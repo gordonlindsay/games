@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b130e">
 <title>Try Line Rugby</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
 }
 [hidden]{display:none!important}
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--night);color:var(--chalk);font:15px/1.45 var(--body);overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;touch-action:manipulation;background:var(--night);color:var(--chalk);font:15px/1.45 var(--body);overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit}
 #cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 
@@ -151,7 +151,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 .bug .sc{display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--chalk);color:var(--night);font-weight:900}
 .sub{padding:4px 9px;border-radius:3px;background:rgba(8,14,10,.74);font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;font-variant-numeric:tabular-nums}
 .sub .lp{color:var(--flood)}
-.pause{position:fixed;z-index:6;top:calc(env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:6px;border:1px solid rgba(241,238,228,.25);background:rgba(8,14,10,.7);cursor:pointer;display:grid;place-items:center}
+.pause{position:fixed;z-index:6;touch-action:manipulation;top:calc(env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:6px;border:1px solid rgba(241,238,228,.25);background:rgba(8,14,10,.7);cursor:pointer;display:grid;place-items:center}
 .pause::before{content:"";width:14px;height:16px;border-left:4px solid var(--chalk);border-right:4px solid var(--chalk)}
 #rotate{position:fixed;inset:0;z-index:30;display:none;place-items:center;align-content:center;gap:22px;padding:24px;background:var(--night);text-align:center;touch-action:none}
 #rotate h2{margin:0;font:900 34px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
@@ -1785,6 +1785,17 @@ const V = { W:0, H:0, dpr:1, s:10 };
 const C = { surround:'#0e2414', grassA:'#2a6233', grassB:'#2f6a38', line:'rgba(244,241,232,.92)', board:'#122018', boardHi:'#1c3125', pad:'#1b2747', ctrl:'#ffcf3d', head:'#2a1d16', outline:'#08110b' };
 const SHADOWS = [[0.45,0.35],[-0.45,0.35],[0.45,-0.35],[-0.45,-0.35]];
 
+/* iPhone Safari can still zoom a page: a quick double tap, a rotation, or a pinch it lets through.
+   Block the gestures, and if the page ever ends up zoomed, snap it back to 1. */
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive:false }));
+document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
+function unzoom() {
+  const vv = window.visualViewport, meta = document.querySelector('meta[name="viewport"]');
+  if (!vv || !meta || vv.scale <= 1.01) return;
+  const c = meta.content;
+  meta.content = c.replace('maximum-scale=1', 'maximum-scale=1.01');   // a change to the tag makes Safari re-apply it
+  requestAnimationFrame(() => { meta.content = c; window.scrollTo(0, 0); });
+}
 function resize() {
   V.dpr = Math.min(2, window.devicePixelRatio || 1);
   V.W = window.innerWidth; V.H = window.innerHeight;
@@ -2853,6 +2864,7 @@ $('hub-reset').addEventListener('click', () => {
 let last = performance.now(), acc = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now-last)/1000); last = now;
+  if (window.innerWidth !== V.W || window.innerHeight !== V.H || Math.min(2, window.devicePixelRatio || 1) !== V.dpr) { resize(); if (input.stickId === null) restStick(); }
   if (M && !M.paused && M.phase !== 'break' && M.phase !== 'menu') {
     acc += dt; let n = 0;
     while (acc >= STEP && n < 5) { update(STEP); acc -= STEP; n++; }
@@ -2886,6 +2898,8 @@ function start(data) {
   if (data && data.settings) settings = { ...settings, ...data.settings };
   resize();
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); });
+  window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
   startDemo();
   renderHome();
   showScreen('s-home');
