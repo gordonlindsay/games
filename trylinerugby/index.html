@@ -108,6 +108,8 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 /* International | Local, beside the title */
 .head > .pool{display:grid;flex:none;gap:0;width:min(272px,100%)}
 .pool button{min-height:44px;padding:0 14px}
+.yours{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid var(--flood);border-radius:8px;background:var(--panel)}
+.yours .btn{width:auto;flex:none}
 .tcard{min-width:0;display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
 .tcard .team{flex:1;border:0;background:transparent}
 .tcard .btn{width:auto;min-height:44px;margin:0 12px 12px}
@@ -288,6 +290,8 @@ tr.me td{background:rgba(255,207,61,.09)}
   <div class="wrap">
     <div class="head"><div><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
       <div class="seg pool" data-key="pool"><button>International</button><button>Local</button></div></div>
+    <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
+    <button class="btn primary" id="t-default" hidden></button>
     <div class="teams" id="t-grid"></div>
     <button class="btn" id="t-back">Back to Menu</button>
   </div>
@@ -424,6 +428,7 @@ const CLUBS = [
   { id:'WIM', name:'Wimbledon',     kit:'#7c1956', trim:'#6cadde', hoops:true, pace:4, power:3, handling:3, kicking:3 },
 ];
 const POOLS = [NATIONS, CLUBS];          // the team screen's International | Local
+const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local with it picked
 const ABILITIES = [['pace', 'Pace'], ['power', 'Power'], ['handling', 'Handling'], ['kicking', 'Kicking']];
 const BUDGET = 10;                        // a team you make starts at 1 in each ability, with this many points to spend
 const MAX_CUSTOM = 4;
@@ -2689,7 +2694,7 @@ window.addEventListener('keyup', e => {
    UI
    ========================================================= */
 let mode = 'menu';           // 'menu' | 'match'
-let pickMode = 'champ', quickPick = null;
+let pickMode = 'champ', quickPick = null, quickAuto = false;   // quickAuto: Farnham is still the untouched default
 let goalOpen = false, goalT = 0, goalPos = 0.5;
 let bannerTimer = 0;
 const playing = () => mode === 'match' && M && !M.demo;
@@ -2917,12 +2922,14 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
 $('b-champ').addEventListener('click', () => {
   ac();
   if (champ) { renderHub(); showScreen('s-hub'); }
-  else { pickMode = 'champ'; quickPick = null; renderTeams(); showScreen('s-teams'); }
+  else openTeams('champ');
 });
-$('b-quick').addEventListener('click', () => { ac(); pickMode = 'quick'; quickPick = null; renderTeams(); showScreen('s-teams'); });
+$('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
 $('b-help').addEventListener('click', () => showScreen('s-help'));
 $('h-back').addEventListener('click', () => { renderHome(); showScreen('s-home'); });
 $('t-back').addEventListener('click', () => { renderHome(); showScreen('s-home'); });
+$('t-change').addEventListener('click', () => { quickPick = null; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; });
+$('t-default').addEventListener('click', () => pickTeam(DEFAULT_TEAM));
 
 /* team select */
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
@@ -2941,9 +2948,19 @@ function teamCard(t, i) {
     </button>`;
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
+function openTeams(m) {
+  pickMode = m; settings.pool = 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
+}
 function renderTeams() {
-  $('t-eyebrow').textContent = pickMode === 'champ' ? 'Championship' : 'Quick Match';
-  $('t-title').textContent = pickMode === 'champ' || quickPick == null ? 'Pick Your Team' : 'Pick Opponent';
+  const quick = pickMode === 'quick';
+  $('t-eyebrow').textContent = quick ? 'Quick Match' : 'Championship';
+  $('t-title').textContent = quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
+  [...document.querySelectorAll('.pool button')].forEach((b, i) => b.setAttribute('aria-pressed', String(i === settings.pool)));
+  $('t-yours').hidden = !(quick && quickPick);
+  if (quick && quickPick) $('t-mine').innerHTML = `${jersey(quickPick)}<span>${esc(quickPick.name)}</span>`;
+  $('t-default').hidden = quick || settings.pool !== 1;
+  $('t-default').textContent = 'Play as ' + DEFAULT_TEAM.name;
   teamList = [...POOLS[settings.pool], ...custom];
   let html = teamList.map(teamCard).join('');
   if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
@@ -2967,7 +2984,8 @@ function pickTeam(t) {
     const others = shuffle(POOLS[settings.pool].filter(o => keyOf(o) !== keyOf(t)));
     newChamp(t, others); renderHub(); showScreen('s-hub'); return;
   }
-  if (quickPick == null) { quickPick = t; renderTeams(); $('s-teams').scrollTop = 0; return; }
+  if (quickPick == null) { quickPick = t; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; return; }
+  if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
   startMatch(quickPick, t, false);
 }
 
@@ -3010,7 +3028,10 @@ function buildBuilder() {
       const i = custom.findIndex(c => c.key === editing.key);
       custom[i] = cleanTeam({ ...t, key:editing.key }, i);
       if (quickPick && keyOf(quickPick) === editing.key) quickPick = custom[i];
-    } else custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
+    } else {
+      custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
+      if (pickMode === 'quick' && quickAuto) { quickPick = custom[custom.length - 1]; quickAuto = false; }   // made it to play as it
+    }
     save(); renderTeams(); showScreen('s-teams');
   });
   $('bd-back').addEventListener('click', () => { renderTeams(); showScreen('s-teams'); });
@@ -3071,7 +3092,7 @@ function renderHub() {
     $('hub-hon').hidden = true;
   } else {
     $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
-    $('hub-new').addEventListener('click', () => { champ = null; save(); pickMode = 'champ'; quickPick = null; renderTeams(); showScreen('s-teams'); });
+    $('hub-new').addEventListener('click', () => { champ = null; save(); openTeams('champ'); });
     $('hub-hon').innerHTML = honours(c, rows).map(([t, i, gold]) => `<div class="hon${gold ? ' gold' : ''}"><span class="eyebrow">${t}</span><b>${esc(T[i].name)}</b></div>`).join('');
     $('hub-hon').hidden = false;
   }

@@ -32,7 +32,9 @@ nations, a local Surrey club, or a team you make yourself.
     Nations. Pick a club, or your own team, and you get five random others from that list. The Triple Crown only
     counts when all four home nations are in it. A championship keeps its own copy of its six teams, so editing or
     deleting a team doesn't change one that's under way.
-  - Quick Match: pick yours, then any opponent from either list.
+  - **Farnham is the default** (2026-10-12). The team screen always opens on Local. Quick Match starts with Farnham
+    as your team (Change Team to swap), then any opponent from either list; a team you make there becomes yours
+    while Farnham is still the untouched default. Championship has a Play as Farnham button, or pick any card.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
