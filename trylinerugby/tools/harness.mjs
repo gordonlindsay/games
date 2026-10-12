@@ -16,7 +16,7 @@ const noop = () => {};
 const ctx2d = new Proxy({}, { get: (t, k) => (k === 'createRadialGradient' || k === 'createLinearGradient' ? () => ({ addColorStop: noop }) : noop), set: () => true });
 const el = () => ({
   style: { setProperty: noop }, classList: { add: noop, remove: noop, toggle: noop }, addEventListener: noop,
-  getContext: () => ctx2d, children: [], dataset: {}, querySelectorAll: () => [], appendChild: noop, setPointerCapture: noop,
+  getContext: () => ctx2d, children: [], dataset: {}, querySelectorAll: () => [], appendChild: noop, setPointerCapture: noop, insertAdjacentHTML: noop, setAttribute: noop,
   set innerHTML(v) {}, get innerHTML() { return ''; }, textContent: '', hidden: false, disabled: false,
 });
 const els = {};
@@ -25,6 +25,7 @@ globalThis.window = globalThis;
 globalThis.innerWidth = 844; globalThis.innerHeight = 390; globalThis.devicePixelRatio = 2;
 globalThis.addEventListener = noop; globalThis.requestAnimationFrame = noop;
 globalThis.localStorage = { getItem: () => null, setItem: noop };
+globalThis.getComputedStyle = () => ({ fontSize: "24px" });
 globalThis.matchMedia = () => ({ matches: false, addEventListener: noop, addListener: noop });
 new Function(js)();
 

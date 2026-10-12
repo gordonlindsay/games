@@ -1,7 +1,7 @@
 # Try Line Rugby
 
-Mobile rugby sevens. Top-down 2D, one stick and two buttons, with a five-round
-championship between England, France, Ireland, Italy, Scotland and Wales.
+Mobile rugby sevens. Top-down 2D, one stick and two buttons, and a five-round championship. Play as one of the six
+nations, a local Surrey club, or a team you make yourself.
 
 **Play:** https://gordonlindsay.github.io/games/trylinerugby/
 
@@ -18,6 +18,21 @@ championship between England, France, Ireland, Italy, Scotland and Wales.
   your runner, and wrong when he comes at you. On Normal and Hard he sometimes fakes the drift.
 - **One repo for all the games** (2026-10-12): this game lives in `gordonlindsay/games`, alongside Farnham Fighters
   and The Wedding Crashers, and away from SignCheck.
+- **Teams** (2026-10-12): the team screen has an **International | Local** switch.
+  - International is the six nations. Local is Farnham, then Haslemere, Guildford, Aldershot, Weybridge, Harlequins
+    and Cobham (Gordon's list), then the clubs at two minis festivals on 11 October 2026: Guildfordians, Ironsides
+    (Battersea), Kingston, Old Ruts and Wimbledon. The festivals' "Irish" and "OCs" squads are left out, because
+    the pages give no full club name.
+  - Kit colours are the clubs' own, with hoops where the club plays in them. **Club ratings are made up**: locals
+    total 11–14 across the four abilities, and the nations total 13–18.
+  - **Create Team:** a name, a three-letter short name for the scoreboard, Plain or Hoops, a shirt and a trim colour,
+    and **10 points to spend** on top of 1 in each ability, 5 at most in any one. The total, 14, matches the
+    strongest club. You can keep up to four teams. They're saved in the browser and show in both lists.
+  - **A championship is your team and five others from the list on screen.** Pick a nation and you get the Six
+    Nations. Pick a club, or your own team, and you get five random others from that list. The Triple Crown only
+    counts when all four home nations are in it. A championship keeps its own copy of its six teams, so editing or
+    deleting a team doesn't change one that's under way.
+  - Quick Match: pick yours, then any opponent from either list.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
@@ -70,6 +85,15 @@ verdict skips the replay.
   - **`node tools/bot.mjs [n] [half] --duels live|instant|off`:** a scripted average player against the CPU on each
     difficulty, with duel counts and win rates.
   - **`node tools/sim.mjs`:** AI v AI matches, with no duels.
+  - **`node tools/teams.mjs`:** 40 asserts. It checks:
+    - every pairing of built-in teams has shirts far enough apart, and hooped sides keep their hoops;
+    - the nations keep their order, and Farnham leads Local;
+    - a team you make is cleaned up and held to the budget;
+    - its automatic short name skips codes in use, and two sides never share one on the scoreboard;
+    - a black away shirt still shows on the dark scoreboard and plates;
+    - opponents are drawn fairly (the old random-comparator sort was badly skewed in Safari);
+    - Local and mixed championships, including when the Triple Crown is awarded;
+    - that a championship saved before clubs existed still loads.
   - **`node tools/setpieces.mjs`:** scrums at different tap speeds and lineouts at different jump timings.
 
 ### Measured baseline
@@ -109,7 +133,13 @@ Measured 2026-10-12 with `bot.mjs`: 1,440 matches per row (12 seeds x 120), 4-mi
 - **Duel camera:** it looks along +x, so screen-right in a duel is world +y. Step Left is world −y, which is screen-up
   back on the pitch. `duels.mjs` pins this.
 - **Debug hook:** `window.__tryline` exposes the engine (`simulate`, `newMatch`, `update`, `input`, `scrum`,
-  `lineout`, `forceDuel`, `debug`, `M`). `__tryline.forceDuel('past')` stages and starts a duel in the console.
+  `lineout`, `forceDuel`, `debug`, `teams`, `M`). `__tryline.forceDuel('past')` stages and starts a duel in the console.
+- **Teams:** `newMatch` takes a team object, or an index into `NATIONS` (the tools use indexes).
+  - **`NATIONS` must keep its order.** Championships saved before clubs existed hold indexes into it, and `restore()`
+    turns them into a team list in that order.
+  - `CLUBS` is append-only.
+  - A clash of shirts is settled by `awayKit()`. It tries, in order: the change kit, the colours swapped, then white,
+    then black.
 - **Chasers:** defenders who are chasing must pursue at full speed (`pursue: true`). With arrive-style steering they
   slow as they close and can never catch a runner. That bug once made a scripted player score 15+ tries a match.
 - **Balance levers:** bursts are the lever for duel balance. Shrinking duel windows barely moves results, because a
