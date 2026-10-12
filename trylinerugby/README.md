@@ -21,8 +21,8 @@ nations, a local Surrey club, or a team you make yourself.
 - **Teams** (2026-10-12): the team screen has an **International | Local** switch.
   - International is the six nations. Local is Farnham, then Haslemere, Guildford, Aldershot, Weybridge, Harlequins
     and Cobham (Gordon's list), then the clubs at two minis festivals on 11 October 2026: Guildfordians, Ironsides
-    (Battersea), Kingston, Old Ruts and Wimbledon. The festivals' "Irish" and "OCs" squads are left out, because
-    the pages give no full club name.
+    (Battersea), Kingston, Old Ruts and Wimbledon. The festivals' "Irish" and "OCs" squads are left out, by
+    Gordon's choice (2026-10-12).
   - Kit colours are the clubs' own, with hoops where the club plays in them. **Club ratings are made up**: locals
     total 11–14 across the four abilities, and the nations total 13–18.
   - **Create Team:** a name, a three-letter short name for the scoreboard, Plain or Hoops, a shirt and a trim colour,
