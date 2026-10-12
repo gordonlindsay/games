@@ -142,6 +142,13 @@ tr.me td{background:rgba(255,207,61,.09)}
 .sub .lp{color:var(--flood)}
 .pause{position:fixed;z-index:6;top:calc(env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:6px;border:1px solid rgba(241,238,228,.25);background:rgba(8,14,10,.7);cursor:pointer;display:grid;place-items:center}
 .pause::before{content:"";width:14px;height:16px;border-left:4px solid var(--chalk);border-right:4px solid var(--chalk)}
+#rotate{position:fixed;inset:0;z-index:30;display:none;place-items:center;align-content:center;gap:22px;padding:24px;background:var(--night);text-align:center;touch-action:none}
+#rotate h2{margin:0;font:900 34px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+#rotate .phone{width:46px;height:78px;border:4px solid var(--chalk);border-radius:9px;position:relative;animation:turn 2.4s ease-in-out infinite}
+#rotate .phone::after{content:"";position:absolute;left:50%;bottom:5px;width:12px;height:3px;margin-left:-6px;border-radius:2px;background:var(--chalk)}
+@keyframes turn{0%,25%{transform:rotate(0)}50%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (orientation:portrait) and (pointer:coarse){#rotate{display:grid}}
+@media (prefers-reduced-motion:reduce){#rotate .phone{animation:none;transform:rotate(-90deg)}}
 #banner{position:fixed;left:0;right:0;top:30%;z-index:7;display:flex;justify-content:center;pointer-events:none;padding:0 16px}
 #banner .msg{padding:10px 18px;border-left:8px solid var(--k,var(--flood));background:rgba(8,14,10,.86);font:900 clamp(30px,7vw,46px)/1 var(--display);text-transform:uppercase;letter-spacing:.03em;animation:pop .22s ease-out}
 #banner .msg.small{font-size:24px;padding:8px 14px;border-left-width:6px}
@@ -188,6 +195,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 </div>
 <button class="pause" id="b-pause" aria-label="Pause" hidden></button>
 <div id="banner" aria-live="polite"></div>
+<div id="rotate" role="alert"><div class="phone" aria-hidden="true"></div><h2>Turn Your Phone Sideways</h2></div>
 
 <div id="controls" hidden>
   <div id="zone"></div>
@@ -1196,7 +1204,7 @@ function recordChampResult() {
    Rendering
    ========================================================= */
 const cv = $('cv'), ctx = cv.getContext('2d');
-const V = { W:0, H:0, dpr:1, s:10, portrait:false };
+const V = { W:0, H:0, dpr:1, s:10 };
 const C = { surround:'#0e2414', grassA:'#2a6233', grassB:'#2f6a38', line:'rgba(244,241,232,.92)', board:'#122018', boardHi:'#1c3125', pad:'#1b2747', ctrl:'#ffcf3d', head:'#2a1d16', outline:'#08110b' };
 const SHADOWS = [[0.45,0.35],[-0.45,0.35],[0.45,-0.35],[-0.45,-0.35]];
 
@@ -1207,9 +1215,9 @@ function resize() {
 }
 function toS(x, y) {
   const s = V.s, c = M.cam;
-  return V.portrait ? [V.W/2 + (y-c.y)*s, V.H/2 - (x-c.x)*s] : [V.W/2 + (x-c.x)*s, V.H/2 + (y-c.y)*s];
+  return [V.W/2 + (x-c.x)*s, V.H/2 + (y-c.y)*s];
 }
-function svec(x, y) { return V.portrait ? [y, -x] : [x, y]; }
+function svec(x, y) { return [x, y]; }
 
 function drawPitch() {
   const s = V.s, lw = Math.max(0.14, 1.3/s);
@@ -1290,8 +1298,7 @@ function drawBall(r) {
 function render(dt) {
   if (!M) return;
   const d = V.dpr;
-  V.portrait = V.H > V.W;
-  const along = V.portrait ? V.H : V.W, across = V.portrait ? V.W : V.H;
+  const along = V.W, across = V.H;
   V.s = Math.min(along/54, across/36);
   const s = V.s, b = M.ball, cam = M.cam;
   let tx = b.x, ty = b.y;
@@ -1302,8 +1309,7 @@ function render(dt) {
   cam.x = ha*2 >= 132 ? 60 : clamp(cam.x, ha-6, 126-ha);
   cam.y = hc*2 >= 82 ? 35 : clamp(cam.y, hc-6, 76-hc);
 
-  if (V.portrait) ctx.setTransform(0, -d*s, d*s, 0, d*(V.W/2 - s*cam.y), d*(V.H/2 + s*cam.x));
-  else ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*cam.x), d*(V.H/2 - s*cam.y));
+  ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*cam.x), d*(V.H/2 - s*cam.y));
   drawPitch();
 
   ctx.setTransform(d, 0, 0, d, 0, 0);
@@ -1404,7 +1410,7 @@ const input = {
     const ky = (k.has('ArrowDown') || k.has('KeyS') ? 1 : 0) - (k.has('ArrowUp') || k.has('KeyW') ? 1 : 0);
     if (kx || ky) { const m = hyp(kx, ky); x = kx/m; y = ky/m; }
     const mag = hyp(x, y);
-    return V.portrait ? { x:-y, y:x, mag } : { x, y, mag };
+    return { x, y, mag };
   },
 };
 const zone = $('zone'), stick = $('stick'), knob = $('knob');
@@ -1502,7 +1508,17 @@ function startDemo() {
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
   goalOpen = false;
 }
+function lockLandscape() {
+  if (!window.matchMedia('(pointer: coarse)').matches) return;
+  try {
+    const el = document.documentElement;
+    const fs = el.requestFullscreen ? el.requestFullscreen({ navigationUI:'hide' }) : null;
+    const lock = () => { try { const p = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (p && p.catch) p.catch(() => {}); } catch (e) { /* unsupported */ } };
+    if (fs && fs.then) fs.then(lock, () => {}); else lock();
+  } catch (e) { /* unsupported */ }
+}
 function startMatch(u, c, isChamp) {
+  lockLandscape();
   ac();
   newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp });
   mode = 'match';
@@ -1634,6 +1650,10 @@ $('pz-quit').addEventListener('click', () => {
   exitMatch();
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
+function onOrientation() { if (uprightPhone.matches) { pause(); input.stickId = null; input.jx = input.jy = 0; input.aDown = input.bDown = false; } }
+if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
+else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
 /* home */
 function renderHome() {

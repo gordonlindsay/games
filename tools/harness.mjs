@@ -19,6 +19,7 @@ globalThis.window = globalThis;
 globalThis.innerWidth = 844; globalThis.innerHeight = 390; globalThis.devicePixelRatio = 2;
 globalThis.addEventListener = noop; globalThis.requestAnimationFrame = noop;
 globalThis.localStorage = { getItem: () => null, setItem: noop };
+globalThis.matchMedia = () => ({ matches: false, addEventListener: noop, addListener: noop });
 new Function(js)();
 
 export const T = window.__tryline;
