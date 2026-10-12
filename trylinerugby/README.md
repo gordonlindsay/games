@@ -74,15 +74,21 @@ verdict skips the replay.
 
 ### Measured baseline
 
-Measured 2026-10-12 with `bot.mjs`: 360 matches per row, 4-minute halves, pooled over SEED 11, 12 and 13.
+Measured 2026-10-12 with `bot.mjs`: 1,440 matches per row (12 seeds x 120), 4-minute halves, duels with the Dummy and
+`BURST` at x1.09 (x1.14 Perfect).
 
 | | Wins, duels off | Wins, duels live | Tries, live (us–them) | Duel win rate |
 |---|---|---|---|---|
-| Easy | 97% | 99% | 9.1–0.4 | about 84% |
-| Normal | 82% | 88% | 5.0–0.7 | about 70% |
-| Hard | 46% | 53% | 2.3–1.9 | about 54% |
+| Easy | 98.9% | 99.4% | 9.3–0.4 | 82% |
+| Normal | 83.5% | 88.3% | 5.2–0.9 | 67% |
+| Hard | 48.9% | 53.3% | 2.3–1.9 | 51% |
 
 - **Duels:** about 3.1 a match, freezing about 6s in total.
+- **Burst size:**
+  - x1.12 (x1.18 Perfect) put Normal at +6.8 win points, over the +6 target.
+  - x1.06 (x1.10) was inside every target but barely felt.
+  - The middle value sits at +4.9.
+  - To try other values without editing the game: `BURST='{ ok:[1.1,2], perfect:[1.15,2.5], knock:[1.06,1.2] }' node tools/bot.mjs`.
 - **AI v AI (`sim.mjs`):** about 2 tries a match.
 - **Set pieces on Normal (`setpieces.mjs`):**
   - Scrums: tapping 4 a second keeps your put-in about 93% of the time. Tapping 8 a second with a good hit wins a
@@ -107,4 +113,4 @@ Measured 2026-10-12 with `bot.mjs`: 360 matches per row, 4-minute halves, pooled
 - **Chasers:** defenders who are chasing must pursue at full speed (`pursue: true`). With arrive-style steering they
   slow as they close and can never catch a runner. That bug once made a scripted player score 15+ tries a match.
 - **Balance levers:** bursts are the lever for duel balance. Shrinking duel windows barely moves results, because a
-  mistime falls back to the open game. `BURST` was halved after measurement.
+  mistime falls back to the open game. If windows are ever narrowed, update `INSTANT` to match.

@@ -4,7 +4,9 @@
 import fs from 'fs';
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const js = html.match(/<script>([\s\S]*)<\/script>/)[1];
+let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
+// BURST='{ ok:[1.12,2.0], perfect:[1.18,2.5], knock:[1.08,1.2] }' tries other duel bursts without editing the game
+if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST = ${process.env.BURST};`);
 
 if (process.env.SEED) {                           // mulberry32, swapped in before the game captures Math.random
   let a = +process.env.SEED >>> 0;
