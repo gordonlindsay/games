@@ -11,7 +11,8 @@ Gordon's games, one folder each, served by GitHub Pages from `main`.
 The front page, https://gordonlindsay.github.io/games/, lists them all.
 
 Each game came from its own repo (`gordonlindsay/farnhamfighters`, `weddingcrashers`, `trylinerugby`), brought in
-with `git subtree` so its history is kept. Those repos stay up until they're retired; this one is the source now.
+with `git subtree` so its history is kept. Those repos were archived on 2026-10-12 and are read-only. Their pages
+forward here, so old links and home-screen shortcuts still work.
 
 ## Preview
 
