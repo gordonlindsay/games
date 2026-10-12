@@ -79,6 +79,36 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
   else ok(M().ball.state === 'loose' && M().ball.vx < 0, 'a knock-down goes backwards for us');
 }
 
+// 3b. a won Key Pass bursts upfield even when the runner is wide and catching across his body
+{
+  let fwd = 0, n = 0;
+  for (let i = 0; i < 20; i++) {
+    fresh(); const st = T.debug.stage('pass'); st.R.y = 46; st.R.vy = 3; T.update(STEP);
+    const c = M().cut; if (!c || c.kind !== 'pass') continue;
+    play(c, 1, c.centre);
+    runUntil(() => M().ball.state !== 'air', 200);
+    if (M().ball.carrier !== st.R) continue;
+    n++; const v = Math.hypot(st.R.vx, st.R.vy); if (st.R.vx > 0.8*v) fwd++;
+  }
+  ok(n > 0 && fwd === n, `Key Pass burst runs upfield (${fwd} of ${n})`);
+}
+// 3c. scrums release at the mark, whoever wins; ignoring a scrum never concedes worse than the ball
+{
+  let far = 0, n = 0, dom = 0;
+  for (let i = 0; i < 40; i++) {
+    T.newMatch(0, 1, { halfLen: 240, diff: 1, headless: false, duels: 'off' });
+    for (let k = 0; k < 120; k++) T.update(STEP);
+    T.scrum(i % 2, 60, 35, '');
+    runUntil(() => M().phase === 'cut', 400);
+    const c = M().cut;
+    runUntil(() => M().phase !== 'cut', 900);
+    if (c.result === 'dom1' || c.result === 'dom0') { dom++; continue; }
+    const b = M().ball; if (b.state !== 'held') continue;
+    n++; if (Math.hypot(b.carrier.x - (c.x + c.pos), b.carrier.y - c.y) > 2.5) far++;
+  }
+  ok(n > 0 && far === 0, `scrum ball released at the mark (${far} of ${n} far away)`);
+  ok(dom === 0, `a scrum with no pushing never ends in a penalty or pushover (${dom} did)`);
+}
 // 4. no input falls back to the open game's odds
 {
   let rucks = 0, frees = 0;
