@@ -12,7 +12,7 @@ const M = () => T.M;
 function play(c, act, at) {
   runUntil(() => c.res || c.t >= (at ?? 99), 400);
   if (!c.res && at != null) {
-    if (c.kind === 'past') T.input.flick = act; else T.input.aPressed = true;
+    if (c.kind === 'past') T.input.flick = act; else if (act === 'dummy') T.input.bPressed = true; else T.input.aPressed = true;
     T.update(STEP);
   }
   runUntil(() => M().phase !== 'cut', 600);
@@ -56,7 +56,8 @@ for (const dir of [-1, 1]) {
   fresh(); const st = T.debug.stage('pass'); T.update(STEP);
   const c = M().cut;
   ok(c && c.kind === 'pass', 'pass duel staged');
-  play(c, 1, c.centre);
+  c.drift = false; c.driftAt = null; c.fakeAt = null;   // he comes at you: Pass is right
+  play(c, 'pass', c.centre);
   ok(c.out === 'drawn', `pass with a centred press draws (got ${c.out})`);
   const b = M().ball;
   ok(b.state === 'air' && b.f.sure && b.f.target === st.R, 'the sure pass goes to the runner the scene showed');
@@ -85,12 +86,33 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
   for (let i = 0; i < 20; i++) {
     fresh(); const st = T.debug.stage('pass'); st.R.y = 46; st.R.vy = 3; T.update(STEP);
     const c = M().cut; if (!c || c.kind !== 'pass') continue;
-    play(c, 1, c.centre);
+    c.drift = false; c.driftAt = null; c.fakeAt = null;
+    play(c, 'pass', c.centre);
     runUntil(() => M().ball.state !== 'air', 200);
     if (M().ball.carrier !== st.R) continue;
     n++; const v = Math.hypot(st.R.vx, st.R.vy); if (st.R.vx > 0.8*v) fwd++;
   }
   ok(n > 0 && fwd === n, `Key Pass burst runs upfield (${fwd} of ${n})`);
+}
+// 3b2. the Dummy: right when he drifts onto the runner, wrong when he comes at you
+{
+  fresh(); const st = T.debug.stage('pass'); T.update(STEP);
+  let c = M().cut; c.drift = true; c.driftAt = c.win[0] - 0.32; c.fakeAt = null;
+  play(c, 'dummy', c.centre);
+  ok(c.out === 'sold' && c.verdict === 'Dummy', `Dummy against a drifting defender is sold (got ${c.out})`);
+  ok(M().ball.carrier === st.U && st.U.boost > 0 && st.O.down > 0, 'a sold Dummy: you keep the ball with a burst, he is wrong-footed');
+  fresh(); const st2 = T.debug.stage('pass'); T.update(STEP);
+  c = M().cut; c.drift = true; c.driftAt = c.win[0] - 0.32; c.fakeAt = null;
+  play(c, 'pass', c.centre);
+  ok(c.out === 'covered' && M().ball.state === 'air' && !M().ball.f.sure, `passing to a covered runner is a normal pass, not a sure one (got ${c.out})`);
+  let tackled = 0, broken = 0;
+  for (let i = 0; i < 30; i++) {
+    fresh(); T.debug.stage('pass'); T.update(STEP);
+    c = M().cut; c.drift = false; c.driftAt = null; c.fakeAt = null;
+    play(c, 'dummy', c.centre);
+    if (c.out === 'tackled' && c.verdict === 'Not Fooled') tackled++; else if (c.out === 'broken') broken++;
+  }
+  ok(tackled + broken === 30 && tackled > 0, `Dummy against a man coming at you: Not Fooled or a broken tackle (${tackled}/${broken})`);
 }
 // 3c. scrums release at the mark, whoever wins; ignoring a scrum never concedes worse than the ball
 {

@@ -35,14 +35,20 @@ const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v)
 export function duelBot(d, sigma = +process.env.DUEL_SIGMA || 0.095) {
   if (!d.bot) {
     const centre = (d.win[0] + d.win[1]) / 2;
-    const tricked = d.open0 !== d.open || d.stepDir || d.dummy;
-    d.bot = { at: centre + gauss() * sigma, none: Math.random() < 0.05, fooled: !!tricked && Math.random() < 0.5, done: false };
-    if (d.bot.fooled && d.kind !== 'past') d.bot.at = centre - 0.30;
+    const tricked = d.open0 !== d.open || d.stepDir || d.dummy || d.fakeAt != null;
+    d.bot = { at: centre + gauss() * sigma, none: Math.random() < 0.05, fooled: !!tricked && Math.random() < 0.5,
+      misread: d.kind === 'pass' && Math.random() < 0.10, done: false };
+    if (d.bot.fooled && d.kind !== 'past' && d.kind !== 'pass') d.bot.at = centre - 0.30;
   }
   if (d.bot.done || d.bot.none || d.res || d.t < 0.3 || d.t < d.bot.at) return;
   d.bot.done = true;
   if (d.kind === 'past') inp.flick = d.bot.fooled ? d.open0 : d.open;
-  else inp.aPressed = true;
+  else if (d.kind === 'pass') {
+    // Pass when he comes at you, Dummy when he drifts to the runner; a fake or a misread flips it
+    let dummy = !!d.drift;
+    if (d.bot.fooled || d.bot.misread) dummy = !dummy;
+    if (dummy) inp.bPressed = true; else inp.aPressed = true;
+  } else inp.aPressed = true;
 }
 
 // A deliberately ordinary human: runs at the line, swerves from the nearest

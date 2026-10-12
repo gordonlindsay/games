@@ -263,7 +263,7 @@ tr.me td{background:rgba(255,207,61,.09)}
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip. Through the posts in open play is a <b>drop goal</b>.</dd>
       <dt>Tackle</dt><dd>When they have the ball. Dive at the carrier from close range. Miss and you're on the floor.</dd>
       <dt>Switch</dt><dd>Take the defender nearest the ball.</dd>
-      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the big button.</dd>
+      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner.</dd>
       <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast with the stick held forward. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
       <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass / Tackle. <b>K</b> Kick / Switch. <b>P</b> Pause.</dd>
@@ -935,7 +935,9 @@ const DUEL_GRACE = 0.30, DUEL_OUTRO = 0.55, DUEL_SKIP = 0.25, DUEL_GAP = 30, DUE
 const G_START = 7.0, G_WIN = 2.4, G_HIT = 0.8;          // the restaged approach, metres apart
 const BURST = { ok:[1.06, 2.0], perfect:[1.10, 2.5], knock:[1.04, 1.2] };   // measured: bigger bursts made duels worth ~9 win points on Normal
 const DOM_TURN = [0.25, 0.35], DOM_RUCK = 1.6, LINE_SPEED = 2.5;
-const INSTANT = [0.85, 0.70, 0.55];                      // instant-mode win rate by difficulty
+const INSTANT = [0.85, 0.70, 0.55];
+// Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first
+const DUMMY = { drift:[0.35, 0.40, 0.45], fake:[0, 0.15, 0.30] };                      // instant-mode win rate by difficulty
 
 function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
@@ -1075,6 +1077,12 @@ function startDuel(s) {
   }
   c.centre = centre; c.wid = w; c.win = [centre - w/2, centre + w/2];
   if (s.kind === 'past' && c.open0 !== c.open) c.feintAt = c.win[0] - 0.32;
+  if (s.kind === 'pass') {
+    c.side = Math.sign((s.R.y - U.y) || 1);                    // the runner's side
+    c.drift = rnd() < DUMMY.drift[di];
+    if (c.drift) c.driftAt = c.win[0] - 0.32;                  // he drifts onto the runner, in plain view
+    else if (rnd() < DUMMY.fake[di]) c.fakeAt = c.win[0] - 0.55;   // starts to drift, then comes back at you
+  }
   if (c.stepDir) c.stepAt = c.win[0] - 0.32;
   c.endT = s.kind === 'block' ? centre + 0.45 : c.tk + 0.35;
   if (M.duels === 'instant') { duelInstant(c); return c; }
@@ -1088,6 +1096,7 @@ function updateDuel(c, dt) {
   if (t < DUEL_GRACE) { input.reanchor(); input.flick = 0; return; }
   if (c.feintAt != null && t >= c.feintAt && c.lastEvt < c.feintAt) { c.lastEvt = c.feintAt; sfx('whoosh'); }
   if (c.stepAt != null && t >= c.stepAt && c.lastEvt < c.stepAt) c.lastEvt = c.stepAt;
+  for (const at of [c.driftAt, c.fakeAt]) if (at != null && t >= at && c.lastEvt < at) c.lastEvt = at;
   if (c.kind === 'block') {
     if (c.dummy && t >= 0.75 && c.lastEvt < 0.75) c.lastEvt = 0.75;
     if (t >= c.rel && c.lastEvt < c.rel) { c.lastEvt = c.rel; sfx('pass'); }
@@ -1102,6 +1111,8 @@ function updateDuel(c, dt) {
     if (!c.armed && Math.abs(jx) < 0.35) c.armed = true;
     if (input.flick) act = input.flick;
     else if (c.armed && Math.abs(jx) >= 0.6 && Math.abs(jx) > Math.abs(jy) && Math.abs(moved) >= 0.5 && Math.sign(moved) === Math.sign(jx)) act = Math.sign(jx);
+  } else if (c.kind === 'pass') {
+    if (input.aPressed) act = 'pass'; else if (input.bPressed) act = 'dummy';
   } else if (input.aPressed) act = 1;
   input.flick = 0;
   if (act != null) judgeDuel(c, act, t);
@@ -1122,10 +1133,13 @@ function settle(c, res, act) {
     else if (rnd() < tackleChance(O, U, 'ai', res === 'early')) { out = 'tackled'; verdict = res === 'early' ? 'Too Early' : 'Too Late'; }
     else { out = 'broken'; verdict = 'Broken Tackle'; }
   } else if (c.kind === 'pass') {
-    if (won) { out = 'drawn'; verdict = 'Draw and Pass'; }
-    else if (res === 'early') { out = 'early'; verdict = 'Too Early'; }
-    else if (rnd() < tackleChance(O, U, 'ai')) { out = 'tackled'; verdict = 'Too Late'; }
-    else { out = 'broken'; verdict = 'Broken Tackle'; }
+    const right = c.drift ? 'dummy' : 'pass';
+    if (won && act === right) { out = right === 'pass' ? 'drawn' : 'sold'; verdict = right === 'pass' ? 'Draw and Pass' : 'Dummy'; }
+    else if (won && act === 'pass') { out = 'covered'; verdict = 'Covered'; }               // he'd drifted onto the runner
+    else if (won || (res === 'early' && act === 'dummy') || res === 'late') {               // dummied a man coming at you, or held on
+      if (rnd() < tackleChance(O, U, 'ai')) { out = 'tackled'; verdict = won ? 'Not Fooled' : res === 'early' ? 'Too Early' : 'Too Late'; }
+      else { out = 'broken'; verdict = 'Broken Tackle'; }
+    } else { out = 'early'; verdict = 'Too Early'; }
   } else if (c.kind === 'tackle') {
     if (won) { out = 'bighit'; verdict = 'Big Hit'; }
     else if (rnd() < tackleChance(U, O, res === 'early' ? 'dive' : 'contact', O.side > 0)) { out = 'tackled'; verdict = res === 'early' ? 'Too Early' : 'Too Late'; }
@@ -1135,7 +1149,7 @@ function settle(c, res, act) {
     else { out = 'pass'; verdict = res === 'early' ? 'Too Early' : 'Too Late'; }
   }
   c.out = out; c.verdict = verdict;
-  const good = ['break', 'drawn', 'bighit', 'intercept', 'knock'].includes(out);
+  const good = ['break', 'drawn', 'sold', 'bighit', 'intercept', 'knock'].includes(out);
   const ours = good || out === 'broken';
   c.good = good;
   if (good) { M.stats.duelsWon = (M.stats.duelsWon || 0) + 1; M.stats['w_' + c.kind] = (M.stats['w_' + c.kind] || 0) + 1; }
@@ -1156,6 +1170,11 @@ function duelInstant(c) {
     if (res === 'ok' || res === 'perfect') act = c.open;
     else if (rnd() < 0.3) { res = 'ok'; act = -c.open; }
     else if (res === 'early') act = rnd() < 0.5 ? -1 : 1;
+  } else if (c.kind === 'pass') {
+    const right = c.drift ? 'dummy' : 'pass', wrong = c.drift ? 'pass' : 'dummy';
+    if (res === 'ok' || res === 'perfect') act = right;
+    else if (rnd() < 0.3) { res = 'ok'; act = wrong; }
+    else if (res === 'early') act = rnd() < 0.5 ? 'pass' : 'dummy';
   } else if (res !== 'late') act = 1;
   c.judged = c.centre;
   settle(c, res, act);
@@ -1192,6 +1211,22 @@ function applyDuel(c) {
       b.x = U.x; b.y = U.y;
       doPass(U, R, { sure:true, boost:c.res === 'perfect' ? BURST.perfect : BURST.ok });
       break;
+    case 'pass:sold': {
+      // he went with the runner; you go through the gap he left
+      put(U, at(1.3, -0.5*c.side), true); put(O, at(0.2, 1.2*c.side));
+      O.down = 0.5; O.tcd = 1; O.vx = O.vy = 0;
+      U.side = 0.35; U.fx = 1; U.fy = 0;
+      setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
+      break;
+    }
+    case 'pass:covered': {
+      // he sat on the runner; the pass goes, with him right there
+      const dx = R.x - O.x, dy = R.y - O.y, m = hyp(dx, dy) || 1;
+      O.x = R.x - dx/m*1.2; O.y = R.y - dy/m*1.2; O.vx = dx/m*6; O.vy = dy/m*6;
+      b.x = U.x; b.y = U.y;
+      doPass(U, R);
+      break;
+    }
     case 'pass:early': {
       const dx = R.x - O.x, dy = R.y - O.y, m = hyp(dx, dy) || 1;
       O.x += dx/m*1.5; O.y += dy/m*1.5; O.vx = dx/m*7; O.vy = dy/m*7;
@@ -2025,8 +2060,13 @@ function duelPose(c, t) {
     const r = c.r0, rx = r.x + r.vx*c.rho*(t - c.tTrig), dy = r.y - c.u0.y;
     const ly = Math.sign(dy)*Math.min(Math.abs(dy), 3.0 + 0.15*(Math.abs(dy) - 4));   // squeezed for the shot
     P.r = { x:Math.max(rx, P.u.x - 1.5), y:P.u.y + ly, h:0 };
-    P.o.commit = c.commitT != null ? clamp((t - c.commitT + 0.1)/0.15, 0, 1) : 0;
-    if (after >= 0 && c.out !== 'tackled' && c.out !== 'broken') {
+    const drift = c.driftAt != null ? ease3((t - c.driftAt)/0.15)
+      : c.fakeAt != null ? ease3((t - c.fakeAt)/0.12)*(1 - ease3((t - c.fakeAt - 0.2)/0.12)) : 0;
+    P.o.y += c.side*1.2*drift; P.o.shift = c.side*0.45*drift;
+    P.o.commit = c.drift ? 0 : clamp((t - c.commitT + 0.1)/0.15, 0, 1);
+    if (c.act === 'dummy' && after >= 0 && after < 0.2) P.u.fake = true;
+    if (c.out === 'sold' && hit > 0) { P.u.x += hit*6; P.u.y -= 0.5*c.side*ease3(hit/0.2); }
+    if (after >= 0 && !['tackled', 'broken', 'sold'].includes(c.out)) {
       const fl = clamp(after/0.35, 0, 1);
       P.ball = { x:lerp(P.u.x, P.r.x, fl), y:lerp(P.u.y, P.r.y, fl), h:1.1 + 0.6*fl*(1 - fl) };
       if (c.out === 'drawn' && hit > 0) { P.o.lying = hit > 0.15; P.o.x = lerp(P.o.x, P.u.x + 0.3, ease3(hit/0.2)); }
@@ -2181,7 +2221,7 @@ function drawDuel(c, g) {
   const actors = [];
   const add = (a, team, back, extra) => { if (a) actors.push({ a, team, back, o:extra || {} }); };
   if (c.kind === 'past' || c.kind === 'pass') {
-    add(P.u, 0, true, { carry:!P.ball, num:c.U.n, stride:t*19 });
+    add(P.u, 0, true, { carry:!P.ball && !P.u.fake, arms:P.u.fake ? 'pass' : undefined, num:c.U.n, stride:t*19 });
     add(P.o, 1, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
     if (P.r) add(P.r, 0, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
   } else if (c.kind === 'tackle') {
@@ -2273,7 +2313,8 @@ function cutTitle(c) {
 }
 function duelLabels(c) {
   if (c.kind === 'past') return [null, null];
-  return [c.kind === 'pass' ? 'Pass' : c.kind === 'tackle' ? 'Tackle' : 'Block', null];
+  if (c.kind === 'pass') return ['Pass', 'Dummy'];
+  return [c.kind === 'tackle' ? 'Tackle' : 'Block', null];
 }
 function render(dt) {
   if (!M) return;
@@ -2585,6 +2626,7 @@ function updateHud() {
     $('btnA').hidden = !la;
     $('btnB').hidden = !lb;
     $('btnA').classList.toggle('cue', !!(cut && !M.cut.after && la));
+    $('btnB').classList.toggle('cue', !!(cut && !M.cut.after && lb));
     $('plates').hidden = !(duel && M.cut.kind === 'past' && !M.cut.after);
     $('btnA').classList.toggle('idle', !canAct); $('btnB').classList.toggle('idle', !canAct);
   }

@@ -13,7 +13,9 @@ championship between England, France, Ireland, Italy, Scotland and Wales.
   cover and the match pauses underneath. Phone browsers can't be forced to turn: Android gets a best-effort
   fullscreen and landscape lock on Play, and iPhone ignores it.
 - **Duels** (2026-10-12): four chase-cam close-ups. The gold ring means "now", and a win gives a small burst. There's a
-  Duels On / Off setting. Next up is a Dummy for you in Key Pass, on the small button.
+  Duels On / Off setting.
+- **Dummy** (2026-10-12): in a Key Pass, the small button fakes the pass. It's right when the defender drifts onto
+  your runner, and wrong when he comes at you. On Normal and Hard he sometimes fakes the drift.
 - **One repo for all the games** (2026-10-12): this game lives in `gordonlindsay/games`, alongside Farnham Fighters
   and The Wedding Crashers, and away from SignCheck.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
@@ -45,7 +47,7 @@ Scrums, lineouts and duels open a close-up: the pitch and the clock freeze while
 | Duel | When | You | Win |
 |---|---|---|---|
 | Get Past | You carry at the last defender | Flick the stick: Step Left / Step Right, against his shoulder (he may feint) | Line Break and a burst |
-| Key Pass | A two-on-one with a support runner | Pass the moment he commits | A sure pass, and the runner gets the burst |
+| Key Pass | A two-on-one with a support runner | Pass if he comes at you; Dummy if he drifts to your runner | Draw and Pass: a sure pass, and the runner gets the burst. Dummy: you go through the gap with the burst |
 | Tackle | You're the last defender, front-on | Tackle as he arrives (he may step) | Big Hit: a dominant ruck, then Line Speed |
 | Block | Their pressure pass crosses your man | Block on the real release, not the dummy | Intercepted (inner window) or Knocked Down |
 
@@ -57,11 +59,12 @@ verdict skips the replay.
 - `index.html` is the whole game in one page. GitHub Pages serves it from `main`.
 - `tools/` runs the engine headless in Node. `SEED=n` makes a run repeatable. Run the tools after any change to
   speed, tackling, AI, set pieces or duels.
-  - **`node tools/duels.mjs`:** 100 asserts. It checks:
+  - **`node tools/duels.mjs`:** 104 asserts. It checks:
     - every duel fires from a staged position, and none fires when you steer away;
     - the world freezes during a close-up;
     - the Step Left / Step Right direction pin;
     - the sure-pass target, and that the Key Pass burst runs upfield;
+    - the three Dummy outcomes;
     - outcomes, fallbacks and the gate;
     - that scrums release at the mark.
   - **`node tools/bot.mjs [n] [half] --duels live|instant|off`:** a scripted average player against the CPU on each
