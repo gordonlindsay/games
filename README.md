@@ -26,6 +26,15 @@ championship between England, France, Ireland, Italy, Scotland and Wales.
 
 Keyboard: arrows or WASD, J, K, P to pause.
 
+Scrums and lineouts open a close-up: a side-on view slides in over the pitch and the clock stops.
+
+- **Scrum:** the referee calls Crouch, Bind, Set. Press Push on Set for a good hit, then tap it fast with the stick
+  held forward. Your pack's shove moves the scrum, and the ground it gains is real. Out-shove them on their ball to
+  steal it, or dominate to win a penalty, or a pushover try within 8m of their line.
+- **Lineout:** one jumper each in the middle. The hooker dummies, then throws. Press Jump so your jumper is at full
+  height when the ball arrives. On their throw, beating their jumper to it is a steal.
+- A steal or a dominant scrum gives the winning team a short burst of speed (`surge`, ×1.08 for 2.5s).
+
 ## Files
 
 - `index.html` is the whole game in one page. GitHub Pages serves it from `main`.
@@ -34,7 +43,12 @@ Keyboard: arrows or WASD, J, K, P to pause.
     The current baseline is Easy about 90% wins, Normal about 75%, Hard about 55%.
   - `node tools/sim.mjs` runs AI v AI matches. Expect about 3 tries a match on Normal.
 
-  Run both after any change to speed, tackling or AI.
+  - `node tools/setpieces.mjs` plays scrums at different tap speeds and lineouts at different jump timings on each
+    difficulty. On Normal: 4 taps/s keeps your scrum about 90%; 8 taps/s plus a good hit wins a penalty about a third
+    of the time and steals theirs about 30%; a perfectly timed jump keeps your throw about 87% and steals theirs
+    about 25%.
+
+  Run them after any change to speed, tackling, AI or set pieces.
 
 ## Preview and release
 
