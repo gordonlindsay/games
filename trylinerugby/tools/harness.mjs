@@ -1,19 +1,27 @@
 // Loads the game's <script> from ../index.html into Node with a stub DOM,
 // so the match engine can run headless. Exports the engine handle, a scripted
-// "average player", and its duel behaviour. SEED=n makes runs repeatable.
+// "average player", and its duel and goal-kick behaviour. SEED=n makes runs repeatable.
 import fs from 'fs';
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 // BURST='{ ok:[1.12,2.0], perfect:[1.18,2.5], knock:[1.08,1.2] }' tries other duel bursts without editing the game
 if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST = ${process.env.BURST};`);
+// GKTUNE='{"band":[0.15,0.13,0.10]}' tries other goal-kick levers the same way
+if (process.env.GKTUNE) js = js.replace('// GKTUNE', 'Object.assign(KICK, ' + process.env.GKTUNE + ');');
 
-if (process.env.SEED) {                           // mulberry32, swapped in before the game captures Math.random
-  let a = +process.env.SEED >>> 0;
-  Math.random = () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-}
+let seedState = null;
+const mulberry = () => { seedState = seedState + 0x6D2B79F5 | 0; let t = Math.imul(seedState ^ seedState >>> 15, 1 | seedState); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+if (process.env.SEED) { seedState = +process.env.SEED >>> 0; Math.random = mulberry; }   // swapped in before the game captures Math.random
+export function reseed(s) { if (seedState == null) throw new Error('reseed needs SEED'); seedState = s >>> 0; }
+let rndN = 0;                                     // every Math.random the game draws is counted, so a test can prove a stretch draws none
+{ const base = Math.random; Math.random = () => { rndN++; return base(); }; }
+export const rndCalls = () => rndN;
 const noop = () => {};
-const ctx2d = new Proxy({}, { get: (t, k) => (k === 'createRadialGradient' || k === 'createLinearGradient' ? () => ({ addColorStop: noop }) : noop), set: () => true });
+// every ctx method call and property set reaches globalThis.__ctxSpy(name, args) when a test installs one
+const spy = k => (...args) => { if (globalThis.__ctxSpy) globalThis.__ctxSpy(k, args); };
+const ctx2d = new Proxy({}, { get: (t, k) => (k === 'createRadialGradient' || k === 'createLinearGradient' ? () => ({ addColorStop: noop }) : k === 'globalAlpha' ? 1 : spy(k)),
+  set: (t, k, v) => { if (globalThis.__ctxSpy) globalThis.__ctxSpy(k, [v]); return true; } });
 const el = () => ({
   style: { setProperty: noop }, classList: { add: noop, remove: noop, toggle: noop }, addEventListener: noop,
   getContext: () => ctx2d, children: [], dataset: {}, querySelectorAll: () => [], appendChild: noop, setPointerCapture: noop, insertAdjacentHTML: noop, setAttribute: noop,
@@ -32,6 +40,7 @@ new Function(js)();
 export const T = window.__tryline;
 const inp = T.input;
 const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const D2R = Math.PI/180;
 
 // An average human in a duel: aims at the middle of the window with some
 // spread, misses 5% outright, and bites on a feint, step or dummy half the time.
@@ -54,13 +63,59 @@ export function duelBot(d, sigma = +process.env.DUEL_SIGMA || 0.095) {
   } else inp.aPressed = true;
 }
 
+// An average human at a goal kick, driving the real input path. He reads the
+// wind as well as his aid lets him, steers the arrow to his target, then holds
+// Kick and lets go near the band's centre with a 60ms spread; 4% of releases
+// are fumbles at a random moment. CPU kicks are watched, never skipped.
+// o.m / o.aim force the release level or the aim target (tests).
+export function kickBot(c, o = {}) {
+  const g = c.g;
+  if (g.watch || c.after || c.t <= 0.22) return;
+  let b = g.bot;
+  if (!b) {
+    const ideal = T.kick.aimFor(g, g.ctr), line = g.aid !== 'path';
+    const comp = !line ? 1 : g.di >= 2 ? 0.55 + 0.35*gauss() : 0.75 + 0.25*gauss();
+    const sA = !line ? 0.35 : g.di >= 2 ? 0.9 : 0.7;
+    const aim = o.aim != null ? o.aim : Math.max(-30*D2R, Math.min(30*D2R, ideal*comp + sA*D2R*gauss()));
+    b = g.bot = { aim, tRel: 0 };
+  }
+  if (g.stage === 'aim') {
+    const err = b.aim - g.aim;
+    if (Math.abs(err) >= 0.003) { inp.jx = Math.sign(err) * Math.max(0.15, Math.min(1, Math.abs(err) / 0.05)); return; }
+    inp.jx = 0;
+    if (!inp.aDown) { b.tRel = planRelease(g, o, 0.060); inp.aPressed = inp.aDown = true; }   // an ignored release re-plans
+  } else if (g.stage === 'power') {
+    if (g.pt + 1.5*T.STEP >= b.tRel) inp.aDown = false;   // update adds a step before it sees the release, so this strikes on the step nearest tRel
+  }
+}
+function planRelease(g, o, sig) {
+  if (o.m != null) return o.m * g.fill + 1e-6;
+  let t = g.ctr * g.fill + 0.012 + sig * gauss();
+  if (Math.random() < 0.04) t = Math.random() * g.fill * 1.15;
+  return t;
+}
+// The same man at a drop goal (Phase 2): the small button, timed from the meter's start, a wider aim spread.
+export function dropBot(c, o = {}) {
+  const g = c.g;
+  if (c.after || c.t <= 0.22) return;
+  let b = g.bot;
+  if (!b) {
+    const ideal = T.kick.aimFor(g, g.ctr);
+    b = g.bot = { aim: o.aim != null ? o.aim : Math.max(-30*D2R, Math.min(30*D2R, ideal + 1.0*D2R*gauss())), tRel: 0 };
+  }
+  const err = b.aim - g.aim;
+  inp.jx = Math.abs(err) >= 0.003 ? Math.sign(err) * Math.max(0.15, Math.min(1, Math.abs(err) / 0.05)) : 0;
+  if (g.stage === 'wait' && !inp.bDown) { b.tRel = planRelease(g, o, 0.065); inp.bPressed = inp.bDown = true; }
+  else if (g.stage === 'hold') { if (!b.tRel) b.tRel = planRelease(g, o, 0.065); if (g.pt + 1.5*T.STEP >= b.tRel) inp.bDown = false; }   // as kickBot: the step nearest tRel
+}
+
 // A deliberately ordinary human: runs at the line, swerves from the nearest
 // tackler, passes late under pressure, chases the carrier and dives close in.
 export function bot() {
   const M = T.M, b = M.ball, c = M.ctrl;
   inp.jx = 0; inp.jy = 0;
   if (M.phase === 'cut' && M.cut && M.cut.duel) { duelBot(M.cut); return; }
-  if (M.phase === 'goal' && M.goal.stage === 'aim') { inp.aPressed = true; return; }
+  if (M.phase === 'cut' && M.cut && M.cut.kind === 'goal') { (M.cut.g.type === 'drop' ? dropBot : kickBot)(M.cut); return; }
   if (!c || M.phase !== 'play') return;
   if (b.state === 'held' && b.carrier === c) {
     let near = 99, ny = 0;

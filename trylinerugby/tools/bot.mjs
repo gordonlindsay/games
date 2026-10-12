@@ -9,6 +9,7 @@ const pos = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].
 const n = +pos[0] || 18, half = +pos[1] || 240, duels = flag('--duels', 'live');
 for (const diff of [0, 1, 2]) {
   let us = 0, them = 0, tu = 0, tt = 0, w = 0, d = 0, l = 0, du = 0, dw = 0, dp = 0, frozen = 0;
+  const gk = { att: [0, 0], made: [0, 0] };
   const kinds = { past: 0, pass: 0, tackle: 0, block: 0 };
   for (let i = 0; i < n; i++) {
     const a = i % 6, b = (a + 1 + (i % 5)) % 6;
@@ -19,10 +20,12 @@ for (const diff of [0, 1, 2]) {
     us += M.score[0]; them += M.score[1]; tu += M.tries[0]; tt += M.tries[1];
     if (M.score[0] > M.score[1]) w++; else if (M.score[0] < M.score[1]) l++; else d++;
     du += M.stats.duels; dw += M.stats.duelsWon; dp += M.stats.duelsPerfect;
+    for (const t of [0, 1]) { gk.att[t] += M.stats.gk.att[t]; gk.made[t] += M.stats.gk.made[t]; }
     for (const k of Object.keys(kinds)) kinds[k] += M.stats['d_' + k] || 0;
   }
   const name = ['Easy', 'Normal', 'Hard'][diff];
-  let line = `${name.padEnd(6)}  avg ${(us / n).toFixed(1)}-${(them / n).toFixed(1)}  tries ${(tu / n).toFixed(1)}-${(tt / n).toFixed(1)}  W${w} D${d} L${l}`;
+  const pct = t => gk.att[t] ? Math.round(100 * gk.made[t] / gk.att[t]) : 0;
+  let line = `${name.padEnd(6)}  avg ${(us / n).toFixed(1)}-${(them / n).toFixed(1)}  tries ${(tu / n).toFixed(1)}-${(tt / n).toFixed(1)}  W${w} D${d} L${l}  kicks us ${pct(0)}% (${gk.att[0]}) them ${pct(1)}% (${gk.att[1]})`;
   if (duels !== 'off') line += `  | duels ${(du / n).toFixed(2)}/match (${Object.entries(kinds).map(([k, v]) => k + ' ' + (v / n).toFixed(2)).join(', ')}) won ${du ? Math.round(100 * dw / du) : 0}% perfect ${du ? Math.round(100 * dp / du) : 0}% frozen ${(frozen / n).toFixed(1)}s`;
   console.log(line);
 }

@@ -6,39 +6,41 @@ import { T } from './harness.mjs';
 
 const N = +process.argv[2] || 300;
 const STEP = T.STEP;
+// set pieces are staged 120 steps after a kickoff, so a goal close-up can never be open here; if one is, the stage is wrong
+const step = () => { T.update(STEP); if (T.M.cut && T.M.cut.kind === 'goal') { console.log('FAIL: a goal close-up opened during a set-piece run'); process.exit(1); } };
 const DIFFS = ['Easy', 'Normal', 'Hard'];
 
 function freshMatch(diff) {
   T.newMatch(0, 1, { halfLen: 240, diff, headless: false, duels: 'off' });   // ENG v FRA, both power 5
-  for (let i = 0; i < 120; i++) T.update(STEP);                  // let the kick-off settle
+  for (let i = 0; i < 120; i++) step();                          // let the kick-off settle
 }
 function runScrum(feed, taps, goodHit) {
   T.scrum(feed, 60, 35, '');
   T.input.jx = taps > 0 ? 1 : 0;
   let next = 0, guard = 0;
-  while (T.M.phase !== 'cut' && guard++ < 400) T.update(STEP);
+  while (T.M.phase !== 'cut' && guard++ < 400) step();
   const c = T.M.cut;
   while (T.M.cut === c && !c.result && guard++ < 2000) {
     if (goodHit && !c.hit && c.t >= 1.42) { T.input.aPressed = true; next = c.t + 1 / taps; }
     else if (taps > 0 && c.t >= 1.42 && c.t >= next) { T.input.aPressed = true; next = c.t + 1 / taps; }
-    T.update(STEP);
+    step();
   }
   T.input.jx = 0;
   const r = c.result;
-  while (T.M.phase === 'cut' && guard++ < 4000) T.update(STEP);
+  while (T.M.phase === 'cut' && guard++ < 4000) step();
   return r;
 }
 function runLineout(team, errSec) {
   T.lineout(team, 60, 5, '');
   let guard = 0;
-  while (T.M.phase !== 'cut' && guard++ < 400) T.update(STEP);
+  while (T.M.phase !== 'cut' && guard++ < 400) step();
   const c = T.M.cut, at = c.arrive - 0.57 + errSec;
   while (T.M.cut === c && c.winner == null && guard++ < 2000) {   // an overthrow's winner is drawn 0.45s after the miss
     if (c.jump[0] == null && c.t >= at) T.input.aPressed = true;
-    T.update(STEP);
+    step();
   }
   const w = c.winner;
-  while (T.M.phase === 'cut' && guard++ < 4000) T.update(STEP);
+  while (T.M.phase === 'cut' && guard++ < 4000) step();
   return w;
 }
 const pct = (n) => String(Math.round(100 * n / N)).padStart(3) + '%';

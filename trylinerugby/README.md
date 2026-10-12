@@ -35,6 +35,9 @@ nations, a local Surrey club, or a team you make yourself.
   - **Farnham is the default** (2026-10-12). The team screen always opens on Local. Quick Match starts with Farnham
     as your team (Change Team to swap), then any opponent from either list; a team you make there becomes yours
     while Farnham is still the untouched default. Championship has a Play as Farnham button, or pick any card.
+- **Goal kicks** (2026-10-12): pitch-level close-up, sevens drop kicks, Normal = CPU parity. Conversions and
+  penalty goals cut to a still shot from behind the kicker: steer the arrow, hold Kick, let go in the gold. The CPU's
+  kicks play the same shot with a Skip button. Drop goals keep today's open-play rule until Phase 2 of the spec.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
@@ -43,14 +46,14 @@ nations, a local Surrey club, or a team you make yourself.
 | | With the ball | Without it |
 |---|---|---|
 | Stick | Run. Flick sideways near a tackler to step him | Run |
-| Big button | Pass to the ringed teammate. Tilt to pick a side | Dive tackle |
+| Big button | Pass to the ringed teammate. Tilt to pick a side. At a goal kick, hold to power and let go in the gold | Dive tackle |
 | Small button | Hold to power a kick, release to kick. A tap is a chip | Switch to the defender nearest the ball |
 
-Keyboard: arrows or WASD, J, K, P to pause.
+Keyboard: arrows or WASD, J, K, P to pause. At a goal kick the arrows steer and J is Kick.
 
 ### Close-ups
 
-Scrums, lineouts and duels open a close-up: the pitch and the clock freeze while it runs.
+Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock freeze while it runs.
 
 - **Scrum:** the referee calls Crouch, Bind, Set. Press Push on Set for a good hit, then tap it fast with the stick
   held forward. The scrum moves with your shove, and the ball comes out where it ends up. Out-shove them on their
@@ -71,6 +74,62 @@ Scrums, lineouts and duels open a close-up: the pitch and the clock freeze while
 A mistimed duel falls back to the odds the open game would have given, so a duel is never a trap. A tap after the
 verdict skips the replay.
 
+### Goal kicks
+
+A conversion or a penalty goal cuts to a still, floodlit shot from behind the kicker, at pitch level, with the posts
+centre-screen. Every kick at goal is a drop kick, as sevens law requires. The camera never moves; only the arrow does.
+
+- **Aim.** The stick steers a gold arrow on the grass (18°/s at full tilt, clamped to ±30° of the posts' centre). On
+  Normal and Hard a dotted chalk line runs on from the arrow to the goal line and ends in a tick, so you can see which
+  upright you are pointing at; the arrow starts on the posts' centre and allowing for the wind is the skill. On Easy,
+  and on your first kick ever, the arrow starts on the wind-corrected line and the aid is the real flight path, 16
+  dots ending in a gold dot where the ball would cross, or a chalk cross where it would land short. While you hold,
+  the path follows the live meter: you watch it fall short, clear the bar, then hook left.
+- **Power.** Hold **Kick**. The meter beside the ball fills in about a second, chalk below the band, gold inside it,
+  coral above. Let go in the gold. Under the band the ball is slower, flies lower and fades right; over it hooks
+  left. The band is derived from the flight for this spot, kicker and wind, so it moves up, narrows and fills faster
+  with distance. A release under 12% is ignored, a cancelled touch is never a kick, and a finger already down when
+  the cut-in ends must lift and press again.
+- **Strike.** Two strides, the ball meets the ground on the mark as the boot arrives, a 70ms hit-stop, a thump.
+- **Wind.** Drawn once per match (30% at 0–3 mph, 45% at 4–11, 25% at 11–18), turned round at half time, and gusted a
+  little for each kick. The coral pennants on the posts stream downwind, and the chip at top-left gives the number;
+  under 2 mph it reads Calm and there is no hidden breeze. The wind is a constant push on the ball. It only acts on
+  kicks at goal; punts, chips and restarts are unchanged.
+- **Verdict.** A grade over the result: Pure Strike, Overcooked, Under-Hit, Wind (it would have scored in still air),
+  Off the Post, Off the Bar. The ball is judged against the real uprights and the 3m bar, with the ball's radius: a
+  post hit below the bar can't score. The points go on at the crossing. A tap from 0.25s after the verdict skips the
+  rest.
+- **CPU kicks** play the same shot from behind their kicker, in any interactive match, with a chalk arrow that swings
+  to show their aim-off and no meter. The big button reads **Skip**: the result was fixed when the kick was set up, so
+  skipping can't change it. Headless runs, AI v AI and the menu demo fly the kick instantly on the top-down pitch.
+- **Penalty card:** "34m to the Posts · Wind 9 MPH", or "· Calm". Kick at Goal is disabled when this kicker can't
+  reach the bar in this wind, and a kick at goal is taken from at least 10m out.
+
+Balance: Normal equals the CPU's own kicking rate (the only rate the old game had measured), Easy is 10 points above
+it and Hard 10 below, and sitters under the posts never miss. Measured with `goalkicks.mjs --rates 4000` at each of
+SEED 11, 42 and 3 and averaged (12,000 kicks a cell, good to about half a point), kicking 3, the match wind
+distribution; you are the headless bot driving the real input path, the CPU is `cpuKickInputs`. Each cell is Easy /
+Normal / Hard.
+
+| Spot | You | CPU |
+|---|---|---|
+| Conversion, in front | 100 / 100 / 100 | 100 / 100 / 100 |
+| Conversion, on the 15m line | 80 / 62 / 53 | 56 / 63 / 66 |
+| Conversion, touchline | 55 / 41 / 34 | 37 / 44 / 45 |
+| Penalty 22m, in front | 89 / 83 / 75 | 76 / 81 / 84 |
+| Penalty 30m, 15m off centre | 79 / 64 / 54 | 57 / 65 / 68 |
+| Penalty on the 15m line, 30m out | 67 / 54 / 46 | 48 / 56 / 57 |
+| Penalty touchline, 22m out | 57 / 44 / 37 | 39 / 46 / 49 |
+| Penalty 40m, in front | 76 / 61 / 47 | 54 / 61 / 65 |
+| Penalty 45m, 10m off centre | 64 / 50 / 43 | 45 / 51 / 55 |
+
+You are 2.1 points rms from the build spec's bot column and the CPU 1.1 from its. Easy runs about 5 points above the
+spec on wide kicks: its band is derived at the preset aim, so the arrow it hands you really does score with a
+band-centre release. The levers are all in `KICK` in `index.html`, and
+`GKTUNE='{"band":[0.15,0.13,0.10]}' node tools/goalkicks.mjs --rates 2000` tries values without an edit: `band` is
+the main dial (±0.01 is about ±3 points at 30m), `bandMin` floors the width on long and wide kicks, `fill` is the
+meter speed, `hook` and `push` the curl, `kw` the wind's pull, `cpuSig` and `cpuAim` the CPU.
+
 ## Files
 
 - `index.html` is the whole game in one page. GitHub Pages serves it from `main`.
@@ -85,8 +144,28 @@ verdict skips the replay.
     - outcomes, fallbacks and the gate;
     - that scrums release at the mark.
   - **`node tools/bot.mjs [n] [half] --duels live|instant|off`:** a scripted average player against the CPU on each
-    difficulty, with duel counts and win rates.
-  - **`node tools/sim.mjs`:** AI v AI matches, with no duels.
+    difficulty, with duel counts and win rates, and goal-kick rates for both sides (`kicks us 70% (378) them 69% (109)`).
+  - **`node tools/goalkicks.mjs [--rates N]`:** 398 asserts. It checks:
+    - the closed-form flight against a 1ms integration, the judge's fixtures, and the mirror for the CPU's end;
+    - that band-centre strikes score, the band is honest at its edges, over hooks left and under fades right;
+    - the wind's drift, headwind and tailwind, and that the Easy aid's preset aim scores in any wind;
+    - the live close-up end to end in a headless user match, the input guards (a finger already down, a release under
+      12%, a cancelled touch, pause and resume), and that no random number is drawn between the release and the verdict;
+    - the CPU's watch cut, that Skip gives the same result as watching, the instant path under the menu demo's flags for
+      both teams, and that the same inputs through the live cut and the instant path give the same result, score and
+      restart (a missed penalty's drop-out included);
+    - the rate table above, at N kicks per cell (default 1,200): each cell within the sampling noise of the measured
+      table (never under 6 points), each table within 3.5 points rms of the build spec's, and the ordering between
+      spots, difficulties and kicking ratings;
+    - the wind's range, the half-time turn, the labels and the penalty card;
+    - a render smoke test: every spot, every difficulty's aid, both teams and every stage at four phone sizes, and once
+      under reduced motion, with no non-finite number reaching the canvas (arguments, dash arrays and property sets)
+      and the posts, ball, meter and chip where the spec puts them;
+    - the drawn woodwork: 0.5s after a contact the ball is between the uprights and beyond the line on screen exactly
+      when the kick scores, and a miss is back in play; the held ball sits at the kicker's hip and does not jump at
+      the drop; the flight zoom moves under 0.08 a frame on an in-front conversion; and the verdict banner is clear of
+      the ball and the A button at 844x390 and 667x375.
+  - **`node tools/sim.mjs`:** AI v AI matches, with no duels, and both sides' goal-kick rates.
   - **`node tools/teams.mjs`:** 40 asserts. It checks:
     - every pairing of built-in teams has shirts far enough apart, and hooped sides keep their hoops;
     - the nations keep their order, and Farnham leads Local;
@@ -100,15 +179,22 @@ verdict skips the replay.
 
 ### Measured baseline
 
-Measured 2026-10-12 with `bot.mjs`: 1,440 matches per row (12 seeds x 120), 4-minute halves, duels with the Dummy and
-`BURST` at x1.09 (x1.14 Perfect).
+Measured 2026-10-12 with `bot.mjs`, after goal kicks: 1,440 matches per row (12 seeds x 120), 4-minute halves, duels
+with the Dummy and `BURST` at x1.09 (x1.14 Perfect).
 
-| | Wins, duels off | Wins, duels live | Tries, live (us–them) | Duel win rate |
-|---|---|---|---|---|
-| Easy | 98.9% | 99.4% | 9.3–0.4 | 82% |
-| Normal | 83.5% | 88.3% | 5.2–0.9 | 67% |
-| Hard | 48.9% | 53.3% | 2.3–1.9 | 51% |
+| | Wins, duels off | Wins, duels live | Tries, live (us–them) | Duel win rate | Goal kicks, live (us / them) |
+|---|---|---|---|---|---|
+| Easy | 98.2% | 99.2% | 9.3–0.3 | 82% | 83% / 65% |
+| Normal | 81.0% | 84.9% | 5.3–0.8 | 67% | 69% / 73% |
+| Hard | 44.4% | 50.2% | 2.3–1.8 | 52% | 61% / 77% |
 
+- **Why it moved:** before goal kicks the headless bot converted 100% of its kicks, because the old modal's timing only
+  ran in `frame()`. It now kicks through the live close-up at 83% on Easy, 69% on Normal and 61% on Hard, and the
+  CPU kicks at its own rate on every level, so wins dip by up to five points. It is a correction, not a regression. The
+  previous table read 98.9 / 99.4 (Easy), 83.5 / 88.3 (Normal) and 48.9 / 53.3 (Hard) for wins with duels off / live.
+- The bot lets go of Kick on the step nearest its planned release. `update` adds a step before it sees the release,
+  so a bot that waits for `pt + STEP/2` strikes a full step (17ms) late on average; the first measurement of this table
+  was taken that way. Ours are up to 2 points higher than it (Easy unchanged), and the CPU's are slightly lower.
 - **Duels:** about 3.1 a match, freezing about 6s in total.
 - **Burst size:**
   - x1.12 (x1.18 Perfect) put Normal at +6.8 win points, over the +6 target.
@@ -142,6 +228,19 @@ Measured 2026-10-12 with `bot.mjs`: 1,440 matches per row (12 seeds x 120), 4-mi
   - `CLUBS` is append-only.
   - A clash of shirts is settled by `awayKit()`. It tries, in order: the change kit, the colours swapped, then white,
     then black.
+- **Goal kicks** run in the kick frame: every kick is computed as if the kicker attacks +x at posts on x = 110, with
+  the uprights at y = 32.2 and 37.8; team 1 is mirrored in (`toFrame`), so the CPU shares the code path and left and
+  right in a verdict are always the kicker's. The flight is closed form (`posAt`), so it has no integrator and no
+  frame-rate dependence, and the result is fixed at the release: a live kick, a skipped CPU kick and the instant
+  headless path all give the same crossing. `M.wind` is drawn in `newMatch` and turned at half time; each kick's wind
+  is drawn once in `makeGoal`. The close-up's rig is `kickCam`: a still camera `8 + 0.2·D` metres behind the mark at
+  2.2m, with the lens solved so the mark sits at 0.80H and the upright tops just under the scoreboard. The drawn ball
+  comes from `ballAt` (the trail samples it too): the closed form, then for 0.5s a cosmetic rebound in the kick's own
+  axes, so the woodwork reads on screen the way the verdict does. A scoring contact carries on behind the posts (a
+  post nudges it in, the bar pops it over); a miss comes back into play, and a post miss away from its upright. The
+  flight camera is `kickView`: the zoom starts at the ball's screen apex but at least 0.4s before the crossing, and
+  is held continuously to the largest Z that keeps the ball in frame. The verdict banner (`say(…, low)`) sits under
+  the crossbar while the ball is up at the posts (`verdictLow`) and up top when it has dropped short.
 - **Chasers:** defenders who are chasing must pursue at full speed (`pursue: true`). With arrive-style steering they
   slow as they close and can never catch a runner. That bug once made a scripted player score 15+ tries a match.
 - **Balance levers:** bursts are the lever for duel balance. Shrinking duel windows barely moves results, because a

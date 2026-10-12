@@ -6,7 +6,7 @@ const STEP = T.STEP;
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
 const fresh = (duels = 'live', diff = 1) => T.newMatch(0, 1, { halfLen: 240, diff, headless: true, duels });
-const runUntil = (pred, max = 600) => { for (let i = 0; i < max && !pred(); i++) T.update(STEP); return pred(); };
+const runUntil = (pred, max = 600) => { for (let i = 0; i < max && !pred(); i++) { T.update(STEP); if (T.M.cut && T.M.cut.kind === 'goal') throw new Error('a goal close-up opened in a duel scenario'); } return pred(); };
 const M = () => T.M;
 // play a live duel to the end with an input at time `at` (null = no input)
 function play(c, act, at) {
