@@ -1,20 +1,24 @@
 // Loads the game's <script> from ../index.html into Node with a stub DOM,
-// so the match engine can run headless. Exports the engine handle and a
-// scripted "average player" used to check difficulty balance.
+// so the match engine can run headless. Exports the engine handle, a scripted
+// "average player", and its duel behaviour. SEED=n makes runs repeatable.
 import fs from 'fs';
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 
+if (process.env.SEED) {                           // mulberry32, swapped in before the game captures Math.random
+  let a = +process.env.SEED >>> 0;
+  Math.random = () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
 const noop = () => {};
-const ctx2d = new Proxy({}, { get: (t, k) => (k === 'createRadialGradient' ? () => ({ addColorStop: noop }) : noop), set: () => true });
+const ctx2d = new Proxy({}, { get: (t, k) => (k === 'createRadialGradient' || k === 'createLinearGradient' ? () => ({ addColorStop: noop }) : noop), set: () => true });
 const el = () => ({
   style: { setProperty: noop }, classList: { add: noop, remove: noop, toggle: noop }, addEventListener: noop,
   getContext: () => ctx2d, children: [], dataset: {}, querySelectorAll: () => [], appendChild: noop, setPointerCapture: noop,
   set innerHTML(v) {}, get innerHTML() { return ''; }, textContent: '', hidden: false, disabled: false,
 });
 const els = {};
-globalThis.document = { getElementById: id => (els[id] ||= el()), querySelectorAll: () => [], addEventListener: noop, createElement: el, hidden: false };
+globalThis.document = { getElementById: id => (els[id] ||= el()), querySelectorAll: () => [], addEventListener: noop, createElement: el, createTextNode: () => ({}), hidden: false };
 globalThis.window = globalThis;
 globalThis.innerWidth = 844; globalThis.innerHeight = 390; globalThis.devicePixelRatio = 2;
 globalThis.addEventListener = noop; globalThis.requestAnimationFrame = noop;
@@ -24,12 +28,29 @@ new Function(js)();
 
 export const T = window.__tryline;
 const inp = T.input;
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+
+// An average human in a duel: aims at the middle of the window with some
+// spread, misses 5% outright, and bites on a feint, step or dummy half the time.
+export function duelBot(d, sigma = +process.env.DUEL_SIGMA || 0.095) {
+  if (!d.bot) {
+    const centre = (d.win[0] + d.win[1]) / 2;
+    const tricked = d.open0 !== d.open || d.stepDir || d.dummy;
+    d.bot = { at: centre + gauss() * sigma, none: Math.random() < 0.05, fooled: !!tricked && Math.random() < 0.5, done: false };
+    if (d.bot.fooled && d.kind !== 'past') d.bot.at = centre - 0.30;
+  }
+  if (d.bot.done || d.bot.none || d.res || d.t < 0.3 || d.t < d.bot.at) return;
+  d.bot.done = true;
+  if (d.kind === 'past') inp.flick = d.bot.fooled ? d.open0 : d.open;
+  else inp.aPressed = true;
+}
 
 // A deliberately ordinary human: runs at the line, swerves from the nearest
 // tackler, passes late under pressure, chases the carrier and dives close in.
 export function bot() {
   const M = T.M, b = M.ball, c = M.ctrl;
   inp.jx = 0; inp.jy = 0;
+  if (M.phase === 'cut' && M.cut && M.cut.duel) { duelBot(M.cut); return; }
   if (M.phase === 'goal' && M.goal.stage === 'aim') { inp.aPressed = true; return; }
   if (!c || M.phase !== 'play') return;
   if (b.state === 'held' && b.carrier === c) {

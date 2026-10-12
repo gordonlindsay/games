@@ -149,6 +149,12 @@ tr.me td{background:rgba(255,207,61,.09)}
 @keyframes turn{0%,25%{transform:rotate(0)}50%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
 @media (orientation:portrait) and (pointer:coarse){#rotate{display:grid}}
 @media (prefers-reduced-motion:reduce){#rotate .phone{animation:none;transform:rotate(-90deg)}}
+#plates{position:absolute;display:grid;grid-template-columns:1fr 1fr;gap:8px;width:164px;pointer-events:none}
+#plates span{display:grid;place-items:center;height:30px;border-radius:4px;background:rgba(8,14,10,.78);border:1px solid rgba(241,238,228,.35);font:800 15px/1 var(--display);text-transform:uppercase;letter-spacing:.04em}
+@keyframes cue{50%{box-shadow:0 0 0 8px rgba(255,207,61,.35)}}
+.act.cue{animation:cue .5s ease-in-out infinite}
+#banner.cut{top:calc(env(safe-area-inset-top,0px) + 66px)}
+#banner .msg .grade{display:block;margin-bottom:6px;font:800 14px/1 var(--body);letter-spacing:.16em;color:var(--flood)}
 #banner{position:fixed;left:0;right:0;top:30%;z-index:7;display:flex;justify-content:center;pointer-events:none;padding:0 16px}
 #banner .msg{padding:10px 18px;border-left:8px solid var(--k,var(--flood));background:rgba(8,14,10,.86);font:900 clamp(30px,7vw,46px)/1 var(--display);text-transform:uppercase;letter-spacing:.03em;animation:pop .22s ease-out}
 #banner .msg.small{font-size:24px;padding:8px 14px;border-left-width:6px}
@@ -178,7 +184,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 .aim .zone{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);background:rgba(255,207,61,.28);border-left:3px solid var(--flood);border-right:3px solid var(--flood)}
 .aim .mk{position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;background:var(--chalk);box-shadow:0 0 10px rgba(241,238,228,.7)}
 .aim-cap{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--chalk-dim)}
-@media (prefers-reduced-motion:reduce){#banner .msg{animation:none}.act{transition:none}}
+@media (prefers-reduced-motion:reduce){#banner .msg{animation:none}.act{transition:none}.act.cue{animation:none}}
 </style>
 </head>
 <body>
@@ -199,6 +205,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 
 <div id="controls" hidden>
   <div id="zone"></div>
+  <div id="plates" hidden><span>Step Left</span><span>Step Right</span></div>
   <div id="stick"><div id="knob"></div></div>
   <button class="act b" id="btnB"><span id="lb">Kick</span></button>
   <button class="act a" id="btnA"><span id="la">Pass</span></button>
@@ -220,6 +227,7 @@ tr.me td{background:rgba(255,207,61,.09)}
       <div class="set"><span class="lbl">Half Length</span><div class="seg" data-key="half"><button>2 Min</button><button>4 Min</button><button>6 Min</button></div></div>
       <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
       <div class="set"><span class="lbl">Sound</span><div class="seg" data-key="sound"><button>On</button><button>Off</button></div></div>
+      <div class="set"><span class="lbl">Duels</span><div class="seg" data-key="duels"><button>On</button><button>Off</button></div></div>
     </div>
   </div>
 </section>
@@ -255,6 +263,7 @@ tr.me td{background:rgba(255,207,61,.09)}
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip. Through the posts in open play is a <b>drop goal</b>.</dd>
       <dt>Tackle</dt><dd>When they have the ball. Dive at the carrier from close range. Miss and you're on the floor.</dd>
       <dt>Switch</dt><dd>Take the defender nearest the ball.</dd>
+      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the big button.</dd>
       <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast with the stick held forward. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
       <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass / Tackle. <b>K</b> Kick / Switch. <b>P</b> Pause.</dd>
@@ -343,7 +352,7 @@ const dist = (a,b) => hyp(a.x-b.x, a.y-b.y);
    Persistence (per-viewer convenience only)
    ========================================================= */
 const STORE = 'tryline.v1';
-let settings = { half:1, diff:1, sound:true };
+let settings = { half:1, diff:1, sound:true, duels:true, duelSeen:false };
 let champ = null;
 function load() {
   try {
@@ -379,10 +388,12 @@ function newMatch(u, c, opts) {
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, ctrl:null, poss:0,
     firstKick: rnd() < 0.5 ? 0 : 1, auto:!!opts.auto, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless,
     paused:false, over:false, charging:false, charge:0, cam:{ x:60, y:35 }, cut:null, surge:null,
-    stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0 },
+    di:opts.diff, duels:(opts.auto || opts.demo) ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0, ctrlT:0, ctrlPrev:null,
+    duelLog:{ last:-99, lastKind:null, half:[0, 0], bonus:[false, false], fails:0 },
+    stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0, duels:0, duelsWon:0, duelsPerfect:0 },
   };
   for (let t = 0; t < 2; t++) for (let i = 0; i < 7; i++) {
-    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0 });
+    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0, boostMul:1, autoDir:0 });
   }
   M.ctrl = M.players[3];
   kickoff(M.firstKick);
@@ -391,7 +402,7 @@ function newMatch(u, c, opts) {
 function maxSpeed(p) {
   let s = 7.6 + M.nat[p.team].pace*0.25;
   if (p.team === 1) s *= M.diff.cpuSpeed;
-  if (p.boost > 0) s *= 1.18;
+  if (p.boost > 0) s *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) s *= 1.08;
   return s;
 }
@@ -437,7 +448,7 @@ function kickoffFormation(kTeam, kx) {
   for (const p of M.players) {
     if (p.team === kTeam) { p.x = kx - d*(i === 3 ? 2.5 : 1.2); p.y = KY[i]; i++; p.fx = d; }
     else { p.x = clamp(kx + d*RX[j], 2, 118); p.y = RY[j]; j++; p.fx = -d; }
-    p.fy = 0; p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = 0; p.hx = p.x; p.hy = p.y;
+    p.fy = 0; p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = 0; p.boost = 0; p.hx = p.x; p.hy = p.y;
   }
 }
 function kickoff(team) {
@@ -477,6 +488,9 @@ function releaseTo(team, x, y, kind) {
   const off = kind === 'ruck' ? 1.6 : kind === 'scrum' ? 1.2 : kind === 'lineout' ? 1.5 : 0.6;
   const sy = kind === 'lineout' ? (y < 35 ? y + 4 : y - 4) : y;
   const p = nearestFree(team, x - d*off, sy) || M.players.find(q => q.team === team);
+  if (kind === 'scrum' || kind === 'lineout') {   // the scrum-half or catcher takes it at the mark, whoever won it
+    p.x = clamp(x - d*off, 1, 119); p.y = clamp(sy, 2, 68); p.vx = p.vy = 0; p.fx = d; p.fy = 0;
+  }
   M.phase = 'play';
   setCarrier(p);
   p.quick = kind === 'ruck' || kind === 'scrum' || kind === 'lineout';
@@ -551,17 +565,19 @@ function bestReceiver(p) {
   }
   return best;
 }
-function doPass(from, to) {
+function doPass(from, to, o) {
+  o = o || {};
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
   const spd = 15 + n.handling*1.1;
   let tx = to.x, ty = to.y, T = 0.2;
   for (let i = 0; i < 3; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + to.vx*T; ty = to.y + to.vy*T; }
   if ((tx-from.x)*d > 0) tx = from.x;
-  const err = (5-n.handling)*0.08;
-  tx += gauss()*err; ty += gauss()*err;
+  if (!o.sure) { const err = (5-n.handling)*0.08; tx += gauss()*err; ty += gauss()*err; }
+  else ty = clamp(ty, 3, 67);   // a won Key Pass is never caught in touch
   T = hyp(tx-b.x, ty-b.y)/spd + 0.06;
   b.state = 'air'; b.carrier = null; b.last = from.team;
-  b.f = { kind:'pass', team:from.team, x0:b.x, y0:b.y, x1:tx, y1:ty, t:0, T, H:0.5, z0:1.1, z1:1.1, rolled:new Set(), onside:null, target:to };
+  b.f = { kind:'pass', team:from.team, x0:b.x, y0:b.y, x1:tx, y1:ty, t:0, T, H:0.5, z0:1.1, z1:1.1, rolled:new Set(o.skip || []), onside:null, target:to,
+    sure:!!o.sure, boost:o.boost || null };
   from.hold = 0; from.quick = false;
   M.stats.passes++;
   if (from.team === 0 && !M.auto) M.ctrl = to;
@@ -614,19 +630,17 @@ function aiKick(p, type) {
 
 /* ---------- tackling ---------- */
 function attemptTackle(q, c, mode) {
-  let p = mode === 'dive' ? (dist(q,c) < 1.7 ? 0.66 : 0.5) : mode === 'contact' ? 0.42 : (q.team === 1 ? M.diff.cpuTackle : M.diff.myTackle);
-  p += (M.nat[q.team].power - M.nat[c.team].power)*0.05;
-  if (c.side > 0) p *= 0.65;
-  if ((q.x-c.x)*dirOf(c.team) < -0.3) p *= 0.75;
+  const p = tackleChance(q, c, mode);
   q.tcd = 1.0;
   M.stats['ta'+c.team] = (M.stats['ta'+c.team]||0) + 1;
-  if (rnd() < clamp(p, 0.08, 0.95)) { M.stats['ts'+c.team] = (M.stats['ts'+c.team]||0) + 1; tackle(c, q); return true; }
+  if (rnd() < p) { M.stats['ts'+c.team] = (M.stats['ts'+c.team]||0) + 1; tackle(c, q); return true; }
   q.down = mode === 'dive' ? 0.75 : 0.5;
   M.stats.broken++;
   if (c.team === 0 && !M.auto) say('Broken Tackle', 'small');
   return false;
 }
-function tackle(c, q) {
+function tackle(c, q, o) {
+  o = o || {};
   M.stats.tackles++;
   c.down = 1.25; c.vx *= 0.2; c.vy *= 0.2;
   q.down = 1.0; q.tcd = 1.0;
@@ -639,14 +653,15 @@ function tackle(c, q) {
   }
   placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
   M.phaseCount++; M.stats.rucks++;
-  startSet({ kind:'ruck', team, x:clamp(c.x,1,119), y:clamp(c.y,1,69), t:1.05, then:resolveRuck });
+  startSet({ kind:'ruck', team, x:clamp(c.x,1,119), y:clamp(c.y,1,69), t:o.dom ? DOM_RUCK : 1.05, dom:!!o.dom, domP:o.domP, then:resolveRuck });
 }
 function resolveRuck(s) {
   const att = s.team, def = 1-att;
   if (rnd() < 0.045) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
-  const pT = 0.075 + (M.nat[def].power - M.nat[att].power)*0.02 + (def === 1 ? M.diff.turnover : -M.diff.turnover);
-  if (rnd() < clamp(pT, 0.03, 0.18)) { M.stats.turnovers++; say('Turnover', 'small'); releaseTo(def, s.x, s.y, 'turnover'); return; }
+  const pT = s.dom ? s.domP : 0.075 + (M.nat[def].power - M.nat[att].power)*0.02 + (def === 1 ? M.diff.turnover : -M.diff.turnover);
+  if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) { M.stats.turnovers++; say('Turnover', 'small'); releaseTo(def, s.x, s.y, 'turnover'); if (s.dom) surge(0, LINE_SPEED); return; }
   releaseTo(att, s.x, s.y, 'ruck');
+  if (s.dom) surge(0, LINE_SPEED);
 }
 function tackleChecks(c) {
   for (const q of M.players) {
@@ -696,7 +711,7 @@ function penChoice(team, x, y, c) {
   else if (c === 'touch') {
     const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3), 15, 105);
     sfx('kick');
-    deadBall(() => lineout(team, nx, y, 'Kick to Touch'));
+    lineout(team, nx, y, 'Kick to Touch');   // after the hooter too: the kicking side gets its lineout
   } else startSet({ kind:'tap', team, x, y, t:0.8, snap:true, label:'Tap and Go', then:s => releaseTo(s.team, s.x, s.y, 'tap') });
 }
 function scoreTry(p) {
@@ -786,6 +801,7 @@ function updateCut(dt) {
   const c = M.cut;
   c.t += dt;
   if (c.after) {
+    if (c.duel && c.t >= c.skipAt && (input.aPressed || input.bPressed || input.flick)) c.hold = 0;   // tap to skip
     if (c.hold > 0) c.hold -= dt;
     else {
       c.exit = Math.max(0, c.exit) + dt;
@@ -794,7 +810,7 @@ function updateCut(dt) {
   } else if (c.kind === 'scrum') updateScrum(c, dt);
   else if (c.kind === 'lineout') updateLineout(c, dt);
   else updateDuel(c, dt);
-  input.aPressed = input.bPressed = false;
+  input.aPressed = input.bPressed = false; input.flick = 0;
 }
 function surge(team, secs) { M.surge = { team, t:secs }; }
 
@@ -812,7 +828,7 @@ function updateScrum(c, dt) {
   if (input.aPressed) {
     if (t < SCRUM_SET - 0.08) { if (!c.early && !c.hit) { c.early = true; c.pos -= 0.25; say('Early', 'small'); } }
     else if (!c.hit && !c.early && t <= SCRUM_SET + 0.28) { c.hit = true; c.pos += 0.35; say('Good Hit', 'small'); buzz(25); }
-    if (t >= SCRUM_SET) c.rate += 1;
+    if (t >= SCRUM_SET) { c.rate += 1; c.taps = (c.taps || 0) + 1; }
   }
   if (t < SCRUM_SET) return;
   if (!c.engaged) { c.engaged = true; sfx('tackle'); buzz(40); }
@@ -826,7 +842,8 @@ function updateScrum(c, dt) {
 }
 function resolveScrum(c) {
   const p = c.pos, F = c.feed;
-  const res = p >= 2.0 ? 'dom0' : p <= -2.0 ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
+  let res = p >= 2.0 ? 'dom0' : p <= -2.0 ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
+  if (res === 'dom1' && !c.taps && !c.hit) res = F === 0 ? 'steal1' : 'win1';   // no push at all loses the ball, nothing worse
   c.result = res;
   const mx = clamp(c.x + p, 15, 105), y = c.y;
   if (res === 'dom0' || res === 'dom1') {
@@ -901,8 +918,361 @@ function autoLineout(s) {
   releaseTo(w, s.x, s.y, 'lineout');
 }
 
-/* Duels: filled in from the duel spec. */
-function updateDuel(c, dt) { finishCut(() => {}, 0); }
+/* ---------- duels ----------
+   Four one-on-one moments that cut to a chase-cam close-up: Get Past and
+   Key Pass on attack, Tackle and Block on defence. A gold ring is the only
+   timing cue. A win gives a short burst; a mistime falls back to the odds
+   the open game would have given, so a duel is never a trap.
+   M.duels: 'off' (setting off, AI v AI, demo, default headless),
+   'live' (the close-up runs) or 'instant' (resolved at the trigger, for tools). */
+const DUEL = {
+  past:   { name:'Get Past', rig:1, tk:1.20, win:[0.30,0.23,0.17], mod:['pace','power'],       cpu:[0,0.20,0.40] }, // feint chance
+  pass:   { name:'Key Pass', rig:2, tk:1.20, win:[0.32,0.24,0.18], mod:['handling','pace'],    cpu:[0,0.06,0.12] }, // commit jitter, s
+  tackle: { name:'Tackle',   rig:1, tk:1.20, win:[0.30,0.23,0.17], mod:['power','pace'],       cpu:[0.15,0.30,0.50] }, // step chance
+  block:  { name:'Block',    rig:2, tk:1.05, win:[0.26,0.20,0.15], mod:['handling','handling'], cpu:[0,0.15,0.30] }, // dummy chance
+};
+const DUEL_GRACE = 0.30, DUEL_OUTRO = 0.55, DUEL_SKIP = 0.25, DUEL_GAP = 30, DUEL_LAST_GAP = 6;
+const G_START = 7.0, G_WIN = 2.4, G_HIT = 0.8;          // the restaged approach, metres apart
+const BURST = { ok:[1.06, 2.0], perfect:[1.10, 2.5], knock:[1.04, 1.2] };   // measured: bigger bursts made duels worth ~9 win points on Normal
+const DOM_TURN = [0.25, 0.35], DOM_RUCK = 1.6, LINE_SPEED = 2.5;
+const INSTANT = [0.85, 0.70, 0.55];                      // instant-mode win rate by difficulty
+
+function tackleChance(q, c, mode, stepped) {
+  if (stepped == null) stepped = c.side > 0;
+  let p = mode === 'dive' ? (dist(q, c) < 1.7 ? 0.66 : 0.5) : mode === 'contact' ? 0.42 : (q.team === 1 ? M.diff.cpuTackle : M.diff.myTackle);
+  p += (M.nat[q.team].power - M.nat[c.team].power)*0.05;
+  if (stepped) p *= 0.65;
+  if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
+  return clamp(p, 0.08, 0.95);
+}
+function setBoost(p, mul, secs) {
+  p.boostMul = mul; p.boost = secs; p.autoDir = 0;
+  const sp = maxSpeed(p), m = hyp(p.fx, p.fy) || 1;
+  p.vx = p.fx/m*sp; p.vy = p.fy/m*sp;
+}
+function duelGate(kind) {
+  if (M.duels === 'off' || M.phase !== 'play' || M.charging || M.clock < 15 || M.cut) return false;
+  const L = M.duelLog, h = M.half - 1;
+  if (M.hooter && !L.bonus[h] && M.dclock - L.last >= DUEL_LAST_GAP) return 'bonus';
+  if (M.dclock - L.last < DUEL_GAP || kind === L.lastKind) return false;
+  if (L.half[h] >= Math.ceil(M.halfLen/90)) return false;
+  return 'normal';
+}
+function findAttackDuel(c) {
+  if (c !== M.ctrl || c.hold < 0.5 || c.down > 0 || c.side > -0.9 || c.vx <= 3) return null;
+  if (110 - c.x < 3 || c.y < 6 || c.y > 64) return null;
+  if (input.world().x < 0.5) return null;                       // running at him, or no duel
+  let d1 = null, bd = 1e9;
+  for (const q of M.players) if (q.team === 1 && q.down <= 0 && q.x - c.x > 0.5) { const d = dist(q, c); if (d < bd) { bd = d; d1 = q; } }
+  if (!d1 || bd < 3.6 || bd > 4.6 || d1.tcd > 0) return null;
+  const ux = (d1.x - c.x)/bd, uy = (d1.y - c.y)/bd;
+  if ((c.vx - d1.vx)*ux + (c.vy - d1.vy)*uy <= 3) return null;
+  for (const q of M.players) if (q.team === 1 && q !== d1 && q.down <= 0 && q.x >= c.x - 1 && dist(q, c) < 10) return null;
+  let r = null;
+  for (const p of M.players) {
+    if (p.team !== 0 || p === c || p.down > 0) continue;
+    const back = c.x - p.x, lat = Math.abs(p.y - c.y);
+    if (back < 0 || back > 6 || lat < 4 || lat > 12) continue;
+    if (M.players.some(q => q.team === 1 && q !== d1 && q.down <= 0 && dist(q, p) < 6)) continue;
+    r = p; break;
+  }
+  if (r) { const g = duelGate('pass'); if (g) return { kind:'pass', U:c, O:d1, R:r, how:g }; }
+  const g = duelGate('past');
+  return g ? { kind:'past', U:c, O:d1, how:g } : null;
+}
+function findTackleDuel(c) {
+  if (c.hold < 0.5 || c.down > 0) return null;
+  const q = M.ctrl;
+  if (!q || q.team !== 0 || q.down > 0 || q.tcd > 0 || M.ctrlT < 0.6) return null;
+  if (q.x >= c.x - 0.5) return null;
+  const d = dist(q, c);
+  if (d < 2.9 || d > 6.0) return null;
+  if (c.x - 10 < 3 || c.y < 6 || c.y > 64) return null;
+  for (const o of M.players) if (o.team === 0 && o !== q && o.down <= 0 && o.x <= c.x + 1 && dist(o, c) < 10) return null;
+  const j = input.world();
+  if (j.mag <= 0.5 || (j.x*(c.x - q.x) + j.y*(c.y - q.y))/(j.mag*d) < 0.57) return null;
+  const g = duelGate('tackle');
+  return g ? { kind:'tackle', U:q, O:c, how:g } : null;
+}
+function duelCheck(c) {
+  if (M.duels === 'off') return false;              // before any rnd(), so AI v AI keeps its sequence
+  const s = c.team === 0 ? findAttackDuel(c) : findTackleDuel(c);
+  if (!s) return false;
+  startDuel(s);
+  return true;
+}
+function blockSpec(from, to) {
+  const q = M.ctrl, b = M.ball;
+  if (!q || q.team !== 0 || q.down > 0 || q.tcd > 0 || M.ctrlT < 0.6 || from.x - 10 < 3) return null;
+  const P0 = { x:b.x, y:b.y }, P1 = { x:to.x + to.vx*0.4, y:to.y + to.vy*0.4 };
+  const vx = P1.x - P0.x, vy = P1.y - P0.y, len = hyp(vx, vy);
+  if (len < 5) return null;
+  const u = ((q.x - P0.x)*vx + (q.y - P0.y)*vy)/(len*len);
+  if (u < 0.25 || u > 0.85) return null;
+  const L = { x:P0.x + vx*u, y:P0.y + vy*u };
+  if (hyp(q.x - L.x, q.y - L.y) > 3.0) return null;
+  if (M.players.some(o => o.team === 0 && o !== q && o.down <= 0 && dist(o, to) < 5)) return null;
+  const j = input.world();
+  if (j.mag <= 0.5) return null;
+  const toward = (x, y) => { const dx = x - q.x, dy = y - q.y, m = hyp(dx, dy) || 1; return (j.x*dx + j.y*dy)/(j.mag*m) >= 0.57; };
+  if (!toward(L.x, L.y) && !toward(from.x, from.y)) return null;
+  const g = duelGate('block');
+  return g ? { kind:'block', U:q, O:from, R:to, P0, P1, L, how:g } : null;
+}
+// the CPU's pressure pass: a Block duel may take it over
+function cpuPass(p, to) {
+  if (M.duels !== 'off' && p.team === 1) {
+    const s = blockSpec(p, to);
+    if (s) { M.duelPending = s; return; }
+  }
+  doPass(p, to);
+}
+function startPendingDuel() {
+  const s = M.duelPending; M.duelPending = null;
+  if (!(M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === s.O)) return;
+  const again = blockSpec(s.O, s.R);          // your man may have gone down, or another duel just used the gap
+  if (again) startDuel(again); else doPass(s.O, s.R);
+}
+function startDuel(s) {
+  const k = DUEL[s.kind], di = M.di, n0 = M.nat[0], n1 = M.nat[1], L = M.duelLog, h = M.half - 1;
+  if (s.how === 'bonus') L.bonus[h] = true; else if (s.how !== 'force') L.half[h]++;
+  L.last = M.dclock; L.lastKind = s.kind;
+  M.stats.duels++; M.stats['d_' + s.kind] = (M.stats['d_' + s.kind] || 0) + 1;
+  const snap = p => p ? { x:p.x, y:p.y, vx:p.vx, vy:p.vy } : null;
+  const c = { duel:true, kind:s.kind, U:s.U, O:s.O, R:s.R || null, how:s.how, lastEvt:0, armed:false, opened:false,
+    res:null, act:null, judged:null, out:null, verdict:null, u0:snap(s.U), o0:snap(s.O), r0:snap(s.R) };
+  const U = s.U, tgt = s.kind === 'block' ? s.L : s.O;
+  const gx = tgt.x - U.x, gy = tgt.y - U.y, g0 = hyp(gx, gy) || 1;
+  c.D = { x:gx/g0, y:gy/g0 }; c.g0 = g0;
+  let vc = 6;
+  if (s.kind === 'block') { c.w = 1; c.K = { x:s.L.x, y:s.L.y }; c.P0 = s.P0; c.P1 = s.P1; c.L = s.L; }
+  else {
+    const uv = U.vx*c.D.x + U.vy*c.D.y, ov = s.O.vx*c.D.x + s.O.vy*c.D.y;
+    vc = Math.max(4, uv - ov);
+    c.w = clamp(uv/vc, 0.3, 0.7);
+    c.K = { x:U.x + c.D.x*g0*c.w, y:U.y + c.D.y*g0*c.w };
+  }
+  c.tk = k.tk;
+  c.rho = (G_START - G_HIT)/vc/(c.tk - CUT_IN);
+  c.tTrig = CUT_IN + clamp((G_START - g0)/(G_START - G_HIT), 0, 1)*(c.tk - CUT_IN);
+  c.dtau = clamp(c.rho*(c.tk - c.tTrig), 0, 0.5);
+  const tw = CUT_IN + (c.tk - CUT_IN)*(G_START - G_WIN)/(G_START - G_HIT);
+  const w = k.win[di] + clamp(0.012*(n0[k.mod[0]] - n1[k.mod[1]]), -0.036, 0.036)
+    + (settings.duelSeen ? 0 : 0.08) + (L.fails >= 2 ? 0.04 : 0);
+  let centre = tw;
+  if (s.kind === 'past') {
+    const touch = U.y < 15 ? -1 : U.y > 55 ? 1 : 0;           // show him the touchline
+    c.open = touch && rnd() < 0.65 ? touch : (rnd() < 0.5 ? -1 : 1);
+    c.open0 = rnd() < k.cpu[di] ? -c.open : c.open;           // a feint starts on the other shoulder
+  } else if (s.kind === 'pass') {
+    centre = c.commitT = tw + (rnd()*2 - 1)*k.cpu[di];
+  } else if (s.kind === 'tackle') {
+    if (rnd() < k.cpu[di]) { c.stepDir = rnd() < 0.5 ? -1 : 1; c.tk += 0.10; centre += 0.10; }
+  } else {
+    c.dummy = rnd() < k.cpu[di];
+    c.rel = c.dummy ? 1.05 : 0.75;
+    centre = c.rel + 0.30; c.tk = centre;
+  }
+  c.centre = centre; c.wid = w; c.win = [centre - w/2, centre + w/2];
+  if (s.kind === 'past' && c.open0 !== c.open) c.feintAt = c.win[0] - 0.32;
+  if (c.stepDir) c.stepAt = c.win[0] - 0.32;
+  c.endT = s.kind === 'block' ? centre + 0.45 : c.tk + 0.35;
+  if (M.duels === 'instant') { duelInstant(c); return c; }
+  input.pre = null; input.reanchor(); input.held = new Set(input.keys); input.flick = 0;
+  startCut(c);
+  sfx('whoosh');
+  return c;
+}
+function updateDuel(c, dt) {
+  const t = c.t;
+  if (t < DUEL_GRACE) { input.reanchor(); input.flick = 0; return; }
+  if (c.feintAt != null && t >= c.feintAt && c.lastEvt < c.feintAt) { c.lastEvt = c.feintAt; sfx('whoosh'); }
+  if (c.stepAt != null && t >= c.stepAt && c.lastEvt < c.stepAt) c.lastEvt = c.stepAt;
+  if (c.kind === 'block') {
+    if (c.dummy && t >= 0.75 && c.lastEvt < 0.75) c.lastEvt = 0.75;
+    if (t >= c.rel && c.lastEvt < c.rel) { c.lastEvt = c.rel; sfx('pass'); }
+  }
+  if (!c.opened && t >= c.win[0]) { c.opened = true; sfx('tick'); buzz(12); }
+  let act = null;
+  if (c.kind === 'past') {
+    // a step is a fresh sideways flick of the re-anchored stick, or an arrow key pressed during the duel
+    const jx = input.jx, jy = input.jy;
+    (c.jxHist ||= []).push(jx); if (c.jxHist.length > 8) c.jxHist.shift();   // the last ~0.13 s
+    const moved = jx - c.jxHist[0];
+    if (!c.armed && Math.abs(jx) < 0.35) c.armed = true;
+    if (input.flick) act = input.flick;
+    else if (c.armed && Math.abs(jx) >= 0.6 && Math.abs(jx) > Math.abs(jy) && Math.abs(moved) >= 0.5 && Math.sign(moved) === Math.sign(jx)) act = Math.sign(jx);
+  } else if (input.aPressed) act = 1;
+  input.flick = 0;
+  if (act != null) judgeDuel(c, act, t);
+  else if (t > c.win[1]) judgeDuel(c, null, t);
+}
+function judgeDuel(c, act, t) {
+  c.judged = t;
+  const res = act == null ? 'late' : t < c.win[0] ? 'early' : Math.abs(t - c.centre) <= 0.2*c.wid ? 'perfect' : 'ok';
+  settle(c, res, act);
+}
+function settle(c, res, act) {
+  c.res = res; c.act = act;
+  const U = c.U, O = c.O, won = res === 'ok' || res === 'perfect';
+  let out, verdict;
+  if (c.kind === 'past') {
+    if (won && act === c.open) { out = 'break'; verdict = 'Line Break'; }
+    else if (won) { out = 'tackled'; verdict = 'Wrong Way'; }
+    else if (rnd() < tackleChance(O, U, 'ai', res === 'early')) { out = 'tackled'; verdict = res === 'early' ? 'Too Early' : 'Too Late'; }
+    else { out = 'broken'; verdict = 'Broken Tackle'; }
+  } else if (c.kind === 'pass') {
+    if (won) { out = 'drawn'; verdict = 'Draw and Pass'; }
+    else if (res === 'early') { out = 'early'; verdict = 'Too Early'; }
+    else if (rnd() < tackleChance(O, U, 'ai')) { out = 'tackled'; verdict = 'Too Late'; }
+    else { out = 'broken'; verdict = 'Broken Tackle'; }
+  } else if (c.kind === 'tackle') {
+    if (won) { out = 'bighit'; verdict = 'Big Hit'; }
+    else if (rnd() < tackleChance(U, O, res === 'early' ? 'dive' : 'contact', O.side > 0)) { out = 'tackled'; verdict = res === 'early' ? 'Too Early' : 'Too Late'; }
+    else { out = 'missed'; verdict = 'Missed'; }
+  } else {
+    if (won) { out = res === 'perfect' ? 'intercept' : 'knock'; verdict = res === 'perfect' ? 'Intercepted' : 'Knocked Down'; }
+    else { out = 'pass'; verdict = res === 'early' ? 'Too Early' : 'Too Late'; }
+  }
+  c.out = out; c.verdict = verdict;
+  const good = ['break', 'drawn', 'bighit', 'intercept', 'knock'].includes(out);
+  const ours = good || out === 'broken';
+  c.good = good;
+  if (good) { M.stats.duelsWon = (M.stats.duelsWon || 0) + 1; M.stats['w_' + c.kind] = (M.stats['w_' + c.kind] || 0) + 1; }
+  if (good && res === 'perfect' && c.kind !== 'block') M.stats.duelsPerfect = (M.stats.duelsPerfect || 0) + 1;
+  M.duelLog.fails = good ? 0 : M.duelLog.fails + 1;
+  if (!settings.duelSeen) { settings.duelSeen = true; save(); }
+  if (good) sfx('cheer');
+  if (['tackled', 'bighit'].includes(out)) { sfx('tackle'); buzz(25); }
+  say(verdict, good ? '' : 'small', ours ? 0 : 1, good && res === 'perfect' && c.kind !== 'block' ? 'Perfect' : null);
+  if (M.duels === 'instant') { applyDuel(c); return; }
+  c.skipAt = c.t + DUEL_SKIP;
+  finishCut(() => applyDuel(c), Math.max(DUEL_OUTRO + (res === 'perfect' ? 0.1 : 0), c.endT - c.t));
+}
+function duelInstant(c) {
+  let res = rnd() < INSTANT[M.di] ? (rnd() < (c.kind === 'block' ? 0.4 : 0.35) ? 'perfect' : 'ok') : (rnd() < 0.5 ? 'early' : 'late');
+  let act = null;
+  if (c.kind === 'past') {
+    if (res === 'ok' || res === 'perfect') act = c.open;
+    else if (rnd() < 0.3) { res = 'ok'; act = -c.open; }
+    else if (res === 'early') act = rnd() < 0.5 ? -1 : 1;
+  } else if (res !== 'late') act = 1;
+  c.judged = c.centre;
+  settle(c, res, act);
+}
+function put(p, P, carrier) { p.x = clamp(P.x, 0.5, 119.5); p.y = clamp(P.y, carrier ? 3 : 1.5, carrier ? 67 : 68.5); }
+// hand the result back to the match, with everyone where the close-up left them
+function applyDuel(c) {
+  if (c.kind === 'block' && c.out === 'intercept') input.pre = { x:0, y:0 };   // the aim was at the lane; the run is upfield
+  if (M.duels !== 'instant') input.restore();
+  const U = c.U, O = c.O, R = c.R, K = c.K, D = c.D, b = M.ball;
+  const at = (k, lat) => ({ x:K.x + D.x*k, y:K.y + D.y*k + (lat || 0) });
+  if (R && c.kind !== 'block') { R.x += R.vx*c.dtau; R.y += R.vy*c.dtau; }
+  switch (c.kind + ':' + c.out) {
+    case 'past:break': {
+      const o = c.open;
+      put(U, at(1.3, 1.2*o), true); put(O, at(0, -0.6*o));
+      O.down = 0.9; O.tcd = 1; O.vx = O.vy = 0;
+      U.side = 0.35;
+      const m = hyp(1, 0.3); U.fx = 1/m; U.fy = 0.3*o/m;
+      setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
+      U.autoDir = o;
+      break;
+    }
+    case 'past:tackled': case 'pass:tackled':
+      put(U, at(-0.4), true); put(O, at(0.4)); tackle(U, O); break;
+    case 'past:broken': case 'pass:broken': {
+      const lat = c.res === 'early' && c.act ? 0.8*c.act : 0;
+      put(U, at(1.0, lat), true); put(O, at(0.4));
+      U.side = 0.35; O.down = 0.5; O.tcd = 1; O.vx = O.vy = 0; M.stats.broken++;
+      break;
+    }
+    case 'pass:drawn':
+      put(U, at(-0.9), true); put(O, at(0.2)); O.down = 0.6; O.vx = O.vy = 0;
+      b.x = U.x; b.y = U.y;
+      doPass(U, R, { sure:true, boost:c.res === 'perfect' ? BURST.perfect : BURST.ok });
+      break;
+    case 'pass:early': {
+      const dx = R.x - O.x, dy = R.y - O.y, m = hyp(dx, dy) || 1;
+      O.x += dx/m*1.5; O.y += dy/m*1.5; O.vx = dx/m*7; O.vy = dy/m*7;
+      b.x = U.x; b.y = U.y;
+      doPass(U, R);
+      break;
+    }
+    case 'tackle:bighit':
+      put(O, at(1.9), true); put(U, at(1.3));
+      tackle(O, U, { dom:true, domP:DOM_TURN[c.res === 'perfect' ? 1 : 0] });
+      U.down = 0.4; U.tcd = 0.4;
+      break;
+    case 'tackle:tackled':
+      put(U, at(0.3)); put(O, at(0.9), true); tackle(O, U); break;
+    case 'tackle:missed':
+      put(U, K); U.down = 0.75; U.vx = U.vy = 0; put(O, at(-1.2), true); M.stats.broken++; break;
+    case 'block:intercept':
+      put(U, K); U.fx = 1; U.fy = 0;
+      setCarrier(U); b.x = U.x; b.y = U.y;
+      M.stats.intercepts++;
+      setBoost(U, ...BURST.ok);
+      if (R) { R.x += R.vx*c.dtau; R.y += R.vy*c.dtau; }
+      break;
+    case 'block:knock':
+      b.state = 'loose'; b.carrier = null; b.f = null; b.x = K.x; b.y = K.y; b.z = 1;
+      b.vx = -(3 + 2*rnd()); b.vy = (rnd() - 0.5)*2; b.vz = 1.5; b.last = 0; b.kickInfo = { team:0, ownHalf:false };
+      put(U, { x:K.x - 0.5, y:K.y }); U.fx = -1; U.fy = 0;
+      setBoost(U, ...BURST.knock);
+      break;
+    case 'block:pass':
+      doPass(O, R, { skip:[U] }); break;
+  }
+}
+function duelResume(c) {
+  c.t = Math.max(c.lastEvt + 0.05, DUEL_GRACE, c.t - 0.25);
+  if (c.t < c.win[0]) c.opened = false;   // the window's tick plays again
+  input.reanchor(); input.held = new Set();
+}
+// canonical positions for tests and the console: __tryline.forceDuel('past')
+function stageDuel(kind) {
+  const P = M.players, b = M.ball;
+  P.forEach((p, i) => { p.x = p.team === 0 ? 20 + i : 100 - i; p.y = 5 + (i % 7)*9; p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = -1; p.boost = 0; p.hold = 2; });
+  const T0 = P.filter(p => p.team === 0), T1 = P.filter(p => p.team === 1);
+  M.phase = 'play'; M.set = null; M.cut = null; M.clock = 30; M.dclock = 100; M.hooter = false; M.charging = false;
+  M.duelLog = { last:-99, lastKind:null, half:[0, 0], bonus:[false, false], fails:0 };
+  input.jx = 1; input.jy = 0;
+  let U, O, R = null;
+  if (kind === 'past' || kind === 'pass') {
+    U = T0[0]; O = T1[0];
+    Object.assign(U, { x:70, y:35, vx:8, vy:0, fx:1, fy:0 });
+    Object.assign(O, { x:74.2, y:35, vx:-7, vy:0, fx:-1, fy:0 });
+    if (kind === 'pass') { R = T0[1]; Object.assign(R, { x:68, y:42, vx:8, vy:0 }); }
+    setCarrier(U); U.hold = 2; b.x = U.x + 0.55; b.y = U.y;
+  } else if (kind === 'tackle') {
+    U = T0[0]; O = T1[0];
+    Object.assign(O, { x:50, y:35, vx:-7, vy:0, fx:-1, fy:0 });
+    Object.assign(U, { x:46, y:35, vx:3, vy:0, fx:1, fy:0 });
+    setCarrier(O); O.hold = 2; M.ctrl = U; b.x = O.x - 0.55; b.y = O.y;
+  } else {
+    U = T0[0]; O = T1[0]; R = T1[1];
+    Object.assign(O, { x:50, y:30, vx:-4, vy:0, fx:-1, fy:0 });
+    Object.assign(R, { x:54, y:40, vx:-4, vy:0 });
+    Object.assign(U, { x:51.8, y:35.6, vx:0, vy:0, fx:1, fy:0 });
+    setCarrier(O); O.hold = 2; M.ctrl = U; b.x = O.x; b.y = O.y;
+  }
+  M.ctrlPrev = M.ctrl; M.ctrlT = 1;
+  if (kind === 'tackle') { input.jx = 1; input.jy = 0; }
+  if (kind === 'block') { const dx = 51.2 - U.x, dy = 34.4 - U.y, m = hyp(dx, dy); input.jx = dx/m; input.jy = dy/m; }
+  return { U, O, R };
+}
+function forceDuel(kind) {
+  const { U, O, R } = stageDuel(kind);
+  if (kind === 'block') {
+    const s = blockSpec(O, R) || (() => {
+      const b = M.ball, P1 = { x:R.x + R.vx*0.4, y:R.y + R.vy*0.4 }, P0 = { x:b.x, y:b.y };
+      return { kind:'block', U, O, R, P0, P1, L:{ x:(P0.x + P1.x)/2, y:(P0.y + P1.y)/2 } };
+    })();
+    return startDuel({ ...s, how:'force' });
+  }
+  return startDuel({ kind, U, O, R, how:'force' });
+}
 
 /* ---------- ball in flight / loose ---------- */
 function updateBallAir(dt) {
@@ -914,7 +1284,7 @@ function updateBallAir(dt) {
   b.z = f.z0 + (f.z1-f.z0)*u + 4*f.H*u*(1-u);
   b.vx = (f.x1-f.x0)/f.T; b.vy = (f.y1-f.y0)/f.T;
   if (f.kind === 'pass') {
-    for (const q of M.players) {
+    if (!f.sure) for (const q of M.players) {
       if (q.team === f.team || q.down > 0 || f.rolled.has(q)) continue;
       if (hyp(q.x-b.x, q.y-b.y) < 1.1 && b.z < 2.3) {
         f.rolled.add(q);
@@ -953,9 +1323,14 @@ function updateBallAir(dt) {
 }
 function resolvePass() {
   const b = M.ball, f = b.f, tgt = f.target;
+  if (f.sure && tgt && tgt.down <= 0 && hyp(tgt.x-b.x, tgt.y-b.y) < 3.5) {
+    setCarrier(tgt);
+    if (f.boost) { tgt.fx = dirOf(tgt.team); tgt.fy = 0; setBoost(tgt, ...f.boost); }   // the burst goes upfield, not along his catching angle
+    return;
+  }
   if (tgt && tgt.down <= 0 && hyp(tgt.x-b.x, tgt.y-b.y) < 2.4) { catchBall(tgt, 'pass'); return; }
   let best = null, bd = 1.8;
-  for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
+  if (!f.sure) for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
   if (best) { catchBall(best, best.team === f.team ? 'pass' : 'intercept'); return; }
   b.state = 'loose'; b.vx = (f.x1-f.x0)/f.T*0.25; b.vy = (f.y1-f.y0)/f.T*0.25; b.vz = 1.5; b.z = 0.9; b.f = null;
   say('Dropped', 'small');
@@ -1124,7 +1499,7 @@ function aiCarrier(p, dt) {
   if (fromOwn < 45 && near > 5 && M.phaseCount >= 3 && rnd() < 0.03) { aiKick(p, 'territory'); return; }
   if (near < 2.6 || (p.hold > 2.4 && rnd() < 0.15)) {
     const r = bestReceiver(p);
-    if (r && r.space > near + 2 && rnd() < 0.6) doPass(p, r.q);
+    if (r && r.space > near + 2 && rnd() < 0.6) cpuPass(p, r.q);
   }
 }
 
@@ -1132,7 +1507,8 @@ function aiCarrier(p, dt) {
 function userMove(p, dt) {
   const j = input.world(), b = M.ball;
   const ms = maxSpeed(p)*(b.carrier === p ? 0.95 : 1);
-  if (j.mag < 0.1 && b.state === 'air' && b.f.kind === 'pass' && b.f.target === p) { seek(p, b.f.x1, b.f.y1, ms, 22, dt); return; }
+  if (b.state === 'air' && b.f.kind === 'pass' && b.f.target === p && (j.mag < 0.1 || b.f.sure)) { seek(p, b.f.x1, b.f.y1, ms, 22, dt); return; }
+  if (b.carrier === p && p.boost > 0 && j.mag < 0.3) { const m = hyp(1, 0.3*p.autoDir); steer(p, ms/m, ms*0.3*p.autoDir/m, 20, dt); return; }
   steer(p, j.x*ms, j.y*ms, 20, dt);
   if (j.mag > 0.55) {
     const a = Math.atan2(j.y, j.x);
@@ -1244,16 +1620,17 @@ function update(dt) {
   if (M.surge && (M.surge.t -= dt) <= 0) M.surge = null;
   const clockOn = M.phase === 'play' || (M.phase === 'set' && M.set.kind !== 'try' && M.set.kind !== 'score');
   if (clockOn) {
-    M.clock += dt;
+    M.clock += dt; M.dclock += dt;
     if (!M.hooter && M.clock >= M.halfLen) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
   }
   handleUser(dt);
+  if (M.ctrl !== M.ctrlPrev) { M.ctrlPrev = M.ctrl; M.ctrlT = 0; } else M.ctrlT += dt;
   moveAll(dt);
   if (M.phase === 'play') {
     if (b.state === 'held') {
       const c = b.carrier;
       b.x = c.x + c.fx*0.55; b.y = c.y + c.fy*0.55; b.z = 1.0;
-      if (!carrierChecks(c)) tackleChecks(c);
+      if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
     if (M.phase === 'play' && M.hooter && !M.demo && M.clock > M.halfLen + 45) endHalf();
@@ -1261,6 +1638,7 @@ function update(dt) {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
   } else if (M.phase === 'goal') updateGoal(dt);
+  if (M.duelPending) startPendingDuel();
 }
 
 /* ---------- halves ---------- */
@@ -1527,12 +1905,13 @@ function cutBall(x, y, sc, ang) {
   ctx.restore();
 }
 function cutText(text, y, size, alpha) {
-  ctx.globalAlpha = alpha == null ? 1 : alpha;
+  const a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*(alpha == null ? 1 : alpha);
   ctx.font = `900 ${Math.round(size)}px 'Big Shoulders Display', Impact, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillText(text.toUpperCase(), V.W/2 + 2, y + 3);
   ctx.fillStyle = '#f1eee4'; ctx.fillText(text.toUpperCase(), V.W/2, y);
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = a0;
 }
 function cutTag(text, g) {
   ctx.font = `700 ${Math.round(g.H*0.034)}px 'Atkinson Hyperlegible', system-ui, sans-serif`;
@@ -1570,11 +1949,11 @@ function drawScrum(c, g) {
   ctx.font = `800 ${Math.round(H*0.04)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textBaseline = 'middle';
   ctx.textAlign = 'right'; ctx.fillText(M.nat[0].id, bx - 10, by + bh/2);
   ctx.textAlign = 'left'; ctx.fillText(M.nat[1].id, bx + bw + 10, by + bh/2);
-  cutTag('Scrum · ' + M.nat[c.feed].id + ' Ball', g);
 }
 function drawLineout(c, g) {
   drawStage(g);
-  const { W, H, ground, sc } = g, t = c.t;
+  const { W, H, ground } = g, t = c.t;
+  const sc = Math.min(g.sc, (W*0.96 - W*0.3)/((LINE_X + 1.15)*0.9 + 0.25));   // the far lifter stays on screen
   const X = m => W*0.3 + m*sc*0.9;   // clear of the joystick on the left
   ctx.strokeStyle = 'rgba(244,241,232,.85)'; ctx.lineWidth = 3;
   seg(X(-0.6), H, X(-0.6) + (W*0.5 - X(-0.6))*0.18, g.horizon);
@@ -1599,26 +1978,303 @@ function drawLineout(c, g) {
   const gyB = c.outcome === 'caught' && c.winner === 1 ? ground - 0.08*H : ground;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ellipse(X(bx), gyB, sc*0.12, sc*0.035); ctx.fill();
   cutBall(X(bx), gyB - bh*sc*(c.outcome === 'caught' && c.winner === 1 ? 0.88 : 1), sc, ang);
-  cutTag('Lineout · ' + M.nat[c.team].id + ' Throw', g);
 }
 function drawCut() {
   const c = M.cut; if (!c) return;
   const g = cutGeom();
   const ease = u => 1 - Math.pow(1 - u, 3);
   const ein = ease(clamp(c.t/CUT_IN, 0, 1)), eout = c.exit > 0 ? ease(clamp(c.exit/CUT_OUT, 0, 1)) : 0;
-  const left = eout*g.W, right = ein*g.W;
+  const left = RM ? 0 : eout*g.W, right = RM ? g.W : ein*g.W;
   if (right - left <= 0.5) return;
-  ctx.save(); ctx.beginPath(); ctx.rect(left, 0, right - left, g.H); ctx.clip();
+  ctx.save();
+  if (RM) ctx.globalAlpha = Math.min(ein, 1 - eout);
+  ctx.beginPath(); ctx.rect(left, 0, right - left, g.H); ctx.clip();
   if (c.kind === 'scrum') drawScrum(c, g);
   else if (c.kind === 'lineout') drawLineout(c, g);
   else drawDuel(c, g);
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07);
+  cutTag(cutTitle(c), g);
   ctx.restore();
+  if (RM) return;
   ctx.fillStyle = C.ctrl;
   if (ein < 1) ctx.fillRect(right - 3, 0, 6, g.H);
   if (eout > 0 && eout < 1) ctx.fillRect(left - 3, 0, 6, g.H);
 }
-function drawDuel(c, g) { drawStage(g); }
+/* ---------- duel view: a chase-cam over your player's shoulder ----------
+   Looks along +x, so screen-right is always world +y. A point (x, y, h)
+   projects with z = x - camX: sx = cx + F(y - camY)/z, sy = hz + F(camH - h)/z. */
+const RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+const RIG = { 1:{ back:4.2, side:2.2, h:2.3, F:1.2, hz:0.20 }, 2:{ back:6.5, side:2.4, h:3.0, F:1.05, hz:0.16 } };
+const ease3 = u => 1 - Math.pow(1 - clamp(u, 0, 1), 3);
+const lerp = (a, b, u) => a + (b - a)*u;
+// where everyone stands at scene time t (render only: the world is frozen)
+function duelPose(c, t) {
+  const tk = c.tk, D = c.D, K = c.K, w = c.w;
+  const gap = G_START - (G_START - G_HIT)*clamp((t - CUT_IN)/(tk - CUT_IN), 0, 1);
+  const P = { u:{ x:K.x - D.x*gap*w, y:K.y - D.y*gap*w, h:0 }, o:{ x:K.x + D.x*gap*(1 - w), y:K.y + D.y*gap*(1 - w), h:0 }, r:null, ball:null };
+  const after = c.judged != null ? t - c.judged : -1, hit = t - c.tk;
+  if (c.kind === 'past') {
+    const shade = c.feintAt != null && t < c.feintAt + 0.12 ? -c.open0 : -c.open;      // the side he's blocking
+    const into = c.feintAt != null ? clamp((t - c.feintAt)/0.12, 0, 1) : 1;
+    P.o.shift = c.feintAt != null ? lerp(-c.open0, -c.open, into)*0.55 : shade*0.55;
+    if (c.act && after >= 0) P.u.y += 1.2*c.act*ease3(after/0.15);
+    if (c.out === 'break' && hit > 0) { P.u.x += hit*6; P.o.dive = c.act ? -c.act : 1; P.o.y += -0.6*c.open*ease3(hit/0.2); P.o.lying = hit > 0.18; }
+    if (c.out === 'tackled' && hit > 0) { P.u.lying = hit > 0.15; P.o.lying = hit > 0.2; }
+    if (c.out === 'broken' && hit > 0) { P.u.x += hit*5; P.o.lying = hit > 0.12; }
+  } else if (c.kind === 'pass') {
+    const r = c.r0, rx = r.x + r.vx*c.rho*(t - c.tTrig), dy = r.y - c.u0.y;
+    const ly = Math.sign(dy)*Math.min(Math.abs(dy), 3.0 + 0.15*(Math.abs(dy) - 4));   // squeezed for the shot
+    P.r = { x:Math.max(rx, P.u.x - 1.5), y:P.u.y + ly, h:0 };
+    P.o.commit = c.commitT != null ? clamp((t - c.commitT + 0.1)/0.15, 0, 1) : 0;
+    if (after >= 0 && c.out !== 'tackled' && c.out !== 'broken') {
+      const fl = clamp(after/0.35, 0, 1);
+      P.ball = { x:lerp(P.u.x, P.r.x, fl), y:lerp(P.u.y, P.r.y, fl), h:1.1 + 0.6*fl*(1 - fl) };
+      if (c.out === 'drawn' && hit > 0) { P.o.lying = hit > 0.15; P.o.x = lerp(P.o.x, P.u.x + 0.3, ease3(hit/0.2)); }
+      if (c.out === 'early') P.o.y = lerp(P.o.y, P.r.y, ease3(after/0.6)*0.4);
+    }
+    if ((c.out === 'tackled' || c.out === 'broken') && hit > 0) { if (c.out === 'tackled') { P.u.lying = hit > 0.15; P.o.lying = hit > 0.2; } else { P.u.x += hit*5; P.o.lying = hit > 0.12; } }
+  } else if (c.kind === 'tackle') {
+    if (c.stepAt != null) P.o.y += c.stepDir*1.2*ease3((t - c.stepAt)/0.15);
+    if (after >= 0 && c.act) P.u.dive = ease3(after/0.2);
+    if (c.out === 'bighit' && hit > 0) { P.o.x += 1.5*ease3(hit/0.25); P.o.lying = hit > 0.12; P.u.x += 0.8*ease3(hit/0.25); P.u.lying = hit > 0.2; }
+    if (c.out === 'tackled' && hit > 0) { P.o.lying = hit > 0.15; P.u.lying = hit > 0.15; }
+    if (c.out === 'missed' && hit > 0) { P.u.lying = hit > 0.1; P.o.x -= hit*5; }
+  } else {
+    const t1 = c.centre, q0 = c.u0;
+    const reach = ease3((t - CUT_IN)/(t1 - CUT_IN));
+    P.u = { x:q0.x + (c.L.x - q0.x)*0.85*reach, y:q0.y + (c.L.y - q0.y)*0.85*reach, h:0 };
+    const slow = (p0, s) => ({ x:p0.x + p0.vx*0.35*s, y:p0.y + p0.vy*0.35*s, h:0 });
+    P.o = slow(c.o0, t); P.r = slow(c.r0, t);
+    P.o.wind = clamp((t - 0.55)/0.2, 0, 1); P.o.thrown = t >= c.rel;
+    if (c.dummy && t > 0.75 && t < c.rel) P.o.pump = clamp((t - 0.75)/0.15, 0, 1);
+    if (t < c.rel) P.ball = null;
+    else {
+      const sp = hyp(c.L.x - c.P0.x, c.L.y - c.P0.y)/0.30, dir = { x:(c.P1.x - c.P0.x), y:(c.P1.y - c.P0.y) }, m = hyp(dir.x, dir.y) || 1;
+      let s = (t - c.rel)*sp;
+      if (c.out === 'intercept' && after >= 0) s = Math.min(s, hyp(c.L.x - c.P0.x, c.L.y - c.P0.y));
+      P.ball = { x:c.P0.x + dir.x/m*s, y:c.P0.y + dir.y/m*s, h:1.3 };
+      if (c.out === 'intercept' && after >= 0) { P.ball = { x:P.u.x + 0.3, y:P.u.y, h:1.2 }; P.u.x += Math.max(0, after - 0.1)*6; P.ball.x = P.u.x + 0.3; P.u.carry = true; }
+      if (c.out === 'knock' && after >= 0) { const k = clamp(after/0.5, 0, 1); P.ball = { x:c.L.x - 3*k, y:c.L.y + (c.act || 1)*0.4*k, h:1.3*(1 - k) + 0.6*Math.sin(k*Math.PI) }; }
+    }
+  }
+  return P;
+}
+// Block frames the pass itself: from behind whichever of you and the passer is nearer, centred between passer and receiver
+function camAt(c, cam, P, Pl) {
+  if (c.kind === 'block') return { camX:Math.min(P.u.x, P.o.x) - cam.back, camY:(Pl.o.y + Pl.r.y)/2 + cam.side*0.4 };
+  return { camX:P.u.x - cam.back, camY:Pl.u.y + cam.side };
+}
+function duelCam(c) {
+  const key = V.W + 'x' + V.H;
+  if (c.cam && c.cam.key === key) return c.cam;
+  const r = RIG[DUEL[c.kind].rig], tw = (c.win[0] + c.win[1])/2;
+  const P = duelPose({ ...c, judged:null, out:null, act:null }, tw);
+  const focus = c.kind === 'block' ? { x:c.L.x, y:(P.o.y + P.r.y)/2 } : P.o;
+  const s = c.kind === 'pass' ? Math.sign((P.r.y - P.u.y) || 1) : c.kind === 'block' ? Math.sign((c.r0.y - c.u0.y) || 1) : ((P.o.y - P.u.y) < -0.5 ? -1 : 1);
+  const cam = { key, back:r.back, side:r.side*s, h:r.h, F:r.F*V.H, hz:r.hz*V.H, s, rig:DUEL[c.kind].rig };
+  for (let i = 0; i < 6; i++) {
+    const { camX, camY } = camAt(c, cam, P, P);
+    cam.cx = clamp((0.5 - (cam.rig === 2 ? 0.07*s : 0))*V.W - cam.F*(focus.y - camY)/Math.max(0.5, focus.x - camX), 0.30*V.W, 0.75*V.W);
+    // keep every opponent between the bars and clear of the buttons
+    let ok = true;
+    for (const tt of [CUT_IN, tw, c.tk]) {
+      const Q = duelPose({ ...c, judged:null, out:null, act:null }, tt);
+      const qc = camAt(c, cam, Q, Q);
+      for (const a of [Q.o, Q.r].filter(Boolean)) {
+        const z = a.x - qc.camX;
+        if (z < 0.8) continue;
+        const k = cam.F/z, sx = cam.cx + k*(a.y - qc.camY), top = cam.hz + k*(cam.h - 1.9), bot = cam.hz + k*cam.h;
+        if (sx - 0.45*k < 0.05*V.W || sx + 0.45*k > V.W - 124 || top < 0.07*V.H + 4 || bot > 0.93*V.H - 4 || (sx < 180 && bot > V.H - 190)) ok = false;
+      }
+    }
+    if (ok) break;
+    cam.back += 0.8; cam.h += 0.25;
+  }
+  c.cam = cam;
+  return cam;
+}
+function drawStands(g, hz) {
+  const { W, H } = g;
+  const st = ctx.createLinearGradient(0, 0, 0, hz);
+  st.addColorStop(0, '#05080a'); st.addColorStop(1, '#14201a');
+  ctx.fillStyle = st; ctx.fillRect(0, 0, W, hz);
+  for (const [cx, cy, k] of CROWD) { ctx.fillStyle = CROWD_C[k]; ctx.fillRect(cx*W, hz*0.22 + cy*hz*0.66, 3, 3); }
+  for (const fx of [0.1, 0.9]) {
+    const gl = ctx.createRadialGradient(W*fx, 0, 0, W*fx, 0, H*0.6);
+    gl.addColorStop(0, 'rgba(255,238,196,.32)'); gl.addColorStop(1, 'rgba(255,238,196,0)');
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H*0.6);
+  }
+  ctx.fillStyle = '#0c1611'; ctx.fillRect(0, hz - H*0.035, W, H*0.035);
+}
+function drawDuel(c, g) {
+  const { W, H } = g;
+  const cam = duelCam(c);
+  // hit-stop: the scene clock holds for 90ms at contact
+  const ti = c.out === 'bighit' ? c.judged + 0.12 : c.tk;
+  let t = c.t;
+  if (!RM && c.out && t > ti) t = t < ti + 0.09 ? ti : t - 0.09;
+  const P = duelPose(c, t);
+  const lagT = RM ? t : Math.max(0, t - 0.12);
+  const Pl = duelPose(c, lagT);
+  const { camX, camY } = camAt(c, cam, P, Pl), F = cam.F, hz = cam.hz, cx = cam.cx, ch = cam.h;
+  const proj = (x, y, h) => { const z = x - camX; return z < 0.05 ? null : { sx:cx + F*(y - camY)/z, sy:hz + F*(ch - h)/z, k:F/z, z }; };
+  ctx.save();
+  if (!RM && c.out && ['tackled', 'bighit', 'break', 'broken'].includes(c.out)) {
+    const dt = c.t - c.tk;
+    if (dt > 0 && dt < 0.25) { const a = 6*Math.exp(-dt/0.08); ctx.translate((Math.random() - 0.5)*a, (Math.random() - 0.5)*a); }
+  }
+  drawStands(g, hz);
+  ctx.fillStyle = C.surround; ctx.fillRect(0, hz, W, H - hz);
+  // grass bands, as drawPitch does them, projected
+  const quad = (x0, y0, x1, y1, fill) => {
+    const a = Math.max(x0, camX + 0.5), bnd = x1;
+    if (bnd <= camX + 0.5) return;
+    const p1 = proj(a, y0, 0), p2 = proj(a, y1, 0), p3 = proj(bnd, y1, 0), p4 = proj(bnd, y0, 0);
+    ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy); ctx.lineTo(p3.sx, p3.sy); ctx.lineTo(p4.sx, p4.sy); ctx.closePath(); ctx.fill();
+  };
+  for (let i = 0; i < 12; i++) quad(i*10, 0, i*10 + 10, 70, i % 2 ? C.grassA : C.grassB);
+  const a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*0.14; quad(0, 0, 10, 70, M.kit[0].fill); quad(110, 0, 120, 70, M.kit[1].fill); ctx.globalAlpha = a0;
+  ctx.strokeStyle = C.line;
+  const lineX = (x, dash) => {
+    if (x <= camX + 0.5) return;
+    const a = proj(x, 0, 0), b2 = proj(x, 70, 0);
+    ctx.lineWidth = Math.max(1, 0.1*a.k); ctx.setLineDash(dash ? [a.k*1.5, a.k*1.5] : []);
+    ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b2.sx, b2.sy); ctx.stroke();
+  };
+  for (const x of [10, 110, 32, 88, 60]) lineX(x, false);
+  for (const x of [50, 70, 15, 105]) lineX(x, true);
+  ctx.setLineDash([]);
+  for (const y of [0, 70]) {
+    const a = proj(camX + 0.6, y, 0), b2 = proj(camX + 160, y, 0);
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b2.sx, b2.sy); ctx.stroke();
+  }
+  // posts
+  if (110 - camX > 0.5 && 110 - camX < 70) {
+    for (const py of [32.2, 37.8]) {
+      const a = proj(110, py, 0), b2 = proj(110, py, 11);
+      ctx.strokeStyle = '#f7f5ee'; ctx.lineWidth = Math.max(1.5, 0.12*a.k); ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b2.sx, b2.sy); ctx.stroke();
+      ctx.fillStyle = C.pad; ctx.fillRect(a.sx - 0.3*a.k, a.sy - 1.8*a.k, 0.6*a.k, 1.8*a.k);
+    }
+    const l = proj(110, 32.2, 3), r = proj(110, 37.8, 3);
+    ctx.strokeStyle = '#f7f5ee'; ctx.beginPath(); ctx.moveTo(l.sx, l.sy); ctx.lineTo(r.sx, r.sy); ctx.stroke();
+  }
+  // Easy only: the open lane
+  if (c.kind === 'past' && M.di === 0 && c.out == null) {
+    const o = c.open, path = (k, lat) => proj(c.K.x + c.D.x*k, c.K.y + c.D.y*k + lat*o, 0);
+    const pts = [path(-1, 0.7), path(3, 0.7), path(3, 1.9), path(-1, 1.9)].filter(Boolean);
+    if (pts.length === 4) { ctx.fillStyle = 'rgba(255,207,61,.22)'; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy)); ctx.closePath(); ctx.fill(); }
+  }
+  // the ring: the one timing cue
+  if (c.out == null && !(c.kind === 'block' && t < c.rel)) {
+    const A = c.kind === 'block' ? { x:c.L.x, y:c.L.y } : P.o, pa = proj(A.x, A.y, 0);
+    if (pa) {
+      const r = c.kind === 'block' ? 0.9 : lerp(2.6, 0.9, clamp((t - CUT_IN)/(c.win[0] - CUT_IN), 0, 1));
+      const rx = r*pa.k, ry = rx*clamp(ch/pa.z, 0.18, 0.6), live = t >= c.win[0] && t <= c.win[1];
+      ctx.beginPath(); ctx.ellipse(pa.sx, pa.sy, rx, ry, 0, 0, Math.PI*2);
+      if (live) { ctx.fillStyle = 'rgba(255,207,61,.30)'; ctx.fill(); ctx.strokeStyle = C.ctrl; ctx.lineWidth = 4; }
+      else { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; }
+      ctx.stroke();
+    }
+  }
+  // figures, far to near
+  const actors = [];
+  const add = (a, team, back, extra) => { if (a) actors.push({ a, team, back, o:extra || {} }); };
+  if (c.kind === 'past' || c.kind === 'pass') {
+    add(P.u, 0, true, { carry:!P.ball, num:c.U.n, stride:t*19 });
+    add(P.o, 1, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
+    if (P.r) add(P.r, 0, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
+  } else if (c.kind === 'tackle') {
+    add(P.u, 0, true, { num:c.U.n, stride:t*16, dive:P.u.dive ? 1 : 0, lying:P.u.lying, arms:P.u.dive ? 'reach' : 'run' });
+    add(P.o, 1, false, { carry:true, stride:t*19, lean:c.stepAt != null && t > c.stepAt ? c.stepDir*0.3 : 0, lying:P.o.lying });
+  } else {
+    add(P.u, 0, true, { num:c.U.n, stride:t*14, arms:P.u.carry ? 'carry' : 'reach' });
+    add(P.o, 1, false, { stride:t*8, arms:P.o.thrown ? 'pass' : (P.o.wind ? 'carry' : 'run'), twist:P.o.pump || P.o.wind });
+    add(P.r, 1, false, { stride:t*10, arms:'reach' });
+  }
+  actors.sort((p, q) => q.a.x - p.a.x);
+  for (const it of actors) {
+    const p = proj(it.a.x, it.a.y, 0);
+    if (!p || p.z < 0.8) continue;
+    figFB(p.sx, p.sy, p.k, it.team, { back:it.back, ...it.o });
+    if (it.o.carry) cutBall(p.sx + (it.back ? 0.18 : -0.18)*p.k, p.sy - 1.15*p.k, Math.max(10, p.k*0.9), 0.3);
+  }
+  if (P.ball) { const pb = proj(P.ball.x, P.ball.y, P.ball.h); if (pb) { const sh = proj(P.ball.x, P.ball.y, 0); if (sh) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ellipse(sh.sx, sh.sy, 0.18*sh.k, 0.05*sh.k); ctx.fill(); } cutBall(pb.sx, pb.sy, Math.max(10, pb.k*0.9), 0.6); } }
+  // effects
+  if (!RM && c.out) {
+    const dt = c.t - c.tk;
+    const k0 = proj(c.K.x, c.K.y, 1.2);
+    if (k0 && dt > 0 && dt < 0.15 && ['tackled', 'bighit', 'break', 'broken', 'missed'].includes(c.out)) {
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      for (let i = 0; i < 8; i++) { const a = i/8*Math.PI*2, r0 = 0.3*k0.k, r1 = (0.6 + dt*3)*k0.k; seg(k0.sx + Math.cos(a)*r0, k0.sy + Math.sin(a)*r0, k0.sx + Math.cos(a)*r1, k0.sy + Math.sin(a)*r1); }
+    }
+    if (c.out === 'bighit' && dt > 0 && dt < 0.3) {
+      ctx.fillStyle = 'rgba(120,170,90,.8)';
+      for (let i = 0; i < 10; i++) { const kk = proj(c.K.x + 1 + (i % 3)*0.3, c.K.y + (i - 5)*0.15, dt*4*(1 + i % 2)); if (kk) ctx.fillRect(kk.sx, kk.sy, 3, 3); }
+    }
+    if ((c.out === 'break' || c.out === 'intercept') && c.after) {
+      ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 2;
+      for (let i = 0; i < 12; i++) { const a = i/12*Math.PI*2 + 0.2, r0 = H*0.25; seg(cx + Math.cos(a)*r0, hz + H*0.3 + Math.sin(a)*r0*0.6, cx + Math.cos(a)*r0*2.2, hz + H*0.3 + Math.sin(a)*r0*1.3); }
+    }
+  }
+  ctx.restore();
+}
+/* A front- or back-on player. sx, sy: feet in px; k: px per metre. */
+function figFB(sx, sy, k, team, o) {
+  const kit = kitOf(team), cr = o.crouch || 0, sh = (o.shift || 0)*k;
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ellipse(sx, sy, 0.38*k, 0.09*k); ctx.fill();
+  ctx.save(); ctx.translate(sx, sy);
+  if (o.lying) { ctx.rotate(Math.PI/2*(o.dive || 1)); ctx.translate(0, 0.25*k); }
+  else if (o.dive) ctx.rotate((o.back ? -0.35 : 0.35)*o.dive);
+  ctx.lineCap = 'round';
+  const hip = 0.95*(1 - 0.3*cr)*k, shY = 1.5*(1 - 0.3*cr)*k, st = o.stride || 0;
+  // legs: shorts on the thigh, trim socks, boots
+  // shading to one side: the hips slide over, the feet stay planted
+  for (const side of [-1, 1]) {
+    const lift = Math.max(0, Math.sin(st + (side > 0 ? Math.PI : 0)))*0.22*k;
+    const fx = side*0.16*k + (side === Math.sign(sh) ? sh*0.6 : 0), kx = side*0.12*k + sh*0.55;
+    ctx.strokeStyle = kit.shorts; ctx.lineWidth = 0.17*k; seg(side*0.08*k + sh, -hip, kx, -hip*0.5 - lift*0.6);
+    ctx.strokeStyle = kit.trim; ctx.lineWidth = 0.13*k; seg(kx, -hip*0.5 - lift*0.6, fx, -0.08*k - lift);
+    ctx.fillStyle = '#111'; ctx.fillRect(fx - 0.07*k, -0.09*k - lift, 0.14*k, 0.09*k);
+  }
+  ctx.translate(sh, -hip); ctx.rotate(o.lean || 0); ctx.translate(0, hip);   // lean pivots at the hips
+  if (o.twist) ctx.scale(1 - 0.25*o.twist, 1);
+  // torso
+  ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
+  ctx.fillStyle = kit.shirt;
+  ctx.beginPath(); ctx.moveTo(-0.2*k, -hip + 0.02*k); ctx.lineTo(0.2*k, -hip + 0.02*k); ctx.lineTo(0.28*k, -shY); ctx.lineTo(-0.28*k, -shY); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = kit.trim; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.06*k);
+  ctx.fillStyle = kit.shorts; rrect(-0.21*k, -hip - 0.02*k, 0.42*k, 0.16*k, 0.05*k); ctx.fill();
+  if (o.back && o.num) {
+    ctx.fillStyle = luma(kit.shirt) > 0.6 ? '#1b2233' : '#f1eee4';
+    ctx.font = `900 ${Math.max(8, Math.round(0.3*k))}px 'Big Shoulders Display', Impact, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(o.num), 0, -(hip + shY)/2);
+  }
+  // arms
+  const ARM = { run:[[-0.36, -0.95], [0.36, -1.05]], wide:[[-0.75, -1.3], [0.75, -1.3]], carry:[[-0.1, -1.1], [0.12, -1.12]], pass:[[0.5, -1.25], [0.62, -1.3]], reach:[[-0.32, -1.85], [0.32, -1.85]] };
+  const arms = ARM[o.arms] || ARM.run, swing = Math.sin(st)*0.08;
+  for (const [i, [ax, ay]] of arms.entries()) {
+    const ex = ax*k, ey = (ay + (i ? swing : -swing))*k*(1 - 0.3*cr), s0 = (i ? 0.26 : -0.26)*k;
+    ctx.strokeStyle = kit.shirt; ctx.lineWidth = 0.12*k; seg(s0, -shY + 0.05*k, (s0 + ex)/2, (-shY + ey)/2);
+    ctx.strokeStyle = SKIN; ctx.lineWidth = 0.1*k; seg((s0 + ex)/2, (-shY + ey)/2, ex, ey);
+  }
+  // head
+  const hy = -1.68*(1 - 0.3*cr)*k;
+  ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(0, hy, 0.12*k, 0, 7); ctx.fill();
+  ctx.fillStyle = HAIR;
+  if (o.back) { ctx.beginPath(); ctx.arc(0, hy - 0.01*k, 0.125*k, 0, 7); ctx.fill(); }
+  else { ctx.beginPath(); ctx.arc(0, hy - 0.03*k, 0.125*k, Math.PI*1.05, Math.PI*1.95); ctx.fill(); }
+  ctx.restore();
+}
+function cutTitle(c) {
+  if (c.duel) return DUEL[c.kind].name;
+  if (c.kind === 'scrum') return 'Scrum · ' + M.nat[c.feed].id + ' Ball';
+  return 'Lineout · ' + M.nat[c.team].id + ' Throw';
+}
+function duelLabels(c) {
+  if (c.kind === 'past') return [null, null];
+  return [c.kind === 'pass' ? 'Pass' : c.kind === 'tackle' ? 'Tackle' : 'Block', null];
+}
 function render(dt) {
   if (!M) return;
   const d = V.dpr;
@@ -1720,6 +2376,8 @@ function sfx(k) {
   else if (k === 'tackle') { noise(a, { dur:0.18, freq:500, gain:0.32 }); tone(a, { freq:90, dur:0.14, gain:0.22, slide:0.6 }); }
   else if (k === 'roar') noise(a, { dur:2.2, type:'bandpass', freq:900, q:0.4, gain:0.26, attack:0.25 });
   else if (k === 'cheer') noise(a, { dur:1.2, type:'bandpass', freq:1000, q:0.5, gain:0.14, attack:0.12 });
+  else if (k === 'whoosh') noise(a, { dur:0.25, type:'bandpass', freq:900, q:0.8, gain:0.12, attack:0.08 });
+  else if (k === 'tick') tone(a, { freq:1200, dur:0.04, gain:0.08 });
 }
 function buzz(ms) {
   if (!M || M.demo || M.headless || !navigator.vibrate) return;
@@ -1731,7 +2389,23 @@ function buzz(ms) {
    Input
    ========================================================= */
 const input = {
-  jx:0, jy:0, stickId:null, ox:0, oy:0, aDown:false, bDown:false, aPressed:false, bPressed:false, keys:new Set(),
+  jx:0, jy:0, stickId:null, ox:0, oy:0, px:0, py:0, aDown:false, bDown:false, aPressed:false, bPressed:false, keys:new Set(),
+  flick:0, pre:null, held:new Set(),
+  // a duel re-centres the stick under the thumb, so a held run doesn't read as a step
+  reanchor() {
+    if (!this.pre) this.pre = { x:this.jx, y:this.jy };
+    if (this.stickId !== null) { this.ox = this.px; this.oy = this.py; placeStick(this.ox, this.oy); }
+    this.jx = this.jy = 0; knob.style.transform = '';
+  },
+  // and afterwards the thumb's spot reads as the pre-duel direction, so the run carries on
+  restore() {
+    const pre = this.pre || { x:0, y:0 };
+    if (this.stickId !== null) {
+      this.ox = this.px - pre.x*STICK_R; this.oy = this.py - pre.y*STICK_R; placeStick(this.ox, this.oy);
+      this.jx = pre.x; this.jy = pre.y; knob.style.transform = `translate(${pre.x*STICK_R}px,${pre.y*STICK_R}px)`;
+    } else { this.jx = this.jy = 0; knob.style.transform = ''; }
+    this.flick = 0; this.held.clear(); this.pre = null;
+  },
   world() {
     let x = this.jx, y = this.jy;
     const k = this.keys;
@@ -1744,18 +2418,24 @@ const input = {
 };
 const zone = $('zone'), stick = $('stick'), knob = $('knob');
 const STICK_R = 52;
-function placeStick(x, y) { stick.style.left = x + 'px'; stick.style.top = y + 'px'; }
+function placeStick(x, y) {
+  stick.style.left = x + 'px'; stick.style.top = y + 'px';
+  const pl = $('plates');
+  if (pl) { const top = y - 102; pl.style.left = clamp(x - 82, 8, window.innerWidth/2 - 172) + 'px'; pl.style.top = (top < 0.07*window.innerHeight + 6 ? y + 72 : top) + 'px'; }
+}
 function restStick() { placeStick(96, window.innerHeight - 118); }
 zone.addEventListener('pointerdown', e => {
+  if (M && M.cut && M.cut.duel && M.cut.after) input.aPressed = true;   // tap to skip the verdict
   if (input.stickId !== null) return;
   e.preventDefault();
-  input.stickId = e.pointerId; input.ox = e.clientX; input.oy = e.clientY;
+  input.stickId = e.pointerId; input.ox = input.px = e.clientX; input.oy = input.py = e.clientY;
   try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
   placeStick(e.clientX, e.clientY); stick.classList.add('on');
   ac();
 });
 zone.addEventListener('pointermove', e => {
   if (e.pointerId !== input.stickId) return;
+  input.px = e.clientX; input.py = e.clientY;
   let dx = e.clientX - input.ox, dy = e.clientY - input.oy;
   const m = hyp(dx, dy);
   if (m > STICK_R) {
@@ -1793,6 +2473,11 @@ bindAct($('btnB'), 'b');
 const MOVE_KEYS = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD']);
 window.addEventListener('keydown', e => {
   if (!playing()) return;
+  if (M.paused) { if (!e.repeat && (e.code === 'KeyP' || e.code === 'Escape')) resume(); return; }
+  if (M.cut && M.cut.duel && !e.repeat && !input.held.has(e.code)) {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.flick = -1;
+    else if (e.code === 'ArrowRight' || e.code === 'KeyD') input.flick = 1;
+  }
   if (MOVE_KEYS.has(e.code)) { input.keys.add(e.code); e.preventDefault(); return; }
   if (e.repeat) return;
   if (e.code === 'KeyJ' || e.code === 'Space') { e.preventDefault(); if (goalOpen) goalUIKick(); else { input.aDown = true; input.aPressed = true; } }
@@ -1800,7 +2485,7 @@ window.addEventListener('keydown', e => {
   else if (e.code === 'KeyP' || e.code === 'Escape') { if (M.paused) resume(); else pause(); }
 });
 window.addEventListener('keyup', e => {
-  input.keys.delete(e.code);
+  input.keys.delete(e.code); input.held.delete(e.code);
   if (e.code === 'KeyJ' || e.code === 'Space') input.aDown = false;
   if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') input.bDown = false;
 });
@@ -1816,15 +2501,17 @@ const playing = () => mode === 'match' && M && !M.demo;
 
 function showScreen(id) { for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id; }
 function clearBanner() { clearTimeout(bannerTimer); const el = document.getElementById('banner'); if (el) el.innerHTML = ''; }
-function say(text, size, team) {
+function say(text, size, team, grade) {
   if (!M || M.demo || M.headless) return;
   const el = $('banner');
   const k = team != null ? M.kit[team].fill : 'var(--flood)';
   el.innerHTML = '';
+  el.classList.toggle('cut', !!M.cut);
   const m = document.createElement('div');
   m.className = 'msg' + (size ? ' ' + size : '');
   m.style.setProperty('--k', k);
-  m.textContent = text;
+  if (grade) { const g = document.createElement('span'); g.className = 'grade'; g.textContent = grade; m.appendChild(g); }
+  m.appendChild(document.createTextNode(text));
   el.appendChild(m);
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => { el.innerHTML = ''; }, size === 'big' ? 1700 : size === 'small' ? 900 : 1300);
@@ -1850,7 +2537,7 @@ function lockLandscape() {
 function startMatch(u, c, isChamp) {
   lockLandscape();
   ac();
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp });
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:settings.duels ? 'live' : 'off' });
   mode = 'match';
   showScreen(null);
   $('hud').hidden = false; $('controls').hidden = false; $('b-pause').hidden = false;
@@ -1870,7 +2557,7 @@ function cutLabels(c) {
   if (c.kind === 'lineout') return ['Jump', null];
   return duelLabels(c);
 }
-function duelLabels(c) { return ['Go', null]; }
+
 function fmtClock() {
   const mins = (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;
   const mm = Math.floor(mins), ss = Math.floor((mins-mm)*60);
@@ -1889,12 +2576,16 @@ function updateHud() {
   const cut = M.phase === 'cut' && M.cut;
   const [la, lb] = cut ? cutLabels(M.cut) : ours ? ['Pass', 'Kick'] : ['Tackle', 'Switch'];
   const canAct = M.phase === 'play' || (cut && !M.cut.after);
-  const bk = la + '|' + lb + canAct;
+  const duel = cut && M.cut.duel;
+  const bk = la + '|' + lb + canAct + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '');
   if (bk !== lastBtn) {
     lastBtn = bk;
-    $('la').textContent = la;
+    $('la').textContent = la || '';
     $('lb').textContent = lb || '';
+    $('btnA').hidden = !la;
     $('btnB').hidden = !lb;
+    $('btnA').classList.toggle('cue', !!(cut && !M.cut.after && la));
+    $('plates').hidden = !(duel && M.cut.kind === 'past' && !M.cut.after);
     $('btnA').classList.toggle('idle', !canAct); $('btnB').classList.toggle('idle', !canAct);
   }
   $('btnB').style.setProperty('--c', M.charging ? M.charge.toFixed(3) : 0);
@@ -1980,7 +2671,16 @@ function pause() {
   $('pz-quit').textContent = 'Quit Match'; quitArmed = false;
   $('m-pause').hidden = false;
 }
-function resume() { if (!M) return; M.paused = false; $('m-pause').hidden = true; input.keys.clear(); }
+function resume() {
+  if (!M) return;
+  M.paused = false; $('m-pause').hidden = true; input.keys.clear();
+  input.aPressed = input.bPressed = false; input.flick = 0;
+  const c = M.cut;
+  if (c && c.duel && !c.after) duelResume(c);
+  // scrums and lineouts give the thumb a moment too, without replaying a throw backwards
+  else if (c && c.kind === 'lineout' && c.outcome == null) c.t = Math.max(CUT_IN, c.t >= c.throwT ? c.throwT : 0, c.t - 0.6);
+  else if (c && c.kind === 'scrum' && !c.engaged) c.t = Math.max(CUT_IN, c.t - 0.6);
+}
 let quitArmed = false;
 $('b-pause').addEventListener('click', pause);
 $('pz-resume').addEventListener('click', resume);
@@ -1995,10 +2695,11 @@ if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOri
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
 /* home */
+const BOOL = { sound:1, duels:1 };
 function renderHome() {
   for (const seg of document.querySelectorAll('.seg')) {
     const key = seg.dataset.key;
-    const val = key === 'sound' ? (settings.sound ? 0 : 1) : settings[key];
+    const val = BOOL[key] ? (settings[key] ? 0 : 1) : settings[key];
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
   const note = $('champ-note');
@@ -2011,7 +2712,7 @@ function renderHome() {
 for (const seg of document.querySelectorAll('.seg')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
-    if (key === 'sound') settings.sound = i === 0; else settings[key] = i;
+    if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     save(); renderHome();
     if (key === 'sound' && settings.sound) ac();
   }));
@@ -2123,7 +2824,8 @@ function simulate(n, half, diff) {
   M = keep;
   return out;
 }
-window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, get M() { return M; } };
+window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, forceDuel,
+  debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings }, get M() { return M; } };
 
 function start(data) {
   load();

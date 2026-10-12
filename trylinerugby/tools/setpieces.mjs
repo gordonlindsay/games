@@ -9,7 +9,7 @@ const STEP = T.STEP;
 const DIFFS = ['Easy', 'Normal', 'Hard'];
 
 function freshMatch(diff) {
-  T.newMatch(0, 1, { halfLen: 240, diff, headless: false });   // ENG v FRA, both power 5
+  T.newMatch(0, 1, { halfLen: 240, diff, headless: false, duels: 'off' });   // ENG v FRA, both power 5
   for (let i = 0; i < 120; i++) T.update(STEP);                  // let the kick-off settle
 }
 function runScrum(feed, taps, goodHit) {
@@ -33,7 +33,7 @@ function runLineout(team, errSec) {
   let guard = 0;
   while (T.M.phase !== 'cut' && guard++ < 400) T.update(STEP);
   const c = T.M.cut, at = c.arrive - 0.57 + errSec;
-  while (T.M.cut === c && c.outcome == null && guard++ < 2000) {
+  while (T.M.cut === c && c.winner == null && guard++ < 2000) {   // an overthrow's winner is drawn 0.45s after the miss
     if (c.jump[0] == null && c.t >= at) T.input.aPressed = true;
     T.update(STEP);
   }
