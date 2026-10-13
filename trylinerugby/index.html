@@ -224,7 +224,13 @@ tr.me td{background:rgba(255,207,61,.09)}
 #knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px;border-radius:50%;background:rgba(241,238,228,.88);box-shadow:0 2px 10px rgba(0,0,0,.45)}
 .act{position:absolute;pointer-events:auto;touch-action:none;display:grid;place-items:center;border-radius:50%;border:2px solid rgba(241,238,228,.55);background:rgba(8,14,10,.58);color:var(--chalk);font:900 18px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:transform .06s}
 .act.a{width:88px;height:88px;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 26px);border-color:var(--flood);background:var(--flood);color:var(--flood-ink)}
-.act.b{width:68px;height:68px;right:calc(max(20px,env(safe-area-inset-right,0px)) + 100px);bottom:calc(env(safe-area-inset-bottom,0px) + 76px);background:conic-gradient(var(--flood) calc(var(--c,0)*1turn),rgba(8,14,10,.58) 0)}
+.act.b{width:68px;height:68px;right:calc(max(20px,env(safe-area-inset-right,0px)) + 104px);bottom:calc(env(safe-area-inset-bottom,0px) + 70px);background:conic-gradient(var(--flood) calc(var(--c,0)*1turn),rgba(8,14,10,.58) 0)}
+/* Sprint: the third button of the fan round A, mirroring B across A's diagonal. The ring is the meter: it drains while held and refills when let go */
+.act.c{width:68px;height:68px;right:calc(max(20px,env(safe-area-inset-right,0px)) + 44px);bottom:calc(env(safe-area-inset-bottom,0px) + 130px);
+  background:radial-gradient(closest-side,rgba(8,14,10,.82) calc(100% - 7px),transparent calc(100% - 6px)),conic-gradient(var(--flood) calc(var(--s,0)*1turn),rgba(241,238,228,.22) 0)}
+.act.c span{opacity:.6}
+.act.c.ready{border-color:var(--flood);color:var(--flood)}
+.act.c.ready span{opacity:1}
 .act.press{transform:scale(.9)}
 .act.idle{opacity:.45}
 .act.b.two span{display:block;width:54px;font-size:15px;line-height:1.05;text-align:center;white-space:normal}   /* "Drop Goal" on two lines inside the 68px button */
@@ -260,6 +266,7 @@ tr.me td{background:rgba(255,207,61,.09)}
   <div id="zone"></div>
   <div id="plates" hidden><span>Step Left</span><span>Step Right</span></div>
   <div id="stick"><div id="knob"></div></div>
+  <button class="act c" id="btnC"><span id="lc">Sprint</span></button>
   <button class="act b" id="btnB"><span id="lb">Kick</span></button>
   <button class="act a" id="btnA"><span id="la">Pass</span></button>
 </div>
@@ -269,7 +276,7 @@ tr.me td{background:rgba(255,207,61,.09)}
     <header class="mark">
       <p class="eyebrow">Mobile Rugby · Sevens · 5 Rounds</p>
       <h1 class="word" aria-label="Try Line"><span class="try">Try</span><span class="line">Line<span class="posts"></span></span></h1>
-      <p class="tag">Seven a side on a full-size pitch. One stick, two buttons, a championship to win.</p>
+      <p class="tag">Seven a side on a full-size pitch. One stick, three buttons, a championship to win.</p>
     </header>
     <div class="stack">
       <button class="btn primary" id="b-champ">Championship</button>
@@ -342,12 +349,14 @@ tr.me td{background:rgba(255,207,61,.09)}
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
       <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
       <dt>Drop Goal</dt><dd>In range the small button reads <b>Drop Goal</b>. Hold it, steer, let go in the gold before they reach you.</dd>
-      <dt>Tackle</dt><dd>When they have the ball. Dive at the carrier from close range. Miss and you're on the floor.</dd>
+      <dt>Tackle</dt><dd>When they have the ball. It lights up when you're close enough to dive. Miss and you're on the floor.</dd>
+      <dt>Sprint</dt><dd>Hold it for a burst of speed, with the ball or without. The ring drains while you hold and refills when you let go.</dd>
+      <dt>Offload</dt><dd>Press Pass as you're tackled, when it glows.</dd>
       <dt>Switch</dt><dd>Take the defender nearest the ball.</dd>
       <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner.</dd>
       <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast with the stick held forward. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
-      <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>P</b> Pause.</dd>
+      <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
     </dl>
     <div class="scoring">
       <div><b>5</b><span>Try</span></div><div><b>2</b><span>Conversion</span></div><div><b>3</b><span>Penalty</span></div><div><b>3</b><span>Drop Goal</span></div>
@@ -551,10 +560,14 @@ function newMatch(u, c, opts) {
     stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0, duels:0, duelsWon:0, duelsPerfect:0, gk:{ att:[0, 0], made:[0, 0] }, dg:{ att:[0, 0], made:[0, 0], charged:[0, 0] } },
     dropOn:[false, false], dropArmed:[false, false],   // the drop-goal offer, per side: its hysteresis, and what the label promised at the B press
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the last offer judged, and the ones the press committed the cut to
+    contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
+    spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
+    tags:[], fx:[], stop:0, shake:0, rt:0,             // render only: on-pitch tags, impact rings, the Big Hit's hit-stop and shake, the render clock
   };
   M.wind = makeWind();
   for (let t = 0; t < 2; t++) for (let i = 0; i < 7; i++) {
-    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0, boostMul:1, autoDir:0, drop:null });
+    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0, boostMul:1, autoDir:0, drop:null,
+      bind:null, bindOff:null, offside:0, sprint:0, sprinting:false, stumble:0, stumbleMul:1, wf:0, drawFrom:null, fend:0, fendA:0 });   // contact: the bind he is in, how long he is retiring, his sprint, a stumble, wrong-footed; then render-only smoothing and the fend
   }
   M.ctrl = M.players[3];
   kickoff(M.firstKick);
@@ -563,12 +576,17 @@ function newMatch(u, c, opts) {
 function maxSpeed(p) {
   let s = 7.6 + M.nat[p.team].pace*0.25;
   if (p.team === 1) s *= M.diff.cpuSpeed;
-  if (p.boost > 0) s *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
-  if (M.surge && M.surge.team === p.team) s *= 1.08;
-  return s;
+  let f = 1;
+  if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
+  if (M.surge && M.surge.team === p.team) f *= 1.08;
+  const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
+  if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
+  if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
+  if (p.wf > 0) f *= RUCK.wf.mul;
+  return s*f;
 }
 function nearestOf(arr, x, y) { let best = null, bd = 1e9; for (const p of arr) { const d = hyp(p.x-x, p.y-y); if (d < bd) { bd = d; best = p; } } return best; }
-function nearestFree(team, x, y) { return nearestOf(M.players.filter(p => p.team === team && p.down <= 0), x, y); }
+function nearestFree(team, x, y) { return nearestOf(M.players.filter(p => p.team === team && p.down <= 0 && !p.bind), x, y); }
 function pressure(p) { let m = 99; for (const q of M.players) if (q.team !== p.team && q.down <= 0) m = Math.min(m, dist(p,q)); return m; }
 function ourBall() {
   const b = M.ball;
@@ -610,7 +628,10 @@ function kickoffFormation(kTeam, kx) {
     if (p.team === kTeam) { p.x = kx - d*(i === 3 ? 2.5 : 1.2); p.y = KY[i]; i++; p.fx = d; }
     else { p.x = clamp(kx + d*RX[j], 2, 118); p.y = RY[j]; j++; p.fx = -d; }
     p.fy = 0; p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = 0; p.boost = 0; p.hx = p.x; p.hy = p.y;
+    p.bind = null; p.offside = 0; p.sprint = 0; p.sprinting = false; p.stumble = 0; p.wf = 0; p.drawFrom = null; p.fend = 0;
   }
+  M.contact = null;
+  for (const S of M.spr) { S.p = null; S.spent = false; }
 }
 function kickoff(team) {
   kickoffFormation(team, 60);
@@ -680,8 +701,8 @@ function catchBall(p, kind) {
   p.fromKick = kind === 'kick';
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); }
 }
-function knockOn(p) {
-  M.stats.knocks++;
+function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
+  M.stats.knocks++; st('ko_' + (why || 'catch'));
   placeBall(p.x, p.y);
   sfx('whistle');
   deadBall(() => scrum(1-p.team, p.x, p.y, 'Knock-On'));
@@ -701,13 +722,13 @@ function pickUp(p) {
 }
 
 /* ---------- passing and kicking ---------- */
-function pickReceiver(c, pref) {
+function pickReceiver(c, pref, maxR = 22) {                 // maxR: an offload reaches only CONTACT.off.range
   const d = dirOf(c.team); let best = null, bs = 1e9;
   for (const q of M.players) {
-    if (q.team !== c.team || q === c || q.down > 0) continue;
+    if (q.team !== c.team || q === c || q.down > 0 || q.bind) continue;
     const dx = (q.x-c.x)*d; if (dx > 0.5) continue;
     const dy = q.y-c.y, dd = hyp(dx,dy);
-    if (dd > 22 || dd < 1.5) continue;
+    if (dd > maxR || dd < 1.5) continue;
     let s = dd;
     if (pref < -0.3 && dy > 0) s += 30;
     if (pref > 0.3 && dy < 0) s += 30;
@@ -718,7 +739,7 @@ function pickReceiver(c, pref) {
 function bestReceiver(p) {
   const d = dirOf(p.team); let best = null, bs = -1e9;
   for (const q of M.players) {
-    if (q.team !== p.team || q === p || q.down > 0) continue;
+    if (q.team !== p.team || q === p || q.down > 0 || q.bind) continue;
     const dx = (q.x-p.x)*d; if (dx > 0.3) continue;
     const dd = dist(p,q); if (dd < 2 || dd > 20) continue;
     const sp = pressure(q), s = sp - dd*0.12;
@@ -793,48 +814,327 @@ function aiKick(p, type) {
   else cpuDrop(p);
 }
 
-/* ---------- tackling ---------- */
-function attemptTackle(q, c, mode) {
-  const p = tackleChance(q, c, mode);
+/* ---------- tackling ----------
+   Contact is a commit, then a bind. A defender who comes within reach commits to the carrier: the roll is drawn at the commit
+   and then played out. A made tackle binds the two men for CONTACT.bind seconds as a Big Hit, a Wrap or a Soft tackle, a second
+   defender can join, and it ends in a ruck with the tackler rolling away and retiring. A broken tackle slides the tackler off the
+   carrier's hip, never into his path. Duels and the drop-goal smother call tackle() with no tier and keep the old body, so no new
+   random draw reaches them. New code reads the two-player shims (isHuman, ctrlOf, levelOf), never team 0 or M.ctrl. */
+const ringed = q => q === ctrlOf(q.team);                   // the man under a human's ring
+const onFeet = p => p.down <= 0 && !p.bind;
+const st = (k, n) => { M.stats[k] = (M.stats[k] || 0) + (n == null ? 1 : n); };
+const cpuEdge = (q, c, arr) => (!isHuman(q.team) && isHuman(c.team)) ? arr[levelOf(c.team)] : 0;   // a CPU edge over a human, by the level that human plays
+const slide = (p, x, y, T, spin) => { T = Math.max(T, hyp(x - p.x, y - p.y)/9); p.drawFrom = { x:p.x, y:p.y, t:T, T, spin:spin || 0 }; p.x = x; p.y = y; };   // a teleport in the logic, smoothed in the drawing at no more than 9 m/s
+function tag(text, x, y) { if (M.auto) return; st('tag_' + text); M.tags.push({ text, x, y, t:0 }); while (M.tags.length > 2) M.tags.shift(); }
+function impact(x, y) { M.fx.push({ x, y, t:0 }); }
+function hitStop(ms) { if (!interactive()) return; M.stop = ms/1000; if (!RM) M.shake = 0.12; }
+function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI defender's reach), 'contact' (your ringed man's automatic tackle), 'dive' (a Tackle press), 'ankle' (a dive from behind)
+  const d = dirOf(c.team), rx = q.x - c.x, ry = q.y - c.y, rm = hyp(rx, ry) || 1;
+  const cv = hyp(c.vx, c.vy), cosF = cv > 0.5 ? (rx*c.vx + ry*c.vy)/(rm*cv) : rx*d/rm;
+  const behind = (q.x - c.x)*d < -0.3, sideOn = !behind && Math.abs(cosF) < 0.5;
+  let p = mode === 'ankle' ? CONTACT.ankle : tackleChance(q, c, mode);
+  if (sideOn && mode !== 'ankle') p = Math.min(0.95, p*CONTACT.side);
   q.tcd = 1.0;
-  M.stats['ta'+c.team] = (M.stats['ta'+c.team]||0) + 1;
-  if (rnd() < p) { M.stats['ts'+c.team] = (M.stats['ts'+c.team]||0) + 1; tackle(c, q); return true; }
-  q.down = mode === 'dive' ? 0.75 : 0.5;
-  M.stats.broken++;
-  if (c.team === 0 && !M.auto) say('Broken Tackle', 'small');
-  return false;
+  st('ta' + c.team);
+  const qs = !!q.sprinting, cs = !!c.sprinting, dp = M.nat[q.team].power - M.nat[c.team].power;   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend
+  const r = rnd();
+  let tier = 'broken';
+  if (r < p) {
+    const closing = ((c.vx - q.vx)*rx + (c.vy - q.vy)*ry)/rm;   // how fast the two are coming together along the line between them
+    let dom = CONTACT.dom.base + dp*CONTACT.dom.pow + (cosF > 0.5 && closing > 6 ? CONTACT.dom.front : 0) + (mode === 'dive' && rm < 1.7 ? CONTACT.dom.dive : 0) + (qs ? CONTACT.dom.sprint : 0) + cpuEdge(q, c, CONTACT.dom.cpu);
+    let soft = CONTACT.soft.base + (behind ? CONTACT.soft.behind : 0) + (cv > 7 ? CONTACT.soft.fast : 0) - dp*CONTACT.soft.pow;
+    if (mode === 'ankle') { dom = 0; soft = 1; }             // an ankle tap is always soft
+    else { dom = clamp(dom, 0.03, 0.5); soft = clamp(soft, 0.05, 1 - dom); }
+    const r2 = rnd();
+    tier = r2 < dom ? 'dom' : r2 < dom + soft ? 'soft' : 'wrap';
+    st('ts' + c.team);
+  }
+  st('tier_' + tier);
+  if (mode === 'ankle') { st('ankleTry'); if (tier !== 'broken') st('ankle' + q.team); }
+  const k = { c, q, q2:null, mode, tier, t:0, T:tier === 'broken' ? 0 : CONTACT.bind, v0:{ x:c.vx, y:c.vy }, front:cosF > 0.3, aiOff:null, offloaded:false, margin:r - p, dp, cSprint:cs };
+  endSprint(q);                                            // the sprint ends when he commits
+  if (tier === 'broken') { resolveContact(k); return k; }
+  endSprint(c);
+  q.bind = k; c.bind = k; q.bindOff = { x:rx/rm*0.7, y:ry/rm*0.7 };
+  M.contact = k; st('binds');
+  sfx('tackle'); if (ringed(q) || ringed(c)) buzz(30);
+  if (!isHuman(c.team) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload
+  return k;
+}
+function releaseBind(k) { for (const p of [k.c, k.q, k.q2]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }
+function contactGuard() { const k = M.contact; if (!k) return; const b = M.ball; if (!(M.phase === 'play' && b.state === 'held' && b.carrier === k.c)) releaseBind(k); }
+function bindMove(p, dt) {                                 // velocities through the bind: the carrier runs down (or is driven back), the tackler is pulled onto his hip
+  const k = p.bind;
+  if (p === k.c) {
+    const u = clamp(k.t/k.T, 0, 1);
+    const f = k.tier === 'soft' ? 1 - 0.6*u : k.tier === 'wrap' ? 1 - u : (u < 0.4 ? 1 - u/0.4 : -0.35*(u - 0.4)/0.6);
+    p.vx = k.v0.x*f; p.vy = k.v0.y*f;
+  } else {
+    const tx = k.c.x + p.bindOff.x, ty = k.c.y + p.bindOff.y;
+    let px = (tx - p.x)*12, py = (ty - p.y)*12; const pm = hyp(px, py);
+    if (pm > 8) { px *= 8/pm; py *= 8/pm; }                   // the pull onto the hip: 12/s of the gap, capped so a lunge from 2.8m reads as a lunge, not a blink
+    p.vx = k.c.vx + px; p.vy = k.c.vy + py;
+  }
+}
+function contactStep(c, dt) {                              // runs in place of the duel and tackle checks while a bind is on
+  const k = M.contact;
+  if (k.c !== c) { releaseBind(k); return; }
+  if (carrierChecks(c)) { releaseBind(k); return; }        // a bound carrier who crosses the line still scores; touch is still touch
+  k.t += dt;
+  if (k.aiOff != null && k.t >= k.aiOff) { k.aiOff = null; if (offload(k, false)) return; }
+  if (!k.q2) for (const o of M.players) {
+    if (o.team === c.team || o === k.q || !onFeet(o) || o.tcd > 0 || o.offside > 0) continue;
+    if (dist(o, c) < CONTACT.second.r) { joinTackle(k, o); break; }
+  }
+  if (k.t >= k.T) resolveContact(k);
+}
+function joinTackle(k, o) { const c = k.c, m = dist(o, c) || 1; k.q2 = o; o.bind = k; o.bindOff = { x:(o.x - c.x)/m*0.7, y:(o.y - c.y)/m*0.7 }; endSprint(o); st('second'); }
+function supportFor(c) {                                   // the AI carrier's offload target: a team-mate level or behind within range, in some space
+  const d = dirOf(c.team); let best = null, bd = CONTACT.off.range;
+  for (const q of M.players) { if (q.team !== c.team || q === c || !onFeet(q) || (q.x - c.x)*d > 0.3) continue; const dd = dist(q, c); if (dd > 1.5 && dd < bd && pressure(q) > 2) { bd = dd; best = q; } }
+  return best;
+}
+function offloadTarget(k) {                                // the one receiver the Offload label, the press and the pass-target ring all agree on: the stick's side within range, else the nearest within range
+  if (k.offloaded || k.tier === 'dom' || k.tier === 'broken') return null;
+  const c = k.c, inp = inputOf(c.team);
+  return inp ? pickReceiver(c, inp.world().y, CONTACT.off.range) : supportFor(c);
+}
+function canOffload(k) { return !!offloadTarget(k); }
+function looseInContact(c) {                               // the ball comes loose behind him, for anyone
+  const b = M.ball, d = dirOf(c.team);
+  tag('Loose Ball', c.x, c.y);
+  b.state = 'loose'; b.carrier = null; b.f = null; b.last = c.team; b.kickInfo = null;
+  b.x = c.x - d*0.4; b.y = c.y; b.z = 0.6; b.vx = -d*(2 + rnd()*3); b.vy = (rnd() - 0.5)*4; b.vz = 1.5;
+  c.hold = 0;
+}
+function offload(k, user) {                                // user: the carrier's own Pass press while held; otherwise the AI's try
+  const c = k.c;
+  if (k.offloaded || k.tier === 'dom' || k.tier === 'broken') return false;
+  const r = user ? offloadTarget(k) : supportFor(c);        // the press takes the man the label was lit for
+  if (!r) return false;
+  const pOk = CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05);
+  st('offAtt'); k.offloaded = true;
+  const q = k.q, q2 = k.q2;
+  releaseBind(k);
+  c.down = 0.9; q.down = 0.6; q.tcd = 1.0; if (q2) q2.tcd = 0.4;
+  if (rnd() < pOk) { st('offloads'); st('off' + c.team); if (ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) }); return true; }
+  st('offFail');
+  if (rnd() < CONTACT.off.hold) { st('offHeld'); c.down = 0; q.down = 0; q.tcd = 0; tackle(c, q, { tier:k.tier, q2 }); return true; }   // he couldn't get it away: an ordinary ruck
+  if (rnd() < CONTACT.off.knock) { st('offKnock'); knockOn(c, 'offload'); } else { st('offLoose'); looseInContact(c); }
+  return true;
+}
+function resolveContact(k) {                               // the end of the bind, or a broken tackle at the commit
+  const c = k.c, q = k.q, q2 = k.q2;
+  let tier = k.tier;
+  if (q2) {
+    if (tier === 'wrap' && rnd() < CONTACT.second.toDom) tier = 'dom';
+    else if (tier === 'soft' && rnd() < CONTACT.second.softToWrap) tier = 'wrap';
+    if (tier !== k.tier) st('secondChanged');
+  }
+  releaseBind(k);
+  if (tier === 'broken') {
+    let ux = c.vx, uy = c.vy, cv = hyp(ux, uy);              // the carrier's line: his run, or his facing when he is standing still, or the line from the tackler; never nothing, so the tackler never lands on top of him
+    if (cv < 0.5) { ux = c.fx; uy = c.fy; cv = hyp(ux, uy); }
+    if (cv < 0.5) { ux = c.x - q.x; uy = c.y - q.y; cv = hyp(ux, uy); }
+    if (cv < 1e-6) { ux = dirOf(c.team); uy = 0; cv = 1; }
+    ux /= cv; uy /= cv;
+    const s = (q.x - c.x)*uy - (q.y - c.y)*ux >= 0 ? 1 : -1;
+    slide(q, c.x - ux*CONTACT.slide[0] + uy*CONTACT.slide[1]*s, c.y - uy*CONTACT.slide[0] - ux*CONTACT.slide[1]*s, 0.12, s);   // off the hip: beside and behind, out of his path
+    q.down = (k.mode === 'dive' || k.mode === 'ankle') ? CONTACT.diveDown : CONTACT.brokenDown; q.tcd = 1.0; q.vx = q.vy = 0;
+    const fend = k.cSprint || (-k.dp >= CONTACT.fend.pow && k.margin >= CONTACT.fend.margin);   // beaten by a clear margin with the power edge, or at a sprint: he keeps his speed
+    c.fend = 0.2; c.fendA = Math.atan2(q.y - c.y, q.x - c.x);
+    let tripped = false;
+    if (k.mode === 'ankle' && rnd() < CONTACT.trip.p) { c.stumble = CONTACT.trip.t; c.stumbleMul = CONTACT.trip.mul; st('trip'); tripped = true; }
+    else if (!fend) { c.stumble = CONTACT.stumble[0]; c.stumbleMul = CONTACT.stumble[1]; }
+    if (fend) { st('fends'); st('fend' + c.team); if (ringed(c)) tag('Fend', c.x, c.y); }
+    if (tripped) { sfx('trip'); if (ringed(q)) { tag('Tripped', c.x, c.y); buzz(20); } } else sfx('whiff');
+    st('broken' + c.team); M.stats.broken++;
+    return;
+  }
+  if (tier === 'dom') { st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45); if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); } }
+  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15);   // the ball jolted loose in the tackle
+  if (rnd() < jolt) {
+    st('jolts');
+    c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
+    if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }
+    return;
+  }
+  if (k.mode === 'ankle') { sfx('trip'); if (ringed(q)) { tag('Ankle Tap', c.x, c.y); buzz(20); } }
+  tackle(c, q, { tier, q2 });
 }
 function tackle(c, q, o) {
   o = o || {};
   M.stats.tackles++;
-  c.down = 1.25; c.vx *= 0.2; c.vy *= 0.2; c.drop = null;
-  q.down = 1.0; q.tcd = 1.0;
-  sfx('tackle'); buzz(30);
   const team = c.team, d = dirOf(team);
+  if (o.tier == null) {                                      // the duels' tackles and Big Hit, and the drop-goal smother: the old body, with no new random draw
+    c.down = 1.25; c.vx *= 0.2; c.vy *= 0.2; c.drop = null;
+    q.down = 1.0; q.tcd = 1.0;
+    sfx('tackle'); buzz(30);
+    if ((c.x-ownLine(team))*d < 0) {
+      placeBall(c.x, c.y);
+      deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
+      return;
+    }
+    placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
+    M.phaseCount++; M.stats.rucks++;
+    startSet({ kind:'ruck', team, x:clamp(c.x,1,119), y:clamp(c.y,1,69), t:o.dom ? DOM_RUCK : 1.05, dom:!!o.dom, domP:o.domP, then:resolveRuck });
+    return;
+  }
+  c.vx *= 0.2; c.vy *= 0.2; c.drop = null;
   if ((c.x-ownLine(team))*d < 0) {
+    c.down = 1.25; q.down = 1.0; q.tcd = 1.0;
     placeBall(c.x, c.y);
     deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
     return;
   }
-  placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
+  const bx = clamp(c.x - d*0.4, 1, 119), by = clamp(c.y, 1, 69), ball = { x:bx, y:by };   // the ball goes behind the tackled man
+  placeBall(bx, by);
   M.phaseCount++; M.stats.rucks++;
-  startSet({ kind:'ruck', team, x:clamp(c.x,1,119), y:clamp(c.y,1,69), t:o.dom ? DOM_RUCK : 1.05, dom:!!o.dom, domP:o.domP, then:resolveRuck });
+  const tier = o.tier, sy = q.y >= by ? 1 : -1;
+  c.x = clamp(bx + d*0.45, 0.5, 119.5); c.y = by;
+  // the race to the ball sets the ruck's length: the attack's first support against the defence's first man other than the tackler
+  let tA = 99;
+  for (const p of M.players) if (p.team === team && p !== c && onFeet(p)) tA = Math.min(tA, dist(p, ball)/(0.85*maxSpeed(p)) + 0.15 - RUCK.attHead);
+  tA = Math.max(0.1, tA);
+  const q2 = o.q2 && o.q2.down <= 0 ? o.q2 : null;
+  let tD = q2 ? 0.15 : 99;
+  for (const p of M.players) if (p.team !== team && p !== q && p !== q2 && onFeet(p) && !(p.offside > 0) && dist(p, ball) <= RUCK.gate && (p.x - bx)*d >= -0.5) tD = Math.min(tD, dist(p, ball)/(0.85*maxSpeed(p)) + 0.15);
+  const t = tier === 'dom' ? RUCK.t.slow : (tA + RUCK.quickLead < tD ? RUCK.t.quick : RUCK.t.normal);
+  st(t <= RUCK.t.quick ? 'ruck_quick' : t >= RUCK.t.slow ? 'ruck_slow' : 'ruck_normal');
+  c.down = t + 0.15;
+  slide(q, clamp(bx + d*1.0, 0.5, 119.5), clamp(by + sy*1.1, 1, 69), 0.15);   // the tackler rolls away, then retires: no tackle and no chasing until he is back
+  q.vx = q.vy = 0; q.down = t + 0.25; q.tcd = q.offside = t + 0.25 + RUCK.retire;
+  if (q2) { q2.offside = t + 0.25 + RUCK.retire; q2.tcd = Math.max(q2.tcd, q2.offside); }   // the man who joined is in the ruck too, and retires for as long as the tackler
+  startSet({ kind:'ruck', team, x:bx, y:by, t, tier, tA, tD, tackler:q, then:resolveRuck });
 }
-function resolveRuck(s) {
+function wrongFoot(team, x, y) {                           // the side that lost the ball, near it, is caught on the wrong side: slow and unable to tackle for a moment
+  for (const p of M.players) if (p.team !== team && hyp(p.x - x, p.y - y) < RUCK.wf.r) { p.tcd = Math.max(p.tcd, RUCK.wf.t); p.wf = RUCK.wf.t; st('wfMen'); }
+}
+function resolveRuck(s) {                                  // the ruck is automatic: a flat penalty roll, then a flat turnover roll
   const att = s.team, def = 1-att;
-  if (rnd() < 0.045) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
-  const pT = s.dom ? s.domP : 0.075 + (M.nat[def].power - M.nat[att].power)*0.02 + (def === 1 ? M.diff.turnover : -M.diff.turnover);
-  if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) { M.stats.turnovers++; say('Turnover', 'small'); releaseTo(def, s.x, s.y, 'turnover'); if (s.dom) surge(0, LINE_SPEED); return; }
+  if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
+  const pT = s.dom ? s.domP : RUCK.flatBase + (M.nat[def].power - M.nat[att].power)*0.02 + (def === 1 ? M.diff.turnover : -M.diff.turnover);
+  if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
+    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small');
+    releaseTo(def, s.x, s.y, 'turnover');
+    if (s.tier) wrongFoot(def, s.x, s.y);
+    if (s.dom) surge(0, LINE_SPEED);
+    return;
+  }
   releaseTo(att, s.x, s.y, 'ruck');
   if (s.dom) surge(0, LINE_SPEED);
 }
 function tackleChecks(c) {
   for (const q of M.players) {
-    if (q.team === c.team || q.down > 0 || q.tcd > 0) continue;
-    const user = !M.auto && q === M.ctrl;
-    if (dist(q,c) < (user ? 1.35 : 1.5) && attemptTackle(q, c, user ? 'contact' : 'ai')) return true;
+    if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
+    const user = ringed(q);
+    if (dist(q,c) < (user ? 1.35 : 1.5)) { commitTackle(q, c, user ? 'contact' : 'ai'); return true; }   // the first man to commit takes him; nobody else rolls while he is bound
   }
   return false;
+}
+function collide() {                                       // standing men push apart; a man on the ground, or one bound in a tackle, is stepped round; team-mates stop jostling
+  const P = M.players, R = 1.25, RD = CONTACT.downR;
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i];
+    for (let j = i+1; j < P.length; j++) {
+      const c = P[j];
+      if (a.bind && a.bind === c.bind) continue;             // the men in one bind hold each other: bindMove owns them
+      const ad = a.down > 0 || !!a.bind, cd = c.down > 0 || !!c.bind;   // a bound man stays put like a man on the ground, and everyone else steps round him
+      if (ad && cd) continue;
+      const dx = c.x-a.x, dy = c.y-a.y, d2 = dx*dx + dy*dy, r = (ad || cd) ? RD : R;
+      if (d2 >= r*r) continue;
+      const d = Math.sqrt(d2), o = Math.min(r - d, (ad || cd) ? 0.2 : 0.4), nx = d > 1e-3 ? dx/d : 1, ny = d > 1e-3 ? dy/d : 0;   // eased out by at most 0.2m a step round a man on the ground or bound (one getting up inside a crowd is not shoved), 0.4m between standing men so they never sink into each other; an exact overlap is parted along the touchline axis rather than left
+      if (ad) { c.x += nx*o; c.y += ny*o; }
+      else if (cd) { a.x -= nx*o; a.y -= ny*o; }
+      else {
+        a.x -= nx*o/2; a.y -= ny*o/2; c.x += nx*o/2; c.y += ny*o/2;
+        const rv = (c.vx - a.vx)*nx + (c.vy - a.vy)*ny;
+        if (rv < 0 && a.team === c.team) { a.vx += nx*rv/2; a.vy += ny*rv/2; c.vx -= nx*rv/2; c.vy -= ny*rv/2; }   // opponents are not damped: a shadowing defender must not become a wall
+      }
+    }
+  }
+}
+
+/* ---------- Sprint ----------
+   One meter a side, M.spr[t]. Holding Sprint lifts the controlled man's top speed and drains the meter over SPRINT.secs; letting
+   go refills it over SPRINT.refill[level]. A sprint needs SPRINT.floor to start, and a hold that runs the meter dry must be let go
+   before the next. The AI side runs the same meter, as often as its level's policy says, for a chaser or its carrier. */
+const sprintLevel = p => p.sprint > 0 ? Math.min(1, p.sprint/SPRINT.fade) : 0;   // p.sprint is the burst in seconds of SPRINT.fade: full while held, easing out over SPRINT.fade after a release, climbing back from where it is if he is held again inside that
+function sprintable(p) { return !!p && M.phase === 'play' && onFeet(p) && !(p.offside > 0); }
+function stopSprint(S) { const p = S.p; if (!p) return; p.sprinting = false; S.p = null; }   // the ease-out runs on from his level now, and sprintTick charges it to the meter
+function endSprint(p) { const S = M.spr[p.team]; if (S.p === p) stopSprint(S); p.sprint = 0; }   // a commit or a bind ends the sprint outright: no ease-out to pay for
+function startSprint(S, p) {
+  const fresh = !(p.sprint > 0);                           // inside his own ease-out the burst climbs back at the fade's rate: a re-press never snaps to full speed
+  S.p = p; p.sprinting = true; if (fresh) p.sprint = SPRINT.fade;
+  st(isHuman(p.team) ? 'sprints' : 'cpuSprints');
+  if (isHuman(p.team) && fresh) { sfx('whoosh'); buzz(15); }
+}
+function bestChaser(team) {                                // the nearest man of this side on his feet to the other side's carrier
+  const b = M.ball, c = b.state === 'held' ? b.carrier : null; if (!c || c.team === team) return null;
+  let best = null, bd = 1e9;
+  for (const p of M.players) if (p.team === team && onFeet(p) && !(p.offside > 0)) { const d = dist(p, c); if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+function sprintPick(t) {                                   // the man a Sprint press would move the ring to: the best chaser when yours is down or another is over SPRINT.pick nearer their carrier; null to stay put
+  const b = M.ball, p = ctrlOf(t), c = b.state === 'held' && b.carrier.team !== t ? b.carrier : null, best = c ? bestChaser(t) : null;
+  return c && best && best !== p && (!p || !onFeet(p) || dist(p, c) - dist(best, c) > SPRINT.pick) ? best : null;
+}
+function sprintOn(t) {                                     // would a Sprint press act now: the meter over the floor (or a sprint running), not latched, and the man it would go to able to sprint
+  const S = M.spr[t];
+  return M.phase === 'play' && !S.spent && (!!S.p || S.m >= SPRINT.floor) && sprintable(sprintPick(t) || ctrlOf(t));
+}
+function sprintPress(t) {                                  // the press edge: a dim button does nothing, not even a switch; otherwise the ring moves to the man who can chase and the hold will act
+  if (!isHuman(t) || !sprintOn(t)) return false;
+  const best = sprintPick(t);
+  if (best) { setCtrl(t, best); st('sprintPick'); }
+  return true;
+}
+function gapAhead(c) { const d = dirOf(c.team); let m = 99; for (const q of M.players) if (q.team !== c.team && onFeet(q) && (q.x - c.x)*d > -1) m = Math.min(m, dist(q, c)); return m; }
+function ahead(c, t) { const d = dirOf(c.team); let n = 0; for (const q of M.players) if (q.team === t && q.down <= 0 && (q.x - c.x)*d > 0 && Math.abs(q.y - c.y) < SPRINT.cpu.lane) n++; return n; }   // defenders of side t still ahead of the carrier, in his lane
+function cleanThrough(c, t) { return ahead(c, t) === 0; }
+function cpuSprintWant(t, S, dt) {                         // the AI side's policy: who should be sprinting on its meter this step, if anyone
+  if (S.spent) { S.spent = false; return null; }
+  const b = M.ball; if (b.state !== 'held') return null;
+  const c = b.carrier, d = dirOf(c.team), P = SPRINT.cpu, lv = levelOf(t);
+  const think = p => { S.think -= dt; if (S.think > 0) return false; S.think = P.think; return rnd() < p; };
+  if (c.team === t) {                                      // carrying: a burst into a clean break, kept while the space lasts
+    if (c.drop) return null;
+    const gap = gapAhead(c);
+    if (S.p === c) return gap > P.keep ? c : null;
+    if (!P.carry[lv] || gap < P.space || ahead(c, 1 - t) > P.carryLast[lv]) return null;
+    return think(P.carry[lv]) ? c : null;
+  }
+  if (S.p) { const q = S.p, dd = dist(q, c); return (q.team === t && dd > 1.5 && dd < P.max + 3 && (q.x - c.x)*d <= 1.5) ? q : null; }
+  const q = bestChaser(t); if (!q) return null;
+  const dd = dist(q, c);
+  if (dd < P.min || dd > P.max || (q.x - c.x)*d > 1) return null;   // chasing from level or behind
+  if (ahead(c, t) > P.chaseLast[lv]) return null;          // only a runner who is through (or past all but the last man, on Hard): the sprint is the last line, not every chase
+  return think(P.chase[lv]) ? q : null;
+}
+function sprintWant(t, dt) {
+  const S = M.spr[t];
+  if (isHuman(t) && !inputOf(t).cDown) S.spent = false;   // letting go clears the spent latch whatever the phase: a release during a ruck counts
+  if (M.phase !== 'play') return null;
+  if (!isHuman(t)) return cpuSprintWant(t, S, dt);
+  return S.spent || !inputOf(t).cDown ? null : ctrlOf(t);
+}
+function sprintTick(dt) {                                  // after the close-up return in update(), so the meters freeze in scrums, lineouts, duels and goal kicks
+  for (let t = 0; t < 2; t++) {
+    const S = M.spr[t], want = sprintWant(t, dt), c = M.ball.carrier;
+    if (S.p && (S.p !== want || !sprintable(S.p))) stopSprint(S);
+    if (want && !S.p && S.m >= SPRINT.floor && sprintable(want)) startSprint(S, want);
+    let drain = 0;                                         // the hold and every ease-out on this side are charged by their level, x1.5 with the ball: a tap buys no more than a hold, and nothing refills while a burst is easing out
+    for (const p of M.players) if (p.team === t && p.sprint > 0) {
+      if (!onFeet(p)) { p.sprint = 0; continue; }           // down or bound: the sprint is over, and nothing is charged for an ease-out that can't move him
+      drain += sprintLevel(p)*(c === p ? SPRINT.ballDrain : 1);
+    }
+    if (drain > 0) {
+      S.m -= dt/SPRINT.secs*drain; if (S.p) st(isHuman(t) ? 'sprintSecs' : 'cpuSprintSecs', dt);
+      if (S.m <= 0) { S.m = 0; if (S.p) { S.spent = true; stopSprint(S); } for (const p of M.players) if (p.team === t) p.sprint = 0; }   // dry: the burst and any ease-out end at once
+    }
+    else if (S.m < 1) { S.m = Math.min(1, S.m + dt/SPRINT.refill[levelOf(t)]); if (S.m >= 1) { S.cue = 0.5; if (isHuman(t) && M.dclock - S.tick > 3) { S.tick = M.dclock; sfx('tick'); } } }
+    if (S.cue > 0) S.cue -= dt;
+  }
 }
 function carrierChecks(c) {
   const d = dirOf(c.team);
@@ -1172,7 +1472,7 @@ const holdLead = () => (holdSteps() - 1)*STEP;               // how long the wor
 function dropZone(c) {                                     // is this carrier offered a drop goal right now? Rules 1 and 3 where he stands; range, bearing and the offer where the hold will leave him
   const t = c.team, inp = inputOf(t), b = M.ball, k = KICK;
   const off = () => { M.dropOn[t] = false; return DZ_OFF; };
-  if (!inp || c !== ctrlOf(t) || b.state !== 'held' || b.carrier !== c || M.phase !== 'play' || M.cut || c.hold < 0.3) return off();
+  if (!inp || c !== ctrlOf(t) || b.state !== 'held' || b.carrier !== c || M.phase !== 'play' || M.cut || c.hold < 0.3 || c.bind) return off();
   const j = frameVec(t, inp.world());
   if (Math.abs(j.y) > 0.55 || j.x < -0.3) return off();   // pointing at touch, or back: the button is today's kick
   const proj = projectHold(c, holdLead()), f = toFrame(t, proj.x, proj.y), D = hyp(110 - f.x, 35 - f.y);
@@ -1199,7 +1499,7 @@ function kickLabel(t) {                                    // the small button w
 // the world `lead` seconds on, run the way the hold will run it: the real step for everyone (the kicker on his stick, a CPU kicker checking
 // his run as the wind-up does, the AI's chasers and the defensive line as computeTargets drives them, collisions included), then everyone put back.
 // Nothing random is drawn. Returns the kick spot and every standing opponent's projected spot and velocity, all in the world.
-const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hold', 'turn', 'lastA', 'boost'];   // what moveAll touches
+const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hold', 'turn', 'lastA', 'boost', 'offside', 'sprint', 'stumble', 'wf'];   // what moveAll touches
 function projectHold(c, lead) {
   const t = c.team, n = Math.max(0, Math.round(lead/STEP)), dt = n ? lead/n : 0, P = M.players;
   const saved = P.map(p => HOLD_KEYS.map(k => p[k])), steps0 = M.stats.steps, drop0 = c.drop;
@@ -1435,7 +1735,7 @@ function startCut(c) {
   M.cut = c; M.phase = 'cut';
   clearBanner();
   M.charging = false; M.charge = 0;
-  input.aPressed = input.bPressed = false;
+  input.aPressed = input.bPressed = input.cPressed = false; input.cDown = false;   // a Sprint held into a close-up must be pressed again after it
   lastBtn = '';
 }
 function finishCut(after, hold) {
@@ -1451,13 +1751,13 @@ function updateCut(dt) {
     if (c.hold > 0) c.hold -= dt;
     else {
       c.exit = Math.max(0, c.exit) + dt;
-      if (c.exit >= CUT_OUT) { const fn = c.after; M.cut = null; M.phase = 'play'; lastBtn = ''; fn(); }
+      if (c.exit >= CUT_OUT) { const fn = c.after; M.cut = null; M.phase = 'play'; lastBtn = ''; input.cDown = input.cPressed = false; fn(); }
     }
   } else if (c.kind === 'scrum') updateScrum(c, dt);
   else if (c.kind === 'lineout') updateLineout(c, dt);
   else if (c.kind === 'goal') updateGoalCut(c, dt);
   else updateDuel(c, dt);
-  input.aPressed = input.bPressed = false; input.flick = 0; input.aCancel = input.bCancel = false;
+  input.aPressed = input.bPressed = input.cPressed = false; input.flick = 0; input.aCancel = input.bCancel = input.cCancel = false;
 }
 function surge(team, secs) { M.surge = { team, t:secs }; }
 
@@ -1582,13 +1882,19 @@ const DUEL_GRACE = 0.30, DUEL_OUTRO = 0.55, DUEL_SKIP = 0.25, DUEL_GAP = 30, DUE
 const G_START = 7.0, G_WIN = 2.4, G_HIT = 0.8;          // the restaged approach, metres apart
 const BURST = { ok:[1.09, 2.0], perfect:[1.14, 2.5], knock:[1.06, 1.2] };   // measured at n=1440 per row: x1.12/x1.18 overshoots Normal once the Dummy is in, x1.06 is barely felt
 const DOM_TURN = [0.25, 0.35], DOM_RUCK = 1.6, LINE_SPEED = 2.5;
+/* Contact, the ruck and Sprint. Every lever is here, one line each, so the harness can override them:
+   CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' node tools/bot.mjs tries values without an edit. Arrays are by level (Easy, Normal, Hard). */
+const CONTACT = { bind:0.25, side:1.10, contact:[0.58,0.42,0.42], dive:[0.66,0.50], ankle:0.55, diveDown:0.75, brokenDown:0.5, stumble:[0.15,0.9], slide:[0.5,0.95], downR:0.95, second:{ r:1.3, toDom:0.35, softToWrap:0.35 }, dom:{ base:0.14, pow:0.04, front:0.03, dive:0.08, sprint:0.10, cpu:[-0.03,0,0.03] }, soft:{ base:0.22, behind:0.25, fast:0.08, pow:0.04 }, fend:{ pow:1, margin:0.35 }, trip:{ p:0.4, t:0.5, mul:0.5 }, jolt:{ dom:0.09, wrap:0.02, soft:0.01, fwd:0.55 }, off:{ soft:0.85, wrap:0.70, range:9, cpu:0.10, hold:0.5, knock:0.55 } };
+const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.35, gate:3.5, retire:0.6, flatBase:0.11, pen:0.045, wf:{ r:3, t:0.7, mul:0.5 } };
+const SPRINT = { mul:[1.20,1.20,1.15], mulBall:[1.05,1.05,1.04], secs:2.0, ballDrain:1.5, refill:[7,10,10], floor:0.2, fade:0.3, pick:4, cpu:{ chase:[0.1,0.12,0.2], chaseLast:[0,0,0], carry:[0,0.05,0.3], carryLast:[0,0,0], lane:15, min:2.5, max:12, space:6, keep:2.5, think:0.25 } };
+// CONTACT_TUNE
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first
 const DUMMY = { drift:[0.35, 0.40, 0.45], fake:[0, 0.15, 0.30] };                      // instant-mode win rate by difficulty
 
 function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
-  let p = mode === 'dive' ? (dist(q, c) < 1.7 ? 0.66 : 0.5) : mode === 'contact' ? 0.42 : (q.team === 1 ? M.diff.cpuTackle : M.diff.myTackle);
+  let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (q.team === 1 ? M.diff.cpuTackle : M.diff.myTackle);
   p += (M.nat[q.team].power - M.nat[c.team].power)*0.05;
   if (stepped) p *= 0.65;
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
@@ -1678,11 +1984,13 @@ function cpuPass(p, to) {
 }
 function startPendingDuel() {
   const s = M.duelPending; M.duelPending = null;
-  if (!(M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === s.O)) return;
+  if (!(M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === s.O) || s.O.bind) return;   // tackled as he shaped to pass: no pass, no duel
   const again = blockSpec(s.O, s.R);          // your man may have gone down, or another duel just used the gap
   if (again) startDuel(again); else doPass(s.O, s.R);
 }
 function startDuel(s) {
+  for (const p of M.players) { p.sprinting = false; p.sprint = 0; }   // a duel is run at the duel's pace; the meters keep their level
+  for (const S of M.spr) S.p = null;
   const k = DUEL[s.kind], di = M.di, n0 = M.nat[0], n1 = M.nat[1], L = M.duelLog, h = M.half - 1;
   if (s.how === 'bonus') L.bonus[h] = true; else if (s.how !== 'force') L.half[h]++;
   L.last = M.dclock; L.lastKind = s.kind;
@@ -2097,7 +2405,7 @@ function assignMarks(T, D, pts, dA, fx, fy, lineX, mode) {
 function computeTargets() {
   const T = new Map(), b = M.ball, P = M.players;
   const uc = userActive() ? M.ctrl : null;
-  const free = p => p.down <= 0 && p !== uc;
+  const free = p => p.down <= 0 && p !== uc && !p.bind;
   if (M.phase === 'goal' || (M.phase === 'set' && (M.set.kind === 'try' || M.set.kind === 'score'))) {
     for (const p of P) T.set(p, { x:p.x, y:p.y, s:0 });
     return T;
@@ -2134,7 +2442,7 @@ function computeTargets() {
   const slots = supportSlots(fx, fy, dA, A.length, depth);
   assignByY(T, A, slots);
   if (mode === 'held') {
-    const s = D.slice().sort((p,q) => dist(p,carrier) - dist(q,carrier));
+    const s = D.filter(p => !(p.offside > 0)).sort((p,q) => dist(p,carrier) - dist(q,carrier));   // a retiring tackler is never the chaser
     const ch = [];
     if (s[0]) ch.push(s[0]);
     for (const q of s.slice(1, 3)) if (dist(q, carrier) < 5.5) ch.push(q);
@@ -2218,19 +2526,24 @@ function userKick(power) {
   const c = M.ctrl;
   doKick(c, power, input.world().y);
 }
-function userTackle() {
-  const q = M.ctrl, b = M.ball;
-  if (!q || q.down > 0 || q.tcd > 0) return;
-  const c = b.state === 'held' ? b.carrier : null;
-  if (c && c.team !== q.team && dist(q,c) < 2.8) {
-    const dx = c.x-q.x, dy = c.y-q.y, m = hyp(dx,dy) || 1;
-    q.vx = dx/m*9; q.vy = dy/m*9;
-    attemptTackle(q, c, 'dive');
-  } else { q.vx += q.fx*5; q.vy += q.fy*5; q.down = 0.5; q.tcd = 0.5; }
+function canDive(q) {                                      // would a Tackle press act now: a carrier of the other side within 2.8m, and this man up, off cooldown, not retiring and unbound
+  const b = M.ball, c = b.state === 'held' ? b.carrier : null;
+  if (!q || !c || c.team === q.team || !onFeet(q) || q.tcd > 0 || q.offside > 0 || dist(q, c) >= 2.8) return false;
+  return !c.bind || (!c.bind.q2 && c.bind.q !== q);
+}
+function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
+  const q = ctrlOf(t), b = M.ball;
+  if (!canDive(q)) { st('ignored'); return; }
+  const c = b.carrier;
+  if (c.bind) { joinTackle(c.bind, q); return; }
+  const behind = (q.x - c.x)*dirOf(c.team) < -0.3;
+  const dx = c.x-q.x, dy = c.y-q.y, m = hyp(dx,dy) || 1;
+  q.vx = dx/m*9; q.vy = dy/m*9;
+  commitTackle(q, c, behind ? 'ankle' : 'dive');
 }
 function switchPlayer() {
   const b = M.ball;
-  const list = M.players.filter(p => p.team === 0 && p.down <= 0).sort((p,q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
+  const list = M.players.filter(p => p.team === 0 && p.down <= 0 && !p.bind).sort((p,q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
   if (!list.length) return;
   M.ctrl = (list[0] === M.ctrl && list[1]) ? list[1] : list[0];
 }
@@ -2239,18 +2552,19 @@ function handleUser(dt) {
   const b = M.ball, c = M.ctrl;
   if (input.aPressed) {
     input.aPressed = false;
-    if (M.phase === 'play') {
-      if (b.state === 'held' && b.carrier === c) userPass();
-      else if (!ourBall()) userTackle();
+    if (M.phase === 'play' && c) {
+      if (b.state === 'held' && b.carrier === c) { if (c.bind) offload(c.bind, true); else userPass(); }   // held in a tackle, Pass is the offload
+      else if (!ourBall()) userTackle(c.team);
     }
   }
   if (input.bPressed) {
     input.bPressed = false;
-    if (M.phase === 'play' && b.state === 'held' && b.carrier === c) { M.charging = true; M.charge = 0; M.holdN = 0; M.dropArmed[c.team] = dropPress(c); }   // what the label promised at the press
+    if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { M.charging = true; M.charge = 0; M.holdN = 0; M.dropArmed[c.team] = dropPress(c); }   // what the label promised at the press
     else if (M.phase === 'play' && !ourBall()) switchPlayer();
   }
+  if (input.cPressed) { input.cPressed = false; if (c) sprintPress(c.team); }   // the hold itself is read by sprintTick
   if (M.charging) {
-    if (!(M.phase === 'play' && b.state === 'held' && b.carrier === c) || input.bCancel) { M.charging = false; M.charge = 0; }   // a cancelled touch is never a kick
+    if (!(M.phase === 'play' && b.state === 'held' && b.carrier === c) || input.bCancel || c.bind) { M.charging = false; M.charge = 0; }   // a cancelled touch is never a kick, and a man held in a tackle can't kick
     else {
       M.charge = Math.min(1, M.charge + dt/0.85); M.holdN++;
       if (!input.bDown) { const pw = M.charge; M.charging = false; M.charge = 0; userKick(pw); }   // a tap is a chip, as ever
@@ -2267,6 +2581,7 @@ function moveAll(dt) {
   const snap = M.phase === 'set' && M.set.snap;
   const ua = userActive();
   for (const p of M.players) {
+    if (p.bind) { bindMove(p, dt); continue; }
     if (p.down > 0) { p.down -= dt; steer(p, 0, 0, 16, dt); continue; }
     if (ua && p === M.ctrl) { userMove(p, dt); continue; }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }
@@ -2285,21 +2600,17 @@ function moveAll(dt) {
       if (m > 0.5) { p.fx += (dx/m-p.fx)*0.12; p.fy += (dy/m-p.fy)*0.12; const n = hyp(p.fx,p.fy) || 1; p.fx /= n; p.fy /= n; }
     }
     if (p.tcd > 0) p.tcd -= dt;
+    if (p.offside > 0) p.offside -= dt;
+    if (p.sprinting) p.sprint = Math.min(SPRINT.fade, p.sprint + dt); else if (p.sprint > 0) p.sprint -= dt;   // the burst climbs while held, eases out when not
+    if (p.stumble > 0) p.stumble -= dt;
+    if (p.wf > 0) p.wf -= dt;
     if (p.boost > 0) p.boost -= dt;
     if (p.side > -1) p.side -= dt;
     p.hold += dt;
     p.x = clamp(p.x, -4, 124);
     if (b.carrier !== p) p.y = clamp(p.y, -3, 73);
   }
-  const P = M.players, R = 1.25;
-  for (let i = 0; i < P.length; i++) {
-    const a = P[i]; if (a.down > 0) continue;
-    for (let j = i+1; j < P.length; j++) {
-      const c = P[j]; if (c.down > 0) continue;
-      const dx = c.x-a.x, dy = c.y-a.y, d2 = dx*dx + dy*dy;
-      if (d2 < R*R && d2 > 1e-6) { const d = Math.sqrt(d2), o = (R-d)/2, nx = dx/d, ny = dy/d; a.x -= nx*o; a.y -= ny*o; c.x += nx*o; c.y += ny*o; }
-    }
-  }
+  collide();
 }
 function update(dt) {
   if (!M || M.phase === 'break' || M.phase === 'menu' || M.paused || M.over) return;
@@ -2313,13 +2624,14 @@ function update(dt) {
   }
   handleUser(dt);
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
+  contactGuard(); sprintTick(dt);
   if (M.ctrl !== M.ctrlPrev) { M.ctrlPrev = M.ctrl; M.ctrlT = 0; } else M.ctrlT += dt;
   moveAll(dt);
   if (M.phase === 'play') {
     if (b.state === 'held') {
       const c = b.carrier;
       b.x = c.x + c.fx*0.55; b.y = c.y + c.fy*0.55; b.z = 1.0;
-      if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
+      if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
     if (M.phase === 'play' && M.hooter && !M.demo && M.clock > M.halfLen + 45) endHalf();
@@ -2491,32 +2803,74 @@ function drawPitch() {
   }
 }
 function ellipse(x, y, rx, ry, rot) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI*2); }
+function drawPos(p) {                                      // where he is drawn: the logic's teleports (a slide-off, a roll-away) are smoothed over drawFrom.T
+  const f = p.drawFrom;
+  if (!f || f.t <= 0) return [p.x, p.y, 0];
+  const u = clamp(f.t/f.T, 0, 1);                           // 1 at the jump, 0 once the drawing has caught up
+  return [p.x + (f.x - p.x)*u, p.y + (f.y - p.y)*u, u];
+}
 function drawPlayer(p, r) {
-  const [sx, sy] = toS(p.x, p.y);
-  const kit = M.kit[p.team];
+  const [wx, wy, u] = drawPos(p);
+  const [sx, sy] = toS(wx, wy);
+  const kit = M.kit[p.team], k = p.bind, tackler = !!(k && p !== k.c);
   const [fx, fy] = svec(p.fx, p.fy);
-  const ang = Math.atan2(fy, fx);
+  let ang = Math.atan2(fy, fx);
   ctx.fillStyle = 'rgba(0,0,0,.12)';
   for (const [ox, oy] of SHADOWS) { ellipse(sx + ox*r, sy + oy*r, r*0.95, r*0.75); ctx.fill(); }
-  if (p.down <= 0 && (p.boost > 0 || (M.surge && M.surge.team === p.team)) && hyp(p.vx, p.vy) > 3) {
-    const sp = hyp(p.vx, p.vy), tx = -p.vx/sp, ty = -p.vy/sp;
-    ctx.fillStyle = p.boost > 0 ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';
-    for (const k of [1.1, 2.0]) { ellipse(sx + tx*r*k, sy + ty*r*k, r*(1 - k*0.22), r*(0.85 - k*0.2)); ctx.fill(); }
+  const sp = hyp(p.vx, p.vy), spr = sprintLevel(p);
+  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || (M.surge && M.surge.team === p.team)) && sp > 3) {
+    const tx = -p.vx/sp, ty = -p.vy/sp;
+    ctx.fillStyle = (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';
+    for (const kk of [1.1, 2.0]) { ellipse(sx + tx*r*kk, sy + ty*r*kk, r*(1 - kk*0.22), r*(0.85 - kk*0.2)); ctx.fill(); }
+    if (spr > 0) {                                           // a sprint: two speed streaks behind him
+      ctx.strokeStyle = `rgba(244,241,232,${(0.55*spr).toFixed(3)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (const side of [-1, 1]) { const ox = -ty*side*r*0.75, oy = tx*side*r*0.75; ctx.beginPath(); ctx.moveTo(sx + ox + tx*r*1.2, sy + oy + ty*r*1.2); ctx.lineTo(sx + ox + tx*r*2.8, sy + oy + ty*r*2.8); ctx.stroke(); }
+    }
   }
-  ctx.save(); ctx.translate(sx, sy); ctx.rotate(ang);
+  ctx.save(); ctx.translate(sx, sy);
+  if (tackler) { const off = p.bindOff || { x:1, y:0 }; ctx.rotate(Math.atan2(off.y, off.x) + Math.PI/2); ctx.scale(0.85, 0.85); }   // bound across the carrier's hips, on the side he came from
+  else {
+    if (p.down > 0 && u > 0 && p.drawFrom.spin) ang += p.drawFrom.spin*Math.PI/2*u;   // the slide-off: a quarter turn away from the carrier as he lands
+    if (p.stumble > 0) ang += 9*D2R*Math.sin(M.rt*2*Math.PI*14);                      // the wobble after an ankle tap
+    ctx.rotate(ang);
+  }
   ctx.strokeStyle = C.outline; ctx.lineWidth = Math.max(1.4, r*0.15);
-  if (p.down > 0) {
+  if (p.down > 0 || tackler) {
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = kit.fill; ellipse(0, 0, r*1.3, r*0.58); ctx.fill(); ctx.stroke();
     ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*1.05, 0, r*0.36, 0, 7); ctx.fill();
   } else {
+    const lean = k ? (k.tier === 'soft' ? 0.15 : k.tier === 'dom' && k.t/k.T >= 0.4 ? -0.12 : 0) : 0;   // a bound carrier leans into a Soft tackle, stands up in a Wrap, recoils from a Big Hit
     ctx.fillStyle = kit.trim;
-    ctx.beginPath(); ctx.arc(0, -r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = kit.fill; ellipse(0, 0, r*0.62, r*0.92); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*0.1, 0, r*0.4, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(lean*r, -r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(lean*r, r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = kit.fill; ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*0.1 + lean*r*1.4, 0, r*0.4, 0, 7); ctx.fill();
   }
   ctx.restore();
+  if (p.fend > 0) {                                          // the fend: an arm out at the man he has just beaten, in his trim colour
+    const a = p.fendA, l = r*(0.9 + 0.5*(1 - p.fend/0.2));
+    ctx.strokeStyle = kit.trim; ctx.lineWidth = Math.max(2, r*0.22); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(sx + Math.cos(a)*r*0.4, sy + Math.sin(a)*r*0.4); ctx.lineTo(sx + Math.cos(a)*l, sy + Math.sin(a)*l); ctx.stroke();
+  }
+}
+function drawTags(dt, r) {                                 // on-pitch tags: chalk, outlined, rising 14px over 0.7s, fading over the last 0.25s, at most two
+  if (M.fx.length) {                                       // the Big Hit's impact ring grows from 0.3m to 1.6m over 0.22s
+    for (const f of M.fx) { const u = clamp(f.t/0.22, 0, 1), [x, y] = toS(f.x, f.y); ctx.strokeStyle = `rgba(255,255,255,${(0.8*(1 - u)).toFixed(3)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, (0.3 + 1.3*u)*V.s, 0, 7); ctx.stroke(); f.t += dt; }
+    M.fx = M.fx.filter(f => f.t < 0.22);
+  }
+  if (!M.tags.length) return;
+  ctx.font = `800 16px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,14,10,.85)'; ctx.fillStyle = '#f1eee4';
+  for (const t of M.tags) {
+    const u = clamp(t.t/0.7, 0, 1), a = t.t > 0.45 ? clamp(1 - (t.t - 0.45)/0.25, 0, 1) : 1;
+    let [x, y] = toS(t.x, t.y);
+    y = Math.max(76, y - 2.2*r - 14*u); x = clamp(x, 60, V.W - 200);   // under the score bug, never under the right thumb
+    ctx.globalAlpha = a; ctx.strokeText(t.text.toUpperCase(), x, y); ctx.fillText(t.text.toUpperCase(), x, y);
+    t.t += dt;
+  }
+  ctx.globalAlpha = 1;
+  M.tags = M.tags.filter(t => t.t < 0.7);
 }
 function drawBall(r) {
   const b = M.ball, s = V.s;
@@ -3331,8 +3685,13 @@ function render(dt) {
   const ha = along/2/s, hc = across/2/s;
   cam.x = ha*2 >= 132 ? 60 : clamp(cam.x, ha-6, 126-ha);
   cam.y = hc*2 >= 82 ? 35 : clamp(cam.y, hc-6, 76-hc);
+  M.rt += dt;
+  for (const p of M.players) { if (p.drawFrom && (p.drawFrom.t -= dt) <= 0) p.drawFrom = null; if (p.fend > 0) p.fend -= dt; }   // render-only clocks
+  const shake = M.shake > 0 && !RM ? 3*(M.shake/0.12) : 0;   // your Big Hit: a 3px shake for 0.12s, none under reduced motion
+  if (M.shake > 0) M.shake -= dt;
+  const camX = cam.x + shake*Math.sin(M.rt*173)/s, camY = cam.y + shake*Math.cos(M.rt*131)/s;
 
-  ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*cam.x), d*(V.H/2 - s*cam.y));
+  ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*camX), d*(V.H/2 - s*camY));
   drawPitch();
 
   ctx.setTransform(d, 0, 0, d, 0, 0);
@@ -3347,7 +3706,7 @@ function render(dt) {
   for (const p of order) drawPlayer(p, r);
   // pass target
   if (ctrl && M.phase === 'play' && b.state === 'held' && b.carrier === ctrl) {
-    const rc = pickReceiver(ctrl, input.world().y);
+    const rc = ctrl.bind ? offloadTarget(ctrl.bind) : pickReceiver(ctrl, input.world().y);   // held in a tackle, the ring sits on the man an Offload would go to
     if (rc) {
       const [qx, qy] = toS(rc.x, rc.y);
       ctx.strokeStyle = 'rgba(244,241,232,.95)'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
@@ -3363,6 +3722,7 @@ function render(dt) {
     ctx.beginPath(); ctx.arc(lx, ly, 13, 0, 7); ctx.stroke();
   }
   drawBall(r);
+  drawTags(dt, r);
   if (ctrl) {
     let [cx, cy] = toS(ctrl.x, ctrl.y);
     const off = cx < 0 || cx > V.W || cy < 0 || cy > V.H;
@@ -3424,6 +3784,9 @@ function sfx(k) {
   else if (k === 'strike') { tone(a, { freq:120, dur:0.10, gain:0.36, slide:0.5 }); noise(a, { dur:0.05, freq:1600, gain:0.12 }); }
   else if (k === 'post') tone(a, { freq:900, dur:0.30, type:'triangle', gain:0.12, slide:0.97 });
   else if (k === 'groan') noise(a, { dur:0.9, type:'bandpass', freq:380, q:0.6, gain:0.14, attack:0.15 });
+  else if (k === 'hit') { tone(a, { freq:70, dur:0.2, gain:0.3, slide:0.5 }); noise(a, { dur:0.22, freq:380, gain:0.4 }); }   // a Big Hit
+  else if (k === 'whiff') noise(a, { dur:0.12, type:'bandpass', freq:1300, q:1.0, gain:0.08 });                            // a broken tackle
+  else if (k === 'trip') tone(a, { freq:620, dur:0.06, type:'square', gain:0.1 });                                        // an ankle tap or a trip
 }
 function buzz(ms) {
   if (!M || M.demo || M.headless || !navigator.vibrate) return;
@@ -3435,7 +3798,7 @@ function buzz(ms) {
    Input
    ========================================================= */
 const input = {
-  jx:0, jy:0, stickId:null, ox:0, oy:0, px:0, py:0, aDown:false, bDown:false, aPressed:false, bPressed:false, aCancel:false, bCancel:false, keys:new Set(),
+  jx:0, jy:0, stickId:null, ox:0, oy:0, px:0, py:0, aDown:false, bDown:false, cDown:false, aPressed:false, bPressed:false, cPressed:false, aCancel:false, bCancel:false, cCancel:false, keys:new Set(),
   flick:0, pre:null, held:new Set(),
   // a duel re-centres the stick under the thumb, so a held run doesn't read as a step
   reanchor() {
@@ -3516,8 +3879,9 @@ function bindAct(el, key) {
 }
 bindAct($('btnA'), 'a');
 bindAct($('btnB'), 'b');
+bindAct($('btnC'), 'c');
 const MOVE_KEYS = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD']);
-window.addEventListener('keydown', e => {
+function keyDown(e) {
   if (!playing()) return;
   if (M.paused) { if (!e.repeat && (e.code === 'KeyP' || e.code === 'Escape')) resume(); return; }
   if (M.cut && M.cut.duel && !e.repeat && !input.held.has(e.code)) {
@@ -3528,13 +3892,17 @@ window.addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.code === 'KeyJ' || e.code === 'Space') { e.preventDefault(); input.aDown = true; input.aPressed = true; }
   else if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') { input.bDown = true; input.bPressed = true; }
+  else if (e.code === 'KeyL') { input.cDown = true; input.cPressed = true; }
   else if (e.code === 'KeyP' || e.code === 'Escape') { if (M.paused) resume(); else pause(); }
-});
-window.addEventListener('keyup', e => {
+}
+function keyUp(e) {
   input.keys.delete(e.code); input.held.delete(e.code);
   if (e.code === 'KeyJ' || e.code === 'Space') input.aDown = false;
   if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') input.bDown = false;
-});
+  if (e.code === 'KeyL') input.cDown = false;
+}
+window.addEventListener('keydown', keyDown);
+window.addEventListener('keyup', keyUp);
 
 /* =========================================================
    UI
@@ -3620,27 +3988,34 @@ function updateHud() {
   const ours = ourBall();
   const cut = M.phase === 'cut' && M.cut;
   const goal = cut && M.cut.kind === 'goal';
-  let la, lb, cueA, cueB;
-  if (goal) [la, lb, cueA, cueB] = goalLabels(M.cut);
-  else { [la, lb] = cut ? cutLabels(M.cut) : ours ? ['Pass', M.ctrl ? kickLabel(M.ctrl.team) : 'Kick'] : ['Tackle', 'Switch']; cueA = !!(cut && !M.cut.after && la); cueB = !!(cut && !M.cut.after && lb); }
+  const ctrl = M.ctrl, ht = ctrl ? ctrl.team : 0, k = M.contact, held = !!(k && ctrl && k.c === ctrl), play = M.phase === 'play';   // held: your carrier is in a tackle
+  let la, lb, cueA, cueB, aAct, bAct;
   const gs = goal ? M.cut.g.stage : '';
-  const canAct = goal ? !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait') : M.phase === 'play' || (cut && !M.cut.after);
+  if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
+  else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
+  else if (ours) { la = held && canOffload(k) ? 'Offload' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && (!held || cueA); bAct = play && !held; }   // held in a tackle, Pass is dim unless an offload is on
+  else { la = 'Tackle'; lb = 'Switch'; cueA = cueB = false; aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now
+  const S = M.spr[ht], sprOn = !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
-  const bk = la + '|' + lb + canAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs;
+  const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue;
   if (bk !== lastBtn) {
     lastBtn = bk;
     $('la').textContent = la || '';
     $('lb').textContent = lb || '';
     $('btnA').hidden = !la;
     $('btnB').hidden = !lb;
+    $('btnC').hidden = !!cut;                                // Sprint is hidden in every close-up and stays in place otherwise, so nothing on screen moves
     $('btnA').classList.toggle('cue', cueA);
     $('btnB').classList.toggle('cue', cueB);
+    $('btnC').classList.toggle('cue', sprCue);
     $('btnB').classList.toggle('two', lb === 'Drop Goal');   // two lines inside the small button
     $('plates').hidden = !(duel && M.cut.kind === 'past' && !M.cut.after);
-    $('btnA').classList.toggle('idle', !canAct); $('btnB').classList.toggle('idle', !canAct);
+    $('btnA').classList.toggle('idle', !aAct); $('btnB').classList.toggle('idle', !bAct);
+    $('btnC').classList.toggle('idle', !sprOn); $('btnC').classList.toggle('ready', sprOn);
     $('hud').classList.toggle('gk', !!goal);   // the clock line hides under a goal close-up
   }
   $('btnB').style.setProperty('--c', M.charging ? M.charge.toFixed(3) : goal && gs === 'hold' ? M.cut.g.m.toFixed(3) : 0);   // the ring shows the charge, or a drop's meter
+  $('btnC').style.setProperty('--s', S.m.toFixed(3));        // the Sprint ring is the meter
 }
 
 /* penalty choice: the card's kick is built now, so the card and the kick share one wind */
@@ -3703,7 +4078,7 @@ function pause() {
 function resume() {
   if (!M) return;
   M.paused = false; $('m-pause').hidden = true; input.keys.clear();
-  input.aPressed = input.bPressed = false; input.flick = 0;
+  input.aPressed = input.bPressed = input.cPressed = false; input.cDown = false; input.flick = 0;
   const c = M.cut;
   if (c && c.duel && !c.after) duelResume(c);
   else if (c && c.kind === 'goal' && !c.after) goalResume(c);
@@ -3720,7 +4095,7 @@ $('pz-quit').addEventListener('click', () => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
-function onOrientation() { if (uprightPhone.matches) { pause(); input.stickId = null; input.jx = input.jy = 0; input.aDown = input.bDown = false; } }
+function onOrientation() { if (uprightPhone.matches) { pause(); input.stickId = null; input.jx = input.jy = 0; input.aDown = input.bDown = input.cDown = false; input.cPressed = false; } }
 if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
@@ -3951,9 +4326,12 @@ function frame(now) {
   const dt = Math.min(0.05, (now-last)/1000); last = now;
   if (window.innerWidth !== V.W || window.innerHeight !== V.H || Math.min(2, window.devicePixelRatio || 1) !== V.dpr) { resize(); if (input.stickId === null) restStick(); }
   if (M && !M.paused && M.phase !== 'break' && M.phase !== 'menu') {
-    acc += dt; let n = 0;
-    while (acc >= STEP && n < 5) { update(STEP); acc -= STEP; n++; }
-    if (n >= 5) acc = 0;
+    if (M.stop > 0) { M.stop -= dt; acc = 0; }               // your Big Hit's hit-stop: the world holds for a few frames
+    else {
+      acc += dt; let n = 0;
+      while (acc >= STEP && n < 5) { update(STEP); acc -= STEP; n++; }
+      if (n >= 5) acc = 0;
+    }
   }
   render(dt);
   updateHud();
@@ -3974,7 +4352,10 @@ function simulate(n, half, diff) {
   return out;
 }
 window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, forceDuel,
-  debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings, view:(W, H) => { V.W = W; V.H = H; V.dpr = 1; }, drawCut, goalKick, openPenalty, resume, interactive, setRM:v => { RM = !!v; } },
+  debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings, endSprint, collide, view:(W, H) => { V.W = W; V.H = H; V.dpr = 1; }, drawCut, goalKick, openPenalty, resume, interactive, setRM:v => { RM = !!v; },
+    render, updateHud, setMode:v => { mode = v; }, keyDown, keyUp, frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; } },
+  contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
+    maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, drawPos, tag, isHuman, ctrlOf, levelOf },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,

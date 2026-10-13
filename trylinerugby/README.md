@@ -1,6 +1,6 @@
 # Try Line Rugby
 
-Mobile rugby sevens. Top-down 2D, one stick and two buttons, and a five-round championship. Play as one of the six
+Mobile rugby sevens. Top-down 2D, one stick and three buttons, and a five-round championship. Play as one of the six
 nations, a local Surrey club, or a team you make yourself.
 
 **Play:** https://gordonlindsay.github.io/games/trylinerugby/
@@ -47,6 +47,24 @@ nations, a local Surrey club, or a team you make yourself.
   a Drop Goal press opens the close-up at 0.20s whatever moves in the meantime, a Kick press stays a kick. The CPU
   drops through that rule from its own side, in the top-down view, offered on the clock its strike keeps, so a man of
   yours closing on him can charge it down.
+- **Contact** (2026-10-13): a tackle is a commit and a 0.25s bind, not a coin flip at 1.5m. A made tackle is a Big Hit,
+  a Wrap or a Soft tackle, the carrier runs down (or is driven back) while the tackler hangs off his hip, a second
+  defender can join, and the ruck that follows has the tackler rolling away and retiring. A missed tackler slides off
+  the hip, never into the carrier's path, so nobody runs over a man on the ground. Men on the ground are stepped round.
+  Offloads, the ball jolted loose, Ankle Taps, Tripped and Fends are in. **Not** in, by Gordon's choice: breakdown
+  steals (no jackal, no Steal prompt), new penalties (no Not Releasing, Off Your Feet, Not Rolling Away or High Tackle)
+  and sin bins. The ruck stays automatic: a flat turnover roll (base raised to 0.11 so turnovers per match hold as
+  rucks fall), the losing side wrong-footed, and today's flat ruck penalty.
+- **Sprint** (2026-10-13): a third button, in a fan with B round A. It is a **meter that refills**, used by **holding**:
+  it drains while held (2s from full) and refills while not (10s from empty, 7s on Easy). A sprint needs a fifth of
+  the meter to start, and letting go stops it at once with a 0.3s ease-out. **Taps buy nothing:** the ease-out is
+  charged to the meter at its level, nothing refills while one runs, and a press inside it climbs back from where it
+  is instead of snapping to full speed, so every burst-second costs the same whatever the thumb does (the first build
+  gave the ease-out away, and a 5Hz tapper won 88% on Normal against 85% holding). Anyone you control sprints: your
+  chaser at x1.20 (x1.15 on Hard), your carrier at a lower x1.05 (x1.04 on Hard) that drains 1.5x as fast, so it is a
+  burst, not a runaway. The button is dim exactly when a press would do nothing, and a press on a dim button does
+  nothing, not even a switch. The CPU runs the same meter and the same burst on every level, choosing its moments by
+  level: only for a runner who is clean through.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
@@ -55,10 +73,11 @@ nations, a local Surrey club, or a team you make yourself.
 | | With the ball | Without it |
 |---|---|---|
 | Stick | Run. Flick sideways near a tackler to step him | Run |
-| Big button | Pass to the ringed teammate. Tilt to pick a side. At a goal kick, hold to power and let go in the gold | Dive tackle |
+| Big button | Pass to the ringed teammate. Tilt to pick a side. Held in a tackle it reads Offload when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
 | Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the defender nearest the ball |
+| Sprint | Hold for a burst of speed (x1.05 with the ball). The ring is the meter: it drains while you hold (and through the ease-out after you let go) and refills when you let go | Hold to run a man down (x1.20). A press moves the ring to the man best placed to chase if yours is down or over 4m further off. It is dim when a press would do nothing, and then it does nothing |
 
-Keyboard: arrows or WASD, J, K, P to pause. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
+Keyboard: arrows or WASD, J, K, L (Sprint), P to pause. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
 
 ### Close-ups
 
@@ -82,6 +101,102 @@ Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock 
 
 A mistimed duel falls back to the odds the open game would have given, so a duel is never a trap. A tap after the
 verdict skips the replay.
+
+### Contact
+
+Every number here is in three one-line constants in `index.html`, `CONTACT`, `RUCK` and `SPRINT`, and the harness
+overrides them from the environment: `CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' node tools/bot.mjs`.
+Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player shims (`isHuman`, `inputOf`, `ctrlOf`,
+`levelOf`, `setCtrl`), never `team === 0` or `M.ctrl`, so a second human seat slots in without a rewrite.
+
+- **Commit.** An AI defender commits within 1.5m of the carrier; your ringed man commits automatically within 1.35m
+  (0.58 / 0.42 / 0.42 by level) and dives on Tackle within 2.8m (0.66 within 1.7m, 0.50 beyond). The roll is drawn at
+  the commit: `tackleChance` as before, x1.10 side-on, x0.75 from behind, x0.65 against a stepping carrier. The first
+  man to commit takes the carrier; nobody else rolls while he is bound. A dive from more than 0.3m behind is an
+  **Ankle Tap**, a flat 0.55 and always Soft.
+- **The tier,** if it sticks: **Big Hit** 0.14, +0.04 a power point, +0.03 front-on with closing speed over 6 m/s,
+  +0.08 for a dive within 1.7m, +0.10 for a sprinting tackler, +0.03 for the CPU on Hard (-0.03 on Easy); **Soft**
+  0.22, +0.25 from behind, +0.08 against a carrier over 7 m/s, -0.04 a power point; **Wrap** is the rest.
+- **The bind** lasts 0.25s. The carrier runs down to nothing (Wrap), falls forward about 1.1m (Soft) or is stopped by
+  40% and driven back (Big Hit); the tackler is pulled to 0.7m off his hip on the side he came from, at 12/s of the
+  gap, capped at 8 m/s so a dive reads as a lunge. A bound carrier who crosses the line scores. A standing defender
+  within 1.3m joins as the **Second Man**: a Wrap becomes a Big Hit 35% of the time, a Soft a Wrap 35%. Your Tackle
+  press on a held carrier joins too.
+- **Broken tackle:** no bind. The tackler lands 0.5m behind and 0.95m beside the carrier's line (his run, or his
+  facing when he is standing still, or the line from the tackler: never on top of him), down 0.5s (0.75s after a
+  dive) with a 1.0s cooldown; the carrier stumbles at x0.9 for 0.15s. Every broken tackle shows a 0.2s fend
+  (an arm line in the carrier's trim colour). A **Fend** proper, with no stumble and a tag when it is yours, is a tackle
+  beaten by a clear margin (roll 0.35 over the odds) with a power edge, or beaten at a sprint. 40% of missed Ankle
+  Taps trip the runner (**Tripped**): x0.5 for 0.5s, so a second chaser can finish him.
+- **Offload.** Held in a Soft or Wrap, with a receiver level or behind within 9m, A reads Offload and pulses: 0.85
+  (Soft) or 0.70 (Wrap), x(1 + 0.05 a handling point over 3). The label, the press and the dashed ring all use one
+  receiver (`offloadTarget`): the stick's side within 9m, else the nearest within 9m, so a lit Offload always goes
+  somewhere. The pass can't be intercepted by the men in the tackle.
+  Half the failures are held (an ordinary ruck); the rest are 55% Knock-On, 45% Loose Ball. The CPU tries one in
+  0.10 x (0.6 + 0.2 x (handling - 3)) of its Soft and Wrap binds, never from a Big Hit (about 2 a match; it was 0.30
+  and 5.7 a match, and that rate cost a player who never sprints about a point on Normal and four on Hard).
+- **The ball jolted loose:** 9% of Big Hits, 2% of Wraps, 1% of Softs, x(1 + 0.15 a handling point under 3). 55%
+  Knock-On (a scrum to the tacklers), 45% **Loose Ball**: it pops 2–5 m/s back towards the carrier's own line, for
+  anyone.
+- **The ruck.** The ball goes 0.4m behind the tackled man, who is down until the ruck ends + 0.15s. The tackler
+  rolls to 1.0m beyond and 1.1m aside, down until the ruck ends + 0.25s, then retiring 0.6s more: he can't tackle
+  and is never picked as a chaser. A Second Man retires for the same time, and Tackle stays dim for a retiring man
+  (a press does nothing). Length: **0.7s** when the attack's first support beats the defence's first man
+  (other than the tackler) to the ball by 0.3s, **1.0s** otherwise, **1.5s** after a Big Hit. Then the flat rolls:
+  a 4.5% penalty, and a turnover at 0.11 + 0.02 a power point (+ the level's `turnover`), clamped 0.03–0.18. After a
+  turnover the losing side within 3m is **wrong-footed**: no tackle for 0.7s and x0.5 speed. Duels and the drop-goal
+  smother call `tackle()` with no tier and keep the old body: the 1.05s ruck (1.6s for the duel Big Hit), no
+  roll-away, and no new random draw.
+- **Collisions** (`collide()`): standing men push apart at 1.25m as before, and team-mates lose the closing part of
+  their relative velocity so pairs stop jostling; opponents are not damped (a shadowing defender must not become a
+  wall). A standing man is pushed to 0.95m from a man on the ground, or from a man bound in a tackle; the man on the
+  ground or in the bind does not move, and the two (or three) men in one bind are left to `bindMove`. A push is at
+  most 0.2m a step, so a man who gets up inside a crowd is eased out rather than shoved, and two men on the same
+  spot are parted along the touchline axis.
+- **Sprint.** One meter a side (`M.spr[t]`): drain 2s full to empty (x1.5 with the ball), refill 7 / 10 / 10s, a
+  0.2 floor to start, a hold that runs it dry must be let go before the next (letting go in a ruck counts), a 0.3s
+  ease-out on release. The ease-out is charged to the meter at its level and nothing refills while one runs; a press
+  inside it climbs back at the same rate rather than snapping to 1, and a meter run dry ends any ease-out at once, so
+  taps buy exactly what a hold buys. Your chaser runs at x1.20 (x1.15 on Hard), your carrier at x1.05 (x1.04 on
+  Hard); a duel's burst and the surge never stack with it (the bigger one applies). A tackler sprinting at the commit
+  (the hold itself, not an ease-out) gets +0.10 Big Hit and his sprint ends when he commits; a duel zeroes every
+  sprint and keeps the meters; the meters freeze in every close-up and keep filling through rucks. The button is dim
+  exactly when a press would do nothing, judged on the man the press would go to (yours, or the best chaser when
+  yours is down or over 4m further off), and a dim press moves nobody. The
+  CPU side's policy: chase a runner who is clean through (no CPU man standing ahead of him within 15m of his line)
+  from 2.5–12m, level or behind, deciding every 0.25s at 0.10 / 0.12 / 0.20; carry into a clean break at 0 / 0.05 /
+  0.30 when the nearest defender ahead is over 6m off, letting go inside 2.5m. About 2 / 2 / 3 CPU sprints a match.
+- **What you see.** The tackler bound across the carrier's hips; the carrier leaning into a Soft, upright in a Wrap,
+  recoiling from a Big Hit; a white impact ring on a Big Hit, with a 70ms hit-stop and a 3px shake when it is yours
+  (no shake under reduced motion); the slide-off and the roll-away smoothed over at most 9 m/s, with a quarter turn;
+  a wobble while tripped; the gold trail and two speed streaks on a sprint; and on-pitch tags (Big Hit, Ankle Tap,
+  Tripped, Fend, Offload, Loose Ball), at most two at a time, about 27 a match on Normal. Sounds: 'tackle' at the
+  bind, 'hit', 'whiff', 'trip', 'whoosh' when a sprint starts, 'tick' when the meter fills.
+
+**Measured** (`bot.mjs`, 4-minute halves, duels live, 12 seeds x 120 matches a cell; `census.mjs`-style census of 60
+Normal matches at SEED 9032, the previous game measured on the same seeds with the same bot). "Tackled within" means a
+made tackle.
+
+| Per match, Normal | Previous game | Now |
+|---|---|---|
+| Tackle attempts / made | 250 / 128 (51%) | 184 / 81 (52%) |
+| Broken tackles | 123 | 89 |
+| Rucks (quick / normal / slow) | 127 | 81 (43 / 22 / 15) |
+| Run-overs (the carrier within 0.9m of a man on the ground) | 87.6 | 0.6 |
+| Ruck ball tackled within 0.5s of the pick-up | 44.3% | 5.4% |
+| Turnover ball tackled within 1s | 66.3% | 15.7% |
+| Turnovers / penalties / knock-ons | 9.3 / 6.0 / 6.4 | 9.8 / 4.4 / 9.5 |
+| Big Hits (yours / the CPU's) | none | 7.6 / 9.3 |
+| Offloads made (yours / the CPU's) of tried | none | 8.6 / 1.9 of 13.5 (1.5 held) |
+| Fends (yours / the CPU's), ball jolted loose (Knock-On / Loose Ball) | none | 7.0 / 8.7, 1.3 / 1.1 |
+| Ankle Taps made of tried, Tripped | none | 5.5 of 10.0, 1.8 |
+| Sprints (yours, seconds; the CPU's) | none | 50 (35s); 2.2 |
+| Tags | none | 30 (Offload 8.6, Fend 7.0, Big Hit 5.4, Ankle Tap 5.1, Tripped 1.8, Loose Ball 1.8) |
+
+CPU sprints a match by level: 2.4 / 2.2 / 2.9 (2.1s of sprint on Hard). Big Hits on Hard: 8.4 yours, 11.2 theirs.
+Your offloads rose from 6.2 to 8.6 a match once the label and the press picked the same receiver (a fifth of the
+bot's presses on a lit Offload had been doing nothing). Win rates with and without Sprint are in Measured baseline
+below.
 
 ### Goal kicks
 
@@ -219,7 +334,49 @@ a charger.
     - outcomes, fallbacks and the gate;
     - that scrums release at the mark.
   - **`node tools/bot.mjs [n] [half] --duels live|instant|off`:** a scripted average player against the CPU on each
-    difficulty, with duel counts and win rates, and goal-kick rates for both sides (`kicks us 70% (378) them 69% (109)`).
+    difficulty, with duel counts and win rates, goal-kick rates for both sides (`kicks us 70% (378) them 69% (109)`),
+    and three contact lines: tackles, broken, rucks by length, Big Hits by side; turnovers by kind, offloads, fends,
+    jolts, Ankle Taps, Tripped; sprints by side with seconds, penalties, knock-ons by kind, and the tags a match. The
+    bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
+    never presses Pass in a tackle; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
+    `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
+  - **`node tools/contact.mjs`:** 255 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
+    and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
+    a scrum). It checks:
+    - a sprint that ends in a fall or a bind charges nothing more to the meter, and the push parts standing men 0.4m a
+      step (0.2m round a man on the ground or bound), so nobody sinks into anybody;
+    - a staged front-on stick: the bind's length, the tackler on the hip, Wrap / Soft / Big Hit speeds, one commit,
+      a ruck of its tier, `contactGuard` releasing a bind whose carrier lost the ball, a third man neither rolling
+      nor binding, a bound carrier scoring, a pending pass dying;
+    - a forced broken tackle: no bind, the carrier's speed, the slide off the hip and the down times, the fend arm
+      set at the commit, and a standing carrier (the slide takes his facing, then the line from the tackler, so the
+      two never end on one spot);
+    - the tier and stick rates against the closed form, 20,000 commits a case: front-on, side-on, from behind, a
+      dive, a sprinting tackler, the Ankle Tap, the CPU's Hard edge;
+    - the Second Man's reach and his two tier changes against their own levers; `moveAll` collisions: a man on the
+      ground, a bound pair (stepped round, not moved, not parted), the 0.2m-a-step cap, an exact overlap parted;
+      the roll-away, retiring (the tackler and the Second Man alike), the ruck race (quick / normal / slow), and that
+      duel tackles keep the old body with no random draw;
+    - wrong-footing after a forced turnover; every timer running out in its stated time give or take a step
+      (retiring, with the man a chaser and a sprinter again after it and a ringed Second Man's Tackle dim until
+      then; wrong-footed; a stumble; a trip; the Sprint ease-out); your automatic tackle base by level; the Tackle
+      press rule, A's dim state, and no second join;
+    - the Sprint meter: hold, drain, floor, latch (cleared by a release in any phase), the ease-out charged to the
+      meter with no refill while it runs, a re-press climbing back instead of snapping, taps in four patterns buying
+      exactly the hold's rate, the multipliers, no stacking with a burst, the ring and the ready / dim states judged
+      on the man a press would go to (lit while your man is down if a chaser can be picked, a dim press moving
+      nobody), KeyL; the carrier's sprint and drain, control moving the sprint, a duel zeroing it, the meter frozen
+      in a scrum and a goal close-up, the hold let go at a close-up's open, its close and `resume()`; the ring moving
+      to the best chaser;
+    - the CPU's meter on every level (floor, drain, refill, no refill during an ease-out, range, the same burst),
+      sparing on Easy, the policy's shape (rates rising by level, clean breaks only) and its gates staged with the
+      odds forced to 1 (a man ahead in the lane, 4m of space, letting go inside 2.5m), and the staged 14m / 8m chase;
+      staged breakaways (4m back is caught with Sprint, 8m is gone);
+    - offloads (one receiver for the label, the press and the ring, whatever the stick says), the ball jolted loose,
+      Tripped, fends; a census of 60 bot matches (run-overs, ruck ball hit at once, turnover ball hit at once, the
+      last tackler, no steals, no new penalty words, the tag list and count);
+    - the words, the three-button layout at 667x375, 932x430 and 932x430 with insets, and a render smoke test
+      (nothing non-finite, no drawn man jumping over 0.3m a frame, drawing draws no random number).
   - **`node tools/goalkicks.mjs [--rates N]`:** about 640 asserts (642 at SEED 11; one line counts its retries). It checks:
     - the closed-form flight against a 1ms integration, the judge's fixtures, and the mirror for the CPU's end;
     - that band-centre strikes score, the band is honest at its edges, over hooks left and under fades right;
@@ -278,19 +435,57 @@ a charger.
 
 ### Measured baseline
 
-Measured 2026-10-12 with `bot.mjs`, after goal kicks: 1,440 matches per row (12 seeds x 120), 4-minute halves, duels
-with the Dummy and `BURST` at x1.09 (x1.14 Perfect).
+Measured 2026-10-13 with `bot.mjs`, after the contact review's fixes (the ease-out charged to the meter, one offload
+receiver, the Second Man retiring, bound pairs stepped round) and the retune: 1,440 matches per row (SEED 1–12 x
+120), 4-minute halves, duels with the Dummy and `BURST` at x1.09 (x1.14 Perfect). The standard error is about 0.3 /
+1.0 / 1.3 points (Easy / Normal / Hard), so a difference between two rows is good to about ±1.4 / ±1.8. The first
+row is the bot with its habits (Sprint held with the ball into space and to run down a clean break, offloads on 40%
+of cues, no Pass in a tackle), the second the same bot never touching Sprint, the third the old bot exactly
+(`HABITS=0`), and the last the previous game (206958f) on the same seeds, so the deltas are like for like.
 
 | | Wins, duels off | Wins, duels live | Tries, live (us–them) | Duel win rate | Goal kicks, live (us / them) |
 |---|---|---|---|---|---|
-| Easy | 98.2% | 99.2% | 9.3–0.3 | 82% | 83% / 65% |
-| Normal | 81.0% | 84.9% | 5.3–0.8 | 67% | 69% / 73% |
-| Hard | 44.4% | 50.2% | 2.3–1.8 | 52% | 61% / 77% |
+| Easy, with Sprint | 98.6% | 99.0% | 9.3–0.5 | 82% | 83% / 66% |
+| Normal, with Sprint | 82.4% | 87.8% | 5.6–1.0 | 67% | 70% / 77% |
+| Hard, with Sprint | 47.4% | 52.0% | 2.6–2.0 | 50% | 59% / 78% |
+| Easy, no Sprint | 97.2% | 98.4% | 8.6–0.5 | 82% | 83% / 67% |
+| Normal, no Sprint | 80.2% | 83.1% | 5.0–1.1 | 67% | 70% / 76% |
+| Hard, no Sprint | 40.5% | 45.9% | 2.4–2.3 | 51% | 61% / 78% |
+| Easy, old bot | 97.3% | 99.1% | 8.8–0.5 | 81% | 83% / 66% |
+| Normal, old bot | 77.9% | 82.7% | 5.1–1.2 | 67% | 70% / 75% |
+| Hard, old bot | 40.4% | 46.3% | 2.5–2.4 | 50% | 59% / 79% |
+| Easy, previous game | 97.8% | 99.0% | 9.3–0.4 | 83% | 83% / 65% |
+| Normal, previous game | 80.6% | 86.3% | 5.1–0.9 | 66% | 70% / 75% |
+| Hard, previous game | 44.9% | 47.6% | 2.4–2.0 | 49% | 60% / 78% |
 
-- **Why it moved:** before goal kicks the headless bot converted 100% of its kicks, because the old modal's timing only
-  ran in `frame()`. It now kicks through the live close-up at 83% on Easy, 69% on Normal and 61% on Hard, and the
-  CPU kicks at its own rate on every level, so wins dip by up to five points. It is a correction, not a regression. The
-  previous table read 98.9 / 99.4 (Easy), 83.5 / 88.3 (Normal) and 48.9 / 53.3 (Hard) for wins with duels off / live.
+- **With Sprint** (duels live) is 0.0 / +1.5 / +4.4 on the previous game on the same seeds; **no Sprint** is -0.6 /
+  -3.2 / -1.7, and the **old bot** +0.1 / -3.6 / -1.3. A second block of seeds (13–24, live) read 87.7 / 54.4 with
+  Sprint, 83.1 / 44.2 without and 85.6 / 50.6 for the previous game on Normal / Hard. An independent check on 20
+  more seeds (101–120) read the sprint user +1.0 / +1.5 and the non-user -2.0 / -3.0. **Pooled over 5,280 matches a
+  cell, the sprint user is +1.4 / +2.9 on the previous game and the non-user -2.4 / -3.6** (Normal / Hard; each about
+  ±0.6). The non-user's loss is about the 3-point limit Gordon set; the sprint user's gain on Normal is small, about a
+  point and a half, because the contact engine alone costs 2–3 points. Sprint itself is worth about +3.9 on Normal and
+  +6.5 on Hard (with against without); it was worth more before the ease-out was charged.
+  The table this replaces (the first build, with the free ease-out and the CPU at chase 0.40 and offload 0.30) read
+  83.3 / 87.8 (Normal) and 46.9 / 51.0 (Hard) with Sprint and 77.7 / 82.2 and 40.6 / 45.9 without, and the one
+  before contact 98.2 / 99.2 (Easy), 81.0 / 84.9 (Normal) and 44.4 / 50.2 (Hard), on other seeds.
+- **Levers.** `SPRINT.mulBall` is the with-ball lever: x1.08 gave the sprint user +7 / +10 on Normal / Hard (a
+  runaway), x1.04–1.06 about +4 / +5. `SPRINT.cpu.chase` and `cpu.carry` set how often the CPU sprints: a CPU that
+  chased every runner past all but its last man (14 sprints a match on Hard) took 9 points off a player who never
+  sprints. With the ease-out charged, the three CPU-side edges were each switched off in turn against the no-Sprint
+  bot (1,440 matches a cell, the same seeds; noise about ±1.4 on a difference): on Hard the CPU's chase sprint at
+  0.40 (4.2 a match) cost that player 4.2 points and the CPU's offloads at 0.30 (5.7 a match) 4.2 more, while on
+  Normal nothing moved it beyond the noise (offloads +0.9, Big Hits +0.7, jolts and the turnover base nothing).
+  The chase sprint is a tax on the player who does not sprint: halving it to 0.20 gave him +4 on Hard and the sprint
+  user +0.8. So three CPU-side levers were trimmed, none of Sprint's own: `SPRINT.cpu.chase[2]` 0.40 → 0.20 (about
+  2.8 CPU sprints a match on Hard), `CONTACT.off.cpu` 0.30 → 0.10 (about 2 CPU offloads a match) and
+  `CONTACT.dom.front` 0.06 → 0.03 (the front-on bonus mostly fell to the CPU, because the bot runs straight at the
+  line; CPU Big Hits on Normal 10.2 → 9.3 a match). The dials left if Gordon wants the non-user closer still:
+  `CONTACT.off.cpu` 0 is worth about another point on Normal, `SPRINT.cpu.chase[2]` 0.10 about one on Hard.
+- **Why the goal-kick note moved:** before goal kicks the headless bot converted 100% of its kicks, because the old
+  modal's timing only ran in `frame()`. It kicks through the live close-up at 83% on Easy, 70% on Normal and 60% on
+  Hard, and the CPU kicks at its own rate on every level. The table before goal kicks read 98.9 / 99.4 (Easy),
+  83.5 / 88.3 (Normal) and 48.9 / 53.3 (Hard).
 - The bot lets go of Kick on the step nearest its planned release. `update` adds a step before it sees the release,
   so a bot that waits for `pt + STEP/2` strikes a full step (17ms) late on average; the first measurement of this table
   was taken that way. Ours are up to 2 points higher than it (Easy unchanged), and the CPU's are slightly lower.
@@ -300,7 +495,8 @@ with the Dummy and `BURST` at x1.09 (x1.14 Perfect).
   - x1.06 (x1.10) was inside every target but barely felt.
   - The middle value sits at +4.9.
   - To try other values without editing the game: `BURST='{ ok:[1.1,2], perfect:[1.15,2.5], knock:[1.06,1.2] }' node tools/bot.mjs`.
-- **AI v AI (`sim.mjs`):** about 2 tries a match.
+- **AI v AI (`sim.mjs`):** about 2 tries a match, 88 tackles, 4 offloads (both sides at the CPU's 0.10 rate), 2
+  balls jolted loose; the CPU sides sprint about 0.3 times a match between them (nobody is a human to run down).
 - **Set pieces on Normal (`setpieces.mjs`):**
   - Scrums: tapping 4 a second keeps your put-in about 93% of the time. Tapping 8 a second with a good hit wins a
     penalty about 30% of the time and steals theirs about a third of the time.
@@ -320,7 +516,14 @@ with the Dummy and `BURST` at x1.09 (x1.14 Perfect).
 - **Duel camera:** it looks along +x, so screen-right in a duel is world +y. Step Left is world −y, which is screen-up
   back on the pitch. `duels.mjs` pins this.
 - **Debug hook:** `window.__tryline` exposes the engine (`simulate`, `newMatch`, `update`, `input`, `scrum`,
-  `lineout`, `forceDuel`, `debug`, `teams`, `M`). `__tryline.forceDuel('past')` stages and starts a duel in the console.
+  `lineout`, `forceDuel`, `debug`, `teams`, `contact`, `M`). `__tryline.forceDuel('past')` stages and starts a duel in
+  the console; `__tryline.contact` holds `CONTACT`, `RUCK`, `SPRINT` and the contact and Sprint functions the tests
+  drive (`commitTackle`, `resolveContact`, `tackle`, `collide`, `sprintTick`, `cpuSprintWant`, `canOffload`, …).
+- **Contact and Sprint** live in the tackling block and the Sprint block of `index.html`, with the drawing in
+  `drawPlayer` and `drawTags`. A player carries `bind` (the contact he is in), `offside` (retiring), `sprint` and
+  `sprinting`, `stumble`, `wf` (wrong-footed), and render-only `drawFrom` (a teleport being smoothed) and `fend`.
+  `M.contact` is the bind under way, `M.spr[t]` the Sprint meter a side, `M.tags` and `M.fx` the tags and impact
+  rings. `moveAll`'s hold keys (`HOLD_KEYS`, for the drop-goal offer's projection) include the new timers.
 - **Teams:** `newMatch` takes a team object, or an index into `NATIONS` (the tools use indexes).
   - **`NATIONS` must keep its order.** Championships saved before clubs existed hold indexes into it, and `restore()`
     turns them into a team list in that order.
