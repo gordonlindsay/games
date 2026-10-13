@@ -227,6 +227,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 .act.b{width:68px;height:68px;right:calc(max(20px,env(safe-area-inset-right,0px)) + 100px);bottom:calc(env(safe-area-inset-bottom,0px) + 76px);background:conic-gradient(var(--flood) calc(var(--c,0)*1turn),rgba(8,14,10,.58) 0)}
 .act.press{transform:scale(.9)}
 .act.idle{opacity:.45}
+.act.b.two span{display:block;width:54px;font-size:15px;line-height:1.05;text-align:center;white-space:normal}   /* "Drop Goal" on two lines inside the 68px button */
 
 /* ---------- modals ---------- */
 .modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:rgba(6,10,8,.55);touch-action:none}
@@ -340,12 +341,13 @@ tr.me td{background:rgba(255,207,61,.09)}
       <dt>Pass</dt><dd>Goes to the teammate in the white ring. Tilt the stick up or down to pick a side. Passes can't go forward.</dd>
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
       <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
+      <dt>Drop Goal</dt><dd>In range the small button reads <b>Drop Goal</b>. Hold it, steer, let go in the gold before they reach you.</dd>
       <dt>Tackle</dt><dd>When they have the ball. Dive at the carrier from close range. Miss and you're on the floor.</dd>
       <dt>Switch</dt><dd>Take the defender nearest the ball.</dd>
       <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner.</dd>
       <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast with the stick held forward. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
-      <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass / Tackle / Kick. <b>K</b> Kick / Switch. <b>P</b> Pause.</dd>
+      <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>P</b> Pause.</dd>
     </dl>
     <div class="scoring">
       <div><b>5</b><span>Try</span></div><div><b>2</b><span>Conversion</span></div><div><b>3</b><span>Penalty</span></div><div><b>3</b><span>Drop Goal</span></div>
@@ -439,12 +441,12 @@ const KICK = {
   lift:0.03, liftW:0.15, floor:0.40, ceil:0.97, clear:0.3, range:0.95,
   hook:4.0, push:2.0, curlK:0.12,
   R:0.18, bar:3.0, upL:32.2, upR:37.8, upH:11,
-  tap:0.12, runup:0.42, dropT:0.25, hitStop:0.07, aimRate:18, keyRate:12, aimMax:30, penMin:10,
-  reach:2.4, block:1.0, lat:0.9, rushAcc:6, rushMul:[0.84,1.0,1.10], rushR:15, offerLate:0.10,
+  tap:0.12, runup:0.42, dropT:0.25, hold:0.20, hitStop:0.07, aimRate:18, keyRate:12, aimMax:30, penMin:10,
+  reach:2.4, block:1.0, lat:0.9, rushAcc:6, rushMul:[0.84,1.0,1.10], rushR:15, shoulder:4, offerLate:0.10, cpuReact:0.30,
   cpuSig:[0.072,0.060,0.056], cpuAim:[0.9,0.15], cpuAimSd:0.6,
   wind:{ mix:[[0.30,0,3],[0.45,4,11],[0.25,11,18]], gust:0.18, swing:10, max:22, calm:2 },
 };
-const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fmax:2.4, near:0.3 };
+const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fmax:2.4, near:0.3, fadeZ:2, fadeW:2, figH:0.6 };   // a charger fades in from fadeZ to fadeZ + fadeW metres in front of the lens, and no charger stands taller than figH of the screen
 // GKTUNE
 const D2R = Math.PI/180, MPH = 0.44704;
 const HALF_SECONDS = [120, 240, 360];
@@ -506,6 +508,14 @@ const dirOf = t => t === 0 ? 1 : -1;
 const oppLine = t => t === 0 ? 110 : 10;
 const ownLine = t => t === 0 ? 10 : 110;
 const SETGAP = { ruck:1.6, scrum:5, lineout:10, penalty:10, tap:10 };
+/* Which side a human sits on, and that human's input, controlled player and difficulty. Engine code written from here on
+   reads these rather than `team === 0`, `input` or `M.di`, so a second human seat (the two-player spec) slots in without a rewrite. */
+const isHuman = t => t === 0 && !M.auto;
+const inputOf = t => isHuman(t) ? input : null;
+const ctrlOf = t => isHuman(t) ? M.ctrl : null;
+const setCtrl = (t, q) => { if (isHuman(t) && q) M.ctrl = q; };
+const levelOf = t => M.di;
+const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
 function colorDist(a,b) { const x = hexRgb(a), y = hexRgb(b); return hyp(x[0]-y[0], x[1]-y[1], x[2]-y[2]); }
@@ -535,14 +545,16 @@ function newMatch(u, c, opts) {
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[opts.diff],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, ctrl:null, poss:0,
     firstKick: rnd() < 0.5 ? 0 : 1, auto:!!opts.auto, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless,
-    paused:false, over:false, charging:false, charge:0, cam:{ x:60, y:35 }, cut:null, surge:null,
+    paused:false, over:false, charging:false, charge:0, holdN:0, cam:{ x:60, y:35 }, cut:null, surge:null,
     di:opts.diff, duels:(opts.auto || opts.demo) ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0, ctrlT:0, ctrlPrev:null,
     duelLog:{ last:-99, lastKind:null, half:[0, 0], bonus:[false, false], fails:0 },
-    stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0, duels:0, duelsWon:0, duelsPerfect:0, gk:{ att:[0, 0], made:[0, 0] } },
+    stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0, duels:0, duelsWon:0, duelsPerfect:0, gk:{ att:[0, 0], made:[0, 0] }, dg:{ att:[0, 0], made:[0, 0], charged:[0, 0] } },
+    dropOn:[false, false], dropArmed:[false, false],   // the drop-goal offer, per side: its hysteresis, and what the label promised at the B press
+    dropSeen:[null, null], dropSet:[null, null],       // the chargers the last offer judged, and the ones the press committed the cut to
   };
   M.wind = makeWind();
   for (let t = 0; t < 2; t++) for (let i = 0; i < 7; i++) {
-    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0, boostMul:1, autoDir:0 });
+    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0, boostMul:1, autoDir:0, drop:null });
   }
   M.ctrl = M.players[3];
   kickoff(M.firstKick);
@@ -651,7 +663,7 @@ function setCarrier(p) {
   const b = M.ball;
   if (M.poss !== p.team) M.phaseCount = 0;
   b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
-  p.hold = 0; p.think = 0.1; p.quick = false;
+  p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   M.poss = p.team;
   M.charging = false; M.charge = 0;
   if (!M.auto) {
@@ -744,15 +756,24 @@ function kickBall(team, x0, y0, x1, y1, T, H, kind) {
   M.charging = false; M.charge = 0;
   if (!M.auto) { const q = nearestFree(0, x1, y1); if (q) M.ctrl = q; }
 }
-function chargeDown(c) {
+function chargeDown(c) {                                   // a tactical kick's roll: a defender on top of the kicker gets a 30% charge-down
   let q = null, bd = 1.7;
   for (const o of M.players) if (o.team !== c.team && o.down <= 0) { const d = dist(o,c); if (d < bd) { bd = d; q = o; } }
   if (!q || rnd() > 0.3) return false;
-  const b = M.ball, d = dirOf(c.team);
-  b.state = 'loose'; b.carrier = null; b.f = null; b.last = q.team; b.kickInfo = null;
-  b.x = c.x + d*0.6; b.y = c.y; b.z = 1; b.vx = -d*(3+rnd()*4); b.vy = (rnd()-0.5)*5; b.vz = 2;
-  say('Charged Down', 'small'); sfx('tackle');
+  chargeDownBy(c, q);
   return true;
+}
+function chargeDownBy(c, q, quiet, at) {                   // q blocks c's kick and the ball bounces back loose. at: where he lands, 1.2m from the kicker on the side he came from (a drop's charger ran there; a tactical kick's roll leaves him where he stood)
+  const b = M.ball, d = dirOf(c.team);
+  if (at) { put(q, at); q.vx = q.vy = 0; }
+  b.state = 'loose'; b.carrier = null; b.f = null; b.last = q.team; b.kickInfo = { team:c.team, ownHalf:false };   // a kicked ball: whoever gathers it, that is no turnover
+  if (at) {                                                // off the charger's hands, away from him: a man from behind knocks it on, one from in front back
+    const m = hyp(c.x - at.x, c.y - at.y) || 1, ux = (c.x - at.x)/m, uy = (c.y - at.y)/m, sp = 3 + rnd()*4, side = (rnd()-0.5)*5;
+    b.x = c.x + ux*0.6; b.y = c.y + uy*0.6; b.z = 1; b.vx = ux*sp - uy*side; b.vy = uy*sp + ux*side; b.vz = 2;
+  } else { b.x = c.x + d*0.6; b.y = c.y; b.z = 1; b.vx = -d*(3+rnd()*4); b.vy = (rnd()-0.5)*5; b.vz = 2; }
+  c.hold = 0;
+  M.phase = 'play'; M.charging = false; M.charge = 0;
+  if (!quiet) { say('Charged Down', 'small'); sfx('tackle'); }
 }
 function doKick(c, power, lat) {
   if (chargeDown(c)) return;
@@ -769,12 +790,7 @@ function aiKick(p, type) {
   const d = dirOf(p.team), n = M.nat[p.team];
   if (type === 'clear') doKick(p, 0.8 + rnd()*0.2, p.y < 35 ? -0.75 : 0.75);
   else if (type === 'territory') doKick(p, 0.7 + rnd()*0.3, (rnd()-0.5)*0.8);
-  else {
-    const dx = (oppLine(p.team)-p.x)*d, dy = 35-p.y;
-    const ang = Math.atan2(dy, dx), dd = hyp(dx, dy);
-    M.stats.drops++;
-    doKick(p, clamp(dd/(36 + n.kicking*3), 0.3, 1), ang/0.75);
-  }
+  else cpuDrop(p);
 }
 
 /* ---------- tackling ---------- */
@@ -791,7 +807,7 @@ function attemptTackle(q, c, mode) {
 function tackle(c, q, o) {
   o = o || {};
   M.stats.tackles++;
-  c.down = 1.25; c.vx *= 0.2; c.vy *= 0.2;
+  c.down = 1.25; c.vx *= 0.2; c.vy *= 0.2; c.drop = null;
   q.down = 1.0; q.tcd = 1.0;
   sfx('tackle'); buzz(30);
   const team = c.team, d = dirOf(team);
@@ -928,17 +944,27 @@ function kickWind(team) {                                  // drawn once per kic
   const v = frameVec(team, { x:mph*MPH*Math.cos(a), y:mph*MPH*Math.sin(a) });
   return { x:v.x, y:v.y, mph };
 }
-function makeGoal(team, wx, wy, kind, kicker) {
-  const f = toFrame(team, wx, wy), cpu = team === 1 || M.auto;
-  const g = { team, kind, type:'set', wx, wy, x:f.x, y:f.y, beta:Math.atan2(35 - f.y, 110 - f.x), dist:hyp(110 - f.x, 35 - f.y), ang:Math.abs(f.y - 35)/35,
-    kicking:M.nat[team].kicking, di:cpu ? 1 : M.di, kicker, W:kickWind(team),
+function windNow(team) {                                   // the match wind as it stands, ungusted and in the frame: what the drop offer and the CPU's trigger read, with no random draw
+  const mw = M.wind;
+  if (mw.mph < KICK.wind.calm) return CALM;
+  const v = frameVec(team, { x:mw.mph*MPH*Math.cos(mw.a), y:mw.mph*MPH*Math.sin(mw.a) });
+  return { x:v.x, y:v.y, mph:mw.mph };
+}
+function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry and band in the given wind, drawing nothing random
+  const f = toFrame(team, wx, wy);
+  const g = { team, kind, type:kind === 'drop' ? 'drop' : 'set', wx, wy, x:f.x, y:f.y, beta:Math.atan2(35 - f.y, 110 - f.x), dist:hyp(110 - f.x, 35 - f.y), ang:Math.abs(f.y - 35)/35,
+    kicking:M.nat[team].kicking, di:isHuman(team) ? levelOf(team) : 1, kicker, W:{ x:W.x, y:W.y, mph:W.mph },
     mClear:0, lo:0, hi:0, w:0, ctr:0, fill:1, aid:'line', watch:false, cpu:null,
     stage:'aim', st:0, aim:0, m:0, pt:0, drain:0, mRel:null, L:null, X:null, res:null, ok:false, grade:null, curl:0,
-    tStrike:0, judged:false, skipped:false, t:0, cam:null, pathKey:null, pathPts:null, bot:null, rush:null, out:null };
-  bandOf(g);
-  if (cpu) g.cpu = cpuKickInputs(g);
+    tStrike:0, judged:false, skipped:false, t:0, cam:null, pathKey:null, pathPts:null, bot:null,
+    rush:null, out:null, outQ:null, started:false, tRel:0, hitT:0, tauStop:0 };   // drop goals: the chargers, and how one ended
+  return bandOf(g);
+}
+function makeGoal(team, wx, wy, kind, kicker) {
+  const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
+  if (!isHuman(team)) g.cpu = cpuKickInputs(g);
   else {
-    g.aid = (M.di === 0 || !settings.kickSeen) ? 'path' : 'line';   // the first kick ever gets the Easy aids
+    g.aid = (levelOf(team) === 0 || !settings.kickSeen) ? 'path' : 'line';   // the first kick ever gets the Easy aids
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
   }
   return g;
@@ -1042,10 +1068,11 @@ function scoreGoal(g) {                                    // the verdict moment
   if (g.judged) return;
   g.judged = true;
   const { team, ok, kind } = g;
-  if (ok) { M.score[team] += kind === 'conversion' ? 2 : 3; M.stats.gk.made[team]++; }
+  if (ok) { M.score[team] += kind === 'conversion' ? 2 : 3; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++; }
   say(verdictOf(g), '', ok ? team : null, g.grade, M.cut && M.cut.kind === 'goal' && verdictLow(g));
   if (g.res === 'post' || g.res === 'postIn' || g.res === 'bar' || g.res === 'barIn') { sfx('post'); buzz(40); }
   sfx(ok ? 'cheer' : 'groan');
+  if (ok && kind === 'drop') sfx('roar');
 }
 function verdictLow(g) {                                   // the banner goes under the bar when the ball is up at the posts at the verdict, and up top when it has dropped short
   const cam = kickCam(g), p = ballAt(g, g.X.t);
@@ -1070,19 +1097,23 @@ function updateGoalCut(c, dt) {
   if (c.armA == null) c.armA = !input.aDown;               // a finger already down must lift first
   if (!input.aDown) c.armA = true;
   if (g.watch) return watchStep(c, dt);
+  if (g.type === 'drop') return dropStep(c, dt);
   if (g.stage === 'aim') {
     if (g.drain > 0) { g.drain = Math.max(0, g.drain - dt); g.m = g.mRel*g.drain/0.2; }
-    steerAim(g, dt);
+    steerAim(g, dt, input);
     if (input.aPressed && c.armA) { g.stage = 'power'; g.pt = 0; g.m = 0; g.drain = 0; g.mRel = null; }
   } else if (g.stage === 'power') {
     g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
     if (input.aCancel || (!input.aDown && g.m < KICK.tap)) backToAim(g);
     else if (!input.aDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
   } else if (g.stage === 'runup') {
-    if ((g.st += dt) >= KICK.runup) { strikeNow(c); if (!settings.kickSeen) { settings.kickSeen = true; save(); } }
+    if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
-function strikeNow(c) { const g = c.g; g.stage = 'flight'; g.tStrike = c.t; sfx('strike'); buzz(25); }
+function strikeNow(c) {                                    // the boot meets the ball. A human's first strike at goal, placed or dropped, ends the first-kick aids
+  const g = c.g; g.stage = 'flight'; g.tStrike = c.t; sfx('strike'); buzz(25);
+  if (!g.watch && isHuman(g.team) && !settings.kickSeen) { settings.kickSeen = true; save(); }
+}
 function watchStep(c, dt) {                                // the CPU's kick: settle, run-up, flight; Skip jumps to the verdict
   const g = c.g, t = c.t;
   if (t >= 0.3 && !g.judged && (input.aPressed || input.bPressed)) {
@@ -1094,32 +1125,302 @@ function watchStep(c, dt) {                                // the CPU's kick: se
   else if (g.stage === 'runup') { if ((g.st += dt) >= KICK.runup) strikeNow(c); }
   else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
-function steerAim(g, dt) {
-  const k = KICK, keys = input.keys, held = input.held, on = code => keys.has(code) && !held.has(code);
-  const jx = input.jx, kx = (on('ArrowRight') || on('KeyD') ? 1 : 0) - (on('ArrowLeft') || on('KeyA') ? 1 : 0);
+function steerAim(g, dt, inp) {
+  const k = KICK, keys = inp.keys, held = inp.held, on = code => keys.has(code) && !held.has(code);
+  const jx = inp.jx, kx = (on('ArrowRight') || on('KeyD') ? 1 : 0) - (on('ArrowLeft') || on('KeyA') ? 1 : 0);
   const rate = jx ? k.aimRate*Math.sign(jx)*Math.pow(Math.abs(jx), 1.6) : k.keyRate*kx;
   if (!rate) return;
   const lim = 85*D2R;
   g.aim = clamp(clamp(g.aim + rate*D2R*dt, -k.aimMax*D2R, k.aimMax*D2R), -lim - g.beta, lim - g.beta);
 }
 function backToAim(g) { g.stage = 'aim'; g.mRel = g.m; g.drain = 0.2; g.pt = 0; }   // the meter drains over 0.2s
-function verdict(c, hold) { scoreGoal(c.g); c.skipAt = c.t + 0.25; finishCut(() => settleGoal(c.g), hold); }
-function goalResume(c) {                                   // back to Aim with the meter empty; a fresh press is needed
+function verdict(c, hold) { const g = c.g; scoreGoal(g); c.skipAt = c.t + 0.25; finishCut(() => g.type === 'drop' ? applyDrop(c) : settleGoal(g), hold); }
+function goalResume(c) {                                   // back to Aim with the meter empty; a fresh press is needed. A drop goes back to Wait, with the chargers where the cut began
   const g = c.g;
-  if (!g.watch && (g.stage === 'aim' || g.stage === 'power')) { g.stage = 'aim'; g.m = 0; g.pt = 0; g.drain = 0; g.mRel = null; }
+  if (g.type === 'drop') { if (!g.out && (g.stage === 'hold' || g.stage === 'wait')) { g.stage = 'wait'; g.m = 0; g.pt = 0; g.started = true; c.t = CUT_IN; } }
+  else if (!g.watch && (g.stage === 'aim' || g.stage === 'power')) { g.stage = 'aim'; g.m = 0; g.pt = 0; g.drain = 0; g.mRel = null; }
   c.armA = false; input.aDown = input.bDown = false;
   input.reanchor(); input.held = new Set();
 }
 function goalLabels(c) {
   const g = c.g;
   if (g.watch) return ['Skip', null, false, false];
+  if (g.type === 'drop') return [null, 'Kick', false, g.stage === 'wait' && !c.after && !g.out];
   return ['Kick', null, g.stage === 'aim' && !c.after, false];
 }
-function dropGoal(team) {
-  M.score[team] += 3;
+function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
+  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); }
   placeBall(M.ball.x, M.ball.y);
-  say('Drop Goal', 'big', team); sfx('roar');
-  startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:1.6, then:() => deadBall(() => kickoff(1-team)) });
+  startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });
+}
+
+/* ---------- drop goals ----------
+   In range, the small button reads Drop Goal: a tap is still a chip, a 0.20s
+   hold freezes play and cuts to the goal-kick shot with the thumb still down.
+   The meter fills while B is held, the stick steers, and the nearest three
+   defenders charge at the lens. One rule, blockedBy, decides whether a kick
+   gets away. The offer runs it on the world as the hold will leave it, the
+   kicker's own run and every opponent ahead or level who can reach him
+   included, plus anyone behind him inside KICK.shoulder, so the label
+   never promises a kick that is certain to be charged down. What the label
+   says at the press is what the press gives: a Drop Goal press opens the
+   close-up at 0.20s whatever has moved since, and a Kick press stays a kick.
+   The CPU drops through the same rule from its own side, in the top-down view. */
+const DZ_ON = { ok:true }, DZ_OFF = { ok:false };
+const holdSteps = () => Math.ceil(KICK.hold/STEP - 1e-9);     // the B press opens the cut on this step, the press step counted as the first: the one count the trigger and the offer's projection share
+const holdLead = () => (holdSteps() - 1)*STEP;               // how long the world runs between the B press and the freeze: the step that opens the cut does not move it
+function dropZone(c) {                                     // is this carrier offered a drop goal right now? Rules 1 and 3 where he stands; range, bearing and the offer where the hold will leave him
+  const t = c.team, inp = inputOf(t), b = M.ball, k = KICK;
+  const off = () => { M.dropOn[t] = false; return DZ_OFF; };
+  if (!inp || c !== ctrlOf(t) || b.state !== 'held' || b.carrier !== c || M.phase !== 'play' || M.cut || c.hold < 0.3) return off();
+  const j = frameVec(t, inp.world());
+  if (Math.abs(j.y) > 0.55 || j.x < -0.3) return off();   // pointing at touch, or back: the button is today's kick
+  const proj = projectHold(c, holdLead()), f = toFrame(t, proj.x, proj.y), D = hyp(110 - f.x, 35 - f.y);
+  if (f.x < 70 || f.x > 104 || D > 42 || Math.abs(Math.atan2(35 - f.y, 110 - f.x)) > 40*D2R) return off();
+  const g = goalOf(t, proj.x, proj.y, 'drop', c, CALM);
+  let on = g.mClear <= k.range;                            // in range: a calm pure strike reaches the bar
+  if (on) { g.W = windNow(t); bandOf(g); on = dropOffer(c, 0, g, M.dropOn[t] ? 0 : k.offerLate, proj); }   // hysteresis: on only if a late release gets away, off only when an on-time one is blocked
+  M.dropOn[t] = on;
+  return on ? DZ_ON : DZ_OFF;
+}
+// at the B press the label decides: if it read Drop Goal on the last frame, a thumb leaving the stick on this one doesn't take it away. The
+// cut then judges the chargers that offer judged, so a chaser who crosses into the shoulder radius during the hold stays out of it
+function dropPress(c) {
+  const t = c.team, on = M.dropOn[t] || dropZone(c).ok;
+  M.dropSet[t] = on ? M.dropSeen[t] : null;
+  return on;
+}
+function kickLabel(t) {                                    // the small button with the ball in hand, for the human on side t: what this press will do. Through a hold it stays what the press promised
+  const c = ctrlOf(t);
+  if (!c) return 'Kick';
+  if (M.charging && M.ball.carrier === c) return M.dropArmed[t] ? 'Drop Goal' : 'Kick';
+  return dropZone(c).ok ? 'Drop Goal' : 'Kick';
+}
+// the world `lead` seconds on, run the way the hold will run it: the real step for everyone (the kicker on his stick, a CPU kicker checking
+// his run as the wind-up does, the AI's chasers and the defensive line as computeTargets drives them, collisions included), then everyone put back.
+// Nothing random is drawn. Returns the kick spot and every standing opponent's projected spot and velocity, all in the world.
+const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hold', 'turn', 'lastA', 'boost'];   // what moveAll touches
+function projectHold(c, lead) {
+  const t = c.team, n = Math.max(0, Math.round(lead/STEP)), dt = n ? lead/n : 0, P = M.players;
+  const saved = P.map(p => HOLD_KEYS.map(k => p[k])), steps0 = M.stats.steps, drop0 = c.drop;
+  if (!isHuman(t) && !c.drop) c.drop = { t:1e9, g:null };   // a CPU kicker brakes through the wind-up, and never strikes inside the projection
+  for (let i = 0; i < n; i++) moveAll(dt);
+  const out = { x:c.x, y:c.y, vx:c.vx, vy:c.vy, opps:P.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy })) };
+  P.forEach((p, i) => HOLD_KEYS.forEach((k, j) => { p[k] = saved[i][j]; }));
+  M.stats.steps = steps0; c.drop = drop0;
+  return out;
+}
+// would a pure strike at aim 0, released `late` seconds after the band's centre, get away from the opponents as they will stand `lead` seconds from now?
+function dropOffer(c, lead, g, late, proj) {
+  proj = proj || projectHold(c, lead);
+  if (!g) g = goalOf(c.team, proj.x, proj.y, 'drop', c, windNow(c.team));
+  if (late == null) late = KICK.offerLate;
+  const m = Math.min(1, g.ctr + late/g.fill);
+  const rs = rushersOf(c, g, proj);
+  M.dropSeen[c.team] = new Set(rs.map(r => r.q));
+  return !blockedBy({ L:launchOf(g, m, 0) }, rs, m*g.fill + KICK.dropT);   // the strike as it would really fly: a late release is above the band and hooks
+}
+// the chargers: every standing opponent within 15m of the kick spot ahead of it or level, and behind it only within the shoulder radius (a man on the
+// kicker's shoulder counts, a chaser deeper behind him does not, in the offer and in the cut alike), the nearest three. Each is frozen where `proj` puts
+// him (or where he really stands), with his speed toward the kicker and his top speed. g.x/g.y is the kick spot, in the frame.
+function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the offer judged)
+  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)] : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
+  const list = proj ? proj.opps : M.players.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy }));
+  for (const o of list) {
+    const f = toFrame(t, o.x, o.y), v = frameVec(t, { x:o.vx, y:o.vy });
+    const dx = g.x - f.x, dy = g.y - f.y, d0 = hyp(dx, dy);
+    if (d0 > (dx > 0 ? k.shoulder : k.rushR)) continue;   // dx > 0: he is behind the kick spot
+    if (only && dx > 0 && !only.has(o.q)) continue;        // a chaser who crossed into the shoulder radius during the hold was not in the offer
+    const vmax = maxSpeed(o.q)*mul, ux = d0 > 1e-6 ? dx/d0 : 1, uy = d0 > 1e-6 ? dy/d0 : 0;
+    out.push({ q:o.q, x:f.x, y:f.y, ux, uy, d0, v0:clamp(v.x*ux + v.y*uy, 0, vmax), vmax, a:k.rushAcc*vmax/8.35 });
+  }
+  out.sort((p, q) => p.d0 - q.d0);
+  return out.slice(0, 3);
+}
+function rushRun(r, t) {                                   // metres covered t seconds after the chargers start: v = min(vmax, v0 + a t)
+  if (t <= 0) return 0;
+  const ta = (r.vmax - r.v0)/r.a;
+  return t <= ta ? r.v0*t + 0.5*r.a*t*t : r.v0*ta + 0.5*r.a*ta*ta + r.vmax*(t - ta);
+}
+function rushAt(r, t) {                                    // where he is, closing straight at the kicker and stopping on him; d is his distance to the kicker
+  const d = Math.max(0, r.d0 - rushRun(r, t)), s = r.d0 - d;
+  return { x:r.x + r.ux*s, y:r.y + r.uy*s, d };
+}
+function rushWhen(r, d) {                                  // when he first comes within d of the kicker
+  const s = r.d0 - d;
+  if (s <= 0) return 0;
+  const ta = (r.vmax - r.v0)/r.a, sa = r.v0*ta + 0.5*r.a*ta*ta;
+  return s <= sa ? (Math.sqrt(r.v0*r.v0 + 2*r.a*s) - r.v0)/r.a : ta + (s - sa)/r.vmax;
+}
+// the one charging rule. A charger within 1.0m of the kicker before the strike blocks it (Smothered before the release, Charged Down
+// after it); so does the ball passing within 0.9m of a charger, horizontally, while under 2.4m in its first 0.8s. tStrike is on the
+// chargers' clock, which starts at the end of the cut-in. Returns null, or the earliest block.
+function blockedBy(g, rushers, tStrike) {
+  const k = KICK;
+  let hit = null;
+  for (const r of rushers) if (rushAt(r, tStrike).d <= k.block) { const at = rushWhen(r, k.block); if (!hit || at < hit.t) hit = { q:r.q, t:at, how:at < tStrike - k.dropT ? 'smothered' : 'charged' }; }
+  if (hit || !g.L) return hit;
+  for (let i = 0; i <= 80; i++) {
+    const tau = i*0.01, p = posAt(g.L, tau);
+    if (p.h <= 0) break;
+    if (p.h > k.reach) continue;
+    for (const r of rushers) { const a = rushAt(r, tStrike + tau); if (hyp(p.x - a.x, p.y - a.y) <= k.lat) return { q:r.q, t:tStrike + tau, how:'charged' }; }
+  }
+  return null;
+}
+function startDropCut(c) {                                 // the carrier has held B for 0.20s in range: freeze, and cut in with the thumb still down
+  const t = c.team, g = makeGoal(t, c.x, c.y, 'drop', c);
+  g.rush = rushersOf(c, g, null, M.dropSet[t]);           // the chargers as they really stand at the freeze; behind him, only the ones the offer judged
+  M.dropSet[t] = null;
+  g.stage = 'hold';
+  M.goal = g; M.stats.dg.att[t]++; M.dropArmed[t] = false;
+  startGoalCut(g);
+}
+function dropStep(c, dt) {
+  const g = c.g, k = KICK, t = c.t, inp = inputOf(g.team), tau = t - CUT_IN;   // tau: the chargers' clock
+  if (g.out) return;
+  if (!g.started) { g.started = true; g.pt = 0; g.m = 0; g.stage = inp.bDown ? 'hold' : 'wait'; }   // the press carries over the cut-in; a thumb that lifted needs a fresh press
+  if (g.stage === 'hold' || g.stage === 'wait') {
+    for (const r of g.rush) if (rushAt(r, tau).d <= k.block) return dropStop(c, 'smothered', r.q, 0);
+    steerAim(g, dt, inp);
+    if (g.stage === 'hold') {
+      g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
+      if (inp.bCancel || (!inp.bDown && g.m < k.tap)) { g.stage = 'wait'; g.m = 0; g.pt = 0; }
+      else if (!inp.bDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.tRel = tau; g.stage = 'drop'; g.st = 0; }
+    } else if (inp.bPressed) { g.stage = 'hold'; g.pt = 0; g.m = 0; }
+  } else if (g.stage === 'drop') {
+    if ((g.st += dt) >= k.dropT) {                         // the half-volley: charging is checked now, with the strike on the chargers' clock
+      const hit = blockedBy(g, g.rush, g.tRel + k.dropT);
+      if (hit) dropStop(c, 'charged', hit.q, Math.max(0.02, hit.t - g.tRel - k.dropT));
+      else strikeNow(c);
+    }
+  } else if (g.stage === 'flight') {
+    const tf = t - g.tStrike - k.hitStop;
+    if (g.X.land) { if (tf >= 0.6) finishCut(() => applyDrop(c), 0); }   // short: no banner, and the ball stays live in the air
+    else if (!g.judged && tf >= g.X.t) verdict(c, 1.5);
+  }
+}
+function dropStop(c, how, q, hitT) {                       // Smothered before the release, or Charged Down at the strike (hitT: how long the ball flew first)
+  const g = c.g;
+  g.out = how; g.outQ = q; g.judged = true; g.tauStop = c.t - CUT_IN;
+  if (how === 'charged') { g.hitT = hitT; strikeNow(c); M.stats.dg.charged[g.team]++; }
+  say(how === 'charged' ? 'Charged Down' : 'Smothered', '', 1 - g.team);
+  sfx('tackle'); buzz(30);
+  c.skipAt = c.t + 0.25;
+  finishCut(() => applyDrop(c), 0.9);
+}
+// hand the drop back to the match: everyone stands where the freeze left them, except the charger
+function applyDrop(c) {
+  const g = c.g, team = g.team, kk = g.kicker, q = g.outQ, inp = inputOf(team);
+  if (inp) inp.restore();
+  if (g.out === 'smothered') { put(q, stopSpot(g, q, 0.5)); q.vx = q.vy = 0; tackle(kk, q); return; }
+  if (g.out === 'charged') { chargeDownBy(kk, q, true, stopSpot(g, q, 1.2)); return; }
+  const w = toWorld(team, g.X.x, g.X.y);
+  if (g.ok) { placeBall(clamp(w.x, 0, 120), clamp(w.y, 0, 70)); dropGoal(team, true); return; }
+  if (g.X.land) { kk.hold = 0; launchG3d(g, kk, Math.min(0.6, g.X.t)); return; }   // the flight the cut left 0.6s into
+  if (g.res === 'post' || g.res === 'bar') { looseOffWood(g); return; }
+  placeBall(clamp(w.x, 0, 120), clamp(w.y, 0, 70));
+  deadBall(() => dropOut(1 - team));                       // wide, or under the bar and dead: their 22
+}
+function stopSpot(g, q, back) {                            // where the charger who stopped the kick lands: `back` metres from the kick spot on the side he came from, in the world
+  const r = g.rush && g.rush.find(r => r.q === q), ux = r ? r.ux : -1, uy = r ? r.uy : 0;
+  return toWorld(g.team, g.x - ux*back, g.y - uy*back);
+}
+function looseOffWood(g) {                                 // a post or bar miss: loose, 1m in front of the goal line, bouncing back into play
+  const b = M.ball, X = g.X, w = toWorld(g.team, 109, X.y), v = frameVec(g.team, { x:-4, y:X.y < 35 ? -1 : 1 });
+  b.state = 'loose'; b.carrier = null; b.f = null; b.last = g.team; b.kickInfo = { team:g.team, ownHalf:false };   // a kicked ball: no turnover for whoever gathers it
+  b.x = w.x; b.y = w.y; b.z = Math.min(X.h, KICK.bar); b.vx = v.x; b.vy = v.y; b.vz = 2;
+  M.phase = 'play';
+}
+// a struck drop flying on in the top-down view, t0 seconds in: the closed form drives the ball, and x1/y1 is where it comes down, so chasers go there
+function launchG3d(g, kk, t0) {
+  const b = M.ball, team = g.team, d = dirOf(team), X = g.X, w0 = toWorld(team, g.x, g.y), w1 = toWorld(team, X.x, X.y);
+  const onside = new Set();
+  for (const p of M.players) if (p.team === team && (p.x - w0.x)*d <= 0.5) onside.add(p);
+  b.state = 'air'; b.carrier = null; b.last = team; b.kickInfo = { team, ownHalf:false };   // a kicked ball: no turnover for whoever gathers it
+  b.f = { kind:'g3d', team, L:g.L, X, t:t0 || 0, T:X.t, x0:w0.x, y0:w0.y, x1:w1.x, y1:w1.y, z0:KICK.h0, z1:0, onside, rolled:new Set(), target:null, drop:true };
+  const p = posAt(g.L, Math.min(b.f.t, X.t)), w = toWorld(team, p.x, p.y);
+  b.x = w.x; b.y = w.y; b.z = Math.max(0, p.h);
+  M.phase = 'play'; M.charging = false; M.charge = 0;
+  for (const t of [0, 1]) if (isHuman(t)) setCtrl(t, nearestFree(t, w1.x, w1.y));
+}
+function updateG3d(dt) {                                   // the g3d ball in the air: the one posts rule at the line, touch, and a catch under 2.7m as for any kick
+  const b = M.ball, f = b.f, team = f.team, X = f.X;
+  f.t += dt;
+  const tt = Math.min(f.t, X.t), p = posAt(f.L, tt), w = toWorld(team, p.x, p.y), v = frameVec(team, velAt(f.L, tt));
+  b.x = w.x; b.y = w.y; b.z = Math.max(0, p.h); b.vx = v.x; b.vy = v.y;
+  if (f.t >= X.t) {
+    if (!X.land) {
+      const res = judgeCross(X);
+      if (scores(res)) { if (f.drop) M.stats.dg.made[team]++; dropGoal(team); return; }
+      if (res === 'post' || res === 'bar') { looseOffWood({ team, X }); sfx('post'); return; }
+      placeBall(clamp(b.x, 0, 120), clamp(b.y, 0, 70)); sfx('whistle');
+      deadBall(() => dropOut(1 - team));
+      return;
+    }
+    b.state = 'loose'; b.f = null; b.vx = v.x*0.32; b.vy = v.y*0.32; b.vz = 3.2; b.z = 0.01;
+    return;
+  }
+  if (b.y < 0 || b.y > 70) {
+    const own22 = team === 0 ? f.x0 <= 32 : f.x0 >= 88;
+    placeBall(b.x, clamp(b.y, 0, 70));
+    deadBall(() => lineout(1 - team, own22 ? b.x : f.x0, b.y, own22 ? 'Into Touch' : 'Out on the Full'));
+    return;
+  }
+  if (f.t/X.t > 0.45 && b.z < 2.7) {
+    let best = null, bd = 1.6;
+    for (const q of M.players) {
+      if (q.down > 0 || (q.team === team && !f.onside.has(q))) continue;
+      const dd = hyp(q.x - b.x, q.y - b.y); if (dd < bd) { bd = dd; best = q; }
+    }
+    if (best) catchBall(best, 'kick');
+  }
+}
+/* The CPU's drop: offered by the same charging rule from his side on the clock his strike keeps, then a 0.25s wind-up in the open (a
+   tackle in that time is a normal tackle), the strike checked against every opponent where he really stands, and a g3d flight with no
+   close-up. The offer projects the world through the wind-up and gives your players KICK.cpuReact to react, so a man closing on him can block it. */
+function cpuDropOffer(p) {
+  const proj = projectHold(p, KICK.dropT), g = goalOf(p.team, proj.x, proj.y, 'drop', p, windNow(p.team));
+  return g.mClear <= KICK.range && !blockedBy({ L:launchOf(g, g.ctr, 0, 0) }, rushersOf(p, g, proj), KICK.cpuReact);
+}
+function cpuDrop(p) {
+  const g = makeGoal(p.team, p.x, p.y, 'drop', p);        // his inputs are drawn now: nothing random happens at the strike
+  p.drop = { t:KICK.dropT, g };
+  M.stats.drops++; M.stats.dg.att[p.team]++;
+}
+function cpuDropStrike(p) {
+  const g0 = p.drop.g, g = goalOf(p.team, p.x, p.y, 'drop', p, g0.W);   // struck from where the wind-up leaves him, with the inputs drawn at the decision
+  g.cpu = g0.cpu; p.drop = null;
+  strikeGoal(g, g.cpu.m, g.cpu.aim);
+  g.rush = rushersOf(p, g, null);                          // every opponent where he really stands, your controlled player included
+  const hit = blockedBy(g, g.rush, 0);
+  if (hit) { M.stats.dg.charged[p.team]++; chargeDownBy(p, hit.q, false, stopSpot(g, hit.q, 1.2)); return; }
+  p.hold = 0;
+  launchG3d(g, p, 0);
+  sfx('kick');
+}
+// canonical positions for the tests and the console: a carrier of `team` at a frame spot, holding the ball with the stick forward, and
+// opponents at frame positions (with frame velocities) as chargers; everyone else well away. Returns the carrier.
+function stageDrop(spot, chargers, team) {
+  team = team || 0; chargers = chargers || [];
+  const P = M.players, b = M.ball, d = dirOf(team), w = toWorld(team, spot.x, spot.y);
+  const own = P.filter(p => p.team === team), opp = P.filter(p => p.team !== team);
+  M.phase = 'play'; M.set = null; M.cut = null; M.clock = 30; M.dclock = 100; M.hooter = false; M.charging = false; M.charge = 0; M.phaseCount = 2;
+  M.dropOn = [false, false]; M.dropArmed = [false, false]; M.dropSeen = [null, null]; M.dropSet = [null, null];
+  for (const p of P) { p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = -1; p.boost = 0; p.hold = 2; p.drop = null; p.quick = false; }
+  own.forEach((p, i) => { p.x = clamp(i ? w.x - d*(8 + i) : w.x, 1, 119); p.y = i ? 6 + i*9.5 : w.y; p.fx = d; p.fy = 0; });
+  opp.forEach((q, i) => {
+    const ch = chargers[i];
+    if (ch) { const cw = toWorld(team, ch.x, ch.y), cv = frameVec(team, { x:ch.vx || 0, y:ch.vy || 0 }); q.x = cw.x; q.y = cw.y; q.vx = cv.x; q.vy = cv.y; }
+    else { q.x = clamp(w.x + d*(22 + i), 1, 119); q.y = 6 + i*9.5; }
+    q.fx = -d; q.fy = 0;
+  });
+  const c = own[0];
+  setCarrier(c); c.hold = 2;
+  b.x = c.x + c.fx*0.55; b.y = c.y; b.z = 1;
+  setCtrl(team, c); M.ctrlPrev = M.ctrl; M.ctrlT = 1;
+  const inp = inputOf(team); if (inp) { inp.jx = 1; inp.jy = 0; }
+  return c;
 }
 
 /* ---------- close-ups: scrums, lineouts, duels ----------
@@ -1343,7 +1644,7 @@ function findTackleDuel(c) {
   return g ? { kind:'tackle', U:q, O:c, how:g } : null;
 }
 function duelCheck(c) {
-  if (M.duels === 'off') return false;              // before any rnd(), so AI v AI keeps its sequence
+  if (M.duels === 'off' || c.drop) return false;    // before any rnd(), so AI v AI keeps its sequence; a CPU carrier winding up a drop is not duelled
   const s = c.team === 0 ? findAttackDuel(c) : findTackleDuel(c);
   if (!s) return false;
   startDuel(s);
@@ -1658,7 +1959,8 @@ function forceDuel(kind) {
 /* ---------- ball in flight / loose ---------- */
 function updateBallAir(dt) {
   const b = M.ball, f = b.f;
-  const px = b.x;
+  if (f.kind === 'g3d') return updateG3d(dt);
+  const px = b.x, py = b.y, pz = b.z;
   f.t += dt;
   const u = Math.min(1, f.t/f.T);
   b.x = f.x0 + (f.x1-f.x0)*u; b.y = f.y0 + (f.y1-f.y0)*u;
@@ -1677,9 +1979,12 @@ function updateBallAir(dt) {
     return;
   }
   const d = dirOf(f.team);
-  if (f.kind === 'kick') {
+  if (f.kind === 'kick') {                                 // an ordinary kick through the posts is a drop goal, judged by the one posts rule at the interpolated crossing
     const line = oppLine(f.team);
-    if ((px-line)*d < 0 && (b.x-line)*d >= 0 && Math.abs(b.y-35) < 2.8 && b.z > 3) { dropGoal(f.team); return; }
+    if ((px-line)*d < 0 && (b.x-line)*d >= 0) {
+      const s = (line - px)/(b.x - px), yc = py + s*(b.y - py), zc = pz + s*(b.z - pz);
+      if (scores(judgeCross({ land:false, x:110, y:toFrame(f.team, line, yc).y, h:zc }))) { dropGoal(f.team); return; }
+    }
   }
   if (b.y < 0 || b.y > 70) {
     const own22 = f.team === 0 ? f.x0 <= 32 : f.x0 >= 88;
@@ -1852,6 +2157,7 @@ function computeTargets() {
 
 /* ---------- AI ball carrier ---------- */
 function aiCarrier(p, dt) {
+  if (p.drop) { steer(p, 0, 0, 12, dt); if ((p.drop.t -= dt) <= 0) cpuDropStrike(p); return; }   // winding up a drop goal: he checks his run and strikes it on the half-volley
   const d = dirOf(p.team), n = M.nat[p.team];
   let ax = d, ay = 0, near = 99;
   for (const q of M.players) {
@@ -1876,7 +2182,7 @@ function aiCarrier(p, dt) {
   const fromOwn = (p.x-ownLine(p.team))*d;
   if (p.fromKick) { p.fromKick = false; if (fromOwn < 40 && rnd() < 0.5) { aiKick(p, 'territory'); return; } }
   if (fromOwn < 22 && near < 8 && rnd() < 0.45) { aiKick(p, 'clear'); return; }
-  if (toLine < 30 && toLine > 6 && Math.abs(p.y-35) < 13 && M.phaseCount >= 2 && near > 2.5 && rnd() < 0.07) { aiKick(p, 'drop'); return; }
+  if (toLine < 30 && toLine > 6 && Math.abs(p.y-35) < 13 && M.phaseCount >= 2 && cpuDropOffer(p) && rnd() < 0.07) { aiKick(p, 'drop'); return; }   // the same offer rule as yours, from his side
   if (fromOwn < 45 && near > 5 && M.phaseCount >= 3 && rnd() < 0.03) { aiKick(p, 'territory'); return; }
   if (near < 2.6 || (p.hold > 2.4 && rnd() < 0.15)) {
     const r = bestReceiver(p);
@@ -1940,14 +2246,15 @@ function handleUser(dt) {
   }
   if (input.bPressed) {
     input.bPressed = false;
-    if (M.phase === 'play' && b.state === 'held' && b.carrier === c) { M.charging = true; M.charge = 0; }
+    if (M.phase === 'play' && b.state === 'held' && b.carrier === c) { M.charging = true; M.charge = 0; M.holdN = 0; M.dropArmed[c.team] = dropPress(c); }   // what the label promised at the press
     else if (M.phase === 'play' && !ourBall()) switchPlayer();
   }
   if (M.charging) {
     if (!(M.phase === 'play' && b.state === 'held' && b.carrier === c) || input.bCancel) { M.charging = false; M.charge = 0; }   // a cancelled touch is never a kick
     else {
-      M.charge = Math.min(1, M.charge + dt/0.85);
-      if (!input.bDown) { const pw = M.charge; M.charging = false; M.charge = 0; userKick(pw); }
+      M.charge = Math.min(1, M.charge + dt/0.85); M.holdN++;
+      if (!input.bDown) { const pw = M.charge; M.charging = false; M.charge = 0; userKick(pw); }   // a tap is a chip, as ever
+      else if (M.dropArmed[c.team] && M.holdN >= holdSteps()) startDropCut(c);   // a Drop Goal press held 0.20s (holdSteps steps, the press step the first): the close-up, with the thumb still down. The offer is not run again: what the label said at the press is what you get
     }
   }
   input.aCancel = input.bCancel = false;
@@ -2005,6 +2312,7 @@ function update(dt) {
     if (!M.hooter && M.clock >= M.halfLen) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
   }
   handleUser(dt);
+  if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
   if (M.ctrl !== M.ctrlPrev) { M.ctrlPrev = M.ctrl; M.ctrlT = 0; } else M.ctrlT += dt;
   moveAll(dt);
   if (M.phase === 'play') {
@@ -2678,15 +2986,17 @@ const BANDS = Array.from({ length:12 }, (_, i) => [i*10, 0, i*10 + 10, 0, i*10 +
 const easeIO = u => u < 0.5 ? 2*u*u : 1 - 2*(1 - u)*(1 - u);
 // where the kicker and the ball are at run-up time st (< 0 before it) and flight time tf (< 0 before the strike)
 function kickPose(g, st, tf) {
-  const k = KICK, ux = Math.cos(g.beta), uy = Math.sin(g.beta), rx = -uy, ry = ux;
-  const K0x = g.x - 1.6*ux - 1.2*rx, K0y = g.y - 1.6*uy - 1.2*ry, K1x = g.x - 0.25*ux - 0.3*rx, K1y = g.y - 0.25*uy - 0.3*ry;
-  const run = st < 0 ? 0 : ease3(st/k.runup);
-  const P = { kx:K0x + (K1x - K0x)*run, ky:K0y + (K1y - K0y)*run, stride:st > 0 ? st*16 : 0, leg:0, bx:0, by:0, bh:0, held:false };
-  if (st >= 0) P.leg = tf < 0 ? clamp((st - 0.32)/0.10, 0, 1) : Math.max(0, 1 - tf/0.25);
+  const k = KICK, drop = g.type === 'drop', ux = Math.cos(g.beta), uy = Math.sin(g.beta), rx = -uy, ry = ux;
+  // a placed kicker starts 1.6m back and 1.2m left and runs up; a drop kicker stands at the mark, 0.9m left of the arrow, and steps onto the line as he drops it
+  const K0x = g.x - (drop ? 0.25 : 1.6)*ux - (drop ? 0.9 : 1.2)*rx, K0y = g.y - (drop ? 0.25 : 1.6)*uy - (drop ? 0.9 : 1.2)*ry, K1x = g.x - 0.25*ux - 0.3*rx, K1y = g.y - 0.25*uy - 0.3*ry;
+  const runT = drop ? k.dropT : k.runup, relT = drop ? 0 : 0.12;   // the run-up (or the drop), and when the ball leaves his hands
+  const run = st < 0 ? 0 : ease3(st/runT);
+  const P = { kx:K0x + (K1x - K0x)*run, ky:K0y + (K1y - K0y)*run, stride:st > 0 && !drop ? st*16 : 0, leg:0, bx:0, by:0, bh:0, held:false };
+  if (st >= 0) P.leg = tf < 0 ? clamp((st - (runT - 0.10))/0.10, 0, 1) : Math.max(0, 1 - tf/0.25);
   const hx = 0.15*ux + 0.26*rx, hy = 0.15*uy + 0.26*ry;         // the held ball sits at his right hip, where it shows past his back
-  if (st < 0.12) { P.bx = P.kx + hx; P.by = P.ky + hy; P.bh = 1.05; P.held = true; }
-  else if (tf < 0 && st < k.runup) {                           // let go from the hands, meeting the ground on the mark as the boot arrives
-    const s = (st - 0.12)/(k.runup - 0.12), r12 = ease3(0.12/k.runup), Rx = K0x + (K1x - K0x)*r12 + hx, Ry = K0y + (K1y - K0y)*r12 + hy;
+  if (st < relT) { P.bx = P.kx + hx; P.by = P.ky + hy; P.bh = 1.05; P.held = true; }
+  else if (tf < 0 && st < runT) {                              // let go from the hands, meeting the ground on the mark as the boot arrives
+    const s = (st - relT)/(runT - relT), r0 = ease3(relT/runT), Rx = K0x + (K1x - K0x)*r0 + hx, Ry = K0y + (K1y - K0y)*r0 + hy;
     P.bx = Rx + (g.x - Rx)*s; P.by = Ry + (g.y - Ry)*s; P.bh = 1.05 - (1.05 - k.h0)*s*s;
   } else if (tf < 0) { P.bx = g.x; P.by = g.y; P.bh = k.h0; }  // the hit-stop
   else { const p = ballAt(g, tf); P.bx = p.x; P.by = p.y; P.bh = p.h; }
@@ -2695,6 +3005,11 @@ function kickPose(g, st, tf) {
 // the drawn ball at flight time tf: the closed form, then a cosmetic 0.5s rebound off the woodwork, or a roll on from a short landing
 function ballAt(g, tf) {
   const X = g.X, L = g.L, res = g.res, k = KICK;
+  if (g.out === 'charged') {                                 // blocked hitT into the flight: it comes back toward the lens, low
+    if (tf <= g.hitT) { const p = posAt(L, tf); p.h = Math.max(0, p.h); return p; }
+    const p = posAt(L, g.hitT), tau = tf - g.hitT, tr = Math.min(tau, 0.6), ux = Math.cos(g.beta), uy = Math.sin(g.beta);
+    return { x:p.x - 5*ux*tr, y:p.y - 5*uy*tr, h:Math.max(0, p.h + 2*tau - 4.9*tau*tau) };
+  }
   const wood = res === 'post' || res === 'postIn' || res === 'bar' || res === 'barIn';
   if (tf <= X.t || !(X.land || wood)) { const p = posAt(L, tf); p.h = Math.max(0, p.h); return p; }
   const v = velAt(L, X.t), tau = tf - X.t, tr = Math.min(tau, 0.5);
@@ -2815,15 +3130,19 @@ function drawTouchJudges(cam, g, up) {
   }
 }
 function drawKick(c, g0) {
-  const g = c.g, cam = kickCam(g), { W, H } = g0, t = c.t, k = KICK, hz = cam.hz, a0 = ctx.globalAlpha;
+  const g = c.g, cam = kickCam(g), { W, H } = g0, t = c.t, k = KICK, hz = cam.hz, a0 = ctx.globalAlpha, drop = g.type === 'drop';
   const tf = g.stage === 'flight' ? t - g.tStrike - k.hitStop : -1;              // the flight clock, hit-stop included
-  const st = g.stage === 'runup' ? g.st : g.stage === 'flight' ? k.runup : -1;   // the run-up clock
+  const runT = drop ? k.dropT : k.runup;
+  const st = g.stage === 'runup' || g.stage === 'drop' ? g.st : g.stage === 'flight' ? runT : -1;   // the run-up (or drop) clock
+  const live = g.stage === 'aim' || g.stage === 'wait' || g.stage === 'hold';   // the arrow is yours to steer
+  let tau = t - CUT_IN - (g.stage === 'flight' ? clamp(t - g.tStrike, 0, k.hitStop) : 0);   // the chargers' clock pauses with the hit-stop
+  if (g.out === 'smothered') tau = Math.min(tau, g.tauStop);
   const P = kickPose(g, st, tf);
   const aimShown = g.watch ? g.aim*easeIO(clamp((t - CUT_IN)/0.5, 0, 1)) : g.aim;
   // camera: a tilt keeps a high ball in frame, and a zoom closes on the goal window as it comes down
   let tilt = 0, Z = 1;
   const gx = cam.cx, gy = cam.gy;
-  if (tf >= 0) { const v = kickView(g, cam, tf, P.bx, P.by, P.bh); tilt = v.tilt; Z = v.Z; }
+  if (tf >= 0 && g.out !== 'charged') { const v = kickView(g, cam, tf, P.bx, P.by, P.bh); tilt = v.tilt; Z = v.Z; }
   ctx.save();
   const ds = tf + k.hitStop;                                                   // the shake is deterministic: no Math.random
   if (!RM && ds >= 0 && ds < 0.12) { const a = 4*Math.exp(-ds/0.04); ctx.translate(a*Math.sin(97*t), a*Math.cos(83*t)); }
@@ -2843,21 +3162,21 @@ function drawKick(c, g0) {
   groundLine(cam, g.x - 0.25, g.y, g.x + 0.25, g.y, false); groundLine(cam, g.x, g.y - 0.25, g.x, g.y + 0.25, false);   // the kick mark
   // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's
   const struck = tf >= -k.hitStop;
-  let arrowA = g.watch ? 0.6 : g.stage === 'aim' ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6;
+  let arrowA = g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6;
   if (struck) arrowA *= Math.max(0, 1 - (tf + k.hitStop)/0.3);
   if (arrowA > 0.01) {
     if (!g.watch && !struck) {
-      if (g.aid === 'path') drawPath(cam, g, g.stage === 'aim' ? g.ctr : g.m, g.aim);   // the live meter from Power on, so the run-up shows the kick that was struck
+      if (g.aid === 'path') drawPath(cam, g, g.stage === 'aim' || g.stage === 'wait' ? g.ctr : g.m, g.aim);   // the live meter from Power on, so the run-up shows the kick that was struck
       else drawAimLine(cam, g, g.aim);
     }
     drawArrow(cam, g, aimShown, arrowA, g.watch);
   }
-  // far figures and the posts
+  // far figures and the posts, then the chargers closing from the posts' side
   drawTouchJudges(cam, g, g.judged && g.ok);
   drawPosts(cam, g, tf);
   drawPennants(cam, g, t);
-  // the ball, the kicker, and the ball again if it is nearer than him; until the strike it is in his hands or at his feet, so it goes over him
-  const qb = camPt(cam, P.bx, P.by, P.bh), qk = camPt(cam, P.kx, P.ky, 0), ballFar = tf >= 0 && qb.z >= qk.z;
+  // the kicker, the ball and the chargers in one list, far to near. Until the strike the ball is in his hands or at his feet, so it goes over him
+  const scene = kickScene(cam, g, P, tau, tf), qb = camPt(cam, P.bx, P.by, P.bh);
   const ball = () => {
     if (qb.z < CAM.near) return;
     const pb = proj(cam, qb), sh = pr(cam, P.bx, P.by, 0);
@@ -2867,12 +3186,33 @@ function drawKick(c, g0) {
     if (sh && sh.z >= 0.8) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ellipse(sh.sx, sh.sy, 0.18*sh.k, 0.05*sh.k); ctx.fill(); }
     cutBall(pb.sx, pb.sy, Math.max(10, pb.k*0.9), P.held ? 0.3 : tf > 0 ? tf*9 : 0.9);
   };
-  if (ballFar) ball();
-  if (qk.z >= 0.8) { const pk = proj(cam, qk); figFB(pk.sx, pk.sy, pk.k, g.team, { back:true, num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' }); }
-  if (!ballFar) ball();
+  for (const it of scene) {
+    if (it.kind === 'ball') ball();
+    else if (it.kind === 'kicker') figFB(it.sx, it.sy, it.k, g.team, { back:true, num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' });
+    else { ctx.globalAlpha = a0*it.alpha; figFB(it.sx, it.sy, it.k, 1 - g.team, it.o); ctx.globalAlpha = a0; }
+  }
   ctx.restore();
-  if (!g.watch) drawMeter(g, g0, tf);
+  if (!g.watch && g.out !== 'smothered') drawMeter(g, g0, tf);
   drawWindChip(g, cam, g0);
+}
+// what the close-up draws between the posts and the lens, far to near: the kicker (from 0.8m in front of the lens), the ball (over him until the strike,
+// then by depth) and the chargers, front-on in their kit, arms up within 3m and on the block. A charger is not drawn until he is CAM.fadeZ metres in
+// front of the lens, fades in over the next fadeW, and never stands taller than figH of the screen, so one closing from behind or beside the kicker is
+// a figure over him, not a wall of shirt under him. P is the kicker's pose, tau the chargers' clock, tf the flight clock.
+function kickScene(cam, g, P, tau, tf) {
+  const items = [], qk = camPt(cam, P.kx, P.ky, 0), qb = camPt(cam, P.bx, P.by, P.bh), kMax = CAM.figH*cam.H/1.85;   // a figure is 1.85k tall with his arms up
+  if (qk.z >= 0.8) { const p = proj(cam, qk); items.push({ kind:'kicker', z:qk.z, sx:p.sx, sy:p.sy, k:p.k, alpha:1 }); }
+  if (qb.z >= CAM.near) items.push({ kind:'ball', z:tf >= 0 ? qb.z : Math.min(qb.z, qk.z) - 1e-6, alpha:1 });
+  if (g.rush) for (const r of g.rush) {
+    const a = rushAt(r, tau);
+    if (a.d < 0.8) { const s = Math.max(0, r.d0 - 0.8); a.x = r.x + r.ux*s; a.y = r.y + r.uy*s; }   // drawn no closer than 0.8m, so he and the kicker stay two figures
+    const q = camPt(cam, a.x, a.y, 0);
+    if (q.z <= CAM.fadeZ) continue;
+    const p = proj(cam, q), moving = a.d > 0.8 && g.out !== 'smothered', hit = g.out === 'charged' && g.outQ === r.q && tf >= g.hitT;
+    items.push({ kind:'charger', z:q.z, sx:p.sx, sy:p.sy, k:Math.min(p.k, kMax), alpha:clamp((q.z - CAM.fadeZ)/CAM.fadeW, 0, 1), r, a,
+      o:{ stride:moving ? tau*19 : 0, arms:hit || a.d < 3 ? 'reach' : 'run', lean:moving ? 0.1 : 0, back:r.ux > 0.3 } });   // one closing from behind the kicker is seen from behind
+  }
+  return items.sort((p, q) => q.z - p.z);
 }
 function drawMeter(g, g0, tf) {
   const { W, H } = g0, x = 0.62*W, y0 = 0.40*H, y1 = 0.86*H, w = 16, h = y1 - y0, a0 = ctx.globalAlpha;
@@ -2892,7 +3232,7 @@ function drawMeter(g, g0, tf) {
   ctx.strokeStyle = 'rgba(241,238,228,.35)'; ctx.lineWidth = 1.5; rrect(x, y0, w, h, 8); ctx.stroke();
   ctx.fillStyle = '#f1eee4';
   for (const e of [lo, hi]) ctx.fillRect(x - 3, yOf(e) - 1.5, w + 6, 3);   // chalk ticks: the band doesn't rely on colour
-  if (g.mRel != null && g.stage !== 'aim') { ctx.fillStyle = '#fff'; ctx.fillRect(x - 4, yOf(g.mRel) - 1.5, 24, 3); }
+  if (g.mRel != null && g.stage !== 'aim' && g.stage !== 'wait') { ctx.fillStyle = '#fff'; ctx.fillRect(x - 4, yOf(g.mRel) - 1.5, 24, 3); }
   ctx.globalAlpha = a0;
 }
 function drawWindChip(g, cam, g0) {
@@ -3282,10 +3622,11 @@ function updateHud() {
   const goal = cut && M.cut.kind === 'goal';
   let la, lb, cueA, cueB;
   if (goal) [la, lb, cueA, cueB] = goalLabels(M.cut);
-  else { [la, lb] = cut ? cutLabels(M.cut) : ours ? ['Pass', 'Kick'] : ['Tackle', 'Switch']; cueA = !!(cut && !M.cut.after && la); cueB = !!(cut && !M.cut.after && lb); }
-  const canAct = goal ? !M.cut.after && (M.cut.g.watch || M.cut.g.stage === 'aim' || M.cut.g.stage === 'power') : M.phase === 'play' || (cut && !M.cut.after);
+  else { [la, lb] = cut ? cutLabels(M.cut) : ours ? ['Pass', M.ctrl ? kickLabel(M.ctrl.team) : 'Kick'] : ['Tackle', 'Switch']; cueA = !!(cut && !M.cut.after && la); cueB = !!(cut && !M.cut.after && lb); }
+  const gs = goal ? M.cut.g.stage : '';
+  const canAct = goal ? !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait') : M.phase === 'play' || (cut && !M.cut.after);
   const duel = cut && M.cut.duel;
-  const bk = la + '|' + lb + canAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + (goal ? M.cut.g.stage : '');
+  const bk = la + '|' + lb + canAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs;
   if (bk !== lastBtn) {
     lastBtn = bk;
     $('la').textContent = la || '';
@@ -3294,11 +3635,12 @@ function updateHud() {
     $('btnB').hidden = !lb;
     $('btnA').classList.toggle('cue', cueA);
     $('btnB').classList.toggle('cue', cueB);
+    $('btnB').classList.toggle('two', lb === 'Drop Goal');   // two lines inside the small button
     $('plates').hidden = !(duel && M.cut.kind === 'past' && !M.cut.after);
     $('btnA').classList.toggle('idle', !canAct); $('btnB').classList.toggle('idle', !canAct);
     $('hud').classList.toggle('gk', !!goal);   // the clock line hides under a goal close-up
   }
-  $('btnB').style.setProperty('--c', M.charging ? M.charge.toFixed(3) : 0);
+  $('btnB').style.setProperty('--c', M.charging ? M.charge.toFixed(3) : goal && gs === 'hold' ? M.cut.g.m.toFixed(3) : 0);   // the ring shows the charge, or a drop's meter
 }
 
 /* penalty choice: the card's kick is built now, so the card and the kick share one wind */
@@ -3354,7 +3696,7 @@ $('br-go').addEventListener('click', () => {
 function pause() {
   if (!playing() || M.over || M.phase === 'break') return;
   M.paused = true;
-  $('pz-score').textContent = M.nat[0].name + ' ' + M.score[0] + ' – ' + M.score[1] + ' ' + M.nat[1].name;
+  $('pz-score').textContent = M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash)
   $('pz-quit').textContent = 'Quit Match'; quitArmed = false;
   $('m-pause').hidden = false;
 }
@@ -3633,7 +3975,8 @@ function simulate(n, half, diff) {
 }
 window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, forceDuel,
   debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings, view:(W, H) => { V.W = W; V.H = H; V.dpr = 1; }, drawCut, goalKick, openPenalty, resume, interactive, setRM:v => { RM = !!v; } },
-  kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels },
+  kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
+    dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; } },
   get M() { return M; } };

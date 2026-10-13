@@ -37,7 +37,16 @@ nations, a local Surrey club, or a team you make yourself.
     while Farnham is still the untouched default. Championship has a Play as Farnham button, or pick any card.
 - **Goal kicks** (2026-10-12): pitch-level close-up, sevens drop kicks, Normal = CPU parity. Conversions and
   penalty goals cut to a still shot from behind the kicker: steer the arrow, hold Kick, let go in the gold. The CPU's
-  kicks play the same shot with a Skip button. Drop goals keep today's open-play rule until Phase 2 of the spec.
+  kicks play the same shot with a Skip button.
+- **Drop goals** (2026-10-13): in range the small button reads **Drop Goal**; a tap is still a chip, a 0.20s hold
+  freezes play and cuts to the same shot with the thumb still down, the meter filling while you hold and the nearest
+  defenders charging at the lens. The label is only offered when a pure strike would get away, by the same charging
+  rule that decides the outcome, run on the hold as it will really play: the kicker's own run on his stick, every
+  opponent ahead of him who can reach him, and behind him only a man on his shoulder (within 4m). What the button says
+  when you press it is what you get:
+  a Drop Goal press opens the close-up at 0.20s whatever moves in the meantime, a Kick press stays a kick. The CPU
+  drops through that rule from its own side, in the top-down view, offered on the clock its strike keeps, so a man of
+  yours closing on him can charge it down.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
@@ -47,9 +56,9 @@ nations, a local Surrey club, or a team you make yourself.
 |---|---|---|
 | Stick | Run. Flick sideways near a tackler to step him | Run |
 | Big button | Pass to the ringed teammate. Tilt to pick a side. At a goal kick, hold to power and let go in the gold | Dive tackle |
-| Small button | Hold to power a kick, release to kick. A tap is a chip | Switch to the defender nearest the ball |
+| Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the defender nearest the ball |
 
-Keyboard: arrows or WASD, J, K, P to pause. At a goal kick the arrows steer and J is Kick.
+Keyboard: arrows or WASD, J, K, P to pause. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
 
 ### Close-ups
 
@@ -104,6 +113,37 @@ centre-screen. Every kick at goal is a drop kick, as sevens law requires. The ca
   skipping can't change it. Headless runs, AI v AI and the menu demo fly the kick instantly on the top-down pitch.
 - **Penalty card:** "34m to the Posts · Wind 9 MPH", or "· Calm". Kick at Goal is disabled when this kicker can't
   reach the bar in this wind, and a kick at goal is taken from at least 10m out.
+- **Drop goals.** Carrying the ball 6–40m from their line, within 42m of the posts and 40° of square, with the stick
+  not pointed at touch or back, the small button reads **Drop Goal** once the game is sure a pure strike released
+  0.1s late would still get away. A tap is still a chip. Hold it 0.20s and play freezes and cuts in with your thumb
+  still down: the meter fills while you hold (faster than a placed kick: 0.80s at 12m on Normal, with a band 1.3x
+  wider), the stick steers the arrow as you hold, and the nearest three defenders charge from where they stood,
+  accelerating to their top speed. Let go and he drops it, striking the half-volley 0.25s later. A charger within
+  1.0m before you release is **Smothered** (a tackle and a ruck); within 1.0m before the strike, or a ball that
+  passes within 0.9m of him under 2.4m, is **Charged Down** (a loose ball). Otherwise it flies as a placed kick: a
+  goal is 3 points and a kickoff, wide or dead is their 22 drop-out, off the woodwork is a loose ball in front of
+  the posts, and a drop that falls short cuts out 0.6s after the strike with the ball still live, so both sides
+  chase it. One rule (`blockedBy`) decides the offer and the outcome, and one posts rule (`judgeCross`) judges every
+  ball that crosses a goal line, ordinary kicks included. The offer runs the game's own step on the whole world
+  through the 0.20s hold (the kicker on his stick, the AI's chasers and line as the AI drives them, collisions
+  included, everyone put back afterwards, nothing random drawn), judges range and bearing where that leaves him, and
+  counts every opponent ahead of him or level who can reach him, and behind him only one inside the shoulder radius
+  (`shoulder`, 4m): a man on his shoulder is a charger, a chaser 5m behind at full tilt is not, in the offer and in the
+  close-up alike. The hold is counted in steps: the press opens the close-up on the 12th (the ceiling of `hold`/STEP)
+  and the offer projects exactly the 11 that run before it. In the close-up the kicker, the ball and the chargers are
+  drawn in one list by depth, so a charger closing from behind or beside him goes over him, not under; he is not drawn
+  until 2m in front of the lens, fades in over the next 2m, never stands taller than 0.6 of the screen, and one who
+  stops the kick lands on the side he came from. The label is
+  decided at the press. A Drop Goal press opens the close-up on the 0.20s step whatever moves in the meantime, and
+  reads Drop Goal throughout; a Kick press stays a kick. Your first strike at goal, placed or dropped, ends the
+  first-kick aids. No kick's hand-back is a turnover: a charged-down drop regathered by either side, a rebound off
+  the post or a short drop gathered by the defence are kicked balls, as a punt is. The CPU drops through the same
+  offer from its side, judged on the clock its strike keeps (the world projected through his 0.25s wind-up, then a
+  strike with your players given 0.30s to react), winds up for 0.25s in the open (a tackle then is a normal
+  tackle), is checked against every one of your players where they really stand, and flies in the top-down view
+  with no close-up. A man of yours closing on him charges it down: 4% of offered CPU drops when your man sprints at
+  him from 2–11m away, with 13 more tackled in the wind-up per 2,760. A tactical kick's charge-down (the 30% roll)
+  is unchanged: the defender stays where he stood.
 
 Balance: Normal equals the CPU's own kicking rate (the only rate the old game had measured), Easy is 10 points above
 it and Hard 10 below, and sitters under the posts never miss. Measured with `goalkicks.mjs --rates 4000` at each of
@@ -130,6 +170,41 @@ band-centre release. The levers are all in `KICK` in `index.html`, and
 the main dial (±0.01 is about ±3 points at 30m), `bandMin` floors the width on long and wide kicks, `fill` is the
 meter speed, `hook` and `push` the curl, `kw` the wind's pull, `cpuSig` and `cpuAim` the CPU.
 
+**Drop goals**, the headless bot through the real path (press, the 0.20s hold, the close-up), kicking 3, pace 3, the
+match wind distribution, 2,000 drops a cell at each of SEED 11, 42 and 3 and averaged. Each cell is Easy / Normal /
+Hard; the spec's table is in brackets.
+
+| Drop | Made, no charger | Full tilt charger 12m away as the meter starts: made / charged down |
+|---|---|---|
+| 20m, in front | 87 / 81 / 72 (86 / 79 / 71) | 88/1 · 82/1 · 73/2 |
+| 30m, 10m off centre | 70 / 56 / 44 (71 / 56 / 42) | 71/0 · 56/1 · 45/1 |
+| 35m, in front | 70 / 54 / 41 (68 / 56 / 39) | 70/0 · 54/3 · 39/8, offered 6% of the time on Hard |
+
+Every no-charger cell is within 2 points of the spec. A charger standing 6m off is never offered. One jogging in
+from 10m is offered only on Easy at 30m (80% of the time, and the average bot is charged down on 14% of those), and a
+full-tilt charger 12m away at the press only on Easy, plus one time in five on Normal at 30m (a sixth of those
+charged): those cells sit on the offer's boundary, where a release 0.1s late is the promise and the bot's late tail
+and 4% fumbles land on the wrong side of it. An offered drop released on time got away every time measured: 0 of 23
+charged or smothered over 108 bot matches, and 0 of 48 at the standing-charger boundary. The drop levers are
+`dropBand`, `dropFill`, `elev.drop`, `rushMul`, `rushAcc`, `block`, `lat`, `reach`, `offerLate` (how late a release
+the label still covers), `hold` (the B hold that opens the cut), `shoulder` (how far behind the kick spot a chaser
+still counts) and `cpuReact` (the CPU's reaction margin).
+
+**Offers.** The shoulder radius sets how often the label comes on. Measured with the verifier's `press` probe: 36
+matches of 120s halves (12 a difficulty, SEED 21), the carrier pressing B on 8% of the steps the label reads Drop
+Goal, once with the stick held at the posts and once with the average bot's own stick, every offered drop released on
+the band's centre.
+
+| `shoulder` | At the posts: label on / presses a match | Bot's own stick: label on / presses a match | On-time drops stopped |
+|---|---|---|---|
+| 3m | 4.3 / 3.3 | 1.75 / 1.4 | 2 of 185 (98.9% away) |
+| **4m** (shipped) | 3.2 / 2.3 | 0.9 / 0.7 | 0 of 102 (100% away) |
+| 6m | 1.4 / 0.7 | 0.14 / 0.1 | 0 of 34 (100% away) |
+
+Counting every chaser within 15m (the build before the radius) the bot saw the label once in seven matches; 4m puts
+a carrier running at the posts at two or three a match and the bot at about one, with the man on the shoulder still
+a charger.
+
 ## Files
 
 - `index.html` is the whole game in one page. GitHub Pages serves it from `main`.
@@ -145,7 +220,7 @@ meter speed, `hook` and `push` the curl, `kw` the wind's pull, `cpuSig` and `cpu
     - that scrums release at the mark.
   - **`node tools/bot.mjs [n] [half] --duels live|instant|off`:** a scripted average player against the CPU on each
     difficulty, with duel counts and win rates, and goal-kick rates for both sides (`kicks us 70% (378) them 69% (109)`).
-  - **`node tools/goalkicks.mjs [--rates N]`:** 398 asserts. It checks:
+  - **`node tools/goalkicks.mjs [--rates N]`:** about 640 asserts (642 at SEED 11; one line counts its retries). It checks:
     - the closed-form flight against a 1ms integration, the judge's fixtures, and the mirror for the CPU's end;
     - that band-centre strikes score, the band is honest at its edges, over hooks left and under fades right;
     - the wind's drift, headwind and tailwind, and that the Easy aid's preset aim scores in any wind;
@@ -164,8 +239,32 @@ meter speed, `hook` and `push` the curl, `kw` the wind's pull, `cpuSig` and `cpu
     - the drawn woodwork: 0.5s after a contact the ball is between the uprights and beyond the line on screen exactly
       when the kick scores, and a miss is back in play; the held ball sits at the kicker's hip and does not jump at
       the drop; the flight zoom moves under 0.08 a frame on an in-front conversion; and the verdict banner is clear of
-      the ball and the A button at 844x390 and 667x375.
-  - **`node tools/sim.mjs`:** AI v AI matches, with no duels, and both sides' goal-kick rates.
+      the ball and the A button at 844x390 and 667x375;
+    - drop goals (groups 23–30): the zone and its hysteresis, the B tap v the 0.20s hold through the real input path,
+      a release during the cut-in, pause and resume; the charging geometry (12m standing gets away, 6m full tilt is
+      Charged Down, no release is Smothered, and the offer agrees with the live outcome at eleven distances); every
+      hand-back (3 points and a kickoff, the 22 drop-out, the live `g3d` ball with chasers on it, the loose ball off the
+      woodwork, the charger 1.2m in front); the CPU's drop (blocked by your man 2m in front, scoring only through
+      `judgeCross`, a wide one their 22, the real AI trigger); the one posts rule on ordinary kicks; the drop-rate table
+      above; and a render smoke test of every drop stage with two chargers at three sizes;
+    - the press decides (groups 31–35): a Drop Goal press opens the cut on the 0.20s step though the stick went to
+      touch or a charger landed 3m off, the label holds through the hold, a Kick press stays a kick, a flick to touch
+      costs nothing, and the zone is judged where the hold ends; the offer is the real step (the kicker's run with the
+      stick forward or let go, the chaser turning in, every player put back, nothing random), agrees with a late pure
+      strike at 18 of 18 offered distances, counts a man on the shoulder and leaves a chaser 5m behind out of the offer
+      and the cut alike (the `shoulder` lever); the CPU's offer on its strike's clock (your man standing 5m off is offered and charges
+      it down by sprinting; 3m, or 8m sprinting, is not), with nothing random drawn; no hand-back is a turnover and a
+      tactical kick's charge-down leaves the defender where he stood; and a drop's strike sets `kickSeen`;
+    - one step count and the lens (groups 36–38): the press opens the cut on `holdSteps()` and the offer projects
+      exactly the steps before it, bit for bit, at holds of 0.20, 0.205, 0.22 and 0.25s; a charger 10m behind (staged
+      with the radius widened) and one beside the kicker are drawn in depth order over him, none until 2m in front of
+      the lens, none taller than 0.6H, no NaN on the canvas, and one who smothers or charges down from behind lands
+      behind the kicker; and `kickLabel(t)` reads its own seat, with the HUD passing its team;
+    - the thumb (group 39): a Drop Goal label still gives a drop if the stick is let go on the press frame or during
+      the hold, a chaser who closes into the shoulder radius as the kicker brakes stays out of the cut (the cut judges
+      the chargers behind him that the offer judged), and a drop charged down from behind bounces away from the man
+      who blocked it.
+  - **`node tools/sim.mjs`:** AI v AI matches, with no duels, both sides' goal-kick rates and the CPU's drop goals.
   - **`node tools/teams.mjs`:** 40 asserts. It checks:
     - every pairing of built-in teams has shirts far enough apart, and hooped sides keep their hoops;
     - the nations keep their order, and Farnham leads Local;

@@ -3,7 +3,8 @@
 // table and a render smoke test. Exits 1 on any failure.
 // node tools/goalkicks.mjs [--rates N]   (N kicks per cell, default 1200; SEED=11 unless set)
 process.env.SEED ??= '11';
-const { T, kickBot, rndCalls, reseed } = await import('./harness.mjs');
+import fs from 'fs';
+const { T, kickBot, dropBot, rndCalls, reseed } = await import('./harness.mjs');
 
 const args = process.argv.slice(2);
 const flag = (k, d) => { const i = args.indexOf(k); return i >= 0 ? +args[i + 1] || d : d; };
@@ -557,6 +558,692 @@ begin('bot timing');
   ok(Math.abs(sum/n) < STEP/4 && worst <= STEP/2 + 1e-6, `strike minus plan: mean ${(sum/n*1000).toFixed(2)}ms, worst ${(worst*1000).toFixed(1)}ms (a step is ${(STEP*1000).toFixed(1)}ms)`);
 }
 done('22 bot timing');
+
+/* ---------- Phase 2: drop goals ---------- */
+// a pace-3 side, so the chargers run at the spec's 8.35 m/s: the drop tables depend on their speed where the placed-kick tables do not
+const teamD = k => T.teams.cleanTeam({ name:'Drop ' + k, kit:'#2050b0', trim:'#f2efe6', pace:3, power:1, handling:1, kicking:k }, 0);
+const freshD = (diff = 1, opts = {}) => T.newMatch(teamD(3), teamD(3), { halfLen:240, diff, headless:true, duels:'off', ...opts });
+const DROPS = [['Drop 20m, in front', { x:90, y:35 }], ['Drop 30m, 10m off centre', { x:110 - Math.sqrt(900 - 100), y:25 }], ['Drop 35m, in front', { x:75, y:35 }]];
+// the spec's Balance table for drops with no charger (Easy / Normal / Hard), and this build's measured rates: 2,000 drops a cell at each of SEED 11, 42 and 3
+const DROP_SPEC = [[86, 79, 71], [71, 56, 42], [68, 56, 39]];
+const DROP_YOU = [[87, 81, 72], [70, 56, 44], [70, 54, 41]];
+const DROP_PIN_N = 6000;
+// one drop through the real path: the carrier presses B with the stick forward, the world runs the 0.20s hold, the cut opens with the thumb still down, and dropBot plays it
+const tryDrop = (spot, di, chargers, o) => {
+  freshD(di); const c = K.stageDrop(spot, chargers || []);
+  inp.bPressed = true; inp.bDown = true;
+  if (!run(() => M().phase === 'cut', 30)) { inp.bDown = false; return { off:false, c }; }
+  const cut = M().cut, g = cut.g;
+  run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, o));
+  inp.bDown = false;
+  return { off:true, c, cut, g };
+};
+const settle = () => run(() => M().phase !== 'cut', 400);   // the verdict hold and the cut-out
+
+// 23. range and the label: the carrier is offered a drop goal in the zone with nobody near, and not out of it, across it, early, or with the stick at touch or back
+begin('drop zone');
+{
+  freshD(1); let c = K.stageDrop({ x:85, y:35 }, []);
+  ok(K.dropZone(c).ok === true, 'dropZone is on for a carrier at (85, 35) with everyone 20m away');
+  ok(K.cutTitle({ kind:'goal', g:K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)) }) === 'Drop Goal · 25m', 'the cut tag reads "Drop Goal · 25m"');
+  freshD(1); c = K.stageDrop({ x:60, y:35 }, []);
+  ok(!K.dropZone(c).ok, 'off at 50m out');
+  freshD(1); c = K.stageDrop({ x:96, y:52 }, []);
+  ok(!K.dropZone(c).ok, `off at a 50° bearing (${(Math.atan2(35 - 52, 110 - 96)/D2R).toFixed(0)}°)`);
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []); c.hold = 0.2;
+  ok(!K.dropZone(c).ok, 'off with the ball held under 0.3s');
+  c.hold = 2; inp.jx = 0; inp.jy = 0.8;
+  ok(!K.dropZone(c).ok, 'off with the stick at touch (world y 0.8): B reads Kick');
+  inp.jx = -0.5; inp.jy = 0;
+  ok(!K.dropZone(c).ok, 'off with the stick back (x -0.5)');
+  inp.jx = 1; c.hold += 0.3;
+  ok(K.dropZone(c).ok, 'and on again with the stick forward');
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []); M().phase = 'set';
+  ok(!K.dropZone(c).ok, 'off outside open play'); M().phase = 'play';
+  // hysteresis: a charger brought to where a late release is blocked but an on-time one gets away leaves the label on; nearer still and it goes off
+  freshD(1); c = K.stageDrop({ x:90, y:35 }, []); const q = M().players.find(p => p.team === 1);
+  ok(K.dropZone(c).ok, 'on with the charger far away');
+  const pj = K.projectHold(c, K.holdLead()), g = K.goalOf(0, pj.x, pj.y, 'drop', c, K.windNow(0));   // judged where the hold leaves him, as dropZone judges it
+  let dLate = null, dOn = null;
+  for (let d = 14; d >= 3; d -= 0.1) {
+    q.x = c.x + d; q.y = c.y; q.vx = q.vy = 0;
+    const late = K.dropOffer(c, K.holdLead(), g, KICK.offerLate), on = K.dropOffer(c, K.holdLead(), g, 0);
+    if (dLate == null && !late && on) dLate = d;
+    if (dOn == null && !on) { dOn = d; break; }
+  }
+  ok(dLate != null && dOn != null && dLate > dOn, `a late release is blocked from ${dLate && dLate.toFixed(1)}m, an on-time one from ${dOn && dOn.toFixed(1)}m`);
+  q.x = c.x + dLate; q.y = c.y; c.hold += 0.3;
+  ok(K.dropZone(c).ok, 'once on it stays on while an on-time strike still gets away');
+  c.hold += 0.3; ok(K.dropZone(c).ok, 'and on the next check too');
+  q.x = c.x + dOn - 0.05; c.hold += 0.3;
+  ok(!K.dropZone(c).ok, 'off once an on-time strike is blocked');
+  q.x = c.x + dLate; c.hold += 0.3;
+  ok(!K.dropZone(c).ok, 'and it does not come back on at a spot where only an on-time strike gets away');
+  q.x = c.x + 14; c.hold += 0.3;
+  ok(K.dropZone(c).ok, 'until a late release gets away again');
+  inp.jx = 0;
+}
+done('23 drop zone');
+
+// 24. the trigger: a B tap is a chip, a 0.20s hold opens the close-up with the thumb still down, and a thumb that lifted during the cut-in waits for a fresh press
+begin('drop trigger');
+{
+  freshD(1); let c = K.stageDrop({ x:85, y:35 }, []);
+  inp.bPressed = true; inp.bDown = true; steps(11); inp.bDown = false; T.update(STEP);
+  ok(!M().cut && M().ball.state === 'air' && M().ball.f.kind === 'kick', `a B tap held under 0.20s is a kick (${M().ball.state}, ${M().ball.f && M().ball.f.kind}, cut ${!!M().cut})`);
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []);
+  inp.bPressed = true; inp.bDown = true; steps(11);
+  ok(M().phase === 'play' && M().charging, 'after 11 steps it is still charging a kick');
+  T.update(STEP);
+  const cut = M().cut, g = cut && cut.g;
+  ok(M().phase === 'cut' && cut.kind === 'goal' && g.type === 'drop' && g.kind === 'drop', `held 0.20s it opens a goal cut with g.type drop (${M().phase}, ${cut && cut.kind}, ${g && g.type})`);
+  ok(!M().charging && M().stats.dg.att[0] === 1 && M().goal === g, 'the charge is cleared and the attempt counted');
+  ok(K.cutTitle(cut) === 'Drop Goal · 25m', `the tag reads Drop Goal · 25m (${K.cutTitle(cut)})`);
+  ok(JSON.stringify(K.goalLabels(cut)) === JSON.stringify([null, 'Kick', false, false]), `A is hidden and B reads Kick through the cut-in (${K.goalLabels(cut)})`);
+  steps(14);
+  ok(g.stage === 'hold' && g.pt > 0 && g.m > 0, `the press carries over the cut-in: the meter is filling (${g.stage}, m ${g.m.toFixed(3)})`);
+  inp.bDown = false; T.update(STEP);
+  ok(g.stage === 'wait' && g.m === 0 && !g.L, 'a release under 12% returns to Wait with the meter empty and no strike');
+  ok(K.goalLabels(cut)[3] === true, 'B pulses in Wait');
+  steps(10); ok(g.stage === 'wait', 'and waits');
+  inp.bPressed = true; inp.bDown = true; T.update(STEP);
+  ok(g.stage === 'hold' && g.m < 0.03, `a fresh press starts the meter from empty (${g.stage}, m ${g.m.toFixed(3)})`);
+  steps(30); inp.bCancel = true; T.update(STEP);
+  ok(g.stage === 'wait' && !g.L, 'pointercancel during the hold returns to Wait with no kick');
+  inp.bDown = false;
+  // released during the cut-in
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []);
+  inp.bPressed = true; inp.bDown = true; steps(12); const c2 = M().cut, g2 = c2.g;
+  inp.bDown = false; steps(14);
+  ok(g2.stage === 'wait' && g2.m === 0, `B released during the cut-in leaves the cut in Wait (${g2.stage})`);
+  inp.bPressed = true; inp.bDown = true; steps(20);
+  ok(g2.stage === 'hold' && g2.m > 0.3, `a fresh press starts the meter (${g2.stage}, m ${g2.m.toFixed(2)})`);
+  // pause during the hold: back to Wait, meter empty, chargers back where they stood
+  M().paused = true; T.debug.resume();
+  ok(g2.stage === 'wait' && g2.m === 0 && c2.t === 0.22 && !inp.bDown, `pause then resume during a drop returns to Wait with the meter empty and the chargers reset (${g2.stage}, t ${c2.t})`);
+  inp.bDown = false;
+}
+done('24 drop trigger');
+
+// 25. charging geometry: a standing charger 12m off never gets there, a full-tilt one 6m off charges a band-centre strike down, no release is Smothered,
+// and the offer and the live outcome are the same rule
+begin('charging');
+{
+  freshD(1); let c = K.stageDrop({ x:90, y:35 }, [{ x:102, y:35 }]); inp.bDown = true; K.startDropCut(c); let cut = M().cut, g = cut.g;
+  ok(g.rush.length === 1 && Math.abs(g.rush[0].d0 - 12) < 1e-9 && g.rush[0].v0 === 0, `one charger, frozen 12m away and standing (${g.rush.map(r => r.d0.toFixed(2))})`);
+  run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); inp.bDown = false;
+  ok(!g.out && g.stage === 'flight', `a band-centre release gets away from a standing charger 12m off (${g.out || 'clear'})`);
+  settle();
+  freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:96, y:35, vx:-9, vy:0 }]); inp.bDown = true; K.startDropCut(c); cut = M().cut; g = cut.g;
+  ok(Math.abs(g.rush[0].v0 - 8.35) < 1e-9, `a charger running at 9 m/s is frozen at his top speed, 8.35 (${g.rush[0].v0.toFixed(2)})`);
+  run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); inp.bDown = false;
+  ok(g.out === 'charged' && g.L && M().stats.dg.charged[0] === 1, `a charger 6m away at full tilt: Charged Down (${g.out}, hit at +${g.hitT.toFixed(2)}s)`);
+  settle();
+  const kk = g.kicker, q = g.outQ;
+  ok(M().phase === 'play' && M().ball.state === 'loose' && Math.abs(q.x - kk.x - 1.2) < 0.05 && Math.abs(q.y - kk.y) < 0.05, `a loose ball, with the charger 1.2m in front of the kicker (${(q.x - kk.x).toFixed(2)}, ${(q.y - kk.y).toFixed(2)})`);
+  freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:98, y:35, vx:-6, vy:0 }]); inp.bDown = false; K.startDropCut(c); cut = M().cut; g = cut.g;
+  run(() => g.out, 3000);
+  ok(g.out === 'smothered' && g.stage === 'wait' && !g.L, `no release at all: Smothered (${g.out}, stage ${g.stage}, at ${cut.t.toFixed(2)}s)`);
+  settle();
+  ok(M().phase === 'set' && M().set.kind === 'ruck' && g.kicker.down > 0 && Math.abs(g.outQ.x - g.kicker.x - 0.5) < 0.05, `then a tackle and a ruck, with the charger 0.5m in front (${M().phase}/${M().set && M().set.kind})`);
+  // the offer and the outcome agree: a standing charger at each distance, the kick released where the offer assumed it (step quantised), the same verdict
+  let agree = 0, total = 0, blocked = 0, clear = 0, first = null;
+  for (let d = 4; d <= 14; d += 1) {
+    freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:90 + d, y:35 }]); inp.bDown = true; K.startDropCut(c); cut = M().cut; g = cut.g;
+    const off = K.dropOffer(c, 0, g, KICK.offerLate), m = Math.min(1, g.ctr + KICK.offerLate/g.fill);
+    run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m, aim:0 })); inp.bDown = false;
+    const got = !g.out;
+    total++; if (got === off) agree++; else if (first == null) first = `${d}m: offer ${off}, live ${g.out || 'clear'} at m ${g.m.toFixed(3)} v ${m.toFixed(3)}`;
+    if (off) clear++; else blocked++;
+    settle();
+  }
+  ok(agree >= total - 1 && blocked > 0 && clear > 0, `the offer and the live outcome agree at ${agree} of ${total} distances (${blocked} blocked, ${clear} clear${first ? '; ' + first : ''})`);
+}
+done('25 charging');
+
+// 26. hand-back: a goal is 3 points and a kickoff, wide is their 22, short leaves a live g3d ball that chasers run to, a post is a loose ball
+begin('drop hand-back');
+{
+  let r = tryDrop({ x:90, y:35 }, 1, [], { m:null, aim:null });
+  // the bot's own aim and release at 20m in front scores most of the time; take the first that does
+  for (let i = 0; i < 20 && !r.g.ok; i++) r = tryDrop({ x:90, y:35 }, 1, []);
+  let g = r.g;
+  ok(g.ok && g.res === 'goal', `a drop from 20m in front scores (${g.res})`);
+  settle();
+  ok(M().score[0] === 3 && M().phase === 'set' && M().set.kind === 'score', `3 points and a score set (${M().score}, ${M().set && M().set.kind})`);
+  ok(run(() => M().phase === 'set' && M().set.kind === 'kickoff', 200) && M().set.team === 1, 'then a kickoff by team 1');
+  ok(M().stats.dg.att[0] === 1 && M().stats.dg.made[0] === 1, 'counted in M.stats.dg');
+  r = tryDrop({ x:90, y:35 }, 1, [], { m:0.9, aim:-25*D2R }); g = r.g;   // the arrow swings left at 18°/s while the meter fills: well off by the release, and overcooked hooks it further left
+  ok(/^wide/.test(g.res), `aimed well off and overcooked it is wide (${g.res}, aim ${(g.aim/D2R).toFixed(1)}°)`); settle();
+  ok(run(() => M().phase === 'set' && M().set.kind === 'dropout', 200) && M().set.team === 1, `wide leads to a 22 drop-out by team 1 (${M().set && M().set.kind} by ${M().set && M().set.team})`);
+  r = tryDrop({ x:75, y:35 }, 1, [], { m:0.2, aim:0 }); g = r.g;
+  ok(g.res === 'short' && g.X.land, `a feeble drop from 35m falls short (${g.res}, lands at ${g.X.x.toFixed(1)})`);
+  const tStrike = r.cut.t; settle();
+  const b = M().ball, f = b.f;
+  ok(M().phase === 'play' && b.state === 'air' && f && f.kind === 'g3d', `the cut ends with the ball live in the air as g3d (${b.state}, ${f && f.kind})`);
+  ok(Math.abs(r.cut.t - tStrike - 0.6 - 0.07 - 0.25) < 0.05, `0.6s after the strike plus the hit-stop and the cut-out (${(r.cut.t - tStrike).toFixed(2)}s)`);
+  ok(f && Number.isFinite(f.x1) && Number.isFinite(f.y1) && f.x1 > 0 && f.x1 < 120 && f.y1 > 0 && f.y1 < 70, `x1, y1 are finite and on the pitch (${f && f.x1.toFixed(1)}, ${f && f.y1.toFixed(1)})`);
+  const w = K.toWorld(0, g.X.x, g.X.y);
+  ok(f && Math.abs(f.x1 - w.x) < 1e-9 && Math.abs(f.y1 - w.y) < 1e-9 && Math.abs(f.t - 0.6) < 1e-9 && f.T === g.X.t, 'they are the world landing point, with the flight 0.6s in');
+  const near = () => Math.min(...M().players.map(p => Math.hypot(p.x - f.x1, p.y - f.y1)));
+  const d0 = near(); let caught = false;
+  for (let i = 0; i < 60 && b.state === 'air'; i++) T.update(STEP);
+  if (b.state !== 'air') caught = true;
+  ok(caught || near() < d0 - 2, `over 60 steps a chaser closes on (x1, y1) (${d0.toFixed(1)}m to ${near().toFixed(1)}m${caught ? ', ball down' : ''})`);
+  // a post: open the cut, calm its wind, search its own g for an aim that hits the woodwork at band centre, then let the bot release there
+  freshD(1); const cst = K.stageDrop({ x:88, y:35 }, []); inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', 30);
+  const cutP = M().cut, gp = cutP.g; gp.W = { x:0, y:0, mph:0 }; K.bandOf(gp);
+  let aimP = null, resP = null;
+  for (let a = -8; a <= 8 && aimP == null; a += 0.02) { K.strikeGoal(gp, gp.ctr, a*D2R); if (gp.res === 'post' || gp.res === 'bar') { aimP = a*D2R; resP = gp.res; } }
+  gp.L = gp.X = gp.res = null;
+  ok(aimP != null, `an aim exists that hits the woodwork from 22m (${resP} at ${aimP != null && (aimP/D2R).toFixed(2)}°)`);
+  if (aimP != null) {
+    gp.aim = aimP;   // the bot would steer there at 18°/s; set the arrow so the release is not waited on
+    run(() => gp.out || gp.stage === 'flight', 3000, () => dropBot(cutP, { m:gp.ctr, aim:aimP })); inp.bDown = false;
+    settle();
+    ok(gp.res === resP && M().ball.state === 'loose' && Math.abs(M().ball.x - 109) < 1e-6 && M().ball.vx < 0, `a ${resP} miss leaves a loose ball 1m in front of the goal line bouncing back (${gp.res}, ${M().ball.state} at x ${M().ball.x.toFixed(1)}, vx ${M().ball.vx.toFixed(1)})`);
+  }
+  inp.bDown = false;
+}
+done('26 drop hand-back');
+
+// 27. the CPU's drop: offered by the same rule from his side, no close-up while you defend, your man 2m in front blocks it, and a clear one scores only through judgeCross
+begin('cpu drop');
+{
+  freshD(1, { headless:false }); inp.jx = inp.jy = 0;
+  let p = K.stageDrop({ x:85, y:35 }, [{ x:87, y:35 }], 1);
+  ok(M().ctrl.team === 0 && Math.abs(M().ctrl.x - 33) < 1e-9, `the staged team-0 player 2m in front is yours (at ${M().ctrl.x})`);
+  ok(!K.cpuDropOffer(p), 'the CPU is not offered a drop with a man 2m in front');
+  K.cpuDrop(p);
+  ok(p.drop && p.drop.t === KICK.dropT && p.drop.g.cpu, 'cpuDrop sets the wind-up with the inputs drawn now');
+  run(() => !p.drop, 40);
+  ok(!p.drop && M().ball.state === 'loose' && M().stats.dg.att[1] === 1 && M().stats.dg.charged[1] === 1 && !M().cut, `your man 2m in front blocks it: a loose ball, counted as charged down, with no close-up (${M().ball.state})`);
+  ok(Math.abs(M().ctrl.x - (p.x - 1.2)) < 0.3, `the blocker lands 1.2m in front of the kicker (${(p.x - M().ctrl.x).toFixed(2)}m)`);
+  freshD(1, { headless:false }); p = K.stageDrop({ x:85, y:35 }, [], 1);
+  ok(K.cpuDropOffer(p), 'with no team-0 player within 15m the drop is offered');
+  K.cpuDrop(p); p.vx = -6; steps(6);
+  ok(Math.hypot(p.vx, p.vy) < 5 && p.drop, `he checks his run at 12 m/s² during the wind-up (${Math.hypot(p.vx, p.vy).toFixed(1)} m/s after 0.1s from 6)`);
+  freshD(1, { headless:false }); p = K.stageDrop({ x:85, y:35 }, [], 1);
+  K.cpuDrop(p); const g = p.drop.g; g.cpu = { m:g.ctr, aim:K.aimFor(g, g.ctr) };   // a band-centre, wind-corrected strike
+  run(() => !p.drop, 40);
+  const b = M().ball;
+  ok(b.state === 'air' && b.f.kind === 'g3d' && b.f.team === 1 && !M().cut, `it flies as a g3d ball in the top-down view with no close-up (${b.state}, ${b.f && b.f.kind})`);
+  const w1 = { x:b.f.x1, y:b.f.y1 };
+  ok(Math.abs(w1.x - 10) < 0.05 && w1.y > 32.2 && w1.y < 37.8, `its x1, y1 is the world crossing point at their posts (${w1.x.toFixed(2)}, ${w1.y.toFixed(1)})`);
+  let maxZ = 0; run(() => b.state !== 'air', 600, () => { maxZ = Math.max(maxZ, b.z); });
+  ok(M().score[1] === 3 && M().stats.dg.made[1] === 1 && M().phase === 'set' && M().set.kind === 'score', `it scores through judgeCross at the crossing: 3 points and a score set (${M().score}, ${M().phase}/${M().set && M().set.kind}, apex ${maxZ.toFixed(1)}m)`);
+  freshD(1, { headless:false }); p = K.stageDrop({ x:85, y:35 }, [], 1);
+  K.cpuDrop(p); const g2 = p.drop.g; g2.cpu = { m:g2.ctr, aim:15*D2R }; run(() => !p.drop, 40);
+  run(() => M().ball.state !== 'air', 600);
+  ok(M().score[1] === 0 && run(() => M().phase === 'set' && M().set.kind === 'dropout', 300) && M().set.team === 0, `a wide CPU drop is a 22 drop-out by team 0 (${M().set && M().set.kind} by ${M().set && M().set.team})`);
+  ok(M().stats.drops === 1 && M().stats.dg.att[1] === 1, 'M.stats.drops still counts his attempts');
+  // the AI carrier takes the real trigger: in the zone with the offer, a 7% roll each think while he runs at the line
+  let dropped = 0;
+  for (let k = 0; k < 20; k++) {
+    freshD(1); p = K.stageDrop({ x:85, y:35 }, [], 1); M().phaseCount = 2;
+    for (let i = 0; i < 200; i++) { T.update(STEP); if (p.drop || (M().ball.f && M().ball.f.kind === 'g3d')) { dropped++; break; } if (M().ball.carrier !== p) break; }
+  }
+  ok(dropped >= 3, `left alone in the zone, the AI carrier drops at goal (${dropped} of 20 runs)`);
+}
+done('27 cpu drop');
+
+// 28. one posts rule: an ordinary kick crossing the line at y 35, z 3.1 is a drop goal; one crossing at y 32.25, z 2 is not, and its flight is unchanged
+begin('one posts rule');
+{
+  // a 'kick' flight from (100, y) to (120, y) over 1s crosses x = 110 at u = 0.5 with z = 0.2 + H
+  const cross = (y, z) => { freshD(1); K.stageDrop({ x:40, y:35 }, []); K.kickBall(0, 100, y, 120, y, 1, z - 0.2, 'kick'); const f = M().ball.f; run(() => M().ball.x >= 110 || M().ball.state !== 'air' || M().phase !== 'play', 80); return { f, score:M().score[0], phase:M().phase, same:M().ball.f === f, state:M().ball.state }; };
+  let r = cross(35, 3.1);
+  ok(r.score === 3 && r.phase === 'set' && M().set.kind === 'score', `a kick crossing at y 35, z 3.1 scores a drop goal (${r.score}, ${r.phase})`);
+  r = cross(32.25, 2);
+  ok(r.score === 0 && r.phase === 'play' && r.same && r.state === 'air', `one crossing at y 32.25, z 2 does not, and flies on unchanged (${r.score}, ${r.phase}, ${r.state})`);
+  r = cross(35, 2.9);
+  ok(r.score === 0 && r.phase === 'play' && r.same, `one under the bar at z 2.9 does not (${r.score})`);
+  r = cross(37.7, 3.5);
+  ok(r.score === 3, `one off the inside of the far upright above the bar does (${r.score})`);
+  r = cross(38.1, 6);
+  ok(r.score === 0 && r.phase === 'play', `one just outside the upright does not (${r.score})`);
+}
+done('28 one posts rule');
+
+// 29. drop rates: no charger, through the real path, within the sampling noise of this build's measured table and ±6pp of the spec's; and with a
+// full-tilt charger 12m away as the meter starts (staged 13.8m, since the hold runs 0.2s) the offered drops are charged down at most 12% on Normal
+begin('drop rates');
+{
+  reseed(+process.env.SEED);
+  const DN = ['Easy', 'Normal', 'Hard'], N = Math.max(100, Math.round(RATE_N/2));
+  const tol = p => Math.max(6, 4*Math.sqrt(p*(100 - p)/N + p*(100 - p)/DROP_PIN_N));
+  let sq = 0, sqS = 0;
+  console.log('drop'.padEnd(28), 'you E/N/H (measured / spec)');
+  for (let si = 0; si < DROPS.length; si++) {
+    const [name, s] = DROPS[si], row = [];
+    for (let di = 0; di < 3; di++) {
+      let made = 0, off = 0;
+      for (let i = 0; i < N; i++) { const r = tryDrop(s, di, []); if (!r.off) continue; off++; if (r.g.ok && !r.g.out) made++; }
+      const pct = 100*made/Math.max(1, off); row.push(pct);
+      ok(off === N, `${name} ${DN[di]}: offered every time with nobody near (${off}/${N})`);
+      ok(Math.abs(pct - DROP_YOU[si][di]) <= tol(DROP_YOU[si][di]), `${name} ${DN[di]} within ${tol(DROP_YOU[si][di]).toFixed(1)}pp of ${DROP_YOU[si][di]} (${pct.toFixed(1)})`);
+      ok(Math.abs(pct - DROP_SPEC[si][di]) <= 6 + 2*Math.sqrt(pct*(100 - pct)/N), `${name} ${DN[di]} within ±6pp (plus two standard errors) of the spec's ${DROP_SPEC[si][di]} (${pct.toFixed(1)})`);
+      sq += (pct - DROP_YOU[si][di])**2; sqS += (pct - DROP_SPEC[si][di])**2;
+    }
+    console.log(name.padEnd(28), row.map((v, di) => v.toFixed(1).padStart(5) + '/' + String(DROP_YOU[si][di]).padStart(3) + '/' + String(DROP_SPEC[si][di]).padStart(3)).join(' '));
+    ok(row[0] >= row[1] - 2 && row[1] >= row[2] - 2, `${name}: Easy >= Normal - 2 and Normal >= Hard - 2`);
+  }
+  console.log(`rms you v measured ${Math.sqrt(sq/9).toFixed(1)}pp, v spec ${Math.sqrt(sqS/9).toFixed(1)}pp`);
+  for (const [name, s] of DROPS) {
+    let off = 0, cd = 0, made = 0;
+    for (let i = 0; i < N; i++) { const r = tryDrop(s, 1, [{ x:s.x + 13.8, y:s.y, vx:-9, vy:0 }]); if (!r.off) continue; off++; if (r.g.out === 'charged') cd++; else if (r.g.ok) made++; }
+    const rate = off ? 100*cd/off : 0;
+    console.log(`${name.padEnd(28)} full tilt 12m, Normal: offered ${(100*off/N).toFixed(0)}%, made ${off ? (100*made/off).toFixed(0) : 0}%, charged down ${rate.toFixed(1)}%`);
+    ok(off > 0.5*N, `${name}: a full-tilt charger 12m away is offered on Normal (${off}/${N})`);
+    ok(rate <= 12, `${name}: offered drops are charged down at most 12% on Normal (${rate.toFixed(1)}%)`);
+  }
+}
+done('29 drop rates');
+
+// 30. render smoke for the drop close-up: every stage with two chargers, at the widest and the smallest size, and the hand-back outcomes, with no non-finite number on the canvas
+begin('drop render');
+{
+  const bad = new Map();
+  const walk = (k, v) => { if (typeof v === 'number') { if (!Number.isFinite(v)) bad.set(k, (bad.get(k) || 0) + 1); } else if (typeof v === 'string') { if (/NaN|Infinity/.test(v)) bad.set(k, (bad.get(k) || 0) + 1); } else if (Array.isArray(v)) for (const x of v) walk(k, x); };
+  globalThis.__ctxSpy = (k, a) => { for (const v of a) walk(k, v); };
+  let frames = 0; const draw = () => { const n = [...bad.values()].reduce((x, y) => x + y, 0); T.debug.drawCut(); frames += [...bad.values()].reduce((x, y) => x + y, 0) === n ? 1 : 0; };
+  for (const [W, H] of [[844, 390], [568, 320], [740, 360]]) {
+    T.debug.view(W, H);
+    for (const [, s] of DROPS) {
+      for (const di of [0, 1]) {
+        freshD(di); const c = K.stageDrop(s, [{ x:s.x + 12, y:s.y, vx:-8, vy:0 }, { x:s.x + 9, y:s.y + 4, vx:-3, vy:-2 }]); inp.bDown = false; K.startDropCut(c); const cut = M().cut, g = cut.g;
+        const ly = K.layoutOf(cut);
+        ok(ly.gapPx >= 38 && ly.ballY >= 0.78*H && ly.ballY <= 0.82*H && ly.meter.x >= 0.52*W, `${W}x${H} drop at (${s.x.toFixed(0)}, ${s.y}): the framing holds (gap ${ly.gapPx.toFixed(0)}px, ball ${(ly.ballY/H).toFixed(2)}H)`);
+        steps(20); draw();                                                           // wait, pulsing, chargers closing
+        inp.bPressed = inp.bDown = true; steps(20); draw();                          // hold, the meter half full, the aid at the live power
+        inp.jx = 0.6; steps(5); inp.jx = 0; draw();
+        inp.bDown = false; T.update(STEP); draw(); steps(8); draw();                 // the drop
+        run(() => g.out || g.stage === 'flight', 60);
+        if (g.stage === 'flight') { cut.t = g.tStrike + KICK.hitStop + g.X.t/2; draw(); cut.t = g.tStrike + KICK.hitStop + g.X.t + 0.3; g.judged = true; cut.after = () => {}; cut.hold = 1; draw(); }
+        else draw();
+        settle();
+      }
+    }
+  }
+  T.debug.view(844, 390);
+  // a charge-down and a smother on screen
+  freshD(1); let c = K.stageDrop({ x:90, y:35 }, [{ x:96, y:35, vx:-9, vy:0 }]); inp.bDown = true; K.startDropCut(c); let cut = M().cut, g = cut.g;
+  run(() => g.out, 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); inp.bDown = false;
+  ok(g.out === 'charged', 'the charge-down scene is staged');
+  for (const dt of [0, 0.1, 0.3, 0.6]) { cut.t = g.tStrike + KICK.hitStop + dt; draw(); }
+  freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:97, y:35, vx:-6, vy:0 }]); inp.bDown = false; K.startDropCut(c); cut = M().cut; g = cut.g;
+  run(() => g.out, 3000); ok(g.out === 'smothered', 'the smother scene is staged');
+  draw(); cut.t += 0.4; draw();
+  T.debug.setRM(true); draw(); T.debug.setRM(false);
+  globalThis.__ctxSpy = null;
+  ok(bad.size === 0, `no non-finite number reaches the canvas in a drop close-up (${[...bad.entries()].map(([k, v]) => k + ' x' + v).join(', ')})`);
+  console.log(`  ${frames} drop frames drawn clean`);
+}
+done('30 drop render');
+
+// 31. the press decides: what the small button says when B goes down is what the hold gives. A Drop Goal press opens the close-up on the
+// 0.20s step whatever moved in the meantime (the stick to touch, a charger arriving); the label stays what it was for the whole hold; a Kick
+// press stays a kick though the zone comes good during it; a flick to touch costs nothing once the stick is back; and range and bearing are
+// judged where the hold will leave him, so a label that reads Drop Goal opens a cut inside the zone
+begin('press decides');
+{
+  const finish = (cut, o) => { const g = cut.g; run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, o)); inp.bDown = false; settle(); };
+  const holdSteps = Math.round(KICK.hold/STEP);
+  // (a) armed, then the stick swings to touch 3 steps in: the cut still opens on the 12th step, and the label never wavered
+  freshD(1); let c = K.stageDrop({ x:85, y:35 }, []);
+  ok(K.kickLabel(0) === 'Drop Goal', 'B reads Drop Goal before the press');
+  inp.bPressed = inp.bDown = true;
+  let n = 0, labels = new Set();
+  while (M().phase !== 'cut' && n < 40) { if (n === 3) { inp.jx = 0; inp.jy = 0.9; } labels.add(K.kickLabel(0)); T.update(STEP); n++; }
+  let cutA = M().cut;
+  ok(n === holdSteps && cutA && cutA.g.type === 'drop', `a Drop Goal press opens the close-up on step ${holdSteps} though the stick went to touch on step 4 (${n} steps, ${M().phase})`);
+  ok(labels.size === 1 && labels.has('Drop Goal'), `and the label read Drop Goal for the whole hold (${[...labels]})`);
+  inp.jx = 1; inp.jy = 0;
+  if (cutA) { ok(!K.dropZone(c).ok && cutA.g.rush.length === 0, 'the zone itself is off in a cut, and nobody is charging'); finish(cutA); } else { inp.bDown = false; T.update(STEP); }
+  // (b) armed, then a charger lands 3m in front during the hold: the offer is not run again, the cut opens and he is a charger in it
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []); const q = M().players.find(p => p.team === 1);
+  inp.bPressed = inp.bDown = true; steps(5); q.x = c.x + 3; q.y = c.y; q.vx = q.vy = 0;
+  const wouldRefuse = !K.dropZone(c).ok;
+  ok(run(() => M().phase === 'cut', holdSteps) && wouldRefuse, `the offer would refuse him now, but the press promised a drop: the cut opens (${M().phase})`);
+  cutA = M().cut; let g = cutA && cutA.g;
+  ok(g && g.rush.length === 1 && g.rush[0].q === q && g.rush[0].d0 < 3, `and he is in it as a charger, ${g && g.rush.length ? g.rush[0].d0.toFixed(2) : '-'}m off`);
+  if (cutA) { finish(cutA, { m:g.ctr, aim:0 }); ok(g.out === 'smothered' || g.out === 'charged', `who stops the kick (${g.out})`); } else { inp.bDown = false; T.update(STEP); }
+  // (c) a Kick press stays a kick: B pressed with the ball held 0.15s reads Kick, and keeps reading Kick though the zone comes good at 0.3s
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []); c.hold = 0.15;
+  ok(K.kickLabel(0) === 'Kick', 'B reads Kick with the ball held under 0.3s');
+  inp.bPressed = inp.bDown = true; labels = new Set();
+  for (let i = 0; i < 30; i++) { labels.add(K.kickLabel(0)); T.update(STEP); }
+  ok(M().phase === 'play' && M().charging && !M().cut, `held 0.5s on a Kick press: still charging a kick, no close-up (${M().phase}, charging ${M().charging})`);
+  ok(labels.size === 1 && labels.has('Kick'), `and the label read Kick throughout, though the zone came good at 0.3s (${[...labels]})`);
+  inp.bDown = false; T.update(STEP);
+  ok(M().ball.state === 'air' && M().ball.f.kind === 'kick', `the release is a kick (${M().ball.state}, ${M().ball.f && M().ball.f.kind})`);
+  ok(K.kickLabel(0) === 'Kick', 'with the ball gone, B reads Kick');
+  // (d) a flick to touch: off while it points there, on again the step the stick comes back
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []);
+  ok(K.dropZone(c).ok, 'on with the stick forward');
+  inp.jx = 0; inp.jy = 0.9; steps(3, () => K.dropZone(c));
+  ok(!K.dropZone(c).ok, 'off while the stick points at touch');
+  inp.jx = 1; inp.jy = 0; T.update(STEP);
+  ok(K.dropZone(c).ok, 'and on again as soon as it is forward: no cache to wait out');
+  // (e) the zone is judged where the hold leaves him: at (98, 26) running at 8 m/s the kick would be taken past 40°, so B reads Kick; standing there it reads Drop Goal and the cut opens
+  freshD(1); c = K.stageDrop({ x:98, y:26 }, []); c.vx = 8; c.vy = 0;
+  const pj = K.projectHold(c, K.holdLead()), bearing = Math.atan2(35 - pj.y, 110 - pj.x)/D2R, now = Math.atan2(35 - c.y, 110 - c.x)/D2R;
+  ok(now < 40 && bearing > 40 && !K.dropZone(c).ok, `at (98, 26) running at 8 m/s he is at ${now.toFixed(1)}° now but the hold ends at ${bearing.toFixed(1)}°: B reads Kick`);
+  freshD(1); c = K.stageDrop({ x:98, y:26 }, []);
+  ok(K.dropZone(c).ok, 'standing there it reads Drop Goal');
+  inp.bPressed = inp.bDown = true;
+  cutA = run(() => M().phase === 'cut', holdSteps) ? M().cut : null;
+  ok(cutA && Math.abs(Math.atan2(35 - cutA.g.y, 110 - cutA.g.x)/D2R) <= 40, `and the press opens a cut inside the zone (${cutA ? (Math.atan2(35 - cutA.g.y, 110 - cutA.g.x)/D2R).toFixed(1) + '°' : 'no cut'})`);
+  if (cutA) finish(cutA); else { inp.bDown = false; T.update(STEP); }
+}
+done('31 press decides');
+
+// 32. the offer projects the hold as it will really run: the kicker on his stick, the AI's chaser turning in, and every opponent who can reach him,
+// a man on his shoulder included. The offer and a late pure strike through the real press path then agree at every distance but the step-quantised
+// boundary, and a charger coming from behind draws clean
+begin('offer projection');
+{
+  const finish = (cut, o) => { const g = cut.g; run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, o)); inp.bDown = false; settle(); };
+  const holdSteps = Math.round(KICK.hold/STEP);
+  // the projection draws nothing random and leaves the world exactly as it found it
+  freshD(1); let c = K.stageDrop({ x:85, y:35 }, [{ x:92, y:36, vx:-3, vy:1 }, { x:88, y:30 }]); c.vx = 6;
+  const before = M().players.map(p => [p.x, p.y, p.vx, p.vy, p.fx, p.fy, p.down, p.tcd, p.side, p.hold, p.turn, p.lastA, p.boost].join(',')).join('|'), r0n = rndCalls();
+  let pj = K.projectHold(c, K.holdLead()); K.dropZone(c);
+  ok(M().players.map(p => [p.x, p.y, p.vx, p.vy, p.fx, p.fy, p.down, p.tcd, p.side, p.hold, p.turn, p.lastA, p.boost].join(',')).join('|') === before && rndCalls() === r0n && pj.x > c.x + 0.9, `projectHold and dropZone leave every player where he was and draw no random number (${rndCalls() - r0n} drawn)`);
+  // the kicker's own run: standing with the stick forward he is 0.37m further on at the freeze, with the stick let go at 8 m/s he brakes; the projection says both
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []);
+  pj = K.projectHold(c, K.holdLead()); inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps);
+  ok(Math.abs(pj.x - c.x) < 1e-9 && Math.abs(pj.y - c.y) < 1e-9 && c.x - 85 > 0.3, `the projected kick spot is where the hold really left him: ${pj.x.toFixed(3)} v ${c.x.toFixed(3)}, ${(c.x - 85).toFixed(2)}m on from a standing start`);
+  finish(M().cut);
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, []); c.vx = 8; inp.jx = 0; inp.jy = 0;
+  pj = K.projectHold(c, K.holdLead()); inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps);
+  ok(Math.abs(pj.x - c.x) < 1e-9 && c.x - 85 < 8*K.holdLead() - 0.3, `with the stick let go he brakes, and the projection has him at ${pj.x.toFixed(3)} v ${c.x.toFixed(3)} (not ${(85 + 8*K.holdLead()).toFixed(2)})`);
+  finish(M().cut); inp.jx = 1;
+  // the chaser's run: a man standing 10m ahead is the AI's chaser, so he is moving and nearer at the freeze; the projected charger is the frozen one
+  freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:100, y:35 }]);
+  pj = K.projectHold(c, K.holdLead()); let g0 = K.goalOf(0, pj.x, pj.y, 'drop', c, K.windNow(0)), r0 = K.rushersOf(c, g0, pj)[0];
+  inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps); let g = M().cut && M().cut.g, r1 = g && g.rush[0];
+  ok(r0 && r1 && Math.abs(r0.d0 - r1.d0) < 1e-9 && Math.abs(r0.v0 - r1.v0) < 1e-9 && r1.v0 > 2 && r1.d0 < 9.5, `the projected charger is the frozen one: d0 ${r0.d0.toFixed(2)} v ${r1.d0.toFixed(2)}, v0 ${r0.v0.toFixed(2)} v ${r1.v0.toFixed(2)} (he has turned in during the hold)`);
+  if (g) finish(M().cut, { m:g.ctr, aim:0 }); else { inp.bDown = false; T.update(STEP); }
+  // the offer and the live late strike agree through the real press path: a standing charger at 31 distances in a calm wind (so the cut's band is the
+  // offer's), the kicker standing with the stick forward. Offered means a pure strike released 0.1s late gets away; the one row that may differ is the
+  // step-quantised boundary
+  let agree = 0, total = 0, offered = 0, bad = [];
+  for (let d = 7; d <= 10.001; d += 0.1) {
+    freshD(1); M().wind = { a:0, mph:0 }; c = K.stageDrop({ x:110 - Math.sqrt(800), y:25 }, [{ x:110 - Math.sqrt(800) + d, y:25 }]);
+    const off = K.dropZone(c).ok;
+    inp.bPressed = inp.bDown = true;
+    if (!run(() => M().phase === 'cut', holdSteps)) { inp.bDown = false; ok(!off, `not offered at ${d.toFixed(1)}m: no cut opened`); continue; }
+    g = M().cut.g; offered++;
+    finish(M().cut, { m:Math.min(1, g.ctr + KICK.offerLate/g.fill), aim:0 });
+    total++; if (!g.out) agree++; else bad.push(`${d.toFixed(1)}m ${g.out} at m ${g.mRel.toFixed(3)} (rush ${g.rush.map(r => r.d0.toFixed(2) + '@' + r.v0.toFixed(2)).join(',')})`);
+  }
+  ok(offered >= 10 && offered < 31 && agree >= total - 1, `offered at ${offered} of 31 distances; the late strike got away at ${agree} of ${total}${bad.length ? ' (' + bad.join('; ') + ')' : ''}`);
+  console.log(`  standing charger 7-10m, calm: offered at ${offered} of 31 distances, the late pure strike got away at ${agree} of ${total}${bad.length ? ' (' + bad.join('; ') + ')' : ''}`);
+  // a man on the shoulder: 1.5m behind and 1m to the side, running with the carrier at 8 m/s, he reaches him whether the stick stays forward or is let go; 9m behind he cannot
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:83.5, y:36, vx:8, vy:0 }]); c.vx = 8;
+  ok(!K.dropZone(c).ok, 'a chaser on his shoulder at 8 m/s: no offer with the stick forward');
+  inp.jx = 0; inp.jy = 0;
+  ok(!K.dropZone(c).ok, 'nor with the stick let go (he brakes, and the chaser is level at the freeze)');
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:81, y:35, vx:8, vy:0 }]); c.vx = 8;
+  ok(!K.dropZone(c).ok, 'one 4m behind at full tilt: no offer');
+  // the shoulder radius: behind the kick spot a chaser counts only within KICK.shoulder (4m), in the offer and in the cut alike; deeper behind he is out of both
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:80, y:35, vx:8, vy:0 }]); c.vx = 8;
+  ok(K.dropZone(c).ok, 'one 5m behind at full tilt is outside the shoulder radius: offered');
+  ok(K.rushersOf(c, K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)), null).length === 0, 'and rushersOf leaves him out');
+  const sh0 = KICK.shoulder; KICK.shoulder = 6;
+  ok(!K.dropZone(c).ok, 'with the lever at 6m he is counted, and reaches him: not offered');
+  KICK.shoulder = sh0;
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:81.5, y:35, vx:8, vy:0 }]); c.vx = 8;
+  ok(!K.dropZone(c).ok, 'one 3.5m behind at full tilt is on the shoulder: not offered');
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:90, y:35, vx:-8, vy:0 }]); c.vx = 8;
+  ok(K.rushersOf(c, K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)), null).length === 1, 'the radius applies behind only: a man 5m in front is a charger');
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:76, y:35, vx:8, vy:0 }]); c.vx = 8;
+  ok(K.dropZone(c).ok, 'one 9m behind at full tilt: offered');
+  inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps); g = M().cut && M().cut.g;
+  ok(g && g.rush.length === 0, `and he is not a charger in the cut either (${g ? g.rush.length : '-'} chargers)`);
+  if (!g) { inp.bDown = false; T.update(STEP); } else { finish(M().cut, { m:g.ctr, aim:0 }); ok(!g.out && g.stage === 'flight', `a band-centre strike gets away (${g.out || 'clear'})`); }
+}
+done('32 offer projection');
+
+// 33. the CPU's drop on one clock: the offer projects the world through his 0.25s wind-up and judges a strike then, with your players given
+// 0.30s to react, so a drop he is offered is one you can block by moving, and one you are already set to block he does not take
+begin('cpu one clock');
+{
+  freshD(1, { headless:false }); inp.jx = inp.jy = 0;
+  let p = K.stageDrop({ x:85, y:35 }, [{ x:90, y:35 }], 1);
+  const u = M().ctrl;
+  ok(u.team === 0 && Math.abs(K.toFrame(1, u.x, u.y).x - 90) < 1e-9, 'your man stands 5m in front of their carrier');
+  const rn = rndCalls(), off5 = K.cpuDropOffer(p);
+  ok(off5 && rndCalls() === rn, `standing still, he does not stop the offer: the CPU is offered the drop, with nothing random drawn (${rndCalls() - rn})`);
+  K.cpuDrop(p);
+  run(() => !p.drop, 40, () => { const dx = p.x - u.x, dy = p.y - u.y, m = Math.hypot(dx, dy) || 1; inp.jx = dx/m; inp.jy = dy/m; });   // you sprint at him the moment he winds up
+  inp.jx = inp.jy = 0;
+  ok(!p.drop && M().stats.dg.charged[1] === 1 && M().ball.state === 'loose', `you sprint at him through the wind-up and charge it down (${M().ball.state}, charged ${M().stats.dg.charged[1]})`);
+  ok(Math.abs(M().ctrl.x - (p.x - 1.2)) < 0.3 && M().ball.kickInfo && M().ball.kickInfo.team === 1, 'the blocker lands 1.2m in front, and the loose ball is still a kicked ball');
+  freshD(1, { headless:false }); inp.jx = inp.jy = 0;
+  p = K.stageDrop({ x:85, y:35 }, [{ x:88, y:35 }], 1);
+  ok(!K.cpuDropOffer(p), 'your man standing 3m in front: not offered');
+  freshD(1, { headless:false }); inp.jx = inp.jy = 0;
+  p = K.stageDrop({ x:85, y:35 }, [{ x:92, y:35, vx:-8, vy:0 }], 1); inp.jx = 1;   // running at him at 8 m/s with the stick held toward him
+  ok(!K.cpuDropOffer(p), 'your man 7m in front and sprinting at him: not offered, he would be on the ball');
+  inp.jx = 0;
+  freshD(1, { headless:false }); inp.jx = inp.jy = 0;
+  p = K.stageDrop({ x:85, y:35 }, [{ x:93, y:35, vx:-8, vy:0 }], 1); inp.jx = 1;
+  ok(!K.cpuDropOffer(p), '8m in front and sprinting: not offered either, which is the 0.30s reaction margin (he would be clear of the ball at the strike itself)');
+  freshD(1, { headless:false }); inp.jx = inp.jy = 0;
+  p = K.stageDrop({ x:85, y:35 }, [{ x:97, y:35, vx:-8, vy:0 }], 1); inp.jx = 1;
+  ok(K.cpuDropOffer(p), '12m in front and sprinting: offered');
+  K.cpuDrop(p); run(() => !p.drop, 40); inp.jx = 0;
+  ok(!p.drop && M().ball.state === 'air' && M().ball.f.kind === 'g3d' && M().stats.dg.charged[1] === 0, `and he gets it away (${M().ball.state}, ${M().ball.f && M().ball.f.kind})`);
+  run(() => M().ball.state !== 'air', 600);
+}
+done('33 cpu one clock');
+
+// 34. hand-backs are not turnovers, and a tactical kick's charge-down is as it was: a charged-down drop regathered by the kicking side, a drop off the post
+// gathered by the defence and a short drop picked up by the defence all leave the turnover count alone; a charged-down tactical kick leaves the
+// defender where he stood (no 1.2m placement) and is a kicked ball too
+begin('hand-back possession');
+{
+  // a charge-down, the ball bouncing back to two support runners 2.5m behind the kicker
+  freshD(1); let c = K.stageDrop({ x:90, y:35 }, [{ x:96, y:35, vx:-9, vy:0 }]); inp.jx = inp.jy = 0;
+  const mates = M().players.filter(p => p.team === 0 && p !== c).slice(0, 2); mates[0].x = c.x - 2.5; mates[0].y = c.y - 1.5; mates[1].x = c.x - 2.5; mates[1].y = c.y + 1.5;
+  inp.bDown = true; K.startDropCut(c); let cut = M().cut, g = cut.g;
+  run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); inp.bDown = false; settle();
+  ok(g.out === 'charged' && M().ball.state === 'loose' && M().ball.kickInfo && M().ball.kickInfo.team === 0 && M().poss === 0, `charged down: a loose kicked ball, possession still ours (${g.out}, kickInfo ${JSON.stringify(M().ball.kickInfo)})`);
+  g.outQ.x = 5; g.outQ.vx = g.outQ.vy = 0;                                       // the charger out of it: who regathers is the point
+  run(() => M().ball.state === 'held' || M().phase !== 'play', 600);
+  ok(M().ball.state === 'held' && M().ball.carrier.team === 0 && M().stats.turnovers === 0, `a support runner regathers it: no Turnover (${M().ball.state} by team ${M().ball.carrier && M().ball.carrier.team}, turnovers ${M().stats.turnovers})`);
+  // off the post, gathered by a defender
+  freshD(1); c = K.stageDrop({ x:88, y:35 }, []); inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', 30);
+  cut = M().cut; g = cut.g; g.W = { x:0, y:0, mph:0 }; K.bandOf(g);
+  let aimP = null;
+  for (let a = -8; a <= 8 && aimP == null; a += 0.02) { K.strikeGoal(g, g.ctr, a*D2R); if (g.res === 'post' || g.res === 'bar') aimP = a*D2R; }
+  g.L = g.X = g.res = null; g.aim = aimP;
+  run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:aimP })); inp.bDown = false; settle();
+  ok(M().ball.state === 'loose' && M().ball.kickInfo && M().ball.kickInfo.team === 0, `off the woodwork: a loose kicked ball (${g.res}, kickInfo ${JSON.stringify(M().ball.kickInfo)})`);
+  run(() => M().ball.z < 0.9 && M().ball.vz <= 0, 300);
+  let d1 = M().players.find(p => p.team === 1 && p.down <= 0); d1.x = M().ball.x; d1.y = M().ball.y; d1.vx = d1.vy = 0;
+  run(() => M().ball.state === 'held' || M().phase !== 'play', 300);
+  ok(M().ball.state === 'held' && M().ball.carrier.team === 1 && M().stats.turnovers === 0, `a defender gathers it: no Turnover, as for any kick (team ${M().ball.carrier && M().ball.carrier.team}, turnovers ${M().stats.turnovers})`);
+  // short, landing loose, picked up by a defender
+  let r = tryDrop({ x:75, y:35 }, 1, [], { m:0.2, aim:0 }); g = r.g; settle();
+  for (const p of M().players) if (p.team === 1) { p.x = 5; p.vx = p.vy = 0; }   // nobody under it: it lands
+  ok(g.res === 'short' && M().ball.state === 'air' && M().ball.f.kind === 'g3d' && M().ball.kickInfo && M().ball.kickInfo.team === 0, `short: a live kicked ball (${M().ball.state}, kickInfo ${JSON.stringify(M().ball.kickInfo)})`);
+  run(() => M().ball.state !== 'air', 400);
+  ok(M().ball.state === 'loose', `it lands loose (${M().ball.state})`);
+  d1 = M().players.find(p => p.team === 1 && p.down <= 0); d1.x = M().ball.x; d1.y = M().ball.y; d1.vx = d1.vy = 0;
+  run(() => M().ball.state === 'held' || M().phase !== 'play', 300);
+  ok(M().ball.state === 'held' && M().ball.carrier.team === 1 && M().stats.turnovers === 0, `a defender picks it up: no Turnover (team ${M().ball.carrier && M().ball.carrier.team}, turnovers ${M().stats.turnovers})`);
+  // a tactical kick's charge-down: the 30% roll with a defender 1.5m behind the kicker. He stays where he is, and the ball is a kicked ball
+  let charged = null, tries = 0;
+  while (!charged && tries++ < 60) {
+    freshD(1); c = K.stageDrop({ x:60, y:35 }, [{ x:58.5, y:35 }]); const q = M().players.find(p => p.team === 1);
+    ok(K.kickLabel(0) === 'Kick', tries === 1 ? 'at 50m out B reads Kick' : 'kick');
+    inp.bPressed = inp.bDown = true; T.update(STEP);
+    if (M().ball.carrier !== c) continue;                                        // tackled on the press step: try again
+    const qx = q.x, qy = q.y; inp.bDown = false; T.update(STEP);
+    if (M().ball.state === 'loose' && M().ball.last === 1) { charged = { q, qx, qy, c, dx:q.x - c.x, dy:q.y - c.y }; q.x = 5; q.vx = q.vy = 0; }   // then out of it, so only the kicking side can gather
+  }
+  ok(!!charged, `a tactical kick with a defender 1.5m behind is charged down within ${tries} tries`);
+  if (charged) {
+    const { q, qx, qy, c:kk, dx, dy } = charged;
+    ok(dx < 0 && Math.abs(kk.x + dx - qx) < 0.3 && Math.abs(kk.y + dy - qy) < 0.3, `the defender stays where he stood, behind the kicker (${dx.toFixed(2)}, ${dy.toFixed(2)} from him), not 1.2m in front`);
+    ok(M().ball.kickInfo && M().ball.kickInfo.team === 0 && !M().ball.kickInfo.ownHalf, 'and the loose ball is a kicked ball');
+    inp.jx = inp.jy = 0;
+    const mate = M().players.find(p => p.team === 0 && p !== kk);
+    run(() => M().ball.z < 0.9, 120); mate.x = M().ball.x; mate.y = M().ball.y; mate.vx = mate.vy = 0;
+    run(() => M().ball.state === 'held' || M().phase !== 'play', 300);
+    ok(M().ball.state === 'held' && M().stats.turnovers === 0, `regathered by team ${M().ball.carrier && M().ball.carrier.team}: no Turnover (turnovers ${M().stats.turnovers})`);
+  }
+  inp.jx = 1;
+}
+done('34 hand-back possession');
+
+// 35. the first strike at goal ends the first-kick aids, placed or dropped
+begin('kickSeen on drops');
+{
+  T.debug.settings().kickSeen = false;
+  const r = tryDrop({ x:90, y:35 }, 1, []);
+  ok(r.off && r.g.aid === 'path', `the first kick ever gets the Easy aids on Normal (${r.g.aid})`);
+  ok(T.debug.settings().kickSeen === true, `a drop's strike sets kickSeen (${T.debug.settings().kickSeen})`);
+  settle();
+  const r2 = tryDrop({ x:90, y:35 }, 1, []);
+  ok(r2.g.aid === 'line', `and the next drop on Normal has the line (${r2.g.aid})`);
+  settle();
+  T.debug.settings().kickSeen = true;
+}
+done('35 kickSeen on drops');
+
+// 36. one step count: the B press opens the cut on holdSteps() (the ceiling of hold/STEP, the press step the first) and holdLead() projects exactly the
+// world steps that run before it, so the offer's kick spot and chargers are the cut's to the bit at holds on and off the 1/60 grid
+// (GKTUNE='{"hold":0.205}' tries one from the shell; 0.20 is the lever as shipped)
+begin('hold steps');
+{
+  const finish = (cut, o) => { const g = cut.g; run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, o)); inp.bDown = false; settle(); };
+  const h0 = KICK.hold;
+  for (const h of [0.20, 0.205, 0.22, 0.25]) {
+    KICK.hold = h;
+    const want = Math.ceil(h/STEP - 1e-9);
+    freshD(1); const c = K.stageDrop({ x:85, y:35 }, [{ x:97, y:35 }]); c.vx = 6;
+    const pj = K.projectHold(c, K.holdLead()), r0 = K.rushersOf(c, K.goalOf(0, pj.x, pj.y, 'drop', c, K.windNow(0)), pj)[0];
+    inp.bPressed = inp.bDown = true; let n = 0; while (M().phase !== 'cut' && n < 40) { T.update(STEP); n++; }
+    const g = M().cut && M().cut.g, r1 = g && g.rush[0];
+    ok(K.holdSteps() === want && n === want, `hold ${h}: the cut opens on step ${n} (holdSteps ${K.holdSteps()}, ceil ${want})`);
+    ok(Math.abs(K.holdLead() - (n - 1)*STEP) < 1e-12, `and holdLead is ${n - 1} steps (${(K.holdLead()/STEP).toFixed(3)})`);
+    ok(g && Math.abs(g.kicker.x - pj.x) < 1e-9 && Math.abs(g.kicker.y - pj.y) < 1e-9, `the projected kick spot is the cut's (${g ? (g.kicker.x - pj.x).toExponential(1) : 'no cut'}m off)`);
+    ok(r0 && r1 && Math.abs(r0.d0 - r1.d0) < 1e-9 && Math.abs(r0.v0 - r1.v0) < 1e-9, `and the projected charger is the frozen one (d0 ${r0 && r0.d0.toFixed(3)} v ${r1 && r1.d0.toFixed(3)})`);
+    if (g) finish(M().cut, { m:g.ctr, aim:0 }); else { inp.bDown = false; T.update(STEP); }
+  }
+  KICK.hold = h0;
+  ok(KICK.hold === 0.20 && K.holdSteps() === 12 && Math.abs(K.holdLead() - 11*STEP) < 1e-12, 'as shipped: 12 steps to the cut, 11 of world');
+}
+done('36 hold steps');
+
+// 37. chargers and the lens: the kicker, the ball and the chargers are drawn in one list by depth, so a charger closing from behind or beside the kicker
+// goes over him; none is drawn until 2m in front of the lens, he fades in over the next 2m, none stands taller than 0.6H, no non-finite number reaches
+// the canvas, and one who stops the kick lands on the side he came from
+begin('charger depth');
+{
+  const H = 390; T.debug.view(844, H);
+  // a charger 10m behind (staged with the shoulder lever widened, so rushersOf takes him) and one level, 3.5m to the side
+  const sh0 = KICK.shoulder; KICK.shoulder = 15;
+  freshD(1); let c = K.stageDrop({ x:85, y:35 }, [{ x:75, y:35.5, vx:8, vy:0 }, { x:85, y:38.5 }]); inp.bDown = true; K.startDropCut(c); let cut = M().cut, g = cut.g;
+  KICK.shoulder = sh0;
+  ok(g.rush.length === 2 && g.rush.some(r => r.ux > 0.9) && g.rush.some(r => Math.abs(r.ux) < 0.1), `two chargers, one from behind and one from the side (ux ${g.rush.map(r => r.ux.toFixed(2))})`);
+  const cam = K.kickCam(g), nan = new Map(), order = [];
+  const walk = (k, v) => { if (typeof v === 'number') { if (!Number.isFinite(v)) nan.set(k, (nan.get(k) || 0) + 1); } else if (typeof v === 'string') { if (/NaN|Infinity/.test(v)) nan.set(k, (nan.get(k) || 0) + 1); } else if (Array.isArray(v)) for (const x of v) walk(k, x); };
+  globalThis.__ctxSpy = (k, a) => { for (const v of a) walk(k, v); if (k === 'translate') order.push(a.slice()); };
+  let frames = 0, sorted = true, overKicker = true, tall = 0, early = 0, drawn = 0, faded = 0, behindDrawn = 0, orderOk = true, ordered = 0, zMin = 99;
+  for (let i = 0; i < 90 && !g.out; i++) {
+    const tau = cut.t - 0.22, P = K.kickPose(g, -1, -1), scene = K.kickScene(cam, g, P, tau, -1), ki = scene.findIndex(it => it.kind === 'kicker');
+    for (let j = 1; j < scene.length; j++) if (scene[j].z > scene[j - 1].z + 1e-9) sorted = false;
+    for (const [j, it] of scene.entries()) if (it.kind === 'charger') {
+      drawn++; zMin = Math.min(zMin, it.z);
+      if (it.k*1.85 > 0.6*H + 1e-6) tall++; if (it.z <= 2) early++; if (it.alpha < 1) faded++; if (it.r.ux > 0.9) behindDrawn++;
+      if (ki >= 0 && it.z < scene[ki].z && j < ki) overKicker = false;
+    }
+    order.length = 0; T.debug.drawCut(); frames++;
+    if (order.length) {                                                          // the frame drew (the first, at t 0, is the cut-in's blank): each figure starts with a translate to his feet
+      const feet = scene.filter(it => it.kind !== 'ball').map(it => [it.sx, it.sy]);
+      let at = 0; for (const [x, y] of order) if (at < feet.length && Math.abs(x - feet[at][0]) < 1e-6 && Math.abs(y - feet[at][1]) < 1e-6) at++;
+      if (at !== feet.length) orderOk = false; else ordered++;
+    }
+    T.update(STEP);
+  }
+  globalThis.__ctxSpy = null;
+  ok(frames >= 30 && nan.size === 0, `${frames} frames drawn with chargers from behind and beside, no non-finite number on the canvas (${[...nan.keys()]})`);
+  ok(sorted && overKicker && drawn > 0 && behindDrawn > 0, `the scene is far to near every frame, and a charger nearer the lens than the kicker is drawn after him (${drawn} charger draws, ${behindDrawn} from behind)`);
+  ok(orderOk && ordered >= 30, `the figures reach the canvas in that order on every frame that draws (${ordered})`);
+  ok(tall === 0 && early === 0 && faded > 0 && zMin > 2, `no charger taller than 0.6H (${tall}), none within 2m of the lens (${early}, nearest ${zMin.toFixed(2)}m), ${faded} draws fading in`);
+  ok(g.out === 'smothered', `the cut ends in a smother (${g.out})`);
+  inp.bDown = false; settle();
+  // one who stops the kick lands on his own side: a man 3m behind who smothers is put 0.5m behind the kicker, one who charges the strike down from 3.5m behind 1.2m behind
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:82, y:35.3 }]); inp.bDown = false; K.startDropCut(c); cut = M().cut; g = cut.g;
+  ok(g.rush.length === 1 && g.rush[0].ux > 0.99, 'a man 3m behind is on the shoulder: a charger in the cut');
+  run(() => g.out, 3000); settle();
+  let q = g.outQ, kk = g.kicker, want = q && K.stopSpot(g, q, 0.5);
+  ok(g.out === 'smothered' && q.x < kk.x && Math.abs(q.x - want.x) < 0.05 && Math.abs(q.y - want.y) < 0.05, `smothered from behind: he lands behind the kicker (${q && (q.x - kk.x).toFixed(2)}, ${q && (q.y - kk.y).toFixed(2)}), not in front`);
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:81.5, y:35.3, vx:3, vy:0 }]); inp.bDown = true; K.startDropCut(c); cut = M().cut; g = cut.g;
+  run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); inp.bDown = false; settle();
+  q = g.outQ; kk = g.kicker; want = q && K.stopSpot(g, q, 1.2);
+  ok(g.out === 'charged' && q.x < kk.x && Math.abs(q.x - want.x) < 0.05 && Math.abs(q.y - want.y) < 0.05, `charged down from behind: he lands 1.2m behind the kicker (${g.out || 'clear'}${q ? ', ' + (q.x - kk.x).toFixed(2) : ''})`);
+  ok(M().ball.state === 'loose' && M().ball.kickInfo && M().ball.kickInfo.team === 0, 'and the ball is loose, a kicked ball');
+  // a placed kick's scene is as it was: the kicker, then the ball over him
+  freshD(1); const gp = stage(0, conv(35), 'conversion'); const cp = M().cut, Pp = K.kickPose(gp, -1, -1), sp = K.kickScene(K.kickCam(gp), gp, Pp, 0, -1);
+  ok(sp.length === 2 && sp[0].kind === 'kicker' && sp[1].kind === 'ball', `a conversion's scene is the kicker then the ball (${sp.map(it => it.kind)})`);
+  if (cp) { cp.after = () => {}; cp.hold = 0; } settle();
+}
+done('37 charger depth');
+
+// 38. the label is per seat: kickLabel(t) reads that side's controlled player, and updateHud passes its own
+begin('label per seat');
+{
+  freshD(1); K.stageDrop({ x:85, y:35 }, []);
+  ok(K.kickLabel(0) === 'Drop Goal' && K.kickLabel(1) === 'Kick', `team 0's carrier in the zone: kickLabel(0) Drop Goal, kickLabel(1) Kick (${K.kickLabel(0)}, ${K.kickLabel(1)})`);
+  inp.bPressed = inp.bDown = true; steps(3);
+  ok(K.kickLabel(0) === 'Drop Goal' && K.kickLabel(1) === 'Kick' && M().dropArmed[0], 'and through the hold');
+  inp.bDown = false; steps(14);
+  const src = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  ok(!/kickLabel\(\)/.test(src) && /kickLabel\(M\.ctrl\.team\)/.test(src), 'updateHud passes its team to kickLabel');
+}
+done('38 label per seat');
+
+// 39. the thumb: what the label showed is what the press gives, even if the stick is let go on the press frame or during the hold, and the cut
+// judges the chargers behind him that the offer judged, so a chaser who crosses into the shoulder radius as the kicker brakes stays out. A drop
+// charged down from behind bounces away from the man who blocked it, not straight back into his hands
+begin('the thumb');
+{
+  const stageRun = () => { const c = K.stageDrop({ x:84, y:35 }, [{ x:79.8, y:35.4, vx:8.5, vy:0 }]); c.vx = 7.5; inp.jx = 1; inp.jy = 0; return c; };
+  for (const L of [0, 1, 3]) {                                       // L: the step after the press on which the stick is let go (0: the press frame itself)
+    freshD(1); const c = stageRun();
+    const shown = K.kickLabel(0);                                    // the HUD reads the label the frame before the press
+    if (L === 0) { inp.jx = 0; inp.jy = 0; }
+    inp.bPressed = inp.bDown = true; let n = 0;
+    while (M().phase !== 'cut' && n < 40) { if (n === L && L > 0) { inp.jx = 0; inp.jy = 0; } T.update(STEP); n++; }
+    const cut = M().cut, g = cut && cut.g;
+    ok(shown === 'Drop Goal' && g && g.type === 'drop', `stick let go ${L ? L + ' steps after' : 'on'} the press: the label read ${shown} and the close-up opened (${M().phase})`);
+    if (!g) { inp.bDown = false; T.update(STEP); continue; }
+    ok(g.rush.every(r => r.x <= g.x), `and the chaser who closed to ${(84 - 79.8).toFixed(1)}m behind is not a charger (${g.rush.map(r => r.d0.toFixed(2) + 'm').join(', ') || 'none'})`);
+    run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); inp.bDown = false;
+    ok(!g.out, `an on-time strike gets away (${g.out || 'clear'})`);
+    settle();
+  }
+  // a drop charged down by a man from behind: the ball comes off his hands forward, away from him
+  let tried = 0, found = null;
+  for (const [gap, lat] of [[3.9, 0.6], [3.5, 1.5], [3.7, 0.6], [3.7, 1.0]]) for (const w of [5, 6]) {   // a jogging chaser just inside the radius gets there after the release
+    if (found) break;
+    freshD(1); const c = K.stageDrop({ x:84, y:35 }, [{ x:84 - gap, y:35 + lat, vx:w, vy:0 }]); c.vx = 6;
+    K.startDropCut(c); const cut = M().cut, g = cut && cut.g; tried++;
+    if (!g || !g.rush.length) { M().cut = null; continue; }
+    run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); inp.bDown = false;
+    if (g.out !== 'charged') { settle(); continue; }
+    const q = g.rush[0].q; settle();
+    const b = M().ball; found = { gap, w, q, away:(b.x - q.x)*b.vx + (b.y - q.y)*b.vy, state:b.state };
+  }
+  ok(found && found.state === 'loose' && found.away > 0, found ? `charged down from ${found.gap.toFixed(1)}m behind at ${found.w} m/s: the ball comes off his hands away from him (${found.away.toFixed(1)})` : `no charge-down from behind in ${tried} staged drops`);
+}
+done('39 the thumb');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
