@@ -577,14 +577,15 @@ begin('cpu sprint');
       let prev = S.m, prevP = S.p, n = 0;
       while (!M().over && n++ < 60000) {
         bot(); const phase = M().phase, c0 = M().ball.state === 'held' ? M().ball.carrier : null;
-        const fading = M().players.filter(p => p.team === 1 && p !== S.p && p.sprint > 0).length;   // an ease-out still running on this side before the step
+        const easing = M().players.filter(p => p.team === 1 && p !== S.p && p.sprint > 0);   // an ease-out still running on this side before the step
+        const fading = easing.length;
         T.update(STEP);
         if (S.m < -1e-9 || S.m > 1 + 1e-9) bad++;
         if (S.p && !prevP) { starts++; if (prev < SPRINT.floor) bad++; if (S.p.team !== 1) bad++;
           if (c0 && c0.team === 0) { const dd = dist(S.p, c0); if (dd >= SPRINT.cpu.min - 0.5 && dd <= SPRINT.cpu.max + 0.5) chaseOk++; else chaseBad++; } }
         if (S.p && prevP === S.p && phase === 'play' && !fading) { const d1 = STEP/SPRINT.secs, d2 = d1*SPRINT.ballDrain; if (!near(prev - S.m, d1, 1e-6) && !near(prev - S.m, d2, 1e-6) && S.m > 0) bad++; }
         if (S.p && phase === 'play') { const sp = C.maxSpeed(S.p), want = base*(M().ball.carrier === S.p ? SPRINT.mulBall[di] : SPRINT.mul[di]); if (sp > want*1.001 && !(S.p.boost > 0) && !M().surge) speedBad++; }
-        if (fading && S.m > prev + 1e-9) bad++;               // nothing refills while a burst eases out
+        if (fading && easing.some(p => p.sprint > 0) && S.m > prev + 1e-9) bad++;   // nothing refills while an ease-out is still running; a tackle this step can cancel it, and that step may refill
         if (!S.p && !prevP && !fading && phase === 'play' && prev < 1 && S.m - prev > STEP/SPRINT.refill[di] + 1e-6) bad++;
         if (!S.p && !prevP && !fading && S.m < prev - 1e-9) bad++;   // and nothing drains with nobody bursting
         prev = S.m; prevP = S.p;

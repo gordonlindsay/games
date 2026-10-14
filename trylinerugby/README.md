@@ -73,11 +73,15 @@ nations, a local Surrey club, or a team you make yourself.
 | | With the ball | Without it |
 |---|---|---|
 | Stick | Run. Flick sideways near a tackler to step him | Run |
-| Big button | Pass to the ringed teammate. Tilt to pick a side. Held in a tackle it reads Offload when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
+| Big button | Pass to the ringed teammate. A tap is a normal pass; hold past 0.18s and the ring turns gold for a long pass to the next man out (it throws itself at 0.6s). Tilt to pick a side. Held in a tackle it reads Offload on the press, when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
 | Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the defender nearest the ball |
 | Sprint | Hold for a burst of speed (x1.05 with the ball). The ring is the meter: it drains while you hold (and through the ease-out after you let go) and refills when you let go | Hold to run a man down (x1.20). A press moves the ring to the man best placed to chase if yours is down or over 4m further off. It is dim when a press would do nothing, and then it does nothing |
 
-Keyboard: arrows or WASD, J, K, L (Sprint), P to pause. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
+Keyboard: arrows or WASD, J, K, L (Sprint), P to pause. J tapped is a pass; J held is a long pass. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
+
+**Long pass.** Hold Pass. For the first 0.18s it is still the normal pass, to the white ring, and letting go throws that. Past 0.18s the ring turns gold on the next man out — the stick's side, or the side with more support if the stick is level — skipping the nearest teammate, within 32m and not forward. A faint ring marks the man it skips. The Pass button fills while it charges, and reads Long once a second man is there; at 0.6s it throws itself. With no second man it stays a normal pass. The ball loops higher as the pass gets longer, so it can sail over the skipped man's defender. It is a little less accurate and a little more likely to be knocked on, and it can be intercepted near the passer or the receiver, not under the top of the arc. The CPU sends one when its nearest receiver is crowded and the next man is in space. A press in the first 0.12s after a catch is kept and thrown as soon as that gate opens, to the man the ring was on. An offload is still the press itself: it does not wait out the long-pass hold, and a charge already under way is cancelled by the tackle.
+
+Checked with `bot.mjs`, 36 matches a difficulty at SEED 1 and again at SEED 2 (72 matches, 4-minute halves, duels live). Wins were 100% / 84.7% / 55.6% (Easy / Normal / Hard), against 99.0 / 87.8 / 52.0 in the measured table below. The scripted player still taps, so every long pass in that run was the CPU's: about 2.6 / 3.4 / 3.5 a match.
 
 ### Close-ups
 
@@ -368,7 +372,7 @@ a charger.
       nobody), KeyL; the carrier's sprint and drain, control moving the sprint, a duel zeroing it, the meter frozen
       in a scrum and a goal close-up, the hold let go at a close-up's open, its close and `resume()`; the ring moving
       to the best chaser;
-    - the CPU's meter on every level (floor, drain, refill, no refill during an ease-out, range, the same burst),
+    - the CPU's meter on every level (floor, drain, refill, no refill while an ease-out is still running — a tackle that cancels one may refill that step — range, the same burst),
       sparing on Easy, the policy's shape (rates rising by level, clean breaks only) and its gates staged with the
       odds forced to 1 (a man ahead in the lane, 4m of space, letting go inside 2.5m), and the staged 14m / 8m chase;
       staged breakaways (4m back is caught with Sprint, 8m is gone);
