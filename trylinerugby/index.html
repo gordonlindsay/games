@@ -2510,10 +2510,36 @@ function assignByY(T, arr, slots) {
   const a = arr.slice().sort((p,q) => p.y-q.y), s = slots.slice().sort((p,q) => p.y-q.y);
   a.forEach((p,i) => { const t = s[i] || s[s.length-1]; if (t) T.set(p, { x:t.x, y:t.y, s:maxSpeed(p) }); });
 }
-function assignMarks(T, D, pts, dA, fx, fy, lineX, mode) {
+/* A line break: the men still goal-side come up instead of holding the sweeper's depth.
+   Easy commits only when he is the last man, and slower, so a break near the line can still be finished.
+   Normal and Hard bring the last two. The angle is onto the inside shoulder, which turns the run toward touch. */
+const COVER = { last:[1, 2, 2], speed:[0.90, 0.98, 1], acc:[12, 15, 18], inside:[2.2, 2.8, 3.2], ahead:[0.6, 1.0, 1.4] };
+function commitPoint(p, carrier, lv, dA) {
+  const room = Math.min(carrier.y, 70 - carrier.y);
+  const drifting = Math.abs(carrier.y - 35) < 4;
+  const inside = drifting ? (Math.abs(carrier.vy) > 0.4 ? (carrier.vy > 0 ? -1 : 1) : (p.y >= carrier.y ? 1 : -1)) : (carrier.y < 35 ? 1 : -1);
+  const gap = dist(p, carrier);
+  const depth = (p.x - carrier.x) * dA;                         // goal-side of the carrier is positive
+  const wide = room < 6 ? 0.35 : clamp(room / 14, 0.45, 1);     // already near touch: shut the short side rather than overshoot it
+  const shade = COVER.inside[lv] * wide * clamp((gap - 1.6) / 8, 0, 1);   // the angle is for the run in; the last metres are at the man
+  // Close, or he has stepped level: go at the body. A point ahead of the carrier is how he runs past the tackle.
+  if (gap < 4.2 || depth < 2.2) return { x:clamp(carrier.x, 1, 119), y:clamp(carrier.y + inside * shade, 2, 68) };
+  // Still in front: the earliest spot on the carrier's line he can reach, a touch goal-side so he arrives in the tackle and not a stride late.
+  const sp = Math.max(0.5, maxSpeed(p) * COVER.speed[lv]);
+  let t = gap / sp;
+  for (let i = 0; i < 5; i++) {
+    const tx = carrier.x + carrier.vx * t + dA * COVER.ahead[lv], ty = carrier.y + carrier.vy * t + inside * shade;
+    t = clamp(hyp(tx - p.x, ty - p.y) / sp, 0.08, 3.2);
+  }
+  return {
+    x: clamp(carrier.x + carrier.vx * t + dA * COVER.ahead[lv], 1, 119),
+    y: clamp(carrier.y + carrier.vy * t + inside * shade, 2, 68),
+  };
+}
+function assignMarks(T, D, pts, dA, fx, fy, lineX, mode, sweep) {
   if (!D.length) return;
   let rest = D.slice();
-  if (rest.length >= 4) {
+  if (sweep !== false && rest.length >= 4) {
     const own = dA > 0 ? 110 : 10;
     let fbx = fx + dA*(mode === 'kick' ? 10 : 18);
     fbx = dA > 0 ? Math.min(fbx, own+3) : Math.max(fbx, own-3);
@@ -2576,16 +2602,46 @@ function computeTargets() {
   const depth = mode === 'set' ? ((M.set.kind === 'scrum' || M.set.kind === 'lineout') ? 5 : 3) : 2.6;
   const slots = supportSlots(fx, fy, dA, A.length, depth);
   assignByY(T, A, slots);
+  let sweep = true;
   if (mode === 'held') {
-    const s = D.filter(p => !(p.offside > 0)).sort((p,q) => dist(p,carrier) - dist(q,carrier));   // a retiring tackler is never the chaser
-    const ch = [];
-    if (s[0]) ch.push(s[0]);
-    for (const q of s.slice(1, 3)) if (dist(q, carrier) < 5.5) ch.push(q);
-    for (const p of ch) {
-      const lead = clamp(dist(p,carrier)/9, 0, 0.7);
+    const live = D.filter(p => !(p.offside > 0));                  // a retiring tackler is never the chaser, and never the man who comes up
+    const depthOf = p => (p.x - carrier.x) * dA;
+    const lv = M.di === 0 || M.di === 2 ? M.di : 1;
+    const quota = COVER.last[lv];
+    const ahead = live.filter(p => depthOf(p) > 0.8);               // still goal-side: a formed line, or the last men of a break
+    const stepped = live.filter(p => { const z = depthOf(p); return z > -4 && z <= 0.8; }).sort((a, b) => depthOf(b) - depthOf(a));
+    let committers = [];
+    if (ahead.length > 0 && ahead.length <= quota) {               // through the line: those men come up, and one who has just drawn level stays on the commit
+      committers = ahead.slice();
+      for (const p of stepped) { if (committers.length >= quota) break; committers.push(p); }
+    } else if (ahead.length === 0 && stepped.length > 0 && stepped.length <= quota) committers = stepped.slice();
+    const taken = new Set();
+    const chase = p => {
+      const lead = clamp(dist(p, carrier) / 9, 0, 0.7);
       T.set(p, { x:carrier.x + carrier.vx*lead, y:carrier.y + carrier.vy*lead, s:maxSpeed(p), a:15, pursue:true });
+      taken.add(p);
+    };
+    if (committers.length) {
+      sweep = false;                                                // nobody is posted to the 18m station once the line is broken
+      const commitSet = new Set(committers);
+      const behind = live.filter(p => !commitSet.has(p)).sort((a, b) => dist(a, carrier) - dist(b, carrier));
+      const ch = [];
+      if (behind[0]) ch.push(behind[0]);
+      for (const q of behind.slice(1, 3)) if (dist(q, carrier) < 5.5) ch.push(q);
+      for (const p of ch) chase(p);
+      for (const p of committers) {
+        const to = commitPoint(p, carrier, lv, dA);
+        T.set(p, { x:to.x, y:to.y, s:maxSpeed(p)*COVER.speed[lv], a:COVER.acc[lv], pursue:true });
+        taken.add(p);
+      }
+    } else {
+      const s = live.slice().sort((a, b) => dist(a, carrier) - dist(b, carrier));
+      const ch = [];
+      if (s[0]) ch.push(s[0]);
+      for (const q of s.slice(1, 3)) if (dist(q, carrier) < 5.5) ch.push(q);
+      for (const p of ch) chase(p);
     }
-    D = D.filter(p => !ch.includes(p));
+    D = D.filter(p => !taken.has(p));
   } else if (mode === 'pass') {
     const c = nearestOf(D, fx, fy);
     if (c) { T.set(c, { x:fx + dA*1.2, y:fy, s:maxSpeed(c), a:15, pursue:true }); D = D.filter(p => p !== c); }
@@ -2594,7 +2650,7 @@ function computeTargets() {
     ? P.filter(p => p.team === att && p.down <= 0 && p !== carrier).map(p => ({ x:p.x, y:p.y }))
     : slots;
   const lineX = mode === 'set' ? fx + dA*(SETGAP[M.set.kind] || 5) : null;
-  assignMarks(T, D, pts, dA, fx, fy, lineX, mode);
+  assignMarks(T, D, pts, dA, fx, fy, lineX, mode, sweep);
   return T;
 }
 
@@ -4542,7 +4598,7 @@ window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, fo
   debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings, endSprint, collide, view:(W, H) => { V.W = W; V.H = H; V.dpr = 1; }, drawCut, goalKick, openPenalty, resume, interactive, setRM:v => { RM = !!v; },
     render, updateHud, setMode:v => { mode = v; }, keyDown, keyUp, frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; } },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
-    maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, drawPos, tag, isHuman, ctrlOf, levelOf,
+    maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
     LONG, pickReceiver, pickLong, passAim, shownPass },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },

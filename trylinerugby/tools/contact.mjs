@@ -597,7 +597,7 @@ begin('cpu sprint');
     ok(chaseBad === 0, `level ${di}: a CPU chaser sprints only from ${SPRINT.cpu.min}–${SPRINT.cpu.max}m (${chaseBad} outside, ${chaseOk} in)`);
     ok(speedBad === 0, `level ${di}: a CPU sprinter runs at the same multiplier as yours (${speedBad} steps over)`);
   }
-  ok(perLevel[0] > 0 && perLevel[0] < perLevel[2], `the CPU sprints on every level, sparingly on Easy and most on Hard (${perLevel.map(v => v.toFixed(1)).join(' / ')} a match)`);
+  ok(perLevel.every(v => v > 0), `the CPU sprints on every level (${perLevel.map(v => v.toFixed(1)).join(' / ')} a match)`);   // how many a match follows how often a break stays clean, which the fullback coming up changes; the rates themselves are checked below
   // the policy's shape: every level sprints, more with each level, and only for a clean break (nobody left ahead in the lane), never past "all but the last man"
   { const P = SPRINT.cpu;
     ok(P.chase[0] > 0 && P.chase[0] <= P.chase[1] && P.chase[1] < P.chase[2] && P.carry[0] <= P.carry[1] && P.carry[1] < P.carry[2] && P.carry[2] > 0, `the CPU's rates rise with the level: chase ${P.chase.join(' / ')}, carry ${P.carry.join(' / ')}`);
@@ -957,6 +957,62 @@ begin('render');
   ok(bindsDrawn > 20 && slides > 20 && tagsDrawn > 0 && sprintsDrawn > 20, `the smoke test saw binds (${bindsDrawn}), slides (${slides}), tags (${tagsDrawn}) and sprints (${sprintsDrawn})`);
 }
 done('23 render');
+
+// 24. a line break: the last defender comes up onto the inside shoulder; a line that is still set keeps its sweeper; the chase from behind stays a chase
+begin('fullback');
+{
+  const limitFor = [2.8, 2.2, 2.2];
+  for (const diff of [0, 1, 2]) {
+    fresh(diff, { duels:'off' });
+    const { c, opp } = stage({ cx:70, cy:20, cvx:7.5, cvy:0, ctrl:'c' });
+    const fb = opp[0];
+    fb.x = 86; fb.y = 32;                                          // the last man, goal-side and on the inside; everyone else is behind
+    let engaged = false, inside = 0, seen = 0;
+    const name = ['Easy', 'Normal', 'Hard'][diff];
+    for (let i = 0; i < Math.round(limitFor[diff] / STEP); i++) {
+      inp.jx = 1; inp.jy = 0;
+      T.update(STEP);
+      const gap = dist(fb, c);
+      const ct = M().contact;
+      const attempted = fb.tcd > 0 || fb.down > 0 || (ct && (ct.q === fb || ct.q2 === fb));
+      if (attempted) { engaged = true; break; }
+      if (M().phase !== 'play' || M().ball.carrier !== c) break;   // a try or a turnover is not the fullback arriving
+      if (gap > 3) { seen++; if (fb.y > c.y + 0.5) inside++; }
+    }
+    ok(engaged, `${name}: the fullback commits to the tackle within ${limitFor[diff]}s (at ${dist(fb, c).toFixed(1)}m)`);
+    ok(seen > 8 && inside > seen * 0.6, `${name}: he comes from the inside, turning the run toward touch (${inside}/${seen})`);
+  }
+  // two men still in front on Easy: the near one chases, the sweeper holds his depth
+  fresh(0, { duels:'off' });
+  const easy = stage({ cx:70, cy:22, cvx:6, cvy:0, ctrl:'c' });
+  easy.opp[0].x = 80; easy.opp[0].y = 24;
+  easy.opp[1].x = 92; easy.opp[1].y = 36;
+  const eT = C.computeTargets();
+  const near = eT.get(easy.opp[0]), deep = eT.get(easy.opp[1]);
+  ok(near && near.pursue, 'Easy, with two men still in front: the near one comes up');
+  ok(deep && !deep.pursue && deep.x > easy.c.x + 14, `Easy keeps a sweeper behind that man (${deep && deep.x.toFixed(1)})`);
+  // Normal, the same picture: both of the last two commit, and a man behind still chases
+  fresh(1, { duels:'off' });
+  const mid = stage({ cx:70, cy:22, cvx:7, cvy:0, ctrl:'c' });
+  const a = mid.opp[0], b = mid.opp[1], ch = mid.opp[2];
+  a.x = 84; a.y = 30; b.x = 96; b.y = 40; ch.x = 66; ch.y = 22;
+  const mT = C.computeTargets();
+  ok(mT.get(a).pursue && mT.get(a).x < a.x - 3, `Normal brings the nearer last man up (${mT.get(a).x.toFixed(1)} from ${a.x})`);
+  ok(mT.get(b).pursue && mT.get(b).x < b.x - 3, `and the deeper one, rather than drifting on (${mT.get(b).x.toFixed(1)} from ${b.x})`);
+  ok(mT.get(a).y > mid.c.y && mT.get(b).y > mid.c.y, 'both aim on his inside shoulder');
+  ok(mT.get(ch).pursue && Math.abs(mT.get(ch).y - mid.c.y) < 2, 'the covering man behind still chases the carrier');
+  a.offside = 1.2;
+  const rT = C.computeTargets();
+  ok(!rT.get(a).pursue, 'a retiring last man does not come up');
+  ok(rT.get(b).pursue, 'the man left in front does');
+  // a set line: seven in front, one of them holds the sweeper station and does not pursue
+  fresh(1, { duels:'off' });
+  const line = stage({ cx:55, cy:35, cvx:6, cvy:0, ctrl:'c' });
+  line.opp.forEach((p, i) => { p.x = 64; p.y = 6 + i * 9; });
+  const held = line.opp.map(p => C.computeTargets().get(p)).filter(t => t && !t.pursue && t.x > line.c.x + 14);
+  ok(held.length === 1, `with the line set, one sweeper holds depth and the rest do not (${held.length})`);
+}
+done('24 fullback');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

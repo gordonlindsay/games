@@ -75,6 +75,14 @@ nations, a local Surrey club, or a team you make yourself.
   burst, not a runaway. The button is dim exactly when a press would do nothing, and a press on a dim button does
   nothing, not even a switch. The CPU runs the same meter and the same burst on every level, choosing its moments by
   level: only for a runner who is clean through.
+- **Line break** (2026-10-14): when you are through the defensive line, the last defender comes up onto your inside
+  shoulder and tries the tackle, turning the run toward the near touch, instead of holding his depth. Easy brings
+  only that last man, and slower, so a step still beats him. Normal and Hard bring the last two. A line that is
+  still set keeps its fullback deep, and the men you have already beaten keep chasing.
+  Checked with `bot.mjs`, 12 matches a difficulty at SEED 1, 4-minute halves, duels live, against the same run
+  before the change. Tries (you–CPU) went 9.3–0.3 → 5.6–0.3 on Easy (still 12 wins from 12), 5.8–1.3 → 3.3–0.6
+  on Normal (10 wins → 9) and 1.8–2.3 → 2.1–2.3 on Hard (4 wins → 6). Get Past fires more often, because the
+  last man now arrives in that window.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
@@ -354,7 +362,7 @@ a charger.
     bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
     never presses Pass in a tackle; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
     `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
-  - **`node tools/contact.mjs`:** 255 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
+  - **`node tools/contact.mjs`:** 270 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
     and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
     a scrum). It checks:
     - a sprint that ends in a fall or a bind charges nothing more to the meter, and the push parts standing men 0.4m a
@@ -390,7 +398,11 @@ a charger.
       Tripped, fends; a census of 60 bot matches (run-overs, ruck ball hit at once, turnover ball hit at once, the
       last tackler, no steals, no new penalty words, the tag list and count);
     - the words, the three-button layout at 667x375, 932x430 and 932x430 with insets, and a render smoke test
-      (nothing non-finite, no drawn man jumping over 0.3m a frame, drawing draws no random number).
+      (nothing non-finite, no drawn man jumping over 0.3m a frame, drawing draws no random number);
+    - a staged line break: the fullback commits to the tackle within 2.8 / 2.2 / 2.2s (Easy / Normal / Hard), coming
+      from the inside shoulder; Easy with two men still in front chases with the near one and keeps a sweeper;
+      Normal commits both of the last two while a man behind chases; a retiring last man does not come up; a set
+      line of seven keeps exactly one sweeper.
   - **`node tools/goalkicks.mjs [--rates N]`:** about 640 asserts (642 at SEED 11; one line counts its retries). It checks:
     - the closed-form flight against a 1ms integration, the judge's fixtures, and the mirror for the CPU's end;
     - that band-centre strikes score, the band is honest at its edges, over hooks left and under fades right;
@@ -564,5 +576,13 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   the crossbar while the ball is up at the posts (`verdictLow`) and up top when it has dropped short.
 - **Chasers:** defenders who are chasing must pursue at full speed (`pursue: true`). With arrive-style steering they
   slow as they close and can never catch a runner. That bug once made a scripted player score 15+ tries a match.
+- **Line break:** `COVER` (by level: how many last men, their speed and acceleration, the inside shade, a small
+  goal-side bias) and `commitPoint`. A break is at most `COVER.last` defenders still goal-side of the carrier
+  (1 on Easy, 2 on Normal and Hard). Those men pursue an intercept on his inside shoulder and, once they are close
+  or level, the man himself, so the path crosses the 1.5m tackle. A man who has drawn level, within 4m behind,
+  stays on that commit: flipping him onto the chase lead runs him past the tackle. `assignMarks` posts no 18m
+  sweeper during a break. Men behind still chase with `pursue`. A formed line keeps one sweeper 18m deeper at
+  0.85 speed, not pursuing. Easy's single last man and lower speed leave the break beatable. Chase-sprint counts
+  per match move with how often a break stays clean; the sprint rates themselves are unchanged.
 - **Balance levers:** bursts are the lever for duel balance. Shrinking duel windows barely moves results, because a
   mistime falls back to the open game. If windows are ever narrowed, update `INSTANT` to match.
