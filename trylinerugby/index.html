@@ -224,6 +224,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 #knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px;border-radius:50%;background:rgba(241,238,228,.88);box-shadow:0 2px 10px rgba(0,0,0,.45)}
 .act{position:absolute;pointer-events:auto;touch-action:none;display:grid;place-items:center;border-radius:50%;border:2px solid rgba(241,238,228,.55);background:rgba(8,14,10,.58);color:var(--chalk);font:900 18px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:transform .06s}
 .act.a{width:88px;height:88px;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 26px);border-color:var(--flood);background:var(--flood);color:var(--flood-ink)}
+.act.a.hold{background:radial-gradient(closest-side,var(--flood) calc(100% - 8px),transparent calc(100% - 7px)),conic-gradient(var(--flood-ink) calc(var(--p,0)*1turn),rgba(28,21,0,.28) 0)}
 .act.b{width:68px;height:68px;right:calc(max(20px,env(safe-area-inset-right,0px)) + 104px);bottom:calc(env(safe-area-inset-bottom,0px) + 70px);background:conic-gradient(var(--flood) calc(var(--c,0)*1turn),rgba(8,14,10,.58) 0)}
 /* Sprint: the third button of the fan round A, mirroring B across A's diagonal. The ring is the meter: it drains while held and refills when let go */
 .act.c{width:68px;height:68px;right:calc(max(20px,env(safe-area-inset-right,0px)) + 44px);bottom:calc(env(safe-area-inset-bottom,0px) + 130px);
@@ -345,7 +346,7 @@ tr.me td{background:rgba(255,207,61,.09)}
     <div class="head"><div><p class="eyebrow">Controls</p><h2 class="title">How to Play</h2></div></div>
     <dl class="help">
       <dt>Stick</dt><dd>Touch anywhere on the left half and drag. Flick it sideways near a tackler to <b>step</b> him.</dd>
-      <dt>Pass</dt><dd>Goes to the teammate in the white ring. Tilt the stick up or down to pick a side. Passes can't go forward.</dd>
+      <dt>Pass</dt><dd>A tap goes to the teammate in the white ring. Tilt the stick up or down to pick a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest man and floats to the next one out.</dd>
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
       <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
       <dt>Drop Goal</dt><dd>In range the small button reads <b>Drop Goal</b>. Hold it, steer, let go in the gold before they reach you.</dd>
@@ -356,7 +357,7 @@ tr.me td{background:rgba(255,207,61,.09)}
       <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner.</dd>
       <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast with the stick held forward. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
-      <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
+      <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
     </dl>
     <div class="scoring">
       <div><b>5</b><span>Try</span></div><div><b>2</b><span>Conversion</span></div><div><b>3</b><span>Penalty</span></div><div><b>3</b><span>Drop Goal</span></div>
@@ -558,6 +559,7 @@ function newMatch(u, c, opts) {
     di:opts.diff, duels:(opts.auto || opts.demo) ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0, ctrlT:0, ctrlPrev:null,
     duelLog:{ last:-99, lastKind:null, half:[0, 0], bonus:[false, false], fails:0 },
     stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0, duels:0, duelsWon:0, duelsPerfect:0, gk:{ att:[0, 0], made:[0, 0] }, dg:{ att:[0, 0], made:[0, 0], charged:[0, 0] } },
+    pass:null,                                         // a Pass press in hand: { mode:'tap'|'hold', to, t } so a hold can charge and an early tap is not dropped
     dropOn:[false, false], dropArmed:[false, false],   // the drop-goal offer, per side: its hysteresis, and what the label promised at the B press
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the last offer judged, and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
@@ -693,9 +695,10 @@ function setCarrier(p) {
   }
 }
 function catchBall(p, kind) {
-  const n = M.nat[p.team];
+  const n = M.nat[p.team], f = M.ball.f;
   let k = 0.015 + (5-n.handling)*0.01 + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? 0.2 : 0);
   if (pressure(p) < 1.8) k += 0.04;
+  if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
   if (rnd() < k) { knockOn(p); return; }
   setCarrier(p);
   p.fromKick = kind === 'kick';
@@ -722,6 +725,13 @@ function pickUp(p) {
 }
 
 /* ---------- passing and kicking ---------- */
+const LONG = { arm:0.18, auto:0.6, gate:0.12, range:32, knock:0.03 };   // hold past arm to skip a man; the ball leaves on release, or on its own at auto
+function passOk(c, q, maxR) {
+  if (!q || q === c || q.team !== c.team || q.down > 0 || q.bind) return false;
+  if ((q.x - c.x)*dirOf(c.team) > 0.5) return false;
+  const dd = dist(c, q);
+  return dd >= 1.5 && dd <= maxR;
+}
 function pickReceiver(c, pref, maxR = 22) {                 // maxR: an offload reaches only CONTACT.off.range
   const d = dirOf(c.team); let best = null, bs = 1e9;
   for (const q of M.players) {
@@ -735,6 +745,42 @@ function pickReceiver(c, pref, maxR = 22) {                 // maxR: an offload 
     if (s < bs) { bs = s; best = q; }
   }
   return best;
+}
+function pickLong(c, pref, skip) {                          // the next man out, on the stick's side or the side with more support, within LONG.range and not forward
+  if (!skip) return null;                                  // with nobody to skip, a hold stays a normal pass
+  const all = [];
+  for (const q of M.players) {
+    if (!passOk(c, q, LONG.range) || q === skip) continue;
+    const dy = q.y - c.y, dd = dist(c, q);
+    if (dd < dist(c, skip) + 0.5) continue;                // out means further than the man this pass skips
+    all.push({ q, dy, dd });
+  }
+  if (!all.length) return null;
+  let side = pref < -0.3 ? -1 : pref > 0.3 ? 1 : 0;
+  if (!side) {
+    let neg = 0, pos = 0;
+    for (const q of M.players) {
+      if (!passOk(c, q, LONG.range)) continue;
+      const dy = q.y - c.y;
+      if (dy < -0.4) neg++; else if (dy > 0.4) pos++;
+    }
+    if (pos > neg) side = 1; else if (neg > pos) side = -1;
+  }
+  let pool = all;
+  if (side) {
+    pool = all.filter(o => side > 0 ? o.dy > 0.3 : o.dy < -0.3);
+    if (!pool.length) return null;                         // nobody further on that side: the press stays a normal pass
+  }
+  pool.sort((a, b) => a.dd - b.dd);
+  return pool[0].q;
+}
+function passAim(c, pref) { const near = pickReceiver(c, pref); return { near, far:pickLong(c, pref, near) }; }
+function shownPass(c) {                                   // the ring and the pass read this together, so the ball goes to the man the ring is on
+  const pref = input.world().y, aim = passAim(c, pref), p = M.pass;
+  const charge = p && p.mode === 'hold' ? Math.min(1, p.t/LONG.auto) : 0;
+  if (p && p.mode === 'tap') return { to:passOk(c, p.to, 22) ? p.to : aim.near, skip:null, gold:false, charge:0 };
+  if (p && p.mode === 'hold' && p.t >= LONG.arm && aim.far) return { to:aim.far, skip:aim.near, gold:true, charge };
+  return { to:aim.near, skip:null, gold:false, charge };   // a short hold still tracks the white ring
 }
 function bestReceiver(p) {
   const d = dirOf(p.team); let best = null, bs = -1e9;
@@ -750,18 +796,21 @@ function bestReceiver(p) {
 function doPass(from, to, o) {
   o = o || {};
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
-  const spd = 15 + n.handling*1.1;
+  const spd = (15 + n.handling*1.1) * (o.long ? 0.88 : 1);   // a long pass hangs a little, so the loop reads
   let tx = to.x, ty = to.y, T = 0.2;
   for (let i = 0; i < 3; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + to.vx*T; ty = to.y + to.vy*T; }
   if ((tx-from.x)*d > 0) tx = from.x;
-  if (!o.sure) { const err = (5-n.handling)*0.08; tx += gauss()*err; ty += gauss()*err; }
+  if (!o.sure) { const err = (5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0); tx += gauss()*err; ty += gauss()*err; }
   else ty = clamp(ty, 3, 67);   // a won Key Pass is never caught in touch
   T = hyp(tx-b.x, ty-b.y)/spd + 0.06;
+  const dist = hyp(tx-b.x, ty-b.y);
+  const H = o.long ? Math.min(6.4, 1.5 + dist*0.11) : 0.5;   // higher with the distance, so it sails over the skipped man's defender
   b.state = 'air'; b.carrier = null; b.last = from.team;
-  b.f = { kind:'pass', team:from.team, x0:b.x, y0:b.y, x1:tx, y1:ty, t:0, T, H:0.5, z0:1.1, z1:1.1, rolled:new Set(o.skip || []), onside:null, target:to,
-    sure:!!o.sure, boost:o.boost || null };
+  b.f = { kind:'pass', team:from.team, x0:b.x, y0:b.y, x1:tx, y1:ty, t:0, T, H, z0:1.1, z1:1.1, rolled:new Set(o.skip || []), onside:null, target:to,
+    sure:!!o.sure, boost:o.boost || null, long:!!o.long };
   from.hold = 0; from.quick = false;
   M.stats.passes++;
+  if (o.long) { st('long'); st('long' + from.team); }
   if (from.team === 0 && !M.auto) M.ctrl = to;
   sfx('pass');
 }
@@ -1734,7 +1783,7 @@ function startCut(c) {
   c.t = 0; c.after = null; c.hold = 0; c.exit = -1;
   M.cut = c; M.phase = 'cut';
   clearBanner();
-  M.charging = false; M.charge = 0;
+  M.charging = false; M.charge = 0; M.pass = null;
   input.aPressed = input.bPressed = input.cPressed = false; input.cDown = false;   // a Sprint held into a close-up must be pressed again after it
   lastBtn = '';
 }
@@ -1975,12 +2024,12 @@ function blockSpec(from, to) {
   return g ? { kind:'block', U:q, O:from, R:to, P0, P1, L, how:g } : null;
 }
 // the CPU's pressure pass: a Block duel may take it over
-function cpuPass(p, to) {
-  if (M.duels !== 'off' && p.team === 1) {
+function cpuPass(p, to, o) {
+  if (M.duels !== 'off' && p.team === 1 && !(o && o.long)) {   // a floater is not the flat pass a Block duel reads
     const s = blockSpec(p, to);
     if (s) { M.duelPending = s; return; }
   }
-  doPass(p, to);
+  doPass(p, to, o);
 }
 function startPendingDuel() {
   const s = M.duelPending; M.duelPending = null;
@@ -2277,6 +2326,7 @@ function updateBallAir(dt) {
   if (f.kind === 'pass') {
     if (!f.sure) for (const q of M.players) {
       if (q.team === f.team || q.down > 0 || f.rolled.has(q)) continue;
+      if (f.long && u > 0.18 && u < 0.82) continue;          // the loop is over the men in between; the contest is at the passer and the receiver
       if (hyp(q.x-b.x, q.y-b.y) < 1.1 && b.z < 2.3) {
         f.rolled.add(q);
         const pI = (!M.auto && q === M.ctrl) ? 0.4 : (q.team === 1 ? M.diff.cpuIntercept : 0.18);
@@ -2494,7 +2544,12 @@ function aiCarrier(p, dt) {
   if (fromOwn < 45 && near > 5 && M.phaseCount >= 3 && rnd() < 0.03) { aiKick(p, 'territory'); return; }
   if (near < 2.6 || (p.hold > 2.4 && rnd() < 0.15)) {
     const r = bestReceiver(p);
-    if (r && r.space > near + 2 && rnd() < 0.6) cpuPass(p, r.q);
+    if (r && r.space > near + 2 && rnd() < 0.6) {
+      const nearMan = pickReceiver(p, 0);                     // the man a flat pass would find; a long one skips him when he is crowded and the next man is in space
+      const nxt = nearMan && pressure(nearMan) < 2.2 ? pickLong(p, 0, nearMan) : null;
+      if (nxt && pressure(nxt) > pressure(nearMan) + 2) cpuPass(p, nxt, { long:true });
+      else cpuPass(p, r.q);
+    }
   }
 }
 
@@ -2515,12 +2570,34 @@ function userMove(p, dt) {
     if (p.turn > 1.4 && b.carrier === p && p.side <= -0.9 && pressure(p) < 3.5) { M.stats.steps = (M.stats.steps||0) + 1; p.side = 0.35; p.turn = 0; p.vx += j.x*2.5; p.vy += j.y*2.5; }
   } else p.turn *= Math.exp(-dt/0.16);
 }
-function userPass() {
-  const c = M.ball.carrier;
-  if (c.hold < 0.12) return;
-  const r = pickReceiver(c, input.world().y);
-  if (!r) { say('No Support', 'small'); return; }
-  doPass(c, r);
+function throwUserPass(c, shown) {
+  M.pass = null;
+  if (!shown || !shown.to) { say('No Support', 'small'); return; }
+  doPass(c, shown.to, { long:!!shown.gold });
+}
+function startUserPass(c) {                                // a tap (no hold) is today's pass; a finger still down starts the charge. Inside the catch gate the press is kept, not dropped.
+  const to = pickReceiver(c, input.world().y);
+  if (!input.aDown) {
+    M.pass = { mode:'tap', to, t:0 };
+    if (c.hold >= LONG.gate) throwUserPass(c, shownPass(c));
+    return;
+  }
+  M.pass = { mode:'hold', to, t:0 };
+}
+function tickUserPass(dt) {
+  const p = M.pass;
+  if (!p) return;
+  const b = M.ball, c = M.ctrl;
+  const carrying = c && M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind;
+  if (!carrying || input.aCancel) { M.pass = null; return; }
+  if (p.mode === 'tap') { if (c.hold >= LONG.gate) throwUserPass(c, shownPass(c)); return; }
+  p.t += dt;
+  if (!input.aDown) {
+    if (c.hold < LONG.gate) { p.to = shownPass(c).to; p.mode = 'tap'; return; }   // let go inside the gate: it still goes, to the man the ring showed
+    throwUserPass(c, shownPass(c));
+    return;
+  }
+  if (p.t >= LONG.auto && c.hold >= LONG.gate) throwUserPass(c, shownPass(c));
 }
 function userKick(power) {
   const c = M.ctrl;
@@ -2552,11 +2629,13 @@ function handleUser(dt) {
   const b = M.ball, c = M.ctrl;
   if (input.aPressed) {
     input.aPressed = false;
-    if (M.phase === 'play' && c) {
-      if (b.state === 'held' && b.carrier === c) { if (c.bind) offload(c.bind, true); else userPass(); }   // held in a tackle, Pass is the offload
-      else if (!ourBall()) userTackle(c.team);
+    if (input.aCancel) M.pass = null;
+    else if (M.phase === 'play' && c) {
+      if (b.state === 'held' && b.carrier === c) { if (c.bind) { M.pass = null; offload(c.bind, true); } else startUserPass(c); }   // held in a tackle, Pass is the offload, on the press
+      else if (!ourBall()) { M.pass = null; userTackle(c.team); }
     }
   }
+  tickUserPass(dt);
   if (input.bPressed) {
     input.bPressed = false;
     if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { M.charging = true; M.charge = 0; M.holdN = 0; M.dropArmed[c.team] = dropPress(c); }   // what the label promised at the press
@@ -2876,7 +2955,9 @@ function drawBall(r) {
   const b = M.ball, s = V.s;
   const [gx, gy] = toS(b.x, b.y);
   const rx = Math.max(4.4, 0.4*s);
-  ctx.fillStyle = 'rgba(0,0,0,.32)'; ellipse(gx, gy, rx*0.9, rx*0.55); ctx.fill();
+  const scG = 1/(1 + Math.max(0, b.z)*0.16);             // the shadow shrinks as the ball climbs, so a long pass reads as a loop
+  ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.globalAlpha = 0.45 + 0.55*scG;
+  ellipse(gx, gy, rx*0.9*scG, rx*0.55*scG); ctx.fill(); ctx.globalAlpha = 1;
   const lift = b.z*s*0.55, sc = 1 + Math.min(b.z, 20)*0.035;
   let ang = 0;
   if (b.state === 'held') { const [fx, fy] = svec(b.carrier.fx, b.carrier.fy); ang = Math.atan2(fy, fx); }
@@ -3704,14 +3785,16 @@ function render(dt) {
   }
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
-  // pass target
+  // pass target. Held in a tackle, the ring sits on the man an Offload would go to. While a long pass charges it turns gold, with a faint ring on the man it skips.
   if (ctrl && M.phase === 'play' && b.state === 'held' && b.carrier === ctrl) {
-    const rc = ctrl.bind ? offloadTarget(ctrl.bind) : pickReceiver(ctrl, input.world().y);   // held in a tackle, the ring sits on the man an Offload would go to
-    if (rc) {
-      const [qx, qy] = toS(rc.x, rc.y);
-      ctx.strokeStyle = 'rgba(244,241,232,.95)'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
-      ctx.beginPath(); ctx.arc(qx, qy, r*1.6, 0, 7); ctx.stroke(); ctx.setLineDash([]);
-    }
+    const shown = ctrl.bind ? { to:offloadTarget(ctrl.bind), skip:null, gold:false } : shownPass(ctrl);
+    const ringAt = (q, style, width, rad, dash) => {
+      const [qx, qy] = toS(q.x, q.y);
+      ctx.strokeStyle = style; ctx.lineWidth = width; ctx.setLineDash(dash);
+      ctx.beginPath(); ctx.arc(qx, qy, rad, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    };
+    if (shown.skip && shown.skip !== shown.to) ringAt(shown.skip, 'rgba(244,241,232,.38)', 1.5, r*1.2, [3, 4]);
+    if (shown.to) ringAt(shown.to, shown.gold ? C.ctrl : 'rgba(244,241,232,.95)', shown.gold ? 2.5 : 2, r*1.6, [4, 3]);
   }
   // kick aim
   if (M.charging && ctrl && b.carrier === ctrl) {
@@ -3989,15 +4072,21 @@ function updateHud() {
   const cut = M.phase === 'cut' && M.cut;
   const goal = cut && M.cut.kind === 'goal';
   const ctrl = M.ctrl, ht = ctrl ? ctrl.team : 0, k = M.contact, held = !!(k && ctrl && k.c === ctrl), play = M.phase === 'play';   // held: your carrier is in a tackle
+  const b = M.ball;
+  let passCharge = 0, passLong = false;
+  if (M.pass && M.pass.mode === 'hold' && play && ctrl && b.state === 'held' && b.carrier === ctrl && !ctrl.bind) {
+    passCharge = Math.min(1, M.pass.t / LONG.auto);
+    passLong = M.pass.t >= LONG.arm && !!passAim(ctrl, input.world().y).far;
+  }
   let la, lb, cueA, cueB, aAct, bAct;
   const gs = goal ? M.cut.g.stage : '';
   if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
-  else if (ours) { la = held && canOffload(k) ? 'Offload' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && (!held || cueA); bAct = play && !held; }   // held in a tackle, Pass is dim unless an offload is on
+  else if (ours) { la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && (!held || cueA); bAct = play && !held; }   // held in a tackle, Pass is dim unless an offload is on
   else { la = 'Tackle'; lb = 'Switch'; cueA = cueB = false; aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now
   const S = M.spr[ht], sprOn = !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
-  const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue;
+  const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue + (passLong ? 'L' : '');
   if (bk !== lastBtn) {
     lastBtn = bk;
     $('la').textContent = la || '';
@@ -4016,6 +4105,8 @@ function updateHud() {
   }
   $('btnB').style.setProperty('--c', M.charging ? M.charge.toFixed(3) : goal && gs === 'hold' ? M.cut.g.m.toFixed(3) : 0);   // the ring shows the charge, or a drop's meter
   $('btnC').style.setProperty('--s', S.m.toFixed(3));        // the Sprint ring is the meter
+  $('btnA').classList.toggle('hold', passCharge > 0);
+  $('btnA').style.setProperty('--p', passCharge.toFixed(3)); // the Pass ring fills while a long pass charges
 }
 
 /* penalty choice: the card's kick is built now, so the card and the kick share one wind */
@@ -4078,7 +4169,7 @@ function pause() {
 function resume() {
   if (!M) return;
   M.paused = false; $('m-pause').hidden = true; input.keys.clear();
-  input.aPressed = input.bPressed = input.cPressed = false; input.cDown = false; input.flick = 0;
+  input.aPressed = input.bPressed = input.cPressed = false; input.cDown = false; input.flick = 0; M.pass = null;
   const c = M.cut;
   if (c && c.duel && !c.after) duelResume(c);
   else if (c && c.kind === 'goal' && !c.after) goalResume(c);
@@ -4355,7 +4446,8 @@ window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, fo
   debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings, endSprint, collide, view:(W, H) => { V.W = W; V.H = H; V.dpr = 1; }, drawCut, goalKick, openPenalty, resume, interactive, setRM:v => { RM = !!v; },
     render, updateHud, setMode:v => { mode = v; }, keyDown, keyUp, frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; } },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
-    maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, drawPos, tag, isHuman, ctrlOf, levelOf },
+    maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, drawPos, tag, isHuman, ctrlOf, levelOf,
+    LONG, pickReceiver, pickLong, passAim, shownPass },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,

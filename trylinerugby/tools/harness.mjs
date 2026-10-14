@@ -150,7 +150,7 @@ export function bot() {
     if (held) {                                                 // in a tackle: the offload, on its cue, or nothing
       if (k.botAt == null) k.botAt = T.contact.canOffload(k) && Math.random() < OFFLOAD_P ? 0.08 + Math.random() * 0.12 : -1;
       if (k.botAt > 0 && k.t >= k.botAt) { inp.aPressed = true; k.botAt = -1; }
-    } else if (near < 2.6 && c.hold > 0.4 && Math.random() < 0.12) inp.aPressed = true;
+    } else if (near < 2.6 && c.hold > 0.4 && Math.random() < 0.12) inp.aPressed = true;   // a tap: aPressed without aDown. Holding aDown past 0.18s would charge a long pass
     if (HABITS && !NOSPRINT && !NOSPRINTBALL && !held) hold = S.p === c ? near > 2.5 : (near > 6 && S.m > 0.5);
   } else if (b.state === 'held' && b.carrier.team === 1) {
     const t = b.carrier, dx = t.x - c.x, dy = t.y - c.y, d = Math.hypot(dx, dy) || 1;
