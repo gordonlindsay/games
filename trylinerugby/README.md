@@ -12,8 +12,9 @@ nations, a local Surrey club, or a team you make yourself.
 - **Landscape only** (2026-10-12). Upright play was glitchy. A phone held upright gets a "Turn Your Phone Sideways"
   cover and the match pauses underneath. Phone browsers can't be forced to turn: Android gets a best-effort
   fullscreen and landscape lock on Play, and iPhone ignores it.
-- **Duels** (2026-10-12): four chase-cam close-ups. The gold ring means "now", and a win gives a small burst. There's a
-  Duels On / Off setting.
+- **Duels** (2026-10-12): four chase-cam close-ups. The gold ring means "now", and a win gives a small burst. Always on
+  (2026-10-14): the On / Off switch is gone, and a save from when it existed still plays with them on. AI v AI, the
+  menu demo and the headless tools can still run without them.
 - **Dummy** (2026-10-12): in a Key Pass, the small button fakes the pass. It's right when the defender drifts onto
   your runner, and wrong when he comes at you. On Normal and Hard he sometimes fakes the drift.
 - **One repo for all the games** (2026-10-12): this game lives in `gordonlindsay/games`, alongside Farnham Fighters
@@ -35,6 +36,15 @@ nations, a local Surrey club, or a team you make yourself.
   - **Farnham is the default** (2026-10-12). The team screen always opens on Local. Quick Match starts with Farnham
     as your team (Change Team to swap), then any opponent from either list; a team you make there becomes yours
     while Farnham is still the untouched default. Championship has a Play as Farnham button, or pick any card.
+  - **Quick Match is the first button** (2026-10-14). It is the gold one, and it takes the keyboard focus.
+    Championship sits under it, beside How to Play. With one under way the button reads Continue Championship, and
+    the line under it is your team and the round.
+- **Saving** (2026-10-14): half length, difficulty, sound, up to four teams you make, and the championship are kept
+  in this browser (`localStorage`, key `tryline.v1`). The championship stores its six teams, the five rounds of
+  fixtures, every result and the round you are on. Continue Championship resumes the next match. Start Fresh on the
+  table, confirmed with a second tap, wipes that championship and leaves your settings and teams. A missing or broken
+  save is ignored. A match in progress is not stored mid-play: quitting or reloading leaves that fixture to play
+  again, and the table updates when the match finishes.
 - **Goal kicks** (2026-10-12): pitch-level close-up, sevens drop kicks, Normal = CPU parity. Conversions and
   penalty goals cut to a still shot from behind the kicker: steer the arrow, hold Kick, let go in the gold. The CPU's
   kicks play the same shot with a Skip button.
@@ -426,7 +436,7 @@ a charger.
       the chargers behind him that the offer judged), and a drop charged down from behind bounces away from the man
       who blocked it.
   - **`node tools/sim.mjs`:** AI v AI matches, with no duels, both sides' goal-kick rates and the CPU's drop goals.
-  - **`node tools/teams.mjs`:** 40 asserts. It checks:
+  - **`node tools/teams.mjs`:** 56 asserts. It checks:
     - every pairing of built-in teams has shirts far enough apart, and hooped sides keep their hoops;
     - the nations keep their order, and Farnham leads Local;
     - a team you make is cleaned up and held to the budget;
@@ -434,7 +444,10 @@ a charger.
     - a black away shirt still shows on the dark scoreboard and plates;
     - opponents are drawn fairly (the old random-comparator sort was badly skewed in Safari);
     - Local and mixed championships, including when the Triple Crown is awarded;
-    - that a championship saved before clubs existed still loads.
+    - that a championship saved before clubs existed still loads;
+    - that Quick Match is the gold button, the Duels switch is gone, and a save round-trips the championship, the
+      settings and a team you made, with duels forced on. A broken championship, bad settings and unreadable storage
+      are dropped without taking the rest with them, and a full storage still starts the championship.
   - **`node tools/setpieces.mjs`:** scrums at different tap speeds and lineouts at different jump timings.
 
 ### Measured baseline
@@ -530,7 +543,9 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   rings. `moveAll`'s hold keys (`HOLD_KEYS`, for the drop-goal offer's projection) include the new timers.
 - **Teams:** `newMatch` takes a team object, or an index into `NATIONS` (the tools use indexes).
   - **`NATIONS` must keep its order.** Championships saved before clubs existed hold indexes into it, and `restore()`
-    turns them into a team list in that order.
+    turns them into a team list in that order. `restore()` also forces duels on, keeps only settings it understands,
+    and drops a championship whose teams, fixtures, results or round don't hold together. `load()` swallows a missing
+    key and bad JSON. The key is `tryline.v1`.
   - `CLUBS` is append-only.
   - A clash of shirts is settled by `awayKit()`. It tries, in order: the change kit, the colours swapped, then white,
     then black.

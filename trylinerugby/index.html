@@ -69,7 +69,9 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .seg button{appearance:none;border:0;background:transparent;min-height:40px;padding:0 6px;font-weight:700;color:var(--chalk-dim);cursor:pointer}
 .seg button+button{border-left:1.5px solid var(--rule-hi)}
 .seg button[aria-pressed="true"]{background:var(--chalk);color:var(--night)}
-.resume-note{margin:-2px 0 0;font-size:13px;color:var(--chalk-dim);text-align:center}
+.resume-note{margin:0;font-size:13px;color:var(--chalk-dim);text-align:center}
+.home-row{align-items:start}
+.home-row .col{display:flex;flex-direction:column;gap:4px;min-width:0}
 @media (orientation:landscape) and (max-height:560px){
   /* a phone held sideways: everything on one screen, settings wide enough not to wrap */
   .screen{padding-block:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 12px)}
@@ -80,10 +82,8 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
   .word{font-size:clamp(60px,11vw,124px)}
   .home .stack{gap:8px}
   .home .btn.primary{min-height:50px}
-  .settings{grid-template-columns:1fr 1fr;gap:8px 12px;padding:10px 12px}
+  .settings{grid-template-columns:1fr;gap:8px;padding:10px 12px}
   .settings .set{grid-template-columns:6.4em minmax(0,1fr);gap:8px}
-  .settings .set:nth-child(-n+2){grid-column:1/-1}
-  .settings .set:nth-child(n+3){grid-template-columns:auto minmax(0,1fr)}
   .seg button{padding:0 4px;white-space:nowrap}
 }
 
@@ -280,15 +280,19 @@ tr.me td{background:rgba(255,207,61,.09)}
       <p class="tag">Seven a side on a full-size pitch. One stick, three buttons, a championship to win.</p>
     </header>
     <div class="stack">
-      <button class="btn primary" id="b-champ">Championship</button>
-      <p class="resume-note" id="champ-note" hidden></p>
-      <div class="row2"><button class="btn" id="b-quick">Quick Match</button><button class="btn" id="b-help">How to Play</button></div>
+      <button class="btn primary" id="b-quick" autofocus>Quick Match</button>
+      <div class="row2 home-row">
+        <div class="col">
+          <button class="btn" id="b-champ">Championship</button>
+          <p class="resume-note" id="champ-note" hidden></p>
+        </div>
+        <button class="btn" id="b-help">How to Play</button>
+      </div>
     </div>
     <div class="settings">
       <div class="set"><span class="lbl">Half Length</span><div class="seg" data-key="half"><button>2 Min</button><button>4 Min</button><button>6 Min</button></div></div>
       <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
       <div class="set"><span class="lbl">Sound</span><div class="seg" data-key="sound"><button>On</button><button>Off</button></div></div>
-      <div class="set"><span class="lbl">Duels</span><div class="seg" data-key="duels"><button>On</button><button>Off</button></div></div>
     </div>
   </div>
 </section>
@@ -337,7 +341,7 @@ tr.me td{background:rgba(255,207,61,.09)}
       <tbody id="hub-table"></tbody>
     </table></div>
     <div class="results" id="hub-results"></div>
-    <div class="row2"><button class="btn" id="hub-back">Back to Menu</button><button class="btn warn" id="hub-reset">Start Again</button></div>
+    <div class="row2"><button class="btn" id="hub-back">Back to Menu</button><button class="btn warn" id="hub-reset">Start Fresh</button></div>
   </div>
 </section>
 
@@ -364,6 +368,7 @@ tr.me td{background:rgba(255,207,61,.09)}
     </div>
     <dl class="help">
       <dt>Table</dt><dd>Win 4, draw 2. <b>+1</b> for four or more tries. <b>+1</b> for losing by seven or fewer. <b>+3</b> for a Grand Slam.</dd>
+      <dt>Saving</dt><dd>This browser keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table wipes that championship. Leaving a match, or reloading, keeps the same round to play again.</dd>
       <dt>50:22</dt><dd>Kick from your own half that bounces out inside their 22 and the lineout throw is yours.</dd>
     </dl>
     <button class="btn" id="h-back">Back to Menu</button>
@@ -471,7 +476,13 @@ const dist = (a,b) => hyp(a.x-b.x, a.y-b.y);
 const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.floor(rnd()*(i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };   // a sort with a random comparator is far from fair in Safari
 
 /* =========================================================
-   Persistence (per-viewer convenience only)
+   Persistence. One browser key holds the settings, the teams
+   you make, and the championship: its six sides, the fixtures,
+   the results and the round. A match in progress is not stored.
+   Leaving it, or reloading, comes back to that round to play
+   again. Duels are always on, including a save from when the
+   switch could turn them off. Anything missing or broken is
+   ignored, and the rest of the save is kept.
    ========================================================= */
 const STORE = 'tryline.v1';
 let settings = { half:1, diff:1, sound:true, duels:true, duelSeen:false, kickSeen:false, pool:0 };
@@ -495,18 +506,92 @@ function autoCode(name, own) {
   return codeFor('', L);
 }
 function codeFor(s, name) { const l = v => String(v || '').toUpperCase().replace(/[^A-Z]/g, ''); return (l(s) + l(name) + 'XXX').slice(0, 3); }
-/* Championships saved before clubs existed hold indexes into NATIONS and no team list of their own. */
+function idx6(n) { return Number.isInteger(n) && n >= 0 && n <= 5; }
+function ptsOf(n) {
+  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > 200) return null;
+  return Math.round(n);
+}
+/* A side inside a saved championship. A built-in side keeps its home-nation flag and its change kit. */
+function cleanSide(t) {
+  if (!t || typeof t !== 'object') return null;
+  const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
+  if (!name) return null;
+  const id = /^[A-Z]{3}$/.test(t.id) ? t.id : codeFor(t.id, name);
+  const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
+  if (t.home) team.home = true;
+  if (t.custom) team.custom = true;
+  if (t.key) team.key = String(t.key).slice(0, 24);
+  if (HEX.test(t.alt)) team.alt = t.alt;
+  if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
+  for (const [k] of ABILITIES) team[k] = clamp(Math.round(+t[k] || 1), 1, 5);
+  return team;
+}
+/* null means the championship cannot be shown or played, so it is dropped instead of crashing the table. */
+function cleanChamp(c) {
+  if (!c || typeof c !== 'object' || Array.isArray(c) || !idx6(c.user)) return null;
+  if (!Number.isInteger(c.round) || c.round < 0 || c.round > 5) return null;
+  let teams;
+  if (!Array.isArray(c.teams)) teams = NATIONS.map(n => ({ ...n }));   // saved before clubs existed: indexes into NATIONS, in that order
+  else {
+    if (c.teams.length !== 6) return null;
+    teams = c.teams.map(cleanSide);
+    if (teams.some(t => !t)) return null;
+  }
+  if (!Array.isArray(c.fixtures) || c.fixtures.length !== 5 || !Array.isArray(c.results) || c.results.length !== c.round) return null;
+  const fixtures = [], results = [];
+  for (const rd of c.fixtures) {
+    if (!Array.isArray(rd) || rd.length !== 3) return null;
+    const seen = new Set(), pairs = [];
+    for (const p of rd) {
+      if (!Array.isArray(p) || p.length !== 2 || !idx6(p[0]) || !idx6(p[1]) || p[0] === p[1] || seen.has(p[0]) || seen.has(p[1])) return null;
+      seen.add(p[0]); seen.add(p[1]);
+      pairs.push([p[0], p[1]]);
+    }
+    if (seen.size !== 6) return null;
+    fixtures.push(pairs);
+  }
+  for (const rd of c.results) {
+    if (!Array.isArray(rd) || rd.length !== 3) return null;
+    const seen = new Set(), out = [];
+    for (const m of rd) {
+      if (!m || typeof m !== 'object' || !idx6(m.h) || !idx6(m.a) || m.h === m.a || seen.has(m.h) || seen.has(m.a)) return null;
+      const hs = ptsOf(m.hs), as = ptsOf(m.as), ht = ptsOf(m.ht), at = ptsOf(m.at);
+      if (hs == null || as == null || ht == null || at == null) return null;
+      seen.add(m.h); seen.add(m.a);
+      out.push({ h:m.h, a:m.a, hs, as, ht, at });
+    }
+    if (seen.size !== 6) return null;
+    results.push(out);
+  }
+  return { user:c.user, teams, round:c.round, fixtures, results };
+}
+function cleanSettings(g) {
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return;
+  if (g.half === 0 || g.half === 1 || g.half === 2) settings.half = g.half;
+  if (g.diff === 0 || g.diff === 1 || g.diff === 2) settings.diff = g.diff;
+  if (typeof g.sound === 'boolean') settings.sound = g.sound;
+  if (typeof g.duelSeen === 'boolean') settings.duelSeen = g.duelSeen;
+  if (typeof g.kickSeen === 'boolean') settings.kickSeen = g.kickSeen;
+  if ('pool' in g) settings.pool = g.pool === 1 ? 1 : 0;
+}
 function restore(s) {
-  if (!s || typeof s !== 'object') return;
-  if (s.settings) settings = { ...settings, ...s.settings };
-  settings.pool = settings.pool === 1 ? 1 : 0;
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return;
+  cleanSettings(s.settings);
+  settings.duels = true;
   if (Array.isArray(s.custom)) custom = s.custom.map(cleanTeam).filter(Boolean).slice(0, MAX_CUSTOM);
-  if (s.champ) { champ = s.champ; if (!Array.isArray(champ.teams)) champ.teams = NATIONS.map(n => ({ ...n })); }
+  if (s.champ != null) champ = cleanChamp(s.champ);
 }
 function load() {
-  try { restore(JSON.parse(localStorage.getItem(STORE) || 'null')); } catch (e) { /* storage unavailable */ }
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw) restore(JSON.parse(raw));
+  } catch (e) { /* missing, blocked, or not JSON: keep a fresh game */ }
+  settings.duels = true;
 }
-function save() { try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom })); } catch (e) { /* ignore */ } }
+function save() {
+  settings.duels = true;
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom })); } catch (e) { /* private mode, or full */ }
+}
 
 /* =========================================================
    Match engine. World units are metres.
@@ -1919,8 +2004,8 @@ function autoLineout(s) {
    Key Pass on attack, Tackle and Block on defence. A gold ring is the only
    timing cue. A win gives a short burst; a mistime falls back to the odds
    the open game would have given, so a duel is never a trap.
-   M.duels: 'off' (setting off, AI v AI, demo, default headless),
-   'live' (the close-up runs) or 'instant' (resolved at the trigger, for tools). */
+   M.duels: 'off' (AI v AI, the menu demo, and the headless default),
+   'live' (a match you play; the close-up runs) or 'instant' (resolved at the trigger, for tools). */
 const DUEL = {
   past:   { name:'Get Past', rig:1, tk:1.20, win:[0.30,0.23,0.17], mod:['pace','power'],       cpu:[0,0.20,0.40] }, // feint chance
   pass:   { name:'Key Pass', rig:2, tk:1.20, win:[0.32,0.24,0.18], mod:['handling','pace'],    cpu:[0,0.06,0.12] }, // commit jitter, s
@@ -3995,7 +4080,11 @@ let pickMode = 'champ', quickPick = null, quickAuto = false;   // quickAuto: Far
 let bannerTimer = 0;
 const playing = () => mode === 'match' && M && !M.demo;
 
-function showScreen(id) { for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id; if (id === 's-teams') fitNames(); }
+function showScreen(id) {
+  for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+  if (id === 's-teams') fitNames();
+  if (id !== 's-home') { const a = document.activeElement; if (a && typeof a.blur === 'function') a.blur(); }   // a focused menu button must not fire on Enter once it is hidden
+}
 function clearBanner() { clearTimeout(bannerTimer); const el = document.getElementById('banner'); if (el) el.innerHTML = ''; }
 function say(text, size, team, grade, low) {
   if (!M || M.demo || M.headless) return;
@@ -4033,7 +4122,7 @@ function lockLandscape() {
 function startMatch(u, c, isChamp) {
   lockLandscape();
   ac();
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:settings.duels ? 'live' : 'off' });
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live' });   // the switch is gone: a match you play always has duels
   mode = 'match';
   showScreen(null);
   $('hud').hidden = false; $('controls').hidden = false; $('b-pause').hidden = false;
@@ -4044,7 +4133,7 @@ function startMatch(u, c, isChamp) {
 function exitMatch() {
   const wasChamp = M && M.champ;
   startDemo();
-  if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else { renderHome(); showScreen('s-home'); }
+  if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else goHome();
 }
 
 let lastHud = '', lastBtn = '';
@@ -4190,8 +4279,8 @@ function onOrientation() { if (uprightPhone.matches) { pause(); input.stickId = 
 if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
-/* home */
-const BOOL = { sound:1, duels:1 };
+/* home. Quick Match is the gold button and the keyboard focus. */
+const BOOL = { sound:1 };
 function renderHome() {
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
@@ -4199,11 +4288,18 @@ function renderHome() {
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
   const note = $('champ-note');
-  if (champ && champ.round < 5) {
+  const live = champ && champ.teams && champ.teams[champ.user] && champ.round < 5;
+  if (live) {
     $('b-champ').textContent = 'Continue Championship';
-    note.textContent = champ.teams[champ.user].name + ' · Round ' + (champ.round+1) + ' of 5';
+    note.textContent = champ.teams[champ.user].name + ' · Round ' + (champ.round + 1) + ' of 5';
     note.hidden = false;
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
+}
+function goHome() {
+  renderHome();
+  showScreen('s-home');
+  const b = $('b-quick');
+  if (b && typeof b.focus === 'function') b.focus();
 }
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
@@ -4221,8 +4317,8 @@ $('b-champ').addEventListener('click', () => {
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
 $('b-help').addEventListener('click', () => showScreen('s-help'));
-$('h-back').addEventListener('click', () => { renderHome(); showScreen('s-home'); });
-$('t-back').addEventListener('click', () => { renderHome(); showScreen('s-home'); });
+$('h-back').addEventListener('click', goHome);
+$('t-back').addEventListener('click', goHome);
 $('t-change').addEventListener('click', () => { quickPick = null; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; });
 $('t-default').addEventListener('click', () => pickTeam(DEFAULT_TEAM));
 
@@ -4400,13 +4496,13 @@ function renderHub() {
     <div class="rd"><p class="eyebrow">Round ${k+1}</p>
       ${rd.map(r => `<div class="res${r.h === c.user || r.a === c.user ? ' me' : ''}"><span class="h">${esc(T[r.h].name)}</span><span class="sc">${r.hs} – ${r.as}</span><span>${esc(T[r.a].name)}</span></div>`).join('')}
     </div>`).join('');
-  $('hub-reset').textContent = 'Start Again'; resetArmed = false;
+  $('hub-reset').textContent = 'Start Fresh'; resetArmed = false;
 }
 let resetArmed = false;
-$('hub-back').addEventListener('click', () => { renderHome(); showScreen('s-home'); });
+$('hub-back').addEventListener('click', goHome);
 $('hub-reset').addEventListener('click', () => {
-  if (!resetArmed) { resetArmed = true; $('hub-reset').textContent = 'Confirm Reset'; return; }
-  champ = null; save(); renderHome(); showScreen('s-home');
+  if (!resetArmed) { resetArmed = true; $('hub-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  champ = null; save(); goHome();
 });
 
 /* =========================================================
@@ -4451,7 +4547,7 @@ window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, fo
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
-    recordChampResult, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; } },
+    recordChampResult, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   get M() { return M; } };
 
 function start(data) {
@@ -4462,8 +4558,7 @@ function start(data) {
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
   startDemo();
-  renderHome();
-  showScreen('s-home');
+  goHome();
   restStick();
   requestAnimationFrame(frame);
 }
