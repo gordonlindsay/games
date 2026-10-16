@@ -21,6 +21,7 @@
   --flood:#ffcf3d;        /* sodium floodlight: controlled player + primary action */
   --flood-ink:#1c1500;
   --alert:#ff8466;
+  --p2:#ff5fd2;           /* Player 2: the second seat's ring and marks */
   --display:'Big Shoulders Display','Arial Narrow','Helvetica Neue Condensed',Impact,sans-serif;
   --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   color-scheme:dark;
@@ -235,6 +236,66 @@ tr.me td{background:rgba(255,207,61,.09)}
 .act.press{transform:scale(.9)}
 .act.idle{opacity:.45}
 .act.b.two span{display:block;width:54px;font-size:15px;line-height:1.05;text-align:center;white-space:normal}   /* "Drop Goal" on two lines inside the 68px button */
+/* a computer (a fine pointer, or a controller seen): a keycap or a controller glyph in each button's corner for the last device used, and the
+   resting stick ring hidden while that wasn't a touch. The glyph is a position on the pad (the diamond's lit dot, the shoulder tab), never a letter.
+   Phones never get the desk class, so nothing here reaches them */
+body.desk.dev-kb #stick,body.desk.dev-pad #stick{display:none}
+.act .hint{display:none;position:absolute;right:-5px;top:-5px;width:20px;height:20px;border-radius:5px;background:rgba(8,14,10,.92);border:1px solid rgba(241,238,228,.55);color:var(--chalk);font:800 11px/18px var(--body);font-style:normal;text-align:center}
+body.desk.dev-kb .act .hint.kb{display:block}
+body.desk.dev-pad .act .hint.pad{display:block}
+.hint.pad b{position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(241,238,228,.35)}
+.hint.pad b:nth-child(1){left:7px;top:3px}.hint.pad b:nth-child(2){left:11px;top:7px}.hint.pad b:nth-child(3){left:7px;top:11px}.hint.pad b:nth-child(4){left:3px;top:7px}
+.hint.pad b.on{background:var(--flood)}
+.hint.pad.sh b{left:4px;top:7px;width:10px;height:4px;border-radius:2px;background:var(--flood)}
+.padfocus{outline:3px solid var(--chalk)!important;outline-offset:2px}
+.desk-only{display:none}
+body.desk .desk-only{display:block}
+#pz-seat,#br-seat{margin:-4px 0 0;font:700 13px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--flood)}
+#pz-seat.s1,#br-seat.s1{color:var(--p2)}
+/* two player: the home button is for computers only (body.desk), where it takes the half beside Championship and How to Play drops
+   to a row of its own; phones keep Championship | How to Play. The join screen seats the two players side by side in their colours */
+body.desk .home-row #b-help{grid-column:1/-1}
+.eyebrow.p1{color:var(--flood)}.eyebrow.p2{color:var(--p2)}
+/* the seat tag: the numeral on the seat colour, beside the scorebug, on the Full Time row and on the join cards */
+.stag{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;background:var(--flood);color:var(--flood-ink);font:900 15px/1 var(--display);font-style:normal;vertical-align:middle;flex:none}
+.stag.s1{background:var(--p2);color:#2a0a22}
+.eyebrow .stag{margin-right:8px;width:20px;height:20px;font-size:13px}
+.bugrow{display:flex;align-items:center;gap:8px}
+.fin{display:flex;align-items:center;gap:8px;min-width:0}
+.fin.r{justify-content:flex-end}
+.seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:12px}
+/* four rows of fixed height on each card, so the two cards line up whatever each seat is on: the seat, the device (with Use Keyboard
+   in its slot), the legend, Difficulty */
+.seat{display:flex;flex-direction:column;gap:10px;padding:14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
+.seat.p1{border-color:var(--flood)}.seat.p2{border-color:var(--p2)}
+.seat .eyebrow{display:flex;align-items:center;min-height:24px}
+.devrow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
+.devrow .btn{width:auto;min-height:44px;padding:8px 14px;flex:none}
+.seat .dev{margin:0;font:700 15px/1.3 var(--body)}
+.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;min-height:76px;align-items:end}
+.lg{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.lg .lbl{font-size:11px;letter-spacing:.08em}
+.caps{display:flex;gap:3px;justify-content:center;align-items:end;min-height:47px}
+.caps.four{display:grid;grid-template-columns:repeat(3,22px);gap:3px}
+.caps.four .kc:first-child{grid-column:2}
+.caps.four .kc:not(:first-child){grid-row:2}
+.kc{display:grid;place-items:center;width:22px;height:22px;border-radius:4px;border:1px solid rgba(241,238,228,.5);background:rgba(8,14,10,.9);color:var(--chalk);font:800 11px/1 var(--body);font-style:normal}
+.kc.ar::before{content:"";width:0;height:0;border:5px solid transparent}
+.kc.ar.u::before{border-top:0;border-bottom:7px solid currentColor}
+.kc.ar.d::before{border-bottom:0;border-top:7px solid currentColor}
+.kc.ar.l::before{border-left:0;border-right:7px solid currentColor}
+.kc.ar.r::before{border-right:0;border-left:7px solid currentColor}
+.pad{position:relative;display:block;width:22px;height:22px;border-radius:6px;border:1px solid rgba(241,238,228,.5);background:rgba(8,14,10,.9);color:var(--chalk)}
+.pad.dia b{position:absolute;width:5px;height:5px;border-radius:50%;background:rgba(241,238,228,.35)}
+.pad.dia b:nth-child(1){left:7.5px;top:2.5px}.pad.dia b:nth-child(2){left:12.5px;top:7.5px}.pad.dia b:nth-child(3){left:7.5px;top:12.5px}.pad.dia b:nth-child(4){left:2.5px;top:7.5px}
+.pad.dia b.on{background:currentColor}
+.pad.sh{width:30px;height:14px;border-radius:7px 7px 3px 3px}
+.pad.stick{border-radius:50%}
+.pad.stick::after{content:"";position:absolute;left:6px;top:6px;width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.7}
+.kc.on,.pad.on{background:var(--flood);border-color:var(--flood);color:var(--flood-ink)}
+.seat.p2 .kc.on,.seat.p2 .pad.on{background:var(--p2);border-color:var(--p2);color:#2a0a22}
+.seat .set{grid-template-columns:1fr;gap:6px}
+.seat .seg button{min-height:44px}
 
 /* ---------- modals ---------- */
 .modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:rgba(6,10,8,.55);touch-action:none}
@@ -252,10 +313,14 @@ tr.me td{background:rgba(255,207,61,.09)}
 <canvas id="cv" aria-label="Rugby pitch"></canvas>
 
 <div id="hud" hidden>
-  <div class="bug">
-    <span class="k" id="h-k0"></span><span class="nm" id="h-n0">ENG</span>
-    <span class="sc"><span id="h-s0">0</span><span>–</span><span id="h-s1">0</span></span>
-    <span class="nm" id="h-n1">FRA</span><span class="k" id="h-k1"></span>
+  <div class="bugrow">
+    <i class="stag s0" id="h-t0" hidden>1</i>
+    <div class="bug">
+      <span class="k" id="h-k0"></span><span class="nm" id="h-n0">ENG</span>
+      <span class="sc"><span id="h-s0">0</span><span>–</span><span id="h-s1">0</span></span>
+      <span class="nm" id="h-n1">FRA</span><span class="k" id="h-k1"></span>
+    </div>
+    <i class="stag s1" id="h-t1" hidden>2</i>
   </div>
   <div class="sub" id="h-sub">00:00</div>
 </div>
@@ -267,9 +332,9 @@ tr.me td{background:rgba(255,207,61,.09)}
   <div id="zone"></div>
   <div id="plates" hidden><span>Step Left</span><span>Step Right</span></div>
   <div id="stick"><div id="knob"></div></div>
-  <button class="act c" id="btnC"><span id="lc">Sprint</span></button>
-  <button class="act b" id="btnB"><span id="lb">Kick</span></button>
-  <button class="act a" id="btnA"><span id="la">Pass</span></button>
+  <button class="act c" id="btnC"><span id="lc">Sprint</span><i class="hint kb">L</i><i class="hint pad sh"><b></b></i></button>
+  <button class="act b" id="btnB"><span id="lb">Kick</span><i class="hint kb">K</i><i class="hint pad"><b></b><b class="on"></b><b></b><b></b></i></button>
+  <button class="act a" id="btnA"><span id="la">Pass</span><i class="hint kb">J</i><i class="hint pad"><b></b><b></b><b class="on"></b><b></b></i></button>
 </div>
 
 <section class="screen" id="s-home">
@@ -286,6 +351,7 @@ tr.me td{background:rgba(255,207,61,.09)}
           <button class="btn" id="b-champ">Championship</button>
           <p class="resume-note" id="champ-note" hidden></p>
         </div>
+        <button class="btn desk-only" id="b-two">Two Player</button>
         <button class="btn" id="b-help">How to Play</button>
       </div>
     </div>
@@ -304,7 +370,7 @@ tr.me td{background:rgba(255,207,61,.09)}
     <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
     <button class="btn primary" id="t-default" hidden></button>
     <div class="teams" id="t-grid"></div>
-    <button class="btn" id="t-back">Back to Menu</button>
+    <button class="btn" id="t-back" data-back>Back to Menu</button>
   </div>
 </section>
 
@@ -327,7 +393,7 @@ tr.me td{background:rgba(255,207,61,.09)}
       </div>
     </div>
     <button class="btn primary" id="bd-save">Save Team</button>
-    <div class="row2" id="bd-row"><button class="btn" id="bd-back">Back to Teams</button><button class="btn warn" id="bd-del">Delete Team</button></div>
+    <div class="row2" id="bd-row"><button class="btn" id="bd-back" data-back>Back to Teams</button><button class="btn warn" id="bd-del">Delete Team</button></div>
   </div>
 </section>
 
@@ -341,7 +407,7 @@ tr.me td{background:rgba(255,207,61,.09)}
       <tbody id="hub-table"></tbody>
     </table></div>
     <div class="results" id="hub-results"></div>
-    <div class="row2"><button class="btn" id="hub-back">Back to Menu</button><button class="btn warn" id="hub-reset">Start Fresh</button></div>
+    <div class="row2"><button class="btn" id="hub-back" data-back>Back to Menu</button><button class="btn warn" id="hub-reset">Start Fresh</button></div>
   </div>
 </section>
 
@@ -362,6 +428,8 @@ tr.me td{background:rgba(255,207,61,.09)}
       <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast with the stick held forward. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
       <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
+      <dt class="desk-only">Controller</dt><dd class="desk-only">Stick or D-Pad to run. <b>Bottom Button</b> Pass / Tackle. <b>Right Button</b> Kick / Switch. <b>Shoulder</b> Sprint. <b>Start</b> Pause. Press any button to connect it.</dd>
+      <dt class="desk-only">Two Player</dt><dd class="desk-only">Player 1: <b>W A S D</b> Run, <b>F</b> Pass, <b>G</b> Kick, <b>H</b> Sprint. Player 2: <b>Arrows</b> Run, <b>/</b> Pass, <b>.</b> Kick, <b>,</b> Sprint. Pass is also Tackle, the goal kick (hold it), Push and Jump; Kick is also Switch, Drop Goal and Dummy. A controller takes a seat with one press. In a duel the other player guards, drifts or steps with his run keys before the ring opens, or presses <b>Kick</b> for a Dummy as the passer.</dd>
     </dl>
     <div class="scoring">
       <div><b>5</b><span>Try</span></div><div><b>2</b><span>Conversion</span></div><div><b>3</b><span>Penalty</span></div><div><b>3</b><span>Drop Goal</span></div>
@@ -371,13 +439,36 @@ tr.me td{background:rgba(255,207,61,.09)}
       <dt>Saving</dt><dd>This browser keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table wipes that championship. Leaving a match, or reloading, keeps the same round to play again.</dd>
       <dt>50:22</dt><dd>Kick from your own half that bounces out inside their 22 and the lineout throw is yours.</dd>
     </dl>
-    <button class="btn" id="h-back">Back to Menu</button>
+    <button class="btn" id="h-back" data-back>Back to Menu</button>
+  </div>
+</section>
+
+<section class="screen" id="s-join" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">Two Player</p><h2 class="title">Players</h2></div></div>
+    <div class="seats">
+      <div class="seat p1 s0">
+        <p class="eyebrow p1"><i class="stag s0">1</i>Player 1</p>
+        <div class="devrow"><p class="dev" id="j-dev0">Keyboard</p><button class="btn" id="j-kb0" hidden>Use Keyboard</button></div>
+        <div class="legend" id="j-leg0"></div>
+        <div class="set"><span class="lbl">Difficulty</span><div class="seg" id="j-diff0"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
+      </div>
+      <div class="seat p2 s1">
+        <p class="eyebrow p2"><i class="stag s1">2</i>Player 2</p>
+        <div class="devrow"><p class="dev" id="j-dev1">Keyboard</p><button class="btn" id="j-kb1" hidden>Use Keyboard</button></div>
+        <div class="legend" id="j-leg1"></div>
+        <div class="set"><span class="lbl">Difficulty</span><div class="seg" id="j-diff1"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
+      </div>
+    </div>
+    <p class="resume-note" id="j-pad">Controller · Press Any Button</p>
+    <button class="btn primary" id="j-go">Pick Teams</button>
+    <div class="row2"><button class="btn" id="j-swap">Swap Players</button><button class="btn" id="j-back" data-back>Back to Menu</button></div>
   </div>
 </section>
 
 <div class="modal" id="m-pen" hidden>
   <div class="card">
-    <p class="eyebrow">Penalty</p>
+    <p class="eyebrow" id="p-eyebrow">Penalty</p>
     <h3 id="p-meta">34m to the Posts</h3>
     <button class="btn primary" id="p-goal">Kick at Goal</button>
     <div class="row2"><button class="btn" id="p-touch">Kick to Touch</button><button class="btn" id="p-tap">Tap and Go</button></div>
@@ -387,10 +478,13 @@ tr.me td{background:rgba(255,207,61,.09)}
 <div class="modal" id="m-break" hidden>
   <div class="card">
     <p class="eyebrow" id="br-eyebrow">Half Time</p>
-    <div class="final"><span id="br-n0">ENG</span><span class="big" id="br-sc">0 – 0</span><span class="r" id="br-n1">FRA</span></div>
+    <div class="final"><span class="fin"><i class="stag s0" id="br-t0" hidden>1</i><span id="br-n0">ENG</span></span><span class="big" id="br-sc">0 – 0</span><span class="fin r"><span id="br-n1">FRA</span><i class="stag s1" id="br-t1" hidden>2</i></span></div>
     <p class="meta" id="br-tries">Tries 0 – 0</p>
     <p class="meta" id="br-pts" hidden></p>
+    <p class="meta" id="br-series" hidden></p>
+    <p class="meta" id="br-seat" hidden></p>
     <button class="btn primary" id="br-go">Second Half</button>
+    <div class="row2" id="br-row" hidden><button class="btn" id="br-teams">Change Teams</button><button class="btn" id="br-menu">Back to Menu</button></div>
   </div>
 </div>
 
@@ -398,6 +492,7 @@ tr.me td{background:rgba(255,207,61,.09)}
   <div class="card">
     <p class="eyebrow">Paused</p>
     <h3 id="pz-score">England 0 – 0 France</h3>
+    <p id="pz-seat" hidden></p>
     <button class="btn primary" id="pz-resume">Resume</button>
     <button class="btn warn" id="pz-quit">Quit Match</button>
   </div>
@@ -485,7 +580,7 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.flo
    ignored, and the rest of the save is kept.
    ========================================================= */
 const STORE = 'tryline.v1';
-let settings = { half:1, diff:1, sound:true, duels:true, duelSeen:false, kickSeen:false, pool:0 };
+let settings = { half:1, diff:1, sound:true, duels:true, duelSeen:false, kickSeen:false, pool:0, twoDiff:[1, 1] };   // twoDiff: each player's Difficulty in two player
 let champ = null, custom = [];
 const HEX = /^#[0-9a-f]{6}$/i;
 /* A team someone made, or one read back from storage: anything off is put right, never trusted. */
@@ -573,6 +668,7 @@ function cleanSettings(g) {
   if (typeof g.duelSeen === 'boolean') settings.duelSeen = g.duelSeen;
   if (typeof g.kickSeen === 'boolean') settings.kickSeen = g.kickSeen;
   if ('pool' in g) settings.pool = g.pool === 1 ? 1 : 0;
+  if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -603,13 +699,25 @@ const dirOf = t => t === 0 ? 1 : -1;
 const oppLine = t => t === 0 ? 110 : 10;
 const ownLine = t => t === 0 ? 10 : 110;
 const SETGAP = { ruck:1.6, scrum:5, lineout:10, penalty:10, tap:10 };
-/* Which side a human sits on, and that human's input, controlled player and difficulty. Engine code written from here on
-   reads these rather than `team === 0`, `input` or `M.di`, so a second human seat (the two-player spec) slots in without a rewrite. */
-const isHuman = t => t === 0 && !M.auto;
-const inputOf = t => isHuman(t) ? input : null;
-const ctrlOf = t => isHuman(t) ? M.ctrl : null;
-const setCtrl = (t, q) => { if (isHuman(t) && q) M.ctrl = q; };
-const levelOf = t => M.di;
+/* The sides table. Each team has an entry in M.side: whether a human plays it, which input seat that human sits in, the man
+   under their ring, their Difficulty, their kick charge and their Pass press. Engine code reads these, never `team === 0`,
+   `input` or `M.di`, so one player, one player as the away side (humans:[false, true]) and two player all run one path. */
+const sideOf = t => M.side[t];
+const isHuman = t => M.side[t].human;
+const inputOf = t => (M.side[t].human ? inputs[M.side[t].seat] : null);
+const ctrlOf = t => (M.side[t].human ? M.side[t].ctrl : null);
+const setCtrl = (t, q) => { if (M.side[t].human && q) M.side[t].ctrl = q; };
+const levelOf = t => M.side[t].level;
+const seatOfTeam = t => (M.side[t].human ? M.side[t].seat : null);   // which seat a team's human sits in, for the rumble and the ring's colour
+const anyCharging = () => M.side[0].charging || M.side[1].charging;
+const clearCharge = () => { for (const s of M.side) { s.charging = false; s.charge = 0; } };
+const humanSlots = () => M.side.filter(s => s.human).map(s => inputs[s.seat]);   // every human's input slot
+/* Balance terms are keyed by role, not by team number: a side plays the human terms or the CPU terms (cpuSpeed, cpuTackle, the
+   intercept and turnover edges, the scrum and lineout rules, the CPU's kick accuracy), each at its own level (a CPU side's level is
+   the human's it plays against). AI v AI and the menu demo are fair: both sides play the CPU terms (team 0 used to keep the human
+   ones, because `team === 1` was the test for the CPU). */
+const cpuSide = t => M.role[t] === 'cpu';
+const diffOf = t => DIFF[levelOf(t)];
 const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
@@ -634,35 +742,49 @@ function newMatch(u, c, opts) {
   const n0 = teamOf(u);
   let n1 = teamOf(c);
   if (n1.id === n0.id) n1 = { ...n1, id:n1.id.slice(0, 2) + '2' };   // e.g. a team you called Farnham Minis against Farnham: this match only
+  // who plays each side: [human, cpu] in one player, [false, false] for AI v AI and the demo, [true, true] in two player; tests may pass humans directly
+  const humans = opts.humans || ((opts.auto || opts.demo) ? [false, false] : [true, false]);
+  const auto = !humans[0] && !humans[1], two = humans[0] && humans[1], di = opts.diff == null ? 1 : opts.diff;   // M.di and M.diff: the match's one level, kept for the tools; the engine reads levelOf(t)
   M = {
     nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:!!n0.hoops }, awayKit(n0, n1)],
     players:[], ball:{ x:60, y:35, z:0, vx:0, vy:0, vz:0, state:'dead', carrier:null, f:null, last:0, kickInfo:null },
-    score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[opts.diff],
-    hooter:false, phase:'set', set:null, goal:null, phaseCount:0, ctrl:null, poss:0,
-    firstKick: rnd() < 0.5 ? 0 : 1, auto:!!opts.auto, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless,
-    paused:false, over:false, charging:false, charge:0, holdN:0, cam:{ x:60, y:35 }, cut:null, surge:null,
-    di:opts.diff, duels:(opts.auto || opts.demo) ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0, ctrlT:0, ctrlPrev:null,
-    duelLog:{ last:-99, lastKind:null, half:[0, 0], bonus:[false, false], fails:0 },
+    score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
+    hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
+    firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless,
+    paused:false, over:false, cam:{ x:60, y:35 }, cut:null, surge:null,
+    di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
+    duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },
     stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0, duels:0, duelsWon:0, duelsPerfect:0, gk:{ att:[0, 0], made:[0, 0] }, dg:{ att:[0, 0], made:[0, 0], charged:[0, 0] } },
-    pass:null,                                         // a Pass press in hand: { mode:'tap'|'hold', to, t } so a hold can charge and an early tap is not dropped
     dropOn:[false, false], dropArmed:[false, false],   // the drop-goal offer, per side: its hysteresis, and what the label promised at the B press
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the last offer judged, and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     tags:[], fx:[], stop:0, shake:0, rt:0,             // render only: on-pitch tags, impact rings, the Big Hit's hit-stop and shake, the render clock
   };
+  // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
+  // level it is played at: its human opponent's, or the match's in AI v AI
+  let seat = 0;
+  M.side = [0, 1].map(t => ({ team:t, human:humans[t], seat:humans[t] ? seat++ : null, ctrl:null, ctrlPrev:null, ctrlT:0,
+    charging:false, charge:0, holdN:0,                 // the kick charge: B held with the ball
+    pass:null,                                         // a Pass press in hand: { mode:'tap'|'hold', to, t } so a hold can charge and an early tap is not dropped
+    level:opts.levels ? opts.levels[t] : di,           // this player's Difficulty (the one level in one player)
+    duel:{ half:[0, 0], lastKind:null, fails:0, first:true },   // two player: this owner's quota, his last kind, his failures in a row and his first-duel aid
+    kickFirst:true }));                                // two player: this player's first goal kick of the match gets the path
+  for (const t of [0, 1]) if (!humans[t] && humans[1 - t] && opts.levels) M.side[t].level = M.side[1 - t].level;
+  M.role = [0, 1].map(t => (humans[t] ? 'human' : 'cpu'));
+  { const m = M; for (const k of ['ctrl', 'ctrlPrev', 'ctrlT', 'charging', 'charge', 'holdN', 'pass']) Object.defineProperty(m, k, { get:() => m.side[0][k], set:v => { m.side[0][k] = v; }, enumerable:false, configurable:true }); }   // side 0's fields on M, for the tools and the console
   M.wind = makeWind();
   for (let t = 0; t < 2; t++) for (let i = 0; i < 7; i++) {
     M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0, boostMul:1, autoDir:0, drop:null,
       bind:null, bindOff:null, offside:0, sprint:0, sprinting:false, stumble:0, stumbleMul:1, wf:0, drawFrom:null, fend:0, fendA:0 });   // contact: the bind he is in, how long he is retiring, his sprint, a stumble, wrong-footed; then render-only smoothing and the fend
   }
-  M.ctrl = M.players[3];
+  M.side[0].ctrl = M.players[3]; if (humans[1]) M.side[1].ctrl = M.players[10];
   kickoff(M.firstKick);
 }
 
 function maxSpeed(p) {
   let s = 7.6 + M.nat[p.team].pace*0.25;
-  if (p.team === 1) s *= M.diff.cpuSpeed;
+  if (cpuSide(p.team)) s *= diffOf(p.team).cpuSpeed;
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
@@ -675,11 +797,11 @@ function maxSpeed(p) {
 function nearestOf(arr, x, y) { let best = null, bd = 1e9; for (const p of arr) { const d = hyp(p.x-x, p.y-y); if (d < bd) { bd = d; best = p; } } return best; }
 function nearestFree(team, x, y) { return nearestOf(M.players.filter(p => p.team === team && p.down <= 0 && !p.bind), x, y); }
 function pressure(p) { let m = 99; for (const q of M.players) if (q.team !== p.team && q.down <= 0) m = Math.min(m, dist(p,q)); return m; }
-function ourBall() {
+function ourBall(t) {                                      // side t has it: held by its man, or its pass in the air
   const b = M.ball;
-  return (b.state === 'held' && b.carrier.team === 0) || (b.state === 'air' && b.f.kind === 'pass' && b.f.team === 0);
+  return (b.state === 'held' && b.carrier.team === t) || (b.state === 'air' && b.f.kind === 'pass' && b.f.team === t);
 }
-function userActive() { return !M.auto && M.ctrl && (M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'ruck')); }
+function userActive(t) { return !!ctrlOf(t) && (M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'ruck')); }
 
 function steer(p, tvx, tvy, acc, dt) {
   const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt;
@@ -699,8 +821,9 @@ function placeBall(x, y) {
 function startSet(o) {
   M.phase = 'set'; M.set = o;
   if (o.label) say(o.label);
-  if (!M.auto && o.kind !== 'ruck' && o.kind !== 'try' && o.kind !== 'score') {
-    const q = nearestFree(0, o.x, o.y); if (q) M.ctrl = q;
+  if (o.kind !== 'ruck' && o.kind !== 'try' && o.kind !== 'score') for (const t of [0, 1]) {
+    if (!isHuman(t)) continue;
+    const q = nearestFree(t, o.x, o.y); if (q) setCtrl(t, q);
   }
 }
 function deadBall(fn) { if (M.hooter && !M.demo) endHalf(); else fn(); }
@@ -773,10 +896,11 @@ function setCarrier(p) {
   b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   M.poss = p.team;
-  M.charging = false; M.charge = 0;
-  if (!M.auto) {
-    if (p.team === 0) M.ctrl = p;
-    else if (!M.ctrl || M.ctrl.down > 0 || dist(M.ctrl, p) > 8) { const q = nearestFree(0, p.x, p.y); if (q) M.ctrl = q; }
+  clearCharge();
+  for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
+    if (!isHuman(t)) continue;
+    if (p.team === t) setCtrl(t, p);
+    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }
   }
 }
 function catchBall(p, kind) {
@@ -861,7 +985,7 @@ function pickLong(c, pref, skip) {                          // the next man out,
 }
 function passAim(c, pref) { const near = pickReceiver(c, pref); return { near, far:pickLong(c, pref, near) }; }
 function shownPass(c) {                                   // the ring and the pass read this together, so the ball goes to the man the ring is on
-  const pref = input.world().y, aim = passAim(c, pref), p = M.pass;
+  const inp = inputOf(c.team), pref = inp ? inp.world().y : 0, aim = passAim(c, pref), p = sideOf(c.team).pass;
   const charge = p && p.mode === 'hold' ? Math.min(1, p.t/LONG.auto) : 0;
   if (p && p.mode === 'tap') return { to:passOk(c, p.to, 22) ? p.to : aim.near, skip:null, gold:false, charge:0 };
   if (p && p.mode === 'hold' && p.t >= LONG.arm && aim.far) return { to:aim.far, skip:aim.near, gold:true, charge };
@@ -896,7 +1020,7 @@ function doPass(from, to, o) {
   from.hold = 0; from.quick = false;
   M.stats.passes++;
   if (o.long) { st('long'); st('long' + from.team); }
-  if (from.team === 0 && !M.auto) M.ctrl = to;
+  if (isHuman(from.team)) setCtrl(from.team, to);
   sfx('pass');
 }
 function kickBall(team, x0, y0, x1, y1, T, H, kind) {
@@ -908,8 +1032,8 @@ function kickBall(team, x0, y0, x1, y1, T, H, kind) {
   b.x = x0; b.y = y0; b.z = 0.4;
   b.kickInfo = kind === 'kick' ? { team, ownHalf:(x0-60)*d < 0 } : null;
   M.phase = 'play';
-  M.charging = false; M.charge = 0;
-  if (!M.auto) { const q = nearestFree(0, x1, y1); if (q) M.ctrl = q; }
+  clearCharge();
+  for (const t of [0, 1]) if (isHuman(t)) { const q = nearestFree(t, x1, y1); if (q) setCtrl(t, q); }
 }
 function chargeDown(c) {                                   // a tactical kick's roll: a defender on top of the kicker gets a 30% charge-down
   let q = null, bd = 1.7;
@@ -927,7 +1051,7 @@ function chargeDownBy(c, q, quiet, at) {                   // q blocks c's kick 
     b.x = c.x + ux*0.6; b.y = c.y + uy*0.6; b.z = 1; b.vx = ux*sp - uy*side; b.vy = uy*sp + ux*side; b.vz = 2;
   } else { b.x = c.x + d*0.6; b.y = c.y; b.z = 1; b.vx = -d*(3+rnd()*4); b.vy = (rnd()-0.5)*5; b.vz = 2; }
   c.hold = 0;
-  M.phase = 'play'; M.charging = false; M.charge = 0;
+  M.phase = 'play'; clearCharge();
   if (!quiet) { say('Charged Down', 'small'); sfx('tackle'); }
 }
 function doKick(c, power, lat) {
@@ -1081,7 +1205,7 @@ function resolveContact(k) {                               // the end of the bin
     if (k.mode === 'ankle' && rnd() < CONTACT.trip.p) { c.stumble = CONTACT.trip.t; c.stumbleMul = CONTACT.trip.mul; st('trip'); tripped = true; }
     else if (!fend) { c.stumble = CONTACT.stumble[0]; c.stumbleMul = CONTACT.stumble[1]; }
     if (fend) { st('fends'); st('fend' + c.team); if (ringed(c)) tag('Fend', c.x, c.y); }
-    if (tripped) { sfx('trip'); if (ringed(q)) { tag('Tripped', c.x, c.y); buzz(20); } } else sfx('whiff');
+    if (tripped) { sfx('trip'); if (ringed(q)) { tag('Tripped', c.x, c.y); buzz(20, q.team); } } else sfx('whiff');
     st('broken' + c.team); M.stats.broken++;
     return;
   }
@@ -1093,7 +1217,7 @@ function resolveContact(k) {                               // the end of the bin
     if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }
     return;
   }
-  if (k.mode === 'ankle') { sfx('trip'); if (ringed(q)) { tag('Ankle Tap', c.x, c.y); buzz(20); } }
+  if (k.mode === 'ankle') { sfx('trip'); if (ringed(q)) { tag('Ankle Tap', c.x, c.y); buzz(20, q.team); } }
   tackle(c, q, { tier, q2 });
 }
 function tackle(c, q, o) {
@@ -1147,16 +1271,16 @@ function wrongFoot(team, x, y) {                           // the side that lost
 function resolveRuck(s) {                                  // the ruck is automatic: a flat penalty roll, then a flat turnover roll
   const att = s.team, def = 1-att;
   if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
-  const pT = s.dom ? s.domP : RUCK.flatBase + (M.nat[def].power - M.nat[att].power)*0.02 + (def === 1 ? M.diff.turnover : -M.diff.turnover);
+  const pT = s.dom ? s.domP : RUCK.flatBase + (M.nat[def].power - M.nat[att].power)*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
     M.stats.turnovers++; st('toRuck'); say('Turnover', 'small');
     releaseTo(def, s.x, s.y, 'turnover');
     if (s.tier) wrongFoot(def, s.x, s.y);
-    if (s.dom) surge(0, LINE_SPEED);
+    if (s.dom) surge(def, LINE_SPEED);                     // Line Speed for the side that made the Big Hit
     return;
   }
   releaseTo(att, s.x, s.y, 'ruck');
-  if (s.dom) surge(0, LINE_SPEED);
+  if (s.dom) surge(def, LINE_SPEED);
 }
 function tackleChecks(c) {
   for (const q of M.players) {
@@ -1201,7 +1325,7 @@ function startSprint(S, p) {
   const fresh = !(p.sprint > 0);                           // inside his own ease-out the burst climbs back at the fade's rate: a re-press never snaps to full speed
   S.p = p; p.sprinting = true; if (fresh) p.sprint = SPRINT.fade;
   st(isHuman(p.team) ? 'sprints' : 'cpuSprints');
-  if (isHuman(p.team) && fresh) { sfx('whoosh'); buzz(15); }
+  if (isHuman(p.team) && fresh) { sfx('whoosh'); buzz(15, p.team); }
 }
 function bestChaser(team) {                                // the nearest man of this side on his feet to the other side's carrier
   const b = M.ball, c = b.state === 'held' ? b.carrier : null; if (!c || c.team === team) return null;
@@ -1294,7 +1418,7 @@ function penalty(team, x, y) {
   M.poss = team;
   startSet({ kind:'penalty', team, x, y, t:1.1, snap:true, label:'Penalty ' + M.nat[team].id, then:s => {
     const dP = hyp(oppLine(s.team)-s.x, s.y-35);
-    if (s.team === 0 && !M.auto) openPenalty(s.x, s.y, dP);
+    if (isHuman(s.team)) openPenalty(s.team, s.x, s.y, dP);
     else cpuPenalty(s.team, s.x, s.y, dP);
   }});
 }
@@ -1338,7 +1462,7 @@ function goalKick(team, x, y, kind, g0) {
   const g = g0 || makeGoal(team, x, y, kind, k);
   g.kicker = k;
   M.goal = g; M.stats.gk.att[team]++;
-  if (team === 0 && !M.auto) { startGoalCut(g); return; }
+  if (isHuman(team)) { g.inp = inputOf(team); startGoalCut(g); return; }
   strikeGoal(g, g.cpu.m, g.cpu.aim);                 // fixed now, so skipping the close-up can't change it
   if (interactive()) { g.watch = true; g.stage = 'settle'; startGoalCut(g); return; }
   M.phase = 'goal'; g.stage = 'fly'; g.t = 0;
@@ -1388,7 +1512,7 @@ function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry a
   const f = toFrame(team, wx, wy);
   const g = { team, kind, type:kind === 'drop' ? 'drop' : 'set', wx, wy, x:f.x, y:f.y, beta:Math.atan2(35 - f.y, 110 - f.x), dist:hyp(110 - f.x, 35 - f.y), ang:Math.abs(f.y - 35)/35,
     kicking:M.nat[team].kicking, di:isHuman(team) ? levelOf(team) : 1, kicker, W:{ x:W.x, y:W.y, mph:W.mph },
-    mClear:0, lo:0, hi:0, w:0, ctr:0, fill:1, aid:'line', watch:false, cpu:null,
+    mClear:0, lo:0, hi:0, w:0, ctr:0, fill:1, aid:'line', watch:false, cpu:null, inp:null,   // inp: the kicker's input slot, for a human's kick
     stage:'aim', st:0, aim:0, m:0, pt:0, drain:0, mRel:null, L:null, X:null, res:null, ok:false, grade:null, curl:0,
     tStrike:0, judged:false, skipped:false, t:0, cam:null, pathKey:null, pathPts:null, bot:null,
     rush:null, out:null, outQ:null, started:false, tRel:0, hitT:0, tauStop:0 };   // drop goals: the chargers, and how one ended
@@ -1398,7 +1522,7 @@ function makeGoal(team, wx, wy, kind, kicker) {
   const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
   if (!isHuman(team)) g.cpu = cpuKickInputs(g);
   else {
-    g.aid = (levelOf(team) === 0 || !settings.kickSeen) ? 'path' : 'line';   // the first kick ever gets the Easy aids
+    g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !settings.kickSeen)) ? 'path' : 'line';   // the first kick ever gets the Easy aids; in two player each player's first kick of the match does
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
   }
   return g;
@@ -1493,7 +1617,7 @@ function verdictOf(g) {
   return { wideL:'Wide Left', wideR:'Wide Right', short:'Short', post:'Off the Post', bar:'Off the Bar' }[g.res];
 }
 function cpuKickInputs(g) {                                // the CPU allows for about 90% of the wind, with some spread
-  const k = KICK, di = g.team === 1 ? M.di : 1;
+  const k = KICK, di = cpuSide(g.team) ? levelOf(g.team) : 1;   // a CPU kicker's spread is its level's
   const aim = aimFor(g, g.ctr)*(k.cpuAim[0] + k.cpuAim[1]*gauss()) + k.cpuAimSd*D2R*gauss();
   const m = clamp(g.ctr + k.cpuSig[di]*gauss()/g.fill, 0, 1);
   return { m, aim };
@@ -1520,37 +1644,40 @@ function settleGoal(g) {
 }
 /* ---------- the close-up ---------- */
 function startGoalCut(g) {
-  input.pre = null; input.reanchor(); input.held = new Set(input.keys);
-  startCut({ kind:'goal', g, armA:null, skipAt:1e9 });
+  for (const inp of humanSlots()) { inp.pre = null; inp.reanchor(); inp.held = new Set(inp.keys); }   // every human slot: touch re-centred, a pad stick latched, held keys ignored
+  startCut({ kind:'goal', g, inp:g.inp, armA:null, skipAt:1e9 });   // c.inp: the kicker's slot, the only one that acts (null for a CPU kick)
   sfx('whoosh');
 }
 function updateGoalCut(c, dt) {
   const g = c.g, t = c.t;
   g.t = t;
-  if (t < CUT_IN) { input.reanchor(); return; }
-  if (c.armA == null) c.armA = !input.aDown;               // a finger already down must lift first
-  if (!input.aDown) c.armA = true;
+  if (t < CUT_IN) { for (const inp of humanSlots()) inp.reanchor(); return; }
   if (g.watch) return watchStep(c, dt);
+  const inp = c.inp;
+  if (c.armA == null) c.armA = !inp.aDown;                 // a finger already down must lift first
+  if (!inp.aDown) c.armA = true;
   if (g.type === 'drop') return dropStep(c, dt);
   if (g.stage === 'aim') {
     if (g.drain > 0) { g.drain = Math.max(0, g.drain - dt); g.m = g.mRel*g.drain/0.2; }
-    steerAim(g, dt, input);
-    if (input.aPressed && c.armA) { g.stage = 'power'; g.pt = 0; g.m = 0; g.drain = 0; g.mRel = null; }
+    steerAim(g, dt, inp);
+    if (inp.aPressed && c.armA) { g.stage = 'power'; g.pt = 0; g.m = 0; g.drain = 0; g.mRel = null; }
   } else if (g.stage === 'power') {
     g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
-    if (input.aCancel || (!input.aDown && g.m < KICK.tap)) backToAim(g);
-    else if (!input.aDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
+    if (inp.aCancel || (!inp.aDown && g.m < KICK.tap)) backToAim(g);
+    else if (!inp.aDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
   } else if (g.stage === 'runup') {
     if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
 function strikeNow(c) {                                    // the boot meets the ball. A human's first strike at goal, placed or dropped, ends the first-kick aids
   const g = c.g; g.stage = 'flight'; g.tStrike = c.t; sfx('strike'); buzz(25);
-  if (!g.watch && isHuman(g.team) && !settings.kickSeen) { settings.kickSeen = true; save(); }
+  if (g.watch || !isHuman(g.team)) return;
+  if (M.two) sideOf(g.team).kickFirst = false;             // settings.kickSeen is one player's: two player never reads or writes it
+  else if (!settings.kickSeen) { settings.kickSeen = true; save(); }
 }
 function watchStep(c, dt) {                                // the CPU's kick: settle, run-up, flight; Skip jumps to the verdict
   const g = c.g, t = c.t;
-  if (t >= 0.3 && !g.judged && (input.aPressed || input.bPressed)) {
+  if (t >= 0.3 && !g.judged && humanSlots().some(i => i.aPressed || i.bPressed)) {   // Skip, from any seat
     g.skipped = true; g.stage = 'flight'; g.tStrike = t - KICK.hitStop - g.X.t;   // the ball is drawn at the crossing
     verdict(c, 0.6);
     return;
@@ -1560,8 +1687,8 @@ function watchStep(c, dt) {                                // the CPU's kick: se
   else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
 function steerAim(g, dt, inp) {
-  const k = KICK, keys = inp.keys, held = inp.held, on = code => keys.has(code) && !held.has(code);
-  const jx = inp.jx, kx = (on('ArrowRight') || on('KeyD') ? 1 : 0) - (on('ArrowLeft') || on('KeyA') ? 1 : 0);
+  const k = KICK;
+  const jx = inp.jx, kx = inp.keyX();                      // the d-pad aims at the keyboard's rate too
   const rate = jx ? k.aimRate*Math.sign(jx)*Math.pow(Math.abs(jx), 1.6) : k.keyRate*kx;
   if (!rate) return;
   const lim = 85*D2R;
@@ -1573,8 +1700,8 @@ function goalResume(c) {                                   // back to Aim with t
   const g = c.g;
   if (g.type === 'drop') { if (!g.out && (g.stage === 'hold' || g.stage === 'wait')) { g.stage = 'wait'; g.m = 0; g.pt = 0; g.started = true; c.t = CUT_IN; } }
   else if (!g.watch && (g.stage === 'aim' || g.stage === 'power')) { g.stage = 'aim'; g.m = 0; g.pt = 0; g.drain = 0; g.mRel = null; }
-  c.armA = false; input.aDown = input.bDown = false;
-  input.reanchor(); input.held = new Set();
+  c.armA = false;
+  for (const inp of humanSlots()) { inp.aDown = inp.bDown = false; inp.reanchor(); inp.held = new Set(); }
 }
 function goalLabels(c) {
   const g = c.g;
@@ -1627,7 +1754,7 @@ function dropPress(c) {
 function kickLabel(t) {                                    // the small button with the ball in hand, for the human on side t: what this press will do. Through a hold it stays what the press promised
   const c = ctrlOf(t);
   if (!c) return 'Kick';
-  if (M.charging && M.ball.carrier === c) return M.dropArmed[t] ? 'Drop Goal' : 'Kick';
+  if (sideOf(t).charging && M.ball.carrier === c) return M.dropArmed[t] ? 'Drop Goal' : 'Kick';
   return dropZone(c).ok ? 'Drop Goal' : 'Kick';
 }
 // the world `lead` seconds on, run the way the hold will run it: the real step for everyone (the kicker on his stick, a CPU kicker checking
@@ -1704,6 +1831,7 @@ function blockedBy(g, rushers, tStrike) {
 }
 function startDropCut(c) {                                 // the carrier has held B for 0.20s in range: freeze, and cut in with the thumb still down
   const t = c.team, g = makeGoal(t, c.x, c.y, 'drop', c);
+  g.inp = inputOf(t);
   g.rush = rushersOf(c, g, null, M.dropSet[t]);           // the chargers as they really stand at the freeze; behind him, only the ones the offer judged
   M.dropSet[t] = null;
   g.stage = 'hold';
@@ -1775,7 +1903,7 @@ function launchG3d(g, kk, t0) {
   b.f = { kind:'g3d', team, L:g.L, X, t:t0 || 0, T:X.t, x0:w0.x, y0:w0.y, x1:w1.x, y1:w1.y, z0:KICK.h0, z1:0, onside, rolled:new Set(), target:null, drop:true };
   const p = posAt(g.L, Math.min(b.f.t, X.t)), w = toWorld(team, p.x, p.y);
   b.x = w.x; b.y = w.y; b.z = Math.max(0, p.h);
-  M.phase = 'play'; M.charging = false; M.charge = 0;
+  M.phase = 'play'; clearCharge();
   for (const t of [0, 1]) if (isHuman(t)) setCtrl(t, nearestFree(t, w1.x, w1.y));
 }
 function updateG3d(dt) {                                   // the g3d ball in the air: the one posts rule at the line, touch, and a catch under 2.7m as for any kick
@@ -1839,7 +1967,7 @@ function stageDrop(spot, chargers, team) {
   team = team || 0; chargers = chargers || [];
   const P = M.players, b = M.ball, d = dirOf(team), w = toWorld(team, spot.x, spot.y);
   const own = P.filter(p => p.team === team), opp = P.filter(p => p.team !== team);
-  M.phase = 'play'; M.set = null; M.cut = null; M.clock = 30; M.dclock = 100; M.hooter = false; M.charging = false; M.charge = 0; M.phaseCount = 2;
+  M.phase = 'play'; M.set = null; M.cut = null; M.clock = 30; M.dclock = 100; M.hooter = false; clearCharge(); M.phaseCount = 2;
   M.dropOn = [false, false]; M.dropArmed = [false, false]; M.dropSeen = [null, null]; M.dropSet = [null, null];
   for (const p of P) { p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = -1; p.boost = 0; p.hold = 2; p.drop = null; p.quick = false; }
   own.forEach((p, i) => { p.x = clamp(i ? w.x - d*(8 + i) : w.x, 1, 119); p.y = i ? 6 + i*9.5 : w.y; p.fx = d; p.fy = 0; });
@@ -1852,8 +1980,8 @@ function stageDrop(spot, chargers, team) {
   const c = own[0];
   setCarrier(c); c.hold = 2;
   b.x = c.x + c.fx*0.55; b.y = c.y; b.z = 1;
-  setCtrl(team, c); M.ctrlPrev = M.ctrl; M.ctrlT = 1;
-  const inp = inputOf(team); if (inp) { inp.jx = 1; inp.jy = 0; }
+  setCtrl(team, c); for (const s of M.side) { s.ctrlPrev = s.ctrl; s.ctrlT = 1; }
+  const inp = inputOf(team); if (inp) { inp.jx = d; inp.jy = 0; }   // the stick forward, in his own direction
   return c;
 }
 
@@ -1868,8 +1996,8 @@ function startCut(c) {
   c.t = 0; c.after = null; c.hold = 0; c.exit = -1;
   M.cut = c; M.phase = 'cut';
   clearBanner();
-  M.charging = false; M.charge = 0; M.pass = null;
-  input.aPressed = input.bPressed = input.cPressed = false; input.cDown = false;   // a Sprint held into a close-up must be pressed again after it
+  clearCharge(); for (const s of M.side) s.pass = null;
+  for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.cDown = false; }   // a Sprint held into a close-up must be pressed again after it
   lastBtn = '';
 }
 function finishCut(after, hold) {
@@ -1881,17 +2009,20 @@ function updateCut(dt) {
   const c = M.cut;
   c.t += dt;
   if (c.after) {
-    if ((c.duel || c.kind === 'goal') && c.t >= c.skipAt && (input.aPressed || input.bPressed || input.flick)) c.hold = 0;   // tap to skip
+    if ((c.duel || c.kind === 'goal') && c.t >= c.skipAt && humanSlots().some(i => i.aPressed || i.bPressed || i.flick)) c.hold = 0;   // tap to skip, from either seat
     if (c.hold > 0) c.hold -= dt;
     else {
       c.exit = Math.max(0, c.exit) + dt;
-      if (c.exit >= CUT_OUT) { const fn = c.after; M.cut = null; M.phase = 'play'; lastBtn = ''; input.cDown = input.cPressed = false; fn(); }
+      if (c.exit >= CUT_OUT) {
+        const fn = c.after; M.cut = null; M.phase = 'play'; lastBtn = ''; for (const inp of inputs) inp.cDown = inp.cPressed = false; fn();
+        for (const inp of humanSlots()) { inp.latch = false; inp.pre = null; inp.held.clear(); }   // every slot the cut-in prepared reads live again: a stick the non-owner (or a watcher of a CPU kick) held through it is no longer latched
+      }
     }
   } else if (c.kind === 'scrum') updateScrum(c, dt);
   else if (c.kind === 'lineout') updateLineout(c, dt);
   else if (c.kind === 'goal') updateGoalCut(c, dt);
   else updateDuel(c, dt);
-  input.aPressed = input.bPressed = input.cPressed = false; input.flick = 0; input.aCancel = input.bCancel = input.cCancel = false;
+  for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.flick = 0; inp.aCancel = inp.bCancel = inp.cCancel = false; }
 }
 function surge(team, secs) { M.surge = { team, t:secs }; }
 
@@ -1899,32 +2030,41 @@ function surge(team, secs) { M.surge = { team, t:secs }; }
    the stick held forward to drive. pos is metres gained by your pack. */
 const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6;
 function startScrum(s) {
-  // every scrum is a little different: their pack's strength varies, and the side putting in gets a small edge
-  startCut({ kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, rate:0, hit:false, early:false, engaged:false,
-    cpu:(M.diff.scrumCpu + (M.nat[1].power-3)*0.06)*(0.75 + rnd()*0.5) + (s.team === 1 ? 0.08 : 0),
-    me:(M.nat[0].power-3)*0.06 + (s.team === 0 ? 0.08 : 0), wave:rnd()*6, mine:0, theirs:0, result:null });
+  // every scrum is a little different: a CPU pack's strength varies, and the side putting in gets a small edge. pos is metres gained by team 0's pack
+  const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, engaged:false, mine:0, theirs:0, result:null,
+    rate:[0, 0], taps:[0, 0], hit:[false, false], early:[false, false], base:[0, 0], wave:0, msg:[null, null] };   // a pack a side: a human's taps and timing, every pack's base effort; msg: two player's Early / Good Hit tag over each pack
+  for (const t of [0, 1]) c.base[t] = cpuSide(t) ? (diffOf(t).scrumCpu + (M.nat[t].power-3)*0.06)*(0.75 + rnd()*0.5) + (s.team === t ? 0.08 : 0) : (M.nat[t].power-3)*0.06 + (s.team === t ? 0.08 : 0) + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0);
+  c.wave = rnd()*6;
+  startCut(c);
+}
+function scrumPush(c, s, dt) {                             // a human pack's shove this step: a timed hit on Set, then the taps of the last quarter second or so with the stick held forward (in its own direction)
+  const t = c.t, inp = inputOf(s), d = dirOf(s);
+  if (inp && inp.aPressed) {
+    const note = text => { if (M.two) c.msg[s] = { text, at:t }; else say(text, 'small'); };   // two player: a tag over that pack in its seat colour, so two hits at once don't fight over the banner
+    if (t < SCRUM_SET - 0.08) { if (!c.early[s] && !c.hit[s]) { c.early[s] = true; c.pos -= 0.25*d; note('Early'); } }
+    else if (!c.hit[s] && !c.early[s] && t <= SCRUM_SET + 0.28) { c.hit[s] = true; c.pos += 0.35*d; note('Good Hit'); buzz(25, s); }
+    if (t >= SCRUM_SET) { c.rate[s] += 1; c.taps[s]++; }
+  }
+  if (t < SCRUM_SET) return 0;
+  c.rate[s] *= Math.exp(-dt/0.25);
+  const j = inp ? inp.world() : { x:0, y:0 }, jx = j.x*d;
+  const aim = jx > 0.35 ? 1 : jx < -0.3 ? 0.2 : 0.55;
+  return 0.85*Math.min(1.3, c.rate[s]/1.5)*aim + c.base[s];   // 6 taps a second = full effort
 }
 function updateScrum(c, dt) {
-  const t = c.t;
-  if (input.aPressed) {
-    if (t < SCRUM_SET - 0.08) { if (!c.early && !c.hit) { c.early = true; c.pos -= 0.25; say('Early', 'small'); } }
-    else if (!c.hit && !c.early && t <= SCRUM_SET + 0.28) { c.hit = true; c.pos += 0.35; say('Good Hit', 'small'); buzz(25); }
-    if (t >= SCRUM_SET) { c.rate += 1; c.taps = (c.taps || 0) + 1; }
-  }
+  const t = c.t, eff = [0, 1].map(s => (cpuSide(s) ? 0 : scrumPush(c, s, dt)));   // a human's press is read before Set too (Early, or the Good Hit)
   if (t < SCRUM_SET) return;
   if (!c.engaged) { c.engaged = true; sfx('tackle'); buzz(40); }
-  c.rate *= Math.exp(-dt/0.25);           // taps in the last quarter second or so count
-  const j = input.world();
-  const aim = j.x > 0.35 ? 1 : j.x < -0.3 ? 0.2 : 0.55;
-  c.mine = 0.85*Math.min(1.3, c.rate/1.5)*aim + c.me;   // 6 taps a second = full effort
-  c.theirs = c.cpu*(1 + 0.22*Math.sin((t-SCRUM_SET)*2.4 + c.wave));
+  for (const s of [0, 1]) if (cpuSide(s)) eff[s] = c.base[s]*(1 + 0.22*Math.sin((t-SCRUM_SET)*2.4 + c.wave));
+  c.mine = eff[0]; c.theirs = eff[1];
   c.pos = clamp(c.pos + (c.mine - c.theirs)*1.8*dt, -2.5, 2.5);
   if (t >= SCRUM_SET + SCRUM_PUSH || Math.abs(c.pos) >= 2.0) resolveScrum(c);
 }
 function resolveScrum(c) {
   const p = c.pos, F = c.feed;
   let res = p >= 2.0 ? 'dom0' : p <= -2.0 ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
-  if (res === 'dom1' && !c.taps && !c.hit) res = F === 0 ? 'steal1' : 'win1';   // no push at all loses the ball, nothing worse
+  if (res === 'dom1' && !cpuSide(0) && !c.taps[0] && !c.hit[0]) res = F === 0 ? 'steal1' : 'win1';   // a human pack that never pushed loses the ball, nothing worse
+  if (res === 'dom0' && !cpuSide(1) && !c.taps[1] && !c.hit[1]) res = F === 1 ? 'steal0' : 'win0';
   c.result = res;
   const mx = clamp(c.x + p, 15, 105), y = c.y;
   if (res === 'dom0' || res === 'dom1') {
@@ -1962,15 +2102,18 @@ function startLineout(s) {
   const throwT = 0.75 + rnd()*0.6, flight = 0.95 + rnd()*0.35;
   const c = { kind:'lineout', team:s.team, x:s.x, y:s.y, throwT, flight, arrive:throwT + flight, catchH:3.4 + rnd()*0.3,
     jump:[null, null], outcome:null, winner:null, decidedAt:null,
-    reach:[0, 1].map(t => 2.35 + gauss()*0.08 + (t === s.team ? 0.06 : 0)) };
-  const contest = s.team === 1 || rnd() < M.diff.lineContest;
-  if (contest) c.jump[1] = c.arrive - 0.57 + gauss()*M.diff.lineSigma*(s.team === 1 ? 0.9 : 1);
+    reach:[0, 1].map(t => 2.35 + gauss()*0.08 + (t === s.team ? (M.two ? 0.10 : 0.06) : 0) + (M.two ? LINE_LEVEL[levelOf(t)] : 0)) };   // two player: the throw's edge is 0.10 (the thrower keeps about 86% at equal timing, measured over 4,000 throws a side), plus an Easy player's reach; the same draws
+  for (const t of [0, 1]) {                                  // a CPU jumper: always on its own throw, else at its level's contest rate, timed with its level's spread
+    if (!cpuSide(t)) continue;
+    const contest = s.team === t || rnd() < diffOf(t).lineContest;
+    if (contest) c.jump[t] = c.arrive - 0.57 + gauss()*diffOf(t).lineSigma*(s.team === t ? 0.9 : 1);
+  }
   startCut(c);
 }
 function handAt(c, team, t) { return c.reach[team] + liftAt(c.jump[team] == null ? null : t - c.jump[team]); }
 function updateLineout(c, dt) {
   const t = c.t;
-  if (input.aPressed && c.jump[0] == null && t > CUT_IN) { c.jump[0] = t; sfx('pass'); }
+  for (const s of [0, 1]) { const inp = inputOf(s); if (inp && inp.aPressed && c.jump[s] == null && t > CUT_IN) { c.jump[s] = t; sfx('pass'); } }   // each human side's Jump
   if (c.outcome == null && t >= c.arrive) {
     const u = handAt(c, 0, t), k = handAt(c, 1, t), need = c.catchH - 0.2;
     const okU = u >= need, okK = k >= need;
@@ -2025,10 +2168,17 @@ const SPRINT = { mul:[1.20,1.20,1.15], mulBall:[1.05,1.05,1.04], secs:2.0, ballD
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first
 const DUMMY = { drift:[0.35, 0.40, 0.45], fake:[0, 0.15, 0.30] };                      // instant-mode win rate by difficulty
+/* Two player only (never read on a one-player path). DUEL_LOCK: how long before the plain window the chooser's choice locks, by
+   the timer's level (Normal's 0.32 is when the CPU shows its feint, drift or step; an Easy timer gets longer to read it). TWO.tackle:
+   how hard a side's AI men tackle the other player's carrier, read at the carrier's level: the scoring lever, tuned with
+   `twoplayer.mjs --sym` toward 5-7 tries a match at 4-minute halves. SCRUM_LEVEL and LINE_LEVEL: an Easy player's shove and reach. */
+const DUEL_LOCK = [0.40, 0.32, 0.24];
+const TWO = { tackle:[0.72, 0.80, 0.88] };
+const SCRUM_LEVEL = [0.10, 0, 0], LINE_LEVEL = [0.06, 0, 0];
 
 function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
-  let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (q.team === 1 ? M.diff.cpuTackle : M.diff.myTackle);
+  let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
   p += (M.nat[q.team].power - M.nat[c.team].power)*0.05;
   if (stepped) p *= 0.65;
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
@@ -2039,60 +2189,77 @@ function setBoost(p, mul, secs) {
   const sp = maxSpeed(p), m = hyp(p.fx, p.fy) || 1;
   p.vx = p.fx/m*sp; p.vy = p.fy/m*sp;
 }
-function duelGate(kind) {
-  if (M.duels === 'off' || M.phase !== 'play' || M.charging || M.clock < 15 || M.cut) return false;
+function duelGate(kind, owner) {                           // owner: the side that would own it. One player keeps the shared log; two player gives each owner his own quota and "never the same kind twice running", with the gap and the Last Play bonus shared
+  if (M.duels === 'off' || M.phase !== 'play' || anyCharging() || M.clock < 15 || M.cut) return false;
   const L = M.duelLog, h = M.half - 1;
   if (M.hooter && !L.bonus[h] && M.dclock - L.last >= DUEL_LAST_GAP) return 'bonus';
-  if (M.dclock - L.last < DUEL_GAP || kind === L.lastKind) return false;
+  if (M.dclock - L.last < DUEL_GAP) return false;
+  if (M.two) {
+    const S = sideOf(owner).duel;
+    if (kind === S.lastKind || S.half[h] >= Math.ceil(M.halfLen/180)) return false;
+    return 'normal';
+  }
+  if (kind === L.lastKind) return false;
   if (L.half[h] >= Math.ceil(M.halfLen/90)) return false;
   return 'normal';
 }
-function findAttackDuel(c) {
-  if (c !== M.ctrl || c.hold < 0.5 || c.down > 0 || c.side > -0.9 || c.vx <= 3) return null;
-  if (110 - c.x < 3 || c.y < 6 || c.y > 64) return null;
-  if (input.world().x < 0.5) return null;                       // running at him, or no duel
+// "ahead" and "behind" along a side's direction of attack, written out per direction so team 0's comparisons are the floats they always were
+const notBehind = (qx, cx, d, k) => (d > 0 ? qx >= cx - k : qx <= cx + k);   // q is no more than k metres behind c
+const wellAhead = (qx, cx, d, k) => (d > 0 ? qx > cx + k : qx < cx - k);     // q is more than k metres ahead of c
+function findAttackDuel(c) {                                // a human carrier at the last defender: Key Pass with a runner outside him, else Get Past
+  const t = c.team, d = dirOf(t), inp = inputOf(t);
+  if (!ringed(c) || c.hold < 0.5 || c.down > 0 || c.side > -0.9 || c.vx*d <= 3) return null;
+  if ((oppLine(t) - c.x)*d < 3 || c.y < 6 || c.y > 64) return null;
+  if (inp.world().x*d < 0.5) return null;                       // running at him, or no duel
   let d1 = null, bd = 1e9;
-  for (const q of M.players) if (q.team === 1 && q.down <= 0 && q.x - c.x > 0.5) { const d = dist(q, c); if (d < bd) { bd = d; d1 = q; } }
+  for (const q of M.players) if (q.team !== t && q.down <= 0 && (q.x - c.x)*d > 0.5) { const dd = dist(q, c); if (dd < bd) { bd = dd; d1 = q; } }
   if (!d1 || bd < 3.6 || bd > 4.6 || d1.tcd > 0) return null;
   const ux = (d1.x - c.x)/bd, uy = (d1.y - c.y)/bd;
   if ((c.vx - d1.vx)*ux + (c.vy - d1.vy)*uy <= 3) return null;
-  for (const q of M.players) if (q.team === 1 && q !== d1 && q.down <= 0 && q.x >= c.x - 1 && dist(q, c) < 10) return null;
+  for (const q of M.players) if (q.team !== t && q !== d1 && q.down <= 0 && notBehind(q.x, c.x, d, 1) && dist(q, c) < 10) return null;
   let r = null;
   for (const p of M.players) {
-    if (p.team !== 0 || p === c || p.down > 0) continue;
-    const back = c.x - p.x, lat = Math.abs(p.y - c.y);
+    if (p.team !== t || p === c || p.down > 0) continue;
+    const back = (c.x - p.x)*d, lat = Math.abs(p.y - c.y);
     if (back < 0 || back > 6 || lat < 4 || lat > 12) continue;
-    if (M.players.some(q => q.team === 1 && q !== d1 && q.down <= 0 && dist(q, p) < 6)) continue;
+    if (M.players.some(q => q.team !== t && q !== d1 && q.down <= 0 && dist(q, p) < 6)) continue;
     r = p; break;
   }
-  if (r) { const g = duelGate('pass'); if (g) return { kind:'pass', U:c, O:d1, R:r, how:g }; }
-  const g = duelGate('past');
+  if (r) { const g = duelGate('pass', t); if (g) return { kind:'pass', U:c, O:d1, R:r, how:g }; }
+  const g = duelGate('past', t);
   return g ? { kind:'past', U:c, O:d1, how:g } : null;
 }
-function findTackleDuel(c) {
+function findTackleDuel(c) {                                // the other side's human as the last defender, front-on, running at the carrier
   if (c.hold < 0.5 || c.down > 0) return null;
-  const q = M.ctrl;
-  if (!q || q.team !== 0 || q.down > 0 || q.tcd > 0 || M.ctrlT < 0.6) return null;
-  if (q.x >= c.x - 0.5) return null;
-  const d = dist(q, c);
-  if (d < 2.9 || d > 6.0) return null;
-  if (c.x - 10 < 3 || c.y < 6 || c.y > 64) return null;
-  for (const o of M.players) if (o.team === 0 && o !== q && o.down <= 0 && o.x <= c.x + 1 && dist(o, c) < 10) return null;
-  const j = input.world();
-  if (j.mag <= 0.5 || (j.x*(c.x - q.x) + j.y*(c.y - q.y))/(j.mag*d) < 0.57) return null;
-  const g = duelGate('tackle');
+  const t = 1 - c.team, d = dirOf(c.team), q = ctrlOf(t);
+  if (!q || q.down > 0 || q.tcd > 0 || sideOf(t).ctrlT < 0.6) return null;
+  if (!wellAhead(q.x, c.x, d, 0.5)) return null;
+  const dd = dist(q, c);
+  if (dd < 2.9 || dd > 6.0) return null;
+  if ((oppLine(c.team) - c.x)*d < 3 || c.y < 6 || c.y > 64) return null;
+  for (const o of M.players) if (o.team === t && o !== q && o.down <= 0 && notBehind(o.x, c.x, d, 1) && dist(o, c) < 10) return null;
+  const j = inputOf(t).world();
+  if (j.mag <= 0.5 || (j.x*(c.x - q.x) + j.y*(c.y - q.y))/(j.mag*dd) < 0.57) return null;
+  const g = duelGate('tackle', t);
   return g ? { kind:'tackle', U:q, O:c, how:g } : null;
+}
+function pickOwner(a, k) {                                 // two candidates on one step (two player only): the side with more duels left this half, then the side that didn't have the last one, then the attacker
+  const h = M.half - 1, left = t => Math.ceil(M.halfLen/180) - sideOf(t).duel.half[h];
+  if (left(a.U.team) !== left(k.U.team)) return left(a.U.team) > left(k.U.team) ? a : k;
+  if (M.duelLog.lastOwner === a.U.team) return k;
+  return a;
 }
 function duelCheck(c) {
   if (M.duels === 'off' || c.drop) return false;    // before any rnd(), so AI v AI keeps its sequence; a CPU carrier winding up a drop is not duelled
-  const s = c.team === 0 ? findAttackDuel(c) : findTackleDuel(c);
+  const a = ringed(c) ? findAttackDuel(c) : null, k = isHuman(1 - c.team) ? findTackleDuel(c) : null;
+  const s = a && k ? pickOwner(a, k) : (a || k);
   if (!s) return false;
   startDuel(s);
   return true;
 }
-function blockSpec(from, to) {
-  const q = M.ctrl, b = M.ball;
-  if (!q || q.team !== 0 || q.down > 0 || q.tcd > 0 || M.ctrlT < 0.6 || from.x - 10 < 3) return null;
+function blockSpec(from, to) {                             // the defending side's human on the line of a pressure pass, running at it
+  const t = 1 - from.team, q = ctrlOf(t), b = M.ball;
+  if (!q || q.down > 0 || q.tcd > 0 || sideOf(t).ctrlT < 0.6 || (oppLine(from.team) - from.x)*dirOf(from.team) < 3) return null;
   const P0 = { x:b.x, y:b.y }, P1 = { x:to.x + to.vx*0.4, y:to.y + to.vy*0.4 };
   const vx = P1.x - P0.x, vy = P1.y - P0.y, len = hyp(vx, vy);
   if (len < 5) return null;
@@ -2100,17 +2267,18 @@ function blockSpec(from, to) {
   if (u < 0.25 || u > 0.85) return null;
   const L = { x:P0.x + vx*u, y:P0.y + vy*u };
   if (hyp(q.x - L.x, q.y - L.y) > 3.0) return null;
-  if (M.players.some(o => o.team === 0 && o !== q && o.down <= 0 && dist(o, to) < 5)) return null;
-  const j = input.world();
+  if (M.players.some(o => o.team === t && o !== q && o.down <= 0 && dist(o, to) < 5)) return null;
+  const j = inputOf(t).world();
   if (j.mag <= 0.5) return null;
   const toward = (x, y) => { const dx = x - q.x, dy = y - q.y, m = hyp(dx, dy) || 1; return (j.x*dx + j.y*dy)/(j.mag*m) >= 0.57; };
   if (!toward(L.x, L.y) && !toward(from.x, from.y)) return null;
-  const g = duelGate('block');
+  const g = duelGate('block', t);
   return g ? { kind:'block', U:q, O:from, R:to, P0, P1, L, how:g } : null;
 }
-// the CPU's pressure pass: a Block duel may take it over
-function cpuPass(p, to, o) {
-  if (M.duels !== 'off' && p.team === 1 && !(o && o.long)) {   // a floater is not the flat pass a Block duel reads
+// a pressure pass across the other side's man: when that side is human and duels are live, a Block duel may take it over. The AI's
+// passes and a human's go through it alike; a floater is not the flat pass a Block duel reads
+function passOrBlock(p, to, o) {
+  if (M.duels !== 'off' && isHuman(1 - p.team) && !(o && o.long)) {
     const s = blockSpec(p, to);
     if (s) { M.duelPending = s; return; }
   }
@@ -2125,20 +2293,22 @@ function startPendingDuel() {
 function startDuel(s) {
   for (const p of M.players) { p.sprinting = false; p.sprint = 0; }   // a duel is run at the duel's pace; the meters keep their level
   for (const S of M.spr) S.p = null;
-  const k = DUEL[s.kind], di = M.di, n0 = M.nat[0], n1 = M.nat[1], L = M.duelLog, h = M.half - 1;
-  if (s.how === 'bonus') L.bonus[h] = true; else if (s.how !== 'force') L.half[h]++;
-  L.last = M.dclock; L.lastKind = s.kind;
+  const own = s.U.team, k = DUEL[s.kind], di = levelOf(own), nU = M.nat[s.U.team], nO = M.nat[s.O.team], L = M.duelLog, h = M.half - 1;
+  if (s.how === 'bonus') L.bonus[h] = true; else if (s.how !== 'force') { L.half[h]++; sideOf(own).duel.half[h]++; }
+  L.last = M.dclock; L.lastKind = s.kind; L.lastOwner = own; sideOf(own).duel.lastKind = s.kind;
   M.stats.duels++; M.stats['d_' + s.kind] = (M.stats['d_' + s.kind] || 0) + 1;
-  const snap = p => p ? { x:p.x, y:p.y, vx:p.vx, vy:p.vy } : null;
-  const c = { duel:true, kind:s.kind, U:s.U, O:s.O, R:s.R || null, how:s.how, lastEvt:0, armed:false, opened:false,
+  if (M.two && (s.kind === 'past' || s.kind === 'pass')) setCtrl(s.O.team, s.O);   // the chooser's ring goes to the man in the close-up (O is the nearest defender, not always his), and stays on him after
+  // the duel runs in its owner's frame (toFrame, the kick frame): Step Right is always the owner's right, and a team 0 duel is the geometry it always was
+  const snap = p => { if (!p) return null; const f = toFrame(own, p.x, p.y), v = frameVec(own, { x:p.vx, y:p.vy }); return { x:f.x, y:f.y, vx:v.x, vy:v.y }; };
+  const c = { duel:true, kind:s.kind, own, U:s.U, O:s.O, R:s.R || null, how:s.how, lastEvt:0, armed:false, opened:false,
     res:null, act:null, judged:null, out:null, verdict:null, u0:snap(s.U), o0:snap(s.O), r0:snap(s.R) };
-  const U = s.U, tgt = s.kind === 'block' ? s.L : s.O;
+  const U = c.u0, tgt = s.kind === 'block' ? toFrame(own, s.L.x, s.L.y) : c.o0;
   const gx = tgt.x - U.x, gy = tgt.y - U.y, g0 = hyp(gx, gy) || 1;
   c.D = { x:gx/g0, y:gy/g0 }; c.g0 = g0;
   let vc = 6;
-  if (s.kind === 'block') { c.w = 1; c.K = { x:s.L.x, y:s.L.y }; c.P0 = s.P0; c.P1 = s.P1; c.L = s.L; }
+  if (s.kind === 'block') { c.w = 1; c.K = { x:tgt.x, y:tgt.y }; c.P0 = toFrame(own, s.P0.x, s.P0.y); c.P1 = toFrame(own, s.P1.x, s.P1.y); c.L = { x:tgt.x, y:tgt.y }; }
   else {
-    const uv = U.vx*c.D.x + U.vy*c.D.y, ov = s.O.vx*c.D.x + s.O.vy*c.D.y;
+    const uv = U.vx*c.D.x + U.vy*c.D.y, ov = c.o0.vx*c.D.x + c.o0.vy*c.D.y;
     vc = Math.max(4, uv - ov);
     c.w = clamp(uv/vc, 0.3, 0.7);
     c.K = { x:U.x + c.D.x*g0*c.w, y:U.y + c.D.y*g0*c.w };
@@ -2148,11 +2318,13 @@ function startDuel(s) {
   c.tTrig = CUT_IN + clamp((G_START - g0)/(G_START - G_HIT), 0, 1)*(c.tk - CUT_IN);
   c.dtau = clamp(c.rho*(c.tk - c.tTrig), 0, 0.5);
   const tw = CUT_IN + (c.tk - CUT_IN)*(G_START - G_WIN)/(G_START - G_HIT);
-  const w = k.win[di] + clamp(0.012*(n0[k.mod[0]] - n1[k.mod[1]]), -0.036, 0.036)
-    + (settings.duelSeen ? 0 : 0.08) + (L.fails >= 2 ? 0.04 : 0);
+  const SD = sideOf(own).duel, first = M.two ? SD.first : !settings.duelSeen, fails = M.two ? SD.fails : L.fails;   // the aids are per owner in two player: his own first duel, his own failures in a row
+  const w = k.win[di] + clamp(0.012*(nU[k.mod[0]] - nO[k.mod[1]]), -0.036, 0.036)
+    + (first ? 0.08 : 0) + (fails >= 2 ? 0.04 : 0);
+  if (M.two) SD.first = false;
   let centre = tw;
   if (s.kind === 'past') {
-    const touch = U.y < 15 ? -1 : U.y > 55 ? 1 : 0;           // show him the touchline
+    const touch = U.y < 15 ? -1 : U.y > 55 ? 1 : 0;           // show him the touchline (frame y: his own left or right)
     c.open = touch && rnd() < 0.65 ? touch : (rnd() < 0.5 ? -1 : 1);
     c.open0 = rnd() < k.cpu[di] ? -c.open : c.open;           // a feint starts on the other shoulder
   } else if (s.kind === 'pass') {
@@ -2167,22 +2339,72 @@ function startDuel(s) {
   c.centre = centre; c.wid = w; c.win = [centre - w/2, centre + w/2];
   if (s.kind === 'past' && c.open0 !== c.open) c.feintAt = c.win[0] - 0.32;
   if (s.kind === 'pass') {
-    c.side = Math.sign((s.R.y - U.y) || 1);                    // the runner's side
+    c.side = Math.sign((c.r0.y - U.y) || 1);                   // the runner's side, in the frame
     c.drift = rnd() < DUMMY.drift[di];
     if (c.drift) c.driftAt = c.win[0] - 0.32;                  // he drifts onto the runner, in plain view
     else if (rnd() < DUMMY.fake[di]) c.fakeAt = c.win[0] - 0.55;   // starts to drift, then comes back at you
   }
   if (c.stepDir) c.stepAt = c.win[0] - 0.32;
   c.endT = s.kind === 'block' ? centre + 0.45 : c.tk + 0.35;
+  if (M.two) duelHeadToHead(c);                              // head to head: the other player makes the choice the AI drew above, by the lock
   if (M.duels === 'instant') { duelInstant(c); return c; }
-  input.pre = null; input.reanchor(); input.held = new Set(input.keys); input.flick = 0;
+  for (const inp of humanSlots()) { inp.pre = null; inp.reanchor(); inp.held = new Set(inp.keys); inp.flick = 0; }   // every human slot: touch re-centred, a pad stick latched, held keys ignored
   startCut(c);
   sfx('whoosh');
   return c;
 }
+/* Head to head. In two player the duel's other man is the other player's, so he is the chooser: he makes the choice the CPU draws in
+   one player (the shoulder the defender guards in a Get Past, a drift onto the runner or a rush at the passer in a Key Pass, the
+   carrier's step in a Tackle, the passer's dummy in a Block). The CPU's plan is drawn in startDuel exactly as in one player and runs
+   unless the chooser moves first: his first fresh input before the lock takes over and cancels what is left of the plan, so a
+   chooser who does nothing defends as the CPU does, and a plan event after the lock shows at the lock. The lock is DUEL_LOCK at the
+   timer's level before the plain window (the pump, 0.75s, for a Block); from there the choice is fixed and the timer reads it as he
+   would read the CPU's tell. The chooser's hand is sideX(): fresh keys only, never one held into the cut-in, and an unlatched stick.
+   Nothing random is drawn here. One player never reaches this, so its duels are the draws they always were. */
+function setWindow(c, centre) { c.centre = centre; c.win = [centre - c.wid/2, centre + c.wid/2]; c.endT = c.kind === 'block' ? centre + 0.45 : c.tk + 0.35; }
+function duelHeadToHead(c) {
+  c.locked = false; c.lean = 0; c.dummyPress = false; c.taken = false; c.changes = 0; c.lastSx = 0;
+  const plain0 = c.win[0] - (c.kind === 'tackle' && c.stepDir ? 0.10 : 0);   // the window before any drawn step
+  c.lock = c.kind === 'block' ? 0.75 : plain0 - DUEL_LOCK[levelOf(c.own)];
+  for (const k of ['feintAt', 'driftAt', 'fakeAt', 'stepAt']) if (c[k] != null) c[k] = Math.min(c[k], c.lock);   // a plan event after the lock is pulled back to it
+  if (c.kind === 'tackle' && c.stepDir) c.tkAt = c.stepAt;                     // the drawn step's slower approach eases in at the step, not from the cut-in
+  if (c.kind === 'block') c.reachT = 1.05;                                      // the blocker's run is timed to the plain release whether or not a dummy is drawn: nothing on screen tells before the pump
+}
+function duelOther(c, t) {                                  // the chooser's hand, every step from the cut-in: shown live, and fixed at the lock
+  if (c.locked) return;
+  const inp = inputOf(1 - c.own); if (!inp) { c.locked = true; return; }
+  const sx = inp.sideX(), fresh = sx !== 0 && sx !== c.lastSx; c.lastSx = sx;   // the duel's right is the owner's right
+  if (t < c.lock) {
+    if (c.kind === 'block') { if (inp.bPressed) c.dummyPress = true; return; }
+    if (c.kind === 'past') {
+      if (!fresh) return;
+      const shown = c.feintAt != null && t < c.feintAt ? c.open0 : c.open;   // the open side as the timer sees it now
+      if (!c.taken) { c.taken = true; c.open = c.open0 = shown; c.feintAt = null; }   // the plan's feint is off: the guard follows his hand from here
+      if (-sx !== c.open && c.changes < 2) { c.open0 = c.open; c.open = -sx; c.feintAt = t; c.changes++; }   // he guards the side he points at, with the feint's own animation; at most a feint and back
+      return;
+    }
+    c.lean = clamp(sx || (inp.latch ? 0 : inp.jx), -1, 1);
+    if (c.kind === 'pass') {
+      if (fresh && !c.taken) { c.taken = true; c.drift = false; c.driftAt = null; c.fakeAt = null; }
+      if (c.taken) {
+        if (sx === c.side && !c.drift) { c.drift = true; c.driftAt = t; c.fakeAt = null; }       // held toward the runner: he drifts onto him, in plain view
+        else if (sx !== c.side && c.drift) { c.drift = false; c.driftAt = null; c.fakeAt = t - 0.2; }   // let go before the lock: the drift was a fake, and he comes back
+      }
+      if (c.drift) c.lean = 0;
+    } else if (c.kind === 'tackle' && fresh && !c.stepped) {   // one step, as the AI's: the contact, the window and the end move 0.10s later, the approach easing to the slower pace over the step
+      c.stepped = true;
+      if (!c.stepDir) { c.tk += 0.10; setWindow(c, c.centre + 0.10); }
+      c.stepDir = sx; c.stepAt = t; c.tkAt = t; c.cam = null; sfx('whoosh');
+    }
+    return;
+  }
+  c.locked = true; c.lean = 0;                             // (the lock is no event of its own: a resume can land before it, and the choice stays fixed)
+  if (c.kind === 'block' && (c.dummyPress || inp.bPressed) && !c.dummy) { c.dummy = true; c.rel = 1.05; c.tk = c.rel + 0.30; setWindow(c, c.tk); }   // the pump: one dummy, the real release at 1.05
+}
 function updateDuel(c, dt) {
-  const t = c.t;
-  if (t < DUEL_GRACE) { input.reanchor(); input.flick = 0; return; }
+  const t = c.t, input = inputOf(c.own);                   // the timer acts from the owner's slot
+  if (M.two) duelOther(c, t);                              // the chooser's hand first, from the cut-in, so a release or a dummy on the lock step is settled before anything sounds
+  if (t < DUEL_GRACE) { for (const inp of M.two ? [input] : humanSlots()) { inp.reanchor(); inp.flick = 0; } return; }   // the owner's stick is re-centred through the grace; the chooser's reads live from the cut-in (it was latched once there)
   if (c.feintAt != null && t >= c.feintAt && c.lastEvt < c.feintAt) { c.lastEvt = c.feintAt; sfx('whoosh'); }
   if (c.stepAt != null && t >= c.stepAt && c.lastEvt < c.stepAt) c.lastEvt = c.stepAt;
   for (const at of [c.driftAt, c.fakeAt]) if (at != null && t >= at && c.lastEvt < at) c.lastEvt = at;
@@ -2190,7 +2412,7 @@ function updateDuel(c, dt) {
     if (c.dummy && t >= 0.75 && c.lastEvt < 0.75) c.lastEvt = 0.75;
     if (t >= c.rel && c.lastEvt < c.rel) { c.lastEvt = c.rel; sfx('pass'); }
   }
-  if (!c.opened && t >= c.win[0]) { c.opened = true; sfx('tick'); buzz(12); }
+  if (!c.opened && t >= c.win[0]) { c.opened = true; sfx('tick'); buzz(12, c.own); }
   let act = null;
   if (c.kind === 'past') {
     // a step is a fresh sideways flick of the re-anchored stick, or an arrow key pressed during the duel
@@ -2244,16 +2466,17 @@ function settle(c, res, act) {
   if (good) { M.stats.duelsWon = (M.stats.duelsWon || 0) + 1; M.stats['w_' + c.kind] = (M.stats['w_' + c.kind] || 0) + 1; }
   if (good && res === 'perfect' && c.kind !== 'block') M.stats.duelsPerfect = (M.stats.duelsPerfect || 0) + 1;
   M.duelLog.fails = good ? 0 : M.duelLog.fails + 1;
-  if (!settings.duelSeen) { settings.duelSeen = true; save(); }
+  if (M.two) { const SD = sideOf(c.own).duel; SD.fails = good ? 0 : SD.fails + 1; }   // the catch-up aid counts each owner's own failures
+  else if (!settings.duelSeen) { settings.duelSeen = true; save(); }   // settings.duelSeen is one player's: two player never touches it
   if (good) sfx('cheer');
   if (['tackled', 'bighit'].includes(out)) { sfx('tackle'); buzz(25); }
-  say(verdict, good ? '' : 'small', ours ? 0 : 1, good && res === 'perfect' && c.kind !== 'block' ? 'Perfect' : null);
+  say(verdict, good ? '' : 'small', ours ? c.U.team : c.O.team, good && res === 'perfect' && c.kind !== 'block' ? 'Perfect' : null);
   if (M.duels === 'instant') { applyDuel(c); return; }
   c.skipAt = c.t + DUEL_SKIP;
   finishCut(() => applyDuel(c), Math.max(DUEL_OUTRO + (res === 'perfect' ? 0.1 : 0), c.endT - c.t));
 }
 function duelInstant(c) {
-  let res = rnd() < INSTANT[M.di] ? (rnd() < (c.kind === 'block' ? 0.4 : 0.35) ? 'perfect' : 'ok') : (rnd() < 0.5 ? 'early' : 'late');
+  let res = rnd() < INSTANT[levelOf(c.own)] ? (rnd() < (c.kind === 'block' ? 0.4 : 0.35) ? 'perfect' : 'ok') : (rnd() < 0.5 ? 'early' : 'late');
   let act = null;
   if (c.kind === 'past') {
     if (res === 'ok' || res === 'perfect') act = c.open;
@@ -2271,10 +2494,12 @@ function duelInstant(c) {
 function put(p, P, carrier) { p.x = clamp(P.x, 0.5, 119.5); p.y = clamp(P.y, carrier ? 3 : 1.5, carrier ? 67 : 68.5); }
 // hand the result back to the match, with everyone where the close-up left them
 function applyDuel(c) {
-  if (c.kind === 'block' && c.out === 'intercept') input.pre = { x:0, y:0 };   // the aim was at the lane; the run is upfield
-  if (M.duels !== 'instant') input.restore();
+  const own = c.own, inp = inputOf(own);
+  if (c.kind === 'block' && c.out === 'intercept' && inp) inp.pre = { x:0, y:0 };   // the aim was at the lane; the run is upfield
+  if (M.duels !== 'instant' && inp) inp.restore();
   const U = c.U, O = c.O, R = c.R, K = c.K, D = c.D, b = M.ball;
-  const at = (k, lat) => ({ x:K.x + D.x*k, y:K.y + D.y*k + (lat || 0) });
+  const at = (k, lat) => toWorld(own, K.x + D.x*k, K.y + D.y*k + (lat || 0));   // a frame spot on the approach line, back in the world
+  const face = (p, fx, fy) => { const v = frameVec(own, { x:fx, y:fy }); p.fx = v.x; p.fy = v.y; };
   if (R && c.kind !== 'block') { R.x += R.vx*c.dtau; R.y += R.vy*c.dtau; }
   switch (c.kind + ':' + c.out) {
     case 'past:break': {
@@ -2282,7 +2507,7 @@ function applyDuel(c) {
       put(U, at(1.3, 1.2*o), true); put(O, at(0, -0.6*o));
       O.down = 0.9; O.tcd = 1; O.vx = O.vy = 0;
       U.side = 0.35;
-      const m = hyp(1, 0.3); U.fx = 1/m; U.fy = 0.3*o/m;
+      const m = hyp(1, 0.3); face(U, 1/m, 0.3*o/m);
       setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
       U.autoDir = o;
       break;
@@ -2304,7 +2529,7 @@ function applyDuel(c) {
       // he went with the runner; you go through the gap he left
       put(U, at(1.3, -0.5*c.side), true); put(O, at(0.2, 1.2*c.side));
       O.down = 0.5; O.tcd = 1; O.vx = O.vy = 0;
-      U.side = 0.35; U.fx = 1; U.fy = 0;
+      U.side = 0.35; U.fx = dirOf(own); U.fy = 0;
       setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
       break;
     }
@@ -2331,20 +2556,22 @@ function applyDuel(c) {
     case 'tackle:tackled':
       put(U, at(0.3)); put(O, at(0.9), true); tackle(O, U); break;
     case 'tackle:missed':
-      put(U, K); U.down = 0.75; U.vx = U.vy = 0; put(O, at(-1.2), true); M.stats.broken++; break;
+      put(U, toWorld(own, K.x, K.y)); U.down = 0.75; U.vx = U.vy = 0; put(O, at(-1.2), true); M.stats.broken++; break;
     case 'block:intercept':
-      put(U, K); U.fx = 1; U.fy = 0;
+      put(U, toWorld(own, K.x, K.y)); U.fx = dirOf(own); U.fy = 0;
       setCarrier(U); b.x = U.x; b.y = U.y;
       M.stats.intercepts++;
       setBoost(U, ...BURST.ok);
       if (R) { R.x += R.vx*c.dtau; R.y += R.vy*c.dtau; }
       break;
-    case 'block:knock':
-      b.state = 'loose'; b.carrier = null; b.f = null; b.x = K.x; b.y = K.y; b.z = 1;
-      b.vx = -(3 + 2*rnd()); b.vy = (rnd() - 0.5)*2; b.vz = 1.5; b.last = 0; b.kickInfo = { team:0, ownHalf:false };
-      put(U, { x:K.x - 0.5, y:K.y }); U.fx = -1; U.fy = 0;
+    case 'block:knock': {
+      const Kw = toWorld(own, K.x, K.y), kv = frameVec(own, { x:-(3 + 2*rnd()), y:(rnd() - 0.5)*2 });   // the knock-down runs back along the owner's own direction
+      b.state = 'loose'; b.carrier = null; b.f = null; b.x = Kw.x; b.y = Kw.y; b.z = 1;
+      b.vx = kv.x; b.vy = kv.y; b.vz = 1.5; b.last = own; b.kickInfo = { team:own, ownHalf:false };
+      put(U, toWorld(own, K.x - 0.5, K.y)); U.fx = -dirOf(own); U.fy = 0;   // half a metre back towards his own line
       setBoost(U, ...BURST.knock);
       break;
+    }
     case 'block:pass':
       doPass(O, R, { skip:[U] }); break;
   }
@@ -2352,42 +2579,46 @@ function applyDuel(c) {
 function duelResume(c) {
   c.t = Math.max(c.lastEvt + 0.05, DUEL_GRACE, c.t - 0.25);
   if (c.t < c.win[0]) c.opened = false;   // the window's tick plays again
-  input.reanchor(); input.held = new Set();
+  for (const inp of humanSlots()) { inp.reanchor(); inp.held = new Set(); }
 }
-// canonical positions for tests and the console: __tryline.forceDuel('past')
-function stageDuel(kind) {
-  const P = M.players, b = M.ball;
-  P.forEach((p, i) => { p.x = p.team === 0 ? 20 + i : 100 - i; p.y = 5 + (i % 7)*9; p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = -1; p.boost = 0; p.hold = 2; });
-  const T0 = P.filter(p => p.team === 0), T1 = P.filter(p => p.team === 1);
-  M.phase = 'play'; M.set = null; M.cut = null; M.clock = 30; M.dclock = 100; M.hooter = false; M.charging = false;
-  M.duelLog = { last:-99, lastKind:null, half:[0, 0], bonus:[false, false], fails:0 };
-  input.jx = 1; input.jy = 0;
+// canonical positions for tests and the console: __tryline.forceDuel('past'). The scene is laid out in the owner's frame and
+// mirrored into the world for team 1 (stageDuel('past', 1) in a match with humans:[false, true]), so the two read the same duel
+function stageDuel(kind, team) {
+  const own = team || 0, P = M.players, b = M.ball, d = dirOf(own);
+  const at = (p, fx, fy) => { const w = toWorld(own, fx, fy); p.x = w.x; p.y = w.y; };
+  const run = (p, vx, vy, fx, fy) => { const v = frameVec(own, { x:vx, y:vy }); p.vx = v.x; p.vy = v.y; if (fx != null) { const f = frameVec(own, { x:fx, y:fy }); p.fx = f.x; p.fy = f.y; } };
+  P.forEach((p, i) => { const j = p.team === own ? i - 7*own : i + 7*own; at(p, p.team === own ? 20 + j : 100 - j, 5 + (j % 7)*9); p.vx = p.vy = 0; p.down = 0; p.tcd = 0; p.side = -1; p.boost = 0; p.hold = 2; });
+  const T0 = P.filter(p => p.team === own), T1 = P.filter(p => p.team !== own);
+  M.phase = 'play'; M.set = null; M.cut = null; M.clock = 30; M.dclock = 100; M.hooter = false; for (const s of M.side) s.charging = false;
+  M.duelLog = { last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 };
+  const input = inputOf(own) || inputs[0];
+  input.jx = d; input.jy = 0;
   let U, O, R = null;
   if (kind === 'past' || kind === 'pass') {
     U = T0[0]; O = T1[0];
-    Object.assign(U, { x:70, y:35, vx:8, vy:0, fx:1, fy:0 });
-    Object.assign(O, { x:74.2, y:35, vx:-7, vy:0, fx:-1, fy:0 });
-    if (kind === 'pass') { R = T0[1]; Object.assign(R, { x:68, y:42, vx:8, vy:0 }); }
-    setCarrier(U); U.hold = 2; b.x = U.x + 0.55; b.y = U.y;
+    at(U, 70, 35); run(U, 8, 0, 1, 0);
+    at(O, 74.2, 35); run(O, -7, 0, -1, 0);
+    if (kind === 'pass') { R = T0[1]; at(R, 68, 42); run(R, 8, 0); }
+    setCarrier(U); U.hold = 2; b.x = U.x + d*0.55; b.y = U.y;
   } else if (kind === 'tackle') {
     U = T0[0]; O = T1[0];
-    Object.assign(O, { x:50, y:35, vx:-7, vy:0, fx:-1, fy:0 });
-    Object.assign(U, { x:46, y:35, vx:3, vy:0, fx:1, fy:0 });
-    setCarrier(O); O.hold = 2; M.ctrl = U; b.x = O.x - 0.55; b.y = O.y;
+    at(O, 50, 35); run(O, -7, 0, -1, 0);
+    at(U, 46, 35); run(U, 3, 0, 1, 0);
+    setCarrier(O); O.hold = 2; setCtrl(own, U); b.x = O.x - d*0.55; b.y = O.y;
   } else {
     U = T0[0]; O = T1[0]; R = T1[1];
-    Object.assign(O, { x:50, y:30, vx:-4, vy:0, fx:-1, fy:0 });
-    Object.assign(R, { x:54, y:40, vx:-4, vy:0 });
-    Object.assign(U, { x:51.8, y:35.6, vx:0, vy:0, fx:1, fy:0 });
-    setCarrier(O); O.hold = 2; M.ctrl = U; b.x = O.x; b.y = O.y;
+    at(O, 50, 30); run(O, -4, 0, -1, 0);
+    at(R, 54, 40); run(R, -4, 0);
+    at(U, 51.8, 35.6); run(U, 0, 0, 1, 0);
+    setCarrier(O); O.hold = 2; setCtrl(own, U); b.x = O.x; b.y = O.y;
   }
-  M.ctrlPrev = M.ctrl; M.ctrlT = 1;
-  if (kind === 'tackle') { input.jx = 1; input.jy = 0; }
-  if (kind === 'block') { const dx = 51.2 - U.x, dy = 34.4 - U.y, m = hyp(dx, dy); input.jx = dx/m; input.jy = dy/m; }
+  for (const s of M.side) { s.ctrlPrev = s.ctrl; s.ctrlT = 1; }
+  if (kind === 'tackle') { input.jx = d; input.jy = 0; }
+  if (kind === 'block') { const L = toWorld(own, 51.2, 34.4), dx = L.x - U.x, dy = L.y - U.y, m = hyp(dx, dy); input.jx = dx/m; input.jy = dy/m; }
   return { U, O, R };
 }
-function forceDuel(kind) {
-  const { U, O, R } = stageDuel(kind);
+function forceDuel(kind, team) {
+  const { U, O, R } = stageDuel(kind, team);
   if (kind === 'block') {
     const s = blockSpec(O, R) || (() => {
       const b = M.ball, P1 = { x:R.x + R.vx*0.4, y:R.y + R.vy*0.4 }, P0 = { x:b.x, y:b.y };
@@ -2414,7 +2645,7 @@ function updateBallAir(dt) {
       if (f.long && u > 0.18 && u < 0.82) continue;          // the loop is over the men in between; the contest is at the passer and the receiver
       if (hyp(q.x-b.x, q.y-b.y) < 1.1 && b.z < 2.3) {
         f.rolled.add(q);
-        const pI = (!M.auto && q === M.ctrl) ? 0.4 : (q.team === 1 ? M.diff.cpuIntercept : 0.18);
+        const pI = ringed(q) ? 0.4 : (cpuSide(q.team) ? diffOf(q.team).cpuIntercept : M.two ? DIFF[levelOf(f.team)].cpuIntercept : 0.18);   // an AI interceptor in two player reads at the passer's level, as the CPU does against a human
         if (rnd() < pI) { catchBall(q, 'intercept'); return; }
       }
     }
@@ -2565,8 +2796,8 @@ function assignMarks(T, D, pts, dA, fx, fy, lineX, mode, sweep) {
 }
 function computeTargets() {
   const T = new Map(), b = M.ball, P = M.players;
-  const uc = userActive() ? M.ctrl : null;
-  const free = p => p.down <= 0 && p !== uc && !p.bind;
+  const uc = new Set(); for (const t of [0, 1]) if (userActive(t)) uc.add(ctrlOf(t));   // the men under a human's ring drive themselves
+  const free = p => p.down <= 0 && !uc.has(p) && !p.bind;
   if (M.phase === 'goal' || (M.phase === 'set' && (M.set.kind === 'try' || M.set.kind === 'score'))) {
     for (const p of P) T.set(p, { x:p.x, y:p.y, s:0 });
     return T;
@@ -2606,7 +2837,7 @@ function computeTargets() {
   if (mode === 'held') {
     const live = D.filter(p => !(p.offside > 0));                  // a retiring tackler is never the chaser, and never the man who comes up
     const depthOf = p => (p.x - carrier.x) * dA;
-    const lv = M.di === 0 || M.di === 2 ? M.di : 1;
+    const L = levelOf(att), lv = L === 0 || L === 2 ? L : 1;         // how hard the defence is for this attacker: his side's level
     const quota = COVER.last[lv];
     const ahead = live.filter(p => depthOf(p) > 0.8);               // still goal-side: a formed line, or the last men of a break
     const stepped = live.filter(p => { const z = depthOf(p); return z > -4 && z <= 0.8; }).sort((a, b) => depthOf(b) - depthOf(a));
@@ -2688,18 +2919,18 @@ function aiCarrier(p, dt) {
     if (r && r.space > near + 2 && rnd() < 0.6) {
       const nearMan = pickReceiver(p, 0);                     // the man a flat pass would find; a long one skips him when he is crowded and the next man is in space
       const nxt = nearMan && pressure(nearMan) < 2.2 ? pickLong(p, 0, nearMan) : null;
-      if (nxt && pressure(nxt) > pressure(nearMan) + 2) cpuPass(p, nxt, { long:true });
-      else cpuPass(p, r.q);
+      if (nxt && pressure(nxt) > pressure(nearMan) + 2) passOrBlock(p, nxt, { long:true });
+      else passOrBlock(p, r.q);
     }
   }
 }
 
 /* ---------- the user's player ---------- */
-function userMove(p, dt) {
-  const j = input.world(), b = M.ball;
+function userMove(p, dt, inp) {
+  const j = inp.world(), b = M.ball;
   const ms = maxSpeed(p)*(b.carrier === p ? 0.95 : 1);
   if (b.state === 'air' && b.f.kind === 'pass' && b.f.target === p && (j.mag < 0.1 || b.f.sure)) { seek(p, b.f.x1, b.f.y1, ms, 22, dt); return; }
-  if (b.carrier === p && p.boost > 0 && j.mag < 0.3) { const m = hyp(1, 0.3*p.autoDir); steer(p, ms/m, ms*0.3*p.autoDir/m, 20, dt); return; }
+  if (b.carrier === p && p.boost > 0 && j.mag < 0.3) { const m = hyp(1, 0.3*p.autoDir), v = frameVec(p.team, { x:ms/m, y:ms*0.3*p.autoDir/m }); steer(p, v.x, v.y, 20, dt); return; }   // the burst runs upfield, autoDir to the owner's right
   steer(p, j.x*ms, j.y*ms, 20, dt);
   if (j.mag > 0.55) {
     const a = Math.atan2(j.y, j.x);
@@ -2712,37 +2943,37 @@ function userMove(p, dt) {
   } else p.turn *= Math.exp(-dt/0.16);
 }
 function throwUserPass(c, shown) {
-  M.pass = null;
+  sideOf(c.team).pass = null;
   if (!shown || !shown.to) { say('No Support', 'small'); return; }
-  doPass(c, shown.to, { long:!!shown.gold });
+  passOrBlock(c, shown.to, { long:!!shown.gold });          // the other side's human may get a Block on it
 }
 function startUserPass(c) {                                // a tap (no hold) is today's pass; a finger still down starts the charge. Inside the catch gate the press is kept, not dropped.
-  const to = pickReceiver(c, input.world().y);
-  if (!input.aDown) {
-    M.pass = { mode:'tap', to, t:0 };
+  const S = sideOf(c.team), inp = inputOf(c.team), to = pickReceiver(c, inp.world().y);
+  if (!inp.aDown) {
+    S.pass = { mode:'tap', to, t:0 };
     if (c.hold >= LONG.gate) throwUserPass(c, shownPass(c));
     return;
   }
-  M.pass = { mode:'hold', to, t:0 };
+  S.pass = { mode:'hold', to, t:0 };
 }
-function tickUserPass(dt) {
-  const p = M.pass;
+function tickUserPass(t, dt) {
+  const S = sideOf(t), p = S.pass;
   if (!p) return;
-  const b = M.ball, c = M.ctrl;
+  const b = M.ball, c = ctrlOf(t), inp = inputOf(t);
   const carrying = c && M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind;
-  if (!carrying || input.aCancel) { M.pass = null; return; }
+  if (!carrying || inp.aCancel) { S.pass = null; return; }
   if (p.mode === 'tap') { if (c.hold >= LONG.gate) throwUserPass(c, shownPass(c)); return; }
   p.t += dt;
-  if (!input.aDown) {
+  if (!inp.aDown) {
     if (c.hold < LONG.gate) { p.to = shownPass(c).to; p.mode = 'tap'; return; }   // let go inside the gate: it still goes, to the man the ring showed
     throwUserPass(c, shownPass(c));
     return;
   }
   if (p.t >= LONG.auto && c.hold >= LONG.gate) throwUserPass(c, shownPass(c));
 }
-function userKick(power) {
-  const c = M.ctrl;
-  doKick(c, power, input.world().y);
+function userKick(t, power) {
+  const c = ctrlOf(t);
+  doKick(c, power, inputOf(t).world().y);
 }
 function canDive(q) {                                      // would a Tackle press act now: a carrier of the other side within 2.8m, and this man up, off cooldown, not retiring and unbound
   const b = M.ball, c = b.state === 'held' ? b.carrier : null;
@@ -2759,39 +2990,51 @@ function userTackle(t) {                                   // the Tackle press f
   q.vx = dx/m*9; q.vy = dy/m*9;
   commitTackle(q, c, behind ? 'ankle' : 'dive');
 }
-function switchPlayer() {
-  const b = M.ball;
-  const list = M.players.filter(p => p.team === 0 && p.down <= 0 && !p.bind).sort((p,q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
+function switchPlayer(t) {
+  const b = M.ball, cur = ctrlOf(t);
+  const list = M.players.filter(p => p.team === t && p.down <= 0 && !p.bind).sort((p,q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
   if (!list.length) return;
-  M.ctrl = (list[0] === M.ctrl && list[1]) ? list[1] : list[0];
+  setCtrl(t, (list[0] === cur && list[1]) ? list[1] : list[0]);
 }
+/* Phase A reads every human slot's edges; Phase B resolves the side in possession first (the carrier's team, the passer's team
+   while a pass is in the air, M.poss otherwise), then the other, each in today's order: A, the pass in hand, B, Sprint, then the
+   charge. One player has one side, so nothing moves; in two player a pass and a dive pressed on the same step resolve the same
+   way whichever seat pressed. */
 function handleUser(dt) {
   if (M.auto) return;
-  const b = M.ball, c = M.ctrl;
-  if (input.aPressed) {
-    input.aPressed = false;
-    if (input.aCancel) M.pass = null;
+  const b = M.ball, I = [null, null];
+  for (const t of [0, 1]) {
+    const inp = inputOf(t); if (!inp) continue;
+    I[t] = { a:inp.aPressed, b:inp.bPressed, c:inp.cPressed };
+    inp.aPressed = inp.bPressed = inp.cPressed = false;
+  }
+  const poss = b.state === 'held' ? b.carrier.team : (b.state === 'air' && b.f.kind === 'pass') ? b.f.team : M.poss;
+  for (const t of [poss, 1 - poss]) if (I[t]) userStep(t, I[t], dt);
+  for (const inp of inputs) inp.aCancel = inp.bCancel = false;
+}
+function userStep(t, i, dt) {
+  const b = M.ball, c = ctrlOf(t), S = sideOf(t), inp = inputOf(t);
+  if (i.a) {
+    if (inp.aCancel) S.pass = null;
     else if (M.phase === 'play' && c) {
-      if (b.state === 'held' && b.carrier === c) { if (c.bind) { M.pass = null; offload(c.bind, true); } else startUserPass(c); }   // held in a tackle, Pass is the offload, on the press
-      else if (!ourBall()) { M.pass = null; userTackle(c.team); }
+      if (b.state === 'held' && b.carrier === c) { if (c.bind) { S.pass = null; offload(c.bind, true); } else startUserPass(c); }   // held in a tackle, Pass is the offload, on the press
+      else if (!ourBall(t)) { S.pass = null; userTackle(t); }
     }
   }
-  tickUserPass(dt);
-  if (input.bPressed) {
-    input.bPressed = false;
-    if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { M.charging = true; M.charge = 0; M.holdN = 0; M.dropArmed[c.team] = dropPress(c); }   // what the label promised at the press
-    else if (M.phase === 'play' && !ourBall()) switchPlayer();
+  tickUserPass(t, dt);
+  if (i.b) {
+    if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
-  if (input.cPressed) { input.cPressed = false; if (c) sprintPress(c.team); }   // the hold itself is read by sprintTick
-  if (M.charging) {
-    if (!(M.phase === 'play' && b.state === 'held' && b.carrier === c) || input.bCancel || c.bind) { M.charging = false; M.charge = 0; }   // a cancelled touch is never a kick, and a man held in a tackle can't kick
+  if (i.c && c) sprintPress(t);                            // the hold itself is read by sprintTick
+  if (S.charging) {
+    if (!(M.phase === 'play' && b.state === 'held' && b.carrier === c) || inp.bCancel || c.bind) { S.charging = false; S.charge = 0; }   // a cancelled touch is never a kick, and a man held in a tackle can't kick
     else {
-      M.charge = Math.min(1, M.charge + dt/0.85); M.holdN++;
-      if (!input.bDown) { const pw = M.charge; M.charging = false; M.charge = 0; userKick(pw); }   // a tap is a chip, as ever
-      else if (M.dropArmed[c.team] && M.holdN >= holdSteps()) startDropCut(c);   // a Drop Goal press held 0.20s (holdSteps steps, the press step the first): the close-up, with the thumb still down. The offer is not run again: what the label said at the press is what you get
+      S.charge = Math.min(1, S.charge + dt/0.85); S.holdN++;
+      if (!inp.bDown) { const pw = S.charge; S.charging = false; S.charge = 0; userKick(t, pw); }   // a tap is a chip, as ever
+      else if (M.dropArmed[t] && S.holdN >= holdSteps()) startDropCut(c);   // a Drop Goal press held 0.20s (holdSteps steps, the press step the first): the close-up, with the thumb still down. The offer is not run again: what the label said at the press is what you get
     }
   }
-  input.aCancel = input.bCancel = false;
 }
 
 /* ---------- the step ---------- */
@@ -2799,11 +3042,11 @@ function moveAll(dt) {
   const b = M.ball;
   const T = computeTargets();
   const snap = M.phase === 'set' && M.set.snap;
-  const ua = userActive();
+  const ua = [userActive(0), userActive(1)];
   for (const p of M.players) {
     if (p.bind) { bindMove(p, dt); continue; }
     if (p.down > 0) { p.down -= dt; steer(p, 0, 0, 16, dt); continue; }
-    if (ua && p === M.ctrl) { userMove(p, dt); continue; }
+    if (ua[p.team] && ringed(p)) { userMove(p, dt, inputOf(p.team)); continue; }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }
     const t = T.get(p);
     if (!t) { steer(p, 0, 0, 10, dt); continue; }
@@ -2845,7 +3088,7 @@ function update(dt) {
   handleUser(dt);
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
   contactGuard(); sprintTick(dt);
-  if (M.ctrl !== M.ctrlPrev) { M.ctrlPrev = M.ctrl; M.ctrlT = 0; } else M.ctrlT += dt;
+  for (const s of M.side) { if (s.ctrl !== s.ctrlPrev) { s.ctrlPrev = s.ctrl; s.ctrlT = 0; } else s.ctrlT += dt; }
   moveAll(dt);
   if (M.phase === 'play') {
     if (b.state === 'held') {
@@ -2865,7 +3108,7 @@ function update(dt) {
 /* ---------- halves ---------- */
 function endHalf() {
   placeBall(M.ball.x, M.ball.y);
-  M.charging = false;
+  for (const s of M.side) s.charging = false;
   if (M.demo) { M.clock = 0; M.hooter = false; kickoff(rnd() < 0.5 ? 0 : 1); return; }
   sfx('long');
   if (M.half === 1) {
@@ -2959,7 +3202,8 @@ function recordChampResult() {
    ========================================================= */
 const cv = $('cv'), ctx = cv.getContext('2d');
 const V = { W:0, H:0, dpr:1, s:10 };
-const C = { surround:'#0e2414', grassA:'#2a6233', grassB:'#2f6a38', line:'rgba(244,241,232,.92)', board:'#122018', boardHi:'#1c3125', pad:'#1b2747', ctrl:'#ffcf3d', head:'#2a1d16', outline:'#08110b' };
+const C = { surround:'#0e2414', grassA:'#2a6233', grassB:'#2f6a38', line:'rgba(244,241,232,.92)', board:'#122018', boardHi:'#1c3125', pad:'#1b2747', ctrl:'#ffcf3d', p2:'#ff5fd2', head:'#2a1d16', outline:'#08110b' };
+const ringCol = t => (seatOfTeam(t) === 1 ? C.p2 : C.ctrl);   // the ring, the pointer and the kick aim: gold for seat 0, pink for Player 2
 const SHADOWS = [[0.45,0.35],[-0.45,0.35],[0.45,-0.35],[-0.45,-0.35]];
 
 /* iPhone Safari can still zoom a page: a quick double tap, a rotation, or a pinch it lets through.
@@ -3197,6 +3441,44 @@ function cutTag(text, g) {
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#a7b4a9';
   ctx.fillText(text.toUpperCase(), 16, g.H*0.035);
 }
+/* two player: each player's cue in the bottom bar of a close-up, in his colour and naming his own key (the on-screen buttons are off,
+   so this is where a pair learns that Kick at goal, Push and Jump are the Pass key). The owner's cue stays until the verdict; the
+   other player's until his choice locks. [[seat, text], ...], Player 1's first */
+const KEYCAP = { KeyW:'W', KeyA:'A', KeyS:'S', KeyD:'D', KeyF:'F', KeyG:'G', KeyH:'H', KeyJ:'J', KeyK:'K', KeyL:'L', Slash:'/', Period:'.', Comma:',', Space:'Space', ShiftLeft:'Shift', ShiftRight:'Shift', Numpad1:'Num 1', Numpad2:'Num 2', Numpad3:'Num 3' };
+function seatKey(s, act) {                                 // what seat s presses for an action, as the screen names it: a keycap, or a controller button by its position
+  const sch = seatScheme(s);
+  if (!sch) return act === 'a' ? 'Bottom Button' : act === 'b' ? 'Right Button' : act === 'c' ? 'Shoulder' : act === 'x' ? 'Stick' : 'Stick';
+  if (act === 'x') return sch === 'right' ? 'Arrows' : 'A D';   // a sideways step or guard
+  if (act === 'm') return sch === 'right' ? 'Arrows' : 'W A S D';
+  return KEYCAP[KB[sch][act][0]] || KB[sch][act][0];
+}
+function cutCues(c) {
+  const out = [], key = (t, act) => seatKey(seatOfTeam(t), act);
+  if (c.kind === 'scrum') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Push']); return out; }
+  if (c.kind === 'lineout') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Jump']); return out; }
+  if (c.kind === 'goal') { const t = c.g.team; if (!c.after && !c.g.out && !c.g.watch) out.push([seatOfTeam(t), c.g.type === 'drop' ? key(t, 'b') + ' · Drop Goal' : 'Hold ' + key(t, 'a') + ' · Kick']); return out; }
+  if (c.out != null) return out;
+  const k = c.kind, U = c.own, O = 1 - c.own;
+  out.push([seatOfTeam(U), k === 'past' ? key(U, 'x') + ' · Step Left · Step Right' : k === 'pass' ? key(U, 'a') + ' Pass · ' + key(U, 'b') + ' Dummy' : k === 'tackle' ? key(U, 'a') + ' · Tackle' : key(U, 'a') + ' · Block']);
+  if (!c.locked) out.push([seatOfTeam(O), k === 'past' ? key(O, 'x') + ' · Guard Left · Guard Right' : k === 'pass' ? key(O, 'x') + ' · Drift · Rush' : k === 'tackle' ? key(O, 'x') + ' · Step Left · Step Right' : key(O, 'b') + ' · Dummy']);
+  out.sort((a, b) => a[0] - b[0]);
+  return out;
+}
+function cutSeatTag(s, x, y, size) {                       // two player: a seat tag (the numeral on the seat colour) over a figure in a close-up, its bottom edge at y
+  if (s == null) return;
+  const w = Math.max(14, size), h = w*0.9;
+  ctx.fillStyle = s === 1 ? C.p2 : C.ctrl; rrect(x - w/2, y - h, w, h, w*0.18); ctx.fill();
+  ctx.fillStyle = TAG_INK[s]; ctx.font = `900 ${Math.round(w*0.72)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(s + 1), x, y - h/2 + 0.5);
+}
+function drawCutCues(c, g) {
+  const cues = cutCues(c); if (!cues.length) return;
+  ctx.font = `700 ${Math.round(g.H*0.034)}px 'Atkinson Hyperlegible', system-ui, sans-serif`; ctx.textBaseline = 'middle';
+  for (const [s, text] of cues) {
+    ctx.fillStyle = s === 1 ? C.p2 : C.ctrl; ctx.textAlign = s === 1 ? 'right' : 'left';
+    ctx.fillText(('Player ' + (s + 1) + ' · ' + text).toUpperCase(), s === 1 ? g.W - 16 : 16, g.H*0.965);
+  }
+}
 function drawScrum(c, g) {
   drawStage(g);
   const { W, H } = g, sc = H*0.2, ground = H*0.85;
@@ -3212,6 +3494,12 @@ function drawScrum(c, g) {
       fig(mid - f*(0.92 + gap/2)*s, ground + dy*H, s, kitOf(team), { face:f, lean, crouch, arms:'down', drive:t >= 0.75, dim });
     }
   }
+  if (M.two) for (const team of [0, 1]) {                     // the seat tag over each pack, and that pack's Early or Good Hit for 0.9s
+    const f = team === 0 ? 1 : -1, px = mid - f*(0.92 + gap/2)*sc, ty = ground - 1.75*sc, tag = Math.max(16, H*0.045);
+    cutSeatTag(seatOfTeam(team), px, ty, tag);
+    const m = c.msg[team];
+    if (m && t - m.at < 0.9) { ctx.fillStyle = ringCol(team); ctx.font = `800 ${Math.round(H*0.045)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(m.text.toUpperCase(), px, ty - tag*0.9 - 4); }
+  }
   // the feed: the ball waits at the mouth of the tunnel, then rolls in
   const roll = engaged ? clamp((t - SCRUM_SET - 0.2)/0.35, 0, 1) : 0, shF = c.feed === 0 ? 1 : -1;
   cutBall(mid - shF*0.5*sc*(1 - roll), ground + (0.06 - 0.075*roll)*H, sc*(1.1 - 0.25*roll), roll*6);
@@ -3222,7 +3510,7 @@ function drawScrum(c, g) {
   const bw = W*0.38, bx = W*0.5 - bw/2, by = H*0.885, bh = Math.max(8, H*0.022);
   ctx.fillStyle = 'rgba(8,14,10,.8)'; rrect(bx - 3, by - 3, bw + 6, bh + 6, 4); ctx.fill();
   const frac = clamp(c.pos/2.0, -1, 1);
-  ctx.fillStyle = frac >= 0 ? C.ctrl : showCol(1);
+  ctx.fillStyle = M.two ? (frac >= 0 ? ringCol(0) : ringCol(1)) : (frac >= 0 ? C.ctrl : showCol(1));   // two player: each pack's gain in its player's colour
   if (frac >= 0) ctx.fillRect(W*0.5, by, bw/2*frac, bh); else ctx.fillRect(W*0.5 + bw/2*frac, by, -bw/2*frac, bh);
   ctx.fillStyle = '#f1eee4'; ctx.fillRect(W*0.5 - 1, by - 4, 2, bh + 8);
   ctx.font = `800 ${Math.round(H*0.04)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textBaseline = 'middle';
@@ -3245,6 +3533,7 @@ function drawLineout(c, g) {
     fig(X(LINE_X + off - 0.75), gy, s, kit, { face:-1, arms:lift > 0.3 ? 'up' : 'carry', crouch:lift > 0.3 ? 0.05 : 0.3 });
     fig(X(LINE_X + off + 0.75), gy, s, kit, { face:-1, arms:lift > 0.3 ? 'up' : 'carry', crouch:lift > 0.3 ? 0.05 : 0.3 });
     fig(X(LINE_X + off), gy, s, kit, { face:-1, lift, arms:lift > 0.15 || (c.winner === team) ? 'up' : 'down' });
+    if (M.two) cutSeatTag(seatOfTeam(team), X(LINE_X + off), gy - (lift + 2.45)*s, Math.max(16, H*0.045));   // the seat tag over each jumper
   }
   let bx, bh, ang = 0;
   if (!thrown) { bx = -0.05; bh = 2.5; }
@@ -3274,6 +3563,7 @@ function drawCut() {
   else drawDuel(c, g);
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07);
   cutTag(cutTitle(c), g);
+  if (M.two) drawCutCues(c, g);
   ctx.restore();
   if (RM) return;
   ctx.fillStyle = C.ctrl;
@@ -3289,7 +3579,7 @@ const ease3 = u => 1 - Math.pow(1 - clamp(u, 0, 1), 3);
 const lerp = (a, b, u) => a + (b - a)*u;
 // where everyone stands at scene time t (render only: the world is frozen)
 function duelPose(c, t) {
-  const tk = c.tk, D = c.D, K = c.K, w = c.w;
+  const tk = c.tkAt != null ? c.tk - 0.10*(1 - ease3((t - c.tkAt)/0.15)) : c.tk, D = c.D, K = c.K, w = c.w;   // two player: a step's slower approach eases in over the step's 0.15s, so the figures don't jump apart
   const gap = G_START - (G_START - G_HIT)*clamp((t - CUT_IN)/(tk - CUT_IN), 0, 1);
   const P = { u:{ x:K.x - D.x*gap*w, y:K.y - D.y*gap*w, h:0 }, o:{ x:K.x + D.x*gap*(1 - w), y:K.y + D.y*gap*(1 - w), h:0 }, r:null, ball:null };
   const after = c.judged != null ? t - c.judged : -1, hit = t - c.tk;
@@ -3307,7 +3597,7 @@ function duelPose(c, t) {
     P.r = { x:Math.max(rx, P.u.x - 1.5), y:P.u.y + ly, h:0 };
     const drift = c.driftAt != null ? ease3((t - c.driftAt)/0.15)
       : c.fakeAt != null ? ease3((t - c.fakeAt)/0.12)*(1 - ease3((t - c.fakeAt - 0.2)/0.12)) : 0;
-    P.o.y += c.side*1.2*drift; P.o.shift = c.side*0.45*drift;
+    P.o.y += c.side*1.2*drift; P.o.shift = c.side*0.45*drift + (c.lean || 0)*0.45;   // two player: the other player's hand before the lock
     P.o.commit = c.drift ? 0 : clamp((t - c.commitT + 0.1)/0.15, 0, 1);
     if (c.act === 'dummy' && after >= 0 && after < 0.2) P.u.fake = true;
     if (c.out === 'sold' && hit > 0) { P.u.x += hit*6; P.u.y -= 0.5*c.side*ease3(hit/0.2); }
@@ -3325,7 +3615,7 @@ function duelPose(c, t) {
     if (c.out === 'tackled' && hit > 0) { P.o.lying = hit > 0.15; P.u.lying = hit > 0.15; }
     if (c.out === 'missed' && hit > 0) { P.u.lying = hit > 0.1; P.o.x -= hit*5; }
   } else {
-    const t1 = c.centre, q0 = c.u0;
+    const t1 = c.reachT != null ? c.reachT : c.centre, q0 = c.u0;
     const reach = ease3((t - CUT_IN)/(t1 - CUT_IN));
     P.u = { x:q0.x + (c.L.x - q0.x)*0.85*reach, y:q0.y + (c.L.y - q0.y)*0.85*reach, h:0 };
     const slow = (p0, s) => ({ x:p0.x + p0.vx*0.35*s, y:p0.y + p0.vy*0.35*s, h:0 });
@@ -3420,7 +3710,7 @@ function drawDuel(c, g) {
   };
   for (let i = 0; i < 12; i++) quad(i*10, 0, i*10 + 10, 70, i % 2 ? C.grassA : C.grassB);
   const a0 = ctx.globalAlpha;
-  ctx.globalAlpha = a0*0.14; quad(0, 0, 10, 70, M.kit[0].fill); quad(110, 0, 120, 70, M.kit[1].fill); ctx.globalAlpha = a0;
+  ctx.globalAlpha = a0*0.14; quad(0, 0, 10, 70, M.kit[c.own].fill); quad(110, 0, 120, 70, M.kit[1 - c.own].fill); ctx.globalAlpha = a0;   // the owner's in-goal behind him, the other side's ahead
   ctx.strokeStyle = C.line;
   const lineX = (x, dash) => {
     if (x <= camX + 0.5) return;
@@ -3446,7 +3736,7 @@ function drawDuel(c, g) {
     ctx.strokeStyle = '#f7f5ee'; ctx.beginPath(); ctx.moveTo(l.sx, l.sy); ctx.lineTo(r.sx, r.sy); ctx.stroke();
   }
   // Easy only: the open lane
-  if (c.kind === 'past' && M.di === 0 && c.out == null) {
+  if (c.kind === 'past' && levelOf(c.own) === 0 && c.out == null) {
     const o = c.open, path = (k, lat) => proj(c.K.x + c.D.x*k, c.K.y + c.D.y*k + lat*o, 0);
     const pts = [path(-1, 0.7), path(3, 0.7), path(3, 1.9), path(-1, 1.9)].filter(Boolean);
     if (pts.length === 4) { ctx.fillStyle = 'rgba(255,207,61,.22)'; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy)); ctx.closePath(); ctx.fill(); }
@@ -3458,7 +3748,7 @@ function drawDuel(c, g) {
       const r = c.kind === 'block' ? 0.9 : lerp(2.6, 0.9, clamp((t - CUT_IN)/(c.win[0] - CUT_IN), 0, 1));
       const rx = r*pa.k, ry = rx*clamp(ch/pa.z, 0.18, 0.6), live = t >= c.win[0] && t <= c.win[1];
       ctx.beginPath(); ctx.ellipse(pa.sx, pa.sy, rx, ry, 0, 0, Math.PI*2);
-      if (live) { ctx.fillStyle = 'rgba(255,207,61,.30)'; ctx.fill(); ctx.strokeStyle = C.ctrl; ctx.lineWidth = 4; }
+      if (live) { ctx.fillStyle = seatOfTeam(c.own) === 1 ? 'rgba(255,95,210,.30)' : 'rgba(255,207,61,.30)'; ctx.fill(); ctx.strokeStyle = ringCol(c.own); ctx.lineWidth = 4; }   // the ring in the owner's colour: pink for Player 2
       else { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; }
       ctx.stroke();
     }
@@ -3467,16 +3757,16 @@ function drawDuel(c, g) {
   const actors = [];
   const add = (a, team, back, extra) => { if (a) actors.push({ a, team, back, o:extra || {} }); };
   if (c.kind === 'past' || c.kind === 'pass') {
-    add(P.u, 0, true, { carry:!P.ball && !P.u.fake, arms:P.u.fake ? 'pass' : undefined, num:c.U.n, stride:t*19 });
-    add(P.o, 1, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
-    if (P.r) add(P.r, 0, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
+    add(P.u, c.U.team, true, { carry:!P.ball && !P.u.fake, arms:P.u.fake ? 'pass' : undefined, num:c.U.n, stride:t*19 });
+    add(P.o, c.O.team, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
+    if (P.r) add(P.r, c.R.team, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
   } else if (c.kind === 'tackle') {
-    add(P.u, 0, true, { num:c.U.n, stride:t*16, dive:P.u.dive ? 1 : 0, lying:P.u.lying, arms:P.u.dive ? 'reach' : 'run' });
-    add(P.o, 1, false, { carry:true, stride:t*19, lean:c.stepAt != null && t > c.stepAt ? c.stepDir*0.3 : 0, lying:P.o.lying });
+    add(P.u, c.U.team, true, { num:c.U.n, stride:t*16, dive:P.u.dive ? 1 : 0, lying:P.u.lying, arms:P.u.dive ? 'reach' : 'run' });
+    add(P.o, c.O.team, false, { carry:true, stride:t*19, lean:c.stepAt != null && t > c.stepAt ? c.stepDir*0.3 : (c.lean || 0)*0.3, lying:P.o.lying });
   } else {
-    add(P.u, 0, true, { num:c.U.n, stride:t*14, arms:P.u.carry ? 'carry' : 'reach' });
-    add(P.o, 1, false, { stride:t*8, arms:P.o.thrown ? 'pass' : (P.o.wind ? 'carry' : 'run'), twist:P.o.pump || P.o.wind });
-    add(P.r, 1, false, { stride:t*10, arms:'reach' });
+    add(P.u, c.U.team, true, { num:c.U.n, stride:t*14, arms:P.u.carry ? 'carry' : 'reach' });
+    add(P.o, c.O.team, false, { stride:t*8, arms:P.o.thrown ? 'pass' : (P.o.wind ? 'carry' : 'run'), twist:P.o.pump || P.o.wind });
+    add(P.r, c.R.team, false, { stride:t*10, arms:'reach' });
   }
   actors.sort((p, q) => q.a.x - p.a.x);
   for (const it of actors) {
@@ -3484,6 +3774,7 @@ function drawDuel(c, g) {
     if (!p || p.z < 0.8) continue;
     figFB(p.sx, p.sy, p.k, it.team, { back:it.back, ...it.o });
     if (it.o.carry) cutBall(p.sx + (it.back ? 0.18 : -0.18)*p.k, p.sy - 1.15*p.k, Math.max(10, p.k*0.9), 0.3);
+    if (M.two && c.out == null && (it.a === P.u || it.a === P.o)) cutSeatTag(seatOfTeam(it.team), p.sx, p.sy - 2.25*p.k, 0.4*p.k);   // the seat tags over the two men in it, until the verdict
   }
   if (P.ball) { const pb = proj(P.ball.x, P.ball.y, P.ball.h); if (pb) { const sh = proj(P.ball.x, P.ball.y, 0); if (sh) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ellipse(sh.sx, sh.sy, 0.18*sh.k, 0.05*sh.k); ctx.fill(); } cutBall(pb.sx, pb.sy, Math.max(10, pb.k*0.9), 0.6); } }
   // effects
@@ -3764,7 +4055,7 @@ function drawKick(c, g0) {
   };
   for (const it of scene) {
     if (it.kind === 'ball') ball();
-    else if (it.kind === 'kicker') figFB(it.sx, it.sy, it.k, g.team, { back:true, num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' });
+    else if (it.kind === 'kicker') { figFB(it.sx, it.sy, it.k, g.team, { back:true, num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' }); if (M.two && !g.judged) cutSeatTag(seatOfTeam(g.team), it.sx, it.sy - 2.25*it.k, 0.4*it.k); }   // the seat tag over the kicker
     else { ctx.globalAlpha = a0*it.alpha; figFB(it.sx, it.sy, it.k, 1 - g.team, it.o); ctx.globalAlpha = a0; }
   }
   ctx.restore();
@@ -3801,7 +4092,7 @@ function drawMeter(g, g0, tf) {
   ctx.fillStyle = 'rgba(255,132,102,.25)'; ctx.fillRect(x, y0, w, yOf(hi) - y0);
   ctx.fillStyle = 'rgba(255,207,61,.30)'; ctx.fillRect(x, yOf(hi), w, yOf(lo) - yOf(hi));
   if (m > 0) {
-    ctx.fillStyle = m < lo ? '#f1eee4' : m <= hi ? C.ctrl : '#ff8466'; ctx.fillRect(x, yOf(m), w, y1 - yOf(m));
+    ctx.fillStyle = m < lo ? '#f1eee4' : m <= hi ? ringCol(g.team) : '#ff8466'; ctx.fillRect(x, yOf(m), w, y1 - yOf(m));
     ctx.fillStyle = '#fff'; ctx.fillRect(x, yOf(m) - 1.5, w, 3);
   }
   ctx.restore();
@@ -3918,16 +4209,18 @@ function render(dt) {
 
   ctx.setTransform(d, 0, 0, d, 0, 0);
   const r = Math.max(8, 0.95*s);
-  const ctrl = (!M.auto && M.ctrl) ? M.ctrl : null;
-  if (ctrl) {
-    const [cx, cy] = toS(ctrl.x, ctrl.y);
-    ctx.strokeStyle = C.ctrl; ctx.lineWidth = 2.5;
+  const ctrls = [0, 1].map(t => (isHuman(t) ? ctrlOf(t) : null));   // the man under each human's ring
+  for (const t of [0, 1]) if (ctrls[t]) {
+    const [cx, cy] = toS(ctrls[t].x, ctrls[t].y);
+    ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(cx, cy, r*1.55, 0, 7); ctx.stroke();
   }
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
-  // pass target. Held in a tackle, the ring sits on the man an Offload would go to. While a long pass charges it turns gold, with a faint ring on the man it skips.
-  if (ctrl && M.phase === 'play' && b.state === 'held' && b.carrier === ctrl) {
+  // pass target, for the human holding the ball. Held in a tackle, the ring sits on the man an Offload would go to. While a long pass charges it turns gold, with a faint ring on the man it skips.
+  for (const t of [0, 1]) {
+    const ctrl = ctrls[t];
+    if (!(ctrl && M.phase === 'play' && b.state === 'held' && b.carrier === ctrl)) continue;
     const shown = ctrl.bind ? { to:offloadTarget(ctrl.bind), skip:null, gold:false } : shownPass(ctrl);
     const ringAt = (q, style, width, rad, dash) => {
       const [qx, qy] = toS(q.x, q.y);
@@ -3935,23 +4228,26 @@ function render(dt) {
       ctx.beginPath(); ctx.arc(qx, qy, rad, 0, 7); ctx.stroke(); ctx.setLineDash([]);
     };
     if (shown.skip && shown.skip !== shown.to) ringAt(shown.skip, 'rgba(244,241,232,.38)', 1.5, r*1.2, [3, 4]);
-    if (shown.to) ringAt(shown.to, shown.gold ? C.ctrl : 'rgba(244,241,232,.95)', shown.gold ? 2.5 : 2, r*1.6, [4, 3]);
+    if (shown.to) ringAt(shown.to, shown.gold ? ringCol(t) : 'rgba(244,241,232,.95)', shown.gold ? 2.5 : 2, r*1.6, [4, 3]);
   }
-  // kick aim
-  if (M.charging && ctrl && b.carrier === ctrl) {
-    const n = M.nat[0], len = 10 + M.charge*(36 + n.kicking*3), ang = clamp(input.world().y, -1.2, 1.2)*0.75;
-    const [lx, ly] = toS(ctrl.x + len*Math.cos(ang), ctrl.y + len*Math.sin(ang));
-    ctx.strokeStyle = C.ctrl; ctx.lineWidth = 2.5;
+  // kick aim, for each side charging a kick, in its own direction
+  for (const t of [0, 1]) {
+    const ctrl = ctrls[t], S = sideOf(t);
+    if (!(S.charging && ctrl && b.carrier === ctrl)) continue;
+    const n = M.nat[t], len = 10 + S.charge*(36 + n.kicking*3), ang = clamp(inputOf(t).world().y, -1.2, 1.2)*0.75;
+    const [lx, ly] = toS(ctrl.x + dirOf(t)*len*Math.cos(ang), ctrl.y + len*Math.sin(ang));
+    ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(lx-7, ly-7); ctx.lineTo(lx+7, ly+7); ctx.moveTo(lx+7, ly-7); ctx.lineTo(lx-7, ly+7); ctx.stroke();
     ctx.beginPath(); ctx.arc(lx, ly, 13, 0, 7); ctx.stroke();
   }
   drawBall(r);
   drawTags(dt, r);
-  if (ctrl) {
-    let [cx, cy] = toS(ctrl.x, ctrl.y);
+  for (const t of [0, 1]) if (ctrls[t]) {
+    let [cx, cy] = toS(ctrls[t].x, ctrls[t].y);
     const off = cx < 0 || cx > V.W || cy < 0 || cy > V.H;
     cx = clamp(cx, 18, V.W-18); cy = clamp(cy, 18 + r*2.4, V.H-18);
-    ctx.fillStyle = C.ctrl;
+    ctx.fillStyle = ringCol(t);
+    if (M.two) { drawSeatMark(t, cx, cy, r, off); continue; }
     if (off) { ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fill(); }
     else { ctx.beginPath(); ctx.moveTo(cx-6, cy-r*2.4); ctx.lineTo(cx+6, cy-r*2.4); ctx.lineTo(cx, cy-r*1.75); ctx.closePath(); ctx.fill(); }
   }
@@ -3959,6 +4255,45 @@ function render(dt) {
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, V.W, V.H);
   if (M.cut) drawCut();
+}
+/* two player: the stick and the three buttons are off (they are seat 0's touch controls), so each player's marks are on the pitch: a
+   numbered tag in his colour over his man where the pointer sits in one player, the Sprint meter as an arc round his ring (the button's
+   ring in one player, dim exactly when a press would do nothing), and under him the word the button would read when it matters now */
+const TAG_INK = ['#1c1500', '#2a0a22'];
+function drawSeatMark(t, cx, cy, r, off) {
+  const col = ringCol(t), s = seatOfTeam(t);
+  ctx.fillStyle = col;
+  if (off) { ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fill(); return; }
+  const w = 18, h = 16, y0 = cy - r*2.4 - h;
+  rrect(cx - w/2, y0, w, h, 3); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx-5, y0 + h); ctx.lineTo(cx+5, y0 + h); ctx.lineTo(cx, y0 + h + 6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = TAG_INK[s]; ctx.font = `900 13px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(s + 1), cx, y0 + h/2 + 0.5);
+  const S = M.spr[t], on = !M.cut && sprintOn(t), a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*(on ? 0.95 : 0.35); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.arc(cx, cy, r*1.55 + 5, -Math.PI/2, -Math.PI/2 + Math.PI*2*clamp(S.m, 0, 1)); ctx.stroke();
+  ctx.globalAlpha = a0;
+  const cue = cueOf(t);
+  if (cue) {
+    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, / · TACKLE
+    ctx.font = `800 12px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const m = ctx.measureText(text), tw = ((m && m.width) || text.length*6.5) + 12;
+    ctx.fillStyle = 'rgba(8,14,10,.82)'; rrect(cx - tw/2, y - 9, tw, 18, 4); ctx.fill();
+    ctx.fillStyle = col; ctx.fillText(text, cx, y);
+  }
+}
+function cueOf(t) {                                        // the word the big or small button would read for side t when a press matters now (the tests read it too)
+  if (!M || M.phase !== 'play' || M.cut) return null;
+  const c = ctrlOf(t); if (!c) return null;
+  const b = M.ball, k = M.contact;
+  if (ourBall(t)) {
+    if (b.state !== 'held' || b.carrier !== c) return null;
+    if (c.bind) return k && k.c === c && canOffload(k) ? 'Offload' : null;
+    const p = sideOf(t).pass;
+    if (p && p.mode === 'hold' && p.t >= LONG.arm && passAim(c, inputOf(t).world().y).far) return 'Long';
+    return kickLabel(t) === 'Drop Goal' ? 'Drop Goal' : null;
+  }
+  return canDive(c) ? 'Tackle' : null;
 }
 
 /* =========================================================
@@ -3993,6 +4328,7 @@ function tone(a, o) {
   osc.connect(g).connect(a.destination); osc.start(t); osc.stop(t + o.dur + 0.02);
 }
 function sfx(k) {
+  if (globalThis.__sfxSpy) globalThis.__sfxSpy(k, M && M.cut ? M.cut.t : null);   // the tools count sounds
   if (!M || M.demo || M.headless) return;
   const a = ac(); if (!a) return;
   if (k === 'whistle') tone(a, { freq:2950, dur:0.32, gain:0.1, trem:38 });
@@ -4012,45 +4348,84 @@ function sfx(k) {
   else if (k === 'whiff') noise(a, { dur:0.12, type:'bandpass', freq:1300, q:1.0, gain:0.08 });                            // a broken tackle
   else if (k === 'trip') tone(a, { freq:620, dur:0.06, type:'square', gain:0.1 });                                        // an ankle tap or a trip
 }
-function buzz(ms) {
-  if (!M || M.demo || M.headless || !navigator.vibrate) return;
+function buzz(ms, team) {                                  // the phone's vibration, and the rumble on a team's seat (every seat when no team is given)
+  if (!M || M.demo || M.headless) return;
+  if (team == null) { for (const s of [0, 1]) rumble(s, ms); } else rumble(seatOfTeam(team), ms);
+  if (!navigator.vibrate) return;
   if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
   try { navigator.vibrate(ms); } catch (e) { /* unsupported */ }
 }
 
 /* =========================================================
    Input
+   One slot a seat. Slot 0 is fed by touch, the keyboard and (in one player) every controller; in two player the keyboard is
+   split in halves and a controller feeds the seat that claimed it. A button is a bitmask of the sources holding it (1 the
+   keyboard, 2 touch, 4 << index a controller), so an idle pad can never let go of a key you are holding. The tools write
+   aDown / aPressed directly, as they always have.
    ========================================================= */
-const input = {
-  jx:0, jy:0, stickId:null, ox:0, oy:0, px:0, py:0, aDown:false, bDown:false, cDown:false, aPressed:false, bPressed:false, cPressed:false, aCancel:false, bCancel:false, cCancel:false, keys:new Set(),
-  flick:0, pre:null, held:new Set(),
-  // a duel re-centres the stick under the thumb, so a held run doesn't read as a step
-  reanchor() {
-    if (!this.pre) this.pre = { x:this.jx, y:this.jy };
-    if (this.stickId !== null) { this.ox = this.px; this.oy = this.py; placeStick(this.ox, this.oy); }
-    this.jx = this.jy = 0; knob.style.transform = '';
-  },
-  // and afterwards the thumb's spot reads as the pre-duel direction, so the run carries on
-  restore() {
-    const pre = this.pre || { x:0, y:0 };
-    if (this.stickId !== null) {
-      this.ox = this.px - pre.x*STICK_R; this.oy = this.py - pre.y*STICK_R; placeStick(this.ox, this.oy);
-      this.jx = pre.x; this.jy = pre.y; knob.style.transform = `translate(${pre.x*STICK_R}px,${pre.y*STICK_R}px)`;
-    } else { this.jx = this.jy = 0; knob.style.transform = ''; }
-    this.flick = 0; this.held.clear(); this.pre = null;
-  },
-  world() {
-    let x = this.jx, y = this.jy;
-    const k = this.keys;
-    const kx = (k.has('ArrowRight') || k.has('KeyD') ? 1 : 0) - (k.has('ArrowLeft') || k.has('KeyA') ? 1 : 0);
-    const ky = (k.has('ArrowDown') || k.has('KeyS') ? 1 : 0) - (k.has('ArrowUp') || k.has('KeyW') ? 1 : 0);
-    if (kx || ky) { const m = hyp(kx, ky); x = kx/m; y = ky/m; }
-    const mag = hyp(x, y);
-    return { x, y, mag };
-  },
-};
+const KEYDIR = { KeyW:[0,-1], ArrowUp:[0,-1], PadUp:[0,-1], KeyS:[0,1], ArrowDown:[0,1], PadDown:[0,1], KeyA:[-1,0], ArrowLeft:[-1,0], PadLeft:[-1,0], KeyD:[1,0], ArrowRight:[1,0], PadRight:[1,0] };
 const zone = $('zone'), stick = $('stick'), knob = $('knob');
 const STICK_R = 52;
+function makeInput(seat) {
+  const inp = {
+    seat, jx:0, jy:0, aDown:false, bDown:false, cDown:false, aPressed:false, bPressed:false, cPressed:false, aCancel:false, bCancel:false, cCancel:false,
+    keys:new Set(), held:new Set(), flick:0, pre:null,
+    src:{ a:0, b:0, c:0 }, latch:false, padStick:false,   // which sources hold each button; a pad stick latched until it comes back to centre
+    // a duel re-centres the stick under the thumb, so a held run doesn't read as a step; a held pad stick is latched the same way
+    reanchor() {
+      if (!this.pre) this.pre = { x:this.jx, y:this.jy };
+      if (this.seat === 0) { if (this.stickId !== null) { this.ox = this.px; this.oy = this.py; placeStick(this.ox, this.oy); } knob.style.transform = ''; }
+      if (this.padStick) this.latch = true;
+      this.jx = this.jy = 0;
+    },
+    // and afterwards the thumb's spot reads as the pre-duel direction, so the run carries on
+    restore() {
+      const pre = this.pre || { x:0, y:0 };
+      if (this.seat === 0 && this.stickId !== null) {
+        this.ox = this.px - pre.x*STICK_R; this.oy = this.py - pre.y*STICK_R; placeStick(this.ox, this.oy);
+        this.jx = pre.x; this.jy = pre.y; knob.style.transform = `translate(${pre.x*STICK_R}px,${pre.y*STICK_R}px)`;
+      } else { this.jx = this.jy = 0; if (this.seat === 0) knob.style.transform = ''; }
+      this.flick = 0; this.held.clear(); this.pre = null; this.latch = false;
+    },
+    // keys win over the stick: any key for a direction counts once, so two keys for the same direction still read 1
+    world() {
+      let x = this.jx, y = this.jy;
+      let px = 0, nx = 0, py = 0, ny = 0;
+      for (const code of this.keys) { const d = KEYDIR[code]; if (!d) continue; if (d[0] > 0) px = 1; else if (d[0] < 0) nx = 1; if (d[1] > 0) py = 1; else if (d[1] < 0) ny = 1; }
+      const kx = px - nx, ky = py - ny;
+      if (kx || ky) { const m = hyp(kx, ky); x = kx/m; y = ky/m; }
+      const mag = hyp(x, y);
+      return { x, y, mag };
+    },
+    keyX() {                                               // the keys' sideways intent, ignoring any held into a close-up
+      let px = 0, nx = 0;
+      for (const code of this.keys) { const d = KEYDIR[code]; if (!d || this.held.has(code)) continue; if (d[0] > 0) px = 1; else if (d[0] < 0) nx = 1; }
+      return px - nx;
+    },
+    sideX() {                                              // a duel chooser's sideways intent, -1 0 1: fresh keys, else the stick when it isn't latched. A key or stick held into the cut-in is never a choice
+      const kx = this.keyX();
+      return kx || (!this.latch && Math.abs(this.jx) >= 0.5 ? Math.sign(this.jx) : 0);
+    },
+  };
+  if (seat === 0) Object.assign(inp, { stickId:null, ox:0, oy:0, px:0, py:0 });   // the touch stick feeds seat 0 only
+  return inp;
+}
+const inputs = [makeInput(0), makeInput(1)];
+const input = inputs[0];
+function btn(inp, k, bit, down) {                          // one source's edge on one button: Pressed only on a rise from nothing held, Down while any source holds it
+  const was = inp.src[k], now = down ? (was | bit) : (was & ~bit);
+  if (now === was) return;
+  inp.src[k] = now;
+  if (!was) inp[k + 'Pressed'] = true;
+  inp[k + 'Down'] = now !== 0;
+}
+let lastDev = 'touch';
+function setDev(d) {                                       // the last device that acted: the on-screen hints follow it
+  if (d === lastDev) return;
+  lastDev = d;
+  const b = document.body;
+  if (b) { b.classList.toggle('dev-kb', d === 'kb'); b.classList.toggle('dev-pad', d === 'pad'); }
+}
 function placeStick(x, y) {
   stick.style.left = x + 'px'; stick.style.top = y + 'px';
   const pl = $('plates');
@@ -4059,6 +4434,7 @@ function placeStick(x, y) {
 function restStick() { placeStick(96, window.innerHeight - 118); }
 zone.addEventListener('pointerdown', e => {
   if (M && M.cut && ((M.cut.duel && M.cut.after) || (M.cut.kind === 'goal' && (M.cut.after || M.cut.g.watch)))) input.aPressed = true;   // tap to skip the verdict, or a CPU kick
+  setDev('touch');
   if (input.stickId !== null) return;
   e.preventDefault();
   input.stickId = e.pointerId; input.ox = input.px = e.clientX; input.oy = input.py = e.clientY;
@@ -4076,7 +4452,7 @@ zone.addEventListener('pointermove', e => {
     input.ox += dx/m*ex; input.oy += dy/m*ex; placeStick(input.ox, input.oy);
     dx = dx/m*STICK_R; dy = dy/m*STICK_R;
   }
-  input.jx = dx/STICK_R; input.jy = dy/STICK_R;
+  input.jx = dx/STICK_R; input.jy = dy/STICK_R; input.padStick = false;
   if (hyp(input.jx, input.jy) < 0.12) { input.jx = 0; input.jy = 0; }
   knob.style.transform = `translate(${dx}px,${dy}px)`;
 });
@@ -4093,10 +4469,10 @@ function bindAct(el, key) {
     e.preventDefault();
     try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     held = true; el.classList.add('press');
-    input[key + 'Down'] = true; input[key + 'Pressed'] = true;
+    setDev('touch'); btn(input, key, 2, true);
     ac();
   });
-  const up = () => { if (!held) return; held = false; el.classList.remove('press'); input[key + 'Down'] = false; };
+  const up = () => { if (!held) return; held = false; el.classList.remove('press'); btn(input, key, 2, false); };
   el.addEventListener('pointerup', up);
   el.addEventListener('pointercancel', () => { up(); input[key + 'Cancel'] = true; });   // a cancel is never a release
   el.addEventListener('contextmenu', e => e.preventDefault());
@@ -4104,29 +4480,284 @@ function bindAct(el, key) {
 bindAct($('btnA'), 'a');
 bindAct($('btnB'), 'b');
 bindAct($('btnC'), 'c');
-const MOVE_KEYS = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD']);
-function keyDown(e) {
-  if (!playing()) return;
-  if (M.paused) { if (!e.repeat && (e.code === 'KeyP' || e.code === 'Escape')) resume(); return; }
-  if (M.cut && M.cut.duel && !e.repeat && !input.held.has(e.code)) {
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.flick = -1;
-    else if (e.code === 'ArrowRight' || e.code === 'KeyD') input.flick = 1;
+
+/* ---------- keyboard ----------
+   By e.code, so the physical positions hold on any layout. One player (and the lone keyboard seat in two player) has the
+   solo map; two seats on one keyboard take a half each: Player 1 on W A S D with F G H, Player 2 on the arrows with / . ,
+   (or Numpad 1 2 3). Ctrl, Cmd and Alt are never bound. */
+const KB = {
+  solo:  { m:['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'], a:['KeyJ', 'Space'], b:['KeyK', 'ShiftLeft', 'ShiftRight'], c:['KeyL'] },
+  left:  { m:['KeyW', 'KeyA', 'KeyS', 'KeyD'], a:['KeyF'], b:['KeyG'], c:['KeyH'] },
+  right: { m:['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'], a:['Slash', 'Numpad1'], b:['Period', 'Numpad2'], c:['Comma', 'Numpad3'] },
+};
+// the seats: who sits where. Both start on the keyboard, so a keyboard-only pair has nothing to set up; a controller claims a seat with one press
+const two = { on:false, lost:[], swapped:false, seats:[{ dev:'kb', half:'left', pad:null }, { dev:'kb', half:'right', pad:null }] };   // lost: the seat whose pad went, waiting to be claimed back; swapped: Swap Players has put Player 1 on the right half
+function seatScheme(s) {
+  if (!two.on) return s === 0 ? 'solo' : null;
+  const seat = two.seats[s];
+  if (seat.dev !== 'kb') return null;
+  return two.seats[1 - s].dev === 'kb' ? seat.half : 'solo';   // the lone keyboard seat keeps the keys it already knows
+}
+const ROUTES = new Map();
+function rebuildRoutes() {
+  ROUTES.clear();
+  for (const s of [0, 1]) { const sch = seatScheme(s); if (!sch) continue; for (const act of ['m', 'a', 'b', 'c']) for (const code of KB[sch][act]) ROUTES.set(code, [s, act]); }
+  for (const code of ['KeyP', 'Escape']) ROUTES.set(code, [null, 'pause']);
+}
+const keyRoute = code => ROUTES.get(code) || null;         // [seat, act] with act one of m a b c pause, or null for an unbound key
+function releaseAll() {                                    // a scheme change, or the window losing focus: nothing held can stick
+  for (const inp of inputs) { inp.keys.clear(); inp.held.clear(); inp.src.a = inp.src.b = inp.src.c = 0; inp.aDown = inp.bDown = inp.cDown = false; }
+  rebuildRoutes();
+}
+rebuildRoutes();
+function setTwo(on) { two.on = !!on; if (!on) two.lost = []; releaseAll(); }
+function lightKey(code, on) {                              // the join screen's legend: a keycap lights while its key is held (so it is also the rollover test)
+  if ($('s-join').hidden) return;
+  for (const el of document.querySelectorAll('#s-join [data-code="' + code + '"]')) el.classList.toggle('on', on);
+}
+function lightPad(seat, which, on) { for (const el of document.querySelectorAll('#s-join .seat.s' + seat + ' [data-pad="' + which + '"]')) el.classList.toggle('on', on); }
+function onKey(e, down) {
+  const code = e.code, r = keyRoute(code);
+  if (e.target && e.target.tagName === 'INPUT') return;    // typing a team name
+  if (two.on && r && r[0] != null) lightKey(code, down);
+  if (!down) {
+    for (const inp of inputs) { inp.keys.delete(code); inp.held.delete(code); }
+    if (r && r[0] != null && r[1] !== 'm') btn(inputs[r[0]], r[1], 1, false);
+    return;
   }
-  if (MOVE_KEYS.has(e.code)) { input.keys.add(e.code); e.preventDefault(); return; }
-  if (e.repeat) return;
-  if (e.code === 'KeyJ' || e.code === 'Space') { e.preventDefault(); input.aDown = true; input.aPressed = true; }
-  else if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') { input.bDown = true; input.bPressed = true; }
-  else if (e.code === 'KeyL') { input.cDown = true; input.cPressed = true; }
-  else if (e.code === 'KeyP' || e.code === 'Escape') { if (M.paused) resume(); else pause(); }
+  if (r) setDev('kb');
+  if (!playing()) { if (two.on && r && !e.repeat) navKey(r, e); return; }   // one player keeps the browser's own Tab, Enter and Space on the menus
+  if (M.paused && !two.on) { if (!e.repeat && r && r[1] === 'pause') { if (e.preventDefault) e.preventDefault(); resume(); } return; }   // one player: the browser's own Space and Enter on the pause card, as before
+  if (r || (two.on && code === 'Quote')) { if (e.preventDefault) e.preventDefault(); }   // Quote opens Firefox's Quick Find
+  if (M.paused) { if (!e.repeat && r && r[1] === 'pause') resume(); else if (two.on && r && !e.repeat) navKey(r, e); return; }
+  if (two.on && (M.phase === 'menu' || M.phase === 'break')) { if (r && !e.repeat) navKey(r, e); return; }   // the penalty card and the half-time and full-time cards: the keys drive the card, as a pad's buttons do, and never reach the slots
+  if (!r) return;
+  const [s, act] = r;
+  if (act === 'pause') { if (!e.repeat) pause(); return; }
+  const inp = inputs[s];
+  if (act === 'm') {
+    if (M.cut && M.cut.duel && !e.repeat && !inp.held.has(code)) { const d = KEYDIR[code]; if (d[0]) inp.flick = d[0]; }   // a step is a fresh sideways key during a duel
+    inp.keys.add(code);
+    return;
+  }
+  if (e.repeat) return;                                    // a repeat never presses
+  btn(inp, act, 1, true);
 }
-function keyUp(e) {
-  input.keys.delete(e.code); input.held.delete(e.code);
-  if (e.code === 'KeyJ' || e.code === 'Space') input.aDown = false;
-  if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') input.bDown = false;
-  if (e.code === 'KeyL') input.cDown = false;
+function navKey(r, e) {                                    // two player only: the routed keys drive the menus and cards
+  const [s, act] = r;
+  if (act === 'm') { const d = KEYDIR[e.code]; navMove(s, d[0], d[1]); }
+  else if (act === 'a') navPress(s);
+  else if (act === 'b' || act === 'pause') navBack(s);
+  if (e.preventDefault) e.preventDefault();
 }
-window.addEventListener('keydown', keyDown);
-window.addEventListener('keyup', keyUp);
+window.addEventListener('keydown', e => onKey(e, true));
+window.addEventListener('keyup', e => onKey(e, false));
+
+/* ---------- controllers ----------
+   Nothing runs until the first gamepadconnected, so phones pay nothing. Pads are polled once a frame, before the step loop.
+   Buttons are mapped by position (0 bottom, 1 right, 4-7 the shoulders and triggers, 9 Start, 12-15 the d-pad), never by
+   letter. In one player every pad drives slot 0; in two player a pad drives the seat it claimed. */
+const PADS = new Map();                                    // by gp.index: { b:[], stick, owner, used, std, act, navT, navDir }
+let padsOn = false;
+const BMAP = { big:0, small:1, start:9, dpad:{ 12:'PadUp', 13:'PadDown', 14:'PadLeft', 15:'PadRight' } };
+const isShoulder = i => i >= 4 && i <= 7;
+function padOf(gp) {
+  let P = PADS.get(gp.index);
+  if (!P) { P = { index:gp.index, b:[], stick:false, owner:null, used:false, std:gp.mapping === 'standard', act:null, navT:0, navDir:'' }; PADS.set(gp.index, P); }
+  return P;
+}
+const padSeat = P => (two.on ? P.owner : 0);
+const onMenu = () => !playing() || M.paused || M.phase === 'menu' || M.phase === 'break';
+function padDown(b, i, was) {                              // triggers count as down at 0.35 and up below 0.25, so a resting trigger never flickers
+  const v = b.value != null ? b.value : (b.pressed ? 1 : 0);
+  return isShoulder(i) ? (was ? v >= 0.25 : v >= 0.35) : !!(b.pressed || v > 0.5);
+}
+function padRise(gp, P) {                                  // an unowned pad in two player: any press on 0-7 or 9 claims a seat, and nothing else reaches the game
+  let rise = false;
+  for (let i = 0; i < Math.min(gp.buttons.length, 10); i++) { const was = !!P.b[i], now = padDown(gp.buttons[i], i, was); P.b[i] = now; if (now && !was && i !== 8) rise = true; }
+  return rise;
+}
+function pollPads() {
+  if (!padsOn) return;
+  let gps;
+  try { gps = navigator.getGamepads ? navigator.getGamepads() : null; } catch (e) { return; }   // Chrome throws on an insecure origin
+  if (!gps) return;
+  for (const gp of gps) {
+    if (!gp || gp.connected === false) continue;
+    const P = padOf(gp), bit = 4 << gp.index, menu = onMenu();
+    P.act = gp.vibrationActuator || null;
+    if (two.on && P.owner == null) { if (padRise(gp, P)) twoClaim(P); continue; }
+    const seat = padSeat(P), inp = inputs[seat], join = two.on && !$('s-join').hidden;
+    const n = P.std ? Math.min(gp.buttons.length, 16) : Math.min(gp.buttons.length, 2);   // a pad with no standard mapping: axes 0/1 and buttons 0/1 only, best effort
+    for (let i = 0; i < n; i++) {
+      const was = !!P.b[i], now = padDown(gp.buttons[i], i, was);
+      if (now === was) continue;
+      P.b[i] = now;
+      if (now) { setDev('pad'); if (playing()) P.used = true; }
+      // on a menu or a card a rise navigates, and a release still reaches the slot: a button let go there can't stay held into play
+      if (i === BMAP.big) { if (now && menu) navPress(seat); else btn(inp, 'a', bit, now); }
+      else if (i === BMAP.small) { if (now && menu) { if (M && M.paused) resume(); else navBack(seat); } else btn(inp, 'b', bit, now); }
+      else if (isShoulder(i)) { if (!menu || !now) btn(inp, 'c', bit, now); }
+      else if (i === BMAP.start) { if (now) padStart(); }
+      else if (BMAP.dpad[i]) {
+        const code = BMAP.dpad[i], d = KEYDIR[code];
+        if (!now) { inp.keys.delete(code); inp.held.delete(code); }
+        else if (menu) navMove(seat, d[0], d[1]);
+        else { if (M.cut && M.cut.duel && !inp.held.has(code)) { if (d[0]) inp.flick = d[0]; } inp.keys.add(code); }
+      }
+      if (join) { if (i === BMAP.big) lightPad(seat, 'big', now); else if (i === BMAP.small) lightPad(seat, 'small', now); else if (isShoulder(i)) lightPad(seat, 'sh', now); }
+    }
+    // the left stick: a 0.20 radial dead zone, rescaled to 0..1; a latched stick writes nothing until it is back inside 0.25
+    const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0, m = hyp(ax, ay);
+    if (inp.latch && m < 0.25) inp.latch = false;
+    if (m >= 0.20 && !inp.latch) { const k = Math.min(1, (m - 0.20)/0.80)/m; inp.jx = ax*k; inp.jy = ay*k; inp.padStick = true; P.stick = true; if (m >= 0.5) setDev('pad'); }
+    else if (m < 0.20 && P.stick) { P.stick = false; if (inp.padStick) { inp.jx = inp.jy = 0; inp.padStick = false; } }   // zeroed once, and only if the stick was the last writer
+    if (join && (m >= 0.5) !== !!P.stickLit) { P.stickLit = m >= 0.5; lightPad(seat, 'stick', P.stickLit); }
+    if (menu) padNav(P, seat, ax, ay, m);
+  }
+}
+function padNav(P, seat, ax, ay, m) {                      // the stick on a menu: a move, then repeats after 400ms and every 150ms while held
+  const dir = m < 0.5 ? '' : Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? 'r' : 'l') : (ay > 0 ? 'd' : 'u');
+  if (!dir) { P.navDir = ''; return; }
+  const now = performance.now();
+  if (dir !== P.navDir) { P.navDir = dir; P.navT = now + 400; }
+  else if (now < P.navT) return;
+  else P.navT = now + 150;
+  setDev('pad');
+  navMove(seat, dir === 'r' ? 1 : dir === 'l' ? -1 : 0, dir === 'd' ? 1 : dir === 'u' ? -1 : 0);
+}
+function padStart() {                                      // Start: pause and resume, and Second Half on the break card
+  if (!playing()) return;
+  if (M.paused) resume();
+  else if (M.phase === 'break') { const go = $('br-go'); if (!$('m-break').hidden && go.click) go.click(); }
+  else if (M.phase !== 'menu') pause();
+}
+function twoClaim(P) {                                     // an unowned pad's first press. Once a seat has lost its pad (two.lost) the press takes that seat back, in any phase; otherwise only the join screen seats a pad: seat 0 if it isn't on one, else seat 1, else nothing (a third pad)
+  let s = null;
+  if (two.lost.length) { s = two.lost.shift(); if (two.lost.length) seatLost(two.lost[0]); else seatFound(); }   // the seats that lost their pads, in the order they went
+  else if (!$('s-join').hidden) s = two.seats[0].dev !== 'pad' ? 0 : two.seats[1].dev !== 'pad' ? 1 : null;
+  if (s == null) return;
+  const old = two.seats[s].pad != null ? PADS.get(two.seats[s].pad) : null; if (old) old.owner = null;
+  two.seats[s] = { dev:'pad', half:two.seats[s].half, pad:P.index }; P.owner = s;
+  releaseAll(); seatsChanged();
+}
+function twoRelease(s) {                                   // back to the keyboard. With both seats on it the halves go by seat, Player 1 on the left (the other way round after Swap Players), whatever a solo spell left stored; a lone keyboard seat keeps its own side
+  const o = two.seats[1 - s], left = two.swapped ? 1 : 0, half = s === left ? 'left' : 'right';
+  const P = two.seats[s].pad != null ? PADS.get(two.seats[s].pad) : null; if (P) P.owner = null;
+  two.seats[s] = { dev:'kb', half, pad:null };
+  if (o.dev === 'kb') o.half = half === 'left' ? 'right' : 'left';
+  releaseAll(); seatsChanged();
+}
+function twoSwap() { two.seats.reverse(); two.swapped = !two.swapped; for (const P of PADS.values()) if (P.owner != null) P.owner = 1 - P.owner; releaseAll(); seatsChanged(); }
+function resetSeats() { two.seats = [{ dev:'kb', half:'left', pad:null }, { dev:'kb', half:'right', pad:null }]; two.lost = []; two.swapped = false; for (const P of PADS.values()) P.owner = null; }   // a fresh visit to the join screen: the halves in order, every pad back to Press Any Button
+function padGone(index) {
+  const P = PADS.get(index); if (!P) return;
+  const seat = padSeat(P), bit = 4 << index;
+  if (seat != null) {
+    const inp = inputs[seat];
+    for (const k of ['a', 'b', 'c']) btn(inp, k, bit, false);
+    if (P.stick && inp.padStick) { inp.jx = inp.jy = 0; inp.padStick = false; }
+    for (const code of Object.values(BMAP.dpad)) { inp.keys.delete(code); inp.held.delete(code); }
+  }
+  PADS.delete(index);
+  setDesk();                                               // the home's Two Player button follows the pads actually connected
+  if (two.on && P.owner != null) { if (!two.lost.includes(P.owner)) two.lost.push(P.owner); twoRelease(P.owner); if (playing()) { pause(); seatLost(two.lost[0]); } }   // the seat falls back to the keyboard and is held for the next pad press, on the pause card, the half-time card or in play
+  else if (P.used && playing()) pause();                   // one player: a pad that was never used this match (one that slept over half time) can't interrupt
+}
+function seatLost(s) { for (const id of ['pz-seat', 'br-seat']) { const el = $(id); if (el) { el.textContent = 'Player ' + (s + 1) + ' · Press Any Button'; el.hidden = false; el.classList.toggle('s1', s === 1); } } }   // on the pause card and the half-time card alike
+function seatFound() { for (const id of ['pz-seat', 'br-seat']) { const el = $(id); if (el) el.hidden = true; } }
+function padConnected(gp) {
+  padsOn = true;
+  if (gp) padOf(gp);
+  setDesk();
+}
+window.addEventListener('gamepadconnected', e => padConnected(e.gamepad));
+window.addEventListener('gamepaddisconnected', e => padGone(e.gamepad.index));
+function rumble(seat, ms) {                                // Chrome and Edge only; feature-checked, so anywhere else it is a no-op
+  if (!padsOn || seat == null) return;
+  for (const P of PADS.values()) {
+    if (padSeat(P) !== seat || !P.act || !P.act.playEffect) continue;
+    try { P.act.playEffect('dual-rumble', { duration:ms, strongMagnitude:0.6, weakMagnitude:0.3 }); } catch (e) { /* unsupported */ }
+  }
+}
+
+/* ---------- menus and cards from a controller ----------
+   A chalk ring (.padfocus) on the current button, moved spatially; the real DOM focus never moves, so a native Enter can't
+   double-fire. In one player the keyboard keeps its native Tab, Enter and Space, so nothing changes for today's keyboard players. */
+let focusEl = null;
+const navLog = [];                                         // the tools read who tried to navigate and whether the layer was his: [fn, seat, owned]
+const logNav = (fn, seat) => { navLog.push([fn, seat, navOwner(seat)]); if (navLog.length > 40) navLog.shift(); };
+function navLayer() {                                      // the top layer: the pause card over anything (it can sit over the penalty card), then an open card, then the visible screen
+  const pz = $('m-pause'); if (pz && !pz.hidden) return pz;
+  for (const m of document.querySelectorAll('.modal')) if (!m.hidden) return m;
+  for (const s of document.querySelectorAll('.screen')) if (!s.hidden) return s;
+  return null;
+}
+function navCands(layer) {
+  const out = [];
+  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step')) {
+    if (el.disabled || el.hidden || el.getAttribute('aria-disabled') === 'true' || (el.closest && el.closest('[hidden]'))) continue;
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    out.push(el);
+  }
+  return out;
+}
+function setFocus(el) {
+  if (focusEl && focusEl !== el) focusEl.classList.remove('padfocus');
+  focusEl = el || null;
+  if (focusEl) { focusEl.classList.add('padfocus'); if (focusEl.scrollIntoView) focusEl.scrollIntoView({ block:'nearest' }); }
+}
+const DEFAULT_FOCUS = { 's-home':() => $('b-quick'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
+let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
+function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
+function navSide(seat) {                                   // the one button a restricted seat may still press: Player 1's Change Team while Player 2 picks
+  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-change');
+  return null;
+}
+function navMove(seat, dx, dy) {                           // the nearest candidate within 60 degrees of the direction: the distance along it plus twice the sideways offset
+  logNav('move', seat);
+  if (!navOwner(seat)) return null;
+  const layer = navLayer(); if (!layer) return null;
+  const cands = navCands(layer); if (!cands.length) return null;
+  if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
+  if (!dx && !dy) return focusEl;
+  const r0 = focusEl.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+  let best = null, bs = 1e9;
+  for (const el of cands) {
+    if (el === focusEl) continue;
+    const r = el.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
+    const along = ex*dx + ey*dy, side = Math.abs(ex*dy - ey*dx);
+    if (along <= 0 || side > along*1.732) continue;
+    const s = along + 2*side;
+    if (s < bs) { bs = s; best = el; }
+  }
+  if (best) setFocus(best);
+  return best;
+}
+function navPress(seat) {
+  logNav('press', seat);
+  if (!navOwner(seat)) { const el = navSide(seat); if (el && el.click) { el.click(); return true; } return false; }
+  const layer = navLayer(); if (!layer) return false;
+  if (!focusEl || !navCands(layer).includes(focusEl)) { navMove(seat, 0, 0); return false; }
+  if (focusEl.click) focusEl.click();
+  return true;
+}
+function navBack(seat) {
+  logNav('back', seat);
+  if (!navOwner(seat)) return false;
+  const layer = navLayer(); if (!layer) return false;
+  for (const el of layer.querySelectorAll('[data-back]')) if (!el.hidden && !(el.closest && el.closest('[hidden]'))) { if (el.click) el.click(); return true; }
+  return false;
+}
+
+/* ---------- housekeeping ---------- */
+document.addEventListener('pointerdown', () => ac(), true);   // a controller press is not a user activation, so it can't start sound; any key or click can
+document.addEventListener('keydown', () => ac(), true);
+window.addEventListener('blur', () => { releaseAll(); pause(); });   // a run can't stick after Cmd-Tab
+const deskQuery = (() => { try { return matchMedia('(hover: hover) and (pointer: fine)'); } catch (e) { return null; } })();   // the primary pointer, on purpose: any-* would put the button on hybrid tablets
+function setDesk() { const b = document.body; if (b) b.classList.toggle('desk', PADS.size > 0 || !!(deskQuery && deskQuery.matches)); }   // a computer, or a controller connected right now: a phone that had a pad goes back to its own layout when it is unplugged
+const isDesk = () => !!(document.body && document.body.classList.contains('desk'));
+if (deskQuery) { if (deskQuery.addEventListener) deskQuery.addEventListener('change', setDesk); else if (deskQuery.addListener) deskQuery.addListener(setDesk); }
 
 /* =========================================================
    UI
@@ -4138,6 +4769,7 @@ const playing = () => mode === 'match' && M && !M.demo;
 
 function showScreen(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+  setFocus(null);
   if (id === 's-teams') fitNames();
   if (id !== 's-home') { const a = document.activeElement; if (a && typeof a.blur === 'function') a.blur(); }   // a focused menu button must not fire on Enter once it is hidden
 }
@@ -4175,19 +4807,26 @@ function lockLandscape() {
     if (fs && fs.then) fs.then(lock, () => {}); else lock();
   } catch (e) { /* unsupported */ }
 }
-function startMatch(u, c, isChamp) {
+function startMatch(u, c, isChamp, o) {
   lockLandscape();
   ac();
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live' });   // the switch is gone: a match you play always has duels
+  for (const P of PADS.values()) P.used = false;             // a pad unplugged mid-match pauses only if it was used in that match
+  const pair = !!(o && o.two);                               // two player: both sides human, each at the level they picked; the seats model routes the keyboard halves and the pads
+  setTwo(pair);
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live',   // the switch is gone: a match you play always has duels
+    humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
-  $('hud').hidden = false; $('controls').hidden = false; $('b-pause').hidden = false;
+  $('hud').hidden = false; $('controls').hidden = pair; $('b-pause').hidden = false;   // two player: the stick and the three buttons are seat 0's touch controls, and nobody is touching; each player's marks are drawn on the pitch
+  $('h-t0').hidden = $('h-t1').hidden = !pair;             // the seat tags either side of the scorebug
   $('h-n0').textContent = M.nat[0].id; $('h-n1').textContent = M.nat[1].id;
   $('h-k0').style.setProperty('--k', showCol(0)); $('h-k1').style.setProperty('--k', showCol(1));
   lastHud = ''; restStick();
 }
 function exitMatch() {
   const wasChamp = M && M.champ;
+  setTwo(false);                                           // the menus are one player's again; the join screen switches the seats back on
+  series = { w:[0, 0], d:0 }; navOnly = null;              // a two-player series ends with the visit to the menu
   startDemo();
   if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else goHome();
 }
@@ -4213,15 +4852,15 @@ function updateHud() {
     $('h-s0').textContent = M.score[0]; $('h-s1').textContent = M.score[1];
     $('h-sub').innerHTML = fmtClock() + ' · ' + sub;
   }
-  const ours = ourBall();
   const cut = M.phase === 'cut' && M.cut;
   const goal = cut && M.cut.kind === 'goal';
-  const ctrl = M.ctrl, ht = ctrl ? ctrl.team : 0, k = M.contact, held = !!(k && ctrl && k.c === ctrl), play = M.phase === 'play';   // held: your carrier is in a tackle
+  const ctrl = M.ctrl, ht = ctrl ? ctrl.team : 0, k = M.contact, held = !!(k && ctrl && k.c === ctrl), play = M.phase === 'play';   // seat 0's side: the on-screen buttons are its. held: your carrier is in a tackle
+  const ours = ourBall(ht), S0 = sideOf(ht), P0 = S0.pass;
   const b = M.ball;
   let passCharge = 0, passLong = false;
-  if (M.pass && M.pass.mode === 'hold' && play && ctrl && b.state === 'held' && b.carrier === ctrl && !ctrl.bind) {
-    passCharge = Math.min(1, M.pass.t / LONG.auto);
-    passLong = M.pass.t >= LONG.arm && !!passAim(ctrl, input.world().y).far;
+  if (P0 && P0.mode === 'hold' && play && ctrl && b.state === 'held' && b.carrier === ctrl && !ctrl.bind) {
+    passCharge = Math.min(1, P0.t / LONG.auto);
+    passLong = P0.t >= LONG.arm && !!passAim(ctrl, inputOf(ht).world().y).far;
   }
   let la, lb, cueA, cueB, aAct, bAct;
   const gs = goal ? M.cut.g.stage : '';
@@ -4248,7 +4887,7 @@ function updateHud() {
     $('btnC').classList.toggle('idle', !sprOn); $('btnC').classList.toggle('ready', sprOn);
     $('hud').classList.toggle('gk', !!goal);   // the clock line hides under a goal close-up
   }
-  $('btnB').style.setProperty('--c', M.charging ? M.charge.toFixed(3) : goal && gs === 'hold' ? M.cut.g.m.toFixed(3) : 0);   // the ring shows the charge, or a drop's meter
+  $('btnB').style.setProperty('--c', S0.charging ? S0.charge.toFixed(3) : goal && gs === 'hold' ? M.cut.g.m.toFixed(3) : 0);   // the ring shows the charge, or a drop's meter
   $('btnC').style.setProperty('--s', S.m.toFixed(3));        // the Sprint ring is the meter
   $('btnA').classList.toggle('hold', passCharge > 0);
   $('btnA').style.setProperty('--p', passCharge.toFixed(3)); // the Pass ring fills while a long pass charges
@@ -4256,17 +4895,21 @@ function updateHud() {
 
 /* penalty choice: the card's kick is built now, so the card and the kick share one wind */
 let penCtx = null;
-function openPenalty(x, y, dP) {
-  if (M.headless) { cpuPenalty(0, x, y, dP); return; }
+function openPenalty(team, x, y, dP) {                     // the card for the human side the penalty went to; headless runs choose as the CPU does
+  if (M.headless) { cpuPenalty(team, x, y, dP); return; }
   M.phase = 'menu';
-  const g = makeGoal(0, penSpot(0, x), y, 'penalty', null);
-  penCtx = { x, y, g };
+  const g = makeGoal(team, penSpot(team, x), y, 'penalty', null);
+  penCtx = { team, x, y, g };
   $('p-meta').textContent = Math.round(g.dist) + 'm to the Posts\u00a0· ' + (g.W.mph < KICK.wind.calm ? 'Calm' : 'Wind ' + Math.round(g.W.mph) + ' MPH');   // breaks after the dot, never before it
   $('p-goal').disabled = g.mClear > KICK.range;
+  const s = M.two ? seatOfTeam(team) : null, eb = $('p-eyebrow');   // two player: the card names its player, in his colour, and only his seat acts on it (the mouse always can)
+  eb.textContent = s == null ? 'Penalty' : 'Penalty · Player ' + (s + 1); eb.classList.toggle('p1', s === 0); eb.classList.toggle('p2', s === 1);
+  navOnly = s;
+  setFocus(null);
   $('m-pen').hidden = false;
 }
 for (const [id, c] of [['p-goal','goal'],['p-touch','touch'],['p-tap','tap']]) {
-  $(id).addEventListener('click', () => { if (!penCtx) return; $('m-pen').hidden = true; const p = penCtx; penCtx = null; penChoice(0, p.x, p.y, c, p.g); });
+  $(id).addEventListener('click', () => { if (!penCtx) return; $('m-pen').hidden = true; navOnly = null; const p = penCtx; penCtx = null; penChoice(p.team, p.x, p.y, c, p.g); });
 }
 
 /* half time and full time */
@@ -4277,21 +4920,30 @@ function fillScore(prefix) {
 function showBreak(kind) {
   breakKind = kind;
   fillScore('br-');
+  if (two.lost && two.lost.length) seatLost(two.lost[0]); else $('br-seat').hidden = true;
   $('br-eyebrow').textContent = kind === 'half' ? 'Half Time' : 'Full Time';
   $('br-sc').textContent = M.score[0] + ' – ' + M.score[1];
   $('br-tries').textContent = 'Tries ' + M.tries[0] + ' – ' + M.tries[1];
   $('br-pts').hidden = true;
-  $('br-go').textContent = kind === 'half' ? 'Second Half' : 'Continue';
+  $('br-go').textContent = kind === 'half' ? 'Second Half' : M.two ? 'Rematch' : 'Continue';
+  const pair = kind === 'full' && !!M.two;
+  $('br-t0').hidden = $('br-t1').hidden = !M.two;          // the seat tags on the score row: a mirror match has two Farnhams
   if (kind === 'full') {
     const [a, b] = M.score;
-    const res = a > b ? M.nat[0].name + ' Win' : a < b ? M.nat[1].name + ' Win' : 'Draw';
+    const res = M.two ? (a > b ? 'Player 1 Wins' : a < b ? 'Player 2 Wins' : 'Draw') : a > b ? M.nat[0].name + ' Win' : a < b ? M.nat[1].name + ' Win' : 'Draw';   // two player names the player, since both can be Farnham
     $('br-tries').textContent = res + ' · Tries ' + M.tries[0] + ' – ' + M.tries[1];
     if (M.champ) {
       const mp = matchPoints(a, b, M.tries[0]);
       $('br-pts').textContent = '+' + mp.p + ' Table ' + (mp.p === 1 ? 'Point' : 'Points') + (mp.why.length ? ' · ' + mp.why.join(', ') : '');
       $('br-pts').hidden = false;
     }
+    if (pair) {                                              // two player: the series between the two players, counted once a match, Player 1's wins first
+      if (!M.seriesDone) { M.seriesDone = true; if (a > b) series.w[0]++; else if (a < b) series.w[1]++; else series.d++; }
+      $('br-series').textContent = 'Series ' + series.w[0] + ' – ' + series.w[1] + (series.d ? ' · ' + series.d + (series.d === 1 ? ' Draw' : ' Draws') : '');
+    }
   }
+  $('br-series').hidden = !pair || series.w[0] + series.w[1] + series.d < 2; $('br-row').hidden = !pair;   // a series needs two matches
+  setFocus(null);
   $('m-break').hidden = false;
 }
 function finishMatch() {
@@ -4300,8 +4952,12 @@ function finishMatch() {
 }
 $('br-go').addEventListener('click', () => {
   $('m-break').hidden = true;
-  if (breakKind === 'half') { M.phase = 'set'; secondHalf(); } else exitMatch();
+  if (breakKind === 'half') { M.phase = 'set'; secondHalf(); }
+  else if (M.two) startTwo();                               // Rematch: the same teams and levels, the series kept
+  else exitMatch();
 });
+$('br-teams').addEventListener('click', () => { $('m-break').hidden = true; startDemo(); openTeams('two'); });   // Change Teams: Player 1's team stays until he changes it, the series kept
+$('br-menu').addEventListener('click', () => { $('m-break').hidden = true; exitMatch(); });
 
 /* pause */
 function pause() {
@@ -4309,12 +4965,15 @@ function pause() {
   M.paused = true;
   $('pz-score').textContent = M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash)
   $('pz-quit').textContent = 'Quit Match'; quitArmed = false;
+  if (two.lost && two.lost.length) seatLost(two.lost[0]); else $('pz-seat').hidden = true;
+  setFocus(null);
   $('m-pause').hidden = false;
 }
 function resume() {
   if (!M) return;
-  M.paused = false; $('m-pause').hidden = true; input.keys.clear();
-  input.aPressed = input.bPressed = input.cPressed = false; input.cDown = false; input.flick = 0; M.pass = null;
+  M.paused = false; $('m-pause').hidden = true;
+  for (const inp of inputs) { inp.keys.clear(); inp.aPressed = inp.bPressed = inp.cPressed = false; inp.cDown = false; inp.flick = 0; }
+  for (const s of M.side) s.pass = null;
   const c = M.cut;
   if (c && c.duel && !c.after) duelResume(c);
   else if (c && c.kind === 'goal' && !c.after) goalResume(c);
@@ -4326,12 +4985,12 @@ let quitArmed = false;
 $('b-pause').addEventListener('click', pause);
 $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
-  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = 'Tap Again to Quit'; return; }
+  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = isDesk() ? 'Press Again to Quit' : 'Tap Again to Quit'; return; }
   exitMatch();
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
-function onOrientation() { if (uprightPhone.matches) { pause(); input.stickId = null; input.jx = input.jy = 0; input.aDown = input.bDown = input.cDown = false; input.cPressed = false; } }
+function onOrientation() { if (uprightPhone.matches) { pause(); input.stickId = null; for (const inp of inputs) { inp.jx = inp.jy = 0; inp.src.a = inp.src.b = inp.src.c = 0; inp.aDown = inp.bDown = inp.cDown = false; inp.cPressed = false; } } }
 if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
@@ -4352,6 +5011,7 @@ function renderHome() {
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
 }
 function goHome() {
+  navOnly = null;
   renderHome();
   showScreen('s-home');
   const b = $('b-quick');
@@ -4374,9 +5034,59 @@ $('b-champ').addEventListener('click', () => {
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
 $('b-help').addEventListener('click', () => showScreen('s-help'));
 $('h-back').addEventListener('click', goHome);
-$('t-back').addEventListener('click', goHome);
-$('t-change').addEventListener('click', () => { quickPick = null; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; });
+$('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
+$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
 $('t-default').addEventListener('click', () => pickTeam(DEFAULT_TEAM));
+
+/* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
+   Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
+   screen (the seats model is switched on here, so pads can claim), Use Keyboard gives it back, Swap Players swaps the halves and the
+   Difficulty that goes with them. Each player's Difficulty is his own and is remembered. Each seat's card carries its legend: the
+   keycaps or pad buttons for Run, Pass, Kick and Sprint, lit while held, so a pair learns the keys here and sees a keyboard that can't
+   hold them all. Player 1 picks his team first, then Player 2. */
+let twoSel = { teams:[DEFAULT_TEAM, null], levels:[1, 1], picking:0 }, series = { w:[0, 0], d:0 };
+const KEY_LEGEND = {
+  left:[['Run', ['KeyW', 'KeyA', 'KeyS', 'KeyD']], ['Pass', ['KeyF']], ['Kick', ['KeyG']], ['Sprint', ['KeyH']]],
+  right:[['Run', ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight']], ['Pass', ['Slash']], ['Kick', ['Period']], ['Sprint', ['Comma']]],
+  solo:[['Run', ['KeyW', 'KeyA', 'KeyS', 'KeyD']], ['Pass', ['KeyJ']], ['Kick', ['KeyK']], ['Sprint', ['KeyL']]],
+};
+const ARROW_KEY = { ArrowUp:'u', ArrowLeft:'l', ArrowDown:'d', ArrowRight:'r' };
+function seatDev(s) { return seatScheme(s) ? 'Keyboard' : 'Controller'; }
+function legendHtml(s) {                                   // the seat's legend: four cells, Run Pass Kick Sprint, keycaps by the scheme (arrows as CSS triangles, never a glyph) or the pad's glyphs by position
+  const cell = (caps, label, four) => `<span class="lg"><span class="caps${four ? ' four' : ''}">${caps}</span><span class="lbl">${label}</span></span>`;
+  const sch = seatScheme(s);
+  if (!sch) return cell('<i class="pad stick" data-pad="stick"></i>', 'Run') + cell('<i class="pad dia" data-pad="big"><b></b><b></b><b class="on"></b><b></b></i>', 'Pass')
+    + cell('<i class="pad dia" data-pad="small"><b></b><b class="on"></b><b></b><b></b></i>', 'Kick') + cell('<i class="pad sh" data-pad="sh"></i>', 'Sprint');
+  const kc = code => (ARROW_KEY[code] ? `<kbd class="kc ar ${ARROW_KEY[code]}" data-code="${code}"></kbd>` : `<kbd class="kc" data-code="${code}">${KEYCAP[code]}</kbd>`);
+  return KEY_LEGEND[sch].map(([label, codes]) => cell(codes.map(kc).join(''), label, codes.length > 1)).join('');
+}
+function openJoin() {
+  resetSeats(); setTwo(true); navOnly = null;
+  twoSel = { teams:[DEFAULT_TEAM, null], levels:settings.twoDiff.slice(), picking:0 }; series = { w:[0, 0], d:0 };
+  renderJoin(); showScreen('s-join'); $('s-join').scrollTop = 0;
+}
+function renderJoin() {
+  for (const s of [0, 1]) {
+    $('j-dev' + s).textContent = seatDev(s);
+    $('j-kb' + s).hidden = two.seats[s].dev !== 'pad';   // its row keeps its height either way, so the two Difficulty rows stay level
+    $('j-leg' + s).innerHTML = legendHtml(s);
+    [...$('j-diff' + s).children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === twoSel.levels[s])));
+  }
+  $('j-pad').hidden = two.seats[0].dev === 'pad' && two.seats[1].dev === 'pad';
+}
+function seatsChanged() { if (two.on && !$('s-join').hidden) renderJoin(); }   // a pad claiming a seat, Use Keyboard, Swap Players or a pad unplugged: the join screen follows
+function startTwo() { navOnly = null; startMatch(twoSel.teams[0], twoSel.teams[1], false, { two:true, levels:twoSel.levels.slice() }); }
+$('b-two').addEventListener('click', () => { ac(); openJoin(); });
+$('j-back').addEventListener('click', () => { setTwo(false); goHome(); });
+const saveTwoDiff = () => { settings.twoDiff = two.swapped ? twoSel.levels.slice().reverse() : twoSel.levels.slice(); save(); };   // stored by half (left, right): a fresh visit puts the halves back in order
+function swapPlayers() { twoSwap(); twoSel.levels.reverse(); saveTwoDiff(); renderJoin(); }   // Swap Players: the device, the half and the Difficulty go with the player
+function useKeyboard(s) { twoRelease(s); renderJoin(); }
+$('j-swap').addEventListener('click', swapPlayers);
+$('j-go').addEventListener('click', () => { ac(); openTeams('two'); });
+for (const s of [0, 1]) {
+  $('j-kb' + s).addEventListener('click', () => useKeyboard(s));
+  [...$('j-diff' + s).children].forEach((b, i) => b.addEventListener('click', () => { twoSel.levels[s] = i; saveTwoDiff(); renderJoin(); }));
+}
 
 /* team select */
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
@@ -4397,16 +5107,22 @@ function teamCard(t, i) {
 }
 function openTeams(m) {
   pickMode = m; settings.pool = 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
 function renderTeams() {
-  const quick = pickMode === 'quick';
-  $('t-eyebrow').textContent = quick ? 'Quick Match' : 'Championship';
-  $('t-title').textContent = quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
+  const quick = pickMode === 'quick', pair = pickMode === 'two', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick;   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
+  const eb = $('t-eyebrow');
+  eb.textContent = quick ? 'Quick Match' : pair ? 'Two Player' : 'Championship';
+  eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
+  $('t-title').textContent = pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
   [...document.querySelectorAll('.pool button')].forEach((b, i) => b.setAttribute('aria-pressed', String(i === settings.pool)));
-  $('t-yours').hidden = !(quick && quickPick);
-  if (quick && quickPick) $('t-mine').innerHTML = `${jersey(quickPick)}<span>${esc(quickPick.name)}</span>`;
-  $('t-default').hidden = quick || settings.pool !== 1;
+  const yours = (quick && !!quickPick) || (pair && p === 1);
+  $('t-yours').hidden = !yours;
+  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(mine.name)}</span>`;
+  $('t-default').hidden = quick || pair || settings.pool !== 1;
+  $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
+  navOnly = pair ? p : null;
   $('t-default').textContent = 'Play as ' + DEFAULT_TEAM.name;
   teamList = [...POOLS[settings.pool], ...custom];
   let html = teamList.map(teamCard).join('');
@@ -4427,6 +5143,10 @@ function fitNames() {
 }
 /* A championship is your team and five others from the list on screen. */
 function pickTeam(t) {
+  if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
+    if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
+    twoSel.teams[1] = t; startTwo(); return;
+  }
   if (pickMode === 'champ') {
     const others = shuffle(POOLS[settings.pool].filter(o => keyOf(o) !== keyOf(t)));
     newChamp(t, others); renderHub(); showScreen('s-hub'); return;
@@ -4475,9 +5195,11 @@ function buildBuilder() {
       const i = custom.findIndex(c => c.key === editing.key);
       custom[i] = cleanTeam({ ...t, key:editing.key }, i);
       if (quickPick && keyOf(quickPick) === editing.key) quickPick = custom[i];
+      if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = custom[i];
     } else {
       custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
       if (pickMode === 'quick' && quickAuto) { quickPick = custom[custom.length - 1]; quickAuto = false; }   // made it to play as it
+      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; }   // Player 1 made it to play as it
     }
     save(); renderTeams(); showScreen('s-teams');
   });
@@ -4486,6 +5208,7 @@ function buildBuilder() {
     if (!delArmed) { delArmed = true; $('bd-del').textContent = 'Confirm Delete'; return; }
     custom = custom.filter(c => c.key !== editing.key);
     if (quickPick && keyOf(quickPick) === editing.key) quickPick = null;
+    if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = DEFAULT_TEAM;
     save(); renderTeams(); showScreen('s-teams');
   });
 }
@@ -4567,6 +5290,7 @@ $('hub-reset').addEventListener('click', () => {
 let last = performance.now(), acc = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now-last)/1000); last = now;
+  pollPads();
   if (window.innerWidth !== V.W || window.innerHeight !== V.H || Math.min(2, window.devicePixelRatio || 1) !== V.dpr) { resize(); if (input.stickId === null) restStick(); }
   if (M && !M.paused && M.phase !== 'break' && M.phase !== 'menu') {
     if (M.stop > 0) { M.stop -= dt; acc = 0; }               // your Big Hit's hit-stop: the world holds for a few frames
@@ -4594,12 +5318,16 @@ function simulate(n, half, diff) {
   M = keep;
   return out;
 }
-window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, forceDuel,
-  debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings, endSprint, collide, view:(W, H) => { V.W = W; V.H = H; V.dpr = 1; }, drawCut, goalKick, openPenalty, resume, interactive, setRM:v => { RM = !!v; },
-    render, updateHud, setMode:v => { mode = v; }, keyDown, keyUp, frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; } },
+window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lineout, forceDuel, pollPads, onKey, keyRoute, navMove, navPress, navBack,
+  sides:{ side:sideOf, isHuman, inputOf, ctrlOf, setCtrl, isCtrl:ringed, levelOf, seatOfTeam, anyCharging, ourBall, userActive, humanSlots },
+  debug:{ stage:stageDuel, startDuel, duelGate, applyDuel, settings:() => settings, endSprint, collide, view:(W, H) => { V.W = W; V.H = H; V.dpr = 1; }, drawCut, goalKick, openPenalty:(x, y, dP) => openPenalty(0, x, y, dP), openPenaltyFor:openPenalty, penalty, resume, interactive, setRM:v => { RM = !!v; },
+    duelCam, duelPose, camAt, startMatch, exitMatch, pickOwner,
+    render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
+    setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
+    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, goHome, exitMatch, setDesk, isDesk },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
-    LONG, pickReceiver, pickLong, passAim, shownPass },
+    LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, handleUser, userStep },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
@@ -4609,7 +5337,7 @@ window.__tryline = { simulate, newMatch, update, input, STEP, scrum, lineout, fo
 function start(data) {
   load();
   if (data && (data.champ || data.settings || data.custom)) restore(data);
-  resize();
+  resize(); setDesk();
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);

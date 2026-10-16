@@ -28,27 +28,37 @@ const noop = () => {};
 const spy = k => (...args) => { if (globalThis.__ctxSpy) globalThis.__ctxSpy(k, args); };
 const ctx2d = new Proxy({}, { get: (t, k) => (k === 'createRadialGradient' || k === 'createLinearGradient' ? () => ({ addColorStop: noop }) : k === 'globalAlpha' ? 1 : spy(k)),
   set: (t, k, v) => { if (globalThis.__ctxSpy) globalThis.__ctxSpy(k, [v]); return true; } });
-// an element stub that remembers its classes and custom properties, so a test can read what updateHud set
-const el = () => {
-  const cls = new Set(), props = {};
+// an element stub that remembers its classes, custom properties and click listeners, so a test can read what updateHud set and
+// press a card's buttons (el.click() runs the game's own handlers); document.querySelectorAll knows the modals and the screens by id
+const el = id => {
+  const cls = new Set(), props = {}, L = {};
   return {
-    style: { setProperty: (k, v) => { props[k] = String(v); }, getPropertyValue: k => props[k] || '' },
+    id, style: { setProperty: (k, v) => { props[k] = String(v); }, getPropertyValue: k => props[k] || '' },
     classList: { add: (...a) => a.forEach(c => cls.add(c)), remove: (...a) => a.forEach(c => cls.delete(c)), toggle: (c, on) => { if (on == null) on = !cls.has(c); if (on) cls.add(c); else cls.delete(c); return on; }, contains: c => cls.has(c) },
-    addEventListener: noop, getContext: () => ctx2d, children: [], dataset: {}, querySelectorAll: () => [], appendChild: noop, setPointerCapture: noop, insertAdjacentHTML: noop, setAttribute: noop,
+    addEventListener: (type, fn) => { (L[type] ||= []).push(fn); }, click() { for (const fn of L.click || []) fn({ preventDefault: noop }); },
+    getContext: () => ctx2d, children: [], dataset: {}, querySelectorAll: () => [], appendChild: noop, setPointerCapture: noop, insertAdjacentHTML: noop, setAttribute: noop,
     set innerHTML(v) {}, get innerHTML() { return ''; }, textContent: '', hidden: false, disabled: false,
   };
 };
 const els = {};
-globalThis.document = { getElementById: id => (els[id] ||= el()), querySelectorAll: () => [], addEventListener: noop, createElement: el, createTextNode: () => ({}), hidden: false };
+const MODALS = ['m-pen', 'm-break', 'm-pause'], SCREENS = ['s-home', 's-teams', 's-build', 's-hub', 's-help', 's-join'];
+globalThis.document = { getElementById: id => (els[id] ||= el(id)), querySelectorAll: sel => (sel === '.modal' ? MODALS : sel === '.screen' ? SCREENS : []).map(id => (els[id] ||= el(id))), addEventListener: noop, createElement: () => el(''), createTextNode: () => ({}), hidden: false };
 globalThis.window = globalThis;
 globalThis.innerWidth = 844; globalThis.innerHeight = 390; globalThis.devicePixelRatio = 2;
-globalThis.addEventListener = noop; globalThis.requestAnimationFrame = noop;
+// window listeners are kept and never fired on their own: fire('gamepadconnected', { gamepad }) or fire('blur') drives them from a test
+const listeners = {};
+globalThis.addEventListener = (type, fn) => { (listeners[type] ||= []).push(fn); };
+export const fire = (type, ev) => { for (const fn of listeners[type] || []) fn(ev || {}); };
+// padStub([gp, ...]) is what navigator.getGamepads() returns from then on: plain objects shaped like a Gamepad ({ index, mapping, buttons:[{ pressed, value }], axes, connected })
+export function padStub(pads) { navigator.getGamepads = () => pads; }
+globalThis.requestAnimationFrame = noop;
 globalThis.localStorage = { getItem: () => null, setItem: noop };
 globalThis.getComputedStyle = () => ({ fontSize: "24px" });
 globalThis.matchMedia = () => ({ matches: false, addEventListener: noop, addListener: noop });
 new Function(js)();
 
 export const T = window.__tryline;
+export const inputs = T.inputs;                   // one slot a seat; T.input is slot 0
 const inp = T.input;
 const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 const D2R = Math.PI/180;
@@ -65,13 +75,14 @@ export function duelBot(d, sigma = +process.env.DUEL_SIGMA || 0.095) {
   }
   if (d.bot.done || d.bot.none || d.res || d.t < 0.3 || d.t < d.bot.at) return;
   d.bot.done = true;
-  if (d.kind === 'past') inp.flick = d.bot.fooled ? d.open0 : d.open;
+  const slot = T.sides.inputOf(d.own);               // the timer acts from the owner's slot
+  if (d.kind === 'past') slot.flick = d.bot.fooled ? d.open0 : d.open;
   else if (d.kind === 'pass') {
     // Pass when he comes at you, Dummy when he drifts to the runner; a fake or a misread flips it
     let dummy = !!d.drift;
     if (d.bot.fooled || d.bot.misread) dummy = !dummy;
-    if (dummy) inp.bPressed = true; else inp.aPressed = true;
-  } else inp.aPressed = true;
+    if (dummy) slot.bPressed = true; else slot.aPressed = true;
+  } else slot.aPressed = true;
 }
 
 // An average human at a goal kick, driving the real input path. He reads the
@@ -80,7 +91,7 @@ export function duelBot(d, sigma = +process.env.DUEL_SIGMA || 0.095) {
 // are fumbles at a random moment. CPU kicks are watched, never skipped.
 // o.m / o.aim force the release level or the aim target (tests).
 export function kickBot(c, o = {}) {
-  const g = c.g;
+  const g = c.g, inp = c.inp || T.input;              // the kicker's slot
   if (g.watch || c.after || c.t <= 0.22) return;
   let b = g.bot;
   if (!b) {
@@ -107,7 +118,7 @@ function planRelease(g, o, sig) {
 }
 // The same man at a drop goal (Phase 2): the small button, timed from the meter's start, a wider aim spread.
 export function dropBot(c, o = {}) {
-  const g = c.g;
+  const g = c.g, inp = c.inp || T.input;              // the kicker's slot
   if (c.after || c.t <= 0.22) return;
   let b = g.bot;
   if (!b) {
@@ -120,6 +131,74 @@ export function dropBot(c, o = {}) {
   else if (g.stage === 'hold') { if (!b.tRel) b.tRel = planRelease(g, o, 0.065); if (g.pt + 1.5*T.STEP >= b.tRel) inp.bDown = false; }   // as kickBot: the step nearest tRel
 }
 
+// Two player's close-up bots (twoplayer.mjs drives them explicitly; bot() below is one player's and is left exactly as it was).
+// ownerBot: duelBot's timing on the timer's slot, with a reaction model: what the screen shows registers with him after a lag of
+// N(react, sd) seconds, and he acts on the stance he had registered by his press, re-timing his press when a step or a dummy he
+// has registered moves the window. 5% never press; 10% misread a Key Pass.
+const shownOpen = c => (c.feintAt != null && c.t < c.feintAt + 0.06 ? c.open0 : c.open);   // the guarded side as drawn (the feint's animation is 0.12s; he reads it half way)
+const shownDrift = c => (c.driftAt != null && c.t >= c.driftAt) || (c.fakeAt != null && c.t >= c.fakeAt && c.t < c.fakeAt + 0.26);   // a drift, or a fake while it still looks like one
+export function ownerBot(c, o = {}) {
+  const react = o.react == null ? 0.25 : o.react, sd = o.sd == null ? 0.05 : o.sd;
+  if (!c.obot) c.obot = { noise: gauss()*(o.sigma || 0.095), none: Math.random() < 0.05, lag: Math.max(0.06, react + gauss()*sd), done:false, hist:[], centre:null, at:0, misread: c.kind === 'pass' && Math.random() < 0.10 };
+  const b = c.obot;
+  b.hist.push({ t:c.t, open:shownOpen(c), drift:shownDrift(c), centre:c.centre });   // what the screen shows, step by step
+  let known = b.hist[0]; for (const h of b.hist) { if (h.t <= c.t - b.lag) known = h; else break; }   // the latest frame old enough to have registered
+  if (known.centre !== b.centre) { b.centre = known.centre; b.at = known.centre + b.noise; }
+  if (b.done || b.none || c.res || c.t < 0.3 || c.t < b.at) return;
+  b.done = true;
+  const slot = T.sides.inputOf(c.own);
+  if (c.kind === 'past') slot.flick = known.open;
+  else if (c.kind === 'pass') { let dummy = known.drift; if (b.misread) dummy = !dummy; if (dummy) slot.bPressed = true; else slot.aPressed = true; }
+  else slot.aPressed = true;
+}
+// chooserBot: the other player's hand through the real input path (dev 'stick' writes his slot's stick, 'keys' presses his seat's own
+// sideways keys through onKey). A stance from early in the cut; `trick` of the time a feint (Get Past) or a fake (Key Pass) that
+// switches up to `late` seconds before the lock; a Tackle step 30%, a Block dummy 15%. { idle:true } never touches the slot.
+export function chooserBot(c, o = {}) {
+  if (o.idle || c.locked) return;
+  const seat = T.sides.seatOfTeam(1 - c.own), inp = T.sides.inputOf(1 - c.own);
+  if (!c.cbot) {
+    const trick = o.trick == null ? 0.3 : o.trick, late = o.late == null ? 0.1 : o.late;
+    c.cbot = { side: Math.random() < 0.5 ? -1 : 1, drift: Math.random() < 0.5, trick: Math.random() < trick, at: c.lock - Math.random()*late, step: Math.random() < 0.3, dummy: Math.random() < 0.15,
+      dir: Math.random() < 0.5 ? -1 : 1, start: 0.04 + Math.random()*0.12, dev: o.dev || 'stick', key:null, pressed:false };
+  }
+  const b = c.cbot, t = c.t;
+  const hand = x => {                                      // -1, 0, 1 through the chosen device
+    if (b.dev === 'keys') {
+      const sch = T.debug.seatScheme(seat), codes = sch === 'right' ? ['ArrowLeft', 'ArrowRight'] : ['KeyA', 'KeyD'], want = x < 0 ? codes[0] : x > 0 ? codes[1] : null;
+      if (want === b.key) return;
+      if (b.key) T.onKey({ code:b.key }, false);
+      if (want) T.onKey({ code:want }, true);
+      b.key = want;
+    } else inp.jx = x;
+  };
+  if (c.kind === 'block') { if (b.dummy && !b.pressed && t >= b.start) { inp.bPressed = true; b.pressed = true; } return; }
+  if (c.kind === 'tackle') { if (b.step && t >= (b.trick ? b.at : b.start)) hand(b.dir); return; }   // a trick step comes just before the lock, so the lock sweep can see it
+  if (t < b.start) { hand(0); return; }
+  const sw = b.trick && t >= b.at;
+  if (c.kind === 'past') hand(sw ? -b.side : b.side);
+  else { const drift = sw ? b.drift : (b.trick ? !b.drift : b.drift); hand(drift ? c.side : -c.side); }
+}
+export function chooserRelease(c) { const b = c && c.cbot; if (b && b.key) { T.onKey({ code:b.key }, false); b.key = null; } }   // a key the bot still holds at the end of a duel
+// scrumBot(side, rate, hitP): the stick forward in his own direction, a hit on Set with probability hitP (0.05 ± 0.08s after it), then taps at `rate` a second
+export function scrumBot(side, rate = 6, hitP = 0.7) {
+  const c = T.M.cut, inp = T.sides.inputOf(side);
+  if (!c || c.kind !== 'scrum' || c.result || !inp) return;
+  const s = (c.sbot ||= [null, null]);
+  if (!s[side]) s[side] = { hit: Math.random() < hitP, hitAt: 1.45 + gauss()*0.08, hitDone:false, next: 1.5 + Math.random()/rate };
+  const b = s[side]; inp.jx = side === 0 ? 1 : -1; inp.jy = 0;
+  if (b.hit && !b.hitDone && c.t >= b.hitAt) { inp.aPressed = true; b.hitDone = true; b.next = c.t + 1/rate; return; }
+  if (rate > 0 && c.t >= 1.4 && c.t >= b.next) { inp.aPressed = true; b.next = c.t + 1/rate; }
+}
+// lineBot(side, sigma): one Jump, at the perfect moment with a spread of sigma seconds
+export function lineBot(side, sigma = 0.10) {
+  const c = T.M.cut, inp = T.sides.inputOf(side);
+  if (!c || c.kind !== 'lineout' || c.winner != null || !inp) return;
+  const s = (c.lbot ||= [null, null]);
+  if (!s[side]) s[side] = { at: c.arrive - 0.57 + gauss()*sigma, done:false };
+  const b = s[side]; if (!b.done && c.jump[side] == null && c.t >= b.at) { inp.aPressed = true; b.done = true; }
+}
+
 // A deliberately ordinary human: runs at the line, swerves from the nearest
 // tackler, passes late under pressure, chases the carrier and dives close in.
 // Contact habits (HABITS=0 gives the old bot exactly, which mashes Pass in a tackle):
@@ -130,34 +209,35 @@ export function dropBot(c, o = {}) {
 export const HABITS = process.env.HABITS !== '0' && !!T.contact;
 const NOSPRINT = !!process.env.NOSPRINT, NOSPRINTBALL = !!process.env.NOSPRINTBALL, NODIVE = !!process.env.NODIVE;
 const OFFLOAD_P = process.env.BOT_OFF != null ? +process.env.BOT_OFF : 0.4;
-export function bot() {
-  const M = T.M, b = M.ball, c = M.ctrl;
+// bot(side) plays side 0 or side 1 (a match made with humans:[false, true]): the same man, mirrored through dirOf(side)
+export function bot(side = 0) {
+  const M = T.M, b = M.ball, c = T.sides.ctrlOf(side), inp = T.sides.inputOf(side), dir = side === 0 ? 1 : -1, opp = 1 - side;
   inp.jx = 0; inp.jy = 0;
   if (M.phase === 'cut' && M.cut && M.cut.duel) { duelBot(M.cut); return; }
   if (M.phase === 'cut' && M.cut && M.cut.kind === 'goal') { (M.cut.g.type === 'drop' ? dropBot : kickBot)(M.cut); return; }
   if (!c || M.phase !== 'play') { if (HABITS) inp.cDown = false; return; }
-  const S = HABITS ? M.spr[0] : null, k = HABITS ? M.contact : null, held = !!(k && k.c === c);
+  const S = HABITS ? M.spr[side] : null, k = HABITS ? M.contact : null, held = !!(k && k.c === c);
   let hold = false;
   if (b.state === 'held' && b.carrier === c) {
     let near = 99, ny = 0;
     for (const q of M.players) {
-      if (q.team !== 1 || q.down > 0) continue;
-      const dx = q.x - c.x, dy = q.y - c.y, d = Math.hypot(dx, dy);
+      if (q.team !== opp || q.down > 0) continue;
+      const dx = (q.x - c.x) * dir, dy = q.y - c.y, d = Math.hypot(dx, dy);
       if (dx > -1 && d < near) { near = d; ny = dy; }
     }
     const jx = 1, jy = near < 8 ? (ny > 0 ? -0.7 : 0.7) : (c.y < 10 ? 0.5 : c.y > 60 ? -0.5 : 0);
-    const m = Math.hypot(jx, jy); inp.jx = jx / m; inp.jy = jy / m;
+    const m = Math.hypot(jx, jy); inp.jx = dir * jx / m; inp.jy = jy / m;
     if (held) {                                                 // in a tackle: the offload, on its cue, or nothing
       if (k.botAt == null) k.botAt = T.contact.canOffload(k) && Math.random() < OFFLOAD_P ? 0.08 + Math.random() * 0.12 : -1;
       if (k.botAt > 0 && k.t >= k.botAt) { inp.aPressed = true; k.botAt = -1; }
     } else if (near < 2.6 && c.hold > 0.4 && Math.random() < 0.12) inp.aPressed = true;   // a tap: aPressed without aDown. Holding aDown past 0.18s would charge a long pass
     if (HABITS && !NOSPRINT && !NOSPRINTBALL && !held) hold = S.p === c ? near > 2.5 : (near > 6 && S.m > 0.5);
-  } else if (b.state === 'held' && b.carrier.team === 1) {
+  } else if (b.state === 'held' && b.carrier.team === opp) {
     const t = b.carrier, dx = t.x - c.x, dy = t.y - c.y, d = Math.hypot(dx, dy) || 1;
     inp.jx = dx / d; inp.jy = dy / d;
     if (!NODIVE && d < 2.4 && Math.random() < 0.2) inp.aPressed = true;
     if (d > 12 && Math.random() < 0.03) inp.bPressed = true;
-    if (HABITS && !NOSPRINT) hold = S.p === c ? (d > 1.5 && d < 14) : (dx >= -1 && d > 2.5 && d < 12 && T.contact.ahead(t, 0) <= 1);
+    if (HABITS && !NOSPRINT) hold = S.p === c ? (d > 1.5 && d < 14) : (dx * dir >= -1 && d > 2.5 && d < 12 && T.contact.ahead(t, side) <= 1);
   } else {
     const tx = b.state === 'air' ? b.f.x1 : b.x, ty = b.state === 'air' ? b.f.y1 : b.y;
     const dx = tx - c.x, dy = ty - c.y, d = Math.hypot(dx, dy);

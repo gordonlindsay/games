@@ -21,7 +21,7 @@ function runScrum(feed, taps, goodHit) {
   while (T.M.phase !== 'cut' && guard++ < 400) step();
   const c = T.M.cut;
   while (T.M.cut === c && !c.result && guard++ < 2000) {
-    if (goodHit && !c.hit && c.t >= 1.42) { T.input.aPressed = true; next = c.t + 1 / taps; }
+    if (goodHit && !c.hit[0] && c.t >= 1.42) { T.input.aPressed = true; next = c.t + 1 / taps; }   // c.hit[0]: side 0's Good Hit (a pack a side since two player)
     else if (taps > 0 && c.t >= 1.42 && c.t >= next) { T.input.aPressed = true; next = c.t + 1 / taps; }
     step();
   }

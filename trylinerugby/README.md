@@ -83,6 +83,95 @@ nations, a local Surrey club, or a team you make yourself.
   before the change. Tries (you–CPU) went 9.3–0.3 → 5.6–0.3 on Easy (still 12 wins from 12), 5.8–1.3 → 3.3–0.6
   on Normal (10 wins → 9) and 1.8–2.3 → 2.1–2.3 on Hard (4 wins → 6). Get Past fires more often, because the
   last man now arrives in that window.
+- **Two player, head to head on one computer** (2026-10-16). Gordon's decisions: one computer, Player 2 in pink (`#ff5fd2`),
+  Two Player shown only on computers (a fine pointer or a connected controller) and never on phones, each player picking their
+  own Difficulty on the join screen, duels always on in two player too, and controllers in one player as well. What is built:
+  - **The home.** On a computer the buttons are Quick Match (gold, the focus), then Championship | Two Player, then How to Play
+    on a row of its own. A phone keeps Quick Match, then Championship | How to Play: the Two Player button is `desk-only`, so a
+    phone never sees it.
+  - **The join screen** (Two Player · Players). Player 1 (gold) and Player 2 (pink) side by side, each card badged with its seat
+    tag and laid out in four fixed rows so the two always line up: the seat, the device (Keyboard or Controller, with Use Keyboard
+    in that row when he is on a pad), a legend, and a Difficulty of his own (remembered in the save as `twoDiff`). The legend is
+    the seat's keys: W A S D Run, F Pass, G Kick, H Sprint for the left half; four arrow keycaps (CSS triangles, no glyph), / . ,
+    for the right; W A S D, J K L for the lone keyboard seat; the stick, the diamond with its bottom or right dot lit, and a
+    shoulder tab for a controller. A keycap or glyph lights while its key or button is held, so a laptop keyboard that can't hold
+    both players' keys shows it here. Both start on the keyboard halves, so a keyboard pair has nothing to set up. "Controller ·
+    Press Any Button": a pad takes a seat with one press, and the lone keyboard seat then shows the solo map. Swap Players swaps
+    the device, the half and the Difficulty with the player. Pick Teams opens the team screen for Player 1 (Player 1 Team, in
+    gold), then Player 2 (Player 2 Team, in pink) with Player 1's team in the bar above and Change Team, which Player 1's own
+    big action presses from his seat; the International | Local switch and Create Team are there as ever; a mirror match is
+    allowed (FAR v FA2); Player 2's pick starts the match. Only the picking player's seat acts on the team screen (`navOnly`);
+    the mouse always can. A fresh visit from the home starts from the defaults (halves in order, every pad back to Press Any
+    Button).
+  - **The match.** The stick and the three buttons are off (they are seat 0's touch controls). The scorebug carries a seat tag at
+    each end. Each player's man carries a numbered tag in his colour where the pointer sits in one player, the Sprint meter is
+    an arc round his ring (dim exactly when a press would do nothing), and under him a chip reads his key and the word the
+    button would (F · Offload, G · Drop Goal, / · Tackle; Long on its own, being a state) only while it matters. Either player
+    pauses (P or Escape, or Start on either pad). The penalty card names its player ("Penalty · Player 2") and takes only his
+    seat, from his keys as well as his pad (his run keys move the ring, Pass presses, Kick goes back); the Half Time and Full
+    Time cards take either seat's keys; the pause card is anyone's, even over the penalty card. A pad unplugged mid-match pauses
+    with "Player N · Press Any Button", and the next press of any unclaimed pad takes that seat back (not the first free seat):
+    a pad lost on the half-time card, or two lost at once on a shared dongle, come back the same way, in the order they went.
+    A pad pressed on the team screen claims nothing. When a release leaves both seats on the keyboard the halves go by seat,
+    Player 1 on the left (the other way round after Swap Players).
+  - **Close-ups head to head.** Scrums are a pack a side (the shove bar in each player's colour, Early and Good Hit as a tag in
+    his colour over his own pack, an Easy pack's shove +0.10), lineouts a jumper a side (the throwing side's reach +0.10 instead
+    of one player's +0.06, an Easy jumper's +0.06), goal kicks and drop goals by whoever kicks, from his own slot, each player's
+    first kick of the match getting the path aid. A seat tag sits over each pack, each jumper, the two men in a duel and the
+    kicker. Each close-up's bottom bar names each player's cue in his colour with his own key: "Player 1 · F · Push", "Player 2 ·
+    / · Jump", "Player 2 · Hold / · Kick" (the goal kick is the Pass key), "Player 1 · G · Drop Goal", and in a duel both roles
+    (below). Every other player's slot is latched through a close-up he doesn't own and reads live the moment it hands back.
+  - **Duels head to head.** The owner is the timer, acting on the ring as ever; the other player is the chooser, who makes the
+    choice the CPU draws in one player. The CPU's plan is drawn exactly as in one player and runs unless the chooser moves
+    first: his first fresh input before the lock takes over and cancels what is left of the plan, so a chooser who does nothing
+    defends exactly as the CPU does (no free win against an idle child). In Get Past he guards a shoulder with his run keys or
+    stick (Guard Left · Guard Right, shown with the feint's own animation; at most a feint and back); in Key Pass he holds toward
+    the runner to drift onto him, in plain view, or away to rush, and a drift let go before the lock is a fake; in a Tackle he is
+    the carrier and makes one step (Step Left · Step Right, which moves the contact and the ring 0.10s later with the approach
+    easing to the new pace, as the AI's step does); in a Block he is the passer and presses Kick for a Dummy before the pump,
+    which plays the release sound once, at the real release. The lock is `DUEL_LOCK` at the timer's level before the plain
+    window (0.40 Easy, 0.32 Normal, 0.24 Hard; the pump at 0.75s for a Block), so a child timer gets longer to read a late
+    switch; a plan event due after the lock shows at the lock. A key or stick held into the cut-in is never a choice; a push in
+    the first 0.30s counts. Each owner has his own quota (2 a half at 4-minute halves), his own "never the same kind twice
+    running", his own first-duel and two-fails aids; the 30s gap and the Last Play bonus are shared. The chooser's ring moves
+    to the man in the close-up and stays on him. The ring is in the owner's colour.
+  - **Full Time.** "Player 1 Wins · Tries 3 – 2" (the player, not the team: a mirror match has two Farnhams), the seat tags on
+    the score row, Rematch (the same teams and levels), then Change Teams (back to Player 1's pick) | Back to Menu, with a
+    Series line ("Series 2 – 1 · 1 Draw", Player 1's wins first) kept across rematches and team changes and ended by Back to
+    Menu or Quit Match.
+  - **The input layer.** One input slot a seat (`inputs[0]`, `inputs[1]`; `input` is still slot 0). Touch feeds slot 0. The
+    keyboard is routed by `e.code`: one player keeps the solo map (WASD or arrows, J K L, Space and Shift, P or Escape); two
+    seats on one keyboard take a half each, Player 1 on W A S D with F (Pass) G (Kick) H (Sprint), Player 2 on the arrows
+    with / (Pass) . (Kick) , (Sprint), or Numpad 1 2 3. A controller claims a seat with any press on the menus; the lone
+    keyboard seat then keeps the solo map. Buttons are a bitmask of the sources holding them, so an idle pad never lets go of
+    a key you are holding. Controllers: mapped by position (bottom button Pass, right button Kick, any shoulder or trigger
+    Sprint with hysteresis, Start pauses, d-pad as keys with a radial 0.20 dead zone on the stick), polled once a frame,
+    nothing running until the first `gamepadconnected`. A pad drives the menus and cards with a chalk ring on the current
+    button; the real DOM focus never moves. The last device used puts a keycap or a pad glyph in each button's corner on a
+    computer; phones see nothing new. Unplugging a pad that was used this match pauses it. A button let go on a card (the
+    pause, penalty or half-time card) is released on the slot, so Sprint or a d-pad run can't carry on by itself after it.
+    `body.desk` follows the pointer or the pads connected right now, so a phone that had a pad goes back to its own layout
+    when it is unplugged.
+  - **Sides.** `M.side[t]` holds whether a human plays team t, its seat, the man under its ring, its level, its kick charge and
+    its Pass press. `isHuman`, `inputOf`, `ctrlOf`, `setCtrl`, `levelOf` read it; `ringed(p)` is the man under a human's
+    ring. `newMatch(u, c, { humans:[a, b], levels:[l0, l1] })` seats any mix: `[true, false]` is one player, `[false, true]`
+    one player as the away side (the lone human sits in seat 0), `[true, true]` two player. Every user action is per side:
+    the pass in hand and the long pass, the kick charge, Sprint on each side's own meter, Switch, Tackle, goal kicks and drop
+    goals from the kicker's own slot. Duels run in their owner's frame through `toFrame`/`toWorld` (the kick frame): a team 1
+    duel is a team 0 duel mirrored, Step Right is always the owner's right, and the outcomes land at the mirror. The surge
+    after a Big Hit goes to the side that made it. A Block can take over a human's pressure pass too.
+  - **Roles.** Balance terms are keyed by role, not team number: `cpuSide(t)` plays the CPU terms (cpuSpeed, cpuTackle, the
+    intercept and turnover edges, the scrum pack's formula, the CPU jumper, the CPU kicker's spread) at its own level, which
+    for a CPU side is the human's it plays against; a human side plays the human terms at the level it picked. Two player has
+    no CPU terms at all. The scrum is a pack a side (each human's taps on its own slot, its stick held forward in its own
+    direction) and the lineout a jumper a side. In two player an AI tackler reads `TWO.tackle` at the carrier's level (0.72 /
+    0.80 / 0.88: the scoring lever) and an AI interceptor `cpuIntercept` at the passer's level, as the CPU does against a human.
+    **AI v AI and the menu demo are now fair:** team 0 used to keep the human terms there because `team === 1` was the test for
+    the CPU. `sim.mjs` is re-baselined below.
+  - Checked by `tools/twoplayer.mjs` (699 asserts on seeds 1, 2 and 11, a paired mirrored-bot symmetry run with the set pieces
+    contested and the chooser's hand driven through the real key and stick paths, a lock sweep under `--lock`, and the full gate
+    under `--sym 400`); every one-player tool's output is byte-identical to `main` (3f11088) on the spec's golden set, `sim.mjs`
+    alone moving, by the fairness change.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
@@ -96,6 +185,12 @@ nations, a local Surrey club, or a team you make yourself.
 | Sprint | Hold for a burst of speed (x1.05 with the ball). The ring is the meter: it drains while you hold (and through the ease-out after you let go) and refills when you let go | Hold to run a man down (x1.20). A press moves the ring to the man best placed to chase if yours is down or over 4m further off. It is dim when a press would do nothing, and then it does nothing |
 
 Keyboard: arrows or WASD, J, K, L (Sprint), P to pause. J tapped is a pass; J held is a long pass. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
+
+Controller (any computer browser with the Gamepad API): stick or d-pad to run, bottom button Pass, right button Kick, a shoulder or trigger Sprint, Start pauses. Press any button to connect it; it also drives the menus.
+
+Two player on one keyboard: Player 1 W A S D with F G H (Pass, Kick, Sprint), Player 2 the arrows with / . , (or Numpad 1 2 3). A controller takes a seat with one press on the join screen, and the other seat keeps the solo map. The Pass key (F or /) is also Tackle, Push at a scrum, Jump at a lineout and the goal kick (hold it, let go in the gold); it holds for a long pass. The Kick key (G or .) is also Switch, Drop Goal (hold it in range) and Dummy. Sprint (H or ,) is a hold on that side's own meter. P, Escape or Start pauses from either seat. In a duel the other player guards, drifts or steps with his run keys or stick before the ring opens, or presses Kick for a Dummy as the passer. On the menus and cards in two player W A S D and the arrows move the ring, F and / press, G, . and Escape go back; a pad's stick, bottom and right buttons do the same. The join screen's legend lights each key while it is held: a laptop keyboard that can't hold both players' keys at once shows it there, and a second USB keyboard fixes the rollover (the browser can't tell keyboards apart, so nothing needs setting).
+
+Controllers need HTTPS or localhost (the Gamepad API is off on an insecure page), and a pad shows up only after a press. A pad press can't start the sound; any key or click does. Steam's desktop layout can turn a pad into arrow keys and Escape, which would drive Player 2's half and pause the match: turn Steam Input off for the browser.
 
 **Long pass.** Hold Pass. For the first 0.18s it is still the normal pass, to the white ring, and letting go throws that. Past 0.18s the ring turns gold on the next man out — the stick's side, or the side with more support if the stick is level — skipping the nearest teammate, within 32m and not forward. A faint ring marks the man it skips. The Pass button fills while it charges, and reads Long once a second man is there; at 0.6s it throws itself. With no second man it stays a normal pass. The ball loops higher as the pass gets longer, so it can sail over the skipped man's defender. It is a little less accurate and a little more likely to be knocked on, and it can be intercepted near the passer or the receiver, not under the top of the arc. The CPU sends one when its nearest receiver is crowded and the next man is in space. A press in the first 0.12s after a catch is kept and thrown as soon as that gate opens, to the man the ring was on. An offload is still the press itself: it does not wait out the long-pass hold, and a charge already under way is cancelled by the tackle.
 
@@ -123,6 +218,13 @@ Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock 
 
 A mistimed duel falls back to the odds the open game would have given, so a duel is never a trap. A tap after the
 verdict skips the replay.
+
+Head to head, the other player is the man opposite, the chooser: he guards a shoulder in Get Past (at most a feint and back),
+drifts or rushes in a Key Pass (a drift let go before the lock is a fake), makes one step as the carrier in a Tackle, and
+dummies as the passer in a Block. The CPU's plan is drawn as in one player and runs until his first fresh input, so a still
+hand defends as the CPU does. His hand shows live until the lock, `DUEL_LOCK` before the ring opens by the timer's level (0.40
+Easy, 0.32 Normal, 0.24 Hard; the pump at 0.75s in a Block), and is fixed from there. The owner's timing is judged exactly as
+against the CPU. The sweep that pins the leads is under Measured baseline.
 
 ### Contact
 
@@ -448,6 +550,71 @@ a charger.
       the chargers behind him that the offer judged), and a drop charged down from behind bounces away from the man
       who blocked it.
   - **`node tools/sim.mjs`:** AI v AI matches, with no duels, both sides' goal-kick rates and the CPU's drop goals.
+  - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 699 asserts over the input layer, the sides, the roles, the join screen
+    and the match head to head, green on seeds 1, 2 and 11 in about 35s. `--sym N` plays N pairs at 4-minute halves (400 by
+    default) and adds the away-side, AI v AI and handicap runs (about 12 minutes); `--lock` runs the lock sweep (about 40s). The
+    default symmetry sample is 100 pairs at 2-minute halves. It checks:
+    - the keyboard routing (the solo map, the two halves, the lone keyboard seat, preventDefault, repeats, releases, blur,
+      the native menu keys in one player, a step from a fresh key in a duel);
+    - controllers (edges, the dead zone, trigger hysteresis, an idle pad leaving held keys held, the d-pad as keys and as
+      the aim, Start, a mapping-less pad, the stick latched through a cut-in, disconnects in one and two player);
+    - the seats (claiming, Use Keyboard, Swap Players, a third pad ignored, a pad on a menu never reaching the slots);
+    - the mirror: a team 1 duel (one player as the away side) equals the team 0 duel in the owner's frame to 1e-9 — the
+      triggers, the frame data, the camera, the drawing with the kits swapped, and every outcome landing at the mirror;
+      the kick-aim cross, the penalty card and the drop zone mirror too;
+    - two player: a whole match played by two bots, the pass in hand, the kick charge, a drop goal and a conversion from
+      seat 1's slot, Sprint on each side's own meter, a pass and a dive on one step, Switch per seat;
+    - the roles: no cpuSpeed or cpuTackle in two player, each side at its own level, the away side's CPU terms on team 0,
+      AI v AI fair at every level, a pack a side at the scrum and a jumper a side at the lineout;
+    - one player as the away side, played to the end by the bot;
+    - the home and the join screen: the desk-only Two Player button in its place and `body.desk` following the pads connected
+      now, Title Case labels and no arrow glyph in the markup, both seats on the halves on a fresh visit, each card's legend
+      (the keycaps by scheme, arrows as CSS triangles, the pad glyphs, lit from onKey and pollPads) and its fixed rows, a pad
+      claiming a seat and the screen following, Swap Players (the Difficulty going with the player), Use Keyboard giving the
+      halves by seat, a Difficulty each (saved, and cleaned on load), and the team flow (Player 1 picks first, then Player 2
+      with Change Team pressed from Player 1's own seat, a mirror match allowed, the pick starting the match at both levels with
+      the touch controls off and the scorebug tags on; Quick Match's screen and a one-player match unchanged);
+    - the match head to head: the tags 1 and 2 and the Sprint arcs drawn in each player's colour (and not in one player), the
+      arc as the meter, the cue chips reading the key and what the button would (. · Drop Goal, / · Tackle, F · Offload, Long),
+      Start on either pad, the pause card naming a lost pad's player, the penalty card naming its player and taking only his
+      seat from his keys and his pad (and nothing left on a slot), the pause card over it anyone's, the half-time card taking
+      either seat's keys, the close-up cues naming each player's key for scrums, lineouts, a conversion and a drop, and a pad
+      seat's cues naming its buttons by position;
+    - the duel locks, for both owners: a Get Past push in the grace guarding the side it points at with the feint's animation,
+      a feint and back allowed and a third change ignored, the guard fixed at the lock (a step to the open side breaks, into the
+      guard is Wrong Way), an idle chooser playing the drawn feint, a Hard timer's later lock, the chooser's run key held into
+      the cut making no choice and a fresh key making one; Key Pass's live drift, fake and drift again before the lock (Dummy
+      sells a drifter, Pass draws a rusher, a still hand on a plain plan is a rush), a drawn drift and a drawn fake kept for an
+      idle chooser, an Easy timer's drift pulled back to its lock; the Tackle's one step moving the contact, the window and the
+      end by 0.10s with the approach eased and the camera reframed, a second push ignored, a drawn step at the lock, a held key
+      no step; the Block's Dummy pressed in the grace and kept until the pump, the release sounding once at 1.05 (and once at
+      0.75 for a plain release), a press after the pump ignored, a drawn dummy kept; the chooser's ring handed to O; the owner's
+      stick re-centred through the grace; the cues naming both players' keys; and that one player's duels have no lock;
+    - Full Time head to head: Player 1 Wins / Player 2 Wins / Draw with the seat tags (a mirror match named by player), Rematch
+      with the same teams and levels, the Series line (wins, draws, counted once a match), Change Teams going back to Player 1's
+      pick with the series kept, Back to Menu ending both, and one player's cards unchanged;
+    - cards and pads: Sprint and the d-pad let go on the penalty card, A on the half-time and pause cards, released on the slot
+      with a fresh edge after (one player and two), a pad lost mid-match claimed back into its own seat by the next press, the
+      halves by seat after a release (and as a swap left them), both pads lost at once reseated in order, a pad lost on the
+      half-time card back with one press, a pad pressed on the team screen claiming nothing, and a stick held through a duel,
+      a drop goal or a CPU conversion reading live the moment the cut hands back;
+    - the handicap: an Easy player against a Hard one gets his own windows, lock lead, path aid, refill, shove and reach, the
+      AI tacklers at his own rate and interceptors at the passer's level, per-owner quotas (two each a half, never the same kind
+      twice running, the bonus shared), the first-duel and two-fails aids per owner with `settings.duelSeen` and `kickSeen`
+      untouched, and `M.di` forced to 2 changing nothing a player faces;
+    - render smoke at 1024x600, 1280x720, 1440x900 and 1920x1080: open play, a scrum (the cues, the tags over both packs, an
+      Early tag in pink, the bar gold to the right and pink to the left inside W·0.38), a lineout, every duel with each side as
+      timer (both cues in their colours, the tags over U and O, the live ring in the owner's colour), both conversions and a drop
+      goal, with no non-finite number on the canvas; and a phone-sized one-player scrum drawing none of it;
+    - isolation: Player 1's conversion ignoring Player 2's slot until the verdict, the timer's and the chooser's other buttons
+      doing nothing in a Get Past, each pack pushed from its own keys, Player 2's arrows moving only his man;
+    - the paired symmetry run: N pairs of two-bot matches (the set pieces contested, the chooser's hand by keys on one seat and
+      the stick on the other, the owner with a 0.25s reaction model, the penalty and half-time cards pressed as a player would),
+      each seed played both ways round: Player 1's share of the decided matches and his paired margin, tries, goal-kick
+      percentage, duels owned and won, scrum and lineout retention by side, and the frozen duel time against one player's at
+      the same half length, plus the mirror match; under `--sym` the away-side comparison (win rate within 5 points, tries
+      within 0.3), AI v AI's share over 500 matches (0.45–0.55) and the handicap (Easy beats Hard over 60%, swapped within 8);
+    - under `--lock`: the sweep (below), and the shipped `DUEL_LOCK` within 8 points of one player in every cell.
   - **`node tools/teams.mjs`:** 56 asserts. It checks:
     - every pairing of built-in teams has shirts far enough apart, and hooped sides keep their hoops;
     - the nations keep their order, and Farnham leads Local;
@@ -524,8 +691,59 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   - x1.06 (x1.10) was inside every target but barely felt.
   - The middle value sits at +4.9.
   - To try other values without editing the game: `BURST='{ ok:[1.1,2], perfect:[1.15,2.5], knock:[1.06,1.2] }' node tools/bot.mjs`.
-- **AI v AI (`sim.mjs`):** about 2 tries a match, 88 tackles, 4 offloads (both sides at the CPU's 0.10 rate), 2
-  balls jolted loose; the CPU sides sprint about 0.3 times a match between them (nobody is a human to run down).
+- **AI v AI (`sim.mjs`):** re-baselined 2026-10-16 after the fairness change (`SEED=1 node tools/sim.mjs`, 24 matches of
+  4-minute halves at Normal): about 1 try and 9.3 points a match, 102 tackles, 5.3 offloads (3.1 / 2.2, both sides at the
+  CPU's 0.10 rate), 2.8 balls jolted loose, 11.4 turnovers, 1 CPU sprint a match between the two sides (nobody is a human
+  to run down). The same seeds on the build before it read 1 try, 8.7 points, 92 tackles, 4.1 offloads, 2.3 jolts: team 0
+  used to play the human terms (no cpuSpeed, myTackle, no intercept or turnover edge, a Normal kicker) against a team 1 on
+  the CPU terms, so the demo was not a fair match. Now both sides play the CPU terms at the match's level.
+- **Two player is fair (`twoplayer.mjs --sym 400`, 2026-10-16):** 400 pairs of two-bot matches at 4-minute halves, Normal v
+  Normal, five team pairings each played both ways round (which team is Player 1 swaps within a pair), the set pieces contested
+  (`scrumBot` at 6 taps a second, `lineBot` with a 0.10s spread), every duel head to head with the owner on `ownerBot`'s 0.25s
+  reaction model and the chooser's hand through the real key path on one seat and the stick on the other, the penalty and
+  half-time cards pressed as a player would: Player 1 394 wins, Player 2 378, 28 draws, a 51.0% share with a standard error of
+  1.8 points, and a paired margin of −0.8 points a pair (−0.8 standard errors); 24.3 v 24.7 points and 3.37 v 3.48 tries a match
+  (6.85 in all); goal kicks 70% v 68%; duels owned 3.49 v 3.54 and won 75% v 76% by the owner; the feeding pack keeps 100% v
+  100% of scrums (equal packs: the put-in's 0.08 edge holds) and the throwing side 86% v 86% of lineouts; 13.4s a match frozen in
+  duels, against one player's 10.0s at the same half length (the gate is 1.6×). The mirror match (France v France, 200 matches)
+  gives Player 1 52.5% (se 3.5). One player as the away side wins 78.3% against the home side's 77.8% over the same 200 seeds
+  (2.44 v 2.40 tries), AI v AI gives team 0 48.6% of 500 matches, and an Easy player beats a Hard one 74.0% of the time as
+  Player 1 and 80.8% as Player 2 (200 each: the per-player level has teeth from either seat). The whole gate is 702 asserts in
+  about 10 minutes. The suite's own run is 100 pairs at 2-minute halves
+  (53.3% on seed 11, a paired margin of 0.9 standard errors) plus a 50-match mirror; it has the power to catch a seat bias of a
+  few points, not a tenth off one side's tackle rate, which the direct `tackleChance` asserts catch instead.
+- **The duel lock (`twoplayer.mjs --lock`, 2026-10-16):** the timer's win rate against a chooser who feints or fakes 30% of the time
+  (switching up to 0.1s before the lock, a Tackle step 30%, a Block dummy 15%), the timer with a 0.25 ± 0.05s reaction, 600 duels
+  a cell, beside the same timer against the CPU in one player. The shipped leads, `DUEL_LOCK = [0.40, 0.32, 0.24]`, are the
+  ones that reproduce one player's rate at each level (every cell within 8 points, pinned by the sweep's asserts):
+
+  | Timer | Duel | One player | Lead 0.15 | 0.24 | 0.32 | 0.40 |
+  |---|---|---|---|---|---|---|
+  | Easy | Get Past | 84.0% | 77.0 | 81.5 | 83.7 | **84.0** |
+  | Easy | Key Pass | 77.0% | 72.7 | 76.0 | 77.3 | **77.3** |
+  | Easy | Tackle | 85.3% | 85.3 | 85.3 | 85.3 | **85.3** |
+  | Easy | Block | 78.2% | 75.2 | 75.2 | 75.2 | **75.2** |
+  | Normal | Get Past | 73.7% | 67.3 | 71.2 | **74.5** | 75.0 |
+  | Normal | Key Pass | 66.2% | 60.7 | 65.5 | **66.8** | 66.8 |
+  | Normal | Tackle | 73.8% | 73.8 | 73.8 | **73.8** | 73.8 |
+  | Normal | Block | 69.5% | 67.5 | 67.5 | **67.5** | 67.5 |
+  | Hard | Get Past | 58.5% | 55.2 | **59.0** | 63.2 | 64.2 |
+  | Hard | Key Pass | 56.3% | 51.5 | **55.3** | 57.5 | 57.5 |
+  | Hard | Tackle | 61.0% | 61.0 | **61.0** | 61.0 | 61.0 |
+  | Hard | Block | 58.2% | 55.8 | **55.8** | 55.8 | 55.8 |
+
+  The Tackle rows barely move with the lead (under a point): the chooser's trick step now comes just before the lock, and
+  a step at that point changes the timer's odds very little. The Block rows don't move at all, because a Block's lock is
+  the 0.75s pump by design. So the Get Past and Key Pass leads carry the level. (Today's `duelBot`, which bites on half the tricks, is
+  printed alongside with `LOCK_DUELBOT=1`.)
+- **`TWO.tackle` (2026-10-16):** the two-player scoring lever, how hard a side's AI men tackle the other player's carrier, read
+  at the carrier's level. Measured with the symmetry bots at 4-minute halves, Normal v Normal, 120 matches a value (the
+  default symmetry run's drivers, set pieces contested): a Normal rate of 0.64 (one player's `cpuTackle`) gives 8.2 tries a
+  match, 0.72 gives 7.7, 0.80 gives 7.1 and 0.88 gives 6.9, about 0.45 tries per +0.08. Shipped at the spec's provisional
+  `[0.72, 0.80, 0.88]` (7.1 tries at Normal, the top of the 5–7 target): the bots score more than people will, since the timer
+  bot wins about 80% of head-to-head duels against a chooser who feints 30% of the time, and pushing the AI tackle past
+  one player's Hard (0.72) to reach the band would make carrying harsher for a child than one player is. Retune in Phase D
+  with real people.
 - **Set pieces on Normal (`setpieces.mjs`):**
   - Scrums: tapping 4 a second keeps your put-in about 93% of the time. Tapping 8 a second with a good hit wins a
     penalty about 30% of the time and steals theirs about a third of the time.
@@ -542,12 +760,36 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
 
 - World units are metres. x runs 0–120 between the dead-ball lines, with try lines at 10 and 110. y runs 0–70 between
   the touchlines. Your team always attacks +x, which is right on screen.
-- **Duel camera:** it looks along +x, so screen-right in a duel is world +y. Step Left is world −y, which is screen-up
-  back on the pitch. `duels.mjs` pins this.
-- **Debug hook:** `window.__tryline` exposes the engine (`simulate`, `newMatch`, `update`, `input`, `scrum`,
-  `lineout`, `forceDuel`, `debug`, `teams`, `contact`, `M`). `__tryline.forceDuel('past')` stages and starts a duel in
-  the console; `__tryline.contact` holds `CONTACT`, `RUCK`, `SPRINT` and the contact and Sprint functions the tests
-  drive (`commitTackle`, `resolveContact`, `tackle`, `collide`, `sprintTick`, `cpuSprintWant`, `canOffload`, …).
+- **Duel camera:** it looks along +x of the owner's frame, so screen-right in a duel is frame +y: world +y for a team 0
+  owner (Step Left is world −y, screen-up back on the pitch; `duels.mjs` pins this) and world −y for a team 1 owner
+  (`twoplayer.mjs` pins the mirror).
+- **Debug hook:** `window.__tryline` exposes the engine (`simulate`, `newMatch`, `update`, `input`, `inputs`, `scrum`,
+  `lineout`, `forceDuel`, `pollPads`, `onKey`, `keyRoute`, `sides`, `debug`, `teams`, `contact`, `M`).
+  `__tryline.forceDuel('past')` stages and starts a duel in the console (`forceDuel('past', 1)` the mirrored one, in a
+  match made with `humans:[false, true]`); `__tryline.contact` holds `CONTACT`, `RUCK`, `SPRINT` and the contact and
+  Sprint functions the tests drive (`commitTackle`, `resolveContact`, `tackle`, `collide`, `sprintTick`, `cpuSprintWant`,
+  `canOffload`, …); `__tryline.sides` the sides helpers; `__tryline.debug.setTwo`, `two`, `twoClaim`, `twoRelease`,
+  `twoSwap`, `pads` the seats model; `__tryline.debug.startMatch(u, c, false, { two:true, levels:[0, 2] })` a
+  two-player match from the console, `debug.openJoin()` the join screen, `debug.twoSel()` the join selection (`teams`,
+  `levels`, `picking`), `debug.series()` the series, `debug.cueOf(t)` a side's chip word, `debug.cutCues(c)` a close-up's cues,
+  `debug.navOnly()` the one seat allowed on the top layer.
+- **Sides and roles:** `M.side[t]` is the side's table (`human`, `seat`, `ctrl`, `ctrlPrev`, `ctrlT`, `level`, `charging`,
+  `charge`, `holdN`, `pass`, `duel`); `M.ctrl`, `M.charging` and the rest are accessors onto side 0 for the tools and the
+  console. `M.role[t]` is `'human'` or `'cpu'`; `cpuSide(t)` and `diffOf(t)` (`DIFF[levelOf(t)]`) key every balance term.
+  `M.di` and `M.diff` are the match's one level, kept for the tools; new engine code reads `levelOf(t)`. The seats model
+  (`two.on`, `two.seats`) lives in the input layer: `openJoin` resets the seats (`resetSeats`) and switches it on so pads can
+  claim, `startMatch` keeps it on for a two-player match, and `exitMatch` switches it off. `twoSel` holds the join selection,
+  `series` the wins and draws, `navOnly` the one seat allowed to act on the top layer (`navSide` the one button a restricted
+  seat may still press: Player 1's Change Team), `two.lost` the seats waiting to claim a pad back, `two.swapped` whether
+  Player 1 is on the right half. A duel in a two-player match is set up by `duelHeadToHead` (the CPU's plan drawn as in one
+  player and kept, the lock `DUEL_LOCK[levelOf(owner)]` before the plain window, plan events clamped to it) and read by
+  `duelOther` every step from the cut-in through `inp.sideX()` (fresh keys, an unlatched stick); `c.lock`, `c.locked`,
+  `c.taken`, `c.changes`, `c.stepped`, `c.tkAt`, `c.lean`, `c.dummyPress` and `c.reachT` exist only there, so one player's
+  duels are the objects they always were. The other two-player-only constants are `TWO.tackle`, `SCRUM_LEVEL` and
+  `LINE_LEVEL`; `M.side[t].duel` carries each owner's quota, last kind, failures and first-duel flag, `M.side[t].kickFirst`
+  his first kick. `globalThis.__sfxSpy` and `debug.navLog` are hooks for the tools, like `__ctxSpy`. The byte-identity
+  proof (the spec's golden set run against the 3f11088 archive, `golden.sh` / `check.sh`) lives in the repo's `.claude/specs/
+  scratch/golden/`, not in `tools/`, because its outputs are 2 MB of fixed runs.
 - **Contact and Sprint** live in the tackling block and the Sprint block of `index.html`, with the drawing in
   `drawPlayer` and `drawTags`. A player carries `bind` (the contact he is in), `offside` (retiring), `sprint` and
   `sprinting`, `stumble`, `wf` (wrong-footed), and render-only `drawFrom` (a teleport being smoothed) and `fend`.
