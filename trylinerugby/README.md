@@ -71,7 +71,7 @@ nations, a local Surrey club, or a team you make yourself.
   charged to the meter at its level, nothing refills while one runs, and a press inside it climbs back from where it
   is instead of snapping to full speed, so every burst-second costs the same whatever the thumb does (the first build
   gave the ease-out away, and a 5Hz tapper won 88% on Normal against 85% holding). Anyone you control sprints: your
-  chaser at x1.20 (x1.15 on Hard), your carrier at a lower x1.05 (x1.04 on Hard) that drains 1.5x as fast, so it is a
+  chaser at x1.25 (x1.20 on Hard), your carrier at a lower x1.06 (x1.05 on Hard) that drains 1.5x as fast, so it is a
   burst, not a runaway. The button is dim exactly when a press would do nothing, and a press on a dim button does
   nothing, not even a switch. The CPU runs the same meter and the same burst on every level, choosing its moments by
   level: only for a runner who is clean through.
@@ -281,7 +281,7 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   0.2 floor to start, a hold that runs it dry must be let go before the next (letting go in a ruck counts), a 0.3s
   ease-out on release. The ease-out is charged to the meter at its level and nothing refills while one runs; a press
   inside it climbs back at the same rate rather than snapping to 1, and a meter run dry ends any ease-out at once, so
-  taps buy exactly what a hold buys. Your chaser runs at x1.20 (x1.15 on Hard), your carrier at x1.05 (x1.04 on
+  taps buy exactly what a hold buys. Your chaser runs at x1.25 (x1.20 on Hard), your carrier at x1.06 (x1.05 on
   Hard); a duel's burst and the surge never stack with it (the bigger one applies). A tackler sprinting at the commit
   (the hold itself, not an ease-out) gets +0.10 Big Hit and his sprint ends when he commits; a duel zeroes every
   sprint and keeps the meters; the meters freeze in every close-up and keep filling through rucks. The button is dim
@@ -665,6 +665,12 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   The table this replaces (the first build, with the free ease-out and the CPU at chase 0.40 and offload 0.30) read
   83.3 / 87.8 (Normal) and 46.9 / 51.0 (Hard) with Sprint and 77.7 / 82.2 and 40.6 / 45.9 without, and the one
   before contact 98.2 / 99.2 (Easy), 81.0 / 84.9 (Normal) and 44.4 / 50.2 (Hard), on other seeds.
+  **Stronger Sprint (2026-10-17, Gordon: "make the sprint a bit stronger").** The chaser went from x1.20 (x1.15 Hard)
+  to x1.25 (x1.20 Hard) and the carrier from x1.05 (x1.04) to x1.06 (x1.05). Measured against the old values on the
+  same 6 seeds x 120 matches (duels live; each cell about ±1.5): a Sprint user +1.8 on Normal and +1.5 on Hard; a player
+  who never sprints +1.1 on Normal (noise) and -4.2 on Hard, because the CPU's chases are stronger too. Sprint is now
+  worth about +3.4 on Normal and +6.7 on Hard against not using it. A longer burst (2.5s) or x1.30 only made the CPU's
+  sprints hurt a non-user more (-2 Normal, -5.5 Hard) without helping the user.
 - **Levers.** `SPRINT.mulBall` is the with-ball lever: x1.08 gave the sprint user +7 / +10 on Normal / Hard (a
   runaway), x1.04–1.06 about +4 / +5. `SPRINT.cpu.chase` and `cpu.carry` set how often the CPU sprints: a CPU that
   chased every runner past all but its last man (14 sprints a match on Hard) took 9 points off a player who never

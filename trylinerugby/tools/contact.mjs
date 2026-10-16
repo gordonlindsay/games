@@ -685,7 +685,7 @@ begin('breakaway');
   const N = 400, rate = (gap, sprint) => { reseed(77); let n = 0; for (let i = 0; i < N; i++) if (trial(gap, sprint)) n++; return n/N; };
   const a4 = rate(4, false), b4 = rate(4, true), a8 = rate(8, false), b8 = rate(8, true);
   ok(a4 === 0 && b4 >= 0.4, `4m back: ${(100*a4).toFixed(0)}% caught without Sprint, ${(100*b4).toFixed(0)}% with it`);
-  ok(a8 === 0 && b8 === 0, `8m back: ${(100*a8).toFixed(0)}% and ${(100*b8).toFixed(0)}%: he is gone`);
+  ok(a8 === 0 && b8 > 0 && b8 < 0.3 && b8 < b4, `8m back: ${(100*a8).toFixed(0)}% without Sprint, ${(100*b8).toFixed(0)}% with it: only Sprint gives a chance, and less than from 4m`);
   inp.cDown = false;
 }
 done('14 breakaway');
