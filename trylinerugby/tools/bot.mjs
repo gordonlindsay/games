@@ -9,7 +9,8 @@ const flag = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] 
 const pos = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));
 const n = +pos[0] || 18, half = +pos[1] || 240, duels = flag('--duels', 'live');
 const CONTACT_KEYS = ['tackles', 'broken', 'rucks', 'ruck_quick', 'ruck_normal', 'ruck_slow', 'dom0', 'dom1', 'second', 'turnovers', 'toRuck', 'intercepts', 'offAtt', 'offloads', 'off0', 'off1', 'offHeld', 'long', 'long0', 'long1',
-  'fends', 'fend0', 'fend1', 'jolts', 'joltKnock', 'joltLoose', 'ankleTry', 'ankle0', 'trip', 'sprints', 'sprintSecs', 'sprintPick', 'cpuSprints', 'cpuSprintSecs', 'pens', 'knocks', 'ko_catch', 'ko_contact', 'ko_offload', 'wfMen', 'ignored'];
+  'fends', 'fend0', 'fend1', 'jolts', 'joltKnock', 'joltLoose', 'ankleTry', 'ankle0', 'trip', 'sprints', 'sprintSecs', 'sprintPick', 'cpuSprints', 'cpuSprintSecs', 'pens', 'knocks', 'ko_catch', 'ko_contact', 'ko_offload', 'wfMen', 'ignored',
+  'steps', 'steps0', 'steps1', 'dummies0', 'sold0', 'dummies1', 'sold1'];
 for (const diff of [0, 1, 2]) {
   let us = 0, them = 0, tu = 0, tt = 0, w = 0, d = 0, l = 0, du = 0, dw = 0, dp = 0, frozen = 0;
   const gk = { att: [0, 0], made: [0, 0] };
@@ -40,6 +41,7 @@ for (const diff of [0, 1, 2]) {
     console.log(`  contact: tackles ${f(S.tackles)} broken ${f(S.broken)} rucks ${f(S.rucks)} (quick ${f(S.ruck_quick)} normal ${f(S.ruck_normal)} slow ${f(S.ruck_slow)}) big hits us ${f2(S.dom0)} them ${f2(S.dom1)} second man ${f(S.second)}`);
     console.log(`  turnovers ${f2(S.turnovers)} (ruck ${f2(S.toRuck)}, loose ${f2(S.turnovers - S.toRuck)}) intercepts ${f2(S.intercepts)}  offloads us ${f2(S.off0)} them ${f2(S.off1)} of ${f2(S.offAtt)} (held ${f2(S.offHeld)})  fends us ${f2(S.fend0)} them ${f2(S.fend1)}  jolts ${f2(S.jolts)} (knock ${f2(S.joltKnock)} loose ${f2(S.joltLoose)})  ankle taps ${f2(S.ankle0)} of ${f2(S.ankleTry)} tripped ${f2(S.trip)}`);
     console.log(`  sprints us ${f2(S.sprints)} (${f(S.sprintSecs)}s, ring moved ${f2(S.sprintPick)}) cpu ${f2(S.cpuSprints)} (${f(S.cpuSprintSecs)}s)  pens ${f2(S.pens)}  knock-ons ${f2(S.knocks)} (catch ${f2(S.ko_catch)} contact ${f2(S.ko_contact)} offload ${f2(S.ko_offload)})  long passes us ${f2(S.long0)} them ${f2(S.long1)}  wrong-footed men ${f(S.wfMen)}  tackle presses ignored ${f2(S.ignored)}`);
+    console.log(`  side steps us ${f2(S.steps0)} them ${f2(S.steps1)}  dummies us ${f2(S.dummies0)} (sold ${f2(S.sold0)}) them ${f2(S.dummies1)} (sold ${f2(S.sold1)})`);
     const tg = Object.entries(tags).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${f2(v)}`).join(', ');
     if (tg) console.log(`  tags/match: ${tg}`);
   }

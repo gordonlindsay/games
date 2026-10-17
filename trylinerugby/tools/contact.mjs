@@ -382,7 +382,15 @@ for (const di of [0, 1, 2]) {
   ok(near(C.tackleChance(q, c, 'dive'), CONTACT.dive[0], 1e-9), `level ${di}: a dive within 1.7m is ${CONTACT.dive[0]}`);
   q.x = c.x - 2.5; ok(near(C.tackleChance(q, c, 'dive'), CONTACT.dive[1], 1e-9), `level ${di}: a dive from 2.5m is ${CONTACT.dive[1]}`);
 }
-done('8 tackle base');
+// 8b. a stepping carrier (side > 0: the Side Step's 0.35s) is tackled at x MOVES.step.odds, read from side alone (2026-10-17); and the old
+// turn-rate step is gone from userMove (p.turn, p.lastA, and both from HOLD_KEYS)
+{
+  fresh(1); const { c, q } = stage({ ct:1, cx:60, cy:35, cvx:-8, qx:58.8, qy:35, qvx:4, ctrl:'q' });
+  const p0 = C.tackleChance(q, c, 'ai'); c.side = 0.35; const p1 = C.tackleChance(q, c, 'ai'); c.side = -1;
+  ok(C.MOVES && C.MOVES.step.odds === 0.65 && near(p1, p0*C.MOVES.step.odds, 1e-9), `a stepping carrier is tackled at x${C.MOVES && C.MOVES.step.odds} (${p1.toFixed(3)} v ${p0.toFixed(3)})`);
+  ok(!/p\.lastA\s*=|p\.turn\s*=|lastA:0|turn:0/.test(script) && !/'turn'|'lastA'/.test(script), 'userMove keeps no turn rate: p.turn and p.lastA are gone, from HOLD_KEYS too');
+}
+done('8b side step odds');
 
 // 9. the Tackle press: nothing at 3.0m (and A is dim), a dive at 2.2m in front, an Ankle Tap from behind, a join on a bound carrier
 begin('tackle press');
@@ -851,7 +859,7 @@ begin('census');
       } else nearSet.clear();
     }
     m++;
-    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); tagsN += v; if (k === 'tag_Fend') fendTags += v; }
+    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); if (k !== 'tag_Side Step') tagsN += v; if (k === 'tag_Fend') fendTags += v; }   // the bot's bang-bang swerve fires Side Steps a thumb never would (about 37 a match), so they are counted apart
   }
   ok(runover/m < 2, `run-overs ${(runover/m).toFixed(2)} a match (under 2)`);
   ok(rk05/rk < 0.08, `ruck ball tackled within 0.5s ${(100*rk05/rk).toFixed(1)}% (under 8%)`);
@@ -860,9 +868,9 @@ begin('census');
   ok(jack === 0, 'no ruck ever has a jackal, a Steal prompt or a press window');
   ok(badLabel === 0 && ![...setLabels].some(l => /Releasing|Off Your Feet|Rolling Away|High Tackle|Sin Bin|Yellow/.test(l)), `every penalty is a plain Penalty: no new reasons (${[...setLabels].filter(l => /Penalty/.test(l)).join(', ')})`);
   ok(duelInBind === 0, 'no duel ever starts during a bind');
-  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball']);
-  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the six (${[...tagKinds].join(', ')})`);
-  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all ${(tagsN/m).toFixed(1)})`);
+  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled']);
+  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the nine (${[...tagKinds].join(', ')})`);
+  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step ${(tagsN/m).toFixed(1)})`);
   ok(!/Not Releasing|Off Your Feet|Not Rolling Away|High Tackle|Sin Bin|Yellow Card|'Steal'|jackal/.test(script), 'the game has no steal, no new penalty and no sin bin');
 }
 done('19 census');
@@ -889,8 +897,8 @@ begin('words');
   const title = s => s.split(' ').every((w, i) => (i > 0 && SMALL.has(w)) || /^[A-Z0-9][A-Za-z0-9:'-]*$/.test(w));
   const labels = ['Pass', 'Offload', 'Tackle', 'Switch', 'Kick', 'Drop Goal', 'Push', 'Jump', 'Skip', 'Dummy', 'Block', 'Sprint'];
   const tags = [...script.matchAll(/tag\('([^']+)'/g)].map(m => m[1]);
-  const fixedTags = ['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball'];
-  ok(tags.length >= 6 && tags.every(t => fixedTags.includes(t)), `every tag in the code is on the list (${[...new Set(tags)].join(', ')})`);
+  const fixedTags = ['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled'];
+  ok(tags.length >= 9 && tags.every(t => fixedTags.includes(t)), `every tag in the code is on the list (${[...new Set(tags)].join(', ')})`);
   ok([...labels, ...fixedTags].every(title), 'labels and tags are Title Case');
   ok(![...labels, ...fixedTags].some(s => /[←→↑↓⇐⇒➜»›]/.test(s)) && !/[←→]/.test(script.replace(/\/\/.*$/gm, '')), 'no arrow glyph in a label, a tag or the code');
   const lc = html.match(/<span id="lc">([^<]+)<\/span>/);

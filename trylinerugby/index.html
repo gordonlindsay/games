@@ -67,7 +67,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .set{display:grid;grid-template-columns:7.5em 1fr;align-items:center;gap:12px}
 .lbl{font:700 12px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim)}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1.5px solid var(--rule-hi);border-radius:6px;overflow:hidden;min-width:0}
-.seg button{appearance:none;border:0;background:transparent;min-height:40px;padding:0 6px;font-weight:700;color:var(--chalk-dim);cursor:pointer}
+.seg button{appearance:none;border:0;background:transparent;min-height:44px;padding:0 6px;font-weight:700;color:var(--chalk-dim);cursor:pointer}
 .seg button+button{border-left:1.5px solid var(--rule-hi)}
 .seg button[aria-pressed="true"]{background:var(--chalk);color:var(--night)}
 .resume-note{margin:0;font-size:13px;color:var(--chalk-dim);text-align:center}
@@ -297,6 +297,61 @@ body.desk .home-row #b-help{grid-column:1/-1}
 .seat .set{grid-template-columns:1fr;gap:6px}
 .seat .seg button{min-height:44px}
 
+/* ---------- hints card (2026-10-17): one DOM card a seat, top-left for Player 1 (and one player), top-right for Player 2, naming the
+   close-up and its one control; the tick turns that seat's Hints off. The card never takes a touch except on the tick; kick cards sit
+   under the wind chip, inside the stick zone, so they carry no tick. Chips are the on-screen buttons' own looks, with a keycap or pad
+   glyph badge for the device in use. The names are .hc-* because .hint is the buttons' corner keycap */
+.hc{position:fixed;z-index:6;left:max(12px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 6px);max-width:min(340px,calc(50% - 116px));padding:0 6px 6px 8px;border-left:4px solid var(--flood);border-radius:4px;background:rgba(8,14,10,.88);color:var(--chalk);pointer-events:none;transition:opacity .2s}
+.hc.two{max-width:min(340px,calc(50% - 140px))}
+.hc.two .hc-title{font-size:clamp(15px,2.6vw,22px)}   /* a narrow laptop window shrinks the title rather than run it under the tick */   /* two player: the scorebug's seat tags reach 116px either side of centre, so the limit is 12px short of them (Player 1 touched the tags at 683 wide) */
+.hc.s1{left:auto;right:calc(max(10px,env(safe-area-inset-right,0px)) + 52px);max-width:min(340px,calc(50% - 190px));border-left-color:var(--p2)}   /* 62px in from the right (the pause button): the same 12px gap to the tags (it reached FRA at 683 wide) */
+.hc.badged .hc-rows{margin-top:7px}   /* keycap and pad badges stand 9px above their chips: room for them, off the rule line */
+.hc.kick{top:calc(7vh + 56px)}
+.hc.dim{opacity:.25}
+.hc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-height:44px}
+.hc.notitle .hc-head{min-height:0}
+.hc-tt{display:flex;flex-direction:column;justify-content:center;min-height:44px;min-width:0}
+.hc.notitle .hc-tt{min-height:28px}
+.hc-title{display:block;font:900 22px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+.hc-rule{display:block;font:800 13px/1.25 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--flood)}   /* wraps only where the card's limit binds (a narrow two-player window), never spilling under the pause button */
+.hc.s1 .hc-rule{color:var(--p2)}
+.hc-tick{appearance:none;pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;width:44px;height:44px;margin:0 -6px 0 0;padding:0;border:0;border-radius:6px;background:transparent;color:var(--chalk-dim);font:700 10px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;touch-action:manipulation}
+.hc-tick i{display:block;position:relative;width:16px;height:16px;border-radius:3px;background:var(--chalk)}
+.hc-tick i::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid var(--night);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.hc-tick.off i{background:transparent;border:2px solid var(--chalk-dim)}
+.hc-tick.off i::after{display:none}
+.hc-rows{display:flex;flex-direction:column;gap:6px}
+.hc-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-height:22px;font:800 16px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}   /* the chips and the text are whole units; a bound card drops the text to its own line */
+.hc-or{font:800 12px/1 var(--display);color:var(--chalk-dim)}
+.chip{position:relative;display:inline-grid;place-items:center;min-width:44px;height:22px;padding:0 9px;border-radius:11px;border:1.5px solid rgba(241,238,228,.6);background:rgba(8,14,10,.6);font:900 12px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;color:var(--chalk)}
+.chip.a{background:var(--flood);border-color:var(--flood);color:var(--flood-ink)}
+.chip.b{background:rgba(8,14,10,.92);border-color:rgba(241,238,228,.75)}
+.chip.c{border-color:var(--flood);color:var(--flood)}
+.chip .badges{position:absolute;right:-7px;top:-9px;display:flex;gap:2px}
+.chip.wide{padding-right:36px}.chip.mid{padding-right:24px}   /* a two-keycap badge or the shoulder glyph is wider than the chip's padding: the label keeps left of it */
+.chip .kc{width:16px;height:16px;font-size:9px;border-radius:3px}
+.chip .kc.ar::before{border-width:4px}
+.chip .kc.ar.u::before{border-bottom-width:5px}.chip .kc.ar.d::before{border-top-width:5px}.chip .kc.ar.l::before{border-right-width:5px}.chip .kc.ar.r::before{border-left-width:5px}
+.chip .pad{width:16px;height:16px;border-radius:4px}
+.chip .pad.dia b{width:4px;height:4px}
+.chip .pad.dia b:nth-child(1){left:5px;top:1.5px}.chip .pad.dia b:nth-child(2){left:9.5px;top:5.5px}.chip .pad.dia b:nth-child(3){left:5px;top:9.5px}.chip .pad.dia b:nth-child(4){left:1px;top:5.5px}
+.chip .pad.sh{width:22px;height:10px;border-radius:5px 5px 2px 2px}
+.chip .pad.stick::after{left:4px;top:4px;width:6px;height:6px}
+@media (max-height:340px){.hc-title{font-size:18px}.hc-rule{font-size:11px}.hc-row{font-size:14px}}
+/* the penalty card's sublines (Hints On), its tick in the eyebrow row, the pause card's Hints rows, the join cards' ticks */
+.eyerow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px}
+.eyerow .hc-tick,.seat .eyebrow .hc-tick{margin:-10px 0 -10px auto}
+.btn .hsub{display:block;margin-top:5px;font:700 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;opacity:.82}
+.modal.nohints .hsub{display:none}
+.card .set{grid-template-columns:auto 1fr}
+.card .seg button{min-height:44px}
+#pz-hints{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:14px 12px}   /* the pause card's Hints rows share one label column, so the two On | Off controls start on the same line */
+#pz-hints .set{display:contents}
+#pz-hints .set[hidden]{display:none}
+#tu-text .kc{display:inline-grid;width:1.6em;height:1.6em;border-radius:.25em;font-size:.72em;vertical-align:-.32em}   /* a key named in a tutorial sentence is a keycap, as on the hint chips */
+.seat .eyebrow{justify-content:space-between}
+#tu-text{margin:0;font:800 clamp(20px,4.6vw,26px)/1.15 var(--display);color:var(--chalk);text-wrap:balance}
+
 /* ---------- modals ---------- */
 .modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:rgba(6,10,8,.55);touch-action:none}
 .card{width:min(420px,100%);display:flex;flex-direction:column;gap:14px;padding:20px;border:1.5px solid var(--rule-hi);border-radius:10px;background:var(--panel);box-shadow:0 18px 50px rgba(0,0,0,.5)}
@@ -325,6 +380,8 @@ body.desk .home-row #b-help{grid-column:1/-1}
   <div class="sub" id="h-sub">00:00</div>
 </div>
 <button class="pause" id="b-pause" aria-label="Pause" hidden></button>
+<div class="hc" id="hc0" hidden><div class="hc-head"><div class="hc-tt"><b class="hc-title" id="hc0-t"></b><span class="hc-rule" id="hc0-r"></span></div><button class="hc-tick" id="ht0" aria-label="Hints Off"><i></i><span>Hints</span></button></div><div class="hc-rows" id="hc0-b"></div></div>
+<div class="hc s1" id="hc1" hidden><div class="hc-head"><div class="hc-tt"><b class="hc-title" id="hc1-t"></b><span class="hc-rule" id="hc1-r"></span></div><button class="hc-tick" id="ht1" aria-label="Hints Off"><i></i><span>Hints</span></button></div><div class="hc-rows" id="hc1-b"></div></div>
 <div id="banner" aria-live="polite"></div>
 <div id="rotate" role="alert"><div class="phone" aria-hidden="true"></div><h2>Turn Your Phone Sideways</h2></div>
 
@@ -359,6 +416,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
       <div class="set"><span class="lbl">Half Length</span><div class="seg" data-key="half"><button>2 Min</button><button>4 Min</button><button>6 Min</button></div></div>
       <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
       <div class="set"><span class="lbl">Sound</span><div class="seg" data-key="sound"><button>On</button><button>Off</button></div></div>
+      <div class="set"><span class="lbl">Hints</span><div class="seg" data-key="hints"><button>On</button><button>Off</button></div></div>
     </div>
   </div>
 </section>
@@ -415,7 +473,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
   <div class="wrap">
     <div class="head"><div><p class="eyebrow">Controls</p><h2 class="title">How to Play</h2></div></div>
     <dl class="help">
-      <dt>Stick</dt><dd>Touch anywhere on the left half and drag. Flick it sideways near a tackler to <b>step</b> him.</dd>
+      <dt>Stick</dt><dd>Touch anywhere on the left half and drag. Near a tackler, flick it sideways to <b>Side Step</b>. Pull it back and push on for a <b>Dummy</b>.</dd>
       <dt>Pass</dt><dd>A tap goes to the teammate in the white ring. Tilt the stick up or down to pick a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest man and floats to the next one out.</dd>
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
       <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
@@ -424,11 +482,13 @@ body.desk .home-row #b-help{grid-column:1/-1}
       <dt>Sprint</dt><dd>Hold it for a burst of speed, with the ball or without. The ring drains while you hold and refills when you let go.</dd>
       <dt>Offload</dt><dd>Press Pass as you're tackled, when it glows.</dd>
       <dt>Switch</dt><dd>Take the defender nearest the ball.</dd>
-      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner.</dd>
-      <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast with the stick held forward. Out-shove theirs to steal it.</dd>
+      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner. Each one starts in slow motion.</dd>
+      <dt>Hints</dt><dd>The card in the top corner names the control for each close-up. Untick <b>Hints</b> on it, or set Hints to Off on the menu.</dd>
+      <dt>Tutorial</dt><dd>The first time each close-up comes up, play pauses and a card says what to do. <b>Replay Tutorial</b> below shows them all again.</dd>
+      <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
-      <dt>Keyboard</dt><dd>Arrows or WASD to run. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
-      <dt class="desk-only">Controller</dt><dd class="desk-only">Stick or D-Pad to run. <b>Bottom Button</b> Pass / Tackle. <b>Right Button</b> Kick / Switch. <b>Shoulder</b> Sprint. <b>Start</b> Pause. Press any button to connect it.</dd>
+      <dt>Keyboard</dt><dd>Arrows or WASD to run: tap across near a tackler to <b>Side Step</b>, tap back for a <b>Dummy</b>. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
+      <dt class="desk-only">Controller</dt><dd class="desk-only">Stick or D-Pad to run: flick across near a tackler to <b>Side Step</b>, pull back and push on for a <b>Dummy</b>. <b>Bottom Button</b> Pass / Tackle. <b>Right Button</b> Kick / Switch. <b>Shoulder</b> Sprint. <b>Start</b> Pause. Press any button to connect it.</dd>
       <dt class="desk-only">Two Player</dt><dd class="desk-only">Player 1: <b>W A S D</b> Run, <b>F</b> Pass, <b>G</b> Kick, <b>H</b> Sprint. Player 2: <b>Arrows</b> Run, <b>/</b> Pass, <b>.</b> Kick, <b>,</b> Sprint. Pass is also Tackle, the goal kick (hold it), Push and Jump; Kick is also Switch, Drop Goal and Dummy. A controller takes a seat with one press. In a duel the other player guards, drifts or steps with his run keys before the ring opens, or presses <b>Kick</b> for a Dummy as the passer.</dd>
     </dl>
     <div class="scoring">
@@ -439,7 +499,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
       <dt>Saving</dt><dd>This browser keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table wipes that championship. Leaving a match, or reloading, keeps the same round to play again.</dd>
       <dt>50:22</dt><dd>Kick from your own half that bounces out inside their 22 and the lineout throw is yours.</dd>
     </dl>
-    <button class="btn" id="h-back" data-back>Back to Menu</button>
+    <div class="row2"><button class="btn" id="h-replay">Replay Tutorial</button><button class="btn" id="h-back" data-back>Back to Menu</button></div>
   </div>
 </section>
 
@@ -448,13 +508,13 @@ body.desk .home-row #b-help{grid-column:1/-1}
     <div class="head"><div><p class="eyebrow">Two Player</p><h2 class="title">Players</h2></div></div>
     <div class="seats">
       <div class="seat p1 s0">
-        <p class="eyebrow p1"><i class="stag s0">1</i>Player 1</p>
+        <p class="eyebrow p1"><i class="stag s0">1</i>Player 1<button class="hc-tick" id="jt0" aria-label="Hints"><i></i><span>Hints</span></button></p>
         <div class="devrow"><p class="dev" id="j-dev0">Keyboard</p><button class="btn" id="j-kb0" hidden>Use Keyboard</button></div>
         <div class="legend" id="j-leg0"></div>
         <div class="set"><span class="lbl">Difficulty</span><div class="seg" id="j-diff0"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
       </div>
       <div class="seat p2 s1">
-        <p class="eyebrow p2"><i class="stag s1">2</i>Player 2</p>
+        <p class="eyebrow p2"><i class="stag s1">2</i>Player 2<button class="hc-tick" id="jt1" aria-label="Hints"><i></i><span>Hints</span></button></p>
         <div class="devrow"><p class="dev" id="j-dev1">Keyboard</p><button class="btn" id="j-kb1" hidden>Use Keyboard</button></div>
         <div class="legend" id="j-leg1"></div>
         <div class="set"><span class="lbl">Difficulty</span><div class="seg" id="j-diff1"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
@@ -468,10 +528,20 @@ body.desk .home-row #b-help{grid-column:1/-1}
 
 <div class="modal" id="m-pen" hidden>
   <div class="card">
-    <p class="eyebrow" id="p-eyebrow">Penalty</p>
+    <div class="eyerow"><p class="eyebrow" id="p-eyebrow">Penalty</p><button class="hc-tick" id="ht-pen" aria-label="Hints"><i></i><span>Hints</span></button></div>
     <h3 id="p-meta">34m to the Posts</h3>
-    <button class="btn primary" id="p-goal">Kick at Goal</button>
-    <div class="row2"><button class="btn" id="p-touch">Kick to Touch</button><button class="btn" id="p-tap">Tap and Go</button></div>
+    <button class="btn primary" id="p-goal">Kick at Goal<small class="hsub" id="p-goal-s">3 Points</small></button>
+    <div class="row2"><button class="btn" id="p-touch">Kick to Touch<small class="hsub">Lineout Upfield</small></button><button class="btn" id="p-tap">Tap and Go<small class="hsub">Play On Now</small></button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-tut" hidden>
+  <div class="card">
+    <p class="eyebrow" id="tu-eye">Tutorial</p>
+    <h3 id="tu-title">Get Past</h3>
+    <p id="tu-text">Beat the Last Man</p>
+    <div class="row2" id="tu-row"><button class="btn" id="tu-skip">Skip</button><button class="btn" id="tu-next">Next</button></div>
+    <button class="btn primary" id="tu-play" hidden>Play</button>
   </div>
 </div>
 
@@ -494,6 +564,10 @@ body.desk .home-row #b-help{grid-column:1/-1}
     <h3 id="pz-score">England 0 – 0 France</h3>
     <p id="pz-seat" hidden></p>
     <button class="btn primary" id="pz-resume">Resume</button>
+    <div id="pz-hints">
+      <div class="set"><span class="lbl" id="pz-hl0">Hints</span><div class="seg" id="pz-h0"><button>On</button><button>Off</button></div></div>
+      <div class="set" id="pz-hrow1" hidden><span class="lbl">Player 2 Hints</span><div class="seg" id="pz-h1"><button>On</button><button>Off</button></div></div>
+    </div>
     <button class="btn warn" id="pz-quit">Quit Match</button>
   </div>
 </div>
@@ -580,7 +654,11 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.flo
    ignored, and the rest of the save is kept.
    ========================================================= */
 const STORE = 'tryline.v1';
-let settings = { half:1, diff:1, sound:true, duels:true, duelSeen:false, kickSeen:false, pool:0, twoDiff:[1, 1] };   // twoDiff: each player's Difficulty in two player
+/* hints: the card in the top corner naming each close-up's control (one player); twoHints: the same per player in two player, stored
+   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; Replay Tutorial empties it.
+   It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too. */
+const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
+let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], pool:0, twoDiff:[1, 1] };   // twoDiff: each player's Difficulty in two player
 let champ = null, custom = [];
 const HEX = /^#[0-9a-f]{6}$/i;
 /* A team someone made, or one read back from storage: anything off is put right, never trusted. */
@@ -665,8 +743,9 @@ function cleanSettings(g) {
   if (g.half === 0 || g.half === 1 || g.half === 2) settings.half = g.half;
   if (g.diff === 0 || g.diff === 1 || g.diff === 2) settings.diff = g.diff;
   if (typeof g.sound === 'boolean') settings.sound = g.sound;
-  if (typeof g.duelSeen === 'boolean') settings.duelSeen = g.duelSeen;
-  if (typeof g.kickSeen === 'boolean') settings.kickSeen = g.kickSeen;
+  if (typeof g.hints === 'boolean') settings.hints = g.hints;
+  if (Array.isArray(g.twoHints) && g.twoHints.length === 2 && g.twoHints.every(v => typeof v === 'boolean')) settings.twoHints = [g.twoHints[0], g.twoHints[1]];
+  if (Array.isArray(g.tut)) settings.tut = TUT_IDS.filter(id => g.tut.includes(id));   // only moments the game knows, each once, in the game's order
   if ('pool' in g) settings.pool = g.pool === 1 ? 1 : 0;
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
 }
@@ -688,6 +767,9 @@ function save() {
   settings.duels = true;
   try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom })); } catch (e) { /* private mode, or full */ }
 }
+const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
+function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }
+function tutReset() { settings.tut = []; save(); }
 
 /* =========================================================
    Match engine. World units are metres.
@@ -759,6 +841,7 @@ function newMatch(u, c, opts) {
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the last offer judged, and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
+    stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
     tags:[], fx:[], stop:0, shake:0, rt:0,             // render only: on-pitch tags, impact rings, the Big Hit's hit-stop and shake, the render clock
   };
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
@@ -775,10 +858,12 @@ function newMatch(u, c, opts) {
   { const m = M; for (const k of ['ctrl', 'ctrlPrev', 'ctrlT', 'charging', 'charge', 'holdN', 'pass']) Object.defineProperty(m, k, { get:() => m.side[0][k], set:v => { m.side[0][k] = v; }, enumerable:false, configurable:true }); }   // side 0's fields on M, for the tools and the console
   M.wind = makeWind();
   for (let t = 0; t < 2; t++) for (let i = 0; i < 7; i++) {
-    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, turn:0, lastA:0, boost:0, boostMul:1, autoDir:0, drop:null,
-      bind:null, bindOff:null, offside:0, sprint:0, sprinting:false, stumble:0, stumbleMul:1, wf:0, drawFrom:null, fend:0, fendA:0 });   // contact: the bind he is in, how long he is retiring, his sprint, a stumble, wrong-footed; then render-only smoothing and the fend
+    M.players.push({ team:t, n:i+1, x:60, y:35, vx:0, vy:0, fx:dirOf(t), fy:0, down:0, tcd:0, side:0, hold:0, think:0, quick:false, fromKick:false, hx:60, hy:35, boost:0, boostMul:1, autoDir:0, drop:null,
+      bind:null, bindOff:null, offside:0, sprint:0, sprinting:false, stumble:0, stumbleMul:1, wf:0, drawFrom:null, fend:0, fendA:0, bite:0, biteTo:null, dumAt:-9 });   // contact: the bind he is in, how long he is retiring, his sprint, a stumble, wrong-footed; then render-only smoothing and the fend; a Dummy he bought (bite: seconds left running at biteTo) and, for a CPU carrier, when he last sold one
   }
   M.side[0].ctrl = M.players[3]; if (humans[1]) M.side[1].ctrl = M.players[10];
+  for (const inp of inputs) inp.gest = null;               // the open-play gesture history starts clean
+  M.tut = null; hintReset();                               // the hints cards start hidden, the open-play hints unshown
   kickoff(M.firstKick);
 }
 
@@ -935,6 +1020,33 @@ function pickUp(p) {
 
 /* ---------- passing and kicking ---------- */
 const LONG = { arm:0.18, auto:0.6, gate:0.12, range:32, knock:0.03 };   // hold past arm to skip a man; the ball leaves on release, or on its own at auto
+/* The pass leads the receiver (2026-10-17). A pass used to be thrown at where the receiver stood, and while it was in the air he braked
+   for it (arrive-style seek), so a completed pass lost about 5m and he took it standing still. Now the ball goes where he will be
+   running on upfield, he runs onto it at pace whatever the stick says (the stick takes over at the catch), and the line keeps running
+   while the ball is in the air. Every lever is here: a: his pick-up (m/s²) from his upfield speed now to top speed × pace; cpu: the
+   CPU receiver's pace (a human's is 1; this is the one-player balance lever: 0.6 gives about 87 / 47 on Normal / Hard, 0.7 about
+   81 / 42); keep: how much of his sideways drift the aim keeps; back: the landing spot is capped this far behind the passer at
+   release, and never forward after the handling error (the law); line: the support slots' upfield lead while a pass is in the air,
+   in seconds of the receiver's top speed; kpBack: how far behind the carrier the Key Pass runner may be (6 before the lead). */
+const RUNON = { a:18, cpu:0.65, keep:0.5, back:0.4, line:0.45, kpBack:7.5 };
+const passSpeed = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // a long pass hangs a little, so the loop reads
+const passPace = team => (isHuman(team) ? 1 : RUNON.cpu);   // how hard a side's receiver runs onto the ball, by role
+function runOn(r, d, t, pace) {                             // how far upfield r gets in t seconds running on from his upfield speed now, picking up at RUNON.a to top speed × pace
+  const vm = maxSpeed(r)*pace, v0 = clamp(r.vx*d, 0, vm), ta = Math.min(t, (vm - v0)/RUNON.a);
+  return v0*ta + 0.5*RUNON.a*ta*ta + vm*(t - ta);
+}
+function leadPass(from, to, o) {                            // the aim: where the ball lands if he runs onto it, before the handling error. blockSpec reads the same point, so the Block close-up shows the line the ball takes
+  o = o || {};
+  const d = dirOf(from.team), spd = passSpeed(M.nat[from.team], o.long), pace = passPace(from.team);
+  let tx = to.x, ty = to.y, T = 0.2;
+  for (let i = 0; i < 4; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + d*runOn(to, d, T, pace); ty = to.y + to.vy*RUNON.keep*T; }
+  if ((tx-from.x)*d > -RUNON.back) tx = from.x - d*RUNON.back;
+  return { x:tx, y:ty, T };
+}
+function runOnTarget(r, f, pace) {                          // the receiver while the pass is in the air: onto the landing spot as the ball gets there, at pace, never braking for it
+  const rem = Math.max(STEP, f.T - f.t), dd = hyp(f.x1 - r.x, f.y1 - r.y);
+  return { x:f.x1, y:f.y1, s:Math.min(maxSpeed(r)*pace, dd/rem), a:RUNON.a, pursue:true };
+}
 function passOk(c, q, maxR) {
   if (!q || q === c || q.team !== c.team || q.down > 0 || q.bind) return false;
   if ((q.x - c.x)*dirOf(c.team) > 0.5) return false;
@@ -1005,12 +1117,18 @@ function bestReceiver(p) {
 function doPass(from, to, o) {
   o = o || {};
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
-  const spd = (15 + n.handling*1.1) * (o.long ? 0.88 : 1);   // a long pass hangs a little, so the loop reads
-  let tx = to.x, ty = to.y, T = 0.2;
-  for (let i = 0; i < 3; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + to.vx*T; ty = to.y + to.vy*T; }
-  if ((tx-from.x)*d > 0) tx = from.x;
-  if (!o.sure) { const err = (5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0); tx += gauss()*err; ty += gauss()*err; }
-  else ty = clamp(ty, 3, 67);   // a won Key Pass is never caught in touch
+  const spd = passSpeed(n, o.long);
+  let tx, ty, T;
+  if (o.sure) {                                            // a won Key Pass: thrown at where the runner is going, as it always was, and never caught in touch
+    tx = to.x; ty = to.y; T = 0.2;
+    for (let i = 0; i < 3; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + to.vx*T; ty = to.y + to.vy*T; }
+    if ((tx-from.x)*d > 0) tx = from.x;
+    ty = clamp(ty, 3, 67);
+  } else {                                                 // led: where he will be running on, then the handling error, and never forward of the passer (the law)
+    const a = leadPass(from, to, o); tx = a.x; ty = a.y;
+    const err = (5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0); tx += gauss()*err; ty += gauss()*err;
+    if ((tx-from.x)*d > 0) tx = from.x;
+  }
   T = hyp(tx-b.x, ty-b.y)/spd + 0.06;
   const dist = hyp(tx-b.x, ty-b.y);
   const H = o.long ? Math.min(6.4, 1.5 + dist*0.11) : 0.5;   // higher with the distance, so it sails over the skipped man's defender
@@ -1522,7 +1640,7 @@ function makeGoal(team, wx, wy, kind, kicker) {
   const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
   if (!isHuman(team)) g.cpu = cpuKickInputs(g);
   else {
-    g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !settings.kickSeen)) ? 'path' : 'line';   // the first kick ever gets the Easy aids; in two player each player's first kick of the match does
+    g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !tutSeen(kind === 'drop' ? 'drop' : 'goal'))) ? 'path' : 'line';   // the first kick ever (the tutorial's goal or drop moment unseen) gets the Easy aids; in two player each player's first kick of the match does
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
   }
   return g;
@@ -1669,11 +1787,10 @@ function updateGoalCut(c, dt) {
     if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
-function strikeNow(c) {                                    // the boot meets the ball. A human's first strike at goal, placed or dropped, ends the first-kick aids
+function strikeNow(c) {                                    // the boot meets the ball. In two player a player's first strike of the match ends his first-kick aid (one player's is the tutorial's memory, marked at the cut-in)
   const g = c.g; g.stage = 'flight'; g.tStrike = c.t; sfx('strike'); buzz(25);
   if (g.watch || !isHuman(g.team)) return;
-  if (M.two) sideOf(g.team).kickFirst = false;             // settings.kickSeen is one player's: two player never reads or writes it
-  else if (!settings.kickSeen) { settings.kickSeen = true; save(); }
+  if (M.two) sideOf(g.team).kickFirst = false;
 }
 function watchStep(c, dt) {                                // the CPU's kick: settle, run-up, flight; Skip jumps to the verdict
   const g = c.g, t = c.t;
@@ -1760,7 +1877,7 @@ function kickLabel(t) {                                    // the small button w
 // the world `lead` seconds on, run the way the hold will run it: the real step for everyone (the kicker on his stick, a CPU kicker checking
 // his run as the wind-up does, the AI's chasers and the defensive line as computeTargets drives them, collisions included), then everyone put back.
 // Nothing random is drawn. Returns the kick spot and every standing opponent's projected spot and velocity, all in the world.
-const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hold', 'turn', 'lastA', 'boost', 'offside', 'sprint', 'stumble', 'wf'];   // what moveAll touches
+const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hold', 'boost', 'offside', 'sprint', 'stumble', 'wf', 'bite'];   // what moveAll touches
 function projectHold(c, lead) {
   const t = c.team, n = Math.max(0, Math.round(lead/STEP)), dt = n ? lead/n : 0, P = M.players;
   const saved = P.map(p => HOLD_KEYS.map(k => p[k])), steps0 = M.stats.steps, drop0 = c.drop;
@@ -1993,21 +2110,48 @@ function stageDrop(spot, chargers, team) {
 const CUT_IN = 0.22, CUT_OUT = 0.25;
 const interactive = () => !M.auto && !M.demo && !M.headless;
 function startCut(c) {
-  c.t = 0; c.after = null; c.hold = 0; c.exit = -1;
+  c.t = 0; c.after = null; c.hold = 0; c.exit = -1; c.acc = 0;
   M.cut = c; M.phase = 'cut';
   clearBanner();
   clearCharge(); for (const s of M.side) s.pass = null;
   for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.cDown = false; }   // a Sprint held into a close-up must be pressed again after it
   lastBtn = '';
+  hintCut(c);                                              // the open-play hint, if one was up, is over; and the tutorial, the first time this kind of moment comes up
+  tutStart(c);
 }
 function finishCut(after, hold) {
   const c = M.cut;
   if (!c || c.after) return;
   c.after = after; c.hold = hold == null ? 0.9 : hold;
 }
+/* Slow motion (2026-10-17, Gordon: duels came too fast to react to). A duel's run-in plays slowly after the slide-in, then ramps to
+   full speed into the window: secs[level] of real time at `rate`, a ramp of `ramp` scene seconds easing to 1, done `lead` before the
+   ring opens (a run-in too short for all that loses slow time, never the ramp). The window, the tells and the verdict are untouched
+   in scene time: the scene clock steps whole frames, held back by the accumulator, so a bot acting on c.t sees exactly the steps it
+   always saw and only the real time (the frames) stretches; the drawing adds the fraction back (c.acc) so the motion is smooth.
+   Resume before the window restarts the slow phase from the resumed time (c.slowFrom). Instant mode has no close-up at all. */
+const DUEL_SLOW = { secs:[1.2, 0.9, 0.6], rate:0.4, ramp:0.10, lead:0.03 };   // measured 2026-10-17: a 0.15 ramp and 0.05 lead clipped Easy's slow phase to 0.95s (its ring opens at 0.80s scene) and left its run-in no longer than Normal's
+function cutRate(c) {                                      // the scene clock's rate this step
+  if (!c.duel || c.after || c.res || c.t < CUT_IN) return 1;
+  const S = DUEL_SLOW, from = c.slowFrom == null ? CUT_IN : c.slowFrom;
+  const rampEnd = Math.min(from + S.rate*S.secs[levelOf(c.own)] + S.ramp, c.win[0] - S.lead), rampStart = rampEnd - S.ramp;
+  if (c.t >= rampEnd) return 1;
+  if (c.t <= rampStart) return S.rate;
+  const u = (c.t - rampStart)/S.ramp;
+  return S.rate + (1 - S.rate)*u*u*(3 - 2*u);
+}
 function updateCut(dt) {
   const c = M.cut;
-  c.t += dt;
+  if (M.tut && c.t + dt >= CUT_IN - 1e-9) {                // the tutorial card: the close-up holds its first frame (the slide-in's last step taken, nothing run on it), presses advance the card, the stick is re-centred under the thumb
+    if (c.t < CUT_IN) c.t += dt;
+    if (humanSlots().some(i => i.aPressed)) tutAdvance();
+    if (c.duel || c.kind === 'goal') for (const inp of (M.two ? [inputOf(c.duel ? c.own : c.g.team)].filter(Boolean) : humanSlots())) { inp.reanchor(); inp.flick = 0; }   // as the grace: in two player only the owner's stick is re-centred (re-anchoring a pad stick latches it, and the chooser's choice would be lost on a pad but kept on keys)
+    for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.flick = 0; inp.aCancel = inp.bCancel = inp.cCancel = false; }
+    return;
+  }
+  const rate = cutRate(c);
+  if (rate >= 1) c.t += dt;
+  else { c.acc += rate*dt; if (c.acc >= STEP - 1e-9) { c.acc -= STEP; c.t += dt; } }   // slow motion: whole frames only, so nothing judged on c.t moves
   if (c.after) {
     if ((c.duel || c.kind === 'goal') && c.t >= c.skipAt && humanSlots().some(i => i.aPressed || i.bPressed || i.flick)) c.hold = 0;   // tap to skip, from either seat
     if (c.hold > 0) c.hold -= dt;
@@ -2026,9 +2170,11 @@ function updateCut(dt) {
 }
 function surge(team, secs) { M.surge = { team, t:secs }; }
 
-/* Scrum: Crouch, Bind, Set. Press on Set for a good hit, then tap Push with
-   the stick held forward to drive. pos is metres gained by your pack. */
-const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6;
+/* Scrum: Crouch, Bind, Set. Press on Set for a good hit, then tap Push fast to drive: the taps alone are the shove, the stick
+   plays no part (2026-10-17: it used to scale the taps by 0.55 at rest and 0.2 held back, and nothing on screen said so). pos is
+   metres gained by your pack. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty (a pushover
+   within 8m of the line); the steal line is 1.2, half way up the bar. */
+const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4;
 function startScrum(s) {
   // every scrum is a little different: a CPU pack's strength varies, and the side putting in gets a small edge. pos is metres gained by team 0's pack
   const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, engaged:false, mine:0, theirs:0, result:null,
@@ -2037,7 +2183,7 @@ function startScrum(s) {
   c.wave = rnd()*6;
   startCut(c);
 }
-function scrumPush(c, s, dt) {                             // a human pack's shove this step: a timed hit on Set, then the taps of the last quarter second or so with the stick held forward (in its own direction)
+function scrumPush(c, s, dt) {                             // a human pack's shove this step: a timed hit on Set, then the taps of the last quarter second or so. The stick is not read
   const t = c.t, inp = inputOf(s), d = dirOf(s);
   if (inp && inp.aPressed) {
     const note = text => { if (M.two) c.msg[s] = { text, at:t }; else say(text, 'small'); };   // two player: a tag over that pack in its seat colour, so two hits at once don't fight over the banner
@@ -2047,9 +2193,7 @@ function scrumPush(c, s, dt) {                             // a human pack's sho
   }
   if (t < SCRUM_SET) return 0;
   c.rate[s] *= Math.exp(-dt/0.25);
-  const j = inp ? inp.world() : { x:0, y:0 }, jx = j.x*d;
-  const aim = jx > 0.35 ? 1 : jx < -0.3 ? 0.2 : 0.55;
-  return 0.85*Math.min(1.3, c.rate[s]/1.5)*aim + c.base[s];   // 6 taps a second = full effort
+  return 0.85*Math.min(1.3, c.rate[s]/1.25) + c.base[s];   // 5 taps a second = full shove, about 6.5 the most (a phone thumb manages 5-7)
 }
 function updateScrum(c, dt) {
   const t = c.t, eff = [0, 1].map(s => (cpuSide(s) ? 0 : scrumPush(c, s, dt)));   // a human's press is read before Set too (Early, or the Good Hit)
@@ -2058,11 +2202,11 @@ function updateScrum(c, dt) {
   for (const s of [0, 1]) if (cpuSide(s)) eff[s] = c.base[s]*(1 + 0.22*Math.sin((t-SCRUM_SET)*2.4 + c.wave));
   c.mine = eff[0]; c.theirs = eff[1];
   c.pos = clamp(c.pos + (c.mine - c.theirs)*1.8*dt, -2.5, 2.5);
-  if (t >= SCRUM_SET + SCRUM_PUSH || Math.abs(c.pos) >= 2.0) resolveScrum(c);
+  if (t >= SCRUM_SET + SCRUM_PUSH || Math.abs(c.pos) >= SCRUM_DOM) resolveScrum(c);
 }
 function resolveScrum(c) {
   const p = c.pos, F = c.feed;
-  let res = p >= 2.0 ? 'dom0' : p <= -2.0 ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
+  let res = p >= SCRUM_DOM ? 'dom0' : p <= -SCRUM_DOM ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
   if (res === 'dom1' && !cpuSide(0) && !c.taps[0] && !c.hit[0]) res = F === 0 ? 'steal1' : 'win1';   // a human pack that never pushed loses the ball, nothing worse
   if (res === 'dom0' && !cpuSide(1) && !c.taps[1] && !c.hit[1]) res = F === 1 ? 'steal0' : 'win0';
   c.result = res;
@@ -2164,10 +2308,31 @@ const DOM_TURN = [0.25, 0.35], DOM_RUCK = 1.6, LINE_SPEED = 2.5;
 const CONTACT = { bind:0.25, side:1.10, contact:[0.58,0.42,0.42], dive:[0.66,0.50], ankle:0.55, diveDown:0.75, brokenDown:0.5, stumble:[0.15,0.9], slide:[0.5,0.95], downR:0.95, second:{ r:1.3, toDom:0.35, softToWrap:0.35 }, dom:{ base:0.14, pow:0.04, front:0.03, dive:0.08, sprint:0.10, cpu:[-0.03,0,0.03] }, soft:{ base:0.22, behind:0.25, fast:0.08, pow:0.04 }, fend:{ pow:1, margin:0.35 }, trip:{ p:0.4, t:0.5, mul:0.5 }, jolt:{ dom:0.09, wrap:0.02, soft:0.01, fwd:0.55 }, off:{ soft:0.85, wrap:0.70, range:9, cpu:0.10, hold:0.5, knock:0.55 } };
 const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.35, gate:3.5, retire:0.6, flatBase:0.11, pen:0.045, wf:{ r:3, t:0.7, mul:0.5 } };
 const SPRINT = { mul:[1.25,1.25,1.20], mulBall:[1.06,1.06,1.05], secs:2.0, ballDrain:1.5, refill:[7,10,10], floor:0.2, fade:0.3, pick:4, cpu:{ chase:[0.1,0.12,0.2], chaseLast:[0,0,0], carry:[0,0.05,0.3], carryLast:[0,0,0], lane:15, min:2.5, max:12, space:6, keep:2.5, think:0.25 } };
-// CONTACT_TUNE
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first
 const DUMMY = { drift:[0.35, 0.40, 0.45], fake:[0, 0.15, 0.30] };                      // instant-mode win rate by difficulty
+/* Open-play moves (2026-10-17): the Side Step and the Dummy, read from the stick with no new button. gestureStep runs once a step for
+   each human slot while his ringed man carries in open play with neither Pass nor Kick held (both aim with the stick). It reads only
+   inputOf(t).world(): L = j.y is across the pitch and F = j.x*dirOf(t) along the run, so it is the same for either team, either seat,
+   touch, pad or keys. The history is cleared at a new carrier, at any step he is not carrying in open play (a cut, a set piece, the ball
+   in the air, a button held), on a lifted thumb, on the stick's restore after a duel, at newMatch, a seat change and a resume.
+   Side Step: one sharp flick across the run (L rises `rise` inside `win` steps to |L| >= L with |j| >= mag), armed from each carry and
+   re-armed once |L| is back under rearm, acting with a standing opponent inside `range` and `since` seconds on the
+   ball: x`odds` tackle odds while side > 0 (`side` seconds; the cooldown is side counting back to -0.9, 1.25s, as the AI's step), a
+   `push` m/s dart along the stick. A fresh up or down key is a flick on its own. The old turn-rate step (p.turn / p.lastA) is gone:
+   a single flick could never turn the floating stick far enough, and most of its steps fired on the first step after a catch.
+   Dummy: the run held at F >= fwd for `hold` seconds, pulled back to F <= back inside `drop` seconds and pushed on to F >= on inside
+   `ret` seconds, with the ring on a teammate and a standing AI defender ahead inside range: he buys it with chance bite[level] (the
+   carrier's level) and for `drift` seconds runs at the ring's man, wrong-footed (x0.5 pace for wf seconds), shoved `shove` m/s that way
+   and unable to tackle for tcd seconds; the carrier keeps the pace he had before the pull, since the check is a shape, not a stop. On
+   keys the pull must be a fresh press of the back key: forward let go and pressed again is not a Dummy. The CPU dummies from
+   aiCarrier's think with chance cpu[level] (Hard only) when a human defends, so AI v AI draws nothing, and never sells a human's
+   ringed man. Every lever is here: MOVES='{"step":{"push":4}}' node tools/bot.mjs tries values without an edit. */
+const MOVES = {
+  step:{ win:4, rise:0.45, L:0.45, mag:0.6, rearm:0.3, range:4, since:0.10, side:0.35, push:5, odds:0.65, cpuPush:4 },
+  dummy:{ fwd:0.7, hold:0.20, back:0.3, drop:0.15, ret:0.30, on:0.6, range:[1.5, 9], cd:2.5, bite:[0.9, 0.75, 0.6], drift:0.6, wf:0.5, tcd:0.4, shove:3, cpu:[0, 0, 0.04], cpuRange:[2.5, 7] },
+};
+// CONTACT_TUNE
 /* Two player only (never read on a one-player path). DUEL_LOCK: how long before the plain window the chooser's choice locks, by
    the timer's level (Normal's 0.32 is when the CPU shows its feint, drift or step; an Easy timer gets longer to read it). TWO.tackle:
    how hard a side's AI men tackle the other player's carrier, read at the carrier's level: the scoring lever, tuned with
@@ -2180,7 +2345,7 @@ function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
   let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
   p += (M.nat[q.team].power - M.nat[c.team].power)*0.05;
-  if (stepped) p *= 0.65;
+  if (stepped) p *= MOVES.step.odds;
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
   return clamp(p, 0.08, 0.95);
 }
@@ -2221,7 +2386,7 @@ function findAttackDuel(c) {                                // a human carrier a
   for (const p of M.players) {
     if (p.team !== t || p === c || p.down > 0) continue;
     const back = (c.x - p.x)*d, lat = Math.abs(p.y - c.y);
-    if (back < 0 || back > 6 || lat < 4 || lat > 12) continue;
+    if (back < 0 || back > RUNON.kpBack || lat < 4 || lat > 12) continue;   // the runner box: the line sits deeper now the ball moves faster
     if (M.players.some(q => q.team !== t && q !== d1 && q.down <= 0 && dist(q, p) < 6)) continue;
     r = p; break;
   }
@@ -2260,7 +2425,7 @@ function duelCheck(c) {
 function blockSpec(from, to) {                             // the defending side's human on the line of a pressure pass, running at it
   const t = 1 - from.team, q = ctrlOf(t), b = M.ball;
   if (!q || q.down > 0 || q.tcd > 0 || sideOf(t).ctrlT < 0.6 || (oppLine(from.team) - from.x)*dirOf(from.team) < 3) return null;
-  const P0 = { x:b.x, y:b.y }, P1 = { x:to.x + to.vx*0.4, y:to.y + to.vy*0.4 };
+  const aim = leadPass(from, to), P0 = { x:b.x, y:b.y }, P1 = { x:aim.x, y:aim.y };   // the lane is the line the ball will take
   const vx = P1.x - P0.x, vy = P1.y - P0.y, len = hyp(vx, vy);
   if (len < 5) return null;
   const u = ((q.x - P0.x)*vx + (q.y - P0.y)*vy)/(len*len);
@@ -2318,7 +2483,7 @@ function startDuel(s) {
   c.tTrig = CUT_IN + clamp((G_START - g0)/(G_START - G_HIT), 0, 1)*(c.tk - CUT_IN);
   c.dtau = clamp(c.rho*(c.tk - c.tTrig), 0, 0.5);
   const tw = CUT_IN + (c.tk - CUT_IN)*(G_START - G_WIN)/(G_START - G_HIT);
-  const SD = sideOf(own).duel, first = M.two ? SD.first : !settings.duelSeen, fails = M.two ? SD.fails : L.fails;   // the aids are per owner in two player: his own first duel, his own failures in a row
+  const SD = sideOf(own).duel, first = M.two ? SD.first : !tutSeen(s.kind), fails = M.two ? SD.fails : L.fails;   // the aids are per owner in two player: his own first duel, his own failures in a row. One player: the first duel of each kind on this device (the tutorial's moment, marked at the cut-in)
   const w = k.win[di] + clamp(0.012*(nU[k.mod[0]] - nO[k.mod[1]]), -0.036, 0.036)
     + (first ? 0.08 : 0) + (fails >= 2 ? 0.04 : 0);
   if (M.two) SD.first = false;
@@ -2467,7 +2632,6 @@ function settle(c, res, act) {
   if (good && res === 'perfect' && c.kind !== 'block') M.stats.duelsPerfect = (M.stats.duelsPerfect || 0) + 1;
   M.duelLog.fails = good ? 0 : M.duelLog.fails + 1;
   if (M.two) { const SD = sideOf(c.own).duel; SD.fails = good ? 0 : SD.fails + 1; }   // the catch-up aid counts each owner's own failures
-  else if (!settings.duelSeen) { settings.duelSeen = true; save(); }   // settings.duelSeen is one player's: two player never touches it
   if (good) sfx('cheer');
   if (['tackled', 'bighit'].includes(out)) { sfx('tackle'); buzz(25); }
   say(verdict, good ? '' : 'small', ours ? c.U.team : c.O.team, good && res === 'perfect' && c.kind !== 'block' ? 'Perfect' : null);
@@ -2578,7 +2742,7 @@ function applyDuel(c) {
 }
 function duelResume(c) {
   c.t = Math.max(c.lastEvt + 0.05, DUEL_GRACE, c.t - 0.25);
-  if (c.t < c.win[0]) c.opened = false;   // the window's tick plays again
+  if (c.t < c.win[0]) { c.opened = false; c.slowFrom = c.t; c.acc = 0; }   // the window's tick plays again, and the slow phase starts over from here
   for (const inp of humanSlots()) { inp.reanchor(); inp.held = new Set(); }
 }
 // canonical positions for tests and the console: __tryline.forceDuel('past'). The scene is laid out in the owner's frame and
@@ -2737,9 +2901,9 @@ function supportSlots(fx, fy, d, n, depth) {
   while (out.length < n) out.push({ x:clamp(fx - d*depth, 1, 119), y:clamp(fy,3,67) });
   return out;
 }
-function assignByY(T, arr, slots) {
+function assignByY(T, arr, slots, lx = 0) {              // lx: an upfield lead on every slot (the line running on while a pass is in the air)
   const a = arr.slice().sort((p,q) => p.y-q.y), s = slots.slice().sort((p,q) => p.y-q.y);
-  a.forEach((p,i) => { const t = s[i] || s[s.length-1]; if (t) T.set(p, { x:t.x, y:t.y, s:maxSpeed(p) }); });
+  a.forEach((p,i) => { const t = s[i] || s[s.length-1]; if (t) T.set(p, { x:clamp(t.x + lx, 1, 119), y:t.y, s:maxSpeed(p) }); });
 }
 /* A line break: the men still goal-side come up instead of holding the sweeper's depth.
    Easy commits only when he is the last man, and slower, so a break near the line can still be finished.
@@ -2821,7 +2985,7 @@ function computeTargets() {
     }
     A = A.filter(p => !T.has(p)); D = D.filter(p => !T.has(p));
   } else if (mode === 'pass') {
-    const r = b.f.target; if (r && free(r)) { T.set(r, { x:fx, y:fy, s:maxSpeed(r), a:18 }); A = A.filter(p => p !== r); }
+    const r = b.f.target; if (r && free(r)) { T.set(r, b.f.sure ? { x:fx, y:fy, s:maxSpeed(r), a:18 } : runOnTarget(r, b.f, passPace(b.f.team))); A = A.filter(p => p !== r); }   // an AI receiver runs onto it at his side's pace; a sure pass keeps its seek
   } else if (mode === 'held') {
     A = A.filter(p => p !== carrier);
   } else {
@@ -2832,7 +2996,8 @@ function computeTargets() {
   }
   const depth = mode === 'set' ? ((M.set.kind === 'scrum' || M.set.kind === 'lineout') ? 5 : 3) : 2.6;
   const slots = supportSlots(fx, fy, dA, A.length, depth);
-  assignByY(T, A, slots);
+  const lead = mode === 'pass' && b.f.target ? dA*maxSpeed(b.f.target)*0.95*RUNON.line : 0;   // the line keeps running while the ball is in the air, instead of pulling up round the landing spot
+  assignByY(T, A, slots, lead);
   let sweep = true;
   if (mode === 'held') {
     const live = D.filter(p => !(p.offside > 0));                  // a retiring tackler is never the chaser, and never the man who comes up
@@ -2882,6 +3047,7 @@ function computeTargets() {
     : slots;
   const lineX = mode === 'set' ? fx + dA*(SETGAP[M.set.kind] || 5) : null;
   assignMarks(T, D, pts, dA, fx, fy, lineX, mode, sweep);
+  for (const p of P) if (p.bite > 0 && p.biteTo && T.has(p)) { const r = p.biteTo; T.set(p, { x:r.x + r.vx*0.3, y:r.y + r.vy*0.3, s:maxSpeed(p), a:15, pursue:true }); }   // a sold Dummy: he runs at the man the pass was shown to
   return T;
 }
 
@@ -2902,9 +3068,14 @@ function aiCarrier(p, dt) {
   if (toLine < 12) ay += (35-p.y)*0.015;
   const m = hyp(ax,ay) || 1, sp = maxSpeed(p)*0.95;
   steer(p, ax/m*sp, ay/m*sp, 15, dt);
-  if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; p.vy += (rnd() < 0.5 ? -1 : 1)*4; }
+  if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; p.vy += (rnd() < 0.5 ? -1 : 1)*MOVES.step.cpuPush; }
   p.think -= dt; if (p.think > 0) return; p.think = 0.15;
   if (p.hold < 0.5) return;
+  const KD = MOVES.dummy, lv = levelOf(p.team);
+  if (KD.cpu[lv] > 0 && isHuman(1 - p.team) && p.side <= -0.9 && M.dclock - p.dumAt >= KD.cd) {   // the CPU's Dummy, only against a human and only where cpu[level] > 0: AI v AI and Normal draw nothing here
+    let fa = 99; for (const q of M.players) if (q.team !== p.team && onFeet(q) && (q.x - p.x)*d > 0) fa = Math.min(fa, dist(q, p));
+    if (fa >= KD.cpuRange[0] && fa <= KD.cpuRange[1]) { const r = bestReceiver(p); if (r && rnd() < KD.cpu[lv]) { p.dumAt = M.dclock; dummyPass(p, r.q); return; } }
+  }
   if (p.quick && p.hold > 0.4) {
     p.quick = false;
     if (rnd() < 0.85) { const r = bestReceiver(p); if (r) { doPass(p, r.q); return; } }
@@ -2929,18 +3100,12 @@ function aiCarrier(p, dt) {
 function userMove(p, dt, inp) {
   const j = inp.world(), b = M.ball;
   const ms = maxSpeed(p)*(b.carrier === p ? 0.95 : 1);
-  if (b.state === 'air' && b.f.kind === 'pass' && b.f.target === p && (j.mag < 0.1 || b.f.sure)) { seek(p, b.f.x1, b.f.y1, ms, 22, dt); return; }
+  if (b.state === 'air' && b.f.kind === 'pass' && b.f.target === p) {   // a pass to him: he runs onto it whatever the stick says, and the stick takes over at the catch
+    if (b.f.sure) { seek(p, b.f.x1, b.f.y1, ms, 22, dt); return; }     // a won Key Pass keeps its seek
+    const r = runOnTarget(p, b.f, passPace(p.team)); seek(p, r.x, r.y, r.s, 22, dt, true); return;
+  }
   if (b.carrier === p && p.boost > 0 && j.mag < 0.3) { const m = hyp(1, 0.3*p.autoDir), v = frameVec(p.team, { x:ms/m, y:ms*0.3*p.autoDir/m }); steer(p, v.x, v.y, 20, dt); return; }   // the burst runs upfield, autoDir to the owner's right
-  steer(p, j.x*ms, j.y*ms, 20, dt);
-  if (j.mag > 0.55) {
-    const a = Math.atan2(j.y, j.x);
-    let da = a - p.lastA;
-    while (da > Math.PI) da -= 2*Math.PI;
-    while (da < -Math.PI) da += 2*Math.PI;
-    p.turn = p.turn*Math.exp(-dt/0.16) + Math.abs(da);
-    p.lastA = a;
-    if (p.turn > 1.4 && b.carrier === p && p.side <= -0.9 && pressure(p) < 3.5) { M.stats.steps = (M.stats.steps||0) + 1; p.side = 0.35; p.turn = 0; p.vx += j.x*2.5; p.vy += j.y*2.5; }
-  } else p.turn *= Math.exp(-dt/0.16);
+  steer(p, j.x*ms, j.y*ms, 20, dt);                       // the Side Step and the Dummy are read in gestureStep, from the slot's history, not here
 }
 function throwUserPass(c, shown) {
   sideOf(c.team).pass = null;
@@ -3000,6 +3165,67 @@ function switchPlayer(t) {
    while a pass is in the air, M.poss otherwise), then the other, each in today's order: A, the pass in hand, B, Sprint, then the
    charge. One player has one side, so nothing moves; in two player a pass and a dive pressed on the same step resolve the same
    way whichever seat pressed. */
+/* ---------- open-play moves: the Side Step and the Dummy (see MOVES) ---------- */
+function sideStep(c, j, s) {                               // the carrier steps toward s (the flick's sign across the pitch), darting along the stick
+  const K = MOVES.step;
+  c.side = K.side; c.vx += j.x*K.push; c.vy += j.y*K.push;
+  M.stats.steps = (M.stats.steps || 0) + 1; st('steps' + c.team);
+  if (ringed(c)) tag('Side Step', c.x, c.y);
+  sfx('whoosh'); buzz(15, c.team);
+}
+function dummyPass(c, r) {                                 // c shows a pass to r and keeps the ball: the nearest standing AI defender ahead may buy it. False when there is nobody to sell
+  const K = MOVES.dummy, t = c.team, d = dirOf(t);
+  if (!r) return false;
+  let q = null, bd = K.range[1];
+  for (const o of M.players) { if (o.team === t || !onFeet(o) || ringed(o) || (o.x - c.x)*d < -0.5) continue; const dd = dist(o, c); if (dd >= K.range[0] && dd < bd) { bd = dd; q = o; } }
+  if (!q) return false;
+  st('dummies' + t);
+  sfx('whoosh');
+  if (rnd() < K.bite[levelOf(t)]) {                        // he bites: wrong-footed, drifting onto the runner, no tackle for a moment
+    q.wf = Math.max(q.wf, K.wf); q.tcd = Math.max(q.tcd, K.tcd);
+    q.vy += (Math.sign(r.y - q.y) || 1)*K.shove;
+    q.bite = K.drift; q.biteTo = r;
+    st('sold' + t);
+    tag('Dummy', c.x, c.y); buzz(15, t);
+  } else if (isHuman(t)) tag('Not Fooled', c.x, c.y);
+  return true;
+}
+const dirKeyHeld = (inp, d) => { for (const code of inp.keys) { const k = KEYDIR[code]; if (k && (d == null || k[0]*d < 0)) return true; } return false; };   // any direction key, or (with d) one pointing back toward his own line
+function gestureStep(t, dt) {                              // one human side's open-play gestures, read once a step from its slot's history
+  const inp = inputOf(t), c = ctrlOf(t), b = M.ball, S = sideOf(t), KS = MOVES.step, KD = MOVES.dummy;
+  const G = inp.gest || (inp.gest = { who:null, n:-9, L:[], armed:true, run:0, lastRun:0, dropT:-9, pull:null, keyed:false, kb:false, v:null, t:0, tagAt:0, tagged:null });   // the Dummy's cooldown is not kept here: it is the carrier's (c.dumAt, on the match clock), so a lifted thumb, a pause or a duel's restore can't reset it
+  G.t += dt;
+  if (G.tagged && G.t - G.tagAt <= 0.15 && (S.pass || (b.state === 'air' && b.f.kind === 'pass' && b.f.team === t))) { const i = M.tags.indexOf(G.tagged); if (i >= 0) M.tags.splice(i, 1); G.tagged = null; }   // Pass inside 0.15s of a step: that flick was an aim, so the tag comes off
+  const carrying = M.phase === 'play' && !!c && b.state === 'held' && b.carrier === c && !c.bind && !inp.aDown && !inp.bDown && !S.charging;
+  if (!carrying) { G.who = null; return; }
+  if (G.who !== c || G.n !== M.stepN - 1) { G.who = c; G.L.length = 0; G.armed = true; G.run = 0; G.lastRun = 0; G.dropT = -9; G.pull = null; G.keyed = false; G.kb = false; G.v = null; }   // a new carrier, or any step he was not carrying in open play (a cut, a set piece, the ball in the air): the history starts again
+  G.n = M.stepN;
+  const j = inp.world(), d = dirOf(t), L = j.y, F = j.x*d;
+  // the Side Step: a sharp rise across the run inside the window, armed
+  G.L.push(L); if (G.L.length > KS.win + 1) G.L.shift();
+  if (Math.abs(L) < KS.rearm) G.armed = true;              // the investigation's re-arm: back inside rearm first (a key switch passes through 0; a thumb crosses the centre in a few steps)
+  if (G.armed && Math.abs(L) >= KS.L && j.mag >= KS.mag) {
+    const s = Math.sign(L); let lo = Infinity; for (const v of G.L) lo = Math.min(lo, s*v);
+    if (s*L - lo >= KS.rise) {
+      G.armed = false;                                     // the flick is spent whether or not it acts: outside a tackler's reach it is steering
+      if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, j, s); G.tagged = M.tags[M.tags.length - 1] || null; G.tagAt = G.t; }
+    }
+  }
+  // the Dummy: a held run, a quick pull back, and the push on
+  const keyHeld = dirKeyHeld(inp), backKey = dirKeyHeld(inp, d);
+  if (F >= KD.fwd) { G.run += dt; if (G.pull == null) G.v = { x:c.vx, y:c.vy }; G.keyed = keyHeld; }   // his pace before the pull, not the push-on step's (already slowed)
+  else { if (G.run > 0) { G.lastRun = G.run; G.dropT = G.t; G.kb = false; } G.run = 0; }
+  if (G.pull == null && F <= KD.back && G.t - G.dropT <= KD.drop && G.lastRun >= KD.hold) G.pull = G.t;
+  if (G.pull != null) { if (backKey) G.kb = true; if (keyHeld) G.keyed = true; if (G.t - G.pull > KD.ret) G.pull = null; }
+  if (G.pull != null && G.t > G.pull && F >= KD.on) {
+    G.pull = null; G.lastRun = 0;
+    if ((!G.keyed || G.kb) && M.dclock - c.dumAt >= KD.cd) { const v = G.v; if (dummyPass(c, shownPass(c).to)) { c.dumAt = M.dclock; if (v) { c.vx = v.x; c.vy = v.y; } } }   // on keys the pull must have been the back key itself; the cooldown is the carrier's, on the match clock, as the CPU's is
+  }
+}
+/* Phase A reads every human slot's edges; Phase B resolves the side in possession first (the carrier's team, the passer's team
+   while a pass is in the air, M.poss otherwise), then the other, each in today's order: A, the pass in hand, B, Sprint, then the
+   charge. One player has one side, so nothing moves; in two player a pass and a dive pressed on the same step resolve the same
+   way whichever seat pressed. The open-play gestures are read last, once a step for each human side. */
 function handleUser(dt) {
   if (M.auto) return;
   const b = M.ball, I = [null, null];
@@ -3011,6 +3237,7 @@ function handleUser(dt) {
   const poss = b.state === 'held' ? b.carrier.team : (b.state === 'air' && b.f.kind === 'pass') ? b.f.team : M.poss;
   for (const t of [poss, 1 - poss]) if (I[t]) userStep(t, I[t], dt);
   for (const inp of inputs) inp.aCancel = inp.bCancel = false;
+  for (const t of [0, 1]) if (inputOf(t)) gestureStep(t, dt);
 }
 function userStep(t, i, dt) {
   const b = M.ball, c = ctrlOf(t), S = sideOf(t), inp = inputOf(t);
@@ -3067,6 +3294,7 @@ function moveAll(dt) {
     if (p.sprinting) p.sprint = Math.min(SPRINT.fade, p.sprint + dt); else if (p.sprint > 0) p.sprint -= dt;   // the burst climbs while held, eases out when not
     if (p.stumble > 0) p.stumble -= dt;
     if (p.wf > 0) p.wf -= dt;
+    if (p.bite > 0) p.bite -= dt;
     if (p.boost > 0) p.boost -= dt;
     if (p.side > -1) p.side -= dt;
     p.hold += dt;
@@ -3077,6 +3305,7 @@ function moveAll(dt) {
 }
 function update(dt) {
   if (!M || M.phase === 'break' || M.phase === 'menu' || M.paused || M.over) return;
+  M.stepN++;                                               // every step, close-ups included: gestureStep reads it to see a gap in a man's carry
   if (M.phase === 'cut') { updateCut(dt); return; }
   const b = M.ball;
   if (M.surge && (M.surge.t -= dt) <= 0) M.surge = null;
@@ -3509,7 +3738,7 @@ function drawScrum(c, g) {
   // who is winning the shove
   const bw = W*0.38, bx = W*0.5 - bw/2, by = H*0.885, bh = Math.max(8, H*0.022);
   ctx.fillStyle = 'rgba(8,14,10,.8)'; rrect(bx - 3, by - 3, bw + 6, bh + 6, 4); ctx.fill();
-  const frac = clamp(c.pos/2.0, -1, 1);
+  const frac = clamp(c.pos/SCRUM_DOM, -1, 1);                // the bar fills exactly at a penalty; the steal line sits half way
   ctx.fillStyle = M.two ? (frac >= 0 ? ringCol(0) : ringCol(1)) : (frac >= 0 ? C.ctrl : showCol(1));   // two player: each pack's gain in its player's colour
   if (frac >= 0) ctx.fillRect(W*0.5, by, bw/2*frac, bh); else ctx.fillRect(W*0.5 + bw/2*frac, by, -bw/2*frac, bh);
   ctx.fillStyle = '#f1eee4'; ctx.fillRect(W*0.5 - 1, by - 4, 2, bh + 8);
@@ -3562,7 +3791,7 @@ function drawCut() {
   else if (c.kind === 'goal') drawKick(c, g);
   else drawDuel(c, g);
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07);
-  cutTag(cutTitle(c), g);
+  if (!(hintShown[0] && hintShown[0].title)) cutTag(cutTitle(c), g);   // a hints card with a title sits where the tag goes and names the moment itself
   if (M.two) drawCutCues(c, g);
   ctx.restore();
   if (RM) return;
@@ -3687,7 +3916,7 @@ function drawDuel(c, g) {
   const cam = duelCam(c);
   // hit-stop: the scene clock holds for 90ms at contact
   const ti = c.out === 'bighit' ? c.judged + 0.12 : c.tk;
-  let t = c.t;
+  let t = c.t + (c.acc || 0);                              // slow motion: the fraction of a frame the logic is holding back, so the run-in is smooth
   if (!RM && c.out && t > ti) t = t < ti + 0.09 ? ti : t - 0.09;
   const P = duelPose(c, t);
   const lagT = RM ? t : Math.max(0, t - 0.12);
@@ -4044,6 +4273,8 @@ function drawKick(c, g0) {
   drawPennants(cam, g, t);
   // the kicker, the ball and the chargers in one list, far to near. Until the strike the ball is in his hands or at his feet, so it goes over him
   const scene = kickScene(cam, g, P, tau, tf), qb = camPt(cam, P.bx, P.by, P.bh);
+  { const s = seatOfTeam(g.team), cw = Math.min(340, W/2 - 116), top = 0.07*H + 56, bot = top + 112, l = s === 1 ? W - 62 - cw : 12, r = l + cw;   // a charger drawn under the kick hint card dims it (the card is 12..12+cw by 0.07H+56..+112 at the left, mirrored for Player 2)
+    g.hcOver = s != null && scene.some(it => it.kind === 'charger' && it.sx + 0.45*it.k > l && it.sx - 0.45*it.k < r && it.sy > top && it.sy - 1.85*it.k < bot); }
   const ball = () => {
     if (qb.z < CAM.near) return;
     const pb = proj(cam, qb), sh = pr(cam, P.bx, P.by, 0);
@@ -4385,7 +4616,7 @@ function makeInput(seat) {
         this.ox = this.px - pre.x*STICK_R; this.oy = this.py - pre.y*STICK_R; placeStick(this.ox, this.oy);
         this.jx = pre.x; this.jy = pre.y; knob.style.transform = `translate(${pre.x*STICK_R}px,${pre.y*STICK_R}px)`;
       } else { this.jx = this.jy = 0; if (this.seat === 0) knob.style.transform = ''; }
-      this.flick = 0; this.held.clear(); this.pre = null; this.latch = false;
+      this.flick = 0; this.held.clear(); this.pre = null; this.latch = false; this.gest = null;   // and a gesture begun before the close-up can't finish after it
     },
     // keys win over the stick: any key for a direction counts once, so two keys for the same direction still read 1
     world() {
@@ -4426,10 +4657,14 @@ function setDev(d) {                                       // the last device th
   const b = document.body;
   if (b) { b.classList.toggle('dev-kb', d === 'kb'); b.classList.toggle('dev-pad', d === 'pad'); }
 }
+function platesFloor() {                                   // the Step Left | Step Right plates never go under the hints card (a thumb a little high on a phone put them under Flick on Gold): its bottom while it is up, else the clock line
+  const hc = $('hc0'), r = hc && !hc.hidden && typeof hc.getBoundingClientRect === 'function' ? hc.getBoundingClientRect() : null;
+  return Math.max(0.07*window.innerHeight + 6, r ? r.bottom + 6 : 0);
+}
 function placeStick(x, y) {
   stick.style.left = x + 'px'; stick.style.top = y + 'px';
   const pl = $('plates');
-  if (pl) { const top = y - 102; pl.style.left = clamp(x - 82, 8, window.innerWidth/2 - 172) + 'px'; pl.style.top = (top < 0.07*window.innerHeight + 6 ? y + 72 : top) + 'px'; }
+  if (pl) { const top = y - 102; pl.style.left = clamp(x - 82, 8, window.innerWidth/2 - 172) + 'px'; pl.style.top = (top < platesFloor() ? y + 72 : top) + 'px'; }
 }
 function restStick() { placeStick(96, window.innerHeight - 118); }
 zone.addEventListener('pointerdown', e => {
@@ -4458,7 +4693,7 @@ zone.addEventListener('pointermove', e => {
 });
 const endStick = e => {
   if (e.pointerId !== input.stickId) return;
-  input.stickId = null; input.jx = input.jy = 0;
+  input.stickId = null; input.jx = input.jy = 0; input.gest = null;   // a lifted thumb clears the gesture history
   knob.style.transform = ''; stick.classList.remove('on'); restStick();
 };
 zone.addEventListener('pointerup', endStick);
@@ -4506,7 +4741,7 @@ function rebuildRoutes() {
 }
 const keyRoute = code => ROUTES.get(code) || null;         // [seat, act] with act one of m a b c pause, or null for an unbound key
 function releaseAll() {                                    // a scheme change, or the window losing focus: nothing held can stick
-  for (const inp of inputs) { inp.keys.clear(); inp.held.clear(); inp.src.a = inp.src.b = inp.src.c = 0; inp.aDown = inp.bDown = inp.cDown = false; }
+  for (const inp of inputs) { inp.keys.clear(); inp.held.clear(); inp.src.a = inp.src.b = inp.src.c = 0; inp.aDown = inp.bDown = inp.cDown = false; inp.gest = null; }
   rebuildRoutes();
 }
 rebuildRoutes();
@@ -4891,7 +5126,214 @@ function updateHud() {
   $('btnC').style.setProperty('--s', S.m.toFixed(3));        // the Sprint ring is the meter
   $('btnA').classList.toggle('hold', passCharge > 0);
   $('btnA').style.setProperty('--p', passCharge.toFixed(3)); // the Pass ring fills while a long pass charges
+  syncHints(la, lb);
 }
+
+/* =========================================================
+   Hints and the tutorial (2026-10-17: Gordon's "Close-Ups and Key Moves" and "Pause and Step Through")
+   The hints card (#hc0 top-left for Player 1 and one player, #hc1 top-right for Player 2) names the close-up and its one control for
+   the device in use, through every duel's slow run-in to the verdict, the scrum to its result, the lineout to the catch, a goal kick or
+   drop from the cut-in to the strike, and once a match each in open play (Long Pass, Sprint, Side Step, Dummy, Offload, Drop Goal, 3s
+   each, 4s apart). hintFor(seat) is pure: it reads the match and returns the words, or null. syncHints runs from updateHud and writes
+   the DOM only when the content changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
+   dropZone is never run again and nothing random is drawn. The tutorial pauses the first time each moment comes up on this device
+   (while that seat's Hints are On): the close-up holds its first frame under a card or two, Next then Play, a tap anywhere or the
+   pass key advancing, the match clock and the world frozen; Replay Tutorial on How to Play forgets them all.
+   ========================================================= */
+const hintShown = [null, null], hintKey = ['', ''], HO = [null, null];   // what each card shows now (the tools read it); the last content key; open-play state per seat
+const OPEN_HINTS = ['offload', 'drop', 'long', 'sprint', 'step', 'dummy'], OPEN_SECS = 3.0, OPEN_GAP = 4.0;
+const CHIP_LABEL = { a:'Pass', b:'Kick', c:'Sprint', x:'Stick', v:'Stick', back:'Stick' };
+const teamOfSeat = s => (M ? M.side.findIndex(x => x.human && x.seat === s) : -1);
+const hintsOn = s => (s == null ? false : two.on ? settings.twoHints[two.swapped ? 1 - s : s] : settings.hints);   // two player: per player, stored by keyboard half like twoDiff
+function setHints(s, on) {
+  if (two.on) settings.twoHints[two.swapped ? 1 - s : s] = !!on; else settings.hints = !!on;
+  save(); renderHintSwitches(); if (M) syncHints();
+}
+function hintReset() { for (const s of [0, 1]) { HO[s] = { shown:new Set(), cur:null, until:-9, last:-99 }; } for (const s of [0, 1]) renderHint(s, null); }
+function hintCut() { for (const s of [0, 1]) if (HO[s]) HO[s].cur = null; }   // a close-up ends an open-play card
+function hintDev(s) { return two.on ? (seatScheme(s) ? 'kb' : 'pad') : lastDev; }   // one player: the last device that acted; two player: the seat's own
+const card = (title, rule, rows, kick) => ({ title, rule, rows, kick:!!kick });
+const row = (chips, text) => ({ chips, text });
+const chip = (act, label) => ({ act, label:label || CHIP_LABEL[act] });
+function hintFor(s) {                                      // the card for seat s now, or null
+  if (!M || M.demo || M.auto || !hintsOn(s)) return null;
+  const t = teamOfSeat(s); if (t < 0) return null;
+  const dev = hintDev(s), kb = dev === 'kb', c = M.cut;
+  if (c) {
+    if (M.phase !== 'cut') return null;
+    if (c.duel) {
+      if (c.out != null) return null;
+      const own = seatOfTeam(c.own) === s, k = c.kind;
+      if (own) return k === 'past' ? card('Get Past', 'To His Open Side', [row([chip('x')], kb ? 'Step on Gold' : 'Flick on Gold')])
+        : k === 'pass' ? card('Key Pass', 'Dummy If He Drifts', [row([chip('a', 'Pass'), chip('b', 'Dummy')], 'On Gold')])
+        : k === 'tackle' ? card('Tackle', 'He May Step', [row([chip('a', 'Tackle')], 'On Gold')])
+        : card('Block', 'He May Dummy', [row([chip('a', 'Block')], 'On Gold')]);
+      if (!M.two || c.locked) return null;                   // the chooser's card goes at his lock, as his bottom-bar cue does
+      return k === 'past' ? card('Get Past', 'Before Gold', [row([chip('x')], 'Guard a Shoulder')])
+        : k === 'pass' ? card('Key Pass', 'Before Gold', [row([chip('x')], 'Drift or Rush')])
+        : k === 'tackle' ? card('Tackle', 'Before Gold', [row([chip('x')], 'Step Left or Right')])
+        : card('Block', 'Before the Pass', [row([chip('b', 'Dummy')], 'Tap It')]);
+    }
+    if (c.kind === 'scrum') return c.result ? null : card('Scrum', c.feed === t ? 'Your Ball' : 'Steal Their Ball', [row([chip('a', 'Push')], 'Hit on Set'), row([chip('a', 'Push')], 'Then Tap Fast')]);
+    if (c.kind === 'lineout') return c.outcome != null ? null : card('Lineout', c.team === t ? 'Your Throw' : 'Steal Their Throw', [row([chip('a', 'Jump')], 'Ball Halfway')]);
+    if (c.kind === 'goal') {
+      const g = c.g;
+      if (g.watch || g.team !== t || c.t < CUT_IN || c.after || g.out) return null;
+      if (g.type === 'drop') return g.stage === 'wait' || g.stage === 'hold' ? card(null, 'Before They Reach You', [row([chip('x')], 'Steer'), row([chip('b', 'Kick')], 'Let Go in the Gold')], true) : null;
+      return g.stage === 'aim' || g.stage === 'power' ? card(null, 'Let Go in the Gold', [row([chip('x')], 'Steer the Arrow'), row([chip('a', 'Kick')], 'Hold It')], true) : null;
+    }
+    return null;
+  }
+  const o = HO[s] && HO[s].cur;
+  if (!o) return null;
+  return o === 'long' ? card('Long Pass', 'Skips a Man', [row([chip('a', 'Pass')], 'Hold It')])
+    : o === 'sprint' ? card('Sprint', '', [row([chip('c', 'Sprint')], 'Hold It')])
+    : o === 'step' ? card('Side Step', 'Near a Tackler', [row([chip('v')], kb ? 'Tap Across' : 'Flick Across')])
+    : o === 'dummy' ? card('Dummy', 'Fakes the Pass', [row([chip('back')], kb ? 'Tap Back' : 'Pull Back, Push On')])
+    : o === 'offload' ? card('Offload', 'As You’re Tackled', [row([chip('a', 'Offload')], 'Tap It')])
+    : card('Drop Goal', 'In Range', [row([chip('b', 'Drop Goal')], 'Hold It')]);
+}
+function hintOpenPick(s, t, la, lb) {                       // which open-play card, if any, is due for seat s now: the first unseen trigger that holds
+  const H = HO[s], c = ctrlOf(t), b = M.ball;
+  if (!c) return null;
+  const carry = b.state === 'held' && b.carrier === c && !c.bind, d = dirOf(t);
+  const cands = [];
+  if (la === 'Offload') cands.push('offload');
+  if (lb === 'Drop Goal') cands.push('drop');
+  if (carry && c.hold >= 0.8 && pressure(c) >= 5 && passAim(c, inputOf(t).world().y).far) cands.push('long');
+  if (sprintOn(t) && ((carry && gapAhead(c) >= 8) || (b.state === 'held' && b.carrier.team !== t && dist(c, b.carrier) <= 12 && cleanThrough(b.carrier, t)))) cands.push('sprint');
+  if (carry) {
+    let front = 99, ai = 99;
+    for (const q of M.players) { if (q.team === t || !onFeet(q) || (q.x - c.x)*d <= 0.5) continue; const dd = dist(q, c); if (Math.abs(q.y - c.y) < 3) front = Math.min(front, dd); if (!ringed(q)) ai = Math.min(ai, dd); }
+    if (front >= 3.5 && front <= 6) cands.push('step');
+    if (ai >= 3 && ai <= 7 && shownPass(c).to) cands.push('dummy');
+  }
+  for (const id of OPEN_HINTS) if (cands.includes(id) && !H.shown.has(id)) return id;
+  return null;
+}
+function hintOpenStep(s, t, la, lb) {
+  const H = HO[s]; if (!H) return;
+  if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s))) { H.cur = null; return; }
+  if (H.cur) { if (M.dclock < H.until) return; H.cur = null; }
+  if (M.dclock < H.last + OPEN_GAP) return;
+  const id = hintOpenPick(s, t, la, lb);
+  if (!id) return;
+  H.cur = id; H.shown.add(id); H.last = M.dclock; H.until = M.dclock + OPEN_SECS;
+}
+function syncHints(la, lb) {                               // la, lb: what seat 0's buttons read this frame (one player); two player reads each side's cue
+  if (!M) return;
+  for (const s of [0, 1]) {
+    const t = teamOfSeat(s);
+    if (t < 0) { renderHint(s, null); continue; }
+    if (M.two) { const cue = cueOf(t); hintOpenStep(s, t, cue === 'Offload' ? 'Offload' : '', cue === 'Drop Goal' ? 'Drop Goal' : ''); }
+    else hintOpenStep(s, t, la, lb);
+    renderHint(s, hintFor(s));
+  }
+}
+function keycapsFor(s, act) {                             // the keycaps a chip wears on a keyboard: the seat's own keys
+  const sch = seatScheme(s) || 'solo', R = sch === 'right', kc = code => (ARROW_KEY[code] ? `<kbd class="kc ar ${ARROW_KEY[code]}"></kbd>` : `<kbd class="kc">${KEYCAP[code]}</kbd>`);
+  if (act === 'a' || act === 'b' || act === 'c') return kc(KB[sch][act][0]);
+  if (act === 'x') return R ? kc('ArrowLeft') + kc('ArrowRight') : kc('KeyA') + kc('KeyD');
+  if (act === 'v') return R ? kc('ArrowUp') + kc('ArrowDown') : kc('KeyW') + kc('KeyS');
+  const d = dirOf(Math.max(0, teamOfSeat(s)));             // back: the key toward his own line
+  return kc(R ? (d > 0 ? 'ArrowLeft' : 'ArrowRight') : (d > 0 ? 'KeyA' : 'KeyD'));
+}
+const PAD_GLYPH = { a:'<i class="pad dia"><b></b><b></b><b class="on"></b><b></b></i>', b:'<i class="pad dia"><b></b><b class="on"></b><b></b><b></b></i>', c:'<i class="pad sh"></i>' };
+function chipHtml(s, ch) {
+  const dev = hintDev(s), cls = ch.act === 'a' || ch.act === 'b' || ch.act === 'c' ? ch.act : 'x';
+  const badge = dev === 'kb' ? keycapsFor(s, ch.act) : dev === 'pad' ? (PAD_GLYPH[ch.act] || '<i class="pad stick"></i>') : '';
+  const wide = (badge.match(/<kbd/g) || []).length > 1 ? ' wide' : /pad sh/.test(badge) ? ' mid' : '';   // a two-keycap badge (A D, the arrow pair) or the shoulder glyph hangs over the chip's right end: the chip pads out so the badge never sits on its own label
+  return `<span class="chip ${cls}${wide}">${esc(ch.label)}${badge ? '<span class="badges">' + badge + '</span>' : ''}</span>`;
+}
+function renderHint(s, h) {
+  hintShown[s] = h;
+  const el = $('hc' + s); if (!el) return;
+  const key = h ? JSON.stringify([h.title, h.rule, h.rows, h.kick, hintDev(s), seatScheme(s), teamOfSeat(s)]) : '';
+  const c = M && M.cut, dim = !!(h && h.kick && c && c.kind === 'goal' && c.g.hcOver);
+  el.classList.toggle('dim', dim); el.classList.toggle('two', !!(M && M.two));   // two player: the narrower limit, clear of the seat tags
+  if (key === hintKey[s]) return;
+  hintKey[s] = key;
+  el.hidden = !h;
+  if (!h) return;
+  const dev = hintDev(s);
+  el.classList.toggle('kick', h.kick); el.classList.toggle('notitle', !h.title); el.classList.toggle('badged', dev === 'kb' || dev === 'pad');   // badged: the chips wear keycaps or pad glyphs, which stand 9px above the row, so the rows start lower (the badges sat on the rule line)
+  $('hc' + s + '-t').textContent = h.title || ''; $('hc' + s + '-r').textContent = h.rule || '';
+  $('ht' + s).hidden = h.kick;                              // kick cards sit inside the stick zone: no tick a steering thumb could hit
+  $('hc' + s + '-b').innerHTML = h.rows.map(r => `<div class="hc-row">${r.chips.map(ch => chipHtml(s, ch)).join('<span class="hc-or">or</span>')}<span>${esc(r.text)}</span></div>`).join('');
+}
+function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines, Replay Tutorial
+  const pair = !!(M && M.two && mode === 'match');
+  $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair;
+  for (const s of [0, 1]) { const seg = $('pz-h' + s); if (seg && seg.children) [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === hintsOn(s)))); }
+  for (const s of [0, 1]) $('jt' + s).classList.toggle('off', !settings.twoHints[two.swapped ? 1 - s : s]);
+  const ps = penCtx && M && M.two ? seatOfTeam(penCtx.team) : 0, on = hintsOn(ps);
+  $('m-pen').classList.toggle('nohints', !on); $('ht-pen').classList.toggle('off', !on);
+  $('p-goal-s').textContent = $('p-goal').disabled ? 'Out of Range' : '3 Points';
+  $('h-replay').disabled = !settings.tut.length;
+}
+/* the tutorial */
+function tutMoment(c) { return c.duel ? c.kind : c.kind === 'goal' ? (c.g.watch || !isHuman(c.g.team) ? null : c.g.type === 'drop' ? 'drop' : 'goal') : c.kind; }
+function tutSeatOf(c) {                                    // whose first time it is: the duel's owner, the kicker, the feeding or throwing side's player, else the human in it
+  const t = c.duel ? c.own : c.kind === 'goal' ? c.g.team : c.kind === 'scrum' ? c.feed : c.team;
+  const s = seatOfTeam(t); return s != null ? s : seatOfTeam(1 - t);
+}
+function tutStart(c) {
+  const id = tutMoment(c); if (!id) return;
+  const s = tutSeatOf(c); if (s == null) return;
+  if (tutSeen(id)) return;
+  tutMark(id);                                             // remembered at its first time whether or not the card shows, so the first-time aids come once
+  if (!interactive() || !hintsOn(s)) return;
+  M.tut = { id, seat:s, step:0, cut:c };
+  renderTut();
+}
+/* a card's words name the control for the device: on a keyboard every key is a {code} token (KeyJ, Slash), which renderTut draws as a
+   keycap through tutHtml, as the hint chips do, so Player 2's / . , never read as punctuation in the sentence and A and D never as words */
+function tutHtml(text) { return text.split(/(\{[A-Za-z0-9]+\})/).map(part => (/^\{[A-Za-z0-9]+\}$/.test(part) ? `<kbd class="kc">${esc(KEYCAP[part.slice(1, -1)] || part.slice(1, -1))}</kbd>` : esc(part))).join(''); }
+function tutCards(id, s) {
+  const dev = hintDev(s), kb = dev === 'kb', pad = dev === 'pad', sch = seatScheme(s) || 'solo', R = sch === 'right';
+  const PAD = { a:'Bottom Button', b:'Right Button', c:'Shoulder' };
+  const key = act => '{' + KB[sch][act][0] + '}';
+  const name = (act, word) => (kb ? key(act) : pad ? 'the ' + PAD[act] : word);   // a keycap, the Bottom Button, or the button's own word
+  const flick = kb ? (R ? 'Tap an Arrow' : 'Tap {KeyA} or {KeyD}') : 'Flick the Stick', steer = kb ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : 'the Stick';
+  switch (id) {
+    case 'past': return [['Get Past', 'Beat the Last Man'], ['Get Past', flick + ' Away From Him When the Ring Turns Gold']];
+    case 'pass': return [['Key Pass', 'Two on One'], ['Key Pass', 'Press ' + name('a', 'Pass') + ' on Gold, or ' + name('b', 'Dummy') + ' If He Drifts to Your Runner']];
+    case 'tackle': return [['Tackle', 'You Are the Last Man'], ['Tackle', 'Press ' + name('a', 'Tackle') + ' When the Ring Turns Gold. He May Step']];
+    case 'block': return [['Block', 'Their Pass Crosses Your Man'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
+    case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
+    case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
+    case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', 'Steer With ' + steer + ', Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
+    default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', Steer With ' + steer + ', Let Go in the Gold Before They Reach You']];
+  }
+}
+function renderTut() {
+  const T = M && M.tut, el = $('m-tut');
+  if (!T) { el.hidden = true; return; }
+  const [title, text] = tutCards(T.id, T.seat)[T.step], eb = $('tu-eye');
+  eb.textContent = M.two ? 'Player ' + (T.seat + 1) + ' · Tutorial' : 'Tutorial'; eb.classList.toggle('p1', M.two && T.seat === 0); eb.classList.toggle('p2', M.two && T.seat === 1);
+  $('tu-title').textContent = title; $('tu-text').innerHTML = tutHtml(text);
+  $('tu-row').hidden = T.step !== 0; $('tu-play').hidden = T.step === 0;
+  setFocus(null); el.hidden = false;
+}
+function tutAdvance() { if (!M || !M.tut) return; if (M.tut.step === 0) { M.tut.step = 1; renderTut(); } else tutPlay(); }
+function tutPlay() {                                        // Play (or Skip): the close-up runs from its first frame
+  if (!M || !M.tut) return;
+  const c = M.tut.cut; M.tut = null; $('m-tut').hidden = true;
+  if (c && c.kind === 'goal' && c.g.type === 'drop' && !c.g.out) { c.g.started = false; c.g.stage = 'hold'; c.g.m = 0; c.g.pt = 0; }   // the thumb still down carries over as at the press; one lifted needs a fresh press
+  if (c && c.duel) { c.slowFrom = c.t; c.acc = 0; }
+  for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.flick = 0; }
+}
+for (const s of [0, 1]) {
+  $('ht' + s).addEventListener('click', () => setHints(s, false));
+  $('jt' + s).addEventListener('click', () => setHints(s, !hintsOn(s)));
+  [...($('pz-h' + s).children || [])].forEach((b, i) => b.addEventListener('click', () => setHints(s, i === 0)));
+}
+$('ht-pen').addEventListener('click', () => { const s = penCtx && M && M.two ? seatOfTeam(penCtx.team) : 0; setHints(s, !hintsOn(s)); });
+$('m-tut').addEventListener('click', e => { if (e.target && e.target.closest && e.target.closest('button')) return; tutAdvance(); });   // a tap anywhere advances; the buttons speak for themselves
+$('tu-next').addEventListener('click', tutAdvance);
+$('tu-skip').addEventListener('click', tutPlay);
+$('tu-play').addEventListener('click', tutPlay);
+$('h-replay').addEventListener('click', () => { tutReset(); renderHintSwitches(); });
 
 /* penalty choice: the card's kick is built now, so the card and the kick share one wind */
 let penCtx = null;
@@ -4905,6 +5347,7 @@ function openPenalty(team, x, y, dP) {                     // the card for the h
   const s = M.two ? seatOfTeam(team) : null, eb = $('p-eyebrow');   // two player: the card names its player, in his colour, and only his seat acts on it (the mouse always can)
   eb.textContent = s == null ? 'Penalty' : 'Penalty · Player ' + (s + 1); eb.classList.toggle('p1', s === 0); eb.classList.toggle('p2', s === 1);
   navOnly = s;
+  renderHintSwitches();                                    // the sublines (3 Points, or Out of Range) and the tick, for this player's Hints
   setFocus(null);
   $('m-pen').hidden = false;
 }
@@ -4966,13 +5409,14 @@ function pause() {
   $('pz-score').textContent = M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash)
   $('pz-quit').textContent = 'Quit Match'; quitArmed = false;
   if (two.lost && two.lost.length) seatLost(two.lost[0]); else $('pz-seat').hidden = true;
+  renderHintSwitches();
   setFocus(null);
   $('m-pause').hidden = false;
 }
 function resume() {
   if (!M) return;
   M.paused = false; $('m-pause').hidden = true;
-  for (const inp of inputs) { inp.keys.clear(); inp.aPressed = inp.bPressed = inp.cPressed = false; inp.cDown = false; inp.flick = 0; }
+  for (const inp of inputs) { inp.keys.clear(); inp.aPressed = inp.bPressed = inp.cPressed = false; inp.cDown = false; inp.flick = 0; inp.gest = null; }
   for (const s of M.side) s.pass = null;
   const c = M.cut;
   if (c && c.duel && !c.after) duelResume(c);
@@ -4995,7 +5439,7 @@ if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOri
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
 /* home. Quick Match is the gold button and the keyboard focus. */
-const BOOL = { sound:1 };
+const BOOL = { sound:1, hints:1 };
 function renderHome() {
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
@@ -5032,7 +5476,7 @@ $('b-champ').addEventListener('click', () => {
   else openTeams('champ');
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
-$('b-help').addEventListener('click', () => showScreen('s-help'));
+$('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
@@ -5073,6 +5517,7 @@ function renderJoin() {
     [...$('j-diff' + s).children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === twoSel.levels[s])));
   }
   $('j-pad').hidden = two.seats[0].dev === 'pad' && two.seats[1].dev === 'pad';
+  renderHintSwitches();                                    // the Hints ticks: by half, so they follow Swap Players and show the saved state when the screen opens
 }
 function seatsChanged() { if (two.on && !$('s-join').hidden) renderJoin(); }   // a pad claiming a seat, Use Keyboard, Swap Players or a pad unplugged: the join screen follows
 function startTwo() { navOnly = null; startMatch(twoSel.teams[0], twoSel.teams[1], false, { two:true, levels:twoSel.levels.slice() }); }
@@ -5324,10 +5769,12 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     duelCam, duelPose, camAt, startMatch, exitMatch, pickOwner,
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
-    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, goHome, exitMatch, setDesk, isDesk },
+    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
+    DUEL_SLOW, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
-    LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, handleUser, userStep },
+    LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
+    MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,

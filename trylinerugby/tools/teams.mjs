@@ -172,21 +172,21 @@ function playOut() {
   const played = JSON.parse(JSON.stringify(X.champ()));
   X.setChamp(null);
   X.restore({
-    settings: { half: 2, diff: 0, sound: false, duels: false, kickSeen: true, pool: 1 },
+    settings: { half: 2, diff: 0, sound: false, duels: false, hints: false, twoHints: [false, true], tut: ['goal', 'bogus', 'past'], pool: 1 },
     champ: played,
     custom: [{ name: 'Wasps', pace: 9, power: 9, handling: 9, kicking: 9 }],
   });
   const s = T.debug.settings();
-  ok(s.duels === true && s.half === 2 && s.diff === 0 && s.sound === false && s.kickSeen === true && s.pool === 1, 'settings load, and an old duels-off save is turned on');
+  ok(s.duels === true && s.half === 2 && s.diff === 0 && s.sound === false && s.hints === false && s.twoHints[0] === false && s.twoHints[1] === true && s.tut.join() === 'past,goal' && s.pool === 1, 'settings load (Hints, each player\'s Hints, the tutorial moments seen in the game\'s order with an unknown one dropped), and an old duels-off save is turned on');
   const c = X.champ();
   ok(c && c.round === 1 && c.results.length === 1 && JSON.stringify(c.fixtures) === JSON.stringify(played.fixtures), 'fixtures, results and the round load back');
   ok(c.teams.find(t => t.id === 'ENG').alt === '#1b2747' && c.teams.filter(t => t.home).length === 4, 'change kits and home nations survive a reload');
   ok(X.standings(c).reduce((a, r) => a + r.P, 0) === 6, 'a reloaded table still adds up');
   ok(X.custom().length === 1 && X.custom()[0].name === 'Wasps' && X.custom()[0].pace + X.custom()[0].power + X.custom()[0].handling + X.custom()[0].kicking === 4 + X.BUDGET, 'a saved team is kept and held to the budget');
 
-  X.restore({ settings: { half: 9, diff: 'hard', sound: 0, duels: false, pool: 7, kickSeen: 'yes' } });
+  X.restore({ settings: { half: 9, diff: 'hard', sound: 0, duels: false, pool: 7, hints: 'yes', twoHints: [true], tut: 'past' } });
   const s2 = T.debug.settings();
-  ok(s2.half === 2 && s2.diff === 0 && s2.sound === false && s2.duels === true && s2.pool === 0 && s2.kickSeen === true, 'bad settings are ignored and duels stay on');
+  ok(s2.half === 2 && s2.diff === 0 && s2.sound === false && s2.duels === true && s2.pool === 0 && s2.hints === false && s2.twoHints[1] === true && s2.tut.join() === 'past,goal', 'bad settings are ignored (a string for Hints, a short twoHints, a string for the tutorial) and duels stay on');
   X.restore({ champ: { user: 0, round: 3, teams: [], fixtures: null, results: {} } });
   ok(X.champ() == null && X.custom().length === 1 && T.debug.settings().half === 2, 'a broken championship is dropped and the rest of the save stays');
 

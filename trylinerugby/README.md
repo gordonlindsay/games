@@ -39,8 +39,9 @@ nations, a local Surrey club, or a team you make yourself.
   - **Quick Match is the first button** (2026-10-14). It is the gold one, and it takes the keyboard focus.
     Championship sits under it, beside How to Play. With one under way the button reads Continue Championship, and
     the line under it is your team and the round.
-- **Saving** (2026-10-14): half length, difficulty, sound, up to four teams you make, and the championship are kept
-  in this browser (`localStorage`, key `tryline.v1`). The championship stores its six teams, the five rounds of
+- **Saving** (2026-10-14): half length, difficulty, sound, Hints (and each player's Hints in two player, by keyboard
+  half like each player's Difficulty), the tutorial moments this device has seen, up to four teams you make, and the
+  championship are kept in this browser (`localStorage`, key `tryline.v1`). The championship stores its six teams, the five rounds of
   fixtures, every result and the round you are on. Continue Championship resumes the next match. Start Fresh on the
   table, confirmed with a second tap, wipes that championship and leaves your settings and teams. A missing or broken
   save is ignored. A match in progress is not stored mid-play: quitting or reloading leaves that fixture to play
@@ -163,30 +164,103 @@ nations, a local Surrey club, or a team you make yourself.
   - **Roles.** Balance terms are keyed by role, not team number: `cpuSide(t)` plays the CPU terms (cpuSpeed, cpuTackle, the
     intercept and turnover edges, the scrum pack's formula, the CPU jumper, the CPU kicker's spread) at its own level, which
     for a CPU side is the human's it plays against; a human side plays the human terms at the level it picked. Two player has
-    no CPU terms at all. The scrum is a pack a side (each human's taps on its own slot, its stick held forward in its own
-    direction) and the lineout a jumper a side. In two player an AI tackler reads `TWO.tackle` at the carrier's level (0.72 /
+    no CPU terms at all. The scrum is a pack a side (each human's taps on its own slot; the stick plays no part) and the
+    lineout a jumper a side. In two player an AI tackler reads `TWO.tackle` at the carrier's level (0.72 /
     0.80 / 0.88: the scoring lever) and an AI interceptor `cpuIntercept` at the passer's level, as the CPU does against a human.
     **AI v AI and the menu demo are now fair:** team 0 used to keep the human terms there because `team === 1` was the test for
     the CPU. `sim.mjs` is re-baselined below.
-  - Checked by `tools/twoplayer.mjs` (699 asserts on seeds 1, 2 and 11, a paired mirrored-bot symmetry run with the set pieces
+  - Checked by `tools/twoplayer.mjs` (708 asserts on seeds 1, 2 and 11, a paired mirrored-bot symmetry run with the set pieces
     contested and the chooser's hand driven through the real key and stick paths, a lock sweep under `--lock`, and the full gate
     under `--sym 400`); every one-player tool's output is byte-identical to `main` (3f11088) on the spec's golden set, `sim.mjs`
     alone moving, by the fairness change.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
+- **Playtest fixes** (2026-10-17). Gordon played on his phone: scrums were lost on Normal, passing was flat with no
+  gain, there was no way to step or dummy in open play, duels came too fast to react to, and nothing on screen said
+  what to do. Six changes, each measured (Measured baseline, below):
+  - **Scrums: Push alone drives the shove.** `scrumPush` used to scale the taps by the stick's direction (1 forward,
+    0.55 at rest, 0.2 held back) and nothing on screen said so, so a thumb off the stick got 55% of its shove and a
+    thumb still pulled back from chasing 20%; and a steal on Normal needed about 8 taps a second, while a phone thumb
+    manages 5-7. Now the taps alone are the shove (`rate/1.25`: full shove at 5 a second, the most at about 6.5), the
+    stick is not read, and the one penalty line is `SCRUM_DOM` 2.4m (from 2.0; the bar fills exactly there and the
+    steal line sits half way), which keeps penalties on your own ball near where they were while steals rise. The
+    levels are untouched. On Normal, 7 taps a second with a Good Hit and the thumb off the stick: your put-in kept
+    100%, theirs stolen about a third (31-35%), no penalties against; a penalty on your own ball 7-13%. The rows
+    with the stick at rest, forward and back are identical, on both sides and in both seats.
+  - **Passing leads the receiver.** A pass used to be thrown at where the receiver stood, and while it was in the air he
+    braked for it (the Chasers bug, on the attack), so a completed pass was caught about 5m behind the passer at 3.4
+    m/s with 38% of catches standing; a thumb left on the stick dropped about 21 passes a match. Now the ball goes
+    where he will be running on (`leadPass`: pick-up at 18 m/s² to top speed, half his sideways drift kept, capped
+    0.4m behind the passer and never forward after the handling error), he runs onto it whatever the stick says
+    (`runOnTarget`, with pursue; the stick takes over at the catch; a won Key Pass's sure pass is as it was), and the
+    support slots lead upfield while the ball is in the air so the line keeps running. The CPU's receivers run on
+    at 0.65 of top speed (`RUNON.cpu`, the balance lever); the Key Pass runner box is 7.5m (from 6). Your passes are
+    now caught about 2.6m behind the passer at 5.7 m/s, 4% standing, 0–0.17 dropped a match; the CPU's at about
+    5 m/s. More tries are scored at every level with the win rates held on Easy and Normal; two player rises to
+    about 9.4 tries a match (the investigation's estimate was 8.5; accepted; `TWO.tackle` is the lever to pull it back); the Tackle duel gets rare (about 0.15 a
+    match from 0.6, accepted for now); AI v AI scores more too (sim.mjs re-baselined below).
+  - **Side Step and Dummy, on the stick.** The old open-play step was a turn-rate test (`p.turn`) that a single flick on
+    the floating stick could never reach, and most of its 53 fires a match came on the first step after a catch. It is
+    gone. **Side Step** is one sharp flick across the run near a tackler (within 4m): x0.65 tackle odds for 0.35s and a
+    5 m/s dart along the stick, with a 1.25s cooldown, tagged Side Step. **Dummy** is a quick pull back and push on
+    along the run with the ring on a teammate: the nearest AI defender ahead (1.5-9m) buys it 90 / 75 / 60% of the time
+    by your level and drifts onto the man in the ring for 0.6s, wrong-footed and unable to tackle for 0.4s (tagged
+    Dummy, or Not Fooled); you keep the pace you had before the pull; 2.5s cooldown, kept on the carrier at the match
+    clock (a lifted thumb clears the gesture's shape, never the cooldown). No new button; both are
+    world-relative (`gestureStep`, per human slot), so keys, pads and either seat read the same: a fresh across key is
+    a flick, and on keys the pull must be the back key itself (forward let go and pressed again is not a Dummy). The
+    CPU dummies on Hard only, about 4 a match, never selling your ringed man, and draws nothing in AI v AI. Every
+    lever is in `MOVES`, beside `CONTACT`. The Key Pass duel keeps its small-button Dummy.
+  - **Duels start in slow motion** (Gordon: they came too fast to react to; his choice "slow mo with longer slow for easy
+    v hard"). After the slide-in the run-in plays at 0.4x for 1.2 / 0.9 / 0.6s of real time by the timer's level, then
+    ramps to full speed (`DUEL_SLOW`: a 0.10s scene ramp, done 0.03s before the ring opens), so the gold window, the
+    tells and the verdict are untouched in scene time: the scene clock steps whole frames, held back by an
+    accumulator, and the drawing adds the fraction back so the motion is smooth. A bot acting on the scene clock sees
+    exactly the duel it always saw (`bot.mjs` 60 a level at SEED 1 is byte-identical with and without it, `frozen`
+    aside); a person gets real time to read which duel it is. The ring now opens about 1.6 / 1.5 / 1.35s after the cut
+    (Easy / Normal / Hard) instead of 0.84 / 0.89 / 0.93; Easy's early ring clips its slow phase to about 1.1s on a Get
+    Past. Resume before the ring opens starts the slow phase again from there. Instant mode has no close-up. Measured
+    with a modelled human under Measured baseline: a player who needs 0.6s to get his bearings goes from 27% to 70% of
+    Normal duels, a child needing 0.8s from 8% to 71%, and the bots don't move.
+  - **Hints** (Gordon's "Close-Ups and Key Moves"). A card in the top corner (Player 1's top-left, Player 2's top-right
+    in his colour) names each close-up and its one control for the device in use: every duel from the cut to the
+    verdict (the chooser's card to his lock in two player), the scrum to its result ("Your Ball" or "Steal Their
+    Ball": Push, Hit on Set; Push, Then Tap Fast), the lineout to the catch (Jump, Ball Halfway), a goal kick or drop
+    goal from the cut-in to the strike (under the wind chip, no tick, as it sits in the stick zone), and once a match
+    each in open play for three seconds, four seconds apart: Long Pass, Sprint, Side Step, Dummy, Offload, Drop Goal,
+    when the chance is there. The chip is the on-screen button's own look with a keycap or pad glyph badge for the
+    device, so a keyboard player reads J or A D and a controller the diamond's lit dot. A 44px tick on the card turns
+    that seat's Hints off; the home has a fourth row, Hints On | Off, under Sound; the pause card a row each (two in
+    two player); the join cards a tick each; the penalty card a tick and, while Hints are on, a subline under each
+    choice (3 Points or Out of Range, Lineout Upfield, Play On Now). Every word is Title Case; every duel card is one
+    row, measured not to cover a figure or the ring at 667x375 up to 932x430 (`hints.mjs` pins it over bot matches).
+    Nothing random is drawn and `dropZone` is never run again: the open-play triggers read the labels the HUD computed.
+  - **A first-time tutorial** (Gordon's "Pause and Step Through"). The first time each duel kind, the scrum, the lineout,
+    a goal kick and a drop goal comes up on this device, with Hints on, the close-up holds its first frame under a
+    card: "Get Past: Beat the Last Man", then the control and its timing for the device ("Flick the Stick Away From
+    Him When the Ring Turns Gold"; "Tap A or D" on a keyboard with A and D drawn as keycaps, as the hint chips do (every
+    key a card names is a keycap, so Player 2's / and . never read as a full stop and a typo), "the Bottom Button" on a
+    pad, Player 2's own keys in two player). Skip | Next, then Play, balanced 44px buttons; a tap anywhere, or the pass key or button, advances;
+    either player can skip; the world and the clock are frozen and nothing is judged. The chosen rule: it shows while
+    that seat's Hints are On (Hints Off is one switch for both), and the moment is remembered either way, per device,
+    in `settings.tut`, so the old `duelSeen` and `kickSeen` flags are gone: the first-duel window aid (+0.08s) now
+    comes once per duel kind and the first-kick path aid once for a goal kick and once for a drop, keyed off the same
+    memory. Replay Tutorial on How to Play forgets them all (dim when there is nothing to replay). A drop goal's thumb
+    still down carries over Play as at the press; one lifted under the card needs a fresh press.
+
 ## Controls
 
 | | With the ball | Without it |
 |---|---|---|
-| Stick | Run. Flick sideways near a tackler to step him | Run |
+| Stick | Run. Flick sideways near a tackler to Side Step. Pull back and push on for a Dummy: the nearest defender drifts to the man in the white ring | Run |
 | Big button | Pass to the ringed teammate. A tap is a normal pass; hold past 0.18s and the ring turns gold for a long pass to the next man out (it throws itself at 0.6s). Tilt to pick a side. Held in a tackle it reads Offload on the press, when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
 | Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the defender nearest the ball |
 | Sprint | Hold for a burst of speed (x1.05 with the ball). The ring is the meter: it drains while you hold (and through the ease-out after you let go) and refills when you let go | Hold to run a man down (x1.20). A press moves the ring to the man best placed to chase if yours is down or over 4m further off. It is dim when a press would do nothing, and then it does nothing |
 
-Keyboard: arrows or WASD, J, K, L (Sprint), P to pause. J tapped is a pass; J held is a long pass. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
+Keyboard: arrows or WASD, J, K, L (Sprint), P to pause. Tap across near a tackler to Side Step; tap back (the key toward your own line, with forward held or let go) for a Dummy. J tapped is a pass; J held is a long pass. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
 
-Controller (any computer browser with the Gamepad API): stick or d-pad to run, bottom button Pass, right button Kick, a shoulder or trigger Sprint, Start pauses. Press any button to connect it; it also drives the menus.
+Controller (any computer browser with the Gamepad API): stick or d-pad to run (flick across near a tackler to Side Step, pull back and push on for a Dummy), bottom button Pass, right button Kick, a shoulder or trigger Sprint, Start pauses. Press any button to connect it; it also drives the menus.
 
 Two player on one keyboard: Player 1 W A S D with F G H (Pass, Kick, Sprint), Player 2 the arrows with / . , (or Numpad 1 2 3). A controller takes a seat with one press on the join screen, and the other seat keeps the solo map. The Pass key (F or /) is also Tackle, Push at a scrum, Jump at a lineout and the goal kick (hold it, let go in the gold); it holds for a long pass. The Kick key (G or .) is also Switch, Drop Goal (hold it in range) and Dummy. Sprint (H or ,) is a hold on that side's own meter. P, Escape or Start pauses from either seat. In a duel the other player guards, drifts or steps with his run keys or stick before the ring opens, or presses Kick for a Dummy as the passer. On the menus and cards in two player W A S D and the arrows move the ring, F and / press, G, . and Escape go back; a pad's stick, bottom and right buttons do the same. The join screen's legend lights each key while it is held: a laptop keyboard that can't hold both players' keys at once shows it there, and a second USB keyboard fixes the rollover (the browser can't tell keyboards apart, so nothing needs setting).
 
@@ -200,14 +274,17 @@ Checked with `bot.mjs`, 36 matches a difficulty at SEED 1 and again at SEED 2 (7
 
 Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock freeze while it runs.
 
-- **Scrum:** the referee calls Crouch, Bind, Set. Press Push on Set for a good hit, then tap it fast with the stick
-  held forward. The scrum moves with your shove, and the ball comes out where it ends up. Out-shove them on their
-  ball to steal it. Dominate to win a penalty, or a pushover try within 8m of their line. Not pushing at all loses the
-  ball, nothing worse.
+- **Scrum:** the referee calls Crouch, Bind, Set. Press Push on Set for a good hit, then tap it fast. The taps alone
+  are the shove, on every device and in both seats (see Decided, 2026-10-17). The scrum moves with your shove, and the
+  ball comes out where it ends up. Out-shove them on their ball to steal it. Dominate to win a penalty (the bar fills
+  exactly at the penalty line, `SCRUM_DOM` 2.4m; the steal line is half way), or a pushover try within 8m of their line.
+  Not pushing at all loses the ball, nothing worse.
 - **Lineout:** one jumper each in the middle. The hooker dummies, then throws. Press Jump so your jumper is at full
   height when the ball arrives. On their throw, beating their jumper to it is a steal.
 - **Duels** fire at last-man moments, and only when you're running at the man. Steer away and none fires. There's
-  at most one every 30s, never the same kind twice, 2–4 a half, plus one Last Play bonus after the hooter.
+  at most one every 30s, never the same kind twice, 2–4 a half, plus one Last Play bonus after the hooter. Each one's
+  run-in plays in slow motion after the slide-in (0.4x for 1.2 / 0.9 / 0.6s real by your level, `DUEL_SLOW`), ramping
+  to full speed before the ring opens; the window itself is the length it always was.
 
 | Duel | When | You | Win |
 |---|---|---|---|
@@ -226,16 +303,41 @@ hand defends as the CPU does. His hand shows live until the lock, `DUEL_LOCK` be
 Easy, 0.32 Normal, 0.24 Hard; the pump at 0.75s in a Block), and is fixed from there. The owner's timing is judged exactly as
 against the CPU. The sweep that pins the leads is under Measured baseline.
 
+### Hints and the tutorial
+
+The hints card (`#hc0` top-left, `#hc1` top-right for Player 2) names the close-up and its control: the duel's name and
+"Flick on Gold" / "Pass or Dummy On Gold" / "Tackle On Gold" / "Block On Gold" (the chooser's "Guard a Shoulder", "Drift
+or Rush", "Step Left or Right", "Dummy: Tap It" in two player), the scrum's two rows, the lineout's one, the kick cards
+("Let Go in the Gold": Steer the Arrow, Hold It; "Before They Reach You": Steer, Let Go in the Gold), and the open-play
+cards (Long Pass: Skips a Man, Hold It; Sprint: Hold It; Side Step: Near a Tackler, Flick Across; Dummy: Fakes the Pass,
+Pull Back, Push On; Offload: As You're Tackled, Tap It; Drop Goal: In Range, Hold It), with Tap Across / Tap Back and
+Step on Gold on a keyboard. The tick on the card, the Hints row on the home and the pause card, the join cards' ticks and
+the penalty card's tick all set the same thing (`settings.hints`, or `settings.twoHints` by half in two player) and save
+it as they are pressed. The card's limit is `min(340px, 50% - 116px)` from 12px in; in two player (`.hc.two`) the
+scorebug's seat tags reach 116px either side of centre, so Player 1's limit is `50% - 140px` and Player 2's, 62px in by
+the pause button, `50% - 190px`: 12px short of the tags from either side (it used to reach FRA at 683 wide), and a card
+its limit binds wraps its rule and its row rather than spilling. On a keyboard or a controller the card is `badged`: its
+rows start 7px lower so the keycap badges clear the rule line, and a chip with a two-keycap badge (A D, the arrows) or the
+shoulder glyph pads out (`wide`, `mid`) so the badge never sits on its own label. The Step Left | Step Right plates flip
+below the stick whenever their top would reach the card's bottom (`platesFloor`), not only the clock line, so a thumb a
+little high on a phone no longer slides them under Flick on Gold. The pause card's two Hints rows share one grid, so both
+On | Off controls start on the same line. The tutorial card (`#m-tut`) holds the first close-up of each kind on this
+device: Skip | Next, then Play; while it holds, two player re-centres only the owner's stick (as the grace does), so the
+chooser's push during the card counts on a pad as it does on keys. Replay Tutorial is on How to Play. The words are
+pinned by `hints.mjs` and `tutorial.mjs`.
+
 ### Contact
 
-Every number here is in three one-line constants in `index.html`, `CONTACT`, `RUCK` and `SPRINT`, and the harness
-overrides them from the environment: `CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' node tools/bot.mjs`.
+Every number here is in five one-line constants in `index.html`, `CONTACT`, `RUCK`, `SPRINT`, `RUNON` (passing) and
+`MOVES` (the Side Step and the Dummy), and the harness overrides them from the environment:
+`CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' MOVES='{"step":{"push":4}}' node tools/bot.mjs`.
 Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player shims (`isHuman`, `inputOf`, `ctrlOf`,
 `levelOf`, `setCtrl`), never `team === 0` or `M.ctrl`, so a second human seat slots in without a rewrite.
 
 - **Commit.** An AI defender commits within 1.5m of the carrier; your ringed man commits automatically within 1.35m
   (0.58 / 0.42 / 0.42 by level) and dives on Tackle within 2.8m (0.66 within 1.7m, 0.50 beyond). The roll is drawn at
-  the commit: `tackleChance` as before, x1.10 side-on, x0.75 from behind, x0.65 against a stepping carrier. The first
+  the commit: `tackleChance` as before, x1.10 side-on, x0.75 from behind, x0.65 (`MOVES.step.odds`) against a stepping
+  carrier (0.35s after a Side Step, his or the AI's). The first
   man to commit takes the carrier; nobody else rolls while he is bound. A dive from more than 0.3m behind is an
   **Ankle Tap**, a flat 0.55 and always Soft.
 - **The tier,** if it sticks: **Big Hit** 0.14, +0.04 a power point, +0.03 front-on with closing speed over 6 m/s,
@@ -321,6 +423,68 @@ CPU sprints a match by level: 2.4 / 2.2 / 2.9 (2.1s of sprint on Hard). Big Hits
 Your offloads rose from 6.2 to 8.6 a match once the label and the press picked the same receiver (a fifth of the
 bot's presses on a lit Offload had been doing nothing). Win rates with and without Sprint are in Measured baseline
 below.
+
+### Passing
+
+Every lever is in `RUNON` (`RUNON='{"cpu":0.6}' node tools/bot.mjs` tries a value without an edit).
+
+- **The lead** (`leadPass`, shared with `blockSpec` so the Block close-up's lane is the line the ball takes): the ball is
+  aimed where the receiver will be if he runs on upfield from his upfield speed now, picking up at 18 m/s² to top speed
+  × pace (1 for a human's receiver, `RUNON.cpu` 0.65 for the CPU's), keeping half his sideways drift, iterated four times
+  on the flight time. The landing spot is capped 0.4m behind the passer at release; the handling error is added after
+  that, and the spot is capped again at the passer's line, so no pass lands forward (it used to, 0.1% of the time by up
+  to 0.27m, because the error came after the clamp). A won Key Pass's sure pass is aimed and sought exactly as before.
+- **The receiver runs onto it** (`runOnTarget`): while a pass to him is in the air he heads for the landing spot at
+  min(top speed × pace, distance left / time left), pursuing, so he arrives with the ball at pace instead of braking for
+  it. Your receiver does this whatever the stick says, as a won Key Pass already did; the stick takes over at the catch.
+  A thumb pressed toward touch no longer drops the ball.
+- **The line keeps running**: while a pass is in the air the support slots round the landing spot carry an upfield
+  lead of 0.95 × the receiver's top speed × `RUNON.line` 0.45s. Without it the line pulls up round the spot: your
+  supports fall to a third of their speed during the flight and the CPU's to about 0.5 m/s.
+- **The Key Pass runner box** is `RUNON.kpBack` 7.5m behind the carrier (from 6): with the ball moving faster the line
+  sits deeper, and at 6m Key Passes fell from 0.7 to 0.2 a match.
+- Checked by `tools/passing.mjs` (28 asserts): the lead and its exact mirror for team 1, a CPU passer leading less (under
+  0.9 of the human's lead, measured 0.83; the human's is taken before the CPU's pass is staged, which parks team 0 40m away),
+  5,000 random staged passes never landing forward, the receiver catching within 0.6m of the spot at pace with the
+  stick upfield, toward touch, let go and pulled back, an AI receiver at his side's pace, the sure pass's target and
+  seek unchanged to the bit, the line in the air (your supports keep at least 0.8 of their speed, the CPU's stay
+  moving), the Block lane, and a census guard over 12 bot matches a level with the thumb holding its direction.
+
+### Side Step and Dummy
+
+Every lever is in `MOVES` (`MOVES='{"step":{"push":4}}' node tools/bot.mjs`). `gestureStep` runs once a step for each human
+slot after `userStep`, only while his ringed man carries in open play with neither Pass nor Kick held (both aim with the
+stick). It reads `inputOf(t).world()` only: L = j.y across the pitch, F = j.x × dirOf(t) along the run, so either team,
+either seat, touch, pad and keys are one rule. The history is cleared at a new carrier, at any step he is not carrying in
+open play (a cut, a set piece, the ball in the air: `M.stepN` counts every update, close-ups included, and a gap resets it),
+on a lifted thumb, on the stick's restore after a duel, at `newMatch`, on a seat change and on resume.
+
+- **Side Step.** The last 4 steps of L are kept. It fires toward sign(L) when |L| ≥ 0.45, |j| ≥ 0.6 and L has risen 0.45
+  inside the window; it is armed from each carry, any flick disarms it (acting or not: outside a tackler's reach a flick
+  is steering), and it re-arms once |L| < 0.3. It acts with a standing opponent within 4m, 1.25s since the last step
+  (side back to -0.9) and 0.10s on the ball: `side = 0.35` (x0.65 tackle odds while it lasts, no Get Past or Key Pass
+  cut-in), a 5 m/s dart along the stick (the AI's own step stays 4), the Side Step tag, the whoosh and a 15ms buzz on
+  his seat. A Pass inside 0.15s drops the tag (that flick was an aim). A fresh up or down key is a flick on its own.
+- **Dummy.** The run held at F ≥ 0.7 for 0.20s, F pulled to ≤ 0.3 within 0.15s, then back to ≥ 0.6 within 0.30s,
+  with the ring on a teammate (`shownPass(c).to`) and a standing AI defender ahead within 1.5-9m who is not a human's
+  ringed man; 2.5s cooldown, on the carrier (`c.dumAt` against `M.dclock`, as the CPU's is), so a lifted thumb, a pause
+  or a duel's restore clears the gesture's shape but never the cooldown (inside `inp.gest` it was one Dummy every 0.3-0.5s
+  with a lift between). He bites with chance `bite[level]` 0.9 / 0.75 / 0.6 at the carrier's level: for 0.6s his
+  `computeTargets` target is the man in the ring (`p.bite`, `p.biteTo`), wrong-footed (x0.5 pace for 0.5s), shoved
+  3 m/s that way and unable to tackle for 0.4s; the carrier keeps the pace he had before the pull. Tagged Dummy
+  (with the whoosh and buzz) or Not Fooled. On keys the pull has to be a fresh press of the back key (A or Left
+  attacking right, D or Right attacking left), with forward held or let go.
+- **The CPU** dummies from `aiCarrier`'s think when its nearest man ahead is 2.5-7m off, `bestReceiver` exists and 2.5s
+  have passed, with chance `cpu[level]` 0 / 0 / 0.04 a think (Hard only, about 4 a match), only when a human
+  defends, so AI v AI draws nothing (`sim.mjs` is byte-identical to the build before it); it never sells your ringed man.
+- **Measured** (`.claude/specs/scratch/feedback/build/del.mjs`, 500 child-like thumb paths each through the game's own
+  floating stick into a staged carry): a single flick fires the Side Step 91% of the time (median 67ms from the
+  gesture's start), flick-and-return 90%, a double tap 95% (on its first leg), back-and-on fires the Dummy 99%
+  (217ms) and the Side Step never, a waggle fires a step on its first leg, a slow swerve 6%, a lift and replace nothing.
+  On keys a single tap across fires 100% at once and back tapped with forward held is a Dummy 100% (100ms); forward
+  let go and pressed again is nothing. False fires from ordinary steering (`ff.mjs`, 40 Normal matches a device model)
+  are under Measured baseline.
+- Checked by `tools/moves.mjs` (95 asserts) and additions to `contact.mjs` and `duels.mjs`.
 
 ### Goal kicks
 
@@ -449,22 +613,40 @@ a charger.
 - `index.html` is the whole game in one page. GitHub Pages serves it from `main`.
 - `tools/` runs the engine headless in Node. `SEED=n` makes a run repeatable. Run the tools after any change to
   speed, tackling, AI, set pieces or duels.
-  - **`node tools/duels.mjs`:** 104 asserts. It checks:
+  - **`node tools/duels.mjs`:** 190 asserts (SEED 1 unless set). It checks:
     - every duel fires from a staged position, and none fires when you steer away;
     - the world freezes during a close-up;
     - the Step Left / Step Right direction pin;
     - the sure-pass target, and that the Key Pass burst runs upfield;
     - the three Dummy outcomes;
     - outcomes, fallbacks and the gate;
-    - that scrums release at the mark.
+    - that scrums release at the mark;
+    - the scrum (2026-10-17): the stick at rest, forward and back giving the same shove at every step and the same result
+      (home side and one player as the away side), the Normal rates at 6 and 7 taps a second with and without a Good Hit
+      (your put-in kept, theirs stolen 20-45%, no penalties against), the steal order Easy > Normal > Hard, the penalty
+      line at `SCRUM_DOM` and the steal line at 1.2m, the Pushover from 10m out, the same line in `updateScrum` (both packs
+      stilled, a shove staged 0.2m short runs on, at the line it ends on the next step) and in `drawScrum`'s bar (a quarter
+      full at 1.2m, half at the line), 8 taps a second winning a penalty or pushover on your own put-in over 10% of the time
+      (0% with the scrum ending at the old 2.0), and that neither the Help page nor the README tells the player to hold the
+      stick;
+    - the Key Pass runner box (7m fires, 8m is a Get Past), and the gesture history cleared by the stick's restore after a duel;
+    - slow motion (2026-10-17): for every kind at every level, the windows, tells, plan, verdict, judged time and random draws
+      are the same with and without it on one seed, the scene clock is always on a whole frame and the slide-in is not slowed,
+      the ring opens about 0.6 x secs later in real time (full speed by then), the slow phase is longest on Easy then Normal
+      then Hard, the rate schedule (0.4 through the slow phase, 1 from 0.03s before the ring, a rising ramp between with
+      frames part way up it, not a jump), Resume before the ring starting the slow phase again, instant mode untouched, two
+      player's lock on the same frame, the drawing mid slow phase using the held-back fraction (the same frame drawn with 0
+      and 0.9 of a frame held back gives different canvas calls, and drawn twice the same) with nothing non-finite, a bot
+      match the same match with more frames frozen,
+      and that the Help page and this README say it. On a build without it, 12 of these fail.
   - **`node tools/bot.mjs [n] [half] --duels live|instant|off`:** a scripted average player against the CPU on each
     difficulty, with duel counts and win rates, goal-kick rates for both sides (`kicks us 70% (378) them 69% (109)`),
     and three contact lines: tackles, broken, rucks by length, Big Hits by side; turnovers by kind, offloads, fends,
     jolts, Ankle Taps, Tripped; sprints by side with seconds, penalties, knock-ons by kind, and the tags a match. The
     bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
-    never presses Pass in a tackle; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
+    never presses Pass in a tackle, and a line of Side Steps and Dummies by side; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
     `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
-  - **`node tools/contact.mjs`:** 270 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
+  - **`node tools/contact.mjs`:** 272 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
     and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
     a scrum). It checks:
     - a sprint that ends in a fall or a bind charges nothing more to the meter, and the push parts standing men 0.4m a
@@ -539,7 +721,8 @@ a charger.
       strike at 18 of 18 offered distances, counts a man on the shoulder and leaves a chaser 5m behind out of the offer
       and the cut alike (the `shoulder` lever); the CPU's offer on its strike's clock (your man standing 5m off is offered and charges
       it down by sprinting; 3m, or 8m sprinting, is not), with nothing random drawn; no hand-back is a turnover and a
-      tactical kick's charge-down leaves the defender where he stood; and a drop's strike sets `kickSeen`;
+      tactical kick's charge-down leaves the defender where he stood; and the first drop on a device gets the path aid, its
+      cut-in marking the tutorial's drop moment seen;
     - one step count and the lens (groups 36–38): the press opens the cut on `holdSteps()` and the offer projects
       exactly the steps before it, bit for bit, at holds of 0.20, 0.205, 0.22 and 0.25s; a charger 10m behind (staged
       with the radius widened) and one beside the kicker are drawn in depth order over him, none until 2m in front of
@@ -550,8 +733,8 @@ a charger.
       the chargers behind him that the offer judged), and a drop charged down from behind bounces away from the man
       who blocked it.
   - **`node tools/sim.mjs`:** AI v AI matches, with no duels, both sides' goal-kick rates and the CPU's drop goals.
-  - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 699 asserts over the input layer, the sides, the roles, the join screen
-    and the match head to head, green on seeds 1, 2 and 11 in about 35s. `--sym N` plays N pairs at 4-minute halves (400 by
+  - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 708 asserts over the input layer, the sides, the roles, the join screen
+    and the match head to head, green on seeds 1, 2 and 11 in about 37s. `--sym N` plays N pairs at 4-minute halves (400 by
     default) and adds the away-side, AI v AI and handicap runs (about 12 minutes); `--lock` runs the lock sweep (about 40s). The
     default symmetry sample is 100 pairs at 2-minute halves. It checks:
     - the keyboard routing (the solo map, the two halves, the lone keyboard seat, preventDefault, repeats, releases, blur,
@@ -598,10 +781,13 @@ a charger.
       halves by seat after a release (and as a swap left them), both pads lost at once reseated in order, a pad lost on the
       half-time card back with one press, a pad pressed on the team screen claiming nothing, and a stick held through a duel,
       a drop goal or a CPU conversion reading live the moment the cut hands back;
+    - the tutorial hold: Player 2's first Key Pass held under his card, Player 1 pushing away from the runner during it and
+      holding through Play, read as a rush on keys and on a pad alike (and as without the card): only the owner's stick is
+      re-centred by the hold, so the chooser's pad is never latched;
     - the handicap: an Easy player against a Hard one gets his own windows, lock lead, path aid, refill, shove and reach, the
       AI tacklers at his own rate and interceptors at the passer's level, per-owner quotas (two each a half, never the same kind
-      twice running, the bonus shared), the first-duel and two-fails aids per owner with `settings.duelSeen` and `kickSeen`
-      untouched, and `M.di` forced to 2 changing nothing a player faces;
+      twice running, the bonus shared), the first-duel and two-fails aids per owner (one player's are the tutorial's
+      per-device memory), and `M.di` forced to 2 changing nothing a player faces;
     - render smoke at 1024x600, 1280x720, 1440x900 and 1920x1080: open play, a scrum (the cues, the tags over both packs, an
       Early tag in pink, the bar gold to the right and pink to the left inside W·0.38), a lineout, every duel with each side as
       timer (both cues in their colours, the tags over U and O, the live ring in the owner's colour), both conversions and a drop
@@ -612,7 +798,8 @@ a charger.
       the stick on the other, the owner with a 0.25s reaction model, the penalty and half-time cards pressed as a player would),
       each seed played both ways round: Player 1's share of the decided matches and his paired margin, tries, goal-kick
       percentage, duels owned and won, scrum and lineout retention by side, and the frozen duel time against one player's at
-      the same half length, plus the mirror match; under `--sym` the away-side comparison (win rate within 5 points, tries
+      the same half length (per duel within 15%, the match within 1.8 x: since the slow run-in, 2026-10-17, the old 1.6 x a
+      match only measured that two player has about 1.75 x the duels), plus the mirror match; under `--sym` the away-side comparison (win rate within 5 points, tries
       within 0.3), AI v AI's share over 500 matches (0.45–0.55) and the handicap (Easy beats Hard over 60%, swapped within 8);
     - under `--lock`: the sweep (below), and the shipped `DUEL_LOCK` within 8 points of one player in every cell.
   - **`node tools/teams.mjs`:** 56 asserts. It checks:
@@ -627,7 +814,58 @@ a charger.
     - that Quick Match is the gold button, the Duels switch is gone, and a save round-trips the championship, the
       settings and a team you made, with duels forced on. A broken championship, bad settings and unreadable storage
       are dropped without taking the rest with them, and a full storage still starts the championship.
-  - **`node tools/setpieces.mjs`:** scrums at different tap speeds and lineouts at different jump timings.
+  - **`node tools/setpieces.mjs`:** scrums at 4-8 taps a second (jittered 18%, the thumb off the stick, with a Good Hit or
+    a late first tap; SEED 1 unless set) and lineouts at different jump timings. ENG v FRA, equal packs.
+  - **`node tools/passing.mjs`:** 28 asserts over the led pass (above, under Passing).
+  - **`node tools/moves.mjs`:** 95 asserts over the Side Step and the Dummy (SEED 5 unless set): each fires from each team each
+    way, tags, the x0.65 odds and the dart; does not fire with no tackler inside 4m, inside the cooldown, for a slow swerve,
+    for a man handed the ball with the stick already across, for a receiver whose stick swung through the flight, on the
+    restore after a duel, inside a drop goal's projection, with Kick or a long Pass held, or split by a missed step; the
+    rules that geometry used to pass for, each with the defender held in place every step and a positive control beside
+    it: the first 0.10s with the ball (a flick at once with a tackler 2.5m off, the same flick 0.15s on), the armed and
+    re-arm rule (a steering flick at 6m spends the flick; a rise from 0.5 to 0.98 that never passes under 0.3 does nothing,
+    after a step too; a jump from 0.7 straight to -0.7 does nothing, the same move through the centre fires); a Pass inside
+    0.15s drops the tag; keys (a fresh across key, up then down, Player 2's arrows, A with D held is a Dummy, forward let go
+    and re-pressed is not); the Dummy sold and Not Fooled by the bite draw, the defender's drift target and its end, his
+    tackle held off 0.4s from tcd 0 (untouched when Not Fooled), the carrier's pace kept, the bite by level; not for a long
+    pull (over 0.30s back; 0.13s is one), a thumb eased back over 0.4s (0.1s is one), a swerve, a waggle, no defender inside
+    9m, no ring receiver, a second back-and-on 0.35s on (2.5s on is a second), a lift and re-touch through the zone's own
+    pointer listeners, nor a lift between two back-and-ons inside 2.5s (the cooldown is the carrier's), or a run under 0.20s;
+    two player never selling the chooser's ringed man; the CPU dummying on Hard only, never selling the ringed man, and
+    drawing no random number in AI v AI (the same stretch from one seed at cpu 0 and 0.5: the same count of draws and every
+    man on the same spot); the d-pad and an analog stick on a pad; and every tag Title Case with the Help naming both.
+    `MOVE_BOT=dummy|step|both` gives the harness bot the moves (half the time, `MOVE_P`), for `bot.mjs` and `twoplayer.mjs --sym`.
+  - **`node tools/hints.mjs`:** 145 asserts over the hints card (SEED 3 unless set): the settings (defaults, cleaning, the save
+    round-trip, one player's switch, each player's by half and following Swap Players, the card ticks, every switch saving the
+    moment it is pressed: the card tick, the pause rows, a join tick and the home row, which stores a boolean); the words for
+    every duel on touch, keyboard and controller, the chooser's cards, the badges (F, A D, W S and the back key for Player 1;
+    /, the arrows for Player 2; J K L in one player; the pad glyphs; a keyboard or pad card badged so its rows start 7px
+    lower, clear of the rule line, and a two-keycap or shoulder chip wide or mid so its badge never sits on its own label),
+    the scrum both ways, the lineout both ways, a goal kick and a
+    drop from the real B hold (no card before the cut-in, none after the strike, the tick hidden), no card for the CPU's kick,
+    every open-play card, Title Case, no arrow glyph, the width budget (title 9, rule 21, row 18 characters: the 217px limit
+    at 667x375) and one row per duel card; when it shows (the first frame of the cut to the verdict, the chooser's to his
+    lock, Hints Off, the canvas tag yielding to a titled card and staying under a kick card, nothing in the demo); clearance
+    over bot-match duels at 667x375, 740x360, 844x390 and 932x430 (no figure's head and no ring under the card); the open-play
+    triggers staged one by one (a defender 4.5m ahead, the ring on a team-mate, a man to skip to after 0.8s held, space with
+    the meter full, the Offload and Drop Goal labels), 3s up, 4s apart, once a match, never in a cut or a set piece, each seat
+    its own in two player, no random number drawn; the penalty card's sublines and tick, the pause rows (one grid, so the two
+    On | Off controls share a left edge), the home's four rows, the two-player card limits (12px short of the scorebug's seat
+    tags from either side, a bound card wrapping rather than spilling), the join ticks through the screen's own flow (Two
+    Player opening on the saved halves, Swap Players swapping them), the markup and the Help entry; and the Step Left |
+    Step Right plates never meeting the card for a thumb anywhere from y 70 to 200 at 667x375 and 844x390 (the card's
+    measured box, the floor its bottom while it is up). On a build without the card it exits at once with one failure.
+  - **`node tools/tutorial.mjs`:** 76 asserts over the first-time tutorial (SEED 2 unless set): the first Get Past's card at the
+    cut, the hold (10s of frames: nothing moves, no clock, no random draw, a flick not judged, the stick re-centred), a press
+    for Next and one for Play, then the slow run-in; every other moment once (Next, Skip and Play by button and by a tap
+    anywhere, the scrum held before Crouch then played out, the goal kick's card and path aid then the kick from Aim, the
+    drop's thumb still down carrying over Play and one lifted needing a fresh press); the words on every device and for each
+    seat, Title Case, no arrows, every key a `{code}` token drawn as a keycap by `tutHtml` (Player 2's / and . as `<kbd>` in
+    the sentence; with the keycaps read as a word, no card on any device or seat names a key as bare punctuation or a lone
+    letter), the Help entry and the card's markup; Hints Off giving no card but the memory and the +0.08
+    aid once per kind; headless never pausing; the save round-trip and cleaning; Replay Tutorial; pause under the card; two
+    player naming the owner with either seat advancing and the memory the device's; a CPU scrum's card yours; no card for the
+    CPU's kick; Quit Match taking the card down. On a build without it, it exits at once with one failure.
 
 ### Measured baseline
 
@@ -684,6 +922,68 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   `CONTACT.dom.front` 0.06 → 0.03 (the front-on bonus mostly fell to the CPU, because the bot runs straight at the
   line; CPU Big Hits on Normal 10.2 → 9.3 a match). The dials left if Gordon wants the non-user closer still:
   `CONTACT.off.cpu` 0 is worth about another point on Normal, `SPRINT.cpu.chase[2]` 0.10 about one on Hard.
+- **Playtest fixes (2026-10-17): the baseline moved, by the led pass and the Side Step.** Measured with `bot.mjs`,
+  1,920 matches a row (SEED 1-16 x 120), 4-minute halves, duels live, the previous game (2463dfa) on the same seeds. The
+  standard error on a row is about 0.3 / 0.8 / 1.1 points (Easy / Normal / Hard), so a difference is good to about ±0.4 /
+  ±1.1 / ±1.6. The first two rows are the plain bot (its habits as above, no deliberate gesture: its swerves still fire
+  about 47 Side Steps a match, a thumb's steering fires 0.3-11, see below); the next two give it the moves half the time
+  it could use them (`MOVE_BOT=dummy`, `MOVE_BOT=both`; 960 matches a row, seeds 1-8).
+
+  | | Wins | Tries (us-them) | Duels a match (Tackle) | Intercepts | Knock-ons |
+  |---|---|---|---|---|---|
+  | Easy, previous game | 97.4% | 5.47-0.29 | 4.59 (0.48) | 6.8 | 9.4 |
+  | Easy, this build | 99.1% | 9.22-0.58 | 3.13 (0.09) | 8.7 | 11.1 |
+  | Normal, previous game | 84.4% | 3.67-0.74 | 4.99 (0.60) | 9.1 | 10.2 |
+  | Normal, this build | 86.5% | 6.13-1.41 | 3.77 (0.13) | 11.8 | 12.2 |
+  | Hard, previous game | 47.0% | 1.59-1.58 | 4.71 (0.68) | 10.5 | 10.6 |
+  | Hard, this build | 44.5% | 2.77-3.00 | 3.53 (0.17) | 14.3 | 12.9 |
+  | Easy, with the Dummy habit | 98.8% | 9.31-0.61 | 2.97 | 8.7 | 11.2 |
+  | Normal, with the Dummy habit | 82.4% | 5.96-1.49 | 3.52 | 11.5 | 12.1 |
+  | Hard, with the Dummy habit | 42.0% | 2.64-3.10 | 3.42 | 14.1 | 12.8 |
+  | Easy, both moves | 98.2% | 9.01-0.60 | 2.90 | 8.9 | 10.9 |
+  | Normal, both moves | 83.4% | 6.06-1.46 | 3.57 | 11.7 | 12.1 |
+  | Hard, both moves | 41.6% | 2.65-3.08 | 3.35 | 14.4 | 12.7 |
+
+  - **Wins** move +1.7 / +2.1 / -2.5 (Easy / Normal / Hard), inside the 3-point limit on every level, with the levers left
+    at the investigation's values (`RUNON.cpu` 0.65, `MOVES.step.push` 5, `MOVES.step.range` 4). The two changes pull
+    opposite ways: the led pass alone (measured before the moves, same seeds) was +1.5 / +1.0 / -3.6, the Side Step
+    then +0.2 / +1.1 / +1.1 on top. `RUNON.cpu` 0.6 on seeds 1-8 gave +2.6 on Hard and +0.4 on Normal against 0.65, if
+    Hard is ever to come back up.
+  - **Tries** roughly double at every level (the ball lands in front of the receiver and he takes it at pace), the CPU's
+    too; intercepts and knock-ons rise because catches happen nearer defenders. **Duels** fall by about a match: a step
+    blocks the Get Past and Key Pass cut-ins, and the **Tackle duel** (the CPU carrier at your last man) falls from 0.6
+    to 0.15 a match, because he now reaches your line at pace with team-mates round him. Gordon accepted both for now.
+  - **The CPU's Dummy** on Hard: 4.3 a match, about 2.4 of them sold (the `cpu dummies` column of `bot.mjs`).
+  - **With the Dummy habit** the bot does worse, not better (-4.1 on Normal and -2.5 on Hard against the plain bot on the
+    same eight seeds), unlike the investigation's +0.9. Pulled apart on seeds 1-4 x 120 (the plain bot there 99.8 / 86.9 /
+    45.4): the same habit with the bite forced to 0, so no dummy is ever sold, reads 99.0 / 85.0 / 40.4, and with it forced
+    to 1 reads 99.6 / 86.0 / 42.3. So the move itself is worth about +1.0 / +1.9 (Normal / Hard) when it sells, and what
+    costs the bot is its own check: it pulls back to -0.3 for five frames, halves its swerve while it does, and runs on
+    straight at a man 3.5-7m off whether or not anyone bit. The move is for a thumb that picks its moment; the harness
+    bot is kept honest about it rather than tuned to like it.
+  - **Two player** (twop.mjs, the symmetry drivers, 240 matches): 6.72 → 9.40 tries a match (the investigation's
+    estimate was 8.5; the Side Step adds the rest), Player 1's share 50.2% (se 3.2). The band was provisional and the
+    bots score more than people will; `TWO.tackle` +0.08 is worth about -0.45 tries if it needs pulling back.
+  - **False fires** (`.claude/specs/scratch/feedback/build/ff.mjs`: the bot's wanted direction through a device model, 40
+    Normal matches each, nobody making a deliberate gesture): Side Steps a match on touch with a closed-loop thumb 0.3,
+    a displacement thumb 10.8, a thumb that runs onto the pass 9.5, a nervy thumb (1.5 jabs a second) 52.9; a pad 7.2;
+    keys 23.2, keys with corrective taps 30.7; the raw bot 45.8. Dummies: 0 on every device (the back-key rule removed
+    the 2 a match the keys model gave in the investigation). Every one of these is a sharp reversal near a tackler, which
+    is what the move is.
+  - **Scrums** (duels.mjs, 300 a cell, Farnham v Haslemere, jittered taps, thumb off the stick; `scrum.mjs` at 400): on
+    Normal at 7 taps a second with a Good Hit your put-in is kept 100%, theirs stolen 31-33% (Against the Head), with no
+    penalty against and a penalty on your own ball 7-8%; at 6 a second 100% / 7-8% / 0 / 0; at 5 a second 100% / 0; at
+    8 a second 100% / 47-48% / 0 / 21-22%; with a late first tap (no hit) 7 a second keeps 100% and steals 0. Easy
+    steals 7 / 40 / 65 / 87% at 5 / 6 / 7 / 8 a second, Hard 0 / 1 / 14 / 29%. The rows with the stick at rest, forward
+    and back are identical; the away side (SEED 3) reads 0 / 9 / 29 / 49% on Normal; against Guildford (power 4) Normal
+    steals 1 / 17 / 34% at 6 / 7 / 8. Before: 7 a second with the thumb off the stick kept 85-87% of your own and stole
+    0% of theirs, with a penalty against on 10-14% of theirs; 6 a second kept 67-73% and conceded 27%.
+  - **Passing census** (`passing.mjs` at its default SEED 1, 12 bot matches a level, the thumb holding its direction through
+    the flight): your completed passes (93 / 87 / 72 a match on Easy / Normal / Hard) are caught 2.6-2.7m behind the passer
+    at 5.7-5.8 m/s upfield, 4% standing, 0.08 / 0.00 / 0.17 dropped a match, and the ball is past the release line 1.5s on
+    (+0.58 / +0.31 / +0.25m); the CPU's receivers catch at 4.97 / 5.15 / 5.33 m/s. Before (the same census on 2463dfa):
+    -2.9m at 5.3-5.4 m/s but 17-28 passes a match dropped with the thumb held, the ball -2.5 to -2.7m 1.5s on, and the
+    CPU's receivers catching at 0.7-0.9 m/s.
 - **Why the goal-kick note moved:** before goal kicks the headless bot converted 100% of its kicks, because the old
   modal's timing only ran in `frame()`. It kicks through the live close-up at 83% on Easy, 70% on Normal and 60% on
   Hard, and the CPU kicks at its own rate on every level. The table before goal kicks read 98.9 / 99.4 (Easy),
@@ -691,30 +991,78 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
 - The bot lets go of Kick on the step nearest its planned release. `update` adds a step before it sees the release,
   so a bot that waits for `pt + STEP/2` strikes a full step (17ms) late on average; the first measurement of this table
   was taken that way. Ours are up to 2 points higher than it (Easy unchanged), and the CPU's are slightly lower.
-- **Duels:** about 3.1 a match, freezing about 6s in total.
+- **Duels:** about 3.0 / 3.7 / 3.7 a match (Easy / Normal / Hard, `bot.mjs` 60 a level at SEED 1), freezing 7.9 / 9.2 / 8.5s
+  in total with the slow run-in (5.7 / 7.0 / 7.0s without it: `DUEL_SLOW='{"rate":1}'`). The three runs are otherwise
+  byte-identical, and identical to the build before slow motion (`feedback/build/s4.html`) on the same seed.
+- **The slow run-in, with a modelled human (2026-10-17):** `.claude/specs/scratch/feedback/build2/orient2.mjs`, 400 duels a
+  kind a cell at SEED 1, the four kinds pooled, one player. He can read nothing until an orientation time after the slide-in;
+  then he registers what is shown with a lag of 0.25 ± 0.05s, aims at the window centre with the bot's 0.095s spread, needs
+  0.15s more to choose in a Get Past or Key Pass, and 5% never press. Wall time is one update a frame. Win %:
+
+  | Level | Needs to orient | Before (no slow motion) | Shipped (1.2 / 0.9 / 0.6s at 0.4x) |
+  |---|---|---|---|
+  | Easy | 0.2s | 84.1 | 82.9 |
+  | Easy | 0.6s | 35.9 | 82.9 |
+  | Easy | 0.8s | 0.3 | 83.0 |
+  | Easy | mixed N(0.5, 0.15) | 52.7 | 83.2 |
+  | Easy | child N(0.8, 0.15) | 9.2 | 83.4 |
+  | Easy | none (the bot) | 82.9 | 82.9 |
+  | Normal | 0.2s | 71.8 | 69.7 |
+  | Normal | 0.6s | 26.7 | 69.7 |
+  | Normal | 0.8s | 2.1 | 72.1 |
+  | Normal | mixed N(0.5, 0.15) | 42.9 | 72.5 |
+  | Normal | child N(0.8, 0.15) | 7.7 | 71.1 |
+  | Normal | none (the bot) | 69.4 | 69.7 |
+  | Hard | 0.2s | 57.2 | 55.3 |
+  | Hard | 0.6s | 22.1 | 57.0 |
+  | Hard | 0.8s | 3.6 | 50.2 |
+  | Hard | 1.0s | 0.8 | 24.9 |
+  | Hard | mixed N(0.5, 0.15) | 36.7 | 60.5 |
+  | Hard | child N(0.8, 0.15) | 7.8 | 48.7 |
+  | Hard | none (the bot) | 55.3 | 55.3 |
+
+  The ring opens 0.84 / 0.89 / 0.93s real after the cut before and 1.59 / 1.49 / 1.35s shipped (Easy / Normal / Hard). The
+  window is unchanged, so the bot's rate barely moves (the Normal and Hard bot rows differ by 0.3 and 0.1 because the 0.25s
+  lag covers less of the scene in slow motion, so a feint registers a hair sooner); a player who orients instantly gains
+  nothing and loses nothing. The first defaults (a 0.15s ramp, 0.05s lead) clipped Easy's slow phase to 0.95s because its
+  ring opens earliest (0.80s scene) and left its run-in no longer than Normal's; the shipped 0.10 / 0.03 keep Easy's at
+  about 1.1s on a Get Past and the full 1.2s on a Block. A player who needs a full second still loses on Hard (25%): the
+  ring is 1.35s away and he needs 1.6s with his lag and his choice. Every number here is a model, not a person.
 - **Burst size:**
   - x1.12 (x1.18 Perfect) put Normal at +6.8 win points, over the +6 target.
   - x1.06 (x1.10) was inside every target but barely felt.
   - The middle value sits at +4.9.
   - To try other values without editing the game: `BURST='{ ok:[1.1,2], perfect:[1.15,2.5], knock:[1.06,1.2] }' node tools/bot.mjs`.
-- **AI v AI (`sim.mjs`):** re-baselined 2026-10-16 after the fairness change (`SEED=1 node tools/sim.mjs`, 24 matches of
-  4-minute halves at Normal): about 1 try and 9.3 points a match, 102 tackles, 5.3 offloads (3.1 / 2.2, both sides at the
-  CPU's 0.10 rate), 2.8 balls jolted loose, 11.4 turnovers, 1 CPU sprint a match between the two sides (nobody is a human
-  to run down). The same seeds on the build before it read 1 try, 8.7 points, 92 tackles, 4.1 offloads, 2.3 jolts: team 0
+- **AI v AI (`sim.mjs`):** re-baselined 2026-10-17 after the led pass (`SEED=1 node tools/sim.mjs`, 24 matches of 4-minute
+  halves at Normal): about 1.8 tries and 14.9 points a match, 112 tackles, 170 passes, 13 intercepts, 11.5 knock-ons, 13.5
+  turnovers, 4.9 offloads, 3.1 balls jolted loose, 2.8 CPU sprints. The scrum, the step levers and the CPU's Dummy draw
+  nothing here (the output is byte-identical with and without them); the led pass is what moved it, since both AI sides
+  lead and run onto their passes. The 2026-10-16 fairness re-baseline on the same seed read about 1 try and 9.3 points a
+  match, 102 tackles, 5.3 offloads (3.1 / 2.2, both sides at the CPU's 0.10 rate), 2.8 balls jolted loose, 11.4 turnovers,
+  1 CPU sprint a match between the two sides (nobody is a human to run down). The same seeds on the build before it read 1 try, 8.7 points, 92 tackles, 4.1 offloads, 2.3 jolts: team 0
   used to play the human terms (no cpuSpeed, myTackle, no intercept or turnover edge, a Normal kicker) against a team 1 on
   the CPU terms, so the demo was not a fair match. Now both sides play the CPU terms at the match's level.
-- **Two player is fair (`twoplayer.mjs --sym 400`, 2026-10-16):** 400 pairs of two-bot matches at 4-minute halves, Normal v
-  Normal, five team pairings each played both ways round (which team is Player 1 swaps within a pair), the set pieces contested
-  (`scrumBot` at 6 taps a second, `lineBot` with a 0.10s spread), every duel head to head with the owner on `ownerBot`'s 0.25s
-  reaction model and the chooser's hand through the real key path on one seat and the stick on the other, the penalty and
-  half-time cards pressed as a player would: Player 1 394 wins, Player 2 378, 28 draws, a 51.0% share with a standard error of
-  1.8 points, and a paired margin of −0.8 points a pair (−0.8 standard errors); 24.3 v 24.7 points and 3.37 v 3.48 tries a match
-  (6.85 in all); goal kicks 70% v 68%; duels owned 3.49 v 3.54 and won 75% v 76% by the owner; the feeding pack keeps 100% v
-  100% of scrums (equal packs: the put-in's 0.08 edge holds) and the throwing side 86% v 86% of lineouts; 13.4s a match frozen in
-  duels, against one player's 10.0s at the same half length (the gate is 1.6×). The mirror match (France v France, 200 matches)
-  gives Player 1 52.5% (se 3.5). One player as the away side wins 78.3% against the home side's 77.8% over the same 200 seeds
-  (2.44 v 2.40 tries), AI v AI gives team 0 48.6% of 500 matches, and an Easy player beats a Hard one 74.0% of the time as
-  Player 1 and 80.8% as Player 2 (200 each: the per-player level has teeth from either seat). The whole gate is 702 asserts in
+- **Two player is fair (`twoplayer.mjs --sym 400`, re-run 2026-10-17 after the slow run-in):** 400 pairs of two-bot matches
+  at 4-minute halves, Normal v Normal, five team pairings each played both ways round (which team is Player 1 swaps within a
+  pair), the set pieces contested (`scrumBot` at 6 taps a second, `lineBot` with a 0.10s spread), every duel head to head with
+  the owner on `ownerBot`'s 0.25s reaction model and the chooser's hand through the real key path on one seat and the stick on
+  the other, the penalty and half-time cards pressed as a player would: Player 1 394 wins, Player 2 398, 8 draws, a 49.8% share
+  with a standard error of 1.8 points, and a paired margin of +0.29 points a pair (0.2 standard errors); 33.3 v 33.2 points
+  and 4.69 v 4.69 tries a match (9.38 in all); goal kicks 70% v 70%; duels owned 3.22 v 3.19 and won 73% v 76% by the owner; the
+  feeding pack keeps 100% v 100% of scrums (equal packs, equal taps: the put-in's 0.08 edge holds, and the stick no longer
+  counts) and the throwing side 86% v 85% of lineouts; 16.1s a match frozen in duels over 6.41 of them, 2.51s a duel against
+  one player's 2.49s (9.8s over 3.9 duels; the gate is per duel within 15% and 1.8 x a match since the slow run-in, which adds
+  the same real time to every duel; the old 1.6 x a match had only measured two player's 1.75 x the duels). The mirror match
+  (France v France, 200 matches) gives Player 1 49.3% (se 3.5). One player as the away side wins 83.5% against the home side's
+  79.8% over the same 200 seeds (4.53 v 4.21 tries), AI v AI gives team 0 49.2% of 500 matches, and an Easy player beats a
+  Hard one 87.8% of the time as Player 1 and 88.0% as Player 2 (200 each); 711 of 711 asserts. The run before the slow run-in
+  (the same seeds, earlier on 2026-10-17) read 391 / 402 / 7, 49.3% (se 1.8), −0.43 a pair, 33.1 v 33.4, 4.66 v 4.71, the
+  mirror 52.3%, Easy over Hard 86.8% / 88.0%, 12.3s frozen: the head-to-head bots move a little because the scripted chooser's
+  hand moves between frames and slow motion gives it one more frame to land in, the one-player bot not at all. With
+  both gestures on both seats (`MOVE_BOT=both`, `--sym 100`): share 54.3% (se 3.5), paired margin +0.87 a pair (0.3 se), 4.84
+  v 4.80 tries, 707 of 707 asserts; an Easy player beats a Hard one 90.5% as Player 1 and 89.5% as Player 2. The 2026-10-16
+  run read 51.0% (se 1.8), −0.8 a pair, 3.37 v 3.48 tries (6.85), 13.4s frozen against one player's 10.0s, the mirror 52.5%,
+  the away side 78.3% v 77.8%, AI v AI 48.6%, Easy over Hard 74.0% / 80.8%. The whole gate is 711 asserts in
   about 10 minutes. The suite's own run is 100 pairs at 2-minute halves
   (53.3% on seed 11, a paired margin of 0.9 standard errors) plus a 50-match mirror; it has the power to catch a seat bias of a
   few points, not a tenth off one side's tackle rate, which the direct `tackleChance` asserts catch instead.
@@ -750,10 +1098,13 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   bot wins about 80% of head-to-head duels against a chooser who feints 30% of the time, and pushing the AI tackle past
   one player's Hard (0.72) to reach the band would make carrying harsher for a child than one player is. Retune in Phase D
   with real people.
-- **Set pieces on Normal (`setpieces.mjs`):**
-  - Scrums: tapping 4 a second keeps your put-in about 93% of the time. Tapping 8 a second with a good hit wins a
-    penalty about 30% of the time and steals theirs about a third of the time.
-  - Lineouts: a perfectly timed jump keeps your throw about 85% of the time and steals theirs about 28%.
+- **Set pieces on Normal (`setpieces.mjs`, 2026-10-17: ENG v FRA, equal packs, 300 a cell at SEED 1, taps jittered 18%,
+  the thumb off the stick):**
+  - Scrums: tapping 7 a second with a good hit keeps your put-in every time and steals theirs about a third of the time
+    (35%); 8 a second steals about half (49%) and wins a penalty or pushover on your own ball about a quarter of the time
+    (24%); 6 a second with a good hit keeps every one and steals 12%; 5 a second with a late first tap keeps 99%, 4 a
+    second 82%. The CPU never wins a penalty against a pack tapping 5 a second or more. The stick plays no part.
+  - Lineouts: a perfectly timed jump keeps your throw about 91% of the time and steals theirs about 27%.
 
 ## Preview and release
 
@@ -770,7 +1121,13 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   owner (Step Left is world −y, screen-up back on the pitch; `duels.mjs` pins this) and world −y for a team 1 owner
   (`twoplayer.mjs` pins the mirror).
 - **Debug hook:** `window.__tryline` exposes the engine (`simulate`, `newMatch`, `update`, `input`, `inputs`, `scrum`,
-  `lineout`, `forceDuel`, `pollPads`, `onKey`, `keyRoute`, `sides`, `debug`, `teams`, `contact`, `M`).
+  `lineout`, `forceDuel`, `pollPads`, `onKey`, `keyRoute`, `sides`, `debug`, `teams`, `contact`, `M`). `debug` also holds
+  `DUEL_SLOW` and `cutRate` (the slow run-in), `hintFor`, `hintShown`, `hintOpen`, `hintsOn`, `setHints`, `syncHints`,
+  `chipHtml`, `keycapsFor`, `renderHintSwitches`, `placeStick`, `platesFloor` (the hints card and the plates under it),
+  `tutCards`, `tutHtml`, `tutStart`, `tutAdvance`, `tutPlay`, `tut`, `tutSeen`, `tutMark`, `tutReset`, `TUT_IDS` (the
+  tutorial); the harness marks every tutorial moment seen on load, so no tool pauses, and takes `DUEL_SLOW='{"rate":1}'`
+  like the other levers. Its element stubs keep `innerHTML`, answer `getBoundingClientRect` from an `el.rect` a test sets,
+  and give the home's `.seg[data-key]` rows and the pause card's Hints rows their two buttons, so a test can press them.
   `__tryline.forceDuel('past')` stages and starts a duel in the console (`forceDuel('past', 1)` the mirrored one, in a
   match made with `humans:[false, true]`); `__tryline.contact` holds `CONTACT`, `RUCK`, `SPRINT` and the contact and
   Sprint functions the tests drive (`commitTackle`, `resolveContact`, `tackle`, `collide`, `sprintTick`, `cpuSprintWant`,
@@ -793,9 +1150,17 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   `c.taken`, `c.changes`, `c.stepped`, `c.tkAt`, `c.lean`, `c.dummyPress` and `c.reachT` exist only there, so one player's
   duels are the objects they always were. The other two-player-only constants are `TWO.tackle`, `SCRUM_LEVEL` and
   `LINE_LEVEL`; `M.side[t].duel` carries each owner's quota, last kind, failures and first-duel flag, `M.side[t].kickFirst`
-  his first kick. `globalThis.__sfxSpy` and `debug.navLog` are hooks for the tools, like `__ctxSpy`. The byte-identity
+  his first kick; one player's first-time aids key off `settings.tut`, the tutorial's per-device memory. `globalThis.__sfxSpy` and `debug.navLog` are hooks for the tools, like `__ctxSpy`. The byte-identity
   proof (the spec's golden set run against the 3f11088 archive, `golden.sh` / `check.sh`) lives in the repo's `.claude/specs/
   scratch/golden/`, not in `tools/`, because its outputs are 2 MB of fixed runs.
+- **Hints and the tutorial** live in the UI block after `updateHud`: `hintFor(seat)` is pure (the match in, the words out
+  or null), `syncHints` runs from `updateHud` and `renderHint` writes the DOM only when the content key changes; the open-play
+  state is `HO[seat]` (what has shown this match, the card up, its end, the last start on `M.dclock`); `hintShown[seat]` is
+  what the card shows now, read by `drawCut` to skip the canvas tag under a titled card and by the tools. The tutorial is
+  `M.tut` (`{ id, seat, step, cut }`), set in `startCut` by `tutStart`; `updateCut` holds the close-up's first frame while
+  it is up (the slide-in's last step taken, presses advancing the card, the stick re-centred) and `tutPlay` lets it run
+  (a drop's `g.started` reset so the thumb's state is read afresh). The slow run-in is `cutRate(c)` in `updateCut`: whole
+  frames only, `c.acc` the fraction held back for the drawing, `c.slowFrom` where Resume restarted it.
 - **Contact and Sprint** live in the tackling block and the Sprint block of `index.html`, with the drawing in
   `drawPlayer` and `drawTags`. A player carries `bind` (the contact he is in), `offside` (retiring), `sprint` and
   `sprinting`, `stumble`, `wf` (wrong-footed), and render-only `drawFrom` (a teleport being smoothed) and `fend`.
@@ -822,6 +1187,9 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   flight camera is `kickView`: the zoom starts at the ball's screen apex but at least 0.4s before the crossing, and
   is held continuously to the largest Z that keeps the ball in frame. The verdict banner (`say(…, low)`) sits under
   the crossbar while the ball is up at the posts (`verdictLow`) and up top when it has dropped short.
+- **Receivers:** the same rule on the attack (2026-10-17): a receiver who seeks the landing spot arrive-style catches
+  standing still. `runOnTarget` pursues at min(top speed × pace, distance / time left) and the pass is led to where he
+  will be (`leadPass`), so he takes it at pace.
 - **Chasers:** defenders who are chasing must pursue at full speed (`pursue: true`). With arrive-style steering they
   slow as they close and can never catch a runner. That bug once made a scripted player score 15+ tries a match.
 - **Line break:** `COVER` (by level: how many last men, their speed and acceleration, the inside shade, a small

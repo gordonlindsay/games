@@ -585,7 +585,7 @@ begin('join');
   ok(caps(leg(1)) === 'ArrowUp ArrowLeft ArrowDown ArrowRight Slash Period Comma' && /<kbd class="kc ar u" data-code="ArrowUp"><\/kbd>/.test(leg(1)) && /data-code="Slash">\/<\/kbd>/.test(leg(1)) && !/[←-↙]/.test(leg(1)), `Player 2's: four arrow keycaps drawn in CSS (no glyph), then / . , (${caps(leg(1))})`);
   ok(/function lightKey\(code, on\)/.test(src) && /if \(two\.on && r && r\[0\] != null\) lightKey\(code, down\);/.test(src) && /lightPad\(seat, 'big', now\)/.test(src) && /lightPad\(seat, 'stick', P\.stickLit\)/.test(src) && /\.kc\.on,\.pad\.on\{background:var\(--flood\)/.test(src) && /\.seat\.p2 \.kc\.on,\.seat\.p2 \.pad\.on\{background:var\(--p2\)/.test(src), 'a keycap or pad glyph lights (.on, in the seat colour) while its key or button is held: onKey and pollPads drive it');
   ok(/\.devrow\{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px\}/.test(src) && /\.legend\{display:grid;grid-template-columns:repeat\(4,1fr\);gap:6px;min-height:76px/.test(src) && /<div class="devrow"><p class="dev" id="j-dev1">Keyboard<\/p><button class="btn" id="j-kb1" hidden>Use Keyboard<\/button><\/div>/.test(src), 'fixed rows: Use Keyboard sits in a 44px device row that keeps its height either way, the legend is 76px, so the Difficulty rows line up');
-  ok(/<p class="eyebrow p1"><i class="stag s0">1<\/i>Player 1<\/p>/.test(src) && /<p class="eyebrow p2"><i class="stag s1">2<\/i>Player 2<\/p>/.test(src), 'each card is badged with its seat tag');
+  ok(/<p class="eyebrow p1"><i class="stag s0">1<\/i>Player 1<button class="hc-tick" id="jt0"[^>]*>(?:(?!<\/p>).)*<\/button><\/p>/.test(src) && /<p class="eyebrow p2"><i class="stag s1">2<\/i>Player 2<button class="hc-tick" id="jt1"[^>]*>(?:(?!<\/p>).)*<\/button><\/p>/.test(src), 'each card is badged with its seat tag, with its Hints tick at the right of the row');
   const gp = gamepad(0); padStub([gp]); connect(gp); bset(gp, 0, 1); poll(); bset(gp, 0, 0); poll();
   ok(seatOf(0).dev === 'pad' && $('j-dev0').textContent === 'Controller' && !$('j-kb0').hidden && $('j-dev1').textContent === 'Keyboard' && $('j-kb1').hidden && D.seatScheme(1) === 'solo', 'a pad press claims seat 0 and the screen follows: Controller, Use Keyboard, the lone keyboard seat on the solo map');
   ok(!/data-code/.test(leg(0)) && /data-pad="stick"/.test(leg(0)) && /data-pad="big"/.test(leg(0)) && /data-pad="small"/.test(leg(0)) && /data-pad="sh"/.test(leg(0)) && lbls(leg(0)) === 'Run Pass Kick Sprint', 'the pad seat\'s legend is the stick, the diamond with its bottom and right dots, and the shoulder');
@@ -1014,10 +1014,43 @@ begin('cards and pads');
 }
 done('N cards and pads');
 
+// T. the tutorial's hold in two player (2026-10-17): while the owner's first-time card is up only his stick is re-centred (as in the grace),
+// so a chooser who pushes during the card and holds through Play is read the same on a pad as on keys. Re-anchoring every slot latched
+// the chooser's pad stick, and his push was lost on a pad but kept on keys. Player 2 owns his first Key Pass; Player 1 (seat 0) chooses
+begin('tutorial hold');
+{
+  const run = (dev, tutorial) => {
+    D.settings().hints = true; D.settings().twoHints = [true, true]; D.settings().tut = tutorial ? [] : D.TUT_IDS.slice();
+    D.setTwo(true); menu(); D.resetSeats(); for (const k of [...D.pads().keys()]) D.padGone(k); padStub([]); clearSlots(); clearEdges();
+    let gp = null;
+    if (dev === 'pad') { gp = gamepad(0); padStub([gp]); connect(gp); bset(gp, 0, 1); poll(); bset(gp, 0, 0); poll(); }   // the pad claims seat 0 on the join screen
+    T.newMatch(0, 1, { halfLen:240, humans:[true, true], levels:[1, 1], headless:false, duels:'live' }); D.setMode('match'); clearSlots(); clearEdges();
+    D.stage('pass', 1); T.update(STEP);
+    const c = M().cut, away = -c.side;                       // a rush, away from the runner, in the owner's frame
+    const push = () => { if (gp) { gp.axes[0] = away; poll(); } else { const code = away > 0 ? 'KeyD' : 'KeyA'; if (!inputs[0].keys.has(code)) down(code); } };
+    const step = () => { if (gp) poll(); T.update(STEP); };
+    const shown = !!D.tut(), seat0 = seatOf(0).dev;
+    if (tutorial) { for (let i = 0; i < 20; i++) step(); push(); for (let i = 0; i < 30; i++) step(); inputs[1].aPressed = true; step(); inputs[1].aPressed = true; step(); }   // the card holds the scene; the chooser pushes while he waits; Player 2: Next, then Play
+    else { for (let i = 0; i < 20; i++) step(); push(); }
+    let n = 0; while (!c.locked && n++ < 600) { push(); step(); }
+    const r = { dev, tutorial, seat0, shown, tut:!!D.tut(), locked:c.locked, taken:c.taken, drift:c.drift, latch:inputs[0].latch };
+    while (M().phase === 'cut' && n++ < 2000) step();
+    if (gp) { gp.axes[0] = 0; poll(); } up('KeyA'); up('KeyD'); clearSlots(); clearEdges(); D.setMode('menu'); for (const k of [...D.pads().keys()]) D.padGone(k); padStub([]);
+    return r;
+  };
+  const R = {}; for (const dev of ['kb', 'pad']) for (const tut of [false, true]) R[dev + (tut ? '+tut' : '')] = run(dev, tut);
+  ok(R.pad.seat0 === 'pad' && R['pad+tut'].seat0 === 'pad' && R.kb.seat0 === 'kb', 'the chooser is on a pad in the pad runs and on the keyboard in the key runs');
+  ok(R['kb+tut'].shown && R['pad+tut'].shown && !R.kb.shown && !R.pad.shown && Object.values(R).every(r => !r.tut && r.locked), 'Player 2\'s first Key Pass shows his tutorial card (never once seen), and every duel reaches its lock with the card gone');
+  ok(Object.values(R).every(r => r.taken), `the chooser's push is read on every device, with and without the card (${Object.entries(R).map(([k, r]) => k + ' ' + (r.taken ? 'taken' : 'lost')).join(', ')})`);
+  ok(R['pad+tut'].drift === R.pad.drift && R['kb+tut'].drift === R.kb.drift && R.pad.drift === R.kb.drift && !R['pad+tut'].latch, `and the same choice lands: a rush (drift ${R['pad+tut'].drift} / ${R.pad.drift} on a pad, ${R['kb+tut'].drift} / ${R.kb.drift} on keys); the card never latched the chooser's pad (${R['pad+tut'].latch})`);
+  D.settings().tut = D.TUT_IDS.slice(); D.setTwo(false);
+}
+done('T tutorial hold');
+
 // O. the two-player levels, quotas and aids: an Easy player against a Hard one gets the wider windows, the longer lock, the path aid on
 // his kicks, the slower-draining meter and the set-piece assists; the AI men tackle his carrier at his own rate; per-owner quotas
 // (ceil(halfLen/180) each, never the same kind twice running per owner, the Last Play bonus shared); the fails and first-duel aids
-// per owner, settings.duelSeen and kickSeen untouched; M.di forced to 2 changes nothing a player faces
+// per owner (the tutorial's per-device memory is one player's aid); M.di forced to 2 changes nothing a player faces
 begin('handicap');
 {
   const S = T.sides, K = T.kick, C = T.contact;
@@ -1036,12 +1069,12 @@ begin('handicap');
   // goal aids: Easy, or each player's first kick of the match
   pairL([0, 2]);
   ok(K.makeGoal(0, 88, 35, 'penalty', null).aid === 'path' && K.makeGoal(1, 32, 35, 'penalty', null).aid === 'path', 'Easy v Hard: Player 1 gets the path (Easy); Player 2 gets it once, his first kick');
-  D.settings().kickSeen = true; S.side(1).kickFirst = false;
+  S.side(1).kickFirst = false;
   ok(K.makeGoal(1, 32, 35, 'penalty', null).aid === 'line' && K.makeGoal(0, 88, 35, 'penalty', null).aid === 'path', 'after it, Player 2 gets the line; Player 1 keeps the path on Easy');
-  D.settings().kickSeen = false; pairL([1, 1]); D.goalKick(1, 21, 35, 'conversion');
+  pairL([1, 1]); D.goalKick(1, 21, 35, 'conversion');
   ok(M().cut.g.aid === 'path' && S.side(1).kickFirst, 'a Normal player\'s first kick of the match has the path');
   { let n = 0; while (M().phase === 'cut' && n++ < 600) { bot(1); T.update(STEP); } }
-  ok(!S.side(1).kickFirst && S.side(0).kickFirst && D.settings().kickSeen === false, 'the strike clears his own kickFirst only, and settings.kickSeen is untouched in two player');
+  ok(!S.side(1).kickFirst && S.side(0).kickFirst, 'the strike clears his own kickFirst only');
   D.goalKick(1, 21, 35, 'conversion'); ok(M().cut.g.aid === 'line', 'his second kick has the line');
   { let n = 0; while (M().phase === 'cut' && n++ < 600) { bot(1); T.update(STEP); } }
   // the meter refills at each player's own rate
@@ -1073,9 +1106,9 @@ begin('handicap');
   hooter = true; c = stage('pass', 0); ok(c && c.how === 'bonus' && M().duelLog.bonus[0], 'the Last Play bonus goes to the first to qualify'); skip();
   c = stage('pass', 1); ok(c === null, 'and is shared: Player 2 gets none'); hooter = false; bonus = [false, false];
   // the aids per owner
-  pairL([1, 1]); D.settings().duelSeen = false;
+  pairL([1, 1]);
   c = stage('past', 0); ok(c && near(c.wid, 0.23 + 0.08 + edge('past', c), 1e-9) && !S.side(0).duel.first && S.side(1).duel.first, 'Player 1\'s first duel gets +0.08, and only his flag clears'); skip();
-  c = stage('tackle', 1); ok(c && near(c.wid, 0.23 + 0.08 + edge('tackle', c), 1e-9) && D.settings().duelSeen === false, 'Player 2\'s first duel gets his +0.08; settings.duelSeen stays false'); skip();
+  c = stage('tackle', 1); ok(c && near(c.wid, 0.23 + 0.08 + edge('tackle', c), 1e-9), 'Player 2\'s first duel gets his +0.08'); skip();
   c = stage('tackle', 1); ok(c === null, '(the same kind twice running is refused him)'); c = stage('pass', 1); ok(c && near(c.wid, 0.24 + edge('pass', c), 1e-9), 'his second duel has no first-duel aid'); skip();
   pairL([1, 1]); S.side(0).duel.first = S.side(1).duel.first = false;
   for (let i = 0; i < 2; i++) { c = stage(i ? 'tackle' : 'past', 0); fail(c); }
@@ -1200,6 +1233,26 @@ begin('isolation');
     down('KeyD'); down('KeyF'); T.update(STEP); ok(c.taps[0] === 1 && c.taps[1] === 0 && c.rate[1] === 0, 'a scrum: Player 1\'s keys push his pack only'); up('KeyF'); up('KeyD');
     down('ArrowLeft'); down('Slash'); T.update(STEP); ok(c.taps[1] === 1 && c.taps[0] === 1, 'and Player 2\'s his'); up('Slash'); up('ArrowLeft');
     let g = 0; while (M().phase === 'cut' && g++ < 4000) T.update(STEP); }
+  // the stick plays no part in the shove (2026-10-17): both seats tap on the same steps, Player 2 holding his forward key (ArrowLeft) and Player 1
+  // no direction key, then Player 1 holding D. Each pack's rate is the same, and the shove difference is the packs' base difference alone
+  for (const p1key of [null, 'KeyD']) {
+    T.newMatch(0, 1, { halfLen:240, diff:1, headless:false, duels:'off', humans:[true, true], levels:[1, 1] }); D.setMode('match'); D.setTwo(true); clearSlots(); clearEdges();
+    steps(120); T.scrum(0, 60, 35, ''); { let g = 0; while (M().phase !== 'cut' && g++ < 400) T.update(STEP); }
+    const c = M().cut; let n = 0; while (c.t < 1.5 && n++ < 120) T.update(STEP);
+    down('ArrowLeft'); if (p1key) down(p1key);
+    let sameRate = true, baseOnly = true, taps = 0, engaged = 0;
+    for (let k = 0; k < 150 && M().cut === c && !c.result; k++) {
+      if (k % 9 === 0) { down('KeyF'); down('Slash'); taps++; } else if (k % 9 === 1) { up('KeyF'); up('Slash'); }
+      T.update(STEP);
+      if (!c.engaged || c.result) continue;
+      engaged++;
+      if (c.rate[0] !== c.rate[1]) sameRate = false;
+      if (!near(c.mine - c.theirs, c.base[0] - c.base[1], 1e-9)) baseOnly = false;
+    }
+    up('ArrowLeft'); if (p1key) up(p1key); up('KeyF'); up('Slash');
+    ok(taps >= 10 && engaged >= 100 && sameRate && baseOnly, `a scrum, Player 1 ${p1key ? 'holding D' : 'with no direction key'} v Player 2 holding ArrowLeft: equal taps give equal rates (${sameRate}) and a shove difference of the bases alone (${baseOnly}) over ${engaged} steps`);
+    let g = 0; while (M().phase === 'cut' && g++ < 4000) T.update(STEP);
+  }
   pairI(); K.stageDrop({ x:60, y:35 }, [], 0);
   { const p0 = S.ctrlOf(0), p1 = S.ctrlOf(1), y0 = p0.y, y1 = p1.y; down('ArrowUp'); steps(20); up('ArrowUp');
     ok(p1.y < y1 - 0.5 && Math.abs(p0.y - y0) < 0.5, `Player 2's arrows move his man, not Player 1's (${(p1.y - y1).toFixed(2)} v ${(p0.y - y0).toFixed(2)})`); }
@@ -1247,10 +1300,13 @@ begin('symmetry');
     return r;
   };
   const sum = (arr, f) => arr.reduce((a, r) => a + f(r), 0);
-  // one player's frozen duel time at the same half length, the scripted player against the CPU (the bound is 1.6 x this)
-  let frozen1 = 0; const n1f = 12;
-  for (let i = 0; i < n1f; i++) { reseed(3000 + i); T.newMatch(i % 6, (i + 1) % 6, { halfLen:HALF, diff:1, headless:true, duels:'live' }); D.setMode('match'); D.setTwo(false); let k = 0; while (!M().over && k++ < 200000) { bot(0); T.update(STEP); if (M().phase === 'cut' && M().cut && M().cut.duel) frozen1 += STEP; } }
-  frozen1 /= n1f;
+  // one player's frozen duel time and duels at the same half length, the scripted player against the CPU. The gate (2026-10-17): two player's
+  // duels freeze no longer each than one player's (within 15%), and the match no more than 1.8 x one player's. It was 1.6 x a match
+  // when a duel froze about 2s; the slow run-in adds the same real time to every duel, and two player has about 1.75 x the duels (an
+  // owner's quota each), so the ratio of match totals follows the ratio of counts and no longer says anything about the duels themselves
+  let frozen1 = 0, duels1 = 0; const n1f = 12;
+  for (let i = 0; i < n1f; i++) { reseed(3000 + i); T.newMatch(i % 6, (i + 1) % 6, { halfLen:HALF, diff:1, headless:true, duels:'live' }); D.setMode('match'); D.setTwo(false); let k = 0; while (!M().over && k++ < 200000) { bot(0); T.update(STEP); if (M().phase === 'cut' && M().cut && M().cut.duel) frozen1 += STEP; } duels1 += M().stats.duels; }
+  frozen1 /= n1f; duels1 /= n1f;
   const report = (rows, label) => {
     const n = rows.length, w = [0, 0, 0]; for (const r of rows) w[r.score[0] > r.score[1] ? 0 : r.score[0] < r.score[1] ? 1 : 2]++;
     const share = (w[0] + w[2]/2)/n, se = 0.5/Math.sqrt(n);
@@ -1283,7 +1339,8 @@ begin('symmetry');
   ok(Math.abs(R.dw[0] - R.dw[1]) <= b.dw, `the owner's duel win rate within ${b.dw} points (${R.dw.map(v => v.toFixed(1)).join(' v ')})`);
   ok(Math.abs(R.sk[0] - R.sk[1]) <= b.sk, `scrum retention by the feeding side within ${b.sk} points (${R.sk.map(v => v.toFixed(1)).join(' v ')})`);
   ok(Math.abs(R.lk[0] - R.lk[1]) <= b.lk, `lineout retention by the throwing side within ${b.lk} points (${R.lk.map(v => v.toFixed(1)).join(' v ')})`);
-  ok(R.frozen <= 1.6*frozen1, `frozen duel time at most 1.6 x one player's (${R.frozen.toFixed(1)}s a match against one player's ${frozen1.toFixed(1)}s)`);
+  { const perTwo = R.frozen/Math.max(0.01, R.du[0] + R.du[1]), per1 = frozen1/Math.max(0.01, duels1);
+    ok(perTwo <= 1.15*per1 && R.frozen <= 1.8*frozen1, `a two-player duel freezes no longer than one player's (${perTwo.toFixed(2)}s a duel against ${per1.toFixed(2)}s; ${R.frozen.toFixed(1)}s a match over ${(R.du[0] + R.du[1]).toFixed(2)} duels against one player's ${frozen1.toFixed(1)}s over ${duels1.toFixed(2)}, at most 1.8 x)`); }
   ok(R.du[0] + R.du[1] > 0.5 && R.dw[0] > 0 && R.dw[1] > 0, 'duels were fought head to head and won by both owners');
   // the mirror match
   const mrows = []; for (let i = 0; i < Math.ceil(N/2); i++) mrows.push(play(T.teams.NATIONS[1], T.teams.NATIONS[1], [1, 1], 5000 + i));
@@ -1320,7 +1377,7 @@ if (process.argv.includes('--lock')) {
   const duel = (kind, own, two, levels, lead, seed) => {        // own is 0 in one player: the human owns every duel
     reseed(seed);
     T.newMatch(1, 1, { halfLen:240, diff:levels[own], headless:true, duels:'live', humans:two ? [true, true] : [true, false], levels:two ? levels : null }); D.setMode('match'); D.setTwo(two); clearSlots(); clearEdges();
-    S.side(0).duel.first = S.side(1).duel.first = false; D.settings().duelSeen = true;
+    S.side(0).duel.first = S.side(1).duel.first = false;
     if (two) LOCK[levels[own]] = lead;
     if (kind === 'block') { D.stage('block', own); T.forceDuel('block', own); } else { D.stage(kind, own); T.update(STEP); }
     const c = M().cut; if (!c || c.kind !== kind) return null;

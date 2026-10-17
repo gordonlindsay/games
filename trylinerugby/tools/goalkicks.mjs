@@ -48,7 +48,7 @@ const YOU_SPEC = [[100,100,100],[76,62,53],[48,41,34],[89,83,75],[75,65,54],[66,
 const CPU      = [[100,100,100],[56,63,66],[37,44,45],[76,81,84],[57,65,68],[48,56,57],[39,46,49],[54,61,65],[45,51,55]];
 const CPU_SPEC = [[100,100,100],[55,63,67],[37,42,44],[76,83,84],[55,65,67],[47,53,57],[39,47,49],[55,62,64],[45,52,55]];
 const PIN_N = 12000;   // kicks behind each pinned cell
-T.debug.settings().kickSeen = true;   // the aids follow the difficulty; the first-kick onboarding is checked on its own
+T.debug.settings().tut = T.debug.TUT_IDS.slice();   // the aids follow the difficulty (every tutorial moment seen, as the harness sets); the first-kick onboarding is checked on its own
 
 // 1. the closed form agrees with a 1ms Euler integration
 begin('closed form');
@@ -160,9 +160,9 @@ for (const [name, s, kind] of SPOTS) {
   ok(n >= 196, `${name}: aim = aimFor(g, ctr) at m = ctr scores at least 98% across match winds (${n/2}%)`);
 }
 {
-  T.debug.settings().kickSeen = false; fresh(1); const g = K.makeGoal(0, 88, 35, 'penalty', null);
-  ok(g.aid === 'path' && g.aim !== 0, 'the first kick ever gets the Easy path on Normal');
-  T.debug.settings().kickSeen = true; fresh(1); const g2 = K.makeGoal(0, 88, 35, 'penalty', null);
+  T.debug.settings().tut = T.debug.TUT_IDS.filter(id => id !== 'goal'); fresh(1); const g = K.makeGoal(0, 88, 35, 'penalty', null);
+  ok(g.aid === 'path' && g.aim !== 0, 'the first kick ever (the tutorial\'s goal moment unseen) gets the Easy path on Normal');
+  T.debug.tutMark('goal'); fresh(1); const g2 = K.makeGoal(0, 88, 35, 'penalty', null);
   ok(g2.aid === 'line' && g2.aim === 0, 'after it, Normal starts on the posts with the line');
   fresh(0); const g3 = K.makeGoal(0, 88, 35, 'penalty', null);
   ok(g3.aid === 'path', 'Easy always draws the path');
@@ -1100,20 +1100,20 @@ begin('hand-back possession');
 }
 done('34 hand-back possession');
 
-// 35. the first strike at goal ends the first-kick aids, placed or dropped
-begin('kickSeen on drops');
+// 35. the first drop goal on this device gets the first-kick aids, and its cut-in marks the tutorial's drop moment seen
+begin('first drop aids');
 {
-  T.debug.settings().kickSeen = false;
+  T.debug.settings().tut = T.debug.TUT_IDS.filter(id => id !== 'drop');
   const r = tryDrop({ x:90, y:35 }, 1, []);
-  ok(r.off && r.g.aid === 'path', `the first kick ever gets the Easy aids on Normal (${r.g.aid})`);
-  ok(T.debug.settings().kickSeen === true, `a drop's strike sets kickSeen (${T.debug.settings().kickSeen})`);
+  ok(r.off && r.g.aid === 'path', `the first drop ever gets the Easy aids on Normal (${r.g.aid})`);
+  ok(T.debug.tutSeen('drop'), `the drop's cut-in marks the drop moment seen (${JSON.stringify(T.debug.settings().tut)})`);
   settle();
   const r2 = tryDrop({ x:90, y:35 }, 1, []);
   ok(r2.g.aid === 'line', `and the next drop on Normal has the line (${r2.g.aid})`);
   settle();
-  T.debug.settings().kickSeen = true;
+  T.debug.settings().tut = T.debug.TUT_IDS.slice();
 }
-done('35 kickSeen on drops');
+done('35 first drop aids');
 
 // 36. one step count: the B press opens the cut on holdSteps() (the ceiling of hold/STEP, the press step the first) and holdLead() projects exactly the
 // world steps that run before it, so the offer's kick spot and chargers are the cut's to the bit at holds on and off the 1/60 grid
