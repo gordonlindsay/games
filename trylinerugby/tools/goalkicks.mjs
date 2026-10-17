@@ -580,7 +580,8 @@ const tryDrop = (spot, di, chargers, o) => {
 };
 const settle = () => run(() => M().phase !== 'cut', 400);   // the verdict hold and the cut-out
 
-// 23. range and the label: the carrier is offered a drop goal in the zone with nobody near, and not out of it, across it, early, or with the stick at touch or back
+// 23. range and the label: the carrier is offered a drop goal in the zone, and not out of it, across it, early, or with the stick at touch or back; the chargers
+// do not enter the label (2026-10-17): a man close in front leaves it on, and the cut then judges him
 begin('drop zone');
 {
   freshD(1); let c = K.stageDrop({ x:85, y:35 }, []);
@@ -600,27 +601,23 @@ begin('drop zone');
   ok(K.dropZone(c).ok, 'and on again with the stick forward');
   freshD(1); c = K.stageDrop({ x:85, y:35 }, []); M().phase = 'set';
   ok(!K.dropZone(c).ok, 'off outside open play'); M().phase = 'play';
-  // hysteresis: a charger brought to where a late release is blocked but an on-time one gets away leaves the label on; nearer still and it goes off
+  // the chargers do not enter the label: a standing man brought in from 14m to 2m in front, or one 6m off at full tilt, leaves it on (the old offer went off
+  // once a late release was blocked, about 9m)
   freshD(1); c = K.stageDrop({ x:90, y:35 }, []); const q = M().players.find(p => p.team === 1);
   ok(K.dropZone(c).ok, 'on with the charger far away');
-  const pj = K.projectHold(c, K.holdLead()), g = K.goalOf(0, pj.x, pj.y, 'drop', c, K.windNow(0));   // judged where the hold leaves him, as dropZone judges it
-  let dLate = null, dOn = null;
-  for (let d = 14; d >= 3; d -= 0.1) {
-    q.x = c.x + d; q.y = c.y; q.vx = q.vy = 0;
-    const late = K.dropOffer(c, K.holdLead(), g, KICK.offerLate), on = K.dropOffer(c, K.holdLead(), g, 0);
-    if (dLate == null && !late && on) dLate = d;
-    if (dOn == null && !on) { dOn = d; break; }
-  }
-  ok(dLate != null && dOn != null && dLate > dOn, `a late release is blocked from ${dLate && dLate.toFixed(1)}m, an on-time one from ${dOn && dOn.toFixed(1)}m`);
-  q.x = c.x + dLate; q.y = c.y; c.hold += 0.3;
-  ok(K.dropZone(c).ok, 'once on it stays on while an on-time strike still gets away');
-  c.hold += 0.3; ok(K.dropZone(c).ok, 'and on the next check too');
-  q.x = c.x + dOn - 0.05; c.hold += 0.3;
-  ok(!K.dropZone(c).ok, 'off once an on-time strike is blocked');
-  q.x = c.x + dLate; c.hold += 0.3;
-  ok(!K.dropZone(c).ok, 'and it does not come back on at a spot where only an on-time strike gets away');
-  q.x = c.x + 14; c.hold += 0.3;
-  ok(K.dropZone(c).ok, 'until a late release gets away again');
+  let onAll = true, offAt = null;
+  for (let d = 14; d >= 2; d -= 0.5) { q.x = c.x + d; q.y = c.y; q.vx = q.vy = 0; c.hold += 0.3; if (!K.dropZone(c).ok) { onAll = false; if (offAt == null) offAt = d; } }
+  ok(onAll, `and on with a standing charger at every distance from 14m down to 2m in front${offAt != null ? ' (off at ' + offAt + 'm)' : ''}`);
+  q.x = c.x + 6; q.y = c.y; q.vx = -9; q.vy = 0; c.hold += 0.3;
+  ok(K.dropZone(c).ok, 'and with one 6m off at full tilt');
+  ok(M().dropSeen[0] && M().dropSeen[0].has(q), 'the label notes him as a charger the cut will judge');
+  // and the cut judges him: offered with a man standing 3m in front, the press opens the close-up, he is a charger in it and he stops the kick
+  freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:93, y:35 }]); const q3 = M().players.filter(p => p.team === 1)[0];   // stageDrop gives the first opponent the first charger's spot
+  ok(K.dropZone(c).ok && K.kickLabel(0) === 'Drop Goal', 'offered, and B reads Drop Goal, with a man standing 3m in front');
+  inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', 30); let cut = M().cut, g = cut && cut.g;
+  ok(g && g.type === 'drop' && g.rush.length >= 1 && g.rush[0].q === q3, `the press opens the close-up with him charging (${g ? g.rush.length : '-'} chargers, ${g && g.rush[0] ? g.rush[0].d0.toFixed(2) : '-'}m off)`);
+  if (g) { run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m:g.ctr, aim:0 })); ok(g.out === 'smothered' || g.out === 'charged', `and he stops the kick (${g.out || 'clear'})`); }
+  inp.bDown = false; settle();
   inp.jx = 0;
 }
 done('23 drop zone');
@@ -666,7 +663,7 @@ begin('drop trigger');
 done('24 drop trigger');
 
 // 25. charging geometry: a standing charger 12m off never gets there, a full-tilt one 6m off charges a band-centre strike down, no release is Smothered,
-// and the offer and the live outcome are the same rule
+// and with a standing charger at each distance the label reads Drop Goal every time while the live outcome turns over once, from blocked to clear
 begin('charging');
 {
   freshD(1); let c = K.stageDrop({ x:90, y:35 }, [{ x:102, y:35 }]); inp.bDown = true; K.startDropCut(c); let cut = M().cut, g = cut.g;
@@ -686,18 +683,22 @@ begin('charging');
   ok(g.out === 'smothered' && g.stage === 'wait' && !g.L, `no release at all: Smothered (${g.out}, stage ${g.stage}, at ${cut.t.toFixed(2)}s)`);
   settle();
   ok(M().phase === 'set' && M().set.kind === 'ruck' && g.kicker.down > 0 && Math.abs(g.outQ.x - g.kicker.x - 0.5) < 0.05, `then a tackle and a ruck, with the charger 0.5m in front (${M().phase}/${M().set && M().set.kind})`);
-  // the offer and the outcome agree: a standing charger at each distance, the kick released where the offer assumed it (step quantised), the same verdict
-  let agree = 0, total = 0, blocked = 0, clear = 0, first = null;
+  // the label and the outcome are separate (2026-10-17): a standing charger at each distance leaves the label on every time; a pure strike released 0.1s
+  // late (what the old offer judged) is blocked close in and gets away further out, turning over once
+  const LATE = 0.10;
+  let total = 0, offered = 0, blocked = 0, clear = 0, flips = 0, last = null, bound = null;
   for (let d = 4; d <= 14; d += 1) {
-    freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:90 + d, y:35 }]); inp.bDown = true; K.startDropCut(c); cut = M().cut; g = cut.g;
-    const off = K.dropOffer(c, 0, g, KICK.offerLate), m = Math.min(1, g.ctr + KICK.offerLate/g.fill);
+    freshD(1); c = K.stageDrop({ x:90, y:35 }, [{ x:90 + d, y:35 }]);
+    if (K.dropZone(c).ok) offered++;
+    inp.bDown = true; K.startDropCut(c); cut = M().cut; g = cut.g;
+    const m = Math.min(1, g.ctr + LATE/g.fill);
     run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, { m, aim:0 })); inp.bDown = false;
     const got = !g.out;
-    total++; if (got === off) agree++; else if (first == null) first = `${d}m: offer ${off}, live ${g.out || 'clear'} at m ${g.m.toFixed(3)} v ${m.toFixed(3)}`;
-    if (off) clear++; else blocked++;
+    total++; if (got) clear++; else blocked++;
+    if (last != null && got !== last) { flips++; bound = d; } last = got;
     settle();
   }
-  ok(agree >= total - 1 && blocked > 0 && clear > 0, `the offer and the live outcome agree at ${agree} of ${total} distances (${blocked} blocked, ${clear} clear${first ? '; ' + first : ''})`);
+  ok(offered === total && blocked > 0 && clear > 0 && flips === 1, `offered at ${offered} of ${total} distances; the late strike is blocked at ${blocked} and clear at ${clear}, turning over ${flips} time${flips === 1 ? '' : 's'}${bound ? ' at ' + bound + 'm' : ''}`);
 }
 done('25 charging');
 
@@ -900,11 +901,10 @@ begin('press decides');
   ok(labels.size === 1 && labels.has('Drop Goal'), `and the label read Drop Goal for the whole hold (${[...labels]})`);
   inp.jx = 1; inp.jy = 0;
   if (cutA) { ok(!K.dropZone(c).ok && cutA.g.rush.length === 0, 'the zone itself is off in a cut, and nobody is charging'); finish(cutA); } else { inp.bDown = false; T.update(STEP); }
-  // (b) armed, then a charger lands 3m in front during the hold: the offer is not run again, the cut opens and he is a charger in it
+  // (b) armed, then a charger lands 3m in front during the hold: the cut opens on the 0.20s step and he is a charger in it
   freshD(1); c = K.stageDrop({ x:85, y:35 }, []); const q = M().players.find(p => p.team === 1);
   inp.bPressed = inp.bDown = true; steps(5); q.x = c.x + 3; q.y = c.y; q.vx = q.vy = 0;
-  const wouldRefuse = !K.dropZone(c).ok;
-  ok(run(() => M().phase === 'cut', holdSteps) && wouldRefuse, `the offer would refuse him now, but the press promised a drop: the cut opens (${M().phase})`);
+  ok(run(() => M().phase === 'cut', holdSteps), `the press promised a drop: the cut opens (${M().phase})`);
   cutA = M().cut; let g = cutA && cutA.g;
   ok(g && g.rush.length === 1 && g.rush[0].q === q && g.rush[0].d0 < 3, `and he is in it as a charger, ${g && g.rush.length ? g.rush[0].d0.toFixed(2) : '-'}m off`);
   if (cutA) { finish(cutA, { m:g.ctr, aim:0 }); ok(g.out === 'smothered' || g.out === 'charged', `who stops the kick (${g.out})`); } else { inp.bDown = false; T.update(STEP); }
@@ -938,10 +938,10 @@ begin('press decides');
 }
 done('31 press decides');
 
-// 32. the offer projects the hold as it will really run: the kicker on his stick, the AI's chaser turning in, and every opponent who can reach him,
-// a man on his shoulder included. The offer and a late pure strike through the real press path then agree at every distance but the step-quantised
-// boundary, and a charger coming from behind draws clean
-begin('offer projection');
+// 32. the label projects the hold as it will really run: the kicker on his stick, the AI's chaser turning in, and the chargers as the hold will leave
+// them, a man on his shoulder included. The label reads Drop Goal whatever they do (2026-10-17); through the real press path a late pure strike is
+// blocked close in and clear further out, a man on the shoulder stops it, and a chaser deeper behind is out of the cut
+begin('label projection');
 {
   const finish = (cut, o) => { const g = cut.g; run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut, o)); inp.bDown = false; settle(); };
   const holdSteps = Math.round(KICK.hold/STEP);
@@ -965,37 +965,57 @@ begin('offer projection');
   inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps); let g = M().cut && M().cut.g, r1 = g && g.rush[0];
   ok(r0 && r1 && Math.abs(r0.d0 - r1.d0) < 1e-9 && Math.abs(r0.v0 - r1.v0) < 1e-9 && r1.v0 > 2 && r1.d0 < 9.5, `the projected charger is the frozen one: d0 ${r0.d0.toFixed(2)} v ${r1.d0.toFixed(2)}, v0 ${r0.v0.toFixed(2)} v ${r1.v0.toFixed(2)} (he has turned in during the hold)`);
   if (g) finish(M().cut, { m:g.ctr, aim:0 }); else { inp.bDown = false; T.update(STEP); }
-  // the offer and the live late strike agree through the real press path: a standing charger at 31 distances in a calm wind (so the cut's band is the
-  // offer's), the kicker standing with the stick forward. Offered means a pure strike released 0.1s late gets away; the one row that may differ is the
-  // step-quantised boundary
-  let agree = 0, total = 0, offered = 0, bad = [];
+  // the label and the live late strike through the real press path: a standing charger at 31 distances in a calm wind, the kicker standing with the stick
+  // forward. The label reads Drop Goal at every one (the old offer refused 13 of them); a pure strike released 0.1s late is blocked close in and gets away
+  // further out, turning over once
+  const LATE = 0.10;
+  let total = 0, offered = 0, clear = 0, flips = 0, last = null, bound = null, bad = [];
   for (let d = 7; d <= 10.001; d += 0.1) {
     freshD(1); M().wind = { a:0, mph:0 }; c = K.stageDrop({ x:110 - Math.sqrt(800), y:25 }, [{ x:110 - Math.sqrt(800) + d, y:25 }]);
-    const off = K.dropZone(c).ok;
+    if (K.dropZone(c).ok) offered++; else bad.push(`not offered at ${d.toFixed(1)}m`);
     inp.bPressed = inp.bDown = true;
-    if (!run(() => M().phase === 'cut', holdSteps)) { inp.bDown = false; ok(!off, `not offered at ${d.toFixed(1)}m: no cut opened`); continue; }
-    g = M().cut.g; offered++;
-    finish(M().cut, { m:Math.min(1, g.ctr + KICK.offerLate/g.fill), aim:0 });
-    total++; if (!g.out) agree++; else bad.push(`${d.toFixed(1)}m ${g.out} at m ${g.mRel.toFixed(3)} (rush ${g.rush.map(r => r.d0.toFixed(2) + '@' + r.v0.toFixed(2)).join(',')})`);
+    if (!run(() => M().phase === 'cut', holdSteps)) { inp.bDown = false; bad.push(`no cut at ${d.toFixed(1)}m`); continue; }
+    g = M().cut.g; total++;
+    finish(M().cut, { m:Math.min(1, g.ctr + LATE/g.fill), aim:0 });
+    const got = !g.out; if (got) clear++;
+    if (last != null && got !== last) { flips++; bound = d; } last = got;
   }
-  ok(offered >= 10 && offered < 31 && agree >= total - 1, `offered at ${offered} of 31 distances; the late strike got away at ${agree} of ${total}${bad.length ? ' (' + bad.join('; ') + ')' : ''}`);
-  console.log(`  standing charger 7-10m, calm: offered at ${offered} of 31 distances, the late pure strike got away at ${agree} of ${total}${bad.length ? ' (' + bad.join('; ') + ')' : ''}`);
-  // a man on the shoulder: 1.5m behind and 1m to the side, running with the carrier at 8 m/s, he reaches him whether the stick stays forward or is let go; 9m behind he cannot
-  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:83.5, y:36, vx:8, vy:0 }]); c.vx = 8;
-  ok(!K.dropZone(c).ok, 'a chaser on his shoulder at 8 m/s: no offer with the stick forward');
-  inp.jx = 0; inp.jy = 0;
-  ok(!K.dropZone(c).ok, 'nor with the stick let go (he brakes, and the chaser is level at the freeze)');
+  ok(offered === 31 && total === 31 && clear > 0 && clear < 31 && flips === 1, `offered at ${offered} of 31 distances; the late strike is blocked at ${total - clear} and clear at ${clear}, turning over ${flips} time${flips === 1 ? '' : 's'}${bound ? ' at ' + bound.toFixed(1) + 'm' : ''}${bad.length ? ' (' + bad.join('; ') + ')' : ''}`);
+  console.log(`  standing charger 7-10m, calm: offered at ${offered} of 31 distances, the late pure strike blocked at ${total - clear} and clear at ${clear}${bound ? ', the boundary at ' + bound.toFixed(1) + 'm' : ''}`);
+  // a man on the shoulder: 1.5m behind and 1m to the side, running with the carrier at 8 m/s. The label stays on (the old offer refused him). With the stick
+  // forward he is the charger in the cut and stops a band-centre strike; with the stick let go the kicker brakes and the chaser reaches him during the
+  // hold, but nobody tackles a man in a Drop Goal hold (dropHolding): the close-up still opens, he is its charger, and he stops the strike there
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:83.5, y:36, vx:8, vy:0 }]); c.vx = 8; let qs = M().players.filter(p => p.team === 1)[0];
+  ok(K.dropZone(c).ok && M().dropSeen[0].has(qs), 'a chaser on his shoulder at 8 m/s, the stick forward: offered, and in the label\'s set');
+  inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps); g = M().cut && M().cut.g;
+  ok(g && g.rush.length === 1 && g.rush[0].q === qs && g.rush[0].d0 < 4, `and he is the charger in the cut (${g ? g.rush.map(r => r.d0.toFixed(2) + 'm').join(', ') : 'no cut'})`);
+  if (g) { finish(M().cut, { m:g.ctr, aim:0 }); ok(g.out === 'smothered' || g.out === 'charged', `who stops a band-centre strike (${g.out || 'clear'})`); } else { inp.bDown = false; T.update(STEP); }
+  freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:83.5, y:36, vx:8, vy:0 }]); c.vx = 8; qs = M().players.filter(p => p.team === 1)[0]; inp.jx = 0; inp.jy = 0;
+  ok(K.dropZone(c).ok && M().dropSeen[0].has(qs), 'with the stick let go: offered, and in the label\'s set');
+  inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps); g = M().cut && M().cut.g;
+  ok(g && qs.down <= 0 && g.rush.some(r => r.q === qs), `the chaser reaches the braking kicker during the hold, but no tackle lands in it: the close-up opens with him as a charger (${g ? g.rush.map(r => r.d0.toFixed(2) + 'm').join(', ') : 'no cut, phase ' + M().phase})`);
+  if (g) { finish(M().cut, { m:g.ctr, aim:0 }); ok(g.out === 'smothered' || g.out === 'charged', `and he stops a band-centre strike there (${g.out || 'clear'})`); } else { inp.bDown = false; T.update(STEP); }
+  // a man standing 1.5m in front: the label reads Drop Goal, the press always reaches the close-up, and he smothers it there
+  { let cut = 0, stopped = 0;
+    for (let i = 0; i < 12; i++) {
+      freshD(i % 3); c = K.stageDrop({ x:85, y:35 }, [{ x:86.5, y:35.3 }]); inp.jx = 1; inp.jy = 0;
+      if (!K.dropZone(c).ok) continue;
+      inp.bPressed = inp.bDown = true; run(() => M().phase === 'cut', holdSteps); const g2 = M().cut && M().cut.g;
+      if (g2 && g2.type === 'drop') { cut++; finish(M().cut, { m:g2.ctr, aim:0 }); if (g2.out) stopped++; } else { inp.bDown = false; T.update(STEP); }
+    }
+    ok(cut === 12 && stopped === 12, `a man 1.5m in front: every Drop Goal press opens the close-up (${cut}/12) and he stops it there (${stopped}/12)`); }
+  inp.jx = 1; inp.jy = 0;
   freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:81, y:35, vx:8, vy:0 }]); c.vx = 8;
-  ok(!K.dropZone(c).ok, 'one 4m behind at full tilt: no offer');
-  // the shoulder radius: behind the kick spot a chaser counts only within KICK.shoulder (4m), in the offer and in the cut alike; deeper behind he is out of both
+  ok(K.dropZone(c).ok && K.rushersOf(c, K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)), null).length === 1, 'one 4m behind at full tilt: offered, and a charger');
+  // the shoulder radius: behind the kick spot a chaser counts only within KICK.shoulder (4m), in the label's set and in the cut alike; deeper behind he is out of both
   freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:80, y:35, vx:8, vy:0 }]); c.vx = 8;
   ok(K.dropZone(c).ok, 'one 5m behind at full tilt is outside the shoulder radius: offered');
   ok(K.rushersOf(c, K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)), null).length === 0, 'and rushersOf leaves him out');
   const sh0 = KICK.shoulder; KICK.shoulder = 6;
-  ok(!K.dropZone(c).ok, 'with the lever at 6m he is counted, and reaches him: not offered');
+  ok(K.dropZone(c).ok && K.rushersOf(c, K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)), null).length === 1, 'with the lever at 6m he is counted as a charger, and the label stays on');
   KICK.shoulder = sh0;
   freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:81.5, y:35, vx:8, vy:0 }]); c.vx = 8;
-  ok(!K.dropZone(c).ok, 'one 3.5m behind at full tilt is on the shoulder: not offered');
+  ok(K.dropZone(c).ok && K.rushersOf(c, K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)), null).length === 1, 'one 3.5m behind at full tilt is on the shoulder: offered, and a charger');
   freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:90, y:35, vx:-8, vy:0 }]); c.vx = 8;
   ok(K.rushersOf(c, K.goalOf(0, 85, 35, 'drop', c, K.windNow(0)), null).length === 1, 'the radius applies behind only: a man 5m in front is a charger');
   freshD(1); c = K.stageDrop({ x:85, y:35 }, [{ x:76, y:35, vx:8, vy:0 }]); c.vx = 8;

@@ -34,6 +34,32 @@ for (const kind of ['past', 'pass', 'tackle']) {
   fresh(); const s = T.debug.stage('block');
   ok(!!T.forceDuel && M(), 'block can be forced');
 }
+// 1b. the Tackle duel's trigger (2026-10-17): the hold floor is 0.3s (from 0.5) and the last-defender test is "no other man of yours goal-side of the
+// carrier within 7m" (from "nobody within 10m unless a metre behind him"), the levers in TDUEL; front-on and the distance band are as they were.
+// Reverted (TDUEL='{"hold":0.5,"lastBack":1,"lastR":10}' node tools/duels.mjs), the four asserts marked * fail.
+{
+  const TD = T.debug.TDUEL, team0 = () => M().players.filter(p => p.team === 0);
+  ok(TD.hold === 0.3 && TD.lastBack === -0.5 && TD.lastR === 7 && TD.ahead === 0.5 && TD.near === 2.9 && TD.far === 6 && TD.ctrlT === 0.6 && TD.cos === 0.57, `TDUEL is as decided (${JSON.stringify(TD)})`);
+  const fires = () => { T.update(STEP); return M().phase === 'cut' && M().cut.kind === 'tackle'; };
+  fresh(); let st = T.debug.stage('tackle'); st.O.hold = 0.35;
+  ok(fires(), '* fires with the carrier 0.35s on the ball');
+  fresh(); st = T.debug.stage('tackle'); st.O.hold = 0.25;
+  ok(!fires(), 'not at 0.25s');
+  fresh(); st = T.debug.stage('tackle'); let o = team0()[1]; o.x = 47; o.y = 40;
+  ok(!fires(), 'another man of ours 3m goal-side of the carrier and 5.8m off: your man is not the last defender, no duel');
+  fresh(); st = T.debug.stage('tackle'); o = team0()[1]; o.x = 50; o.y = 40;
+  ok(fires(), '* a man of ours level with the carrier, 5m off, is not between him and the line: the duel fires');
+  fresh(); st = T.debug.stage('tackle'); o = team0()[1]; o.x = 50.5; o.y = 39;
+  ok(fires(), '* nor is one half a metre behind him');
+  fresh(); st = T.debug.stage('tackle'); o = team0()[1]; o.x = 42.5; o.y = 36;
+  ok(fires(), '* a man goal-side but 7.6m off is beyond the last-defender radius: the duel fires');
+  fresh(); st = T.debug.stage('tackle'); o = team0()[1]; o.x = 43.5; o.y = 35.5;
+  ok(!fires(), 'one 6.5m off goal-side is not');
+  fresh(); st = T.debug.stage('tackle'); st.U.x = 49.6;
+  ok(!fires(), 'front-on still: your man 0.4m goal-side of the carrier does not get the duel');
+  fresh(); st = T.debug.stage('tackle'); st.U.x = 43.5;
+  ok(!fires(), 'and the band is as it was: 6.5m off is too far');
+}
 
 // 2. the world is frozen during a close-up
 {

@@ -626,7 +626,7 @@ const KICK = {
   hook:4.0, push:2.0, curlK:0.12,
   R:0.18, bar:3.0, upL:32.2, upR:37.8, upH:11,
   tap:0.12, runup:0.42, dropT:0.25, hold:0.20, hitStop:0.07, aimRate:18, keyRate:12, aimMax:30, penMin:10,
-  reach:2.4, block:1.0, lat:0.9, rushAcc:6, rushMul:[0.84,1.0,1.10], rushR:15, shoulder:4, offerLate:0.10, cpuReact:0.30,
+  reach:2.4, block:1.0, lat:0.9, rushAcc:6, rushMul:[0.84,1.0,1.10], rushR:15, shoulder:4, cpuReact:0.30,
   cpuSig:[0.072,0.060,0.056], cpuAim:[0.9,0.15], cpuAimSd:0.6,
   wind:{ mix:[[0.30,0,3],[0.45,4,11],[0.25,11,18]], gust:0.18, swing:10, max:22, calm:2 },
 };
@@ -837,8 +837,8 @@ function newMatch(u, c, opts) {
     di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
     duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },
     stats:{ tackles:0, broken:0, passes:0, kicks:0, rucks:0, turnovers:0, pens:0, knocks:0, intercepts:0, drops:0, duels:0, duelsWon:0, duelsPerfect:0, gk:{ att:[0, 0], made:[0, 0] }, dg:{ att:[0, 0], made:[0, 0], charged:[0, 0] } },
-    dropOn:[false, false], dropArmed:[false, false],   // the drop-goal offer, per side: its hysteresis, and what the label promised at the B press
-    dropSeen:[null, null], dropSet:[null, null],       // the chargers the last offer judged, and the ones the press committed the cut to
+    dropOn:[false, false], dropArmed:[false, false],   // the drop-goal label, per side: what it read on the last frame, and what it promised at the B press
+    dropSeen:[null, null], dropSet:[null, null],       // the chargers the label last saw (as the hold would leave them), and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
@@ -1400,7 +1400,10 @@ function resolveRuck(s) {                                  // the ruck is automa
   releaseTo(att, s.x, s.y, 'ruck');
   if (s.dom) surge(def, LINE_SPEED);
 }
+// a Drop Goal press: the 0.20s to the close-up is the kicker's, and a man close enough to stop it is judged as a charger in the cut
+const dropHolding = c => !!c && !!M.dropArmed[c.team] && !!sideOf(c.team).charging && M.ball.carrier === c;
 function tackleChecks(c) {
+  if (dropHolding(c)) return false;
   for (const q of M.players) {
     if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
     const user = ringed(q);
@@ -1620,7 +1623,7 @@ function kickWind(team) {                                  // drawn once per kic
   const v = frameVec(team, { x:mph*MPH*Math.cos(a), y:mph*MPH*Math.sin(a) });
   return { x:v.x, y:v.y, mph };
 }
-function windNow(team) {                                   // the match wind as it stands, ungusted and in the frame: what the drop offer and the CPU's trigger read, with no random draw
+function windNow(team) {                                   // the match wind as it stands, ungusted and in the frame: what the drop label and the CPU's trigger read, with no random draw
   const mw = M.wind;
   if (mw.mph < KICK.wind.calm) return CALM;
   const v = frameVec(team, { x:mw.mph*MPH*Math.cos(mw.a), y:mw.mph*MPH*Math.sin(mw.a) });
@@ -1836,18 +1839,19 @@ function dropGoal(team, quiet) {                           // quiet: the close-u
    In range, the small button reads Drop Goal: a tap is still a chip, a 0.20s
    hold freezes play and cuts to the goal-kick shot with the thumb still down.
    The meter fills while B is held, the stick steers, and the nearest three
-   defenders charge at the lens. One rule, blockedBy, decides whether a kick
-   gets away. The offer runs it on the world as the hold will leave it, the
-   kicker's own run and every opponent ahead or level who can reach him
-   included, plus anyone behind him inside KICK.shoulder, so the label
-   never promises a kick that is certain to be charged down. What the label
-   says at the press is what the press gives: a Drop Goal press opens the
-   close-up at 0.20s whatever has moved since, and a Kick press stays a kick.
-   The CPU drops through the same rule from its own side, in the top-down view. */
+   defenders charge at the lens. The label is geometry alone (2026-10-17): the
+   kick is offered whenever it is viable, in range (a calm pure strike reaches
+   the bar) and at a bearing that can go between the posts, judged on the world
+   as the hold will leave it, whatever the chargers are doing. They still run
+   at him in the close-up, and one rule, blockedBy, decides whether the kick
+   gets away: pressure is the risk he takes. What the label says at the press
+   is what the press gives: a Drop Goal press opens the close-up at 0.20s
+   whatever has moved since, and a Kick press stays a kick. The CPU's own drop
+   decisions (cpuDropOffer) still weigh the chargers, in the top-down view. */
 const DZ_ON = { ok:true }, DZ_OFF = { ok:false };
-const holdSteps = () => Math.ceil(KICK.hold/STEP - 1e-9);     // the B press opens the cut on this step, the press step counted as the first: the one count the trigger and the offer's projection share
+const holdSteps = () => Math.ceil(KICK.hold/STEP - 1e-9);     // the B press opens the cut on this step, the press step counted as the first: the one count the trigger and the label's projection share
 const holdLead = () => (holdSteps() - 1)*STEP;               // how long the world runs between the B press and the freeze: the step that opens the cut does not move it
-function dropZone(c) {                                     // is this carrier offered a drop goal right now? Rules 1 and 3 where he stands; range, bearing and the offer where the hold will leave him
+function dropZone(c) {                                     // is this carrier offered a drop goal right now? Rules 1 and 3 where he stands; range and bearing where the hold will leave him
   const t = c.team, inp = inputOf(t), b = M.ball, k = KICK;
   const off = () => { M.dropOn[t] = false; return DZ_OFF; };
   if (!inp || c !== ctrlOf(t) || b.state !== 'held' || b.carrier !== c || M.phase !== 'play' || M.cut || c.hold < 0.3 || c.bind) return off();
@@ -1856,13 +1860,13 @@ function dropZone(c) {                                     // is this carrier of
   const proj = projectHold(c, holdLead()), f = toFrame(t, proj.x, proj.y), D = hyp(110 - f.x, 35 - f.y);
   if (f.x < 70 || f.x > 104 || D > 42 || Math.abs(Math.atan2(35 - f.y, 110 - f.x)) > 40*D2R) return off();
   const g = goalOf(t, proj.x, proj.y, 'drop', c, CALM);
-  let on = g.mClear <= k.range;                            // in range: a calm pure strike reaches the bar
-  if (on) { g.W = windNow(t); bandOf(g); on = dropOffer(c, 0, g, M.dropOn[t] ? 0 : k.offerLate, proj); }   // hysteresis: on only if a late release gets away, off only when an on-time one is blocked
+  const on = g.mClear <= k.range;                          // in range: a calm pure strike reaches the bar
+  if (on) M.dropSeen[t] = new Set(rushersOf(c, g, proj).map(r => r.q));   // the chargers as the hold will leave them: the cut takes the ones behind him from this set, not from where the hold really left them
   M.dropOn[t] = on;
   return on ? DZ_ON : DZ_OFF;
 }
 // at the B press the label decides: if it read Drop Goal on the last frame, a thumb leaving the stick on this one doesn't take it away. The
-// cut then judges the chargers that offer judged, so a chaser who crosses into the shoulder radius during the hold stays out of it
+// cut then judges the chargers that label saw, so a chaser who crosses into the shoulder radius during the hold stays out of it
 function dropPress(c) {
   const t = c.team, on = M.dropOn[t] || dropZone(c).ok;
   M.dropSet[t] = on ? M.dropSeen[t] : null;
@@ -1888,27 +1892,17 @@ function projectHold(c, lead) {
   M.stats.steps = steps0; c.drop = drop0;
   return out;
 }
-// would a pure strike at aim 0, released `late` seconds after the band's centre, get away from the opponents as they will stand `lead` seconds from now?
-function dropOffer(c, lead, g, late, proj) {
-  proj = proj || projectHold(c, lead);
-  if (!g) g = goalOf(c.team, proj.x, proj.y, 'drop', c, windNow(c.team));
-  if (late == null) late = KICK.offerLate;
-  const m = Math.min(1, g.ctr + late/g.fill);
-  const rs = rushersOf(c, g, proj);
-  M.dropSeen[c.team] = new Set(rs.map(r => r.q));
-  return !blockedBy({ L:launchOf(g, m, 0) }, rs, m*g.fill + KICK.dropT);   // the strike as it would really fly: a late release is above the band and hooks
-}
 // the chargers: every standing opponent within 15m of the kick spot ahead of it or level, and behind it only within the shoulder radius (a man on the
-// kicker's shoulder counts, a chaser deeper behind him does not, in the offer and in the cut alike), the nearest three. Each is frozen where `proj` puts
+// kicker's shoulder counts, a chaser deeper behind him does not, at the label and in the cut alike), the nearest three. Each is frozen where `proj` puts
 // him (or where he really stands), with his speed toward the kicker and his top speed. g.x/g.y is the kick spot, in the frame.
-function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the offer judged)
+function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the label saw)
   const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)] : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
   const list = proj ? proj.opps : M.players.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy }));
   for (const o of list) {
     const f = toFrame(t, o.x, o.y), v = frameVec(t, { x:o.vx, y:o.vy });
     const dx = g.x - f.x, dy = g.y - f.y, d0 = hyp(dx, dy);
     if (d0 > (dx > 0 ? k.shoulder : k.rushR)) continue;   // dx > 0: he is behind the kick spot
-    if (only && dx > 0 && !only.has(o.q)) continue;        // a chaser who crossed into the shoulder radius during the hold was not in the offer
+    if (only && dx > 0 && !only.has(o.q)) continue;        // a chaser who crossed into the shoulder radius during the hold was not in the label's set
     const vmax = maxSpeed(o.q)*mul, ux = d0 > 1e-6 ? dx/d0 : 1, uy = d0 > 1e-6 ? dy/d0 : 0;
     out.push({ q:o.q, x:f.x, y:f.y, ux, uy, d0, v0:clamp(v.x*ux + v.y*uy, 0, vmax), vmax, a:k.rushAcc*vmax/8.35 });
   }
@@ -1949,7 +1943,7 @@ function blockedBy(g, rushers, tStrike) {
 function startDropCut(c) {                                 // the carrier has held B for 0.20s in range: freeze, and cut in with the thumb still down
   const t = c.team, g = makeGoal(t, c.x, c.y, 'drop', c);
   g.inp = inputOf(t);
-  g.rush = rushersOf(c, g, null, M.dropSet[t]);           // the chargers as they really stand at the freeze; behind him, only the ones the offer judged
+  g.rush = rushersOf(c, g, null, M.dropSet[t]);           // the chargers as they really stand at the freeze; behind him, only the ones the label saw
   M.dropSet[t] = null;
   g.stage = 'hold';
   M.goal = g; M.stats.dg.att[t]++; M.dropArmed[t] = false;
@@ -2300,6 +2294,13 @@ const DUEL = {
   block:  { name:'Block',    rig:2, tk:1.05, win:[0.26,0.20,0.15], mod:['handling','handling'], cpu:[0,0.15,0.30] }, // dummy chance
 };
 const DUEL_GRACE = 0.30, DUEL_OUTRO = 0.55, DUEL_SKIP = 0.25, DUEL_GAP = 30, DUEL_LAST_GAP = 6;
+/* The Tackle duel's trigger (findTackleDuel), one line so the harness can try values: TDUEL='{"hold":0.5}' node tools/bot.mjs. hold: the CPU
+   carrier's seconds on the ball; ctrlT: seconds since your ring last moved; ahead: how far goal-side of him your man must be (front-on);
+   near/far: the distance band; lastBack/lastR: no other standing man of yours within lastR of the carrier and no more than lastBack metres
+   behind him (negative: at least that far goal-side of him); cos: your stick's cosine toward the carrier.
+   2026-10-17: hold 0.5 -> 0.3 and the last-defender test from "nobody within 10m unless 1m behind him" to "nobody goal-side of him within
+   7m", since the led pass has the CPU's receivers catching at pace with team-mates level: the duel had fallen from 0.6 to 0.15 a match. */
+const TDUEL = { hold:0.3, ctrlT:0.6, ahead:0.5, near:2.9, far:6.0, lastBack:-0.5, lastR:7, cos:0.57 };
 const G_START = 7.0, G_WIN = 2.4, G_HIT = 0.8;          // the restaged approach, metres apart
 const BURST = { ok:[1.09, 2.0], perfect:[1.14, 2.5], knock:[1.06, 1.2] };   // measured at n=1440 per row: x1.12/x1.18 overshoots Normal once the Dummy is in, x1.06 is barely felt
 const DOM_TURN = [0.25, 0.35], DOM_RUCK = 1.6, LINE_SPEED = 2.5;
@@ -2394,17 +2395,18 @@ function findAttackDuel(c) {                                // a human carrier a
   const g = duelGate('past', t);
   return g ? { kind:'past', U:c, O:d1, how:g } : null;
 }
-function findTackleDuel(c) {                                // the other side's human as the last defender, front-on, running at the carrier
-  if (c.hold < 0.5 || c.down > 0) return null;
+function findTackleDuel(c) {                                // the other side's human as the last defender, front-on, running at the carrier (the levers are TDUEL)
+  const K = TDUEL;
+  if (c.hold < K.hold || c.down > 0) return null;
   const t = 1 - c.team, d = dirOf(c.team), q = ctrlOf(t);
-  if (!q || q.down > 0 || q.tcd > 0 || sideOf(t).ctrlT < 0.6) return null;
-  if (!wellAhead(q.x, c.x, d, 0.5)) return null;
+  if (!q || q.down > 0 || q.tcd > 0 || sideOf(t).ctrlT < K.ctrlT) return null;
+  if (!wellAhead(q.x, c.x, d, K.ahead)) return null;
   const dd = dist(q, c);
-  if (dd < 2.9 || dd > 6.0) return null;
+  if (dd < K.near || dd > K.far) return null;
   if ((oppLine(c.team) - c.x)*d < 3 || c.y < 6 || c.y > 64) return null;
-  for (const o of M.players) if (o.team === t && o !== q && o.down <= 0 && notBehind(o.x, c.x, d, 1) && dist(o, c) < 10) return null;
+  for (const o of M.players) if (o.team === t && o !== q && o.down <= 0 && notBehind(o.x, c.x, d, K.lastBack) && dist(o, c) < K.lastR) return null;   // the last defender: no other man of his goal-side of the carrier (lastBack < 0: by more than -lastBack) within lastR
   const j = inputOf(t).world();
-  if (j.mag <= 0.5 || (j.x*(c.x - q.x) + j.y*(c.y - q.y))/(j.mag*dd) < 0.57) return null;
+  if (j.mag <= 0.5 || (j.x*(c.x - q.x) + j.y*(c.y - q.y))/(j.mag*dd) < K.cos) return null;
   const g = duelGate('tackle', t);
   return g ? { kind:'tackle', U:q, O:c, how:g } : null;
 }
@@ -3149,6 +3151,7 @@ function userTackle(t) {                                   // the Tackle press f
   const q = ctrlOf(t), b = M.ball;
   if (!canDive(q)) { st('ignored'); return; }
   const c = b.carrier;
+  if (dropHolding(c)) { st('ignored'); return; }   // he is about to drop for goal: the close-up judges you as a charger
   if (c.bind) { joinTackle(c.bind, q); return; }
   const behind = (q.x - c.x)*dirOf(c.team) < -0.3;
   const dx = c.x-q.x, dy = c.y-q.y, m = hyp(dx,dy) || 1;
@@ -3259,7 +3262,7 @@ function userStep(t, i, dt) {
     else {
       S.charge = Math.min(1, S.charge + dt/0.85); S.holdN++;
       if (!inp.bDown) { const pw = S.charge; S.charging = false; S.charge = 0; userKick(t, pw); }   // a tap is a chip, as ever
-      else if (M.dropArmed[t] && S.holdN >= holdSteps()) startDropCut(c);   // a Drop Goal press held 0.20s (holdSteps steps, the press step the first): the close-up, with the thumb still down. The offer is not run again: what the label said at the press is what you get
+      else if (M.dropArmed[t] && S.holdN >= holdSteps()) startDropCut(c);   // a Drop Goal press held 0.20s (holdSteps steps, the press step the first): the close-up, with the thumb still down. The label is not run again: what it said at the press is what you get
     }
   }
 }
@@ -5770,13 +5773,13 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
     openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
-    DUEL_SLOW, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor },
+    DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
     LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
-    dropZone, dropOffer, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
+    dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   get M() { return M; } };

@@ -49,15 +49,19 @@ nations, a local Surrey club, or a team you make yourself.
 - **Goal kicks** (2026-10-12): pitch-level close-up, sevens drop kicks, Normal = CPU parity. Conversions and
   penalty goals cut to a still shot from behind the kicker: steer the arrow, hold Kick, let go in the gold. The CPU's
   kicks play the same shot with a Skip button.
-- **Drop goals** (2026-10-13): in range the small button reads **Drop Goal**; a tap is still a chip, a 0.20s hold
-  freezes play and cuts to the same shot with the thumb still down, the meter filling while you hold and the nearest
-  defenders charging at the lens. The label is only offered when a pure strike would get away, by the same charging
-  rule that decides the outcome, run on the hold as it will really play: the kicker's own run on his stick, every
-  opponent ahead of him who can reach him, and behind him only a man on his shoulder (within 4m). What the button says
-  when you press it is what you get:
-  a Drop Goal press opens the close-up at 0.20s whatever moves in the meantime, a Kick press stays a kick. The CPU
-  drops through that rule from its own side, in the top-down view, offered on the clock its strike keeps, so a man of
-  yours closing on him can charge it down.
+- **Drop goals** (2026-10-13; the label geometry alone since 2026-10-17): in range the small button reads **Drop Goal**;
+  a tap is still a chip, a 0.20s hold freezes play and cuts to the same shot with the thumb still down, the meter
+  filling while you hold and the nearest defenders charging at the lens. The label is offered whenever the kick is
+  viable: in range (a calm pure strike reaches the bar) and at a bearing that can go between the posts, judged on the
+  hold as it will really play (the kicker's own run on his stick), whatever the chargers are doing (Gordon, 2026-10-17:
+  "drop kick should snap to the 3d version if kick is between the posts and therefore viable"). Until then it was only
+  offered when a pure strike would also get away from them, by the charging rule that decides the outcome. They still
+  charge in the close-up, from where they stood, and still smother or charge it down: the pressure is yours to read.
+  What the button says when you press it is what you get: a Drop Goal press opens the close-up at 0.20s whatever moves
+  in the meantime (nobody can tackle a kicker in that 0.20s hold, `dropHolding`: a man close enough is judged as a
+  charger in the close-up instead, so he smothers it there rather than ending it before it opens), a Kick press stays a kick. The CPU still drops only when the charging rule says its strike would get
+  away (`cpuDropOffer`), in the top-down view, on the clock its strike keeps, so a man of yours closing on him can
+  charge it down.
 - **Contact** (2026-10-13): a tackle is a commit and a 0.25s bind, not a coin flip at 1.5m. A made tackle is a Big Hit,
   a Wrap or a Soft tackle, the carrier runs down (or is driven back) while the tackler hangs off his hip, a second
   defender can join, and the ruck that follows has the tackler rolling away and retiring. A missed tackler slides off
@@ -198,8 +202,8 @@ nations, a local Surrey club, or a team you make yourself.
     at 0.65 of top speed (`RUNON.cpu`, the balance lever); the Key Pass runner box is 7.5m (from 6). Your passes are
     now caught about 2.6m behind the passer at 5.7 m/s, 4% standing, 0–0.17 dropped a match; the CPU's at about
     5 m/s. More tries are scored at every level with the win rates held on Easy and Normal; two player rises to
-    about 9.4 tries a match (the investigation's estimate was 8.5; accepted; `TWO.tackle` is the lever to pull it back); the Tackle duel gets rare (about 0.15 a
-    match from 0.6, accepted for now); AI v AI scores more too (sim.mjs re-baselined below).
+    about 9.4 tries a match (the investigation's estimate was 8.5; accepted; `TWO.tackle` is the lever to pull it back); the Tackle duel got rare (about 0.15 a
+    match from 0.6) until its trigger was retuned later the same day, below; AI v AI scores more too (sim.mjs re-baselined below).
   - **Side Step and Dummy, on the stick.** The old open-play step was a turn-rate test (`p.turn`) that a single flick on
     the floating stick could never reach, and most of its 53 fires a match came on the first step after a catch. It is
     gone. **Side Step** is one sharp flick across the run near a tackler (within 4m): x0.65 tackle odds for 0.35s and a
@@ -223,6 +227,26 @@ nations, a local Surrey club, or a team you make yourself.
     Past. Resume before the ring opens starts the slow phase again from there. Instant mode has no close-up. Measured
     with a modelled human under Measured baseline: a player who needs 0.6s to get his bearings goes from 27% to 70% of
     Normal duels, a child needing 0.8s from 8% to 71%, and the bots don't move.
+  - **The Tackle duel comes up often again** (Gordon: "The tackle duel should be as before - it's the time not the frequency
+    that was the challenge. Otherwise gameplay becomes too one dimensional", then "Tackling happens often in a real game so
+    should here too"). The led pass had the CPU's receivers reaching your line at pace with team-mates level, and the duel
+    fell from 0.6 to 0.15 a match: its trigger wanted the carrier 0.5s on the ball and nobody else of yours within 10m
+    unless a metre behind him. Now (`TDUEL`) the carrier needs 0.3s on the ball and the last-defender test is "no other
+    standing man of yours goal-side of him within 7m" (a man level with him or behind him is not between him and the
+    line); front-on (your man goal-side of him by 0.5m, 2.9-6m off, your stick toward him) and the rest are as they were.
+    It fires 1.7 / 1.8 / 1.8 a match (Easy / Normal / Hard), about as often as Get Past (1.7 / 1.8 / 1.4), from 0.09 /
+    0.14 / 0.19, with wins moving -0.6 / +0.2 / -0.4. Total duels go from 3.1 / 3.8 / 3.6 a match back to the 4.7 / 5.2 /
+    5.0 the game had before the led pass, and the frozen time with them, 8.3 / 9.5 / 8.3s to 12.3 / 13.0 / 11.5s, each
+    duel now carrying its slow run-in; `DUEL_GAP` (30s) and the per-half cap are the levers if that is too much. The
+    measurements and the sweep are under Measured baseline.
+  - **Drop Goal is offered whenever the kick is viable** (Gordon: "Same for drop kick should snap to the 3d version if kick
+    is between the posts and therefore viable"). The label no longer asks whether a late strike would get away from the
+    chargers: it is in range and in front, judged where the 0.20s hold will leave him, or it is Kick. The chargers in the
+    close-up (`rushersOf`, `blockedBy`) are untouched, so a drop taken with a man on you is smothered. On Normal the label
+    is now on for all of the time the bot carries in range (8.6 spells a match, from 2.3); a bot that holds B the instant
+    it appears takes 9.2 drops a match with 15% made and 63% smothered, one that waits for 5m of space 2.2 a match with
+    45% made and 28% charged down, against 2.3 a match at 59% made and nothing blocked under the old label. The CPU's own
+    drops are unchanged.
   - **Hints** (Gordon's "Close-Ups and Key Moves"). A card in the top corner (Player 1's top-left, Player 2's top-right
     in his colour) names each close-up and its one control for the device in use: every duel from the cut to the
     verdict (the chooser's card to his lock in two player), the scrum to its result ("Your Ball" or "Steal Their
@@ -284,7 +308,10 @@ Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock 
 - **Duels** fire at last-man moments, and only when you're running at the man. Steer away and none fires. There's
   at most one every 30s, never the same kind twice, 2–4 a half, plus one Last Play bonus after the hooter. Each one's
   run-in plays in slow motion after the slide-in (0.4x for 1.2 / 0.9 / 0.6s real by your level, `DUEL_SLOW`), ramping
-  to full speed before the ring opens; the window itself is the length it always was.
+  to full speed before the ring opens; the window itself is the length it always was. The Tackle duel wants the CPU
+  carrier 0.3s on the ball, your ringed man goal-side of him by 0.5m and 2.9-6m off with your stick toward him, and no
+  other standing man of yours goal-side of him within 7m (`TDUEL`; until 2026-10-17 the hold was 0.5s and the last-man
+  test "nobody within 10m unless a metre behind him", which the led pass had made rare).
 
 | Duel | When | You | Win |
 |---|---|---|---|
@@ -328,9 +355,9 @@ pinned by `hints.mjs` and `tutorial.mjs`.
 
 ### Contact
 
-Every number here is in five one-line constants in `index.html`, `CONTACT`, `RUCK`, `SPRINT`, `RUNON` (passing) and
-`MOVES` (the Side Step and the Dummy), and the harness overrides them from the environment:
-`CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' MOVES='{"step":{"push":4}}' node tools/bot.mjs`.
+Every number here is in six one-line constants in `index.html`, `CONTACT`, `RUCK`, `SPRINT`, `RUNON` (passing),
+`MOVES` (the Side Step and the Dummy) and `TDUEL` (the Tackle duel's trigger), and the harness overrides them from the environment:
+`CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' MOVES='{"step":{"push":4}}' TDUEL='{"hold":0.5}' node tools/bot.mjs`.
 Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player shims (`isHuman`, `inputOf`, `ctrlOf`,
 `levelOf`, `setCtrl`), never `team === 0` or `M.ctrl`, so a second human seat slots in without a rewrite.
 
@@ -517,8 +544,9 @@ centre-screen. Every kick at goal is a drop kick, as sevens law requires. The ca
 - **Penalty card:** "34m to the Posts · Wind 9 MPH", or "· Calm". Kick at Goal is disabled when this kicker can't
   reach the bar in this wind, and a kick at goal is taken from at least 10m out.
 - **Drop goals.** Carrying the ball 6–40m from their line, within 42m of the posts and 40° of square, with the stick
-  not pointed at touch or back, the small button reads **Drop Goal** once the game is sure a pure strike released
-  0.1s late would still get away. A tap is still a chip. Hold it 0.20s and play freezes and cuts in with your thumb
+  not pointed at touch or back, the small button reads **Drop Goal** whenever the kick is viable: in range (a calm pure
+  strike reaches the bar) and at a bearing that can go between the posts, whatever the defenders are doing (until
+  2026-10-17 it also had to be sure a pure strike released 0.1s late would get away from them). A tap is still a chip. Hold it 0.20s and play freezes and cuts in with your thumb
   still down: the meter fills while you hold (faster than a placed kick: 0.80s at 12m on Normal, with a band 1.3x
   wider), the stick steers the arrow as you hold, and the nearest three defenders charge from where they stood,
   accelerating to their top speed. Let go and he drops it, striking the half-volley 0.25s later. A charger within
@@ -526,22 +554,22 @@ centre-screen. Every kick at goal is a drop kick, as sevens law requires. The ca
   passes within 0.9m of him under 2.4m, is **Charged Down** (a loose ball). Otherwise it flies as a placed kick: a
   goal is 3 points and a kickoff, wide or dead is their 22 drop-out, off the woodwork is a loose ball in front of
   the posts, and a drop that falls short cuts out 0.6s after the strike with the ball still live, so both sides
-  chase it. One rule (`blockedBy`) decides the offer and the outcome, and one posts rule (`judgeCross`) judges every
-  ball that crosses a goal line, ordinary kicks included. The offer runs the game's own step on the whole world
+  chase it. One rule (`blockedBy`) decides the outcome, and one posts rule (`judgeCross`) judges every
+  ball that crosses a goal line, ordinary kicks included. The label runs the game's own step on the whole world
   through the 0.20s hold (the kicker on his stick, the AI's chasers and line as the AI drives them, collisions
   included, everyone put back afterwards, nothing random drawn), judges range and bearing where that leaves him, and
-  counts every opponent ahead of him or level who can reach him, and behind him only one inside the shoulder radius
-  (`shoulder`, 4m): a man on his shoulder is a charger, a chaser 5m behind at full tilt is not, in the offer and in the
-  close-up alike. The hold is counted in steps: the press opens the close-up on the 12th (the ceiling of `hold`/STEP)
-  and the offer projects exactly the 11 that run before it. In the close-up the kicker, the ball and the chargers are
+  notes the chargers as the hold will leave them: every opponent ahead of him or level within 15m, and behind him only one
+  inside the shoulder radius (`shoulder`, 4m): a man on his shoulder is a charger, a chaser 5m behind at full tilt is
+  not, at the label and in the close-up alike. The hold is counted in steps: the press opens the close-up on the 12th
+  (the ceiling of `hold`/STEP) and the label projects exactly the 11 that run before it. In the close-up the kicker, the ball and the chargers are
   drawn in one list by depth, so a charger closing from behind or beside him goes over him, not under; he is not drawn
   until 2m in front of the lens, fades in over the next 2m, never stands taller than 0.6 of the screen, and one who
   stops the kick lands on the side he came from. The label is
   decided at the press. A Drop Goal press opens the close-up on the 0.20s step whatever moves in the meantime, and
   reads Drop Goal throughout; a Kick press stays a kick. Your first strike at goal, placed or dropped, ends the
   first-kick aids. No kick's hand-back is a turnover: a charged-down drop regathered by either side, a rebound off
-  the post or a short drop gathered by the defence are kicked balls, as a punt is. The CPU drops through the same
-  offer from its side, judged on the clock its strike keeps (the world projected through his 0.25s wind-up, then a
+  the post or a short drop gathered by the defence are kicked balls, as a punt is. The CPU drops only when the
+  charging rule says its strike would get away (`cpuDropOffer`, the test the label used to share), judged on the clock its strike keeps (the world projected through his 0.25s wind-up, then a
   strike with your players given 0.30s to react), winds up for 0.25s in the open (a tackle then is a normal
   tackle), is checked against every one of your players where they really stand, and flies in the top-down view
   with no close-up. A man of yours closing on him charges it down: 4% of offered CPU drops when your man sprints at
@@ -613,8 +641,12 @@ a charger.
 - `index.html` is the whole game in one page. GitHub Pages serves it from `main`.
 - `tools/` runs the engine headless in Node. `SEED=n` makes a run repeatable. Run the tools after any change to
   speed, tackling, AI, set pieces or duels.
-  - **`node tools/duels.mjs`:** 190 asserts (SEED 1 unless set). It checks:
+  - **`node tools/duels.mjs`:** 200 asserts (SEED 1 unless set). It checks:
     - every duel fires from a staged position, and none fires when you steer away;
+    - the Tackle duel's trigger (2026-10-17): it fires with the carrier 0.35s on the ball and not at 0.25, with a man of
+      yours level with the carrier or half a metre behind him, or goal-side 7.6m off, and not with one goal-side 5.8 or
+      6.5m off; front-on (0.4m goal-side is refused) and the 6m band as they were; `TDUEL` pinned as decided (reverted
+      with `TDUEL='{"hold":0.5,"lastBack":1,"lastR":10}'`, five asserts fail);
     - the world freezes during a close-up;
     - the Step Left / Step Right direction pin;
     - the sure-pass target, and that the Key Pass burst runs upfield;
@@ -707,30 +739,34 @@ a charger.
       when the kick scores, and a miss is back in play; the held ball sits at the kicker's hip and does not jump at
       the drop; the flight zoom moves under 0.08 a frame on an in-front conversion; and the verdict banner is clear of
       the ball and the A button at 844x390 and 667x375;
-    - drop goals (groups 23–30): the zone and its hysteresis, the B tap v the 0.20s hold through the real input path,
+    - drop goals (groups 23–30): the zone (on with a standing charger brought from 14m to 2m in front and with one 6m off
+      at full tilt, the man standing 3m in front then smothering the kick in the cut), the B tap v the 0.20s hold through the real input path,
       a release during the cut-in, pause and resume; the charging geometry (12m standing gets away, 6m full tilt is
-      Charged Down, no release is Smothered, and the offer agrees with the live outcome at eleven distances); every
+      Charged Down, no release is Smothered, and with a standing charger at eleven distances the label on at every one
+      while the late strike turns from blocked to clear once); every
       hand-back (3 points and a kickoff, the 22 drop-out, the live `g3d` ball with chasers on it, the loose ball off the
       woodwork, the charger 1.2m in front); the CPU's drop (blocked by your man 2m in front, scoring only through
       `judgeCross`, a wide one their 22, the real AI trigger); the one posts rule on ordinary kicks; the drop-rate table
       above; and a render smoke test of every drop stage with two chargers at three sizes;
     - the press decides (groups 31–35): a Drop Goal press opens the cut on the 0.20s step though the stick went to
       touch or a charger landed 3m off, the label holds through the hold, a Kick press stays a kick, a flick to touch
-      costs nothing, and the zone is judged where the hold ends; the offer is the real step (the kicker's run with the
-      stick forward or let go, the chaser turning in, every player put back, nothing random), agrees with a late pure
-      strike at 18 of 18 offered distances, counts a man on the shoulder and leaves a chaser 5m behind out of the offer
-      and the cut alike (the `shoulder` lever); the CPU's offer on its strike's clock (your man standing 5m off is offered and charges
+      costs nothing, and the zone is judged where the hold ends; the label's projection is the real step (the kicker's
+      run with the stick forward or let go, the chaser turning in, every player put back, nothing random), the label on
+      at 31 of 31 distances with a standing charger 7-10m off while the late pure strike is blocked at the near 13 and
+      clear beyond, a man on the shoulder in the label's set and the charger in the cut (he stops it with the stick
+      forward; with the stick let go he dives at the braking kicker during the hold and misses), and a chaser 5m behind
+      out of the set and the cut alike (the `shoulder` lever); the CPU's offer on its strike's clock (your man standing 5m off is offered and charges
       it down by sprinting; 3m, or 8m sprinting, is not), with nothing random drawn; no hand-back is a turnover and a
       tactical kick's charge-down leaves the defender where he stood; and the first drop on a device gets the path aid, its
       cut-in marking the tutorial's drop moment seen;
-    - one step count and the lens (groups 36–38): the press opens the cut on `holdSteps()` and the offer projects
+    - one step count and the lens (groups 36–38): the press opens the cut on `holdSteps()` and the label projects
       exactly the steps before it, bit for bit, at holds of 0.20, 0.205, 0.22 and 0.25s; a charger 10m behind (staged
       with the radius widened) and one beside the kicker are drawn in depth order over him, none until 2m in front of
       the lens, none taller than 0.6H, no NaN on the canvas, and one who smothers or charges down from behind lands
       behind the kicker; and `kickLabel(t)` reads its own seat, with the HUD passing its team;
     - the thumb (group 39): a Drop Goal label still gives a drop if the stick is let go on the press frame or during
       the hold, a chaser who closes into the shoulder radius as the kicker brakes stays out of the cut (the cut judges
-      the chargers behind him that the offer judged), and a drop charged down from behind bounces away from the man
+      the chargers behind him that the label saw), and a drop charged down from behind bounces away from the man
       who blocked it.
   - **`node tools/sim.mjs`:** AI v AI matches, with no duels, both sides' goal-kick rates and the CPU's drop goals.
   - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 708 asserts over the input layer, the sides, the roles, the join screen
@@ -952,7 +988,8 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   - **Tries** roughly double at every level (the ball lands in front of the receiver and he takes it at pace), the CPU's
     too; intercepts and knock-ons rise because catches happen nearer defenders. **Duels** fall by about a match: a step
     blocks the Get Past and Key Pass cut-ins, and the **Tackle duel** (the CPU carrier at your last man) falls from 0.6
-    to 0.15 a match, because he now reaches your line at pace with team-mates round him. Gordon accepted both for now.
+    to 0.15 a match, because he now reaches your line at pace with team-mates round him. Gordon accepted both for now;
+    the Tackle trigger was retuned the same day (**The Tackle duel's trigger and the Drop Goal label**, below).
   - **The CPU's Dummy** on Hard: 4.3 a match, about 2.4 of them sold (the `cpu dummies` column of `bot.mjs`).
   - **With the Dummy habit** the bot does worse, not better (-4.1 on Normal and -2.5 on Hard against the plain bot on the
     same eight seeds), unlike the investigation's +0.9. Pulled apart on seeds 1-4 x 120 (the plain bot there 99.8 / 86.9 /
@@ -984,6 +1021,38 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
     (+0.58 / +0.31 / +0.25m); the CPU's receivers catch at 4.97 / 5.15 / 5.33 m/s. Before (the same census on 2463dfa):
     -2.9m at 5.3-5.4 m/s but 17-28 passes a match dropped with the thumb held, the ball -2.5 to -2.7m 1.5s on, and the
     CPU's receivers catching at 0.7-0.9 m/s.
+- **The Tackle duel's trigger and the Drop Goal label (2026-10-17).** Measured with `bot.mjs`, 1,440 matches a row (SEED 1-12
+  x 120), 4-minute halves, duels live: the game before the led pass, the build as shipped that afternoon (ff17545) and this
+  one, on the same seeds (`.claude/specs/scratch/tackleduel/rates.mjs`). The standard error on wins is about 0.3 / 1.0 / 0.8
+  points (Easy / Normal / Hard).
+
+  | | Wins | Get Past a match | Tackle a match | Duels a match | Frozen |
+  |---|---|---|---|---|---|
+  | Easy, before the led pass | 98.2% | 2.39 | 0.49 | 4.57 | 8.6s |
+  | Easy, ff17545 | 99.5% | 1.58 | 0.09 | 3.13 | 8.3s |
+  | Easy, this build | 98.9% | 1.70 | 1.70 | 4.68 | 12.3s |
+  | Normal, before the led pass | 85.7% | 2.56 | 0.60 | 5.00 | 9.4s |
+  | Normal, ff17545 | 86.7% | 1.77 | 0.14 | 3.79 | 9.5s |
+  | Normal, this build | 86.9% | 1.82 | 1.76 | 5.21 | 13.0s |
+  | Hard, before the led pass | 48.9% | 2.17 | 0.68 | 4.73 | 8.9s |
+  | Hard, ff17545 | 44.8% | 1.49 | 0.19 | 3.58 | 8.3s |
+  | Hard, this build | 44.4% | 1.42 | 1.80 | 4.98 | 11.5s |
+
+  - **What blocked it** (`.claude/specs/scratch/tackleduel/probe2.mjs`: every condition of `findTackleDuel` judged on its own
+    over 30 Normal matches): with everything else right, your man was behind the carrier on 165 steps a match (3-6m behind
+    him: the chaser), another man of yours within 10m on 28, and the hold under 0.5s on 7 (nearly all under 0.1s: the
+    catch). Relaxing the last-man test alone (goal-side within 7m) gave 8 eligible steps a match, the hold alone (0.2s) 1,
+    both 22. The sweep (4 seeds x 60): `lastR` 8 with `hold` 0.3 gave 1.5 / 1.5 / 1.5 Tackles a match, `lastR` 7 with
+    `hold` 0.2 1.8 / 1.9 / 2.0, `lastR` 6 with `far` 7 2.4 / 2.5 / 2.6, `ctrlT` 0.3 2.5 / 2.7 / 2.8; the chosen `hold`
+    0.3 and `lastR` 7 sit at Get Past's rate. The duel win rate is 81 / 66 / 50% (83 / 67 / 52 before). The frozen time is
+    the one cost: each duel carries its slow run-in, so the total is 3-4s a match more than the game Gordon played that
+    morning, at the duel count the game had before the led pass.
+  - **The Drop Goal label** (`.claude/specs/scratch/tackleduel/dropprobe.mjs`, 30 Normal matches at SEED 3, the bot carrying):
+    the label is on for 100% of the steps the carrier is in range and in front with the stick forward (506 a match, in 8.6
+    spells), from 19% (94 steps, 2.3 spells) under the charger rule. A bot that holds B the instant the label appears takes
+    9.2 drops a match: 15% made, 11% wide, 10% charged down, 63% smothered (Easy 10.8 a match, 19% made, 63% smothered; Hard
+    5.4, 9% made, 61% smothered). One that waits until nobody is within 5m takes 2.2 a match: 45% made, 26% wide, 28%
+    charged down, none smothered. Under the old label the same bot took 2.3 a match, 59% made, 32% wide, nothing blocked.
 - **Why the goal-kick note moved:** before goal kicks the headless bot converted 100% of its kicks, because the old
   modal's timing only ran in `frame()`. It kicks through the live close-up at 83% on Easy, 70% on Normal and 60% on
   Hard, and the CPU kicks at its own rate on every level. The table before goal kicks read 98.9 / 99.4 (Easy),
@@ -991,9 +1060,11 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
 - The bot lets go of Kick on the step nearest its planned release. `update` adds a step before it sees the release,
   so a bot that waits for `pt + STEP/2` strikes a full step (17ms) late on average; the first measurement of this table
   was taken that way. Ours are up to 2 points higher than it (Easy unchanged), and the CPU's are slightly lower.
-- **Duels:** about 3.0 / 3.7 / 3.7 a match (Easy / Normal / Hard, `bot.mjs` 60 a level at SEED 1), freezing 7.9 / 9.2 / 8.5s
-  in total with the slow run-in (5.7 / 7.0 / 7.0s without it: `DUEL_SLOW='{"rate":1}'`). The three runs are otherwise
-  byte-identical, and identical to the build before slow motion (`feedback/build/s4.html`) on the same seed.
+- **Duels:** about 4.7 / 4.8 / 5.1 a match (Easy / Normal / Hard, `bot.mjs` 60 a level at SEED 1; Tackle 1.7 / 1.7 / 1.9 of
+  them), freezing 12.3 / 12.0 / 11.8s in total with the slow run-in (8.9 / 9.1 / 9.6s without it: `DUEL_SLOW='{"rate":1}'`).
+  Before the Tackle trigger's retune the same run read 3.0 / 3.7 / 3.7 a match and 7.9 / 9.2 / 8.5s (5.7 / 7.0 / 7.0s
+  without the slow run-in), the runs with and without it byte-identical, and identical to the build before slow motion
+  (`feedback/build/s4.html`) on the same seed.
 - **The slow run-in, with a modelled human (2026-10-17):** `.claude/specs/scratch/feedback/build2/orient2.mjs`, 400 duels a
   kind a cell at SEED 1, the four kinds pooled, one player. He can read nothing until an orientation time after the slide-in;
   then he registers what is shown with a lag of 0.25 ± 0.05s, aims at the window centre with the bot's 0.095s spread, needs

@@ -10,9 +10,9 @@ let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST = ${process.env.BURST};`);
 // GKTUNE='{"band":[0.15,0.13,0.10]}' tries other goal-kick levers the same way
 if (process.env.GKTUNE) js = js.replace('// GKTUNE', 'Object.assign(KICK, ' + process.env.GKTUNE + ');');
-// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' deep-merge into the contact, ruck, Sprint, passing, open-play move and duel slow-motion levers
+// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' deep-merge into the contact, ruck, Sprint, passing, open-play move, duel slow-motion and Tackle duel trigger levers
 {
-  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'MOVES', 'DUEL_SLOW'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
+  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'MOVES', 'DUEL_SLOW', 'TDUEL'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
   if (tune) js = js.replace('// CONTACT_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; ${tune} }`);
 }
 
