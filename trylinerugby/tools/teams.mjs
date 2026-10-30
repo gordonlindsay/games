@@ -208,5 +208,88 @@ function playOut() {
   globalThis.localStorage = kept;
 }
 
+// 8. the gentler start, and a championship that runs from the weakest opponent to the strongest
+{
+  const E = X.EARLY, C = T.contact, D = T.debug, s = D.settings();
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  const speed = (pace, mul) => (7.6 + pace * 0.25) * mul;
+  ok(E.games === 2 && E.gap === 3 && E.nudge.cpuSpeed === -0.03 && E.nudge.myTackle === 0.14, 'two Normal matches and a gap of three');
+  const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0];
+  ok(!X.outmatched(far, has) && !X.outmatched(far, eng) && X.outmatched(far, fra), 'France is a stronger side than Farnham; England and Haslemere are not');
+  ok(X.rateOf(fra) === 18 && X.rateOf(far) === 14 && X.rateOf(has) === 11, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
+
+  T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, duels: 'off' });
+  ok(!T.M.early && near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(has.pace, 1)), 'a headless match is not eased, and Normal pace is unchanged');
+  T.newMatch(0, 1, { halfLen: 30, diff: 1, auto: true, headless: true, early: true, duels: 'off' });
+  ok(!T.M.early && T.M.auto, 'AI v AI ignores an early request');
+  T.newMatch(0, 1, { halfLen: 30, diff: 1, demo: true, auto: true, early: true, headless: true });
+  ok(!T.M.early && T.M.demo, 'the demo ignores an early request');
+  T.newMatch(far, has, { halfLen: 30, diff: 0, headless: true, early: true, duels: 'off' });
+  ok(!T.M.early, 'Easy is not eased further');
+  T.newMatch(far, has, { halfLen: 30, diff: 2, headless: true, early: true, duels: 'off' });
+  ok(!T.M.early && near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(has.pace, 1.04)), 'Hard keeps its pace');
+  T.newMatch(far, fra, { halfLen: 30, diff: 1, headless: true, humans: [true, true], early: true, duels: 'off' });
+  ok(!T.M.early && T.M.two, 'two player is not eased');
+
+  T.newMatch(far, fra, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });
+  ok(T.M.early && document.getElementById('banner').innerHTML === '', 'an eased headless kick-off stays quiet, stronger side included');
+  ok(near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(fra.pace, 1 + E.nudge.cpuSpeed)) && near(C.maxSpeed(T.M.players.find(p => p.team === 0)), speed(far.pace, 1)), 'eased CPU pace, and yours is not');
+  T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });
+  const q = T.M.players[0], opp = T.M.players[7], mate = T.M.players[8];
+  q.x = opp.x = mate.x = 40; q.y = opp.y = mate.y = 35; opp.side = q.side = -1;
+  ok(near(C.tackleChance(q, opp, 'ai', false), 0.48 + E.nudge.myTackle), `teammates tackle more surely (${C.tackleChance(q, opp, 'ai', false)})`);
+  ok(near(C.tackleChance(mate, q, 'ai', false), 0.64), `the CPU's tackle is not eased (${C.tackleChance(mate, q, 'ai', false)})`);
+
+  const five = ['HAR', 'HAS', 'GUI', 'ALD', 'WEY'].map(id => X.CLUBS.find(t => t.id === id));
+  X.newChamp(far, five);
+  const ch = X.champ();
+  const opps = ch.fixtures.map(rd => { const p = rd.find(x => x[0] === ch.user || x[1] === ch.user); return p[0] === ch.user ? p[1] : p[0]; });
+  ok(opps.map(i => X.rateOf(ch.teams[i])).join() === '11,12,13,13,14', `weakest first (${opps.map(i => ch.teams[i].id).join(' ')})`);
+  ok(ch.teams.map(t => t.id).join() === 'FAR,HAR,HAS,GUI,ALD,WEY', 'the draw stays in the order it was given');
+
+  const weak = X.cleanTeam({ name: 'Cubs', pace: 1, power: 1, handling: 1, kicking: 1 }, 0);
+  X.newChamp(weak, five);
+  D.renderHub();
+  ok(document.getElementById('hub-next').innerHTML.includes('Stronger Side'), 'the hub names a stronger first opponent');
+  X.newChamp(far, five);
+  D.renderHub();
+  ok(!document.getElementById('hub-next').innerHTML.includes('Stronger Side'), 'Farnham\'s weakest club opponent is not marked');
+
+  D.openTeams('quick'); s.pool = 0; D.renderTeams();
+  const grid = document.getElementById('t-grid').innerHTML;
+  const card = name => { const i = grid.indexOf('>' + name + '<'); return grid.slice(i, grid.indexOf('</button>', i)); };
+  ok(card('France').includes('Stronger Side') && card('Ireland').includes('Stronger Side') && !card('England').includes('Stronger Side') && !card('Italy').includes('Stronger Side'), 'Quick Match marks a side three points stronger');
+  s.pool = 1; D.renderTeams();
+  ok(!document.getElementById('t-grid').innerHTML.includes('Stronger Side'), 'no local card is marked stronger than Farnham');
+
+  s.played = 0; s.tut = []; X.setChamp(null);
+  X.restore({ settings: { tut: ['past'] } });
+  ok(s.played === E.games && s.tut.join() === 'past', 'a save with a tutorial moment and no played count is past the gentler start');
+  s.tut = []; X.setChamp(null);
+  X.restore({ settings: { played: 0, tut: ['past'] } });
+  ok(s.played === 0 && s.tut.join() === 'past', 'an explicit 0 is kept');
+  s.played = 1; X.setChamp(null); s.tut = [];
+  X.restore({ settings: { played: 100 } });
+  ok(s.played === 1, 'a count above 99 is ignored');
+  X.restore({ settings: { played: 1 } });
+  ok(s.played === 1, 'a stored count loads');
+
+  s.played = 0; s.diff = 1;
+  D.startMatch(far, has, false);
+  ok(T.M.early && s.played === 1 && !T.M.headless, 'the first Normal match is eased and counted');
+  D.exitMatch();
+  D.startMatch(far, has, false);
+  ok(T.M.early && s.played === 2, 'the second is eased too');
+  D.exitMatch();
+  D.startMatch(far, has, false);
+  ok(!T.M.early && s.played === 3, 'the third is full Normal');
+  D.exitMatch();
+  s.played = 0; s.diff = 0;
+  D.startMatch(far, has, false);
+  ok(!T.M.early && s.played === 1, 'an Easy match is counted and not eased');
+  D.exitMatch();
+  s.diff = 1; s.played = 0;
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
