@@ -38,7 +38,7 @@ nations, a local Surrey club, or a team you make yourself.
     while Farnham is still the untouched default. Championship has a Play as Farnham button, or pick any card.
   - **Quick Match is the first button** (2026-10-14). It is the gold one, and it takes the keyboard focus.
     Championship sits under it, beside How to Play. With one under way the button reads Continue Championship, and
-    the line under it is your team and the round.
+    the line under it is your team, your place and the round. A finished season reads Final Table, with the prize.
 - **Saving** (2026-10-14): half length, difficulty, sound, Hints (and each player's Hints in two player, by keyboard
   half like each player's Difficulty), the tutorial moments this device has seen, up to four teams you make, and the
   championship are kept in this browser (`localStorage`, key `tryline.v1`). The championship stores its six teams, the five rounds of
@@ -46,6 +46,18 @@ nations, a local Surrey club, or a team you make yourself.
   table, confirmed with a second tap, wipes that championship and leaves your settings and teams. A missing or broken
   save is ignored. A match in progress is not stored mid-play: quitting or reloading leaves that fixture to play
   again, and the table updates when the match finishes.
+- **The chase** (2026-10-30): the table, the next match and the end of the season say where the championship stands.
+  The points are unchanged (4 a win, try bonus at 4, losing bonus within 7, +3 for a Grand Slam). The table is numbered.
+  One line gives the place and the gap (clear of second, behind the leader, or level on points), then still in it, or out of the title when even
+  a win and a try bonus from every game left, plus the Grand Slam if you are still unbeaten, cannot reach the leader's points
+  now. The next match says so when this game decides something: For the Grand Slam, A draw is enough, A win takes the title,
+  A try-bonus win takes the title, or Must win to stay in it. A win takes the title only when every win does, counting the
+  losing bonus the other side can still take and the best return of the sides you are not playing. The other two games this
+  round are listed, and so are the opponents still to come. Before a ball is kicked the line is "Five rounds. Top the table."
+  With the title already safe it reads Champions, with the rounds left. When the season is over the button reads Final Table,
+  the title is the prize (Grand Slam, Champions, Triple Crown, Wooden Spoon, or the place) and the line says how it was won
+  or lost, including a tie decided on points difference or tries. Full time stays the score, the result and the table points.
+  Headless runs, the menu demo and AI v AI never open the hub.
 - **Goal kicks** (2026-10-12): pitch-level close-up, sevens drop kicks, Normal = CPU parity. Conversions and
   penalty goals cut to a still shot from behind the kicker: steer the arrow, hold Kick, let go in the gold. The CPU's
   kicks play the same shot with a Skip button.
@@ -179,6 +191,7 @@ nations, a local Surrey club, or a team you make yourself.
     alone moving, by the fairness change.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
+  The chase between fixtures reads that table. It does not change the points.
 
 - **Playtest fixes** (2026-10-17). Gordon played on his phone: scrums were lost on Normal, passing was flat with no
   gain, there was no way to step or dummy in open play, duels came too fast to react to, and nothing on screen said
@@ -838,7 +851,7 @@ a charger.
       match only measured that two player has about 1.75 x the duels), plus the mirror match; under `--sym` the away-side comparison (win rate within 5 points, tries
       within 0.3), AI v AI's share over 500 matches (0.45–0.55) and the handicap (Easy beats Hard over 60%, swapped within 8);
     - under `--lock`: the sweep (below), and the shipped `DUEL_LOCK` within 8 points of one player in every cell.
-  - **`node tools/teams.mjs`:** 56 asserts. It checks:
+  - **`node tools/teams.mjs`:** 85 asserts. It checks:
     - every pairing of built-in teams has shirts far enough apart, and hooped sides keep their hoops;
     - the nations keep their order, and Farnham leads Local;
     - a team you make is cleaned up and held to the budget;
@@ -846,6 +859,9 @@ a charger.
     - a black away shirt still shows on the dark scoreboard and plates;
     - opponents are drawn fairly (the old random-comparator sort was badly skewed in Safari);
     - Local and mixed championships, including when the Triple Crown is awarded;
+    - the chase between fixtures: the place and the gap, still in it or out of the title, a clinched title, the next
+      match's stake (the slam, a draw, a win, a try-bonus win, a must-win), the other games and the run-in, and the
+      final prize. Full time stays the score, the result and the table points;
     - that a championship saved before clubs existed still loads;
     - that Quick Match is the gold button, the Duels switch is gone, and a save round-trips the championship, the
       settings and a team you made, with duels forced on. A broken championship, bad settings and unreadable storage
