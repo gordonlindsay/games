@@ -177,6 +177,12 @@ nations, a local Surrey club, or a team you make yourself.
     contested and the chooser's hand driven through the real key and stick paths, a lock sweep under `--lock`, and the full gate
     under `--sym 400`); every one-player tool's output is byte-identical to `main` (3f11088) on the spec's golden set, `sim.mjs`
     alone moving, by the fairness change.
+- **Full time stats** (2026-10-30). The full-time card keeps the score, who won and the tries, and adds both sides under that.
+  Conversions, tackles and duels are made of attempted (2/3). Penalty Goals and Drop Goals show only when somebody
+  attempted one. Duels belong to the side that played them, so a computer's column is a dash. Metres Made is ground
+  gained with the ball, toward that side's try line, and it can be negative. Half time stays the score and the tries.
+  Continue, Rematch and Second Half are still one press. A headless run, the menu demo and AI v AI do not open the card.
+  The championship still stores the score and the tries, not this table. Checked by `tools/postmatch.mjs`.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
 
@@ -850,6 +856,10 @@ a charger.
     - that Quick Match is the gold button, the Duels switch is gone, and a save round-trips the championship, the
       settings and a team you made, with duels forced on. A broken championship, bad settings and unreadable storage
       are dropped without taking the rest with them, and a full storage still starts the championship.
+  - **`node tools/postmatch.mjs`:** the full-time card and the counts behind it. Conversions are kept apart from penalty
+    goals, a tackle is charged to the tackler, metres are the ground made while carrying, a duel belongs to its owner,
+    the card is hidden at half time, and a headless finish and the menu demo do not open it. Continue and Rematch are
+    still one press.
   - **`node tools/setpieces.mjs`:** scrums at 4-8 taps a second (jittered 18%, the thumb off the stick, with a Good Hit or
     a late first tap; SEED 1 unless set) and lineouts at different jump timings. ENG v FRA, equal packs.
   - **`node tools/passing.mjs`:** 28 asserts over the led pass (above, under Passing).
