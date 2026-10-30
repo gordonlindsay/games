@@ -40,9 +40,9 @@ nations, a local Surrey club, or a team you make yourself.
     Championship sits under it, beside How to Play. With one under way the button reads Continue Championship, and
     the line under it is your team and the round.
 - **Saving** (2026-10-14): half length, difficulty, sound, Hints (and each player's Hints in two player, by keyboard
-  half like each player's Difficulty), the tutorial moments this device has seen, up to four teams you make, and the
-  championship are kept in this browser (`localStorage`, key `tryline.v1`). The championship stores its six teams, the five rounds of
-  fixtures, every result and the round you are on. Continue Championship resumes the next match. Start Fresh on the
+  half like each player's Difficulty), the tutorial moments this device has seen, Coach Tips and the coach lines already
+  heard, up to four teams you make, and the championship are kept in this browser (`localStorage`, key `tryline.v1`).
+  The championship stores its six teams, the five rounds of fixtures, every result and the round you are on. Continue Championship resumes the next match. Start Fresh on the
   table, confirmed with a second tap, wipes that championship and leaves your settings and teams. A missing or broken
   save is ignored. A match in progress is not stored mid-play: quitting or reloading leaves that fixture to play
   again, and the table updates when the match finishes.
@@ -272,6 +272,11 @@ nations, a local Surrey club, or a team you make yourself.
     comes once per duel kind and the first-kick path aid once for a goal kick and once for a drop, keyed off the same
     memory. Replay Tutorial on How to Play forgets them all (dim when there is nothing to replay). A drop goal's thumb
     still down carries over Play as at the press; one lifted under the card needs a fresh press.
+- **A first-match coach** (2026-10-30). Coach Tips starts On. The first time Pass, Tackle, an offload (Pass pulsing in a
+  Soft or a Wrap), Sprint or a side-step window comes up, one short line shows on the banner and play carries on. Each
+  line once per device, one at a time, kept in `settings.tips` inside `tryline.v1`. Headless, auto and demo matches stay
+  quiet. The first duel and the first goal kick keep the tutorial card, the hints card and the first-kick path. With
+  Hints off and no card up, the first duel also gets "Wait for gold, then go". The home row turns Coach Tips off.
 
 ## Controls
 
