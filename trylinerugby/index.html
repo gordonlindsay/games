@@ -24,6 +24,8 @@
   --p2:#ff5fd2;           /* Player 2: the second seat's ring and marks */
   --display:'Big Shoulders Display','Arial Narrow','Helvetica Neue Condensed',Impact,sans-serif;
   --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
   color-scheme:dark;
 }
 [hidden]{display:none!important}
@@ -86,6 +88,15 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
   .settings{grid-template-columns:1fr;gap:8px;padding:10px 12px}
   .settings .set{grid-template-columns:6.4em minmax(0,1fr);gap:8px}
   .seg button{padding:0 4px;white-space:nowrap}
+}
+@media (orientation:landscape) and (max-height:420px){
+  /* a phone in Safari, sideways: the URL bar leaves about 320px. Two columns of settings, labels above the controls,
+     so Half, Difficulty, Sound and Hints fit without a scroll. Every control stays 44px. */
+  .home .stack{gap:6px}
+  .home .btn,.home .btn.primary{min-height:44px}
+  .settings{grid-template-columns:1fr 1fr;gap:8px 12px;padding:8px 10px}
+  .settings .set{grid-template-columns:1fr;gap:4px}
+  .settings .seg button{font-size:13px;padding:0 2px}
 }
 
 /* team select */
@@ -195,9 +206,18 @@ tr.me td{background:rgba(255,207,61,.09)}
 .bug .sc{display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--chalk);color:var(--night);font-weight:900}
 .sub{padding:4px 9px;border-radius:3px;background:rgba(8,14,10,.74);font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;font-variant-numeric:tabular-nums}
 .sub .lp{color:var(--flood)}
+@media (orientation:landscape) and (max-height:420px){
+  /* after the base scorebug rules, so a short phone actually gets the tighter band */
+  #hud{gap:2px;padding-top:calc(env(safe-area-inset-top,0px) + 4px)}
+  .bug{font-size:18px}
+  .bug .nm{padding:3px 7px}
+  .bug .sc{padding:3px 8px;gap:5px}
+  .sub{padding:2px 7px}
+}
 #hud.gk .sub{visibility:hidden}
 .pause{position:fixed;z-index:6;touch-action:manipulation;top:calc(env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:6px;border:1px solid rgba(241,238,228,.25);background:rgba(8,14,10,.7);cursor:pointer;display:grid;place-items:center}
 .pause::before{content:"";width:14px;height:16px;border-left:4px solid var(--chalk);border-right:4px solid var(--chalk)}
+.pause::after{content:"";position:absolute;inset:-6px -2px -10px -10px}   /* the 44px glyph stays; the hit target grows inward, off the corner */
 #rotate{position:fixed;inset:0;z-index:30;display:none;place-items:center;align-content:center;gap:22px;padding:24px;background:var(--night);text-align:center;touch-action:none}
 #rotate h2{margin:0;font:900 34px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
 #rotate .phone{width:46px;height:78px;border:4px solid var(--chalk);border-radius:9px;position:relative;animation:turn 2.4s ease-in-out infinite}
@@ -219,7 +239,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:none;opacity:1}}
 
 #controls{position:fixed;inset:0;z-index:4;pointer-events:none}
-#zone{position:absolute;left:0;top:64px;bottom:0;width:52%;pointer-events:auto;touch-action:none}
+#zone{position:absolute;left:env(safe-area-inset-left,0px);top:calc(env(safe-area-inset-top,0px) + 64px);bottom:env(safe-area-inset-bottom,0px);width:calc(52% - env(safe-area-inset-left,0px));pointer-events:auto;touch-action:none}   /* right edge stays at 52%: the notch and the home indicator are not part of the stick, and the buttons stay clear of it */
 #stick{position:absolute;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;border:2px solid rgba(241,238,228,.32);background:rgba(8,14,10,.22);pointer-events:none}
 #stick.on{border-color:rgba(241,238,228,.62);background:rgba(8,14,10,.32)}
 #knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px;border-radius:50%;background:rgba(241,238,228,.88);box-shadow:0 2px 10px rgba(0,0,0,.45)}
@@ -3196,6 +3216,7 @@ function dummyPass(c, r) {                                 // c shows a pass to 
 const dirKeyHeld = (inp, d) => { for (const code of inp.keys) { const k = KEYDIR[code]; if (k && (d == null || k[0]*d < 0)) return true; } return false; };   // any direction key, or (with d) one pointing back toward his own line
 function gestureStep(t, dt) {                              // one human side's open-play gestures, read once a step from its slot's history
   const inp = inputOf(t), c = ctrlOf(t), b = M.ball, S = sideOf(t), KS = MOVES.step, KD = MOVES.dummy;
+  const peak = inp.latPeak; inp.latPeak = null;            // consumed this step, carrying or not, so a flick from a cut can't finish on the next carry
   const G = inp.gest || (inp.gest = { who:null, n:-9, L:[], armed:true, run:0, lastRun:0, dropT:-9, pull:null, keyed:false, kb:false, v:null, t:0, tagAt:0, tagged:null });   // the Dummy's cooldown is not kept here: it is the carrier's (c.dumAt, on the match clock), so a lifted thumb, a pause or a duel's restore can't reset it
   G.t += dt;
   if (G.tagged && G.t - G.tagAt <= 0.15 && (S.pass || (b.state === 'air' && b.f.kind === 'pass' && b.f.team === t))) { const i = M.tags.indexOf(G.tagged); if (i >= 0) M.tags.splice(i, 1); G.tagged = null; }   // Pass inside 0.15s of a step: that flick was an aim, so the tag comes off
@@ -3203,15 +3224,18 @@ function gestureStep(t, dt) {                              // one human side's o
   if (!carrying) { G.who = null; return; }
   if (G.who !== c || G.n !== M.stepN - 1) { G.who = c; G.L.length = 0; G.armed = true; G.run = 0; G.lastRun = 0; G.dropT = -9; G.pull = null; G.keyed = false; G.kb = false; G.v = null; }   // a new carrier, or any step he was not carrying in open play (a cut, a set piece, the ball in the air): the history starts again
   G.n = M.stepN;
-  const j = inp.world(), d = dirOf(t), L = j.y, F = j.x*d;
+  const j = inp.world(), d = dirOf(t);
+  let jx = j.x, jy = j.y, L = jy, mag = j.mag;
+  if (typeof peak === 'number' && !inp.keys.size && Math.abs(peak) > Math.abs(jy)) { jy = peak; L = peak; mag = Math.max(mag, Math.abs(peak)); }   // a flick Chrome coalesced into one move: the peak across the run, not the sample that landed back near centre
+  const F = jx*d;
   // the Side Step: a sharp rise across the run inside the window, armed
   G.L.push(L); if (G.L.length > KS.win + 1) G.L.shift();
   if (Math.abs(L) < KS.rearm) G.armed = true;              // the investigation's re-arm: back inside rearm first (a key switch passes through 0; a thumb crosses the centre in a few steps)
-  if (G.armed && Math.abs(L) >= KS.L && j.mag >= KS.mag) {
+  if (G.armed && Math.abs(L) >= KS.L && mag >= KS.mag) {
     const s = Math.sign(L); let lo = Infinity; for (const v of G.L) lo = Math.min(lo, s*v);
     if (s*L - lo >= KS.rise) {
       G.armed = false;                                     // the flick is spent whether or not it acts: outside a tackler's reach it is steering
-      if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, j, s); G.tagged = M.tags[M.tags.length - 1] || null; G.tagAt = G.t; }
+      if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, { x:jx, y:jy }, s); G.tagged = M.tags[M.tags.length - 1] || null; G.tagAt = G.t; }
     }
   }
   // the Dummy: a held run, a quick pull back, and the push on
@@ -3561,7 +3585,8 @@ function drawTags(dt, r) {                                 // on-pitch tags: cha
   for (const t of M.tags) {
     const u = clamp(t.t/0.7, 0, 1), a = t.t > 0.45 ? clamp(1 - (t.t - 0.45)/0.25, 0, 1) : 1;
     let [x, y] = toS(t.x, t.y);
-    y = Math.max(76, y - 2.2*r - 14*u); x = clamp(x, 60, V.W - 200);   // under the score bug, never under the right thumb
+    const edge = tagBox();                                          // insets 0: 76 / 60 / W-200, as before. A right inset walks the clamp in with the buttons
+    y = Math.max(edge.top, y - 2.2*r - 14*u); x = clamp(x, edge.left, V.W - edge.right);
     ctx.globalAlpha = a; ctx.strokeText(t.text.toUpperCase(), x, y); ctx.fillText(t.text.toUpperCase(), x, y);
     t.t += dt;
   }
@@ -4664,24 +4689,53 @@ function platesFloor() {                                   // the Step Left | St
   const hc = $('hc0'), r = hc && !hc.hidden && typeof hc.getBoundingClientRect === 'function' ? hc.getBoundingClientRect() : null;
   return Math.max(0.07*window.innerHeight + 6, r ? r.bottom + 6 : 0);
 }
+function safeInsets() {                                   // --sal and the rest are the safe-area env()s. No layout (the tools) reads as 0, which is today's placement
+  let read = null;
+  try { const cs = getComputedStyle(document.documentElement); if (cs && cs.getPropertyValue) read = k => cs.getPropertyValue(k); } catch (e) { /* no layout */ }
+  const n = k => { if (!read) return 0; const x = parseFloat(read(k)); return Number.isFinite(x) ? x : 0; };
+  return { t:n('--sat'), r:n('--sar'), b:n('--sab'), l:n('--sal') };
+}
+function stickRest(W, H, ins) {                            // the ring is 124px. Insets 0 stays at (96, H-118). A notch on the left moves it in until the ring is 8px clear, still left of the buttons
+  ins = ins || { t:0, r:0, b:0, l:0 };
+  const R = 62, edge = 8;
+  const x = clamp(Math.max(96, ins.l + R + edge), R + edge, Math.max(R + edge, 0.52*W - R - edge));
+  const y = clamp(H - Math.max(118, ins.b + R + edge), 64 + R + edge, Math.max(64 + R + edge, H - R - edge));
+  return { x, y };
+}
+function tagBox(ins) {                                     // where an on-pitch tag may sit. Insets 0 is the old box (top 76, left 60, 200px clear of the right edge)
+  ins = ins || safeInsets();
+  return { top:Math.max(76, ins.t + 68), left:Math.max(60, ins.l + 8), right:Math.max(20, ins.r) + 180 };
+}
 function placeStick(x, y) {
   stick.style.left = x + 'px'; stick.style.top = y + 'px';
   const pl = $('plates');
-  if (pl) { const top = y - 102; pl.style.left = clamp(x - 82, 8, window.innerWidth/2 - 172) + 'px'; pl.style.top = (top < platesFloor() ? y + 72 : top) + 'px'; }
+  if (pl) { const top = y - 102, ins = safeInsets(); pl.style.left = clamp(x - 82, Math.max(8, ins.l), window.innerWidth/2 - 172) + 'px'; pl.style.top = (top < platesFloor() ? y + 72 : top) + 'px'; }
 }
-function restStick() { placeStick(96, window.innerHeight - 118); }
+function restStick() { const p = stickRest(window.innerWidth, window.innerHeight, safeInsets()); placeStick(p.x, p.y); }
 zone.addEventListener('pointerdown', e => {
   if (M && M.cut && ((M.cut.duel && M.cut.after) || (M.cut.kind === 'goal' && (M.cut.after || M.cut.g.watch)))) input.aPressed = true;   // tap to skip the verdict, or a CPU kick
   setDev('touch');
   if (input.stickId !== null) return;
   e.preventDefault();
-  input.stickId = e.pointerId; input.ox = input.px = e.clientX; input.oy = input.py = e.clientY;
+  input.stickId = e.pointerId; input.ox = input.px = e.clientX; input.oy = input.py = e.clientY; input.latPeak = null;
   try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
   placeStick(e.clientX, e.clientY); stick.classList.add('on');
   ac();
 });
-zone.addEventListener('pointermove', e => {
+function notePeak(samples) {                               // the largest sideways deflection in this move, from the origin as it was. The run still follows the last sample
+  if (!samples || !samples.length) return;
+  let best = input.latPeak || 0;
+  for (const p of samples) {
+    const dx = p.clientX - input.ox, dy = p.clientY - input.oy, m = hyp(dx, dy);
+    if (m < 1e-6) continue;
+    const uy = dy/m*Math.min(1, m/STICK_R);
+    if (Math.abs(uy) > Math.abs(best)) best = uy;
+  }
+  if (Math.abs(best) >= 0.12) input.latPeak = best;
+}
+function onStickMove(e) {
   if (e.pointerId !== input.stickId) return;
+  if (e.getCoalescedEvents) notePeak(e.getCoalescedEvents());
   input.px = e.clientX; input.py = e.clientY;
   let dx = e.clientX - input.ox, dy = e.clientY - input.oy;
   const m = hyp(dx, dy);
@@ -4693,31 +4747,69 @@ zone.addEventListener('pointermove', e => {
   input.jx = dx/STICK_R; input.jy = dy/STICK_R; input.padStick = false;
   if (hyp(input.jx, input.jy) < 0.12) { input.jx = 0; input.jy = 0; }
   knob.style.transform = `translate(${dx}px,${dy}px)`;
-});
+}
+zone.addEventListener('pointermove', onStickMove);
+zone.addEventListener('pointerrawupdate', onStickMove);   // Chromium delivers this a frame ahead of pointermove. Where it doesn't exist, nothing calls it
 const endStick = e => {
-  if (e.pointerId !== input.stickId) return;
-  input.stickId = null; input.jx = input.jy = 0; input.gest = null;   // a lifted thumb clears the gesture history
+  if (!e || e.pointerId !== input.stickId) return;
+  input.stickId = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null;   // a lifted thumb clears the gesture history
   knob.style.transform = ''; stick.classList.remove('on'); restStick();
 };
 zone.addEventListener('pointerup', endStick);
 zone.addEventListener('pointercancel', endStick);
+const ACTS = [['btnA', 'a'], ['btnB', 'b'], ['btnC', 'c']];
+const HIT_SLOP = 12;                                       // a miss in the 17px gap between B and Sprint lands within this of one circle
+function nearestAct(x, y) {                                // the button whose circle, grown by HIT_SLOP, contains the point and whose centre is nearest. Hidden or unlaid-out buttons are not there
+  let best = null, bd = Infinity;
+  for (const [id, key] of ACTS) {
+    const el = $(id);
+    if (!el || el.hidden) continue;
+    const r = el.getBoundingClientRect();
+    if (!(r.width > 0)) continue;
+    const cx = r.left + r.width/2, cy = r.top + r.height/2, d = hyp(x - cx, y - cy);
+    if (d <= r.width/2 + HIT_SLOP && d < bd) { bd = d; best = { el, key, d }; }
+  }
+  return best;
+}
+function beginAct(el, key, e) {
+  if (e && e.preventDefault) e.preventDefault();
+  try { if (e && e.pointerId != null) el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  el._held = true; el.classList.add('press');
+  setDev('touch'); btn(input, key, 2, true);
+  ac();
+}
+function endAct(el, key, cancel) {
+  if (!el._held) return;
+  el._held = false; el.classList.remove('press'); btn(input, key, 2, false);
+  if (cancel) input[key + 'Cancel'] = true;               // a cancel is never a release
+}
 function bindAct(el, key) {
-  let held = false;
-  el.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-    held = true; el.classList.add('press');
-    setDev('touch'); btn(input, key, 2, true);
-    ac();
-  });
-  const up = () => { if (!held) return; held = false; el.classList.remove('press'); btn(input, key, 2, false); };
-  el.addEventListener('pointerup', up);
-  el.addEventListener('pointercancel', () => { up(); input[key + 'Cancel'] = true; });   // a cancel is never a release
+  el.addEventListener('pointerdown', e => beginAct(el, key, e));
+  el.addEventListener('pointerup', () => endAct(el, key, false));
+  el.addEventListener('pointercancel', () => endAct(el, key, true));
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
-bindAct($('btnA'), 'a');
-bindAct($('btnB'), 'b');
-bindAct($('btnC'), 'c');
+for (const [id, key] of ACTS) bindAct($(id), key);
+cv.addEventListener('pointerdown', e => {                 // a tap in the gap falls through to the pitch. If it is within HIT_SLOP of a button, that button takes it
+  if (!playing() || $('controls').hidden) return;
+  const hit = nearestAct(e.clientX, e.clientY);
+  if (hit) beginAct(hit.el, hit.key, e);
+});
+const endActs = cancel => { for (const [id, key] of ACTS) endAct($(id), key, cancel); };
+cv.addEventListener('pointerup', () => endActs(false));    // capture sends the release to the button; if it could not, the pitch still lets go
+cv.addEventListener('pointercancel', () => endActs(true));
+function releaseTouch() {                                  // the phone turned, or the stick has to come up: the ring goes home and no button stays pressed
+  input.stickId = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null;
+  knob.style.transform = ''; stick.classList.remove('on'); restStick();
+  for (const [id, key] of ACTS) { const el = $(id); el._held = false; el.classList.remove('press'); }
+  for (const inp of inputs) {
+    inp.jx = inp.jy = 0; inp.latPeak = null; inp.gest = null;
+    inp.src.a = inp.src.b = inp.src.c = 0;
+    inp.aDown = inp.bDown = inp.cDown = false;
+    inp.aPressed = inp.bPressed = inp.cPressed = false;
+    inp.aCancel = inp.bCancel = inp.cCancel = false;
+  }
+}
 
 /* ---------- keyboard ----------
    By e.code, so the physical positions hold on any layout. One player (and the lone keyboard seat in two player) has the
@@ -5437,7 +5529,8 @@ $('pz-quit').addEventListener('click', () => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
-function onOrientation() { if (uprightPhone.matches) { pause(); input.stickId = null; for (const inp of inputs) { inp.jx = inp.jy = 0; inp.src.a = inp.src.b = inp.src.c = 0; inp.aDown = inp.bDown = inp.cDown = false; inp.cPressed = false; } } }
+function phoneUpright() { pause(); releaseTouch(); }        // the cover pauses the match; the stick and the buttons let go too, so nothing is left held when the phone comes back
+function onOrientation() { if (uprightPhone.matches) phoneUpright(); }
 if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
@@ -5773,7 +5866,7 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
     openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
-    DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor },
+    DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, safeInsets, stickRest, tagBox, nearestAct, releaseTouch, phoneUpright },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
     LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,

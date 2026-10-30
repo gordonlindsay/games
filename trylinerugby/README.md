@@ -272,6 +272,25 @@ nations, a local Surrey club, or a team you make yourself.
     comes once per duel kind and the first-kick path aid once for a goal kick and once for a drop, keyed off the same
     memory. Replay Tutorial on How to Play forgets them all (dim when there is nothing to replay). A drop goal's thumb
     still down carries over Play as at the press; one lifted under the card needs a fresh press.
+- **Phone landscape** (2026-10-30). The fan, Sprint-as-hold and the resting stick at 96, H−118 with no inset stay as
+  they are. Four things that were fiddly on a phone, each checked rather than redesigned:
+  - **Safe area.** The stick zone starts after the left inset and stops at the home indicator, and its right edge stays
+    at 52% so it never reaches the buttons. The resting stick moves in only when the notch would cover the ring (left
+    inset 59: centre at 129, the ring 8px clear) and lifts only when the home indicator would (a 21px one does not; it
+    already cleared it). On-pitch tags keep today's clamp when the insets are 0, and step in with the buttons when the
+    right inset is 59 (200px clear becomes 239).
+  - **Near misses.** A tap that misses a button and lands on the pitch, within 12px of a button's circle, goes to the
+    nearest one. The gap between Kick and Sprint is 17px between the circles, so a thumb that lands in it now hits one
+    of them. A direct hit is unchanged, and Sprint takes none of these while it is hidden in a close-up. The pause
+    glyph stays 44px; its hit target grows inward, off the corner.
+  - **A coalesced flick.** Chrome can deliver a fast Side Step as one move whose last sample is back in the dead zone.
+    The peak across the run is what the Side Step reads; the run itself still follows where the thumb is now. A move
+    with no intermediate samples is unchanged, and so is every step the tools drive by setting the stick directly.
+  - **Short landscape and turning upright.** Under 420px tall (a phone in Safari, sideways) the home settings sit in
+    two columns, labels above the controls, so Half, Difficulty, Sound and Hints fit on a 320px-tall screen with a
+    21px home indicator and every control stays 44px. The scorebug tightens from about 65px to about 45px. Turning the
+    phone upright still pauses, and now also lets go of the stick and the buttons, so a cancel that arrives late cannot
+    leave the ring on.
 
 ## Controls
 
@@ -678,7 +697,7 @@ a charger.
     bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
     never presses Pass in a tackle, and a line of Side Steps and Dummies by side; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
     `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
-  - **`node tools/contact.mjs`:** 272 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
+  - **`node tools/contact.mjs`:** 293 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
     and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
     a scrum). It checks:
     - a sprint that ends in a fall or a bind charges nothing more to the meter, and the push parts standing men 0.4m a
@@ -713,8 +732,10 @@ a charger.
     - offloads (one receiver for the label, the press and the ring, whatever the stick says), the ball jolted loose,
       Tripped, fends; a census of 60 bot matches (run-overs, ruck ball hit at once, turnover ball hit at once, the
       last tackler, no steals, no new penalty words, the tag list and count);
-    - the words, the three-button layout at 667x375, 932x430 and 932x430 with insets, and a render smoke test
-      (nothing non-finite, no drawn man jumping over 0.3m a frame, drawing draws no random number);
+    - the words, the three-button layout at 667x375, 932x430 and 932x430 with insets (the fan unchanged), the stick
+      zone and the resting stick under a notch and a home indicator, a near miss within 12px of a circle, the short
+      landscape home fitting at 44px, and the stick and Sprint letting go when the phone turns upright; and a render
+      smoke test (nothing non-finite, no drawn man jumping over 0.3m a frame, drawing draws no random number);
     - a staged line break: the fullback commits to the tackle within 2.8 / 2.2 / 2.2s (Easy / Normal / Hard), coming
       from the inside shoulder; Easy with two men still in front chases with the near one and keeps a sweeper;
       Normal commits both of the last two while a man behind chases; a retiring last man does not come up; a set
@@ -853,7 +874,7 @@ a charger.
   - **`node tools/setpieces.mjs`:** scrums at 4-8 taps a second (jittered 18%, the thumb off the stick, with a Good Hit or
     a late first tap; SEED 1 unless set) and lineouts at different jump timings. ENG v FRA, equal packs.
   - **`node tools/passing.mjs`:** 28 asserts over the led pass (above, under Passing).
-  - **`node tools/moves.mjs`:** 95 asserts over the Side Step and the Dummy (SEED 5 unless set): each fires from each team each
+  - **`node tools/moves.mjs`:** 99 asserts over the Side Step and the Dummy (SEED 5 unless set): each fires from each team each
     way, tags, the x0.65 odds and the dart; does not fire with no tackler inside 4m, inside the cooldown, for a slow swerve,
     for a man handed the ball with the stick already across, for a receiver whose stick swung through the flight, on the
     restore after a duel, inside a drop goal's projection, with Kick or a long Pass held, or split by a missed step; the
@@ -867,8 +888,9 @@ a charger.
     pull (over 0.30s back; 0.13s is one), a thumb eased back over 0.4s (0.1s is one), a swerve, a waggle, no defender inside
     9m, no ring receiver, a second back-and-on 0.35s on (2.5s on is a second), a lift and re-touch through the zone's own
     pointer listeners, nor a lift between two back-and-ons inside 2.5s (the cooldown is the carrier's), or a run under 0.20s;
-    two player never selling the chooser's ringed man; the CPU dummying on Hard only, never selling the ringed man, and
-    drawing no random number in AI v AI (the same stretch from one seed at cpu 0 and 0.5: the same count of draws and every
+    two player never selling the chooser's ringed man; a Side Step flick Chrome coalesced into one move (the peak across
+    the run counts, the same endpoint with no intermediate samples does not); the CPU dummying on Hard only, never selling
+    the ringed man, and drawing no random number in AI v AI (the same stretch from one seed at cpu 0 and 0.5: the same count of draws and every
     man on the same spot); the d-pad and an analog stick on a pad; and every tag Title Case with the Help naming both.
     `MOVE_BOT=dummy|step|both` gives the harness bot the moves (half the time, `MOVE_P`), for `bot.mjs` and `twoplayer.mjs --sym`.
   - **`node tools/hints.mjs`:** 145 asserts over the hints card (SEED 3 unless set): the settings (defaults, cleaning, the save
