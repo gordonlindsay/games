@@ -166,6 +166,19 @@ td.t{display:flex;align-items:center;gap:8px;font-weight:700}
 td.t .chip{width:10px;height:18px;border-radius:2px;background:var(--k);box-shadow:0 0 0 1px rgba(241,238,228,.35)}
 td.pts{font:900 20px/1 var(--display)}
 tr.me td{background:rgba(255,207,61,.09)}
+th.rk,td.rk{width:1.4em;padding-right:4px;color:var(--chalk-dim)}
+tr.me td.rk{color:var(--flood);font:900 18px/1 var(--display)}
+h2.title.gold{color:var(--flood)}
+.chase{margin:0;max-width:46ch;color:var(--chalk-dim);font:700 15px/1.35 var(--body);text-wrap:balance}
+.chase.payoff{color:var(--flood);font:900 22px/1.05 var(--display);letter-spacing:.02em;text-transform:uppercase}
+.fixture .stake{grid-column:1 / -1;margin:0;text-align:center;color:var(--flood);font:700 14px/1.3 var(--body)}
+.path{display:flex;flex-direction:column;gap:2px}
+.path .eyebrow{margin-top:8px}
+.path .eyebrow:first-child{margin-top:0}
+.path .ln{margin:0;color:var(--chalk-dim);font-size:14px;text-wrap:pretty}
+@media (orientation:landscape) and (max-height:560px){
+  .chase.payoff{font-size:18px}
+}
 .honours{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .hon{padding:12px 14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);display:flex;flex-direction:column;gap:4px}
 .hon b{font:900 26px/1 var(--display);text-transform:uppercase;overflow-wrap:anywhere}
@@ -489,11 +502,11 @@ body.desk .home-row #b-help{grid-column:1/-1}
 
 <section class="screen" id="s-hub" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow" id="hub-eyebrow">Championship</p><h2 class="title" id="hub-title">Round 1 of 5</h2></div></div>
+    <div class="head"><div><p class="eyebrow" id="hub-eyebrow">Championship</p><h2 class="title" id="hub-title">Round 1 of 5</h2><p class="chase" id="hub-chase"></p></div></div>
     <div id="hub-next"></div>
     <div class="honours" id="hub-hon" hidden></div>
     <div class="tbl"><table>
-      <thead><tr><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PD</th><th>BP</th><th>Pts</th></tr></thead>
+      <thead><tr><th class="rk">#</th><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PD</th><th>BP</th><th>Pts</th></tr></thead>
       <tbody id="hub-table"></tbody>
     </table></div>
     <div class="results" id="hub-results"></div>
@@ -3497,6 +3510,121 @@ function matchPoints(us, them, ourTries) {
   if (ourTries >= 4) { p += 1; why.push('Try Bonus'); }
   return { p, why };
 }
+/* The chase is the table talking. The points are the ones standings() already awards: 4 a win, 2 a draw,
+   a try bonus at 4, a losing bonus within 7, and 3 for a grand slam once all five are won. A side's best
+   return from here is a win and a try bonus from every game left (5), plus the slam if it is still unbeaten.
+   Nothing here is a new rule, and a match in progress is still not stored. */
+const CHASE_WIN = 5, CHASE_DRAW = 3, CHASE_GS = 3;
+function ordinal(n) { return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'); }
+function ptsWord(n) { return n === 1 ? 'point' : 'points'; }
+function maxPoints(row, left) {
+  if (left <= 0) return row.Pts;
+  return row.Pts + left * CHASE_WIN + (row.W === row.P ? CHASE_GS : 0);
+}
+/* What another side can still reach once the user's next result is decided. share is the points that
+   result gives the side the user plays (a close win still leaves them the losing bonus), or null for
+   everyone else, who can still take their best. A win for the user is not a win for them, so the slam
+   dies on it. Claiming the title only when this still leaves you clear never pretends two other sides
+   can both win the game they play against each other. */
+function otherCeiling(row, left, share) {
+  if (left <= 0) return row.Pts;
+  if (share == null) return maxPoints(row, left);
+  return row.Pts + share + (left - 1) * CHASE_WIN + (share >= 4 && row.W === row.P ? CHASE_GS : 0);
+}
+function userOpponent(c) {
+  if (!c || c.round >= 5) return -1;
+  return userFixture(c).opp;
+}
+function clearsAll(c, rows, gain, oppShare) {
+  const left = 5 - c.round, me = rows.find(r => r.i === c.user), opp = userOpponent(c);
+  const gs = gain >= 4 && left === 1 && me.W === me.P ? CHASE_GS : 0;
+  const mine = me.Pts + gain + gs;
+  return rows.every(r => r.i === c.user || mine > otherCeiling(r, left, r.i === opp ? oppShare : null));
+}
+function chaseFacts(c, rows) {
+  const left = 5 - c.round;
+  const place = rows.findIndex(r => r.i === c.user);
+  const me = rows[place];
+  const others = rows.filter(r => r.i !== c.user);
+  const neighbour = place === 0 ? rows[1] : rows[0];   // the gap is to second when you lead, and to the leader when you don't
+  const gap = neighbour ? (place === 0 ? me.Pts - neighbour.Pts : neighbour.Pts - me.Pts) : 0;
+  const clinched = left > 0 && me.Pts > Math.max(...others.map(r => maxPoints(r, left)));
+  const alive = maxPoints(me, left) >= Math.max(...others.map(r => r.Pts));
+  return { left, place, me, neighbour, gap, clinched, alive, bar: Math.max(...others.map(r => r.Pts)) };
+}
+function positionPhrase(c, f) {
+  const ord = ordinal(f.place + 1);
+  if (!f.neighbour) return ord;
+  if (f.gap === 0) return ord + ', level on points with ' + c.teams[f.neighbour.i].name;
+  return f.place === 0
+    ? ord + ', ' + f.gap + ' ' + ptsWord(f.gap) + ' clear'
+    : ord + ', ' + f.gap + ' ' + ptsWord(f.gap) + ' behind';
+}
+function splitBy(ahead, behind) {
+  if (ahead.Pts !== behind.Pts) return null;
+  if (ahead.PD !== behind.PD) return 'points difference';
+  if (ahead.TF !== behind.TF) return 'tries';
+  return null;
+}
+function chaseTitle(c, rows) {
+  if (c.round < 5) return 'Round ' + (c.round + 1) + ' of 5';
+  const mine = new Set(honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]));
+  if (mine.has('Grand Slam')) return 'Grand Slam';
+  if (mine.has('Champions')) return 'Champions';
+  if (mine.has('Triple Crown')) return 'Triple Crown';
+  if (mine.has('Wooden Spoon')) return 'Wooden Spoon';
+  return ['Runners-Up', '3rd', '4th', '5th'][rows.findIndex(r => r.i === c.user) - 1] || 'Final Table';
+}
+function finishLine(c, rows) {
+  const name = c.teams[c.user].name;
+  const mine = new Set(honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]));
+  const place = rows.findIndex(r => r.i === c.user);
+  const me = rows[place];
+  if (mine.has('Grand Slam')) return name + ' win the Grand Slam' + (mine.has('Triple Crown') ? ' and the Triple Crown' : '');
+  if (mine.has('Champions')) {
+    let line = name + ' win the championship' + (mine.has('Triple Crown') ? ' and the Triple Crown' : '');
+    const next = rows[1];
+    if (next && next.Pts === me.Pts) { const how = splitBy(me, next); if (how) line += ', ahead on ' + how; }
+    return line;
+  }
+  if (mine.has('Triple Crown')) return name + ' take the Triple Crown, and finish ' + ordinal(place + 1);
+  if (mine.has('Wooden Spoon')) return name + ' take the Wooden Spoon';
+  const champRow = rows[0], gap = champRow.Pts - me.Pts;
+  if (gap === 0) {
+    const how = splitBy(champRow, me);
+    return name + ' finish ' + ordinal(place + 1) + ', level with ' + c.teams[champRow.i].name + (how ? ', behind on ' + how : '');
+  }
+  return name + ' finish ' + ordinal(place + 1) + ', ' + gap + ' ' + ptsWord(gap) + ' short of ' + c.teams[champRow.i].name;
+}
+function fixtureStake(c, rows) {
+  if (!c || c.round >= 5) return '';
+  const f = chaseFacts(c, rows);
+  if (f.left === 1 && f.me.W === 4 && f.me.W === f.me.P) return 'For the Grand Slam';
+  if (f.clinched) return '';
+  if (clearsAll(c, rows, 2, 3)) return 'A draw is enough';
+  if (clearsAll(c, rows, 4, 1)) return 'A win takes the title';
+  if (clearsAll(c, rows, 5, 1)) return 'A try-bonus win takes the title';
+  const withWin = f.me.Pts + CHASE_WIN + (f.left - 1) * CHASE_WIN + (f.me.W === f.me.P ? CHASE_GS : 0);
+  if (f.me.Pts + CHASE_DRAW + (f.left - 1) * CHASE_WIN < f.bar && withWin >= f.bar) return 'Must win to stay in it';
+  return '';
+}
+function chaseLine(c, rows) {
+  if (c.round >= 5) return finishLine(c, rows);
+  if (c.round === 0) return 'Five rounds. Top the table.';
+  const f = chaseFacts(c, rows);
+  if (f.clinched) return 'Champions, with ' + (f.left === 1 ? 'a round' : f.left + ' rounds') + ' to play';
+  const pos = positionPhrase(c, f);
+  if (!f.alive) return pos + ', and out of the title';
+  if (f.place === 0 || fixtureStake(c, rows)) return pos;
+  return pos + '. Still in it';
+}
+function champNote(c) {
+  const name = c.teams[c.user].name;
+  if (c.round >= 5) return name + ' · ' + chaseTitle(c, standings(c));
+  if (c.round === 0) return name + ' · Round 1 of 5';
+  const rows = standings(c), f = chaseFacts(c, rows);
+  return name + ' · ' + (f.clinched ? 'Champions' : ordinal(f.place + 1)) + ' · Round ' + (c.round + 1) + ' of 5';
+}
 function recordChampResult() {
   const c = champ, { pair } = userFixture(c);
   const userHome = pair[0] === c.user;
@@ -5616,9 +5744,14 @@ function renderHome() {
   }
   const note = $('champ-note');
   const live = champ && champ.teams && champ.teams[champ.user] && champ.round < 5;
+  const done = champ && champ.teams && champ.teams[champ.user] && champ.round >= 5;
   if (live) {
     $('b-champ').textContent = 'Continue Championship';
-    note.textContent = champ.teams[champ.user].name + ' · Round ' + (champ.round + 1) + ' of 5';
+    note.textContent = champNote(champ);
+    note.hidden = false;
+  } else if (done) {
+    $('b-champ').textContent = 'Final Table';
+    note.textContent = champNote(champ);
     note.hidden = false;
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
 }
@@ -5858,12 +5991,24 @@ function renderHub() {
   const c = champ; if (!c) return;
   const done = c.round >= 5;
   const T = c.teams;
-  $('hub-eyebrow').textContent = 'Championship · ' + T[c.user].name;
-  $('hub-title').textContent = done ? 'Final Table' : 'Round ' + (c.round+1) + ' of 5';
   const rows = standings(c);
+  const title = chaseTitle(c, rows);
+  $('hub-eyebrow').textContent = 'Championship · ' + T[c.user].name;
+  $('hub-title').textContent = title;
+  const prize = title === 'Grand Slam' || title === 'Champions' || title === 'Triple Crown';
+  $('hub-title').classList.toggle('gold', done && (title === 'Grand Slam' || title === 'Champions'));
+  $('hub-chase').textContent = chaseLine(c, rows);
+  $('hub-chase').classList.toggle('payoff', (done && prize) || (!done && c.round > 0 && chaseFacts(c, rows).clinched));
   if (!done) {
     const { pair } = userFixture(c);
     const [h, a] = pair;
+    const stake = fixtureStake(c, rows);
+    const mates = c.fixtures[c.round].filter(p => p !== pair).map(p => esc(T[p[0]].name) + ' v ' + esc(T[p[1]].name));
+    const later = [];
+    for (let r = c.round + 1; r < 5; r++) {
+      const p = c.fixtures[r].find(x => x[0] === c.user || x[1] === c.user);
+      later.push('Round ' + (r + 1) + ' · ' + esc(T[p[0] === c.user ? p[1] : p[0]].name));
+    }
     const foe = T[h === c.user ? a : h];
     $('hub-next').innerHTML = `
       <div class="stack">
@@ -5871,9 +6016,14 @@ function renderHub() {
           <span class="fx-team">${jersey(T[h])}<span>${esc(T[h].name)}</span></span>
           <span class="fx-v">V</span>
           <span class="fx-team r"><span>${esc(T[a].name)}</span>${jersey(T[a])}</span>
+          ${stake ? `<p class="stake">${stake}</p>` : ''}
         </div>
         ${outmatched(T[c.user], foe) ? '<p class="eyebrow">Stronger Side</p>' : ''}
         <button class="btn primary" id="hub-play">Play Match</button>
+        ${mates.length || later.length ? `<div class="path">
+          ${mates.length ? `<p class="eyebrow">Also This Round</p><p class="ln">${mates.join(' · ')}</p>` : ''}
+          ${later.length ? `<p class="eyebrow">Still to Come</p><p class="ln">${later.join(' · ')}</p>` : ''}
+        </div>` : ''}
       </div>`;
     $('hub-play').addEventListener('click', () => { const { opp } = userFixture(champ); startMatch(champ.teams[champ.user], champ.teams[opp], true); });
     $('hub-hon').hidden = true;
@@ -5883,8 +6033,9 @@ function renderHub() {
     $('hub-hon').innerHTML = honours(c, rows).map(([t, i, gold]) => `<div class="hon${gold ? ' gold' : ''}"><span class="eyebrow">${t}</span><b>${esc(T[i].name)}</b></div>`).join('');
     $('hub-hon').hidden = false;
   }
-  $('hub-table').innerHTML = rows.map(r => `
+  $('hub-table').innerHTML = rows.map((r, n) => `
     <tr class="${r.i === c.user ? 'me' : ''}">
+      <td class="rk">${c.round ? n + 1 : '–'}</td>
       <td class="t"><span class="chip" style="--k:${HEX.test(T[r.i].kit) ? T[r.i].kit : '#888888'}"></span>${esc(T[r.i].name)}</td>
       <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.PD > 0 ? '+' : ''}${r.PD}</td><td>${r.BP}</td><td class="pts">${r.Pts}</td>
     </tr>`).join('');
@@ -5950,7 +6101,7 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
-    recordChampResult, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
+    recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   get M() { return M; } };
 
 function start(data) {
