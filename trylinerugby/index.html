@@ -546,8 +546,8 @@ body.desk .home-row #b-help{grid-column:1/-1}
       <dt>Tackle</dt><dd>When they have the ball. It lights up when you're close enough to dive. Miss and you're on the floor.</dd>
       <dt>Sprint</dt><dd>Hold it for a burst of speed, with the ball or without. The ring drains while you hold and refills when you let go.</dd>
       <dt>Offload</dt><dd>Press Pass as you're tackled, when it glows.</dd>
+      <dt>Switch</dt><dd>The dashed ring shows who. Nearest the ball, or the next one if that is you. If your man is behind the ball, the nearest teammate still in front, and the button pulses.</dd>
       <dt>Ruck</dt><dd>The ring moves to the teammate who will pick the ball up. Place him with the stick, or let go and he runs to the ball. Pass, Kick and Tackle stay dead until it is out.</dd>
-      <dt>Switch</dt><dd>Take the defender nearest the ball.</dd>
       <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner. Each one starts in slow motion.</dd>
       <dt>Hints</dt><dd>The card in the top corner names the control for each close-up. Untick <b>Hints</b> on it, or set Hints to Off on the menu.</dd>
       <dt>Tutorial</dt><dd>The first time each close-up comes up, play pauses and a card says what to do. <b>Replay Tutorial</b> below shows them all again.</dd>
@@ -3280,11 +3280,32 @@ function userTackle(t) {                                   // the Tackle press f
   q.vx = dx/m*9; q.vy = dy/m*9;
   commitTackle(q, c, behind ? 'ankle' : 'dive');
 }
-function switchPlayer(t) {
+function switchMark(t) {                               // where "behind the ball" is judged. The carrier, when they have it (the ball sits half a metre in front of his hands). The ball itself on their pass or kick. Nothing on a loose ball: there is no line to be behind
+  const b = M.ball;
+  if (b.state === 'held' && b.carrier && b.carrier.team !== t) return { x:b.carrier.x, y:b.carrier.y, d:dirOf(b.carrier.team) };
+  if (b.state === 'air' && b.f && b.f.team !== t && (b.f.kind === 'pass' || b.f.kind === 'kick')) return { x:b.x, y:b.y, d:dirOf(b.f.team) };
+  return null;
+}
+function switchTarget(t) {                                // the one man the dashed ring, the press and the pulse agree on. Nearest the ball, or the second-nearest when that is already you. When your man is behind the ball, the nearest teammate still in front
   const b = M.ball, cur = ctrlOf(t);
-  const list = M.players.filter(p => p.team === t && p.down <= 0 && !p.bind).sort((p,q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
-  if (!list.length) return;
-  setCtrl(t, (list[0] === cur && list[1]) ? list[1] : list[0]);
+  const list = M.players.filter(p => p.team === t && onFeet(p)).sort((p, q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
+  if (!list.length) return null;
+  const m = switchMark(t);
+  if (cur && m && (cur.x - m.x)*m.d < -0.3) {             // behind: the attack is past him, the same 0.3m an Ankle Tap calls behind. Still in front: level, or goal-side
+    const front = list.find(p => p !== cur && (p.x - m.x)*m.d >= -0.3);
+    if (front) return front;
+  }
+  const pick = (list[0] === cur && list[1]) ? list[1] : list[0];
+  return pick === cur ? null : pick;
+}
+function switchUseful(t) {                                // worth pulsing, the way Offload pulses: your man is behind the ball and the man in the ring can still meet it. A switch onto someone already beaten stays quiet
+  if (!M || M.phase !== 'play' || M.cut || ourBall(t)) return false;
+  const q = switchTarget(t), cur = ctrlOf(t), m = switchMark(t);
+  return !!(q && cur && m && (cur.x - m.x)*m.d < -0.3 && (q.x - m.x)*m.d >= -0.3);
+}
+function switchPlayer(t) {
+  const q = switchTarget(t);
+  if (q) setCtrl(t, q);
 }
 /* Phase A reads every human slot's edges; Phase B resolves the side in possession first (the carrier's team, the passer's team
    while a pass is in the air, M.poss otherwise), then the other, each in today's order: A, the pass in hand, B, Sprint, then the
@@ -4722,6 +4743,16 @@ function render(dt) {
     if (shown.skip && shown.skip !== shown.to) ringAt(shown.skip, 'rgba(244,241,232,.38)', 1.5, r*1.2, [3, 4]);
     if (shown.to) ringAt(shown.to, shown.gold ? ringCol(t) : 'rgba(244,241,232,.95)', shown.gold ? 2.5 : 2, r*1.6, [4, 3]);
   }
+  // switch target, for a human without the ball: the dashed ring is the man Switch would take, drawn before the press
+  for (const t of [0, 1]) {
+    const ctrl = ctrls[t];
+    if (!(ctrl && M.phase === 'play' && !ourBall(t))) continue;
+    const q = switchTarget(t);
+    if (!q) continue;
+    const [qx, qy] = toS(q.x, q.y);
+    ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.arc(qx, qy, r*1.45, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
   // kick aim, for each side charging a kick, in its own direction
   for (const t of [0, 1]) {
     const ctrl = ctrls[t], S = sideOf(t);
@@ -4767,7 +4798,7 @@ function drawSeatMark(t, cx, cy, r, off) {
   ctx.globalAlpha = a0;
   const cue = cueOf(t);
   if (cue) {
-    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, / · TACKLE
+    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' || cue === 'Switch' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, G · SWITCH, / · TACKLE
     ctx.font = `800 12px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const m = ctx.measureText(text), tw = ((m && m.width) || text.length*6.5) + 12;
     ctx.fillStyle = 'rgba(8,14,10,.82)'; rrect(cx - tw/2, y - 9, tw, 18, 4); ctx.fill();
@@ -4785,6 +4816,7 @@ function cueOf(t) {                                        // the word the big o
     if (p && p.mode === 'hold' && p.t >= LONG.arm && passAim(c, inputOf(t).world().y).far) return 'Long';
     return kickLabel(t) === 'Drop Goal' ? 'Drop Goal' : null;
   }
+  if (switchUseful(t)) return 'Switch';                  // the chase, when your man is behind and a teammate can still meet the ball. It outranks Tackle: the pulse is the thing to read
   return canDive(c) ? 'Tackle' : null;
 }
 
@@ -5432,7 +5464,7 @@ function updateHud() {
   if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
   else if (ours) { la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && (!held || cueA); bAct = play && !held; }   // held in a tackle, Pass is dim unless an offload is on
-  else { la = 'Tackle'; lb = 'Switch'; cueA = cueB = false; aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now
+  else { la = 'Tackle'; lb = 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
   const S = M.spr[ht], sprOn = !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
   const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue + (passLong ? 'L' : '');
@@ -6212,7 +6244,7 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, safeInsets, stickRest, tagBox, nearestAct, releaseTouch, phoneUpright, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
-    maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
+    maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, switchTarget, switchUseful, switchPlayer, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
     LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,

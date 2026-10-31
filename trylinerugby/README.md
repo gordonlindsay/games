@@ -110,6 +110,7 @@ nations, a local Surrey club, or a team you make yourself.
   burst, not a runaway. The button is dim exactly when a press would do nothing, and a press on a dim button does
   nothing, not even a switch. The CPU runs the same meter and the same burst on every level, choosing its moments by
   level: only for a runner who is clean through.
+- **Switch** (2026-10-31). Without the ball the small button takes a defender, and a dashed ring in your colour shows who before you press. It is the defender nearest the ball. If that is already you, it is the next nearest: that used to happen with nothing drawn. When your man is already behind the ball (the attack is past him by the same 0.3m an Ankle Tap calls behind, judged on the carrier, or on the ball itself during their pass or kick), the ring moves to the nearest teammate still in front — level with that spot, or goal-side of it — even when a beaten teammate is closer. If nobody is still in front, it stays the next nearest. The button pulses, as Offload does, when your man is behind and the man in the ring can still meet the ball. A switch onto someone already beaten does not pulse, and the press still takes the man the ring shows. A loose ball keeps the nearest rule, since there is no line to be behind. In two player the chip under your man reads Switch (G or .) in the same case it would pulse, and Tackle when a dive is on and Switch would not.
 - **Line break** (2026-10-14): when you are through the defensive line, the last defender comes up onto your inside
   shoulder and tries the tackle, turning the run toward the near touch, instead of holding his depth. Easy brings
   only that last man, and slower, so a step still beats him. Normal and Hard bring the last two. A line that is
@@ -141,7 +142,7 @@ nations, a local Surrey club, or a team you make yourself.
   - **The match.** The stick and the three buttons are off (they are seat 0's touch controls). The scorebug carries a seat tag at
     each end. Each player's man carries a numbered tag in his colour where the pointer sits in one player, the Sprint meter is
     an arc round his ring (dim exactly when a press would do nothing), and under him a chip reads his key and the word the
-    button would (F · Offload, G · Drop Goal, / · Tackle; Long on its own, being a state) only while it matters. Either player
+    button would (F · Offload, G · Drop Goal, G · Switch, / · Tackle; Long on its own, being a state) only while it matters. Either player
     pauses (P or Escape, or Start on either pad). The penalty card names its player ("Penalty · Player 2") and takes only his
     seat, from his keys as well as his pad (his run keys move the ring, Pass presses, Kick goes back); the Half Time and Full
     Time cards take either seat's keys; the pause card is anyone's, even over the penalty card. A pad unplugged mid-match pauses
@@ -340,7 +341,7 @@ nations, a local Surrey club, or a team you make yourself.
 |---|---|---|
 | Stick | Run. Flick sideways near a tackler to Side Step. Pull back and push on for a Dummy: the nearest defender drifts to the man in the white ring | Run. In a ruck, place the teammate who will pick the ball up. Pass, Kick and Tackle stay dead until it is out |
 | Big button | Pass to the ringed teammate. A tap is a normal pass; hold past 0.18s and the ring turns gold for a long pass to the next man out (it throws itself at 0.6s). Tilt to pick a side. Held in a tackle it reads Offload on the press, when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
-| Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the defender nearest the ball |
+| Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the man in the dashed ring: the defender nearest the ball, or the next one if that is already you. If your man is behind the ball, the nearest teammate still in front. It pulses when he can still meet the ball |
 | Sprint | Hold for a burst of speed (x1.05 with the ball). The ring is the meter: it drains while you hold (and through the ease-out after you let go) and refills when you let go | Hold to run a man down (x1.20). A press moves the ring to the man best placed to chase if yours is down or over 4m further off. It is dim when a press would do nothing, and then it does nothing |
 
 Keyboard: arrows or WASD, J, K, L (Sprint), P to pause. Tap across near a tackler to Side Step; tap back (the key toward your own line, with forward held or let go) for a Dummy. J tapped is a pass; J held is a long pass. At a goal kick the arrows steer and J is Kick; K held is Drop Goal.
@@ -742,7 +743,7 @@ a charger.
     bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
     never presses Pass in a tackle, and a line of Side Steps and Dummies by side; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
     `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
-  - **`node tools/contact.mjs`:** 313 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
+  - **`node tools/contact.mjs`:** 336 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
     and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
     a scrum). It checks:
     - a sprint that ends in a fall or a bind charges nothing more to the meter, and the push parts standing men 0.4m a
@@ -763,6 +764,8 @@ a charger.
       and draws nothing random, a let-go still runs him to the mark and he takes the ball, Pass Kick and Tackle stay
       dead until it is out (and Pass and Kick light again once he has it), a turnover still goes to the defence, a CPU
       side is not moved, and in two player only the attacking ring moves;
+    - Switch: the dashed ring, the press and the pulse name one man (nearest the ball, the next if that is you,
+      the nearest teammate still in front when yours is behind);
     - wrong-footing after a forced turnover; every timer running out in its stated time give or take a step
       (retiring, with the man a chaser and a sprinter again after it and a ringed Second Man's Tackle dim until
       then; wrong-footed; a stumble; a trip; the Sprint ease-out); your automatic tackle base by level; the Tackle
@@ -1281,7 +1284,7 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   `__tryline.forceDuel('past')` stages and starts a duel in the console (`forceDuel('past', 1)` the mirrored one, in a
   match made with `humans:[false, true]`); `__tryline.contact` holds `CONTACT`, `RUCK`, `SPRINT` and the contact and
   Sprint functions the tests drive (`commitTackle`, `resolveContact`, `tackle`, `collide`, `sprintTick`, `cpuSprintWant`,
-  `canOffload`, …); `__tryline.sides` the sides helpers; `__tryline.debug.setTwo`, `two`, `twoClaim`, `twoRelease`,
+  `canOffload`, `switchTarget`, `switchUseful`, …); `__tryline.sides` the sides helpers; `__tryline.debug.setTwo`, `two`, `twoClaim`, `twoRelease`,
   `twoSwap`, `pads` the seats model; `__tryline.debug.startMatch(u, c, false, { two:true, levels:[0, 2] })` a
   two-player match from the console, `debug.openJoin()` the join screen, `debug.twoSel()` the join selection (`teams`,
   `levels`, `picking`), `debug.series()` the series, `debug.cueOf(t)` a side's chip word, `debug.cutCues(c)` a close-up's cues,
