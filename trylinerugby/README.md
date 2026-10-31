@@ -270,15 +270,29 @@ nations, a local Surrey club, or a team you make yourself.
     that seat's Hints are On (Hints Off is one switch for both), and the moment is remembered either way, per device,
     in `settings.tut`, so the old `duelSeen` and `kickSeen` flags are gone: the first-duel window aid (+0.08s) now
     comes once per duel kind and the first-kick path aid once for a goal kick and once for a drop, keyed off the same
-    memory. Replay Tutorial on How to Play forgets them all (dim when there is nothing to replay). A drop goal's thumb
-    still down carries over Play as at the press; one lifted under the card needs a fresh press.
+  memory. Replay Tutorial on How to Play forgets them all (dim when there is nothing to replay). A drop goal's thumb
+  still down carries over Play as at the press; one lifted under the card needs a fresh press.
+
+- **Support on the open shoulder** (2026-10-31). One runner is held on the open shoulder, still behind the ball. The
+  open shoulder is the side the nearest defender up on the carrier is not standing on; with him head-on, it is the side
+  with more room to the touchline. He starts 5m wide and 2.6m behind (`SUPPORT`), and slides wider along that shoulder,
+  then a little deeper, while a defender is within 5m of the spot. He stays behind the ball and inside the Key Pass box
+  (4–12m wide, at most 6.4m behind). The rest of the line stays on the flat shelf. A set piece keeps that shelf. The pass
+  ring is white when the man it is on is free and tints (`#ff8466`) when a defender is within 5m of him, so a pass is a
+  read. A long pass stays gold, with that tint drawn inside the gold when the further man is marked. The stick still
+  chooses the man. The CPU's refusal of a pass into pressure is unchanged.
+  Checked with `bot.mjs`, 24 matches a difficulty at SEED 1, 4-minute halves, duels live, against the same run before
+  the change. Key Passes a match went 0.50 → 0.54 on Easy, 0.46 → 0.42 on Normal and 0.25 → 0.58 on Hard. The runner
+  is placed inside the 7.5m box. Easy and Normal stayed in the same band; Hard rose by about a third of a duel a
+  match. Tries (you–CPU) went 9.0–0.5 → 8.5–0.2 on Easy (24 wins from 24), 6.6–1.1 → 5.5–1.1 on Normal (20 wins from
+  24) and 3.0–2.9 → 2.5–1.8 on Hard (13 wins → 16).
 
 ## Controls
 
 | | With the ball | Without it |
 |---|---|---|
-| Stick | Run. Flick sideways near a tackler to Side Step. Pull back and push on for a Dummy: the nearest defender drifts to the man in the white ring | Run |
-| Big button | Pass to the ringed teammate. A tap is a normal pass; hold past 0.18s and the ring turns gold for a long pass to the next man out (it throws itself at 0.6s). Tilt to pick a side. Held in a tackle it reads Offload on the press, when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
+| Stick | Run. Flick sideways near a tackler to Side Step. Pull back and push on for a Dummy: the nearest defender drifts to the man in the pass ring | Run |
+| Big button | Pass to the ringed teammate. A tap is a normal pass; the ring is white when he is free and tints when a defender is on him. Hold past 0.18s and the ring turns gold for a long pass to the next man out (it throws itself at 0.6s), with the tint inside the gold when that man is marked. Tilt to pick a side. Held in a tackle it reads Offload on the press, when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
 | Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the defender nearest the ball |
 | Sprint | Hold for a burst of speed (x1.05 with the ball). The ring is the meter: it drains while you hold (and through the ease-out after you let go) and refills when you let go | Hold to run a man down (x1.20). A press moves the ring to the man best placed to chase if yours is down or over 4m further off. It is dim when a press would do nothing, and then it does nothing |
 
@@ -290,7 +304,7 @@ Two player on one keyboard: Player 1 W A S D with F G H (Pass, Kick, Sprint), Pl
 
 Controllers need HTTPS or localhost (the Gamepad API is off on an insecure page), and a pad shows up only after a press. A pad press can't start the sound; any key or click does. Steam's desktop layout can turn a pad into arrow keys and Escape, which would drive Player 2's half and pause the match: turn Steam Input off for the browser.
 
-**Long pass.** Hold Pass. For the first 0.18s it is still the normal pass, to the white ring, and letting go throws that. Past 0.18s the ring turns gold on the next man out — the stick's side, or the side with more support if the stick is level — skipping the nearest teammate, within 32m and not forward. A faint ring marks the man it skips. The Pass button fills while it charges, and reads Long once a second man is there; at 0.6s it throws itself. With no second man it stays a normal pass. The ball loops higher as the pass gets longer, so it can sail over the skipped man's defender. It is a little less accurate and a little more likely to be knocked on, and it can be intercepted near the passer or the receiver, not under the top of the arc. The CPU sends one when its nearest receiver is crowded and the next man is in space. A press in the first 0.12s after a catch is kept and thrown as soon as that gate opens, to the man the ring was on. An offload is still the press itself: it does not wait out the long-pass hold, and a charge already under way is cancelled by the tackle.
+**Long pass.** Hold Pass. For the first 0.18s it is still the normal pass, to the ring — white when that man is free, tinted when a defender is on him — and letting go throws that. Past 0.18s the ring turns gold on the next man out — the stick's side, or the side with more support if the stick is level — skipping the nearest teammate, within 32m and not forward. A faint ring marks the man it skips. The Pass button fills while it charges, and reads Long once a second man is there; at 0.6s it throws itself. With no second man it stays a normal pass. The ball loops higher as the pass gets longer, so it can sail over the skipped man's defender. It is a little less accurate and a little more likely to be knocked on, and it can be intercepted near the passer or the receiver, not under the top of the arc. The CPU sends one when its nearest receiver is crowded and the next man is in space. A press in the first 0.12s after a catch is kept and thrown as soon as that gate opens, to the man the ring was on. An offload is still the press itself: it does not wait out the long-pass hold, and a charge already under way is cancelled by the tackle.
 
 Checked with `bot.mjs`, 36 matches a difficulty at SEED 1 and again at SEED 2 (72 matches, 4-minute halves, duels live). Wins were 100% / 84.7% / 55.6% (Easy / Normal / Hard), against 99.0 / 87.8 / 52.0 in the measured table below. The scripted player still taps, so every long pass in that run was the CPU's: about 2.6 / 3.4 / 3.5 a match.
 
@@ -470,12 +484,17 @@ Every lever is in `RUNON` (`RUNON='{"cpu":0.6}' node tools/bot.mjs` tries a valu
   supports fall to a third of their speed during the flight and the CPU's to about 0.5 m/s.
 - **The Key Pass runner box** is `RUNON.kpBack` 7.5m behind the carrier (from 6): with the ball moving faster the line
   sits deeper, and at 6m Key Passes fell from 0.7 to 0.2 a match.
-- Checked by `tools/passing.mjs` (28 asserts): the lead and its exact mirror for team 1, a CPU passer leading less (under
+- **The open shoulder** (2026-10-31): `holdShoulder` keeps one support runner on the open shoulder, `SUPPORT.lat` 5m
+  wide and `SUPPORT.back` 2.6m behind the ball, sliding out to `latMax` 11.2 and `backMax` 6.4 while a defender is
+  inside `clear` 5m. The pass ring tints (`SUPPORT.tint`) when a defender is inside `mark` 5m of the man it is on.
+  `passing.mjs` pins the spot, the slide, the mirror and the ring. The Key Pass count is under Decided.
+- Checked by `tools/passing.mjs` (46 asserts): the lead and its exact mirror for team 1, a CPU passer leading less (under
   0.9 of the human's lead, measured 0.83; the human's is taken before the CPU's pass is staged, which parks team 0 40m away),
   5,000 random staged passes never landing forward, the receiver catching within 0.6m of the spot at pace with the
   stick upfield, toward touch, let go and pulled back, an AI receiver at his side's pace, the sure pass's target and
   seek unchanged to the bit, the line in the air (your supports keep at least 0.8 of their speed, the CPU's stay
-  moving), the Block lane, and a census guard over 12 bot matches a level with the thumb holding its direction.
+  moving), the Block lane, a census guard over 12 bot matches a level with the thumb holding its direction, and the
+  open shoulder (the spot, the slide, the mirror, and the white, tinted and gold rings).
 
 ### Side Step and Dummy
 

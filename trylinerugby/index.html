@@ -474,7 +474,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
     <div class="head"><div><p class="eyebrow">Controls</p><h2 class="title">How to Play</h2></div></div>
     <dl class="help">
       <dt>Stick</dt><dd>Touch anywhere on the left half and drag. Near a tackler, flick it sideways to <b>Side Step</b>. Pull it back and push on for a <b>Dummy</b>.</dd>
-      <dt>Pass</dt><dd>A tap goes to the teammate in the white ring. Tilt the stick up or down to pick a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest man and floats to the next one out.</dd>
+      <dt>Pass</dt><dd>A tap goes to the teammate in the ring. White means he is free; the ring tints when a defender is on him. Tilt the stick up or down to pick a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest man and floats to the next one out. A tint inside the gold means that man is marked too.</dd>
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
       <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
       <dt>Drop Goal</dt><dd>In range the small button reads <b>Drop Goal</b>. Hold it, steer, let go in the gold before they reach you.</dd>
@@ -1029,6 +1029,10 @@ const LONG = { arm:0.18, auto:0.6, gate:0.12, range:32, knock:0.03 };   // hold 
    release, and never forward after the handling error (the law); line: the support slots' upfield lead while a pass is in the air,
    in seconds of the receiver's top speed; kpBack: how far behind the carrier the Key Pass runner may be (6 before the lead). */
 const RUNON = { a:18, cpu:0.65, keep:0.5, back:0.4, line:0.45, kpBack:7.5 };
+/* One runner on the open shoulder (2026-10-31). lat / back: where he starts, wide of the ball and behind it. clear: he slides
+   while a defender is closer than this. mark: the pass ring tints when a defender is closer than this to the man it is on.
+   latMax / backMax keep him inside the Key Pass box (4–12m wide, inside kpBack). tint: the marked colour, the alert chalk. */
+const SUPPORT = { lat:5, back:2.6, clear:5, mark:5, latMax:11.2, backMax:6.4, tint:'#ff8466' };
 const passSpeed = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // a long pass hangs a little, so the loop reads
 const passPace = team => (isHuman(team) ? 1 : RUNON.cpu);   // how hard a side's receiver runs onto the ball, by role
 function runOn(r, d, t, pace) {                             // how far upfield r gets in t seconds running on from his upfield speed now, picking up at RUNON.a to top speed × pace
@@ -1099,9 +1103,11 @@ function passAim(c, pref) { const near = pickReceiver(c, pref); return { near, f
 function shownPass(c) {                                   // the ring and the pass read this together, so the ball goes to the man the ring is on
   const inp = inputOf(c.team), pref = inp ? inp.world().y : 0, aim = passAim(c, pref), p = sideOf(c.team).pass;
   const charge = p && p.mode === 'hold' ? Math.min(1, p.t/LONG.auto) : 0;
-  if (p && p.mode === 'tap') return { to:passOk(c, p.to, 22) ? p.to : aim.near, skip:null, gold:false, charge:0 };
-  if (p && p.mode === 'hold' && p.t >= LONG.arm && aim.far) return { to:aim.far, skip:aim.near, gold:true, charge };
-  return { to:aim.near, skip:null, gold:false, charge };   // a short hold still tracks the white ring
+  const out = p && p.mode === 'tap' ? { to:passOk(c, p.to, 22) ? p.to : aim.near, skip:null, gold:false, charge:0 }
+    : p && p.mode === 'hold' && p.t >= LONG.arm && aim.far ? { to:aim.far, skip:aim.near, gold:true, charge }
+    : { to:aim.near, skip:null, gold:false, charge };      // a short hold still tracks the ring
+  out.marked = !!(out.to && pressure(out.to) < SUPPORT.mark);   // white when he is free, tinted when a defender is on him
+  return out;
 }
 function bestReceiver(p) {
   const d = dirOf(p.team); let best = null, bs = -1e9;
@@ -2893,15 +2899,61 @@ function updateLoose(dt) {
 }
 
 /* ---------- team shape ---------- */
-function supportSlots(fx, fy, d, n, depth) {
+/* One runner is held on the open shoulder, still behind the ball. The rest of the line stays on the flat shelf.
+   The open shoulder is the side the nearest defender up on the ball is not on; head-on, it is the side with more
+   room to touch. He slides wider, then a little deeper, while a defender is inside SUPPORT.clear — never forward,
+   and never outside the Key Pass box. The stick still picks the man; the ring only shows whether that man is free. */
+function supportSlots(fx, fy, d, n, depth, skipNear) {
   const out = [];
   for (const k of [1,-1,2,-2,3,-3,4,-4,5,-5,6,-6,7,-7,8,-8,9,-9]) {
     if (out.length >= n) break;
+    if (skipNear && k === skipNear) continue;             // the near slot on the open side: the held runner stands there instead
     const y = fy + k*6.5; if (y < 3 || y > 67) continue;
     out.push({ x:clamp(fx - d*(depth + 1.3*Math.abs(k)), 1, 119), y });
   }
   while (out.length < n) out.push({ x:clamp(fx - d*depth, 1, 119), y:clamp(fy,3,67) });
   return out;
+}
+function shoulderRoom(fy, sign) { return sign > 0 ? 67 - fy : fy - 3; }
+function openShoulder(fx, fy, d, team) {                   // +1 is +y. 0 when neither touch leaves room for a shoulder
+  let best = null, bd = 1e9, side = 0;
+  for (const q of M.players) {
+    if (q.team === team || !onFeet(q) || q.offside > 0) continue;
+    const dx = (q.x - fx)*d; if (dx < -2.5) continue;     // behind the ball: not guarding a shoulder
+    const dy = q.y - fy, dd = hyp(dx, dy);
+    if (dd > 16 || dd >= bd) continue;
+    bd = dd; best = q; side = dy;
+  }
+  let sign = best && Math.abs(side) >= 1.5 ? (side > 0 ? -1 : 1) : ((70 - fy) >= fy ? 1 : -1);
+  if (shoulderRoom(fy, sign) < 4.5 && shoulderRoom(fy, -sign) >= 4.5) sign = -sign;
+  return shoulderRoom(fy, sign) >= 4.5 ? sign : 0;
+}
+function shoulderPoint(fx, fy, d, open, team) {            // where the held runner stands: in space, on that shoulder, behind the ball
+  if (!open) return null;
+  let lat = SUPPORT.lat, back = SUPPORT.back, best = null, bestC = -1;
+  for (let i = 0; i < 14; i++) {
+    const y = clamp(fy + open*lat, 3, 67), x = clamp(fx - d*back, 1, 119);
+    const gotLat = (y - fy)*open, gotBack = (fx - x)*d;
+    if (gotLat < 4 || gotBack < 1) break;                 // a clamp that pulled him off the shoulder, or in front of the ball
+    let clear = 99;
+    for (const q of M.players) if (q.team !== team && onFeet(q)) clear = Math.min(clear, hyp(q.x - x, q.y - y));
+    if (clear > bestC) { bestC = clear; best = { x, y, lat:gotLat, back:gotBack }; }
+    if (clear >= SUPPORT.clear) return best;
+    if (lat < SUPPORT.latMax - 0.01) lat = Math.min(SUPPORT.latMax, lat + 1.2);
+    else if (back < SUPPORT.backMax - 0.01) back = Math.min(SUPPORT.backMax, back + 0.6);
+    else break;
+  }
+  return best;
+}
+function holdShoulder(A, fx, fy, d, team) {                // the attacker already in that channel, held on the point. Null keeps the flat shelf
+  const open = openShoulder(fx, fy, d, team), pt = shoulderPoint(fx, fy, d, open, team);
+  if (!pt || !A.length) return null;
+  let holder = null, by = 1e9, bx = 1e9;
+  for (const p of A) {
+    const dy = Math.abs(p.y - pt.y), dx = Math.abs(p.x - pt.x);
+    if (dy < by - 1e-6 || (Math.abs(dy - by) <= 1e-6 && dx < bx)) { by = dy; bx = dx; holder = p; }
+  }
+  return holder ? { holder, at:pt, skip:open } : null;
 }
 function assignByY(T, arr, slots, lx = 0) {              // lx: an upfield lead on every slot (the line running on while a pass is in the air)
   const a = arr.slice().sort((p,q) => p.y-q.y), s = slots.slice().sort((p,q) => p.y-q.y);
@@ -2996,10 +3048,13 @@ function computeTargets() {
     const sh = nearestOf(A, sx, sy);
     if (sh) { T.set(sh, { x:sx, y:sy, s:maxSpeed(sh) }); A = A.filter(p => p !== sh); }
   }
-  const depth = mode === 'set' ? ((M.set.kind === 'scrum' || M.set.kind === 'lineout') ? 5 : 3) : 2.6;
-  const slots = supportSlots(fx, fy, dA, A.length, depth);
+  const depth = mode === 'set' ? ((M.set.kind === 'scrum' || M.set.kind === 'lineout') ? 5 : 3) : SUPPORT.back;
+  const pod = (mode === 'held' || mode === 'pass') ? holdShoulder(A, fx, fy, dA, att) : null;   // one runner on the open shoulder; a set piece keeps the flat shelf
+  const rest = pod ? A.filter(p => p !== pod.holder) : A;
+  const slots = supportSlots(fx, fy, dA, rest.length, depth, pod ? pod.skip : 0);
   const lead = mode === 'pass' && b.f.target ? dA*maxSpeed(b.f.target)*0.95*RUNON.line : 0;   // the line keeps running while the ball is in the air, instead of pulling up round the landing spot
-  assignByY(T, A, slots, lead);
+  assignByY(T, rest, slots, lead);
+  if (pod) T.set(pod.holder, { x:clamp(pod.at.x + lead, 1, 119), y:pod.at.y, s:maxSpeed(pod.holder) });
   let sweep = true;
   if (mode === 'held') {
     const live = D.filter(p => !(p.offside > 0));                  // a retiring tackler is never the chaser, and never the man who comes up
@@ -4452,17 +4507,23 @@ function render(dt) {
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
   // pass target, for the human holding the ball. Held in a tackle, the ring sits on the man an Offload would go to. While a long pass charges it turns gold, with a faint ring on the man it skips.
+  // White is a free man. The ring tints when a defender is on him; a long pass keeps its gold and draws the tint inside it.
   for (const t of [0, 1]) {
     const ctrl = ctrls[t];
     if (!(ctrl && M.phase === 'play' && b.state === 'held' && b.carrier === ctrl)) continue;
-    const shown = ctrl.bind ? { to:offloadTarget(ctrl.bind), skip:null, gold:false } : shownPass(ctrl);
+    const shown = ctrl.bind ? { to:offloadTarget(ctrl.bind), skip:null, gold:false, marked:false } : shownPass(ctrl);
+    if (ctrl.bind) shown.marked = !!(shown.to && pressure(shown.to) < SUPPORT.mark);
     const ringAt = (q, style, width, rad, dash) => {
       const [qx, qy] = toS(q.x, q.y);
       ctx.strokeStyle = style; ctx.lineWidth = width; ctx.setLineDash(dash);
       ctx.beginPath(); ctx.arc(qx, qy, rad, 0, 7); ctx.stroke(); ctx.setLineDash([]);
     };
     if (shown.skip && shown.skip !== shown.to) ringAt(shown.skip, 'rgba(244,241,232,.38)', 1.5, r*1.2, [3, 4]);
-    if (shown.to) ringAt(shown.to, shown.gold ? ringCol(t) : 'rgba(244,241,232,.95)', shown.gold ? 2.5 : 2, r*1.6, [4, 3]);
+    if (shown.to) {
+      if (shown.gold) ringAt(shown.to, ringCol(t), 2.5, r*1.6, [4, 3]);
+      else ringAt(shown.to, shown.marked ? SUPPORT.tint : 'rgba(244,241,232,.95)', shown.marked ? 2.5 : 2, r*1.6, [4, 3]);
+      if (shown.gold && shown.marked) ringAt(shown.to, SUPPORT.tint, 2, r*1.15, []);
+    }
   }
   // kick aim, for each side charging a kick, in its own direction
   for (const t of [0, 1]) {
@@ -5776,7 +5837,7 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
-    LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
+    LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, SUPPORT, openShoulder, shoulderPoint, holdShoulder, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
