@@ -257,5 +257,30 @@ guard(() => {
 });
 done('8 words');
 
+// 9. a Side Step flick that Chrome coalesces into one pointermove: the last sample is back near the centre, the peak across the run is what counts.
+// The same move with no intermediate samples is a dead-zone twitch and does not step.
+begin('coalesced flick');
+guard(() => {
+  const zone = document.getElementById('zone');
+  const flick = (id, samples) => {
+    const s = stage(0, 3), s0 = steps(s.m);
+    zone.fire('pointerdown', { pointerId:id, clientX:120, clientY:250 });
+    zone.fire('pointermove', { pointerId:id, clientX:120, clientY:246, getCoalescedEvents: samples ? () => samples : undefined });
+    return { s, s0, peak:s.inp.latPeak, jy:s.inp.jy };
+  };
+  const peak = [{ clientX:120, clientY:250 }, { clientX:120, clientY:204 }, { clientX:120, clientY:246 }];
+  const a = flick(3, peak);
+  ok(a.jy === 0 && a.peak < -0.7, `the thumb is back in the dead zone (${a.jy}) and the peak across the run is kept (${a.peak == null ? 'none' : a.peak.toFixed(2)})`);
+  a.s.c.x = 60; a.s.q.x = 60 + a.s.gap; T.update(STEP);
+  ok(steps(a.s.m) === a.s0 + 1 && a.s.inp.latPeak == null, `that one move is a Side Step, and the peak is spent (${steps(a.s.m) - a.s0})`);
+  zone.fire('pointerup', { pointerId:3 });
+  const b = flick(4, null);
+  ok(b.jy === 0 && b.peak == null, 'the same endpoint with no intermediate samples is nothing');
+  b.s.c.x = 60; b.s.q.x = 60 + b.s.gap; T.update(STEP);
+  ok(steps(b.s.m) === b.s0, 'and it does not step');
+  zone.fire('pointerup', { pointerId:4 });
+});
+done('9 coalesced flick');
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
