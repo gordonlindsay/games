@@ -2,7 +2,8 @@
 // collisions (men on the ground and bound pairs stepped round), the ruck race and the roll-away, wrong-footing, every
 // timer running out, the Tackle press rule, the Sprint meter (hold to sprint, the floor, the refill, the ease-out charged
 // to the meter so taps buy nothing, the dim state and the press agreeing), the CPU's meter and policy on every level,
-// offloads (the label and the press picking one receiver), the ball jolted loose, trips, fends, a census of 60 bot
+// offloads (the label and the press picking one receiver), Switch (the ring, the press and the pulse picking one man),
+// the ball jolted loose, trips, fends, a census of 60 bot
 // matches, that duels and goal kicks draw no new random number, the words, the three-button layout and a render smoke
 // test. Exits 1 on any failure. Seed-proof: every staged bind that must end in a ruck runs with the jolt switched off.
 // node tools/contact.mjs            (SEED=7 unless set; 1, 5, 7, 14 and 99 are run before a change ships)
@@ -1021,6 +1022,152 @@ begin('fullback');
   ok(held.length === 1, `with the line set, one sweeper holds depth and the rest do not (${held.length})`);
 }
 done('24 fullback');
+
+// 25. Switch. The dashed ring, the press and the pulse name one man: nearest the ball, or the second-nearest when that is
+// already you. When your man is behind the ball, the nearest teammate still in front, even if a beaten man is closer.
+// The button pulses only then. A loose ball keeps the nearest rule.
+begin('switch');
+{
+  const S = T.sides;
+  // carrier of team ct standing at (60, 35). spots are the defending side, nearest-list order not required; the rest are down.
+  const lay = (ct, spots) => {
+    fresh(1, { humans: ct === 1 ? [true, false] : [false, true] });
+    T.debug.setMode('match');
+    stage({ ct, cx:60, cy:35, cvx:0, cvy:0, ctrl:'none' });
+    const m = M(), d = dirOf(ct), c = m.ball.carrier;
+    c.x = 60; c.y = 35; c.fx = d; c.fy = 0; c.vx = c.vy = 0;
+    m.ball.state = 'held'; m.ball.carrier = c; m.ball.f = null; m.ball.x = c.x + d*0.55; m.ball.y = c.y;
+    m.phase = 'play'; m.cut = null; m.contact = null;
+    const def = m.players.filter(p => p.team !== ct);
+    def.forEach((p, i) => Object.assign(p, { x:4, y:3 + i*4, down:1, bind:null, offside:0, vx:0, vy:0 }));
+    let you = null;
+    spots.forEach((s, i) => {
+      Object.assign(def[i], { x:s.x, y:s.y, down:s.down ? 1 : 0, bind:s.bind ? { q:def[i] } : null });
+      if (s.you) you = def[i];
+    });
+    S.setCtrl(1 - ct, you);
+    return { c, you, def, d, side:1 - ct };
+  };
+  const press = side => { const inp = S.inputOf(side); inp.bPressed = true; T.update(STEP); };
+  const screenOf = p => {
+    const m = M(), s = Math.min(844/54, 390/36);
+    return [844/2 + (p.x - m.cam.x)*s, 390/2 + (p.y - m.cam.y)*s];
+  };
+  // team 1 carries toward -x, so behind the ball is +x and still in front is -x.
+  // you are nearest, a beaten teammate is second, a fullback further off is the only man still in front: he is the target
+  {
+    const { you, def, side } = lay(1, [{ x:63, y:35, you:true }, { x:66, y:35 }, { x:50, y:36 }]);
+    const front = def[2], beaten = def[1];
+    ok(C.switchTarget(side) === front, `behind the ball, Switch names the fullback still in front, not the nearer beaten man (${C.switchTarget(side) === front}, beaten closer ${dist(beaten, M().ball) < dist(front, M().ball)})`);
+    ok(C.switchUseful(side), 'and that switch pulses');
+    T.debug.updateHud();
+    ok($('lb').textContent === 'Switch' && $('btnB').classList.contains('cue') && !$('btnB').classList.contains('idle'), `B reads Switch and pulses (${$('lb').textContent}, cue ${$('btnB').classList.contains('cue')})`);
+    // the ring is drawn on him, dashed, in your colour, and not on you — before the press, which is what the player sees
+    T.debug.view(844, 390);
+    const sc = Math.min(844/54, 390/36), rad = Math.max(8, 0.95*sc)*1.45;
+    let stroke = '', dash = []; const arcs = [];
+    globalThis.__ctxSpy = (name, args) => {
+      if (name === 'strokeStyle') stroke = args[0];
+      else if (name === 'setLineDash') dash = args[0].slice();
+      else if (name === 'arc') arcs.push({ x:args[0], y:args[1], r:args[2], stroke, dash:dash.slice() });
+    };
+    T.debug.render(STEP);
+    globalThis.__ctxSpy = null;
+    const rings = arcs.filter(a => near(a.r, rad, 1e-6) && a.stroke === '#ffcf3d' && a.dash[0] === 4 && a.dash[1] === 3);
+    const [fx, fy] = screenOf(front), [yx, yy] = screenOf(you);
+    ok(rings.length === 1 && near(rings[0].x, fx, 1.5) && near(rings[0].y, fy, 1.5), `one dashed gold ring, on the fullback (${rings.length}, ${rings[0] && rings[0].x.toFixed(0)},${rings[0] && rings[0].y.toFixed(0)} vs ${fx.toFixed(0)},${fy.toFixed(0)})`);
+    ok(!rings.some(a => near(a.x, yx, 1.5) && near(a.y, yy, 1.5)), 'the ring is not drawn on the man you already control');
+    press(side);
+    ok(S.ctrlOf(side) === front && S.ctrlOf(side) !== beaten && S.ctrlOf(side) !== you, 'the press takes the man the ring named');
+  }
+  // you are the nearest and still in front: the ring shows the second-nearest, and Switch does not pulse
+  {
+    const { def, side } = lay(1, [{ x:54, y:35, you:true }, { x:68, y:36 }, { x:80, y:40 }]);
+    const second = def[1];
+    ok(C.switchTarget(side) === second && !C.switchUseful(side), 'already the nearest man in front: the ring shows the second-nearest, and it does not pulse');
+    T.debug.updateHud();
+    ok($('lb').textContent === 'Switch' && !$('btnB').classList.contains('cue'), `B still reads Switch, and stays quiet (${$('btnB').classList.contains('cue')})`);
+    press(side);
+    ok(S.ctrlOf(side) === second, 'the press still takes that second-nearest man');
+  }
+  // behind, and nobody still in front: back to the second-nearest, with no pulse
+  {
+    const { def, side } = lay(1, [{ x:63, y:35, you:true }, { x:70, y:34 }]);
+    ok(C.switchTarget(side) === def[1] && !C.switchUseful(side), 'behind, with nobody in front: the next nearest, and no pulse');
+  }
+  // a man on the ground, and a man in a tackle, are never the target even when they are the ones in front
+  {
+    const { def, side } = lay(1, [{ x:63, y:35, you:true }, { x:52, y:35, down:true }, { x:48, y:34, bind:true }, { x:44, y:38 }]);
+    ok(C.switchTarget(side) === def[3], 'the man down and the man in the tackle are skipped for the one still in front and on his feet');
+  }
+  // the only man on his feet is you: nothing to show, and the press stays put
+  {
+    const { you, side } = lay(1, [{ x:63, y:35, you:true }]);
+    ok(C.switchTarget(side) == null && !C.switchUseful(side), 'alone, there is no target and no pulse');
+    press(side);
+    ok(S.ctrlOf(side) === you, 'and the press leaves the ring where it is');
+  }
+  // the mirror: team 0 carries toward +x, so behind is -x. The human is the away side
+  {
+    const { def, side } = lay(0, [{ x:54, y:35, you:true }, { x:50, y:35 }, { x:72, y:36 }]);
+    ok(side === 1 && C.switchTarget(side) === def[2], 'attacking the other way, behind the ball still prefers the man goal-side of it');
+    const before = S.ctrlOf(side);
+    press(side);
+    ok(S.ctrlOf(side) === def[2] && S.ctrlOf(side) !== before, 'and that side\'s own Kick press takes him');
+  }
+  // their pass in the air: behind is judged on the ball. A loose ball is not: nearest, even if he has been beaten
+  {
+    const { def, side } = lay(1, [{ x:64, y:35, you:true }, { x:68, y:35 }, { x:48, y:35 }]);
+    const m = M();
+    m.ball.state = 'air'; m.ball.carrier = null; m.ball.x = 60; m.ball.y = 35;
+    m.ball.f = { kind:'pass', team:1 };
+    ok(C.switchTarget(side) === def[2] && C.switchUseful(side), 'on their pass, the ball is the line, and the man in front of it is the target');
+    m.ball.state = 'loose'; m.ball.f = null; m.ball.x = 60; m.ball.y = 35;
+    ok(C.switchTarget(side) === def[1] && !C.switchUseful(side), 'a loose ball keeps the nearest man, who is the beaten one, and does not pulse');
+  }
+  // with the ball, Switch is not offered: no pulse, no ring
+  {
+    fresh(1); T.debug.setMode('match');
+    stage({ ct:0, cx:60, cy:35, cvx:0, ctrl:'c' });
+    ok(!C.switchUseful(0), 'with the ball, Switch does not pulse');
+    T.debug.updateHud();
+    ok($('lb').textContent !== 'Switch' && !$('btnB').classList.contains('cue'), `B is the kick, and quiet (${$('lb').textContent})`);
+    T.debug.view(844, 390);
+    const sc = Math.min(844/54, 390/36), rad = Math.max(8, 0.95*sc)*1.45;
+    let stroke = '', dash = []; let n = 0;
+    globalThis.__ctxSpy = (name, args) => {
+      if (name === 'strokeStyle') stroke = args[0];
+      else if (name === 'setLineDash') dash = args[0].slice();
+      else if (name === 'arc' && near(args[2], rad, 1e-6) && stroke === '#ffcf3d' && dash[0] === 4 && dash[1] === 3) n++;
+    };
+    T.debug.render(STEP);
+    globalThis.__ctxSpy = null;
+    ok(n === 0, 'and no switch ring is drawn while you have the ball');
+  }
+  // two player: the chip reads Switch on the Kick key when it would pulse, and Tackle when a dive is on and Switch would not.
+  // A man close enough to ankle-tap from behind still reads Switch, because the pulse is the thing to read
+  {
+    const pair = () => { fresh(1, { humans:[true, true] }); T.debug.setTwo(true); T.debug.setMode('match'); };
+    pair();
+    stage({ ct:1, cx:60, cy:35, cvx:0, ctrl:'q' });
+    const m = M(), me = S.ctrlOf(0), mate = m.players.find(p => p.team === 0 && p !== me);
+    me.x = 62.2; me.y = 35; mate.x = 50; mate.y = 36; mate.down = 0; mate.bind = null;
+    for (const p of m.players) if (p.team === 0 && p !== me && p !== mate) p.down = 1;
+    ok(C.canDive(me) && C.switchUseful(0) && T.debug.cueOf(0) === 'Switch', `behind and in reach of an ankle tap, the chip reads Switch (${T.debug.cueOf(0)})`);
+    T.debug.view(844, 390);
+    const texts = []; let fill = '';
+    globalThis.__ctxSpy = (name, args) => { if (name === 'fillStyle') fill = args[0]; else if (name === 'fillText') texts.push([String(args[0]), fill]); };
+    T.debug.render(STEP);
+    globalThis.__ctxSpy = null;
+    ok(texts.some(([t, f]) => t === 'G · SWITCH' && f === '#ffcf3d'), `drawn as G · SWITCH in gold (${texts.filter(([t]) => /SWITCH|TACKLE/.test(t)).map(([t]) => t).join('|')})`);
+    // in front and close enough to dive: Tackle, not Switch
+    me.x = 58; me.y = 35;
+    ok(C.canDive(me) && !C.switchUseful(0) && T.debug.cueOf(0) === 'Tackle', `goal-side and in reach, the chip reads Tackle (${T.debug.cueOf(0)})`);
+    T.debug.setTwo(false);
+  }
+  T.debug.setMode('menu');
+}
+done('25 switch');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

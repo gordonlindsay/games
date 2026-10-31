@@ -638,7 +638,7 @@ begin('join');
 done('I join');
 
 // J. the match head to head: the on-screen buttons are off, so each player's man carries a numbered tag in his colour, the Sprint meter as an
-// arc round his ring, and under him his key and the word the button would read (F · Offload, G · Drop Goal, / · Tackle); either seat
+// arc round his ring, and under him his key and the word the button would read (F · Offload, G · Drop Goal, G · Switch, / · Tackle); either seat
 // pauses; the pause card names a lost pad's player; the penalty card names its player and takes only his seat, from his keys as well as
 // his pad; the half-time and full-time cards take either seat's keys; the close-up cues name each player's key
 begin('marks');
