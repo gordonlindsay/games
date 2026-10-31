@@ -288,7 +288,7 @@ begin('cards');
   // the markup: the home's fourth row, the pause rows, the penalty sublines, the two cards, the Help entries, Replay Tutorial beside Back to Menu
   const home = html.slice(html.indexOf('id="s-home"'), html.indexOf('id="s-teams"'));
   const rows = [...home.matchAll(/<div class="set"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)">/g)].map(m => m[1] + ':' + m[2]);
-  ok(rows.join() === 'Half Length:half,Difficulty:diff,Sound:sound,Hints:hints', `the home's rows: ${rows.join(', ')}`);
+  ok(rows.join() === 'Half Length:half,Difficulty:diff,Sound:sound,Hints:hints,Coach Tips:coach', `the home's rows: ${rows.join(', ')}`);
   ok(/<div class="hc" id="hc0" hidden>/.test(html) && /<div class="hc s1" id="hc1" hidden>/.test(html) && /id="ht0"/.test(html) && /id="ht1"/.test(html), 'two cards, #hc0 and #hc1, each with its tick');
   ok(/id="pz-h0"/.test(html) && /id="pz-h1"/.test(html) && /Player 2 Hints/.test(html), 'the pause card carries the Hints rows');
   ok(/<div id="pz-hints">\s*<div class="set"><span class="lbl" id="pz-hl0">Hints<\/span>[\s\S]*?<div class="set" id="pz-hrow1" hidden>[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn warn" id="pz-quit">/.test(html) && /#pz-hints\{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:14px 12px\}[^\n]*\n#pz-hints \.set\{display:contents\}\n#pz-hints \.set\[hidden\]\{display:none\}/.test(html), 'the two Hints rows share one grid (one label column), so both On | Off controls start on the same line');

@@ -167,5 +167,93 @@ begin('memory and seats');
 }
 done('D memory and seats');
 
+// E. the first-match coach: one line each, once, and quiet when the match is not a player's
+begin('coach');
+{
+  const X = T.teams, line = id => D.COACH_LINE[id];
+  ok(D.COACH_IDS.join() === 'offload,step,tackle,duel,kick,pass,sprint' && /coach:true, tips:\[\]/.test(html), 'Coach Tips starts on, and the lines are the seven moments');
+  const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'coach');
+  ok(!!seg && seg.children.length === 2, 'the home row is Coach Tips, On and Off');
+  seg.children[1].click(); ok(settings().coach === false, 'Off stores false');
+  seg.children[0].click(); ok(settings().coach === true, 'On stores true');
+  X.restore({ settings:{ tips:['sprint', 'nope', 'pass', 'pass'] } });
+  ok(settings().tips.join() === 'pass,sprint', `known lines load in the game's order (${settings().tips.join()})`);
+  settings().coach = false;
+  X.restore({ settings:{ tips:'pass', coach:'yes' } });
+  ok(settings().coach === false && settings().tips.join() === 'pass,sprint', 'a string for the lines or the switch is ignored');
+  const kept = globalThis.localStorage, mem = {};
+  globalThis.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+  settings().coach = false; settings().tips = ['tackle'];
+  X.save(); settings().coach = true; settings().tips = []; X.load();
+  ok(settings().coach === false && settings().tips.join() === 'tackle' && JSON.parse(mem['tryline.v1']).settings.tips.join() === 'tackle', 'tryline.v1 keeps the switch and the lines heard');
+  globalThis.localStorage = kept;
+  settings().coach = true; settings().hints = true; settings().tips = []; D.coachClear();
+  const pose = (o) => {
+    fresh(o);
+    const m = M();
+    m.phase = 'play'; m.paused = false; m.over = false; m.cut = null; m.contact = null; m.tut = null;
+    const me = m.side[0].ctrl;
+    me.x = 30; me.y = 35; me.bind = null; me.down = 0; me.tcd = 0; me.offside = 0;
+    m.ball.state = 'held'; m.ball.carrier = me;
+    for (const p of m.players) if (p.team === 1) { p.x = 110; p.y = 12; p.down = 0; p.bind = null; }
+    m.spr[0].m = 1; m.spr[0].spent = false; m.spr[0].p = null;
+    return m;
+  };
+  const hear = (id) => { D.coachClear(); D.updateHud(); ok(D.coachLast() === line(id) && settings().tips.includes(id), `${id}: ${D.coachLast()}`); };
+  let m = pose();
+  hear('pass');
+  D.updateHud(); ok(settings().tips.join() === 'pass', 'the next frame does not stack a second line on the pass');
+  const me = m.side[0].ctrl, opp = m.players.find(p => p.team === 1);
+  me.x = 40; me.y = 35; opp.x = 42; opp.y = 35; m.ball.carrier = opp;
+  hear('tackle');
+  const mate = m.players.find(p => p.team === 0 && p !== me);
+  for (const p of m.players) if (p.team === 0 && p !== me) { p.x = 8; p.y = 8; p.down = 0; p.bind = null; }
+  me.x = 50; me.y = 35; mate.x = 46; mate.y = 35; m.ball.carrier = me;
+  me.bind = m.contact = { c:me, tier:'dom', offloaded:false };
+  D.coachClear(); D.updateHud(); ok(D.coachLast() == null && !settings().tips.includes('offload'), 'a Big Hit does not offer the offload line');
+  m.contact.tier = me.bind.tier = 'soft';
+  hear('offload');
+  me.bind = null; m.contact = null; me.x = 40; me.y = 35;
+  let i = 0; for (const p of m.players) if (p.team === 1) { p.x = i === 0 ? 45 : 110; p.y = i === 0 ? 35 : 8; p.down = 0; p.bind = null; i++; }
+  hear('step');
+  for (const p of m.players) if (p.team === 1) { p.x = 110; p.y = 12; }
+  hear('sprint');
+  ok(settings().tips.filter(id => ['pass', 'tackle', 'offload', 'step', 'sprint'].includes(id)).length === 5, `the five open-play lines have each fired once (${settings().tips.join(', ')})`);
+  // quiet matches, even if a side is marked human so a line would otherwise be due
+  for (const [name, o] of [['headless', { headless:true }], ['auto', { auto:true }], ['demo', { demo:true }]]) {
+    settings().tips = []; D.coachClear(); const q = pose(o); q.side[0].human = true; q.auto = o.auto || q.auto; q.demo = !!o.demo; q.headless = !!o.headless;
+    D.updateHud(); D.coachTick();
+    ok(settings().tips.length === 0 && D.coachLast() == null, `${name}: no coach line`);
+  }
+  settings().tips = []; settings().coach = false; D.coachClear(); pose(); D.updateHud();
+  ok(settings().tips.length === 0 && D.coachLast() == null, 'Coach Tips off: nothing');
+  settings().coach = true; settings().hints = true;
+  // the first duel. Hints off and no card: the line. Hints on: the card covers it, the line is only remembered
+  settings().tut = settings().tut.filter(id => id !== 'past'); settings().tips = []; D.coachClear(); settings().hints = false;
+  fresh(); D.stage('past'); T.update(STEP);
+  let c = M().cut;
+  ok(c && c.kind === 'past' && D.tut() == null && settings().tut.includes('past'), 'hints off: the first duel is remembered and no card is up');
+  { let n = 0; while (c.t < D.CUT_IN && n++ < 40) T.update(STEP); }
+  D.coachTick();
+  ok(D.coachLast() === line('duel') && settings().tips.includes('duel'), `the coach says the duel line (${D.coachLast()})`);
+  D.coachTick(); ok(settings().tips.filter(id => id === 'duel').length === 1, 'once');
+  settings().hints = true; settings().tips = settings().tips.filter(id => id !== 'duel'); D.coachClear();
+  fresh(); D.stage('past'); T.update(STEP);
+  ok(D.tut() == null && M().phase === 'cut', 'the next Get Past has no tutorial card');
+  D.coachTick();
+  ok(settings().tips.includes('duel') && D.coachLast() == null, 'hints on: the hints card covers the duel, so the coach stays quiet and remembers it');
+  // the first goal kick keeps its card and its path. The coach remembers the kick line and does not say it
+  settings().tut = settings().tut.filter(id => id !== 'goal'); settings().tips = settings().tips.filter(id => id !== 'kick');
+  settings().hints = true; D.coachClear();
+  fresh(); D.goalKick(0, 88, 35, 'penalty');
+  ok(D.tut() && D.tut().id === 'goal' && M().cut.g.aid === 'path', 'the first kick still has the card and the path');
+  D.coachTick();
+  ok(!settings().tips.includes('kick') && D.coachLast() == null, 'under the card the coach stays quiet');
+  $('tu-skip').click(); D.coachTick();
+  ok(settings().tips.includes('kick') && M().cut.g.aid === 'path' && D.coachLast() == null, 'after Play the path still owns the kick: the line is remembered, not said');
+  settings().coach = true; settings().hints = true; settings().tips = D.COACH_IDS.slice(); settings().tut = D.TUT_IDS.slice(); D.setTwo(false);
+}
+done('E coach');
+
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

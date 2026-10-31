@@ -215,6 +215,7 @@ tr.me td{background:rgba(255,207,61,.09)}
 #banner{position:fixed;left:0;right:0;top:30%;z-index:7;display:flex;justify-content:center;pointer-events:none;padding:0 16px}
 #banner .msg{padding:10px 18px;border-left:8px solid var(--k,var(--flood));background:rgba(8,14,10,.86);font:900 clamp(30px,7vw,46px)/1 var(--display);text-transform:uppercase;letter-spacing:.03em;animation:pop .22s ease-out}
 #banner .msg.small{font-size:24px;padding:8px 14px;border-left-width:6px}
+#banner .msg.coach{font:700 18px/1.25 var(--body);text-transform:none;letter-spacing:0;padding:8px 14px;max-width:min(28em,92vw)}
 #banner .msg.big{border:0;background:none;padding:0;font-size:clamp(84px,22vw,170px);color:var(--chalk);text-shadow:0 5px 0 var(--k,#000),0 8px 0 rgba(0,0,0,.45),0 0 40px rgba(0,0,0,.5)}
 @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:none;opacity:1}}
 
@@ -417,6 +418,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
       <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
       <div class="set"><span class="lbl">Sound</span><div class="seg" data-key="sound"><button>On</button><button>Off</button></div></div>
       <div class="set"><span class="lbl">Hints</span><div class="seg" data-key="hints"><button>On</button><button>Off</button></div></div>
+      <div class="set"><span class="lbl">Coach Tips</span><div class="seg" data-key="coach"><button>On</button><button>Off</button></div></div>
     </div>
   </div>
 </section>
@@ -485,6 +487,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
       <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner. Each one starts in slow motion.</dd>
       <dt>Hints</dt><dd>The card in the top corner names the control for each close-up. Untick <b>Hints</b> on it, or set Hints to Off on the menu.</dd>
       <dt>Tutorial</dt><dd>The first time each close-up comes up, play pauses and a card says what to do. <b>Replay Tutorial</b> below shows them all again.</dd>
+      <dt>Coach</dt><dd>The first time Pass, Tackle, an offload, Sprint or a side step comes up, one line tells you. Set <b>Coach Tips</b> to Off on the menu when you know them.</dd>
       <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
       <dt>Keyboard</dt><dd>Arrows or WASD to run: tap across near a tackler to <b>Side Step</b>, tap back for a <b>Dummy</b>. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
@@ -656,9 +659,20 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.flo
 const STORE = 'tryline.v1';
 /* hints: the card in the top corner naming each close-up's control (one player); twoHints: the same per player in two player, stored
    by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; Replay Tutorial empties it.
-   It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too. */
+   It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
+   coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
 const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
-let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], pool:0, twoDiff:[1, 1] };   // twoDiff: each player's Difficulty in two player
+const COACH_IDS = ['offload', 'step', 'tackle', 'duel', 'kick', 'pass', 'sprint'];   // fleeting moments first, then the ones that stay available
+const COACH_LINE = {
+  offload: 'Tap Pass \u2014 offload!',
+  step: 'Flick across \u2014 side step',
+  tackle: 'Tap Tackle \u2014 he\u2019s in reach',
+  duel: 'Wait for gold, then go',
+  kick: 'Hold it, let go in the gold',
+  pass: 'Tap Pass to move it',
+  sprint: 'Hold Sprint for a burst',
+};
+let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1] };   // twoDiff: each player's Difficulty in two player
 let champ = null, custom = [];
 const HEX = /^#[0-9a-f]{6}$/i;
 /* A team someone made, or one read back from storage: anything off is put right, never trusted. */
@@ -746,6 +760,8 @@ function cleanSettings(g) {
   if (typeof g.hints === 'boolean') settings.hints = g.hints;
   if (Array.isArray(g.twoHints) && g.twoHints.length === 2 && g.twoHints.every(v => typeof v === 'boolean')) settings.twoHints = [g.twoHints[0], g.twoHints[1]];
   if (Array.isArray(g.tut)) settings.tut = TUT_IDS.filter(id => g.tut.includes(id));   // only moments the game knows, each once, in the game's order
+  if (typeof g.coach === 'boolean') settings.coach = g.coach;
+  if (Array.isArray(g.tips)) settings.tips = COACH_IDS.filter(id => g.tips.includes(id));   // coach lines already heard, in the game's order, unknown ones dropped
   if ('pool' in g) settings.pool = g.pool === 1 ? 1 : 0;
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
 }
@@ -770,6 +786,8 @@ function save() {
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }
 function tutReset() { settings.tut = []; save(); }
+const tipSeen = id => settings.tips.includes(id);          // has this device already heard this coach line?
+function coachMark(id) { if (!tipSeen(id)) { settings.tips.push(id); save(); } }
 
 /* =========================================================
    Match engine. World units are metres.
@@ -863,7 +881,7 @@ function newMatch(u, c, opts) {
   }
   M.side[0].ctrl = M.players[3]; if (humans[1]) M.side[1].ctrl = M.players[10];
   for (const inp of inputs) inp.gest = null;               // the open-play gesture history starts clean
-  M.tut = null; hintReset();                               // the hints cards start hidden, the open-play hints unshown
+  M.tut = null; hintReset(); coachUntil = 0;               // the hints cards start hidden, the open-play hints unshown, and a coach line from the last match does not hold the next one
   kickoff(M.firstKick);
 }
 
@@ -5002,7 +5020,7 @@ if (deskQuery) { if (deskQuery.addEventListener) deskQuery.addEventListener('cha
    ========================================================= */
 let mode = 'menu';           // 'menu' | 'match'
 let pickMode = 'champ', quickPick = null, quickAuto = false;   // quickAuto: Farnham is still the untouched default
-let bannerTimer = 0;
+let bannerTimer = 0, coachLast = null, coachUntil = 0;   // coachUntil: wall-clock ms until another coach line may speak (one at a time)
 const playing = () => mode === 'match' && M && !M.demo;
 
 function showScreen(id) {
@@ -5026,7 +5044,7 @@ function say(text, size, team, grade, low) {
   m.appendChild(document.createTextNode(text));
   el.appendChild(m);
   clearTimeout(bannerTimer);
-  bannerTimer = setTimeout(() => { el.innerHTML = ''; }, size === 'big' ? 1700 : size === 'small' ? 900 : 1300);
+  bannerTimer = setTimeout(() => { el.innerHTML = ''; }, size === 'big' ? 1700 : size === 'coach' ? 1600 : size === 'small' ? 900 : 1300);
 }
 
 function startDemo() {
@@ -5130,6 +5148,7 @@ function updateHud() {
   $('btnA').classList.toggle('hold', passCharge > 0);
   $('btnA').style.setProperty('--p', passCharge.toFixed(3)); // the Pass ring fills while a long pass charges
   syncHints(la, lb);
+  coachTick();
 }
 
 /* =========================================================
@@ -5338,6 +5357,67 @@ $('tu-skip').addEventListener('click', tutPlay);
 $('tu-play').addEventListener('click', tutPlay);
 $('h-replay').addEventListener('click', () => { tutReset(); renderHintSwitches(); });
 
+/* ---------- first-match coach (2026-10-30)
+   One short line the first time each open-play move comes up on this device, through say() so it stays a banner (the on-pitch
+   tags stay capped at two, and reduced motion already drops the banner's pop). Play is not frozen. One line at a time, and
+   none while a game banner is up or two tags are already out. Headless, auto and the menu demo stay quiet.
+   The first duel and the first goal kick keep the tutorial card, the hints card and the first-kick path: those already teach
+   the moment, so the coach remembers the line and leaves the card and the path to speak. With Hints off and no card up, the
+   first duel still gets its one line. A drop goal is the tutorial's own moment. */
+function coachClear() { coachLast = null; coachUntil = 0; }
+function bannerBusy() { const el = $('banner'); return !!(el && el.innerHTML); }
+function coachStepNear(c) {                               // the Side Step hint's window: a standing defender ahead, 3.5–6m off and within 3m across
+  const d = dirOf(c.team); let front = 99;
+  for (const q of M.players) {
+    if (q.team === c.team || !onFeet(q) || (q.x - c.x)*d <= 0.5) continue;
+    if (Math.abs(q.y - c.y) < 3) front = Math.min(front, dist(q, c));
+  }
+  return front >= 3.5 && front <= 6;
+}
+function coachOpen(t) {                                   // which lines this human's buttons would earn right now
+  const due = [], c = ctrlOf(t); if (!c) return due;
+  const b = M.ball, k = M.contact, held = b.state === 'held' && b.carrier === c;
+  if (held && c.bind && k && k.c === c && (k.tier === 'soft' || k.tier === 'wrap') && canOffload(k)) due.push('offload');
+  if (!ourBall(t) && canDive(c)) due.push('tackle');
+  if (held && !c.bind) { if (coachStepNear(c)) due.push('step'); due.push('pass'); }
+  if (sprintOn(t)) due.push('sprint');
+  return due;
+}
+function coachCut() {                                     // a duel or a place kick. Returns a line to say, or null after remembering one the existing aids already cover
+  const c = M.cut; if (!c || c.after) return null;
+  if (c.duel && isHuman(c.own) && !tipSeen('duel')) {
+    const s = seatOfTeam(c.own);
+    if (M.tut || (s != null && hintsOn(s))) { coachMark('duel'); return null; }   // the tutorial card or the hints card already names the gold ring
+    if (c.t >= CUT_IN) return 'duel';
+  }
+  const g = c.kind === 'goal' ? c.g : null;
+  if (g && g.type !== 'drop' && !g.watch && isHuman(g.team) && !tipSeen('kick')) {
+    const s = seatOfTeam(g.team);
+    if (M.tut || g.aid === 'path' || tutSeen('goal') || (s != null && hintsOn(s))) { coachMark('kick'); return null; }   // the first-kick path, the card, or a kick this device has already had
+    if (c.t >= CUT_IN && (g.stage === 'aim' || g.stage === 'power')) return 'kick';
+  }
+  return null;
+}
+function coachPick() {
+  const due = [];
+  if (M.phase === 'cut' && M.cut) { const id = coachCut(); if (id) due.push(id); }
+  else if (M.phase === 'play' && !M.cut) for (const t of [0, 1]) if (isHuman(t)) due.push(...coachOpen(t));
+  for (const id of COACH_IDS) if (due.includes(id) && !tipSeen(id)) return id;
+  return null;
+}
+function coachShow(id) {
+  coachMark(id);
+  coachLast = COACH_LINE[id];
+  say(coachLast, 'coach');
+  coachUntil = performance.now() + 1700;
+}
+function coachTick() {
+  if (!settings.coach || !M || !interactive() || M.paused || M.over || M.tut || M.phase === 'menu' || M.phase === 'break') return;
+  const id = coachPick();
+  if (!id || performance.now() < coachUntil || bannerBusy() || M.tags.length >= 2) return;
+  coachShow(id);
+}
+
 /* penalty choice: the card's kick is built now, so the card and the kick share one wind */
 let penCtx = null;
 function openPenalty(team, x, y, dP) {                     // the card for the human side the penalty went to; headless runs choose as the CPU does
@@ -5442,7 +5522,7 @@ if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOri
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
 /* home. Quick Match is the gold button and the keyboard focus. */
-const BOOL = { sound:1, hints:1 };
+const BOOL = { sound:1, hints:1, coach:1 };
 function renderHome() {
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
@@ -5773,7 +5853,7 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
     openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
-    DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor },
+    DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
     LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
