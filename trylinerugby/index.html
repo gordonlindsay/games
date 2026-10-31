@@ -105,6 +105,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .pips{display:flex;gap:3px}
 .pips i{flex:1;height:5px;border-radius:1px;background:var(--rule-hi)}
 .pips i.on{background:var(--chalk)}
+.gap{grid-column:1/-1;margin-top:-4px;font:800 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--flood)}
 
 /* International | Local, beside the title */
 .head > .pool{display:grid;flex:none;gap:0;width:min(272px,100%)}
@@ -500,6 +501,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
     <dl class="help">
       <dt>Table</dt><dd>Win 4, draw 2. <b>+1</b> for four or more tries. <b>+1</b> for losing by seven or fewer. <b>+3</b> for a Grand Slam.</dd>
       <dt>Saving</dt><dd>This browser keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table wipes that championship. Leaving a match, or reloading, keeps the same round to play again.</dd>
+      <dt>First Matches</dt><dd>The first two games on Normal are a little kinder while you learn to turn and chase. A card marked <b>Stronger Side</b> is rated well above yours.</dd>
       <dt>50:22</dt><dd>Kick from your own half that bounces out inside their 22 and the lineout throw is yours.</dd>
     </dl>
     <div class="row2"><button class="btn" id="h-replay">Replay Tutorial</button><button class="btn" id="h-back" data-back>Back to Menu</button></div>
@@ -619,6 +621,13 @@ const DIFF = [
   { scrumCpu:0.72, lineSigma:0.12, lineContest:0.65, cpuSpeed:1.00, cpuTackle:0.64, myTackle:0.48, cpuIntercept:0.17, turnover:0.00 },
   { scrumCpu:0.80, lineSigma:0.07, lineContest:0.75, cpuSpeed:1.04, cpuTackle:0.72, myTackle:0.42, cpuIntercept:0.25, turnover:0.03 },
 ];
+/* The first EARLY.games one-player matches on Normal only. A player who has not learned to turn and chase leaves one
+   defender running the wrong way, so two levers move and nothing else: the other side runs at Easy's pace, and your
+   teammates tackle a little more surely than on Easy (one of them is still being pulled out of the tackle). Easy and
+   Hard are left as set. Duels, scrums, your own tackle and sprint, and every later match stay on the chosen level. */
+const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };
+const rateOf = t => ABILITIES.reduce((a, [k]) => a + (+t[k] || 0), 0);
+const outmatched = (us, them) => !!us && !!them && rateOf(them) >= rateOf(us) + EARLY.gap;
 /* Goal kicks. Every lever is here: GKTUNE='{"band":[0.15,0.13,0.10]}' node tools/goalkicks.mjs --rates tries values without an edit. */
 const KICK = {
   g:9.81, kd:0.10, kw:0.32, v0:26.5, vK:1.0, vLo:0.35,
@@ -672,7 +681,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1] };   // twoDiff: each player's Difficulty in two player
+let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
 let champ = null, custom = [];
 const HEX = /^#[0-9a-f]{6}$/i;
 /* A team someone made, or one read back from storage: anything off is put right, never trusted. */
@@ -764,13 +773,16 @@ function cleanSettings(g) {
   if (Array.isArray(g.tips)) settings.tips = COACH_IDS.filter(id => g.tips.includes(id));   // coach lines already heard, in the game's order, unknown ones dropped
   if ('pool' in g) settings.pool = g.pool === 1 ? 1 : 0;
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
+  if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
+  const hadPlayed = !!(s.settings && Number.isInteger(s.settings.played) && s.settings.played >= 0 && s.settings.played <= 99);
   cleanSettings(s.settings);
   settings.duels = true;
   if (Array.isArray(s.custom)) custom = s.custom.map(cleanTeam).filter(Boolean).slice(0, MAX_CUSTOM);
   if (s.champ != null) champ = cleanChamp(s.champ);
+  if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
 function load() {
   try {
@@ -817,7 +829,8 @@ const humanSlots = () => M.side.filter(s => s.human).map(s => inputs[s.seat]);  
    the human's it plays against). AI v AI and the menu demo are fair: both sides play the CPU terms (team 0 used to keep the human
    ones, because `team === 1` was the test for the CPU). */
 const cpuSide = t => M.role[t] === 'cpu';
-const diffOf = t => DIFF[levelOf(t)];
+let earlyDiff = null;   // Normal's levers with EARLY.nudge, or null. Set for a match, never left over into the next.
+const diffOf = t => (M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);
 const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
@@ -845,12 +858,15 @@ function newMatch(u, c, opts) {
   // who plays each side: [human, cpu] in one player, [false, false] for AI v AI and the demo, [true, true] in two player; tests may pass humans directly
   const humans = opts.humans || ((opts.auto || opts.demo) ? [false, false] : [true, false]);
   const auto = !humans[0] && !humans[1], two = humans[0] && humans[1], di = opts.diff == null ? 1 : opts.diff;   // M.di and M.diff: the match's one level, kept for the tools; the engine reads levelOf(t)
+  const ease = !!(opts.early && di === 1 && !two && !auto && !opts.demo);   // the gentler start: asked for, Normal, one player, never the demo or AI v AI
+  earlyDiff = null;
+  if (ease) { const d = DIFF[di], o = { ...d }; for (const k in EARLY.nudge) o[k] = d[k] + EARLY.nudge[k]; earlyDiff = o; }
   M = {
     nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:!!n0.hoops }, awayKit(n0, n1)],
     players:[], ball:{ x:60, y:35, z:0, vx:0, vy:0, vz:0, state:'dead', carrier:null, f:null, last:0, kickInfo:null },
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
-    firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless,
+    firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless, early:ease,
     paused:false, over:false, cam:{ x:60, y:35 }, cut:null, surge:null,
     di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
     duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },
@@ -951,6 +967,7 @@ function kickoff(team) {
   placeBall(60, 35);
   M.phaseCount = 0; M.poss = team;
   startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => restartKick(team, 60, 35, 'kickoff') });
+  if (!M.two && outmatched(M.nat[0], M.nat[1])) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless
 }
 function dropOut(team) {
   const kx = team === 0 ? 32 : 88;
@@ -3393,10 +3410,14 @@ function simMatch(c, h, a) {
   const pts = (n, t) => { let s = t*5; for (let i = 0; i < t; i++) if (rnd() < 0.5 + n.kicking*0.06) s += 2; return s + poisson(1.2 + n.kicking*0.2)*3; };
   return { h, a, hs:pts(H, ht), as:pts(A, at), ht, at };
 }
-/* Six teams: yours and five others. The championship keeps its own copy, so editing a team later can't change one under way. */
+/* Six teams: yours and five others. The championship keeps its own copy, so editing a team later can't change one under way.
+   The five are whoever was passed in (a random draw, at the team screen). You play the weakest of them first and the
+   strongest last: circle position 0 stays put and meets position 5, then the new position 5, each round. */
 function newChamp(user, others) {
-  const order = shuffle([0,1,2,3,4,5]);
-  champ = { user:0, teams:[user, ...others.slice(0, 5)].map(t => ({ ...t })), round:0, fixtures:roundRobin(order), results:[] };
+  const five = others.slice(0, 5);
+  const ranked = five.map((t, i) => ({ i:i + 1, r:rateOf(t) })).sort((a, b) => a.r - b.r || a.i - b.i);
+  const order = [0, ranked[4].i, ranked[3].i, ranked[2].i, ranked[1].i, ranked[0].i];
+  champ = { user:0, teams:[user, ...five].map(t => ({ ...t })), round:0, fixtures:roundRobin(order), results:[] };
   save();
 }
 function userFixture(c) {
@@ -5069,7 +5090,9 @@ function startMatch(u, c, isChamp, o) {
   for (const P of PADS.values()) P.used = false;             // a pad unplugged mid-match pauses only if it was used in that match
   const pair = !!(o && o.two);                               // two player: both sides human, each at the level they picked; the seats model routes the keyboard halves and the pads
   setTwo(pair);
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live',   // the switch is gone: a match you play always has duels
+  const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
+  if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease,   // the switch is gone: a match you play always has duels
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -5627,8 +5650,10 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
 let teamList = [];
 function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
+  const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
       ${jersey(t)}<span class="tname">${esc(t.name)}</span>
+      ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(t[k])}`).join('')}</span>
     </button>`;
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
@@ -5777,6 +5802,7 @@ function renderHub() {
   if (!done) {
     const { pair } = userFixture(c);
     const [h, a] = pair;
+    const foe = T[h === c.user ? a : h];
     $('hub-next').innerHTML = `
       <div class="stack">
         <div class="fixture">
@@ -5784,6 +5810,7 @@ function renderHub() {
           <span class="fx-v">V</span>
           <span class="fx-team r"><span>${esc(T[a].name)}</span>${jersey(T[a])}</span>
         </div>
+        ${outmatched(T[c.user], foe) ? '<p class="eyebrow">Stronger Side</p>' : ''}
         <button class="btn primary" id="hub-play">Play Match</button>
       </div>`;
     $('hub-play').addEventListener('click', () => { const { opp } = userFixture(champ); startMatch(champ.teams[champ.user], champ.teams[opp], true); });
@@ -5852,7 +5879,7 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     duelCam, duelPose, camAt, startMatch, exitMatch, pickOwner,
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
-    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
+    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
@@ -5860,7 +5887,7 @@ window.__tryline = { simulate, newMatch, update, input, inputs, STEP, scrum, lin
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
-  teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ NATIONS, CLUBS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   get M() { return M; } };
 
