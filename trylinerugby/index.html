@@ -481,6 +481,7 @@ body.desk .home-row #b-help{grid-column:1/-1}
       <dt>Tackle</dt><dd>When they have the ball. It lights up when you're close enough to dive. Miss and you're on the floor.</dd>
       <dt>Sprint</dt><dd>Hold it for a burst of speed, with the ball or without. The ring drains while you hold and refills when you let go.</dd>
       <dt>Offload</dt><dd>Press Pass as you're tackled, when it glows.</dd>
+      <dt>Ruck</dt><dd>The ring moves to the teammate who will pick the ball up. Place him with the stick, or let go and he runs to the ball. Pass, Kick and Tackle stay dead until it is out.</dd>
       <dt>Switch</dt><dd>Take the defender nearest the ball.</dd>
       <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner. Each one starts in slow motion.</dd>
       <dt>Hints</dt><dd>The card in the top corner names the control for each close-up. Untick <b>Hints</b> on it, or set Hints to Off on the menu.</dd>
@@ -886,7 +887,7 @@ function ourBall(t) {                                      // side t has it: hel
   const b = M.ball;
   return (b.state === 'held' && b.carrier.team === t) || (b.state === 'air' && b.f.kind === 'pass' && b.f.team === t);
 }
-function userActive(t) { return !!ctrlOf(t) && (M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'ruck')); }
+function userActive(t) { return !!ctrlOf(t) && (M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'ruck')); }   // the stick stays live through a ruck, on the man who will pick the ball up
 
 function steer(p, tvx, tvy, acc, dt) {
   const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt;
@@ -903,10 +904,24 @@ function placeBall(x, y) {
   const b = M.ball;
   b.state = 'dead'; b.carrier = null; b.f = null; b.x = x; b.y = y; b.z = 0; b.vx = b.vy = b.vz = 0;
 }
+function playFrom(team, x, y, kind) {                      // the mark the ball is played from: a ruck 1.6m behind, a scrum 1.2, a lineout 1.5 and out to the side
+  const d = dirOf(team);
+  const off = kind === 'ruck' ? 1.6 : kind === 'scrum' ? 1.2 : kind === 'lineout' ? 1.5 : 0.6;
+  const sy = kind === 'lineout' ? (y < 35 ? y + 4 : y - 4) : y;
+  return { x:x - d*off, y:sy };
+}
 function startSet(o) {
   M.phase = 'set'; M.set = o;
   if (o.label) say(o.label);
-  if (o.kind !== 'ruck' && o.kind !== 'try' && o.kind !== 'score') for (const t of [0, 1]) {
+  if (o.kind === 'ruck') {
+    // the ring leaves the tackled man for the teammate who will pick the ball up, so the stick can place him while the ruck is still down. A CPU side is left alone
+    if (isHuman(o.team)) {
+      const m = playFrom(o.team, o.x, o.y, 'ruck'), p = nearestFree(o.team, m.x, m.y);
+      if (p) { o.picker = p; setCtrl(o.team, p); }
+    }
+    return;
+  }
+  if (o.kind !== 'try' && o.kind !== 'score') for (const t of [0, 1]) {
     if (!isHuman(t)) continue;
     const q = nearestFree(t, o.x, o.y); if (q) setCtrl(t, q);
   }
@@ -960,13 +975,13 @@ function lineout(team, x, y, reason) {
   startSet({ kind:'lineout', team, x:clamp(x,15,105), y:ly, t:interactive() ? 1.1 : 1.8, snap:true,
     label:(reason ? reason + ' · ' : '') + 'Lineout ' + M.nat[team].id, then:s => interactive() ? startLineout(s) : autoLineout(s) });
 }
-function releaseTo(team, x, y, kind) {
+function releaseTo(team, x, y, kind, who) {
   const d = dirOf(team);
-  const off = kind === 'ruck' ? 1.6 : kind === 'scrum' ? 1.2 : kind === 'lineout' ? 1.5 : 0.6;
-  const sy = kind === 'lineout' ? (y < 35 ? y + 4 : y - 4) : y;
-  const p = nearestFree(team, x - d*off, sy) || M.players.find(q => q.team === team);
+  const m = playFrom(team, x, y, kind);
+  const pinned = kind === 'ruck' && who && who.team === team && onFeet(who) ? who : null;   // the man the stick was placing picks it up, wherever he was put; a turnover never asks for him
+  const p = pinned || nearestFree(team, m.x, m.y) || M.players.find(q => q.team === team);
   if (kind === 'scrum' || kind === 'lineout') {   // the scrum-half or catcher takes it at the mark, whoever won it
-    p.x = clamp(x - d*off, 1, 119); p.y = clamp(sy, 2, 68); p.vx = p.vy = 0; p.fx = d; p.fy = 0;
+    p.x = clamp(m.x, 1, 119); p.y = clamp(m.y, 2, 68); p.vx = p.vy = 0; p.fx = d; p.fy = 0;
   }
   M.phase = 'play';
   setCarrier(p);
@@ -1397,7 +1412,7 @@ function resolveRuck(s) {                                  // the ruck is automa
     if (s.dom) surge(def, LINE_SPEED);                     // Line Speed for the side that made the Big Hit
     return;
   }
-  releaseTo(att, s.x, s.y, 'ruck');
+  releaseTo(att, s.x, s.y, 'ruck', s.picker);
   if (s.dom) surge(def, LINE_SPEED);
 }
 // a Drop Goal press: the 0.20s to the close-up is the kicker's, and a man close enough to stop it is judged as a charger in the cut
@@ -2991,9 +3006,10 @@ function computeTargets() {
   } else if (mode === 'held') {
     A = A.filter(p => p !== carrier);
   } else {
-    const k = M.set.kind, off = k === 'scrum' ? 1.2 : k === 'lineout' ? 1.5 : 1.6;
-    const sx = clamp(fx - dA*off, 1, 119), sy = k === 'lineout' ? (fy < 35 ? fy+4 : fy-4) : fy;
-    const sh = nearestOf(A, sx, sy);
+    const k = M.set.kind, m = playFrom(att, fx, fy, k);
+    const sx = clamp(m.x, 1, 119), sy = m.y;
+    const pin = k === 'ruck' && M.set.picker && M.set.picker.team === att && onFeet(M.set.picker) ? M.set.picker : null;   // he keeps the half-back mark, so the rest of the shape is the one it was
+    const sh = pin || nearestOf(A, sx, sy);
     if (sh) { T.set(sh, { x:sx, y:sy, s:maxSpeed(sh) }); A = A.filter(p => p !== sh); }
   }
   const depth = mode === 'set' ? ((M.set.kind === 'scrum' || M.set.kind === 'lineout') ? 5 : 3) : 2.6;
@@ -3244,6 +3260,7 @@ function handleUser(dt) {
 }
 function userStep(t, i, dt) {
   const b = M.ball, c = ctrlOf(t), S = sideOf(t), inp = inputOf(t);
+  if (M.phase === 'set' && M.set && M.set.kind === 'ruck') { S.pass = null; if (S.charging) { S.charging = false; S.charge = 0; } return; }   // Pass, Kick and Tackle stay dead until the ball is out
   if (i.a) {
     if (inp.aCancel) S.pass = null;
     else if (M.phase === 'play' && c) {
@@ -3276,7 +3293,14 @@ function moveAll(dt) {
   for (const p of M.players) {
     if (p.bind) { bindMove(p, dt); continue; }
     if (p.down > 0) { p.down -= dt; steer(p, 0, 0, 16, dt); continue; }
-    if (ua[p.team] && ringed(p)) { userMove(p, dt, inputOf(p.team)); continue; }
+    if (ua[p.team] && ringed(p)) {
+      const inp = inputOf(p.team);
+      if (M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p && inp.world().mag < 1e-6) {
+        const t = T.get(p);                                     // the stick let go: he still runs onto the ball, as he did before the ring moved
+        if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
+      }
+      userMove(p, dt, inp); continue;                          // any deflection places him until the ball is out
+    }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }
     const t = T.get(p);
     if (!t) { steer(p, 0, 0, 10, dt); continue; }
