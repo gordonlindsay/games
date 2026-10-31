@@ -3,7 +3,8 @@
 // timer running out, the Tackle press rule, the Sprint meter (hold to sprint, the floor, the refill, the ease-out charged
 // to the meter so taps buy nothing, the dim state and the press agreeing), the CPU's meter and policy on every level,
 // offloads (the label and the press picking one receiver), the ball jolted loose, trips, fends, a census of 60 bot
-// matches, that duels and goal kicks draw no new random number, the words, the three-button layout and a render smoke
+// matches, that duels and goal kicks draw no new random number, the ring through a ruck (on the man who will pick the
+// ball up, the stick placing him, Pass Kick and Tackle dead), the words, the three-button layout and a render smoke
 // test. Exits 1 on any failure. Seed-proof: every staged bind that must end in a ruck runs with the jolt switched off.
 // node tools/contact.mjs            (SEED=7 unless set; 1, 5, 7, 14 and 99 are run before a change ships)
 process.env.SEED ??= '7';
@@ -291,6 +292,103 @@ begin('ruck');
   ok(rndCalls() === r1 && near(M().set.t, 1.05, 1e-9) && !M().set.dom && M().set.tier == null && q5.offside === 0 && q5.down === 1.0, 'a tackle with no tier (duels, the drop-goal smother) is the old 1.05s ruck with no roll-away and no random draw');
 }
 done('6 ruck');
+
+// 6b. during a ruck the ring is on the teammate who will pick the ball up. The stick places him; let go and he still
+// runs to the mark and takes the ball. Pass, Kick and Tackle stay dead. The timer and the rolls are the tackle's.
+// A turnover still goes to the defence. A CPU side is not moved.
+begin('ruck control');
+{
+  const park = (k, mate) => {
+    const d = dirOf(k.c.team);
+    mate.x = k.c.x - d*3; mate.y = k.c.y; mate.vx = mate.vy = 0;
+    k.own.forEach((p, i) => { if (p !== k.c && p !== mate) { p.x = 6; p.y = 3 + i*8; p.vx = p.vy = 0; } });
+  };
+  const toRuck = () => run(() => M().phase === 'set' && M().set && M().set.kind === 'ruck', 40);
+  fresh(1); noJolt(); const turn0 = M().diff.turnover;
+  const k = bind(FRONT, 'ai', 'wrap'), mate = k.own[1]; park(k, mate);
+  ok(toRuck(), 'a staged tackle becomes a ruck');
+  const s = M().set, d = dirOf(s.team), mx = s.x - d*1.6, my = s.y;
+  ok(s.picker === mate && M().ctrl === mate && mate !== k.c && mate.down <= 0, 'the ring leaves the tackled man for the teammate nearest the mark');
+  ok(near(s.t, RUCK.t.quick, 1e-9) && !('jackal' in s) && !('mine' in s) && !('press' in s), `the ruck keeps its length and has no jackal, steal or press (${s.t}s)`);
+  const y0 = mate.y, cy0 = k.c.y, t0 = s.t, r0 = rndCalls();
+  inp.jx = 0; inp.jy = 1;
+  steps(20);
+  ok(rndCalls() === r0, 'placing him draws no random number');
+  ok(mate.y > y0 + 1 && Math.abs(k.c.y - cy0) < 0.2 && k.c.down > 0, `the stick moves him (${(mate.y - y0).toFixed(2)}m) and the tackled man stays down`);
+  ok(M().phase === 'set' && M().ball.state === 'dead' && near(M().set.t, t0 - 20*STEP, 1e-6), 'the ball stays down and the timer only loses the steps');
+  T.debug.setMode('match');
+  const passes = M().stats.passes || 0, kicks = M().stats.kicks || 0, tackles = M().stats.tackles;
+  inp.aPressed = true; inp.bPressed = true; inp.cPressed = true; inp.aDown = true; inp.bDown = true; inp.cDown = true;
+  T.update(STEP); T.debug.updateHud();
+  ok(M().phase === 'set' && M().ball.state === 'dead' && M().ctrl === mate && !M().side[0].pass && !M().side[0].charging, 'Pass, Kick and Tackle do nothing while the ruck is down');
+  ok((M().stats.passes || 0) === passes && (M().stats.kicks || 0) === kicks && M().stats.tackles === tackles, 'and they add no pass, kick or tackle');
+  ok($('btnA').classList.contains('idle') && $('btnB').classList.contains('idle') && $('btnC').classList.contains('idle'), 'and all three buttons are dim');
+  inp.aDown = inp.bDown = inp.cDown = false; inp.jx = inp.jy = 0; T.debug.setMode('menu');
+  // stick let go: he runs to the mark, and he is the one who takes the ball
+  let kept = false;
+  for (let i = 0; i < 12 && !kept; i++) {
+    fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+    const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+    if (!toRuck() || M().set.picker !== m2) continue;
+    const ss = M().set, dd = dirOf(ss.team), x1 = ss.x - dd*1.6, y1 = ss.y, d0 = dist(m2, { x:x1, y:y1 });
+    inp.jx = inp.jy = 0;
+    steps(25);
+    const d1 = dist(m2, { x:x1, y:y1 });
+    ok(M().phase === 'set' && d1 < d0 - 0.35, `with the stick let go he runs to the mark (${d0.toFixed(2)}m to ${d1.toFixed(2)}m)`);
+    run(() => M().phase !== 'set', 80);
+    if (M().phase === 'play' && M().ball.state === 'held' && M().ball.carrier === m2) {
+      kept = true;
+      ok(dist(m2, { x:x1, y:y1 }) < 1.2, `and he takes the ball at the mark (${dist(m2, { x:x1, y:y1 }).toFixed(2)}m off)`);
+      T.debug.setMode('match'); T.debug.updateHud();
+      ok($('la').textContent === 'Pass' && !$('btnA').classList.contains('idle') && !$('btnB').classList.contains('idle'), 'Pass and Kick come back once the ball is out');
+      T.debug.setMode('menu');
+    }
+  }
+  ok(kept, 'a ruck with the stick let go could be kept by the attack');
+  // the stick held away the whole ruck: he is still the man who picks it up, not whoever is standing at the mark
+  let placed = false;
+  for (let i = 0; i < 12 && !placed; i++) {
+    fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+    const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+    if (!toRuck() || M().set.picker !== m2) continue;
+    const yAt = M().set.y;
+    run(() => M().phase !== 'set', 90, () => { inp.jx = 0; inp.jy = 1; });
+    if (M().phase === 'play' && M().ball.state === 'held' && M().ball.carrier === m2 && Math.abs(m2.y - yAt) > 2) {
+      placed = true;
+      ok(true, `placed off the mark, he still picks the ball up (${Math.abs(m2.y - yAt).toFixed(1)}m aside)`);
+    }
+  }
+  ok(placed, 'a placed carrier could be kept by the attack');
+  // a turnover still goes to the other side. resolveRuck draws the same rolls; the placed man does not keep it
+  let turned = false;
+  for (let i = 0; i < 80 && !turned; i++) {
+    fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = 1;
+    const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+    if (!toRuck() || M().set.picker !== m2) continue;
+    const s = M().set, before = rndCalls(), to0 = M().stats.toRuck || 0;
+    C.resolveRuck(s);
+    if ((M().stats.toRuck || 0) > to0 && M().ball.state === 'held' && M().ball.carrier.team === 1) {
+      turned = true;
+      ok(M().ball.carrier !== m2 && rndCalls() > before, 'a turnover goes to the defence, and the roll is still drawn when the ruck ends');
+    }
+  }
+  ok(turned, 'a ruck turnover could be forced without the placed man keeping the ball');
+  // a CPU side is not moved onto a picker
+  fresh(1, { humans:[false, false] }); noJolt(); CONTACT.off.cpu = 0;
+  const cpu = bind({ ...FRONT, ctrl:'c' }, 'ai', 'wrap');
+  ok(toRuck() && !M().set.picker && M().ctrl === cpu.c, 'a CPU ruck sets no picker and leaves the ring where it was');
+  // two player: the tackler's side keeps its own ring
+  fresh(1, { humans:[true, true] }); noJolt();
+  const both = bind(FRONT, 'ai', 'wrap'), mate2 = both.own[1]; park(both, mate2); M().side[1].ctrl = both.q;
+  ok(toRuck() && M().ctrl === mate2 && M().set.picker === mate2 && M().side[1].ctrl === both.q, 'two player moves only the attacking ring');
+  // the away human: his ring, not seat 0's
+  fresh(1, { humans:[false, true] }); noJolt();
+  const away = bind({ ct:1, cx:60, cy:35, cvx:-4, qx:61.3, qy:35, qvx:4, ctrl:'none' }, 'ai', 'wrap'), mate3 = away.own[1];
+  park(away, mate3); const seat0 = M().ctrl;
+  ok(toRuck() && M().side[1].ctrl === mate3 && mate3 !== away.c && M().ctrl === seat0, 'an away-side human\'s ring moves to his own next carrier');
+  M().diff.turnover = turn0; reset();
+}
+done('6b ruck control');
 
 // 7. wrong-footed: after a ruck turnover every opponent within 3m is slow and can't tackle for 0.7s; nobody beyond 3m is
 begin('wrong-footed');

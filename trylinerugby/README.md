@@ -96,6 +96,10 @@ nations, a local Surrey club, or a team you make yourself.
   steals (no jackal, no Steal prompt), new penalties (no Not Releasing, Off Your Feet, Not Rolling Away or High Tackle)
   and sin bins. The ruck stays automatic: a flat turnover roll (base raised to 0.11 so turnovers per match hold as
   rucks fall), the losing side wrong-footed, and today's flat ruck penalty.
+- **Ruck control** (2026-10-31): while a ruck is down, the ring leaves the tackled man and sits on the teammate who
+  will pick the ball up. The stick places him; with the stick let go he still runs to the ball. Pass, Kick and Tackle
+  stay dead until the ball is out. No jackal, no steal, and no new penalty — the ruck's length and the penalty and
+  turnover rolls are the ones drawn when the tackle ends.
 - **Sprint** (2026-10-13): a third button, in a fan with B round A. It is a **meter that refills**, used by **holding**:
   it drains while held (2s from full) and refills while not (10s from empty, 7s on Easy). A sprint needs a fifth of
   the meter to start, and letting go stops it at once with a 0.3s ease-out. **Taps buy nothing:** the ease-out is
@@ -334,7 +338,7 @@ nations, a local Surrey club, or a team you make yourself.
 
 | | With the ball | Without it |
 |---|---|---|
-| Stick | Run. Flick sideways near a tackler to Side Step. Pull back and push on for a Dummy: the nearest defender drifts to the man in the white ring | Run |
+| Stick | Run. Flick sideways near a tackler to Side Step. Pull back and push on for a Dummy: the nearest defender drifts to the man in the white ring | Run. In a ruck, place the teammate who will pick the ball up. Pass, Kick and Tackle stay dead until it is out |
 | Big button | Pass to the ringed teammate. A tap is a normal pass; hold past 0.18s and the ring turns gold for a long pass to the next man out (it throws itself at 0.6s). Tilt to pick a side. Held in a tackle it reads Offload on the press, when a man is within 9m, and pulses. At a goal kick, hold to power and let go in the gold | Tackle: a dive at a carrier within 2.8m, an Ankle Tap from behind, a join on a carrier already held. It is dim when a press would do nothing |
 | Small button | Hold to power a kick, release to kick. A tap is a chip. In range it reads Drop Goal: hold it 0.2s for the close-up | Switch to the defender nearest the ball |
 | Sprint | Hold for a burst of speed (x1.05 with the ball). The ring is the meter: it drains while you hold (and through the ease-out after you let go) and refills when you let go | Hold to run a man down (x1.20). A press moves the ring to the man best placed to chase if yours is down or over 4m further off. It is dim when a press would do nothing, and then it does nothing |
@@ -456,7 +460,10 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   a 4.5% penalty, and a turnover at 0.11 + 0.02 a power point (+ the level's `turnover`), clamped 0.03–0.18. After a
   turnover the losing side within 3m is **wrong-footed**: no tackle for 0.7s and x0.5 speed. Duels and the drop-goal
   smother call `tackle()` with no tier and keep the old body: the 1.05s ruck (1.6s for the duel Big Hit), no
-  roll-away, and no new random draw.
+  roll-away, and no new random draw. While it is down, a human attacker's ring is on the teammate who will pick the
+  ball up (the nearest teammate still on his feet to the mark, 1.6m behind the ball). The stick places that man; with the
+  stick let go he runs to the mark as before, and he takes the ball when the attack keeps it. Pass, Kick and Tackle do
+  nothing until the ball is out. A CPU side is unchanged, and a turnover still goes to the other side's nearest man.
 - **Collisions** (`collide()`): standing men push apart at 1.25m as before, and team-mates lose the closing part of
   their relative velocity so pairs stop jostling; opponents are not damped (a shadowing defender must not become a
   wall). A standing man is pushed to 0.95m from a man on the ground, or from a man bound in a tackle; the man on the
@@ -735,7 +742,7 @@ a charger.
     bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
     never presses Pass in a tackle, and a line of Side Steps and Dummies by side; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
     `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
-  - **`node tools/contact.mjs`:** 293 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
+  - **`node tools/contact.mjs`:** 313 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
     and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
     a scrum). It checks:
     - a sprint that ends in a fall or a bind charges nothing more to the meter, and the push parts standing men 0.4m a
@@ -752,6 +759,10 @@ a charger.
       ground, a bound pair (stepped round, not moved, not parted), the 0.2m-a-step cap, an exact overlap parted;
       the roll-away, retiring (the tackler and the Second Man alike), the ruck race (quick / normal / slow), and that
       duel tackles keep the old body with no random draw;
+    - the ring in a ruck: it leaves the tackled man for the teammate who will pick the ball up, the stick places him
+      and draws nothing random, a let-go still runs him to the mark and he takes the ball, Pass Kick and Tackle stay
+      dead until it is out (and Pass and Kick light again once he has it), a turnover still goes to the defence, a CPU
+      side is not moved, and in two player only the attacking ring moves;
     - wrong-footing after a forced turnover; every timer running out in its stated time give or take a step
       (retiring, with the man a chaser and a sprinter again after it and a ringed Second Man's Tackle dim until
       then; wrong-footed; a stumble; a trip; the Sprint ease-out); your automatic tackle base by level; the Tackle
