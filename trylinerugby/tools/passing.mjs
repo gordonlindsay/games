@@ -8,6 +8,7 @@
 //   4. the line in the air: the supports keep running while a pass is in the air
 //   5. the Block lane is the line the ball will take
 //   6. census guard: 12 bot matches a level with the thumb holding its direction through the flight
+//   7. the open shoulder: one runner held behind the ball on the free side, and the pass ring white, tinted or gold
 // node tools/passing.mjs            (SEED=1 unless set)
 process.env.SEED ??= '1';
 const { T, bot, reseed } = await import('./harness.mjs');
@@ -247,6 +248,102 @@ guard(() => {
   }
 });
 done('6 census');
+
+// 7. the open shoulder (2026-10-31): one runner is held on the open shoulder, still behind the ball, and the pass ring tints when a defender is on that man
+begin('open shoulder');
+guard(() => {
+  const D = T.debug, SU = C.SUPPORT;
+  const lay = (t, o) => {
+    fresh({ humans: t === 0 ? [true, false] : [false, true] });
+    const m = M(), d = dirOf(t), own = m.players.filter(p => p.team === t), opp = m.players.filter(p => p.team !== t);
+    const c = own[0];
+    own.forEach((p, i) => {
+      p.down = 0; p.bind = null; p.offside = 0; p.vx = 0; p.vy = 0; p.hold = 2;
+      const k = i === 0 ? 0 : [1, -1, 2, -2, 3, -3][i - 1];
+      p.x = o.x - d * (i === 0 ? 0 : SU.back + 1.3 * Math.abs(k));
+      p.y = o.y + (i === 0 ? 0 : k * 6.5);
+    });
+    c.x = o.x; c.y = o.y; c.vx = 6 * d; c.fx = d; c.fy = 0;
+    opp.forEach((p, i) => { p.down = 0; p.bind = null; p.offside = 0; p.vx = p.vy = 0; p.x = o.x + d * (28 + i * 3); p.y = 6 + i * 8; });
+    const def = opp[0]; def.x = o.x + d * o.dx; def.y = o.y + o.dy;
+    const b = m.ball; b.state = 'held'; b.carrier = c; b.f = null; b.last = t; b.kickInfo = null; b.x = c.x; b.y = c.y; b.z = 1; b.vx = b.vy = b.vz = 0;
+    m.phase = 'play'; m.set = null; m.cut = null; m.poss = t; m.contact = null;
+    if (S.isHuman(t)) S.setCtrl(t, c);
+    return { c, def, d, own, opp };
+  };
+  const behind = (c, p, d) => (c.x - p.x) * d;
+  // a defender on +y: the held runner is on -y, at the shelf's depth, and the closed side stays on the shelf
+  {
+    const s = lay(0, { x:60, y:35, dx:4, dy:8 });
+    const open = C.openShoulder(s.c.x, s.c.y, s.d, 0), pt = C.shoulderPoint(s.c.x, s.c.y, s.d, open, 0);
+    ok(open === -1, `a defender on +y leaves the open shoulder on -y (got ${open})`);
+    ok(pt && near(pt.lat, SU.lat, 0.05) && near(pt.back, SU.back, 0.05) && behind(s.c, pt, s.d) >= 1 && pt.y < s.c.y, `a clear shoulder sits ${SU.lat}m wide and ${SU.back}m behind (got lat ${pt && pt.lat.toFixed(2)}, back ${pt && pt.back.toFixed(2)})`);
+    const Tg = C.computeTargets();
+    const held = s.own.filter(p => p !== s.c && Tg.has(p) && near(Tg.get(p).x, pt.x, 1e-6) && near(Tg.get(p).y, pt.y, 1e-6));
+    ok(held.length === 1, `one runner is held on that point (${held.length})`);
+    const shelfX = s.c.x - (SU.back + 1.3), shelfY = s.c.y + 6.5;
+    const shelf = s.own.filter(p => p !== s.c && Tg.has(p) && near(Tg.get(p).x, shelfX, 0.05) && near(Tg.get(p).y, shelfY, 0.05));
+    ok(shelf.length === 1, `the closed side stays on the shelf at ${shelfX.toFixed(1)}, ${shelfY.toFixed(1)} (${shelf.length})`);
+    ok(s.own.every(p => p === s.c || !Tg.has(p) || behind(s.c, Tg.get(p), s.d) >= -0.01), 'every support target is behind the ball');
+  }
+  // the open side is occupied too: he slides wider along it, still behind, still inside the Key Pass box
+  {
+    const s = lay(0, { x:60, y:35, dx:2, dy:3 });          // nearest is on +y, closer than the shoulder spot, so a man standing there does not flip the read
+    const home = C.shoulderPoint(s.c.x, s.c.y, s.d, -1, 0);
+    s.opp[1].x = home.x; s.opp[1].y = home.y;
+    const open = C.openShoulder(s.c.x, s.c.y, s.d, 0), slid = C.shoulderPoint(s.c.x, s.c.y, s.d, open, 0);
+    const gap = hyp(slid.x - home.x, slid.y - home.y);
+    ok(open === -1 && slid.y < s.c.y && slid.lat > SU.lat + 0.5, `he stays on -y and slides wider (lat ${slid.lat.toFixed(2)} from ${SU.lat})`);
+    ok(gap >= SU.clear - 0.05 && behind(s.c, slid, s.d) >= 1 && slid.lat >= 4 && slid.lat <= 12 && slid.back <= C.RUNON.kpBack, `the slide leaves the defender ${gap.toFixed(2)}m off, behind the ball, inside the Key Pass box (lat ${slid.lat.toFixed(2)}, back ${slid.back.toFixed(2)})`);
+  }
+  // head-on, the shoulder is the side with more room; team 1's behind is +x
+  {
+    const s = lay(0, { x:60, y:35, dx:4, dy:0 });
+    ok(C.openShoulder(s.c.x, s.c.y, s.d, 0) === 1, `head-on in midfield, the open shoulder is +y (got ${C.openShoulder(s.c.x, s.c.y, s.d, 0)})`);
+    const edge = lay(0, { x:60, y:64, dx:4, dy:0 });
+    const eo = C.openShoulder(edge.c.x, edge.c.y, edge.d, 0), ep = C.shoulderPoint(edge.c.x, edge.c.y, edge.d, eo, 0);
+    ok(eo === -1 && ep && ep.y <= edge.c.y - 4 && behind(edge.c, ep, edge.d) >= 1, `near the top touch he takes the side with room and stays behind (y ${ep && ep.y.toFixed(1)}, back ${ep && ep.back.toFixed(2)})`);
+    const m = lay(1, { x:60, y:35, dx:4, dy:8 });
+    const mo = C.openShoulder(m.c.x, m.c.y, m.d, 1), mp = C.shoulderPoint(m.c.x, m.c.y, m.d, mo, 1), Tg = C.computeTargets();
+    ok(mo === -1 && mp.x > m.c.x && mp.y < m.c.y, `team 1 mirrors: behind is +x, the open shoulder is still -y (${mp.x.toFixed(1)}, ${mp.y.toFixed(1)})`);
+    ok(m.own.some(p => p !== m.c && Tg.has(p) && near(Tg.get(p).x, mp.x, 1e-6) && near(Tg.get(p).y, mp.y, 1e-6)), 'one of his runners is held on that point');
+  }
+  // the ring: white when the man is free, tinted when a defender is on him, gold kept for a long pass with the tint inside it
+  {
+    fresh({ h:3, humans:[true, false] });
+    const { from, to } = stage(0, { x:60, y:35, vx:6, back:4, wide:6, rvx:0 });
+    const opp = M().players.find(p => p.team === 1);
+    opp.x = to.x + 1.5; opp.y = to.y;
+    const marked = C.shownPass(from);
+    ok(marked.to === to && marked.marked && !marked.gold && C.pressure(to) < SU.mark, `a defender ${C.pressure(to).toFixed(2)}m off marks the ring's man`);
+    const rad = Math.max(8, 0.95 * Math.min(844 / 54, 390 / 36));
+    const arcsOf = () => {
+      const arcs = []; let stroke = '', width = 0;
+      globalThis.__ctxSpy = (name, args) => { if (name === 'strokeStyle') stroke = args[0]; else if (name === 'lineWidth') width = args[0]; else if (name === 'arc') arcs.push({ r:args[2], stroke, width }); };
+      D.view(844, 390); D.render(STEP); globalThis.__ctxSpy = null;
+      return arcs;
+    };
+    let arcs = arcsOf();
+    ok(arcs.some(a => near(a.r, rad * 1.6, 0.2) && a.stroke === SU.tint), 'the pass ring is drawn in the tint');
+    ok(!arcs.some(a => near(a.r, rad * 1.6, 0.2) && a.stroke === 'rgba(244,241,232,.95)'), 'and not in white while he is marked');
+    opp.x = to.x + 14; opp.y = to.y + 10;
+    const free = C.shownPass(from);
+    ok(free.to === to && !free.marked && C.pressure(to) >= SU.mark, `with the defender ${C.pressure(to).toFixed(1)}m off the ring reads free`);
+    arcs = arcsOf();
+    ok(arcs.some(a => near(a.r, rad * 1.6, 0.2) && a.stroke === 'rgba(244,241,232,.95)') && !arcs.some(a => a.stroke === SU.tint), 'a free man keeps the white ring, with no tint');
+    const far = M().players.filter(p => p.team === 0)[2];
+    far.x = from.x - 8; far.y = from.y + 14; far.down = 0; far.bind = null;
+    opp.x = far.x + 1; opp.y = far.y + 1;
+    const inp0 = S.inputOf(0); inp0.jx = 0; inp0.jy = 1;
+    S.side(0).pass = { mode:'hold', to:null, t:C.LONG.arm + 0.02 };
+    const long = C.shownPass(from);
+    ok(long.gold && long.marked && long.to === far, `a long pass to a marked man stays gold and reads marked (${long.to === far}, gold ${long.gold}, marked ${long.marked})`);
+    arcs = arcsOf();
+    ok(arcs.some(a => near(a.r, rad * 1.6, 0.2) && a.stroke === '#ffcf3d') && arcs.some(a => near(a.r, rad * 1.15, 0.2) && a.stroke === SU.tint), 'the gold ring stays, and the tint is drawn inside it');
+    inp0.jx = inp0.jy = 0; S.side(0).pass = null;
+  }
+});
+done('7 open shoulder');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
