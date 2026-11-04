@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // The hints card (2026-10-17): its settings and saving, its words for every moment on every device and seat, when it shows and
 // hides, that it never covers a figure or the ring in a duel, the open-play cards' triggers, the penalty card's sublines and
 // tick, the home row and the pause rows. Exits 1 on any failure.
@@ -10,7 +11,7 @@ let failed = 0, passed = 0, group = '';
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', group + ':', msg); } };
 const done = name => { console.log(`${name.padEnd(26)} ${failed ? 'FAIL so far ' + failed : 'ok'} (${passed} passed)`); };
 const begin = name => { group = name; };
-const html = fs.readFileSync(new URL(process.env.GAME || '../index.html', import.meta.url), 'utf8');
+const html = readGameSource();
 if (!D.hintFor || !D.hintShown) { console.log('FAIL hints: hintFor and hintShown are missing from the engine'); console.log('0 passed, 1 failed'); process.exit(1); }
 const settings = () => D.settings();
 const fresh = (o = {}) => { T.newMatch(0, 1, { halfLen:240, diff:1, headless:true, duels:'live', ...o }); D.setMode('match'); D.setTwo(!!(o.humans && o.humans[0] && o.humans[1])); for (const inp of inputs) { inp.keys.clear(); inp.jx = inp.jy = 0; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; } };
@@ -340,3 +341,4 @@ done('G plates');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

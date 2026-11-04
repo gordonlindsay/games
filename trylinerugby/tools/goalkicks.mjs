@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // Goal kicks: the closed-form flight, the judge, the band, the wind, the live
 // close-up driven through the real input path, the CPU's kicks, the rate
 // table and a render smoke test. Exits 1 on any failure.
@@ -1224,7 +1225,7 @@ begin('label per seat');
   inp.bPressed = inp.bDown = true; steps(3);
   ok(K.kickLabel(0) === 'Drop Goal' && K.kickLabel(1) === 'Kick' && M().dropArmed[0], 'and through the hold');
   inp.bDown = false; steps(14);
-  const src = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const src = readGameSource();
   ok(!/kickLabel\(\)/.test(src) && /kickLabel\(M\.ctrl\.team\)/.test(src), 'updateHud passes its team to kickLabel');
 }
 done('38 label per seat');
@@ -1267,3 +1268,4 @@ done('39 the thumb');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

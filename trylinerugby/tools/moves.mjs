@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // The open-play moves (2026-10-17): the Side Step (one sideways flick near a tackler) and the Dummy (pull back and push on). Staged
 // carries run headless through the real update path, from both teams, on the stick, the keys and a pad. Exits 1 on any failure.
 // node tools/moves.mjs            (SEED=5 unless set)
@@ -245,7 +246,7 @@ done('7 pads');
 // 8. the words: every open-play tag is Title Case, the Help names both moves, and no page says to hold the stick at a scrum
 begin('words');
 guard(() => {
-  const html = fs.readFileSync(new URL(process.env.GAME || '../index.html', import.meta.url), 'utf8'), js = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const html = readGameSource(), js = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const texts = [...js.matchAll(/\btag\('([^']+)'/g)].map(m => m[1]);
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const title = s => s.split(' ').every((w, i) => (i > 0 && small.has(w)) || /^[A-Z0-9]/.test(w));
@@ -284,3 +285,4 @@ done('9 coalesced flick');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+
