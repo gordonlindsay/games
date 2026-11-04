@@ -46,7 +46,7 @@ const el = id => {
 const els = {};
 const MODALS = ['m-pen', 'm-break', 'm-pause', 'm-tut', 'm-practice'], SCREENS = ['s-home', 's-teams', 's-build', 's-hub', 's-help', 's-join', 's-practice'];
 // the home and team screens' On | Off rows (.seg[data-key]): one stub a row, with its data-key and two child buttons, so the game wires its handlers and a test can press Hints On and Off
-const SEGS = [...html.matchAll(/<div class="seg" data-key="([a-z]+)">/g)].map(m => { const seg = el('seg-' + m[1]); seg.dataset.key = m[1]; seg.children = [el('seg-' + m[1] + '-0'), el('seg-' + m[1] + '-1')]; return seg; });
+const SEGS = [...html.matchAll(/<div class="seg" data-key="([a-z]+)"[^>]*>/g)].map(m => { const seg = el('seg-' + m[1]); seg.dataset.key = m[1]; seg.children = [el('seg-' + m[1] + '-0'), el('seg-' + m[1] + '-1')]; return seg; });
 for (const s of [0, 1]) { const seg = els['pz-h' + s] = el('pz-h' + s); seg.children = [el('pz-h' + s + '-0'), el('pz-h' + s + '-1')]; }   // the pause card's Hints rows have their On and Off buttons, so the game wires them and a test can press one
 globalThis.document = { getElementById: id => (els[id] ||= el(id)), querySelectorAll: sel => (sel === '.modal' ? MODALS : sel === '.screen' ? SCREENS : []).map(id => (els[id] ||= el(id))).concat(sel === '.seg[data-key]' ? SEGS : []), addEventListener: noop, createElement: () => el(''), createTextNode: () => ({}), hidden: false };
 globalThis.window = globalThis;

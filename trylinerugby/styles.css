@@ -64,7 +64,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .seg button[aria-pressed="true"]{background:var(--chalk);color:var(--night)}
 .resume-note{margin:0;font-size:13px;color:var(--chalk-dim);text-align:center}
 .home-row{align-items:start}
-.home-row .col{display:flex;flex-direction:column;gap:4px;min-width:0}
+.home-row .col{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;min-width:0}
 @media (orientation:landscape) and (max-height:560px){
   /* a phone held sideways: everything on one screen, settings wide enough not to wrap */
   .screen{padding-block:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 12px)}
@@ -279,7 +279,7 @@ body.desk .desk-only{display:block}
 #pz-seat.s1,#br-seat.s1{color:var(--p2)}
 /* two player: the home button is for computers only (body.desk), where it takes the half beside Championship and How to Play drops
    to a row of its own; phones keep Championship | How to Play. The join screen seats the two players side by side in their colours */
-body.desk .home-row #b-help{grid-column:1/-1}
+body.desk .home-row .col{grid-column:auto}
 .eyebrow.p1{color:var(--flood)}.eyebrow.p2{color:var(--p2)}
 /* the seat tag: the numeral on the seat colour, beside the scorebug, on the Full Time row and on the join cards */
 .stag{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;background:var(--flood);color:var(--flood-ink);font:900 15px/1 var(--display);font-style:normal;vertical-align:middle;flex:none}

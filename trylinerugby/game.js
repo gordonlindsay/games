@@ -4158,6 +4158,20 @@ function render(dt) {
   }
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
+  // A short cue only where a decision matters; free pass targets keep just their ring.
+  // Suppress edge cues rather than detach a label from an off-screen player or cover the scorebug.
+  const targetCue = (q, text, colour) => {
+    const [x, y] = toS(q.x, q.y), cy = y - r*1.6 - 13;
+    if (x < 24 || x > V.W - 24 || cy < 83 || y > V.H - 20) return;
+    ctx.save();
+    ctx.font = `700 11px 'Atkinson Hyperlegible', sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const measured = ctx.measureText(text), w = ((measured && measured.width) || text.length*6) + 12;
+    const cx = clamp(x, w/2 + 8, V.W - w/2 - 8);
+    ctx.fillStyle = 'rgba(8,14,10,.9)'; rrect(cx - w/2, cy - 9, w, 18, 4); ctx.fill();
+    ctx.fillStyle = colour; ctx.fillText(text, cx, cy);
+    ctx.restore();
+  };
   // pass target, for the human holding the ball. Held in a tackle, the ring sits on the man an Offload would go to. While a long pass charges it turns gold, with a faint ring on the man it skips.
   // White is a free man. The ring tints when a defender is on him; a long pass keeps its gold and draws the tint inside it.
   for (const t of [0, 1]) {
@@ -4175,6 +4189,7 @@ function render(dt) {
       if (shown.gold) ringAt(shown.to, ringCol(t), 2.5, r*1.6, [4, 3]);
       else ringAt(shown.to, shown.marked ? SUPPORT.tint : 'rgba(244,241,232,.95)', shown.marked ? 2.5 : 2, r*1.6, [4, 3]);
       if (shown.gold && shown.marked) ringAt(shown.to, SUPPORT.tint, 2, r*1.15, []);
+      if (shown.marked) targetCue(shown.to, 'Marked', '#f1eee4');
     }
   }
   // switch target, for a human without the ball: the dashed ring is the man Switch would take, drawn before the press
@@ -4186,6 +4201,7 @@ function render(dt) {
     const [qx, qy] = toS(q.x, q.y);
     ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.arc(qx, qy, r*1.45, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    if (switchUseful(t)) targetCue(q, 'Switch', ringCol(t));
   }
   // kick aim, for each side charging a kick, in its own direction
   for (const t of [0, 1]) {
@@ -5301,6 +5317,7 @@ function resume() {
   if (!M) return;
   M.paused = false; $('m-pause').hidden = true;
   for (const inp of inputs) { inp.keys.clear(); inp.aPressed = inp.bPressed = inp.cPressed = false; inp.cDown = false; inp.flick = 0; inp.gest = null; }
+  clearCharge(); // a Kick released on the pause card must not fire when play resumes
   for (const s of M.side) s.pass = null;
   const c = M.cut;
   if (c && c.duel && !c.after) duelResume(c);
@@ -5328,7 +5345,7 @@ const BOOL = { sound:1, hints:1, coach:1 };
 function renderHome() {
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
-    const val = BOOL[key] ? (settings[key] ? 0 : 1) : settings[key];
+    const val = BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
   const note = $('champ-note');
@@ -5355,6 +5372,7 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
     if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
+    if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
     if (key === 'sound' && settings.sound) ac();
     if (key === 'pool') { renderTeams(); $('s-teams').scrollTop = 0; }

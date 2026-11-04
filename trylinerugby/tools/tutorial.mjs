@@ -173,10 +173,10 @@ begin('coach');
 {
   const X = T.teams, line = id => D.COACH_LINE[id];
   ok(D.COACH_IDS.join() === 'offload,step,tackle,duel,kick,pass,sprint' && /coach:true, tips:\[\]/.test(html), 'Coach Tips starts on, and the lines are the seven moments');
-  const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'coach');
-  ok(!!seg && seg.children.length === 2, 'the home row is Coach Tips, On and Off');
-  seg.children[1].click(); ok(settings().coach === false, 'Off stores false');
-  seg.children[0].click(); ok(settings().coach === true, 'On stores true');
+  const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'hints');
+  ok(!!seg && seg.children.length === 2, 'Match Help controls coach tips and hints together');
+  seg.children[1].click(); ok(settings().coach === false && settings().hints === false, 'Off disables both types of help');
+  seg.children[0].click(); ok(settings().coach === true && settings().hints === true, 'On enables both types of help');
   X.restore({ settings:{ tips:['sprint', 'nope', 'pass', 'pass'] } });
   ok(settings().tips.join() === 'pass,sprint', `known lines load in the game's order (${settings().tips.join()})`);
   settings().coach = false;

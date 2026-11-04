@@ -7,11 +7,11 @@ nations, a local Surrey club, or a team you make yourself.
 
 ## Practice + Polish (review branch)
 
-The home screen now includes **Practice Ground**: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.
+The home screen pairs **How to Play** and **Practice Ground** in matching buttons. **Match Help** switches control hints and first-match coach tips together, retaining existing browser saves. Practice Ground offers: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.
 
 The page remains buildless. `index.html` holds the screens, `styles.css` the existing styling, `practice.css` the practice layout and `game.js` the game. Serve this folder over HTTP; opening the page needs no package installation or build step. The engine is still one script; further separation can follow after playtesting.
 
-Pass and Kick now dim while your pass is airborne, then reactivate on the catch. Opponent possession still offers defensive controls. Match balance is unchanged.
+Pass and Kick now dim while your pass is airborne, then reactivate on the catch. Opponent possession still offers defensive controls. A pressured selected receiver now also reads **Marked**, and useful defensive cover reads **Switch**. Resuming from pause cancels a tactical kick charge, preventing an unintended kick when the button was released while paused. Match balance is unchanged.
 
 Run the new checks with `node tools/practice.mjs` and `node tools/polish.mjs`. Existing checks use `tools/source.mjs` to read external sources; `GAME=/absolute/path/to/index.html` still supports old inline snapshots for comparisons.
 
