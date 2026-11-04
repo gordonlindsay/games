@@ -59,6 +59,7 @@ function start(data) {
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
   startDemo();
   goHome();
+  offlineStart();
   restStick();
   requestAnimationFrame(frame);
 }

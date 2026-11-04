@@ -23,6 +23,16 @@ The Trophy Cabinet keeps the last ten completed seasons in this browser, includi
 
 The hub and the home screen provide cabinet access. Expandable stats and cabinet panels work with touch, keyboard and controller navigation. Nothing changes scoring, match balance or the championship table rules.
 
+## Install and offline play
+
+The game includes a web app manifest, app icons and a scoped service worker. On a supported HTTPS browser, visit online and wait for **Offline Ready** before relying on cached play. The home menu offers **Install Game** when the browser provides an install prompt; How to Play includes manual home-screen guidance. Installation does not move your browser save between browsers or devices.
+
+The worker caches only this game's local shell and checks downloaded file hashes against the generated version. It does not cache other games, remote fonts, arbitrary requests or browser saves. Offline fonts use the existing system-font fallbacks. Cache storage must remain available; verified files can refill missing entries when online. A mismatched or incomplete new deployment leaves the working version in place.
+
+Updates wait by default. **Update Game** appears on the home menu and reloads only after an explicit choice; entering a match meanwhile defers the reload until home returns. Other tabs never reload automatically, and their older caches are retained while windows remain open. Install/update buttons support touch, keyboard and controller navigation.
+
+Use HTTPS to test real service-worker installation. The HTTP development preview remains playable but cannot demonstrate a secure-browser install. The focused offline suites exercise worker and browser events in controlled runtimes; physical-device installation and airplane-mode play still need a device check.
+
 ## Development source and checks
 
 Edit `src/*.js`, then run these commands from `trylinerugby/`:
@@ -33,7 +43,7 @@ node tools/build.mjs --check
 node tools/check.mjs
 ```
 
-The build has no dependencies. It follows `src/manifest.json` and writes `game.js`; commit both the edited sources and generated script. `--check` rejects syntax errors or a stale generated script without rewriting it. Direct gameplay checks also reject a stale current bundle. `GAME=/absolute/path/to/index.html` still reads a separate old snapshot for comparisons.
+The build has no dependencies. It follows `src/manifest.json` and writes `game.js` and versioned `sw.js`; commit the edited sources, shell assets and both generated scripts. `--check` rejects syntax errors or stale generated game/service-worker scripts without rewriting them. Direct gameplay checks also reject a stale current bundle. `GAME=/absolute/path/to/index.html` still reads a separate old snapshot for comparisons.
 
 The source files are **shared-closure sections, not independent ES modules**. Each is valid JavaScript with complete declarations and functions; the build places them in their existing order inside one private function. Cross-file names, initialisation order and execution remain shared. Moving declarations or adding top-level side effects requires care. This stage creates clear editing boundaries while retaining the existing engine and test interfaces.
 
@@ -49,6 +59,8 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
 | `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
 | `src/practice.js` | Isolated drills and practice feedback |
+| `src/offline-client.js` | Optional browser installation, offline status and safe update controls |
+| `src/service-worker.js` | Separate worker template; cached shell and integrity checks (outside the game bundle) |
 | `src/boot.js` | Frame loop, diagnostic API and startup |
 
 The browser still loads only `game.js`; `src/` and the Node tools are development inputs. See [tools/CHECKS.md](tools/CHECKS.md) for the quick gate, full gameplay checks and separate two-player suite.

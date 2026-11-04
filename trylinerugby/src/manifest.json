@@ -22,5 +22,6 @@
   "ui-help.js",
   "ui-menus.js",
   "practice.js",
+  "offline-client.js",
   "boot.js"
 ]

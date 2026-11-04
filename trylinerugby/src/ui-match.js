@@ -7,6 +7,7 @@ let bannerTimer = 0, coachLast = null, coachUntil = 0;   // coachUntil: wall-clo
 const playing = () => mode === 'match' && M && !M.demo;
 
 function showScreen(id) {
+  if (typeof offlineScreen === 'function') offlineScreen(id);
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   setFocus(null);
   if (id === 's-teams') fitNames();

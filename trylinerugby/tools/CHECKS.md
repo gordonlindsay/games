@@ -6,9 +6,11 @@ Run from `trylinerugby/` with Node. No dependencies need installing.
 node tools/check.mjs
 ```
 
-The default gate first verifies the generated game bundle matches its source and parses. It then runs practice, HUD availability, target feedback, input transitions, tutorials, hints, post-match statistics, championship persistence and season review regression checks. Each suite keeps its own fixed default seed. A failed suite produces its full output and the command exits unsuccessfully.
+The default gate first verifies the generated game bundle matches its source and parses. It then runs the offline shell and installation/update checks, practice, HUD availability, target feedback, input transitions, tutorials, hints, post-match statistics, championship persistence and season review regression checks. Each suite keeps its own fixed default seed. A failed suite produces its full output and the command exits unsuccessfully.
 
 The championship checks cover optional match statistics, legacy and malformed saves, bounded completed-season history, archive deduplication, and the hub, result review and season cabinet. Run these focused checks directly with `node tools/season-data.mjs`, `node tools/season-ui.mjs` and `node tools/season-flow.mjs`. The flow suite uses the current browser bundle and save boundary to check five home/away results, duplicate completion, reload, rendered totals, Start Fresh, partial restores and practice isolation.
+
+The offline checks run directly with `node tools/offline-core.mjs` and `node tools/offline-ui.mjs`. They exercise the generated service worker and client lifecycle with controlled browser API stubs, including failed installs, cache isolation, request bypasses, readiness, and updates deferred until the home menu. These checks do not prove browser installation prompts, platform-specific standalone behaviour, or actual device offline support; those need browser/device checks.
 
 For the existing wider gameplay and balance checks:
 

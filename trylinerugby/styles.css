@@ -438,3 +438,10 @@ body.desk .home-row .col{grid-column:auto}
   .season-summary p,.season-entry p{font-size:13px;margin:3px 0}
   .season-entry{padding:8px 0}
 }
+
+/* Optional install and offline controls stay secondary to play. */
+.app-tools { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px 16px; margin:14px 0 0; font-size:12px; color:var(--muted, #acb7ac); }
+.app-tools[hidden], .app-tools [hidden] { display:none; }
+.app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; padding:7px 11px; font:inherit; cursor:pointer; }
+.app-action:hover, .app-action:focus-visible { color:#fff; border-color:#d5b663; }
+.app-action:disabled { opacity:.55; cursor:wait; }

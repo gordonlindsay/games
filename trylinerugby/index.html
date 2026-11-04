@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b130e">
 <title>Try Line Rugby</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&display=swap">
@@ -61,6 +65,11 @@
         <button class="btn" id="b-help">How to Play</button>
         <button class="btn" id="b-practice">Practice Ground</button>
       </div>
+    </div>
+    <div class="app-tools" id="app-tools" hidden>
+      <span id="offline-status" role="status" hidden>Offline Ready</span>
+      <button class="app-action" id="b-install" hidden>Install Game</button>
+      <button class="app-action" id="b-update" hidden>Update Game</button>
     </div>
     <details class="cabinet home-cabinet" id="home-cabinet"><summary>Trophy Cabinet</summary><div id="home-history"></div></details>
     <div class="settings">
@@ -151,6 +160,7 @@
     </div>
     <dl class="help">
       <dt>Table</dt><dd>Win 4, draw 2. <b>+1</b> for four or more tries. <b>+1</b> for losing by seven or fewer. <b>+3</b> for a Grand Slam.</dd>
+      <dt>Install &amp; Offline</dt><dd>On iPhone or iPad, open in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. Other browsers may offer <b>Install</b> in their menu. Visit online first and wait for <b>Offline Ready</b> on the home menu before playing without a connection. Browser storage must remain available. Updates appear on the home menu and wait for you to choose <b>Update Game</b>.</dd>
       <dt>Saving</dt><dd>This browser keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table clears the current championship and keeps completed seasons in the Trophy Cabinet. Leaving a match, or reloading, keeps the same round to play again.</dd>
       <dt>First Matches</dt><dd>The first two games on Normal are a little kinder while you learn to turn and chase. A card marked <b>Stronger Side</b> is rated well above yours.</dd>
       <dt>50:22</dt><dd>Kick from your own half that bounces out inside their 22 and the lineout throw is yours.</dd>
