@@ -215,7 +215,7 @@ function navLayer() {                                      // the top layer: the
 }
 function navCands(layer) {
   const out = [];
-  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step')) {
+  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary')) {
     if (el.disabled || el.hidden || el.getAttribute('aria-disabled') === 'true' || (el.closest && el.closest('[hidden]'))) continue;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
     out.push(el);

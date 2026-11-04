@@ -24,7 +24,28 @@ const COACH_LINE = {
   sprint: 'Hold Sprint for a burst',
 };
 let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
-let champ = null, custom = [];
+let champ = null, custom = [], champHistory = [], seasonSerial = 0;
+const SEASON_LIMIT = 10;
+/* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
+function cleanSeasonStats(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
+  const out = {};
+  for (const key of ['conv', 'pen', 'dg', 'tk', 'duelN']) {
+    const v = s[key], made = key === 'duelN' ? 'won' : 'made';
+    if (!v || !Number.isInteger(v.att) || v.att < 0 || v.att > 100000 || !Number.isInteger(v[made]) || v[made] < 0 || v[made] > v.att) return null;
+    out[key] = { att:v.att, [made]:v[made] };
+  }
+  if (typeof s.gain !== 'number' || !Number.isFinite(s.gain) || Math.abs(s.gain) > 1000000) return null;
+  out.gain = Math.round(s.gain);
+  return out;
+}
+/* The legacy fingerprint uses only validated season data, never the simulation RNG. */
+function legacySeasonId(c) {
+  const text = JSON.stringify([c.user, c.teams, c.fixtures, c.results.map(rd => rd.map(({h,a,hs,as,ht,at}) => ({h,a,hs,as,ht,at})))]);
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return 'legacy-' + (h >>> 0).toString(36);
+}
 const HEX = /^#[0-9a-f]{6}$/i;
 /* A team someone made, or one read back from storage: anything off is put right, never trusted. */
 function cleanTeam(t, i) {
@@ -96,12 +117,17 @@ function cleanChamp(c) {
       const hs = ptsOf(m.hs), as = ptsOf(m.as), ht = ptsOf(m.ht), at = ptsOf(m.at);
       if (hs == null || as == null || ht == null || at == null) return null;
       seen.add(m.h); seen.add(m.a);
-      out.push({ h:m.h, a:m.a, hs, as, ht, at });
+      const result = { h:m.h, a:m.a, hs, as, ht, at };
+      const detail = cleanSeasonStats(m.stats);
+      if ((m.h === c.user || m.a === c.user) && detail) result.stats = detail;
+      out.push(result);
     }
     if (seen.size !== 6) return null;
     results.push(out);
   }
-  return { user:c.user, teams, round:c.round, fixtures, results };
+  const out = { user:c.user, teams, round:c.round, fixtures, results };
+  out.id = typeof c.id === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(c.id) ? c.id : legacySeasonId(out);
+  return out;
 }
 function cleanSettings(g) {
   if (!g || typeof g !== 'object' || Array.isArray(g)) return;
@@ -123,7 +149,17 @@ function restore(s) {
   cleanSettings(s.settings);
   settings.duels = true;
   if (Array.isArray(s.custom)) custom = s.custom.map(cleanTeam).filter(Boolean).slice(0, MAX_CUSTOM);
-  if (s.champ != null) champ = cleanChamp(s.champ);
+  if (Number.isSafeInteger(s.seasonSerial) && s.seasonSerial >= 0) seasonSerial = s.seasonSerial;
+  if ('champHistory' in s) {
+    champHistory = [];
+    if (Array.isArray(s.champHistory)) for (const raw of s.champHistory.slice(-100)) {
+      const c = cleanChamp(raw);
+      if (c && c.round === 5 && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
+    }
+    champHistory = champHistory.slice(-SEASON_LIMIT);
+  }
+  if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
+  retainCompletedSeason(champ);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
 function load() {
@@ -136,7 +172,8 @@ function load() {
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
   settings.duels = true;
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom })); } catch (e) { /* private mode, or full */ }
+  retainCompletedSeason(champ);
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial })); } catch (e) { /* private mode, or full */ }
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }

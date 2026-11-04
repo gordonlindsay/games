@@ -415,3 +415,26 @@ body.desk .home-row .col{grid-column:auto}
   #br-stats .key{font-size:11px}
 }
 @media (prefers-reduced-motion:reduce){#banner .msg{animation:none}.act{transition:none}.act.cue{animation:none}}
+
+/* Progression stays within the menu; match cards keep their one-press Continue. */
+.season-summary,.cabinet{padding:12px 14px;border:1px solid var(--rule);border-radius:8px;background:var(--panel)}
+.season-summary p,.season-entry p{margin:5px 0;font-size:14px;line-height:1.4}
+.season-summary .season-record{font-weight:800;font-variant-numeric:tabular-nums}
+.cabinet summary,.season-details summary,.match-details summary{cursor:pointer;padding:8px 0;font-size:14px;font-weight:700;color:var(--chalk)}
+.cabinet summary:focus-visible,.season-details summary:focus-visible,.match-details summary:focus-visible{outline:2px solid var(--flood);outline-offset:3px;border-radius:2px}
+.home-cabinet{margin-top:12px;padding:0 12px;background:transparent}
+.stat-note{margin:8px 0;color:var(--chalk-dim);font-size:12px;line-height:1.4}
+.cabinet-tally{font-size:13px;color:var(--flood)}
+.season-entry{padding:12px 0;border-top:1px solid var(--rule)}
+.season-entry h3{margin:4px 0;font-size:17px;overflow-wrap:anywhere}
+.season-awards{color:var(--flood)}
+.saved-stats{font-size:13px}
+.saved-stats caption{text-align:left;color:var(--chalk-dim);font-size:12px;padding:8px 0}
+.saved-stats th{text-align:left;letter-spacing:0;white-space:normal;text-transform:none;font-size:13px;line-height:1.2;padding:7px 0}
+.saved-stats td{padding:7px 0}
+.match-details{padding:0 12px;border:1px solid var(--rule);border-top:0;border-radius:0 0 6px 6px}
+@media (orientation:landscape) and (max-height:560px){
+  .season-summary,.cabinet{padding:8px 12px}
+  .season-summary p,.season-entry p{font-size:13px;margin:3px 0}
+  .season-entry{padding:8px 0}
+}

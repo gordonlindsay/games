@@ -52,7 +52,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
 
 function start(data) {
   load();
-  if (data && (data.champ || data.settings || data.custom)) restore(data);
+  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data)) restore(data);
   resize(); setDesk();
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
@@ -62,5 +62,5 @@ function start(data) {
   restStick();
   requestAnimationFrame(frame);
 }
-try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom })); } catch (e) { /* not in a viewer */ }
+try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial })); } catch (e) { /* not in a viewer */ }
 if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});

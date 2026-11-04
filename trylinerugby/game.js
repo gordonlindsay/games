@@ -104,7 +104,28 @@ const COACH_LINE = {
   sprint: 'Hold Sprint for a burst',
 };
 let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
-let champ = null, custom = [];
+let champ = null, custom = [], champHistory = [], seasonSerial = 0;
+const SEASON_LIMIT = 10;
+/* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
+function cleanSeasonStats(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
+  const out = {};
+  for (const key of ['conv', 'pen', 'dg', 'tk', 'duelN']) {
+    const v = s[key], made = key === 'duelN' ? 'won' : 'made';
+    if (!v || !Number.isInteger(v.att) || v.att < 0 || v.att > 100000 || !Number.isInteger(v[made]) || v[made] < 0 || v[made] > v.att) return null;
+    out[key] = { att:v.att, [made]:v[made] };
+  }
+  if (typeof s.gain !== 'number' || !Number.isFinite(s.gain) || Math.abs(s.gain) > 1000000) return null;
+  out.gain = Math.round(s.gain);
+  return out;
+}
+/* The legacy fingerprint uses only validated season data, never the simulation RNG. */
+function legacySeasonId(c) {
+  const text = JSON.stringify([c.user, c.teams, c.fixtures, c.results.map(rd => rd.map(({h,a,hs,as,ht,at}) => ({h,a,hs,as,ht,at})))]);
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return 'legacy-' + (h >>> 0).toString(36);
+}
 const HEX = /^#[0-9a-f]{6}$/i;
 /* A team someone made, or one read back from storage: anything off is put right, never trusted. */
 function cleanTeam(t, i) {
@@ -176,12 +197,17 @@ function cleanChamp(c) {
       const hs = ptsOf(m.hs), as = ptsOf(m.as), ht = ptsOf(m.ht), at = ptsOf(m.at);
       if (hs == null || as == null || ht == null || at == null) return null;
       seen.add(m.h); seen.add(m.a);
-      out.push({ h:m.h, a:m.a, hs, as, ht, at });
+      const result = { h:m.h, a:m.a, hs, as, ht, at };
+      const detail = cleanSeasonStats(m.stats);
+      if ((m.h === c.user || m.a === c.user) && detail) result.stats = detail;
+      out.push(result);
     }
     if (seen.size !== 6) return null;
     results.push(out);
   }
-  return { user:c.user, teams, round:c.round, fixtures, results };
+  const out = { user:c.user, teams, round:c.round, fixtures, results };
+  out.id = typeof c.id === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(c.id) ? c.id : legacySeasonId(out);
+  return out;
 }
 function cleanSettings(g) {
   if (!g || typeof g !== 'object' || Array.isArray(g)) return;
@@ -203,7 +229,17 @@ function restore(s) {
   cleanSettings(s.settings);
   settings.duels = true;
   if (Array.isArray(s.custom)) custom = s.custom.map(cleanTeam).filter(Boolean).slice(0, MAX_CUSTOM);
-  if (s.champ != null) champ = cleanChamp(s.champ);
+  if (Number.isSafeInteger(s.seasonSerial) && s.seasonSerial >= 0) seasonSerial = s.seasonSerial;
+  if ('champHistory' in s) {
+    champHistory = [];
+    if (Array.isArray(s.champHistory)) for (const raw of s.champHistory.slice(-100)) {
+      const c = cleanChamp(raw);
+      if (c && c.round === 5 && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
+    }
+    champHistory = champHistory.slice(-SEASON_LIMIT);
+  }
+  if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
+  retainCompletedSeason(champ);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
 function load() {
@@ -216,7 +252,8 @@ function load() {
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
   settings.duels = true;
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom })); } catch (e) { /* private mode, or full */ }
+  retainCompletedSeason(champ);
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial })); } catch (e) { /* private mode, or full */ }
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }
@@ -2966,10 +3003,12 @@ function simMatch(c, h, a) {
    The five are whoever was passed in (a random draw, at the team screen). You play the weakest of them first and the
    strongest last: circle position 0 stays put and meets position 5, then the new position 5, each round. */
 function newChamp(user, others) {
+  if (practice) return;
+  retainCompletedSeason(champ);
   const five = others.slice(0, 5);
   const ranked = five.map((t, i) => ({ i:i + 1, r:rateOf(t) })).sort((a, b) => a.r - b.r || a.i - b.i);
   const order = [0, ranked[4].i, ranked[3].i, ranked[2].i, ranked[1].i, ranked[0].i];
-  champ = { user:0, teams:[user, ...five].map(t => ({ ...t })), round:0, fixtures:roundRobin(order), results:[] };
+  champ = { id:'season-' + Date.now().toString(36) + '-' + (++seasonSerial).toString(36), user:0, teams:[user, ...five].map(t => ({ ...t })), round:0, fixtures:roundRobin(order), results:[] };
   save();
 }
 function userFixture(c) {
@@ -3123,18 +3162,71 @@ function champNote(c) {
   return name + ' · ' + (f.clinched ? 'Champions' : ordinal(f.place + 1)) + ' · Round ' + (c.round + 1) + ' of 5';
 }
 function recordChampResult() {
+  if (!champ || champ.round >= 5 || !M || !M.champ || M.demo || M.two || practice || M.champResultDone) return;
   const c = champ, { pair } = userFixture(c);
   const userHome = pair[0] === c.user;
   const mine = userHome
     ? { h:pair[0], a:pair[1], hs:M.score[0], as:M.score[1], ht:M.tries[0], at:M.tries[1] }
     : { h:pair[0], a:pair[1], hs:M.score[1], as:M.score[0], ht:M.tries[1], at:M.tries[0] };
+  const S = M.stats, detail = {};
+  if (S && !M.headless) {
+    for (const key of ['conv', 'pen', 'dg', 'tk', 'duelN']) {
+      const made = key === 'duelN' ? 'won' : 'made';
+      detail[key] = { att:S[key]?.att?.[0], [made]:S[key]?.[made]?.[0] };
+    }
+    detail.gain = S.gain?.[0];
+    const valid = cleanSeasonStats(detail);
+    if (valid) mine.stats = valid;
+  }
   const rd = [mine];
   for (const p of c.fixtures[c.round]) if (p !== pair) rd.push(simMatch(c, p[0], p[1]));
+  M.champResultDone = true;
   c.results.push(rd);
   c.round++;
   save();
 }
 
+
+/* Scores cover every round; detailed totals cover only matches with a saved full-time card. */
+function seasonSummary(c = champ) {
+  const out = { played:0, won:0, drawn:0, lost:0, pointsFor:0, pointsAgainst:0, triesFor:0, triesAgainst:0, detailedMatches:0, legacyMatches:0,
+    stats:{ conv:{att:0,made:0}, pen:{att:0,made:0}, dg:{att:0,made:0}, tk:{att:0,made:0}, duelN:{att:0,won:0}, gain:0 } };
+  if (!c) return out;
+  for (const rd of c.results) for (const r of rd) {
+    if (r.h !== c.user && r.a !== c.user) continue;
+    const home = r.h === c.user, us = home ? r.hs : r.as, them = home ? r.as : r.hs;
+    out.played++; out[us > them ? 'won' : us < them ? 'lost' : 'drawn']++;
+    out.pointsFor += us; out.pointsAgainst += them;
+    out.triesFor += home ? r.ht : r.at; out.triesAgainst += home ? r.at : r.ht;
+    const detail = cleanSeasonStats(r.stats);
+    if (!detail) { out.legacyMatches++; continue; }
+    out.detailedMatches++;
+    for (const key of ['conv', 'pen', 'dg', 'tk', 'duelN']) for (const field in out.stats[key]) out.stats[key][field] += detail[key][field];
+    out.stats.gain += detail.gain;
+  }
+  return out;
+}
+function retainCompletedSeason(c) {
+  if (practice || !c || c.round !== 5) return false;
+  const valid = cleanChamp(c);
+  if (!valid || champHistory.some(old => old.id === valid.id)) return false;
+  c.id = valid.id;
+  champHistory.push(valid);
+  champHistory = champHistory.slice(-SEASON_LIMIT);
+  return true;
+}
+function archiveChampionship(c = champ) {
+  const added = retainCompletedSeason(c);
+  if (added) save();
+  return added;
+}
+/* Counts describe only the retained completed seasons, rather than an all-time record. */
+function savedHonours() {
+  const out = { seasons:champHistory.length, champions:0, grandSlams:0, tripleCrowns:0, woodenSpoons:0 };
+  const keys = { Champions:'champions', 'Grand Slam':'grandSlams', 'Triple Crown':'tripleCrowns', 'Wooden Spoon':'woodenSpoons' };
+  for (const c of champHistory) for (const h of honours(c, standings(c))) if (h[1] === c.user) out[keys[h[0]]]++;
+  return out;
+}
 /* =========================================================
    Rendering
    ========================================================= */
@@ -4744,7 +4836,7 @@ function navLayer() {                                      // the top layer: the
 }
 function navCands(layer) {
   const out = [];
-  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step')) {
+  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary')) {
     if (el.disabled || el.hidden || el.getAttribute('aria-disabled') === 'true' || (el.closest && el.closest('[hidden]'))) continue;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
     out.push(el);
@@ -5345,6 +5437,8 @@ else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 /* home. Quick Match is the gold button and the keyboard focus. */
 const BOOL = { sound:1, hints:1, coach:1 };
 function renderHome() {
+  renderCabinet('home-history');
+  $('home-cabinet').hidden = !champHistory.length;
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
     const val = BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];
@@ -5596,8 +5690,38 @@ function renderBuilder() {
 buildBuilder();
 
 /* hub */
+/* Saved progression uses counted scores for every fixture; detailed counters belong only to played matches. */
+function seasonRecord(s) {
+  return s.won + ' W · ' + s.drawn + ' D · ' + s.lost + ' L';
+}
+function recordedStatsHtml(s, label = 'Recorded Match Stats') {
+  const pair = (v, made = 'made') => v[made] + '/' + v.att;
+  const row = (label, value) => `<tr><th scope="row">${label}</th><td>${value}</td></tr>`;
+  return `<table class="saved-stats"><caption>${label} · your team</caption><tbody>${
+    row('Conversions', pair(s.conv)) + row('Penalty Goals', pair(s.pen)) + row('Drop Goals', pair(s.dg))
+    + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
+  }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
+}
+function renderCabinet(id) {
+  const history = champHistory.slice().reverse();
+  const totals = savedHonours();
+  const tally = [['Title', 'Titles', totals.champions], ['Grand Slam', 'Grand Slams', totals.grandSlams], ['Triple Crown', 'Triple Crowns', totals.tripleCrowns]];
+  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved in this browser.</p>`
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([singular, plural, n]) => `${n} ${n === 1 ? singular : plural}`).join(' · ')}</p>` + history.map((c, i) => {
+      const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
+      const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
+      return `<article class="season-entry"><p class="eyebrow">${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
+    }).join('') : '<p class="stat-note">Complete a championship to record your first season here.</p>');
+}
+function renderSeasonSummary(c) {
+  const s = seasonSummary(c);
+  $('hub-summary').innerHTML = `<p class="eyebrow">Your Season · ${s.played} of 5 Played</p><p class="season-record">${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p>`
+    + (s.detailedMatches ? `<details class="season-details"><summary>Recorded Season Stats · ${s.detailedMatches} ${s.detailedMatches === 1 ? 'Match' : 'Matches'}</summary>${recordedStatsHtml(s.stats, 'Recorded Season Totals')}<p class="stat-note">Totals cover ${s.detailedMatches} recorded ${s.detailedMatches === 1 ? 'match' : 'matches'}${s.legacyMatches ? '; older matches have scores and tries only' : ''}.</p></details>` : `<p class="stat-note">${c.round >= 5 ? 'This season has scores and tries only.' : 'Detailed stats appear here after your next played match.'}</p>`);
+}
 function renderHub() {
   const c = champ; if (!c) return;
+  archiveChampionship(c);
+  renderSeasonSummary(c); renderCabinet('hub-history');
   const done = c.round >= 5;
   const T = c.teams;
   const rows = standings(c);
@@ -5638,7 +5762,7 @@ function renderHub() {
     $('hub-hon').hidden = true;
   } else {
     $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
-    $('hub-new').addEventListener('click', () => { champ = null; save(); openTeams('champ'); });
+    $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); openTeams('champ'); });
     $('hub-hon').innerHTML = honours(c, rows).map(([t, i, gold]) => `<div class="hon${gold ? ' gold' : ''}"><span class="eyebrow">${t}</span><b>${esc(T[i].name)}</b></div>`).join('');
     $('hub-hon').hidden = false;
   }
@@ -5650,7 +5774,7 @@ function renderHub() {
     </tr>`).join('');
   $('hub-results').innerHTML = c.results.map((rd, k) => ({ rd, k })).reverse().map(({ rd, k }) => `
     <div class="rd"><p class="eyebrow">Round ${k+1}</p>
-      ${rd.map(r => `<div class="res${r.h === c.user || r.a === c.user ? ' me' : ''}"><span class="h">${esc(T[r.h].name)}</span><span class="sc">${r.hs} – ${r.as}</span><span>${esc(T[r.a].name)}</span></div>`).join('')}
+      ${rd.map(r => { const mine = r.h === c.user || r.a === c.user; return `<div class="result-entry"><div class="res${mine ? ' me' : ''}"><span class="h">${esc(T[r.h].name)}</span><span class="sc">${r.hs} – ${r.as}</span><span>${esc(T[r.a].name)}</span></div>${mine && r.stats ? `<details class="match-details"><summary>Recorded Match Stats</summary>${recordedStatsHtml(r.stats)}</details>` : ''}</div>`; }).join('')}
     </div>`).join('');
   $('hub-reset').textContent = 'Start Fresh'; resetArmed = false;
 }
@@ -5658,7 +5782,7 @@ let resetArmed = false;
 $('hub-back').addEventListener('click', goHome);
 $('hub-reset').addEventListener('click', () => {
   if (!resetArmed) { resetArmed = true; $('hub-reset').textContent = 'Tap Again to Start Fresh'; return; }
-  champ = null; save(); goHome();
+  archiveChampionship(champ); champ = null; save(); goHome();
 });
 
 /* =========================================================
@@ -5819,7 +5943,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
 
 function start(data) {
   load();
-  if (data && (data.champ || data.settings || data.custom)) restore(data);
+  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data)) restore(data);
   resize(); setDesk();
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
@@ -5829,6 +5953,6 @@ function start(data) {
   restStick();
   requestAnimationFrame(frame);
 }
-try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom })); } catch (e) { /* not in a viewer */ }
+try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial })); } catch (e) { /* not in a viewer */ }
 if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
 })();

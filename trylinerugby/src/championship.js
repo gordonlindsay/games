@@ -24,10 +24,12 @@ function simMatch(c, h, a) {
    The five are whoever was passed in (a random draw, at the team screen). You play the weakest of them first and the
    strongest last: circle position 0 stays put and meets position 5, then the new position 5, each round. */
 function newChamp(user, others) {
+  if (practice) return;
+  retainCompletedSeason(champ);
   const five = others.slice(0, 5);
   const ranked = five.map((t, i) => ({ i:i + 1, r:rateOf(t) })).sort((a, b) => a.r - b.r || a.i - b.i);
   const order = [0, ranked[4].i, ranked[3].i, ranked[2].i, ranked[1].i, ranked[0].i];
-  champ = { user:0, teams:[user, ...five].map(t => ({ ...t })), round:0, fixtures:roundRobin(order), results:[] };
+  champ = { id:'season-' + Date.now().toString(36) + '-' + (++seasonSerial).toString(36), user:0, teams:[user, ...five].map(t => ({ ...t })), round:0, fixtures:roundRobin(order), results:[] };
   save();
 }
 function userFixture(c) {
@@ -181,15 +183,68 @@ function champNote(c) {
   return name + ' · ' + (f.clinched ? 'Champions' : ordinal(f.place + 1)) + ' · Round ' + (c.round + 1) + ' of 5';
 }
 function recordChampResult() {
+  if (!champ || champ.round >= 5 || !M || !M.champ || M.demo || M.two || practice || M.champResultDone) return;
   const c = champ, { pair } = userFixture(c);
   const userHome = pair[0] === c.user;
   const mine = userHome
     ? { h:pair[0], a:pair[1], hs:M.score[0], as:M.score[1], ht:M.tries[0], at:M.tries[1] }
     : { h:pair[0], a:pair[1], hs:M.score[1], as:M.score[0], ht:M.tries[1], at:M.tries[0] };
+  const S = M.stats, detail = {};
+  if (S && !M.headless) {
+    for (const key of ['conv', 'pen', 'dg', 'tk', 'duelN']) {
+      const made = key === 'duelN' ? 'won' : 'made';
+      detail[key] = { att:S[key]?.att?.[0], [made]:S[key]?.[made]?.[0] };
+    }
+    detail.gain = S.gain?.[0];
+    const valid = cleanSeasonStats(detail);
+    if (valid) mine.stats = valid;
+  }
   const rd = [mine];
   for (const p of c.fixtures[c.round]) if (p !== pair) rd.push(simMatch(c, p[0], p[1]));
+  M.champResultDone = true;
   c.results.push(rd);
   c.round++;
   save();
 }
 
+
+/* Scores cover every round; detailed totals cover only matches with a saved full-time card. */
+function seasonSummary(c = champ) {
+  const out = { played:0, won:0, drawn:0, lost:0, pointsFor:0, pointsAgainst:0, triesFor:0, triesAgainst:0, detailedMatches:0, legacyMatches:0,
+    stats:{ conv:{att:0,made:0}, pen:{att:0,made:0}, dg:{att:0,made:0}, tk:{att:0,made:0}, duelN:{att:0,won:0}, gain:0 } };
+  if (!c) return out;
+  for (const rd of c.results) for (const r of rd) {
+    if (r.h !== c.user && r.a !== c.user) continue;
+    const home = r.h === c.user, us = home ? r.hs : r.as, them = home ? r.as : r.hs;
+    out.played++; out[us > them ? 'won' : us < them ? 'lost' : 'drawn']++;
+    out.pointsFor += us; out.pointsAgainst += them;
+    out.triesFor += home ? r.ht : r.at; out.triesAgainst += home ? r.at : r.ht;
+    const detail = cleanSeasonStats(r.stats);
+    if (!detail) { out.legacyMatches++; continue; }
+    out.detailedMatches++;
+    for (const key of ['conv', 'pen', 'dg', 'tk', 'duelN']) for (const field in out.stats[key]) out.stats[key][field] += detail[key][field];
+    out.stats.gain += detail.gain;
+  }
+  return out;
+}
+function retainCompletedSeason(c) {
+  if (practice || !c || c.round !== 5) return false;
+  const valid = cleanChamp(c);
+  if (!valid || champHistory.some(old => old.id === valid.id)) return false;
+  c.id = valid.id;
+  champHistory.push(valid);
+  champHistory = champHistory.slice(-SEASON_LIMIT);
+  return true;
+}
+function archiveChampionship(c = champ) {
+  const added = retainCompletedSeason(c);
+  if (added) save();
+  return added;
+}
+/* Counts describe only the retained completed seasons, rather than an all-time record. */
+function savedHonours() {
+  const out = { seasons:champHistory.length, champions:0, grandSlams:0, tripleCrowns:0, woodenSpoons:0 };
+  const keys = { Champions:'champions', 'Grand Slam':'grandSlams', 'Triple Crown':'tripleCrowns', 'Wooden Spoon':'woodenSpoons' };
+  for (const c of champHistory) for (const h of honours(c, standings(c))) if (h[1] === c.user) out[keys[h[0]]]++;
+  return out;
+}

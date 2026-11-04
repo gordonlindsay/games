@@ -128,6 +128,8 @@ else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 /* home. Quick Match is the gold button and the keyboard focus. */
 const BOOL = { sound:1, hints:1, coach:1 };
 function renderHome() {
+  renderCabinet('home-history');
+  $('home-cabinet').hidden = !champHistory.length;
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
     const val = BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];
@@ -379,8 +381,38 @@ function renderBuilder() {
 buildBuilder();
 
 /* hub */
+/* Saved progression uses counted scores for every fixture; detailed counters belong only to played matches. */
+function seasonRecord(s) {
+  return s.won + ' W · ' + s.drawn + ' D · ' + s.lost + ' L';
+}
+function recordedStatsHtml(s, label = 'Recorded Match Stats') {
+  const pair = (v, made = 'made') => v[made] + '/' + v.att;
+  const row = (label, value) => `<tr><th scope="row">${label}</th><td>${value}</td></tr>`;
+  return `<table class="saved-stats"><caption>${label} · your team</caption><tbody>${
+    row('Conversions', pair(s.conv)) + row('Penalty Goals', pair(s.pen)) + row('Drop Goals', pair(s.dg))
+    + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
+  }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
+}
+function renderCabinet(id) {
+  const history = champHistory.slice().reverse();
+  const totals = savedHonours();
+  const tally = [['Title', 'Titles', totals.champions], ['Grand Slam', 'Grand Slams', totals.grandSlams], ['Triple Crown', 'Triple Crowns', totals.tripleCrowns]];
+  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved in this browser.</p>`
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([singular, plural, n]) => `${n} ${n === 1 ? singular : plural}`).join(' · ')}</p>` + history.map((c, i) => {
+      const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
+      const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
+      return `<article class="season-entry"><p class="eyebrow">${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
+    }).join('') : '<p class="stat-note">Complete a championship to record your first season here.</p>');
+}
+function renderSeasonSummary(c) {
+  const s = seasonSummary(c);
+  $('hub-summary').innerHTML = `<p class="eyebrow">Your Season · ${s.played} of 5 Played</p><p class="season-record">${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p>`
+    + (s.detailedMatches ? `<details class="season-details"><summary>Recorded Season Stats · ${s.detailedMatches} ${s.detailedMatches === 1 ? 'Match' : 'Matches'}</summary>${recordedStatsHtml(s.stats, 'Recorded Season Totals')}<p class="stat-note">Totals cover ${s.detailedMatches} recorded ${s.detailedMatches === 1 ? 'match' : 'matches'}${s.legacyMatches ? '; older matches have scores and tries only' : ''}.</p></details>` : `<p class="stat-note">${c.round >= 5 ? 'This season has scores and tries only.' : 'Detailed stats appear here after your next played match.'}</p>`);
+}
 function renderHub() {
   const c = champ; if (!c) return;
+  archiveChampionship(c);
+  renderSeasonSummary(c); renderCabinet('hub-history');
   const done = c.round >= 5;
   const T = c.teams;
   const rows = standings(c);
@@ -421,7 +453,7 @@ function renderHub() {
     $('hub-hon').hidden = true;
   } else {
     $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
-    $('hub-new').addEventListener('click', () => { champ = null; save(); openTeams('champ'); });
+    $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); openTeams('champ'); });
     $('hub-hon').innerHTML = honours(c, rows).map(([t, i, gold]) => `<div class="hon${gold ? ' gold' : ''}"><span class="eyebrow">${t}</span><b>${esc(T[i].name)}</b></div>`).join('');
     $('hub-hon').hidden = false;
   }
@@ -433,7 +465,7 @@ function renderHub() {
     </tr>`).join('');
   $('hub-results').innerHTML = c.results.map((rd, k) => ({ rd, k })).reverse().map(({ rd, k }) => `
     <div class="rd"><p class="eyebrow">Round ${k+1}</p>
-      ${rd.map(r => `<div class="res${r.h === c.user || r.a === c.user ? ' me' : ''}"><span class="h">${esc(T[r.h].name)}</span><span class="sc">${r.hs} – ${r.as}</span><span>${esc(T[r.a].name)}</span></div>`).join('')}
+      ${rd.map(r => { const mine = r.h === c.user || r.a === c.user; return `<div class="result-entry"><div class="res${mine ? ' me' : ''}"><span class="h">${esc(T[r.h].name)}</span><span class="sc">${r.hs} – ${r.as}</span><span>${esc(T[r.a].name)}</span></div>${mine && r.stats ? `<details class="match-details"><summary>Recorded Match Stats</summary>${recordedStatsHtml(r.stats)}</details>` : ''}</div>`; }).join('')}
     </div>`).join('');
   $('hub-reset').textContent = 'Start Fresh'; resetArmed = false;
 }
@@ -441,6 +473,6 @@ let resetArmed = false;
 $('hub-back').addEventListener('click', goHome);
 $('hub-reset').addEventListener('click', () => {
   if (!resetArmed) { resetArmed = true; $('hub-reset').textContent = 'Tap Again to Start Fresh'; return; }
-  champ = null; save(); goHome();
+  archiveChampionship(champ); champ = null; save(); goHome();
 });
 

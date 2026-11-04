@@ -15,6 +15,14 @@ Pass and Kick now dim while your pass is airborne, then reactivate on the catch.
 
 Run the new checks with `node tools/practice.mjs` and `node tools/polish.mjs`. Existing checks use `tools/source.mjs` to read external sources; `GAME=/absolute/path/to/index.html` still supports old inline snapshots for comparisons.
 
+## Championship progression
+
+Played championship fixtures now retain your team's full-time counters, with expandable match details and season totals. Older results keep their scores and tries; the summary states how many matches have detailed stats. Opponents' simulated fixtures have scores and tries only.
+
+The Trophy Cabinet keeps the last ten completed seasons in this browser, including your team, finishing place, win/draw/loss record, points, tries and honours. Start Fresh resets the current campaign while preserving completed seasons. Older completed campaigns can be imported without duplicate awards; identical legacy season records without an ID count as one saved season. Practice, demos and ordinary simulations do not add records.
+
+The hub and the home screen provide cabinet access. Expandable stats and cabinet panels work with touch, keyboard and controller navigation. Nothing changes scoring, match balance or the championship table rules.
+
 ## Development source and checks
 
 Edit `src/*.js`, then run these commands from `trylinerugby/`:
@@ -253,7 +261,7 @@ The browser still loads only `game.js`; `src/` and the Node tools are developmen
   attempted one. Duels belong to the side that played them, so a computer's column is a dash. Metres Made is ground
   gained with the ball, toward that side's try line, and it can be negative. Half time stays the score and the tries.
   Continue, Rematch and Second Half are still one press. A headless run, the menu demo and AI v AI do not open the card.
-  The championship still stores the score and the tries, not this table. Checked by `tools/postmatch.mjs`.
+  New played championship results now also retain these user-side counters; older results keep their score and tries. Checked by `tools/postmatch.mjs`.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
   The chase between fixtures reads that table. It does not change the points.
