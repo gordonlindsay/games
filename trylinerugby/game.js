@@ -2803,7 +2803,7 @@ function handleUser(dt) {
   }
   const poss = b.state === 'held' ? b.carrier.team : (b.state === 'air' && b.f.kind === 'pass') ? b.f.team : M.poss;
   for (const t of [poss, 1 - poss]) if (I[t]) userStep(t, I[t], dt);
-  for (const inp of inputs) inp.aCancel = inp.bCancel = false;
+  for (const inp of inputs) inp.aCancel = inp.bCancel = inp.cCancel = false;
   for (const t of [0, 1]) if (inputOf(t)) gestureStep(t, dt);
 }
 function userStep(t, i, dt) {
@@ -2817,11 +2817,11 @@ function userStep(t, i, dt) {
     }
   }
   tickUserPass(t, dt);
-  if (i.b) {
+  if (i.b && !inp.bCancel) {
     if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
-  if (i.c && c) sprintPress(t);                            // the hold itself is read by sprintTick
+  if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick
   if (S.charging) {
     if (!(M.phase === 'play' && b.state === 'held' && b.carrier === c) || inp.bCancel || c.bind) { S.charging = false; S.charge = 0; }   // a cancelled touch is never a kick, and a man held in a tackle can't kick
     else {
@@ -4487,21 +4487,22 @@ function nearestAct(x, y) {                                // the button whose c
   return best;
 }
 function beginAct(el, key, e) {
+  if (el._held) return; // one finger owns an action until its own release or cancellation
   if (e && e.preventDefault) e.preventDefault();
   try { if (e && e.pointerId != null) el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-  el._held = true; el.classList.add('press');
+  el._held = true; el._pointerId = e && e.pointerId != null ? e.pointerId : null; el.classList.add('press');
   setDev('touch'); btn(input, key, 2, true);
   ac();
 }
-function endAct(el, key, cancel) {
-  if (!el._held) return;
-  el._held = false; el.classList.remove('press'); btn(input, key, 2, false);
-  if (cancel) input[key + 'Cancel'] = true;               // a cancel is never a release
+function endAct(el, key, cancel, e) {
+  if (!el._held || (el._pointerId != null && (!e || e.pointerId !== el._pointerId))) return;
+  el._held = false; el._pointerId = null; el.classList.remove('press'); btn(input, key, 2, false);
+  if (cancel && !input[key + 'Down']) input[key + 'Cancel'] = true; // cancel this action only when no other source still holds it
 }
 function bindAct(el, key) {
   el.addEventListener('pointerdown', e => beginAct(el, key, e));
-  el.addEventListener('pointerup', () => endAct(el, key, false));
-  el.addEventListener('pointercancel', () => endAct(el, key, true));
+  el.addEventListener('pointerup', e => endAct(el, key, false, e));
+  el.addEventListener('pointercancel', e => endAct(el, key, true, e));
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 for (const [id, key] of ACTS) bindAct($(id), key);
@@ -4510,13 +4511,13 @@ cv.addEventListener('pointerdown', e => {                 // a tap in the gap fa
   const hit = nearestAct(e.clientX, e.clientY);
   if (hit) beginAct(hit.el, hit.key, e);
 });
-const endActs = cancel => { for (const [id, key] of ACTS) endAct($(id), key, cancel); };
-cv.addEventListener('pointerup', () => endActs(false));    // capture sends the release to the button; if it could not, the pitch still lets go
-cv.addEventListener('pointercancel', () => endActs(true));
+const endActs = (cancel, e) => { for (const [id, key] of ACTS) endAct($(id), key, cancel, e); };
+cv.addEventListener('pointerup', e => endActs(false, e));    // capture sends the release to the button; if it could not, the pitch still lets go
+cv.addEventListener('pointercancel', e => endActs(true, e));
 function releaseTouch() {                                  // the phone turned, or the stick has to come up: the ring goes home and no button stays pressed
   input.stickId = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null;
   knob.style.transform = ''; stick.classList.remove('on'); restStick();
-  for (const [id, key] of ACTS) { const el = $(id); el._held = false; el.classList.remove('press'); }
+  for (const [id, key] of ACTS) { const el = $(id); el._held = false; el._pointerId = null; el.classList.remove('press'); }
   for (const inp of inputs) {
     inp.jx = inp.jy = 0; inp.latPeak = null; inp.gest = null;
     inp.src.a = inp.src.b = inp.src.c = 0;
@@ -4551,6 +4552,7 @@ function rebuildRoutes() {
 }
 const keyRoute = code => ROUTES.get(code) || null;         // [seat, act] with act one of m a b c pause, or null for an unbound key
 function releaseAll() {                                    // a scheme change, or the window losing focus: nothing held can stick
+  releaseTouch(); // a lost pointer release must not leave a button owned by an old finger
   for (const inp of inputs) { inp.keys.clear(); inp.held.clear(); inp.src.a = inp.src.b = inp.src.c = 0; inp.aDown = inp.bDown = inp.cDown = false; inp.gest = null; }
   rebuildRoutes();
 }

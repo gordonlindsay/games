@@ -3,7 +3,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertBundleCurrent } from './build.mjs';
 export function readGameSource() {
+  // Individual checks must exercise current sources, not a forgotten older bundle.
+  // Explicit GAME snapshots remain independent of this checkout's source manifest.
+  if (!process.env.GAME) assertBundleCurrent();
   const pagePath = process.env.GAME ? path.resolve(process.env.GAME) : fileURLToPath(new URL('../index.html', import.meta.url));
   const directory = path.dirname(pagePath);
   let html = fs.readFileSync(pagePath, 'utf8');

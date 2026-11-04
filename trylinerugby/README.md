@@ -9,11 +9,41 @@ nations, a local Surrey club, or a team you make yourself.
 
 The home screen pairs **How to Play** and **Practice Ground** in matching buttons. **Match Help** switches control hints and first-match coach tips together, retaining existing browser saves. Practice Ground offers: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.
 
-The page remains buildless. `index.html` holds the screens, `styles.css` the existing styling, `practice.css` the practice layout and `game.js` the game. Serve this folder over HTTP; opening the page needs no package installation or build step. The engine is still one script; further separation can follow after playtesting.
+The deployed page remains buildless. `index.html` holds the screens, `styles.css` the existing styling, `practice.css` the practice layout and committed `game.js` the generated browser script. Serve this folder over HTTP; playing needs no package installation or build step. Development sources live in `src/`, with the build and checks below.
 
-Pass and Kick now dim while your pass is airborne, then reactivate on the catch. Opponent possession still offers defensive controls. A pressured selected receiver now also reads **Marked**, and useful defensive cover reads **Switch**. Resuming from pause cancels a tactical kick charge, preventing an unintended kick when the button was released while paused. Match balance is unchanged.
+Pass and Kick now dim while your pass is airborne, then reactivate on the catch. Opponent possession still offers defensive controls. A pressured selected receiver now also reads **Marked**, and useful defensive cover reads **Switch**. Resuming from pause cancels a tactical kick charge, preventing an unintended kick when the button was released while paused. Match balance is unchanged. Touch actions now track their owning finger: lifting another finger does not release a held action, and cancelled Switch/Sprint presses do not switch defenders. Cancelling touch preserves other input sources; losing browser focus clears touch ownership so the next press works.
 
 Run the new checks with `node tools/practice.mjs` and `node tools/polish.mjs`. Existing checks use `tools/source.mjs` to read external sources; `GAME=/absolute/path/to/index.html` still supports old inline snapshots for comparisons.
+
+## Development source and checks
+
+Edit `src/*.js`, then run these commands from `trylinerugby/`:
+
+```sh
+node tools/build.mjs
+node tools/build.mjs --check
+node tools/check.mjs
+```
+
+The build has no dependencies. It follows `src/manifest.json` and writes `game.js`; commit both the edited sources and generated script. `--check` rejects syntax errors or a stale generated script without rewriting it. Direct gameplay checks also reject a stale current bundle. `GAME=/absolute/path/to/index.html` still reads a separate old snapshot for comparisons.
+
+The source files are **shared-closure sections, not independent ES modules**. Each is valid JavaScript with complete declarations and functions; the build places them in their existing order inside one private function. Cross-file names, initialisation order and execution remain shared. Moving declarations or adding top-level side effects requires care. This stage creates clear editing boundaries while retaining the existing engine and test interfaces.
+
+| Source | Responsibility |
+|---|---|
+| `src/data.js`, `src/persistence.js` | Teams, tuning, settings and browser saves |
+| `src/match.js`, `src/ball.js` | Match state, restarts, possession and ball flight |
+| `src/passing.js`, `src/contact.js`, `src/movement.js` | Passing, tackling, sprint, team movement and match update |
+| `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
+| `src/championship.js` | Fixtures, results, standings and title race |
+| `src/render-*.js` | Pitch, players, close-up scenes and match drawing |
+| `src/sound.js` | Synthesised audio and rumble |
+| `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
+| `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
+| `src/practice.js` | Isolated drills and practice feedback |
+| `src/boot.js` | Frame loop, diagnostic API and startup |
+
+The browser still loads only `game.js`; `src/` and the Node tools are development inputs. See [tools/CHECKS.md](tools/CHECKS.md) for the quick gate, full gameplay checks and separate two-player suite.
 
 ## Decided
 
