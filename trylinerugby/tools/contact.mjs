@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // Contact, the ruck and Sprint: staged binds and broken tackles, the tier table against its closed form, the Second Man,
 // collisions (men on the ground and bound pairs stepped round), the ruck race and the roll-away, wrong-footing, every
 // timer running out, the Tackle press rule, the Sprint meter (hold to sprint, the floor, the refill, the ease-out charged
@@ -12,7 +13,7 @@ process.env.SEED ??= '7';
 import fs from 'fs';
 const { T, bot, rndCalls, reseed } = await import('./harness.mjs');
 const C = T.contact, { CONTACT, RUCK, SPRINT } = C, STEP = T.STEP, M = () => T.M, inp = T.input;
-const html = fs.readFileSync(new URL(process.env.GAME || '../index.html', import.meta.url), 'utf8'), script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+const html = readGameSource(), script = html.match(/<script>([\s\S]*)<\/script>/)[1];
 const doc = globalThis.document, $ = id => doc.getElementById(id);
 const hyp = Math.hypot, clamp = (v, a, b) => v < a ? a : v > b ? b : v, dist = (a, b) => hyp(a.x - b.x, a.y - b.y), dirOf = t => t === 0 ? 1 : -1;
 const near = (a, b, e) => Math.abs(a - b) <= e;
@@ -1315,3 +1316,4 @@ done('25 switch');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

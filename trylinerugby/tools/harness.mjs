@@ -1,10 +1,10 @@
-// Loads the game's <script> from ../index.html into Node with a stub DOM,
+// Loads the game's page and local script into Node with a stub DOM,
 // so the match engine can run headless. Exports the engine handle, a scripted
 // "average player", and its duel and goal-kick behaviour. SEED=n makes runs repeatable.
-import fs from 'fs';
+import { readGameSource } from './source.mjs';
 
 // GAME=path loads another copy of the game (a pinned snapshot, or a scratch copy with one line reverted)
-const html = fs.readFileSync(process.env.GAME ? process.env.GAME : new URL('../index.html', import.meta.url), 'utf8');
+const html = readGameSource();
 let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 // BURST='{ ok:[1.12,2.0], perfect:[1.18,2.5], knock:[1.08,1.2] }' tries other duel bursts without editing the game
 if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST = ${process.env.BURST};`);
@@ -44,9 +44,9 @@ const el = id => {
   };
 };
 const els = {};
-const MODALS = ['m-pen', 'm-break', 'm-pause', 'm-tut'], SCREENS = ['s-home', 's-teams', 's-build', 's-hub', 's-help', 's-join'];
+const MODALS = ['m-pen', 'm-break', 'm-pause', 'm-tut', 'm-practice'], SCREENS = ['s-home', 's-teams', 's-build', 's-hub', 's-help', 's-join', 's-practice'];
 // the home and team screens' On | Off rows (.seg[data-key]): one stub a row, with its data-key and two child buttons, so the game wires its handlers and a test can press Hints On and Off
-const SEGS = [...html.matchAll(/<div class="seg" data-key="([a-z]+)">/g)].map(m => { const seg = el('seg-' + m[1]); seg.dataset.key = m[1]; seg.children = [el('seg-' + m[1] + '-0'), el('seg-' + m[1] + '-1')]; return seg; });
+const SEGS = [...html.matchAll(/<div class="seg" data-key="([a-z]+)"[^>]*>/g)].map(m => { const seg = el('seg-' + m[1]); seg.dataset.key = m[1]; seg.children = [el('seg-' + m[1] + '-0'), el('seg-' + m[1] + '-1')]; return seg; });
 for (const s of [0, 1]) { const seg = els['pz-h' + s] = el('pz-h' + s); seg.children = [el('pz-h' + s + '-0'), el('pz-h' + s + '-1')]; }   // the pause card's Hints rows have their On and Off buttons, so the game wires them and a test can press one
 globalThis.document = { getElementById: id => (els[id] ||= el(id)), querySelectorAll: sel => (sel === '.modal' ? MODALS : sel === '.screen' ? SCREENS : []).map(id => (els[id] ||= el(id))).concat(sel === '.seg[data-key]' ? SEGS : []), addEventListener: noop, createElement: () => el(''), createTextNode: () => ({}), hidden: false };
 globalThis.window = globalThis;
@@ -281,3 +281,4 @@ export function bot(side = 0) {
   }
   if (HABITS) { if (hold && !inp.cDown) inp.cPressed = true; inp.cDown = hold; }
 }
+

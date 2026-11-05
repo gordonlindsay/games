@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // The first-time tutorial (2026-10-17): the first time each duel kind, the scrum, the lineout, a goal kick and a drop goal comes up
 // on this device (with Hints On) play pauses under a card or two; Next then Play; a press advances; the world and the clock are
 // frozen; each moment is remembered once seen; Replay Tutorial forgets them; two player names the owner. Exits 1 on any failure.
@@ -10,7 +11,7 @@ let failed = 0, passed = 0, group = '';
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', group + ':', msg); } };
 const done = name => { console.log(`${name.padEnd(26)} ${failed ? 'FAIL so far ' + failed : 'ok'} (${passed} passed)`); };
 const begin = name => { group = name; };
-const html = fs.readFileSync(new URL(process.env.GAME || '../index.html', import.meta.url), 'utf8');
+const html = readGameSource();
 if (!D.tutCards || !D.TUT_IDS) { console.log('FAIL tutorial: tutCards and TUT_IDS are missing from the engine'); console.log('0 passed, 1 failed'); process.exit(1); }
 const settings = () => D.settings();
 const fresh = (o = {}) => { T.newMatch(0, 1, { halfLen:240, diff:1, headless:false, duels:'live', ...o }); D.setMode('match'); D.setTwo(!!(o.humans && o.humans[0] && o.humans[1])); for (const inp of inputs) { inp.keys.clear(); inp.jx = inp.jy = 0; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; } };
@@ -172,10 +173,10 @@ begin('coach');
 {
   const X = T.teams, line = id => D.COACH_LINE[id];
   ok(D.COACH_IDS.join() === 'offload,step,tackle,duel,kick,pass,sprint' && /coach:true, tips:\[\]/.test(html), 'Coach Tips starts on, and the lines are the seven moments');
-  const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'coach');
-  ok(!!seg && seg.children.length === 2, 'the home row is Coach Tips, On and Off');
-  seg.children[1].click(); ok(settings().coach === false, 'Off stores false');
-  seg.children[0].click(); ok(settings().coach === true, 'On stores true');
+  const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'hints');
+  ok(!!seg && seg.children.length === 2, 'Match Help controls coach tips and hints together');
+  seg.children[1].click(); ok(settings().coach === false && settings().hints === false, 'Off disables both types of help');
+  seg.children[0].click(); ok(settings().coach === true && settings().hints === true, 'On enables both types of help');
   X.restore({ settings:{ tips:['sprint', 'nope', 'pass', 'pass'] } });
   ok(settings().tips.join() === 'pass,sprint', `known lines load in the game's order (${settings().tips.join()})`);
   settings().coach = false;
@@ -257,3 +258,4 @@ done('E coach');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

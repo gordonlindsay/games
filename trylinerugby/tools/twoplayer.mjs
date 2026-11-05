@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // Two player: the input layer (per-seat slots fed by the keyboard halves, touch and controllers), the sides refactor and the
 // mirrored close-ups. Exits 1 on any failure. The sections: A keyboard routing, B controllers, C seats and menus, E the geometric
 // mirror, F the two-player step, G role-keyed balance, H one player as the away side.
@@ -560,10 +561,12 @@ done('H away side');
 begin('join');
 {
   const fs = (await import('fs')).default, S = T.sides, X = T.teams;
-  const src = fs.readFileSync(process.env.GAME ? process.env.GAME : new URL('../index.html', import.meta.url), 'utf8');
+  const src = readGameSource();
   ok(/<button class="btn desk-only" id="b-two">Two Player<\/button>/.test(src), 'the home has a desk-only Two Player button');
   ok(/<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>/.test(src) && src.indexOf('id="b-champ"') < src.indexOf('id="b-two"') && src.indexOf('id="b-two"') < src.indexOf('id="b-help"'), 'Quick Match is still the gold first button with the focus; Championship, Two Player, How to Play follow');
-  ok(/body\.desk \.home-row #b-help\{grid-column:1\/-1\}/.test(src) && /\.desk-only\{display:none\}/.test(src), 'on a computer How to Play takes a row of its own under Championship | Two Player; phones never see the button');
+  const matchRow = src.match(/<div class="row2 home-row">([\s\S]*?)<div class="row2 learn-row">/);
+  const learnRow = src.match(/<div class="row2 learn-row">([\s\S]*?)<\/div>/);
+  ok(matchRow && /id="b-champ"/.test(matchRow[1]) && /class="btn desk-only" id="b-two"/.test(matchRow[1]) && !/id="b-help"|id="b-practice"/.test(matchRow[1]) && learnRow && /id="b-help"/.test(learnRow[1]) && /id="b-practice"/.test(learnRow[1]) && /\.row2\{display:grid;grid-template-columns:1fr 1fr;/.test(src) && /\.home-row \.col\{grid-column:1\/-1;/.test(src) && /body\.desk \.home-row \.col\{grid-column:auto\}/.test(src) && /\.desk-only\{display:none\}/.test(src), 'How to Play and Practice Ground share a symmetric learn row; Championship fills the phone match row and shares it with Two Player on computers');
   ok(/b\.classList\.toggle\('desk', PADS\.size > 0 \|\| !!\(deskQuery && deskQuery\.matches\)\)/.test(src) && /PADS\.delete\(index\);\n  setDesk\(\);/.test(src) && /function padConnected\(gp\) \{\n  padsOn = true;\n  if \(gp\) padOf\(gp\);\n  setDesk\(\);/.test(src), 'body.desk follows the pointer or the pads connected right now: a phone that had a pad goes back to its own layout when it is unplugged');
   // labels on the join screen are Title Case, with no arrow glyph anywhere in the markup
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);

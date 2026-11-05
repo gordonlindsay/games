@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // Forced duel scenarios with asserts, and the scrum close-up's rates. Exits 1 on any failure.
 // node tools/duels.mjs            (SEED=1 unless set, so the scrum rate cells repeat)
 process.env.SEED ??= '1';
@@ -262,7 +263,7 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
     ok(fillAt(fills(1.2), bw/4) && fillAt(fills(SD), bw/2) && !fillAt(fills(1.2), bw/2*1.2/2.0), `drawScrum's bar fills by pos/SCRUM_DOM: a quarter of it at the 1.2m steal line, half at ${SD}m (not 0.3 of it at 1.2, the old /2.0)`);
     runUntil(() => M().phase !== 'cut', 4000); }
   // the words: neither the Help page nor the README tells the player to hold the stick at a scrum
-  const html = fs.readFileSync(new URL(process.env.GAME || '../index.html', import.meta.url), 'utf8'), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const html = readGameSource(), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   const help = (html.match(/<dt>Scrum<\/dt><dd>([\s\S]*?)<\/dd>/) || [])[1] || '', bullet = (readme.match(/- \*\*Scrum:\*\*([\s\S]*?)\n- \*\*/) || [])[1] || '';
   ok(help && !/stick/i.test(help) && /tap it fast/i.test(help), `the Help page's Scrum row says tap it fast and never mentions the stick (${help.slice(0, 90)})`);
   ok(bullet && !/stick/i.test(bullet), `the README's Scrum bullet never mentions the stick`);
@@ -381,10 +382,11 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
       const a = frozenOf(rate0), b = frozenOf(1); SL.rate = rate0;
       ok(a.score === b.score && a.duels === b.duels && a.won === b.won && a.fr > b.fr + 0.5*a.duels, `a bot match is the same match (${a.score}, ${a.duels} duels, ${a.won} won) with ${a.fr.toFixed(1)}s frozen in duels against ${b.fr.toFixed(1)}s without slow motion`); }
     // the words
-    const html = fs.readFileSync(new URL(process.env.GAME || '../index.html', import.meta.url), 'utf8'), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+    const html = readGameSource(), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
     ok(/<dt>Duels<\/dt><dd>[^<]*(<b>[^<]*<\/b>[^<]*)*slow motion/.test(html) && /slow motion/i.test(readme), 'the Help page\'s Duels row and the README say the duel starts in slow motion');
   }
 }
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

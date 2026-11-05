@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // Teams: kit clashes, local clubs, teams you make, and championships built from any six.
 // Also the menu (Quick Match first, no Duels switch) and the save: what loads, what is dropped.
 // Exits 1 on any failure.
@@ -156,7 +157,7 @@ function playOut() {
 
 // 7. the menu, and a save that survives a reload
 {
-  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const html = readGameSource();
   const quick = html.indexOf('id="b-quick"'), champBtn = html.indexOf('id="b-champ"');
   ok(quick > 0 && champBtn > quick, 'Quick Match comes before Championship');
   ok(/<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>/.test(html), 'Quick Match is the primary button and takes focus');
@@ -472,3 +473,4 @@ function settle(pick) {
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

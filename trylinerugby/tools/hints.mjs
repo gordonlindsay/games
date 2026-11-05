@@ -1,3 +1,4 @@
+import { readGameSource } from './source.mjs';
 // The hints card (2026-10-17): its settings and saving, its words for every moment on every device and seat, when it shows and
 // hides, that it never covers a figure or the ring in a duel, the open-play cards' triggers, the penalty card's sublines and
 // tick, the home row and the pause rows. Exits 1 on any failure.
@@ -10,7 +11,7 @@ let failed = 0, passed = 0, group = '';
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', group + ':', msg); } };
 const done = name => { console.log(`${name.padEnd(26)} ${failed ? 'FAIL so far ' + failed : 'ok'} (${passed} passed)`); };
 const begin = name => { group = name; };
-const html = fs.readFileSync(new URL(process.env.GAME || '../index.html', import.meta.url), 'utf8');
+const html = readGameSource();
 if (!D.hintFor || !D.hintShown) { console.log('FAIL hints: hintFor and hintShown are missing from the engine'); console.log('0 passed, 1 failed'); process.exit(1); }
 const settings = () => D.settings();
 const fresh = (o = {}) => { T.newMatch(0, 1, { halfLen:240, diff:1, headless:true, duels:'live', ...o }); D.setMode('match'); D.setTwo(!!(o.humans && o.humans[0] && o.humans[1])); for (const inp of inputs) { inp.keys.clear(); inp.jx = inp.jy = 0; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; } };
@@ -287,8 +288,8 @@ begin('cards');
   fresh({ humans:[true, true], levels:[1, 1] }); D.pause(); ok($('pz-hl0').textContent === 'Player 1 Hints' && !$('pz-hrow1').hidden, 'two player paused: a row each'); D.resume(); D.setTwo(false);
   // the markup: the home's fourth row, the pause rows, the penalty sublines, the two cards, the Help entries, Replay Tutorial beside Back to Menu
   const home = html.slice(html.indexOf('id="s-home"'), html.indexOf('id="s-teams"'));
-  const rows = [...home.matchAll(/<div class="set"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)">/g)].map(m => m[1] + ':' + m[2]);
-  ok(rows.join() === 'Half Length:half,Difficulty:diff,Sound:sound,Hints:hints,Coach Tips:coach', `the home's rows: ${rows.join(', ')}`);
+  const rows = [...home.matchAll(/<div class="set"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"[^>]*>/g)].map(m => m[1] + ':' + m[2]);
+  ok(rows.join() === 'Half Length:half,Difficulty:diff,Sound:sound,Match Help:hints', `the home's rows: ${rows.join(', ')}`);
   ok(/<div class="hc" id="hc0" hidden>/.test(html) && /<div class="hc s1" id="hc1" hidden>/.test(html) && /id="ht0"/.test(html) && /id="ht1"/.test(html), 'two cards, #hc0 and #hc1, each with its tick');
   ok(/id="pz-h0"/.test(html) && /id="pz-h1"/.test(html) && /Player 2 Hints/.test(html), 'the pause card carries the Hints rows');
   ok(/<div id="pz-hints">\s*<div class="set"><span class="lbl" id="pz-hl0">Hints<\/span>[\s\S]*?<div class="set" id="pz-hrow1" hidden>[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn warn" id="pz-quit">/.test(html) && /#pz-hints\{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:14px 12px\}[^\n]*\n#pz-hints \.set\{display:contents\}\n#pz-hints \.set\[hidden\]\{display:none\}/.test(html), 'the two Hints rows share one grid (one label column), so both On | Off controls start on the same line');
@@ -296,7 +297,7 @@ begin('cards');
   fresh({ humans:[true, true], levels:[1, 1] }); D.stage('past', 1); T.update(STEP); sync(); ok($('hc0').classList.contains('two') && $('hc1').classList.contains('two'), 'the cards carry the two-player class in a two-player match'); runUntil(() => M().phase !== 'cut', 900);
   D.setTwo(false); fresh(); D.stage('past'); T.update(STEP); sync(); ok(!$('hc0').classList.contains('two'), 'and not in one player'); runUntil(() => M().phase !== 'cut', 900);
   ok(/<small class="hsub" id="p-goal-s">3 Points<\/small>/.test(html) && /Kick to Touch<small class="hsub">Lineout Upfield<\/small>/.test(html) && /Tap and Go<small class="hsub">Play On Now<\/small>/.test(html) && /id="ht-pen"/.test(html), 'the penalty card\'s sublines and tick');
-  ok(/<dt>Hints<\/dt><dd>The card in the top corner names the control for each close-up\. Untick <b>Hints<\/b> on it, or set Hints to Off on the menu\.<\/dd>/.test(html), 'the Help page\'s Hints entry');
+  ok(/<dt>Hints<\/dt><dd>The card in the top corner names the control for each close-up\. Untick <b>Hints<\/b> on it, or set <b>Match Help<\/b> to Off on the menu\.<\/dd>/.test(html), 'the Help page\'s Hints entry');
   ok(/<div class="row2"><button class="btn" id="h-replay">Replay Tutorial<\/button><button class="btn" id="h-back" data-back>Back to Menu<\/button><\/div>/.test(html), 'Replay Tutorial and Back to Menu share a balanced row on How to Play');
   ok(/id="jt0"/.test(html) && /id="jt1"/.test(html), 'each join card has a Hints tick');
   const labels = [...html.matchAll(/<button class="hc-tick" id="[a-z0-9-]+" aria-label="([^"]+)"><i><\/i><span>([^<]+)<\/span><\/button>/g)].map(m => m[2]);
@@ -340,3 +341,4 @@ done('G plates');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+

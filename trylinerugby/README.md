@@ -5,6 +5,66 @@ nations, a local Surrey club, or a team you make yourself.
 
 **Play:** https://gordonlindsay.github.io/games/trylinerugby/
 
+## Practice + Polish (review branch)
+
+The home screen pairs **How to Play** and **Practice Ground** in matching buttons. **Match Help** switches control hints and first-match coach tips together, retaining existing browser saves. Practice Ground offers: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.
+
+The deployed page remains buildless. `index.html` holds the screens, `styles.css` the existing styling, `practice.css` the practice layout and committed `game.js` the generated browser script. Serve this folder over HTTP; playing needs no package installation or build step. Development sources live in `src/`, with the build and checks below.
+
+Pass and Kick now dim while your pass is airborne, then reactivate on the catch. Opponent possession still offers defensive controls. A pressured selected receiver now also reads **Marked**, and useful defensive cover reads **Switch**. Resuming from pause cancels a tactical kick charge, preventing an unintended kick when the button was released while paused. Match balance is unchanged. Touch actions now track their owning finger: lifting another finger does not release a held action, and cancelled Switch/Sprint presses do not switch defenders. Cancelling touch preserves other input sources; losing browser focus clears touch ownership so the next press works.
+
+Run the new checks with `node tools/practice.mjs` and `node tools/polish.mjs`. Existing checks use `tools/source.mjs` to read external sources; `GAME=/absolute/path/to/index.html` still supports old inline snapshots for comparisons.
+
+## Championship progression
+
+Played championship fixtures now retain your team's full-time counters, with expandable match details and season totals. Older results keep their scores and tries; the summary states how many matches have detailed stats. Opponents' simulated fixtures have scores and tries only.
+
+The Trophy Cabinet keeps the last ten completed seasons in this browser, including your team, finishing place, win/draw/loss record, points, tries and honours. Start Fresh resets the current campaign while preserving completed seasons. Older completed campaigns can be imported without duplicate awards; identical legacy season records without an ID count as one saved season. Practice, demos and ordinary simulations do not add records.
+
+The hub and the home screen provide cabinet access. Expandable stats and cabinet panels work with touch, keyboard and controller navigation. Nothing changes scoring, match balance or the championship table rules.
+
+## Install and offline play
+
+The game includes a web app manifest, app icons and a scoped service worker. On a supported HTTPS browser, visit online and wait for **Offline Ready** before relying on cached play. The home menu offers **Install Game** when the browser provides an install prompt; How to Play includes manual home-screen guidance. Installation does not move your browser save between browsers or devices.
+
+The worker caches only this game's local shell and checks downloaded file hashes against the generated version. It does not cache other games, remote fonts, arbitrary requests or browser saves. Offline fonts use the existing system-font fallbacks. Cache storage must remain available; verified files can refill missing entries when online. A mismatched or incomplete new deployment leaves the working version in place.
+
+Updates wait by default. **Update Game** appears on the home menu and reloads only after an explicit choice; entering a match meanwhile defers the reload until home returns. Other tabs never reload automatically, and their older caches are retained while windows remain open. Install/update buttons support touch, keyboard and controller navigation.
+
+Use HTTPS to test real service-worker installation. The HTTP development preview remains playable but cannot demonstrate a secure-browser install. The focused offline suites exercise worker and browser events in controlled runtimes; physical-device installation and airplane-mode play still need a device check.
+
+## Development source and checks
+
+Edit `src/*.js`, then run these commands from `trylinerugby/`:
+
+```sh
+node tools/build.mjs
+node tools/build.mjs --check
+node tools/check.mjs
+```
+
+The build has no dependencies. It follows `src/manifest.json` and writes `game.js` and versioned `sw.js`; commit the edited sources, shell assets and both generated scripts. `--check` rejects syntax errors or stale generated game/service-worker scripts without rewriting them. Direct gameplay checks also reject a stale current bundle. `GAME=/absolute/path/to/index.html` still reads a separate old snapshot for comparisons.
+
+The source files are **shared-closure sections, not independent ES modules**. Each is valid JavaScript with complete declarations and functions; the build places them in their existing order inside one private function. Cross-file names, initialisation order and execution remain shared. Moving declarations or adding top-level side effects requires care. This stage creates clear editing boundaries while retaining the existing engine and test interfaces.
+
+| Source | Responsibility |
+|---|---|
+| `src/data.js`, `src/persistence.js` | Teams, tuning, settings and browser saves |
+| `src/match.js`, `src/ball.js` | Match state, restarts, possession and ball flight |
+| `src/passing.js`, `src/contact.js`, `src/movement.js` | Passing, tackling, sprint, team movement and match update |
+| `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
+| `src/championship.js` | Fixtures, results, standings and title race |
+| `src/render-*.js` | Pitch, players, close-up scenes and match drawing |
+| `src/sound.js` | Synthesised audio and rumble |
+| `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
+| `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
+| `src/practice.js` | Isolated drills and practice feedback |
+| `src/offline-client.js` | Optional browser installation, offline status and safe update controls |
+| `src/service-worker.js` | Separate worker template; cached shell and integrity checks (outside the game bundle) |
+| `src/boot.js` | Frame loop, diagnostic API and startup |
+
+The browser still loads only `game.js`; `src/` and the Node tools are development inputs. See [tools/CHECKS.md](tools/CHECKS.md) for the quick gate, full gameplay checks and separate two-player suite.
+
 ## Decided
 
 - **Sevens**, not fifteens (2026-10-11). Seven a side on a full-size pitch keeps a phone screen readable.
@@ -213,7 +273,7 @@ nations, a local Surrey club, or a team you make yourself.
   attempted one. Duels belong to the side that played them, so a computer's column is a dash. Metres Made is ground
   gained with the ball, toward that side's try line, and it can be negative. Half time stays the score and the tries.
   Continue, Rematch and Second Half are still one press. A headless run, the menu demo and AI v AI do not open the card.
-  The championship still stores the score and the tries, not this table. Checked by `tools/postmatch.mjs`.
+  New played championship results now also retain these user-side counters; older results keep their score and tries. Checked by `tools/postmatch.mjs`.
 - Championship uses Six Nations table rules (4 a win, try bonus at 4+, losing bonus within 7, +3 Grand Slam)
   but not the name, crests or player names. Those are licensed, so a wider release needs a licence or made-up names.
   The chase between fixtures reads that table. It does not change the points.
