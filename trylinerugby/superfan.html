@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b130e">
+<title>Super Fan · Tryline Rugby Sevens</title>
+<meta name="description" content="Super Fan: the Tryline Rugby Sevens unlock that supports a partner club, and the share each club gets.">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<main class="page">
+<header class="top">
+<p class="eyebrow">Tryline Rugby Sevens</p>
+<h1>Super Fan</h1>
+<nav class="nav" aria-label="Tryline Rugby Sevens pages"><a class="btn" href="privacy.html">Privacy</a><a class="btn" href="support.html">Support</a><a class="btn" href="superfan.html" aria-current="page">Super Fan</a></nav>
+</header>
+
+<p class="lede">Super Fan is a one-off unlock in the Tryline Rugby Sevens app for supporters of a partner club. A stated share of what we receive for every Super Fan unlock goes to that club.</p>
+
+<h2 id="get">What You Get</h2>
+<ul>
+<li>Everything in Full Game: Championship, Career, Create Team and Hard.</li>
+<li>Import: your club and its league, from your club's web page or a tournament link.</li>
+<li>Your club's kit and name on your Super Fan badge.</li>
+<li>Your club first in Career and Championship.</li>
+</ul>
+
+<h2 id="clubs">Partner Clubs</h2>
+<!-- A club appears here only once it has confirmed its share in writing and its FAN_CLUBS entry (src/store.js) carries
+     agreed:true. Then, in the same change, a table goes here with one row per agreed club:
+       <tr data-club="KEY" data-product="tryline.fan.KEY" data-share="N"><td>NAME</td><td>N%</td></tr>
+     with NAME as FAN_CLUBS has it, and under the table the game's own line for each, word for word (storeShareLine in
+     src/store.js): "Supports NAME: N% of what we receive for every Super Fan unlock goes to the club."
+     tools/listing.mjs checks every row against FAN_CLUBS, and fails on a club named here that is not marked agreed. -->
+<p>Partner clubs appear here, each with its share, once the club has agreed in writing.</p>
+
+<h2 id="share">How the Share Works</h2>
+<p>Each partner club has its own Super Fan unlock in the App Store. Apple reports how many of each one sold and what it paid us for them. The club's share is a percentage of what Apple pays us for each unlock, after Apple's commission and VAT, worked out from those reports. It is paid to the club [OWNER: how often, for example every three months].</p>
+<p>The reports count sales, not people. Neither we nor the club learn who bought Super Fan.</p>
+
+<h2 id="join">For Clubs</h2>
+<p>Would your club like to be a partner? Email support@signcheck.ai.</p>
+</main>
+</body>
+</html>
