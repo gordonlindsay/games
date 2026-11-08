@@ -1,10 +1,11 @@
 // Career seasons end to end, with the real cups engine: scripted careers played through the game's own paths, year after year.
 // Each career is a script for one player (a back or a forward, Whole Team or My Player, Men or Women, Normal or Kids). Every round he
 // answers the hub's dilemma, trains through Train, the drill's ready card and its result card (the drill's stars are the script's), and
-// plays his match from the hub's Play Match to the full-time card's Continue. The cup matches (and, for the first career, its first
-// league season and first international window) are played to full time by the harness's bot (seeded; My Player by the Pro Mode bot of
-// tools/career-pro.mjs); the rest are scripted at the last hooter. Where the script needs a result to reach a phase (a league won, a level knockout, a Test
-// lost) the score is set as the second half's hooter goes, and the engine's own full time follows (endHalf, finishMatch, the card).
+// plays his match from the hub's Play Match to the full-time card's Continue. Each career's plan says which matches are played to full
+// time by the harness's bot (seeded; My Player by the Pro Mode bot of tools/career-pro.mjs): every cup match of B, C and D, and A's
+// first league season, first European Cup, first international window, World Cup and tour; the rest are scripted at the last hooter.
+// Where the script needs a result to reach a phase (a league won, a level knockout, a Test lost) the score is set as the second half's
+// hooter goes, and the engine's own full time follows (endHalf, finishMatch, the card).
 // Between phases it presses Continue, picks a country at the first call-up and Stays or signs in the transfer window, as the buttons
 // do. The save is written and read back at every turn. Then careers saved by every earlier build (stages 0 to 4, mid-season and
 // finished: tools/fixtures/career-saves.json) are loaded and played on, and, where Playwright is installed, every phase's screens are
@@ -275,7 +276,10 @@ const vs = (cr, f) => f.teams[f.home === f.user ? f.away : f.home];
 const RUNS = [];
 // A: a back, Whole Team, Men, Normal, at Bath. His first season is played; Bath win it, then the European Cup, its Semi-Final level at
 // full time for the Golden Try. He Stays every year, is called up for England, takes the Triple Crown (France beat him), wins the World
-// Cup through a level Quarter-Final, and on the Home Nations Tour in year 6 wins Tests 1 and 3 and loses the second.
+// Cup through a level Quarter-Final, and on the Home Nations Tour in year 6 wins Tests 1 and 3 and loses the second. His European Cups
+// after year 1 are scripted: the bot's deeds in his year 2 pair (6 points each, at the cap, where a scripted match gives 5) take him
+// from 79 to exactly 80 at the end of year 2, a call-up a year early on a single point, in a script that already trains every round
+// at two stars and plays two more rounds a year than tools/career.mjs's calibration player.
 RUNS.push(career({ label:'A (a back, Whole Team, Men, Normal)', name:'Sam', pos:'B', num:7, club:'BTH', cat:'men', pro:false, kids:false, country:'ENG', dilemma:'skill', stars:2, until:7,
   plan(cr, f) {
     const opp = vs(cr, f);
@@ -293,7 +297,7 @@ RUNS.push(career({ label:'B (a forward, My Player, Women, Normal)', name:'Isla',
   plan(cr, f) {
     const opp = vs(cr, f);
     if (cr.phase === 'league') return { want:cr.year === 2 && f.label === 'Round 5 of 5' ? 'loss' : 'win' };
-    if (cr.phase === 'cup') return { real:cr.year === 1, want:f.label === 'Final' ? 'loss' : 'win' };
+    if (cr.phase === 'cup') return { real:true, want:f.label === 'Final' ? 'loss' : 'win' };
     if (cr.phase === 'intl' && cr.season) return { want:opp.id === 'ENG' && cr.history.filter(h => h.kind === 'intl').length === 0 ? 'win' : 'win' };
     if (cr.phase === 'intl') return { real:true, want:f.label === 'Final' ? 'loss' : f.label === 'Semi-Final' ? 'level' : 'win', golden:'win' };
     if (cr.phase === 'tour') return { real:true, want:f.label === 'Test 2 of 3' ? 'win' : 'loss' };
@@ -505,8 +509,11 @@ function chromium() {
 }
 // Every phase's screens in a browser, at 844x390 and 667x375: the hub of each phase (with a dilemma, and with every kind of trophy in
 // two figures), the cup's draw, the screen between phases (a season won, a cup won and lost, the call-up on Men and Women, the Triple
-// Crown, a tour), the transfer window, and the full-time card of a cup match. Each fits without a scroll (the league table's own screen
-// excepted), nothing runs off the side, every button is 44px, and no name is cut. SHOTS=<dir> writes each as int-<state>-<w>x<h>.png.
+// Crown, a tour), the transfer window (and one with the longest leagues), the full-time card of a cup match, and the hub with the
+// longest names (South Africa Women, London North Women: three lines at 667x375 at the hub's size). Each fits without a scroll (the
+// league table's own screen excepted), nothing runs off the side, every button is 44px, no name is cut, no word anywhere on it is
+// broken across two lines (a bracket's names included), and a fixture's jersey keeps its size and its gap from the name.
+// SHOTS=<dir> writes each as int-<state>-<w>x<h>.png.
 async function browserChecks() {
   if (process.env.GAME || process.env.NO_BROWSER) { console.log('skip the browser checks (GAME or NO_BROWSER set)'); return; }
   const chrome = chromium();
@@ -530,6 +537,7 @@ async function browserChecks() {
     var rounds = (cr, n) => { const c = cr.season; for (let k = 0; k < n; k++) { c.results.push(c.fixtures[k].map(([h, a]) => ({ h, a, hs:h === 0 ? 24 : 10, as:a === 0 ? 24 : 7, ht:h === 0 ? 4 : 1, at:a === 0 ? 4 : 1 }))); c.round++; } };
     var skillsTo = (cr, v) => { for (const [k] of C.skills()) cr.skills[k] = v; };
     var mk = o => { const cr = C.create({ name:'Alfie', pos:'B', num:7, club:club('BTH'), ...o }); C.set(cr); return cr; };
+    var opp = (cr, name) => { const f = C.ahead(cr); f.teams[f.user === f.home ? f.away : f.home].name = name; };   // the next opponent by the longest names, for the fit
     var cupPlay = (cr, us, them) => { const f = C.ahead(cr), home = f.home === f.user; K.cupRecord(cr.cup, home ? { score:[us, them], tries:[Math.floor(us/5), Math.floor(them/5)] } : { score:[them, us], tries:[Math.floor(them/5), Math.floor(us/5)] }); };
     var full = (us, them) => { $('cr-play').click(); const M = T.M; M.half = 2; M.score = [us, them]; M.tries = [Math.floor(us/5), Math.floor(them/5)]; T.arcade.endHalf(); };
     var euro = o => { const cr = mk(o); cr.year = 2; finish(cr, 1); C.advance(); return cr; };
@@ -552,6 +560,8 @@ async function browserChecks() {
     'draw-world':`var cr = world({}); cupPlay(cr, 30, 0); C.open(); $('cr-table').click();`,
     'ft-world':`var cr = world({}); C.open(); full(10, 10);`,
     'hub-world-ko':`var cr = world({ cat:'women' }); cupPlay(cr, 30, 0); cupPlay(cr, 30, 0); C.open();`,
+    'hub-long-cup':`var cr = world({ cat:'women' }); cupPlay(cr, 30, 0); cupPlay(cr, 30, 0); opp(cr, 'South Africa Women'); C.open();`,
+    'hub-long-league':`var cr = mk({ cat:'women' }); cr.year = 9; rounds(cr, 1); cr.life.done = cr.season.id + ':1'; opp(cr, 'London North Women'); C.open();`,
     'draw-world-ko':`var cr = world({}); cupPlay(cr, 30, 0); cupPlay(cr, 30, 0); cupPlay(cr, 24, 10); C.open(); $('cr-table').click();`,
     'end-world':`var cr = world({}); for (let i = 0; i < 5 && C.ahead(cr); i++) cupPlay(cr, 30, 0); C.open();`,
     'hub-tour':`var cr = tour({}); cupPlay(cr, 20, 10); C.open();`,
@@ -559,6 +569,7 @@ async function browserChecks() {
     'ft-tour':`var cr = tour({}); C.open(); full(20, 13);`,
     'end-tour':`var cr = tour({ cat:'women' }); cupPlay(cr, 20, 10); cupPlay(cr, 10, 20); cupPlay(cr, 10, 20); C.open();`,
     'transfer':`var cr = mk({}); cr.year = 2; skillsTo(cr, 55); finish(cr, 3); C.advance(); for (let i = 0; i < 40 && cr.offers.length < 3; i++) cr.offers = T.career.offers(cr); C.open();`,
+    'transfer-long':`var cr = mk({ cat:'women' }); cr.year = 2; skillsTo(cr, 55); finish(cr, 3); C.advance(); cr.offers = ['Galway', 'Bloemfontein', 'Johannesburg'].map(n => X.NATIONAL.flat().find(t => t.name === n).id); C.open();`,   // the longest leagues, three offers and Stay: Celtic and Italy, South Africa
   };
   const shots = process.env.SHOTS ? path.resolve(process.env.SHOTS) : null;
   if (shots) fs.mkdirSync(shots, { recursive:true });
@@ -582,6 +593,23 @@ async function browserChecks() {
           const over = [...s.querySelectorAll('*')].filter(el => shownEl(el) && (box(el).right > innerWidth + 0.5 || box(el).left < -0.5)).map(el => el.id || el.className);
           const small = [...s.querySelectorAll('button')].filter(shownEl).filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(b => b.id || b.textContent.trim().slice(0, 16));
           const cut = [...s.querySelectorAll('[data-fit]')].filter(shownEl).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent.trim().slice(0, 16));
+          // a word broken across two lines, anywhere on the screen (overflow-wrap:anywhere breaks a name rather than let it run over): each
+          // word's own boxes, split at spaces and hyphens, must sit on one line
+          const walk = document.createTreeWalker(s, NodeFilter.SHOW_TEXT), range = document.createRange();
+          for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+            if (!n.parentElement || !shownEl(n.parentElement)) continue;
+            for (const m of n.data.matchAll(/[^\s\-–]+/g)) {
+              range.setStart(n, m.index); range.setEnd(n, m.index + m[0].length);
+              if (new Set([...range.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top))).size > 1) cut.push(m[0] + ' broken');
+            }
+          }
+          // a fixture's jersey: its full size, and clear of the name by the design's gap (10px; a squashed wrapper let it run into the name)
+          for (const t of [...s.querySelectorAll('.fx-team')].filter(shownEl)) {
+            const j = t.querySelector('.jersey'), nm = t.querySelector('[data-fit]');
+            if (!j || !nm || !shownEl(j)) continue;
+            const jb = box(j), nb = box(nm), gap = t.classList.contains('r') ? jb.left - nb.right : nb.left - jb.right;
+            if (jb.width < 33.5 || gap < 8) cut.push(`${nm.textContent.trim().slice(0, 16)} jersey ${Math.round(jb.width)}px, gap ${Math.round(gap)}px`);
+          }
           const act = s.querySelector('#cr-play:not([hidden]), #ce-go, #br-go, #cd-back');
           const a = act && box(act);
           return { name:s.id, scroll:s.scrollHeight - s.clientHeight, over:over.slice(0, 4), small:small.slice(0, 4), cut:cut.slice(0, 4), act:a ? a.bottom <= innerHeight + 0.5 && a.top >= 0 : true };
@@ -596,7 +624,7 @@ async function browserChecks() {
       const fits = results.filter(r => r.scroll > 1 || r.over.length || !r.act);
       ok(!fits.length, `${w}x${h}: every hub, draw, screen between phases, transfer window and cup full-time card fits with no scroll, nothing off the side, its main button in view (${fits.map(r => r.state + ' ' + json([r.scroll, r.over, r.act])).join('; ') || 'all ' + results.length})`);
       const tight = results.filter(r => r.small.length || r.cut.length);
-      ok(!tight.length, `${w}x${h}: every button at least 44px and no name cut, the trophy row with five kinds in two figures included (${tight.map(r => r.state + ' ' + json([r.small, r.cut])).join('; ') || 'all'})`);
+      ok(!tight.length, `${w}x${h}: every button at least 44px, no name cut, no word broken across two lines and every fixture's jersey clear of its name, the trophy row with five kinds in two figures, a tour's Tests and the longest names included (${tight.map(r => r.state + ' ' + json([r.small, r.cut])).join('; ') || 'all'})`);
       // a controller and the keyboard on the draw: the first press lands on Back to Career, B goes back to the hub
       const pad = await page.evaluate(src => {
         (0, eval)(src);

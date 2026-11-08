@@ -493,6 +493,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-main{display:flex;flex-direction:column;gap:10px;min-width:0}
 .cr-main .head > div{gap:4px}
 .cr-main .fx-team span{overflow-wrap:normal}
+.cr-main .fx-team .jw{flex:none}   /* the jersey keeps its size and its gap: only the name yields (as .cup-main's) */
 #cr-play{margin-bottom:12px}   /* far enough above Train | Table that a controller's Down reaches them, not the row below */
 .cr-card{display:flex;flex-direction:column;gap:12px;padding:14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);min-width:0}
 .cr-id{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
@@ -940,11 +941,11 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-cup b{font:inherit}
 /* the transfer window: the offers and Stay in equal parts, each a club's card */
 .cr-offers{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:10px}
-.team.cr-offer{grid-template-columns:44px minmax(0,1fr);grid-template-rows:auto auto;align-content:center;gap:4px 12px;min-height:76px;padding:10px 12px}
+.team.cr-offer{grid-template-columns:44px minmax(0,1fr);grid-template-rows:1fr 1fr;align-content:center;gap:4px 12px;min-height:76px;padding:10px 12px}   /* equal rows: the name on the card's middle line in every card, a league on two lines or one */
 .cr-offer .jw{grid-row:1/3}
 .cr-offer .jersey{width:44px;height:44px}
 .cr-offer .tname{align-self:end;font-size:24px;white-space:nowrap;overflow-wrap:normal}
-.cr-offer .lbl{align-self:start;white-space:nowrap}
+.cr-offer .lbl{align-self:start;white-space:nowrap;overflow-wrap:normal}   /* one line, stepped down; one still too wide at 10px (Celtic and Italy, South Africa in a quarter of 667) wraps at its own size (careerFit, data-fit="wrap") */
 .cr-offer.stay{border-style:dashed}
 .cr-offer.stay .lbl{color:var(--chalk)}
 @media (max-width:620px){ .cr-offers{grid-template-columns:repeat(2,minmax(0,1fr))} }

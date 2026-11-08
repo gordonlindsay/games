@@ -8105,7 +8105,10 @@ function cupWinHtml(c, pre, label) {                       // the winner's card,
       <button class="btn primary" id="${pre}-new">${esc(label)}</button>
     </div>`;
 }
-function cupTieHtml(c, k, i, short) {                      // one tie in the bracket: two rows, the winner bright, yours marked; one not drawn yet is the same size
+/* One tie in the bracket: two rows, the winner bright, yours marked; one not drawn yet is the same size. short: each side by its code, as
+   the World Cup's and a tour's are (three columns: Australia and Home Nations are wider than a column at 667x375, and a name is never
+   broken inside a word); the European Cup's two columns take a club's name. */
+function cupTieHtml(c, k, i, short) {
   const pair = c.fixtures[k] && c.fixtures[k][i], m = c.results[k] && c.results[k][i];
   if (!pair) return `<div class="cb-tie tbc"><span class="cb-nm">${cupDone(c) ? 'Not Needed' : 'To Come'}</span></div>`;
   const row = (t, sc) => `<span class="cb-row${t === c.user ? ' me' : ''}${m && m.w === t ? ' win' : ''}">${cupChip(c.teams[t])}<span class="cb-nm">${esc(short ? c.teams[t].id : listName(c.teams[t]))}</span><b>${m ? sc : ''}</b></span>`;
@@ -8114,7 +8117,7 @@ function cupTieHtml(c, k, i, short) {                      // one tie in the bra
 function cupBracketHtml(c) {                               // the knockouts (or a tour's Tests) as columns of ties, each round's name over its column
   const cols = c.id === 'euro' ? [[0, 2], [1, 1]] : c.id === 'tour' ? [[0, 1], [1, 1], [2, 1]] : [[3, 4], [4, 2], [5, 1]];
   const name = k => (c.id === 'tour' ? 'Test ' + (k + 1) : CUP_PLURAL[cupStage(c, k)]);
-  return `<div class="cup-bracket" style="--cols:${cols.length}">${cols.map(([k]) => `<p class="eyebrow">${name(k)}</p>`).join('')}${cols.map(([k, n]) => `<div class="cb-col">${Array.from({ length:n }, (_, i) => cupTieHtml(c, k, i, c.id === 'world')).join('')}</div>`).join('')}</div>`;
+  return `<div class="cup-bracket" style="--cols:${cols.length}">${cols.map(([k]) => `<p class="eyebrow">${name(k)}</p>`).join('')}${cols.map(([k, n]) => `<div class="cb-col">${Array.from({ length:n }, (_, i) => cupTieHtml(c, k, i, c.id !== 'euro')).join('')}</div>`).join('')}</div>`;
 }
 function cupPoolsHtml(c) {
   return `<div class="cup-pools">${c.pools.map((own, p) => `<div class="cp-pool${own.includes(c.user) ? ' me' : ''}"><p class="eyebrow">Pool ${CUP_POOL[p]}</p>
@@ -10584,15 +10587,30 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
    A label (Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing first, and may go down to 10px; so may the
-   trophy row, whose five kinds in two figures need 11px beside the overall at 667x375. */
+   trophy row, whose five kinds in two figures need 11px beside the overall at 667x375. One marked data-fit="wrap" (a transfer offer's
+   league) that is still too wide at its smallest goes on two lines or more at its own size instead, a word never broken. A side's name
+   in the fixture also steps down while it runs to three lines (South Africa Women, London North Women at 667x375, and the hub would
+   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. */
 function careerFit(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
-    el.style.fontSize = ''; el.style.letterSpacing = '';
+    el.style.fontSize = ''; el.style.letterSpacing = ''; el.style.whiteSpace = '';
     const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl') || el.classList.contains('eyebrow');
     if (lbl && over()) el.style.letterSpacing = '.04em';
     let px = parseFloat(getComputedStyle(el).fontSize) || 20;
-    while (over() && px > (lbl || el.classList.contains('cr-cab') ? 10 : 12)) { px -= 1; el.style.fontSize = px + 'px'; }
+    const floor = lbl || el.classList.contains('cr-cab') ? 10 : 12;
+    while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
+    if (over() && el.getAttribute('data-fit') === 'wrap') {
+      el.style.whiteSpace = 'normal'; el.style.fontSize = ''; el.style.letterSpacing = ''; px = parseFloat(getComputedStyle(el).fontSize) || 20;
+      while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
+    }
+    if (el.parentNode && el.parentNode.classList && el.parentNode.classList.contains('fx-team')) while (careerLines(el) > 2 && px > 16) { px -= 1; el.style.fontSize = px + 'px'; }
   }
+}
+function careerLines(el) {                           // the lines a name takes: its height against one line's (1 with no layout, as in the tools' DOM)
+  const h = el.getBoundingClientRect().height;
+  if (!h) return 1;
+  const ws = el.style.whiteSpace; el.style.whiteSpace = 'nowrap'; const one = el.getBoundingClientRect().height; el.style.whiteSpace = ws;
+  return one ? Math.round(h/one) : 1;
 }
 function careerShow(id) { showScreen(id); const s = $(id); s.scrollTop = 0; careerFit(s); }
 /* The side he plays for in this phase: his club, his country, or the cup's side for him (the touring side on tour). */
@@ -10864,7 +10882,7 @@ function renderCareerEnd() {
 }
 /* The transfer window: each offer a club's card (its kit, name, rating and league), and his own club's card to Stay, in equal parts. */
 function careerOfferHtml(t, id, lbl) {
-  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit>${esc(lbl)}</span></button>`;
+  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
 }
 function renderCareerMove() {
   const cr = career, team = careerTeamFor(cr, 'league'), cat = careerCat(cr), body = $('ce-body');

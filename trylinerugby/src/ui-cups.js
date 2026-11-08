@@ -210,7 +210,10 @@ function cupWinHtml(c, pre, label) {                       // the winner's card,
       <button class="btn primary" id="${pre}-new">${esc(label)}</button>
     </div>`;
 }
-function cupTieHtml(c, k, i, short) {                      // one tie in the bracket: two rows, the winner bright, yours marked; one not drawn yet is the same size
+/* One tie in the bracket: two rows, the winner bright, yours marked; one not drawn yet is the same size. short: each side by its code, as
+   the World Cup's and a tour's are (three columns: Australia and Home Nations are wider than a column at 667x375, and a name is never
+   broken inside a word); the European Cup's two columns take a club's name. */
+function cupTieHtml(c, k, i, short) {
   const pair = c.fixtures[k] && c.fixtures[k][i], m = c.results[k] && c.results[k][i];
   if (!pair) return `<div class="cb-tie tbc"><span class="cb-nm">${cupDone(c) ? 'Not Needed' : 'To Come'}</span></div>`;
   const row = (t, sc) => `<span class="cb-row${t === c.user ? ' me' : ''}${m && m.w === t ? ' win' : ''}">${cupChip(c.teams[t])}<span class="cb-nm">${esc(short ? c.teams[t].id : listName(c.teams[t]))}</span><b>${m ? sc : ''}</b></span>`;
@@ -219,7 +222,7 @@ function cupTieHtml(c, k, i, short) {                      // one tie in the bra
 function cupBracketHtml(c) {                               // the knockouts (or a tour's Tests) as columns of ties, each round's name over its column
   const cols = c.id === 'euro' ? [[0, 2], [1, 1]] : c.id === 'tour' ? [[0, 1], [1, 1], [2, 1]] : [[3, 4], [4, 2], [5, 1]];
   const name = k => (c.id === 'tour' ? 'Test ' + (k + 1) : CUP_PLURAL[cupStage(c, k)]);
-  return `<div class="cup-bracket" style="--cols:${cols.length}">${cols.map(([k]) => `<p class="eyebrow">${name(k)}</p>`).join('')}${cols.map(([k, n]) => `<div class="cb-col">${Array.from({ length:n }, (_, i) => cupTieHtml(c, k, i, c.id === 'world')).join('')}</div>`).join('')}</div>`;
+  return `<div class="cup-bracket" style="--cols:${cols.length}">${cols.map(([k]) => `<p class="eyebrow">${name(k)}</p>`).join('')}${cols.map(([k, n]) => `<div class="cb-col">${Array.from({ length:n }, (_, i) => cupTieHtml(c, k, i, c.id !== 'euro')).join('')}</div>`).join('')}</div>`;
 }
 function cupPoolsHtml(c) {
   return `<div class="cup-pools">${c.pools.map((own, p) => `<div class="cp-pool${own.includes(c.user) ? ' me' : ''}"><p class="eyebrow">Pool ${CUP_POOL[p]}</p>
