@@ -3,8 +3,9 @@
    The hints card (#hc0 top-left for Player 1 and one player, #hc1 top-right for Player 2) names the close-up and its one control for
    the device in use, through every duel's slow run-in to the verdict, the scrum to its result, the lineout to the catch, a goal kick or
    drop from the cut-in to the strike, and once a match each in open play (Long Pass, Sprint, Side Step, Dummy, Offload, Drop Goal, 3s
-   each, 4s apart). hintFor(seat) is pure: it reads the match and returns the words, or null. syncHints runs from updateHud and writes
-   the DOM only when the content changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
+   each, 4s apart; never in a drill, whose cue names its controls, and nothing behind a drill's ready or result card). hintFor(seat)
+   is pure: it reads the match and returns the words, or null. syncHints runs from updateHud and writes the DOM only when the content
+   changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
    dropZone is never run again and nothing random is drawn. The tutorial pauses the first time each moment comes up on this device
    (while that seat's Hints are On): the close-up holds its first frame under a card or two, Next then Play, a tap anywhere or the
    pass key advancing, the match clock and the world frozen; Replay Tutorial on How to Play forgets them all.
@@ -26,6 +27,7 @@ const row = (chips, text) => ({ chips, text });
 const chip = (act, label) => ({ act, label:label || CHIP_LABEL[act] });
 function hintFor(s) {                                      // the card for seat s now, or null
   if (!M || M.demo || M.auto || !hintsOn(s)) return null;
+  if (practice && (practice.ready || practice.done)) return null;   // a drill's ready and result cards: no card behind them (the Driving drill stages its scrum under the ready card)
   const t = teamOfSeat(s); if (t < 0) return null;
   const dev = hintDev(s), kb = dev === 'kb', c = M.cut;
   if (c) {
@@ -82,7 +84,7 @@ function hintOpenPick(s, t, la, lb) {                       // which open-play c
 }
 function hintOpenStep(s, t, la, lb) {
   const H = HO[s]; if (!H) return;
-  if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s))) { H.cur = null; return; }
+  if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s)) || practice) { H.cur = null; return; }   // a drill names its own controls in the cue at the top, where an open-play card would sit on it
   if (H.cur) { if (M.dclock < H.until) return; H.cur = null; }
   if (M.dclock < H.last + OPEN_GAP) return;
   const id = hintOpenPick(s, t, la, lb);

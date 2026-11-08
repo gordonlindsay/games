@@ -1,5 +1,5 @@
 // Kids: the level below Easy (a flag on Easy, settings.kids), its levers, and the grown-up check (parentGate).
-// Every lever is on in a Kids match, off on Easy, and off in AI v AI, the demo, two player and practice even when asked.
+// Every lever is on in a Kids match, off on Easy, and off in AI v AI, the demo, two player and practice (but Kicking and Driving) even when asked.
 // node tools/kids.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
 const { T, reseed, fire, kickBot, dropBot } = await import('./harness.mjs');
@@ -65,7 +65,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   s.kids = false; s.diff = 0;
 }
 
-// 3. who plays Kids: asked for, on Easy, one player; never AI v AI, the demo, two player or practice
+// 3. who plays Kids: asked for, on Easy, one player; never AI v AI, the demo or two player (in practice only Kicking and Driving: together.mjs)
 {
   play(true); ok(M().kids === true, 'a one-player Easy match asked to play Kids is Kids');
   play(false); ok(M().kids === false, 'a match not asked is not');

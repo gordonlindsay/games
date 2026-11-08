@@ -8,8 +8,8 @@
    flag, a saved diff means what it always did, an old save (no flag) loads exactly as it was, and anything that reads settings.diff
    or levelOf sees Easy, the nearest level. The flag counts only with diff 0, so a hand-edited kids:true on Hard is just Hard.
    The levers below act only in a match newMatch was asked to play as Kids (opts.kids, which startMatch passes): one player, on
-   Easy, never AI v AI, the demo, practice or two player. Every one reads M.kids, so the sims, the demo and the balance tools run
-   the same numbers and the same random draws as before. */
+   Easy, never AI v AI, the demo or two player, and in the Training Ground only the Kicking and Driving drills (practice.js). Every
+   one reads M.kids, so the sims, the demo and the balance tools run the same numbers and the same random draws as before. */
 const KIDS = {
   diff:{ ...DIFF[0], cpuSpeed:0.92, cpuTackle:0.45, cpuIntercept:0.05, turnover:-0.05, scrumCpu:0.45, lineSigma:0.28, lineContest:0.35 },   // Easy's row with the other side slower, weaker in the tackle, less often intercepting or turning the ball over, and soft at scrum and lineout
   tackle:0.10,             // your ringed man's own tackles (his contact tackle and his dive) are this much surer

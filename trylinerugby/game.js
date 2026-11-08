@@ -3479,7 +3479,8 @@ function careerTeamFor(cr, stage) {
 }
 function careerOpponents(cr, stage) {               // five sides; the random draws happen here, never in a save or a render
   if (stage <= 1) {
-    const mine = cr.club, others = CLUBS.filter(t => t.id !== mine.id && t.name !== mine.name);
+    const mine = cr.club, same = t => t.id === mine.id || t.name === mine.name || (typeof importSame === 'function' && importSame(t.name, mine.name));   // an imported Farnham RFC is Farnham, as the import's own league draw has it
+    const others = CLUBS.filter(t => !same(t));
     return shuffle(others.slice()).slice(0, 5).map(t => careerSide(t, CAREER_CUT[stage]));
   }
   if (stage === 2) return CAREER_COUNTIES.slice(1).map(t => careerSide(t));
@@ -5545,8 +5546,9 @@ function updateHud() {
    The hints card (#hc0 top-left for Player 1 and one player, #hc1 top-right for Player 2) names the close-up and its one control for
    the device in use, through every duel's slow run-in to the verdict, the scrum to its result, the lineout to the catch, a goal kick or
    drop from the cut-in to the strike, and once a match each in open play (Long Pass, Sprint, Side Step, Dummy, Offload, Drop Goal, 3s
-   each, 4s apart). hintFor(seat) is pure: it reads the match and returns the words, or null. syncHints runs from updateHud and writes
-   the DOM only when the content changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
+   each, 4s apart; never in a drill, whose cue names its controls, and nothing behind a drill's ready or result card). hintFor(seat)
+   is pure: it reads the match and returns the words, or null. syncHints runs from updateHud and writes the DOM only when the content
+   changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
    dropZone is never run again and nothing random is drawn. The tutorial pauses the first time each moment comes up on this device
    (while that seat's Hints are On): the close-up holds its first frame under a card or two, Next then Play, a tap anywhere or the
    pass key advancing, the match clock and the world frozen; Replay Tutorial on How to Play forgets them all.
@@ -5568,6 +5570,7 @@ const row = (chips, text) => ({ chips, text });
 const chip = (act, label) => ({ act, label:label || CHIP_LABEL[act] });
 function hintFor(s) {                                      // the card for seat s now, or null
   if (!M || M.demo || M.auto || !hintsOn(s)) return null;
+  if (practice && (practice.ready || practice.done)) return null;   // a drill's ready and result cards: no card behind them (the Driving drill stages its scrum under the ready card)
   const t = teamOfSeat(s); if (t < 0) return null;
   const dev = hintDev(s), kb = dev === 'kb', c = M.cut;
   if (c) {
@@ -5624,7 +5627,7 @@ function hintOpenPick(s, t, la, lb) {                       // which open-play c
 }
 function hintOpenStep(s, t, la, lb) {
   const H = HO[s]; if (!H) return;
-  if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s))) { H.cur = null; return; }
+  if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s)) || practice) { H.cur = null; return; }   // a drill names its own controls in the cue at the top, where an open-play card would sit on it
   if (H.cur) { if (M.dclock < H.until) return; H.cur = null; }
   if (M.dclock < H.last + OPEN_GAP) return;
   const id = hintOpenPick(s, t, la, lb);
@@ -5900,8 +5903,8 @@ function pause() {
   if (practice && (practice.done || practice.ready)) return;
   if (!playing() || M.over || M.phase === 'break') return;
   M.paused = true;
-  $('pz-score').textContent = M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash)
-  $('pz-quit').textContent = 'Quit Match'; quitArmed = false;
+  $('pz-score').textContent = practice ? practice.name : M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash); a drill has no score, so its name
+  $('pz-quit').textContent = practice ? practiceBackText() : 'Quit Match'; quitArmed = false;   // a drill goes back to where it came from (practice.js)
   if (two.lost && two.lost.length) seatLost(two.lost[0]); else $('pz-seat').hidden = true;
   renderHintSwitches();
   setFocus(null);
@@ -5925,8 +5928,8 @@ let quitArmed = false;
 $('b-pause').addEventListener('click', pause);
 $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
-  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = isDesk() ? 'Press Again to Quit' : 'Tap Again to Quit'; return; }
-  exitMatch();
+  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
+  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Training, or Back to Career for a caller (which hears it as a quit)
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -5950,14 +5953,19 @@ function renderHome() {
   const done = champ && champ.teams && champ.teams[champ.user] && champ.round >= 5;
   if (live) {
     $('b-champ').textContent = 'Continue Championship';
-    note.textContent = champNote(champ);
-    note.hidden = false;
+    homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else if (done) {
     $('b-champ').textContent = 'Final Table';
-    note.textContent = champNote(champ);
-    note.hidden = false;
+    homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
   renderCareerHome();
+}
+/* A note under Championship or Career. The team's name (and its separator) is a span of its own, which a phone held sideways
+   leaves out (styles.css), so the note stays one line under its half: Round 2 of 5, Minis · Round 1 of 5. */
+function homeNote(el, text, name) {
+  const i = name ? text.indexOf(name + ' · ') : -1;
+  el.innerHTML = i < 0 ? esc(text) : esc(text.slice(0, i)) + '<span class="rn-name">' + esc(name + ' · ') + '</span>' + esc(text.slice(i + name.length + 3));
+  el.hidden = false;
 }
 function goHome() {
   navOnly = null;
@@ -7174,8 +7182,8 @@ $('im-paste').addEventListener('click', async () => {
    flag, a saved diff means what it always did, an old save (no flag) loads exactly as it was, and anything that reads settings.diff
    or levelOf sees Easy, the nearest level. The flag counts only with diff 0, so a hand-edited kids:true on Hard is just Hard.
    The levers below act only in a match newMatch was asked to play as Kids (opts.kids, which startMatch passes): one player, on
-   Easy, never AI v AI, the demo, practice or two player. Every one reads M.kids, so the sims, the demo and the balance tools run
-   the same numbers and the same random draws as before. */
+   Easy, never AI v AI, the demo or two player, and in the Training Ground only the Kicking and Driving drills (practice.js). Every
+   one reads M.kids, so the sims, the demo and the balance tools run the same numbers and the same random draws as before. */
 const KIDS = {
   diff:{ ...DIFF[0], cpuSpeed:0.92, cpuTackle:0.45, cpuIntercept:0.05, turnover:-0.05, scrumCpu:0.45, lineSigma:0.28, lineContest:0.35 },   // Easy's row with the other side slower, weaker in the tackle, less often intercepting or turning the ball over, and soft at scrum and lineout
   tackle:0.10,             // your ringed man's own tackles (his contact tackle and his dive) are this much surer
@@ -7919,15 +7927,15 @@ function tackleDraw(T) {                                   // the side-on close-
     if (T && T.stage === 'show') tackleChips(T);
     return;
   }
-  const K = DRILL_TACKLE, W = V.W, H = V.H, y0 = H*0.8, k = H*0.40/1.8, Hp = 1.8*k, tx = W*0.32;
+  const K = DRILL_TACKLE, W = V.W, H = V.H, y0 = H*0.8, k = H*0.40/1.8, Hp = 1.8*k, tx = W*0.32, kd = tackleRunScale(W, H);   // k sizes the men, kd his distance along the ground
   ctx.save();
   const sky = ctx.createLinearGradient(0, 0, 0, y0);    // a still, side-on view: the pitch behind is covered so only the two men read
   sky.addColorStop(0, '#13202a'); sky.addColorStop(1, '#2e4a58');
   ctx.fillStyle = sky; ctx.fillRect(0, 0, W, y0);
   ctx.fillStyle = '#2a6233'; ctx.fillRect(0, y0, W, H - y0);
   ctx.fillStyle = 'rgba(244,241,232,.85)'; ctx.fillRect(0, y0 - 1, W, 2);
-  ctx.fillStyle = 'rgba(255,207,61,.55)'; ctx.fillRect(tx + K.zone[0]*k, y0, (K.zone[1] - K.zone[0])*k, 10);   // the gold: let go as his front foot lands here
-  const rx = tx + Math.max(0.35, T.d)*k + H*0.04, run = T.stage === 'side' || T.stage === 'lunge' || T.stage === 'missed';
+  ctx.fillStyle = 'rgba(255,207,61,.55)'; ctx.fillRect(tx + K.zone[0]*kd, y0, (K.zone[1] - K.zone[0])*kd, 10);   // the gold: let go as his front foot lands here
+  const rx = tx + Math.max(0.35*k, T.d*kd) + H*0.04, run = T.stage === 'side' || T.stage === 'lunge' || T.stage === 'missed';
   const fall = T.stage === 'down' || (T.stage === 'show' && T.good) ? clamp(T.stage === 'down' ? T.t/0.45 : 1, 0, 1) : 0;
   if (T.stage === 'side' || T.stage === 'lunge') {         // the bands on him: too high, right, too low
     const bx = rx - H*0.12, bw = H*0.26;
@@ -7937,11 +7945,11 @@ function tackleDraw(T) {                                   // the side-on close-
     ctx.fillStyle = '#ffcf3d'; ctx.fillRect(bx, y0 - Hp*K.height[0], bw, Hp*K.height[0]);
     ctx.globalAlpha = 1;
   }
-  tackleBody(rx, y0, k, M.kit[1], { dir:-1, phase:run ? M.rt*11 : 0, lean:run ? 0.15 : 0, ball:true, down:fall });
+  tackleBody(rx, y0, k, M.kit[1], { dir:-1, phase:run ? M.rt*11*kd/k : 0, lean:run ? 0.15 : 0, ball:true, down:fall });
   const zone = T.h > K.height[1] ? '#ff8466' : T.h < K.height[0] ? '#ffcf3d' : '#62d680';
   const contact = T.stage === 'squeeze' || T.stage === 'down' || (T.stage === 'show' && T.good);
   const lungeU = T.stage === 'lunge' ? clamp(T.t/K.lunge, 0, 1) : contact ? 1 : T.stage === 'missed' && T.fail !== 'late' ? 1 : 0;
-  const reach = T.fail === 'early' ? (T.dc - K.zone[1] + 0.6)*k : 0;
+  const reach = T.fail === 'early' ? (T.dc - K.zone[1] + 0.6)*kd : 0;
   const mx = drillLerp(tx, rx - H*0.12, lungeU) - (T.fail === 'early' ? reach*lungeU : 0);
   const crouch = clamp((0.62 - T.h)/0.5, 0, 1);
   tackleBody(mx, y0, k, M.kit[0], { dir:1, fwd:true, crouch, lean:0.35 + 0.9*lungeU, phase:0, down:T.stage === 'missed' && T.fail !== 'high' ? clamp(T.t/0.3, 0, 1)*0.9 : contact ? 0.55 : 0 });
@@ -7962,6 +7970,14 @@ function tackleDraw(T) {                                   // the side-on close-
   }
   ctx.restore();
   tackleChips(T);
+}
+/* Metres to pixels along the ground. The men's own scale, unless that would start the runner under the Tackle button (88px,
+   20px in from the right edge): then his run closes up so the right edge of his three bands (0.18 of the height past his
+   distance) starts 20px clear of the button, and the low band and his feet are never under a thumb. 667x375 closes it to about half.
+   The nearest he comes (0.35m) stays at the men's scale, so the contact poses read as they did. */
+function tackleRunScale(W, H) {
+  const k = H*0.40/1.8, room = W - 128 - W*0.32 - H*0.18;
+  return Math.max(k*0.4, Math.min(k, room/DRILL_TACKLE.side));
 }
 const tackleChipTop = H => Math.max(96, H*0.27);          // the top of the five chips (28px tall)
 function tackleMeterBox(W, H) {                            // the power meter: a bar over the tackler's head, between it and the chips, so the thumb on the touch stick never covers it
@@ -8014,7 +8030,7 @@ const drillKick = {
   },
   timeUp() { const K = practice.kick, stars = drillStarsOf(K.made, DRILL_KICKS.stars); practiceFinish(stars > 0, K.made + ' of ' + DRILL_KICKS.spots.length + ' Kicks', stars); },
   hud() { const K = practice.kick, pips = []; for (let i = 0; i < DRILL_KICKS.spots.length; i++) pips.push(i < K.shots.length ? (K.shots[i] ? 'got' : 'miss') : i === K.shots.length ? 'now' : 'todo'); return { pips }; },
-  howTo() { return 'Five kicks, each further out and windier. Steer the arrow with your run controls, hold ' + drillName('Kick', 'a') + ' and let go in the gold.'; },
+  howTo() { return 'Five kicks, each further out and windier. ' + (M && M.kids ? 'Hold ' : 'Steer the arrow with your run controls, hold ') + drillName('Kick', 'a') + ' and let go in the gold.'; },   // Kids sets the aim
   result() { return { skill:'kicking' }; },
 };
 
@@ -8132,8 +8148,8 @@ function drillStarsHtml(n) { let s = ''; for (let i = 0; i < 3; i++) s += `<i cl
    Training Ground: the drill picker, the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
    practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
-   Career, or leaveLabel; Back or Escape on the card; Pause then Quit) restores the settings exactly as leaving does, shows the
-   home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
+   Career, or leaveLabel; Back or Escape on the card; Pause then Back to Career) restores the settings exactly as leaving does,
+   shows the home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
    Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
 const PRACTICE_DRILLS = [
@@ -8141,8 +8157,8 @@ const PRACTICE_DRILLS = [
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
   { id:'cones', name:'Cones', objective:'Beat the Clock', limit:45 },
   { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90 },
-  { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Steer the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150 },
-  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60 },
+  { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Steer the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
+  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, kids:true },
   { id:'defend', name:'Defend a Breakaway', objective:'Switch into cover and stop the runner', cue:'Your first defender is beaten. Press Switch, run towards the carrier and Tackle. Sprint helps you close the gap.', limit:18 },
   { id:'pass', name:'Create a Two-on-One', objective:'Pass to support, then score a try', cue:'Run towards the defender to draw him in. Pass to the dashed-ringed runner, then run for the right-hand try line.', limit:22 }
 ];
@@ -8192,7 +8208,10 @@ function practiceStart(id, opts) {
   practice = { ...drill, opts:keep, best:null, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
-  newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false] });
+  // Every drill plays on Easy. At Kids, Kicking and Driving also take a Kids match's own help (kids.js: the aim set for you, a wider
+  // gold band and a slower meter; your pack's extra shove), as the career's Train sends a Kids player to them every round. The
+  // others stay as they are: the training spaces never read M.kids, and Kids' automatic switch would play Defend a Breakaway for you.
+  newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false], kids:!!drill.kids && kidsLevel() });
   M.practice = id; M.phase = 'play'; M.set = null; M.cut = null; M.goal = null;
   const own = M.players.filter(p => p.team === 0), cpu = M.players.filter(p => p.team === 1);
   kit.setup(own, cpu);
@@ -8215,8 +8234,9 @@ function practiceStart(id, opts) {
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
 }
+const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training');   // the card's leave button and the pause card's
 function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
-  $('pr-select').textContent = practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training';
+  $('pr-select').textContent = practiceBackText();
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }
 function practiceGo() {                                    // the ready card's Start: the drill runs
@@ -8283,11 +8303,12 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
   return `<span class="cr-shirt${cls ? ' ' + cls : ''}">${jersey(t)}<b>${num}</b></span>`;
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
-   A label (International on a narrow Hall of Fame) gives up most of its letter spacing first, and may go down to 10px. */
+   A label (International on a narrow Hall of Fame, Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing
+   first, and may go down to 10px. */
 function careerFit(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
     el.style.fontSize = ''; el.style.letterSpacing = '';
-    const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl');
+    const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl') || el.classList.contains('eyebrow');
     if (lbl && over()) el.style.letterSpacing = '.04em';
     let px = parseFloat(getComputedStyle(el).fontSize) || 20;
     while (over() && px > (lbl ? 10 : 12)) { px -= 1; el.style.fontSize = px + 'px'; }
@@ -8303,7 +8324,8 @@ function careerNote(cr) {
 function renderCareerHome() {
   const b = $('b-career'), note = $('career-note');
   if (!career) { b.textContent = 'Career'; note.hidden = true; return; }
-  b.textContent = 'Continue Career'; note.textContent = careerNote(career); note.hidden = false;
+  const c = career.season;
+  b.textContent = 'Continue Career'; homeNote(note, careerNote(career), c && c.teams[c.user] ? c.teams[c.user].name : '');
 }
 
 /* ---------- the new player ---------- */
@@ -8352,7 +8374,7 @@ function careerOpen() {
 function careerCardHtml(cr, team) {
   const ovr = careerOverall(cr.skills), g = (careerLast && careerLast.gains) || {};
   return `<div class="cr-id">${careerShirt(team, cr.num)}
-      <div class="cr-who"><p class="eyebrow">${careerPosWord(cr.pos)} · No. ${cr.num}</p><h3 data-fit>${esc(cr.name || team.name)}</h3></div>
+      <div class="cr-who"><p class="eyebrow" data-fit>${careerPosWord(cr.pos)} · No. ${cr.num}</p><h3 data-fit>${esc(cr.name || team.name)}</h3></div>
       <span class="cr-ovr" aria-label="Overall ${ovr}"><b>${ovr}</b><span>Overall</span></span></div>
     <div class="cr-skills">${careerSkills().map(([k, l]) => {
       const v = cr.skills[k];
@@ -8616,7 +8638,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
-  drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
+  drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   get M() { return M; } };
 

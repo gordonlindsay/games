@@ -91,8 +91,8 @@ function pause() {
   if (practice && (practice.done || practice.ready)) return;
   if (!playing() || M.over || M.phase === 'break') return;
   M.paused = true;
-  $('pz-score').textContent = M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash)
-  $('pz-quit').textContent = 'Quit Match'; quitArmed = false;
+  $('pz-score').textContent = practice ? practice.name : M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash); a drill has no score, so its name
+  $('pz-quit').textContent = practice ? practiceBackText() : 'Quit Match'; quitArmed = false;   // a drill goes back to where it came from (practice.js)
   if (two.lost && two.lost.length) seatLost(two.lost[0]); else $('pz-seat').hidden = true;
   renderHintSwitches();
   setFocus(null);
@@ -116,8 +116,8 @@ let quitArmed = false;
 $('b-pause').addEventListener('click', pause);
 $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
-  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = isDesk() ? 'Press Again to Quit' : 'Tap Again to Quit'; return; }
-  exitMatch();
+  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
+  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Training, or Back to Career for a caller (which hears it as a quit)
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -141,14 +141,19 @@ function renderHome() {
   const done = champ && champ.teams && champ.teams[champ.user] && champ.round >= 5;
   if (live) {
     $('b-champ').textContent = 'Continue Championship';
-    note.textContent = champNote(champ);
-    note.hidden = false;
+    homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else if (done) {
     $('b-champ').textContent = 'Final Table';
-    note.textContent = champNote(champ);
-    note.hidden = false;
+    homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
   renderCareerHome();
+}
+/* A note under Championship or Career. The team's name (and its separator) is a span of its own, which a phone held sideways
+   leaves out (styles.css), so the note stays one line under its half: Round 2 of 5, Minis · Round 1 of 5. */
+function homeNote(el, text, name) {
+  const i = name ? text.indexOf(name + ' · ') : -1;
+  el.innerHTML = i < 0 ? esc(text) : esc(text.slice(0, i)) + '<span class="rn-name">' + esc(name + ' · ') + '</span>' + esc(text.slice(i + name.length + 3));
+  el.hidden = false;
 }
 function goHome() {
   navOnly = null;

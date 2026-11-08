@@ -11,11 +11,12 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
   return `<span class="cr-shirt${cls ? ' ' + cls : ''}">${jersey(t)}<b>${num}</b></span>`;
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
-   A label (International on a narrow Hall of Fame) gives up most of its letter spacing first, and may go down to 10px. */
+   A label (International on a narrow Hall of Fame, Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing
+   first, and may go down to 10px. */
 function careerFit(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
     el.style.fontSize = ''; el.style.letterSpacing = '';
-    const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl');
+    const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl') || el.classList.contains('eyebrow');
     if (lbl && over()) el.style.letterSpacing = '.04em';
     let px = parseFloat(getComputedStyle(el).fontSize) || 20;
     while (over() && px > (lbl ? 10 : 12)) { px -= 1; el.style.fontSize = px + 'px'; }
@@ -31,7 +32,8 @@ function careerNote(cr) {
 function renderCareerHome() {
   const b = $('b-career'), note = $('career-note');
   if (!career) { b.textContent = 'Career'; note.hidden = true; return; }
-  b.textContent = 'Continue Career'; note.textContent = careerNote(career); note.hidden = false;
+  const c = career.season;
+  b.textContent = 'Continue Career'; homeNote(note, careerNote(career), c && c.teams[c.user] ? c.teams[c.user].name : '');
 }
 
 /* ---------- the new player ---------- */
@@ -80,7 +82,7 @@ function careerOpen() {
 function careerCardHtml(cr, team) {
   const ovr = careerOverall(cr.skills), g = (careerLast && careerLast.gains) || {};
   return `<div class="cr-id">${careerShirt(team, cr.num)}
-      <div class="cr-who"><p class="eyebrow">${careerPosWord(cr.pos)} · No. ${cr.num}</p><h3 data-fit>${esc(cr.name || team.name)}</h3></div>
+      <div class="cr-who"><p class="eyebrow" data-fit>${careerPosWord(cr.pos)} · No. ${cr.num}</p><h3 data-fit>${esc(cr.name || team.name)}</h3></div>
       <span class="cr-ovr" aria-label="Overall ${ovr}"><b>${ovr}</b><span>Overall</span></span></div>
     <div class="cr-skills">${careerSkills().map(([k, l]) => {
       const v = cr.skills[k];

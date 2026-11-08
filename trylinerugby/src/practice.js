@@ -2,8 +2,8 @@
    Training Ground: the drill picker, the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
    practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
-   Career, or leaveLabel; Back or Escape on the card; Pause then Quit) restores the settings exactly as leaving does, shows the
-   home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
+   Career, or leaveLabel; Back or Escape on the card; Pause then Back to Career) restores the settings exactly as leaving does,
+   shows the home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
    Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
 const PRACTICE_DRILLS = [
@@ -11,8 +11,8 @@ const PRACTICE_DRILLS = [
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
   { id:'cones', name:'Cones', objective:'Beat the Clock', limit:45 },
   { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90 },
-  { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Steer the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150 },
-  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60 },
+  { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Steer the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
+  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, kids:true },
   { id:'defend', name:'Defend a Breakaway', objective:'Switch into cover and stop the runner', cue:'Your first defender is beaten. Press Switch, run towards the carrier and Tackle. Sprint helps you close the gap.', limit:18 },
   { id:'pass', name:'Create a Two-on-One', objective:'Pass to support, then score a try', cue:'Run towards the defender to draw him in. Pass to the dashed-ringed runner, then run for the right-hand try line.', limit:22 }
 ];
@@ -62,7 +62,10 @@ function practiceStart(id, opts) {
   practice = { ...drill, opts:keep, best:null, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
-  newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false] });
+  // Every drill plays on Easy. At Kids, Kicking and Driving also take a Kids match's own help (kids.js: the aim set for you, a wider
+  // gold band and a slower meter; your pack's extra shove), as the career's Train sends a Kids player to them every round. The
+  // others stay as they are: the training spaces never read M.kids, and Kids' automatic switch would play Defend a Breakaway for you.
+  newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false], kids:!!drill.kids && kidsLevel() });
   M.practice = id; M.phase = 'play'; M.set = null; M.cut = null; M.goal = null;
   const own = M.players.filter(p => p.team === 0), cpu = M.players.filter(p => p.team === 1);
   kit.setup(own, cpu);
@@ -85,8 +88,9 @@ function practiceStart(id, opts) {
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
 }
+const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training');   // the card's leave button and the pause card's
 function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
-  $('pr-select').textContent = practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training';
+  $('pr-select').textContent = practiceBackText();
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }
 function practiceGo() {                                    // the ready card's Start: the drill runs

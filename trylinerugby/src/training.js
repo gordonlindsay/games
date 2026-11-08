@@ -597,15 +597,15 @@ function tackleDraw(T) {                                   // the side-on close-
     if (T && T.stage === 'show') tackleChips(T);
     return;
   }
-  const K = DRILL_TACKLE, W = V.W, H = V.H, y0 = H*0.8, k = H*0.40/1.8, Hp = 1.8*k, tx = W*0.32;
+  const K = DRILL_TACKLE, W = V.W, H = V.H, y0 = H*0.8, k = H*0.40/1.8, Hp = 1.8*k, tx = W*0.32, kd = tackleRunScale(W, H);   // k sizes the men, kd his distance along the ground
   ctx.save();
   const sky = ctx.createLinearGradient(0, 0, 0, y0);    // a still, side-on view: the pitch behind is covered so only the two men read
   sky.addColorStop(0, '#13202a'); sky.addColorStop(1, '#2e4a58');
   ctx.fillStyle = sky; ctx.fillRect(0, 0, W, y0);
   ctx.fillStyle = '#2a6233'; ctx.fillRect(0, y0, W, H - y0);
   ctx.fillStyle = 'rgba(244,241,232,.85)'; ctx.fillRect(0, y0 - 1, W, 2);
-  ctx.fillStyle = 'rgba(255,207,61,.55)'; ctx.fillRect(tx + K.zone[0]*k, y0, (K.zone[1] - K.zone[0])*k, 10);   // the gold: let go as his front foot lands here
-  const rx = tx + Math.max(0.35, T.d)*k + H*0.04, run = T.stage === 'side' || T.stage === 'lunge' || T.stage === 'missed';
+  ctx.fillStyle = 'rgba(255,207,61,.55)'; ctx.fillRect(tx + K.zone[0]*kd, y0, (K.zone[1] - K.zone[0])*kd, 10);   // the gold: let go as his front foot lands here
+  const rx = tx + Math.max(0.35*k, T.d*kd) + H*0.04, run = T.stage === 'side' || T.stage === 'lunge' || T.stage === 'missed';
   const fall = T.stage === 'down' || (T.stage === 'show' && T.good) ? clamp(T.stage === 'down' ? T.t/0.45 : 1, 0, 1) : 0;
   if (T.stage === 'side' || T.stage === 'lunge') {         // the bands on him: too high, right, too low
     const bx = rx - H*0.12, bw = H*0.26;
@@ -615,11 +615,11 @@ function tackleDraw(T) {                                   // the side-on close-
     ctx.fillStyle = '#ffcf3d'; ctx.fillRect(bx, y0 - Hp*K.height[0], bw, Hp*K.height[0]);
     ctx.globalAlpha = 1;
   }
-  tackleBody(rx, y0, k, M.kit[1], { dir:-1, phase:run ? M.rt*11 : 0, lean:run ? 0.15 : 0, ball:true, down:fall });
+  tackleBody(rx, y0, k, M.kit[1], { dir:-1, phase:run ? M.rt*11*kd/k : 0, lean:run ? 0.15 : 0, ball:true, down:fall });
   const zone = T.h > K.height[1] ? '#ff8466' : T.h < K.height[0] ? '#ffcf3d' : '#62d680';
   const contact = T.stage === 'squeeze' || T.stage === 'down' || (T.stage === 'show' && T.good);
   const lungeU = T.stage === 'lunge' ? clamp(T.t/K.lunge, 0, 1) : contact ? 1 : T.stage === 'missed' && T.fail !== 'late' ? 1 : 0;
-  const reach = T.fail === 'early' ? (T.dc - K.zone[1] + 0.6)*k : 0;
+  const reach = T.fail === 'early' ? (T.dc - K.zone[1] + 0.6)*kd : 0;
   const mx = drillLerp(tx, rx - H*0.12, lungeU) - (T.fail === 'early' ? reach*lungeU : 0);
   const crouch = clamp((0.62 - T.h)/0.5, 0, 1);
   tackleBody(mx, y0, k, M.kit[0], { dir:1, fwd:true, crouch, lean:0.35 + 0.9*lungeU, phase:0, down:T.stage === 'missed' && T.fail !== 'high' ? clamp(T.t/0.3, 0, 1)*0.9 : contact ? 0.55 : 0 });
@@ -640,6 +640,14 @@ function tackleDraw(T) {                                   // the side-on close-
   }
   ctx.restore();
   tackleChips(T);
+}
+/* Metres to pixels along the ground. The men's own scale, unless that would start the runner under the Tackle button (88px,
+   20px in from the right edge): then his run closes up so the right edge of his three bands (0.18 of the height past his
+   distance) starts 20px clear of the button, and the low band and his feet are never under a thumb. 667x375 closes it to about half.
+   The nearest he comes (0.35m) stays at the men's scale, so the contact poses read as they did. */
+function tackleRunScale(W, H) {
+  const k = H*0.40/1.8, room = W - 128 - W*0.32 - H*0.18;
+  return Math.max(k*0.4, Math.min(k, room/DRILL_TACKLE.side));
 }
 const tackleChipTop = H => Math.max(96, H*0.27);          // the top of the five chips (28px tall)
 function tackleMeterBox(W, H) {                            // the power meter: a bar over the tackler's head, between it and the chips, so the thumb on the touch stick never covers it
@@ -692,7 +700,7 @@ const drillKick = {
   },
   timeUp() { const K = practice.kick, stars = drillStarsOf(K.made, DRILL_KICKS.stars); practiceFinish(stars > 0, K.made + ' of ' + DRILL_KICKS.spots.length + ' Kicks', stars); },
   hud() { const K = practice.kick, pips = []; for (let i = 0; i < DRILL_KICKS.spots.length; i++) pips.push(i < K.shots.length ? (K.shots[i] ? 'got' : 'miss') : i === K.shots.length ? 'now' : 'todo'); return { pips }; },
-  howTo() { return 'Five kicks, each further out and windier. Steer the arrow with your run controls, hold ' + drillName('Kick', 'a') + ' and let go in the gold.'; },
+  howTo() { return 'Five kicks, each further out and windier. ' + (M && M.kids ? 'Hold ' : 'Steer the arrow with your run controls, hold ') + drillName('Kick', 'a') + ' and let go in the gold.'; },   // Kids sets the aim
   result() { return { skill:'kicking' }; },
 };
 

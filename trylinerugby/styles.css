@@ -483,6 +483,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-card{display:flex;flex-direction:column;gap:12px;padding:14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);min-width:0}
 .cr-id{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
 .cr-who{min-width:0}
+.cr-who .eyebrow{white-space:nowrap}   /* Forward · No. 1 stays one line: careerFit takes in its spacing, then its size, where the card is narrow */
 .cr-who h3{margin:4px 0 0;font:900 30px/.95 var(--display);text-transform:uppercase;letter-spacing:.01em;overflow-wrap:normal}
 .cr-ovr{display:grid;justify-items:center;gap:2px;min-width:64px;padding:6px 8px;border-radius:8px;background:var(--chalk);color:var(--night)}
 .cr-ovr b{font:900 36px/1 var(--display);font-variant-numeric:tabular-nums}
@@ -588,4 +589,26 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   .settings .btn.more-btn[aria-expanded]{grid-column:auto;align-self:end;padding:4px;font-size:13px}
   #m-gate .card{gap:10px;padding:14px 16px}
   .pg-keys .btn{min-height:48px}
+}
+/* ===== home: Championship | Career with their notes (integration) ===== */
+@media (orientation:landscape) and (max-height:560px){
+  /* a phone held sideways: a note is one line under its half and leaves out the team's name (ui-menus.js homeNote), so it reads
+     Round 2 of 5 or Minis · Round 1 of 5; a longer one ends in an ellipsis rather than wrapping */
+  .resume-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+  .resume-note .rn-name{display:none}
+  .home-row .col{gap:2px}
+}
+@media (orientation:landscape) and (max-height:420px){
+  /* the home fits 844x390 and 667x375 with a championship and a career both under way: a two-line Continue Championship stays
+     44px like its neighbour, Offline Ready sits closer, and with no Trophy Cabinet it takes the right column beside the settings
+     (rows 2 and 3) rather than a row of its own above them */
+  .home{row-gap:6px}
+  .home-row .btn{padding-block:4px;line-height:1.05}
+  .home .app-tools{margin-top:4px}
+  .home:not(:has(> .home-cabinet:not([hidden]))) .app-tools{grid-column:2;grid-row:2/4;align-self:start}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:720px){
+  /* a narrow computer window: Championship | Career | Two Player in thirds, so the labels step down to keep Championship inside its border */
+  body.desk .home-row .btn{font-size:13px;padding-inline:4px}
+  body.desk .resume-note{font-size:12px}
 }

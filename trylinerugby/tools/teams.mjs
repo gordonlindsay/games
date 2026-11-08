@@ -346,7 +346,7 @@ function settle(pick) {
   X.renderHub();
   X.renderHome();
   ok(document.getElementById('hub-title').textContent === 'Runners-Up' && !document.getElementById('hub-title').classList.contains('gold') && !document.getElementById('hub-chase').classList.contains('payoff') && document.getElementById('hub-next').innerHTML.includes('New Championship') && !document.getElementById('hub-next').innerHTML.includes('Play Match'), 'a finished season headlines the place, and offers a new one');
-  ok(document.getElementById('b-champ').textContent === 'Final Table' && document.getElementById('champ-note').textContent === 'Farnham · Runners-Up' && document.getElementById('champ-note').hidden === false, 'home keeps the finished season as Final Table');
+  ok(document.getElementById('b-champ').textContent === 'Final Table' && document.getElementById('champ-note').innerHTML === '<span class="rn-name">Farnham · </span>Runners-Up' && document.getElementById('champ-note').hidden === false, 'home keeps the finished season as Final Table (the team\'s name a span a phone held sideways leaves out)');
 
   X.newChamp(X.CLUBS[0], X.CLUBS.slice(1));
   c = settle((h, a) => {

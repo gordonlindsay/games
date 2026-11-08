@@ -96,7 +96,8 @@ function careerTeamFor(cr, stage) {
 }
 function careerOpponents(cr, stage) {               // five sides; the random draws happen here, never in a save or a render
   if (stage <= 1) {
-    const mine = cr.club, others = CLUBS.filter(t => t.id !== mine.id && t.name !== mine.name);
+    const mine = cr.club, same = t => t.id === mine.id || t.name === mine.name || (typeof importSame === 'function' && importSame(t.name, mine.name));   // an imported Farnham RFC is Farnham, as the import's own league draw has it
+    const others = CLUBS.filter(t => !same(t));
     return shuffle(others.slice()).slice(0, 5).map(t => careerSide(t, CAREER_CUT[stage]));
   }
   if (stage === 2) return CAREER_COUNTIES.slice(1).map(t => careerSide(t));

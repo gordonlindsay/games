@@ -385,7 +385,7 @@ function playOut(us, them, deeds) {
   ok($('b-career').textContent === 'Career' && $('career-note').hidden, 'home: Career, with no note before a career starts');
   const cr = C.create({ name:'Isla', pos:'B', num:7, club:{ id:'XSS', name:'<img src=x>', kit:'#123456', trim:'#abcdef', custom:true, pace:3, power:3, handling:3, kicking:3 } });
   C.set(cr); X.renderHome();
-  ok($('b-career').textContent === 'Continue Career' && !$('career-note').hidden && $('career-note').textContent === 'Minis · <img src=x> · Round 1 of 5', 'with one: Continue Career, the stage, the club and the round');
+  ok($('b-career').textContent === 'Continue Career' && !$('career-note').hidden && $('career-note').innerHTML === 'Minis · <span class="rn-name">&lt;img src=x&gt; · </span>Round 1 of 5', 'with one: Continue Career, the stage, the club (escaped, in a span a phone held sideways leaves out) and the round');
   // the new player screen
   C.set(null); C.newOpen();
   ok(shown() === 's-career-new' && /Farnham/.test($('cn-clubs').innerHTML) && /data-n="4"/.test($('cn-num').innerHTML) && !/data-n="3"/.test($('cn-num').innerHTML), 'New Player: the clubs, and a back\'s numbers to start');

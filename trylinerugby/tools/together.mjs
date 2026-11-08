@@ -82,5 +82,87 @@ const champBefore = JSON.stringify(X.champ());
   }
 }
 
+// 6. pausing a drill: its name, not a match score, and a way back to where it came from, not Quit Match
+{
+  P.start('cones'); $('pr-retry').click(); T.update(T.STEP); D.pause();
+  ok($('pz-score').textContent === 'Cones' && $('pz-quit').textContent === 'Back to Training', `a paused drill reads its name and Back to Training (${$('pz-score').textContent}, ${$('pz-quit').textContent})`);
+  $('pz-quit').click();
+  ok(/^(Tap|Press) Again to Leave$/.test($('pz-quit').textContent), `the second press is asked for as Leave (${$('pz-quit').textContent})`);
+  $('pz-quit').click();
+  ok(!P.state() && $('m-pause').hidden && !$('s-practice').hidden, 'and it goes back to the Training Ground');
+  const cr = fresh(); C.train('cones'); $('pr-retry').click(); T.update(T.STEP); D.pause();
+  ok($('pz-quit').textContent === 'Back to Career', 'a drill from the career leaves Back to Career');
+  $('pz-quit').click(); $('pz-quit').click();
+  ok(!P.state() && !$('s-career').hidden && C.get().trained === false, 'which hands back to the hub with the session kept');
+  C.set(null); D.goHome();
+}
+
+// 7. no hint card behind a drill's ready or result card, and no open-play card over a drill's own cue
+{
+  const s = D.settings(), keep = s.hints; s.hints = true;
+  P.start('scrum'); D.syncHints('', '');
+  ok(T.M.cut && T.M.cut.kind === 'scrum' && !D.hintShown()[0], 'Driving stages its scrum under the ready card with no Scrum card showing');
+  $('pr-retry').click(); D.syncHints('Push', null);
+  ok(D.hintShown()[0] && D.hintShown()[0].title === 'Scrum', 'once the drill starts, the Scrum card');
+  P.finish(true, 'Done', 3); D.syncHints('', '');
+  ok(!D.hintShown()[0], 'and none behind the result card');
+  P.leave();
+  P.start('pass'); D.hintOpen()[0].cur = 'sprint'; D.syncHints('Pass', 'Kick');
+  ok(!D.hintShown()[0], 'none behind the Two-on-One\'s ready card');
+  $('pr-retry').click();
+  const H0 = D.hintOpen()[0]; H0.cur = 'sprint'; H0.until = T.M.dclock + 3; D.syncHints('Pass', 'Kick');
+  ok(!D.hintShown()[0], 'a Sprint card due in the Two-on-One is not shown over its cue');
+  let seen = 0;
+  for (let i = 0; i < 400 && P.state() && !P.state().done; i++) { T.update(T.STEP); D.syncHints('Pass', 'Kick'); if (D.hintShown()[0]) seen++; }
+  ok(seen === 0 && D.hintOpen()[0].shown.size === 0, `no open-play card over the drill's cue (${seen} frames)`);
+  P.leave(); s.hints = keep; D.goHome();
+}
+
+// 8. at Kids, the Kicking and Driving drills take a Kids match's help; the rest play as on Easy
+{
+  const s = D.settings(), keep = [s.kids, s.diff];
+  T.kids.segSet(0);
+  P.start('kick');
+  ok(T.M.kids === true && !/Steer/.test($('pr-cue').textContent) && /^Five kicks, each further out and windier\. Hold /.test($('pr-cue').textContent), `Kids: Kicking is a Kids match, its aim set, and says so (${$('pr-cue').textContent})`);
+  P.leave(); P.start('scrum'); ok(T.M.kids === true, 'Kids: so is Driving'); P.leave();
+  const easy = ['egg', 'circle', 'cones', 'tackle', 'defend', 'pass'].filter(id => { P.start(id); const k = T.M.kids; P.leave(); return k !== false; });
+  ok(easy.length === 0, `Kids: every other drill plays on Easy (${easy.join(', ') || 'all'})`);
+  ok(s.kids === true && s.diff === 0, 'and leaving puts Kids back');
+  T.kids.segSet(1); P.start('kick');
+  ok(T.M.kids === false && /Steer the arrow/.test($('pr-cue').textContent), 'Easy: Kicking is as it was, the arrow yours to steer');
+  P.leave(); s.kids = keep[0]; s.diff = keep[1]; D.goHome();
+}
+
+// 9. a career on an imported club never draws that club's built-in twin (Farnham RFC is Farnham)
+{
+  const club = { id:'FAN', name:'Farnham RFC', kit:'#111111', trim:'#eeeeee', custom:true, pace:3, power:3, handling:3, kicking:3, stamina:3 };
+  let twin = 0; for (let i = 0; i < 60; i++) { const cr = C.create({ pos:'B', num:9, club }); for (const st of [0, 1]) if (C.opponents(cr, st).some(t => t.name === 'Farnham')) twin++; }
+  ok(twin === 0, `Farnham RFC's Minis and Juniors never meet Farnham (${twin} of 120 draws)`);
+  const mine = C.create({ pos:'B', num:9, club:X.CLUBS[2] }), o = C.opponents(mine, 0);
+  ok(o.length === 5 && !o.some(t => t.name === X.CLUBS[2].name), 'a built-in club still draws five others');
+  C.set(null);
+}
+
+// 10. the tackle close-up starts the runner clear of the Tackle button (88px, 20px in from the right edge)
+{
+  const K = T.drills.TACKLE;
+  for (const [W, Ht] of [[667, 375], [844, 390], [932, 430], [1280, 720]]) {
+    const kd = T.drills.tackleRunScale(W, Ht), k = Ht*0.40/1.8, right = W*0.32 + K.side*kd + Ht*0.18;
+    ok(kd <= k + 1e-9 && right <= W - 128 + 1e-6 && kd >= k*0.4 - 1e-9, `${W}x${Ht}: his bands start at ${right.toFixed(0)}px, the button at ${W - 108} (${(kd/k*100).toFixed(0)}% of the men's scale)`);
+  }
+}
+
+// 11. the layout fixes: home notes one line on a phone held sideways, the player card's eyebrow one line
+{
+  const fs = await import('node:fs');
+  const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  const sideways = [...css.matchAll(/@media \(orientation:landscape\) and \(max-height:560px\)\{([\s\S]*?)\n\}/g)].map(m => m[1]).join('\n');
+  ok(/\.resume-note\{white-space:nowrap;overflow:hidden;text-overflow:ellipsis/.test(sideways) && /\.resume-note \.rn-name\{display:none\}/.test(sideways), 'sideways, a home note is one line and leaves out the team\'s name');
+  ok(/\.cr-who \.eyebrow\{white-space:nowrap\}/.test(css), 'the player card\'s Forward · No. 1 stays one line');
+  const cr = fresh(); C.open();
+  ok(/<p class="eyebrow" data-fit>Back · No\. 5<\/p>/.test($('cr-card').innerHTML), 'and careerFit fits it');
+  C.set(null); D.goHome();
+}
+
 console.log(`Together: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
