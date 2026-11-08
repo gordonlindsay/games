@@ -502,29 +502,35 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   play(true, { kidsR:1 }); quiet(); D.setMode('match');
   { const c = T.forceDuel('tackle'); let pressed = false; run(() => c.res != null, 600, () => { quiet(); if (!pressed && c.t >= c.centre - 0.5*STEP) { pressed = true; inp.aPressed = true; } }); ok(c.res === 'perfect' && c.out === 'bighit', `at the ceiling a press in the gold is a Perfect (${c.res}, ${c.out})`); run(() => M().phase !== 'cut', 600); }
   D.setMode('menu');
-  // the update rule: a share of the way up or down, by the result in the child's side's points and tries
+  // the update rule: a fixed step up or down by the result in the child's side's points and tries, the same size anywhere on the scale
   const st = (us, them, tu, tt, h = 0) => K.step(h ? [them, us] : [us, them], h ? [tt, tu] : [tu, tt], h);
-  ok(st(35, 0, 5, 0) === ADAPT.raise && st(28, 7, 4, 0) === ADAPT.raise, `a win by more than ${ADAPT.big} tries raises it (${100*ADAPT.raise}% of the way up)`);
-  ok(st(21, 0, 3, 0) === ADAPT.nudge && st(7, 0, 1, 0) === ADAPT.nudge && st(8, 5, 1, 1) === ADAPT.nudge && ADAPT.nudge < ADAPT.raise, `a narrower win nudges it up (${100*ADAPT.nudge}%), a win on a kick included`);
-  ok(st(7, 7, 1, 1) === ADAPT.draw && ADAPT.draw < 0 && ADAPT.draw > ADAPT.lose, `a draw eases it (${-100*ADAPT.draw}% of the way down)`);
-  ok(st(5, 7, 1, 1) === ADAPT.lose && st(0, 7, 0, 1) === ADAPT.lose && st(0, 14, 0, 2) === ADAPT.heavy && ADAPT.heavy < ADAPT.lose, `a loss lowers it (${-100*ADAPT.lose}%; ${-100*ADAPT.heavy}% by two tries or more)`);
+  ok(st(35, 0, 5, 0) === ADAPT.raise && st(28, 7, 4, 0) === ADAPT.raise && ADAPT.raise > 0, `a win by more than ${ADAPT.big} tries raises it (+${ADAPT.raise})`);
+  ok(st(21, 0, 3, 0) === ADAPT.nudge && st(7, 0, 1, 0) === ADAPT.nudge && st(8, 5, 1, 1) === ADAPT.nudge && ADAPT.nudge > 0 && ADAPT.nudge < ADAPT.raise, `a narrower win nudges it up (+${ADAPT.nudge}), a win on a kick included`);
+  ok(st(7, 7, 1, 1) === ADAPT.draw && ADAPT.draw <= 0 && ADAPT.draw > ADAPT.lose, `a draw holds or eases it (${ADAPT.draw})`);
+  ok(st(5, 7, 1, 1) === ADAPT.lose && st(0, 7, 0, 1) === ADAPT.lose && st(0, 14, 0, 2) === ADAPT.heavy && ADAPT.lose < 0 && ADAPT.heavy < ADAPT.lose, `a loss lowers it (${ADAPT.lose}; ${ADAPT.heavy} by two tries or more)`);
   ok(st(35, 0, 5, 0, 1) === ADAPT.raise && st(0, 14, 0, 2, 1) === ADAPT.heavy, 'the child playing the away side is read from his own side');
   const nx = (r, us, them, tu, tt) => K.next(r, [us, them], [tu, tt]);
-  ok(nx(0, 35, 0, 5, 0) === ADAPT.raise && nx(0.5, 35, 0, 5, 0) === 0.5 + ADAPT.raise/2 && nx(0.5, 7, 0, 1, 0) === 0.5 + ADAPT.nudge/2, 'a win moves it that share of what is left to the ceiling');
-  ok(nx(0.5, 0, 14, 0, 2) === 0.5 + ADAPT.heavy/2 && nx(0.5, 7, 7, 1, 1) === 0.5 + ADAPT.draw/2 && nx(0, 0, 50, 0, 7) === 0, 'a draw or a loss that share of what is left to the start');
-  let worst = 0;
-  for (let i = 0; i <= 1000; i++) for (const [a, b, c, d] of [[50, 0, 7, 0], [7, 0, 1, 0], [7, 7, 1, 1], [0, 7, 0, 1], [0, 50, 0, 7]]) worst = Math.max(worst, Math.abs(nx(i/1000, a, b, c, d) - i/1000));
-  ok(worst <= 0.1 + 1e-9, `no one match moves it more than a tenth of the scale, anywhere on it (${worst.toFixed(3)})`);
+  const results = [[50, 0, 7, 0], [7, 0, 1, 0], [7, 7, 1, 1], [0, 7, 0, 1], [0, 50, 0, 7]], steps = results.map(([a, b, c, d]) => st(a, b, c, d));
+  let same = true, worst = 0;
+  for (let i = 0; i <= 1000; i++) results.forEach(([a, b, c, d], j) => { const r = i/1000, v = nx(r, a, b, c, d); worst = Math.max(worst, Math.abs(v - r)); if (!near(v, Math.min(1, Math.max(0, r + steps[j])), 1e-9)) same = false; });
+  ok(same, 'every result moves it by its own step wherever it is on the scale, the start and the ceiling only stopping it');
+  ok(nx(0.1, 0, 7, 0, 1) < 0.1 && near(0.1 - nx(0.1, 0, 7, 0, 1), 0.9 - nx(0.9, 0, 7, 0, 1), 1e-9) && near(nx(0.1, 0, 50, 0, 7), 0.1 + ADAPT.heavy, 1e-9), `near the start a loss takes it down as far as near the top (0.1 to ${nx(0.1, 0, 7, 0, 1)}; the old rule, a share of the way, barely moved it there and not at all at 0)`);
+  ok(nx(0, 0, 50, 0, 7) === 0 && nx(0, 7, 0, 1, 0) === ADAPT.nudge, 'at the start a loss leaves it there and a win lifts it');
+  ok(worst <= 0.1 + 1e-9, `no one match moves it more than a tenth of the scale (${worst.toFixed(3)})`);
   let r = 0; const climb = []; for (let i = 0; i < 30; i++) { climb.push(r); r = nx(r, 50, 0, 7, 0); }
-  ok(climb[10] > 0.6 && climb[10] < 0.7 && climb.every((v, i) => !i || v - climb[i - 1] <= climb[1] + 1e-9) && r < 1 && r > 0.95, `big wins in a row from the start: ${climb[5].toFixed(2)} after 5, ${climb[10].toFixed(2)} after 10, ${r.toFixed(2)} after 30, each step smaller than the last`);
-  ok(nx(0.85, 0, 7, 0, 1) < nx(0.85, 7, 0, 1, 0) && 0.85 - nx(0.85, 0, 7, 0, 1) > nx(0.85, 7, 0, 1, 0) - 0.85, 'near the top a loss takes it down further than a win takes it up');
-  ok(nx(1, 50, 0, 7, 0) === 1 && nx(0, 0, 50, 0, 7) === 0 && nx(2, 7, 7, 1, 1) === 1 + ADAPT.draw && nx(-1, 7, 0, 1, 0) === ADAPT.nudge, 'it stays between 0 and 1');
-  ok(nx(0.1234567, 7, 7, 1, 1) === Math.round((0.1234567*(1 + ADAPT.draw))*1000)/1000 && nx(NaN, 7, 0, 1, 0) === ADAPT.nudge, 'it is kept to three places, and a rating that is not a number starts again from 0');
+  const top = Math.ceil(1/ADAPT.raise - 1e-9);
+  ok(climb[top] === 1 && climb[top - 1] < 1 && climb.slice(1, top).every((v, i) => near(v - climb[i], ADAPT.raise, 1e-9)), `big wins in a row from the start: ${climb[5].toFixed(2)} after 5, the ceiling after ${top}, in equal steps`);
+  const walk = (r0, seq, n) => { let v = r0; for (let i = 0; i < n; i++) v = nx(v, ...seq[i % seq.length]); return v; };
+  ok(walk(0.8, [[7, 0, 1, 0], [0, 7, 0, 1]], 60) === 0, 'a child who loses every other match by a try, winning the rest narrowly, goes back to the start');
+  ok(walk(0.6, [[28, 0, 4, 0], [21, 7, 3, 1], [7, 7, 1, 1], [0, 14, 0, 2]], 80) === 0, 'and so does one who loses one in four heavily and draws one, even winning one of the others big');
+  ok(walk(0, [[35, 0, 5, 0], [35, 0, 5, 0], [14, 7, 2, 1], [0, 7, 0, 1]], 120) > 0.9, 'one who wins two in four by more than 3 tries and a third narrowly climbs to the top even losing the fourth');
+  ok(nx(1, 50, 0, 7, 0) === 1 && nx(0, 0, 50, 0, 7) === 0 && near(nx(2, 7, 7, 1, 1), 1 + ADAPT.draw, 1e-9) && nx(-1, 7, 0, 1, 0) === ADAPT.nudge, 'it stays between 0 and 1');
+  ok(nx(0.1234567, 0, 7, 0, 1) === Math.round((0.1234567 + ADAPT.lose)*1000)/1000 && nx(NaN, 7, 0, 1, 0) === ADAPT.nudge, 'it is kept to three places, and a rating that is not a number starts again from 0');
   // who moves it: full time in a one-player Kids match, once; never a match left early, practice, Easy, AI v AI, the demo or two player
   const full = (us, them, tu, tt) => { const m = M(); m.half = 2; m.score = [us, them]; m.tries = [tu, tt]; T.arcade.endHalf(); return m; };
   s.kidsR = 0.4; K.segSet(0); D.startMatch(X.CLUBS[0], X.CLUBS[1], false); let m = full(35, 0, 5, 0);
-  ok(m.over && near(s.kidsR, 0.4 + 0.6*ADAPT.raise, 1e-9) && JSON.parse(memory['tryline.v1']).settings.kidsR === s.kidsR, `full time in a Kids Quick Match moves it (0.4 to ${s.kidsR}) and saves it`);
-  ok(K.adapt() === null && near(s.kidsR, 0.4 + 0.6*ADAPT.raise, 1e-9), 'and only once a match');
+  ok(m.over && near(s.kidsR, 0.4 + ADAPT.raise, 1e-9) && JSON.parse(memory['tryline.v1']).settings.kidsR === s.kidsR, `full time in a Kids Quick Match moves it (0.4 to ${s.kidsR}) and saves it`);
+  ok(K.adapt() === null && near(s.kidsR, 0.4 + ADAPT.raise, 1e-9), 'and only once a match');
   ok(/^Farnham.* Win · Tries 5 – 0$/.test($('br-tries').textContent) && !/[0-9]\.[0-9]|Harder|Level|Rating/.test($('br-tries').textContent + $('br-pts').textContent + $('br-eyebrow').textContent + ($('banner').innerHTML || '')), `nothing on the full-time card shows it ("${$('br-tries').textContent}")`);
   D.exitMatch();
   const r0 = s.kidsR;

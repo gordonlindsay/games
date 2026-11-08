@@ -1,11 +1,13 @@
-// Scripted children for the Kids rating (src/kids.js): a 6 year old, a 7 to 8 year old and a sharp 10 year old, each playing
-// one-player Kids matches through the real input path, with 2-minute halves and Quick Match's rules (arcade on: On Fire, the Golden Try).
-//   node tools/kidbots.mjs at [r=0,1] [matches=200]       scorelines for each child at fixed ratings (easy: plain Easy, for comparison)
-//   node tools/kidbots.mjs settle [runs=16] [matches=50]  each child from r = 0, the rating moved after every match by kidsAdapt's rule;
-//                                                       settled is the second half of each run
-// Add a profile name (six, eight, ten) to run one child only. Every match is seeded on its own (SEED, then its run and number), so a
-// line is the same whatever else runs. JOBS=n splits the matches over n processes (default: the machine's cores, at most 8).
-// Not part of check.mjs: it is a calibration tool, minutes long. tools/kids.mjs checks the rule and the scale themselves.
+// Scripted children for the Kids rating (src/kids.js): a 6 year old, a 7 to 8 year old, a sharp 10 year old and a stick masher, each
+// playing one-player Kids matches through the real input path, with 2-minute halves and Quick Match's rules (arcade on: On Fire, the Golden Try).
+//   node tools/kidbots.mjs at [r=0,1] [matches=200]                  scorelines for each child at fixed ratings (easy: plain Easy, for comparison)
+//   node tools/kidbots.mjs settle [runs=16] [matches=150] [skip=60]  each child from r = 0, the rating moved after every match by kidsAdapt's
+//                                                                  rule; settled is each run after its first `skip` matches
+// Add a profile name (six, eight, ten, or masher, who runs only when named) to run one child only. Every match is seeded on its own (SEED,
+// then its run and number), so a line is the same whatever else runs. JOBS=n splits the matches over n processes (default: the machine's
+// cores, at most 8). A ± is a standard error. Where r settles has it across the runs; a settled margin and win share have it counting each
+// match on its own, and across the runs in brackets (the rating's feedback holds a run's results together, so the matches are not independent).
+// Not part of check.mjs: it is a calibration tool, tens of minutes long. tools/kids.mjs checks the rule and the scale themselves.
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -34,6 +36,8 @@ export const KID_BOTS = {
   eight:{ name:'7 to 8 year old', def:0.6, astray:0.25, react:0.5, wob:0.9, pass:0.001, chip:0.001, under:0.05, swerve:0.4, sprint:0.3, off:0.2, dive:0.06,
     duel:{ press:0.9, sd:0.2, flick:0.6, right:0.75 }, kick:0.12, scrum:[4, 0.35], line:0.22 },
   ten:  { name:'sharp 10 year old', harness:true },
+  masher:{ name:'stick masher', extra:true, def:0, astray:0.7, react:0.9, wob:1.6, pass:0.003, chip:0.002, under:0, swerve:0, sprint:0, off:0.05, dive:0,
+    duel:{ press:1, sd:null, flick:0.3, right:0.5 }, kick:0.25, scrum:[2, 0.1], line:0.35 },   // never defends, 70% of the time still pushing at the try line; run only when named
 };
 
 function kidGoal(c, P) {                                   // the aim is set on Kids; he holds Kick and lets go about the gold's centre
@@ -125,7 +129,7 @@ async function main() {
   const args = process.argv.slice(2);
   if (args[0] === '--job') { job(JSON.parse(args[1])); return; }
   const cmd = args[0] || 'at', who = args.filter(a => KID_BOTS[a]), nums = args.slice(1).filter(a => !KID_BOTS[a]);
-  const kids = who.length ? who : Object.keys(KID_BOTS);
+  const kids = who.length ? who : Object.keys(KID_BOTS).filter(k => !KID_BOTS[k].extra);
   const jobs = +process.env.JOBS || Math.min(8, os.cpus().length);
   if (cmd === 'at') {
     const rs = (nums[0] || '0,1').split(',').map(v => (v === 'easy' ? -1 : +v)), n = +nums[1] || 200;
@@ -135,20 +139,18 @@ async function main() {
       console.log(line(`${KID_BOTS[k].name} ${r < 0 ? 'on Easy' : 'at r=' + r.toFixed(2)}`, res));
     }
   } else if (cmd === 'settle') {
-    const runs = +nums[0] || 16, n = +nums[1] || 50;
+    const runs = +nums[0] || 16, n = +nums[1] || 150, skip = Math.min(n - 1, nums[2] != null ? +nums[2] : 60);
     for (const k of kids) {
       const seqs = await fan(jobs, runs, (lo, hi) => ({ kind:'settle', who:k, n, lo, hi }));   // one array of n matches a run
       if (process.env.DUMP) fs.appendFileSync(process.env.DUMP, JSON.stringify({ who:k, seqs }) + '\n');
-      const late = seqs.flatMap(s => s.slice(Math.floor(n/2)));   // the second half of each run: settled
-      const rr = late.map(m => m.r), mean = rr.reduce((a, b) => a + b, 0)/rr.length;
-      const runMeans = seqs.map(s => s.slice(Math.floor(n/2)).reduce((a, m) => a + m.r, 0)/(n - Math.floor(n/2)));
-      const sdRuns = Math.sqrt(runMeans.reduce((a, v) => a + (v - mean)**2, 0)/Math.max(1, runMeans.length - 1));
-      const curve = [0, 5, 10, 15, 20, 30, n - 1].filter(i => i < n).map(i => `${i + 1}:${(seqs.reduce((a, s) => a + s[i].r, 0)/seqs.length).toFixed(2)}`).join(' ');
-      const jumps = Math.max(...seqs.flatMap(s => s.map((m, i) => Math.abs(m.next - m.r))));
-      console.log(`${KID_BOTS[k].name}: r settles at ${mean.toFixed(3)} ± ${(sdRuns/Math.sqrt(runMeans.length)).toFixed(3)} (runs' spread ${sdRuns.toFixed(3)}; the rating before match ${curve}; largest step ${jumps.toFixed(3)})`);
-      console.log('  ' + line('settled matches', late));
+      const late = seqs.map(s => s.slice(skip));                  // each run after its first `skip` matches: settled
+      const runMeans = late.map(s => s.reduce((a, m) => a + m.r, 0)/s.length), [mean, seR, sdRuns] = meanSe(runMeans);
+      const curve = [0, 10, 20, 30, 40, 60, 80, 100, n - 1].filter((i, j, a) => i < n && a.indexOf(i) === j).map(i => `${i + 1}:${(seqs.reduce((a, s) => a + s[i].r, 0)/seqs.length).toFixed(3)}`).join(' ');
+      const jumps = Math.max(...seqs.flatMap(s => s.map(m => Math.abs(m.next - m.r))));
+      console.log(`${KID_BOTS[k].name}: r settles at ${mean.toFixed(3)} ± ${seR.toFixed(3)} (runs' spread ${sdRuns.toFixed(3)}; the runs' mean rating before match ${curve}; largest step ${jumps.toFixed(3)})`);
+      console.log('  ' + line(`settled (from match ${skip + 1})`, late.flat(), late));
     }
-  } else { console.error('Usage: node tools/kidbots.mjs at [r,r] [matches] | settle [runs] [matches] [six|eight|ten]'); process.exitCode = 2; }
+  } else { console.error('Usage: node tools/kidbots.mjs at [r,r] [matches] | settle [runs] [matches] [skip] [six|eight|ten|masher]'); process.exitCode = 2; }
 }
 function job(o) {
   const out = [];
@@ -168,11 +170,15 @@ function fan(jobs, n, spec) {                              // the items 0..n-1 o
     let s = ''; p.stdout.on('data', d => { s += d; }); p.on('close', code => (code ? bad(new Error('job failed')) : ok(JSON.parse(s))));
   }))).then(r => r.flat());
 }
-function line(label, res) {                                // mean scoreline and tries, the result counts, and the try margin's mean with its standard error
-  const n = res.length, f = k => res.reduce((a, m) => a + k(m), 0)/n;
-  const marg = res.map(m => m.tries[0] - m.tries[1]), mm = marg.reduce((a, b) => a + b, 0)/n, sd = Math.sqrt(marg.reduce((a, v) => a + (v - mm)**2, 0)/Math.max(1, n - 1));
-  const w = res.filter(m => m.score[0] > m.score[1]).length, l = res.filter(m => m.score[0] < m.score[1]).length, d = n - w - l;
-  const big = res.filter(m => m.tries[0] - m.tries[1] > 3).length, conceded = res.filter(m => m.tries[1] > 0).length;
-  const se = (p) => Math.sqrt(p*(1 - p)/n);
-  return `${label.padEnd(26)} ${f(m => m.score[0]).toFixed(1)}-${f(m => m.score[1]).toFixed(1)}  tries ${f(m => m.tries[0]).toFixed(2)}-${f(m => m.tries[1]).toFixed(2)}  margin ${mm.toFixed(2)} ± ${(sd/Math.sqrt(n)).toFixed(2)} (sd ${sd.toFixed(2)})  W${w} D${d} L${l} (won ${(100*w/n).toFixed(0)} ± ${(100*se(w/n)).toFixed(0)}%)  by 4+ ${(100*big/n).toFixed(0)}%  conceded a try ${(100*conceded/n).toFixed(0)}%  n=${n}`;
+function meanSe(v) { const n = v.length, m = v.reduce((a, b) => a + b, 0)/n, sd = Math.sqrt(v.reduce((a, x) => a + (x - m)**2, 0)/Math.max(1, n - 1)); return [m, sd/Math.sqrt(n), sd]; }   // mean, its standard error, the spread
+function line(label, res, runs) {                          // mean scoreline and tries, the try margin (mean ± its standard error, median), wins by how much, tries conceded; runs: the same errors across them too
+  const n = res.length, f = k => res.reduce((a, m) => a + k(m), 0)/n, share = (k, of = res) => of.filter(k).length/of.length, pc = v => (100*v).toFixed(0);
+  const mg = m => m.tries[0] - m.tries[1], won = m => m.score[0] > m.score[1], lost = m => m.score[0] < m.score[1];
+  const marg = res.map(mg).sort((a, b) => a - b), med = n % 2 ? marg[(n - 1)/2] : (marg[n/2 - 1] + marg[n/2])/2;
+  const [mm, seM, sd] = meanSe(marg), seW = Math.sqrt(share(won)*(1 - share(won))/n);
+  const runSe = runs ? ` (across the runs ± ${meanSe(runs.map(s => s.reduce((a, m) => a + mg(m), 0)/s.length))[1].toFixed(2)}, ± ${pc(meanSe(runs.map(s => share(won, s)))[1])}%)` : '';   // the rating's feedback holds a run's results together, so this one is usually the smaller
+  const w = res.filter(won).length, l = res.filter(lost).length;
+  return `${label.padEnd(26)} ${f(m => m.score[0]).toFixed(1)}-${f(m => m.score[1]).toFixed(1)}  tries ${f(m => m.tries[0]).toFixed(2)}-${f(m => m.tries[1]).toFixed(2)}  margin ${mm.toFixed(2)} ± ${seM.toFixed(2)} (sd ${sd.toFixed(2)}, median ${med})  ` +
+    `won ${pc(w/n)} ± ${pc(seW)}% (W${w} D${n - w - l} L${l})${runSe}  wins by 4+ ${pc(share(m => won(m) && mg(m) >= 4))}%, 2-3 ${pc(share(m => won(m) && mg(m) >= 2 && mg(m) <= 3))}%, 1 or less ${pc(share(m => won(m) && mg(m) <= 1))}%  ` +
+    `conceded a try ${pc(share(m => m.tries[1] > 0))}% (2+ ${pc(share(m => m.tries[1] > 1))}%)  n=${n}`;
 }

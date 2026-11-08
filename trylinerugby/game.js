@@ -7223,14 +7223,17 @@ function kidsTune(r) {                                     // KIDS at rating r (
 }
 kidsTune(0);
 /* After a completed one-player Kids match (kidsAdapt, from finishMatch: never practice, AI v AI, the demo or two player, never a
-   match left early), r moves by the result in the child's side's points and tries, a share of the way towards the ceiling or the
-   start: a win by more than KIDS_ADAPT.big tries raises it a tenth of the way up, a narrower win nudges it 4% of the way, a draw
-   eases it 3% of the way down, a loss lowers it 6% (10% by two tries or more). So it never lurches (a tenth of the scale at most),
-   and it closes on where a child's results hold it in ever smaller steps, quicker down than up near the top: a slow decay towards
-   that point, not a swing from end to end. Scripted children (tools/kidbots.mjs) settle at about 0.70 (a 6 year old), 0.84 (7 to 8)
-   and 0.96 (a sharp 10 year old); README.md has the scorelines. */
-const KIDS_ADAPT = { big:3, raise:0.10, nudge:0.04, draw:-0.03, lose:-0.06, heavy:-0.10 };
-function kidsStep(score, tries, h = 0) {                    // the share one result moves r: up towards 1 if above 0, down towards 0 if below. h is the child's side
+   match left early), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
+   KIDS_ADAPT.big tries raises it, any other win (one on a kick included) nudges it up, a draw eases it a little, a loss lowers it, and
+   a loss by two tries or more lowers it further. A step is the same size anywhere on the scale; 0 and 1 only stop it. So a loss near
+   the start takes it down as surely as one near the top, and a child who loses more than he wins goes back to the start. No step is
+   more than a tenth of the scale, so it never lurches. It settles where a child's wins and losses balance: below that point his
+   wins outweigh his losses and it climbs, above it the other way, and the nearer it gets the more nearly they cancel, so it drifts
+   in more and more slowly rather than swinging from end to end. Scripted children (tools/kidbots.mjs) settle at about 0.73 (a 6 year
+   old, winning 72%), 0.96 (a 7 to 8 year old, winning 81% by 2.7 tries) and the ceiling (a sharp 10 year old), and a child who never
+   defends at about 0.12; README.md has the scorelines. */
+const KIDS_ADAPT = { big:3, raise:0.05, nudge:0.01, draw:-0.01, lose:-0.05, heavy:-0.10 };
+function kidsStep(score, tries, h = 0) {                    // the step one result moves r, up if above 0, down if below. h is the child's side
   const pts = score[h] - score[1 - h], m = tries[h] - tries[1 - h], A = KIDS_ADAPT;
   if (pts > 0) return m > A.big ? A.raise : A.nudge;
   if (pts === 0) return A.draw;
@@ -7238,8 +7241,7 @@ function kidsStep(score, tries, h = 0) {                    // the share one res
 }
 function kidsNext(r, score, tries, h = 0) {                // the rating after a result, kept to three places
   r = Number.isFinite(r) ? clamp(r, 0, 1) : 0;
-  const f = kidsStep(score, tries, h);
-  return Math.round(clamp(f > 0 ? r + f*(1 - r) : r + f*r, 0, 1)*1000)/1000;
+  return Math.round(clamp(r + kidsStep(score, tries, h), 0, 1)*1000)/1000;
 }
 function kidsAdapt() {                                     // full time in a Kids match: the rating moves once, and is saved
   if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two) return null;
