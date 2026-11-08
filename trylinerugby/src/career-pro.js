@@ -14,10 +14,13 @@
      teammate looks for him. At a pass the carrier was making anyway he gives it to him instead with chance PRO.look,
      and while he is a sensible option the carrier passes to him unprompted, PRO.seek times a second, unless he is
      running into open grass himself. Sensible: level or behind the ball, PRO.near to PRO.far metres off, no defender
-     within PRO.open of him and none within PRO.lane of the line to him. Never a pass into trouble.
+     within PRO.open of him and none within PRO.lane of the line to him. Never a pass into trouble. An offload out of a
+     tackle goes to him only inside the engine's offload range (CONTACT.off.range), as any other offload does.
    - Call for Ball: Pass while a teammate has the ball. Answered with chance PRO.answer when a pass to him is on (the
      same test, with PRO.callOpen for his space), PRO.react later; otherwise the No sign over the carrier. One call
-     each PRO.cool seconds.
+     each PRO.cool seconds. A call lasts one possession: setCarrier drops it when anyone gets the ball, so a caller who
+     loses it and has it back later never answers a call from before.
+   - Kids: a My Player career match never moves the hidden Kids rating (kidsAdapt), since his teammates won or lost it.
    - Set pieces: a forward plays the scrums and lineouts, as today; a back's are played for the team (autoScrum and
      autoLineout, as AI v AI plays them). He takes the goal kicks, as in every career match, and the duels are his
      only, since the engine starts them only for the ringed man.
@@ -45,9 +48,9 @@ function proSpirit() {                                       // Team Spirit, 0 t
   return L && Number.isFinite(+L.spirit) ? clamp(+L.spirit/100, 0, 1) : 0.5;
 }
 const proAt = (a, s) => a[0] + (a[1] - a[0])*s;
-function proOpen(c, room) {                                  // could carrier c pass to your player now, into space (room: no defender closer to him)
+function proOpen(c, room, far = PRO.far) {                   // could carrier c pass to your player now, into space (room: no defender closer to him), from at most `far` away
   const me = M.careerP;
-  if (!me || !c || c === me || c.team !== me.team || !onFeet(me) || !passOk(c, me, PRO.far) || dist(c, me) < PRO.near || pressure(me) < room) return false;
+  if (!me || !c || c === me || c.team !== me.team || !onFeet(me) || !passOk(c, me, far) || dist(c, me) < PRO.near || pressure(me) < room) return false;
   const ax = me.x - c.x, ay = me.y - c.y, L2 = ax*ax + ay*ay || 1;
   for (const q of M.players) {
     if (q.team === c.team || !onFeet(q)) continue;
@@ -56,9 +59,10 @@ function proOpen(c, room) {                                  // could carrier c 
   }
   return true;
 }
-/* doPass's hook: a teammate's pass may go to him instead. Returns the pass's [to, o]. */
+/* doPass's hook: a teammate's pass may go to him instead. Returns the pass's [to, o]. An offload (offload() is the one pass
+   of a teammate's that names men to skip: the tacklers) reaches only CONTACT.off.range, as supportFor's do. */
 function proPass(from, to, o) {
-  if (!proRun(from) || to === M.careerP || o.sure || !proOpen(from, PRO.open) || rnd() >= proAt(PRO.look, proSpirit())) return [to, o];
+  if (!proRun(from) || to === M.careerP || o.sure || !proOpen(from, PRO.open, o.skip ? CONTACT.off.range : PRO.far) || rnd() >= proAt(PRO.look, proSpirit())) return [to, o];
   st('proLook');
   return [M.careerP, { ...o, long:false }];                  // a flat pass to him: a floater was for the man it skipped
 }

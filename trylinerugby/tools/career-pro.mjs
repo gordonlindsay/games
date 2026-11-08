@@ -63,7 +63,7 @@ function proBot(o = {}) {
   const M = T.M, b = M.ball, me = M.careerP, inp = T.input;
   if (M.phase === 'cut' && M.cut) {
     inp.jx = 0; inp.jy = 0; const c = M.cut;
-    if (c.duel) duelBot(c); else if (c.kind === 'goal') (c.g.type === 'drop' ? dropBot : kickBot)(c);
+    if (c.duel) duelBot(c); else if (c.kind === 'goal') (c.g.type === 'drop' ? dropBot : kickBot)(c, M.kids ? { aim:c.g.aim } : {});   // Kids sets the aim
     else if (c.kind === 'scrum') scrumBot(0); else if (c.kind === 'lineout') lineBot(0);
     return;
   }
@@ -266,6 +266,30 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
   if (T.M.proCall) { const other = s.mates[0]; T.M.ball.carrier = other; other.hold = 2; steps(1); ok(!T.M.proCall || T.M.proCall.c !== other, 'a call the ball has moved on from is dropped'); }
   else ok(false, 'a call at Team Spirit 1 was not answered');
   D.exitMatch();
+  // a call lasts one possession: the caller gives the ball to him before he answers (an offload, say), and later has it back
+  // from him. The call went with the first catch, so the caller never answers it late with a pass straight back.
+  {
+    let cycle = null;
+    for (let a = 0; a < 12 && !cycle; a++) {
+      s = stage({ me:{ x:46, y:43 }, spirit:1 });
+      for (let i = 0; i < 20 && !T.M.proCall; i++) { T.M.proLast = null; P.call(); }
+      const M = T.M, c = s.c, me = s.me, catchBy = p => { for (let i = 0; i < 90; i++) { T.update(T.STEP); const b = M.ball; if (b.state === 'held') return b.carrier === p; if (b.state !== 'air' || M.phase !== 'play') return false; } return false; };
+      if (!M.proCall || M.proCall.c !== c) { D.exitMatch(); continue; }
+      K.doPass(c, me);
+      if (!catchBy(me)) { D.exitMatch(); continue; }
+      const gone = M.proCall == null;
+      steps(30);                                               // he runs with it half a second
+      if (M.ball.state !== 'held' || M.ball.carrier !== me) { D.exitMatch(); continue; }
+      c.x = me.x - 3; c.y = me.y - 5; c.vx = c.vy = 0;
+      const a0 = M.stats.proAnswer || 0;
+      K.doPass(me, c);
+      if (!catchBy(c)) { D.exitMatch(); continue; }
+      let toMe = false; for (let i = 0; i < 30; i++) { T.update(T.STEP); const b = M.ball; if (b.state === 'air' && b.f.kind === 'pass' && b.f.target === me) toMe = true; }
+      cycle = { gone, answered:(M.stats.proAnswer || 0) > a0, toMe };
+      D.exitMatch();
+    }
+    ok(cycle && cycle.gone && !cycle.answered && !cycle.toMe, `a call ends with the possession: the ball going to him drops it, and the caller, given it back, does not answer it late (${json(cycle)})`);
+  }
   // how often a call is answered: PRO.answer, from Team Spirit 0 to 1
   const rate = sp => {
     let yes = 0; const N = 300;
@@ -297,6 +321,18 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
   const keep = P.PRO.look[1]; P.PRO.look[1] = 1; const c = share(1); const [to, oo] = P.pass(c.s.c, c.s.mates[0], { long:true, skip:[1] }); P.PRO.look[1] = keep;
   ok(to === c.s.me && oo.long === false && json(oo.skip) === '[1]', 'a floater meant for the man further out becomes a flat pass to him');
   D.exitMatch();
+  // an offload out of a tackle (the one pass of a teammate's that names men to skip) goes to him only inside the engine's offload
+  // range, as every offload does; a pass in open play still reaches him from PRO.far
+  {
+    const keep = P.PRO.look[1]; P.PRO.look[1] = 1;
+    const s = stage({ me:{ x:44, y:46 }, spirit:1 }), far = Math.hypot(s.me.x - s.c.x, s.me.y - s.c.y);
+    const [o1] = P.pass(s.c, s.mates[0], { skip:[s.foes[0]] }), [p1] = P.pass(s.c, s.mates[0], {});
+    s.me.x = 47; s.me.y = 41; const near = Math.hypot(s.me.x - s.c.x, s.me.y - s.c.y);
+    const [o2] = P.pass(s.c, s.mates[0], { skip:[s.foes[0]] });
+    P.PRO.look[1] = keep;
+    ok(far > K.CONTACT.off.range && near < K.CONTACT.off.range && o1 === s.mates[0] && p1 === s.me && o2 === s.me, `an offload goes to him only within ${K.CONTACT.off.range}m (not from ${far.toFixed(1)}m, yes from ${near.toFixed(1)}m); an open-play pass still reaches him from ${far.toFixed(1)}m`);
+    D.exitMatch();
+  }
   // Team Spirit is career-life.js's reader where it is merged, the match's snapshot of it otherwise
   stage({ spirit:0.2 });
   ok(Math.abs(P.spirit() - 0.2) < 1e-9, 'Team Spirit 20 reads 0.2');
@@ -344,6 +380,25 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
   const per = sp => { let n = 0; for (let i = 0; i < 10; i++) { const r = proMatch(700 + i, sp, { call:0.6 }); n += r.thrown; D.exitMatch(); C.set(null); } return n/10; };
   const lo = per(0.2), hi = per(0.9);
   ok(hi > lo*1.4 && hi - lo > 3, `passes to him a match rise with Team Spirit (${lo.toFixed(1)} at 0.2, ${hi.toFixed(1)} at 0.9)`);
+}
+
+// Kids: a My Player career match never moves the hidden Kids rating (his teammates won or lost it, so it says nothing of the
+// child's level, and Quick Match and Championship read the same rating); a Whole Team career match still does
+{
+  const r0 = settings.kidsR;
+  const kidsMatch = pro => {
+    reseed(640); ready(); settings.diff = 0; settings.kids = true; settings.kidsR = 0.3;
+    C.set(C.create({ pos:'B', num:5, club:X.CLUBS[0], proMode:pro })); C.play();
+    const M = T.M, kids = !!M.kids;
+    const kidsBot = () => { const c = M.cut; if (M.phase === 'cut' && c && !c.duel && c.kind === 'goal') { T.input.jx = T.input.jy = 0; (c.g.type === 'drop' ? dropBot : kickBot)(c, { aim:c.g.aim }); } else bot(0); };   // the harness's bot, with Kids' set aim at a goal kick
+    playOut(pro ? () => proBot({ call:0.6 }) : kidsBot);
+    const out = { kids, over:M.over, r:settings.kidsR, score:M.score.join('-') };
+    D.exitMatch(); C.set(null); ready(); return out;
+  };
+  const a = kidsMatch(true), b = kidsMatch(false);
+  settings.kidsR = r0;
+  ok(a.kids && a.over && a.r === 0.3, `Kids, My Player: the match (${a.score}) leaves the Kids rating at 0.3 (${a.r})`);
+  ok(b.kids && b.over && b.r !== 0.3, `Kids, Whole Team: the match (${b.score}) moves it, as before (0.3 to ${b.r})`);
 }
 
 // 10. the new player screen

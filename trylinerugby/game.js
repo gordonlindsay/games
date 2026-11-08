@@ -758,6 +758,7 @@ function setCarrier(p) {
   if (M.poss !== p.team) M.phaseCount = 0;
   b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
+  if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
   clearCharge();
   for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
@@ -3714,8 +3715,10 @@ function careerCreate(o) {
   if (!club) return null;
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
-  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, pro:null, country:null, skills,
-    stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 }, proMode:o.proMode === true };   // proMode: Pro Mode, your player alone (career-pro.js)
+  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club,
+    proMode:o.proMode === true,                      // Pro Mode, your player alone (career-pro.js). Its own line, and in cleanCareer's order
+    pro:null, country:null, skills,
+    stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
   careerNewSeason(cr);
   return cr;
 }
@@ -3902,8 +3905,9 @@ function cleanCareer(c) {
   }
   const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club,
+    proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
     pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:NATIONS.some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
-    skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals, proMode:c.proMode === true };   // a career from before Pro Mode is Whole Team
+    skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
 }
 /* Your player: a ring in the kit's trim round him and a star on his back (the trim, or the shirt, or chalk, whichever
    stands off the grass), drawn over the men so a ruck can't hide him. */
@@ -3938,10 +3942,13 @@ function careerMark(r) {
      teammate looks for him. At a pass the carrier was making anyway he gives it to him instead with chance PRO.look,
      and while he is a sensible option the carrier passes to him unprompted, PRO.seek times a second, unless he is
      running into open grass himself. Sensible: level or behind the ball, PRO.near to PRO.far metres off, no defender
-     within PRO.open of him and none within PRO.lane of the line to him. Never a pass into trouble.
+     within PRO.open of him and none within PRO.lane of the line to him. Never a pass into trouble. An offload out of a
+     tackle goes to him only inside the engine's offload range (CONTACT.off.range), as any other offload does.
    - Call for Ball: Pass while a teammate has the ball. Answered with chance PRO.answer when a pass to him is on (the
      same test, with PRO.callOpen for his space), PRO.react later; otherwise the No sign over the carrier. One call
-     each PRO.cool seconds.
+     each PRO.cool seconds. A call lasts one possession: setCarrier drops it when anyone gets the ball, so a caller who
+     loses it and has it back later never answers a call from before.
+   - Kids: a My Player career match never moves the hidden Kids rating (kidsAdapt), since his teammates won or lost it.
    - Set pieces: a forward plays the scrums and lineouts, as today; a back's are played for the team (autoScrum and
      autoLineout, as AI v AI plays them). He takes the goal kicks, as in every career match, and the duels are his
      only, since the engine starts them only for the ringed man.
@@ -3969,9 +3976,9 @@ function proSpirit() {                                       // Team Spirit, 0 t
   return L && Number.isFinite(+L.spirit) ? clamp(+L.spirit/100, 0, 1) : 0.5;
 }
 const proAt = (a, s) => a[0] + (a[1] - a[0])*s;
-function proOpen(c, room) {                                  // could carrier c pass to your player now, into space (room: no defender closer to him)
+function proOpen(c, room, far = PRO.far) {                   // could carrier c pass to your player now, into space (room: no defender closer to him), from at most `far` away
   const me = M.careerP;
-  if (!me || !c || c === me || c.team !== me.team || !onFeet(me) || !passOk(c, me, PRO.far) || dist(c, me) < PRO.near || pressure(me) < room) return false;
+  if (!me || !c || c === me || c.team !== me.team || !onFeet(me) || !passOk(c, me, far) || dist(c, me) < PRO.near || pressure(me) < room) return false;
   const ax = me.x - c.x, ay = me.y - c.y, L2 = ax*ax + ay*ay || 1;
   for (const q of M.players) {
     if (q.team === c.team || !onFeet(q)) continue;
@@ -3980,9 +3987,10 @@ function proOpen(c, room) {                                  // could carrier c 
   }
   return true;
 }
-/* doPass's hook: a teammate's pass may go to him instead. Returns the pass's [to, o]. */
+/* doPass's hook: a teammate's pass may go to him instead. Returns the pass's [to, o]. An offload (offload() is the one pass
+   of a teammate's that names men to skip: the tacklers) reaches only CONTACT.off.range, as supportFor's do. */
 function proPass(from, to, o) {
-  if (!proRun(from) || to === M.careerP || o.sure || !proOpen(from, PRO.open) || rnd() >= proAt(PRO.look, proSpirit())) return [to, o];
+  if (!proRun(from) || to === M.careerP || o.sure || !proOpen(from, PRO.open, o.skip ? CONTACT.off.range : PRO.far) || rnd() >= proAt(PRO.look, proSpirit())) return [to, o];
   st('proLook');
   return [M.careerP, { ...o, long:false }];                  // a flat pass to him: a floater was for the man it skipped
 }
@@ -6223,7 +6231,7 @@ function showBreak(kind) {
 function finishMatch() {
   if (M.champ && champ) recordChampResult();
   if (M.career) careerRecordResult();
-  if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and Career alike
+  if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and a Whole Team career alike
   showBreak('full');
 }
 $('br-go').addEventListener('click', () => {
@@ -7565,7 +7573,7 @@ function kidsTune(r) {                                     // KIDS at rating r (
 }
 kidsTune(0);
 /* After a completed one-player Kids match (kidsAdapt, from finishMatch: never practice, AI v AI, the demo or two player, never a
-   match left early), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
+   match left early, never a My Player career match, career-pro.js), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
    KIDS_ADAPT.big tries raises it, any other win (one on a kick included) nudges it up, a draw eases it a little, a loss lowers it, and
    a loss by two tries or more lowers it further. A step is the same size anywhere on the scale; 0 and 1 only stop it. So a loss near
    the start takes it down as surely as one near the top, and a child who loses more than he wins goes back to the start. No step is
@@ -7586,7 +7594,7 @@ function kidsNext(r, score, tries, h = 0) {                // the rating after a
   return Math.round(clamp(r + kidsStep(score, tries, h), 0, 1)*1000)/1000;
 }
 function kidsAdapt() {                                     // full time in a Kids match: the rating moves once, and is saved
-  if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two) return null;
+  if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two || M.careerPro) return null;   // a My Player career match: the computer played his side, so it says nothing of the child's level
   const h = isHuman(0) ? 0 : 1;
   M.kidsDone = true;
   settings.kidsR = kidsNext(M.kidsR, M.score, M.tries, h);

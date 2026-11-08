@@ -46,7 +46,7 @@ function kidsTune(r) {                                     // KIDS at rating r (
 }
 kidsTune(0);
 /* After a completed one-player Kids match (kidsAdapt, from finishMatch: never practice, AI v AI, the demo or two player, never a
-   match left early), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
+   match left early, never a My Player career match, career-pro.js), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
    KIDS_ADAPT.big tries raises it, any other win (one on a kick included) nudges it up, a draw eases it a little, a loss lowers it, and
    a loss by two tries or more lowers it further. A step is the same size anywhere on the scale; 0 and 1 only stop it. So a loss near
    the start takes it down as surely as one near the top, and a child who loses more than he wins goes back to the start. No step is
@@ -67,7 +67,7 @@ function kidsNext(r, score, tries, h = 0) {                // the rating after a
   return Math.round(clamp(r + kidsStep(score, tries, h), 0, 1)*1000)/1000;
 }
 function kidsAdapt() {                                     // full time in a Kids match: the rating moves once, and is saved
-  if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two) return null;
+  if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two || M.careerPro) return null;   // a My Player career match: the computer played his side, so it says nothing of the child's level
   const h = isHuman(0) ? 0 : 1;
   M.kidsDone = true;
   settings.kidsR = kidsNext(M.kidsR, M.score, M.tries, h);
