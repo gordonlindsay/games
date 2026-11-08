@@ -87,7 +87,7 @@ export const LISTING_MOMENTS = [
   }, wait:700 },
   { id:'teams', name:'Team Picker', stage:() => { document.getElementById('b-quick').click(); }, wait:700 },   // Quick Match's, which is free
   { id:'home', name:'Home', stage:() => {}, wait:900 },
-  { id:'career', name:'Career', full:true, stage:() => {
+  { id:'career', name:'Career', full:true, stage:() => {   // a rookie's first year at his club (club seasons): the card, the year's first round and its dilemma
     const T = window.__tryline, X = T.teams;
     T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] });
     T.career.open();

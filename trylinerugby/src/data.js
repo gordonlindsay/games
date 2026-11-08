@@ -150,7 +150,7 @@ const TEAM_LISTS = [
   { key:'sur', tier:2, name:'Surrey',           teams:CLUBS },
 ];
 const POOLS = TEAM_LISTS.map(l => l.teams);   // every built-in list
-const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's Pro Club signs from these
+const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's transfer offers come from these
 /* Saves from before the hierarchy hold an index into the old five lists and My League (International, Local, France, Australia,
    South Africa, My League). Each goes to the list it was; anything else to International, as a bad choice always has. */
 const POOL_OLD = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];

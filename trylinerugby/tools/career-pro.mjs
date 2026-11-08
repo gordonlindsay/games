@@ -22,7 +22,10 @@ const ready = () => { settings.played = 99; settings.diff = 1; settings.kids = f
 //    where they move nothing), from that change's bundle without career-pro.js.
 // NON_CAREER follows career.mjs's BASE, the same seeded runs: re-pinned with it when the nations were rated on the XV rankings (its first
 // value, AI v AI, moved with the ratings alone).
-const NON_CAREER = '1o2r2g2 1uombq7 12cy4qs', TEAM = '1c73jxu 1d1uovf';
+// TEAM re-pinned at club seasons (2026-11-08): a career's first year at Farnham and Aldershot is their Local league at full strength,
+// no longer the Minis one off every ability. With the Minis' sides put back (team(true): the same draw, one off every ability) this
+// build gives the pin from before Pro Mode, TEAM_MINIS, exactly.
+const NON_CAREER = '1o2r2g2 1uombq7 12cy4qs', TEAM = 'kui40f 1x06cnw', TEAM_MINIS = '1c73jxu 1d1uovf';
 function nonCareer() {
   const out = [];
   reseed(23);
@@ -45,9 +48,10 @@ function playOut(step, limit = 400000) {
   }
   return n;
 }
-function teamMatch(seed, o) {
+function teamMatch(seed, o, minis) {
   reseed(seed); ready();
   const cr = C.create({ pos:o.pos, num:o.num, club:X.CLUBS[o.club] }); C.set(cr);
+  if (minis) cr.season.teams = cr.season.teams.map(t => { const m = { ...t }; for (const [k] of T.stamina.ABILITIES) if (k in m) m[k] = Math.max(1, m[k] - 1); return m; });   // the Minis' sides, as careers had them before club seasons
   if (cr.life) Object.assign(cr.life, { energy:100, morale:50, spirit:50 });   // career-life.js's bars at their neutral values: Whole Team plays as on 30e13e2
   C.play();
   const n = playOut(() => bot(0), 200000);
@@ -55,10 +59,11 @@ function teamMatch(seed, o) {
   D.exitMatch(); C.set(null);
   return out;
 }
-const team = () => [teamMatch(301, { pos:'B', num:5, club:0 }), teamMatch(302, { pos:'F', num:2, club:3 })].map(fnv).join(' ');
-{ const a = nonCareer(), b = team();
+const team = minis => [teamMatch(301, { pos:'B', num:5, club:0 }, minis), teamMatch(302, { pos:'F', num:2, club:3 }, minis)].map(fnv).join(' ');
+{ const a = nonCareer(), b = team(), m = team(true);
   ok(a === NON_CAREER, `non-career matches play exactly as before Pro Mode (seeded fingerprint ${a}, pinned ${NON_CAREER})`);
-  ok(b === TEAM, `a Whole Team career match plays exactly as before Pro Mode (seeded fingerprint ${b}, pinned ${TEAM})`); }
+  ok(b === TEAM, `a Whole Team career match plays as pinned (seeded fingerprint ${b}, pinned ${TEAM})`);
+  ok(m === TEAM_MINIS, `and, with the Minis' sides it was pinned on, exactly as before Pro Mode (${m}, pinned ${TEAM_MINIS})`); }
 
 // The scripted Pro Mode player. The harness's bot with the ball and in defence (its Switch press does nothing here); its close-up
 // bots in his duels, his goal kicks and, for a forward, the scrums and lineouts. While a teammate has the ball he runs a support
@@ -108,8 +113,8 @@ function proMatch(seed, spirit, o = {}) {
   const old = JSON.parse(json(b)); delete old.proMode;
   ok(C.clean(old).proMode === false, 'a career saved before Pro Mode loads as Whole Team');
   ok(C.clean({ ...b, proMode:'true' }).proMode === false && C.clean({ ...b, proMode:null }).proMode === false, 'a bad value is Whole Team');
-  const signed = C.clean({ ...b, stage:3, pro:'TLS' });
-  ok(signed.pro === 'TLS' && signed.proMode === true && C.teamFor(signed, 3).name === 'Toulouse', 'Pro Mode is its own field: the Pro Club side you signed for is still `pro`');
+  const signed = C.clean({ ...JSON.parse(json(b)), phase:undefined, stage:3, pro:'TLS' });   // a Pro Club career from before club seasons
+  ok(signed.club.id === 'TLS' && signed.proMode === true && C.teamFor(signed).name === 'Toulouse' && !('pro' in signed), 'Pro Mode is its own field: a Pro Club career from before club seasons loads at the side it signed for (`pro`, now its club), still Pro Mode');
   C.set(b); X.save();
   const disk = JSON.parse(memory['tryline.v1']).career;
   C.set(null); X.restore({ career:disk });
@@ -266,7 +271,7 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
   D.exitMatch();
   // a call still waiting when the ball moves on is dropped
   s = stage({ me:{ x:46, y:43 }, spirit:1 });
-  P.call();
+  for (let i = 0; i < 20 && !T.M.proCall; i++) { T.M.proLast = null; P.call(); }   // answered 95% of the time at Team Spirit 1: called until it is
   if (T.M.proCall) { const other = s.mates[0]; T.M.ball.carrier = other; other.hold = 2; steps(1); ok(!T.M.proCall || T.M.proCall.c !== other, 'a call the ball has moved on from is dropped'); }
   else ok(false, 'a call at Team Spirit 1 was not answered');
   D.exitMatch();
@@ -409,7 +414,7 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
 {
   const src = readGameSource(), html = src.slice(src.indexOf('id="s-career-new"'), src.indexOf('id="s-career"'));
   ok(/<span class="lbl">Play as<\/span><div class="seg" id="cn-mode"><button>Whole Team<\/button><button>My Player<\/button><\/div>/.test(html), 'New Player: Play as, Whole Team first, My Player second, one balanced row of two');
-  ok(html.indexOf('id="cn-mode"') < html.indexOf('id="cn-clubs"') && html.indexOf('id="cn-mode"') < html.indexOf('id="cn-go"'), 'above the clubs, so Start Career stays where it was');
+  ok(html.indexOf('id="cn-mine"') < html.indexOf('id="cn-mode"') && html.indexOf('id="cn-mode"') < html.indexOf('class="cr-form"') && html.indexOf('class="cr-form"') < html.indexOf('id="cn-go"'), 'under Your Club and Team on the left, so Start Career stays in view on the right');
   C.set(null); C.newOpen();
   ok(P.draft().proMode === false, 'Whole Team is picked to start');
   $('cn-go').click();
@@ -423,8 +428,8 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
 }
 
 // 11. and still, with Pro Mode played, nothing else moved
-{ const a = nonCareer(), b = team();
-  ok(a === NON_CAREER && b === TEAM, `after Pro Mode matches, other matches and Whole Team careers still play exactly as before (${a} / ${b})`); }
+{ const a = nonCareer(), b = team(), m = team(true);
+  ok(a === NON_CAREER && b === TEAM && m === TEAM_MINIS, `after Pro Mode matches, other matches and Whole Team careers still play exactly as before (${a} / ${b} / ${m})`); }
 
 console.log(`Career Pro: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

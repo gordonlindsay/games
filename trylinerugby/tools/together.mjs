@@ -61,13 +61,11 @@ const champBefore = JSON.stringify(X.champ());
   ok(p.trained && p.gain.join() === 'handling', `the Passer trains Handling (${p.gain.join() || 'nothing'})`);
 }
 
-// 4. The career's drills never touch the championship, and Driving waits for the Juniors
+// 4. The career's drills never touch the championship, and every drill is offered from a career's first year (club seasons have no Minis)
 {
   ok(JSON.stringify(X.champ()) === champBefore, 'the championship save is untouched by career training');
   const cr = fresh();
-  ok(!C.drills(cr).some(d => d.id === 'scrum'), 'Driving is hidden in the Minis');
-  cr.stage = 1;
-  ok(C.drills(cr).some(d => d.id === 'scrum') && C.drills(cr).length === T.drills.DRILLS.length, 'and every drill is offered from the Juniors');
+  ok(cr.year === 1 && C.drills(cr).some(d => d.id === 'scrum') && C.drills(cr).length === T.drills.DRILLS.length, 'every drill is offered in the first year, Driving included');
   C.set(null);
 }
 
@@ -136,9 +134,9 @@ const champBefore = JSON.stringify(X.champ());
 // 9. a career on an imported club never draws that club's built-in twin (Farnham RFC is Farnham)
 {
   const club = { id:'FAN', name:'Farnham RFC', kit:'#111111', trim:'#eeeeee', custom:true, pace:3, power:3, handling:3, kicking:3, stamina:3 };
-  let twin = 0; for (let i = 0; i < 60; i++) { const cr = C.create({ pos:'B', num:9, club }); for (const st of [0, 1]) if (C.opponents(cr, st).some(t => t.name === 'Farnham')) twin++; }
-  ok(twin === 0, `Farnham RFC's Minis and Juniors never meet Farnham (${twin} of 120 draws)`);
-  const mine = C.create({ pos:'B', num:9, club:X.CLUBS[2] }), o = C.opponents(mine, 0);
+  let twin = 0; for (let i = 0; i < 60; i++) { const cr = C.create({ pos:'B', num:9, club }); for (const s of [cr.season.teams, C.opponents(cr)]) if (s.some(t => t.name === 'Farnham')) twin++; }
+  ok(twin === 0, `Farnham RFC's league seasons on Local never meet Farnham (${twin} of 120 draws)`);
+  const mine = C.create({ pos:'B', num:9, club:X.CLUBS[2] }), o = C.opponents(mine);
   ok(o.length === 5 && !o.some(t => t.name === X.CLUBS[2].name), 'a built-in club still draws five others');
   C.set(null);
 }

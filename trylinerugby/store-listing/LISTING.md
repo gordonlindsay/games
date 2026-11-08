@@ -71,7 +71,7 @@ Free to Play
 
 Full Game (a one-off unlock, no subscription)
 - Championship: your team and five others over five rounds, with a league table and bonus points
-- Career: one player, from the minis to the international side, training between matches
+- Career: one player at any club, season by season, with transfers, call-ups and training between matches
 - Create Team: up to four teams of your own, with your kit, short name and abilities
 - Hard level
 
@@ -102,7 +102,7 @@ Free to Play
 
 Full Game (a one-off unlock, no subscription)
 - Championship: your team and five others over five rounds, with a league table and bonus points
-- Career: one player, from the minis to the international side, training between matches
+- Career: one player at any club, season by season, with transfers, call-ups and training between matches
 - Create Team: up to four teams of your own, with your kit, short name and abilities
 - Hard level
 
@@ -161,7 +161,7 @@ Free to Play
 
 Full Game (a one-off unlock, no subscription)
 - Championship: your team and five others over five rounds, with a league table and bonus points
-- Career: one player, from the minis to the international side, training between matches
+- Career: one player at any club, season by season, with transfers, call-ups and training between matches
 - Create Team: up to four teams of your own, with your kit, short name and abilities
 - Hard level
 

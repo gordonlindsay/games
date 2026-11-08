@@ -1,18 +1,19 @@
 /* =========================================================
-   Career screens: the new player, the hub, training, the table and the season's end.
-   The rules are in src/career.js; nothing here draws a random number except through it.
+   Career screens: the new player and his club, the hub, training, the table, and the screen between phases (a season's or a
+   cup's end, the call-up, the transfer window). The rules are in src/career.js; nothing here draws a random number except
+   through it.
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
+/* The trophy row on the player card: a cup per kind he has won, in its colour, and how many. None a skill's or a bar's colour. */
+const CAREER_CUP_COL = { league:'#dfe3e5', euro:'#8aa2ff', world:'#f5c542', tour:'#e5484d', triple:'#d39b62' };
+const CAREER_KIND_NAME = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
-const careerStageName = i => CAREER_STAGES[i].name;
-const careerSeasonNo = cr => cr.history.filter(h => h.stage === cr.stage).length + 1;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
 function careerShirt(t, num, cls) {                  // the kit with his number on it
   return `<span class="cr-shirt${cls ? ' ' + cls : ''}">${jersey(t)}<b>${num}</b></span>`;
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
-   A label (International on a narrow Hall of Fame, Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing
-   first, and may go down to 10px. */
+   A label (Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing first, and may go down to 10px. */
 function careerFit(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
     el.style.fontSize = ''; el.style.letterSpacing = '';
@@ -23,33 +24,59 @@ function careerFit(root) {
   }
 }
 function careerShow(id) { showScreen(id); const s = $(id); s.scrollTop = 0; careerFit(s); }
+/* The side he plays for in this phase: his club, his country, or the cup's side for him (the touring side on tour). */
+function careerTeamNow(cr) {
+  if (cr.season) return cr.season.teams[cr.season.user];
+  if (cr.cup && Array.isArray(cr.cup.teams) && cr.cup.teams[careerCupUser(cr.cup)]) return cr.cup.teams[careerCupUser(cr.cup)];
+  return careerTeamFor(cr);
+}
+/* Full time in a career cup match, its result in the cup: the full-time card reads the cup's own line (Through to the Final, Test Won ·
+   Series 1 – 0: cupBreakLine, src/ui-cups.js) in place of table points, as a cup match in Championship mode does. */
+function careerCupCard() { if (M) M.cupResultDone = true; }
+/* The eyebrow over the hub, the table and the screen between phases: Bath · Year 2, England · International,
+   European Cup · Semi-Final, World Cup · Pool B, Home Nations Tour · Test 2 of 3 (a finished cup: its year). */
+function careerEyebrow(cr) {
+  const team = careerTeamNow(cr);
+  if (cr.phase === 'transfer' || (cr.season && cr.phase === 'league')) return team.name + ' · Year ' + cr.year;
+  if (cr.season) return team.name + ' · International';
+  const f = careerAhead(cr);
+  return CAREER_CUP_NAME[careerCupKind(cr)] + ' · ' + (f && f.label ? f.label : 'Year ' + cr.year);
+}
+/* A finished phase in a word or two: the championship's own (Champions, Runners-Up, Triple Crown), or a cup's. */
+function careerResult(cr, out) {
+  if (!out) return 'Season Over';
+  if (cr.season) return chaseTitle(cr.season, standings(cr.season));
+  if (out.kind === 'tour') return out.won ? 'Series Won' : 'Series Lost';
+  return out.won ? 'Winners' : 'Knocked Out';
+}
+/* The note under Continue Career: Year 2 · Bath · Round 1 of 5, Year 2 · England · Semi-Final, Year 3 · Transfer Window. A phone held
+   sideways leaves out the side's name (homeNote), so the note stays one line under its half. */
 function careerNote(cr) {
-  const c = cr.season, st = careerStageName(cr.stage);
-  if (!c) return st;
-  if (c.round < 5) return st + ' · ' + c.teams[c.user].name + ' · Round ' + (c.round + 1) + ' of 5';
-  return st + ' · ' + (careerOutcome(cr).final ? 'Career Over' : 'Season Over');
+  const team = careerTeamNow(cr), f = careerAhead(cr);
+  return 'Year ' + cr.year + ' · ' + team.name + ' · ' + (cr.phase === 'transfer' ? 'Transfer Window' : f ? f.label : careerResult(cr, careerOutcome(cr)));
 }
 function renderCareerHome() {
   const b = $('b-career'), note = $('career-note');
   if (!career) { b.textContent = 'Career'; note.hidden = true; return; }
-  const c = career.season;
-  b.textContent = 'Continue Career'; homeNote(note, careerNote(career), c && c.teams[c.user] ? c.teams[c.user].name : '');
+  b.textContent = 'Continue Career'; homeNote(note, careerNote(career), careerTeamNow(career).name);
 }
 
-/* ---------- the new player ---------- */
-const careerClubs = () => storeFirst([...CLUBS, ...custom]);   // the Local list and the teams you made (an imported club is one of those), the Super Fan's club first (src/store.js)
+/* ---------- the new player, and his club ---------- */
+/* Your Club is picked on its own screen with the team screen's rows: National | Local, then National's leagues or Local's Surrey and
+   My League (while one is saved). The teams you made follow every list (an imported club is one of those), the Super Fan's club first. */
+const careerPoolTeams = k => (k === IMPORT_POOL ? importTeams() : (TEAM_LISTS.find(l => l.key === k && l.tier > 0) || TEAM_LISTS.find(l => l.key === 'sur')).teams);
+const careerClubList = k => storeFirst([...careerPoolTeams(k), ...custom]);
+const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom === !b.custom;
 function careerNewOpen() {
-  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false };   // Men first and picked; Whole Team first and picked: Pro Mode is the harder way
+  const home = storeHomePool(), pool = poolTier(home) > 0 ? home : 'sur';
+  careerDraft = { club:storeHomeTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false };   // the Super Fan's club, or Farnham; Men first and picked; Whole Team first and picked: Pro Mode is the harder way
   $('cn-name').value = '';
-  $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('');
-  for (const b of $('cn-clubs').querySelectorAll('[data-i]')) b.addEventListener('click', () => { careerDraft.i = +b.dataset.i; renderCareerNew(); });
   renderCareerNew(); careerShow('s-career-new');
 }
 /* The picks change in place, so a controller's ring stays on the button it pressed; the numbers are redrawn only for a new position. */
 function renderCareerNew() {
-  const d = careerDraft, clubs = careerClubs();
-  if (d.i >= clubs.length) d.i = 0;
-  for (const b of $('cn-clubs').querySelectorAll('[data-i]')) { const on = +b.dataset.i === d.i; b.classList.toggle('picked', on); b.setAttribute('aria-pressed', String(on)); }
+  const d = careerDraft;
+  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit>${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;
   [...$('cn-cat').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === (d.cat === 'women'))));
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
   [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
@@ -59,7 +86,6 @@ function renderCareerNew() {
     for (const b of $('cn-num').querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerDraft.num = +b.dataset.n; renderCareerNew(); });
   }
   for (const b of $('cn-num').querySelectorAll('[data-n]')) b.setAttribute('aria-pressed', String(+b.dataset.n === d.num));
-  $('cn-shirt').innerHTML = careerShirt(clubs[d.i], d.num, 'big');
 }
 function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; renderCareerNew(); }   // Men | Women: the career's teams are named for it (career.js)
 [...$('cn-cat').children].forEach((b, i) => b.addEventListener('click', () => careerCatPick(i)));
@@ -72,30 +98,70 @@ function careerModePick(i) { careerDraft.proMode = i === 1; renderCareerNew(); }
 [...$('cn-mode').children].forEach((b, i) => b.addEventListener('click', () => careerModePick(i)));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('cn-go').addEventListener('click', () => {
-  const d = careerDraft, club = careerClubs()[d.i];
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, cat:d.cat, proMode:d.proMode })) return;
+  const d = careerDraft;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club:d.club, league:d.league, cat:d.cat, proMode:d.proMode })) return;
   careerOpen();
 });
 $('cn-back').addEventListener('click', goHome);
+$('cn-change').addEventListener('click', () => careerClubOpen());
+function careerClubOpen() { careerDraft.pool = careerDraft.league; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on
+function renderCareerClubs() {
+  const d = careerDraft, pool = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool, tier = poolTier(pool);
+  const press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
+  press('cc-tier', '[data-tier]', b => +b.dataset.tier === tier);
+  $('cc-nat').hidden = tier !== 1; $('cc-loc').hidden = tier !== 2; $('cc-league').hidden = !importLeague;
+  for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
+  const clubs = careerClubList(pool);
+  $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
+    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');
+  for (const b of $('cc-grid').querySelectorAll('[data-i]')) b.addEventListener('click', () => careerClubPick(clubs[+b.dataset.i]));
+  if (!$('s-career-club').hidden) careerFit($('s-career-club'));
+}
+function careerClubPick(t) {                         // a club tapped: his, with the list on screen as its league; back to New Player
+  const d = careerDraft; if (!t) return;
+  d.club = t; d.league = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool;
+  renderCareerNew(); careerShow('s-career-new');
+}
+function careerPoolPick(k) {
+  if (k === IMPORT_POOL && !importLeague) return;
+  careerDraft.pool = k; if (poolTier(k) === 1) careerDraft.nat = k;
+  renderCareerClubs(); $('s-career-club').scrollTop = 0;
+}
+function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur'); }   // National goes back to the league last looked at
+{
+  const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
+  $('cc-tier').innerHTML = [1, 2].map(i => btn(`data-tier="${i}"`, TEAM_TIERS[i])).join('');   // National | Local: a club is never a nation
+  $('cc-nat').innerHTML = TEAM_LISTS.filter(l => l.tier === 1).map(l => btn(`data-pool="${l.key}"`, l.name)).join('');
+  $('cc-loc').innerHTML = TEAM_LISTS.filter(l => l.tier === 2).map(l => btn(`data-pool="${l.key}"`, l.name)).join('') + btn(`data-pool="${IMPORT_POOL}" id="cc-league"`, 'My League', ' hidden');
+  for (const b of $('cc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => careerTierPick(+b.dataset.tier));
+  for (const id of ['cc-nat', 'cc-loc']) for (const b of $(id).querySelectorAll('[data-pool]')) b.addEventListener('click', () => careerPoolPick(b.dataset.pool));
+}
+$('cc-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
 
 /* ---------- the hub ---------- */
 function careerOpen() {
   if (!storeGate('career', careerOpen)) return;            // Career is in the Full Game (src/store.js); a career under way stays saved
   if (!career) { careerNewOpen(); return; }
-  if (!career.season) { careerNewSeason(career); save(); }   // a broken season was dropped on load: a new draw for the same stage
-  if (career.season.round >= 5) { if (careerSettle(career)) save(); renderCareerEnd(); careerShow('s-career-end'); return; }
+  if (careerRepair(career)) save();                        // a season or a window's offers dropped on load: drawn again now
+  if (!careerAhead(career)) { renderCareerEnd(); careerShow('s-career-end'); return; }
   renderCareer(); careerShow('s-career');
 }
 function careerCardHtml(cr, team) {
   const ovr = careerOverall(cr.skills), g = (careerLast && careerLast.gains) || {};
   return `<div class="cr-id">${careerShirt(team, cr.num)}
-      <div class="cr-who"><p class="eyebrow" data-fit>${careerPosWord(cr.pos)} · No. ${cr.num}</p><h3 data-fit>${esc(cr.name || team.name)}</h3></div>
+      <div class="cr-who"><p class="eyebrow" data-fit>${careerPosWord(cr.pos)} · No. ${cr.num}</p><h3 data-fit>${esc(cr.name || team.name)}</h3>${careerCabinetHtml(cr)}</div>
       <span class="cr-ovr" aria-label="Overall ${ovr}"><b>${ovr}</b><span>Overall</span></span></div>
     <div class="cr-skills">${careerSkills().map(([k, l]) => {
       const v = cr.skills[k];
       return `<div class="cr-sk" style="--k:${CAREER_COL[k] || 'var(--chalk)'}"><span class="lbl">${l}</span><span class="bar" aria-hidden="true"><i style="width:${v}%"></i></span><b>${v}</b>${g[k] ? `<em>+${g[k]}</em>` : '<em></em>'}</div>`;
     }).join('')}</div>
     <div class="cr-traits">${careerTraitChips(cr)}</div>`;
+}
+/* His trophies, counted by kind under his name: a cup in the kind's colour and the number, only the kinds he has won. */
+function careerCabinetHtml(cr) {
+  const n = k => (cr.trophies || []).filter(t => t.kind === k).length, have = CAREER_KINDS.filter(n);
+  if (!have.length) return '';
+  return `<p class="cr-cab" data-fit aria-label="Trophies: ${have.map(k => CAREER_KIND_NAME[k] + ' ' + n(k)).join(', ')}">${have.map(k => `<span class="cr-cup" style="--k:${CAREER_CUP_COL[k]}"><i></i><b>${n(k)}</b></span>`).join('')}</p>`;
 }
 /* His star traits (src/traits.js), in TRAITS order: one he has in its skill's colour; a locked one dimmed, with the skill and the number it needs. */
 function careerTraitChips(cr) {
@@ -105,35 +171,31 @@ function careerTraitChips(cr) {
     return `<span class="cr-trait${on ? '' : ' off'}" style="--k:${CAREER_COL[tr.skill] || 'var(--chalk)'}"${on ? '' : ` aria-label="${tr.name}, ${need}"`}><b data-fit>${tr.name}</b>${on ? '' : `<span>${tr.unlock}</span>`}</span>`;   // locked: the name, dimmed, and the number its skill (the chip's colour) must reach; the label says both
   }).join('');
 }
-function careerFixtureHtml(c) {
-  const { pair } = userFixture(c), [h, a] = pair, T = c.teams;
+function careerFixtureHtml(f) {
+  const T = f.teams, h = f.home, a = f.away;
   return `<div class="fixture"><span class="fx-team">${jersey(T[h])}<span data-fit>${esc(T[h].name)}</span></span><span class="fx-v">V</span><span class="fx-team r"><span data-fit>${esc(T[a].name)}</span>${jersey(T[a])}</span></div>`;
 }
-function careerLine(cr) {
-  const c = cr.season, st = CAREER_STAGES[cr.stage];
-  const place = c.round ? ordinal(careerPlace(c)) : '';
-  const goal = st.bar == null ? '' : 'Top Two or Overall ' + st.bar + ' to Go Up';
-  return [place, goal].filter(Boolean).join(' · ');
-}
+const careerLine = cr => (cr.season && cr.season.round ? ordinal(careerPlace(cr.season)) : '');   // his place in the table, once a round is played
 function careerGainText(g) { return careerSkills().filter(([k]) => g[k]).map(([k, l]) => '+' + g[k] + ' ' + l).join(' · '); }
 function renderCareer() {
-  const cr = career, c = cr.season, team = c.teams[c.user];
+  const cr = career, f = careerAhead(cr), team = f.teams[f.user], cup = !cr.season;
   $('cr-card').innerHTML = careerCardHtml(cr, team);
-  $('cr-eyebrow').textContent = careerStageName(cr.stage) + ' · Season ' + careerSeasonNo(cr);
-  $('cr-title').textContent = 'Round ' + (c.round + 1) + ' of 5';
+  $('cr-eyebrow').textContent = careerEyebrow(cr);
+  $('cr-title').textContent = cup ? 'Year ' + cr.year : f.label;
   $('cr-line').textContent = careerLine(cr); $('cr-line').hidden = !$('cr-line').textContent;
   const gain = careerLast ? careerGainText(careerLast.gains) : '';
   $('cr-gain').textContent = gain; $('cr-gain').hidden = !gain;
-  $('cr-next').innerHTML = careerFixtureHtml(c);
+  $('cr-next').innerHTML = careerFixtureHtml(f);
   const can = careerCanTrain(cr) && careerDrills(cr).length > 0;
   $('cr-train').textContent = cr.trained ? 'Trained' : 'Train'; $('cr-train').disabled = !can;
+  $('cr-table').hidden = cup; $('cr-trow').classList.toggle('one', cup);   // a cup has no table here: Train takes the row
   $('cr-reset').textContent = 'Start Fresh'; careerResetArmed = false;
   careerLifeRender(cr);                              // the bars on the card, and this round's dilemma (src/career-life.js)
 }
 $('b-career').addEventListener('click', () => { ac(); careerOpen(); });
 $('cr-play').addEventListener('click', () => { careerLast = null; careerPlay(); });
 $('cr-train').addEventListener('click', () => { if (careerCanTrain(career)) { renderCareerTrain(); careerShow('s-career-train'); } });
-$('cr-table').addEventListener('click', () => { renderCareerTable(); careerShow('s-career-table'); });
+$('cr-table').addEventListener('click', () => { if (!career.season) return; renderCareerTable(); careerShow('s-career-table'); });
 $('cr-back').addEventListener('click', goHome);
 $('cr-reset').addEventListener('click', () => {
   if (!careerResetArmed) { careerResetArmed = true; confirmArm(); $('cr-reset').textContent = 'Tap Again to Start Fresh'; return; }
@@ -154,9 +216,9 @@ $('ct-back').addEventListener('click', careerOpen);
 
 /* ---------- the table ---------- */
 function careerTableRows(cr) {
-  const c = cr.season, T = c.teams, up = CAREER_STAGES[cr.stage].bar != null;
+  const c = cr.season, T = c.teams;
   return standings(c).map((r, n) => `
-    <tr class="${r.i === c.user ? 'me' : ''}${up && c.round && n < CAREER_UP ? ' up' : ''}">
+    <tr class="${r.i === c.user ? 'me' : ''}">
       <td class="rk">${c.round ? n + 1 : '–'}</td>
       <td class="t"><span class="chip" style="--k:${HEX.test(T[r.i].kit) ? T[r.i].kit : '#888888'}"></span>${esc(T[r.i].name)}</td>
       <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.PD > 0 ? '+' : ''}${r.PD}</td><td>${r.BP}</td><td class="pts">${r.Pts}</td>
@@ -164,7 +226,7 @@ function careerTableRows(cr) {
 }
 function renderCareerTable() {
   const cr = career, c = cr.season, T = c.teams;
-  $('cl-eyebrow').textContent = careerStageName(cr.stage) + ' · Season ' + careerSeasonNo(cr);
+  $('cl-eyebrow').textContent = careerEyebrow(cr);
   $('cl-table').innerHTML = careerTableRows(cr);
   $('cl-results').innerHTML = c.results.map((rd, k) => ({ rd, k })).reverse().map(({ rd, k }) => `<div class="rd"><p class="eyebrow">Round ${k + 1}</p>${rd.map(r => {
     const mine = r.h === c.user || r.a === c.user;
@@ -173,53 +235,62 @@ function renderCareerTable() {
 }
 $('cl-back').addEventListener('click', careerOpen);
 
-/* ---------- the season's end, and the end of the career ---------- */
+/* ---------- between phases: a season's or a cup's end, the call-up, the transfer window ---------- */
 function careerTile(label, value, extra) { return `<div class="cr-tile"><span class="lbl" data-fit>${label}</span>${extra || ''}<b data-fit>${value}</b></div>`; }
+const careerNextName = next => (next.phase === 'cup' ? 'European Cup' : next.phase === 'tour' ? 'Home Nations Tour' : next.phase === 'transfer' ? 'Transfers' : next.kind === 'world' ? 'World Cup' : 'International');
+function careerNextTile(cr, next) {                  // what comes next, with the side he plays it for where it is known
+  const side = next.phase === 'cup' ? careerTeamFor(cr, 'league') : next.phase === 'intl' && cr.country ? careerTeamFor(cr, 'intl') : null;
+  return careerTile('Next', careerNextName(next), side ? `<span class="cr-next">${jersey(side)}<span data-fit>${esc(side.name)}</span></span>` : '');
+}
 function renderCareerEnd() {
-  const cr = career, c = cr.season, out = careerOutcome(cr), team = c.teams[c.user];
-  const title = $('ce-title'), body = $('ce-body'), act = $('ce-act');
+  const cr = career, title = $('ce-title'), body = $('ce-body'), act = $('ce-act');
+  careerRestartArmed = false; $('ce-new').textContent = 'Start New Career';
+  if (cr.phase === 'transfer') { renderCareerMove(); return; }
+  const out = careerOutcome(cr), team = careerTeamNow(cr);
+  if (!out) return;                                  // careerOpen puts right a phase with nothing to show before it gets here
+  const next = out.next, first = next.phase === 'intl' && next.first;
   $('ce-shirt').innerHTML = careerShirt(team, cr.num, 'big');
-  if (out.final) {                                   // the International season is the last: the honours
-    const best = CAREER_STAGES.map((st, i) => {
-      const places = cr.history.filter(h => h.stage === i).map(h => h.place).concat(i === cr.stage ? [out.place] : []);
-      return places.length ? careerTile(st.name, ordinal(Math.min(...places))) : '';
-    }).filter(Boolean);
-    const titles = cr.history.filter(h => h.place === 1).length + (out.place === 1 ? 1 : 0);
-    $('ce-eyebrow').textContent = (cr.name ? cr.name + ' · ' : '') + careerPosWord(cr.pos) + ' · No. ' + cr.num;
-    title.textContent = 'Hall of Fame'; title.classList.add('gold');
-    $('ce-line').textContent = team.name + ' finish ' + ordinal(out.place);
-    body.innerHTML = `<div class="cr-tiles" style="--n:5">${careerTile('Overall', out.ovr)}${careerTile('Seasons', cr.seasons)}${careerTile('Matches', cr.totals.matches)}${careerTile('Tries', cr.totals.tries)}${careerTile('Titles', titles)}</div><div class="cr-tiles cr-best" style="--n:${best.length}">${best.join('')}</div>`;
-    act.innerHTML = `<button class="btn primary" id="ce-go">Start New Career</button>`;
-    careerRestartArmed = false;
-    $('ce-go').addEventListener('click', careerRestart);
-    return;
-  }
-  const next = out.promoted ? cr.stage + 1 : cr.stage;
-  $('ce-eyebrow').textContent = careerStageName(cr.stage) + ' · Season ' + careerSeasonNo(cr);
-  title.textContent = out.place === 1 ? 'Champions' : out.promoted ? (next === 4 ? 'Called Up' : 'Promoted') : 'One More Season';
-  title.classList.toggle('gold', out.promoted);
-  $('ce-line').textContent = team.name + ' finish ' + ordinal(out.place) + (out.promoted && !out.top ? ' · Overall ' + out.ovr : '');
-  const tiles = careerTile('Place', ordinal(out.place)) + careerTile('Overall', out.ovr);
-  if (out.promoted && next === 4) {                  // called up: the country is the choice, and the choice starts the season
-    body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile('Next', careerStageName(next))}</div><p class="lbl cr-pick">Pick Your Country</p>
-      <div class="cr-nations">${natList(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span></button>`).join('')}</div>`;
+  $('ce-eyebrow').textContent = careerEyebrow(cr);
+  title.textContent = first ? 'Called Up' : careerResult(cr, out);
+  title.classList.toggle('gold', first || out.won || out.triple);
+  $('ce-line').textContent = out.place ? team.name + ' finish ' + ordinal(out.place) : '';
+  const tiles = (out.place ? careerTile('Place', ordinal(out.place)) : '') + careerTile('Overall', out.ovr) + careerNextTile(cr, next);
+  body.innerHTML = first ? '' : `<div class="cr-tiles" style="--n:${out.place ? 3 : 2}">${tiles}</div>`;
+  if (first) {                                       // his first call-up: the country is the choice, and the choice starts the window (no tiles: Called Up and the twelve fill the screen)
+    body.innerHTML += `<p class="lbl cr-pick">Pick Your Country</p>
+      <div class="cr-nations">${careerNations(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span></button>`).join('')}</div>`;
     for (const b of body.querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerAdvance(b.dataset.n); careerOpen(); });
     act.innerHTML = '';
     return;
   }
-  const nextTeam = out.promoted ? careerTeamFor(cr, next) : team;
-  body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile(out.promoted ? 'Next' : 'Again', careerStageName(next), `<span class="cr-next">${jersey(nextTeam)}<span data-fit>${esc(nextTeam.name)}</span></span>`)}</div>`;
-  act.innerHTML = `<button class="btn primary" id="ce-go">Next Season</button>`;
+  act.innerHTML = `<button class="btn primary" id="ce-go">Continue</button>`;
   $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
 }
-/* Start New Career on the Hall of Fame wipes the career and its honours, so it takes a second tap, as Start Fresh does. */
+/* The transfer window: each offer a club's card (its kit, name, rating and league), and his own club's card to Stay, in equal parts. */
+function careerOfferHtml(t, id, lbl) {
+  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit>${esc(lbl)}</span></button>`;
+}
+function renderCareerMove() {
+  const cr = career, team = careerTeamFor(cr, 'league'), cat = careerCat(cr), body = $('ce-body');
+  $('ce-shirt').innerHTML = careerShirt(team, cr.num, 'big');
+  $('ce-eyebrow').textContent = careerEyebrow(cr);
+  $('ce-title').textContent = 'Transfer Window'; $('ce-title').classList.remove('gold');
+  $('ce-line').textContent = 'Overall ' + careerOverall(cr.skills);
+  const offers = (cr.offers || []).map(careerClubById).filter(Boolean);
+  body.innerHTML = `<div class="cr-offers" style="--n:${offers.length + 1}">${offers.map(t => careerOfferHtml(catSide(t, cat), t.id, careerLeagueName(careerListOf(t).key))).join('')}${careerOfferHtml(team, '', 'Stay')}</div>`;
+  for (const b of body.querySelectorAll('[data-sign]')) b.addEventListener('click', () => { careerSign(b.dataset.sign); careerOpen(); });
+  $('ce-act').innerHTML = '';
+}
+/* Start New Career wipes the career and its trophies, so it takes a second tap, as Start Fresh does. */
 function careerRestart() {
-  if (!careerRestartArmed) { careerRestartArmed = true; confirmArm(); $('ce-go').textContent = 'Tap Again to Start New Career'; return false; }
+  if (!careerRestartArmed) { careerRestartArmed = true; confirmArm(); $('ce-new').textContent = 'Tap Again to Start New Career'; return false; }
   if (confirmSoon()) return false;
   careerRestartArmed = false; careerEnd(); careerNewOpen();
   return true;
 }
+$('ce-new').addEventListener('click', careerRestart);
 $('ce-back').addEventListener('click', goHome);
 
-/* the first controller press lands on the screen's main action */
-Object.assign(DEFAULT_FOCUS, { 's-career-new':() => $('cn-go'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.team') });
+/* the first controller press lands on the screen's main action: his own club on the club screen, Stay in the transfer window (a
+   mashed button never signs him anywhere), the first country at a call-up */
+Object.assign(DEFAULT_FOCUS, { 's-career-new':() => $('cn-go'), 's-career-club':() => $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
