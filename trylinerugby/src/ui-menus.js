@@ -57,7 +57,7 @@ function showBreak(kind) {
     const [a, b] = M.score;
     const res = M.two ? (a > b ? 'Player 1 Wins' : a < b ? 'Player 2 Wins' : 'Draw') : a > b ? M.nat[0].name + ' Win' : a < b ? M.nat[1].name + ' Win' : 'Draw';   // two player names the player, since both can be Farnham
     $('br-tries').textContent = res + ' · Tries ' + M.tries[0] + ' – ' + M.tries[1];
-    if (M.champ) {
+    if (M.champ || M.career) {
       const mp = matchPoints(a, b, M.tries[0]);
       $('br-pts').textContent = '+' + mp.p + ' Table ' + (mp.p === 1 ? 'Point' : 'Points') + (mp.why.length ? ' · ' + mp.why.join(', ') : '');
       $('br-pts').hidden = false;
@@ -74,6 +74,7 @@ function showBreak(kind) {
 }
 function finishMatch() {
   if (M.champ && champ) recordChampResult();
+  if (M.career) careerRecordResult();
   showBreak('full');
 }
 $('br-go').addEventListener('click', () => {
@@ -147,6 +148,7 @@ function renderHome() {
     note.textContent = champNote(champ);
     note.hidden = false;
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
+  renderCareerHome();
 }
 function goHome() {
   navOnly = null;

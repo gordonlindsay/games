@@ -160,7 +160,7 @@ function chargeDownBy(c, q, quiet, at) {                   // q blocks c's kick 
 }
 function doKick(c, power, lat) {
   if (chargeDown(c)) return;
-  const n = M.nat[c.team], d = dirOf(c.team);
+  const n = M.career ? careerNatOf(c) : M.nat[c.team], d = dirOf(c.team);   // a career match: your player's own kicking
   const len = 10 + power*(36 + n.kicking*3);
   const ang = clamp(lat, -1.2, 1.2)*0.75 + gauss()*(0.13 - n.kicking*0.015);
   const tx = c.x + d*len*Math.cos(ang), ty = c.y + len*Math.sin(ang);

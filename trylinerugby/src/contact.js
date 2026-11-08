@@ -21,7 +21,7 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   if (sideOn && mode !== 'ankle') p = Math.min(0.95, p*CONTACT.side);
   q.tcd = 1.0;
   st('ta' + c.team);
-  const qs = !!q.sprinting, cs = !!c.sprinting, dp = powerOf(q.team) - powerOf(c.team);   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend
+  const qs = !!q.sprinting, cs = !!c.sprinting, dp = M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team);   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend. A career match: your player's own power, faded as his side's
   const r = rnd();
   let tier = 'broken';
   if (r < p) {
@@ -159,6 +159,7 @@ function tackle(c, q, o) {
   if (practice && practice.id === 'defend' && c.team === 1) { practiceFinish(practice.switched && q === ctrlOf(0), practice.switched && q === ctrlOf(0) ? 'You switched into cover and stopped the runner.' : 'Switch to the defender ahead of the ball, then meet the runner.'); return; }
   o = o || {};
   M.stats.tackles++;
+  if (M.career) careerDeed('tackles', q);                  // a career match: a tackle by your player
   const team = c.team, d = dirOf(team);
   if (o.tier == null) {                                      // the duels' tackles and Big Hit, and the drop-goal smother: the old body, with no new random draw
     c.down = 1.25; c.vx *= 0.2; c.vy *= 0.2; c.drop = null;
@@ -323,7 +324,7 @@ function sprintTick(dt) {                                  // after the close-up
     let drain = 0;                                         // the hold and every ease-out on this side are charged by their level, x1.5 with the ball: a tap buys no more than a hold, and nothing refills while a burst is easing out
     for (const p of M.players) if (p.team === t && p.sprint > 0) {
       if (!onFeet(p)) { p.sprint = 0; continue; }           // down or bound: the sprint is over, and nothing is charged for an ease-out that can't move him
-      drain += sprintLevel(p)*(c === p ? SPRINT.ballDrain : 1);
+      drain += sprintLevel(p)*(c === p ? SPRINT.ballDrain : 1)*(M.career ? careerSprintDrain(p) : 1);   // a career match: your player's stamina
     }
     if (drain > 0) {
       S.m -= dt/(SPRINT.secs*staminaLasts(t))*drain; if (S.p) st(isHuman(t) ? 'sprintSecs' : 'cpuSprintSecs', dt);

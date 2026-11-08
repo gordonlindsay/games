@@ -29,6 +29,18 @@ Stamina is the fifth ability, after Kicking: a fifth pip row on every team card 
 
 Tuning lives in `STAMINA` in `src/stamina.js`.
 
+## Career
+
+One player, from the minis to the national team. **Career** on the home screen makes him: a first name (optional, 12 letters at most, kept on this device only), Forward or Back, a shirt number (forwards 1 to 3, backs 4 to 7 in sevens) and a club from the Local list or your own teams, where an imported club appears too.
+
+- **Five stages**, each a season of the championship's shape (six sides, five rounds, the same points): Minis and Juniors at your club against five other Local clubs at lowered ratings, County as Surrey against five invented county sides, Pro Club at a city side you sign for from the France, Australia or South Africa lists, and International for the country you pick when you are called up. A finished International season ends the career with the Hall of Fame and Start New Career.
+- **Going up.** Finish in the top two, or reach the stage's bar with your overall (64, 70, 77, 85). Otherwise you play the stage again against a new draw.
+- **Your player** has Pace, Power, Handling, Kicking and Stamina from 1 to 99, and an overall on the team cards' 40 to 99 scale. A session of training between matches (one a round) adds points to the drill's skill by its stars (1, 3, 5 or 8): Bouncy Egg and Create a Two-on-One train Handling, Pass Around the Circle Stamina as the Runner and Handling as the Passer, Tackling and Driving Power (no Driving in the Minis), Cones and Defend a Breakaway Pace, and the Kicking drill Kicking. His tries, tackles and goals in a match add a little more, six points at most.
+- **In a career match only**, he wears a star and a ring in the kit's trim, the ring starts on him at every kick-off, he takes your side's goal kicks, and his ratings pull his own speed, catching, tackling, kicking, sprint and late-half pace from the team's halfway towards his own. A career season is a league, so it keeps its draws. Every other match plays exactly as before.
+- **Saving.** The career is its own field (`career`) in the browser save, with its own seasons. It never touches the championship or the Trophy Cabinet, and the championship never touches it. A broken season is dropped and redrawn for the same stage; the player is kept.
+
+The rules and every number are in `src/career.js`, the screens in `src/ui-career.js`; `node tools/career.mjs` checks them.
+
 ## Practice + Polish (review branch)
 
 The home screen pairs **How to Play** and **Practice Ground** in matching buttons. **Match Help** switches control hints and first-match coach tips together, retaining existing browser saves. Practice Ground offers: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.

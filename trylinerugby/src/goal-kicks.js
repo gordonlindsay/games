@@ -33,6 +33,7 @@ function scoreTry(p) {
   if (practice) { practiceFinish(practice.id === 'pass' && p.team === 0 && practice.completedPass, p.team === 0 ? (practice.completedPass ? 'You moved the ball to support and finished the attack.' : 'Draw the defender, then pass to your supporting runner before scoring.') : 'The runner got through. Switch into cover and run towards the ball.'); return; }
   const team = p.team;
   M.score[team] += 5; M.tries[team]++;
+  if (M.career) careerDeed('tries', p);                    // a career match: a try by your player
   heat(team, 'try'); fireOut(1 - team);                    // a try lights the scorers and puts the other side out
   goldenScored();
   placeBall(clamp(p.x,0,120), clamp(p.y,0,70));
@@ -47,7 +48,7 @@ function conversion(team, y) {
 function goalKick(team, x, y, kind, g0) {
   placeBall(x, y);
   const d = dirOf(team);
-  const k = nearestFree(team, x, y) || M.players.find(p => p.team === team);
+  const k = (M.career && careerKicker(team)) || nearestFree(team, x, y) || M.players.find(p => p.team === team);   // a career match: your player takes your side's goal kicks
   k.x = x - d*2.2; k.y = y; k.vx = k.vy = 0; k.fx = d; k.fy = 0;
   for (const p of M.players) if (p !== k && hyp(p.x-x, p.y-y) < 5) { p.x -= d*6; }
   const g = g0 || makeGoal(team, x, y, kind, k);
@@ -103,7 +104,7 @@ function windNow(team) {                                   // the match wind as 
 function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry and band in the given wind, drawing nothing random
   const f = toFrame(team, wx, wy);
   const g = { team, kind, type:kind === 'drop' ? 'drop' : 'set', wx, wy, x:f.x, y:f.y, beta:Math.atan2(35 - f.y, 110 - f.x), dist:hyp(110 - f.x, 35 - f.y), ang:Math.abs(f.y - 35)/35,
-    kicking:M.nat[team].kicking, di:isHuman(team) ? levelOf(team) : 1, kicker, W:{ x:W.x, y:W.y, mph:W.mph },
+    kicking:(M.career ? careerGoalNat(team, kicker, kind) : M.nat[team]).kicking, di:isHuman(team) ? levelOf(team) : 1, kicker, W:{ x:W.x, y:W.y, mph:W.mph },
     mClear:0, lo:0, hi:0, w:0, ctr:0, fill:1, aid:'line', watch:false, cpu:null, inp:null,   // inp: the kicker's input slot, for a human's kick
     stage:'aim', st:0, aim:0, m:0, pt:0, drain:0, mRel:null, L:null, X:null, res:null, ok:false, grade:null, curl:0,
     tStrike:0, judged:false, skipped:false, t:0, cam:null, pathKey:null, pathPts:null, bot:null,
@@ -221,6 +222,7 @@ function scoreGoal(g) {                                    // the verdict moment
   if (ok) {
     M.score[team] += kind === 'conversion' ? 2 : 3; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
     if (kind === 'conversion') M.stats.conv.made[team]++; else if (kind === 'penalty') M.stats.pen.made[team]++;
+    if (M.career) careerDeed('goals', g.kicker);            // a career match: a goal kicked by your player
     goldenScored();
   }
   say(verdictOf(g), '', ok ? team : null, g.grade, M.cut && M.cut.kind === 'goal' && verdictLow(g));
