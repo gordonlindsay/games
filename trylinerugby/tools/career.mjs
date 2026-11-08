@@ -798,10 +798,11 @@ C.setCups(false);                                    // no cups unless a section
   ok(/'s-career-end':\(\) => \$\('ce-go'\) \|\| \$\('ce-body'\)\.querySelector\('\.stay'\)/.test(src), 'a controller\'s first press in the window lands on Stay');
   C.sign(cr.offers[0]); C.open();
   ok(shown() === 's-career' && cr.year === 2 && $('cr-eyebrow').textContent === cr.club.name + ' · Year 2', 'an offer taken: the hub, year 2 at the new club');
-  // a cup on the hub: no table, Train takes the row
+  // a cup on the hub, with a stand-in that has none of the cups' screens: no draw and no line, so Train takes the row (with the real cups
+  // the second button is the cup's draw: tools/career-season.mjs)
   C.setCups(stubCups());
   const b = C.create({ pos:'B', num:7, club:X.ENGLAND[0] }); C.set(b); finish(b, 1); C.advance(); C.open();
-  ok(shown() === 's-career' && $('cr-eyebrow').textContent === 'European Cup · Semi-Final' && $('cr-title').textContent === 'Year 1' && $('cr-table').hidden && $('cr-trow').classList.contains('one') && $('cr-line').hidden, 'the European Cup on the hub: its stage, the year, Train across the row');
+  ok(shown() === 's-career' && $('cr-eyebrow').textContent === 'European Cup · Semi-Final' && $('cr-title').textContent === 'Year 1' && $('cr-table').hidden && $('cr-trow').classList.contains('one') && $('cr-line').hidden, 'the European Cup on the hub without the cups\' screens: its stage, the year, Train across the row');
   C.setCups(false);
   // Start Fresh, and Start New Career between phases: a second tap, after a beat
   C.end();

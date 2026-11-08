@@ -78,8 +78,13 @@ function careerCups() {
   if (careerCupsHook !== null) return careerCupsHook || null;
   if (typeof cupNew !== 'function' || typeof cupFixture !== 'function' || typeof cupRecord !== 'function' || typeof cupWinner !== 'function') return null;
   return { cupNew, cupFixture, cupRecord, cupWinner, cupLabel:typeof cupLabel === 'function' ? cupLabel : null,
-    cleanCup:typeof cleanCup === 'function' ? cleanCup : null, cupTriple:typeof cupTriple === 'function' ? cupTriple : null };
+    cleanCup:typeof cleanCup === 'function' ? cleanCup : null, cupTriple:typeof cupTriple === 'function' ? cupTriple : null,
+    cupFinish:typeof cupFinish === 'function' ? cupFinish : null,   // how far he went: Runners-Up, Semi-Finalists, Series Lost
+    /* the cups' own pieces for the career's screens (src/ui-cups.js): the line under the title, the last round's card and the draw.
+       A stand-in without them gets the career's plain cup screens: no draw, no line. */
+    cupLine:typeof cupLine === 'function' ? cupLine : null, cupLastHtml:typeof cupLastHtml === 'function' ? cupLastHtml : null, cupDrawHtml:typeof cupDrawHtml === 'function' ? cupDrawHtml : null };
 }
+const CAREER_CUP_PHASE = { cup:'euro', intl:'world', tour:'tour' };   // the cup each phase can hold: a saved cup of another kind is not his
 /* A medal (the Locker). The career's own: his first call-up ('callup'), a transfer ('transfer') and a Triple Crown ('triple', as it is
    banked: the cups engine tells the Locker of one in Championship mode only). A cup he wins ('euro', 'world', 'tour') is the cups
    engine's to tell (cupRecord, in Championship mode and in a career alike), never the career's, so it is never counted twice. */
@@ -457,6 +462,7 @@ function cleanCareer(c) {
   let season = null, cup = null, offers = null;
   if ((phase === 'league' || phase === 'intl') && c.season != null && !(was != null && was < 3)) season = cleanChamp(c.season);   // a broken season is dropped (and a Minis, Juniors or County one): the hub draws a new one
   if (phase !== 'league' && phase !== 'transfer' && !season && c.cup != null && K && K.cleanCup) cup = K.cleanCup(c.cup) || null;
+  if (cup && cup.id !== CAREER_CUP_PHASE[phase]) cup = null;   // a European Cup saved in the window (or any cup in another's phase) would read and bank as the wrong cup
   if ((phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
   if (phase === 'transfer' && Array.isArray(c.offers)) {
     offers = [...new Set(c.offers.filter(id => typeof id === 'string' && careerClubById(id) && (club.custom || id !== club.id)))].slice(0, CAREER_MOVE.offers[1]);

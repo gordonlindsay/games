@@ -13,15 +13,31 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
   return `<span class="cr-shirt${cls ? ' ' + cls : ''}">${jersey(t)}<b>${num}</b></span>`;
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
-   A label (Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing first, and may go down to 10px. */
+   A label (Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing first, and may go down to 10px; so may the
+   trophy row, whose five kinds in two figures need 11px beside the overall at 667x375. One marked data-fit="wrap" (a transfer offer's
+   league) that is still too wide at its smallest goes on two lines or more at its own size instead, a word never broken. A side's name
+   in the fixture also steps down while it runs to three lines (South Africa Women, London North Women at 667x375, and the hub would
+   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. */
 function careerFit(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
-    el.style.fontSize = ''; el.style.letterSpacing = '';
+    el.style.fontSize = ''; el.style.letterSpacing = ''; el.style.whiteSpace = '';
     const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl') || el.classList.contains('eyebrow');
     if (lbl && over()) el.style.letterSpacing = '.04em';
     let px = parseFloat(getComputedStyle(el).fontSize) || 20;
-    while (over() && px > (lbl ? 10 : 12)) { px -= 1; el.style.fontSize = px + 'px'; }
+    const floor = lbl || el.classList.contains('cr-cab') ? 10 : 12;
+    while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
+    if (over() && el.getAttribute('data-fit') === 'wrap') {
+      el.style.whiteSpace = 'normal'; el.style.fontSize = ''; el.style.letterSpacing = ''; px = parseFloat(getComputedStyle(el).fontSize) || 20;
+      while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
+    }
+    if (el.parentNode && el.parentNode.classList && el.parentNode.classList.contains('fx-team')) while (careerLines(el) > 2 && px > 16) { px -= 1; el.style.fontSize = px + 'px'; }
   }
+}
+function careerLines(el) {                           // the lines a name takes: its height against one line's (1 with no layout, as in the tools' DOM)
+  const h = el.getBoundingClientRect().height;
+  if (!h) return 1;
+  const ws = el.style.whiteSpace; el.style.whiteSpace = 'nowrap'; const one = el.getBoundingClientRect().height; el.style.whiteSpace = ws;
+  return one ? Math.round(h/one) : 1;
 }
 function careerShow(id) { showScreen(id); const s = $(id); s.scrollTop = 0; careerFit(s); }
 /* The side he plays for in this phase: his club, his country, or the cup's side for him (the touring side on tour). */
@@ -42,13 +58,22 @@ function careerEyebrow(cr) {
   const f = careerAhead(cr);
   return CAREER_CUP_NAME[careerCupKind(cr)] + ' · ' + (f && f.label ? f.label : 'Year ' + cr.year);
 }
-/* A finished phase in a word or two: the championship's own (Champions, Runners-Up, Triple Crown), or a cup's. */
+/* A finished phase in a word or two: the championship's own (Champions, Runners-Up, Triple Crown), or a cup's: Winners, or how far he
+   went (the cups engine's cupFinish: Runners-Up, Semi-Finalists, Quarter-Finalists, Pool Stage), Knocked Out where a build has no such word. */
 function careerResult(cr, out) {
   if (!out) return 'Season Over';
   if (cr.season) return chaseTitle(cr.season, standings(cr.season));
   if (out.kind === 'tour') return out.won ? 'Series Won' : 'Series Lost';
-  return out.won ? 'Winners' : 'Knocked Out';
+  const K = careerCups();
+  return out.won ? 'Winners' : K && K.cupFinish && cr.cup ? K.cupFinish(cr.cup) : 'Knocked Out';
 }
+/* A cup has no table: the hub's Table button shows the cup's own draw instead (src/ui-cups.js: the last round's card, then the pools,
+   the knockouts or the Tests), named for what it shows. Only with the cups' screens in the build: without them Train takes the row. */
+const careerDrawOn = cr => !!(cr && !cr.season && cr.cup && careerCups() && careerCups().cupDrawHtml);
+const careerDrawName = c => (c.id === 'tour' ? 'Series' : c.id === 'world' && c.round < 3 ? 'Pools' : 'Knockouts');
+/* The line under a cup's title on the hub and at its end: the cups' own (Win to Reach the Final, 2nd in Pool B · top two go through,
+   Bath win the European Cup), as Championship mode's cup hub has it; nothing without the cups' screens. */
+function careerCupLine(cr) { const K = careerCups(); return cr.cup && K && K.cupLine ? K.cupLine(cr.cup) : ''; }
 /* The note under Continue Career: Year 2 · Bath · Round 1 of 5, Year 2 · England · Semi-Final, Year 3 · Transfer Window. A phone held
    sideways leaves out the side's name (homeNote), so the note stays one line under its half. */
 function careerNote(cr) {
@@ -182,20 +207,25 @@ function renderCareer() {
   $('cr-card').innerHTML = careerCardHtml(cr, team);
   $('cr-eyebrow').textContent = careerEyebrow(cr);
   $('cr-title').textContent = cup ? 'Year ' + cr.year : f.label;
-  $('cr-line').textContent = careerLine(cr); $('cr-line').hidden = !$('cr-line').textContent;
+  $('cr-line').textContent = cup ? careerCupLine(cr) : careerLine(cr); $('cr-line').hidden = !$('cr-line').textContent;
   const gain = careerLast ? careerGainText(careerLast.gains) : '';
   $('cr-gain').textContent = gain; $('cr-gain').hidden = !gain;
   $('cr-next').innerHTML = careerFixtureHtml(f);
   const can = careerCanTrain(cr) && careerDrills(cr).length > 0;
   $('cr-train').textContent = cr.trained ? 'Trained' : 'Train'; $('cr-train').disabled = !can;
-  $('cr-table').hidden = cup; $('cr-trow').classList.toggle('one', cup);   // a cup has no table here: Train takes the row
+  const draw = careerDrawOn(cr);                     // a cup's Table is its draw; without the cups' screens, Train takes the row
+  $('cr-table').textContent = draw ? careerDrawName(cr.cup) : 'Table';
+  $('cr-table').hidden = cup && !draw; $('cr-trow').classList.toggle('one', cup && !draw);
   $('cr-reset').textContent = 'Start Fresh'; careerResetArmed = false;
   careerLifeRender(cr);                              // the bars on the card, and this round's dilemma (src/career-life.js)
 }
 $('b-career').addEventListener('click', () => { ac(); careerOpen(); });
 $('cr-play').addEventListener('click', () => { careerLast = null; careerPlay(); });
 $('cr-train').addEventListener('click', () => { if (careerCanTrain(career)) { renderCareerTrain(); careerShow('s-career-train'); } });
-$('cr-table').addEventListener('click', () => { if (!career.season) return; renderCareerTable(); careerShow('s-career-table'); });
+$('cr-table').addEventListener('click', () => {
+  if (careerDrawOn(career)) { renderCareerDraw(); careerShow('s-career-draw'); return; }   // a cup's Table is its draw
+  if (!career.season) return; renderCareerTable(); careerShow('s-career-table');
+});
 $('cr-back').addEventListener('click', goHome);
 $('cr-reset').addEventListener('click', () => {
   if (!careerResetArmed) { careerResetArmed = true; confirmArm(); $('cr-reset').textContent = 'Tap Again to Start Fresh'; return; }
@@ -234,6 +264,17 @@ function renderCareerTable() {
   }).join('')}</div>`).join('');
 }
 $('cl-back').addEventListener('click', careerOpen);
+/* A cup's draw, laid out as Championship mode's cup hub (src/ui-cups.js): the stage, its line and the last round's card on the left with
+   Back to Career, the pools, the knockouts or the Tests on the right. */
+function renderCareerDraw() {
+  const cr = career, K = careerCups(), c = cr.cup;
+  $('cd-eyebrow').textContent = careerEyebrow(cr);
+  $('cd-title').textContent = careerDrawName(c);
+  $('cd-line').textContent = careerCupLine(cr); $('cd-line').hidden = !$('cd-line').textContent;
+  $('cd-last').innerHTML = K.cupLastHtml(c); $('cd-last').hidden = !$('cd-last').innerHTML;
+  $('cd-draw').innerHTML = K.cupDrawHtml(c);
+}
+$('cd-back').addEventListener('click', careerOpen);
 
 /* ---------- between phases: a season's or a cup's end, the call-up, the transfer window ---------- */
 function careerTile(label, value, extra) { return `<div class="cr-tile"><span class="lbl" data-fit>${label}</span>${extra || ''}<b data-fit>${value}</b></div>`; }
@@ -253,7 +294,7 @@ function renderCareerEnd() {
   $('ce-eyebrow').textContent = careerEyebrow(cr);
   title.textContent = first ? 'Called Up' : careerResult(cr, out);
   title.classList.toggle('gold', first || out.won || out.triple);
-  $('ce-line').textContent = out.place ? team.name + ' finish ' + ordinal(out.place) : '';
+  $('ce-line').textContent = out.place ? team.name + ' finish ' + ordinal(out.place) : careerCupLine(cr);   // a cup's: who won it (Bath win the European Cup)
   const tiles = (out.place ? careerTile('Place', ordinal(out.place)) : '') + careerTile('Overall', out.ovr) + careerNextTile(cr, next);
   body.innerHTML = first ? '' : `<div class="cr-tiles" style="--n:${out.place ? 3 : 2}">${tiles}</div>`;
   if (first) {                                       // his first call-up: the country is the choice, and the choice starts the window (no tiles: Called Up and the twelve fill the screen)
@@ -268,7 +309,7 @@ function renderCareerEnd() {
 }
 /* The transfer window: each offer a club's card (its kit, name, rating and league), and his own club's card to Stay, in equal parts. */
 function careerOfferHtml(t, id, lbl) {
-  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit>${esc(lbl)}</span></button>`;
+  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
 }
 function renderCareerMove() {
   const cr = career, team = careerTeamFor(cr, 'league'), cat = careerCat(cr), body = $('ce-body');
@@ -293,4 +334,4 @@ $('ce-back').addEventListener('click', goHome);
 
 /* the first controller press lands on the screen's main action: his own club on the club screen, Stay in the transfer window (a
    mashed button never signs him anywhere), the first country at a call-up */
-Object.assign(DEFAULT_FOCUS, { 's-career-new':() => $('cn-go'), 's-career-club':() => $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
+Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
