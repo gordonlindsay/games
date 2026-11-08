@@ -150,6 +150,7 @@ function cleanSettings(g) {
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
   if (typeof g.kids === 'boolean') settings.kids = g.kids;
+  if (g.cam === 0 || g.cam === 1 || g.cam === 2 || g.cam === 3) settings.cam = g.cam;   // 0 Top: an old save has none and stays there
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;

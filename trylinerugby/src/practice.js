@@ -14,13 +14,13 @@ const PRACTICE_DRILLS = [
   { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Steer the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150 },
   { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60 },
   { id:'defend', name:'Defend a Breakaway', objective:'Switch into cover and stop the runner', cue:'Your first defender is beaten. Press Switch, run towards the carrier and Tackle. Sprint helps you close the gap.', limit:18 },
-  { id:'pass', name:'Create a Two-on-One', objective:'Pass to support, then score a try', cue:'Run towards the defender to draw him in. Pass to the dashed-ringed runner, then run for the right-hand try line.', limit:22 }
+  { id:'pass', name:'Create a Two-on-One', objective:'Pass to support, then score a try', cue:'Run towards the defender to draw him in. Pass to the dashed-ringed runner, then run for the try line.', limit:22 }
 ];
 function practiceInstructions(id) {
   const touch = lastDev === 'touch';
   const name = (word, act) => word + (touch ? '' : ' (' + seatKey(0, act) + ')');
   if (id === 'defend') return 'Your first defender is beaten. Press ' + name('Switch', 'b') + ', run towards the carrier and ' + name('Tackle', 'a') + '. ' + name('Sprint', 'c') + ' helps you close the gap.';
-  if (id === 'pass') return 'Run towards the defender to draw him in. ' + name('Pass', 'a') + ' to the dashed-ringed runner, then run for the right-hand try line.';
+  if (id === 'pass') return 'Run towards the defender to draw him in. ' + name('Pass', 'a') + ' to the dashed-ringed runner, then run for the try line.';
   const kit = DRILL_KIT[id];
   return kit && kit.howTo ? kit.howTo() : '';
 }

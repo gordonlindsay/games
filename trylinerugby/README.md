@@ -106,6 +106,30 @@ Measured over 2-minute halves, Easy against Kids for the same player (scratch bo
 **The ring in a tackle.** On Kids the ring never leaves your man while he is bound in his own tackle, so a dominant one is still his Big Hit (and Tripped and Ankle Tap are still his).
 
 `node tools/kids.mjs` checks the setting, the save (a round trip, old saves on each level, partial and bad ones), each lever on in Kids and off on Easy and in AI v AI, the ring staying on a bound tackler, the check's pass and cancel paths, its three-figure answers, its rests (two keys in turn and random taps), the controller's focus, and its place over the other cards.
+## Behind views (trial, 2026-11-08)
+
+**Camera** (More Settings, or the pause card in a match) offers **Top**, **Low**, **Mid** and **High**. Top is the default. The behind views look along your team's run with a fixed height and tilt: only depth and a little lateral follow move, with no yaw, roll, bob or shake. Up on the stick is always toward the opposition's line and right is always screen right, for either team.
+
+| Preset | Height, back | Feet at | px per metre at 844x390 | Carrier |
+|---|---|---|---|---|
+| Low | 7.5m, 19m | 0.60H | 25.7 | 46px |
+| Mid (try this first) | 10m, 22m | 0.58H | 22.2 | 40px |
+| High | 13m, 25m | 0.58H | 19.5 | 35px |
+
+Low has the mockup's height and distance, not its 12 degree tilt: it works out at about 17 degrees. Two Player, the menu demo, simulate and Practice always draw Top, and the saved choice is kept for the next match.
+
+How it stays out of the way:
+
+- **Top is protected by an early return.** `render` runs its clocks, then returns to `renderBehind` when `behindOn()`. `toS` gains one line that issues no canvas call. A throwaway ctx log hash over 600 frames at 844x390, seed 11, matched a pinned copy of the previous commit exactly, as did a 3000-frame run through live close-ups and a run at 667x375.
+- **The engine doesn't know.** `world()` turns the thumb before the match reads it; `jx`, `jy`, `sideX` and `keyX` stay raw for close-ups. The same seed under cam 0 and cam 2 gives the same players, ball, score, stats and random draws. The only gameplay line touched is `dirKeyHeld` in `movement.js`, an identity on Top.
+- **Looks are data, not save fields.** `lookOf` in `src/looks.js` derives height, build, skin, hair and one of six head styles from the team and shirt number with a local generator. It draws no game random number and adds nothing to `M.players` or a save. Each squad is dealt its heights, builds, skin tones and hair from a shuffled deck, so no team's spread rests on chance and no tone belongs to a team. A team is seeded by its key or name, because `newMatch` rewrites a clashing id for one match; a mirror match is therefore twins in different kits. A squad entry's `look` would override it, for a future career player.
+- **Existing art, cached.** `paintMan` points `ctx`, `SKIN` and `HAIR` at one man, so `figFB` and `fig` paint a sprite cell with their bodies unchanged, then redraws a slightly larger head in his style. Sprites come in two sizes, up to six baked a frame. The man you run and bound tacklers are drawn fresh; men on the floor have a lying sprite, because a pile-up drawn live broke the frame budget. A back view shows his number; a side view is `fig`, whose torso and socks differ from `figFB`, so a turn visibly pops.
+
+Known limits, on purpose: close-ups keep today's default look, so the same man looks generic in a duel. The Big Hit doesn't shake a behind view, its impact ring stays a circle on the screen, and there is no pass-target depth pull: a target off the frame gets an edge chevron. The canvas caps at 1.5x in a behind view, close-ups included.
+
+Measured on the seeded bot at 844x390, Mid (`node tools/camera.mjs`): the worst warm frame without a close-up is 712 ctx calls over 94,365 frames (whole matches on 11 seeds, plus arcade matches on 4 seeds, home and away), against a worst of 944 and a mean of about 841 on Top over the same seeds; the ring man is on screen 99.9% of play frames and the pass target 95.8%. These are bot figures and a call count. **Not yet measured:** frame rate on a real phone, how the art reads at 40px on one, thumb cover, and whether a child runs the right way without being told. No tool replaces that trial: about 50 fps on the oldest phone available is the bar.
+
+Later: Side broadcast view as the route for Two Player; after PR 13 lands, grep its `render-match.js` and `render-pitch.js` diff for new overlays such as stamina and port them, and grep for `jx`, `jy`, `KEYDIR` and left or right wording. `render-duels.js:128` draws `Math.random` during the duel shake, in every view; a fix can shift seeded duel tests, so it is a separate decision.
 
 ## Practice + Polish (review branch)
 
@@ -166,7 +190,8 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/passing.js`, `src/contact.js`, `src/movement.js` | Passing, tackling, sprint, team movement and match update |
 | `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
 | `src/championship.js` | Fixtures, results, standings and title race |
-| `src/render-*.js` | Pitch, players, close-up scenes and match drawing |
+| `src/render-*.js` | Pitch, players, close-up scenes and match drawing; `render-behind.js` is the optional behind views |
+| `src/looks.js` | Player height, build, skin, hair and head style for the behind views |
 | `src/sound.js` | Synthesised audio and rumble |
 | `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
 | `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
@@ -180,7 +205,10 @@ The browser still loads only `game.js`; `src/` and the Node tools are developmen
 ## Decided
 
 - **Sevens**, not fifteens (2026-10-11). Seven a side on a full-size pitch keeps a phone screen readable.
-- **2D top-down** for now (2026-10-11). 3D is a later call, once the gameplay is fun.
+- **Top-down stays the default; behind-the-player views are optional for now** (2026-11-08). This replaces "2D top-down for
+  now" (2026-10-11). Top is what every old save and new player opens on, drawn by the same code as before. Low, Mid and High are
+  a 2.5D choice under More Settings and on the pause card, in one-player matches only. Whether one of them becomes the default is
+  Gordon's call after a phone trial, starting with Mid. See [Behind views](#behind-views-trial-2026-11-08).
 - **Landscape only** (2026-10-12). Upright play was glitchy. A phone held upright gets a "Turn Your Phone Sideways"
   cover and the match pauses underneath. Phone browsers can't be forced to turn: Android gets a best-effort
   fullscreen and landscape lock on Play, and iPhone ignores it.

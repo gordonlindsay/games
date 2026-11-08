@@ -5,7 +5,7 @@ let last = performance.now(), acc = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now-last)/1000); last = now;
   pollPads();
-  if (window.innerWidth !== V.W || window.innerHeight !== V.H || Math.min(2, window.devicePixelRatio || 1) !== V.dpr) { resize(); if (input.stickId === null) restStick(); }
+  if (window.innerWidth !== V.W || window.innerHeight !== V.H || Math.min(dprMax(), window.devicePixelRatio || 1) !== V.dpr) { resize(); if (input.stickId === null) restStick(); }
   if (M && !M.paused && M.phase !== 'break' && M.phase !== 'menu') {
     if (M.stop > 0) { M.stop -= dt; acc = 0; }               // your Big Hit's hit-stop: the world holds for a few frames
     else {
@@ -54,6 +54,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  behind:{ BV, BV_CELL, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, LOOK_SKIN, LOOK_HAIR, paintState:() => ({ ctx, SKIN, HAIR }) },
   get M() { return M; } };
 
 function start(data) {

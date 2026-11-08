@@ -174,7 +174,7 @@ $('b-champ').addEventListener('click', () => {
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
 $('b-more').addEventListener('click', () => {   // Half Length lives here: 2 Min is the default, the longer halves are a deliberate choice
-  const open = $('set-more').hidden; $('set-more').hidden = !open; $('b-more').setAttribute('aria-expanded', String(open)); $('b-more').textContent = open ? 'Fewer Settings' : 'More Settings';
+  const open = $('set-more').hidden; $('set-more').hidden = !open; $('set-cam').hidden = !open; $('b-more').setAttribute('aria-expanded', String(open)); $('b-more').textContent = open ? 'Fewer Settings' : 'More Settings';
 });
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', goHome);

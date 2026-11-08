@@ -1,7 +1,8 @@
 /* =========================================================
    Rendering
    ========================================================= */
-const cv = $('cv'), ctx = cv.getContext('2d');
+const cv = $('cv');
+let ctx = cv.getContext('2d');   // let: paintMan points it at a sprite cell for one man
 const V = { W:0, H:0, dpr:1, s:10 };
 const C = { surround:'#0e2414', grassA:'#2a6233', grassB:'#2f6a38', line:'rgba(244,241,232,.92)', board:'#122018', boardHi:'#1c3125', pad:'#1b2747', ctrl:'#ffcf3d', p2:'#ff5fd2', head:'#2a1d16', outline:'#08110b' };
 const ringCol = t => (seatOfTeam(t) === 1 ? C.p2 : C.ctrl);   // the ring, the pointer and the kick aim: gold for seat 0, pink for Player 2
@@ -19,11 +20,12 @@ function unzoom() {
   requestAnimationFrame(() => { meta.content = c; window.scrollTo(0, 0); });
 }
 function resize() {
-  V.dpr = Math.min(2, window.devicePixelRatio || 1);
+  V.dpr = Math.min(dprMax(), window.devicePixelRatio || 1);
   V.W = window.innerWidth; V.H = window.innerHeight;
   cv.width = Math.round(V.W*V.dpr); cv.height = Math.round(V.H*V.dpr);
 }
 function toS(x, y) {
+  if (BV.on) return bvS(x, y);
   const s = V.s, c = M.cam;
   return [V.W/2 + (x-c.x)*s, V.H/2 + (y-c.y)*s];
 }
