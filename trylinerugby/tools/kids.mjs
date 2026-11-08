@@ -5,7 +5,7 @@ process.env.SEED ??= '29';
 const { T, reseed, fire, kickBot, dropBot } = await import('./harness.mjs');
 import fs from 'node:fs';
 const K = T.kids, D = T.debug, X = T.teams, C = T.contact, KK = T.kick, STEP = T.STEP, inp = T.input;
-const KIDS = K.KIDS, S = () => D.settings(), M = () => T.M, $ = id => document.getElementById(id);
+const KIDS = K.KIDS, KIDS_GATE = K.KIDS_GATE, S = () => D.settings(), M = () => T.M, $ = id => document.getElementById(id);
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } if (process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
@@ -289,6 +289,20 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(T.sides.ctrlOf(0) === p[3], 'Easy leaves the ring where it is');
   p = stage(true); M().side[0].ctrlT = 0; T.update(STEP);
   ok(T.sides.ctrlOf(0) === p[3], `the ring stays put for its first ${KIDS.switchHold}s on a man`);
+  {                                                        // your ringed man commits a tackle with a teammate as near the carrier: the ring stays on him until it ends, so a dominant one is his Big Hit
+    let made = 0, left = 0, doms = 0, big = 0;
+    for (let i = 0; i < 200 && doms < 3; i++) {
+      const p = stage(true), c = p[10], q = p[3];
+      q.x = 59; q.y = 35; p[2].x = 64; p[2].y = 38;
+      for (const s of M().side) s.ctrlT = 1;
+      const k = C.commitTackle(q, c, 'contact'); if (!k || k.tier === 'broken') continue;
+      made++; const b0 = M().stats['tag_Big Hit'] || 0;
+      for (let n = 0; n < 120 && M().contact; n++) { T.update(STEP); if (M().contact && T.sides.ctrlOf(0) !== q) { left++; break; } }
+      if (k.tier === 'dom') { doms++; if ((M().stats['tag_Big Hit'] || 0) > b0) big++; }
+    }
+    ok(made > 0 && left === 0, `Kids: the ring stays on your man while he is bound in his tackle (it left him in ${left} of ${made})`);
+    ok(doms > 0 && big === doms, `so your dominant tackle is still your Big Hit (${big} of ${doms})`);
+  }
   // the stick let go: your ringed man closes on the carrier
   const chase = (kids, jx, jy) => {                        // how far the man in the ring runs in a third of a second, and how much of it is toward the carrier
     const p = stage(kids); T.sides.setCtrl(0, p[2]); for (const s of M().side) { s.ctrlPrev = s.ctrl; s.ctrlT = 0; }
@@ -315,7 +329,8 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   K.parentGate(pass, cancel);
   let g = K.gate();
   ok(g && !$('m-gate').hidden && D.navLayer() === $('m-gate'), 'it opens over everything and is the controller\'s layer');
-  ok(g.a >= 13 && g.a <= 19 && g.b >= 6 && g.b <= 9 && g.answer === String(g.a*g.b), `a teen times six to nine (${g.a} x ${g.b})`);
+  ok(g.a >= 13 && g.a <= 19 && g.b >= 6 && g.b <= 9 && g.answer === String(g.a*g.b) && g.answer.length === 3, `a teen times six to nine with a three-figure answer (${g.a} x ${g.b})`);
+  ok(K.KIDS_ASKS.length === 22 && K.KIDS_ASKS.every(([a, b]) => a >= 13 && a <= 19 && b >= 6 && b <= 9 && a*b >= 100 && a*b <= 999), `every question's answer has three figures (${K.KIDS_ASKS.length} questions, ${Math.min(...K.KIDS_ASKS.map(([a, b]) => a*b))} to ${Math.max(...K.KIDS_ASKS.map(([a, b]) => a*b))})`);
   ok($('pg-q').textContent === `What is ${words(g.a)} times ${words(g.b)}?` && !/[0-9]/.test($('pg-q').textContent), `written out in words: "${$('pg-q').textContent}"`);
   const wrong = g.answer.slice(0, -1) + ((+g.answer.slice(-1) + 1) % 10);
   for (const d of wrong) $('pg-k' + d).click();
@@ -337,7 +352,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   K.parentGate(pass); ok(cancels === 3 && K.gate(), 'a second check cancels the first');
   K.close(false); ok(cancels === 3, 'a check with no onCancel just closes');
   let asks = new Set(); for (let i = 0; i < 200; i++) { K.parentGate(); asks.add(K.gate().a + 'x' + K.gate().b); K.close(false); }
-  ok(asks.size > 20, `the questions vary (${asks.size} of the 28 in 200)`);
+  ok(asks.size > 18, `the questions vary (${asks.size} of the ${K.KIDS_ASKS.length} in 200)`);
   // Install Game asks first; Update Game (the game's own files, already downloaded) does not
   let installs = 0;
   fire('beforeinstallprompt', { preventDefault() {}, prompt() { installs++; return Promise.resolve(); }, userChoice:Promise.resolve({ outcome:'dismissed' }) });
@@ -347,6 +362,59 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(installs === 0, 'cancelled, nothing is installed');
   $('b-install').click(); g = K.gate(); for (const d of g.answer) $('pg-k' + d).click(); await Promise.resolve();
   ok(installs === 1, 'answered, the browser\'s install prompt opens');
+  // two wrong answers in a row rest the keys; the rest outlives the card and doubles each time, to a minute, until a right answer
+  const realTimeout = globalThis.setTimeout, timers = [];
+  globalThis.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };   // the rests' timers, run by hand
+  const typeAll = t => { for (const d of t) K.type(d); };
+  const miss = () => typeAll(String(+K.gate().answer + 1));
+  passes = cancels = 0;
+  K.parentGate(pass, cancel); miss();
+  ok(!K.rest() && timers.length === 0 && $('pg-ans').textContent === 'Try Again', 'one wrong answer: Try Again and a new question');
+  miss();
+  ok(K.rest() && timers.length === 1 && timers[0].ms === KIDS_GATE.rest && $('pg-ans').textContent === 'Wait' && $('m-gate').classList.contains('rest'), `a second wrong answer in a row rests the keys for ${KIDS_GATE.rest/1000}s`);
+  g = K.gate(); typeAll(g.answer); $('pg-del').click();
+  for (const d of g.answer) fire('keydown', { key:d });
+  ok(passes === 0 && K.gate() && K.gate().typed === '', 'resting, the keys and the keyboard\'s figures do nothing, the right answer included');
+  $('pg-cancel').click(); K.parentGate(pass, cancel); typeAll(K.gate().answer);
+  ok(cancels === 1 && passes === 0 && K.rest() && $('pg-ans').textContent === 'Wait', 'Cancel still works, and opening the check again does not skip the rest');
+  timers.shift().fn();
+  ok(!K.rest() && $('pg-ans').textContent === '' && !$('m-gate').classList.contains('rest'), 'the rest over, the keys wake');
+  const lens = [];
+  for (let i = 0; i < 4; i++) { miss(); miss(); lens.push(timers[0] && timers[0].ms); timers.shift().fn(); }
+  ok(lens.join() === '20000,40000,60000,60000', `each rest is twice the last, to a minute at most (${lens.join(', ')}ms)`);
+  typeAll(K.gate().answer);
+  ok(passes === 1 && !K.gate(), 'awake, the right answer passes');
+  K.parentGate(pass, cancel); miss(); miss();
+  ok(timers.length === 1 && timers[0].ms === KIDS_GATE.rest, 'and the rests start again from the first');
+  timers.shift().fn(); K.close(false);
+  const tapping = (keyOf, taps) => {                       // a child tapping a tap a fifth of a second, opening the check again whenever it shuts, and waiting out every rest
+    let passed = 0, t = 0;
+    for (let i = 0; i < taps; i++) {
+      if (!K.gate()) K.parentGate(() => passed++);
+      K.type(keyOf(i)); t += 0.2;
+      while (timers.length) { const r = timers.shift(); t += r.ms/1000; r.fn(); }
+    }
+    K.close(false); return { passed, t };
+  };
+  const nine0 = tapping(i => (i % 2 ? '0' : '9'), 3000);
+  ok(nine0.passed === 0, `9 and 0 in turn for 3000 taps never passes (it did in about 100 when two-figure answers were in)`);
+  const rnd10 = tapping(() => String(Math.floor(Math.random()*10)), 3000);
+  ok(rnd10.t > 6*3600, `a thousand random guesses take ${(rnd10.t/3600).toFixed(1)} hours of rests (${rnd10.passed} passed)`);
+  globalThis.setTimeout = realTimeout;
+  // the first key's DOM focus is for the keyboard and touch; a controller gets the chalk ring alone, so only one key is outlined
+  let focused = 0; $('pg-k1').focus = () => focused++;
+  D.setDev('pad'); K.parentGate(pass, cancel);
+  ok(focused === 0 && D.focus() === $('pg-k1'), 'opened from a controller: the ring on 1, and no DOM focus');
+  K.close(false); D.setDev('touch'); K.parentGate(pass, cancel);
+  ok(focused === 1 && D.focus() === null, 'opened by touch or the keyboard: the DOM focus on 1, for Tab and the screen reader');
+  K.close(false); delete $('pg-k1').focus;
+  const page = [{ id:'rotate', inert:false }, { id:'controls', inert:false }, $('m-gate')];   // the body's children, as parentGate walks them
+  document.body = { children:page };
+  K.parentGate(pass, cancel);
+  ok(!page[0].inert && page[1].inert && !$('m-gate').inert, 'open, the page under it is inert, all but Turn Your Phone Sideways, which covers it on an upright phone');
+  K.close(false);
+  ok(!page[1].inert, 'shut, the page is live again');
+  delete document.body;
 }
 
 // 12. kids-safe: no links out, no ads or analytics, and the privacy note
@@ -363,6 +431,10 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(!/—/.test(priv + gate) && !/[←-↙]/.test(gate), 'no em dashes or arrows in the new copy');
   ok(/>Ask a Grown-Up</.test(gate) && />Delete</.test(gate) && />Cancel</.test(gate) && /data-back/.test(gate), 'the card\'s labels are Title Case, and Cancel is its Back');
   ok((gate.match(/class="btn" id="pg-k[0-9]"/g) || []).length === 10, 'ten figure keys, each a button the controller reaches');
+  const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8') + fs.readFileSync(new URL('../practice.css', import.meta.url), 'utf8');
+  const z = sel => { let v = null; for (const m of css.matchAll(new RegExp('(?:^|[},\\s])' + sel.replace(/[.#]/g, '\\$&') + '\\{[^}]*z-index:(\\d+)', 'g'))) v = +m[1]; return v; };
+  ok(z('.modal') < z('#m-practice') && z('#m-practice') < z('#m-gate') && z('#m-gate') < z('#rotate'), `the check is over every card and under Turn Your Phone Sideways (z ${z('.modal')}, ${z('#m-practice')}, ${z('#m-gate')}, ${z('#rotate')})`);
+  ok(/@media \(max-width:560px\)\{\.pg-keys\{grid-template-columns:repeat\(5,/.test(css), 'on a narrow screen the figure keys are two rows of five');
 }
 
 console.log(`${passed} passed, ${failed} failed`);

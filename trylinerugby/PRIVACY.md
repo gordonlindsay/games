@@ -22,8 +22,8 @@ The web version also loads its two typefaces from Google Fonts. Google receives 
 
 ## Import
 
-Import is in the App Store version only. A grown-up check comes first. Import then fetches the one club or tournament page you paste, on your device, and keeps only the team and competition details it needs, such as team names and fixtures. It never keeps any person's name, photo or contact details, and it sends nothing to anyone.
+Import is in the App Store version only. A grown-up check comes first. Import then fetches the club or tournament page you paste and, if it needs them, up to two pages that page links to on the same site (its table and fixtures). That site receives those requests and your device's internet address, as Google does for the fonts; nothing about you or your child is sent with them. Import keeps only the team and competition details it needs, such as team names and fixtures, on your device. It never keeps any person's name, photo or contact details.
 
 ## The grown-up check
 
-Anything that leaves the game, such as installing it or importing a club page, first asks a question a young child cannot answer.
+Anything that leaves the game, such as installing it or importing a club page, first asks a grown-up to answer a multiplication written out in words. After two wrong answers in a row it waits before it takes another, so tapping at random does not get past it.

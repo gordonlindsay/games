@@ -5992,8 +5992,10 @@ function kidsBand(g) {                                     // after bandOf: the 
 const kidsStrike = (g, m) => (M && M.kids && isHuman(g.team) && m >= g.lo && m <= g.hi ? g.ctr : m);   // a release in the gold strikes the band's centre, which the set aim puts between the posts
 function kidsSwitch(t) {                                   // defending, the ring goes to the man who can make the tackle: the nearest chaser when yours is down or another is well nearer, else the man in front when yours is beaten
   if (!M.kids || !isHuman(t) || M.phase !== 'play' || M.cut || ourBall(t) || sideOf(t).ctrlT < KIDS.switchHold) return;
+  const cur = ctrlOf(t);
+  if (cur && cur.bind) return;                             // never off a man bound in a tackle: how it ends (Big Hit, Tripped, Ankle Tap) is his to see
   const q = sprintPick(t) || (switchUseful(t) ? switchTarget(t) : null);
-  if (q && q !== ctrlOf(t)) { setCtrl(t, q); st('kidsSwitch'); }
+  if (q && q !== cur) { setCtrl(t, q); st('kidsSwitch'); }
 }
 function kidsChase(p, inp, dt) {                           // the stick let go while defending: the ringed man chases the carrier, or runs to a kicked or loose ball, as his teammates do
   if (!M.kids || inp.world().mag >= KIDS.rest || M.phase !== 'play' || p.offside > 0) return false;   // a retiring tackler stays out, as his teammates do
@@ -6009,32 +6011,55 @@ function kidsChase(p, inp, dt) {                           // the stick let go w
 
 /* ---------- the grown-up check ----------
    parentGate(onPass, onCancel): a card a young child cannot get past, in the Apple Kids-category style. It asks a multiplication
-   written out in words, a teen times six to nine (seventeen times six), typed on its own number keys. A wrong answer clears and
-   asks a new one. Touch, the keyboard (the figures, Backspace, Escape, and Tab inside the card: the rest of the page is inert while
-   it is open) and a controller (the card is the nav layer, Back is Cancel) all reach it. Only a right answer calls onPass. */
+   written out in words, a teen times six to nine with a three-figure answer (seventeen times six), typed on its own number keys.
+   A wrong answer clears and asks a new one. A second wrong answer in a row rests the keys (10s, then 20s, 40s and 60s at most until
+   a right answer), so tapping a pattern cannot cycle through the questions until one comes out; the rest outlives the card, so
+   shutting it and opening it again does not skip it. Touch, the keyboard (the figures, Backspace, Escape, and Tab inside the card:
+   the rest of the page is inert while it is open) and a controller (the card is the nav layer, Back is Cancel) all reach it. Only a
+   right answer calls onPass. */
 const KIDS_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const KIDS_GATE = { tries:2, rest:10000, restMax:60000 };   // wrong answers in a row before the keys rest; the first rest (ms), doubling to restMax
+const KIDS_ASKS = [];                                      // [a, b]: 13 to 19 times 6 to 9 with a three-figure answer, 102 to 171 (22 questions), past the times tables a child knows
+for (let a = 13; a <= 19; a++) for (let b = 6; b <= 9; b++) if (a*b >= 100) KIDS_ASKS.push([a, b]);
 let kidsGate = null;                                       // the open check: { a, b, answer, typed, onPass, onCancel, back, inert }
+let kidsGateMiss = 0, kidsGateRests = 0, kidsGateRest = null;   // wrong answers in a row; rests since the last right answer; the rest under way ({ until, ms }) or null
 function kidsPick(n) {                                     // 0..n-1 from the browser's crypto, so the check never draws on the match's Math.random
   try { const u = new Uint32Array(1); crypto.getRandomValues(u); return u[0] % n; } catch (e) { return Math.floor(Math.random()*n); }
 }
 function kidsAsk() {
-  const g = kidsGate;
-  g.a = 13 + kidsPick(7); g.b = 6 + kidsPick(4); g.answer = String(g.a*g.b); g.typed = '';   // 13 to 19 times 6 to 9: 78 to 171, past the times tables a child knows
+  const g = kidsGate, q = KIDS_ASKS[kidsPick(KIDS_ASKS.length)];
+  g.a = q[0]; g.b = q[1]; g.answer = String(g.a*g.b); g.typed = '';
   $('pg-q').textContent = 'What is ' + KIDS_WORDS[g.a] + ' times ' + KIDS_WORDS[g.b] + '?';
 }
 function kidsGateShow(wrong) {
-  const el = $('pg-ans');
-  el.textContent = kidsGate.typed || (wrong ? 'Try Again' : '');
-  el.classList.toggle('wrong', !!wrong);
+  const el = $('pg-ans'), rest = !!kidsGateRest;
+  el.textContent = rest ? 'Wait' : kidsGate.typed || (wrong ? 'Try Again' : '');
+  el.classList.toggle('wrong', rest || !!wrong);
+  $('m-gate').classList.toggle('rest', rest);              // the keys dim and a bar runs down the answer box (styles.css)
+  if (rest) el.style.setProperty('--pg-rest', Math.max(0, kidsGateRest.until - Date.now()) + 'ms');
+}
+function kidsGateSleep() {                                 // the second wrong answer in a row: the keys rest
+  const ms = Math.min(KIDS_GATE.restMax, KIDS_GATE.rest*2**kidsGateRests);
+  kidsGateRests++; kidsGateMiss = 0;
+  const r = kidsGateRest = { until:Date.now() + ms, ms };
+  setTimeout(() => kidsGateWake(r), ms);
+}
+function kidsGateWake(r) {                                 // r: the rest its timer was set for, so a stale timer never ends a later one (the tools call it bare)
+  if (!kidsGateRest || (r && r !== kidsGateRest)) return;
+  kidsGateRest = null;
+  if (kidsGate) kidsGateShow(false);
 }
 function parentGate(onPass, onCancel) {
   if (kidsGate) kidsGateClose(false);                      // one check at a time: an older one is cancelled
-  kidsGate = { onPass, onCancel, typed:'', back:document.activeElement || null, inert:[] };
+  const pad = lastDev === 'pad', act = document.activeElement || null;
+  kidsGate = { onPass, onCancel, typed:'', back:act, inert:[] };
   kidsAsk(); kidsGateShow(false);
   const m = $('m-gate'), body = document.body;
-  if (body && body.children) for (const el of body.children) if (el !== m && !el.inert) { el.inert = true; kidsGate.inert.push(el); }
-  m.hidden = false; setFocus(null);
-  const first = $('pg-k1'); if (first && first.focus) first.focus();
+  if (pad && act && act.blur) act.blur();                  // a controller works by the chalk ring, and the DOM focus would draw a second outline on another key
+  if (body && body.children) for (const el of body.children) if (el !== m && el.id !== 'rotate' && !el.inert) { el.inert = true; kidsGate.inert.push(el); }   // Turn Your Phone Sideways stays live: it covers the card upright, and an inert overlay would let a tap through to the keys under it
+  m.hidden = false;
+  if (pad) setFocus($('pg-k1'));                           // the ring starts on 1
+  else { setFocus(null); const first = $('pg-k1'); if (first && first.focus) first.focus(); }   // the keyboard's Tab and the screen reader start there
 }
 function kidsGateClose(passed) {
   const g = kidsGate; if (!g) return;
@@ -6042,17 +6067,20 @@ function kidsGateClose(passed) {
   $('m-gate').hidden = true; setFocus(null);
   for (const el of g.inert) el.inert = false;
   if (g.back && g.back.focus && !(g.back.closest && g.back.closest('[hidden]'))) g.back.focus();
+  if (passed) { kidsGateMiss = 0; kidsGateRests = 0; }
   const fn = passed ? g.onPass : g.onCancel;
   if (typeof fn === 'function') fn();
 }
 function kidsGateType(d) {
-  const g = kidsGate; if (!g) return;
+  const g = kidsGate; if (!g || kidsGateRest) return;      // resting keys do nothing
   g.typed = (g.typed + d).slice(0, 3);
   if (g.typed.length < g.answer.length) { kidsGateShow(false); return; }
   if (g.typed === g.answer) { kidsGateClose(true); return; }
-  kidsAsk(); kidsGateShow(true);
+  kidsAsk();
+  if (++kidsGateMiss >= KIDS_GATE.tries) kidsGateSleep();
+  kidsGateShow(true);
 }
-function kidsGateDelete() { if (kidsGate) { kidsGate.typed = kidsGate.typed.slice(0, -1); kidsGateShow(false); } }
+function kidsGateDelete() { if (kidsGate && !kidsGateRest) { kidsGate.typed = kidsGate.typed.slice(0, -1); kidsGateShow(false); } }
 for (const n of '1234567890') $('pg-k' + n).addEventListener('click', () => kidsGateType(n));
 $('pg-del').addEventListener('click', kidsGateDelete);
 $('pg-cancel').addEventListener('click', () => kidsGateClose(false));
@@ -6312,7 +6340,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
-  kids:{ KIDS, KIDS_WORDS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  kids:{ KIDS, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   get M() { return M; } };
 
 function start(data) {
