@@ -153,6 +153,7 @@ let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[t
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
+let storeBought = [];   // the app's purchases, product ids in the order bought (src/store.js); saved as store:{ owned } only once there is one, so a web save is as it was
 const SEASON_LIMIT = 10;
 /* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
 function cleanSeasonStats(s) {
@@ -295,6 +296,7 @@ function restore(s) {
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
   if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
+  if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
   retainCompletedSeason(champ);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
@@ -309,7 +311,7 @@ function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
   settings.duels = true;
   retainCompletedSeason(champ);
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague })); } catch (e) { /* private mode, or full */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, store:storeBought.length ? { owned:storeBought } : undefined })); } catch (e) { /* private mode, or full */ }
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }
@@ -317,6 +319,176 @@ function tutReset() { settings.tut = []; save(); }
 const tipSeen = id => settings.tips.includes(id);          // has this device already heard this coach line?
 function coachMark(id) { if (!tipSeen(id)) { settings.tips.push(id); save(); } }
 
+/* =========================================================
+   Store: the one-off unlocks, who has them, and the adapter to the app stores.
+
+   Free: Quick Match, the Training Ground, Kids, Easy and Normal, How to Play and Two Player. Full Game (tryline.full) adds
+   Championship, Career, Create Team and Hard. Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
+   Game and Import, and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
+   Career and Championship. No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's
+   own field (store), and Restore Purchases reads it back from the App Store or Google Play.
+
+   Where it applies (storeHas):
+   - The Try Line app: by purchases.
+   - The web: by STORE_WEB_TIER alone. 'full' (until the app is live) unlocks everything and shows nothing of the store, so the
+     web plays exactly as it did before; 'free' (from launch) keeps the free tier and offers Get the App. Purchases are the
+     app's: the web never reads them, and a save with a championship or a career under way keeps it, locked, untouched.
+
+   The adapter (storeBackend) talks to @capgo/native-purchases, a Capacitor plugin over StoreKit 2 and Google Play Billing
+   with no service of its own in between (trylinerugby/store/README.md says why that one). The web and the tests use
+   storeStub, or a backend a test hands in. Nothing about the player is sent: no account token, no receipt, nothing.
+   ========================================================= */
+const STORE_WEB_TIER = 'full';             // the web build: 'full' now, 'free' at launch (trylinerugby/store/README.md)
+const STORE_FULL = 'tryline.full';         // Full Game, £1.99 (the price lives in App Store Connect and Play Console, not here)
+const STORE_FULL_HAS = ['champ', 'career', 'create', 'hard'];
+const STORE_FAN_HAS = [...STORE_FULL_HAS, 'import'];   // Super Fan: everything in the Full Game, and Import
+/* Partner clubs. key names the product (tryline.fan.<key>), so Apple's and Google's sales reports count each club's unlocks with
+   nothing collected by us. name is how the game names the club; team is its side in data.js, for the badge's kit and the side
+   offered first. share is the percentage of each Super Fan unlock that goes to the club, filled in by the owner: while it is null
+   the club's Super Fan offer is not shown, so it can never go out without its stated share. A club the game does not have yet is
+   appended to CLUBS (data.js) first. */
+const FAN_CLUBS = [
+  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:null, team:'FAR' },
+];
+const STORE_LINKS = {                      // each opens outside the game, and only after the grown-up check
+  privacy:'https://gordonlindsay.github.io/games/trylinerugby/privacy.html',
+  support:'https://gordonlindsay.github.io/games/trylinerugby/support.html',
+  ios:null,                                // the App Store page for Get the App: set before STORE_WEB_TIER goes to 'free'
+  android:null,                            // the Google Play page, likewise
+};
+const STORE_ID = /^tryline\.(?:full|fan\.[a-z0-9]{1,24})$/;   // a product id the save may keep: one from a club since dropped stays bought
+let storeNativeHook = null;                // the tests' stand-in for nativeOn (src/native.js)
+let storeTierHook = null;                  // the tests' stand-in for STORE_WEB_TIER
+let storeUse = null;                       // the tests' backend, in place of the app's or the stub
+let storePrices = {};                      // product id: its price as the store writes it (£1.99), once the store has said
+let storeStarted = false;
+
+/* ---------- who has what ---------- */
+const storeNative = () => (storeNativeHook != null ? !!storeNativeHook : typeof nativeOn === 'function' && !!nativeOn());
+const storeTier = () => storeTierHook || STORE_WEB_TIER;
+const storeLive = () => storeNative() || storeTier() === 'free';   // false: the web as it was, everything unlocked and no store
+function cleanStore(v) {                   // the save's store field: known-shaped product ids, each once
+  const out = [];
+  const ids = v && typeof v === 'object' && !Array.isArray(v) && Array.isArray(v.owned) ? v.owned : [];
+  for (const id of ids.slice(0, 32)) if (typeof id === 'string' && STORE_ID.test(id) && !out.includes(id)) out.push(id);
+  return out;
+}
+const storeClubOf = id => FAN_CLUBS.find(c => c.product === id) || null;
+const storeTeamOf = c => (c ? ALL_TEAMS.find(t => t.id === c.team) || null : null);
+function storeFanClub() {                  // the club of the latest Super Fan unlock still in FAN_CLUBS, in the app
+  if (!storeNative()) return null;
+  for (let i = storeBought.length - 1; i >= 0; i--) { const c = storeClubOf(storeBought[i]); if (c) return c; }
+  return null;
+}
+function storeFan() { const c = storeFanClub(); return c ? { key:c.key, name:c.name } : null; }
+const storeAnyFan = () => storeNative() && storeBought.some(id => id.startsWith('tryline.fan.'));   // any Super Fan unlock, a club since dropped from FAN_CLUBS included, still unlocks
+function storeHas(f) {
+  if (!STORE_FAN_HAS.includes(f)) return true;           // the free tier
+  if (!storeNative()) return storeTier() !== 'free';     // the web: the tier alone
+  if (storeAnyFan()) return true;
+  return f !== 'import' && storeBought.includes(STORE_FULL);
+}
+const storeShareOk = c => typeof c.share === 'number' && Number.isFinite(c.share) && c.share > 0 && c.share <= 100;
+const storeShareLine = c => 'Supports ' + c.name + ': ' + c.share + '% of every Super Fan unlock goes to the club.';
+/* What can be bought, in the app: for a locked feature, what unlocks it; for the Grown-Ups panel (f null), all not yet owned.
+   A Super Fan club is offered only once its share is set. */
+function storeOffers(f) {
+  if (!storeNative()) return [];
+  const out = [], fan = storeAnyFan();
+  if (!fan && !storeBought.includes(STORE_FULL) && (f == null || STORE_FULL_HAS.includes(f))) out.push({ id:STORE_FULL, kind:'full' });
+  for (const c of FAN_CLUBS) if (storeShareOk(c) && storeTeamOf(c) && !storeBought.includes(c.product) && (f == null || !storeHas(f))) out.push({ id:c.product, kind:'fan', club:c });
+  return out;
+}
+/* A locked control is shown only where something unlocks it: in the app, Import Club stays away until a Super Fan club is on sale. */
+const storeOffered = f => storeHas(f) || !storeNative() || storeOffers(f).length > 0;
+
+/* ---------- the Super Fan's club, first ---------- */
+const storeFanTeam = () => storeTeamOf(storeFanClub());
+const storeHomeTeam = () => storeFanTeam() || DEFAULT_TEAM;
+function storeHomePool() { const t = storeFanTeam(); const i = t ? POOLS.findIndex(p => p.includes(t)) : -1; return i < 0 ? 1 : i; }
+function storeFirst(list) {                // the Super Fan's club moved to the front of a team list, the rest in their order
+  const t = storeFanTeam(); if (!t) return list;
+  const i = list.findIndex(o => o && !o.custom && o.id === t.id);
+  return i <= 0 ? list : [list[i], ...list.slice(0, i), ...list.slice(i + 1)];
+}
+
+/* ---------- purchases kept ---------- */
+function storeGrant(ids) {                 // add only: a store that answers with less (offline, signed out) never takes one away
+  let added = false;
+  for (const id of Array.isArray(ids) ? ids : []) if (typeof id === 'string' && STORE_ID.test(id) && !storeBought.includes(id)) { storeBought.push(id); added = true; }
+  if (added) { save(); storeRefresh(); }
+  return added;
+}
+
+/* ---------- the adapter ----------
+   storeBackend: @capgo/native-purchases, reached as Capacitor.Plugins.NativePurchases (the game has no bundler; Capacitor's
+   bridge puts every installed plugin there). Its documented calls, and nothing else: getProducts, purchaseProduct,
+   restorePurchases, getPurchases and the transactionUpdated event. Each answer is checked here before anything is unlocked. */
+const storePlugin = () => { try { const C = window.Capacitor, P = C && C.Plugins && C.Plugins.NativePurchases; return P && typeof P.purchaseProduct === 'function' ? P : null; } catch (e) { return null; } };
+const storeIds = () => [STORE_FULL, ...FAN_CLUBS.map(c => c.product)];
+/* A transaction counts when it is for a product of ours, Google's state is Purchased (1, not 0 Pending) and Apple has not revoked it. */
+const storeValid = t => !!t && typeof t === 'object' && typeof t.productIdentifier === 'string' && STORE_ID.test(t.productIdentifier)
+  && (t.purchaseState == null || String(t.purchaseState) === '1') && !t.revocationDate;
+function storeWhy(e) {                     // a refused purchase, by the words either platform rejects with
+  const m = String((e && e.code) || '') + ' ' + String((e && e.message) || e || '');
+  return /cancel/i.test(m) ? 'cancelled' : /pending/i.test(m) ? 'pending' : /already_?owned/i.test(m) ? 'owned' : 'failed';
+}
+const storeBackend = {
+  async products() {
+    const P = storePlugin(); if (!P) return [];
+    const r = await P.getProducts({ productIdentifiers:storeIds(), productType:'inapp' });
+    return ((r && r.products) || []).filter(p => p && storeIds().includes(p.identifier)).map(p => ({ id:p.identifier, price:typeof p.priceString === 'string' ? p.priceString.slice(0, 16) : '' }));
+  },
+  async owned() {                          // what this Apple ID or Google account owns now, with no sign-in asked for
+    const P = storePlugin(); if (!P) return [];
+    const r = await P.getPurchases({ productType:'inapp', onlyCurrentEntitlements:true });
+    return ((r && r.purchases) || []).filter(storeValid).map(t => t.productIdentifier);
+  },
+  async buy(id) {
+    const P = storePlugin(); if (!P) return { ok:false, why:'store' };
+    try {
+      const t = await P.purchaseProduct({ productIdentifier:id, productType:'inapp', quantity:1 });
+      if (storeValid(t) && t.productIdentifier === id) return { ok:true, ids:[id] };
+      return { ok:false, why:t && String(t.purchaseState) === '0' ? 'pending' : 'failed' };
+    } catch (e) {
+      const why = storeWhy(e);
+      if (why !== 'owned') return { ok:false, why };
+      const ids = await this.owned().catch(() => []);   // Google: already owned (bought on another device), so it is read back
+      return ids.includes(id) ? { ok:true, ids } : { ok:false, why:'failed' };
+    }
+  },
+  async restore() {                        // Restore Purchases: the store syncs (Apple may ask to sign in), then what is owned is read
+    const P = storePlugin(); if (!P) return { ok:false, why:'store' };
+    try { await P.restorePurchases(); return { ok:true, ids:await this.owned() }; } catch (e) { return { ok:false, why:storeWhy(e) }; }
+  },
+  listen(fn) {                             // a purchase that finishes later (Ask to Buy approved, Google's pending paid)
+    const P = storePlugin(); if (!P || typeof P.addListener !== 'function') return;
+    P.addListener('transactionUpdated', t => { if (storeValid(t)) fn([t.productIdentifier]); });
+  },
+};
+const storeStub = {                        // the web and the tests: no store, nothing sold
+  async products() { return []; },
+  async owned() { return []; },
+  async buy() { return { ok:false, why:'store' }; },
+  async restore() { return { ok:false, why:'store' }; },
+  listen() {},
+};
+const storeApi = () => storeUse || (storeNative() && storePlugin() ? storeBackend : storeStub);
+function storePricesLoad() {
+  Promise.resolve().then(() => storeApi().products()).then(list => {
+    for (const p of Array.isArray(list) ? list : []) if (p && typeof p.price === 'string' && p.price) storePrices[p.id] = p.price;
+    storeRefresh();
+  }, () => { /* offline: the buttons go without a price until the card opens again */ });
+}
+/* In the app, once: listen for purchases that finish later, read back what is owned (no prompt), and fetch the prices. */
+function storeStart() {
+  if (storeStarted || !storeNative()) return;
+  storeStarted = true;
+  const api = storeApi();
+  try { api.listen(ids => storeGrant(ids)); } catch (e) { /* no listener: Restore Purchases still reads them */ }
+  Promise.resolve().then(() => api.owned()).then(storeGrant, () => {});
+  storePricesLoad();
+}
 /* =========================================================
    Match engine. World units are metres.
    x: 0..120 (dead-ball to dead-ball), try lines at 10 and 110.
@@ -5941,6 +6113,7 @@ else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 /* home. Quick Match is the gold button and the keyboard focus. */
 const BOOL = { sound:1, hints:1, coach:1 };
 function renderHome() {
+  storeRender();                                           // the locks, Grown-Ups and the Super Fan badge (src/ui-store.js); nothing on the web today
   renderCabinet('home-history');
   $('home-cabinet').hidden = !champHistory.length;
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
@@ -5977,6 +6150,7 @@ function goHome() {
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
+    if (key === 'diff' && i === 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
@@ -5986,6 +6160,7 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
 }
 $('b-champ').addEventListener('click', () => {
   ac();
+  if (!storeGate('champ', () => $('b-champ').click())) return;   // locked: the Unlock card; a championship under way stays saved
   if (champ) { renderHub(); showScreen('s-hub'); }
   else openTeams('champ');
 });
@@ -5997,7 +6172,7 @@ $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
-$('t-default').addEventListener('click', () => pickTeam(DEFAULT_TEAM));
+$('t-default').addEventListener('click', () => pickTeam(storeHomeTeam()));   // Farnham, or the Super Fan's club
 
 /* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
@@ -6034,6 +6209,7 @@ function renderJoin() {
     [...$('j-diff' + s).children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === twoSel.levels[s])));
   }
   $('j-pad').hidden = two.seats[0].dev === 'pad' && two.seats[1].dev === 'pad';
+  storeJoinRender();
   renderHintSwitches();                                    // the Hints ticks: by half, so they follow Swap Players and show the saved state when the screen opens
 }
 function seatsChanged() { if (two.on && !$('s-join').hidden) renderJoin(); }   // a pad claiming a seat, Use Keyboard, Swap Players or a pad unplugged: the join screen follows
@@ -6047,7 +6223,7 @@ $('j-swap').addEventListener('click', swapPlayers);
 $('j-go').addEventListener('click', () => { ac(); openTeams('two'); });
 for (const s of [0, 1]) {
   $('j-kb' + s).addEventListener('click', () => useKeyboard(s));
-  [...$('j-diff' + s).children].forEach((b, i) => b.addEventListener('click', () => { twoSel.levels[s] = i; saveTwoDiff(); renderJoin(); }));
+  [...$('j-diff' + s).children].forEach((b, i) => b.addEventListener('click', () => { if (i === 2 && !storeGate('hard', () => b.click())) return; twoSel.levels[s] = i; saveTwoDiff(); renderJoin(); }));
 }
 
 /* team select */
@@ -6070,7 +6246,7 @@ function teamCard(t, i) {
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
 function openTeams(m) {
-  pickMode = m; settings.pool = 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
@@ -6084,11 +6260,12 @@ function renderTeams() {
   const yours = (quick && !!quickPick) || (pair && p === 1);
   $('t-yours').hidden = !yours;
   if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(mine.name)}</span>`;
-  $('t-default').hidden = quick || pair || settings.pool !== 1;
+  $('t-default').hidden = quick || pair || settings.pool !== (pickMode === 'champ' ? storeHomePool() : 1);
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
-  $('t-default').textContent = 'Play as ' + DEFAULT_TEAM.name;
+  $('t-default').textContent = 'Play as ' + storeHomeTeam().name;
   teamList = [...(settings.pool === IMPORT_POOL ? importTeams() : POOLS[settings.pool]), ...custom];   // My League: src/import.js
+  if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
   let html = teamList.map(teamCard).join('');
   if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
   html += importCard();                                    // Import Club, src/import.js
@@ -6097,6 +6274,7 @@ function renderTeams() {
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));
   const cr = $('t-create'); if (cr) cr.addEventListener('click', () => openBuilder(null));
   importBind();
+  storeTeamsRender();                                      // locks on Create Team, Edit and Import Club (src/ui-store.js)
   fitNames();
 }
 /* A name too long for its card steps down in size until its longest word fits. */
@@ -6179,6 +6357,7 @@ function buildBuilder() {
   });
 }
 function openBuilder(t) {
+  if (!storeGate('create', () => openBuilder(t))) return;   // Create Team is in the Full Game (src/store.js)
   editing = t;
   draft = t ? { ...t } : { name:'', kit:'#2050b0', trim:'#f2efe6', ...Object.fromEntries(ABILITIES.map(([k]) => [k, 1])) };
   codeTouched = !!t;
@@ -7057,8 +7236,8 @@ function importOthers(t) {
   return five;
 }
 /* The Import Club card: beside Create Team while there is room for a team, and kept with four made while a league is
-   saved, as the way to refresh it or remove it. */
-function importCard() { return custom.length < MAX_CUSTOM || importLeague ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
+   saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is on sale (storeOffered). */
+function importCard() { return (custom.length < MAX_CUSTOM || importLeague) && storeOffered('import') ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
 function importBind() {
   $('t-league').hidden = !importLeague;
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
@@ -7083,6 +7262,7 @@ function importFocus() {
 }
 DEFAULT_FOCUS['m-import'] = () => importFocusEl(true);
 function importOpen() {
+  if (!storeGate('import', importOpen)) return;            // Import comes with Super Fan (src/store.js); a league already saved stays
   importUi = { step:importHttp() ? 'link' : 'web', data:null, draft:null, pick:false, err:'', armed:false, token:importUi.token + 1 };
   $('im-url').value = '';
   importRender();
@@ -7328,6 +7508,189 @@ window.addEventListener('keydown', e => {                  // while the check is
   else return;
   if (e.preventDefault) e.preventDefault();
 }, true);
+/* =========================================================
+   Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge on the home,
+   and the links that leave the game. The rules are in src/store.js.
+   - A locked control (Championship, Career, Create Team and Edit, Hard, Import Club) keeps its place and its label, with a small
+     lock (.locked), and opens the Unlock card instead. A championship or career under way keeps its note: it is saved, only locked.
+   - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
+     first. The card hides while the check is up, as the import card does, so the two never stack.
+   - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
+   ========================================================= */
+const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Import Club' };
+const STORE_LINE = { full:'Championship · Career · Create Team · Hard', fan:'Full Game · Import Club · Club Badge' };
+const STORE_MSG = {
+  pending:'Waiting for a grown-up to approve it.',
+  failed:'The purchase did not go through.',
+  store:'Could not reach the store. Try again later.',
+  restored:'Purchases restored.',
+  none:'No purchases to restore.',
+  same:'Purchases are up to date.',
+};
+let storeUi = { mode:'grown', feature:null, then:null, busy:false, msg:'', token:0, back:null };
+
+/* ---------- locks ---------- */
+function storeMark(el, f) {                // a lock on a control while its feature is locked; nothing at all while the store is not live
+  if (!el || !el.classList) return;
+  const lock = storeLive() && !storeHas(f);
+  if (el.classList.contains('locked') === lock) return;
+  el.classList.toggle('locked', lock);
+  if (lock) el.setAttribute('aria-describedby', 'st-locked');   // read out as Locked (#st-locked)
+  else if (typeof el.removeAttribute === 'function') el.removeAttribute('aria-describedby');
+}
+/* A feature's way in: true goes ahead; locked, the Unlock card opens and then() runs once it is bought. */
+function storeGate(f, then) {
+  if (storeHas(f)) return true;
+  storeOpen({ mode:'unlock', feature:f, then:typeof then === 'function' ? then : null });
+  return false;
+}
+/* The home's part, from renderHome: the locks, the Grown-Ups button, the Super Fan badge, and a saved Hard played as Normal while Hard
+   is locked (the save keeps no other trace of it; buying the Full Game and pressing Hard puts it back). */
+function storeRender() {
+  storeStart();
+  const live = storeLive();
+  const g = $('b-grown'), row = g.parentNode;
+  g.hidden = !live; if (row && row.classList) row.classList.toggle('three', live);   // How to Play | Training Ground | Grown-Ups in thirds
+  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career');
+  const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
+  if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
+  if (!storeHas('hard')) {
+    if (settings.diff === 2) settings.diff = 1;
+    if (settings.twoDiff.includes(2)) settings.twoDiff = settings.twoDiff.map(v => Math.min(v, 1));
+  }
+  const c = storeFanClub(), t = storeTeamOf(c), b = $('st-fan');   // a Super Fan's line under the logo, in place of Mobile Rugby · Sevens, so the home keeps its height
+  if (c && t) { b.innerHTML = jersey(t) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
+  else if (!b.hidden) { b.hidden = true; $('home-tag').hidden = false; }
+}
+function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Import Club
+  storeMark($('t-create'), 'create');
+  for (const b of $('t-grid').querySelectorAll('[data-edit]')) storeMark(b, 'create');
+  storeMark($('t-import'), 'import');
+}
+function storeJoinRender() {               // Two Player's Hard, from renderJoin (a saved Hard was played as Normal by storeRender)
+  for (const s of [0, 1]) { const b = $('j-diff' + s).children[2]; if (b) storeMark(b, 'hard'); }
+}
+/* After a purchase or a restore, whatever is showing catches up. */
+function storeRefresh() {
+  if (!$('s-home').hidden) renderHome();
+  if (!$('s-teams').hidden) renderTeams();
+  if (!$('s-join').hidden) renderJoin();
+  if (!$('m-store').hidden) storeCardRender();
+}
+
+/* ---------- the card: Unlock (from a locked control) or Grown-Ups (from the home) ---------- */
+function storeOpen(o) {
+  const act = typeof document !== 'undefined' ? document.activeElement : null;
+  storeUi = { mode:o.mode, feature:o.feature || null, then:o.then || null, busy:false, msg:'', token:storeUi.token + 1, back:act || null };
+  if (storeNative() && storeOffers(null).some(x => !storePrices[x.id])) storePricesLoad();   // a price the store has not given yet (offline at start)
+  $('m-store').hidden = false;
+  storeCardRender();
+  setFocus(null);
+  storeCardFocus();
+}
+function storeClose() {
+  const back = storeUi.back;
+  storeUi = { ...storeUi, then:null, busy:false, token:storeUi.token + 1, back:null };
+  $('m-store').hidden = true; setFocus(null);
+  if (back && back.focus && !(back.closest && back.closest('[hidden]'))) back.focus();
+}
+const storeFocusEl = () => { const q = $('st-offers'); return (q.querySelector && q.querySelector('.btn:not([disabled])')) || $('st-back'); };
+DEFAULT_FOCUS['m-store'] = storeFocusEl;
+function storeCardFocus() {
+  if ($('m-store').hidden || lastDev === 'pad') return;    // a controller starts on DEFAULT_FOCUS with its first press
+  const el = storeFocusEl(); if (el && el.focus) el.focus();
+}
+function storeOfferHtml(o, busy) {
+  const price = storePrices[o.id] ? ' · ' + esc(storePrices[o.id]) : '', dis = busy ? ' disabled' : '';
+  if (o.kind === 'full') return `<button class="btn primary st-buy" data-buy="${o.id}"${dis}>Full Game${price}<small class="hsub">${STORE_LINE.full}</small></button>`;
+  const c = o.club, t = storeTeamOf(c);
+  return `<div class="st-fanbuy"><button class="btn st-buy" data-buy="${o.id}"${dis}>${jersey(t)}<span class="st-nm">Super Fan · ${esc(c.name)}${price}<small class="hsub">${STORE_LINE.fan}</small></span></button><p class="st-share">${esc(storeShareLine(c))}</p></div>`;
+}
+function storeCardRender() {
+  const u = storeUi, app = storeNative(), grown = u.mode === 'grown';
+  $('st-eyebrow').textContent = grown ? 'Grown-Ups' : 'Unlock';
+  $('st-title').textContent = grown ? (app ? 'Purchases' : 'Full Game') : STORE_NAMES[u.feature] || 'Full Game';
+  const have = [];
+  if (app && grown) {                      // the panel says what this device has
+    const c = storeFanClub();
+    if (c) have.push(`<p class="st-own">${jersey(storeTeamOf(c))}<span>Super Fan · ${esc(c.name)}</span></p>`);
+    else if (storeBought.includes(STORE_FULL)) have.push('<p class="st-own"><span>Full Game Unlocked</span></p>');
+  }
+  $('st-have').innerHTML = have.join(''); $('st-have').hidden = !have.length;
+  const link = storeAppLink();
+  $('st-offers').innerHTML = app ? storeOffers(grown ? null : u.feature).map(o => storeOfferHtml(o, u.busy)).join('')
+    : link ? `<button class="btn primary" id="st-app">Get the App${u.feature === 'import' ? '' : `<small class="hsub">${STORE_LINE.full}</small>`}</button>` : '';   // Import is the Super Fan's, not the Full Game's
+  for (const b of $('st-offers').querySelectorAll('[data-buy]')) b.addEventListener('click', () => storeBuyAsk(b.dataset.buy));
+  const ga = $('st-offers').querySelector ? $('st-offers').querySelector('#st-app') : null;
+  if (ga) ga.addEventListener('click', () => storeLeave(link));
+  $('st-msg').textContent = u.msg; $('st-msg').hidden = !u.msg;
+  $('st-links').hidden = !grown;
+  $('st-restore').hidden = !app; $('st-restore').disabled = u.busy;
+  $('st-row').classList.toggle('one', !app);
+  $('st-back').textContent = !$('s-teams').hidden ? 'Back to Teams' : !$('s-join').hidden ? 'Back to Players' : 'Back to Menu';   // the card closes onto the screen it opened from
+  const card = $('m-store').querySelector ? $('m-store').querySelector('.card') : null;
+  if (card) { card.classList.toggle('solo', !$('st-offers').innerHTML); if (!$('m-store').hidden) careerFit(card); }   // nothing on offer: one column; a long title steps down to fit (careerFit, ui-career.js)
+}
+
+/* ---------- buying, restoring, leaving ---------- */
+function storeAsk(go) {                    // the grown-up check over the card: the card hides, and comes back either way
+  $('m-store').hidden = true;
+  const token = storeUi.token;
+  parentGate(() => { if (token !== storeUi.token) return; $('m-store').hidden = false; go(); },
+    () => { if (token !== storeUi.token) return; $('m-store').hidden = false; storeCardFocus(); });
+}
+function storeBuyAsk(id) { if (!storeUi.busy && storeIds().includes(id)) storeAsk(() => storeBuy(id)); }
+async function storeBuy(id) {
+  const u = storeUi, token = u.token;
+  u.busy = true; u.msg = ''; storeCardRender();
+  let r; try { r = await storeApi().buy(id); } catch (e) { r = null; }
+  if (r && r.ok) storeGrant([id, ...(Array.isArray(r.ids) ? r.ids : [])].filter(x => x === id || storeIds().includes(x)));   // kept even if the card has gone
+  if (token !== storeUi.token) return;     // closed while the store's sheet was up: the purchase stands, nothing more on screen
+  u.busy = false;
+  if (r && r.ok) { storeDone(); return; }
+  u.msg = r && r.why === 'cancelled' ? '' : STORE_MSG[r && r.why] || STORE_MSG.failed;
+  storeCardRender(); storeCardFocus();
+}
+function storeRestoreAsk() { if (!storeUi.busy && storeNative()) storeAsk(storeRestore); }
+async function storeRestore() {
+  const u = storeUi, token = u.token;
+  u.busy = true; u.msg = ''; storeCardRender();
+  let r; try { r = await storeApi().restore(); } catch (e) { r = null; }
+  const added = !!(r && r.ok) && storeGrant(r.ids);
+  if (token !== storeUi.token) return;
+  u.busy = false;
+  if (added && u.mode === 'unlock' && storeHas(u.feature)) { storeDone(); return; }
+  u.msg = r && r.ok ? (added ? STORE_MSG.restored : storeBought.length ? STORE_MSG.same : STORE_MSG.none) : r && r.why === 'cancelled' ? '' : STORE_MSG.store;
+  storeCardRender(); storeCardFocus();
+}
+/* Bought: an Unlock card closes and carries on into what was asked for; the panel stays, showing what is owned. */
+function storeDone() {
+  const u = storeUi;
+  if (u.mode === 'unlock' && storeHas(u.feature)) { const then = u.then; storeClose(); if (then) then(); return; }
+  storeCardRender(); storeCardFocus();
+}
+function storeAppLink() {                  // Get the App: Google Play on Android, the App Store on everything else
+  const ua = typeof navigator !== 'undefined' && navigator ? String(navigator.userAgent || '') : '';
+  const url = /android/i.test(ua) ? STORE_LINKS.android : STORE_LINKS.ios;
+  return typeof url === 'string' && /^https:\/\//.test(url) ? url : null;
+}
+function storeLeave(url) { if (typeof url === 'string' && /^https:\/\//.test(url)) storeAsk(() => { storeOpenUrl(url); storeCardFocus(); }); }
+/* Outside the game: in the app, Capacitor hands a new window to the system browser (Safari on iOS, an intent on Android) and the
+   game stays where it is; on the web, a new tab with no way back into this page. */
+function storeOpenUrl(url) {
+  try { if (storeNative()) window.open(url, '_blank'); else window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) { /* blocked */ }
+}
+
+$('m-store').hidden = true;                // closed until asked for (the test harness's stand-in elements start open)
+$('b-grown').addEventListener('click', () => storeOpen({ mode:'grown' }));
+$('st-back').addEventListener('click', storeClose);
+$('st-restore').addEventListener('click', storeRestoreAsk);
+$('st-privacy').addEventListener('click', () => storeLeave(STORE_LINKS.privacy));
+$('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support));
+window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
+  if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-store').hidden) return;
+  storeClose(); if (e.preventDefault) e.preventDefault();
+});
 /* =========================================================
    Training Ground drills.
    Bouncy Egg, Pass Around the Circle, Cones and Tackling each run in a training space of their own: the pitch, the kits and
@@ -8329,7 +8692,7 @@ function renderCareerHome() {
 }
 
 /* ---------- the new player ---------- */
-const careerClubs = () => [...CLUBS, ...custom];     // the Local list and the teams you made (an imported club is one of those)
+const careerClubs = () => storeFirst([...CLUBS, ...custom]);   // the Local list and the teams you made (an imported club is one of those), the Super Fan's club first (src/store.js)
 function careerNewOpen() {
   careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null };
   $('cn-name').value = '';
@@ -8366,6 +8729,7 @@ $('cn-back').addEventListener('click', goHome);
 
 /* ---------- the hub ---------- */
 function careerOpen() {
+  if (!storeGate('career', careerOpen)) return;            // Career is in the Full Game (src/store.js); a career under way stays saved
   if (!career) { careerNewOpen(); return; }
   if (!career.season) { careerNewSeason(career); save(); }   // a broken season was dropped on load: a new draw for the same stage
   if (career.season.round >= 5) { if (careerSettle(career)) save(); renderCareerEnd(); careerShow('s-career-end'); return; }
@@ -8640,11 +9004,12 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   get M() { return M; } };
 
 function start(data) {
   load();
-  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data)) restore(data);
+  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data)) restore(data);
   resize(); setDesk();
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
@@ -8655,6 +9020,6 @@ function start(data) {
   restStick();
   requestAnimationFrame(frame);
 }
-try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague })); } catch (e) { /* not in a viewer */ }
+try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, store:{ owned:storeBought } })); } catch (e) { /* not in a viewer */ }
 if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
 })();

@@ -92,13 +92,13 @@ Measured over 2-minute halves, Easy against Kids for the same player (scratch bo
 - **Install Game** (the browser's install prompt): behind the check.
 - **Import** (App Store build): the import code calls the check before it fetches.
 - **Update Game**: not gated. It applies the game's own files, which the browser has already downloaded from the game's own site.
-- **The service worker** and **Google Fonts**: automatic loads of the game's own files and its two typefaces, not something a child opens. There are no links, ads, purchases or share buttons.
+- **The service worker** and **Google Fonts**: automatic loads of the game's own files and its two typefaces, not something a child opens. There are no ads or share buttons; every purchase, Restore Purchases and the Privacy and Support links are behind the check too ([store/README.md](store/README.md)).
 
 [PRIVACY.md](PRIVACY.md) says what the game stores and that it collects nothing.
 
 **App Store Kids category checklist.**
 
-- Done: no ads, no analytics, no tracking, no accounts, chat or purchases (`tools/kids.mjs` checks the bundle for the usual ad and analytics names and the page for links); nothing about the player leaves the device; the grown-up check before installing and before import; a privacy note; a level a 6 year old can play.
+- Done: no ads, no analytics, no tracking, no accounts or chat, and every purchase behind the grown-up check (`tools/kids.mjs` checks the bundle for the usual ad and analytics names and the page for links); nothing about the player leaves the device; the grown-up check before installing and before import; a privacy note; a level a 6 year old can play.
 - Remains for the native build: bundle the two fonts so no request goes to Google; host PRIVACY.md and give its address, with a contact address, in App Store Connect; choose the age band (6-8 suits Kids) and declare Data Not Collected; add no SDK that collects anything (analytics, crash reporting, ads) to the Capacitor project; put `parentGate` in front of every native-only way out (import's fetch, any support, rating or privacy link); hide Install Game and Update Game, which mean nothing in the app; check the card on an iPhone and an iPad, VoiceOver included.
 
 **The home on a small phone.** At 420px tall and below, Difficulty's four buttons take the settings panel's top row and Sound, Match Help and More Settings share the second in three columns (opened, More Settings keeps its cell and Half Length takes a row under it). The left column is at least 288px wide so each On | Off stays 44px, and the home buttons give up some side padding so the right column's labels stay on one line. The closed home fits 844x390 and 667x375 without a scroll.
@@ -134,6 +134,12 @@ Fetching happens only in the Try Line app (Capacitor's native HTTP), after a gro
 The Pitchero adapter follows real pages (see `tools/fixtures/import/README.md`). Everything is in `__NEXT_DATA__`: the club at `props.club`, the season's table and the fixtures under `props.initialReduxState.teams`, with the club's own row marked `is_highlighted`. Minis pages usually have no table, as age-grade rugby publishes none, so their fixture opponents become the league. Any other page is read by its standings table (a Team column with P, W, D, L and Pts), JSON-LD, og:site_name, theme-color and any embedded JSON.
 
 Safeguarding: only club and team names, shirt colours and table numbers leave a parser. Subtrees that can hold people (squads, players, staff, contacts, authors, reports, photos, leaderboards, rankings) are never read, JSON rows are read as a table only under a key that names one (standings, table, rows), and a page title gives a club name only where it says it is a club (RFC, Rugby, Club, FC). Every name is checked, and anything shaped like a person ("J Smith", "Joe S", a first name and a surname), an email, a phone number, a link or a role is dropped. Nothing about a person, the link or the page is kept. `node tools/importer.mjs` checks every parser path on the fixtures, links, the filter, the native fetch with a stubbed Capacitor, the web message, the save field (`importLeague`, validated by `cleanImportLeague`), old saves and My League.
+
+## Purchases
+
+A free download with one-off unlocks, no subscriptions and no ads. Free: Quick Match, the Training Ground, Kids, Easy, Normal, How to Play and Two Player. **Full Game** (`tryline.full`, £1.99): Championship, Career, Create Team and Hard. **Super Fan** of a partner club (`tryline.fan.<key>`, one product a club, Farnham RUFC first): the Full Game, Import Club, the club's shirt and name on the home, and the club offered first in Career and Championship. A locked control keeps its label with a small lock and opens the Unlock card; a championship or career under way stays saved, only locked. **Grown-Ups** on the home has the purchases, Restore Purchases, Privacy and Support. Every purchase and every link out asks a grown-up first.
+
+Purchases are the app's, through `@capgo/native-purchases` (StoreKit 2 and Google Play Billing, nothing in between), kept on the device in the save's `store` field. The web stays fully unlocked while `STORE_WEB_TIER` is `'full'`, and plays exactly as before; from launch it is `'free'`, with Get the App. The product ids, the store setup, adding a partner club and the launch flip are in [store/README.md](store/README.md); the code is in `src/store.js` and `src/ui-store.js`, and `node tools/store.mjs` checks it.
 
 ## Install and offline play
 

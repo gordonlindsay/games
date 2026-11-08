@@ -755,8 +755,8 @@ function importOthers(t) {
   return five;
 }
 /* The Import Club card: beside Create Team while there is room for a team, and kept with four made while a league is
-   saved, as the way to refresh it or remove it. */
-function importCard() { return custom.length < MAX_CUSTOM || importLeague ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
+   saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is on sale (storeOffered). */
+function importCard() { return (custom.length < MAX_CUSTOM || importLeague) && storeOffered('import') ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
 function importBind() {
   $('t-league').hidden = !importLeague;
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
@@ -781,6 +781,7 @@ function importFocus() {
 }
 DEFAULT_FOCUS['m-import'] = () => importFocusEl(true);
 function importOpen() {
+  if (!storeGate('import', importOpen)) return;            // Import comes with Super Fan (src/store.js); a league already saved stays
   importUi = { step:importHttp() ? 'link' : 'web', data:null, draft:null, pick:false, err:'', armed:false, token:importUi.token + 1 };
   $('im-url').value = '';
   importRender();

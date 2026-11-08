@@ -129,6 +129,7 @@ else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 /* home. Quick Match is the gold button and the keyboard focus. */
 const BOOL = { sound:1, hints:1, coach:1 };
 function renderHome() {
+  storeRender();                                           // the locks, Grown-Ups and the Super Fan badge (src/ui-store.js); nothing on the web today
   renderCabinet('home-history');
   $('home-cabinet').hidden = !champHistory.length;
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
@@ -165,6 +166,7 @@ function goHome() {
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
+    if (key === 'diff' && i === 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
@@ -174,6 +176,7 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
 }
 $('b-champ').addEventListener('click', () => {
   ac();
+  if (!storeGate('champ', () => $('b-champ').click())) return;   // locked: the Unlock card; a championship under way stays saved
   if (champ) { renderHub(); showScreen('s-hub'); }
   else openTeams('champ');
 });
@@ -185,7 +188,7 @@ $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
-$('t-default').addEventListener('click', () => pickTeam(DEFAULT_TEAM));
+$('t-default').addEventListener('click', () => pickTeam(storeHomeTeam()));   // Farnham, or the Super Fan's club
 
 /* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
@@ -222,6 +225,7 @@ function renderJoin() {
     [...$('j-diff' + s).children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === twoSel.levels[s])));
   }
   $('j-pad').hidden = two.seats[0].dev === 'pad' && two.seats[1].dev === 'pad';
+  storeJoinRender();
   renderHintSwitches();                                    // the Hints ticks: by half, so they follow Swap Players and show the saved state when the screen opens
 }
 function seatsChanged() { if (two.on && !$('s-join').hidden) renderJoin(); }   // a pad claiming a seat, Use Keyboard, Swap Players or a pad unplugged: the join screen follows
@@ -235,7 +239,7 @@ $('j-swap').addEventListener('click', swapPlayers);
 $('j-go').addEventListener('click', () => { ac(); openTeams('two'); });
 for (const s of [0, 1]) {
   $('j-kb' + s).addEventListener('click', () => useKeyboard(s));
-  [...$('j-diff' + s).children].forEach((b, i) => b.addEventListener('click', () => { twoSel.levels[s] = i; saveTwoDiff(); renderJoin(); }));
+  [...$('j-diff' + s).children].forEach((b, i) => b.addEventListener('click', () => { if (i === 2 && !storeGate('hard', () => b.click())) return; twoSel.levels[s] = i; saveTwoDiff(); renderJoin(); }));
 }
 
 /* team select */
@@ -258,7 +262,7 @@ function teamCard(t, i) {
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
 function openTeams(m) {
-  pickMode = m; settings.pool = 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
@@ -272,11 +276,12 @@ function renderTeams() {
   const yours = (quick && !!quickPick) || (pair && p === 1);
   $('t-yours').hidden = !yours;
   if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(mine.name)}</span>`;
-  $('t-default').hidden = quick || pair || settings.pool !== 1;
+  $('t-default').hidden = quick || pair || settings.pool !== (pickMode === 'champ' ? storeHomePool() : 1);
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
-  $('t-default').textContent = 'Play as ' + DEFAULT_TEAM.name;
+  $('t-default').textContent = 'Play as ' + storeHomeTeam().name;
   teamList = [...(settings.pool === IMPORT_POOL ? importTeams() : POOLS[settings.pool]), ...custom];   // My League: src/import.js
+  if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
   let html = teamList.map(teamCard).join('');
   if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
   html += importCard();                                    // Import Club, src/import.js
@@ -285,6 +290,7 @@ function renderTeams() {
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));
   const cr = $('t-create'); if (cr) cr.addEventListener('click', () => openBuilder(null));
   importBind();
+  storeTeamsRender();                                      // locks on Create Team, Edit and Import Club (src/ui-store.js)
   fitNames();
 }
 /* A name too long for its card steps down in size until its longest word fits. */
@@ -367,6 +373,7 @@ function buildBuilder() {
   });
 }
 function openBuilder(t) {
+  if (!storeGate('create', () => openBuilder(t))) return;   // Create Team is in the Full Game (src/store.js)
   editing = t;
   draft = t ? { ...t } : { name:'', kit:'#2050b0', trim:'#f2efe6', ...Object.fromEntries(ABILITIES.map(([k]) => [k, 1])) };
   codeTouched = !!t;
