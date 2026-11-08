@@ -252,9 +252,10 @@ function catchBall(p, kind) {
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
-  if (rnd() < traitHands(p, k)) { knockOn(p); return; }    // Safe Hands: hardly ever
+  const r = rnd();
+  if (r < traitHands(p, k)) { knockOn(p); return; }        // Safe Hands: hardly ever
   setCarrier(p);
-  traitCaught(p, k);
+  traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }

@@ -172,52 +172,97 @@ function pin() {
   ok(near(accel(true, true, true)/accel(false, true, true), R.TRAIT.burst.acc) && accel(true, true, false) === accel(false, true, false), `Burst gets going ${R.TRAIT.burst.acc}x quicker while he sprints, and only then`);
   ok(accel(true, false, true) === accel(false, false, true), 'and not outside arcade');
 
-  // Crunch: Big Hits and jolts, counted over the same draws with and without him
-  const tackles = (has, arcade, mode = 'ai') => {
-    const n = { dom:0, made:0, jolts:0, broken:0, fends:0 };
+  // Crunch: Big Hits and jolts, counted over the same draws with and without him. Each tackle is a fresh match, so no throttle:
+  // every call-out counted (trait_<id>) is one shown (tag_<name>)
+  const tackleEach = (has, arcade, mode = 'ai', sprint = false) => {
+    const out = [];
     for (let i = 0; i < 1500; i++) {
-      play(even(), even(), { arcade }); const M = T.M, q = M.players[8], c = M.players[3];
+      play(even(), even(), { arcade }); const M = T.M, tap = mode === 'ankle', q = M.players[tap ? 1 : 8], c = M.players[tap ? 10 : 3];
       give(q, ...(has === 'crunch' ? ['crunch'] : [])); give(c, ...(has === 'handoff' ? ['handoff'] : []));
-      M.phase = 'play'; M.set = null; T.sides.setCtrl(0, M.players[0]); M.ball.state = 'held'; M.ball.carrier = c;
-      c.x = 40; c.y = 35; q.x = 41.2; q.y = 35; c.vx = 6; c.vy = 0; q.vx = -4; q.vy = 0; c.sprinting = q.sprinting = false;
+      M.phase = 'play'; M.set = null; T.sides.setCtrl(0, tap ? q : M.players[0]); M.ball.state = 'held'; M.ball.carrier = c;
+      if (tap) { c.x = 40; c.y = 35; q.x = 41; q.y = 35.3; c.vx = -6; c.vy = 0; q.vx = -6; q.vy = 0; }   // your ringed man taps their carrier from behind
+      else { c.x = 40; c.y = 35; q.x = 41.2; q.y = 35; c.vx = 6; c.vy = 0; q.vx = -4; q.vy = 0; }
+      c.sprinting = sprint; q.sprinting = false;
       reseed(9000 + i);
-      const before = { j:M.stats.jolts || 0, f:M.stats.fends || 0 };
-      const k = C.commitTackle(q, c, mode);
-      if (k.tier === 'dom') n.dom++; if (k.tier !== 'broken') n.made++; else n.broken++;
-      if (k.tier !== 'broken') { k.t = k.T; C.resolveContact(k); }
-      n.jolts += (M.stats.jolts || 0) - before.j; n.fends += (M.stats.fends || 0) - before.f;
+      const k = C.commitTackle(q, c, mode), tier = k.tier;
+      if (tier !== 'broken') { k.t = k.T; C.resolveContact(k); }
+      const S2 = M.stats;
+      out.push({ tier, jolt:!!S2.jolts, fend:!!S2.fends, stumble:c.stumble > 0, trip:!!S2.trip, tags:M.tags.map(t => t.text).join(),
+        call:(S2.trait_crunch || 0) + (S2.trait_handoff || 0), shown:(S2.tag_Crunch || 0) + (S2['tag_Hand-Off'] || 0) });
     }
-    return n;
+    return out;
   };
-  const base = tackles(null, true), crunch = tackles('crunch', true), crunchOff = tackles('crunch', false), baseOff = tackles(null, false);
+  const sum = e => ({ dom:e.filter(o => o.tier === 'dom').length, made:e.filter(o => o.tier !== 'broken').length, jolts:e.filter(o => o.jolt).length,
+    broken:e.filter(o => o.tier === 'broken').length, fends:e.filter(o => o.fend).length, stumbles:e.filter(o => o.stumble).length, trips:e.filter(o => o.trip).length });
+  const tackles = (has, arcade, mode) => sum(tackleEach(has, arcade, mode));
+  const baseE = tackleEach(null, true), crunchE = tackleEach('crunch', true);
+  const base = sum(baseE), crunch = sum(crunchE), crunchOff = tackles('crunch', false), baseOff = tackles(null, false);
   ok(crunch.dom/crunch.made - base.dom/base.made > R.TRAIT.crunch.dom*0.7, `Crunch: more Big Hits (${(100*base.dom/base.made).toFixed(1)}% to ${(100*crunch.dom/crunch.made).toFixed(1)}% of his made tackles)`);
   ok(crunch.jolts > base.jolts*1.2, `Crunch: more balls jolted loose (${base.jolts} to ${crunch.jolts} in 1500)`);
   ok(crunch.made === base.made, 'Crunch leaves whether the tackle holds alone');
   ok(json(crunchOff) === json(baseOff), 'Crunch outside arcade: the same tackles exactly');
-  const hand = tackles('handoff', true), handOff = tackles('handoff', false);
+  // Crunch's call-out: only a Big Hit or a jolt the trait made, seed by seed. Each half of the trait on its own, so the other cannot
+  // move the tier or the jolt's odds under it
+  {
+    const keep = { ...R.TRAIT.crunch };
+    try {
+      R.TRAIT.crunch.jolt = 0;                                     // the Big Hit alone
+      const hitE = tackleEach('crunch', true), bad = hitE.filter((o, i) => (o.call > 0) !== (o.tier === 'dom' && baseE[i].tier !== 'dom')).length;
+      const hits = hitE.filter(o => o.tier === 'dom').length, called = hitE.filter(o => o.call > 0).length;
+      ok(bad === 0 && called > 0 && called < hits, `Crunch calls a Big Hit only when he made it: ${called} of his ${hits} Big Hits, the ones the same tackle without him was not (${bad} wrong)`);
+      R.TRAIT.crunch.dom = 0; R.TRAIT.crunch.jolt = keep.jolt;      // the jolt alone
+      const joltE = tackleEach('crunch', true), badJ = joltE.filter((o, i) => (o.call > 0) !== (o.jolt && !baseE[i].jolt)).length;
+      const jolts = joltE.filter(o => o.jolt).length, calledJ = joltE.filter(o => o.call > 0).length;
+      ok(badJ === 0 && calledJ > 0 && calledJ < jolts && joltE.every((o, i) => o.tier === baseE[i].tier), `and a jolt only when he made it: ${calledJ} of ${jolts} (${badJ} wrong)`);
+    } finally { Object.assign(R.TRAIT.crunch, keep); }
+    const calls = crunchE.filter(o => o.call > 0).length;
+    ok(calls < crunch.dom + crunch.jolts - base.dom*0.5 && crunchE.every(o => o.shown === Math.min(o.call, 1)), `the whole trait: ${calls} call-outs over ${crunch.dom} Big Hits and ${crunch.jolts} jolts, one at most a tackle`);
+  }
+  const handE = tackleEach('handoff', true), hand = sum(handE), handOff = tackles('handoff', false);
   ok(hand.broken > base.broken*1.15 && near(hand.made/1500, base.made/1500*R.TRAIT.handoff.hold, 0.04), `Hand-Off: more tackles broken (${base.broken} to ${hand.broken} of 1500)`);
   ok(hand.fends === hand.broken && base.fends < base.broken, `and every one of them a Fend (${hand.fends} of ${hand.broken}; without him ${base.fends} of ${base.broken})`);
+  {
+    const decided = (e, e0) => {   // he broke it, or made a stumble a Fend: seed by seed against the same tackle without him
+      const want = (o, i) => o.tier === 'broken' && (e0[i].tier !== 'broken' || !e0[i].fend);
+      return { bad:e.filter((o, i) => (o.call > 0) !== want(o, i)).length, called:e.filter(o => o.call > 0).length, broke:e.filter((o, i) => o.call > 0 && e0[i].tier !== 'broken').length,
+        broken:e.filter(o => o.tier === 'broken').length, shown:e.every(o => o.shown === o.call) };
+    };
+    const a = decided(handE, baseE);
+    ok(a.bad === 0 && a.shown && a.broke > 0, `Hand-Off calls a break he decided, at a jog: ${a.called} of his ${a.broken} (${a.broke} he broke; the other ${a.called - a.broke} broke anyway but would have been a stumble, not a Fend; ${a.bad} wrong)`);
+    const b = decided(tackleEach('handoff', true, 'ai', true), tackleEach(null, true, 'ai', true));
+    ok(b.bad === 0 && b.shown && b.called === b.broke && b.called < b.broken*0.5, `and at a sprint, when every break is a Fend anyway, only the ones he broke: ${b.called} of his ${b.broken} (${b.bad} wrong)`);
+  }
   ok(json(handOff) === json(baseOff), 'Hand-Off outside arcade: the same tackles exactly');
-  const ankle = tackles('handoff', true, 'ankle'), ankle0 = tackles(null, true, 'ankle');
+  const ankleE = tackleEach('handoff', true, 'ankle'), ankle0E = tackleEach(null, true, 'ankle'), ankle = sum(ankleE), ankle0 = sum(ankle0E);
   ok(ankle.made === ankle0.made, 'an ankle tap from behind is not handed off');
+  ok(json(ankleE) === json(ankle0E) && ankleE.every(o => !o.call && !/Hand-Off/.test(o.tags)), `a broken ankle tap on a Hand-Off carrier: no Hand-Off, no Fend, and he stumbles or is tripped as ever (${ankle.broken} broken: ${ankle.trips} tripped, ${ankle.stumbles - ankle.trips} stumbled, ${ankle.fends} Fends; the same ${ankle0.broken}, ${ankle0.trips}, ${ankle0.stumbles - ankle0.trips} and ${ankle0.fends} without him)`);
+  ok(ankle.trips > 0 && ankle.stumbles > ankle.trips && ankleE.some(o => /Tripped/.test(o.tags)), 'and the ringed tackler still sees Tripped');
 
-  // Safe Hands: the catch and the offload
-  const catches = (has, arcade) => {
-    let knocks = 0;
+  // Safe Hands: the catch and the offload. Each a fresh match, so every call-out counted is shown
+  const catchEach = (has, arcade, kind = 'kick') => {
+    const out = [];
     for (let i = 0; i < 1500; i++) {
       play(even({ handling:1 }), even(), { arcade }); const M = T.M, p = M.players[3];
       give(p, ...(has ? ['safe'] : []));
-      M.phase = 'play'; M.ball.state = 'air'; M.ball.f = { kind:'kick', team:1 };
+      M.phase = 'play'; M.ball.state = 'air'; M.ball.f = { kind, team:1 };
       M.players[9].x = p.x + 1; M.players[9].y = p.y;   // under pressure
-      const k0 = M.stats.knocks; reseed(7000 + i); R.catchBall(p, 'kick'); if (M.stats.knocks > k0) knocks++;
+      const k0 = M.stats.knocks; reseed(7000 + i); R.catchBall(p, kind);
+      out.push({ knock:M.stats.knocks > k0, call:M.stats.trait_safe || 0, shown:M.stats['tag_Safe Hands'] || 0 });
     }
-    return knocks;
+    return out;
   };
-  const k0 = catches(false, true), k1 = catches(true, true);
+  const catches = (has, arcade) => catchEach(has, arcade).filter(o => o.knock).length;
+  const c0E = catchEach(false, true), c1E = catchEach(true, true), k0 = c0E.filter(o => o.knock).length, k1 = c1E.filter(o => o.knock).length;
   ok(k0 > 150 && k1 <= Math.ceil(k0*R.TRAIT.safe.hands*1.5), `Safe Hands: knock-ons at a hard catch near zero (${k0} to ${k1} of 1500)`);
+  {
+    const bad = c1E.filter((o, i) => (o.call > 0) !== (c0E[i].knock && !o.knock)).length, called = c1E.filter(o => o.call > 0).length;
+    ok(bad === 0 && called === k0 - k1 && c1E.every(o => o.shown === o.call), `Safe Hands calls only a catch he saved: ${called} of his ${1500 - k1} catches, the ones the same draw knocked on without him (${bad} wrong)`);
+    const easy = catchEach(true, true, 'pass');
+    ok(easy.filter(o => o.call > 0).length < easy.filter(o => !o.knock).length*0.2, `an easier catch (a pass under pressure) is seldom one he saved: ${easy.filter(o => o.call > 0).length} of ${easy.filter(o => !o.knock).length}`);
+  }
   ok(catches(true, false) === catches(false, false), 'Safe Hands outside arcade: the same catches');
-  const offloads = (has, arcade) => {
-    let got = 0;
+  const offloadEach = (has, arcade) => {
+    const out = [];
     for (let i = 0; i < 1500; i++) {
       play(even(), even(), { arcade }); const M = T.M, c = M.players[3], q = M.players[8], r = M.players[2];
       give(c, ...(has ? ['safe'] : []));
@@ -225,12 +270,18 @@ function pin() {
       c.x = 40; c.y = 35; q.x = 41; q.y = 35; r.x = 37; r.y = 40; for (const o of M.players) if (o !== c && o !== q && o !== r) { o.x = 90; o.y = 10; }
       const k = { c, q, q2:null, tier:'wrap', offloaded:false };
       c.bind = q.bind = k; M.contact = k;
-      const n0 = M.stats.offloads || 0; reseed(5000 + i); C.offload(k, false); if ((M.stats.offloads || 0) > n0) got++;
+      reseed(5000 + i); C.offload(k, false);
+      out.push({ ok:!!M.stats.offloads, call:M.stats.trait_safe || 0, shown:M.stats['tag_Safe Hands'] || 0 });
     }
-    return got;
+    return out;
   };
-  const o0 = offloads(false, true), o1 = offloads(true, true), pOk = C.CONTACT.off.wrap;
+  const offloads = (has, arcade) => offloadEach(has, arcade).filter(o => o.ok).length;
+  const o0E = offloadEach(false, true), o1E = offloadEach(true, true), o0 = o0E.filter(o => o.ok).length, o1 = o1E.filter(o => o.ok).length, pOk = C.CONTACT.off.wrap;
   ok(o1 > o0 && near(o1/1500, 1 - (1 - pOk)*R.TRAIT.safe.offload, 0.04), `Safe Hands: offloads go to hand more (${o0} to ${o1} of 1500)`);
+  {
+    const bad = o1E.filter((o, i) => (o.call > 0) !== (o.ok && !o0E[i].ok)).length, called = o1E.filter(o => o.call > 0).length;
+    ok(bad === 0 && called === o1 - o0 && o1E.every(o => o.shown === o.call), `and calls only an offload he saved: ${called} of his ${o1} (${bad} wrong)`);
+  }
   ok(offloads(true, false) === offloads(false, false), 'Safe Hands outside arcade: the same offloads');
 
   // Long Boot: the tactical kick runs on, the kick to touch goes further, he takes the place kicks with a wider band
@@ -349,9 +400,10 @@ process.exitCode = failed ? 1 : 0;
 /* ---------- --balance: what a starred side gains, in seeded CPU v CPU arcade matches ----------
    As README's Stamina section measured: a match you play (arcade) with the computer at both sets of controls, 2-minute halves,
    Normal. Each pairing is the same side twice, stars kept on one and taken off the other, played both ways round with the same
-   seeds (the side at the human's end plays the human side's terms), so only the stars differ. N=BAL_N pairs (500). */
+   seeds (the side at the human's end plays the human side's terms), so only the stars differ. N=BAL_N pairs (500). Pair i is
+   seeded BAL_SEED + i*BAL_STEP (1000 and 7919); the README pools that set with 77000 and 104729. */
 async function balance() {
-  const N = +(process.env.BAL_N || 500);
+  const N = +(process.env.BAL_N || 500), S0 = +(process.env.BAL_SEED || 1000), DS = +(process.env.BAL_STEP || 7919);
   const allFives = even({ id:'ALL', name:'All Stars', pace:5, power:5, handling:5, kicking:5, stamina:5 });
   const one = id => [even(), { [R.TRAITS.find(t => t.id === id).shirts[0]]:[id] }];
   const rows = [['France (4 stars)', team('FRA'), null], ['Ireland (3)', team('IRE'), null], ['Pretoria (2)', team('PRE'), null], ['All six', allFives, null],
@@ -360,7 +412,7 @@ async function balance() {
   for (const [label, side, force] of rows.filter((_, i) => !only || only.includes(i))) {
     let sum = 0, sum2 = 0, n = 0, w = 0, l = 0, pts = 0;
     for (let i = 0; i < N; i++) for (const star of [0, 1]) {
-      reseed(1000 + i*7919);
+      reseed(S0 + i*DS);
       T.newMatch(side, side, { halfLen:120, diff:1, headless:true, humans:[true, false], duels:'off', arcade:true });
       const M = T.M; M.side[0].human = false; M.side[0].ctrl = null;
       for (const p of M.players) { if (p.team !== star) p.tr = null; else if (force) give(p, ...(force[p.n] || [])); }
@@ -368,6 +420,7 @@ async function balance() {
       const m = M.score[star] - M.score[1 - star]; sum += m; sum2 += m*m; n++; pts += M.score[0] + M.score[1]; if (m > 0) w++; else if (m < 0) l++;
     }
     const mean = sum/n, se = Math.sqrt(Math.max(0, sum2/n - mean*mean)/n);
-    console.log(`${label.padEnd(18)} ${mean >= 0 ? '+' : ''}${mean.toFixed(2)} a match (se ${se.toFixed(2)}), won ${(100*w/n).toFixed(0)}% lost ${(100*l/n).toFixed(0)}%, ${(pts/n/2).toFixed(1)} points a side`);
+    console.log(`${label.padEnd(18)} ${mean >= 0 ? '+' : ''}${mean.toFixed(2)} a match (se ${se.toFixed(2)}), won ${(100*w/n).toFixed(0)}% lost ${(100*l/n).toFixed(0)}%, ${(pts/n/2).toFixed(1)} points a side` +
+      (process.env.BAL_RAW ? ` [raw n=${n} sum=${sum} sum2=${sum2} w=${w} l=${l} pts=${pts}]` : ''));   // BAL_RAW: the sums, to pool runs
   }
 }

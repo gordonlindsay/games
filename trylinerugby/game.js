@@ -774,9 +774,10 @@ function catchBall(p, kind) {
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
-  if (rnd() < traitHands(p, k)) { knockOn(p); return; }    // Safe Hands: hardly ever
+  const r = rnd();
+  if (r < traitHands(p, k)) { knockOn(p); return; }        // Safe Hands: hardly ever
   setCarrier(p);
-  traitCaught(p, k);
+  traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
@@ -1000,26 +1001,29 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   const behind = (q.x - c.x)*d < -0.3, sideOn = !behind && Math.abs(cosF) < 0.5;
   let p = mode === 'ankle' ? CONTACT.ankle : tackleChance(q, c, mode);
   if (sideOn && mode !== 'ankle') p = Math.min(0.95, p*CONTACT.side);
+  const p0 = p;                                            // the hold without a Hand-Off
   p *= traitHold(c, mode);                                 // a Hand-Off carrier breaks more (src/traits.js)
   q.tcd = 1.0;
   st('ta' + c.team);
   const qs = !!q.sprinting, cs = !!c.sprinting, dp = (M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team)) + traitEdge(q, c);   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend. A career match: your player's own power, faded as his side's; an Engine keeps most of what his side has faded (src/traits.js)
   const r = rnd();
-  let tier = 'broken';
+  let tier = 'broken', hit = false;
   if (r < p) {
     const closing = ((c.vx - q.vx)*rx + (c.vy - q.vy)*ry)/rm;   // how fast the two are coming together along the line between them
-    let dom = CONTACT.dom.base + dp*CONTACT.dom.pow + (cosF > 0.5 && closing > 6 ? CONTACT.dom.front : 0) + (mode === 'dive' && rm < 1.7 ? CONTACT.dom.dive : 0) + (qs ? CONTACT.dom.sprint : 0) + cpuEdge(q, c, CONTACT.dom.cpu) + traitDom(q);   // a Crunch tackler hits harder
+    const dom0 = CONTACT.dom.base + dp*CONTACT.dom.pow + (cosF > 0.5 && closing > 6 ? CONTACT.dom.front : 0) + (mode === 'dive' && rm < 1.7 ? CONTACT.dom.dive : 0) + (qs ? CONTACT.dom.sprint : 0) + cpuEdge(q, c, CONTACT.dom.cpu);
+    let dom = dom0 + traitDom(q);                          // a Crunch tackler hits harder
     let soft = CONTACT.soft.base + (behind ? CONTACT.soft.behind : 0) + (cv > 7 ? CONTACT.soft.fast : 0) - dp*CONTACT.soft.pow;
     if (mode === 'ankle') { dom = 0; soft = 1; }             // an ankle tap is always soft
     else { dom = clamp(dom, 0.03, 0.5); soft = clamp(soft, 0.05, 1 - dom); }
     const r2 = rnd();
     tier = r2 < dom ? 'dom' : r2 < dom + soft ? 'soft' : 'wrap';
+    hit = tier === 'dom' && r2 >= clamp(dom0, 0.03, 0.5);   // a Big Hit only the Crunch made: the call-out's (src/traits.js)
     st('ts' + c.team);
   }
   st('tier_' + tier);
   countTk(q.team, tier !== 'broken');
   if (mode === 'ankle') { st('ankleTry'); if (tier !== 'broken') st('ankle' + q.team); }
-  const k = { c, q, q2:null, mode, tier, t:0, T:tier === 'broken' ? 0 : CONTACT.bind, v0:{ x:c.vx, y:c.vy }, front:cosF > 0.3, aiOff:null, offloaded:false, margin:r - p, dp, cSprint:cs };
+  const k = { c, q, q2:null, mode, tier, t:0, T:tier === 'broken' ? 0 : CONTACT.bind, v0:{ x:c.vx, y:c.vy }, front:cosF > 0.3, aiOff:null, offloaded:false, margin:r - p, margin0:r - p0, hit, dp, cSprint:cs };   // margin0: without a Hand-Off
   endSprint(q);                                            // the sprint ends when he commits
   if (tier === 'broken') { resolveContact(k); return k; }
   endSprint(c);
@@ -1080,12 +1084,13 @@ function offload(k, user) {                                // user: the carrier'
   if (k.offloaded || k.tier === 'dom' || k.tier === 'broken') return false;
   const r = user ? offloadTarget(k) : supportFor(c);        // the press takes the man the label was lit for
   if (!r) return false;
-  const pOk = traitOffload(c, M.kids && user ? KIDS.offload : CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05));   // Kids: an offload you press gets away. Safe Hands: most of his do
+  const p0 = M.kids && user ? KIDS.offload : CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05), pOk = traitOffload(c, p0);   // Kids: an offload you press gets away. Safe Hands: most of his do
   st('offAtt'); k.offloaded = true;
   const q = k.q, q2 = k.q2;
   releaseBind(k);
   c.down = 0.9; q.down = 0.6; q.tcd = 1.0; if (q2) q2.tcd = 0.4;
-  if (rnd() < pOk) { st('offloads'); st('off' + c.team); if (!traitCall(c, 'safe') && ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) }); return true; }
+  const ro = rnd();
+  if (ro < pOk) { st('offloads'); st('off' + c.team); if (!traitOffloaded(c, ro, p0) && ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) }); return true; }   // Safe Hands says so when it saved the offload
   st('offFail');
   if (rnd() < CONTACT.off.hold) { st('offHeld'); c.down = 0; q.down = 0; q.tcd = 0; tackle(c, q, { tier:k.tier, q2 }); return true; }   // he couldn't get it away: an ordinary ruck
   if (rnd() < CONTACT.off.knock) { st('offKnock'); knockOn(c, 'offload'); } else { st('offLoose'); looseInContact(c); }
@@ -1109,28 +1114,30 @@ function resolveContact(k) {                               // the end of the bin
     const s = (q.x - c.x)*uy - (q.y - c.y)*ux >= 0 ? 1 : -1;
     slide(q, c.x - ux*CONTACT.slide[0] + uy*CONTACT.slide[1]*s, c.y - uy*CONTACT.slide[0] - ux*CONTACT.slide[1]*s, 0.12, s);   // off the hip: beside and behind, out of his path
     q.down = (k.mode === 'dive' || k.mode === 'ankle') ? CONTACT.diveDown : CONTACT.brokenDown; q.tcd = 1.0; q.vx = q.vy = 0;
-    const fend = k.cSprint || (Math.round(-k.dp) >= CONTACT.fend.pow && k.margin >= CONTACT.fend.margin) || traitFend(c);   // beaten by a clear margin with the power edge, or at a sprint: he keeps his speed. The edge to the nearest point, so the Stamina fade moves it only once the two sides have faded half a point apart
+    const fend0 = k.cSprint || (Math.round(-k.dp) >= CONTACT.fend.pow && k.margin0 >= CONTACT.fend.margin);   // beaten by a clear margin with the power edge, or at a sprint: he keeps his speed. The edge to the nearest point, so the Stamina fade moves it only once the two sides have faded half a point apart. The margin a Hand-Off would have had without him: his own break is a Fend below anyway
+    const fend = fend0 || traitFend(c, k.mode);              // a Hand-Off: every tackle he breaks is a Fend, an ankle tap from behind aside
     c.fend = 0.2; c.fendA = Math.atan2(q.y - c.y, q.x - c.x);
     let tripped = false;
     if (k.mode === 'ankle' && rnd() < CONTACT.trip.p) { c.stumble = CONTACT.trip.t; c.stumbleMul = CONTACT.trip.mul; st('trip'); tripped = true; }
     else if (!fend) { c.stumble = CONTACT.stumble[0]; c.stumbleMul = CONTACT.stumble[1]; }
-    if (fend) { st('fends'); st('fend' + c.team); if (!traitCall(c, 'handoff') && ringed(c)) tag('Fend', c.x, c.y); }   // a Hand-Off says so instead
+    if (fend) { st('fends'); st('fend' + c.team); if (!traitBroke(c, k, fend0) && ringed(c)) tag('Fend', c.x, c.y); }   // a Hand-Off says so instead, when he decided it
     if (tripped) { sfx('trip'); if (ringed(q)) { tag('Tripped', c.x, c.y); buzz(20, q.team); } } else sfx('whiff');
     st('broken' + c.team); M.stats.broken++; heat(c.team, 'break');
     return;
   }
   if (tier === 'dom') {
-    st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45); traitCall(q, 'crunch', c.x, c.y);
+    st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45); if (k.hit) traitCall(q, 'crunch', c.x, c.y);   // a Big Hit his Crunch made
     if (M.arcade) {                                          // arcade: the whole screen knows. Yours freezes and shakes hard; one on your carrier shakes too
       heat(q.team, 'hit');
       if (ringed(q)) { say('Big Hit', 'big hit', q.team); hitStop(ARCADE.hit.stop, ARCADE.hit.shake); }
       else if (ringed(c) && !RM && interactive()) M.shake = M.shakeT = ARCADE.hit.hitShake;
     } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
   }
-  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0) + traitJolt(q);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more, and so does a Crunch
+  const jolt0 = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0), jolt = jolt0 + traitJolt(q);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more, and so does a Crunch
   if (practice && practiceTackle(c, q)) return;            // a drill takes a made tackle before the ball can jolt loose
-  if (rnd() < jolt*(M.kids && isHuman(c.team) ? KIDS.jolt : 1)) {   // Kids: your carrier keeps hold of it
-    st('jolts'); traitCall(q, 'crunch', c.x, c.y);
+  const rj = rnd(), kj = M.kids && isHuman(c.team) ? KIDS.jolt : 1;   // Kids: your carrier keeps hold of it
+  if (rj < jolt*kj) {
+    st('jolts'); if (rj >= jolt0*kj) traitCall(q, 'crunch', c.x, c.y);   // a jolt his Crunch made
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
     if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }
     return;
@@ -3940,7 +3947,9 @@ function careerMark(r) {
      traitOn reads false everywhere else, so AI v AI, the demo, practice and the balance tools play as they did.
      Every hook in the engine is a multiplier of exactly 1, a term of exactly 0 or the value handed in when traitOn is false.
    - A trait that decides a moment says so over the man (tag), at most once every TRAIT.gap seconds of play for each man; a
-     small gold star sits on each star's shoulder in the top view (traitMarks, from render-match.js).
+     small gold star sits on each star's shoulder in the top view (traitMarks, from render-match.js). A moment it decides is
+     one that would have gone the other way without him, read off the draw already made (no new draw): a Big Hit or a jolt in
+     the band Crunch adds, a tackle Hand-Off broke or made a Fend, a catch or an offload Safe Hands kept from going astray.
    ========================================================= */
 const TRAITS = [   // in ABILITIES order; name is the label everywhere (cards, call-outs, the career hub)
   { id:'burst',   name:'Burst',      skill:'pace',     unlock:80, shirts:[7] },        // the wing
@@ -3955,7 +3964,7 @@ const TRAIT = {
   burst:{ top:0.08, acc:1.4 },              // sprinting: top speed 8% more at full burst, acceleration 40% more
   crunch:{ dom:0.15, jolt:0.05 },           // his made tackles: 15 points more chance of a Big Hit (dominant tackle), 5 more of the ball jolting loose
   handoff:{ hold:0.8 },                     // his carries: a tackle on him (not an ankle tap) holds 80% as often, and every one he breaks is a Fend (he keeps his speed)
-  safe:{ hands:0.1, offload:0.4, hard:0.05 },   // a knock-on at the catch a tenth as likely; his offloads go astray 40% as often. The call-out is for a catch that was at least 5% to go down without it
+  safe:{ hands:0.1, offload:0.4 },          // a knock-on at the catch a tenth as likely; his offloads go astray 40% as often
   boot:{ roll:2.0, touch:10, band:1.35 },   // his tactical kick lands where the cross says and runs on twice as far; his side's kick to touch 10m further; his goal kicks' band 35% wider (he takes his side's place kicks)
   engine:{ fade:0.15, drain:0.5, late:0.5 },    // he feels 15% of what the half takes from his side's Power and pace, and his sprint drains the meter half as fast. The call-out: a sprint started in the second half of a period
   gap:4,                                    // seconds of play between one man's call-outs
@@ -4024,15 +4033,19 @@ function traitSprint(p) {                                  // a fresh sprint: Bu
   if (traitCall(p, 'burst')) return;
   if (traitOn(p, 'engine') && M.clock >= TRAIT.engine.late*periodLen()) traitCall(p, 'engine');
 }
-/* Crunch and Hand-Off: the tackle. traitHold scales the chance a tackle on him holds; traitDom adds to his Big Hit chance. */
+/* Crunch and Hand-Off: the tackle. traitHold scales the chance a tackle on him holds; traitDom adds to his Big Hit chance.
+   Neither touches an ankle tap from behind, which plays as ever. Crunch's call-out is in contact.js (k.hit, jolt0). */
 const traitHold = (c, mode) => (mode !== 'ankle' && traitOn(c, 'handoff') ? TRAIT.handoff.hold : 1);
 const traitDom = q => (traitOn(q, 'crunch') ? TRAIT.crunch.dom : 0);
 const traitJolt = q => (traitOn(q, 'crunch') ? TRAIT.crunch.jolt : 0);
-const traitFend = c => traitOn(c, 'handoff');
+const traitFend = (c, mode) => mode !== 'ankle' && traitOn(c, 'handoff');
+/* A broken tackle Hand-Off decided: it held without him (margin0 < 0), or it broke anyway but as a stumble (fend0 false). */
+const traitBroke = (c, k, fend0) => traitFend(c, k.mode) && (k.margin0 < 0 || !fend0) && traitCall(c, 'handoff');
 /* Safe Hands: the catch (knock-on chance k) and the offload (success chance pOk). */
 const traitHands = (p, k) => (traitOn(p, 'safe') ? k*TRAIT.safe.hands : k);
-function traitCaught(p, k) { if (k >= TRAIT.safe.hard) traitCall(p, 'safe'); }   // a hard catch held: a kick, an intercept, under pressure or a long one
+function traitCaught(p, r, k) { if (r < k) traitCall(p, 'safe'); }   // a catch held that the same draw would have knocked on without him
 const traitOffload = (c, pOk) => (traitOn(c, 'safe') ? 1 - (1 - pOk)*TRAIT.safe.offload : pOk);
+const traitOffloaded = (c, r, p0) => r >= p0 && traitCall(c, 'safe');   // an offload away that would have gone astray without him
 /* Long Boot: his tactical kick runs on (ball.js reads f.boot at the landing), his side's kick to touch goes further, and he
    takes his side's place kicks with a wider band. */
 function traitKick(c) { if (!traitOn(c, 'boot') || !M.ball.f) return; M.ball.f.boot = true; traitCall(c, 'boot'); }

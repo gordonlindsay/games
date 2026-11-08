@@ -15,7 +15,9 @@
      traitOn reads false everywhere else, so AI v AI, the demo, practice and the balance tools play as they did.
      Every hook in the engine is a multiplier of exactly 1, a term of exactly 0 or the value handed in when traitOn is false.
    - A trait that decides a moment says so over the man (tag), at most once every TRAIT.gap seconds of play for each man; a
-     small gold star sits on each star's shoulder in the top view (traitMarks, from render-match.js).
+     small gold star sits on each star's shoulder in the top view (traitMarks, from render-match.js). A moment it decides is
+     one that would have gone the other way without him, read off the draw already made (no new draw): a Big Hit or a jolt in
+     the band Crunch adds, a tackle Hand-Off broke or made a Fend, a catch or an offload Safe Hands kept from going astray.
    ========================================================= */
 const TRAITS = [   // in ABILITIES order; name is the label everywhere (cards, call-outs, the career hub)
   { id:'burst',   name:'Burst',      skill:'pace',     unlock:80, shirts:[7] },        // the wing
@@ -30,7 +32,7 @@ const TRAIT = {
   burst:{ top:0.08, acc:1.4 },              // sprinting: top speed 8% more at full burst, acceleration 40% more
   crunch:{ dom:0.15, jolt:0.05 },           // his made tackles: 15 points more chance of a Big Hit (dominant tackle), 5 more of the ball jolting loose
   handoff:{ hold:0.8 },                     // his carries: a tackle on him (not an ankle tap) holds 80% as often, and every one he breaks is a Fend (he keeps his speed)
-  safe:{ hands:0.1, offload:0.4, hard:0.05 },   // a knock-on at the catch a tenth as likely; his offloads go astray 40% as often. The call-out is for a catch that was at least 5% to go down without it
+  safe:{ hands:0.1, offload:0.4 },          // a knock-on at the catch a tenth as likely; his offloads go astray 40% as often
   boot:{ roll:2.0, touch:10, band:1.35 },   // his tactical kick lands where the cross says and runs on twice as far; his side's kick to touch 10m further; his goal kicks' band 35% wider (he takes his side's place kicks)
   engine:{ fade:0.15, drain:0.5, late:0.5 },    // he feels 15% of what the half takes from his side's Power and pace, and his sprint drains the meter half as fast. The call-out: a sprint started in the second half of a period
   gap:4,                                    // seconds of play between one man's call-outs
@@ -99,15 +101,19 @@ function traitSprint(p) {                                  // a fresh sprint: Bu
   if (traitCall(p, 'burst')) return;
   if (traitOn(p, 'engine') && M.clock >= TRAIT.engine.late*periodLen()) traitCall(p, 'engine');
 }
-/* Crunch and Hand-Off: the tackle. traitHold scales the chance a tackle on him holds; traitDom adds to his Big Hit chance. */
+/* Crunch and Hand-Off: the tackle. traitHold scales the chance a tackle on him holds; traitDom adds to his Big Hit chance.
+   Neither touches an ankle tap from behind, which plays as ever. Crunch's call-out is in contact.js (k.hit, jolt0). */
 const traitHold = (c, mode) => (mode !== 'ankle' && traitOn(c, 'handoff') ? TRAIT.handoff.hold : 1);
 const traitDom = q => (traitOn(q, 'crunch') ? TRAIT.crunch.dom : 0);
 const traitJolt = q => (traitOn(q, 'crunch') ? TRAIT.crunch.jolt : 0);
-const traitFend = c => traitOn(c, 'handoff');
+const traitFend = (c, mode) => mode !== 'ankle' && traitOn(c, 'handoff');
+/* A broken tackle Hand-Off decided: it held without him (margin0 < 0), or it broke anyway but as a stumble (fend0 false). */
+const traitBroke = (c, k, fend0) => traitFend(c, k.mode) && (k.margin0 < 0 || !fend0) && traitCall(c, 'handoff');
 /* Safe Hands: the catch (knock-on chance k) and the offload (success chance pOk). */
 const traitHands = (p, k) => (traitOn(p, 'safe') ? k*TRAIT.safe.hands : k);
-function traitCaught(p, k) { if (k >= TRAIT.safe.hard) traitCall(p, 'safe'); }   // a hard catch held: a kick, an intercept, under pressure or a long one
+function traitCaught(p, r, k) { if (r < k) traitCall(p, 'safe'); }   // a catch held that the same draw would have knocked on without him
 const traitOffload = (c, pOk) => (traitOn(c, 'safe') ? 1 - (1 - pOk)*TRAIT.safe.offload : pOk);
+const traitOffloaded = (c, r, p0) => r >= p0 && traitCall(c, 'safe');   // an offload away that would have gone astray without him
 /* Long Boot: his tactical kick runs on (ball.js reads f.boot at the landing), his side's kick to touch goes further, and he
    takes his side's place kicks with a wider band. */
 function traitKick(c) { if (!traitOn(c, 'boot') || !M.ball.f) return; M.ball.f.boot = true; traitCall(c, 'boot'); }
