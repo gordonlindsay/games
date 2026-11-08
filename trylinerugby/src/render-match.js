@@ -30,6 +30,7 @@ function render(dt) {
   }
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
+  if (M.career) careerMark(r);                             // a career match: your player's ring and the star on his back
   // A short cue only where a decision matters; free pass targets keep just their ring.
   // Suppress edge cues rather than detach a label from an off-screen player or cover the scorebug.
   const targetCue = (q, text, colour) => {
@@ -79,7 +80,7 @@ function render(dt) {
   for (const t of [0, 1]) {
     const ctrl = ctrls[t], S = sideOf(t);
     if (!(S.charging && ctrl && b.carrier === ctrl)) continue;
-    const n = M.nat[t], len = 10 + S.charge*(36 + n.kicking*3), ang = clamp(inputOf(t).world().y, -1.2, 1.2)*0.75;
+    const n = M.career ? careerNatOf(ctrl) : M.nat[t], len = 10 + S.charge*(36 + n.kicking*3), ang = clamp(inputOf(t).world().y, -1.2, 1.2)*0.75;
     const [lx, ly] = toS(ctrl.x + dirOf(t)*len*Math.cos(ang), ctrl.y + len*Math.sin(ang));
     ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(lx-7, ly-7); ctx.lineTo(lx+7, ly+7); ctx.moveTo(lx+7, ly-7); ctx.lineTo(lx-7, ly+7); ctx.stroke();

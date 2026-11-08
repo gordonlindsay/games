@@ -103,7 +103,7 @@ function newMatch(u, c, opts) {
 }
 
 function maxSpeed(p) {
-  let s = 7.6 + M.nat[p.team].pace*0.25;
+  let s = 7.6 + (M.career ? careerNatOf(p) : M.nat[p.team]).pace*0.25;   // a career match: your player's own pace
   if (cpuSide(p.team)) s *= diffOf(p.team).cpuSpeed;
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
@@ -113,6 +113,7 @@ function maxSpeed(p) {
   if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
   if (p.wf > 0) f *= RUCK.wf.mul;
+  if (M.career) f *= careerFade(p);                         // a career match: your player's stamina, late in the half
   return s*f;
 }
 function nearestOf(arr, x, y) { let best = null, bd = 1e9; for (const p of arr) { const d = hyp(p.x-x, p.y-y); if (d < bd) { bd = d; best = p; } } return best; }
@@ -184,6 +185,7 @@ function kickoff(team) {
   M.phaseCount = 0; M.poss = team;
   startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => restartKick(team, 60, 35, 'kickoff') });
   if (!M.two && outmatched(M.nat[0], M.nat[1])) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless
+  if (M.career) careerKickoff();                           // a career match: the ring starts on your player
 }
 function dropOut(team) {
   const kx = team === 0 ? 32 : 88;
@@ -240,7 +242,7 @@ function setCarrier(p) {
   }
 }
 function catchBall(p, kind) {
-  const n = M.nat[p.team], f = M.ball.f;
+  const n = M.career ? careerNatOf(p) : M.nat[p.team], f = M.ball.f;   // a career match: your player's own handling
   let k = 0.015 + (5-n.handling)*0.01 + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? 0.2 : 0);
   if (pressure(p) < 1.8) k += 0.04;
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take

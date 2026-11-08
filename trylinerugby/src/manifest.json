@@ -11,6 +11,7 @@
   "ball.js",
   "movement.js",
   "championship.js",
+  "career.js",
   "render-pitch.js",
   "render-setpieces.js",
   "render-duels.js",
@@ -23,6 +24,7 @@
   "ui-help.js",
   "ui-menus.js",
   "practice.js",
+  "ui-career.js",
   "offline-client.js",
   "boot.js"
 ]

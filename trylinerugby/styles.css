@@ -456,3 +456,74 @@ body.desk .home-row .col{grid-column:auto}
 .app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; padding:7px 11px; font:inherit; cursor:pointer; }
 .app-action:hover, .app-action:focus-visible { color:#fff; border-color:#d5b663; }
 .app-action:disabled { opacity:.55; cursor:wait; }
+
+/* ===== career ===== */
+.career-row .col{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;min-width:0}
+.cr-shirt{position:relative;display:inline-grid;place-items:center;flex:none}
+.cr-shirt .jersey{width:56px;height:56px}
+.cr-shirt b{position:absolute;inset:0;display:grid;place-items:center;padding-top:14%;font:900 24px/1 var(--display);color:var(--chalk);text-shadow:0 0 2px #000,0 0 3px #000;pointer-events:none}
+.cr-shirt.big .jersey{width:64px;height:64px}
+.cr-shirt.big b{font-size:28px}
+.btn.cr-headback{width:auto;min-height:44px;padding:8px 16px}
+.cr-newgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px 20px;align-items:start}
+.cr-clubs{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.cr-nations{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.team.cr-club{grid-template-columns:28px minmax(0,1fr);min-height:44px;padding:6px 10px;gap:8px}
+.cr-club .jersey{width:28px;height:28px}
+.cr-club .tname{font:700 14px/1.1 var(--body);text-transform:none;letter-spacing:0;overflow-wrap:normal}
+.cr-form{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cr-namerow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px}
+.cr-hub{max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px 24px;align-items:start}
+.cr-main{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cr-main .head > div{gap:4px}
+.cr-main .fx-team span{overflow-wrap:normal}
+#cr-play{margin-bottom:12px}   /* far enough above Train | Table that a controller's Down reaches them, not the row below */
+.cr-card{display:flex;flex-direction:column;gap:12px;padding:14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);min-width:0}
+.cr-id{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
+.cr-who{min-width:0}
+.cr-who h3{margin:4px 0 0;font:900 30px/.95 var(--display);text-transform:uppercase;letter-spacing:.01em;overflow-wrap:normal}
+.cr-ovr{display:grid;justify-items:center;gap:2px;min-width:64px;padding:6px 8px;border-radius:8px;background:var(--chalk);color:var(--night)}
+.cr-ovr b{font:900 36px/1 var(--display);font-variant-numeric:tabular-nums}
+.cr-ovr span{font:700 10px/1 var(--body);letter-spacing:.12em;text-transform:uppercase}
+.cr-skills{display:grid;gap:8px}
+.cr-sk{display:grid;grid-template-columns:6.2em minmax(0,1fr) 2.2em 2.2em;align-items:center;gap:10px}
+.cr-sk .lbl{color:var(--k)}
+.cr-sk .bar{height:12px;border-radius:6px;background:var(--rule-hi);overflow:hidden}
+.cr-sk .bar i{display:block;height:100%;border-radius:6px;background:var(--k)}
+.cr-sk b{font:900 20px/1 var(--display);text-align:right;font-variant-numeric:tabular-nums}
+.cr-sk em{font:700 13px/1 var(--body);font-style:normal;color:var(--flood)}
+.cr-gain{margin:0;color:var(--flood);font:700 15px/1.3 var(--body)}
+.cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.btn.cr-drill{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:76px;padding:10px 12px;text-align:left}
+.cr-drill .nm{font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+.cr-drill .nw{white-space:nowrap}
+.cr-chips{display:flex;flex-wrap:wrap;gap:6px}
+.cr-chip{padding:4px 8px;border-radius:4px;border:1.5px solid var(--k);color:var(--k);font:700 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase}
+.tbl tr.up td:first-child{box-shadow:inset 4px 0 0 #5fd38a}
+.cr-end{display:flex;flex-direction:column;gap:12px}
+.cr-tiles{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:10px}
+.cr-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);min-width:0}
+.cr-tile b{align-self:stretch;min-width:0;font:900 32px/1 var(--display);text-transform:uppercase;overflow-wrap:normal}
+.cr-next{display:flex;align-items:center;gap:8px;min-width:0;align-self:stretch;font:700 15px/1.1 var(--body)}
+.cr-next span{min-width:0;overflow-wrap:normal}
+.cr-next .jersey{width:28px;height:28px}
+.cr-pick{margin:0}
+.cr-tile .lbl{align-self:stretch;min-width:0;overflow-wrap:normal}
+.cr-best .cr-tile b{font-size:24px}
+@media (min-width:760px){.cr-nations{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media (orientation:landscape) and (max-height:560px){
+  #s-career-new .wrap,#s-career-end .wrap,#s-career-train .wrap,#s-career-table .wrap{gap:12px}
+  .cr-hub{gap:12px 20px}
+  .cr-main h2.title,#s-career-new h2.title,#s-career-end h2.title,#s-career-train h2.title,#s-career-table h2.title{font-size:36px}
+  .cr-main .btn.primary,#s-career-new .btn.primary,#s-career-end .btn.primary{min-height:50px}
+  .cr-main .fixture{padding:10px 14px}
+  .cr-main .fx-team{font-size:24px}
+  .cr-card{gap:10px;padding:12px}
+  .cr-skills{gap:6px}
+  .cr-tile{padding:10px 12px}
+  .cr-tile b{font-size:28px}
+}
+@media (max-width:620px){
+  .cr-hub,.cr-newgrid{grid-template-columns:1fr}
+  .cr-tiles,.cr-drills{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

@@ -67,11 +67,12 @@ function startMatch(u, c, isChamp, o) {
 }
 function exitMatch() {
   if (practice) { practiceLeave(); return; }
-  const wasChamp = M && M.champ;
+  const wasChamp = M && M.champ, wasCareer = M && M.career;
   setTwo(false);                                           // the menus are one player's again; the join screen switches the seats back on
   series = { w:[0, 0], d:0 }; navOnly = null;              // a two-player series ends with the visit to the menu
   startDemo();
-  if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else goHome();
+  if (wasCareer && career) careerOpen();
+  else if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else goHome();
 }
 
 let lastHud = '', lastBtn = '';
