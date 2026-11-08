@@ -373,8 +373,9 @@ function playOut(us, them, deeds) {
   const labels = [...career.matchAll(/<button[^>]*>([^<]+)<\/button>/g), ...career.matchAll(/<p class="eyebrow[^"]*"[^>]*>([^<]+)<\/p>/g), ...career.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g), ...career.matchAll(/<span class="lbl">([^<]+)<\/span>/g)].map(m => text(m[1])).filter(Boolean);
   ok(labels.length >= 15 && labels.every(titled), `every career label is Title Case (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
   const row = src.match(/<div class="row2 home-row">([\s\S]*?)<div class="row2 learn-row">/);
-  ok(row && /id="b-career"/.test(row[1]) && /<div class="row2 career-row">/.test(row[1]) && src.indexOf('id="b-career"') > src.indexOf('id="b-two"'), 'the Career button has a row of its own under Championship');
-  ok(/\.career-row \.col\{grid-column:1\/-1;/.test(src), 'and fills it, as Championship fills its row on a phone');
+  const at = id => row[1].indexOf('id="' + id + '"');
+  ok(row && at('b-champ') >= 0 && at('b-champ') < at('b-career') && at('b-career') < at('b-two') && !/career-row/.test(src), 'Career sits beside Championship in the home row, Two Player after them (the orchestrator\'s layout at merge)');
+  ok(/\.home-row \.col\{display:flex;/.test(src) && !/\.home-row \.col\{grid-column:1\/-1/.test(src) && /body\.desk \.home-row\{grid-template-columns:1fr 1fr 1fr\}/.test(src), 'equal halves on a phone, thirds with Two Player on a desk');
   ok(!/[\u2190-\u2199\u21d0-\u21d9]/.test(career), 'no arrow glyph on the career screens');
   for (const id of ['s-career-new', 's-career', 's-career-train', 's-career-table', 's-career-end'])
     ok(new RegExp(`id="${id}"[\\s\\S]*?data-back>Back to (Menu|Career)<`).test(html), `${id} has a Back to Menu or Back to Career button`);
