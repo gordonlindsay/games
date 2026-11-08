@@ -145,6 +145,14 @@ Updates wait by default. **Update Game** appears on the home menu and reloads on
 
 Use HTTPS to test real service-worker installation. The HTTP development preview remains playable but cannot demonstrate a secure-browser install. The focused offline suites exercise worker and browser events in controlled runtimes; physical-device installation and airplane-mode play still need a device check.
 
+## Store listing
+
+`store-listing/` holds what the App Store and Google Play need that is not code: the owner's launch checklist, the App Store Connect and Play Console answers (Sports category, 4+, Data Not Collected, the Families policy, Data Safety, IARC), draft listing copy, the Super Fan club partnership outline, and the screenshots at the stores' sizes. Start with [store-listing/README.md](store-listing/README.md). The owner chose the Sports category, not Apple's Kids category (2026-11-08); the kids-safe behaviour above stays.
+
+The stores link three pages beside the game, served by GitHub Pages and styled by `pages.css`: `privacy.html` (made from [PRIVACY.md](PRIVACY.md) by `node tools/listing.mjs --write`), `support.html` (Restore Purchases, the unlocks, answers for parents) and `superfan.html` (the partner clubs and each one's share). They load nothing from another site and carry no script.
+
+`node tools/listing.mjs` checks the pack: every file there, the pages linking each other, no em dashes, the copy inside each store's limits and free of the banned words, privacy.html matching PRIVACY.md, PRIVACY.md's fonts line matching index.html, superfan.html matching `FAN_CLUBS`, and every screenshot at its exact size. `node tools/listing-shots.mjs` re-shoots the screenshots with Playwright; they need doing again once the new graphics land.
+
 ## Development source and checks
 
 Edit `src/*.js`, then run these commands from `trylinerugby/`:

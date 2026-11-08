@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b130e">
+<title>Super Fan · Try Line Rugby</title>
+<meta name="description" content="Super Fan: the Try Line Rugby unlock that supports a partner club, and the share each club gets.">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<main class="page">
+<header class="top">
+<p class="eyebrow">Try Line Rugby</p>
+<h1>Super Fan</h1>
+<nav class="nav" aria-label="Try Line Rugby pages"><a class="btn" href="privacy.html">Privacy</a><a class="btn" href="support.html">Support</a><a class="btn" href="superfan.html" aria-current="page">Super Fan</a></nav>
+</header>
+
+<p class="lede">Super Fan is a one-off unlock in the Try Line Rugby app for supporters of a partner club. Part of every Super Fan unlock goes to that club.</p>
+
+<h2 id="get">What You Get</h2>
+<ul>
+<li>Everything in Full Game: Championship, Career, Create Team and Hard.</li>
+<li>Import: your club and its league, from your club's web page or a tournament link.</li>
+<li>Your club's kit and name on your Super Fan badge.</li>
+<li>Your club first in Career and Championship.</li>
+</ul>
+
+<h2 id="clubs">Partner Clubs</h2>
+<!-- One row per club in FAN_CLUBS (src/store.js): the club's name as FAN_CLUBS has it in the first cell, data-share the share as
+     a number (empty while it is not set, with To Be Confirmed in the Share cell). A set share shows as "N%" in the Share cell and,
+     under the table, as the game's own line: "Supports <club>: N% of every Super Fan unlock goes to the club." (storeShareLine in
+     src/store.js; keep the two in the same words). tools/listing.mjs checks every row against FAN_CLUBS. -->
+<table>
+<thead><tr><th scope="col">Club</th><th scope="col">Share</th></tr></thead>
+<tbody>
+<tr data-club="farnham" data-product="tryline.fan.farnham" data-share=""><td>Farnham RUFC</td><td class="tbc">To Be Confirmed</td></tr>
+</tbody>
+</table>
+<p>A club's Super Fan unlock goes on sale once its share is set. Until then the game does not offer it.</p>
+
+<h2 id="share">How the Share Works</h2>
+<p>Each partner club has its own Super Fan unlock in the App Store and in Google Play. Every month Apple and Google report how many of each one sold and what they paid us for them. The club's share is worked out from those reports: [OWNER: say what the percentage is of, for example what Apple and Google pay us for each unlock, after their fee and VAT]. It is paid to the club [OWNER: how often, for example every three months].</p>
+<p>The reports count sales, not people. Neither we nor the club learn who bought Super Fan.</p>
+
+<h2 id="join">For Clubs</h2>
+<p>Would your club like to be a partner? Contact [OWNER: contact email].</p>
+</main>
+</body>
+</html>
