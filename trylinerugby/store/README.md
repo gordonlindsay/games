@@ -13,7 +13,7 @@ Grown-Ups panel). `node tools/store.mjs` checks them, and runs in `node tools/ch
 |---|---|---|---|
 | Free | none | Quick Match, Training Ground (all drills), Kids, Easy, Normal, How to Play, Two Player | free |
 | Full Game | `tryline.full` | Championship, Career, Create Team (and Edit), Hard | £1.99 |
-| Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Import Club, and the Super Fan badge: the club's shirt and name on the home, and the club offered first in Career and Championship | set by the owner |
+| Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Import Club, and the Super Fan badge: the club's shirt and name on the home, and the club offered first in Career and Championship | £3.99 |
 
 All of them are **non-consumable** in-app purchases. There is no generic `tryline.fan`: every Super Fan product belongs to one
 club, so Apple's and Google's sales reports count each club's unlocks with nothing collected by the game.
@@ -27,33 +27,44 @@ They live in one list, `FAN_CLUBS` in `src/store.js`:
 
 ```js
 const FAN_CLUBS = [
-  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:null, team:'FAR' },
+  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR' },
 ];
 ```
 
 - `key`: lower case letters and figures, 24 at most. The product id is `tryline.fan.` + key.
 - `name`: how the game names the club on the badge and the offer.
 - `team`: the club's side in the game (`id` in `src/data.js`), for its shirt colours and to be offered first.
-- `share`: the percentage of each Super Fan unlock that goes to the club, filled in by the owner. **While it is `null` the club's
-  Super Fan offer is not shown anywhere**, so it can never go on sale without its stated share (`tools/store.mjs` checks this).
-  Until a club has a share, Import Club is not offered in the app at all, as only Super Fan unlocks it.
+- `share`: the club's percentage of **what we receive** for each Super Fan unlock: the proceeds Apple (or Google) pays after its
+  commission, not the price. Farnham RUFC's is 50.
+- `agreed`: `true` only once the club has confirmed that share in writing. **Until a club has both a share and `agreed:true`, its
+  Super Fan offer is not shown anywhere**, so it can never go on sale without its stated, agreed share (`tools/store.mjs` checks
+  this). Until one club is on sale, Import Club is not offered in the app at all, as only Super Fan unlocks it.
+  `tools/listing.mjs` reads the same flag: `superfan.html` names a club only once it is marked agreed.
 
-With a share set, the offer carries this sentence, and the game never describes it any other way:
+With the share agreed, the offer carries this sentence, and the game never describes it any other way:
 
-> Supports Farnham RUFC: 20% of every Super Fan unlock goes to the club.
+> Supports Farnham RUFC: 50% of what we receive for every Super Fan unlock goes to the club.
+
+The words after the share are the same on `superfan.html`; `tools/listing.mjs` reads them from `storeShareLine` in
+`src/store.js` and fails if the two differ.
 
 Never call it a donation or charity, in the game, the listing or the product's description (Apple 3.2.2, and the UK rules for a
 commercial participator). It is a purchase of game content, and the sentence says what the club gets.
 
 ### Adding a partner club
 
-1. Agree the share and how it is paid with the club (the partnership outline is in `trylinerugby/store-listing/`; it is not legal advice).
+1. Agree the share of proceeds and how it is paid with the club (the partnership outline is in `trylinerugby/store-listing/`;
+   it is not legal advice).
 2. If the game does not have the club yet, append it to `CLUBS` in `src/data.js` with its shirt colours (append only, never
    reorder; ratings are made up, as for every club).
-3. Append it to `FAN_CLUBS` with `share:null`, its `key`, `name`, `product` and `team`.
-4. Create the product in App Store Connect and Play Console (below) with that product id, and the price the owner chooses.
-5. Set `share` to the agreed percentage. Rebuild (`node tools/build.mjs`), run `node tools/check.mjs`, and ship an update: the
-   offer appears from that version.
+3. Append it to `FAN_CLUBS` with its `key`, `name`, `product`, `team`, the `share` and `agreed:false`.
+4. Create the product in App Store Connect and Play Console (below) with that product id, at £3.99.
+5. Once the club has confirmed the share in writing, set `agreed:true` and add its row to `superfan.html` in the same change.
+   Rebuild (`node tools/build.mjs`), run `node tools/check.mjs`, and ship an update: the offer appears from that version.
+
+Farnham RUFC is in the list with `share:50, agreed:false`: its 50% is to be confirmed in writing before launch. Without that
+confirmation it stays `agreed:false`, so the app goes out with the Full Game alone, and `tryline.fan.farnham` is left off the
+version in App Store Connect.
 
 A club removed from `FAN_CLUBS` later is no longer offered, but anyone who bought it keeps it: the save keeps every product id it
 was given.
@@ -71,7 +82,8 @@ Each club has its own product, so its sales are its own line:
 1. In the app's record: In-App Purchases (under Monetization in the sidebar), then **+** for each product, type **Non-Consumable**.
    - Reference name: Full Game; Product ID: `tryline.full`; price: £1.99 in the UK storefront (Apple sets the others from it
      unless changed).
-   - Reference name: Super Fan Farnham RUFC; Product ID: `tryline.fan.farnham`; price: the owner's choice.
+   - Reference name: Super Fan Farnham RUFC; Product ID: `tryline.fan.farnham`; price: £3.99 in the UK storefront. Attach it
+     to a version only once Farnham's share is agreed in writing and `agreed:true` is in that build.
 2. For each, add a display name and description (the game shows its own wording, with the price the store returns), a review
    screenshot of the Unlock card, and a review note: the Unlock card opens from any locked mode or from Grown-Ups on the home,
    and a grown-up check (a multiplication in words) comes before every purchase.
@@ -82,9 +94,12 @@ Each club has its own product, so its sales are its own line:
 6. Test with a StoreKit configuration file in Xcode, then Sandbox testers (Users and Access, Sandbox) on TestFlight.
 
 Ask to Buy: when a child on Family Sharing taps a purchase, Apple asks the parent. The card says "Waiting for a grown-up to approve
-it." and the unlock arrives when it is approved, by the plugin's `transactionUpdated` event or on the next launch.
+it." and the unlock arrives when it is approved, by the plugin's `transactionUpdated` event (iOS only) or on the next launch. If
+the Unlock card is still open when it arrives, it closes and goes on into what was asked for.
 
-## Google Play Console
+## Google Play Console (phase 2)
+
+The app launches on the App Store first; Google Play follows. The Android project and these steps are kept ready for then.
 
 1. Play needs a build that uses billing before it lets you create products: upload the first app bundle to the internal testing
    track (the plugin brings in Play Billing and its `BILLING` permission).
@@ -95,8 +110,15 @@ it." and the unlock arrives when it is approved, by the plugin's `transactionUpd
 5. The target audience includes under-13s, so the Families policy applies: purchases are allowed, there are no ads or third-party
    SDKs that collect data, and every purchase and link out is behind the grown-up check.
 
-Google's pending payments (cash at a shop, for example) work like Ask to Buy: "Waiting for a grown-up to approve it.", then the
-unlock when it is paid.
+Google's pending payments (cash at a shop, for example) show "Waiting for a grown-up to approve it." too, but the plugin's
+`transactionUpdated` event is iOS only, so the unlock arrives at the next launch, when `getPurchases` reports it paid. Google
+refunds a purchase not acknowledged within three days, and the plugin acknowledges only one paid inside `purchaseProduct`, so
+at each start the game acknowledges any of ours that Google reports Purchased and not yet acknowledged
+(`acknowledgePurchase`, one at a time, before the prices are asked for).
+
+Phase 2 checklist for this: on the internal testing track, buy with a licence tester's slow test card ("Slow test card,
+approves after a few minutes"), close the app, wait for approval, open the app, and check in Play Console (Order management)
+that the order is acknowledged and not refunded three days later.
 
 ## The native plugin
 
@@ -110,7 +132,8 @@ Why this one:
   sources were read before choosing it: the iOS side uses StoreKit only, and the Android side depends on Play Billing and
   AndroidX alone; the one web address in it is Google's subscription page, which the game never opens.
 - No account, sign-up or API key, and nothing about the player passes through it. The game never sends it an account token, and
-  never reads or sends a receipt or purchase token.
+  never reads or sends a receipt. On Android, Google's purchase token is handed straight back to the plugin to acknowledge a
+  purchase, on the device; it goes nowhere else.
 - It is a Capacitor plugin, maintained for Capacitor 8 (8.9.6, October 2026), with the calls the game needs.
 - RevenueCat, Adapty, Qonversion and the like route purchases through their own servers and collect data, so they are out.
   `cordova-plugin-purchase` was the other candidate: it also works without a service, but it is a Cordova plugin with a larger
@@ -122,12 +145,13 @@ The calls the game makes, and nothing else:
 
 | When | Call |
 |---|---|
-| Start, in the app | `addListener('transactionUpdated')` for purchases that finish later; `getPurchases({ productType:'inapp', onlyCurrentEntitlements:true })` to read back what is owned with no sign-in prompt; `getProducts({ productIdentifiers, productType:'inapp' })` for the prices |
+| Start, in the app | `addListener('transactionUpdated')` for purchases that finish later (iOS); `getPurchases({ productType:'inapp', onlyCurrentEntitlements:true })` to read back what is owned with no sign-in prompt; on Android, `acknowledgePurchase({ purchaseToken })` for each of ours that is Purchased and not yet acknowledged; then `getProducts({ productIdentifiers, productType:'inapp' })` for the prices |
 | A purchase | `purchaseProduct({ productIdentifier, productType:'inapp', quantity:1 })` |
 | Restore Purchases | `restorePurchases()` (Apple may ask the user to sign in), then `getPurchases` as above |
 
-Leave the plugin's `autoFinishTransactions` at its default (on): non-consumables are finished on iOS and acknowledged on Android
-by the plugin, as Google requires within three days.
+Leave the plugin's `autoFinishTransactions` at its default (on): non-consumables are finished on iOS by the plugin, and acknowledged
+on Android by the plugin when paid inside the purchase, as Google requires within three days; a pending payment paid later is
+acknowledged by the game at the next start (above).
 
 A transaction unlocks only if it is for one of our product ids, Google's state is Purchased (not Pending) and Apple has not
 revoked it. Purchases are kept in the save's own field (`store:{ owned }` in `tryline.v1`) and only ever added to: a store that
@@ -141,15 +165,18 @@ it; it would be gone after a reinstall and Restore Purchases.
 - `'full'` (now, until the app is live): everything is unlocked and nothing of the store shows. The web plays exactly as it did,
   and its save is byte for byte the same.
 - `'free'` (from launch): the free tier, the locks, and a **Get the App** button on the Unlock card and the Grown-Ups panel,
-  behind the grown-up check. It opens Google Play on Android and the App Store everywhere else. Purchases are the app's; the web
-  sells nothing and reads none.
+  behind the grown-up check. It opens the App Store, or Google Play on an Android phone once `STORE_LINKS.android` is set. Until
+  then an Android browser stays on `'full'`: the app is on the App Store first, and a lock with no app to get would be a dead end.
+  Purchases are the app's; the web sells nothing and reads none.
 
 ### Flipping it at launch
 
-1. Once both store pages are live, set `STORE_LINKS.ios` and `STORE_LINKS.android` in `src/store.js` to their https addresses.
+1. Once the App Store page is live, set `STORE_LINKS.ios` in `src/store.js` to its https address.
 2. Set `const STORE_WEB_TIER = 'free';`.
-3. `node tools/build.mjs`, then `node tools/check.mjs` (`tools/store.mjs` fails the free tier without both links).
+3. `node tools/build.mjs`, then `node tools/check.mjs` (`tools/store.mjs` fails the free tier without the App Store link).
 4. Commit `src/store.js`, `game.js` and `sw.js`, and open a pull request.
+5. Phase 2, once the Google Play page is live: set `STORE_LINKS.android` the same way. Android browsers then get the free tier too,
+   with Get the App opening Google Play.
 
 A web save with a championship or career under way is not touched by the flip. It stays saved and locked, and plays on in the app
 or once the game is unlocked.

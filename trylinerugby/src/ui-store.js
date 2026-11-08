@@ -8,7 +8,7 @@
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
    ========================================================= */
 const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Import Club' };
-const STORE_LINE = { full:'Championship · Career · Create Team · Hard', fan:'Full Game · Import Club · Club Badge' };
+const STORE_LINE = { full:'Championship · Career · Create Team · Hard', fan:'Full Game · Import Club · Super Fan Badge' };
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
   failed:'The purchase did not go through.',
@@ -60,12 +60,19 @@ function storeTeamsRender() {              // the team screen's part, from rende
 function storeJoinRender() {               // Two Player's Hard, from renderJoin (a saved Hard was played as Normal by storeRender)
   for (const s of [0, 1]) { const b = $('j-diff' + s).children[2]; if (b) storeMark(b, 'hard'); }
 }
-/* After a purchase or a restore, whatever is showing catches up. */
-function storeRefresh() {
+/* After a purchase or a restore, whatever is showing catches up. granted: something was just added. If it came by itself (an Ask to
+   Buy approved while the card is up, not this card's own Buy or Restore, which are busy and finish themselves), the card's
+   message is stale: an Unlock card that now has its feature closes and carries on into it, and any other card drops the message. */
+function storeRefresh(granted) {
   if (!$('s-home').hidden) renderHome();
   if (!$('s-teams').hidden) renderTeams();
   if (!$('s-join').hidden) renderJoin();
-  if (!$('m-store').hidden) storeCardRender();
+  if ($('m-store').hidden) return;
+  if (granted && !storeUi.busy) {
+    storeUi.msg = '';
+    if (storeUi.mode === 'unlock' && storeHas(storeUi.feature)) { storeDone(); return; }
+  }
+  storeCardRender();
 }
 
 /* ---------- the card: Unlock (from a locked control) or Grown-Ups (from the home) ---------- */
@@ -160,9 +167,8 @@ function storeDone() {
   storeCardRender(); storeCardFocus();
 }
 function storeAppLink() {                  // Get the App: Google Play on Android, the App Store on everything else
-  const ua = typeof navigator !== 'undefined' && navigator ? String(navigator.userAgent || '') : '';
-  const url = /android/i.test(ua) ? STORE_LINKS.android : STORE_LINKS.ios;
-  return typeof url === 'string' && /^https:\/\//.test(url) ? url : null;
+  const url = storeAndroid() ? STORE_LINKS.android : STORE_LINKS.ios;   // (an Android browser is on 'full' until Play's is set: storeTier)
+  return storeUrlOk(url) ? url : null;
 }
 function storeLeave(url) { if (typeof url === 'string' && /^https:\/\//.test(url)) storeAsk(() => { storeOpenUrl(url); storeCardFocus(); }); }
 /* Outside the game: in the app, Capacitor hands a new window to the system browser (Safari on iOS, an intent on Android) and the

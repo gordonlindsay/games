@@ -21,7 +21,8 @@ const FARNHAM = S.FAN_CLUBS[0];
 $('b-grown').parentNode = $('learn-row');                  // the stand-in DOM has no parents: Grown-Ups sits in the learn row, as in index.html
 const reset = () => {                                       // the web as shipped, nothing bought, nothing open
   S.setNative(null); S.setTier(null); S.setBackend(null); S.setBought([]); S.setPrices({}); S.setStarted(false);
-  FARNHAM.share = null; S.FAN_CLUBS.length = 1; S.LINKS.ios = null; S.LINKS.android = null;
+  FARNHAM.share = 50; FARNHAM.agreed = false; S.FAN_CLUBS.length = 1; S.LINKS.ios = null; S.LINKS.android = null;
+  delete navigator.userAgent;
   if (K.gate()) cancel();
   if (!$('m-store').hidden) S.close();
   delete globalThis.Capacitor;
@@ -31,31 +32,38 @@ const calls = [];
 let owns = [], next = null, listener = null;
 const plugin = () => {
   globalThis.Capacitor = { isNativePlatform:() => true, Plugins:{ NativePurchases:{
-    getProducts:async o => { calls.push(['getProducts', o]); return { products:[...o.productIdentifiers, 'someone.else'].map(id => ({ identifier:id, priceString:id === 'tryline.full' ? '£1.99' : '£2.49', title:id })) }; },
+    getProducts:async o => { calls.push(['getProducts', o]); return { products:[...o.productIdentifiers, 'someone.else'].map(id => ({ identifier:id, priceString:id === 'tryline.full' ? '£1.99' : '£3.99', title:id })) }; },
     getPurchases:async o => { calls.push(['getPurchases', o]); return { purchases:owns.map(t => (typeof t === 'string' ? { productIdentifier:t, transactionId:'1' } : t)) }; },
     purchaseProduct:async o => { calls.push(['purchaseProduct', o]); const r = next; next = null; if (r instanceof Error) throw r; return r === 'none' ? null : r || { productIdentifier:o.productIdentifier, transactionId:'9' }; },
     restorePurchases:async () => { calls.push(['restorePurchases']); if (next instanceof Error) { const e = next; next = null; throw e; } },
     addListener:async (ev, fn) => { calls.push(['addListener', ev]); listener = fn; return { remove() {} }; },
+    acknowledgePurchase:async o => { calls.push(['acknowledgePurchase', o]); if (o.purchaseToken === 'fails') throw new Error('Service unavailable'); },
   } } };
 };
 const app = () => { reset(); plugin(); S.setNative(true); S.setStarted(true); calls.length = 0; owns = []; next = null; listener = null; };   // the app, already started (section 7 starts it)
 const called = n => calls.filter(c => c[0] === n);
+const android = () => Object.defineProperty(navigator, 'userAgent', { value:'Mozilla/5.0 (Linux; Android 14)', configurable:true });
+const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the club.';   // tools/listing.mjs on the listing branch holds superfan.html to the same
 
 // 1. what ships: the tier, the products, the partner clubs and the links
 {
   ok(/^const STORE_WEB_TIER = 'full';/m.test(src) && S.WEB_TIER === 'full', 'the web ships on the full tier until the app is live');
   ok(S.FULL === 'tryline.full', 'Full Game is tryline.full');
   ok(S.FAN_CLUBS.length >= 1 && FARNHAM.key === 'farnham' && FARNHAM.name === 'Farnham RUFC' && FARNHAM.product === 'tryline.fan.farnham' && FARNHAM.team === 'FAR', 'Farnham RUFC is the first partner club, tryline.fan.farnham, playing as Farnham');
-  ok(/share:null/.test(src.slice(src.indexOf('const FAN_CLUBS'), src.indexOf('];', src.indexOf('const FAN_CLUBS')))), 'Farnham\'s share ships as null, for the owner to fill in');
+  const fanSrc = src.slice(src.indexOf('const FAN_CLUBS'), src.indexOf('\n];', src.indexOf('const FAN_CLUBS')) + 3);
+  ok(/\{ key:'farnham', name:'Farnham RUFC', product:'tryline\.fan\.farnham', share:50, agreed:false, team:'FAR' \}/.test(fanSrc) && FARNHAM.share === 50 && FARNHAM.agreed === false, 'Farnham\'s share is 50 (of what we receive), not yet agreed in writing: agreed:false');
+  let parsed = null; try { parsed = Function('"use strict"; return (' + fanSrc.match(/=\s*(\[[\s\S]*\])/)[1] + ');')(); } catch (e) { /* not plain data */ }
+  ok(Array.isArray(parsed) && JSON.stringify(parsed) === JSON.stringify(S.FAN_CLUBS), 'FAN_CLUBS is plain data, as tools/listing.mjs reads it');
   for (const c of S.FAN_CLUBS) {
     ok(c.product === 'tryline.fan.' + c.key && /^[a-z0-9]{1,24}$/.test(c.key), `${c.name}: one product a club, tryline.fan.<key>`);
     ok(c.share === null || (typeof c.share === 'number' && c.share > 0 && c.share <= 100), `${c.name}: a share is null or a percentage`);
+    ok(typeof c.agreed === 'boolean' && (!c.agreed || c.share !== null), `${c.name}: agreed is true or false, and true only with a share`);
     ok(!!S.teamOf(c) && X.ALL_TEAMS.includes(S.teamOf(c)), `${c.name}: its side is in the game, for its kit and to be offered first`);
   }
   ok(!S.ids().includes('tryline.fan') && !/'tryline\.fan'/.test(src + ui), 'no generic tryline.fan with no club share');
   ok(new Set(S.ids()).size === S.ids().length, 'every product id is its own');
   ok(['privacy', 'support'].every(k => /^https:\/\/gordonlindsay\.github\.io\/games\/trylinerugby\/[a-z]+\.html$/.test(S.LINKS[k])), 'privacy and support open the pages GitHub Pages serves');
-  ok(S.WEB_TIER !== 'free' || ['ios', 'android'].every(k => /^https:\/\//.test(S.LINKS[k] || '')), 'the free tier cannot ship without the App Store and Google Play links for Get the App');
+  ok(S.WEB_TIER !== 'free' || /^https:\/\//.test(S.LINKS.ios || ''), 'the free tier cannot ship without the App Store link for Get the App (Google Play is phase 2)');
   ok(JSON.parse(read('src/manifest.json')).includes('store.js') && JSON.parse(read('src/manifest.json')).includes('ui-store.js'), 'store.js and ui-store.js are built into the game');
   ok(/'store'/.test(read('tools/check.mjs').match(/\.\.\.\[([^\]]*)\]\.map/)[1]), 'this suite is in the default checks');
 }
@@ -126,6 +134,15 @@ const called = n => calls.filter(c => c[0] === n);
   ok(S.live() && !S.native(), 'the free web is live, and not the app');
   ok(['quick', 'drills', 'kids', 'easy', 'normal', 'help', 'two'].every(f => S.has(f)), 'Quick Match, the Training Ground, Kids, Easy, Normal, How to Play and Two Player are free');
   ok(PAID.every(f => !S.has(f)) && !S.has('import'), 'Championship, Career, Create Team, Hard and Import are locked');
+  // an Android browser, while there is no Google Play page (iPhone first): no lock with no app to get, everything as before
+  android();
+  ok(S.tier() === 'full' && !S.live() && FEATURES.every(f => S.has(f)), 'an Android browser stays on the full tier until the Google Play link is set');
+  D.goHome();
+  ok(!$('b-champ').classList.contains('locked') && $('b-grown').hidden && !$('learn-row').classList.contains('three'), 'and its home has no lock and no Grown-Ups');
+  S.LINKS.android = 'https://play.google.com/store/apps/details?id=x';
+  ok(S.tier() === 'free' && S.live() && PAID.every(f => !S.has(f)) && S.appLink() === S.LINKS.android, 'once it is set: the free tier, and Get the App opens Google Play');
+  S.LINKS.android = null; delete navigator.userAgent;
+  ok(S.tier() === 'free', 'everywhere else the free tier needs only the App Store link');
   S.setBought(['tryline.full', 'tryline.fan.farnham']);
   ok(FEATURES.every(f => !S.has(f)) && S.fan() === null && S.offers(null).length === 0, 'nothing bought counts on the web, and nothing is sold there');
   S.setBought([]);
@@ -164,13 +181,15 @@ const called = n => calls.filter(c => c[0] === n);
   S.close();
   ok(/if \(key === 'diff' && i === 3 && !storeGate\('hard'/.test(menus) && /if \(i === 2 && !storeGate\('hard'/.test(menus), 'the home\'s Hard and each Two Player Hard go through the gate first');
   // Get the App: once the links are in, through the grown-up check, the store for the device
-  S.LINKS.ios = 'https://apps.apple.com/app/id1'; S.LINKS.android = 'https://play.google.com/store/apps/details?id=x';
+  S.LINKS.ios = 'https://apps.apple.com/app/id1';
   S.open({ mode:'unlock', feature:'champ' });
   ok(/id="st-app">Get the App<small class="hsub">Championship · Career · Create Team · Hard<\/small>/.test($('st-offers').innerHTML), 'Get the App, with what the Full Game holds');
   ok(S.appLink() === S.LINKS.ios, 'the App Store from a computer or an iPhone');
-  Object.defineProperty(navigator, 'userAgent', { value:'Mozilla/5.0 (Linux; Android 14)', configurable:true });
-  ok(S.appLink() === S.LINKS.android, 'Google Play from an Android phone');
-  delete navigator.userAgent;
+  android();
+  ok(S.appLink() === null, 'an Android phone gets no App Store link (it stays on the full tier, above)');
+  S.LINKS.android = 'https://play.google.com/store/apps/details?id=x';
+  ok(S.appLink() === S.LINKS.android, 'Google Play from an Android phone, once it is set');
+  delete navigator.userAgent; S.LINKS.android = null;
   opened.length = 0;
   S.leave(S.appLink());
   ok(!!K.gate() && $('m-store').hidden && !opened.length, 'Get the App asks a grown-up first, with the card hidden');
@@ -193,21 +212,26 @@ const called = n => calls.filter(c => c[0] === n);
   app();
   ok(S.native() && S.live() && S.api() === S.backend, 'in the app the adapter talks to the plugin');
   ok(PAID.every(f => !S.has(f)) && !S.has('import') && S.has('quick'), 'the free tier, and nothing more');
-  ok(S.offers('champ').map(o => o.id).join() === 'tryline.full', 'while Farnham\'s share is null only the Full Game is on sale');
+  ok(S.offers('champ').map(o => o.id).join() === 'tryline.full', 'while Farnham has not agreed its share in writing only the Full Game is on sale');
   ok(!S.offers(null).some(o => o.kind === 'fan') && !S.offers('import').length, 'no Super Fan offer anywhere');
   ok(!S.offered('import') && I.card() === '', 'and Import Club, which only Super Fan unlocks, is not on the team screen');
   S.open({ mode:'unlock', feature:'champ' });
   ok(!/tryline\.fan|Super Fan|Supports/.test($('st-offers').innerHTML), 'the card shows no Super Fan offer and no share line');
   S.close();
-  // the share set: the offer and its sentence
-  FARNHAM.share = 20;
-  ok(S.offers('champ').map(o => o.id).join() === 'tryline.full,tryline.fan.farnham' && S.offers('import').map(o => o.id).join() === 'tryline.fan.farnham', 'with a share the Super Fan offer joins the Full Game, and alone unlocks Import');
-  ok(S.shareLine(FARNHAM) === 'Supports Farnham RUFC: 20% of every Super Fan unlock goes to the club.', 'the share sentence says what the club gets');
+  for (const a of [false, undefined, 'true', 1, null]) { FARNHAM.agreed = a; ok(!S.offers(null).some(o => o.kind === 'fan') && !S.offered('import'), `agreed ${String(a)}: no Super Fan offer, even with its share of 50`); }
+  FARNHAM.agreed = true; FARNHAM.share = null;
+  ok(!S.offers(null).some(o => o.kind === 'fan'), 'agreed with no share stated: no offer either');
+  // the share set and agreed in writing: the offer and its sentence
+  FARNHAM.share = 50;
+  ok(S.offers('champ').map(o => o.id).join() === 'tryline.full,tryline.fan.farnham' && S.offers('import').map(o => o.id).join() === 'tryline.fan.farnham', 'agreed, with its share: the Super Fan offer joins the Full Game, and alone unlocks Import');
+  ok(S.shareLine(FARNHAM) === 'Supports Farnham RUFC: 50' + SHARE_WORDS, 'the share sentence says what the club gets: a share of what we receive, not of the price');
+  ok(!/(?:%|\bshare)\s+of\s+(?:each|every)\s+Super Fan unlock/i.test(src + ui + read('store/README.md') + read('README.md')), 'nowhere is the share stated as of every unlock (the price)');
   for (const bad of [0, -5, 101, NaN, '20', Infinity]) { FARNHAM.share = bad; ok(!S.offers(null).some(o => o.kind === 'fan'), `a share of ${String(bad)} is not a share: no offer`); }
-  FARNHAM.share = 20;
+  FARNHAM.share = 50;
   ok(S.offered('import') && I.card().includes('t-import'), 'Import Club is on the team screen once a Super Fan club is on sale');
   S.open({ mode:'unlock', feature:'champ' });
-  ok(/data-buy="tryline\.full"/.test($('st-offers').innerHTML) && /data-buy="tryline\.fan\.farnham"/.test($('st-offers').innerHTML) && $('st-offers').innerHTML.includes('Supports Farnham RUFC: 20% of every Super Fan unlock goes to the club.'), 'the card: Full Game, Super Fan · Farnham RUFC and its share');
+  ok(/data-buy="tryline\.full"/.test($('st-offers').innerHTML) && /data-buy="tryline\.fan\.farnham"/.test($('st-offers').innerHTML) && $('st-offers').innerHTML.includes('Supports Farnham RUFC: 50' + SHARE_WORDS), 'the card: Full Game, Super Fan · Farnham RUFC and its share');
+  ok($('st-offers').innerHTML.includes('Full Game · Import Club · Super Fan Badge') && !/Club Badge/.test(ui.replace('Super Fan Badge', '')), 'the Super Fan perks: Full Game, Import Club and the Super Fan Badge (the shirt and name, never a crest)');
   ok(!$('st-restore').hidden && !$('st-row').classList.contains('one') && $('st-links').hidden && $('st-back').textContent === 'Back to Menu', 'Restore Purchases | Back to Menu under them');
   S.close();
   // locks
@@ -227,7 +251,7 @@ const called = n => calls.filter(c => c[0] === n);
 
 // 6. the app: buying, through the grown-up check, checked before anything unlocks
 {
-  app(); FARNHAM.share = 20; X.setChamp(null);
+  app(); FARNHAM.agreed = true; X.setChamp(null);
   let went = 0;
   S.gate('champ', () => went++);
   S.buyAsk('tryline.full');
@@ -267,7 +291,7 @@ const called = n => calls.filter(c => c[0] === n);
   ok(S.fan() && S.fan().key === 'farnham' && S.has('import') && $('m-store').hidden, 'already owned: read back from the store and unlocked');
   ok(called('getPurchases').every(c => c[1].onlyCurrentEntitlements === true && c[1].productType === 'inapp'), 'reading back asks for current entitlements only (no sign-in prompt)');
   // a card closed while the store's sheet is up: the purchase still stands
-  app(); FARNHAM.share = 20;
+  app(); FARNHAM.agreed = true;
   let resolve; globalThis.Capacitor.Plugins.NativePurchases.purchaseProduct = o => new Promise(r => { resolve = () => r({ productIdentifier:o.productIdentifier }); });
   S.open({ mode:'unlock', feature:'champ' }); S.buyAsk('tryline.full'); pass(); await tick(2);
   ok(S.ui().busy, 'busy while the store\'s sheet is up');
@@ -278,7 +302,7 @@ const called = n => calls.filter(c => c[0] === n);
 
 // 7. Restore Purchases, the start, and purchases that finish later
 {
-  app(); FARNHAM.share = 20;
+  app(); FARNHAM.agreed = true;
   S.open({ mode:'grown' });
   S.restoreAsk();
   ok(!!K.gate() && !called('restorePurchases').length, 'Restore Purchases asks a grown-up first');
@@ -302,7 +326,7 @@ const called = n => calls.filter(c => c[0] === n);
   S.gate('career', () => went++); S.restoreAsk(); pass(); await tick();
   ok(S.has('career') && $('m-store').hidden && went === 1, 'restored from Career\'s Unlock card: it closes and opens Career');
   // the start, in the app: listen, read back silently, fetch prices
-  app(); FARNHAM.share = 20; owns = ['tryline.full']; S.setStarted(false);
+  app(); FARNHAM.agreed = true; owns = ['tryline.full']; S.setStarted(false);
   D.goHome(); await tick();
   ok(S.started() && called('addListener').length === 1 && called('addListener')[0][1] === 'transactionUpdated', 'on the home, once: a listener for purchases that finish later');
   ok(called('getPurchases').length === 1 && !called('restorePurchases').length && S.bought().join() === 'tryline.full', 'what is owned is read back with no prompt (no restorePurchases)');
@@ -312,7 +336,7 @@ const called = n => calls.filter(c => c[0] === n);
   D.goHome(); await tick();
   ok(called('addListener').length === 1 && called('getPurchases').length === 1, 'and only once');
   S.open({ mode:'grown' });
-  ok(/Super Fan · Farnham RUFC · £2\.49/.test($('st-offers').innerHTML), 'the store\'s own price on the button');
+  ok(/Super Fan · Farnham RUFC · £3\.99/.test($('st-offers').innerHTML), 'the store\'s own price on the button');
   S.close();
   listener({ productIdentifier:'tryline.fan.farnham', transactionId:'5' }); await tick();
   ok(S.fan() && S.fan().name === 'Farnham RUFC' && saved().store.owned.join() === 'tryline.full,tryline.fan.farnham', 'Ask to Buy approved later: the Super Fan arrives by the listener, and is saved');
@@ -320,6 +344,48 @@ const called = n => calls.filter(c => c[0] === n);
   ok(S.bought().join() === 'tryline.full,tryline.fan.farnham', 'a pending or foreign transaction from the listener changes nothing');
   owns = []; S.setStarted(false); D.goHome(); await tick();
   ok(S.bought().length === 2, 'a store that answers with less (offline, signed out) never takes a purchase away');
+  ok(!called('acknowledgePurchase').length, 'nothing to acknowledge: Apple\'s transactions carry no isAcknowledged');
+  // Android: a pending Google payment paid since is acknowledged at the next start (Google refunds it after three days otherwise)
+  app(); S.setStarted(false);
+  owns = [
+    { productIdentifier:'tryline.fan.farnham', purchaseState:'1', isAcknowledged:false, purchaseToken:'tok-fan' },
+    { productIdentifier:'tryline.full', purchaseState:'1', isAcknowledged:true, purchaseToken:'tok-full' },
+    { productIdentifier:'tryline.fan.other', purchaseState:'0', isAcknowledged:false, purchaseToken:'tok-pending' },
+    { productIdentifier:'com.someone.else', purchaseState:'1', isAcknowledged:false, purchaseToken:'tok-foreign' },
+  ];
+  D.goHome(); await tick(12);
+  ok(called('acknowledgePurchase').map(c => c[1].purchaseToken).join() === 'tok-fan' && JSON.stringify(called('acknowledgePurchase')[0][1]) === '{"purchaseToken":"tok-fan"}', 'paid and not acknowledged: acknowledged with its token alone; not one already acknowledged, still pending or another app\'s');
+  ok([...S.bought()].sort().join() === 'tryline.fan.farnham,tryline.full', `and both purchases are kept (${S.bought().join(', ')})`);
+  const order = calls.map(c => c[0]).filter(n => n !== 'addListener');
+  ok(order.join() === 'getPurchases,acknowledgePurchase,getProducts', `one after the other: read, acknowledge, then the prices (${order.join(', ')})`);
+  app(); S.setStarted(false);
+  owns = [{ productIdentifier:'tryline.fan.farnham', purchaseState:'1', isAcknowledged:false, purchaseToken:'fails' }, { productIdentifier:'tryline.full', purchaseState:'1', isAcknowledged:false, purchaseToken:'tok-full' }];
+  D.goHome(); await tick(12);
+  ok(called('acknowledgePurchase').length === 2 && S.bought().join() === 'tryline.fan.farnham,tryline.full' && called('getProducts').length === 1, 'an acknowledgement that fails stops nothing: the next is tried, both unlock, and it is tried again at the next start');
+  delete globalThis.Capacitor.Plugins.NativePurchases.acknowledgePurchase; S.setBought([]); S.setStarted(false); D.goHome(); await tick(12);
+  ok(S.bought().length === 2, 'a plugin without acknowledgePurchase still reads back what is owned');
+  // Ask to Buy approved while the Unlock card is still open: it closes and carries on into what was asked for
+  app(); S.setStarted(false); D.goHome(); await tick(12);
+  let wentOn = 0;
+  S.gate('career', () => wentOn++);
+  next = new Error('Transaction pending'); S.buyAsk('tryline.full'); pass(); await tick();
+  ok(!$('m-store').hidden && $('st-msg').textContent === S.MSG.pending && !wentOn, 'Ask to Buy: the card waits for a grown-up to approve it');
+  listener({ productIdentifier:'tryline.full', transactionId:'7' }); await tick();
+  ok(S.has('career') && $('m-store').hidden && wentOn === 1 && S.ui().msg === '', 'approved while the card is open: it closes, with no stale message, and Career opens');
+  // the same in the Grown-Ups panel: the panel stays, shows what is owned, and drops the waiting message
+  app(); S.setStarted(false); D.goHome(); await tick(12);
+  S.open({ mode:'grown' });
+  next = new Error('Transaction pending'); S.buyAsk('tryline.full'); pass(); await tick();
+  ok($('st-msg').textContent === S.MSG.pending, 'Grown-Ups: waiting for a grown-up');
+  listener({ productIdentifier:'tryline.full', transactionId:'8' }); await tick();
+  ok(!$('m-store').hidden && $('st-msg').hidden && $('st-have').innerHTML.includes('Full Game Unlocked'), 'approved: the panel stays, the message goes, and it shows the Full Game unlocked');
+  S.close();
+  // a pending unlock for a feature it does not open (Full Game from Import Club's card) leaves the card up, message cleared
+  app(); FARNHAM.agreed = true; S.setStarted(false); D.goHome(); await tick(12);
+  S.open({ mode:'unlock', feature:'import' }); S.ui().msg = S.MSG.pending; S.cardRender();
+  listener({ productIdentifier:'tryline.full', transactionId:'9' }); await tick();
+  ok(!$('m-store').hidden && S.ui().feature === 'import' && $('st-msg').hidden, 'the Full Game arriving on Import Club\'s card: still locked, so the card stays, its message gone');
+  S.close();
   // the web never starts the store
   reset(); calls.length = 0; plugin(); S.setNative(false); D.goHome(); await tick();
   ok(!S.started() && !calls.length, 'on the web nothing is asked of a store, even where a plugin is present');
@@ -328,7 +394,7 @@ const called = n => calls.filter(c => c[0] === n);
 
 // 8. Super Fan: the badge, Import, and the club offered first
 {
-  app(); FARNHAM.share = 20; S.setBought(['tryline.fan.farnham']);
+  app(); FARNHAM.agreed = true; S.setBought(['tryline.fan.farnham']);
   ok(FEATURES.every(f => S.has(f)) && JSON.stringify(S.fan()) === '{"key":"farnham","name":"Farnham RUFC"}', 'Super Fan: everything in the Full Game, and Import; storeFan names the club');
   D.goHome();
   ok(!$('st-fan').hidden && $('st-fan').innerHTML.includes('Super Fan · Farnham RUFC') && $('st-fan').innerHTML.includes('--kit:#1a1a1a') && $('home-tag').hidden, 'the home\'s badge: Farnham\'s kit and the club\'s name, in the tagline\'s place');
@@ -341,7 +407,7 @@ const called = n => calls.filter(c => c[0] === n);
   ok($('m-store').hidden && !$('m-import').hidden, 'and opens the import');
   $('im-back').click();
   // a second partner club, to see it first in Career and Championship (Farnham is first already)
-  S.FAN_CLUBS.push({ key:'guildford', name:'Guildford RFC', product:'tryline.fan.guildford', share:10, team:'GUI' });
+  S.FAN_CLUBS.push({ key:'guildford', name:'Guildford RFC', product:'tryline.fan.guildford', share:50, agreed:true, team:'GUI' });
   S.grant(['tryline.fan.guildford']);
   ok(S.fan().key === 'guildford', 'the latest Super Fan unlock is the club shown');
   C.set(null); C.newOpen();
@@ -350,7 +416,7 @@ const called = n => calls.filter(c => c[0] === n);
   X.setChamp(null); D.goHome(); $('b-champ').click();
   ok(D.settings().pool === 1 && $('t-default').textContent === 'Play as Guildford' && !$('t-default').hidden, 'Championship opens on the club\'s list with Play as Guildford');
   ok(/data-i="0"[^>]*>[\s\S]*?Guildford/.test($('t-grid').innerHTML.split('data-i="1"')[0]), 'Guildford is the first card');
-  S.FAN_CLUBS.push({ key:'toulouse', name:'Toulouse', product:'tryline.fan.toulouse', share:10, team:'TLS' });
+  S.FAN_CLUBS.push({ key:'toulouse', name:'Toulouse', product:'tryline.fan.toulouse', share:50, agreed:true, team:'TLS' });
   S.grant(['tryline.fan.toulouse']);
   ok(S.homePool() === 2, 'a club in another list opens that list');
   ok(S.first([X.CLUBS[0], X.FRANCE[1], X.FRANCE[0]]).map(t => t.id).join() === 'TLS,FAR,BOR', 'storeFirst moves the club to the front and keeps the rest in order');
@@ -391,7 +457,7 @@ const called = n => calls.filter(c => c[0] === n);
 
 // 10. the card's controls: a controller, the keyboard, and Back
 {
-  app(); FARNHAM.share = 20;
+  app(); FARNHAM.agreed = true;
   S.open({ mode:'unlock', feature:'champ' });
   ok(/data-back/.test(html.slice(html.indexOf('id="st-back"') - 40, html.indexOf('id="st-back"') + 60)), 'Back is the card\'s data-back, so a controller\'s Back closes it');
   ok(/DEFAULT_FOCUS\['m-store'\] = storeFocusEl/.test(ui), 'a controller\'s first press lands on the first offer');
@@ -424,11 +490,15 @@ const called = n => calls.filter(c => c[0] === n);
 // 12. the contracts with the other builders
 {
   const boot = read('src/boot.js');
-  ok(/^  store:\{ [^\n]*\},\n  get M\(\)/m.test(boot), 'one store namespace line in window.__tryline, before get M()');
+  const ns = boot.slice(boot.indexOf('window.__tryline = {'), boot.indexOf('\n  get M() {'));
+  ok(boot.indexOf('window.__tryline = {') >= 0 && boot.indexOf('\n  get M() {') > boot.indexOf('window.__tryline = {') && (ns.match(/^  store:\{ [^\n]*\},$/gm) || []).length === 1 && (boot.match(/^  store:\{/gm) || []).length === 1,
+    'one store namespace line in window.__tryline, before get M() (in any order with the other builders\' lines)');
   ok(['has', 'fan'].every(k => typeof S[k] === 'function'), 'storeHas and storeFan are exported');
   ok(/typeof nativeOn === 'function' && !!nativeOn\(\)/.test(src), 'the app is detected through the native builder\'s nativeOn, when it is there');
   ok(/Plugins\.NativePurchases/.test(src) && ['getProducts', 'purchaseProduct', 'restorePurchases', 'getPurchases', "'transactionUpdated'"].every(n => src.includes(n)), 'the adapter uses the plugin\'s documented calls');
-  ok(!/appAccountToken|receipt|jwsRepresentation|purchaseToken|fetch\(|XMLHttpRequest|sendBeacon/.test((src + ui).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')), 'no account token, receipt or token is read or sent, and the store code makes no request of its own');
+  const code = (src + ui).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ''), ack = code.match(/async function storeAcknowledge\(P, list\) \{[\s\S]*?\n\}\n/);
+  ok(!/appAccountToken|receipt|jwsRepresentation|purchaseToken|fetch\(|XMLHttpRequest|sendBeacon/.test(code.replace(ack ? ack[0] : '', '')), 'no account token, receipt or token is read or sent, and the store code makes no request of its own');
+  ok(!!ack && (ack[0].match(/purchaseToken/g) || []).length === 4 && /await P\.acknowledgePurchase\(\{ purchaseToken:t\.purchaseToken \}\)/.test(ack[0]) && !/fetch|XMLHttpRequest|sendBeacon|save\(|localStorage/.test(ack[0]), 'Google\'s purchase token is read in one place, storeAcknowledge, and goes only back to the plugin');
   const readme = read('store/README.md');
   ok(/@capgo\/native-purchases@8\.9\.6/.test(readme) && /tryline\.full/.test(readme) && /tryline\.fan\.farnham/.test(readme) && /STORE_WEB_TIER/.test(readme), 'store/README.md names the plugin and its version, the product ids and the tier flag');
 }

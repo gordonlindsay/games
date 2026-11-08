@@ -12,22 +12,25 @@
    - The web: by STORE_WEB_TIER alone. 'full' (until the app is live) unlocks everything and shows nothing of the store, so the
      web plays exactly as it did before; 'free' (from launch) keeps the free tier and offers Get the App. Purchases are the
      app's: the web never reads them, and a save with a championship or a career under way keeps it, locked, untouched.
+     An Android browser stays on 'full' until STORE_LINKS.android is set: the app is on the App Store first, and a lock with
+     no app to get would be a dead end.
 
    The adapter (storeBackend) talks to @capgo/native-purchases, a Capacitor plugin over StoreKit 2 and Google Play Billing
    with no service of its own in between (trylinerugby/store/README.md says why that one). The web and the tests use
    storeStub, or a backend a test hands in. Nothing about the player is sent: no account token, no receipt, nothing.
    ========================================================= */
 const STORE_WEB_TIER = 'full';             // the web build: 'full' now, 'free' at launch (trylinerugby/store/README.md)
-const STORE_FULL = 'tryline.full';         // Full Game, £1.99 (the price lives in App Store Connect and Play Console, not here)
+const STORE_FULL = 'tryline.full';         // Full Game, £1.99; Super Fan, £3.99 (prices live in App Store Connect and Play Console)
 const STORE_FULL_HAS = ['champ', 'career', 'create', 'hard'];
 const STORE_FAN_HAS = [...STORE_FULL_HAS, 'import'];   // Super Fan: everything in the Full Game, and Import
 /* Partner clubs. key names the product (tryline.fan.<key>), so Apple's and Google's sales reports count each club's unlocks with
    nothing collected by us. name is how the game names the club; team is its side in data.js, for the badge's kit and the side
-   offered first. share is the percentage of each Super Fan unlock that goes to the club, filled in by the owner: while it is null
-   the club's Super Fan offer is not shown, so it can never go out without its stated share. A club the game does not have yet is
-   appended to CLUBS (data.js) first. */
+   offered first. share is the club's percentage of what we receive for each Super Fan unlock (the proceeds, after the store's
+   commission). agreed turns true only once the club has confirmed that share in writing. The club's Super Fan offer is shown only
+   with both, so it can never go out without its stated, agreed share. A club the game does not have yet is appended to CLUBS
+   (data.js) first. tools/listing.mjs reads this list as plain data: keep it literals only. */
 const FAN_CLUBS = [
-  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:null, team:'FAR' },
+  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR' },
 ];
 const STORE_LINKS = {                      // each opens outside the game, and only after the grown-up check
   privacy:'https://gordonlindsay.github.io/games/trylinerugby/privacy.html',
@@ -44,7 +47,14 @@ let storeStarted = false;
 
 /* ---------- who has what ---------- */
 const storeNative = () => (storeNativeHook != null ? !!storeNativeHook : typeof nativeOn === 'function' && !!nativeOn());
-const storeTier = () => storeTierHook || STORE_WEB_TIER;
+const storeUrlOk = u => typeof u === 'string' && /^https:\/\//.test(u);
+const storeAndroid = () => { try { return typeof navigator !== 'undefined' && !!navigator && /android/i.test(String(navigator.userAgent || '')); } catch (e) { return false; } };
+/* The web's tier. An Android browser keeps 'full' until the Google Play page is set, so the free web never locks a mode it has no
+   app to offer for (the app is on the App Store first). */
+function storeTier() {
+  const t = storeTierHook || STORE_WEB_TIER;
+  return t === 'free' && storeAndroid() && !storeUrlOk(STORE_LINKS.android) ? 'full' : t;
+}
 const storeLive = () => storeNative() || storeTier() === 'free';   // false: the web as it was, everything unlocked and no store
 function cleanStore(v) {                   // the save's store field: known-shaped product ids, each once
   const out = [];
@@ -67,10 +77,13 @@ function storeHas(f) {
   if (storeAnyFan()) return true;
   return f !== 'import' && storeBought.includes(STORE_FULL);
 }
-const storeShareOk = c => typeof c.share === 'number' && Number.isFinite(c.share) && c.share > 0 && c.share <= 100;
-const storeShareLine = c => 'Supports ' + c.name + ': ' + c.share + '% of every Super Fan unlock goes to the club.';
+/* A club is on sale only with a share and the club's written agreement to it (agreed:true). */
+const storeShareOk = c => c.agreed === true && typeof c.share === 'number' && Number.isFinite(c.share) && c.share > 0 && c.share <= 100;
+/* The share is of what we receive (the proceeds, after the store's commission), never of the price. tools/listing.mjs holds
+   superfan.html to these same words. */
+const storeShareLine = c => 'Supports ' + c.name + ': ' + c.share + '% of what we receive for every Super Fan unlock goes to the club.';
 /* What can be bought, in the app: for a locked feature, what unlocks it; for the Grown-Ups panel (f null), all not yet owned.
-   A Super Fan club is offered only once its share is set. */
+   A Super Fan club is offered only once its share is set and agreed. */
 function storeOffers(f) {
   if (!storeNative()) return [];
   const out = [], fan = storeAnyFan();
@@ -95,14 +108,15 @@ function storeFirst(list) {                // the Super Fan's club moved to the 
 function storeGrant(ids) {                 // add only: a store that answers with less (offline, signed out) never takes one away
   let added = false;
   for (const id of Array.isArray(ids) ? ids : []) if (typeof id === 'string' && STORE_ID.test(id) && !storeBought.includes(id)) { storeBought.push(id); added = true; }
-  if (added) { save(); storeRefresh(); }
+  if (added) { save(); storeRefresh(true); }
   return added;
 }
 
 /* ---------- the adapter ----------
    storeBackend: @capgo/native-purchases, reached as Capacitor.Plugins.NativePurchases (the game has no bundler; Capacitor's
    bridge puts every installed plugin there). Its documented calls, and nothing else: getProducts, purchaseProduct,
-   restorePurchases, getPurchases and the transactionUpdated event. Each answer is checked here before anything is unlocked. */
+   restorePurchases, getPurchases, acknowledgePurchase and the transactionUpdated event. Each answer is checked here before
+   anything is unlocked. */
 const storePlugin = () => { try { const C = window.Capacitor, P = C && C.Plugins && C.Plugins.NativePurchases; return P && typeof P.purchaseProduct === 'function' ? P : null; } catch (e) { return null; } };
 const storeIds = () => [STORE_FULL, ...FAN_CLUBS.map(c => c.product)];
 /* A transaction counts when it is for a product of ours, Google's state is Purchased (1, not 0 Pending) and Apple has not revoked it. */
@@ -121,7 +135,9 @@ const storeBackend = {
   async owned() {                          // what this Apple ID or Google account owns now, with no sign-in asked for
     const P = storePlugin(); if (!P) return [];
     const r = await P.getPurchases({ productType:'inapp', onlyCurrentEntitlements:true });
-    return ((r && r.purchases) || []).filter(storeValid).map(t => t.productIdentifier);
+    const list = ((r && r.purchases) || []).filter(storeValid);
+    await storeAcknowledge(P, list);
+    return list.map(t => t.productIdentifier);
   },
   async buy(id) {
     const P = storePlugin(); if (!P) return { ok:false, why:'store' };
@@ -140,11 +156,23 @@ const storeBackend = {
     const P = storePlugin(); if (!P) return { ok:false, why:'store' };
     try { await P.restorePurchases(); return { ok:true, ids:await this.owned() }; } catch (e) { return { ok:false, why:storeWhy(e) }; }
   },
-  listen(fn) {                             // a purchase that finishes later (Ask to Buy approved, Google's pending paid)
-    const P = storePlugin(); if (!P || typeof P.addListener !== 'function') return;
+  listen(fn) {                             // an Apple purchase that finishes later (Ask to Buy approved). The plugin fires it on iOS
+    const P = storePlugin(); if (!P || typeof P.addListener !== 'function') return;   // only: Google's pending payment arrives by owned() at the next start
     P.addListener('transactionUpdated', t => { if (storeValid(t)) fn([t.productIdentifier]); });
   },
 };
+/* Google wants every purchase acknowledged within three days, or it refunds it. The plugin acknowledges one bought and paid in the
+   same purchaseProduct, but not a pending payment (cash at a shop) paid later, which arrives only by getPurchases at the next start.
+   Each of ours that Google reports Purchased and not yet acknowledged is acknowledged here, one at a time (the plugin opens a
+   fresh billing connection for every call). Android only: Apple's transactions carry no isAcknowledged, and the plugin finishes
+   them itself. Google's purchase token goes straight back to the plugin, on the device, and nowhere else. */
+async function storeAcknowledge(P, list) {
+  if (typeof P.acknowledgePurchase !== 'function') return;
+  for (const t of list) {
+    if (t.isAcknowledged !== false || String(t.purchaseState) !== '1' || typeof t.purchaseToken !== 'string' || !t.purchaseToken) continue;
+    try { await P.acknowledgePurchase({ purchaseToken:t.purchaseToken }); } catch (e) { /* tried again at the next start */ }
+  }
+}
 const storeStub = {                        // the web and the tests: no store, nothing sold
   async products() { return []; },
   async owned() { return []; },
@@ -159,12 +187,13 @@ function storePricesLoad() {
     storeRefresh();
   }, () => { /* offline: the buttons go without a price until the card opens again */ });
 }
-/* In the app, once: listen for purchases that finish later, read back what is owned (no prompt), and fetch the prices. */
+/* In the app, once: listen for purchases that finish later, read back what is owned (no prompt, acknowledging any Google payment
+   that completed since), then fetch the prices. One after the other: the plugin's Android side closes its billing connection at
+   each new call, so a price request alongside could cut an acknowledgement short. */
 function storeStart() {
   if (storeStarted || !storeNative()) return;
   storeStarted = true;
   const api = storeApi();
   try { api.listen(ids => storeGrant(ids)); } catch (e) { /* no listener: Restore Purchases still reads them */ }
-  Promise.resolve().then(() => api.owned()).then(storeGrant, () => {});
-  storePricesLoad();
+  Promise.resolve().then(() => api.owned()).then(storeGrant, () => {}).then(storePricesLoad);
 }
