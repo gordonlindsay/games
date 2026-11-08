@@ -116,6 +116,7 @@ function renderCareer() {
   const can = careerCanTrain(cr) && careerDrills(cr).length > 0;
   $('cr-train').textContent = cr.trained ? 'Trained' : 'Train'; $('cr-train').disabled = !can;
   $('cr-reset').textContent = 'Start Fresh'; careerResetArmed = false;
+  careerLifeRender(cr);                              // the bars on the card, and this round's dilemma (src/career-life.js)
 }
 $('b-career').addEventListener('click', () => { ac(); careerOpen(); });
 $('cr-play').addEventListener('click', () => { careerLast = null; careerPlay(); });

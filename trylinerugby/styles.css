@@ -517,6 +517,22 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-best .cr-tile{padding-right:6px}   /* everything in a tile sits left, so the stage row gives International its room on the right */
 .cr-best .cr-tile b{font-size:24px}
 @media (min-width:760px){.cr-nations{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* career life (src/career-life.js): Energy, Morale and Team Spirit under the skills, and the dilemma card in place of the fixture */
+.cr-life{display:grid;gap:6px;padding-top:10px;border-top:1.5px solid var(--rule)}
+.cr-lf{display:grid;grid-template-columns:6.2em minmax(0,1fr) 2.2em 2.2em;align-items:center;gap:10px}   /* the skill rows' columns, so the bars line up under theirs */
+.cr-lf .lbl{color:var(--k);white-space:nowrap;overflow-wrap:normal}
+.cr-lf .bar{height:6px;border-radius:3px;background:var(--rule-hi);overflow:hidden}
+.cr-lf .bar i{display:block;height:100%;border-radius:3px;background:var(--k)}
+.cr-lf b{font:900 17px/1 var(--display);text-align:right;font-variant-numeric:tabular-nums}
+.cr-lf em{font:700 13px/1 var(--body);font-style:normal;color:var(--flood)}
+.cr-lf em.dn{color:var(--chalk-dim)}
+.cr-dilemma{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}   /* as far above Train | Table as Play Match is */
+.cr-q{margin:0;font:900 28px/1 var(--display);text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow-wrap:normal}
+.cr-opts{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:10px}   /* equal halves */
+.btn.cr-opt{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:84px;padding:10px 12px;text-align:left}
+.cr-opt .nm{align-self:stretch;min-width:0;font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow-wrap:normal}   /* one line, always: a name on two makes both buttons taller and the hub scrolls at 667x375; careerFit steps a wide one down */
+.cr-opt .cr-chips{gap:4px}
+.cr-opt .cr-chip{padding:3px 6px;letter-spacing:.04em;white-space:nowrap}
 @media (orientation:landscape) and (max-height:560px){
   #s-career-new .wrap,#s-career-end .wrap,#s-career-train .wrap,#s-career-table .wrap{gap:12px}
   .cr-hub{gap:12px 20px}
@@ -526,6 +542,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   .cr-main .fx-team{font-size:24px}
   .cr-card{gap:10px;padding:12px}
   .cr-skills{gap:6px}
+  .cr-life{gap:4px;padding-top:8px}
   .cr-tile{padding:10px 12px}
   .cr-tile b{font-size:28px}
 }

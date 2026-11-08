@@ -509,6 +509,7 @@ function computeTargets() {
   if (practice && practice.id === 'defend') for (const p of M.players) {
     if (p.team === 0 && p !== ctrlOf(0)) targets.set(p, { x:p.x, y:p.y, s:0 });
   }
+  if (M.career) careerLifeSupport(targets);                // a career match: Team Spirit pulls your player's support line towards the ball
   return targets;
 }
 function update(dt) {

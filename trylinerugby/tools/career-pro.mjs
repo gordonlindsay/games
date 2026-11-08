@@ -18,7 +18,8 @@ const ready = () => { settings.played = 99; settings.diff = 1; settings.kids = f
 //    NON_CAREER is career.mjs's fingerprint (two AI v AI matches, an arcade match you play and a plain one). TEAM is two whole career
 //    matches through Play Match with the harness's bot, Whole Team (a back and a forward, interactive close-ups, the half-time card),
 //    pinned on 30e13e2, the commit before Pro Mode. Re-pin TEAM only from a change that moves Whole Team career play on purpose (the
-//    Energy, Morale and Team Spirit effects in career-life.js are one), from that change's bundle without career-pro.js.
+//    Energy, Morale and Team Spirit effects in career-life.js are one, so teamMatch sets those bars to their neutral 100, 50 and 50,
+//    where they move nothing), from that change's bundle without career-pro.js.
 const NON_CAREER = '1vg5qro 1uombq7 12cy4qs', TEAM = '1c73jxu 1d1uovf';
 function nonCareer() {
   const out = [];
@@ -45,6 +46,7 @@ function playOut(step, limit = 400000) {
 function teamMatch(seed, o) {
   reseed(seed); ready();
   const cr = C.create({ pos:o.pos, num:o.num, club:X.CLUBS[o.club] }); C.set(cr);
+  if (cr.life) Object.assign(cr.life, { energy:100, morale:50, spirit:50 });   // career-life.js's bars at their neutral values: Whole Team plays as on 30e13e2
   C.play();
   const n = playOut(() => bot(0), 200000);
   const out = json([T.M.score, T.M.tries, T.M.stats, n]);
