@@ -271,7 +271,8 @@ function renderTeams() {
   $('t-default').textContent = 'Play as ' + DEFAULT_TEAM.name;
   teamList = [...(settings.pool === IMPORT_POOL ? importTeams() : POOLS[settings.pool]), ...custom];   // My League: src/import.js
   let html = teamList.map(teamCard).join('');
-  if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>` + importCard();
+  if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
+  html += importCard();                                    // Import Club, src/import.js
   $('t-grid').innerHTML = html;
   for (const b of $('t-grid').querySelectorAll('.team[data-i]')) b.addEventListener('click', () => pickTeam(teamList[+b.dataset.i]));
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));

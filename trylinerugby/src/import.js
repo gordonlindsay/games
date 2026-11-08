@@ -12,9 +12,11 @@
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
-   opponent). Anything that walks a page skips every subtree under a key that can hold people (IMPORT_SKIP), and every
-   name passes importName, which drops anything that looks like a person, an email, a phone number or a link.
-   Nothing about a person, the link itself or the page is kept.
+   opponent). Anything that walks a page skips every subtree under a key that can hold people (IMPORT_SKIP), reads a
+   table of rows only under a key that names a standings table (IMPORT_TABLE_KEY), and takes a club's name from a page
+   title only when it says it is a club. Every name passes importName, which drops anything that looks like a person,
+   an email, a phone number or a link. The structure does the work: the first-name list in importPersonal is a last
+   net, not the defence. Nothing about a person, the link itself or the page is kept.
    ========================================================= */
 const IMPORT_POOL = POOLS.length;                 // My League: the team screen's button after South Africa
 const IMPORT_MAX_SIDES = 16;                      // league opponents saved
@@ -28,11 +30,12 @@ const IMPORT_MSG = {
   net:'Couldn’t open that page. Check the link.',
   timeout:'That page took too long. Try again.',
   empty:'No club or table on that page.',
+  full:'Delete a team to make room for this club.',
 };
 
 /* ---------- what the parsers look for: data, so a new page shape is a table edit ---------- */
 /* Keys whose whole subtree can hold people or their pictures: never walked. */
-const IMPORT_SKIP = /^(?:players?|squads?|members?|membership|staff|officials?|coach(?:es)?|managers?|captains?|contacts?|contactpoint|authors?|users?|profiles?|people|persons?|athletes?|employees?|founders?|scorers?|try_?scorers?|lineups?|team_?sheets?|motm|man_?of_?the_?match|player_?of_?the_?match|comments?|reports?|match_?reports?|news|articles?|posts?|blogs?|galler(?:y|ies)|photos?|images?|image_?url|avatars?|logos?|crests?|emails?|phones?|telephone|mobile|address(?:es)?|welfare|committee|officers?|volunteers?|parents?|guardians?|statistics|leaders|awards?|sponsors?|videos?|media|socials?|social_?links)$/i;
+const IMPORT_SKIP = /^(?:players?|squads?|members?|membership|staff|officials?|coach(?:es)?|managers?|captains?|contacts?|contactpoint|authors?|users?|profiles?|people|persons?|athletes?|employees?|founders?|scorers?|try_?scorers?|lineups?|team_?sheets?|motm|man_?of_?the_?match|player_?of_?the_?match|comments?|reports?|match_?reports?|news|articles?|posts?|blogs?|galler(?:y|ies)|photos?|images?|image_?url|avatars?|logos?|crests?|emails?|phones?|telephone|mobile|address(?:es)?|welfare|committee|officers?|volunteers?|parents?|guardians?|statistics|leaders|leaderboards?|rankings?|individuals?|awards?|sponsors?|videos?|media|socials?|social_?links)$/i;
 const IMPORT_KEYS = {
   name:['team_name', 'teamName', 'team', 'club', 'clubName', 'club_name', 'name', 'title', 'displayName', 'display_name', 'shortName', 'short_name'],
   played:['played', 'p', 'pl', 'pld', 'gp', 'mp', 'gamesPlayed', 'games_played', 'matchesPlayed', 'matches_played'],
@@ -47,6 +50,11 @@ const IMPORT_KEYS = {
   sides:['homeSide', 'awaySide', 'homeTeam', 'awayTeam', 'home_team', 'away_team'],
   club:/^(?:club|clubinfo|club_info|organisation|organization)$/i,
 };
+/* The only keys a JSON table of rows is read under, letters only and lower case (leagueTable, league_table): a
+   standings table names itself. A leaderboard, a ranking or a list of records is a list of people, and is never read. */
+const IMPORT_TABLE_KEY = /^(?:(?:league|pool|group|division|competition|conference)?(?:standings?|tables?|ladders?|positions)|(?:league|pool|group|division|competition|conference|standings?|table)?rows|leagues?|teams|clubs)$/;
+/* A page title or og:title names the club only in a part that says it is one: Arlo Smith's page is never a club. */
+const IMPORT_TITLE_CLUB = /\b(?:r\.?u?\.?f\.?c|rugby|club|f\.?c)\b/i;
 /* A standings table's header cells, and a fixtures table's. A player table (Player, Apps, Tries, Pts) has no team
    column and no W or L, so it never passes. */
 const IMPORT_COLS = {
@@ -92,15 +100,26 @@ function importPersonal(s) {
 }
 const IMPORT_ENT = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ', ndash:'-', mdash:'-', rsquo:'’', lsquo:'‘', ldquo:'"', rdquo:'"', hellip:'...', copy:'', reg:'', trade:'' };
 const importChar = n => n > 31 && n < 0x110000 && !(n >= 0xd800 && n < 0xe000) ? String.fromCodePoint(n) : '';
+/* Each <...> as a space, in one pass: from a '<' with no '>' after it nothing more is a tag, so the rest is kept as it
+   stands (as /<[^>]*>/g would, without rescanning to the end from every later '<'). */
+function importUntag(s) {
+  let out = '', i = 0;
+  for (;;) {
+    const lt = s.indexOf('<', i); if (lt < 0) break;
+    const gt = s.indexOf('>', lt + 1); if (gt < 0) break;
+    out += s.slice(i, lt) + ' '; i = gt + 1;
+  }
+  return out + s.slice(i);
+}
 function importText(h) {
-  return String(h).replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, ' ')
+  return importUntag(String(h).replace(/<br\s*\/?>/gi, ' '))
     .replace(/&(#x[0-9a-f]{1,6}|#\d{1,7}|[a-z]{2,8});/gi, (m, e) => e[0] === '#' ? importChar(/x/i.test(e[1]) ? parseInt(e.slice(2), 16) : +e.slice(1)) : (IMPORT_ENT[e.toLowerCase()] ?? m))
     .replace(/\s+/g, ' ').trim();
 }
 const importLabel = s => { const w = String(s).toLowerCase().split(/[\s/]+/).filter(Boolean); return w.length > 0 && w.every(x => IMPORT_LABEL.test(x)); };
 /* A club or team name as it may be shown, or '' for anything that is not one. */
 function importName(v) {
-  if (typeof v !== 'string' && typeof v !== 'number') return '';
+  if ((typeof v !== 'string' && typeof v !== 'number') || String(v).length > 500) return '';   // no name is that long, and the checks below stay cheap
   if (importPersonal(importText(String(v)))) return '';
   const s = importText(String(v))
     .replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩﻿]|\p{Extended_Pictographic}/gu, '')
@@ -128,6 +147,21 @@ function importShort(name, max = 16) {
   const cut = s.slice(0, max + 1), sp = cut.lastIndexOf(' ');
   const out = (sp >= 3 ? cut.slice(0, sp) : s.slice(0, max)).trim();
   return out.replace(/(?:\s+(?:&|and|of|the|on|in|at|-))+$/i, '').trim() || out;   // never ends on a joining word
+}
+/* A name for a card that no side already in the league has (taken holds their importKeys), or '' to leave the side
+   out. Where shortening makes two sides the same (Sevenoaks Minis A and B, Tunbridge Wells and Tunbridge Wells II), a
+   side whose name ends in a label keeps it, the words in front shortened instead (Sevenoaks A, Sevenoaks B, Tunbridge
+   II): first when label says its short name is shared, else when the short name is taken. Never with no real word in
+   front (Old II). */
+function importFit(name, taken, label) {
+  const s = importShort(name), w = String(name || '').replace(/\s+/g, ' ').trim().split(' '), tail = w.length > 1 ? w[w.length - 1] : '';
+  let kept = '';
+  if (tail && tail.length <= 6 && (IMPORT_LABEL.test(tail) || /^[ivx]{1,4}$/i.test(tail))) {
+    const head = importShort(w.slice(0, -1).join(' '), 16 - tail.length - 1);
+    if (/\p{L}{4}/u.test(head)) kept = head + ' ' + tail;
+  }
+  for (const c of label ? [kept, s] : [s, kept]) if (c && !taken.has(importKey(c))) return c;
+  return '';
 }
 function importHex(v) {
   if (typeof v !== 'string') return null;
@@ -163,11 +197,13 @@ function importAttrs(s) {
   return a;
 }
 function importJson(s) { try { const v = JSON.parse(s); return v && typeof v === 'object' ? v : null; } catch (e) { return null; } }
-/* The JSON value opening at s[i] ({ or [), as text, or ''. */
-function importBalanced(s, i) {
+/* The JSON value opening at s[i] ({ or [), as text, or ''. room.left is what one page may scan in all, shared by
+   every call for it, so blobs inside blobs cost no more than the page itself. */
+function importBalanced(s, i, room) {
   if (s[i] !== '{' && s[i] !== '[') return '';
   let depth = 0, str = false;
-  for (let j = i; j < s.length && j < i + IMPORT_MAX_HTML; j++) {
+  for (let j = i; j < s.length; j++) {
+    if (room.left-- <= 0) return '';
     const c = s[j];
     if (str) { if (c === '\\') j++; else if (c === '"') str = false; continue; }
     if (c === '"') str = true;
@@ -176,16 +212,39 @@ function importBalanced(s, i) {
   }
   return '';
 }
-/* Each <tag ...>...</tag> in s as [attributes, inner], in one pass: an unclosed tag ends the search rather than
-   rescanning the page from every later start, so no page, however broken, can stall the import. */
+/* Each <tag ...> in s as its attributes, in one pass: a tag with no '>' after it ends the search (no later one can
+   close either), rather than rescanning the page from every later start. */
+function importTags(s, tag, max) {
+  const out = [], open = new RegExp('<' + tag + '\\b', 'gi');
+  while (out.length < max && open.exec(s)) {
+    const gt = s.indexOf('>', open.lastIndex); if (gt < 0) break;
+    out.push(s.slice(open.lastIndex, gt));
+    open.lastIndex = gt + 1;
+  }
+  return out;
+}
+/* Each <tag ...>...</tag> in s as [attributes, inner], in one pass in the same way: a tag left open or a missing close
+   ends the search, so no page, however broken, can stall the import. */
 function importBlocks(s, low, tag, max) {
-  const out = [], open = new RegExp('<' + tag + '\\b([^>]*)>', 'gi'), close = '</' + tag;
-  let m;
-  while (out.length < max && (m = open.exec(s))) {
-    const start = m.index + m[0].length, end = low.indexOf(close, start);
-    if (end < 0) break;
-    out.push([m[1], s.slice(start, end)]);
+  const out = [], open = new RegExp('<' + tag + '\\b', 'gi'), close = '</' + tag;
+  while (out.length < max && open.exec(s)) {
+    const gt = s.indexOf('>', open.lastIndex); if (gt < 0) break;
+    const end = low.indexOf(close, gt + 1); if (end < 0) break;
+    out.push([s.slice(open.lastIndex, gt), s.slice(gt + 1, end)]);
     open.lastIndex = end + close.length;
+  }
+  return out;
+}
+/* A table's rows, each as the text after its <tr ...> up to the next row or </tr>, in one pass. */
+function importRows(inner, max) {
+  const out = [], open = /<tr\b/gi;
+  let m = open.exec(inner);
+  while (m && out.length < max) {
+    const gt = inner.indexOf('>', open.lastIndex); if (gt < 0) break;
+    open.lastIndex = gt + 1;
+    const next = open.exec(inner), body = inner.slice(gt + 1, next ? next.index : inner.length), e = body.search(/<\/tr\b/i);
+    out.push(e < 0 ? body : body.slice(0, e));
+    m = next;
   }
   return out;
 }
@@ -208,32 +267,37 @@ function importStrip(s, low) {
    window.__STATE__ handed to the page), JSON-LD, meta tags, the title, tables as rows of cell text, and links. */
 function importDoc(html) {
   const src = typeof html === 'string' ? html.slice(0, IMPORT_MAX_HTML) : '', low = importLow(src);
-  const doc = { blobs:[], ld:[], meta:{}, title:'', tables:[], links:[] };
+  const doc = { blobs:[], ld:[], meta:{}, title:'', tables:[], links:[] }, room = { left:IMPORT_MAX_HTML };
   const blob = (id, json) => { if (json && doc.blobs.length < 200) doc.blobs.push({ id, json }); };
+  /* Each JSON value after a match of re in body, the search going on after the value, so a blob that holds more of the
+     same is read once, never again from each match inside it. A broken one ends the search. */
+  const values = (body, re, fn) => {
+    let m;
+    while ((m = re.exec(body))) {
+      const at = m.index + m[0].length, text = importBalanced(body, at, room); if (!text) break;
+      fn(text); re.lastIndex = at + text.length;
+    }
+  };
   for (const [attrs, inner] of importBlocks(src, low, 'script', 600)) {
     const a = importAttrs(attrs), type = (a.type || '').toLowerCase(), body = inner.trim();
     if (type === 'application/ld+json') { const j = importJson(body); if (j && doc.ld.length < 20) doc.ld.push(j); continue; }
     if (a.id === '__NEXT_DATA__' || type === 'application/json') { blob(a.id || 'json', importJson(body)); continue; }
     let flight = '';
-    for (const f of body.matchAll(/self\.__next_f\.push\(/g)) {
-      const text = importBalanced(body, f.index + f[0].length); if (!text) break;   // a broken push: stop, never rescan
-      const arr = importJson(text);
-      if (Array.isArray(arr) && typeof arr[1] === 'string') flight += arr[1];
-    }
+    values(body, /self\.__next_f\.push\(/g, text => { const arr = importJson(text); if (Array.isArray(arr) && typeof arr[1] === 'string') flight += arr[1]; });
     for (const line of flight.split('\n')) { const p = line.indexOf(':'); if (p > 0 && /^[[{]/.test(line.slice(p + 1))) blob('flight', importJson(line.slice(p + 1))); }
-    for (const w of body.matchAll(/(?:window|self)\.__[A-Za-z_]+__\s*=\s*(?=[{[])/g)) { const text = importBalanced(body, w.index + w[0].length); if (!text) break; blob('state', importJson(text)); }
+    values(body, /(?:window|self)\.__[A-Za-z_]+__\s*=\s*(?=[{[])/g, text => blob('state', importJson(text)));
   }
   const page = importStrip(src, low), plow = importLow(page);
-  for (const m of page.matchAll(/<meta\b([^>]*)>/gi)) {
-    const a = importAttrs(m[1]), k = (a.property || a.name || '').toLowerCase();
+  for (const attrs of importTags(page, 'meta', 400)) {
+    const a = importAttrs(attrs), k = (a.property || a.name || '').toLowerCase();
     if (k && a.content && !(k in doc.meta)) doc.meta[k] = a.content;
   }
-  const t = importBlocks(page, plow, 'title', 1)[0]; if (t) doc.title = importText(t[1]);
+  const t = importBlocks(page, plow, 'title', 1)[0]; if (t) doc.title = importText(t[1].slice(0, 1000));   // a title is a line, not a page
   for (const [, inner] of importBlocks(page, plow, 'table', 40)) {
     const rows = [];
-    for (const r of inner.split(/<tr\b[^>]*>/i).slice(1, 202)) {
+    for (const r of importRows(inner, 201)) {
       const cells = [];
-      for (const part of r.split(/<\/tr\s*>/i)[0].split(/(?=<t[hd]\b)/i).slice(0, 60)) {
+      for (const part of r.split(/(?=<t[hd]\b)/i).slice(0, 60)) {
         const c = part.match(/^<(t[hd])\b([^>]*)>([\s\S]*)$/i); if (!c) continue;
         const th = c[1].toLowerCase() === 'th', span = Math.min(8, Math.max(1, parseInt(importAttrs(c[2]).colspan, 10) || 1));
         cells.push({ th, text:importText(c[3]) });
@@ -246,16 +310,20 @@ function importDoc(html) {
   for (const [attrs, inner] of importBlocks(page, plow, 'a', 400)) { const a = importAttrs(attrs); if (a.href) doc.links.push({ href:a.href, text:importText(inner) }); }
   return doc;
 }
-/* Every object and array under a JSON value, depth first, skipping any subtree under a person key. */
+/* Every object and array under a JSON value, depth first, skipping any subtree under a person key. visit gets the
+   value, its key, and its nearest key that is not a number (tables:{ 3100:[...] } is under tables). */
 function importWalk(root, visit) {
-  const stack = [[root, '', 0]];
+  const stack = [[root, '', 0, '']];
   let n = 0;
   while (stack.length && n++ < 100000) {
-    const [v, key, depth] = stack.pop();
+    const [v, key, depth, named] = stack.pop();
     if (!v || typeof v !== 'object' || depth > 40 || IMPORT_SKIP.test(key)) continue;
-    visit(v, key);
+    visit(v, key, named);
     const entries = Array.isArray(v) ? v.map((c, i) => [String(i), c]) : Object.entries(v);
-    for (let i = entries.length - 1; i >= 0; i--) if (entries[i][1] && typeof entries[i][1] === 'object') stack.push([entries[i][1], entries[i][0], depth + 1]);
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const [k, c] = entries[i];
+      if (c && typeof c === 'object') stack.push([c, k, depth + 1, /^\d+$/.test(k) ? named : k]);
+    }
   }
 }
 const importPick = (o, keys) => { if (o && typeof o === 'object') for (const k of keys) if (o[k] != null && o[k] !== '') return o[k]; return null; };
@@ -276,11 +344,12 @@ function importRowOf(o) {
   if (get(IMPORT_KEYS.own) === true) row.own = true;
   return row;
 }
-/* What a JSON tree offers: standings tables, fixture opponents and club objects with colours. */
+/* What a JSON tree offers: standings tables (only under a key that names one), fixture opponents and club objects
+   with colours. */
 function importScan(json, out) {
-  importWalk(json, (v, key) => {
+  importWalk(json, (v, key, named) => {
     if (Array.isArray(v)) {
-      if (v.length >= 2 && v.length <= 200) {
+      if (v.length >= 2 && v.length <= 200 && IMPORT_TABLE_KEY.test(named.toLowerCase().replace(/[^a-z]/g, ''))) {
         const rows = v.map(importRowOf).filter(Boolean);
         if (rows.length >= 2 && rows.length * 2 >= v.length) out.tables.push(rows);
       }
@@ -326,12 +395,13 @@ function importTables(doc) {
   return { standings, names };
 }
 const importHas = (rows, club) => !!club && rows.some(r => importSame(r.name, club));
-/* The club a page names: a club object in its JSON, a JSON-LD sports team, og:site_name, then the title. Not on a
-   person's page, where the title is a name. */
+/* The club a page names: a club object in its JSON, a JSON-LD sports team, og:site_name, then the part of og:title or
+   the title that says it is a club (Riverside RFC in "U16 Spring Cup | Riverside RFC"). A title with no club word is
+   no club: on a person's page it is that person's name. Nor is any title read on a page whose path is about people. */
 function importClubName(doc, href, extra) {
   let path = ''; try { path = new URL(href).pathname; } catch (e) { /* no link */ }
-  const personal = /\/(?:players?|profiles?|people|persons?|staff|members?|contacts?|officials?|coach(?:es)?|users?|squads?)(?:\/|$)/i.test(path);
-  const seg = t => { const parts = String(t || '').split(/\s+[|\-\u2013\u2014\u00b7:]+\s+/).map(s => s.trim()).filter(Boolean); return parts.find(p => /\b(?:r\.?u?\.?f\.?c\.?|rugby|club)\b/i.test(p)) || parts[parts.length - 1] || ''; };
+  const personal = /\/[\w-]*(?:players?|profiles?|people|persons?|staff|members?|contacts?|officials?|coach(?:es)?|users?|squads?|athletes?)[\w-]*(?:\/|$)/i.test(path);
+  const seg = t => String(t || '').slice(0, 300).split(/\s+[|\-\u2013\u2014\u00b7:]+\s+/).map(s => s.trim()).find(p => IMPORT_TITLE_CLUB.test(p)) || '';
   const cands = [...extra, doc.meta['og:site_name'], doc.meta['application-name']];
   if (!personal) cands.push(seg(doc.meta['og:title']), seg(doc.title));
   for (const c of cands) { const n = importName(c); if (n) return n; }
@@ -410,10 +480,11 @@ function importPitcheroRef(href) {
 }
 const importPitcheroShape = doc => doc.blobs.some(b => b.id === '__NEXT_DATA__' && b.json.props && b.json.props.club && typeof b.json.props.club === 'object' && 'folder' in b.json.props.club && 'colours' in b.json.props.club);
 /* The pages worth one more request when the first had no league: the team's league table, then its fixtures. From a
-   club's home page, the first team with a league table tab (its 1st XV, as a rule), else the first with fixtures. */
-function importPitcheroNext(html, href) {
+   club's home page, the first team with a league table tab (its 1st XV, as a rule), else the first with fixtures.
+   Each source's next reads the page as importDoc already read it, so no page is read twice. */
+function importPitcheroNext(doc, href) {
   const ref = importPitcheroRef(href); if (!ref) return [];
-  const nd = (importDoc(html).blobs.find(b => b.id === '__NEXT_DATA__') || {}).json || {};
+  const nd = (doc.blobs.find(b => b.id === '__NEXT_DATA__') || {}).json || {};
   const club = nd.props && nd.props.club || {};
   const teams = (Array.isArray(club.sections) ? club.sections : []).flatMap(s => s && Array.isArray(s.teams) ? s.teams : []).filter(t => t && t.id != null);
   const tabs = t => Array.isArray(t.navigationItems) ? t.navigationItems : [];
@@ -423,8 +494,8 @@ function importPitcheroNext(html, href) {
   const here = importUrl(href);
   return [['league', '/league-table'], ['fixtures', '/fixtures-results']].map(([kind, tab]) => ({ kind, href:ref.base + '/teams/' + team + tab })).filter(s => importUrl(s.href) !== here);
 }
-function importGenericNext(html, href) {
-  const doc = importDoc(html), out = [];
+function importGenericNext(doc, href) {
+  const out = [];
   for (const [kind, re] of [['league', /standings|league[\s_-]*tables?|\btables?\b|ladder/i], ['fixtures', /fixtures|schedule|matches|results/i]]) {
     for (const l of doc.links) {
       let abs; try { abs = new URL(l.href, href).href; } catch (e) { continue; }
@@ -496,8 +567,9 @@ function importUrl(text) {
   return u.href;
 }
 /* A page's club, league and other sides. Pure: html and the link in, the result above out. */
-function importParse(html, url) {
-  const href = importUrl(String(url || '')) || '', doc = importDoc(html);
+function importParse(html, url) { return importRead(importDoc(html), url); }
+function importRead(doc, url) {
+  const href = importUrl(String(url || '')) || '';
   const src = IMPORT_SOURCES.find(s => s.test(href, doc));
   return importSafe(src.id, src.parse(doc, href), href);
 }
@@ -516,9 +588,20 @@ function importHttp() {
   const H = C.Plugins && C.Plugins.CapacitorHttp;
   return H && typeof H.get === 'function' ? H : null;
 }
+/* A response header, whatever case the platform gives its name in. */
+function importHeader(headers, name) {
+  if (!headers || typeof headers !== 'object') return '';
+  for (const [k, v] of Object.entries(headers)) if (k.toLowerCase() === name) return typeof v === 'string' ? v : Array.isArray(v) && typeof v[0] === 'string' ? v[0] : '';
+  return '';
+}
 /* The pasted page, then, while it has no league, its league table and then its fixtures: at most three requests,
    all to the pasted page's site, a pause between them, each with a timeout. Only the User-Agent header names the
-   game; nothing about the player or the device is sent. opts.sleep, opts.gap and opts.timeout are for the tests. */
+   game; nothing about the player or the device is sent.
+   Redirects are never followed by the platform (disableRedirects): each one is followed here, its Location checked by
+   importUrl as a pasted link is (so never an IP address or a local name), and counted as one of the three requests.
+   A platform that follows one anyway is held to the same rule: a page whose final address importUrl refuses is a
+   failed import, never read as if it came from the link asked for. opts.cancelled() true stops the run before its next
+   pause or request (Back while it imports). opts.sleep, opts.gap and opts.timeout are for the tests. */
 async function importFetch(url, opts = {}) {
   const href = importUrl(url);
   if (!href) return { ok:false, error:'url', requests:0 };
@@ -526,55 +609,80 @@ async function importFetch(url, opts = {}) {
   if (!http) return { ok:false, error:'web', requests:0 };
   const sleep = opts.sleep || (ms => new Promise(r => setTimeout(r, ms)));
   const timeout = opts.timeout ?? IMPORT_TIMEOUT;
+  const stopped = () => typeof opts.cancelled === 'function' && !!opts.cancelled();
   let requests = 0;
-  const get = async (u, gap) => {
+  const one = async u => {
+    if (stopped()) throw Error('cancelled');
     if (requests >= IMPORT_MAX_REQUESTS) throw Error('budget');
-    if (requests && gap) await sleep(gap);
     requests++;
     let timer = 0;
     try {
-      const res = await Promise.race([
-        http.get({ url:u, headers:{ 'User-Agent':IMPORT_UA, Accept:'text/html,application/json' }, responseType:'text', connectTimeout:timeout, readTimeout:timeout }),
+      return await Promise.race([
+        http.get({ url:u, headers:{ 'User-Agent':IMPORT_UA, Accept:'text/html,application/json' }, responseType:'text', connectTimeout:timeout, readTimeout:timeout, disableRedirects:true }),
         new Promise((_, no) => { timer = setTimeout(() => no(Error('timeout')), timeout); }),
       ]);
-      if (!res || !(res.status >= 200 && res.status < 300)) throw Error('net');
-      let body = res.data;
-      if (body && typeof body === 'object') body = '<script type="application/json">' + JSON.stringify(body).replace(/</g, '\\u003c') + '</script>';
-      return { html:String(body || '').slice(0, IMPORT_MAX_HTML), href:importUrl(typeof res.url === 'string' ? res.url : '') || u };
     } finally { clearTimeout(timer); }
   };
+  const get = async (u, gap) => {
+    if (stopped()) throw Error('cancelled');
+    if (requests && gap) await sleep(gap);
+    for (;;) {
+      const res = await one(u);
+      if (stopped()) throw Error('cancelled');
+      if (!res || typeof res !== 'object') throw Error('net');
+      if (res.status >= 300 && res.status < 400) {
+        let next = null;
+        try { const loc = importHeader(res.headers, 'location'); next = loc ? importUrl(new URL(loc, u).href) : null; } catch (e) { next = null; }
+        if (!next) throw Error('net');
+        u = next; continue;
+      }
+      if (!(res.status >= 200 && res.status < 300)) throw Error('net');
+      const final = typeof res.url === 'string' && res.url ? importUrl(res.url) : u;
+      if (!final) throw Error('net');
+      let body = res.data;
+      if (body && typeof body === 'object') body = '<script type="application/json">' + JSON.stringify(body).replace(/</g, '\\u003c') + '</script>';
+      return { html:String(body || '').slice(0, IMPORT_MAX_HTML), href:final };
+    }
+  };
   try {
-    const first = await get(href, 0);
-    let data = importParse(first.html, first.href);
+    const first = await get(href, 0), doc = importDoc(first.html);
+    let data = importRead(doc, first.href);
     const src = IMPORT_SOURCES.find(s => s.id === data.source), host = importHost(first.href);
-    for (const step of src.next(first.html, first.href)) {
+    for (const step of src.next(doc, first.href)) {
       if (requests >= IMPORT_MAX_REQUESTS || data.league.some(r => !r.own)) break;
       if (step.kind === 'fixtures' && data.teams.length) continue;
       if (importHost(step.href) !== host) continue;
-      try { const page = await get(step.href, opts.gap ?? src.gap); data = importMerge(data, importParse(page.html, page.href)); } catch (e) { /* a missing tab: the first page stands */ }
+      try { const page = await get(step.href, opts.gap ?? src.gap); data = importMerge(data, importParse(page.html, page.href)); }
+      catch (e) { if (stopped()) throw e; /* a missing tab: the first page stands */ }
     }
     return { ok:true, data, requests };
-  } catch (e) { return { ok:false, error:e && e.message === 'timeout' ? 'timeout' : 'net', requests }; }
+  } catch (e) { return { ok:false, error:e && (e.message === 'timeout' || e.message === 'cancelled') ? e.message : 'net', requests }; }
 }
 
 /* ---------- saving ---------- */
-/* The league as saved: the table's other sides (the club's own row left out), else the fixture opponents, at most 16.
-   Ratings are made up, as the built-in clubs' are: a table's leader totals 14 (a team you make, spent in full) and its
-   foot 10; fixture opponents, with no table to go on, 11 to 13 by name. Colours are the page's where it gave them,
-   else a shirt and trim picked from KIT_COLOURS by the name, so a side keeps its colours from one import to the next.
-   Codes skip every built-in side's and your teams'. */
+/* The league as saved: the table's other sides (the club's own row left out), else the fixture opponents, at most 16,
+   each with a name no other side in it has (importFit). Ratings are made up, as the built-in clubs' are, and count
+   every ability in ABILITIES: a table's leader totals a team you make, spent in full (one point each plus BUDGET),
+   and its foot one point an ability less, below every Local club; fixture opponents, with no table to go on, fall
+   between the two by name. Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
+   by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
 function importSides(data) {
   if (!data) return [];
   const table = data.league || [], rows = table.filter(r => !r.own), fromTable = rows.length > 0;
-  const used = new Set([...ALL_TEAMS, ...custom].map(t => t.id));
-  return (fromTable ? rows : data.teams || []).slice(0, IMPORT_MAX_SIDES).map(t => {
-    const name = importShort(t.name), h = importHash(name), id = importCode(name, used);
-    used.add(id);
-    const total = fromTable ? Math.round(14 - 4*table.indexOf(t)/Math.max(1, table.length - 1)) : 11 + h % 3;
-    const side = { key:'lg-' + id, id, name, ...importColours(t, h) };
-    importSpread(side, total, h);
-    return cleanSide(side);
-  }).filter(Boolean);
+  const n = ABILITIES.length, top = n + BUDGET, foot = top - n;
+  const used = new Set([...ALL_TEAMS, ...custom].map(t => t.id)), names = new Set(), out = [], list = fromTable ? rows : data.teams || [];
+  const shared = new Map();                                // how many sides each short name stands for
+  for (const t of list) { const k = importKey(importShort(t.name)); shared.set(k, (shared.get(k) || 0) + 1); }
+  for (const t of list) {
+    if (out.length >= IMPORT_MAX_SIDES) break;
+    const name = importFit(t.name, names, shared.get(importKey(importShort(t.name))) > 1); if (!name) continue;
+    const h = importHash(name), id = importCode(name, used);
+    const total = fromTable ? Math.round(top - (top - foot)*table.indexOf(t)/Math.max(1, table.length - 1)) : foot + 1 + h % Math.max(1, top - foot - 1);
+    const side = cleanSide(importSpread({ key:'lg-' + id, id, name, ...importColours(t, h) }, total, ABILITIES.map((_, i) => ABILITIES[(i + h) % n][0])));
+    if (!side) continue;
+    names.add(importKey(name)); used.add(id); out.push(side);
+  }
+  return out;
 }
 function importColours(t, h) {
   if (t.kit) return { kit:t.kit, trim:t.trim || importContrast(t.kit), hoops:false };
@@ -582,9 +690,13 @@ function importColours(t, h) {
   for (let j = 0; j < n; j++) { const trim = KIT_COLOURS[((h >>> 8) + j) % n][1]; if (colorDist(kit, trim) >= 150) return { kit, trim, hoops:(h >>> 16) % 4 === 0 }; }
   return { kit, trim:importContrast(kit), hoops:false };
 }
-function importSpread(t, total, h) {
-  const base = Math.floor(total/4), extra = total % 4, start = h % 4;
-  ABILITIES.forEach(([k], i) => { t[k] = clamp(base + ((i - start + 4) % 4 < extra ? 1 : 0), 1, 5); });
+/* total ability points over every ability in ABILITIES, as evenly as they go: the odd points to the first of order
+   (ability keys), then the rest in ABILITIES order. */
+function importSpread(t, total, order) {
+  const keys = ABILITIES.map(([k]) => k), n = keys.length, base = Math.floor(total/n), extra = total % n;
+  const rank = [...order.filter(k => keys.includes(k)), ...keys.filter(k => !order.includes(k))];
+  for (const k of keys) t[k] = clamp(base + (rank.indexOf(k) < extra ? 1 : 0), 1, 5);
+  return t;
 }
 function importCode(name, used) {
   const L = String(name).toUpperCase().replace(/[^A-Z]/g, '') || 'LGE', AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -592,15 +704,16 @@ function importCode(name, used) {
   for (const a of AZ) for (const b of AZ) { const c = L[0] + a + b; if (!used.has(c)) return c; }
   return 'XXX';
 }
-/* A saved league, read back: each side through cleanSide, a name that fits a card and passes importName, a code no
-   built-in side uses and no other side in it, at most 16. Anything broken is dropped; an empty league is null. */
+/* A saved league, read back: each side through cleanSide, a name that fits a card, passes importName and no other side
+   in it has, a code no built-in side uses and no other side in it, at most 16. Anything broken is dropped; an empty
+   league is null. */
 function cleanImportLeague(v) {
   if (!v || typeof v !== 'object' || Array.isArray(v) || !Array.isArray(v.teams)) return null;
-  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id));
+  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set();
   for (const raw of v.teams.slice(0, 64)) {
-    const t = cleanSide(raw), name = t && importName(t.name);
-    if (!name) continue;
-    t.name = importShort(name);
+    const t = cleanSide(raw), name = t && importName(t.name), fit = name && importFit(name, names);
+    if (!fit) continue;
+    t.name = fit; names.add(importKey(fit));
     delete t.home; delete t.custom;
     if (ids.has(t.id)) t.id = importCode(t.name, ids);
     ids.add(t.id);
@@ -610,18 +723,19 @@ function cleanImportLeague(v) {
   }
   return teams.length ? { teams } : null;
 }
+/* One of your teams with the club's name, or null. */
+const importMine = data => { if (!data || !data.club) return null; const k = importKey(importShort(data.club.name)); return custom.find(t => importKey(t.name) === k) || null; };
+/* Is there a place for the club among your teams: one of yours has its name, or there is room for another. */
+const importRoom = data => !!importMine(data) || custom.length < MAX_CUSTOM;
 /* Save: the club joins your teams through cleanTeam, unless one of yours already has its name (re-importing keeps your
-   edits), with pace and handling at 4 and power and kicking at 3, the whole budget spent evenly, and the colours
-   picked. Its league replaces any saved before; an import with no league leaves the old one. */
+   edits), with the whole budget spent evenly over every ability (the odd points to pace and handling), and the
+   colours picked. Its league replaces any saved before; an import with no league leaves the old one. */
 function importSave(data, draft) {
-  let club = null, added = false;
-  if (data.club) {
+  let club = importMine(data), added = false;
+  if (data.club && !club && custom.length < MAX_CUSTOM) {
     const name = importShort(data.club.name);
-    club = custom.find(t => importKey(t.name) === importKey(name)) || null;
-    if (!club && custom.length < MAX_CUSTOM) {
-      club = cleanTeam({ key:'imp' + Date.now().toString(36), id:autoCode(name), name, kit:draft.kit, trim:draft.trim, hoops:false, pace:4, power:3, handling:4, kicking:3 }, custom.length);
-      custom.push(club); added = true;
-    }
+    club = cleanTeam(importSpread({ key:'imp' + Date.now().toString(36), id:autoCode(name), name, kit:draft.kit, trim:draft.trim, hoops:false }, ABILITIES.length + BUDGET, ['pace', 'handling']), custom.length);
+    custom.push(club); added = true;
   }
   const sides = importSides(data);
   if (sides.length) importLeague = { teams:sides };
@@ -640,7 +754,9 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-function importCard() { return `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>`; }
+/* The Import Club card: beside Create Team while there is room for a team, and kept with four made while a league is
+   saved, as the way to refresh it or remove it. */
+function importCard() { return custom.length < MAX_CUSTOM || importLeague ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
 function importBind() {
   $('t-league').hidden = !importLeague;
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
@@ -651,11 +767,25 @@ function importBind() {
    colours and the league's size, then Save. The card hides while the grown-up check is up, so the two never stack. */
 let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
+const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
+/* The control a step starts on: the link field (on a touch screen Import, so no keyboard springs up over the card),
+   the primary in the preview, Back while it imports and on the web. button: a button only, for a controller's ring. */
+function importFocusEl(button) {
+  const s = importUi.step;
+  if (s === 'link') return !button && !importTouch() ? $('im-url') : button && !$('im-paste').hidden ? $('im-paste') : $('im-go');
+  return s === 'preview' ? $('im-go') : $('im-back');
+}
+function importFocus() {
+  const el = importFocusEl(false);
+  if (!$('m-import').hidden && el && typeof el.focus === 'function') el.focus();
+}
+DEFAULT_FOCUS['m-import'] = () => importFocusEl(true);
 function importOpen() {
   importUi = { step:importHttp() ? 'link' : 'web', data:null, draft:null, pick:false, err:'', armed:false, token:importUi.token + 1 };
   $('im-url').value = '';
   importRender();
   $('m-import').hidden = false;
+  importFocus();
 }
 function importClose() { importUi.token++; $('m-import').hidden = true; renderTeams(); }
 let importGateHook = null;                               // the tests' stand-in for the grown-up check
@@ -668,24 +798,26 @@ function importGo() {
   const u = importUi;
   if (u.step === 'preview') { importCommit(); return; }
   if (u.step !== 'link') return;
+  u.armed = false;
   const href = importUrl($('im-url').value);
   if (!href) { u.err = IMPORT_MSG.url; importRender(); return; }
   if (!importHttp()) { u.step = 'web'; importRender(); return; }
   const token = ++u.token;
   $('m-import').hidden = true;
-  importGate(() => { if (token === importUi.token) importRun(href, token); }, () => { if (token === importUi.token) $('m-import').hidden = false; });
+  importGate(() => { if (token === importUi.token) importRun(href, token); }, () => { if (token === importUi.token) { $('m-import').hidden = false; importFocus(); } });
 }
 async function importRun(href, token, opts) {
   const u = importUi;
-  u.step = 'busy'; u.err = ''; importRender(); $('m-import').hidden = false;
-  const r = await importFetch(href, opts);
+  u.step = 'busy'; u.err = ''; u.armed = false; importRender(); $('m-import').hidden = false; importFocus();
+  const r = await importFetch(href, { ...opts, cancelled:() => token !== importUi.token });   // Back, or another link: no more requests
   if (token !== importUi.token) return;                   // closed, or another link, while it fetched
-  const empty = r.ok && !r.data.club && !importSides(r.data).length;
-  if (!r.ok || empty) { u.step = 'link'; u.err = IMPORT_MSG[empty ? 'empty' : r.error] || IMPORT_MSG.net; importRender(); return; }
-  const c = r.data.club;
-  u.data = r.data; u.pick = !!c && !c.kit;
+  const full = r.ok && !!r.data.club && !importRoom(r.data), data = full ? { ...r.data, club:null } : r.data;   // four teams made: the league can come in, the club can't
+  const empty = r.ok && !data.club && !importSides(data).length;
+  if (!r.ok || empty) { u.step = 'link'; u.err = IMPORT_MSG[!r.ok ? r.error : full ? 'full' : 'empty'] || IMPORT_MSG.net; importRender(); importFocus(); return; }
+  const c = data.club;
+  u.data = data; u.pick = !!c && !c.kit;
   u.draft = c ? { kit:c.kit || '#2050b0', trim:c.trim || importContrast(c.kit || '#2050b0'), hoops:false } : null;
-  u.step = 'preview'; importRender();
+  u.step = 'preview'; importRender(); importFocus();
 }
 function importCommit() {
   const u = importUi; if (u.step !== 'preview' || !u.data) return;
@@ -708,7 +840,7 @@ function importRender() {
   $('im-err').hidden = !u.err || pre; $('im-err').textContent = u.err;
   $('im-jersey').hidden = !c; $('im-jersey').innerHTML = c ? jersey(u.draft) : '';
   $('im-league').hidden = !n;
-  $('im-league').innerHTML = n ? sides.slice(0, 12).map(t => jersey(t, 'mini')).join('') + `<span class="lbl">My League · ${n} Teams</span>` : '';
+  $('im-league').innerHTML = n ? sides.slice(0, 12).map(t => jersey(t, 'mini')).join('') + `<span class="lbl">My League · ${n} Team${n === 1 ? '' : 's'}</span>` : '';
   $('im-cols').hidden = !(c && u.pick);
   for (const [id, key] of [['im-kit', 'kit'], ['im-trim', 'trim']]) for (const b of $(id).querySelectorAll('.sw')) b.setAttribute('aria-pressed', String(!!u.draft && b.dataset.c === u.draft[key]));
   $('im-go').hidden = web; $('im-go').disabled = busy;
@@ -719,12 +851,12 @@ function importRender() {
 }
 function importAlt() {
   const u = importUi;
-  if (u.step === 'preview') { u.step = 'link'; u.data = null; u.err = ''; u.token++; importRender(); return; }
+  if (u.step === 'preview') { u.step = 'link'; u.data = null; u.err = ''; u.armed = false; u.token++; importRender(); importFocus(); return; }
   if (!importLeague) return;
   if (!u.armed) { u.armed = true; importRender(); return; }
   importLeague = null; u.armed = false;
   if (settings.pool === IMPORT_POOL) settings.pool = 1;
-  save(); importRender();
+  save(); importRender(); importFocus();                   // Remove League has gone: focus to the step's own control
 }
 for (const [id, key] of [['im-kit', 'kit'], ['im-trim', 'trim']]) {
   $(id).innerHTML = KIT_COLOURS.map(([n, h]) => `<button class="sw" style="--k:${h}" data-c="${h}" aria-label="${n}"></button>`).join('');

@@ -62,9 +62,9 @@ const P = (f, url) => I.parse(fx(f), url);
   ok(own.source === 'pitchero' && own.league.length === 6, 'a Pitchero club on its own domain is known by its page');
   const plain = P('generic-tournament', PIT + '/teams/3100/league-table');
   ok(plain.source === 'pitchero' && plain.league.length > 0 && plain.club.name === 'Riverside RFC', 'a Pitchero page without its JSON falls back to the tables and meta tags');
-  const next = I.SOURCES[0].next(fx('pitchero-home'), 'https://www.pitchero.com/en_GB/clubs/bracknell');
+  const next = I.SOURCES[0].next(I.doc(fx('pitchero-home')), 'https://www.pitchero.com/en_GB/clubs/bracknell');
   ok(next.map(s => s.kind + ' ' + s.href).join() === `league ${PIT}/teams/3100/league-table,fixtures ${PIT}/teams/3100/fixtures-results`, `from a club home (locale dropped), the first team with a table (${JSON.stringify(next)})`);
-  const next2 = I.SOURCES[0].next(fx('pitchero-fixtures'), PIT + '/teams/3100/fixtures-results');
+  const next2 = I.SOURCES[0].next(I.doc(fx('pitchero-fixtures')), PIT + '/teams/3100/fixtures-results');
   ok(next2.length === 1 && next2[0].kind === 'league', 'a fixtures page offers its league table, not itself');
 
   const tour = P('generic-tournament', 'https://www.riversiderfc.example.com/spring-cup');
@@ -91,16 +91,23 @@ const P = (f, url) => I.parse(fx(f), url);
   const hostile = '<svg'.repeat(60000) + '<table><tr><td>'.repeat(20000) + '<a href=x>'.repeat(60000) + '<!--'.repeat(20000) + '<title>'.repeat(20000) + '<script>self.__next_f.push([1,"'.repeat(5000);
   const t0 = Date.now(); I.parse(hostile, PIT); I.parse('\u0130'.repeat(1000) + fx('pitchero-league'), PIT);
   ok(Date.now() - t0 < 3000, `a page of unclosed tags parses in one pass (${Date.now() - t0}ms)`);
+  const stall = { 'a':'<a '.repeat(40000), 'meta':'<meta '.repeat(40000), 'table':'<table '.repeat(40000), 'script':'<script '.repeat(40000), 'tr':'<table>' + '<tr '.repeat(40000) + '</table>',
+    'title':'<title>' + '<'.repeat(200000) + '</title>', 'cell':'<table><tr><th>Team<th>W<th>L<th>Pts<tr><td>' + '<x'.repeat(100000) + '</table', 'name':'<table><tr><th>Team<th>W<th>L<th>Pts<tr><td>' + '('.repeat(200000) + '<td>1<td>2<td>3</table>',
+    'window blob in blob':'<script>' + 'window.__a__=['.repeat(20000) + ']'.repeat(20000) + '</script>', 'flight push in push':'<script>' + 'self.__next_f.push(['.repeat(20000) + ']'.repeat(20000) + '</script>' };
+  for (const [k, page] of Object.entries(stall)) { const t1 = Date.now(); I.parse(page, PIT); ok(Date.now() - t1 < 1000, `${k}: a page built to stall the parser reads in one pass (${Date.now() - t1}ms)`); }
   ok(I.parse('\u0130'.repeat(5000) + fx('pitchero-league'), PIT + '/teams/3100/league-table').league.length === 6, 'characters that change length when lower-cased do not shift the parse');
+  ok(I.parse('<title>Fixtures | Ash Grove RFC</title>', 'https://ashgrove.example.org/fixtures').club.name === 'Ash Grove RFC' && I.parse('<title>Ash Grove Rugby Club</title>', 'https://ashgrove.example.org/').club.name === 'Ash Grove Rugby Club', 'a title names the club in the part that says it is one');
+  ok(I.parse('<title>Zara Fakeperson</title>', 'https://club.example.org/team/zara-fakeperson').club === null && I.parse('<meta property="og:title" content="Arlo Plantedkid">', 'https://club.example.org/player-profile/arlo-plantedkid/').club === null, 'a title with no club word names no club');
   ok(I.short('London Scottish Lions') === 'London Scottish' && I.short('Old Whitgiftian RFC') === 'Old Whitgiftian' && I.short('Old Mill & District') === 'Old Mill' && I.short('Supercalifragilistic') === 'Supercalifragili' && I.short('Bracknell RFC') === 'Bracknell RFC', 'names fit a card: the suffix, then whole words');
 }
 
 // 3. safeguarding: nothing about a person reaches a result, the save or the screen
 {
   const PEOPLE = ['testplayer', 'tinyplayer', 'plantedname', 'coachperson', 'fakename', 'byline', 'madeup', 'notreal', 'statsname', 'organiserperson', 'soloathlete',
-    'taylor p', 'j smith', 'joe s', 'example.com', 'example.org', '07700', '@', '.jpg', '.png', 'http', 'captain', 'coach', 'secretary', 'logo'];
+    'taylor p', 'j smith', 'joe s', 'example.com', 'example.org', '07700', '@', '.jpg', '.png', 'http', 'captain', 'coach', 'secretary', 'logo',
+    'fakeperson', 'plantedkid', 'notachild', 'inventedname', 'madeupname', 'testsurname', 'pretendperson', 'imaginaryname'];
   const ROW = ['name', 'played', 'won', 'drawn', 'lost', 'points', 'kit', 'trim', 'own'];
-  const urls = { 'pitchero-safeguarding':PIT + '/teams/3100/league-table', 'generic-tournament':'https://www.riversiderfc.example.com/', 'generic-jsonld':'https://www.hilltophawks.example.com/', 'generic-next':'https://aldervale.example.org/', 'generic-empty':'https://blank.example.org/', 'pitchero-home':PIT, 'pitchero-league':PIT + '/teams/3100/league-table' };
+  const urls = { 'pitchero-safeguarding':PIT + '/teams/3100/league-table', 'generic-tournament':'https://www.riversiderfc.example.com/', 'generic-jsonld':'https://www.hilltophawks.example.com/', 'generic-next':'https://aldervale.example.org/', 'generic-empty':'https://blank.example.org/', 'pitchero-home':PIT, 'pitchero-league':PIT + '/teams/3100/league-table', 'generic-people':'https://club.example.org/team/zara-fakeperson' };
   for (const [f, u] of Object.entries(urls)) {
     const r = I.parse(fx(f), u), text = JSON.stringify(r).toLowerCase();
     for (const p of PEOPLE) ok(!text.includes(p), `${f}: "${p}" never reaches the result`);
@@ -108,6 +115,12 @@ const P = (f, url) => I.parse(fx(f), url);
   }
   const sg = I.parse(fx('pitchero-safeguarding'), PIT + '/teams/3100/league-table');
   ok(names(sg.league) === 'Sevenoaks,Tunbridge Wells,Bracknell' && names(sg.teams) === 'Hornets RFC,Farnham', `person-shaped rows and opponents are dropped, the real ones kept (${names(sg.league)} / ${names(sg.teams)})`);
+  const FREE = ['Zara Fakeperson', 'Arlo Plantedkid', 'Priya Notachild', 'Teddy Inventedname', 'Willow Madeupname', 'Ezra Testsurname', 'Nia Pretendperson', 'Kofi Imaginaryname'];
+  ok(FREE.every(n => I.name(n) === n), 'generic-people\'s planted first names are not in the first-name list: only the structure keeps them out');
+  for (const u of ['https://club.example.org/team/zara-fakeperson', 'https://club.example.org/player-profile/arlo-plantedkid/', 'https://club.example.org/']) {
+    const pp = I.parse(fx('generic-people'), u);
+    ok(pp.club === null && names(pp.league) === 'Ash Grove,Birch Lane' && !pp.teams.length, `${u}: no club from a person's title, no table from a leaderboard, rankings, results or individuals, only the standings (${JSON.stringify(pp)})`);
+  }
   const PERSON = ['J Smith', 'J. Smith', 'Joe S', 'Joe S.', 'Jamie Testplayer', 'Sophie Taylor', 'Oliver James Brown', 'alex@example.com', '07700 900123', 'Coach: Robin', 'Mr Brown', 'www.example.com', 'Captain Fantastic'];
   for (const p of PERSON) ok(I.personal(p) && I.name(p) === '', `"${p}" reads as a person`);
   const TEAM = ['Bath A', 'Bath B', 'Sale Sharks', 'London Scottish', 'Old Ruts', 'Tunbridge Wells', 'Hornets RFC', "St Bede's", 'Farnham', 'Harlequins', 'Barnard Castle', 'Morgan Academy', 'Jack Rugby Club', 'Kingsmead Rugby Football Club'];
@@ -183,6 +196,29 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
   const r6 = await I.fetch('https://www.bracknellrugbyclub.com/', { gap:0 });
   ok(r6.ok && calls[1] && calls[1].url === PIT + '/teams/3100/league-table', 'after a redirect, the next page is on the site that answered');
+  ok(calls.length && calls.every(c => c.disableRedirects === true), 'the platform is never left to follow a redirect itself');
+
+  reset(); pages['https://www.bracknellrugbyclub.com/'] = { status:301, headers:{ Location:PIT }, data:'' };
+  pages[PIT] = html200('pitchero-home'); pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
+  const r7 = await I.fetch('https://www.bracknellrugbyclub.com/', { gap:0 });
+  ok(r7.ok && r7.requests === 3 && calls.map(c => c.url).join() === ['https://www.bracknellrugbyclub.com/', PIT, PIT + '/teams/3100/league-table'].join() && r7.data.league.length === 6, `a redirect is followed here, as one of the three requests, and the next page is on the site it led to (${calls.map(c => c.url).join(' ')})`);
+  reset(); pages['https://www.bracknellrugbyclub.com/'] = { status:302, headers:{ location:'http://192.168.1.1/admin' }, data:'' };
+  const r8 = await I.fetch('https://www.bracknellrugbyclub.com/', { gap:0 });
+  ok(!r8.ok && r8.error === 'net' && calls.length === 1, 'a redirect to a local address is refused, and nothing more is asked for');
+  reset(); pages['https://www.bracknellrugbyclub.com/'] = { status:200, url:'http://192.168.1.1/', data:'<title>Router RFC</title><a href="/cgi-bin/luci/;stok=TOKEN/admin/status">Status Table</a>' };
+  const r9 = await I.fetch('https://www.bracknellrugbyclub.com/', { gap:0 });
+  ok(!r9.ok && r9.error === 'net' && calls.length === 1, 'a page the platform brought from a refused address is never read, nor its links followed');
+  reset(); pages['https://loop.example.org/'] = { status:302, headers:{ Location:'/again' }, data:'' };
+  pages['https://loop.example.org/again'] = { status:307, headers:{ Location:'https://loop.example.org/' }, data:'' };
+  const r10 = await I.fetch('https://loop.example.org/', { gap:0 });
+  ok(!r10.ok && calls.length === I.MAX_REQUESTS && calls[1].url === 'https://loop.example.org/again', `a redirect loop ends at three requests (${calls.length})`);
+  reset(); pages['https://nowhere.example.org/'] = { status:302, data:'' };
+  ok((await I.fetch('https://nowhere.example.org/', { gap:0 })).error === 'net' && calls.length === 1, 'a redirect with no Location is a failed import');
+
+  reset(); pages[team] = html200('<script id="__NEXT_DATA__" type="application/json">' + JSON.stringify(nd) + '</script>');
+  let stop = false;
+  const r11 = await I.fetch(team, { gap:1, sleep:() => { stop = true; }, cancelled:() => stop });
+  ok(!r11.ok && r11.error === 'cancelled' && calls.length === 1, 'cancelled in the pause between pages, no further request is made');
 }
 
 // 5. the web build never fetches, and says so
@@ -208,35 +244,45 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   native(true); reset();
   X.restore({ custom:[], champ:null }); I.setLeague(null);
   const LG = PIT + '/teams/3100/league-table';
+  let focused = '';
+  for (const id of ['im-url', 'im-go', 'im-back', 'im-paste']) $(id).focus = () => { focused = id; };
   pages[LG] = html200('pitchero-league');
   D.openTeams('champ');
   ok($('t-grid').innerHTML.includes('id="t-import"') && $('t-grid').innerHTML.includes('Import Club') && $('t-league').hidden, 'the team screen has an Import Club card beside Create Team, and no My League yet');
   I.open();
   ok(I.state().step === 'link' && $('im-title').textContent === 'Paste Your Link' && !$('im-field').hidden && $('im-go').textContent === 'Import', 'in the app the card asks for the link');
+  ok(focused === 'im-url' && I.focusEl(true) === $('im-go'), 'focus goes into the card, on the link field; a controller\'s ring starts on Import');
+  const mm = globalThis.matchMedia; globalThis.matchMedia = q => ({ matches:q === '(pointer: coarse)' });
+  focused = ''; I.open();
+  ok(focused === 'im-go', 'on a touch screen focus goes to Import, so no keyboard springs up over the card');
+  globalThis.matchMedia = mm; I.open();
   $('im-url').value = 'file:///etc/passwd'; I.go();
   ok(!$('im-err').hidden && $('im-err').textContent === I.MSG.url && calls.length === 0, 'a bad link says so and fetches nothing');
   let gate = null;
   I.setGate((go, cancel) => { gate = { go, cancel }; });
   $('im-url').value = LG; I.go();
   ok(gate && $('m-import').hidden && calls.length === 0, 'Import asks the grown-up check first, the card out of its way, nothing fetched');
-  gate.cancel();
-  ok(!$('m-import').hidden && I.state().step === 'link' && calls.length === 0, 'cancelling the check comes back to the link, nothing fetched');
+  focused = ''; gate.cancel();
+  ok(!$('m-import').hidden && I.state().step === 'link' && calls.length === 0 && focused === 'im-url', 'cancelling the check comes back to the link, focus on it, nothing fetched');
   gate = null; I.go(); gate.go();
-  ok(I.state().step === 'busy' && $('im-go').textContent === 'Importing' && $('im-go').disabled && $('im-url').disabled, 'passing it starts the import');
+  ok(I.state().step === 'busy' && $('im-go').textContent === 'Importing' && $('im-go').disabled && $('im-url').disabled && focused === 'im-back', 'passing it starts the import, focus on Back');
   for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
   ok(I.state().step === 'preview' && $('im-title').textContent === 'Bracknell RFC' && !$('im-jersey').hidden && $('im-jersey').innerHTML.includes('--kit:#399913'), 'the preview shows the club in its colours');
   ok($('im-league').innerHTML.includes('My League · 5 Teams') && ($('im-league').innerHTML.match(/class="jersey/g) || []).length === 5, 'and the league\'s shirts and size');
-  ok($('im-cols').hidden && $('im-go').textContent === 'Save Club' && $('im-alt').textContent === 'Change Link' && !$('im-alt').classList.contains('warn'), 'page colours need no picking; Save Club, then Change Link beside Back');
+  ok($('im-cols').hidden && $('im-go').textContent === 'Save Club' && $('im-alt').textContent === 'Change Link' && !$('im-alt').classList.contains('warn') && focused === 'im-go', 'page colours need no picking; Save Club, focused, then Change Link beside Back');
   I.go();
-  const club = X.custom().find(t => t.name === 'Bracknell RFC');
-  ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && club.pace + club.power + club.handling + club.kicking === 4 + X.BUDGET && club.pace === 4 && club.kicking === 3, 'Save Club adds it through cleanTeam, the budget spent evenly');
+  const club = X.custom().find(t => t.name === 'Bracknell RFC'), NA = I.ABILITIES.length, TOP = NA + X.BUDGET;
+  ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && X.rateOf(club) === TOP && I.ABILITIES.every(([k]) => club[k] === 3 || ((k === 'pace' || k === 'handling') && club[k] === 4)) && club.pace === 4 && club.handling === 4,
+    `Save Club adds it through cleanTeam, the budget spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
   ok($('m-import').hidden && D.settings().pool === I.POOL && !$('t-league').hidden, 'the card closes on My League');
   ok($('t-grid').innerHTML.includes('Sevenoaks') && $('t-grid').innerHTML.includes('Bracknell RFC'), 'My League lists the league and your teams');
   const sv = saved();
   ok(sv.importLeague.teams.length === 5 && sv.custom.some(t => t.name === 'Bracknell RFC'), 'both are in the browser save');
   const lead = I.league().teams[0], foot = I.league().teams[4];
-  ok(X.rateOf(lead) === 14 && X.rateOf(foot) === 11 && lead.kit !== foot.kit, `ratings follow the table (${X.rateOf(lead)} top, ${X.rateOf(foot)} fifth of six)`);
+  ok(X.rateOf(lead) === TOP && X.rateOf(foot) === Math.round(TOP - NA*4/5) && lead.kit !== foot.kit && I.league().teams.every(t => I.ABILITIES.every(([k]) => Number.isInteger(t[k]))), `ratings follow the table over every ability, the leader a team you can make (${X.rateOf(lead)} top, ${X.rateOf(foot)} fifth of six)`);
+  const opp = I.sides({ teams:['Ash Vale', 'Birch Lane', 'Cedar Park', 'Damson Hill', 'Elm Bridge', 'Fir Tree'].map(name => ({ name })), league:[] });
+  ok(opp.every(t => X.rateOf(t) > TOP - NA && X.rateOf(t) < TOP), `fixture opponents fall between a table's foot and its leader (${opp.map(X.rateOf).join(' ')})`);
   const ids = [...I.league().teams, ...X.custom()].map(t => t.id);
   ok(new Set(ids).size === ids.length && !ids.some(id => X.ALL_TEAMS.some(t => t.id === id)), `codes are unique and clear of the built-in sides (${ids.join(' ')})`);
 
@@ -249,8 +295,19 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   I.open(); $('im-url').value = 'plain.example.org'; I.go(); gate.go();
   for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
   ok(I.state().pick && !$('im-cols').hidden && I.state().draft.kit === '#2050b0', 'a page with no colours offers the shirt and trim swatches');
+  ok($('im-league').innerHTML.includes('My League · 1 Team</span>'), 'a league of one says 1 Team');
   I.state().draft.kit = '#c8102e'; I.state().draft.trim = '#f2efe6'; I.render(); I.go();
   ok(X.custom().find(t => t.name === 'Plain Lane RFC').kit === '#c8102e' && names(I.league().teams) === 'Quarry Hill', 'the picked colours are saved, and the new league replaces the old');
+
+  I.open(); I.alt();
+  ok($('im-alt').textContent === 'Confirm Remove', 'Remove League armed');
+  $('im-url').value = 'plain.example.org'; I.go(); gate.go();
+  for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+  focused = ''; I.alt();
+  ok(I.state().step === 'link' && !I.state().armed && $('im-alt').textContent === 'Remove League' && focused === 'im-url', 'an import in between disarms it, and Change Link puts focus on the link');
+  I.alt();
+  ok(I.league() && $('im-alt').textContent === 'Confirm Remove', 'so one tap after Change Link never removes the league');
+  $('im-back').click();
 
   pages['https://gone.example.org/'] = { status:404, data:'' };
   I.open(); $('im-url').value = 'https://gone.example.org/'; I.go(); gate.go();
@@ -267,13 +324,20 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   const run = I.run('https://slow.example.org/', I.state().token, { timeout:20 });
   $('im-back').click(); await run;
   ok($('m-import').hidden && JSON.stringify([X.custom(), I.league()]) === before, 'Back while it imports drops whatever comes back');
+  reset();
+  const MINI = PIT + '/teams/3487';
+  for (const u of [MINI, MINI + '/league-table', MINI + '/fixtures-results']) pages[u] = html200('pitchero-minis-empty');
+  I.open();
+  const run2 = I.run(MINI, I.state().token, { gap:200 });
+  await new Promise(r => setTimeout(r, 30)); $('im-back').click(); await run2;
+  ok(calls.length === 1, `Back while it imports stops the requests, not just the card (${calls.length})`);
 
   I.open();
   ok($('im-alt').textContent === 'Remove League' && $('im-alt').classList.contains('warn') && !$('im-row').classList.contains('one'), 'with a league saved, Remove League sits beside Back');
   I.alt();
   ok(I.league() && $('im-alt').textContent === 'Confirm Remove', 'it asks twice');
-  I.alt();
-  ok(I.league() === null && saved().importLeague === null && D.settings().pool === 1 && $('im-alt').hidden, 'then the league goes, from the save too');
+  focused = ''; I.alt();
+  ok(I.league() === null && saved().importLeague === null && D.settings().pool === 1 && $('im-alt').hidden && focused === 'im-url', 'then the league goes, from the save too, and focus is not left on a hidden button');
   $('im-back').click();
   ok($('t-league').hidden, 'and so does My League');
   I.setGate(null); native(false);
@@ -301,6 +365,9 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(m0.kit === '#2050b0' && m0.trim === '#f2efe6' && m0.pace === 5 && m0.power === 1 && m0.handling === 3 && m0.kicking === 1 && !m0.home && !m0.custom && !('extra' in m0), 'each side is put right through cleanSide, flags and unknown fields dropped');
   ok(m0.id !== 'FAR' && m1.id !== 'FAR' && m0.id !== m1.id && m0.key === 'lg-' + m0.id, `a built-in or repeated code is replaced (${m0.id} ${m1.id})`);
   ok(m1.name === 'London Scottish' && !messy.teams.some(t => /Smith|Joe|script/.test(t.name)) && messy.teams.length === I.MAX_SIDES, 'names fit a card, people and junk are dropped, at most sixteen');
+  const short = I.sides({ league:['Tunbridge Wells', 'Tunbridge Wells II', 'Old Whitgiftians', 'Old Whitgiftians II', 'Sevenoaks Minis A', 'Sevenoaks Minis B'].map(name => ({ name })), teams:[] });
+  ok(names(short) === 'Tunbridge Wells,Tunbridge II,Old Whitgiftians,Sevenoaks A,Sevenoaks B', `sides that would shorten to one name keep their labels, or one is left out (${names(short)})`);
+  ok(names(I.clean({ teams:[{ name:'Tunbridge Wells' }, { name:'Tunbridge Wells' }, { name:'Tunbridge Wells II' }] }).teams) === 'Tunbridge Wells,Tunbridge II', 'a saved league never shows two sides of one name');
   const OLD = { settings:{ half:1, diff:2, sound:true, hints:true, pool:1 }, champ:null, custom:[{ key:'my1', name:'Badgers', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:3 }], champHistory:[], seasonSerial:4 };
   I.setLeague(null);
   memory['tryline.v1'] = JSON.stringify(OLD); X.load();
@@ -346,7 +413,21 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok($('t-league').hidden, 'no league, no My League');
   const full = Array.from({ length:4 }, (_, i) => ({ key:'f' + i, name:'Full ' + i }));
   X.restore({ custom:full }); D.renderTeams();
-  ok(!$('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four teams made, Import Club goes with Create Team');
+  ok(!$('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four teams made and no league, Import Club goes with Create Team');
+  I.setLeague(I.clean(mk(3))); D.renderTeams();
+  ok($('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four made and a league saved, Import Club stays: the way to refresh or remove it');
+  native(true); reset(); I.setGate(go => go());
+  pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
+  I.open(); $('im-url').value = PIT + '/teams/3100/league-table'; I.go();
+  for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+  ok(I.state().step === 'preview' && $('im-title').textContent === 'My League' && $('im-go').textContent === 'Save League' && $('im-jersey').hidden, 'with four made, a club\'s page offers its league alone');
+  I.go();
+  ok(X.custom().length === 4 && !X.custom().some(t => /Bracknell/.test(t.name)) && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and saves the league, not the club');
+  pages['https://clubonly.example.org/'] = html200('<meta property="og:site_name" content="Club Only RFC">');
+  I.open(); $('im-url').value = 'https://clubonly.example.org/'; I.go();
+  for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+  ok(I.state().step === 'link' && $('im-err').textContent === I.MSG.full && !$('im-err').hidden, 'a club with no league, with four made, says to make room');
+  $('im-back').click(); I.setGate(null); native(false); I.setLeague(null);
   X.restore({ custom:[] });
 }
 

@@ -24,7 +24,10 @@ These are made up to cover the other parser paths and the safeguarding filter. E
 them is invented. The planted people (Jamie Testplayer, Avery Tinyplayer, Alexandra Plantedname, Robin Coachperson,
 Morgan Fakename, Casey Byline, Riley Madeup, Sam Notreal, Jordan Statsname, Quinn Organiserperson, Harper Soloathlete,
 Taylor P, J Smith, Joe S, plus the example.com and example.org emails and the 07700 900xxx numbers, which are Ofcom's
-drama range) must never reach a result.
+drama range) must never reach a result. Those first names are all in the importer's first-name list, so
+`generic-people.html` plants people whose first names are not (Zara Fakeperson, Arlo Plantedkid, Priya Notachild, Teddy
+Inventedname, Willow Madeupname, Ezra Testsurname, Nia Pretendperson, Kofi Imaginaryname): every one of them passes
+`importName`, so only the page's structure can keep them out.
 
 | File | What it covers |
 |---|---|
@@ -34,6 +37,7 @@ drama range) must never reach a result.
 | `generic-next.html` | A Next.js site that is not Pitchero: standings with nested `team.name` and `stats`, a club with `colors`, and `homeTeam`/`awayTeam` fixtures, for the generic JSON walker. |
 | `generic-flight.html` | A Next.js app-router page whose data arrives as flight lines in `self.__next_f.push`, with an `rgb()` colour. |
 | `generic-empty.html` | Nothing to import. |
+| `generic-people.html` | A person's page on a club site: the title and og:title name the person, and people with win and loss records sit under `leaderboard`, `rankings`, `results` and `individuals`. Only the `standings` under `competition` is a table. No club name. |
 
 When real pages for another source arrive, add them here and give that source its own entry in `IMPORT_SOURCES` in
 `src/import.js`.
