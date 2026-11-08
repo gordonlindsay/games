@@ -87,8 +87,8 @@ Each club has its own product, so its sales are its own line:
 2. For each, add a display name and description (the game shows its own wording, with the price the store returns), a review
    screenshot of the Unlock card, and a review note: the Unlock card opens from any locked mode or from Grown-Ups on the home,
    and a grown-up check (a multiplication in words) comes before every purchase.
-3. Family Sharing: optional per product. If it is on, a family member's purchase arrives as owned on the next launch or with
-   Restore Purchases.
+3. Family Sharing: on for both products (the owner, 2026-11-08). A family member's purchase arrives as owned on the next launch or
+   with Restore Purchases, and goes again when they leave the family group (below).
 4. Attach the products to the app version before submitting it for review: the first products must go with a version.
 5. In Xcode, the app target needs the **In-App Purchase** capability (Signing and Capabilities). StoreKit 2 needs iOS 15 or later.
 6. Test with a StoreKit configuration file in Xcode, then Sandbox testers (Users and Access, Sandbox) on TestFlight.
@@ -154,9 +154,12 @@ on Android by the plugin when paid inside the purchase, as Google requires withi
 acknowledged by the game at the next start (above).
 
 A transaction unlocks only if it is for one of our product ids, Google's state is Purchased (not Pending) and Apple has not
-revoked it. Purchases are kept in the save's own field (`store:{ owned }` in `tryline.v1`) and only ever added to: a store that
-answers with less (offline, signed out) never takes one away. With no server, a refund is not noticed on the device that bought
-it; it would be gone after a reinstall and Restore Purchases.
+revoked it. Purchases are kept in the save's own field (`store:{ owned }` in `tryline.v1`), written at once even during a drill
+(`storeKeep`), and a store that answers with less (offline, signed out) never takes one away. A revocation is the one way an
+unlock goes: Apple sends a refunded purchase, or a family member's that ended when they left the Family Sharing group, through
+`transactionUpdated` again with a `revocationDate`, and the game drops that unlock unless the account's current entitlements
+still hold it (bought as well as shared). Whatever it unlocked stays saved, locked, as on the free web. Google's refunds reach
+no listener here; a refunded Android unlock goes after a reinstall and Restore Purchases.
 
 ## The web version
 

@@ -56,7 +56,42 @@ tackle,try,career,arcade,sport,minis,junior,7s,scrum,lineout,training,league,off
 
 ### Description (4,000 characters)
 
+Two versions, for the two ways the first version can go out (LAUNCH_CHECKLIST.md, section 4). Paste the one that matches the build being submitted; `node tools/listing.mjs` says which, from `FAN_CLUBS` in src/store.js. While no partner club has `agreed:true` in the build, the app offers the Full Game alone and has no Import Club, so a description that sells Super Fan or Import sends the reviewer looking for things the app does not have (guidelines 2.1 and 2.3.1).
+
+**Without Super Fan**: no club has `agreed:true` in the build. The copy names neither Super Fan nor Import (`node tools/listing.mjs` checks).
+
 <!-- copy:apple.description -->
+```text
+Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitch, seen from above, with one stick and three buttons: Pass, Kick and Sprint. Tackles, rucks, scrums, lineouts and goal kicks are all in. The big moments cut to a close-up with a clear cue, so a new player knows what to press and when.
+
+Free to Play
+- Quick Match against the computer, on Kids, Easy or Normal
+- The Training Ground: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
+- How to Play, with control hints you can switch off
+
+Full Game (a one-off unlock, no subscription)
+- Championship: your team and five others over five rounds, with a league table and bonus points
+- Career: one player, from the minis to the international side, training between matches
+- Create Team: up to four teams of your own, with your kit, short name and abilities
+- Hard level
+
+The Teams
+National sides, local clubs, and city sides from France, Australia and South Africa. Professional sides go by their city, and every rating is made up.
+
+Arcade Moments
+On Fire: string three good moments together and your side lights up for a few seconds. A dominant tackle lands as a Big Hit. A drawn Quick Match goes to a Golden Try, sudden-death extra time.
+
+For Parents
+- No ads, no tracking, no accounts and no chat
+- Nothing about you or your child is collected
+- A grown-up check before any purchase or link out of the game
+- The Kids level, a step below Easy
+- Plays offline; only buying an unlock needs a connection
+```
+
+**With Super Fan**: a club has confirmed its share in writing, and `agreed:true` is in the build.
+
+<!-- copy:apple.description.fan -->
 ```text
 Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitch, seen from above, with one stick and three buttons: Pass, Kick and Sprint. Tackles, rucks, scrums, lineouts and goal kicks are all in. The big moments cut to a close-up with a clear cue, so a new player knows what to press and when.
 
@@ -150,5 +185,7 @@ For Parents
 ## Before Publishing
 
 - Add a partner club's name to the descriptions only once its share is set in the game and the agreement is signed (see SUPER_FAN.md). Until then "a partner club" is accurate.
+- The subtitle (Play and support your club) and the promotional text's opening line (Support your club) are the owner's, and stay with either description. Without Super Fan they read as playing as your club; if the owner would rather they waited for Super Fan, "Your club. Your career." (23) is his earlier subtitle.
+- Google Play's full description (phase 2) still has its Super Fan paragraph: when the Play listing is made, the same rule applies, so drop it there too unless a club is agreed in that build.
 - Controllers: the game supports them on the web. If they work in the app on a real iPhone, iPad and Android phone, "Works with game controllers" can be added, and Apple's game controller badge set in App Store Connect. Not claimed until tested.
 - Re-read the whole description against the build being submitted: anything the reviewer cannot find in the app is a guideline 2.3.1 rejection.

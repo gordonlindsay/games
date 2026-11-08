@@ -80,8 +80,8 @@ npx cap sync
 - `npx cap add ios` uses Swift Package Manager, so CocoaPods is not needed.
 - `npm run native-config` makes the project landscape only, either way up, and hides the status bar from launch,
   answers Apple's export compliance question (the only encryption is the system's HTTPS), and adds the privacy
-  manifest to the iOS app. In phase 2 it also sets Android's landscape, turns off Android's cloud backup (so the save
-  stays on the phone, as the privacy note says) and removes the advertising ID permission should a library ever add
+  manifest to the iOS app. In phase 2 it also sets Android's landscape, turns off Android's cloud backup (so deleting
+  the app removes the save, as the privacy note says) and removes the advertising ID permission should a library ever add
   it. It prints what it set, skips a platform not added yet, and running it again changes nothing. If it says the Xcode project did not match, drag `ios/App/App/PrivacyInfo.xcprivacy` into the
   App group in Xcode with the App target ticked.
 - `npm run assets` makes every iPhone and iPad icon and launch screen size from `assets/`.

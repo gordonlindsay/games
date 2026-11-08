@@ -854,7 +854,8 @@ function importAlt() {
   const u = importUi;
   if (u.step === 'preview') { u.step = 'link'; u.data = null; u.err = ''; u.armed = false; u.token++; importRender(); importFocus(); return; }
   if (!importLeague) return;
-  if (!u.armed) { u.armed = true; importRender(); return; }
+  if (!u.armed) { u.armed = true; confirmArm(); importRender(); return; }
+  if (confirmSoon()) return;                               // a quick double tap only asks (CONFIRM, ui-menus.js)
   importLeague = null; u.armed = false;
   if (settings.pool === IMPORT_POOL) settings.pool = 1;
   save(); importRender(); importFocus();                   // Remove League has gone: focus to the step's own control

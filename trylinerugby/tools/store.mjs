@@ -20,7 +20,7 @@ const cancel = () => K.close(false);
 const FARNHAM = S.FAN_CLUBS[0];
 $('b-grown').parentNode = $('learn-row');                  // the stand-in DOM has no parents: Grown-Ups sits in the learn row, as in index.html
 const reset = () => {                                       // the web as shipped, nothing bought, nothing open
-  S.setNative(null); S.setTier(null); S.setBackend(null); S.setBought([]); S.setPrices({}); S.setStarted(false);
+  S.setNative(null); S.setTier(null); S.setBackend(null); S.setBought([]); S.setPrices({}); S.setAsked(false); S.setStarted(false);
   FARNHAM.share = 50; FARNHAM.agreed = false; S.FAN_CLUBS.length = 1; S.LINKS.ios = null; S.LINKS.android = null;
   delete navigator.userAgent;
   if (K.gate()) cancel();
@@ -277,7 +277,10 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
     [{ productIdentifier:'tryline.fan.other' }, S.MSG.failed, 'a transaction for another product'],
     [{ productIdentifier:'tryline.fan.farnham', revocationDate:'2026-01-01' }, S.MSG.failed, 'a revoked transaction'],
     ['none', S.MSG.failed, 'no transaction'],
-    [new Error('Network down'), S.MSG.failed, 'an error'],
+    [new Error('The Internet connection appears to be offline.'), S.MSG.store, 'offline (Apple\'s words)'],
+    [new Error('Cannot find product for id tryline.fan.farnham'), S.MSG.store, 'a product the store could not find'],
+    [Object.assign(new Error('Billing service unavailable'), { code:'SERVICE_UNAVAILABLE' }), S.MSG.store, 'Google\'s service out of reach'],
+    [new Error('Something unexpected'), S.MSG.failed, 'any other error'],
   ];
   for (const [r, msg, what] of tries) {
     S.open({ mode:'grown' }); next = r;
@@ -392,6 +395,51 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   delete globalThis.Capacitor;
 }
 
+// 7b. the store out of reach, a refund, and an unlock that arrives during a drill
+{
+  // the store never priced the Full Game (offline at the start, or not found): tapping it says so before the grown-up check
+  app(); let offline = true;
+  const NP = globalThis.Capacitor.Plugins.NativePurchases, gp = NP.getProducts;
+  NP.getProducts = async o => { if (offline) { calls.push(['getProducts', o]); throw new Error('The Internet connection appears to be offline.'); } return gp(o); };
+  S.open({ mode:'unlock', feature:'champ' }); await tick();
+  ok(S.unpriced('tryline.full') && /data-buy="tryline\.full"/.test($('st-offers').innerHTML) && !/£/.test($('st-offers').innerHTML), 'offline: the Full Game shows with no price');
+  const asked = called('getProducts').length;
+  S.buyAsk('tryline.full');
+  ok(!K.gate() && !$('m-store').hidden && $('st-msg').textContent === S.MSG.store && !$('st-msg').hidden && !called('purchaseProduct').length, 'tapped: "Could not reach the store" at once, before any grown-up check, and nothing bought');
+  await tick();
+  ok(called('getProducts').length === asked + 1 && $('st-msg').textContent === S.MSG.store, 'the store is asked again, and still out of reach');
+  offline = false; S.buyAsk('tryline.full'); await tick();
+  ok($('st-msg').hidden && /Full Game · £1\.99/.test($('st-offers').innerHTML), 'back online: the price comes in and the message goes');
+  S.buyAsk('tryline.full');
+  ok(!!K.gate() && $('m-store').hidden, 'and the Full Game asks a grown-up as before');
+  cancel(); S.close();
+  NP.getProducts = gp;
+  app(); ok(!S.unpriced('tryline.full'), 'before the store has answered at all, a tap goes to the grown-up check as before');
+  reset(); S.setAsked(true); ok(!S.unpriced('tryline.full'), 'on the web there is no store to be out of reach');
+  // a refund: Apple sends the transaction again with a revocationDate, and the unlock goes unless the account still holds it
+  app(); FARNHAM.agreed = true; owns = ['tryline.full', 'tryline.fan.farnham']; S.setStarted(false); D.goHome(); await tick(12);
+  ok(S.bought().join() === 'tryline.full,tryline.fan.farnham' && S.has('import'), 'both unlocks, read back at the start');
+  owns = ['tryline.full'];
+  listener({ productIdentifier:'tryline.fan.farnham', revocationDate:'2026-11-08T10:00:00Z' }); await tick();
+  ok(S.bought().join() === 'tryline.full' && !S.has('import') && S.has('champ') && S.fan() === null && saved().store.owned.join() === 'tryline.full', 'the Super Fan refunded: it goes, and is saved gone; the Full Game stays');
+  listener({ productIdentifier:'tryline.full', revocationDate:'2026-11-08T10:00:00Z' }); await tick();
+  ok(S.bought().join() === 'tryline.full', 'a revocation for an unlock the account still holds (bought as well as shared) changes nothing');
+  listener({ productIdentifier:'com.someone.else', revocationDate:'2026-11-08T10:00:00Z' }); await tick();
+  ok(S.bought().join() === 'tryline.full', 'another app\'s revocation changes nothing');
+  owns = [];
+  listener({ productIdentifier:'tryline.full', revocationDate:'2026-11-08T10:00:00Z' }); await tick();
+  D.goHome();
+  ok(!S.bought().length && !S.has('champ') && saved().store === undefined && $('b-champ').classList.contains('locked'), 'the Full Game refunded too: locked again on the home, and the save keeps no unlock');
+  // an unlock that arrives during a drill goes into the save, and so into Preferences, at once, though a drill saves nothing else
+  app(); S.setStarted(false); D.goHome(); await tick(12); X.save();
+  const settingsBefore = JSON.stringify(saved().settings);
+  T.practice.start('defend');
+  listener({ productIdentifier:'tryline.full', transactionId:'11' }); await tick();
+  ok(T.practice.state() && S.has('champ') && saved().store.owned.join() === 'tryline.full', 'Ask to Buy approved during a drill: saved at once');
+  ok(JSON.stringify(saved().settings) === settingsBefore, 'and nothing else in the save moves (the drill\'s own settings are never written)');
+  T.practice.leave(); D.goHome();
+}
+
 // 8. Super Fan: the badge, Import, and the club offered first
 {
   app(); FARNHAM.agreed = true; S.setBought(['tryline.fan.farnham']);
@@ -452,7 +500,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   }
   ok(!/window\.open|location\.href|location\.assign/.test(src) && (ui.match(/window\.open\(/g) || []).length === 2 && /function storeOpenUrl/.test(ui), 'storeOpenUrl is the one place the store leaves the game');
   ok(/storeLeave\(STORE_LINKS\.privacy\)/.test(ui) && /storeLeave\(STORE_LINKS\.support\)/.test(ui) && /storeLeave\(link\)/.test(ui), 'Privacy, Support and Get the App all go through storeLeave');
-  ok(/function storeAsk\(go\)[\s\S]*?parentGate\(/.test(ui) && /function storeBuyAsk[^\n]*storeAsk\(/.test(ui) && /function storeRestoreAsk[^\n]*storeAsk\(/.test(ui) && /function storeLeave[^\n]*storeAsk\(/.test(ui), 'buying, restoring and leaving all ask through parentGate');
+  ok(/function storeAsk\(go\)[\s\S]*?parentGate\(/.test(ui) && /function storeBuyAsk[\s\S]*?\n  storeAsk\(\(\) => storeBuy\(id\)\);\n\}/.test(ui) && /function storeRestoreAsk[^\n]*storeAsk\(/.test(ui) && /function storeLeave[^\n]*storeAsk\(/.test(ui), 'buying, restoring and leaving all ask through parentGate');
 }
 
 // 10. the card's controls: a controller, the keyboard, and Back

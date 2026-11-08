@@ -17,7 +17,7 @@ App Store Connect scales the 6.9-inch set down for smaller iPhones, so one iPhon
 
 ## Moments, in Store Order
 
-The first two or three are what most people see in search, so they are play, not menus.
+The first two or three are what most people see in search, so they are play, not menus. The free modes come first. The shots are of the app as a new player gets it, with nothing bought, so the home shows the locks on Championship, Career and Hard, and the one paid screen, Career, comes last with a caption that says it is the Full Game's (guideline 2.3.2: screenshots must make clear what needs an extra purchase).
 
 | File | Moment | What it shows | Caption idea (if captions are added later) |
 |---|---|---|---|
@@ -26,16 +26,16 @@ The first two or three are what most people see in search, so they are play, not
 | `03-lineout.png` | Set Piece | The lineout close-up, the jumpers lifted, the Jump hint | Win the Lineout |
 | `04-goal.png` | Goal Kick | A conversion: wind, the aim arrow, the meter filling | Kick for the Posts |
 | `05-drill.png` | Training Ground | The Tackling drill's side-on close-up: Position, Height, Timing, Power, Squeeze | Learn to Tackle |
-| `06-career.png` | Career | A player's card and his first season | From Minis to International |
-| `07-teams.png` | Team Picker | Pick Your Team: kits and ratings | Pick Your Club |
-| `08-home.png` | Home | The home screen with the Kids, Easy, Normal and Hard levels | Four Levels, Kids to Hard |
+| `06-teams.png` | Team Picker | Quick Match's Pick Opponent: your side, and the Local clubs' kits and ratings | Pick Your Opponent |
+| `07-home.png` | Home | The home screen as a new player sees it: Quick Match, the Training Ground, Kids, Easy and Normal free, and the locks on Championship, Career and Hard | Free to Play, Unlock the Full Game |
+| `08-career.png` | Career (Full Game) | A player's card and his first season, with the Full Game owned | Full Game: From Minis to International |
 
 Google Play takes at most 8 per type; the App Store takes up to 10. Upload them in this order.
 
 ## Things to Know Before Uploading
 
-- **Club names show.** The team picker, the career card and the scorebug show Farnham, Haslemere, Guildford, Aldershot, Weybridge, Quins, Cobham and Guildfordians: real local clubs by name and colours (APP_STORE.md, Content Rights). If any club objects, re-shoot. Harlequins was renamed Quins after these shots were taken: re-shoot the team picker and any match against them.
-- **The app as a paying family sees it.** The shots are staged as the app with Full Game owned (tools/listing-shots.mjs), so no locks show and the home has its Grown-Ups button. Re-shot on 2026-11-08 after the store, native and Quins changes.
+- **Club names show.** The team picker, the career card and the scorebug show Farnham, Haslemere, Guildford, Aldershot, Weybridge, Quins, Cobham and Guildfordians: real local clubs by name and colours (APP_STORE.md, Content Rights). If any club objects, re-shoot.
+- **The app as a new player gets it.** The shots are staged as the app with nothing bought (tools/listing-shots.mjs), so the home shows its locks and its Grown-Ups button, and the team picker is Quick Match's. Only Career, the last shot, has the Full Game owned. If captions are added, Career's says Full Game. Re-shot on 2026-11-08 after the App Review audit (they were first shot with the Full Game owned, which showed paid modes with no lock).
 - **iPad.** The first version is iPhone only (owner, 2026-11-08), so no iPad set is made. On a 13-inch iPad the game draws small with a lot of empty pitch; scaling the layout up is game work for a later version, and its set (2752x2064 from 1376x1032 at 2x) can be added back to `tools/listing-shots.mjs` then.
 - **Sharpness on iPhone.** The game draws its canvas at up to twice the screen's pixels, so on the 3x iPhone set the pitch is upscaled a little while the text stays sharp. The iPad and Play sets are at 2x and fully sharp.
 - **No device frames and no captions.** Both are allowed; plain shots are honest and quick to redo. If captions are added, keep them Title Case, short and true to the shot (Apple rejects screenshots that show what the app does not do), and never say who the app is for by age: guideline 2.3.8 keeps "For Kids" and "For Children" for Apple's Kids Category, and this app is in Sports. `node tools/listing.mjs` checks the caption ideas above.

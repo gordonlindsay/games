@@ -15,7 +15,7 @@
 //   - landscape either way up (sensorLandscape) for the game's activity.
 //   - no cloud backup (allowBackup false, where Capacitor's template has true): Auto Backup would copy the save, in
 //     Preferences and the web view's storage, to the family's Google Drive and put it back on a reinstall, and the privacy
-//     note says the save stays on the device and deleting the app removes it. A phone-to-phone transfer when setting up a
+//     note says deleting the app removes it. A phone-to-phone transfer when setting up a
 //     new phone (Android 12 and later) still carries it across.
 //   - the advertising ID permission removed, should any library ever bring it in (Google Play's Families policy).
 import fs from 'node:fs';

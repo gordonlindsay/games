@@ -11,7 +11,7 @@ let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } if (process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const memory = {};
-globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; } };
+globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; }, removeItem(k) { delete memory[k]; } };
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const play = (kids, o = {}) => T.newMatch(X.NATIONS[0], X.NATIONS[3], { halfLen:120, diff:0, headless:true, duels:'live', humans:[true, false], kids, ...o });
 const quiet = () => { for (const i of T.inputs) { i.keys.clear(); i.jx = i.jy = 0; i.aPressed = i.bPressed = i.cPressed = false; i.aDown = i.bDown = i.cDown = false; i.flick = 0; } };
@@ -401,6 +401,34 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   K.parentGate(pass, cancel); miss(); miss();
   ok(timers.length === 1 && timers[0].ms === KIDS_GATE.rest, 'and the rests start again from the first');
   timers.shift().fn(); K.close(false);
+  ok(memory[K.GATE_KEY] === undefined, 'on the web the rest is kept in memory alone, as before');
+  // in the app the rest also outlives the game: closing the app and opening it again comes back to the same wait
+  {
+    const realNow = Date.now; let now = 2e12; Date.now = () => now;
+    globalThis.Capacitor = { isNativePlatform:() => true, Plugins:{} };
+    const kept = () => JSON.parse(memory[K.GATE_KEY] || 'null');
+    K.parentGate(pass, cancel); miss(); miss();
+    const until = now + 2*KIDS_GATE.rest;
+    ok(K.rest() && kept() && kept().until === until && kept().rests === 2, `in the app the rest is kept on the device as it starts (${memory[K.GATE_KEY]})`);
+    K.close(false); now += 3000; K.relaunch();
+    ok(K.rest() && K.rest().until === until && timers[timers.length - 1].ms === 2*KIDS_GATE.rest - 3000, 'a relaunch 3s later comes back to the same wait, ending when it would have');
+    const p0 = passes;
+    K.parentGate(pass, cancel); typeAll(K.gate().answer);
+    ok(passes === p0 && K.gate() && $('pg-ans').textContent === 'Wait', 'and the keys still rest, the right answer included');
+    timers.pop().fn();
+    ok(!K.rest() && kept() && kept().until === 0 && kept().rests === 2, 'the rest over: the keys wake, and the count is still kept');
+    K.close(false); K.relaunch(); K.parentGate(pass, cancel); miss(); miss();
+    ok(timers[timers.length - 1].ms === 4*KIDS_GATE.rest, 'after another relaunch the next rest still doubles');
+    now += 9e6; K.close(false); K.relaunch();
+    ok(!K.rest(), 'a rest long over by the next start is not waited again');
+    now -= 9e7; memory[K.GATE_KEY] = JSON.stringify({ until:now + 9e9, rests:3 }); K.relaunch();
+    ok(K.rest() && K.rest().ms === KIDS_GATE.restMax, 'a clock put back never makes a rest longer than a minute');
+    timers.pop().fn(); K.parentGate(pass, cancel); typeAll(K.gate().answer);
+    ok(passes === p0 + 1 && memory[K.GATE_KEY] === undefined, 'a right answer clears what was kept');
+    memory[K.GATE_KEY] = '{"until":'; K.relaunch();
+    ok(!K.rest(), 'what was kept, cut short, is ignored');
+    delete memory[K.GATE_KEY]; delete globalThis.Capacitor; Date.now = realNow; timers.length = 0; K.relaunch();
+  }
   const tapping = (keyOf, taps) => {                       // a child tapping a tap a fifth of a second, opening the check again whenever it shuts, and waiting out every rest
     let passed = 0, t = 0;
     for (let i = 0; i < taps; i++) {

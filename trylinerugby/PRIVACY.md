@@ -6,7 +6,7 @@ Last updated 8 November 2026. This covers the app from the App Store, the Androi
 
 ## What the game keeps
 
-Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player), any league you import and the unlocks you have bought are saved on this device only: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. None of it is sent anywhere. Deleting the app, or clearing the browser's data for the game's site, removes it.
+Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player), any league you import and the unlocks you have bought are saved on this device: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. The game never sends any of it anywhere, and we never receive it. On an iPhone, like any app's storage, it is part of the phone's own backup (iCloud, or a computer) if you use one, so it moves to a new iPhone with the rest. Deleting the app, or clearing the browser's data for the game's site, removes it from the device.
 
 ## What the game does not do
 
@@ -38,12 +38,12 @@ Import is part of Super Fan, in the app only. A grown-up check comes first. Impo
 
 ## The grown-up check
 
-Anything that leaves the game or costs money first asks a grown-up to answer a multiplication written out in words: a purchase, Restore Purchases, Get the App, the privacy and support pages, installing the web version and importing a club page. After two wrong answers in a row it waits before it takes another, so tapping at random does not get past it.
+Anything that leaves the game or costs money first asks a grown-up to answer a multiplication written out in words: a purchase, Restore Purchases, Get the App, the privacy and support pages, installing the web version and importing a club page. After two wrong answers in a row it waits before it takes another, so tapping at random does not get past it. In the app the wait is kept on the device, under `tryline.gate`, so closing the app does not skip it.
 
 ## Your information
 
-The game holds nothing about you anywhere but on your own device, so there is nothing for us to show you, correct or delete. To remove everything it keeps, delete the app or clear the site's data in your browser.
+The game holds nothing about you anywhere but on your own device (and in your phone's own backup), so there is nothing for us to show you, correct or delete. To remove everything it keeps, delete the app or clear the site's data in your browser.
 
 ## Contact
 
-Tryline Rugby Sevens is made by SignCheck Ltd. Questions about privacy: support@signcheck.ai.
+Tryline Rugby Sevens is made by SignCheck Ltd, a company registered in England and Wales, company number [OWNER: company number]. Registered office: [OWNER: registered office address]. Questions about privacy: support@signcheck.ai.

@@ -155,9 +155,11 @@ ok(JSON.parse(store.get(STORE)).seasonSerial === 4, 'the save is back in the web
   prefs.delete(STORE); ok(await N.saved() === null, 'no copy: nothing to put back');
 }
 
-// 3f. Preferences that never answers: the game starts after the wait, and a late answer is not written over it
+// 3f. Preferences that never answers: the game starts after the wait, copies nothing over Preferences meanwhile, and a late
+// answer's copy goes back (at once on the menus, at the next home after a match or a drill), a purchase made meanwhile kept
 {
-  store.clear();
+  const copy = JSON.stringify(kept);
+  store.clear(); prefs.set(STORE, copy); D.goHome();
   const late = deferred(); getHold = late;
   const keep = N.state().wait; N.state().wait = 40;
   let went = 0; N.boot(() => went++);
@@ -165,9 +167,45 @@ ok(JSON.parse(store.get(STORE)).seasonSerial === 4, 'the save is back in the web
   ok(went === 0, 'the start waits while Preferences is silent');
   await wait(60);
   ok(went === 1, 'after the wait the game starts without it');
-  late.resolve({ value:JSON.stringify(kept) }); await flush();
-  ok(!store.has(STORE) && went === 1, 'a late answer is ignored: never written over a game already running');
-  getHold = null; N.state().wait = keep;
+  const sets = calls('Preferences', 'set').length;
+  D.settings().diff = 1; D.settings().played = 0; X.save(); await flush();
+  ok(store.has(STORE) && calls('Preferences', 'set').length === sets && prefs.get(STORE) === copy, 'the fresh game saves, but nothing is copied over Preferences before it answers');
+  late.resolve({ value:copy }); await flush();
+  ok(went === 1 && store.get(STORE) === copy && D.settings().diff === 2 && D.settings().played === 7 && X.custom().some(t => t.name === 'Farnham Minis') && !$('s-home').hidden, 'on the menus, a late answer\'s copy goes back into storage and into the game, on the home');
+  ok(calls('Preferences', 'set').length === sets && N.state().restored, 'and is not copied again');
+  D.settings().diff = 0; X.save(); await flush();
+  ok(calls('Preferences', 'set').length === sets + 1 && JSON.parse(prefs.get(STORE)).settings.diff === 0, 'from then on each save is copied as before');
+  // a late answer during a drill: held until the next home, with a purchase made meanwhile kept
+  prefs.set(STORE, copy); store.clear();
+  const late2 = deferred(); getHold = late2;
+  N.boot(() => {}); await wait(60);
+  T.store.setBought(['tryline.fan.farnham']); X.save(); await flush();
+  T.practice.start('defend');
+  late2.resolve({ value:copy }); await flush();
+  ok(T.practice.state() && prefs.get(STORE) === copy && N.state().late === copy, 'in a drill the copy waits, and Preferences still holds it');
+  T.practice.leave(); D.goHome(); await flush();
+  const back = JSON.parse(store.get(STORE));
+  ok(back.seasonSerial === 4 && back.custom.some(t => t.name === 'Farnham Minis') && back.store.owned.join() === 'tryline.full,tryline.fan.farnham' && !N.state().late, 'at the next home it goes back, with the Super Fan bought meanwhile kept');
+  ok(JSON.parse(prefs.get(STORE)).store.owned.join() === 'tryline.full,tryline.fan.farnham', 'and Preferences gets the two together');
+  // no copy in Preferences after all: copying starts with the answer
+  prefs.delete(STORE); store.clear();
+  const late3 = deferred(); getHold = late3;
+  N.boot(() => {}); await wait(60);
+  X.save(); await flush();
+  ok(!prefs.has(STORE), 'still silent: nothing copied');
+  late3.resolve({ value:null }); await flush();
+  ok(prefs.get(STORE) === store.get(STORE), 'it answers with no copy: the game\'s save is copied at once');
+  getHold = null; N.state().wait = keep; T.store.setBought([]);
+}
+
+// 3l. a save in the web view that does not read as one (cut short) counts as lost, and is never copied
+{
+  store.set(STORE, '{"settings":{"half":0'); prefs.set(STORE, JSON.stringify(kept));
+  const gets = calls('Preferences', 'get').length, sets = calls('Preferences', 'set').length;
+  ok(await N.saved() === JSON.stringify(kept) && calls('Preferences', 'get').length === gets + 1, 'Preferences is asked, and its copy is the one to put back');
+  N.mirror(); await flush();
+  ok(calls('Preferences', 'set').length === sets && prefs.get(STORE) === JSON.stringify(kept), 'the cut-short text is never copied over it');
+  store.clear(); X.save(); await flush();
 }
 
 // 3g. plugins missing or failing leave the web behaviour, and never throw

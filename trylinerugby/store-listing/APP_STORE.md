@@ -94,7 +94,7 @@ In App Store Connect, under App Privacy, answer **"No, we do not collect data fr
 
 Apple's rule: data is "collected" when it is sent off the device so that the developer or a third-party partner can get at it for longer than it takes to answer the request. Data handled only on the device is not collected. Why nothing in Tryline Rugby Sevens counts:
 
-- **Saves.** Settings, teams, championship, career (with the optional first name), an imported league and the list of unlocks stay in the app's own storage on the device. The native layer copies the save into Capacitor Preferences, which is also on the device. Nothing is uploaded.
+- **Saves.** Settings, teams, championship, career (with the optional first name), an imported league and the list of unlocks stay in the app's own storage on the device. The native layer copies the save into Capacitor Preferences, which is also on the device. Nothing is uploaded. Like any app's storage, it is part of the phone's own iCloud or computer backup when the user has one: that is the user's backup with Apple, not data sent to us, and privacy.html says so.
 - **Purchases.** StoreKit takes the payment. Apple's guidance: "You are not responsible for disclosing data collected by Apple", and payment information entered outside the app, which the developer never sees, "is not collected". The game reads back only which product ids the account owns and keeps that on the device. No receipt is sent to any server of ours or anyone else's; the store adapter talks to StoreKit and nothing else (no RevenueCat or similar service, which would collect purchase history).
 - **Super Fan.** Each partner club is its own product (`tryline.fan.<club>`), so Apple's own sales report shows each club's sales. The game sends nothing to count them.
 - **Import.** A player pastes a club or tournament link; the app fetches that public page from the device and reads team names out of it. The club's site sees an ordinary web request (the device's IP address and a plain `TryLineRugby` user agent), as it would from any browser. Nothing about the player goes with it, and nothing comes to us. Apple's guidance on IP addresses sent with a request and not kept points the same way; and the site is the one the user chose to read, not a partner of ours.
@@ -117,16 +117,17 @@ App Store Connect asks whether the app contains, shows or accesses third-party c
 - **Quins** (formerly Harlequins) is in the Local list with magenta and light blue. The owner renamed it from the professional club's registered name to the nickname on 2026-11-08; the colours stay. If the professional club objects, rename it by place, as the professional sides are.
 - **Grand Slam, Triple Crown and Wooden Spoon** are used as the championship's honours. They are generic sporting terms; they are left out of the store copy anyway.
 - **Import** reads public club and tournament pages that the player chooses, keeps only team names, colours and table numbers, and never keeps a person's name or photo.
+- **Import and Pitchero's terms (Super Fan only).** Import is part of the paid Super Fan, and its main adapter reads Pitchero club pages (src/import.js). Guideline 5.2.2: an app that uses or monetises a third-party service's content must be permitted to under that service's terms, and Apple may ask for proof. Pitchero's terms of use have not been checked yet (its site could not be reached from where this was written). Before Super Fan goes on sale: read them; if they bar automated access or commercial use, get Pitchero's written permission and keep it ready to upload in App Review, or keep Import to pages the club itself controls. Write the answer here. Without Super Fan at launch Import is not in the app and this can wait.
 - **Typefaces**: Big Shoulders Display and Atkinson Hyperlegible, both under the SIL Open Font License, with the licence files shipped next to the fonts.
 
 ## In-App Purchases
 
-All are **Non-Consumable**. Create them under Monetisation, In-App Purchases, before the build is submitted, and attach them to the version (Apple reviews them with it). Each needs a display name, a description, a price, a review screenshot of the unlock card in the game, and review notes.
+All are **Non-Consumable**. Create them under Monetisation, In-App Purchases, before the build is submitted. Attach `tryline.full` to the version (Apple reviews it with the version). Attach a club's `tryline.fan.<club>` only when that club has `agreed:true` in the build being submitted: with `agreed:false` the game never offers it, and a reviewer who cannot find an attached purchase rejects the version (guideline 2.1). Each needs a display name, a description, a price, a review screenshot of the unlock card in the game, and review notes.
 
 | Product ID | Reference name | Price | Notes |
 |---|---|---|---|
 | `tryline.full` | Full Game | £1.99 | Championship, Career, Create Team and Hard. |
-| `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Import and the club badge. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set in FAN_CLUBS. |
+| `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Import and the club badge. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set and `agreed:true` is on its FAN_CLUBS entry, in the build submitted. |
 | `tryline.fan.<club>` | Super Fan (club name) | £3.99 | One per partner club, same shape. There is no generic `tryline.fan`. |
 
 The ids are the store builder's (src/store.js, `FAN_CLUBS`, and `trylinerugby/store/README.md`); they must match exactly.
@@ -153,7 +154,7 @@ Super Fan: Farnham RUFC
 Full Game and Import. Supports Farnham RUFC.
 ```
 
-**Family Sharing.** Non-consumables can be shared with a Family Sharing group. Turning it on is kind to families (one unlock for every child's device). It cannot be turned off again for a product once on. For Super Fan it means one sale can unlock several devices, and only the one sale is reported and shared with the club. ****On for both products (owner, 2026-11-08).** Set it when each product is created; it cannot be switched off later.**
+**Family Sharing.** Non-consumables can be shared with a Family Sharing group. Turning it on is kind to families (one unlock for every child's device). It cannot be turned off again for a product once on. For Super Fan it means one sale can unlock several devices, and only the one sale is reported and shared with the club. **On for both products (owner, 2026-11-08).** Set it when each product is created; it cannot be switched off later. The support page tells parents a family member gets the unlocks on their own Apple Account.
 
 **Price of Super Fan.** £3.99, the owner's choice (Full Game stays £1.99). The club's share is 50% of what Apple pays us for each unlock, after its commission and VAT: about £1.41 of £3.99 in the UK under the Small Business Program's 15% commission, about £1.16 at 30% (SUPER_FAN.md has the arithmetic). The game and superfan.html say "of what we receive", so nobody reads it as half the price.
 
@@ -161,9 +162,24 @@ Full Game and Import. Supports Farnham RUFC.
 
 - Sign-in required: **No**.
 - Contact: **[OWNER: the name and phone number App Review should use]**, email support@signcheck.ai.
-- Notes, ready to paste:
+- Notes, ready to paste. Two versions, as for the description (LISTING.md): **without Super Fan** while no club has `agreed:true` in the build, and **with Super Fan** once one has. `node tools/listing.mjs` says which applies.
+
+Without Super Fan (attach `tryline.full` only):
 
 <!-- copy:apple.review -->
+```text
+Tryline Rugby Sevens is a rugby sevens game. The whole game runs from files inside the app and plays offline; it downloads no code.
+
+Unlock: Full Game (tryline.full) is a non-consumable in-app purchase. Championship, Career, Create Team and Hard show a lock, and open an Unlock card. Restore Purchases is in the Grown-Ups panel, on the home screen.
+
+Grown-up check: purchases, Restore Purchases and the privacy and support links first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
+
+No ads, no analytics, no accounts, no data collected.
+```
+
+With Super Fan (attach `tryline.full` and the agreed club's `tryline.fan.<club>`):
+
+<!-- copy:apple.review.fan -->
 ```text
 Tryline Rugby Sevens is a rugby sevens game. The whole game runs from files inside the app and plays offline; it downloads no code.
 
@@ -171,14 +187,14 @@ Unlocks: Full Game (tryline.full) and Super Fan for a partner club (tryline.fan.
 
 Grown-up check: purchases, Restore Purchases, the privacy and support links and Import first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
 
-Import (part of Super Fan) reads a club or tournament page you paste in. A public link to try: [OWNER: a club page link]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
+Import (part of Super Fan, on the team screen as Import Club) reads a club or tournament page you paste in. A public link to try: [OWNER: the partner club's own page, used with the club's consent]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
 
 Super Fan is an ordinary purchase of an unlock. Before purchase the game states the share of what we receive for each Super Fan unlock that goes to the partner club (50% of Apple's proceeds); SignCheck Ltd pays that share to the club under a written agreement.
 
 No ads, no analytics, no accounts, no data collected.
 ```
 
-Check the notes against the build being submitted, Restore Purchases' place above all: the Grown-Ups panel is the store work's, and its labels may change before launch.
+Check the notes against the build being submitted, Restore Purchases' place above all: the Grown-Ups panel is the store work's, and its labels may change before launch. `node tools/listing.mjs --launch` asks for the club link only once a club is agreed.
 
 ## Version Release
 

@@ -69,6 +69,7 @@ function storeRefresh(granted) {
   if (!$('s-teams').hidden) renderTeams();
   if (!$('s-join').hidden) renderJoin();
   if ($('m-store').hidden) return;
+  if (storeUi.unpriced && storePrices[storeUi.unpriced]) { storeUi.unpriced = null; storeUi.msg = ''; }   // the store answered after all: its out-of-reach message goes
   if (granted && !storeUi.busy) {
     storeUi.msg = '';
     if (storeUi.mode === 'unlock' && storeHas(storeUi.feature)) { storeDone(); return; }
@@ -140,7 +141,11 @@ function storeAsk(go) {                    // the grown-up check over the card: 
   parentGate(() => { if (token !== storeUi.token) return; $('m-store').hidden = false; go(); },
     () => { if (token !== storeUi.token) return; $('m-store').hidden = false; storeCardFocus(); });
 }
-function storeBuyAsk(id) { if (!storeUi.busy && storeIds().includes(id)) storeAsk(() => storeBuy(id)); }
+function storeBuyAsk(id) {
+  if (storeUi.busy || !storeIds().includes(id)) return;
+  if (storeUnpriced(id)) { storeUi.unpriced = id; storeUi.msg = STORE_MSG.store; storeCardRender(); storeCardFocus(); storePricesLoad(); return; }   // the store never priced it: said now, not after the grown-up check, and asked again
+  storeAsk(() => storeBuy(id));
+}
 async function storeBuy(id) {
   const u = storeUi, token = u.token;
   u.busy = true; u.msg = ''; storeCardRender();

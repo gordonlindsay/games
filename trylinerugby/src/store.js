@@ -43,6 +43,7 @@ let storeNativeHook = null;                // the tests' stand-in for nativeOn (
 let storeTierHook = null;                  // the tests' stand-in for STORE_WEB_TIER
 let storeUse = null;                       // the tests' backend, in place of the app's or the stub
 let storePrices = {};                      // product id: its price as the store writes it (£1.99), once the store has said
+let storeAsked = false;                    // the store has answered a price request, or failed to, since the start
 let storeStarted = false;
 
 /* ---------- who has what ---------- */
@@ -108,8 +109,35 @@ function storeFirst(list) {                // the Super Fan's club moved to the 
 function storeGrant(ids) {                 // add only: a store that answers with less (offline, signed out) never takes one away
   let added = false;
   for (const id of Array.isArray(ids) ? ids : []) if (typeof id === 'string' && STORE_ID.test(id) && !storeBought.includes(id)) { storeBought.push(id); added = true; }
-  if (added) { save(); storeRefresh(true); }
+  if (added) { storeKeep(); storeRefresh(true); }
   return added;
+}
+/* A refund, or a family member's unlock that ends when they leave the Family Sharing group: Apple sends the transaction again with a
+   revocationDate (the transactionUpdated listener). The unlock goes only if the store's current entitlements no longer hold it (an
+   unlock bought twice, once shared and once bought, stays). Anything saved stays saved, only locked, as on the free web. */
+function storeRevoke(ids) {
+  const gone = (Array.isArray(ids) ? ids : []).filter(id => storeBought.includes(id));
+  if (!gone.length) return Promise.resolve(false);
+  return Promise.resolve().then(() => storeApi().owned()).then(own => (Array.isArray(own) ? own : []), () => []).then(own => {
+    const before = storeBought.length;
+    storeBought = storeBought.filter(id => !gone.includes(id) || own.includes(id));
+    if (storeBought.length === before) return false;
+    storeKeep(); storeRefresh();
+    return true;
+  });
+}
+/* The purchases into the save at once. save() waits out a drill (practice never writes settings or a championship), so an unlock
+   that arrives during one (Ask to Buy approved, a family member's) goes into the save as it stands, and into Preferences. */
+function storeKeep() {
+  if (!practice) { save(); return; }
+  try {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { s = null; }
+    if (!s || typeof s !== 'object' || Array.isArray(s)) s = {};
+    s.store = storeBought.length ? { owned:storeBought.slice() } : undefined;
+    localStorage.setItem(STORE, JSON.stringify(s));
+  } catch (e) { /* storage refused: the store gives them back at the next start, or Restore Purchases */ }
+  if (typeof nativeMirror === 'function') nativeMirror();
 }
 
 /* ---------- the adapter ----------
@@ -120,11 +148,15 @@ function storeGrant(ids) {                 // add only: a store that answers wit
 const storePlugin = () => { try { const C = window.Capacitor, P = C && C.Plugins && C.Plugins.NativePurchases; return P && typeof P.purchaseProduct === 'function' ? P : null; } catch (e) { return null; } };
 const storeIds = () => [STORE_FULL, ...FAN_CLUBS.map(c => c.product)];
 /* A transaction counts when it is for a product of ours, Google's state is Purchased (1, not 0 Pending) and Apple has not revoked it. */
-const storeValid = t => !!t && typeof t === 'object' && typeof t.productIdentifier === 'string' && STORE_ID.test(t.productIdentifier)
-  && (t.purchaseState == null || String(t.purchaseState) === '1') && !t.revocationDate;
-function storeWhy(e) {                     // a refused purchase, by the words either platform rejects with
+const storeOurs = t => !!t && typeof t === 'object' && typeof t.productIdentifier === 'string' && STORE_ID.test(t.productIdentifier);
+const storeValid = t => storeOurs(t) && (t.purchaseState == null || String(t.purchaseState) === '1') && !t.revocationDate;
+const storeRevoked = t => storeOurs(t) && !!t.revocationDate;
+/* A refused purchase, by the words either platform rejects with. No connection, or a product the store could not find (Apple:
+   "Cannot find product for id", Google: SERVICE_UNAVAILABLE), is the store out of reach, said as such. */
+function storeWhy(e) {
   const m = String((e && e.code) || '') + ' ' + String((e && e.message) || e || '');
-  return /cancel/i.test(m) ? 'cancelled' : /pending/i.test(m) ? 'pending' : /already_?owned/i.test(m) ? 'owned' : 'failed';
+  return /cancel/i.test(m) ? 'cancelled' : /pending/i.test(m) ? 'pending' : /already_?owned/i.test(m) ? 'owned'
+    : /offline|network|internet|connection|timed?[ _]?out|cannot find product|not found|unavailable/i.test(m) ? 'store' : 'failed';
 }
 const storeBackend = {
   async products() {
@@ -156,9 +188,9 @@ const storeBackend = {
     const P = storePlugin(); if (!P) return { ok:false, why:'store' };
     try { await P.restorePurchases(); return { ok:true, ids:await this.owned() }; } catch (e) { return { ok:false, why:storeWhy(e) }; }
   },
-  listen(fn) {                             // an Apple purchase that finishes later (Ask to Buy approved). The plugin fires it on iOS
-    const P = storePlugin(); if (!P || typeof P.addListener !== 'function') return;   // only: Google's pending payment arrives by owned() at the next start
-    P.addListener('transactionUpdated', t => { if (storeValid(t)) fn([t.productIdentifier]); });
+  listen(fn, gone) {                       // an Apple purchase that finishes later (Ask to Buy approved), or one revoked (a refund). The
+    const P = storePlugin(); if (!P || typeof P.addListener !== 'function') return;   // plugin fires it on iOS only: Google's pending payment arrives by owned() at the next start
+    P.addListener('transactionUpdated', t => { if (storeValid(t)) fn([t.productIdentifier]); else if (storeRevoked(t) && typeof gone === 'function') gone([t.productIdentifier]); });
   },
 };
 /* Google wants every purchase acknowledged within three days, or it refunds it. The plugin acknowledges one bought and paid in the
@@ -184,9 +216,12 @@ const storeApi = () => storeUse || (storeNative() && storePlugin() ? storeBacken
 function storePricesLoad() {
   Promise.resolve().then(() => storeApi().products()).then(list => {
     for (const p of Array.isArray(list) ? list : []) if (p && typeof p.price === 'string' && p.price) storePrices[p.id] = p.price;
-    storeRefresh();
-  }, () => { /* offline: the buttons go without a price until the card opens again */ });
+    storeAsked = true; storeRefresh();
+  }, () => { storeAsked = true; });       // offline: the buttons go without a price, and say so when tapped (storeBuyAsk), until it answers
 }
+/* A product the store has not priced though it was asked (offline, or not found): tapping it says the store is out of reach at once,
+   rather than after the grown-up check. */
+const storeUnpriced = id => storeNative() && storeAsked && !storePrices[id];
 /* In the app, once: listen for purchases that finish later, read back what is owned (no prompt, acknowledging any Google payment
    that completed since), then fetch the prices. One after the other: the plugin's Android side closes its billing connection at
    each new call, so a price request alongside could cut an acknowledgement short. */
@@ -194,6 +229,6 @@ function storeStart() {
   if (storeStarted || !storeNative()) return;
   storeStarted = true;
   const api = storeApi();
-  try { api.listen(ids => storeGrant(ids)); } catch (e) { /* no listener: Restore Purchases still reads them */ }
+  try { api.listen(ids => storeGrant(ids), ids => storeRevoke(ids)); } catch (e) { /* no listener: Restore Purchases still reads them */ }
   Promise.resolve().then(() => api.owned()).then(storeGrant, () => {}).then(storePricesLoad);
 }

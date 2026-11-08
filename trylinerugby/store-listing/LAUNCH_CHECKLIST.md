@@ -24,6 +24,7 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
 
 ## 3. Web Addresses and Contact
 
+- [ ] **The company's details on the three pages.** privacy.html (from PRIVACY.md), support.html and superfan.html end with SignCheck Ltd's company number and registered office, which a UK company must show on its websites (the Company, LLP and Business (Names and Trading Disclosures) Regulations 2015, reg 25) and which the CMA expects a game business to give up front. Fill in both **[OWNER: ...]** placeholders before the pages go live (they are public once the work is merged). Also check the registered name: signcheck.ai's own terms and privacy pages give it as **Sign Check Ltd** (Gordon, 2026-10-21), with a space, while this pack says SignCheck Ltd throughout. If the registered name is Sign Check Ltd, use it on the pages, in the copyright line and in the review notes too.
 - [ ] Check **support@signcheck.ai** is a mailbox someone reads. The App Store, the support page, the Super Fan page and the privacy policy all publish it.
 - [ ] Fill every remaining **[OWNER: ...]** placeholder (the App Review contact, the Cartoon or Fantasy Violence answer, how often the club is paid, and the rest). Then `node tools/listing.mjs --write` (privacy.html is made from PRIVACY.md) and `node tools/listing.mjs --launch`, which fails while any placeholder is left.
 - [ ] Merge the launch work so privacy.html, support.html and superfan.html are live on GitHub Pages, and open each on a phone. These addresses go into App Store Connect:
@@ -34,11 +35,15 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
 
 ## 4. Partner Clubs, App Record and Products
 
-- [ ] **Farnham RUFC confirms 50% of proceeds in writing before launch**: 50% of what Apple pays us for each Super Fan unlock, after its commission and VAT (SUPER_FAN.md has the agreement's outline). No written confirmation, no Farnham Super Fan at launch: leave `tryline.fan.farnham` off the version and its share unset in the game.
+- [ ] **Farnham RUFC confirms 50% of proceeds in writing before launch**: 50% of what Apple pays us for each Super Fan unlock, after its commission and VAT (SUPER_FAN.md has the agreement's outline). This decides which of two versions goes out, so settle it before the build is archived:
+  - **Confirmed:** `agreed:true` on Farnham's `FAN_CLUBS` entry and its row on superfan.html, in one change, then build and archive. Attach `tryline.full` and `tryline.fan.farnham`, and paste the **with Super Fan** description and review notes (`apple.description.fan`, `apple.review.fan`).
+  - **Not confirmed:** no Farnham Super Fan at launch. The build keeps `agreed:false`, so the app offers the Full Game alone and has no Import Club. Attach `tryline.full` only, leave `tryline.fan.farnham` off the version, and paste the **without Super Fan** description and review notes (`apple.description`, `apple.review`).
+  - `node tools/listing.mjs` prints which applies to the build as it stands.
+- [ ] **Pitchero's terms (Super Fan only).** Import is part of the paid Super Fan and reads Pitchero club pages. Before Super Fan goes on sale, read Pitchero's terms of use (APP_STORE.md, Content Rights, guideline 5.2.2). If they bar automated access or commercial use, get Pitchero's written permission and keep it ready for App Review, or keep Import to pages the club itself controls. Use the partner club's own page, with its consent, as the review notes' test link.
 - [ ] **A club confirms in writing before superfan.html lists it.** The page goes live as soon as the work is merged, long before the app, so it names no partner club until then. Once a club has signed, in one change: `agreed:true` and its share on its `FAN_CLUBS` entry (src/store.js) and its row on superfan.html. `node tools/listing.mjs` checks the two agree, and fails on a row, or the club's name, on superfan.html for a club not marked agreed.
 - [ ] **App Store Connect app record**: New App, iOS, Tryline Rugby Sevens, English (U.K.), bundle id `ai.signcheck.tryline`, SKU `TRYLINE1`. Then fill App Information, Age Rating, App Privacy and Pricing from APP_STORE.md.
 - [ ] **In-app purchases** (App Store): `tryline.full` at £1.99, and `tryline.fan.farnham` at £3.99 once Farnham RUFC has confirmed. Exact ids, non-consumable.
-- [ ] **Family Sharing** for each in-app purchase: decide (it cannot be turned off once on).
+- [x] **Family Sharing**: on for both products (owner, 2026-11-08). Set it as each product is created; it cannot be turned off once on.
 - [x] **iPad**: iPhone only for the first version (owner, 2026-11-08). The native project's device family is iPhone; iPad comes later, once the layout scales up.
 - [ ] **Screenshots**: after the merge, and again after the Mac session's new graphics, re-shoot (SCREENSHOTS.md) and upload the iPhone 6.9-inch set (iPhone only for now).
 
@@ -61,7 +66,7 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
 ## 6. Submit to the App Store
 
 - [ ] Release set to **Manually release this version**, so the owner picks the day.
-- [ ] Attach the in-app purchases to the version, add the review notes from APP_STORE.md (with a club link for Import), submit for review. A first review often takes a day or two.
+- [ ] Attach the in-app purchases to the version and add the review notes from APP_STORE.md, the version that matches the build (section 4): without Super Fan, `tryline.full` alone and no Import; with Super Fan, both products and the partner club's page as the link for Import. Submit for review. A first review often takes a day or two.
 - [ ] **At the App Store launch (owner, 2026-11-08): flip `STORE_WEB_TIER` to `'free'` once `STORE_LINKS.ios` is set.** An Android browser stays fully unlocked until `STORE_LINKS.android` is set (src/store.js), so Android visitors never meet a lock with no app to buy it in.
 - [ ] Launch day, in this order:
   1. Release the App Store version.

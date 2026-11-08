@@ -122,7 +122,8 @@ function kidsChase(p, inp, dt) {                           // the stick let go w
    written out in words, a teen times six to nine with a three-figure answer (seventeen times six), typed on its own number keys.
    A wrong answer clears and asks a new one. A second wrong answer in a row rests the keys (10s, then 20s, 40s and 60s at most until
    a right answer), so tapping a pattern cannot cycle through the questions until one comes out; the rest outlives the card, so
-   shutting it and opening it again does not skip it. Touch, the keyboard (the figures, Backspace, Escape, and Tab inside the card:
+   shutting it and opening it again does not skip it, and in the app it outlives the game too (kidsGateKeep), so closing the app and
+   opening it again does not skip it either. Touch, the keyboard (the figures, Backspace, Escape, and Tab inside the card:
    the rest of the page is inert while it is open) and a controller (the card is the nav layer, Back is Cancel) all reach it. Only a
    right answer calls onPass. */
 const KIDS_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -151,11 +152,36 @@ function kidsGateSleep() {                                 // the second wrong a
   kidsGateRests++; kidsGateMiss = 0;
   const r = kidsGateRest = { until:Date.now() + ms, ms };
   setTimeout(() => kidsGateWake(r), ms);
+  kidsGateKeep();
 }
 function kidsGateWake(r) {                                 // r: the rest its timer was set for, so a stale timer never ends a later one (the tools call it bare)
   if (!kidsGateRest || (r && r !== kidsGateRest)) return;
   kidsGateRest = null;
   if (kidsGate) kidsGateShow(false);
+  kidsGateKeep();
+}
+/* In the app, the rest under way and the count of rests are kept on the device under KIDS_GATE_KEY, apart from the save, and read
+   back at start: a child who closes the app and opens it again comes back to the same wait. A right answer clears them. The web
+   keeps them in memory alone, as before. */
+const KIDS_GATE_KEY = 'tryline.gate';
+const kidsGateApp = () => typeof nativeOn === 'function' && nativeOn();
+function kidsGateKeep() {
+  if (!kidsGateApp()) return;
+  try {
+    if (kidsGateRests > 0) localStorage.setItem(KIDS_GATE_KEY, JSON.stringify({ until:kidsGateRest ? kidsGateRest.until : 0, rests:kidsGateRests }));
+    else if (typeof localStorage.removeItem === 'function') localStorage.removeItem(KIDS_GATE_KEY);
+  } catch (e) { /* storage refused: the rest still holds while the game is open */ }
+}
+function kidsGateLoad() {
+  if (!kidsGateApp()) return;
+  let g = null;
+  try { g = JSON.parse(localStorage.getItem(KIDS_GATE_KEY) || 'null'); } catch (e) { g = null; }
+  if (!g || typeof g !== 'object') return;
+  if (Number.isInteger(g.rests) && g.rests > 0 && g.rests <= 16) kidsGateRests = g.rests;
+  const left = Math.min(KIDS_GATE.restMax, Number(g.until) - Date.now());   // a clock put back never makes it longer than a rest can be
+  if (!(left > 0)) return;
+  const r = kidsGateRest = { until:Date.now() + left, ms:left };
+  setTimeout(() => kidsGateWake(r), left);
 }
 function parentGate(onPass, onCancel) {
   if (kidsGate) kidsGateClose(false);                      // one check at a time: an older one is cancelled
@@ -175,7 +201,7 @@ function kidsGateClose(passed) {
   $('m-gate').hidden = true; setFocus(null);
   for (const el of g.inert) el.inert = false;
   if (g.back && g.back.focus && !(g.back.closest && g.back.closest('[hidden]'))) g.back.focus();
-  if (passed) { kidsGateMiss = 0; kidsGateRests = 0; }
+  if (passed) { kidsGateMiss = 0; kidsGateRests = 0; kidsGateKeep(); }
   const fn = passed ? g.onPass : g.onCancel;
   if (typeof fn === 'function') fn();
 }
@@ -193,6 +219,7 @@ for (const n of '1234567890') $('pg-k' + n).addEventListener('click', () => kids
 $('pg-del').addEventListener('click', kidsGateDelete);
 $('pg-cancel').addEventListener('click', () => kidsGateClose(false));
 $('m-gate').hidden = true;                                 // closed until asked for (the test harness's stand-in elements start open)
+kidsGateLoad();                                            // the app: a rest still under way when the app was closed
 DEFAULT_FOCUS['m-gate'] = () => $('pg-k1');
 window.addEventListener('keydown', e => {                  // while the check is open no key reaches the game; the figures, Backspace and Escape answer it, and every other key keeps the browser's own meaning (Tab, Enter and Space on the card's buttons)
   if (!kidsGate) return;

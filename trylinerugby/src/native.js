@@ -9,14 +9,15 @@
    - safe areas: the env(safe-area-inset-*) the CSS already uses, under viewport-fit=cover. SystemBars in
      capacitor.config.json keeps Android's right.
    - buzz() through Haptics, a light, medium or heavy tap: WKWebView has no navigator.vibrate.
-   - the save (tryline.v1) copied into Preferences after every save, and put back at start when localStorage is empty:
+   - the save (tryline.v1) copied into Preferences after every save, and put back at start when localStorage has none:
      iOS can clear a web view's storage when the phone runs short of space, and Preferences lives in the app's own data.
+     Nothing is copied until Preferences has answered, so a slow answer never has a fresh game written over the copy.
    - Android's Back drives the game's own: Pause and Resume in play, else the open card's or screen's Back, and on the home
      menu the app goes to the background with the game as it was.
    Every plugin is optional: one missing, or one that fails, leaves the web behaviour in its place. In a browser nativeOn()
    is false and none of this runs, so the web build behaves as before. tools/native.mjs checks it under a stubbed Capacitor.
    ========================================================= */
-const nativeApp = { started:false, ready:false, restored:false, queued:false, mirrored:null, wait:2000 };   // wait: ms the start gives Preferences before going on without it
+const nativeApp = { started:false, ready:false, restored:false, queued:false, mirrored:null, wait:2000, hold:true, late:null };   // wait: ms the start gives Preferences before going on without it; hold: no copy until it has answered; late: a copy it gave after that
 /* True only inside the app: Capacitor's bridge says it is native. A browser has no window.Capacitor, and Capacitor's own
    web runtime answers false. Others ask it as typeof nativeOn === 'function' && nativeOn(). */
 function nativeOn() {
@@ -39,11 +40,12 @@ function nativeCall(name, method, options) {
 /* ---------- start ---------- */
 /* boot.js starts the game through this. In a browser go() runs at once, exactly as before. In the app the plugins are set
    up first, then the save is put back if the web view lost it, then the game starts, and its save is copied once.
-   Preferences that never answers costs nativeApp.wait at most, and an answer that comes later is ignored, never
-   written over a game already running. */
+   Preferences that never answers costs nativeApp.wait at most: the game starts fresh, and nothing is copied over Preferences
+   until it answers (nativeLate). */
 function nativeBoot(go) {
   if (!nativeOn()) { go(); return; }
   nativeStart();
+  nativeApp.hold = true;
   let done = false;
   const finish = saved => {
     if (done) return;
@@ -54,7 +56,30 @@ function nativeBoot(go) {
     nativeMirror();
   };
   setTimeout(() => finish(null), nativeApp.wait);
-  nativeSaved().then(finish, () => finish(null));
+  nativeSaved().then(saved => {
+    if (!done) { nativeApp.hold = false; finish(saved); } else nativeLate(saved);
+  }, () => { nativeApp.hold = false; finish(null); });
+}
+/* Preferences answered after the game had started without it. No copy there: copying starts now. A copy: the game started fresh only
+   because the phone was slow to answer, so the copy goes back, at once unless a match or a drill is under way, else at the next
+   goHome (nativePutBack), and until then nothing is copied over it. */
+function nativeLate(saved) {
+  if (typeof saved !== 'string') { nativeApp.hold = false; nativeApp.mirrored = null; nativeMirror(); return; }   // Preferences holds nothing, so the game's save is copied whatever was copied before
+  nativeApp.late = saved;
+  if (!playing() && !practice) goHome();
+}
+/* goHome calls this first: the late copy into storage and into the game. A purchase made meanwhile is kept with it. */
+function nativePutBack() {
+  const text = nativeApp.late;
+  if (!text || practice) return false;
+  nativeApp.late = null;
+  const bought = storeBought.slice();
+  try { localStorage.setItem(STORE, text); } catch (e) { /* storage refused: the game still takes the copy */ }
+  nativeApp.restored = true; nativeApp.mirrored = text; nativeApp.hold = false;
+  restore(JSON.parse(text));
+  const more = bought.filter(id => !storeBought.includes(id));
+  if (more.length) { storeBought.push(...more); save(); }
+  return true;
 }
 function nativeStart() {
   if (nativeApp.started || !nativeOn()) return;
@@ -79,22 +104,26 @@ function nativeBars() {
 }
 
 /* ---------- the save ---------- */
+/* Text that reads as a save: JSON for an object. */
+function nativeIsSave(text) {
+  if (typeof text !== 'string' || !text) return false;
+  try { const s = JSON.parse(text); return !!s && typeof s === 'object' && !Array.isArray(s); } catch (e) { return false; }
+}
 /* The copy in Preferences, when the web view has lost the save: its text if it reads as a save, else null. A save still in
-   localStorage is never replaced. */
+   localStorage is never replaced; one that does not read as a save (cut short) counts as lost. */
 function nativeSaved() {
   let have = null;
   try { have = localStorage.getItem(STORE); } catch (e) { have = null; }
-  if (have) return Promise.resolve(null);
+  if (nativeIsSave(have)) { nativeApp.hold = false; return Promise.resolve(null); }   // the web view's own save is the latest: the copy may follow it
   return nativeCall('Preferences', 'get', { key:STORE }).then(r => {
     const text = r && typeof r.value === 'string' ? r.value : '';
-    if (!text) return null;
-    try { const s = JSON.parse(text); return s && typeof s === 'object' && !Array.isArray(s) ? text : null; } catch (e) { return null; }
+    return nativeIsSave(text) ? text : null;
   });
 }
 /* save() calls this: once the save is written, its exact text goes to Preferences. Saves in one turn of the event loop make
-   one copy, an unchanged save none, and nothing is copied before the start has had its chance to put a save back. */
+   one copy, an unchanged save none, and nothing is copied before Preferences has answered at the start, or that is not a save. */
 function nativeMirror() {
-  if (!nativeApp.ready || nativeApp.queued) return;
+  if (!nativeApp.ready || nativeApp.hold || nativeApp.queued) return;
   const prefs = nativePlugin('Preferences');
   if (!prefs || typeof prefs.set !== 'function') return;
   nativeApp.queued = true;
@@ -102,7 +131,7 @@ function nativeMirror() {
     nativeApp.queued = false;
     let text = null;
     try { text = localStorage.getItem(STORE); } catch (e) { text = null; }
-    if (typeof text !== 'string' || !text || text === nativeApp.mirrored) return;
+    if (!nativeIsSave(text) || text === nativeApp.mirrored) return;
     try { Promise.resolve(prefs.set({ key:STORE, value:text })).then(() => { nativeApp.mirrored = text; }, () => {}); } catch (e) { /* tried again at the next save */ }
   });
 }

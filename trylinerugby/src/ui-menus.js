@@ -113,11 +113,17 @@ function resume() {
   else if (c && c.kind === 'lineout' && c.outcome == null) c.t = Math.max(CUT_IN, c.t >= c.throwT ? c.throwT : 0, c.t - 0.6);
   else if (c && c.kind === 'scrum' && !c.engaged) c.t = Math.max(CUT_IN, c.t - 0.6);
 }
+/* A two-tap confirm (Quit, Delete Team, Start Fresh, Start New Career, Remove League): the first tap asks again, and the second
+   counts only once CONFIRM.gap has passed, so a quick double tap (a child mashing, or one tap read twice) only asks. */
+const CONFIRM = { gap:500, at:0 };
+function confirmArm() { CONFIRM.at = Date.now(); }
+const confirmSoon = () => Date.now() - CONFIRM.at < CONFIRM.gap;
 let quitArmed = false;
 $('b-pause').addEventListener('click', pause);
 $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
-  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
+  if (!quitArmed) { quitArmed = true; confirmArm(); $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
+  if (confirmSoon()) return;
   if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Training, or Back to Career for a caller (which hears it as a quit)
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
@@ -158,6 +164,7 @@ function homeNote(el, text, name) {
   el.hidden = false;
 }
 function goHome() {
+  if (typeof nativePutBack === 'function') nativePutBack();   // the app: a save Preferences gave back late goes in first (native.js)
   navOnly = null;
   renderHome();
   showScreen('s-home');
@@ -366,7 +373,8 @@ function buildBuilder() {
   });
   $('bd-back').addEventListener('click', () => { renderTeams(); showScreen('s-teams'); });
   $('bd-del').addEventListener('click', () => {
-    if (!delArmed) { delArmed = true; $('bd-del').textContent = 'Confirm Delete'; return; }
+    if (!delArmed) { delArmed = true; confirmArm(); $('bd-del').textContent = 'Confirm Delete'; return; }
+    if (confirmSoon()) return;
     custom = custom.filter(c => c.key !== editing.key);
     if (quickPick && keyOf(quickPick) === editing.key) quickPick = null;
     if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = DEFAULT_TEAM;
@@ -417,7 +425,7 @@ function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
   const tally = [['Title', 'Titles', totals.champions], ['Grand Slam', 'Grand Slams', totals.grandSlams], ['Triple Crown', 'Triple Crowns', totals.tripleCrowns]];
-  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved in this browser.</p>`
+  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved on this device.</p>`
     + (history.length ? `<p class="cabinet-tally">${tally.map(([singular, plural, n]) => `${n} ${n === 1 ? singular : plural}`).join(' · ')}</p>` + history.map((c, i) => {
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
@@ -492,7 +500,8 @@ function renderHub() {
 let resetArmed = false;
 $('hub-back').addEventListener('click', goHome);
 $('hub-reset').addEventListener('click', () => {
-  if (!resetArmed) { resetArmed = true; $('hub-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (!resetArmed) { resetArmed = true; confirmArm(); $('hub-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (confirmSoon()) return;
   archiveChampionship(champ); champ = null; save(); goHome();
 });
 

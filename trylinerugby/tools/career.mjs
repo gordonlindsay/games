@@ -420,6 +420,20 @@ function playOut(us, them, deeds) {
   C.renderEnd();
   ok(C.restart() === false && C.get() === hof, 'and drawing the Hall of Fame again asks again');
   ok(C.restart() === true && C.get() === null && saved().career === null && shown() === 's-career-new', 'the second tap ends the career and opens New Player');
+  // a quick double tap (a child mashing the button, or one tap read twice) only asks: the second tap counts once CONFIRM.gap has passed
+  const realNow = Date.now; let now = 1e12; Date.now = () => now; D.CONFIRM.gap = 500;
+  const mash = C.create({ pos:'B', num:4, club:X.CLUBS[0] }); C.set(mash); X.save(); C.open();
+  ok(shown() === 's-career' && $('cr-reset').textContent === 'Start Fresh', 'a career under way opens on its hub, with Start Fresh');
+  $('cr-reset').click(); now += 120; $('cr-reset').click();
+  ok(C.get() === mash && saved().career && shown() === 's-career' && $('cr-reset').textContent === 'Tap Again to Start Fresh', 'Start Fresh tapped twice 120 ms apart only asks: the career stays, saved');
+  now += 600; $('cr-reset').click();
+  ok(C.get() === null && saved().career === null && shown() === 's-home', 'a second tap after a beat ends it');
+  const hof2 = C.create({ pos:'B', num:4, club:X.CLUBS[0] }); C.set(hof2); X.save();
+  hof2.stage = 4; hof2.country = 'ENG'; C.newSeason(hof2); finish(hof2, 1); C.open();
+  ok(C.restart() === false && (now += 120, C.restart() === false) && C.get() === hof2, 'Start New Career tapped twice 120 ms apart only asks');
+  now += 600;
+  ok(C.restart() === true && C.get() === null, 'and after a beat it starts again');
+  Date.now = realNow; D.CONFIRM.gap = 0;
 }
 
 console.log(`Career: ${passed} passed, ${failed} failed`);

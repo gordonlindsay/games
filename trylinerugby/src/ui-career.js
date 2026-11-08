@@ -120,7 +120,8 @@ $('cr-train').addEventListener('click', () => { if (careerCanTrain(career)) { re
 $('cr-table').addEventListener('click', () => { renderCareerTable(); careerShow('s-career-table'); });
 $('cr-back').addEventListener('click', goHome);
 $('cr-reset').addEventListener('click', () => {
-  if (!careerResetArmed) { careerResetArmed = true; $('cr-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (!careerResetArmed) { careerResetArmed = true; confirmArm(); $('cr-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (confirmSoon()) return;                               // a quick double tap only asks (CONFIRM, ui-menus.js)
   careerEnd(); goHome();
 });
 
@@ -197,7 +198,8 @@ function renderCareerEnd() {
 }
 /* Start New Career on the Hall of Fame wipes the career and its honours, so it takes a second tap, as Start Fresh does. */
 function careerRestart() {
-  if (!careerRestartArmed) { careerRestartArmed = true; $('ce-go').textContent = 'Tap Again to Start New Career'; return false; }
+  if (!careerRestartArmed) { careerRestartArmed = true; confirmArm(); $('ce-go').textContent = 'Tap Again to Start New Career'; return false; }
+  if (confirmSoon()) return false;
   careerRestartArmed = false; careerEnd(); careerNewOpen();
   return true;
 }

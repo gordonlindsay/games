@@ -366,6 +366,7 @@ let storeNativeHook = null;                // the tests' stand-in for nativeOn (
 let storeTierHook = null;                  // the tests' stand-in for STORE_WEB_TIER
 let storeUse = null;                       // the tests' backend, in place of the app's or the stub
 let storePrices = {};                      // product id: its price as the store writes it (£1.99), once the store has said
+let storeAsked = false;                    // the store has answered a price request, or failed to, since the start
 let storeStarted = false;
 
 /* ---------- who has what ---------- */
@@ -431,8 +432,35 @@ function storeFirst(list) {                // the Super Fan's club moved to the 
 function storeGrant(ids) {                 // add only: a store that answers with less (offline, signed out) never takes one away
   let added = false;
   for (const id of Array.isArray(ids) ? ids : []) if (typeof id === 'string' && STORE_ID.test(id) && !storeBought.includes(id)) { storeBought.push(id); added = true; }
-  if (added) { save(); storeRefresh(true); }
+  if (added) { storeKeep(); storeRefresh(true); }
   return added;
+}
+/* A refund, or a family member's unlock that ends when they leave the Family Sharing group: Apple sends the transaction again with a
+   revocationDate (the transactionUpdated listener). The unlock goes only if the store's current entitlements no longer hold it (an
+   unlock bought twice, once shared and once bought, stays). Anything saved stays saved, only locked, as on the free web. */
+function storeRevoke(ids) {
+  const gone = (Array.isArray(ids) ? ids : []).filter(id => storeBought.includes(id));
+  if (!gone.length) return Promise.resolve(false);
+  return Promise.resolve().then(() => storeApi().owned()).then(own => (Array.isArray(own) ? own : []), () => []).then(own => {
+    const before = storeBought.length;
+    storeBought = storeBought.filter(id => !gone.includes(id) || own.includes(id));
+    if (storeBought.length === before) return false;
+    storeKeep(); storeRefresh();
+    return true;
+  });
+}
+/* The purchases into the save at once. save() waits out a drill (practice never writes settings or a championship), so an unlock
+   that arrives during one (Ask to Buy approved, a family member's) goes into the save as it stands, and into Preferences. */
+function storeKeep() {
+  if (!practice) { save(); return; }
+  try {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { s = null; }
+    if (!s || typeof s !== 'object' || Array.isArray(s)) s = {};
+    s.store = storeBought.length ? { owned:storeBought.slice() } : undefined;
+    localStorage.setItem(STORE, JSON.stringify(s));
+  } catch (e) { /* storage refused: the store gives them back at the next start, or Restore Purchases */ }
+  if (typeof nativeMirror === 'function') nativeMirror();
 }
 
 /* ---------- the adapter ----------
@@ -443,11 +471,15 @@ function storeGrant(ids) {                 // add only: a store that answers wit
 const storePlugin = () => { try { const C = window.Capacitor, P = C && C.Plugins && C.Plugins.NativePurchases; return P && typeof P.purchaseProduct === 'function' ? P : null; } catch (e) { return null; } };
 const storeIds = () => [STORE_FULL, ...FAN_CLUBS.map(c => c.product)];
 /* A transaction counts when it is for a product of ours, Google's state is Purchased (1, not 0 Pending) and Apple has not revoked it. */
-const storeValid = t => !!t && typeof t === 'object' && typeof t.productIdentifier === 'string' && STORE_ID.test(t.productIdentifier)
-  && (t.purchaseState == null || String(t.purchaseState) === '1') && !t.revocationDate;
-function storeWhy(e) {                     // a refused purchase, by the words either platform rejects with
+const storeOurs = t => !!t && typeof t === 'object' && typeof t.productIdentifier === 'string' && STORE_ID.test(t.productIdentifier);
+const storeValid = t => storeOurs(t) && (t.purchaseState == null || String(t.purchaseState) === '1') && !t.revocationDate;
+const storeRevoked = t => storeOurs(t) && !!t.revocationDate;
+/* A refused purchase, by the words either platform rejects with. No connection, or a product the store could not find (Apple:
+   "Cannot find product for id", Google: SERVICE_UNAVAILABLE), is the store out of reach, said as such. */
+function storeWhy(e) {
   const m = String((e && e.code) || '') + ' ' + String((e && e.message) || e || '');
-  return /cancel/i.test(m) ? 'cancelled' : /pending/i.test(m) ? 'pending' : /already_?owned/i.test(m) ? 'owned' : 'failed';
+  return /cancel/i.test(m) ? 'cancelled' : /pending/i.test(m) ? 'pending' : /already_?owned/i.test(m) ? 'owned'
+    : /offline|network|internet|connection|timed?[ _]?out|cannot find product|not found|unavailable/i.test(m) ? 'store' : 'failed';
 }
 const storeBackend = {
   async products() {
@@ -479,9 +511,9 @@ const storeBackend = {
     const P = storePlugin(); if (!P) return { ok:false, why:'store' };
     try { await P.restorePurchases(); return { ok:true, ids:await this.owned() }; } catch (e) { return { ok:false, why:storeWhy(e) }; }
   },
-  listen(fn) {                             // an Apple purchase that finishes later (Ask to Buy approved). The plugin fires it on iOS
-    const P = storePlugin(); if (!P || typeof P.addListener !== 'function') return;   // only: Google's pending payment arrives by owned() at the next start
-    P.addListener('transactionUpdated', t => { if (storeValid(t)) fn([t.productIdentifier]); });
+  listen(fn, gone) {                       // an Apple purchase that finishes later (Ask to Buy approved), or one revoked (a refund). The
+    const P = storePlugin(); if (!P || typeof P.addListener !== 'function') return;   // plugin fires it on iOS only: Google's pending payment arrives by owned() at the next start
+    P.addListener('transactionUpdated', t => { if (storeValid(t)) fn([t.productIdentifier]); else if (storeRevoked(t) && typeof gone === 'function') gone([t.productIdentifier]); });
   },
 };
 /* Google wants every purchase acknowledged within three days, or it refunds it. The plugin acknowledges one bought and paid in the
@@ -507,9 +539,12 @@ const storeApi = () => storeUse || (storeNative() && storePlugin() ? storeBacken
 function storePricesLoad() {
   Promise.resolve().then(() => storeApi().products()).then(list => {
     for (const p of Array.isArray(list) ? list : []) if (p && typeof p.price === 'string' && p.price) storePrices[p.id] = p.price;
-    storeRefresh();
-  }, () => { /* offline: the buttons go without a price until the card opens again */ });
+    storeAsked = true; storeRefresh();
+  }, () => { storeAsked = true; });       // offline: the buttons go without a price, and say so when tapped (storeBuyAsk), until it answers
 }
+/* A product the store has not priced though it was asked (offline, or not found): tapping it says the store is out of reach at once,
+   rather than after the grown-up check. */
+const storeUnpriced = id => storeNative() && storeAsked && !storePrices[id];
 /* In the app, once: listen for purchases that finish later, read back what is owned (no prompt, acknowledging any Google payment
    that completed since), then fetch the prices. One after the other: the plugin's Android side closes its billing connection at
    each new call, so a price request alongside could cut an acknowledgement short. */
@@ -517,7 +552,7 @@ function storeStart() {
   if (storeStarted || !storeNative()) return;
   storeStarted = true;
   const api = storeApi();
-  try { api.listen(ids => storeGrant(ids)); } catch (e) { /* no listener: Restore Purchases still reads them */ }
+  try { api.listen(ids => storeGrant(ids), ids => storeRevoke(ids)); } catch (e) { /* no listener: Restore Purchases still reads them */ }
   Promise.resolve().then(() => api.owned()).then(storeGrant, () => {}).then(storePricesLoad);
 }
 /* =========================================================
@@ -6131,11 +6166,17 @@ function resume() {
   else if (c && c.kind === 'lineout' && c.outcome == null) c.t = Math.max(CUT_IN, c.t >= c.throwT ? c.throwT : 0, c.t - 0.6);
   else if (c && c.kind === 'scrum' && !c.engaged) c.t = Math.max(CUT_IN, c.t - 0.6);
 }
+/* A two-tap confirm (Quit, Delete Team, Start Fresh, Start New Career, Remove League): the first tap asks again, and the second
+   counts only once CONFIRM.gap has passed, so a quick double tap (a child mashing, or one tap read twice) only asks. */
+const CONFIRM = { gap:500, at:0 };
+function confirmArm() { CONFIRM.at = Date.now(); }
+const confirmSoon = () => Date.now() - CONFIRM.at < CONFIRM.gap;
 let quitArmed = false;
 $('b-pause').addEventListener('click', pause);
 $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
-  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
+  if (!quitArmed) { quitArmed = true; confirmArm(); $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
+  if (confirmSoon()) return;
   if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Training, or Back to Career for a caller (which hears it as a quit)
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
@@ -6176,6 +6217,7 @@ function homeNote(el, text, name) {
   el.hidden = false;
 }
 function goHome() {
+  if (typeof nativePutBack === 'function') nativePutBack();   // the app: a save Preferences gave back late goes in first (native.js)
   navOnly = null;
   renderHome();
   showScreen('s-home');
@@ -6384,7 +6426,8 @@ function buildBuilder() {
   });
   $('bd-back').addEventListener('click', () => { renderTeams(); showScreen('s-teams'); });
   $('bd-del').addEventListener('click', () => {
-    if (!delArmed) { delArmed = true; $('bd-del').textContent = 'Confirm Delete'; return; }
+    if (!delArmed) { delArmed = true; confirmArm(); $('bd-del').textContent = 'Confirm Delete'; return; }
+    if (confirmSoon()) return;
     custom = custom.filter(c => c.key !== editing.key);
     if (quickPick && keyOf(quickPick) === editing.key) quickPick = null;
     if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = DEFAULT_TEAM;
@@ -6435,7 +6478,7 @@ function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
   const tally = [['Title', 'Titles', totals.champions], ['Grand Slam', 'Grand Slams', totals.grandSlams], ['Triple Crown', 'Triple Crowns', totals.tripleCrowns]];
-  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved in this browser.</p>`
+  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved on this device.</p>`
     + (history.length ? `<p class="cabinet-tally">${tally.map(([singular, plural, n]) => `${n} ${n === 1 ? singular : plural}`).join(' · ')}</p>` + history.map((c, i) => {
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
@@ -6510,7 +6553,8 @@ function renderHub() {
 let resetArmed = false;
 $('hub-back').addEventListener('click', goHome);
 $('hub-reset').addEventListener('click', () => {
-  if (!resetArmed) { resetArmed = true; $('hub-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (!resetArmed) { resetArmed = true; confirmArm(); $('hub-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (confirmSoon()) return;
   archiveChampionship(champ); champ = null; save(); goHome();
 });
 
@@ -7370,7 +7414,8 @@ function importAlt() {
   const u = importUi;
   if (u.step === 'preview') { u.step = 'link'; u.data = null; u.err = ''; u.armed = false; u.token++; importRender(); importFocus(); return; }
   if (!importLeague) return;
-  if (!u.armed) { u.armed = true; importRender(); return; }
+  if (!u.armed) { u.armed = true; confirmArm(); importRender(); return; }
+  if (confirmSoon()) return;                               // a quick double tap only asks (CONFIRM, ui-menus.js)
   importLeague = null; u.armed = false;
   if (settings.pool === IMPORT_POOL) settings.pool = 1;
   save(); importRender(); importFocus();                   // Remove League has gone: focus to the step's own control
@@ -7511,7 +7556,8 @@ function kidsChase(p, inp, dt) {                           // the stick let go w
    written out in words, a teen times six to nine with a three-figure answer (seventeen times six), typed on its own number keys.
    A wrong answer clears and asks a new one. A second wrong answer in a row rests the keys (10s, then 20s, 40s and 60s at most until
    a right answer), so tapping a pattern cannot cycle through the questions until one comes out; the rest outlives the card, so
-   shutting it and opening it again does not skip it. Touch, the keyboard (the figures, Backspace, Escape, and Tab inside the card:
+   shutting it and opening it again does not skip it, and in the app it outlives the game too (kidsGateKeep), so closing the app and
+   opening it again does not skip it either. Touch, the keyboard (the figures, Backspace, Escape, and Tab inside the card:
    the rest of the page is inert while it is open) and a controller (the card is the nav layer, Back is Cancel) all reach it. Only a
    right answer calls onPass. */
 const KIDS_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -7540,11 +7586,36 @@ function kidsGateSleep() {                                 // the second wrong a
   kidsGateRests++; kidsGateMiss = 0;
   const r = kidsGateRest = { until:Date.now() + ms, ms };
   setTimeout(() => kidsGateWake(r), ms);
+  kidsGateKeep();
 }
 function kidsGateWake(r) {                                 // r: the rest its timer was set for, so a stale timer never ends a later one (the tools call it bare)
   if (!kidsGateRest || (r && r !== kidsGateRest)) return;
   kidsGateRest = null;
   if (kidsGate) kidsGateShow(false);
+  kidsGateKeep();
+}
+/* In the app, the rest under way and the count of rests are kept on the device under KIDS_GATE_KEY, apart from the save, and read
+   back at start: a child who closes the app and opens it again comes back to the same wait. A right answer clears them. The web
+   keeps them in memory alone, as before. */
+const KIDS_GATE_KEY = 'tryline.gate';
+const kidsGateApp = () => typeof nativeOn === 'function' && nativeOn();
+function kidsGateKeep() {
+  if (!kidsGateApp()) return;
+  try {
+    if (kidsGateRests > 0) localStorage.setItem(KIDS_GATE_KEY, JSON.stringify({ until:kidsGateRest ? kidsGateRest.until : 0, rests:kidsGateRests }));
+    else if (typeof localStorage.removeItem === 'function') localStorage.removeItem(KIDS_GATE_KEY);
+  } catch (e) { /* storage refused: the rest still holds while the game is open */ }
+}
+function kidsGateLoad() {
+  if (!kidsGateApp()) return;
+  let g = null;
+  try { g = JSON.parse(localStorage.getItem(KIDS_GATE_KEY) || 'null'); } catch (e) { g = null; }
+  if (!g || typeof g !== 'object') return;
+  if (Number.isInteger(g.rests) && g.rests > 0 && g.rests <= 16) kidsGateRests = g.rests;
+  const left = Math.min(KIDS_GATE.restMax, Number(g.until) - Date.now());   // a clock put back never makes it longer than a rest can be
+  if (!(left > 0)) return;
+  const r = kidsGateRest = { until:Date.now() + left, ms:left };
+  setTimeout(() => kidsGateWake(r), left);
 }
 function parentGate(onPass, onCancel) {
   if (kidsGate) kidsGateClose(false);                      // one check at a time: an older one is cancelled
@@ -7564,7 +7635,7 @@ function kidsGateClose(passed) {
   $('m-gate').hidden = true; setFocus(null);
   for (const el of g.inert) el.inert = false;
   if (g.back && g.back.focus && !(g.back.closest && g.back.closest('[hidden]'))) g.back.focus();
-  if (passed) { kidsGateMiss = 0; kidsGateRests = 0; }
+  if (passed) { kidsGateMiss = 0; kidsGateRests = 0; kidsGateKeep(); }
   const fn = passed ? g.onPass : g.onCancel;
   if (typeof fn === 'function') fn();
 }
@@ -7582,6 +7653,7 @@ for (const n of '1234567890') $('pg-k' + n).addEventListener('click', () => kids
 $('pg-del').addEventListener('click', kidsGateDelete);
 $('pg-cancel').addEventListener('click', () => kidsGateClose(false));
 $('m-gate').hidden = true;                                 // closed until asked for (the test harness's stand-in elements start open)
+kidsGateLoad();                                            // the app: a rest still under way when the app was closed
 DEFAULT_FOCUS['m-gate'] = () => $('pg-k1');
 window.addEventListener('keydown', e => {                  // while the check is open no key reaches the game; the figures, Backspace and Escape answer it, and every other key keeps the browser's own meaning (Tab, Enter and Space on the card's buttons)
   if (!kidsGate) return;
@@ -7664,6 +7736,7 @@ function storeRefresh(granted) {
   if (!$('s-teams').hidden) renderTeams();
   if (!$('s-join').hidden) renderJoin();
   if ($('m-store').hidden) return;
+  if (storeUi.unpriced && storePrices[storeUi.unpriced]) { storeUi.unpriced = null; storeUi.msg = ''; }   // the store answered after all: its out-of-reach message goes
   if (granted && !storeUi.busy) {
     storeUi.msg = '';
     if (storeUi.mode === 'unlock' && storeHas(storeUi.feature)) { storeDone(); return; }
@@ -7735,7 +7808,11 @@ function storeAsk(go) {                    // the grown-up check over the card: 
   parentGate(() => { if (token !== storeUi.token) return; $('m-store').hidden = false; go(); },
     () => { if (token !== storeUi.token) return; $('m-store').hidden = false; storeCardFocus(); });
 }
-function storeBuyAsk(id) { if (!storeUi.busy && storeIds().includes(id)) storeAsk(() => storeBuy(id)); }
+function storeBuyAsk(id) {
+  if (storeUi.busy || !storeIds().includes(id)) return;
+  if (storeUnpriced(id)) { storeUi.unpriced = id; storeUi.msg = STORE_MSG.store; storeCardRender(); storeCardFocus(); storePricesLoad(); return; }   // the store never priced it: said now, not after the grown-up check, and asked again
+  storeAsk(() => storeBuy(id));
+}
 async function storeBuy(id) {
   const u = storeUi, token = u.token;
   u.busy = true; u.msg = ''; storeCardRender();
@@ -8874,7 +8951,8 @@ $('cr-train').addEventListener('click', () => { if (careerCanTrain(career)) { re
 $('cr-table').addEventListener('click', () => { renderCareerTable(); careerShow('s-career-table'); });
 $('cr-back').addEventListener('click', goHome);
 $('cr-reset').addEventListener('click', () => {
-  if (!careerResetArmed) { careerResetArmed = true; $('cr-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (!careerResetArmed) { careerResetArmed = true; confirmArm(); $('cr-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (confirmSoon()) return;                               // a quick double tap only asks (CONFIRM, ui-menus.js)
   careerEnd(); goHome();
 });
 
@@ -8951,7 +9029,8 @@ function renderCareerEnd() {
 }
 /* Start New Career on the Hall of Fame wipes the career and its honours, so it takes a second tap, as Start Fresh does. */
 function careerRestart() {
-  if (!careerRestartArmed) { careerRestartArmed = true; $('ce-go').textContent = 'Tap Again to Start New Career'; return false; }
+  if (!careerRestartArmed) { careerRestartArmed = true; confirmArm(); $('ce-go').textContent = 'Tap Again to Start New Career'; return false; }
+  if (confirmSoon()) return false;
   careerRestartArmed = false; careerEnd(); careerNewOpen();
   return true;
 }
@@ -8970,14 +9049,15 @@ Object.assign(DEFAULT_FOCUS, { 's-career-new':() => $('cn-go'), 's-career':() =>
    - safe areas: the env(safe-area-inset-*) the CSS already uses, under viewport-fit=cover. SystemBars in
      capacitor.config.json keeps Android's right.
    - buzz() through Haptics, a light, medium or heavy tap: WKWebView has no navigator.vibrate.
-   - the save (tryline.v1) copied into Preferences after every save, and put back at start when localStorage is empty:
+   - the save (tryline.v1) copied into Preferences after every save, and put back at start when localStorage has none:
      iOS can clear a web view's storage when the phone runs short of space, and Preferences lives in the app's own data.
+     Nothing is copied until Preferences has answered, so a slow answer never has a fresh game written over the copy.
    - Android's Back drives the game's own: Pause and Resume in play, else the open card's or screen's Back, and on the home
      menu the app goes to the background with the game as it was.
    Every plugin is optional: one missing, or one that fails, leaves the web behaviour in its place. In a browser nativeOn()
    is false and none of this runs, so the web build behaves as before. tools/native.mjs checks it under a stubbed Capacitor.
    ========================================================= */
-const nativeApp = { started:false, ready:false, restored:false, queued:false, mirrored:null, wait:2000 };   // wait: ms the start gives Preferences before going on without it
+const nativeApp = { started:false, ready:false, restored:false, queued:false, mirrored:null, wait:2000, hold:true, late:null };   // wait: ms the start gives Preferences before going on without it; hold: no copy until it has answered; late: a copy it gave after that
 /* True only inside the app: Capacitor's bridge says it is native. A browser has no window.Capacitor, and Capacitor's own
    web runtime answers false. Others ask it as typeof nativeOn === 'function' && nativeOn(). */
 function nativeOn() {
@@ -9000,11 +9080,12 @@ function nativeCall(name, method, options) {
 /* ---------- start ---------- */
 /* boot.js starts the game through this. In a browser go() runs at once, exactly as before. In the app the plugins are set
    up first, then the save is put back if the web view lost it, then the game starts, and its save is copied once.
-   Preferences that never answers costs nativeApp.wait at most, and an answer that comes later is ignored, never
-   written over a game already running. */
+   Preferences that never answers costs nativeApp.wait at most: the game starts fresh, and nothing is copied over Preferences
+   until it answers (nativeLate). */
 function nativeBoot(go) {
   if (!nativeOn()) { go(); return; }
   nativeStart();
+  nativeApp.hold = true;
   let done = false;
   const finish = saved => {
     if (done) return;
@@ -9015,7 +9096,30 @@ function nativeBoot(go) {
     nativeMirror();
   };
   setTimeout(() => finish(null), nativeApp.wait);
-  nativeSaved().then(finish, () => finish(null));
+  nativeSaved().then(saved => {
+    if (!done) { nativeApp.hold = false; finish(saved); } else nativeLate(saved);
+  }, () => { nativeApp.hold = false; finish(null); });
+}
+/* Preferences answered after the game had started without it. No copy there: copying starts now. A copy: the game started fresh only
+   because the phone was slow to answer, so the copy goes back, at once unless a match or a drill is under way, else at the next
+   goHome (nativePutBack), and until then nothing is copied over it. */
+function nativeLate(saved) {
+  if (typeof saved !== 'string') { nativeApp.hold = false; nativeApp.mirrored = null; nativeMirror(); return; }   // Preferences holds nothing, so the game's save is copied whatever was copied before
+  nativeApp.late = saved;
+  if (!playing() && !practice) goHome();
+}
+/* goHome calls this first: the late copy into storage and into the game. A purchase made meanwhile is kept with it. */
+function nativePutBack() {
+  const text = nativeApp.late;
+  if (!text || practice) return false;
+  nativeApp.late = null;
+  const bought = storeBought.slice();
+  try { localStorage.setItem(STORE, text); } catch (e) { /* storage refused: the game still takes the copy */ }
+  nativeApp.restored = true; nativeApp.mirrored = text; nativeApp.hold = false;
+  restore(JSON.parse(text));
+  const more = bought.filter(id => !storeBought.includes(id));
+  if (more.length) { storeBought.push(...more); save(); }
+  return true;
 }
 function nativeStart() {
   if (nativeApp.started || !nativeOn()) return;
@@ -9040,22 +9144,26 @@ function nativeBars() {
 }
 
 /* ---------- the save ---------- */
+/* Text that reads as a save: JSON for an object. */
+function nativeIsSave(text) {
+  if (typeof text !== 'string' || !text) return false;
+  try { const s = JSON.parse(text); return !!s && typeof s === 'object' && !Array.isArray(s); } catch (e) { return false; }
+}
 /* The copy in Preferences, when the web view has lost the save: its text if it reads as a save, else null. A save still in
-   localStorage is never replaced. */
+   localStorage is never replaced; one that does not read as a save (cut short) counts as lost. */
 function nativeSaved() {
   let have = null;
   try { have = localStorage.getItem(STORE); } catch (e) { have = null; }
-  if (have) return Promise.resolve(null);
+  if (nativeIsSave(have)) { nativeApp.hold = false; return Promise.resolve(null); }   // the web view's own save is the latest: the copy may follow it
   return nativeCall('Preferences', 'get', { key:STORE }).then(r => {
     const text = r && typeof r.value === 'string' ? r.value : '';
-    if (!text) return null;
-    try { const s = JSON.parse(text); return s && typeof s === 'object' && !Array.isArray(s) ? text : null; } catch (e) { return null; }
+    return nativeIsSave(text) ? text : null;
   });
 }
 /* save() calls this: once the save is written, its exact text goes to Preferences. Saves in one turn of the event loop make
-   one copy, an unchanged save none, and nothing is copied before the start has had its chance to put a save back. */
+   one copy, an unchanged save none, and nothing is copied before Preferences has answered at the start, or that is not a save. */
 function nativeMirror() {
-  if (!nativeApp.ready || nativeApp.queued) return;
+  if (!nativeApp.ready || nativeApp.hold || nativeApp.queued) return;
   const prefs = nativePlugin('Preferences');
   if (!prefs || typeof prefs.set !== 'function') return;
   nativeApp.queued = true;
@@ -9063,7 +9171,7 @@ function nativeMirror() {
     nativeApp.queued = false;
     let text = null;
     try { text = localStorage.getItem(STORE); } catch (e) { text = null; }
-    if (typeof text !== 'string' || !text || text === nativeApp.mirrored) return;
+    if (!nativeIsSave(text) || text === nativeApp.mirrored) return;
     try { Promise.resolve(prefs.set({ key:STORE, value:text })).then(() => { nativeApp.mirrored = text; }, () => {}); } catch (e) { /* tried again at the next save */ }
   });
 }
@@ -9222,7 +9330,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     duelCam, duelPose, camAt, startMatch, exitMatch, pickOwner,
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
-    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk,
+    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk, CONFIRM,
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, safeInsets, stickRest, tagBox, nearestAct, releaseTouch, phoneUpright, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, switchTarget, switchUseful, switchPlayer, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
@@ -9237,9 +9345,9 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
-  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
-  native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
-  store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
+  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
+  store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   get M() { return M; } };
 
 function start(data) {

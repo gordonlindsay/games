@@ -26,6 +26,9 @@ export const LISTING_FEATURE = { id:'play-feature', file:'play-feature-graphic.p
 
 // The moments, in the order suggested for the store (the first two or three are what most people see).
 // Each stage() runs in the page, against window.__tryline, and leaves the game still (M.paused) for the shot.
+// The app as a new player gets it, nothing bought, so the locks on the paid modes show (guideline 2.3.2: screenshots must make
+// clear what needs an extra purchase). The free tier comes first; the one paid screen, Career, comes last (full: the Full Game
+// owned for it alone), and its caption says it is the Full Game's (SCREENSHOTS.md).
 export const LISTING_MOMENTS = [
   { id:'match', name:'Live Match', stage:() => {
     const T = window.__tryline, X = T.teams;
@@ -82,18 +85,19 @@ export const LISTING_MOMENTS = [
     for (let i = 0; i < 24; i++) T.update(T.STEP);
     M.paused = true;
   }, wait:700 },
-  { id:'career', name:'Career', stage:() => {
+  { id:'teams', name:'Team Picker', stage:() => { document.getElementById('b-quick').click(); }, wait:700 },   // Quick Match's, which is free
+  { id:'home', name:'Home', stage:() => {}, wait:900 },
+  { id:'career', name:'Career', full:true, stage:() => {
     const T = window.__tryline, X = T.teams;
     T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] });
     T.career.open();
   }, wait:700 },
-  { id:'teams', name:'Team Picker', stage:() => { document.getElementById('b-champ').click(); }, wait:700 },
-  { id:'home', name:'Home', stage:() => {}, wait:900 },
 ];
 
-// A returning player's save: tutorials seen, coach tips off, past the gentler first matches. Nothing else.
-// Full Game owned, so the shots show the app as a paying family sees it: no locks, and the Grown-Ups button on the home.
-const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 }, store:{ owned:['tryline.full'] } };
+// A returning player's save: tutorials seen, coach tips off, past the gentler first matches. Nothing bought, so the home shows
+// the locks a new player sees; a moment marked full has the Full Game owned.
+const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 } };
+const saveFor = moment => (moment.full ? { ...SAVE, store:{ owned:['tryline.full'] } } : SAVE);
 const SEED = 20261108;
 
 const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.webmanifest':'application/manifest+json',
@@ -156,7 +160,7 @@ async function shoot(browser, base, size, moment, out, bare = false) {   // bare
     };
     let s = seed >>> 0;                                       // a seeded Math.random, so a re-shoot draws the same scenes
     Math.random = () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  }, [SAVE, SEED]);
+  }, [saveFor(moment), SEED]);
   await page.goto(base + 'index.html', { waitUntil:'load' });
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => {                                  // the shots are of the app, not the web page: as the app, already started
