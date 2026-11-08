@@ -81,12 +81,15 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 }
 @media (orientation:landscape) and (max-height:420px){
   /* a phone in Safari, sideways: the URL bar leaves about 320px. Two columns of settings, labels above the controls,
-     so Half, Difficulty, Sound and Hints fit without a scroll. Every control stays 44px. */
+     so Difficulty, Sound and Match Help fit without a scroll, with More Settings in the cell beside Match Help (full width
+     once open, under Half Length). Every control stays 44px. */
   .home .stack{gap:6px}
   .home .btn,.home .btn.primary{min-height:44px}
   .settings{grid-template-columns:1fr 1fr;gap:8px 12px;padding:8px 10px}
   .settings .set{grid-template-columns:1fr;gap:4px}
   .settings .seg button{font-size:13px;padding:0 2px}
+  .settings .btn.more-btn{grid-column:auto;align-self:end}
+  .settings .btn.more-btn[aria-expanded="true"]{grid-column:1/-1}
 }
 
 /* team select */
