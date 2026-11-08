@@ -111,6 +111,7 @@ function drawPlayer(p, r) {
     ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*1.05, 0, r*0.36, 0, 7); ctx.fill();
   } else {
     const lean = k ? (k.tier === 'soft' ? 0.15 : k.tier === 'dom' && k.t/k.T >= 0.4 ? -0.12 : 0) : 0;   // a bound carrier leans into a Soft tackle, stands up in a Wrap, recoils from a Big Hit
+    const boots = lockerBoots(p.team, p); if (boots) lockerFeet(boots, r, p);   // the Locker's boots on your side, under the body so the toes show as he runs (src/locker.js)
     ctx.fillStyle = kit.trim;
     ctx.beginPath(); ctx.arc(lean*r, -r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(lean*r, r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
@@ -155,7 +156,8 @@ function drawBall(r) {
   if (b.state === 'held') { const [fx, fy] = svec(b.carrier.fx, b.carrier.fy); ang = Math.atan2(fy, fx); }
   else { const [vx, vy] = svec(b.vx, b.vy); if (hyp(vx, vy) > 0.5) ang = Math.atan2(vy, vx); }
   ctx.save(); ctx.translate(gx, gy - lift); ctx.rotate(ang);
-  ctx.fillStyle = '#f6f3ea'; ctx.strokeStyle = '#3b2f22'; ctx.lineWidth = 1.2;
+  const look = lockerBall();                               // the Locker's ball in a match you play, or null for the classic one (src/locker.js)
+  ctx.fillStyle = look ? lockerBallFill(look, rx*sc) : '#f6f3ea'; ctx.strokeStyle = look ? look.line : '#3b2f22'; ctx.lineWidth = 1.2;
   ellipse(0, 0, rx*sc, rx*0.62*sc); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(59,47,34,.6)'; ctx.beginPath(); ctx.moveTo(-rx*0.45*sc, 0); ctx.lineTo(rx*0.45*sc, 0); ctx.stroke();
   ctx.restore();

@@ -310,6 +310,7 @@ function goalLabels(c) {
   return ['Kick', null, g.stage === 'aim' && !c.after, false];
 }
 function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
+  lockerTally('drops', team);                              // every drop goal, the open-play kind too, for the Locker (a plain counter, src/locker.js)
   if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
   placeBall(M.ball.x, M.ball.y);
   startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });

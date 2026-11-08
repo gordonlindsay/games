@@ -75,7 +75,7 @@ Tuning lives in `TRAIT` in `src/traits.js`; `node tools/traits.mjs` checks it.
 
 ## Training Ground
 
-The home screen's **Training Ground** (it was Practice Ground) opens a grid of eight drills, each a drawn picture and a name. Every drill is short, has a ready card with one line on what to do, shows 0 to 3 stars on its result, and offers Try Again, Next Drill and Back to Training. Drills never write the browser save, the settings, the tutorial memory or a championship.
+The home screen's **Training Ground** (it was Practice Ground) opens a grid of eight drills, each a drawn picture and a name. Every drill is short, has a ready card with one line on what to do, shows 0 to 3 stars on its result, and offers Try Again, Next Drill and Back to Training. Drills never write the settings, the tutorial memory or a championship. The one save a drill causes is the Locker's: a drill's first three stars count toward Star Pupil and are saved as the drill hands back the player's own settings (see Locker).
 
 - **Bouncy Egg.** A thrower faces you and, after the same wind-up every time, spins the ball into the ground so it pops up at an odd angle, passes it flat, or throws it high. Run to it and catch it between knee and head height, from behind a line of marker cones six metres out (in his face, every throw would be caught as it left his hands). Twelve throws, quicker and wilder as they go; a ball that lands costs one of three hearts. Stars at 4, 7 and 10 catches.
 - **Pass Around the Circle.** A ring of six. The runner passes, runs round the outside and must be home before the ball has gone all the way round; the ring grows a metre each round, five rounds. Pick a role on the ready card. **Runner**: hold the stick to run, and Sprint from a three-second meter (pace it: the last rounds need it). **Passer**: tap Pass as the white ring closes on the gold one; Perfect is quickest, an early tap is fumbled. Stars at 1, 3 and 5 rounds.
@@ -90,6 +90,70 @@ Bouncy Egg, the circle, Cones and Tackling run in a training space: the pitch, k
 A caller can run a drill with `practiceStart(id, { onDone, leaveLabel })`: any way out of it (Back to Career, or the caller's `leaveLabel`, on the card; Back or Escape on the card; Pause then the pause card's Back to Career) restores the settings, shows the home screen and calls `onDone({ id, stars, success, skill })` once, with `role` for the circle. It reports the best finished run of the visit, so Try Again never loses a result already won; a visit with no finished run reports `quit: true` (0 stars). Each drill names the ability it trains: the circle's runner stamina and passer handling, Cones and Defend pace, Tackling and Driving power, Kicking kicking, Bouncy Egg and the two-on-one handling.
 
 The drills are in `src/training.js` and the picker and card rules in `src/practice.js`; their styles are in `practice.css`. `node tools/drills.mjs` checks every drill's setup, a scripted success and failure, the star thresholds, `onDone`, and isolation.
+
+## Locker
+
+The home screen's **Locker** holds what a player has won: medals for feats, the balls and boots they unlock, and the Legends. Nothing in it is sold, and nothing is bought to reach it.
+
+**Medals.** Twelve feats, each with Bronze, Silver and Gold for doing it 1, 3 and 10 times. A feat counts once in a match at most, at full time, in any match you play: Quick Match, Championship, Career and Two Player, at any level, Kids included. AI v AI, the demo, a drill's match and a tool's headless match never count, and nor does a match left before full time. In Two Player the medals are Player 1's (side 0): one device, one Locker, and that is the simplest rule a child can follow.
+
+| Feat | What it asks | Bronze unlocks | Silver unlocks |
+|---|---|---|---|
+| Hat-Trick | Score 3 tries in a match. | White Ball | Red Boots |
+| Sharpshooter | Kick 3 goals in a match (conversions, penalty goals and drop goals). | White Boots | Sky Blue Ball |
+| Big Hitter | Make 3 Big Hits in a match (in open play or a Tackle duel). | Red Ball | Blue Boots |
+| Clean Sheet | Win and let in no tries. | Sky Blue Boots | Blue Ball |
+| Golden Try | Win in Golden Try. | Orange Ball | Yellow Boots |
+| Comeback | Win after losing at half time. | Orange Boots | Purple Ball |
+| Drop Goal | Score a drop goal (a drop kick or any kick through the posts in play). | Pink Ball | Pink Boots |
+| On Fire Twice | Go On Fire twice in a match. | Neon Green Boots | Neon Ball |
+| Champions | Win a Championship. | Silver Boots | Gold Ball |
+| Star Pupil | Get 3 stars in a drill. | Purple Boots | Stripes Ball |
+| Silverware | Win a cup or a crown. | Silver Ball | Gold Boots |
+| Call-Up | Get called up. | Rainbow Boots | Rainbow Ball |
+
+Every Gold unlocks the next Legends side of each list. Star Pupil counts drills, each once, so its Gold is every drill (eight today; never more than ten). Champions counts a Championship won (first in the final table); Silverware and Call-Up count what the silverware and career work report (below), so on this build they cannot be won yet.
+
+**Balls and boots.** Thirteen balls (Classic, the ball as it always was, and twelve more: White, Pink, Neon, Sky Blue, Orange, Red, Blue, Purple, Silver, Stripes, Rainbow, Gold) and thirteen pairs of boots (Black, the default, and White, Red, Blue, Neon Green, Pink, Orange, Sky Blue, Purple, Yellow, Silver, Rainbow, Gold). The chosen ball is the ball in matches you play, in the top view and the close-ups; the chosen boots are your side's, their toes showing under each man as he runs in the top view and on the close-ups' figures (in a career match, his boots only; Rainbow gives each man his own colour). Classic and Black draw exactly as before, and AI v AI, the demo and the drills always do.
+
+**Legends.** The sides that won a World Cup, named by nation and year only: never a player's name, likeness or nickname. The nth Gold unlocks the nth side of each list, in date order. They join the team screen's International list once unlocked, after the nations, for Quick Match, Two Player, or as your own Championship side; they never enter a draw the player did not pick (no championship opponent, no demo, no career). Ratings are made up, at the top of the scale: every ability 5 (overall 99) or one 4 (96); the style is the side's strength. Kits are the nation's colours. The years were checked on 2026-11-08 (the 2021 women's World Cup was played in 2022).
+
+| Gold | Men | Code | Style | Overall | Women | Code | Style | Overall |
+|---|---|---|---|---|---|---|---|---|
+| 1 | New Zealand 1987 | L87 | Pace | 96 | USA 1991 Women | W91 | Pace | 96 |
+| 2 | Australia 1991 | L91 | Handling | 96 | England 1994 Women | W94 | Power | 96 |
+| 3 | South Africa 1995 | L95 | Power | 96 | New Zealand 1998 Women | W98 | Handling | 96 |
+| 4 | Australia 1999 | L99 | Stamina | 96 | New Zealand 2002 Women | W02 | Power | 96 |
+| 5 | England 2003 | L03 | Kicking | 96 | New Zealand 2006 Women | W06 | Stamina | 96 |
+| 6 | South Africa 2007 | L07 | Power | 96 | New Zealand 2010 Women | W10 | Handling | 99 |
+| 7 | New Zealand 2011 | L11 | Handling | 96 | England 2014 Women | W14 | Kicking | 96 |
+| 8 | New Zealand 2015 | L15 | Pace | 99 | New Zealand 2017 Women | W17 | Pace | 96 |
+| 9 | South Africa 2019 | L19 | Power | 96 | New Zealand 2021 Women | W21 | Pace | 96 |
+| 10 | South Africa 2023 | L23 | Stamina | 99 | England 2025 Women | W25 | Power | 99 |
+
+A women's side is already named Women and carries `cat:'women'`, so the team screen's Men | Women | Minis (`catSide`) leaves its name alone. `lockerLegends(cat)` returns the unlocked sides of one list: `'men'` or `'women'`, with Minis playing the men's. On this build `renderTeams` adds them to International in one guarded line; under the new hierarchy that line moves into `natList(cat)`.
+
+**The screens.** On the home screen the Locker button sits with the logo, so no row of buttons changes in any state: under the logo's line on a phone held sideways (where the logo's column has room), at the right end of that line on a taller screen (adding no height). A dot on it means a medal is waiting unseen. The Locker itself is four tabs, Medals, Ball, Boots and Legends, with Back to Menu; on a phone held sideways the title, the tabs and Back to Menu stand on the left and each tab fits the right without a scroll at 844x390 and 667x375. Medals: a tile a feat, its picture, name and one line, three pips in bronze, silver and gold, and the count to the next (2/3). Ball and Boots: each drawn in its colours; a locked one is dimmed with the pip and name of the medal that unlocks it. Legends: each unlocked side's shirt, overall, nation and year; a locked one is a padlock and the Gold count it needs. The full-time card shows a row for each medal a match won (the medal in its colour, the feat, and what it unlocked), and a New Legends line for a Gold; on a phone held sideways the card widens and they stand beside the score, so Continue stays on the screen.
+
+**For other work.** `lockerEvent(id)` counts a moment from elsewhere in the game, and returns true when it counted. Callers outside `src/locker.js` use `typeof lockerEvent === 'function' && lockerEvent(id)`.
+
+- `'champ'`: Champions. The Championship's own league win already calls it (`lockerMatch`, at full time).
+- `'euro'`, `'world'`, `'tour'`, `'triple'`: Silverware (European Cup, World Cup, Home Nations Tour, Triple Crown).
+- `'callup'`: Call-Up.
+- `'transfer'`: no medal yet; it counts nothing and returns false.
+
+Inside a match you play, one medal counts once a match however many of its ids come; between matches each call counts and saves. Nothing counts from inside a drill.
+
+**For the new player art.** The renderer's only links to the Locker are two reads, so a new renderer carries them over by calling the same two:
+
+- `lockerBall()`: the ball's look in a match you play, `{ id, name, fill, line, band?, rainbow?, shine? }`, or `null` for the classic ball (`#f6f3ea`, outlined `#3b2f22`). `band` is a stripe colour (two stripes a third of the way in from each end), `rainbow` the colours along its length (`LOCKER_RAINBOW`), `shine` a white sheen across it. `lockerBallFill(look, rx)` turns a look into a canvas fill along the ball's own length; the current renderer uses it in `drawBall` (top view) and `cutBall` (close-ups).
+- `lockerBoots(team, p)`: the colour of man `p`'s boots, or `null` for none (the top view) or black (a close-up). `p` may be `null` for a close-up figure that is no one in particular: the side's colour, or `null` in a career match, where only his are coloured. The current renderer draws the toes with `lockerFeet(colour, r, p)` in `drawPlayer`, and `kitOf(team)` carries `boots` to the close-ups' figures.
+
+**The save.** One field, `locker`: `{ n:{ feat:count }, drills:[ids], ball, boots, seen:{ feat:tier } }`, written only once something is in it, so a save with nothing earned is exactly as it was and an old save loads with nothing earned. `cleanLocker` puts anything broken right (unknown feats and drills dropped, counts whole and capped at 9999, a ball or boots not unlocked by those counts back to the default, `seen` no higher than won). No names and no personal data. A drill's three stars are held until the drill hands back the player's settings, then saved once.
+
+**Engine hooks.** Three plain counters, made only in a match you play and never drawing a random number: `lockerTally('drops', team)` in `dropGoal`, `lockerTally('hits', team)` on a Tackle duel's Big Hit, and `lockerHalf()` at the second half's kick-off (the half-time score, for Comeback). Big Hits in open play, On Fire, tries and goals are read from what the match already counts.
+
+The rules are in `src/locker.js` and the screens in `src/ui-locker.js`; the styles are the `locker` block at the end of `styles.css`. `node tools/locker.mjs` checks the tables and the Legends; every feat counted from real played matches (seeded Quick Matches, a Kids match, a career match, Two Player and a Championship's last round, played to full time); tiers, events, unlocks and Star Pupil's save; nothing counted in AI v AI, the demo, a drill or a tool's match; the save; the full-time card, the home dot, the screens and the team screen's hook; the render hooks; and a fingerprint pinning AI v AI, the demo, a balance tool's match, a tool's match, a played Quick Match and a drill (with their random draws) to d6192ad, the build before the Locker. Where Playwright is installed it also checks, in Chromium, the home in all eight states (phone or computer, web or app, with or without a championship and a career under way) at 844x390 and 667x375, every Locker tab at both sizes, its keyboard and controller reach, and Continue on a full-time card with medals.
 
 ## Kids
 

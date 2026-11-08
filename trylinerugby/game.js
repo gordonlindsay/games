@@ -209,7 +209,7 @@ function cleanSide(t) {
   if (!t || typeof t !== 'object') return null;
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   if (!name) return null;
-  const id = /^[A-Z]{3}$/.test(t.id) ? t.id : codeFor(t.id, name);
+  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W94: src/locker.js)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;
@@ -299,6 +299,7 @@ function restore(s) {
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
   if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
+  if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   retainCompletedSeason(champ);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
@@ -314,7 +315,7 @@ function save() {
   if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
   settings.duels = true;
   retainCompletedSeason(champ);
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, store:storeBought.length ? { owned:storeBought } : undefined })); } catch (e) { /* private mode, or full */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined })); } catch (e) { /* private mode, or full */ }
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }
@@ -1693,6 +1694,7 @@ function goalLabels(c) {
   return ['Kick', null, g.stage === 'aim' && !c.after, false];
 }
 function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
+  lockerTally('drops', team);                              // every drop goal, the open-play kind too, for the Locker (a plain counter, src/locker.js)
   if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
   placeBall(M.ball.x, M.ball.y);
   startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });
@@ -2583,7 +2585,7 @@ function applyDuel(c) {
     }
     case 'tackle:bighit':
       put(O, at(1.9), true); put(U, at(1.3));
-      countTk(U.team, true); tackle(O, U, { dom:true, domP:DOM_TURN[c.res === 'perfect' ? 1 : 0] });
+      countTk(U.team, true); tackle(O, U, { dom:true, domP:DOM_TURN[c.res === 'perfect' ? 1 : 0] }); lockerTally('hits', U.team);   // a Tackle duel's Big Hit, for the Locker (src/locker.js)
       U.down = 0.4; U.tcd = 0.4;
       break;
     case 'tackle:tackled':
@@ -3390,7 +3392,7 @@ function endHalf() {
     if (!M.headless) finishMatch();
   }
 }
-function secondHalf() { M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; kickoff(1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
+function secondHalf() { lockerHalf(); M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; kickoff(1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
 
 /* =========================================================
    Championship
@@ -4260,6 +4262,291 @@ function traitMarks(r) {
   }
 }
 /* =========================================================
+   The Locker: medals for feats, the balls and boots they unlock, and the Legends.
+
+   The rules, all of them here:
+   - A feat (LOCKER_FEATS) counts once in a match you play, at most, at full time (lockerMatch, from finishMatch): any level,
+     Kids included, Quick Match, Championship, Career and Two Player alike. Never AI v AI, the demo, a drill or a tool's
+     headless match (only a match you play reaches finishMatch with M.arcade). Two Player counts Player 1's side (side 0).
+   - Bronze, Silver and Gold are a feat done 1, 3 and 10 times (LOCKER_TIERS). Star Pupil counts drills, each once, at three
+     stars, so its Gold is every drill (8 today, never more than 10). The events (lockerEvent) count once a call, and once a
+     match for one medal: 'champ' (Champions; the Championship's own league win calls it here), 'euro', 'world', 'tour' and
+     'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
+   - Every Bronze and every Silver unlocks one ball or one pair of boots (each feat's unlock). Every Gold unlocks the next
+     Legends side of each list, in date order: the nth Gold, the nth men's and the nth women's side. Nothing here is sold.
+   - The match counts are plain counters on M.lk (drop goals and duel Big Hits by side, the half-time score), made only in a
+     match you play; nothing here draws a random number, so AI v AI, the demo and every tool play exactly as before.
+   - The chosen ball and boots are drawn only in a match you play (lockerBall, lockerBoots); AI v AI, the demo and the drills
+     draw as they always have. The default ball and boots (Classic, Black) draw as today too.
+   - The save is one field, locker (cleanLocker), written only once something is in it, so an old save loads with nothing
+     earned and a save with nothing earned stays as it was. A drill's three stars wait for the drill to end before saving,
+     so a drill never writes the save while its settings are the drill's own.
+   ========================================================= */
+const LOCKER_TIERS = [1, 3, 10];                            // Bronze, Silver, Gold
+const LOCKER_MEDALS = ['Bronze', 'Silver', 'Gold'];
+const LOCKER_MAX = 9999;                                     // a count stops here
+/* Each feat: its name (a label, Title Case), its line (one plain sentence for a child), and the ball or boots its Bronze and its
+   Silver unlock ('ball:pink', 'boots:red'). Match feats first, in the order of the Locker's grid. */
+const LOCKER_FEATS = [
+  { id:'hat',      name:'Hat-Trick',     line:'Score 3 tries in a match.',       unlock:['ball:white', 'boots:red'] },
+  { id:'sharp',    name:'Sharpshooter',  line:'Kick 3 goals in a match.',        unlock:['boots:white', 'ball:sky'] },
+  { id:'hit',      name:'Big Hitter',    line:'Make 3 Big Hits in a match.',     unlock:['ball:red', 'boots:blue'] },
+  { id:'clean',    name:'Clean Sheet',   line:'Win and let in no tries.',        unlock:['boots:sky', 'ball:blue'] },
+  { id:'golden',   name:'Golden Try',    line:'Win in Golden Try.',              unlock:['ball:orange', 'boots:yellow'] },
+  { id:'comeback', name:'Comeback',      line:'Win after losing at half time.',  unlock:['boots:orange', 'ball:purple'] },
+  { id:'drop',     name:'Drop Goal',     line:'Score a drop goal.',              unlock:['ball:pink', 'boots:pink'] },
+  { id:'fire',     name:'On Fire Twice', line:'Go On Fire twice in a match.',    unlock:['boots:neon', 'ball:neon'] },
+  { id:'champ',    name:'Champions',     line:'Win a Championship.',             unlock:['boots:silver', 'ball:gold'] },
+  { id:'star',     name:'Star Pupil',    line:'Get 3 stars in a drill.',         unlock:['boots:purple', 'ball:stripes'] },
+  { id:'silver',   name:'Silverware',    line:'Win a cup or a crown.',           unlock:['ball:silver', 'boots:gold'] },
+  { id:'callup',   name:'Call-Up',       line:'Get called up.',                  unlock:['boots:rainbow', 'ball:rainbow'] },
+];
+const LOCKER_EVENTS = { champ:'champ', euro:'silver', world:'silver', tour:'silver', triple:'silver', callup:'callup' };   // lockerEvent's ids and the medal each counts toward
+/* The balls: the first is the ball as it always was. band: two stripes; rainbow: the colours along it; shine: a gold sheen. */
+const LOCKER_BALLS = [
+  { id:'classic', name:'Classic',  fill:'#f6f3ea', line:'#3b2f22' },
+  { id:'white',   name:'White',    fill:'#ffffff', line:'#56626b' },
+  { id:'pink',    name:'Pink',     fill:'#ff7eb6', line:'#6e1a44' },
+  { id:'neon',    name:'Neon',     fill:'#dcff3d', line:'#465400' },
+  { id:'sky',     name:'Sky Blue', fill:'#6fc8f2', line:'#123c52' },
+  { id:'orange',  name:'Orange',   fill:'#ff8a2a', line:'#552700' },
+  { id:'red',     name:'Red',      fill:'#ec3440', line:'#470a10' },
+  { id:'blue',    name:'Blue',     fill:'#3a7bff', line:'#0d2260' },
+  { id:'purple',  name:'Purple',   fill:'#a274ff', line:'#2c1060' },
+  { id:'silver',  name:'Silver',   fill:'#cfd6db', line:'#3c464d', shine:true },
+  { id:'stripes', name:'Stripes',  fill:'#f6f3ea', line:'#1b2747', band:'#c8102e' },
+  { id:'rainbow', name:'Rainbow',  fill:'#f6f3ea', line:'#3b2f22', rainbow:true },
+  { id:'gold',    name:'Gold',     fill:'#ffcf3d', line:'#5e4100', shine:true },
+];
+/* The boots: the first, Black, is the default and draws as today (the top view shows no boots). */
+const LOCKER_BOOTS = [
+  { id:'black',   name:'Black',      col:'#1c1c1c' },
+  { id:'white',   name:'White',      col:'#f6f3ea' },
+  { id:'red',     name:'Red',        col:'#ec3440' },
+  { id:'blue',    name:'Blue',       col:'#3a7bff' },
+  { id:'neon',    name:'Neon Green', col:'#7dff3d' },
+  { id:'pink',    name:'Pink',       col:'#ff6fb0' },
+  { id:'orange',  name:'Orange',     col:'#ff8a2a' },
+  { id:'sky',     name:'Sky Blue',   col:'#6fc8f2' },
+  { id:'purple',  name:'Purple',     col:'#a274ff' },
+  { id:'yellow',  name:'Yellow',     col:'#ffe03d' },
+  { id:'silver',  name:'Silver',     col:'#cfd6db' },
+  { id:'rainbow', name:'Rainbow',    col:'#ff4f4f', rainbow:true },
+  { id:'gold',    name:'Gold',       col:'#ffcf3d' },
+];
+const LOCKER_RAINBOW = ['#ff4f4f', '#ff9a2a', '#ffe03d', '#5fd35f', '#3a9bff', '#8a5cff'];
+/* The Legends: the sides that won a World Cup, named by nation and year only (never a player's name, likeness or nickname), in
+   date order, men's then women's. Ratings at the top of the scale: every ability 5 (overall 99) or one 4 (96); style is the side's
+   strength, as the Locker shows it. Kit colours are the nation's. A women's side already says Women, with cat 'women', so the team
+   screen's Men | Women | Minis (catSide) leaves its name alone. Codes are unique across every list: L and the year, W and the year. */
+const LEGEND_KIT = {
+  'New Zealand':  { kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c' },
+  'Australia':    { kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e' },
+  'South Africa': { kit:'#0f5a32', trim:'#f2b01e', alt:'#f2efe6', altTrim:'#0f5a32' },
+  'England':      { kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e' },
+  'USA':          { kit:'#1b2747', trim:'#c8102e', alt:'#f2efe6', altTrim:'#1b2747' },
+};
+function legend(cat, nation, year, style, low) {             // low: the one ability at 4, or null for all 5s
+  const t = { id:(cat === 'women' ? 'W' : 'L') + String(year).slice(2), name:nation + ' ' + year + (cat === 'women' ? ' Women' : ''), nation, year, cat, style, legend:true, ...LEGEND_KIT[nation] };
+  for (const [k] of ABILITIES) t[k] = k === low ? 4 : 5;
+  return t;
+}
+const LEGENDS = [
+  legend('men', 'New Zealand', 1987, 'pace', 'kicking'),
+  legend('men', 'Australia', 1991, 'handling', 'power'),
+  legend('men', 'South Africa', 1995, 'power', 'pace'),
+  legend('men', 'Australia', 1999, 'stamina', 'handling'),
+  legend('men', 'England', 2003, 'kicking', 'pace'),
+  legend('men', 'South Africa', 2007, 'power', 'handling'),
+  legend('men', 'New Zealand', 2011, 'handling', 'kicking'),
+  legend('men', 'New Zealand', 2015, 'pace', null),
+  legend('men', 'South Africa', 2019, 'power', 'pace'),
+  legend('men', 'South Africa', 2023, 'stamina', null),
+  legend('women', 'USA', 1991, 'pace', 'kicking'),
+  legend('women', 'England', 1994, 'power', 'pace'),
+  legend('women', 'New Zealand', 1998, 'handling', 'kicking'),
+  legend('women', 'New Zealand', 2002, 'power', 'kicking'),
+  legend('women', 'New Zealand', 2006, 'stamina', 'kicking'),
+  legend('women', 'New Zealand', 2010, 'handling', null),
+  legend('women', 'England', 2014, 'kicking', 'pace'),
+  legend('women', 'New Zealand', 2017, 'pace', 'power'),
+  legend('women', 'New Zealand', 2021, 'pace', 'kicking'),   // the 2021 World Cup, played in 2022
+  legend('women', 'England', 2025, 'power', null),
+];
+
+/* ---------- the record ---------- */
+const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOCKER_BOOTS[0].id, seen:{} });
+let locker = lockerFresh();
+let lockerDirty = false;                                     // a drill's three stars, waiting to be saved once the drill is over
+const lockerFeat = id => LOCKER_FEATS.find(f => f.id === id);
+const lockerStarMax = () => Math.min(LOCKER_TIERS[2], typeof PRACTICE_DRILLS !== 'undefined' ? PRACTICE_DRILLS.length : LOCKER_TIERS[2]);
+const lockerTiers = id => (id === 'star' ? [LOCKER_TIERS[0], LOCKER_TIERS[1], lockerStarMax()] : LOCKER_TIERS);
+const lockerCount = id => (id === 'star' ? locker.drills.length : locker.n[id] || 0);
+const lockerTier = id => { const n = lockerCount(id); return lockerTiers(id).filter(c => n >= c).length; };   // 0 none, 1 Bronze, 2 Silver, 3 Gold
+const lockerNext = id => { const t = lockerTier(id); return t < 3 ? lockerTiers(id)[t] : null; };          // the count the next medal needs
+const lockerGolds = (tiers = id => lockerTier(id)) => LOCKER_FEATS.filter(f => tiers(f.id) === 3).length;
+/* What unlocks an item: the feat and the tier (1 Bronze, 2 Silver), or null for the default. */
+function lockerSource(kind, id) {
+  for (const f of LOCKER_FEATS) { const i = f.unlock.indexOf(kind + ':' + id); if (i >= 0) return { feat:f, tier:i + 1 }; }
+  return null;
+}
+const lockerHas = (kind, id) => { const s = lockerSource(kind, id); return s ? lockerTier(s.feat.id) >= s.tier : (kind === 'ball' ? LOCKER_BALLS : LOCKER_BOOTS).some(x => x.id === id); };
+const lockerItem = (kind, id) => (kind === 'ball' ? LOCKER_BALLS : LOCKER_BOOTS).find(x => x.id === id) || null;
+/* The unlocked Legends of one list: 'men' or 'women' (minis play the men's). The team screen's International list shows them. */
+function lockerLegends(cat) {
+  const c = cat === 'women' ? 'women' : 'men';
+  return LEGENDS.filter(t => t.cat === c).slice(0, lockerGolds());
+}
+function lockerAdd(id) { locker.n[id] = Math.min(LOCKER_MAX, (locker.n[id] || 0) + 1); }
+
+/* ---------- counting ---------- */
+const lockerSide = () => (M && M.side ? M.side.findIndex(s => s.human) : -1);   // your side: the human one, Player 1's in Two Player
+const lockerCounts = () => !!(M && M.arcade && !M.demo && !M.auto && !practice && lockerSide() >= 0);
+function lockerTally(key, team) {                            // engine hooks: a drop goal ('drops') or a duel's Big Hit ('hits') by side team
+  if (!lockerCounts()) return;
+  const k = M.lk || (M.lk = { drops:[0, 0], hits:[0, 0], ht:null });
+  k[key][team]++;
+}
+function lockerHalf() {                                      // the second half starts: the half-time score, for Comeback
+  if (!lockerCounts()) return;
+  (M.lk || (M.lk = { drops:[0, 0], hits:[0, 0], ht:null })).ht = M.score.slice();
+}
+/* Full time in a match you play: each feat done counts once, then a Championship won. Called once a match (finishMatch). */
+function lockerMatch() {
+  if (!lockerCounts() || M.lockerDone) return [];
+  M.lockerDone = true;
+  const me = lockerSide(), op = 1 - me, S = M.stats, k = M.lk || { drops:[0, 0], hits:[0, 0], ht:null };
+  const won = M.score[me] > M.score[op];
+  const done = {
+    hat: M.tries[me] >= 3,
+    sharp: S.conv.made[me] + S.pen.made[me] + k.drops[me] >= 3,   // conversions, penalty goals and drop goals
+    hit: (S['dom' + me] || 0) + k.hits[me] >= 3,                  // Big Hits in open play and in a Tackle duel
+    clean: won && M.tries[op] === 0,
+    golden: won && !!M.golden,
+    comeback: won && !!k.ht && k.ht[me] < k.ht[op],
+    drop: k.drops[me] >= 1,
+    fire: (S['fire' + me] || 0) >= 2,
+  };
+  const ids = Object.keys(done).filter(id => done[id]);
+  for (const id of ids) lockerAdd(id);
+  if (M.champ && champ && champ.round >= 5 && standings(champ)[0].i === champ.user && lockerEvent('champ')) ids.push('champ');   // the Championship's own league win
+  save();
+  return ids;
+}
+/* Another part of the game says a moment happened: true when it counted. Callers outside this file use
+   typeof lockerEvent === 'function' && lockerEvent(id). */
+function lockerEvent(id) {
+  const f = LOCKER_EVENTS[id];
+  if (!f || practice) return false;
+  if (M && M.arcade && !M.demo && !M.auto) { const ev = M.lockerEv || (M.lockerEv = []); if (ev.includes(f)) return false; ev.push(f); }   // once a match for one medal
+  lockerAdd(f);
+  save();
+  return true;
+}
+/* A drill finished with its stars (practiceFinish): three stars in a drill not yet counted counts toward Star Pupil. Saved once
+   the drill is over (lockerFlush, from practiceRestore), never while the drill's own settings are in place. */
+function lockerDrill(id, stars) {
+  if (stars < 3 || locker.drills.includes(id) || !PRACTICE_DRILLS.some(d => d.id === id)) return false;
+  locker.drills = PRACTICE_DRILLS.map(d => d.id).filter(d => d === id || locker.drills.includes(d));
+  lockerDirty = true;
+  return true;
+}
+function lockerFlush() { if (lockerDirty && !practice) { lockerDirty = false; save(); } }
+
+/* ---------- what is new ---------- */
+const lockerSeen = id => Math.min(locker.seen[id] || 0, lockerTier(id));
+const lockerNew = () => LOCKER_FEATS.some(f => lockerTier(f.id) > lockerSeen(f.id));
+/* Each medal won since it was last shown: { feat, tier, item } (item null for a Gold), and the Legends the new Golds bring. */
+function lockerNews() {
+  const medals = [];
+  for (const f of LOCKER_FEATS) for (let t = lockerSeen(f.id) + 1; t <= lockerTier(f.id); t++) {
+    const u = t < 3 ? f.unlock[t - 1].split(':') : null;
+    medals.push({ feat:f, tier:t, item:u ? { kind:u[0], ...lockerItem(u[0], u[1]) } : null });
+  }
+  const g0 = Math.min(10, lockerGolds(lockerSeen)), g1 = Math.min(10, lockerGolds());
+  const legends = [];
+  for (let i = g0; i < g1; i++) legends.push(LEGENDS.filter(t => t.cat === 'men')[i], LEGENDS.filter(t => t.cat === 'women')[i]);
+  return { medals, legends };
+}
+function lockerMarkSeen() {
+  let changed = false;
+  for (const f of LOCKER_FEATS) { const t = lockerTier(f.id); if ((locker.seen[f.id] || 0) !== t) { locker.seen[f.id] = t; changed = true; } }
+  if (changed) save();
+}
+
+/* ---------- picking ---------- */
+function lockerPick(kind, id) {                              // the Locker's swatches: only an unlocked one
+  if (!lockerItem(kind, id) || !lockerHas(kind, id)) return false;
+  locker[kind] = id; save();
+  return true;
+}
+
+/* ---------- the save ---------- */
+/* What the save keeps: undefined until something is earned or picked, so a save with nothing in the Locker is as it was. */
+function lockerSaved() {
+  const n = {};
+  for (const f of LOCKER_FEATS) if (f.id !== 'star' && locker.n[f.id] > 0) n[f.id] = locker.n[f.id];
+  const seen = {};
+  for (const f of LOCKER_FEATS) if (locker.seen[f.id] > 0) seen[f.id] = locker.seen[f.id];
+  const empty = !Object.keys(n).length && !locker.drills.length && locker.ball === LOCKER_BALLS[0].id && locker.boots === LOCKER_BOOTS[0].id && !Object.keys(seen).length;
+  return empty ? undefined : { n, drills:locker.drills.slice(), ball:locker.ball, boots:locker.boots, seen };
+}
+/* A saved Locker, read back: anything unknown or broken is dropped, counts are whole and bounded, and a ball or boots not unlocked
+   by those counts goes back to the default. Never throws; anything unreadable is a Locker with nothing in it. */
+function cleanLocker(v) {
+  const out = lockerFresh();
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  if (v.n && typeof v.n === 'object' && !Array.isArray(v.n)) for (const f of LOCKER_FEATS) {
+    const c = v.n[f.id];
+    if (f.id !== 'star' && Number.isInteger(c) && c > 0) out.n[f.id] = Math.min(LOCKER_MAX, c);
+  }
+  const ids = typeof PRACTICE_DRILLS !== 'undefined' ? PRACTICE_DRILLS.map(d => d.id) : [];
+  if (Array.isArray(v.drills)) out.drills = ids.filter(id => v.drills.includes(id));
+  const keep = locker; locker = out;                       // read the tiers from the cleaned counts
+  try {
+    if (typeof v.ball === 'string' && lockerHas('ball', v.ball)) out.ball = v.ball;
+    if (typeof v.boots === 'string' && lockerHas('boots', v.boots)) out.boots = v.boots;
+    if (v.seen && typeof v.seen === 'object' && !Array.isArray(v.seen)) for (const f of LOCKER_FEATS) {
+      const s = v.seen[f.id];
+      if (Number.isInteger(s) && s > 0 && lockerTier(f.id) > 0) out.seen[f.id] = Math.min(s, lockerTier(f.id));
+    }
+  } finally { locker = keep; }
+  return out;
+}
+
+/* ---------- drawing: two hooks for the renderer ----------
+   lockerBall(): the ball's look in a match you play ({ fill, line, band?, rainbow?, shine? }), or null to draw the classic ball.
+   lockerBoots(team, p): the colour of man p's boots, or null for no boots in the top view and black ones in a close-up (the default
+   Black, the other side, a career teammate, AI v AI, the demo and the drills). p null is a close-up's figure: the side's colour
+   (Rainbow's first), but none in a career match, where only his are coloured. Both read nothing but the Locker and M; lockerBallFill
+   and lockerFeet are the current renderer's own use of them (src/render-pitch.js, src/render-setpieces.js, src/render-goals.js). */
+const lockerDraws = () => !!(M && M.arcade && !M.demo && !M.auto && !practice);
+function lockerBall() {
+  if (!lockerDraws() || locker.ball === LOCKER_BALLS[0].id) return null;
+  return lockerItem('ball', locker.ball);
+}
+function lockerBoots(team, p) {
+  if (!lockerDraws() || locker.boots === LOCKER_BOOTS[0].id || team !== Math.max(0, lockerSide())) return null;
+  if (M.career && p !== M.careerP) return null;              // a career match: his boots only
+  const b = lockerItem('boots', locker.boots);
+  return b ? (b.rainbow ? LOCKER_RAINBOW[((p && p.n) || 0) % LOCKER_RAINBOW.length] : b.col) : null;
+}
+/* The ball's fill along its length, in the ball's own frame (x from -rx to rx): a colour, or a gradient for the patterns. */
+function lockerBallFill(look, rx) {
+  if (!look.band && !look.rainbow && !look.shine) return look.fill;
+  const g = ctx.createLinearGradient(-rx, 0, rx, 0);
+  if (look.rainbow) LOCKER_RAINBOW.forEach((c, i) => g.addColorStop(i/(LOCKER_RAINBOW.length - 1), c));
+  else if (look.band) [0, 0.26, 0.38, 0.62, 0.74, 1].forEach((at, i, a) => { if (i) { const c = i % 2 ? look.fill : look.band; g.addColorStop(a[i - 1], c); g.addColorStop(at, c); } });   // two bands, a third of the way in from each end
+  else { g.addColorStop(0, look.fill); g.addColorStop(0.42, '#ffffff'); g.addColorStop(0.58, look.fill); g.addColorStop(1, look.line); }
+  return g;
+}
+/* Two boots under man p, in his own turned frame (x along his facing), drawn before his body so only the toes show as he runs. */
+function lockerFeet(col, r, p) {
+  const sp = hyp(p.vx, p.vy), a = Math.min(1, sp/6)*0.55*Math.sin((M.rt || 0)*(4 + sp*1.3) + p.n*1.7);
+  ctx.fillStyle = col;                                       // the outline and its width are the body's, already set
+  for (const [s, y] of [[1, -0.32], [-1, 0.32]]) { ellipse(r*(0.32 + s*a), r*y, r*0.3, r*0.18); ctx.fill(); ctx.stroke(); }
+}
+/* =========================================================
    Rendering
    ========================================================= */
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -4372,6 +4659,7 @@ function drawPlayer(p, r) {
     ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*1.05, 0, r*0.36, 0, 7); ctx.fill();
   } else {
     const lean = k ? (k.tier === 'soft' ? 0.15 : k.tier === 'dom' && k.t/k.T >= 0.4 ? -0.12 : 0) : 0;   // a bound carrier leans into a Soft tackle, stands up in a Wrap, recoils from a Big Hit
+    const boots = lockerBoots(p.team, p); if (boots) lockerFeet(boots, r, p);   // the Locker's boots on your side, under the body so the toes show as he runs (src/locker.js)
     ctx.fillStyle = kit.trim;
     ctx.beginPath(); ctx.arc(lean*r, -r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(lean*r, r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
@@ -4416,7 +4704,8 @@ function drawBall(r) {
   if (b.state === 'held') { const [fx, fy] = svec(b.carrier.fx, b.carrier.fy); ang = Math.atan2(fy, fx); }
   else { const [vx, vy] = svec(b.vx, b.vy); if (hyp(vx, vy) > 0.5) ang = Math.atan2(vy, vx); }
   ctx.save(); ctx.translate(gx, gy - lift); ctx.rotate(ang);
-  ctx.fillStyle = '#f6f3ea'; ctx.strokeStyle = '#3b2f22'; ctx.lineWidth = 1.2;
+  const look = lockerBall();                               // the Locker's ball in a match you play, or null for the classic one (src/locker.js)
+  ctx.fillStyle = look ? lockerBallFill(look, rx*sc) : '#f6f3ea'; ctx.strokeStyle = look ? look.line : '#3b2f22'; ctx.lineWidth = 1.2;
   ellipse(0, 0, rx*sc, rx*0.62*sc); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(59,47,34,.6)'; ctx.beginPath(); ctx.moveTo(-rx*0.45*sc, 0); ctx.lineTo(rx*0.45*sc, 0); ctx.stroke();
   ctx.restore();
@@ -4427,7 +4716,7 @@ const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
 const SKIN = '#c69c7c', HAIR = '#2a1d16';
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
-function kitOf(team) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df' }; }
+function kitOf(team) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, null) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js)
 function seg(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 function cutGeom() { const W = V.W, H = V.H; return { W, H, horizon:H*0.38, ground:H*0.83, sc:H*0.15 }; }
@@ -4470,7 +4759,7 @@ function fig(x, gy, sc, kit0, o) {
     if (o.drive) { fx = hx - 0.55*sc + sw*0.06*sc; kx = hx - 0.12*sc; ky = -hipH*0.42; }
     ctx.strokeStyle = kit.shorts; ctx.lineWidth = w*1.15; seg(hx, -hipH, kx, ky);
     ctx.strokeStyle = kit.shirt; ctx.lineWidth = w*0.85; seg(kx, ky, fx, -0.07*sc);
-    ctx.fillStyle = '#111'; ctx.fillRect(fx - 0.04*sc, -0.08*sc, 0.2*sc, 0.08*sc);
+    ctx.fillStyle = kit0.boots || '#111'; ctx.fillRect(fx - 0.04*sc, -0.08*sc, 0.2*sc, 0.08*sc);
   }
   ctx.translate(0, -hipH); ctx.rotate(lean*1.42);
   ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
@@ -4491,7 +4780,8 @@ function fig(x, gy, sc, kit0, o) {
 function cutBall(x, y, sc, ang) {
   const rx = Math.max(5, sc*0.17);
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang || 0);
-  ctx.fillStyle = '#f6f3ea'; ctx.strokeStyle = '#3b2f22'; ctx.lineWidth = 1.4;
+  const look = lockerBall();                               // the Locker's ball in a match you play (src/locker.js)
+  ctx.fillStyle = look ? lockerBallFill(look, rx) : '#f6f3ea'; ctx.strokeStyle = look ? look.line : '#3b2f22'; ctx.lineWidth = 1.4;
   ellipse(0, 0, rx, rx*0.62); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
@@ -5210,7 +5500,7 @@ function figFB(sx, sy, k, team, o) {
     const fx = side*0.16*k + (side === Math.sign(sh) ? sh*0.6 : 0), kx = side*0.12*k + sh*0.55;
     ctx.strokeStyle = kit.shorts; ctx.lineWidth = 0.17*k; seg(side*0.08*k + sh, -hip, kx, -hip*0.5 - lift*0.6);
     ctx.strokeStyle = kit.trim; ctx.lineWidth = 0.13*k; seg(kx, -hip*0.5 - lift*0.6, fx, -0.08*k - lift);
-    ctx.fillStyle = '#111'; ctx.fillRect(fx - 0.07*k, -0.09*k - lift, 0.14*k, 0.09*k);
+    ctx.fillStyle = kit.boots || '#111'; ctx.fillRect(fx - 0.07*k, -0.09*k - lift, 0.14*k, 0.09*k);
   }
   ctx.translate(sh, -hip); ctx.rotate(o.lean || 0); ctx.translate(0, hip);   // lean pivots at the hips
   if (o.twist) ctx.scale(1 - 0.25*o.twist, 1);
@@ -6433,6 +6723,7 @@ function showBreak(kind) {
   }
   $('br-series').hidden = !pair || series.w[0] + series.w[1] + series.d < 2; $('br-row').hidden = !pair;   // a series needs two matches
   fillMatchStats();
+  lockerCard(kind);                                        // full time: a row for each medal won (src/ui-locker.js)
   setFocus(null);
   $('m-break').hidden = false;
 }
@@ -6440,6 +6731,7 @@ function finishMatch() {
   if (M.champ && champ) recordChampResult();
   if (M.career) careerRecordResult();
   if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and a Whole Team career alike
+  lockerMatch();                                            // the Locker: the feats done this match, and a Championship won (src/locker.js)
   showBreak('full');
 }
 $('br-go').addEventListener('click', () => {
@@ -6519,6 +6811,7 @@ function renderHome() {
     homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
   renderCareerHome();
+  lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
 }
 /* A note under Championship or Career. The team's name (and its separator) is a span of its own, which a phone held sideways
    leaves out (styles.css), so the note stays one line under its half: Round 2 of 5, Minis · Round 1 of 5. */
@@ -6655,6 +6948,7 @@ function renderTeams() {
   navOnly = pair ? p : null;
   $('t-default').textContent = 'Play as ' + storeHomeTeam().name;
   teamList = [...(settings.pool === IMPORT_POOL ? importTeams() : POOLS[settings.pool]), ...custom];   // My League: src/import.js
+  if (settings.pool === 0 && typeof lockerLegends === 'function') teamList.splice(POOLS[0].length, 0, ...lockerLegends('men'), ...lockerLegends('women'));   // International: the Legends unlocked so far, after the nations (src/locker.js)
   if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
   let html = teamList.map(teamCard).join('');
   if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
@@ -9048,6 +9342,7 @@ function practiceRestore() {
   $('practice-cue').hidden = true; $('m-practice').hidden = true; $('drill-hud').hidden = true;
   for (const id of ['m-pause', 'm-break', 'm-tut', 'm-pen']) $(id).hidden = true;
   releaseAll(); clearBanner();
+  lockerFlush();                                           // a drill's first three stars reach the save now, with the settings back as they were (src/locker.js)
 }
 function practiceResult(p) {                               // a run as a caller hears it: the stars shown on its result card, or quit when it was left unfinished
   const kit = DRILL_KIT[p.id], done = !!p.done;
@@ -9120,6 +9415,7 @@ function practiceFinish(won, feedback, stars) {
   if (!practice || practice.done) return;
   stars = stars == null ? (won ? 3 : 0) : clamp(Math.round(stars), 0, 3);
   practice.ready = false; practice.done = true; practice.won = !!won; practice.stars = stars; M.paused = true;
+  lockerDrill(practice.id, stars);                         // three stars: Star Pupil (src/locker.js), saved when the drill is left
   if (practice.opts) practice.best = practiceBest(practice.best, practiceResult(practice));   // taken now, while the run (its role included) is as shown
   $('pr-retry').textContent = 'Try Again'; $('pr-retry').hidden = false; $('pr-roles').hidden = true;
   $('pr-next').hidden = !!practice.opts;                   // a caller picks the next drill itself
@@ -9160,6 +9456,109 @@ for (const role of ['runner', 'passer']) $('pr-' + role).addEventListener('click
 });
 $('pr-next').addEventListener('click', () => practiceStart(PRACTICE_DRILLS[(PRACTICE_DRILLS.findIndex(d => d.id === practice.id) + 1) % PRACTICE_DRILLS.length].id, practice.opts));
 $('pr-select').addEventListener('click', practiceChoose);
+/* =========================================================
+   The Locker's screens: the home button, the Locker (Medals | Ball | Boots | Legends) and the full-time card's medal rows.
+   Pictures and colours first: each feat has an icon, each medal a bronze, silver or gold pip, each ball and pair of boots is
+   drawn in its colours, a locked one is dimmed with the pip and the name of the medal that unlocks it, and a locked Legends
+   side is a padlock with the Gold count it needs. The rules are in src/locker.js.
+   ========================================================= */
+const LOCKER_TABS = ['Medals', 'Ball', 'Boots', 'Legends'];
+let lockerTab = 0, lockerSvgN = 0;
+const LOCKER_ICON = {   // 40x40, drawn in the chalk line; .acc is the gold accent
+  hat:'<ellipse cx="10" cy="27" rx="6.5" ry="4.2" transform="rotate(-28 10 27)"/><ellipse cx="20" cy="14" rx="6.5" ry="4.2" transform="rotate(-28 20 14)" class="acc"/><ellipse cx="30" cy="27" rx="6.5" ry="4.2" transform="rotate(-28 30 27)"/>',
+  sharp:'<path d="M12 5v30M28 5v30M12 23h16"/><ellipse cx="20" cy="12" rx="5" ry="3.3" transform="rotate(-35 20 12)" class="acc"/>',
+  hit:'<path class="acc" d="M20 3l3.2 9 8.6-4.2-4.2 8.6 9 3.2-9 3.2 4.2 8.6-8.6-4.2-3.2 9-3.2-9-8.6 4.2 4.2-8.6-9-3.2 9-3.2-4.2-8.6 8.6 4.2z"/>',
+  clean:'<path d="M20 4l13 4.5v10c0 8.5-5.5 14-13 17.5C12.5 32.5 7 27 7 18.5v-10z"/><path class="acc-line" d="M13.5 19.5l4.5 4.5 8.5-9"/>',
+  golden:'<ellipse cx="20" cy="22" rx="9" ry="6" transform="rotate(-30 20 22)" class="acc"/><path class="acc-line" d="M20 5v5M33 10l-3.5 3.5M7 10l3.5 3.5M35 23h-4.5M5 23h4.5"/>',
+  comeback:'<path d="M8 34v-7M16 34v-12M24 34v-17M32 34v-23" class="acc-line" stroke-width="5"/><path d="M5 35h30"/>',
+  drop:'<path d="M13 4v15M27 4v15M13 12h14"/><path class="dash" d="M20 28V15"/><ellipse cx="20" cy="31" rx="5.5" ry="3.6" transform="rotate(-30 20 31)" class="acc"/>',
+  fire:'<path class="acc" d="M13 36c-5 0-8-4-7-9 1-4 4-6 4-11 4 2 6 6 5 10 1-2 3-3 3-5 2 3 3 6 2 9-1 4-3 6-7 6z"/><path class="acc" d="M28 36c-5 0-8-4-7-9 1-4 4-6 4-11 4 2 6 6 5 10 1-2 3-3 3-5 2 3 3 6 2 9-1 4-3 6-7 6z"/>',
+  champ:'<path class="acc" d="M13 6h14v8a7 7 0 0 1-14 0z"/><path d="M13 9H8.5a4.5 4.5 0 0 0 5 6M27 9h4.5a4.5 4.5 0 0 1-5 6M20 21v6M15 27h10v6H15z"/>',
+  star:'<path class="acc" d="M20 4l2.6 6.2 6.7.5-5.1 4.4 1.6 6.5L20 18l-5.8 3.6 1.6-6.5-5.1-4.4 6.7-.5z"/><path d="M9.5 22l1.7 4 4.3.3-3.3 2.8 1 4.2-3.7-2.3-3.7 2.3 1-4.2-3.3-2.8 4.3-.3zM30.5 22l1.7 4 4.3.3-3.3 2.8 1 4.2-3.7-2.3-3.7 2.3 1-4.2-3.3-2.8 4.3-.3z"/>',
+  silver:'<circle cx="20" cy="17" r="12"/><circle cx="20" cy="17" r="6.5" class="acc"/><path d="M20 29v4M13 35h14"/>',
+  callup:'<path d="M14 6l-8 5 3 7 4-2v18h14V16l4 2 3-7-8-5c-1 3-4 4-6 4s-5-1-6-4z"/><path class="acc" d="M20 17l1.6 3.4 3.7.4-2.8 2.5.8 3.7-3.3-1.9-3.3 1.9.8-3.7-2.8-2.5 3.7-.4z"/>',
+};
+const lockerIcon = id => `<svg viewBox="0 0 40 40" aria-hidden="true">${LOCKER_ICON[id] || ''}</svg>`;
+const lockerDisc = t => `<svg class="lk-disc t${t}" viewBox="0 0 20 24" aria-hidden="true"><path d="M5 0h4l3 7H8zM15 0h-4L8 7h4z" fill="#c8102e"/><circle cx="10" cy="15" r="7.5" fill="var(--pc)" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/></svg>`;   // a medal on its ribbon, in its colour
+const lockerPip = (t, on) => `<i class="lk-pip t${t}${on ? ' on' : ''}" aria-hidden="true"></i>`;
+/* A ball or a pair of boots, drawn in its colours: patterns as a gradient with an id of its own, so two copies never share one. */
+function lockerSwatch(kind, it) {
+  const n = 'lkg' + (++lockerSvgN);
+  let fill = kind === 'ball' ? it.fill : it.col, defs = '';
+  const stops = it.rainbow ? LOCKER_RAINBOW.map((c, i) => [i/(LOCKER_RAINBOW.length - 1), c])
+    : it.band ? [[0, it.fill], [0.26, it.fill], [0.26, it.band], [0.38, it.band], [0.38, it.fill], [0.62, it.fill], [0.62, it.band], [0.74, it.band], [0.74, it.fill], [1, it.fill]]
+    : it.shine ? [[0, it.fill], [0.42, '#ffffff'], [0.58, it.fill], [1, it.line]] : null;
+  if (stops) { defs = `<defs><linearGradient id="${n}">${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient></defs>`; fill = `url(#${n})`; }
+  if (kind === 'ball') return `<svg class="lk-ball" viewBox="0 0 48 32" aria-hidden="true">${defs}<ellipse cx="24" cy="16" rx="21" ry="12.5" fill="${fill}" stroke="${it.line}" stroke-width="2"/><path d="M15 16h18M19 13.5v5M23 13.5v5M27 13.5v5" stroke="${it.line}" stroke-width="1.6" stroke-linecap="round" opacity=".7"/></svg>`;
+  return `<svg class="lk-boot" viewBox="0 0 48 32" aria-hidden="true">${defs}<path d="M5 6h15l2 9 15 3.5c5 1 7 3.5 7 6.5v2H5z" fill="${fill}" stroke="#a7b4a9" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 27h39" stroke="#a7b4a9" stroke-width="1.6"/><g fill="#08110b"><circle cx="10" cy="29.5" r="1.8"/><circle cx="17" cy="29.5" r="1.8"/><circle cx="31" cy="29.5" r="1.8"/><circle cx="39" cy="29.5" r="1.8"/></g></svg>`;
+}
+const lockerItemName = it => it.name + (it.kind === 'ball' ? ' Ball' : ' Boots');
+const LOCKER_LOCK = '<svg class="lk-lock" viewBox="0 0 14 18" aria-hidden="true"><path d="M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x=".5" y="7.6" width="13" height="10" rx="2" fill="currentColor"/></svg>';
+
+/* ---------- the home button ---------- */
+function lockerHome() {                                      // from renderHome: a dot on Locker while a medal waits there unseen
+  const b = $('b-locker'); if (!b || !b.classList) return;
+  const fresh = lockerNew();
+  if (b.classList.contains('note') !== fresh) { b.classList.toggle('note', fresh); b.setAttribute('aria-label', fresh ? 'Locker, a new medal' : 'Locker'); }
+}
+
+/* ---------- the Locker ---------- */
+function lockerOpen(tab) {
+  lockerTab = tab == null ? 0 : tab;
+  const news = new Set(LOCKER_FEATS.filter(f => lockerTier(f.id) > lockerSeen(f.id)).map(f => f.id));   // shown once with a ring, then seen
+  renderLocker(news);
+  showScreen('s-locker'); $('s-locker').scrollTop = 0;
+  lockerMarkSeen(); lockerHome();
+}
+function renderLocker(news) {
+  const tiers = LOCKER_FEATS.map(f => lockerTier(f.id));
+  $('lk-tally').innerHTML = [1, 2, 3].map(t => `<span class="lk-tal" aria-label="${LOCKER_MEDALS[t - 1]} ${tiers.filter(x => x >= t).length}">${lockerPip(t, true)}${tiers.filter(x => x >= t).length}</span>`).join('');
+  [...$('lk-tabs').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === lockerTab)));
+  const body = $('lk-body');
+  body.className = 'lk-body lk-t' + lockerTab;
+  if (lockerTab === 0) body.innerHTML = LOCKER_FEATS.map(f => {
+    const t = lockerTier(f.id), next = lockerNext(f.id), n = lockerCount(f.id);
+    return `<div class="lk-feat${news && news.has(f.id) ? ' new' : ''}" role="group" aria-label="${f.name}, ${t ? LOCKER_MEDALS[t - 1] : 'no medal yet'}, ${n}${next ? ' of ' + next : ''}">
+      <span class="lk-ic">${lockerIcon(f.id)}</span><b class="lk-name">${f.name}</b><span class="lk-line">${f.line}</span>
+      <span class="lk-pips">${[1, 2, 3].map(k => lockerPip(k, t >= k)).join('')}<span class="lk-n">${next ? n + '/' + next : n}</span></span></div>`;
+  }).join('');
+  else if (lockerTab < 3) {
+    const kind = lockerTab === 1 ? 'ball' : 'boots', list = kind === 'ball' ? LOCKER_BALLS : LOCKER_BOOTS;
+    body.innerHTML = list.map(it => {
+      const has = lockerHas(kind, it.id), on = locker[kind] === it.id, src = lockerSource(kind, it.id);
+      const why = !has && src ? `<span class="lk-why">${lockerPip(src.tier, true)}${src.feat.name}</span>` : '';
+      const label = it.name + (has ? '' : ', locked, ' + src.feat.name + ' ' + LOCKER_MEDALS[src.tier - 1]);
+      return `<button class="btn lk-item${has ? '' : ' lk-off'}" data-kind="${kind}" data-id="${it.id}" aria-pressed="${on}" aria-label="${label}"${has ? '' : ' disabled'}>
+        ${lockerSwatch(kind, it)}<span class="lk-iname">${it.name}</span>${why}</button>`;
+    }).join('');
+    for (const b of body.querySelectorAll('.lk-item')) b.addEventListener('click', () => { if (lockerPick(b.dataset.kind, b.dataset.id)) { renderLocker(); const again = $('lk-body').querySelector(`[data-id="${b.dataset.id}"]`); if (again && again.focus) again.focus(); if (again && focusEl) setFocus(again); } });
+  } else {
+    const g = Math.min(10, lockerGolds());
+    const tile = (t, i) => i < g
+      ? `<div class="lk-leg" role="group" aria-label="${esc(t.name)}, Overall ${overallOf(t)}">${jersey(t).replace(/<\/span>$/, `<span class="ovr">${overallOf(t)}</span></span>`)}<span class="lk-nat">${esc(t.nation)}</span><b class="lk-yr">${t.year}</b></div>`
+      : `<div class="lk-leg lk-off" role="group" aria-label="Locked, ${i + 1} Gold ${i ? 'Medals' : 'Medal'}"><span class="lk-padlock">${LOCKER_LOCK}</span><span class="lk-need">${lockerPip(3, true)}${i + 1}</span></div>`;
+    body.innerHTML = ['men', 'women'].map(cat => `<p class="lbl">${cat === 'men' ? 'Men' : 'Women'}</p><div class="lk-legrow">${LEGENDS.filter(t => t.cat === cat).map(tile).join('')}</div>`).join('');
+  }
+}
+function lockerSetTab(i) { lockerTab = clamp(i, 0, LOCKER_TABS.length - 1); renderLocker(); }
+[...$('lk-tabs').children].forEach((b, i) => b.addEventListener('click', () => lockerSetTab(i)));
+$('b-locker').addEventListener('click', () => { ac(); lockerOpen(0); });
+$('lk-back').addEventListener('click', goHome);
+
+/* ---------- full time ---------- */
+/* The full-time card: a row for each medal won since it was last shown (its pip, its name, what it unlocked), and a line for the
+   Legends a new Gold brings. Shown once: the medals are seen from then on. */
+function lockerCard(kind) {
+  const el = $('br-medals');
+  const show = on => { el.hidden = !on; $('m-break').classList.toggle('lk-on', on); };   // the card makes room for them beside the stats on a phone held sideways
+  if (kind !== 'full') { show(false); return; }
+  const { medals, legends } = lockerNews();
+  if (!medals.length) { show(false); el.innerHTML = ''; return; }
+  el.innerHTML = medals.map(m => `<p class="lk-won" aria-label="${m.feat.name}, ${LOCKER_MEDALS[m.tier - 1]}${m.item ? ', ' + lockerItemName(m.item) : ''}">${lockerDisc(m.tier)}<b>${m.feat.name}</b>${m.item ? `<span class="lk-got">${lockerSwatch(m.item.kind, m.item)}${lockerItemName(m.item)}</span>` : ''}</p>`).join('')
+    + (legends.length ? `<p class="lk-won lk-newleg"><b>New Legends</b>${legends.map(t => `<span class="lk-got">${jersey(t)}${esc(t.name)}</span>`).join('')}</p>` : '');
+  show(true);
+  lockerMarkSeen();
+}
 /* =========================================================
    Career screens: the new player, the hub, training, the table and the season's end.
    The rules are in src/career.js; nothing here draws a random number except through it.
@@ -9905,11 +10304,12 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
+  locker:{ FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, finishMatch, showBreak },
   get M() { return M; } };
 
 function start(data) {
   load();
-  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data)) restore(data);
+  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data || 'locker' in data)) restore(data);
   resize(); setDesk();
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
@@ -9920,6 +10320,6 @@ function start(data) {
   restStick();
   requestAnimationFrame(frame);
 }
-try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, store:{ owned:storeBought } })); } catch (e) { /* not in a viewer */ }
+try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, store:{ owned:storeBought }, locker:lockerSaved() })); } catch (e) { /* not in a viewer */ }
 nativeBoot(() => { if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {}); });   // a browser starts at once; the app first puts back a save the web view lost (native.js)
 })();

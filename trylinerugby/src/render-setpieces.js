@@ -4,7 +4,7 @@ const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
 const SKIN = '#c69c7c', HAIR = '#2a1d16';
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
-function kitOf(team) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df' }; }
+function kitOf(team) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, null) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js)
 function seg(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 function cutGeom() { const W = V.W, H = V.H; return { W, H, horizon:H*0.38, ground:H*0.83, sc:H*0.15 }; }
@@ -47,7 +47,7 @@ function fig(x, gy, sc, kit0, o) {
     if (o.drive) { fx = hx - 0.55*sc + sw*0.06*sc; kx = hx - 0.12*sc; ky = -hipH*0.42; }
     ctx.strokeStyle = kit.shorts; ctx.lineWidth = w*1.15; seg(hx, -hipH, kx, ky);
     ctx.strokeStyle = kit.shirt; ctx.lineWidth = w*0.85; seg(kx, ky, fx, -0.07*sc);
-    ctx.fillStyle = '#111'; ctx.fillRect(fx - 0.04*sc, -0.08*sc, 0.2*sc, 0.08*sc);
+    ctx.fillStyle = kit0.boots || '#111'; ctx.fillRect(fx - 0.04*sc, -0.08*sc, 0.2*sc, 0.08*sc);
   }
   ctx.translate(0, -hipH); ctx.rotate(lean*1.42);
   ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
@@ -68,7 +68,8 @@ function fig(x, gy, sc, kit0, o) {
 function cutBall(x, y, sc, ang) {
   const rx = Math.max(5, sc*0.17);
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang || 0);
-  ctx.fillStyle = '#f6f3ea'; ctx.strokeStyle = '#3b2f22'; ctx.lineWidth = 1.4;
+  const look = lockerBall();                               // the Locker's ball in a match you play (src/locker.js)
+  ctx.fillStyle = look ? lockerBallFill(look, rx) : '#f6f3ea'; ctx.strokeStyle = look ? look.line : '#3b2f22'; ctx.lineWidth = 1.4;
   ellipse(0, 0, rx, rx*0.62); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
