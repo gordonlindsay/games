@@ -701,11 +701,19 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 }
 /* ===== locker ===== */
 /* the home button: with the logo, so no row of buttons changes in any state (src/ui-locker.js). On a tall screen it sits at the right
-   end of the logo's line, level with Quick Match's right edge, and adds no height; on a phone held sideways it stands under the line
-   in the logo's column, where there is room. A dot while a new medal waits there, as Grown-Ups has for Move Up to Easy */
+   end of the logo's line, level with Quick Match's right edge, and adds no height; on a phone held sideways it stands at the right of
+   the tagline, level with the settings' right edge. A dot while a new medal waits there, as Grown-Ups has for Move Up to Easy */
 .home .mark{position:relative}
 .lk-home{position:absolute;right:0;bottom:0;width:auto;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:6px 20px 6px 12px}
-@media (orientation:landscape) and (max-height:560px){.lk-home{position:relative;right:auto;bottom:auto;align-self:flex-start}}
+@media (orientation:landscape) and (max-height:560px){
+  /* sideways: its top a little above the tagline's (the logo's posts end left of it), so the logo's column grows by less than the
+     button's height, and with a Trophy Cabinet (where that column sets the height) the home is no taller than without the Locker */
+  .home .mark{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-content:start}
+  .home .mark > *{grid-column:1}
+  .home .mark .word{grid-column:1 / -1}
+  .home .mark .eyebrow{align-self:start}
+  .home .mark .lk-home{position:relative;right:auto;bottom:auto;grid-column:2;grid-row:2;align-self:start;justify-self:end;margin-top:-8px}
+}
 .lk-medal{display:block;width:22px;height:26px;flex:none}
 .lk-medal svg{display:block;width:100%;height:100%}
 .lk-home.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}
@@ -780,7 +788,9 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   .lk-n{font-size:14px}
 }
 /* the full-time card: a row for each medal won (the medal in its colour, the feat, what it unlocked), then the new Legends. On a phone
-   held sideways the card widens and they stand beside the score and the stats, so Continue stays on the screen */
+   held sideways the card widens and they stand beside the score and the stats, so Continue stays on the screen: the left column is
+   never under 350px, so the stats' key stays on one line as on the card without them, and they span exactly the rows shown above
+   Continue (--lk-rows, from lockerCard), so a row the mode does not show never adds a gap. The card is never taller for them */
 .br-medals{display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid var(--rule)}
 .lk-won{margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:14px;line-height:1.2}
 .lk-disc{display:block;width:18px;height:22px;flex:none}
@@ -791,9 +801,20 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .lk-newleg{gap:4px 12px}
 .lk-newleg b{flex:1 0 100%;font-size:15px;color:var(--flood)}
 .lk-newleg .lk-got{margin-left:0}
+.lk-who{margin:0;display:flex;align-items:center;gap:8px;font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim)}   /* Two Player: Player 1's medals */
 @media (orientation:landscape) and (max-height:560px){
-  #m-break.lk-on .card{width:min(780px,100%);display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:20px;align-items:start}
+  #m-break.lk-on .card{width:min(780px,100%);display:grid;grid-template-columns:minmax(350px,1fr) minmax(150px,1fr);column-gap:20px;align-items:start}
   #m-break.lk-on .card > *{grid-column:1}
-  #m-break.lk-on #br-medals{grid-column:2;grid-row:1 / span 6;align-self:center;padding:0 0 0 18px;border-top:0;border-left:1px solid var(--rule)}
+  #m-break.lk-on #br-medals{grid-column:2;grid-row:1 / span var(--lk-rows,4);align-self:center;padding:0 0 0 18px;border-top:0;border-left:1px solid var(--rule)}
   #m-break.lk-on #br-go,#m-break.lk-on #br-row{grid-column:1 / -1}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:760px){
+  /* a narrower phone (667x375): the medals' column is about 230px, so each row steps down a size to keep its name and its unlock on
+     one line where they fit; one that does not puts its unlock on the line below */
+  #m-break.lk-on #br-medals{gap:5px;padding-left:14px}
+  #m-break.lk-on .lk-won{gap:2px 6px}
+  #m-break.lk-on .lk-won b{font-size:17px}
+  #m-break.lk-on .lk-got{gap:4px;font-size:13px}
+  #m-break.lk-on .lk-got svg{width:26px;height:17px}
+  #m-break.lk-on .lk-got .jersey{width:20px;height:20px}
 }

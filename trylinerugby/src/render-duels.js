@@ -183,18 +183,18 @@ function drawDuel(c, g) {
   }
   // figures, far to near
   const actors = [];
-  const add = (a, team, back, extra) => { if (a) actors.push({ a, team, back, o:extra || {} }); };
+  const add = (a, man, back, extra) => { if (a) actors.push({ a, team:man.team, back, o:{ kit:kitOf(man.team, man), ...extra } }); };   // the kit knows the man, for the Locker's boots (kitOf)
   if (c.kind === 'past' || c.kind === 'pass') {
-    add(P.u, c.U.team, true, { carry:!P.ball && !P.u.fake, arms:P.u.fake ? 'pass' : undefined, num:c.U.n, stride:t*19 });
-    add(P.o, c.O.team, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
-    if (P.r) add(P.r, c.R.team, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
+    add(P.u, c.U, true, { carry:!P.ball && !P.u.fake, arms:P.u.fake ? 'pass' : undefined, num:c.U.n, stride:t*19 });
+    add(P.o, c.O, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
+    if (P.r) add(P.r, c.R, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
   } else if (c.kind === 'tackle') {
-    add(P.u, c.U.team, true, { num:c.U.n, stride:t*16, dive:P.u.dive ? 1 : 0, lying:P.u.lying, arms:P.u.dive ? 'reach' : 'run' });
-    add(P.o, c.O.team, false, { carry:true, stride:t*19, lean:c.stepAt != null && t > c.stepAt ? c.stepDir*0.3 : (c.lean || 0)*0.3, lying:P.o.lying });
+    add(P.u, c.U, true, { num:c.U.n, stride:t*16, dive:P.u.dive ? 1 : 0, lying:P.u.lying, arms:P.u.dive ? 'reach' : 'run' });
+    add(P.o, c.O, false, { carry:true, stride:t*19, lean:c.stepAt != null && t > c.stepAt ? c.stepDir*0.3 : (c.lean || 0)*0.3, lying:P.o.lying });
   } else {
-    add(P.u, c.U.team, true, { num:c.U.n, stride:t*14, arms:P.u.carry ? 'carry' : 'reach' });
-    add(P.o, c.O.team, false, { stride:t*8, arms:P.o.thrown ? 'pass' : (P.o.wind ? 'carry' : 'run'), twist:P.o.pump || P.o.wind });
-    add(P.r, c.R.team, false, { stride:t*10, arms:'reach' });
+    add(P.u, c.U, true, { num:c.U.n, stride:t*14, arms:P.u.carry ? 'carry' : 'reach' });
+    add(P.o, c.O, false, { stride:t*8, arms:P.o.thrown ? 'pass' : (P.o.wind ? 'carry' : 'run'), twist:P.o.pump || P.o.wind });
+    add(P.r, c.R, false, { stride:t*10, arms:'reach' });
   }
   actors.sort((p, q) => q.a.x - p.a.x);
   for (const it of actors) {

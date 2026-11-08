@@ -152,6 +152,7 @@ function lockerHalf() {                                      // the second half 
 function lockerMatch() {
   if (!lockerCounts() || M.lockerDone) return [];
   M.lockerDone = true;
+  lockerFrom();
   const me = lockerSide(), op = 1 - me, S = M.stats, k = M.lk || { drops:[0, 0], hits:[0, 0], ht:null };
   const won = M.score[me] > M.score[op];
   const done = {
@@ -175,7 +176,7 @@ function lockerMatch() {
 function lockerEvent(id) {
   const f = LOCKER_EVENTS[id];
   if (!f || practice) return false;
-  if (M && M.arcade && !M.demo && !M.auto) { const ev = M.lockerEv || (M.lockerEv = []); if (ev.includes(f)) return false; ev.push(f); }   // once a match for one medal
+  if (M && M.arcade && !M.demo && !M.auto) { lockerFrom(); const ev = M.lockerEv || (M.lockerEv = []); if (ev.includes(f)) return false; ev.push(f); }   // once a match for one medal
   lockerAdd(f);
   save();
   return true;
@@ -193,21 +194,29 @@ function lockerFlush() { if (lockerDirty && !practice) { lockerDirty = false; sa
 /* ---------- what is new ---------- */
 const lockerSeen = id => Math.min(locker.seen[id] || 0, lockerTier(id));
 const lockerNew = () => LOCKER_FEATS.some(f => lockerTier(f.id) > lockerSeen(f.id));
-/* Each medal won since it was last shown: { feat, tier, item } (item null for a Gold), and the Legends the new Golds bring. */
-function lockerNews() {
+/* The tiers as a match you play began, kept on M (M.lkFrom) before its first count: at full time (lockerMatch) or at an event inside
+   it, whichever comes first. Every count in a match goes through those two, so this is the Locker as the match found it, and the
+   full-time card shows only what the match itself won. */
+function lockerFrom() {
+  if (!M.lkFrom) M.lkFrom = Object.fromEntries(LOCKER_FEATS.map(f => [f.id, lockerTier(f.id)]));
+  return M.lkFrom;
+}
+/* Each medal won since `from` (a feat's tier then; the last one shown by default): { feat, tier, item } (item null for a Gold), and
+   the Legends the new Golds bring. */
+function lockerNews(from = lockerSeen) {
   const medals = [];
-  for (const f of LOCKER_FEATS) for (let t = lockerSeen(f.id) + 1; t <= lockerTier(f.id); t++) {
+  for (const f of LOCKER_FEATS) for (let t = from(f.id) + 1; t <= lockerTier(f.id); t++) {
     const u = t < 3 ? f.unlock[t - 1].split(':') : null;
     medals.push({ feat:f, tier:t, item:u ? { kind:u[0], ...lockerItem(u[0], u[1]) } : null });
   }
-  const g0 = Math.min(10, lockerGolds(lockerSeen)), g1 = Math.min(10, lockerGolds());
+  const g0 = Math.min(10, lockerGolds(from)), g1 = Math.min(10, lockerGolds());
   const legends = [];
   for (let i = g0; i < g1; i++) legends.push(LEGENDS.filter(t => t.cat === 'men')[i], LEGENDS.filter(t => t.cat === 'women')[i]);
   return { medals, legends };
 }
-function lockerMarkSeen() {
+function lockerMarkSeen(ids) {                               // the medals shown: every feat (the Locker), or only those listed (the full-time card)
   let changed = false;
-  for (const f of LOCKER_FEATS) { const t = lockerTier(f.id); if ((locker.seen[f.id] || 0) !== t) { locker.seen[f.id] = t; changed = true; } }
+  for (const f of LOCKER_FEATS) { if (ids && !ids.includes(f.id)) continue; const t = lockerTier(f.id); if ((locker.seen[f.id] || 0) !== t) { locker.seen[f.id] = t; changed = true; } }
   if (changed) save();
 }
 

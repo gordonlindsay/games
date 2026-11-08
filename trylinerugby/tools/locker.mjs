@@ -3,8 +3,9 @@
 // match, the unlocks, the Legends' order and ratings, lockerEvent, nothing counted in AI v AI, the demo, a drill's match or a tool's,
 // Star Pupil's one save after a drill, the save, the full-time card, the home button, the Locker screen, the team screen's hook, the
 // render hooks, and AI v AI, the demo and the balance tools pinned to d6192ad, the build before the Locker. Last, in a real browser
-// when Playwright is installed: the home rows in every state at 844x390 and 667x375, the Locker's tabs at both sizes, its keyboard
-// and controller reach, and Continue on the full-time card with medals on it.
+// when Playwright is installed: the home rows in every state at 844x390 and 667x375 (and with a Trophy Cabinet, the Locker adding no
+// height), the Locker's tabs at both sizes, its keyboard and controller reach, Continue on the full-time card with medals on it, and
+// full time in Quick Match, Two Player, a Championship and a career never taller with medals than without.
 // node tools/locker.mjs            (SEED=37 unless set; VERBOSE=1 lists every check)
 // node tools/locker.mjs --pins     prints this build's fingerprints; GAME=<d6192ad>/index.html node tools/locker.mjs --pins re-pins BASE
 process.env.SEED ??= '37';
@@ -342,7 +343,32 @@ function champAt4(userWins) {
   ok(!L.isNew(), 'and are seen from then on');
   D.showBreak('half'); ok($('br-medals').hidden && !$('m-break').classList.contains('lk-on'), 'half time shows no medals');
   D.showBreak('full'); ok($('br-medals').hidden, 'a full-time card with nothing new shows no medal row');
+  ok(!/lk-who/.test(card), "a one-player card carries no seat tag");
   D.exitMatch();
+  // only what the match won: a medal won between matches (Star Pupil from a drill, an event) is not on the next match's card, won or
+  // lost, and keeps the home's dot; an event inside the match is on its card with the match's own medals
+  const keep = L.state();
+  fresh(); P.start('cones'); $('pr-retry').click(); P.finish(true, 'Done', 3); P.leave(); L.event('callup');
+  ok(L.tier('star') === 1 && L.tier('callup') === 1 && L.isNew(), 'a drill at three stars and a call-up between matches: two Bronzes, waiting');
+  D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+  { const M = T.M; M.half = 2; M.score = [0, 10]; M.tries = [0, 2]; M.phase = 'break'; M.over = true; }
+  L.finishMatch();
+  ok($('br-medals').hidden && !$('m-break').classList.contains('lk-on') && L.seen('star') === 0 && L.seen('callup') === 0 && L.isNew(), "a match lost with nothing done shows no medal row for them, and they keep the home's dot");
+  D.exitMatch();
+  D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+  { const M = T.M; M.half = 2; M.score = [24, 0]; M.tries = [4, 0]; ok(L.event('euro'), 'an event inside the match counts'); M.phase = 'break'; M.over = true; }
+  L.finishMatch();
+  const won = $('br-medals').innerHTML;
+  ok(/<b>Hat-Trick<\/b>/.test(won) && /<b>Clean Sheet<\/b>/.test(won) && /<b>Silverware<\/b>/.test(won) && !/Star Pupil|Call-Up/.test(won) && L.seen('hat') === 1 && L.seen('silver') === 1, 'a match won shows its own medals and the event inside it, and nothing from before it');
+  ok(L.seen('star') === 0 && L.seen('callup') === 0 && L.isNew(), 'the earlier two still wait for the Locker');
+  D.exitMatch(); L.open(0); ok(!L.isNew(), 'and the Locker shows them'); $('lk-back').click();
+  // Two Player: the medals are Player 1's, so they carry his seat tag (the score row's), Player 2's win or not
+  fresh(); D.startMatch(X.CLUBS[0], X.CLUBS[1], false, { two:true, levels:[1, 1] });
+  { const M = T.M; M.half = 2; M.score = [15, 20]; M.tries = [3, 4]; M.phase = 'break'; M.over = true; }
+  L.finishMatch();
+  ok(/^<p class="lk-who"><i class="stag s0"[^>]*>1<\/i>Player 1<\/p><p class="lk-won/.test($('br-medals').innerHTML) && /<b>Hat-Trick<\/b>/.test($('br-medals').innerHTML) && $('br-tries').textContent.startsWith('Player 2 Wins'), "Two Player: Player 1's medals under his seat tag, when Player 2 wins too");
+  D.exitMatch();
+  L.set(keep);
   L.state().n.sharp = 1; X.renderHome(); ok($('b-locker').classList.contains('note'), 'a new medal puts a dot on the home Locker button');
   L.open(0); ok(!$('s-locker').hidden && !$('b-locker').classList.contains('note'), 'opening the Locker shows it and clears the dot');
   ok(L.tab() === 0 && (L.setTab(2), L.tab() === 2) && (L.setTab(9), L.tab() === 3), 'the tabs: Medals, Ball, Boots, Legends');
@@ -394,14 +420,17 @@ function champAt4(userWins) {
   L.pick('boots', 'red'); const cr = C.create({ pos:'B', num:5, club:X.CLUBS[0] }); C.set(cr); C.play();
   const his = T.M.careerP, mate = T.M.players.find(p => p.team === 0 && p !== his);
   ok(L.boots(0, his) === '#ec3440' && L.boots(0, mate) === null && L.boots(0, null) === null, 'a career match: his boots only');
+  ok(L.kit(0, his).boots === '#ec3440' && L.kit(0, mate).boots === null && L.kit(0).boots === null, "and a close-up of him wears them (kitOf(team, p)), one of a teammate or of no one in particular does not");
   D.exitMatch(); C.set(null);
   D.startMatch(X.CLUBS[0], X.CLUBS[1], false, { two:true, levels:[1, 1] });
   ok(L.boots(0, T.M.players[0]) === '#ec3440' && L.boots(1, T.M.players[8]) === null, "Two Player: Player 1's side");
   D.exitMatch();
-  ok(/const look = lockerBall\(\);[^\n]*\n\s*ctx\.fillStyle = look \? lockerBallFill\(look, rx\*sc\) : '#f6f3ea'/.test(html) && /const boots = lockerBoots\(p\.team, p\); if \(boots\) lockerFeet\(boots, r, p\);/.test(html) && /boots:lockerBoots\(team, null\)/.test(html), "the renderer's hooks are the two calls, lockerBall() and lockerBoots(team, p)");
+  ok(/const look = lockerBall\(\);[^\n]*\n\s*ctx\.fillStyle = look \? lockerBallFill\(look, rx\*sc\) : '#f6f3ea'/.test(html) && /const boots = lockerBoots\(p\.team, p\); if \(boots\) lockerFeet\(boots, r, p\);/.test(html) && /function kitOf\(team, p = null\)[^\n]*boots:lockerBoots\(team, p\)/.test(html), "the renderer's hooks are the two calls, lockerBall() and lockerBoots(team, p)");
+  ok(/figFB\(it\.sx, it\.sy, it\.k, g\.team, \{ back:true, kit:kitOf\(g\.team, g\.kicker\)/.test(html) && /const add = \(a, man, back, extra\) => \{ if \(a\) actors\.push\(\{ a, team:man\.team, back, o:\{ kit:kitOf\(man\.team, man\), \.\.\.extra \} \}\); \};/.test(html), 'the close-ups that know the man pass him to kitOf: the goal kick its kicker, a duel its men');
 }
 
-// 14. a browser: the home rows in every state at both sizes, the Locker's tabs, its keyboard and controller reach, full time's Continue
+// 14. a browser: the home rows in every state at both sizes (and with a Trophy Cabinet), the Locker's tabs, its keyboard and controller
+// reach, full time's Continue, and full time in every mode
 await browserChecks();
 
 console.log(failed ? `Locker: ${passed} passed, ${failed} failed` : `Locker: ${passed} passed, 0 failed`);
@@ -510,6 +539,53 @@ async function browserChecks() {
         return out;
       });
       ok(ft.rows === 5 && ft.go && ft.scroll, `${w}x${h}: full time with four medals and the new Legends keeps Continue on the screen (${json(ft)})`);
+      // full time in every mode, with six medals and the new Legends against the same card with none: Quick Match, Two Player (its series
+      // row and Change Teams | Back to Menu), a Championship's and a career's table points. The medals never make the card taller, so
+      // one that fitted still fits (Two Player with its series already scrolled at both sizes before the Locker)
+      const modes = await page.evaluate(async () => {
+        const T = window.__tryline, L = T.locker, X = T.teams, out = [];
+        const none = Object.fromEntries(['hat', 'sharp', 'hit', 'clean', 'golden', 'comeback', 'drop', 'fire'].map(id => [id, 1]));   // one each: this match crosses no tier
+        for (const mode of ['quick', 'two', 'champ', 'career']) for (const medals of [false, true]) {
+          L.set(L.clean(medals ? { n:{ hat:2, drop:9 }, seen:{ hat:1, drop:2 } } : { n:none, seen:none }));
+          if (mode === 'two') { T.debug.series().w = [1, 0]; T.debug.series().d = 0; T.debug.startMatch(X.CLUBS[0], X.CLUBS[1], false, { two:true, levels:[1, 1] }); }
+          else if (mode === 'champ') { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.debug.startMatch(X.NATIONS[0], X.NATIONS[1], true); }
+          else if (mode === 'career') { T.career.set(T.career.create({ pos:'B', num:5, club:X.CLUBS[0] })); T.career.play(); }
+          else T.debug.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+          const M = T.M; M.half = 2; M.score = [31, 3]; M.tries = [5, 0]; M.stats.conv.made[0] = 3; M.stats.fire0 = 2; M.lk = { drops:[1, 0], hits:[0, 0], ht:[3, 5] };
+          M.phase = 'break'; M.over = true; L.finishMatch();
+          const m = document.getElementById('m-break'); void m.scrollHeight; await document.fonts.ready;   // any face the card first uses, loaded
+          out.push({ mode, medals, rows:document.querySelectorAll('#br-medals .lk-won').length, over:m.scrollHeight - m.clientHeight, extra:['br-series', 'br-pts', 'br-row'].filter(id => !document.getElementById(id).hidden).join('+') });
+          m.hidden = true; T.debug.exitMatch(); T.career.set(null); X.setChamp(null);
+        }
+        return out;
+      });
+      const pair = mode => [modes.find(r => r.mode === mode && !r.medals), modes.find(r => r.mode === mode && r.medals)];
+      ok(modes.length === 8 && modes.every(r => r.rows === (r.medals ? 7 : 0)) && pair('two').every(r => r.extra === 'br-series+br-row') && ['champ', 'career'].every(m => pair(m).every(r => r.extra === 'br-pts')), `${w}x${h}: each mode's card, with no medal row and with six medals and the new Legends (${json(modes.map(r => [r.mode, r.rows, r.extra]))})`);
+      ok(['quick', 'two', 'champ', 'career'].every(m => { const [a, b] = pair(m); return b.over <= Math.max(0, a.over); }), `${w}x${h}: the medals never make the full-time card taller, in any mode (scroll without and with: ${json(['quick', 'two', 'champ', 'career'].map(m => [m, ...pair(m).map(r => r.over)]))})`);
+      // the Trophy Cabinet (a championship finished; last, since it stays): the home scrolled with one before the Locker, so the Locker
+      // must add nothing to it, in any of the eight states
+      const cab = await page.evaluate(() => {
+        const T = window.__tryline, X = T.teams, out = [];
+        const box = el => el.getBoundingClientRect(), vis = el => !el.hidden && box(el).width > 0;
+        X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ();
+        for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; }
+        X.setChamp(c); X.save(); X.load();
+        for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) {
+          T.store.setNative(app); T.store.setStarted(app); if (app) T.store.setBought(['tryline.full']);
+          if (busy) { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); } else { X.setChamp(null); T.career.set(null); }
+          document.body.classList.toggle('desk', desk); T.debug.goHome();
+          const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk);
+          const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b) && !b.closest('.settings'));
+          const overlap = others.some(b => { const q = box(b); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; });
+          const withIt = s.scrollHeight; lk.style.display = 'none'; const without = s.scrollHeight; lk.style.display = '';
+          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : ''), cab:vis(document.getElementById('home-cabinet')), grow:withIt - without, scroll:withIt - s.clientHeight,
+            lk:vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0, overlap });
+        }
+        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.goHome();
+        return out;
+      });
+      ok(cab.length === 8 && cab.every(r => r.cab && r.grow <= 0), `${w}x${h}: with a Trophy Cabinet the Locker adds no height to the home, in every state (${json(cab.map(r => [r.state, r.grow, r.scroll]))})`);
+      ok(cab.every(r => r.lk && !r.overlap), `${w}x${h}: and Locker is on screen, at least 44px, touching no other button`);
       ok(!errors.length, `${w}x${h}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }

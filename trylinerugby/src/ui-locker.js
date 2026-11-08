@@ -88,16 +88,22 @@ $('b-locker').addEventListener('click', () => { ac(); lockerOpen(0); });
 $('lk-back').addEventListener('click', goHome);
 
 /* ---------- full time ---------- */
-/* The full-time card: a row for each medal won since it was last shown (its pip, its name, what it unlocked), and a line for the
-   Legends a new Gold brings. Shown once: the medals are seen from then on. */
+/* The full-time card: a row for each medal this match won (its pip, its name, what it unlocked), and a line for the Legends a new
+   Gold brings. Only what the match won, from the tiers it began with (lockerFrom): a medal won between matches, a drill's Star Pupil
+   say, keeps the dot on the home's Locker button and its ring in the Locker. In Two Player the medals are Player 1's, so they carry his
+   seat tag. Shown once: those medals are seen from then on. */
 function lockerCard(kind) {
   const el = $('br-medals');
-  const show = on => { el.hidden = !on; $('m-break').classList.toggle('lk-on', on); };   // the card makes room for them beside the stats on a phone held sideways
-  if (kind !== 'full') { show(false); return; }
-  const { medals, legends } = lockerNews();
+  const show = on => {                                       // the card makes room for them beside the stats on a phone held sideways,
+    el.hidden = !on; $('m-break').classList.toggle('lk-on', on);   // spanning the rows shown above Continue and no more (styles.css)
+    const card = el.parentElement;                           // (no layout, and no parent, in the tools' headless page)
+    if (on && card) el.style.setProperty('--lk-rows', [...card.children].filter(c => c !== el && !c.hidden && c.id !== 'br-go' && c.id !== 'br-row').length);
+  };
+  if (kind !== 'full' || !M.lkFrom) { show(false); el.innerHTML = ''; return; }
+  const { medals, legends } = lockerNews(id => Math.max(lockerSeen(id), M.lkFrom[id] || 0));
   if (!medals.length) { show(false); el.innerHTML = ''; return; }
-  el.innerHTML = medals.map(m => `<p class="lk-won" aria-label="${m.feat.name}, ${LOCKER_MEDALS[m.tier - 1]}${m.item ? ', ' + lockerItemName(m.item) : ''}">${lockerDisc(m.tier)}<b>${m.feat.name}</b>${m.item ? `<span class="lk-got">${lockerSwatch(m.item.kind, m.item)}${lockerItemName(m.item)}</span>` : ''}</p>`).join('')
+  el.innerHTML = (M.two ? '<p class="lk-who"><i class="stag s0" aria-hidden="true">1</i>Player 1</p>' : '') + medals.map(m => `<p class="lk-won" aria-label="${m.feat.name}, ${LOCKER_MEDALS[m.tier - 1]}${m.item ? ', ' + lockerItemName(m.item) : ''}">${lockerDisc(m.tier)}<b>${m.feat.name}</b>${m.item ? `<span class="lk-got">${lockerSwatch(m.item.kind, m.item)}${lockerItemName(m.item)}</span>` : ''}</p>`).join('')
     + (legends.length ? `<p class="lk-won lk-newleg"><b>New Legends</b>${legends.map(t => `<span class="lk-got">${jersey(t)}${esc(t.name)}</span>`).join('')}</p>` : '');
   show(true);
-  lockerMarkSeen();
+  lockerMarkSeen(medals.map(m => m.feat.id));
 }

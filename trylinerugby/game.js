@@ -4415,6 +4415,7 @@ function lockerHalf() {                                      // the second half 
 function lockerMatch() {
   if (!lockerCounts() || M.lockerDone) return [];
   M.lockerDone = true;
+  lockerFrom();
   const me = lockerSide(), op = 1 - me, S = M.stats, k = M.lk || { drops:[0, 0], hits:[0, 0], ht:null };
   const won = M.score[me] > M.score[op];
   const done = {
@@ -4438,7 +4439,7 @@ function lockerMatch() {
 function lockerEvent(id) {
   const f = LOCKER_EVENTS[id];
   if (!f || practice) return false;
-  if (M && M.arcade && !M.demo && !M.auto) { const ev = M.lockerEv || (M.lockerEv = []); if (ev.includes(f)) return false; ev.push(f); }   // once a match for one medal
+  if (M && M.arcade && !M.demo && !M.auto) { lockerFrom(); const ev = M.lockerEv || (M.lockerEv = []); if (ev.includes(f)) return false; ev.push(f); }   // once a match for one medal
   lockerAdd(f);
   save();
   return true;
@@ -4456,21 +4457,29 @@ function lockerFlush() { if (lockerDirty && !practice) { lockerDirty = false; sa
 /* ---------- what is new ---------- */
 const lockerSeen = id => Math.min(locker.seen[id] || 0, lockerTier(id));
 const lockerNew = () => LOCKER_FEATS.some(f => lockerTier(f.id) > lockerSeen(f.id));
-/* Each medal won since it was last shown: { feat, tier, item } (item null for a Gold), and the Legends the new Golds bring. */
-function lockerNews() {
+/* The tiers as a match you play began, kept on M (M.lkFrom) before its first count: at full time (lockerMatch) or at an event inside
+   it, whichever comes first. Every count in a match goes through those two, so this is the Locker as the match found it, and the
+   full-time card shows only what the match itself won. */
+function lockerFrom() {
+  if (!M.lkFrom) M.lkFrom = Object.fromEntries(LOCKER_FEATS.map(f => [f.id, lockerTier(f.id)]));
+  return M.lkFrom;
+}
+/* Each medal won since `from` (a feat's tier then; the last one shown by default): { feat, tier, item } (item null for a Gold), and
+   the Legends the new Golds bring. */
+function lockerNews(from = lockerSeen) {
   const medals = [];
-  for (const f of LOCKER_FEATS) for (let t = lockerSeen(f.id) + 1; t <= lockerTier(f.id); t++) {
+  for (const f of LOCKER_FEATS) for (let t = from(f.id) + 1; t <= lockerTier(f.id); t++) {
     const u = t < 3 ? f.unlock[t - 1].split(':') : null;
     medals.push({ feat:f, tier:t, item:u ? { kind:u[0], ...lockerItem(u[0], u[1]) } : null });
   }
-  const g0 = Math.min(10, lockerGolds(lockerSeen)), g1 = Math.min(10, lockerGolds());
+  const g0 = Math.min(10, lockerGolds(from)), g1 = Math.min(10, lockerGolds());
   const legends = [];
   for (let i = g0; i < g1; i++) legends.push(LEGENDS.filter(t => t.cat === 'men')[i], LEGENDS.filter(t => t.cat === 'women')[i]);
   return { medals, legends };
 }
-function lockerMarkSeen() {
+function lockerMarkSeen(ids) {                               // the medals shown: every feat (the Locker), or only those listed (the full-time card)
   let changed = false;
-  for (const f of LOCKER_FEATS) { const t = lockerTier(f.id); if ((locker.seen[f.id] || 0) !== t) { locker.seen[f.id] = t; changed = true; } }
+  for (const f of LOCKER_FEATS) { if (ids && !ids.includes(f.id)) continue; const t = lockerTier(f.id); if ((locker.seen[f.id] || 0) !== t) { locker.seen[f.id] = t; changed = true; } }
   if (changed) save();
 }
 
@@ -4716,7 +4725,7 @@ const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
 const SKIN = '#c69c7c', HAIR = '#2a1d16';
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
-function kitOf(team) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, null) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js)
+function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
 function seg(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 function cutGeom() { const W = V.W, H = V.H; return { W, H, horizon:H*0.38, ground:H*0.83, sc:H*0.15 }; }
@@ -5113,18 +5122,18 @@ function drawDuel(c, g) {
   }
   // figures, far to near
   const actors = [];
-  const add = (a, team, back, extra) => { if (a) actors.push({ a, team, back, o:extra || {} }); };
+  const add = (a, man, back, extra) => { if (a) actors.push({ a, team:man.team, back, o:{ kit:kitOf(man.team, man), ...extra } }); };   // the kit knows the man, for the Locker's boots (kitOf)
   if (c.kind === 'past' || c.kind === 'pass') {
-    add(P.u, c.U.team, true, { carry:!P.ball && !P.u.fake, arms:P.u.fake ? 'pass' : undefined, num:c.U.n, stride:t*19 });
-    add(P.o, c.O.team, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
-    if (P.r) add(P.r, c.R.team, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
+    add(P.u, c.U, true, { carry:!P.ball && !P.u.fake, arms:P.u.fake ? 'pass' : undefined, num:c.U.n, stride:t*19 });
+    add(P.o, c.O, false, { shift:P.o.shift || 0, lean:(P.o.shift || 0)*0.6 + (P.o.commit || 0)*0.25, arms:P.o.commit > 0.5 ? 'wide' : 'run', stride:t*12, lying:P.o.lying, dive:P.o.dive });
+    if (P.r) add(P.r, c.R, true, { num:c.R.n, stride:t*19, arms:P.ball ? 'reach' : 'run' });
   } else if (c.kind === 'tackle') {
-    add(P.u, c.U.team, true, { num:c.U.n, stride:t*16, dive:P.u.dive ? 1 : 0, lying:P.u.lying, arms:P.u.dive ? 'reach' : 'run' });
-    add(P.o, c.O.team, false, { carry:true, stride:t*19, lean:c.stepAt != null && t > c.stepAt ? c.stepDir*0.3 : (c.lean || 0)*0.3, lying:P.o.lying });
+    add(P.u, c.U, true, { num:c.U.n, stride:t*16, dive:P.u.dive ? 1 : 0, lying:P.u.lying, arms:P.u.dive ? 'reach' : 'run' });
+    add(P.o, c.O, false, { carry:true, stride:t*19, lean:c.stepAt != null && t > c.stepAt ? c.stepDir*0.3 : (c.lean || 0)*0.3, lying:P.o.lying });
   } else {
-    add(P.u, c.U.team, true, { num:c.U.n, stride:t*14, arms:P.u.carry ? 'carry' : 'reach' });
-    add(P.o, c.O.team, false, { stride:t*8, arms:P.o.thrown ? 'pass' : (P.o.wind ? 'carry' : 'run'), twist:P.o.pump || P.o.wind });
-    add(P.r, c.R.team, false, { stride:t*10, arms:'reach' });
+    add(P.u, c.U, true, { num:c.U.n, stride:t*14, arms:P.u.carry ? 'carry' : 'reach' });
+    add(P.o, c.O, false, { stride:t*8, arms:P.o.thrown ? 'pass' : (P.o.wind ? 'carry' : 'run'), twist:P.o.pump || P.o.wind });
+    add(P.r, c.R, false, { stride:t*10, arms:'reach' });
   }
   actors.sort((p, q) => q.a.x - p.a.x);
   for (const it of actors) {
@@ -5415,7 +5424,7 @@ function drawKick(c, g0) {
   };
   for (const it of scene) {
     if (it.kind === 'ball') ball();
-    else if (it.kind === 'kicker') { figFB(it.sx, it.sy, it.k, g.team, { back:true, num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' }); if (M.two && !g.judged) cutSeatTag(seatOfTeam(g.team), it.sx, it.sy - 2.25*it.k, 0.4*it.k); }   // the seat tag over the kicker
+    else if (it.kind === 'kicker') { figFB(it.sx, it.sy, it.k, g.team, { back:true, kit:kitOf(g.team, g.kicker), num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' }); if (M.two && !g.judged) cutSeatTag(seatOfTeam(g.team), it.sx, it.sy - 2.25*it.k, 0.4*it.k); }   // the seat tag over the kicker
     else { ctx.globalAlpha = a0*it.alpha; figFB(it.sx, it.sy, it.k, 1 - g.team, it.o); ctx.globalAlpha = a0; }
   }
   ctx.restore();
@@ -9546,18 +9555,24 @@ $('b-locker').addEventListener('click', () => { ac(); lockerOpen(0); });
 $('lk-back').addEventListener('click', goHome);
 
 /* ---------- full time ---------- */
-/* The full-time card: a row for each medal won since it was last shown (its pip, its name, what it unlocked), and a line for the
-   Legends a new Gold brings. Shown once: the medals are seen from then on. */
+/* The full-time card: a row for each medal this match won (its pip, its name, what it unlocked), and a line for the Legends a new
+   Gold brings. Only what the match won, from the tiers it began with (lockerFrom): a medal won between matches, a drill's Star Pupil
+   say, keeps the dot on the home's Locker button and its ring in the Locker. In Two Player the medals are Player 1's, so they carry his
+   seat tag. Shown once: those medals are seen from then on. */
 function lockerCard(kind) {
   const el = $('br-medals');
-  const show = on => { el.hidden = !on; $('m-break').classList.toggle('lk-on', on); };   // the card makes room for them beside the stats on a phone held sideways
-  if (kind !== 'full') { show(false); return; }
-  const { medals, legends } = lockerNews();
+  const show = on => {                                       // the card makes room for them beside the stats on a phone held sideways,
+    el.hidden = !on; $('m-break').classList.toggle('lk-on', on);   // spanning the rows shown above Continue and no more (styles.css)
+    const card = el.parentElement;                           // (no layout, and no parent, in the tools' headless page)
+    if (on && card) el.style.setProperty('--lk-rows', [...card.children].filter(c => c !== el && !c.hidden && c.id !== 'br-go' && c.id !== 'br-row').length);
+  };
+  if (kind !== 'full' || !M.lkFrom) { show(false); el.innerHTML = ''; return; }
+  const { medals, legends } = lockerNews(id => Math.max(lockerSeen(id), M.lkFrom[id] || 0));
   if (!medals.length) { show(false); el.innerHTML = ''; return; }
-  el.innerHTML = medals.map(m => `<p class="lk-won" aria-label="${m.feat.name}, ${LOCKER_MEDALS[m.tier - 1]}${m.item ? ', ' + lockerItemName(m.item) : ''}">${lockerDisc(m.tier)}<b>${m.feat.name}</b>${m.item ? `<span class="lk-got">${lockerSwatch(m.item.kind, m.item)}${lockerItemName(m.item)}</span>` : ''}</p>`).join('')
+  el.innerHTML = (M.two ? '<p class="lk-who"><i class="stag s0" aria-hidden="true">1</i>Player 1</p>' : '') + medals.map(m => `<p class="lk-won" aria-label="${m.feat.name}, ${LOCKER_MEDALS[m.tier - 1]}${m.item ? ', ' + lockerItemName(m.item) : ''}">${lockerDisc(m.tier)}<b>${m.feat.name}</b>${m.item ? `<span class="lk-got">${lockerSwatch(m.item.kind, m.item)}${lockerItemName(m.item)}</span>` : ''}</p>`).join('')
     + (legends.length ? `<p class="lk-won lk-newleg"><b>New Legends</b>${legends.map(t => `<span class="lk-got">${jersey(t)}${esc(t.name)}</span>`).join('')}</p>` : '');
   show(true);
-  lockerMarkSeen();
+  lockerMarkSeen(medals.map(m => m.feat.id));
 }
 /* =========================================================
    Career screens: the new player, the hub, training, the table and the season's end.
@@ -10304,7 +10319,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
-  locker:{ FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, finishMatch, showBreak },
+  locker:{ FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak },
   get M() { return M; } };
 
 function start(data) {
