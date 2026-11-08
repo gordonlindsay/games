@@ -401,10 +401,16 @@ function settle(pick) {
   const E = X.EARLY, C = T.contact, D = T.debug, s = D.settings();
   const near = (a, b) => Math.abs(a - b) < 1e-9;
   const speed = (pace, mul) => (7.6 + pace * 0.25) * mul;
-  ok(E.games === 2 && E.gap === 4 && E.nudge.cpuSpeed === -0.03 && E.nudge.myTackle === 0.14, 'two Normal matches and a gap of four (five abilities)');
+  ok(E.games === 2 && E.gap === 3 && E.nudge.cpuSpeed === -0.03 && E.nudge.myTackle === 0.14, 'two Normal matches and a gap of three');
   const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0];
   ok(!X.outmatched(far, has) && !X.outmatched(far, eng) && X.outmatched(far, fra), 'France is a stronger side than Farnham; England and Haslemere are not');
   ok(X.rateOf(fra) === 23 && X.rateOf(far) === 17 && X.rateOf(has) === 14, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
+  // Stronger Side leaves Stamina out, so it marks the pairs it did before Stamina: within a pool, as the hub shows them
+  const by = id => X.ALL_TEAMS.find(t => t.id === id), marks = (u, t) => X.outmatched(by(u), by(t));
+  ok(marks('HAS', 'FAR') && marks('IRO', 'HAR') && marks('ADL', 'SYD') && marks('ADL', 'CAN') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS'),
+    'a side three points stronger in Pace, Power, Handling and Kicking is marked, whatever the Stamina');
+  ok(!marks('GDN', 'WIM') && !marks('MTB', 'CLE'), 'two points apart in the four and Stamina on top is not a Stronger Side');
+  ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 2, power: 2, handling: 2, kicking: 2 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...eng, stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');
 
   T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, duels: 'off' });
   ok(!T.M.early && near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(has.pace, 1)), 'a headless match is not eased, and Normal pace is unchanged');

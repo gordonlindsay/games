@@ -1,13 +1,13 @@
 // Stamina, the fifth ability: the data, the budget and old custom teams, old saves, the overall rating, the cards and the builder,
 // each engine effect on in a match you play and off everywhere else, and AI v AI, the demo, practice and simulate() unchanged
 // whatever the sides' Stamina (seeded runs compared step for step). Exits 1 on any failure.
-// node tools/stamina.mjs            (SEED=21 unless set)
+// node tools/stamina.mjs            (SEED=21 unless set; VERBOSE=1 lists every check)
 process.env.SEED ??= '21';
 import fs from 'node:fs';
 const { T, reseed } = await import('./harness.mjs');
 const S = T.stamina, X = T.teams, C = T.contact, A = T.arcade, D = T.debug, STEP = T.STEP, $ = id => document.getElementById(id);
 let failed = 0, passed = 0;
-const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
+const ok = (cond, msg) => { if (cond) passed++; else failed++; if (!cond || process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };   // VERBOSE=1 prints the passes too
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const KEYS = ['pace', 'power', 'handling', 'kicking', 'stamina'];
 const sum = t => KEYS.reduce((a, k) => a + t[k], 0);
@@ -44,6 +44,10 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   const made = X.cleanTeam({ name:'Runners', pace:3, power:3, handling:3, kicking:3, stamina:5 }, 0);
   ok(made.stamina === 5 && sum(made) === 17, 'Stamina 5 can be bought');
   ok(X.cleanTeam({ name:'Bad', stamina:'lots' }, 0).stamina === 3 && X.cleanTeam({ name:'Lo', stamina:-4 }, 0).stamina === 1, 'a broken Stamina is put right');
+  const imp4 = X.cleanTeam({ name:'Import', pace:4, power:4, handling:4, kicking:4 }, 0), imp5 = X.cleanTeam({ name:'Import', pace:5, power:5, handling:5, kicking:5 }, 0);
+  ok(imp4.stamina === 3 && sum(imp4) === 5 + S.BUDGET && KEYS.map(k => imp4[k]).join() === '4,4,4,2,3', `overspent with no Stamina: it keeps its 3 and the cut falls on the other four (${KEYS.map(k => imp4[k]).join(' ')})`);
+  ok(imp5.stamina === 3 && KEYS.map(k => imp5[k]).join() === '5,5,3,1,3', `and the most overspent too (${KEYS.map(k => imp5[k]).join(' ')})`);
+  ok(Object.keys(imp4).slice(-5).join() === KEYS.join(), 'the abilities are still stored in ABILITIES order');
 
   X.restore({ custom:[{ key:'myold', name:'Old Max', kit:'#c8102e', trim:'#f2efe6', pace:5, power:5, handling:2, kicking:2 }, { key:'mynew', name:'Fit', pace:2, power:2, handling:2, kicking:2, stamina:5 }] });
   const [a, b] = X.custom();
@@ -70,6 +74,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   X.setChamp(null); X.restore({ champ:legacy });
   ok(X.champ() && X.champ().teams.map(t => t.stamina).join() === X.NATIONS.map(t => t.stamina).join(), 'a championship from before clubs takes the nations with their Stamina');
   ok(S.cleanSide({ id:'ABC', name:'Side', stamina:7 }).stamina === 5 && S.cleanSide({ id:'ABC', name:'Side' }).stamina === 3, 'cleanSide holds Stamina to 1 to 5, 3 when missing');
+  ok(S.cleanSide({ id:'ABC', name:'Side', stamina:3.6 }).stamina === 4 && X.cleanTeam({ name:'Side', stamina:3.6 }, 0).stamina === 4, 'the saves keep whole pips: a fraction comes back rounded (data.js, staminaOf)');
   const sim = X.simMatch;   // the other fixtures ignore Stamina: same draws, same result
   const pair = st => ({ teams:[side('AAA', st), side('BBB', 6 - st)] });
   reseed(5); const r1 = JSON.stringify(sim(pair(1), 0, 1)); reseed(5); const r5 = JSON.stringify(sim(pair(5), 0, 1));
@@ -86,6 +91,10 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok([...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA].every(t => O(t) <= 75), 'no club is rated above a team you can make');
   ok(X.ALL_TEAMS.every(t => Number.isInteger(O(t)) && O(t) >= 40 && O(t) <= 99), 'every built-in team has a whole-number overall');
   ok(O({ pace:4, power:4, handling:4, kicking:4 }) === O({ pace:4, power:4, handling:4, kicking:4, stamina:3 }), 'a team without Stamina is rated as Stamina 3');
+  const st1 = side('AAA', 1), st5 = side('BBB', 5), up3 = side('CCC', 1, { pace:4, power:4, kicking:4 });
+  ok(!X.outmatched(st1, st5) && X.outmatched(st5, up3) && X.outmatched(st1, up3), 'Stronger Side leaves Stamina out: 4 points of it mark nothing, 3 points of the rest are marked whatever the Stamina');
+  const four = t => t.pace + t.power + t.handling + t.kicking;
+  ok(X.ALL_TEAMS.every(u => X.ALL_TEAMS.every(t => X.outmatched(u, t) === (four(t) >= four(u) + 3))), 'every built-in pair is marked as it was before Stamina');
 }
 
 // 6. the cards and the builder
@@ -171,7 +180,8 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok(S.powerOf(0) === 3 && S.powerOf(1) === 3, 'outside arcade Power never fades');
 }
 
-// 11. the fade reaches every engine read of Power
+// 11. the fade reaches every engine read of Power: a source check for direct reads, then each site measured (the duel windows read
+// Power by name, which the source check cannot see), so reverting any one site fails a check here
 {
   const src = ['contact.js', 'duels.js', 'set-pieces.js', 'passing.js', 'goal-kicks.js', 'match.js', 'movement.js', 'ball.js', 'arcade.js']
     .map(f => fs.readFileSync(new URL('../src/' + f, import.meta.url), 'utf8')).join('\n');
@@ -192,6 +202,54 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   const scrumBase = (clock, arcade) => { play(1, 3, { arcade }); T.M.clock = clock; S.startScrum({ team:0, x:60, y:35 }); return T.M.cut.base[0]; };
   ok(near(scrumBase(0, true) - scrumBase(120, true), 0.06), `your pack's push fades with Power (${scrumBase(0, true).toFixed(3)} to ${scrumBase(120, true).toFixed(3)})`);
   ok(scrumBase(120, false) === scrumBase(0, false), 'and not outside arcade');
+
+  // the duel windows read Power by name (DUEL[kind].mod), which the source check above cannot see: open each and measure it
+  const wid = (kind, s0, s1, clock, arcade) => {
+    T.newMatch(side('AAA', s0), side('BBB', s1), { halfLen:120, diff:1, headless:true, duels:'live', humans:[true, false], arcade });
+    const { U, O, R } = D.stage(kind); T.M.clock = clock;
+    return D.startDuel({ kind, U, O, R, how:'force' }).wid;
+  };
+  ok(near(wid('past', 5, 1, 120, true) - wid('past', 5, 1, 0, true), 0.012) && near(wid('past', 1, 5, 120, true) - wid('past', 1, 5, 0, true), 0.0012),
+    `Get Past: the window widens as the defender's Power fades, by his own Stamina (${(wid('past', 5, 1, 120, true) - wid('past', 5, 1, 0, true)).toFixed(4)})`);
+  ok(near(wid('tackle', 1, 5, 0, true) - wid('tackle', 1, 5, 120, true), 0.012) && near(wid('tackle', 5, 1, 0, true) - wid('tackle', 5, 1, 120, true), 0.0012),
+    `Tackle: the window narrows as your own Power fades (${(wid('tackle', 1, 5, 0, true) - wid('tackle', 1, 5, 120, true)).toFixed(4)})`);
+  ok(wid('past', 5, 1, 120, false) === wid('past', 5, 1, 0, false) && wid('tackle', 1, 5, 120, false) === wid('tackle', 1, 5, 0, false), 'outside arcade the duel windows do not move');
+
+  // the Fend needs a point of Power edge, to the nearest point: a broken tackle by a clear margin (a seed whose first draw is high)
+  let hi = 1; for (; hi < 5000; hi++) { reseed(hi); if (Math.random() > 0.99) break; }
+  const fends = (car, tac, clock, arcade) => {
+    T.newMatch(car, tac, { halfLen:120, diff:1, headless:true, duels:'off', humans:[true, false], arcade });
+    T.M.clock = clock;
+    const c = T.M.players[3], q = T.M.players[10], n = T.M.stats.fends || 0;
+    c.x = 40; c.y = q.y = 35; q.x = 41; c.vx = c.vy = q.vx = q.vy = 0; c.sprinting = q.sprinting = false;
+    reseed(hi); C.commitTackle(q, c, 'contact');
+    return (T.M.stats.fends || 0) > n;
+  };
+  const eng = X.NATIONS[0], ire = X.NATIONS[2];   // England carrying: Power 5 and Stamina 4, against Ireland's 4 and 5
+  ok(fends(eng, ire, 0, true) && fends(eng, ire, 60, true) && fends(eng, ire, 120, true), 'England keeps the Fend against Ireland all half: a point of Power, faded 0.225 by the hooter');
+  ok(fends(side('AAA', 1, { power:4 }), side('BBB', 5), 0, true) && !fends(side('AAA', 1, { power:4 }), side('BBB', 5), 120, true), 'a point up at Stamina 1 against 5: the Fend at kick-off, gone by the hooter');
+  ok(!fends(side('AAA', 5), side('BBB', 1), 0, true) && fends(side('AAA', 5), side('BBB', 1), 120, true), 'level Power at Stamina 5 against 1: no Fend at kick-off, one by the hooter');
+  ok(fends(side('AAA', 3, { power:4 }), side('BBB', 3), 120, true) && !fends(side('AAA', 3), side('BBB', 3), 120, true), 'the same Stamina: the Fend is as it was at kick-off');
+  ok(fends(side('AAA', 1, { power:4 }), side('BBB', 5), 120, false) && !fends(side('AAA', 5), side('BBB', 1), 120, false), 'outside arcade the Fend reads Power as it is');
+
+  // the ruck turnover and the scrum played for you: the same draws (one seed each) at kick-off and at the hooter
+  const seeds = Array.from({ length:400 }, (_, i) => (i + 1)*7919);
+  const turnovers = (clock, arcade) => {
+    play(1, 5, { arcade }); T.M.clock = clock;
+    let n = 0;
+    for (const sd of seeds) { T.M.phase = 'play'; T.M.set = null; const before = T.M.stats.turnovers; reseed(sd); C.resolveRuck({ team:0, x:60, y:35, dom:false }); if (T.M.stats.turnovers > before) n++; }
+    return n;
+  };
+  const tk = turnovers(0, true), th = turnovers(120, true);
+  ok(th > tk && turnovers(120, false) === turnovers(0, false), `a tired Stamina 1 side loses more rucks to a Stamina 5 side by the hooter (${tk} to ${th} of ${seeds.length})`);
+  const feedKept = (clock, arcade) => {
+    play(1, 5, { arcade }); T.M.clock = clock;
+    let n = 0;
+    for (const sd of seeds) { T.M.phase = 'play'; T.M.set = null; reseed(sd); S.autoScrum({ team:0, x:60, y:35 }); if (T.M.poss === 0) n++; }
+    return n;
+  };
+  const fk = feedKept(0, true), fh = feedKept(120, true);
+  ok(fh < fk && feedKept(120, false) === feedKept(0, false), `the scrum played for you: a tired Stamina 1 pack keeps its own feed less often by the hooter (${fk} to ${fh} of ${seeds.length})`);
 }
 
 // 12. AI v AI, the demo, practice and simulate() play exactly as they did, whatever Stamina says (seeded, compared step for step)

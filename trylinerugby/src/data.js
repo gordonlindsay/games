@@ -69,7 +69,8 @@ const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Lo
 const ABILITIES = [['pace', 'Pace'], ['power', 'Power'], ['handling', 'Handling'], ['kicking', 'Kicking'], ['stamina', 'Stamina']];
 const BUDGET = 12;                        // a team you make starts at 1 in each ability, with this many points to spend: any team the four-ability builder allowed (10 points), plus Stamina 3
 /* Stamina came after the other four. A team without it (a save from before it, an import, a test's side) reads as 3, the middle:
-   its Sprint and On Fire last as long as they always have. Not rounded here, so a career player's stamina can sit between two pips. */
+   its Sprint and On Fire last as long as they always have. Not rounded here, so a side handed in with a fractional Stamina plays as
+   given; the saves keep whole pips (cleanTeam, cleanSide), so a fraction must be kept, and put back, by whatever made it. */
 const staminaOf = t => { const v = t ? t.stamina : null; return typeof v === 'number' && Number.isFinite(v) ? clamp(v, 1, 5) : 3; };
 const abilityOf = (t, k) => (k === 'stamina' ? staminaOf(t) : +t[k] || 0);   // a team's ability as the cards, the ratings and the saves read it
 const MAX_CUSTOM = 4;
@@ -86,11 +87,13 @@ const DIFF = [
    defender running the wrong way, so two levers move and nothing else: the other side runs at Easy's pace, and your
    teammates tackle a little more surely than on Easy (one of them is still being pulled out of the tackle). Easy and
    Hard are left as set. Duels, scrums, your own tackle and sprint, and every later match stay on the chosen level. */
-const EARLY = { games:2, gap:4, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };   // gap: the rating points that make a Stronger Side, 4 of the five abilities' 20-point range as 3 was of the four's 16
+const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };   // gap: the rating points, Stamina left out, that make a Stronger Side
 const rateOf = t => ABILITIES.reduce((a, [k]) => a + abilityOf(t, k), 0);
 /* The overall rating on a team card: the five abilities (5 to 25) on a 40 to 99 scale. A team you make tops out at 75, France and Ireland are 93. */
 const overallOf = t => { const n = ABILITIES.length; return Math.round(40 + (clamp(rateOf(t), n, 5*n) - n)*59/(4*n)); };
-const outmatched = (us, them) => !!us && !!them && rateOf(them) >= rateOf(us) + EARLY.gap;
+/* Stronger Side compares the four abilities other than Stamina, EARLY.gap apart, so it marks the pairs it marked before Stamina
+   and no others (tools/teams.mjs pins pairs within a pool). The badge and the championship's running order count all five. */
+const outmatched = (us, them) => !!us && !!them && rateOf(them) - staminaOf(them) >= rateOf(us) - staminaOf(us) + EARLY.gap;
 /* Goal kicks. Every lever is here: GKTUNE='{"band":[0.15,0.13,0.10]}' node tools/goalkicks.mjs --rates tries values without an edit. */
 const KICK = {
   g:9.81, kd:0.10, kw:0.32, v0:26.5, vK:1.0, vLo:0.35,
