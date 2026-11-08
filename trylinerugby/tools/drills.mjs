@@ -22,6 +22,7 @@ const isTitle = s => s.split(' ').every((w, i) => (i > 0 && ['a', 'an', 'the', '
 // ---- isolation is watched across the whole run
 const originalSettings = JSON.stringify(D.settings()), originalChamp = JSON.stringify(T.teams.champ()), originalCustom = JSON.stringify(T.teams.custom());
 let writes = 0; localStorage.setItem = () => writes++;
+T.locker.state().drills = X.DRILLS.map(d => d.id);   // the Locker's Star Pupil writes the save once, after a drill's first three stars (tools/locker.mjs): every drill counted already keeps that write out of these checks
 
 // ---- the contract: ids, names, cards, pictures
 const ids = X.DRILLS.map(d => d.id);
@@ -308,6 +309,7 @@ ok(JSON.stringify(T.teams.champ()) === originalChamp && JSON.stringify(T.teams.c
 { // an old save loads as before and gains no field from the drills
   const memory = {}; localStorage.getItem = k => memory[k] ?? null; localStorage.setItem = (k, v) => { memory[k] = String(v); };
   const old = { settings:{ half:2, diff:2, sound:false, hints:false, coach:false, played:7 }, champ:null, custom:[], champHistory:[], seasonSerial:3 };
+  T.locker.set(T.locker.fresh());                         // and the Locker back to empty, as an old save's is
   memory['tryline.v1'] = JSON.stringify(old); T.teams.load();
   const before = JSON.stringify(D.settings());
   P.start('egg'); $('pr-retry').click(); play(() => {}, 300); P.leave();

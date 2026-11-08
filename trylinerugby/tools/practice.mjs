@@ -9,6 +9,7 @@ function tick(n = 1) { for (let i=0; i<n; i++) T.update(T.STEP); }
 function start(id) { P.start(id); ok(P.state().ready && T.M.paused, id + ' waits for Start'); $('pr-retry').click(); }
 const original = JSON.stringify(D.settings()), originalChamp = JSON.stringify(T.teams.champ());
 let writes = 0; localStorage.setItem = () => writes++;
+T.locker.state().drills = T.drills.DRILLS.map(d => d.id);   // the Locker's Star Pupil writes the save once, after a drill's first three stars (tools/locker.mjs): every drill counted already keeps that write out of these checks
 start('defend');
 const initial = T.sides.ctrlOf(0), target = T.contact.switchTarget(0);
 ok(target && target !== initial && target.x < T.M.ball.carrier.x, 'Switch points to goal-side cover');

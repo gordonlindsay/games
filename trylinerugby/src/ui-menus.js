@@ -69,6 +69,7 @@ function showBreak(kind) {
   }
   $('br-series').hidden = !pair || series.w[0] + series.w[1] + series.d < 2; $('br-row').hidden = !pair;   // a series needs two matches
   fillMatchStats();
+  lockerCard(kind);                                        // full time: a row for each medal won (src/ui-locker.js)
   setFocus(null);
   $('m-break').hidden = false;
 }
@@ -76,6 +77,7 @@ function finishMatch() {
   if (M.champ && champ) recordChampResult();
   if (M.career) careerRecordResult();
   if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and a Whole Team career alike
+  lockerMatch();                                            // the Locker: the feats done this match, and a Championship won (src/locker.js)
   showBreak('full');
 }
 $('br-go').addEventListener('click', () => {
@@ -155,6 +157,7 @@ function renderHome() {
     homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
   renderCareerHome();
+  lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
 }
 /* A note under Championship or Career. The team's name (and its separator) is a span of its own, which a phone held sideways
    leaves out (styles.css), so the note stays one line under its half: Round 2 of 5, Minis · Round 1 of 5. */
@@ -335,6 +338,7 @@ function renderTeams() {
   navOnly = pair ? p : null;
   $('t-default').textContent = 'Play as ' + catSide(storeHomeTeam(), settings.cat).name;   // the side it starts: Farnham Women on Women
   teamList = [...poolTeams(pool), ...custom];              // My League: src/import.js
+  if (poolTeams(pool) === natList(settings.cat) && typeof lockerLegends === 'function') teamList.splice(natList(settings.cat).length, 0, ...lockerLegends(settings.cat));   // International: the Legends unlocked so far, after the nations, for the category in play (src/locker.js)
   if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
   let html = teamList.map(teamCard).join('');
   if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;

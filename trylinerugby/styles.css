@@ -706,3 +706,122 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   .learn-row.three .btn{padding-block:4px;line-height:1.05}   /* in thirds on a narrow phone a label may take two lines, and the row stays 44px, as Championship's does */
   #b-grown{white-space:nowrap}
 }
+/* ===== locker ===== */
+/* the home button: with the logo, so no row of buttons changes in any state (src/ui-locker.js). On a tall screen it sits at the right
+   end of the logo's line, level with Quick Match's right edge, and adds no height; on a phone held sideways it stands at the right of
+   the tagline, level with the settings' right edge. A dot while a new medal waits there, as Grown-Ups has for Move Up to Easy */
+.home .mark{position:relative}
+.lk-home{position:absolute;right:0;bottom:0;width:auto;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:6px 20px 6px 12px}
+@media (orientation:landscape) and (max-height:560px){
+  /* sideways: its top a little above the tagline's (the logo's posts end left of it), so the logo's column grows by less than the
+     button's height, and with a Trophy Cabinet (where that column sets the height) the home is no taller than without the Locker */
+  .home .mark{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-content:start}
+  .home .mark > *{grid-column:1}
+  .home .mark .word{grid-column:1 / -1}
+  .home .mark .eyebrow{align-self:start}
+  .home .mark .lk-home{position:relative;right:auto;bottom:auto;grid-column:2;grid-row:2;align-self:start;justify-self:end;margin-top:-8px}
+}
+.lk-medal{display:block;width:22px;height:26px;flex:none}
+.lk-medal svg{display:block;width:100%;height:100%}
+.lk-home.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}
+/* a medal pip: bronze, silver or gold; filled once won */
+.lk-pip{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--pc);flex:none;opacity:.45}
+.lk-pip.t1,.lk-disc.t1{--pc:#c98a4b}.lk-pip.t2,.lk-disc.t2{--pc:#c9d1d6}.lk-pip.t3,.lk-disc.t3{--pc:#ffcf3d}
+.lk-pip.on{background:var(--pc);opacity:1}
+/* the Locker: the title, the four tabs and Back to Menu over the tab's page; on a phone held sideways they stand in a column on the
+   left and the page fills the right, so each tab fits 844x390 and 667x375 without a scroll */
+#s-locker .lk-wrap{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "tabs" "body" "back";gap:14px}
+.lk-head{grid-area:head}.lk-tabs{grid-area:tabs}.lk-body{grid-area:body;min-width:0}.lk-back{grid-area:back}
+.lk-tally{display:flex;gap:14px}
+.lk-tal{display:inline-flex;align-items:center;gap:6px;font:800 17px/1 var(--display);letter-spacing:.02em;color:var(--chalk)}
+.lk-ic{display:block;width:32px;height:32px;flex:none}
+.lk-ic svg{display:block;width:100%;height:100%;fill:none;stroke:var(--chalk);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.lk-ic .acc{fill:var(--flood);stroke:var(--flood)}
+.lk-ic .acc-line{stroke:var(--flood);stroke-width:3}
+.lk-ic .dash{stroke:var(--chalk-dim);stroke-dasharray:2.5 3}
+/* Medals: twelve tiles, each its picture, name and line, the three pips and the count to the next */
+.lk-t0{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.lk-feat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;padding:8px 6px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);text-align:center}
+.lk-feat.new{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}
+.lk-name{font:700 14px/1.1 var(--body)}
+.lk-line{font-size:12px;line-height:1.25;color:var(--chalk-dim);text-wrap:balance}
+.lk-pips{display:flex;align-items:center;gap:4px;margin-top:2px}
+.lk-n{margin-left:4px;font:800 15px/1 var(--display);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+/* Ball and Boots: each drawn in its colours; a locked one dimmed, with the pip and name of the medal that unlocks it */
+.lk-t1,.lk-t2{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;--per:5}   /* rows centred, so 13 make 5, 5 and 3 (7 and 6 on a wider screen) */
+#s-locker .btn.lk-item{flex:0 0 calc((100% - (var(--per) - 1)*8px)/var(--per));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:80px;padding:8px 4px;text-align:center}
+.lk-item svg{display:block;width:54px;height:36px}
+.lk-iname{font:700 13px/1.1 var(--body)}
+#s-locker .btn.lk-item[aria-pressed="true"]{border-color:var(--flood);box-shadow:inset 0 0 0 2px var(--flood)}
+#s-locker .btn.lk-item.lk-off{opacity:1;cursor:default;background:var(--panel)}
+.lk-item.lk-off svg{opacity:.3}
+.lk-item.lk-off .lk-iname{color:var(--chalk-dim)}
+.lk-why{display:flex;align-items:center;gap:4px;font-size:11px;line-height:1.1;color:var(--chalk-dim);white-space:nowrap}
+.lk-why .lk-pip{width:10px;height:10px;border-width:1.5px}
+/* Legends: men's then women's, five a row; a locked side is a padlock and the Gold count it needs */
+.lk-t3 .lbl{display:block;margin:0 0 4px}
+.lk-legrow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.lk-legrow+.lbl{margin-top:8px}
+.lk-leg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;min-height:62px;padding:5px 4px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);text-align:center}
+.lk-leg .jw{position:relative}
+.lk-leg .jersey{width:28px;height:28px}
+.lk-leg .ovr{right:-18px;top:-2px;bottom:auto;min-width:22px;padding:2px 3px;font-size:12px}
+.lk-nat{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 11px/1.15 var(--body);color:var(--chalk-dim)}
+.lk-yr{font:800 15px/1 var(--display);letter-spacing:.03em}
+.lk-leg.lk-off{gap:4px;color:var(--chalk-dim);border-style:dashed}
+.lk-padlock svg{display:block;width:14px;height:18px}
+.lk-need{display:flex;align-items:center;gap:4px;font:800 15px/1 var(--display);color:var(--chalk)}
+@media (min-width:800px){.lk-t1,.lk-t2{--per:7}}
+@media (orientation:landscape) and (max-height:560px){
+  #s-locker .lk-wrap{max-width:900px;min-height:100%;grid-template-columns:minmax(124px,150px) minmax(0,1fr);grid-template-areas:"head body" "tabs body" "back body";grid-template-rows:auto 1fr auto;gap:10px 14px}
+  #s-locker h2.title{font-size:40px}
+  .lk-tabs{grid-auto-flow:row;align-self:start}
+  .lk-tabs button+button{border-left:0;border-top:1.5px solid var(--rule-hi)}
+  .lk-body{align-self:center}
+  .lk-tally{gap:10px}
+}
+@media (orientation:landscape) and (max-height:420px){
+  #s-locker .lk-wrap{gap:8px 12px}
+  #s-locker h2.title{font-size:34px}
+  .lk-tally{gap:8px}
+  .lk-tal{font-size:15px;gap:4px}
+  #s-locker .btn{min-height:44px}
+  .lk-t0{gap:6px}
+  .lk-feat{gap:2px;padding:5px 4px}
+  .lk-ic{width:26px;height:26px}
+  .lk-name{font-size:13px}
+  .lk-line{font-size:11px;line-height:1.2}
+  .lk-pip{width:12px;height:12px}
+  .lk-n{font-size:14px}
+}
+/* the full-time card: a row for each medal won (the medal in its colour, the feat, what it unlocked), then the new Legends. On a phone
+   held sideways the card widens and they stand beside the score and the stats, so Continue stays on the screen: the left column is
+   never under 350px, so the stats' key stays on one line as on the card without them, and they span exactly the rows shown above
+   Continue (--lk-rows, from lockerCard), so a row the mode does not show never adds a gap. The card is never taller for them */
+.br-medals{display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid var(--rule)}
+.lk-won{margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:14px;line-height:1.2}
+.lk-disc{display:block;width:18px;height:22px;flex:none}
+.lk-won b{font:800 19px/1 var(--display);letter-spacing:.03em;text-transform:uppercase}
+.lk-got{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-weight:700}
+.lk-got svg{display:block;width:30px;height:20px}
+.lk-got .jersey{width:22px;height:22px}
+.lk-newleg{gap:4px 12px}
+.lk-newleg b{flex:1 0 100%;font-size:15px;color:var(--flood)}
+.lk-newleg .lk-got{margin-left:0}
+.lk-who{margin:0;display:flex;align-items:center;gap:8px;font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim)}   /* Two Player: Player 1's medals */
+@media (orientation:landscape) and (max-height:560px){
+  #m-break.lk-on .card{width:min(780px,100%);display:grid;grid-template-columns:minmax(350px,1fr) minmax(150px,1fr);column-gap:20px;align-items:start}
+  #m-break.lk-on .card > *{grid-column:1}
+  #m-break.lk-on #br-medals{grid-column:2;grid-row:1 / span var(--lk-rows,4);align-self:center;padding:0 0 0 18px;border-top:0;border-left:1px solid var(--rule)}
+  #m-break.lk-on #br-go,#m-break.lk-on #br-row{grid-column:1 / -1}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:760px){
+  /* a narrower phone (667x375): the medals' column is about 230px, so each row steps down a size to keep its name and its unlock on
+     one line where they fit; one that does not puts its unlock on the line below */
+  #m-break.lk-on #br-medals{gap:5px;padding-left:14px}
+  #m-break.lk-on .lk-won{gap:2px 6px}
+  #m-break.lk-on .lk-won b{font-size:17px}
+  #m-break.lk-on .lk-got{gap:4px;font-size:13px}
+  #m-break.lk-on .lk-got svg{width:26px;height:17px}
+  #m-break.lk-on .lk-got .jersey{width:20px;height:20px}
+}

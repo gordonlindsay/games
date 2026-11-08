@@ -437,7 +437,7 @@ function applyDuel(c) {
     }
     case 'tackle:bighit':
       put(O, at(1.9), true); put(U, at(1.3));
-      countTk(U.team, true); tackle(O, U, { dom:true, domP:DOM_TURN[c.res === 'perfect' ? 1 : 0] });
+      countTk(U.team, true); tackle(O, U, { dom:true, domP:DOM_TURN[c.res === 'perfect' ? 1 : 0] }); lockerTally('hits', U.team);   // a Tackle duel's Big Hit, for the Locker (src/locker.js)
       U.down = 0.4; U.tcd = 0.4;
       break;
     case 'tackle:tackled':

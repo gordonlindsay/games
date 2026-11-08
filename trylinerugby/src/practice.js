@@ -33,6 +33,7 @@ function practiceRestore() {
   $('practice-cue').hidden = true; $('m-practice').hidden = true; $('drill-hud').hidden = true;
   for (const id of ['m-pause', 'm-break', 'm-tut', 'm-pen']) $(id).hidden = true;
   releaseAll(); clearBanner();
+  lockerFlush();                                           // a drill's first three stars reach the save now, with the settings back as they were (src/locker.js)
 }
 function practiceResult(p) {                               // a run as a caller hears it: the stars shown on its result card, or quit when it was left unfinished
   const kit = DRILL_KIT[p.id], done = !!p.done;
@@ -105,6 +106,7 @@ function practiceFinish(won, feedback, stars) {
   if (!practice || practice.done) return;
   stars = stars == null ? (won ? 3 : 0) : clamp(Math.round(stars), 0, 3);
   practice.ready = false; practice.done = true; practice.won = !!won; practice.stars = stars; M.paused = true;
+  lockerDrill(practice.id, stars);                         // three stars: Star Pupil (src/locker.js), saved when the drill is left
   if (practice.opts) practice.best = practiceBest(practice.best, practiceResult(practice));   // taken now, while the run (its role included) is as shown
   $('pr-retry').textContent = 'Try Again'; $('pr-retry').hidden = false; $('pr-roles').hidden = true;
   $('pr-next').hidden = !!practice.opts;                   // a caller picks the next drill itself
