@@ -621,6 +621,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .team.create.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
 /* Grown-Ups joins How to Play and Training Ground in thirds, so the home keeps its height */
 .learn-row.three{grid-template-columns:1fr 1fr 1fr}
+#st-links.three #st-reset{grid-column:1/-1}   /* Privacy | Support, then Reset Kids Level across the row (in thirds it took three lines on a 667px phone) */
 /* the Super Fan badge under the logo, in the eyebrow's place and size: the club's shirt and its name */
 .st-fan{display:flex;align-items:center;gap:8px;color:var(--chalk)}
 .st-fan .jersey{width:20px;height:20px;margin-block:-4px}

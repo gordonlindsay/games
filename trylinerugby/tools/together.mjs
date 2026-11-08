@@ -164,5 +164,31 @@ const champBefore = JSON.stringify(X.champ());
   C.set(null); D.goHome();
 }
 
+// 12. Reset Kids Level in the Grown-Ups panel (the owner's ask, 2026-11-08): only once the hidden Kids rating has moved, behind the
+// grown-up check, and back to the start of the Kids scale when a grown-up answers it; a cancel leaves it where it was
+{
+  const S = T.store, K = T.kids, s = D.settings();
+  const pass = () => { const g = K.gate(); if (!g) return false; for (const d of g.answer) K.type(d); return true; };
+  const keep = s.kidsR;
+  S.setNative(true); S.setStarted(true);
+  s.kidsR = 0; S.open({ mode:'grown' });
+  ok($('st-reset').hidden && !$('st-links').classList.contains('three'), 'Reset Kids Level waits until the Kids rating has moved');
+  S.close();
+  s.kidsR = 0.42; S.open({ mode:'grown' });
+  const page = (await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8');   // the harness's stand-in elements carry no text: read the label from the page
+  ok(!$('st-reset').hidden && /<button class="btn" id="st-reset" hidden>Reset Kids Level<\/button><\/div>/.test(page) && $('st-links').classList.contains('three'), 'once it has, Grown-Ups shows Reset Kids Level under Privacy and Support');
+  $('st-reset').click();
+  ok(!!K.gate() && $('m-store').hidden, 'the reset asks a grown-up first, the panel hidden behind the check');
+  $('pg-cancel').click();
+  ok(s.kidsR === 0.42 && !$('m-store').hidden, 'a cancelled check leaves the rating as it was and brings the panel back');
+  $('st-reset').click(); pass();
+  ok(s.kidsR === 0 && !$('m-store').hidden && $('st-msg').textContent === 'Kids level is back to the start.' && $('st-reset').hidden, 'a grown-up\'s answer puts the rating back to the start, says so, and the button goes');
+  S.close();
+  S.open({ mode:'unlock', feature:'champ' }); s.kidsR = 0.3; S.close(); S.open({ mode:'unlock', feature:'champ' });
+  ok($('st-reset').hidden || $('st-links').hidden, 'an Unlock card never offers it');
+  S.close();
+  s.kidsR = keep; S.setNative(null); S.setStarted(false);
+}
+
 console.log(`Together: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

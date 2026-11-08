@@ -16,6 +16,7 @@ const STORE_MSG = {
   restored:'Purchases restored.',
   none:'No purchases to restore.',
   same:'Purchases are up to date.',
+  kids:'Kids level is back to the start.',
 };
 let storeUi = { mode:'grown', feature:null, then:null, busy:false, msg:'', token:0, back:null };
 
@@ -123,6 +124,8 @@ function storeCardRender() {
   if (ga) ga.addEventListener('click', () => storeLeave(link));
   $('st-msg').textContent = u.msg; $('st-msg').hidden = !u.msg;
   $('st-links').hidden = !grown;
+  const kidsReset = grown && settings.kidsR > 0;            // Reset Kids Level: only once the Kids rating has moved (src/kids.js), for a sibling or a fresh start
+  $('st-reset').hidden = !kidsReset; $('st-links').classList.toggle('three', kidsReset);   // Privacy | Support, then Reset Kids Level across the row
   $('st-restore').hidden = !app; $('st-restore').disabled = u.busy;
   $('st-row').classList.toggle('one', !app);
   $('st-back').textContent = !$('s-teams').hidden ? 'Back to Teams' : !$('s-join').hidden ? 'Back to Players' : 'Back to Menu';   // the card closes onto the screen it opened from
@@ -183,6 +186,9 @@ $('b-grown').addEventListener('click', () => storeOpen({ mode:'grown' }));
 $('st-back').addEventListener('click', storeClose);
 $('st-restore').addEventListener('click', storeRestoreAsk);
 $('st-privacy').addEventListener('click', () => storeLeave(STORE_LINKS.privacy));
+/* Reset Kids Level, behind the grown-up check like everything else here: the hidden Kids rating back to 0, saved, and said. */
+function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeCardFocus(); }); }
+$('st-reset').addEventListener('click', storeKidsReset);
 $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support));
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
   if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-store').hidden) return;

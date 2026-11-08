@@ -69,6 +69,8 @@ A level below Easy for 6 to 10 year olds, and a grown-up check in front of anyth
 
 **The rating.** Kids is a scale, not one setting, and it starts easy and gets harder as the child wins. One hidden number, `settings.kidsR`, runs from 0, where every child starts (Kids exactly as it was before the scale), to 1, the ceiling, where every lever on the scale is 80% of the way from there to Easy, so still a little easier than Easy. As a Kids match starts, `kidsTune(r)` puts each lever in `KIDS_SCALE` on the straight line between its start and its ceiling. Four aids hold all the way up the scale: the aim set at a goal kick (the path shows it, the stick does nothing, the hints and tutorial say so) and a release in the gold struck true, any button acting in a close-up (a button in a Get Past goes the open way), the ring moving to your best defender once it has sat 0.5s on a man, and your man chasing the ball at 80% of his pace when you let go of the stick. Quick Match, Championship and Career all play the child's one rating (`startMatch` passes it). The Kicking and Driving drills keep the help they always had, the start of the scale, whatever the rating.
 
+**Reset Kids Level.** One device keeps one rating, so siblings share it. Grown-Ups (in the app, and on the web once it is on the free tier) shows **Reset Kids Level** under Privacy and Support once the rating has moved; behind the grown-up check it puts `settings.kidsR` back to 0 and says so. `tools/together.mjs` section 12 pins it.
+
 | Lever (`KIDS_SCALE`, `src/kids.js`) | Easy | Kids start (r 0) | Kids ceiling (r 1) |
 |---|---|---|---|
 | The other side's pace (`diff.cpuSpeed`) | 0.97 | 0.92 | 0.96 |
