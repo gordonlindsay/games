@@ -57,7 +57,9 @@ function showBreak(kind) {
     const [a, b] = M.score;
     const res = M.two ? (a > b ? 'Player 1 Wins' : a < b ? 'Player 2 Wins' : 'Draw') : a > b ? M.nat[0].name + ' Win' : a < b ? M.nat[1].name + ' Win' : 'Draw';   // two player names the player, since both can be Farnham
     $('br-tries').textContent = res + ' · Tries ' + M.tries[0] + ' – ' + M.tries[1];
-    if (M.champ || M.career) {
+    const cupLine = M.cup && M.cupResultDone && typeof cupBreakLine === 'function' ? cupBreakLine() : '';   // a cup match: Through to the Final, Series 1–0 (src/ui-cups.js)
+    if (cupLine) { $('br-pts').textContent = cupLine; $('br-pts').hidden = false; }
+    else if (M.champ || M.career) {
       const mp = matchPoints(a, b, M.tries[0]);
       $('br-pts').textContent = '+' + mp.p + ' Table ' + (mp.p === 1 ? 'Point' : 'Points') + (mp.why.length ? ' · ' + mp.why.join(', ') : '');
       $('br-pts').hidden = false;
@@ -74,7 +76,8 @@ function showBreak(kind) {
   $('m-break').hidden = false;
 }
 function finishMatch() {
-  if (M.champ && champ) recordChampResult();
+  if (M.champ && champ) { const was = champ.round; recordChampResult(); if (champ.round > was && typeof cupTripleAfter === 'function') cupTripleAfter(champ); }   // a Triple Crown completed by this result tells the Locker (src/cups.js)
+  if (M.cup && !M.career && cup && typeof cupRecordMatch === 'function') cupRecordMatch();   // a cup in Championship mode (src/ui-cups.js)
   if (M.career) careerRecordResult();
   if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and a Whole Team career alike
   lockerMatch();                                            // the Locker: the feats done this match, and a Championship won (src/locker.js)
@@ -149,7 +152,10 @@ function renderHome() {
   const note = $('champ-note');
   const live = champ && champ.teams && champ.teams[champ.user] && champ.round < 5;
   const done = champ && champ.teams && champ.teams[champ.user] && champ.round >= 5;
-  if (live) {
+  if (cup && typeof cupNote === 'function') {                // a cup under way, or finished and not yet put away (src/ui-cups.js)
+    $('b-champ').textContent = cupFixture(cup) ? 'Continue Championship' : 'Final Result';
+    cupHomeNote(note, cup);
+  } else if (live) {
     $('b-champ').textContent = 'Continue Championship';
     homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else if (done) {
@@ -187,7 +193,8 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
 $('b-champ').addEventListener('click', () => {
   ac();
   if (!storeGate('champ', () => $('b-champ').click())) return;   // locked: the Unlock card; a championship under way stays saved
-  if (champ) { renderHub(); showScreen('s-hub'); }
+  if (cup) { renderCup(); showScreen('s-cup'); }          // a cup under way (src/ui-cups.js)
+  else if (champ) { renderHub(); showScreen('s-hub'); }
   else openTeams('champ');
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
@@ -198,7 +205,7 @@ $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
-$('t-default').addEventListener('click', () => pickTeam(storeHomeTeam()));   // Farnham, or the Super Fan's club
+$('t-default').addEventListener('click', () => { const v = teamsView(); pickTeam(v && v.pick ? v.pick : storeHomeTeam()); });   // Farnham, or the Super Fan's club; on a Home Nations Tour, the host in turn
 
 /* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
@@ -316,33 +323,41 @@ function catPick(id) {
 }
 function openTeams(m) {
   pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 'sur'; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  if (typeof cupCompReset === 'function') cupCompReset();   // Championship opens on League, today's flow (src/ui-cups.js)
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
+/* Championship's World Cup or Home Nations Tour, picked on the team screen's competition row: its title, its list, its side
+   and its primary (src/ui-cups.js); null for League, today's flow, and for every other mode. */
+const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
 function renderTeams() {
-  const quick = pickMode === 'quick', pair = pickMode === 'two', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick;   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
+  const quick = pickMode === 'quick', pair = pickMode === 'two', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick, view = teamsView();   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
   const eb = $('t-eyebrow');
   eb.textContent = quick ? 'Quick Match' : pair ? 'Two Player' : 'Championship';
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
-  $('t-title').textContent = pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
+  $('t-title').textContent = view ? view.title : pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
   const pool = teamPool(), tier = poolTier(pool), press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
+  $('t-comp').hidden = pickMode !== 'champ';               // League | World Cup | Home Nations Tour, Championship only (src/ui-cups.js)
+  press('t-comp', '[data-comp]', b => b.dataset.comp === (view ? view.comp : 'league'));
   press('t-tier', '[data-tier]', b => +b.dataset.tier === tier);
-  $('t-nat').hidden = tier !== 1; $('t-loc').hidden = tier !== 2; $('t-league').hidden = !importLeague;
+  $('t-tier').hidden = !!view;                             // a cup's sides are its own: no lists to pick from
+  $('t-nat').hidden = !!view || tier !== 1; $('t-loc').hidden = !!view || tier !== 2; $('t-league').hidden = !importLeague;
   for (const id of ['t-nat', 't-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   press('t-cat', '[data-cat]', b => b.dataset.cat === settings.cat);
-  const yours = (quick && !!quickPick) || (pair && p === 1);
-  $('t-yours').hidden = !yours;
-  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, settings.cat) || mine).name)}</span>`;
-  $('t-default').hidden = quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
+  const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours);
+  $('t-yours').hidden = !yours; $('t-change').hidden = !!view;
+  if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
+  else if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, settings.cat) || mine).name)}</span>`;
+  $('t-default').hidden = view ? !view.pick : quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
-  $('t-default').textContent = 'Play as ' + catSide(storeHomeTeam(), settings.cat).name;   // the side it starts: Farnham Women on Women
-  teamList = [...poolTeams(pool), ...custom];              // My League: src/import.js
-  if (poolTeams(pool) === natList(settings.cat) && typeof lockerLegends === 'function') teamList.splice(natList(settings.cat).length, 0, ...lockerLegends(settings.cat));   // International: the Legends unlocked so far, after the nations, for the category in play (src/locker.js)
-  if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
+  $('t-default').textContent = view && view.pick ? view.primary : 'Play as ' + catSide(storeHomeTeam(), settings.cat).name;   // the side it starts: Farnham Women on Women
+  teamList = view ? view.list : [...poolTeams(pool), ...custom];   // My League: src/import.js
+  if (!view && poolTeams(pool) === natList(settings.cat) && typeof lockerLegends === 'function') teamList.splice(natList(settings.cat).length, 0, ...lockerLegends(settings.cat));   // International: the Legends unlocked so far, after the nations, for the category in play (src/locker.js); never in a cup's list
+  if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js); a cup's nations and hosts are never a partner club
   let html = teamList.map(teamCard).join('');
-  if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
-  html += importCard();                                    // Import Club, src/import.js
+  if (!view && custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
+  if (!view) html += importCard();                         // Import Club, src/import.js
   $('t-grid').innerHTML = html;
   for (const b of $('t-grid').querySelectorAll('.team[data-i]')) b.addEventListener('click', () => pickTeam(teamList[+b.dataset.i]));
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));
@@ -371,6 +386,8 @@ function pickTeam(t) {
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
+    const view = teamsView();
+    if (view) { view.start(t); return; }                   // a World Cup as that nation, or a tour to that host (src/ui-cups.js)
     const pool = teamPool(), cat = settings.cat, me = catTeam(t, cat);
     if (!me) return;
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
@@ -479,15 +496,20 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
     + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
+/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked with its kind's colour and
+   name; the tally counts each kind won, a cup's only once one is kept. An entry without a kind is a league season. */
 function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
-  const tally = [['Title', 'Titles', totals.champions], ['Grand Slam', 'Grand Slams', totals.grandSlams], ['Triple Crown', 'Triple Crowns', totals.tripleCrowns]];
-  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved on this device.</p>`
-    + (history.length ? `<p class="cabinet-tally">${tally.map(([singular, plural, n]) => `${n} ${n === 1 ? singular : plural}`).join(' · ')}</p>` + history.map((c, i) => {
+  const tally = [['league', 'Title', 'Titles', totals.champions], ['league', 'Grand Slam', 'Grand Slams', totals.grandSlams], ['triple', 'Triple Crown', 'Triple Crowns', totals.tripleCrowns],
+    ...[['euro', 'European Cup', 'European Cups'], ['world', 'World Cup', 'World Cups'], ['tour', 'Tour', 'Tours']].map(([k, a, b]) => [k, a, b, totals[k] || 0]).filter(t => t[3] > 0)];
+  const kindTag = k => `<span class="cup-kind" data-kind="${k}">${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
+  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}">${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
+      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind));
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
-      return `<article class="season-entry"><p class="eyebrow">${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
+      return `<article class="season-entry"><p class="eyebrow">${kindTag('league')}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
     }).join('') : '<p class="stat-note">Complete a championship to record your first season here.</p>');
 }
 function renderSeasonSummary(c) {
@@ -538,8 +560,11 @@ function renderHub() {
     $('hub-play').addEventListener('click', () => { const { opp } = userFixture(champ); startMatch(champ.teams[champ.user], champ.teams[opp], true); });
     $('hub-hon').hidden = true;
   } else {
-    $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
-    $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); openTeams('champ'); });
+    if (typeof cupEuroHub === 'function' && cupEuroHub(c, rows)) { /* won a European league: Play European Cup or Not Now (src/ui-cups.js) */ }
+    else {
+      $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
+      $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); openTeams('champ'); });
+    }
     $('hub-hon').innerHTML = honours(c, rows).map(([t, i, gold]) => `<div class="hon${gold ? ' gold' : ''}"><span class="eyebrow">${t}</span><b>${esc(T[i].name)}</b></div>`).join('');
     $('hub-hon').hidden = false;
   }

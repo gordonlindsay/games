@@ -26,9 +26,23 @@ const COACH_LINE = {
 let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0 };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
+let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
 let storeBought = [];   // the app's purchases, product ids in the order bought (src/store.js); saved as store:{ owned } only once there is one, so a web save is as it was
 const SEASON_LIMIT = 10;
+/* The Trophy Cabinet (champHistory) holds completed league seasons, as it always has, and finished cups beside them as
+   { kind, id, cup } (src/cups.js). An entry without a kind is a league season: every old one. It keeps the last SEASON_LIMIT of
+   each, leagues and cups, in the order they finished. */
+const cabinetKind = e => (e && typeof e === 'object' && e.kind != null && e.kind !== 'league' ? e.kind : 'league');
+function cabinetTrim(list) {
+  const leagues = list.filter(e => cabinetKind(e) === 'league').slice(-SEASON_LIMIT), cups = list.filter(e => cabinetKind(e) !== 'league').slice(-SEASON_LIMIT);
+  return list.filter(e => leagues.includes(e) || cups.includes(e));
+}
+function cabinetClean(raw) {
+  if (cabinetKind(raw) !== 'league') return typeof cleanCupEntry === 'function' ? cleanCupEntry(raw) : null;
+  const c = cleanChamp(raw);
+  return c && c.round === 5 ? c : null;
+}
 /* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
 function cleanSeasonStats(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
@@ -166,17 +180,20 @@ function restore(s) {
   if ('champHistory' in s) {
     champHistory = [];
     if (Array.isArray(s.champHistory)) for (const raw of s.champHistory.slice(-100)) {
-      const c = cleanChamp(raw);
-      if (c && c.round === 5 && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
+      const c = cabinetClean(raw);
+      if (c && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
     }
-    champHistory = champHistory.slice(-SEASON_LIMIT);
+    champHistory = cabinetTrim(champHistory);
   }
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
   if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
+  if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
+  if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
   retainCompletedSeason(champ);
+  if (typeof cupRetain === 'function') cupRetain(cup);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
 function load() {
@@ -191,7 +208,8 @@ function save() {
   if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
   settings.duels = true;
   retainCompletedSeason(champ);
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined })); } catch (e) { /* private mode, or full */ }
+  if (typeof cupRetain === 'function') cupRetain(cup);
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined })); } catch (e) { /* private mode, or full */ }
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }

@@ -173,8 +173,10 @@ function lockerMatch() {
 }
 /* Another part of the game says a moment happened: true when it counted. Callers outside this file use
    typeof lockerEvent === 'function' && lockerEvent(id). */
+const lockerHeard = [];                                  // the last events heard, newest last (tools/cups.mjs reads it); never saved
 function lockerEvent(id) {
   const f = LOCKER_EVENTS[id];
+  if (f) { lockerHeard.push(id); if (lockerHeard.length > 20) lockerHeard.shift(); }
   if (!f || practice) return false;
   if (M && M.arcade && !M.demo && !M.auto) { lockerFrom(); const ev = M.lockerEv || (M.lockerEv = []); if (ev.includes(f)) return false; ev.push(f); }   // once a match for one medal
   lockerAdd(f);

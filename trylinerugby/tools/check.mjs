@@ -15,7 +15,7 @@ if (flags.has('--help')) {
 const cwd = fileURLToPath(new URL('../', import.meta.url));
 const jobs = [
   ['Build', ['tools/build.mjs', '--check']],
-  ...['offline-core', 'offline-ui', 'practice', 'polish', 'feedback', 'transitions', 'input-lifecycle', 'tutorial', 'hints', 'postmatch', 'season-data', 'season-ui', 'season-flow', 'arcade', 'stamina', 'career', 'career-pro', 'traits', 'importer', 'drills', 'together', 'kids', 'store', 'listing', 'native'].map(name => [name, [`tools/${name}.mjs`]]),
+  ...['offline-core', 'offline-ui', 'practice', 'polish', 'feedback', 'transitions', 'input-lifecycle', 'tutorial', 'hints', 'postmatch', 'season-data', 'season-ui', 'season-flow', 'arcade', 'stamina', 'career', 'career-pro', 'traits', 'cups', 'importer', 'drills', 'together', 'kids', 'store', 'listing', 'native'].map(name => [name, [`tools/${name}.mjs`]]),
   ['career-life', ['tools/career-life.mjs']],               // the career's Energy, Morale, Team Spirit and dilemmas
   ['locker', ['tools/locker.mjs']],                         // medals, balls and boots, the Legends (its browser part runs where Playwright is installed)
 ];

@@ -24,8 +24,9 @@ function heat(t, why) {
 function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }
 function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }
 
-/* The Golden Try: level at the end of the second half, play on until somebody scores. */
-const goldenOn = () => !!(M && M.arcade && !M.champ && !M.career);   // a career season is a league too
+/* The Golden Try: level at the end of the second half, play on until somebody scores. A cup's knockout or Test has it too
+   (M.cupKO, src/cups.js), in Championship mode or a career, since it cannot end level; a cup's pool keeps its draws. */
+const goldenOn = () => !!(M && M.arcade && (M.cup ? M.cupKO : !M.champ && !M.career));   // a career season is a league too
 const periodLen = () => M.golden ? M.halfLen*ARCADE.golden.len : M.halfLen;
 function startGolden() {
   M.half = 3; M.golden = true; M.clock = 0; M.hooter = false;
