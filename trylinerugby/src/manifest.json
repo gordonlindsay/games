@@ -22,6 +22,7 @@
   "ui-match.js",
   "ui-help.js",
   "ui-menus.js",
+  "import.js",
   "practice.js",
   "offline-client.js",
   "boot.js"

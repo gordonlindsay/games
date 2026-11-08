@@ -456,3 +456,32 @@ body.desk .home-row .col{grid-column:auto}
 .app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; padding:7px 11px; font:inherit; cursor:pointer; }
 .app-action:hover, .app-action:focus-visible { color:#fff; border-color:#d5b663; }
 .app-action:disabled { opacity:.55; cursor:wait; }
+
+/* ===== import ===== */
+/* the Import Club card beside Create Team: a chain link drawn in CSS */
+.team.create .plus.link{border:0;border-radius:0;position:relative}
+.team.create .plus.link::before,.team.create .plus.link::after{content:"";position:absolute;width:24px;height:12px;border:3px solid currentColor;border-radius:7px;transform:rotate(-45deg)}
+.team.create .plus.link::before{left:3px;top:20px}
+.team.create .plus.link::after{left:15px;top:10px}
+/* the import card scrolls on a short landscape phone, as full time does */
+#m-import{display:flex;align-items:safe center;justify-content:center;overflow:auto;touch-action:pan-y;padding:12px}
+#m-import .card{margin:auto;width:min(640px,100%);gap:12px;padding:16px}
+.im-head{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0}
+.im-head > div{display:flex;flex-direction:column;gap:6px;min-width:0}
+#im-title{overflow-wrap:anywhere}
+.im-line{margin:0;color:var(--chalk-dim)}
+.im-paste{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.im-paste .btn{width:auto;min-height:44px;padding:0 20px}
+.im-paste .inp:disabled{opacity:.55}
+.im-err{margin:0;color:var(--alert);font-weight:700}
+.im-league{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.im-league .jersey{width:24px;height:24px}
+.im-league .lbl{margin-left:8px}
+.im-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(284px,max-content));gap:10px 16px}
+.im-cols .swatches{gap:4px}
+#m-import .btn:disabled{opacity:.6;cursor:wait}
+@media (max-height:420px){
+  #m-import .card{gap:10px;padding:12px 14px}
+  #m-import h3{font-size:30px}
+  #m-import .btn.primary{min-height:50px}
+}
