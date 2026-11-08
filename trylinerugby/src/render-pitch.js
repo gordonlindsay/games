@@ -83,9 +83,14 @@ function drawPlayer(p, r) {
   ctx.fillStyle = 'rgba(0,0,0,.12)';
   for (const [ox, oy] of SHADOWS) { ellipse(sx + ox*r, sy + oy*r, r*0.95, r*0.75); ctx.fill(); }
   const sp = hyp(p.vx, p.vy), spr = sprintLevel(p);
-  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || (M.surge && M.surge.team === p.team)) && sp > 3) {
+  const fire = onFire(p.team);
+  if (fire && p.down <= 0) {                                 // On Fire: an orange glow under every man on the side, pulsing
+    ctx.fillStyle = `rgba(255,110,30,${(0.30 + 0.12*Math.sin(M.rt*2*Math.PI*3)).toFixed(3)})`;
+    ellipse(sx, sy, r*1.55, r*1.3); ctx.fill();
+  }
+  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || fire || (M.surge && M.surge.team === p.team)) && sp > (fire ? 1.5 : 3)) {
     const tx = -p.vx/sp, ty = -p.vy/sp;
-    ctx.fillStyle = (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';
+    ctx.fillStyle = fire ? 'rgba(255,110,30,.6)' : (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';   // On Fire burns orange
     for (const kk of [1.1, 2.0]) { ellipse(sx + tx*r*kk, sy + ty*r*kk, r*(1 - kk*0.22), r*(0.85 - kk*0.2)); ctx.fill(); }
     if (spr > 0) {                                           // a sprint: two speed streaks behind him
       ctx.strokeStyle = `rgba(244,241,232,${(0.55*spr).toFixed(3)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';

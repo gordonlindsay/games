@@ -208,6 +208,10 @@ h2.title.gold{color:var(--flood)}
 .bug{display:flex;align-items:stretch;background:rgba(8,14,10,.88);border:1px solid rgba(241,238,228,.2);border-radius:4px;overflow:hidden;font:800 21px/1 var(--display);text-transform:uppercase;font-variant-numeric:tabular-nums}
 .bug .k{width:6px;background:var(--k)}
 .bug .nm{padding:6px 9px;display:flex;align-items:center}
+.bug .heat{width:7px;margin:5px 3px;border-radius:2px;background:linear-gradient(to top,#ff7a1f calc(var(--n,0)*33.4%),rgba(241,238,228,.22) 0)}   /* the run towards On Fire, fills bottom up */
+.bug .heat[hidden]{display:none}
+.bug .heat.on{background:#ff7a1f;box-shadow:0 0 8px #ff7a1f;animation:flick .35s ease-in-out infinite alternate}
+@keyframes flick{to{opacity:.55}}
 .bug .sc{display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--chalk);color:var(--night);font-weight:900}
 .sub{padding:4px 9px;border-radius:3px;background:rgba(8,14,10,.74);font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;font-variant-numeric:tabular-nums}
 .sub .lp{color:var(--flood)}
@@ -242,6 +246,9 @@ h2.title.gold{color:var(--flood)}
 #banner .msg.small{font-size:24px;padding:8px 14px;border-left-width:6px}
 #banner .msg.coach{font:700 18px/1.25 var(--body);text-transform:none;letter-spacing:0;padding:8px 14px;max-width:min(28em,92vw)}
 #banner .msg.big{border:0;background:none;padding:0;font-size:clamp(84px,22vw,170px);color:var(--chalk);text-shadow:0 5px 0 var(--k,#000),0 8px 0 rgba(0,0,0,.45),0 0 40px rgba(0,0,0,.5)}
+#banner .msg.fire{color:#ffcf3d;text-shadow:0 5px 0 #ff5a14,0 8px 0 rgba(0,0,0,.45),0 0 48px rgba(255,90,20,.65)}   /* On Fire */
+#banner .msg.hit{animation:pop .22s ease-out,thud .3s ease-out}   /* Big Hit lands with a jolt */
+@keyframes thud{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,2px)}}
 @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:none;opacity:1}}
 
 #controls{position:fixed;inset:0;z-index:4;pointer-events:none}
@@ -415,7 +422,7 @@ body.desk .home-row .col{grid-column:auto}
   #br-stats td{font-size:18px}
   #br-stats .key{font-size:11px}
 }
-@media (prefers-reduced-motion:reduce){#banner .msg{animation:none}.act{transition:none}.act.cue{animation:none}}
+@media (prefers-reduced-motion:reduce){#banner .msg,#banner .msg.hit,.bug .heat.on{animation:none}.act{transition:none}.act.cue{animation:none}}
 
 /* Progression stays within the menu; match cards keep their one-press Continue. */
 .season-summary,.cabinet{padding:12px 14px;border:1px solid var(--rule);border-radius:8px;background:var(--panel)}

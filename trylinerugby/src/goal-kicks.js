@@ -33,10 +33,12 @@ function scoreTry(p) {
   if (practice) { practiceFinish(practice.id === 'pass' && p.team === 0 && practice.completedPass, p.team === 0 ? (practice.completedPass ? 'You moved the ball to support and finished the attack.' : 'Draw the defender, then pass to your supporting runner before scoring.') : 'The runner got through. Switch into cover and run towards the ball.'); return; }
   const team = p.team;
   M.score[team] += 5; M.tries[team]++;
+  heat(team, 'try'); fireOut(1 - team);                    // a try lights the scorers and puts the other side out
+  goldenScored();
   placeBall(clamp(p.x,0,120), clamp(p.y,0,70));
   p.vx *= 0.3; p.vy *= 0.3;
-  say('Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
-  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => conversion(s.team, s.y) });
+  say(M.golden ? 'Golden Try' : 'Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
+  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => M.golden ? endHalf() : conversion(s.team, s.y) });   // a Golden Try needs no conversion
 }
 function conversion(team, y) {
   const yy = clamp(y, 4, 66);
@@ -219,6 +221,7 @@ function scoreGoal(g) {                                    // the verdict moment
   if (ok) {
     M.score[team] += kind === 'conversion' ? 2 : 3; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
     if (kind === 'conversion') M.stats.conv.made[team]++; else if (kind === 'penalty') M.stats.pen.made[team]++;
+    goldenScored();
   }
   say(verdictOf(g), '', ok ? team : null, g.grade, M.cut && M.cut.kind === 'goal' && verdictLow(g));
   if (g.res === 'post' || g.res === 'postIn' || g.res === 'bar' || g.res === 'barIn') { sfx('post'); buzz(40); }
@@ -303,7 +306,7 @@ function goalLabels(c) {
   return ['Kick', null, g.stage === 'aim' && !c.after, false];
 }
 function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
-  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); }
+  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
   placeBall(M.ball.x, M.ball.y);
   startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });
 }

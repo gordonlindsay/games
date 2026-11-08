@@ -75,7 +75,7 @@ function setBoost(p, mul, secs) {
 }
 function duelGate(kind, owner) {                           // owner: the side that would own it. One player keeps the shared log; two player gives each owner his own quota and "never the same kind twice running", with the gap and the Last Play bonus shared
   if (M.duels === 'off' || M.phase !== 'play' || anyCharging() || M.clock < 15 || M.cut) return false;
-  const L = M.duelLog, h = M.half - 1;
+  const L = M.duelLog, h = Math.min(M.half, 2) - 1;
   if (M.hooter && !L.bonus[h] && M.dclock - L.last >= DUEL_LAST_GAP) return 'bonus';
   if (M.dclock - L.last < DUEL_GAP) return false;
   if (M.two) {
@@ -129,7 +129,7 @@ function findTackleDuel(c) {                                // the other side's 
   return g ? { kind:'tackle', U:q, O:c, how:g } : null;
 }
 function pickOwner(a, k) {                                 // two candidates on one step (two player only): the side with more duels left this half, then the side that didn't have the last one, then the attacker
-  const h = M.half - 1, left = t => Math.ceil(M.halfLen/180) - sideOf(t).duel.half[h];
+  const h = Math.min(M.half, 2) - 1, left = t => Math.ceil(M.halfLen/180) - sideOf(t).duel.half[h];
   if (left(a.U.team) !== left(k.U.team)) return left(a.U.team) > left(k.U.team) ? a : k;
   if (M.duelLog.lastOwner === a.U.team) return k;
   return a;
@@ -178,7 +178,7 @@ function startPendingDuel() {
 function startDuel(s) {
   for (const p of M.players) { p.sprinting = false; p.sprint = 0; }   // a duel is run at the duel's pace; the meters keep their level
   for (const S of M.spr) S.p = null;
-  const own = s.U.team, k = DUEL[s.kind], di = levelOf(own), nU = M.nat[s.U.team], nO = M.nat[s.O.team], L = M.duelLog, h = M.half - 1;
+  const own = s.U.team, k = DUEL[s.kind], di = levelOf(own), nU = M.nat[s.U.team], nO = M.nat[s.O.team], L = M.duelLog, h = Math.min(M.half, 2) - 1;
   if (s.how === 'bonus') L.bonus[h] = true; else if (s.how !== 'force') { L.half[h]++; sideOf(own).duel.half[h]++; }
   L.last = M.dclock; L.lastKind = s.kind; L.lastOwner = own; sideOf(own).duel.lastKind = s.kind;
   M.stats.duels++; M.stats['d_' + s.kind] = (M.stats['d_' + s.kind] || 0) + 1; M.stats.duelN.att[own]++;

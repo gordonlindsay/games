@@ -13,7 +13,7 @@ function render(dt) {
   cam.y = hc*2 >= 82 ? 35 : clamp(cam.y, hc-6, 76-hc);
   M.rt += dt;
   for (const p of M.players) { if (p.drawFrom && (p.drawFrom.t -= dt) <= 0) p.drawFrom = null; if (p.fend > 0) p.fend -= dt; }   // render-only clocks
-  const shake = M.shake > 0 && !RM ? 3*(M.shake/0.12) : 0;   // your Big Hit: a 3px shake for 0.12s, none under reduced motion
+  const shake = M.shake > 0 && !RM ? 3*(M.shakeT/0.12)*(M.shake/M.shakeT) : 0;   // your Big Hit: a 3px shake for 0.12s (an arcade one bigger and longer), none under reduced motion
   if (M.shake > 0) M.shake -= dt;
   const camX = cam.x + shake*Math.sin(M.rt*173)/s, camY = cam.y + shake*Math.cos(M.rt*131)/s;
 

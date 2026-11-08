@@ -75,7 +75,9 @@ function newMatch(u, c, opts) {
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
-    tags:[], fx:[], stop:0, shake:0, rt:0,             // render only: on-pitch tags, impact rings, the Big Hit's hit-stop and shake, the render clock
+    tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
+    arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
+    fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
   };
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
@@ -106,6 +108,7 @@ function maxSpeed(p) {
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
+  if (onFire(p.team)) f *= ARCADE.fire.speed;
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
   if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
@@ -241,10 +244,11 @@ function catchBall(p, kind) {
   let k = 0.015 + (5-n.handling)*0.01 + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? 0.2 : 0);
   if (pressure(p) < 1.8) k += 0.04;
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
+  if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (rnd() < k) { knockOn(p); return; }
   setCarrier(p);
   p.fromKick = kind === 'kick';
-  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); }
+  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
@@ -263,6 +267,6 @@ function pickUp(p) {
   }
   const turn = p.team !== b.last && !b.kickInfo;
   setCarrier(p);
-  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); }
+  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); heat(p.team, 'turnover'); }
 }
 

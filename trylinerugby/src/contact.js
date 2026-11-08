@@ -12,7 +12,7 @@ const cpuEdge = (q, c, arr) => (!isHuman(q.team) && isHuman(c.team)) ? arr[level
 const slide = (p, x, y, T, spin) => { T = Math.max(T, hyp(x - p.x, y - p.y)/9); p.drawFrom = { x:p.x, y:p.y, t:T, T, spin:spin || 0 }; p.x = x; p.y = y; };   // a teleport in the logic, smoothed in the drawing at no more than 9 m/s
 function tag(text, x, y) { if (M.auto) return; st('tag_' + text); M.tags.push({ text, x, y, t:0 }); while (M.tags.length > 2) M.tags.shift(); }
 function impact(x, y) { M.fx.push({ x, y, t:0 }); }
-function hitStop(ms) { if (!interactive()) return; M.stop = ms/1000; if (!RM) M.shake = 0.12; }
+function hitStop(ms, shake) { if (!interactive()) return; M.stop = ms/1000; if (!RM) M.shake = M.shakeT = shake || 0.12; }   // shake: its length, which also sets its size
 function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI defender's reach), 'contact' (your ringed man's automatic tackle), 'dive' (a Tackle press), 'ankle' (a dive from behind)
   const d = dirOf(c.team), rx = q.x - c.x, ry = q.y - c.y, rm = hyp(rx, ry) || 1;
   const cv = hyp(c.vx, c.vy), cosF = cv > 0.5 ? (rx*c.vx + ry*c.vy)/(rm*cv) : rx*d/rm;
@@ -134,11 +134,18 @@ function resolveContact(k) {                               // the end of the bin
     else if (!fend) { c.stumble = CONTACT.stumble[0]; c.stumbleMul = CONTACT.stumble[1]; }
     if (fend) { st('fends'); st('fend' + c.team); if (ringed(c)) tag('Fend', c.x, c.y); }
     if (tripped) { sfx('trip'); if (ringed(q)) { tag('Tripped', c.x, c.y); buzz(20, q.team); } } else sfx('whiff');
-    st('broken' + c.team); M.stats.broken++;
+    st('broken' + c.team); M.stats.broken++; heat(c.team, 'break');
     return;
   }
-  if (tier === 'dom') { st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45); if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); } }
-  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15);   // the ball jolted loose in the tackle
+  if (tier === 'dom') {
+    st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45);
+    if (M.arcade) {                                          // arcade: the whole screen knows. Yours freezes and shakes hard; one on your carrier shakes too
+      heat(q.team, 'hit');
+      if (ringed(q)) { say('Big Hit', 'big hit', q.team); hitStop(ARCADE.hit.stop, ARCADE.hit.shake); }
+      else if (ringed(c) && !RM && interactive()) M.shake = M.shakeT = ARCADE.hit.hitShake;
+    } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
+  }
+  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more
   if (rnd() < jolt) {
     st('jolts');
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
@@ -202,7 +209,7 @@ function resolveRuck(s) {                                  // the ruck is automa
   if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
   const pT = s.dom ? s.domP : RUCK.flatBase + (M.nat[def].power - M.nat[att].power)*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
-    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small');
+    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
     releaseTo(def, s.x, s.y, 'turnover');
     if (s.tier) wrongFoot(def, s.x, s.y);
     if (s.dom) surge(def, LINE_SPEED);                     // Line Speed for the side that made the Big Hit

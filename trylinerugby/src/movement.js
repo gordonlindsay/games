@@ -516,10 +516,11 @@ function matchUpdate(dt) {
   if (M.phase === 'cut') { updateCut(dt); return; }
   const b = M.ball;
   if (M.surge && (M.surge.t -= dt) <= 0) M.surge = null;
+  fireTick(dt);
   const clockOn = M.phase === 'play' || (M.phase === 'set' && M.set.kind !== 'try' && M.set.kind !== 'score');
   if (clockOn) {
     M.clock += dt; M.dclock += dt;
-    if (!M.hooter && M.clock >= M.halfLen) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
+    if (!M.hooter && M.clock >= periodLen()) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
   }
   handleUser(dt);
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
@@ -533,7 +534,7 @@ function matchUpdate(dt) {
       if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
-    if (M.phase === 'play' && M.hooter && !M.demo && M.clock > M.halfLen + 45) endHalf();
+    if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
   } else if (M.phase === 'set') {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
@@ -550,6 +551,8 @@ function endHalf() {
   if (M.half === 1) {
     if (M.headless) { secondHalf(); return; }
     M.phase = 'break'; showBreak('half');
+  } else if (M.half === 2 && goldenOn() && M.score[0] === M.score[1]) {
+    startGolden();                                         // level: sudden death, straight from the hooter
   } else {
     M.phase = 'break'; M.over = true;
     if (!M.headless) finishMatch();

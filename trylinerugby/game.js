@@ -375,7 +375,9 @@ function newMatch(u, c, opts) {
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
-    tags:[], fx:[], stop:0, shake:0, rt:0,             // render only: on-pitch tags, impact rings, the Big Hit's hit-stop and shake, the render clock
+    tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
+    arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
+    fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
   };
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
@@ -406,6 +408,7 @@ function maxSpeed(p) {
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
+  if (onFire(p.team)) f *= ARCADE.fire.speed;
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
   if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
@@ -541,10 +544,11 @@ function catchBall(p, kind) {
   let k = 0.015 + (5-n.handling)*0.01 + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? 0.2 : 0);
   if (pressure(p) < 1.8) k += 0.04;
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
+  if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (rnd() < k) { knockOn(p); return; }
   setCarrier(p);
   p.fromKick = kind === 'kick';
-  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); }
+  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
@@ -563,7 +567,7 @@ function pickUp(p) {
   }
   const turn = p.team !== b.last && !b.kickInfo;
   setCarrier(p);
-  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); }
+  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); heat(p.team, 'turnover'); }
 }
 
 /* ---------- passing and kicking ---------- */
@@ -758,7 +762,7 @@ const cpuEdge = (q, c, arr) => (!isHuman(q.team) && isHuman(c.team)) ? arr[level
 const slide = (p, x, y, T, spin) => { T = Math.max(T, hyp(x - p.x, y - p.y)/9); p.drawFrom = { x:p.x, y:p.y, t:T, T, spin:spin || 0 }; p.x = x; p.y = y; };   // a teleport in the logic, smoothed in the drawing at no more than 9 m/s
 function tag(text, x, y) { if (M.auto) return; st('tag_' + text); M.tags.push({ text, x, y, t:0 }); while (M.tags.length > 2) M.tags.shift(); }
 function impact(x, y) { M.fx.push({ x, y, t:0 }); }
-function hitStop(ms) { if (!interactive()) return; M.stop = ms/1000; if (!RM) M.shake = 0.12; }
+function hitStop(ms, shake) { if (!interactive()) return; M.stop = ms/1000; if (!RM) M.shake = M.shakeT = shake || 0.12; }   // shake: its length, which also sets its size
 function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI defender's reach), 'contact' (your ringed man's automatic tackle), 'dive' (a Tackle press), 'ankle' (a dive from behind)
   const d = dirOf(c.team), rx = q.x - c.x, ry = q.y - c.y, rm = hyp(rx, ry) || 1;
   const cv = hyp(c.vx, c.vy), cosF = cv > 0.5 ? (rx*c.vx + ry*c.vy)/(rm*cv) : rx*d/rm;
@@ -880,11 +884,18 @@ function resolveContact(k) {                               // the end of the bin
     else if (!fend) { c.stumble = CONTACT.stumble[0]; c.stumbleMul = CONTACT.stumble[1]; }
     if (fend) { st('fends'); st('fend' + c.team); if (ringed(c)) tag('Fend', c.x, c.y); }
     if (tripped) { sfx('trip'); if (ringed(q)) { tag('Tripped', c.x, c.y); buzz(20, q.team); } } else sfx('whiff');
-    st('broken' + c.team); M.stats.broken++;
+    st('broken' + c.team); M.stats.broken++; heat(c.team, 'break');
     return;
   }
-  if (tier === 'dom') { st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45); if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); } }
-  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15);   // the ball jolted loose in the tackle
+  if (tier === 'dom') {
+    st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45);
+    if (M.arcade) {                                          // arcade: the whole screen knows. Yours freezes and shakes hard; one on your carrier shakes too
+      heat(q.team, 'hit');
+      if (ringed(q)) { say('Big Hit', 'big hit', q.team); hitStop(ARCADE.hit.stop, ARCADE.hit.shake); }
+      else if (ringed(c) && !RM && interactive()) M.shake = M.shakeT = ARCADE.hit.hitShake;
+    } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
+  }
+  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more
   if (rnd() < jolt) {
     st('jolts');
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
@@ -948,7 +959,7 @@ function resolveRuck(s) {                                  // the ruck is automa
   if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
   const pT = s.dom ? s.domP : RUCK.flatBase + (M.nat[def].power - M.nat[att].power)*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
-    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small');
+    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
     releaseTo(def, s.x, s.y, 'turnover');
     if (s.tier) wrongFoot(def, s.x, s.y);
     if (s.dom) surge(def, LINE_SPEED);                     // Line Speed for the side that made the Big Hit
@@ -1123,10 +1134,12 @@ function scoreTry(p) {
   if (practice) { practiceFinish(practice.id === 'pass' && p.team === 0 && practice.completedPass, p.team === 0 ? (practice.completedPass ? 'You moved the ball to support and finished the attack.' : 'Draw the defender, then pass to your supporting runner before scoring.') : 'The runner got through. Switch into cover and run towards the ball.'); return; }
   const team = p.team;
   M.score[team] += 5; M.tries[team]++;
+  heat(team, 'try'); fireOut(1 - team);                    // a try lights the scorers and puts the other side out
+  goldenScored();
   placeBall(clamp(p.x,0,120), clamp(p.y,0,70));
   p.vx *= 0.3; p.vy *= 0.3;
-  say('Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
-  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => conversion(s.team, s.y) });
+  say(M.golden ? 'Golden Try' : 'Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
+  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => M.golden ? endHalf() : conversion(s.team, s.y) });   // a Golden Try needs no conversion
 }
 function conversion(team, y) {
   const yy = clamp(y, 4, 66);
@@ -1309,6 +1322,7 @@ function scoreGoal(g) {                                    // the verdict moment
   if (ok) {
     M.score[team] += kind === 'conversion' ? 2 : 3; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
     if (kind === 'conversion') M.stats.conv.made[team]++; else if (kind === 'penalty') M.stats.pen.made[team]++;
+    goldenScored();
   }
   say(verdictOf(g), '', ok ? team : null, g.grade, M.cut && M.cut.kind === 'goal' && verdictLow(g));
   if (g.res === 'post' || g.res === 'postIn' || g.res === 'bar' || g.res === 'barIn') { sfx('post'); buzz(40); }
@@ -1393,7 +1407,7 @@ function goalLabels(c) {
   return ['Kick', null, g.stage === 'aim' && !c.after, false];
 }
 function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
-  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); }
+  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
   placeBall(M.ball.x, M.ball.y);
   startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });
 }
@@ -1920,7 +1934,7 @@ function setBoost(p, mul, secs) {
 }
 function duelGate(kind, owner) {                           // owner: the side that would own it. One player keeps the shared log; two player gives each owner his own quota and "never the same kind twice running", with the gap and the Last Play bonus shared
   if (M.duels === 'off' || M.phase !== 'play' || anyCharging() || M.clock < 15 || M.cut) return false;
-  const L = M.duelLog, h = M.half - 1;
+  const L = M.duelLog, h = Math.min(M.half, 2) - 1;
   if (M.hooter && !L.bonus[h] && M.dclock - L.last >= DUEL_LAST_GAP) return 'bonus';
   if (M.dclock - L.last < DUEL_GAP) return false;
   if (M.two) {
@@ -1974,7 +1988,7 @@ function findTackleDuel(c) {                                // the other side's 
   return g ? { kind:'tackle', U:q, O:c, how:g } : null;
 }
 function pickOwner(a, k) {                                 // two candidates on one step (two player only): the side with more duels left this half, then the side that didn't have the last one, then the attacker
-  const h = M.half - 1, left = t => Math.ceil(M.halfLen/180) - sideOf(t).duel.half[h];
+  const h = Math.min(M.half, 2) - 1, left = t => Math.ceil(M.halfLen/180) - sideOf(t).duel.half[h];
   if (left(a.U.team) !== left(k.U.team)) return left(a.U.team) > left(k.U.team) ? a : k;
   if (M.duelLog.lastOwner === a.U.team) return k;
   return a;
@@ -2023,7 +2037,7 @@ function startPendingDuel() {
 function startDuel(s) {
   for (const p of M.players) { p.sprinting = false; p.sprint = 0; }   // a duel is run at the duel's pace; the meters keep their level
   for (const S of M.spr) S.p = null;
-  const own = s.U.team, k = DUEL[s.kind], di = levelOf(own), nU = M.nat[s.U.team], nO = M.nat[s.O.team], L = M.duelLog, h = M.half - 1;
+  const own = s.U.team, k = DUEL[s.kind], di = levelOf(own), nU = M.nat[s.U.team], nO = M.nat[s.O.team], L = M.duelLog, h = Math.min(M.half, 2) - 1;
   if (s.how === 'bonus') L.bonus[h] = true; else if (s.how !== 'force') { L.half[h]++; sideOf(own).duel.half[h]++; }
   L.last = M.dclock; L.lastKind = s.kind; L.lastOwner = own; sideOf(own).duel.lastKind = s.kind;
   M.stats.duels++; M.stats['d_' + s.kind] = (M.stats['d_' + s.kind] || 0) + 1; M.stats.duelN.att[own]++;
@@ -2358,6 +2372,43 @@ function forceDuel(kind, team) {
   return startDuel({ kind, U, O, R, how:'force' });
 }
 
+/* ---------- arcade ----------
+   On Fire, the louder Big Hit and the Golden Try. Only a match you play has them (newMatch's opts.arcade, which startMatch
+   passes): AI v AI, the demo, practice and the balance tools never do, so every sim and suite that ran before still runs the
+   same. Both sides can go On Fire, the CPU included. The Golden Try is for Quick Match and Two Player: a championship is a
+   league, and a league keeps its draws. */
+const ARCADE = {
+  fire:{ need:3, secs:12, speed:1.06, hands:0.5, pts:{ break:0, hit:1, turnover:1, try:2 } },   // 3 points unanswered (about two a match at the middle length) lights it for 12 match seconds: 6% quicker, half the handling errors. A try is worth two; a broken tackle (90-odd a match) only breaks the other side's run
+  hit:{ jolt:0.12, stop:180, shake:0.28, hitShake:0.18 },    // your Big Hit: an extra 12% chance the ball spills, a 180ms freeze and a harder shake; taking one shakes too
+  golden:{ len:0.5 },                                         // sudden-death extra time is half a half; still level at its hooter, the draw stands
+};
+const onFire = t => !!(M && M.arcade && M.fire[t].t > 0);
+/* A good moment for side t: a broken tackle, a Big Hit, a turnover won or a try. Each breaks the other side's run; all but the broken tackle build this one's. */
+function heat(t, why) {
+  if (!M || !M.arcade) return;
+  const F = M.fire[t], O = M.fire[1 - t];
+  O.heat = 0;
+  st('heat_' + why);
+  if (F.t > 0) return;                                        // already alight: the run starts again when it goes out
+  F.heat = Math.min(ARCADE.fire.need, F.heat + (ARCADE.fire.pts[why] || 0));
+  if (F.heat < ARCADE.fire.need) return;
+  F.heat = 0; F.t = ARCADE.fire.secs; st('fire' + t);
+  say('On Fire', 'big fire', t); sfx('roar'); buzz(50, t);
+}
+function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }
+function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }
+
+/* The Golden Try: level at the end of the second half, play on until somebody scores. */
+const goldenOn = () => !!(M && M.arcade && !M.champ);
+const periodLen = () => M.golden ? M.halfLen*ARCADE.golden.len : M.halfLen;
+function startGolden() {
+  M.half = 3; M.golden = true; M.clock = 0; M.hooter = false;
+  for (const t of [0, 1]) fireOut(t);
+  sfx('horn'); st('golden');
+  kickoff(M.firstKick);
+  say('Golden Try', 'big');
+}
+function goldenScored() { if (M.golden) M.hooter = true; }   // any score in extra time wins it: the next dead ball ends the match
 /* ---------- ball in flight / loose ---------- */
 function updateBallAir(dt) {
   const b = M.ball, f = b.f;
@@ -2973,10 +3024,11 @@ function matchUpdate(dt) {
   if (M.phase === 'cut') { updateCut(dt); return; }
   const b = M.ball;
   if (M.surge && (M.surge.t -= dt) <= 0) M.surge = null;
+  fireTick(dt);
   const clockOn = M.phase === 'play' || (M.phase === 'set' && M.set.kind !== 'try' && M.set.kind !== 'score');
   if (clockOn) {
     M.clock += dt; M.dclock += dt;
-    if (!M.hooter && M.clock >= M.halfLen) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
+    if (!M.hooter && M.clock >= periodLen()) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
   }
   handleUser(dt);
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
@@ -2990,7 +3042,7 @@ function matchUpdate(dt) {
       if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
-    if (M.phase === 'play' && M.hooter && !M.demo && M.clock > M.halfLen + 45) endHalf();
+    if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
   } else if (M.phase === 'set') {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
@@ -3007,6 +3059,8 @@ function endHalf() {
   if (M.half === 1) {
     if (M.headless) { secondHalf(); return; }
     M.phase = 'break'; showBreak('half');
+  } else if (M.half === 2 && goldenOn() && M.score[0] === M.score[1]) {
+    startGolden();                                         // level: sudden death, straight from the hooter
   } else {
     M.phase = 'break'; M.over = true;
     if (!M.headless) finishMatch();
@@ -3349,9 +3403,14 @@ function drawPlayer(p, r) {
   ctx.fillStyle = 'rgba(0,0,0,.12)';
   for (const [ox, oy] of SHADOWS) { ellipse(sx + ox*r, sy + oy*r, r*0.95, r*0.75); ctx.fill(); }
   const sp = hyp(p.vx, p.vy), spr = sprintLevel(p);
-  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || (M.surge && M.surge.team === p.team)) && sp > 3) {
+  const fire = onFire(p.team);
+  if (fire && p.down <= 0) {                                 // On Fire: an orange glow under every man on the side, pulsing
+    ctx.fillStyle = `rgba(255,110,30,${(0.30 + 0.12*Math.sin(M.rt*2*Math.PI*3)).toFixed(3)})`;
+    ellipse(sx, sy, r*1.55, r*1.3); ctx.fill();
+  }
+  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || fire || (M.surge && M.surge.team === p.team)) && sp > (fire ? 1.5 : 3)) {
     const tx = -p.vx/sp, ty = -p.vy/sp;
-    ctx.fillStyle = (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';
+    ctx.fillStyle = fire ? 'rgba(255,110,30,.6)' : (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';   // On Fire burns orange
     for (const kk of [1.1, 2.0]) { ellipse(sx + tx*r*kk, sy + ty*r*kk, r*(1 - kk*0.22), r*(0.85 - kk*0.2)); ctx.fill(); }
     if (spr > 0) {                                           // a sprint: two speed streaks behind him
       ctx.strokeStyle = `rgba(244,241,232,${(0.55*spr).toFixed(3)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
@@ -4270,7 +4329,7 @@ function render(dt) {
   cam.y = hc*2 >= 82 ? 35 : clamp(cam.y, hc-6, 76-hc);
   M.rt += dt;
   for (const p of M.players) { if (p.drawFrom && (p.drawFrom.t -= dt) <= 0) p.drawFrom = null; if (p.fend > 0) p.fend -= dt; }   // render-only clocks
-  const shake = M.shake > 0 && !RM ? 3*(M.shake/0.12) : 0;   // your Big Hit: a 3px shake for 0.12s, none under reduced motion
+  const shake = M.shake > 0 && !RM ? 3*(M.shakeT/0.12)*(M.shake/M.shakeT) : 0;   // your Big Hit: a 3px shake for 0.12s (an arcade one bigger and longer), none under reduced motion
   if (M.shake > 0) M.shake -= dt;
   const camX = cam.x + shake*Math.sin(M.rt*173)/s, camY = cam.y + shake*Math.cos(M.rt*131)/s;
 
@@ -4995,7 +5054,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease,   // the switch is gone: a match you play always has duels
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true,   // the switch is gone: a match you play always has duels
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -5022,18 +5081,20 @@ function cutLabels(c) {
 }
 
 function fmtClock() {
-  const mins = (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;
+  const mins = M.golden ? 80 + Math.min(M.clock/periodLen(), 1)*10 : (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;   // extra time runs 80 to 90
   const mm = Math.floor(mins), ss = Math.floor((mins-mm)*60);
   return String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
 }
 function updateHud() {
   if (!playing()) return;
-  const sub = M.hooter ? '<span class="lp">Last Play</span>' : (M.phaseCount > 0 ? 'Phase ' + M.phaseCount : (M.half === 1 ? '1st Half' : '2nd Half'));
-  const key = M.score[0] + '|' + M.score[1] + '|' + fmtClock() + sub;
+  const sub = M.golden ? '<span class="lp">Golden Try</span>' : M.hooter ? '<span class="lp">Last Play</span>' : (M.phaseCount > 0 ? 'Phase ' + M.phaseCount : (M.half === 1 ? '1st Half' : '2nd Half'));
+  const fire = M.arcade ? M.fire.map(F => F.t > 0 ? 'on' : String(F.heat)).join('|') : '';
+  const key = M.score[0] + '|' + M.score[1] + '|' + fmtClock() + sub + fire;
   if (key !== lastHud) {
     lastHud = key;
     $('h-s0').textContent = M.score[0]; $('h-s1').textContent = M.score[1];
     $('h-sub').innerHTML = fmtClock() + ' · ' + sub;
+    for (const t of [0, 1]) { const el = $('h-f' + t), F = M.fire[t]; el.hidden = !M.arcade; el.className = 'heat' + (F.t > 0 ? ' on' : ''); el.style.setProperty('--n', F.t > 0 ? ARCADE.fire.need : F.heat); }   // the run towards On Fire, under each side's code
   }
   const cut = M.phase === 'cut' && M.cut;
   const goal = cut && M.cut.kind === 'goal';
@@ -6062,6 +6123,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
+  arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   get M() { return M; } };
 
 function start(data) {

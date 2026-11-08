@@ -55,7 +55,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease,   // the switch is gone: a match you play always has duels
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true,   // the switch is gone: a match you play always has duels
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -82,18 +82,20 @@ function cutLabels(c) {
 }
 
 function fmtClock() {
-  const mins = (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;
+  const mins = M.golden ? 80 + Math.min(M.clock/periodLen(), 1)*10 : (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;   // extra time runs 80 to 90
   const mm = Math.floor(mins), ss = Math.floor((mins-mm)*60);
   return String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
 }
 function updateHud() {
   if (!playing()) return;
-  const sub = M.hooter ? '<span class="lp">Last Play</span>' : (M.phaseCount > 0 ? 'Phase ' + M.phaseCount : (M.half === 1 ? '1st Half' : '2nd Half'));
-  const key = M.score[0] + '|' + M.score[1] + '|' + fmtClock() + sub;
+  const sub = M.golden ? '<span class="lp">Golden Try</span>' : M.hooter ? '<span class="lp">Last Play</span>' : (M.phaseCount > 0 ? 'Phase ' + M.phaseCount : (M.half === 1 ? '1st Half' : '2nd Half'));
+  const fire = M.arcade ? M.fire.map(F => F.t > 0 ? 'on' : String(F.heat)).join('|') : '';
+  const key = M.score[0] + '|' + M.score[1] + '|' + fmtClock() + sub + fire;
   if (key !== lastHud) {
     lastHud = key;
     $('h-s0').textContent = M.score[0]; $('h-s1').textContent = M.score[1];
     $('h-sub').innerHTML = fmtClock() + ' · ' + sub;
+    for (const t of [0, 1]) { const el = $('h-f' + t), F = M.fire[t]; el.hidden = !M.arcade; el.className = 'heat' + (F.t > 0 ? ' on' : ''); el.style.setProperty('--n', F.t > 0 ? ARCADE.fire.need : F.heat); }   // the run towards On Fire, under each side's code
   }
   const cut = M.phase === 'cut' && M.cut;
   const goal = cut && M.cut.kind === 'goal';

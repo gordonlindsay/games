@@ -6,6 +6,16 @@ sides go by their city, not the club's name.
 
 **Play:** https://gordonlindsay.github.io/games/trylinerugby/
 
+## Arcade: On Fire, Big Hit, Golden Try
+
+Matches you play are arcade; AI v AI, the demo, practice and the balance tools are not, so their numbers are unchanged.
+
+- **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds: 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length.
+- **Big Hit.** Your dominant tackle now takes the full banner, a 180ms freeze and a harder shake, and spills the ball 12% more often. Taking one shakes the screen too.
+- **Golden Try.** Quick Match and Two Player level at full time go to sudden-death extra time, half a half long. Any score wins it; a try needs no conversion. Still level at its hooter, the draw stands. A championship keeps its draws.
+
+Tuning lives in `ARCADE` in `src/arcade.js`; `node tools/arcade.mjs` checks it.
+
 ## Practice + Polish (review branch)
 
 The home screen pairs **How to Play** and **Practice Ground** in matching buttons. **Match Help** switches control hints and first-match coach tips together, retaining existing browser saves. Practice Ground offers: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.
