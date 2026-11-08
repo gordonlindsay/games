@@ -1,11 +1,12 @@
-// Kids: the level below Easy (a flag on Easy, settings.kids), its levers, and the grown-up check (parentGate).
+// Kids: the level below Easy (a flag on Easy, settings.kids), its levers, its hidden rating (settings.kidsR), and the grown-up check (parentGate).
 // Every lever is on in a Kids match, off on Easy, and off in AI v AI, the demo, two player and practice (but Kicking and Driving) even when asked.
+// The rating's scale, its update rule, its bounds, its save and its gating are section 13; tools/kidbots.mjs calibrates it with scripted children.
 // node tools/kids.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
 const { T, reseed, fire, kickBot, dropBot } = await import('./harness.mjs');
 import fs from 'node:fs';
 const K = T.kids, D = T.debug, X = T.teams, C = T.contact, KK = T.kick, STEP = T.STEP, inp = T.input;
-const KIDS = K.KIDS, KIDS_GATE = K.KIDS_GATE, S = () => D.settings(), M = () => T.M, $ = id => document.getElementById(id);
+const KIDS = K.KIDS, SCALE = K.KIDS_SCALE, ADAPT = K.KIDS_ADAPT, KIDS_GATE = K.KIDS_GATE, S = () => D.settings(), M = () => T.M, $ = id => document.getElementById(id);
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } if (process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
@@ -58,6 +59,19 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
     X.restore(JSON.parse(JSON.stringify(old)));
     const keep = Object.keys(old.settings).every(k => JSON.stringify(s[k]) === JSON.stringify(old.settings[k]));
     ok(keep && s.kids === false && !K.kidsLevel() && K.segIndex() === diff + 1, `an old save on ${['Easy', 'Normal', 'Hard'][diff]} loads unchanged, not as Kids`);
+  }
+  // the rating: a round trip, an old save, and anything that is not a number from 0 to 1 ignored
+  ok(s.kidsR === 0, 'a new game\'s Kids rating is 0, the start');
+  s.kidsR = 0.437; X.save(); s.kidsR = 0; X.load();
+  ok(s.kidsR === 0.437 && JSON.parse(memory['tryline.v1']).settings.kidsR === 0.437, 'the rating is saved and loads back');
+  for (const bad of ['0.5', -0.1, 1.5, null, true, [0.5], {}, 1e999]) { s.kidsR = 0.25; X.restore({ settings:{ kidsR:bad } }); ok(s.kidsR === 0.25, `a rating of ${typeof bad === "number" ? String(bad) : JSON.stringify(bad)} is ignored`); }
+  X.restore({ settings:{ kidsR:0.12345 } }); ok(s.kidsR === 0.123, 'a rating is kept to three places');
+  X.restore({ settings:{ kidsR:1 } }); ok(s.kidsR === 1, 'the ceiling, 1, is a rating');
+  X.restore({ settings:{ kidsR:0 } }); ok(s.kidsR === 0, 'and so is the start, 0');
+  for (const diff of [0, 1, 2]) {                          // a save from before the rating, onto a fresh game: it starts at 0
+    s.kidsR = 0;
+    X.restore({ settings:{ half:1, diff, sound:true, kids:diff === 0, played:5 }, champ:null, custom:[] });
+    ok(s.kidsR === 0, `a save from before the rating, on ${diff ? ['Easy', 'Normal', 'Hard'][diff] : 'Kids'}, starts at 0`);
   }
   memory['tryline.v1'] = JSON.stringify({ settings:{ half:0, diff:1, sound:false, played:4 }, champ:null, custom:[] });
   s.kids = true; X.load();
@@ -435,6 +449,102 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const z = sel => { let v = null; for (const m of css.matchAll(new RegExp('(?:^|[},\\s])' + sel.replace(/[.#]/g, '\\$&') + '\\{[^}]*z-index:(\\d+)', 'g'))) v = +m[1]; return v; };
   ok(z('.modal') < z('#m-practice') && z('#m-practice') < z('#m-gate') && z('#m-gate') < z('#rotate'), `the check is over every card and under Turn Your Phone Sideways (z ${z('.modal')}, ${z('#m-practice')}, ${z('#m-gate')}, ${z('#rotate')})`);
   ok(/@media \(max-width:560px\)\{\.pg-keys\{grid-template-columns:repeat\(5,/.test(css), 'on a narrow screen the figure keys are two rows of five');
+}
+
+// 13. the Kids rating: one hidden number r, 0 the start and 1 the ceiling, sets every lever on the scale; a completed match moves it
+{
+  const s = S();
+  const flat = o => Object.entries(o).flatMap(([k, v]) => (Array.isArray(v) ? [[k, v]] : Object.entries(v).map(([j, w]) => [k + '.' + j, w])));
+  const at = (k) => { const [a, b] = k.split('.'); return b ? KIDS[a][b] : KIDS[a]; };
+  const levers = flat(SCALE);
+  // the start is the Kids level as it was before the scale, lever for lever
+  const was = { 'diff.cpuSpeed':0.92, 'diff.cpuTackle':0.45, 'diff.cpuIntercept':0.05, 'diff.turnover':-0.05, 'diff.scrumCpu':0.45, 'diff.lineSigma':0.28, 'diff.lineContest':0.35,
+    tackle:0.10, hands:0.1, jolt:0.15, offload:0.95, passErr:0.4, duelWin:0.20, save:1, 'kick.band':2, 'kick.bandMax':0.34, 'kick.fill':1.6, 'kick.rush':0.65, scrum:0.25, reach:0.12 };
+  ok(levers.length === Object.keys(was).length && levers.every(([k, v]) => v[0] === was[k]), `the scale starts where Kids was (${levers.length} levers)`);
+  K.tune(0); ok(levers.every(([k, v]) => at(k) === v[0]), 'at r = 0 every lever is at its start');
+  K.tune(1); ok(levers.every(([k, v]) => at(k) === v[1]), 'at r = 1 every lever is at its ceiling');
+  K.tune(0.5); ok(levers.every(([k, v]) => near(at(k), (v[0] + v[1])/2, 1e-12)), 'and at 0.5, half way: a straight line');
+  let mono = true;
+  for (let i = 0; i < 10; i++) { K.tune(i/10); const lo = levers.map(([k]) => at(k)); K.tune((i + 1)/10); levers.forEach(([k, v], j) => { if (Math.sign(at(k) - lo[j]) !== Math.sign(v[1] - v[0])) mono = false; }); }
+  ok(mono, 'every lever moves one way only, from its start to its ceiling, as r rises');
+  K.tune(-1); const lo = levers.every(([k, v]) => at(k) === v[0]); K.tune(2); const hi = levers.every(([k, v]) => at(k) === v[1]); K.tune(NaN);
+  ok(lo && hi && levers.every(([k, v]) => at(k) === v[0]), 'r below 0 is the start, above 1 the ceiling, and not a number the start');
+  // the ceiling is still easier than Easy, lever for lever: about 80% of the way from the start
+  const easy = { 'diff.cpuSpeed':0.97, 'diff.cpuTackle':0.56, 'diff.cpuIntercept':0.10, 'diff.turnover':-0.03, 'diff.scrumCpu':0.60, 'diff.lineSigma':0.19, 'diff.lineContest':0.55,
+    tackle:0, hands:1, jolt:1, passErr:1, duelWin:0, save:0, 'kick.band':1, 'kick.bandMax':KK.KICK.bandMax, 'kick.fill':1, 'kick.rush':1, scrum:0, reach:0 };
+  play(false); const dE = K.diffOf(1);
+  ok(Object.keys(easy).filter(k => k.startsWith('diff.')).every(k => dE[k.slice(5)] === easy[k]), 'Easy\'s own levers are as this table has them');
+  const way = Object.entries(easy).map(([k, e]) => { const v = SCALE[k.split('.')[0]], [a, b] = Array.isArray(v) ? v : v[k.split('.')[1]]; return [k, (b - a)/(e - a)]; });
+  ok(way.every(([, f]) => f > 0.7 && f < 0.9), `each ceiling is 70 to 90% of the way from the start to Easy, never at Easy (${way.map(([k, f]) => k + ' ' + f.toFixed(2)).join(', ')})`);
+  ok(SCALE.offload[1] >= 0.85 && SCALE.offload[1] < SCALE.offload[0], `an offload you press gets away ${100*SCALE.offload[1]}% at the ceiling, the top of Easy's 70 to 85%`);
+  // the levers a match plays: the rating it was started at, or the start when nothing says
+  play(true); ok(M().kidsR === 0 && KIDS.r === 0 && KIDS.diff.cpuSpeed === SCALE.diff.cpuSpeed[0], 'a Kids match not given a rating plays the start');
+  play(true, { kidsR:0.6 }); ok(M().kidsR === 0.6 && near(KIDS.diff.cpuTackle, 0.4*SCALE.diff.cpuTackle[0] + 0.6*SCALE.diff.cpuTackle[1], 1e-12) && K.diffOf(1) === KIDS.diff, 'one given r = 0.6 plays the levers at 0.6');
+  play(true, { kidsR:1 }); const cpuK = T.contact.maxSpeed(M().players[10]); play(false); const cpuE = T.contact.maxSpeed(M().players[10]);
+  ok(cpuK < cpuE && near(cpuK/cpuE, SCALE.diff.cpuSpeed[1]/0.97, 1e-9), `at the ceiling the CPU still runs a little slower than on Easy (${(100*cpuK/cpuE).toFixed(1)}%)`);
+  play(false, { kidsR:0.6 }); ok(M().kidsR == null && K.diffOf(1) !== KIDS.diff && K.diffOf(1).cpuSpeed === 0.97, 'an Easy match given a rating ignores it');
+  T.newMatch(0, 3, { halfLen:60, diff:0, auto:true, headless:true, kids:true, kidsR:1 }); ok(!M().kids && M().kidsR == null, 'AI v AI given a rating ignores it');
+  s.kidsR = 0.7; K.segSet(0);
+  D.startMatch(X.CLUBS[0], X.CLUBS[1], false); ok(M().kids && M().kidsR === 0.7, 'Quick Match plays the child\'s own rating');
+  X.setChamp(null); X.newChamp(X.NATIONS[0], X.NATIONS.slice(1));
+  { const c = X.champ(), opp = c.fixtures[0].find(p => p.includes(c.user)).find(i => i !== c.user); D.startMatch(c.teams[c.user], c.teams[opp], true); }
+  ok(M().kids && M().champ && M().kidsR === 0.7, 'so does a Championship match');
+  const cr = T.career.create({ pos:'B', num:5, club:X.CLUBS[0] }); T.career.set(cr); T.career.play();
+  ok(M().kids && M().career && M().kidsR === 0.7, 'and a Career match: one rating for all three');
+  D.exitMatch(); T.career.set(null); X.setChamp(null);
+  for (const id of ['kick', 'scrum']) { T.practice.start(id); ok(M().kids && M().kidsR === 0 && KIDS.kick.band === SCALE.kick.band[0] && KIDS.scrum === SCALE.scrum[0], `the ${id === 'kick' ? 'Kicking' : 'Driving'} drill keeps the help it always had (r = 0 whatever the child's rating)`); T.practice.leave(); }
+  ok(s.kidsR === 0.7, 'and a drill leaves the rating alone');
+  // the close-ups: a mistake comes off KIDS.save of the time (always at the start), and a press in the gold is still a Perfect
+  const lost = (r, n) => { let off = 0; for (let i = 0; i < n; i++) { play(true, { kidsR:r }); quiet(); D.setMode('match'); const c = T.forceDuel('past'); run(() => c.res != null, 600, quiet); if (c.res === 'ok' || c.res === 'perfect') off++; run(() => M().phase !== 'cut', 600); } D.setMode('menu'); return off/n; };
+  const off0 = lost(0, 20), off1 = lost(1, 120);
+  ok(off0 === 1, 'at the start a Get Past with no press at all always comes off');
+  ok(Math.abs(off1 - SCALE.save[1]) < 0.1, `at the ceiling ${(100*off1).toFixed(0)}% of them do (save ${SCALE.save[1]})`);
+  play(true, { kidsR:1 }); quiet(); D.setMode('match');
+  { const c = T.forceDuel('tackle'); let pressed = false; run(() => c.res != null, 600, () => { quiet(); if (!pressed && c.t >= c.centre - 0.5*STEP) { pressed = true; inp.aPressed = true; } }); ok(c.res === 'perfect' && c.out === 'bighit', `at the ceiling a press in the gold is a Perfect (${c.res}, ${c.out})`); run(() => M().phase !== 'cut', 600); }
+  D.setMode('menu');
+  // the update rule: a share of the way up or down, by the result in the child's side's points and tries
+  const st = (us, them, tu, tt, h = 0) => K.step(h ? [them, us] : [us, them], h ? [tt, tu] : [tu, tt], h);
+  ok(st(35, 0, 5, 0) === ADAPT.raise && st(28, 7, 4, 0) === ADAPT.raise, `a win by more than ${ADAPT.big} tries raises it (${100*ADAPT.raise}% of the way up)`);
+  ok(st(21, 0, 3, 0) === ADAPT.nudge && st(7, 0, 1, 0) === ADAPT.nudge && st(8, 5, 1, 1) === ADAPT.nudge && ADAPT.nudge < ADAPT.raise, `a narrower win nudges it up (${100*ADAPT.nudge}%), a win on a kick included`);
+  ok(st(7, 7, 1, 1) === ADAPT.draw && ADAPT.draw < 0 && ADAPT.draw > ADAPT.lose, `a draw eases it (${-100*ADAPT.draw}% of the way down)`);
+  ok(st(5, 7, 1, 1) === ADAPT.lose && st(0, 7, 0, 1) === ADAPT.lose && st(0, 14, 0, 2) === ADAPT.heavy && ADAPT.heavy < ADAPT.lose, `a loss lowers it (${-100*ADAPT.lose}%; ${-100*ADAPT.heavy}% by two tries or more)`);
+  ok(st(35, 0, 5, 0, 1) === ADAPT.raise && st(0, 14, 0, 2, 1) === ADAPT.heavy, 'the child playing the away side is read from his own side');
+  const nx = (r, us, them, tu, tt) => K.next(r, [us, them], [tu, tt]);
+  ok(nx(0, 35, 0, 5, 0) === ADAPT.raise && nx(0.5, 35, 0, 5, 0) === 0.5 + ADAPT.raise/2 && nx(0.5, 7, 0, 1, 0) === 0.5 + ADAPT.nudge/2, 'a win moves it that share of what is left to the ceiling');
+  ok(nx(0.5, 0, 14, 0, 2) === 0.5 + ADAPT.heavy/2 && nx(0.5, 7, 7, 1, 1) === 0.5 + ADAPT.draw/2 && nx(0, 0, 50, 0, 7) === 0, 'a draw or a loss that share of what is left to the start');
+  let worst = 0;
+  for (let i = 0; i <= 1000; i++) for (const [a, b, c, d] of [[50, 0, 7, 0], [7, 0, 1, 0], [7, 7, 1, 1], [0, 7, 0, 1], [0, 50, 0, 7]]) worst = Math.max(worst, Math.abs(nx(i/1000, a, b, c, d) - i/1000));
+  ok(worst <= 0.1 + 1e-9, `no one match moves it more than a tenth of the scale, anywhere on it (${worst.toFixed(3)})`);
+  let r = 0; const climb = []; for (let i = 0; i < 30; i++) { climb.push(r); r = nx(r, 50, 0, 7, 0); }
+  ok(climb[10] > 0.6 && climb[10] < 0.7 && climb.every((v, i) => !i || v - climb[i - 1] <= climb[1] + 1e-9) && r < 1 && r > 0.95, `big wins in a row from the start: ${climb[5].toFixed(2)} after 5, ${climb[10].toFixed(2)} after 10, ${r.toFixed(2)} after 30, each step smaller than the last`);
+  ok(nx(0.85, 0, 7, 0, 1) < nx(0.85, 7, 0, 1, 0) && 0.85 - nx(0.85, 0, 7, 0, 1) > nx(0.85, 7, 0, 1, 0) - 0.85, 'near the top a loss takes it down further than a win takes it up');
+  ok(nx(1, 50, 0, 7, 0) === 1 && nx(0, 0, 50, 0, 7) === 0 && nx(2, 7, 7, 1, 1) === 1 + ADAPT.draw && nx(-1, 7, 0, 1, 0) === ADAPT.nudge, 'it stays between 0 and 1');
+  ok(nx(0.1234567, 7, 7, 1, 1) === Math.round((0.1234567*(1 + ADAPT.draw))*1000)/1000 && nx(NaN, 7, 0, 1, 0) === ADAPT.nudge, 'it is kept to three places, and a rating that is not a number starts again from 0');
+  // who moves it: full time in a one-player Kids match, once; never a match left early, practice, Easy, AI v AI, the demo or two player
+  const full = (us, them, tu, tt) => { const m = M(); m.half = 2; m.score = [us, them]; m.tries = [tu, tt]; T.arcade.endHalf(); return m; };
+  s.kidsR = 0.4; K.segSet(0); D.startMatch(X.CLUBS[0], X.CLUBS[1], false); let m = full(35, 0, 5, 0);
+  ok(m.over && near(s.kidsR, 0.4 + 0.6*ADAPT.raise, 1e-9) && JSON.parse(memory['tryline.v1']).settings.kidsR === s.kidsR, `full time in a Kids Quick Match moves it (0.4 to ${s.kidsR}) and saves it`);
+  ok(K.adapt() === null && near(s.kidsR, 0.4 + 0.6*ADAPT.raise, 1e-9), 'and only once a match');
+  ok(/^Farnham.* Win · Tries 5 – 0$/.test($('br-tries').textContent) && !/[0-9]\.[0-9]|Harder|Level|Rating/.test($('br-tries').textContent + $('br-pts').textContent + $('br-eyebrow').textContent + ($('banner').innerHTML || '')), `nothing on the full-time card shows it ("${$('br-tries').textContent}")`);
+  D.exitMatch();
+  const r0 = s.kidsR;
+  D.startMatch(X.CLUBS[0], X.CLUBS[1], false); M().score = [0, 40]; M().tries = [0, 6]; D.exitMatch();
+  ok(s.kidsR === r0, 'a match left before full time does not move it');
+  X.newChamp(X.NATIONS[0], X.NATIONS.slice(1));
+  { const c = X.champ(), opp = c.fixtures[0].find(p => p.includes(c.user)).find(i => i !== c.user); D.startMatch(c.teams[c.user], c.teams[opp], true); }
+  full(0, 14, 0, 2); ok(s.kidsR === K.next(r0, [0, 14], [0, 2]) && s.kidsR < r0 && X.champ().round === 1, 'a Championship match moves it too, and is recorded as ever');
+  D.exitMatch(); X.setChamp(null);
+  { const cr = T.career.create({ pos:'F', num:2, club:X.CLUBS[0] }); T.career.set(cr); const r1 = s.kidsR; T.career.play(); full(12, 7, 2, 1); ok(s.kidsR === K.next(r1, [12, 7], [2, 1]) && s.kidsR > r1 && cr.season.round === 1, 'and a Career match'); D.exitMatch(); T.career.set(null); }
+  const r2 = s.kidsR;
+  K.segSet(1); D.startMatch(X.CLUBS[0], X.CLUBS[1], false); full(50, 0, 7, 0); D.exitMatch();
+  ok(s.kidsR === r2, 'an Easy match leaves it alone');
+  K.segSet(0); D.startMatch(X.CLUBS[0], X.CLUBS[1], false, { two:true, levels:[0, 0] }); full(50, 0, 7, 0); D.setTwo(false); D.exitMatch();
+  ok(s.kidsR === r2, 'so does two player');
+  T.newMatch(0, 3, { halfLen:60, diff:0, auto:true, headless:true, kids:true, kidsR:r2 }); M().over = true; ok(K.adapt() === null && s.kidsR === r2, 'and AI v AI');
+  T.newMatch(0, 3, { halfLen:1e9, diff:0, auto:true, demo:true, kids:true }); M().over = true; ok(K.adapt() === null && s.kidsR === r2, 'and the demo');
+  T.practice.start('kick'); M().over = true; ok(K.adapt() === null && s.kidsR === r2, 'and a drill, even one that takes the Kids help'); T.practice.leave();
+  play(true, { kidsR:r2 }); ok(K.adapt() === null && s.kidsR === r2, 'and a Kids match not yet over');
+  s.kidsR = 0; K.segSet(1); X.save();
 }
 
 console.log(`${passed} passed, ${failed} failed`);

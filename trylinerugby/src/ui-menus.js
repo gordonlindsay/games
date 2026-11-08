@@ -75,6 +75,7 @@ function showBreak(kind) {
 function finishMatch() {
   if (M.champ && champ) recordChampResult();
   if (M.career) careerRecordResult();
+  if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and Career alike
   showBreak('full');
 }
 $('br-go').addEventListener('click', () => {

@@ -65,25 +65,52 @@ A level below Easy for 6 to 10 year olds, and a grown-up check in front of anyth
 
 **How it is stored.** `settings.kids`, a flag layered on Easy: Kids saves `diff:0, kids:true`. Every lever table in the engine (`DIFF`, `KICK.fill` and `band`, `SPRINT`, `CONTACT.contact`, the duel windows, `COVER`, `MOVES.dummy.bite`) is an array by level 0..2, and the save keeps `diff` as 0..2, so a fourth level would mean a fourth entry everywhere or a shift in what a saved value means. As a flag, a saved `diff` means what it always did, a save without the flag loads unchanged, and anything that reads `settings.diff` or `levelOf` sees Easy, the nearest level. The flag counts only with `diff` 0.
 
-**Who gets it.** `newMatch(..., { kids:true })` sets `M.kids` only for one player on Easy: never AI v AI, the demo or two player, whatever is asked. `startMatch` passes `kids:kidsLevel()`, so Quick Match and Championship play it. In the Training Ground only the Kicking and Driving drills ask for it (`kids:true` in `PRACTICE_DRILLS`), so at Kids the kicks have the aim set and the wider, slower band, and your pack has the extra shove; the training spaces never read `M.kids`, and Defend a Breakaway and Create a Two-on-One stay on Easy (Kids' automatic switch would play Defend for you). Every lever reads `M.kids`, so the sims, the demo and the balance tools draw exactly what they drew before: AI v AI at all three levels, the bot's matches at all three levels and the demo hash identically to the build before Kids (SEED 5).
+**Who gets it.** `newMatch(..., { kids:true })` sets `M.kids` only for one player on Easy: never AI v AI, the demo or two player, whatever is asked. `startMatch` passes `kids:kidsLevel()` and the rating, so Quick Match, Championship and Career play it. In the Training Ground only the Kicking and Driving drills ask for it (`kids:true` in `PRACTICE_DRILLS`), so at Kids the kicks have the aim set and the wider, slower band, and your pack has the extra shove; the training spaces never read `M.kids`, and Defend a Breakaway and Create a Two-on-One stay on Easy (Kids' automatic switch would play Defend for you). Every lever reads `M.kids`, so the sims, the demo and the balance tools draw exactly what they drew before: AI v AI at all three levels, the bot's matches at all three levels and the demo hash identically to the build before Kids (SEED 5).
 
-| Lever (all in `KIDS`, `src/kids.js`) | Easy | Kids |
-|---|---|---|
-| The other side's pace (`diff.cpuSpeed`) | 0.97 | 0.92 |
-| Their tackle on your carrier (`diff.cpuTackle`) | 0.56 | 0.45 |
-| Their interceptions, ruck turnover edge (`cpuIntercept`, `turnover`) | 0.10, -0.03 | 0.05, -0.05 |
-| Their scrum, lineout contest and jump spread (`scrumCpu`, `lineContest`, `lineSigma`) | 0.60, 0.55, 0.19 | 0.45, 0.35, 0.28 |
-| Your ringed man's contact tackle and dive (`tackle`) | as set | +0.10 |
-| Your side's knock-ons on a catch (`hands`) | as set | a tenth |
-| The ball jolted from your tackled carrier (`jolt`) | as set | 0.15 of it |
-| Your offloads that get away (`offload`) | 70-85% | 95% |
-| How far your passes stray (`passErr`) | as set | 0.4 of it |
-| Close-ups (`duelWin`) | lost if mistimed | never lost; the gold ring 0.2s longer; any button acts; in the gold is a Perfect |
-| Goal kicks (`kick`) | | aim set for you (the path shows it, the stick does nothing, the hints and tutorial say so), the gold band twice as wide (at most 0.34), the meter 1.6x slower, a release in the gold struck true; drop-goal chargers at 65% |
-| Defending (`switchHold`, `rest`, `chase`) | | the ring moves to your best defender (once it has sat 0.5s on a man); let go of the stick and your man chases the ball at 80% of his pace |
-| Your scrum shove and lineout reach (`scrum`, `reach`) | | +0.25, +0.12m |
+**The rating.** Kids is a scale, not one setting, and it starts easy and gets harder as the child wins. One hidden number, `settings.kidsR`, runs from 0, where every child starts (Kids exactly as it was before the scale), to 1, the ceiling, where every lever on the scale is 80% of the way from there to Easy, so still a little easier than Easy. As a Kids match starts, `kidsTune(r)` puts each lever in `KIDS_SCALE` on the straight line between its start and its ceiling. Four aids hold all the way up the scale: the aim set at a goal kick (the path shows it, the stick does nothing, the hints and tutorial say so) and a release in the gold struck true, any button acting in a close-up (a button in a Get Past goes the open way), the ring moving to your best defender once it has sat 0.5s on a man, and your man chasing the ball at 80% of his pace when you let go of the stick. Quick Match, Championship and Career all play the child's one rating (`startMatch` passes it). The Kicking and Driving drills keep the help they always had, the start of the scale, whatever the rating.
 
-Measured over 2-minute halves, Easy against Kids for the same player (scratch bots, SEED 7 and 11): the harness's average player goes from 30-2 to 60-1. A rough child (a wobbly run at the line, a pass now and then at random, presses at random in close-ups, a loose kick release) who defends half the time goes from 13-6 (25 won, 12 lost of 40) to 37-1 (38 won, 2 drawn); one who never defends goes from 9-13 (14 won, 24 lost) to 35-2 (38 won, 2 drawn). The hands-off chase is what saves a child who never defends: without it that child concedes 3.1 tries a match even on Kids (18 won, 20 lost); with it, 0.2. Its pace hardly matters (0.15 to 0.2 tries against from 60% to 80%; 0.03 at full pace), so it runs at 80%, a little behind his teammates.
+| Lever (`KIDS_SCALE`, `src/kids.js`) | Easy | Kids start (r 0) | Kids ceiling (r 1) |
+|---|---|---|---|
+| The other side's pace (`diff.cpuSpeed`) | 0.97 | 0.92 | 0.96 |
+| Their tackle on your carrier (`diff.cpuTackle`) | 0.56 | 0.45 | 0.54 |
+| Their interceptions, ruck turnover edge (`cpuIntercept`, `turnover`) | 0.10, -0.03 | 0.05, -0.05 | 0.09, -0.035 |
+| Their scrum, lineout contest and jump spread (`scrumCpu`, `lineContest`, `lineSigma`) | 0.60, 0.55, 0.19 | 0.45, 0.35, 0.28 | 0.57, 0.51, 0.21 |
+| Your ringed man's contact tackle and dive (`tackle`) | as set | +0.10 | +0.02 |
+| Your side's knock-ons on a catch (`hands`) | as set | a tenth | 0.82 of them |
+| The ball jolted from your tackled carrier (`jolt`) | as set | 0.15 of it | 0.83 |
+| Your offloads that get away (`offload`) | 70-85% | 95% | 85% |
+| How far your passes stray (`passErr`) | as set | 0.4 of it | 0.88 |
+| The gold ring in a close-up (`duelWin`) | as set | 0.2s longer | 0.04s longer |
+| A close-up you get wrong, early, late or the wrong way (`save`) | lost | always comes off | comes off 20% of the time |
+| Goal kicks: the gold band, its cap, the meter, drop-goal chargers (`kick`) | as set, 0.24, as set, full pace | twice as wide, 0.34, 1.6x slower, 65% | 1.2x, 0.26, 1.12x slower, 93% |
+| Your scrum shove and lineout reach (`scrum`, `reach`) | | +0.25, +0.12m | +0.05, +0.03m |
+
+After each completed one-player Kids match (`kidsAdapt`, called from `finishMatch`: full time only, so never a match quit early, and never practice, AI v AI, the demo or two player) the rating moves a share of the way towards the ceiling or the start, by the result in the child's side's points and tries (`KIDS_ADAPT`):
+
+- a win by more than 3 tries: a tenth of the way up;
+- any other win (a win on a kick included): 4% of the way up;
+- a draw: 3% of the way down;
+- a loss: 6% of the way down, or 10% by two tries or more.
+
+No match moves it more than a tenth of the scale. The steps shrink as it closes on where a child's results hold it, and near the top a loss takes it down further than a win takes it up, so it settles rather than swinging from end to end: ten big wins in a row from the start take it to 0.65, thirty to 0.96. It is saved with the settings, a number from 0 to 1 kept to three places; anything else is ignored, and a save from before the rating starts at 0. Nothing on screen shows it, and nothing says the game got harder.
+
+**Calibration.** `node tools/kidbots.mjs` plays scripted children against the CPU through the real input path, 2-minute halves, Quick Match's rules (On Fire, the Golden Try), each match on its own seed (SEED 7):
+
+- **6 year old**: defends a quarter of the time, and for 40% of the rest still pushes the stick at the try line (otherwise he lets go of it, and the chase takes over); reacts about 0.9s late to a change of possession; a weaving run, a pass or a chip now and then at random, no side step, no Sprint; presses in 60% of close-ups at a random moment; a goal kick released anywhere within 0.25s of the gold's centre; slow scrum taps.
+- **7 to 8 year old** (the one the level is aimed at): defends 60% of the time, and for a quarter of the rest pushes the stick at the try line; reacts about 0.5s late; passes when a tackler is on him now and then, steps away from the man in front on 40% of his carries, sprints into space on 30%, offloads on a fifth of the cues; presses in 90% of close-ups about the gold (0.2s spread), the right way three times in four; a kick released within about 0.12s of the centre.
+- **sharp 10 year old**: the harness's average player (`bot`), the aim left to Kids.
+
+| Child | Easy | Kids start (r 0) | Where r settles | Settled | Kids ceiling (r 1) |
+|---|---|---|---|---|---|
+| 6 year old | 15-11, tries 2.3-1.4, won 57% | 42-7, tries 6.0-0.9, won 94% | 0.70 ± 0.01 | 27-13, tries 4.0-1.8, won 72% | 21-15, tries 3.2-2.2, won 60% |
+| 7 to 8 year old | 17-7, tries 2.5-0.9, won 74% | 47-2, tries 6.7-0.2, won 100% | 0.84 ± 0.01 | 26-6, tries 3.9-0.7, won 86% | 24-7, tries 3.6-0.9, won 80% |
+| sharp 10 year old | 36-2, tries 5.2-0.25, won 96% | 65-1, tries 9.2-0.05, won 100% | 0.96 ± 0.002 | 41-2, tries 6.0-0.15, won 99% | 40-2, tries 5.9-0.14, won 99% |
+
+Each fixed column is 200 matches (`node tools/kidbots.mjs at easy`, `at 0,1`); the try margin's standard error there is about 0.2 tries. Where r settles is 16 runs of 50 matches from r 0 (`node tools/kidbots.mjs settle`): the mean rating over each run's last 25 matches, ± the standard error across the 16 runs, and Settled is those 400 matches (margin standard error about 0.15 tries). Settled, the 7 to 8 year old wins 86% of his matches, by 3 tries at the median (a mean of 3.2), and concedes no try in 52% of them, one in 31% and two or more in 18%; he is within 0.1 of where he settles after 20 matches. The 6 year old still wins most (72%, by 2 tries at the median) and gets there in 16; the 10 year old rides near the ceiling, where he still wins 99% by 6, and belongs on Easy. Easy against the ceiling, the ceiling is a little easier for every child: 0.1 tries more margin for the 6 year old, 1.1 for the 7 to 8 year old, 0.7 for the 10 year old. The always-on aids are most of that; with the scaled levers at 90% of the way to Easy instead of 80%, the 6 year old did no better than on Easy.
+
+Before the scale (Easy against Kids for the same player, scratch bots, SEED 7 and 11): the harness's average player went from 30-2 to 60-1, a rough child who defends half the time from 13-6 to 37-1, and one who never defends from 9-13 to 35-2. The hands-off chase is what saves a child who never defends: without it that child conceded 3.1 tries a match even on Kids; with it, 0.2. Its pace hardly matters (0.15 to 0.2 tries against from 60% to 80%; 0.03 at full pace), so it runs at 80%, a little behind his teammates.
+
+AI v AI at all three levels (asked to play Kids or not), the demo, the harness's player at Easy, Normal and Hard (with and without Quick Match's arcade) and two player at three pairs of levels all hash identically to 0397251, the build before the rating (SEED 5), with the same number of random draws: nothing outside Kids changes.
 
 **Two Player** keeps Easy | Normal | Hard per player. Kids there would need its own per-player store, per-side levers and a rule for a close-up the other player chooses; Two Player is for computers, so it is left as it is.
 
@@ -105,7 +132,7 @@ Measured over 2-minute halves, Easy against Kids for the same player (scratch bo
 
 **The ring in a tackle.** On Kids the ring never leaves your man while he is bound in his own tackle, so a dominant one is still his Big Hit (and Tripped and Ankle Tap are still his).
 
-`node tools/kids.mjs` checks the setting, the save (a round trip, old saves on each level, partial and bad ones), each lever on in Kids and off on Easy and in AI v AI, the ring staying on a bound tackler, the check's pass and cancel paths, its three-figure answers, its rests (two keys in turn and random taps), the controller's focus, and its place over the other cards.
+`node tools/kids.mjs` checks the setting, the save (a round trip, old saves on each level, partial and bad ones), each lever on in Kids and off on Easy and in AI v AI, the ring staying on a bound tackler, the rating (the scale's start and ceiling lever by lever, the straight line between them, bounds, the update rule and its step sizes, its save, old saves, and who moves it: Quick Match, Championship and Career at full time, never a match quit early, Easy, two player, AI v AI, the demo or a drill), the check's pass and cancel paths, its three-figure answers, its rests (two keys in turn and random taps), the controller's focus, and its place over the other cards. `node tools/kidbots.mjs` is the calibration above: minutes long, so not part of `check.mjs`.
 
 ## Practice + Polish (review branch)
 

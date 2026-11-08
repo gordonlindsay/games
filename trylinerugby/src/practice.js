@@ -63,7 +63,8 @@ function practiceStart(id, opts) {
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
   // Every drill plays on Easy. At Kids, Kicking and Driving also take a Kids match's own help (kids.js: the aim set for you, a wider
-  // gold band and a slower meter; your pack's extra shove), as the career's Train sends a Kids player to them every round. The
+  // gold band and a slower meter; your pack's extra shove), as the career's Train sends a Kids player to them every round. They take
+  // it at the start of the Kids scale (newMatch is given no kidsR), the help they always had, whatever the child's rating. The
   // others stay as they are: the training spaces never read M.kids, and Kids' automatic switch would play Defend a Breakaway for you.
   newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false], kids:!!drill.kids && kidsLevel() });
   M.practice = id; M.phase = 'play'; M.set = null; M.cut = null; M.goal = null;

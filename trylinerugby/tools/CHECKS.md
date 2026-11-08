@@ -20,6 +20,8 @@ node tools/check.mjs --full
 
 This also runs contact, duels, goal kicks, movement, passing, teams and set pieces. Some of these contain small shared-control regression cases; the dedicated two-player suite is separate.
 
+The Kids rating's calibration, `node tools/kidbots.mjs at` and `settle` (scripted 6, 7 to 8 and 10 year olds; see the Kids section of README.md), runs for minutes and is never part of `check.mjs`. `node tools/kids.mjs`, in the default gate, checks the rating's scale, update rule, save and gating directly.
+
 The two-player suite has six pre-existing failures in Key Pass mirror fixtures, deferred from this single-player work: mirrored duel frame data, identical drawn scene with kits swapped, mirrored drawn-outcome players, mirrored drawn-outcome ball, mirrored sold-outcome players, and mirrored covered-outcome players. It is deliberately opt-in and its failures still cause a failing exit status:
 
 ```sh
