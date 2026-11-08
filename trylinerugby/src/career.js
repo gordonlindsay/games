@@ -173,11 +173,12 @@ function careerDrills(cr) {                          // the drills that exist ri
     .map(id => ({ id, name:have.get(id).name || CAREER_DRILL_NAME[id], skills:id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[id]] }));
 }
 const careerCanTrain = cr => !!(cr && cr.season && cr.season.round < 5 && !cr.trained);
-/* The drill's onDone ({ id, stars, success[, role, skill] }), once its settings are restored. One session a round. */
+/* The drill's onDone ({ id, stars, success[, role, skill, quit] }), once its settings are restored. One session a round;
+   a drill left before it finished (quit) gives nothing and keeps the session. */
 function careerTrainDone(res) {
   const cr = career;
   let out = null;
-  if (!practice && careerCanTrain(cr) && res && typeof res === 'object') {
+  if (!practice && careerCanTrain(cr) && res && typeof res === 'object' && !res.quit) {
     const keys = careerSkillKeys();
     const skill = keys.includes(res.skill) ? res.skill : CAREER_DRILL_SKILL[res.id];
     if (skill && keys.includes(skill)) {
@@ -194,7 +195,7 @@ function careerTrainDone(res) {
 }
 function careerTrain(id) {
   if (!careerCanTrain(career) || !careerDrills(career).some(d => d.id === id)) return false;
-  practiceStart(id, { onDone:careerTrainDone });
+  practiceStart(id, { onDone:careerTrainDone, leaveLabel:'Back to Career' });
   return true;
 }
 

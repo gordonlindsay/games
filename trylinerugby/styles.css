@@ -509,6 +509,7 @@ body.desk .home-row .col{grid-column:auto}
 .cr-next .jersey{width:28px;height:28px}
 .cr-pick{margin:0}
 .cr-tile .lbl{align-self:stretch;min-width:0;overflow-wrap:normal}
+.cr-best .cr-tile{padding-right:6px}   /* everything in a tile sits left, so the stage row gives International its room on the right */
 .cr-best .cr-tile b{font-size:24px}
 @media (min-width:760px){.cr-nations{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media (orientation:landscape) and (max-height:560px){

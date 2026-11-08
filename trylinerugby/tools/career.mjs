@@ -168,6 +168,10 @@ function playOut(us, them, deeds) {
   cr.trained = false; const snap = json(cr.skills);
   ok(C.trainDone({ id:'mystery', stars:3 }) === null && json(cr.skills) === snap && !cr.trained, 'an unknown drill gives nothing and keeps the session');
   ok(C.trainDone(null) === null && C.trainDone('3') === null && !cr.trained, 'a missing result gives nothing');
+  { const w = writes;   // a drill left before it finished (the ready card's leave button, Pause then Quit, Back): the session is still there
+    ok(C.trainDone({ id:'egg', stars:0, success:false, skill:'handling', quit:true }) === null && json(cr.skills) === snap && !cr.trained && writes === w && shown() === 's-career' && !$('cr-train').disabled, 'a drill left before it finished gives nothing and keeps the session');
+    ok(C.trainDone({ id:'egg', stars:3, success:true, quit:true }) === null && json(cr.skills) === snap && !cr.trained, 'even one that claims stars'); }
+  { const src = readGameSource(); ok(/practiceStart\(id, \{ onDone:careerTrainDone, leaveLabel:'Back to Career' \}\)/.test(src), 'a career drill\'s leave button reads Back to Career'); }
   cr.skills.handling = 97; ok(gain({ id:'egg', stars:3 }, 'handling') === 2 && cr.skills.handling === 99, 'skills stop at 99');
   ok(C.TRAIN.every((v, i, a) => !i || v > a[i - 1]), 'more stars, more points');
   // the drill list: only drills that exist, never Driving in the Minis
@@ -407,6 +411,14 @@ function playOut(us, them, deeds) {
   ok($('ce-title').textContent === 'One More Season' && /Again/.test($('ce-body').innerHTML), 'a season that does not go up: One More Season');
   C.end();
   ok(C.get() === null && saved().career === null, 'Start Fresh ends the career');
+  // Start New Career on the Hall of Fame wipes the honours, so it takes a second tap
+  const hof = C.create({ pos:'B', num:4, club:X.CLUBS[0] }); C.set(hof); X.save();
+  hof.stage = 4; hof.country = 'ENG'; C.newSeason(hof); finish(hof, 1); C.open();
+  ok(shown() === 's-career-end' && $('ce-title').textContent === 'Hall of Fame', 'a finished career opens on the Hall of Fame');
+  ok(C.restart() === false && C.get() === hof && saved().career && $('ce-go').textContent === 'Tap Again to Start New Career' && shown() === 's-career-end', 'one tap of Start New Career only asks again');
+  C.renderEnd();
+  ok(C.restart() === false && C.get() === hof, 'and drawing the Hall of Fame again asks again');
+  ok(C.restart() === true && C.get() === null && saved().career === null && shown() === 's-career-new', 'the second tap ends the career and opens New Player');
 }
 
 console.log(`Career: ${passed} passed, ${failed} failed`);

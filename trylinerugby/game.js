@@ -3502,11 +3502,12 @@ function careerDrills(cr) {                          // the drills that exist ri
     .map(id => ({ id, name:have.get(id).name || CAREER_DRILL_NAME[id], skills:id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[id]] }));
 }
 const careerCanTrain = cr => !!(cr && cr.season && cr.season.round < 5 && !cr.trained);
-/* The drill's onDone ({ id, stars, success[, role, skill] }), once its settings are restored. One session a round. */
+/* The drill's onDone ({ id, stars, success[, role, skill, quit] }), once its settings are restored. One session a round;
+   a drill left before it finished (quit) gives nothing and keeps the session. */
 function careerTrainDone(res) {
   const cr = career;
   let out = null;
-  if (!practice && careerCanTrain(cr) && res && typeof res === 'object') {
+  if (!practice && careerCanTrain(cr) && res && typeof res === 'object' && !res.quit) {
     const keys = careerSkillKeys();
     const skill = keys.includes(res.skill) ? res.skill : CAREER_DRILL_SKILL[res.id];
     if (skill && keys.includes(skill)) {
@@ -3523,7 +3524,7 @@ function careerTrainDone(res) {
 }
 function careerTrain(id) {
   if (!careerCanTrain(career) || !careerDrills(career).some(d => d.id === id)) return false;
-  practiceStart(id, { onDone:careerTrainDone });
+  practiceStart(id, { onDone:careerTrainDone, leaveLabel:'Back to Career' });
   return true;
 }
 
@@ -6338,19 +6339,22 @@ $('pr-select').addEventListener('click', practiceChoose);
    The rules are in src/career.js; nothing here draws a random number except through it.
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
-let careerDraft = null, careerResetArmed = false;
+let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerStageName = i => CAREER_STAGES[i].name;
 const careerSeasonNo = cr => cr.history.filter(h => h.stage === cr.stage).length + 1;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
 function careerShirt(t, num, cls) {                  // the kit with his number on it
   return `<span class="cr-shirt${cls ? ' ' + cls : ''}">${jersey(t)}<b>${num}</b></span>`;
 }
-/* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows. */
+/* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
+   A label (International on a narrow Hall of Fame) gives up most of its letter spacing first, and may go down to 10px. */
 function careerFit(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
-    el.style.fontSize = '';
+    el.style.fontSize = ''; el.style.letterSpacing = '';
+    const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl');
+    if (lbl && over()) el.style.letterSpacing = '.04em';
     let px = parseFloat(getComputedStyle(el).fontSize) || 20;
-    while (el.scrollWidth > el.clientWidth + 0.5 && px > 12) { px -= 1; el.style.fontSize = px + 'px'; }
+    while (over() && px > (lbl ? 10 : 12)) { px -= 1; el.style.fontSize = px + 'px'; }
   }
 }
 function careerShow(id) { showScreen(id); const s = $(id); s.scrollTop = 0; careerFit(s); }
@@ -6502,7 +6506,8 @@ function renderCareerEnd() {
     $('ce-line').textContent = team.name + ' finish ' + ordinal(out.place);
     body.innerHTML = `<div class="cr-tiles" style="--n:5">${careerTile('Overall', out.ovr)}${careerTile('Seasons', cr.seasons)}${careerTile('Matches', cr.totals.matches)}${careerTile('Tries', cr.totals.tries)}${careerTile('Titles', titles)}</div><div class="cr-tiles cr-best" style="--n:${best.length}">${best.join('')}</div>`;
     act.innerHTML = `<button class="btn primary" id="ce-go">Start New Career</button>`;
-    $('ce-go').addEventListener('click', () => { careerEnd(); careerNewOpen(); });
+    careerRestartArmed = false;
+    $('ce-go').addEventListener('click', careerRestart);
     return;
   }
   const next = out.promoted ? cr.stage + 1 : cr.stage;
@@ -6522,6 +6527,12 @@ function renderCareerEnd() {
   body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile(out.promoted ? 'Next' : 'Again', careerStageName(next), `<span class="cr-next">${jersey(nextTeam)}<span data-fit>${esc(nextTeam.name)}</span></span>`)}</div>`;
   act.innerHTML = `<button class="btn primary" id="ce-go">Next Season</button>`;
   $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
+}
+/* Start New Career on the Hall of Fame wipes the career and its honours, so it takes a second tap, as Start Fresh does. */
+function careerRestart() {
+  if (!careerRestartArmed) { careerRestartArmed = true; $('ce-go').textContent = 'Tap Again to Start New Career'; return false; }
+  careerRestartArmed = false; careerEnd(); careerNewOpen();
+  return true;
 }
 $('ce-back').addEventListener('click', goHome);
 
@@ -6663,7 +6674,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   teams:{ overallOf, NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
-  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
+  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
   get M() { return M; } };
 
 function start(data) {
