@@ -9,7 +9,6 @@ Captured from the current build (the game as on 8 November 2026, the store-launc
 | Folder | Store | Device | Pixels | How it is made |
 |---|---|---|---|---|
 | `screenshots/ios-6.9/` | App Store | iPhone 6.9-inch display (required) | 2868x1320 landscape | a 956x440 phone viewport at 3x |
-| `screenshots/ipad-13/` | App Store | iPad 13-inch display (required if the app runs on iPad) | 2752x2064 landscape | 1376x1032 at 2x |
 | `screenshots/play-phone/` | Google Play (phase 2) | Phone | 1920x1080 | 960x540 at 2x |
 | `screenshots/play-tablet/` | Google Play (phase 2) | 7-inch and 10-inch tablet | 2560x1440 | 1280x720 at 2x |
 | `screenshots/play-feature-graphic.png` | Google Play (phase 2) | Feature graphic (required) | 1024x500 | `feature-graphic.html`: the home screen's wordmark over the lineout close-up |
@@ -37,7 +36,7 @@ Google Play takes at most 8 per type; the App Store takes up to 10. Upload them 
 
 - **Club names show.** The team picker, the career card and the scorebug show Farnham, Haslemere, Guildford, Aldershot, Weybridge, Quins, Cobham and Guildfordians: real local clubs by name and colours (APP_STORE.md, Content Rights). If any club objects, re-shoot. Harlequins was renamed Quins after these shots were taken: re-shoot the team picker and any match against them.
 - **Home shows the free and paid modes alike.** These shots are of today's build, before the store work's locks and Grown-Ups button. Re-shooting after the merge shows the home as the app has it.
-- **iPad.** On a 13-inch iPad the game draws at the iPad's own size, so the scorebug, hints, buttons and the career card come out small with a lot of empty pitch round them (see `ipad-13/`). That is how the build looks on an iPad today. Two ways on: make the layout scale up on large screens (game work, outside this pack), or ship the app for iPhone only for now, so App Store Connect does not ask for iPad screenshots and iPads run the iPhone version. **[OWNER: decide; tell the native work, which sets the device family in Xcode.]**
+- **iPad.** The first version is iPhone only (owner, 2026-11-08), so no iPad set is made. On a 13-inch iPad the game draws small with a lot of empty pitch; scaling the layout up is game work for a later version, and its set (2752x2064 from 1376x1032 at 2x) can be added back to `tools/listing-shots.mjs` then.
 - **Sharpness on iPhone.** The game draws its canvas at up to twice the screen's pixels, so on the 3x iPhone set the pitch is upscaled a little while the text stays sharp. The iPad and Play sets are at 2x and fully sharp.
 - **No device frames and no captions.** Both are allowed; plain shots are honest and quick to redo. If captions are added, keep them Title Case, short and true to the shot (Apple rejects screenshots that show what the app does not do), and never say who the app is for by age: guideline 2.3.8 keeps "For Kids" and "For Children" for Apple's Kids Category, and this app is in Sports. `node tools/listing.mjs` checks the caption ideas above.
 
@@ -48,7 +47,7 @@ From `trylinerugby/`:
 ```sh
 npm i -g playwright && npx playwright install chromium   # once, if Playwright is not installed
 node tools/listing-shots.mjs                              # every set and the feature graphic, about 90 seconds
-node tools/listing-shots.mjs --only ios-6.9               # one set (ids: ios-6.9, ipad-13, play-phone, play-tablet, play-feature)
+node tools/listing-shots.mjs --only ios-6.9               # one set (ids: ios-6.9, play-phone, play-tablet, play-feature)
 node tools/listing-shots.mjs --moments match,fire         # some moments, every set
 node tools/listing.mjs                                    # then check them
 ```

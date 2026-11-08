@@ -39,14 +39,14 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
 - [ ] **App Store Connect app record**: New App, iOS, Tryline Rugby Sevens, English (U.K.), bundle id `ai.signcheck.tryline`, SKU `TRYLINE1`. Then fill App Information, Age Rating, App Privacy and Pricing from APP_STORE.md.
 - [ ] **In-app purchases** (App Store): `tryline.full` at £1.99, and `tryline.fan.farnham` at £3.99 once Farnham RUFC has confirmed. Exact ids, non-consumable.
 - [ ] **Family Sharing** for each in-app purchase: decide (it cannot be turned off once on).
-- [ ] **iPad**: decide whether the first version runs on iPad as an iPad app or as the iPhone app (SCREENSHOTS.md). Tell the native work.
-- [ ] **Screenshots**: after the merge, and again after the Mac session's new graphics, re-shoot (SCREENSHOTS.md) and upload the iPhone 6.9-inch set, and the iPad 13-inch set if it is an iPad app.
+- [x] **iPad**: iPhone only for the first version (owner, 2026-11-08). The native project's device family is iPhone; iPad comes later, once the layout scales up.
+- [ ] **Screenshots**: after the merge, and again after the Mac session's new graphics, re-shoot (SCREENSHOTS.md) and upload the iPhone 6.9-inch set (iPhone only for now).
 
 ## 5. Build and Test on Apple (TestFlight)
 
 - [ ] On the Mac: build the app in Xcode from the native project (its README has the steps), set the signing team to SignCheck Ltd, and check the bundle identifier is `ai.signcheck.tryline` and `ITSAppUsesNonExemptEncryption` is `NO` in Info.plist.
 - [ ] Archive and upload to App Store Connect. Wait for processing.
-- [ ] **Internal testing** in TestFlight (up to 100 people on the team, no review). Test on a real iPhone and, if it is an iPad app, an iPad:
+- [ ] **Internal testing** in TestFlight (up to 100 people on the team, no review). Test on a real iPhone:
   - [ ] Every mode, offline (aeroplane mode).
   - [ ] Buy Full Game and a Super Fan with a **Sandbox** tester account (App Store Connect, Users and Access, Sandbox). The grown-up check comes first every time.
   - [ ] Delete the app, reinstall, **Restore Purchases**: both unlocks come back.

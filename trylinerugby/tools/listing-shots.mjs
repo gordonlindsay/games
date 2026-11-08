@@ -18,7 +18,7 @@ export const SHOTS_DIR = path.join(GAME_DIR, 'store-listing', 'screenshots');
 // viewports are a landscape phone's, so the game lays out as it does on one (its phone rules start below 560px tall).
 export const LISTING_SIZES = [
   { id:'ios-6.9', store:'App Store', label:'iPhone 6.9-inch display', w:956, h:440, dpr:3, px:[2868, 1320] },
-  { id:'ipad-13', store:'App Store', label:'iPad 13-inch display', w:1376, h:1032, dpr:2, px:[2752, 2064] },
+  // iPad (13-inch, 2752x2064 from 1376x1032 at 2x) waits: the owner chose iPhone only for the first version (2026-11-08)
   { id:'play-phone', store:'Google Play', label:'Phone', w:960, h:540, dpr:2, px:[1920, 1080] },
   { id:'play-tablet', store:'Google Play', label:'7-inch and 10-inch tablet', w:1280, h:720, dpr:2, px:[2560, 1440] },
 ];

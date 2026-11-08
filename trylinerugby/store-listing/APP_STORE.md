@@ -191,4 +191,4 @@ Choose **Manually release this version**, so nothing goes live before the web's 
 
 ## Screenshots
 
-See SCREENSHOTS.md. The required sets are the iPhone 6.9-inch display (`screenshots/ios-6.9/`, 2868x1320) and, if the app runs on iPad, the iPad 13-inch display (`screenshots/ipad-13/`, 2752x2064).
+See SCREENSHOTS.md. The first version is iPhone only (the owner's decision, 2026-11-08), so the one required set is the iPhone 6.9-inch display (`screenshots/ios-6.9/`, 2868x1320). No iPad set is uploaded; the app's device family is iPhone, so App Store Connect does not ask for one.
