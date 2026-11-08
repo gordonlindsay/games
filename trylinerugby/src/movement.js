@@ -507,7 +507,7 @@ function computeTargets() {
   return targets;
 }
 function update(dt) {
-  matchUpdate(dt);
+  if (!(practice && practice.space)) matchUpdate(dt);      // a training space has no match flow: its drill moves the men and the ball (training.js)
   practiceTick(dt);
 }
 function matchUpdate(dt) {

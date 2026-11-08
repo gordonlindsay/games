@@ -106,6 +106,7 @@ function resolveScrum(c) {
   if (res === 'dom1' && !cpuSide(0) && !c.taps[0] && !c.hit[0]) res = F === 0 ? 'steal1' : 'win1';   // a human pack that never pushed loses the ball, nothing worse
   if (res === 'dom0' && !cpuSide(1) && !c.taps[1] && !c.hit[1]) res = F === 1 ? 'steal0' : 'win0';
   c.result = res;
+  if (practice && practiceScrum(c)) return;                // the Driving drill counts it and sets the next scrum
   const mx = clamp(c.x + p, 15, 105), y = c.y;
   if (res === 'dom0' || res === 'dom1') {
     const t = res === 'dom0' ? 0 : 1, over = Math.abs(oppLine(t) - mx) <= 8;

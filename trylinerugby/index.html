@@ -63,7 +63,7 @@
       </div>
       <div class="row2 learn-row">
         <button class="btn" id="b-help">How to Play</button>
-        <button class="btn" id="b-practice">Practice Ground</button>
+        <button class="btn" id="b-practice">Training Ground</button>
       </div>
     </div>
     <div class="app-tools" id="app-tools" hidden>
@@ -242,21 +242,33 @@
 
 <section class="screen" id="s-practice" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow">Learn the Game</p><h2 class="title">Practice Ground</h2></div></div>
-    <p>Short drills using the match controls. Practise each skill, then try it in a match.</p>
-    <div class="stack">
-      <button class="btn primary" id="pr-defend">Defend a Breakaway</button>
-      <button class="btn" id="pr-pass">Create a Two-on-One</button>
-      <button class="btn" id="pr-kick">Kick a Conversion</button>
+    <div class="head"><div><p class="eyebrow">Learn the Game</p><h2 class="title">Training Ground</h2></div></div>
+    <div class="drills" id="pr-grid">
+      <button class="btn drill" id="pr-egg"><span class="dc-icon" id="pi-egg" aria-hidden="true"></span><span class="dc-name">Bouncy Egg</span></button>
+      <button class="btn drill" id="pr-circle"><span class="dc-icon" id="pi-circle" aria-hidden="true"></span><span class="dc-name">Pass Around the Circle</span></button>
+      <button class="btn drill" id="pr-cones"><span class="dc-icon" id="pi-cones" aria-hidden="true"></span><span class="dc-name">Cones</span></button>
+      <button class="btn drill" id="pr-tackle"><span class="dc-icon" id="pi-tackle" aria-hidden="true"></span><span class="dc-name">Tackling</span></button>
+      <button class="btn drill" id="pr-kick"><span class="dc-icon" id="pi-kick" aria-hidden="true"></span><span class="dc-name">Kicking</span></button>
+      <button class="btn drill" id="pr-scrum"><span class="dc-icon" id="pi-scrum" aria-hidden="true"></span><span class="dc-name">Driving</span></button>
+      <button class="btn drill" id="pr-defend"><span class="dc-icon" id="pi-defend" aria-hidden="true"></span><span class="dc-name">Defend a Breakaway</span></button>
+      <button class="btn drill" id="pr-pass"><span class="dc-icon" id="pi-pass" aria-hidden="true"></span><span class="dc-name">Create a Two-on-One</span></button>
     </div>
     <button class="btn" id="pr-back" data-back>Back to Menu</button>
   </div>
 </section>
 <div id="practice-cue" hidden aria-live="polite"><strong id="pr-objective"></strong><span id="pr-cue"></span></div>
+<div id="drill-hud" hidden><span id="dh-pips"></span><span id="dh-num" hidden></span><span id="dh-bar" hidden><i></i></span></div>
 <div class="modal" id="m-practice" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="pr-result">
-    <p class="eyebrow">Practice Ground</p><h2 id="pr-result"></h2><p id="pr-feedback"></p>
-    <div class="stack"><button class="btn primary" id="pr-retry">Try Again</button><button class="btn" id="pr-next">Next Drill</button><button class="btn" id="pr-select" data-back>Choose Drill</button></div>
+    <p class="eyebrow">Training Ground</p>
+    <div class="pr-title"><span class="dc-icon" id="pr-icon" aria-hidden="true"></span><h2 id="pr-result"></h2></div>
+    <div class="pr-stars" id="pr-stars" role="img" aria-label="" hidden></div>
+    <p id="pr-feedback"></p>
+    <div class="stack">
+      <div class="row2" id="pr-roles" hidden><button class="btn primary" id="pr-runner">Runner</button><button class="btn primary" id="pr-passer">Passer</button></div>
+      <button class="btn primary" id="pr-retry">Try Again</button>
+      <div class="row2" id="pr-row"><button class="btn" id="pr-next">Next Drill</button><button class="btn" id="pr-select" data-back>Back to Training</button></div>
+    </div>
   </div>
 </div>
 
