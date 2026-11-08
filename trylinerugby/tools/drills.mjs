@@ -34,9 +34,9 @@ for (const d of X.DRILLS) {
   ok(X.KIT[d.id] && typeof X.KIT[d.id].setup === 'function' && X.icons[d.id] && /<(path|circle|ellipse|rect)\b/.test(X.icons[d.id]), d.id + ' has a drill and a drawn picture');
   ok(d.limit > 0 && d.limit <= 150, d.id + ' has a time limit');
 }
-ok(/<button class="btn" id="b-practice">Training Ground<\/button>/.test(html) && /<h2 class="title">Training Ground<\/h2>/.test(html) && !/Practice Ground/.test(html), 'the home button and the screen read Training Ground');
+ok(/<button class="btn hl" id="hl-drills" data-hl="drills"[^>]*>[\s\S]*?<span class="hl-name">Training Drills<\/span><\/button>/.test(html) && /<div class="hl-panel hp-drills" id="hp-drills"[^>]*>\s*<div class="drills hl-drills" id="pr-grid">/.test(html) && /<p class="eyebrow">Training Ground<\/p>/.test(html) && !/id="s-practice"|id="b-practice"|Practice Ground/.test(html), 'the drills are the home\'s Training Drills (the Training Ground screen folded into it), and the drill card reads Training Ground');
 ok(/id="pr-select" data-back>Back to Training</.test(html) && /id="pr-next">Next Drill</.test(html) && /id="pr-runner">Runner</.test(html) && /id="pr-passer">Passer</.test(html), 'the card offers Try Again, Next Drill and Back to Training, and the circle\'s Runner and Passer');
-ok(!/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="s-practice"'), html.indexOf('<script'))) && !/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(training), 'drill pictures are drawn, with no image files and no emoji');
+ok(!/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="pr-grid"'), html.indexOf('id="b-help"'))) && !/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="m-practice"'), html.indexOf('<script'))) && !/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(training), 'drill pictures are drawn, with no image files and no emoji');
 const drillWords = [...training.matchAll(/drillTag\('([^']+)'/g)].map(m => m[1]);
 ok(drillWords.length >= 5 && drillWords.every(w => isTitle(w) || w === '+') && !/\btag\(/.test(training), 'the drills\' on-pitch words are Title Case, and none is a match tag (' + [...new Set(drillWords)].join(', ') + ')');
 ok(!/[\u2190-\u2199\u21D0-\u21D9]/.test(training) && !/\u2014/.test(training.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')), 'no arrow glyphs and no em dashes in the drills');
@@ -300,7 +300,7 @@ calls = [];
 P.start('tackle', { onDone }); D.keyDown({ code:'Escape', repeat:false, preventDefault() {} });
 ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.skill === 'power' && !X.state(), 'onDone: Escape on the ready card hands back once');
 P.start('cones'); ok(!P.state().opts && $('pr-select').textContent === 'Back to Training', 'without opts the card goes Back to Training');
-$('pr-select').click(); ok(!X.state() && !$('s-practice').hidden && calls.length === 1, 'Back to Training returns to the drill picker and calls nobody');
+$('pr-select').click(); ok(!X.state() && !$('s-home').hidden && calls.length === 1, 'Back to Training returns to the drill picker (the home\'s Training Drills) and calls nobody');
 
 // ---- isolation
 ok(writes === 0, 'no drill writes the browser save');

@@ -18,6 +18,7 @@ const jobs = [
   ...['offline-core', 'offline-ui', 'practice', 'polish', 'feedback', 'transitions', 'input-lifecycle', 'tutorial', 'hints', 'postmatch', 'season-data', 'season-ui', 'season-flow', 'arcade', 'stamina', 'career', 'career-pro', 'traits', 'cups', 'importer', 'drills', 'together', 'kids', 'store', 'listing', 'native'].map(name => [name, [`tools/${name}.mjs`]]),
   ['career-life', ['tools/career-life.mjs']],               // the career's Energy, Morale, Team Spirit and dilemmas
   ['locker', ['tools/locker.mjs']],                         // medals, balls and boots, the Legends (its browser part runs where Playwright is installed)
+  ['home', ['tools/home.mjs']],                             // the home's headlines, My Team, the competitions by tier, the Legends' gate (its browser part runs where Playwright is installed)
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces']) jobs.push([name, [`tools/${name}.mjs`]]);

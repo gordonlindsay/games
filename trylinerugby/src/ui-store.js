@@ -1,14 +1,15 @@
 /* =========================================================
    Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge on the home,
    and the links that leave the game. The rules are in src/store.js.
-   - A locked control (Championship, Career, Create Team and Edit, Hard, Import Club) keeps its place and its label, with a small
+   - A locked control (Championship and its competitions, Career, Create Team and Edit, Hard, Import Club and Import Data, a Legends
+     side the Locker has unlocked) keeps its place and its label, with a small
      lock (.locked), and opens the Unlock card instead. A championship or career under way keeps its note: it is saved, only locked.
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
      first. The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
    ========================================================= */
-const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Import Club' };
-const STORE_LINE = { full:'Championship · Career · Create Team · Hard', fan:'Full Game · Import Club · Super Fan Badge' };
+const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Import Club', legends:'Legends' };
+const STORE_LINE = { full:'Championship · Career · Create Team · Hard · Legends', fan:'Full Game · Import Club · Super Fan Badge' };
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
   failed:'The purchase did not go through.',
@@ -41,11 +42,13 @@ function storeGate(f, then) {
 function storeRender() {
   storeStart();
   const live = storeLive();
-  const g = $('b-grown'), row = g.parentNode;
-  g.hidden = !live; if (row && row.classList) row.classList.toggle('three', live);   // How to Play | Training Ground | Grown-Ups in thirds
-  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there; touched only when it changes
+  const g = $('b-grown'), set = $('hp-settings');
+  g.hidden = !live; set.classList.toggle('grown', live);    // Settings: Half Length | Grown-Ups in halves
+  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there, and on the Settings headline; touched only when it changes
   if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
-  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career');
+  const hs = $('hl-settings');
+  if (hs.classList.contains('note') !== ready) { hs.classList.toggle('note', ready); hs.setAttribute('aria-label', ready ? 'Settings, a suggestion waiting' : 'Settings'); }
+  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('hl-champ'), 'champ'); storeMark($('hl-career'), 'career');
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
   if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
   if (!storeHas('hard')) {
@@ -56,10 +59,11 @@ function storeRender() {
   if (c && t) { b.innerHTML = jersey(t) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
   else if (!b.hidden) { b.hidden = true; $('home-tag').hidden = false; }
 }
-function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Import Club
+function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Import Club, a Legends side
   storeMark($('t-create'), 'create');
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) storeMark(b, 'create');
   storeMark($('t-import'), 'import');
+  for (const b of $('t-grid').querySelectorAll('[data-legend]')) storeMark(b, 'legends');   // unlocked by Gold medals on any tier, played with the Full Game
 }
 function storeJoinRender() {               // Two Player's Hard, from renderJoin (a saved Hard was played as Normal by storeRender)
   for (const s of [0, 1]) { const b = $('j-diff' + s).children[2]; if (b) storeMark(b, 'hard'); }

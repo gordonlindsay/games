@@ -126,7 +126,7 @@ All are **Non-Consumable**. Create them under Monetisation, In-App Purchases, be
 
 | Product ID | Reference name | Price | Notes |
 |---|---|---|---|
-| `tryline.full` | Full Game | £1.99 | Championship, Career, Create Team and Hard. |
+| `tryline.full` | Full Game | £1.99 | Championship, Career, Create Team, Hard and the Legends sides. |
 | `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Import and the club badge. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set and `agreed:true` is on its FAN_CLUBS entry, in the build submitted. |
 | `tryline.fan.<club>` | Super Fan (club name) | £3.99 | One per partner club, same shape. There is no generic `tryline.fan`. |
 
@@ -141,7 +141,7 @@ Full Game
 
 <!-- copy:apple.iap.full.description -->
 ```text
-Championship, Career, Create Team and Hard
+Championship, Career, Create Team, Legends
 ```
 
 <!-- copy:apple.iap.fan.name -->
@@ -170,7 +170,7 @@ Without Super Fan (attach `tryline.full` only):
 ```text
 Tryline Rugby Sevens is a rugby sevens game. The whole game runs from files inside the app and plays offline; it downloads no code.
 
-Unlock: Full Game (tryline.full) is a non-consumable in-app purchase. Championship, Career, Create Team and Hard show a lock, and open an Unlock card. Restore Purchases is in the Grown-Ups panel, on the home screen.
+Unlock: Full Game (tryline.full) is a non-consumable in-app purchase. Championship, Career, Create Team, Hard and the Legends sides (won with medals, played with the Full Game) show a lock, and open an Unlock card. Restore Purchases is in the Grown-Ups panel: Settings, at the bottom of the home screen, then Grown-Ups.
 
 Grown-up check: purchases, Restore Purchases and the privacy and support links first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
 
@@ -183,11 +183,11 @@ With Super Fan (attach `tryline.full` and the agreed club's `tryline.fan.<club>`
 ```text
 Tryline Rugby Sevens is a rugby sevens game. The whole game runs from files inside the app and plays offline; it downloads no code.
 
-Unlocks: Full Game (tryline.full) and Super Fan for a partner club (tryline.fan.<club>) are non-consumable in-app purchases. Locked modes show an Unlock card. Restore Purchases is in the Grown-Ups panel, on the home screen.
+Unlocks: Full Game (tryline.full) and Super Fan for a partner club (tryline.fan.<club>) are non-consumable in-app purchases. Locked modes show an Unlock card. Restore Purchases is in the Grown-Ups panel: Settings, at the bottom of the home screen, then Grown-Ups.
 
 Grown-up check: purchases, Restore Purchases, the privacy and support links and Import first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
 
-Import (part of Super Fan, on the team screen as Import Club) reads a club or tournament page you paste in. A public link to try: [OWNER: the partner club's own page, used with the club's consent]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
+Import (part of Super Fan: Import Data at the top of the home screen, and Import Club on the team screen) reads a club or tournament page you paste in. A public link to try: [OWNER: the partner club's own page, used with the club's consent]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
 
 Super Fan is an ordinary purchase of an unlock. Before purchase the game states the share of what we receive for each Super Fan unlock that goes to the partner club (50% of Apple's proceeds); SignCheck Ltd pays that share to the club under a written agreement.
 

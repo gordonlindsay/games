@@ -19,7 +19,7 @@ ok(T.sides.ctrlOf(0) === target && P.state().switched, 'real Switch input change
 T.contact.tackle(T.M.ball.carrier, target);
 ok(P.state().done && P.state().won, 'cover tackle completes drill');
 D.resume(); ok(T.M.paused, 'result cannot resume via pause shortcut');
-key('Escape'); ok(!P.state() && !$('s-practice').hidden, 'Escape returns from result to drill selection');
+key('Escape'); ok(!P.state() && !$('s-home').hidden, 'Escape returns from result to drill selection (the home\'s Training Drills)');
 ok(JSON.stringify(D.settings()) === original, 'selection restores all settings');
 start('pass');
 const carrier = T.M.ball.carrier;

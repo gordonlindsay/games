@@ -379,15 +379,17 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(engine.every(f => !/\bM\.cup/.test(src(f))) && golden.length === 1 && /^const goldenOn = /.test(golden[0]), 'nothing in the engine reads M.cup but the Golden Try (goldenOn)');
 }
 
-// 10. Championship mode: the competition row, the World Cup, the tour, the European Cup offer, the hub
+// 10. Championship mode: the competitions on the home, the World Cup, the tour, the European Cup offer, the hub
 {
+  const H = T.home;
   K.set(null); X.setChamp(null); K.setHistory([]); K.setTurn(0); D.settings().cat = 'men';
-  D.openTeams('champ');
-  ok(K.comp() === 'league' && !$('t-comp').hidden && !$('t-tier').hidden && $('t-title').textContent === 'Pick Your Team' && /Create Team/.test($('t-grid').innerHTML), 'Championship opens on League: today\'s team screen, with the competition row');
-  ok(/data-comp="league">League<\/button><button data-comp="world">World Cup<\/button><button data-comp="tour">Home Nations Tour<\/button>/.test($('t-comp').innerHTML), 'League | World Cup | Home Nations Tour');
+  H.setTier(2); H.select('champ'); H.champPick('sur');
+  ok(K.comp() === 'league' && $('t-tier').hidden && $('t-nat').hidden && $('t-loc').hidden && X.teamPool() === 'sur' && $('t-title').textContent === 'Pick Your Team' && /Create Team/.test($('t-grid').innerHTML), 'a league picked on the home (Local · Surrey): the team screen with its sides, and no lists to wander off to');
+  D.goHome(); H.setTier(0); H.champ();
+  ok(/data-comp="int"><span>Championship<\/span><\/button><button class="btn hc-comp" id="hc-world" data-comp="world"><span>World Cup<\/span><\/button><button class="btn hc-comp" id="hc-tour" data-comp="tour"><span>Home Nations Tour<\/span><\/button>/.test($('hc-comps').innerHTML), 'International: Championship | World Cup | Home Nations Tour');
   D.openTeams('quick');
-  ok($('t-comp').hidden, 'Quick Match has no competition row');
-  D.openTeams('champ'); K.compPick('world');
+  ok(!$('t-tier').hidden, 'Quick Match keeps the lists');
+  H.champPick('world');
   ok($('t-title').textContent === 'Pick Your Nation' && $('t-tier').hidden && $('t-nat').hidden && $('t-loc').hidden && !/Create Team|Import/.test($('t-grid').innerHTML), 'World Cup: Pick Your Nation, no lists, no Create Team or Import');
   ok((($('t-grid').innerHTML.match(/class="team/g)) || []).length === 12 && /South Africa/.test($('t-grid').innerHTML), 'the twelve nations');
   D.settings().cat = 'women'; D.renderTeams();
@@ -431,9 +433,9 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   D.goHome();
   ok($('b-champ').textContent === 'Final Result' && / · Winners$/.test(noteText()), `home: Final Result (${noteText()})`);
   $('b-champ').click(); $('cup-new').click();
-  ok(K.get() === null && shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && K.history().length === 1, 'New Championship: the cup put away once, the team screen on League');
+  ok(K.get() === null && shown() === 's-home' && D.settings().hl === 'champ' && !$('hc-new').hidden && $('hc-go').hidden && K.history().length === 1, 'New Championship: the cup put away once, the home\'s Championship with its competitions');
   // the Home Nations Tour, in turn
-  D.settings().cat = 'men'; K.compPick('tour');
+  D.settings().cat = 'men'; H.champPick('tour');
   ok($('t-title').textContent === 'Pick the Host' && $('t-default').textContent === 'Tour New Zealand' && !$('t-default').hidden && !$('t-yours').hidden && $('t-change').hidden && /Home Nations/.test($('t-mine').innerHTML), 'Home Nations Tour: your side is the Home Nations, Tour New Zealand first');
   ok(/New Zealand[\s\S]*South Africa[\s\S]*Australia/.test($('t-grid').innerHTML) && (($('t-grid').innerHTML.match(/class="team/g)) || []).length === 3, 'the three hosts, the one in turn first');
   $('t-default').click();
@@ -441,13 +443,13 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(c && c.id === 'tour' && c.teams[1].id === 'NZL' && c.user === 0 && K.turn() === 1 && $('cup-eyebrow').textContent === 'Tour of New Zealand' && $('cup-title').textContent === 'Test 1 of 3', 'a tour of New Zealand, Test 1 of 3');
   $('cup-reset').click(); $('cup-reset').click();
   ok(K.get() === null && shown() === 's-home' && K.history().length === 1, 'Start Fresh, two taps: the tour gone, nothing unfinished in the cabinet');
-  D.openTeams('champ'); K.compPick('tour');
+  H.champPick('tour');
   ok($('t-default').textContent === 'Tour South Africa', 'next time the host in turn is South Africa');
   D.pickTeam(nat('AUS'));
   ok(K.get().teams[1].id === 'AUS' && K.turn() === 3, 'or pick the host: Australia, and New Zealand is next');
   K.set(null);
-  D.openTeams('champ');
-  ok(K.comp() === 'league' && !$('t-tier').hidden, 'the team screen always opens on League');
+  H.champPick('eng');
+  ok(K.comp() === 'league' && X.teamPool() === 'eng' && $('t-tier').hidden && $('t-eyebrow').textContent === 'Championship · England', 'after a cup, a league from the home is a league again: England\'s sides');
   // the European Cup offer after a league won with a side from a European league
   const finish = (c, place) => {   // every game won by the higher-ranked side, the user ranked place
     const order = [1, 2, 3, 4, 5]; order.splice(place - 1, 0, c.user);
@@ -497,9 +499,9 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   const order = JSON.parse(src('src/manifest.json'));
   ok(order.indexOf('cups.js') === order.indexOf('championship.js') + 1 && order.indexOf('ui-cups.js') === order.indexOf('ui-menus.js') + 1, 'cups.js after championship.js, ui-cups.js after ui-menus.js');
   ok(/^  cups:\{ CUPS, /m.test(src('src/boot.js')), 'the tests\' namespace, cups, on its own line in window.__tryline');
-  ok(/<div class="seg" id="t-comp" hidden><\/div>\s*<div class="pools"><div class="seg" id="t-tier"><\/div>/.test(src('index.html')) && /<section class="screen" id="s-cup" hidden>/.test(src('index.html')), 'index.html: the competition row over the lists, and the cup hub');
+  ok(!/id="t-comp"/.test(src('index.html')) && /<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>/.test(src('index.html')) && /<section class="screen" id="s-cup" hidden>/.test(src('index.html')), 'index.html: the competitions on the home (the team screen\'s row gone), and the cup hub');
   ok(/\/\* ===== cups ===== \*\//.test(src('styles.css')), 'styles.css: one block, under its heading');
-  ok(/#t-comp:not\(\[hidden\]\) \+ \.pools\{margin-top:-12px\}/.test(src('styles.css')) && !/#t-comp \+ \.pools/.test(src('styles.css')), 'the lists move up under the competition row only when it shows: Quick Match and Two Player keep ed37be5\'s spacing');
+  ok(!/#t-comp/.test(src('styles.css')) && /\.hc-comps\.n8\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}/.test(src('styles.css')), 'no competition row left on the team screen; the home\'s national leagues in two rows of four');
   ok(/^## Silverware$/m.test(src('README.md')), 'README: a Silverware section');
   const copyText = src('src/cups.js') + src('src/ui-cups.js');
   ok(!/\u2014/.test(copyText), 'no em dashes');

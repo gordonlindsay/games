@@ -55,9 +55,9 @@ function careerNote(cr) {
   const team = careerTeamNow(cr), f = careerAhead(cr);
   return 'Year ' + cr.year + ' · ' + team.name + ' · ' + (cr.phase === 'transfer' ? 'Transfer Window' : f ? f.label : careerResult(cr, careerOutcome(cr)));
 }
-function renderCareerHome() {
+function renderCareerHome() {                       // the home's Career: Continue Career with its note, or New Career
   const b = $('b-career'), note = $('career-note');
-  if (!career) { b.textContent = 'Career'; note.hidden = true; return; }
+  if (!career) { b.textContent = 'New Career'; note.hidden = true; return; }
   b.textContent = 'Continue Career'; homeNote(note, careerNote(career), careerTeamNow(career).name);
 }
 
@@ -68,8 +68,8 @@ const careerPoolTeams = k => (k === IMPORT_POOL ? importTeams() : (TEAM_LISTS.fi
 const careerClubList = k => storeFirst([...careerPoolTeams(k), ...custom]);
 const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom === !b.custom;
 function careerNewOpen() {
-  const home = storeHomePool(), pool = poolTier(home) > 0 ? home : 'sur';
-  careerDraft = { club:storeHomeTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false };   // the Super Fan's club, or Farnham; Men first and picked; Whole Team first and picked: Pro Mode is the harder way
+  const home = myPool() || 'sur', pool = poolTier(home) > 0 ? home : 'sur';
+  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked; Whole Team first and picked: Pro Mode is the harder way
   $('cn-name').value = '';
   renderCareerNew(); careerShow('s-career-new');
 }

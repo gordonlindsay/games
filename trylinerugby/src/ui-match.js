@@ -2,7 +2,7 @@
    UI
    ========================================================= */
 let mode = 'menu';           // 'menu' | 'match'
-let pickMode = 'champ', quickPick = null, quickAuto = false;   // quickAuto: Farnham is still the untouched default
+let pickMode = 'champ', quickPick = null;   // quickPick: Quick Match's Player 1 side, once he has picked it (nothing is picked for him)
 let bannerTimer = 0, coachLast = null, coachUntil = 0;   // coachUntil: wall-clock ms until another coach line may speak (one at a time)
 const playing = () => mode === 'match' && M && !M.demo;
 

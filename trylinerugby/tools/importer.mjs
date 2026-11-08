@@ -248,7 +248,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   X.restore({ custom:[], champ:null }); I.setLeague(null);
   const LG = PIT + '/teams/3100/league-table';
   let focused = '';
-  for (const id of ['im-url', 'im-go', 'im-back', 'im-paste']) $(id).focus = () => { focused = id; };
+  for (const id of ['im-url', 'im-go', 'im-back', 'im-paste', 'im-make']) $(id).focus = () => { focused = id; };
   pages[LG] = html200('pitchero-league');
   D.openTeams('champ');
   ok($('t-grid').innerHTML.includes('id="t-import"') && $('t-grid').innerHTML.includes('Import Club') && $('t-league').hidden, 'the team screen has an Import Club card beside Create Team, and no My League yet');
@@ -280,7 +280,10 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && X.rateOf(club) === TOP && I.ABILITIES.every(([k]) => club[k] === 3 || ((k === 'pace' || k === 'handling') && club[k] === 4)) && club.pace === 4 && club.handling === 4,
     `Save Club adds it through cleanTeam, the budget spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
-  ok($('m-import').hidden && D.settings().pool === I.POOL && X.teamPool() === 'my' && !$('t-league').hidden && !$('t-loc').hidden && $('t-nat').hidden, 'the card closes on My League, under Local beside Surrey');
+  ok(!$('m-import').hidden && I.state().step === 'mine' && $('im-title').textContent === 'Bracknell RFC' && !$('im-mine').hidden && $('im-row').hidden && $('im-go').hidden && !$('im-jersey').hidden && focused === 'im-make', 'then the card offers Make This My Team | Not Now, in the club\'s shirt, focus on Make This My Team');
+  $('im-not').click();
+  ok(D.settings().myClub == null, 'Not Now leaves My Team as it was');
+  ok($('m-import').hidden && D.settings().pool === I.POOL && X.teamPool() === 'my' && X.poolTier('my') === 2 && !$('t-league').hidden && $('t-tier').hidden, 'the card closes on My League (Local\'s, beside Surrey), Championship\'s list now that its competition is chosen on the home');
   ok($('t-grid').innerHTML.includes('Sevenoaks') && $('t-grid').innerHTML.includes('Bracknell RFC'), 'My League lists the league and your teams');
   const sv = saved();
   ok(sv.importLeague.teams.length === 5 && sv.custom.some(t => t.name === 'Bracknell RFC'), 'both are in the browser save');
