@@ -11,7 +11,9 @@
      the rules themselves never stop a match (a match played without an answer just skips that round's dilemma).
    - Each round, at full time: Energy comes back by a fifth of what is missing (at least 5); Morale goes a fifth of the way
      back to 50, then a win adds 8, a draw 2, a loss takes 6, and each of his tries, tackles and goals adds 1 (3 at most);
-     Team Spirit fades 4, then adds 1 for every six passes he throws or is thrown and 2 for each try he scores (6 at most).
+     Team Spirit fades 4, and 1 more for every 10 it stands above 50 (9 at 100), then adds 1 for every six passes he throws
+     or is thrown and 2 for each try he scores (6 at most): the more he is in the game the less it fades, but the higher it
+     is the faster it goes, so only going out with the team keeps it high.
      A training session costs 8 Energy.
    - In a career match the bars are read once, at careerArm (M.careerLife), so nothing changes mid-match:
      Energy under 60 takes up to 2.5 points off his Stamina ability for the match (all of it at 0, down to 0), so his
@@ -27,20 +29,21 @@ const CAREER_LIFE = {
   start:{ energy:80, morale:60, spirit:50 },
   energy:{ tired:60, most:2.5, back:0.2, backMin:5, train:-8 },   // tired: below this he loses Stamina; most: points lost at 0; back: share of the gap regained a round
   morale:{ shade:0.05, drift:0.2, win:8, draw:2, loss:-6, deed:1, deedCap:3 },
-  spirit:{ fade:-4, passes:6, tryPts:2, cap:6, support:0.7, lat:3.5, back:1.2, hands:0.3 },   // passes: passes involving him for each point; support: how much closer (or further) he runs; lat / back: never tighter than this to the ball
+  spirit:{ fade:-4, high:10, passes:6, tryPts:2, cap:6, support:0.7, lat:3.5, back:1.2, hands:0.3 },   // high: 1 more off for every this many above 50; passes: passes involving him for each point; support: how much closer (or further) he runs; lat / back: never tighter than this to the ball
 };
 const CAREER_LIFE_KEYS = [['energy', 'Energy'], ['morale', 'Morale'], ['spirit', 'Team Spirit']];
 const CAREER_LIFE_COL = { energy:'#c4e65a', morale:'#ff7eb6', spirit:'#3ad6c0' };   // a colour per bar, on its chips too, never one a skill uses
 /* The dilemmas. from: the first stage it can come up (0 Minis, 1 Juniors, 2 County). Every option's fx is skill points (Pace to
    Stamina) and bar points; each option has something good in it. The question is the card's heading, the names its buttons.
-   Two options of two chips each, names of 16 letters at most: three of either do not fit the hub at 667x375. */
+   Two options of two chips each, and a name that fits one line of its button at 667x375 (tools/career-life.mjs measures them):
+   a third of either, or a name on two lines, and the hub scrolls there. A name a device renders wider steps down (careerFit). */
 const CAREER_DILEMMAS = [
   { id:'pizza', from:0, q:'Training or Pizza Night?', opts:[{ name:'Extra Training', fx:{ handling:2, energy:-15 } }, { name:'Team Pizza Night', fx:{ spirit:12, morale:6 } }] },
   { id:'captain', from:0, q:'Kick With the Captain?', opts:[{ name:'Kicking Practice', fx:{ kicking:2, energy:-10 } }, { name:'Rest', fx:{ energy:20 } }] },
   { id:'videos', from:0, q:'Videos or Video Games?', opts:[{ name:'Match Videos', fx:{ handling:2, energy:-5 } }, { name:'Video Games', fx:{ morale:8, energy:10 } }] },
   { id:'film', from:0, q:'Early Night or Film Night?', opts:[{ name:'Early Night', fx:{ energy:20 } }, { name:'Team Film Night', fx:{ spirit:12, morale:6 } }] },
   { id:'beach', from:0, q:'Beach Day or Tackling?', opts:[{ name:'Team Beach Day', fx:{ spirit:10, morale:6 } }, { name:'Tackle Drills', fx:{ power:2, energy:-15 } }] },
-  { id:'park', from:0, q:'Lie In or Touch Rugby?', opts:[{ name:'Lie In', fx:{ energy:20 } }, { name:'Park Touch Rugby', fx:{ spirit:10, pace:1 } }] },
+  { id:'park', from:0, q:'Lie In or Touch Rugby?', opts:[{ name:'Lie In', fx:{ energy:20 } }, { name:'Touch Rugby', fx:{ spirit:10, pace:1 } }] },
   { id:'party', from:0, q:'Party or Practice?', opts:[{ name:'Birthday Party', fx:{ spirit:12, morale:6 } }, { name:'Goal Kicking', fx:{ kicking:2, energy:-10 } }] },
   { id:'gym', from:1, q:'Rest or Gym?', opts:[{ name:'Rest Day', fx:{ energy:20 } }, { name:'Gym Session', fx:{ power:2, energy:-15 } }] },
   { id:'minis', from:1, q:'Help Coach the Minis?', opts:[{ name:'Help Coach', fx:{ spirit:8, morale:8 } }, { name:'Rest', fx:{ energy:20 } }] },
@@ -123,7 +126,7 @@ function careerLifeRound(cr, deeds) {                // full time in a career ma
   const moved = careerLifeAdd(cr, {
     energy:Math.max(E.backMin, Math.round((100 - l.energy)*E.back)),
     morale:-Math.round((l.morale - 50)*R.drift) + (diff > 0 ? R.win : diff < 0 ? R.loss : R.draw) + Math.min(R.deedCap, did*R.deed),
-    spirit:S.fade + Math.min(S.cap, inv),
+    spirit:S.fade - Math.floor(Math.max(0, l.spirit - 50)/S.high) + Math.min(S.cap, inv),   // the higher it is, the faster it fades: his part in a match never holds it up alone
   });
   if (careerLast) careerLast.life = moved.life;
   return moved.life;
@@ -186,7 +189,7 @@ function careerLifeBarsHtml(cr) {                    // under the skill bars: En
 }
 function careerDilemmaHtml(d) {
   return `<h3 class="cr-q" data-fit>${esc(d.q)}</h3><div class="cr-opts" style="--n:${d.opts.length}">${d.opts.map((o, i) =>
-    `<button class="btn cr-opt" data-o="${i}"><span class="nm">${esc(o.name)}</span><span class="cr-chips">${Object.entries(o.fx).map(([k, v]) => careerLifeChip(k, v)).join('')}</span></button>`).join('')}</div>`;
+    `<button class="btn cr-opt" data-o="${i}"><span class="nm" data-fit>${esc(o.name)}</span><span class="cr-chips">${Object.entries(o.fx).map(([k, v]) => careerLifeChip(k, v)).join('')}</span></button>`).join('')}</div>`;
 }
 /* renderCareer's last step: the bars on the card, and this round's dilemma in place of the fixture and Play Match until it is answered. */
 function careerLifeRender(cr) {

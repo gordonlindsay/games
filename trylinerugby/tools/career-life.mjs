@@ -146,7 +146,16 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   ok(Ds.every(d => d.opts.length >= 2 && d.opts.length <= 3), 'two or three options each');
   ok(Ds.every(d => titled(d.q) && /\?$/.test(d.q) && d.q.length <= 26), `each question is short, Title Case and a question (${Ds.filter(d => !titled(d.q) || !/\?$/.test(d.q)).map(d => d.q)})`);
   const opts = Ds.flatMap(d => d.opts);
-  ok(opts.every(o => titled(o.name) && o.name.length <= 16), `each option a Title Case name of 16 letters at most (${opts.filter(o => !titled(o.name) || o.name.length > 16).map(o => o.name)})`);
+  ok(opts.every(o => titled(o.name)), `each option a Title Case name (${opts.filter(o => !titled(o.name)).map(o => o.name)})`);
+  // one line each at 667x375: a name that wraps makes both buttons a line taller and the hub scrolls (Park Touch Rugby did, by 11px).
+  // The widths are each letter of Big Shoulders Display 800 at 20px with the name's .02em, upper case, measured on its own in
+  // headless Chromium (their sums came within half a pixel of every name rendered whole); the room is an option button's inside
+  // at 667x375 (two halves of the hub's right column, less 12px each side). Re-measure both if the CSS changes: render the hub
+  // with a dilemma, read .cr-opt's clientWidth less its padding, and a span of each letter inside it.
+  const W20 = { A:9.27, B:9.24, C:9.5, D:9.63, E:8.04, F:7.97, G:9.55, H:9.5, I:4.72, J:8.85, K:9.58, L:7.9, M:14.22, N:10.57, O:9.65, P:9.15, Q:9.65, R:9.3, S:9.24, T:8.1, U:9.47, V:9.54, W:15.07, X:9.13, Y:9, Z:8.18, ' ':4.4 };
+  const ROOM = 133, wide = n => [...n.toUpperCase()].reduce((a, ch) => a + (W20[ch] ?? W20.W), 0);
+  const widest = opts.reduce((a, o) => (wide(o.name) > wide(a.name) ? o : a));
+  ok(opts.every(o => wide(o.name) <= ROOM), `each option name fits one line of its button at 667x375 (widest ${widest.name}, ${wide(widest.name).toFixed(1)} of ${ROOM}px; too wide: ${opts.filter(o => wide(o.name) > ROOM).map(o => o.name + ' ' + wide(o.name).toFixed(1))})`);
   ok(opts.every(o => Object.keys(o.fx).length >= 1 && Object.keys(o.fx).length <= 2 && Object.keys(o.fx).every(k => skillKeys.includes(k) || barKeys.includes(k))), 'one or two effects each, every one a skill or a bar (two chips fit the hub at 667x375)');
   ok(opts.every(o => Object.values(o.fx).some(v => v > 0) && Object.values(o.fx).every(v => Number.isInteger(v) && Math.abs(v) <= 20)), 'every option gives something: no dilemma is a trap');
   ok(opts.every(o => Object.entries(o.fx).every(([k, v]) => v > 0 || k === 'energy')), 'the only cost is Energy');
@@ -223,6 +232,15 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   playOut(10, 10, { passes:400, deeds:{ tries:5 } });
   ok(cr.life.morale === 20 + Math.round(30*LF.morale.drift) + LF.morale.draw + LF.morale.deedCap && cr.life.spirit === 50 + LF.spirit.fade + LF.spirit.cap, `a draw lifts a low Morale; Team Spirit takes ${LF.spirit.cap} at most from a match (${json(cr.life)})`);
   ok(LF.energy.backMin > 0 && LF.spirit.fade < 0, 'Energy always comes back some, Team Spirit always fades if never tended');
+  // the higher Team Spirit is, the faster it fades: 1 more for every LF.spirit.high above 50, so his part in a match never holds it up
+  { const c6 = C.create({ pos:'B', num:5, club:X.CLUBS[0] }); C.set(c6);
+    Object.assign(c6.life, { spirit:100 });
+    playOut(10, 5, { passes:400, deeds:{ tries:5 } });
+    ok(c6.life.spirit === 100 + LF.spirit.fade - Math.floor(50/LF.spirit.high) + LF.spirit.cap && c6.life.spirit < 100, `at 100 it fades ${-LF.spirit.fade + Math.floor(50/LF.spirit.high)}: even the most a match can give (${LF.spirit.cap}) leaves it lower (${c6.life.spirit})`);
+    Object.assign(c6.life, { spirit:79 });
+    playOut(10, 5, { passes:0 });
+    ok(c6.life.spirit === 79 + LF.spirit.fade - Math.floor(29/LF.spirit.high), `at 79, ${-LF.spirit.fade + Math.floor(29/LF.spirit.high)} (${c6.life.spirit})`);
+    C.set(cr); }
   delete cr.life; cr.trained = false;
   C.trainDone({ id:'egg', stars:1 }); playOut(5, 5);
   ok(cr.life && cr.life.energy === 72 + Math.max(LF.energy.backMin, Math.round(28*LF.energy.back)) && cr.season.round > 0, 'a career object made without its bars gets them, rather than breaking a session or a full time');
@@ -306,7 +324,10 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   ok(rest === BASE.rest, `a career match at Energy 100, Morale 50, Team Spirit 50 plays exactly as a career match did before the bars (${rest}, pinned ${BASE.rest})`);
   ok(careerMatch(REST, 131, { noLife:true }) === rest && careerMatch({ ...REST, energy:60 }) === rest, 'the same with no bars at all, and with Energy at 60');
   ok(careerMatch({ ...REST, spirit:90 }) !== rest && careerMatch({ ...REST, morale:90 }) !== rest && careerMatch({ ...REST, energy:10 }) !== rest, 'Team Spirit, Morale and Energy each change a match once away from rest');
-  ok(careerMatch({ ...REST, spirit:90 }, 131, { pro:true }) === rest, 'Pro Mode with this file alone: Team Spirit moves nothing here (the Pro Mode builder owns it there)');
+  // With no Pro Mode in the build, M.careerPro set by hand plays like any career match: none of this file's Team Spirit acts there.
+  // Once career-pro.js is in, M.careerPro is Pro Mode itself and the match is a different one, so this proves nothing; section 7
+  // already shows careerLifeHands and careerLifeSupport stand aside under M.careerPro.
+  if (!T.careerPro) ok(careerMatch({ ...REST, spirit:90 }, 131, { pro:true }) === rest, 'Pro Mode with this file alone: Team Spirit moves nothing here (the Pro Mode builder owns it there)');
   ok(others() === BASE.others, 'and after career matches with every bar, everything else still plays as before');
 }
 
@@ -332,6 +353,34 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   ok(lo < mid && mid < hi && hi > lo*1.3, `passes to him a match (12 seeded, one-minute halves): ${lo.toFixed(2)} at Team Spirit 20, ${mid.toFixed(2)} at 50, ${hi.toFixed(2)} at 90`);
 }
 
+// 9b. Team Spirit over two seasons, real matches (the bot, two-minute halves) through careerArm and full time, from Team Spirit 100:
+//     a player who always takes the training option (a drill every round too, and a dilemma with no training option left
+//     unanswered) never goes out with the team, and it must fall clearly however much the team then plays through him;
+//     one who always goes out with the team keeps it up. That is the train-or-socialise trade-off.
+{
+  const career2 = (policy, pre = 'career-spirit-') => {   // the seasons' ids are fixed (the game's are the clock's), so the same dilemmas come up every run
+    reseed(31); const cr = withId(C.create({ pos:'B', num:5, club:X.CLUBS[0] }), pre + '0'); C.set(cr); Object.assign(cr.life, { energy:80, morale:60, spirit:100 });
+    const trail = [];
+    for (let i = 0; i < 10; i++) {
+      if (cr.season.round >= 5) { C.advance(); withId(cr, pre + '1'); }
+      const d = L.dilemma(cr);
+      if (d) { const j = d.opts.findIndex(o => (policy === 'train' ? skillKeys.some(k => o.fx[k] >= 2) : o.fx.spirit > 0)); if (j >= 0) L.choose(j); }
+      if (policy === 'train' && C.drills(cr).length) { cr.trained = false; C.trainDone({ id:'egg', stars:2, success:true }); }
+      const c = cr.season, pair = c.fixtures[c.round].find(q => q.includes(c.user)), opp = pair[0] === c.user ? pair[1] : pair[0];
+      reseed(700 + i);
+      T.newMatch(c.teams[c.user], c.teams[opp], { halfLen:120, diff:1, headless:true, humans:[true, false], arcade:true, duels:'live' });
+      C.arm(); runOut(); C.record();
+      trail.push(cr.life.spirit);
+    }
+    C.set(null);
+    return trail;
+  };
+  const pre = process.env.SPIRIT_IDS || 'career-spirit-', train = career2('train', pre), social = career2('social', pre);
+  if (process.env.SPIRIT_IDS) console.log('trails', train.join(' '), '/', social.join(' '));
+  ok(train[4] <= 90 && train[9] <= 85 && Math.max(...train.slice(5)) < 90, `never tended, Team Spirit falls from 100 (${train.join(' ')})`);
+  ok(Math.min(...social) >= 75 && social[9] >= train[9] + 5, `going out with the team keeps it up (${social.join(' ')})`);
+}
+
 // 10. the hub
 {
   const src = readGameSource(), html = src.slice(src.indexOf('<body>'), src.indexOf('<script>'));
@@ -345,6 +394,8 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   ok(!$('cr-dilemma').hidden && $('cr-play').hidden && $('cr-next').hidden, 'a dilemma waiting: the card in place of the fixture and Play Match');
   const box = $('cr-dilemma').innerHTML;
   ok(/<h3 class="cr-q" data-fit>Training or Pizza Night\?<\/h3>/.test(box) && (box.match(/<button class="btn cr-opt" data-o="/g) || []).length === 2, 'its question as the heading, an option a button');
+  const nmCss = (src.match(/\.cr-opt \.nm\{([^}]*)\}/) || [])[1] || '';
+  ok((box.match(/<span class="nm" data-fit>/g) || []).length === 2 && /white-space:nowrap/.test(nmCss) && /align-self:stretch/.test(nmCss) && /min-width:0/.test(nmCss), 'each name kept to one line, as wide as its button, and stepped down by careerFit if a device draws it wider');
   ok(box.includes('>Extra Training<') && box.includes('>Handling +2<') && box.includes('>Energy −15<') && box.includes('>Team Spirit +12<') && box.includes('>Morale +6<'), 'names, and chips such as Energy −15 and Team Spirit +12');
   ok(box.includes(`--k:${L.COL.energy}`) && box.includes('--k:#5fd38a'), 'each chip in its bar\'s or skill\'s colour');
   ok(L.pick(1) && $('cr-dilemma').hidden && !$('cr-play').hidden && !$('cr-next').hidden && $('cr-dilemma').innerHTML === '', 'picked: the fixture and Play Match are back');

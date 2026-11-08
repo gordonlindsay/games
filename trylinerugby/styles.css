@@ -528,7 +528,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-q{margin:0;font:900 28px/1 var(--display);text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow-wrap:normal}
 .cr-opts{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:10px}   /* equal halves */
 .btn.cr-opt{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:84px;padding:10px 12px;text-align:left}
-.cr-opt .nm{font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+.cr-opt .nm{align-self:stretch;min-width:0;font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow-wrap:normal}   /* one line, always: a name on two makes both buttons taller and the hub scrolls at 667x375; careerFit steps a wide one down */
 .cr-opt .cr-chips{gap:4px}
 .cr-opt .cr-chip{padding:3px 6px;letter-spacing:.04em;white-space:nowrap}
 @media (orientation:landscape) and (max-height:560px){
