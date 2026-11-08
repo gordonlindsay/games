@@ -39,6 +39,7 @@ function startDemo() {
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
 }
 function lockLandscape() {
+  if (typeof nativeOn === 'function' && nativeOn()) return;   // the Try Line app is landscape with no bars from the start (native.js); its web views have no fullscreen to ask for
   if (!window.matchMedia('(pointer: coarse)').matches) return;
   try {
     const el = document.documentElement;

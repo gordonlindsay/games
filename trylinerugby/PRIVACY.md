@@ -30,7 +30,7 @@ Super Fan supports a partner club: before you buy, the game states the share of 
 
 Once loaded, the game plays offline. When it is online it fetches only its own files, from the site it came from, to load and to update itself. The app has its files built in, and updates come through the App Store or Google Play.
 
-The web version also loads its two typefaces from Google Fonts. Google receives that request, as it does from any website that uses its fonts. The game adds nothing about you or your play to it.
+Its two typefaces come with the game, on the web and in the app. It never loads fonts from Google Fonts or any other site.
 
 ## Import
 

@@ -60,6 +60,17 @@ export function assertBundleCurrent() {
   return files.length;
 }
 
+// The self-hosted typefaces are shell assets too: fonts/fonts.css and every file it names (once each, in the order it first
+// names them), cached for offline play, hashed into the worker's version and copied into the app (app/scripts/copy-www.mjs).
+// A file the stylesheet names but the folder lacks fails the build (assembleWorker reads every asset).
+export function fontAssets() {
+  const css = fs.readFileSync(path.join(gameDirectory, 'fonts/fonts.css'), 'utf8');
+  const files = [...new Set([...css.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)].map(m => m[1]))];
+  if (!files.length || files.some(f => !/^[a-z0-9-]+\.woff2$/.test(f))) throw new Error('fonts/fonts.css must name local .woff2 files beside it.');
+  return ['fonts/fonts.css', ...files.map(f => 'fonts/' + f)];
+}
+shellAssets.push(...fontAssets());
+
 const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   try {

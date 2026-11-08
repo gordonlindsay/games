@@ -139,7 +139,7 @@ Safeguarding: only club and team names, shirt colours and table numbers leave a 
 
 The game includes a web app manifest, app icons and a scoped service worker. On a supported HTTPS browser, visit online and wait for **Offline Ready** before relying on cached play. The home menu offers **Install Game** when the browser provides an install prompt; How to Play includes manual home-screen guidance. Installation does not move your browser save between browsers or devices.
 
-The worker caches only this game's local shell and checks downloaded file hashes against the generated version. It does not cache other games, remote fonts, arbitrary requests or browser saves. Offline fonts use the existing system-font fallbacks. Cache storage must remain available; verified files can refill missing entries when online. A mismatched or incomplete new deployment leaves the working version in place.
+The worker caches only this game's local shell and checks downloaded file hashes against the generated version. The shell includes the game's own typefaces (`fonts/`, under the Open Font License), so offline play keeps the look and no page calls Google Fonts. It does not cache other games, arbitrary requests or browser saves. Cache storage must remain available; verified files can refill missing entries when online. A mismatched or incomplete new deployment leaves the working version in place.
 
 Updates wait by default. **Update Game** appears on the home menu and reloads only after an explicit choice; entering a match meanwhile defers the reload until home returns. Other tabs never reload automatically, and their older caches are retained while windows remain open. Install/update buttons support touch, keyboard and controller navigation.
 
@@ -152,6 +152,16 @@ Use HTTPS to test real service-worker installation. The HTTP development preview
 The stores link three pages beside the game, served by GitHub Pages and styled by `pages.css`: `privacy.html` (made from [PRIVACY.md](PRIVACY.md) by `node tools/listing.mjs --write`), `support.html` (Restore Purchases, the unlocks, answers for parents) and `superfan.html` (Super Fan, and each partner club with its share once the club has agreed in writing). They load nothing from another site and carry no script.
 
 `node tools/listing.mjs` checks the pack: every file there, the pages linking each other, no em dashes, the copy inside each store's limits and free of the banned words, Apple's copy naming no audience by age (guideline 2.3.8), every share stated as a share of what we receive, privacy.html matching PRIVACY.md, PRIVACY.md's fonts line matching index.html, superfan.html naming only the `FAN_CLUBS` marked `agreed:true`, with their shares, `storeShareLine` in the game using superfan.html's words, and every screenshot at its exact size. `node tools/listing-shots.mjs` re-shoots the screenshots with Playwright; they need doing again once the new graphics land.
+
+## The App
+
+`app/` at the repository root wraps the game for the App Store (Google Play in phase 2) with Capacitor; `app/README.md`
+has the steps on a Mac. The app carries the same files the site serves, and its native projects are landscape either
+way up. What it does differently is in `src/native.js`, and none of it runs in a browser (`nativeOn()` is false there):
+no service worker or Install and Update buttons, How to Play's app entries, no status bar, haptics through the phone's
+own engine, the save copied into the app's own storage and put back if the web view loses it, and Android's Back as the
+game's own. `node tools/native.mjs` checks it under a stand-in Capacitor, the web build unchanged, the typefaces and the
+app's scripts.
 
 ## Development source and checks
 
@@ -179,6 +189,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
 | `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
 | `src/practice.js` | Isolated drills and practice feedback |
+| `src/native.js` | The Try Line app (Capacitor): `nativeOn()`, haptics, the save's copy, bars, How to Play's app entries and Back |
 | `src/offline-client.js` | Optional browser installation, offline status and safe update controls |
 | `src/service-worker.js` | Separate worker template; cached shell and integrity checks (outside the game bundle) |
 | `src/boot.js` | Frame loop, diagnostic API and startup |

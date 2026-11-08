@@ -1,0 +1,35 @@
+{
+  "name": "tryline-rugby-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Try Line Rugby as an iPhone, iPad and Android app (Capacitor). The game itself is ../trylinerugby; see README.md.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "www": "node scripts/copy-www.mjs",
+    "sync": "node scripts/copy-www.mjs && cap sync",
+    "native-config": "node scripts/native-config.mjs",
+    "make-assets": "node scripts/make-assets.mjs",
+    "assets": "capacitor-assets generate --ios",
+    "assets-android": "capacitor-assets generate --android",
+    "ios": "npm run sync && cap open ios",
+    "android": "npm run sync && cap open android"
+  },
+  "//": "TODO(store builder): add the in-app purchase plugin to dependencies at the exact version named in trylinerugby/store/README.md, then npm install and npm run sync.",
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "4.0.0",
+    "@capacitor/cli": "8.6.0",
+    "sharp": "0.35.5"
+  }
+}

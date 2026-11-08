@@ -181,6 +181,7 @@ function load() {
 }
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
+  if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
   settings.duels = true;
   retainCompletedSeason(champ);
   try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague })); } catch (e) { /* private mode, or full */ }

@@ -29,6 +29,7 @@
   "training.js",
   "practice.js",
   "ui-career.js",
+  "native.js",
   "offline-client.js",
   "boot.js"
 ]
