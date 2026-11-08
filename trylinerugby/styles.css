@@ -952,3 +952,16 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 @media (orientation:landscape) and (max-height:380px){ .cr-card{gap:6px} }
 /* the first call-up's twelve: four across on a phone held sideways, so they fit under Called Up at 667x375 */
 @media (orientation:landscape) and (max-width:759px){ .cr-nations{grid-template-columns:repeat(4,minmax(0,1fr))} }
+
+/* ===== career and silverware ===== */
+/* A career cup's draw (#s-career-draw, src/ui-career.js): Championship mode's cup hub (#s-cup) with the career's stage on the left, so it
+   fits a phone held sideways the same way: the stage, its line, the last round's card and Back to Career; the draw on the right. */
+@media (orientation:landscape) and (max-height:560px){
+  #s-career-draw .wrap{gap:12px 20px}
+  #s-career-draw .cup-main,#s-career-draw .cup-side{gap:10px}
+  #s-career-draw h2.title{font-size:36px}
+  #s-career-draw .res{padding:6px 10px}
+  #s-career-draw .cb-col{gap:6px}
+  #s-career-draw .cb-row{min-height:20px;padding-block:1px}
+  #s-career-draw .cb-tie.tbc{min-height:42px}
+}
