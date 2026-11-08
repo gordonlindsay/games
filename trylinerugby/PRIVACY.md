@@ -1,8 +1,8 @@
-# Privacy: Try Line Rugby
+# Privacy: Tryline Rugby Sevens
 
-Try Line Rugby is made to be safe for children. It collects nothing about you or your child. Nobody, including us, receives your name, your email, where you are or how you play.
+Tryline Rugby Sevens is made to be safe for children. It collects nothing about you or your child. Nobody, including us, receives your name, your email, where you are or how you play.
 
-Last updated 8 November 2026. This covers the game in the App Store and Google Play apps and on the web.
+Last updated 8 November 2026. This covers the app from the App Store, the Android app once it is on Google Play, and the game on the web.
 
 ## What the game keeps
 
@@ -18,13 +18,13 @@ Settings, the teams you make, your championship, your Trophy Cabinet, your caree
 
 ## Purchases
 
-The app is free to download. Full Game and Super Fan are one-off unlocks, bought through the App Store or Google Play. Apple or Google takes the payment under its own privacy policy: the game never sees your name, email, card or store account. The game keeps only a note of which unlocks you have, on the device. Restore Purchases asks the App Store or Google Play for them again.
+The app is free to download. Full Game and Super Fan are one-off unlocks, bought through the App Store (or Google Play, for the Android app). Apple or Google takes the payment under its own privacy policy: the game never sees your name, email, card or store account. The game keeps only a note of which unlocks you have, on the device. Restore Purchases asks the App Store or Google Play for them again.
 
 Every purchase, and Restore Purchases, starts with the grown-up check. If your child's account needs your approval to buy (Ask to Buy on Apple, purchase approvals in Google Family Link), that still applies.
 
 ## Super Fan
 
-Super Fan supports a partner club: the share of each Super Fan unlock that goes to the club is stated in the game before you buy. We count each club's unlocks from the sales reports Apple and Google send us. Those reports say how many of each unlock sold and what we were paid for them, not who bought them. Neither we nor the club learn who you are.
+Super Fan supports a partner club: before you buy, the game states the share of what we receive for each Super Fan unlock that goes to the club. We count each club's unlocks from the sales reports Apple and Google send us. Those reports say how many of each unlock sold and what we were paid for them, not who bought them. Neither we nor the club learn who you are.
 
 ## Going online
 
@@ -46,4 +46,4 @@ The game holds nothing about you anywhere but on your own device, so there is no
 
 ## Contact
 
-Try Line Rugby is made by [OWNER: your name or company, as it appears on the App Store and Google Play]. Questions about privacy: [OWNER: contact email].
+Tryline Rugby Sevens is made by SignCheck Ltd. Questions about privacy: support@signcheck.ai.

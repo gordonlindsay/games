@@ -32,6 +32,5 @@ table{width:100%;border-collapse:collapse;font-size:16px}
 th,td{text-align:left;vertical-align:top;padding:8px 8px 8px 0;border-bottom:1px solid var(--rule)}
 th{font:700 13px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim)}
 td:first-child{white-space:nowrap;padding-right:16px}
-.tbc{color:var(--chalk-dim)}
 .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);color:var(--chalk-dim);font-size:14px}
 @media (max-width:360px){ .btn{font-size:14px;padding:8px 6px} }

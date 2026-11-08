@@ -1,17 +1,19 @@
 # App Store Connect: Answers
 
-What to enter in App Store Connect for Try Line Rugby, and why each answer is right for this game. Written on 8 November 2026 against the game at the store-launch branches; Apple changes its forms, so read each question as it stands on the day and check the answer still fits. Where the owner has to decide or fill something in, it says **[OWNER: ...]**.
+What to enter in App Store Connect for Tryline Rugby Sevens, and why each answer is right for this game. Written on 8 November 2026 against the game at the store-launch branches; Apple changes its forms, so read each question as it stands on the day and check the answer still fits. Where the owner has to decide or fill something in, it says **[OWNER: ...]**.
 
 The owner's decisions this follows (2026-11-08): the Sports category, **not** Apple's Kids category; an age rating of 4+; a free download with one-off unlocks, no subscriptions and no ads; the kids-safe behaviour kept anyway (no ads, no tracking, no third-party analytics, the grown-up check in front of purchases and anything that leaves the app).
+
+And his further answers the same day: the store name **Tryline Rugby Sevens** with the subtitle **Play and support your club**; **SignCheck Ltd** as the seller, through its existing Apple Developer account; the bundle id **`ai.signcheck.tryline`**; the **App Store only at launch** (iPhone first; Google Play is phase 2); Super Fan at **£3.99**, with **50% of what Apple pays us** for each unlock going to the club; support at **support@signcheck.ai**.
 
 ## App Information
 
 | Field | Answer | Why |
 |---|---|---|
-| Name | Try Line Rugby | LISTING.md has the copy and a fallback if the name is taken. |
-| Subtitle | Rugby Sevens, Easy to Learn | Draft in LISTING.md. |
+| Name | Tryline Rugby Sevens | The owner's choice (20 of 30). LISTING.md has a fallback if the name is taken. |
+| Subtitle | Play and support your club | The owner's choice (26 of 30). |
 | Primary language | English (U.K.) | The copy is UK English. |
-| Bundle ID | **[OWNER: the app id in the native project's capacitor.config.json]** | Must match the build exactly; it cannot be changed after the first upload. |
+| Bundle ID | `ai.signcheck.tryline` | The owner's choice: SignCheck Ltd's domain, signcheck.ai, reversed. It cannot be changed after the first upload, and the build must carry exactly this id: the native project's `appId` in `app/capacitor.config.json` and the bundle identifier in Xcode. The native scaffold was first made with the placeholder `com.gordonlindsay.tryline`; check it says `ai.signcheck.tryline` before the first upload. |
 | SKU | TRYLINE1 | Internal only, never shown. Any unique text works. |
 | Primary category | Games, with subcategories Sports and Family | See "Category" below. |
 | Secondary category | Sports | |
@@ -22,15 +24,19 @@ The owner's decisions this follows (2026-11-08): the Sports category, **not** Ap
 | Privacy Policy URL | https://gordonlindsay.github.io/games/trylinerugby/privacy.html | Required. Made from PRIVACY.md. |
 | Support URL | https://gordonlindsay.github.io/games/trylinerugby/support.html | Required. |
 | Marketing URL | https://gordonlindsay.github.io/games/trylinerugby/ | Optional: the web version. |
-| Copyright | **[OWNER: for example "2026 Your Name"]** | Shown on the store page. |
+| Copyright | 2026 SignCheck Ltd | Shown on the store page. |
+
+**Seller.** The App Store shows the seller and developer from the account the app is made in, not from a field here: SignCheck Ltd's Apple Developer account (an organisation membership), so the store page reads **SignCheck Ltd**. The name under the icon on the home screen is the native project's (`appName`, Xcode's display name), and only about 12 characters show there, so "Tryline" or "Tryline Rugby" fits where the full store name would be cut.
+
+**Guideline 2.3.8.** Apple: 'Use of terms like "For Kids" and "For Children" in app metadata is reserved in the App Store for the Kids Category.' This app is in Games, Sports, not the Kids Category. So the name, subtitle, promotional text, description, keywords, screenshot captions and in-app purchase names may name the **Kids level** as a level, but never say who the app is for by age ("for kids", "for 6 to 10 year olds"). `node tools/listing.mjs` fails Apple copy that does. The one open question is the keyword `kids` (LISTING.md). The same guideline asks that the app name and icon be similar: the game's own title still reads Try Line Rugby (index.html and the Try Line wordmark), close to the store name, though the owner may want the two to match.
 
 ### Category
 
-The owner chose Sports. In App Store Connect a game's primary category is **Games**, and Sports is a subcategory of Games: that is how the App Store lists rugby, football and cricket games, and it puts Try Line Rugby in the Sports games charts and searches. Choosing the non-game **Sports** category as the primary one is meant for scores, news and fitness apps, and App Review can move a game out of it. So: primary **Games**, subcategories **Sports** and **Family**, and **Sports** again as the secondary category. Family is optional; it suits a game with a Kids level, without being Apple's Kids category (that is set under Age Categories, not here).
+The owner chose Sports. In App Store Connect a game's primary category is **Games**, and Sports is a subcategory of Games: that is how the App Store lists rugby, football and cricket games, and it puts the app in the Sports games charts and searches. Choosing the non-game **Sports** category as the primary one is meant for scores, news and fitness apps, and App Review can move a game out of it. So: primary **Games**, subcategories **Sports** and **Family**, and **Sports** again as the secondary category. Family is optional; it suits a game with a Kids level, without being Apple's Kids category (that is set under Age Categories, not here).
 
 ## Age Rating: 4+
 
-Apple works the rating out from the answers. Every answer below is "None" or "No", which gives **4+**. The reasons are given so the owner can check each against the game.
+Apple works the rating out from the answers. Every answer below is "None" or "No" except Contests, which is "Infrequent", and Apple rates Infrequent Contests 4+ too. That gives **4+**, unless the owner answers Cartoon or Fantasy Violence "Infrequent", which makes it **9+**. Guideline 2.3.6 asks for honest answers ("If your app is mis-rated, customers might be surprised by what they get, or it could trigger an inquiry from government regulators"), so Apple's definitions are quoted in full where an answer is close. The reasons are given so the owner can check each against the game.
 
 **In-App Controls**
 
@@ -66,7 +72,7 @@ Apple works the rating out from the answers. Every answer below is "None" or "No
 
 | Question | Answer | Reason |
 |---|---|---|
-| Cartoon or Fantasy Violence | None | The tackling is sporting contact within the laws of rugby: a tackle, a ruck, a scrum. There is no blood, no injury shown, no fighting or harm meant; tackled players get up and play on. "Big Hit" is the sport's own word for a hard, fair tackle, shown with a banner and a short screen shake. Apple's definition is "physical conflict or harm", and sports games with tackling are commonly rated 4+ on the store. If the owner prefers caution, "Infrequent" here makes the app **9+**. |
+| Cartoon or Fantasy Violence | **[OWNER: None (4+) or Infrequent (9+)]** | Apple's definition in full: "Physical conflict or harm of an exaggerated or fantastical nature that can easily be distinguished from real life. May include: animated magic used to harm animals or animated human wrestling." For None: the tackling is sporting contact within the laws of rugby (a tackle, a ruck, a scrum); there is no blood, no injury shown, no fighting or harm meant, and tackled players get up and play on. For Infrequent: a tackle is physical conflict, and the game exaggerates the hardest ones on purpose. A Big Hit in a match you play gets a banner, a 180ms freeze and a harder screen shake (`ARCADE.hit` in src/arcade.js, src/contact.js), and Apple's own example, animated human wrestling, is a contact sport. None gives 4+; Infrequent makes the app **9+**. The owner's call. |
 | Realistic Violence | None | Flat cartoon players; no harm. |
 | Prolonged Graphic or Sadistic Realistic Violence | None | |
 | Guns or Other Weapons | None | |
@@ -77,7 +83,7 @@ Apple works the rating out from the answers. Every answer below is "None" or "No
 |---|---|---|
 | Gambling | No | No real-money betting. |
 | Simulated Gambling | None | No betting or wagering of any kind. |
-| Contests | None | No rankings, leaderboards or rewards between players. The championship and career are against the computer. Two Player is a friendly match on one computer, with a series score that ends when you leave. "Infrequent" would still be 4+; "Frequent" would make it 13+. |
+| Contests | Infrequent | Apple's definition in full: "Events that allow users to compete with one another for rankings, rewards, or the achievement of personal goals. May include: skill-based competitions, trivia quizzes, or sport or fitness contests". Two Player is two people competing head to head in a sport match on one device, with a series score, which is that. It is not Frequent: there are no online rankings or leaderboards, and the championship and career are against the computer. Apple rates Infrequent Contests **4+** ("Frequent" would make it 13+). In Brazil, where Apple applies Brazil's own table, Infrequent contests rates **A6** instead of AL. |
 | Loot Boxes | No | The two unlocks are fixed and known before you buy. Nothing is random and nothing is bought with in-game currency. |
 
 Questions added after this was written (two new content descriptors were reported for 16 November 2026, one of them about sharing a person's real-world location): the game shares no location and has no social features, so the answer to anything of that kind is No or None.
@@ -86,7 +92,7 @@ Questions added after this was written (two new content descriptors were reporte
 
 In App Store Connect, under App Privacy, answer **"No, we do not collect data from this app"**. The label then reads **Data Not Collected**. Tracking: **No** (there is no App Tracking Transparency prompt, and none is needed).
 
-Apple's rule: data is "collected" when it is sent off the device so that the developer or a third-party partner can get at it for longer than it takes to answer the request. Data handled only on the device is not collected. Why nothing in Try Line Rugby counts:
+Apple's rule: data is "collected" when it is sent off the device so that the developer or a third-party partner can get at it for longer than it takes to answer the request. Data handled only on the device is not collected. Why nothing in Tryline Rugby Sevens counts:
 
 - **Saves.** Settings, teams, championship, career (with the optional first name), an imported league and the list of unlocks stay in the app's own storage on the device. The native layer copies the save into Capacitor Preferences, which is also on the device. Nothing is uploaded.
 - **Purchases.** StoreKit takes the payment. Apple's guidance: "You are not responsible for disclosing data collected by Apple", and payment information entered outside the app, which the developer never sees, "is not collected". The game reads back only which product ids the account owns and keeps that on the device. No receipt is sent to any server of ours or anyone else's; the store adapter talks to StoreKit and nothing else (no RevenueCat or similar service, which would collect purchase history).
@@ -120,8 +126,8 @@ All are **Non-Consumable**. Create them under Monetisation, In-App Purchases, be
 | Product ID | Reference name | Price | Notes |
 |---|---|---|---|
 | `tryline.full` | Full Game | £1.99 | Championship, Career, Create Team and Hard. |
-| `tryline.fan.farnham` | Super Fan Farnham RUFC | **[OWNER: price]** | Full Game, Import and the club badge. On sale in the game only once its share is set in FAN_CLUBS. |
-| `tryline.fan.<club>` | Super Fan (club name) | **[OWNER: price]** | One per partner club, same shape. There is no generic `tryline.fan`. |
+| `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Import and the club badge. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set in FAN_CLUBS. |
+| `tryline.fan.<club>` | Super Fan (club name) | £3.99 | One per partner club, same shape. There is no generic `tryline.fan`. |
 
 The ids are the store builder's (src/store.js, `FAN_CLUBS`, and `trylinerugby/store/README.md`); they must match exactly.
 
@@ -149,17 +155,17 @@ Full Game and Import. Supports Farnham RUFC.
 
 **Family Sharing.** Non-consumables can be shared with a Family Sharing group. Turning it on is kind to families (one unlock for every child's device). It cannot be turned off again for a product once on. For Super Fan it means one sale can unlock several devices, and only the one sale is reported and shared with the club. **[OWNER: decide, per product.]**
 
-**Price of Super Fan.** Apple lets a price be any of its price points. The club's share is worked out from what Apple pays, so a higher price than Full Game gives the club something worth having. **[OWNER: set it; SUPER_FAN.md has a worked example.]**
+**Price of Super Fan.** £3.99, the owner's choice (Full Game stays £1.99). The club's share is 50% of what Apple pays us for each unlock, after its commission and VAT: about £1.41 of £3.99 in the UK under the Small Business Program's 15% commission, about £1.16 at 30% (SUPER_FAN.md has the arithmetic). The game and superfan.html say "of what we receive", so nobody reads it as half the price.
 
 ## App Review Information
 
 - Sign-in required: **No**.
-- Contact: **[OWNER: name, phone and email for App Review]**.
+- Contact: **[OWNER: the name and phone number App Review should use]**, email support@signcheck.ai.
 - Notes, ready to paste:
 
 <!-- copy:apple.review -->
 ```text
-Try Line Rugby is a rugby sevens game. The whole game runs from files inside the app and plays offline; it downloads no code.
+Tryline Rugby Sevens is a rugby sevens game. The whole game runs from files inside the app and plays offline; it downloads no code.
 
 Unlocks: Full Game (tryline.full) and Super Fan for a partner club (tryline.fan.<club>) are non-consumable in-app purchases. Locked modes show an Unlock card. Restore Purchases is in the Grown-Ups panel, on the home screen.
 
@@ -167,7 +173,7 @@ Grown-up check: purchases, Restore Purchases, the privacy and support links and 
 
 Import (part of Super Fan) reads a club or tournament page you paste in. A public link to try: [OWNER: a club page link]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
 
-Super Fan is an ordinary purchase of an unlock. Before purchase the game states the share of each Super Fan unlock that goes to the partner club; the developer pays that share to the club under a written agreement.
+Super Fan is an ordinary purchase of an unlock. Before purchase the game states the share of what we receive for each Super Fan unlock that goes to the partner club (50% of Apple's proceeds); SignCheck Ltd pays that share to the club under a written agreement.
 
 No ads, no analytics, no accounts, no data collected.
 ```
@@ -181,7 +187,7 @@ Choose **Manually release this version**, so nothing goes live before the web's 
 ## Pricing and Availability
 
 - Price: **Free** (Tier 0), with the in-app purchases above.
-- Availability: **[OWNER: all countries, or the UK first]**. Selling in the EU needs the Digital Services Act trader declaration (see LAUNCH_CHECKLIST.md): a trader's address, phone and email are shown on the EU store pages.
+- Availability: **[OWNER: all countries, or the UK first]**. Selling in the EU needs the Digital Services Act trader declaration (see LAUNCH_CHECKLIST.md): SignCheck Ltd's address, phone and email are then shown on the EU store pages.
 
 ## Screenshots
 

@@ -1,8 +1,10 @@
-# Google Play Console: Answers
+# Google Play Console: Answers (Phase 2)
 
-What to enter in Play Console for Try Line Rugby, and why. Written on 8 November 2026. Google's help pages could not be read from the session that wrote this (support.google.com was outside its network), so every answer here is from the game's behaviour and Google's policies as generally published: read each question as it stands on the day, and check the answer still fits. **[OWNER: ...]** marks what the owner fills in or decides.
+> **Phase 2: after the App Store launch.** The owner chose iPhone first (8 November 2026): the App Store only at launch, Google Play after. This file is kept ready for then; nothing in it blocks the App Store launch.
 
-The owner's decisions this follows (2026-11-08): the target audience **includes children under 13**, so Google Play's **Families policy applies**, and the app is designed for it; a free download with one-off unlocks, no subscriptions and no ads.
+What to enter in Play Console for Tryline Rugby Sevens, and why. Written on 8 November 2026. Google's help pages could not be read from the session that wrote this (support.google.com was outside its network), so every answer here is from the game's behaviour and Google's policies as generally published: read each question as it stands on the day, and check the answer still fits. **[OWNER: ...]** marks what the owner fills in or decides.
+
+The owner's decisions this follows (2026-11-08): the target audience **includes children under 13**, so Google Play's **Families policy applies**, and the app is designed for it; a free download with one-off unlocks, no subscriptions and no ads; the developer is **SignCheck Ltd**, so the Play developer account is an **organisation** account in the company's name; the app id is `ai.signcheck.tryline`, as on the App Store.
 
 ## Store Settings
 
@@ -11,11 +13,11 @@ The owner's decisions this follows (2026-11-08): the target audience **includes 
 | App or game | Game |
 | Category | Sports |
 | Tags | Sports, Rugby (if offered), Casual, Offline (choose from Google's list) |
-| Contact email | **[OWNER: a support address; it is shown on the store page]** |
+| Contact email | support@signcheck.ai (shown on the store page) |
 | Website | https://gordonlindsay.github.io/games/trylinerugby/ |
 | Privacy policy | https://gordonlindsay.github.io/games/trylinerugby/privacy.html |
 | Default language | English (United Kingdom), en-GB |
-| Package name | **[OWNER: the app id in the native project; it can never change once published]** |
+| Package name | `ai.signcheck.tryline`, the same as the App Store's bundle id. It can never change once published; the native project's `appId` (`app/capacitor.config.json`) must say it before the first upload. |
 
 ## Store Listing
 
@@ -39,17 +41,17 @@ Copy is in LISTING.md (app name, short description, full description). Graphics:
 | Could the store listing unintentionally appeal to children? | Not asked once a children's age group is ticked | The app does target children. |
 | Appeals to children (where asked) | Yes | |
 
-Because the audience includes children and adults, Google treats it as a **mixed audience** app. A mixed audience app that collects data from children needs a neutral age screen; Try Line Rugby collects nothing from anyone, so no age screen is needed. The grown-up check is not an age screen and is not offered as one.
+Because the audience includes children and adults, Google treats it as a **mixed audience** app. A mixed audience app that collects data from children needs a neutral age screen; Tryline Rugby Sevens collects nothing from anyone, so no age screen is needed. The grown-up check is not an age screen and is not offered as one.
 
 ### Families Policy: What Applies and How the App Meets It
 
-| Requirement | How Try Line Rugby meets it |
+| Requirement | How the app meets it |
 |---|---|
 | Content suitable for children | Cartoon sport. No blood, no injury, no bad language, no scary or sexual content. |
 | Ads | None at all. Declare **No** under Ads. No ad SDK is in the app, so the rule that only Families self-certified ad SDKs may serve ads to children does not arise. |
 | No identifiers from children or users of unknown age (advertising ID, SIM serial, build serial, BSSID, MAC, SSID, IMEI, IMSI) | The game never reads any of them. **[OWNER: check the built Android app's merged manifest has no `com.google.android.gms.permission.AD_ID` permission and no Google Play services ads, Firebase or analytics library. Play Console's App bundle explorer shows the permissions.]** |
 | No precise location from children | The game asks for no location. |
-| Permissions kept to what the app needs | Internet (Import's fetch, and the store) and vibration (the haptics). Nothing else: no camera, microphone, contacts, storage or location. **[OWNER: confirm against the built app's permission list.]** |
+| Permissions kept to what the app needs | Internet (Import's fetch, and the store), vibration (the haptics) and `com.android.vending.BILLING`, which the in-app purchase plugin brings in for Play Billing (`trylinerugby/store/README.md`): all three are expected. Nothing else: no camera, microphone, contacts, storage or location, and no `AD_ID`. **[OWNER: confirm against the built app's permission list.]** |
 | SDKs approved for children's apps | None beyond Capacitor's own plugins and the in-app purchase plugin, which talk only to Google Play Billing on the device. No third-party service (so not RevenueCat or similar). |
 | Privacy policy that covers children | privacy.html: it says plainly that nothing is collected from anyone, children included, and what stays on the device. |
 | Data practices follow children's privacy law (COPPA in the US, the UK GDPR and the ICO's Children's Code, the GDPR) | Nothing is collected, so there is nothing to get consent for, keep secure or delete. The Children's Code's defaults are met by design: no profiling, no location, no nudging towards sharing, no data used for anything. |
@@ -125,8 +127,8 @@ Under Monetise, Products, **One-time products**. Ids must match the game's (src/
 | Product ID | Name | Price | Notes |
 |---|---|---|---|
 | `tryline.full` | Full Game | £1.99 | |
-| `tryline.fan.farnham` | Super Fan: Farnham RUFC | **[OWNER: price]** | Activate only once the share is set and agreed. |
-| `tryline.fan.<club>` | Super Fan: (club name) | **[OWNER: price]** | One per partner club. No generic `tryline.fan`. |
+| `tryline.fan.farnham` | Super Fan: Farnham RUFC | £3.99 | Activate only once the club has confirmed its 50% in writing. |
+| `tryline.fan.<club>` | Super Fan: (club name) | £3.99 | One per partner club. No generic `tryline.fan`. |
 
 <!-- copy:google.iap.full.name -->
 ```text
@@ -152,9 +154,9 @@ A Google Play merchant account (Monetise setup) and a payments profile must be i
 
 ## Testing Before Production
 
-See LAUNCH_CHECKLIST.md. In short: an **internal test** track first (up to 100 testers by email, live in minutes). A **personal** developer account made after November 2023 must also run a **closed test with at least 12 testers opted in for 14 days in a row** before it can apply for production. An organisation account does not. **[OWNER: check the current numbers in Play Console when the account is made; Google has changed them before.]**
+See LAUNCH_CHECKLIST.md. In short: an **internal test** track first (up to 100 testers by email, live in minutes), then production. SignCheck Ltd's account is an organisation account, so the rule that a personal account made after November 2023 must run a closed test with at least 12 testers for 14 days before production does not apply. If Play Console asks for one anyway when the account is made, follow what it says: Google has changed these rules before.
 
 ## Release
 
-- Use **managed publishing**, so the release goes live when the owner says, on the same day as the App Store version and the web's `STORE_WEB_TIER` flip.
+- Use **managed publishing**, so the release goes live when the owner says. On that day, add the Play address to `STORE_LINKS.android` in src/store.js, so the web's Get the App offers it too.
 - Countries: **[OWNER: all, or the UK first]**. As on the App Store, selling in the EU needs a trader declaration with contact details shown on the store page.

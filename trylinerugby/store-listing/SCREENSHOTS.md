@@ -10,9 +10,9 @@ Captured from the current build (the game as on 8 November 2026, the store-launc
 |---|---|---|---|---|
 | `screenshots/ios-6.9/` | App Store | iPhone 6.9-inch display (required) | 2868x1320 landscape | a 956x440 phone viewport at 3x |
 | `screenshots/ipad-13/` | App Store | iPad 13-inch display (required if the app runs on iPad) | 2752x2064 landscape | 1376x1032 at 2x |
-| `screenshots/play-phone/` | Google Play | Phone | 1920x1080 | 960x540 at 2x |
-| `screenshots/play-tablet/` | Google Play | 7-inch and 10-inch tablet | 2560x1440 | 1280x720 at 2x |
-| `screenshots/play-feature-graphic.png` | Google Play | Feature graphic (required) | 1024x500 | `feature-graphic.html`: the home screen's wordmark over the lineout close-up |
+| `screenshots/play-phone/` | Google Play (phase 2) | Phone | 1920x1080 | 960x540 at 2x |
+| `screenshots/play-tablet/` | Google Play (phase 2) | 7-inch and 10-inch tablet | 2560x1440 | 1280x720 at 2x |
+| `screenshots/play-feature-graphic.png` | Google Play (phase 2) | Feature graphic (required) | 1024x500 | `feature-graphic.html`: the home screen's wordmark over the lineout close-up |
 
 App Store Connect scales the 6.9-inch set down for smaller iPhones, so one iPhone set is enough. If a 6.7-inch set is wanted too (2796x1290), add `{ id:'ios-6.7', store:'App Store', label:'iPhone 6.7-inch display', w:932, h:430, dpr:3, px:[2796, 1290] }` to `LISTING_SIZES` in the tool.
 
@@ -29,7 +29,7 @@ The first two or three are what most people see in search, so they are play, not
 | `05-drill.png` | Training Ground | The Tackling drill's side-on close-up: Position, Height, Timing, Power, Squeeze | Learn to Tackle |
 | `06-career.png` | Career | A player's card and his first season | From Minis to International |
 | `07-teams.png` | Team Picker | Pick Your Team: kits and ratings | Pick Your Club |
-| `08-home.png` | Home | The home screen with the Kids, Easy, Normal and Hard levels | A Kids Level for 6 to 10 Year Olds |
+| `08-home.png` | Home | The home screen with the Kids, Easy, Normal and Hard levels | Four Levels, Kids to Hard |
 
 Google Play takes at most 8 per type; the App Store takes up to 10. Upload them in this order.
 
@@ -39,7 +39,7 @@ Google Play takes at most 8 per type; the App Store takes up to 10. Upload them 
 - **Home shows the free and paid modes alike.** These shots are of today's build, before the store work's locks and Grown-Ups button. Re-shooting after the merge shows the home as the app has it.
 - **iPad.** On a 13-inch iPad the game draws at the iPad's own size, so the scorebug, hints, buttons and the career card come out small with a lot of empty pitch round them (see `ipad-13/`). That is how the build looks on an iPad today. Two ways on: make the layout scale up on large screens (game work, outside this pack), or ship the app for iPhone only for now, so App Store Connect does not ask for iPad screenshots and iPads run the iPhone version. **[OWNER: decide; tell the native work, which sets the device family in Xcode.]**
 - **Sharpness on iPhone.** The game draws its canvas at up to twice the screen's pixels, so on the 3x iPhone set the pitch is upscaled a little while the text stays sharp. The iPad and Play sets are at 2x and fully sharp.
-- **No device frames and no captions.** Both are allowed; plain shots are honest and quick to redo. If captions are added, keep them Title Case, short and true to the shot (Apple rejects screenshots that show what the app does not do).
+- **No device frames and no captions.** Both are allowed; plain shots are honest and quick to redo. If captions are added, keep them Title Case, short and true to the shot (Apple rejects screenshots that show what the app does not do), and never say who the app is for by age: guideline 2.3.8 keeps "For Kids" and "For Children" for Apple's Kids Category, and this app is in Sports. `node tools/listing.mjs` checks the caption ideas above.
 
 ## Re-shooting
 

@@ -4,8 +4,10 @@
 // node tools/listing.mjs --launch   also fail while any [OWNER: ...] placeholder is left (run before submitting to the stores)
 // What it checks: every file is there; the three pages link each other, load nothing from outside and carry no script; no em
 // or en dash anywhere in the pack; the listing copy keeps to each store's length limits and avoids the banned words and the other
-// store's name; privacy.html is PRIVACY.md; the fonts line in PRIVACY.md matches how index.html loads its fonts; superfan.html
-// lists every club in FAN_CLUBS with its stated share; the screenshots are all there at their exact sizes with no alpha channel.
+// store's name, and Apple's copy never says who the app is for by age (guideline 2.3.8); a share is always stated as a share of
+// what we receive; privacy.html is PRIVACY.md; the fonts line in PRIVACY.md matches how index.html loads its fonts; superfan.html
+// lists exactly the FAN_CLUBS marked agreed, with their shares, and names no other; the game's share line (storeShareLine) uses
+// superfan.html's words; the screenshots are all there at their exact sizes with no alpha channel.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -27,10 +29,10 @@ export const LISTING_PAGES = [
 const OWN = [...LISTING_DOCS, ...LISTING_PAGES.map(p => p.file), 'pages.css', 'PRIVACY.md', 'store-listing/feature-graphic.html', 'tools/listing.mjs', 'tools/listing-shots.mjs'];
 
 /* ---------- the pages' shared parts ---------- */
-export const PAGE_TITLE = 'Try Line Rugby';
+export const PAGE_TITLE = 'Tryline Rugby Sevens';   // the App Store name (the owner, 2026-11-08); the web game's own title is index.html's
 // The three pages' buttons, in one balanced row, the current page shown pressed. The same block on every page (checked).
 export function listingNav(current) {
-  return '<nav class="nav" aria-label="Try Line Rugby pages">' + LISTING_PAGES.map(p =>
+  return `<nav class="nav" aria-label="${PAGE_TITLE} pages">` + LISTING_PAGES.map(p =>
     `<a class="btn" href="${p.file}"${p.file === current ? ' aria-current="page"' : ''}>${p.label}</a>`).join('') + '</nav>';
 }
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -69,7 +71,7 @@ export function privacyHtml(md) {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b130e">
 <title>Privacy · ${esc(title)}</title>
-<meta name="description" content="What Try Line Rugby keeps on your device. It collects nothing about you or your child.">
+<meta name="description" content="What ${esc(PAGE_TITLE)} keeps on your device. It collects nothing about you or your child.">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="pages.css">
@@ -99,6 +101,13 @@ export const COPY_LIMITS = {
 };
 export const BANNED = [/\bsix\s+nations\b/i, /\bdonat(?:e|es|ed|ing|ion|ions)\b/i, /\bcharit(?:y|ies|able)\b/i, /\bbest\b/i, /\bultimate\b/i];
 const NOT_ON_APPLE = [/\bandroid\b/i, /\bgoogle\b/i];
+// Apple guideline 2.3.8: "Use of terms like "For Kids" and "For Children" in app metadata is reserved in the App Store for the Kids
+// Category". The app is in Sports, so Apple's copy and screenshot captions may name the Kids level, never an audience by age.
+export const APPLE_AUDIENCE = [/\bfor\s+(?:kids|children|toddlers)\b/i, /\b\d+\s*(?:to|-|and)\s*\d+\s*years?[- ]?olds?\b/i, /\b(?:aged?|ages)\s+\d+/i];
+// A share is stated as a share of what we receive (the owner, 2026-11-08): "N% of every Super Fan unlock" reads as N% of the price.
+export const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the club.';
+export const shareLine = (name, share) => `Supports ${name}: ${share}${SHARE_WORDS}`;
+const SHARE_OF_PRICE = /(?:%|\bshare)\s+of\s+(?:each|every)\s+Super Fan unlock/i;
 const NOT_ON_GOOGLE = [/\bapple\b/i, /\biphone\b/i, /\bipad\b/i, /\bapp store\b/i, /\bios\b/i];
 const US_SPELLING = [/\bcolor/i, /\bfavorite/i, /\bcenter\b/i, /\bdefense\b/i, /\boffense\b/i, /\blicense\b/i, /\btraveling\b/i, /\bgray\b/i, /\bpracticing\b/i];
 export function copyBlocks(md) {
@@ -125,6 +134,18 @@ function fanClubs() {
     if (!m) continue;
     try { return { file:f, clubs:Function('"use strict"; return (' + m[1] + ');')() }; }
     catch (e) { return { file:f, error:e.message }; }
+  }
+  return null;
+}
+// The words after the share in the game's own line (storeShareLine, the store work's), to hold superfan.html to them.
+function storeShareWords() {
+  const dir = at('src');
+  for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.js'))) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    if (!/\bconst storeShareLine\b/.test(src)) continue;
+    const m = src.match(/const storeShareLine\s*=\s*\(?\s*(\w+)\s*\)?\s*=>\s*'Supports '\s*\+\s*\1\.name\s*\+\s*': '\s*\+\s*\1\.share\s*\+\s*'([^'\\]*)'/)
+      || src.match(/const storeShareLine\s*=\s*\(?\s*(\w+)\s*\)?\s*=>\s*`Supports \$\{\1\.name\}: \$\{\1\.share\}([^`$\\]*)`/);
+    return m ? { file:f, words:m[2] } : { file:f, error:'not in a shape this check reads' };
   }
   return null;
 }
@@ -169,6 +190,7 @@ for (const p of LISTING_PAGES) {
   const arrow = text.match(ARROW);
   ok(!arrow, `${p.file} has no arrow glyphs${arrow ? ': ' + arrow[0] : ''}`);
   for (const b of BANNED) ok(!b.test(text), `${p.file} avoids ${b.source}`);
+  ok(!SHARE_OF_PRICE.test(text), `${p.file} states a share as a share of what we receive, never "of every Super Fan unlock"`);
   const ext = [...html.matchAll(/<a\b[^>]*href="(https?:[^"]+)"/g)].map(m => m[1]);
   ok(ext.every(u => /^https:\/\//.test(u)), `${p.file}: every outside address is https`);
 }
@@ -199,43 +221,61 @@ if (fs.existsSync(at('privacy.html'))) ok(read('privacy.html') === privacyHtml(r
     for (const r of BANNED) ok(!r.test(b.text), `${b.file}: ${b.key} avoids ${r.source}`);
     for (const r of b.key.startsWith('apple.') ? NOT_ON_APPLE : NOT_ON_GOOGLE) ok(!r.test(b.text), `${b.file}: ${b.key} does not name the other store (${r.source})`);
     for (const r of US_SPELLING) ok(!r.test(b.text), `${b.file}: ${b.key} keeps UK spelling (${r.source})`);
+    if (b.key.startsWith('apple.')) for (const r of APPLE_AUDIENCE) ok(!r.test(b.text), `${b.file}: ${b.key} names no audience by age, which guideline 2.3.8 keeps for the Kids Category (${r.source})`);
+    ok(!SHARE_OF_PRICE.test(b.text), `${b.file}: ${b.key} states a share as a share of what we receive`);
   }
   const kw = blocks.find(b => b.key === 'apple.keywords');
   if (kw) {
     const words = kw.text.split(',');
     ok(!/,\s|\s,/.test(kw.text) && !/\n/.test(kw.text), 'the App Store keywords are one comma-separated line with no spaces round the commas');
     ok(new Set(words.map(w => w.toLowerCase())).size === words.length, 'no keyword is repeated');
-    const name = (blocks.find(b => b.key === 'apple.name') || { text:'' }).text.toLowerCase().split(/\s+/);
-    ok(words.every(w => !name.includes(w.toLowerCase())), 'no keyword repeats a word of the app name (Apple indexes the name already)');
+    const indexed = ['apple.name', 'apple.subtitle'].flatMap(k => (blocks.find(b => b.key === k) || { text:'' }).text.toLowerCase().split(/[^a-z0-9]+/)).filter(Boolean);
+    const repeats = words.filter(w => indexed.includes(w.toLowerCase()));
+    ok(!repeats.length, `no keyword repeats a word of the app name or subtitle, which Apple indexes already${repeats.length ? ': ' + repeats.join(', ') : ''}`);
+  }
+  // the screenshot captions go on Apple's screenshots too, so 2.3.8 holds for them
+  if (fs.existsSync(at('store-listing/SCREENSHOTS.md'))) {
+    const captions = read('store-listing/SCREENSHOTS.md').split('\n').filter(l => /^\|\s*`\d\d-[a-z]+\.png`/.test(l)).map(l => l.split('|').map(c => c.trim()).filter(Boolean).pop());
+    ok(captions.length === LISTING_MOMENTS.length, `SCREENSHOTS.md has a caption idea for each of the ${LISTING_MOMENTS.length} moments`);
+    for (const c of captions) for (const r of APPLE_AUDIENCE) ok(!r.test(c), `SCREENSHOTS.md: the caption "${c}" names no audience by age (guideline 2.3.8)`);
   }
 }
 
-// 7. superfan.html lists every partner club with its stated share, as FAN_CLUBS has it (once the store's code is in)
+// 7. superfan.html names a partner club only once it has agreed in writing (FAN_CLUBS' agreed:true), with its share, in the game's words.
+// The page is public as soon as the work merges, long before the app ships, so a club whose agreement is not signed is not named.
 {
-  const html = fs.existsSync(at('superfan.html')) ? read('superfan.html') : '';
-  const rows = [...html.matchAll(/<tr data-club="([a-z0-9]+)" data-product="([^"]+)" data-share="([0-9.]*)"><td>([^<]+)<\/td>([\s\S]*?)<\/tr>/g)]
+  const html = fs.existsSync(at('superfan.html')) ? read('superfan.html') : '', live = html.replace(/<!--[\s\S]*?-->/g, ' ');
+  const rows = [...live.matchAll(/<tr data-club="([a-z0-9]+)" data-product="([^"]+)" data-share="([0-9.]*)"><td>([^<]+)<\/td>([\s\S]*?)<\/tr>/g)]
     .map(m => ({ key:m[1], product:m[2], share:m[3], name:visible(m[4]).trim(), cells:visible(m[4] + ' ' + m[5]) }));
   const text = visible(html);
-  ok(rows.length > 0, 'superfan.html lists at least one club');
+  ok((live.match(/<tr data-club=/g) || []).length === rows.length, 'every club row on superfan.html is in the checked shape');
   for (const r of rows) {
     ok(r.product === 'tryline.fan.' + r.key, `superfan.html: ${r.key} sells as tryline.fan.${r.key}`);
-    // a set share: the N% in its row, and the game's own line under the table ("Supports <club>: N% of ...", whatever follows)
-    ok(r.share ? r.cells.includes(r.share + '%') && text.includes(`Supports ${r.name}: ${r.share}% of `) : /To Be Confirmed/.test(r.cells),
-      `superfan.html: ${r.key} shows ${r.share ? 'its ' + r.share + '% and the line "Supports ' + r.name + ': ' + r.share + '% of ..."' : 'To Be Confirmed while its share is not set'}`);
+    ok(!!r.share && r.cells.includes(r.share + '%') && text.includes(shareLine(r.name, r.share)),
+      `superfan.html: ${r.key} shows its share as N% and, under the table, the game's line "${shareLine(r.name, r.share || 'N')}" (a club is listed only with its agreed share)`);
   }
   const fc = fanClubs();
   if (fc && fc.error) ok(false, `FAN_CLUBS in src/${fc.file} could not be read (${fc.error}); update tools/listing.mjs`);
   else if (fc) {
     for (const c of fc.clubs) {
-      const r = rows.find(x => x.key === c.key);
-      ok(!!r, `superfan.html lists ${c.name} (FAN_CLUBS in src/${fc.file})`);
-      if (!r) continue;
-      ok(r.product === c.product, `superfan.html: ${c.key}'s product is ${c.product}`);
-      ok(r.share === (c.share == null ? '' : String(c.share)), `superfan.html: ${c.key}'s share is ${c.share == null ? 'not set' : c.share + '%'}, as in FAN_CLUBS`);
-      ok(r.name === c.name, `superfan.html names ${c.name} as FAN_CLUBS does`);
+      const r = rows.find(x => x.key === c.key), short = c.name.replace(/\s+(?:RUFC|RFC|RUC|RC)$/, '');
+      if (c.agreed === true) {
+        ok(typeof c.share === 'number' && c.share > 0 && c.share <= 100, `FAN_CLUBS (src/${fc.file}): ${c.key} is marked agreed, so its share is set`);
+        ok(!!r, `superfan.html lists ${c.name}, marked agreed in FAN_CLUBS (src/${fc.file})`);
+        if (!r) continue;
+        ok(r.product === c.product, `superfan.html: ${c.key}'s product is ${c.product}`);
+        ok(r.share === String(c.share), `superfan.html: ${c.key}'s share is ${c.share}%, as in FAN_CLUBS`);
+        ok(r.name === c.name, `superfan.html names ${c.name} as FAN_CLUBS does`);
+      } else {
+        ok(!r, `superfan.html has no row for ${c.name}: FAN_CLUBS does not mark it agreed (agreed:true once the club confirms its share in writing)`);
+        ok(!text.includes(c.name) && !new RegExp('\\b' + short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(text), `superfan.html does not name ${c.name} before it has agreed in writing`);
+      }
     }
     ok(rows.every(r => fc.clubs.some(c => c.key === r.key)), 'superfan.html lists no club that FAN_CLUBS does not have');
   } else if (process.env.VERBOSE) console.log('note: no FAN_CLUBS in src/ yet (the store branch adds it); superfan.html checked on its own');
+  const sw = storeShareWords();
+  if (sw) ok(!sw.error && sw.words === SHARE_WORDS, sw.error ? `storeShareLine in src/${sw.file} could not be read (${sw.error}); update tools/listing.mjs`
+    : `storeShareLine in src/${sw.file} ends "${SHARE_WORDS}", as superfan.html does (it ends "${sw.words}")`);
 }
 
 // 8. the links the store's code opens are pages that are here (once the store's code is in)

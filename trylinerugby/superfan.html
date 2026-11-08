@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b130e">
-<title>Super Fan · Try Line Rugby</title>
-<meta name="description" content="Super Fan: the Try Line Rugby unlock that supports a partner club, and the share each club gets.">
+<title>Super Fan · Tryline Rugby Sevens</title>
+<meta name="description" content="Super Fan: the Tryline Rugby Sevens unlock that supports a partner club, and the share each club gets.">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="pages.css">
@@ -13,12 +13,12 @@
 <body>
 <main class="page">
 <header class="top">
-<p class="eyebrow">Try Line Rugby</p>
+<p class="eyebrow">Tryline Rugby Sevens</p>
 <h1>Super Fan</h1>
-<nav class="nav" aria-label="Try Line Rugby pages"><a class="btn" href="privacy.html">Privacy</a><a class="btn" href="support.html">Support</a><a class="btn" href="superfan.html" aria-current="page">Super Fan</a></nav>
+<nav class="nav" aria-label="Tryline Rugby Sevens pages"><a class="btn" href="privacy.html">Privacy</a><a class="btn" href="support.html">Support</a><a class="btn" href="superfan.html" aria-current="page">Super Fan</a></nav>
 </header>
 
-<p class="lede">Super Fan is a one-off unlock in the Try Line Rugby app for supporters of a partner club. Part of every Super Fan unlock goes to that club.</p>
+<p class="lede">Super Fan is a one-off unlock in the Tryline Rugby Sevens app for supporters of a partner club. A stated share of what we receive for every Super Fan unlock goes to that club.</p>
 
 <h2 id="get">What You Get</h2>
 <ul>
@@ -29,24 +29,20 @@
 </ul>
 
 <h2 id="clubs">Partner Clubs</h2>
-<!-- One row per club in FAN_CLUBS (src/store.js): the club's name as FAN_CLUBS has it in the first cell, data-share the share as
-     a number (empty while it is not set, with To Be Confirmed in the Share cell). A set share shows as "N%" in the Share cell and,
-     under the table, as the game's own line: "Supports <club>: N% of every Super Fan unlock goes to the club." (storeShareLine in
-     src/store.js; keep the two in the same words). tools/listing.mjs checks every row against FAN_CLUBS. -->
-<table>
-<thead><tr><th scope="col">Club</th><th scope="col">Share</th></tr></thead>
-<tbody>
-<tr data-club="farnham" data-product="tryline.fan.farnham" data-share=""><td>Farnham RUFC</td><td class="tbc">To Be Confirmed</td></tr>
-</tbody>
-</table>
-<p>A club's Super Fan unlock goes on sale once its share is set. Until then the game does not offer it.</p>
+<!-- A club appears here only once it has confirmed its share in writing and its FAN_CLUBS entry (src/store.js) carries
+     agreed:true. Then, in the same change, a table goes here with one row per agreed club:
+       <tr data-club="KEY" data-product="tryline.fan.KEY" data-share="N"><td>NAME</td><td>N%</td></tr>
+     with NAME as FAN_CLUBS has it, and under the table the game's own line for each, word for word (storeShareLine in
+     src/store.js): "Supports NAME: N% of what we receive for every Super Fan unlock goes to the club."
+     tools/listing.mjs checks every row against FAN_CLUBS, and fails on a club named here that is not marked agreed. -->
+<p>Partner clubs appear here, each with its share, once the club has agreed in writing.</p>
 
 <h2 id="share">How the Share Works</h2>
-<p>Each partner club has its own Super Fan unlock in the App Store and in Google Play. Every month Apple and Google report how many of each one sold and what they paid us for them. The club's share is worked out from those reports: [OWNER: say what the percentage is of, for example what Apple and Google pay us for each unlock, after their fee and VAT]. It is paid to the club [OWNER: how often, for example every three months].</p>
+<p>Each partner club has its own Super Fan unlock in the App Store. Apple reports how many of each one sold and what it paid us for them. The club's share is a percentage of what Apple pays us for each unlock, after Apple's commission and VAT, worked out from those reports. It is paid to the club [OWNER: how often, for example every three months].</p>
 <p>The reports count sales, not people. Neither we nor the club learn who bought Super Fan.</p>
 
 <h2 id="join">For Clubs</h2>
-<p>Would your club like to be a partner? Contact [OWNER: contact email].</p>
+<p>Would your club like to be a partner? Email support@signcheck.ai.</p>
 </main>
 </body>
 </html>
