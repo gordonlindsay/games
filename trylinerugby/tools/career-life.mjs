@@ -22,7 +22,10 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    Re-pinned again at the team hierarchy merge, data only: the AI v AI simulate (first) is career.mjs's own fingerprint, which moved
 //    with the nations' XV ratings (career.mjs notes the old ratings give the old value); the championship match (third) is England v
 //    Italy, both re-rated; the demo (fourth) draws from ALL_TEAMS, which the new leagues enlarged. The Quick Match and the drill hold.
-const BASE = { others:'1o2r2g2 1fohttg 1230j1m c6ydhd 83k82g', rest:'1p6a14j' };
+//    Re-pinned again at club seasons (2026-11-08): `rest` is a career match at Farnham, and a career's first year is no longer the
+//    Minis, so its two sides play at full strength instead of one off every ability. With the Minis' sides put back (careerMatch's
+//    `minis`, the same draw with CAREER_CUT[0] on both) this build gives the pin from before the bars, `restMinis`, exactly.
+const BASE = { others:'1o2r2g2 1fohttg 1230j1m c6ydhd 83k82g', rest:'1qet6a1', restMinis:'1p6a14j' };
 const runOut = (side = 0) => { let n = 0; while (!T.M.over && n < 400000) { bot(side); T.update(T.STEP); n++; } return n; };
 const pos = () => T.M.players.map(p => [p.x.toFixed(6), p.y.toFixed(6)]).join(';');
 function others() {
@@ -41,6 +44,7 @@ function others() {
 function careerMatch(life, seed = 131, o = {}) {   // a career match through careerArm, played by the bot to full time: its fingerprint
   reseed(31);
   const cr = C.create({ pos:'B', num:5, club:X.CLUBS[0] }); C.set(cr);
+  if (o.minis) cr.season.teams = cr.season.teams.map(t => { const m = { ...t }; for (const [k] of T.stamina.ABILITIES) if (k in m) m[k] = Math.max(1, m[k] - 1); return m; });   // the Minis' sides, as careers had them before club seasons
   if (L && life) Object.assign(cr.life, life);
   reseed(seed);
   T.newMatch(cr.season.teams[0], cr.season.teams[1], { halfLen:60, diff:1, headless:true, humans:[true, false], arcade:true, duels:'live' });
@@ -120,7 +124,7 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   const r0 = rndCalls();
   let all = [], seen = new Set(), plans = new Set(), firsts = 0, repeats = 0, gapRun = 0, worstGap = 0;
   for (let i = 0; i < 600; i++) {
-    cr.stage = i % 5; withId(cr, 'career-test-' + i.toString(36) + '-' + (i % 7));
+    cr.year = 1 + i % 5; withId(cr, 'career-test-' + i.toString(36) + '-' + (i % 7));
     const plan = L.plan(cr);
     all.push(...plan);
     plans.add(plan.map(d => (d ? 1 : 0)).join(''));
@@ -128,18 +132,22 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
     const ids = plan.filter(Boolean).map(d => d.id);
     if (new Set(ids).size !== ids.length) repeats++;
     for (const d of plan) { if (d) { seen.add(d.id); gapRun = 0; } else worstGap = Math.max(worstGap, ++gapRun); }
-    if (plan.filter(Boolean).some(d => d.from > cr.stage)) repeats += 1000;
+    if (plan.filter(Boolean).some(d => d.from > cr.year)) repeats += 1000;
   }
   ok(rndCalls() === r0, 'the schedule draws no random numbers');
   ok(all.filter(Boolean).length === 600*3, 'three dilemmas in every season of five rounds');
   ok(firsts === 600 && worstGap === 1, `the first round always has one, and no two rounds running go without, across a season's end too (longest gap ${worstGap})`);
   ok(plans.size === 3, `the rounds vary from season to season (${[...plans].join(', ')})`);
-  ok(repeats === 0, 'never the same dilemma twice in a season, and never one before its stage');
+  ok(repeats === 0, 'never the same dilemma twice in a season, and never one before its year');
   ok(seen.size === L.DILEMMAS.length, `every dilemma comes up (${seen.size} of ${L.DILEMMAS.length})`);
-  withId(cr, 'career-same-1'); cr.stage = 0;
+  withId(cr, 'career-same-1'); cr.year = 1;
   ok(json(L.plan(cr).map(d => d && d.id)) === json(L.plan(JSON.parse(json(cr))).map(d => d && d.id)), 'the same season draws the same dilemmas');
-  const minis = new Set(); for (let i = 0; i < 300; i++) { withId(cr, 'career-m-' + i); cr.stage = 0; for (const d of L.plan(cr)) if (d) minis.add(d.id); }
-  ok(['gym', 'minis', 'physio', 'school', 'swim'].every(id => !minis.has(id)) && minis.size >= 6, `the Minis get only the Minis' dilemmas (${[...minis].join(', ')})`);
+  const first = new Set(); for (let i = 0; i < 300; i++) { withId(cr, 'career-m-' + i); cr.year = 1; for (const d of L.plan(cr)) if (d) first.add(d.id); }
+  ok(['gym', 'minis', 'physio', 'school', 'swim'].every(id => !first.has(id)) && first.size >= 6, `a career's first year gets only the first year's dilemmas (${[...first].join(', ')})`);
+  const second = new Set(); for (let i = 0; i < 300; i++) { withId(cr, 'career-y-' + i); cr.year = 2; for (const d of L.plan(cr)) if (d) second.add(d.id); }
+  ok(['gym', 'minis'].every(id => second.has(id)) && ['physio', 'school', 'swim'].every(id => !second.has(id)), 'the second year adds Rest or Gym and Help Coach the Minis; the third and on, the rest');
+  const old = { ...cr, year:undefined }; withId(old, 'career-old-1');
+  ok(L.plan(old).filter(Boolean).every(d => d.from === 1), 'a career object with no year reads as year 1');
 }
 
 // 4. the table
@@ -169,7 +177,7 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   ok(Ds.every(d => d.opts.some(o => (o.fx.energy || 0) >= 0)), 'every dilemma has an option that costs no Energy');
   const words = /\b(beer|pub|bar|wine|drink|drunk|money|cash|bet|betting|casino|party all night|kiss|date|£|\$)\b/i;
   ok(Ds.every(d => !words.test(d.q) && d.opts.every(o => !words.test(o.name))), 'nothing grown-up: no drink, no money, no dates');
-  ok(Ds.every(d => [0, 1, 2].includes(d.from)) && Ds.filter(d => d.from === 0).length >= 6, 'enough for a Minis season, more from the Juniors on');
+  ok(Ds.every(d => [1, 2, 3].includes(d.from)) && Ds.filter(d => d.from === 1).length >= 6, 'enough for a first year, more from the second year on');
 }
 
 // 5. picking an option
@@ -326,7 +334,9 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
 // 8. at rest the bars are nothing: a career match plays exactly as before them; anything else is live
 {
   const rest = careerMatch(REST);
-  ok(rest === BASE.rest, `a career match at Energy 100, Morale 50, Team Spirit 50 plays exactly as a career match did before the bars (${rest}, pinned ${BASE.rest})`);
+  ok(rest === BASE.rest, `a career match at Energy 100, Morale 50, Team Spirit 50 plays as pinned (${rest}, pinned ${BASE.rest})`);
+  const restMinis = careerMatch(REST, 131, { minis:true });
+  ok(restMinis === BASE.restMinis, `and, with the Minis' sides it was pinned on, exactly as a career match did before the bars (${restMinis}, pinned ${BASE.restMinis})`);
   ok(careerMatch(REST, 131, { noLife:true }) === rest && careerMatch({ ...REST, energy:60 }) === rest, 'the same with no bars at all, and with Energy at 60');
   ok(careerMatch({ ...REST, spirit:90 }) !== rest && careerMatch({ ...REST, morale:90 }) !== rest && careerMatch({ ...REST, energy:10 }) !== rest, 'Team Spirit, Morale and Energy each change a match once away from rest');
   // With no Pro Mode in the build, M.careerPro set by hand plays like any career match: none of this file's Team Spirit acts there.
@@ -367,7 +377,7 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
     reseed(31); const cr = withId(C.create({ pos:'B', num:5, club:X.CLUBS[0] }), pre + '0'); C.set(cr); Object.assign(cr.life, { energy:80, morale:60, spirit:100 });
     const trail = [];
     for (let i = 0; i < 10; i++) {
-      if (cr.season.round >= 5) { C.advance(); withId(cr, pre + '1'); }
+      if (cr.season.round >= 5) { C.advance(); C.sign(null); withId(cr, pre + '1'); }   // the season's end, the transfer window (Stay), the next year's league
       const d = L.dilemma(cr);
       if (d) { const j = d.opts.findIndex(o => (policy === 'train' ? skillKeys.some(k => o.fx[k] >= 2) : o.fx.spirit > 0)); if (j >= 0) L.choose(j); }
       if (policy === 'train' && C.drills(cr).length) { cr.trained = false; C.trainDone({ id:'egg', stars:2, success:true }); }

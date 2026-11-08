@@ -90,7 +90,7 @@ Answer in App Store Connect's Resolution Center: calmly, specifically, with what
 - **4.2 Minimum Functionality ("a repackaged website" or "not enough native functionality").** The arguments, all true of this app:
   - It is a **game**, not a website: it runs entirely from files inside the app and plays fully offline in aeroplane mode. Nothing is loaded from a website; the web version exists, but the app does not depend on it.
   - It uses the device natively: **StoreKit** in-app purchases with Restore Purchases, **haptics** through the Taptic Engine, **native storage** that survives the web view's storage being cleared, **native HTTP** for Import, the landscape lock and the safe areas (and game controllers, once tested in the app).
-  - It is a complete game with depth: open play with tackling, rucks, scrums, lineouts and goal kicks; a five-round championship; a career from the minis to the international side; eight training drills; a Kids level with its own easing; a team builder.
+  - It is a complete game with depth: open play with tackling, rucks, scrums, lineouts and goal kicks; a five-round championship; a career of club seasons, with transfers and call-ups; eight training drills; a Kids level with its own easing; a team builder.
   - Offer the reviewer a 30-second screen recording of a match, a drill and a purchase if asked.
   - What not to do: argue that other web-view apps were approved.
 - **2.5.2 (downloads or runs code it did not ship with).** The app must not use the service worker or update itself from the web (the native work turns both off in the app). If cited, confirm that every file is in the app bundle.

@@ -561,8 +561,8 @@ function settle(pick) {
   const MARKS = /\b(leinster|munster|ulster|connacht|saracens|harlequins|tigers|saints|sharks|bears|chiefs|blues|crusaders|hurricanes|highlanders|steelers|wild knights|spears|sungoliath|verblitz|bluerevs|blue revs|eagles|warriors|ospreys|scarlets|dragons|benetton|zebre|falcons|red bulls|brumbies|waratahs|reds|force|rebels|stormers|bulls|lions|cheetahs|pumas|stade|racing|rugby|rfc|club|toyota|kubota|panasonic|suntory|kobelco|canon|yamaha|chieftains|hawks|watsonians?|heriots?|hutchesons|aloysians|gha|marr|accies|academicals?)\b/i;
   const pro = X.NATIONAL.flat();
   ok(pro.every(t => !MARKS.test(t.name)), `no professional side carries a club's name or nickname (${pro.filter(t => MARKS.test(t.name)).map(t => t.name).join(', ') || 'none'})`);
-  const codes = [...X.ALL_TEAMS.map(t => t.id), ...T.career.COUNTIES.map(t => t.id)];
-  ok(new Set(codes).size === codes.length && codes.every(c => /^[A-Z]{3}$/.test(c)), 'every code is three letters and unique across every list, every nation and the career\'s counties');
+  const codes = X.ALL_TEAMS.map(t => t.id);   // the career's invented counties went with its stages (club seasons, 2026-11-08): every side it plays is on a list
+  ok(new Set(codes).size === codes.length && codes.every(c => /^[A-Z]{3}$/.test(c)), 'every code is three letters and unique across every list and every nation');
   ok(['NZL', 'RSA', 'AUS', 'ARG', 'FIJ', 'JPN', 'CDN', 'USA'].every(id => !clubs.some(t => t.id === id)) && !X.NATIONS.slice(6).some(t => t.home) && X.AUSTRALIA.some(t => t.id === 'CAN' && t.name === 'Canberra'), 'the new nations\' codes clash with no club (Canada is CDN: CAN stays Canberra\'s), and none is a home nation');
   ok(pro.every(t => total(t) <= 5 + X.BUDGET) && X.NATIONS.every(t => R.every(k => t[k] >= 1 && t[k] <= 5)), `no league side is stronger than a team you can make (top ${Math.max(...pro.map(total))})`);
   ok(X.NATIONS.slice(6).every(t => /^#[0-9a-f]{6}$/i.test(t.alt) && /^#[0-9a-f]{6}$/i.test(t.altTrim)), 'each new nation has a change kit, as the six do');

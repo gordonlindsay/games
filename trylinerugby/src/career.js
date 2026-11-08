@@ -1,21 +1,32 @@
 /* =========================================================
-   Career: one player, from the minis to the national team.
+   Career: one player, club seasons. Any club, a rookie whatever the club; a year at it, then what he has earned, then the
+   transfer window.
 
    The rules, all of them here:
-   - Five stages, each a season of the championship's shape (six sides, five rounds, three games a round): Minis,
-     Juniors, County, Pro Club, International. Only your game is played; the other two are drawn by simMatch, as in a
-     championship. Points are the championship's (4 a win, bonus points, 3 for a grand slam).
-   - Minis and Juniors are your club against five other Local clubs drawn at random, every side at lowered ratings
-     (Minis: one off every ability; Juniors: one off Pace and Power). County is Surrey against five invented county
-     sides. Pro Club is the city side you sign for (drawn from every national league when you go up: the career has no
-     country until the call-up) against five others from its league. International is your country (any of the twelve
-     on the career's Men or Women list, natList, picked when you are called up) against the other five of its six, at
-     that list's ratings: the Six Nations, or the other six (natGroup).
+   - A year (career.year, from 1) runs in phases (career.phase, in CAREER_PHASES order), each one skipped unless he has earned it:
+     'league'   his club's league: his club and five drawn from its list, a season of the championship's shape (six sides, five
+                rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
+     'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, Celtic and Italy, South Africa).
+     'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
+                his country's six in its category's twelve (natGroup) as a season, or in a World Cup year (4, 8, 12) the World Cup.
+                His country is picked at his first call-up, from the career's Men or Women twelve (natList), and kept.
+     'tour'     the Home Nations Tour, in years 2, 6, 10, after the window, for a home-nation player (CAREER_HOME) rated
+                CAREER_CALL.tour or more.
+     'transfer' two or three offers from clubs near his level (CAREER_MOVE), and Stay; then the next year, at his club's league.
+     The cups (the European Cup, the World Cup and the tour) are the cups engine's (src/cups.js: cupNew, cupFixture, cupRecord,
+     cupWinner, cupLabel, cleanCup, cupTriple), read through careerCups. Without it they are skipped, and a World Cup year is his
+     country's six as any other.
+   - Any club: a side from a national league, a Local club, or a team you made or imported. The list it was picked from is its
+     league (career.league): a built-in club's is always its own list, a made one's the list it was picked on (My League for an
+     imported one, Local while no league is saved). Every player starts a rookie (CAREER_START, about 61), whatever the club.
+   - Transfers: his overall (61 to 99) maps onto the clubs' band (61 to 75) linearly and capped (careerTarget); the offers are
+     clubs from the national lists, Scotland's included, never his own, within CAREER_MOVE.band of that, the band widened a
+     point at a time until there are two. One from each league first where it can be. A made, imported or Local club he started
+     at is his to stay at; an offer is always from the national lists. The draw is made as the window opens and saved with it.
+   - Trophies (career.trophies, { kind, year, name }): a league or his country's six won ('league'), the European Cup ('euro'),
+     the World Cup ('world'), the Home Nations Tour ('tour') and the Triple Crown ('triple'). The player card counts them by kind.
    - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
-     International stage is that category's own twelve; nothing else changes.
-   - Promotion at the end of a season: finish in the top two, or reach the stage's bar with your overall rating
-     (CAREER_STAGES[].bar). Otherwise you play the stage again, against a new draw. A finished International season
-     ends the career, whatever the table says.
+     international window is that category's own twelve; nothing else changes.
    - Your player has a 1 to 99 rating in each ability (Pace, Power, Handling, Kicking, and Stamina even before the
      teams have it). The overall is the team cards' overallOf on the same 40 to 99 scale.
    - Skills rise from training (one session a round, between matches: a drill's stars give points to its skill,
@@ -25,37 +36,29 @@
      speed, catching, tackling, kicking and stamina from the team's baseline (CAREER_SHADE). Every engine site reads
      the side's own value unless M.career is set, and careerNatOf, careerAbility, careerFade and careerSprintDrain add
      the shade for your player only, so no other match and no other man changes.
-   - The career keeps its own seasons in `career` (persistence.js), never in `champ` or champHistory. Championship
-     helpers that take the season as an argument (roundRobin, simMatch, standings, userFixture) are reused; the ones
-     that read the global champ (newChamp, recordChampResult, retainCompletedSeason) never are.
+   - The career keeps its own seasons and cups in `career` (persistence.js), never in `champ`, champHistory or the cups'
+     own save. Championship helpers that take the season as an argument (roundRobin, simMatch, standings, userFixture,
+     honours) are reused; the ones that read the global champ (newChamp, recordChampResult, retainCompletedSeason) never are.
    ========================================================= */
-const CAREER_STAGES = [
-  { id:'minis', name:'Minis', bar:64 },
-  { id:'juniors', name:'Juniors', bar:70 },
-  { id:'county', name:'County', bar:77 },
-  { id:'pro', name:'Pro Club', bar:85 },
-  { id:'intl', name:'International', bar:null },   // the last stage: one season, then the career is over
-];
-const CAREER_UP = 2;                                 // the top two go up
-const CAREER_CUT = [{ all:-1 }, { pace:-1, power:-1 }];   // Minis and Juniors: what comes off a club's abilities (never below 1)
-/* Invented county sides: county names, made-up kits and ratings (Pace to Kicking 11 to 14, the Local clubs' range; Stamina 3,
-   kept only once the teams have it). Surrey is yours. */
-const CAREER_COUNTIES = [
-  { id:'SUR', name:'Surrey',    kit:'#2a3d8f', trim:'#f2b01e', pace:3, power:3, handling:4, kicking:3, stamina:3 },
-  { id:'KEN', name:'Kent',      kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'SSX', name:'Sussex',    kit:'#1c6fb8', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'HAM', name:'Hampshire', kit:'#c8102e', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'MDX', name:'Middlesex', kit:'#0f5a32', trim:'#f2efe6', hoops:true, pace:4, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'BRK', name:'Berkshire', kit:'#5b2d8e', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:3 },
-];
-const CAREER_PRO_POOLS = NATIONAL;                  // the national leagues (data.js)
+const CAREER_PHASES = ['league', 'cup', 'intl', 'tour', 'transfer'];
+/* bar: the overall that earns a call-up (a scripted player is first called up at the end of year 3 or 4: tools/career.mjs);
+   tour: the overall for the Home Nations Tour; every4: a World Cup in years 4, 8, 12, the tour in years tourAt + 4n (2, 6, 10). */
+const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
+/* from: his overall's range; to: the clubs' (Scotland's amateur sides at 61 to the top professional sides at 75); band: how near
+   a club's overall must be to the target, widened a point at a time until there are two; offers: two or three. */
+const CAREER_MOVE = { from:[61, 99], to:[61, 75], band:1, offers:[2, 3] };
+const CAREER_EURO = ['eng', 'fra', 'cel', 'rsa'];   // the leagues whose winners play the European Cup (the cups engine's CUPS.euro.lists)
+const CAREER_HOME = ['ENG', 'IRE', 'SCO', 'WAL'];   // the home nations: the tour is theirs (CUPS.tour.from), and so is the Triple Crown
+const CAREER_CUP_NAME = { euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // the cups engine's names (CUPS)
+const CAREER_KINDS = ['league', 'euro', 'world', 'tour', 'triple'];   // a trophy's kind, in the card's order
+const CAREER_TROPHIES = 60;                          // the most kept, the latest
 const CAREER_POS = { F:[1, 2, 3], B:[4, 5, 6, 7] };   // sevens: forwards wear 1 to 3, backs 4 to 7
-/* A new player: about 61 overall, near the Minis sides. Any skill not listed starts at CAREER_BASE. */
+/* A new player: about 61 overall, whatever the club. Any skill not listed starts at CAREER_BASE. */
 const CAREER_START = { F:{ pace:32, power:44, handling:36, kicking:26, stamina:38 }, B:{ pace:44, power:26, handling:38, kicking:34, stamina:34 } };
 const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
 /* Which skill a drill trains. A drill's own result wins when it names one: Pass Around the Circle trains Stamina as the
-   Runner and Handling as the Passer. Driving is hidden in the Minis: young players don't scrum yet. */
+   Runner and Handling as the Passer. */
 const CAREER_DRILL_SKILL = { egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', cones:'pace', defend:'pace', kick:'kicking' };
 const CAREER_DRILL_ORDER = ['egg', 'pass', 'circle', 'tackle', 'scrum', 'cones', 'defend', 'kick'];
 const CAREER_DRILL_NAME = { egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
@@ -68,6 +71,16 @@ const CAREER_FADE = 0.02;                            // late in a half: top spee
 const CAREER_SPRINT = 0.08;                          // the sprint meter's drain while he sprints, per ability point of stamina
 const CAREER_HISTORY = 40;
 let careerLast = null;                               // what the last match or session gave, for the hub: { kind, gains }
+/* The cups engine, when the build has it: its functions, or null, and every cup phase is skipped. careerCupsHook is the tests'
+   stand-in (an object of the same functions, or false for none), as storeNativeHook is the store's. */
+let careerCupsHook = null;
+function careerCups() {
+  if (careerCupsHook !== null) return careerCupsHook || null;
+  if (typeof cupNew !== 'function' || typeof cupFixture !== 'function' || typeof cupRecord !== 'function' || typeof cupWinner !== 'function') return null;
+  return { cupNew, cupFixture, cupRecord, cupWinner, cupLabel:typeof cupLabel === 'function' ? cupLabel : null,
+    cleanCup:typeof cleanCup === 'function' ? cleanCup : null, cupTriple:typeof cupTriple === 'function' ? cupTriple : null };
+}
+const careerLocker = id => { if (typeof lockerEvent === 'function') lockerEvent(id); };   // a medal (the Locker): his first call-up, a transfer
 
 /* ---------- skills ---------- */
 function careerSkills() {                            // [key, label]: the team abilities, plus Stamina while the teams don't have it yet
@@ -83,40 +96,44 @@ function careerOverall(skills) {                     // overallOf's 40 to 99, fr
 }
 function careerName(v) { return Array.from(String(v == null ? '' : v).normalize('NFC').replace(/[^\p{L}' -]/gu, '').replace(/\s+/g, ' ').trim()).slice(0, 12).join('').trim(); }
 
-/* ---------- teams for each stage ---------- */
-function careerSide(t, cut) {
-  const s = cleanSide(t); if (!s) return null;
-  for (const [k] of ABILITIES) if (k in s) s[k] = clamp(s[k] + ((cut && (cut[k] != null ? cut[k] : cut.all)) || 0), 1, 5);
-  return s;
-}
-const careerProSide = id => CAREER_PRO_POOLS.flat().find(t => t.id === id) || FRANCE[0];
-const careerNation = (id, cat) => { const l = natList(cat); return l.find(t => t.id === id) || l.find(t => t.id === 'ENG'); };   // the category's own side
+/* ---------- clubs, leagues and nations ---------- */
+const careerSide = t => cleanSide(t);
 const careerCat = cr => (cr && cr.cat === 'women' ? 'women' : 'men');   // Men | Women: Career has no Minis
-function careerTeamFor(cr, stage) { return catSide(careerTeamBase(cr, stage), careerCat(cr)); }
-function careerTeamBase(cr, stage) {
-  if (stage <= 1) return careerSide(cr.club, CAREER_CUT[stage]);
-  if (stage === 2) return careerSide(CAREER_COUNTIES[0]);
-  if (stage === 3) return careerSide(careerProSide(cr.pro));
-  return careerSide(careerNation(cr.country, careerCat(cr)));
+const careerNations = cat => natList(cat).filter(t => !t.legend);      // the twelve to be called up for: never a Legends side
+const careerNation = (id, cat) => { const l = careerNations(cat); return l.find(t => t.id === id) || l.find(t => t.id === 'ENG'); };   // the category's own side
+const careerClubs = () => NATIONAL.flat();           // where an offer comes from: every national league, Scotland's included
+const careerClubById = id => careerClubs().find(t => t.id === id) || null;
+const careerListOf = t => (t && !t.custom ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's list, or null for one you made
+/* The list a club was picked from, as the save keeps it: a built-in club's own, else a national league's or My League's key, else Local. */
+function careerLeagueKey(key, club) {
+  const own = careerListOf(club); if (own) return own.key;
+  return key === IMPORT_POOL || TEAM_LISTS.some(l => l.key === key && l.tier > 0) ? key : 'sur';
 }
-function careerOpponents(cr, stage) { return careerDraw(cr, stage).map(t => catSide(t, careerCat(cr))); }
-function careerDraw(cr, stage) {                     // five sides; the random draws happen here, never in a save or a render
-  if (stage <= 1) {
-    const mine = cr.club, same = t => t.id === mine.id || t.name === mine.name || (typeof importSame === 'function' && importSame(t.name, mine.name));   // an imported Farnham RFC is Farnham, as the import's own league draw has it
-    const others = CLUBS.filter(t => !same(t));
-    return shuffle(others.slice()).slice(0, 5).map(t => careerSide(t, CAREER_CUT[stage]));
-  }
-  if (stage === 2) return CAREER_COUNTIES.slice(1).map(t => careerSide(t));
-  if (stage === 3) {
-    const me = careerProSide(cr.pro), pool = CAREER_PRO_POOLS.find(p => p.includes(me)) || FRANCE;
-    return shuffle(pool.filter(t => t !== me)).slice(0, 5).map(t => careerSide(t));
-  }
-  const cat = careerCat(cr), me = careerNation(cr.country, cat);   // the country's six in its category's twelve, by who is in it (natGroup)
-  return natGroup(me.id, cat).filter(t => t.id !== me.id).map(t => careerSide(t));
+function careerLeague(cr) {                          // his club's league now: My League only while a league is saved
+  const key = careerLeagueKey(cr.league, cr.club);
+  return key === IMPORT_POOL && !importLeague ? 'sur' : key;
 }
-/* A season: the championship's shape, with the weakest opponent first and the strongest last, as newChamp does. */
+const careerLeagueName = key => (key === IMPORT_POOL ? 'My League' : (TEAM_LISTS.find(l => l.key === key) || { name:'' }).name);
+/* Where he plays now: his country in the international window and on tour, his club otherwise. */
+const careerWhere = cr => (cr.phase === 'intl' || cr.phase === 'tour' ? 'intl' : 'league');
+function careerTeamFor(cr, where) { return catSide(careerTeamBase(cr, where || careerWhere(cr)), careerCat(cr)); }
+function careerTeamBase(cr, where) { return careerSide(where === 'intl' ? careerNation(cr.country, careerCat(cr)) : cr.club); }
+function careerOpponents(cr, where) { return careerDraw(cr, where || careerWhere(cr)).map(t => catSide(t, careerCat(cr))); }
+function careerDraw(cr, where) {                     // five sides; the random draws happen here, never in a save or a render
+  if (where === 'intl') {                            // his country's six in its category's twelve (natGroup), by who is in it
+    const cat = careerCat(cr), me = careerNation(cr.country, cat);
+    return natGroup(me.id, cat).filter(t => t.id !== me.id && !t.legend).map(careerSide);
+  }
+  const key = careerLeague(cr), mine = cr.club;
+  if (key === IMPORT_POOL) return importOthers(mine).map(careerSide);   // My League: its sides, topped up with Local clubs (src/import.js)
+  const same = t => t.id === mine.id || t.name === mine.name || (typeof importSame === 'function' && importSame(t.name, mine.name));   // an imported Farnham RFC is Farnham, as the import's own league draw has it
+  const list = (TEAM_LISTS.find(l => l.key === key) || TEAM_LISTS.find(l => l.key === 'sur')).teams;
+  return shuffle(list.filter(t => !same(t))).slice(0, 5).map(careerSide);
+}
+/* A season (his club's league, or his country's six): the championship's shape, with the weakest opponent first and the
+   strongest last, as newChamp does. */
 function careerNewSeason(cr) {
-  const user = careerTeamFor(cr, cr.stage), five = careerOpponents(cr, cr.stage);
+  const where = careerWhere(cr), user = careerTeamFor(cr, where), five = careerOpponents(cr, where);
   const ranked = five.map((t, i) => ({ i:i + 1, r:rateOf(t) })).sort((a, b) => a.r - b.r || a.i - b.i);
   const order = [0, ranked[4].i, ranked[3].i, ranked[2].i, ranked[1].i, ranked[0].i];
   cr.seasons++;
@@ -130,10 +147,10 @@ function careerCreate(o) {
   if (!club) return null;
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
-  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, cat:careerCat(o),
+  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, league:careerLeagueKey(o.league, club), cat:careerCat(o),
     proMode:o.proMode === true,                      // Pro Mode, your player alone (career-pro.js). Its own line, and in cleanCareer's order
-    pro:null, country:null, skills,
-    stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
+    country:null, skills, year:1, phase:'league', seasons:0, season:null, cup:null, offers:null, trained:false,
+    history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 }, trophies:[] };
   cr.life = careerLifeNew();                         // Energy, Morale and Team Spirit (src/career-life.js)
   careerNewSeason(cr);
   return cr;
@@ -146,44 +163,130 @@ function careerStart(o) {                            // Start Career on the new 
   return cr;
 }
 
-/* ---------- the season's end ---------- */
+/* ---------- the next match, and the end of a phase ---------- */
+const careerCupUser = cup => (Number.isInteger(cup && cup.user) ? cup.user : 0);   // his side's index in the cup's teams
+const careerCupKind = cr => (cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
+/* His next match in the phase: { teams, home, away, user, label }, or null when the phase is over (or there is no match: the
+   transfer window). Reads the season or the cup, draws nothing. */
+function careerAhead(cr) {
+  if (!cr || cr.phase === 'transfer') return null;
+  const c = cr.season;
+  if (c) { if (c.round >= 5) return null; const { pair } = userFixture(c); return { teams:c.teams, home:pair[0], away:pair[1], user:c.user, label:'Round ' + (c.round + 1) + ' of 5' }; }
+  const K = careerCups(), f = cr.cup && K ? K.cupFixture(cr.cup) : null;
+  return f ? { teams:cr.cup.teams, home:f.home, away:f.away, user:careerCupUser(cr.cup), label:f.label || '' } : null;
+}
 function careerPlace(c) { return standings(c).findIndex(r => r.i === c.user) + 1; }
-function careerOutcome(cr) {
-  const c = cr && cr.season;
-  if (!c || c.round < 5) return null;
-  const place = careerPlace(c), ovr = careerOverall(cr.skills), st = CAREER_STAGES[cr.stage];
-  const final = cr.stage >= CAREER_STAGES.length - 1, top = place <= CAREER_UP, bar = st.bar != null && ovr >= st.bar;
-  return { place, ovr, final, top, bar, promoted:!final && (top || bar) };
+function careerTriple(c) {                           // a home nation that beat the other three: the cups engine's rule, else the championship's honours
+  const K = careerCups();
+  if (K && K.cupTriple) return !!K.cupTriple(c);
+  return honours(c, standings(c)).some(h => h[0] === 'Triple Crown' && h[1] === c.user);
 }
-function careerSign(cr) {                            // going up to Pro Club: a city side from any national league
-  const all = CAREER_PRO_POOLS.flat();
-  cr.pro = all[Math.floor(rnd()*all.length)].id;
-}
-function careerAdvance(country) {                    // Next Season (or a country, when called up)
-  const cr = career, out = careerOutcome(cr);
-  if (practice || !out || out.final) return false;
-  const c = cr.season, s = seasonSummary(c);
-  cr.history.push({ stage:cr.stage, name:c.teams[c.user].name, place:out.place, up:out.promoted, w:s.won, d:s.drawn, l:s.lost });
-  cr.history = cr.history.slice(-CAREER_HISTORY);
-  if (out.promoted) {
-    cr.stage++;
-    if (cr.stage === 3 && !cr.pro) careerSign(cr);
-    if (cr.stage === 4) cr.country = natList(careerCat(cr)).some(t => t.id === country) ? country : (cr.country || 'ENG');
+/* What comes next this year, after the phase he is in: the first of the phases after it that he has earned. */
+function careerNext(cr) {
+  const K = careerCups(), ovr = careerOverall(cr.skills), from = CAREER_PHASES.indexOf(cr.phase);
+  const won = cr.phase === 'league' && !!cr.season && cr.season.round >= 5 && careerPlace(cr.season) === 1;
+  for (const ph of CAREER_PHASES.slice(from + 1)) {
+    if (ph === 'cup' && won && K && CAREER_EURO.includes(careerLeague(cr))) return { phase:'cup', kind:'euro' };
+    if (ph === 'intl' && ovr >= CAREER_CALL.bar) return { phase:'intl', kind:K && cr.year % CAREER_CALL.every === 0 ? 'world' : 'six', first:!cr.country };
+    if (ph === 'tour' && K && cr.year % CAREER_CALL.every === CAREER_CALL.tourAt && CAREER_HOME.includes(cr.country) && ovr >= CAREER_CALL.tour) return { phase:'tour', kind:'tour' };
   }
-  careerNewSeason(cr);
+  return { phase:'transfer' };
+}
+/* The phase just finished, for the screen between phases: { kind, place, won, triple, ovr, next }, or null while a match is
+   still to play (and in the transfer window). kind: 'league', 'intl' (his country's six), 'euro', 'world' or 'tour'. */
+function careerOutcome(cr) {
+  if (!cr || cr.phase === 'transfer' || careerAhead(cr)) return null;
+  const out = { kind:null, place:null, won:false, triple:false, ovr:careerOverall(cr.skills), next:null };
+  const c = cr.season, K = careerCups();
+  if (c) { out.kind = cr.phase === 'intl' ? 'intl' : 'league'; out.place = careerPlace(c); out.won = out.place === 1; out.triple = out.kind === 'intl' && careerTriple(c); }
+  else if (cr.cup && K) { out.kind = careerCupKind(cr); out.won = K.cupWinner(cr.cup) === careerCupUser(cr.cup); }
+  else return null;
+  out.next = careerNext(cr);
+  return out;
+}
+function careerTrophy(cr, kind, name) {
+  cr.trophies.push({ kind, year:cr.year, name:String(name).slice(0, 24) });
+  cr.trophies = cr.trophies.slice(-CAREER_TROPHIES);
+}
+function careerBank(cr, out) {                       // the phase just finished into his history and his trophies
+  const c = cr.season;
+  if (c) {
+    const s = seasonSummary(c), name = c.teams[c.user].name;
+    cr.history.push({ year:cr.year, kind:out.kind, name, place:out.place, w:s.won, d:s.drawn, l:s.lost });
+    cr.history = cr.history.slice(-CAREER_HISTORY);
+    if (out.won) careerTrophy(cr, 'league', name);
+    if (out.triple) careerTrophy(cr, 'triple', name);
+  } else if (out.won) careerTrophy(cr, out.kind, cr.cup.teams[careerCupUser(cr.cup)].name);
+}
+/* Into a phase: its season, cup or offers drawn now, once, and saved with it. */
+function careerEnter(cr, next) {
+  const K = careerCups(), cat = careerCat(cr);
+  cr.phase = next.phase; cr.season = null; cr.cup = null; cr.offers = null; cr.trained = false;
+  if (next.phase === 'transfer') { cr.offers = careerOffers(cr); return; }
+  if (next.phase === 'league' || (next.phase === 'intl' && next.kind !== 'world')) { careerNewSeason(cr); return; }
+  const id = next.kind, opts = { user:careerTeamFor(cr, id === 'euro' ? 'league' : 'intl'), cat, year:cr.year };
+  if (id === 'euro') opts.list = careerLeague(cr);   // his league, never drawn again (a made team's is the list it was picked on)
+  if (id === 'tour') opts.n = Math.floor(cr.year/CAREER_CALL.every);   // the hosts in turn: years 2, 6, 10 are 0, 1, 2
+  const cup = K ? K.cupNew(id, opts) : null;
+  if (cup) { cr.cup = cup; return; }
+  if (id === 'world') careerNewSeason(cr);           // no World Cup after all: his country's six
+  else careerEnter(cr, { phase:'transfer' });
+}
+/* Continue on the screen between phases (or a country, at the first call-up): the phase into the history and the cabinet, and the next one. */
+function careerAdvance(country) {
+  const cr = career, out = careerOutcome(cr);
+  if (practice || !out) return false;
+  careerBank(cr, out);
+  if (out.next.phase === 'intl' && out.next.first) {
+    cr.country = careerNations(careerCat(cr)).some(t => t.id === country) ? country : 'ENG';
+    careerLocker('callup');
+  }
+  careerEnter(cr, out.next);
   careerLast = null;
   save();
+  return true;
+}
+/* The transfer window. target: the club overall his own maps to. */
+function careerTarget(ovr) { const [a, b] = CAREER_MOVE.from, [lo, hi] = CAREER_MOVE.to; return clamp(lo + (ovr - a)*(hi - lo)/(b - a), lo, hi); }
+function careerOffers(cr) {                          // two or three club ids, best first; the draw happens here, as the window opens
+  const target = careerTarget(careerOverall(cr.skills)), pool = careerClubs().filter(t => cr.club.custom || t.id !== cr.club.id);
+  let near = [];
+  for (let band = CAREER_MOVE.band; near.length < 2 && band <= 40; band++) near = pool.filter(t => Math.abs(overallOf(t) - target) <= band);
+  const [few, most] = CAREER_MOVE.offers, n = Math.min(near.length, few + Math.floor(rnd()*(most - few + 1)));
+  const mixed = shuffle(near.slice()), out = [], lists = new Set();
+  for (const t of mixed) { const k = careerListOf(t).key; if (out.length < n && !lists.has(k)) { out.push(t); lists.add(k); } }
+  for (const t of mixed) if (out.length < n && !out.includes(t)) out.push(t);
+  return out.sort((a, b) => overallOf(b) - overallOf(a)).map(t => t.id);
+}
+/* An offer taken (its club's id), or Stay (anything else): the next year starts at that club's league. */
+function careerSign(id) {
+  const cr = career;
+  if (practice || !cr || cr.phase !== 'transfer') return false;
+  const to = id && (cr.offers || []).includes(id) ? careerClubById(id) : null;
+  if (to) { cr.club = careerSide(to); cr.league = careerListOf(to).key; careerLocker('transfer'); }
+  cr.year++;
+  careerEnter(cr, { phase:'league' });
+  careerLast = null;
+  save();
+  return true;
+}
+/* A phase with nothing drawn yet (a broken season or cup dropped on load, a window's offers lost): drawn now, as the hub opens. */
+function careerRepair(cr) {
+  if (cr.phase === 'transfer') { if (cr.offers && cr.offers.length) return false; cr.offers = careerOffers(cr); return true; }
+  if (cr.season || (cr.cup && careerCups())) return false;
+  if (cr.phase === 'league' || cr.phase === 'intl') { cr.cup = null; careerNewSeason(cr); return true; }
+  careerEnter(cr, { phase:'transfer' });             // a cup that could not be kept: on to the window
   return true;
 }
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the drills that exist right now, in the career's order; no Driving in the Minis
+function careerDrills(cr) {                          // the drills that exist right now, in the career's order
   const have = new Map(PRACTICE_DRILLS.map(d => [d.id, d]));
-  return CAREER_DRILL_ORDER.filter(id => have.has(id) && !(id === 'scrum' && cr && cr.stage === 0))
+  return CAREER_DRILL_ORDER.filter(id => have.has(id))
     .map(id => ({ id, name:have.get(id).name || CAREER_DRILL_NAME[id], skills:id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[id]] }));
 }
-const careerCanTrain = cr => !!(cr && cr.season && cr.season.round < 5 && !cr.trained);
+const careerCanTrain = cr => !!(cr && !cr.trained && careerAhead(cr));   // one session before each match, league, international or cup
 /* The drill's onDone ({ id, stars, success[, role, skill, quit] }), once its settings are restored. One session a round;
    a drill left before it finished (quit) gives nothing and keeps the session. */
 function careerTrainDone(res) {
@@ -232,10 +335,12 @@ function careerArm() {                               // straight after startMatc
   careerKickoff();
 }
 function careerPlay() {                              // Play Match on the hub
-  const cr = career, c = cr && cr.season;
-  if (practice || !c || c.round >= 5) return false;
-  const { opp } = userFixture(c);
-  startMatch(c.teams[c.user], c.teams[opp], false, cr.proMode === true && kidsLevel() ? { easy:true } : undefined);   // My Player on Kids plays at Easy: the computer runs his side, so Kids' weaker opponents would let it win by itself (the owner's call)
+  const cr = career, f = careerAhead(cr);
+  if (practice || !f) return false;
+  const opp = f.home === f.user ? f.away : f.home, cup = !cr.season && cr.cup;
+  const o = cr.proMode === true && kidsLevel() ? { easy:true } : undefined;   // My Player on Kids plays at Easy: the computer runs his side, so Kids' weaker opponents would let it win by itself (the owner's call)
+  startMatch(f.teams[f.user], f.teams[opp], false, cup ? { ...o, cup:cup.id } : o);
+  if (cup) M.cup = cup.id;                           // a cup match: the cups engine's rules for one (its Golden Try) read it, as they read M.champ
   careerArm();
   return true;
 }
@@ -270,19 +375,21 @@ function careerDeedGains(deeds) {
   }
   return gains;
 }
-/* Full time in a career match: the result into the career's season (never the championship), the deeds into his skills. */
+/* Full time in a career match: the result into the career's season or cup (never the championship's), the deeds into his skills. */
 function careerRecordResult() {
-  const cr = career, c = cr && cr.season;
-  if (!c || c.round >= 5 || !M || !M.career || M.demo || M.two || practice || M.careerDone) return false;
-  const { pair } = userFixture(c), home = pair[0] === c.user;
-  const mine = home
-    ? { h:pair[0], a:pair[1], hs:M.score[0], as:M.score[1], ht:M.tries[0], at:M.tries[1] }
-    : { h:pair[0], a:pair[1], hs:M.score[1], as:M.score[0], ht:M.tries[1], at:M.tries[0] };
-  const rd = [mine];
-  for (const p of c.fixtures[c.round]) if (p !== pair) rd.push(simMatch(c, p[0], p[1]));
+  const cr = career, f = careerAhead(cr);
+  if (!f || !M || !M.career || M.demo || M.two || practice || M.careerDone) return false;
+  const home = f.home === f.user, us = [M.score[0], M.tries[0]], them = [M.score[1], M.tries[1]];
   M.careerDone = true;
-  c.results.push(rd);
-  c.round++;
+  const c = cr.season;
+  if (c) {
+    const { pair } = userFixture(c);
+    const mine = home ? { h:pair[0], a:pair[1], hs:us[0], as:them[0], ht:us[1], at:them[1] } : { h:pair[0], a:pair[1], hs:them[0], as:us[0], ht:them[1], at:us[1] };
+    const rd = [mine];
+    for (const p of c.fixtures[c.round]) if (p !== pair) rd.push(simMatch(c, p[0], p[1]));
+    c.results.push(rd);
+    c.round++;
+  } else careerCups().cupRecord(cr.cup, home ? { score:[us[0], them[0]], tries:[us[1], them[1]] } : { score:[them[0], us[0]], tries:[them[1], us[1]] });   // in the fixture's order
   const deeds = M.careerDeeds || {}, gains = careerDeedGains(deeds);
   for (const k in gains) cr.skills[k] = clamp(cr.skills[k] + gains[k], 1, 99);
   const T = cr.totals;
@@ -290,44 +397,63 @@ function careerRecordResult() {
   cr.trained = false;
   careerLast = { kind:'match', gains };
   careerLifeRound(cr, deeds);                        // Energy back, Morale from the result, Team Spirit from his part in it
-  careerSettle(cr);
   save();
-  return true;
-}
-function careerSettle(cr) {                          // going up to Pro Club: sign at the season's end, so the screen can name the club
-  const out = careerOutcome(cr);
-  if (!out || !out.promoted || cr.stage !== 2 || cr.pro) return false;
-  careerSign(cr);
   return true;
 }
 
 /* ---------- the save ---------- */
 const careerInt = (v, lo, hi) => (Number.isInteger(v) && v >= lo && v <= hi ? v : null);
+const careerText = v => String(v || '').replace(/\s+/g, ' ').trim().slice(0, 24);
+function careerTrophies(list) {
+  const out = [];
+  for (const t of list.slice(-CAREER_TROPHIES)) {
+    if (!t || typeof t !== 'object' || !CAREER_KINDS.includes(t.kind)) continue;
+    const year = careerInt(t.year, 1, 9999), name = careerText(t.name);
+    if (year != null && name) out.push({ kind:t.kind, year, name });
+  }
+  return out;
+}
+/* A career from before club seasons has a stage (0 Minis, 1 Juniors, 2 County, 3 Pro Club, 4 International) and no phase. Minis,
+   Juniors and County become a league year at their club, a new season drawn as the hub opens; Pro Club is a year at the side he
+   signed for, its season kept; International keeps that club and his country, in the window with its season. Its skills, history,
+   totals and life are kept, and the titles in its history are its first trophies. A club and skills are the career: anything
+   else that is broken is put right, never the whole career dropped. */
 function cleanCareer(c) {
   if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
-  const club = cleanSide(c.club);
-  if (!club) return null;
-  const pos = c.pos === 'F' ? 'F' : c.pos === 'B' ? 'B' : null;
-  if (!pos) return null;
-  const stage = careerInt(c.stage, 0, CAREER_STAGES.length - 1);
-  if (stage == null) return null;
-  const skills = {}, raw = c.skills && typeof c.skills === 'object' ? c.skills : {};
+  const raw = c.skills && typeof c.skills === 'object' && !Array.isArray(c.skills) ? c.skills : null;
+  const was = typeof c.phase === 'string' ? null : careerInt(c.stage, 0, 4);   // the stage of a career from before club seasons
+  const signed = was != null && was >= 3 ? careerClubById(c.pro) : null;   // the Pro Club side it signed for
+  const club = cleanSide(signed || c.club);
+  if (!club || !raw) return null;
+  const pos = c.pos === 'F' ? 'F' : 'B', cat = careerCat(c);   // an unknown position is a back, as careerCreate has it; a career from before Men | Women is Men
+  const skills = {};
   for (const k of careerSkillKeys()) skills[k] = typeof raw[k] === 'number' && Number.isFinite(raw[k]) ? clamp(Math.round(raw[k]), 1, 99) : (CAREER_START[pos][k] || CAREER_BASE);
   const T = c.totals && typeof c.totals === 'object' ? c.totals : {}, totals = {};
   for (const k of ['matches', 'tries', 'tackles', 'goals']) totals[k] = careerInt(T[k], 0, 100000) || 0;
   const history = [];
-  if (Array.isArray(c.history)) for (const h of c.history.slice(-CAREER_HISTORY)) {
-    if (!h || typeof h !== 'object') continue;
-    const e = { stage:careerInt(h.stage, 0, CAREER_STAGES.length - 1), name:String(h.name || '').replace(/\s+/g, ' ').trim().slice(0, 24), place:careerInt(h.place, 1, 6), up:!!h.up,
-      w:careerInt(h.w, 0, 5), d:careerInt(h.d, 0, 5), l:careerInt(h.l, 0, 5) };
-    if (e.stage == null || e.place == null || e.w == null || e.d == null || e.l == null || !e.name) continue;
-    history.push(e);
+  if (Array.isArray(c.history)) c.history.slice(-CAREER_HISTORY).forEach((h, i) => {
+    if (!h || typeof h !== 'object') return;
+    const stage = careerInt(h.stage, 0, 4), kind = h.kind === 'league' || h.kind === 'intl' ? h.kind : stage == null ? null : stage === 4 ? 'intl' : 'league';
+    const e = { year:careerInt(h.year, 1, 9999) || i + 1, kind, name:careerText(h.name), place:careerInt(h.place, 1, 6), w:careerInt(h.w, 0, 5), d:careerInt(h.d, 0, 5), l:careerInt(h.l, 0, 5) };
+    if (e.kind && e.name && e.place != null && e.w != null && e.d != null && e.l != null) history.push(e);
+  });
+  let phase = CAREER_PHASES.includes(c.phase) ? c.phase : was === 4 ? 'intl' : 'league';
+  const nations = careerNations(cat), K = careerCups();
+  const country = nations.some(t => t.id === c.country) ? c.country : phase === 'intl' || phase === 'tour' ? 'ENG' : null;
+  let season = null, cup = null, offers = null;
+  if ((phase === 'league' || phase === 'intl') && c.season != null && !(was != null && was < 3)) season = cleanChamp(c.season);   // a broken season is dropped (and a Minis, Juniors or County one): the hub draws a new one
+  if (phase !== 'league' && phase !== 'transfer' && !season && c.cup != null && K && K.cleanCup) cup = K.cleanCup(c.cup) || null;
+  if ((phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
+  if (phase === 'transfer' && Array.isArray(c.offers)) {
+    offers = [...new Set(c.offers.filter(id => typeof id === 'string' && careerClubById(id) && (club.custom || id !== club.id)))].slice(0, CAREER_MOVE.offers[1]);
+    if (!offers.length) offers = null;               // drawn again as the hub opens
   }
-  const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
-  return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, cat:careerCat(c),   // a career from before Men | Women is Men
+  const year = careerInt(c.year, 1, 9999) || (was != null ? Math.max(1, careerInt(c.seasons, 1, 9999) || history.length + 1) : 1);
+  const trophies = Array.isArray(c.trophies) ? careerTrophies(c.trophies) : careerTrophies(history.filter(h => h.place === 1).map(h => ({ kind:'league', year:h.year, name:h.name })));
+  return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, league:careerLeagueKey(c.league, club), cat,
     proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
-    pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:natList(careerCat(c)).some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
-    skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals,
+    country, skills, year, phase, seasons:careerInt(c.seasons, 0, 100000) || 0, season, cup, offers,
+    trained:c.trained === true && (season ? season.round < 5 : !!cup), history, totals, trophies,
     life:careerLifeClean(c.life) };
 }
 /* Your player: a ring in the kit's trim round him and a star on his back (the trim, or the shirt, or chalk, whichever

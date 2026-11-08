@@ -33,23 +33,23 @@ const CAREER_LIFE = {
 };
 const CAREER_LIFE_KEYS = [['energy', 'Energy'], ['morale', 'Morale'], ['spirit', 'Team Spirit']];
 const CAREER_LIFE_COL = { energy:'#c4e65a', morale:'#ff7eb6', spirit:'#3ad6c0' };   // a colour per bar, on its chips too, never one a skill uses
-/* The dilemmas. from: the first stage it can come up (0 Minis, 1 Juniors, 2 County). Every option's fx is skill points (Pace to
+/* The dilemmas. from: the first year of a career it can come up in (1, 2 or 3, and every year after). Every option's fx is skill points (Pace to
    Stamina) and bar points; each option has something good in it. The question is the card's heading, the names its buttons.
    Two options of two chips each, and a name that fits one line of its button at 667x375 (tools/career-life.mjs measures them):
    a third of either, or a name on two lines, and the hub scrolls there. A name a device renders wider steps down (careerFit). */
 const CAREER_DILEMMAS = [
-  { id:'pizza', from:0, q:'Training or Pizza Night?', opts:[{ name:'Extra Training', fx:{ handling:2, energy:-15 } }, { name:'Team Pizza Night', fx:{ spirit:12, morale:6 } }] },
-  { id:'captain', from:0, q:'Kick With the Captain?', opts:[{ name:'Kicking Practice', fx:{ kicking:2, energy:-10 } }, { name:'Rest', fx:{ energy:20 } }] },
-  { id:'videos', from:0, q:'Videos or Video Games?', opts:[{ name:'Match Videos', fx:{ handling:2, energy:-5 } }, { name:'Video Games', fx:{ morale:8, energy:10 } }] },
-  { id:'film', from:0, q:'Early Night or Film Night?', opts:[{ name:'Early Night', fx:{ energy:20 } }, { name:'Team Film Night', fx:{ spirit:12, morale:6 } }] },
-  { id:'beach', from:0, q:'Beach Day or Tackling?', opts:[{ name:'Team Beach Day', fx:{ spirit:10, morale:6 } }, { name:'Tackle Drills', fx:{ power:2, energy:-15 } }] },
-  { id:'park', from:0, q:'Lie In or Touch Rugby?', opts:[{ name:'Lie In', fx:{ energy:20 } }, { name:'Touch Rugby', fx:{ spirit:10, pace:1 } }] },
-  { id:'party', from:0, q:'Party or Practice?', opts:[{ name:'Birthday Party', fx:{ spirit:12, morale:6 } }, { name:'Goal Kicking', fx:{ kicking:2, energy:-10 } }] },
-  { id:'gym', from:1, q:'Rest or Gym?', opts:[{ name:'Rest Day', fx:{ energy:20 } }, { name:'Gym Session', fx:{ power:2, energy:-15 } }] },
-  { id:'minis', from:1, q:'Help Coach the Minis?', opts:[{ name:'Help Coach', fx:{ spirit:8, morale:8 } }, { name:'Rest', fx:{ energy:20 } }] },
-  { id:'physio', from:2, q:'Physio or Bike Ride?', opts:[{ name:'Physio Session', fx:{ energy:20 } }, { name:'Bike Ride', fx:{ stamina:2, energy:-10 } }] },
-  { id:'school', from:2, q:'Autographs or Sprints?', opts:[{ name:'Sign Autographs', fx:{ morale:10, spirit:4 } }, { name:'Extra Sprints', fx:{ pace:2, energy:-15 } }] },
-  { id:'swim', from:2, q:'Swim or Long Run?', opts:[{ name:'Team Swim', fx:{ spirit:8, energy:10 } }, { name:'Long Run', fx:{ stamina:2, energy:-15 } }] },
+  { id:'pizza', from:1, q:'Training or Pizza Night?', opts:[{ name:'Extra Training', fx:{ handling:2, energy:-15 } }, { name:'Team Pizza Night', fx:{ spirit:12, morale:6 } }] },
+  { id:'captain', from:1, q:'Kick With the Captain?', opts:[{ name:'Kicking Practice', fx:{ kicking:2, energy:-10 } }, { name:'Rest', fx:{ energy:20 } }] },
+  { id:'videos', from:1, q:'Videos or Video Games?', opts:[{ name:'Match Videos', fx:{ handling:2, energy:-5 } }, { name:'Video Games', fx:{ morale:8, energy:10 } }] },
+  { id:'film', from:1, q:'Early Night or Film Night?', opts:[{ name:'Early Night', fx:{ energy:20 } }, { name:'Team Film Night', fx:{ spirit:12, morale:6 } }] },
+  { id:'beach', from:1, q:'Beach Day or Tackling?', opts:[{ name:'Team Beach Day', fx:{ spirit:10, morale:6 } }, { name:'Tackle Drills', fx:{ power:2, energy:-15 } }] },
+  { id:'park', from:1, q:'Lie In or Touch Rugby?', opts:[{ name:'Lie In', fx:{ energy:20 } }, { name:'Touch Rugby', fx:{ spirit:10, pace:1 } }] },
+  { id:'party', from:1, q:'Party or Practice?', opts:[{ name:'Birthday Party', fx:{ spirit:12, morale:6 } }, { name:'Goal Kicking', fx:{ kicking:2, energy:-10 } }] },
+  { id:'gym', from:2, q:'Rest or Gym?', opts:[{ name:'Rest Day', fx:{ energy:20 } }, { name:'Gym Session', fx:{ power:2, energy:-15 } }] },
+  { id:'minis', from:2, q:'Help Coach the Minis?', opts:[{ name:'Help Coach', fx:{ spirit:8, morale:8 } }, { name:'Rest', fx:{ energy:20 } }] },
+  { id:'physio', from:3, q:'Physio or Bike Ride?', opts:[{ name:'Physio Session', fx:{ energy:20 } }, { name:'Bike Ride', fx:{ stamina:2, energy:-10 } }] },
+  { id:'school', from:3, q:'Autographs or Sprints?', opts:[{ name:'Sign Autographs', fx:{ morale:10, spirit:4 } }, { name:'Extra Sprints', fx:{ pace:2, energy:-15 } }] },
+  { id:'swim', from:3, q:'Swim or Long Run?', opts:[{ name:'Team Swim', fx:{ spirit:8, energy:10 } }, { name:'Long Run', fx:{ stamina:2, energy:-15 } }] },
 ];
 /* Which of a season's rounds have a dilemma: three of five, the first always, so no two rounds running go without one,
    across a season's end too. */
@@ -88,7 +88,7 @@ function careerLifeHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i
 function careerDilemmaPlan(cr) {                     // the season's five rounds: a dilemma or null each, from the season's id alone
   const c = cr && cr.season; if (!c) return [null, null, null, null, null];
   const plan = CAREER_DILEMMA_PLANS[careerLifeHash(c.id + '|plan') % CAREER_DILEMMA_PLANS.length];
-  const pool = CAREER_DILEMMAS.filter(d => (cr.stage || 0) >= d.from);
+  const pool = CAREER_DILEMMAS.filter(d => (Number.isInteger(cr.year) && cr.year > 0 ? cr.year : 1) >= d.from);   // the year's pool: a career's first year has its own seven
   let x = careerLifeHash(c.id + '|pick') || 1;
   for (let i = pool.length - 1; i > 0; i--) {         // a shuffle by xorshift on the hash: no rnd(), so the season's draw and the matches are untouched
     x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0;
@@ -196,7 +196,7 @@ function careerLifeRender(cr) {
   $('cr-card').innerHTML += careerLifeBarsHtml(cr);
   const d = careerDilemma(cr), box = $('cr-dilemma');
   box.hidden = !d; $('cr-next').hidden = $('cr-play').hidden = !!d;
-  if (d) $('cr-line').hidden = true;                // what it takes to go up comes back with Play Match: the card needs the room at 667x375
+  if (d) $('cr-line').hidden = true;                // the place in the table comes back with Play Match: the card needs the room at 667x375
   box.innerHTML = d ? careerDilemmaHtml(d) : '';
   for (const b of box.querySelectorAll('[data-o]')) b.addEventListener('click', () => careerLifePick(+b.dataset.o));
 }

@@ -96,8 +96,8 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // every way in goes ahead, with no card
   X.setChamp(null); $('b-champ').click();
   ok($('m-store').hidden && D.pickMode() === 'champ' && !$('s-teams').hidden, 'Championship opens its team screen');
-  C.set(null); $('cn-clubs').innerHTML = ''; C.open();
-  ok($('m-store').hidden && /data-i="0"/.test($('cn-clubs').innerHTML), 'Career opens the new player screen');
+  C.set(null); $('cn-mine').innerHTML = ''; C.open();
+  ok($('m-store').hidden && /Farnham/.test($('cn-mine').innerHTML), 'Career opens the new player screen');
   T.stamina.openBuilder(null);
   ok($('m-store').hidden && !$('s-build').hidden, 'Create Team opens the builder');
   I.open();
@@ -458,9 +458,9 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   S.FAN_CLUBS.push({ key:'guildford', name:'Guildford RFC', product:'tryline.fan.guildford', share:50, agreed:true, team:'GUI' });
   S.grant(['tryline.fan.guildford']);
   ok(S.fan().key === 'guildford', 'the latest Super Fan unlock is the club shown');
-  C.set(null); C.newOpen();
-  const cn = $('cn-clubs').innerHTML;
-  ok(cn.indexOf('Guildford') > 0 && cn.indexOf('Guildford') < cn.indexOf('Farnham') && /--kit:#1a1e4f/.test($('cn-shirt').innerHTML), 'Career\'s new player: Guildford first, and picked');
+  C.set(null); C.newOpen(); C.clubOpen();
+  const cn = $('cc-grid').innerHTML;
+  ok(cn.indexOf('Guildford') > 0 && cn.indexOf('Guildford') < cn.indexOf('Farnham') && /--kit:#1a1e4f/.test($('cn-mine').innerHTML) && C.draft().club.id === 'GUI', 'Career\'s new player: Guildford picked, and first on its list');
   X.setChamp(null); D.goHome(); $('b-champ').click();
   ok(D.settings().pool === 'sur' && X.teamPool() === 'sur' && $('t-default').textContent === 'Play as Guildford' && !$('t-default').hidden, 'Championship opens on the club\'s list (Local · Surrey) with Play as Guildford');
   ok(/data-i="0"[^>]*>[\s\S]*?Guildford/.test($('t-grid').innerHTML.split('data-i="1"')[0]), 'Guildford is the first card');
@@ -471,6 +471,9 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && !$('t-nat').hidden && $('t-loc').hidden && !$('t-default').hidden && $('t-default').textContent === 'Play as Toulouse', 'and the team screen opens on National · France with Play as Toulouse');
   X.poolPick('eng');
   ok($('t-default').hidden, 'Play as Toulouse only shows on its own list');
+  C.set(null); C.newOpen(); C.clubOpen();
+  ok(C.draft().club.id === 'TLS' && C.draft().league === 'fra' && !$('cc-nat').hidden && /data-i="0"[^>]*>[\s\S]*?Toulouse/.test($('cc-grid').innerHTML.split('data-i="1"')[0]), 'Career\'s new player starts at Toulouse, and its club screen opens on National · France with Toulouse first');
+  D.goHome();
   ok(S.first([X.CLUBS[0], X.FRANCE[1], X.FRANCE[0]]).map(t => t.id).join() === 'TLS,FAR,BOR', 'storeFirst moves the club to the front and keeps the rest in order');
   ok(S.first([{ ...X.FRANCE[0], custom:true }, X.CLUBS[0]])[0].custom, 'a team made by the player is never taken for the club');
   S.setBought([]);
@@ -480,7 +483,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // careerClubs: the Super Fan's club first on the new player screen
   S.setBought(['tryline.fan.guildford']);
   const careerSrc = read('src/ui-career.js');
-  ok(/const careerClubs = \(\) => storeFirst\(\[\.\.\.CLUBS, \.\.\.custom\]\)/.test(careerSrc), 'Career\'s club list puts the Super Fan\'s club first');
+  ok(/const careerClubList = k => storeFirst\(\[\.\.\.careerPoolTeams\(k\), \.\.\.custom\]\)/.test(careerSrc) && /careerDraft = \{ club:storeHomeTeam\(\), league:pool/.test(careerSrc), 'Career\'s club lists put the Super Fan\'s club first, and a new player starts with it');
   ok(/if \(pickMode === 'champ'\) teamList = storeFirst\(teamList\)/.test(menus), 'and so does Championship\'s team screen');
   S.setBought([]); D.goHome();
   ok($('st-fan').hidden && !$('home-tag').hidden, 'no Super Fan: the tagline is back');

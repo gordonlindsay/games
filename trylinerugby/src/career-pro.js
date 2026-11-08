@@ -1,7 +1,7 @@
 /* =========================================================
    Pro Mode: a career played as your player alone (2026-11-08, the owner's "control only your player").
    The choice is made with the career (Play as Whole Team | My Player, Whole Team first and the default) and kept in
-   career.proMode (`pro` was already the Pro Club side's id). careerArm sets M.careerPro in a career match with it on.
+   career.proMode (a career saved before club seasons kept its Pro Club side in `pro`; cleanCareer makes that side its club). careerArm sets M.careerPro in a career match with it on.
    Every rule here reads M.careerPro, so with it off (every other match, and a Whole Team career) the game plays
    exactly as before: the hooks in match.js, movement.js, passing.js, contact.js, goal-kicks.js and ui-match.js are each
    one condition that is false without it.

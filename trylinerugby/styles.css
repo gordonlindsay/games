@@ -535,8 +535,6 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-next .jersey{width:28px;height:28px}
 .cr-pick{margin:0}
 .cr-tile .lbl{align-self:stretch;min-width:0;overflow-wrap:normal}
-.cr-best .cr-tile{padding-right:6px}   /* everything in a tile sits left, so the stage row gives International its room on the right */
-.cr-best .cr-tile b{font-size:24px}
 @media (min-width:760px){.cr-nations{grid-template-columns:repeat(6,minmax(0,1fr))}}
 /* career life (src/career-life.js): Energy, Morale and Team Spirit under the skills, and the dilemma card in place of the fixture */
 .cr-life{display:grid;gap:6px;padding-top:10px;border-top:1.5px solid var(--rule)}
@@ -706,3 +704,48 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   .learn-row.three .btn{padding-block:4px;line-height:1.05}   /* in thirds on a narrow phone a label may take two lines, and the row stays 44px, as Championship's does */
   #b-grown{white-space:nowrap}
 }
+/* ===== career3 ===== */
+/* New Player: Your Club, Team and Play as on the left, First Name, Position, Shirt Number and Start Career on the right, so Start
+   Career is in view at 844x390 and 667x375 with no scroll. Your Club is his shirt with his number, the club and its league, and
+   Change Club, which opens the club screen (#s-career-club) */
+.cr-yours{padding:6px 8px 6px 10px;gap:10px}
+.cr-mineline{display:flex;align-items:center;gap:12px;min-width:0}
+.cr-mine{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cr-mine b{font:900 28px/.95 var(--display);text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow-wrap:normal}
+.cr-mine .lbl{white-space:nowrap}
+.cr-yours .btn{min-height:44px;padding:8px 14px}
+/* the club screen: National | Local and the lists as on the team screen, then the clubs, each its kit, name and rating */
+.team.cr-club{grid-template-columns:28px minmax(0,1fr) auto}
+.cr-rate{min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums}
+#cc-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}   /* four across at 844, three at 667: room for Guildfordians and Johannesburg beside the rating */
+#cc-grid .cr-club .tname{white-space:nowrap;overflow-wrap:normal}
+@media (orientation:landscape) and (max-height:560px){
+  #s-career-club .wrap{gap:12px}
+  #s-career-club h2.title{font-size:36px}
+}
+.cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
+@media (max-width:731px){
+  #cc-nat{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr))}
+  #cc-nat button:nth-child(4n+1){border-left:0}
+  #cc-nat button:nth-child(n+5){border-top:1.5px solid var(--rule-hi)}
+}
+/* the trophy row on the player card, under his name: a cup in each kind's colour and the count, only what he has won */
+/* one line, always (the card has no height to spare at 667x375): sized in em, so careerFit steps the whole row down where a narrow card can't hold it */
+.cr-cab{display:flex;flex-wrap:nowrap;gap:.4em;margin:3px 0 0;font:900 15px/1 var(--display);white-space:nowrap}
+.cr-cup{display:inline-flex;align-items:center;gap:.15em;color:var(--k);font-variant-numeric:tabular-nums}
+.cr-cup i{display:block;width:.85em;height:.95em;background:var(--k);clip-path:polygon(0 0,100% 0,100% 18%,84% 46%,60% 62%,58% 78%,80% 84%,80% 100%,20% 100%,20% 84%,42% 78%,40% 62%,16% 46%,0 18%)}
+.cr-cup b{font:inherit}
+/* the transfer window: the offers and Stay in equal parts, each a club's card */
+.cr-offers{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:10px}
+.team.cr-offer{grid-template-columns:44px minmax(0,1fr);grid-template-rows:auto auto;align-content:center;gap:4px 12px;min-height:76px;padding:10px 12px}
+.cr-offer .jw{grid-row:1/3}
+.cr-offer .jersey{width:44px;height:44px}
+.cr-offer .tname{align-self:end;font-size:24px;white-space:nowrap;overflow-wrap:normal}
+.cr-offer .lbl{align-self:start;white-space:nowrap}
+.cr-offer.stay{border-style:dashed}
+.cr-offer.stay .lbl{color:var(--chalk)}
+@media (max-width:620px){ .cr-offers{grid-template-columns:repeat(2,minmax(0,1fr))} }
+/* a phone 380px tall or less (667x375): the card's sections 6px apart, so the trophy row fits with the skills, traits and bars */
+@media (orientation:landscape) and (max-height:380px){ .cr-card{gap:6px} }
+/* the first call-up's twelve: four across on a phone held sideways, so they fit under Called Up at 667x375 */
+@media (orientation:landscape) and (max-width:759px){ .cr-nations{grid-template-columns:repeat(4,minmax(0,1fr))} }

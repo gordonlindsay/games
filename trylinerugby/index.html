@@ -160,12 +160,12 @@
     <div class="head"><div><p class="eyebrow">Career</p><h2 class="title">New Player</h2></div><button class="btn cr-headback" id="cn-back" data-back>Back to Menu</button></div>
     <div class="cr-newgrid">
       <div class="cr-left">
+        <div class="field"><span class="lbl">Your Club</span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"></span><button class="btn" id="cn-change">Change Club</button></div></div>
+        <div class="field"><span class="lbl">Team</span><div class="seg" id="cn-cat"><button>Men</button><button>Women</button></div></div>
         <div class="field"><span class="lbl">Play as</span><div class="seg" id="cn-mode"><button>Whole Team</button><button>My Player</button></div></div>
-        <div class="field"><span class="lbl">Your Club</span><div class="cr-clubs" id="cn-clubs"></div></div>
       </div>
       <div class="cr-form">
-        <div class="cr-namerow"><label class="field"><span class="lbl">First Name</span><input class="inp" id="cn-name" maxlength="12" placeholder="Optional" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label><span id="cn-shirt"></span></div>
-        <div class="field"><span class="lbl">Team</span><div class="seg" id="cn-cat"><button>Men</button><button>Women</button></div></div>
+        <label class="field"><span class="lbl">First Name</span><input class="inp" id="cn-name" maxlength="12" placeholder="Optional" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label>
         <div class="field"><span class="lbl">Position</span><div class="seg" id="cn-pos"><button>Forward</button><button>Back</button></div></div>
         <div class="field"><span class="lbl">Shirt Number</span><div class="seg" id="cn-num"></div></div>
         <button class="btn primary" id="cn-go">Start Career</button>
@@ -174,15 +174,24 @@
   </div>
 </section>
 
+<section class="screen" id="s-career-club" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">New Player</p><h2 class="title">Pick Your Club</h2></div></div>
+    <div class="pools"><div class="seg" id="cc-tier"></div><div class="seg" id="cc-nat" hidden></div><div class="seg" id="cc-loc" hidden></div></div>
+    <div class="cr-clubs" id="cc-grid"></div>
+    <button class="btn" id="cc-back" data-back>Back to New Player</button>
+  </div>
+</section>
+
 <section class="screen" id="s-career" hidden>
   <div class="wrap cr-hub">
     <div class="cr-card" id="cr-card"></div>
     <div class="cr-main">
-      <div class="head"><div><p class="eyebrow" id="cr-eyebrow">Minis</p><h2 class="title" id="cr-title">Round 1 of 5</h2><p class="chase" id="cr-line"></p><p class="cr-gain" id="cr-gain" hidden></p></div></div>
+      <div class="head"><div><p class="eyebrow" id="cr-eyebrow">Career</p><h2 class="title" id="cr-title">Round 1 of 5</h2><p class="chase" id="cr-line"></p><p class="cr-gain" id="cr-gain" hidden></p></div></div>
       <div class="cr-dilemma" id="cr-dilemma" hidden></div>
       <div id="cr-next"></div>
       <button class="btn primary" id="cr-play">Play Match</button>
-      <div class="row2"><button class="btn" id="cr-train">Train</button><button class="btn" id="cr-table">Table</button></div>
+      <div class="row2" id="cr-trow"><button class="btn" id="cr-train">Train</button><button class="btn" id="cr-table">Table</button></div>
       <div class="row2"><button class="btn" id="cr-back" data-back>Back to Menu</button><button class="btn warn" id="cr-reset">Start Fresh</button></div>
     </div>
   </div>
@@ -198,7 +207,7 @@
 
 <section class="screen" id="s-career-table" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow" id="cl-eyebrow">Minis</p><h2 class="title">Table</h2></div></div>
+    <div class="head"><div><p class="eyebrow" id="cl-eyebrow">Career</p><h2 class="title">Table</h2></div></div>
     <div class="tbl"><table>
       <thead><tr><th class="rk">#</th><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PD</th><th>BP</th><th>Pts</th></tr></thead>
       <tbody id="cl-table"></tbody>
@@ -213,7 +222,7 @@
     <div class="head"><div><p class="eyebrow" id="ce-eyebrow"></p><h2 class="title" id="ce-title"></h2><p class="chase" id="ce-line"></p></div><span id="ce-shirt"></span></div>
     <div class="cr-end" id="ce-body"></div>
     <div id="ce-act"></div>
-    <button class="btn" id="ce-back" data-back>Back to Menu</button>
+    <div class="row2"><button class="btn" id="ce-back" data-back>Back to Menu</button><button class="btn warn" id="ce-new">Start New Career</button></div>
   </div>
 </section>
 
