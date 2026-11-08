@@ -39,7 +39,7 @@ function renderCareerHome() {
 /* ---------- the new player ---------- */
 const careerClubs = () => storeFirst([...CLUBS, ...custom]);   // the Local list and the teams you made (an imported club is one of those), the Super Fan's club first (src/store.js)
 function careerNewOpen() {
-  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null };
+  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null, proMode:false };   // Whole Team first and picked: Pro Mode is the harder way
   $('cn-name').value = '';
   $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('');
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) b.addEventListener('click', () => { careerDraft.i = +b.dataset.i; renderCareerNew(); });
@@ -51,6 +51,7 @@ function renderCareerNew() {
   if (d.i >= clubs.length) d.i = 0;
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) { const on = +b.dataset.i === d.i; b.classList.toggle('picked', on); b.setAttribute('aria-pressed', String(on)); }
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
+  [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
   if (d.numsFor !== d.pos) {
     d.numsFor = d.pos;
     $('cn-num').innerHTML = CAREER_POS[d.pos].map(n => `<button data-n="${n}">${n}</button>`).join('');
@@ -64,10 +65,12 @@ function renderCareerNew() {
   if (careerDraft.pos !== pos) { careerDraft.pos = pos; careerDraft.num = CAREER_POS[pos][0]; }
   renderCareerNew();
 }));
+function careerModePick(i) { careerDraft.proMode = i === 1; renderCareerNew(); }   // Play as Whole Team (0) or My Player (1): Pro Mode (career-pro.js)
+[...$('cn-mode').children].forEach((b, i) => b.addEventListener('click', () => careerModePick(i)));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('cn-go').addEventListener('click', () => {
   const d = careerDraft, club = careerClubs()[d.i];
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club })) return;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, proMode:d.proMode })) return;
   careerOpen();
 });
 $('cn-back').addEventListener('click', goHome);

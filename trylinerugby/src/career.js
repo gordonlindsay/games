@@ -123,7 +123,9 @@ function careerCreate(o) {
   if (!club) return null;
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
-  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, pro:null, country:null, skills,
+  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club,
+    proMode:o.proMode === true,                      // Pro Mode, your player alone (career-pro.js). Its own line, and in cleanCareer's order
+    pro:null, country:null, skills,
     stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
   careerNewSeason(cr);
   return cr;
@@ -213,6 +215,7 @@ function careerArm() {                               // straight after startMatc
   if (!M || !career) return;
   M.career = true;
   M.careerP = M.players.find(p => p.team === 0 && p.n === career.num) || M.players.find(p => p.team === 0);
+  M.careerPro = career.proMode === true;                    // Pro Mode: your player alone (career-pro.js)
   M.careerNat = careerNatFor(M.nat[0], career.skills);
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
   careerKickoff();
@@ -310,6 +313,7 @@ function cleanCareer(c) {
   }
   const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club,
+    proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
     pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:NATIONS.some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
     skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
 }
@@ -328,4 +332,5 @@ function careerMark(r) {
   ctx.fillStyle = col; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = C.outline; ctx.stroke();
   ctx.restore();
+  if (M.careerPro) proMark(r);                             // Pro Mode: the call's ring and the No sign (career-pro.js)
 }

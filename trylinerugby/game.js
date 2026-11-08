@@ -573,7 +573,7 @@ const sideOf = t => M.side[t];
 const isHuman = t => M.side[t].human;
 const inputOf = t => (M.side[t].human ? inputs[M.side[t].seat] : null);
 const ctrlOf = t => (M.side[t].human ? M.side[t].ctrl : null);
-const setCtrl = (t, q) => { if (M.side[t].human && q) M.side[t].ctrl = q; };
+const setCtrl = (t, q) => { if (M.side[t].human && q && !(proPinned(t) && q !== M.careerP)) M.side[t].ctrl = q; };   // Pro Mode: the ring stays on your player (career-pro.js)
 const levelOf = t => M.side[t].level;
 const seatOfTeam = t => (M.side[t].human ? M.side[t].seat : null);   // which seat a team's human sits in, for the rumble and the ring's colour
 const anyCharging = () => M.side[0].charging || M.side[1].charging;
@@ -766,13 +766,13 @@ function scrum(team, x, y, reason) {
   M.stats.scrums = (M.stats.scrums||0) + 1;
   placeBall(clamp(x,15,105), clamp(y,15,55));
   startSet({ kind:'scrum', team, x:clamp(x,15,105), y:clamp(y,15,55), t:interactive() ? 1.1 : 1.8, snap:true,
-    label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() ? startScrum(s) : autoScrum(s) });
+    label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() && !proSkip() ? startScrum(s) : autoScrum(s) });   // Pro Mode: a back's scrum is played for the team
 }
 function lineout(team, x, y, reason) {
   const ly = y < 35 ? 8 : 62;
   placeBall(clamp(x,15,105), ly);
   startSet({ kind:'lineout', team, x:clamp(x,15,105), y:ly, t:interactive() ? 1.1 : 1.8, snap:true,
-    label:(reason ? reason + ' · ' : '') + 'Lineout ' + M.nat[team].id, then:s => interactive() ? startLineout(s) : autoLineout(s) });
+    label:(reason ? reason + ' · ' : '') + 'Lineout ' + M.nat[team].id, then:s => interactive() && !proSkip() ? startLineout(s) : autoLineout(s) });   // and his lineout
 }
 function releaseTo(team, x, y, kind, who) {
   const d = dirOf(team);
@@ -794,6 +794,7 @@ function setCarrier(p) {
   if (M.poss !== p.team) M.phaseCount = 0;
   b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
+  if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
   clearCharge();
   for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
@@ -938,6 +939,7 @@ function bestReceiver(p) {
 }
 function doPass(from, to, o) {
   o = o || {};
+  if (M.careerPro) [to, o] = proPass(from, to, o);       // Pro Mode: a teammate may give it to your player instead (career-pro.js)
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
   const spd = passSpeed(n, o.long);
   let tx, ty, T;
@@ -1058,7 +1060,7 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   q.bind = k; c.bind = k; q.bindOff = { x:rx/rm*0.7, y:ry/rm*0.7 };
   M.contact = k; st('binds');
   sfx('tackle'); if (ringed(q) || ringed(c)) buzz(30);
-  if (!isHuman(c.team) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload
+  if ((!isHuman(c.team) || proRun(c)) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload (Pro Mode: so does a teammate of yours)
   return k;
 }
 function releaseBind(k) { for (const p of [k.c, k.q, k.q2]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }
@@ -1290,7 +1292,7 @@ function bestChaser(team) {                                // the nearest man of
 }
 function sprintPick(t) {                                   // the man a Sprint press would move the ring to: the best chaser when yours is down or another is over SPRINT.pick nearer their carrier; null to stay put
   const b = M.ball, p = ctrlOf(t), c = b.state === 'held' && b.carrier.team !== t ? b.carrier : null, best = c ? bestChaser(t) : null;
-  return c && best && best !== p && (!p || !onFeet(p) || dist(p, c) - dist(best, c) > SPRINT.pick) ? best : null;
+  return c && best && best !== p && !proPinned(t) && (!p || !onFeet(p) || dist(p, c) - dist(best, c) > SPRINT.pick) ? best : null;   // Pro Mode: the ring never moves
 }
 function sprintOn(t) {                                     // would a Sprint press act now: the meter over the floor (or a sprint running), not latched, and the man it would go to able to sprint
   const S = M.spr[t];
@@ -1480,7 +1482,7 @@ function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry a
 }
 function makeGoal(team, wx, wy, kind, kicker) {
   const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
-  if (!isHuman(team)) g.cpu = cpuKickInputs(g);
+  if (!isHuman(team) || proRun(kicker)) g.cpu = cpuKickInputs(g);   // Pro Mode: a teammate's drop goal is the CPU's kick
   else {
     g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !tutSeen(kind === 'drop' ? 'drop' : 'goal'))) ? 'path' : 'line';   // the first kick ever (the tutorial's goal or drop moment unseen) gets the Easy aids; in two player each player's first kick of the match does
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
@@ -1732,7 +1734,7 @@ const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hol
 function projectHold(c, lead) {
   const t = c.team, n = Math.max(0, Math.round(lead/STEP)), dt = n ? lead/n : 0, P = M.players;
   const saved = P.map(p => HOLD_KEYS.map(k => p[k])), steps0 = M.stats.steps, drop0 = c.drop;
-  if (!isHuman(t) && !c.drop) c.drop = { t:1e9, g:null };   // a CPU kicker brakes through the wind-up, and never strikes inside the projection
+  if ((!isHuman(t) || proRun(c)) && !c.drop) c.drop = { t:1e9, g:null };   // a CPU kicker (Pro Mode: or your teammate) brakes through the wind-up, and never strikes inside the projection
   for (let i = 0; i < n; i++) moveAll(dt);
   const out = { x:c.x, y:c.y, vx:c.vx, vy:c.vy, opps:P.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy })) };
   P.forEach((p, i) => HOLD_KEYS.forEach((k, j) => { p[k] = saved[i][j]; }));
@@ -1743,7 +1745,7 @@ function projectHold(c, lead) {
 // kicker's shoulder counts, a chaser deeper behind him does not, at the label and in the cut alike), the nearest three. Each is frozen where `proj` puts
 // him (or where he really stands), with his speed toward the kicker and his top speed. g.x/g.y is the kick spot, in the frame.
 function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the label saw)
-  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)]*(M.kids ? KIDS.kick.rush : 1) : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
+  const t = c.team, k = KICK, mul = isHuman(t) && !proRun(c) ? k.rushMul[levelOf(t)]*(M.kids ? KIDS.kick.rush : 1) : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker (Pro Mode: or your teammate) faces real players
   const list = proj ? proj.opps : M.players.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy }));
   for (const o of list) {
     const f = toFrame(t, o.x, o.y), v = frameVec(t, { x:o.vx, y:o.vy });
@@ -3036,6 +3038,7 @@ function aiCarrier(p, dt) {
   const m = hyp(ax,ay) || 1, sp = maxSpeed(p)*0.95;
   steer(p, ax/m*sp, ay/m*sp, 15, dt);
   if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; p.vy += (rnd() < 0.5 ? -1 : 1)*MOVES.step.cpuPush; }
+  if (M.careerPro && proCarrier(p, dt)) return;          // Pro Mode: a Call for Ball answered, or a look for your player (career-pro.js)
   p.think -= dt; if (p.think > 0) return; p.think = 0.15;
   if (p.hold < 0.5) return;
   const KD = MOVES.dummy, lv = levelOf(p.team);
@@ -3131,6 +3134,7 @@ function switchMark(t) {                               // where "behind the ball
 }
 function switchTarget(t) {                                // the one man the dashed ring, the press and the pulse agree on. Nearest the ball, or the second-nearest when that is already you. When your man is behind the ball, the nearest teammate still in front
   const b = M.ball, cur = ctrlOf(t);
+  if (proPinned(t)) return null;                          // Pro Mode: he is always him, so there is no Switch
   const list = M.players.filter(p => p.team === t && onFeet(p)).sort((p, q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
   if (!list.length) return null;
   const m = switchMark(t);
@@ -3241,6 +3245,7 @@ function userStep(t, i, dt) {
     else if (M.phase === 'play' && c) {
       if (b.state === 'held' && b.carrier === c) { if (c.bind) { S.pass = null; offload(c.bind, true); } else startUserPass(c); }   // held in a tackle, Pass is the offload, on the press
       else if (!ourBall(t)) { S.pass = null; userTackle(t); }
+      else if (proPinned(t)) proCall();                     // Pro Mode: a teammate has it, so Pass is Call for Ball (career-pro.js)
     }
   }
   tickUserPass(t, dt);
@@ -3746,7 +3751,9 @@ function careerCreate(o) {
   if (!club) return null;
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
-  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, pro:null, country:null, skills,
+  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club,
+    proMode:o.proMode === true,                      // Pro Mode, your player alone (career-pro.js). Its own line, and in cleanCareer's order
+    pro:null, country:null, skills,
     stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
   careerNewSeason(cr);
   return cr;
@@ -3836,6 +3843,7 @@ function careerArm() {                               // straight after startMatc
   if (!M || !career) return;
   M.career = true;
   M.careerP = M.players.find(p => p.team === 0 && p.n === career.num) || M.players.find(p => p.team === 0);
+  M.careerPro = career.proMode === true;                    // Pro Mode: your player alone (career-pro.js)
   M.careerNat = careerNatFor(M.nat[0], career.skills);
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
   careerKickoff();
@@ -3933,6 +3941,7 @@ function cleanCareer(c) {
   }
   const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club,
+    proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
     pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:NATIONS.some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
     skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
 }
@@ -3951,6 +3960,133 @@ function careerMark(r) {
   ctx.fillStyle = col; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = C.outline; ctx.stroke();
   ctx.restore();
+  if (M.careerPro) proMark(r);                             // Pro Mode: the call's ring and the No sign (career-pro.js)
+}
+/* =========================================================
+   Pro Mode: a career played as your player alone (2026-11-08, the owner's "control only your player").
+   The choice is made with the career (Play as Whole Team | My Player, Whole Team first and the default) and kept in
+   career.proMode (`pro` was already the Pro Club side's id). careerArm sets M.careerPro in a career match with it on.
+   Every rule here reads M.careerPro, so with it off (every other match, and a Whole Team career) the game plays
+   exactly as before: the hooks in match.js, movement.js, passing.js, contact.js, goal-kicks.js and ui-match.js are each
+   one condition that is false without it.
+   - The ring is his for the whole match: setCtrl moves it to nobody else, so Switch is gone, Sprint never moves it to a
+     chaser, his side never takes it at a catch, a kick or a ruck, and the Kids ring never moves either.
+   - His teammates, the carrier included, are run by the computer as the CPU side's men are: aiCarrier carries, passes,
+     kicks, drops for goal (with the CPU's kick inputs) and tries offloads in the tackle; matchTargets moves the rest.
+     His side keeps its own balance terms (pace, catching, Kids' help): only who decides changes.
+   - Team Spirit (careerSpirit(), 0 to 1, from career-life.js; M.careerLife.spirit or 0.5 without it) sets how often a
+     teammate looks for him. At a pass the carrier was making anyway he gives it to him instead with chance PRO.look,
+     and while he is a sensible option the carrier passes to him unprompted, PRO.seek times a second, unless he is
+     running into open grass himself. Sensible: level or behind the ball, PRO.near to PRO.far metres off, no defender
+     within PRO.open of him and none within PRO.lane of the line to him. Never a pass into trouble. An offload out of a
+     tackle goes to him only inside the engine's offload range (CONTACT.off.range), as any other offload does.
+   - Call for Ball: Pass while a teammate has the ball. Answered with chance PRO.answer when a pass to him is on (the
+     same test, with PRO.callOpen for his space), PRO.react later; otherwise the No sign over the carrier. One call
+     each PRO.cool seconds. A call lasts one possession: setCarrier drops it when anyone gets the ball, so a caller who
+     loses it and has it back later never answers a call from before.
+   - Kids: a My Player career match never moves the hidden Kids rating (kidsAdapt), since his teammates won or lost it.
+   - Set pieces: a forward plays the scrums and lineouts, as today; a back's are played for the team (autoScrum and
+     autoLineout, as AI v AI plays them). He takes the goal kicks, as in every career match, and the duels are his
+     only, since the engine starts them only for the ringed man.
+   ========================================================= */
+const PRO = {
+  look:[0.10, 0.80],      // a pass the carrier was making anyway goes to him instead, at Team Spirit 0 and 1
+  seek:[0.05, 0.70],      // passes a second to him while he is a sensible option, at Team Spirit 0 and 1
+  answer:[0.25, 0.95],    // Call for Ball answered when a pass is on, at Team Spirit 0 and 1
+  react:0.2,              // seconds from the call to the pass
+  near:3, far:20,         // metres from the carrier
+  open:4,                 // no defender this close to him for a pass the carrier chooses
+  callOpen:2.5,           // and this close for a call: he asked for it
+  lane:1.5,               // no defender this close to the line to him
+  hold:0.4,               // a carrier looks for him only after this long on the ball
+  gap:8,                  // and not while his own way ahead is clearer than this
+  cool:0.8,               // seconds between calls
+  callT:0.45, noT:0.8,    // how long the call's ring and the No sign show
+};
+const proOn = () => !!(M && M.careerPro);
+function proPinned(t) { return !!(M && M.careerPro && t === 0); }   // the side whose ring never moves: yours, in Pro Mode
+function proRun(p) { return !!(M && M.careerPro && p && p.team === 0 && p !== M.careerP); }   // a teammate of his, run by the computer
+function proSpirit() {                                       // Team Spirit, 0 to 1: career-life.js when it is there, else the match's snapshot, else the middle
+  if (typeof careerSpirit === 'function') { const s = +careerSpirit(); if (Number.isFinite(s)) return clamp(s, 0, 1); }
+  const L = M && M.careerLife;
+  return L && Number.isFinite(+L.spirit) ? clamp(+L.spirit/100, 0, 1) : 0.5;
+}
+const proAt = (a, s) => a[0] + (a[1] - a[0])*s;
+function proOpen(c, room, far = PRO.far) {                   // could carrier c pass to your player now, into space (room: no defender closer to him), from at most `far` away
+  const me = M.careerP;
+  if (!me || !c || c === me || c.team !== me.team || !onFeet(me) || !passOk(c, me, far) || dist(c, me) < PRO.near || pressure(me) < room) return false;
+  const ax = me.x - c.x, ay = me.y - c.y, L2 = ax*ax + ay*ay || 1;
+  for (const q of M.players) {
+    if (q.team === c.team || !onFeet(q)) continue;
+    const u = clamp(((q.x - c.x)*ax + (q.y - c.y)*ay)/L2, 0, 1);
+    if (hyp(c.x + ax*u - q.x, c.y + ay*u - q.y) < PRO.lane) return false;
+  }
+  return true;
+}
+/* doPass's hook: a teammate's pass may go to him instead. Returns the pass's [to, o]. An offload (offload() is the one pass
+   of a teammate's that names men to skip: the tacklers) reaches only CONTACT.off.range, as supportFor's do. */
+function proPass(from, to, o) {
+  if (!proRun(from) || to === M.careerP || o.sure || !proOpen(from, PRO.open, o.skip ? CONTACT.off.range : PRO.far) || rnd() >= proAt(PRO.look, proSpirit())) return [to, o];
+  st('proLook');
+  return [M.careerP, { ...o, long:false }];                  // a flat pass to him: a floater was for the man it skipped
+}
+/* aiCarrier's hook, every step after the carrier has run: a call answered, or a look for him. True when a pass went. */
+function proCarrier(p, dt) {
+  if (!proRun(p)) return false;
+  const K = M.proCall;
+  if (K && K.at != null) {
+    if (K.c !== p) M.proCall = null;                         // the ball has moved on since he called
+    else {
+      if ((K.at -= dt) > 0) return false;
+      M.proCall = null;
+      if (!p.bind && proOpen(p, PRO.callOpen)) { st('proAnswer'); doPass(p, M.careerP); return true; }
+      proNo(p); return false;                                // it was on when he called and is not now
+    }
+  }
+  if (p.hold < PRO.hold || gapAhead(p) >= PRO.gap || !proOpen(p, PRO.open) || rnd() >= proAt(PRO.seek, proSpirit())*dt) return false;
+  st('proSeek'); doPass(p, M.careerP);
+  return true;
+}
+/* Call for Ball */
+function proCanCall() {                                      // would a press call now: a teammate holds it in open play, free of a tackle and not winding up a drop, no call pending, the last one PRO.cool ago
+  if (!proOn() || M.phase !== 'play' || M.cut) return false;
+  const b = M.ball, c = b.state === 'held' ? b.carrier : null, K = M.proCall;
+  return !!(c && proRun(c) && !c.bind && !c.drop && !(K && K.at != null && K.c === c) && M.dclock - (M.proLast == null ? -99 : M.proLast) >= PRO.cool);
+}
+function proCall() {                                         // userStep's hook: Pass with a teammate on the ball
+  if (!proCanCall()) return false;
+  const c = M.ball.carrier;
+  M.proLast = M.dclock; M.proCue = { p:M.careerP, at:M.dclock };
+  st('proCalls'); sfx('tick'); buzz(15, 0);
+  if (proOpen(c, PRO.callOpen) && rnd() < proAt(PRO.answer, proSpirit())) M.proCall = { c, at:PRO.react };
+  else proNo(c);
+  return true;
+}
+function proNo(c) { M.proNo = { p:c, at:M.dclock }; st('proNo'); sfx('whiff'); }
+function proCalling(t) {                                     // your side's ball, and not in his hands or on its way to him: the Pass button is Call for Ball
+  if (!proPinned(t)) return false;
+  const b = M.ball, me = M.careerP;
+  return !(b.state === 'held' ? b.carrier === me : b.state === 'air' && b.f && b.f.target === me);
+}
+/* A back's scrums and lineouts are played for the team; a forward plays them. */
+function proSkip() { return !!(M && M.careerPro && M.careerP && !CAREER_POS.F.includes(M.careerP.n)); }
+/* careerMark's hook: the call's ring going out from him, and the No sign (a slashed circle, no words) over the carrier. */
+function proMark(r) {
+  const now = M.dclock, C = M.proCue, N = M.proNo;
+  if (C && C.p && now - C.at < PRO.callT) {
+    const u = (now - C.at)/PRO.callT, [sx, sy] = toS(...drawPos(C.p));
+    ctx.save(); ctx.globalAlpha = 1 - u; ctx.strokeStyle = ringCol(0); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(sx, sy, r*(RM ? 1.9 : 1.5 + 1.4*u), 0, 7); ctx.stroke(); ctx.restore();   // reduced motion: it fades where it is
+  }
+  if (N && N.p && now - N.at < PRO.noT) {
+    const [sx, sy] = toS(...drawPos(N.p)), y = sy - r*2.7, R = Math.max(7, r*0.8), a = Math.min(1, 4*(1 - (now - N.at)/PRO.noT));
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(8,14,10,.88)'; ctx.beginPath(); ctx.arc(sx, y, R + 3, 0, 7); ctx.fill();
+    ctx.strokeStyle = SUPPORT.tint; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(sx, y, R, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx - R*0.7, y - R*0.7); ctx.lineTo(sx + R*0.7, y + R*0.7); ctx.stroke();
+    ctx.restore();
+  }
 }
 /* =========================================================
    Rendering
@@ -5754,8 +5890,9 @@ function updateHud() {
   if (D) { la = D.a; lb = D.b; cueA = !!D.cueA; cueB = false; aAct = !!D.aOn; bAct = !!D.bOn; }
   else if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
+  else if (ours && proCalling(ht)) { la = 'Call for Ball'; lb = null; cueA = cueB = false; aAct = play && proCanCall(); bAct = false; }   // Pro Mode: a teammate has it (career-pro.js)
   else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl; la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && carrying && (!held || cueA); bAct = play && carrying && !held; }   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
-  else { la = 'Tackle'; lb = 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
+  else { la = 'Tackle'; lb = proPinned(ht) ? null : 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
   const S = M.spr[ht], sprOn = D ? !!D.cOn : !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
   const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue + (passLong ? 'L' : '') + (D ? (D.c ? 'C' : 'c') : '');
@@ -5770,6 +5907,7 @@ function updateHud() {
     $('btnB').classList.toggle('cue', cueB);
     $('btnC').classList.toggle('cue', sprCue);
     $('btnB').classList.toggle('two', lb === 'Drop Goal');   // two lines inside the small button
+    $('btnA').classList.toggle('two', la === 'Call for Ball');   // and inside the big one
     $('plates').hidden = !(duel && M.cut.kind === 'past' && !M.cut.after);
     $('btnA').classList.toggle('idle', !aAct); $('btnB').classList.toggle('idle', !bAct);
     $('btnC').classList.toggle('idle', !sprOn); $('btnC').classList.toggle('ready', sprOn);
@@ -6129,7 +6267,7 @@ function showBreak(kind) {
 function finishMatch() {
   if (M.champ && champ) recordChampResult();
   if (M.career) careerRecordResult();
-  if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and Career alike
+  if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and a Whole Team career alike
   showBreak('full');
 }
 $('br-go').addEventListener('click', () => {
@@ -7481,7 +7619,7 @@ function kidsTune(r) {                                     // KIDS at rating r (
 }
 kidsTune(0);
 /* After a completed one-player Kids match (kidsAdapt, from finishMatch: never practice, AI v AI, the demo or two player, never a
-   match left early), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
+   match left early, never a My Player career match, career-pro.js), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
    KIDS_ADAPT.big tries raises it, any other win (one on a kick included) nudges it up, a draw eases it a little, a loss lowers it, and
    a loss by two tries or more lowers it further. A step is the same size anywhere on the scale; 0 and 1 only stop it. So a loss near
    the start takes it down as surely as one near the top, and a child who loses more than he wins goes back to the start. No step is
@@ -7502,7 +7640,7 @@ function kidsNext(r, score, tries, h = 0) {                // the rating after a
   return Math.round(clamp(r + kidsStep(score, tries, h), 0, 1)*1000)/1000;
 }
 function kidsAdapt() {                                     // full time in a Kids match: the rating moves once, and is saved
-  if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two) return null;
+  if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two || M.careerPro) return null;   // a My Player career match: the computer played his side, so it says nothing of the child's level
   const h = isHuman(0) ? 0 : 1;
   M.kidsDone = true;
   settings.kidsR = kidsNext(M.kidsR, M.score, M.tries, h);
@@ -8889,7 +9027,7 @@ function renderCareerHome() {
 /* ---------- the new player ---------- */
 const careerClubs = () => storeFirst([...CLUBS, ...custom]);   // the Local list and the teams you made (an imported club is one of those), the Super Fan's club first (src/store.js)
 function careerNewOpen() {
-  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null };
+  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null, proMode:false };   // Whole Team first and picked: Pro Mode is the harder way
   $('cn-name').value = '';
   $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('');
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) b.addEventListener('click', () => { careerDraft.i = +b.dataset.i; renderCareerNew(); });
@@ -8901,6 +9039,7 @@ function renderCareerNew() {
   if (d.i >= clubs.length) d.i = 0;
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) { const on = +b.dataset.i === d.i; b.classList.toggle('picked', on); b.setAttribute('aria-pressed', String(on)); }
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
+  [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
   if (d.numsFor !== d.pos) {
     d.numsFor = d.pos;
     $('cn-num').innerHTML = CAREER_POS[d.pos].map(n => `<button data-n="${n}">${n}</button>`).join('');
@@ -8914,10 +9053,12 @@ function renderCareerNew() {
   if (careerDraft.pos !== pos) { careerDraft.pos = pos; careerDraft.num = CAREER_POS[pos][0]; }
   renderCareerNew();
 }));
+function careerModePick(i) { careerDraft.proMode = i === 1; renderCareerNew(); }   // Play as Whole Team (0) or My Player (1): Pro Mode (career-pro.js)
+[...$('cn-mode').children].forEach((b, i) => b.addEventListener('click', () => careerModePick(i)));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('cn-go').addEventListener('click', () => {
   const d = careerDraft, club = careerClubs()[d.i];
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club })) return;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, proMode:d.proMode })) return;
   careerOpen();
 });
 $('cn-back').addEventListener('click', goHome);
@@ -9362,6 +9503,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
+  careerPro:{ PRO, pinned:proPinned, run:proRun, spirit:proSpirit, open:proOpen, pass:proPass, carrier:proCarrier, canCall:proCanCall, call:proCall, calling:proCalling, skip:proSkip, mark:proMark, modePick:careerModePick, draft:() => careerDraft },
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
