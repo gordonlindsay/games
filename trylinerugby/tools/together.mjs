@@ -176,7 +176,7 @@ const champBefore = JSON.stringify(X.champ());
   S.close();
   s.kidsR = 0.42; S.open({ mode:'grown' });
   const page = (await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8');   // the harness's stand-in elements carry no text: read the label from the page
-  ok(!$('st-reset').hidden && /<button class="btn" id="st-reset" hidden>Reset Kids Level<\/button><\/div>/.test(page) && $('st-links').classList.contains('three'), 'once it has, Grown-Ups shows Reset Kids Level under Privacy and Support');
+  ok(!$('st-reset').hidden && /<button class="btn" id="st-reset" hidden>Reset Kids Level<\/button>/.test(page) && $('st-links').classList.contains('three'), 'once it has, Grown-Ups shows Reset Kids Level under Privacy and Support');
   $('st-reset').click();
   ok(!!K.gate() && $('m-store').hidden, 'the reset asks a grown-up first, the panel hidden behind the check');
   $('pg-cancel').click();
@@ -188,6 +188,42 @@ const champBefore = JSON.stringify(X.champ());
   ok($('st-reset').hidden || $('st-links').hidden, 'an Unlock card never offers it');
   S.close();
   s.kidsR = keep; S.setNative(null); S.setStarted(false);
+}
+
+// 13. Move Up to Easy (the owner, 2026-11-08): offered in Grown-Ups, with a dot on the home's Grown-Ups button, only after five big wins
+// in a row (by more than KIDS_EASY.margin tries) at the top of the Kids scale, behind the grown-up check; a sibling's rating is kept
+{
+  const S = T.store, K = T.kids, s = D.settings(), E = K.KIDS_EASY;
+  const pass = () => { const g = K.gate(); if (!g) return false; for (const d of g.answer) K.type(d); return true; };
+  const keep = { kids:s.kids, diff:s.diff, kidsR:s.kidsR, kidsTop:s.kidsTop };
+  ok(E.top === 0.95 && E.margin === 4 && E.run === 5, 'five wins in a row by 5 or more tries, at 0.95 or above');
+  // the run, through the real kidsAdapt at full time of a Kids match
+  const kidsFull = (tries, r) => { T.newMatch(X.CLUBS[0], X.CLUBS[1], { halfLen:60, diff:0, headless:true, humans:[true, false], kids:true, kidsR:r }); T.M.tries = tries; T.M.score = [tries[0]*7, tries[1]*7]; T.M.over = true; return K.adapt(); };
+  s.kids = true; s.diff = 0; s.kidsTop = 0;
+  for (let i = 0; i < 4; i++) kidsFull([7, 1], 1);
+  ok(s.kidsTop === 4 && !K.ready(), 'four big wins at the top are not yet enough');
+  kidsFull([5, 1], 1);
+  ok(s.kidsTop === 0, 'a win by four tries breaks the run');
+  for (let i = 0; i < 5; i++) kidsFull([8, 2], 0.6);
+  ok(s.kidsTop === 0, 'big wins below the top of the scale do not count');
+  s.kidsR = 1; for (let i = 0; i < 5; i++) kidsFull([8, 2], 1);
+  ok(s.kidsTop >= 5 && K.ready(), 'five in a row at the top: ready');
+  S.setNative(true); S.setStarted(true); D.goHome();
+  ok($('b-grown').classList.contains('note'), 'the home\'s Grown-Ups button carries a dot');
+  S.open({ mode:'grown' });
+  ok(!$('st-easy').hidden && !$('st-reset').hidden && $('st-links').classList.contains('four'), 'Grown-Ups offers Move Up to Easy beside Reset Kids Level, in halves');
+  $('st-easy').click();
+  ok(!!K.gate(), 'it asks a grown-up first');
+  $('pg-cancel').click();
+  ok(s.kids === true && K.ready(), 'a cancelled check changes nothing');
+  $('st-easy').click(); pass();
+  ok(s.kids === false && s.diff === 0 && s.kidsTop === 0 && s.kidsR === 1 && $('st-msg').textContent === 'Difficulty is now Easy.' && $('st-easy').hidden, 'a grown-up\'s answer moves Difficulty to Easy, keeps the Kids rating, and says so');
+  S.close(); D.goHome();
+  ok(!$('b-grown').classList.contains('note'), 'and the dot goes');
+  s.kids = true; s.kidsTop = 6; S.open({ mode:'grown' }); $('st-reset').click(); pass();
+  ok(s.kidsR === 0 && s.kidsTop === 0, 'Reset Kids Level clears the run too');
+  S.close();
+  Object.assign(s, keep); S.setNative(null); S.setStarted(false); D.goHome();
 }
 
 console.log(`Together: ${passed} passed, ${failed} failed`);
