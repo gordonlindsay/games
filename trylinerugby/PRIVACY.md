@@ -18,11 +18,11 @@ Settings, the teams you make, your championship, your Trophy Cabinet, your caree
 
 Once loaded, the game plays offline. When it is online it fetches only its own files, from the site it came from, to load and to update itself.
 
-The web version also loads its two typefaces from Google Fonts. Google receives that request, as it does from any website that uses its fonts. The game adds nothing about you or your play to it.
+Its two typefaces come with the game, on the web and in the app. It never loads fonts from Google Fonts or any other site.
 
 ## Import
 
-Import is in the App Store version only. A grown-up check comes first. Import then fetches the club or tournament page you paste and, if it needs them, up to two pages that page links to on the same site (its table and fixtures). That site receives those requests and your device's internet address, as Google does for the fonts; nothing about you or your child is sent with them. Import keeps only the team and competition details it needs, such as team names and fixtures, on your device. It never keeps any person's name, photo or contact details.
+Import is in the App Store version only. A grown-up check comes first. Import then fetches the club or tournament page you paste and, if it needs them, up to two pages that page links to on the same site (its table and fixtures). That site receives those requests and your device's internet address, as any website you visit does; nothing about you or your child is sent with them. Import keeps only the team and competition details it needs, such as team names and fixtures, on your device. It never keeps any person's name, photo or contact details.
 
 ## The grown-up check
 

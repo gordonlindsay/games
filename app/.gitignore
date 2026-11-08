@@ -1,0 +1,7 @@
+node_modules/
+www/
+# signing keys never go in the repository
+*.jks
+*.keystore
+*.p12
+*.mobileprovision

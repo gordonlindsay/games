@@ -53,6 +53,7 @@ function sfx(k) {
 function buzz(ms, team) {                                  // the phone's vibration, and the rumble on a team's seat (every seat when no team is given)
   if (!M || M.demo || M.headless) return;
   if (team == null) { for (const s of [0, 1]) rumble(s, ms); } else rumble(seatOfTeam(team), ms);
+  if (typeof nativeBuzz === 'function' && nativeBuzz(ms)) return;   // the Try Line app: the phone's haptics (native.js)
   if (!navigator.vibrate) return;
   if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
   try { navigator.vibrate(ms); } catch (e) { /* unsupported */ }

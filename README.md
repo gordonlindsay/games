@@ -10,6 +10,8 @@ Gordon's games, one folder each, served by GitHub Pages from `main`.
 
 The front page, https://gordonlindsay.github.io/games/, lists them all.
 
+`app/` is not a game: it wraps Try Line Rugby as the iPhone, iPad and Android app (see `app/README.md`).
+
 Each game came from its own repo (`gordonlindsay/farnhamfighters`, `weddingcrashers`, `trylinerugby`), brought in
 with `git subtree` so its history is kept. Those repos were archived on 2026-10-12 and are read-only. Their pages
 forward here, so old links and home-screen shortcuts still work.

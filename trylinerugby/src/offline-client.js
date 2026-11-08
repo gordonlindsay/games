@@ -53,6 +53,7 @@ function offlineRegistration(registration) {
 function offlineStart() {
   if (offlineApp.started) return;
   offlineApp.started = true;
+  if (typeof nativeOn === 'function' && nativeOn()) return;   // the Try Line app carries its own files: no worker, and Install, Update and Offline Ready stay hidden (native.js)
   const install = $('b-install'), update = $('b-update');
   if (install) install.addEventListener('click', () => {
     const go = async () => {

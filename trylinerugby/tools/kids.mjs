@@ -422,7 +422,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const body = html.slice(html.indexOf('<body>'));
   ok(!/<a[\s>]/i.test(body) && !/href=/i.test(body), 'the page has no links to leave by');
   const ext = [...html.matchAll(/(?:src|href)="(https?:[^"]+)"/g)].map(m => new URL(m[1]).host);
-  ok(ext.every(h => h === 'fonts.googleapis.com' || h === 'fonts.gstatic.com'), `the only other site the page names is Google Fonts (${[...new Set(ext)].join(', ')})`);
+  ok(ext.length === 0, `the page names no other site, Google Fonts included: its typefaces come with it (${[...new Set(ext)].join(', ') || 'none'})`);
   const game = fs.readFileSync(new URL('../game.js', import.meta.url), 'utf8');
   ok(!/sendBeacon|google-analytics|googletagmanager|gtag\(|doubleclick|adsbygoogle|facebook\.com|connect\.facebook\.net|fbq\(|mixpanel|segment\.io|amplitude/i.test(game), 'no analytics, ads or tracking in the game');
   const priv = fs.readFileSync(new URL('../PRIVACY.md', import.meta.url), 'utf8');
