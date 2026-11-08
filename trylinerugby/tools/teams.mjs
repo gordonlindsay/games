@@ -570,6 +570,26 @@ function settle(pick) {
     ok(c.teams.length === 6 && c.teams[0].id === l.teams[1].id && c.teams.slice(1).every(t => l.teams.some(o => o.id === t.id) && t.id !== l.teams[1].id), `a championship from ${l.name} is your side and five from ${l.name}`);
     X.setChamp(null);
   }
+  // International through the team screen: a nation plays the rest of its six, as Career's International stage does, so the Six
+  // Nations (and its Triple Crown) is what England, France, Ireland, Italy, Scotland and Wales get every time
+  const sixOf = l => l.map(t => t.id).sort().join(), SIX = sixOf(X.NATIONS.slice(0, 6)), REST = sixOf(X.NATIONS.slice(6));
+  for (const n of X.NATIONS) {
+    D.openTeams('champ'); X.poolPick('int'); D.pickTeam(n);
+    const got = sixOf(X.champ().teams), want = X.NATIONS.indexOf(n) < 6 ? SIX : REST;
+    ok(X.champ().teams[X.champ().user].id === n.id && got === want, `a championship as ${n.name} from International is its own six (${got})`);
+    X.setChamp(null);
+  }
+  {
+    D.openTeams('champ'); X.poolPick('int'); D.pickTeam(X.NATIONS[0]);
+    const c = playOut(), hon = X.honours(c, X.standings(c)).filter(h => h[1] === c.user).map(h => h[0]);
+    ok(c.teams.filter(t => t.home).length === 4 && hon.includes('Triple Crown'), `England picked on the team screen can win the Triple Crown (${hon.join(', ')})`);
+    X.setChamp(null);
+    const mine = X.cleanTeam({ name: 'Badgers', pace: 5, power: 5 }, 0);
+    D.openTeams('champ'); X.poolPick('int'); D.pickTeam(mine);
+    const m = X.champ();
+    ok(m.teams[m.user].name === 'Badgers' && m.teams.length === 6 && m.teams.filter((t, i) => i !== m.user).every(t => X.NATIONS.some(n => n.id === t.id)), 'a team you made, on International, plays five of the twelve');
+    X.setChamp(null);
+  }
   // old saves: each index the team screen used to save goes to where it was
   const want = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];
   ok(X.POOL_OLD.join() === want.join() && !X.POOL_OLD.includes('sco'), 'the old lists were International, Local, France, Australia, South Africa, My League: nothing old lands on Scotland');
@@ -625,6 +645,13 @@ function settle(pick) {
   X.restore({ champ: { ...saved, teams: saved.teams.map(t => ({ ...t, cat: 'bogus' })) } });
   ok(X.champ().teams.every(t => !('cat' in t)), 'an unknown category in a saved side is dropped: men\'s');
   X.setChamp(null);
+  // Play as Farnham names the side it starts
+  D.openTeams('champ'); X.catPick('women');
+  ok(!$('t-default').hidden && $('t-default').textContent === 'Play as Farnham Women', `Play as names the category (${$('t-default').textContent})`);
+  $('t-default').click();
+  ok(X.champ() && X.champ().teams[X.champ().user].name === 'Farnham Women', 'and starts the side it names');
+  X.setChamp(null); X.catPick('men'); D.openTeams('champ');
+  ok($('t-default').textContent === 'Play as Farnham', 'on Men it is Farnham, as before');
   // Two Player
   D.openJoin(); D.openTeams('two'); X.catPick('women');
   D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]);

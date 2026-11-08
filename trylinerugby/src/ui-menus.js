@@ -315,7 +315,7 @@ function renderTeams() {
   $('t-default').hidden = quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
-  $('t-default').textContent = 'Play as ' + storeHomeTeam().name;
+  $('t-default').textContent = 'Play as ' + catSide(storeHomeTeam(), settings.cat).name;   // the side it starts: Farnham Women on Women
   teamList = [...poolTeams(pool), ...custom];              // My League: src/import.js
   if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
   let html = teamList.map(teamCard).join('');
@@ -337,7 +337,11 @@ function fitNames() {
     while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px -= 1; el.style.fontSize = px + 'px'; }
   }
 }
-/* A championship is your team and five others from the list on screen. Men | Women | Minis names every side of it, or both of a match. */
+/* A championship is your team and five others from the list on screen. A nation's are the rest of its six, as Career's International
+   stage draws them (NATIONS in sixes): the Six Nations, so the Triple Crown is still there to win, or New Zealand, South Africa,
+   Australia, Argentina, Fiji and Japan. A team you made, on International, gets five of the twelve. Men | Women | Minis names every
+   side of it, or both of a match. */
+const champFrom = (pool, t) => { const g = NATIONS.indexOf(t); return g < 0 ? poolTeams(pool) : NATIONS.slice(g - g % 6, g - g % 6 + 6); };
 function pickTeam(t) {
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
     if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
@@ -345,7 +349,7 @@ function pickTeam(t) {
   }
   if (pickMode === 'champ') {
     const pool = teamPool(), cat = settings.cat;
-    const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(poolTeams(pool).filter(o => keyOf(o) !== keyOf(t)));
+    const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t).filter(o => keyOf(o) !== keyOf(t)));
     newChamp(catSide(t, cat), others.slice(0, 5).map(o => catSide(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
   if (quickPick == null) { quickPick = t; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; return; }

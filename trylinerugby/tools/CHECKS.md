@@ -20,7 +20,7 @@ For the existing wider gameplay and balance checks:
 node tools/check.mjs --full
 ```
 
-This also runs contact, duels, goal kicks, movement, passing, teams (the lists, Scotland's clubs among them, the ratings' XV order, International | National | Local, Men | Women | Minis and old saves' lists) and set pieces. Some of these contain small shared-control regression cases; the dedicated two-player suite is separate.
+This also runs contact, duels, goal kicks, movement, passing, teams (the lists, Scotland's clubs among them, the ratings' XV order, International | National | Local, a nation's championship being its own six, Men | Women | Minis and old saves' lists) and set pieces. Some of these contain small shared-control regression cases; the dedicated two-player suite is separate.
 
 The Kids rating's calibration, `node tools/kidbots.mjs at` and `settle` (scripted 6, 7 to 8 and 10 year olds; see the Kids section of README.md), runs for minutes and is never part of `check.mjs`. `node tools/kids.mjs`, in the default gate, checks the rating's scale, update rule, save and gating directly.
 
