@@ -879,6 +879,8 @@ body.desk .desk-only{display:block}
 .home .word .line{margin-right:40px}   /* the posts stand out past the word's right edge: room for them in the column */
 .home .word{font-size:clamp(56px,9.4vw,124px)}
 .home .app-tools{margin:2px 0 0;justify-content:flex-start;gap:6px 10px;width:0;min-width:100%}   /* Install and Update wrap inside the wordmark's column: never widen it */
+.home .st-fan{width:0;min-width:100%}   /* nor the Super Fan badge: its club's name wraps under Super Fan, so My Team keeps its width */
+.home .st-fan span{min-width:0;text-wrap:balance}
 .home .app-action{min-height:44px}
 .home-top{grid-area:top;display:flex;align-items:stretch;justify-content:flex-end;gap:8px;min-width:0}
 .home-top .btn{width:auto;flex:none;min-height:52px;padding:6px 14px;position:relative}
@@ -889,7 +891,7 @@ body.desk .desk-only{display:block}
 .my-side{display:inline-flex;align-items:center;gap:5px;min-width:0}
 .my-side .jersey{width:20px;height:20px}
 .my-side b{min-width:0;font:800 1em/1 var(--display);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hl-panels{grid-area:panel;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.hl-panels{grid-area:panel;min-height:0;display:flex;flex-direction:column;justify-content:safe center}   /* safe: a panel too tall for its row starts at the row's top, never pushed up under the top row */
 .hl-panel{display:flex;flex-direction:column;gap:10px;min-width:0}
 .hl-panel .btn.primary{min-height:72px;font-size:30px}
 .hp-game .btn{min-height:56px}
@@ -902,7 +904,8 @@ body.desk .desk-only{display:block}
 .hc-comps.n1{grid-template-columns:1fr}
 .btn.hc-comp{display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;padding:6px 8px;font-size:16px;line-height:1.1;text-align:center;text-wrap:balance}
 .hc-comps.n8 .btn.hc-comp{min-height:52px;font-size:14px}
-.hc-comp .cup-trophy{width:16px;height:16px}
+.hc-comp .cup-trophy{width:16px;height:16px;flex:none}
+.hc-comp.locked::after{flex:none}   /* the lock keeps its size: the name wraps, never the lock */
 .hp-drills .drills{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}   /* the eight drills and How to Play, three rows of three */
 .hp-drills .btn.drill{min-height:70px;padding:5px 6px;gap:3px;font-size:14px;line-height:1.1}
 .hp-drills .dc-icon{width:28px;height:28px}
@@ -934,9 +937,9 @@ body.desk .desk-only{display:block}
 .gap.mine{color:var(--flood)}
 .team.locked{position:relative}
 .team.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
-.team.locked:not(.create) .tname{padding-right:16px}   /* a locked Legends side: its name clears the lock */
+.team.locked:not(.create) .tname{margin-right:16px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it) */
 .lk-leg.locked{position:relative}
-.lk-leg.locked::after{position:absolute;top:6px;right:6px;margin:0;width:11px;height:14px;color:var(--chalk)}
+.lk-leg.locked::after{position:absolute;top:6px;left:6px;margin:0;width:11px;height:14px;color:var(--chalk)}   /* top left: the jersey's overall badge sits on its right */
 /* the Trophy Cabinet, its own screen now; a World Cup's Pools, a plain button; no disclosure triangle on any summary */
 #s-cabinet .cabinet{display:flex;flex-direction:column;gap:6px}
 .cup-poolbtn{min-height:44px}
@@ -959,12 +962,37 @@ summary::-webkit-details-marker{display:none}
   .hp-settings.settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px;padding:8px 10px}   /* two columns, every target 44px */
   .hp-settings .seg button{font-size:13px}
 }
-@media (max-width:599px){
-  /* a narrow window: the wordmark over the rest, one column */
+@media (max-width:599px) and (min-height:421px){
+  /* a narrow window: the wordmark over the rest, one column (a phone held sideways keeps two, below) */
   .home{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"mark" "top" "panel" "bar"}
   .home-top{justify-content:stretch}
   .hp-drills .drills{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hp-drills #b-help{grid-column:1/-1}
+}
+@media (orientation:landscape) and (max-height:340px){
+  /* Safari sideways, about 320px tall (568x320, 667x320): the top row and the bar 44px, the wordmark smaller, each drill its picture
+     beside its name; whatever still does not fit scrolls inside the panel's own row, between the top row and the bar, never under
+     them (the padding keeps a focus ring inside the scroll box). Every target stays 44px. */
+  .home{gap:6px 14px}
+  .home .word{font-size:48px}
+  .home .mark{gap:8px}
+  .home #home-tag{width:0;min-width:100%;text-wrap:balance}   /* Mobile Rugby · Sevens wraps under the wordmark rather than widen its column: My Team keeps its room */
+  .home .mark:has(#app-tools:not([hidden])) #home-tag{display:none}   /* and gives its lines to Install and Update when they show */
+  .home-top{gap:6px}
+  .home-top .btn,.home-top .my-home{min-height:44px;padding:4px 10px}
+  .btn.hl{min-height:44px;padding:3px 4px;gap:2px}
+  .btn.hl svg{width:18px;height:18px}
+  .hl-panels{overflow-y:auto;margin:-6px;padding:6px;scrollbar-width:none}
+  .hl-panel,.hl-go,.hc-new{gap:6px}
+  .hl-panel .btn.primary{min-height:56px;font-size:26px}
+  .hc-comps{gap:6px}
+  .btn.hc-comp,.hc-comps.n8 .btn.hc-comp{min-height:44px}
+  .hp-drills .drills{gap:6px}
+  .hp-drills .btn.drill{flex-direction:row;justify-content:flex-start;gap:6px;min-height:52px;padding:4px 8px;text-align:left}
+  .hp-drills .dc-icon{width:24px;height:24px}
+  .hp-settings.settings{gap:4px 10px;padding:5px 10px}
+  .hp-settings .set{gap:2px}
+  .hp-settings .lbl{font-size:10px;line-height:1}
 }
 @media (orientation:landscape) and (max-height:420px){
   /* a World Cup's Pools, swapped in for the bracket: a little tighter, so they and the Bracket button fit under the result card */

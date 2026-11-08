@@ -80,7 +80,7 @@ const fresh = () => {                                       // a new game on the
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
   ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half']) && /<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<\/div>\s*<\/div>\s*<nav/.test(home), `Settings: ${sets.join(', ')}, then Grown-Ups (where the store is live)`);
   ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my" aria-label="My Team"><span class="lbl">My Team<\/span><span class="my-kits" id="my-kits"><\/span><\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Import Data<\/button>\s*<\/div>/.test(home), 'the top row: My Team (its kits and names), Locker, Import Data');
-  ok(/<header class="mark">\s*<h1 class="word"[\s\S]*?<\/h1>\s*<p class="eyebrow" id="home-tag">Mobile Rugby · Sevens<\/p>[\s\S]*?<div class="app-tools" id="app-tools" hidden>[\s\S]*?id="b-install" hidden>Install Game<\/button>\s*<button class="app-action" id="b-update" hidden>Update Game<\/button>\s*<\/div>\s*<\/header>/.test(home), 'the logo stays, with Install Game and Update Game as small app actions under it');
+  ok(/<header class="mark">\s*<h1 class="word"[\s\S]*?<\/h1>\s*<p class="eyebrow" id="home-tag">Mobile Rugby&nbsp;· Sevens<\/p>[\s\S]*?<div class="app-tools" id="app-tools" hidden>[\s\S]*?id="b-install" hidden>Install Game<\/button>\s*<button class="app-action" id="b-update" hidden>Update Game<\/button>\s*<\/div>\s*<\/header>/.test(home), 'the logo stays, with Install Game and Update Game as small app actions under it');
   const text = s => s.replace(/<[^>]+>/g, '').trim();
   const labels = [...home.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map(m => text(m[1])).filter(Boolean).concat([...home.matchAll(/<span class="lbl">([^<]+)<\/span>/g)].map(m => m[1]));
   ok(labels.length >= 30 && labels.every(titled), `every label on the home is Title Case (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
@@ -402,14 +402,17 @@ async function browserChecks() {
       await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
       const kind = `${w}x${h} ${touch ? 'touch' : 'desk'}`;
       // every state: desk (2 Players) or not, the app (Grown-Ups) or the web (Import Data), Install and Update showing or not, a Trophy
-      // Cabinet or not, nothing saved, a championship and a career, or a cup, the free tier's locks or not; on every headline
+      // Cabinet or not, nothing saved, a championship and a career, or a cup, the free tier's locks or not, and in the app a Super Fan
+      // (the badge under the logo, two lines: it must not widen the logo's column and squeeze My Team); on every headline
       const states = await page.evaluate(() => {
         const T = window.__tryline, X = T.teams, K = T.cups, out = [];
         const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
         const cabinet = () => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
-        for (const desk of [false, true]) for (const app of [false, true]) for (const tools of [false, true]) for (const cab of [false, true]) for (const busy of ['none', 'champ', 'cup']) for (const free of [false, true]) {
+        for (const desk of [false, true]) for (const app of [false, true]) for (const tools of [false, true]) for (const cab of [false, true]) for (const busy of ['none', 'champ', 'cup']) for (const buy of ['full', 'free', 'fan']) {
           if (app && tools) continue;                         // the app has no Install or Update
-          T.store.setNative(app); T.store.setStarted(app); T.store.setBought(app && !free ? ['tryline.full'] : []); T.store.setTier(!app && free ? 'free' : null);
+          if (!app && buy === 'fan') continue;                // nor the web a Super Fan
+          const free = buy === 'free';
+          T.store.setNative(app); T.store.setStarted(app); T.store.setBought(!app || free ? [] : buy === 'fan' ? ['tryline.fan.farnham'] : ['tryline.full']); T.store.setTier(!app && free ? 'free' : null);
           K.setHistory([]); if (cab) cabinet();
           X.setChamp(null); K.set(null); T.career.set(null);
           if (busy === 'champ') { X.newChamp(X.CLUBS[7] || X.CLUBS[0], X.CLUBS.slice(1, 6)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); }
@@ -422,9 +425,10 @@ async function browserChecks() {
             const s = document.getElementById('s-home');
             const btns = [...s.querySelectorAll('button')].filter(vis);
             const small = btns.filter(b => { const r = box(b); return r.height < 44 || r.width < 44; }).filter(b => !b.classList.contains('app-action')).map(b => b.id || b.textContent.trim());
-            const clipped = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent);
+            const clipped = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)
+              .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = getComputedStyle(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }).map(e => e.id + "'s lock squeezed"));   // a lock beside a name keeps its size
             const overlap = btns.some((a, i) => btns.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && (() => { const p = box(a), q = box(b); return p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1; })()));
-            out.push({ state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', hl].filter(Boolean).join('+'), fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth, small, clipped, overlap,
+            out.push({ state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', buy === 'fan' ? 'fan' : '', hl].filter(Boolean).join('+'), fan:buy === 'fan' && !document.getElementById('st-fan').hidden, fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth, small, clipped, overlap,
               two:vis(document.getElementById('b-two')) === (desk && hl === 'game'), grown:vis(document.getElementById('b-grown')) === ((app || free) && hl === 'settings'), note:document.getElementById('hl-settings').classList.contains('note') === app, cabBtn:vis(document.getElementById('b-cabinet')) === (cab && hl === 'champ') });
             if (tools) { for (const id of ['app-tools', 'b-install', 'b-update', 'offline-status']) document.getElementById(id).hidden = true; }
           }
@@ -435,9 +439,10 @@ async function browserChecks() {
         return out;
       });
       const bad = f => states.filter(f).map(r => r.state);
-      ok(states.length === 360 && states.every(r => r.fits), `${kind}: the home fits without a scroll in every state, on every headline (${bad(r => !r.fits).slice(0, 6).join(', ') || states.length + ' states'})`);
+      ok(states.length === 420 && states.every(r => r.fits), `${kind}: the home fits without a scroll in every state, on every headline (${bad(r => !r.fits).slice(0, 6).join(', ') || states.length + ' states'})`);
+      ok(states.filter(r => r.fan).length === 60, `${kind}: 60 of them with the Super Fan badge under the logo (${states.filter(r => r.fan).length})`);
       ok(states.every(r => !r.small.length), `${kind}: every button at least 44px (${states.filter(r => r.small.length).slice(0, 3).map(r => r.state + ': ' + r.small.join('/')).join('; ') || 'all'})`);
-      ok(states.every(r => !r.clipped.length && !r.overlap), `${kind}: no name cut off, no button over another (${states.filter(r => r.clipped.length || r.overlap).slice(0, 3).map(r => r.state + ': ' + r.clipped.join('/') + (r.overlap ? ' overlap' : '')).join('; ') || 'none'})`);
+      ok(states.every(r => !r.clipped.length && !r.overlap), `${kind}: no name cut off nor lock squeezed, no button over another (${states.filter(r => r.clipped.length || r.overlap).slice(0, 3).map(r => r.state + ': ' + r.clipped.join('/') + (r.overlap ? ' overlap' : '')).join('; ') || 'none'})`);
       ok(states.every(r => r.two && r.grown && r.note && r.cabBtn), `${kind}: 2 Players on computers only, Grown-Ups in Settings where the store is live (the app, the free web), its dot on Settings, the Trophy Cabinet with a finished season (${bad(r => !(r.two && r.grown && r.note && r.cabBtn)).slice(0, 4).join(', ') || 'all'})`);
       // long names on My Team step down to fit
       const fit = await page.evaluate(() => {
@@ -447,6 +452,50 @@ async function browserChecks() {
         return out;
       });
       ok(fit.length === 2 && fit.every(f => f[1] && f[2] >= 12) && fit[0][2] === fit[1][2], `${kind}: Christchurch and South Africa fit My Team, stepped down together (${JSON.stringify(fit)})`);
+      // every built-in club with England, South Africa and New Zealand fits My Team, on the web, in the app with the Full Game, with a
+      // club on sale and nothing bought, and with the Super Fan badge under the logo (its two lines must not take My Team's width)
+      const names = await page.evaluate(() => {
+        const T = window.__tryline, X = T.teams, S = T.store, st = T.debug.settings(), out = {};
+        const clubs = X.TEAM_LISTS.filter(l => l.tier > 0).flatMap(l => l.teams);
+        for (const [state, bought, onSale] of [['web', null, false], ['app full', ['tryline.full'], false], ['app on sale', [], true], ['app Super Fan', ['tryline.fan.farnham'], true]]) {
+          S.FAN_CLUBS[0].agreed = onSale; S.setNative(!!bought); S.setStarted(!!bought); S.setBought(bought || []);
+          st.hl = 'game'; const cut = [];
+          for (const nat of ['ENG', 'RSA', 'NZL']) for (const c of clubs) {
+            st.myClub = c.id; st.myNat = nat; T.debug.goHome();
+            const b = [...document.querySelectorAll('.my-side b')];
+            if (b.length !== 2 || b.some(e => e.scrollWidth > e.clientWidth + 1)) cut.push(c.name + ' + ' + nat);
+          }
+          out[state] = { tried:clubs.length * 3, cut:cut.length, of:cut.slice(0, 4), badge:!document.getElementById('st-fan').hidden, width:Math.round(document.getElementById('b-my').getBoundingClientRect().width) };
+        }
+        S.FAN_CLUBS[0].agreed = false; S.setNative(false); S.setStarted(false); S.setBought([]); st.myClub = null; st.myNat = null; T.debug.goHome();
+        return out;
+      });
+      ok(Object.values(names).every(r => r.tried > 200 && !r.cut) && names['app Super Fan'].badge && !names['app full'].badge, `${kind}: every club with England, South Africa or New Zealand fits My Team, the Super Fan badge showing or not (${JSON.stringify(names)})`);
+      // a locked Legend: the padlock clears the name on its team card and the jersey, its badge and its name on the Locker's tile
+      const locks = await page.evaluate(async () => {
+        const T = window.__tryline, X = T.teams, L = T.locker, S = T.store, st = T.debug.settings(), cat0 = st.cat, out = { cards:0, tiles:0, over:[] };
+        const lockOf = el => { const c = getComputedStyle(el, '::after'), r = el.getBoundingClientRect(), l = r.left + el.clientLeft + parseFloat(c.left), t = r.top + el.clientTop + parseFloat(c.top); return { left:l, top:t, right:l + parseFloat(c.width), bottom:t + parseFloat(c.height) }; };
+        const hit = (a, b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;   // 2px clear
+        const saved = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); S.setTier('free');
+        for (const cat of ['men', 'women']) {
+          st.cat = cat; T.debug.openTeams('quick'); X.tierPick(0);
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          for (const b of document.querySelectorAll('#t-grid .team[data-legend]')) {
+            out.cards++;
+            const lock = lockOf(b), range = document.createRange(); range.selectNodeContents(b.querySelector('.tname'));
+            if (!b.classList.contains('locked') || [...range.getClientRects()].some(q => hit(q, lock))) out.over.push('card ' + b.querySelector('.tname').textContent);
+          }
+        }
+        L.open(3);
+        for (const b of document.querySelectorAll('#s-locker .lk-leg[data-legend]')) {
+          out.tiles++;
+          const lock = lockOf(b);
+          if (!b.classList.contains('locked') || ['.ovr', '.jersey', '.lk-nat', '.lk-yr'].some(q => hit(b.querySelector(q).getBoundingClientRect(), lock))) out.over.push('tile ' + b.getAttribute('aria-label'));
+        }
+        S.setTier(null); L.set(saved); st.cat = cat0; T.debug.goHome();
+        return out;
+      });
+      ok(locks.cards === 18 && locks.tiles === 18 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge and name on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
       // a controller: the first press on Quick Match, down to the bar, along it, press, up into the panel; every button reachable
       const pad = await page.evaluate(() => {
         const T = window.__tryline, out = {};
@@ -458,6 +507,17 @@ async function browserChecks() {
         T.home.ring($('hl-game')); T.navMove(0, 1, 0); T.navMove(0, 1, 0); out.along = id(); T.navPress(0); out.hl = T.debug.settings().hl;
         T.navMove(0, 0, -1); out.up = f() && !!f().closest('#hp-career');
         T.home.ring($('hl-settings')); out.end = T.navMove(0, 1, 0); T.home.ring($('hl-game')); out.start = T.navMove(0, -1, 0);
+        // Down from any button of any headline's panel, pressed until the ring is on the bar, lands on that headline: never the nearest one
+        out.landed = [];
+        for (const hl of HL) for (const tier of hl === 'champ' ? [0, 1, 2] : [null]) {
+          T.debug.settings().hl = hl; if (tier != null) T.home.setTier(tier); T.debug.goHome(); T.home.ring(null);
+          for (const b of [...document.querySelectorAll('#hp-' + hl + ' .btn, #hp-' + hl + ' .seg button')].filter(b => !b.hidden && !b.closest('[hidden]') && b.getBoundingClientRect().width > 0)) {
+            T.home.ring(b); let el = b, n = 0;
+            while (el && !el.closest('#hl-bar') && n++ < 8) el = T.navMove(0, 0, 1);
+            if (!el || el.dataset.hl !== hl) out.landed.push(hl + (tier != null ? tier : '') + ':' + (b.id || b.textContent.trim()) + '>' + (el ? el.id || el.textContent.trim() : 'nothing'));
+          }
+        }
+        T.home.setTier(null); T.debug.settings().hl = 'game'; T.debug.goHome(); T.home.ring(null);
         // every visible button on every headline, reached by moving the ring from the first press
         out.unreached = [];
         for (const hl of T.home.HL) {
@@ -474,7 +534,8 @@ async function browserChecks() {
         T.debug.settings().hl = 'game'; T.debug.goHome();
         return out;
       });
-      ok(pad.first === 'b-quick' && pad.down >= 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Quick Match, Down reaches the bar, Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify(pad)})`);
+      ok(pad.first === 'b-quick' && pad.down === 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Quick Match, Down reaches the bar on Game (the chosen headline), Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify({ ...pad, landed:undefined, unreached:undefined })})`);
+      ok(!pad.landed.length, `${kind}: Down from every button of every headline (each Championship tier too) reaches the bar on that headline (${pad.landed.slice(0, 4).join(', ') || 'all'})`);
       ok(!pad.unreached.length, `${kind}: every button on every headline is reached by moving the ring (${pad.unreached.join(', ') || 'all'})`);
       // the keyboard: Tab reaches the bar (one stop), the arrows move along it and show each, Enter presses what Tab reaches
       await page.evaluate(() => { const T = window.__tryline; T.debug.settings().hl = 'game'; T.debug.goHome(); document.activeElement && document.activeElement.blur(); });
@@ -489,6 +550,60 @@ async function browserChecks() {
       const pressed = await page.evaluate(() => [document.getElementById('s-career-new').hidden === false || document.getElementById('m-store').hidden === false]);
       ok(onBar && atBar === 'hl-game' && kb[0] === 'hl-career' && kb[1] === 'career' && kb[2] && back === 'b-career' && pressed[0], `${kind}: Tab reaches the bar on its chosen headline (${tabs} presses), Right moves along it showing each, Shift+Tab goes up to the panel and Enter presses (${JSON.stringify([atBar, kb, back])})`);
       await page.evaluate(() => { const T = window.__tryline; T.debug.settings().hl = 'game'; T.career.set(null); T.debug.goHome(); });
+      ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
+      await ctx.close();
+    }
+    // 320px tall (Safari sideways: 667x320, 568x320), not one of the sizes that must never scroll: the page still never scrolls, and the
+    // logo, the top row and the bar are all on screen and never under anything; the panel holds what it can between them and scrolls
+    // inside its own row for the rest (only National's eight leagues with the Trophy Cabinet need it), the ring scrolling it into view
+    for (const [w, h] of [[667, 320], [568, 320]]) {
+      const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
+      const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
+      await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
+      const kind = `${w}x${h}`;
+      const r = await page.evaluate(() => {
+        const T = window.__tryline, X = T.teams, K = T.cups, S = T.store, out = [];
+        const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
+        const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
+        const cabinet = () => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
+        const TOOLS = ['app-tools', 'b-install', 'b-update', 'offline-status'];
+        for (const st of ['web', 'web tools', 'web free cab', 'app free', 'app fan', 'app full busy']) {
+          const app = st.startsWith('app');
+          S.setNative(app); S.setStarted(app); S.setBought(st === 'app fan' ? ['tryline.fan.farnham'] : st === 'app full busy' ? ['tryline.full'] : []); S.setTier(st === 'web free cab' ? 'free' : null);
+          K.setHistory([]); if (st === 'web free cab') cabinet();
+          X.setChamp(null); K.set(null); T.career.set(null);
+          if (st === 'app full busy') { X.newChamp(X.CLUBS[7], X.CLUBS.slice(1, 6)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); }
+          for (const [tier, hl] of [[2, 'game'], [0, 'champ'], [1, 'champ'], [2, 'champ'], [2, 'career'], [2, 'drills'], [2, 'settings']]) {
+            T.debug.settings().hl = hl; T.home.setTier(tier); T.debug.goHome();
+            if (st === 'web tools') for (const id of TOOLS) document.getElementById(id).hidden = false;
+            const s = document.getElementById('s-home'), p = document.getElementById('hl-panels'), pr = box(p);
+            const btns = [...s.querySelectorAll('button')].filter(vis), inner = btns.filter(b => p.contains(b)), outer = btns.filter(b => !p.contains(b));
+            const off = outer.filter(b => { const q = box(b); return q.top < -0.5 || q.bottom > innerHeight + 0.5 || q.left < -0.5 || q.right > innerWidth + 0.5; });
+            const clip = getComputedStyle(p).overflowY !== 'visible';   // what the panel shows of a button: all of it, or (scrolling) the part inside its box
+            const seen = b => { const q = box(b); return clip ? { left:Math.max(q.left, pr.left), right:Math.min(q.right, pr.right), top:Math.max(q.top, pr.top), bottom:Math.min(q.bottom, pr.bottom) } : q; };
+            const over = outer.filter((a, i) => outer.some((b, j) => j > i && meet(box(a), box(b))) || inner.some(b => meet(box(a), seen(b))) || (clip && meet(box(a), pr)))
+              .concat(inner.filter((a, i) => inner.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && meet(box(a), box(b)))));
+            const small = btns.filter(b => !b.classList.contains('app-action') && (box(b).height < 44 || box(b).width < 44));
+            const cut = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1)
+              .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = getComputedStyle(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }));
+            const scroll = p.scrollHeight - p.clientHeight;
+            let ringed = true;
+            if (scroll > 0) { const last = inner[inner.length - 1]; T.home.ring(last); const q = box(last); ringed = q.top >= pr.top - 0.5 && q.bottom <= pr.bottom + 0.5; T.home.ring(null); p.scrollTop = 0; }
+            const name = el => el.id || el.textContent.trim().slice(0, 16);
+            out.push({ state:st + ' ' + hl + (hl === 'champ' ? tier : ''), page:s.scrollHeight - s.clientHeight, scroll, ringed, off:off.map(name), over:over.map(name), small:small.map(name), cut:cut.map(e => e.textContent) });
+            if (st === 'web tools') for (const id of TOOLS) document.getElementById(id).hidden = true;
+          }
+        }
+        S.setNative(false); S.setStarted(false); S.setBought([]); S.setTier(null); X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.home.setTier(null);
+        T.debug.settings().hl = 'game'; T.debug.goHome();
+        return out;
+      });
+      const list = f => r.filter(f).slice(0, 4).map(x => x.state + ': ' + [...x.off, ...x.over, ...x.small, ...x.cut].join('/')).join('; ');
+      ok(r.length === 42 && r.every(x => x.page <= 0 && !x.off.length && !x.over.length), `${kind}: the page never scrolls, the logo, top row and bar are on screen and nothing sits over anything (${list(x => x.page > 0 || x.off.length || x.over.length) || r.length + ' states'})`);
+      ok(r.every(x => !x.small.length && !x.cut.length), `${kind}: every target 44px, no name cut off nor lock squeezed (${list(x => x.small.length || x.cut.length) || 'all'})`);
+      const scrolls = r.filter(x => x.scroll > 0);
+      ok(scrolls.every(x => /cab champ1$/.test(x.state) && x.ringed), `${kind}: only National's eight leagues with the Trophy Cabinet scroll inside the panel, and the ring brings the last button into view (${scrolls.map(x => x.state + ' ' + x.scroll + 'px' + (x.ringed ? '' : ' not ringed')).join(', ') || 'none'})`);
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }

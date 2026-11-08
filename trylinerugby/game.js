@@ -6853,6 +6853,10 @@ function navMove(seat, dx, dy) {                           // the nearest candid
     const s = along + 2*side;
     if (s < bs) { bs = s; best = el; }
   }
+  if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one
+    const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
+    if (sel && cands.includes(sel)) best = sel;
+  }
   if (best) setFocus(best);
   return best;
 }
