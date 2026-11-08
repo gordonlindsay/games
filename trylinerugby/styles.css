@@ -724,7 +724,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 /* the team screen's competition row, Championship only: League | World Cup | Home Nations Tour over the lists, in equal thirds like them */
 #t-comp{margin-top:-8px}
 #t-comp button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
-#t-comp + .pools{margin-top:-12px}
+#t-comp:not([hidden]) + .pools{margin-top:-12px}   /* only under the row: hidden (Quick Match, Two Player), the lists sit where they did */
 .cup-offer .btn.primary{display:flex;align-items:center;justify-content:center;gap:12px}
 .cup-offer .cup-trophy{width:28px;height:28px;background:var(--flood-ink)}
 .cup-hub{max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 24px;align-items:start}
@@ -785,4 +785,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   #s-cup .cup-win{padding:10px 14px}
   #s-cup .cup-win b{font-size:26px}
   #s-cup .res{padding:6px 10px}
+  #s-cup .cb-col{gap:6px}
+  #s-cup .cb-row{min-height:20px;padding-block:1px}   /* the World Cup's four Quarter-Finals under their two-line name, with Pools folded under them, inside 375px */
+  #s-cup .cb-tie.tbc{min-height:42px}
 }

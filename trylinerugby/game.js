@@ -4098,6 +4098,10 @@ function cleanCup(c) {
     out.results.push(clean); out.round = out.results.length;
   }
   if (out.fixtures.length === out.results.length) { const nx = cupNext(out, out.results.length); if (nx) out.fixtures.push(nx); }   // a missing next round follows from the results
+  /* The next unplayed round must be his. One he has no part in (the pool round he sits out, or the rest once he is out) is played by
+     cupSettle as soon as it is made, with draws a validator never makes, so a save still holding one could never move on. */
+  const next = out.fixtures[out.results.length];
+  if (next && !next.some(p => p.includes(out.user))) return null;
   if (!out.uid) out.uid = 'cup-' + cupHash(out);
   return out;
 }
@@ -7614,7 +7618,10 @@ function cupSeriesHtml(c, k) {                             // a tour's result ca
   const side = (t, r) => `<span class="cs-side${r ? ' r' : ''}${t === c.user ? ' me' : ''}" data-fit>${r ? '' : cupChip(T[t])}${esc(listName(T[t]))}${r ? cupChip(T[t]) : ''}</span>`;
   return `<div class="cup-last"><p class="eyebrow">Series</p><div class="cup-series">${side(0)}<b>${s[0]} – ${s[1]}</b>${side(1, true)}</div>${text ? `<p class="cup-verdict${(cupDone(c) ? cupWinner(c) === c.user : won) ? ' good' : ' bad'}">${esc(text)}</p>` : ''}</div>`;
 }
-function cupFixtureHtml(c, fx) {
+/* The next-match panel's two cards. pre names the button's id, one per screen (the cup hub's is 'cup': cup-play, cup-new), so a
+   screen left hidden with its old panel never answers $() for another's: give Career its own and bind $(pre + '-play'). label is
+   the winner's card's button (here New Championship). */
+function cupFixtureHtml(c, fx, pre) {
   const T = c.teams, h = T[fx.home], a = T[fx.away];
   return `<div class="stack">
       <div class="fixture">
@@ -7623,10 +7630,10 @@ function cupFixtureHtml(c, fx) {
         <span class="fx-team r"><span data-fit>${esc(listName(a))}</span>${jersey(a)}</span>
       </div>
       ${outmatched(T[c.user], T[fx.opp]) ? '<p class="eyebrow">Stronger Side</p>' : ''}
-      <button class="btn primary" id="cup-play">Play Match</button>
+      <button class="btn primary" id="${pre}-play">Play Match</button>
     </div>`;
 }
-function cupWinHtml(c) {                                   // the winner's card, and New Championship
+function cupWinHtml(c, pre, label) {                       // the winner's card, and its button
   const w = cupWinner(c), won = w === c.user;
   const head = w < 0 ? CUPS[c.id].name : c.id === 'tour' ? 'Series Winners' : CUPS[c.id].name + ' Winners';
   const who = w < 0 ? c.teams[c.user] : c.teams[w];
@@ -7636,7 +7643,7 @@ function cupWinHtml(c) {                                   // the winner's card,
         <div class="cup-who"><p class="eyebrow">${w < 0 ? 'Out' : esc(head)}</p><b data-fit>${esc(listName(who))}</b></div>
         ${jersey(who)}
       </div>
-      <button class="btn primary" id="cup-new">New Championship</button>
+      <button class="btn primary" id="${pre}-new">${esc(label)}</button>
     </div>`;
 }
 function cupTieHtml(c, k, i, short) {                      // one tie in the bracket: two rows, the winner bright, yours marked; one not drawn yet is the same size
@@ -7673,7 +7680,7 @@ function renderCup() {
   $('cup-title').classList.toggle('gold', won);
   $('cup-line').textContent = cupLine(c);
   $('cup-line').classList.toggle('payoff', won);
-  $('cup-next').innerHTML = fx ? cupFixtureHtml(c, fx) : cupWinHtml(c);
+  $('cup-next').innerHTML = fx ? cupFixtureHtml(c, fx, 'cup') : cupWinHtml(c, 'cup', 'New Championship');
   if (fx) $('cup-play').addEventListener('click', cupPlay);
   else $('cup-new').addEventListener('click', () => { cupRetain(cup); cup = null; save(); openTeams('champ'); });
   $('cup-last').innerHTML = cupLastHtml(c);
@@ -10728,7 +10735,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
-  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compPick:cupCompPick, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
+  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compPick:cupCompPick, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },

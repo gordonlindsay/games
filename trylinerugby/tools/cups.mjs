@@ -287,12 +287,17 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
     ['pools with a side twice', (() => { const x = copy(cups[1]); x.pools[0][0] = x.pools[1][0]; return x; })()],
     ['a pool with two from one band', (() => { const x = copy(cups[1]); [x.pools[0][1], x.pools[0][2]] = [x.pools[0][2], x.pools[0][1]]; return x; })()],
     ['a pool round that is not the pools\'', (() => { const x = copy(cups[1]); x.fixtures[0][0] = x.fixtures[0][0].slice().reverse(); return x; })()],
+    ['the pool round he sits out, not played', (() => { const w = K.cupNew('world', { user:nat('SCO') }); win(w); win(w); const x = copy(w); x.results = x.results.slice(0, 2); x.round = 2; x.fixtures = x.fixtures.slice(0, 3); return x; })()],
+    ['out in the Semi-Final, the Final not played', (() => { const o = K.cupNew('euro', { user:X.ENGLAND[0] }); lose(o); const x = copy(o); x.results = x.results.slice(0, 1); x.round = 1; x.fixtures = x.fixtures.slice(0, 1); return x; })()],
+    ['out in the Quarter-Final, the rest not played', (() => { const w = K.cupNew('world', { user:nat('NZL') }); win(w, 60, 0); win(w, 60, 0); lose(w); const x = copy(w); x.results = x.results.slice(0, 4); x.round = 4; x.fixtures = x.fixtures.slice(0, 5); return x; })()],
   ];
   for (const [what, v] of bad) ok(K.cleanCup(v) === null, 'refused: ' + what);
   const level = copy(e), lm = level.results[0][0]; lm.as = lm.hs; lm.at = lm.ht; lm.by = 'toss';
   ok(K.cleanCup(level) && K.cleanCup(level).results[0][0].by === 'toss', 'a level knockout settled on the toss is kept');
   const gap = copy(e); gap.fixtures.pop();
   ok(json(K.cleanCup(gap).fixtures) === json(e.fixtures), 'a next round missing from a save follows from the results');
+  const live = K.cleanCup(copy(e)), fx = K.cupFixture(live);
+  ok(fx && fx.label === 'Final' && live.fixtures[live.round].some(p => p.includes(live.user)), 'a cup under way is kept: its next round is his');
   const anon = copy(e); delete anon.uid;
   ok(/^cup-[a-z0-9]+$/.test(K.cleanCup(anon).uid) && K.cleanCup(anon).uid === K.cleanCup(copy(anon)).uid, 'a cup saved without an id gets a stable one from its data');
   // the browser save: the field, partial restores, old saves
@@ -418,6 +423,11 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   c = K.get();
   ok(K.cupDone(c) && K.cupWinner(c) === c.user && $('cup-title').textContent === 'Winners' && $('cup-title').classList.contains('gold') && /cup-win/.test($('cup-next').innerHTML) && /id="cup-new"/.test($('cup-next').innerHTML), 'the winner\'s card, gold, and New Championship');
   ok(K.history().length === 1 && K.history()[0].kind === 'world' && K.history()[0].id === c.uid, 'and the cup is in the Trophy Cabinet');
+  ok(/id="cup-new"[^>]*>New Championship<\/button>/.test($('cup-next').innerHTML), 'the hub\'s button is cup-new, New Championship');
+  { // the panel's builders, for another screen (Career's): its own ids and its own words, so a hidden hub's old panel never answers $() for it
+    const e2 = K.cupNew('euro', { user:X.ENGLAND[0] }), fx2 = K.cupFixture(e2), play = K.fixtureHtml(e2, fx2, 'cc'), end = K.winHtml(c, 'cc', 'Next Season');
+    ok(/id="cc-play"[^>]*>Play Match<\/button>/.test(play) && /id="cc-new"[^>]*>Next Season<\/button>/.test(end) && !/id="cup-/.test(play + end) && !/New Championship/.test(end), 'the fixture and winner\'s cards take a prefix for their ids and a label for the button');
+  }
   D.goHome();
   ok($('b-champ').textContent === 'Final Result' && / · Winners$/.test(noteText()), `home: Final Result (${noteText()})`);
   $('b-champ').click(); $('cup-new').click();
@@ -489,6 +499,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(/^  cups:\{ CUPS, /m.test(src('src/boot.js')), 'the tests\' namespace, cups, on its own line in window.__tryline');
   ok(/<div class="seg" id="t-comp" hidden><\/div>\s*<div class="pools"><div class="seg" id="t-tier"><\/div>/.test(src('index.html')) && /<section class="screen" id="s-cup" hidden>/.test(src('index.html')), 'index.html: the competition row over the lists, and the cup hub');
   ok(/\/\* ===== cups ===== \*\//.test(src('styles.css')), 'styles.css: one block, under its heading');
+  ok(/#t-comp:not\(\[hidden\]\) \+ \.pools\{margin-top:-12px\}/.test(src('styles.css')) && !/#t-comp \+ \.pools/.test(src('styles.css')), 'the lists move up under the competition row only when it shows: Quick Match and Two Player keep ed37be5\'s spacing');
   ok(/^## Silverware$/m.test(src('README.md')), 'README: a Silverware section');
   const copyText = src('src/cups.js') + src('src/ui-cups.js');
   ok(!/\u2014/.test(copyText), 'no em dashes');

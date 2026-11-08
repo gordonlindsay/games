@@ -296,6 +296,10 @@ function cleanCup(c) {
     out.results.push(clean); out.round = out.results.length;
   }
   if (out.fixtures.length === out.results.length) { const nx = cupNext(out, out.results.length); if (nx) out.fixtures.push(nx); }   // a missing next round follows from the results
+  /* The next unplayed round must be his. One he has no part in (the pool round he sits out, or the rest once he is out) is played by
+     cupSettle as soon as it is made, with draws a validator never makes, so a save still holding one could never move on. */
+  const next = out.fixtures[out.results.length];
+  if (next && !next.some(p => p.includes(out.user))) return null;
   if (!out.uid) out.uid = 'cup-' + cupHash(out);
   return out;
 }
