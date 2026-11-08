@@ -92,7 +92,8 @@ export const LISTING_MOMENTS = [
 ];
 
 // A returning player's save: tutorials seen, coach tips off, past the gentler first matches. Nothing else.
-const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 } };
+// Full Game owned, so the shots show the app as a paying family sees it: no locks, and the Grown-Ups button on the home.
+const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 }, store:{ owned:['tryline.full'] } };
 const SEED = 20261108;
 
 const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.webmanifest':'application/manifest+json',
@@ -158,6 +159,10 @@ async function shoot(browser, base, size, moment, out, bare = false) {   // bare
   }, [SAVE, SEED]);
   await page.goto(base + 'index.html', { waitUntil:'load' });
   await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => {                                  // the shots are of the app, not the web page: as the app, already started
+    const T = window.__tryline;
+    if (T && T.store) { T.store.setNative(true); T.store.setStarted(true); T.debug.goHome(); }
+  });
   await page.waitForTimeout(600);
   const info = await page.evaluate(`(${moment.stage.toString()})()`);
   if (info && info.n === -1) throw new Error(`${moment.id} at ${size.id}: the scene never came up; try another SEED`);
