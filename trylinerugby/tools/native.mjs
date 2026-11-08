@@ -1,6 +1,6 @@
 // The Try Line app (src/native.js, ../app): native detection stays off on the web and the web build behaves as before;
-// under a stubbed window.Capacitor every in-app change applies (no service worker or install buttons, landscape, no bars,
-// haptics, Android's Back); the save goes to Preferences and comes back; the typefaces are the game's own files, with
+// under a stubbed window.Capacitor every in-app change applies (no service worker or install buttons, How to Play's app
+// entries, no orientation lock, no bars, haptics, Android's Back); the save goes to Preferences and comes back; the typefaces are the game's own files, with
 // Google Fonts gone; and the app's scripts copy the right files and set the native projects.
 // node tools/native.mjs   Exits 1 on any failure.
 import fs from 'node:fs';
@@ -77,19 +77,19 @@ const Plugins = {
   Haptics:stub('Haptics', { impact:() => Promise.resolve() }),
   StatusBar:stub('StatusBar', { hide:() => Promise.resolve() }),
   SystemBars:stub('SystemBars', { hide:() => Promise.resolve() }),
-  ScreenOrientation:stub('ScreenOrientation', { lock:() => Promise.resolve() }),
+  ScreenOrientation:stub('ScreenOrientation', { lock:() => Promise.resolve(), unlock:() => Promise.resolve() }),   // not shipped: here so a call would show
   App:stub('App', { addListener:(event, fn) => { appListeners[event] = fn; return Promise.resolve({ remove() {} }); }, minimizeApp:() => Promise.resolve() }),
 };
 let isNative = true;
 globalThis.Capacitor = { isNativePlatform:() => isNative, getPlatform:() => 'android', Plugins };
 const vibes = []; navigator.vibrate = ms => { vibes.push(ms); return true; };
 // The harness builds its stand-in document when it loads. Wrapped as it is set, so the test can fire document events and
-// find How to Play's web-only entries, which the stand-in does not model.
-const docEvents = {}, webOnly = [{ hidden:false }, { hidden:false }];
+// find How to Play's web-only and app-only entries, which the stand-in does not model.
+const docEvents = {}, webOnly = [{ hidden:false }, { hidden:false }, { hidden:false }, { hidden:false }], appOnly = [{ hidden:true }, { hidden:true }];
 let theDoc = null;
 Object.defineProperty(globalThis, 'document', { configurable:true, get:() => theDoc, set:d => {
   const all = d.querySelectorAll;
-  theDoc = Object.assign(d, { addEventListener:(t, fn) => { (docEvents[t] ||= []).push(fn); }, querySelectorAll:sel => sel === '.web-only' ? webOnly : all(sel) });
+  theDoc = Object.assign(d, { addEventListener:(t, fn) => { (docEvents[t] ||= []).push(fn); }, querySelectorAll:sel => sel === '.web-only' ? webOnly : sel === '.app-only' ? appOnly : all(sel) });
 } });
 const fireDoc = (t, ev = {}) => { for (const fn of docEvents[t] || []) fn(ev); };
 const calls = (plugin, method) => log.filter(([p, m]) => p === plugin && m === method);
@@ -101,10 +101,10 @@ globalThis.localStorage = { getItem:k => store.has(k) ? store.get(k) : null, set
 
 // 3a. the start: plugins first, and the game waits for Preferences
 ok(N.on() === true, 'nativeOn() is true inside the app');
-ok(calls('ScreenOrientation', 'lock').length === 1 && calls('ScreenOrientation', 'lock')[0][2].orientation === 'landscape', 'the app locks to landscape at start');
+ok(!log.some(([p]) => p === 'ScreenOrientation'), 'the app never locks the orientation: a lock pins one side, and the native projects already allow landscape either way up');
 ok(calls('StatusBar', 'hide').length === 1 && calls('SystemBars', 'hide').length === 1, 'the status bar (StatusBar) and the system bars (SystemBars) are hidden at start');
 ok(typeof appListeners.backButton === 'function', 'Android\'s Back is taken by the game');
-ok(webOnly.every(e => e.hidden), 'How to Play\'s web install entry is hidden in the app');
+ok(webOnly.every(e => e.hidden) && appOnly.every(e => !e.hidden), 'How to Play\'s browser entries (Install & Offline, Saving) are hidden in the app, and its app entries shown');
 ok(calls('Preferences', 'get').length === 1 && calls('Preferences', 'get')[0][2].key === STORE, 'with the web view\'s save gone, the start asks Preferences for tryline.v1');
 ok(!N.state().ready, 'the game does not start before Preferences answers');
 
@@ -250,7 +250,7 @@ ok(JSON.parse(store.get(STORE)).seasonSerial === 4, 'the save is back in the web
   const mm = globalThis.matchMedia; globalThis.matchMedia = q => ({ matches:/coarse/.test(q), addEventListener() {}, addListener() {} });
   document.documentElement = { requestFullscreen:() => { fsCalls++; return Promise.resolve(); } };
   D.startMatch(X.NATIONS[0], X.NATIONS[1], false);
-  ok(fsCalls === 0, 'in the app a match asks for no fullscreen (landscape and no bars already)');
+  ok(fsCalls === 0 && !log.some(([p]) => p === 'ScreenOrientation'), 'in the app a match asks for no fullscreen and locks no orientation (landscape and no bars already)');
   D.exitMatch(); isNative = false;
   D.startMatch(X.NATIONS[0], X.NATIONS[1], false);
   ok(fsCalls === 1, 'on a touch browser it still does, as before');
@@ -284,6 +284,19 @@ const html = read('index.html');
   ok(sw === assembleWorker().worker && faces.every(f => sw.includes('"fonts/' + f.file + '"')), 'sw.js lists and hashes every font file');
   const priv = read('PRIVACY.md');
   ok(!/loads its two typefaces from Google/i.test(priv) && /typefaces come with the game/i.test(priv) && !/as Google does/i.test(priv), 'PRIVACY.md says the typefaces come with the game and Google gets no request');
+  ok(/## Going online\n\n[^\n]*The app has its files built in/.test(priv), 'PRIVACY.md says the app has its files built in, rather than fetching them');
+}
+
+// ---------- 4b. How to Play: the browser's Saving entry on the web, the app's in the app ----------
+{
+  const entries = [...html.matchAll(/<(dt|dd)(?: class="([^"]*)")?( hidden)?>([\s\S]*?)<\/\1>/g)].map(m => ({ tag:m[1], cls:(m[2] || '').split(' '), hidden:!!m[3], text:m[4] }));
+  const saving = cls => entries.filter(e => e.cls.includes(cls) && (e.text === 'Saving' || /keeps your settings/.test(e.text)));
+  const web = saving('web-only'), app = saving('app-only');
+  const before = 'This browser keeps your settings, the teams you make, and a championship\'s fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table clears the current championship and keeps completed seasons in the Trophy Cabinet. Leaving a match, or reloading, keeps the same round to play again.';
+  ok(web.length === 2 && web[0].tag === 'dt' && !web.some(e => e.hidden) && web[1].text === before, 'on the web How to Play\'s Saving is the browser\'s, word for word as before');
+  ok(app.length === 2 && app[0].tag === 'dt' && !/browser|reload/i.test(app[1].text) && /closing the app/.test(app[1].text), 'the app\'s Saving speaks of the game and closing the app, not a browser or reloading');
+  ok(entries.filter(e => e.cls.includes('app-only')).every(e => e.hidden) && /\[hidden\]\{display:none!important\}/.test(read('styles.css')), 'every app-only entry starts hidden, so a browser never shows one');
+  ok(!entries.some(e => !e.cls.includes('web-only') && !e.cls.includes('app-only') && e.text === 'Saving'), 'no Saving entry is shown to both');
 }
 
 // ---------- 5. safe areas ----------
@@ -300,13 +313,14 @@ const html = read('index.html');
   const pkg = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
   const all = { ...pkg.dependencies, ...pkg.devDependencies };
   ok(Object.values(all).every(v => /^\d+\.\d+\.\d+$/.test(v)), 'every package is pinned to an exact version');
-  const need = ['@capacitor/core', '@capacitor/cli', '@capacitor/ios', '@capacitor/android', '@capacitor/haptics', '@capacitor/preferences', '@capacitor/status-bar', '@capacitor/screen-orientation', '@capacitor/app'];
+  const need = ['@capacitor/core', '@capacitor/cli', '@capacitor/ios', '@capacitor/android', '@capacitor/haptics', '@capacitor/preferences', '@capacitor/status-bar', '@capacitor/app'];
   ok(need.every(p => all[p]), 'Capacitor and every plugin the game calls are in package.json');
+  ok(!all['@capacitor/screen-orientation'] && !/ScreenOrientation/.test(read('src/native.js').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')), 'no orientation plugin: the app is never pinned to one landscape side');
   ok(new Set(['core', 'cli', 'ios', 'android'].map(p => all['@capacitor/' + p])).size === 1 && need.every(p => all[p].split('.')[0] === all['@capacitor/core'].split('.')[0]), `Capacitor's packages share one version and the plugins its major (${all['@capacitor/core']})`);
   const lock = JSON.parse(fs.readFileSync(path.join(appDir, 'package-lock.json'), 'utf8'));
   ok(JSON.stringify(lock.packages[''].dependencies) === JSON.stringify(pkg.dependencies) && JSON.stringify(lock.packages[''].devDependencies) === JSON.stringify(pkg.devDependencies), 'package-lock.json matches package.json');
   const cfg = JSON.parse(fs.readFileSync(path.join(appDir, 'capacitor.config.json'), 'utf8'));
-  ok(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/.test(cfg.appId) && cfg.appName === 'Try Line Rugby' && cfg.webDir === 'www', `capacitor.config.json: ${cfg.appId}, Try Line Rugby, www`);
+  ok(cfg.appId === 'ai.signcheck.tryline' && cfg.appName === 'Tryline Rugby' && cfg.webDir === 'www', `capacitor.config.json: SignCheck Ltd's app id ai.signcheck.tryline, Tryline Rugby, www (${cfg.appId}, ${cfg.appName})`);
   ok(cfg.backgroundColor === read('styles.css').match(/--night:(#[0-9a-f]{6})/)[1], 'the web view\'s background is the game\'s night ground, so nothing flashes white');
   ok(cfg.plugins.CapacitorHttp.enabled === false, 'fetch and XMLHttpRequest stay the web view\'s own; Import calls CapacitorHttp directly');
   ok(/(^|\n)www\/(\n|$)/.test(fs.readFileSync(path.join(appDir, '.gitignore'), 'utf8')) && /node_modules\//.test(fs.readFileSync(path.join(appDir, '.gitignore'), 'utf8')), 'app/www and node_modules are never committed');
@@ -356,6 +370,9 @@ const html = read('index.html');
   const am = patchAndroidManifest(fx('AndroidManifest.xml'));
   ok(/<activity\b[^>]*android:screenOrientation="sensorLandscape"[^>]*android:name="\.MainActivity"/.test(am), 'Android: the game\'s activity is landscape, either way up');
   ok(/<uses-permission android:name="com\.google\.android\.gms\.permission\.AD_ID" tools:node="remove" \/>/.test(am) && /xmlns:tools=/.test(am), 'Android: no advertising ID permission, whatever a library asks (Families policy)');
+  ok(/android:allowBackup="true"/.test(fx('AndroidManifest.xml')) && /<application\b[^>]*android:allowBackup="false"/.test(am) && (am.match(/allowBackup/g) || []).length === 1, 'Android: no cloud backup of the save (the template\'s allowBackup true set to false), so deleting the app removes it, as PRIVACY.md says');
+  const bare = patchAndroidManifest(fx('AndroidManifest.xml').replace(/\s*android:allowBackup="true"/, ''));
+  ok(/<application\b[^>]*android:allowBackup="false"/.test(bare) && patchAndroidManifest(bare) === bare, 'Android: a manifest without allowBackup gets it, once');
   ok(patchAndroidManifest(am) === am && (am.match(/screenOrientation/g) || []).length === 1, 'Android: run twice, nothing changes');
 }
 

@@ -171,7 +171,7 @@ function playOut() {
   ok(/<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>/.test(html), 'Quick Match is the primary button and takes focus');
   ok(!html.includes('data-key="duels"'), 'the Duels switch is gone');
   ok(html.includes("duels:'live'"), 'a match you play passes live duels');
-  ok(/<dt>Saving<\/dt>/.test(html) && html.includes('Start Fresh'), 'How to Play explains saving and starting fresh');
+  ok(/<dt class="web-only">Saving<\/dt>/.test(html) && /<dt class="app-only" hidden>Saving<\/dt>/.test(html) && html.includes('Start Fresh'), 'How to Play explains saving and starting fresh');
 
   X.newChamp(X.NATIONS[0], X.NATIONS.slice(1));
   const c0 = X.champ();

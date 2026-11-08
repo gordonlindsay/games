@@ -16,7 +16,7 @@ Settings, the teams you make, your championship, your Trophy Cabinet, your caree
 
 ## Going online
 
-Once loaded, the game plays offline. When it is online it fetches only its own files, from the site it came from, to load and to update itself.
+Once loaded, the game plays offline. When it is online it fetches only its own files, from the site it came from, to load and to update itself. The app has its files built in, and updates come through the App Store or Google Play.
 
 Its two typefaces come with the game, on the web and in the app. It never loads fonts from Google Fonts or any other site.
 

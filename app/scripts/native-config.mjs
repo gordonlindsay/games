@@ -10,8 +10,12 @@
 //   - ITSAppUsesNonExemptEncryption NO: the only encryption is the system's own HTTPS, so each upload skips the question.
 //   - PrivacyInfo.xcprivacy (native/): no tracking, no data collected, and UserDefaults read and written for the app's own
 //     data (reason CA92.1), which is how Preferences keeps the save's copy. Added to the App target's resources.
-// Android (android/app/src/main/AndroidManifest.xml):
+// Android (android/app/src/main/AndroidManifest.xml), phase 2:
 //   - landscape either way up (sensorLandscape) for the game's activity.
+//   - no cloud backup (allowBackup false, where Capacitor's template has true): Auto Backup would copy the save, in
+//     Preferences and the web view's storage, to the family's Google Drive and put it back on a reinstall, and the privacy
+//     note says the save stays on the device and deleting the app removes it. A phone-to-phone transfer when setting up a
+//     new phone (Android 12 and later) still carries it across.
 //   - the advertising ID permission removed, should any library ever bring it in (Google Play's Families policy).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -74,6 +78,11 @@ export function patchAndroidManifest(xml) {
   xml = xml.replace(activity, tag => /android:screenOrientation="/.test(tag)
     ? tag.replace(/android:screenOrientation="[^"]*"/, 'android:screenOrientation="sensorLandscape"')
     : tag.replace(/<activity\b(\s*)/, (m, space) => '<activity' + (space || ' ') + 'android:screenOrientation="sensorLandscape"' + (space || ' ')));
+  const application = /<application\b[^>]*>/;
+  if (!application.test(xml)) throw new Error('AndroidManifest.xml has no application.');
+  xml = xml.replace(application, tag => /android:allowBackup="/.test(tag)
+    ? tag.replace(/android:allowBackup="[^"]*"/, 'android:allowBackup="false"')
+    : tag.replace(/<application\b(\s*)/, (m, space) => '<application' + (space || ' ') + 'android:allowBackup="false"' + (space || ' ')));
   if (!/xmlns:tools="/.test(xml)) xml = xml.replace(/<manifest\b/, '<manifest xmlns:tools="http://schemas.android.com/tools"');
   if (!/com\.google\.android\.gms\.permission\.AD_ID/.test(xml)) xml = xml.replace(/\n?<\/manifest>\s*$/, '\n    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />\n</manifest>\n');
   return xml;
@@ -99,7 +108,7 @@ if (invokedDirectly) {
       }
     } else console.log('No iOS project yet (npx cap add ios): skipped.');
     const manifest = path.join(app, 'android/app/src/main/AndroidManifest.xml');
-    if (fs.existsSync(manifest)) update(manifest, patchAndroidManifest, 'Android manifest (landscape, no advertising ID)');
+    if (fs.existsSync(manifest)) update(manifest, patchAndroidManifest, 'Android manifest (landscape, no cloud backup, no advertising ID)');
     else console.log('No Android project yet (npx cap add android): skipped.');
   } catch (error) {
     console.error(error.message);

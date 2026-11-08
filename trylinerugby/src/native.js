@@ -1,9 +1,11 @@
 /* =========================================================
    The Try Line app. What the game does differently inside the iOS and Android app (Capacitor, app/ at the repo root):
    - no service worker, and no Install Game, Update Game or Offline Ready: the app carries its own files (offlineStart asks
-     nativeOn first). How to Play leaves out its web install entry (.web-only).
-   - landscape only, with the status bar (and Android's navigation bar) hidden, through the plugins when present; a match
-     skips the web's fullscreen and orientation request (lockLandscape asks nativeOn first).
+     nativeOn first). How to Play swaps its browser entries (.web-only) for the app's (.app-only).
+   - landscape either way up, set in the native projects (Info.plist, and sensorLandscape on Android: app/scripts/
+     native-config.mjs), never locked at run time, as a lock pins one side and a phone held the other way stays upside
+     down. The status bar (and Android's navigation bar) is hidden through the plugins when present; a match skips the
+     web's fullscreen and orientation request (lockLandscape asks nativeOn first).
    - safe areas: the env(safe-area-inset-*) the CSS already uses, under viewport-fit=cover. SystemBars in
      capacitor.config.json keeps Android's right.
    - buzz() through Haptics, a light, medium or heavy tap: WKWebView has no navigator.vibrate.
@@ -58,7 +60,6 @@ function nativeStart() {
   if (nativeApp.started || !nativeOn()) return;
   nativeApp.started = true;
   nativeWebOnly();
-  nativeCall('ScreenOrientation', 'lock', { orientation:'landscape' });
   nativeBars();
   // Coming back from the background, or a keyboard closing after a team name or a link, can bring the bars back.
   document.addEventListener('visibilitychange', () => { if (!document.hidden) nativeBars(); });
@@ -66,8 +67,11 @@ function nativeStart() {
   const app = nativePlugin('App');
   if (app && typeof app.addListener === 'function') { try { app.addListener('backButton', nativeBack); } catch (e) { /* Back keeps the platform's own */ } }
 }
-function nativeWebOnly() {                                 // How to Play's Install & Offline: Safari, Add to Home Screen and Update Game mean nothing in the app
+/* How to Play's browser entries (Install & Offline: Safari, Add to Home Screen and Update Game; Saving: this browser, reloading)
+   mean nothing in the app: they go, and the app's own (.app-only, hidden in index.html, so a browser never shows them) come in. */
+function nativeWebOnly() {
   for (const el of document.querySelectorAll('.web-only')) el.hidden = true;
+  for (const el of document.querySelectorAll('.app-only')) el.hidden = false;
 }
 function nativeBars() {
   nativeCall('StatusBar', 'hide');

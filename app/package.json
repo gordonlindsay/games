@@ -12,7 +12,8 @@
     "sync": "node scripts/copy-www.mjs && cap sync",
     "native-config": "node scripts/native-config.mjs",
     "make-assets": "node scripts/make-assets.mjs",
-    "assets": "capacitor-assets generate --ios --android",
+    "assets": "capacitor-assets generate --ios",
+    "assets-android": "capacitor-assets generate --android",
     "ios": "npm run sync && cap open ios",
     "android": "npm run sync && cap open android"
   },
@@ -24,7 +25,6 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/ios": "8.6.0",
     "@capacitor/preferences": "8.0.1",
-    "@capacitor/screen-orientation": "8.0.2",
     "@capacitor/status-bar": "8.0.4"
   },
   "devDependencies": {

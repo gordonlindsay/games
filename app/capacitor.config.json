@@ -1,6 +1,6 @@
 {
-  "appId": "com.gordonlindsay.tryline",
-  "appName": "Try Line Rugby",
+  "appId": "ai.signcheck.tryline",
+  "appName": "Tryline Rugby",
   "webDir": "www",
   "backgroundColor": "#0b130e",
   "ios": {

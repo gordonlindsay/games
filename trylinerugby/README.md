@@ -147,12 +147,13 @@ Use HTTPS to test real service-worker installation. The HTTP development preview
 
 ## The App
 
-`app/` at the repository root wraps the game for the App Store and Google Play with Capacitor; `app/README.md` has the
-steps on a Mac. The app carries the same files the site serves. What it does differently is in `src/native.js`, and
-none of it runs in a browser (`nativeOn()` is false there): no service worker or Install and Update buttons, landscape
-with no status bar, haptics through the phone's own engine, the save copied into the app's own storage and put back
-if the web view loses it, and Android's Back as the game's own. `node tools/native.mjs` checks it under a stand-in
-Capacitor, the web build unchanged, the typefaces and the app's scripts.
+`app/` at the repository root wraps the game for the App Store (Google Play in phase 2) with Capacitor; `app/README.md`
+has the steps on a Mac. The app carries the same files the site serves, and its native projects are landscape either
+way up. What it does differently is in `src/native.js`, and none of it runs in a browser (`nativeOn()` is false there):
+no service worker or Install and Update buttons, How to Play's app entries, no status bar, haptics through the phone's
+own engine, the save copied into the app's own storage and put back if the web view loses it, and Android's Back as the
+game's own. `node tools/native.mjs` checks it under a stand-in Capacitor, the web build unchanged, the typefaces and the
+app's scripts.
 
 ## Development source and checks
 
@@ -180,7 +181,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
 | `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
 | `src/practice.js` | Isolated drills and practice feedback |
-| `src/native.js` | The Try Line app (Capacitor): `nativeOn()`, haptics, the save's copy, bars, orientation and Back |
+| `src/native.js` | The Try Line app (Capacitor): `nativeOn()`, haptics, the save's copy, bars, How to Play's app entries and Back |
 | `src/offline-client.js` | Optional browser installation, offline status and safe update controls |
 | `src/service-worker.js` | Separate worker template; cached shell and integrity checks (outside the game bundle) |
 | `src/boot.js` | Frame loop, diagnostic API and startup |
