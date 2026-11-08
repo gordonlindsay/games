@@ -8,10 +8,11 @@
    - Minis and Juniors are your club against five other Local clubs drawn at random, every side at lowered ratings
      (Minis: one off every ability; Juniors: one off Pace and Power). County is Surrey against five invented county
      sides. Pro Club is the city side you sign for (drawn from every national league when you go up: the career has no
-     country until the call-up) against five others from its league. International is your country (any of the twelve,
-     picked when you are called up) against the other five of its six, at their own ratings: the Six Nations, or New
-     Zealand, South Africa, Australia, Argentina, Fiji and Japan.
-   - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), nothing else.
+     country until the call-up) against five others from its league. International is your country (any of the twelve
+     on the career's Men or Women list, natList, picked when you are called up) against the other five of its six, at
+     that list's ratings: the Six Nations, or the other six (natGroup).
+   - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
+     International stage is that category's own twelve; nothing else changes.
    - Promotion at the end of a season: finish in the top two, or reach the stage's bar with your overall rating
      (CAREER_STAGES[].bar). Otherwise you play the stage again, against a new draw. A finished International season
      ends the career, whatever the table says.
@@ -89,14 +90,14 @@ function careerSide(t, cut) {
   return s;
 }
 const careerProSide = id => CAREER_PRO_POOLS.flat().find(t => t.id === id) || FRANCE[0];
-const careerNation = id => NATIONS.find(t => t.id === id) || NATIONS[0];
+const careerNation = (id, cat) => { const l = natList(cat); return l.find(t => t.id === id) || l.find(t => t.id === 'ENG'); };   // the category's own side
 const careerCat = cr => (cr && cr.cat === 'women' ? 'women' : 'men');   // Men | Women: Career has no Minis
 function careerTeamFor(cr, stage) { return catSide(careerTeamBase(cr, stage), careerCat(cr)); }
 function careerTeamBase(cr, stage) {
   if (stage <= 1) return careerSide(cr.club, CAREER_CUT[stage]);
   if (stage === 2) return careerSide(CAREER_COUNTIES[0]);
   if (stage === 3) return careerSide(careerProSide(cr.pro));
-  return careerSide(careerNation(cr.country));
+  return careerSide(careerNation(cr.country, careerCat(cr)));
 }
 function careerOpponents(cr, stage) { return careerDraw(cr, stage).map(t => catSide(t, careerCat(cr))); }
 function careerDraw(cr, stage) {                     // five sides; the random draws happen here, never in a save or a render
@@ -110,8 +111,8 @@ function careerDraw(cr, stage) {                     // five sides; the random d
     const me = careerProSide(cr.pro), pool = CAREER_PRO_POOLS.find(p => p.includes(me)) || FRANCE;
     return shuffle(pool.filter(t => t !== me)).slice(0, 5).map(t => careerSide(t));
   }
-  const me = careerNation(cr.country), g = Math.floor(NATIONS.indexOf(me)/6)*6;   // the country's six: NATIONS in sixes
-  return NATIONS.slice(g, g + 6).filter(t => t !== me).map(t => careerSide(t));
+  const cat = careerCat(cr), me = careerNation(cr.country, cat);   // the country's six in its category's twelve, by who is in it (natGroup)
+  return natGroup(me.id, cat).filter(t => t.id !== me.id).map(t => careerSide(t));
 }
 /* A season: the championship's shape, with the weakest opponent first and the strongest last, as newChamp does. */
 function careerNewSeason(cr) {
@@ -164,7 +165,7 @@ function careerAdvance(country) {                    // Next Season (or a countr
   if (out.promoted) {
     cr.stage++;
     if (cr.stage === 3 && !cr.pro) careerSign(cr);
-    if (cr.stage === 4) cr.country = NATIONS.some(t => t.id === country) ? country : (cr.country || 'ENG');
+    if (cr.stage === 4) cr.country = natList(careerCat(cr)).some(t => t.id === country) ? country : (cr.country || 'ENG');
   }
   careerNewSeason(cr);
   careerLast = null;
@@ -316,7 +317,7 @@ function cleanCareer(c) {
   }
   const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, cat:careerCat(c),   // a career from before Men | Women is Men
-    pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:NATIONS.some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
+    pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:natList(careerCat(c)).some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
     skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
 }
 /* Your player: a ring in the kit's trim round him and a star on his back (the trim, or the shirt, or chalk, whichever

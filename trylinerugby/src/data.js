@@ -4,23 +4,27 @@ let practice = null;
 /* =========================================================
    Data
    ========================================================= */
-/* Nations are rated on the XV game's hierarchy, World Rugby's men's ranking (2 November 2026): South Africa and New Zealand 24,
-   Ireland and France 23, England 22, Scotland and Australia 21, Argentina and Fiji 20, Wales, Italy and Japan 19, every one above
-   every club, each keeping its style (Fiji's pace, South Africa's power, Ireland's handling and kicking). */
+/* Nations are rated on the XV game's hierarchy: World Rugby's official tables, the men's effective 3 November 2026 and the women's
+   2 November 2026 (README, Teams). Each category's International list is its own top twelve in its table's order (natList). A
+   five-ability sum goes by the points, so overallOf sits near them (23 is 93, 22 is 90, 21 is 87, 20 is 84, 19 is 81, 18 is 78), and
+   every nation is above every club (17 is 75). Each keeps its style: Fiji's pace, South Africa's power, Ireland's handling and
+   kicking. NATIONS holds the kits and the men's ratings, NAT_WOMEN the women's. */
 const NATIONS = [   // append only: championships saved before clubs existed index into the first six
-  { id:'ENG', name:'England',  kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e', pace:4, power:5, handling:4, kicking:5, stamina:4, home:true },
-  { id:'FRA', name:'France',   kit:'#1d3a8f', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1d3a8f', pace:5, power:5, handling:4, kicking:4, stamina:5 },
-  { id:'IRE', name:'Ireland',  kit:'#109a52', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#109a52', pace:4, power:4, handling:5, kicking:5, stamina:5, home:true },
-  { id:'ITA', name:'Italy',    kit:'#2f7ed8', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#2f7ed8', pace:4, power:4, handling:4, kicking:3, stamina:4 },
-  { id:'SCO', name:'Scotland', kit:'#1a2a5e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1a2a5e', pace:5, power:4, handling:5, kicking:3, stamina:4, home:true },
-  { id:'WAL', name:'Wales',    kit:'#c8102e', trim:'#f2efe6', alt:'#1c1c1c', altTrim:'#c8102e', pace:4, power:4, handling:3, kicking:4, stamina:4, home:true },
-  { id:'NZL', name:'New Zealand',  kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c', pace:5, power:5, handling:5, kicking:4, stamina:5 },
-  { id:'RSA', name:'South Africa', kit:'#0b5a3c', trim:'#f2b01e', alt:'#f2efe6', altTrim:'#0b5a3c', pace:4, power:5, handling:5, kicking:5, stamina:5 },
-  { id:'AUS', name:'Australia',    kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e', pace:5, power:4, handling:4, kicking:4, stamina:4 },
-  { id:'ARG', name:'Argentina',    kit:'#6fb7e6', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#6fb7e6', pace:4, power:5, handling:4, kicking:3, stamina:4 },
-  { id:'FIJ', name:'Fiji',         kit:'#f2efe6', trim:'#1c1c1c', alt:'#1c1c1c', altTrim:'#f2efe6', pace:5, power:4, handling:5, kicking:2, stamina:4 },
-  { id:'JPN', name:'Japan',        kit:'#c8102e', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#c8102e', pace:5, power:3, handling:4, kicking:3, stamina:4 },
-];   // the six first, then the rest of the world; a nation's code never matches a club's (RSA, not a South African city's)
+  { id:'ENG', name:'England',  kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e', pace:4, power:5, handling:3, kicking:5, stamina:3, home:true },
+  { id:'FRA', name:'France',   kit:'#1d3a8f', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1d3a8f', pace:5, power:5, handling:4, kicking:3, stamina:4 },
+  { id:'IRE', name:'Ireland',  kit:'#109a52', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#109a52', pace:4, power:4, handling:5, kicking:5, stamina:3, home:true },
+  { id:'ITA', name:'Italy',    kit:'#2f7ed8', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#2f7ed8', pace:4, power:4, handling:4, kicking:3, stamina:3 },
+  { id:'SCO', name:'Scotland', kit:'#1a2a5e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1a2a5e', pace:5, power:4, handling:5, kicking:3, stamina:3, home:true },
+  { id:'WAL', name:'Wales',    kit:'#c8102e', trim:'#f2efe6', alt:'#1c1c1c', altTrim:'#c8102e', pace:4, power:4, handling:3, kicking:4, stamina:3, home:true },
+  { id:'NZL', name:'New Zealand',  kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c', pace:5, power:4, handling:5, kicking:4, stamina:5 },
+  { id:'RSA', name:'South Africa', kit:'#0b5a3c', trim:'#f2b01e', alt:'#f2efe6', altTrim:'#0b5a3c', pace:4, power:5, handling:4, kicking:5, stamina:5 },
+  { id:'AUS', name:'Australia',    kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e', pace:5, power:4, handling:4, kicking:4, stamina:3 },
+  { id:'ARG', name:'Argentina',    kit:'#6fb7e6', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#6fb7e6', pace:4, power:5, handling:4, kicking:3, stamina:3 },
+  { id:'FIJ', name:'Fiji',         kit:'#f2efe6', trim:'#1c1c1c', alt:'#1c1c1c', altTrim:'#f2efe6', pace:5, power:3, handling:5, kicking:2, stamina:3 },
+  { id:'JPN', name:'Japan',        kit:'#c8102e', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#c8102e', pace:5, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'CDN', name:'Canada',       kit:'#d52b1e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#d52b1e', pace:4, power:5, handling:4, kicking:4, stamina:5 },   // women's twelve only: CAN is Canberra's
+  { id:'USA', name:'USA',          kit:'#1b2747', trim:'#c8102e', alt:'#f2efe6', altTrim:'#1b2747', pace:5, power:5, handling:3, kicking:3, stamina:4 },   // women's twelve only
+];   // the six first, then the rest of the world, then the women's two; a nation's code never matches a club's (RSA, not a South African city's)
 /* Local clubs: kit colours are the clubs' own, ratings are made up. Append only, never reorder. */
 const CLUBS = [
   { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3 },
@@ -134,7 +138,7 @@ const SCOTLAND = [   // the Scottish Premiership, 2025-26, in its table's order:
    a league is saved. Keys never change: the save keeps them. */
 const TEAM_TIERS = ['International', 'National', 'Local'];
 const TEAM_LISTS = [
-  { key:'int', tier:0, name:'International',    teams:NATIONS },
+  { key:'int', tier:0, name:'International',    teams:NATIONS },   // every nation, for the codes and the saves; the screen shows the category's twelve (natList)
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
   { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
@@ -166,6 +170,32 @@ function catSide(t, cat) {               // Men: the team itself, as before. Oth
   if (!t || !c || !c.tag) return t;
   return { ...t, name:String(t.name).toLowerCase().endsWith(c.tag.toLowerCase()) ? t.name : t.name + c.tag, cat:c.id };
 }
+/* International is each category's own twelve, in its World Rugby table's order: the men's from NATIONS, the women's with their own
+   ratings and Canada and the USA in place of Argentina and Japan, Minis the men's. Each is named for its category by catSide
+   ('England Women'); on Men the list is the NATIONS objects themselves, so a men's match gets the very teams it always did. */
+const NAT_MEN = ['RSA', 'NZL', 'IRE', 'FRA', 'ENG', 'SCO', 'AUS', 'ARG', 'FIJ', 'WAL', 'ITA', 'JPN'];   // men's table, 3 November 2026: ratings in NATIONS
+const NAT_WOMEN = {   // women's table, 2 November 2026: Pace, Power, Handling, Kicking, Stamina
+  ENG:[4, 5, 4, 5, 5], NZL:[5, 4, 5, 4, 5], CDN:[4, 5, 4, 4, 5], FRA:[5, 5, 4, 3, 4], IRE:[4, 3, 5, 5, 3], USA:[5, 5, 3, 3, 4],
+  AUS:[5, 4, 4, 4, 3], ITA:[4, 4, 4, 3, 4], SCO:[5, 4, 4, 3, 3], RSA:[4, 5, 3, 3, 3], WAL:[4, 4, 3, 4, 3], FIJ:[5, 3, 5, 2, 3],
+};
+const SIX_NATIONS = ['ENG', 'FRA', 'IRE', 'ITA', 'SCO', 'WAL'];
+const NAT_LISTS = {};
+function natList(cat) {                  // 'men', 'women' or 'minis' (men's ratings); anything else is men's. Built once, then the same objects
+  const c = cat === 'women' || cat === 'minis' ? cat : 'men', by = id => NATIONS.find(t => t.id === id);
+  if (!NAT_LISTS[c]) NAT_LISTS[c] = c === 'women'
+    ? Object.entries(NAT_WOMEN).map(([id, r]) => { const t = catSide(by(id), 'women'); ABILITIES.forEach(([k], i) => { t[k] = r[i]; }); return t; })
+    : NAT_MEN.map(id => catSide(by(id), c));
+  return NAT_LISTS[c];
+}
+const isNation = t => !!t && !t.custom && NATIONS.some(n => n.id === t.id);
+/* A side for the category: a nation is the category's own (null for one its list does not have: Canada or the USA on Men or Minis),
+   anything else catSide's. */
+function catTeam(t, cat) { return isNation(t) ? natList(cat).find(n => n.id === t.id) || null : catSide(t, cat); }
+/* A nation's championship, and Career's International stage: the Six Nations, or the other six of its category's twelve, by who is
+   in it, never by position, so the Triple Crown is there to win on every list. */
+function natGroup(id, cat) { const six = SIX_NATIONS.includes(id); return natList(cat).filter(t => SIX_NATIONS.includes(t.id) === six); }
+/* The name a list shows: the side's own, without its category's word, as the club cards show it (England Women is England). */
+const listName = t => { const c = TEAM_CATS.find(x => x.id === t.cat), n = String(t.name); return c && c.tag && n.endsWith(c.tag) ? n.slice(0, -c.tag.length) : n; };
 const ABILITIES = [['pace', 'Pace'], ['power', 'Power'], ['handling', 'Handling'], ['kicking', 'Kicking'], ['stamina', 'Stamina']];
 const BUDGET = 12;                        // a team you make starts at 1 in each ability, with this many points to spend: any team the four-ability builder allowed (10 points), plus Stamina 3
 /* Stamina came after the other four. A team without it (a save from before it, an import, a test's side) reads as 3, the middle:
@@ -189,7 +219,7 @@ const DIFF = [
    Hard are left as set. Duels, scrums, your own tackle and sprint, and every later match stay on the chosen level. */
 const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };   // gap: the rating points, Stamina left out, that make a Stronger Side
 const rateOf = t => ABILITIES.reduce((a, [k]) => a + abilityOf(t, k), 0);
-/* The overall rating on a team card: the five abilities (5 to 25) on a 40 to 99 scale. A team you make tops out at 75; South Africa and New Zealand are 96, France and Ireland 93. */
+/* The overall rating on a team card: the five abilities (5 to 25) on a 40 to 99 scale. A team you make tops out at 75; South Africa and New Zealand are 93, Ireland and France 87. */
 const overallOf = t => { const n = ABILITIES.length; return Math.round(40 + (clamp(rateOf(t), n, 5*n) - n)*59/(4*n)); };
 /* Stronger Side compares the four abilities other than Stamina, EARLY.gap apart, so it marks the pairs it marked before Stamina
    and no others (tools/teams.mjs pins pairs within a pool). The badge and the championship's running order count all five. */

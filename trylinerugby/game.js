@@ -6,23 +6,27 @@ let practice = null;
 /* =========================================================
    Data
    ========================================================= */
-/* Nations are rated on the XV game's hierarchy, World Rugby's men's ranking (2 November 2026): South Africa and New Zealand 24,
-   Ireland and France 23, England 22, Scotland and Australia 21, Argentina and Fiji 20, Wales, Italy and Japan 19, every one above
-   every club, each keeping its style (Fiji's pace, South Africa's power, Ireland's handling and kicking). */
+/* Nations are rated on the XV game's hierarchy: World Rugby's official tables, the men's effective 3 November 2026 and the women's
+   2 November 2026 (README, Teams). Each category's International list is its own top twelve in its table's order (natList). A
+   five-ability sum goes by the points, so overallOf sits near them (23 is 93, 22 is 90, 21 is 87, 20 is 84, 19 is 81, 18 is 78), and
+   every nation is above every club (17 is 75). Each keeps its style: Fiji's pace, South Africa's power, Ireland's handling and
+   kicking. NATIONS holds the kits and the men's ratings, NAT_WOMEN the women's. */
 const NATIONS = [   // append only: championships saved before clubs existed index into the first six
-  { id:'ENG', name:'England',  kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e', pace:4, power:5, handling:4, kicking:5, stamina:4, home:true },
-  { id:'FRA', name:'France',   kit:'#1d3a8f', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1d3a8f', pace:5, power:5, handling:4, kicking:4, stamina:5 },
-  { id:'IRE', name:'Ireland',  kit:'#109a52', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#109a52', pace:4, power:4, handling:5, kicking:5, stamina:5, home:true },
-  { id:'ITA', name:'Italy',    kit:'#2f7ed8', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#2f7ed8', pace:4, power:4, handling:4, kicking:3, stamina:4 },
-  { id:'SCO', name:'Scotland', kit:'#1a2a5e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1a2a5e', pace:5, power:4, handling:5, kicking:3, stamina:4, home:true },
-  { id:'WAL', name:'Wales',    kit:'#c8102e', trim:'#f2efe6', alt:'#1c1c1c', altTrim:'#c8102e', pace:4, power:4, handling:3, kicking:4, stamina:4, home:true },
-  { id:'NZL', name:'New Zealand',  kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c', pace:5, power:5, handling:5, kicking:4, stamina:5 },
-  { id:'RSA', name:'South Africa', kit:'#0b5a3c', trim:'#f2b01e', alt:'#f2efe6', altTrim:'#0b5a3c', pace:4, power:5, handling:5, kicking:5, stamina:5 },
-  { id:'AUS', name:'Australia',    kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e', pace:5, power:4, handling:4, kicking:4, stamina:4 },
-  { id:'ARG', name:'Argentina',    kit:'#6fb7e6', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#6fb7e6', pace:4, power:5, handling:4, kicking:3, stamina:4 },
-  { id:'FIJ', name:'Fiji',         kit:'#f2efe6', trim:'#1c1c1c', alt:'#1c1c1c', altTrim:'#f2efe6', pace:5, power:4, handling:5, kicking:2, stamina:4 },
-  { id:'JPN', name:'Japan',        kit:'#c8102e', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#c8102e', pace:5, power:3, handling:4, kicking:3, stamina:4 },
-];   // the six first, then the rest of the world; a nation's code never matches a club's (RSA, not a South African city's)
+  { id:'ENG', name:'England',  kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e', pace:4, power:5, handling:3, kicking:5, stamina:3, home:true },
+  { id:'FRA', name:'France',   kit:'#1d3a8f', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1d3a8f', pace:5, power:5, handling:4, kicking:3, stamina:4 },
+  { id:'IRE', name:'Ireland',  kit:'#109a52', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#109a52', pace:4, power:4, handling:5, kicking:5, stamina:3, home:true },
+  { id:'ITA', name:'Italy',    kit:'#2f7ed8', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#2f7ed8', pace:4, power:4, handling:4, kicking:3, stamina:3 },
+  { id:'SCO', name:'Scotland', kit:'#1a2a5e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1a2a5e', pace:5, power:4, handling:5, kicking:3, stamina:3, home:true },
+  { id:'WAL', name:'Wales',    kit:'#c8102e', trim:'#f2efe6', alt:'#1c1c1c', altTrim:'#c8102e', pace:4, power:4, handling:3, kicking:4, stamina:3, home:true },
+  { id:'NZL', name:'New Zealand',  kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c', pace:5, power:4, handling:5, kicking:4, stamina:5 },
+  { id:'RSA', name:'South Africa', kit:'#0b5a3c', trim:'#f2b01e', alt:'#f2efe6', altTrim:'#0b5a3c', pace:4, power:5, handling:4, kicking:5, stamina:5 },
+  { id:'AUS', name:'Australia',    kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e', pace:5, power:4, handling:4, kicking:4, stamina:3 },
+  { id:'ARG', name:'Argentina',    kit:'#6fb7e6', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#6fb7e6', pace:4, power:5, handling:4, kicking:3, stamina:3 },
+  { id:'FIJ', name:'Fiji',         kit:'#f2efe6', trim:'#1c1c1c', alt:'#1c1c1c', altTrim:'#f2efe6', pace:5, power:3, handling:5, kicking:2, stamina:3 },
+  { id:'JPN', name:'Japan',        kit:'#c8102e', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#c8102e', pace:5, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'CDN', name:'Canada',       kit:'#d52b1e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#d52b1e', pace:4, power:5, handling:4, kicking:4, stamina:5 },   // women's twelve only: CAN is Canberra's
+  { id:'USA', name:'USA',          kit:'#1b2747', trim:'#c8102e', alt:'#f2efe6', altTrim:'#1b2747', pace:5, power:5, handling:3, kicking:3, stamina:4 },   // women's twelve only
+];   // the six first, then the rest of the world, then the women's two; a nation's code never matches a club's (RSA, not a South African city's)
 /* Local clubs: kit colours are the clubs' own, ratings are made up. Append only, never reorder. */
 const CLUBS = [
   { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3 },
@@ -136,7 +140,7 @@ const SCOTLAND = [   // the Scottish Premiership, 2025-26, in its table's order:
    a league is saved. Keys never change: the save keeps them. */
 const TEAM_TIERS = ['International', 'National', 'Local'];
 const TEAM_LISTS = [
-  { key:'int', tier:0, name:'International',    teams:NATIONS },
+  { key:'int', tier:0, name:'International',    teams:NATIONS },   // every nation, for the codes and the saves; the screen shows the category's twelve (natList)
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
   { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
@@ -168,6 +172,32 @@ function catSide(t, cat) {               // Men: the team itself, as before. Oth
   if (!t || !c || !c.tag) return t;
   return { ...t, name:String(t.name).toLowerCase().endsWith(c.tag.toLowerCase()) ? t.name : t.name + c.tag, cat:c.id };
 }
+/* International is each category's own twelve, in its World Rugby table's order: the men's from NATIONS, the women's with their own
+   ratings and Canada and the USA in place of Argentina and Japan, Minis the men's. Each is named for its category by catSide
+   ('England Women'); on Men the list is the NATIONS objects themselves, so a men's match gets the very teams it always did. */
+const NAT_MEN = ['RSA', 'NZL', 'IRE', 'FRA', 'ENG', 'SCO', 'AUS', 'ARG', 'FIJ', 'WAL', 'ITA', 'JPN'];   // men's table, 3 November 2026: ratings in NATIONS
+const NAT_WOMEN = {   // women's table, 2 November 2026: Pace, Power, Handling, Kicking, Stamina
+  ENG:[4, 5, 4, 5, 5], NZL:[5, 4, 5, 4, 5], CDN:[4, 5, 4, 4, 5], FRA:[5, 5, 4, 3, 4], IRE:[4, 3, 5, 5, 3], USA:[5, 5, 3, 3, 4],
+  AUS:[5, 4, 4, 4, 3], ITA:[4, 4, 4, 3, 4], SCO:[5, 4, 4, 3, 3], RSA:[4, 5, 3, 3, 3], WAL:[4, 4, 3, 4, 3], FIJ:[5, 3, 5, 2, 3],
+};
+const SIX_NATIONS = ['ENG', 'FRA', 'IRE', 'ITA', 'SCO', 'WAL'];
+const NAT_LISTS = {};
+function natList(cat) {                  // 'men', 'women' or 'minis' (men's ratings); anything else is men's. Built once, then the same objects
+  const c = cat === 'women' || cat === 'minis' ? cat : 'men', by = id => NATIONS.find(t => t.id === id);
+  if (!NAT_LISTS[c]) NAT_LISTS[c] = c === 'women'
+    ? Object.entries(NAT_WOMEN).map(([id, r]) => { const t = catSide(by(id), 'women'); ABILITIES.forEach(([k], i) => { t[k] = r[i]; }); return t; })
+    : NAT_MEN.map(id => catSide(by(id), c));
+  return NAT_LISTS[c];
+}
+const isNation = t => !!t && !t.custom && NATIONS.some(n => n.id === t.id);
+/* A side for the category: a nation is the category's own (null for one its list does not have: Canada or the USA on Men or Minis),
+   anything else catSide's. */
+function catTeam(t, cat) { return isNation(t) ? natList(cat).find(n => n.id === t.id) || null : catSide(t, cat); }
+/* A nation's championship, and Career's International stage: the Six Nations, or the other six of its category's twelve, by who is
+   in it, never by position, so the Triple Crown is there to win on every list. */
+function natGroup(id, cat) { const six = SIX_NATIONS.includes(id); return natList(cat).filter(t => SIX_NATIONS.includes(t.id) === six); }
+/* The name a list shows: the side's own, without its category's word, as the club cards show it (England Women is England). */
+const listName = t => { const c = TEAM_CATS.find(x => x.id === t.cat), n = String(t.name); return c && c.tag && n.endsWith(c.tag) ? n.slice(0, -c.tag.length) : n; };
 const ABILITIES = [['pace', 'Pace'], ['power', 'Power'], ['handling', 'Handling'], ['kicking', 'Kicking'], ['stamina', 'Stamina']];
 const BUDGET = 12;                        // a team you make starts at 1 in each ability, with this many points to spend: any team the four-ability builder allowed (10 points), plus Stamina 3
 /* Stamina came after the other four. A team without it (a save from before it, an import, a test's side) reads as 3, the middle:
@@ -191,7 +221,7 @@ const DIFF = [
    Hard are left as set. Duels, scrums, your own tackle and sprint, and every later match stay on the chosen level. */
 const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };   // gap: the rating points, Stamina left out, that make a Stronger Side
 const rateOf = t => ABILITIES.reduce((a, [k]) => a + abilityOf(t, k), 0);
-/* The overall rating on a team card: the five abilities (5 to 25) on a 40 to 99 scale. A team you make tops out at 75; South Africa and New Zealand are 96, France and Ireland 93. */
+/* The overall rating on a team card: the five abilities (5 to 25) on a 40 to 99 scale. A team you make tops out at 75; South Africa and New Zealand are 93, Ireland and France 87. */
 const overallOf = t => { const n = ABILITIES.length; return Math.round(40 + (clamp(rateOf(t), n, 5*n) - n)*59/(4*n)); };
 /* Stronger Side compares the four abilities other than Stamina, EARLY.gap apart, so it marks the pairs it marked before Stamina
    and no others (tools/teams.mjs pins pairs within a pool). The badge and the championship's running order count all five. */
@@ -3733,10 +3763,11 @@ function savedHonours() {
    - Minis and Juniors are your club against five other Local clubs drawn at random, every side at lowered ratings
      (Minis: one off every ability; Juniors: one off Pace and Power). County is Surrey against five invented county
      sides. Pro Club is the city side you sign for (drawn from every national league when you go up: the career has no
-     country until the call-up) against five others from its league. International is your country (any of the twelve,
-     picked when you are called up) against the other five of its six, at their own ratings: the Six Nations, or New
-     Zealand, South Africa, Australia, Argentina, Fiji and Japan.
-   - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), nothing else.
+     country until the call-up) against five others from its league. International is your country (any of the twelve
+     on the career's Men or Women list, natList, picked when you are called up) against the other five of its six, at
+     that list's ratings: the Six Nations, or the other six (natGroup).
+   - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
+     International stage is that category's own twelve; nothing else changes.
    - Promotion at the end of a season: finish in the top two, or reach the stage's bar with your overall rating
      (CAREER_STAGES[].bar). Otherwise you play the stage again, against a new draw. A finished International season
      ends the career, whatever the table says.
@@ -3814,14 +3845,14 @@ function careerSide(t, cut) {
   return s;
 }
 const careerProSide = id => CAREER_PRO_POOLS.flat().find(t => t.id === id) || FRANCE[0];
-const careerNation = id => NATIONS.find(t => t.id === id) || NATIONS[0];
+const careerNation = (id, cat) => { const l = natList(cat); return l.find(t => t.id === id) || l.find(t => t.id === 'ENG'); };   // the category's own side
 const careerCat = cr => (cr && cr.cat === 'women' ? 'women' : 'men');   // Men | Women: Career has no Minis
 function careerTeamFor(cr, stage) { return catSide(careerTeamBase(cr, stage), careerCat(cr)); }
 function careerTeamBase(cr, stage) {
   if (stage <= 1) return careerSide(cr.club, CAREER_CUT[stage]);
   if (stage === 2) return careerSide(CAREER_COUNTIES[0]);
   if (stage === 3) return careerSide(careerProSide(cr.pro));
-  return careerSide(careerNation(cr.country));
+  return careerSide(careerNation(cr.country, careerCat(cr)));
 }
 function careerOpponents(cr, stage) { return careerDraw(cr, stage).map(t => catSide(t, careerCat(cr))); }
 function careerDraw(cr, stage) {                     // five sides; the random draws happen here, never in a save or a render
@@ -3835,8 +3866,8 @@ function careerDraw(cr, stage) {                     // five sides; the random d
     const me = careerProSide(cr.pro), pool = CAREER_PRO_POOLS.find(p => p.includes(me)) || FRANCE;
     return shuffle(pool.filter(t => t !== me)).slice(0, 5).map(t => careerSide(t));
   }
-  const me = careerNation(cr.country), g = Math.floor(NATIONS.indexOf(me)/6)*6;   // the country's six: NATIONS in sixes
-  return NATIONS.slice(g, g + 6).filter(t => t !== me).map(t => careerSide(t));
+  const cat = careerCat(cr), me = careerNation(cr.country, cat);   // the country's six in its category's twelve, by who is in it (natGroup)
+  return natGroup(me.id, cat).filter(t => t.id !== me.id).map(t => careerSide(t));
 }
 /* A season: the championship's shape, with the weakest opponent first and the strongest last, as newChamp does. */
 function careerNewSeason(cr) {
@@ -3889,7 +3920,7 @@ function careerAdvance(country) {                    // Next Season (or a countr
   if (out.promoted) {
     cr.stage++;
     if (cr.stage === 3 && !cr.pro) careerSign(cr);
-    if (cr.stage === 4) cr.country = NATIONS.some(t => t.id === country) ? country : (cr.country || 'ENG');
+    if (cr.stage === 4) cr.country = natList(careerCat(cr)).some(t => t.id === country) ? country : (cr.country || 'ENG');
   }
   careerNewSeason(cr);
   careerLast = null;
@@ -4041,7 +4072,7 @@ function cleanCareer(c) {
   }
   const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, cat:careerCat(c),   // a career from before Men | Women is Men
-    pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:NATIONS.some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
+    pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:natList(careerCat(c)).some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
     skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
 }
 /* Your player: a ring in the kit's trim round him and a star on his back (the trim, or the shirt, or chalk, whichever
@@ -6398,7 +6429,11 @@ function renderJoin() {
   renderHintSwitches();                                    // the Hints ticks: by half, so they follow Swap Players and show the saved state when the screen opens
 }
 function seatsChanged() { if (two.on && !$('s-join').hidden) renderJoin(); }   // a pad claiming a seat, Use Keyboard, Swap Players or a pad unplugged: the join screen follows
-function startTwo() { navOnly = null; startMatch(catSide(twoSel.teams[0], settings.cat), catSide(twoSel.teams[1], settings.cat), false, { two:true, levels:twoSel.levels.slice() }); }   // Men | Women | Minis: the team screen's
+function startTwo() {                                    // Men | Women | Minis: the team screen's, a nation as that category's own side
+  const a = catTeam(twoSel.teams[0], settings.cat), b = catTeam(twoSel.teams[1], settings.cat);
+  if (!a || !b) return;
+  navOnly = null; startMatch(a, b, false, { two:true, levels:twoSel.levels.slice() });
+}
 $('b-two').addEventListener('click', () => { ac(); openJoin(); });
 $('j-back').addEventListener('click', () => { setTwo(false); goHome(); });
 const saveTwoDiff = () => { settings.twoDiff = two.swapped ? twoSel.levels.slice().reverse() : twoSel.levels.slice(); save(); };   // stored by half (left, right): a fresh visit puts the halves back in order
@@ -6424,7 +6459,7 @@ function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
-      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
+      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(listName(t))}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
     </button>`;
@@ -6436,7 +6471,11 @@ let natLast = 'eng';                                       // National goes back
 const listOf = k => TEAM_LISTS.find(l => l.key === k);
 function teamPool() { const k = poolKey(settings.pool); return k === IMPORT_POOL && !importLeague ? 'sur' : k; }   // My League with no league saved is Surrey
 const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier);
-const poolTeams = k => (k === IMPORT_POOL ? importTeams() : (listOf(k) || TEAM_LISTS[0]).teams);
+function poolTeams(k) {                                   // International is the category's twelve (natList); a list that does not exist is International
+  if (k === IMPORT_POOL) return importTeams();
+  const l = listOf(k) || TEAM_LISTS[0];
+  return l.key === 'int' ? natList(settings.cat) : l.teams;
+}
 {
   const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
   $('t-tier').innerHTML = TEAM_TIERS.map((n, i) => btn(`data-tier="${i}"`, n)).join('');
@@ -6454,7 +6493,15 @@ function poolPick(k) {
   save(); renderTeams(); $('s-teams').scrollTop = 0;
 }
 function tierPick(i) { if (poolTier(teamPool()) !== i) poolPick(i === 0 ? 'int' : i === 1 ? natLast : 'sur'); }
-function catPick(id) { if (!TEAM_CATS.some(c => c.id === id)) return; settings.cat = id; save(); renderTeams(); }
+function catPick(id) {
+  if (!TEAM_CATS.some(c => c.id === id)) return;
+  settings.cat = id;
+  // a nation already picked follows the category to its own side there; one its list does not have (Canada or the USA on Men) is unpicked
+  const follow = t => (isNation(t) ? natList(id).find(n => n.id === t.id) || null : t);
+  if (quickPick) { quickPick = follow(quickPick); if (!quickPick) quickAuto = false; }
+  if (twoSel.teams[0]) { const t = follow(twoSel.teams[0]); twoSel.teams[0] = t || DEFAULT_TEAM; if (!t) twoSel.picking = 0; }
+  save(); renderTeams();
+}
 function openTeams(m) {
   pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 'sur'; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
@@ -6473,7 +6520,7 @@ function renderTeams() {
   press('t-cat', '[data-cat]', b => b.dataset.cat === settings.cat);
   const yours = (quick && !!quickPick) || (pair && p === 1);
   $('t-yours').hidden = !yours;
-  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(catSide(mine, settings.cat).name)}</span>`;
+  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, settings.cat) || mine).name)}</span>`;
   $('t-default').hidden = quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
@@ -6499,24 +6546,27 @@ function fitNames() {
     while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px -= 1; el.style.fontSize = px + 'px'; }
   }
 }
-/* A championship is your team and five others from the list on screen. A nation's are the rest of its six, as Career's International
-   stage draws them (NATIONS in sixes): the Six Nations, so the Triple Crown is still there to win, or New Zealand, South Africa,
-   Australia, Argentina, Fiji and Japan. A team you made, on International, gets five of the twelve. Men | Women | Minis names every
-   side of it, or both of a match. */
-const champFrom = (pool, t) => { const g = NATIONS.indexOf(t); return g < 0 ? poolTeams(pool) : NATIONS.slice(g - g % 6, g - g % 6 + 6); };
+/* A championship is your team and five others from the list on screen. A nation's are the rest of its six in the category's twelve,
+   as Career's International stage draws them (natGroup): the Six Nations, so the Triple Crown is still there to win, or the other
+   six (Men: New Zealand, South Africa, Australia, Argentina, Fiji and Japan; Women: New Zealand, Canada, the USA, Australia, South
+   Africa and Fiji). A team you made, on International, gets five of the twelve. Men | Women | Minis names every side of it, or both
+   of a match, and a nation is the category's own side (catTeam). */
+const champFrom = (pool, t, cat) => (isNation(t) ? natGroup(t.id, cat) : poolTeams(pool));
 function pickTeam(t) {
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
     if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
-    const pool = teamPool(), cat = settings.cat;
-    const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t).filter(o => keyOf(o) !== keyOf(t)));
-    newChamp(catSide(t, cat), others.slice(0, 5).map(o => catSide(o, cat))); renderHub(); showScreen('s-hub'); return;
+    const pool = teamPool(), cat = settings.cat, me = catTeam(t, cat);
+    if (!me) return;
+    const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
+    newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
   if (quickPick == null) { quickPick = t; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; return; }
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
-  startMatch(catSide(quickPick, settings.cat), catSide(t, settings.cat), false);
+  const us = catTeam(quickPick, settings.cat), them = catTeam(t, settings.cat);
+  if (us && them) startMatch(us, them, false);
 }
 
 /* create team */
@@ -9179,7 +9229,7 @@ function renderCareerEnd() {
   const tiles = careerTile('Place', ordinal(out.place)) + careerTile('Overall', out.ovr);
   if (out.promoted && next === 4) {                  // called up: the country is the choice, and the choice starts the season
     body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile('Next', careerStageName(next))}</div><p class="lbl cr-pick">Pick Your Country</p>
-      <div class="cr-nations">${NATIONS.map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('')}</div>`;
+      <div class="cr-nations">${natList(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span></button>`).join('')}</div>`;
     for (const b of body.querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerAdvance(b.dataset.n); careerOpen(); });
     act.innerHTML = '';
     return;
@@ -9500,7 +9550,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
-  teams:{ overallOf, NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },

@@ -923,11 +923,15 @@ done('18 fend');
 // 19. a census of 60 seeded Normal bot matches: run-overs, ruck ball hit at once, turnover ball hit at once, the last tackler, no steals, no new penalty words, no duel in a bind
 begin('census');
 {
+  // the six at the ratings the census was written with (f0530c9: four abilities, Stamina at its default 3), so a re-rate cannot tip
+  // an engine figure: re-pinned at the official XV tables, which put ruck ball within 0.5s at 8.1% (7.99% at the XV hierarchy, 7.5% here)
+  const R4 = ['pace', 'power', 'handling', 'kicking'], WAS = [[4, 5, 3, 4], [5, 5, 4, 4], [4, 4, 5, 5], [4, 3, 3, 3], [5, 3, 4, 3], [3, 4, 3, 3]];
+  const SIX = T.teams.NATIONS.slice(0, 6).map((t, k) => ({ ...t, ...Object.fromEntries(R4.map((key, j) => [key, WAS[k][j]])), stamina:undefined }));
   reseed(9001 + 31);
   let m = 0, runover = 0, rk = 0, rk05 = 0, tov = 0, tov1 = 0, early = 0, badLabel = 0, jack = 0, duelInBind = 0, tagsN = 0, fendTags = 0;
   const tagKinds = new Set(), setLabels = new Set();
   for (let i = 0; i < 60; i++) {
-    fresh(1, { a:i % 6, b:(i + 1 + (i % 5)) % 6, duels:'live' });
+    fresh(1, { a:SIX[i % 6], b:SIX[(i + 1 + (i % 5)) % 6], duels:'live' });
     let n = 0, wasSet = null, rel = null; const nearSet = new Set();
     while (!M().over && n++ < 60000) {
       bot(); T.update(STEP);

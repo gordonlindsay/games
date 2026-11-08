@@ -22,7 +22,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   const clubs = [...X.CLUBS, ...X.NATIONAL.flat()], top = Math.max(...clubs.map(sum));   // Local and every national league
   ok(top <= 5 + S.BUDGET, `no club tops a team you can make (${top} v ${5 + S.BUDGET})`);
   ok(S.BUDGET === 12, `a made team has 12 points: the old builder's 10 and 2 for Stamina 3 (${S.BUDGET})`);
-  ok(X.NATIONS.map(t => t.stamina).join() === '4,5,5,4,4,4,5,5,4,4,4,4', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')})`);   // re-pinned when the nations were rated on the XV hierarchy: Italy 3 to 4
+  ok(X.NATIONS.map(t => t.stamina).join() === '3,4,3,3,3,3,5,5,3,3,3,3,5,4' && X.natList('women').map(t => t.stamina).join() === '5,5,5,4,3,4,3,4,3,3,3,3', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')}; Women ${X.natList('women').map(t => t.id + ' ' + t.stamina).join(', ')})`);   // re-pinned when the nations were rated on the XV hierarchy: Italy 3 to 4; and at the official XV tables: the men's sums came down (Canada and the USA appended), the women's twelve their own
 }
 
 // 2. reading Stamina, and a team without it
@@ -86,7 +86,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 {
   const O = X.overallOf;
   ok(O({ pace:1, power:1, handling:1, kicking:1, stamina:1 }) === 40 && O({ pace:5, power:5, handling:5, kicking:5, stamina:5 }) === 99, 'the overall rating still runs 40 to 99');
-  ok(O(X.NATIONS[1]) === 93 && O(X.NATIONS[2]) === 93 && O(X.NATIONS[0]) === 90, `France and Ireland 93, England 90 (${X.NATIONS.map(t => t.id + ' ' + O(t)).join(', ')})`);   // re-pinned when the nations were rated on the XV hierarchy: England 84 to 90
+  ok(O(X.NATIONS[1]) === 87 && O(X.NATIONS[2]) === 87 && O(X.NATIONS[0]) === 84 && O(X.natList('women')[0]) === 93, `France and Ireland 87, England 84, England Women 93 (${X.NATIONS.map(t => t.id + ' ' + O(t)).join(', ')})`);   // re-pinned when the nations were rated on the XV hierarchy: England 84 to 90; and at the official XV tables: France and Ireland 93 to 87, England 90 to 84
   ok(O({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75 && O({ pace:4, power:4, handling:3, kicking:3, stamina:3 }) === 75, 'a team you make tops out at 75');
   ok([...X.CLUBS, ...X.NATIONAL.flat()].every(t => O(t) <= 75), 'no club is rated above a team you can make');
   ok(X.ALL_TEAMS.every(t => Number.isInteger(O(t)) && O(t) >= 40 && O(t) <= 99), 'every built-in team has a whole-number overall');
@@ -235,7 +235,9 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
     reseed(hi); C.commitTackle(q, c, 'contact');
     return (T.M.stats.fends || 0) > n;
   };
-  const eng = X.NATIONS[0], ire = X.NATIONS[2];   // England carrying: Power 5 and Stamina 4, against Ireland's 4 and 5
+  // England carrying: Power 5 and Stamina 4, against Ireland's 4 and 5. Re-pinned at the official XV tables, which made both
+  // Stamina 3: the two are written at the ratings the check was written with, so it still tests a point of Power fading
+  const eng = { ...X.NATIONS[0], pace:4, power:5, handling:4, kicking:5, stamina:4 }, ire = { ...X.NATIONS[2], pace:4, power:4, handling:5, kicking:5, stamina:5 };
   ok(fends(eng, ire, 0, true) && fends(eng, ire, 60, true) && fends(eng, ire, 120, true), 'England keeps the Fend against Ireland all half: a point of Power, faded 0.225 by the hooter');
   ok(fends(side('AAA', 1, { power:4 }), side('BBB', 5), 0, true) && !fends(side('AAA', 1, { power:4 }), side('BBB', 5), 120, true), 'a point up at Stamina 1 against 5: the Fend at kick-off, gone by the hooter');
   ok(!fends(side('AAA', 5), side('BBB', 1), 0, true) && fends(side('AAA', 5), side('BBB', 1), 120, true), 'level Power at Stamina 5 against 1: no Fend at kick-off, one by the hooter');

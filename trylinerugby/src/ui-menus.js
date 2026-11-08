@@ -236,7 +236,11 @@ function renderJoin() {
   renderHintSwitches();                                    // the Hints ticks: by half, so they follow Swap Players and show the saved state when the screen opens
 }
 function seatsChanged() { if (two.on && !$('s-join').hidden) renderJoin(); }   // a pad claiming a seat, Use Keyboard, Swap Players or a pad unplugged: the join screen follows
-function startTwo() { navOnly = null; startMatch(catSide(twoSel.teams[0], settings.cat), catSide(twoSel.teams[1], settings.cat), false, { two:true, levels:twoSel.levels.slice() }); }   // Men | Women | Minis: the team screen's
+function startTwo() {                                    // Men | Women | Minis: the team screen's, a nation as that category's own side
+  const a = catTeam(twoSel.teams[0], settings.cat), b = catTeam(twoSel.teams[1], settings.cat);
+  if (!a || !b) return;
+  navOnly = null; startMatch(a, b, false, { two:true, levels:twoSel.levels.slice() });
+}
 $('b-two').addEventListener('click', () => { ac(); openJoin(); });
 $('j-back').addEventListener('click', () => { setTwo(false); goHome(); });
 const saveTwoDiff = () => { settings.twoDiff = two.swapped ? twoSel.levels.slice().reverse() : twoSel.levels.slice(); save(); };   // stored by half (left, right): a fresh visit puts the halves back in order
@@ -262,7 +266,7 @@ function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
-      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
+      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(listName(t))}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
     </button>`;
@@ -274,7 +278,11 @@ let natLast = 'eng';                                       // National goes back
 const listOf = k => TEAM_LISTS.find(l => l.key === k);
 function teamPool() { const k = poolKey(settings.pool); return k === IMPORT_POOL && !importLeague ? 'sur' : k; }   // My League with no league saved is Surrey
 const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier);
-const poolTeams = k => (k === IMPORT_POOL ? importTeams() : (listOf(k) || TEAM_LISTS[0]).teams);
+function poolTeams(k) {                                   // International is the category's twelve (natList); a list that does not exist is International
+  if (k === IMPORT_POOL) return importTeams();
+  const l = listOf(k) || TEAM_LISTS[0];
+  return l.key === 'int' ? natList(settings.cat) : l.teams;
+}
 {
   const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
   $('t-tier').innerHTML = TEAM_TIERS.map((n, i) => btn(`data-tier="${i}"`, n)).join('');
@@ -292,7 +300,15 @@ function poolPick(k) {
   save(); renderTeams(); $('s-teams').scrollTop = 0;
 }
 function tierPick(i) { if (poolTier(teamPool()) !== i) poolPick(i === 0 ? 'int' : i === 1 ? natLast : 'sur'); }
-function catPick(id) { if (!TEAM_CATS.some(c => c.id === id)) return; settings.cat = id; save(); renderTeams(); }
+function catPick(id) {
+  if (!TEAM_CATS.some(c => c.id === id)) return;
+  settings.cat = id;
+  // a nation already picked follows the category to its own side there; one its list does not have (Canada or the USA on Men) is unpicked
+  const follow = t => (isNation(t) ? natList(id).find(n => n.id === t.id) || null : t);
+  if (quickPick) { quickPick = follow(quickPick); if (!quickPick) quickAuto = false; }
+  if (twoSel.teams[0]) { const t = follow(twoSel.teams[0]); twoSel.teams[0] = t || DEFAULT_TEAM; if (!t) twoSel.picking = 0; }
+  save(); renderTeams();
+}
 function openTeams(m) {
   pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 'sur'; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
@@ -311,7 +327,7 @@ function renderTeams() {
   press('t-cat', '[data-cat]', b => b.dataset.cat === settings.cat);
   const yours = (quick && !!quickPick) || (pair && p === 1);
   $('t-yours').hidden = !yours;
-  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(catSide(mine, settings.cat).name)}</span>`;
+  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, settings.cat) || mine).name)}</span>`;
   $('t-default').hidden = quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
@@ -337,24 +353,27 @@ function fitNames() {
     while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px -= 1; el.style.fontSize = px + 'px'; }
   }
 }
-/* A championship is your team and five others from the list on screen. A nation's are the rest of its six, as Career's International
-   stage draws them (NATIONS in sixes): the Six Nations, so the Triple Crown is still there to win, or New Zealand, South Africa,
-   Australia, Argentina, Fiji and Japan. A team you made, on International, gets five of the twelve. Men | Women | Minis names every
-   side of it, or both of a match. */
-const champFrom = (pool, t) => { const g = NATIONS.indexOf(t); return g < 0 ? poolTeams(pool) : NATIONS.slice(g - g % 6, g - g % 6 + 6); };
+/* A championship is your team and five others from the list on screen. A nation's are the rest of its six in the category's twelve,
+   as Career's International stage draws them (natGroup): the Six Nations, so the Triple Crown is still there to win, or the other
+   six (Men: New Zealand, South Africa, Australia, Argentina, Fiji and Japan; Women: New Zealand, Canada, the USA, Australia, South
+   Africa and Fiji). A team you made, on International, gets five of the twelve. Men | Women | Minis names every side of it, or both
+   of a match, and a nation is the category's own side (catTeam). */
+const champFrom = (pool, t, cat) => (isNation(t) ? natGroup(t.id, cat) : poolTeams(pool));
 function pickTeam(t) {
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
     if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
-    const pool = teamPool(), cat = settings.cat;
-    const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t).filter(o => keyOf(o) !== keyOf(t)));
-    newChamp(catSide(t, cat), others.slice(0, 5).map(o => catSide(o, cat))); renderHub(); showScreen('s-hub'); return;
+    const pool = teamPool(), cat = settings.cat, me = catTeam(t, cat);
+    if (!me) return;
+    const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
+    newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
   if (quickPick == null) { quickPick = t; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; return; }
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
-  startMatch(catSide(quickPick, settings.cat), catSide(t, settings.cat), false);
+  const us = catTeam(quickPick, settings.cat), them = catTeam(t, settings.cat);
+  if (us && them) startMatch(us, them, false);
 }
 
 /* create team */

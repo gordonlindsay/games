@@ -17,7 +17,8 @@ const clubs = [...X.CLUBS, ...X.NATIONAL.flat()];   // every side that is not a 
   const ids = all.map(t => t.id);
   ok(new Set(ids).size === ids.length, `every team code is unique (${ids.join(' ')})`);
   ok(X.NATIONS.map(t => t.id).slice(0, 6).join() === 'ENG,FRA,IRE,ITA,SCO,WAL', 'the six nations keep their order, which saved championships index into');
-  ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL,NZL,RSA,AUS,ARG,FIJ,JPN', 'then New Zealand, South Africa, Australia, Argentina, Fiji and Japan: twelve');
+  // re-pinned at the official tables: Canada (CDN: CAN is Canberra's) and the USA appended for the women's twelve
+  ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA', 'then New Zealand, South Africa, Australia, Argentina, Fiji and Japan, then Canada and the USA: fourteen');
   ok(X.CLUBS[0].id === 'FAR', 'Farnham comes first in Local');
   ok(X.CLUBS.length >= 6, `Local has enough clubs for a championship (${X.CLUBS.length})`);
   ok(X.POOLS.length === 10 && X.POOLS.every((p, i) => p === X.TEAM_LISTS[i].teams), 'POOLS is every built-in list, in the team screen\'s order');
@@ -31,7 +32,8 @@ const clubs = [...X.CLUBS, ...X.NATIONAL.flat()];   // every side that is not a 
   ok(top <= 5 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${5 + X.BUDGET})`);
   ok(all.every(t => /^#[0-9a-f]{6}$/i.test(t.kit) && /^#[0-9a-f]{6}$/i.test(t.trim)), 'every kit colour is a hex');
   ok(X.overallOf({ pace:1, power:1, handling:1, kicking:1, stamina:1 }) === 40 && X.overallOf({ pace:5, power:5, handling:5, kicking:5, stamina:5 }) === 99, 'the overall rating runs 40 to 99');
-  ok(X.overallOf(X.NATIONS[1]) === 93 && X.overallOf({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75, `France is 93 and a team you make tops out at 75 (${X.overallOf(X.NATIONS[1])})`);
+  // re-pinned at the official men's table: France 87.43 points, 21 (87), was 23 (93)
+  ok(X.overallOf(X.NATIONS[1]) === 87 && X.overallOf({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75, `France is 87 and a team you make tops out at 75 (${X.overallOf(X.NATIONS[1])})`);
   ok(all.every(t => { const o = X.overallOf(t); return Number.isInteger(o) && o >= 40 && o <= 99; }), 'every built-in team has a whole-number overall');
 }
 
@@ -407,14 +409,15 @@ function settle(pick) {
   const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0];
   const ita = X.NATIONS[3];   // re-pinned when the nations were rated on the XV hierarchy: England (18 in the four, was 16) is now a Stronger Side than Farnham (14); Italy (15) is the nation that is not
   ok(!X.outmatched(far, has) && !X.outmatched(far, ita) && X.outmatched(far, fra) && X.outmatched(far, eng), 'France and England are stronger sides than Farnham; Italy and Haslemere are not');
-  ok(X.rateOf(fra) === 23 && X.rateOf(far) === 17 && X.rateOf(has) === 14, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
+  ok(X.rateOf(fra) === 21 && X.rateOf(far) === 17 && X.rateOf(has) === 14, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);   // re-pinned at the official men's table: France 23 to 21
   // Stronger Side leaves Stamina out, so it marks the pairs it did before Stamina: within a pool, as the hub shows them
   const by = id => X.ALL_TEAMS.find(t => t.id === id), marks = (u, t) => X.outmatched(by(u), by(t));
   // re-pinned when the leagues were rated on their XV tables: Adelaide is now two points off Sydney and Canberra, so Taranaki v Hamilton and Llanelli v Dublin stand in
-  ok(marks('HAS', 'FAR') && marks('IRO', 'QUI') && marks('TAR', 'HMN') && marks('LLA', 'DUB') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS'),
+  // re-pinned at the official men's table: England (17 in the four) is two off Wales (15), so Ireland (18) stands in
+  ok(marks('HAS', 'FAR') && marks('IRO', 'QUI') && marks('TAR', 'HMN') && marks('LLA', 'DUB') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'IRE') && marks('PGN', 'TLS'),
     'a side three points stronger in Pace, Power, Handling and Kicking is marked, whatever the Stamina');
   ok(!marks('GDN', 'WIM') && !marks('MTB', 'CLE'), 'two points apart in the four and Stamina on top is not a Stronger Side');
-  ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 2, power: 2, handling: 2, kicking: 2 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...eng, stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');
+  ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 2, power: 2, handling: 2, kicking: 2 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...X.NATIONS[2], stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');   // re-pinned with the line above: Wales v Ireland, not England
 
   T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, duels: 'off' });
   ok(!T.M.early && near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(has.pace, 1)), 'a headless match is not eased, and Normal pace is unchanged');
@@ -497,7 +500,8 @@ function settle(pick) {
   ok(L.map(l => l.key + ':' + l.tier).join() === 'int:0,eng:1,fra:1,cel:1,sco:1,rsa:1,aus:1,nzl:1,jpn:1,sur:2', 'International is one list; National is England, France, Celtic and Italy, Scotland, South Africa, Australia, New Zealand and Japan; Local is Surrey');
   ok(L.map(l => l.name).join() === 'International,England,France,Celtic and Italy,Scotland,South Africa,Australia,New Zealand,Japan,Surrey', 'each list is named by its country or county, never a competition');
   ok(L.every(l => l.teams.length >= 6), `every list offers at least six sides (${L.map(l => l.key + ' ' + l.teams.length).join(', ')})`);
-  ok([X.NATIONS, X.ENGLAND, X.FRANCE, X.CELTIC, X.SCOTLAND, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN, X.CLUBS].map(l => l.length).join() === '12,10,14,12,10,7,6,6,7,12', 'International 12, England 10, France 14, Celtic and Italy 12, Scotland 10, South Africa 7, Australia 6, New Zealand 6, Japan 7, Surrey 12');
+  // re-pinned at the official tables: NATIONS is fourteen (Canada and the USA appended); each category's International is twelve
+  ok([X.NATIONS, X.ENGLAND, X.FRANCE, X.CELTIC, X.SCOTLAND, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN, X.CLUBS].map(l => l.length).join() === '14,10,14,12,10,7,6,6,7,12' && ['men', 'women', 'minis'].every(c => X.natList(c).length === 12), 'International 12 a category (14 nations in all), England 10, France 14, Celtic and Italy 12, Scotland 10, South Africa 7, Australia 6, New Zealand 6, Japan 7, Surrey 12');
   ok(X.ENGLAND.map(t => t.name).join() === 'Bath,Bristol,Exeter,Gloucester,Leicester,Newcastle,Northampton,Sale,London North,London West', 'England by city');
   ok(X.CELTIC.map(t => t.name).join() === 'Dublin,Limerick,Belfast,Galway,Edinburgh,Glasgow,Cardiff,Swansea,Llanelli,Newport,Treviso,Parma', 'Ireland, Scotland, Wales and Italy by city');
   ok(X.NEW_ZEALAND.map(t => t.name).join() === 'Auckland,Hamilton,Wellington,Christchurch,Dunedin,Taranaki', 'New Zealand by city, and Taranaki');
@@ -506,11 +510,33 @@ function settle(pick) {
   const lower = all.map(t => t.name.toLowerCase());
   ok(new Set(lower).size === lower.length && X.CELTIC.some(t => t.id === 'EDI') && X.CELTIC.some(t => t.id === 'GLA') && !X.SCOTLAND.some(t => /edinburgh|glasgow/i.test(t.name)), 'no side is in two lists: Edinburgh and Glasgow stay with the professional sides');
   const avg = l => l.reduce((a, t) => a + total(t), 0) / l.length, others = X.NATIONAL.filter(l => l !== X.SCOTLAND).flat();
-  // the XV hierarchy: nations in World Rugby's men's ranking (2 November 2026), sums 24 down to 19; each league by its last completed table
-  const rank = ['RSA', 'NZL', 'IRE', 'FRA', 'ENG', 'SCO', 'AUS', 'ARG', 'FIJ', 'WAL', 'ITA', 'JPN'].map(id => X.NATIONS.find(t => t.id === id));
-  ok(rank.map(total).join() === '24,24,23,23,22,21,21,20,20,19,19,19' && rank.every((t, i) => i === 0 || X.overallOf(t) <= X.overallOf(rank[i - 1])), `the twelve in ranking order, 24 down to 19, level only with a neighbour (${rank.map(t => t.id + ' ' + X.overallOf(t)).join(', ')})`);
-  const nat = id => X.NATIONS.find(t => t.id === id), fij = nat('FIJ'), rsa = nat('RSA'), ire = nat('IRE');
-  ok(fij.pace === 5 && R.every(k => fij[k] <= fij.pace) && rsa.power === 5 && ire.handling === 5 && ire.kicking === 5 && R.every(k => fij.kicking <= fij[k]), 'each keeps its style: Fiji\'s pace, South Africa\'s power, Ireland\'s handling and kicking');
+  // the XV hierarchy: each category's International is its World Rugby table's top twelve, in order (men's 3 November 2026, women's
+  // 2 November 2026; README, Teams), five-ability sums by the points, every nation above every club. Re-pinned from the unofficial
+  // men's table of 2 November (24 down to 19) when the official tables came in; the women's list is new.
+  const MEN = { RSA:93.09, NZL:92.27, IRE:88.08, FRA:87.43, ENG:85.68, SCO:84.78, AUS:84.43, ARG:82.24, FIJ:77.85, WAL:76.38, ITA:76.30, JPN:76.23 };
+  const WOMEN = { ENG:94.20, NZL:93.18, CDN:91.68, FRA:85.00, IRE:78.29, USA:77.50, AUS:77.18, ITA:71.99, SCO:71.25, RSA:70.76, WAL:70.12, FIJ:66.65 };
+  const SUMS = { men:'23,23,21,21,20,20,20,19,18,18,18,18', women:'23,23,22,21,20,20,20,19,19,18,18,18' };
+  const base = id => X.NATIONS.find(t => t.id === id);
+  for (const [cat, table, sums] of [['men', MEN, SUMS.men], ['women', WOMEN, SUMS.women], ['minis', MEN, SUMS.men]]) {
+    const l = X.natList(cat), pts = l.map(t => table[t.id]);
+    ok(l.map(t => t.id).join() === Object.keys(table).join() && pts.every((p, i) => i === 0 || p < pts[i - 1]), `${cat}: the twelve in its table's order (${l.map(t => t.id).join(' ')})`);
+    ok(l.map(total).join() === sums && l.every((t, i) => i === 0 || X.overallOf(t) <= X.overallOf(l[i - 1])), `${cat}: sums by the points (${l.map(t => t.id + ' ' + total(t) + ' ' + X.overallOf(t)).join(', ')})`);
+    ok(Math.min(...l.map(total)) > Math.max(...clubs.map(total)), `${cat}: every nation above every club (${Math.min(...l.map(total))} v ${Math.max(...clubs.map(total))})`);
+    ok(cat === 'men' ? l.every(t => t === base(t.id)) : l.every(t => t.cat === cat && t.name === base(t.id).name + (cat === 'women' ? ' Women' : ' Minis') && t.id === base(t.id).id && t.kit === base(t.id).kit && t.home === base(t.id).home), `${cat}: named by catSide, code, kit and home nation the nation's own${cat === 'men' ? ' (the NATIONS objects themselves)' : ''}`);
+    ok(X.natList(cat) === l && X.natList(cat)[0] === l[0], `${cat}: the same list and the same sides every time`);
+    if (cat !== 'women') ok(l.every(t => R.every(k => t[k] === base(t.id)[k])), `${cat}: the men's ratings`);
+  }
+  ok(X.natList('men').every(t => Math.abs(X.overallOf(t) - MEN[t.id]) < 2), `the men's overall sits within two of the points (${X.natList('men').map(t => t.id + ' ' + X.overallOf(t) + ' v ' + MEN[t.id]).join(', ')})`);
+  const abil = l => l.map(t => R.map(k => t[k]).join('')).join(' ');
+  ok(abil(X.natList('women')) === '45455 54545 45445 55434 43553 55334 54443 44434 54433 45333 44343 53523' && R.some(k => X.natList('women')[0][k] !== base('ENG')[k]), `the women's twelve have their own ratings, England's not the men's (${abil(X.natList('women'))})`);
+  ok(abil(X.natList('men')) === '45455 54545 44553 55434 45353 54533 54443 45433 53523 44343 44433 53433', `the men's twelve (${abil(X.natList('men'))})`);
+  ok(X.natList('xyz') === X.natList('men'), 'an unknown category is the men\'s');
+  ok(['CDN', 'USA'].every(id => X.natList('women').some(t => t.id === id) && !X.natList('men').some(t => t.id === id) && !X.natList('minis').some(t => t.id === id)) && ['ARG', 'JPN'].every(id => !X.natList('women').some(t => t.id === id)), 'Canada and the USA only under Women; Argentina and Japan only under Men and Minis');
+  ok(X.catTeam(base('CDN'), 'men') === null && X.catTeam(base('CDN'), 'women') === X.natList('women')[2] && X.catTeam(base('ENG'), 'women') === X.natList('women')[0] && X.catTeam(base('ENG'), 'men') === base('ENG') && X.catTeam(X.CLUBS[0], 'women').name === 'Farnham Women', 'catTeam: a nation is its category\'s own, or none; a club is catSide\'s');
+  for (const cat of ['men', 'women']) {
+    const nat = id => X.natList(cat).find(t => t.id === id), fij = nat('FIJ'), rsa = nat('RSA'), ire = nat('IRE');
+    ok(fij.pace === 5 && R.every(k => fij[k] <= fij.pace) && rsa.power === 5 && ire.handling === 5 && ire.kicking === 5 && R.every(k => fij.kicking <= fij[k]), `${cat}: each keeps its style: Fiji's pace, South Africa's power, Ireland's handling and kicking`);
+  }
   ok(Math.min(...X.NATIONS.map(total)) > Math.max(...clubs.map(total)), `every nation above every club (${Math.min(...X.NATIONS.map(total))} v ${Math.max(...clubs.map(total))})`);
   const TABLES = {   // strongest first: the last completed league table each list follows (README, Teams)
     eng: 'NTH,BTH,EXE,LEI,BRS,LNO,SAL,GLO,LWE,NCL',            // Premiership 2025-26 (Exeter and Leicester level: 3rd and 4th)
@@ -537,7 +563,7 @@ function settle(pick) {
   ok(pro.every(t => !MARKS.test(t.name)), `no professional side carries a club's name or nickname (${pro.filter(t => MARKS.test(t.name)).map(t => t.name).join(', ') || 'none'})`);
   const codes = [...X.ALL_TEAMS.map(t => t.id), ...T.career.COUNTIES.map(t => t.id)];
   ok(new Set(codes).size === codes.length && codes.every(c => /^[A-Z]{3}$/.test(c)), 'every code is three letters and unique across every list, every nation and the career\'s counties');
-  ok(['NZL', 'RSA', 'AUS', 'ARG', 'FIJ', 'JPN'].every(id => !clubs.some(t => t.id === id)) && !X.NATIONS.slice(6).some(t => t.home), 'the new nations\' codes clash with no club, and none is a home nation');
+  ok(['NZL', 'RSA', 'AUS', 'ARG', 'FIJ', 'JPN', 'CDN', 'USA'].every(id => !clubs.some(t => t.id === id)) && !X.NATIONS.slice(6).some(t => t.home) && X.AUSTRALIA.some(t => t.id === 'CAN' && t.name === 'Canberra'), 'the new nations\' codes clash with no club (Canada is CDN: CAN stays Canberra\'s), and none is a home nation');
   ok(pro.every(t => total(t) <= 5 + X.BUDGET) && X.NATIONS.every(t => R.every(k => t[k] >= 1 && t[k] <= 5)), `no league side is stronger than a team you can make (top ${Math.max(...pro.map(total))})`);
   ok(X.NATIONS.slice(6).every(t => /^#[0-9a-f]{6}$/i.test(t.alt) && /^#[0-9a-f]{6}$/i.test(t.altTrim)), 'each new nation has a change kit, as the six do');
 
@@ -554,7 +580,14 @@ function settle(pick) {
   ok(s.pool === 'sco' && names(X.SCOTLAND) && !grid().includes('>Edinburgh<') && !grid().includes('>Glasgow<') && X.teamPool() === 'sco' && X.poolTier('sco') === 1 && !$('t-nat').hidden, 'Scotland, under National, shows the Premiership\'s clubs; the pro sides stay in Celtic and Italy');
   X.poolPick('jpn');
   X.tierPick(0);
-  ok(s.pool === 'int' && $('t-nat').hidden && $('t-loc').hidden && names(X.NATIONS), 'International: the twelve, with nothing under it');
+  const inOrder = l => l.every((t, i) => i === 0 || grid().indexOf('>' + X.listName(t) + '<') > grid().indexOf('>' + X.listName(l[i - 1]) + '<'));
+  ok(s.pool === 'int' && $('t-nat').hidden && $('t-loc').hidden && names(X.natList('men')) && inOrder(X.natList('men')) && !grid().includes('>Canada<') && !grid().includes('>USA<'), 'International: the men\'s twelve in table order, with nothing under it');   // re-pinned at the official tables: natList, not NATIONS
+  ok(X.poolTeams('int') === X.natList('men') && grid().includes('aria-label="Overall 93">93<'), 'Men: the list is natList(\'men\'), South Africa at 93');
+  X.catPick('women');
+  ok(X.poolTeams('int') === X.natList('women') && X.natList('women').every(t => grid().includes('>' + X.listName(t) + '<')) && inOrder(X.natList('women')) && !grid().includes('>Argentina<') && !grid().includes('>Japan<') && !grid().includes(' Women<'), 'Women: the women\'s twelve in table order, Canada and the USA in, each card by the nation\'s name as the club cards are');
+  X.catPick('minis');
+  ok(X.poolTeams('int') === X.natList('minis') && names(X.natList('men')) && !grid().includes('>Canada<'), 'Minis: the men\'s twelve');
+  X.catPick('men');
   X.tierPick(1);
   ok(s.pool === 'jpn', 'National goes back to the league last looked at');
   X.tierPick(1);
@@ -570,26 +603,52 @@ function settle(pick) {
     ok(c.teams.length === 6 && c.teams[0].id === l.teams[1].id && c.teams.slice(1).every(t => l.teams.some(o => o.id === t.id) && t.id !== l.teams[1].id), `a championship from ${l.name} is your side and five from ${l.name}`);
     X.setChamp(null);
   }
-  // International through the team screen: a nation plays the rest of its six, as Career's International stage does, so the Six
-  // Nations (and its Triple Crown) is what England, France, Ireland, Italy, Scotland and Wales get every time
-  const sixOf = l => l.map(t => t.id).sort().join(), SIX = sixOf(X.NATIONS.slice(0, 6)), REST = sixOf(X.NATIONS.slice(6));
-  for (const n of X.NATIONS) {
-    D.openTeams('champ'); X.poolPick('int'); D.pickTeam(n);
-    const got = sixOf(X.champ().teams), want = X.NATIONS.indexOf(n) < 6 ? SIX : REST;
-    ok(X.champ().teams[X.champ().user].id === n.id && got === want, `a championship as ${n.name} from International is its own six (${got})`);
-    X.setChamp(null);
+  // International through the team screen: a nation plays the rest of its six in its category's twelve, by who is in it, as Career's
+  // International stage does, so the Six Nations (and its Triple Crown) is what England, France, Ireland, Italy, Scotland and Wales get
+  // every time. Re-pinned at the official tables: natList for each category, not NATIONS in sixes.
+  const sixOf = l => l.map(t => t.id).sort().join(), SIX = 'ENG,FRA,IRE,ITA,SCO,WAL', REST = { men:'ARG,AUS,FIJ,JPN,NZL,RSA', women:'AUS,CDN,FIJ,NZL,RSA,USA', minis:'ARG,AUS,FIJ,JPN,NZL,RSA' };
+  ok(sixOf(X.NATIONS.filter(t => t.home || ['FRA', 'ITA'].includes(t.id))) === SIX && ['men', 'women'].every(c => X.SIX_NATIONS.every(id => X.natList(c).some(t => t.id === id))), 'the Six Nations are in both categories\' twelve');
+  for (const cat of ['men', 'women', 'minis']) {
+    const l = X.natList(cat);
+    for (const n of l) {
+      D.openTeams('champ'); X.catPick(cat); X.poolPick('int'); D.pickTeam(n);
+      const c = X.champ(), got = sixOf(c.teams), want = X.SIX_NATIONS.includes(n.id) ? SIX : REST[cat];
+      const rated = c.teams.every(t => { const o = l.find(x => x.id === t.id); return o && R.every(k => t[k] === o[k]) && t.name === o.name && (cat === 'men' ? !('cat' in t) : t.cat === cat); });
+      ok(c.teams[c.user].id === n.id && got === want && rated && sixOf(X.natGroup(n.id, cat)) === want, `${cat}: a championship as ${n.name} from International is its own six, at its list's ratings (${got})`);
+      X.setChamp(null);
+    }
   }
-  {
-    D.openTeams('champ'); X.poolPick('int'); D.pickTeam(X.NATIONS[0]);
+  ok(X.natGroup('NZL', 'women').map(t => t.id).join() === 'NZL,CDN,USA,AUS,RSA,FIJ' && X.natGroup('ENG', 'men').map(t => t.id).join() === 'IRE,FRA,ENG,SCO,WAL,ITA', 'a group keeps its table\'s order');
+  for (const cat of ['men', 'women']) {
+    D.openTeams('champ'); X.catPick(cat); X.poolPick('int'); D.pickTeam(X.natList(cat).find(t => t.id === 'ENG'));
     const c = playOut(), hon = X.honours(c, X.standings(c)).filter(h => h[1] === c.user).map(h => h[0]);
-    ok(c.teams.filter(t => t.home).length === 4 && hon.includes('Triple Crown'), `England picked on the team screen can win the Triple Crown (${hon.join(', ')})`);
+    ok(c.teams.filter(t => t.home).length === 4 && hon.includes('Triple Crown'), `${cat}: England picked on the team screen can win the Triple Crown (${hon.join(', ')})`);
     X.setChamp(null);
     const mine = X.cleanTeam({ name: 'Badgers', pace: 5, power: 5 }, 0);
-    D.openTeams('champ'); X.poolPick('int'); D.pickTeam(mine);
-    const m = X.champ();
-    ok(m.teams[m.user].name === 'Badgers' && m.teams.length === 6 && m.teams.filter((t, i) => i !== m.user).every(t => X.NATIONS.some(n => n.id === t.id)), 'a team you made, on International, plays five of the twelve');
+    D.openTeams('champ'); X.catPick(cat); X.poolPick('int'); D.pickTeam(mine);
+    const m = X.champ(), l = X.natList(cat);
+    ok(m.teams[m.user].name === (cat === 'men' ? 'Badgers' : 'Badgers Women') && m.teams.length === 6 && m.teams.filter((t, i) => i !== m.user).every(t => l.some(n => n.id === t.id && n.name === t.name && R.every(k => n[k] === t[k]))), `${cat}: a team you made, on International, plays five of the category's twelve`);
     X.setChamp(null);
   }
+  D.openTeams('champ'); X.catPick('men'); X.poolPick('int'); D.pickTeam(X.NATIONS[12]);
+  ok(X.champ() == null, 'Canada handed to the team screen on Men starts nothing: the men\'s list has no Canada');
+  // a pick follows the category: Quick Match and Two Player
+  D.openTeams('quick'); $('t-change').click(); X.catPick('women'); X.poolPick('int'); D.pickTeam(X.natList('women')[2]);
+  ok($('t-mine').innerHTML.includes('Canada Women') && $('t-title').textContent === 'Pick Opponent', 'Quick Match on Women: Canada Women is your team');
+  X.catPick('minis');
+  ok($('t-yours').hidden && $('t-title').textContent === 'Pick Your Team', 'Minis has no Canada: the pick is undone, and the screen asks for your team');
+  D.pickTeam(X.natList('minis')[4]); X.catPick('women');
+  ok($('t-mine').innerHTML.includes('England Women'), 'England Minis picked, then Women: England Women');
+  D.pickTeam(X.natList('women')[1]);
+  ok(T.M.nat[0] === X.natList('women')[0] && T.M.nat[1] === X.natList('women')[1] && T.M.nat[0].pace === 4 && T.M.nat[0].stamina === 5, 'England Women v New Zealand Women: the women\'s sides, at the women\'s ratings');
+  D.exitMatch();
+  D.openJoin(); D.openTeams('two'); X.catPick('women'); X.poolPick('int'); D.pickTeam(X.natList('women')[5]);
+  ok(D.twoSel().picking === 1 && $('t-mine').innerHTML.includes('USA Women'), 'Two Player on Women: Player 1 is the USA');
+  X.catPick('men');
+  ok(D.twoSel().picking === 0 && D.twoSel().teams[0] === X.CLUBS[0], 'Men has no USA: Player 1 picks again, from Farnham');
+  D.pickTeam(X.natList('women')[0]); X.catPick('men');
+  ok(D.twoSel().teams[0] === X.NATIONS[0] && $('t-mine').innerHTML.includes('Player 1 · England<'), 'England Women, then Men: England');
+  D.setTwo(false); X.catPick('men'); D.goHome();
   // old saves: each index the team screen used to save goes to where it was
   const want = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];
   ok(X.POOL_OLD.join() === want.join() && !X.POOL_OLD.includes('sco'), 'the old lists were International, Local, France, Australia, South Africa, My League: nothing old lands on Scotland');
@@ -599,6 +658,16 @@ function settle(pick) {
   X.restore({ settings: { pool: 5 } });
   ok(X.teamPool() === 'sur', 'an old My League with no league saved shows Surrey');
   ok(X.poolKey(2) === 'fra' && X.poolKey('cel') === 'cel', 'poolKey maps an old index and keeps a key');
+  {   // a championship saved before the official tables keeps its sides as they were saved: England Women at the old men's 22, Argentina Women
+    const was = { ENG:[4, 5, 4, 5, 4], FRA:[5, 5, 4, 4, 5], ARG:[4, 5, 4, 3, 4], JPN:[5, 3, 4, 3, 4], WAL:[4, 4, 3, 4, 4], ITA:[4, 4, 4, 3, 4] };
+    X.newChamp(...(() => { const six = Object.entries(was).map(([id, r]) => { const t = { ...X.catSide(base(id), 'women') }; R.forEach((k, i) => { t[k] = r[i]; }); return t; }); return [six[0], six.slice(1)]; })());
+    const saved = JSON.parse(JSON.stringify(X.champ()));
+    X.setChamp(null); X.restore({ settings: { cat: 'women', pool: 'int' }, champ: saved });
+    const c = X.champ();
+    const same = (a, b) => a.id === b.id && a.name === b.name && a.cat === b.cat && a.kit === b.kit && R.every(k => a[k] === b[k]);
+    ok(c && c.teams.length === 6 && c.teams.every((t, i) => same(t, saved.teams[i])) && c.teams[0].name === 'England Women' && total(c.teams[0]) === 22 && c.teams.some(t => t.name === 'Argentina Women'), 'a saved championship keeps its teams: no re-rating, Argentina Women still in it');
+    X.setChamp(null); X.restore({ settings: { pool: 'int', cat: 'men' } });
+  }
   const kept = globalThis.localStorage, mem = {};
   globalThis.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
   D.openTeams('champ'); X.poolPick('nzl'); X.catPick('women');
