@@ -8,6 +8,7 @@ const C = T.career, X = T.teams, D = T.debug, $ = id => document.getElementById(
 let passed = 0, failed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
 const json = v => JSON.stringify(v);
+const json2 = v => JSON.parse(JSON.stringify(v));   // a plain copy, as a save reads back
 const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
 
 // 0. Non-career matches are unchanged. The fingerprint below is these seeded matches on the commit before the career
@@ -96,6 +97,37 @@ function playOut(us, them, deeds) {
   const mine = { id:'MYT', name:'My Town Minis', kit:'#c8102e', trim:'#f2efe6', custom:true, key:'my1', pace:5, power:5, handling:3, kicking:1 };
   const own = C.create({ pos:'F', num:3, club:mine });
   ok(own.season.teams[0].name === 'My Town Minis' && own.season.teams[0].kicking === 1 && own.season.teams[0].pace === 4, 'a team you made (or imported) can be the club');
+}
+
+// 2b. Men | Women, the national leagues and the twelve nations
+{
+  const FAR = X.CLUBS[0], men = C.create({ pos:'B', num:4, club:FAR }), women = C.create({ pos:'B', num:4, club:FAR, cat:'women' });
+  ok(men.cat === 'men' && C.create({ pos:'B', num:4, club:FAR, cat:'minis' }).cat === 'men' && C.create({ pos:'B', num:4, club:FAR, cat:'x' }).cat === 'men', 'Men unless Women is picked: Career has no Minis');
+  ok(women.cat === 'women' && women.season.teams.every(t => t.cat === 'women' && / Women$/.test(t.name)) && women.season.teams[0].name === 'Farnham Women', `a women's career names every side for it (${women.season.teams.map(t => t.name).join(', ')})`);
+  ok(men.season.teams.every(t => !('cat' in t) && !/ Women$/.test(t.name)), 'a men\'s career is named as before');
+  const R = ['pace', 'power', 'handling', 'kicking', 'stamina'], same = (a, b) => R.every(k => a[k] === b[k]) && a.id === b.id && a.kit === b.kit;
+  ok([0, 1, 2, 3, 4].every(st => same(C.teamFor({ ...women, pro:'TLS', country:'NZL' }, st), C.teamFor({ ...men, pro:'TLS', country:'NZL' }, st))), 'and changes nothing else: ratings, codes and kits are the men\'s at every stage');
+  ok(C.teamFor({ ...women, country:'FIJ' }, 4).name === 'Fiji Women' && C.opponents({ ...women, stage:2 }, 2).every(t => / Women$/.test(t.name)), 'the County sides and the nations too');
+  ok(C.clean({ ...json2(men), cat:undefined }).cat === 'men' && C.clean({ ...json2(women) }).cat === 'women' && C.clean({ ...json2(women), cat:'minis' }).cat === 'men', 'the save keeps Women; a career from before it, or a bad value, is Men');
+  ok(C.clean(json2(women)).season.teams[0].cat === 'women', 'a saved season keeps its names and category');
+  // Pro Club: every national league
+  ok(X.NATIONAL.length === 7 && [X.ENGLAND, X.FRANCE, X.CELTIC, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN].every(l => X.NATIONAL.includes(l)), 'the national leagues are England, France, Celtic and Italy, South Africa, Australia, New Zealand and Japan');
+  const signed = new Set();
+  for (let i = 0; i < 400; i++) { const p = C.create({ pos:'B', num:5, club:FAR }); p.stage = 2; C.newSeason(p); finish(p, 1); C.set(p); C.advance(); signed.add(X.NATIONAL.findIndex(l => l.some(t => t.id === p.pro))); }
+  ok(signed.size === 7 && !signed.has(-1), `going up signs a side from any national league (${[...signed].sort().join(' ')})`);
+  for (const [id, list] of [['BTH', X.ENGLAND], ['GLA', X.CELTIC], ['AKL', X.NEW_ZEALAND], ['KOB', X.JAPAN], ['TLS', X.FRANCE], ['ADL', X.AUSTRALIA]]) {
+    const pros = C.opponents({ ...men, pro:id }, 3);
+    ok(C.teamFor({ ...men, pro:id }, 3).id === id && pros.length === 5 && pros.every(t => list.some(a => a.id === t.id) && t.id !== id), `Pro Club at ${id}: five others from its own league`);
+  }
+  ok(C.clean({ ...json2(men), stage:3, pro:'LNO' }).pro === 'LNO' && C.clean({ ...json2(men), stage:3, pro:'SYD' }).pro === 'SYD', 'a new league\'s side, and an old one, are kept in the save');
+  // International: twelve to pick from, a season against the other five of its six
+  const nz = C.opponents({ ...men, country:'NZL' }, 4);
+  ok(nz.map(t => t.id).join() === 'RSA,AUS,ARG,FIJ,JPN', `New Zealand plays the other five of the second six (${nz.map(t => t.id).join()})`);
+  ok(C.opponents({ ...men, country:'ENG' }, 4).map(t => t.id).join() === 'FRA,IRE,ITA,SCO,WAL', 'England still plays the Six Nations');
+  ok(C.clean({ ...json2(men), stage:4, country:'JPN' }).country === 'JPN', 'a call-up to a new nation is kept');
+  const cr = C.create({ pos:'B', num:6, club:FAR }); C.set(cr); cr.stage = 3; C.newSeason(cr); finish(cr, 1); C.advance('ARG');
+  ok(cr.stage === 4 && cr.country === 'ARG' && cr.season.teams[0].name === 'Argentina' && cr.season.teams.length === 6, 'picking Argentina starts an International season as Argentina');
+  C.set(null);
 }
 
 // 3. promotion
@@ -389,6 +421,13 @@ function playOut(us, them, deeds) {
   // the new player screen
   C.set(null); C.newOpen();
   ok(shown() === 's-career-new' && /Farnham/.test($('cn-clubs').innerHTML) && /data-n="4"/.test($('cn-num').innerHTML) && !/data-n="3"/.test($('cn-num').innerHTML), 'New Player: the clubs, and a back\'s numbers to start');
+  ok(C.draft().cat === 'men' && /<div class="field"><span class="lbl">Team<\/span><div class="seg" id="cn-cat"><button>Men<\/button><button>Women<\/button><\/div><\/div>/.test(html), 'Team is Men | Women, two equal buttons, Men first and picked');
+  C.catPick(1);
+  ok(C.draft().cat === 'women', 'Women picks it');
+  $('cn-go').click();
+  ok(C.get() && C.get().cat === 'women' && C.get().season.teams[0].name === 'Farnham Women' && saved().career.cat === 'women', 'Start Career starts a women\'s career, and saves it');
+  C.set(null); C.newOpen();
+  ok(C.draft().cat === 'men', 'a new player starts on Men again');
   // the hub
   C.set(cr); C.open();
   const card = $('cr-card').innerHTML;
@@ -405,7 +444,7 @@ function playOut(us, them, deeds) {
   finish(cr, 1); C.open();
   ok(shown() === 's-career-end' && $('ce-title').textContent === 'Champions' && /Next Season/.test($('ce-act').innerHTML), 'a won season: Champions and Next Season');
   cr.stage = 3; C.newSeason(cr); finish(cr, 2); C.renderEnd();
-  ok($('ce-title').textContent === 'Called Up' && ($('ce-body').innerHTML.match(/data-n="/g) || []).length === 6 && $('ce-act').innerHTML === '', 'called up: the six countries are the choice');
+  ok($('ce-title').textContent === 'Called Up' && ($('ce-body').innerHTML.match(/data-n="/g) || []).length === 12 && $('ce-act').innerHTML === '', 'called up: all twelve countries are the choice');
   cr.stage = 4; cr.country = 'ENG'; C.newSeason(cr); finish(cr, 4); C.renderEnd();
   ok($('ce-title').textContent === 'Hall of Fame' && /Start New Career/.test($('ce-act').innerHTML), 'the end of the career: Hall of Fame and Start New Career');
   cr.stage = 1; C.newSeason(cr); finish(cr, 5); C.renderEnd();

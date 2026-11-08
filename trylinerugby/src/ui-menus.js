@@ -179,7 +179,6 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
     if (key === 'sound' && settings.sound) ac();
-    if (key === 'pool') { renderTeams(); $('s-teams').scrollTop = 0; }
   }));
 }
 $('b-champ').addEventListener('click', () => {
@@ -237,7 +236,7 @@ function renderJoin() {
   renderHintSwitches();                                    // the Hints ticks: by half, so they follow Swap Players and show the saved state when the screen opens
 }
 function seatsChanged() { if (two.on && !$('s-join').hidden) renderJoin(); }   // a pad claiming a seat, Use Keyboard, Swap Players or a pad unplugged: the join screen follows
-function startTwo() { navOnly = null; startMatch(twoSel.teams[0], twoSel.teams[1], false, { two:true, levels:twoSel.levels.slice() }); }
+function startTwo() { navOnly = null; startMatch(catSide(twoSel.teams[0], settings.cat), catSide(twoSel.teams[1], settings.cat), false, { two:true, levels:twoSel.levels.slice() }); }   // Men | Women | Minis: the team screen's
 $('b-two').addEventListener('click', () => { ac(); openJoin(); });
 $('j-back').addEventListener('click', () => { setTwo(false); goHome(); });
 const saveTwoDiff = () => { settings.twoDiff = two.swapped ? twoSel.levels.slice().reverse() : twoSel.levels.slice(); save(); };   // stored by half (left, right): a fresh visit puts the halves back in order
@@ -269,8 +268,33 @@ function teamCard(t, i) {
     </button>`;
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
+/* The lists: International | National | Local, then under it National's leagues or Local's Surrey and My League (none under
+   International), and Men | Women | Minis beside the title. Built from TEAM_TIERS, TEAM_LISTS and TEAM_CATS (data.js). */
+let natLast = 'eng';                                       // National goes back to the league last looked at
+const listOf = k => TEAM_LISTS.find(l => l.key === k);
+function teamPool() { const k = poolKey(settings.pool); return k === IMPORT_POOL && !importLeague ? 'sur' : k; }   // My League with no league saved is Surrey
+const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier);
+const poolTeams = k => (k === IMPORT_POOL ? importTeams() : (listOf(k) || TEAM_LISTS[0]).teams);
+{
+  const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
+  $('t-tier').innerHTML = TEAM_TIERS.map((n, i) => btn(`data-tier="${i}"`, n)).join('');
+  $('t-nat').innerHTML = TEAM_LISTS.filter(l => l.tier === 1).map(l => btn(`data-pool="${l.key}"`, l.name)).join('');
+  $('t-loc').innerHTML = TEAM_LISTS.filter(l => l.tier === 2).map(l => btn(`data-pool="${l.key}"`, l.name)).join('') + btn('data-pool="my" id="t-league"', 'My League', ' hidden');
+  $('t-cat').innerHTML = TEAM_CATS.map(c => btn(`data-cat="${c.id}"`, c.name)).join('');
+  for (const b of $('t-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => tierPick(+b.dataset.tier));
+  for (const id of ['t-nat', 't-loc']) for (const b of $(id).querySelectorAll('[data-pool]')) b.addEventListener('click', () => poolPick(b.dataset.pool));
+  for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.addEventListener('click', () => catPick(b.dataset.cat));
+}
+function poolPick(k) {
+  k = poolKey(k);
+  if (k === IMPORT_POOL && !importLeague) return;
+  settings.pool = k; if (poolTier(k) === 1) natLast = k;
+  save(); renderTeams(); $('s-teams').scrollTop = 0;
+}
+function tierPick(i) { if (poolTier(teamPool()) !== i) poolPick(i === 0 ? 'int' : i === 1 ? natLast : 'sur'); }
+function catPick(id) { if (!TEAM_CATS.some(c => c.id === id)) return; settings.cat = id; save(); renderTeams(); }
 function openTeams(m) {
-  pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 'sur'; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
@@ -280,15 +304,19 @@ function renderTeams() {
   eb.textContent = quick ? 'Quick Match' : pair ? 'Two Player' : 'Championship';
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
   $('t-title').textContent = pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
-  [...document.querySelectorAll('.pool button')].forEach((b, i) => b.setAttribute('aria-pressed', String(i === settings.pool)));
+  const pool = teamPool(), tier = poolTier(pool), press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
+  press('t-tier', '[data-tier]', b => +b.dataset.tier === tier);
+  $('t-nat').hidden = tier !== 1; $('t-loc').hidden = tier !== 2; $('t-league').hidden = !importLeague;
+  for (const id of ['t-nat', 't-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
+  press('t-cat', '[data-cat]', b => b.dataset.cat === settings.cat);
   const yours = (quick && !!quickPick) || (pair && p === 1);
   $('t-yours').hidden = !yours;
-  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(mine.name)}</span>`;
-  $('t-default').hidden = quick || pair || settings.pool !== (pickMode === 'champ' ? storeHomePool() : 1);
+  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(catSide(mine, settings.cat).name)}</span>`;
+  $('t-default').hidden = quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
   $('t-default').textContent = 'Play as ' + storeHomeTeam().name;
-  teamList = [...(settings.pool === IMPORT_POOL ? importTeams() : POOLS[settings.pool]), ...custom];   // My League: src/import.js
+  teamList = [...poolTeams(pool), ...custom];              // My League: src/import.js
   if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
   let html = teamList.map(teamCard).join('');
   if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
@@ -309,19 +337,20 @@ function fitNames() {
     while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px -= 1; el.style.fontSize = px + 'px'; }
   }
 }
-/* A championship is your team and five others from the list on screen. */
+/* A championship is your team and five others from the list on screen. Men | Women | Minis names every side of it, or both of a match. */
 function pickTeam(t) {
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
     if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
-    const others = settings.pool === IMPORT_POOL ? importOthers(t) : shuffle(POOLS[settings.pool].filter(o => keyOf(o) !== keyOf(t)));
-    newChamp(t, others); renderHub(); showScreen('s-hub'); return;
+    const pool = teamPool(), cat = settings.cat;
+    const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(poolTeams(pool).filter(o => keyOf(o) !== keyOf(t)));
+    newChamp(catSide(t, cat), others.slice(0, 5).map(o => catSide(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
   if (quickPick == null) { quickPick = t; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; return; }
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
-  startMatch(quickPick, t, false);
+  startMatch(catSide(quickPick, settings.cat), catSide(t, settings.cat), false);
 }
 
 /* create team */

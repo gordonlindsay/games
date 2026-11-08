@@ -10,16 +10,17 @@ const X = T.teams, STEP = T.STEP;
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
 const all = X.ALL_TEAMS;
-const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
+const clubs = [...X.CLUBS, ...X.NATIONAL.flat()];   // every side that is not a nation: Local and the national leagues
 
 // 1. the lists
 {
   const ids = all.map(t => t.id);
   ok(new Set(ids).size === ids.length, `every team code is unique (${ids.join(' ')})`);
-  ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL', 'the nations keep their order, which saved championships index into');
+  ok(X.NATIONS.map(t => t.id).slice(0, 6).join() === 'ENG,FRA,IRE,ITA,SCO,WAL', 'the six nations keep their order, which saved championships index into');
+  ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL,NZL,RSA,AUS,ARG,FIJ,JPN', 'then New Zealand, South Africa, Australia, Argentina, Fiji and Japan: twelve');
   ok(X.CLUBS[0].id === 'FAR', 'Farnham comes first in Local');
   ok(X.CLUBS.length >= 6, `Local has enough clubs for a championship (${X.CLUBS.length})`);
-  ok(X.POOLS.length === 5 && X.POOLS[0] === X.NATIONS && X.POOLS[1] === X.CLUBS, 'International and Local keep their places, which saved settings index into');
+  ok(X.POOLS.length === 9 && X.POOLS.every((p, i) => p === X.TEAM_LISTS[i].teams), 'POOLS is every built-in list, in the team screen\'s order');
   ok(X.POOLS.every(p => p.length >= 6), `every list has enough sides for a championship (${X.POOLS.map(p => p.length).join(' ')})`);
   ok(X.FRANCE.length === 14, `France is the Top 14 (${X.FRANCE.length})`);
   ok(all.length === X.POOLS.reduce((a, p) => a + p.length, 0), 'ALL_TEAMS is every list');
@@ -160,7 +161,7 @@ function playOut() {
   X.restore({ custom: [{ name: 'A' }, { name: 'B' }, null, { name: 'C' }, { name: 'D' }, { name: 'E' }, 'junk'] });
   ok(X.custom().length === 4 && X.custom().every(t => t.custom && t.key), 'saved teams are cleaned and capped at four');
   X.restore({ settings: { pool: 7 } });
-  ok(T.debug.settings().pool === 0, 'a bad list choice falls back to International');
+  ok(T.debug.settings().pool === 'int', 'a bad list choice falls back to International');
 }
 
 // 7. the menu, and a save that survives a reload
@@ -183,21 +184,22 @@ function playOut() {
   const played = JSON.parse(JSON.stringify(X.champ()));
   X.setChamp(null);
   X.restore({
-    settings: { half: 2, diff: 0, sound: false, duels: false, hints: false, twoHints: [false, true], tut: ['goal', 'bogus', 'past'], pool: 1 },
+    settings: { half: 2, diff: 0, sound: false, duels: false, hints: false, twoHints: [false, true], tut: ['goal', 'bogus', 'past'], pool: 1, cat: 'women' },
     champ: played,
     custom: [{ name: 'Wasps', pace: 9, power: 9, handling: 9, kicking: 9 }],
   });
   const s = T.debug.settings();
-  ok(s.duels === true && s.half === 2 && s.diff === 0 && s.sound === false && s.hints === false && s.twoHints[0] === false && s.twoHints[1] === true && s.tut.join() === 'past,goal' && s.pool === 1, 'settings load (Hints, each player\'s Hints, the tutorial moments seen in the game\'s order with an unknown one dropped), and an old duels-off save is turned on');
+  ok(s.duels === true && s.half === 2 && s.diff === 0 && s.sound === false && s.hints === false && s.twoHints[0] === false && s.twoHints[1] === true && s.tut.join() === 'past,goal' && s.pool === 'sur' && s.cat === 'women', 'settings load (Hints, each player\'s Hints, the tutorial moments seen in the game\'s order with an unknown one dropped), and an old duels-off save is turned on (an old Local is Surrey)');
+  T.debug.settings().cat = 'men';
   const c = X.champ();
   ok(c && c.round === 1 && c.results.length === 1 && JSON.stringify(c.fixtures) === JSON.stringify(played.fixtures), 'fixtures, results and the round load back');
   ok(c.teams.find(t => t.id === 'ENG').alt === '#1b2747' && c.teams.filter(t => t.home).length === 4, 'change kits and home nations survive a reload');
   ok(X.standings(c).reduce((a, r) => a + r.P, 0) === 6, 'a reloaded table still adds up');
   ok(X.custom().length === 1 && X.custom()[0].name === 'Wasps' && X.custom()[0].pace + X.custom()[0].power + X.custom()[0].handling + X.custom()[0].kicking + X.custom()[0].stamina === 5 + X.BUDGET, 'a saved team is kept and held to the budget');
 
-  X.restore({ settings: { half: 9, diff: 'hard', sound: 0, duels: false, pool: 7, hints: 'yes', twoHints: [true], tut: 'past' } });
+  X.restore({ settings: { half: 9, diff: 'hard', sound: 0, duels: false, pool: 7, hints: 'yes', twoHints: [true], tut: 'past', cat: 'girls' } });
   const s2 = T.debug.settings();
-  ok(s2.half === 2 && s2.diff === 0 && s2.sound === false && s2.duels === true && s2.pool === 0 && s2.hints === false && s2.twoHints[1] === true && s2.tut.join() === 'past,goal', 'bad settings are ignored (a string for Hints, a short twoHints, a string for the tutorial) and duels stay on');
+  ok(s2.half === 2 && s2.diff === 0 && s2.sound === false && s2.duels === true && s2.pool === 'int' && s2.cat === 'men' && s2.hints === false && s2.twoHints[1] === true && s2.tut.join() === 'past,goal', 'bad settings are ignored (a string for Hints, a short twoHints, a string for the tutorial, an unknown category) and duels stay on');
   X.restore({ champ: { user: 0, round: 3, teams: [], fixtures: null, results: {} } });
   ok(X.champ() == null && X.custom().length === 1 && T.debug.settings().half === 2, 'a broken championship is dropped and the rest of the save stays');
 
@@ -449,11 +451,11 @@ function settle(pick) {
   D.renderHub();
   ok(!document.getElementById('hub-next').innerHTML.includes('Stronger Side'), 'Farnham\'s weakest club opponent is not marked');
 
-  D.openTeams('quick'); s.pool = 0; D.renderTeams();
+  D.openTeams('quick'); X.tierPick(0);
   const grid = document.getElementById('t-grid').innerHTML;
   const card = name => { const i = grid.indexOf('>' + name + '<'); return grid.slice(i, grid.indexOf('</button>', i)); };
   ok(card('France').includes('Stronger Side') && card('Ireland').includes('Stronger Side') && !card('England').includes('Stronger Side') && !card('Italy').includes('Stronger Side'), 'Quick Match marks a side three points stronger');
-  s.pool = 1; D.renderTeams();
+  X.tierPick(2);
   ok(!document.getElementById('t-grid').innerHTML.includes('Stronger Side'), 'no local card is marked stronger than Farnham');
 
   s.played = 0; s.tut = []; X.setChamp(null);
@@ -483,6 +485,129 @@ function settle(pick) {
   ok(!T.M.early && s.played === 1, 'an Easy match is counted and not eased');
   D.exitMatch();
   s.diff = 1; s.played = 0;
+}
+
+// 10. International | National | Local: the lists, the hierarchy and old saves
+{
+  const D = T.debug, s = D.settings(), $ = id => document.getElementById(id), L = X.TEAM_LISTS;
+  const R = ['pace', 'power', 'handling', 'kicking', 'stamina'], total = t => R.reduce((a, k) => a + t[k], 0);
+  ok(X.TEAM_TIERS.join() === 'International,National,Local', 'three tiers: International, National, Local');
+  ok(L.map(l => l.key + ':' + l.tier).join() === 'int:0,eng:1,fra:1,cel:1,rsa:1,aus:1,nzl:1,jpn:1,sur:2', 'International is one list; National is England, France, Celtic and Italy, South Africa, Australia, New Zealand and Japan; Local is Surrey');
+  ok(L.map(l => l.name).join() === 'International,England,France,Celtic and Italy,South Africa,Australia,New Zealand,Japan,Surrey', 'each list is named by its country or county, never a competition');
+  ok(L.every(l => l.teams.length >= 6), `every list offers at least six sides (${L.map(l => l.key + ' ' + l.teams.length).join(', ')})`);
+  ok([X.NATIONS, X.ENGLAND, X.FRANCE, X.CELTIC, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN, X.CLUBS].map(l => l.length).join() === '12,10,14,12,7,6,6,7,12', 'International 12, England 10, France 14, Celtic and Italy 12, South Africa 7, Australia 6, New Zealand 6, Japan 7, Surrey 12');
+  ok(X.ENGLAND.map(t => t.name).join() === 'Bath,Bristol,Exeter,Gloucester,Leicester,Newcastle,Northampton,Sale,London North,London West', 'England by city');
+  ok(X.CELTIC.map(t => t.name).join() === 'Dublin,Limerick,Belfast,Galway,Edinburgh,Glasgow,Cardiff,Swansea,Llanelli,Newport,Treviso,Parma', 'Ireland, Scotland, Wales and Italy by city');
+  ok(X.NEW_ZEALAND.map(t => t.name).join() === 'Auckland,Hamilton,Wellington,Christchurch,Dunedin,Taranaki', 'New Zealand by city, and Taranaki');
+  ok(X.AUSTRALIA.map(t => t.id).join() === 'SYD,BRI,CAN,PTH,MEL,ADL' && X.SOUTH_AFRICA.length === 7 && X.FRANCE.length === 14, 'Australia, South Africa and France as they were (append only: saved careers name their sides)');
+  // the owner's trademark rule: a city or a region, never a club's registered name or nickname (Quins in Local is the one exception)
+  const MARKS = /\b(leinster|munster|ulster|connacht|saracens|harlequins|tigers|saints|sharks|bears|chiefs|blues|crusaders|hurricanes|highlanders|steelers|wild knights|spears|sungoliath|verblitz|bluerevs|blue revs|eagles|warriors|ospreys|scarlets|dragons|benetton|zebre|falcons|red bulls|brumbies|waratahs|reds|force|rebels|stormers|bulls|lions|cheetahs|pumas|stade|racing|rugby|rfc|club|toyota|kubota|panasonic|suntory|kobelco|canon|yamaha)\b/i;
+  const pro = X.NATIONAL.flat();
+  ok(pro.every(t => !MARKS.test(t.name)), `no professional side carries a club's name or nickname (${pro.filter(t => MARKS.test(t.name)).map(t => t.name).join(', ') || 'none'})`);
+  const codes = [...X.ALL_TEAMS.map(t => t.id), ...T.career.COUNTIES.map(t => t.id)];
+  ok(new Set(codes).size === codes.length && codes.every(c => /^[A-Z]{3}$/.test(c)), 'every code is three letters and unique across every list, every nation and the career\'s counties');
+  ok(['NZL', 'RSA', 'AUS', 'ARG', 'FIJ', 'JPN'].every(id => !clubs.some(t => t.id === id)) && !X.NATIONS.slice(6).some(t => t.home), 'the new nations\' codes clash with no club, and none is a home nation');
+  ok(pro.every(t => total(t) <= 5 + X.BUDGET) && X.NATIONS.every(t => R.every(k => t[k] >= 1 && t[k] <= 5)), `no league side is stronger than a team you can make (top ${Math.max(...pro.map(total))})`);
+  ok(X.NATIONS.slice(6).every(t => /^#[0-9a-f]{6}$/i.test(t.alt) && /^#[0-9a-f]{6}$/i.test(t.altTrim)), 'each new nation has a change kit, as the six do');
+
+  // the hierarchy on screen
+  X.setChamp(null); D.openTeams('quick');
+  ok(X.teamPool() === 'sur' && X.poolTier(X.teamPool()) === 2 && !$('t-loc').hidden && $('t-nat').hidden && $('t-league').hidden, 'Quick Match opens on Local · Surrey; no My League without an import');
+  const grid = () => $('t-grid').innerHTML, names = l => l.every(t => grid().includes('>' + t.name + '<'));
+  ok(names(X.CLUBS), 'Surrey lists the Local clubs');
+  X.tierPick(1);
+  ok(s.pool === 'eng' && !$('t-nat').hidden && $('t-loc').hidden && names(X.ENGLAND) && !grid().includes('>Farnham<'), 'National opens on England, its league under it');
+  X.poolPick('jpn');
+  ok(s.pool === 'jpn' && names(X.JAPAN) && !grid().includes('>Bath<'), 'a league shows its own sides');
+  X.tierPick(0);
+  ok(s.pool === 'int' && $('t-nat').hidden && $('t-loc').hidden && names(X.NATIONS), 'International: the twelve, with nothing under it');
+  X.tierPick(1);
+  ok(s.pool === 'jpn', 'National goes back to the league last looked at');
+  X.tierPick(1);
+  ok(s.pool === 'jpn', 'and pressing it again stays put');
+  X.tierPick(2);
+  ok(s.pool === 'sur', 'Local is Surrey');
+  X.poolPick('nope'); ok(s.pool === 'int', 'a list that does not exist is International');
+  // a championship from every list: your side and five from it
+  for (const l of L) {
+    D.openTeams('champ'); X.poolPick(l.key);
+    D.pickTeam(l.teams[1]);
+    const c = X.champ();
+    ok(c.teams.length === 6 && c.teams[0].id === l.teams[1].id && c.teams.slice(1).every(t => l.teams.some(o => o.id === t.id) && t.id !== l.teams[1].id), `a championship from ${l.name} is your side and five from ${l.name}`);
+    X.setChamp(null);
+  }
+  // old saves: each index the team screen used to save goes to where it was
+  const want = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];
+  ok(X.POOL_OLD.join() === want.join(), 'the old lists were International, Local, France, Australia, South Africa, My League');
+  for (let i = 0; i < want.length; i++) { X.restore({ settings: { pool: i } }); ok(s.pool === want[i], `an old saved pool ${i} is ${want[i]}`); }
+  for (const k of [...L.map(l => l.key), 'my']) { X.restore({ settings: { pool: k } }); ok(s.pool === k, `a saved ${k} loads as it is`); }
+  for (const bad of [-1, 6, 1.5, 'x', null, {}, true]) { X.restore({ settings: { pool: bad } }); ok(s.pool === 'int', `a bad pool (${JSON.stringify(bad)}) is International, as before`); }
+  X.restore({ settings: { pool: 5 } });
+  ok(X.teamPool() === 'sur', 'an old My League with no league saved shows Surrey');
+  ok(X.poolKey(2) === 'fra' && X.poolKey('cel') === 'cel', 'poolKey maps an old index and keeps a key');
+  const kept = globalThis.localStorage, mem = {};
+  globalThis.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+  D.openTeams('champ'); X.poolPick('nzl'); X.catPick('women');
+  const w = JSON.parse(mem['tryline.v1']).settings;
+  ok(w.pool === 'nzl' && w.cat === 'women', 'the save keeps the list\'s key and the category');
+  globalThis.localStorage = kept;
+  X.catPick('men');
+}
+
+// 11. Men | Women | Minis: the name and the cat, nothing else
+{
+  const D = T.debug, s = D.settings(), $ = id => document.getElementById(id);
+  const R = ['pace', 'power', 'handling', 'kicking', 'stamina'], far = X.CLUBS[0], has = X.CLUBS[1];
+  ok(X.TEAM_CATS.map(c => c.name).join() === 'Men,Women,Minis' && s.cat === 'men', 'Men | Women | Minis, on Men');
+  ok(X.catSide(far, 'men') === far && X.catOf(far) === 'men', 'Men is the team as it was, and a team with no category is men\'s');
+  const fw = X.catSide(far, 'women'), em = X.catSide(X.NATIONS[0], 'minis');
+  ok(fw.name === 'Farnham Women' && fw.cat === 'women' && fw.id === 'FAR' && fw.kit === far.kit && R.every(k => fw[k] === far[k]) && far.name === 'Farnham' && !('cat' in far), 'Women: the name and the cat; the code, kit and ratings unchanged, the list\'s own side untouched');
+  ok(em.name === 'England Minis' && em.cat === 'minis' && em.home === true && em.alt === X.NATIONS[0].alt, 'Minis: England Minis, still a home nation in its change kit');
+  ok(X.catSide({ name: 'Farnham Minis', id: 'FAN' }, 'minis').name === 'Farnham Minis' && X.catSide({ name: 'Farnham Minis', id: 'FAN' }, 'women').name === 'Farnham Minis Women', 'a name already ending in its word is not doubled');
+  // Quick Match
+  D.openTeams('quick'); X.catPick('women');
+  ok(s.cat === 'women' && $('t-mine').innerHTML.includes('Farnham Women'), 'the bar names your side for the category');
+  ok($('t-grid').innerHTML.includes('>Haslemere<') && !$('t-grid').innerHTML.includes('Haslemere Women'), 'the cards keep the club\'s name');
+  D.pickTeam(has);
+  ok(T.M.nat[0].name === 'Farnham Women' && T.M.nat[1].name === 'Haslemere Women' && T.M.nat.every(n => n.cat === 'women') && T.M.nat[0].id === 'FAR' && T.M.nat[1].id === 'HAS', 'a women\'s Quick Match: both sides named for it and carrying cat, the scoreboard codes unchanged');
+  ok(R.every(k => T.M.nat[0][k] === far[k] && T.M.nat[1][k] === has[k]) && T.M.kit[0].fill === far.kit, 'ratings and kits as the men\'s');
+  D.exitMatch();
+  // a championship keeps the category it was started with
+  D.openTeams('champ'); X.catPick('minis'); X.poolPick('int');
+  D.pickTeam(X.NATIONS[2]);
+  let c = X.champ();
+  ok(c.teams.every(t => t.cat === 'minis' && / Minis$/.test(t.name)) && c.teams[0].name === 'Ireland Minis', `a minis championship names all six (${c.teams.map(t => t.name).join(', ')})`);
+  D.renderHub();
+  ok($('hub-eyebrow').textContent === 'Championship · Ireland Minis' && $('hub-table').innerHTML.includes('Ireland Minis'), 'the hub shows the names');
+  X.catPick('men');
+  const saved = JSON.parse(JSON.stringify(X.champ()));
+  X.setChamp(null); X.restore({ champ: saved });
+  c = X.champ();
+  ok(c.teams.every(t => t.cat === 'minis' && / Minis$/.test(t.name)), 'a reload keeps them, whatever the team screen says now');
+  const pair = c.fixtures[0].find(p => p.includes(c.user)), opp = pair[0] === c.user ? pair[1] : pair[0];
+  D.startMatch(c.teams[c.user], c.teams[opp], true);
+  ok(T.M.nat[0].cat === 'minis' && T.M.nat[0].name === 'Ireland Minis' && T.M.nat[0].id === 'IRE', 'and its matches are minis matches');
+  D.exitMatch();
+  X.restore({ champ: { ...saved, teams: saved.teams.map(t => ({ ...t, cat: 'bogus' })) } });
+  ok(X.champ().teams.every(t => !('cat' in t)), 'an unknown category in a saved side is dropped: men\'s');
+  X.setChamp(null);
+  // Two Player
+  D.openJoin(); D.openTeams('two'); X.catPick('women');
+  D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]);
+  ok(T.M.two && T.M.nat[0].name === 'England Women' && T.M.nat[1].name === 'France Women' && T.M.nat.every(n => n.cat === 'women'), 'Two Player plays the category too');
+  D.setTwo(false); D.exitMatch(); X.catPick('men');
+  D.openJoin(); D.openTeams('two'); D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]);
+  ok(T.M.nat[0] === X.NATIONS[0] && T.M.nat[1] === X.NATIONS[1], 'on Men a match is given the very teams it always was');
+  D.setTwo(false); D.exitMatch();
+  // the screen: labels, controls and no arrows
+  const html = readGameSource(), menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
+  ok(html.includes('<div class="seg cat" id="t-cat"></div></div>') && html.includes('<div class="pools"><div class="seg" id="t-tier"></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>'), 'Men | Women | Minis beside the title, the tiers and their lists under it');
+  ok(!html.includes('data-key="pool"'), 'the old five-list control has gone');
+  const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
+  const titled = t => t.split(' ').every((w, i) => (i && small.has(w)) || /^[A-Z]/.test(w));
+  const labels = [...X.TEAM_TIERS, ...X.TEAM_LISTS.map(l => l.name), ...X.TEAM_CATS.map(c => c.name), 'My League'];
+  ok(labels.every(titled), `every label is Title Case (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
+  ok(!/[←-↙⇐-⇙—]/.test(labels.join(' ') + menus.slice(menus.indexOf('let natLast'), menus.indexOf('function openTeams'))), 'no arrow or em dash');
 }
 
 console.log(`${passed} passed, ${failed} failed`);

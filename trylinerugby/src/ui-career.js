@@ -39,7 +39,7 @@ function renderCareerHome() {
 /* ---------- the new player ---------- */
 const careerClubs = () => storeFirst([...CLUBS, ...custom]);   // the Local list and the teams you made (an imported club is one of those), the Super Fan's club first (src/store.js)
 function careerNewOpen() {
-  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null };
+  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men' };   // Men first and picked
   $('cn-name').value = '';
   $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('');
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) b.addEventListener('click', () => { careerDraft.i = +b.dataset.i; renderCareerNew(); });
@@ -50,6 +50,7 @@ function renderCareerNew() {
   const d = careerDraft, clubs = careerClubs();
   if (d.i >= clubs.length) d.i = 0;
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) { const on = +b.dataset.i === d.i; b.classList.toggle('picked', on); b.setAttribute('aria-pressed', String(on)); }
+  [...$('cn-cat').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === (d.cat === 'women'))));
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
   if (d.numsFor !== d.pos) {
     d.numsFor = d.pos;
@@ -59,6 +60,8 @@ function renderCareerNew() {
   for (const b of $('cn-num').querySelectorAll('[data-n]')) b.setAttribute('aria-pressed', String(+b.dataset.n === d.num));
   $('cn-shirt').innerHTML = careerShirt(clubs[d.i], d.num, 'big');
 }
+function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; renderCareerNew(); }   // Men | Women: the career's teams are named for it (career.js)
+[...$('cn-cat').children].forEach((b, i) => b.addEventListener('click', () => careerCatPick(i)));
 [...$('cn-pos').children].forEach((b, i) => b.addEventListener('click', () => {
   const pos = i === 0 ? 'F' : 'B';
   if (careerDraft.pos !== pos) { careerDraft.pos = pos; careerDraft.num = CAREER_POS[pos][0]; }
@@ -67,7 +70,7 @@ function renderCareerNew() {
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('cn-go').addEventListener('click', () => {
   const d = careerDraft, club = careerClubs()[d.i];
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club })) return;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, cat:d.cat })) return;
   careerOpen();
 });
 $('cn-back').addEventListener('click', goHome);

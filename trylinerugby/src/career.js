@@ -7,9 +7,11 @@
      championship. Points are the championship's (4 a win, bonus points, 3 for a grand slam).
    - Minis and Juniors are your club against five other Local clubs drawn at random, every side at lowered ratings
      (Minis: one off every ability; Juniors: one off Pace and Power). County is Surrey against five invented county
-     sides. Pro Club is the city side you sign for (drawn from the France, Australia and South Africa lists when you
-     go up) against five others from its list. International is your country (picked when you are called up) against
-     the other five nations, at their own ratings.
+     sides. Pro Club is the city side you sign for (drawn from every national league when you go up: the career has no
+     country until the call-up) against five others from its league. International is your country (any of the twelve,
+     picked when you are called up) against the other five of its six, at their own ratings: the Six Nations, or New
+     Zealand, South Africa, Australia, Argentina, Fiji and Japan.
+   - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), nothing else.
    - Promotion at the end of a season: finish in the top two, or reach the stage's bar with your overall rating
      (CAREER_STAGES[].bar). Otherwise you play the stage again, against a new draw. A finished International season
      ends the career, whatever the table says.
@@ -45,7 +47,7 @@ const CAREER_COUNTIES = [
   { id:'MDX', name:'Middlesex', kit:'#0f5a32', trim:'#f2efe6', hoops:true, pace:4, power:4, handling:3, kicking:3, stamina:3 },
   { id:'BRK', name:'Berkshire', kit:'#5b2d8e', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:3 },
 ];
-const CAREER_PRO_POOLS = [FRANCE, AUSTRALIA, SOUTH_AFRICA];
+const CAREER_PRO_POOLS = NATIONAL;                  // the national leagues (data.js)
 const CAREER_POS = { F:[1, 2, 3], B:[4, 5, 6, 7] };   // sevens: forwards wear 1 to 3, backs 4 to 7
 /* A new player: about 61 overall, near the Minis sides. Any skill not listed starts at CAREER_BASE. */
 const CAREER_START = { F:{ pace:32, power:44, handling:36, kicking:26, stamina:38 }, B:{ pace:44, power:26, handling:38, kicking:34, stamina:34 } };
@@ -88,13 +90,16 @@ function careerSide(t, cut) {
 }
 const careerProSide = id => CAREER_PRO_POOLS.flat().find(t => t.id === id) || FRANCE[0];
 const careerNation = id => NATIONS.find(t => t.id === id) || NATIONS[0];
-function careerTeamFor(cr, stage) {
+const careerCat = cr => (cr && cr.cat === 'women' ? 'women' : 'men');   // Men | Women: Career has no Minis
+function careerTeamFor(cr, stage) { return catSide(careerTeamBase(cr, stage), careerCat(cr)); }
+function careerTeamBase(cr, stage) {
   if (stage <= 1) return careerSide(cr.club, CAREER_CUT[stage]);
   if (stage === 2) return careerSide(CAREER_COUNTIES[0]);
   if (stage === 3) return careerSide(careerProSide(cr.pro));
   return careerSide(careerNation(cr.country));
 }
-function careerOpponents(cr, stage) {               // five sides; the random draws happen here, never in a save or a render
+function careerOpponents(cr, stage) { return careerDraw(cr, stage).map(t => catSide(t, careerCat(cr))); }
+function careerDraw(cr, stage) {                     // five sides; the random draws happen here, never in a save or a render
   if (stage <= 1) {
     const mine = cr.club, same = t => t.id === mine.id || t.name === mine.name || (typeof importSame === 'function' && importSame(t.name, mine.name));   // an imported Farnham RFC is Farnham, as the import's own league draw has it
     const others = CLUBS.filter(t => !same(t));
@@ -105,7 +110,8 @@ function careerOpponents(cr, stage) {               // five sides; the random dr
     const me = careerProSide(cr.pro), pool = CAREER_PRO_POOLS.find(p => p.includes(me)) || FRANCE;
     return shuffle(pool.filter(t => t !== me)).slice(0, 5).map(t => careerSide(t));
   }
-  return NATIONS.filter(t => t.id !== careerNation(cr.country).id).map(t => careerSide(t));
+  const me = careerNation(cr.country), g = Math.floor(NATIONS.indexOf(me)/6)*6;   // the country's six: NATIONS in sixes
+  return NATIONS.slice(g, g + 6).filter(t => t !== me).map(t => careerSide(t));
 }
 /* A season: the championship's shape, with the weakest opponent first and the strongest last, as newChamp does. */
 function careerNewSeason(cr) {
@@ -123,7 +129,7 @@ function careerCreate(o) {
   if (!club) return null;
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
-  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, pro:null, country:null, skills,
+  const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, cat:careerCat(o), pro:null, country:null, skills,
     stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
   careerNewSeason(cr);
   return cr;
@@ -145,7 +151,7 @@ function careerOutcome(cr) {
   const final = cr.stage >= CAREER_STAGES.length - 1, top = place <= CAREER_UP, bar = st.bar != null && ovr >= st.bar;
   return { place, ovr, final, top, bar, promoted:!final && (top || bar) };
 }
-function careerSign(cr) {                            // going up to Pro Club: a city side from one of the three lists
+function careerSign(cr) {                            // going up to Pro Club: a city side from any national league
   const all = CAREER_PRO_POOLS.flat();
   cr.pro = all[Math.floor(rnd()*all.length)].id;
 }
@@ -309,7 +315,7 @@ function cleanCareer(c) {
     history.push(e);
   }
   const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
-  return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club,
+  return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, cat:careerCat(c),   // a career from before Men | Women is Men
     pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:NATIONS.some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
     skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
 }

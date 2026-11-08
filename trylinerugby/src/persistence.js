@@ -23,7 +23,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js)
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0 };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
@@ -90,6 +90,7 @@ function cleanSide(t) {
   if (t.key) team.key = String(t.key).slice(0, 24);
   if (HEX.test(t.alt)) team.alt = t.alt;
   if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
+  if (t.cat != null && catOf(t) === t.cat) team.cat = t.cat;   // Men | Women | Minis, kept as it was started; a side saved before it has none and is men's
   for (const [k] of ABILITIES) team[k] = clamp(Math.round(abilityOf(t, k) || 1), 1, 5);   // a side saved before Stamina gets 3
   return team;
 }
@@ -98,7 +99,7 @@ function cleanChamp(c) {
   if (!c || typeof c !== 'object' || Array.isArray(c) || !idx6(c.user)) return null;
   if (!Number.isInteger(c.round) || c.round < 0 || c.round > 5) return null;
   let teams;
-  if (!Array.isArray(c.teams)) teams = NATIONS.map(n => ({ ...n }));   // saved before clubs existed: indexes into NATIONS, in that order
+  if (!Array.isArray(c.teams)) teams = NATIONS.slice(0, 6).map(n => ({ ...n }));   // saved before clubs existed: indexes into the first six NATIONS, in that order
   else {
     if (c.teams.length !== 6) return null;
     teams = c.teams.map(cleanSide);
@@ -147,7 +148,8 @@ function cleanSettings(g) {
   if (Array.isArray(g.tut)) settings.tut = TUT_IDS.filter(id => g.tut.includes(id));   // only moments the game knows, each once, in the game's order
   if (typeof g.coach === 'boolean') settings.coach = g.coach;
   if (Array.isArray(g.tips)) settings.tips = COACH_IDS.filter(id => g.tips.includes(id));   // coach lines already heard, in the game's order, unknown ones dropped
-  if ('pool' in g) settings.pool = Number.isInteger(g.pool) && g.pool >= 0 && g.pool < POOLS.length ? g.pool : 0;
+  if ('pool' in g) settings.pool = poolKey(g.pool);   // an old save's index goes to the list it was (POOL_OLD)
+  if (TEAM_CATS.some(c => c.id === g.cat)) settings.cat = g.cat;   // a save from before Men | Women | Minis is Men
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
   if (typeof g.kids === 'boolean') settings.kids = g.kids;

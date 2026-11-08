@@ -19,10 +19,10 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok(S.ABILITIES.length === 5 && S.ABILITIES[4][0] === 'stamina' && S.ABILITIES[4][1] === 'Stamina' && S.ABILITIES[3][0] === 'kicking', `Stamina is the fifth ability, after Kicking (${S.ABILITIES.map(a => a[1]).join(' ')})`);
   ok(X.ALL_TEAMS.every(t => Number.isInteger(t.stamina) && t.stamina >= 1 && t.stamina <= 5), 'every built-in team has a Stamina of 1 to 5');
   ok(new Set(X.ALL_TEAMS.map(t => t.stamina)).size >= 4, `the sides differ in Stamina (${[...new Set(X.ALL_TEAMS.map(t => t.stamina))].sort().join(' ')})`);
-  const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA], top = Math.max(...clubs.map(sum));
+  const clubs = [...X.CLUBS, ...X.NATIONAL.flat()], top = Math.max(...clubs.map(sum));   // Local and every national league
   ok(top <= 5 + S.BUDGET, `no club tops a team you can make (${top} v ${5 + S.BUDGET})`);
   ok(S.BUDGET === 12, `a made team has 12 points: the old builder's 10 and 2 for Stamina 3 (${S.BUDGET})`);
-  ok(X.NATIONS.map(t => t.stamina).join() === '4,5,5,3,4,4', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')})`);
+  ok(X.NATIONS.map(t => t.stamina).join() === '4,5,5,3,4,4,5,5,4,4,4,4', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')})`);
 }
 
 // 2. reading Stamina, and a team without it
@@ -72,7 +72,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok(X.standings(c).length === 6, 'and its table still builds');
   const legacy = { user:0, round:0, fixtures:raw.fixtures, results:[] };   // saved before clubs: no teams, the nations by index
   X.setChamp(null); X.restore({ champ:legacy });
-  ok(X.champ() && X.champ().teams.map(t => t.stamina).join() === X.NATIONS.map(t => t.stamina).join(), 'a championship from before clubs takes the nations with their Stamina');
+  ok(X.champ() && X.champ().teams.map(t => t.stamina).join() === X.NATIONS.slice(0, 6).map(t => t.stamina).join(), 'a championship from before clubs takes the six nations with their Stamina');
   ok(S.cleanSide({ id:'ABC', name:'Side', stamina:7 }).stamina === 5 && S.cleanSide({ id:'ABC', name:'Side' }).stamina === 3, 'cleanSide holds Stamina to 1 to 5, 3 when missing');
   ok(S.cleanSide({ id:'ABC', name:'Side', stamina:3.6 }).stamina === 4 && X.cleanTeam({ name:'Side', stamina:3.6 }, 0).stamina === 4, 'the saves keep whole pips: a fraction comes back rounded (data.js, staminaOf)');
   const sim = X.simMatch;   // the other fixtures ignore Stamina: same draws, same result

@@ -252,6 +252,8 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   pages[LG] = html200('pitchero-league');
   D.openTeams('champ');
   ok($('t-grid').innerHTML.includes('id="t-import"') && $('t-grid').innerHTML.includes('Import Club') && $('t-league').hidden, 'the team screen has an Import Club card beside Create Team, and no My League yet');
+  X.poolPick(I.POOL);
+  ok(D.settings().pool === 'sur' && X.teamPool() === 'sur', 'My League cannot be picked before there is one');
   I.open();
   ok(I.state().step === 'link' && $('im-title').textContent === 'Paste Your Link' && !$('im-field').hidden && $('im-go').textContent === 'Import', 'in the app the card asks for the link');
   ok(focused === 'im-url' && I.focusEl(true) === $('im-go'), 'focus goes into the card, on the link field; a controller\'s ring starts on Import');
@@ -278,7 +280,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && X.rateOf(club) === TOP && I.ABILITIES.every(([k]) => club[k] === 3 || ((k === 'pace' || k === 'handling') && club[k] === 4)) && club.pace === 4 && club.handling === 4,
     `Save Club adds it through cleanTeam, the budget spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
-  ok($('m-import').hidden && D.settings().pool === I.POOL && !$('t-league').hidden, 'the card closes on My League');
+  ok($('m-import').hidden && D.settings().pool === I.POOL && X.teamPool() === 'my' && !$('t-league').hidden && !$('t-loc').hidden && $('t-nat').hidden, 'the card closes on My League, under Local beside Surrey');
   ok($('t-grid').innerHTML.includes('Sevenoaks') && $('t-grid').innerHTML.includes('Bracknell RFC'), 'My League lists the league and your teams');
   const sv = saved();
   ok(sv.importLeague.teams.length === 5 && sv.custom.some(t => t.name === 'Bracknell RFC'), 'both are in the browser save');
@@ -340,7 +342,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   I.alt();
   ok(I.league() && $('im-alt').textContent === 'Confirm Remove', 'it asks twice');
   focused = ''; I.alt();
-  ok(I.league() === null && saved().importLeague === null && D.settings().pool === 1 && $('im-alt').hidden && focused === 'im-url', 'then the league goes, from the save too, and focus is not left on a hidden button');
+  ok(I.league() === null && saved().importLeague === null && D.settings().pool === 'sur' && $('im-alt').hidden && focused === 'im-url', 'then the league goes, from the save too, the list back to Surrey, and focus is not left on a hidden button');
   $('im-back').click();
   ok($('t-league').hidden, 'and so does My League');
   I.setGate(null); native(false);
@@ -384,8 +386,11 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(I.league() === null, 'a broken league field reads as none');
   memory['tryline.v1'] = text; X.load();
   ok(I.league().teams.length === 2, 'the save written above still loads');
-  X.restore({ settings:{ pool:I.POOL } });
-  ok(D.settings().pool === 0, 'a saved My League choice falls back, as a bad list choice always has (the team screen opens on Local anyway)');
+  X.restore({ settings:{ pool:5 } });
+  ok(D.settings().pool === I.POOL && X.teamPool() === I.POOL, 'a My League choice saved before the hierarchy (5) is My League again');
+  X.restore({ settings:{ pool:I.POOL } }); I.setLeague(null);
+  ok(D.settings().pool === I.POOL && X.teamPool() === 'sur', 'and with no league saved the list shows Surrey (the team screen opens on Local anyway)');
+  I.setLeague(I.clean(lg));
 }
 
 // 8. My League in a championship: your club and five others, trimmed or topped up
@@ -444,7 +449,8 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   const title = s => s.split(' ').every((w, i) => (i > 0 && SMALL.has(w)) || /^[A-Z0-9]/.test(w));
   const labels = ['Import Club', 'Paste Your Link', 'Import', 'Importing', 'Save Club', 'Save League', 'Change Link', 'Remove League', 'Confirm Remove', 'Back to Teams', 'Paste', 'My League', 'Import Works in the Try Line App', 'Shirt', 'Trim'];
   for (const l of labels) ok(title(l) && (src + block).includes(l), `"${l}" is a Title Case label in use`);
-  ok(/My League[^<]*<\/button>/.test(html) && html.includes('<button id="t-league" hidden>My League</button>'), 'the pool control carries My League, hidden until there is one');
+  const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
+  ok(html.includes('<div class="seg" id="t-loc" hidden></div>') && menus.includes("btn('data-pool=\"my\" id=\"t-league\"', 'My League', ' hidden')"), 'Local\'s list carries My League after Surrey, hidden until there is one');
   ok(/typeof parentGate === 'function'\) parentGate\(go, cancel\)/.test(src), 'Import goes through parentGate(go, cancel) when the kids check is there');
   ok(Object.values(I.MSG).every(m => m.length <= 45 && /\.$/.test(m)), 'each message is one short plain sentence');
 }

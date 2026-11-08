@@ -462,15 +462,19 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const cn = $('cn-clubs').innerHTML;
   ok(cn.indexOf('Guildford') > 0 && cn.indexOf('Guildford') < cn.indexOf('Farnham') && /--kit:#1a1e4f/.test($('cn-shirt').innerHTML), 'Career\'s new player: Guildford first, and picked');
   X.setChamp(null); D.goHome(); $('b-champ').click();
-  ok(D.settings().pool === 1 && $('t-default').textContent === 'Play as Guildford' && !$('t-default').hidden, 'Championship opens on the club\'s list with Play as Guildford');
+  ok(D.settings().pool === 'sur' && X.teamPool() === 'sur' && $('t-default').textContent === 'Play as Guildford' && !$('t-default').hidden, 'Championship opens on the club\'s list (Local · Surrey) with Play as Guildford');
   ok(/data-i="0"[^>]*>[\s\S]*?Guildford/.test($('t-grid').innerHTML.split('data-i="1"')[0]), 'Guildford is the first card');
   S.FAN_CLUBS.push({ key:'toulouse', name:'Toulouse', product:'tryline.fan.toulouse', share:50, agreed:true, team:'TLS' });
   S.grant(['tryline.fan.toulouse']);
-  ok(S.homePool() === 2, 'a club in another list opens that list');
+  ok(S.homePool() === 'fra', 'a club in another list opens that list (National · France)');
+  X.setChamp(null); D.goHome(); $('b-champ').click();
+  ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && !$('t-nat').hidden && $('t-loc').hidden && !$('t-default').hidden && $('t-default').textContent === 'Play as Toulouse', 'and the team screen opens on National · France with Play as Toulouse');
+  X.poolPick('eng');
+  ok($('t-default').hidden, 'Play as Toulouse only shows on its own list');
   ok(S.first([X.CLUBS[0], X.FRANCE[1], X.FRANCE[0]]).map(t => t.id).join() === 'TLS,FAR,BOR', 'storeFirst moves the club to the front and keeps the rest in order');
   ok(S.first([{ ...X.FRANCE[0], custom:true }, X.CLUBS[0]])[0].custom, 'a team made by the player is never taken for the club');
   S.setBought([]);
-  ok(S.homePool() === 1 && S.homeTeam() === X.CLUBS[0], 'no Super Fan: Local, Farnham, as before');
+  ok(S.homePool() === 'sur' && S.homeTeam() === X.CLUBS[0], 'no Super Fan: Local · Surrey, Farnham, as before');
   S.setBought(['tryline.fan.oldclub']);
   ok(FEATURES.every(f => S.has(f)) && S.fan() === null && S.offers('champ').length === 0, 'a Super Fan of a club since dropped keeps everything it unlocked, with no badge');
   // careerClubs: the Super Fan's club first on the new player screen

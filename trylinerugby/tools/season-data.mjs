@@ -7,7 +7,9 @@ const source = ['persistence.js','championship.js'].map(f => fs.readFileSync(new
 const context = vm.createContext({ console, Date, Math, localStorage:{ getItem(){return null;}, setItem(k,v){context.stored=v;} } });
 vm.runInContext(`const NATIONS = Array.from({length:6},(_,i)=>({id:'AA'+String.fromCharCode(65+i),name:'Side '+i,pace:3,power:3,handling:3,kicking:3})), CLUBS=[], POOLS=[NATIONS, CLUBS], ALL_TEAMS=POOLS.flat(), ABILITIES=[['pace'],['power'],['handling'],['kicking']], BUDGET=12, MAX_CUSTOM=12, EARLY={games:3}; let practice=null, M=null; const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)); let randomCalls=0; const rnd=()=>{randomCalls++;return .5;}; const rateOf=t=>12;\n` + source, context);
 const run = s => vm.runInContext(s, context);
-run(fs.readFileSync(new URL('data.js', root), 'utf8').match(/^const staminaOf .*\nconst abilityOf .*$/m)[0]);   // data.js's ability readers, which cleanTeam and cleanSide call
+const data = fs.readFileSync(new URL('data.js', root), 'utf8');
+run(data.match(/^const staminaOf .*\nconst abilityOf .*$/m)[0]);   // data.js's ability readers, which cleanTeam and cleanSide call
+run('const TEAM_LISTS=[];\n' + data.match(/^const POOL_OLD [\s\S]*?\n}$/m)[0] + '\n' + data.match(/^const TEAM_CATS .*\nconst catOf .*$/m)[0]);   // and its list keys and categories, which cleanSettings and cleanSide read
 let checks=0;
 const ok=(expr,msg)=>{assert.ok(run(expr),msg);checks++;};
 run(`newChamp(NATIONS[0],NATIONS.slice(1)); const initialId=champ.id; const detail={conv:{att:2,made:1},pen:{att:1,made:1},dg:{att:1,made:0},tk:{att:9,made:7},duelN:{att:3,won:2},gain:123.7};`);
