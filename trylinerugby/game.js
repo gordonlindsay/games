@@ -3856,7 +3856,10 @@ function careerCups() {
   return { cupNew, cupFixture, cupRecord, cupWinner, cupLabel:typeof cupLabel === 'function' ? cupLabel : null,
     cleanCup:typeof cleanCup === 'function' ? cleanCup : null, cupTriple:typeof cupTriple === 'function' ? cupTriple : null };
 }
-const careerLocker = id => { if (typeof lockerEvent === 'function') lockerEvent(id); };   // a medal (the Locker): his first call-up, a transfer
+/* A medal (the Locker). The career's own: his first call-up ('callup'), a transfer ('transfer') and a Triple Crown ('triple', as it is
+   banked: the cups engine tells the Locker of one in Championship mode only). A cup he wins ('euro', 'world', 'tour') is the cups
+   engine's to tell (cupRecord, in Championship mode and in a career alike), never the career's, so it is never counted twice. */
+const careerLocker = id => { if (typeof lockerEvent === 'function') lockerEvent(id); };
 
 /* ---------- skills ---------- */
 function careerSkills() {                            // [key, label]: the team abilities, plus Stamina while the teams don't have it yet
@@ -3942,14 +3945,15 @@ function careerStart(o) {                            // Start Career on the new 
 /* ---------- the next match, and the end of a phase ---------- */
 const careerCupUser = cup => (Number.isInteger(cup && cup.user) ? cup.user : 0);   // his side's index in the cup's teams
 const careerCupKind = cr => (cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
-/* His next match in the phase: { teams, home, away, user, label }, or null when the phase is over (or there is no match: the
-   transfer window). Reads the season or the cup, draws nothing. */
+/* His next match in the phase: { teams, home, away, user, label, ko }, or null when the phase is over (or there is no match: the
+   transfer window). ko: a cup's knockout or Test (cupFixture's), which cannot end level; a season's match never is. Reads the season
+   or the cup, draws nothing. */
 function careerAhead(cr) {
   if (!cr || cr.phase === 'transfer') return null;
   const c = cr.season;
-  if (c) { if (c.round >= 5) return null; const { pair } = userFixture(c); return { teams:c.teams, home:pair[0], away:pair[1], user:c.user, label:'Round ' + (c.round + 1) + ' of 5' }; }
+  if (c) { if (c.round >= 5) return null; const { pair } = userFixture(c); return { teams:c.teams, home:pair[0], away:pair[1], user:c.user, label:'Round ' + (c.round + 1) + ' of 5', ko:false }; }
   const K = careerCups(), f = cr.cup && K ? K.cupFixture(cr.cup) : null;
-  return f ? { teams:cr.cup.teams, home:f.home, away:f.away, user:careerCupUser(cr.cup), label:f.label || '' } : null;
+  return f ? { teams:cr.cup.teams, home:f.home, away:f.away, user:careerCupUser(cr.cup), label:f.label || '', ko:!!f.ko } : null;
 }
 function careerPlace(c) { return standings(c).findIndex(r => r.i === c.user) + 1; }
 function careerTriple(c) {                           // a home nation that beat the other three: the cups engine's rule, else the championship's honours
@@ -3991,8 +3995,8 @@ function careerBank(cr, out) {                       // the phase just finished 
     cr.history.push({ year:cr.year, kind:out.kind, name, place:out.place, w:s.won, d:s.drawn, l:s.lost });
     cr.history = cr.history.slice(-CAREER_HISTORY);
     if (out.won) careerTrophy(cr, 'league', name);
-    if (out.triple) careerTrophy(cr, 'triple', name);
-  } else if (out.won) careerTrophy(cr, out.kind, cr.cup.teams[careerCupUser(cr.cup)].name);
+    if (out.triple) { careerTrophy(cr, 'triple', name); careerLocker('triple'); }
+  } else if (out.won) careerTrophy(cr, out.kind, cr.cup.teams[careerCupUser(cr.cup)].name);   // its medal is the cups engine's (cupRecord)
 }
 /* Into a phase: its season, cup or offers drawn now, once, and saved with it. */
 function careerEnter(cr, next) {
@@ -4110,13 +4114,18 @@ function careerArm() {                               // straight after startMatc
   traitsArm();                                       // his own traits, and his shirt kept for him (src/traits.js)
   careerKickoff();
 }
+/* startMatch's options for his next match f: Easy for My Player on Kids, and for a cup match the cup's id and whether it is a knockout
+   or a Test (cupKO), which newMatch keeps on the match for the cups engine's rules (the Golden Try in a level knockout), as it keeps
+   champ. The career sets nothing of the cup's on the match itself. */
+function careerMatchOpts(cr, f) {
+  const o = cr.proMode === true && kidsLevel() ? { easy:true } : undefined;   // My Player on Kids plays at Easy: the computer runs his side, so Kids' weaker opponents would let it win by itself (the owner's call)
+  return !cr.season && cr.cup ? { ...o, cup:cr.cup.id, cupKO:!!f.ko } : o;
+}
 function careerPlay() {                              // Play Match on the hub
   const cr = career, f = careerAhead(cr);
   if (practice || !f) return false;
-  const opp = f.home === f.user ? f.away : f.home, cup = !cr.season && cr.cup;
-  const o = cr.proMode === true && kidsLevel() ? { easy:true } : undefined;   // My Player on Kids plays at Easy: the computer runs his side, so Kids' weaker opponents would let it win by itself (the owner's call)
-  startMatch(f.teams[f.user], f.teams[opp], false, cup ? { ...o, cup:cup.id } : o);
-  if (cup) M.cup = cup.id;                           // a cup match: the cups engine's rules for one (its Golden Try) read it, as they read M.champ
+  const opp = f.home === f.user ? f.away : f.home;
+  startMatch(f.teams[f.user], f.teams[opp], false, careerMatchOpts(cr, f));
   careerArm();
   return true;
 }
@@ -4165,7 +4174,10 @@ function careerRecordResult() {
     for (const p of c.fixtures[c.round]) if (p !== pair) rd.push(simMatch(c, p[0], p[1]));
     c.results.push(rd);
     c.round++;
-  } else careerCups().cupRecord(cr.cup, home ? { score:[us[0], them[0]], tries:[us[1], them[1]] } : { score:[them[0], us[0]], tries:[them[1], us[1]] });   // in the fixture's order
+  } else {
+    careerCups().cupRecord(cr.cup, home ? { score:[us[0], them[0]], tries:[us[1], them[1]] } : { score:[them[0], us[0]], tries:[them[1], us[1]] });   // in the fixture's order
+    careerCupCard();                                 // the result is in the cup: the full-time card says what it meant (src/ui-career.js)
+  }
   const deeds = M.careerDeeds || {}, gains = careerDeedGains(deeds);
   for (const k in gains) cr.skills[k] = clamp(cr.skills[k] + gains[k], 1, 99);
   const T = cr.totals;
@@ -4192,8 +4204,10 @@ function careerTrophies(list) {
 /* A career from before club seasons has a stage (0 Minis, 1 Juniors, 2 County, 3 Pro Club, 4 International) and no phase. Minis,
    Juniors and County become a league year at their club, a new season drawn as the hub opens; Pro Club is a year at the side he
    signed for, its season kept; International keeps that club and his country, in the window with its season. Its skills, history,
-   totals and life are kept, and the titles in its history are its first trophies. A club and skills are the career: anything
-   else that is broken is put right, never the whole career dropped. */
+   totals and life are kept, and the titles in its history are its first trophies. A Minis, Juniors or County season he had finished
+   (its end screen seen, Continue not yet pressed) is banked here as Continue would have banked it, since its season is not kept: its
+   place and record into his history (a title into his trophies), and he starts the year after it. A club and skills are the career:
+   anything else that is broken is put right, never the whole career dropped. */
 function cleanCareer(c) {
   if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
   const raw = c.skills && typeof c.skills === 'object' && !Array.isArray(c.skills) ? c.skills : null;
@@ -4224,7 +4238,15 @@ function cleanCareer(c) {
     offers = [...new Set(c.offers.filter(id => typeof id === 'string' && careerClubById(id) && (club.custom || id !== club.id)))].slice(0, CAREER_MOVE.offers[1]);
     if (!offers.length) offers = null;               // drawn again as the hub opens
   }
-  const year = careerInt(c.year, 1, 9999) || (was != null ? Math.max(1, careerInt(c.seasons, 1, 9999) || history.length + 1) : 1);
+  let year = careerInt(c.year, 1, 9999) || (was != null ? Math.max(1, careerInt(c.seasons, 1, 9999) || history.length + 1) : 1);
+  const done = was != null && was < 3 && c.season != null ? cleanChamp(c.season) : null;   // the old stage's season, banked only if finished
+  if (done && done.round >= 5) {
+    const s = seasonSummary(done);
+    year = Math.max(year, history.length ? history[history.length - 1].year + 1 : 1);
+    history.push({ year, kind:'league', name:careerText(done.teams[done.user].name), place:careerPlace(done), w:s.won, d:s.drawn, l:s.lost });
+    if (history.length > CAREER_HISTORY) history.shift();
+    year++;
+  }
   const trophies = Array.isArray(c.trophies) ? careerTrophies(c.trophies) : careerTrophies(history.filter(h => h.place === 1).map(h => ({ kind:'league', year:h.year, name:h.name })));
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, league:careerLeagueKey(c.league, club), cat,
     proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
@@ -9508,6 +9530,9 @@ function careerTeamNow(cr) {
   if (cr.cup && Array.isArray(cr.cup.teams) && cr.cup.teams[careerCupUser(cr.cup)]) return cr.cup.teams[careerCupUser(cr.cup)];
   return careerTeamFor(cr);
 }
+/* Full time in a career cup match, its result in the cup: the full-time card reads the cup's own line (Through to the Final, Test Won ·
+   Series 1 – 0: cupBreakLine, src/ui-cups.js) in place of table points, as a cup match in Championship mode does. */
+function careerCupCard() { if (M) M.cupResultDone = true; }
 /* The eyebrow over the hub, the table and the screen between phases: Bath · Year 2, England · International,
    European Cup · Semi-Final, World Cup · Pool B, Home Nations Tour · Test 2 of 3 (a finished cup: its year). */
 function careerEyebrow(cr) {
@@ -10283,7 +10308,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
-  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
+  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
   careerPro:{ PRO, pinned:proPinned, run:proRun, spirit:proSpirit, open:proOpen, pass:proPass, carrier:proCarrier, canCall:proCanCall, call:proCall, calling:proCalling, skip:proSkip, mark:proMark, modePick:careerModePick, draft:() => careerDraft },
   careerLife:{ LIFE:CAREER_LIFE, KEYS:CAREER_LIFE_KEYS, COL:CAREER_LIFE_COL, DILEMMAS:CAREER_DILEMMAS, PLANS:CAREER_DILEMMA_PLANS, fresh:careerLifeNew, clean:careerLifeClean, spirit:careerSpirit, morale:careerMorale, energy:careerEnergy, tired:careerLifeTired, plan:careerDilemmaPlan, dilemma:careerDilemma, key:careerDilemmaKey, choose:careerLifeChoose, pick:careerLifePick, train:careerLifeTrain, round:careerLifeRound, arm:careerLifeArm, hands:careerLifeHands, pass:careerLifePass, support:careerLifeSupport, chip:careerLifeChip, barsHtml:careerLifeBarsHtml, dilemmaHtml:careerDilemmaHtml, render:careerLifeRender, hash:careerLifeHash },
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },

@@ -30,6 +30,9 @@ function careerTeamNow(cr) {
   if (cr.cup && Array.isArray(cr.cup.teams) && cr.cup.teams[careerCupUser(cr.cup)]) return cr.cup.teams[careerCupUser(cr.cup)];
   return careerTeamFor(cr);
 }
+/* Full time in a career cup match, its result in the cup: the full-time card reads the cup's own line (Through to the Final, Test Won ·
+   Series 1 – 0: cupBreakLine, src/ui-cups.js) in place of table points, as a cup match in Championship mode does. */
+function careerCupCard() { if (M) M.cupResultDone = true; }
 /* The eyebrow over the hub, the table and the screen between phases: Bath · Year 2, England · International,
    European Cup · Semi-Final, World Cup · Pool B, Home Nations Tour · Test 2 of 3 (a finished cup: its year). */
 function careerEyebrow(cr) {

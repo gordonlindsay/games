@@ -80,7 +80,7 @@ function stubCups() {
       return { id, user:0, teams:[user, ...opps].map(t => ({ ...t })), labels, results:[], won:0, lost:0 };
     },
     done:c => (c.id === 'tour' ? c.won >= 2 || c.lost >= 2 : c.lost > 0 || c.results.length >= c.labels.length),
-    cupFixture(c) { if (S.done(c)) return null; const k = c.results.length, opp = 1 + (k % (c.teams.length - 1)); return k % 2 ? { home:opp, away:c.user, label:c.labels[k] } : { home:c.user, away:opp, label:c.labels[k] }; },
+    cupFixture(c) { if (S.done(c)) return null; const k = c.results.length, opp = 1 + (k % (c.teams.length - 1)), ko = !/^Pool/.test(c.labels[k]); return k % 2 ? { home:opp, away:c.user, label:c.labels[k], ko } : { home:c.user, away:opp, label:c.labels[k], ko }; },   // ko: a knockout or a Test, never a pool match
     cupRecord(c, r) { log.push(['record', c.id, r]); const f = S.cupFixture(c), h = f.home === c.user, us = h ? r.score[0] : r.score[1], them = h ? r.score[1] : r.score[0]; c.results.push([us, them]); if (us > them) c.won++; else c.lost++; },
     cupWinner:c => (S.done(c) ? ((c.id === 'tour' ? c.won >= 2 : c.lost === 0) ? c.user : 1) : -1),
     cupLabel(c) { const f = S.cupFixture(c); return f ? f.label : ''; },
@@ -91,6 +91,7 @@ function stubCups() {
 }
 // the Locker's medals: its own lockerEvent once it is in the build, else a stand-in here that counts them
 const LOCKER = /function lockerEvent\b/.test(readGameSource()), medals = [];
+const CUPS_ENGINE = /function cupNew\b/.test(readGameSource());   // the real cups engine (src/cups.js) in this build: section 3c plays it
 if (!LOCKER) globalThis.lockerEvent = id => medals.push(id);
 C.setCups(false);                                    // no cups unless a section brings its stand-in
 
@@ -235,6 +236,7 @@ C.setCups(false);                                    // no cups unless a section
   ok($('ce-title').textContent === 'Triple Crown' && $('ce-title').classList.contains('gold'), 'the screen says so');
   C.advance();
   ok(cr.trophies.at(-1).kind === 'triple' && cr.trophies.at(-1).name === 'Wales' && cr.trophies.at(-1).year === 5, 'and it is in his cabinet');
+  ok(LOCKER || medals.join() === 'triple', `and the Locker hears of it, once, as it is banked (${medals})`);
   // the transfer offers, measured
   const target = C.target;
   ok(target(61) === 61 && target(99) === 75 && target(40) === 61 && Math.abs(target(80) - 68) < 1e-9 && Math.abs(target(70) - (61 + 9*14/38)) < 1e-9, 'his overall 61 to 99 maps onto the clubs\' 61 to 75, linearly and capped');
@@ -260,7 +262,7 @@ C.setCups(false);                                    // no cups unless a section
 
 // 3b. the year with the cups engine (a stand-in by its contract): the European Cup, the World Cup and the Home Nations Tour
 {
-  const S = stubCups(); C.setCups(S);
+  const S = stubCups(); C.setCups(S); medals.length = 0;
   const bath = C.create({ pos:'B', num:7, club:X.ENGLAND[0] }); C.set(bath); bath.year = 2;
   finish(bath, 1); let out = C.outcome(bath);
   ok(out.won && json(out.next) === json({ phase:'cup', kind:'euro' }), 'Bath win England: the European Cup next');
@@ -269,9 +271,12 @@ C.setCups(false);                                    // no cups unless a section
   ok(bath.phase === 'cup' && bath.season === null && bath.cup && bath.cup.id === 'euro' && made[1] === 'euro' && made[2].user.id === 'BTH' && made[2].cat === 'men' && made[2].list === 'eng' && made[2].year === 2, `cupNew('euro', { user:Bath, cat, list:'eng', year })`);
   ok(bath.trophies.length === 1 && bath.trophies[0].kind === 'league', 'the league title banked first');
   ok(C.ahead(bath).label === 'Semi-Final' && C.eyebrow(bath) === 'European Cup · Semi-Final' && !L.dilemma(bath) && C.drills(bath).length > 0 && !bath.trained, 'the hub: European Cup · Semi-Final, training before it, no dilemma');
-  ok(C.play() && T.M.career === true && T.M.cup === 'euro' && T.M.nat[0].id === 'BTH' && T.M.nat[1].id === 'TLS', 'Play Match: a career match flagged as the cup\'s (M.cup)');
-  T.M.half = 2; T.M.score = [17, 5]; T.M.tries = [3, 1]; T.M.careerDeeds = { tries:1, tackles:0, goals:0 }; T.arcade.endHalf(); D.exitMatch();
+  ok(C.ahead(bath).ko === true && json(C.matchOpts(bath, C.ahead(bath))) === json({ cup:'euro', cupKO:true }), 'a cup match hands startMatch the cup and that it is a knockout (cupKO), as Championship mode\'s cup matches do');
+  ok(C.play() && T.M.career === true && T.M.nat[0].id === 'BTH' && T.M.nat[1].id === 'TLS' && (CUPS_ENGINE ? T.M.cup === 'euro' && T.M.cupKO === true : !('cup' in T.M)), `Play Match: a career match; the cup's id and cupKO on it are newMatch's (the cups engine's), never set by the career (${CUPS_ENGINE ? 'cups in the build' : 'no cups in the build'})`);
+  T.M.half = 2; T.M.score = [17, 5]; T.M.tries = [3, 1]; T.M.careerDeeds = { tries:1, tackles:0, goals:0 }; T.arcade.endHalf();
+  const cardIn = T.M.cupResultDone === true; D.exitMatch();
   ok(json(S.log.at(-1)) === json(['record', 'euro', { score:[17, 5], tries:[3, 1] }]) && bath.cup.results.length === 1 && bath.totals.matches === 1 && C.last().gains.pace === 1, 'full time: into the cup in the fixture\'s order (his side at home), the deeds into his skills');
+  ok(cardIn, 'and the result is in for the full-time card (M.cupResultDone), which reads the cup\'s line in place of table points');
   ok(C.ahead(bath).label === 'Final' && C.ahead(bath).home !== 0, 'the Final, away');
   C.play(); T.M.half = 2; T.M.score = [22, 12]; T.M.tries = [4, 2]; T.arcade.endHalf(); D.exitMatch();
   ok(json(S.log.at(-1)[2]) === json({ score:[12, 22], tries:[2, 4] }) && bath.cup.won === 2, 'away: the result handed over home side first');
@@ -281,6 +286,7 @@ C.setCups(false);                                    // no cups unless a section
   ok($('ce-title').textContent === 'Winners' && $('ce-eyebrow').textContent === 'European Cup · Year 2', 'the screen: Winners');
   C.advance();
   ok(bath.trophies.map(t => t.kind).join() === 'league,euro' && bath.phase === 'transfer', 'and the European Cup is in his cabinet');
+  ok(LOCKER || medals.length === 0, `its medal is the cups engine's (cupRecord), never the career's too (${medals})`);
   // a European Cup lost, and a league outside Europe
   const lost = C.create({ pos:'B', num:7, club:X.FRANCE[0] }); C.set(lost); finish(lost, 1); C.advance();
   C.play(); T.M.half = 2; T.M.score = [3, 20]; T.M.tries = [0, 4]; T.arcade.endHalf(); D.exitMatch();
@@ -316,7 +322,8 @@ C.setCups(false);                                    // no cups unless a section
   out = C.outcome(p);
   ok(out.kind === 'tour' && out.won && out.next.phase === 'transfer', 'two Tests of three won: the series');
   C.renderEnd(); ok($('ce-title').textContent === 'Series Won', 'Series Won');
-  C.advance(); ok(p.trophies.at(-1).kind === 'tour' && p.trophies.at(-1).name === 'Home Nations', 'the tour in his cabinet');
+  medals.length = 0;
+  C.advance(); ok(p.trophies.at(-1).kind === 'tour' && p.trophies.at(-1).name === 'Home Nations' && (LOCKER || medals.length === 0), `the tour in his cabinet, its medal the cups engine's (${medals})`);
   // the save: a cup is kept through cleanCup; a build without the cups moves on to the window
   const e = C.create({ pos:'B', num:7, club:X.ENGLAND[0] }); C.set(e); finish(e, 1); C.advance();
   const back = C.clean(json2(e));
@@ -357,6 +364,56 @@ C.setCups(false);                                    // no cups unless a section
   };
   const two = script(2), one = script(1);
   ok(two === 3 && one === 4, `a scripted player is first called up in year 3 (two stars a session) or year 4 (one star): ${two} and ${one}`);
+}
+
+// 3d. the real cups engine, once the build has it (src/cups.js): a career cup match is the cups engine's match (M.cup and M.cupKO,
+//     from newMatch), its full-time card is the cup's own line and never table points, a level knockout goes to the Golden Try, a
+//     pool match keeps its draw, and a cup won tells the Locker once (cupRecord), the career adding nothing. Without the engine,
+//     careerCups() is null and every cup phase is skipped (section 3); section 3b covers the career's side of the contract.
+{
+  C.setCups(null);                                   // the build's own cups engine, if it has one
+  if (!CUPS_ENGINE) ok(C.cups() === null, 'no cups engine in this build: none for the career (this section plays the real one once src/cups.js is in)');
+  else {
+    const card = () => ($('br-pts').hidden ? '' : $('br-pts').textContent);
+    const full = (us, them, tu, tt) => { T.M.half = 2; T.M.score = [us, them]; T.M.tries = [tu, tt]; T.arcade.endHalf(); };
+    medals.length = 0;
+    const bath = C.create({ pos:'B', num:7, club:X.ENGLAND.find(t => t.id === 'BTH') }); C.set(bath); bath.year = 2;
+    finish(bath, 1); C.advance();
+    ok(bath.phase === 'cup' && bath.cup && bath.cup.id === 'euro' && C.ahead(bath).label === 'Semi-Final' && C.ahead(bath).ko === true && C.eyebrow(bath) === 'European Cup · Semi-Final', 'Bath win England: the European Cup, a Semi-Final, a knockout');
+    C.play();
+    ok(T.M.career === true && T.M.cup === 'euro' && T.M.cupKO === true && T.arcade.goldenOn(), 'Play Match: the cup\'s knockout (M.cup, M.cupKO), with the Golden Try');
+    full(10, 10, 2, 2);
+    ok(T.M.golden && !T.M.over && bath.cup.results.length === 0, 'level at full time: the Golden Try, nothing recorded yet');
+    T.M.score = [15, 10]; T.M.tries = [3, 2]; T.arcade.endHalf();
+    ok(T.M.over && T.M.cupResultDone === true && card() === 'Through to the Final', `the try wins it: the full-time card is the cup's line (${card()})`);
+    D.exitMatch();
+    ok(shown() === 's-career' && C.ahead(bath).label === 'Final', 'back to the hub: the Final next');
+    C.play(); full(30, 0, 6, 0);
+    ok(card() === 'European Cup Winners' && !/Table Point/.test(card()), `the Final won: European Cup Winners, no table points (${card()})`);
+    D.exitMatch();
+    ok(C.outcome(bath).won, 'European Cup won');
+    C.advance();
+    ok(bath.trophies.map(t => t.kind).join() === 'league,euro' && (LOCKER || medals.join() === 'euro'), `in his cabinet, and its medal told once, by the cups engine (${medals})`);
+    // the Home Nations Tour: Test 1 of 3
+    const p = C.create({ pos:'F', num:2, club:X.CELTIC[3] }); C.set(p); p.year = 6; p.country = 'IRE'; skillsTo(p, overallAt(95));
+    finish(p, 4); C.advance(); finish(p, 3); C.advance();
+    ok(p.phase === 'tour' && p.cup.id === 'tour' && C.ahead(p).label === 'Test 1 of 3' && C.ahead(p).ko === true, 'Ireland, year 6: the Home Nations Tour, Test 1 of 3');
+    C.play();
+    ok(T.M.cup === 'tour' && T.M.cupKO === true && T.arcade.goldenOn(), 'a Test cannot end level: the Golden Try');
+    full(20, 10, 3, 1);
+    ok(card() === 'Test Won · Series 1 – 0', `the card: Test Won · Series 1 – 0 (${card()})`);
+    D.exitMatch();
+    // the World Cup: a pool match keeps its draw
+    const w = C.create({ pos:'B', num:7, club:X.CLUBS[0] }); C.set(w); w.year = 4; w.country = 'ENG'; skillsTo(w, overallAt(85));
+    finish(w, 3); C.advance();
+    ok(w.phase === 'intl' && w.cup && w.cup.id === 'world' && /^Pool [ABCD]$/.test(C.ahead(w).label) && C.ahead(w).ko === false, `England, year 4: the World Cup, ${C.ahead(w).label}, no knockout`);
+    C.play();
+    ok(T.M.cup === 'world' && T.M.cupKO === false && !T.arcade.goldenOn(), 'a pool match: no Golden Try');
+    full(10, 10, 2, 2);
+    ok(T.M.over && !T.M.golden && T.M.cupResultDone === true && card() === '+2 Table Points · Draw', `level: the draw stands, the cup's pool line (${card()})`);
+    D.exitMatch();
+  }
+  C.setCups(false); C.set(null);
 }
 
 // 4. training: stars into skills
@@ -445,6 +502,7 @@ C.setCups(false);                                    // no cups unless a section
   ok((mine.h === 0 ? mine.hs : mine.as) === 12 && (mine.h === 0 ? mine.ht : mine.at) === 2, 'the score follows your side home or away');
   ok(cr.season.results[0].length === 3, 'the other two games are drawn');
   ok(!C.record() && cr.season.round === 1, 'a second full time records nothing');
+  ok(!T.M.cupResultDone && /^\+4 Table Points · Win$/.test($('br-pts').textContent) && !$('br-pts').hidden, `a league match's full-time card: its table points, no cup's line (${$('br-pts').textContent})`);
   D.exitMatch();
   ok(shown() === 's-career', 'Continue goes back to the career hub');
   C.set(null);
@@ -568,6 +626,19 @@ C.setCups(false);                                    // no cups unless a section
   }
   C.open();
   ok(shown() === 's-career' && C.get().season && C.get().season.teams[0].id === 'ALD' && C.get().season.teams[0].pace === ALD.pace && C.get().phase === 'league', 'the hub draws its league season, Aldershot at full strength');
+  // one whose season he had finished (its end screen seen, Continue not pressed): banked as Continue would have, the year after it next
+  const doneSeason = place => { const p = C.create({ pos:'B', num:7, club:ALD }); finish(p, place); return json2(p.season); };
+  for (const [stage, name, place] of [[0, 'Minis', 2], [1, 'Juniors', 6], [2, 'County', 1]]) {
+    X.restore({ career:was(stage, { season:doneSeason(place) }) });
+    const k = C.get();
+    ok(k && k.phase === 'league' && k.season === null && k.year === 5 && k.history.length === 4 && json(k.history[3]) === json({ year:4, kind:'league', name:'Aldershot', place, w:6 - place, d:0, l:place - 1 }), `a finished ${name} season (place ${place}): into his history as year 4, and year 5 next (year ${k && k.year}, ${json(k && k.history.at(-1))})`);
+    ok(json(k.trophies) === json([{ kind:'league', year:1, name:'Aldershot' }, ...(place === 1 ? [{ kind:'league', year:4, name:'Aldershot' }] : [])]), `${place === 1 ? 'its title a trophy' : 'no title, no trophy'} (${json(k.trophies)})`);
+  }
+  const unfinished = was(2, { season:(() => { const p = C.create({ pos:'B', num:7, club:ALD }); finish(p, 1); p.season.round = 4; p.season.results.pop(); return json2(p.season); })() });
+  X.restore({ career:unfinished });
+  ok(C.get().year === 4 && C.get().history.length === 3 && C.get().trophies.length === 1, 'one he had not finished is dropped, banked nowhere');
+  X.restore({ career:was(2, { season:doneSeason(1), history:[], seasons:0 }) });
+  ok(C.get().year === 2 && json(C.get().history) === json([{ year:1, kind:'league', name:'Aldershot', place:1, w:5, d:0, l:0 }]) && C.get().trophies.length === 1, 'with no history or season count: year 1 banked, year 2 next');
   const proSeason = C.create({ pos:'B', num:7, club:TLS }).season;
   X.restore({ career:was(3, { pro:'TLS', season:proSeason }) });
   let k = C.get();
