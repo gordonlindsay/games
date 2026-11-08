@@ -262,10 +262,12 @@ let teamList = [];
 function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
+  const stars = teamTraitNames(t);                         // the star traits its 5s bring (src/traits.js)
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
       ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
+      ${stars.length ? `<span class="tstars" aria-label="Star Traits: ${stars.join(', ')}">${stars.map(n => `<b>${n}</b>`).join(' · ')}</span>` : ''}
     </button>`;
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }

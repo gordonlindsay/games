@@ -99,6 +99,7 @@ function newMatch(u, c, opts) {
       bind:null, bindOff:null, offside:0, sprint:0, sprinting:false, stumble:0, stumbleMul:1, wf:0, drawFrom:null, fend:0, fendA:0, bite:0, biteTo:null, dumAt:-9 });   // contact: the bind he is in, how long he is retiring, his sprint, a stumble, wrong-footed; then render-only smoothing and the fend; a Dummy he bought (bite: seconds left running at biteTo) and, for a CPU carrier, when he last sold one
   }
   M.side[0].ctrl = M.players[3]; if (humans[1]) M.side[1].ctrl = M.players[10];
+  traitsArm();                                             // the star traits, in a match you play only (src/traits.js)
   for (const inp of inputs) inp.gest = null;               // the open-play gesture history starts clean
   M.tut = null; hintReset(); coachUntil = 0;               // the hints cards start hidden, the open-play hints unshown, and a coach line from the last match does not hold the next one
   kickoff(M.firstKick);
@@ -111,9 +112,9 @@ function maxSpeed(p) {
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
   if (onFire(p.team)) f *= ARCADE.fire.speed;
-  f *= staminaPace(p.team);                                  // tired legs late in a half (1 outside matches you play)
+  f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
-  if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
+  if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp)*traitBurst(p, sp);   // a Burst sprints a little quicker
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
   if (p.wf > 0) f *= RUCK.wf.mul;
   if (M.career) f *= careerFade(p);                         // a career match: your player's stamina, late in the half
@@ -129,7 +130,7 @@ function ourBall(t) {                                      // side t has it: hel
 function userActive(t) { return !!ctrlOf(t) && (M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'ruck')); }   // the stick stays live through a ruck, on the man who will pick the ball up
 
 function steer(p, tvx, tvy, acc, dt) {
-  const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt;
+  const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt*traitAcc(p);   // a Burst gets going quicker while he sprints (src/traits.js)
   if (m <= a) { p.vx = tvx; p.vy = tvy; } else { p.vx += dx/m*a; p.vy += dy/m*a; }
 }
 function seek(p, tx, ty, speed, acc, dt, pursue) {
@@ -253,8 +254,10 @@ function catchBall(p, kind) {
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
   if (M.career) k *= careerLifeHands(p, kind, f);          // a career match: Team Spirit, on a pass to or from your player
-  if (rnd() < k) { knockOn(p); return; }
+  const r = rnd();
+  if (r < traitHands(p, k)) { knockOn(p); return; }        // Safe Hands: hardly ever
   setCarrier(p);
+  traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }

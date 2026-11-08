@@ -15,6 +15,7 @@
   "championship.js",
   "career.js",
   "career-pro.js",
+  "traits.js",
   "render-pitch.js",
   "render-setpieces.js",
   "render-duels.js",

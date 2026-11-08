@@ -63,7 +63,7 @@ const SCRUM_LEVEL = [0.10, 0, 0], LINE_LEVEL = [0.06, 0, 0];
 function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
   let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
-  p += (M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team))*0.05;   // a career match: your player's own power
+  p += ((M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team)) + traitEdge(q, c))*0.05;   // a career match: your player's own power. An Engine keeps most of his (src/traits.js)
   if (M.kids && isHuman(q.team) && mode !== 'ai') p += KIDS.tackle;   // Kids: your ringed man's contact tackle and dive
   if (stepped) p *= MOVES.step.odds;
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;

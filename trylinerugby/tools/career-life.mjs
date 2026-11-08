@@ -17,7 +17,9 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    menus' demo and the Defend a Breakaway drill; then a career match with the bars at rest (Energy 100, Morale 50, Team
 //    Spirit 50), which must play exactly as a career match did before the bars. Pinned from 30e13e2, the commit before them:
 //    GAME=<30e13e2's trylinerugby/index.html> node tools/career-life.mjs --pins
-const BASE = { others:'1vg5qro 1fohttg opguqv 1h7fv95 83k82g', rest:'1p6a14j' };
+//    The championship match (third) is re-pinned for star traits (src/traits.js), which act in matches you play between star
+//    sides: with traitOn forced off the merged build gives 30e13e2's opguqv again.
+const BASE = { others:'1vg5qro 1fohttg kkk9ft 1h7fv95 83k82g', rest:'1p6a14j' };
 const runOut = (side = 0) => { let n = 0; while (!T.M.over && n < 400000) { bot(side); T.update(T.STEP); n++; } return n; };
 const pos = () => T.M.players.map(p => [p.x.toFixed(6), p.y.toFixed(6)]).join(';');
 function others() {

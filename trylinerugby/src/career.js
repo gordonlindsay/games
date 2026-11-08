@@ -221,6 +221,7 @@ function careerArm() {                               // straight after startMatc
   M.careerNat = careerNatFor(M.nat[0], career.skills);
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
   careerLifeArm();                                   // the bars as they are now, for the whole match: Energy and Morale into M.careerNat
+  traitsArm();                                       // his own traits, and his shirt kept for him (src/traits.js)
   careerKickoff();
 }
 function careerPlay() {                              // Play Match on the hub

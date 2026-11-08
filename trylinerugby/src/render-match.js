@@ -33,6 +33,7 @@ function render(dt) {
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
   if (M.career) careerMark(r);                             // a career match: your player's ring and the star on his back
+  if (M.arcade) traitMarks(r);                             // a match you play: a gold star on each star player's shoulder (src/traits.js)
   // A short cue only where a decision matters; free pass targets keep just their ring.
   // Suppress edge cues rather than detach a label from an off-screen player or cover the scorebug.
   const targetCue = (q, text, colour) => {
