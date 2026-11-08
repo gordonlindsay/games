@@ -30,7 +30,7 @@ function penChoice(team, x, y, c, g) {
   } else startSet({ kind:'tap', team, x, y, t:0.8, snap:true, label:'Tap and Go', then:s => releaseTo(s.team, s.x, s.y, 'tap') });
 }
 function scoreTry(p) {
-  if (practice) { practiceFinish(practice.id === 'pass' && p.team === 0 && practice.completedPass, p.team === 0 ? (practice.completedPass ? 'You moved the ball to support and finished the attack.' : 'Draw the defender, then pass to your supporting runner before scoring.') : 'The runner got through. Switch into cover and run towards the ball.'); return; }
+  if (practice) { practiceTry(p); return; }
   const team = p.team;
   M.score[team] += 5; M.tries[team]++;
   if (M.career) careerDeed('tries', p);                    // a career match: a try by your player
@@ -235,7 +235,7 @@ function verdictLow(g) {                                   // the banner goes un
   return kickView(g, cam, g.X.t, p.x, p.y, p.h).sy < 0.55*V.H;
 }
 function settleGoal(g) {
-  if (practice && practice.id === 'kick') { practiceFinish(g.ok, g.ok ? 'Between the posts. Read the wind, then release in gold.' : 'Check the wind and arrow; hold Kick and release in the gold band.'); return; }
+  if (practice && practiceGoal(g)) return;
   const w = toWorld(g.team, g.X.x, g.X.y), x = clamp(w.x, 0, 120), y = clamp(w.y, 0, 70);
   placeBall(x, y);
   const { team, ok, kind } = g;

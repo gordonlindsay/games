@@ -146,6 +146,7 @@ function resolveContact(k) {                               // the end of the bin
     } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
   }
   const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more
+  if (practice && practiceTackle(c, q)) return;            // a drill takes a made tackle before the ball can jolt loose
   if (rnd() < jolt) {
     st('jolts');
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
@@ -156,7 +157,7 @@ function resolveContact(k) {                               // the end of the bin
   tackle(c, q, { tier, q2 });
 }
 function tackle(c, q, o) {
-  if (practice && practice.id === 'defend' && c.team === 1) { practiceFinish(practice.switched && q === ctrlOf(0), practice.switched && q === ctrlOf(0) ? 'You switched into cover and stopped the runner.' : 'Switch to the defender ahead of the ball, then meet the runner.'); return; }
+  if (practice && practiceTackle(c, q)) return;
   o = o || {};
   M.stats.tackles++;
   if (M.career) careerDeed('tackles', q);                  // a career match: a tackle by your player

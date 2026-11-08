@@ -2,10 +2,11 @@ function render(dt) {
   if (!M) return;
   const d = V.dpr;
   const along = V.W, across = V.H;
-  V.s = Math.min(along/54, across/36);
+  V.s = Math.min(along/54, across/36)*(practice && practice.zoom ? practice.zoom : 1);   // a training space may come in closer
   const s = V.s, b = M.ball, cam = M.cam;
   let tx = b.x, ty = b.y;
   if (b.state === 'held') tx += dirOf(b.carrier.team)*7;
+  if (practice && practice.cam) { tx = practice.cam.x; ty = practice.cam.y; }   // a training space holds its camera still
   const k = Math.min(1, dt*3.2);
   cam.x += (tx-cam.x)*k; cam.y += (ty-cam.y)*k;
   const ha = along/2/s, hc = across/2/s;
@@ -19,6 +20,7 @@ function render(dt) {
 
   ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*camX), d*(V.H/2 - s*camY));
   drawPitch();
+  if (practice) drillDrawWorld();                          // a drill's cones, rings and lines, on the grass under the players
 
   ctx.setTransform(d, 0, 0, d, 0, 0);
   const r = Math.max(8, 0.95*s);
@@ -101,6 +103,7 @@ function render(dt) {
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, V.W, V.H);
   if (M.cut) drawCut();
+  if (practice) drillDrawScreen();                         // a drill's own close-up (the Tackling drill's side-on view)
 }
 /* two player: the stick and the three buttons are off (they are seat 0's touch controls), so each player's marks are on the pitch: a
    numbered tag in his colour over his man where the pointer sits in one player, the Sprint meter as an arc round his ring (the button's

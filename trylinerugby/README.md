@@ -41,6 +41,24 @@ One player, from the minis to the national team. **Career** on the home screen m
 
 The rules and every number are in `src/career.js`, the screens in `src/ui-career.js`; `node tools/career.mjs` checks them.
 
+## Training Ground
+
+The home screen's **Training Ground** (it was Practice Ground) opens a grid of eight drills, each a drawn picture and a name. Every drill is short, has a ready card with one line on what to do, shows 0 to 3 stars on its result, and offers Try Again, Next Drill and Back to Training. Drills never write the browser save, the settings, the tutorial memory or a championship.
+
+- **Bouncy Egg.** A thrower faces you and, after the same wind-up every time, spins the ball into the ground so it pops up at an odd angle, passes it flat, or throws it high. Run to it and catch it between knee and head height, from behind a line of marker cones six metres out (in his face, every throw would be caught as it left his hands). Twelve throws, quicker and wilder as they go; a ball that lands costs one of three hearts. Stars at 4, 7 and 10 catches.
+- **Pass Around the Circle.** A ring of six. The runner passes, runs round the outside and must be home before the ball has gone all the way round; the ring grows a metre each round, five rounds. Pick a role on the ready card. **Runner**: hold the stick to run, and Sprint from a three-second meter (pace it: the last rounds need it). **Passer**: tap Pass as the white ring closes on the gold one; Perfect is quickest, an early tap is fumbled. Stars at 1, 3 and 5 rounds.
+- **Cones.** Through a zig-zag of five gates, round the flag and back through three: a missed gate adds two seconds, a clipped cone one. Sprint on the straight back. Three stars inside 11.5 seconds, two inside 16.
+- **Tackling.** One runner a rep, five reps. On the pitch, get into his path and stand still (Position). Then a side-on close-up, where his body is banded red, green and amber: aim at his thighs with the stick (Height: too high is always a fail, too low and he steps out), hold Tackle to load the meter (Power) and let go as he steps on the gold (Timing), then tap or hold to Squeeze. Each rep shows the five elements in green or red. Stars at 1, 2 and 4 good reps.
+- **Kicking.** Five goal kicks, each further out and wider, the wind rising from calm to 18 mph. Stars at 2, 3 and 5 made.
+- **Driving.** Three of the match's own scrums, the other pack stronger each time; a drive is won when your pack gains half a metre. Stars by drives won.
+- **Defend a Breakaway** and **Create a Two-on-One** are as before, with three stars for a quick finish.
+
+Bouncy Egg, the circle, Cones and Tackling run in a training space: the pitch, kits and controls of a match with none of its flow (`practice.space` makes `update()` skip `matchUpdate`, and the drill moves the men and the ball). Kicking and Driving use the match's goal-kick and scrum close-ups. Every engine hook checks `practice` first, so matches, AI v AI, the demo and the balance tools run exactly as before (checked: the same seeded AI v AI results and random draws as before the drills).
+
+A caller can run a drill with `practiceStart(id, { onDone, leaveLabel })`: any way out of it (Back to Career, or the caller's `leaveLabel`, on the card; Back or Escape on the card; Pause then Quit) restores the settings, shows the home screen and calls `onDone({ id, stars, success, skill })` once, with `role` for the circle. It reports the best finished run of the visit, so Try Again never loses a result already won; a visit with no finished run reports `quit: true` (0 stars). Each drill names the ability it trains: the circle's runner stamina and passer handling, Cones and Defend pace, Tackling and Driving power, Kicking kicking, Bouncy Egg and the two-on-one handling.
+
+The drills are in `src/training.js` and the picker and card rules in `src/practice.js`; their styles are in `practice.css`. `node tools/drills.mjs` checks every drill's setup, a scripted success and failure, the star thresholds, `onDone`, and isolation.
+
 ## Practice + Polish (review branch)
 
 The home screen pairs **How to Play** and **Practice Ground** in matching buttons. **Match Help** switches control hints and first-match coach tips together, retaining existing browser saves. Practice Ground offers: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.
