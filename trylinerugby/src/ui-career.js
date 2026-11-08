@@ -99,7 +99,7 @@ function careerTraitChips(cr) {
   const label = Object.fromEntries(careerSkills()), have = careerTraitIds(cr);
   return TRAITS.map(tr => {
     const on = have.includes(tr.id), need = (label[tr.skill] || tr.skill) + ' ' + tr.unlock;
-    return `<span class="cr-trait${on ? '' : ' off'}" style="--k:${CAREER_COL[tr.skill] || 'var(--chalk)'}"${on ? '' : ` aria-label="${tr.name}, ${need}"`}><b data-fit>${tr.name}</b>${on ? '' : `<span data-fit>${need}</span>`}</span>`;
+    return `<span class="cr-trait${on ? '' : ' off'}" style="--k:${CAREER_COL[tr.skill] || 'var(--chalk)'}"${on ? '' : ` aria-label="${tr.name}, ${need}"`}><b data-fit>${tr.name}</b>${on ? '' : `<span>${tr.unlock}</span>`}</span>`;   // locked: the name, dimmed, and the number its skill (the chip's colour) must reach; the label says both
   }).join('');
 }
 function careerFixtureHtml(c) {

@@ -506,10 +506,12 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 /* his star traits (src/traits.js): three a row; one he has in its skill's colour, a locked one dimmed, with what it needs under its name.
    careerFit steps a name down if a narrow card can't hold it */
 .cr-traits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.cr-trait{display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0;min-height:38px;padding:4px 6px;border:1.5px solid var(--k);border-radius:4px;color:var(--k)}
+.cr-trait{position:relative;display:flex;align-items:center;min-width:0;min-height:30px;padding:5px 6px;border:1.5px solid var(--k);border-radius:4px;color:var(--k)}   /* one line: the name; a locked one's number sits in the corner */
 .cr-trait b,.cr-trait span{display:block;min-width:0;font:700 13px/1.1 var(--body);white-space:nowrap}
-.cr-trait.off{border-color:var(--rule-hi);color:var(--chalk-dim);opacity:.7}
-.cr-trait.off span{font-size:11px;font-weight:400}
+.cr-trait b{flex:1 1 auto}
+.cr-trait span{position:absolute;top:1px;right:3px;font-variant-numeric:tabular-nums}
+.cr-trait.off{align-items:flex-end;padding-bottom:4px;border-color:color-mix(in srgb,var(--k) 45%,var(--rule-hi));color:var(--chalk-dim);opacity:.8}   /* its skill's colour, faint: which skill earns it */
+.cr-trait.off span{font-size:10px;font-weight:700;line-height:1;color:var(--k)}
 .cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .btn.cr-drill{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:76px;padding:10px 12px;text-align:left}
 .cr-drill .nm{font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
@@ -552,9 +554,10 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   .cr-main .btn.primary,#s-career-new .btn.primary,#s-career-end .btn.primary{min-height:50px}
   .cr-main .fixture{padding:10px 14px}
   .cr-main .fx-team{font-size:24px}
-  .cr-card{gap:10px;padding:12px}
-  .cr-skills{gap:6px}
-  .cr-life{gap:4px;padding-top:8px}
+  .cr-card{gap:8px;padding:12px}
+  .cr-skills{gap:4px}
+  .cr-traits{gap:4px}
+  .cr-life{gap:2px;padding-top:6px}
   .cr-tile{padding:10px 12px}
   .cr-tile b{font-size:28px}
 }

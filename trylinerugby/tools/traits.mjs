@@ -388,8 +388,8 @@ function pin() {
   const card = $('cr-card').innerHTML, chips = card.match(/<span class="cr-trait[^"]*"/g) || [];
   ok(chips.length === 6, 'the hub shows all six traits as chips');
   ok(/<span class="cr-trait" style="--k:#5fb8ff"><b data-fit>Burst<\/b><\/span>/.test(card) && /class="cr-trait" style="--k:#c58cff"><b data-fit>Engine<\/b>/.test(card), 'one he has: its name, in its skill\'s colour');
-  ok(/class="cr-trait off"[^>]*aria-label="Hand-Off, Power 90"><b data-fit>Hand-Off<\/b><span data-fit>Power 90<\/span>/.test(card), 'a locked one dimmed, with the skill and the number it needs (Hand-Off, Power 90)');
-  ok(/Safe Hands<\/b><span data-fit>Handling 80<\/span>/.test(card) && /Long Boot<\/b><span data-fit>Kicking 80<\/span>/.test(card), 'Safe Hands needs Handling 80, Long Boot Kicking 80');
+  ok(/class="cr-trait off"[^>]*aria-label="Hand-Off, Power 90"><b data-fit>Hand-Off<\/b><span>90<\/span>/.test(card), 'a locked one dimmed, with the skill and the number it needs (Hand-Off, Power 90)');
+  ok(/aria-label="Safe Hands, Handling 80"><b data-fit>Safe Hands<\/b><span>80<\/span>/.test(card) && /aria-label="Long Boot, Kicking 80"><b data-fit>Long Boot<\/b><span>80<\/span>/.test(card), 'Safe Hands needs Handling 80, Long Boot Kicking 80 (the number on the chip, in its skill\'s colour; both in the label)');
   ok(!/[a-z] [a-z]/.test((card.match(/<b data-fit>[^<]*<\/b>|<span data-fit>[^<]*<\/span>/g) || []).join(' ').replace(/<[^>]+>/g, ' ').replace(/ {2,}/g, '|')), 'Title Case, and no sentence');
   T.career.set(null);
 }
