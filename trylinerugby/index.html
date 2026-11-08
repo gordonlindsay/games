@@ -77,7 +77,7 @@
     </div>
     <details class="cabinet home-cabinet" id="home-cabinet"><summary>Trophy Cabinet</summary><div id="home-history"></div></details>
     <div class="settings">
-      <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
+      <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Kids</button><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
       <div class="set"><span class="lbl">Sound</span><div class="seg" data-key="sound"><button>On</button><button>Off</button></div></div>
       <div class="set"><span class="lbl">Match Help</span><div class="seg" data-key="hints" aria-label="Control hints and coach tips"><button>On</button><button>Off</button></div></div>
       <div class="set more" id="set-more" hidden><span class="lbl">Half Length</span><div class="seg" data-key="half"><button>2 Min</button><button>4 Min</button><button>6 Min</button></div></div>
@@ -316,6 +316,15 @@
       <div class="set" id="pz-hrow1" hidden><span class="lbl">Player 2 Hints</span><div class="seg" id="pz-h1"><button>On</button><button>Off</button></div></div>
     </div>
     <button class="btn warn" id="pz-quit">Quit Match</button>
+  </div>
+</div>
+
+<div class="modal" id="m-gate" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="pg-eyebrow" aria-describedby="pg-q">
+    <p class="eyebrow" id="pg-eyebrow">Ask a Grown-Up</p>
+    <div class="pg-ask"><h3 id="pg-q">What is seventeen times six?</h3><output class="pg-ans" id="pg-ans" aria-live="polite"></output></div>
+    <div class="pg-keys"><button class="btn" id="pg-k1">1</button><button class="btn" id="pg-k2">2</button><button class="btn" id="pg-k3">3</button><button class="btn" id="pg-k4">4</button><button class="btn" id="pg-k5">5</button><button class="btn" id="pg-k6">6</button><button class="btn" id="pg-k7">7</button><button class="btn" id="pg-k8">8</button><button class="btn" id="pg-k9">9</button><button class="btn" id="pg-k0">0</button></div>
+    <div class="row2"><button class="btn" id="pg-del">Delete</button><button class="btn" id="pg-cancel" data-back>Cancel</button></div>
   </div>
 </div>
 

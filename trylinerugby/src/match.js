@@ -27,7 +27,7 @@ const humanSlots = () => M.side.filter(s => s.human).map(s => inputs[s.seat]);  
    ones, because `team === 1` was the test for the CPU). */
 const cpuSide = t => M.role[t] === 'cpu';
 let earlyDiff = null;   // Normal's levers with EARLY.nudge, or null. Set for a match, never left over into the next.
-const diffOf = t => (M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);
+const diffOf = t => (M && M.kids ? KIDS.diff : M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);   // a Kids match (kids.js) plays both sides' terms from KIDS.diff
 const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
@@ -78,6 +78,7 @@ function newMatch(u, c, opts) {
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
     arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
     fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
+    kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
@@ -248,6 +249,7 @@ function catchBall(p, kind) {
   if (pressure(p) < 1.8) k += 0.04;
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
+  if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
   if (rnd() < k) { knockOn(p); return; }
   setCarrier(p);
   p.fromKick = kind === 'kick';

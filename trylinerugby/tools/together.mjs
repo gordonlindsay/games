@@ -71,5 +71,16 @@ const champBefore = JSON.stringify(X.champ());
   C.set(null);
 }
 
+// 5. every stylesheet's braces balance: merging the features once dropped two closing braces at the ends of their blocks,
+// which silently nested every later rule (the Kids home layout among them) inside a media query
+{
+  const fs = await import('node:fs');
+  for (const f of ['styles.css', 'practice.css']) {
+    const css = fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    let depth = 0, low = 0; for (const ch of css) { if (ch === '{') depth++; else if (ch === '}') { depth--; low = Math.min(low, depth); } }
+    ok(depth === 0 && low === 0, `${f}: every brace is closed (${depth} open)`);
+  }
+}
+
 console.log(`Together: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

@@ -59,6 +59,54 @@ A caller can run a drill with `practiceStart(id, { onDone, leaveLabel })`: any w
 
 The drills are in `src/training.js` and the picker and card rules in `src/practice.js`; their styles are in `practice.css`. `node tools/drills.mjs` checks every drill's setup, a scripted success and failure, the star thresholds, `onDone`, and isolation.
 
+## Kids
+
+A level below Easy for 6 to 10 year olds, and a grown-up check in front of anything that leaves the game. The home Difficulty row reads **Kids | Easy | Normal | Hard**; a new game starts on Normal as before, and an old save loads on the level it had.
+
+**How it is stored.** `settings.kids`, a flag layered on Easy: Kids saves `diff:0, kids:true`. Every lever table in the engine (`DIFF`, `KICK.fill` and `band`, `SPRINT`, `CONTACT.contact`, the duel windows, `COVER`, `MOVES.dummy.bite`) is an array by level 0..2, and the save keeps `diff` as 0..2, so a fourth level would mean a fourth entry everywhere or a shift in what a saved value means. As a flag, a saved `diff` means what it always did, a save without the flag loads unchanged, and anything that reads `settings.diff` or `levelOf` sees Easy, the nearest level. The flag counts only with `diff` 0.
+
+**Who gets it.** `newMatch(..., { kids:true })` sets `M.kids` only for one player on Easy: never AI v AI, the demo, two player or practice, whatever is asked. `startMatch` passes `kids:kidsLevel()`, so Quick Match and Championship play it. Every lever reads `M.kids`, so the sims, the demo and the balance tools draw exactly what they drew before: AI v AI at all three levels, the bot's matches at all three levels and the demo hash identically to the build before Kids (SEED 5).
+
+| Lever (all in `KIDS`, `src/kids.js`) | Easy | Kids |
+|---|---|---|
+| The other side's pace (`diff.cpuSpeed`) | 0.97 | 0.92 |
+| Their tackle on your carrier (`diff.cpuTackle`) | 0.56 | 0.45 |
+| Their interceptions, ruck turnover edge (`cpuIntercept`, `turnover`) | 0.10, -0.03 | 0.05, -0.05 |
+| Their scrum, lineout contest and jump spread (`scrumCpu`, `lineContest`, `lineSigma`) | 0.60, 0.55, 0.19 | 0.45, 0.35, 0.28 |
+| Your ringed man's contact tackle and dive (`tackle`) | as set | +0.10 |
+| Your side's knock-ons on a catch (`hands`) | as set | a tenth |
+| The ball jolted from your tackled carrier (`jolt`) | as set | 0.15 of it |
+| Your offloads that get away (`offload`) | 70-85% | 95% |
+| How far your passes stray (`passErr`) | as set | 0.4 of it |
+| Close-ups (`duelWin`) | lost if mistimed | never lost; the gold ring 0.2s longer; any button acts; in the gold is a Perfect |
+| Goal kicks (`kick`) | | aim set for you (the path shows it, the stick does nothing, the hints and tutorial say so), the gold band twice as wide (at most 0.34), the meter 1.6x slower, a release in the gold struck true; drop-goal chargers at 65% |
+| Defending (`switchHold`, `rest`, `chase`) | | the ring moves to your best defender (once it has sat 0.5s on a man); let go of the stick and your man chases the ball at 80% of his pace |
+| Your scrum shove and lineout reach (`scrum`, `reach`) | | +0.25, +0.12m |
+
+Measured over 2-minute halves, Easy against Kids for the same player (scratch bots, SEED 7 and 11): the harness's average player goes from 30-2 to 60-1. A rough child (a wobbly run at the line, a pass now and then at random, presses at random in close-ups, a loose kick release) who defends half the time goes from 13-6 (25 won, 12 lost of 40) to 37-1 (38 won, 2 drawn); one who never defends goes from 9-13 (14 won, 24 lost) to 35-2 (38 won, 2 drawn). The hands-off chase is what saves a child who never defends: without it that child concedes 3.1 tries a match even on Kids (18 won, 20 lost); with it, 0.2. Its pace hardly matters (0.15 to 0.2 tries against from 60% to 80%; 0.03 at full pace), so it runs at 80%, a little behind his teammates.
+
+**Two Player** keeps Easy | Normal | Hard per player. Kids there would need its own per-player store, per-side levers and a rule for a close-up the other player chooses; Two Player is for computers, so it is left as it is.
+
+**The grown-up check.** `parentGate(onPass, onCancel)` opens `#m-gate`: "Ask a Grown-Up", a multiplication written in words (a teen times six to nine with a three-figure answer: 22 questions, 102 to 171), and ten figure keys with Delete | Cancel (two rows of five on a screen under 560px). Only the right answer calls `onPass`; a wrong one asks a new question, and a second wrong one in a row rests the keys ("Wait", the keys dimmed and a bar running down) for 10s, then 20s, 40s and 60s at most until a right answer. The rest outlives the card, so shutting it and opening it again does not skip it. Tapping 9 and 0 in turn, which passed the first cut in about 100 taps, now never passes, and a thousand random guesses take about eight hours of rests. Touch, the keyboard (figures, Backspace, Escape, Tab inside the card: the rest of the page is inert) and a controller (the card is the nav layer; Back is Cancel) all reach it. Opened by touch or the keyboard, the DOM focus starts on 1; opened from a controller, the chalk ring does and there is no DOM focus, so only one key is outlined. The card sits over every other card and under Turn Your Phone Sideways (`#rotate`, raised to z-index 40 so it covers the practice card as well). Where the game reaches outside itself:
+
+- **Install Game** (the browser's install prompt): behind the check.
+- **Import** (App Store build): the import code calls the check before it fetches.
+- **Update Game**: not gated. It applies the game's own files, which the browser has already downloaded from the game's own site.
+- **The service worker** and **Google Fonts**: automatic loads of the game's own files and its two typefaces, not something a child opens. There are no links, ads, purchases or share buttons.
+
+[PRIVACY.md](PRIVACY.md) says what the game stores and that it collects nothing.
+
+**App Store Kids category checklist.**
+
+- Done: no ads, no analytics, no tracking, no accounts, chat or purchases (`tools/kids.mjs` checks the bundle for the usual ad and analytics names and the page for links); nothing about the player leaves the device; the grown-up check before installing and before import; a privacy note; a level a 6 year old can play.
+- Remains for the native build: bundle the two fonts so no request goes to Google; host PRIVACY.md and give its address, with a contact address, in App Store Connect; choose the age band (6-8 suits Kids) and declare Data Not Collected; add no SDK that collects anything (analytics, crash reporting, ads) to the Capacitor project; put `parentGate` in front of every native-only way out (import's fetch, any support, rating or privacy link); hide Install Game and Update Game, which mean nothing in the app; check the card on an iPhone and an iPad, VoiceOver included.
+
+**The home on a small phone.** At 420px tall and below, Difficulty's four buttons take the settings panel's top row and Sound, Match Help and More Settings share the second in three columns (opened, More Settings keeps its cell and Half Length takes a row under it). The left column is at least 288px wide so each On | Off stays 44px, and the home buttons give up some side padding so the right column's labels stay on one line. The closed home fits 844x390 and 667x375 without a scroll.
+
+**The ring in a tackle.** On Kids the ring never leaves your man while he is bound in his own tackle, so a dominant one is still his Big Hit (and Tripped and Ankle Tap are still his).
+
+`node tools/kids.mjs` checks the setting, the save (a round trip, old saves on each level, partial and bad ones), each lever on in Kids and off on Easy and in AI v AI, the ring staying on a bound tackler, the check's pass and cancel paths, its three-figure answers, its rests (two keys in turn and random taps), the controller's focus, and its place over the other cards.
+
 ## Practice + Polish (review branch)
 
 The home screen pairs **How to Play** and **Practice Ground** in matching buttons. **Match Help** switches control hints and first-match coach tips together, retaining existing browser saves. Practice Ground offers: defend a breakaway, create a two-on-one, and kick a conversion. Each drill uses the match engine and controls, with feedback, retry, next drill and return to selection. Practice does not advance a championship or write match settings, played count or tutorial progress.

@@ -54,11 +54,14 @@ function offlineStart() {
   if (offlineApp.started) return;
   offlineApp.started = true;
   const install = $('b-install'), update = $('b-update');
-  if (install) install.addEventListener('click', async () => {
-    const prompt = offlineApp.prompt;
-    if (!prompt) return;
-    offlineApp.prompt = null; offlineRender();
-    try { await prompt.prompt(); await prompt.userChoice; } catch (e) { /* browser dismissed or unavailable */ }
+  if (install) install.addEventListener('click', () => {
+    const go = async () => {
+      const prompt = offlineApp.prompt;
+      if (!prompt) return;
+      offlineApp.prompt = null; offlineRender();
+      try { await prompt.prompt(); await prompt.userChoice; } catch (e) { /* browser dismissed or unavailable */ }
+    };
+    if (typeof parentGate === 'function') parentGate(go); else go();   // a grown-up check first (kids.js): installing hands over to the browser
   });
   if (update) update.addEventListener('click', () => {
     if (!offlineApp.home || !offlineApp.waiting || offlineApp.requested) return;

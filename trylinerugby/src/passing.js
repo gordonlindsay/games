@@ -112,7 +112,7 @@ function doPass(from, to, o) {
     ty = clamp(ty, 3, 67);
   } else {                                                 // led: where he will be running on, then the handling error, and never forward of the passer (the law)
     const a = leadPass(from, to, o); tx = a.x; ty = a.y;
-    const err = (5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0); tx += gauss()*err; ty += gauss()*err;
+    const err = ((5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0))*(M.kids && isHuman(from.team) ? KIDS.passErr : 1); tx += gauss()*err; ty += gauss()*err;   // Kids: your passes stray less
     if ((tx-from.x)*d > 0) tx = from.x;
   }
   T = hyp(tx-b.x, ty-b.y)/spd + 0.06;

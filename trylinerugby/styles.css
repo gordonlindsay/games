@@ -529,6 +529,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 @media (max-width:620px){
   .cr-hub,.cr-newgrid{grid-template-columns:1fr}
   .cr-tiles,.cr-drills{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 /* ===== import ===== */
 /* the Import Club card beside Create Team: a chain link drawn in CSS */
 .team.create .plus.link{border:0;border-radius:0;position:relative}
@@ -556,4 +557,35 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
   #m-import .card{gap:10px;padding:12px 14px}
   #m-import h3{font-size:30px}
   #m-import .btn.primary{min-height:50px}
+}
+/* ===== kids ===== */
+/* the grown-up check (kids.js): over every other card (the practice card's is 35) and under only Turn Your Phone Sideways, which
+   now sits over every card too; the question and the answer on one row, ten figure keys (two rows of five on a narrow screen),
+   then Delete | Cancel */
+#rotate{z-index:40}
+#m-gate{z-index:38}
+#m-gate .card{width:min(600px,100%);gap:12px}
+.pg-ask{display:grid;grid-template-columns:minmax(0,1fr) 7.5em;align-items:center;gap:12px}
+.pg-ask h3{font-size:clamp(26px,5vw,34px)}
+.pg-ans{position:relative;overflow:hidden;display:grid;place-items:center;min-height:56px;border:1.5px solid var(--rule-hi);border-radius:6px;background:var(--night);font:900 38px/1 var(--display);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.pg-ans.wrong{border-color:var(--alert);color:var(--alert);font:700 15px/1.1 var(--body);letter-spacing:0}
+#m-gate.rest .pg-ans::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--alert);transform-origin:left;animation:pg-rest var(--pg-rest,10s) linear forwards}   /* two wrong answers: the keys rest, and a bar runs down for the wait */
+@keyframes pg-rest{to{transform:scaleX(0)}}
+#m-gate.rest .pg-keys .btn,#m-gate.rest #pg-del{opacity:.4}
+#m-gate:has(.padfocus) .btn:focus-visible:not(.padfocus){outline:none}   /* a controller's ring is the one outline: a DOM focus the keyboard left on a key would read as a second */
+.pg-keys{display:grid;grid-template-columns:repeat(10,minmax(44px,1fr));gap:6px}
+.pg-keys .btn{min-height:52px;padding:0;font:900 28px/1 var(--display)}
+@media (max-width:560px){.pg-keys{grid-template-columns:repeat(5,minmax(44px,1fr))}}
+@media (orientation:landscape) and (max-height:420px){
+  /* the home settings, in place of the two-column panel above (Kids makes Difficulty four buttons, too many for half a row):
+     Difficulty takes the top row and Sound, Match Help and More Settings share the next in three columns, so the closed panel stays two rows (opened, More Settings keeps its cell and Half Length takes a row under it). The left
+     column is at least 288px so each On | Off stays 44px wide, and the home buttons give up some side padding so the right column's
+     labels stay on one line. The home fits 844x390 and 667x375 without a scroll. */
+  .home{grid-template-columns:minmax(288px,.8fr) minmax(0,1.2fr)}
+  .home .stack .btn{padding-inline:8px}
+  .settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(64px,.7fr);grid-auto-flow:row dense;gap:6px;padding:6px 8px}
+  .settings .set:first-child,.settings #set-more{grid-column:1/-1}
+  .settings .btn.more-btn[aria-expanded]{grid-column:auto;align-self:end;padding:4px;font-size:13px}
+  #m-gate .card{gap:10px;padding:14px 16px}
+  .pg-keys .btn{min-height:48px}
 }

@@ -187,6 +187,7 @@ function bandOf(g, aim) {                                  // at aim 0, except t
   g.ctr = Math.min(Math.max(g.mClear + k.lift + k.liftW*g.w, k.floor), k.ceil);   // the floor makes short kicks fly like real ones
   g.lo = g.ctr - g.w/2; g.hi = g.ctr + g.w/2;
   g.fill = (g.type === 'drop' ? k.dropFill : k.fill)[di]/(1 + (g.dist - 12)*k.fillD);
+  if (M && M.kids && isHuman(g.team)) kidsBand(g);        // Kids: a wider band and a slower meter
   return g;
 }
 function strikeGoal(g, m, aim) {                           // draws no random numbers: the result is known at the release
@@ -263,7 +264,7 @@ function updateGoalCut(c, dt) {
   } else if (g.stage === 'power') {
     g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
     if (inp.aCancel || (!inp.aDown && g.m < KICK.tap)) backToAim(g);
-    else if (!inp.aDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
+    else if (!inp.aDown) { strikeGoal(g, kidsStrike(g, g.m), g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
   } else if (g.stage === 'runup') {
     if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
@@ -285,6 +286,7 @@ function watchStep(c, dt) {                                // the CPU's kick: se
   else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
 function steerAim(g, dt, inp) {
+  if (M.kids && isHuman(g.team)) return;                   // Kids: the aim the path shows is set for you
   const k = KICK;
   const jx = inp.jx, kx = inp.keyX();                      // the d-pad aims at the keyboard's rate too
   const rate = jx ? k.aimRate*Math.sign(jx)*Math.pow(Math.abs(jx), 1.6) : k.keyRate*kx;
@@ -374,7 +376,7 @@ function projectHold(c, lead) {
 // kicker's shoulder counts, a chaser deeper behind him does not, at the label and in the cut alike), the nearest three. Each is frozen where `proj` puts
 // him (or where he really stands), with his speed toward the kicker and his top speed. g.x/g.y is the kick spot, in the frame.
 function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the label saw)
-  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)] : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
+  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)]*(M.kids ? KIDS.kick.rush : 1) : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
   const list = proj ? proj.opps : M.players.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy }));
   for (const o of list) {
     const f = toFrame(t, o.x, o.y), v = frameVec(t, { x:o.vx, y:o.vy });
@@ -437,7 +439,7 @@ function dropStep(c, dt) {
     if (g.stage === 'hold') {
       g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
       if (inp.bCancel || (!inp.bDown && g.m < k.tap)) { g.stage = 'wait'; g.m = 0; g.pt = 0; }
-      else if (!inp.bDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.tRel = tau; g.stage = 'drop'; g.st = 0; }
+      else if (!inp.bDown) { strikeGoal(g, kidsStrike(g, g.m), g.aim); g.mRel = g.m; g.tRel = tau; g.stage = 'drop'; g.st = 0; }
     } else if (inp.bPressed) { g.stage = 'hold'; g.pt = 0; g.m = 0; }
   } else if (g.stage === 'drop') {
     if ((g.st += dt) >= k.dropT) {                         // the half-volley: charging is checked now, with the strike on the chargers' clock
