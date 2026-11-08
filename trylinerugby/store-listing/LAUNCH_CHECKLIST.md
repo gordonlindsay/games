@@ -62,7 +62,7 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
 
 - [ ] Release set to **Manually release this version**, so the owner picks the day.
 - [ ] Attach the in-app purchases to the version, add the review notes from APP_STORE.md (with a club link for Import), submit for review. A first review often takes a day or two.
-- [ ] **[OWNER: decide when the web goes to the free tier: at the App Store launch, or when the Play version is out.]** Flipping at the App Store launch leaves Android visitors to the web with the free modes and no app to buy the rest in until phase 2.
+- [ ] **At the App Store launch (owner, 2026-11-08): flip `STORE_WEB_TIER` to `'free'` once `STORE_LINKS.ios` is set.** An Android browser stays fully unlocked until `STORE_LINKS.android` is set (src/store.js), so Android visitors never meet a lock with no app to buy it in.
 - [ ] Launch day, in this order:
   1. Release the App Store version.
   2. Put the App Store address into `STORE_LINKS.ios` in src/store.js.

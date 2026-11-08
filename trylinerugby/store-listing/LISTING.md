@@ -47,18 +47,18 @@ Apple already indexes the name and subtitle, so the keywords spend their 100 byt
 
 <!-- copy:apple.keywords -->
 ```text
-kids,tackle,try,career,arcade,sport,minis,junior,7s,scrum,lineout,training,league,offline,kicking
+tackle,try,career,arcade,sport,minis,junior,7s,scrum,lineout,training,league,offline,kicking,ruck
 ```
 
-97 of 100 bytes. The first eight are the owner's list (rugby, sevens, kids, tackle, try, club, career, arcade, sport, minis, junior) less `rugby` and `sevens`, which are in the name, and `club`, which is in the subtitle: a repeat earns nothing. The last seven are generic words from the first draft that fill the space; cut any of them freely.
+97 of 100 bytes. The first seven are the owner's list (rugby, sevens, kids, tackle, try, club, career, arcade, sport, minis, junior) less `rugby` and `sevens`, which are in the name, `club`, which is in the subtitle, and `kids` (dropped, below): a repeat earns nothing. The rest are generic words that fill the space; cut any of them freely.
 
-**[OWNER: keep or drop `kids`.]** Keywords are not shown on the store page, but App Review reads them, and guideline 2.3.8 reserves "For Kids" and "For Children" in metadata for the Kids Category. A bare `kids` is not "for kids", and the game does have a Kids level, but it is the one keyword a reviewer could read as aiming the app at children outside the Kids Category. Keeping it risks a 2.3.8 rejection; if cited, drop it and resubmit (keywords change only with a new version). `junior` and `minis` describe rugby's age-grade sections rather than an audience, and carry less risk.
+**`kids` dropped (2026-11-08).** Keywords are not shown on the store page, but App Review reads them, and guideline 2.3.8 reserves "For Kids" and "For Children" in metadata for the Kids Category. In a Sports listing a bare `kids` is the one keyword a reviewer could read as aiming the app at children outside the Kids Category, so it is left out; the description still says honestly that there is a Kids level.
 
 ### Description (4,000 characters)
 
 <!-- copy:apple.description -->
 ```text
-Tryline Rugby Sevens is rugby sevens for your phone and tablet. Seven a side on a full pitch, seen from above, with one stick and three buttons: Pass, Kick and Sprint. Tackles, rucks, scrums, lineouts and goal kicks are all in. The big moments cut to a close-up with a clear cue, so a new player knows what to press and when.
+Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitch, seen from above, with one stick and three buttons: Pass, Kick and Sprint. Tackles, rucks, scrums, lineouts and goal kicks are all in. The big moments cut to a close-up with a clear cue, so a new player knows what to press and when.
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal

@@ -78,7 +78,7 @@ The stores pay the owner first: Apple roughly a month after the end of each of i
 | Option | For | Against |
 |---|---|---|
 | Monthly | Quick for the club | Twelve statements a year; small sums |
-| **Quarterly** (suggested) | Four statements a year; sums worth a bank transfer; refunds mostly settled | The club waits up to four months |
+| **Quarterly** (chosen by the owner, 2026-11-08) | Four statements a year; sums worth a bank transfer; refunds mostly settled | The club waits up to four months |
 | Twice a year or yearly, with a minimum (for example £25, carried forward below it) | Least work | Long waits; fits a club with few sales |
 
 Each payment comes with a one-page statement: the period, units sold and refunded on each store, what each store paid for them, the share, and the amount. Keep the reports and statements with the business records (HMRC generally expects a company's records to be kept for six years: check with SignCheck Ltd's accountant).

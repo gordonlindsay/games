@@ -159,4 +159,4 @@ See LAUNCH_CHECKLIST.md. In short: an **internal test** track first (up to 100 t
 ## Release
 
 - Use **managed publishing**, so the release goes live when the owner says. On that day, add the Play address to `STORE_LINKS.android` in src/store.js, so the web's Get the App offers it too.
-- Countries: **[OWNER: all, or the UK first]**. As on the App Store, selling in the EU needs a trader declaration with contact details shown on the store page.
+- Countries: **all countries** (owner, 2026-11-08, as on the App Store). As on the App Store, selling in the EU needs a trader declaration with contact details shown on the store page.

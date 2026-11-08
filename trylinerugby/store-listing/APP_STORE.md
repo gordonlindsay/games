@@ -72,7 +72,7 @@ Apple works the rating out from the answers. Every answer below is "None" or "No
 
 | Question | Answer | Reason |
 |---|---|---|
-| Cartoon or Fantasy Violence | **[OWNER: None (4+) or Infrequent (9+)]** | Apple's definition in full: "Physical conflict or harm of an exaggerated or fantastical nature that can easily be distinguished from real life. May include: animated magic used to harm animals or animated human wrestling." For None: the tackling is sporting contact within the laws of rugby (a tackle, a ruck, a scrum); there is no blood, no injury shown, no fighting or harm meant, and tackled players get up and play on. For Infrequent: a tackle is physical conflict, and the game exaggerates the hardest ones on purpose. A Big Hit in a match you play gets a banner, a 180ms freeze and a harder screen shake (`ARCADE.hit` in src/arcade.js, src/contact.js), and Apple's own example, animated human wrestling, is a contact sport. None gives 4+; Infrequent makes the app **9+**. The owner's call. |
+| Cartoon or Fantasy Violence | **None** (owner, 2026-11-08) | Apple's definition in full: "Physical conflict or harm of an exaggerated or fantastical nature that can easily be distinguished from real life. May include: animated magic used to harm animals or animated human wrestling." For None: the tackling is sporting contact within the laws of rugby (a tackle, a ruck, a scrum); there is no blood, no injury shown, no fighting or harm meant, and tackled players get up and play on. For Infrequent: a tackle is physical conflict, and the game exaggerates the hardest ones on purpose. A Big Hit in a match you play gets a banner, a 180ms freeze and a harder screen shake (`ARCADE.hit` in src/arcade.js, src/contact.js), and Apple's own example, animated human wrestling, is a contact sport. None gives 4+; Infrequent makes the app **9+**. The owner's call. |
 | Realistic Violence | None | Flat cartoon players; no harm. |
 | Prolonged Graphic or Sadistic Realistic Violence | None | |
 | Guns or Other Weapons | None | |
@@ -153,7 +153,7 @@ Super Fan: Farnham RUFC
 Full Game and Import. Supports Farnham RUFC.
 ```
 
-**Family Sharing.** Non-consumables can be shared with a Family Sharing group. Turning it on is kind to families (one unlock for every child's device). It cannot be turned off again for a product once on. For Super Fan it means one sale can unlock several devices, and only the one sale is reported and shared with the club. **[OWNER: decide, per product.]**
+**Family Sharing.** Non-consumables can be shared with a Family Sharing group. Turning it on is kind to families (one unlock for every child's device). It cannot be turned off again for a product once on. For Super Fan it means one sale can unlock several devices, and only the one sale is reported and shared with the club. ****On for both products (owner, 2026-11-08).** Set it when each product is created; it cannot be switched off later.**
 
 **Price of Super Fan.** £3.99, the owner's choice (Full Game stays £1.99). The club's share is 50% of what Apple pays us for each unlock, after its commission and VAT: about £1.41 of £3.99 in the UK under the Small Business Program's 15% commission, about £1.16 at 30% (SUPER_FAN.md has the arithmetic). The game and superfan.html say "of what we receive", so nobody reads it as half the price.
 
@@ -187,7 +187,7 @@ Choose **Manually release this version**, so nothing goes live before the web's 
 ## Pricing and Availability
 
 - Price: **Free** (Tier 0), with the in-app purchases above.
-- Availability: **[OWNER: all countries, or the UK first]**. Selling in the EU needs the Digital Services Act trader declaration (see LAUNCH_CHECKLIST.md): SignCheck Ltd's address, phone and email are then shown on the EU store pages.
+- Availability: **all countries** (owner, 2026-11-08). Selling in the EU needs the Digital Services Act trader declaration (see LAUNCH_CHECKLIST.md): SignCheck Ltd's address, phone and email are then shown on the EU store pages.
 
 ## Screenshots
 
