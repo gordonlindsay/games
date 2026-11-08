@@ -9,7 +9,8 @@ import { T } from './harness.mjs';
 const X = T.teams, STEP = T.STEP;
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
-const all = [...X.NATIONS, ...X.CLUBS];
+const all = X.ALL_TEAMS;
+const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
 
 // 1. the lists
 {
@@ -18,10 +19,14 @@ const all = [...X.NATIONS, ...X.CLUBS];
   ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL', 'the nations keep their order, which saved championships index into');
   ok(X.CLUBS[0].id === 'FAR', 'Farnham comes first in Local');
   ok(X.CLUBS.length >= 6, `Local has enough clubs for a championship (${X.CLUBS.length})`);
+  ok(X.POOLS.length === 5 && X.POOLS[0] === X.NATIONS && X.POOLS[1] === X.CLUBS, 'International and Local keep their places, which saved settings index into');
+  ok(X.POOLS.every(p => p.length >= 6), `every list has enough sides for a championship (${X.POOLS.map(p => p.length).join(' ')})`);
+  ok(X.FRANCE.length === 14, `France is the Top 14 (${X.FRANCE.length})`);
+  ok(all.length === X.POOLS.reduce((a, p) => a + p.length, 0), 'ALL_TEAMS is every list');
   ok(X.NATIONS.filter(t => t.home).map(t => t.id).join() === 'ENG,IRE,SCO,WAL', 'the home nations are England, Ireland, Scotland and Wales');
   const R = ['pace', 'power', 'handling', 'kicking'];
   ok(all.every(t => R.every(k => Number.isInteger(t[k]) && t[k] >= 1 && t[k] <= 5)), 'every rating is 1 to 5');
-  const top = Math.max(...X.CLUBS.map(t => R.reduce((a, k) => a + t[k], 0)));
+  const top = Math.max(...clubs.map(t => R.reduce((a, k) => a + t[k], 0)));
   ok(top <= 4 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${4 + X.BUDGET})`);
   ok(all.every(t => /^#[0-9a-f]{6}$/i.test(t.kit) && /^#[0-9a-f]{6}$/i.test(t.trim)), 'every kit colour is a hex');
 }

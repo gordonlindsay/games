@@ -1,7 +1,8 @@
 # Try Line Rugby
 
 Mobile rugby sevens. Top-down 2D, one stick and three buttons, and a five-round championship. Play as one of the six
-nations, a local Surrey club, or a team you make yourself.
+nations, a local Surrey club, a Top 14, Australian or South African side, or a team you make yourself. Professional
+sides go by their city, not the club's name.
 
 **Play:** https://gordonlindsay.github.io/games/trylinerugby/
 

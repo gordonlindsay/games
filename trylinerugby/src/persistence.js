@@ -60,7 +60,7 @@ function cleanTeam(t, i) {
 /* The short name filled in for you skips codes already on the scoreboard elsewhere: Farnham Minis is FAN, not FAR. */
 function autoCode(name, own) {
   const L = String(name || '').toUpperCase().replace(/[^A-Z]/g, '') || 'MYTEAM';
-  const used = new Set([...NATIONS, ...CLUBS, ...custom.filter(t => t.key !== own)].map(t => t.id));
+  const used = new Set([...ALL_TEAMS, ...custom.filter(t => t.key !== own)].map(t => t.id));
   for (let j = 1; j < L.length; j++) for (let k = j + 1; k < L.length; k++) { const c = L[0] + L[j] + L[k]; if (!used.has(c)) return c; }
   return codeFor('', L);
 }
@@ -139,7 +139,7 @@ function cleanSettings(g) {
   if (Array.isArray(g.tut)) settings.tut = TUT_IDS.filter(id => g.tut.includes(id));   // only moments the game knows, each once, in the game's order
   if (typeof g.coach === 'boolean') settings.coach = g.coach;
   if (Array.isArray(g.tips)) settings.tips = COACH_IDS.filter(id => g.tips.includes(id));   // coach lines already heard, in the game's order, unknown ones dropped
-  if ('pool' in g) settings.pool = g.pool === 1 ? 1 : 0;
+  if ('pool' in g) settings.pool = Number.isInteger(g.pool) && g.pool >= 0 && g.pool < POOLS.length ? g.pool : 0;
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
 }
