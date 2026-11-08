@@ -192,7 +192,7 @@ The browser still loads only `game.js`; `src/` and the Node tools are developmen
 - **One repo for all the games** (2026-10-12): this game lives in `gordonlindsay/games`, alongside Farnham Fighters
   and The Wedding Crashers, and away from SignCheck.
 - **Teams** (2026-10-12): the team screen has an **International | Local** switch.
-  - International is the six nations. Local is Farnham, then Haslemere, Guildford, Aldershot, Weybridge, Harlequins
+  - International is the six nations. Local is Farnham, then Haslemere, Guildford, Aldershot, Weybridge, Quins
     and Cobham (Gordon's list), then the clubs at two minis festivals on 11 October 2026: Guildfordians, Ironsides
     (Battersea), Kingston, Old Ruts and Wimbledon. The festivals' "Irish" and "OCs" squads are left out, by
     Gordon's choice (2026-10-12).
@@ -213,12 +213,12 @@ The browser still loads only `game.js`; `src/` and the Node tools are developmen
     the line under it is your team, your place and the round. A finished season reads Final Table, with the prize.
 - **A gentler start** (2026-10-30). A player who has not learned to turn and chase — the stick stays forward — was
   losing the games a player who chases wins easily. Measured with that stick-forward player as Farnham, 4-minute
-  halves, duels live, the same 10 seeds: Haslemere 48–39 (W7 D1 L2, 5.8 tries against) and Harlequins 46–56 (W4 L6,
+  halves, duels live, the same 10 seeds: Haslemere 48–39 (W7 D1 L2, 5.8 tries against) and Quins 46–56 (W4 L6,
   7.9 against), while the scripted player who chases won both 10 from 10 (52–6 and 34–14). France, four rating
   points stronger, was 19–69, none won. The first two one-player matches on Normal (the default; Easy and Hard are
   left as set) move two CPU levers and nothing else: `cpuSpeed` −0.03, so the other side runs at Easy's pace, and
   `myTackle` +0.14, so your teammates tackle a little more surely than on Easy, because one defender is still being
-  pulled out of the tackle. The same seeds then read Haslemere 52–30 (W8 L2, 4.3 against) and Harlequins 51–36
+  pulled out of the tackle. The same seeds then read Haslemere 52–30 (W8 L2, 4.3 against) and Quins 51–36
   (W8 D1 L1, 5.0 against). France stayed 22–61, none won. A chaser's France result moved from 16–28 (W1) to 23–21
   (W5) for those two matches, then Normal again. Duels, scrums, your own tackle and sprint, and every later match
   are untouched. Headless runs, AI v AI and the demo are not eased unless a tool asks. A save that already has a

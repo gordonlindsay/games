@@ -62,7 +62,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 
 // 4. championship sides saved before Stamina
 {
-  const five = ['HAR', 'HAS', 'GUI', 'ALD', 'WEY'].map(id => X.CLUBS.find(t => t.id === id));
+  const five = ['QUI', 'HAS', 'GUI', 'ALD', 'WEY'].map(id => X.CLUBS.find(t => t.id === id));
   X.newChamp(X.CLUBS[0], five);
   const raw = JSON.parse(JSON.stringify(X.champ()));
   for (const t of raw.teams) delete t.stamina;

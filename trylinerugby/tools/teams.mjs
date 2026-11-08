@@ -407,7 +407,7 @@ function settle(pick) {
   ok(X.rateOf(fra) === 23 && X.rateOf(far) === 17 && X.rateOf(has) === 14, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
   // Stronger Side leaves Stamina out, so it marks the pairs it did before Stamina: within a pool, as the hub shows them
   const by = id => X.ALL_TEAMS.find(t => t.id === id), marks = (u, t) => X.outmatched(by(u), by(t));
-  ok(marks('HAS', 'FAR') && marks('IRO', 'HAR') && marks('ADL', 'SYD') && marks('ADL', 'CAN') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS'),
+  ok(marks('HAS', 'FAR') && marks('IRO', 'QUI') && marks('ADL', 'SYD') && marks('ADL', 'CAN') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS'),
     'a side three points stronger in Pace, Power, Handling and Kicking is marked, whatever the Stamina');
   ok(!marks('GDN', 'WIM') && !marks('MTB', 'CLE'), 'two points apart in the four and Stamina on top is not a Stronger Side');
   ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 2, power: 2, handling: 2, kicking: 2 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...eng, stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');
@@ -434,12 +434,12 @@ function settle(pick) {
   ok(near(C.tackleChance(q, opp, 'ai', false), 0.48 + E.nudge.myTackle), `teammates tackle more surely (${C.tackleChance(q, opp, 'ai', false)})`);
   ok(near(C.tackleChance(mate, q, 'ai', false), 0.64), `the CPU's tackle is not eased (${C.tackleChance(mate, q, 'ai', false)})`);
 
-  const five = ['HAR', 'HAS', 'GUI', 'ALD', 'WEY'].map(id => X.CLUBS.find(t => t.id === id));
+  const five = ['QUI', 'HAS', 'GUI', 'ALD', 'WEY'].map(id => X.CLUBS.find(t => t.id === id));
   X.newChamp(far, five);
   const ch = X.champ();
   const opps = ch.fixtures.map(rd => { const p = rd.find(x => x[0] === ch.user || x[1] === ch.user); return p[0] === ch.user ? p[1] : p[0]; });
   ok(opps.map(i => X.rateOf(ch.teams[i])).join() === '14,16,16,16,17', `weakest first (${opps.map(i => ch.teams[i].id).join(' ')})`);
-  ok(ch.teams.map(t => t.id).join() === 'FAR,HAR,HAS,GUI,ALD,WEY', 'the draw stays in the order it was given');
+  ok(ch.teams.map(t => t.id).join() === 'FAR,QUI,HAS,GUI,ALD,WEY', 'the draw stays in the order it was given');
 
   const weak = X.cleanTeam({ name: 'Cubs', pace: 1, power: 1, handling: 1, kicking: 1 }, 0);
   X.newChamp(weak, five);
