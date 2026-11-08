@@ -64,6 +64,7 @@ function newMatch(u, c, opts) {
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
     firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless, early:ease,
+    cup:typeof opts.cup === 'string' ? opts.cup : null, cupKO:typeof opts.cup === 'string' && !!opts.cupKO,   // a cup match (src/cups.js): its id, and whether it is a knockout or a Test, which the Golden Try reads
     paused:false, over:false, cam:{ x:60, y:35 }, cut:null, surge:null,
     di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
     duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },

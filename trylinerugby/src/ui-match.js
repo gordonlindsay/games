@@ -11,6 +11,7 @@ function showScreen(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   setFocus(null);
   if (id === 's-teams') fitNames();
+  if (id === 's-cup' && typeof cupFit === 'function') cupFit($('s-cup'));   // the cup hub's long names, once it has a size (src/ui-cups.js)
   if (id !== 's-home') { const a = document.activeElement; if (a && typeof a.blur === 'function') a.blur(); }   // a focused menu button must not fire on Enter once it is hidden
 }
 function clearBanner() { clearTimeout(bannerTimer); const el = document.getElementById('banner'); if (el) el.innerHTML = ''; }
@@ -56,7 +57,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -68,12 +69,14 @@ function startMatch(u, c, isChamp, o) {
 }
 function exitMatch() {
   if (practice) { practiceLeave(); return; }
-  const wasChamp = M && M.champ, wasCareer = M && M.career;
+  const wasChamp = M && M.champ, wasCareer = M && M.career, wasCup = M && M.cup;
   setTwo(false);                                           // the menus are one player's again; the join screen switches the seats back on
   series = { w:[0, 0], d:0 }; navOnly = null;              // a two-player series ends with the visit to the menu
   startDemo();
   if (wasCareer && career) careerOpen();
-  else if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else goHome();
+  else if (wasChamp && champ) { renderHub(); showScreen('s-hub'); }
+  else if (wasCup && cup) { renderCup(); showScreen('s-cup'); }   // a cup in Championship mode (src/ui-cups.js)
+  else goHome();
 }
 
 let lastHud = '', lastBtn = '';

@@ -282,9 +282,23 @@ const COACH_LINE = {
 let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0 };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
+let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
 let storeBought = [];   // the app's purchases, product ids in the order bought (src/store.js); saved as store:{ owned } only once there is one, so a web save is as it was
 const SEASON_LIMIT = 10;
+/* The Trophy Cabinet (champHistory) holds completed league seasons, as it always has, and finished cups beside them as
+   { kind, id, cup } (src/cups.js). An entry without a kind is a league season: every old one. It keeps the last SEASON_LIMIT of
+   each, leagues and cups, in the order they finished. */
+const cabinetKind = e => (e && typeof e === 'object' && e.kind != null && e.kind !== 'league' ? e.kind : 'league');
+function cabinetTrim(list) {
+  const leagues = list.filter(e => cabinetKind(e) === 'league').slice(-SEASON_LIMIT), cups = list.filter(e => cabinetKind(e) !== 'league').slice(-SEASON_LIMIT);
+  return list.filter(e => leagues.includes(e) || cups.includes(e));
+}
+function cabinetClean(raw) {
+  if (cabinetKind(raw) !== 'league') return typeof cleanCupEntry === 'function' ? cleanCupEntry(raw) : null;
+  const c = cleanChamp(raw);
+  return c && c.round === 5 ? c : null;
+}
 /* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
 function cleanSeasonStats(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
@@ -422,16 +436,19 @@ function restore(s) {
   if ('champHistory' in s) {
     champHistory = [];
     if (Array.isArray(s.champHistory)) for (const raw of s.champHistory.slice(-100)) {
-      const c = cleanChamp(raw);
-      if (c && c.round === 5 && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
+      const c = cabinetClean(raw);
+      if (c && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
     }
-    champHistory = champHistory.slice(-SEASON_LIMIT);
+    champHistory = cabinetTrim(champHistory);
   }
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
   if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
+  if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
+  if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
   retainCompletedSeason(champ);
+  if (typeof cupRetain === 'function') cupRetain(cup);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
 function load() {
@@ -446,7 +463,8 @@ function save() {
   if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
   settings.duels = true;
   retainCompletedSeason(champ);
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, store:storeBought.length ? { owned:storeBought } : undefined })); } catch (e) { /* private mode, or full */ }
+  if (typeof cupRetain === 'function') cupRetain(cup);
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined })); } catch (e) { /* private mode, or full */ }
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }
@@ -754,6 +772,7 @@ function newMatch(u, c, opts) {
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
     firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless, early:ease,
+    cup:typeof opts.cup === 'string' ? opts.cup : null, cupKO:typeof opts.cup === 'string' && !!opts.cupKO,   // a cup match (src/cups.js): its id, and whether it is a knockout or a Test, which the Golden Try reads
     paused:false, over:false, cam:{ x:60, y:35 }, cut:null, surge:null,
     di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
     duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },
@@ -2820,8 +2839,9 @@ function heat(t, why) {
 function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }
 function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }
 
-/* The Golden Try: level at the end of the second half, play on until somebody scores. */
-const goldenOn = () => !!(M && M.arcade && !M.champ && !M.career);   // a career season is a league too
+/* The Golden Try: level at the end of the second half, play on until somebody scores. A cup's knockout or Test has it too
+   (M.cupKO, src/cups.js), in Championship mode or a career, since it cannot end level; a cup's pool keeps its draws. */
+const goldenOn = () => !!(M && M.arcade && (M.cup ? M.cupKO : !M.champ && !M.career));   // a career season is a league too
 const periodLen = () => M.golden ? M.halfLen*ARCADE.golden.len : M.halfLen;
 function startGolden() {
   M.half = 3; M.golden = true; M.clock = 0; M.hooter = false;
@@ -3759,7 +3779,7 @@ function retainCompletedSeason(c) {
   if (!valid || champHistory.some(old => old.id === valid.id)) return false;
   c.id = valid.id;
   champHistory.push(valid);
-  champHistory = champHistory.slice(-SEASON_LIMIT);
+  champHistory = cabinetTrim(champHistory);   // the last ten seasons, and the cups beside them (persistence.js)
   return true;
 }
 function archiveChampionship(c = champ) {
@@ -3767,12 +3787,332 @@ function archiveChampionship(c = champ) {
   if (added) save();
   return added;
 }
-/* Counts describe only the retained completed seasons, rather than an all-time record. */
+/* Counts describe only the retained completed seasons, rather than an all-time record. A cup counts by its kind when the
+   user won it (src/cups.js); seasons counts league seasons only, cups the finished cups kept. */
 function savedHonours() {
-  const out = { seasons:champHistory.length, champions:0, grandSlams:0, tripleCrowns:0, woodenSpoons:0 };
+  const out = { seasons:0, champions:0, grandSlams:0, tripleCrowns:0, woodenSpoons:0, cups:0, euro:0, world:0, tour:0 };
   const keys = { Champions:'champions', 'Grand Slam':'grandSlams', 'Triple Crown':'tripleCrowns', 'Wooden Spoon':'woodenSpoons' };
-  for (const c of champHistory) for (const h of honours(c, standings(c))) if (h[1] === c.user) out[keys[h[0]]]++;
+  for (const c of champHistory) {
+    const kind = cabinetKind(c);
+    if (kind !== 'league') { out.cups++; if (cupWinner(c.cup) === c.cup.user) out[kind]++; continue; }
+    out.seasons++;
+    for (const h of honours(c, standings(c))) if (h[1] === c.user) out[keys[h[0]]]++;
+  }
   return out;
+}
+/* =========================================================
+   Silverware: the European Cup, the World Cup, the Home Nations Tour and the Triple Crown (README, Silverware).
+   A cup is a plain object that saves as it is: its sides, its rounds of fixtures and the results played so far.
+   Every random draw happens in cupNew (the draw) or cupRecord (the other matches of a round, and a level knockout's
+   toss), never in a render, a save or cleanCup. Championship mode keeps one in `cup` (persistence.js, ui-cups.js);
+   Career keeps its own in career.cup. Both play through the same functions.
+     cup = { id:'euro'|'world'|'tour', uid, cat, year?, user, teams:[sides], pools?:[[i,j,k] x4],
+             fixtures:[[[home, away], ...] a round], results:[[{ h, a, hs, as, ht, at, w?, by? }, ...] a round], round }
+   A round's results are in its fixtures' order. A knockout or Test result carries its winner, w; level on points it
+   goes to the side with more tries (by:'tries'), then to the toss (by:'toss'). The match you play has the Golden Try
+   first (M.cupKO, src/arcade.js), so the toss is rare. Pool matches keep their draws.
+   ========================================================= */
+const CUPS = {
+  euro:{ id:'euro', name:'European Cup', lists:['eng', 'fra', 'cel', 'rsa'] },
+  world:{ id:'world', name:'World Cup' },
+  tour:{ id:'tour', name:'Home Nations Tour', tests:3, hosts:['NZL', 'RSA', 'AUS'], from:['ENG', 'IRE', 'SCO', 'WAL'] },
+};
+const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] };
+const CUP_SIZE = { euro:4, world:12, tour:2 };             // sides in each
+const CUP_MADE = { euro:1, world:3, tour:1 };              // rounds drawn at the start; the rest follow from the results
+const CUP_POOL = ['A', 'B', 'C', 'D'];
+const CUP_TOUR_SIDE = { id:'HNS', name:'Home Nations', kit:'#c41e3a', trim:'#f2efe6', alt:'#1b2747', altTrim:'#c41e3a' };   // the touring side: red, a code no club or nation has
+let cupSerial = 0;                                         // with the time, a cup's uid (the Trophy Cabinet keeps each one once)
+
+const cupFree = list => list.filter(t => t && !t.legend);  // Legends sides (the Locker) never join a draw the player did not pick
+const cupTwelve = cat => cupFree(natList(cat)).slice(0, 12);   // the category's twelve, in its table's order
+function cupNation(id, cat) { return cupTwelve(cat).find(t => t.id === id) || null; }
+function cupListOf(t) {                                    // the European league a side comes from: a built-in side's own list, else none
+  if (!t || t.custom) return null;
+  const l = TEAM_LISTS.find(x => CUPS.euro.lists.includes(x.key) && x.teams.some(s => s.id === t.id));
+  return l ? l.key : null;
+}
+/* The touring side: each ability the best of the four home nations' on the category's list, capped at 5, in red. */
+function cupTourSide(cat) {
+  const four = CUPS.tour.from.map(id => cupNation(id, cat)).filter(Boolean);
+  const t = { ...CUP_TOUR_SIDE };
+  for (const [k] of ABILITIES) t[k] = Math.min(5, Math.max(1, ...four.map(n => abilityOf(n, k))));
+  return catSide(t, cat);
+}
+/* The tour's host: the one asked for, else the next in turn from the caller's counter (New Zealand, South Africa, Australia). */
+function cupTourHost(o) {
+  const hosts = CUPS.tour.hosts;
+  if (hosts.includes(o.host)) return o.host;
+  const n = Number.isInteger(o.n) && o.n >= 0 ? o.n : 0;
+  return hosts[n % hosts.length];
+}
+/* A league winner drawn from a list, weighted by rating: a 17 (75) is six times as likely as a 14 (67). */
+function cupWeighted(list) {
+  const w = list.map(t => Math.max(1, rateOf(t) - 12) ** 2);
+  let r = rnd()*w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < list.length; i++) { r -= w[i]; if (r < 0) return list[i]; }
+  return list[list.length - 1];
+}
+/* The higher-rated side is at home; level, the better seed (the lower index). A tour's Tests are all at the host's. */
+function cupHome(c, x, y) {
+  if (c.id === 'tour') return [1, 0];
+  const rx = rateOf(c.teams[x]), ry = rateOf(c.teams[y]);
+  return rx > ry || (rx === ry && x < y) ? [x, y] : [y, x];
+}
+/* The World Cup's three pool rounds, from the pools: in yours, the weaker of the other two first and the stronger second,
+   so the round you sit out is the last (played for you); in the others the strongest meet last. */
+function cupPoolRounds(c) {
+  const rounds = [[], [], []];
+  for (const [s1, s2, s3] of c.pools) {
+    const mine = [s1, s2, s3].includes(c.user), [x, y] = [s1, s2, s3].filter(i => i !== c.user);
+    const games = mine ? [[c.user, y], [c.user, x], [x, y]] : [[s2, s3], [s1, s3], [s1, s2]];
+    games.forEach((g, r) => rounds[r].push(cupHome(c, g[0], g[1])));
+  }
+  return rounds;
+}
+
+/* A new cup. opts: user (the user's side, already named for its category), cat ('men' | 'women' | 'minis'), year, and for
+   the European Cup list (the user's league; else the list his side comes from), for the tour host or n (the caller's count
+   of tours, for the host in turn). */
+function cupNew(id, opts) {
+  const def = CUPS[id], o = opts || {};
+  if (!def || !o.user || typeof o.user !== 'object') return null;
+  const cat = TEAM_CATS.some(x => x.id === o.cat) ? o.cat : 'men';
+  const side = t => cleanSide(t);
+  const c = { id, uid:'cup-' + Date.now().toString(36) + '-' + (++cupSerial).toString(36), cat };
+  if (Number.isInteger(o.year) && o.year >= 0 && o.year <= 9999) c.year = o.year;
+  const me = side(o.user);
+  if (!me) return null;
+  if (id === 'euro') {
+    const mine = def.lists.includes(o.list) ? o.list : cupListOf(o.user);
+    let lists = def.lists.filter(k => k !== mine);
+    if (lists.length > 3) lists = shuffle(lists.slice()).slice(0, 3);   // a side from no European league: three of the four
+    const drawn = lists.map(k => cupWeighted(cupFree(TEAM_LISTS.find(l => l.key === k).teams)));
+    Object.assign(c, { user:0, teams:[me, ...drawn.map(t => side(catTeam(t, cat)))] });
+    const order = shuffle([0, 1, 2, 3]);
+    c.fixtures = [[cupHome(c, order[0], order[1]), cupHome(c, order[2], order[3])]];
+  } else if (id === 'world') {
+    const list = cupTwelve(cat).map(side);
+    let at = list.findIndex(t => t.id === me.id && !me.custom);
+    if (at < 0) { list.splice(11, 1, me); at = 11; } else list[at] = me;   // a side not on the list takes the twelfth place
+    Object.assign(c, { user:at, teams:list });
+    const bands = [0, 4, 8].map(b => shuffle([b, b + 1, b + 2, b + 3]));
+    c.pools = CUP_POOL.map((_, p) => [bands[0][p], bands[1][p], bands[2][p]]);
+    c.fixtures = cupPoolRounds(c);
+  } else {
+    const own = !me.custom && CUPS.tour.hosts.includes(me.id);   // a host's own side plays the host; anyone else is on tour
+    const hostId = own ? me.id : cupTourHost(o);
+    const host = own ? me : side(cupNation(hostId, cat) || natList('men').find(t => t.id === hostId));
+    const tourer = !own && me.id === CUP_TOUR_SIDE.id ? me : side(cupTourSide(cat));
+    Object.assign(c, { user:own ? 1 : 0, teams:[tourer, host] });   // teams[0] the touring side, teams[1] the host, at home in every Test
+    c.fixtures = [[[1, 0]]];
+  }
+  c.results = []; c.round = 0;
+  cupSettle(c);
+  return c;
+}
+
+const cupKO = (c, k) => c.id !== 'world' || k >= 3;       // every round but the World Cup's pools is a knockout (or a Test)
+const cupW = (c, k, i) => c.results[k][i].w;
+function cupSeries(c, k = c.results.length) {              // Tests won by each side, [tourer, host], from the first k
+  const w = [0, 0];
+  for (let r = 0; r < k; r++) for (const m of c.results[r]) w[m.w]++;
+  return w;
+}
+/* Round k's fixtures, from the results of rounds 0 to k-1, for a round made as the cup goes; null when there is none. */
+function cupNext(c, k) {
+  if (k < CUP_MADE[c.id]) return c.fixtures[k] || null;
+  if (c.id === 'euro') return k === 1 ? [cupHome(c, cupW(c, 0, 0), cupW(c, 0, 1))] : null;
+  if (c.id === 'tour') { const s = cupSeries(c, k); return k < CUPS.tour.tests && Math.max(...s) < 2 ? [[1, 0]] : null; }
+  if (k === 3) {                                           // the Quarter-Finals: A1 v B2, C1 v D2, B1 v A2, D1 v C2
+    const t = [0, 1, 2, 3].map(p => cupPoolRows(c, p, 3).map(r => r.i));
+    return [[t[0][0], t[1][1]], [t[2][0], t[3][1]], [t[1][0], t[0][1]], [t[3][0], t[2][1]]].map(([x, y]) => cupHome(c, x, y));
+  }
+  if (k === 4) return [cupHome(c, cupW(c, 3, 0), cupW(c, 3, 1)), cupHome(c, cupW(c, 3, 2), cupW(c, 3, 3))];
+  if (k === 5) return [cupHome(c, cupW(c, 4, 0), cupW(c, 4, 1))];
+  return null;
+}
+/* A pool's table over its first k rounds (standings, the league's own points), its three sides only, best first. */
+function cupPoolRows(c, p, k = Math.min(3, c.results.length)) {
+  const own = c.pools[p], res = [];
+  for (let r = 0; r < Math.min(k, 3, c.results.length); r++) res.push(c.results[r].filter(m => own.includes(m.h)));
+  return standings({ teams:c.teams, results:res }).filter(r => own.includes(r.i));
+}
+/* A knockout result: the winner on points, else on tries, else on the toss. */
+function cupDecide(m) {
+  if (m.hs !== m.as) return { ...m, w:m.hs > m.as ? m.h : m.a };
+  if (m.ht !== m.at) return { ...m, w:m.ht > m.at ? m.h : m.a, by:'tries' };
+  return { ...m, w:rnd() < 0.5 ? m.h : m.a, by:'toss' };
+}
+/* Make the next round when the last is done, and play every round the user has no part in: the round of his pool he sits
+   out, or the rest of the cup once he is out. */
+function cupSettle(c) {
+  for (let guard = 0; guard < 8; guard++) {
+    if (c.fixtures.length === c.results.length) { const nx = cupNext(c, c.results.length); if (!nx) break; c.fixtures.push(nx); }
+    const k = c.results.length, pairs = c.fixtures[k];
+    if (pairs.some(p => p.includes(c.user))) break;
+    c.results.push(pairs.map(([h, a]) => { const m = simMatch(c, h, a); return cupKO(c, k) ? cupDecide(m) : m; }));
+    c.round = c.results.length;
+  }
+}
+function cupStage(c, k) {
+  if (c.id === 'euro') return k === 0 ? 'Semi-Final' : 'Final';
+  if (c.id === 'tour') return 'Test ' + (k + 1) + ' of ' + CUPS.tour.tests;
+  if (k < 3) return 'Pool ' + CUP_POOL[c.pools.findIndex(p => p.includes(c.user))];
+  return ['Quarter-Final', 'Semi-Final', 'Final'][k - 3];
+}
+/* The user's next match, or null when he is out or the cup is over. */
+function cupFixture(c) {
+  if (!c || !Array.isArray(c.fixtures) || c.round >= c.fixtures.length) return null;
+  const k = c.round, pair = c.fixtures[k].find(p => p.includes(c.user));
+  if (!pair) return null;
+  return { home:pair[0], away:pair[1], opp:pair[0] === c.user ? pair[1] : pair[0], label:cupStage(c, k), ko:cupKO(c, k), round:k };
+}
+/* The user's match: r = { score:[home, away], tries:[home, away] } in the fixture's order. The rest of the round is simulated,
+   the cup moves on, and a cup the user wins tells the Locker once. False when there is nothing to record. */
+function cupRecord(c, r) {
+  const fx = cupFixture(c);
+  if (!fx || !r || !Array.isArray(r.score) || !Array.isArray(r.tries)) return false;
+  const hs = ptsOf(r.score[0]), as = ptsOf(r.score[1]), ht = ptsOf(r.tries[0]), at = ptsOf(r.tries[1]);
+  if (hs == null || as == null || ht == null || at == null) return false;
+  const k = fx.round, ko = fx.ko;
+  c.results.push(c.fixtures[k].map(([h, a]) => {
+    const m = h === fx.home && a === fx.away ? { h, a, hs, as, ht, at } : simMatch(c, h, a);
+    return ko ? cupDecide(m) : m;
+  }));
+  c.round = c.results.length;
+  cupSettle(c);
+  if (cupDone(c) && cupWinner(c) === c.user && typeof lockerEvent === 'function') lockerEvent(c.id);
+  return true;
+}
+function cupDone(c) { return !!c && c.results.length === c.fixtures.length && !cupNext(c, c.results.length); }
+function cupWinner(c) {
+  if (!cupDone(c)) return -1;
+  if (c.id === 'tour') { const s = cupSeries(c); return s[0] > s[1] ? 0 : 1; }
+  return c.results[c.results.length - 1][0].w;
+}
+/* Out: beaten in a knockout, not through the pools, or (a tour) the series lost. A lost Test leaves the series alive. */
+function cupUserOut(c) {
+  if (!c) return false;
+  if (cupDone(c)) return cupWinner(c) !== c.user;
+  if (c.id === 'tour') return false;
+  for (let k = 0; k < c.results.length; k++) if (cupKO(c, k) && c.results[k].some(m => (m.h === c.user || m.a === c.user) && m.w !== c.user)) return true;
+  return c.round < c.fixtures.length && cupKO(c, c.round) && !c.fixtures[c.round].some(p => p.includes(c.user));
+}
+/* How far the user went: Winners (Series Won), Runners-Up, Semi-Finalists, Quarter-Finalists, Pool Stage (Series Lost). */
+function cupFinish(c) {
+  if (c.id === 'tour') return cupWinner(c) === c.user ? 'Series Won' : 'Series Lost';
+  if (cupWinner(c) === c.user) return 'Winners';
+  let last = -1;
+  c.results.forEach((rd, k) => { if (rd.some(m => m.h === c.user || m.a === c.user)) last = k; });
+  const stage = last < 0 ? '' : cupStage(c, last);
+  return stage === 'Final' ? 'Runners-Up' : stage === 'Semi-Final' ? 'Semi-Finalists' : stage === 'Quarter-Final' ? 'Quarter-Finalists' : 'Pool Stage';
+}
+/* The stage now ('Semi-Final', 'Pool B', 'Test 2 of 3'), or, once the user is done, how far he went. */
+function cupLabel(c) {
+  const fx = cupFixture(c);
+  if (fx) return fx.label;
+  return cupDone(c) || cupUserOut(c) ? cupFinish(c) : cupStage(c, Math.min(c.round, c.fixtures.length - 1));
+}
+/* The user's record in the cup: played, won, drawn, lost, points and tries for and against. */
+function cupRecordOf(c) {
+  const s = { played:0, won:0, drawn:0, lost:0, pointsFor:0, pointsAgainst:0, triesFor:0, triesAgainst:0 };
+  for (const rd of c.results) for (const m of rd) {
+    if (m.h !== c.user && m.a !== c.user) continue;
+    const home = m.h === c.user, us = home ? m.hs : m.as, them = home ? m.as : m.hs;
+    s.played++; s[us > them ? 'won' : us < them ? 'lost' : 'drawn']++;
+    s.pointsFor += us; s.pointsAgainst += them; s.triesFor += home ? m.ht : m.at; s.triesAgainst += home ? m.at : m.ht;
+  }
+  return s;
+}
+
+/* The Triple Crown: in a six-nation season (championship.js's shape, a nation's own six), a home nation that has beaten each of
+   the other three. Read from the results, so it can be asked of a season under way. */
+function cupTriple(season) {
+  const s = season;
+  if (!s || !Array.isArray(s.teams) || !Array.isArray(s.results) || !s.teams[s.user]) return false;
+  const ids = CUP_TRIPLE.nations, me = s.teams[s.user];
+  if (me.custom || !ids.includes(me.id)) return false;
+  const others = ids.filter(id => id !== me.id).map(id => s.teams.findIndex(t => t && t.id === id && !t.custom));
+  if (others.some(i => i < 0)) return false;
+  const all = s.results.flat();
+  return others.every(o => all.some(r => (r.h === s.user && r.a === o && r.hs > r.as) || (r.a === s.user && r.h === o && r.as > r.hs)));
+}
+/* After a result goes into a six-nation season: true, once, in the round that completed the Triple Crown, telling the Locker. */
+function cupTripleAfter(season) {
+  if (!cupTriple(season)) return false;
+  if (cupTriple({ ...season, results:season.results.slice(0, -1) })) return false;
+  if (typeof lockerEvent === 'function') lockerEvent('triple');
+  return true;
+}
+
+/* A saved cup, rebuilt and checked: the sides through cleanSide, the drawn rounds' shape, every later round remade from the
+   results and compared, and each result against its fixture. null for anything that does not hold; a save without one loads
+   as it did. */
+function cleanCup(c) {
+  if (!c || typeof c !== 'object' || Array.isArray(c) || !CUPS[c.id]) return null;
+  const n = CUP_SIZE[c.id];
+  if (!Array.isArray(c.teams) || c.teams.length !== n || !Number.isInteger(c.user) || c.user < 0 || c.user >= n) return null;
+  const teams = c.teams.map(cleanSide);
+  if (teams.some(t => !t)) return null;
+  if (!Array.isArray(c.fixtures) || !Array.isArray(c.results) || c.round !== c.results.length || c.results.length > c.fixtures.length || c.fixtures.length > 6) return null;
+  const out = { id:c.id, uid:typeof c.uid === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(c.uid) ? c.uid : '', cat:TEAM_CATS.some(x => x.id === c.cat) ? c.cat : 'men' };
+  if (Number.isInteger(c.year) && c.year >= 0 && c.year <= 9999) out.year = c.year;
+  Object.assign(out, { user:c.user, teams });
+  const idx = v => Number.isInteger(v) && v >= 0 && v < n;
+  const pairOk = p => Array.isArray(p) && p.length === 2 && idx(p[0]) && idx(p[1]) && p[0] !== p[1];
+  const same = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((p, i) => pairOk(b[i]) && p[0] === b[i][0] && p[1] === b[i][1]);
+  if (c.id === 'world') {
+    if (!Array.isArray(c.pools) || c.pools.length !== 4 || !c.pools.every(p => Array.isArray(p) && p.length === 3 && p.every(idx))) return null;
+    const pools = c.pools.map(p => p.slice());
+    if (new Set(pools.flat()).size !== 12 || !pools.every(p => p.every((i, b) => Math.floor(i/4) === b))) return null;   // one side of each band
+    out.pools = pools;
+  }
+  out.fixtures = []; out.results = []; out.round = 0;
+  const made = c.id === 'world' ? cupPoolRounds(out) : c.id === 'tour' ? [[[1, 0]]] : null;
+  if (c.id === 'euro') {
+    const f = c.fixtures[0];
+    if (!Array.isArray(f) || f.length !== 2 || !f.every(pairOk) || new Set(f.flat()).size !== 4 || !f.every(p => same([cupHome(out, p[0], p[1])], [p]))) return null;
+  } else if (c.fixtures.length < made.length || !made.every((rd, k) => same(rd, c.fixtures[k]))) return null;
+  for (let k = 0; k < c.fixtures.length; k++) {
+    const want = k < CUP_MADE[c.id] ? (made ? made[k] : c.fixtures[0].map(p => p.slice())) : cupNext(out, k);
+    if (!want || !same(want, c.fixtures[k]) || (k > out.results.length && k >= CUP_MADE[c.id])) return null;   // a later round only once the one before it is played
+    out.fixtures.push(want.map(p => p.slice()));
+    if (k >= c.results.length) continue;
+    const rd = c.results[k], ko = cupKO(out, k);
+    if (!Array.isArray(rd) || rd.length !== want.length) return null;
+    const clean = [];
+    for (let i = 0; i < rd.length; i++) {
+      const m = rd[i], [h, a] = want[i];
+      if (!m || typeof m !== 'object' || m.h !== h || m.a !== a) return null;
+      const hs = ptsOf(m.hs), as = ptsOf(m.as), ht = ptsOf(m.ht), at = ptsOf(m.at);
+      if (hs == null || as == null || ht == null || at == null) return null;
+      const r = { h, a, hs, as, ht, at };
+      if (ko) {
+        const by = hs !== as ? null : ht !== at ? 'tries' : 'toss', w = by === 'tries' ? (ht > at ? h : a) : by ? m.w : hs > as ? h : a;
+        if (m.w !== w || (w !== h && w !== a) || (m.by || null) !== by) return null;
+        r.w = w; if (by) r.by = by;
+      }
+      clean.push(r);
+    }
+    out.results.push(clean); out.round = out.results.length;
+  }
+  if (out.fixtures.length === out.results.length) { const nx = cupNext(out, out.results.length); if (nx) out.fixtures.push(nx); }   // a missing next round follows from the results
+  if (!out.uid) out.uid = 'cup-' + cupHash(out);
+  return out;
+}
+function cupHash(c) {                                      // a stable id for a cup saved without one, from its data, never the RNG
+  const text = JSON.stringify([c.id, c.user, c.teams, c.pools || null, c.fixtures, c.results]);
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return (h >>> 0).toString(36);
+}
+/* A Trophy Cabinet entry for a finished cup: { kind, id, cup }. League seasons are entries as they always were (kind 'league'). */
+function cleanCupEntry(e) {
+  if (!e || typeof e !== 'object' || !CUPS[e.kind]) return null;
+  const c = cleanCup(e.cup);
+  if (!c || c.id !== e.kind || !cupDone(c)) return null;
+  return { kind:c.id, id:c.uid, cup:c };
 }
 /* =========================================================
    Career: one player, from the minis to the national team.
@@ -6097,6 +6437,7 @@ function showScreen(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   setFocus(null);
   if (id === 's-teams') fitNames();
+  if (id === 's-cup' && typeof cupFit === 'function') cupFit($('s-cup'));   // the cup hub's long names, once it has a size (src/ui-cups.js)
   if (id !== 's-home') { const a = document.activeElement; if (a && typeof a.blur === 'function') a.blur(); }   // a focused menu button must not fire on Enter once it is hidden
 }
 function clearBanner() { clearTimeout(bannerTimer); const el = document.getElementById('banner'); if (el) el.innerHTML = ''; }
@@ -6142,7 +6483,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -6154,12 +6495,14 @@ function startMatch(u, c, isChamp, o) {
 }
 function exitMatch() {
   if (practice) { practiceLeave(); return; }
-  const wasChamp = M && M.champ, wasCareer = M && M.career;
+  const wasChamp = M && M.champ, wasCareer = M && M.career, wasCup = M && M.cup;
   setTwo(false);                                           // the menus are one player's again; the join screen switches the seats back on
   series = { w:[0, 0], d:0 }; navOnly = null;              // a two-player series ends with the visit to the menu
   startDemo();
   if (wasCareer && career) careerOpen();
-  else if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else goHome();
+  else if (wasChamp && champ) { renderHub(); showScreen('s-hub'); }
+  else if (wasCup && cup) { renderCup(); showScreen('s-cup'); }   // a cup in Championship mode (src/ui-cups.js)
+  else goHome();
 }
 
 let lastHud = '', lastBtn = '';
@@ -6560,7 +6903,9 @@ function showBreak(kind) {
     const [a, b] = M.score;
     const res = M.two ? (a > b ? 'Player 1 Wins' : a < b ? 'Player 2 Wins' : 'Draw') : a > b ? M.nat[0].name + ' Win' : a < b ? M.nat[1].name + ' Win' : 'Draw';   // two player names the player, since both can be Farnham
     $('br-tries').textContent = res + ' · Tries ' + M.tries[0] + ' – ' + M.tries[1];
-    if (M.champ || M.career) {
+    const cupLine = M.cup && M.cupResultDone && typeof cupBreakLine === 'function' ? cupBreakLine() : '';   // a cup match: Through to the Final, Series 1–0 (src/ui-cups.js)
+    if (cupLine) { $('br-pts').textContent = cupLine; $('br-pts').hidden = false; }
+    else if (M.champ || M.career) {
       const mp = matchPoints(a, b, M.tries[0]);
       $('br-pts').textContent = '+' + mp.p + ' Table ' + (mp.p === 1 ? 'Point' : 'Points') + (mp.why.length ? ' · ' + mp.why.join(', ') : '');
       $('br-pts').hidden = false;
@@ -6576,7 +6921,8 @@ function showBreak(kind) {
   $('m-break').hidden = false;
 }
 function finishMatch() {
-  if (M.champ && champ) recordChampResult();
+  if (M.champ && champ) { const was = champ.round; recordChampResult(); if (champ.round > was && typeof cupTripleAfter === 'function') cupTripleAfter(champ); }   // a Triple Crown completed by this result tells the Locker (src/cups.js)
+  if (M.cup && !M.career && cup && typeof cupRecordMatch === 'function') cupRecordMatch();   // a cup in Championship mode (src/ui-cups.js)
   if (M.career) careerRecordResult();
   if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and a Whole Team career alike
   showBreak('full');
@@ -6650,7 +6996,10 @@ function renderHome() {
   const note = $('champ-note');
   const live = champ && champ.teams && champ.teams[champ.user] && champ.round < 5;
   const done = champ && champ.teams && champ.teams[champ.user] && champ.round >= 5;
-  if (live) {
+  if (cup && typeof cupNote === 'function') {                // a cup under way, or finished and not yet put away (src/ui-cups.js)
+    $('b-champ').textContent = cupFixture(cup) ? 'Continue Championship' : 'Final Result';
+    cupHomeNote(note, cup);
+  } else if (live) {
     $('b-champ').textContent = 'Continue Championship';
     homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else if (done) {
@@ -6687,7 +7036,8 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
 $('b-champ').addEventListener('click', () => {
   ac();
   if (!storeGate('champ', () => $('b-champ').click())) return;   // locked: the Unlock card; a championship under way stays saved
-  if (champ) { renderHub(); showScreen('s-hub'); }
+  if (cup) { renderCup(); showScreen('s-cup'); }          // a cup under way (src/ui-cups.js)
+  else if (champ) { renderHub(); showScreen('s-hub'); }
   else openTeams('champ');
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
@@ -6698,7 +7048,7 @@ $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
-$('t-default').addEventListener('click', () => pickTeam(storeHomeTeam()));   // Farnham, or the Super Fan's club
+$('t-default').addEventListener('click', () => { const v = teamsView(); pickTeam(v && v.pick ? v.pick : storeHomeTeam()); });   // Farnham, or the Super Fan's club; on a Home Nations Tour, the host in turn
 
 /* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
@@ -6816,32 +7166,40 @@ function catPick(id) {
 }
 function openTeams(m) {
   pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 'sur'; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  if (typeof cupCompReset === 'function') cupCompReset();   // Championship opens on League, today's flow (src/ui-cups.js)
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
+/* Championship's World Cup or Home Nations Tour, picked on the team screen's competition row: its title, its list, its side
+   and its primary (src/ui-cups.js); null for League, today's flow, and for every other mode. */
+const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
 function renderTeams() {
-  const quick = pickMode === 'quick', pair = pickMode === 'two', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick;   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
+  const quick = pickMode === 'quick', pair = pickMode === 'two', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick, view = teamsView();   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
   const eb = $('t-eyebrow');
   eb.textContent = quick ? 'Quick Match' : pair ? 'Two Player' : 'Championship';
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
-  $('t-title').textContent = pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
+  $('t-title').textContent = view ? view.title : pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
   const pool = teamPool(), tier = poolTier(pool), press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
+  $('t-comp').hidden = pickMode !== 'champ';               // League | World Cup | Home Nations Tour, Championship only (src/ui-cups.js)
+  press('t-comp', '[data-comp]', b => b.dataset.comp === (view ? view.comp : 'league'));
   press('t-tier', '[data-tier]', b => +b.dataset.tier === tier);
-  $('t-nat').hidden = tier !== 1; $('t-loc').hidden = tier !== 2; $('t-league').hidden = !importLeague;
+  $('t-tier').hidden = !!view;                             // a cup's sides are its own: no lists to pick from
+  $('t-nat').hidden = !!view || tier !== 1; $('t-loc').hidden = !!view || tier !== 2; $('t-league').hidden = !importLeague;
   for (const id of ['t-nat', 't-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   press('t-cat', '[data-cat]', b => b.dataset.cat === settings.cat);
-  const yours = (quick && !!quickPick) || (pair && p === 1);
-  $('t-yours').hidden = !yours;
-  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, settings.cat) || mine).name)}</span>`;
-  $('t-default').hidden = quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
+  const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours);
+  $('t-yours').hidden = !yours; $('t-change').hidden = !!view;
+  if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
+  else if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, settings.cat) || mine).name)}</span>`;
+  $('t-default').hidden = view ? !view.pick : quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
-  $('t-default').textContent = 'Play as ' + catSide(storeHomeTeam(), settings.cat).name;   // the side it starts: Farnham Women on Women
-  teamList = [...poolTeams(pool), ...custom];              // My League: src/import.js
-  if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js)
+  $('t-default').textContent = view && view.pick ? view.primary : 'Play as ' + catSide(storeHomeTeam(), settings.cat).name;   // the side it starts: Farnham Women on Women
+  teamList = view ? view.list : [...poolTeams(pool), ...custom];   // My League: src/import.js
+  if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js); a cup's nations and hosts are never a partner club
   let html = teamList.map(teamCard).join('');
-  if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
-  html += importCard();                                    // Import Club, src/import.js
+  if (!view && custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
+  if (!view) html += importCard();                         // Import Club, src/import.js
   $('t-grid').innerHTML = html;
   for (const b of $('t-grid').querySelectorAll('.team[data-i]')) b.addEventListener('click', () => pickTeam(teamList[+b.dataset.i]));
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));
@@ -6870,6 +7228,8 @@ function pickTeam(t) {
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
+    const view = teamsView();
+    if (view) { view.start(t); return; }                   // a World Cup as that nation, or a tour to that host (src/ui-cups.js)
     const pool = teamPool(), cat = settings.cat, me = catTeam(t, cat);
     if (!me) return;
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
@@ -6978,15 +7338,20 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
     + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
+/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked with its kind's colour and
+   name; the tally counts each kind won, a cup's only once one is kept. An entry without a kind is a league season. */
 function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
-  const tally = [['Title', 'Titles', totals.champions], ['Grand Slam', 'Grand Slams', totals.grandSlams], ['Triple Crown', 'Triple Crowns', totals.tripleCrowns]];
-  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons · saved on this device.</p>`
-    + (history.length ? `<p class="cabinet-tally">${tally.map(([singular, plural, n]) => `${n} ${n === 1 ? singular : plural}`).join(' · ')}</p>` + history.map((c, i) => {
+  const tally = [['league', 'Title', 'Titles', totals.champions], ['league', 'Grand Slam', 'Grand Slams', totals.grandSlams], ['triple', 'Triple Crown', 'Triple Crowns', totals.tripleCrowns],
+    ...[['euro', 'European Cup', 'European Cups'], ['world', 'World Cup', 'World Cups'], ['tour', 'Tour', 'Tours']].map(([k, a, b]) => [k, a, b, totals[k] || 0]).filter(t => t[3] > 0)];
+  const kindTag = k => `<span class="cup-kind" data-kind="${k}">${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
+  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}">${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
+      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind));
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
-      return `<article class="season-entry"><p class="eyebrow">${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
+      return `<article class="season-entry"><p class="eyebrow">${kindTag('league')}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
     }).join('') : '<p class="stat-note">Complete a championship to record your first season here.</p>');
 }
 function renderSeasonSummary(c) {
@@ -7037,8 +7402,11 @@ function renderHub() {
     $('hub-play').addEventListener('click', () => { const { opp } = userFixture(champ); startMatch(champ.teams[champ.user], champ.teams[opp], true); });
     $('hub-hon').hidden = true;
   } else {
-    $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
-    $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); openTeams('champ'); });
+    if (typeof cupEuroHub === 'function' && cupEuroHub(c, rows)) { /* won a European league: Play European Cup or Not Now (src/ui-cups.js) */ }
+    else {
+      $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
+      $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); openTeams('champ'); });
+    }
     $('hub-hon').innerHTML = honours(c, rows).map(([t, i, gold]) => `<div class="hon${gold ? ' gold' : ''}"><span class="eyebrow">${t}</span><b>${esc(T[i].name)}</b></div>`).join('');
     $('hub-hon').hidden = false;
   }
@@ -7062,6 +7430,279 @@ $('hub-reset').addEventListener('click', () => {
   archiveChampionship(champ); champ = null; save(); goHome();
 });
 
+/* =========================================================
+   Silverware in Championship mode (README, Silverware): the team screen's competition row (League | World Cup | Home Nations
+   Tour), the European Cup offered after a European league is won, the cup hub (the stage, your next fixture, Play, the
+   bracket, the pools or the Tests), the last round's result card, the winner's card, the full-time line, and the cups in the
+   Trophy Cabinet. The rules are src/cups.js's; the cup under way is `cup` (persistence.js). All of it sits behind
+   Championship's Full Game gate, as the button that leads here does.
+   ========================================================= */
+const CUP_COMPS = [['league', 'League'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']];
+const CUP_SHORT = { euro:'European Cup', world:'World Cup', tour:'Tour' };   // the home screen's note, one line under its half
+const CUP_PLURAL = { 'Semi-Final':'Semi-Finals', 'Quarter-Final':'Quarter-Finals', Final:'Final' };
+let champComp = 'league';                                  // the competition row; League, today's flow, each time the screen opens
+let cupEuroSkip = null;                                    // Not Now: the league season whose European Cup offer was put off, this visit
+let cupResetArmed = false;
+
+{
+  $('t-comp').innerHTML = CUP_COMPS.map(([id, n]) => `<button data-comp="${id}">${n}</button>`).join('');
+  for (const b of $('t-comp').querySelectorAll('[data-comp]')) b.addEventListener('click', () => cupCompPick(b.dataset.comp));
+}
+function cupCompReset() { champComp = 'league'; }
+function cupCompPick(id) {
+  if (!CUP_COMPS.some(c => c[0] === id)) return;
+  champComp = id;
+  renderTeams(); $('s-teams').scrollTop = 0;
+}
+/* The team screen for the World Cup (the category's twelve, pick your nation) or the Home Nations Tour (your side is the
+   Home Nations; the three hosts, the one in turn first and on the primary). null for League. */
+function cupTeamsView() {
+  if (champComp === 'world') {
+    const cat = settings.cat;
+    return { comp:'world', title:'Pick Your Nation', list:cupTwelve(cat), start:t => cupBegin('world', { user:catTeam(t, cat) || t, cat }) };
+  }
+  if (champComp !== 'tour') return null;
+  const cat = settings.cat, hosts = CUPS.tour.hosts, at = cupTurn % hosts.length;
+  const list = [0, 1, 2].map(i => cupNation(hosts[(at + i) % hosts.length], cat)).filter(Boolean);
+  return { comp:'tour', title:'Pick the Host', list, yours:cupTourSide(cat), pick:list[0], primary:'Tour ' + listName(list[0]),
+    start:t => { if (!hosts.includes(t.id)) return; cupTurn = hosts.indexOf(t.id) + 1; cupBegin('tour', { user:cupTourSide(cat), cat, host:t.id }); } };
+}
+function cupBegin(id, opts) {
+  const c = cupNew(id, opts);
+  if (!c) return false;
+  cup = c; cupResetArmed = false;
+  save(); renderCup(); showScreen('s-cup'); $('s-cup').scrollTop = 0;
+  return true;
+}
+
+/* A league won with a side from England, France, Celtic and Italy or South Africa offers the European Cup straight after. */
+function cupEuroOn(c, rows) { return !!c && c.round >= 5 && rows[0].i === c.user && cupEuroSkip !== c.id && !!cupListOf(c.teams[c.user]); }
+function cupEuroHub(c, rows) {
+  if (!cupEuroOn(c, rows)) return false;
+  $('hub-next').innerHTML = `<div class="stack cup-offer"><button class="btn primary" id="hub-euro"><span class="cup-trophy" data-kind="euro" aria-hidden="true"></span>Play European Cup</button><button class="btn" id="hub-later">Not Now</button></div>`;
+  $('hub-euro').addEventListener('click', cupEuroStart);
+  $('hub-later').addEventListener('click', () => { cupEuroSkip = champ ? champ.id : null; renderHub(); });
+  return true;
+}
+function cupEuroStart() {
+  const c = champ;
+  if (!c || !cupEuroOn(c, standings(c))) return false;
+  const me = c.teams[c.user];
+  archiveChampionship(c);                                  // the league season goes into the Trophy Cabinet first
+  champ = null;
+  return cupBegin('euro', { user:me, cat:catOf(me) });
+}
+
+/* Full time in a cup match in Championship mode: the result into the cup, in the fixture's order. */
+function cupRecordMatch() {
+  if (!cup || !M || M.cup !== cup.id || M.career || M.demo || M.two || practice || M.cupResultDone) return false;
+  const fx = cupFixture(cup);
+  if (!fx) return false;
+  const home = fx.home === cup.user;
+  const r = home ? { score:[M.score[0], M.score[1]], tries:[M.tries[0], M.tries[1]] } : { score:[M.score[1], M.score[0]], tries:[M.tries[1], M.tries[0]] };
+  M.cupResultDone = true;
+  const done = cupRecord(cup, r);
+  save();
+  return done;
+}
+function cupPlay() {
+  const fx = cupFixture(cup);
+  if (!fx) return false;
+  startMatch(cup.teams[cup.user], cup.teams[fx.opp], false, { cup:cup.id, cupKO:fx.ko });
+  return true;
+}
+/* A finished cup goes into the Trophy Cabinet once, as { kind, id, cup } (persistence.js). Never a career's: career.cup is its own. */
+function cupRetain(c) {
+  if (practice || !c || !cupDone(c)) return false;
+  const e = cleanCupEntry({ kind:c.id, cup:c });
+  if (!e || champHistory.some(old => old.id === e.id)) return false;
+  champHistory.push(e);
+  champHistory = cabinetTrim(champHistory);
+  return true;
+}
+
+/* Words. */
+function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
+/* The home screen's note under Championship: a small trophy in the cup's colour, then Bath · European Cup · Semi-Final. A phone held
+   sideways leaves out the side's name and the cup's (styles.css), so it stays one line under its half: the trophy and Semi-Final. */
+function cupHomeNote(el, c) {
+  const tour = c.id === 'tour' && c.user === 0;
+  const name = tour ? '' : `<span class="rn-name">${esc(c.teams[c.user].name + ' · ')}</span>`;
+  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : CUPS[c.id].name) + ' · ')}</span>${esc(cupLabel(c))}`;
+  el.hidden = false;
+}
+/* The cup by name: European Cup · Bath, or on tour, Tour of South Africa (the Home Nations are always the side on tour). */
+function cupName(c, long) {
+  if (c.id === 'tour' && c.user === 0) return 'Tour of ' + listName(c.teams[1]);
+  return (long ? CUPS[c.id].name : c.teams[c.user].name + ' · ' + CUP_SHORT[c.id]) + (long ? ' · ' + c.teams[c.user].name : '');
+}
+function cupLastRound(c) {                                 // the latest round with a result of the user's
+  for (let k = c.results.length - 1; k >= 0; k--) if (c.results[k].some(m => m.h === c.user || m.a === c.user)) return k;
+  return -1;
+}
+const cupMine = (c, k) => c.results[k].find(m => m.h === c.user || m.a === c.user);
+const cupUs = (c, m) => (m.h === c.user ? [m.hs, m.as, m.ht] : [m.as, m.hs, m.at]);   // the user's points, theirs, his tries
+function cupRoundName(c, k) {
+  if (c.id === 'tour') return 'Test ' + (k + 1);
+  if (c.id === 'world' && k < 3) return cupStage(c, k) + ' · Match ' + (c.results.slice(0, k + 1).filter(rd => rd.some(m => m.h === c.user || m.a === c.user)).length);
+  return CUP_PLURAL[cupStage(c, k)];
+}
+/* What round k meant for the user: Through to the Final (on Tries), Out, Winners, Series 2 – 1, or a pool's table points. */
+function cupVerdict(c, k) {
+  const m = cupMine(c, k);
+  if (!m) return { text:'', good:false };
+  const [us, them, tries] = cupUs(c, m);
+  if (c.id === 'world' && k < 3 && c.results.length >= 3) {   // his last pool match, the pools done: through or out, and where he finished
+    const p = c.pools.findIndex(x => x.includes(c.user)), place = cupPoolRows(c, p).findIndex(r => r.i === c.user);
+    return { text:place === 0 ? 'Pool ' + CUP_POOL[p] + ' Winners' : (place === 1 ? 'Through' : 'Out') + ' · ' + ordinal(place + 1) + ' in Pool ' + CUP_POOL[p], good:place < 2 };
+  }
+  if (!cupKO(c, k)) { const mp = matchPoints(us, them, tries); return { text:'+' + mp.p + ' Table ' + (mp.p === 1 ? 'Point' : 'Points') + (mp.why.length ? ' · ' + mp.why.join(', ') : ''), good:us >= them }; }
+  const won = m.w === c.user, how = m.by === 'tries' ? ' on Tries' : m.by === 'toss' ? ' on the Toss' : '';
+  if (c.id === 'tour') {
+    const s = cupSeries(c, k + 1), mine = s[c.user], theirs = s[1 - c.user];
+    const end = k === c.results.length - 1 && cupDone(c) ? (cupWinner(c) === c.user ? 'Series Won ' : 'Series Lost ') : 'Series ';
+    return { text:(won ? 'Test Won' : 'Test Lost') + how + ' · ' + end + mine + ' – ' + theirs, good:won };
+  }
+  if (!won) return { text:'Out' + how, good:false };
+  if (cupDone(c) && k === c.results.length - 1) return { text:CUPS[c.id].name + ' Winners' + how, good:true };
+  return { text:'Through to the ' + CUP_PLURAL[cupStage(c, k + 1)] + how, good:true };
+}
+function cupBreakLine() {                                  // the full-time card, once the result is in (M.cupResultDone)
+  const c = M && M.cup ? (M.career ? career && career.cup : cup) : null;
+  if (!c || !M.cupResultDone || c.id !== M.cup) return '';
+  const k = cupLastRound(c);
+  return k < 0 ? '' : cupVerdict(c, k).text;
+}
+function cupLine(c) {                                      // under the title
+  const fx = cupFixture(c), T = c.teams;
+  if (!fx) {
+    if (!cupDone(c)) return 'Out of the ' + CUPS[c.id].name;
+    const w = cupWinner(c);
+    if (c.id === 'tour') { const s = cupSeries(c); return T[w].name + ' win the series ' + Math.max(...s) + ' – ' + Math.min(...s); }
+    return T[w].name + ' win the ' + CUPS[c.id].name;
+  }
+  if (c.id === 'tour') {
+    const s = cupSeries(c), mine = s[c.user], theirs = s[1 - c.user];
+    return fx.round === 0 ? 'Win two Tests to take the series' : 'Series ' + mine + ' – ' + theirs + (mine === 1 && theirs === 1 ? ' · The decider' : '');
+  }
+  if (!fx.ko) {
+    if (fx.round === 0) return 'Top two in each pool go through';
+    const p = c.pools.findIndex(x => x.includes(c.user)), place = cupPoolRows(c, p).findIndex(r => r.i === c.user);
+    return ordinal(place + 1) + ' in Pool ' + CUP_POOL[p] + ' · top two go through';
+  }
+  return fx.label === 'Final' ? 'Win the ' + CUPS[c.id].name : 'Win to reach the ' + CUP_PLURAL[cupStage(c, fx.round + 1)];
+}
+
+/* Pieces. */
+const cupKit = t => (HEX.test(t.kit) ? t.kit : '#888888');
+const cupChip = t => `<i class="cup-chip" style="--k:${cupKit(t)}"></i>`;
+function cupResHtml(c, m) {
+  const T = c.teams, mine = m.h === c.user || m.a === c.user;
+  return `<div class="res${mine ? ' me' : ''}"><span class="h">${esc(listName(T[m.h]))}</span><span class="sc">${m.hs} – ${m.as}</span><span>${esc(listName(T[m.a]))}</span></div>`;
+}
+function cupLastHtml(c) {                                  // the result card for the round just played: your match and what it meant (the rest are in the draw)
+  const k = cupLastRound(c);
+  if (c.id === 'tour') return cupSeriesHtml(c, k);
+  if (k < 0) return '';
+  const v = cupVerdict(c, k);
+  return `<div class="cup-last"><p class="eyebrow">${esc(cupRoundName(c, k))}</p>${cupResHtml(c, cupMine(c, k))}<p class="cup-verdict${v.good ? ' good' : ' bad'}">${esc(v.text)}</p></div>`;
+}
+function cupSeriesHtml(c, k) {                             // a tour's result card: the series score, and the last Test's outcome under it
+  const T = c.teams, s = cupSeries(c), m = k < 0 ? null : cupMine(c, k);
+  const won = m && m.w === c.user, how = m && m.by === 'tries' ? ' on Tries' : m && m.by === 'toss' ? ' on the Toss' : '';
+  const text = !m ? '' : cupDone(c) ? (cupWinner(c) === c.user ? 'Series Won' : 'Series Lost') : 'Test ' + (k + 1) + (won ? ' Won' : ' Lost') + how;
+  const side = (t, r) => `<span class="cs-side${r ? ' r' : ''}${t === c.user ? ' me' : ''}" data-fit>${r ? '' : cupChip(T[t])}${esc(listName(T[t]))}${r ? cupChip(T[t]) : ''}</span>`;
+  return `<div class="cup-last"><p class="eyebrow">Series</p><div class="cup-series">${side(0)}<b>${s[0]} – ${s[1]}</b>${side(1, true)}</div>${text ? `<p class="cup-verdict${(cupDone(c) ? cupWinner(c) === c.user : won) ? ' good' : ' bad'}">${esc(text)}</p>` : ''}</div>`;
+}
+function cupFixtureHtml(c, fx) {
+  const T = c.teams, h = T[fx.home], a = T[fx.away];
+  return `<div class="stack">
+      <div class="fixture">
+        <span class="fx-team">${jersey(h)}<span data-fit>${esc(listName(h))}</span></span>
+        <span class="fx-v">V</span>
+        <span class="fx-team r"><span data-fit>${esc(listName(a))}</span>${jersey(a)}</span>
+      </div>
+      ${outmatched(T[c.user], T[fx.opp]) ? '<p class="eyebrow">Stronger Side</p>' : ''}
+      <button class="btn primary" id="cup-play">Play Match</button>
+    </div>`;
+}
+function cupWinHtml(c) {                                   // the winner's card, and New Championship
+  const w = cupWinner(c), won = w === c.user;
+  const head = w < 0 ? CUPS[c.id].name : c.id === 'tour' ? 'Series Winners' : CUPS[c.id].name + ' Winners';
+  const who = w < 0 ? c.teams[c.user] : c.teams[w];
+  return `<div class="stack">
+      <div class="cup-win${won ? ' mine' : ''}" data-kind="${c.id}">
+        <span class="cup-trophy" data-kind="${c.id}" aria-hidden="true"></span>
+        <div class="cup-who"><p class="eyebrow">${w < 0 ? 'Out' : esc(head)}</p><b data-fit>${esc(listName(who))}</b></div>
+        ${jersey(who)}
+      </div>
+      <button class="btn primary" id="cup-new">New Championship</button>
+    </div>`;
+}
+function cupTieHtml(c, k, i, short) {                      // one tie in the bracket: two rows, the winner bright, yours marked; one not drawn yet is the same size
+  const pair = c.fixtures[k] && c.fixtures[k][i], m = c.results[k] && c.results[k][i];
+  if (!pair) return `<div class="cb-tie tbc"><span class="cb-nm">${cupDone(c) ? 'Not Needed' : 'To Come'}</span></div>`;
+  const row = (t, sc) => `<span class="cb-row${t === c.user ? ' me' : ''}${m && m.w === t ? ' win' : ''}">${cupChip(c.teams[t])}<span class="cb-nm">${esc(short ? c.teams[t].id : listName(c.teams[t]))}</span><b>${m ? sc : ''}</b></span>`;
+  return `<div class="cb-tie">${row(pair[0], m && m.hs)}${row(pair[1], m && m.as)}</div>`;
+}
+function cupBracketHtml(c) {                               // the knockouts (or a tour's Tests) as columns of ties, each round's name over its column
+  const cols = c.id === 'euro' ? [[0, 2], [1, 1]] : c.id === 'tour' ? [[0, 1], [1, 1], [2, 1]] : [[3, 4], [4, 2], [5, 1]];
+  const name = k => (c.id === 'tour' ? 'Test ' + (k + 1) : CUP_PLURAL[cupStage(c, k)]);
+  return `<div class="cup-bracket" style="--cols:${cols.length}">${cols.map(([k]) => `<p class="eyebrow">${name(k)}</p>`).join('')}${cols.map(([k, n]) => `<div class="cb-col">${Array.from({ length:n }, (_, i) => cupTieHtml(c, k, i, c.id === 'world')).join('')}</div>`).join('')}</div>`;
+}
+function cupPoolsHtml(c) {
+  return `<div class="cup-pools">${c.pools.map((own, p) => `<div class="cp-pool${own.includes(c.user) ? ' me' : ''}"><p class="eyebrow">Pool ${CUP_POOL[p]}</p>
+      <span class="cp-row cp-head"><span></span><span>P</span><b>Pts</b></span>
+      ${cupPoolRows(c, p).map((r, n) => `<span class="cp-row${r.i === c.user ? ' me' : ''}${c.round >= 3 && n < 2 ? ' thru' : ''}"><span class="cp-t">${cupChip(c.teams[r.i])}<span class="cb-nm">${esc(c.teams[r.i].id)}</span></span><span>${r.P}</span><b>${r.Pts}</b></span>`).join('')}
+    </div>`).join('')}</div>`;
+}
+function cupDrawHtml(c) {
+  if (c.id !== 'world') return cupBracketHtml(c);
+  if (c.round < 3) return cupPoolsHtml(c);
+  return cupBracketHtml(c) + `<details class="cabinet cup-pooled"><summary>Pools</summary>${cupPoolsHtml(c)}</details>`;
+}
+
+/* The cup hub. */
+function renderCup() {
+  const c = cup;
+  if (!c) return;
+  if (cupRetain(c)) save();
+  const fx = cupFixture(c), me = c.teams[c.user], won = cupDone(c) && cupWinner(c) === c.user;
+  $('cup-eyebrow').textContent = cupName(c, true);
+  $('cup-title').textContent = cupLabel(c);
+  $('cup-title').classList.toggle('gold', won);
+  $('cup-line').textContent = cupLine(c);
+  $('cup-line').classList.toggle('payoff', won);
+  $('cup-next').innerHTML = fx ? cupFixtureHtml(c, fx) : cupWinHtml(c);
+  if (fx) $('cup-play').addEventListener('click', cupPlay);
+  else $('cup-new').addEventListener('click', () => { cupRetain(cup); cup = null; save(); openTeams('champ'); });
+  $('cup-last').innerHTML = cupLastHtml(c);
+  $('cup-last').hidden = !$('cup-last').innerHTML;
+  $('cup-draw').innerHTML = cupDrawHtml(c);
+  $('cup-reset').textContent = 'Start Fresh'; cupResetArmed = false;
+  cupFit($('s-cup'));
+}
+/* A long name (South Africa, Home Nations) steps down in size until its longest word fits its box, never under the edge of a jersey. */
+function cupFit(root) {
+  for (const el of root.querySelectorAll('[data-fit]')) {
+    el.style.fontSize = '';
+    let px = parseFloat(getComputedStyle(el).fontSize) || 24;
+    while (el.scrollWidth > el.clientWidth + 0.5 && px > 14) { px -= 1; el.style.fontSize = px + 'px'; }
+  }
+}
+$('cup-back').addEventListener('click', goHome);
+$('cup-reset').addEventListener('click', () => {
+  if (!cupResetArmed) { cupResetArmed = true; confirmArm(); $('cup-reset').textContent = 'Tap Again to Start Fresh'; return; }
+  if (confirmSoon()) return;
+  cupRetain(cup); cup = null; save(); goHome();
+});
+
+/* A finished cup in the Trophy Cabinet (renderCabinet, src/ui-menus.js). */
+function cupEntryHtml(e, i, tag) {
+  const c = e.cup, s = cupRecordOf(c), w = cupWinner(c);
+  const award = w === c.user ? (c.id === 'tour' ? 'Series Won' : CUPS[c.id].name) : (c.id === 'tour' ? 'Series Won by ' : 'Won by ') + esc(c.teams[w].name);
+  return `<article class="season-entry"><p class="eyebrow">${tag}${i === 0 ? 'Most Recent' : 'Earlier Cup'}</p><h3>${esc(c.teams[c.user].name)} · ${esc(cupFinish(c))}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${award}</p></article>`;
+}
 /* =========================================================
    Import: paste a Pitchero or tournament link and the game builds your club and its league.
 
@@ -10087,6 +10728,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
+  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compPick:cupCompPick, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
@@ -10102,9 +10744,9 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
 
 function start(data) {
   load();
-  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data)) restore(data);
+  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data || 'cup' in data)) restore(data);
   resize(); setDesk();
-  window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); });
+  window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); if (!$('s-cup').hidden) cupFit($('s-cup')); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
   startDemo();
@@ -10113,6 +10755,6 @@ function start(data) {
   restStick();
   requestAnimationFrame(frame);
 }
-try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, store:{ owned:storeBought } })); } catch (e) { /* not in a viewer */ }
+try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, cup, cupTurn, store:{ owned:storeBought } })); } catch (e) { /* not in a viewer */ }
 nativeBoot(() => { if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {}); });   // a browser starts at once; the app first puts back a save the web view lost (native.js)
 })();

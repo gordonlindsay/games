@@ -233,7 +233,7 @@ function retainCompletedSeason(c) {
   if (!valid || champHistory.some(old => old.id === valid.id)) return false;
   c.id = valid.id;
   champHistory.push(valid);
-  champHistory = champHistory.slice(-SEASON_LIMIT);
+  champHistory = cabinetTrim(champHistory);   // the last ten seasons, and the cups beside them (persistence.js)
   return true;
 }
 function archiveChampionship(c = champ) {
@@ -241,10 +241,16 @@ function archiveChampionship(c = champ) {
   if (added) save();
   return added;
 }
-/* Counts describe only the retained completed seasons, rather than an all-time record. */
+/* Counts describe only the retained completed seasons, rather than an all-time record. A cup counts by its kind when the
+   user won it (src/cups.js); seasons counts league seasons only, cups the finished cups kept. */
 function savedHonours() {
-  const out = { seasons:champHistory.length, champions:0, grandSlams:0, tripleCrowns:0, woodenSpoons:0 };
+  const out = { seasons:0, champions:0, grandSlams:0, tripleCrowns:0, woodenSpoons:0, cups:0, euro:0, world:0, tour:0 };
   const keys = { Champions:'champions', 'Grand Slam':'grandSlams', 'Triple Crown':'tripleCrowns', 'Wooden Spoon':'woodenSpoons' };
-  for (const c of champHistory) for (const h of honours(c, standings(c))) if (h[1] === c.user) out[keys[h[0]]]++;
+  for (const c of champHistory) {
+    const kind = cabinetKind(c);
+    if (kind !== 'league') { out.cups++; if (cupWinner(c.cup) === c.cup.user) out[kind]++; continue; }
+    out.seasons++;
+    for (const h of honours(c, standings(c))) if (h[1] === c.user) out[keys[h[0]]]++;
+  }
   return out;
 }
