@@ -97,11 +97,12 @@ function storeCardFocus() {
   if ($('m-store').hidden || lastDev === 'pad') return;    // a controller starts on DEFAULT_FOCUS with its first press
   const el = storeFocusEl(); if (el && el.focus) el.focus();
 }
+/* The Super Fan's line wraps only between its items on a narrow phone, never inside one (no lone Badge). */
 function storeOfferHtml(o, busy) {
   const price = storePrices[o.id] ? ' · ' + esc(storePrices[o.id]) : '', dis = busy ? ' disabled' : '';
   if (o.kind === 'full') return `<button class="btn primary st-buy" data-buy="${o.id}"${dis}>Full Game${price}<small class="hsub">${STORE_LINE.full}</small></button>`;
   const c = o.club, t = storeTeamOf(c);
-  return `<div class="st-fanbuy"><button class="btn st-buy" data-buy="${o.id}"${dis}>${jersey(t)}<span class="st-nm">Super Fan · ${esc(c.name)}${price}<small class="hsub">${STORE_LINE.fan}</small></span></button><p class="st-share">${esc(storeShareLine(c))}</p></div>`;
+  return `<div class="st-fanbuy"><button class="btn st-buy" data-buy="${o.id}"${dis}>${jersey(t)}<span class="st-nm">Super Fan · ${esc(c.name)}${price}<small class="hsub">${STORE_LINE.fan.split(' · ').map(x => x.split(' ').join('\u00a0')).join(' · ')}</small></span></button><p class="st-share">${esc(storeShareLine(c))}</p></div>`;
 }
 function storeCardRender() {
   const u = storeUi, app = storeNative(), grown = u.mode === 'grown';

@@ -231,7 +231,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(S.offered('import') && I.card().includes('t-import'), 'Import Club is on the team screen once a Super Fan club is on sale');
   S.open({ mode:'unlock', feature:'champ' });
   ok(/data-buy="tryline\.full"/.test($('st-offers').innerHTML) && /data-buy="tryline\.fan\.farnham"/.test($('st-offers').innerHTML) && $('st-offers').innerHTML.includes('Supports Farnham RUFC: 50' + SHARE_WORDS), 'the card: Full Game, Super Fan · Farnham RUFC and its share');
-  ok($('st-offers').innerHTML.includes('Full Game · Import Club · Super Fan Badge') && !/Club Badge/.test(ui.replace('Super Fan Badge', '')), 'the Super Fan perks: Full Game, Import Club and the Super Fan Badge (the shirt and name, never a crest)');
+  ok($('st-offers').innerHTML.replace(/\u00a0/g, ' ').includes('Full Game · Import Club · Super Fan Badge') && $('st-offers').innerHTML.includes('Super\u00a0Fan\u00a0Badge') && !/Club Badge/.test(ui.replace('Super Fan Badge', '')), 'the Super Fan perks: Full Game, Import Club and the Super Fan Badge (the shirt and name, never a crest)');
   ok(!$('st-restore').hidden && !$('st-row').classList.contains('one') && $('st-links').hidden && $('st-back').textContent === 'Back to Menu', 'Restore Purchases | Back to Menu under them');
   S.close();
   // locks
