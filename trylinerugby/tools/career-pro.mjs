@@ -20,7 +20,9 @@ const ready = () => { settings.played = 99; settings.diff = 1; settings.kids = f
 //    pinned on 30e13e2, the commit before Pro Mode. Re-pin TEAM only from a change that moves Whole Team career play on purpose (the
 //    Energy, Morale and Team Spirit effects in career-life.js are one, so teamMatch sets those bars to their neutral 100, 50 and 50,
 //    where they move nothing), from that change's bundle without career-pro.js.
-const NON_CAREER = '1vg5qro 1uombq7 12cy4qs', TEAM = '1c73jxu 1d1uovf';
+// NON_CAREER follows career.mjs's BASE, the same seeded runs: re-pinned with it when the nations were rated on the XV rankings (its first
+// value, AI v AI, moved with the ratings alone).
+const NON_CAREER = '1o2r2g2 1uombq7 12cy4qs', TEAM = '1c73jxu 1d1uovf';
 function nonCareer() {
   const out = [];
   reseed(23);

@@ -19,7 +19,10 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    GAME=<30e13e2's trylinerugby/index.html> node tools/career-life.mjs --pins
 //    The championship match (third) is re-pinned for star traits (src/traits.js), which act in matches you play between star
 //    sides: with traitOn forced off the merged build gives 30e13e2's opguqv again.
-const BASE = { others:'1vg5qro 1fohttg kkk9ft 1h7fv95 83k82g', rest:'1p6a14j' };
+//    Re-pinned again at the team hierarchy merge, data only: the AI v AI simulate (first) is career.mjs's own fingerprint, which moved
+//    with the nations' XV ratings (career.mjs notes the old ratings give the old value); the championship match (third) is England v
+//    Italy, both re-rated; the demo (fourth) draws from ALL_TEAMS, which the new leagues enlarged. The Quick Match and the drill hold.
+const BASE = { others:'1o2r2g2 1fohttg 1230j1m c6ydhd 83k82g', rest:'1p6a14j' };
 const runOut = (side = 0) => { let n = 0; while (!T.M.over && n < 400000) { bot(side); T.update(T.STEP); n++; } return n; };
 const pos = () => T.M.players.map(p => [p.x.toFixed(6), p.y.toFixed(6)]).join(';');
 function others() {

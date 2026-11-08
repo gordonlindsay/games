@@ -18,7 +18,7 @@
    an email, a phone number or a link. The structure does the work: the first-name list in importPersonal is a last
    net, not the defence. Nothing about a person, the link itself or the page is kept.
    ========================================================= */
-const IMPORT_POOL = POOLS.length;                 // My League: the team screen's button after South Africa
+const IMPORT_POOL = 'my';                        // My League: settings.pool's key for it, the team screen's Local list after Surrey
 const IMPORT_MAX_SIDES = 16;                      // league opponents saved
 const IMPORT_MAX_ROWS = 24;                       // rows or names a parser returns
 const IMPORT_MAX_REQUESTS = 3;                    // the pasted page, a league table, fixtures
@@ -758,7 +758,6 @@ function importOthers(t) {
    saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is on sale (storeOffered). */
 function importCard() { return (custom.length < MAX_CUSTOM || importLeague) && storeOffered('import') ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
 function importBind() {
-  $('t-league').hidden = !importLeague;
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
 }
 
@@ -857,7 +856,7 @@ function importAlt() {
   if (!u.armed) { u.armed = true; confirmArm(); importRender(); return; }
   if (confirmSoon()) return;                               // a quick double tap only asks (CONFIRM, ui-menus.js)
   importLeague = null; u.armed = false;
-  if (settings.pool === IMPORT_POOL) settings.pool = 1;
+  if (settings.pool === IMPORT_POOL) settings.pool = 'sur';
   save(); importRender(); importFocus();                   // Remove League has gone: focus to the step's own control
 }
 for (const [id, key] of [['im-kit', 'kit'], ['im-trim', 'trim']]) {

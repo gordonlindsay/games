@@ -89,7 +89,8 @@
 <section class="screen" id="s-teams" hidden>
   <div class="wrap">
     <div class="head"><div><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
-      <div class="seg pool" data-key="pool"><button>International</button><button>Local</button><button>France</button><button>Australia</button><button>South Africa</button><button id="t-league" hidden>My League</button></div></div>
+      <div class="seg cat" id="t-cat"></div></div>
+    <div class="pools"><div class="seg" id="t-tier"></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>
     <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
     <button class="btn primary" id="t-default" hidden></button>
     <div class="teams" id="t-grid"></div>
@@ -164,6 +165,7 @@
       </div>
       <div class="cr-form">
         <div class="cr-namerow"><label class="field"><span class="lbl">First Name</span><input class="inp" id="cn-name" maxlength="12" placeholder="Optional" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label><span id="cn-shirt"></span></div>
+        <div class="field"><span class="lbl">Team</span><div class="seg" id="cn-cat"><button>Men</button><button>Women</button></div></div>
         <div class="field"><span class="lbl">Position</span><div class="seg" id="cn-pos"><button>Forward</button><button>Back</button></div></div>
         <div class="field"><span class="lbl">Shirt Number</span><div class="seg" id="cn-num"></div></div>
         <button class="btn primary" id="cn-go">Start Career</button>

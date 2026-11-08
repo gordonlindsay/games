@@ -76,7 +76,7 @@ Full Game (a one-off unlock, no subscription)
 - Hard level
 
 The Teams
-National sides, local clubs, and city sides from France, Australia and South Africa. Professional sides go by their city, and every rating is made up.
+Twelve national sides, city sides from the leagues of England, France, Ireland, Scotland, Wales and Italy, South Africa, Australia, New Zealand and Japan, Scotland's club sides, and local clubs, as men, women or minis. Professional sides go by their city, club sides by their town, and every rating is made up.
 
 Arcade Moments
 On Fire: string three good moments together and your side lights up for a few seconds. A dominant tackle lands as a Big Hit. A drawn Quick Match goes to a Golden Try, sudden-death extra time.
@@ -110,7 +110,7 @@ Super Fan
 For supporters of a partner club. Everything in Full Game, and Import, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
 
 The Teams
-National sides, local clubs, and city sides from France, Australia and South Africa. Professional sides go by their city, and every rating is made up.
+Twelve national sides, city sides from the leagues of England, France, Ireland, Scotland, Wales and Italy, South Africa, Australia, New Zealand and Japan, Scotland's club sides, and local clubs, as men, women or minis. Professional sides go by their city, club sides by their town, and every rating is made up.
 
 Arcade Moments
 On Fire: string three good moments together and your side lights up for a few seconds. A dominant tackle lands as a Big Hit. A drawn Quick Match goes to a Golden Try, sudden-death extra time.
@@ -169,7 +169,7 @@ Super Fan
 For supporters of a partner club. Everything in Full Game, and Import, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
 
 The Teams
-National sides, local clubs, and city sides from France, Australia and South Africa. Professional sides go by their city, and every rating is made up.
+Twelve national sides, city sides from the leagues of England, France, Ireland, Scotland, Wales and Italy, South Africa, Australia, New Zealand and Japan, Scotland's club sides, and local clubs, as men, women or minis. Professional sides go by their city, club sides by their town, and every rating is made up.
 
 Arcade Moments
 On Fire: string three good moments together and your side lights up for a few seconds. A dominant tackle lands as a Big Hit. A drawn Quick Match goes to a Golden Try, sudden-death extra time.

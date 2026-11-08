@@ -39,7 +39,7 @@ function renderCareerHome() {
 /* ---------- the new player ---------- */
 const careerClubs = () => storeFirst([...CLUBS, ...custom]);   // the Local list and the teams you made (an imported club is one of those), the Super Fan's club first (src/store.js)
 function careerNewOpen() {
-  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null, proMode:false };   // Whole Team first and picked: Pro Mode is the harder way
+  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false };   // Men first and picked; Whole Team first and picked: Pro Mode is the harder way
   $('cn-name').value = '';
   $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('');
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) b.addEventListener('click', () => { careerDraft.i = +b.dataset.i; renderCareerNew(); });
@@ -50,6 +50,7 @@ function renderCareerNew() {
   const d = careerDraft, clubs = careerClubs();
   if (d.i >= clubs.length) d.i = 0;
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) { const on = +b.dataset.i === d.i; b.classList.toggle('picked', on); b.setAttribute('aria-pressed', String(on)); }
+  [...$('cn-cat').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === (d.cat === 'women'))));
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
   [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
   if (d.numsFor !== d.pos) {
@@ -60,6 +61,8 @@ function renderCareerNew() {
   for (const b of $('cn-num').querySelectorAll('[data-n]')) b.setAttribute('aria-pressed', String(+b.dataset.n === d.num));
   $('cn-shirt').innerHTML = careerShirt(clubs[d.i], d.num, 'big');
 }
+function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; renderCareerNew(); }   // Men | Women: the career's teams are named for it (career.js)
+[...$('cn-cat').children].forEach((b, i) => b.addEventListener('click', () => careerCatPick(i)));
 [...$('cn-pos').children].forEach((b, i) => b.addEventListener('click', () => {
   const pos = i === 0 ? 'F' : 'B';
   if (careerDraft.pos !== pos) { careerDraft.pos = pos; careerDraft.num = CAREER_POS[pos][0]; }
@@ -70,7 +73,7 @@ function careerModePick(i) { careerDraft.proMode = i === 1; renderCareerNew(); }
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('cn-go').addEventListener('click', () => {
   const d = careerDraft, club = careerClubs()[d.i];
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, proMode:d.proMode })) return;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, cat:d.cat, proMode:d.proMode })) return;
   careerOpen();
 });
 $('cn-back').addEventListener('click', goHome);
@@ -199,7 +202,7 @@ function renderCareerEnd() {
   const tiles = careerTile('Place', ordinal(out.place)) + careerTile('Overall', out.ovr);
   if (out.promoted && next === 4) {                  // called up: the country is the choice, and the choice starts the season
     body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile('Next', careerStageName(next))}</div><p class="lbl cr-pick">Pick Your Country</p>
-      <div class="cr-nations">${NATIONS.map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('')}</div>`;
+      <div class="cr-nations">${natList(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span></button>`).join('')}</div>`;
     for (const b of body.querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerAdvance(b.dataset.n); careerOpen(); });
     act.innerHTML = '';
     return;

@@ -12,7 +12,11 @@ const ok = (cond, msg) => { if (cond) passed++; else failed++; if (!cond || proc
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
 const json = v => JSON.stringify(v);
-const team = id => X.ALL_TEAMS.find(t => t.id === id);
+// The mechanism checks below use the nations as rated when they were written (d6192ad): the XV rankings (src/data.js) re-rated them since,
+// which moves who has which star but not how a star works. `live` is a side as the game ships it.
+const WRITTEN = { ENG:[4, 5, 3, 4, 4], FRA:[5, 5, 4, 4, 5], IRE:[4, 4, 5, 5, 5], ITA:[4, 3, 3, 3, 3], SCO:[5, 3, 4, 3, 4], WAL:[3, 4, 3, 3, 4] };
+const live = id => X.ALL_TEAMS.find(t => t.id === id);
+const team = id => { const t = live(id), w = WRITTEN[id]; return w ? { ...t, pace:w[0], power:w[1], handling:w[2], kicking:w[3], stamina:w[4] } : t; };
 const even = (o) => ({ id:'EVN', name:'Evens', kit:'#1d3a8f', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3, ...o });
 const play = (a, b, o) => T.newMatch(a, b, { halfLen:120, diff:1, headless:true, duels:'off', humans:[true, false], arcade:true, ...o });
 const give = (p, ...ids) => { p.tr = ids.length ? Object.fromEntries(ids.map(id => [id, true])) : null; };   // a star made by hand, for one check
@@ -74,7 +78,8 @@ function pin() {
     for (const [n, list] of stars) for (const id of list) if (!R.TRAITS.find(tr => tr.id === id).shirts.includes(n)) ok(false, `${t.name}: ${id} on ${n}, not a shirt it fits`);
   }
   ok(true, 'every built-in side has exactly the stars its 5s bring, each on a shirt it fits');
-  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,PRE', `the sides with stars: ${X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id + ' ' + R.teamTraitNames(t).join('/')).join(', ')}`);
+  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA,MPL,PRE',   // every nation on the XV rankings has a 5 somewhere; Montpellier and Pretoria are the clubs with one
+     `the sides with stars: ${X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id + ' ' + R.teamTraitNames(t).join('/')).join(', ')}`);
   const fra = R.teamStars(team('FRA')), ire = R.teamStars(team('IRE'));
   ok(fra.size === 4 && fra.get(7).join() === 'burst' && fra.get(6).join() === 'handoff' && [...fra].filter(([n]) => n <= 3).length === 2, `France: four stars, Burst on 7, Hand-Off on 6, Crunch and Engine on two forwards (${starMap(team('FRA'))})`);
   ok(ire.size === 3 && ire.get(4).join() === 'safe' && ire.get(5).join() === 'boot' && [...ire].some(([n, l]) => n <= 3 && l.join() === 'engine'), `Ireland: Safe Hands on 4, Long Boot on 5, Engine on a forward (${starMap(team('IRE'))})`);
@@ -379,8 +384,9 @@ function pin() {
 {
   D.openTeams('quick'); D.settings().pool = 0; D.renderTeams();
   const html = $('t-grid').innerHTML;
-  ok(/<span class="tstars" aria-label="Star Traits: Burst, Crunch, Hand-Off, Engine"><b>Burst<\/b> · <b>Crunch<\/b> · <b>Hand-Off<\/b> · <b>Engine<\/b><\/span>/.test(html), 'France\'s card names its four stars under the ability rows');
-  ok((html.match(/class="tstars"/g) || []).length === 4 && !/Italy[\s\S]*?tstars[\s\S]*?Scotland/.test(html), `England, France, Ireland and Scotland have a line; Italy and Wales, with no 5, have none (${(html.match(/class="tstars"/g) || []).length})`);
+  ok(/<span class="tstars" aria-label="Star Traits: Burst, Crunch, Hand-Off"><b>Burst<\/b> · <b>Crunch<\/b> · <b>Hand-Off<\/b><\/span>/.test(html), 'France\'s card names its three stars under the ability rows (Pace 5, Power 5 on the XV rankings)');
+  { const cards = html.split('<button class="team"').slice(1), bare = cards.filter(c => !c.includes('class="tstars"')).map(c => (c.match(/class="tname">([^<]*)</) || [])[1]).sort();
+    ok(cards.length === 12 && bare.join() === 'Italy,Wales', `every nation with a 5 has a line; Italy and Wales, with none, have none (${cards.length} cards; no line: ${bare.join(', ')})`); }
   ok(/aria-label="Overall 93">93<\/span>/.test(html), 'the overall badge is as it was');
   const cr = T.career.create({ name:'Sam', pos:'F', num:2, club:X.CLUBS[0] });
   Object.assign(cr.skills, { pace:81, power:84, handling:62, kicking:45, stamina:91 });

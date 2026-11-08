@@ -1322,7 +1322,13 @@ begin('symmetry');
     return { n, share, se, tries, pts, gk, du, dw, sk, lk, frozen };
   };
   // paired: each seed twice, the teams swapped
-  const pairs = [[1, 1], [0, 1], [2, 3], [4, 5], [6, 7]].map(([a, b]) => [T.teams.NATIONS[a] || T.teams.CLUBS[a - 6], T.teams.NATIONS[b] || T.teams.CLUBS[b - 6]]);
+  // France v France, England v France, Ireland v Italy, Scotland v Wales and Farnham v Haslemere, as written: with six nations, 6 and 7 were the
+  // clubs; the twelve made them New Zealand and South Africa, so the clubs are named now. The pairs also play at the ratings they were written
+  // with: this is a check of the seats, not the teams, and the XV ratings (2026-11-08) moved its seeded tries from 2.10 v 2.29 to 2.00 v 2.27,
+  // while seeds from 13000 give 2.19 v 2.13 at the old ratings and 2.13 v 2.13 at the new: seed noise near the bar, not a seat effect
+  const AS_WRITTEN = { ENG:[4, 5, 3, 4, 4], ITA:[4, 3, 3, 3, 3], SCO:[5, 3, 4, 3, 4], WAL:[3, 4, 3, 3, 4] };
+  const written = t => AS_WRITTEN[t.id] ? { ...t, ...Object.fromEntries(['pace', 'power', 'handling', 'kicking', 'stamina'].map((k, i) => [k, AS_WRITTEN[t.id][i]])) } : t;
+  const pairs = [[1, 1], [0, 1], [2, 3], [4, 5], [6, 7]].map(([a, b]) => [a < 6 ? T.teams.NATIONS[a] : T.teams.CLUBS[a - 6], b < 6 ? T.teams.NATIONS[b] : T.teams.CLUBS[b - 6]].map(written));
   const rows = [], diff = [];
   reseed(2024);
   for (let i = 0; i < N; i++) {

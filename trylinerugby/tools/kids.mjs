@@ -57,7 +57,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
     s.kids = false;
     const old = { settings:{ half:1, diff, sound:true, duels:true, hints:true, twoHints:[true, false], tut:['past'], coach:false, tips:['pass'], pool:2, twoDiff:[2, 0], played:5 }, champ:null, custom:[], champHistory:[], seasonSerial:3 };
     X.restore(JSON.parse(JSON.stringify(old)));
-    const keep = Object.keys(old.settings).every(k => JSON.stringify(s[k]) === JSON.stringify(old.settings[k]));
+    const keep = Object.keys(old.settings).every(k => JSON.stringify(s[k]) === JSON.stringify(k === 'pool' ? 'fra' : old.settings[k]));   // its old list index 2 is France, now National · France (data.js, POOL_OLD)
     ok(keep && s.kids === false && !K.kidsLevel() && K.segIndex() === diff + 1, `an old save on ${['Easy', 'Normal', 'Hard'][diff]} loads unchanged, not as Kids`);
   }
   // the rating: a round trip, an old save, and anything that is not a number from 0 to 1 ignored
