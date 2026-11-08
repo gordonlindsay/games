@@ -8,6 +8,7 @@
   "set-pieces.js",
   "duels.js",
   "arcade.js",
+  "stamina.js",
   "ball.js",
   "movement.js",
   "championship.js",

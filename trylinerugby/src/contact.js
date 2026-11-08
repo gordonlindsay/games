@@ -21,7 +21,7 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   if (sideOn && mode !== 'ankle') p = Math.min(0.95, p*CONTACT.side);
   q.tcd = 1.0;
   st('ta' + c.team);
-  const qs = !!q.sprinting, cs = !!c.sprinting, dp = M.nat[q.team].power - M.nat[c.team].power;   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend
+  const qs = !!q.sprinting, cs = !!c.sprinting, dp = powerOf(q.team) - powerOf(c.team);   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend
   const r = rnd();
   let tier = 'broken';
   if (r < p) {
@@ -127,7 +127,7 @@ function resolveContact(k) {                               // the end of the bin
     const s = (q.x - c.x)*uy - (q.y - c.y)*ux >= 0 ? 1 : -1;
     slide(q, c.x - ux*CONTACT.slide[0] + uy*CONTACT.slide[1]*s, c.y - uy*CONTACT.slide[0] - ux*CONTACT.slide[1]*s, 0.12, s);   // off the hip: beside and behind, out of his path
     q.down = (k.mode === 'dive' || k.mode === 'ankle') ? CONTACT.diveDown : CONTACT.brokenDown; q.tcd = 1.0; q.vx = q.vy = 0;
-    const fend = k.cSprint || (-k.dp >= CONTACT.fend.pow && k.margin >= CONTACT.fend.margin);   // beaten by a clear margin with the power edge, or at a sprint: he keeps his speed
+    const fend = k.cSprint || (Math.round(-k.dp) >= CONTACT.fend.pow && k.margin >= CONTACT.fend.margin);   // beaten by a clear margin with the power edge, or at a sprint: he keeps his speed. The edge to the nearest point, so the Stamina fade moves it only once the two sides have faded half a point apart
     c.fend = 0.2; c.fendA = Math.atan2(q.y - c.y, q.x - c.x);
     let tripped = false;
     if (k.mode === 'ankle' && rnd() < CONTACT.trip.p) { c.stumble = CONTACT.trip.t; c.stumbleMul = CONTACT.trip.mul; st('trip'); tripped = true; }
@@ -207,7 +207,7 @@ function wrongFoot(team, x, y) {                           // the side that lost
 function resolveRuck(s) {                                  // the ruck is automatic: a flat penalty roll, then a flat turnover roll
   const att = s.team, def = 1-att;
   if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
-  const pT = s.dom ? s.domP : RUCK.flatBase + (M.nat[def].power - M.nat[att].power)*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
+  const pT = s.dom ? s.domP : RUCK.flatBase + (powerOf(def) - powerOf(att))*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
     M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
     releaseTo(def, s.x, s.y, 'turnover');
@@ -326,7 +326,7 @@ function sprintTick(dt) {                                  // after the close-up
       drain += sprintLevel(p)*(c === p ? SPRINT.ballDrain : 1);
     }
     if (drain > 0) {
-      S.m -= dt/SPRINT.secs*drain; if (S.p) st(isHuman(t) ? 'sprintSecs' : 'cpuSprintSecs', dt);
+      S.m -= dt/(SPRINT.secs*staminaLasts(t))*drain; if (S.p) st(isHuman(t) ? 'sprintSecs' : 'cpuSprintSecs', dt);
       if (S.m <= 0) { S.m = 0; if (S.p) { S.spent = true; stopSprint(S); } for (const p of M.players) if (p.team === t) p.sprint = 0; }   // dry: the burst and any ease-out end at once
     }
     else if (S.m < 1) { S.m = Math.min(1, S.m + dt/SPRINT.refill[levelOf(t)]); if (S.m >= 1) { S.cue = 0.5; if (isHuman(t) && M.dclock - S.tick > 3) { S.tick = M.dclock; sfx('tick'); } } }

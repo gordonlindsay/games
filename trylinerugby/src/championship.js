@@ -12,7 +12,7 @@ function roundRobin(teams) {
   return rounds;
 }
 function poisson(l) { const L = Math.exp(-l); let k = 0, p = 1; do { k++; p *= rnd(); } while (p > L); return k-1; }
-function simMatch(c, h, a) {
+function simMatch(c, h, a) {                              // pace, power, handling and kicking only: Stamina is left out on purpose, so simulated fixtures read as they always have
   const H = c.teams[h], A = c.teams[a];
   const atk = n => (n.pace + n.handling)/2, def = n => (n.power + n.handling)/2;
   const ht = poisson(clamp(2.5 + (atk(H)-def(A))*0.6 + 0.25, 0.5, 5));
