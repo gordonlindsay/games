@@ -228,7 +228,7 @@ function careerPlay() {                              // Play Match on the hub
   const cr = career, c = cr && cr.season;
   if (practice || !c || c.round >= 5) return false;
   const { opp } = userFixture(c);
-  startMatch(c.teams[c.user], c.teams[opp], false);
+  startMatch(c.teams[c.user], c.teams[opp], false, cr.proMode === true && kidsLevel() ? { easy:true } : undefined);   // My Player on Kids plays at Easy: the computer runs his side, so Kids' weaker opponents would let it win by itself (the owner's call)
   careerArm();
   return true;
 }

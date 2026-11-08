@@ -399,7 +399,7 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
   };
   const a = kidsMatch(true), b = kidsMatch(false);
   settings.kidsR = r0;
-  ok(a.kids && a.over && a.r === 0.3, `Kids, My Player: the match (${a.score}) leaves the Kids rating at 0.3 (${a.r})`);
+  ok(!a.kids && a.over && a.r === 0.3, `Kids, My Player: the match plays at Easy, not Kids (${a.score}), and leaves the Kids rating at 0.3 (${a.r})`);
   ok(b.kids && b.over && b.r !== 0.3, `Kids, Whole Team: the match (${b.score}) moves it, as before (0.3 to ${b.r})`);
 }
 

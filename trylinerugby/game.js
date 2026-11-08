@@ -3872,7 +3872,7 @@ function careerPlay() {                              // Play Match on the hub
   const cr = career, c = cr && cr.season;
   if (practice || !c || c.round >= 5) return false;
   const { opp } = userFixture(c);
-  startMatch(c.teams[c.user], c.teams[opp], false);
+  startMatch(c.teams[c.user], c.teams[opp], false, cr.proMode === true && kidsLevel() ? { easy:true } : undefined);   // My Player on Kids plays at Easy: the computer runs his side, so Kids' weaker opponents would let it win by itself (the owner's call)
   careerArm();
   return true;
 }
@@ -6003,7 +6003,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel(), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
