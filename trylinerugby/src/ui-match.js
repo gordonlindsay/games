@@ -31,8 +31,8 @@ function say(text, size, team, grade, low) {
   bannerTimer = setTimeout(() => { el.innerHTML = ''; }, size === 'big' ? 1700 : size === 'coach' ? 1600 : size === 'small' ? 900 : 1300);
 }
 
-function startDemo() {
-  const all = ALL_TEAMS, a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
+function startDemo() {   // a men's match: every side but the women's-only nations (Canada and the USA), in the order the demo always drew from
+  const men = natList('men'), all = ALL_TEAMS.filter(t => !isNation(t) || men.includes(t)), a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
   newMatch(all[a], all[b], { halfLen:1e9, diff:1, auto:true, demo:true });
   mode = 'menu';
   $('hud').hidden = true; $('controls').hidden = true; $('b-pause').hidden = true;

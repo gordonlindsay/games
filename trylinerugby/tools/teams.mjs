@@ -729,6 +729,9 @@ function settle(pick) {
   D.openJoin(); D.openTeams('two'); D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]);
   ok(T.M.nat[0] === X.NATIONS[0] && T.M.nat[1] === X.NATIONS[1], 'on Men a match is given the very teams it always was');
   D.setTwo(false); D.exitMatch();
+  const demoIds = new Set();   // the home screen's demo (exitMatch starts it): a men's match, so never Canada or the USA
+  for (let i = 0; i < 400; i++) { D.exitMatch(); demoIds.add(T.M.nat[0].id); demoIds.add(T.M.nat[1].id); }
+  ok(T.M.demo && !demoIds.has('CDN') && !demoIds.has('USA') && X.natList('men').some(t => demoIds.has(t.id)) && X.CLUBS.some(t => demoIds.has(t.id)), `the demo is a men's match: nations and clubs, never Canada or the USA (${demoIds.size} sides in 400 demos)`);
   // the screen: labels, controls and no arrows
   const html = readGameSource(), menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
   ok(html.includes('<div class="seg cat" id="t-cat"></div></div>') && html.includes('<div class="pools"><div class="seg" id="t-tier"></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>'), 'Men | Women | Minis beside the title, the tiers and their lists under it');
