@@ -423,6 +423,7 @@ function maxSpeed(p) {
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
   if (onFire(p.team)) f *= ARCADE.fire.speed;
+  f *= staminaPace(p.team);                                  // tired legs late in a half (1 outside matches you play)
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
   if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
@@ -2430,10 +2431,12 @@ function goldenScored() { if (M.golden) M.hooter = true; }   // any score in ext
    - Sprint: the meter lasts STAMINA.len longer for each point above 3 and that much shorter below (5: 20% longer, 1: 20% shorter).
    - On Fire burns longer or shorter by the same measure.
    - Power fades over each half, in a straight line from nothing at the kick-off to its fade at the hooter, and is back at half time;
+     top speed fades the same way, a little (staminaPace, read by maxSpeed). The owner chose this over a separate Stamina budget so
+     that Stamina is worth its point when you make a team;
      extra time starts fresh. Every engine read of a side's Power goes through powerOf: the tackle and the Big Hit, the ruck, the
      scrum (the push and the scrum played for you) and the Get Past and Tackle duel windows.
    simMatch, the championship's other fixtures, ignores Stamina as it ignores the rest of the open game. */
-const STAMINA = { len:0.10, fade:[1.0, 0.1] };   // fade: Power lost by the hooter at Stamina 1 and at Stamina 5, in a straight line between (3 loses 0.55)
+const STAMINA = { len:0.10, fade:[2.0, 0.2], pace:[0.05, 0] };   // fade: Power lost by the hooter at Stamina 1 and at 5, in a straight line between (3 loses 1.1); pace: the share of top speed lost by the hooter, the same way (3 loses 2.5%)
 /* All consts, not function declarations: a name another section also uses stops the build instead of quietly replacing one. */
 const staminaOn = () => !!(M && M.arcade);
 const staminaLasts = t => (staminaOn() ? 1 + (staminaOf(M.nat[t]) - 3)*STAMINA.len : 1);   // how much longer side t's Sprint meter and On Fire last
@@ -2443,6 +2446,11 @@ const staminaFade = t => {                                 // the Power side t h
   return most*clamp(M.clock/M.halfLen, 0, 1);
 };
 const powerOf = t => M.nat[t].power - staminaFade(t);      // side t's Power as the engine plays it now
+const staminaPace = t => {                                 // side t's top-speed multiplier this far into the half: tired legs late on
+  if (!staminaOn()) return 1;
+  const [at1, at5] = STAMINA.pace, most = at1 + (staminaOf(M.nat[t]) - 1)*(at5 - at1)/4;
+  return 1 - most*clamp(M.clock/M.halfLen, 0, 1);
+};
 /* ---------- ball in flight / loose ---------- */
 function updateBallAir(dt) {
   const b = M.ball, f = b.f;
@@ -6161,7 +6169,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   teams:{ overallOf, NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
-  stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
+  stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   get M() { return M; } };
 
 function start(data) {

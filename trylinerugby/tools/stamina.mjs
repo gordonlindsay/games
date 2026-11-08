@@ -163,21 +163,30 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 {
   play(1, 5);
   const M = T.M, at = (clock, t) => { M.clock = clock; return S.staminaFade(t); };
+  const F = st => S.STAMINA.fade[0] + (st - 1)*(S.STAMINA.fade[1] - S.STAMINA.fade[0])/4;   // Power lost by the hooter at Stamina st
+  ok(S.STAMINA.fade[0] === 2 && S.STAMINA.fade[1] === 0.2, 'Stamina 1 loses two points of Power by the hooter, Stamina 5 a fifth of one (the owner chose a stronger fade)');
   ok(at(0, 0) === 0 && at(0, 1) === 0, 'nothing faded at the kick-off');
-  ok(near(at(120, 0), 1.0) && near(at(120, 1), 0.1), `by the hooter Stamina 1 has lost a point of Power, Stamina 5 a tenth (${at(120, 0)}, ${at(120, 1)})`);
-  ok(near(at(60, 0), 0.5) && near(at(400, 0), 1.0), 'a straight line over the half, and no further while play runs on');
+  ok(near(at(120, 0), F(1)) && near(at(120, 1), F(5)), `by the hooter Stamina 1 and 5 have lost their fade (${at(120, 0)}, ${at(120, 1)})`);
+  ok(near(at(60, 0), F(1)/2) && near(at(400, 0), F(1)), 'a straight line over the half, and no further while play runs on');
   play(3, 2); T.M.clock = 120;
-  ok(near(S.staminaFade(0), 0.55) && near(S.staminaFade(1), 0.775), 'Stamina 3 loses 0.55, 2 loses 0.775');
+  ok(near(S.staminaFade(0), 1.1) && near(S.staminaFade(1), 1.55), 'Stamina 3 loses 1.1, 2 loses 1.55');
   play(1, 5); T.M.clock = 120;
-  ok(near(S.powerOf(0), 2) && near(S.powerOf(1), 2.9), 'powerOf is the Power left');
+  ok(near(S.powerOf(0), 3 - F(1)) && near(S.powerOf(1), 3 - F(5)), 'powerOf is the Power left');
   A.endHalf();
   ok(T.M.half === 2 && T.M.clock === 0 && S.staminaFade(0) === 0 && S.powerOf(0) === 3, 'back to full at half time');
   T.M.clock = 120; T.M.score = [5, 5]; A.endHalf();
   ok(T.M.golden && S.staminaFade(0) === 0, 'extra time starts fresh');
   T.M.clock = 30;
-  ok(near(S.staminaFade(0), 0.25), 'and fades as fast through it');
+  ok(near(S.staminaFade(0), F(1)/4), 'and fades as fast through it');
   play(1, 5, { arcade:false }); T.M.clock = 120;
   ok(S.powerOf(0) === 3 && S.powerOf(1) === 3, 'outside arcade Power never fades');
+  ok(S.staminaPace(0) === 1 && S.staminaPace(1) === 1, 'and top speed never fades');
+  play(1, 5); const p0 = T.M.players[3], p1 = T.M.players[10];
+  T.M.clock = 0; const v0 = C.maxSpeed(p0), w0 = C.maxSpeed(p1);
+  T.M.clock = 120;
+  ok(near(S.staminaPace(0), 1 - S.STAMINA.pace[0]) && near(S.staminaPace(1), 1 - S.STAMINA.pace[1]), `top speed fades too: Stamina 1 loses ${S.STAMINA.pace[0]*100}% by the hooter, Stamina 5 none`);
+  ok(near(C.maxSpeed(p0)/v0, 1 - S.STAMINA.pace[0]) && near(C.maxSpeed(p1), w0), 'and maxSpeed reads it');
+  T.M.clock = 60; ok(near(S.staminaPace(0), 1 - S.STAMINA.pace[0]/2), 'in a straight line over the half');
 }
 
 // 11. the fade reaches every engine read of Power: a source check for direct reads, then each site measured (the duel windows read
@@ -195,12 +204,13 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
     return C.tackleChance(q, c, 'ai', false);
   };
   const fresh = tackle(1, 5, 0, true), tired = tackle(1, 5, 120, true);
-  ok(near(fresh - tired, 0.9*0.05), `a tired Stamina 1 side tackles a Stamina 5 carrier less surely by the hooter (${fresh.toFixed(3)} to ${tired.toFixed(3)})`);
+  const F = st => S.STAMINA.fade[0] + (st - 1)*(S.STAMINA.fade[1] - S.STAMINA.fade[0])/4;
+  ok(near(fresh - tired, (F(1) - F(5))*0.05), `a tired Stamina 1 side tackles a Stamina 5 carrier less surely by the hooter (${fresh.toFixed(3)} to ${tired.toFixed(3)})`);
   ok(tackle(1, 5, 120, false) === fresh, 'outside arcade the tackle is as at the kick-off');
   ok(near(tackle(3, 3, 120, true), fresh), 'two sides of the same Stamina fade together: nothing changes between them');
 
   const scrumBase = (clock, arcade) => { play(1, 3, { arcade }); T.M.clock = clock; S.startScrum({ team:0, x:60, y:35 }); return T.M.cut.base[0]; };
-  ok(near(scrumBase(0, true) - scrumBase(120, true), 0.06), `your pack's push fades with Power (${scrumBase(0, true).toFixed(3)} to ${scrumBase(120, true).toFixed(3)})`);
+  ok(near(scrumBase(0, true) - scrumBase(120, true), 0.06*F(1)), `your pack's push fades with Power (${scrumBase(0, true).toFixed(3)} to ${scrumBase(120, true).toFixed(3)})`);
   ok(scrumBase(120, false) === scrumBase(0, false), 'and not outside arcade');
 
   // the duel windows read Power by name (DUEL[kind].mod), which the source check above cannot see: open each and measure it
@@ -209,9 +219,9 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
     const { U, O, R } = D.stage(kind); T.M.clock = clock;
     return D.startDuel({ kind, U, O, R, how:'force' }).wid;
   };
-  ok(near(wid('past', 5, 1, 120, true) - wid('past', 5, 1, 0, true), 0.012) && near(wid('past', 1, 5, 120, true) - wid('past', 1, 5, 0, true), 0.0012),
+  ok(near(wid('past', 5, 1, 120, true) - wid('past', 5, 1, 0, true), 0.012*F(1)) && near(wid('past', 1, 5, 120, true) - wid('past', 1, 5, 0, true), 0.012*F(5)),
     `Get Past: the window widens as the defender's Power fades, by his own Stamina (${(wid('past', 5, 1, 120, true) - wid('past', 5, 1, 0, true)).toFixed(4)})`);
-  ok(near(wid('tackle', 1, 5, 0, true) - wid('tackle', 1, 5, 120, true), 0.012) && near(wid('tackle', 5, 1, 0, true) - wid('tackle', 5, 1, 120, true), 0.0012),
+  ok(near(wid('tackle', 1, 5, 0, true) - wid('tackle', 1, 5, 120, true), 0.012*F(1)) && near(wid('tackle', 5, 1, 0, true) - wid('tackle', 5, 1, 120, true), 0.012*F(5)),
     `Tackle: the window narrows as your own Power fades (${(wid('tackle', 1, 5, 0, true) - wid('tackle', 1, 5, 120, true)).toFixed(4)})`);
   ok(wid('past', 5, 1, 120, false) === wid('past', 5, 1, 0, false) && wid('tackle', 1, 5, 120, false) === wid('tackle', 1, 5, 0, false), 'outside arcade the duel windows do not move');
 

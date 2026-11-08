@@ -109,6 +109,7 @@ function maxSpeed(p) {
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
   if (onFire(p.team)) f *= ARCADE.fire.speed;
+  f *= staminaPace(p.team);                                  // tired legs late in a half (1 outside matches you play)
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
   if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
