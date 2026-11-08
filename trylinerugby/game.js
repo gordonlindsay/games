@@ -621,6 +621,7 @@ function newMatch(u, c, opts) {
       bind:null, bindOff:null, offside:0, sprint:0, sprinting:false, stumble:0, stumbleMul:1, wf:0, drawFrom:null, fend:0, fendA:0, bite:0, biteTo:null, dumAt:-9 });   // contact: the bind he is in, how long he is retiring, his sprint, a stumble, wrong-footed; then render-only smoothing and the fend; a Dummy he bought (bite: seconds left running at biteTo) and, for a CPU carrier, when he last sold one
   }
   M.side[0].ctrl = M.players[3]; if (humans[1]) M.side[1].ctrl = M.players[10];
+  traitsArm();                                             // the star traits, in a match you play only (src/traits.js)
   for (const inp of inputs) inp.gest = null;               // the open-play gesture history starts clean
   M.tut = null; hintReset(); coachUntil = 0;               // the hints cards start hidden, the open-play hints unshown, and a coach line from the last match does not hold the next one
   kickoff(M.firstKick);
@@ -633,9 +634,9 @@ function maxSpeed(p) {
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
   if (onFire(p.team)) f *= ARCADE.fire.speed;
-  f *= staminaPace(p.team);                                  // tired legs late in a half (1 outside matches you play)
+  f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
-  if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
+  if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp)*traitBurst(p, sp);   // a Burst sprints a little quicker
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
   if (p.wf > 0) f *= RUCK.wf.mul;
   if (M.career) f *= careerFade(p);                         // a career match: your player's stamina, late in the half
@@ -651,7 +652,7 @@ function ourBall(t) {                                      // side t has it: hel
 function userActive(t) { return !!ctrlOf(t) && (M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'ruck')); }   // the stick stays live through a ruck, on the man who will pick the ball up
 
 function steer(p, tvx, tvy, acc, dt) {
-  const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt;
+  const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt*traitAcc(p);   // a Burst gets going quicker while he sprints (src/traits.js)
   if (m <= a) { p.vx = tvx; p.vy = tvy; } else { p.vx += dx/m*a; p.vy += dy/m*a; }
 }
 function seek(p, tx, ty, speed, acc, dt, pursue) {
@@ -773,8 +774,9 @@ function catchBall(p, kind) {
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
-  if (rnd() < k) { knockOn(p); return; }
+  if (rnd() < traitHands(p, k)) { knockOn(p); return; }    // Safe Hands: hardly ever
   setCarrier(p);
+  traitCaught(p, k);
   p.fromKick = kind === 'kick';
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
@@ -967,6 +969,7 @@ function doKick(c, power, lat) {
   c.hold = 0;
   M.stats.kicks++;
   kickBall(c.team, c.x, c.y, tx, ty, 0.8 + len/28, 2.5 + len*0.26, 'kick');
+  traitKick(c);                                            // a Long Boot's kick runs on where it lands (src/traits.js)
   sfx('kick');
 }
 function aiKick(p, type) {
@@ -997,14 +1000,15 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   const behind = (q.x - c.x)*d < -0.3, sideOn = !behind && Math.abs(cosF) < 0.5;
   let p = mode === 'ankle' ? CONTACT.ankle : tackleChance(q, c, mode);
   if (sideOn && mode !== 'ankle') p = Math.min(0.95, p*CONTACT.side);
+  p *= traitHold(c, mode);                                 // a Hand-Off carrier breaks more (src/traits.js)
   q.tcd = 1.0;
   st('ta' + c.team);
-  const qs = !!q.sprinting, cs = !!c.sprinting, dp = M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team);   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend. A career match: your player's own power, faded as his side's
+  const qs = !!q.sprinting, cs = !!c.sprinting, dp = (M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team)) + traitEdge(q, c);   // both read the hold itself, not an ease-out: a tap buys no Big Hit bonus and no Fend. A career match: your player's own power, faded as his side's; an Engine keeps most of what his side has faded (src/traits.js)
   const r = rnd();
   let tier = 'broken';
   if (r < p) {
     const closing = ((c.vx - q.vx)*rx + (c.vy - q.vy)*ry)/rm;   // how fast the two are coming together along the line between them
-    let dom = CONTACT.dom.base + dp*CONTACT.dom.pow + (cosF > 0.5 && closing > 6 ? CONTACT.dom.front : 0) + (mode === 'dive' && rm < 1.7 ? CONTACT.dom.dive : 0) + (qs ? CONTACT.dom.sprint : 0) + cpuEdge(q, c, CONTACT.dom.cpu);
+    let dom = CONTACT.dom.base + dp*CONTACT.dom.pow + (cosF > 0.5 && closing > 6 ? CONTACT.dom.front : 0) + (mode === 'dive' && rm < 1.7 ? CONTACT.dom.dive : 0) + (qs ? CONTACT.dom.sprint : 0) + cpuEdge(q, c, CONTACT.dom.cpu) + traitDom(q);   // a Crunch tackler hits harder
     let soft = CONTACT.soft.base + (behind ? CONTACT.soft.behind : 0) + (cv > 7 ? CONTACT.soft.fast : 0) - dp*CONTACT.soft.pow;
     if (mode === 'ankle') { dom = 0; soft = 1; }             // an ankle tap is always soft
     else { dom = clamp(dom, 0.03, 0.5); soft = clamp(soft, 0.05, 1 - dom); }
@@ -1076,12 +1080,12 @@ function offload(k, user) {                                // user: the carrier'
   if (k.offloaded || k.tier === 'dom' || k.tier === 'broken') return false;
   const r = user ? offloadTarget(k) : supportFor(c);        // the press takes the man the label was lit for
   if (!r) return false;
-  const pOk = M.kids && user ? KIDS.offload : CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05);   // Kids: an offload you press gets away
+  const pOk = traitOffload(c, M.kids && user ? KIDS.offload : CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05));   // Kids: an offload you press gets away. Safe Hands: most of his do
   st('offAtt'); k.offloaded = true;
   const q = k.q, q2 = k.q2;
   releaseBind(k);
   c.down = 0.9; q.down = 0.6; q.tcd = 1.0; if (q2) q2.tcd = 0.4;
-  if (rnd() < pOk) { st('offloads'); st('off' + c.team); if (ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) }); return true; }
+  if (rnd() < pOk) { st('offloads'); st('off' + c.team); if (!traitCall(c, 'safe') && ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) }); return true; }
   st('offFail');
   if (rnd() < CONTACT.off.hold) { st('offHeld'); c.down = 0; q.down = 0; q.tcd = 0; tackle(c, q, { tier:k.tier, q2 }); return true; }   // he couldn't get it away: an ordinary ruck
   if (rnd() < CONTACT.off.knock) { st('offKnock'); knockOn(c, 'offload'); } else { st('offLoose'); looseInContact(c); }
@@ -1105,28 +1109,28 @@ function resolveContact(k) {                               // the end of the bin
     const s = (q.x - c.x)*uy - (q.y - c.y)*ux >= 0 ? 1 : -1;
     slide(q, c.x - ux*CONTACT.slide[0] + uy*CONTACT.slide[1]*s, c.y - uy*CONTACT.slide[0] - ux*CONTACT.slide[1]*s, 0.12, s);   // off the hip: beside and behind, out of his path
     q.down = (k.mode === 'dive' || k.mode === 'ankle') ? CONTACT.diveDown : CONTACT.brokenDown; q.tcd = 1.0; q.vx = q.vy = 0;
-    const fend = k.cSprint || (Math.round(-k.dp) >= CONTACT.fend.pow && k.margin >= CONTACT.fend.margin);   // beaten by a clear margin with the power edge, or at a sprint: he keeps his speed. The edge to the nearest point, so the Stamina fade moves it only once the two sides have faded half a point apart
+    const fend = k.cSprint || (Math.round(-k.dp) >= CONTACT.fend.pow && k.margin >= CONTACT.fend.margin) || traitFend(c);   // beaten by a clear margin with the power edge, or at a sprint: he keeps his speed. The edge to the nearest point, so the Stamina fade moves it only once the two sides have faded half a point apart
     c.fend = 0.2; c.fendA = Math.atan2(q.y - c.y, q.x - c.x);
     let tripped = false;
     if (k.mode === 'ankle' && rnd() < CONTACT.trip.p) { c.stumble = CONTACT.trip.t; c.stumbleMul = CONTACT.trip.mul; st('trip'); tripped = true; }
     else if (!fend) { c.stumble = CONTACT.stumble[0]; c.stumbleMul = CONTACT.stumble[1]; }
-    if (fend) { st('fends'); st('fend' + c.team); if (ringed(c)) tag('Fend', c.x, c.y); }
+    if (fend) { st('fends'); st('fend' + c.team); if (!traitCall(c, 'handoff') && ringed(c)) tag('Fend', c.x, c.y); }   // a Hand-Off says so instead
     if (tripped) { sfx('trip'); if (ringed(q)) { tag('Tripped', c.x, c.y); buzz(20, q.team); } } else sfx('whiff');
     st('broken' + c.team); M.stats.broken++; heat(c.team, 'break');
     return;
   }
   if (tier === 'dom') {
-    st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45);
+    st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45); traitCall(q, 'crunch', c.x, c.y);
     if (M.arcade) {                                          // arcade: the whole screen knows. Yours freezes and shakes hard; one on your carrier shakes too
       heat(q.team, 'hit');
       if (ringed(q)) { say('Big Hit', 'big hit', q.team); hitStop(ARCADE.hit.stop, ARCADE.hit.shake); }
       else if (ringed(c) && !RM && interactive()) M.shake = M.shakeT = ARCADE.hit.hitShake;
     } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
   }
-  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more
+  const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0) + traitJolt(q);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more, and so does a Crunch
   if (practice && practiceTackle(c, q)) return;            // a drill takes a made tackle before the ball can jolt loose
   if (rnd() < jolt*(M.kids && isHuman(c.team) ? KIDS.jolt : 1)) {   // Kids: your carrier keeps hold of it
-    st('jolts');
+    st('jolts'); traitCall(q, 'crunch', c.x, c.y);
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
     if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }
     return;
@@ -1245,6 +1249,7 @@ function startSprint(S, p) {
   S.p = p; p.sprinting = true; if (fresh) p.sprint = SPRINT.fade;
   st(isHuman(p.team) ? 'sprints' : 'cpuSprints');
   if (isHuman(p.team) && fresh) { sfx('whoosh'); buzz(15, p.team); }
+  if (fresh) traitSprint(p);                               // Burst, or Engine late on, says so
 }
 function bestChaser(team) {                                // the nearest man of this side on his feet to the other side's carrier
   const b = M.ball, c = b.state === 'held' ? b.carrier : null; if (!c || c.team === team) return null;
@@ -1303,7 +1308,7 @@ function sprintTick(dt) {                                  // after the close-up
     let drain = 0;                                         // the hold and every ease-out on this side are charged by their level, x1.5 with the ball: a tap buys no more than a hold, and nothing refills while a burst is easing out
     for (const p of M.players) if (p.team === t && p.sprint > 0) {
       if (!onFeet(p)) { p.sprint = 0; continue; }           // down or bound: the sprint is over, and nothing is charged for an ease-out that can't move him
-      drain += sprintLevel(p)*(c === p ? SPRINT.ballDrain : 1)*(M.career ? careerSprintDrain(p) : 1);   // a career match: your player's stamina
+      drain += sprintLevel(p)*(c === p ? SPRINT.ballDrain : 1)*(M.career ? careerSprintDrain(p) : 1)*traitDrain(p);   // a career match: your player's stamina. An Engine's sprint costs less
     }
     if (drain > 0) {
       S.m -= dt/(SPRINT.secs*staminaLasts(t))*drain; if (S.p) st(isHuman(t) ? 'sprintSecs' : 'cpuSprintSecs', dt);
@@ -1355,7 +1360,7 @@ function penChoice(team, x, y, c, g) {
   M.phase = 'play';
   if (c === 'goal') goalKick(team, penSpot(team, x), y, 'penalty', g);
   else if (c === 'touch') {
-    const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3), 15, 105);
+    const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3 + traitTouch(team, x, y)), 15, 105);   // a Long Boot finds touch further on (src/traits.js)
     sfx('kick');
     lineout(team, nx, y, 'Kick to Touch');   // after the hooter too: the kicking side gets its lineout
   } else startSet({ kind:'tap', team, x, y, t:0.8, snap:true, label:'Tap and Go', then:s => releaseTo(s.team, s.x, s.y, 'tap') });
@@ -1379,7 +1384,7 @@ function conversion(team, y) {
 function goalKick(team, x, y, kind, g0) {
   placeBall(x, y);
   const d = dirOf(team);
-  const k = (M.career && careerKicker(team)) || nearestFree(team, x, y) || M.players.find(p => p.team === team);   // a career match: your player takes your side's goal kicks
+  const k = (M.career && careerKicker(team)) || traitKicker(team) || nearestFree(team, x, y) || M.players.find(p => p.team === team);   // a career match: your player takes your side's goal kicks; otherwise a Long Boot takes them (src/traits.js)
   k.x = x - d*2.2; k.y = y; k.vx = k.vy = 0; k.fx = d; k.fy = 0;
   for (const p of M.players) if (p !== k && hyp(p.x-x, p.y-y) < 5) { p.x -= d*6; }
   const g = g0 || makeGoal(team, x, y, kind, k);
@@ -1513,7 +1518,7 @@ function aimFor(g, m) {                                    // the aim that sends
 function bandOf(g, aim) {                                  // at aim 0, except the Easy path's band, which is honest for the arrow it hands you
   const k = KICK, di = g.di, kk = g.kicking - 3;
   const w0 = clamp(k.band[di] - k.bandD*(g.dist - 12) - k.bandA*g.ang + k.bandK*kk, k.bandMin + k.minK*kk, k.bandMax);
-  g.w = g.type === 'drop' ? w0*k.dropBand : w0;
+  g.w = (g.type === 'drop' ? w0*k.dropBand : w0)*traitBand(g);   // a Long Boot's band is wider (src/traits.js)
   g.mClear = clearPower(g, aim);
   g.ctr = Math.min(Math.max(g.mClear + k.lift + k.liftW*g.w, k.floor), k.ceil);   // the floor makes short kicks fly like real ones
   g.lo = g.ctr - g.w/2; g.hi = g.ctr + g.w/2;
@@ -2157,7 +2162,7 @@ const SCRUM_LEVEL = [0.10, 0, 0], LINE_LEVEL = [0.06, 0, 0];
 function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
   let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
-  p += (M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team))*0.05;   // a career match: your player's own power
+  p += ((M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team)) + traitEdge(q, c))*0.05;   // a career match: your player's own power. An Engine keeps most of his (src/traits.js)
   if (M.kids && isHuman(q.team) && mode !== 'ai') p += KIDS.tackle;   // Kids: your ringed man's contact tackle and dive
   if (stepped) p *= MOVES.step.odds;
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
@@ -2723,7 +2728,8 @@ function updateBallAir(dt) {
   }
   if (u >= 1) {
     b.state = 'loose'; b.f = null;
-    b.vx = (f.x1-f.x0)/f.T*0.32; b.vy = (f.y1-f.y0)/f.T*0.32; b.vz = 3.2; b.z = 0.01;
+    const roll = f.boot ? 0.32*TRAIT.boot.roll : 0.32;     // a Long Boot's kick runs on (src/traits.js)
+    b.vx = (f.x1-f.x0)/f.T*roll; b.vy = (f.y1-f.y0)/f.T*roll; b.vz = 3.2; b.z = 0.01;
   }
 }
 function resolvePass() {
@@ -3802,6 +3808,7 @@ function careerArm() {                               // straight after startMatc
   M.careerP = M.players.find(p => p.team === 0 && p.n === career.num) || M.players.find(p => p.team === 0);
   M.careerNat = careerNatFor(M.nat[0], career.skills);
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
+  traitsArm();                                       // his own traits, and his shirt kept for him (src/traits.js)
   careerKickoff();
 }
 function careerPlay() {                              // Play Match on the hub
@@ -3915,6 +3922,149 @@ function careerMark(r) {
   ctx.fillStyle = col; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = C.outline; ctx.stroke();
   ctx.restore();
+}
+/* =========================================================
+   Star traits: a few men with something special, as FIFA's players have traits.
+
+   The rules, all of them here:
+   - Six traits, one row each in TRAITS: the ability that brings it, the career skill and number that unlock it, the shirts it
+     fits (sevens: 1 to 3 forwards, 4 scrum-half, 5 fly-half, 6 centre, 7 wing). Every effect size is in TRAIT.
+   - A team: each ability at TRAIT.star (5) brings its trait(s), each on its own man: Pace a Burst wing, Power a Crunch forward
+     and a Hand-Off centre, Handling a Safe Hands scrum-half, Kicking a Long Boot fly-half, Stamina an Engine forward. Which
+     forward is the team's name's (traitHash), so a side keeps its stars from match to match; a shirt already taken moves the
+     trait to the next one that fits, then to its unit, then anywhere. Built-in, custom and imported sides alike: it reads only
+     the abilities, so nothing new is saved.
+   - Your career player: each trait whose skill has reached its unlock (80; Hand-Off 90) is his, on him only. In a career match
+     his shirt is his own, so a team star that would wear it moves along (traitsArm).
+   - Only a match you play has them (M.arcade, as On Fire and Stamina): traitsArm hands them out at newMatch and careerArm, and
+     traitOn reads false everywhere else, so AI v AI, the demo, practice and the balance tools play as they did.
+     Every hook in the engine is a multiplier of exactly 1, a term of exactly 0 or the value handed in when traitOn is false.
+   - A trait that decides a moment says so over the man (tag), at most once every TRAIT.gap seconds of play for each man; a
+     small gold star sits on each star's shoulder in the top view (traitMarks, from render-match.js).
+   ========================================================= */
+const TRAITS = [   // in ABILITIES order; name is the label everywhere (cards, call-outs, the career hub)
+  { id:'burst',   name:'Burst',      skill:'pace',     unlock:80, shirts:[7] },        // the wing
+  { id:'crunch',  name:'Crunch',     skill:'power',    unlock:80, shirts:[1, 2, 3] },  // a forward
+  { id:'handoff', name:'Hand-Off',   skill:'power',    unlock:90, shirts:[6] },        // the centre
+  { id:'safe',    name:'Safe Hands', skill:'handling', unlock:80, shirts:[4] },        // the scrum-half
+  { id:'boot',    name:'Long Boot',  skill:'kicking',  unlock:80, shirts:[5] },        // the fly-half
+  { id:'engine',  name:'Engine',     skill:'stamina',  unlock:80, shirts:[1, 2, 3] },  // a forward
+];
+const TRAIT = {
+  star:5,                                   // the ability a team needs for that ability's star(s)
+  burst:{ top:0.08, acc:1.4 },              // sprinting: top speed 8% more at full burst, acceleration 40% more
+  crunch:{ dom:0.15, jolt:0.05 },           // his made tackles: 15 points more chance of a Big Hit (dominant tackle), 5 more of the ball jolting loose
+  handoff:{ hold:0.8 },                     // his carries: a tackle on him (not an ankle tap) holds 80% as often, and every one he breaks is a Fend (he keeps his speed)
+  safe:{ hands:0.1, offload:0.4, hard:0.05 },   // a knock-on at the catch a tenth as likely; his offloads go astray 40% as often. The call-out is for a catch that was at least 5% to go down without it
+  boot:{ roll:2.0, touch:10, band:1.35 },   // his tactical kick lands where the cross says and runs on twice as far; his side's kick to touch 10m further; his goal kicks' band 35% wider (he takes his side's place kicks)
+  engine:{ fade:0.15, drain:0.5, late:0.5 },    // he feels 15% of what the half takes from his side's Power and pace, and his sprint drains the meter half as fast. The call-out: a sprint started in the second half of a period
+  gap:4,                                    // seconds of play between one man's call-outs
+};
+const TRAIT_BY = Object.fromEntries(TRAITS.map(t => [t.id, t]));
+const TRAIT_FWD = [1, 2, 3], TRAIT_BACKS = [4, 5, 6, 7], TRAIT_ALL = [1, 2, 3, 4, 5, 6, 7];
+const traitHash = s => { let h = 2166136261; for (const ch of String(s == null ? '' : s)) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return h >>> 0; };
+const traitRot = (a, k) => a.map((_, i) => a[(i + k) % a.length]);
+
+/* ---------- who has them ---------- */
+/* A side's stars: shirt number to trait ids, in TRAITS order. taken: shirts already spoken for (your career player's). */
+function teamStars(t, taken) {
+  const out = new Map(), used = new Set(taken || []);
+  if (!t || typeof t !== 'object') return out;
+  const h = traitHash(t.name);
+  TRAITS.forEach((tr, i) => {
+    if (abilityOf(t, tr.skill) < TRAIT.star) return;
+    const k = h >>> (i*4), unit = tr.shirts[0] <= 3 ? TRAIT_FWD : TRAIT_BACKS;
+    const n = [...traitRot(tr.shirts, k % tr.shirts.length), ...traitRot(unit, k % unit.length), ...TRAIT_ALL].find(s => !used.has(s));
+    if (n == null) return;
+    used.add(n); out.set(n, [...(out.get(n) || []), tr.id]);
+  });
+  return out;
+}
+/* The team cards' line: the trait names, in TRAITS order. */
+const teamTraitNames = t => [...teamStars(t).values()].flat().sort((a, b) => TRAITS.indexOf(TRAIT_BY[a]) - TRAITS.indexOf(TRAIT_BY[b])).map(id => TRAIT_BY[id].name);
+/* Your career player's traits: each one his skill has reached. */
+const careerTraitIds = cr => (cr && cr.skills ? TRAITS.filter(tr => (+cr.skills[tr.skill] || 0) >= tr.unlock).map(tr => tr.id) : []);
+/* Hand them out for this match: newMatch, then careerArm once your player is known. Nothing outside a match you play. */
+function traitsArm() {
+  if (!M) return;
+  for (const p of M.players) p.tr = null;
+  if (!M.arcade) return;
+  const mine = M.career && M.careerP ? M.careerP : null;
+  for (const t of [0, 1]) {
+    const stars = teamStars(M.nat[t], t === 0 && mine ? [mine.n] : null);
+    for (const p of M.players) if (p.team === t && stars.has(p.n)) p.tr = Object.fromEntries(stars.get(p.n).map(id => [id, true]));
+  }
+  if (mine) { const ids = careerTraitIds(career); mine.tr = ids.length ? Object.fromEntries(ids.map(id => [id, true])) : null; }
+}
+const traitOn = (p, id) => !!(M && M.arcade && p && p.tr && p.tr[id]);
+
+/* ---------- the call-out ---------- */
+/* The trait's name over him when it decides a moment: counted each time (trait_<id>), shown at most once every TRAIT.gap
+   seconds of play for each man. True when it showed. */
+function traitCall(p, id, x, y) {
+  if (!traitOn(p, id)) return false;
+  st('trait_' + id);
+  if (p.trAt != null && M.dclock - p.trAt < TRAIT.gap) return false;
+  p.trAt = M.dclock;
+  tag(TRAIT_BY[id].name, x == null ? p.x : x, y == null ? p.y : y);
+  return true;
+}
+
+/* ---------- the engine's hooks ---------- */
+/* Burst: the sprint's top speed and its acceleration (maxSpeed, steer). */
+const traitBurst = (p, sp) => (traitOn(p, 'burst') ? 1 + TRAIT.burst.top*sp : 1);
+const traitAcc = p => (p.sprint > 0 && traitOn(p, 'burst') ? TRAIT.burst.acc : 1);
+/* Engine: his pace fade (maxSpeed hands in the side's staminaPace), his Power fade at the tackle (an edge, as Power points),
+   and his sprint's drain on the meter. */
+const traitPace = (p, k) => (traitOn(p, 'engine') ? 1 - (1 - k)*TRAIT.engine.fade : k);
+const traitKeep = p => (traitOn(p, 'engine') ? staminaFade(p.team)*(1 - TRAIT.engine.fade) : 0);   // the Power the fade would have taken that he keeps
+const traitEdge = (q, c) => traitKeep(q) - traitKeep(c);
+const traitDrain = p => (traitOn(p, 'engine') ? TRAIT.engine.drain : 1);
+function traitSprint(p) {                                  // a fresh sprint: Burst, or Engine late in a period
+  if (traitCall(p, 'burst')) return;
+  if (traitOn(p, 'engine') && M.clock >= TRAIT.engine.late*periodLen()) traitCall(p, 'engine');
+}
+/* Crunch and Hand-Off: the tackle. traitHold scales the chance a tackle on him holds; traitDom adds to his Big Hit chance. */
+const traitHold = (c, mode) => (mode !== 'ankle' && traitOn(c, 'handoff') ? TRAIT.handoff.hold : 1);
+const traitDom = q => (traitOn(q, 'crunch') ? TRAIT.crunch.dom : 0);
+const traitJolt = q => (traitOn(q, 'crunch') ? TRAIT.crunch.jolt : 0);
+const traitFend = c => traitOn(c, 'handoff');
+/* Safe Hands: the catch (knock-on chance k) and the offload (success chance pOk). */
+const traitHands = (p, k) => (traitOn(p, 'safe') ? k*TRAIT.safe.hands : k);
+function traitCaught(p, k) { if (k >= TRAIT.safe.hard) traitCall(p, 'safe'); }   // a hard catch held: a kick, an intercept, under pressure or a long one
+const traitOffload = (c, pOk) => (traitOn(c, 'safe') ? 1 - (1 - pOk)*TRAIT.safe.offload : pOk);
+/* Long Boot: his tactical kick runs on (ball.js reads f.boot at the landing), his side's kick to touch goes further, and he
+   takes his side's place kicks with a wider band. */
+function traitKick(c) { if (!traitOn(c, 'boot') || !M.ball.f) return; M.ball.f.boot = true; traitCall(c, 'boot'); }
+function traitTouch(team, x, y) {                          // metres more on a penalty kick to touch
+  const p = M && M.arcade ? M.players.find(q => q.team === team && traitOn(q, 'boot')) : null;
+  if (!p) return 0;
+  traitCall(p, 'boot', x, y);
+  return TRAIT.boot.touch;
+}
+const traitKicker = team => (M && M.arcade ? M.players.find(q => q.team === team && traitOn(q, 'boot')) || null : null);
+function traitBand(g) {                                    // bandOf's multiplier on the goal kick's band: the man kicking it, or for a place kick the man who will
+  if (!M || !M.arcade) return 1;
+  const k = g.kicker || (g.type === 'set' ? (M.career && careerKicker(g.team)) || traitKicker(g.team) : null);
+  return traitOn(k, 'boot') ? TRAIT.boot.band : 1;
+}
+
+/* ---------- drawing ---------- */
+/* A small gold star on each star's right shoulder, over the men (render-match.js calls it once, after drawPlayer). Your career
+   player has his own ring and star, so he is left out. */
+function traitMarks(r) {
+  if (!M || !M.arcade) return;
+  const s = Math.max(4, r*0.5);
+  for (const p of M.players) {
+    if (!p.tr || (M.career && p === M.careerP)) continue;
+    const [wx, wy] = drawPos(p), [x0, y0] = toS(wx, wy), x = x0 + r*0.95, y = y0 - r*0.95;
+    if (x < -s || x > V.W + s || y < -s || y > V.H + s) continue;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? s*0.45 : s; ctx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr); }
+    ctx.closePath();
+    ctx.fillStyle = '#ffcf3d'; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = C.outline; ctx.stroke();
+  }
 }
 /* =========================================================
    Rendering
@@ -4947,6 +5097,7 @@ function render(dt) {
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
   if (M.career) careerMark(r);                             // a career match: your player's ring and the star on his back
+  if (M.arcade) traitMarks(r);                             // a match you play: a gold star on each star player's shoulder (src/traits.js)
   // A short cue only where a decision matters; free pass targets keep just their ring.
   // Suppress edge cues rather than detach a label from an off-screen player or cover the scorebug.
   const targetCue = (q, text, colour) => {
@@ -6273,10 +6424,12 @@ let teamList = [];
 function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
+  const stars = teamTraitNames(t);                         // the star traits its 5s bring (src/traits.js)
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
       ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
+      ${stars.length ? `<span class="tstars" aria-label="Star Traits: ${stars.join(', ')}">${stars.map(n => `<b>${n}</b>`).join(' · ')}</span>` : ''}
     </button>`;
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
@@ -8842,7 +8995,16 @@ function careerCardHtml(cr, team) {
     <div class="cr-skills">${careerSkills().map(([k, l]) => {
       const v = cr.skills[k];
       return `<div class="cr-sk" style="--k:${CAREER_COL[k] || 'var(--chalk)'}"><span class="lbl">${l}</span><span class="bar" aria-hidden="true"><i style="width:${v}%"></i></span><b>${v}</b>${g[k] ? `<em>+${g[k]}</em>` : '<em></em>'}</div>`;
-    }).join('')}</div>`;
+    }).join('')}</div>
+    <div class="cr-traits">${careerTraitChips(cr)}</div>`;
+}
+/* His star traits (src/traits.js), in TRAITS order: one he has in its skill's colour; a locked one dimmed, with the skill and the number it needs. */
+function careerTraitChips(cr) {
+  const label = Object.fromEntries(careerSkills()), have = careerTraitIds(cr);
+  return TRAITS.map(tr => {
+    const on = have.includes(tr.id), need = (label[tr.skill] || tr.skill) + ' ' + tr.unlock;
+    return `<span class="cr-trait${on ? '' : ' off'}" style="--k:${CAREER_COL[tr.skill] || 'var(--chalk)'}"${on ? '' : ` aria-label="${tr.name}, ${need}"`}><b data-fit>${tr.name}</b>${on ? '' : `<span data-fit>${need}</span>`}</span>`;
+  }).join('');
 }
 function careerFixtureHtml(c) {
   const { pair } = userFixture(c), [h, a] = pair, T = c.teams;
@@ -9235,6 +9397,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
+  traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },

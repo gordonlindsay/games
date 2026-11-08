@@ -215,6 +215,7 @@ function careerArm() {                               // straight after startMatc
   M.careerP = M.players.find(p => p.team === 0 && p.n === career.num) || M.players.find(p => p.team === 0);
   M.careerNat = careerNatFor(M.nat[0], career.skills);
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
+  traitsArm();                                       // his own traits, and his shirt kept for him (src/traits.js)
   careerKickoff();
 }
 function careerPlay() {                              // Play Match on the hub

@@ -113,6 +113,11 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .pips i{flex:1;height:5px;border-radius:1px;background:var(--rule-hi)}
 .pips i.on{background:var(--chalk)}
 .gap{grid-column:1/-1;margin-top:-4px;font:800 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--flood)}
+/* the star traits a team's 5s bring (src/traits.js), under the ability rows behind a gold star as on the pitch. One line for one or two;
+   three or four (Ireland, France) take a second at 844 and 667 wide, breaking only between names */
+.tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
+.tstars b{font-weight:700;color:var(--chalk);white-space:nowrap}
+.tstars::before{content:"";display:inline-block;width:11px;height:11px;margin:0 5px -1px 0;background:var(--flood);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
 
 /* International | Local | France | Australia | South Africa, beside the title, or under it when the row is short */
 .head > .pool{display:grid;flex:0 1 auto;gap:0;grid-auto-columns:auto;width:auto;max-width:100%;overflow-x:auto;scrollbar-width:none}
@@ -496,6 +501,13 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-sk b{font:900 20px/1 var(--display);text-align:right;font-variant-numeric:tabular-nums}
 .cr-sk em{font:700 13px/1 var(--body);font-style:normal;color:var(--flood)}
 .cr-gain{margin:0;color:var(--flood);font:700 15px/1.3 var(--body)}
+/* his star traits (src/traits.js): three a row; one he has in its skill's colour, a locked one dimmed, with what it needs under its name.
+   careerFit steps a name down if a narrow card can't hold it */
+.cr-traits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.cr-trait{display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0;min-height:38px;padding:4px 6px;border:1.5px solid var(--k);border-radius:4px;color:var(--k)}
+.cr-trait b,.cr-trait span{display:block;min-width:0;font:700 13px/1.1 var(--body);white-space:nowrap}
+.cr-trait.off{border-color:var(--rule-hi);color:var(--chalk-dim);opacity:.7}
+.cr-trait.off span{font-size:11px;font-weight:400}
 .cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .btn.cr-drill{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:76px;padding:10px 12px;text-align:left}
 .cr-drill .nm{font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}

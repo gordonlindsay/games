@@ -88,7 +88,16 @@ function careerCardHtml(cr, team) {
     <div class="cr-skills">${careerSkills().map(([k, l]) => {
       const v = cr.skills[k];
       return `<div class="cr-sk" style="--k:${CAREER_COL[k] || 'var(--chalk)'}"><span class="lbl">${l}</span><span class="bar" aria-hidden="true"><i style="width:${v}%"></i></span><b>${v}</b>${g[k] ? `<em>+${g[k]}</em>` : '<em></em>'}</div>`;
-    }).join('')}</div>`;
+    }).join('')}</div>
+    <div class="cr-traits">${careerTraitChips(cr)}</div>`;
+}
+/* His star traits (src/traits.js), in TRAITS order: one he has in its skill's colour; a locked one dimmed, with the skill and the number it needs. */
+function careerTraitChips(cr) {
+  const label = Object.fromEntries(careerSkills()), have = careerTraitIds(cr);
+  return TRAITS.map(tr => {
+    const on = have.includes(tr.id), need = (label[tr.skill] || tr.skill) + ' ' + tr.unlock;
+    return `<span class="cr-trait${on ? '' : ' off'}" style="--k:${CAREER_COL[tr.skill] || 'var(--chalk)'}"${on ? '' : ` aria-label="${tr.name}, ${need}"`}><b data-fit>${tr.name}</b>${on ? '' : `<span data-fit>${need}</span>`}</span>`;
+  }).join('');
 }
 function careerFixtureHtml(c) {
   const { pair } = userFixture(c), [h, a] = pair, T = c.teams;

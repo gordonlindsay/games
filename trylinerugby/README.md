@@ -39,7 +39,35 @@ One player, from the minis to the national team. **Career** on the home screen m
 - **In a career match only**, he wears a star and a ring in the kit's trim, the ring starts on him at every kick-off, he takes your side's goal kicks, and his ratings pull his own speed, catching, tackling, kicking, sprint and late-half pace from the team's halfway towards his own. A career season is a league, so it keeps its draws. Every other match plays exactly as before.
 - **Saving.** The career is its own field (`career`) in the browser save, with its own seasons. It never touches the championship or the Trophy Cabinet, and the championship never touches it. A broken season is dropped and redrawn for the same stage; the player is kept.
 
+- **Traits.** At 80 in a skill he earns its star trait (Hand-Off at Power 90), on him only; the hub shows all six as chips, a locked one dimmed with what it needs. See Star Traits.
+
 The rules and every number are in `src/career.js`, the screens in `src/ui-career.js`; `node tools/career.mjs` checks them.
+
+## Star Traits
+
+A few men with something special, as FIFA's players have traits. A team's 5s bring them and your career player earns them. Like Stamina and the arcade, they only act in matches you play: AI v AI, the demo, practice and the balance tools are unchanged. `node tools/traits.mjs` pins seeded AI v AI, demo and tool matches between star sides to the build before traits (30e13e2), and the same comparison over AI v AI, `simulate()`, the demo, two drills, a tool's match and an arcade match between sides with no star matched that build exactly when traits went in.
+
+- **Burst** (Pace, the wing, No. 7). Sprinting, 8% more top speed at full burst and 40% more acceleration.
+- **Crunch** (Power, a forward). His made tackles: 15 points more chance of a Big Hit and 5 more of jolting the ball loose.
+- **Hand-Off** (Power, the centre, No. 6). A tackle on him holds 80% as often (an ankle tap from behind as ever), and every one he breaks is a Fend: he keeps his speed.
+- **Safe Hands** (Handling, the scrum-half, No. 4). A knock-on at the catch a tenth as likely, and his offloads go astray 40% as often.
+- **Long Boot** (Kicking, the fly-half, No. 5). His tactical kick lands where the cross says, then runs on twice as far; his side's penalty kick to touch goes 10m further; he takes his side's conversions and penalty goals, with a band 35% wider.
+- **Engine** (Stamina, a forward). He feels 15% of the Power and pace his side loses over a half, and his sprint drains the meter half as fast.
+
+Who has them:
+
+- **Teams.** Each ability at 5 brings its trait, each on its own man; Power brings two. Which forward carries Crunch or Engine follows the team's name, so a side keeps its stars from match to match. England and Pretoria: Crunch and Hand-Off. France: Burst, Crunch, Hand-Off and Engine. Ireland: Safe Hands, Long Boot and Engine. Scotland: Burst. A team you make or import has them as soon as it has a 5 (12 points buy three 5s: four stars at most). Nothing is saved: they come from the abilities, so every old save has them.
+- **Your career player.** Each at 80 in its skill, Hand-Off at Power 90, on him only. In a career match his shirt is his own: a team star that would wear it moves to the next shirt that fits. His traits come from his skills, so nothing new is saved either.
+
+Showing them: a small gold star on each star's shoulder in the top view (not on your career player, who has his own star); one line on the team card under the ability rows naming them (three or four take a second line at 844 and 667 wide); and when a trait decides a moment, its name over the man: a Big Hit or a jolt by Crunch, a tackle broken by Hand-Off, a hard catch or an offload by Safe Hands, a Long Boot's kick, a Burst sprint, an Engine sprint late in a half. At most one every 4 seconds of play for each man: about 11 a match France v Ireland.
+
+**What they are worth.** Measured as Stamina was: seeded CPU v CPU arcade matches, 2-minute halves, Normal, the same side at both ends with its stars kept on one and taken off the other, played both ways round on the same seeds, 1,000 matches a row (`node tools/traits.mjs --balance`). Sides score about 4 points a match here.
+
+- France's four stars: +0.7 a match (se 0.23), won 47%, lost 39%. Ireland's three: +1.2 (se 0.25), won 49%, lost 38%. Pretoria's two: +0.2 (se 0.18). All six on one side: +1.7 (se 0.25), won 53%, lost 34%. Noticeable, never decisive: a side with every star still loses a third of its matches to the same side without them.
+- One star on a side of 3s: Long Boot +0.8, Hand-Off +0.4, Engine +0.3, Safe Hands +0.1, Crunch +0.1, Burst 0.0 (se 0.16 to 0.18). Burst and Engine act mostly on a sprint, and the computer seldom sprints, so they are the player's: with the harness's player at the controls (Normal, duels live, 200 matches a row), France's stars add about 2 points a match to his margin (+17.8 to +20.0, se 0.8) and the computer's France about 0.7 to its own; Ireland's about 1 and 0.6.
+- A stronger set (Hand-Off 0.72, Crunch 0.2 and 0.06, Long Boot 1.4 and 2.5, the rest a step up) moved France, Ireland and all six by nothing measurable (+0.8, +1.1 and +1.6 over 600 matches), so the gentler set stayed.
+
+Tuning lives in `TRAIT` in `src/traits.js`; `node tools/traits.mjs` checks it.
 
 ## Training Ground
 

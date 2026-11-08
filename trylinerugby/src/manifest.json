@@ -14,6 +14,7 @@
   "movement.js",
   "championship.js",
   "career.js",
+  "traits.js",
   "render-pitch.js",
   "render-setpieces.js",
   "render-duels.js",

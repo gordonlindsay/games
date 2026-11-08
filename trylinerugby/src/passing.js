@@ -167,6 +167,7 @@ function doKick(c, power, lat) {
   c.hold = 0;
   M.stats.kicks++;
   kickBall(c.team, c.x, c.y, tx, ty, 0.8 + len/28, 2.5 + len*0.26, 'kick');
+  traitKick(c);                                            // a Long Boot's kick runs on where it lands (src/traits.js)
   sfx('kick');
 }
 function aiKick(p, type) {

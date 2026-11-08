@@ -24,7 +24,7 @@ function penChoice(team, x, y, c, g) {
   M.phase = 'play';
   if (c === 'goal') goalKick(team, penSpot(team, x), y, 'penalty', g);
   else if (c === 'touch') {
-    const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3), 15, 105);
+    const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3 + traitTouch(team, x, y)), 15, 105);   // a Long Boot finds touch further on (src/traits.js)
     sfx('kick');
     lineout(team, nx, y, 'Kick to Touch');   // after the hooter too: the kicking side gets its lineout
   } else startSet({ kind:'tap', team, x, y, t:0.8, snap:true, label:'Tap and Go', then:s => releaseTo(s.team, s.x, s.y, 'tap') });
@@ -48,7 +48,7 @@ function conversion(team, y) {
 function goalKick(team, x, y, kind, g0) {
   placeBall(x, y);
   const d = dirOf(team);
-  const k = (M.career && careerKicker(team)) || nearestFree(team, x, y) || M.players.find(p => p.team === team);   // a career match: your player takes your side's goal kicks
+  const k = (M.career && careerKicker(team)) || traitKicker(team) || nearestFree(team, x, y) || M.players.find(p => p.team === team);   // a career match: your player takes your side's goal kicks; otherwise a Long Boot takes them (src/traits.js)
   k.x = x - d*2.2; k.y = y; k.vx = k.vy = 0; k.fx = d; k.fy = 0;
   for (const p of M.players) if (p !== k && hyp(p.x-x, p.y-y) < 5) { p.x -= d*6; }
   const g = g0 || makeGoal(team, x, y, kind, k);
@@ -182,7 +182,7 @@ function aimFor(g, m) {                                    // the aim that sends
 function bandOf(g, aim) {                                  // at aim 0, except the Easy path's band, which is honest for the arrow it hands you
   const k = KICK, di = g.di, kk = g.kicking - 3;
   const w0 = clamp(k.band[di] - k.bandD*(g.dist - 12) - k.bandA*g.ang + k.bandK*kk, k.bandMin + k.minK*kk, k.bandMax);
-  g.w = g.type === 'drop' ? w0*k.dropBand : w0;
+  g.w = (g.type === 'drop' ? w0*k.dropBand : w0)*traitBand(g);   // a Long Boot's band is wider (src/traits.js)
   g.mClear = clearPower(g, aim);
   g.ctr = Math.min(Math.max(g.mClear + k.lift + k.liftW*g.w, k.floor), k.ceil);   // the floor makes short kicks fly like real ones
   g.lo = g.ctr - g.w/2; g.hi = g.ctr + g.w/2;
