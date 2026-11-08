@@ -275,6 +275,7 @@ h2.title.gold{color:var(--flood)}
 .act.press{transform:scale(.9)}
 .act.idle{opacity:.45}
 .act.b.two span{display:block;width:54px;font-size:15px;line-height:1.05;text-align:center;white-space:normal}   /* "Drop Goal" on two lines inside the 68px button */
+.act.a.two span{display:block;width:72px;font-size:17px;line-height:1.05;text-align:center;white-space:normal}   /* "Call for Ball" on two lines inside the 88px button (Pro Mode) */
 /* a computer (a fine pointer, or a controller seen): a keycap or a controller glyph in each button's corner for the last device used, and the
    resting stick ring hidden while that wasn't a touch. The glyph is a position on the pad (the diamond's lit dot, the shoulder tab), never a letter.
    Phones never get the desk class, so nothing here reaches them */
@@ -474,6 +475,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-club .jersey{width:28px;height:28px}
 .cr-club .tname{font:700 14px/1.1 var(--body);text-transform:none;letter-spacing:0;overflow-wrap:normal}
 .cr-form{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cr-left{display:flex;flex-direction:column;gap:10px;min-width:0}   /* Play as (Whole Team | My Player) over the clubs, so Start Career stays in view */
 .cr-namerow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px}
 .cr-hub{max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px 24px;align-items:start}
 .cr-main{display:flex;flex-direction:column;gap:10px;min-width:0}

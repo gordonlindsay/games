@@ -115,8 +115,9 @@ function updateHud() {
   if (D) { la = D.a; lb = D.b; cueA = !!D.cueA; cueB = false; aAct = !!D.aOn; bAct = !!D.bOn; }
   else if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
+  else if (ours && proCalling(ht)) { la = 'Call for Ball'; lb = null; cueA = cueB = false; aAct = play && proCanCall(); bAct = false; }   // Pro Mode: a teammate has it (career-pro.js)
   else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl; la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && carrying && (!held || cueA); bAct = play && carrying && !held; }   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
-  else { la = 'Tackle'; lb = 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
+  else { la = 'Tackle'; lb = proPinned(ht) ? null : 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
   const S = M.spr[ht], sprOn = D ? !!D.cOn : !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
   const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue + (passLong ? 'L' : '') + (D ? (D.c ? 'C' : 'c') : '');
@@ -131,6 +132,7 @@ function updateHud() {
     $('btnB').classList.toggle('cue', cueB);
     $('btnC').classList.toggle('cue', sprCue);
     $('btnB').classList.toggle('two', lb === 'Drop Goal');   // two lines inside the small button
+    $('btnA').classList.toggle('two', la === 'Call for Ball');   // and inside the big one
     $('plates').hidden = !(duel && M.cut.kind === 'past' && !M.cut.after);
     $('btnA').classList.toggle('idle', !aAct); $('btnB').classList.toggle('idle', !bAct);
     $('btnC').classList.toggle('idle', !sprOn); $('btnC').classList.toggle('ready', sprOn);

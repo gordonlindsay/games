@@ -44,7 +44,7 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   q.bind = k; c.bind = k; q.bindOff = { x:rx/rm*0.7, y:ry/rm*0.7 };
   M.contact = k; st('binds');
   sfx('tackle'); if (ringed(q) || ringed(c)) buzz(30);
-  if (!isHuman(c.team) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload
+  if ((!isHuman(c.team) || proRun(c)) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload (Pro Mode: so does a teammate of yours)
   return k;
 }
 function releaseBind(k) { for (const p of [k.c, k.q, k.q2]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }
@@ -276,7 +276,7 @@ function bestChaser(team) {                                // the nearest man of
 }
 function sprintPick(t) {                                   // the man a Sprint press would move the ring to: the best chaser when yours is down or another is over SPRINT.pick nearer their carrier; null to stay put
   const b = M.ball, p = ctrlOf(t), c = b.state === 'held' && b.carrier.team !== t ? b.carrier : null, best = c ? bestChaser(t) : null;
-  return c && best && best !== p && (!p || !onFeet(p) || dist(p, c) - dist(best, c) > SPRINT.pick) ? best : null;
+  return c && best && best !== p && !proPinned(t) && (!p || !onFeet(p) || dist(p, c) - dist(best, c) > SPRINT.pick) ? best : null;   // Pro Mode: the ring never moves
 }
 function sprintOn(t) {                                     // would a Sprint press act now: the meter over the floor (or a sprint running), not latched, and the man it would go to able to sprint
   const S = M.spr[t];

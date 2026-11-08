@@ -102,6 +102,7 @@ function bestReceiver(p) {
 }
 function doPass(from, to, o) {
   o = o || {};
+  if (M.careerPro) [to, o] = proPass(from, to, o);       // Pro Mode: a teammate may give it to your player instead (career-pro.js)
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
   const spd = passSpeed(n, o.long);
   let tx, ty, T;

@@ -227,6 +227,7 @@ function aiCarrier(p, dt) {
   const m = hyp(ax,ay) || 1, sp = maxSpeed(p)*0.95;
   steer(p, ax/m*sp, ay/m*sp, 15, dt);
   if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; p.vy += (rnd() < 0.5 ? -1 : 1)*MOVES.step.cpuPush; }
+  if (M.careerPro && proCarrier(p, dt)) return;          // Pro Mode: a Call for Ball answered, or a look for your player (career-pro.js)
   p.think -= dt; if (p.think > 0) return; p.think = 0.15;
   if (p.hold < 0.5) return;
   const KD = MOVES.dummy, lv = levelOf(p.team);
@@ -322,6 +323,7 @@ function switchMark(t) {                               // where "behind the ball
 }
 function switchTarget(t) {                                // the one man the dashed ring, the press and the pulse agree on. Nearest the ball, or the second-nearest when that is already you. When your man is behind the ball, the nearest teammate still in front
   const b = M.ball, cur = ctrlOf(t);
+  if (proPinned(t)) return null;                          // Pro Mode: he is always him, so there is no Switch
   const list = M.players.filter(p => p.team === t && onFeet(p)).sort((p, q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
   if (!list.length) return null;
   const m = switchMark(t);
@@ -432,6 +434,7 @@ function userStep(t, i, dt) {
     else if (M.phase === 'play' && c) {
       if (b.state === 'held' && b.carrier === c) { if (c.bind) { S.pass = null; offload(c.bind, true); } else startUserPass(c); }   // held in a tackle, Pass is the offload, on the press
       else if (!ourBall(t)) { S.pass = null; userTackle(t); }
+      else if (proPinned(t)) proCall();                     // Pro Mode: a teammate has it, so Pass is Call for Ball (career-pro.js)
     }
   }
   tickUserPass(t, dt);

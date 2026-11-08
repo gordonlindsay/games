@@ -15,7 +15,7 @@ const sideOf = t => M.side[t];
 const isHuman = t => M.side[t].human;
 const inputOf = t => (M.side[t].human ? inputs[M.side[t].seat] : null);
 const ctrlOf = t => (M.side[t].human ? M.side[t].ctrl : null);
-const setCtrl = (t, q) => { if (M.side[t].human && q) M.side[t].ctrl = q; };
+const setCtrl = (t, q) => { if (M.side[t].human && q && !(proPinned(t) && q !== M.careerP)) M.side[t].ctrl = q; };   // Pro Mode: the ring stays on your player (career-pro.js)
 const levelOf = t => M.side[t].level;
 const seatOfTeam = t => (M.side[t].human ? M.side[t].seat : null);   // which seat a team's human sits in, for the rumble and the ring's colour
 const anyCharging = () => M.side[0].charging || M.side[1].charging;
@@ -208,13 +208,13 @@ function scrum(team, x, y, reason) {
   M.stats.scrums = (M.stats.scrums||0) + 1;
   placeBall(clamp(x,15,105), clamp(y,15,55));
   startSet({ kind:'scrum', team, x:clamp(x,15,105), y:clamp(y,15,55), t:interactive() ? 1.1 : 1.8, snap:true,
-    label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() ? startScrum(s) : autoScrum(s) });
+    label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() && !proSkip() ? startScrum(s) : autoScrum(s) });   // Pro Mode: a back's scrum is played for the team
 }
 function lineout(team, x, y, reason) {
   const ly = y < 35 ? 8 : 62;
   placeBall(clamp(x,15,105), ly);
   startSet({ kind:'lineout', team, x:clamp(x,15,105), y:ly, t:interactive() ? 1.1 : 1.8, snap:true,
-    label:(reason ? reason + ' · ' : '') + 'Lineout ' + M.nat[team].id, then:s => interactive() ? startLineout(s) : autoLineout(s) });
+    label:(reason ? reason + ' · ' : '') + 'Lineout ' + M.nat[team].id, then:s => interactive() && !proSkip() ? startLineout(s) : autoLineout(s) });   // and his lineout
 }
 function releaseTo(team, x, y, kind, who) {
   const d = dirOf(team);

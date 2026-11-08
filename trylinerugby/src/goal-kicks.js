@@ -113,7 +113,7 @@ function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry a
 }
 function makeGoal(team, wx, wy, kind, kicker) {
   const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
-  if (!isHuman(team)) g.cpu = cpuKickInputs(g);
+  if (!isHuman(team) || proRun(kicker)) g.cpu = cpuKickInputs(g);   // Pro Mode: a teammate's drop goal is the CPU's kick
   else {
     g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !tutSeen(kind === 'drop' ? 'drop' : 'goal'))) ? 'path' : 'line';   // the first kick ever (the tutorial's goal or drop moment unseen) gets the Easy aids; in two player each player's first kick of the match does
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
@@ -365,7 +365,7 @@ const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hol
 function projectHold(c, lead) {
   const t = c.team, n = Math.max(0, Math.round(lead/STEP)), dt = n ? lead/n : 0, P = M.players;
   const saved = P.map(p => HOLD_KEYS.map(k => p[k])), steps0 = M.stats.steps, drop0 = c.drop;
-  if (!isHuman(t) && !c.drop) c.drop = { t:1e9, g:null };   // a CPU kicker brakes through the wind-up, and never strikes inside the projection
+  if ((!isHuman(t) || proRun(c)) && !c.drop) c.drop = { t:1e9, g:null };   // a CPU kicker (Pro Mode: or your teammate) brakes through the wind-up, and never strikes inside the projection
   for (let i = 0; i < n; i++) moveAll(dt);
   const out = { x:c.x, y:c.y, vx:c.vx, vy:c.vy, opps:P.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy })) };
   P.forEach((p, i) => HOLD_KEYS.forEach((k, j) => { p[k] = saved[i][j]; }));
@@ -376,7 +376,7 @@ function projectHold(c, lead) {
 // kicker's shoulder counts, a chaser deeper behind him does not, at the label and in the cut alike), the nearest three. Each is frozen where `proj` puts
 // him (or where he really stands), with his speed toward the kicker and his top speed. g.x/g.y is the kick spot, in the frame.
 function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the label saw)
-  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)]*(M.kids ? KIDS.kick.rush : 1) : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
+  const t = c.team, k = KICK, mul = isHuman(t) && !proRun(c) ? k.rushMul[levelOf(t)]*(M.kids ? KIDS.kick.rush : 1) : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker (Pro Mode: or your teammate) faces real players
   const list = proj ? proj.opps : M.players.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy }));
   for (const o of list) {
     const f = toFrame(t, o.x, o.y), v = frameVec(t, { x:o.vx, y:o.vy });
