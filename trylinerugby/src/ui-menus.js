@@ -246,7 +246,7 @@ function teamCard(t, i) {
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
       ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
-      <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(t[k])}`).join('')}</span>
+      <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
     </button>`;
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
@@ -359,7 +359,7 @@ function buildBuilder() {
 }
 function openBuilder(t) {
   editing = t;
-  draft = t ? { ...t } : { name:'', kit:'#2050b0', trim:'#f2efe6', pace:1, power:1, handling:1, kicking:1 };
+  draft = t ? { ...t } : { name:'', kit:'#2050b0', trim:'#f2efe6', ...Object.fromEntries(ABILITIES.map(([k]) => [k, 1])) };
   codeTouched = !!t;
   $('bd-name').value = draft.name;
   $('bd-code').value = t ? t.id : autoCode('My Team');

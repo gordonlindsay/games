@@ -18,7 +18,7 @@ function heat(t, why) {
   if (F.t > 0) return;                                        // already alight: the run starts again when it goes out
   F.heat = Math.min(ARCADE.fire.need, F.heat + (ARCADE.fire.pts[why] || 0));
   if (F.heat < ARCADE.fire.need) return;
-  F.heat = 0; F.t = ARCADE.fire.secs; st('fire' + t);
+  F.heat = 0; F.t = ARCADE.fire.secs*staminaLasts(t); st('fire' + t);   // longer or shorter by the side's Stamina (src/stamina.js)
   say('On Fire', 'big fire', t); sfx('roar'); buzz(50, t);
 }
 function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }

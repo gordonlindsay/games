@@ -29,11 +29,12 @@ const play = o => T.newMatch(X.NATIONS[0], X.NATIONS[1], { halfLen:60, diff:1, h
   A.heat(0, 'hit'); A.heat(1, 'turnover');
   ok(T.M.fire[0].heat === 0 && T.M.fire[1].heat === 1, 'the other side\'s good moment breaks the run');
   A.heat(0, 'hit'); A.heat(0, 'try');
-  ok(A.onFire(0) && T.M.fire[0].t === A.ARCADE.fire.secs, 'three in a row lights it');
+  const secs = A.ARCADE.fire.secs*T.stamina.staminaLasts(0);   // as long as England's Stamina says (tools/stamina.mjs checks the scale)
+  ok(A.onFire(0) && T.M.fire[0].t === secs, 'three in a row lights it');
   ok(Math.abs(A.maxSpeed(p)/base - A.ARCADE.fire.speed) < 1e-9, `On Fire is ${A.ARCADE.fire.speed}x quicker`);
   A.heat(0, 'hit');
   ok(T.M.fire[0].heat === 0, 'no run builds while alight');
-  A.fireTick(A.ARCADE.fire.secs - 0.5);
+  A.fireTick(secs - 0.5);
   ok(A.onFire(0), 'still alight just before time');
   A.fireTick(1);
   ok(!A.onFire(0) && Math.abs(A.maxSpeed(p) - base) < 1e-9, 'it goes out on time, and the speed with it');

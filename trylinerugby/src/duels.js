@@ -63,7 +63,7 @@ const SCRUM_LEVEL = [0.10, 0, 0], LINE_LEVEL = [0.06, 0, 0];
 function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
   let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
-  p += (M.nat[q.team].power - M.nat[c.team].power)*0.05;
+  p += (powerOf(q.team) - powerOf(c.team))*0.05;
   if (stepped) p *= MOVES.step.odds;
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
   return clamp(p, 0.08, 0.95);
@@ -178,7 +178,7 @@ function startPendingDuel() {
 function startDuel(s) {
   for (const p of M.players) { p.sprinting = false; p.sprint = 0; }   // a duel is run at the duel's pace; the meters keep their level
   for (const S of M.spr) S.p = null;
-  const own = s.U.team, k = DUEL[s.kind], di = levelOf(own), nU = M.nat[s.U.team], nO = M.nat[s.O.team], L = M.duelLog, h = Math.min(M.half, 2) - 1;
+  const own = s.U.team, k = DUEL[s.kind], di = levelOf(own), ab = (t, m) => (m === 'power' ? powerOf(t) : M.nat[t][m]), L = M.duelLog, h = Math.min(M.half, 2) - 1;
   if (s.how === 'bonus') L.bonus[h] = true; else if (s.how !== 'force') { L.half[h]++; sideOf(own).duel.half[h]++; }
   L.last = M.dclock; L.lastKind = s.kind; L.lastOwner = own; sideOf(own).duel.lastKind = s.kind;
   M.stats.duels++; M.stats['d_' + s.kind] = (M.stats['d_' + s.kind] || 0) + 1; M.stats.duelN.att[own]++;
@@ -204,7 +204,7 @@ function startDuel(s) {
   c.dtau = clamp(c.rho*(c.tk - c.tTrig), 0, 0.5);
   const tw = CUT_IN + (c.tk - CUT_IN)*(G_START - G_WIN)/(G_START - G_HIT);
   const SD = sideOf(own).duel, first = M.two ? SD.first : !tutSeen(s.kind), fails = M.two ? SD.fails : L.fails;   // the aids are per owner in two player: his own first duel, his own failures in a row. One player: the first duel of each kind on this device (the tutorial's moment, marked at the cut-in)
-  const w = k.win[di] + clamp(0.012*(nU[k.mod[0]] - nO[k.mod[1]]), -0.036, 0.036)
+  const w = k.win[di] + clamp(0.012*(ab(s.U.team, k.mod[0]) - ab(s.O.team, k.mod[1])), -0.036, 0.036)
     + (first ? 0.08 : 0) + (fails >= 2 ? 0.04 : 0);
   if (M.two) SD.first = false;
   let centre = tw;

@@ -24,13 +24,13 @@ const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
   ok(X.FRANCE.length === 14, `France is the Top 14 (${X.FRANCE.length})`);
   ok(all.length === X.POOLS.reduce((a, p) => a + p.length, 0), 'ALL_TEAMS is every list');
   ok(X.NATIONS.filter(t => t.home).map(t => t.id).join() === 'ENG,IRE,SCO,WAL', 'the home nations are England, Ireland, Scotland and Wales');
-  const R = ['pace', 'power', 'handling', 'kicking'];
+  const R = ['pace', 'power', 'handling', 'kicking', 'stamina'];
   ok(all.every(t => R.every(k => Number.isInteger(t[k]) && t[k] >= 1 && t[k] <= 5)), 'every rating is 1 to 5');
   const top = Math.max(...clubs.map(t => R.reduce((a, k) => a + t[k], 0)));
-  ok(top <= 4 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${4 + X.BUDGET})`);
+  ok(top <= 5 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${5 + X.BUDGET})`);
   ok(all.every(t => /^#[0-9a-f]{6}$/i.test(t.kit) && /^#[0-9a-f]{6}$/i.test(t.trim)), 'every kit colour is a hex');
-  ok(X.overallOf({ pace:1, power:1, handling:1, kicking:1 }) === 40 && X.overallOf({ pace:5, power:5, handling:5, kicking:5 }) === 99, 'the overall rating runs 40 to 99');
-  ok(X.overallOf(X.NATIONS[1]) === 92 && X.overallOf({ pace:5, power:5, handling:2, kicking:2 }) === 77, `France is 92 and a team you make tops out at 77 (${X.overallOf(X.NATIONS[1])})`);
+  ok(X.overallOf({ pace:1, power:1, handling:1, kicking:1, stamina:1 }) === 40 && X.overallOf({ pace:5, power:5, handling:5, kicking:5, stamina:5 }) === 99, 'the overall rating runs 40 to 99');
+  ok(X.overallOf(X.NATIONS[1]) === 93 && X.overallOf({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75, `France is 93 and a team you make tops out at 75 (${X.overallOf(X.NATIONS[1])})`);
   ok(all.every(t => { const o = X.overallOf(t); return Number.isInteger(o) && o >= 40 && o <= 99; }), 'every built-in team has a whole-number overall');
 }
 
@@ -70,8 +70,8 @@ const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
   const t = X.cleanTeam({ name: '  A   very long team name indeed ', kit: 'red', trim: '#zzzzzz', pace: 9, power: 9, handling: 9, kicking: 9, id: 'q1' }, 3);
   ok(t.name.length <= 16 && !/\s\s/.test(t.name) && t.name === t.name.trim(), `names are tidied and cut to 16 (${JSON.stringify(t.name)})`);
   ok(t.kit === '#2050b0' && t.trim === '#f2efe6', 'bad colours fall back');
-  const sum = t.pace + t.power + t.handling + t.kicking;
-  ok(sum === 4 + X.BUDGET && [t.pace, t.power, t.handling, t.kicking].every(v => v >= 1 && v <= 5), `abilities are held to the budget (${sum})`);
+  const sum = t.pace + t.power + t.handling + t.kicking + t.stamina;
+  ok(sum === 5 + X.BUDGET && [t.pace, t.power, t.handling, t.kicking, t.stamina].every(v => v >= 1 && v <= 5), `abilities are held to the budget (${sum})`);
   ok(t.id === 'QAV', `the short name is letters only, topped up from the name (${t.id})`);
   ok(X.codeFor('', 'Old Ruts') === 'OLD' && X.codeFor('ab', 'x') === 'ABX', 'short names fill to three letters');
   ok(X.cleanTeam({ name: '' }, 0).name === 'My Team', 'an empty name becomes My Team');
@@ -193,7 +193,7 @@ function playOut() {
   ok(c && c.round === 1 && c.results.length === 1 && JSON.stringify(c.fixtures) === JSON.stringify(played.fixtures), 'fixtures, results and the round load back');
   ok(c.teams.find(t => t.id === 'ENG').alt === '#1b2747' && c.teams.filter(t => t.home).length === 4, 'change kits and home nations survive a reload');
   ok(X.standings(c).reduce((a, r) => a + r.P, 0) === 6, 'a reloaded table still adds up');
-  ok(X.custom().length === 1 && X.custom()[0].name === 'Wasps' && X.custom()[0].pace + X.custom()[0].power + X.custom()[0].handling + X.custom()[0].kicking === 4 + X.BUDGET, 'a saved team is kept and held to the budget');
+  ok(X.custom().length === 1 && X.custom()[0].name === 'Wasps' && X.custom()[0].pace + X.custom()[0].power + X.custom()[0].handling + X.custom()[0].kicking + X.custom()[0].stamina === 5 + X.BUDGET, 'a saved team is kept and held to the budget');
 
   X.restore({ settings: { half: 9, diff: 'hard', sound: 0, duels: false, pool: 7, hints: 'yes', twoHints: [true], tut: 'past' } });
   const s2 = T.debug.settings();
@@ -401,10 +401,10 @@ function settle(pick) {
   const E = X.EARLY, C = T.contact, D = T.debug, s = D.settings();
   const near = (a, b) => Math.abs(a - b) < 1e-9;
   const speed = (pace, mul) => (7.6 + pace * 0.25) * mul;
-  ok(E.games === 2 && E.gap === 3 && E.nudge.cpuSpeed === -0.03 && E.nudge.myTackle === 0.14, 'two Normal matches and a gap of three');
+  ok(E.games === 2 && E.gap === 4 && E.nudge.cpuSpeed === -0.03 && E.nudge.myTackle === 0.14, 'two Normal matches and a gap of four (five abilities)');
   const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0];
   ok(!X.outmatched(far, has) && !X.outmatched(far, eng) && X.outmatched(far, fra), 'France is a stronger side than Farnham; England and Haslemere are not');
-  ok(X.rateOf(fra) === 18 && X.rateOf(far) === 14 && X.rateOf(has) === 11, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
+  ok(X.rateOf(fra) === 23 && X.rateOf(far) === 17 && X.rateOf(has) === 14, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
 
   T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, duels: 'off' });
   ok(!T.M.early && near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(has.pace, 1)), 'a headless match is not eased, and Normal pace is unchanged');
@@ -432,7 +432,7 @@ function settle(pick) {
   X.newChamp(far, five);
   const ch = X.champ();
   const opps = ch.fixtures.map(rd => { const p = rd.find(x => x[0] === ch.user || x[1] === ch.user); return p[0] === ch.user ? p[1] : p[0]; });
-  ok(opps.map(i => X.rateOf(ch.teams[i])).join() === '11,12,13,13,14', `weakest first (${opps.map(i => ch.teams[i].id).join(' ')})`);
+  ok(opps.map(i => X.rateOf(ch.teams[i])).join() === '14,16,16,16,17', `weakest first (${opps.map(i => ch.teams[i].id).join(' ')})`);
   ok(ch.teams.map(t => t.id).join() === 'FAR,HAR,HAS,GUI,ALD,WEY', 'the draw stays in the order it was given');
 
   const weak = X.cleanTeam({ name: 'Cubs', pace: 1, power: 1, handling: 1, kicking: 1 }, 0);
