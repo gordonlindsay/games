@@ -132,7 +132,10 @@ const P = (f, url) => I.parse(fx(f), url);
 
 // 4. the native fetch path, through a stubbed Capacitor
 const pages = {}, calls = [];
+// In the app Import Club is the Super Fan's (src/store.js): with the app stubbed this suite plays as a Super Fan, so the native
+// builder's nativeOn (once merged) sees the app and Import stays open. On the web the purchase is never read.
 const native = on => {
+  T.store.setBought(on ? ['tryline.fan.farnham'] : []);
   if (!on) { delete globalThis.Capacitor; return; }
   globalThis.Capacitor = { isNativePlatform:() => true, Plugins:{ CapacitorHttp:{ get:async o => {
     calls.push(o);

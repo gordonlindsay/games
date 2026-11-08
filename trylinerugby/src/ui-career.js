@@ -37,7 +37,7 @@ function renderCareerHome() {
 }
 
 /* ---------- the new player ---------- */
-const careerClubs = () => [...CLUBS, ...custom];     // the Local list and the teams you made (an imported club is one of those)
+const careerClubs = () => storeFirst([...CLUBS, ...custom]);   // the Local list and the teams you made (an imported club is one of those), the Super Fan's club first (src/store.js)
 function careerNewOpen() {
   careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null };
   $('cn-name').value = '';
@@ -74,6 +74,7 @@ $('cn-back').addEventListener('click', goHome);
 
 /* ---------- the hub ---------- */
 function careerOpen() {
+  if (!storeGate('career', careerOpen)) return;            // Career is in the Full Game (src/store.js); a career under way stays saved
   if (!career) { careerNewOpen(); return; }
   if (!career.season) { careerNewSeason(career); save(); }   // a broken season was dropped on load: a new draw for the same stage
   if (career.season.round >= 5) { if (careerSettle(career)) save(); renderCareerEnd(); careerShow('s-career-end'); return; }

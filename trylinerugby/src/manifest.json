@@ -1,6 +1,7 @@
 [
   "data.js",
   "persistence.js",
+  "store.js",
   "match.js",
   "passing.js",
   "contact.js",
@@ -26,6 +27,7 @@
   "ui-menus.js",
   "import.js",
   "kids.js",
+  "ui-store.js",
   "training.js",
   "practice.js",
   "ui-career.js",

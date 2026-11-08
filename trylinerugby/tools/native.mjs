@@ -109,7 +109,7 @@ ok(calls('Preferences', 'get').length === 1 && calls('Preferences', 'get')[0][2]
 ok(!N.state().ready, 'the game does not start before Preferences answers');
 
 // 3b. the save comes back from Preferences
-const kept = { settings:{ half:1, diff:2, sound:false, hints:false, tut:['pass'], played:7 }, champ:null, custom:[{ key:'my0', name:'Farnham Minis', id:'FAN', kit:'#123456', trim:'#abcdef', pace:3, power:3, handling:3, kicking:3, stamina:3 }], champHistory:[], seasonSerial:4, career:null, importLeague:null };
+const kept = { settings:{ half:1, diff:2, sound:false, hints:false, tut:['pass'], played:7 }, champ:null, custom:[{ key:'my0', name:'Farnham Minis', id:'FAN', kit:'#123456', trim:'#abcdef', pace:3, power:3, handling:3, kicking:3, stamina:3 }], champHistory:[], seasonSerial:4, career:null, importLeague:null, store:{ owned:['tryline.full'] } };
 getHold.resolve({ value:JSON.stringify(kept) }); getHold = null;
 await flush();
 ok(N.state().ready && N.state().restored, 'the start goes on once Preferences answers, with the save put back');

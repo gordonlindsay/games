@@ -38,8 +38,9 @@ not until phase 2.
   icon on some iPhones (`Tryline Rug...`). `Tryline` alone always fits. To use it, change Display Name in Xcode
   (step 4), and in phase 2 `app_name` in `android/app/src/main/res/values/strings.xml`. The store listing keeps
   Tryline Rugby Sevens.
-- **In-app purchase plugin.** `package.json` has a `TODO` line: add the plugin named in `trylinerugby/store/README.md`
-  at its exact version, then `npm install`.
+- **In-app purchase plugin.** `@capgo/native-purchases` 8.9.6 is in `package.json` and the lockfile (StoreKit 2 and Play
+  Billing only, no third-party service; the reasons are in `trylinerugby/store/README.md`). Turn on the **In-App Purchase**
+  capability in Xcode (section 4).
 
 **Accounts (owner only):** SignCheck Ltd's existing Apple Developer Program membership. A Google Play Console
 developer account is needed only for phase 2.

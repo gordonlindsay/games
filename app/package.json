@@ -17,7 +17,6 @@
     "ios": "npm run sync && cap open ios",
     "android": "npm run sync && cap open android"
   },
-  "//": "TODO(store builder): add the in-app purchase plugin to dependencies at the exact version named in trylinerugby/store/README.md, then npm install and npm run sync.",
   "dependencies": {
     "@capacitor/android": "8.6.0",
     "@capacitor/app": "8.1.2",
@@ -25,7 +24,8 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/ios": "8.6.0",
     "@capacitor/preferences": "8.0.1",
-    "@capacitor/status-bar": "8.0.4"
+    "@capacitor/status-bar": "8.0.4",
+    "@capgo/native-purchases": "8.9.6"
   },
   "devDependencies": {
     "@capacitor/assets": "4.0.0",
