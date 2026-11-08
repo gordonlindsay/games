@@ -22,7 +22,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   const clubs = [...X.CLUBS, ...X.NATIONAL.flat()], top = Math.max(...clubs.map(sum));   // Local and every national league
   ok(top <= 5 + S.BUDGET, `no club tops a team you can make (${top} v ${5 + S.BUDGET})`);
   ok(S.BUDGET === 12, `a made team has 12 points: the old builder's 10 and 2 for Stamina 3 (${S.BUDGET})`);
-  ok(X.NATIONS.map(t => t.stamina).join() === '4,5,5,3,4,4,5,5,4,4,4,4', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')})`);
+  ok(X.NATIONS.map(t => t.stamina).join() === '4,5,5,4,4,4,5,5,4,4,4,4', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')})`);   // re-pinned when the nations were rated on the XV hierarchy: Italy 3 to 4
 }
 
 // 2. reading Stamina, and a team without it
@@ -86,9 +86,9 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 {
   const O = X.overallOf;
   ok(O({ pace:1, power:1, handling:1, kicking:1, stamina:1 }) === 40 && O({ pace:5, power:5, handling:5, kicking:5, stamina:5 }) === 99, 'the overall rating still runs 40 to 99');
-  ok(O(X.NATIONS[1]) === 93 && O(X.NATIONS[2]) === 93 && O(X.NATIONS[0]) === 84, `France and Ireland 93, England 84 (${X.NATIONS.map(t => t.id + ' ' + O(t)).join(', ')})`);
+  ok(O(X.NATIONS[1]) === 93 && O(X.NATIONS[2]) === 93 && O(X.NATIONS[0]) === 90, `France and Ireland 93, England 90 (${X.NATIONS.map(t => t.id + ' ' + O(t)).join(', ')})`);   // re-pinned when the nations were rated on the XV hierarchy: England 84 to 90
   ok(O({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75 && O({ pace:4, power:4, handling:3, kicking:3, stamina:3 }) === 75, 'a team you make tops out at 75');
-  ok([...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA].every(t => O(t) <= 75), 'no club is rated above a team you can make');
+  ok([...X.CLUBS, ...X.NATIONAL.flat()].every(t => O(t) <= 75), 'no club is rated above a team you can make');
   ok(X.ALL_TEAMS.every(t => Number.isInteger(O(t)) && O(t) >= 40 && O(t) <= 99), 'every built-in team has a whole-number overall');
   ok(O({ pace:4, power:4, handling:4, kicking:4 }) === O({ pace:4, power:4, handling:4, kicking:4, stamina:3 }), 'a team without Stamina is rated as Stamina 3');
   const st1 = side('AAA', 1), st5 = side('BBB', 5), up3 = side('CCC', 1, { pace:4, power:4, kicking:4 });

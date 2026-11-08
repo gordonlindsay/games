@@ -405,11 +405,13 @@ function settle(pick) {
   const speed = (pace, mul) => (7.6 + pace * 0.25) * mul;
   ok(E.games === 2 && E.gap === 3 && E.nudge.cpuSpeed === -0.03 && E.nudge.myTackle === 0.14, 'two Normal matches and a gap of three');
   const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0];
-  ok(!X.outmatched(far, has) && !X.outmatched(far, eng) && X.outmatched(far, fra), 'France is a stronger side than Farnham; England and Haslemere are not');
+  const ita = X.NATIONS[3];   // re-pinned when the nations were rated on the XV hierarchy: England (18 in the four, was 16) is now a Stronger Side than Farnham (14); Italy (15) is the nation that is not
+  ok(!X.outmatched(far, has) && !X.outmatched(far, ita) && X.outmatched(far, fra) && X.outmatched(far, eng), 'France and England are stronger sides than Farnham; Italy and Haslemere are not');
   ok(X.rateOf(fra) === 23 && X.rateOf(far) === 17 && X.rateOf(has) === 14, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
   // Stronger Side leaves Stamina out, so it marks the pairs it did before Stamina: within a pool, as the hub shows them
   const by = id => X.ALL_TEAMS.find(t => t.id === id), marks = (u, t) => X.outmatched(by(u), by(t));
-  ok(marks('HAS', 'FAR') && marks('IRO', 'QUI') && marks('ADL', 'SYD') && marks('ADL', 'CAN') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS'),
+  // re-pinned when the leagues were rated on their XV tables: Adelaide is now two points off Sydney and Canberra, so Taranaki v Hamilton and Llanelli v Dublin stand in
+  ok(marks('HAS', 'FAR') && marks('IRO', 'QUI') && marks('TAR', 'HMN') && marks('LLA', 'DUB') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS'),
     'a side three points stronger in Pace, Power, Handling and Kicking is marked, whatever the Stamina');
   ok(!marks('GDN', 'WIM') && !marks('MTB', 'CLE'), 'two points apart in the four and Stamina on top is not a Stronger Side');
   ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 2, power: 2, handling: 2, kicking: 2 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...eng, stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');
@@ -454,7 +456,7 @@ function settle(pick) {
   D.openTeams('quick'); X.tierPick(0);
   const grid = document.getElementById('t-grid').innerHTML;
   const card = name => { const i = grid.indexOf('>' + name + '<'); return grid.slice(i, grid.indexOf('</button>', i)); };
-  ok(card('France').includes('Stronger Side') && card('Ireland').includes('Stronger Side') && !card('England').includes('Stronger Side') && !card('Italy').includes('Stronger Side'), 'Quick Match marks a side three points stronger');
+  ok(card('France').includes('Stronger Side') && card('Ireland').includes('Stronger Side') && card('England').includes('Stronger Side') && !card('Italy').includes('Stronger Side') && !card('Japan').includes('Stronger Side'), 'Quick Match marks a side three points stronger');   // re-pinned at the XV ratings: England is now one, Italy and Japan are not
   X.tierPick(2);
   ok(!document.getElementById('t-grid').innerHTML.includes('Stronger Side'), 'no local card is marked stronger than Farnham');
 
@@ -504,6 +506,29 @@ function settle(pick) {
   const lower = all.map(t => t.name.toLowerCase());
   ok(new Set(lower).size === lower.length && X.CELTIC.some(t => t.id === 'EDI') && X.CELTIC.some(t => t.id === 'GLA') && !X.SCOTLAND.some(t => /edinburgh|glasgow/i.test(t.name)), 'no side is in two lists: Edinburgh and Glasgow stay with the professional sides');
   const avg = l => l.reduce((a, t) => a + total(t), 0) / l.length, others = X.NATIONAL.filter(l => l !== X.SCOTLAND).flat();
+  // the XV hierarchy: nations in World Rugby's men's ranking (2 November 2026), sums 24 down to 19; each league by its last completed table
+  const rank = ['RSA', 'NZL', 'IRE', 'FRA', 'ENG', 'SCO', 'AUS', 'ARG', 'FIJ', 'WAL', 'ITA', 'JPN'].map(id => X.NATIONS.find(t => t.id === id));
+  ok(rank.map(total).join() === '24,24,23,23,22,21,21,20,20,19,19,19' && rank.every((t, i) => i === 0 || X.overallOf(t) <= X.overallOf(rank[i - 1])), `the twelve in ranking order, 24 down to 19, level only with a neighbour (${rank.map(t => t.id + ' ' + X.overallOf(t)).join(', ')})`);
+  const nat = id => X.NATIONS.find(t => t.id === id), fij = nat('FIJ'), rsa = nat('RSA'), ire = nat('IRE');
+  ok(fij.pace === 5 && R.every(k => fij[k] <= fij.pace) && rsa.power === 5 && ire.handling === 5 && ire.kicking === 5 && R.every(k => fij.kicking <= fij[k]), 'each keeps its style: Fiji\'s pace, South Africa\'s power, Ireland\'s handling and kicking');
+  ok(Math.min(...X.NATIONS.map(total)) > Math.max(...clubs.map(total)), `every nation above every club (${Math.min(...X.NATIONS.map(total))} v ${Math.max(...clubs.map(total))})`);
+  const TABLES = {   // strongest first: the last completed league table each list follows (README, Teams)
+    eng: 'NTH,BTH,EXE,LEI,BRS,LNO,SAL,GLO,LWE,NCL',            // Premiership 2025-26 (Exeter and Leicester level: 3rd and 4th)
+    fra: 'TLS,MPL,PAU,PAR,NAN,LRO,CLE,BOR,TLN,CAS,LYO,BAY,PGN,MTB',   // Top 14 2025-26
+    cel: 'GLA,DUB,LIM,CDF,GAL,BEL,SWA,EDI,TRE,LLA,NPT,PRM',    // URC 2025-26
+    sco: 'AYR,CUR,GOL,MYR,KEL,GIF,HAW,MLR,ANN,SEL',            // Scottish Premiership 2025-26
+    rsa: 'CPT,PRE,JHB,DUR,KIM,BLM,MBO',                        // URC 2025-26, then the Currie Cup 2026
+    aus: 'BRI,CAN,PTH,SYD,MEL,ADL',                            // Super Rugby Pacific 2026; Melbourne (gone after 2024) and the invented Adelaide last
+    nzl: 'WLG,HMN,CHC,AKL,DUN,TAR',                            // Super Rugby Pacific 2026; Taranaki (provincial) last
+    jpn: 'KOB,SAI,FNB,TOK,AIC,SHZ,YOK',                        // League One 2025-26
+  };
+  for (const [k, order] of Object.entries(TABLES)) {
+    const l = L.find(x => x.key === k), ids = order.split(','), side = id => l.teams.find(t => t.id === id);
+    ok(ids.length === l.teams.length && ids.every(side) && ids.every((id, i) => i === 0 || total(side(id)) <= total(side(ids[i - 1]))) && total(side(ids[0])) > total(side(ids[ids.length - 1])), `${l.name} rates its sides in table order (${ids.map(id => id + ' ' + total(side(id))).join(', ')})`);
+  }
+  const pros = X.NATIONAL.filter(l => l !== X.SCOTLAND).flat();
+  ok(pros.every(t => total(t) >= 14 && total(t) <= 17) && X.SCOTLAND.every(t => total(t) >= 12 && total(t) < Math.min(...pros.map(total))), `the professional leagues in 14 to 17 (67 to 75), Scotland's amateur clubs below every one of them (${Math.min(...X.SCOTLAND.map(total))} to ${Math.max(...X.SCOTLAND.map(total))})`);
+  ok(X.CLUBS.map(total).join() === '17,14,16,16,16,17,15,13,15,15,14,17' && X.overallOf(X.CLUBS[0]) === Math.max(...pros.map(X.overallOf)), 'Local is not re-rated (Kids and Quick Match read it): Farnham, 75, is level with the top professional sides');
   ok(avg(X.SCOTLAND) < avg(others) && X.SCOTLAND.every(t => total(t) <= 5 + X.BUDGET) && X.SCOTLAND.every((t, i) => i === 0 || total(t) <= total(X.SCOTLAND[i - 1])) && total(X.SCOTLAND[0]) > total(X.SCOTLAND[9]), `Scotland's amateur sides rate a little below the professional leagues (${avg(X.SCOTLAND).toFixed(1)} v ${avg(others).toFixed(1)}), the table's leaders highest`);
   ok(X.AUSTRALIA.map(t => t.id).join() === 'SYD,BRI,CAN,PTH,MEL,ADL' && X.SOUTH_AFRICA.length === 7 && X.FRANCE.length === 14, 'Australia, South Africa and France as they were (append only: saved careers name their sides)');
   // the owner's trademark rule: a city or a region, never a club's registered name or nickname (Quins in Local is the one exception)

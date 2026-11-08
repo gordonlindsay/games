@@ -15,7 +15,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 //    (bc8fabf): two AI v AI matches, an arcade match you play and a plain one, both played by the harness's bot. Run first,
 //    so nothing earlier in this file can move them. If another change moves non-career play on purpose, re-pin it from
 //    that change's bundle without the career sources.
-const BASE = '1vg5qro 1uombq7 12cy4qs';   // re-pinned at the Stamina merge: the arcade match moved because Stamina acts in arcade matches; the Stamina-only build (30e61ad) gives the same value, so the career still changes no non-career play
+const BASE = '18qgoe5 1uombq7 12cy4qs';   // re-pinned at the Stamina merge (the arcade match moved: Stamina acts in arcade matches), and again when the nations were rated on the XV hierarchy: England and Italy, in the two AI v AI matches, have new ratings; with their old ones put back the value is the earlier 1vg5qro, so the career still changes no non-career play
 function fingerprint() {
   const out = [];
   reseed(23);

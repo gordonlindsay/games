@@ -108,11 +108,14 @@ export function kidStep(P, S) {
   inp.cDown = sprint;
 }
 
-/* One seeded Kids match for child `who` at rating r: Quick Match's terms, 2-minute halves, the teams rotated by its number. */
+/* One seeded Kids match for child `who` at rating r: Quick Match's terms, 2-minute halves, the teams rotated by its number. The six nations
+   play at the ratings the calibration in README.md was measured with: the XV ratings (2026-11-08) moved England, Italy, Scotland and Wales. */
+const CALIBRATED = { ENG:[4, 5, 3, 4, 4], ITA:[4, 3, 3, 3, 3], SCO:[5, 3, 4, 3, 4], WAL:[3, 4, 3, 3, 4] };
+const sixAt = i => { const t = T.teams.NATIONS[i], v = CALIBRATED[t.id]; return v ? { ...t, pace:v[0], power:v[1], handling:v[2], kicking:v[3], stamina:v[4] } : t; };
 export function kidsMatch(who, r, seed) {
   reseed(seed);
   const P = KID_BOTS[who], i = seed % 30, a = i % 6, b = (a + 1 + (i % 5)) % 6;
-  T.newMatch(a, b, { halfLen:120, diff:0, headless:true, duels:'live', arcade:true, kids:r >= 0, kidsR:r });   // r < 0: plain Easy, for comparison
+  T.newMatch(sixAt(a), sixAt(b), { halfLen:120, diff:0, headless:true, duels:'live', arcade:true, kids:r >= 0, kidsR:r });   // r < 0: plain Easy, for comparison
   const S = { wobT:0, defT:0, lag:0 };
   let n = 0;
   while (!T.M.over && n < 400000) { kidStep(P, S); T.update(STEP); n++; }
