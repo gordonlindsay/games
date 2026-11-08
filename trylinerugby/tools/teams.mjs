@@ -29,6 +29,9 @@ const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
   const top = Math.max(...clubs.map(t => R.reduce((a, k) => a + t[k], 0)));
   ok(top <= 4 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${4 + X.BUDGET})`);
   ok(all.every(t => /^#[0-9a-f]{6}$/i.test(t.kit) && /^#[0-9a-f]{6}$/i.test(t.trim)), 'every kit colour is a hex');
+  ok(X.overallOf({ pace:1, power:1, handling:1, kicking:1 }) === 40 && X.overallOf({ pace:5, power:5, handling:5, kicking:5 }) === 99, 'the overall rating runs 40 to 99');
+  ok(X.overallOf(X.NATIONS[1]) === 92 && X.overallOf({ pace:5, power:5, handling:2, kicking:2 }) === 77, `France is 92 and a team you make tops out at 77 (${X.overallOf(X.NATIONS[1])})`);
+  ok(all.every(t => { const o = X.overallOf(t); return Number.isInteger(o) && o >= 40 && o <= 99; }), 'every built-in team has a whole-number overall');
 }
 
 // 2. no two shirts on the pitch too alike, for every pairing of built-in teams

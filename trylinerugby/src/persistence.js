@@ -23,7 +23,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 const SEASON_LIMIT = 10;
 /* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */

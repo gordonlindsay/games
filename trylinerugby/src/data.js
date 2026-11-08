@@ -84,6 +84,8 @@ const DIFF = [
    Hard are left as set. Duels, scrums, your own tackle and sprint, and every later match stay on the chosen level. */
 const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };
 const rateOf = t => ABILITIES.reduce((a, [k]) => a + (+t[k] || 0), 0);
+/* The overall rating on a team card: the four abilities (4 to 20) on a 40 to 99 scale. A team you make tops out at 77, France at 92. */
+const overallOf = t => Math.round(40 + (clamp(rateOf(t), 4, 20) - 4)*59/16);
 const outmatched = (us, them) => !!us && !!them && rateOf(them) >= rateOf(us) + EARLY.gap;
 /* Goal kicks. Every lever is here: GKTUNE='{"band":[0.15,0.13,0.10]}' node tools/goalkicks.mjs --rates tries values without an edit. */
 const KICK = {

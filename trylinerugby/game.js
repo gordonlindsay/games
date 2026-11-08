@@ -86,6 +86,8 @@ const DIFF = [
    Hard are left as set. Duels, scrums, your own tackle and sprint, and every later match stay on the chosen level. */
 const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };
 const rateOf = t => ABILITIES.reduce((a, [k]) => a + (+t[k] || 0), 0);
+/* The overall rating on a team card: the four abilities (4 to 20) on a 40 to 99 scale. A team you make tops out at 77, France at 92. */
+const overallOf = t => Math.round(40 + (clamp(rateOf(t), 4, 20) - 4)*59/16);
 const outmatched = (us, them) => !!us && !!them && rateOf(them) >= rateOf(us) + EARLY.gap;
 /* Goal kicks. Every lever is here: GKTUNE='{"band":[0.15,0.13,0.10]}' node tools/goalkicks.mjs --rates tries values without an edit. */
 const KICK = {
@@ -140,7 +142,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 const SEASON_LIMIT = 10;
 /* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
@@ -5579,6 +5581,9 @@ $('b-champ').addEventListener('click', () => {
   else openTeams('champ');
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
+$('b-more').addEventListener('click', () => {   // Half Length lives here: 2 Min is the default, the longer halves are a deliberate choice
+  const open = $('set-more').hidden; $('set-more').hidden = !open; $('b-more').setAttribute('aria-expanded', String(open)); $('b-more').textContent = open ? 'Fewer Settings' : 'More Settings';
+});
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
@@ -5649,7 +5654,7 @@ function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
-      ${jersey(t)}<span class="tname">${esc(t.name)}</span>
+      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(t[k])}`).join('')}</span>
     </button>`;
@@ -6121,7 +6126,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
-  teams:{ NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ overallOf, NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   get M() { return M; } };

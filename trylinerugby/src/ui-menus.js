@@ -171,6 +171,9 @@ $('b-champ').addEventListener('click', () => {
   else openTeams('champ');
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
+$('b-more').addEventListener('click', () => {   // Half Length lives here: 2 Min is the default, the longer halves are a deliberate choice
+  const open = $('set-more').hidden; $('set-more').hidden = !open; $('b-more').setAttribute('aria-expanded', String(open)); $('b-more').textContent = open ? 'Fewer Settings' : 'More Settings';
+});
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
@@ -241,7 +244,7 @@ function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
-      ${jersey(t)}<span class="tname">${esc(t.name)}</span>
+      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(t[k])}`).join('')}</span>
     </button>`;
