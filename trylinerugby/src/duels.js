@@ -319,7 +319,7 @@ function updateDuel(c, dt) {
 function judgeDuel(c, act, t) {
   c.judged = t;
   let res = act == null ? 'late' : t < c.win[0] ? 'early' : Math.abs(t - c.centre) <= 0.2*c.wid ? 'perfect' : 'ok';
-  if (M.kids) [res, act] = kidsDuel(c, res);              // Kids: never lost, a Perfect in the gold
+  if (M.kids) [res, act] = kidsDuel(c, res, act);         // Kids: a mistake still comes off KIDS.save of the time, a Perfect in the gold
   settle(c, res, act);
 }
 function settle(c, res, act) {

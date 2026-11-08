@@ -149,7 +149,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy (kids.js)
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false, kidsR:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
@@ -277,6 +277,7 @@ function cleanSettings(g) {
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
   if (typeof g.kids === 'boolean') settings.kids = g.kids;
+  if (typeof g.kidsR === 'number' && Number.isFinite(g.kidsR) && g.kidsR >= 0 && g.kidsR <= 1) settings.kidsR = Math.round(g.kidsR*1000)/1000;   // a save from before the rating has none, and starts at 0
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -601,6 +602,7 @@ function newMatch(u, c, opts) {
     fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
+  if (M.kids) { M.kidsR = kidsTune(opts.kidsR).r; M.kidsDone = false; }   // its rating sets the levers before anything reads them: the start (0) unless the caller says (startMatch passes settings.kidsR)
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
   let seat = 0;
@@ -2411,7 +2413,7 @@ function updateDuel(c, dt) {
 function judgeDuel(c, act, t) {
   c.judged = t;
   let res = act == null ? 'late' : t < c.win[0] ? 'early' : Math.abs(t - c.centre) <= 0.2*c.wid ? 'perfect' : 'ok';
-  if (M.kids) [res, act] = kidsDuel(c, res);              // Kids: never lost, a Perfect in the gold
+  if (M.kids) [res, act] = kidsDuel(c, res, act);         // Kids: a mistake still comes off KIDS.save of the time, a Perfect in the gold
   settle(c, res, act);
 }
 function settle(c, res, act) {
@@ -5657,7 +5659,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel(),   // the switch is gone: a match you play always has duels; Kids is one player's
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel(), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -6091,6 +6093,7 @@ function showBreak(kind) {
 function finishMatch() {
   if (M.champ && champ) recordChampResult();
   if (M.career) careerRecordResult();
+  if (M.kids) kidsAdapt();                                  // a completed Kids match moves the hidden rating (kids.js): Quick Match, Championship and Career alike
   showBreak('full');
 }
 $('br-go').addEventListener('click', () => {
@@ -7396,31 +7399,81 @@ $('im-paste').addEventListener('click', async () => {
    The levers below act only in a match newMatch was asked to play as Kids (opts.kids, which startMatch passes): one player, on
    Easy, never AI v AI, the demo or two player, and in the Training Ground only the Kicking and Driving drills (practice.js). Every
    one reads M.kids, so the sims, the demo and the balance tools run the same numbers and the same random draws as before. */
-const KIDS = {
-  diff:{ ...DIFF[0], cpuSpeed:0.92, cpuTackle:0.45, cpuIntercept:0.05, turnover:-0.05, scrumCpu:0.45, lineSigma:0.28, lineContest:0.35 },   // Easy's row with the other side slower, weaker in the tackle, less often intercepting or turning the ball over, and soft at scrum and lineout
-  tackle:0.10,             // your ringed man's own tackles (his contact tackle and his dive) are this much surer
-  hands:0.1,               // your side's catches knock on a tenth as often
-  jolt:0.15,               // your carrier in a tackle has the ball jolted loose about a seventh as often
-  offload:0.95,            // an offload you press gets away
-  passErr:0.4,             // your passes stray less than half as far
-  duelWin:0.20,            // the gold ring stays open 0.2s longer. A close-up is never lost (kidsDuel): in the gold it is a Perfect
-  kick:{ band:2, bandMax:0.34, fill:1.6, rush:0.65 },   // goal kicks: the gold band twice as wide (at most 0.34 of the meter), the meter 1.6x slower, the aim set for you, a release in the gold struck true; drop-goal chargers at 65% pace
+/* The Kids rating, r: one hidden number from 0, where every child starts, to 1, the ceiling, which is still a little easier than
+   Easy. Each lever that moves is a pair [start, ceiling] in KIDS_SCALE, and kidsTune(r) puts KIDS on the straight line between them
+   as a Kids match starts (newMatch). The aids in KIDS outside the scale hold all the way up: the aim set at a goal kick, any press
+   acting in a close-up, the ring finding your best defender, and the chase when the stick is let go. After each completed one-player
+   Kids match kidsAdapt moves r by the result (KIDS_ADAPT) and saves it as settings.kidsR. Nothing on screen ever shows it. */
+const KIDS_SCALE = {       // [start, ceiling]. The start is the Kids level as it was before the scale; the ceiling is 80% of the way from there to Easy
+  diff:{ cpuSpeed:[0.92, 0.96], cpuTackle:[0.45, 0.54], cpuIntercept:[0.05, 0.09], turnover:[-0.05, -0.035], scrumCpu:[0.45, 0.57], lineSigma:[0.28, 0.21], lineContest:[0.35, 0.51] },   // the other side (Easy: 0.97, 0.56, 0.10, -0.03, 0.60, 0.19, 0.55): slower, weaker in the tackle, less often intercepting or turning the ball over, soft at scrum and lineout
+  tackle:[0.10, 0.02],     // your ringed man's own tackles (his contact tackle and his dive) are this much surer (Easy 0)
+  hands:[0.1, 0.82],       // your side's catches knock on this share as often (Easy 1)
+  jolt:[0.15, 0.83],       // your carrier in a tackle has the ball jolted loose this share as often (Easy 1)
+  offload:[0.95, 0.85],    // an offload you press gets away this often (Easy 70 to 85%)
+  passErr:[0.4, 0.88],     // your passes stray this share as far (Easy 1)
+  duelWin:[0.20, 0.04],    // the gold ring stays open this much longer, in seconds (Easy 0)
+  save:[1, 0.2],           // a close-up you get wrong (early, late or the wrong way) still comes off this often (Easy 0); one in the gold is a Perfect
+  kick:{ band:[2, 1.2], bandMax:[0.34, 0.26], fill:[1.6, 1.12], rush:[0.65, 0.93] },   // goal kicks (Easy 1, 0.24, 1, 1): the gold band this much wider (at most bandMax), the meter this much slower; drop-goal chargers at this share of their pace
+  scrum:[0.25, 0.05],      // your pack's own shove (Easy 0)
+  reach:[0.12, 0.03],      // your lineout jumper's reach, in metres (Easy 0)
+};
+const KIDS = {             // the levers of the Kids match being played: kidsTune fills in the scale, and the rest never moves
+  diff:{ ...DIFF[0] }, kick:{},
   switchHold:0.5,          // defending, the ring moves to your best defender once it has stayed put this long
   rest:0.15,               // a stick under this is let go: your ringed defender chases the ball on his own
   chase:0.80,              // at this share of his pace, so the other side can still get away and score now and then
-  scrum:0.25,              // your pack's own shove, so a few taps win your scrum
-  reach:0.12,              // your lineout jumper's reach, so a rough Jump still takes your throw
 };
+const kidsLerp = (a, b, r) => (1 - r)*a + r*b;            // exactly a at 0 and b at 1
+function kidsTune(r) {                                     // KIDS at rating r (0..1). Practice's Kicking and Driving play r = 0, the help they always had
+  r = Number.isFinite(r) ? clamp(r, 0, 1) : 0;
+  for (const [k, v] of Object.entries(KIDS_SCALE)) {
+    if (Array.isArray(v)) KIDS[k] = kidsLerp(v[0], v[1], r);
+    else for (const [j, w] of Object.entries(v)) KIDS[k][j] = kidsLerp(w[0], w[1], r);
+  }
+  KIDS.r = r;
+  return KIDS;
+}
+kidsTune(0);
+/* After a completed one-player Kids match (kidsAdapt, from finishMatch: never practice, AI v AI, the demo or two player, never a
+   match left early), r takes one fixed step by the result in the child's side's points and tries (KIDS_ADAPT): a win by more than
+   KIDS_ADAPT.big tries raises it, any other win (one on a kick included) nudges it up, a draw eases it a little, a loss lowers it, and
+   a loss by two tries or more lowers it further. A step is the same size anywhere on the scale; 0 and 1 only stop it. So a loss near
+   the start takes it down as surely as one near the top, and a child who loses more than he wins goes back to the start. No step is
+   more than a tenth of the scale, so it never lurches. It settles where a child's wins and losses balance: below that point his
+   wins outweigh his losses and it climbs, above it the other way, and the nearer it gets the more nearly they cancel, so it drifts
+   in more and more slowly rather than swinging from end to end. Scripted children (tools/kidbots.mjs) settle at about 0.73 (a 6 year
+   old, winning 72%), 0.96 (a 7 to 8 year old, winning 81% by 2.7 tries) and the ceiling (a sharp 10 year old), and a child who never
+   defends at about 0.12; README.md has the scorelines. */
+const KIDS_ADAPT = { big:3, raise:0.05, nudge:0.01, draw:-0.01, lose:-0.05, heavy:-0.10 };
+function kidsStep(score, tries, h = 0) {                    // the step one result moves r, up if above 0, down if below. h is the child's side
+  const pts = score[h] - score[1 - h], m = tries[h] - tries[1 - h], A = KIDS_ADAPT;
+  if (pts > 0) return m > A.big ? A.raise : A.nudge;
+  if (pts === 0) return A.draw;
+  return m < -1 ? A.heavy : A.lose;
+}
+function kidsNext(r, score, tries, h = 0) {                // the rating after a result, kept to three places
+  r = Number.isFinite(r) ? clamp(r, 0, 1) : 0;
+  return Math.round(clamp(r + kidsStep(score, tries, h), 0, 1)*1000)/1000;
+}
+function kidsAdapt() {                                     // full time in a Kids match: the rating moves once, and is saved
+  if (!M || !M.kids || M.kidsDone || !M.over || practice || M.auto || M.demo || M.two) return null;
+  const h = isHuman(0) ? 0 : 1;
+  M.kidsDone = true;
+  settings.kidsR = kidsNext(M.kidsR, M.score, M.tries, h);
+  save();
+  return settings.kidsR;
+}
 const kidsLevel = () => !!settings.kids && settings.diff === 0;
 /* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
 const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff + 1);
 function kidsSegSet(i) { settings.kids = i === 0; settings.diff = clamp(i - 1, 0, 2); }
 
 /* ---------- the levers the engine calls (each caller checks M.kids first) ---------- */
-function kidsDuel(c, res) {                                // a close-up is never lost: early, late or the wrong way it still comes off, and a press in the gold is a Perfect
-  if (res !== 'perfect') res = 'ok';
+function kidsDuel(c, res, act) {                           // a close-up you get wrong (early, late or the wrong way) still comes off KIDS.save of the time, a Perfect if the press was in the gold
   const right = c.kind === 'past' ? c.open : c.kind === 'pass' ? (c.drift ? 'dummy' : 'pass') : 1;
-  return [res, right];
+  if ((res === 'ok' || res === 'perfect') && act === right) return [res, act];
+  if (KIDS.save < 1 && rnd() >= KIDS.save) return [res, act];   // at the start (save 1) no draw is made: every one comes off, as before the scale
+  return [res === 'perfect' ? res : 'ok', right];
 }
 function kidsDuelAct(c, inp) {                             // any press counts: Pass or Kick in a Get Past, Kick in a Tackle or Block
   if (!(inp.aPressed || inp.bPressed || inp.flick)) return null;
@@ -8611,7 +8664,8 @@ function practiceStart(id, opts) {
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
   // Every drill plays on Easy. At Kids, Kicking and Driving also take a Kids match's own help (kids.js: the aim set for you, a wider
-  // gold band and a slower meter; your pack's extra shove), as the career's Train sends a Kids player to them every round. The
+  // gold band and a slower meter; your pack's extra shove), as the career's Train sends a Kids player to them every round. They take
+  // it at the start of the Kids scale (newMatch is given no kidsR), the help they always had, whatever the child's rating. The
   // others stay as they are: the training spaces never read M.kids, and Kids' automatic switch would play Defend a Breakaway for you.
   newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false], kids:!!drill.kids && kidsLevel() });
   M.practice = id; M.phase = 'play'; M.set = null; M.cut = null; M.goal = null;
@@ -9177,7 +9231,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
-  kids:{ KIDS, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   get M() { return M; } };
