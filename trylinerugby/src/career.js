@@ -125,6 +125,7 @@ function careerCreate(o) {
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
   const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, pro:null, country:null, skills,
     stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
+  cr.life = careerLifeNew();                         // Energy, Morale and Team Spirit (src/career-life.js)
   careerNewSeason(cr);
   return cr;
 }
@@ -187,6 +188,7 @@ function careerTrainDone(res) {
       cr.skills[skill] = clamp(before + CAREER_TRAIN[stars], 1, 99);
       cr.trained = true;
       out = careerLast = { kind:'train', stars, gains:{ [skill]:cr.skills[skill] - before } };
+      careerLifeTrain(cr);                           // a session costs a little Energy
       save();
     }
   }
@@ -215,6 +217,7 @@ function careerArm() {                               // straight after startMatc
   M.careerP = M.players.find(p => p.team === 0 && p.n === career.num) || M.players.find(p => p.team === 0);
   M.careerNat = careerNatFor(M.nat[0], career.skills);
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
+  careerLifeArm();                                   // the bars as they are now, for the whole match: Energy and Morale into M.careerNat
   careerKickoff();
 }
 function careerPlay() {                              // Play Match on the hub
@@ -275,6 +278,7 @@ function careerRecordResult() {
   T.matches++; T.tries += deeds.tries || 0; T.tackles += deeds.tackles || 0; T.goals += deeds.goals || 0;
   cr.trained = false;
   careerLast = { kind:'match', gains };
+  careerLifeRound(cr, deeds);                        // Energy back, Morale from the result, Team Spirit from his part in it
   careerSettle(cr);
   save();
   return true;
@@ -311,7 +315,8 @@ function cleanCareer(c) {
   const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club,
     pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:NATIONS.some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
-    skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
+    skills, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals,
+    life:careerLifeClean(c.life) };
 }
 /* Your player: a ring in the kit's trim round him and a star on his back (the trim, or the shirt, or chalk, whichever
    stands off the grass), drawn over the men so a ruck can't hide him. */

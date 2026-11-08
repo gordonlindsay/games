@@ -123,6 +123,7 @@ function doPass(from, to, o) {
     sure:!!o.sure, boost:o.boost || null, long:!!o.long };
   from.hold = 0; from.quick = false;
   M.stats.passes++;
+  if (M.career) careerLifePass(from, to);                  // a career match: a pass to or from your player, for Team Spirit
   if (o.long) { st('long'); st('long' + from.team); }
   if (isHuman(from.team)) setCtrl(from.team, to);
   sfx('pass');
