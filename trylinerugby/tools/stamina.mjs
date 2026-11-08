@@ -100,7 +100,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 // 6. the cards and the builder
 {
   D.openTeams('champ');
-  const html = $('t-grid').innerHTML, cards = html.split('<button class="team').length - 1;
+  const html = $('t-grid').innerHTML, cards = (html.match(/<button class="team[^"]*" data-i=/g) || []).length + 1;   // the team cards (data-i), plus one for the Create Team card the old count included; Import Club is not a team card
   ok((html.match(/<span>Stamina<\/span>/g) || []).length === cards - 1 && (html.match(/class="pips"/g) || []).length === 5*(cards - 1), `every team card shows five ability rows (${cards - 1} cards)`);
   ok(/<span>Kicking<\/span><span class="pips"[^>]*>.*?<\/span><span>Stamina<\/span><span class="pips" aria-label="3 of 5">/.test(html), 'Stamina is the last row, Farnham at 3');
   S.openBuilder(null);

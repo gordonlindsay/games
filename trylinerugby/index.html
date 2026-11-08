@@ -89,7 +89,7 @@
 <section class="screen" id="s-teams" hidden>
   <div class="wrap">
     <div class="head"><div><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
-      <div class="seg pool" data-key="pool"><button>International</button><button>Local</button><button>France</button><button>Australia</button><button>South Africa</button></div></div>
+      <div class="seg pool" data-key="pool"><button>International</button><button>Local</button><button>France</button><button>Australia</button><button>South Africa</button><button id="t-league" hidden>My League</button></div></div>
     <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
     <button class="btn primary" id="t-default" hidden></button>
     <div class="teams" id="t-grid"></div>
@@ -119,6 +119,24 @@
     <div class="row2" id="bd-row"><button class="btn" id="bd-back" data-back>Back to Teams</button><button class="btn warn" id="bd-del">Delete Team</button></div>
   </div>
 </section>
+
+<div class="modal" id="m-import" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="im-title">
+    <div class="im-head">
+      <div><p class="eyebrow">Import Club</p><h3 id="im-title">Paste Your Link</h3><div class="im-league" id="im-league" hidden></div></div>
+      <span class="preview" id="im-jersey" hidden></span>
+    </div>
+    <p class="im-line" id="im-line" hidden>Paste a Pitchero or tournament link there.</p>
+    <div class="im-paste" id="im-field"><input class="inp" id="im-url" type="url" inputmode="url" aria-labelledby="im-title" placeholder="https://" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" maxlength="2048"><button class="btn" id="im-paste" hidden>Paste</button></div>
+    <p class="im-err" id="im-err" role="alert" hidden></p>
+    <div class="im-cols" id="im-cols" hidden>
+      <div class="field"><span class="lbl">Shirt</span><div class="swatches" id="im-kit"></div></div>
+      <div class="field"><span class="lbl">Trim</span><div class="swatches" id="im-trim"></div></div>
+    </div>
+    <button class="btn primary" id="im-go">Import</button>
+    <div class="row2 one" id="im-row"><button class="btn" id="im-back" data-back>Back to Teams</button><button class="btn warn" id="im-alt" hidden>Remove League</button></div>
+  </div>
+</div>
 
 <section class="screen" id="s-hub" hidden>
   <div class="wrap">

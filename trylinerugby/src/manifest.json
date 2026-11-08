@@ -24,6 +24,7 @@
   "ui-match.js",
   "ui-help.js",
   "ui-menus.js",
+  "import.js",
   "practice.js",
   "ui-career.js",
   "offline-client.js",
