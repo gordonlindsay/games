@@ -149,7 +149,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false, kidsR:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js)
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
@@ -278,6 +278,7 @@ function cleanSettings(g) {
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
   if (typeof g.kids === 'boolean') settings.kids = g.kids;
   if (typeof g.kidsR === 'number' && Number.isFinite(g.kidsR) && g.kidsR >= 0 && g.kidsR <= 1) settings.kidsR = Math.round(g.kidsR*1000)/1000;   // a save from before the rating has none, and starts at 0
+  if (Number.isInteger(g.kidsTop) && g.kidsTop >= 0 && g.kidsTop <= 99) settings.kidsTop = g.kidsTop;   // the run of big wins at the top of Kids (Move Up to Easy)
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -7460,9 +7461,19 @@ function kidsAdapt() {                                     // full time in a Kid
   const h = isHuman(0) ? 0 : 1;
   M.kidsDone = true;
   settings.kidsR = kidsNext(M.kidsR, M.score, M.tries, h);
+  const big = M.tries[h] - M.tries[1 - h] > KIDS_EASY.margin;   // the run towards Move Up to Easy: big wins at the top of the scale, in a row
+  settings.kidsTop = settings.kidsR >= KIDS_EASY.top && big ? Math.min(99, (settings.kidsTop | 0) + 1) : 0;
   save();
   return settings.kidsR;
 }
+/* Outgrowing Kids (the owner, 2026-11-08: "yes, suggest Easy"). Grown-Ups offers Move Up to Easy, and the home's Grown-Ups button
+   carries a dot, once a child has won KIDS_EASY.run Kids matches in a row by more than KIDS_EASY.margin tries with the rating at
+   KIDS_EASY.top or above. Chosen by replaying the calibration's settle runs (tools/kidbots.mjs, SEED 7 and 13, 150 matches each):
+   wins by 5 or more tries, five in a row, never came up for the 7 to 8 year old Kids is tuned for (0 of 32 runs), the 6 year old
+   (0 of 32) or the stick masher (0 of 16), and came up for every sharp 10 year old (16 of 16, median match 39). A margin of 4 or
+   more (more than 3) caught 5 of 32 of the 7 to 8 year olds, so it is more than 4. Nothing on the child's screens changes. */
+const KIDS_EASY = { top:0.95, margin:4, run:5 };
+const kidsReady = () => kidsLevel() && (settings.kidsTop | 0) >= KIDS_EASY.run;
 const kidsLevel = () => !!settings.kids && settings.diff === 0;
 /* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
 const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff + 1);
@@ -7612,6 +7623,7 @@ const STORE_MSG = {
   none:'No purchases to restore.',
   same:'Purchases are up to date.',
   kids:'Kids level is back to the start.',
+  easy:'Difficulty is now Easy.',
 };
 let storeUi = { mode:'grown', feature:null, then:null, busy:false, msg:'', token:0, back:null };
 
@@ -7637,6 +7649,8 @@ function storeRender() {
   const live = storeLive();
   const g = $('b-grown'), row = g.parentNode;
   g.hidden = !live; if (row && row.classList) row.classList.toggle('three', live);   // How to Play | Training Ground | Grown-Ups in thirds
+  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there; touched only when it changes
+  if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
   storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career');
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
   if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
@@ -7720,7 +7734,9 @@ function storeCardRender() {
   $('st-msg').textContent = u.msg; $('st-msg').hidden = !u.msg;
   $('st-links').hidden = !grown;
   const kidsReset = grown && settings.kidsR > 0;            // Reset Kids Level: only once the Kids rating has moved (src/kids.js), for a sibling or a fresh start
-  $('st-reset').hidden = !kidsReset; $('st-links').classList.toggle('three', kidsReset);   // Privacy | Support, then Reset Kids Level across the row
+  const kidsEasy = grown && kidsReady();                    // Move Up to Easy: once the child has outgrown Kids (KIDS_EASY, src/kids.js)
+  $('st-reset').hidden = !kidsReset; $('st-links').classList.toggle('three', kidsReset);
+  $('st-easy').hidden = !kidsEasy; $('st-links').classList.toggle('four', kidsReset && kidsEasy);   // the two Kids buttons share their row in halves   // Privacy | Support, then Reset Kids Level across the row
   $('st-restore').hidden = !app; $('st-restore').disabled = u.busy;
   $('st-row').classList.toggle('one', !app);
   $('st-back').textContent = !$('s-teams').hidden ? 'Back to Teams' : !$('s-join').hidden ? 'Back to Players' : 'Back to Menu';   // the card closes onto the screen it opened from
@@ -7782,8 +7798,11 @@ $('st-back').addEventListener('click', storeClose);
 $('st-restore').addEventListener('click', storeRestoreAsk);
 $('st-privacy').addEventListener('click', () => storeLeave(STORE_LINKS.privacy));
 /* Reset Kids Level, behind the grown-up check like everything else here: the hidden Kids rating back to 0, saved, and said. */
-function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeCardFocus(); }); }
+function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }); }
 $('st-reset').addEventListener('click', storeKidsReset);
+/* Move Up to Easy, behind the grown-up check: the Difficulty row moves from Kids to Easy; the Kids rating is kept for a sibling. */
+function storeKidsEasy() { if (!kidsReady() || storeUi.busy) return; storeAsk(() => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); }); }
+$('st-easy').addEventListener('click', storeKidsEasy);
 $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support));
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
   if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-store').hidden) return;
@@ -9237,7 +9256,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
-  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   get M() { return M; } };

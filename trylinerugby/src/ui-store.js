@@ -17,6 +17,7 @@ const STORE_MSG = {
   none:'No purchases to restore.',
   same:'Purchases are up to date.',
   kids:'Kids level is back to the start.',
+  easy:'Difficulty is now Easy.',
 };
 let storeUi = { mode:'grown', feature:null, then:null, busy:false, msg:'', token:0, back:null };
 
@@ -42,6 +43,8 @@ function storeRender() {
   const live = storeLive();
   const g = $('b-grown'), row = g.parentNode;
   g.hidden = !live; if (row && row.classList) row.classList.toggle('three', live);   // How to Play | Training Ground | Grown-Ups in thirds
+  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there; touched only when it changes
+  if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
   storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career');
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
   if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
@@ -125,7 +128,9 @@ function storeCardRender() {
   $('st-msg').textContent = u.msg; $('st-msg').hidden = !u.msg;
   $('st-links').hidden = !grown;
   const kidsReset = grown && settings.kidsR > 0;            // Reset Kids Level: only once the Kids rating has moved (src/kids.js), for a sibling or a fresh start
-  $('st-reset').hidden = !kidsReset; $('st-links').classList.toggle('three', kidsReset);   // Privacy | Support, then Reset Kids Level across the row
+  const kidsEasy = grown && kidsReady();                    // Move Up to Easy: once the child has outgrown Kids (KIDS_EASY, src/kids.js)
+  $('st-reset').hidden = !kidsReset; $('st-links').classList.toggle('three', kidsReset);
+  $('st-easy').hidden = !kidsEasy; $('st-links').classList.toggle('four', kidsReset && kidsEasy);   // the two Kids buttons share their row in halves   // Privacy | Support, then Reset Kids Level across the row
   $('st-restore').hidden = !app; $('st-restore').disabled = u.busy;
   $('st-row').classList.toggle('one', !app);
   $('st-back').textContent = !$('s-teams').hidden ? 'Back to Teams' : !$('s-join').hidden ? 'Back to Players' : 'Back to Menu';   // the card closes onto the screen it opened from
@@ -187,8 +192,11 @@ $('st-back').addEventListener('click', storeClose);
 $('st-restore').addEventListener('click', storeRestoreAsk);
 $('st-privacy').addEventListener('click', () => storeLeave(STORE_LINKS.privacy));
 /* Reset Kids Level, behind the grown-up check like everything else here: the hidden Kids rating back to 0, saved, and said. */
-function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeCardFocus(); }); }
+function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }); }
 $('st-reset').addEventListener('click', storeKidsReset);
+/* Move Up to Easy, behind the grown-up check: the Difficulty row moves from Kids to Easy; the Kids rating is kept for a sibling. */
+function storeKidsEasy() { if (!kidsReady() || storeUi.busy) return; storeAsk(() => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); }); }
+$('st-easy').addEventListener('click', storeKidsEasy);
 $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support));
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
   if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-store').hidden) return;

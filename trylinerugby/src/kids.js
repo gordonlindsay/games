@@ -71,9 +71,19 @@ function kidsAdapt() {                                     // full time in a Kid
   const h = isHuman(0) ? 0 : 1;
   M.kidsDone = true;
   settings.kidsR = kidsNext(M.kidsR, M.score, M.tries, h);
+  const big = M.tries[h] - M.tries[1 - h] > KIDS_EASY.margin;   // the run towards Move Up to Easy: big wins at the top of the scale, in a row
+  settings.kidsTop = settings.kidsR >= KIDS_EASY.top && big ? Math.min(99, (settings.kidsTop | 0) + 1) : 0;
   save();
   return settings.kidsR;
 }
+/* Outgrowing Kids (the owner, 2026-11-08: "yes, suggest Easy"). Grown-Ups offers Move Up to Easy, and the home's Grown-Ups button
+   carries a dot, once a child has won KIDS_EASY.run Kids matches in a row by more than KIDS_EASY.margin tries with the rating at
+   KIDS_EASY.top or above. Chosen by replaying the calibration's settle runs (tools/kidbots.mjs, SEED 7 and 13, 150 matches each):
+   wins by 5 or more tries, five in a row, never came up for the 7 to 8 year old Kids is tuned for (0 of 32 runs), the 6 year old
+   (0 of 32) or the stick masher (0 of 16), and came up for every sharp 10 year old (16 of 16, median match 39). A margin of 4 or
+   more (more than 3) caught 5 of 32 of the 7 to 8 year olds, so it is more than 4. Nothing on the child's screens changes. */
+const KIDS_EASY = { top:0.95, margin:4, run:5 };
+const kidsReady = () => kidsLevel() && (settings.kidsTop | 0) >= KIDS_EASY.run;
 const kidsLevel = () => !!settings.kids && settings.diff === 0;
 /* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
 const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff + 1);

@@ -468,7 +468,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(!K.gate() && !$('m-store').hidden, 'over it, the grown-up check takes Escape first: the check shuts, the card stays');
   S.close();
   const block = html.slice(html.indexOf('<div class="modal" id="m-store"'), html.indexOf('<div class="modal" id="m-gate"'));
-  ok((block.match(/<button class="btn"/g) || []).length === 5 && /id="st-reset" hidden>Reset Kids Level</.test(block) && !/<a[\s>]|href=/.test(block), 'Privacy, Support, Reset Kids Level, Restore Purchases and Back are buttons, never links');
+  ok((block.match(/<button class="btn"/g) || []).length === 6 && /id="st-reset" hidden>Reset Kids Level</.test(block) && /id="st-easy" hidden>Move Up to Easy</.test(block) && !/<a[\s>]|href=/.test(block), 'Privacy, Support, Reset Kids Level, Move Up to Easy, Restore Purchases and Back are buttons, never links');
   ok(/aria-modal="true"/.test(block) && /role="status"/.test(block), 'a dialog, and its message is read out');
   const z = sel => { let v = null; for (const m of css.matchAll(new RegExp('(?:^|[},\\s])' + sel.replace(/[.#]/g, '\\$&') + '\\{[^}]*z-index:(\\d+)', 'g'))) v = +m[1]; return v; };
   ok(z('.modal') < z('#m-gate'), 'the grown-up check sits over the card');

@@ -71,6 +71,8 @@ A level below Easy for 6 to 10 year olds, and a grown-up check in front of anyth
 
 **Reset Kids Level.** One device keeps one rating, so siblings share it. Grown-Ups (in the app, and on the web once it is on the free tier) shows **Reset Kids Level** under Privacy and Support once the rating has moved; behind the grown-up check it puts `settings.kidsR` back to 0 and says so. `tools/together.mjs` section 12 pins it.
 
+**Move Up to Easy.** A child who has outgrown Kids gets a quiet nudge to a grown-up, never to the child: after five Kids wins in a row by 5 or more tries at the top of the scale (`KIDS_EASY` in src/kids.js), the home's Grown-Ups button carries a dot and Grown-Ups offers **Move Up to Easy**, behind the grown-up check. The threshold comes from replaying the calibration's settle runs: it never came up for the 7 to 8 year old (0 of 32 runs), the 6 year old or the stick masher, and came up for every sharp 10 year old (median match 39). The Kids rating is kept for a sibling. `tools/together.mjs` section 13 pins it.
+
 | Lever (`KIDS_SCALE`, `src/kids.js`) | Easy | Kids start (r 0) | Kids ceiling (r 1) |
 |---|---|---|---|
 | The other side's pace (`diff.cpuSpeed`) | 0.97 | 0.92 | 0.96 |
