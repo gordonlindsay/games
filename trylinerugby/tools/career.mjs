@@ -111,15 +111,15 @@ function playOut(us, them, deeds) {
   ok(C.clean({ ...json2(men), cat:undefined }).cat === 'men' && C.clean({ ...json2(women) }).cat === 'women' && C.clean({ ...json2(women), cat:'minis' }).cat === 'men', 'the save keeps Women; a career from before it, or a bad value, is Men');
   ok(C.clean(json2(women)).season.teams[0].cat === 'women', 'a saved season keeps its names and category');
   // Pro Club: every national league
-  ok(X.NATIONAL.length === 7 && [X.ENGLAND, X.FRANCE, X.CELTIC, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN].every(l => X.NATIONAL.includes(l)), 'the national leagues are England, France, Celtic and Italy, South Africa, Australia, New Zealand and Japan');
+  ok(X.NATIONAL.length === 8 && [X.ENGLAND, X.FRANCE, X.CELTIC, X.SCOTLAND, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN].every(l => X.NATIONAL.includes(l)), 'the national leagues are England, France, Celtic and Italy, Scotland, South Africa, Australia, New Zealand and Japan');
   const signed = new Set();
   for (let i = 0; i < 400; i++) { const p = C.create({ pos:'B', num:5, club:FAR }); p.stage = 2; C.newSeason(p); finish(p, 1); C.set(p); C.advance(); signed.add(X.NATIONAL.findIndex(l => l.some(t => t.id === p.pro))); }
-  ok(signed.size === 7 && !signed.has(-1), `going up signs a side from any national league (${[...signed].sort().join(' ')})`);
-  for (const [id, list] of [['BTH', X.ENGLAND], ['GLA', X.CELTIC], ['AKL', X.NEW_ZEALAND], ['KOB', X.JAPAN], ['TLS', X.FRANCE], ['ADL', X.AUSTRALIA]]) {
+  ok(signed.size === 8 && !signed.has(-1), `going up signs a side from any national league, Scotland's included (${[...signed].sort().join(' ')})`);
+  for (const [id, list] of [['BTH', X.ENGLAND], ['GLA', X.CELTIC], ['AYR', X.SCOTLAND], ['AKL', X.NEW_ZEALAND], ['KOB', X.JAPAN], ['TLS', X.FRANCE], ['ADL', X.AUSTRALIA]]) {
     const pros = C.opponents({ ...men, pro:id }, 3);
     ok(C.teamFor({ ...men, pro:id }, 3).id === id && pros.length === 5 && pros.every(t => list.some(a => a.id === t.id) && t.id !== id), `Pro Club at ${id}: five others from its own league`);
   }
-  ok(C.clean({ ...json2(men), stage:3, pro:'LNO' }).pro === 'LNO' && C.clean({ ...json2(men), stage:3, pro:'SYD' }).pro === 'SYD', 'a new league\'s side, and an old one, are kept in the save');
+  ok(C.clean({ ...json2(men), stage:3, pro:'LNO' }).pro === 'LNO' && C.clean({ ...json2(men), stage:3, pro:'SYD' }).pro === 'SYD' && C.clean({ ...json2(men), stage:3, pro:'KEL' }).pro === 'KEL', 'a new league\'s side, and an old one, are kept in the save');
   // International: twelve to pick from, a season against the other five of its six
   const nz = C.opponents({ ...men, country:'NZL' }, 4);
   ok(nz.map(t => t.id).join() === 'RSA,AUS,ARG,FIJ,JPN', `New Zealand plays the other five of the second six (${nz.map(t => t.id).join()})`);

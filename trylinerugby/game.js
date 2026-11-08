@@ -114,6 +114,18 @@ const JAPAN = [   // League One, by city or prefecture
   { id:'SHZ', name:'Shizuoka',  kit:'#2050b0', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3 },
   { id:'YOK', name:'Yokohama',  kit:'#1c1c1c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:3 },
 ];
+const SCOTLAND = [   // the Scottish Premiership, 2025-26: amateur club sides by town, or by district or ground in a city with several (Edinburgh and Glasgow are the pro sides, in CELTIC)
+  { id:'AYR', name:'Ayr',        kit:'#c2185b', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:3, stamina:2 },
+  { id:'CUR', name:'Currie',     kit:'#f2a900', trim:'#1c1c1c', pace:3, power:3, handling:2, kicking:2, stamina:3 },
+  { id:'GOL', name:'Goldenacre', kit:'#2050b0', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:2, stamina:3 },
+  { id:'MYR', name:'Myreside',   kit:'#7a1f2b', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'KEL', name:'Kelso',      kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:2 },
+  { id:'GIF', name:'Giffnock',   kit:'#c8102e', trim:'#0f6b3a', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'HAW', name:'Hawick',     kit:'#1f7a3a', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:2, stamina:2 },
+  { id:'MLR', name:'Melrose',    kit:'#f5c400', trim:'#1c1c1c', hoops:true, pace:2, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'ANN', name:'Anniesland', kit:'#b3121f', trim:'#f5c400', pace:3, power:2, handling:3, kicking:2, stamina:2 },
+  { id:'SEL', name:'Selkirk',    kit:'#1b2747', trim:'#f2efe6', pace:2, power:3, handling:2, kicking:2, stamina:3 },
+];
 /* The team screen: International | National | Local, then a list. Every list offers at least six sides, since a championship is
    your side and five from the list on screen. settings.pool holds a list's key; 'my' is My League (src/import.js), under Local while
    a league is saved. Keys never change: the save keeps them. */
@@ -123,6 +135,7 @@ const TEAM_LISTS = [
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
   { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
+  { key:'sco', tier:1, name:'Scotland',         teams:SCOTLAND },
   { key:'rsa', tier:1, name:'South Africa',     teams:SOUTH_AFRICA },
   { key:'aus', tier:1, name:'Australia',        teams:AUSTRALIA },
   { key:'nzl', tier:1, name:'New Zealand',      teams:NEW_ZEALAND },
@@ -9478,7 +9491,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
-  teams:{ overallOf, NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ overallOf, NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },

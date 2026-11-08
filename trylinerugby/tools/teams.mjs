@@ -20,7 +20,7 @@ const clubs = [...X.CLUBS, ...X.NATIONAL.flat()];   // every side that is not a 
   ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL,NZL,RSA,AUS,ARG,FIJ,JPN', 'then New Zealand, South Africa, Australia, Argentina, Fiji and Japan: twelve');
   ok(X.CLUBS[0].id === 'FAR', 'Farnham comes first in Local');
   ok(X.CLUBS.length >= 6, `Local has enough clubs for a championship (${X.CLUBS.length})`);
-  ok(X.POOLS.length === 9 && X.POOLS.every((p, i) => p === X.TEAM_LISTS[i].teams), 'POOLS is every built-in list, in the team screen\'s order');
+  ok(X.POOLS.length === 10 && X.POOLS.every((p, i) => p === X.TEAM_LISTS[i].teams), 'POOLS is every built-in list, in the team screen\'s order');
   ok(X.POOLS.every(p => p.length >= 6), `every list has enough sides for a championship (${X.POOLS.map(p => p.length).join(' ')})`);
   ok(X.FRANCE.length === 14, `France is the Top 14 (${X.FRANCE.length})`);
   ok(all.length === X.POOLS.reduce((a, p) => a + p.length, 0), 'ALL_TEAMS is every list');
@@ -492,16 +492,22 @@ function settle(pick) {
   const D = T.debug, s = D.settings(), $ = id => document.getElementById(id), L = X.TEAM_LISTS;
   const R = ['pace', 'power', 'handling', 'kicking', 'stamina'], total = t => R.reduce((a, k) => a + t[k], 0);
   ok(X.TEAM_TIERS.join() === 'International,National,Local', 'three tiers: International, National, Local');
-  ok(L.map(l => l.key + ':' + l.tier).join() === 'int:0,eng:1,fra:1,cel:1,rsa:1,aus:1,nzl:1,jpn:1,sur:2', 'International is one list; National is England, France, Celtic and Italy, South Africa, Australia, New Zealand and Japan; Local is Surrey');
-  ok(L.map(l => l.name).join() === 'International,England,France,Celtic and Italy,South Africa,Australia,New Zealand,Japan,Surrey', 'each list is named by its country or county, never a competition');
+  ok(L.map(l => l.key + ':' + l.tier).join() === 'int:0,eng:1,fra:1,cel:1,sco:1,rsa:1,aus:1,nzl:1,jpn:1,sur:2', 'International is one list; National is England, France, Celtic and Italy, Scotland, South Africa, Australia, New Zealand and Japan; Local is Surrey');
+  ok(L.map(l => l.name).join() === 'International,England,France,Celtic and Italy,Scotland,South Africa,Australia,New Zealand,Japan,Surrey', 'each list is named by its country or county, never a competition');
   ok(L.every(l => l.teams.length >= 6), `every list offers at least six sides (${L.map(l => l.key + ' ' + l.teams.length).join(', ')})`);
-  ok([X.NATIONS, X.ENGLAND, X.FRANCE, X.CELTIC, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN, X.CLUBS].map(l => l.length).join() === '12,10,14,12,7,6,6,7,12', 'International 12, England 10, France 14, Celtic and Italy 12, South Africa 7, Australia 6, New Zealand 6, Japan 7, Surrey 12');
+  ok([X.NATIONS, X.ENGLAND, X.FRANCE, X.CELTIC, X.SCOTLAND, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN, X.CLUBS].map(l => l.length).join() === '12,10,14,12,10,7,6,6,7,12', 'International 12, England 10, France 14, Celtic and Italy 12, Scotland 10, South Africa 7, Australia 6, New Zealand 6, Japan 7, Surrey 12');
   ok(X.ENGLAND.map(t => t.name).join() === 'Bath,Bristol,Exeter,Gloucester,Leicester,Newcastle,Northampton,Sale,London North,London West', 'England by city');
   ok(X.CELTIC.map(t => t.name).join() === 'Dublin,Limerick,Belfast,Galway,Edinburgh,Glasgow,Cardiff,Swansea,Llanelli,Newport,Treviso,Parma', 'Ireland, Scotland, Wales and Italy by city');
   ok(X.NEW_ZEALAND.map(t => t.name).join() === 'Auckland,Hamilton,Wellington,Christchurch,Dunedin,Taranaki', 'New Zealand by city, and Taranaki');
+  ok(X.SCOTLAND.map(t => t.name).join() === 'Ayr,Currie,Goldenacre,Myreside,Kelso,Giffnock,Hawick,Melrose,Anniesland,Selkirk', 'Scotland: the Premiership\'s ten by town, and by district or ground in Edinburgh and Glasgow');
+  ok(X.SCOTLAND.map(t => t.id).join() === 'AYR,CUR,GOL,MYR,KEL,GIF,HAW,MLR,ANN,SEL' && !X.SCOTLAND.some(t => ['GAL', 'GLA', 'GLO', 'MEL', 'EDI'].includes(t.id)), 'Scotland\'s codes, none of them Galway\'s, Glasgow\'s, Gloucester\'s, Melbourne\'s or Edinburgh\'s');
+  const lower = all.map(t => t.name.toLowerCase());
+  ok(new Set(lower).size === lower.length && X.CELTIC.some(t => t.id === 'EDI') && X.CELTIC.some(t => t.id === 'GLA') && !X.SCOTLAND.some(t => /edinburgh|glasgow/i.test(t.name)), 'no side is in two lists: Edinburgh and Glasgow stay with the professional sides');
+  const avg = l => l.reduce((a, t) => a + total(t), 0) / l.length, others = X.NATIONAL.filter(l => l !== X.SCOTLAND).flat();
+  ok(avg(X.SCOTLAND) < avg(others) && X.SCOTLAND.every(t => total(t) <= 5 + X.BUDGET) && X.SCOTLAND.every((t, i) => i === 0 || total(t) <= total(X.SCOTLAND[i - 1])) && total(X.SCOTLAND[0]) > total(X.SCOTLAND[9]), `Scotland's amateur sides rate a little below the professional leagues (${avg(X.SCOTLAND).toFixed(1)} v ${avg(others).toFixed(1)}), the table's leaders highest`);
   ok(X.AUSTRALIA.map(t => t.id).join() === 'SYD,BRI,CAN,PTH,MEL,ADL' && X.SOUTH_AFRICA.length === 7 && X.FRANCE.length === 14, 'Australia, South Africa and France as they were (append only: saved careers name their sides)');
   // the owner's trademark rule: a city or a region, never a club's registered name or nickname (Quins in Local is the one exception)
-  const MARKS = /\b(leinster|munster|ulster|connacht|saracens|harlequins|tigers|saints|sharks|bears|chiefs|blues|crusaders|hurricanes|highlanders|steelers|wild knights|spears|sungoliath|verblitz|bluerevs|blue revs|eagles|warriors|ospreys|scarlets|dragons|benetton|zebre|falcons|red bulls|brumbies|waratahs|reds|force|rebels|stormers|bulls|lions|cheetahs|pumas|stade|racing|rugby|rfc|club|toyota|kubota|panasonic|suntory|kobelco|canon|yamaha)\b/i;
+  const MARKS = /\b(leinster|munster|ulster|connacht|saracens|harlequins|tigers|saints|sharks|bears|chiefs|blues|crusaders|hurricanes|highlanders|steelers|wild knights|spears|sungoliath|verblitz|bluerevs|blue revs|eagles|warriors|ospreys|scarlets|dragons|benetton|zebre|falcons|red bulls|brumbies|waratahs|reds|force|rebels|stormers|bulls|lions|cheetahs|pumas|stade|racing|rugby|rfc|club|toyota|kubota|panasonic|suntory|kobelco|canon|yamaha|chieftains|hawks|watsonians?|heriots?|hutchesons|aloysians|gha|marr|accies|academicals?)\b/i;
   const pro = X.NATIONAL.flat();
   ok(pro.every(t => !MARKS.test(t.name)), `no professional side carries a club's name or nickname (${pro.filter(t => MARKS.test(t.name)).map(t => t.name).join(', ') || 'none'})`);
   const codes = [...X.ALL_TEAMS.map(t => t.id), ...T.career.COUNTIES.map(t => t.id)];
@@ -519,6 +525,9 @@ function settle(pick) {
   ok(s.pool === 'eng' && !$('t-nat').hidden && $('t-loc').hidden && names(X.ENGLAND) && !grid().includes('>Farnham<'), 'National opens on England, its league under it');
   X.poolPick('jpn');
   ok(s.pool === 'jpn' && names(X.JAPAN) && !grid().includes('>Bath<'), 'a league shows its own sides');
+  X.poolPick('sco');
+  ok(s.pool === 'sco' && names(X.SCOTLAND) && !grid().includes('>Edinburgh<') && !grid().includes('>Glasgow<') && X.teamPool() === 'sco' && X.poolTier('sco') === 1 && !$('t-nat').hidden, 'Scotland, under National, shows the Premiership\'s clubs; the pro sides stay in Celtic and Italy');
+  X.poolPick('jpn');
   X.tierPick(0);
   ok(s.pool === 'int' && $('t-nat').hidden && $('t-loc').hidden && names(X.NATIONS), 'International: the twelve, with nothing under it');
   X.tierPick(1);
@@ -538,7 +547,7 @@ function settle(pick) {
   }
   // old saves: each index the team screen used to save goes to where it was
   const want = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];
-  ok(X.POOL_OLD.join() === want.join(), 'the old lists were International, Local, France, Australia, South Africa, My League');
+  ok(X.POOL_OLD.join() === want.join() && !X.POOL_OLD.includes('sco'), 'the old lists were International, Local, France, Australia, South Africa, My League: nothing old lands on Scotland');
   for (let i = 0; i < want.length; i++) { X.restore({ settings: { pool: i } }); ok(s.pool === want[i], `an old saved pool ${i} is ${want[i]}`); }
   for (const k of [...L.map(l => l.key), 'my']) { X.restore({ settings: { pool: k } }); ok(s.pool === k, `a saved ${k} loads as it is`); }
   for (const bad of [-1, 6, 1.5, 'x', null, {}, true]) { X.restore({ settings: { pool: bad } }); ok(s.pool === 'int', `a bad pool (${JSON.stringify(bad)}) is International, as before`); }
@@ -603,6 +612,8 @@ function settle(pick) {
   const html = readGameSource(), menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
   ok(html.includes('<div class="seg cat" id="t-cat"></div></div>') && html.includes('<div class="pools"><div class="seg" id="t-tier"></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>'), 'Men | Women | Minis beside the title, the tiers and their lists under it');
   ok(!html.includes('data-key="pool"'), 'the old five-list control has gone');
+  const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  ok(X.TEAM_LISTS.filter(l => l.tier === 1).length === 8 && /@media \(max-width:731px\)\{\s*#t-nat\{grid-auto-flow:row;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}/.test(css), 'National\'s eight leagues: one row where eight fit, two balanced rows of four where they do not');
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const titled = t => t.split(' ').every((w, i) => (i && small.has(w)) || /^[A-Z]/.test(w));
   const labels = [...X.TEAM_TIERS, ...X.TEAM_LISTS.map(l => l.name), ...X.TEAM_CATS.map(c => c.name), 'My League'];
