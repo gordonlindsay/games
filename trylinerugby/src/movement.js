@@ -422,6 +422,7 @@ function handleUser(dt) {
   for (const t of [poss, 1 - poss]) if (I[t]) userStep(t, I[t], dt);
   for (const inp of inputs) inp.aCancel = inp.bCancel = inp.cCancel = false;
   for (const t of [0, 1]) if (inputOf(t)) gestureStep(t, dt);
+  if (M.kids) for (const t of [0, 1]) kidsSwitch(t);      // Kids: the ring finds your best defender
 }
 function userStep(t, i, dt) {
   const b = M.ball, c = ctrlOf(t), S = sideOf(t), inp = inputOf(t);
@@ -464,6 +465,7 @@ function moveAll(dt) {
         const t = T.get(p);                                     // the stick let go: he still runs onto the ball, as he did before the ring moved
         if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
       }
+      if (M.kids && kidsChase(p, inp, dt)) continue;           // Kids: let go of the stick and he chases on his own
       userMove(p, dt, inp); continue;                          // any deflection places him until the ball is out
     }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }

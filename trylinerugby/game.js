@@ -149,7 +149,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy (kids.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 const SEASON_LIMIT = 10;
 /* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
@@ -273,6 +273,7 @@ function cleanSettings(g) {
   if ('pool' in g) settings.pool = Number.isInteger(g.pool) && g.pool >= 0 && g.pool < POOLS.length ? g.pool : 0;
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
+  if (typeof g.kids === 'boolean') settings.kids = g.kids;
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -341,7 +342,7 @@ const humanSlots = () => M.side.filter(s => s.human).map(s => inputs[s.seat]);  
    ones, because `team === 1` was the test for the CPU). */
 const cpuSide = t => M.role[t] === 'cpu';
 let earlyDiff = null;   // Normal's levers with EARLY.nudge, or null. Set for a match, never left over into the next.
-const diffOf = t => (M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);
+const diffOf = t => (M && M.kids ? KIDS.diff : M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);   // a Kids match (kids.js) plays both sides' terms from KIDS.diff
 const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
@@ -392,6 +393,7 @@ function newMatch(u, c, opts) {
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
     arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
     fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
+    kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
@@ -560,6 +562,7 @@ function catchBall(p, kind) {
   if (pressure(p) < 1.8) k += 0.04;
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
+  if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
   if (rnd() < k) { knockOn(p); return; }
   setCarrier(p);
   p.fromKick = kind === 'kick';
@@ -699,7 +702,7 @@ function doPass(from, to, o) {
     ty = clamp(ty, 3, 67);
   } else {                                                 // led: where he will be running on, then the handling error, and never forward of the passer (the law)
     const a = leadPass(from, to, o); tx = a.x; ty = a.y;
-    const err = (5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0); tx += gauss()*err; ty += gauss()*err;
+    const err = ((5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0))*(M.kids && isHuman(from.team) ? KIDS.passErr : 1); tx += gauss()*err; ty += gauss()*err;   // Kids: your passes stray less
     if ((tx-from.x)*d > 0) tx = from.x;
   }
   T = hyp(tx-b.x, ty-b.y)/spd + 0.06;
@@ -863,7 +866,7 @@ function offload(k, user) {                                // user: the carrier'
   if (k.offloaded || k.tier === 'dom' || k.tier === 'broken') return false;
   const r = user ? offloadTarget(k) : supportFor(c);        // the press takes the man the label was lit for
   if (!r) return false;
-  const pOk = CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05);
+  const pOk = M.kids && user ? KIDS.offload : CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05);   // Kids: an offload you press gets away
   st('offAtt'); k.offloaded = true;
   const q = k.q, q2 = k.q2;
   releaseBind(k);
@@ -911,7 +914,7 @@ function resolveContact(k) {                               // the end of the bin
     } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
   }
   const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more
-  if (rnd() < jolt) {
+  if (rnd() < jolt*(M.kids && isHuman(c.team) ? KIDS.jolt : 1)) {   // Kids: your carrier keeps hold of it
     st('jolts');
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
     if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }
@@ -1302,6 +1305,7 @@ function bandOf(g, aim) {                                  // at aim 0, except t
   g.ctr = Math.min(Math.max(g.mClear + k.lift + k.liftW*g.w, k.floor), k.ceil);   // the floor makes short kicks fly like real ones
   g.lo = g.ctr - g.w/2; g.hi = g.ctr + g.w/2;
   g.fill = (g.type === 'drop' ? k.dropFill : k.fill)[di]/(1 + (g.dist - 12)*k.fillD);
+  if (M && M.kids && isHuman(g.team)) kidsBand(g);        // Kids: a wider band and a slower meter
   return g;
 }
 function strikeGoal(g, m, aim) {                           // draws no random numbers: the result is known at the release
@@ -1377,7 +1381,7 @@ function updateGoalCut(c, dt) {
   } else if (g.stage === 'power') {
     g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
     if (inp.aCancel || (!inp.aDown && g.m < KICK.tap)) backToAim(g);
-    else if (!inp.aDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
+    else if (!inp.aDown) { strikeGoal(g, kidsStrike(g, g.m), g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
   } else if (g.stage === 'runup') {
     if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
@@ -1399,6 +1403,7 @@ function watchStep(c, dt) {                                // the CPU's kick: se
   else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
 function steerAim(g, dt, inp) {
+  if (M.kids && isHuman(g.team)) return;                   // Kids: the aim the path shows is set for you
   const k = KICK;
   const jx = inp.jx, kx = inp.keyX();                      // the d-pad aims at the keyboard's rate too
   const rate = jx ? k.aimRate*Math.sign(jx)*Math.pow(Math.abs(jx), 1.6) : k.keyRate*kx;
@@ -1488,7 +1493,7 @@ function projectHold(c, lead) {
 // kicker's shoulder counts, a chaser deeper behind him does not, at the label and in the cut alike), the nearest three. Each is frozen where `proj` puts
 // him (or where he really stands), with his speed toward the kicker and his top speed. g.x/g.y is the kick spot, in the frame.
 function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the label saw)
-  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)] : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
+  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)]*(M.kids ? KIDS.kick.rush : 1) : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
   const list = proj ? proj.opps : M.players.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy }));
   for (const o of list) {
     const f = toFrame(t, o.x, o.y), v = frameVec(t, { x:o.vx, y:o.vy });
@@ -1551,7 +1556,7 @@ function dropStep(c, dt) {
     if (g.stage === 'hold') {
       g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
       if (inp.bCancel || (!inp.bDown && g.m < k.tap)) { g.stage = 'wait'; g.m = 0; g.pt = 0; }
-      else if (!inp.bDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.tRel = tau; g.stage = 'drop'; g.st = 0; }
+      else if (!inp.bDown) { strikeGoal(g, kidsStrike(g, g.m), g.aim); g.mRel = g.m; g.tRel = tau; g.stage = 'drop'; g.st = 0; }
     } else if (inp.bPressed) { g.stage = 'hold'; g.pt = 0; g.m = 0; }
   } else if (g.stage === 'drop') {
     if ((g.st += dt) >= k.dropT) {                         // the half-volley: charging is checked now, with the strike on the chargers' clock
@@ -1765,7 +1770,7 @@ function startScrum(s) {
   // every scrum is a little different: a CPU pack's strength varies, and the side putting in gets a small edge. pos is metres gained by team 0's pack
   const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, engaged:false, mine:0, theirs:0, result:null,
     rate:[0, 0], taps:[0, 0], hit:[false, false], early:[false, false], base:[0, 0], wave:0, msg:[null, null] };   // a pack a side: a human's taps and timing, every pack's base effort; msg: two player's Early / Good Hit tag over each pack
-  for (const t of [0, 1]) c.base[t] = cpuSide(t) ? (diffOf(t).scrumCpu + (powerOf(t)-3)*0.06)*(0.75 + rnd()*0.5) + (s.team === t ? 0.08 : 0) : (powerOf(t)-3)*0.06 + (s.team === t ? 0.08 : 0) + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0);
+  for (const t of [0, 1]) c.base[t] = cpuSide(t) ? (diffOf(t).scrumCpu + (powerOf(t)-3)*0.06)*(0.75 + rnd()*0.5) + (s.team === t ? 0.08 : 0) : (powerOf(t)-3)*0.06 + (s.team === t ? 0.08 : 0) + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0) + (M.kids ? KIDS.scrum : 0);
   c.wave = rnd()*6;
   startCut(c);
 }
@@ -1832,7 +1837,7 @@ function startLineout(s) {
   const throwT = 0.75 + rnd()*0.6, flight = 0.95 + rnd()*0.35;
   const c = { kind:'lineout', team:s.team, x:s.x, y:s.y, throwT, flight, arrive:throwT + flight, catchH:3.4 + rnd()*0.3,
     jump:[null, null], outcome:null, winner:null, decidedAt:null,
-    reach:[0, 1].map(t => 2.35 + gauss()*0.08 + (t === s.team ? (M.two ? 0.10 : 0.06) : 0) + (M.two ? LINE_LEVEL[levelOf(t)] : 0)) };   // two player: the throw's edge is 0.10 (the thrower keeps about 86% at equal timing, measured over 4,000 throws a side), plus an Easy player's reach; the same draws
+    reach:[0, 1].map(t => 2.35 + gauss()*0.08 + (t === s.team ? (M.two ? 0.10 : 0.06) : 0) + (M.two ? LINE_LEVEL[levelOf(t)] : 0) + (M.kids && isHuman(t) ? KIDS.reach : 0)) };   // two player: the throw's edge is 0.10 (the thrower keeps about 86% at equal timing, measured over 4,000 throws a side), plus an Easy player's reach; the same draws
   for (const t of [0, 1]) {                                  // a CPU jumper: always on its own throw, else at its level's contest rate, timed with its level's spread
     if (!cpuSide(t)) continue;
     const contest = s.team === t || rnd() < diffOf(t).lineContest;
@@ -1938,6 +1943,7 @@ function tackleChance(q, c, mode, stepped) {
   if (stepped == null) stepped = c.side > 0;
   let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
   p += (powerOf(q.team) - powerOf(c.team))*0.05;
+  if (M.kids && isHuman(q.team) && mode !== 'ai') p += KIDS.tackle;   // Kids: your ringed man's contact tackle and dive
   if (stepped) p *= MOVES.step.odds;
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
   return clamp(p, 0.08, 0.95);
@@ -2079,7 +2085,7 @@ function startDuel(s) {
   const tw = CUT_IN + (c.tk - CUT_IN)*(G_START - G_WIN)/(G_START - G_HIT);
   const SD = sideOf(own).duel, first = M.two ? SD.first : !tutSeen(s.kind), fails = M.two ? SD.fails : L.fails;   // the aids are per owner in two player: his own first duel, his own failures in a row. One player: the first duel of each kind on this device (the tutorial's moment, marked at the cut-in)
   const w = k.win[di] + clamp(0.012*(ab(s.U.team, k.mod[0]) - ab(s.O.team, k.mod[1])), -0.036, 0.036)
-    + (first ? 0.08 : 0) + (fails >= 2 ? 0.04 : 0);
+    + (first ? 0.08 : 0) + (fails >= 2 ? 0.04 : 0) + (M.kids ? KIDS.duelWin : 0);
   if (M.two) SD.first = false;
   let centre = tw;
   if (s.kind === 'past') {
@@ -2184,13 +2190,15 @@ function updateDuel(c, dt) {
   } else if (c.kind === 'pass') {
     if (input.aPressed) act = 'pass'; else if (input.bPressed) act = 'dummy';
   } else if (input.aPressed) act = 1;
+  if (act == null && M.kids) act = kidsDuelAct(c, input);   // Kids: any press acts
   input.flick = 0;
   if (act != null) judgeDuel(c, act, t);
   else if (t > c.win[1]) judgeDuel(c, null, t);
 }
 function judgeDuel(c, act, t) {
   c.judged = t;
-  const res = act == null ? 'late' : t < c.win[0] ? 'early' : Math.abs(t - c.centre) <= 0.2*c.wid ? 'perfect' : 'ok';
+  let res = act == null ? 'late' : t < c.win[0] ? 'early' : Math.abs(t - c.centre) <= 0.2*c.wid ? 'perfect' : 'ok';
+  if (M.kids) [res, act] = kidsDuel(c, res);              // Kids: never lost, a Perfect in the gold
   settle(c, res, act);
 }
 function settle(c, res, act) {
@@ -2972,6 +2980,7 @@ function handleUser(dt) {
   for (const t of [poss, 1 - poss]) if (I[t]) userStep(t, I[t], dt);
   for (const inp of inputs) inp.aCancel = inp.bCancel = inp.cCancel = false;
   for (const t of [0, 1]) if (inputOf(t)) gestureStep(t, dt);
+  if (M.kids) for (const t of [0, 1]) kidsSwitch(t);      // Kids: the ring finds your best defender
 }
 function userStep(t, i, dt) {
   const b = M.ball, c = ctrlOf(t), S = sideOf(t), inp = inputOf(t);
@@ -3014,6 +3023,7 @@ function moveAll(dt) {
         const t = T.get(p);                                     // the stick let go: he still runs onto the ball, as he did before the ring moved
         if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
       }
+      if (M.kids && kidsChase(p, inp, dt)) continue;           // Kids: let go of the stick and he chases on his own
       userMove(p, dt, inp); continue;                          // any deflection places him until the ball is out
     }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }
@@ -4967,6 +4977,7 @@ let focusEl = null;
 const navLog = [];                                         // the tools read who tried to navigate and whether the layer was his: [fn, seat, owned]
 const logNav = (fn, seat) => { navLog.push([fn, seat, navOwner(seat)]); if (navLog.length > 40) navLog.shift(); };
 function navLayer() {                                      // the top layer: the pause card over anything (it can sit over the penalty card), then an open card, then the visible screen
+  const pg = $('m-gate'); if (pg && !pg.hidden) return pg;   // the grown-up check (kids.js) sits over everything, another card included
   const pz = $('m-pause'); if (pz && !pz.hidden) return pz;
   for (const m of document.querySelectorAll('.modal')) if (!m.hidden) return m;
   for (const s of document.querySelectorAll('.screen')) if (!s.hidden) return s;
@@ -5096,7 +5107,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true,   // the switch is gone: a match you play always has duels
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel(),   // the switch is gone: a match you play always has duels; Kids is one player's
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -5231,8 +5242,8 @@ function hintFor(s) {                                      // the card for seat 
     if (c.kind === 'goal') {
       const g = c.g;
       if (g.watch || g.team !== t || c.t < CUT_IN || c.after || g.out) return null;
-      if (g.type === 'drop') return g.stage === 'wait' || g.stage === 'hold' ? card(null, 'Before They Reach You', [row([chip('x')], 'Steer'), row([chip('b', 'Kick')], 'Let Go in the Gold')], true) : null;
-      return g.stage === 'aim' || g.stage === 'power' ? card(null, 'Let Go in the Gold', [row([chip('x')], 'Steer the Arrow'), row([chip('a', 'Kick')], 'Hold It')], true) : null;
+      if (g.type === 'drop') return g.stage === 'wait' || g.stage === 'hold' ? card(null, 'Before They Reach You', [...(M.kids ? [] : [row([chip('x')], 'Steer')]), row([chip('b', 'Kick')], 'Let Go in the Gold')], true) : null;
+      return g.stage === 'aim' || g.stage === 'power' ? card(null, 'Let Go in the Gold', [...(M.kids ? [] : [row([chip('x')], 'Steer the Arrow')]), row([chip('a', 'Kick')], 'Hold It')], true) : null;   // Kids sets the aim, so there is nothing to steer
     }
     return null;
   }
@@ -5346,7 +5357,7 @@ function tutCards(id, s) {
   const PAD = { a:'Bottom Button', b:'Right Button', c:'Shoulder' };
   const key = act => '{' + KB[sch][act][0] + '}';
   const name = (act, word) => (kb ? key(act) : pad ? 'the ' + PAD[act] : word);   // a keycap, the Bottom Button, or the button's own word
-  const flick = kb ? (R ? 'Tap an Arrow' : 'Tap {KeyA} or {KeyD}') : 'Flick the Stick', steer = kb ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : 'the Stick';
+  const flick = kb ? (R ? 'Tap an Arrow' : 'Tap {KeyA} or {KeyD}') : 'Flick the Stick', steer = kb ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : 'the Stick', aim = M && M.kids ? '' : 'Steer With ' + steer + ', ';   // Kids sets the aim
   switch (id) {
     case 'past': return [['Get Past', 'Beat the Last Man'], ['Get Past', flick + ' Away From Him When the Ring Turns Gold']];
     case 'pass': return [['Key Pass', 'Two on One'], ['Key Pass', 'Press ' + name('a', 'Pass') + ' on Gold, or ' + name('b', 'Dummy') + ' If He Drifts to Your Runner']];
@@ -5354,8 +5365,8 @@ function tutCards(id, s) {
     case 'block': return [['Block', 'Their Pass Crosses Your Man'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
     case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
     case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
-    case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', 'Steer With ' + steer + ', Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
-    default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', Steer With ' + steer + ', Let Go in the Gold Before They Reach You']];
+    case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', aim + 'Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
+    default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', ' + aim + 'Let Go in the Gold Before They Reach You']];
   }
 }
 function renderTut() {
@@ -5582,7 +5593,7 @@ function renderHome() {
   $('home-cabinet').hidden = !champHistory.length;
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
-    const val = BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];
+    const val = key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
   const note = $('champ-note');
@@ -5608,7 +5619,7 @@ function goHome() {
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
-    if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
+    if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
     if (key === 'sound' && settings.sound) ac();
@@ -5930,6 +5941,134 @@ $('hub-reset').addEventListener('click', () => {
 });
 
 /* =========================================================
+   Kids: a level below Easy for 6 to 10 year olds, and the
+   grown-up check in front of anything that leaves the game.
+   ========================================================= */
+/* How the level is stored: settings.kids, a flag layered on Easy (settings.diff stays 0). Every lever table in the engine (DIFF,
+   KICK's fill and band, SPRINT, CONTACT.contact, the duel windows, COVER, MOVES.dummy.bite) is an array by level 0..2, and the save
+   keeps diff as 0..2. A fourth level would need a fourth entry in every one of them, or would shift what a saved 0..2 means. As a
+   flag, a saved diff means what it always did, an old save (no flag) loads exactly as it was, and anything that reads settings.diff
+   or levelOf sees Easy, the nearest level. The flag counts only with diff 0, so a hand-edited kids:true on Hard is just Hard.
+   The levers below act only in a match newMatch was asked to play as Kids (opts.kids, which startMatch passes): one player, on
+   Easy, never AI v AI, the demo, practice or two player. Every one reads M.kids, so the sims, the demo and the balance tools run
+   the same numbers and the same random draws as before. */
+const KIDS = {
+  diff:{ ...DIFF[0], cpuSpeed:0.92, cpuTackle:0.45, cpuIntercept:0.05, turnover:-0.05, scrumCpu:0.45, lineSigma:0.28, lineContest:0.35 },   // Easy's row with the other side slower, weaker in the tackle, less often intercepting or turning the ball over, and soft at scrum and lineout
+  tackle:0.10,             // your ringed man's own tackles (his contact tackle and his dive) are this much surer
+  hands:0.1,               // your side's catches knock on a tenth as often
+  jolt:0.15,               // your carrier in a tackle has the ball jolted loose about a seventh as often
+  offload:0.95,            // an offload you press gets away
+  passErr:0.4,             // your passes stray less than half as far
+  duelWin:0.20,            // the gold ring stays open 0.2s longer. A close-up is never lost (kidsDuel): in the gold it is a Perfect
+  kick:{ band:2, bandMax:0.34, fill:1.6, rush:0.65 },   // goal kicks: the gold band twice as wide (at most 0.34 of the meter), the meter 1.6x slower, the aim set for you, a release in the gold struck true; drop-goal chargers at 65% pace
+  switchHold:0.5,          // defending, the ring moves to your best defender once it has stayed put this long
+  rest:0.15,               // a stick under this is let go: your ringed defender chases the ball on his own
+  chase:0.80,              // at this share of his pace, so the other side can still get away and score now and then
+  scrum:0.25,              // your pack's own shove, so a few taps win your scrum
+  reach:0.12,              // your lineout jumper's reach, so a rough Jump still takes your throw
+};
+const kidsLevel = () => !!settings.kids && settings.diff === 0;
+/* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
+const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff + 1);
+function kidsSegSet(i) { settings.kids = i === 0; settings.diff = clamp(i - 1, 0, 2); }
+
+/* ---------- the levers the engine calls (each caller checks M.kids first) ---------- */
+function kidsDuel(c, res) {                                // a close-up is never lost: early, late or the wrong way it still comes off, and a press in the gold is a Perfect
+  if (res !== 'perfect') res = 'ok';
+  const right = c.kind === 'past' ? c.open : c.kind === 'pass' ? (c.drift ? 'dummy' : 'pass') : 1;
+  return [res, right];
+}
+function kidsDuelAct(c, inp) {                             // any press counts: Pass or Kick in a Get Past, Kick in a Tackle or Block
+  if (!(inp.aPressed || inp.bPressed || inp.flick)) return null;
+  if (c.kind === 'past') return inp.flick || c.open;
+  if (c.kind === 'pass') return inp.bPressed ? 'dummy' : 'pass';
+  return 1;
+}
+function kidsBand(g) {                                     // after bandOf: the band widens about its centre and the meter slows
+  const w = Math.min(g.w*KIDS.kick.band, KIDS.kick.bandMax);
+  g.w = w; g.lo = g.ctr - w/2; g.hi = Math.min(1, g.ctr + w/2);
+  g.fill *= KIDS.kick.fill;
+}
+const kidsStrike = (g, m) => (M && M.kids && isHuman(g.team) && m >= g.lo && m <= g.hi ? g.ctr : m);   // a release in the gold strikes the band's centre, which the set aim puts between the posts
+function kidsSwitch(t) {                                   // defending, the ring goes to the man who can make the tackle: the nearest chaser when yours is down or another is well nearer, else the man in front when yours is beaten
+  if (!M.kids || !isHuman(t) || M.phase !== 'play' || M.cut || ourBall(t) || sideOf(t).ctrlT < KIDS.switchHold) return;
+  const q = sprintPick(t) || (switchUseful(t) ? switchTarget(t) : null);
+  if (q && q !== ctrlOf(t)) { setCtrl(t, q); st('kidsSwitch'); }
+}
+function kidsChase(p, inp, dt) {                           // the stick let go while defending: the ringed man chases the carrier, or runs to a kicked or loose ball, as his teammates do
+  if (!M.kids || inp.world().mag >= KIDS.rest || M.phase !== 'play' || p.offside > 0) return false;   // a retiring tackler stays out, as his teammates do
+  const b = M.ball;
+  let x, y;
+  if (b.state === 'held' && b.carrier.team !== p.team) { const c = b.carrier, lead = clamp(dist(p, c)/9, 0, 0.7); x = c.x + c.vx*lead; y = c.y + c.vy*lead; }
+  else if (b.state === 'air' && b.f && b.f.kind !== 'pass') { x = b.f.x1; y = b.f.y1; }
+  else if (b.state === 'loose') { x = b.x; y = b.y; }
+  else return false;
+  seek(p, x, y, maxSpeed(p)*KIDS.chase, 15, dt, true);
+  return true;
+}
+
+/* ---------- the grown-up check ----------
+   parentGate(onPass, onCancel): a card a young child cannot get past, in the Apple Kids-category style. It asks a multiplication
+   written out in words, a teen times six to nine (seventeen times six), typed on its own number keys. A wrong answer clears and
+   asks a new one. Touch, the keyboard (the figures, Backspace, Escape, and Tab inside the card: the rest of the page is inert while
+   it is open) and a controller (the card is the nav layer, Back is Cancel) all reach it. Only a right answer calls onPass. */
+const KIDS_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+let kidsGate = null;                                       // the open check: { a, b, answer, typed, onPass, onCancel, back, inert }
+function kidsPick(n) {                                     // 0..n-1 from the browser's crypto, so the check never draws on the match's Math.random
+  try { const u = new Uint32Array(1); crypto.getRandomValues(u); return u[0] % n; } catch (e) { return Math.floor(Math.random()*n); }
+}
+function kidsAsk() {
+  const g = kidsGate;
+  g.a = 13 + kidsPick(7); g.b = 6 + kidsPick(4); g.answer = String(g.a*g.b); g.typed = '';   // 13 to 19 times 6 to 9: 78 to 171, past the times tables a child knows
+  $('pg-q').textContent = 'What is ' + KIDS_WORDS[g.a] + ' times ' + KIDS_WORDS[g.b] + '?';
+}
+function kidsGateShow(wrong) {
+  const el = $('pg-ans');
+  el.textContent = kidsGate.typed || (wrong ? 'Try Again' : '');
+  el.classList.toggle('wrong', !!wrong);
+}
+function parentGate(onPass, onCancel) {
+  if (kidsGate) kidsGateClose(false);                      // one check at a time: an older one is cancelled
+  kidsGate = { onPass, onCancel, typed:'', back:document.activeElement || null, inert:[] };
+  kidsAsk(); kidsGateShow(false);
+  const m = $('m-gate'), body = document.body;
+  if (body && body.children) for (const el of body.children) if (el !== m && !el.inert) { el.inert = true; kidsGate.inert.push(el); }
+  m.hidden = false; setFocus(null);
+  const first = $('pg-k1'); if (first && first.focus) first.focus();
+}
+function kidsGateClose(passed) {
+  const g = kidsGate; if (!g) return;
+  kidsGate = null;
+  $('m-gate').hidden = true; setFocus(null);
+  for (const el of g.inert) el.inert = false;
+  if (g.back && g.back.focus && !(g.back.closest && g.back.closest('[hidden]'))) g.back.focus();
+  const fn = passed ? g.onPass : g.onCancel;
+  if (typeof fn === 'function') fn();
+}
+function kidsGateType(d) {
+  const g = kidsGate; if (!g) return;
+  g.typed = (g.typed + d).slice(0, 3);
+  if (g.typed.length < g.answer.length) { kidsGateShow(false); return; }
+  if (g.typed === g.answer) { kidsGateClose(true); return; }
+  kidsAsk(); kidsGateShow(true);
+}
+function kidsGateDelete() { if (kidsGate) { kidsGate.typed = kidsGate.typed.slice(0, -1); kidsGateShow(false); } }
+for (const n of '1234567890') $('pg-k' + n).addEventListener('click', () => kidsGateType(n));
+$('pg-del').addEventListener('click', kidsGateDelete);
+$('pg-cancel').addEventListener('click', () => kidsGateClose(false));
+$('m-gate').hidden = true;                                 // closed until asked for (the test harness's stand-in elements start open)
+DEFAULT_FOCUS['m-gate'] = () => $('pg-k1');
+window.addEventListener('keydown', e => {                  // while the check is open no key reaches the game; the figures, Backspace and Escape answer it, and every other key keeps the browser's own meaning (Tab, Enter and Space on the card's buttons)
+  if (!kidsGate) return;
+  if (e.stopPropagation) e.stopPropagation();
+  const k = e.key;
+  if (/^[0-9]$/.test(k)) kidsGateType(k);
+  else if (k === 'Backspace' || k === 'Delete') kidsGateDelete();
+  else if (k === 'Escape') kidsGateClose(false);
+  else return;
+  if (e.preventDefault) e.preventDefault();
+}, true);
+/* =========================================================
    Practice ground: small scenarios using the match's real input and rules.
    No championship result, played count or tutorial memory is written here.
    ========================================================= */
@@ -6089,11 +6228,14 @@ function offlineStart() {
   if (offlineApp.started) return;
   offlineApp.started = true;
   const install = $('b-install'), update = $('b-update');
-  if (install) install.addEventListener('click', async () => {
-    const prompt = offlineApp.prompt;
-    if (!prompt) return;
-    offlineApp.prompt = null; offlineRender();
-    try { await prompt.prompt(); await prompt.userChoice; } catch (e) { /* browser dismissed or unavailable */ }
+  if (install) install.addEventListener('click', () => {
+    const go = async () => {
+      const prompt = offlineApp.prompt;
+      if (!prompt) return;
+      offlineApp.prompt = null; offlineRender();
+      try { await prompt.prompt(); await prompt.userChoice; } catch (e) { /* browser dismissed or unavailable */ }
+    };
+    if (typeof parentGate === 'function') parentGate(go); else go();   // a grown-up check first (kids.js): installing hands over to the browser
   });
   if (update) update.addEventListener('click', () => {
     if (!offlineApp.home || !offlineApp.waiting || offlineApp.requested) return;
@@ -6170,6 +6312,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
+  kids:{ KIDS, KIDS_WORDS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   get M() { return M; } };
 
 function start(data) {

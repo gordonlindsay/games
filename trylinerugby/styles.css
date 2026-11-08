@@ -459,3 +459,19 @@ body.desk .home-row .col{grid-column:auto}
 .app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; padding:7px 11px; font:inherit; cursor:pointer; }
 .app-action:hover, .app-action:focus-visible { color:#fff; border-color:#d5b663; }
 .app-action:disabled { opacity:.55; cursor:wait; }
+
+/* ===== kids ===== */
+/* the grown-up check (kids.js): over every other card; the question and the answer on one row, ten figure keys, then Delete | Cancel */
+#m-gate{z-index:30}
+#m-gate .card{width:min(600px,100%);gap:12px}
+.pg-ask{display:grid;grid-template-columns:minmax(0,1fr) 7.5em;align-items:center;gap:12px}
+.pg-ask h3{font-size:clamp(26px,5vw,34px)}
+.pg-ans{display:grid;place-items:center;min-height:56px;border:1.5px solid var(--rule-hi);border-radius:6px;background:var(--night);font:900 38px/1 var(--display);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.pg-ans.wrong{border-color:var(--alert);color:var(--alert);font:700 15px/1.1 var(--body);letter-spacing:0}
+.pg-keys{display:grid;grid-template-columns:repeat(10,minmax(44px,1fr));gap:6px}
+.pg-keys .btn{min-height:52px;padding:0;font:900 28px/1 var(--display)}
+@media (orientation:landscape) and (max-height:420px){
+  .settings .set:first-child,.settings #set-more{grid-column:1/-1}   /* Difficulty's four buttons take the row Sound shared and Sound moves up beside Match Help, so the closed panel keeps its height; Half Length, opened, takes a row of its own too */
+  #m-gate .card{gap:10px;padding:14px 16px}
+  .pg-keys .btn{min-height:48px}
+}

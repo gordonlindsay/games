@@ -98,7 +98,7 @@ function offload(k, user) {                                // user: the carrier'
   if (k.offloaded || k.tier === 'dom' || k.tier === 'broken') return false;
   const r = user ? offloadTarget(k) : supportFor(c);        // the press takes the man the label was lit for
   if (!r) return false;
-  const pOk = CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05);
+  const pOk = M.kids && user ? KIDS.offload : CONTACT.off[k.tier]*(1 + (M.nat[c.team].handling - 3)*0.05);   // Kids: an offload you press gets away
   st('offAtt'); k.offloaded = true;
   const q = k.q, q2 = k.q2;
   releaseBind(k);
@@ -146,7 +146,7 @@ function resolveContact(k) {                               // the end of the bin
     } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
   }
   const jolt = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more
-  if (rnd() < jolt) {
+  if (rnd() < jolt*(M.kids && isHuman(c.team) ? KIDS.jolt : 1)) {   // Kids: your carrier keeps hold of it
     st('jolts');
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
     if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }

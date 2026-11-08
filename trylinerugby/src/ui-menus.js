@@ -132,7 +132,7 @@ function renderHome() {
   $('home-cabinet').hidden = !champHistory.length;
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
-    const val = BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];
+    const val = key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
   const note = $('champ-note');
@@ -158,7 +158,7 @@ function goHome() {
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
-    if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
+    if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
     if (key === 'sound' && settings.sound) ac();
