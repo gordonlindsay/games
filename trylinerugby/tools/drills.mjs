@@ -62,6 +62,11 @@ s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > 
 ok(s.done && s.egg.caught === X.EGG.throws && s.stars === 3 && s.won && $('pr-feedback').textContent === X.EGG.throws + ' Catches', 'Bouncy Egg: twelve clean catches is three stars');
 ok(T.M.stats.eggCatch === X.EGG.throws && /class="on"/.test($('pr-stars').innerHTML) && !$('pr-stars').hidden, 'Bouncy Egg: the result card shows the stars');
 P.leave();
+{ // a camper: the stick held towards the thrower all run and nothing else. Every throw leaves his hands, so in his face it would catch the lot
+  let nearest = Infinity; const stars = [];
+  for (let seed = 1; seed <= 6; seed++) { H.reseed(seed); begin('egg'); s = play(st => { stick(-1, 0); nearest = Math.min(nearest, st.egg.me.x - st.egg.tw.x); }); stars.push(s.stars); P.leave(); }
+  ok(nearest >= 6 - 1e-9 && Math.max(...stars) <= 1, 'Bouncy Egg: camping towards the thrower stops six metres out, behind the marker cones, and earns no more than one star (' + stars.join(' ') + ')');
+}
 
 // ---- Pass Around the Circle
 P.start('circle');
@@ -146,6 +151,24 @@ r = firstFail({ h:0.4, d:1.8, squeeze:false });
 ok(r.good === false && r.marks.squeeze.word === 'Loose', 'Tackling: no squeeze and he breaks free');
 r = firstFail({ h:0.4, d:1.8, squeeze:true, off:3 });
 ok(r.good === false && r.marks.pos.word === 'Off Line' && r.marks.height.ok === null, 'Tackling: out of his path, Position fails and nothing else is reached');
+{ // a young child on a keyboard, a D-pad or a stick pushed all the way: steers the bracket by its colour, seeing it 0.4 s late, lets go mid-gold and taps Squeeze
+  const lag = Math.round(0.4/T.STEP), K = X.TACKLE; let seen = [], greenAtGold = 0, gold = 0;
+  begin('tackle');
+  s = play(st => {
+    const Tk = st.tackle, me = Tk.me;
+    if (Tk.stage === 'approach') { seen = []; const dy = Tk.lane - me.y; stick(0, Math.abs(dy) > 0.15 ? Math.max(-1, Math.min(1, dy*0.7)) : 0); hold(false); return; }
+    if (Tk.stage === 'side') {
+      seen.push(Tk.h); const h = seen[Math.max(0, seen.length - 1 - lag)];
+      stick(0, h > K.height[1] ? 1 : h < K.height[0] ? -1 : 0); hold(Tk.d > (K.zone[0] + K.zone[1])/2);
+      if (Tk.d <= K.zone[1]) { gold++; if (Tk.h >= K.height[0] && Tk.h <= K.height[1]) greenAtGold++; }
+      return;
+    }
+    stick(0, 0);
+    if (Tk.stage === 'squeeze') { if (Math.round(Tk.t*60) % 12 === 0) { hold(false); inp.aPressed = true; } } else hold(false);
+  });
+  ok(s.done && gold > 0 && greenAtGold === gold && s.tackle.made === X.TACKLE.reps && s.stars === 3, 'Tackling: a child steering at full deflection with a 0.4 s reaction holds the bracket in the green through the gold, every rep (' + greenAtGold + ' of ' + gold + ' frames, ' + s.tackle.made + ' good)');
+  P.leave();
+}
 begin('tackle'); s = play(() => {});
 ok(s.done && s.stars === 0 && s.tackle.made === 0, 'Tackling: doing nothing earns no star');
 ok(X.result(s).skill === 'power', 'Tackling trains power');
@@ -210,6 +233,24 @@ begin('tackle'); { const Tk = P.state().tackle; let seen = new Set(), threw = nu
   ok(alone === true, 'Tackling: Tackle alone in the close-up');
   ok(!threw && ['side', 'lunge', 'squeeze', 'down', 'show'].every(k => seen.has(k)), 'Tackling: the side-on close-up draws through every stage' + (threw ? ' (' + threw.message + ')' : '')); }
 letGo(); P.leave();
+for (const [W, Ht] of [[844, 390], [667, 375]]) {           // where a thumb rests on the touch stick: the ring at stickRest, 62px round
+  const rest = D.stickRest(W, Ht, { t:0, r:0, b:0, l:0 }), ring = { x0:rest.x - 62, y0:rest.y - 62, x1:rest.x + 62, y1:rest.y + 62 };
+  const clear = b => b.x1 < ring.x0 - 4 || b.x0 > ring.x1 + 4 || b.y1 < ring.y0 - 4 || b.y0 > ring.y1 + 4;
+  D.view(W, Ht); begin('cones');
+  let tf = [1, 0, 0, 1, 0, 0]; const strip = [];
+  globalThis.__ctxSpy = (k, a) => { if (k === 'setTransform') tf = a; if (k === 'fillRect' && a[0] === X.CONES.line - 0.5 && a[2] === 1) strip.push({ x0:tf[0]*a[0] + tf[4], y0:tf[3]*a[1] + tf[5], x1:tf[0]*(a[0] + 1) + tf[4], y1:tf[3]*(a[1] + 1) + tf[5] }); };
+  D.render(1/60); globalThis.__ctxSpy = null;
+  ok(strip.length === 10 && strip.every(clear), 'Cones: the chequered finish is drawn clear of the resting touch stick at ' + W + 'x' + Ht);
+  P.leave();
+  const m = X.tackleMeterBox(W, Ht), box = { x0:m.x - 2, y0:m.y - 4, x1:m.x + m.w + 2, y1:m.y + m.h + 4 }, chips = Math.max(96, Ht*0.27) + 28, head = Ht*0.8 - 0.4*Ht*0.96;
+  ok(clear(box) && box.y0 > chips && box.y1 < head, 'Tackling: the power meter sits between the chips and his head, clear of the resting touch stick at ' + W + 'x' + Ht);
+  begin('tackle'); { const Tk = P.state().tackle; Tk.stage = 'side'; Tk.t = 0; Tk.d = X.TACKLE.side; }
+  let drawn = false; globalThis.__ctxSpy = (k, a) => { if (k === 'fillRect' && a[0] === m.x - 2 && a[1] === m.y - 2 && a[2] === m.w + 4) drawn = true; };
+  D.render(1/60); globalThis.__ctxSpy = null;
+  ok(drawn, 'Tackling: the close-up draws its power meter in that box at ' + W + 'x' + Ht);
+  P.leave();
+}
+D.view(844, 390);
 begin('cones'); D.updateHud();
 ok(!$('btnC').hidden && $('btnA').hidden && $('btnB').hidden, 'Cones: Sprint alone');
 ok((P.state().cones.pass.length === X.CONES.gates.length) && ($('dh-pips').innerHTML.match(/dh-pip/g) || []).length === X.CONES.gates.length && /ic-clock/.test($('dh-num').className), 'Cones: a pip a gate and the clock in the drill bar');
@@ -219,10 +260,10 @@ P.leave();
 let calls = [];
 const onDone = res => calls.push({ res, settings:JSON.stringify(D.settings()), practice:X.state(), home:!$('s-home').hidden });
 P.start('egg', { onDone });
-ok($('pr-select').textContent === 'Continue' && $('pr-row').classList.contains('one'), 'onDone: the ready card leaves with Continue');
+ok($('pr-select').textContent === 'Back to Career' && $('pr-row').classList.contains('one'), 'onDone: the ready card leaves with Back to Career when the caller names nothing else');
 $('pr-retry').click();
 s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > 0.5 && b.z < 2) { E.me.x = b.x; E.me.y = b.y; } });
-ok(s.done && $('pr-next').hidden && $('pr-select').textContent === 'Continue' && calls.length === 0, 'onDone: the result card offers Try Again and Continue, no Next Drill');
+ok(s.done && $('pr-next').hidden && $('pr-select').textContent === 'Back to Career' && calls.length === 0, 'onDone: the result card offers Try Again and Back to Career, no Next Drill');
 $('pr-retry').click(); ok(P.state() && P.state().ready && P.state().opts && P.state().opts.onDone === onDone, 'onDone: Try Again keeps the caller');
 $('pr-retry').click();
 s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > 0.5 && b.z < 2) { E.me.x = b.x; E.me.y = b.y; } });
@@ -230,6 +271,27 @@ const shown = s.stars;
 $('pr-select').click(); $('pr-select').click();
 ok(calls.length === 1 && calls[0].res.id === 'egg' && calls[0].res.stars === shown && Number.isInteger(calls[0].res.stars) && calls[0].res.success === true && calls[0].res.skill === 'handling' && !('quit' in calls[0].res), 'onDone fires once, with the stars shown');
 ok(calls[0].settings === originalSettings && calls[0].practice === null && calls[0].home, 'onDone runs after the settings are restored, with the home screen up');
+const catcher = st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > 0.5 && b.z < 2) { E.me.x = b.x; E.me.y = b.y; } };
+calls = [];
+P.start('egg', { onDone, leaveLabel:'Back to the Club' });
+ok($('pr-select').textContent === 'Back to the Club', 'onDone: a caller may name its own way back');
+$('pr-retry').click(); s = play(catcher); const won = s.stars;
+$('pr-retry').click();                                     // Try Again, the card's primary
+ok(won === 3 && P.state().ready && !P.state().done && calls.length === 0, 'onDone: Try Again after a finished run opens the ready card');
+$('pr-select').click();                                    // and leaving from it, unstarted
+ok(calls.length === 1 && calls[0].res.stars === won && calls[0].res.success === true && !('quit' in calls[0].res), 'onDone: a finished run survives Try Again then leaving from the ready card');
+calls = [];
+P.start('egg', { onDone }); $('pr-retry').click(); s = play(catcher);
+$('pr-retry').click(); $('pr-retry').click(); s = play(() => {});   // three stars, then a run standing still
+const worse = s.stars;
+$('pr-retry').click(); $('pr-retry').click(); T.update(T.STEP); D.pause(); $('pz-quit').click(); $('pz-quit').click();   // and a third run quit part way
+ok(worse < 3 && calls.length === 1 && calls[0].res.stars === 3 && !('quit' in calls[0].res), 'onDone: the visit\'s best finished run is reported, whatever came after it');
+calls = [];
+P.start('circle', { onDone }); $('pr-runner').click(); s = play(st => { if (st.circle.stage === 'start' && st.circle.t > 0.2) inp.aPressed = true; });   // a runner who never runs
+$('pr-retry').click(); $('pr-passer').click();
+s = play(st => { const C = st.circle; if (C.stage === 'start') { if (C.t > 0.2) inp.aPressed = true; return; } if (C.hold && Math.abs(C.hold.t - C.hold.tc) < T.STEP/2 + 1e-9) inp.aPressed = true; });
+$('pr-select').click();
+ok(calls.length === 1 && calls[0].res.stars === 3 && calls[0].res.role === 'passer' && calls[0].res.skill === 'handling', 'onDone: the best run carries its own role and skill');
 calls = [];
 P.start('circle', { onDone }); $('pr-passer').click(); D.pause(); $('pz-quit').click(); $('pz-quit').click();
 ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.stars === 0 && calls[0].res.role === 'passer' && calls[0].res.skill === 'handling' && calls[0].settings === originalSettings, 'onDone: Pause then Quit hands back once, quit and no stars');

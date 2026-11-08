@@ -1,9 +1,10 @@
 /* =========================================================
    Training Ground: the drill picker, the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
-   practiceStart(id, { onDone }) runs a drill for a caller (the career): every way out of it (the result card's Continue,
-   Back or Escape on the card, Pause then Quit) restores the settings exactly as leaving does, shows the home screen, then
-   calls onDone({ id, stars, success, skill, role? }) once; a drill left before it finished reports quit: true and 0 stars.
+   practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
+   Career, or leaveLabel; Back or Escape on the card; Pause then Quit) restores the settings exactly as leaving does, shows the
+   home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
+   Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
 const PRACTICE_DRILLS = [
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
@@ -33,13 +34,14 @@ function practiceRestore() {
   for (const id of ['m-pause', 'm-break', 'm-tut', 'm-pen']) $(id).hidden = true;
   releaseAll(); clearBanner();
 }
-function practiceResult(p) {                               // what a caller is told: the stars shown on the result card, or a drill left unfinished
+function practiceResult(p) {                               // a run as a caller hears it: the stars shown on its result card, or quit when it was left unfinished
   const kit = DRILL_KIT[p.id], done = !!p.done;
   return { id:p.id, stars:done ? p.stars : 0, success:done && !!p.won, ...(kit && kit.result ? kit.result() : {}), ...(done ? {} : { quit:true }) };
 }
-function practiceHandBack() {                              // a caller's drill ends: settings back as leaving puts them, the home screen up, then its onDone, once
+const practiceBest = (a, b) => (!a ? b : !b ? a : b.stars >= a.stars ? b : a);   // a caller's better finished run: more stars, the later on a tie
+function practiceHandBack() {                              // a caller's drill ends: settings back as leaving puts them, the home screen up, then its onDone, once, with the visit's best finished run
   const p = practice, fn = p.opts.onDone;
-  const res = practiceResult(p);
+  const res = p.best || practiceResult(p);
   p.opts = null;
   practiceRestore(); exitMatch();
   fn(res);
@@ -57,7 +59,7 @@ function practiceStart(id, opts) {
   const kit = DRILL_KIT[id];
   const keep = opts && typeof opts.onDone === 'function' ? opts : null;
   practiceRestore(); releaseAll(); setTwo(false); lockLandscape(); ac();
-  practice = { ...drill, opts:keep, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
+  practice = { ...drill, opts:keep, best:null, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
   newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false] });
@@ -83,8 +85,8 @@ function practiceStart(id, opts) {
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
 }
-function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill reads Continue
-  $('pr-select').textContent = practice.opts ? (practice.opts.leaveLabel || 'Continue') : 'Back to Training';
+function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
+  $('pr-select').textContent = practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training';
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }
 function practiceGo() {                                    // the ready card's Start: the drill runs
@@ -98,6 +100,7 @@ function practiceFinish(won, feedback, stars) {
   if (!practice || practice.done) return;
   stars = stars == null ? (won ? 3 : 0) : clamp(Math.round(stars), 0, 3);
   practice.ready = false; practice.done = true; practice.won = !!won; practice.stars = stars; M.paused = true;
+  if (practice.opts) practice.best = practiceBest(practice.best, practiceResult(practice));   // taken now, while the run (its role included) is as shown
   $('pr-retry').textContent = 'Try Again'; $('pr-retry').hidden = false; $('pr-roles').hidden = true;
   $('pr-next').hidden = !!practice.opts;                   // a caller picks the next drill itself
   practiceLeaveLabel();
@@ -127,7 +130,7 @@ $('pr-back').addEventListener('click', goHome);
 for (const d of PRACTICE_DRILLS) { $('pr-' + d.id).addEventListener('click', () => practiceStart(d.id)); $('pi-' + d.id).innerHTML = drillIconSvg(d.id); }
 $('pr-retry').addEventListener('click', () => {
   if (!practice) return;
-  if (!practice.ready) { practiceStart(practice.id, practice.opts); return; }
+  if (!practice.ready) { const best = practice.best; practiceStart(practice.id, practice.opts); if (practice && practice.opts) practice.best = best; return; }   // a caller keeps the best run so far
   practiceGo();
 });
 for (const role of ['runner', 'passer']) $('pr-' + role).addEventListener('click', () => {   // Pass Around the Circle: the role is the start

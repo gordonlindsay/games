@@ -5983,8 +5983,9 @@ function drillCone(x, y, state) {                          // a training cone fr
    The thrower faces you and, after the same short wind-up every time, spins the ball into the ground so it pops up at an odd
    angle and height, passes it flat, or throws it high and long. You only know which at the release. Catch it cleanly (the
    ball within reach, between knee and head height); a ball that lands untouched costs a heart. The throws get quicker and
-   wilder as the run goes on. Stars by clean catches. */
-const DRILL_EGG = { throws:12, lives:3, reach:1.15, lo:0.35, hi:2.4, wind:[1.0, 0.55], gap:0.6, miss:0.9, box:[47, 24, 73, 46], at:[60, 35], from:[45, 35], cam:[57, 35], zoom:1.45, stars:[4, 7, 10] };
+   wilder as the run goes on. Stars by clean catches. You can come no nearer him than six metres (box): every throw leaves his
+   hands within reach of a catcher standing in his face, so closer would catch the lot with no reactions at all. */
+const DRILL_EGG = { throws:12, lives:3, reach:1.15, lo:0.35, hi:2.4, wind:[1.0, 0.55], gap:0.6, miss:0.9, box:[51, 24, 73, 46], at:[60, 35], from:[45, 35], cam:[55, 35], zoom:1.45, stars:[4, 7, 10] };
 function eggStage(E, stage) { E.stage = stage; E.t = 0; }
 function eggReady(E) {                                     // the ball back in the thrower's hands and the wind-up begins, a little shorter each throw
   const u = Math.min(1, E.n/(DRILL_EGG.throws - 2));
@@ -6014,8 +6015,8 @@ function eggThrow(E) {
     tx = me.x - (me.x - b.x)/d*back + (rnd() - 0.5)*1.5*wild; ty = me.y - (me.y - b.y)/d*back + (rnd() - 0.5)*1.5*wild; zEnd = 0;
     T = 0.5 + 0.2*(1 - u);
   }
-  const B = DRILL_EGG.box;                                 // never out of reach: every throw comes down well inside the area you can run in
-  tx = clamp(tx, B[0] + 3, B[2] - 3); ty = clamp(ty, B[1] + 3, B[3] - 3);
+  const B = DRILL_EGG.box;                                 // never out of reach: every throw comes down inside the area you can run in. A bounce may land short of it, between him and you (its pop carries it in); pulling it into the area would send it past you at chest height instead
+  tx = kind === 'bounce' ? clamp(tx, tw.x + 3, B[2] - 3) : clamp(tx, B[0] + 1, B[2] - 3); ty = clamp(ty, B[1] + 3, B[3] - 3);
   b.vx = (tx - b.x)/T; b.vy = (ty - b.y)/T; b.vz = (zEnd - b.z + 4.9*T*T)/T;
   eggStage(E, 'fly');
   sfx('pass');
@@ -6035,9 +6036,8 @@ function eggFly(E, dt) {
     E.bounced = true;
     const dir = Math.atan2(b.vy, b.vx) + (rnd() < 0.5 ? -1 : 1)*(0.35 + rnd()*(0.5 + 0.6*u)), out = 2.2 + rnd()*2.5;
     b.vx = Math.cos(dir)*out; b.vy = Math.sin(dir)*out; b.vz = 3.8 + rnd()*2.6;
-    const air = 2*b.vz/9.8, B = DRILL_EGG.box;              // and its pop stays inside the area too
-    if (b.x + b.vx*air < B[0] + 1.5 || b.x + b.vx*air > B[2] - 1.5) b.vx = -b.vx;
-    if (b.y + b.vy*air < B[1] + 1.5 || b.y + b.vy*air > B[3] - 1.5) b.vy = -b.vy;
+    const air = 2*b.vz/9.8, B = DRILL_EGG.box;              // and its pop comes down inside the area: as it goes, else turned back, else aimed at the nearest spot in it
+    b.vx = eggPop(b.x, b.vx, air, B[0] + 1.5, B[2] - 1.5); b.vy = eggPop(b.y, b.vy, air, B[1] + 1.5, B[3] - 1.5);
     sfx('trip');
     return;
   }
@@ -6045,6 +6045,10 @@ function eggFly(E, dt) {
   b.vz = 0; b.vx *= 0.35; b.vy *= 0.35;
   eggStage(E, 'missed');
   drillTag('Missed', b.x, b.y); sfx('groan');
+}
+function eggPop(p, v, air, lo, hi) {
+  const at = p + v*air, back = p - v*air;
+  return at >= lo && at <= hi ? v : back >= lo && back <= hi ? -v : (clamp(at, lo, hi) - p)/air;
 }
 function eggEnd(E) {
   const stars = drillStarsOf(E.caught, DRILL_EGG.stars);
@@ -6075,8 +6079,10 @@ const drillEgg = {
   timeUp() { eggEnd(practice.egg); },
   labels() { return { a:null, b:null, c:false }; },
   hud() { const E = practice.egg; return { lives:[E.lives, DRILL_EGG.lives], num:String(E.caught), icon:'ball' }; },
-  drawWorld() {                                            // the wind-up: the same closing ring round the thrower whatever is coming
-    const E = practice.egg; if (!E || E.stage !== 'wind') return;
+  drawWorld() {                                            // a line of marker cones six metres out, no nearer; and the wind-up, the same closing ring round the thrower whatever is coming
+    const E = practice.egg, B = DRILL_EGG.box; if (!E) return;
+    for (let i = 0; i < 5; i++) drillCone(B[0] - 0.7, drillLerp(B[1] + 2, B[3] - 2, i/4), null);
+    if (E.stage !== 'wind') return;
     const u = clamp(E.t/E.wind, 0, 1);
     drillRing(E.tw.x, E.tw.y, 2.4 - 1.4*u, `rgba(241,238,228,${(0.35 + 0.5*u).toFixed(3)})`, 0.12);
   },
@@ -6260,9 +6266,10 @@ const drillCircle = {
 
 /* ---------- Cones: an obstacle course against the clock ----------
    Out through a zig-zag of gates, round the flag, and a sprint back through a straight line of gates to the finish. A missed
-   gate adds two seconds and a clipped cone one. The Sprint meter lasts three seconds: spend it on the straights. Stars by time. */
-const DRILL_CONES = { start:[24, 30], gates:[[32, 29], [38.5, 33], [45, 29], [51.5, 33], [58, 29], [57, 46], [47, 46], [37, 46]], out:5, turn:[66, 37], half:1.7, clip:0.5,
-  hit:1, miss:2, line:26, box:[20, 22, 72, 52], cam:[50, 37], times:[12.5, 17] };   // the course stays left of the Sprint button
+   gate adds two seconds and a clipped cone one. The Sprint meter lasts three seconds: spend it on the straights. Stars by time.
+   The course stays left of the Sprint button, and the finish (line) right of the touch stick's resting place at 667x375 too. */
+const DRILL_CONES = { start:[24, 30], gates:[[32, 29], [38.5, 33], [45, 29], [51.5, 33], [58, 29], [58, 46], [49, 46], [40, 46]], out:5, turn:[66, 37], half:1.7, clip:0.5,
+  hit:1, miss:2, startLine:26, line:35, box:[20, 22, 72, 52], cam:[50, 37], times:[11.5, 16] };
 function conesCones() {                                    // every cone: each gate's pair, then the flag
   const K = DRILL_CONES, out = [];
   K.gates.forEach(([x, y], i) => { out.push({ x, y:y - K.half, g:i }, { x, y:y + K.half, g:i }); });
@@ -6321,11 +6328,12 @@ const drillCones = {
     ctx.quadraticCurveTo(K.turn[0] + 4, K.turn[1] - 9, K.turn[0] + 2.2, K.turn[1]);
     ctx.quadraticCurveTo(K.turn[0] + 1, K.gates[K.out][1] + 1, K.gates[K.out][0], K.gates[K.out][1]);
     for (let i = K.out + 1; i < K.gates.length; i++) ctx.lineTo(K.gates[i][0], K.gates[i][1]);
-    ctx.lineTo(K.line - 2, K.gates[K.gates.length - 1][1]);
+    ctx.lineTo(K.line - 1, K.gates[K.gates.length - 1][1]);
     ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = 'rgba(241,238,228,.9)'; ctx.lineWidth = lw*1.6;   // start and finish lines
-    ctx.beginPath(); ctx.moveTo(K.line, K.start[1] - 5); ctx.lineTo(K.line, K.start[1] + 5); ctx.stroke();
-    for (let i = 0; i < 10; i++) { ctx.fillStyle = i % 2 ? '#f1eee4' : '#14140f'; ctx.fillRect(K.line - 0.5, 41 + i, 1, 1); }
+    ctx.beginPath(); ctx.moveTo(K.startLine, K.start[1] - 5); ctx.lineTo(K.startLine, K.start[1] + 5); ctx.stroke();
+    const fin = K.gates[K.gates.length - 1][1] - 5;          // the chequered finish, across the way home
+    for (let i = 0; i < 10; i++) { ctx.fillStyle = i % 2 ? '#f1eee4' : '#14140f'; ctx.fillRect(K.line - 0.5, fin + i, 1, 1); }
     const next = Q.pass.findIndex(v => !v);
     for (const c of Q.cones) {
       if (c.g < 0) continue;
@@ -6346,9 +6354,10 @@ const drillCones = {
    One runner a rep. On the pitch, get into his path and stand still (Set). Then a side-on close-up, so height reads: aim
    at his thighs with the stick (too high is always a fail, the safety point; too low and he steps out), hold Tackle to load
    power and let go as he steps on the gold (Timing, Power), then Squeeze with taps or a hold to bring him down. Each rep
-   names how every element went. Stars by good reps. */
+   names how every element went. Stars by good reps. The aim moves at half a height a second (aim): a child seeing the
+   bracket 0.4 s late with the stick pushed all the way still stops it inside the green, which is a quarter of his height. */
 const DRILL_TACKLE = { reps:5, jog:4.2, from:20, lane:[2.5, 5.5], at:[52, 35], setAt:6.5, inLine:1.0, still:2.2, side:6, run:3.2, zone:[1.0, 2.6], late:0.55, fill:0.55, power:0.6,
-  aim:1.25, aim0:0.7, height:[0.28, 0.52], lunge:0.22, squeeze:1.3, tap:0.25, holdRate:1.4, show:2.0, box:[40, 23, 70, 47], cam:[60, 35], zoom:1.25, stars:[1, 2, 4] };
+  aim:0.5, aim0:0.7, height:[0.28, 0.52], lunge:0.22, squeeze:1.3, tap:0.25, holdRate:1.4, show:2.0, box:[40, 23, 70, 47], cam:[60, 35], zoom:1.25, stars:[1, 2, 4] };
 const TACKLE_PARTS = [['pos', 'Position'], ['height', 'Height'], ['time', 'Timing'], ['power', 'Power'], ['squeeze', 'Squeeze']];
 function tackleRep(K) {                                    // the next runner, jogging down a lane a few metres off yours
   const T = practice.tackle, side = rnd() < 0.5 ? -1 : 1, lane = K.at[1] + side*(K.lane[0] + rnd()*(K.lane[1] - K.lane[0]));
@@ -6517,10 +6526,10 @@ function tackleDraw(T) {                                   // the side-on close-
     ctx.strokeStyle = zone; ctx.lineWidth = 4; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(rx - H*0.16, ay - 8); ctx.lineTo(rx - H*0.16, ay); ctx.lineTo(rx + H*0.14, ay); ctx.lineTo(rx + H*0.14, ay - 8); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(tx + H*0.1, ay); ctx.lineTo(rx - H*0.2, ay); ctx.setLineDash([6, 6]); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
-    const px = tx - H*0.2, ph = Hp*0.8;                    // the power meter: fills while Tackle is held; the notch is enough
-    ctx.fillStyle = 'rgba(8,14,10,.8)'; ctx.fillRect(px - 7, y0 - ph, 14, ph);
-    ctx.fillStyle = T.charge >= K.power ? '#62d680' : '#ffcf3d'; ctx.fillRect(px - 5, y0 - ph*T.charge, 10, ph*T.charge);
-    ctx.fillStyle = '#f1eee4'; ctx.fillRect(px - 10, y0 - ph*K.power - 1, 20, 3);
+    const pm = tackleMeterBox(W, H);                       // the power meter: fills while Tackle is held; the notch is enough
+    ctx.fillStyle = 'rgba(8,14,10,.8)'; ctx.fillRect(pm.x - 2, pm.y - 2, pm.w + 4, pm.h + 4);
+    ctx.fillStyle = T.charge >= K.power ? '#62d680' : '#ffcf3d'; ctx.fillRect(pm.x, pm.y, pm.w*T.charge, pm.h);
+    ctx.fillStyle = '#f1eee4'; ctx.fillRect(pm.x + pm.w*K.power - 1, pm.y - 4, 3, pm.h + 8);
   }
   if (T.stage === 'squeeze') {                             // the squeeze: a ring that fills
     const cx = rx - H*0.06, cy = y0 - Hp*0.4, r = H*0.11;
@@ -6530,8 +6539,13 @@ function tackleDraw(T) {                                   // the side-on close-
   ctx.restore();
   tackleChips(T);
 }
+const tackleChipTop = H => Math.max(96, H*0.27);          // the top of the five chips (28px tall)
+function tackleMeterBox(W, H) {                            // the power meter: a bar over the tackler's head, between it and the chips, so the thumb on the touch stick never covers it
+  const y0 = H*0.8, Hp = 0.4*H, w = H*0.24, h = 8;          // the close-up's ground line and a man's height, as tackleDraw has them; his head's top is 0.96 of that, standing
+  return { x:W*0.32 - w/2, y:(tackleChipTop(H) + 28 + y0 - Hp*0.96)/2 - h/2, w, h };
+}
 function tackleChips(T) {                                  // the five elements, a word each: green right, red wrong, grey not reached yet
-  const W = V.W, top = Math.max(96, V.H*0.27), gap = 6, w = Math.min(124, (W - 120 - gap*4)/5), x0 = W/2 - (w*5 + gap*4)/2;
+  const W = V.W, top = tackleChipTop(V.H), gap = 6, w = Math.min(124, (W - 120 - gap*4)/5), x0 = W/2 - (w*5 + gap*4)/2;
   ctx.save();
   ctx.font = `800 15px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   TACKLE_PARTS.forEach(([k, label], i) => {
@@ -6693,9 +6707,10 @@ function drillStarsHtml(n) { let s = ''; for (let i = 0; i < 3; i++) s += `<i cl
 /* =========================================================
    Training Ground: the drill picker, the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
-   practiceStart(id, { onDone }) runs a drill for a caller (the career): every way out of it (the result card's Continue,
-   Back or Escape on the card, Pause then Quit) restores the settings exactly as leaving does, shows the home screen, then
-   calls onDone({ id, stars, success, skill, role? }) once; a drill left before it finished reports quit: true and 0 stars.
+   practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
+   Career, or leaveLabel; Back or Escape on the card; Pause then Quit) restores the settings exactly as leaving does, shows the
+   home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
+   Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
 const PRACTICE_DRILLS = [
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
@@ -6725,13 +6740,14 @@ function practiceRestore() {
   for (const id of ['m-pause', 'm-break', 'm-tut', 'm-pen']) $(id).hidden = true;
   releaseAll(); clearBanner();
 }
-function practiceResult(p) {                               // what a caller is told: the stars shown on the result card, or a drill left unfinished
+function practiceResult(p) {                               // a run as a caller hears it: the stars shown on its result card, or quit when it was left unfinished
   const kit = DRILL_KIT[p.id], done = !!p.done;
   return { id:p.id, stars:done ? p.stars : 0, success:done && !!p.won, ...(kit && kit.result ? kit.result() : {}), ...(done ? {} : { quit:true }) };
 }
-function practiceHandBack() {                              // a caller's drill ends: settings back as leaving puts them, the home screen up, then its onDone, once
+const practiceBest = (a, b) => (!a ? b : !b ? a : b.stars >= a.stars ? b : a);   // a caller's better finished run: more stars, the later on a tie
+function practiceHandBack() {                              // a caller's drill ends: settings back as leaving puts them, the home screen up, then its onDone, once, with the visit's best finished run
   const p = practice, fn = p.opts.onDone;
-  const res = practiceResult(p);
+  const res = p.best || practiceResult(p);
   p.opts = null;
   practiceRestore(); exitMatch();
   fn(res);
@@ -6749,7 +6765,7 @@ function practiceStart(id, opts) {
   const kit = DRILL_KIT[id];
   const keep = opts && typeof opts.onDone === 'function' ? opts : null;
   practiceRestore(); releaseAll(); setTwo(false); lockLandscape(); ac();
-  practice = { ...drill, opts:keep, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
+  practice = { ...drill, opts:keep, best:null, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
   newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false] });
@@ -6775,8 +6791,8 @@ function practiceStart(id, opts) {
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
 }
-function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill reads Continue
-  $('pr-select').textContent = practice.opts ? (practice.opts.leaveLabel || 'Continue') : 'Back to Training';
+function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
+  $('pr-select').textContent = practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training';
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }
 function practiceGo() {                                    // the ready card's Start: the drill runs
@@ -6790,6 +6806,7 @@ function practiceFinish(won, feedback, stars) {
   if (!practice || practice.done) return;
   stars = stars == null ? (won ? 3 : 0) : clamp(Math.round(stars), 0, 3);
   practice.ready = false; practice.done = true; practice.won = !!won; practice.stars = stars; M.paused = true;
+  if (practice.opts) practice.best = practiceBest(practice.best, practiceResult(practice));   // taken now, while the run (its role included) is as shown
   $('pr-retry').textContent = 'Try Again'; $('pr-retry').hidden = false; $('pr-roles').hidden = true;
   $('pr-next').hidden = !!practice.opts;                   // a caller picks the next drill itself
   practiceLeaveLabel();
@@ -6819,7 +6836,7 @@ $('pr-back').addEventListener('click', goHome);
 for (const d of PRACTICE_DRILLS) { $('pr-' + d.id).addEventListener('click', () => practiceStart(d.id)); $('pi-' + d.id).innerHTML = drillIconSvg(d.id); }
 $('pr-retry').addEventListener('click', () => {
   if (!practice) return;
-  if (!practice.ready) { practiceStart(practice.id, practice.opts); return; }
+  if (!practice.ready) { const best = practice.best; practiceStart(practice.id, practice.opts); if (practice && practice.opts) practice.best = best; return; }   // a caller keeps the best run so far
   practiceGo();
 });
 for (const role of ['runner', 'passer']) $('pr-' + role).addEventListener('click', () => {   // Pass Around the Circle: the role is the start
@@ -6965,7 +6982,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   teams:{ overallOf, NATIONS, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
-  drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
+  drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   get M() { return M; } };
 
 function start(data) {
