@@ -180,7 +180,7 @@ function padGone(index) {
     for (const code of Object.values(BMAP.dpad)) { inp.keys.delete(code); inp.held.delete(code); }
   }
   PADS.delete(index);
-  setDesk();                                               // the home's Two Player button follows the pads actually connected
+  setDesk();                                               // body.desk follows the pads actually connected: How to Play's desk-only rows and the in-play key or button hints (no Two Player button on the home since 2026-11-09)
   if (two.on && P.owner != null) { if (!two.lost.includes(P.owner)) two.lost.push(P.owner); twoRelease(P.owner); if (playing()) { pause(); seatLost(two.lost[0]); } }   // the seat falls back to the keyboard and is held for the next pad press, on the pause card, the half-time card or in play
   else if (P.used && playing()) pause();                   // one player: a pad that was never used this match (one that slept over half time) can't interrupt
 }

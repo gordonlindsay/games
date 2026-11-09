@@ -278,7 +278,7 @@ body.desk.dev-pad .act .hint.pad{display:block}
 body.desk .desk-only{display:block}
 #pz-seat,#br-seat{margin:-4px 0 0;font:700 13px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--flood)}
 #pz-seat.s1,#br-seat.s1{color:var(--p2)}
-/* two player: the home's 2 Players is for computers only (body.desk). The join screen seats the two players side by side in their colours */
+/* two player: no button on the home since 2026-11-09 (openJoin is its way in); body.desk now drives How to Play's desk-only rows. The join screen seats the two players side by side in their colours */
 .eyebrow.p1{color:var(--flood)}.eyebrow.p2{color:var(--p2)}
 /* the seat tag: the numeral on the seat colour, beside the scorebug, on the Full Time row and on the join cards */
 .stag{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;background:var(--flood);color:var(--flood-ink);font:900 15px/1 var(--display);font-style:normal;vertical-align:middle;flex:none}
