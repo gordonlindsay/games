@@ -1011,6 +1011,7 @@ function newMatch(u, c, opts) {
     dropOn:[false, false], dropArmed:[false, false],   // the drop-goal label, per side: what it read on the last frame, and what it promised at the B press
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the label last saw (as the hold would leave them), and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
+    pressure:[0, 0], press:{ poss:null, mark:[null, null], said:[false, false] },   // PRESSURE (src/contact.js): the pressure on each side's possession, who has it, the last breakdown's mark and whether Pressure On was said
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
@@ -1081,6 +1082,7 @@ function seek(p, tx, ty, speed, acc, dt, pursue) {
 function placeBall(x, y) {
   const b = M.ball;
   b.state = 'dead'; b.carrier = null; b.f = null; b.x = x; b.y = y; b.z = 0; b.vx = b.vy = b.vz = 0;
+  eggOff(b);
 }
 function playFrom(team, x, y, kind) {                      // the mark the ball is played from: a ruck 1.6m behind, a scrum 1.2, a lineout 1.5 and out to the side
   const d = dirOf(team);
@@ -1173,7 +1175,7 @@ function releaseTo(team, x, y, kind, who) {
 function setCarrier(p) {
   const b = M.ball;
   if (M.poss !== p.team) M.phaseCount = 0;
-  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
+  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b);
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
@@ -1203,7 +1205,9 @@ function catchBall(p, kind) {
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
   placeBall(p.x, p.y);
-  sfx('fumble'); sfx('whistle');
+  sfx('fumble');
+  if (knockBeat(p)) return;                                // PRESSURE: it hops for a beat before the whistle (src/contact.js)
+  sfx('whistle');
   deadBall(() => scrum(1-p.team, p.x, p.y, 'Knock-On'));
 }
 function pickUp(p) {
@@ -1518,12 +1522,13 @@ function offloadTarget(k) {                                // the one receiver t
   return inp ? pickReceiver(c, inp.world().y, CONTACT.off.range) : supportFor(c);
 }
 function canOffload(k) { return !!offloadTarget(k); }
-function looseInContact(c) {                               // the ball comes loose behind him, for anyone
+function looseInContact(c, spill) {                        // the ball comes loose behind him, for anyone. spill: knocked loose by the pressure (PRESSURE)
   const b = M.ball, d = dirOf(c.team);
   tag('Loose Ball', c.x, c.y); sfx('fumble');
   b.state = 'loose'; b.carrier = null; b.f = null; b.last = c.team; b.kickInfo = null;
   b.x = c.x - d*0.4; b.y = c.y; b.z = 0.6; b.vx = -d*(2 + rnd()*3); b.vy = (rnd() - 0.5)*4; b.vz = 1.5;
   c.hold = 0;
+  if (pressLive()) eggStart(b, c.team, !!spill);           // it hops like Bouncy Egg's ball
 }
 function offload(k, user) {                                // user: the carrier's own Pass press while held; otherwise the AI's try
   const c = k.c;
@@ -1592,6 +1597,12 @@ function resolveContact(k) {                               // the end of the bin
     if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }
     return;
   }
+  if (rj < pressJolt(c.team, jolt)*kj) {                   // the share the defence's pressure adds (PRESSURE): always loose, for anyone, never a knock-on scrum
+    st('jolts'); st('pressSpill');
+    c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
+    looseInContact(c, true);
+    return;
+  }
   if (k.mode === 'ankle') { sfx('trip'); if (ringed(q)) { tag('Ankle Tap', c.x, c.y); buzz(20, q.team); } }
   tackle(c, q, { tier, q2 });
 }
@@ -1612,6 +1623,7 @@ function tackle(c, q, o) {
     }
     placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
     M.phaseCount++; M.stats.rucks++;
+    pressTackle(c, !!o.dom, clamp(c.x,1,119));             // no draw: the duels stay as they were
     startSet({ kind:'ruck', team, x:clamp(c.x,1,119), y:clamp(c.y,1,69), t:o.dom ? DOM_RUCK : 1.05, dom:!!o.dom, domP:o.domP, then:resolveRuck });
     return;
   }
@@ -1625,6 +1637,7 @@ function tackle(c, q, o) {
   const bx = clamp(c.x - d*0.4, 1, 119), by = clamp(c.y, 1, 69), ball = { x:bx, y:by };   // the ball goes behind the tackled man
   placeBall(bx, by);
   M.phaseCount++; M.stats.rucks++;
+  pressTackle(c, o.tier === 'dom', bx);
   const tier = o.tier, sy = q.y >= by ? 1 : -1;
   c.x = clamp(bx + d*0.45, 0.5, 119.5); c.y = by;
   // the race to the ball sets the ruck's length: the attack's first support against the defence's first man other than the tackler
@@ -1694,6 +1707,87 @@ function collide() {                                       // standing men push 
   }
 }
 
+/* ---------- Pressure ----------
+   Gordon, 2026-11-09: "after an amount of pressure, let's say consistent big hits or multiple tackles in a row ... and the ball's
+   not really moving, this could spark a loose ball, which could then bounce egg style around. And obviously, whoever picks that up
+   is able to take advantage of it." M.pressure[t] is the pressure on side t's possession, built by the other side's tackles: a made
+   tackle (one that ends in a ruck) adds `rise` when the carrier had gained under `little` metres past the last breakdown's mark (or
+   past where the possession began), and a Big Hit adds `hit` anywhere short of a real gain. It goes back to 0 on a real gain (the
+   carrier `gain` metres past the mark), a kick, a change of possession, a set piece, a try, and when the ball goes loose. From the
+   `line` up it scales the tackle's jolt chance by (1 + `per` x (count - line + 1)), the whole chance capped at `cap` (`capMild` for
+   Kids and Minis, matchMild), never below the chance at no pressure; the share over that is a pressure spill, which always goes loose (never straight to a
+   knock-on scrum), and the side that gathers it from the other gets the surge (surge(), src/set-pieces.js) for `surge` seconds.
+   'Pressure On' is tagged the first time a possession's count reaches `line`. Both sides play the same rule. A pressure spill is the
+   ball knocked loose in the tackle, before any ruck: the ruck itself is as it was, with its one flat turnover roll and no new penalty.
+   egg: the hop of a ball spilled in the tackle (a jolt or a failed offload) or knocked on, Bouncy Egg's model (hopMove and
+   hopBounce, src/ball.js) at match levers: a first hop of 0.6 to 1.4m, lower than the drill's, and gathered only below `reach`
+   (0.5m, by the knees; any other loose ball, 1.0m as ever). knock: the seconds a knocked-on ball hops before the whistle and the
+   scrum. lead: how far ahead the chase looks at a hopping ball, in seconds of its flight.
+   on:false plays exactly as b706c3e did, draw for draw: PRESSURE='{"on":false}' node tools/sim.mjs. */
+const PRESSURE = { on:true, little:3, gain:10, rise:1, hit:2, line:4, per:4, cap:0.25, capMild:0.08, surge:2.0, knock:0.8, lead:0.6,
+  egg:{ pop:[3.4, 5.2], hopOut:[2.0, 4.0], keep:[0.55, 0.72], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:2.5, wild:0.6, spin:[6, 9], reach:0.5 } };
+const pressLive = () => PRESSURE.on && !practice && !!M.press;   // a match: a drill never has it
+function pressZero() { M.pressure[0] = M.pressure[1] = 0; }
+function pressReset() { const P = M.press; pressZero(); P.poss = null; P.mark[0] = P.mark[1] = null; P.said[0] = P.said[1] = false; }   // a set piece, a try, a restart: the next possession starts clean
+function pressJolt(t, j) {                                 // the jolt chance with the defence's pressure on side t's carrier: never under j, never over the cap
+  const n = pressLive() ? M.pressure[t] - PRESSURE.line + 1 : 0;   // nothing below the line: Pressure On is the warning
+  return n > 0 ? Math.max(j, Math.min(matchMild() ? PRESSURE.capMild : PRESSURE.cap, j*(1 + PRESSURE.per*n))) : j;
+}
+function pressTackle(c, dom, mx) {                         // a made tackle that ends in a ruck at mx: the count rises if the ball has hardly moved, and mx is the new mark
+  if (!pressLive()) return;
+  const P = M.press, t = c.team, d = dirOf(t), gain = P.mark[t] == null ? 0 : (c.x - P.mark[t])*d, n0 = M.pressure[t];
+  if (dom && gain < PRESSURE.gain) M.pressure[t] += PRESSURE.hit;
+  else if (gain < PRESSURE.little) M.pressure[t] += PRESSURE.rise;
+  P.poss = t; P.mark[t] = mx;
+  if (n0 < PRESSURE.line && M.pressure[t] >= PRESSURE.line && !P.said[t]) { P.said[t] = true; st('pressOn'); tag('Pressure On', c.x, c.y); }   // once a possession, so the player learns the word
+}
+function eggStart(b, team, spill, spin) {                  // the ball is an egg from here: its hops are drawn in the sim, and drawBall tumbles it. spin: given, or drawn
+  const K = PRESSURE.egg;
+  b.egg = { g:9.8, hops:[], hopV:0, spin:spin != null ? spin : (rnd() < 0.5 ? -1 : 1)*(K.spin[0] + rnd()*(K.spin[1] - K.spin[0])), rolling:false, spill, team };
+  b.tumble = 0;
+}
+function pressGather(p, E) {                               // a pressure spill gathered by the other side: the turnover gets the surge
+  if (!E.spill || p.team === E.team || M.ball.state !== 'held' || M.ball.carrier !== p) return;
+  st('pressTurn'); surge(p.team, PRESSURE.surge);
+}
+function knockBeat(p) {                                    // a knock-on in a match: the ball hops on for PRESSURE.knock seconds, then the whistle and the scrum (knockOn, src/match.js)
+  if (!pressLive() || !(PRESSURE.knock > 0)) return false;
+  const b = M.ball, d = dirOf(p.team), team = 1 - p.team, x = p.x, y = p.y, K = PRESSURE.egg;
+  b.z = 1.0; b.vx = d*2.2 + 0.25*p.vx; b.vy = 0.25*p.vy; b.vz = 1.2;   // forward out of his hands, on along his run: that is what a knock-on is. No draw until it lands: the hops are the egg's
+  eggStart(b, p.team, false, (p.vy >= 0 ? 1 : -1)*(K.spin[0] + K.spin[1])/2);
+  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); deadBall(() => scrum(team, x, y, 'Knock-On')); } });
+  return true;
+}
+function eggLead(b) {                                      // where the chase runs for a hopping ball: where this hop comes down, or a little ahead of a roll; any other ball, where it is
+  const E = b.egg;
+  if (!E || !pressLive()) return b;
+  const t = E.rolling ? Math.min(PRESSURE.lead, 1/PRESSURE.egg.roll) : Math.min(PRESSURE.lead, (b.vz + Math.sqrt(Math.max(0, b.vz*b.vz + 2*E.g*b.z)))/E.g);
+  return { x:b.x + b.vx*t, y:b.y + b.vy*t };
+}
+function eggChaser(t, S) {                                 // the CPU sprints its nearest man at a hopping ball, 2.5 to 12m off, with no draw; he keeps it while he is still the nearest
+  const L = eggLead(M.ball); let best = null, bd = 1e9;
+  for (const p of M.players) if (p.team === t && onFeet(p) && !(p.offside > 0)) { const dd = dist(p, L); if (dd < bd) { bd = dd; best = p; } }
+  if (!best) return null;
+  if (S.p) return S.p === best && bd > 1 ? best : null;
+  return bd >= SPRINT.cpu.min && bd <= SPRINT.cpu.max ? best : null;
+}
+function pressTick(dt) {                                   // once a step in a match (matchUpdate): the resets, the possession's mark, and a knocked-on ball's beat
+  if (!pressLive()) return;
+  const b = M.ball, P = M.press;
+  if (M.phase === 'set') {
+    if (M.set.kind === 'knock') { if (b.egg) { const K = PRESSURE.egg; if (hopMove(b, b.egg, K, dt)) hopBounce(b, b.egg, K, K.wild); if (b.x < 0 || b.x > 120 || b.y < 0 || b.y > 70) { b.x = clamp(b.x, 0, 120); b.y = clamp(b.y, 0, 70); b.vx = b.vy = 0; } } }   // dead already: it stays on the field and nobody gathers it
+    else if (M.set.kind !== 'ruck') pressReset();
+    return;
+  }
+  if (M.phase !== 'play') { if (M.phase === 'goal') pressReset(); return; }
+  if (b.state === 'loose' || (b.state === 'air' && b.f && b.f.kind !== 'pass')) { pressZero(); return; }   // a loose ball or a kick lets the pressure go
+  if (b.state !== 'held') return;
+  const c = b.carrier, t = c.team;
+  if (P.poss !== t) { pressZero(); P.said[0] = P.said[1] = false; P.poss = t; P.mark[t] = c.x; P.mark[1 - t] = null; return; }   // a new possession, marked where it began
+  if (P.mark[t] == null) P.mark[t] = c.x;
+  else if (M.pressure[t] > 0 && (c.x - P.mark[t])*dirOf(t) >= PRESSURE.gain) M.pressure[t] = 0;   // a real gain
+}
+
 /* ---------- Sprint ----------
    One meter a side, M.spr[t]. Holding Sprint lifts the controlled man's top speed and drains the meter over SPRINT.secs; letting
    go refills it over SPRINT.refill[level]. A sprint needs SPRINT.floor to start, and a hold that runs the meter dry must be let go
@@ -1735,7 +1829,9 @@ function ahead(c, t) { const d = dirOf(c.team); let n = 0; for (const q of M.pla
 function cleanThrough(c, t) { return ahead(c, t) === 0; }
 function cpuSprintWant(t, S, dt) {                         // the AI side's policy: who should be sprinting on its meter this step, if anyone
   if (S.spent) { S.spent = false; return null; }
-  const b = M.ball; if (b.state !== 'held') return null;
+  const b = M.ball;
+  if (b.state === 'loose' && b.egg && pressLive()) return eggChaser(t, S);   // a hopping ball: run it down (PRESSURE)
+  if (b.state !== 'held') return null;
   const c = b.carrier, d = dirOf(c.team), P = SPRINT.cpu, lv = levelOf(t);
   const think = p => { S.think -= dt; if (S.think > 0) return false; S.think = P.think; return rnd() < p; };
   if (c.team === t) {                                      // carrying: a burst into a clean break, kept while the space lasts
@@ -3210,14 +3306,42 @@ function resolvePass() {
   b.state = 'loose'; b.vx = (f.x1-f.x0)/f.T*0.25; b.vy = (f.y1-f.y0)/f.T*0.25; b.vz = 1.5; b.z = 0.9; b.f = null;
   say('Dropped', 'small'); sfx('fumble');
 }
+/* The egg's hop (2026-11-09): one model for Bouncy Egg's ball (src/training.js) and a match's ball spilled in the tackle or knocked on
+   (PRESSURE, src/contact.js). H is the hop state ({ g, hops, hopV, spin, rolling }), K the levers (pop, hopOut, keep, turn, slow,
+   stop, roll), u (0..1) how much wider the turn gets, and fit(b, vx, vy, air), if given, sets a hop's speeds so it comes down inside
+   an area (the drill's box). A kick, a dropped pass, a charge-down and a ball off the posts keep the old bounce below. */
+function hopMove(b, H, K, dt) {                            // through the air, then along the ground once its hops are done. True the step it lands
+  b.tumble = (b.tumble || 0) + H.spin*dt;
+  if (H.rolling) { const f = Math.exp(-K.roll*dt); b.vx *= f; b.vy *= f; b.x += b.vx*dt; b.y += b.vy*dt; b.z = 0; b.vz = 0; H.spin *= f; return false; }
+  b.vz -= H.g*dt; b.x += b.vx*dt; b.y += b.vy*dt; b.z += b.vz*dt;
+  if (b.z > 0) return false;
+  b.z = 0; H.g = 9.8;                                      // whatever it was thrown as, its hops are real ones
+  return true;
+}
+function hopBounce(b, H, K, u, fit) {                      // off the ground again, at an odd angle, each hop smaller than the last. Too small a hop and it rolls (false)
+  const first = !H.hops.length;
+  const vz = first ? K.pop[0] + rnd()*(K.pop[1] - K.pop[0]) : H.hopV*(K.keep[0] + rnd()*(K.keep[1] - K.keep[0]));
+  const sp = first ? K.hopOut[0] + rnd()*(K.hopOut[1] - K.hopOut[0]) : hyp(b.vx, b.vy)*K.slow;
+  if (vz < K.stop) { H.rolling = true; b.vz = 0; return false; }
+  const dir = Math.atan2(b.vy, b.vx) + (rnd() < 0.5 ? -1 : 1)*(K.turn[0] + rnd()*(K.turn[1] - K.turn[0] + 0.5*u));
+  const air = 2*vz/9.8, vx = Math.cos(dir)*sp, vy = Math.sin(dir)*sp;
+  if (fit) fit(b, vx, vy, air); else { b.vx = vx; b.vy = vy; }
+  b.vz = vz; H.hopV = vz; H.hops.push(vz); H.spin = -H.spin*1.1;
+  sfx('bounce', Math.min(1, vz/K.pop[1]));                  // each hop smaller than the last, and softer
+  return true;
+}
+function eggOff(b) { if (b.egg) { b.egg = null; b.tumble = null; } }   // the match's egg is over: gathered or dead (placeBall, setCarrier). The drill never sets b.egg
 function updateLoose(dt) {
   const b = M.ball;
-  const fr = Math.exp(-1.4*dt); b.vx *= fr; b.vy *= fr;
-  b.x += b.vx*dt; b.y += b.vy*dt;
-  b.vz -= 9.8*dt; b.z += b.vz*dt;
-  if (b.z <= 0) {
-    b.z = 0;
-    if (Math.abs(b.vz) > 1.2) { sfx('bounce', Math.min(1, Math.abs(b.vz)/5)); b.vz = -b.vz*0.45; b.vx += (rnd()-0.5)*2.5; b.vy += (rnd()-0.5)*2.5; } else b.vz = 0;
+  if (b.egg) { const K = PRESSURE.egg; if (hopMove(b, b.egg, K, dt)) hopBounce(b, b.egg, K, K.wild); }   // spilled in the tackle: it hops like Bouncy Egg's ball (PRESSURE, src/contact.js)
+  else {                                                   // a kick's run, a dropped pass, a charge-down, off the posts: the old bounce
+    const fr = Math.exp(-1.4*dt); b.vx *= fr; b.vy *= fr;
+    b.x += b.vx*dt; b.y += b.vy*dt;
+    b.vz -= 9.8*dt; b.z += b.vz*dt;
+    if (b.z <= 0) {
+      b.z = 0;
+      if (Math.abs(b.vz) > 1.2) { sfx('bounce', Math.min(1, Math.abs(b.vz)/5)); b.vz = -b.vz*0.45; b.vx += (rnd()-0.5)*2.5; b.vy += (rnd()-0.5)*2.5; } else b.vz = 0;
+    }
   }
   if (b.y < 0 || b.y > 70) {
     const ki = b.kickInfo;
@@ -3234,10 +3358,10 @@ function updateLoose(dt) {
     deadBall(() => dropOut(defTeam));
     return;
   }
-  if (b.z < 1.0) {
+  if (b.z < (b.egg ? PRESSURE.egg.reach : 1.0)) {          // an egg on the hop is gathered only once it is down by the knees
     let best = null, bd = 1.1;
     for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
-    if (best) pickUp(best);
+    if (best) { const E = b.egg; pickUp(best); if (E) pressGather(best, E); }
   }
 }
 
@@ -3372,7 +3496,7 @@ function matchTargets() {
   else if (b.state === 'held') { carrier = b.carrier; att = carrier.team; fx = carrier.x; fy = carrier.y; mode = 'held'; }
   else if (b.state === 'air' && b.f.kind === 'pass') { att = b.f.team; fx = b.f.x1; fy = b.f.y1; mode = 'pass'; }
   else if (b.state === 'air') { att = 1-b.f.team; fx = b.f.x1; fy = b.f.y1; mode = 'kick'; }
-  else { att = 1-b.last; fx = b.x; fy = b.y; mode = 'kick'; }
+  else { att = 1-b.last; const L = eggLead(b); fx = L.x; fy = L.y; mode = 'kick'; }   // a hopping egg: where it comes down (src/contact.js)
   const dA = dirOf(att);
   let A = P.filter(p => p.team === att && free(p)), D = P.filter(p => p.team !== att && free(p));
   if (mode === 'kick') {
@@ -3798,6 +3922,7 @@ function matchUpdate(dt) {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
   } else if (M.phase === 'goal') updateGoal(dt);
+  pressTick(dt);                                           // PRESSURE's resets and marks, and a knocked-on ball's beat (src/contact.js)
   if (M.duelPending) startPendingDuel();
 }
 
@@ -7325,8 +7450,8 @@ function bvBall(cam) {                                      // a ball not in any
   if (!q) return;
   const sh = pr(cam, b.x, b.y, 0), scG = 1/(1 + Math.max(0, b.z)*0.16);
   if (sh) { ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.globalAlpha = 0.45 + 0.55*scG; ellipse(sh.sx, sh.sy, Math.max(7, 0.3*sh.k)*scG, Math.max(2.5, 0.11*sh.k)*scG); ctx.fill(); ctx.globalAlpha = 1; }
-  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y, ang = hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0;
-  if (b.state === 'dead') { cutBall(q.sx, q.sy, q.k*1.1, ang); return; }   // waiting at a kick-off or a ruck, among the men: its old size, so it never sits on a man like a plate. No one needs to chase it
+  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y, ang = (hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0) + (b.tumble != null ? b.tumble*0.5 : 0);   // a spilled or knocked-on egg turns end over end (b.tumble, set in the sim; PRESSURE)
+  if (b.state === 'dead' && !b.egg) { cutBall(q.sx, q.sy, q.k*1.1, ang); return; }   // waiting at a kick-off or a ruck, among the men: its old size, so it never sits on a man like a plate. No one needs to chase it. A knock-on hopping before its whistle is drawn as a loose ball
   const rx = Math.max(b.state === 'air' ? BV_LOOSE.air : BV_LOOSE.rx, BV_LOOSE.k*q.k);
   cutBall(q.sx, q.sy, rx/0.17, ang);                         // cutBall's half-length is 0.17 of its scale
   ballLaces(q.sx, q.sy, rx, ang);
@@ -12298,26 +12423,13 @@ function eggThrow(E) {
   eggStage(E, 'fly');
   sfx('pass');
 }
-function eggMove(E, dt) {                                  // the ball through the air, then along the ground once its hops are done. True the step it lands
-  const b = M.ball, K = DRILL_EGG;
-  b.tumble = (b.tumble || 0) + E.spin*dt;
-  if (E.rolling) { const f = Math.exp(-K.roll*dt); b.vx *= f; b.vy *= f; b.x += b.vx*dt; b.y += b.vy*dt; b.z = 0; b.vz = 0; E.spin *= f; return false; }
-  b.vz -= E.g*dt; b.x += b.vx*dt; b.y += b.vy*dt; b.z += b.vz*dt;
-  if (b.z > 0) return false;
-  b.z = 0; E.g = 9.8;                                      // whatever it was thrown as, its hops are real ones
-  return true;
-}
+function eggMove(E, dt) { return hopMove(M.ball, E, DRILL_EGG, dt); }   // the ball through the air, then along the ground once its hops are done. True the step it lands. The hop is shared with a match's spilled ball (src/ball.js)
 function eggHop(E) {                                       // off the ground again, at an odd angle, each hop smaller than the last. Too small a hop and it rolls
-  const b = M.ball, K = DRILL_EGG, B = K.box, u = Math.min(1, (E.n - 1)/(K.throws - 2)), first = !E.hops.length;
-  const vz = first ? K.pop[0] + rnd()*(K.pop[1] - K.pop[0]) : E.hopV*(K.keep[0] + rnd()*(K.keep[1] - K.keep[0]));
-  const sp = first ? K.hopOut[0] + rnd()*(K.hopOut[1] - K.hopOut[0]) : hyp(b.vx, b.vy)*K.slow;
-  if (vz < K.stop) { E.rolling = true; b.vz = 0; E.aim = { x:b.x + b.vx/K.roll, y:b.y + b.vy/K.roll }; return; }   // the ring moves to where it will roll to a stop
-  const dir = Math.atan2(b.vy, b.vx) + (rnd() < 0.5 ? -1 : 1)*(K.turn[0] + rnd()*(K.turn[1] - K.turn[0] + 0.5*u));
-  const air = 2*vz/9.8;                                    // and it comes down inside the area: as it goes, else turned back, else aimed at the nearest spot in it
-  b.vx = eggPop(b.x, Math.cos(dir)*sp, air, B[0] + 1.5, B[2] - 1.5); b.vy = eggPop(b.y, Math.sin(dir)*sp, air, E.n <= K.first.length ? B[1] + K.named : B[1] + 1.5, B[3] - 1.5); b.vz = vz;
+  const b = M.ball, K = DRILL_EGG, B = K.box, u = Math.min(1, (E.n - 1)/(K.throws - 2));
+  const fit = (b, vx, vy, air) => { b.vx = eggPop(b.x, vx, air, B[0] + 1.5, B[2] - 1.5); b.vy = eggPop(b.y, vy, air, E.n <= K.first.length ? B[1] + K.named : B[1] + 1.5, B[3] - 1.5); };   // it comes down inside the area: as it goes, else turned back, else aimed at the nearest spot in it
+  if (!hopBounce(b, E, K, u, fit)) { E.aim = { x:b.x + b.vx/K.roll, y:b.y + b.vy/K.roll }; return; }   // the ring moves to where it will roll to a stop
+  const air = 2*b.vz/9.8;
   E.aim = { x:b.x + b.vx*air, y:b.y + b.vy*air };          // the ring moves to where this hop comes down
-  E.hopV = vz; E.hops.push(vz); E.spin = -E.spin*1.1;
-  sfx('bounce', Math.min(1, vz/K.pop[1]));                  // each hop smaller than the last, and softer
 }
 function eggMiss(E) {
   const b = M.ball;
@@ -14941,6 +15053,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
+  press:{ PRESSURE, pressJolt, pressTackle, pressTick, pressReset, knockOn, knockBeat, eggStart, eggLead, eggChaser, hopMove, hopBounce, updateLoose, pickUp, surge },   // pressure, the spill and the egg's hop (src/contact.js, src/ball.js)
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, builderLevel, levelChoosing:() => levelChoosing, levelNote:() => levelNote, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, newGo:careerNewGo, lookOpen:careerLookOpen, lookSet:careerLookSet, look:careerLook, LOOK:CAREER_LOOK, BUILDS:CAREER_BUILDS, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, DIFF, diffOf },
   careerPro:{ PRO, pinned:proPinned, run:proRun, spirit:proSpirit, open:proOpen, pass:proPass, carrier:proCarrier, canCall:proCanCall, call:proCall, calling:proCalling, skip:proSkip, mark:proMark, modePick:careerModePick, draft:() => careerDraft },

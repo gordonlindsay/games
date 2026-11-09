@@ -127,26 +127,13 @@ function eggThrow(E) {
   eggStage(E, 'fly');
   sfx('pass');
 }
-function eggMove(E, dt) {                                  // the ball through the air, then along the ground once its hops are done. True the step it lands
-  const b = M.ball, K = DRILL_EGG;
-  b.tumble = (b.tumble || 0) + E.spin*dt;
-  if (E.rolling) { const f = Math.exp(-K.roll*dt); b.vx *= f; b.vy *= f; b.x += b.vx*dt; b.y += b.vy*dt; b.z = 0; b.vz = 0; E.spin *= f; return false; }
-  b.vz -= E.g*dt; b.x += b.vx*dt; b.y += b.vy*dt; b.z += b.vz*dt;
-  if (b.z > 0) return false;
-  b.z = 0; E.g = 9.8;                                      // whatever it was thrown as, its hops are real ones
-  return true;
-}
+function eggMove(E, dt) { return hopMove(M.ball, E, DRILL_EGG, dt); }   // the ball through the air, then along the ground once its hops are done. True the step it lands. The hop is shared with a match's spilled ball (src/ball.js)
 function eggHop(E) {                                       // off the ground again, at an odd angle, each hop smaller than the last. Too small a hop and it rolls
-  const b = M.ball, K = DRILL_EGG, B = K.box, u = Math.min(1, (E.n - 1)/(K.throws - 2)), first = !E.hops.length;
-  const vz = first ? K.pop[0] + rnd()*(K.pop[1] - K.pop[0]) : E.hopV*(K.keep[0] + rnd()*(K.keep[1] - K.keep[0]));
-  const sp = first ? K.hopOut[0] + rnd()*(K.hopOut[1] - K.hopOut[0]) : hyp(b.vx, b.vy)*K.slow;
-  if (vz < K.stop) { E.rolling = true; b.vz = 0; E.aim = { x:b.x + b.vx/K.roll, y:b.y + b.vy/K.roll }; return; }   // the ring moves to where it will roll to a stop
-  const dir = Math.atan2(b.vy, b.vx) + (rnd() < 0.5 ? -1 : 1)*(K.turn[0] + rnd()*(K.turn[1] - K.turn[0] + 0.5*u));
-  const air = 2*vz/9.8;                                    // and it comes down inside the area: as it goes, else turned back, else aimed at the nearest spot in it
-  b.vx = eggPop(b.x, Math.cos(dir)*sp, air, B[0] + 1.5, B[2] - 1.5); b.vy = eggPop(b.y, Math.sin(dir)*sp, air, E.n <= K.first.length ? B[1] + K.named : B[1] + 1.5, B[3] - 1.5); b.vz = vz;
+  const b = M.ball, K = DRILL_EGG, B = K.box, u = Math.min(1, (E.n - 1)/(K.throws - 2));
+  const fit = (b, vx, vy, air) => { b.vx = eggPop(b.x, vx, air, B[0] + 1.5, B[2] - 1.5); b.vy = eggPop(b.y, vy, air, E.n <= K.first.length ? B[1] + K.named : B[1] + 1.5, B[3] - 1.5); };   // it comes down inside the area: as it goes, else turned back, else aimed at the nearest spot in it
+  if (!hopBounce(b, E, K, u, fit)) { E.aim = { x:b.x + b.vx/K.roll, y:b.y + b.vy/K.roll }; return; }   // the ring moves to where it will roll to a stop
+  const air = 2*b.vz/9.8;
   E.aim = { x:b.x + b.vx*air, y:b.y + b.vy*air };          // the ring moves to where this hop comes down
-  E.hopV = vz; E.hops.push(vz); E.spin = -E.spin*1.1;
-  sfx('bounce', Math.min(1, vz/K.pop[1]));                  // each hop smaller than the last, and softer
 }
 function eggMiss(E) {
   const b = M.ball;

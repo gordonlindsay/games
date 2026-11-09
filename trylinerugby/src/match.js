@@ -76,6 +76,7 @@ function newMatch(u, c, opts) {
     dropOn:[false, false], dropArmed:[false, false],   // the drop-goal label, per side: what it read on the last frame, and what it promised at the B press
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the label last saw (as the hold would leave them), and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
+    pressure:[0, 0], press:{ poss:null, mark:[null, null], said:[false, false] },   // PRESSURE (src/contact.js): the pressure on each side's possession, who has it, the last breakdown's mark and whether Pressure On was said
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
@@ -146,6 +147,7 @@ function seek(p, tx, ty, speed, acc, dt, pursue) {
 function placeBall(x, y) {
   const b = M.ball;
   b.state = 'dead'; b.carrier = null; b.f = null; b.x = x; b.y = y; b.z = 0; b.vx = b.vy = b.vz = 0;
+  eggOff(b);
 }
 function playFrom(team, x, y, kind) {                      // the mark the ball is played from: a ruck 1.6m behind, a scrum 1.2, a lineout 1.5 and out to the side
   const d = dirOf(team);
@@ -238,7 +240,7 @@ function releaseTo(team, x, y, kind, who) {
 function setCarrier(p) {
   const b = M.ball;
   if (M.poss !== p.team) M.phaseCount = 0;
-  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
+  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b);
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
@@ -268,7 +270,9 @@ function catchBall(p, kind) {
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
   placeBall(p.x, p.y);
-  sfx('fumble'); sfx('whistle');
+  sfx('fumble');
+  if (knockBeat(p)) return;                                // PRESSURE: it hops for a beat before the whistle (src/contact.js)
+  sfx('whistle');
   deadBall(() => scrum(1-p.team, p.x, p.y, 'Knock-On'));
 }
 function pickUp(p) {
