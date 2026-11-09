@@ -109,21 +109,32 @@ const isTitle = s => s.split(' ').every((w, i) => (i > 0 && ['a', 'an', 'the', '
   ok(json(L.EVENTS) === json({ champ:'champ', euro:'silver', world:'silver', tour:'silver', triple:'silver', callup:'callup' }), "lockerEvent's ids: champ to Champions, euro, world, tour and triple to Silverware, callup to Call-Up");
 }
 
-// 2. the Legends: World Cup winners by nation and year (checked 2026-11-08: men 1987 to 2023, women 1991 to 2025, the 2021 women's
-//    World Cup played in 2022), ratings at the top of the scale, the nation's kit, codes unique across every list
+// 2. the Legends: World Cup winners by nation and year (checked 2026-11-08), ratings at the top of the scale, the nation's kit, codes
+//    unique across every list. Every men's winner, 1987 to 2023; five women's over the years and the nations (the owner, 2026-11-09:
+//    "just have a few female legends teams as they are less prominent. red roses WC winners and similar make sense over the years",
+//    then "Maybe some other women's legendary clubs not just England"): USA 1991, the first winners; New Zealand 1998, the first of
+//    four in a row; England 2014; New Zealand 2017; England 2025. Each as it was in 84e61b1's ten (style, kit, code, rating)
 {
   const G = L.LEGENDS, men = G.filter(t => t.cat === 'men'), women = G.filter(t => t.cat === 'women');
   const MEN = [['New Zealand', 1987], ['Australia', 1991], ['South Africa', 1995], ['Australia', 1999], ['England', 2003], ['South Africa', 2007], ['New Zealand', 2011], ['New Zealand', 2015], ['South Africa', 2019], ['South Africa', 2023]];
-  const WOMEN = [['USA', 1991], ['England', 1994], ['New Zealand', 1998], ['New Zealand', 2002], ['New Zealand', 2006], ['New Zealand', 2010], ['England', 2014], ['New Zealand', 2017], ['New Zealand', 2021], ['England', 2025]];
-  ok(G.length === 20 && json(men.map(t => [t.nation, t.year])) === json(MEN) && json(women.map(t => [t.nation, t.year])) === json(WOMEN), 'ten men\'s and ten women\'s World Cup winners, in date order');
+  const WOMEN = [['USA', 1991], ['New Zealand', 1998], ['England', 2014], ['New Zealand', 2017], ['England', 2025]];
+  ok(G.length === 15 && json(men.map(t => [t.nation, t.year])) === json(MEN) && json(women.map(t => [t.nation, t.year])) === json(WOMEN), 'ten men\'s and five women\'s World Cup winners, each list in date order');
+  const card = t => [t.id, t.name, t.style, X.overallOf(t), t.kit, t.trim, t.alt, t.altTrim, ...T.stamina.ABILITIES.map(([k]) => t[k])].join(' ');
+  // the five cards as 84e61b1's build prints them (GAME=<84e61b1>/index.html, the same card of its ten women's sides)
+  ok(json(women.map(card)) === json(['W91 USA 1991 Women pace 96 #1b2747 #c8102e #f2efe6 #1b2747 5 5 5 4 5', 'W98 New Zealand 1998 Women handling 96 #1c1c1c #f2efe6 #f2efe6 #1c1c1c 5 5 5 4 5', 'W14 England 2014 Women kicking 96 #f2efe6 #c8102e #1b2747 #c8102e 4 5 5 5 5', 'W17 New Zealand 2017 Women pace 96 #1c1c1c #f2efe6 #f2efe6 #1c1c1c 5 4 5 5 5', 'W25 England 2025 Women power 99 #f2efe6 #c8102e #1b2747 #c8102e 5 5 5 5 5']), `the five women's sides, W91, W98, W14, W17 and W25, each with its code, style, rating, kit and abilities as in 84e61b1's ten (${women.map(t => t.id).join(' ')})`);
+  ok(new Set(women.map(t => t.nation)).size === 3 && women.filter(t => t.nation === 'England').length === 2 && women.filter(t => t.nation === 'New Zealand').length === 2, "three nations among the five, not England's alone: USA, New Zealand twice and England twice");
+  ok(fnv(json(men.map(card))) === 'czc58b', `the men's ten unchanged (pinned on 84e61b1, the build with ten women's sides): codes, names, styles, ratings, kits and abilities (${fnv(json(men.map(card)))})`);
+  ok(['W94', 'W02', 'W06', 'W10', 'W21'].every(id => !G.some(t => t.id === id)) && !G.some(t => t.cat === 'women' && [1994, 2002, 2006, 2010, 2021].includes(t.year)), 'England 1994 and New Zealand 2002, 2006, 2010 and 2021 Women (W94, W02, W06, W10, W21) are gone');
   ok(men.every(t => t.name === t.nation + ' ' + t.year) && women.every(t => t.name === t.nation + ' ' + t.year + ' Women'), "named by nation and year only; a women's side says Women");
   ok(G.every(t => /^(?:New Zealand|Australia|South Africa|England|USA) (?:19|20)\d\d(?: Women)?$/.test(t.name)), 'no name but a nation and a year: no player, likeness or nickname');
   const ids = G.map(t => t.id), others = X.ALL_TEAMS.map(t => t.id);
-  ok(new Set(ids).size === 20 && ids.every(id => !others.includes(id)) && men.every(t => t.id === 'L' + String(t.year).slice(2)) && women.every(t => t.id === 'W' + String(t.year).slice(2)), 'codes unique across every list: L87 to L23, W91 to W25');
+  ok(new Set(ids).size === 15 && ids.every(id => !others.includes(id)) && men.every(t => t.id === 'L' + String(t.year).slice(2)) && women.every(t => t.id === 'W' + String(t.year).slice(2)), 'codes unique across every list: L87 to L23, W91 to W25');
+  ok(json(ids) === json(['L87', 'L91', 'L95', 'L99', 'L03', 'L07', 'L11', 'L15', 'L19', 'L23', 'W91', 'W98', 'W14', 'W17', 'W25']), `the codes, men's then women's, each in date order (${ids.join(' ')})`);
   const ab = T.stamina.ABILITIES.map(([k]) => k), sum = t => ab.reduce((a, k) => a + t[k], 0);
   ok(G.every(t => X.overallOf(t) >= 96 && X.overallOf(t) <= 99 && sum(t) >= 24 && sum(t) <= 25 && ab.every(k => t[k] >= 4 && t[k] <= 5)), 'every Legend rated 96 to 99, its five abilities summing 24 or 25');
   ok(G.every(t => ab.includes(t.style) && t[t.style] === 5), "each has a style, one of its 5s (England 2003's is kicking)");
-  ok(G.find(t => t.id === 'L03').style === 'kicking' && G.filter(t => X.overallOf(t) === 99).length === 4, 'England 2003 kicks; four sides rated 99, the rest 96');
+  // re-pinned 2026-11-09 from four: 84e61b1's four 99s were L15, L23, W10 and W25, and W10 (New Zealand 2010 Women) is one of the five dropped
+  ok(G.find(t => t.id === 'L03').style === 'kicking' && json(G.filter(t => X.overallOf(t) === 99).map(t => t.id)) === '["L15","L23","W25"]', 'England 2003 kicks; three sides rated 99 (New Zealand 2015, South Africa 2023, England 2025 Women), the rest 96');
   const HEX = /^#[0-9a-f]{6}$/i;
   ok(G.every(t => HEX.test(t.kit) && HEX.test(t.trim) && HEX.test(t.alt) && HEX.test(t.altTrim)) && G.filter(t => t.nation === 'New Zealand').every(t => t.kit === '#1c1c1c') && G.filter(t => t.nation === 'England').every(t => t.kit === '#f2efe6'), "the nation's kit colours, with a change kit for a clash");
   ok(women.every(t => t.cat === 'women') && men.every(t => t.cat === 'men'), "a women's side carries cat 'women', so Men | Women | Minis leaves its name alone");
@@ -137,24 +148,48 @@ const isTitle = s => s.split(' ').every((w, i) => (i > 0 && ['a', 'an', 'the', '
   const name = u => { const [k, id] = u.split(':'), it = (k === 'ball' ? L.BALLS : L.BOOTS).find(x => x.id === id); return it.name + (k === 'ball' ? ' Ball' : ' Boots'); };
   ok(L.FEATS.every(f => { const r = row(f); return r && r.endsWith('| ' + name(f.unlock[0]) + ' | ' + name(f.unlock[1]) + ' |'); }), "the README's medal table names each feat's Bronze and Silver unlocks");
   const men = L.LEGENDS.filter(t => t.cat === 'men'), women = L.LEGENDS.filter(t => t.cat === 'women'), cap = s => s[0].toUpperCase() + s.slice(1);
-  ok(men.every((m, i) => { const w = women[i]; return sec.includes(`| ${i + 1} | ${m.name} | ${m.id} | ${cap(m.style)} | ${X.overallOf(m)} | ${w.name} | ${w.id} | ${cap(w.style)} | ${X.overallOf(w)} |`); }), "the README's Legends table: each Gold's two sides, codes, styles and ratings");
+  const cells = t => (t ? [t.name, t.id, cap(t.style), X.overallOf(t)] : ['', '', '', '']), line = a => '|' + a.map(c => (c === '' ? ' ' : ' ' + c + ' ')).join('|') + '|';
+  const table = sec.split('\n').filter(l => /^\| \d+ \|/.test(l));
+  ok(table.length === 10 && men.every((m, i) => table[i] === line([i + 1, ...cells(m), ...cells(women[i])])), "the README's Legends table: each Gold's men's side, and its women's side for Golds 1 to 5 (blank after), codes, styles and ratings");
+  ok(!/(?:1994|2002|2006|2010|2021) Women|W94|W02|W06|W10|W21/.test(table.join('\n')) && /England 1994 and New Zealand 2002, 2006, 2010 and 2021 \(W94, W02, W06, W10, W21\) went/.test(sec), "and no dropped side in it; the README says which went, and what an old save does");
 }
 
-// 3. which Legends are unlocked: the nth Gold, the nth side of each list
+// 3. which Legends are unlocked: the nth Gold, the nth side of each list while it has one. Golds 1 to 5 a men's and a women's side,
+//    Golds 6 to 10 a men's side only, and more Golds than a list has sides shows them all (the codes written out, not read off LEGENDS)
+const MEN_IDS = ['L87', 'L91', 'L95', 'L99', 'L03', 'L07', 'L11', 'L15', 'L19', 'L23'], WOMEN_IDS = ['W91', 'W98', 'W14', 'W17', 'W25'];
+const golds = n => { fresh(); L.FEATS.filter(f => f.id !== 'star').slice(0, n).forEach(f => { L.state().n[f.id] = 10; }); };
+// the Legends tab's markup (the harness keeps it as a string): each row's tiles, won or a padlock with the Gold count it needs
+const legRows = body => body.split('<div class="lk-legrow">').slice(1).map(row => [...row.matchAll(/<div class="lk-leg( lk-off)?"[^>]*aria-label="([^"]*)">([\s\S]*?)(?=<div class="lk-leg|<p class="lbl"|$)/g)]
+  .map(([, off, label, inner]) => ({ off:!!off, label, need:off ? +(/<span class="lk-need">[\s\S]*?<\/i>(\d+)<\/span>/.exec(inner) || [])[1] : null })));
 {
   fresh();
   ok(L.legends('men').length === 0 && L.legends('women').length === 0, 'no Gold, no Legends');
-  const golds = n => { fresh(); L.FEATS.filter(f => f.id !== 'star').slice(0, n).forEach(f => { L.state().n[f.id] = 10; }); };
-  let good = true;
-  for (let g = 1; g <= 10; g++) {
-    golds(g);
-    const m = L.legends('men'), w = L.legends('women');
-    if (L.golds() !== g || json(m.map(t => t.id)) !== json(L.LEGENDS.filter(t => t.cat === 'men').slice(0, g).map(t => t.id)) || json(w.map(t => t.id)) !== json(L.LEGENDS.filter(t => t.cat === 'women').slice(0, g).map(t => t.id))) good = false;
-  }
-  ok(good, 'each Gold unlocks the next side of each list, in date order');
+  const got = [];
+  for (let g = 0; g <= 11; g++) { golds(g); got.push([L.golds(), L.legends('men').map(t => t.id).join(' '), L.legends('women').map(t => t.id).join(' ')]); }
+  ok(json(got) === json(Array.from({ length:12 }, (_, g) => [g, MEN_IDS.slice(0, g).join(' '), WOMEN_IDS.slice(0, g).join(' ')])), `each Gold unlocks the next side of each list, in date order: Golds 1 to 5 one of each, 6 to 10 a men's side only, 11 nothing more (${got.map(r => r[0] + ':' + r[1].split(' ').filter(Boolean).length + '+' + r[2].split(' ').filter(Boolean).length).join(' ')})`);
+  ok(got.every(r => !/undefined/.test(r.join())) && L.legends('women').every(Boolean) && L.legends('men').every(Boolean), 'never an empty slot in either list');
   golds(1); ok(json(L.legends('minis')) === json(L.legends('men')) && L.legends('men')[0].id === 'L87' && L.legends('women')[0].id === 'W91', 'the first Gold: New Zealand 1987 and USA 1991 Women; Minis play the men\'s');
+  golds(2); ok(json(L.legends('women').map(t => t.name)) === json(['USA 1991 Women', 'New Zealand 1998 Women']) && L.legends('men').at(-1).name === 'Australia 1991', 'the second Gold: Australia 1991 and New Zealand 1998 Women');
+  golds(5); ok(json(L.legends('women').map(t => t.name)) === json(['USA 1991 Women', 'New Zealand 1998 Women', 'England 2014 Women', 'New Zealand 2017 Women', 'England 2025 Women']) && L.legends('men').at(-1).name === 'England 2003', 'the fifth Gold: England 2003 and England 2025 Women, so every women\'s side is in');
+  golds(6); ok(L.legends('men').at(-1).name === 'South Africa 2007' && L.legends('women').length === 5, 'the sixth: South Africa 2007, and the women\'s five stay as they were');
   fresh(); for (const f of L.FEATS) if (f.id !== 'star') L.state().n[f.id] = 10; L.state().drills = T.drills.DRILLS.map(d => d.id);
-  ok(L.golds() === 12 && L.legends('men').length === 10 && L.legends('women').length === 10, 'twelve Golds: all twenty Legends, and nothing beyond');
+  ok(L.golds() === 12 && json(L.legends('men').map(t => t.id)) === json(MEN_IDS) && json(L.legends('women').map(t => t.id)) === json(WOMEN_IDS), 'twelve Golds: all fifteen Legends, and nothing beyond');
+}
+
+// 3b. the New Legends a match's Golds bring (lockerNews, the full-time card's line): each new Gold's men's side, then its women's side
+//     while there is one, over Golds 4 to 7 and every window inside them, never an empty slot
+{
+  const news = (a, b) => { golds(b); const feats = L.FEATS.filter(f => f.id !== 'star'); return L.news(id => (feats.findIndex(f => f.id === id) < a && feats.some(f => f.id === id) ? 3 : 0)).legends; };
+  const want = (a, b) => { const out = []; for (let i = a; i < b; i++) for (const id of [MEN_IDS[i], WOMEN_IDS[i]]) if (id) out.push(id); return out; };
+  const rows = [];
+  for (let a = 3; a <= 7; a++) for (let b = a; b <= 7; b++) { const got = news(a, b); rows.push([a, b, got.length && got.every(Boolean) ? got.map(t => t.id).join(' ') : got.length ? 'empty slot' : '']); }
+  ok(rows.every(([a, b, got]) => got === want(a, b).join(' ')), `New Legends from Gold a to Gold b, every window over Golds 4 to 7 (${rows.filter(r => r[0] + 1 === r[1]).map(r => 'Gold ' + r[1] + ': ' + r[2]).join('; ')})`);
+  ok(json(news(3, 4).map(t => t.name)) === json(['Australia 1999', 'New Zealand 2017 Women']) && json(news(4, 5).map(t => t.name)) === json(['England 2003', 'England 2025 Women']) && json(news(5, 6).map(t => t.name)) === json(['South Africa 2007']) && json(news(6, 7).map(t => t.name)) === json(['New Zealand 2011']), 'Gold 4: Australia 1999 and New Zealand 2017 Women; Gold 5: England 2003 and England 2025 Women; Gold 6 and 7: South Africa 2007, then New Zealand 2011, alone');
+  ok(json(news(3, 7).map(t => t.id)) === json(['L99', 'W17', 'L03', 'W25', 'L07', 'L11']), 'four Golds at once (4 to 7): each Gold\'s sides in turn, the men\'s first');
+  const all = news(0, 11);
+  ok(all.length === 15 && all.every(Boolean) && json(all.map(t => t.id)) === json(want(0, 11)), `from none to eleven Golds: all fifteen, once each, no empty slot (${all.length})`);
+  { fresh(); for (const f of L.FEATS) if (f.id !== 'star') L.state().n[f.id] = 10; L.state().drills = T.drills.DRILLS.map(d => d.id); const twelve = L.news(() => 0).legends; ok(twelve.length === 15 && twelve.every(Boolean), 'and twelve Golds, every medal, still fifteen'); }
+  fresh();
 }
 
 // 4. each feat counted from real played matches, through the real path to the full-time card. Each match's feats are read off the
@@ -453,10 +488,39 @@ function champAt4(userWins) {
   ok((balls.match(/class="btn lk-item/g) || []).length === 13 && (balls.match(/ disabled/g) || []).length === 13 - L.BALLS.filter(b => L.has('ball', b.id)).length, 'Ball: thirteen swatches, the locked ones disabled');
   ok(/lk-off[^>]*data-id="red"[\s\S]*?lk-why[\s\S]*?Big Hitter/.test(balls) && /aria-pressed="true"[^>]*aria-label="Classic"/.test(balls), 'a locked ball is dimmed with the medal that unlocks it; the picked one is pressed');
   L.open(3); const leg = $('lk-body').innerHTML;
-  ok(/New Zealand/.test(leg) && /1987/.test(leg) && (leg.match(/lk-leg lk-off/g) || []).length === 18 && /lk-padlock/.test(leg) && /lk-need[^<]*<i class="lk-pip t3 on"[^>]*><\/i>2</.test(leg), 'Legends: the unlocked sides, the rest a padlock and the Gold count each needs');
+  // one Gold: nine men's padlocks and four women's, 13 (re-pinned 2026-11-09 from 18, nine and nine, when the women's became five)
+  ok(/New Zealand/.test(leg) && /1987/.test(leg) && (leg.match(/lk-leg lk-off/g) || []).length === 13 && /lk-padlock/.test(leg) && /lk-need[^<]*<i class="lk-pip t3 on"[^>]*><\/i>2</.test(leg), 'Legends: the unlocked sides, the rest a padlock and the Gold count each needs');
   { const R = T.ratings, won = (leg.match(/class="lk-leg" data-legend/g) || []).length, nz = L.LEGENDS.find(t => t.cat === 'men' && t.year === 1987);
     ok(won === 2 && (leg.match(/class="lk-yr">\d+<\/b><svg class="rstars"/g) || []).length === won && leg.includes('>1987</b>' + R.starsHtml(R.starsOf(nz)) + '</span></div>') && R.starsHtml(R.starsOf(nz)).includes('aria-label="' + R.starsWords(R.starsOf(nz)) + '"'), `each won Legend shows its stars beside its year, under its name, with their words, as every listed side has beside its overall (${won})`); }
+  // the Legends tab at 0, 3 and 7 Golds: ten men's tiles and five women's, the nth of each list won with the nth Gold, every other a
+  // padlock with its own Gold count (the nth side of either list, n), and nothing past the fifth women's
+  for (const g of [0, 3, 7, 11]) {
+    golds(g); L.open(3);
+    const body = $('lk-body').innerHTML, lbls = [...body.matchAll(/<p class="lbl">([^<]*)<\/p>/g)].map(r => r[1]), [mr, wr] = legRows(body);
+    const won = r => r.filter(t => !t.off).map(t => t.label.split(',')[0]), needs = r => r.filter(t => t.off).map(t => t.need);
+    const want = (list, n) => ({ won:list.slice(0, n).map(id => L.LEGENDS.find(t => t.id === id).name), needs:list.map((_, i) => i + 1).slice(n) });
+    const m = want(MEN_IDS, g), w = want(WOMEN_IDS, g);
+    ok(json(lbls) === '["Men","Women"]' && legRows(body).length === 2 && mr.length === 10 && wr.length === 5
+      && json(won(mr)) === json(m.won) && json(won(wr)) === json(w.won) && json(needs(mr)) === json(m.needs) && json(needs(wr)) === json(w.needs)
+      && [...mr, ...wr].filter(t => t.off).every(t => t.label === 'Locked, ' + t.need + ' Gold ' + (t.need === 1 ? 'Medal' : 'Medals')) && !/undefined|NaN/.test(body),
+      `${g} Golds: Men ${won(mr).length} won, padlocks at ${needs(mr).join(' ') || 'none'}; Women ${won(wr).length} won, padlocks at ${needs(wr).join(' ') || 'none'}`);
+  }
   $('lk-back').click(); ok(!$('s-home').hidden && $('s-locker').hidden, 'Back to Menu goes home');
+  // full time across Gold 5 and Gold 6: the New Legends line names each new Gold's sides, a women's one only while there is one
+  for (const [before, names] of [[4, ['England 2003', 'England 2025 Women']], [5, ['South Africa 2007']]]) {
+    golds(before); const feats = L.FEATS.filter(f => f.id !== 'star');            // the fifth and sixth non-star feats: Golden Try, Comeback
+    for (const f of feats.slice(0, before)) L.state().seen[f.id] = 3;
+    const next = feats[before].id; L.state().n[next] = 9; L.state().seen[next] = 2;
+    D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+    const M = T.M; M.half = 2; M.score = [15, 10]; M.tries = [1, 2]; M.phase = 'break'; M.over = true;
+    if (next === 'golden') M.golden = true;                                         // Gold 5: won in Golden Try
+    else M.lk = { drops:[0, 0], hits:[0, 0], ht:[0, 3] };                           // Gold 6: won from behind at half time
+    L.finishMatch();
+    const line = (/<p class="lk-won lk-newleg">([\s\S]*?)<\/p>/.exec($('br-medals').innerHTML) || [])[1] || '', got = [...line.replace(/<span class="jw[^"]*"><span class="jersey[^"]*"[^>]*><\/span><\/span>/g, '').matchAll(/<span class="lk-got">([^<]*)<\/span>/g)].map(r => r[1]);
+    ok(L.golds() === before + 1 && json(got) === json(names) && !/undefined/.test($('br-medals').innerHTML), `full time, Gold ${before + 1} (${next}): New Legends ${got.join(' and ') || 'none'}`);
+    D.exitMatch();
+  }
+  fresh();
   ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my"[^>]*>[\s\S]*?<\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(html), 'the home button reads Locker, at the top beside My Team and Add Your Team (the home\'s headlines, ui-menus.js)');
   ok(/id="lk-back" data-back>Back to Menu</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Menu is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
   ok(![src, css].some(s => /[\u2014\u2190-\u21ff]/.test(s)), 'no em dash and no arrow in the Locker\'s code or styles');
@@ -471,7 +535,8 @@ function champAt4(userWins) {
   const lastNat = X.natList('men').at(-1).name;   // International is the category's twelve in ranking order (natList): the Legends follow the last
   ok(/New Zealand 1987/.test(g) && /Australia 1991/.test(g) && !/South Africa 1995/.test(g) && !/Women/.test(g) && g.indexOf(lastNat) < g.indexOf('New Zealand 1987'), 'two Golds, Men: two men\'s Legends, after the nations');
   D.settings().cat = 'women'; D.renderTeams(); const gw = $('t-grid').innerHTML;
-  ok(/>USA 1991</.test(gw) && />England 1994</.test(gw) && !/New Zealand 1987/.test(gw) && gw.indexOf('>' + X.natList('women').at(-1).name.replace(/ Women$/, '') + '<') < gw.indexOf('>USA 1991<'), 'two Golds, Women: two women\'s Legends, after the women\'s twelve (cards show the plain name, as the nations\' do)');
+  // re-pinned 2026-11-09: the second women's side is New Zealand 1998 now (England 1994 on 84e61b1, one of the five dropped)
+  ok(/>USA 1991</.test(gw) && />New Zealand 1998</.test(gw) && !/>England 2014</.test(gw) && !/>England 1994</.test(gw) && !/New Zealand 1987/.test(gw) && gw.indexOf('>' + X.natList('women').at(-1).name.replace(/ Women$/, '') + '<') < gw.indexOf('>USA 1991<'), 'two Golds, Women: two women\'s Legends (USA 1991, New Zealand 1998), after the women\'s twelve (cards show the plain name, as the nations\' do)');
   D.settings().cat = 'men';
   D.settings().pool = 1; D.renderTeams(); ok(!/1987/.test($('t-grid').innerHTML), 'not on any other list');
   D.openTeams('champ'); D.settings().pool = 0; D.renderTeams(); D.pickTeam(L.LEGENDS[0]);
@@ -479,6 +544,58 @@ function champAt4(userWins) {
   ok(c.teams[0].id === 'L87' && c.teams.slice(1).every(t => X.NATIONS.some(n => n.id === t.id)), 'a Legend picked for a championship plays it; its five opponents are nations');
   X.save(); X.load(); ok(X.champ().teams[0].id === 'L87' && X.champ().teams[0].name === 'New Zealand 1987', 'a saved championship keeps the Legend\'s code (cleanSide)');
   X.setChamp(null); X.save();
+  // seven Golds on International: seven men's Legends after the men's twelve, and on Women the five, never a sixth
+  golds(7); D.openTeams('quick'); D.settings().pool = 0;
+  const legs = () => [...$('t-grid').innerHTML.matchAll(/<button class="team[^"]*" data-i="\d+" data-legend="1"[\s\S]*?<span class="tname">([^<]*)</g)].map(r => r[1]);
+  D.settings().cat = 'men'; D.renderTeams(); const m7 = legs();
+  D.settings().cat = 'women'; D.renderTeams(); const w7 = legs();
+  ok(json(m7) === json(MEN_IDS.slice(0, 7).map(id => L.LEGENDS.find(t => t.id === id).name)) && json(w7) === json(['USA 1991', 'New Zealand 1998', 'England 2014', 'New Zealand 2017', 'England 2025']) && !/undefined/.test($('t-grid').innerHTML), `seven Golds: seven men's Legends on Men, the five women's on Women (${m7.length}, ${w7.length})`);
+  D.settings().cat = 'men'; fresh();
+}
+
+// 12b. old saves from the build with ten women's sides, naming each code since dropped (W94, W02, W06, W10, W21), load safely: the
+//      Locker's Golds show the five; a saved Championship, under way or in the Trophy Cabinet, keeps its side as saved and plays; My
+//      Team's club or country naming one falls back to the default, exactly as an unknown code does
+{
+  // the five dropped sides exactly as 84e61b1's LEGENDS held them (printed from GAME=<84e61b1>/index.html): England 1994 in England's
+  // kit, the four New Zealand sides in New Zealand's
+  const ENG = { kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e' }, NZL = { kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c' };
+  const OLD = [
+    { id:'W94', name:'England 1994 Women', nation:'England', year:1994, cat:'women', style:'power', legend:true, ...ENG, pace:4, power:5, handling:5, kicking:5, stamina:5 },
+    { id:'W02', name:'New Zealand 2002 Women', nation:'New Zealand', year:2002, cat:'women', style:'power', legend:true, ...NZL, pace:5, power:5, handling:5, kicking:4, stamina:5 },
+    { id:'W06', name:'New Zealand 2006 Women', nation:'New Zealand', year:2006, cat:'women', style:'stamina', legend:true, ...NZL, pace:5, power:5, handling:5, kicking:4, stamina:5 },
+    { id:'W10', name:'New Zealand 2010 Women', nation:'New Zealand', year:2010, cat:'women', style:'handling', legend:true, ...NZL, pace:5, power:5, handling:5, kicking:5, stamina:5 },
+    { id:'W21', name:'New Zealand 2021 Women', nation:'New Zealand', year:2021, cat:'women', style:'pace', legend:true, ...NZL, pace:5, power:5, handling:5, kicking:4, stamina:5 },
+  ];
+  ok(json(OLD.map(t => t.id)) === '["W94","W02","W06","W10","W21"]' && OLD.every(t => !L.LEGENDS.some(l => l.id === t.id || l.name === t.name)), 'the five dropped sides, as the old build saved them, none of them a Legend now');
+  const keep = memory['tryline.v1'], st = D.settings(), was = { myClub:st.myClub, myNat:st.myNat, cat:st.cat };
+  // a Locker with every Gold, saved by the old build: the Legends tab and International show the five
+  memory['tryline.v1'] = json({ settings:{}, locker:{ n:Object.fromEntries(L.FEATS.filter(f => f.id !== 'star').map(f => [f.id, 10])), drills:[], ball:'classic', boots:'black', seen:{} } }); fresh(); X.load();
+  L.open(3); const wr = legRows($('lk-body').innerHTML)[1];
+  ok(L.golds() === 11 && json(L.legends('women').map(t => t.id)) === json(WOMEN_IDS) && wr.length === 5 && wr.every(t => !t.off), 'an old Locker with eleven Golds loads and shows the five women\'s sides, all won');
+  $('lk-back').click();
+  const nats = X.natList('women');                         // a women's side's championship is the women's nations (pickTeam: catTeam)
+  for (const old of OLD) {
+    // a Championship under way with the dropped side as the player's: as the old build saved it, then loaded here
+    X.newChamp(old, nats.slice(0, 5)); X.save();
+    const raw = JSON.parse(memory['tryline.v1']).champ, side = raw.teams[raw.user];
+    X.setChamp(null); X.load();
+    const c = X.champ(), t = c && c.teams[c.user];
+    const same = !!t && ['id', 'name', 'kit', 'trim', 'alt', 'altTrim', 'cat', ...T.stamina.ABILITIES.map(([k]) => k)].every(k => t[k] === side[k]) && t.id === old.id && t.name === old.name;
+    let plays = false;
+    try { X.renderHub(); $('hub-play').click(); plays = !!T.M && T.M.champ && !T.M.demo && T.M.nat[0].name === old.name && T.M.nat[0].kit === old.kit; D.exitMatch(); } catch (e) { plays = false; }
+    ok(same && plays && !L.LEGENDS.some(l => l.id === old.id), `${old.id}: a saved Championship as ${old.name} loads with its side as saved (code, name, kit, ratings) and plays its next match`);
+    // the same Championship finished: in the Trophy Cabinet, kept as saved through a save and a load
+    for (let i = c.round; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; }
+    X.setChamp(c); X.save(); X.load(); X.setChamp(null); X.save(); X.load();
+    const hist = JSON.parse(memory['tryline.v1']).champHistory || [], h = hist.find(e => e.teams && e.teams.some(x => x.id === old.id));
+    ok(!!h && h.teams.find(x => x.id === old.id).name === old.name, `${old.id}: the finished one stays in the Trophy Cabinet as saved`);
+    // My Team's club and country naming it: the default, as an unknown code
+    const myTeam = v => { st.myClub = null; st.myNat = undefined; X.restore({ settings:{ myClub:v, myNat:v } }); return json([st.myClub, st.myNat, X.listName(T.home.myClub()), X.listName(T.home.myNat(null)), X.listName(T.home.myNat('women') || {}), T.home.myIs(old)]); };
+    const dropped = myTeam(old.id), unknown = myTeam('Q77'), unset = myTeam(undefined);
+    ok(dropped === unknown && dropped === unset && !JSON.parse(dropped)[0] && !JSON.parse(dropped)[1] && JSON.parse(dropped)[3] === 'England', `${old.id}: My Team's club and country naming it fall back to the default, as an unknown code does (${dropped})`);
+  }
+  memory['tryline.v1'] = keep; Object.assign(st, was); fresh(); X.setChamp(null); X.load();
 }
 
 // 13. the render hooks: the chosen ball and boots in a match you play, and only there

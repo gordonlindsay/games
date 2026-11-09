@@ -525,7 +525,7 @@ function cleanSide(t) {
   if (!t || typeof t !== 'object') return null;
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   if (!name) return null;
-  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W94: src/locker.js)
+  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W91: src/locker.js), and so does one dropped since (W94)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;
@@ -5233,7 +5233,8 @@ function traitMarks(r) {
      count once a call, and once a match for one medal: 'champ' (Champions; the Championship's own league win calls it here),
      'euro', 'world', 'tour' and 'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
    - Every Bronze and every Silver unlocks one ball or one pair of boots (each feat's unlock). Every Gold unlocks the next
-     Legends side of each list, in date order: the nth Gold, the nth men's and the nth women's side. Nothing here is sold.
+     Legends side of each list, in date order: the nth Gold, the nth men's side and the nth women's while there is one, so Golds
+     1 to 5 bring one of each and Golds 6 to 10 a men's side only (ten men's, five women's). Nothing here is sold.
    - The match counts are plain counters on M.lk (drop goals and duel Big Hits by side, the half-time score), made only in a
      match you play; nothing here draws a random number, so AI v AI, the demo and every tool play exactly as before.
    - The chosen ball and boots are drawn only in a match you play (lockerBall, lockerBoots); AI v AI, the demo and the drills
@@ -5301,9 +5302,15 @@ const LOCKER_BOOTS = [
 ];
 const LOCKER_RAINBOW = ['#ff4f4f', '#ff9a2a', '#ffe03d', '#5fd35f', '#3a9bff', '#8a5cff'];
 /* The Legends: the sides that won a World Cup, named by nation and year only (never a player's name, likeness or nickname), in
-   date order, men's then women's. Ratings at the top of the scale: every ability 5 (overall 99) or one 4 (96); style is the side's
+   date order, men's then women's. Ten men's, every winner; five women's, spread over the years and the nations (the owner, 2026-11-09:
+   "just have a few female legends teams as they are less prominent. red roses WC winners and similar make sense over the years", then
+   "Maybe some other women's legendary clubs not just England"): USA 1991, the first winners; New Zealand 1998, the first of their four
+   in a row; England 2014; New Zealand 2017; England 2025. The two lists are not the same length, so nothing reads one by the other's
+   index (lockerList). Ratings at the top of the scale: every ability 5 (overall 99) or one 4 (96); style is the side's
    strength, as the Locker shows it. Kit colours are the nation's. A women's side already says Women, with cat 'women', so the team
-   screen's Men | Women | Minis (catSide) leaves its name alone. Codes are unique across every list: L and the year, W and the year. */
+   screen's Men | Women | Minis (catSide) leaves its name alone. Codes are unique across every list: L and the year, W and the year.
+   A code dropped (W94, W02, W06, W10, W21: women's sides of an earlier build) is no Legend now: a saved Championship keeps its side
+   as saved (cleanSide), and a My Team or settings value naming one reads as any unknown code does (myClubFind, the myNat check). */
 const LEGEND_KIT = {
   'New Zealand':  { kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c' },
   'Australia':    { kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e' },
@@ -5328,16 +5335,12 @@ const LEGENDS = [
   legend('men', 'South Africa', 2019, 'power', 'pace'),
   legend('men', 'South Africa', 2023, 'stamina', null),
   legend('women', 'USA', 1991, 'pace', 'kicking'),
-  legend('women', 'England', 1994, 'power', 'pace'),
   legend('women', 'New Zealand', 1998, 'handling', 'kicking'),
-  legend('women', 'New Zealand', 2002, 'power', 'kicking'),
-  legend('women', 'New Zealand', 2006, 'stamina', 'kicking'),
-  legend('women', 'New Zealand', 2010, 'handling', null),
   legend('women', 'England', 2014, 'kicking', 'pace'),
   legend('women', 'New Zealand', 2017, 'pace', 'power'),
-  legend('women', 'New Zealand', 2021, 'pace', 'kicking'),   // the 2021 World Cup, played in 2022
   legend('women', 'England', 2025, 'power', null),
 ];
+const lockerList = cat => LEGENDS.filter(t => t.cat === cat);   // one list, 'men' or 'women', in date order: the nth Gold unlocks its nth side, if it has one
 
 /* ---------- the record ---------- */
 const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOCKER_BOOTS[0].id, seen:{} });   // fan and fanSeen join it with the first Super Fan trophy
@@ -5378,8 +5381,7 @@ const lockerHas = (kind, id) => { const s = lockerSource(kind, id); return s ? l
 const lockerItem = (kind, id) => (kind === 'ball' ? LOCKER_BALLS : LOCKER_BOOTS).find(x => x.id === id) || null;
 /* The unlocked Legends of one list: 'men' or 'women' (minis play the men's). The team screen's International list shows them. */
 function lockerLegends(cat) {
-  const c = cat === 'women' ? 'women' : 'men';
-  return LEGENDS.filter(t => t.cat === c).slice(0, lockerGolds());
+  return lockerList(cat === 'women' ? 'women' : 'men').slice(0, lockerGolds());
 }
 function lockerAdd(id) { locker.n[id] = Math.min(LOCKER_MAX, (locker.n[id] || 0) + 1); }
 
@@ -5478,16 +5480,15 @@ function lockerFrom() {
   return M.lkFrom;
 }
 /* Each medal won since `from` (a feat's tier then; the last one shown by default): { feat, tier, item } (item null for a Gold), and
-   the Legends the new Golds bring. */
+   the Legends the new Golds bring: for each new Gold, its men's side and its women's side, the women's only while there is one. */
 function lockerNews(from = lockerSeen) {
   const medals = [];
   for (const f of LOCKER_FEATS) for (let t = from(f.id) + 1; t <= lockerTier(f.id); t++) {
     const u = t < 3 ? f.unlock[t - 1].split(':') : null;
     medals.push({ feat:f, tier:t, item:u ? { kind:u[0], ...lockerItem(u[0], u[1]) } : null });
   }
-  const g0 = Math.min(10, lockerGolds(from)), g1 = Math.min(10, lockerGolds());
   const legends = [];
-  for (let i = g0; i < g1; i++) legends.push(LEGENDS.filter(t => t.cat === 'men')[i], LEGENDS.filter(t => t.cat === 'women')[i]);
+  for (let i = lockerGolds(from); i < lockerGolds(); i++) for (const cat of ['men', 'women']) { const t = lockerList(cat)[i]; if (t) legends.push(t); }
   return { medals, legends };
 }
 function lockerMarkSeen(ids) {                               // the medals shown: every feat and trophy (the Locker), or only the medals listed (the full-time card)
@@ -13604,11 +13605,11 @@ function renderLocker(news) {
     }).join('');
     for (const b of body.querySelectorAll('.lk-item')) b.addEventListener('click', () => { if (lockerPick(b.dataset.kind, b.dataset.id)) { renderLocker(); const again = $('lk-body').querySelector(`[data-id="${b.dataset.id}"]`); if (again && again.focus) again.focus(); if (again && focusEl) setFocus(again); } });
   } else {
-    const g = Math.min(10, lockerGolds());
+    const g = lockerGolds();                                 // the nth Gold, the nth side of each list (ten men's, five women's)
     const tile = (t, i) => i < g
       ? `<div class="lk-leg" data-legend="1" role="group" aria-label="${esc(t.name)}, Overall ${overallOf(t)}">${jersey(t).replace(/<\/span>$/, `<span class="ovr">${overallOf(t)}</span></span>`)}<span class="lk-nat">${esc(t.nation)}</span><span class="lk-yrow"><b class="lk-yr">${t.year}</b>${ratedStars(t)}</span></div>`
       : `<div class="lk-leg lk-off" role="group" aria-label="Locked, ${i + 1} Gold ${i ? 'Medals' : 'Medal'}"><span class="lk-padlock">${LOCKER_LOCK}</span><span class="lk-need">${lockerPip(3, true)}${i + 1}</span></div>`;
-    body.innerHTML = ['men', 'women'].map(cat => `<p class="lbl">${cat === 'men' ? 'Men' : 'Women'}</p><div class="lk-legrow">${LEGENDS.filter(t => t.cat === cat).map(tile).join('')}</div>`).join('');
+    body.innerHTML = ['men', 'women'].map(cat => `<p class="lbl">${cat === 'men' ? 'Men' : 'Women'}</p><div class="lk-legrow">${lockerList(cat).map(tile).join('')}</div>`).join('');
     for (const el of body.querySelectorAll('[data-legend]')) storeMark(el, 'legends');   // won on any tier, played with the Full Game: the lock the team screen shows (src/ui-store.js)
   }
 }

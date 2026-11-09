@@ -102,7 +102,7 @@ function cleanSide(t) {
   if (!t || typeof t !== 'object') return null;
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   if (!name) return null;
-  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W94: src/locker.js)
+  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W91: src/locker.js), and so does one dropped since (W94)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;

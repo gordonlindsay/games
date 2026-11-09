@@ -39,8 +39,8 @@ ok(EASY !== NORMAL, 'Easy and Normal are different levels');
 
 // The Locker with every Gold: every Legends side unlocked, so every draw below has them there to draw if anything would
 LK.set(LK.clean({ n:Object.fromEntries(LK.FEATS.filter(f => f.id !== 'star').map(f => [f.id, 40])), drills:C.drillIds() }));
-const LEG = { men:LK.legends('men'), women:LK.legends('women') };
-ok(LEG.men.length === 10 && LEG.women.length === 10, `every Legends side unlocked for the careers to meet if anything drew them (${LEG.men.length} men's, ${LEG.women.length} women's)`);
+const LEG = { men:LK.legends('men'), women:LK.legends('women') };   // ten men's and five women's (re-pinned 2026-11-09 from ten women's: the women's Legends are five, src/locker.js)
+ok(LEG.men.length === 10 && LEG.women.length === 5, `every Legends side unlocked for the careers to meet if anything drew them (${LEG.men.length} men's, ${LEG.women.length} women's)`);
 const LEGEND = new Set(LK.LEGENDS.flatMap(t => [t.id, t.name]));
 const legendary = t => !!t && (t.legend || LEGEND.has(t.id) || LEGEND.has(t.name) || LEGEND.has(String(t.name).replace(/ Women$/, '')));
 
