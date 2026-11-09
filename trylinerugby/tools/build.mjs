@@ -60,6 +60,33 @@ export function assertBundleCurrent() {
   return files.length;
 }
 
+// The self-hosted typefaces are shell assets too: fonts/fonts.css and every file it names (once each, in the order it first
+// names them), cached for offline play, hashed into the worker's version and copied into the app (app/scripts/copy-www.mjs).
+// A file the stylesheet names but the folder lacks fails the build (assembleWorker reads every asset).
+export function fontAssets() {
+  const css = fs.readFileSync(path.join(gameDirectory, 'fonts/fonts.css'), 'utf8');
+  const files = [...new Set([...css.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)].map(m => m[1]))];
+  if (!files.length || files.some(f => !/^[a-z0-9-]+\.woff2$/.test(f))) throw new Error('fonts/fonts.css must name local .woff2 files beside it.');
+  return ['fonts/fonts.css', ...files.map(f => 'fonts/' + f)];
+}
+shellAssets.push(...fontAssets());
+
+// A partner club's crest (crest in FAN_CLUBS, src/store.js: set only once the club has supplied it with its written permission) is a
+// shell asset too, so the Super Fan's shield shows it offline and in the app. While every crest is null nothing is added. A crest
+// that is not a file of the game's own in crests/, or that is not there, fails the build (assembleWorker reads every asset).
+export function crestAssets(source = fs.readFileSync(path.join(gameDirectory, 'src/store.js'), 'utf8')) {
+  const m = source.match(/const FAN_CLUBS\s*=\s*(\[[\s\S]*?\n\]);/);
+  if (!m) return [];
+  const clubs = new vm.Script('(' + m[1] + ')').runInNewContext({}), out = [];   // plain data, as tools/listing.mjs reads it
+  for (const c of clubs) {
+    if (c.crest == null) continue;
+    if (typeof c.crest !== 'string' || !/^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/.test(c.crest)) throw new Error(`FAN_CLUBS: ${c.key}'s crest must be null or crests/<name>.png, .webp or .svg.`);
+    if (!out.includes(c.crest)) out.push(c.crest);
+  }
+  return out;
+}
+shellAssets.push(...crestAssets());
+
 const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   try {

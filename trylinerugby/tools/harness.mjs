@@ -65,6 +65,7 @@ new Function(js)();
 
 export const T = window.__tryline;
 if (T.debug.TUT_IDS) T.debug.settings().tut = T.debug.TUT_IDS.slice(); else T.debug.settings().duelSeen = T.debug.settings().kickSeen = true;   // the tools play as a player who has had the tutorial: no moment pauses, no first-time aid (tutorial.mjs empties it where it tests them); a GAME= snapshot from before the tutorial gets its old flags set the same way
+if (T.debug.CONFIRM) T.debug.CONFIRM.gap = 0;            // the tools press a two-tap confirm twice in one turn; tools/career.mjs checks the gap itself
 if (T.debug.COACH_IDS) T.debug.settings().tips = T.debug.COACH_IDS.slice();   // and who has heard every coach line, so a tool's updateHud stays quiet (tutorial.mjs clears them where it tests the coach)
 export const inputs = T.inputs;                   // one slot a seat; T.input is slot 0
 const inp = T.input;

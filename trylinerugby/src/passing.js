@@ -102,6 +102,7 @@ function bestReceiver(p) {
 }
 function doPass(from, to, o) {
   o = o || {};
+  if (M.careerPro) [to, o] = proPass(from, to, o);       // Pro Mode: a teammate may give it to your player instead (career-pro.js)
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
   const spd = passSpeed(n, o.long);
   let tx, ty, T;
@@ -112,7 +113,7 @@ function doPass(from, to, o) {
     ty = clamp(ty, 3, 67);
   } else {                                                 // led: where he will be running on, then the handling error, and never forward of the passer (the law)
     const a = leadPass(from, to, o); tx = a.x; ty = a.y;
-    const err = (5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0); tx += gauss()*err; ty += gauss()*err;
+    const err = ((5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0))*(M.kids && isHuman(from.team) ? KIDS.passErr : 1); tx += gauss()*err; ty += gauss()*err;   // Kids: your passes stray less
     if ((tx-from.x)*d > 0) tx = from.x;
   }
   T = hyp(tx-b.x, ty-b.y)/spd + 0.06;
@@ -123,6 +124,7 @@ function doPass(from, to, o) {
     sure:!!o.sure, boost:o.boost || null, long:!!o.long };
   from.hold = 0; from.quick = false;
   M.stats.passes++;
+  if (M.career) careerLifePass(from, to);                  // a career match: a pass to or from your player, for Team Spirit
   if (o.long) { st('long'); st('long' + from.team); }
   if (isHuman(from.team)) setCtrl(from.team, to);
   sfx('pass');
@@ -160,13 +162,14 @@ function chargeDownBy(c, q, quiet, at) {                   // q blocks c's kick 
 }
 function doKick(c, power, lat) {
   if (chargeDown(c)) return;
-  const n = M.nat[c.team], d = dirOf(c.team);
+  const n = M.career ? careerNatOf(c) : M.nat[c.team], d = dirOf(c.team);   // a career match: your player's own kicking
   const len = 10 + power*(36 + n.kicking*3);
   const ang = clamp(lat, -1.2, 1.2)*0.75 + gauss()*(0.13 - n.kicking*0.015);
   const tx = c.x + d*len*Math.cos(ang), ty = c.y + len*Math.sin(ang);
   c.hold = 0;
   M.stats.kicks++;
   kickBall(c.team, c.x, c.y, tx, ty, 0.8 + len/28, 2.5 + len*0.26, 'kick');
+  traitKick(c);                                            // a Long Boot's kick runs on where it lands (src/traits.js)
   sfx('kick');
 }
 function aiKick(p, type) {

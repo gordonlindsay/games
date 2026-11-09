@@ -1,0 +1,26 @@
+{
+  "appId": "ai.signcheck.tryline",
+  "appName": "Tryline Rugby",
+  "webDir": "www",
+  "backgroundColor": "#0b130e",
+  "ios": {
+    "contentInset": "never"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "hidden": true,
+      "style": "DARK",
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    },
+    "CapacitorCookies": {
+      "enabled": false
+    }
+  }
+}

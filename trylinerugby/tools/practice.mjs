@@ -9,6 +9,7 @@ function tick(n = 1) { for (let i=0; i<n; i++) T.update(T.STEP); }
 function start(id) { P.start(id); ok(P.state().ready && T.M.paused, id + ' waits for Start'); $('pr-retry').click(); }
 const original = JSON.stringify(D.settings()), originalChamp = JSON.stringify(T.teams.champ());
 let writes = 0; localStorage.setItem = () => writes++;
+T.locker.state().drills = T.drills.DRILLS.map(d => d.id);   // the Locker's Star Pupil writes the save once, after a drill's first three stars (tools/locker.mjs): every drill counted already keeps that write out of these checks
 start('defend');
 const initial = T.sides.ctrlOf(0), target = T.contact.switchTarget(0);
 ok(target && target !== initial && target.x < T.M.ball.carrier.x, 'Switch points to goal-side cover');
@@ -18,7 +19,7 @@ ok(T.sides.ctrlOf(0) === target && P.state().switched, 'real Switch input change
 T.contact.tackle(T.M.ball.carrier, target);
 ok(P.state().done && P.state().won, 'cover tackle completes drill');
 D.resume(); ok(T.M.paused, 'result cannot resume via pause shortcut');
-key('Escape'); ok(!P.state() && !$('s-practice').hidden, 'Escape returns from result to drill selection');
+key('Escape'); ok(!P.state() && !$('s-home').hidden, 'Escape returns from result to drill selection (the home\'s Skills Mini Games)');
 ok(JSON.stringify(D.settings()) === original, 'selection restores all settings');
 start('pass');
 const carrier = T.M.ball.carrier;
@@ -45,9 +46,10 @@ g.aim = T.kick.aimFor(g, g.ctr);
 tick(30); key('KeyJ');
 const hold = Math.round(g.ctr*g.fill/T.STEP);
 tick(hold); key('KeyJ', false);
-for (let i=0; i<900 && !P.state().done; i++) tick();
+for (let i=0; i<900 && P.state().kick.shots.length < 1; i++) tick();
 ok(g.judged, 'hold/release judged a real conversion');
-ok(P.state().done && P.state().won === !!g.ok, 'conversion outcome feeds practice result');
+ok(P.state().kick.shots.length === 1 && P.state().kick.shots[0] === !!g.ok && P.state().kick.made === (g.ok ? 1 : 0), 'conversion outcome feeds the Kicking count');
+ok(!P.state().done && T.M.cut && T.M.cut.kind === 'goal' && T.M.goal !== g && T.M.wind.mph > 0, 'the next kick opens further out, with wind');
 P.leave();
 ok(!P.state() && $('m-practice').hidden && $('m-pause').hidden, 'leave clears practice overlays');
 ok(JSON.stringify(D.settings()) === original, 'all exits restore settings');

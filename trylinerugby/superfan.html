@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b130e">
+<title>Super Fan · Tryline Rugby Sevens</title>
+<meta name="description" content="Super Fan: the Tryline Rugby Sevens unlock that supports a partner club, and the share each club gets.">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<main class="page">
+<header class="top">
+<p class="eyebrow">Tryline Rugby Sevens</p>
+<h1>Super Fan</h1>
+<nav class="nav" aria-label="Tryline Rugby Sevens pages"><a class="btn" href="privacy.html">Privacy</a><a class="btn" href="support.html">Support</a><a class="btn" href="superfan.html" aria-current="page">Super Fan</a></nav>
+</header>
+
+<p class="lede">Super Fan is a one-off unlock in the Tryline Rugby Sevens app for supporters of a partner club. A stated share of what we receive for every Super Fan unlock goes to that club.</p>
+
+<h2 id="get">What You Get</h2>
+<ul>
+<li>Everything in Full Game: Career, Championship and International modes, Create Team, Hard and the Legends sides.</li>
+<li>Add Your Team: your club and its league, from your club's web page or a tournament link.</li>
+<li>Your club's colours on the home screen, and its name on your Super Fan badge.</li>
+<li>A gold Super Fan trophy for your club, in your Locker and your Trophy Cabinet.</li>
+<li>Your club first in Career and Championship.</li>
+</ul>
+
+<h2 id="clubs">Partner Clubs</h2>
+<!-- A club appears here only once it has confirmed its share in writing and its FAN_CLUBS entry (src/store.js) carries
+     agreed:true. Then, in the same change, a table goes here with one row per agreed club:
+       <tr data-club="KEY" data-product="tryline.fan.KEY" data-share="N"><td>NAME</td><td>N%</td></tr>
+     with NAME as FAN_CLUBS has it, and under the table the game's own line for each, word for word (storeShareLine in
+     src/store.js): "Supports NAME: N% of what we receive for every Super Fan unlock goes to the club."
+     tools/listing.mjs checks every row against FAN_CLUBS, and fails on a club named here that is not marked agreed. -->
+<p>Partner clubs appear here, each with its share, once the club has agreed in writing.</p>
+
+<h2 id="share">How the Share Works</h2>
+<p>Each partner club has its own Super Fan unlock in the App Store. Apple reports how many of each one sold and what it paid us for them. The club's share is a percentage of what Apple pays us for each unlock, after Apple's commission and VAT, worked out from those reports. It is paid to the club every three months.</p>
+<p>The reports count sales, not people. Neither we nor the club learn who bought Super Fan.</p>
+
+<h2 id="wall">Supporters' Wall</h2>
+<p>Grown-up Super Fans can ask for their name to go on their club's wall, here on this page. It is only ever your choice, it is only for people aged 18 or over, and the game itself sends nothing.</p>
+<ol>
+<li>In the app, open the <strong>Locker</strong> and tap <strong>Join the Supporters' Wall</strong> beside your Super Fan trophy, or tap <strong>Settings</strong>, then <strong>Grown-Ups</strong>.</li>
+<li>Answer the grown-up check, and confirm you are 18 or over.</li>
+<li>Type your name as you would like it to appear: a first name and your town, or a first name and an initial.</li>
+<li>Tap <strong>Continue</strong>. Your own email app opens with the request written out to support@signcheck.ai. Read it, then send it.</li>
+<li>We check each request by hand, then add the name under your club here.</li>
+</ol>
+<p>We keep only the name and the club, to show them here. To have your name taken off, email support@signcheck.ai at any time and we will remove it from this page. This page is published from a public code repository on GitHub, so its earlier versions, with any name that was on them, can still be read in that repository's history after a name comes off the page.</p>
+<!-- The wall is filled by hand, after checking each request (store-listing/LAUNCH_CHECKLIST.md, Supporters' Wall). Only a club that has
+     agreed in writing (its row above, agreed:true in FAN_CLUBS) gets a list, in place of the line below:
+       <h3>NAME</h3>
+       <ul class="wall" data-club="KEY"><li>First name, Town</li></ul>
+     with NAME and KEY as FAN_CLUBS has them. A first name with a town or an initial only, from someone who said they are 18 or
+     over; never a child's name. tools/listing.mjs checks each list belongs to an agreed club. -->
+<p>No names yet.</p>
+
+<h2 id="join">For Clubs</h2>
+<p>Would your club like to be a partner? Email support@signcheck.ai.</p>
+
+<p class="foot">Tryline Rugby Sevens is made by SignCheck Ltd, a company registered in England and Wales, company number [OWNER: company number]. Registered office: [OWNER: registered office address].</p>
+</main>
+</body>
+</html>

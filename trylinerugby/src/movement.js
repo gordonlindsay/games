@@ -227,6 +227,7 @@ function aiCarrier(p, dt) {
   const m = hyp(ax,ay) || 1, sp = maxSpeed(p)*0.95;
   steer(p, ax/m*sp, ay/m*sp, 15, dt);
   if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; p.vy += (rnd() < 0.5 ? -1 : 1)*MOVES.step.cpuPush; }
+  if (M.careerPro && proCarrier(p, dt)) return;          // Pro Mode: a Call for Ball answered, or a look for your player (career-pro.js)
   p.think -= dt; if (p.think > 0) return; p.think = 0.15;
   if (p.hold < 0.5) return;
   const KD = MOVES.dummy, lv = levelOf(p.team);
@@ -322,6 +323,7 @@ function switchMark(t) {                               // where "behind the ball
 }
 function switchTarget(t) {                                // the one man the dashed ring, the press and the pulse agree on. Nearest the ball, or the second-nearest when that is already you. When your man is behind the ball, the nearest teammate still in front
   const b = M.ball, cur = ctrlOf(t);
+  if (proPinned(t)) return null;                          // Pro Mode: he is always him, so there is no Switch
   const list = M.players.filter(p => p.team === t && onFeet(p)).sort((p, q) => hyp(p.x-b.x, p.y-b.y) - hyp(q.x-b.x, q.y-b.y));
   if (!list.length) return null;
   const m = switchMark(t);
@@ -422,6 +424,7 @@ function handleUser(dt) {
   for (const t of [poss, 1 - poss]) if (I[t]) userStep(t, I[t], dt);
   for (const inp of inputs) inp.aCancel = inp.bCancel = inp.cCancel = false;
   for (const t of [0, 1]) if (inputOf(t)) gestureStep(t, dt);
+  if (M.kids) for (const t of [0, 1]) kidsSwitch(t);      // Kids: the ring finds your best defender
 }
 function userStep(t, i, dt) {
   const b = M.ball, c = ctrlOf(t), S = sideOf(t), inp = inputOf(t);
@@ -431,6 +434,7 @@ function userStep(t, i, dt) {
     else if (M.phase === 'play' && c) {
       if (b.state === 'held' && b.carrier === c) { if (c.bind) { S.pass = null; offload(c.bind, true); } else startUserPass(c); }   // held in a tackle, Pass is the offload, on the press
       else if (!ourBall(t)) { S.pass = null; userTackle(t); }
+      else if (proPinned(t)) proCall();                     // Pro Mode: a teammate has it, so Pass is Call for Ball (career-pro.js)
     }
   }
   tickUserPass(t, dt);
@@ -464,6 +468,7 @@ function moveAll(dt) {
         const t = T.get(p);                                     // the stick let go: he still runs onto the ball, as he did before the ring moved
         if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
       }
+      if (M.kids && kidsChase(p, inp, dt)) continue;           // Kids: let go of the stick and he chases on his own
       userMove(p, dt, inp); continue;                          // any deflection places him until the ball is out
     }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }
@@ -504,10 +509,11 @@ function computeTargets() {
   if (practice && practice.id === 'defend') for (const p of M.players) {
     if (p.team === 0 && p !== ctrlOf(0)) targets.set(p, { x:p.x, y:p.y, s:0 });
   }
+  if (M.career) careerLifeSupport(targets);                // a career match: Team Spirit pulls your player's support line towards the ball
   return targets;
 }
 function update(dt) {
-  matchUpdate(dt);
+  if (!(practice && practice.space)) matchUpdate(dt);      // a training space has no match flow: its drill moves the men and the ball (training.js)
   practiceTick(dt);
 }
 function matchUpdate(dt) {
@@ -516,10 +522,11 @@ function matchUpdate(dt) {
   if (M.phase === 'cut') { updateCut(dt); return; }
   const b = M.ball;
   if (M.surge && (M.surge.t -= dt) <= 0) M.surge = null;
+  fireTick(dt);
   const clockOn = M.phase === 'play' || (M.phase === 'set' && M.set.kind !== 'try' && M.set.kind !== 'score');
   if (clockOn) {
     M.clock += dt; M.dclock += dt;
-    if (!M.hooter && M.clock >= M.halfLen) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
+    if (!M.hooter && M.clock >= periodLen()) { M.hooter = true; if (!M.demo) { say('Last Play'); sfx('horn'); } }
   }
   handleUser(dt);
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
@@ -533,7 +540,7 @@ function matchUpdate(dt) {
       if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
-    if (M.phase === 'play' && M.hooter && !M.demo && M.clock > M.halfLen + 45) endHalf();
+    if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
   } else if (M.phase === 'set') {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
@@ -550,10 +557,12 @@ function endHalf() {
   if (M.half === 1) {
     if (M.headless) { secondHalf(); return; }
     M.phase = 'break'; showBreak('half');
+  } else if (M.half === 2 && goldenOn() && M.score[0] === M.score[1]) {
+    startGolden();                                         // level: sudden death, straight from the hooter
   } else {
     M.phase = 'break'; M.over = true;
     if (!M.headless) finishMatch();
   }
 }
-function secondHalf() { M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; kickoff(1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
+function secondHalf() { lockerHalf(); M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; kickoff(1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
 

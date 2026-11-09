@@ -2,7 +2,7 @@
    UI
    ========================================================= */
 let mode = 'menu';           // 'menu' | 'match'
-let pickMode = 'champ', quickPick = null, quickAuto = false;   // quickAuto: Farnham is still the untouched default
+let pickMode = 'champ', quickPick = null;   // quickPick: Quick Match's Player 1 side, once he has picked it (nothing is picked for him)
 let bannerTimer = 0, coachLast = null, coachUntil = 0;   // coachUntil: wall-clock ms until another coach line may speak (one at a time)
 const playing = () => mode === 'match' && M && !M.demo;
 
@@ -11,6 +11,7 @@ function showScreen(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   setFocus(null);
   if (id === 's-teams') fitNames();
+  if (id === 's-cup' && typeof cupFit === 'function') cupFit($('s-cup'));   // the cup hub's long names, once it has a size (src/ui-cups.js)
   if (id !== 's-home') { const a = document.activeElement; if (a && typeof a.blur === 'function') a.blur(); }   // a focused menu button must not fire on Enter once it is hidden
 }
 function clearBanner() { clearTimeout(bannerTimer); const el = document.getElementById('banner'); if (el) el.innerHTML = ''; }
@@ -31,14 +32,15 @@ function say(text, size, team, grade, low) {
   bannerTimer = setTimeout(() => { el.innerHTML = ''; }, size === 'big' ? 1700 : size === 'coach' ? 1600 : size === 'small' ? 900 : 1300);
 }
 
-function startDemo() {
-  const all = [...NATIONS, ...CLUBS], a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
+function startDemo() {   // a men's match: every side but the women's-only nations (Canada and the USA), in the order the demo always drew from
+  const men = natList('men'), all = ALL_TEAMS.filter(t => !isNation(t) || men.includes(t)), a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
   newMatch(all[a], all[b], { halfLen:1e9, diff:1, auto:true, demo:true });
   mode = 'menu';
   $('hud').hidden = true; $('controls').hidden = true; $('b-pause').hidden = true;
   for (const m of document.querySelectorAll('.modal')) m.hidden = true;
 }
 function lockLandscape() {
+  if (typeof nativeOn === 'function' && nativeOn()) return;   // the Try Line app is landscape with no bars from the start (native.js); its web views have no fullscreen to ask for
   if (!window.matchMedia('(pointer: coarse)').matches) return;
   try {
     const el = document.documentElement;
@@ -55,7 +57,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease,   // the switch is gone: a match you play always has duels
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -67,11 +69,14 @@ function startMatch(u, c, isChamp, o) {
 }
 function exitMatch() {
   if (practice) { practiceLeave(); return; }
-  const wasChamp = M && M.champ;
+  const wasChamp = M && M.champ, wasCareer = M && M.career, wasCup = M && M.cup;
   setTwo(false);                                           // the menus are one player's again; the join screen switches the seats back on
   series = { w:[0, 0], d:0 }; navOnly = null;              // a two-player series ends with the visit to the menu
   startDemo();
-  if (wasChamp && champ) { renderHub(); showScreen('s-hub'); } else goHome();
+  if (wasCareer && career) careerOpen();
+  else if (wasChamp && champ) { renderHub(); showScreen('s-hub'); }
+  else if (wasCup && cup) { renderCup(); showScreen('s-cup'); }   // a cup in Championship mode (src/ui-cups.js)
+  else goHome();
 }
 
 let lastHud = '', lastBtn = '';
@@ -82,18 +87,20 @@ function cutLabels(c) {
 }
 
 function fmtClock() {
-  const mins = (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;
+  const mins = M.golden ? 80 + Math.min(M.clock/periodLen(), 1)*10 : (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;   // extra time runs 80 to 90
   const mm = Math.floor(mins), ss = Math.floor((mins-mm)*60);
   return String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
 }
 function updateHud() {
   if (!playing()) return;
-  const sub = M.hooter ? '<span class="lp">Last Play</span>' : (M.phaseCount > 0 ? 'Phase ' + M.phaseCount : (M.half === 1 ? '1st Half' : '2nd Half'));
-  const key = M.score[0] + '|' + M.score[1] + '|' + fmtClock() + sub;
+  const sub = M.golden ? '<span class="lp">Golden Try</span>' : M.hooter ? '<span class="lp">Last Play</span>' : (M.phaseCount > 0 ? 'Phase ' + M.phaseCount : (M.half === 1 ? '1st Half' : '2nd Half'));
+  const fire = M.arcade ? M.fire.map(F => F.t > 0 ? 'on' : String(F.heat)).join('|') : '';
+  const key = M.score[0] + '|' + M.score[1] + '|' + fmtClock() + sub + fire;
   if (key !== lastHud) {
     lastHud = key;
     $('h-s0').textContent = M.score[0]; $('h-s1').textContent = M.score[1];
     $('h-sub').innerHTML = fmtClock() + ' · ' + sub;
+    for (const t of [0, 1]) { const el = $('h-f' + t), F = M.fire[t]; el.hidden = !M.arcade; el.className = 'heat' + (F.t > 0 ? ' on' : ''); el.style.setProperty('--n', F.t > 0 ? ARCADE.fire.need : F.heat); }   // the run towards On Fire, under each side's code
   }
   const cut = M.phase === 'cut' && M.cut;
   const goal = cut && M.cut.kind === 'goal';
@@ -107,24 +114,28 @@ function updateHud() {
   }
   let la, lb, cueA, cueB, aAct, bAct;
   const gs = goal ? M.cut.g.stage : '';
-  if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
+  const D = practice && practice.space ? drillLabels() : null;   // a training space sets its own buttons
+  if (D) { la = D.a; lb = D.b; cueA = !!D.cueA; cueB = false; aAct = !!D.aOn; bAct = !!D.bOn; }
+  else if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
+  else if (ours && proCalling(ht)) { la = 'Call for Ball'; lb = null; cueA = cueB = false; aAct = play && proCanCall(); bAct = false; }   // Pro Mode: a teammate has it (career-pro.js)
   else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl; la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && carrying && (!held || cueA); bAct = play && carrying && !held; }   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
-  else { la = 'Tackle'; lb = 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
-  const S = M.spr[ht], sprOn = !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
+  else { la = 'Tackle'; lb = proPinned(ht) ? null : 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && canDive(ctrl); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
+  const S = M.spr[ht], sprOn = D ? !!D.cOn : !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
-  const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue + (passLong ? 'L' : '');
+  const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue + (passLong ? 'L' : '') + (D ? (D.c ? 'C' : 'c') : '');
   if (bk !== lastBtn) {
     lastBtn = bk;
     $('la').textContent = la || '';
     $('lb').textContent = lb || '';
     $('btnA').hidden = !la;
     $('btnB').hidden = !lb;
-    $('btnC').hidden = !!cut;                                // Sprint is hidden in every close-up and stays in place otherwise, so nothing on screen moves
+    $('btnC').hidden = !!cut || !!(D && !D.c);                                // Sprint is hidden in every close-up and stays in place otherwise, so nothing on screen moves
     $('btnA').classList.toggle('cue', cueA);
     $('btnB').classList.toggle('cue', cueB);
     $('btnC').classList.toggle('cue', sprCue);
     $('btnB').classList.toggle('two', lb === 'Drop Goal');   // two lines inside the small button
+    $('btnA').classList.toggle('two', la === 'Call for Ball');   // and inside the big one
     $('plates').hidden = !(duel && M.cut.kind === 'past' && !M.cut.after);
     $('btnA').classList.toggle('idle', !aAct); $('btnB').classList.toggle('idle', !bAct);
     $('btnC').classList.toggle('idle', !sprOn); $('btnC').classList.toggle('ready', sprOn);

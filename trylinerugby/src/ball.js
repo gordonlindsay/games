@@ -47,7 +47,8 @@ function updateBallAir(dt) {
   }
   if (u >= 1) {
     b.state = 'loose'; b.f = null;
-    b.vx = (f.x1-f.x0)/f.T*0.32; b.vy = (f.y1-f.y0)/f.T*0.32; b.vz = 3.2; b.z = 0.01;
+    const roll = f.boot ? 0.32*TRAIT.boot.roll : 0.32;     // a Long Boot's kick runs on (src/traits.js)
+    b.vx = (f.x1-f.x0)/f.T*roll; b.vy = (f.y1-f.y0)/f.T*roll; b.vz = 3.2; b.z = 0.01;
   }
 }
 function resolvePass() {

@@ -180,7 +180,7 @@ function padGone(index) {
     for (const code of Object.values(BMAP.dpad)) { inp.keys.delete(code); inp.held.delete(code); }
   }
   PADS.delete(index);
-  setDesk();                                               // the home's Two Player button follows the pads actually connected
+  setDesk();                                               // body.desk follows the pads actually connected: How to Play's desk-only rows and the in-play key or button hints (no Two Player button on the home since 2026-11-09)
   if (two.on && P.owner != null) { if (!two.lost.includes(P.owner)) two.lost.push(P.owner); twoRelease(P.owner); if (playing()) { pause(); seatLost(two.lost[0]); } }   // the seat falls back to the keyboard and is held for the next pad press, on the pause card, the half-time card or in play
   else if (P.used && playing()) pause();                   // one player: a pad that was never used this match (one that slept over half time) can't interrupt
 }
@@ -208,6 +208,7 @@ let focusEl = null;
 const navLog = [];                                         // the tools read who tried to navigate and whether the layer was his: [fn, seat, owned]
 const logNav = (fn, seat) => { navLog.push([fn, seat, navOwner(seat)]); if (navLog.length > 40) navLog.shift(); };
 function navLayer() {                                      // the top layer: the pause card over anything (it can sit over the penalty card), then an open card, then the visible screen
+  const pg = $('m-gate'); if (pg && !pg.hidden) return pg;   // the grown-up check (kids.js) sits over everything, another card included
   const pz = $('m-pause'); if (pz && !pz.hidden) return pz;
   for (const m of document.querySelectorAll('.modal')) if (!m.hidden) return m;
   for (const s of document.querySelectorAll('.screen')) if (!s.hidden) return s;
@@ -250,6 +251,10 @@ function navMove(seat, dx, dy) {                           // the nearest candid
     if (along <= 0 || side > along*1.732) continue;
     const s = along + 2*side;
     if (s < bs) { bs = s; best = el; }
+  }
+  if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one
+    const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
+    if (sel && cands.includes(sel)) best = sel;
   }
   if (best) setFocus(best);
   return best;

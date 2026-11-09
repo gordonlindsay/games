@@ -4,33 +4,205 @@ let practice = null;
 /* =========================================================
    Data
    ========================================================= */
-const NATIONS = [   // order fixed: championships saved before clubs existed index into it
-  { id:'ENG', name:'England',  kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e', pace:4, power:5, handling:3, kicking:4, home:true },
-  { id:'FRA', name:'France',   kit:'#1d3a8f', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1d3a8f', pace:5, power:5, handling:4, kicking:4 },
-  { id:'IRE', name:'Ireland',  kit:'#109a52', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#109a52', pace:4, power:4, handling:5, kicking:5, home:true },
-  { id:'ITA', name:'Italy',    kit:'#2f7ed8', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#2f7ed8', pace:4, power:3, handling:3, kicking:3 },
-  { id:'SCO', name:'Scotland', kit:'#1a2a5e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1a2a5e', pace:5, power:3, handling:4, kicking:3, home:true },
-  { id:'WAL', name:'Wales',    kit:'#c8102e', trim:'#f2efe6', alt:'#1c1c1c', altTrim:'#c8102e', pace:3, power:4, handling:3, kicking:3, home:true },
-];
+/* Nations are rated on the XV game's hierarchy: World Rugby's official tables, the men's effective 3 November 2026 and the women's
+   2 November 2026 (README, Teams). Each category's International list is its own top twelve in its table's order (natList). A
+   five-ability sum goes by the points, so overallOf sits near them (23 is 93, 22 is 90, 21 is 87, 20 is 84, 19 is 81, 18 is 78), and
+   every nation is above every club (17 is 75). Each keeps its style: Fiji's pace, South Africa's power, Ireland's handling and
+   kicking. NATIONS holds the kits and the men's ratings, NAT_WOMEN the women's. */
+const NATIONS = [   // append only: championships saved before clubs existed index into the first six
+  { id:'ENG', name:'England',  kit:'#f2efe6', trim:'#c8102e', alt:'#1b2747', altTrim:'#c8102e', pace:4, power:5, handling:3, kicking:5, stamina:3, home:true },
+  { id:'FRA', name:'France',   kit:'#1d3a8f', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1d3a8f', pace:5, power:5, handling:4, kicking:3, stamina:4 },
+  { id:'IRE', name:'Ireland',  kit:'#109a52', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#109a52', pace:4, power:4, handling:5, kicking:5, stamina:3, home:true },
+  { id:'ITA', name:'Italy',    kit:'#2f7ed8', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#2f7ed8', pace:4, power:4, handling:4, kicking:3, stamina:3 },
+  { id:'SCO', name:'Scotland', kit:'#1a2a5e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1a2a5e', pace:5, power:4, handling:5, kicking:3, stamina:3, home:true },
+  { id:'WAL', name:'Wales',    kit:'#c8102e', trim:'#f2efe6', alt:'#1c1c1c', altTrim:'#c8102e', pace:4, power:4, handling:3, kicking:4, stamina:3, home:true },
+  { id:'NZL', name:'New Zealand',  kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c', pace:5, power:4, handling:5, kicking:4, stamina:5 },
+  { id:'RSA', name:'South Africa', kit:'#0b5a3c', trim:'#f2b01e', alt:'#f2efe6', altTrim:'#0b5a3c', pace:4, power:5, handling:4, kicking:5, stamina:5 },
+  { id:'AUS', name:'Australia',    kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e', pace:5, power:4, handling:4, kicking:4, stamina:3 },
+  { id:'ARG', name:'Argentina',    kit:'#6fb7e6', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#6fb7e6', pace:4, power:5, handling:4, kicking:3, stamina:3 },
+  { id:'FIJ', name:'Fiji',         kit:'#f2efe6', trim:'#1c1c1c', alt:'#1c1c1c', altTrim:'#f2efe6', pace:5, power:3, handling:5, kicking:2, stamina:3 },
+  { id:'JPN', name:'Japan',        kit:'#c8102e', trim:'#f2efe6', hoops:true, alt:'#1b2747', altTrim:'#c8102e', pace:5, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'CDN', name:'Canada',       kit:'#d52b1e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#d52b1e', pace:4, power:5, handling:4, kicking:4, stamina:5 },   // women's twelve only: CAN is Canberra's
+  { id:'USA', name:'USA',          kit:'#1b2747', trim:'#c8102e', alt:'#f2efe6', altTrim:'#1b2747', pace:5, power:5, handling:3, kicking:3, stamina:4 },   // women's twelve only
+];   // the six first, then the rest of the world, then the women's two; a nation's code never matches a club's (RSA, not a South African city's)
 /* Local clubs: kit colours are the clubs' own, ratings are made up. Append only, never reorder. */
 const CLUBS = [
-  { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3 },
-  { id:'HAS', name:'Haslemere',     kit:'#2244aa', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2 },
-  { id:'GUI', name:'Guildford',     kit:'#1a1e4f', trim:'#ffc014', pace:3, power:4, handling:3, kicking:3 },
-  { id:'ALD', name:'Aldershot',     kit:'#d8333a', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3 },
-  { id:'WEY', name:'Weybridge',     kit:'#1a1a1a', trim:'#0f8040', pace:3, power:3, handling:4, kicking:3 },
-  { id:'HAR', name:'Harlequins',    kit:'#c8306f', trim:'#7eb0dc', pace:4, power:3, handling:4, kicking:3 },
-  { id:'COB', name:'Cobham',        kit:'#26316f', trim:'#7a2338', hoops:true, pace:3, power:3, handling:3, kicking:3 },
-  { id:'GDN', name:'Guildfordians', kit:'#12482a', trim:'#6b1a3a', hoops:true, pace:3, power:3, handling:3, kicking:2 },
-  { id:'IRO', name:'Ironsides',     kit:'#1f9a55', trim:'#c8191e', pace:3, power:4, handling:2, kicking:2 },
-  { id:'KIN', name:'Kingston',      kit:'#7c1431', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2 },
-  { id:'ORU', name:'Old Ruts',      kit:'#2a3290', trim:'#f5c400', hoops:true, pace:4, power:3, handling:3, kicking:2 },
-  { id:'WIM', name:'Wimbledon',     kit:'#7c1956', trim:'#6cadde', hoops:true, pace:4, power:3, handling:3, kicking:3 },
+  { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'HAS', name:'Haslemere',     kit:'#2244aa', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'GUI', name:'Guildford',     kit:'#1a1e4f', trim:'#ffc014', pace:3, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'ALD', name:'Aldershot',     kit:'#d8333a', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3, stamina:4 },
+  { id:'WEY', name:'Weybridge',     kit:'#1a1a1a', trim:'#0f8040', pace:3, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'QUI', name:'Quins',         kit:'#c8306f', trim:'#7eb0dc', pace:4, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'COB', name:'Cobham',        kit:'#26316f', trim:'#7a2338', hoops:true, pace:3, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'GDN', name:'Guildfordians', kit:'#12482a', trim:'#6b1a3a', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'IRO', name:'Ironsides',     kit:'#1f9a55', trim:'#c8191e', pace:3, power:4, handling:2, kicking:2, stamina:4 },
+  { id:'KIN', name:'Kingston',      kit:'#7c1431', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'ORU', name:'Old Ruts',      kit:'#2a3290', trim:'#f5c400', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'WIM', name:'Wimbledon',     kit:'#7c1956', trim:'#6cadde', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:4 },
 ];
-const POOLS = [NATIONS, CLUBS];          // the team screen's International | Local
-const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local with it picked
-const ABILITIES = [['pace', 'Pace'], ['power', 'Power'], ['handling', 'Handling'], ['kicking', 'Kicking']];
-const BUDGET = 10;                        // a team you make starts at 1 in each ability, with this many points to spend
+/* Professional sides go by their city, not the club's own name or nickname: the city is a place, the club name is a
+   trademark. Kit colours follow the clubs' own; ratings are made up, and no club tops a team you can make (5 + BUDGET).
+   They follow the XV game: each league's sides in the order of its last completed table, from 17 (75) down to 14 (67), and
+   Scotland's amateur clubs 13 and 12, below every professional side. Local (CLUBS) keeps its own: Kids and Quick Match read it.
+   Codes are unique across every list, nations included. Append only, never reorder. */
+const FRANCE = [   // the Top 14, rated by its 2025-26 table
+  { id:'TLS', name:'Toulouse',    kit:'#d01f2e', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'BOR', name:'Bordeaux',    kit:'#5c1a33', trim:'#f2efe6', pace:4, power:2, handling:4, kicking:2, stamina:3 },
+  { id:'LRO', name:'La Rochelle', kit:'#f5c400', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'TLN', name:'Toulon',      kit:'#1c1c1c', trim:'#d01f2e', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'NAN', name:'Nanterre',    kit:'#7eb6e0', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'PAR', name:'Paris',       kit:'#e2457f', trim:'#1b2747', pace:3, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'CLE', name:'Clermont',    kit:'#f5c400', trim:'#1b2747', pace:3, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'CAS', name:'Castres',     kit:'#2050b0', trim:'#f2efe6', pace:3, power:4, handling:2, kicking:3, stamina:3 },
+  { id:'MPL', name:'Montpellier', kit:'#1b2747', trim:'#6fb7e6', pace:3, power:5, handling:3, kicking:3, stamina:3 },
+  { id:'PAU', name:'Pau',         kit:'#0f7a3c', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'BAY', name:'Bayonne',     kit:'#6fb7e6', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:3 },
+  { id:'LYO', name:'Lyon',        kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'PGN', name:'Perpignan',   kit:'#f2b01e', trim:'#c8102e', pace:3, power:3, handling:2, kicking:3, stamina:3 },
+  { id:'MTB', name:'Montauban',   kit:'#f2efe6', trim:'#2050b0', pace:3, power:3, handling:3, kicking:2, stamina:3 },
+];
+const AUSTRALIA = [   // the four Super Rugby cities (rated by the 2026 table), Melbourne (in Super Rugby until 2024) and Adelaide, invented: no sixth professional side exists
+  { id:'SYD', name:'Sydney',    kit:'#6fb7e6', trim:'#1b2747', pace:4, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'BRI', name:'Brisbane',  kit:'#a3162f', trim:'#f2efe6', pace:4, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'CAN', name:'Canberra',  kit:'#1b2747', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'PTH', name:'Perth',     kit:'#2050b0', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'MEL', name:'Melbourne', kit:'#14235a', trim:'#c8102e', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'ADL', name:'Adelaide',  kit:'#c8102e', trim:'#1b2747', pace:3, power:3, handling:3, kicking:2, stamina:3 },
+];
+const SOUTH_AFRICA = [   // the URC four and the Currie Cup's next three, rated by the 2025-26 URC and the 2026 Currie Cup
+  { id:'PRE', name:'Pretoria',     kit:'#2a5fb8', trim:'#f2efe6', pace:3, power:5, handling:3, kicking:3, stamina:3 },
+  { id:'CPT', name:'Cape Town',    kit:'#1c1c1c', trim:'#2a5fb8', hoops:true, pace:4, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'DUR', name:'Durban',       kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'JHB', name:'Johannesburg', kit:'#c8102e', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'BLM', name:'Bloemfontein', kit:'#e8731c', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:2, stamina:3 },
+  { id:'KIM', name:'Kimberley',    kit:'#f2efe6', trim:'#b0b4ba', pace:3, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'MBO', name:'Mbombela',     kit:'#d8a823', trim:'#1c1c1c', pace:3, power:4, handling:2, kicking:2, stamina:3 },
+];
+const ENGLAND = [   // the Premiership, rated by its 2025-26 table. London North and London West are the two London clubs; Quins in Local is the amateur club
+  { id:'BTH', name:'Bath',         kit:'#1d4fa0', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'BRS', name:'Bristol',      kit:'#14235a', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:2, stamina:3 },
+  { id:'EXE', name:'Exeter',       kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'GLO', name:'Gloucester',   kit:'#a4123f', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:2, stamina:3 },
+  { id:'LEI', name:'Leicester',    kit:'#0f5a32', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'NCL', name:'Newcastle',    kit:'#1c1c1c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'NTH', name:'Northampton',  kit:'#0f6b3a', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'SAL', name:'Sale',         kit:'#1b2747', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'LNO', name:'London North', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:4, handling:2, kicking:3, stamina:3 },
+  { id:'LWE', name:'London West',  kit:'#7eb0dc', trim:'#c8306f', pace:4, power:2, handling:3, kicking:2, stamina:3 },
+];
+const CELTIC = [   // Ireland, Scotland, Wales and Italy's professional sides, in one league, rated by its 2025-26 table
+  { id:'DUB', name:'Dublin',    kit:'#1f4fa8', trim:'#f2b01e', pace:4, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'LIM', name:'Limerick',  kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'BEL', name:'Belfast',   kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'GAL', name:'Galway',    kit:'#0f5a32', trim:'#f2b01e', pace:3, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'EDI', name:'Edinburgh', kit:'#14235a', trim:'#e8731c', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'GLA', name:'Glasgow',   kit:'#1c1c1c', trim:'#6fb7e6', pace:4, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'CDF', name:'Cardiff',   kit:'#6fb7e6', trim:'#1c1c1c', pace:4, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'SWA', name:'Swansea',   kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'LLA', name:'Llanelli',  kit:'#c8102e', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:2, stamina:3 },
+  { id:'NPT', name:'Newport',   kit:'#1c1c1c', trim:'#e8731c', pace:3, power:4, handling:2, kicking:2, stamina:3 },
+  { id:'TRE', name:'Treviso',   kit:'#0f7a3c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:2 },
+  { id:'PRM', name:'Parma',     kit:'#1b2747', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:2, stamina:2 },
+];
+const NEW_ZEALAND = [   // the five Super Rugby cities (rated by the 2026 table) and Taranaki, a provincial side
+  { id:'AKL', name:'Auckland',     kit:'#1b3a8c', trim:'#f2efe6', pace:4, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'HMN', name:'Hamilton',     kit:'#1c1c1c', trim:'#c8102e', pace:4, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'WLG', name:'Wellington',   kit:'#f5c400', trim:'#1c1c1c', pace:4, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'CHC', name:'Christchurch', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'DUN', name:'Dunedin',      kit:'#1b2747', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'TAR', name:'Taranaki',     kit:'#f2a900', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3 },
+];
+const JAPAN = [   // League One, by city or prefecture, rated by its 2025-26 table
+  { id:'TOK', name:'Tokyo',     kit:'#f5c400', trim:'#1c1c1c', pace:4, power:3, handling:4, kicking:2, stamina:3 },
+  { id:'SAI', name:'Saitama',   kit:'#1d3a8f', trim:'#f2efe6', pace:4, power:4, handling:3, kicking:3, stamina:3 },
+  { id:'FNB', name:'Funabashi', kit:'#e8731c', trim:'#1b2747', pace:3, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'AIC', name:'Aichi',     kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3 },
+  { id:'KOB', name:'Kobe',      kit:'#a4141f', trim:'#1c1c1c', pace:4, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'SHZ', name:'Shizuoka',  kit:'#2050b0', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'YOK', name:'Yokohama',  kit:'#1c1c1c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:3 },
+];
+const SCOTLAND = [   // the Scottish Premiership, 2025-26, in its table's order: amateur club sides by town, or by district or ground in a city with several (Edinburgh and Glasgow are the pro sides, in CELTIC)
+  { id:'AYR', name:'Ayr',        kit:'#c2185b', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'CUR', name:'Currie',     kit:'#f2a900', trim:'#1c1c1c', pace:3, power:3, handling:2, kicking:2, stamina:3 },
+  { id:'GOL', name:'Goldenacre', kit:'#2050b0', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:2, stamina:3 },
+  { id:'MYR', name:'Myreside',   kit:'#7a1f2b', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'KEL', name:'Kelso',      kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:2 },
+  { id:'GIF', name:'Giffnock',   kit:'#c8102e', trim:'#0f6b3a', hoops:true, pace:3, power:2, handling:2, kicking:3, stamina:2 },
+  { id:'HAW', name:'Hawick',     kit:'#1f7a3a', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:2, stamina:2 },
+  { id:'MLR', name:'Melrose',    kit:'#f5c400', trim:'#1c1c1c', hoops:true, pace:2, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'ANN', name:'Anniesland', kit:'#b3121f', trim:'#f5c400', pace:3, power:2, handling:3, kicking:2, stamina:2 },
+  { id:'SEL', name:'Selkirk',    kit:'#1b2747', trim:'#f2efe6', pace:2, power:3, handling:2, kicking:2, stamina:3 },
+];
+/* The team screen: International | National | Local, then a list. Every list offers at least six sides, since a championship is
+   your side and five from the list on screen. settings.pool holds a list's key; 'my' is My League (src/import.js), under Local while
+   a league is saved. Keys never change: the save keeps them. */
+const TEAM_TIERS = ['International', 'National', 'Local'];
+const TEAM_LISTS = [
+  { key:'int', tier:0, name:'International',    teams:NATIONS },   // every nation, for the codes and the saves; the screen shows the category's twelve (natList)
+  { key:'eng', tier:1, name:'England',          teams:ENGLAND },
+  { key:'fra', tier:1, name:'France',           teams:FRANCE },
+  { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
+  { key:'sco', tier:1, name:'Scotland',         teams:SCOTLAND },
+  { key:'rsa', tier:1, name:'South Africa',     teams:SOUTH_AFRICA },
+  { key:'aus', tier:1, name:'Australia',        teams:AUSTRALIA },
+  { key:'nzl', tier:1, name:'New Zealand',      teams:NEW_ZEALAND },
+  { key:'jpn', tier:1, name:'Japan',            teams:JAPAN },
+  { key:'sur', tier:2, name:'Surrey',           teams:CLUBS },
+];
+const POOLS = TEAM_LISTS.map(l => l.teams);   // every built-in list
+const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's transfer offers come from these
+/* Saves from before the hierarchy hold an index into the old five lists and My League (International, Local, France, Australia,
+   South Africa, My League). Each goes to the list it was; anything else to International, as a bad choice always has. */
+const POOL_OLD = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];
+function poolKey(v) {
+  if (Number.isInteger(v) && v >= 0 && v < POOL_OLD.length) return POOL_OLD[v];
+  return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? v : 'int';
+}
+const ALL_TEAMS = POOLS.flat();
+const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local · Surrey with it picked
+/* Men | Women | Minis on the team screen, for the match or championship being set up; Men | Women in Career. Only the name and the
+   team's cat change ('England Women', 'Farnham Minis'): ratings, kit, code and the engine are the same. A women's or minis side
+   carries cat ('women' | 'minis') into newMatch and the saves, for the drawing; a team without one is men's (catOf). */
+const TEAM_CATS = [{ id:'men', name:'Men', tag:'' }, { id:'women', name:'Women', tag:' Women' }, { id:'minis', name:'Minis', tag:' Minis' }];
+const catOf = t => (t && TEAM_CATS.some(c => c.id === t.cat) ? t.cat : 'men');
+function catSide(t, cat) {               // Men: the team itself, as before. Otherwise a copy named for it; a name already ending in its word keeps it (Farnham Minis)
+  const c = TEAM_CATS.find(x => x.id === cat);
+  if (!t || !c || !c.tag) return t;
+  return { ...t, name:String(t.name).toLowerCase().endsWith(c.tag.toLowerCase()) ? t.name : t.name + c.tag, cat:c.id };
+}
+/* International is each category's own twelve, in its World Rugby table's order: the men's from NATIONS, the women's with their own
+   ratings and Canada and the USA in place of Argentina and Japan, Minis the men's. Each is named for its category by catSide
+   ('England Women'); on Men the list is the NATIONS objects themselves, so a men's match gets the very teams it always did. */
+const NAT_MEN = ['RSA', 'NZL', 'IRE', 'FRA', 'ENG', 'SCO', 'AUS', 'ARG', 'FIJ', 'WAL', 'ITA', 'JPN'];   // men's table, 3 November 2026: ratings in NATIONS
+const NAT_WOMEN = {   // women's table, 2 November 2026: Pace, Power, Handling, Kicking, Stamina
+  ENG:[4, 5, 4, 5, 5], NZL:[5, 4, 5, 4, 5], CDN:[4, 5, 4, 4, 5], FRA:[5, 5, 4, 3, 4], IRE:[4, 3, 5, 5, 3], USA:[5, 5, 3, 3, 4],
+  AUS:[5, 4, 4, 4, 3], ITA:[4, 4, 4, 3, 4], SCO:[5, 4, 4, 3, 3], RSA:[4, 5, 3, 3, 3], WAL:[4, 4, 3, 4, 3], FIJ:[5, 3, 5, 2, 3],
+};
+const SIX_NATIONS = ['ENG', 'FRA', 'IRE', 'ITA', 'SCO', 'WAL'];
+const NAT_LISTS = {};
+function natList(cat) {                  // 'men', 'women' or 'minis' (men's ratings); anything else is men's. Built once, then the same objects
+  const c = cat === 'women' || cat === 'minis' ? cat : 'men', by = id => NATIONS.find(t => t.id === id);
+  if (!NAT_LISTS[c]) NAT_LISTS[c] = c === 'women'
+    ? Object.entries(NAT_WOMEN).map(([id, r]) => { const t = catSide(by(id), 'women'); ABILITIES.forEach(([k], i) => { t[k] = r[i]; }); return t; })
+    : NAT_MEN.map(id => catSide(by(id), c));
+  return NAT_LISTS[c];
+}
+const isNation = t => !!t && !t.custom && NATIONS.some(n => n.id === t.id);
+/* A side for the category: a nation is the category's own (null for one its list does not have: Canada or the USA on Men or Minis),
+   anything else catSide's. */
+function catTeam(t, cat) { return isNation(t) ? natList(cat).find(n => n.id === t.id) || null : catSide(t, cat); }
+/* A nation's championship, and Career's International stage: the Six Nations, or the other six of its category's twelve, by who is
+   in it, never by position, so the Triple Crown is there to win on every list. */
+function natGroup(id, cat) { const six = SIX_NATIONS.includes(id); return natList(cat).filter(t => SIX_NATIONS.includes(t.id) === six); }
+/* The name a list shows: the side's own, without its category's word, as the club cards show it (England Women is England). */
+const listName = t => { const c = TEAM_CATS.find(x => x.id === t.cat), n = String(t.name); return c && c.tag && n.endsWith(c.tag) ? n.slice(0, -c.tag.length) : n; };
+const ABILITIES = [['pace', 'Pace'], ['power', 'Power'], ['handling', 'Handling'], ['kicking', 'Kicking'], ['stamina', 'Stamina']];
+const BUDGET = 12;                        // a team you make starts at 1 in each ability, with this many points to spend: any team the four-ability builder allowed (10 points), plus Stamina 3
+/* Stamina came after the other four. A team without it (a save from before it, an import, a test's side) reads as 3, the middle:
+   its Sprint and On Fire last as long as they always have. Not rounded here, so a side handed in with a fractional Stamina plays as
+   given; the saves keep whole pips (cleanTeam, cleanSide), so a fraction must be kept, and put back, by whatever made it. */
+const staminaOf = t => { const v = t ? t.stamina : null; return typeof v === 'number' && Number.isFinite(v) ? clamp(v, 1, 5) : 3; };
+const abilityOf = (t, k) => (k === 'stamina' ? staminaOf(t) : +t[k] || 0);   // a team's ability as the cards, the ratings and the saves read it
 const MAX_CUSTOM = 4;
 const KIT_COLOURS = [
   ['White', '#f2efe6'], ['Black', '#1c1c1c'], ['Navy', '#1b2747'], ['Royal Blue', '#2050b0'], ['Sky Blue', '#6fb7e6'], ['Red', '#c8102e'],
@@ -45,9 +217,13 @@ const DIFF = [
    defender running the wrong way, so two levers move and nothing else: the other side runs at Easy's pace, and your
    teammates tackle a little more surely than on Easy (one of them is still being pulled out of the tackle). Easy and
    Hard are left as set. Duels, scrums, your own tackle and sprint, and every later match stay on the chosen level. */
-const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };
-const rateOf = t => ABILITIES.reduce((a, [k]) => a + (+t[k] || 0), 0);
-const outmatched = (us, them) => !!us && !!them && rateOf(them) >= rateOf(us) + EARLY.gap;
+const EARLY = { games:2, gap:3, nudge:{ cpuSpeed:-0.03, myTackle:0.14 } };   // gap: the rating points, Stamina left out, that make a Stronger Side
+const rateOf = t => ABILITIES.reduce((a, [k]) => a + abilityOf(t, k), 0);
+/* The overall rating on a team card: the five abilities (5 to 25) on a 40 to 99 scale. A team you make tops out at 75; South Africa and New Zealand are 93, Ireland and France 87. */
+const overallOf = t => { const n = ABILITIES.length; return Math.round(40 + (clamp(rateOf(t), n, 5*n) - n)*59/(4*n)); };
+/* Stronger Side compares the four abilities other than Stamina, EARLY.gap apart, so it marks the pairs it marked before Stamina
+   and no others (tools/teams.mjs pins pairs within a pool). The badge and the championship's running order count all five. */
+const outmatched = (us, them) => !!us && !!them && rateOf(them) - staminaOf(them) >= rateOf(us) - staminaOf(us) + EARLY.gap;
 /* Goal kicks. Every lever is here: GKTUNE='{"band":[0.15,0.13,0.10]}' node tools/goalkicks.mjs --rates tries values without an edit. */
 const KICK = {
   g:9.81, kd:0.10, kw:0.32, v0:26.5, vK:1.0, vLo:0.35,

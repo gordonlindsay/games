@@ -3,8 +3,9 @@
    The hints card (#hc0 top-left for Player 1 and one player, #hc1 top-right for Player 2) names the close-up and its one control for
    the device in use, through every duel's slow run-in to the verdict, the scrum to its result, the lineout to the catch, a goal kick or
    drop from the cut-in to the strike, and once a match each in open play (Long Pass, Sprint, Side Step, Dummy, Offload, Drop Goal, 3s
-   each, 4s apart). hintFor(seat) is pure: it reads the match and returns the words, or null. syncHints runs from updateHud and writes
-   the DOM only when the content changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
+   each, 4s apart; never in a drill, whose cue names its controls, and nothing behind a drill's ready or result card). hintFor(seat)
+   is pure: it reads the match and returns the words, or null. syncHints runs from updateHud and writes the DOM only when the content
+   changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
    dropZone is never run again and nothing random is drawn. The tutorial pauses the first time each moment comes up on this device
    (while that seat's Hints are On): the close-up holds its first frame under a card or two, Next then Play, a tap anywhere or the
    pass key advancing, the match clock and the world frozen; Replay Tutorial on How to Play forgets them all.
@@ -26,6 +27,7 @@ const row = (chips, text) => ({ chips, text });
 const chip = (act, label) => ({ act, label:label || CHIP_LABEL[act] });
 function hintFor(s) {                                      // the card for seat s now, or null
   if (!M || M.demo || M.auto || !hintsOn(s)) return null;
+  if (practice && (practice.ready || practice.done)) return null;   // a drill's ready and result cards: no card behind them (the Driving drill stages its scrum under the ready card)
   const t = teamOfSeat(s); if (t < 0) return null;
   const dev = hintDev(s), kb = dev === 'kb', c = M.cut;
   if (c) {
@@ -48,8 +50,8 @@ function hintFor(s) {                                      // the card for seat 
     if (c.kind === 'goal') {
       const g = c.g;
       if (g.watch || g.team !== t || c.t < CUT_IN || c.after || g.out) return null;
-      if (g.type === 'drop') return g.stage === 'wait' || g.stage === 'hold' ? card(null, 'Before They Reach You', [row([chip('x')], 'Steer'), row([chip('b', 'Kick')], 'Let Go in the Gold')], true) : null;
-      return g.stage === 'aim' || g.stage === 'power' ? card(null, 'Let Go in the Gold', [row([chip('x')], 'Steer the Arrow'), row([chip('a', 'Kick')], 'Hold It')], true) : null;
+      if (g.type === 'drop') return g.stage === 'wait' || g.stage === 'hold' ? card(null, 'Before They Reach You', [...(M.kids ? [] : [row([chip('x')], 'Steer')]), row([chip('b', 'Kick')], 'Let Go in the Gold')], true) : null;
+      return g.stage === 'aim' || g.stage === 'power' ? card(null, 'Let Go in the Gold', [...(M.kids ? [] : [row([chip('x')], 'Steer the Arrow')]), row([chip('a', 'Kick')], 'Hold It')], true) : null;   // Kids sets the aim, so there is nothing to steer
     }
     return null;
   }
@@ -82,7 +84,7 @@ function hintOpenPick(s, t, la, lb) {                       // which open-play c
 }
 function hintOpenStep(s, t, la, lb) {
   const H = HO[s]; if (!H) return;
-  if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s))) { H.cur = null; return; }
+  if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s)) || practice) { H.cur = null; return; }   // a drill names its own controls in the cue at the top, where an open-play card would sit on it
   if (H.cur) { if (M.dclock < H.until) return; H.cur = null; }
   if (M.dclock < H.last + OPEN_GAP) return;
   const id = hintOpenPick(s, t, la, lb);
@@ -163,7 +165,7 @@ function tutCards(id, s) {
   const PAD = { a:'Bottom Button', b:'Right Button', c:'Shoulder' };
   const key = act => '{' + KB[sch][act][0] + '}';
   const name = (act, word) => (kb ? key(act) : pad ? 'the ' + PAD[act] : word);   // a keycap, the Bottom Button, or the button's own word
-  const flick = kb ? (R ? 'Tap an Arrow' : 'Tap {KeyA} or {KeyD}') : 'Flick the Stick', steer = kb ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : 'the Stick';
+  const flick = kb ? (R ? 'Tap an Arrow' : 'Tap {KeyA} or {KeyD}') : 'Flick the Stick', steer = kb ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : 'the Stick', aim = M && M.kids ? '' : 'Steer With ' + steer + ', ';   // Kids sets the aim
   switch (id) {
     case 'past': return [['Get Past', 'Beat the Last Man'], ['Get Past', flick + ' Away From Him When the Ring Turns Gold']];
     case 'pass': return [['Key Pass', 'Two on One'], ['Key Pass', 'Press ' + name('a', 'Pass') + ' on Gold, or ' + name('b', 'Dummy') + ' If He Drifts to Your Runner']];
@@ -171,8 +173,8 @@ function tutCards(id, s) {
     case 'block': return [['Block', 'Their Pass Crosses Your Man'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
     case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
     case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
-    case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', 'Steer With ' + steer + ', Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
-    default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', Steer With ' + steer + ', Let Go in the Gold Before They Reach You']];
+    case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', aim + 'Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
+    default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', ' + aim + 'Let Go in the Gold Before They Reach You']];
   }
 }
 function renderTut() {

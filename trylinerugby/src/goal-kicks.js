@@ -24,19 +24,22 @@ function penChoice(team, x, y, c, g) {
   M.phase = 'play';
   if (c === 'goal') goalKick(team, penSpot(team, x), y, 'penalty', g);
   else if (c === 'touch') {
-    const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3), 15, 105);
+    const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3 + traitTouch(team, x, y)), 15, 105);   // a Long Boot finds touch further on (src/traits.js)
     sfx('kick');
     lineout(team, nx, y, 'Kick to Touch');   // after the hooter too: the kicking side gets its lineout
   } else startSet({ kind:'tap', team, x, y, t:0.8, snap:true, label:'Tap and Go', then:s => releaseTo(s.team, s.x, s.y, 'tap') });
 }
 function scoreTry(p) {
-  if (practice) { practiceFinish(practice.id === 'pass' && p.team === 0 && practice.completedPass, p.team === 0 ? (practice.completedPass ? 'You moved the ball to support and finished the attack.' : 'Draw the defender, then pass to your supporting runner before scoring.') : 'The runner got through. Switch into cover and run towards the ball.'); return; }
+  if (practice) { practiceTry(p); return; }
   const team = p.team;
   M.score[team] += 5; M.tries[team]++;
+  if (M.career) careerDeed('tries', p);                    // a career match: a try by your player
+  heat(team, 'try'); fireOut(1 - team);                    // a try lights the scorers and puts the other side out
+  goldenScored();
   placeBall(clamp(p.x,0,120), clamp(p.y,0,70));
   p.vx *= 0.3; p.vy *= 0.3;
-  say('Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
-  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => conversion(s.team, s.y) });
+  say(M.golden ? 'Golden Try' : 'Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
+  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => M.golden ? endHalf() : conversion(s.team, s.y) });   // a Golden Try needs no conversion
 }
 function conversion(team, y) {
   const yy = clamp(y, 4, 66);
@@ -45,7 +48,7 @@ function conversion(team, y) {
 function goalKick(team, x, y, kind, g0) {
   placeBall(x, y);
   const d = dirOf(team);
-  const k = nearestFree(team, x, y) || M.players.find(p => p.team === team);
+  const k = (M.career && careerKicker(team)) || traitKicker(team) || nearestFree(team, x, y) || M.players.find(p => p.team === team);   // a career match: your player takes your side's goal kicks; otherwise a Long Boot takes them (src/traits.js)
   k.x = x - d*2.2; k.y = y; k.vx = k.vy = 0; k.fx = d; k.fy = 0;
   for (const p of M.players) if (p !== k && hyp(p.x-x, p.y-y) < 5) { p.x -= d*6; }
   const g = g0 || makeGoal(team, x, y, kind, k);
@@ -101,7 +104,7 @@ function windNow(team) {                                   // the match wind as 
 function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry and band in the given wind, drawing nothing random
   const f = toFrame(team, wx, wy);
   const g = { team, kind, type:kind === 'drop' ? 'drop' : 'set', wx, wy, x:f.x, y:f.y, beta:Math.atan2(35 - f.y, 110 - f.x), dist:hyp(110 - f.x, 35 - f.y), ang:Math.abs(f.y - 35)/35,
-    kicking:M.nat[team].kicking, di:isHuman(team) ? levelOf(team) : 1, kicker, W:{ x:W.x, y:W.y, mph:W.mph },
+    kicking:(M.career ? careerGoalNat(team, kicker, kind) : M.nat[team]).kicking, di:isHuman(team) ? levelOf(team) : 1, kicker, W:{ x:W.x, y:W.y, mph:W.mph },
     mClear:0, lo:0, hi:0, w:0, ctr:0, fill:1, aid:'line', watch:false, cpu:null, inp:null,   // inp: the kicker's input slot, for a human's kick
     stage:'aim', st:0, aim:0, m:0, pt:0, drain:0, mRel:null, L:null, X:null, res:null, ok:false, grade:null, curl:0,
     tStrike:0, judged:false, skipped:false, t:0, cam:null, pathKey:null, pathPts:null, bot:null,
@@ -110,7 +113,7 @@ function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry a
 }
 function makeGoal(team, wx, wy, kind, kicker) {
   const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
-  if (!isHuman(team)) g.cpu = cpuKickInputs(g);
+  if (!isHuman(team) || proRun(kicker)) g.cpu = cpuKickInputs(g);   // Pro Mode: a teammate's drop goal is the CPU's kick
   else {
     g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !tutSeen(kind === 'drop' ? 'drop' : 'goal'))) ? 'path' : 'line';   // the first kick ever (the tutorial's goal or drop moment unseen) gets the Easy aids; in two player each player's first kick of the match does
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
@@ -179,11 +182,12 @@ function aimFor(g, m) {                                    // the aim that sends
 function bandOf(g, aim) {                                  // at aim 0, except the Easy path's band, which is honest for the arrow it hands you
   const k = KICK, di = g.di, kk = g.kicking - 3;
   const w0 = clamp(k.band[di] - k.bandD*(g.dist - 12) - k.bandA*g.ang + k.bandK*kk, k.bandMin + k.minK*kk, k.bandMax);
-  g.w = g.type === 'drop' ? w0*k.dropBand : w0;
+  g.w = (g.type === 'drop' ? w0*k.dropBand : w0)*traitBand(g);   // a Long Boot's band is wider (src/traits.js)
   g.mClear = clearPower(g, aim);
   g.ctr = Math.min(Math.max(g.mClear + k.lift + k.liftW*g.w, k.floor), k.ceil);   // the floor makes short kicks fly like real ones
   g.lo = g.ctr - g.w/2; g.hi = g.ctr + g.w/2;
   g.fill = (g.type === 'drop' ? k.dropFill : k.fill)[di]/(1 + (g.dist - 12)*k.fillD);
+  if (M && M.kids && isHuman(g.team)) kidsBand(g);        // Kids: a wider band and a slower meter
   return g;
 }
 function strikeGoal(g, m, aim) {                           // draws no random numbers: the result is known at the release
@@ -219,6 +223,8 @@ function scoreGoal(g) {                                    // the verdict moment
   if (ok) {
     M.score[team] += kind === 'conversion' ? 2 : 3; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
     if (kind === 'conversion') M.stats.conv.made[team]++; else if (kind === 'penalty') M.stats.pen.made[team]++;
+    if (M.career) careerDeed('goals', g.kicker);            // a career match: a goal kicked by your player
+    goldenScored();
   }
   say(verdictOf(g), '', ok ? team : null, g.grade, M.cut && M.cut.kind === 'goal' && verdictLow(g));
   if (g.res === 'post' || g.res === 'postIn' || g.res === 'bar' || g.res === 'barIn') { sfx('post'); buzz(40); }
@@ -230,7 +236,7 @@ function verdictLow(g) {                                   // the banner goes un
   return kickView(g, cam, g.X.t, p.x, p.y, p.h).sy < 0.55*V.H;
 }
 function settleGoal(g) {
-  if (practice && practice.id === 'kick') { practiceFinish(g.ok, g.ok ? 'Between the posts. Read the wind, then release in gold.' : 'Check the wind and arrow; hold Kick and release in the gold band.'); return; }
+  if (practice && practiceGoal(g)) return;
   const w = toWorld(g.team, g.X.x, g.X.y), x = clamp(w.x, 0, 120), y = clamp(w.y, 0, 70);
   placeBall(x, y);
   const { team, ok, kind } = g;
@@ -258,7 +264,7 @@ function updateGoalCut(c, dt) {
   } else if (g.stage === 'power') {
     g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
     if (inp.aCancel || (!inp.aDown && g.m < KICK.tap)) backToAim(g);
-    else if (!inp.aDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
+    else if (!inp.aDown) { strikeGoal(g, kidsStrike(g, g.m), g.aim); g.mRel = g.m; g.stage = 'runup'; g.st = 0; }
   } else if (g.stage === 'runup') {
     if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
@@ -280,6 +286,7 @@ function watchStep(c, dt) {                                // the CPU's kick: se
   else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
 function steerAim(g, dt, inp) {
+  if (M.kids && isHuman(g.team)) return;                   // Kids: the aim the path shows is set for you
   const k = KICK;
   const jx = inp.jx, kx = inp.keyX();                      // the d-pad aims at the keyboard's rate too
   const rate = jx ? k.aimRate*Math.sign(jx)*Math.pow(Math.abs(jx), 1.6) : k.keyRate*kx;
@@ -303,7 +310,8 @@ function goalLabels(c) {
   return ['Kick', null, g.stage === 'aim' && !c.after, false];
 }
 function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
-  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); }
+  lockerTally('drops', team);                              // every drop goal, the open-play kind too, for the Locker (a plain counter, src/locker.js)
+  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
   placeBall(M.ball.x, M.ball.y);
   startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });
 }
@@ -358,7 +366,7 @@ const HOLD_KEYS = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'down', 'tcd', 'side', 'hol
 function projectHold(c, lead) {
   const t = c.team, n = Math.max(0, Math.round(lead/STEP)), dt = n ? lead/n : 0, P = M.players;
   const saved = P.map(p => HOLD_KEYS.map(k => p[k])), steps0 = M.stats.steps, drop0 = c.drop;
-  if (!isHuman(t) && !c.drop) c.drop = { t:1e9, g:null };   // a CPU kicker brakes through the wind-up, and never strikes inside the projection
+  if ((!isHuman(t) || proRun(c)) && !c.drop) c.drop = { t:1e9, g:null };   // a CPU kicker (Pro Mode: or your teammate) brakes through the wind-up, and never strikes inside the projection
   for (let i = 0; i < n; i++) moveAll(dt);
   const out = { x:c.x, y:c.y, vx:c.vx, vy:c.vy, opps:P.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy })) };
   P.forEach((p, i) => HOLD_KEYS.forEach((k, j) => { p[k] = saved[i][j]; }));
@@ -369,7 +377,7 @@ function projectHold(c, lead) {
 // kicker's shoulder counts, a chaser deeper behind him does not, at the label and in the cut alike), the nearest three. Each is frozen where `proj` puts
 // him (or where he really stands), with his speed toward the kicker and his top speed. g.x/g.y is the kick spot, in the frame.
 function rushersOf(c, g, proj, only) {                     // only: behind the kick spot, judge these opponents and no others (the ones the label saw)
-  const t = c.team, k = KICK, mul = isHuman(t) ? k.rushMul[levelOf(t)] : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker faces real players
+  const t = c.team, k = KICK, mul = isHuman(t) && !proRun(c) ? k.rushMul[levelOf(t)]*(M.kids ? KIDS.kick.rush : 1) : 1, out = [];   // a human's chargers run at the difficulty's pace; a CPU kicker (Pro Mode: or your teammate) faces real players
   const list = proj ? proj.opps : M.players.filter(q => q.team !== t && q.down <= 0).map(q => ({ q, x:q.x, y:q.y, vx:q.vx, vy:q.vy }));
   for (const o of list) {
     const f = toFrame(t, o.x, o.y), v = frameVec(t, { x:o.vx, y:o.vy });
@@ -432,7 +440,7 @@ function dropStep(c, dt) {
     if (g.stage === 'hold') {
       g.pt += dt; g.m = Math.min(1, g.pt/g.fill);
       if (inp.bCancel || (!inp.bDown && g.m < k.tap)) { g.stage = 'wait'; g.m = 0; g.pt = 0; }
-      else if (!inp.bDown) { strikeGoal(g, g.m, g.aim); g.mRel = g.m; g.tRel = tau; g.stage = 'drop'; g.st = 0; }
+      else if (!inp.bDown) { strikeGoal(g, kidsStrike(g, g.m), g.aim); g.mRel = g.m; g.tRel = tau; g.stage = 'drop'; g.st = 0; }
     } else if (inp.bPressed) { g.stage = 'hold'; g.pt = 0; g.m = 0; }
   } else if (g.stage === 'drop') {
     if ((g.st += dt) >= k.dropT) {                         // the half-volley: charging is checked now, with the strike on the chargers' clock

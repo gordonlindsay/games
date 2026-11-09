@@ -553,8 +553,8 @@ begin('away side');
 }
 done('H away side');
 
-// I. the home and the join screen: Two Player is a desk-only button beside Championship (How to Play drops to its own row there, phones keep
-// Championship | How to Play), the join screen seats both players on the keyboard halves with a legend each (keycaps or pad glyphs for
+// I. the home and the join screen: 2 Players has left the home on every device (the owner, 2026-11-09: "take out 2 player from the
+// menu. doesn't work for mobile"), so the join screen is reached through its own entry, openJoin (exported as debug.openJoin); it seats both players on the keyboard halves with a legend each (keycaps or pad glyphs for
 // Run Pass Kick Sprint, lit while held), fixed rows so the two cards line up, a pad claims a seat with one press and the screen follows,
 // Use Keyboard and Swap Players (the Difficulty goes with the player), then the team flow: Player 1 picks first, then Player 2 with
 // Player 1's team in the bar (Change Team is his, from his own seat), and the pick starts the match with both humans at their own levels
@@ -562,11 +562,11 @@ begin('join');
 {
   const fs = (await import('fs')).default, S = T.sides, X = T.teams;
   const src = readGameSource();
-  ok(/<button class="btn desk-only" id="b-two">Two Player<\/button>/.test(src), 'the home has a desk-only Two Player button');
-  ok(/<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>/.test(src) && src.indexOf('id="b-champ"') < src.indexOf('id="b-two"') && src.indexOf('id="b-two"') < src.indexOf('id="b-help"'), 'Quick Match is still the gold first button with the focus; Championship, Two Player, How to Play follow');
-  const matchRow = src.match(/<div class="row2 home-row">([\s\S]*?)<div class="row2 learn-row">/);
-  const learnRow = src.match(/<div class="row2 learn-row">([\s\S]*?)<\/div>/);
-  ok(matchRow && /id="b-champ"/.test(matchRow[1]) && /class="btn desk-only" id="b-two"/.test(matchRow[1]) && !/id="b-help"|id="b-practice"/.test(matchRow[1]) && learnRow && /id="b-help"/.test(learnRow[1]) && /id="b-practice"/.test(learnRow[1]) && /\.row2\{display:grid;grid-template-columns:1fr 1fr;/.test(src) && /\.home-row \.col\{grid-column:1\/-1;/.test(src) && /body\.desk \.home-row \.col\{grid-column:auto\}/.test(src) && /\.desk-only\{display:none\}/.test(src), 'How to Play and Practice Ground share a symmetric learn row; Championship fills the phone match row and shares it with Two Player on computers');
+  ok(!/id="b-two"/.test(src) && !/\$\('b-two'\)/.test(src) && /\nfunction openJoin\(\) \{\n  resetSeats\(\); setTwo\(true\);/.test(src) && typeof D.openJoin === 'function', 'the home has no 2 Players button on any device; Two Player\'s entry is openJoin, kept and exported (debug.openJoin)');
+  ok(/<button class="btn primary" id="b-quick" autofocus>Play<\/button>/.test(src) && src.indexOf('id="b-quick"') < src.indexOf('id="b-champ"') && src.indexOf('id="b-champ"') < src.indexOf('id="b-help"'), 'Quick Match\'s Play is still the gold first button with the focus, then Championship\'s, Career\'s and Skills Mini Games\' panels');
+  const gamePanel = src.match(/<div class="hl-panel hp-game" id="hp-game"[^>]*>([\s\S]*?)<\/div>/);
+  const drillPanel = src.match(/<div class="hl-panel hp-drills" id="hp-drills"[^>]*>([\s\S]*?)<button class="btn drill" id="b-help">/);
+  ok(gamePanel && /id="b-quick"/.test(gamePanel[1]) && !/id="b-two"|2 Players/.test(gamePanel[1]) && !/id="b-help"|id="b-champ"|id="b-career"/.test(gamePanel[1]) && drillPanel && /id="pr-grid"/.test(drillPanel[1]) && /\.row2\{display:grid;grid-template-columns:1fr 1fr;/.test(src) && /<nav class="hl-bar" id="hl-bar" role="tablist"/.test(src) && /\.hl-panel\{display:flex;flex-direction:column;/.test(src) && /\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/.test(src) && /\.desk-only\{display:none\}/.test(src), 'Quick Match\'s panel is its Play alone, with no 2 Players on any device; How to Play sits with the drills under Skills Mini Games; the five headlines share the bar in equal parts');
   ok(/b\.classList\.toggle\('desk', PADS\.size > 0 \|\| !!\(deskQuery && deskQuery\.matches\)\)/.test(src) && /PADS\.delete\(index\);\n  setDesk\(\);/.test(src) && /function padConnected\(gp\) \{\n  padsOn = true;\n  if \(gp\) padOf\(gp\);\n  setDesk\(\);/.test(src), 'body.desk follows the pointer or the pads connected right now: a phone that had a pad goes back to its own layout when it is unplugged');
   // labels on the join screen are Title Case, with no arrow glyph anywhere in the markup
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
@@ -610,7 +610,7 @@ begin('join');
   D.settings().twoDiff = [1, 1];
   // the team flow: Player 1 first
   D.openTeams('two');
-  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === 'Two Player' && $('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Player 1 Team', 'Player 1 picks first: Player 1 Team, the eyebrow in his colour');
+  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === '2 Players' && $('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Player 1 Team', 'Player 1 picks first: Player 1 Team, the eyebrow in his colour');
   ok($('t-yours').hidden && $('t-default').hidden && $('t-back').textContent === 'Back to Players' && D.navOnly() === 0 && D.navOwner(0) && !D.navOwner(1) && D.navOwner(null), 'no team in the bar yet, the Play as Farnham button is off, Back to Players, and only seat 0 (or the mouse) acts');
   D.pickTeam(X.NATIONS[0]);
   ok(sel.teams[0] === X.NATIONS[0] && sel.picking === 1 && $('t-title').textContent === 'Player 2 Team' && $('t-eyebrow').classList.contains('p2') && !$('t-yours').hidden && D.navOnly() === 1 && !M().two, 'Player 1 picked England: Player 2 Team, England in the bar with Change Team, only seat 1 acts; nothing has started');
@@ -629,7 +629,7 @@ begin('join');
   D.exitMatch();
   // one player's team screen is as it was
   D.openTeams('quick');
-  ok($('t-eyebrow').textContent === 'Quick Match' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Opponent' && !$('t-yours').hidden && $('t-back').textContent === 'Back to Menu' && D.navOnly() == null, 'Quick Match: Pick Opponent with Farnham in the bar, Back to Menu, nobody restricted');
+  ok($('t-eyebrow').textContent === 'Quick Match' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Your Team' && $('t-yours').hidden && $('t-default').hidden && $('t-back').textContent === 'Back to Menu' && D.navOnly() == null, 'Quick Match: Pick Your Team, nothing picked for him (My Team only offered first), Back to Menu, nobody restricted');
   fresh({ headless:false }); $('h-t0').hidden = $('h-t1').hidden = false; D.startMatch(0, 1, false); ok($('h-t0').hidden && $('h-t1').hidden && !$('controls').hidden, 'a one-player match: no seat tags on the scorebug, the touch controls on'); D.exitMatch();
   D.goHome(); menu();
   // Difficulty is saved by keyboard half: swapped Easy/Hard, then a fresh visit puts the halves back in order and each half keeps its own level
@@ -1322,7 +1322,13 @@ begin('symmetry');
     return { n, share, se, tries, pts, gk, du, dw, sk, lk, frozen };
   };
   // paired: each seed twice, the teams swapped
-  const pairs = [[1, 1], [0, 1], [2, 3], [4, 5], [6, 7]].map(([a, b]) => [T.teams.NATIONS[a] || T.teams.CLUBS[a - 6], T.teams.NATIONS[b] || T.teams.CLUBS[b - 6]]);
+  // France v France, England v France, Ireland v Italy, Scotland v Wales and Farnham v Haslemere, as written: with six nations, 6 and 7 were the
+  // clubs; the twelve made them New Zealand and South Africa, so the clubs are named now. The pairs also play at the ratings they were written
+  // with: this is a check of the seats, not the teams, and the XV ratings (2026-11-08) moved its seeded tries from 2.10 v 2.29 to 2.00 v 2.27,
+  // while seeds from 13000 give 2.19 v 2.13 at the old ratings and 2.13 v 2.13 at the new: seed noise near the bar, not a seat effect
+  const AS_WRITTEN = { ENG:[4, 5, 3, 4, 4], ITA:[4, 3, 3, 3, 3], SCO:[5, 3, 4, 3, 4], WAL:[3, 4, 3, 3, 4] };
+  const written = t => AS_WRITTEN[t.id] ? { ...t, ...Object.fromEntries(['pace', 'power', 'handling', 'kicking', 'stamina'].map((k, i) => [k, AS_WRITTEN[t.id][i]])) } : t;
+  const pairs = [[1, 1], [0, 1], [2, 3], [4, 5], [6, 7]].map(([a, b]) => [a < 6 ? T.teams.NATIONS[a] : T.teams.CLUBS[a - 6], b < 6 ? T.teams.NATIONS[b] : T.teams.CLUBS[b - 6]].map(written));
   const rows = [], diff = [];
   reseed(2024);
   for (let i = 0; i < N; i++) {

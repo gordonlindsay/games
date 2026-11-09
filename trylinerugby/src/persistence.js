@@ -23,9 +23,27 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:1, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0 };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start
+const HOME_HL = ['game', 'champ', 'career', 'drills', 'settings'];   // the home's five headlines, in the bar's order: Quick Match, Championship, Career, Skills Mini Games, Settings (the keys are the saves', kept from Game and Training Drills)
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, hl:'game', myClub:null, myNat:null };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); hl: the home's headline last chosen (HOME_HL, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, null for the default (myClubTeam, ui-menus.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
+let career = null;   // the player career (src/career.js): its own seasons, never the championship's
+let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
+let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
+let storeBought = [];   // the app's purchases, product ids in the order bought (src/store.js); saved as store:{ owned } only once there is one, so a web save is as it was
 const SEASON_LIMIT = 10;
+/* The Trophy Cabinet (champHistory) holds completed league seasons, as it always has, and finished cups beside them as
+   { kind, id, cup } (src/cups.js). An entry without a kind is a league season: every old one. It keeps the last SEASON_LIMIT of
+   each, leagues and cups, in the order they finished. */
+const cabinetKind = e => (e && typeof e === 'object' && e.kind != null && e.kind !== 'league' ? e.kind : 'league');
+function cabinetTrim(list) {
+  const leagues = list.filter(e => cabinetKind(e) === 'league').slice(-SEASON_LIMIT), cups = list.filter(e => cabinetKind(e) !== 'league').slice(-SEASON_LIMIT);
+  return list.filter(e => leagues.includes(e) || cups.includes(e));
+}
+function cabinetClean(raw) {
+  if (cabinetKind(raw) !== 'league') return typeof cleanCupEntry === 'function' ? cleanCupEntry(raw) : null;
+  const c = cleanChamp(raw);
+  return c && c.round === 5 ? c : null;
+}
 /* Only the user's full-time card is retained. Optional broken detail never invalidates a result. */
 function cleanSeasonStats(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
@@ -53,14 +71,19 @@ function cleanTeam(t, i) {
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 16) || 'My Team';
   const team = { key:String(t.key || 'my' + i).slice(0, 24), id:codeFor(t.id, name), name, custom:true,
     kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
+  // spent in ABILITIES order, so an overspent team loses from the last; a team without Stamina (saved before it, or an import) has its 3
+  // set aside first, so a cut falls on the other four. A team saved before Stamina spent at most 10, so nothing of it is cut.
+  const keys = ABILITIES.map(([k]) => k), hasStamina = !keys.includes('stamina') || (typeof t.stamina === 'number' && Number.isFinite(t.stamina));
+  const got = {};
   let left = BUDGET;
-  for (const [k] of ABILITIES) { const v = clamp(Math.round(+t[k] || 1), 1, 5); const spend = Math.min(v - 1, left); team[k] = 1 + spend; left -= spend; }
+  for (const k of hasStamina ? keys : ['stamina', ...keys.filter(x => x !== 'stamina')]) { const v = clamp(Math.round(abilityOf(t, k) || 1), 1, 5); const spend = Math.min(v - 1, left); got[k] = 1 + spend; left -= spend; }
+  for (const k of keys) team[k] = got[k];
   return team;
 }
 /* The short name filled in for you skips codes already on the scoreboard elsewhere: Farnham Minis is FAN, not FAR. */
 function autoCode(name, own) {
   const L = String(name || '').toUpperCase().replace(/[^A-Z]/g, '') || 'MYTEAM';
-  const used = new Set([...NATIONS, ...CLUBS, ...custom.filter(t => t.key !== own)].map(t => t.id));
+  const used = new Set([...ALL_TEAMS, ...custom.filter(t => t.key !== own)].map(t => t.id));
   for (let j = 1; j < L.length; j++) for (let k = j + 1; k < L.length; k++) { const c = L[0] + L[j] + L[k]; if (!used.has(c)) return c; }
   return codeFor('', L);
 }
@@ -75,14 +98,15 @@ function cleanSide(t) {
   if (!t || typeof t !== 'object') return null;
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   if (!name) return null;
-  const id = /^[A-Z]{3}$/.test(t.id) ? t.id : codeFor(t.id, name);
+  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W94: src/locker.js)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;
   if (t.key) team.key = String(t.key).slice(0, 24);
   if (HEX.test(t.alt)) team.alt = t.alt;
   if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
-  for (const [k] of ABILITIES) team[k] = clamp(Math.round(+t[k] || 1), 1, 5);
+  if (t.cat != null && catOf(t) === t.cat) team.cat = t.cat;   // Men | Women | Minis, kept as it was started; a side saved before it has none and is men's
+  for (const [k] of ABILITIES) team[k] = clamp(Math.round(abilityOf(t, k) || 1), 1, 5);   // a side saved before Stamina gets 3
   return team;
 }
 /* null means the championship cannot be shown or played, so it is dropped instead of crashing the table. */
@@ -90,7 +114,7 @@ function cleanChamp(c) {
   if (!c || typeof c !== 'object' || Array.isArray(c) || !idx6(c.user)) return null;
   if (!Number.isInteger(c.round) || c.round < 0 || c.round > 5) return null;
   let teams;
-  if (!Array.isArray(c.teams)) teams = NATIONS.map(n => ({ ...n }));   // saved before clubs existed: indexes into NATIONS, in that order
+  if (!Array.isArray(c.teams)) teams = NATIONS.slice(0, 6).map(n => ({ ...n }));   // saved before clubs existed: indexes into the first six NATIONS, in that order
   else {
     if (c.teams.length !== 6) return null;
     teams = c.teams.map(cleanSide);
@@ -139,9 +163,16 @@ function cleanSettings(g) {
   if (Array.isArray(g.tut)) settings.tut = TUT_IDS.filter(id => g.tut.includes(id));   // only moments the game knows, each once, in the game's order
   if (typeof g.coach === 'boolean') settings.coach = g.coach;
   if (Array.isArray(g.tips)) settings.tips = COACH_IDS.filter(id => g.tips.includes(id));   // coach lines already heard, in the game's order, unknown ones dropped
-  if ('pool' in g) settings.pool = g.pool === 1 ? 1 : 0;
+  if ('pool' in g) settings.pool = poolKey(g.pool);   // an old save's index goes to the list it was (POOL_OLD)
+  if (TEAM_CATS.some(c => c.id === g.cat)) settings.cat = g.cat;   // a save from before Men | Women | Minis is Men
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
+  if (typeof g.kids === 'boolean') settings.kids = g.kids;
+  if (typeof g.kidsR === 'number' && Number.isFinite(g.kidsR) && g.kidsR >= 0 && g.kidsR <= 1) settings.kidsR = Math.round(g.kidsR*1000)/1000;   // a save from before the rating has none, and starts at 0
+  if (Number.isInteger(g.kidsTop) && g.kidsTop >= 0 && g.kidsTop <= 99) settings.kidsTop = g.kidsTop;   // the run of big wins at the top of Kids (Move Up to Easy)
+  if (HOME_HL.includes(g.hl)) settings.hl = g.hl;   // the home's headline last chosen; a save from before it opens on Quick Match
+  if (typeof g.myClub === 'string' && /^[A-Za-z0-9-]{1,24}$/.test(g.myClub)) settings.myClub = g.myClub;   // My Team's club, by its key (a built-in club's code, a made or imported team's key, a My League side's); one no longer there reads as the default (myClubTeam)
+  if (typeof g.myNat === 'string' && NATIONS.some(n => n.id === g.myNat)) settings.myNat = g.myNat;   // My Team's country; a save from before My Team has neither, and is the Super Fan's club or Farnham, and England
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -153,13 +184,21 @@ function restore(s) {
   if ('champHistory' in s) {
     champHistory = [];
     if (Array.isArray(s.champHistory)) for (const raw of s.champHistory.slice(-100)) {
-      const c = cleanChamp(raw);
-      if (c && c.round === 5 && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
+      const c = cabinetClean(raw);
+      if (c && !champHistory.some(old => old.id === c.id)) champHistory.push(c);
     }
-    champHistory = champHistory.slice(-SEASON_LIMIT);
+    champHistory = cabinetTrim(champHistory);
   }
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
+  if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
+  if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
+  if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
+  if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
+  if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
+  if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
+  if (settings.myClub && typeof myClubFind === 'function' && !myClubFind(settings.myClub)) settings.myClub = null;   // a My Team since deleted, or its league removed: the default again
   retainCompletedSeason(champ);
+  if (typeof cupRetain === 'function') cupRetain(cup);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
 function load() {
@@ -171,9 +210,11 @@ function load() {
 }
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
+  if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
   settings.duels = true;
   retainCompletedSeason(champ);
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial })); } catch (e) { /* private mode, or full */ }
+  if (typeof cupRetain === 'function') cupRetain(cup);
+  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined })); } catch (e) { /* private mode, or full */ }
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }

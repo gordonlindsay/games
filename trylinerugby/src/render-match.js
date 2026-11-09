@@ -2,10 +2,11 @@ function render(dt) {
   if (!M) return;
   const d = V.dpr;
   const along = V.W, across = V.H;
-  V.s = Math.min(along/54, across/36);
+  V.s = Math.min(along/54, across/36)*(practice && practice.zoom ? practice.zoom : 1);   // a training space may come in closer
   const s = V.s, b = M.ball, cam = M.cam;
   let tx = b.x, ty = b.y;
   if (b.state === 'held') tx += dirOf(b.carrier.team)*7;
+  if (practice && practice.cam) { tx = practice.cam.x; ty = practice.cam.y; }   // a training space holds its camera still
   const k = Math.min(1, dt*3.2);
   cam.x += (tx-cam.x)*k; cam.y += (ty-cam.y)*k;
   const ha = along/2/s, hc = across/2/s;
@@ -13,12 +14,13 @@ function render(dt) {
   cam.y = hc*2 >= 82 ? 35 : clamp(cam.y, hc-6, 76-hc);
   M.rt += dt;
   for (const p of M.players) { if (p.drawFrom && (p.drawFrom.t -= dt) <= 0) p.drawFrom = null; if (p.fend > 0) p.fend -= dt; }   // render-only clocks
-  const shake = M.shake > 0 && !RM ? 3*(M.shake/0.12) : 0;   // your Big Hit: a 3px shake for 0.12s, none under reduced motion
+  const shake = M.shake > 0 && !RM ? 3*(M.shakeT/0.12)*(M.shake/M.shakeT) : 0;   // your Big Hit: a 3px shake for 0.12s (an arcade one bigger and longer), none under reduced motion
   if (M.shake > 0) M.shake -= dt;
   const camX = cam.x + shake*Math.sin(M.rt*173)/s, camY = cam.y + shake*Math.cos(M.rt*131)/s;
 
   ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*camX), d*(V.H/2 - s*camY));
   drawPitch();
+  if (practice) drillDrawWorld();                          // a drill's cones, rings and lines, on the grass under the players
 
   ctx.setTransform(d, 0, 0, d, 0, 0);
   const r = Math.max(8, 0.95*s);
@@ -30,6 +32,8 @@ function render(dt) {
   }
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
+  if (M.career) careerMark(r);                             // a career match: your player's ring and the star on his back
+  if (M.arcade) traitMarks(r);                             // a match you play: a gold star on each star player's shoulder (src/traits.js)
   // A short cue only where a decision matters; free pass targets keep just their ring.
   // Suppress edge cues rather than detach a label from an off-screen player or cover the scorebug.
   const targetCue = (q, text, colour) => {
@@ -79,7 +83,7 @@ function render(dt) {
   for (const t of [0, 1]) {
     const ctrl = ctrls[t], S = sideOf(t);
     if (!(S.charging && ctrl && b.carrier === ctrl)) continue;
-    const n = M.nat[t], len = 10 + S.charge*(36 + n.kicking*3), ang = clamp(inputOf(t).world().y, -1.2, 1.2)*0.75;
+    const n = M.career ? careerNatOf(ctrl) : M.nat[t], len = 10 + S.charge*(36 + n.kicking*3), ang = clamp(inputOf(t).world().y, -1.2, 1.2)*0.75;
     const [lx, ly] = toS(ctrl.x + dirOf(t)*len*Math.cos(ang), ctrl.y + len*Math.sin(ang));
     ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(lx-7, ly-7); ctx.lineTo(lx+7, ly+7); ctx.moveTo(lx+7, ly-7); ctx.lineTo(lx-7, ly+7); ctx.stroke();
@@ -100,6 +104,7 @@ function render(dt) {
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, V.W, V.H);
   if (M.cut) drawCut();
+  if (practice) drillDrawScreen();                         // a drill's own close-up (the Tackling drill's side-on view)
 }
 /* two player: the stick and the three buttons are off (they are seat 0's touch controls), so each player's marks are on the pitch: a
    numbered tag in his colour over his man where the pointer sits in one player, the Sprint meter as an arc round his ring (the button's

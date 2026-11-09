@@ -42,7 +42,7 @@ ok(X.champ() !== null, 'Start Fresh requires its second press');
 $('hub-reset').click();
 ok(saved().champ === null && saved().champHistory.length === 1, 'Start Fresh clears the active season and retains its archive');
 X.load(); X.renderHome();
-ok(X.champ() === null && !$('home-cabinet').hidden, 'home cabinet remains available after reloading Start Fresh');
+ok(X.champ() === null && !$('b-cabinet').hidden, 'home cabinet (Championship\'s Trophy Cabinet) remains available after reloading Start Fresh');
 X.restore({ settings:{ sound:false } }); X.save();
 ok(saved().champHistory.length === 1 && saved().champHistory[0].id === seasonId, 'a partial settings restore preserves completed history');
 const beforeRandom = rndCalls(); X.save(); X.renderHome();

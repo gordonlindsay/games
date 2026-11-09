@@ -15,7 +15,7 @@ const sideOf = t => M.side[t];
 const isHuman = t => M.side[t].human;
 const inputOf = t => (M.side[t].human ? inputs[M.side[t].seat] : null);
 const ctrlOf = t => (M.side[t].human ? M.side[t].ctrl : null);
-const setCtrl = (t, q) => { if (M.side[t].human && q) M.side[t].ctrl = q; };
+const setCtrl = (t, q) => { if (M.side[t].human && q && !(proPinned(t) && q !== M.careerP)) M.side[t].ctrl = q; };   // Pro Mode: the ring stays on your player (career-pro.js)
 const levelOf = t => M.side[t].level;
 const seatOfTeam = t => (M.side[t].human ? M.side[t].seat : null);   // which seat a team's human sits in, for the rumble and the ring's colour
 const anyCharging = () => M.side[0].charging || M.side[1].charging;
@@ -27,7 +27,7 @@ const humanSlots = () => M.side.filter(s => s.human).map(s => inputs[s.seat]);  
    ones, because `team === 1` was the test for the CPU). */
 const cpuSide = t => M.role[t] === 'cpu';
 let earlyDiff = null;   // Normal's levers with EARLY.nudge, or null. Set for a match, never left over into the next.
-const diffOf = t => (M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);
+const diffOf = t => (M && M.kids ? KIDS.diff : M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);   // a Kids match (kids.js) plays both sides' terms from KIDS.diff
 const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
@@ -64,6 +64,7 @@ function newMatch(u, c, opts) {
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
     firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless, early:ease,
+    cup:typeof opts.cup === 'string' ? opts.cup : null, cupKO:typeof opts.cup === 'string' && !!opts.cupKO,   // a cup match (src/cups.js): its id, and whether it is a knockout or a Test, which the Golden Try reads
     paused:false, over:false, cam:{ x:60, y:35 }, cut:null, surge:null,
     di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
     duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },
@@ -75,8 +76,12 @@ function newMatch(u, c, opts) {
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
-    tags:[], fx:[], stop:0, shake:0, rt:0,             // render only: on-pitch tags, impact rings, the Big Hit's hit-stop and shake, the render clock
+    tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
+    arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
+    fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
+    kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
+  if (M.kids) { M.kidsR = kidsTune(opts.kidsR).r; M.kidsDone = false; }   // its rating sets the levers before anything reads them: the start (0) unless the caller says (startMatch passes settings.kidsR)
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
   let seat = 0;
@@ -95,21 +100,25 @@ function newMatch(u, c, opts) {
       bind:null, bindOff:null, offside:0, sprint:0, sprinting:false, stumble:0, stumbleMul:1, wf:0, drawFrom:null, fend:0, fendA:0, bite:0, biteTo:null, dumAt:-9 });   // contact: the bind he is in, how long he is retiring, his sprint, a stumble, wrong-footed; then render-only smoothing and the fend; a Dummy he bought (bite: seconds left running at biteTo) and, for a CPU carrier, when he last sold one
   }
   M.side[0].ctrl = M.players[3]; if (humans[1]) M.side[1].ctrl = M.players[10];
+  traitsArm();                                             // the star traits, in a match you play only (src/traits.js)
   for (const inp of inputs) inp.gest = null;               // the open-play gesture history starts clean
   M.tut = null; hintReset(); coachUntil = 0;               // the hints cards start hidden, the open-play hints unshown, and a coach line from the last match does not hold the next one
   kickoff(M.firstKick);
 }
 
 function maxSpeed(p) {
-  let s = 7.6 + M.nat[p.team].pace*0.25;
+  let s = 7.6 + (M.career ? careerNatOf(p) : M.nat[p.team]).pace*0.25;   // a career match: your player's own pace
   if (cpuSide(p.team)) s *= diffOf(p.team).cpuSpeed;
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
+  if (onFire(p.team)) f *= ARCADE.fire.speed;
+  f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
-  if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp);
+  if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp)*traitBurst(p, sp);   // a Burst sprints a little quicker
   if (p.stumble > 0) f *= p.stumbleMul || CONTACT.stumble[1];
   if (p.wf > 0) f *= RUCK.wf.mul;
+  if (M.career) f *= careerFade(p);                         // a career match: your player's stamina, late in the half
   return s*f;
 }
 function nearestOf(arr, x, y) { let best = null, bd = 1e9; for (const p of arr) { const d = hyp(p.x-x, p.y-y); if (d < bd) { bd = d; best = p; } } return best; }
@@ -122,7 +131,7 @@ function ourBall(t) {                                      // side t has it: hel
 function userActive(t) { return !!ctrlOf(t) && (M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'ruck')); }   // the stick stays live through a ruck, on the man who will pick the ball up
 
 function steer(p, tvx, tvy, acc, dt) {
-  const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt;
+  const dx = tvx-p.vx, dy = tvy-p.vy, m = hyp(dx,dy), a = acc*dt*traitAcc(p);   // a Burst gets going quicker while he sprints (src/traits.js)
   if (m <= a) { p.vx = tvx; p.vy = tvy; } else { p.vx += dx/m*a; p.vy += dy/m*a; }
 }
 function seek(p, tx, ty, speed, acc, dt, pursue) {
@@ -181,6 +190,7 @@ function kickoff(team) {
   M.phaseCount = 0; M.poss = team;
   startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => restartKick(team, 60, 35, 'kickoff') });
   if (!M.two && outmatched(M.nat[0], M.nat[1])) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless
+  if (M.career) careerKickoff();                           // a career match: the ring starts on your player
 }
 function dropOut(team) {
   const kx = team === 0 ? 32 : 88;
@@ -200,13 +210,13 @@ function scrum(team, x, y, reason) {
   M.stats.scrums = (M.stats.scrums||0) + 1;
   placeBall(clamp(x,15,105), clamp(y,15,55));
   startSet({ kind:'scrum', team, x:clamp(x,15,105), y:clamp(y,15,55), t:interactive() ? 1.1 : 1.8, snap:true,
-    label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() ? startScrum(s) : autoScrum(s) });
+    label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() && !proSkip() ? startScrum(s) : autoScrum(s) });   // Pro Mode: a back's scrum is played for the team
 }
 function lineout(team, x, y, reason) {
   const ly = y < 35 ? 8 : 62;
   placeBall(clamp(x,15,105), ly);
   startSet({ kind:'lineout', team, x:clamp(x,15,105), y:ly, t:interactive() ? 1.1 : 1.8, snap:true,
-    label:(reason ? reason + ' · ' : '') + 'Lineout ' + M.nat[team].id, then:s => interactive() ? startLineout(s) : autoLineout(s) });
+    label:(reason ? reason + ' · ' : '') + 'Lineout ' + M.nat[team].id, then:s => interactive() && !proSkip() ? startLineout(s) : autoLineout(s) });   // and his lineout
 }
 function releaseTo(team, x, y, kind, who) {
   const d = dirOf(team);
@@ -228,6 +238,7 @@ function setCarrier(p) {
   if (M.poss !== p.team) M.phaseCount = 0;
   b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
+  if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
   clearCharge();
   for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
@@ -237,14 +248,19 @@ function setCarrier(p) {
   }
 }
 function catchBall(p, kind) {
-  const n = M.nat[p.team], f = M.ball.f;
+  const n = M.career ? careerNatOf(p) : M.nat[p.team], f = M.ball.f;   // a career match: your player's own handling
   let k = 0.015 + (5-n.handling)*0.01 + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? 0.2 : 0);
   if (pressure(p) < 1.8) k += 0.04;
   if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
-  if (rnd() < k) { knockOn(p); return; }
+  if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
+  if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
+  if (M.career) k *= careerLifeHands(p, kind, f);          // a career match: Team Spirit, on a pass to or from your player
+  const r = rnd();
+  if (r < traitHands(p, k)) { knockOn(p); return; }        // Safe Hands: hardly ever
   setCarrier(p);
+  traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
-  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); }
+  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
@@ -263,6 +279,6 @@ function pickUp(p) {
   }
   const turn = p.team !== b.last && !b.kickInfo;
   setCarrier(p);
-  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); }
+  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); heat(p.team, 'turnover'); }
 }
 

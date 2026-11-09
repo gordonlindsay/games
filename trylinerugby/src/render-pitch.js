@@ -83,9 +83,14 @@ function drawPlayer(p, r) {
   ctx.fillStyle = 'rgba(0,0,0,.12)';
   for (const [ox, oy] of SHADOWS) { ellipse(sx + ox*r, sy + oy*r, r*0.95, r*0.75); ctx.fill(); }
   const sp = hyp(p.vx, p.vy), spr = sprintLevel(p);
-  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || (M.surge && M.surge.team === p.team)) && sp > 3) {
+  const fire = onFire(p.team);
+  if (fire && p.down <= 0) {                                 // On Fire: an orange glow under every man on the side, pulsing
+    ctx.fillStyle = `rgba(255,110,30,${(0.30 + 0.12*Math.sin(M.rt*2*Math.PI*3)).toFixed(3)})`;
+    ellipse(sx, sy, r*1.55, r*1.3); ctx.fill();
+  }
+  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || fire || (M.surge && M.surge.team === p.team)) && sp > (fire ? 1.5 : 3)) {
     const tx = -p.vx/sp, ty = -p.vy/sp;
-    ctx.fillStyle = (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';
+    ctx.fillStyle = fire ? 'rgba(255,110,30,.6)' : (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';   // On Fire burns orange
     for (const kk of [1.1, 2.0]) { ellipse(sx + tx*r*kk, sy + ty*r*kk, r*(1 - kk*0.22), r*(0.85 - kk*0.2)); ctx.fill(); }
     if (spr > 0) {                                           // a sprint: two speed streaks behind him
       ctx.strokeStyle = `rgba(244,241,232,${(0.55*spr).toFixed(3)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
@@ -106,6 +111,7 @@ function drawPlayer(p, r) {
     ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*1.05, 0, r*0.36, 0, 7); ctx.fill();
   } else {
     const lean = k ? (k.tier === 'soft' ? 0.15 : k.tier === 'dom' && k.t/k.T >= 0.4 ? -0.12 : 0) : 0;   // a bound carrier leans into a Soft tackle, stands up in a Wrap, recoils from a Big Hit
+    const boots = lockerBoots(p.team, p); if (boots) lockerFeet(boots, r, p);   // the Locker's boots on your side, under the body so the toes show as he runs (src/locker.js)
     ctx.fillStyle = kit.trim;
     ctx.beginPath(); ctx.arc(lean*r, -r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(lean*r, r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
@@ -150,7 +156,8 @@ function drawBall(r) {
   if (b.state === 'held') { const [fx, fy] = svec(b.carrier.fx, b.carrier.fy); ang = Math.atan2(fy, fx); }
   else { const [vx, vy] = svec(b.vx, b.vy); if (hyp(vx, vy) > 0.5) ang = Math.atan2(vy, vx); }
   ctx.save(); ctx.translate(gx, gy - lift); ctx.rotate(ang);
-  ctx.fillStyle = '#f6f3ea'; ctx.strokeStyle = '#3b2f22'; ctx.lineWidth = 1.2;
+  const look = lockerBall();                               // the Locker's ball in a match you play, or null for the classic one (src/locker.js)
+  ctx.fillStyle = look ? lockerBallFill(look, rx*sc) : '#f6f3ea'; ctx.strokeStyle = look ? look.line : '#3b2f22'; ctx.lineWidth = 1.2;
   ellipse(0, 0, rx*sc, rx*0.62*sc); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(59,47,34,.6)'; ctx.beginPath(); ctx.moveTo(-rx*0.45*sc, 0); ctx.lineTo(rx*0.45*sc, 0); ctx.stroke();
   ctx.restore();

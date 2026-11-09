@@ -12,6 +12,10 @@
   --flood-ink:#1c1500;
   --alert:#ff8466;
   --p2:#ff5fd2;           /* Player 2: the second seat's ring and marks */
+  --gold:#dcab42;         /* silverware (TROPHY_METAL, src/cups.js): a cup's gold, darker than the floodlight */
+  --gold-hi:#f7df95; --gold-lo:#a37522;
+  --silver:#c3ccd3;       /* a title's silver, cooler than the chalk; both read at 8:1 and more on the panel */
+  --silver-hi:#f4f7f9; --silver-lo:#86929b;
   --display:'Big Shoulders Display','Arial Narrow','Helvetica Neue Condensed',Impact,sans-serif;
   --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
@@ -45,8 +49,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stack{display:flex;flex-direction:column;gap:10px}
 
-/* home */
-.home{min-height:100%;justify-content:center}
+/* home: the wordmark (the rest of the home is the headlines block at the end) */
 .mark{display:flex;flex-direction:column;gap:14px}
 .word{margin:0;display:flex;flex-direction:column;font:900 clamp(84px,24vw,168px)/.78 var(--display);text-transform:uppercase;letter-spacing:-.005em}
 .word .try{color:transparent;-webkit-text-stroke:2px var(--chalk)}
@@ -55,7 +58,6 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .posts{position:absolute;right:-40px;bottom:0;width:30px;height:64px;border-left:4px solid var(--chalk);border-right:4px solid var(--chalk)}
 .posts::after{content:"";position:absolute;left:0;right:0;top:46%;height:4px;background:var(--chalk)}
 .tag{margin:0;color:var(--chalk-dim);max-width:34ch}
-.settings{display:grid;gap:12px;padding:14px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
 .set{display:grid;grid-template-columns:7.5em 1fr;align-items:center;gap:12px}
 .lbl{font:700 12px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim)}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1.5px solid var(--rule-hi);border-radius:6px;overflow:hidden;min-width:0}
@@ -63,30 +65,10 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .seg button+button{border-left:1.5px solid var(--rule-hi)}
 .seg button[aria-pressed="true"]{background:var(--chalk);color:var(--night)}
 .resume-note{margin:0;font-size:13px;color:var(--chalk-dim);text-align:center}
-.home-row{align-items:start}
-.home-row .col{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;min-width:0}
 @media (orientation:landscape) and (max-height:560px){
-  /* a phone held sideways: everything on one screen, settings wide enough not to wrap */
+  /* a phone held sideways: every screen closer to the edges */
   .screen{padding-block:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 12px)}
-  .home{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);align-items:center;gap:10px 28px;max-width:900px}
-  .home .mark{grid-row:span 2}
-  .home .tag{display:none}
-  .home .eyebrow{font-size:10px;letter-spacing:.12em}
-  .word{font-size:clamp(60px,11vw,124px)}
-  .home .stack{gap:8px}
-  .home .btn.primary{min-height:50px}
-  .settings{grid-template-columns:1fr;gap:8px;padding:10px 12px}
-  .settings .set{grid-template-columns:6.4em minmax(0,1fr);gap:8px}
   .seg button{padding:0 4px;white-space:nowrap}
-}
-@media (orientation:landscape) and (max-height:420px){
-  /* a phone in Safari, sideways: the URL bar leaves about 320px. Two columns of settings, labels above the controls,
-     so Half, Difficulty, Sound and Hints fit without a scroll. Every control stays 44px. */
-  .home .stack{gap:6px}
-  .home .btn,.home .btn.primary{min-height:44px}
-  .settings{grid-template-columns:1fr 1fr;gap:8px 12px;padding:8px 10px}
-  .settings .set{grid-template-columns:1fr;gap:4px}
-  .settings .seg button{font-size:13px;padding:0 2px}
 }
 
 /* team select */
@@ -103,14 +85,29 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .jersey.hoops{background:linear-gradient(var(--kit) 0 30%,var(--trim) 30% 42%,var(--kit) 42% 56%,var(--trim) 56% 68%,var(--kit) 68% 82%,var(--trim) 82% 94%,var(--kit) 94%)}
 .tname{min-width:0;font:800 clamp(20px,5.6vw,26px)/.95 var(--display);text-transform:uppercase;letter-spacing:.02em}
 .stats{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--chalk-dim)}
+.team .jw{position:relative}
+.ovr{position:absolute;right:-10px;bottom:-8px;min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 2px 0 rgba(0,0,0,.35)}   /* the overall rating, a badge on the shirt */
 .pips{display:flex;gap:3px}
 .pips i{flex:1;height:5px;border-radius:1px;background:var(--rule-hi)}
 .pips i.on{background:var(--chalk)}
 .gap{grid-column:1/-1;margin-top:-4px;font:800 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--flood)}
+/* the star traits a team's 5s bring (src/traits.js), under the ability rows behind a gold star as on the pitch. One line for one or two;
+   three or four (Ireland, France) take a second at 844 and 667 wide, breaking only between names */
+.tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
+.tstars b{font-weight:700;color:var(--chalk);white-space:nowrap}
+.tstars::before{content:"";display:inline-block;width:11px;height:11px;margin:0 5px -1px 0;background:var(--flood);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
 
-/* International | Local, beside the title */
-.head > .pool{display:grid;flex:none;gap:0;width:min(272px,100%)}
-.pool button{min-height:44px;padding:0 14px}
+/* Men | Women | Minis beside the title (under it when the row is short); International | National | Local, then National's leagues
+   or Local's lists, each row in equal parts. A long league name takes two lines rather than push the row wider than the screen. */
+.head > .cat{display:grid;gap:0;flex:0 1 264px;min-width:228px}
+.pools{display:flex;flex-direction:column;gap:8px;margin-top:-8px}
+.pools .seg button,.head > .cat button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
+/* National's eight leagues: one row where eight fit (a phone held sideways at 844), two balanced rows of four where they do not (667) */
+@media (max-width:731px){
+  #t-nat{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr))}
+  #t-nat button:nth-child(4n+1){border-left:0}
+  #t-nat button:nth-child(n+5){border-top:1.5px solid var(--rule-hi)}
+}
 .yours{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid var(--flood);border-radius:8px;background:var(--panel)}
 .yours .btn{width:auto;flex:none}
 .tcard{min-width:0;display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
@@ -207,6 +204,10 @@ h2.title.gold{color:var(--flood)}
 .bug{display:flex;align-items:stretch;background:rgba(8,14,10,.88);border:1px solid rgba(241,238,228,.2);border-radius:4px;overflow:hidden;font:800 21px/1 var(--display);text-transform:uppercase;font-variant-numeric:tabular-nums}
 .bug .k{width:6px;background:var(--k)}
 .bug .nm{padding:6px 9px;display:flex;align-items:center}
+.bug .heat{width:7px;margin:5px 3px;border-radius:2px;background:linear-gradient(to top,#ff7a1f calc(var(--n,0)*33.4%),rgba(241,238,228,.22) 0)}   /* the run towards On Fire, fills bottom up */
+.bug .heat[hidden]{display:none}
+.bug .heat.on{background:#ff7a1f;box-shadow:0 0 8px #ff7a1f;animation:flick .35s ease-in-out infinite alternate}
+@keyframes flick{to{opacity:.55}}
 .bug .sc{display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--chalk);color:var(--night);font-weight:900}
 .sub{padding:4px 9px;border-radius:3px;background:rgba(8,14,10,.74);font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;font-variant-numeric:tabular-nums}
 .sub .lp{color:var(--flood)}
@@ -241,6 +242,9 @@ h2.title.gold{color:var(--flood)}
 #banner .msg.small{font-size:24px;padding:8px 14px;border-left-width:6px}
 #banner .msg.coach{font:700 18px/1.25 var(--body);text-transform:none;letter-spacing:0;padding:8px 14px;max-width:min(28em,92vw)}
 #banner .msg.big{border:0;background:none;padding:0;font-size:clamp(84px,22vw,170px);color:var(--chalk);text-shadow:0 5px 0 var(--k,#000),0 8px 0 rgba(0,0,0,.45),0 0 40px rgba(0,0,0,.5)}
+#banner .msg.fire{color:#ffcf3d;text-shadow:0 5px 0 #ff5a14,0 8px 0 rgba(0,0,0,.45),0 0 48px rgba(255,90,20,.65)}   /* On Fire */
+#banner .msg.hit{animation:pop .22s ease-out,thud .3s ease-out}   /* Big Hit lands with a jolt */
+@keyframes thud{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,2px)}}
 @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:none;opacity:1}}
 
 #controls{position:fixed;inset:0;z-index:4;pointer-events:none}
@@ -261,6 +265,7 @@ h2.title.gold{color:var(--flood)}
 .act.press{transform:scale(.9)}
 .act.idle{opacity:.45}
 .act.b.two span{display:block;width:54px;font-size:15px;line-height:1.05;text-align:center;white-space:normal}   /* "Drop Goal" on two lines inside the 68px button */
+.act.a.two span{display:block;width:72px;font-size:17px;line-height:1.05;text-align:center;white-space:normal}   /* "Call for Ball" on two lines inside the 88px button (Pro Mode) */
 /* a computer (a fine pointer, or a controller seen): a keycap or a controller glyph in each button's corner for the last device used, and the
    resting stick ring hidden while that wasn't a touch. The glyph is a position on the pad (the diamond's lit dot, the shoulder tab), never a letter.
    Phones never get the desk class, so nothing here reaches them */
@@ -277,9 +282,7 @@ body.desk.dev-pad .act .hint.pad{display:block}
 body.desk .desk-only{display:block}
 #pz-seat,#br-seat{margin:-4px 0 0;font:700 13px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--flood)}
 #pz-seat.s1,#br-seat.s1{color:var(--p2)}
-/* two player: the home button is for computers only (body.desk), where it takes the half beside Championship and How to Play drops
-   to a row of its own; phones keep Championship | How to Play. The join screen seats the two players side by side in their colours */
-body.desk .home-row .col{grid-column:auto}
+/* two player: no button on the home since 2026-11-09 (openJoin is its way in); body.desk now drives How to Play's desk-only rows. The join screen seats the two players side by side in their colours */
 .eyebrow.p1{color:var(--flood)}.eyebrow.p2{color:var(--p2)}
 /* the seat tag: the numeral on the seat colour, beside the scorebug, on the Full Time row and on the join cards */
 .stag{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;background:var(--flood);color:var(--flood-ink);font:900 15px/1 var(--display);font-style:normal;vertical-align:middle;flex:none}
@@ -414,7 +417,7 @@ body.desk .home-row .col{grid-column:auto}
   #br-stats td{font-size:18px}
   #br-stats .key{font-size:11px}
 }
-@media (prefers-reduced-motion:reduce){#banner .msg{animation:none}.act{transition:none}.act.cue{animation:none}}
+@media (prefers-reduced-motion:reduce){#banner .msg,#banner .msg.hit,.bug .heat.on{animation:none}.act{transition:none}.act.cue{animation:none}}
 
 /* Progression stays within the menu; match cards keep their one-press Continue. */
 .season-summary,.cabinet{padding:12px 14px;border:1px solid var(--rule);border-radius:8px;background:var(--panel)}
@@ -422,9 +425,8 @@ body.desk .home-row .col{grid-column:auto}
 .season-summary .season-record{font-weight:800;font-variant-numeric:tabular-nums}
 .cabinet summary,.season-details summary,.match-details summary{cursor:pointer;padding:8px 0;font-size:14px;font-weight:700;color:var(--chalk)}
 .cabinet summary:focus-visible,.season-details summary:focus-visible,.match-details summary:focus-visible{outline:2px solid var(--flood);outline-offset:3px;border-radius:2px}
-.home-cabinet{margin-top:12px;padding:0 12px;background:transparent}
 .stat-note{margin:8px 0;color:var(--chalk-dim);font-size:12px;line-height:1.4}
-.cabinet-tally{font-size:13px;color:var(--flood)}
+.cabinet-tally{font-size:13px;color:var(--chalk-dim)}   /* a count held in its trophy's metal (.ck[data-won]); a 0 and the dots between them quiet */
 .season-entry{padding:12px 0;border-top:1px solid var(--rule)}
 .season-entry h3{margin:4px 0;font-size:17px;overflow-wrap:anywhere}
 .season-awards{color:var(--flood)}
@@ -445,3 +447,660 @@ body.desk .home-row .col{grid-column:auto}
 .app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; padding:7px 11px; font:inherit; cursor:pointer; }
 .app-action:hover, .app-action:focus-visible { color:#fff; border-color:#d5b663; }
 .app-action:disabled { opacity:.55; cursor:wait; }
+
+/* ===== career ===== */
+.cr-shirt{position:relative;display:inline-grid;place-items:center;flex:none}
+.cr-shirt .jersey{width:56px;height:56px}
+.cr-shirt b{position:absolute;inset:0;display:grid;place-items:center;padding-top:14%;font:900 24px/1 var(--display);color:var(--chalk);text-shadow:0 0 2px #000,0 0 3px #000;pointer-events:none}
+.cr-shirt.big .jersey{width:64px;height:64px}
+.cr-shirt.big b{font-size:28px}
+.btn.cr-headback{width:auto;min-height:44px;padding:8px 16px}
+.cr-newgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px 20px;align-items:start}
+.cr-clubs{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.cr-nations{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.team.cr-club{grid-template-columns:28px minmax(0,1fr);min-height:44px;padding:6px 10px;gap:8px}
+.cr-club .jersey{width:28px;height:28px}
+.cr-club .tname{font:700 14px/1.1 var(--body);text-transform:none;letter-spacing:0;overflow-wrap:normal}
+.cr-form{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cr-left{display:flex;flex-direction:column;gap:10px;min-width:0}   /* Play as (Whole Team | My Player) over the clubs, so Start Career stays in view */
+.cr-namerow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px}
+.cr-hub{max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px 24px;align-items:start}
+.cr-main{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cr-main .head > div{gap:4px}
+.cr-main .fx-team span{overflow-wrap:normal}
+.cr-main .fx-team .jw{flex:none}   /* the jersey keeps its size and its gap: only the name yields (as .cup-main's) */
+#cr-play{margin-bottom:12px}   /* far enough above Train | Table that a controller's Down reaches them, not the row below */
+.cr-card{display:flex;flex-direction:column;gap:12px;padding:14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);min-width:0}
+.cr-id{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
+.cr-who{min-width:0}
+.cr-who .eyebrow{white-space:nowrap}   /* Forward · No. 1 stays one line: careerFit takes in its spacing, then its size, where the card is narrow */
+.cr-who h3{margin:4px 0 0;font:900 30px/.95 var(--display);text-transform:uppercase;letter-spacing:.01em;overflow-wrap:normal}
+.cr-ovr{display:grid;justify-items:center;gap:2px;min-width:64px;padding:6px 8px;border-radius:8px;background:var(--chalk);color:var(--night)}
+.cr-ovr b{font:900 36px/1 var(--display);font-variant-numeric:tabular-nums}
+.cr-ovr span{font:700 10px/1 var(--body);letter-spacing:.12em;text-transform:uppercase}
+.cr-skills{display:grid;gap:8px}
+.cr-sk{display:grid;grid-template-columns:6.2em minmax(0,1fr) 2.2em 2.2em;align-items:center;gap:10px}
+.cr-sk .lbl{color:var(--k)}
+.cr-sk .bar{height:12px;border-radius:6px;background:var(--rule-hi);overflow:hidden}
+.cr-sk .bar i{display:block;height:100%;border-radius:6px;background:var(--k)}
+.cr-sk b{font:900 20px/1 var(--display);text-align:right;font-variant-numeric:tabular-nums}
+.cr-sk em{font:700 13px/1 var(--body);font-style:normal;color:var(--flood)}
+.cr-gain{margin:0;color:var(--flood);font:700 15px/1.3 var(--body)}
+/* his star traits (src/traits.js): three a row; one he has in its skill's colour, a locked one dimmed, with what it needs under its name.
+   careerFit steps a name down if a narrow card can't hold it */
+.cr-traits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.cr-trait{position:relative;display:flex;align-items:center;min-width:0;min-height:30px;padding:5px 6px;border:1.5px solid var(--k);border-radius:4px;color:var(--k)}   /* one line: the name; a locked one's number sits in the corner */
+.cr-trait b,.cr-trait span{display:block;min-width:0;font:700 13px/1.1 var(--body);white-space:nowrap}
+.cr-trait b{flex:1 1 auto}
+.cr-trait span{position:absolute;top:1px;right:3px;font-variant-numeric:tabular-nums}
+.cr-trait.off{align-items:flex-end;padding-bottom:4px;border-color:color-mix(in srgb,var(--k) 45%,var(--rule-hi));color:var(--chalk-dim);opacity:.8}   /* its skill's colour, faint: which skill earns it */
+.cr-trait.off span{font-size:10px;font-weight:700;line-height:1;color:var(--k)}
+.cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.btn.cr-drill{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:76px;padding:10px 12px;text-align:left}
+.cr-drill .nm{font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+.cr-drill .nw{white-space:nowrap}
+.cr-chips{display:flex;flex-wrap:wrap;gap:6px}
+.cr-chip{padding:4px 8px;border-radius:4px;border:1.5px solid var(--k);color:var(--k);font:700 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase}
+.tbl tr.up td:first-child{box-shadow:inset 4px 0 0 #5fd38a}
+.cr-end{display:flex;flex-direction:column;gap:12px}
+.cr-tiles{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:10px}
+.cr-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);min-width:0}
+.cr-tile b{align-self:stretch;min-width:0;font:900 32px/1 var(--display);text-transform:uppercase;overflow-wrap:normal}
+.cr-next{display:flex;align-items:center;gap:8px;min-width:0;align-self:stretch;font:700 15px/1.1 var(--body)}
+.cr-next span{min-width:0;overflow-wrap:normal}
+.cr-next .jersey{width:28px;height:28px}
+.cr-pick{margin:0}
+.cr-tile .lbl{align-self:stretch;min-width:0;overflow-wrap:normal}
+@media (min-width:760px){.cr-nations{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* career life (src/career-life.js): Energy, Morale and Team Spirit under the skills, and the dilemma card in place of the fixture */
+.cr-life{display:grid;gap:6px;padding-top:10px;border-top:1.5px solid var(--rule)}
+.cr-lf{display:grid;grid-template-columns:6.2em minmax(0,1fr) 2.2em 2.2em;align-items:center;gap:10px}   /* the skill rows' columns, so the bars line up under theirs */
+.cr-lf .lbl{color:var(--k);white-space:nowrap;overflow-wrap:normal}
+.cr-lf .bar{height:6px;border-radius:3px;background:var(--rule-hi);overflow:hidden}
+.cr-lf .bar i{display:block;height:100%;border-radius:3px;background:var(--k)}
+.cr-lf b{font:900 17px/1 var(--display);text-align:right;font-variant-numeric:tabular-nums}
+.cr-lf em{font:700 13px/1 var(--body);font-style:normal;color:var(--flood)}
+.cr-lf em.dn{color:var(--chalk-dim)}
+.cr-dilemma{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}   /* as far above Train | Table as Play Match is */
+.cr-q{margin:0;font:900 28px/1 var(--display);text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow-wrap:normal}
+.cr-opts{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:10px}   /* equal halves */
+.btn.cr-opt{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:84px;padding:10px 12px;text-align:left}
+.cr-opt .nm{align-self:stretch;min-width:0;font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow-wrap:normal}   /* one line, always: a name on two makes both buttons taller and the hub scrolls at 667x375; careerFit steps a wide one down */
+.cr-opt .cr-chips{gap:4px}
+.cr-opt .cr-chip{padding:3px 6px;letter-spacing:.04em;white-space:nowrap}
+@media (orientation:landscape) and (max-height:560px){
+  #s-career-new .wrap,#s-career-end .wrap,#s-career-train .wrap,#s-career-table .wrap{gap:12px}
+  .cr-hub{gap:12px 20px}
+  .cr-main h2.title,#s-career-new h2.title,#s-career-end h2.title,#s-career-train h2.title,#s-career-table h2.title{font-size:36px}
+  .cr-main .btn.primary,#s-career-new .btn.primary,#s-career-end .btn.primary{min-height:50px}
+  .cr-main .fixture{padding:10px 14px}
+  .cr-main .fx-team{font-size:24px}
+  .cr-card{gap:8px;padding:12px}
+  .cr-skills{gap:4px}
+  .cr-traits{gap:4px}
+  .cr-life{gap:2px;padding-top:6px}
+  .cr-tile{padding:10px 12px}
+  .cr-tile b{font-size:28px}
+}
+@media (max-width:620px){
+  .cr-hub,.cr-newgrid{grid-template-columns:1fr}
+  .cr-tiles,.cr-drills{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* ===== import ===== */
+/* the Add Your Team card beside Create Team: a chain link drawn in CSS */
+.team.create .plus.link{border:0;border-radius:0;position:relative}
+.team.create .plus.link::before,.team.create .plus.link::after{content:"";position:absolute;width:24px;height:12px;border:3px solid currentColor;border-radius:7px;transform:rotate(-45deg)}
+.team.create .plus.link::before{left:3px;top:20px}
+.team.create .plus.link::after{left:15px;top:10px}
+/* the import card scrolls on a short landscape phone, as full time does */
+#m-import{display:flex;align-items:safe center;justify-content:center;overflow:auto;touch-action:pan-y;padding:12px}
+#m-import .card{margin:auto;width:min(640px,100%);gap:12px;padding:16px}
+.im-head{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0}
+.im-head > div{display:flex;flex-direction:column;gap:6px;min-width:0}
+#im-title{overflow-wrap:anywhere}
+.im-line{margin:0;color:var(--chalk-dim)}
+.im-paste{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.im-paste .btn{width:auto;min-height:44px;padding:0 20px}
+.im-paste .inp:disabled{opacity:.55}
+.im-err{margin:0;color:var(--alert);font-weight:700}
+.im-league{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.im-league .jersey{width:24px;height:24px}
+.im-league .lbl{margin-left:8px}
+.im-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(284px,max-content));gap:10px 16px}
+.im-cols .swatches{gap:4px}
+#m-import .btn:disabled{opacity:.6;cursor:wait}
+@media (max-height:420px){
+  #m-import .card{gap:10px;padding:12px 14px}
+  #m-import h3{font-size:30px}
+  #m-import .btn.primary{min-height:50px}
+}
+/* ===== kids ===== */
+/* the grown-up check (kids.js): over every other card (the practice card's is 35) and under only Turn Your Phone Sideways, which
+   now sits over every card too; the question and the answer on one row, ten figure keys (two rows of five on a narrow screen),
+   then Delete | Cancel */
+#rotate{z-index:40}
+#m-gate{z-index:38}
+#m-gate .card{width:min(600px,100%);gap:12px}
+.pg-ask{display:grid;grid-template-columns:minmax(0,1fr) 7.5em;align-items:center;gap:12px}
+.pg-ask h3{font-size:clamp(26px,5vw,34px)}
+.pg-ans{position:relative;overflow:hidden;display:grid;place-items:center;min-height:56px;border:1.5px solid var(--rule-hi);border-radius:6px;background:var(--night);font:900 38px/1 var(--display);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.pg-ans.wrong{border-color:var(--alert);color:var(--alert);font:700 15px/1.1 var(--body);letter-spacing:0}
+#m-gate.rest .pg-ans::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--alert);transform-origin:left;animation:pg-rest var(--pg-rest,10s) linear forwards}   /* two wrong answers: the keys rest, and a bar runs down for the wait */
+@keyframes pg-rest{to{transform:scaleX(0)}}
+#m-gate.rest .pg-keys .btn,#m-gate.rest #pg-del{opacity:.4}
+#m-gate:has(.padfocus) .btn:focus-visible:not(.padfocus){outline:none}   /* a controller's ring is the one outline: a DOM focus the keyboard left on a key would read as a second */
+.pg-keys{display:grid;grid-template-columns:repeat(10,minmax(44px,1fr));gap:6px}
+.pg-keys .btn{min-height:52px;padding:0;font:900 28px/1 var(--display)}
+@media (max-width:560px){.pg-keys{grid-template-columns:repeat(5,minmax(44px,1fr))}}
+@media (orientation:landscape) and (max-height:420px){
+  #m-gate .card{gap:10px;padding:14px 16px}
+  .pg-keys .btn{min-height:48px}
+}
+/* ===== store ===== */
+/* a locked control keeps its label, with a small lock after it (ui-store.js storeMark), drawn as a mask in the control's own colour */
+.locked::after{content:"";display:inline-block;width:.7em;height:.9em;margin-left:.45em;vertical-align:-.08em;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 18'%3E%3Cpath d='M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8' fill='none' stroke='%23000' stroke-width='2.2'/%3E%3Crect x='.5' y='7.6' width='13' height='10' rx='2'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 18'%3E%3Cpath d='M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8' fill='none' stroke='%23000' stroke-width='2.2'/%3E%3Crect x='.5' y='7.6' width='13' height='10' rx='2'/%3E%3C/svg%3E") center/contain no-repeat}
+.team.create.locked{position:relative}
+.team.create.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
+#st-links.three #st-reset{grid-column:1/-1}   /* Privacy | Support, then Reset Kids Level across the row (in thirds it took three lines on a 667px phone) */
+#st-links.four #st-reset{grid-column:auto}   /* Reset Kids Level | Move Up to Easy in halves when both show */
+#st-links #st-easy{grid-column:1/-1}
+#st-links.four #st-easy{grid-column:auto}
+#b-grown{position:relative}
+#b-grown.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}   /* Move Up to Easy waiting in Grown-Ups */
+/* the Super Fan badge under the logo, in the eyebrow's place and size: the club's shirt and its name */
+.st-fan{display:flex;align-items:center;gap:8px;color:var(--chalk)}
+.st-fan .jersey{width:20px;height:20px;margin-block:-4px}
+/* the Unlock card and the Grown-Ups panel (#m-store): one column on a tall screen. On a phone held sideways, the heading with what is
+   owned over the card's own buttons on the left, the offers on the right, so it fits 844x390 and 667x375 without a scroll; with
+   nothing on offer (.solo) it is one narrower column */
+#m-store{display:flex;align-items:safe center;justify-content:center;overflow:auto;touch-action:pan-y;padding:12px}
+#m-store .card{margin:auto;width:min(480px,100%);display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding:18px}
+.st-head,.st-offers,.st-foot{display:flex;flex-direction:column;gap:10px;min-width:0}
+.st-offers:empty{display:none}
+#st-title{white-space:nowrap}
+.st-have{display:flex;flex-direction:column;gap:6px}
+.st-own{display:flex;align-items:center;gap:10px;margin:0;font:700 13px/1.2 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--chalk)}
+.st-own .jersey{width:28px;height:28px}
+/* a Super Fan's line in Grown-Ups: Join the Supporters' Wall beside the club's name, which takes two lines to make room (a row of its
+   own pushed the panel off a phone held sideways). The name is never narrower than its longest word; where the two cannot share a
+   line (a tall phone, a very long name) the button drops under the name, across the card */
+.st-own.st-fanown{flex-wrap:wrap;row-gap:6px}
+.st-fanown > .jw{flex:none}
+.st-fanown > .st-ownname{flex:999 1 120px}
+#m-store .st-fanown .btn.st-wall{width:auto;flex:1 0 auto;min-height:44px;padding:4px 12px;font:700 13px/1.1 var(--body);letter-spacing:normal;text-transform:none;text-wrap:balance}
+.st-msg{margin:0;color:var(--chalk);font-weight:700}
+.st-fanbuy{display:flex;flex-direction:column;gap:6px}
+.st-fanbuy .btn{display:flex;align-items:center;gap:12px;text-align:left}
+.st-fanbuy .jersey{width:36px;height:36px;flex:none}
+.st-nm{min-width:0}
+.st-share{margin:0;font-size:13px;line-height:1.35;color:var(--chalk-dim)}
+#m-store .btn:disabled{opacity:.6;cursor:wait}
+@media (orientation:landscape) and (max-height:560px){
+  #m-store .card{width:min(760px,100%);grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);grid-template-rows:auto 1fr;gap:12px 18px;padding:14px 16px}
+  #m-store .card.solo{width:min(420px,100%);grid-template-columns:minmax(0,1fr)}
+  .st-head{grid-column:1;grid-row:1}
+  .st-offers{grid-column:2;grid-row:1/3;align-self:center}
+  .st-foot{grid-column:1;grid-row:2;align-self:end}
+  #m-store .card.solo .st-foot{grid-row:auto}
+  #m-store h3{font-size:34px}
+  #m-store .btn.primary{min-height:54px;font-size:22px}
+  #m-store .btn{min-height:44px}
+  #m-store .hsub{letter-spacing:.05em}
+  .st-foot .btn{padding:4px 8px;line-height:1.05}   /* Restore Purchases may take two lines in its half; the row stays 44px */
+  /* a Super Fan's line beside something still on offer: the columns go to halves, so the club's name and Join the Supporters' Wall
+     (each on two lines) share the left one's line */
+  #m-store .card:not(.solo):has(.st-fanown){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #m-store .card:has(.st-fanown) .st-head{gap:8px}   /* the Super Fan's line is 44px with its button: the head gives a little back, */
+  #m-store .card:has(.st-fanown) .st-msg{line-height:1.2}   /* so a two-line message still fits beside an offer with both Kids buttons */
+  #m-store .card:not(.solo) .st-fanown > .st-ownname{flex:1 1 115px}
+  #m-store .card:not(.solo) .st-fanown .btn.st-wall{flex:1 1 120px;padding-inline:8px}
+}
+@media (orientation:landscape) and (max-height:420px){
+  #b-grown{white-space:nowrap}
+}
+/* ===== locker ===== */
+.lk-medal{display:block;width:22px;height:26px;flex:none}
+.lk-medal svg{display:block;width:100%;height:100%}
+.lk-home.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}
+/* a medal pip: bronze, silver or gold; filled once won */
+.lk-pip{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--pc);flex:none;opacity:.45}
+.lk-pip.t1,.lk-disc.t1{--pc:#c98a4b}.lk-pip.t2,.lk-disc.t2{--pc:#c9d1d6}.lk-pip.t3,.lk-disc.t3{--pc:#ffcf3d}
+.lk-pip.on{background:var(--pc);opacity:1}
+/* the Locker: the title, the four tabs and Back to Menu over the tab's page; on a phone held sideways they stand in a column on the
+   left and the page fills the right, so each tab fits 844x390 and 667x375 without a scroll */
+#s-locker .lk-wrap{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "tabs" "body" "back";gap:14px}
+.lk-head{grid-area:head}.lk-tabs{grid-area:tabs}.lk-body{grid-area:body;min-width:0}.lk-back{grid-area:back}
+.lk-tally{display:flex;gap:14px}
+.lk-tal{display:inline-flex;align-items:center;gap:6px;font:800 17px/1 var(--display);letter-spacing:.02em;color:var(--chalk)}
+.lk-ic{display:block;width:32px;height:32px;flex:none}
+.lk-ic svg{display:block;width:100%;height:100%;fill:none;stroke:var(--chalk);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.lk-ic .acc{fill:var(--flood);stroke:var(--flood)}
+.lk-ic .acc-line{stroke:var(--flood);stroke-width:3}
+.lk-ic .dash{stroke:var(--chalk-dim);stroke-dasharray:2.5 3}
+/* Medals: twelve tiles, each its picture, name and line, the three pips and the count to the next */
+.lk-t0{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.lk-feat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;padding:8px 6px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);text-align:center}
+.lk-feat.new{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}
+.lk-name{font:700 14px/1.1 var(--body)}
+.lk-line{font-size:12px;line-height:1.25;color:var(--chalk-dim);text-wrap:balance}
+.lk-pips{display:flex;align-items:center;gap:4px;margin-top:2px}
+.lk-n{margin-left:4px;font:800 15px/1 var(--display);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+/* Ball and Boots: each drawn in its colours; a locked one dimmed, with the pip and name of the medal that unlocks it */
+.lk-t1,.lk-t2{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;--per:5}   /* rows centred, so 13 make 5, 5 and 3 (7 and 6 on a wider screen) */
+#s-locker .btn.lk-item{flex:0 0 calc((100% - (var(--per) - 1)*8px)/var(--per));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:80px;padding:8px 4px;text-align:center}
+.lk-item svg{display:block;width:54px;height:36px}
+.lk-iname{font:700 13px/1.1 var(--body)}
+#s-locker .btn.lk-item[aria-pressed="true"]{border-color:var(--flood);box-shadow:inset 0 0 0 2px var(--flood)}
+#s-locker .btn.lk-item.lk-off{opacity:1;cursor:default;background:var(--panel)}
+.lk-item.lk-off svg{opacity:.3}
+.lk-item.lk-off .lk-iname{color:var(--chalk-dim)}
+.lk-why{display:flex;align-items:center;gap:4px;font-size:11px;line-height:1.1;color:var(--chalk-dim);white-space:nowrap}
+.lk-why .lk-pip{width:10px;height:10px;border-width:1.5px}
+/* Legends: men's then women's, five a row; a locked side is a padlock and the Gold count it needs */
+.lk-t3 .lbl{display:block;margin:0 0 4px}
+.lk-legrow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.lk-legrow+.lbl{margin-top:8px}
+.lk-leg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;min-height:62px;padding:5px 4px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);text-align:center}
+.lk-leg .jw{position:relative}
+.lk-leg .jersey{width:28px;height:28px}
+.lk-leg .ovr{right:-18px;top:-2px;bottom:auto;min-width:22px;padding:2px 3px;font-size:12px}
+.lk-nat{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 11px/1.15 var(--body);color:var(--chalk-dim)}
+.lk-yr{font:800 15px/1 var(--display);letter-spacing:.03em}
+.lk-leg.lk-off{gap:4px;color:var(--chalk-dim);border-style:dashed}
+.lk-padlock svg{display:block;width:14px;height:18px}
+.lk-need{display:flex;align-items:center;gap:4px;font:800 15px/1 var(--display);color:var(--chalk)}
+@media (min-width:800px){.lk-t1,.lk-t2{--per:7}}
+@media (orientation:landscape) and (max-height:560px){
+  #s-locker .lk-wrap{max-width:900px;min-height:100%;grid-template-columns:minmax(124px,150px) minmax(0,1fr);grid-template-areas:"head body" "tabs body" "back body";grid-template-rows:auto 1fr auto;gap:10px 14px}
+  #s-locker h2.title{font-size:40px}
+  .lk-tabs{grid-auto-flow:row;align-self:start}
+  .lk-tabs button+button{border-left:0;border-top:1.5px solid var(--rule-hi)}
+  .lk-body{align-self:center}
+  .lk-tally{gap:10px}
+}
+@media (orientation:landscape) and (max-height:420px){
+  #s-locker .lk-wrap{gap:8px 12px}
+  #s-locker h2.title{font-size:34px}
+  .lk-tally{gap:8px}
+  .lk-tal{font-size:15px;gap:4px}
+  #s-locker .btn{min-height:44px}
+  .lk-t0{gap:6px}
+  .lk-feat{gap:2px;padding:5px 4px}
+  .lk-ic{width:26px;height:26px}
+  .lk-name{font-size:13px}
+  .lk-line{font-size:11px;line-height:1.2}
+  .lk-pip{width:12px;height:12px}
+  .lk-n{font-size:14px}
+}
+/* the full-time card: a row for each medal won (the medal in its colour, the feat, what it unlocked), then the new Legends. On a phone
+   held sideways the card widens and they stand beside the score and the stats, so Continue stays on the screen: the left column is
+   never under 350px, so the stats' key stays on one line as on the card without them, and they span exactly the rows shown above
+   Continue (--lk-rows, from lockerCard), so a row the mode does not show never adds a gap. The card is never taller for them */
+.br-medals{display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid var(--rule)}
+.lk-won{margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:14px;line-height:1.2}
+.lk-disc{display:block;width:18px;height:22px;flex:none}
+.lk-won b{font:800 19px/1 var(--display);letter-spacing:.03em;text-transform:uppercase}
+.lk-got{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-weight:700}
+.lk-got svg{display:block;width:30px;height:20px}
+.lk-got .jersey{width:22px;height:22px}
+.lk-newleg{gap:4px 12px}
+.lk-newleg b{flex:1 0 100%;font-size:15px;color:var(--flood)}
+.lk-newleg .lk-got{margin-left:0}
+.lk-who{margin:0;display:flex;align-items:center;gap:8px;font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim)}   /* Two Player: Player 1's medals */
+@media (orientation:landscape) and (max-height:560px){
+  #m-break.lk-on .card{width:min(780px,100%);display:grid;grid-template-columns:minmax(350px,1fr) minmax(150px,1fr);column-gap:20px;align-items:start}
+  #m-break.lk-on .card > *{grid-column:1}
+  #m-break.lk-on #br-medals{grid-column:2;grid-row:1 / span var(--lk-rows,4);align-self:center;padding:0 0 0 18px;border-top:0;border-left:1px solid var(--rule)}
+  #m-break.lk-on #br-go,#m-break.lk-on #br-row{grid-column:1 / -1}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:760px){
+  /* a narrower phone (667x375): the medals' column is about 230px, so each row steps down a size to keep its name and its unlock on
+     one line where they fit; one that does not puts its unlock on the line below */
+  #m-break.lk-on #br-medals{gap:5px;padding-left:14px}
+  #m-break.lk-on .lk-won{gap:2px 6px}
+  #m-break.lk-on .lk-won b{font-size:17px}
+  #m-break.lk-on .lk-got{gap:4px;font-size:13px}
+  #m-break.lk-on .lk-got svg{width:26px;height:17px}
+  #m-break.lk-on .lk-got .jersey{width:20px;height:20px}
+}
+
+/* ===== cups ===== */
+/* Silverware (src/ui-cups.js). Every trophy is real silverware, in its kind's metal (TROPHY_METAL, src/cups.js, on it as data-metal):
+   gold for the European Cup, the World Cup and the Home Nations Tour, silver for a title and the Triple Crown. The same on a tag in the
+   Trophy Cabinet, its tally, every cup's trophy and the career's trophy row; the words say which kind. Each trophy is its kind's shape
+   (TROPHY_SHAPE, src/cups.js: --trophy, a mask set by data-kind in the page's #trophy-shapes): a shield, a cup with big handles, a cup
+   with a ball on top, a plate, a crown, a rosette. In the cabinet a trophy is drawn
+   only for silverware held (data-won): an entry not won has a dot, a count of 0 nothing. The cup hub is the championship
+   hub's pieces in two columns where a phone held sideways has the width: the stage, the fixture and Play on the left; the last round
+   and the bracket, the pools or the Tests on the right. */
+.cup-kind,.ck,.cup-trophy,.cup-win,.cr-cup{--kc:var(--silver);--kc-hi:var(--silver-hi);--kc-lo:var(--silver-lo)}
+[data-metal="gold"]{--kc:var(--gold);--kc-hi:var(--gold-hi);--kc-lo:var(--gold-lo)}
+[data-metal="silver"]{--kc:var(--silver);--kc-hi:var(--silver-hi);--kc-lo:var(--silver-lo)}
+.cup-kind{display:inline-flex;align-items:baseline;gap:5px;margin-right:8px;color:var(--kc)}
+.cup-kind::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--kc);flex:none;align-self:center}   /* an entry not won: a dot in its kind's metal, never a trophy */
+.cup-kind[data-won]::before,.ck[data-won]::before{content:"";width:.8em;height:.9em;border-radius:0;background:linear-gradient(150deg,var(--kc-hi),var(--kc) 55%,var(--kc-lo));-webkit-mask:var(--trophy) center/contain no-repeat;mask:var(--trophy) center/contain no-repeat;flex:none;align-self:auto;transform:translateY(.1em)}   /* silverware held: its kind's trophy, as on the career's row, in the metal, on the line as a letter is: the words beside it keep the line's baseline */
+.ck{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap}
+.ck[data-won]{color:var(--kc)}
+.cup-trophy{display:inline-block;flex:none;width:40px;height:40px;background:linear-gradient(150deg,var(--kc-hi),var(--kc) 55%,var(--kc-lo));-webkit-mask:var(--trophy) center/contain no-repeat;mask:var(--trophy) center/contain no-repeat}   /* its kind's trophy (data-kind), in its kind's metal */
+.cup-offer .btn.primary{display:flex;align-items:center;justify-content:center;gap:12px}
+.cup-offer .cup-trophy{width:28px;height:28px;background:var(--flood-ink)}
+.cup-hub{max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 24px;align-items:start}
+.cup-main,.cup-side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.cup-main .head > div{gap:4px}
+.cup-main .fixture{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}   /* the names yield, never the V or a jersey: cupFit steps a long one down */
+.cup-main .fx-team span{overflow-wrap:normal}
+.cup-main .fx-team .jw{flex:none}
+.cup-last{display:flex;flex-direction:column;gap:6px}
+.cup-verdict{margin:2px 0 0;font:900 18px/1.05 var(--display);letter-spacing:.03em;text-transform:uppercase}
+.cup-verdict.good{color:var(--flood)}
+.cup-verdict.bad{color:var(--alert)}
+.cup-win{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
+.cup-win.mine{border-color:var(--kc)}
+.cup-win b{display:block;font:900 30px/.95 var(--display);text-transform:uppercase;overflow-wrap:anywhere}
+.cup-who{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cup-bracket{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:6px 10px}
+.cup-bracket > .eyebrow{font-size:11px;letter-spacing:.04em;align-self:end}   /* the rounds' names on one row, their ties under them, each column's ties spread to line up with the next */
+.cb-col{display:flex;flex-direction:column;justify-content:space-around;gap:8px;min-width:0}
+.cb-tie{display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:6px;background:var(--panel);overflow:hidden}
+.cb-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:6px;min-height:22px;padding:2px 8px;font-size:13px;color:var(--chalk-dim);font-variant-numeric:tabular-nums}
+.cb-row + .cb-row{border-top:1px solid var(--rule)}
+.cb-row.win{color:var(--chalk);font-weight:700}
+.cb-row.me{box-shadow:inset 3px 0 0 var(--flood)}
+.cb-row b{font:800 15px/1 var(--display)}
+.cb-tie.tbc{min-height:46px;justify-content:center;padding:0 8px;font-size:13px;color:var(--chalk-dim);opacity:.7}   /* two rows' height */
+.cb-nm{min-width:0;overflow-wrap:anywhere;line-height:1.1}
+.cup-chip{display:inline-block;width:8px;height:16px;border-radius:2px;background:var(--k);box-shadow:0 0 0 1px rgba(241,238,228,.35);flex:none}
+.cup-pools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cp-pool{display:flex;flex-direction:column;padding:8px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--panel)}
+.cp-pool.me{border-color:var(--rule-hi)}
+.cp-pool > .eyebrow{margin-bottom:2px}
+.cp-row{display:grid;grid-template-columns:minmax(0,1fr) 2em 2.4em;align-items:center;gap:6px;min-height:24px;font-size:13px;color:var(--chalk-dim);font-variant-numeric:tabular-nums;text-align:right}
+.cp-row.cp-head{min-height:16px;font:700 10px/1 var(--body);letter-spacing:.1em;text-transform:uppercase}
+.cp-row b{font:800 15px/1 var(--display);color:var(--chalk)}
+.cp-row.cp-head b{font:inherit;color:inherit}
+.cp-t{display:flex;align-items:center;gap:6px;min-width:0;text-align:left}
+.cp-row.me{color:var(--chalk);font-weight:700}
+.cp-row.me .cp-t{box-shadow:inset 0 -2px 0 var(--flood)}
+.cp-row.thru .cb-nm::after{content:"";display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:#4fd08a;vertical-align:2px}
+.cup-series{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;padding:10px 14px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
+.cup-series b{font:900 30px/1 var(--display);font-variant-numeric:tabular-nums}
+.cs-side{display:flex;align-items:center;gap:8px;min-width:0;font:800 18px/1 var(--display);text-transform:uppercase;overflow-wrap:anywhere}
+.cs-side.r{justify-content:flex-end;text-align:right}
+.cs-side.me{color:var(--flood)}
+@media (max-width:639px){ .cup-hub{grid-template-columns:1fr} }
+.resume-note .cup-trophy{width:13px;height:13px;margin:0 4px -2px 0}
+@media (orientation:landscape) and (max-height:560px){
+  #s-cup .wrap{gap:12px 20px}
+  #s-cup .cup-main,#s-cup .cup-side{gap:10px}
+  #s-cup h2.title{font-size:36px}
+  #s-cup .btn.primary{min-height:50px}
+  #s-cup .fixture{padding:10px 14px}
+  #s-cup .fx-team{font-size:24px}
+  #s-cup .cup-win{padding:10px 14px}
+  #s-cup .cup-win b{font-size:26px}
+  #s-cup .res{padding:6px 10px}
+  #s-cup .cb-col{gap:6px}
+  #s-cup .cb-row{min-height:20px;padding-block:1px}   /* the World Cup's four Quarter-Finals under their two-line name, with Pools folded under them, inside 375px */
+  #s-cup .cb-tie.tbc{min-height:42px}
+}
+
+/* ===== career3 ===== */
+/* New Player: Your Club, Team and Play as on the left, First Name, Position, Shirt Number and Start Career on the right, so Start
+   Career is in view at 844x390 and 667x375 with no scroll. Your Club is his shirt with his number, the club and its league, and
+   Change Club, which opens the club screen (#s-career-club) */
+.cr-yours{padding:6px 8px 6px 10px;gap:10px}
+.cr-mineline{display:flex;align-items:center;gap:12px;min-width:0}
+.cr-mine{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cr-mine b{font:900 28px/.95 var(--display);text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow-wrap:normal}
+.cr-mine .lbl{white-space:nowrap}
+.cr-yours .btn{min-height:44px;padding:8px 14px}
+/* the club screen: National | Local and the lists as on the team screen, then the clubs, each its kit, name and rating */
+.team.cr-club{grid-template-columns:28px minmax(0,1fr) auto}
+.cr-rate{min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums}
+#cc-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}   /* four across at 844, three at 667: room for Guildfordians and Johannesburg beside the rating */
+#cc-grid .cr-club .tname{white-space:nowrap;overflow-wrap:normal}
+@media (orientation:landscape) and (max-height:560px){
+  #s-career-club .wrap{gap:12px}
+  #s-career-club h2.title{font-size:36px}
+}
+.cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
+@media (max-width:731px){
+  #cc-nat{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr))}
+  #cc-nat button:nth-child(4n+1){border-left:0}
+  #cc-nat button:nth-child(n+5){border-top:1.5px solid var(--rule-hi)}
+}
+/* the trophy row on the player card, under his name: each kind's trophy, in its shape and metal, and the count, only what he has won (as the Trophy Cabinet draws it) */
+/* one line, always (the card has no height to spare at 667x375): sized in em, so careerFit steps the whole row down where a narrow card can't hold it */
+.cr-cab{display:flex;flex-wrap:nowrap;gap:.4em;margin:3px 0 0;font:900 15px/1 var(--display);white-space:nowrap}
+.cr-cup{display:inline-flex;align-items:center;gap:.15em;color:var(--kc);font-variant-numeric:tabular-nums}
+.cr-cup i{display:block;width:.85em;height:.95em;background:linear-gradient(150deg,var(--kc-hi),var(--kc) 55%,var(--kc-lo));-webkit-mask:var(--trophy) center/contain no-repeat;mask:var(--trophy) center/contain no-repeat}
+.cr-cup b{font:inherit}
+/* the transfer window: the offers and Stay in equal parts, each a club's card */
+.cr-offers{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:10px}
+.team.cr-offer{grid-template-columns:44px minmax(0,1fr);grid-template-rows:1fr 1fr;align-content:center;gap:4px 12px;min-height:76px;padding:10px 12px}   /* equal rows: the name on the card's middle line in every card, a league on two lines or one */
+.cr-offer .jw{grid-row:1/3}
+.cr-offer .jersey{width:44px;height:44px}
+.cr-offer .tname{align-self:end;font-size:24px;white-space:nowrap;overflow-wrap:normal}
+.cr-offer .lbl{align-self:start;white-space:nowrap;overflow-wrap:normal}   /* one line, stepped down; one still too wide at 10px (Celtic and Italy, South Africa in a quarter of 667) wraps at its own size (careerFit, data-fit="wrap") */
+.cr-offer.stay{border-style:dashed}
+.cr-offer.stay .lbl{color:var(--chalk)}
+@media (max-width:620px){ .cr-offers{grid-template-columns:repeat(2,minmax(0,1fr))} }
+/* a phone 380px tall or less (667x375): the card's sections 6px apart, so the trophy row fits with the skills, traits and bars */
+@media (orientation:landscape) and (max-height:380px){ .cr-card{gap:6px} }
+/* the first call-up's twelve: four across on a phone held sideways, so they fit under Called Up at 667x375 */
+@media (orientation:landscape) and (max-width:759px){ .cr-nations{grid-template-columns:repeat(4,minmax(0,1fr))} }
+
+/* ===== career and silverware ===== */
+/* A career cup's draw (#s-career-draw, src/ui-career.js): Championship mode's cup hub (#s-cup) with the career's stage on the left, so it
+   fits a phone held sideways the same way: the stage, its line, the last round's card and Back to Career; the draw on the right. */
+@media (orientation:landscape) and (max-height:560px){
+  #s-career-draw .wrap{gap:12px 20px}
+  #s-career-draw .cup-main,#s-career-draw .cup-side{gap:10px}
+  #s-career-draw h2.title{font-size:36px}
+  #s-career-draw .res{padding:6px 10px}
+  #s-career-draw .cb-col{gap:6px}
+  #s-career-draw .cb-row{min-height:20px;padding-block:1px}
+  #s-career-draw .cb-tie.tbc{min-height:42px}
+}
+/* ===== home: five headlines (ui-menus.js) ===== */
+/* The wordmark on the left; My Team, Locker and Add Your Team along the top beside it; the chosen headline's buttons under them, big;
+   and the five headlines along the bottom in equal parts, the chosen one lit in the floodlight's colour. Fits 844x390 and 667x375
+   with no scroll in every state. */
+.home{max-width:960px;height:100%;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"mark top" "mark panel" "bar bar";gap:12px 28px;align-items:stretch}
+.home .mark{grid-area:mark;align-self:center;gap:12px}
+.home .word .line{margin-right:40px}   /* the posts stand out past the word's right edge: room for them in the column */
+.home .word{font-size:clamp(56px,9.4vw,124px)}
+.home .app-tools{margin:2px 0 0;justify-content:flex-start;gap:6px 10px;width:0;min-width:100%}   /* Install and Update wrap inside the wordmark's column: never widen it */
+.home .st-fan{width:0;min-width:100%}   /* nor the Super Fan badge: its club's name wraps under Super Fan, so My Team keeps its width */
+.home .st-fan span{min-width:0;text-wrap:balance}
+.home .app-action{min-height:44px}
+.home-top{grid-area:top;display:flex;align-items:stretch;justify-content:flex-end;gap:8px;min-width:0}
+.home-top .btn{width:auto;flex:none;min-height:52px;padding:6px 14px;position:relative}
+.home-top .lk-home{display:inline-flex;align-items:center;gap:8px}
+.home-top .my-home{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:5px 12px;text-align:left}
+.my-home .lbl{font-size:10px;line-height:1}
+.my-kits{display:flex;align-items:center;gap:12px;min-width:0;max-width:100%;font-size:19px}
+.my-side{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.my-side .jersey{width:20px;height:20px}
+.my-side b{min-width:0;font:800 1em/1 var(--display);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hl-panels{grid-area:panel;min-height:0;display:flex;flex-direction:column;justify-content:safe center}   /* safe: a panel too tall for its row starts at the row's top, never pushed up under the top row */
+.hl-panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.hl-panel .btn.primary{min-height:72px;font-size:30px}
+.hl-panel.hp-game .btn.primary{min-height:128px;font-size:56px;letter-spacing:.04em}   /* Quick Match's one button, Play: bigger than any other panel's */
+.hp-career .resume-note,.hl-go .resume-note{margin-top:-4px}
+.hl-go{display:flex;flex-direction:column;gap:10px}
+.hc-new{display:flex;flex-direction:column;gap:8px}
+.hc-comps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hc-comps.n8{grid-template-columns:repeat(4,minmax(0,1fr))}
+.hc-comps.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.hc-comps.n1{grid-template-columns:1fr}
+.btn.hc-comp{display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;padding:6px 8px;font-size:16px;line-height:1.1;text-align:center;text-wrap:balance}
+.hc-comps.n8 .btn.hc-comp{min-height:52px;font-size:14px}
+.hc-comp .cup-trophy{width:16px;height:16px;flex:none}
+.hc-comp.locked::after{flex:none}   /* the lock keeps its size: the name wraps, never the lock */
+.hp-drills .drills{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}   /* the eight drills and How to Play, three rows of three */
+.hp-drills .btn.drill{min-height:70px;padding:5px 6px;gap:3px;font-size:14px;line-height:1.1}
+.hp-drills .dc-icon{width:28px;height:28px}
+/* Settings: Difficulty across, then Sound | Match Help, then Half Length (and Grown-Ups beside it, where the store is live) */
+.hp-settings.settings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
+.hp-settings .set{grid-template-columns:1fr;gap:4px}
+.hp-settings .set-diff,.hp-settings .set-half{grid-column:1/-1}
+.hp-settings.grown .set-half{grid-column:auto}
+.hp-settings #b-grown{align-self:end;min-height:44px}
+/* the bar: five headlines in equal parts, each a picture and its name; the chosen one lit, with a line along its top */
+.hl-bar{grid-area:bar;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1.5px solid var(--rule-hi);border-radius:10px;background:rgba(9,16,11,.92)}
+.btn.hl{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:5px 4px;border:0;border-radius:0;background:transparent;color:var(--chalk-dim);font:700 13px/1.1 var(--body);text-align:center}
+.btn.hl + .btn.hl{border-left:1.5px solid var(--rule)}
+.btn.hl:first-child{border-radius:8px 0 0 8px}
+.btn.hl:last-child{border-radius:0 8px 8px 0}
+.btn.hl svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.btn.hl[aria-selected="true"]{color:var(--flood);background:var(--panel-hi);box-shadow:inset 0 3px 0 var(--flood)}
+.btn.hl:hover{color:var(--chalk)}
+.btn.hl[aria-selected="true"]:hover{color:var(--flood)}
+.btn.hl:focus-visible,.hl-bar .btn.hl.padfocus{outline-offset:-4px}
+.btn.hl.locked::after{position:absolute;top:6px;right:8px;margin:0;width:10px;height:13px}
+.btn.hl.note::after{content:"";position:absolute;top:6px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}   /* Move Up to Easy waiting in Grown-Ups */
+.hl-name{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.im-home{white-space:nowrap}
+.lk-home.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}
+/* My Team on the team screen and the cards that are it: the club and the country side by side in the bar; "My Team" on the card */
+#t-mine:has(> .my-pair){gap:28px;flex-wrap:wrap}
+#t-mine .my-pair{display:inline-flex;align-items:center;gap:10px;min-width:0}
+.gap.mine{color:var(--flood)}
+.team.locked{position:relative}
+.team.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
+.team.locked:not(.create) .tname{margin-right:16px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it) */
+.lk-leg.locked{position:relative}
+.lk-leg.locked::after{position:absolute;top:6px;left:6px;margin:0;width:11px;height:14px;color:var(--chalk)}   /* top left: the jersey's overall badge sits on its right */
+/* the Trophy Cabinet, its own screen now; a World Cup's Pools, a plain button; no disclosure triangle on any summary */
+#s-cabinet .cabinet{display:flex;flex-direction:column;gap:6px}
+.cup-poolbtn{min-height:44px}
+summary{list-style:none}
+summary::-webkit-details-marker{display:none}
+.cabinet summary,.season-details summary,.match-details summary{display:flex;align-items:center;min-height:44px;padding:6px 12px;margin:2px 0;border:1.5px solid var(--rule-hi);border-radius:6px;background:var(--panel-hi);width:max-content;max-width:100%}
+@media (orientation:landscape) and (max-height:560px){
+  .home{gap:8px 14px}
+  .home .resume-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}   /* one line under its button: a long one ends in an ellipsis */
+  .home .eyebrow{font-size:10px;letter-spacing:.12em}
+  .home .mark{gap:10px}
+  .hl-panel .btn.primary{min-height:64px;font-size:28px}
+  .hl-panel.hp-game .btn.primary{min-height:112px;font-size:48px}
+}
+@media (orientation:landscape) and (max-height:420px){
+  /* a phone held sideways: the top row 48px, the bar 52px, the panel's buttons between */
+  .home-top .btn{min-height:48px}
+  .btn.hl{min-height:50px}
+  .hp-drills .btn.drill{min-height:66px;font-size:13px}
+  .hp-drills .dc-icon{width:26px;height:26px}
+  .hp-settings.settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px;padding:8px 10px}   /* two columns, every target 44px */
+  .hp-settings .seg button{font-size:13px}
+}
+@media (max-width:599px) and (min-height:421px){
+  /* a narrow window: the wordmark over the rest, one column (a phone held sideways keeps two, below) */
+  .home{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"mark" "top" "panel" "bar"}
+  .home-top{justify-content:stretch}
+  .hp-drills .drills{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hp-drills #b-help{grid-column:1/-1}
+}
+@media (orientation:landscape) and (max-height:340px){
+  /* Safari sideways, about 320px tall (568x320, 667x320): the top row and the bar 44px, the wordmark smaller, each drill its picture
+     beside its name; whatever still does not fit scrolls inside the panel's own row, between the top row and the bar, never under
+     them (the padding keeps a focus ring inside the scroll box). Every target stays 44px. */
+  .home{gap:6px 14px}
+  .home .word{font-size:48px}
+  .home .mark{gap:8px}
+  .home #home-tag{width:0;min-width:100%;text-wrap:balance}   /* Mobile Rugby · Sevens wraps under the wordmark rather than widen its column: My Team keeps its room */
+  .home .mark:has(#app-tools:not([hidden])) #home-tag{display:none}   /* and gives its lines to Install and Update when they show */
+  .home-top{gap:6px}
+  .home-top .btn,.home-top .my-home{min-height:44px;padding:4px 10px}
+  .btn.hl{min-height:44px;padding:3px 4px;gap:2px}
+  .btn.hl svg{width:18px;height:18px}
+  .hl-panels{overflow-y:auto;margin:-6px;padding:6px;scrollbar-width:none}
+  .hl-panel,.hl-go,.hc-new{gap:6px}
+  .hl-panel .btn.primary{min-height:56px;font-size:26px}
+  .hl-panel.hp-game .btn.primary{min-height:88px;font-size:40px}
+  .hc-comps{gap:6px}
+  .btn.hc-comp,.hc-comps.n8 .btn.hc-comp{min-height:44px}
+  .hp-drills .drills{gap:6px}
+  .hp-drills .btn.drill{flex-direction:row;justify-content:flex-start;gap:6px;min-height:52px;padding:4px 8px;text-align:left}
+  .hp-drills .dc-icon{width:24px;height:24px}
+  .hp-settings.settings{gap:4px 10px;padding:5px 10px}
+  .hp-settings .set{gap:2px}
+  .hp-settings .lbl{font-size:10px;line-height:1}
+}
+@media (orientation:landscape) and (max-width:619px){
+  /* a phone under 620px wide held sideways (568x320): the five names a little smaller, so Skills Mini Games fits its fifth whole */
+  .btn.hl{padding-inline:2px}
+  .hl-name{font-size:11.5px}
+}
+@media (max-width:760px){
+  /* a phone's width: Add Your Team on two lines, its lock beside Team, so My Team keeps the room Import Data left it */
+  .home-top .im-home{white-space:normal;max-width:calc(4.6em + 24px);padding-inline:12px;text-wrap:balance}
+}
+@media (orientation:landscape) and (max-height:420px){
+  /* a World Cup's Pools, swapped in for the bracket: a little tighter, so they and the Bracket button fit under the result card */
+  #s-cup .cup-pools{gap:6px}
+  #s-cup .cp-pool{padding:4px 10px}
+  #s-cup .cp-row{min-height:0;height:19px}   /* a table's row, not a target */
+  #s-cup .cp-row.cp-head{height:12px}
+  #s-cup .cup-poolbtn{min-height:44px;padding-block:6px}
+  #s-cup .cup-side{gap:6px}
+}
+/* ===== super fan ===== */
+/* A Super Fan's home (ui-store.js, storeThemeHome): the club's kit colours on the chosen headline, the panel's primary (Play) and My
+   Team's edge. The accent is lifted toward chalk where the kit is dark, so it reads on the dark home; a word on the kit's fill is chalk,
+   or the night's ink on a fill too light for chalk. Without a Super Fan unlock the home has no .fan and is as it was. */
+#s-home.fan .btn.hl[aria-selected="true"],#s-home.fan .btn.hl[aria-selected="true"]:hover{color:var(--fan-acc);box-shadow:inset 0 3px 0 var(--fan-acc)}
+#s-home.fan .hl-panel .btn.primary{border-color:var(--fan-edge);background:var(--fan-kit);color:var(--fan-ink);box-shadow:inset 0 0 0 1.5px var(--fan-edge)}
+#s-home.fan .home-top .my-home{border-color:var(--fan-acc);box-shadow:inset 0 0 0 1px var(--fan-acc)}
+/* the shield beside the club's name under the logo: plain, in the kit colours, or the club's own crest where it has given one */
+.st-fan .fan-shield{display:block;width:20px;height:24px;flex:none;margin-block:-6px;filter:drop-shadow(0 0 1px rgba(241,238,228,.45))}
+.st-fan img.fan-shield{object-fit:contain;filter:none}
+/* the gold Super Fan trophy: in the Locker's Medals, a tile a club before the feats (the trophy, Super Fan, the club, and Join the
+   Supporters' Wall where the unlock is owned); in the Trophy Cabinet, its own kind, in gold */
+.lk-fanrow{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.lk-fan{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;padding:4px 6px 4px 8px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
+.lk-fanrow.many .lk-fan{flex-basis:220px}   /* two a row on every phone held sideways; a third wraps under them */
+#s-locker .lk-fanrow.many .btn.lk-wall{flex-basis:132px}   /* two a row: Join the Supporters' Wall on two lines, the club's name on one */
+.lk-fan.new{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}
+.lk-cup{display:block;width:40px;height:40px;flex:none}
+/* the name never narrower than its longest word, so a club's name breaks only between words; Join the Supporters' Wall yields first */
+.lk-fanname{flex:1 1 auto;display:flex;flex-direction:column;gap:3px}
+.lk-fanname b{font:800 16px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;color:#ffcf3d;white-space:nowrap}
+.lk-fanname span{font:700 14px/1.15 var(--body)}
+#s-locker .btn.lk-wall{width:auto;flex:0 1 auto;min-height:44px;padding:4px 12px;font-size:13px;line-height:1.1;text-wrap:balance}
+.cabinet > .fan-entry:first-child{border-top:0;padding-top:2px}   /* first in the cabinet: no rule above it */
+.fan-entry h3{display:flex;align-items:center;gap:10px}
+.fan-entry .lk-cup{width:36px;height:36px}
+@media (orientation:landscape) and (max-height:420px){
+  .lk-fan{gap:8px;padding:2px 4px 2px 6px}
+  .lk-cup{width:34px;height:34px}
+  .lk-fanname b{font-size:15px}
+  .lk-fanname span{font-size:13px}
+}
+@media (orientation:landscape) and (max-height:420px) and (max-width:760px){
+  /* a narrower phone (667x375), where each medal's line takes two: with the trophy's row above them the medals' pictures step down
+     a little, so the twelve still fit under it without a scroll */
+  .lk-t0:has(.lk-fanrow) .lk-feat{padding:4px}
+  .lk-t0:has(.lk-fanrow) .lk-ic{width:20px;height:20px}
+  /* two clubs side by side: a smaller cup and tighter tiles, the club's name on two lines and Join the Supporters' Wall on two */
+  .lk-fanrow.many .lk-fan{gap:6px;padding:2px 4px 2px 5px}
+  .lk-fanrow.many .lk-cup{width:28px;height:28px}
+  .lk-fanrow.many .lk-fanname{gap:2px}
+  .lk-fanrow.many .lk-fanname span{line-height:1.08}
+  #s-locker .lk-fanrow.many .btn.lk-wall{flex-basis:auto;padding-inline:6px}
+}
+/* the Supporters' Wall card (ui-store.js): Are you 18 or over? with Yes, I'm 18 or Over | Cancel in halves, then How Your Name Appears
+   with Continue | Cancel; over the Locker or in the Grown-Ups card's place */
+#m-wall .card{margin:auto;width:min(460px,100%);gap:14px;padding:18px}
+#m-wall h3{font-size:clamp(28px,6vw,36px)}
+.wl-step{display:flex;flex-direction:column;gap:12px}
+.wl-q{margin:0;font:700 17px/1.3 var(--body)}
+#m-wall .row2 .btn{min-height:48px;padding-inline:10px;line-height:1.1}
+@media (orientation:landscape) and (max-height:420px){
+  #m-wall .card{gap:10px;padding:14px 16px}
+  #m-wall .row2 .btn{min-height:44px}
+}
