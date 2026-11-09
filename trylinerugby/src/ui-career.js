@@ -243,6 +243,7 @@ function careerChips(keys) {
 function renderCareerTrain() {
   $('ct-list').innerHTML = careerDrills(career).map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('');
   for (const b of $('ct-list').querySelectorAll('[data-drill]')) b.addEventListener('click', () => careerTrain(b.dataset.drill));
+  $('ct-coach').hidden = !careerDrills(career).some(d => PRACTICE_DRILLS.find(p => p.id === d.id).contact);   // the coach line goes with the contact games (src/practice.js)
 }
 $('ct-back').addEventListener('click', careerOpen);
 

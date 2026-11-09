@@ -25,7 +25,7 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    Re-pinned again at club seasons (2026-11-08): `rest` is a career match at Farnham, and a career's first year is no longer the
 //    Minis, so its two sides play at full strength instead of one off every ability. With the Minis' sides put back (careerMatch's
 //    `minis`, the same draw with CAREER_CUT[0] on both) this build gives the pin from before the bars, `restMinis`, exactly.
-const BASE = { others:'1o2r2g2 1fohttg 1230j1m c6ydhd 83k82g', rest:'1qet6a1', restMinis:'1p6a14j' };
+const BASE = { others:'lhsdx3 1foeejc 1ga5bkq 11tx4fr 83k82g', rest:'1gof0cz', restMinis:'1ibpkeg' };   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 1fohttg 1230j1m c6ydhd 83k82g, 1qet6a1 and 1p6a14j (the drill, 83k82g, did not move)
 const runOut = (side = 0) => { let n = 0; while (!T.M.over && n < 400000) { bot(side); T.update(T.STEP); n++; } return n; };
 const pos = () => T.M.players.map(p => [p.x.toFixed(6), p.y.toFixed(6)]).join(';');
 function others() {

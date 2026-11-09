@@ -19,7 +19,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 
 // 0. Nothing the home does moves a match: AI v AI, a tool's match (the balance tools' kind: the bot against the computer), an arcade
 //    Quick Match, a championship match and the demo, seeded, against the build before the headlines (2e4829d). Run first.
-const BASE = '12rapqh 14qny5b 1dars3e 5k7me2 1amrgpj';   // pinned from 2e4829d (GAME=<its index.html> HOME_PRINT=1); this build gives the same
+const BASE = '1ux7bcz 10kl4wv 1nh2ksp jmrs3q q2h33q';   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 12rapqh 14qny5b 1dars3e 5k7me2 1amrgpj. Before that: pinned from 2e4829d (GAME=<its index.html> HOME_PRINT=1); this build gives the same
 function fingerprint() {
   const out = [];
   reseed(31);
@@ -78,7 +78,7 @@ const fresh = () => {                                       // a new game on the
   ok(/<div class="hl-go" id="hc-go" hidden>\s*<button class="btn primary" id="b-champ">Continue Championship<\/button>\s*<p class="resume-note" id="champ-note" hidden><\/p>\s*<\/div>\s*<div class="hc-new" id="hc-new">\s*<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>\s*<\/div>\s*<button class="btn" id="b-cabinet" hidden>Trophy Cabinet<\/button>/.test(home), 'Championship: Continue (when one is saved) first, else the tiers and their competitions; the Trophy Cabinet under them');
   ok(/<div class="hl-panel hp-career" id="hp-career"[^>]*>\s*<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(home), 'Career: New Career or Continue Career, with its note');
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
-  ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-pass">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<\/div>/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(css), `Skills Mini Games: every drill as a big button with its picture (${drills.length}), then How to Play, three rows of three`);
+  ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skills Mini Games: every game as a big button with its picture (${drills.length}), seven and How to Play in rows of four, then Contact Games and For Grown-Ups (re-pinned for PR #14's ten games: it was eight drills and How to Play, three rows of three)`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
   ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half']) && /<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<\/div>\s*<\/div>\s*<nav/.test(home), `Settings: ${sets.join(', ')}, then Grown-Ups (where the store is live)`);
   ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my" aria-label="My Team"><span class="lbl">My Team<\/span><span class="my-kits" id="my-kits"><\/span><\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(home), 'the top row: My Team (its kits and names), Locker, Add Your Team');
@@ -134,7 +134,8 @@ const fresh = () => {                                       // a new game on the
   seg('half').children[0].click(); seg('sound').children[1].click(); ok(D.settings().sound === false, 'Sound');
   seg('sound').children[0].click(); seg('hints').children[1].click(); ok(D.settings().hints === false && D.settings().coach === false, 'Match Help, the hints and the coach together');
   seg('hints').children[0].click(); seg('diff').children[0].click(); ok(D.settings().kids === true && D.settings().diff === 0, 'Difficulty: Kids');
-  seg('diff').children[1].click(); ok(D.settings().kids === false && D.settings().diff === 0, 'Easy');
+  seg('diff').children[1].click(); { const g = T.kids.gate(); ok(g && D.settings().kids === true, 'Easy from Kids asks a grown-up first (PR #14: only a grown-up leaves the Kids level)'); if (g) for (const d of g.answer) T.kids.type(d); }
+  ok(D.settings().kids === false && D.settings().diff === 0, 'Easy');
   D.settings().diff = 1;
   ok($('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'no Grown-Ups on the web as shipped');
   S.setNative(true); S.setStarted(true); D.goHome();

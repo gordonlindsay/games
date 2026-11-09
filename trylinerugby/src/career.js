@@ -31,8 +31,9 @@
      teams have it). The overall is the team cards' overallOf on the same 40 to 99 scale.
    - Skills rise from training (one session a round, between matches: a drill's stars give points to its skill,
      CAREER_TRAIN) and a little from what your player does in a match (CAREER_DEEDS, capped a match).
-   - In a career match only (M.career, set by careerArm after startMatch), your player wears a star and a ring in the
-     kit's trim, the ring starts on him at every kick-off, he takes your side's goal kicks, and his skills shade HIS
+   - In a career match only (M.career, set by careerArm after startMatch), your player wears a star in the kit's trim. The
+     star means your player and the ring means who you control now, and only one of each is drawn. The ring starts on
+     him at every kick-off and moves with Switch and passes, he takes your side's goal kicks, and his skills shade HIS
      speed, catching, tackling, kicking and stamina from the team's baseline (CAREER_SHADE). Every engine site reads
      the side's own value unless M.career is set, and careerNatOf, careerAbility, careerFade and careerSprintDrain add
      the shade for your player only, so no other match and no other man changes.
@@ -58,10 +59,10 @@ const CAREER_START = { F:{ pace:32, power:44, handling:36, kicking:26, stamina:3
 const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
 /* Which skill a drill trains. A drill's own result wins when it names one: Pass Around the Circle trains Stamina as the
-   Runner and Handling as the Passer. */
-const CAREER_DRILL_SKILL = { egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', cones:'pace', defend:'pace', kick:'kicking' };
-const CAREER_DRILL_ORDER = ['egg', 'pass', 'circle', 'tackle', 'scrum', 'cones', 'defend', 'kick'];
-const CAREER_DRILL_NAME = { egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
+   Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact) are hidden for the youngest (practiceBarred). */
+const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
+const CAREER_DRILL_ORDER = ['tag', 'egg', 'pass', 'circle', 'tackle', 'scrum', 'back', 'cones', 'defend', 'kick'];
+const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
    kicked a point of Kicking. At most CAREER_DEED_CAP points a match: training is where most of it comes from. */
 const CAREER_DEEDS = { tries:{ pace:1, handling:1 }, goals:{ kicking:1 }, tackles:{ power:1 } };
@@ -290,9 +291,9 @@ function careerRepair(cr) {
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the drills that exist right now, in the career's order
+function careerDrills(cr) {                          // the drills that exist right now, in the career's order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
   const have = new Map(PRACTICE_DRILLS.map(d => [d.id, d]));
-  return CAREER_DRILL_ORDER.filter(id => have.has(id))
+  return CAREER_DRILL_ORDER.filter(id => have.has(id) && !practiceBarred(id))
     .map(id => ({ id, name:have.get(id).name || CAREER_DRILL_NAME[id], skills:id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[id]] }));
 }
 const careerCanTrain = cr => !!(cr && !cr.trained && careerAhead(cr));   // one session before each match, league, international or cup
@@ -332,6 +333,8 @@ function careerNatFor(team, skills) {                // the team's abilities, ea
   }
   return out;
 }
+const CAREER_CAP = { matches:3, secs:4 };            // the kick-off caption: a player's first matches, this long on M.rt. Over the play, never stopping it
+const careerCaption = () => !!(M && M.career && M.capUntil > M.rt && !M.cut && !M.tut && !M.paused && !M.over && !practice);
 function careerArm() {                               // straight after startMatch: this match is a career match
   if (!M || !career) return;
   M.career = true;
@@ -341,6 +344,7 @@ function careerArm() {                               // straight after startMatc
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
   careerLifeArm();                                   // the bars as they are now, for the whole match: Energy and Morale into M.careerNat
   traitsArm();                                       // his own traits, and his shirt kept for him (src/traits.js)
+  M.capUntil = settings.hints && career.totals && career.totals.matches < CAREER_CAP.matches ? M.rt + CAREER_CAP.secs : 0;
   careerKickoff();
 }
 /* startMatch's options for his next match f: Easy for My Player on Kids, and for a cup match the cup's id and whether it is a knockout
@@ -484,20 +488,21 @@ function cleanCareer(c) {
     trained:c.trained === true && (season ? season.round < 5 : !!cup), history, totals, trophies,
     life:careerLifeClean(c.life) };
 }
-/* Your player: a ring in the kit's trim round him and a star on his back (the trim, or the shirt, or chalk, whichever
-   stands off the grass), drawn over the men so a ruck can't hide him. */
-function careerMark(r) {
-  const p = M.careerP; if (!p) return;
-  const [wx, wy] = drawPos(p), [sx, sy] = toS(wx, wy), k = M.kit[0];
-  const col = colorDist(k.trim, '#2f6a38') >= 90 ? k.trim : colorDist(k.fill, '#2f6a38') >= 90 ? k.fill : '#f1eee4';
-  ctx.save(); ctx.translate(sx, sy);
-  ctx.lineWidth = 3; ctx.strokeStyle = col;
-  ctx.beginPath(); ctx.arc(0, 0, r*1.3, 0, 7); ctx.stroke();
+/* Your player: a star in the trim, the shirt or chalk, whichever stands off the grass, on his back on Top and over his head in a behind
+   view, drawn over the men so a ruck can't hide him. No ring of his own: a ring on the grass always means who you control now. */
+function careerCol() { const k = M.kit[0]; return colorDist(k.trim, '#2f6a38') >= 90 ? k.trim : colorDist(k.fill, '#2f6a38') >= 90 ? k.fill : '#f1eee4'; }
+const careerEdgeCol = () => { const c = careerCol(); return colorDist(c, '#08110b') >= 90 ? c : '#f1eee4'; };   // the edge arrow sits on a dark disc: a near-black trim would vanish there
+function careerStar(cx, cy, r, col) {
   ctx.beginPath();
-  for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r*0.42 : r*1.0; ctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr); }
+  for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r*0.42 : r; ctx.lineTo(cx + Math.cos(a)*rr, cy + Math.sin(a)*rr); }
   ctx.closePath();
   ctx.fillStyle = col; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = C.outline; ctx.stroke();
-  ctx.restore();
+}
+function careerMark(r) {
+  const p = M.careerP; if (!p) return;
+  const [wx, wy] = drawPos(p), [sx, sy] = toS(wx, wy);
+  if (sx < 0 || sx > V.W || sy < 0 || sy > V.H) { BV.edges.length = 0; edgeTag(sx, sy, careerEdgeCol(), 'star', safeInsets()); }
+  else careerStar(sx, sy, r, careerCol());
   if (M.careerPro) proMark(r);                             // Pro Mode: the call's ring and the No sign (career-pro.js)
 }

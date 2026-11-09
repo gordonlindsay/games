@@ -18,7 +18,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 //    (bc8fabf): two AI v AI matches, an arcade match you play and a plain one, both played by the harness's bot. Run first,
 //    so nothing earlier in this file can move them. If another change moves non-career play on purpose, re-pin it from
 //    that change's bundle without the career sources.
-const BASE = '1o2r2g2 1uombq7 12cy4qs';   // re-pinned at the Stamina merge (the arcade match moved: Stamina acts in arcade matches), and again when the nations were rated on the XV hierarchy: England and Italy, in the two AI v AI matches, have new ratings; with their old ones put back the value is the earlier 1vg5qro, so the career still changes no non-career play
+const BASE = 'lhsdx3 1wmrjk7 uge569';   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 1uombq7 12cy4qs. Before that: re-pinned at the Stamina merge (the arcade match moved: Stamina acts in arcade matches), and again when the nations were rated on the XV hierarchy: England and Italy, in the two AI v AI matches, have new ratings; with their old ones put back the value is the earlier 1vg5qro, so the career still changes no non-career play
 // re-pinned at the official XV tables: England, France and Italy (the AI v AI matches) re-rated; with the XV hierarchy's ratings put back the value is that commit's 18qgoe5
 function fingerprint() {
   const out = [];
@@ -444,10 +444,11 @@ C.setCups(false);                                    // no cups unless a section
   { const src = readGameSource(); ok(/practiceStart\(id, \{ onDone:careerTrainDone, leaveLabel:'Back to Career' \}\)/.test(src), 'a career drill\'s leave button reads Back to Career'); }
   cr.skills.handling = 97; ok(gain({ id:'egg', stars:3 }, 'handling') === 2 && cr.skills.handling === 99, 'skills stop at 99');
   ok(C.TRAIN.every((v, i, a) => !i || v > a[i - 1]), 'more stars, more points');
-  // the drill list: every drill that exists, Driving from the first year (no stage hides it now)
-  const have = C.drillIds();
+  // the drill list: every game that exists, Driving from the first year; never a contact game for the youngest (practiceBarred: the Kids level, or Minis)
+  const have = C.drillIds(), contact = ['tackle', 'scrum', 'back'];
   ok(C.drills(cr).every(d => have.includes(d.id)) && C.drills(cr).length === have.filter(id => id in map).length, `the training list is the drills that exist (${C.drills(cr).map(d => d.id)})`);
   if (have.includes('scrum')) ok(cr.year === 1 && C.drills(cr).some(d => d.id === 'scrum'), 'Driving in the first year');
+  { const s = D.settings(), was = s.cat; s.cat = 'minis'; ok(!C.drills(cr).some(d => contact.includes(d.id)) && C.drills(cr).some(d => d.id === 'tag'), 'no contact game on Minis, and Tag Chase is there'); s.cat = was; }
   if (have.includes('circle')) ok(json(C.drills(cr).find(d => d.id === 'circle').skills) === '["stamina","handling"]', 'the circle shows both skills');
   cr.trained = false;
   ok(!C.train('nothing-here'), 'a drill that does not exist cannot start');
@@ -540,10 +541,11 @@ C.setCups(false);                                    // no cups unless a section
   ok(M.half === 2 && T.sides.ctrlOf(0) === me, 'the second-half kick-off puts the ring back on him');
   // the mark on the pitch: drawn in a career match only
   let calls = 0; globalThis.__ctxSpy = () => { calls++; };
+  const arc = M.arcade; M.arcade = false;                  // no trait stars (traitMarks): with every skill at 99 his own traits would star him outside a career too, the same calls as his career star
   D.view(844, 390); D.render(0.016); const withMark = calls;
-  M.career = false; calls = 0; D.render(0.016); const without = calls; M.career = true;
+  M.career = false; calls = 0; D.render(0.016); const without = calls; M.career = true; M.arcade = arc;
   globalThis.__ctxSpy = null;
-  ok(withMark > without, `the ring and star are drawn in a career match only (${withMark} > ${without} draw calls)`);
+  ok(withMark > without, `the star is drawn in a career match only (${withMark} > ${without} draw calls; PR #14: no ring of his own, the ring is who you control)`);
   // a league keeps its draws
   M.half = 2; M.score = [7, 7]; T.arcade.endHalf();
   ok(M.over && !M.golden, 'a career match level at full time is a draw, no Golden Try');

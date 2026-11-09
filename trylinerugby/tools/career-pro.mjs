@@ -25,7 +25,7 @@ const ready = () => { settings.played = 99; settings.diff = 1; settings.kids = f
 // TEAM re-pinned at club seasons (2026-11-08): a career's first year at Farnham and Aldershot is their Local league at full strength,
 // no longer the Minis one off every ability. With the Minis' sides put back (team(true): the same draw, one off every ability) this
 // build gives the pin from before Pro Mode, TEAM_MINIS, exactly.
-const NON_CAREER = '1o2r2g2 1uombq7 12cy4qs', TEAM = 'kui40f 1x06cnw', TEAM_MINIS = '1c73jxu 1d1uovf';
+const NON_CAREER = 'lhsdx3 1wmrjk7 uge569', TEAM = '1k1rp0v d3xoxp', TEAM_MINIS = '3wqcqk 14ancgg';   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 1uombq7 12cy4qs, kui40f 1x06cnw and 1c73jxu 1d1uovf
 function nonCareer() {
   const out = [];
   reseed(23);

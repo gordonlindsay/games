@@ -29,7 +29,7 @@ const clubs = [...X.CLUBS, ...X.NATIONAL.flat()];   // every side that is not a 
   const R = ['pace', 'power', 'handling', 'kicking', 'stamina'];
   ok(all.every(t => R.every(k => Number.isInteger(t[k]) && t[k] >= 1 && t[k] <= 5)), 'every rating is 1 to 5');
   const top = Math.max(...clubs.map(t => R.reduce((a, k) => a + t[k], 0)));
-  ok(top <= 5 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${5 + X.BUDGET})`);
+  ok(top <= 5 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${5 + X.BUDGET})`);   // a team with no level; PR #14's levels go to 90 (European Champions), and where they sit against main's club band is the teams builder's (README, integration list)
   ok(all.every(t => /^#[0-9a-f]{6}$/i.test(t.kit) && /^#[0-9a-f]{6}$/i.test(t.trim)), 'every kit colour is a hex');
   ok(X.overallOf({ pace:1, power:1, handling:1, kicking:1, stamina:1 }) === 40 && X.overallOf({ pace:5, power:5, handling:5, kicking:5, stamina:5 }) === 99, 'the overall rating runs 40 to 99');
   // re-pinned at the official men's table: France 87.43 points, 21 (87), was 23 (93)
@@ -75,6 +75,23 @@ const clubs = [...X.CLUBS, ...X.NATIONAL.flat()];   // every side that is not a 
   ok(t.kit === '#2050b0' && t.trim === '#f2efe6', 'bad colours fall back');
   const sum = t.pace + t.power + t.handling + t.kicking + t.stamina;
   ok(sum === 5 + X.BUDGET && [t.pace, t.power, t.handling, t.kicking, t.stamina].every(v => v >= 1 && v <= 5), `abilities are held to the budget (${sum})`);
+  // a team's level sets what it can spend; a team with no level, from an old save, keeps 12 and is cut as it always was
+  { const R5 = T.ratings, K = ['pace', 'power', 'handling', 'kicking', 'stamina'], total = v => K.reduce((a, k) => a + v[k], 0), full = { name:'Otters', pace:5, power:5, handling:5, kicking:5, stamina:5 };
+    ok(!('level' in t) && R5.teamBudget({}) === 12 && R5.teamBudget({ level:'nope' }) === 12 && R5.teamBudget(null) === 12, 'no level, or one the game does not know, is the old budget of 12');
+    ok(!('level' in X.cleanTeam({ ...full, level:'nope' }, 0)) && total(X.cleanTeam({ ...full, level:'nope' }, 0)) === 17, 'and a level the game does not know is dropped');
+    for (const l of R5.TEAM_LEVELS) {
+      const c = X.cleanTeam({ ...full, level:l.id }, 0), back = X.cleanTeam(JSON.parse(JSON.stringify(c)), 0);
+      ok(c.level === l.id && total(c) === 5 + l.budget && X.overallOf(c) === l.overall && JSON.stringify(back) === JSON.stringify(c), `${l.name}: held to ${l.budget} points, ${l.overall} overall, and reloading loses nothing (${K.map(k => c[k]).join('')})`);
+    }
+    const c3 = X.cleanTeam({ name:'Cubs', level:'c3', pace:3, power:1, handling:1, kicking:1, stamina:1 }, 0);
+    ok(c3.pace === 2 && total(c3) === 6, 'the cut falls from the last in line, as it always has');
+    const under = X.cleanTeam({ name:'Tenners', level:'top', pace:2, power:2, handling:2, kicking:2, stamina:2 }, 0);
+    ok(total(under) === 10 && X.overallOf(under) === 55 && under.level === 'top', 'a team under its level keeps what it has');
+    const old13 = X.cleanTeam({ key:'my1', name:'Old13', pace:5, power:5, handling:3, kicking:1, stamina:1 }, 0), old17 = X.cleanTeam({ key:'my2', name:'Old17', pace:5, power:5, handling:3, kicking:3, stamina:1 }, 0);
+    ok(K.map(k => old13[k]).join('') === '55311' && K.map(k => old17[k]).join('') === '55331' && !('level' in old13), 'old saves: teams at and under the old 12 points keep every ability, with no level');
+    const c0 = X.cleanSide({ ...under, league:'x' });
+    ok(!('level' in c0), 'a side in a saved championship or career holds no level: it keeps its abilities as they are');
+  }
   ok(t.id === 'QAV', `the short name is letters only, topped up from the name (${t.id})`);
   ok(X.codeFor('', 'Old Ruts') === 'OLD' && X.codeFor('ab', 'x') === 'ABX', 'short names fill to three letters');
   ok(X.cleanTeam({ name: '' }, 0).name === 'My Team', 'an empty name becomes My Team');
@@ -435,7 +452,7 @@ function settle(pick) {
   T.newMatch(far, fra, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });
   ok(T.M.early && document.getElementById('banner').innerHTML === '', 'an eased headless kick-off stays quiet, stronger side included');
   ok(near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(fra.pace, 1 + E.nudge.cpuSpeed)) && near(C.maxSpeed(T.M.players.find(p => p.team === 0)), speed(far.pace, 1)), 'eased CPU pace, and yours is not');
-  T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });
+  T.newMatch({ ...far, pace: 3, power: 3 }, { ...has, pace: 3, power: 3 }, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });   // level in Power, so the tackle chances are the plain lever's
   const q = T.M.players[0], opp = T.M.players[7], mate = T.M.players[8];
   q.x = opp.x = mate.x = 40; q.y = opp.y = mate.y = 35; opp.side = q.side = -1;
   ok(near(C.tackleChance(q, opp, 'ai', false), 0.48 + E.nudge.myTackle), `teammates tackle more surely (${C.tackleChance(q, opp, 'ai', false)})`);

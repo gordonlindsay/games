@@ -90,7 +90,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .pips{display:flex;gap:3px}
 .pips i{flex:1;height:5px;border-radius:1px;background:var(--rule-hi)}
 .pips i.on{background:var(--chalk)}
-.gap{grid-column:1/-1;margin-top:-4px;font:800 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--flood)}
+.gap{grid-column:1/-1;margin-top:-1px;font:800 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--flood)}
 /* the star traits a team's 5s bring (src/traits.js), under the ability rows behind a gold star as on the pitch. One line for one or two;
    three or four (Ireland, France) take a second at 844 and 667 wide, breaking only between names */
 .tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
@@ -220,6 +220,21 @@ h2.title.gold{color:var(--flood)}
   .sub{padding:2px 7px}
 }
 #hud.gk .sub{visibility:hidden}
+/* what to do now, under the clock: a shape and a word, in the flow of the scorebug so it can't reach the score, the clock or the pause button */
+.bstat{display:flex;align-items:center;gap:5px;padding:3px 9px 3px 7px;border-radius:4px;background:rgba(8,14,10,.82);border-left:3px solid currentColor;color:var(--chalk);font:700 13px/1 var(--body)}
+.bstat i{display:block;width:18px;height:14px;color:var(--bs,var(--chalk))}
+.bstat i svg{display:block;width:100%;height:100%}
+.bstat{--bs:var(--chalk)}
+.bstat.ours{--bs:#7ddc8f;border-left-color:#7ddc8f}
+.bstat.stop{--bs:var(--alert);border-left-color:var(--alert)}
+.bstat.loose{--bs:var(--flood);border-left-color:var(--flood)}
+/* the career caption: at the foot of the screen between the stick and the buttons, out of the scorebug's column, so it can't move while it is read or sit on the marks at the top. Inside #hud, so it goes when the HUD does */
+.bcap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);display:flex;align-items:center;gap:9px;padding:3px 8px;border-radius:4px;background:rgba(8,14,10,.82);color:var(--chalk);font:700 12px/1 var(--body);white-space:nowrap}
+.bcap span{display:flex;align-items:center;gap:5px}
+@media (max-width:720px){.bcap{flex-direction:column;align-items:flex-start;gap:3px}}   /* a small phone: on two lines, to fit between the stick and the buttons */
+.bcap i{display:block;flex:none;width:13px;height:13px}
+.bcap i.ring{border:2.5px solid #ffcf3d;border-radius:50%;height:10px;width:16px}
+.bcap i.star{background:var(--chalk);clip-path:polygon(50% 0,63% 35%,100% 38%,71% 60%,82% 96%,50% 76%,18% 96%,29% 60%,0 38%,37% 35%)}
 .pause{position:fixed;z-index:6;touch-action:manipulation;top:calc(env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:6px;border:1px solid rgba(241,238,228,.25);background:rgba(8,14,10,.7);cursor:pointer;display:grid;place-items:center}
 .pause::before{content:"";width:14px;height:16px;border-left:4px solid var(--chalk);border-right:4px solid var(--chalk)}
 .pause::after{content:"";position:absolute;inset:-6px -2px -10px -10px}   /* the 44px glyph stays; the hit target grows inward, off the corner */
@@ -452,7 +467,7 @@ body.desk .desk-only{display:block}
 /* Optional install and offline controls stay secondary to play. */
 .app-tools { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px 16px; margin:14px 0 0; font-size:12px; color:var(--muted, #acb7ac); }
 .app-tools[hidden], .app-tools [hidden] { display:none; }
-.app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; padding:7px 11px; font:inherit; cursor:pointer; }
+.app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; min-height:44px; padding:7px 11px; font:inherit; white-space:nowrap; cursor:pointer; }
 .app-action:hover, .app-action:focus-visible { color:#fff; border-color:#d5b663; }
 .app-action:disabled { opacity:.55; cursor:wait; }
 
@@ -577,10 +592,20 @@ body.desk .desk-only{display:block}
 .im-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(284px,max-content));gap:10px 16px}
 .im-cols .swatches{gap:4px}
 #m-import .btn:disabled{opacity:.6;cursor:wait}
+/* the level an import is set at (src/import.js): a step down, the level and its stars, a step up */
+.im-level{grid-template-columns:auto 44px minmax(0,1fr) 44px}
+.im-level[hidden]{display:none}
+.im-kept{margin:-4px 0 0}
+.im-lv-name{text-align:center;font-weight:800}
 @media (max-height:420px){
   #m-import .card{gap:10px;padding:12px 14px}
   #m-import h3{font-size:30px}
   #m-import .btn.primary{min-height:50px}
+  #m-import .card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}   /* the primary and the row beside it, so the preview's buttons, its level row included, are in the first view (PR #14) */
+  #m-import .card > *{grid-column:1/-1}
+  #m-import .card > #im-go{grid-column:1}
+  #m-import .card > #im-row{grid-column:2}
+  #m-import .card > #im-go[hidden] ~ #im-row{grid-column:1/-1}
 }
 /* ===== kids ===== */
 /* the grown-up check (kids.js): over every other card (the practice card's is 35) and under only Turn Your Phone Sideways, which
@@ -949,9 +974,20 @@ body.desk .desk-only{display:block}
 .hc-comps.n8 .btn.hc-comp{min-height:52px;font-size:14px}
 .hc-comp .cup-trophy{width:16px;height:16px;flex:none}
 .hc-comp.locked::after{flex:none}   /* the lock keeps its size: the name wraps, never the lock */
-.hp-drills .drills{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}   /* the eight drills and How to Play, three rows of three */
+.hp-drills .drills{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}   /* PR #14's ten games in rows of four: seven and How to Play, then the three contact games and For Grown-Ups */
 .hp-drills .btn.drill{min-height:70px;padding:5px 6px;gap:3px;font-size:14px;line-height:1.1}
 .hp-drills .dc-icon{width:28px;height:28px}
+.hp-drills .pr-games{display:flex;flex-direction:column;gap:8px}
+.hp-drills .pr-low{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}   /* Contact Games' line across, its three under it, For Grown-Ups in the fourth place; with the group hidden (Kids, Minis) For Grown-Ups keeps its place */
+.hp-drills #pr-contact,.hp-drills #pr-contact .drills{display:contents}   /* an id: practice.css's #pr-contact is a flex column */
+.hp-drills .pr-cg{grid-column:1/-1;margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px;min-width:0}
+.hp-drills .pr-cg .pr-group{font-size:18px;white-space:nowrap}
+.hp-drills .pr-cg .pr-coach{font-size:13px;line-height:1.15}
+.hp-drills .pr-grown{grid-column:4}
+.hp-drills:has(#pr-grownups:not([hidden])){flex:1 1 auto;min-height:0}   /* For Grown-Ups: the panel takes the row and scrolls inside it, Back to Skills at its foot */
+.hp-drills #pr-grownups{min-height:0;max-height:100%;overflow-y:auto;gap:8px;font-size:14px;line-height:1.3}
+.hp-drills #pr-grownups p,.hp-drills #pr-grownups h3{margin:0}
+.hp-drills #pr-grownups p.pr-line{color:var(--chalk);font-weight:700}
 /* Settings: Difficulty across, then Sound | Match Help, then Half Length (and Grown-Ups beside it, where the store is live) */
 .hp-settings.settings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
 .hp-settings .set{grid-template-columns:1fr;gap:4px}
@@ -1001,8 +1037,12 @@ summary::-webkit-details-marker{display:none}
   /* a phone held sideways: the top row 48px, the bar 52px, the panel's buttons between */
   .home-top .btn{min-height:48px}
   .btn.hl{min-height:50px}
-  .hp-drills .btn.drill{min-height:66px;font-size:13px}
-  .hp-drills .dc-icon{width:26px;height:26px}
+  .hp-drills .btn.drill{min-height:58px;font-size:13px}
+  .hp-drills .dc-icon{width:24px;height:24px}
+  .hp-drills .drills,.hp-drills .pr-low{gap:6px}
+  .hp-drills .pr-games{gap:6px}
+  .hp-drills .pr-cg .pr-group{font-size:16px}
+  .hp-drills .pr-cg .pr-coach{font-size:12px}
   .hp-settings.settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px;padding:8px 10px}   /* two columns, every target 44px */
   .hp-settings .seg button{font-size:13px}
 }
@@ -1010,8 +1050,8 @@ summary::-webkit-details-marker{display:none}
   /* a narrow window: the wordmark over the rest, one column (a phone held sideways keeps two, below) */
   .home{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"mark" "top" "panel" "bar"}
   .home-top{justify-content:stretch}
-  .hp-drills .drills{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .hp-drills #b-help{grid-column:1/-1}
+  .hp-drills .drills,.hp-drills .pr-low{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hp-drills .pr-grown{grid-column:auto}
 }
 @media (orientation:landscape) and (max-height:340px){
   /* Safari sideways, about 320px tall (568x320, 667x320): the top row and the bar 44px, the wordmark smaller, each drill its picture
@@ -1033,11 +1073,19 @@ summary::-webkit-details-marker{display:none}
   .hc-comps{gap:6px}
   .btn.hc-comp,.hc-comps.n8 .btn.hc-comp{min-height:44px}
   .hp-drills .drills{gap:6px}
-  .hp-drills .btn.drill{flex-direction:row;justify-content:flex-start;gap:6px;min-height:52px;padding:4px 8px;text-align:left}
-  .hp-drills .dc-icon{width:24px;height:24px}
+  .hp-drills .btn.drill{min-height:44px;padding:3px 4px;gap:1px;font-size:12px;line-height:1.05}   /* PR #14's ten in rows of four: each picture small over its name, so the three rows and Contact Games' lines fit the row */
+  .hp-drills .dc-icon{width:18px;height:18px}
+  .hp-drills .pr-cg .pr-group{font-size:15px;line-height:1}
+  .hp-drills .pr-cg .pr-coach{line-height:1.05}
+  .hp-drills .drills,.hp-drills .pr-low,.hp-drills .pr-games{gap:4px}
   .hp-settings.settings{gap:4px 10px;padding:5px 10px}
   .hp-settings .set{gap:2px}
   .hp-settings .lbl{font-size:10px;line-height:1}
+}
+@media (orientation:landscape) and (max-height:420px) and (min-height:341px) and (max-width:740px){
+  /* a smaller phone sideways (667x375): smaller pictures and tighter lines, so the three rows and Contact Games' two lines fit between the top row and the bar */
+  .hp-drills .btn.drill{min-height:52px;padding:4px 6px;gap:2px;line-height:1.05}
+  .hp-drills .dc-icon{width:20px;height:20px}
 }
 @media (orientation:landscape) and (max-width:619px){
   /* a phone under 620px wide held sideways (568x320): the five names a little smaller, so Skills Mini Games fits its fifth whole */
@@ -1112,3 +1160,24 @@ summary::-webkit-details-marker{display:none}
   #m-wall .card{gap:10px;padding:14px 16px}
   #m-wall .row2 .btn{min-height:44px}
 }
+
+/* ===== PR #14: rating stars and a made team's level ===== */
+/* A level's stars (starsHtml, ui-menus.js): drawn shapes, never under 12px a star, so a half star reads on a phone. Named rstars, not tstars:
+   tstars is the star traits' line on a team card (src/traits.js). Beside every team's overall badge is the teams builder's (README, integration list). */
+.rstars{--star:14px;display:block;flex:none;width:calc(var(--star)*5);height:var(--star)}
+.rstars .off{fill:rgba(241,238,228,.34)}
+.rstars .on{fill:var(--flood)}
+.bd-levels{display:flex;flex-direction:column;gap:10px}
+.bd-levels[hidden],#bd-form[hidden]{display:none}
+.lv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.lv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:6px 10px;text-transform:none}
+.lv[aria-pressed="true"]{border-color:var(--flood)}
+.lv-name{font-weight:800}
+.lv-sub{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--chalk-dim)}
+.lv-line{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 10px;min-width:0}
+.bd-level-now .lv-line{justify-content:flex-start}
+#bd-jersey .rstars{--star:15px}
+.bd-level-now{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
+.bd-level-now .btn{width:auto;min-height:44px;padding:0 12px}
+.bd-level .stat-note{margin:0}
+@media (orientation:landscape) and (max-height:420px){.lv{min-height:44px;padding:3px 10px}.bd-levels{gap:6px}}   /* nine levels and the row under them fit a phone sideways, on first sight */

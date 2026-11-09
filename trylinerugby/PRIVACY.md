@@ -36,6 +36,8 @@ Requests to join the wall arrive by email. SignCheck Ltd checks each one by hand
 
 Once loaded, the game plays offline. When it is online it fetches only its own files, from the site it came from, to load and to update itself. The app has its files built in, and updates come through the App Store or Google Play.
 
+The web version also reads one small file, `ratings.json`, when it starts and is online. It holds the national teams' ratings. It comes only from the game's own site, and nothing about the player is sent with the request. Offline, the game uses the last copy kept on the device and sends nothing. If it is missing or looks wrong, the game uses the ratings it already carries. The game never contacts a rankings service or any other third party for ratings.
+
 Its two typefaces come with the game, on the web and in the app. It never loads fonts from Google Fonts or any other site.
 
 ## Add Your Team

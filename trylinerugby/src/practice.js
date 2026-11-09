@@ -6,26 +6,43 @@
    shows the home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
    Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
-const PRACTICE_DRILLS = [
+const PRACTICE_DRILLS = [                                   // tag and handling first; contact marks the games under Contact Games (U9 and Up), which the Kids level and a career's Minis never reach
+  { id:'tag', name:'Tag Chase', objective:'Keep Your Tags, Pull Theirs', limit:70 },
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
   { id:'cones', name:'Cones', objective:'Beat the Clock', limit:45 },
-  { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90 },
-  { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Steer the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
-  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, kids:true },
-  { id:'defend', name:'Defend a Breakaway', objective:'Switch into cover and stop the runner', cue:'Your first defender is beaten. Press Switch, run towards the carrier and Tackle. Sprint helps you close the gap.', limit:18 },
-  { id:'pass', name:'Create a Two-on-One', objective:'Pass to support, then score a try', cue:'Run towards the defender to draw him in. Pass to the dashed-ringed runner, then run for the try line.', limit:22 }
+  { id:'pass', name:'Create a Two-on-One', objective:'Draw the Defender, Then Pass', cue:'Run towards the defender to draw them in. Pass to the dashed-ringed runner, then run for the try line.', limit:22 },
+  { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Aim the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
+  { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Your first defender is beaten. Press Switch, run across to the carrier and Tackle. Sprint helps you close the gap.', tagCue:'Your first defender is beaten. Press Switch, run across to the carrier and Pull Tag. Sprint helps you close the gap.', limit:18 },
+  { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90, contact:true },
+  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true },
+  { id:'back', name:'Ball Back', objective:'Hands, Landing, Ball Back', limit:60, contact:true },
 ];
+const PRACTICE_COACH = 'Learn Real Tackling With a Club Coach. Not One to Try at Home.';
+const practiceYoung = () => kidsLevel() || settings.cat === 'minis';   // the youngest: the Kids level, or Minis picked on the team screen (Men | Women | Minis), in free play as much as on the career's own list
+function practiceBarred(id) {                              // the one rule, for every route in: no contact game for the youngest
+  const d = PRACTICE_DRILLS.find(x => x.id === id);
+  return !!(d && d.contact && practiceYoung());
+}
+function practiceNextId(id) {                              // Next Game: the next one this player may play
+  const n = PRACTICE_DRILLS.length, i = PRACTICE_DRILLS.findIndex(d => d.id === id);
+  for (let k = 1; k <= n; k++) { const d = PRACTICE_DRILLS[(i + k) % n]; if (!practiceBarred(d.id)) return d.id; }
+  return id;
+}
+function practiceGroups() {                                // the picker as this player sees it, the grown-ups' panel shut
+  $('pr-contact').hidden = practiceYoung();
+  $('pr-games').hidden = false; $('pr-grownups').hidden = true;
+}
 function practiceInstructions(id) {
-  const touch = lastDev === 'touch';
-  const name = (word, act) => word + (touch ? '' : ' (' + seatKey(0, act) + ')');
-  if (id === 'defend') return 'Your first defender is beaten. Press ' + name('Switch', 'b') + ', run towards the carrier and ' + name('Tackle', 'a') + '. ' + name('Sprint', 'c') + ' helps you close the gap.';
-  if (id === 'pass') return 'Run towards the defender to draw him in. ' + name('Pass', 'a') + ' to the dashed-ringed runner, then run for the try line.';
+  const name = drillName;
+  if (id === 'defend') return 'Your first defender is beaten. Press ' + name('Switch', 'b') + ', run across to the carrier and ' + name(practiceYoung() ? 'Pull Tag' : 'Tackle', 'a') + '. ' + name('Sprint', 'c') + ' helps you close the gap.';
+  if (id === 'pass') return 'Run towards the defender to draw them in. ' + name('Pass', 'a') + ' to the dashed-ringed runner, then run for the try line.';
   const kit = DRILL_KIT[id];
   return kit && kit.howTo ? kit.howTo() : '';
 }
 function practiceRestore() {
   if (!practice) return;
+  if (practice.demo) demoClean();
   const snapshot = practice.settings;
   for (const key of Object.keys(settings)) delete settings[key];
   Object.assign(settings, snapshot);
@@ -54,22 +71,28 @@ function practiceChoose() {                                // Back to Skills: th
   practiceRestore();
   setTwo(false); startDemo();
   $('hud').hidden = $('controls').hidden = $('b-pause').hidden = true;
+  practiceGroups();                                        // the contact group shown or hidden for this player, the grown-ups' panel shut
   goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings, the headline included: it was picked on Skills Mini Games
 }
-function practiceStart(id, opts) {
-  const drill = PRACTICE_DRILLS.find(d => d.id === id); if (!drill) return;
+/* The two sides on a drill's pitch play at these ability sums, whatever their clubs are rated this season: a drill's timing and its stars are the drill's, and don't move when a league's band does. */
+const DRILL_SUMS = [13, 8];
+function practiceStart(id, opts, noDemo) {                 // noDemo: Watch How rebuilding its own drill
+  const drill = PRACTICE_DRILLS.find(d => d.id === id); if (!drill || practiceBarred(id)) return;
+  const tagOnly = practiceYoung();                         // read before the run's own settings: for the youngest, no open-play game ever ends in a tackle (training.js)
   const kit = DRILL_KIT[id];
   const keep = opts && typeof opts.onDone === 'function' ? opts : null;
   practiceRestore(); releaseAll(); setTwo(false); lockLandscape(); ac();
-  practice = { ...drill, opts:keep, best:null, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
+  const firstTime = !settings.drillSeen.includes(id) && !noDemo;   // Watch How plays the first time this device opens the drill, until it has really been seen (demoMark)
+  practice = { ...drill, tagOnly, ...(tagOnly && drill.tagCue ? { cue:drill.tagCue } : {}), opts:keep, best:null, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
-  // Every drill plays on Easy. At Kids, Kicking and Driving also take a Kids match's own help (kids.js: the aim set for you, a wider
-  // gold band and a slower meter; your pack's extra shove), as the career's Train sends a Kids player to them every round. They take
-  // it at the start of the Kids scale (newMatch is given no kidsR), the help they always had, whatever the child's rating. The
-  // others stay as they are: the training spaces never read M.kids, and Kids' automatic switch would play Defend a Breakaway for you.
-  newMatch(DEFAULT_TEAM, CLUBS[1], { halfLen:120, diff:0, duels:'off', humans:[true, false], kids:!!drill.kids && kidsLevel() });
-  M.practice = id; M.phase = 'play'; M.set = null; M.cut = null; M.goal = null;
+  // Every game plays on Easy, its two sides at DRILL_SUMS whatever their clubs are rated. At Kids, Kicking (and Driving, which the Kids
+  // level never reaches: a contact game) also take a Kids match's own help (kids.js: the aim set for you, a wider gold band and a slower
+  // meter), as the career's Train sends a Kids player to them. They take it at the start of the Kids scale (newMatch is given no kidsR),
+  // the help they always had, whatever the child's rating. The others stay as they are: the training spaces never read M.kids, and Kids'
+  // automatic switch would play Defend a Breakaway for you.
+  newMatch({ ...DEFAULT_TEAM, ...abilitiesFor(TEAM_FLAVOUR.get(DEFAULT_TEAM.id), DRILL_SUMS[0]) }, { ...CLUBS[1], ...abilitiesFor(TEAM_FLAVOUR.get(CLUBS[1].id), DRILL_SUMS[1]) }, { halfLen:120, diff:0, duels:'off', humans:[true, false], kids:!!drill.kids && kidsLevel() });
+  M.practice = id; M.phase = 'play'; M.set = null; M.cut = null; M.goal = null; M.kit = DV_KITS;
   const own = M.players.filter(p => p.team === 0), cpu = M.players.filter(p => p.team === 1);
   kit.setup(own, cpu);
   if (practice.cam) { M.cam.x = practice.cam.x; M.cam.y = practice.cam.y; }
@@ -78,27 +101,30 @@ function practiceStart(id, opts) {
   $('h-t0').hidden = $('h-t1').hidden = true;
   $('h-n0').textContent = M.nat[0].id; $('h-n1').textContent = M.nat[1].id;
   $('h-k0').style.setProperty('--k', showCol(0)); $('h-k1').style.setProperty('--k', showCol(1));
-  $('pr-objective').textContent = drill.objective; $('pr-cue').textContent = practiceInstructions(id);
+  $('pr-objective').textContent = (tagOnly && drill.tagObjective) || drill.objective; $('pr-cue').textContent = practiceInstructions(id);
   $('practice-cue').hidden = true; $('drill-hud').hidden = true; drillHudKey = ''; lastHud = ''; lastBtn = ''; restStick();
   practice.ready = true; M.paused = true;
   $('pr-icon').innerHTML = drillIconSvg(id);
   $('pr-result').textContent = drill.name; $('pr-feedback').textContent = practiceInstructions(id);
-  $('pr-stars').hidden = true;
+  $('pr-stars').hidden = true; $('pr-tip').hidden = true; $('pr-coach').hidden = !(drill.contact || (drill.tackles && !tagOnly));
   $('pr-roles').hidden = !drill.roles; $('pr-retry').hidden = !!drill.roles;
-  $('pr-retry').textContent = 'Start Drill'; $('pr-next').hidden = true;
+  $('pr-watch').hidden = false; $('pr-go').classList.toggle('one', !!drill.roles);
+  $('pr-retry').textContent = 'Play'; $('pr-next').hidden = true;
   practiceLeaveLabel();
   $('m-practice').hidden = false; $('controls').hidden = true; $('b-pause').hidden = true;
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
+  if (firstTime) demoStart();
 }
 const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Skills');   // the card's leave button and the pause card's
-function practiceLeaveLabel() {                            // Back to Skills on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
+function practiceLeaveLabel() {                            // Back to Skills on its own row, or beside Next Game; a caller's drill goes Back to Career unless it names its own
   $('pr-eyebrow').textContent = practice.opts ? 'Training' : 'Skills Mini Games';   // the place it came from: the home's Skills Mini Games, or a caller's training (the career's Train)
   $('pr-select').textContent = practiceBackText();
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }
 function practiceGo() {                                    // the ready card's Start: the drill runs
   practice.ready = false; M.paused = false; releaseAll();
+  demoMark();                                              // started by hand: no demo on its next open
   for (const inp of inputs) inp.aPressed = inp.bPressed = inp.cPressed = false;
   $('m-practice').hidden = true; $('controls').hidden = false; $('b-pause').hidden = false;
   $('practice-cue').hidden = !(practice.id === 'defend' || practice.id === 'pass');
@@ -106,16 +132,19 @@ function practiceGo() {                                    // the ready card's S
 }
 function practiceFinish(won, feedback, stars) {
   if (!practice || practice.done) return;
+  if (practice.demo) { demoEnd(!!won); return; }           // Watch How records nothing: no stars, no best, no card
   stars = stars == null ? (won ? 3 : 0) : clamp(Math.round(stars), 0, 3);
   practice.ready = false; practice.done = true; practice.won = !!won; practice.stars = stars; M.paused = true;
   lockerDrill(practice.id, stars);                         // three stars: Star Pupil (src/locker.js), saved when the drill is left
   if (practice.opts) practice.best = practiceBest(practice.best, practiceResult(practice));   // taken now, while the run (its role included) is as shown
   $('pr-retry').textContent = 'Try Again'; $('pr-retry').hidden = false; $('pr-roles').hidden = true;
+  $('pr-watch').hidden = true; $('pr-go').classList.add('one');
   $('pr-next').hidden = !!practice.opts;                   // a caller picks the next drill itself
   practiceLeaveLabel();
   $('pr-result').textContent = won ? 'Well Played' : 'Have Another Go';
   $('pr-stars').innerHTML = drillStarsHtml(stars); $('pr-stars').setAttribute('aria-label', stars + (stars === 1 ? ' Star' : ' Stars')); $('pr-stars').hidden = false;
   $('pr-feedback').textContent = feedback;
+  { const kit = DRILL_KIT[practice.id], tip = kit && kit.tip ? kit.tip() : ''; $('pr-tip').textContent = tip; $('pr-tip').hidden = !tip; }   // a short line on what worked
   $('m-practice').hidden = false; $('practice-cue').hidden = true; $('drill-hud').hidden = true;
   $('controls').hidden = true; $('b-pause').hidden = true;
   releaseAll(); setFocus(null);
@@ -127,7 +156,7 @@ function practiceTick(dt) {
   const kit = DRILL_KIT[practice.id];
   if (kit.tick) kit.tick(dt);
   if (!practice || practice.done) return;
-  if (kit.cue) { const c = kit.cue(); if (c) drillCue(c[0], c[1]); else drillCue('', ''); }
+  if (kit.cue && !practice.demo) { const c = kit.cue(); if (c) drillCue(c[0], c[1]); else drillCue('', ''); }
   if (practice.elapsed >= practice.limit) {
     if (kit.timeUp) kit.timeUp();
     else practiceFinish(false, 'Try again: ' + practice.cue, 0);
@@ -145,5 +174,8 @@ for (const role of ['runner', 'passer']) $('pr-' + role).addEventListener('click
   DRILL_KIT[practice.id].role(role);
   practiceGo();
 });
-$('pr-next').addEventListener('click', () => practiceStart(PRACTICE_DRILLS[(PRACTICE_DRILLS.findIndex(d => d.id === practice.id) + 1) % PRACTICE_DRILLS.length].id, practice.opts));
+$('pr-watch').addEventListener('click', () => { if (practice && practice.ready) demoStart(); });
+$('pr-next').addEventListener('click', () => practiceStart(practiceNextId(practice.id), practice.opts));
+$('pr-grown').addEventListener('click', () => { $('pr-games').hidden = true; $('pr-grownups').hidden = false; setFocus(null); const b = $('pr-grown-back'); if (b.focus) b.focus({ preventScroll:true }); $('pr-grownups').scrollTop = 0; });   // opens at its top (it scrolls inside the panel), with Back to Skills a key press away
+$('pr-grown-back').addEventListener('click', () => { $('pr-games').hidden = false; $('pr-grownups').hidden = true; setFocus(null); const b = $('pr-grown'); if (b.focus) b.focus(); });
 $('pr-select').addEventListener('click', practiceChoose);

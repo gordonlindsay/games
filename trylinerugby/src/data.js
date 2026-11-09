@@ -196,8 +196,17 @@ function catTeam(t, cat) { return isNation(t) ? natList(cat).find(n => n.id === 
 function natGroup(id, cat) { const six = SIX_NATIONS.includes(id); return natList(cat).filter(t => SIX_NATIONS.includes(t.id) === six); }
 /* The name a list shows: the side's own, without its category's word, as the club cards show it (England Women is England). */
 const listName = t => { const c = TEAM_CATS.find(x => x.id === t.cat), n = String(t.name); return c && c.tag && n.endsWith(c.tag) ? n.slice(0, -c.tag.length) : n; };
+/* Who plays on a side, for the drawing (looks.js, and the Blender players in render-art.js): 0 men's, 1 women's, 'mixed'. Men | Women |
+   Minis is the one control: a Women side is women's and a Minis side mixed; anything else is men's. Every match is one category (catTeam),
+   so sidesMeet only guards a damaged call. MIXED_THROUGH is the one lever, the oldest age group that plays mixed. The game follows England:
+   mixed through U11, girls-only from U12. Ireland and Australia run through U12, New Zealand through U13, and World Rugby's law is the end
+   of the season a player turns 12. Wales and Scotland were not confirmed. */
+const MIXED_THROUGH = 11;
+const teamSide = t => (t && (t.g === 1 || t.g === 'mixed') ? t.g : catOf(t) === 'women' ? 1 : catOf(t) === 'minis' ? 'mixed' : 0);   // a g of its own wins (PR #14's field: no team in the merged game carries one yet, a squad entry's look may)
+const sidesMeet = (a, b) => { const x = teamSide(a), y = teamSide(b); return x === y || x === 'mixed' || y === 'mixed'; };
+const allNations = () => NATIONS;
 const ABILITIES = [['pace', 'Pace'], ['power', 'Power'], ['handling', 'Handling'], ['kicking', 'Kicking'], ['stamina', 'Stamina']];
-const BUDGET = 12;                        // a team you make starts at 1 in each ability, with this many points to spend: any team the four-ability builder allowed (10 points), plus Stamina 3
+const BUDGET = 12;                        // a team with no level, saved before levels: it starts at 1 in each ability with this many points to spend, any team the four-ability builder allowed (10 points) plus Stamina 3. A team with a level spends its level's budget (TEAM_LEVELS, src/ratings.js)
 /* Stamina came after the other four. A team without it (a save from before it, an import, a test's side) reads as 3, the middle:
    its Sprint and On Fire last as long as they always have. Not rounded here, so a side handed in with a fractional Stamina plays as
    given; the saves keep whole pips (cleanTeam, cleanSide), so a fraction must be kept, and put back, by whatever made it. */
@@ -243,6 +252,8 @@ const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fm
 const D2R = Math.PI/180, MPH = 0.44704;
 const HALF_SECONDS = [120, 240, 360];
 const STEP = 1/60;
+/* How fast a match you see runs against real time: the one lever. The frame loop (boot.js) feeds the sim and the drawing dt times this, so a step is still 1/60 of a simulated second and update() never knows: seeded results per simulated second, the bots and the headless tools are as they were. Every window a person has to hit widens by 1/pace in real time, and a half takes that much longer. Two Player and the menu demo run at match; only M.kids reads kids; the Training Ground has its own (DRILL_PACE). */
+const MATCH_PACE = { match:0.88, kids:0.75 };
 
 const $ = id => document.getElementById(id);
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;

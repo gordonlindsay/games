@@ -142,7 +142,8 @@ function match(run, f, plan) {
 function train(run, stars) {
   const cr = run.cr, bad = m => run.bad.push(`year ${cr.year} ${cr.phase}: ${m}`);
   if (cr.trained || $('cr-train').disabled) return false;
-  const low = keys.reduce((a, k) => (cr.skills[k] < cr.skills[a] ? k : a), keys[0]), id = DRILL[low], b0 = cr.skills[low], e0 = cr.life.energy;
+  const can = keys.filter(k => C.drills(cr).some(d => d.id === DRILL[k]));   // a game the player can see: at Kids no contact game, so no Power (PR #14's rule)
+  const low = can.reduce((a, k) => (cr.skills[k] < cr.skills[a] ? k : a), can[0]), id = DRILL[low], b0 = cr.skills[low], e0 = cr.life.energy;
   $('cr-train').click();
   if (shown() !== 's-career-train' || !$('ct-list').innerHTML.includes(`data-drill="${id}"`)) { bad('Train did not open the drills'); return false; }
   if (!C.train(id) || !T.practice.state()) { bad('the drill did not start'); return false; }   // the drill's button (ct-list): careerTrain

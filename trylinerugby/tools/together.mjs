@@ -101,7 +101,7 @@ const champBefore = JSON.stringify(X.champ());
   P.start('scrum'); D.syncHints('', '');
   ok(T.M.cut && T.M.cut.kind === 'scrum' && !D.hintShown()[0], 'Driving stages its scrum under the ready card with no Scrum card showing');
   $('pr-retry').click(); D.syncHints('Push', null);
-  ok(D.hintShown()[0] && D.hintShown()[0].title === 'Scrum', 'once the drill starts, the Scrum card');
+  ok(D.hintShown()[0] && D.hintShown()[0].title === 'Driving', 'once the drill starts, the game\'s own card (Driving: PR #14, where it was the Scrum card)');
   P.finish(true, 'Done', 3); D.syncHints('', '');
   ok(!D.hintShown()[0], 'and none behind the result card');
   P.leave();
@@ -122,12 +122,12 @@ const champBefore = JSON.stringify(X.champ());
   T.kids.segSet(0);
   P.start('kick');
   ok(T.M.kids === true && !/Steer/.test($('pr-cue').textContent) && /^Five kicks, each further out and windier\. Hold /.test($('pr-cue').textContent), `Kids: Kicking is a Kids match, its aim set, and says so (${$('pr-cue').textContent})`);
-  P.leave(); P.start('scrum'); ok(T.M.kids === true, 'Kids: so is Driving'); P.leave();
-  const easy = ['egg', 'circle', 'cones', 'tackle', 'defend', 'pass'].filter(id => { P.start(id); const k = T.M.kids; P.leave(); return k !== false; });
+  P.leave(); P.start('scrum'); ok(!P.state(), 'Kids: Driving is a contact game, out of reach (PR #14: it was a Kids match here before)'); P.leave();
+  const easy = ['tag', 'egg', 'circle', 'cones', 'defend', 'pass'].filter(id => { P.start(id); const k = T.M.kids; P.leave(); return k !== false; });
   ok(easy.length === 0, `Kids: every other drill plays on Easy (${easy.join(', ') || 'all'})`);
   ok(s.kids === true && s.diff === 0, 'and leaving puts Kids back');
   T.kids.segSet(1); P.start('kick');
-  ok(T.M.kids === false && /Steer the arrow/.test($('pr-cue').textContent), 'Easy: Kicking is as it was, the arrow yours to steer');
+  ok(T.M.kids === false && /Aim the arrow/.test($('pr-cue').textContent), 'Easy: Kicking is as it was, the arrow yours to aim (PR #14\'s word)');
   P.leave(); s.kids = keep[0]; s.diff = keep[1]; D.goHome();
 }
 
