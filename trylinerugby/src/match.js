@@ -84,6 +84,14 @@ function newMatch(u, c, opts) {
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   if (M.kids) { M.kidsR = kidsTune(opts.kidsR).r; M.kidsDone = false; }   // its rating sets the levers before anything reads them: the start (0) unless the caller says (startMatch passes settings.kidsR)
+  /* A Kids half lasts the half chosen on a real clock (the owner, 2026-11-09: "2 Real Minutes"). The match runs at MATCH_PACE.kids, so
+     the half is that share of the chosen half in simulated seconds (2 minutes: 90), and the clock on the scorebug reads real time
+     (fmtClock), 2:00 at the hooter. The Golden Try is half of it (periodLen). Only where the Kids pace runs (matchPace): a drill keeps
+     its own clock, and every other match keeps the half as given. The close-up quota reads the simulated half, as everything else in a
+     half does: one close-up in a 2-minute half instead of two, but it was seldom reached (2.3 a match for the 7 to 8 year old, 2.45 with
+     the quota left at two). */
+  M.realClock = M.kids && !practice ? MATCH_PACE.kids : 0;
+  if (M.realClock) M.halfLen = opts.halfLen*M.realClock;
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
   let seat = 0;

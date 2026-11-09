@@ -62,7 +62,8 @@ kidsTune(0);
    in more and more slowly rather than swinging from end to end. Scripted children (tools/kidbots.mjs) settle at about 0.73 (a 6 year
    old, winning 72%), 0.96 (a 7 to 8 year old, winning 81% by 2.7 tries) and the ceiling (a sharp 10 year old), and a child who never
    defends at about 0.12; README.md has the scorelines. Since PR #14, with its passing on the scale, the 7 to 8 year old settles at 0.97,
-   winning 83% by 2.7 (2026-11-09). */
+   winning 83% by 2.7 (2026-11-09). With the half on a real clock (90 simulated seconds for 2 minutes, match.js) he still settles at
+   0.97, winning 82% by 2.2: the margin shrinks with the half, the share won does not, so these steps are unchanged. */
 const KIDS_ADAPT = { big:3, raise:0.05, nudge:0.01, draw:-0.01, lose:-0.05, heavy:-0.10 };
 function kidsStep(score, tries, h = 0) {                    // the step one result moves r, up if above 0, down if below. h is the child's side
   const pts = score[h] - score[1 - h], m = tries[h] - tries[1 - h], A = KIDS_ADAPT;
@@ -89,8 +90,12 @@ function kidsAdapt() {                                     // full time in a Kid
    KIDS_EASY.top or above. Chosen by replaying the calibration's settle runs (tools/kidbots.mjs, SEED 7 and 13, 150 matches each):
    wins by 5 or more tries, five in a row, never came up for the 7 to 8 year old Kids is tuned for (0 of 32 runs), the 6 year old
    (0 of 32) or the stick masher (0 of 16), and came up for every sharp 10 year old (16 of 16, median match 39). A margin of 4 or
-   more (more than 3) caught 5 of 32 of the 7 to 8 year olds, so it is more than 4. Nothing on the child's screens changes. */
-const KIDS_EASY = { top:0.95, margin:4, run:5 };
+   more (more than 3) caught 5 of 32 of the 7 to 8 year olds, so it was more than 4. With the half on a real clock (2 minutes is
+   90 simulated seconds, match.js) a quarter less happens in a match: wins by 5 or more came up for only 15 of 32 sharp 10 year olds
+   (SEED 7 and 13), so it is more than 3 now, the old 5 tries scaled by the shorter half. Replayed over the new runs, that never
+   comes up for the 7 to 8 year old (0 of 32), the 6 year old or the masher, and does for 28 of 32 10 year olds (median match 51
+   on SEED 7, 43 on SEED 13). Nothing on the child's screens changes. */
+const KIDS_EASY = { top:0.95, margin:3, run:5 };
 const kidsReady = () => kidsLevel() && (settings.kidsTop | 0) >= KIDS_EASY.run;
 const kidsLevel = () => !!settings.kids && settings.diff === 0;
 /* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
