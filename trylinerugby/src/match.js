@@ -81,6 +81,7 @@ function newMatch(u, c, opts) {
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
     arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
     fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
+    rules:RULES[opts.rules] || RULES.normal,           // the rule set this match plays (src/data.js): Normal unless the caller names another
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   if (M.kids) { M.kidsR = kidsTune(opts.kidsR).r; M.kidsDone = false; }   // its rating sets the levers before anything reads them: the start (0) unless the caller says (startMatch passes settings.kidsR)
@@ -105,7 +106,7 @@ function newMatch(u, c, opts) {
   traitsArm();                                             // the star traits, in a match you play only (src/traits.js)
   for (const inp of inputs) inp.gest = null;               // the open-play gesture history starts clean
   M.tut = null; hintReset(); coachUntil = 0;               // the hints cards start hidden, the open-play hints unshown, and a coach line from the last match does not hold the next one
-  kickoff(M.firstKick);
+  restart('halfStart', M.firstKick);
 }
 
 function maxSpeed(p) {
@@ -169,9 +170,16 @@ function startSet(o) {
     const q = nearestFree(t, o.x, o.y); if (q) setCtrl(t, q);
   }
 }
-function deadBall(fn) { if (M.hooter && !M.demo) endHalf(); else fn(); }
 
-/* ---------- restarts ---------- */
+/* ---------- restarts ----------
+   Every stoppage comes through restart(): why play stopped (a row of the match's rule set, src/data.js), the side that gets
+   the ball, and where. Once the hooter has gone a stoppage ends the half instead, unless its row plays on. */
+const RESTART_KIND = { kickoff, dropOut, scrum, lineout, penalty };
+function restart(why, team, x, y) {
+  const r = M.rules.restarts[why];
+  if (M.hooter && !M.demo && !r.playOn) { endHalf(); return; }
+  RESTART_KIND[r.kind](team, x, y, r.label);
+}
 function kickoffFormation(kTeam, kx) {
   const d = dirOf(kTeam);
   const KY = [6,16,26,35,44,54,64];
@@ -269,7 +277,7 @@ function knockOn(p, why) {                                 // why: 'catch' (the 
   M.stats.knocks++; st('ko_' + (why || 'catch'));
   placeBall(p.x, p.y);
   sfx('fumble'); sfx('whistle');
-  deadBall(() => scrum(1-p.team, p.x, p.y, 'Knock-On'));
+  restart('knockOn', 1-p.team, p.x, p.y);
 }
 function pickUp(p) {
   const b = M.ball;
@@ -277,7 +285,7 @@ function pickUp(p) {
     const defTeam = b.x < 10 ? 0 : 1;
     if (p.team !== defTeam) { scoreTry(p); return; }
     placeBall(b.x, b.y); sfx('whistle');
-    deadBall(() => dropOut(defTeam));
+    restart('groundedInGoal', defTeam);
     return;
   }
   const turn = p.team !== b.last && !b.kickInfo;

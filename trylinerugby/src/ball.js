@@ -34,7 +34,7 @@ function updateBallAir(dt) {
     const lx = (f.kind === 'restart' || own22) ? b.x : f.x0;
     const full = f.kind === 'kick' && !own22;
     placeBall(b.x, clamp(b.y,0,70));
-    deadBall(() => lineout(1-f.team, lx, b.y, full ? 'Out on the Full' : 'Into Touch'));
+    restart(full ? 'outOnFull' : 'touchKick', 1-f.team, lx, b.y);
     return;
   }
   if (u > 0.45 && b.z < 2.7) {
@@ -77,17 +77,17 @@ function updateLoose(dt) {
   }
   if (b.y < 0 || b.y > 70) {
     const ki = b.kickInfo;
-    let t = 1-b.last, reason = 'Into Touch';
-    if (ki && ki.ownHalf && (ki.team === 0 ? b.x >= 88 : b.x <= 32)) { t = ki.team; reason = '50:22'; }
+    let t = 1-b.last, why = 'touchLoose';
+    if (ki && ki.ownHalf && (ki.team === 0 ? b.x >= 88 : b.x <= 32)) { t = ki.team; why = 'fiftyTwentyTwo'; }
     const x = b.x, y = b.y;
     placeBall(x, clamp(y,0,70)); sfx('whistle');
-    deadBall(() => lineout(t, x, y, reason));
+    restart(why, t, x, y);
     return;
   }
   if (b.x < 0 || b.x > 120) {
     const defTeam = b.x < 0 ? 0 : 1;
     placeBall(clamp(b.x,0,120), b.y); sfx('whistle');
-    deadBall(() => dropOut(defTeam));
+    restart('deadBallLoose', defTeam);
     return;
   }
   if (b.z < 1.0) {

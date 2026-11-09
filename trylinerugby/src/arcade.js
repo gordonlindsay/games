@@ -32,7 +32,7 @@ function startGolden() {
   M.half = 3; M.golden = true; M.clock = 0; M.hooter = false;
   for (const t of [0, 1]) fireOut(t);
   sfx('horn'); st('golden');
-  kickoff(M.firstKick);
+  restart('halfStart', M.firstKick);
   say('Golden Try', 'big');
 }
 function goldenScored() { if (M.golden) M.hooter = true; }   // any score in extra time wins it: the next dead ball ends the match

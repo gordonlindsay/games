@@ -290,6 +290,64 @@ const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fm
 // GKTUNE
 const D2R = Math.PI/180, MPH = 0.44704;
 const HALF_SECONDS = [120, 240, 360];
+const GAME_VERSION = '1.1';                                 // shown on the home screen, after the tagline (src/boot.js)
+
+/* ---------- rule sets ----------
+   A match plays one rule set (M.rules, chosen in newMatch). The same three are meant to hold wherever the game is played:
+   a match, a career stage and a drill. In this build every match plays Normal, exactly as before. Junior and Minis are
+   written down here from the RFU's Age Grade Rules of Play (Regulation 15: Under 9s, Transitional Contact; Under 8s, Tag
+   Rugby; the 2025-26 copies), kept simple. They are marked pending: the engine does not play them yet, and nothing reads them.
+   Close-ups for call-outs and events stay under every rule set, wherever the event still exists.
+   restarts: why play stopped -> how it restarts. The place that stops play says why, which side gets the ball and where;
+   this table alone says what follows. playOn: taken even after the hooter. */
+const RESTARTS_NORMAL = {
+  halfStart:      { kind:'kickoff', playOn:true },
+  afterScore:     { kind:'kickoff' },
+  knockOn:        { kind:'scrum',   label:'Knock-On' },
+  heldInGoal:     { kind:'scrum',   label:'Held in Goal' },
+  deadBallCarried:{ kind:'scrum',   label:'Dead Ball' },
+  touchCarried:   { kind:'lineout', label:'Into Touch' },
+  touchKick:      { kind:'lineout', label:'Into Touch' },
+  outOnFull:      { kind:'lineout', label:'Out on the Full' },
+  touchLoose:     { kind:'lineout', label:'Into Touch' },
+  fiftyTwentyTwo: { kind:'lineout', label:'50:22' },
+  penaltyTouch:   { kind:'lineout', label:'Kick to Touch', playOn:true },
+  groundedInGoal: { kind:'dropOut' },
+  deadBallLoose:  { kind:'dropOut' },
+  goalMissed:     { kind:'dropOut' },
+  ruckPenalty:    { kind:'penalty', playOn:true },
+  scrumPenalty:   { kind:'penalty', playOn:true },
+};
+const POINTS_NORMAL = { try:5, conversion:2, penalty:3, dropGoal:3 };
+/* Junior and Minis: every stoppage is a free pass to the side that gets the ball, the other side 7m back. at: where it is taken.
+   centre: halfway. mark: where it happened. in5: 5m in from touch. touch: on the touchline. Any mark within 7m of a goal line
+   is moved out to 7m. The kicking rows of Normal (a kick to touch, out on the full, 50:22, a missed goal) cannot happen. */
+const fp = at => ({ kind:'freePass', at });
+const RESTARTS_JUNIOR = { halfStart:{ ...fp('centre'), playOn:true }, afterScore:fp('centre'), knockOn:fp('mark'), infringement:fp('mark'), tackleLimit:fp('mark'),
+  touchCarried:fp('in5'), touchLoose:fp('in5'), heldInGoal:fp('mark'), deadBallCarried:fp('mark'), groundedInGoal:fp('mark'), deadBallLoose:fp('mark') };
+const RESTARTS_MINIS = { ...RESTARTS_JUNIOR, touchCarried:fp('touch'), touchLoose:fp('touch') };
+const POINTS_TRIES = { try:5 };                             // tries only: no kicking, so no conversions, penalty goals or drop goals. The RFU text gives a try no value; 5 keeps the tables working
+const RULES = {
+  normal: { id:'normal', name:'Normal', contact:'tackle', rucks:true, scrums:true, lineouts:true, kicking:true, fend:true,
+    points:POINTS_NORMAL, restarts:RESTARTS_NORMAL },
+  // Under 9s. A tackle is not contested: the carrier passes within 3 seconds and the tackler lets him. The tackle is below the base of the sternum.
+  // tackles: the RFU's optional variation, agreed by the coaches: six tackles, and the seventh hands the ball over. Set to 0 to play without it.
+  junior: { id:'junior', name:'Junior', contact:'tackle', rucks:false, scrums:false, lineouts:false, kicking:false, fend:false,
+    afterContact:{ passWithin:3, contest:false, limit:6 }, freePassBack:7,
+    real:{ perSide:7, pitch:[60, 30], inGoal:5, halfMinutes:15 },
+    points:POINTS_TRIES, restarts:RESTARTS_JUNIOR, pending:true },
+  // Under 8s. A tag, not a tackle: the carrier stops inside about three strides and passes within 3 seconds. The seventh tag hands the ball over (in the rules, not optional).
+  minis: { id:'minis', name:'Minis', contact:'tag', rucks:false, scrums:false, lineouts:false, kicking:false, fend:false,
+    afterContact:{ passWithin:3, contest:false, limit:6 }, freePassBack:7,
+    real:{ perSide:6, pitch:[45, 22], inGoal:5, halfMinutes:10 },
+    points:POINTS_TRIES, restarts:RESTARTS_MINIS, pending:true },
+};
+/* Which rule set a match plays, from the player's age group (the Under-N he plays in: a 12-year-old plays Under 13s).
+   Three bands: Under 7s and 8s play Minis, Under 9s to 12s play Junior, Under 13s and up play Normal. A national or
+   professional side always plays Normal, whatever the player's age. Not called yet: every match still plays Normal. */
+const RULE_BANDS = [{ upTo:8, rules:'minis' }, { upTo:12, rules:'junior' }, { upTo:Infinity, rules:'normal' }];
+const rulesForAge = under => RULE_BANDS.find(b => under <= b.upTo).rules;
+const rulesFor = (under, national) => national || under == null ? 'normal' : rulesForAge(under);
 const STEP = 1/60;
 /* How fast a match you see runs against real time: the one lever. The frame loop (boot.js) feeds the sim and the drawing dt times this, so a step is still 1/60 of a simulated second and update() never knows: seeded results per simulated second, the bots and the headless tools are as they were. Every window a person has to hit widens by 1/pace in real time, and a half takes that much longer. Two Player and the menu demo run at match; only M.kids reads kids; the Training Ground has its own (DRILL_PACE). */
 const MATCH_PACE = { match:0.88, kids:0.75 };

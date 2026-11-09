@@ -180,7 +180,7 @@ function tackle(c, q, o) {
     sfx('tackle'); buzz(30);
     if ((c.x-ownLine(team))*d < 0) {
       placeBall(c.x, c.y);
-      deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
+      restart('heldInGoal', 1-team, c.x, c.y);
       return;
     }
     placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
@@ -192,7 +192,7 @@ function tackle(c, q, o) {
   if ((c.x-ownLine(team))*d < 0) {
     c.down = 1.25; q.down = 1.0; q.tcd = 1.0;
     placeBall(c.x, c.y);
-    deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
+    restart('heldInGoal', 1-team, c.x, c.y);
     return;
   }
   const bx = clamp(c.x - d*0.4, 1, 119), by = clamp(c.y, 1, 69), ball = { x:bx, y:by };   // the ball goes behind the tackled man
@@ -220,7 +220,7 @@ function wrongFoot(team, x, y) {                           // the side that lost
 }
 function resolveRuck(s) {                                  // the ruck is automatic: a flat penalty roll, then a flat turnover roll
   const att = s.team, def = 1-att;
-  if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
+  if (rnd() < RUCK.pen) { restart('ruckPenalty', rnd() < 0.55 ? def : att, s.x, s.y); return; }
   const pT = s.dom ? s.domP : RUCK.flatBase + (powerOf(def) - powerOf(att))*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
     M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
@@ -354,13 +354,13 @@ function carrierChecks(c) {
   const d = dirOf(c.team);
   if (c.y < 0 || c.y > 70) {
     placeBall(c.x, clamp(c.y,0,70)); sfx('whistle');
-    deadBall(() => lineout(1-c.team, c.x, c.y, 'Into Touch'));
+    restart('touchCarried', 1-c.team, c.x, c.y);
     return true;
   }
   if ((c.x-oppLine(c.team))*d >= 0.3) { scoreTry(c); return true; }
   if (c.team === 0 ? c.x < 0 : c.x > 120) {
     placeBall(c.x, c.y);
-    deadBall(() => scrum(1-c.team, c.x, c.y, 'Dead Ball'));
+    restart('deadBallCarried', 1-c.team, c.x, c.y);
     return true;
   }
   return false;
