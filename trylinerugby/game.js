@@ -482,10 +482,15 @@ function coachMark(id) { if (!tipSeen(id)) { settings.tips.push(id); save(); } }
    Store: the one-off unlocks, who has them, and the adapter to the app stores.
 
    Free: Quick Match, Skills Mini Games, Kids, Easy and Normal, How to Play, Two Player (no home button), the Locker and My Team. Full Game
-   (tryline.full) adds Championship, Career, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
-   Game and Add Your Team (the import), and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
-   Career and Championship. No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's
-   own field (store), and Restore Purchases reads it back from the App Store or Google Play.
+   (tryline.full) adds Career, Championship and International modes, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
+   Game and Add Your Team (the import), and marks the player as that club's Super Fan: the home in its kit colours with its shield and name,
+   a gold Super Fan trophy in the Locker and the Trophy Cabinet (src/locker.js), and the club offered first in Career and Championship.
+   No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's own field (store), and Restore
+   Purchases reads it back from the App Store or Google Play.
+
+   The Supporters' Wall (storeWallMail): a Super Fan's grown-up, 18 or over, can ask to be named on the club's Super Fan page. The game
+   builds an email for the grown-up's own mail app to send (a mailto: link, after the grown-up check); it sends nothing itself and keeps
+   no name. SignCheck Ltd checks each request by hand and lists it on superfan.html.
 
    Where it applies (storeHas):
    - The Try Line app: by purchases.
@@ -508,9 +513,12 @@ const STORE_FAN_HAS = [...STORE_FULL_HAS, 'import'];   // Super Fan: everything 
    offered first. share is the club's percentage of what we receive for each Super Fan unlock (the proceeds, after the store's
    commission). agreed turns true only once the club has confirmed that share in writing. The club's Super Fan offer is shown only
    with both, so it can never go out without its stated, agreed share. A club the game does not have yet is appended to CLUBS
-   (data.js) first. tools/listing.mjs reads this list as plain data: keep it literals only. */
+   (data.js) first. crest is null, or the club's crest as an image inside the game (crests/<key>.png, .webp or .svg), set only once the
+   club has supplied it with its written permission: the Super Fan's shield on the home then shows it in place of the kit colours, and
+   tools/build.mjs puts the file in the game's shell (offline, and in the app). tools/listing.mjs reads this list as plain data: keep it
+   literals only. */
 const FAN_CLUBS = [
-  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR' },
+  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR', crest:null },
 ];
 const STORE_LINKS = {                      // each opens outside the game, and only after the grown-up check
   privacy:'https://gordonlindsay.github.io/games/trylinerugby/privacy.html',
@@ -518,6 +526,8 @@ const STORE_LINKS = {                      // each opens outside the game, and o
   ios:null,                                // the App Store page for Get the App: set before STORE_WEB_TIER goes to 'free'
   android:null,                            // the Google Play page, likewise
 };
+const STORE_MAIL = 'support@signcheck.ai';   // the Supporters' Wall's requests, sent by the grown-up's own mail app (storeWallMail)
+const STORE_CREST = /^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/;   // a crest is a file of the game's own, never an address elsewhere
 const STORE_ID = /^tryline\.(?:full|fan\.[a-z0-9]{1,24})$/;   // a product id the save may keep: one from a club since dropped stays bought
 let storeNativeHook = null;                // the tests' stand-in for nativeOn (src/native.js)
 let storeTierHook = null;                  // the tests' stand-in for STORE_WEB_TIER
@@ -551,6 +561,15 @@ function storeFanClub() {                  // the club of the latest Super Fan u
   return null;
 }
 function storeFan() { const c = storeFanClub(); return c ? { key:c.key, name:c.name } : null; }
+/* Every club in FAN_CLUBS whose Super Fan unlock this device owns, in the order bought: in the app only, so the web (whatever its tier)
+   owns none. Each earns its Super Fan trophy (lockerFanAward) and can offer the Supporters' Wall. */
+function storeFanOwned() {
+  if (!storeNative()) return [];
+  const out = [];
+  for (const id of storeBought) { const c = storeClubOf(id); if (c && !out.includes(c)) out.push(c); }
+  return out;
+}
+const storeCrest = c => (c && typeof c.crest === 'string' && STORE_CREST.test(c.crest) ? c.crest : null);
 const storeAnyFan = () => storeNative() && storeBought.some(id => id.startsWith('tryline.fan.'));   // any Super Fan unlock, a club since dropped from FAN_CLUBS included, still unlocks
 function storeHas(f) {
   if (!STORE_FAN_HAS.includes(f)) return true;           // the free tier
@@ -575,6 +594,19 @@ function storeOffers(f) {
 /* A locked control is shown only where something unlocks it: in the app, Add Your Team stays away until a Super Fan club is on sale. */
 const storeOffered = f => storeHas(f) || !storeNative() || storeOffers(f).length > 0;
 
+/* ---------- the Supporters' Wall ----------
+   The name as the grown-up typed it, on one line and 40 characters at most, and the email it goes in: to STORE_MAIL, with the club in
+   the subject, and the name, the club and the grown-up's yes in the body. Built only when asked for and handed straight to the mail app
+   (storeWallGo, src/ui-store.js): nothing here keeps it. */
+const storeWallName = s => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40).trim();
+function storeWallMail(c, name) {
+  const n = storeWallName(name);
+  if (!c || !c.name || n.length < 2) return null;
+  const subject = "Supporters' Wall: " + c.name;
+  const body = ['Name: ' + n, 'Club: ' + c.name, '', "I am 18 or over. I agree to be listed on the Supporters' Wall by this name, and I can ask to be removed at any time."].join('\r\n');
+  return 'mailto:' + STORE_MAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+
 /* ---------- the Super Fan's club, first ---------- */
 const storeFanTeam = () => storeTeamOf(storeFanClub());
 const storeHomeTeam = () => storeFanTeam() || DEFAULT_TEAM;
@@ -589,7 +621,7 @@ function storeFirst(list) {                // the Super Fan's club moved to the 
 function storeGrant(ids) {                 // add only: a store that answers with less (offline, signed out) never takes one away
   let added = false;
   for (const id of Array.isArray(ids) ? ids : []) if (typeof id === 'string' && STORE_ID.test(id) && !storeBought.includes(id)) { storeBought.push(id); added = true; }
-  if (added) { storeKeep(); storeRefresh(true); }
+  if (added) { if (typeof lockerFanAward === 'function') lockerFanAward(); storeKeep(); storeRefresh(true); }   // a Super Fan unlock earns its club's trophy once (src/locker.js)
   return added;
 }
 /* A refund, or a family member's unlock that ends when they leave the Family Sharing group: Apple sends the transaction again with a
@@ -602,6 +634,7 @@ function storeRevoke(ids) {
     const before = storeBought.length;
     storeBought = storeBought.filter(id => !gone.includes(id) || own.includes(id));
     if (storeBought.length === before) return false;
+    if (typeof lockerFanDrop === 'function') lockerFanDrop();   // a refunded Super Fan takes its trophy with it
     storeKeep(); storeRefresh();
     return true;
   });
@@ -3829,7 +3862,7 @@ const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] }
    Championship's or a career's, or an international championship) and the Triple Crown. The one map: the Trophy Cabinet's trophies,
    tags and tallies, the career's trophy row and every cup's trophy read it (data-metal, whose tones are styles.css's --gold and
    --silver), and each still names its kind in words. */
-const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver' };
+const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold' };   // fan: the Super Fan trophy (src/ui-locker.js)
 function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
 /* Each trophy's shape, so the kinds tell apart at a glance in the same metal (the owner, 2026-11-09, shown three gold cups alike on the
    career's row: "different shapes"). A filled silhouette in a 24 by 24 box, read at 10px on the career's row and the Trophy Cabinet's
@@ -4952,6 +4985,11 @@ function traitMarks(r) {
    - The save is one field, locker (cleanLocker), written only once something is in it, so an old save loads with nothing
      earned and a save with nothing earned stays as it was. A drill's three stars wait for the drill to end before saving,
      so a drill never writes the save while its settings are the drill's own.
+   - Super Fan trophies: a gold trophy for each club whose Super Fan unlock this device owns in the app (storeFanOwned, src/store.js),
+     awarded once (lockerFanAward: after a purchase, Restore Purchases, the start's read-back, or an unlock bought before the
+     trophies came) and kept as the club's key (fan). A refund takes it back with the unlock (lockerFanDrop). Never on the web, whatever
+     its tier: the web owns no unlock. It shows in the Locker and the Trophy Cabinet, its own kind, and is never a medal, a league or a
+     cup won.
    ========================================================= */
 const LOCKER_TIERS = [1, 3, 10];                            // Bronze, Silver, Gold
 const LOCKER_MEDALS = ['Bronze', 'Silver', 'Gold'];
@@ -5046,7 +5084,7 @@ const LEGENDS = [
 ];
 
 /* ---------- the record ---------- */
-const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOCKER_BOOTS[0].id, seen:{} });
+const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOCKER_BOOTS[0].id, seen:{} });   // fan and fanSeen join it with the first Super Fan trophy
 let locker = lockerFresh();
 let lockerDirty = false;                                     // a drill's three stars, waiting to be saved once the drill is over
 const lockerFeat = id => LOCKER_FEATS.find(f => f.id === id);
@@ -5069,6 +5107,31 @@ function lockerLegends(cat) {
   return LEGENDS.filter(t => t.cat === c).slice(0, lockerGolds());
 }
 function lockerAdd(id) { locker.n[id] = Math.min(LOCKER_MAX, (locker.n[id] || 0) + 1); }
+
+/* ---------- Super Fan trophies ---------- */
+const lockerFanKeys = () => (typeof FAN_CLUBS !== 'undefined' ? FAN_CLUBS.map(c => c.key) : []);
+const lockerFanHeld = () => (Array.isArray(locker.fan) ? locker.fan : []);   // the clubs' keys, in the order awarded; none until the first
+/* The clubs whose trophy is held, in the order awarded, each with its side for the kit colours. */
+const lockerFanClubs = () => lockerFanHeld().map(k => FAN_CLUBS.find(c => c.key === k)).filter(c => c && storeTeamOf(c)).map(c => ({ club:c, team:storeTeamOf(c) }));
+function lockerFanSet(keys) {                               // the trophies held, saved (once a drill is over: lockerFlush)
+  if (keys.length) { locker.fan = keys; locker.fanSeen = Math.min(locker.fanSeen || 0, keys.length); }
+  else { delete locker.fan; delete locker.fanSeen; }
+  if (practice) lockerDirty = true; else save();
+}
+function lockerFanAward() {                                 // each Super Fan unlock owned, its club's trophy once; true when one was added
+  const held = lockerFanHeld().slice();
+  for (const c of typeof storeFanOwned === 'function' ? storeFanOwned() : []) if (!held.includes(c.key)) held.push(c.key);
+  if (held.length === lockerFanHeld().length) return false;
+  lockerFanSet(held);
+  return true;
+}
+function lockerFanDrop() {                                  // a refunded unlock takes its trophy back; in the app only (the web owns nothing, and takes nothing)
+  if (typeof storeNative !== 'function' || !storeNative()) return false;
+  const own = storeFanOwned().map(c => c.key), keep = lockerFanHeld().filter(k => own.includes(k));
+  if (keep.length === lockerFanHeld().length) return false;
+  lockerFanSet(keep);
+  return true;
+}
 
 /* ---------- counting ---------- */
 const lockerSide = () => (M && M.side ? M.side.findIndex(s => s.human) : -1);   // your side: the human one, Player 1's in Two Player
@@ -5129,7 +5192,7 @@ function lockerFlush() { if (lockerDirty && !practice) { lockerDirty = false; sa
 
 /* ---------- what is new ---------- */
 const lockerSeen = id => Math.min(locker.seen[id] || 0, lockerTier(id));
-const lockerNew = () => LOCKER_FEATS.some(f => lockerTier(f.id) > lockerSeen(f.id));
+const lockerNew = () => LOCKER_FEATS.some(f => lockerTier(f.id) > lockerSeen(f.id)) || lockerFanHeld().length > (locker.fanSeen || 0);   // a medal, or a Super Fan trophy, not yet seen
 /* The tiers as a match you play began, kept on M (M.lkFrom) before its first count: at full time (lockerMatch) or at an event inside
    it, whichever comes first. Every count in a match goes through those two, so this is the Locker as the match found it, and the
    full-time card shows only what the match itself won. */
@@ -5150,9 +5213,10 @@ function lockerNews(from = lockerSeen) {
   for (let i = g0; i < g1; i++) legends.push(LEGENDS.filter(t => t.cat === 'men')[i], LEGENDS.filter(t => t.cat === 'women')[i]);
   return { medals, legends };
 }
-function lockerMarkSeen(ids) {                               // the medals shown: every feat (the Locker), or only those listed (the full-time card)
+function lockerMarkSeen(ids) {                               // the medals shown: every feat and trophy (the Locker), or only the medals listed (the full-time card)
   let changed = false;
   for (const f of LOCKER_FEATS) { if (ids && !ids.includes(f.id)) continue; const t = lockerTier(f.id); if ((locker.seen[f.id] || 0) !== t) { locker.seen[f.id] = t; changed = true; } }
+  if (!ids && lockerFanHeld().length && locker.fanSeen !== lockerFanHeld().length) { locker.fanSeen = lockerFanHeld().length; changed = true; }
   if (changed) save();
 }
 
@@ -5170,8 +5234,11 @@ function lockerSaved() {
   for (const f of LOCKER_FEATS) if (f.id !== 'star' && locker.n[f.id] > 0) n[f.id] = locker.n[f.id];
   const seen = {};
   for (const f of LOCKER_FEATS) if (locker.seen[f.id] > 0) seen[f.id] = locker.seen[f.id];
-  const empty = !Object.keys(n).length && !locker.drills.length && locker.ball === LOCKER_BALLS[0].id && locker.boots === LOCKER_BOOTS[0].id && !Object.keys(seen).length;
-  return empty ? undefined : { n, drills:locker.drills.slice(), ball:locker.ball, boots:locker.boots, seen };
+  const empty = !Object.keys(n).length && !locker.drills.length && locker.ball === LOCKER_BALLS[0].id && locker.boots === LOCKER_BOOTS[0].id && !Object.keys(seen).length && !lockerFanHeld().length;
+  if (empty) return undefined;
+  const out = { n, drills:locker.drills.slice(), ball:locker.ball, boots:locker.boots, seen };
+  if (lockerFanHeld().length) { out.fan = lockerFanHeld().slice(); out.fanSeen = locker.fanSeen || 0; }   // only with a Super Fan trophy, so every other save is as it was
+  return out;
 }
 /* A saved Locker, read back: anything unknown or broken is dropped, counts are whole and bounded, and a ball or boots not unlocked
    by those counts goes back to the default. Never throws; anything unreadable is a Locker with nothing in it. */
@@ -5193,6 +5260,9 @@ function cleanLocker(v) {
       if (Number.isInteger(s) && s > 0 && lockerTier(f.id) > 0) out.seen[f.id] = Math.min(s, lockerTier(f.id));
     }
   } finally { locker = keep; }
+  const fan = [];                                           // a club's trophy once, a club the game still has
+  if (Array.isArray(v.fan)) for (const k of v.fan.slice(0, 32)) if (typeof k === 'string' && lockerFanKeys().includes(k) && !fan.includes(k)) fan.push(k);
+  if (fan.length) { out.fan = fan; out.fanSeen = Number.isInteger(v.fanSeen) && v.fanSeen > 0 ? Math.min(v.fanSeen, fan.length) : 0; }
   return out;
 }
 
@@ -7631,7 +7701,7 @@ function champHome() {
     box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
     for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
   }
-  $('b-cabinet').hidden = !champHistory.length;
+  $('b-cabinet').hidden = !champHistory.length && !(typeof lockerFanClubs === 'function' && lockerFanClubs().length);   // a finished season or cup, or a Super Fan trophy (src/ui-locker.js)
 }
 function champPick(k) {
   ac();
@@ -8005,7 +8075,8 @@ function renderCabinet(id) {
   const metal = k => (typeof trophyMetal === 'function' ? trophyMetal(k) : 'silver');   // a build without the cups: every entry is a League
   const won = on => (on ? ' data-won' : '');
   const kindTag = (k, on) => `<span class="cup-kind" data-kind="${k}" data-metal="${metal(k)}"${won(on)}>${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
-  $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
+  $(id).innerHTML = (typeof lockerFanCabinet === 'function' ? lockerFanCabinet() : '')   // Super Fan trophies first, their own kind, never in the tally (src/ui-locker.js)
+    + `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
     + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}" data-metal="${metal(k)}"${won(n > 0)}>${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
       if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind, cupWinner(c.cup) === c.cup.user));
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
@@ -9534,9 +9605,14 @@ window.addEventListener('keydown', e => {                  // while the check is
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
      first. The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
+   - A Super Fan's home takes the club's kit colours (storeThemeHome) and shows its shield, or its crest where the club has given one
+     with its written permission. Without a Super Fan unlock the home is exactly as it was.
+   - The Supporters' Wall (storeWallAsk): for a club whose Super Fan unlock this device owns, from the Locker's Super Fan tile and the
+     Grown-Ups panel. The grown-up check, then Are you 18 or over? and How Your Name Appears; Continue opens the grown-up's own mail app
+     with the request written out (storeWallMail, src/store.js). The game sends nothing and keeps no name.
    ========================================================= */
 const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Add Your Team', legends:'Legends' };
-const STORE_LINE = { full:'Championship · Career · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };
+const STORE_LINE = { full:'Career · Championship · International · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };   // the Full Game's in the store's own order (Career, Championship and International modes)
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
   failed:'The purchase did not go through.',
@@ -9582,9 +9658,47 @@ function storeRender() {
     if (settings.diff === 2) settings.diff = 1;
     if (settings.twoDiff.includes(2)) settings.twoDiff = settings.twoDiff.map(v => Math.min(v, 1));
   }
+  if (typeof lockerFanAward === 'function') lockerFanAward();   // an unlock owned before the trophies came earns its club's too (src/locker.js); in the app only
   const c = storeFanClub(), t = storeTeamOf(c), b = $('st-fan');   // a Super Fan's line under the logo, in place of Mobile Rugby · Sevens, so the home keeps its height
-  if (c && t) { b.innerHTML = jersey(t) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
+  if (c && t) { b.innerHTML = storeShield(t, c) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
   else if (!b.hidden) { b.hidden = true; $('home-tag').hidden = false; }
+  storeThemeHome(c && t ? t : null);
+}
+
+/* ---------- the Super Fan's home: the club's colours ----------
+   The chosen headline, the panel's primary button (Play) and My Team's edge take the club's kit colours (styles.css, #s-home.fan),
+   readable on the dark home. The accent, a line or a word on the dark, is whichever of the kit and the trim stands out more from the
+   panel, lifted toward chalk until it reads at 4.5:1. A word on the kit's fill is chalk wherever chalk reads on it (4.5:1), and the
+   night's ink only on a fill too light for it. The fill's edge is the trim where the trim shows on the dark, the accent where not. */
+const STORE_TONE = { chalk:'#f1eee4', night:'#0b130e', panel:'#17271d' };   // styles.css's --chalk, --night and --panel-hi
+const storeLum = h => { const v = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)/255).map(c => (c <= 0.03928 ? c/12.92 : ((c + 0.055)/1.055) ** 2.4)); return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
+const storeContrast = (a, b) => { const x = storeLum(a), y = storeLum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
+const storeMix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16)*(1 - t) + parseInt(b.slice(i, i + 2), 16)*t).toString(16).padStart(2, '0')).join('');
+function storeTheme(t) {
+  const kit = (HEX.test(t.kit) ? t.kit : '#888888').toLowerCase(), trim = (HEX.test(t.trim) ? t.trim : '#f2efe6').toLowerCase();
+  const base = storeContrast(kit, STORE_TONE.panel) >= storeContrast(trim, STORE_TONE.panel) ? kit : trim;
+  let acc = base;
+  for (let i = 1; i <= 10 && storeContrast(acc, STORE_TONE.panel) < 4.5; i++) acc = storeMix(base, STORE_TONE.chalk, i/10);
+  const chalk = storeContrast(kit, STORE_TONE.chalk), ink = chalk >= 4.5 || chalk >= storeContrast(kit, STORE_TONE.night) ? STORE_TONE.chalk : STORE_TONE.night;
+  return { kit, trim, acc, ink, edge:storeContrast(trim, STORE_TONE.night) >= 3 ? trim : acc };
+}
+let storeThemeOn = '';                     // the colours the home has now ('' for none), so it is touched only when they change
+function storeThemeHome(t) {
+  const s = $('s-home'), th = t ? storeTheme(t) : null, key = th ? Object.values(th).join() : '';
+  if (key === storeThemeOn) return;
+  storeThemeOn = key;
+  s.classList.toggle('fan', !!th);
+  for (const k of ['kit', 'trim', 'acc', 'ink', 'edge']) {
+    if (th) s.style.setProperty('--fan-' + k, th[k]);
+    else if (typeof s.style.removeProperty === 'function') s.style.removeProperty('--fan-' + k);
+  }
+}
+/* The Super Fan's shield: plain, in the kit colours, or the club's crest where FAN_CLUBS has one (a file of the game's own). */
+function storeShield(t, c) {
+  const crest = storeCrest(c);
+  if (crest) return `<img class="fan-shield fan-crest" src="${esc(crest)}" alt="" draggable="false">`;
+  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
+  return `<svg class="fan-shield" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 1.6l9.8 3.5v7.5c0 6.7-4.1 11.3-9.8 13.6C6.3 23.9 2.2 19.3 2.2 12.6V5.1z" fill="${k}" stroke="${tr}" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
 }
 function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Add Your Team, a Legends side
   storeMark($('t-create'), 'create');
@@ -9647,10 +9761,11 @@ function storeCardRender() {
   const have = [];
   if (app && grown) {                      // the panel says what this device has
     const c = storeFanClub();
-    if (c) have.push(`<p class="st-own">${jersey(storeTeamOf(c))}<span>Super Fan · ${esc(c.name)}</span></p>`);
+    if (c) have.push(`<p class="st-own st-fanown">${jersey(storeTeamOf(c))}<span class="st-ownname">Super Fan · ${esc(c.name)}</span><button class="btn st-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button></p>`);   // beside the club's name, as on the Locker's tile: a row of its own pushed the panel off a phone with the Kids buttons and a message up
     else if (storeBought.includes(STORE_FULL)) have.push('<p class="st-own"><span>Full Game Unlocked</span></p>');
   }
   $('st-have').innerHTML = have.join(''); $('st-have').hidden = !have.length;
+  for (const b of $('st-have').querySelectorAll('[data-wall]')) { b.disabled = u.busy; b.addEventListener('click', () => storeWallAsk(b.dataset.wall)); }
   const link = storeAppLink();
   $('st-offers').innerHTML = app ? storeOffers(grown ? null : u.feature).map(o => storeOfferHtml(o, u.busy)).join('')
     : link ? `<button class="btn primary" id="st-app">Get the App${u.feature === 'import' ? '' : `<small class="hsub">${STORE_LINE.full}</small>`}</button>` : '';   // Add Your Team is the Super Fan's, not the Full Game's
@@ -9722,6 +9837,61 @@ function storeOpenUrl(url) {
   try { if (storeNative()) window.open(url, '_blank'); else window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) { /* blocked */ }
 }
 
+/* ---------- the Supporters' Wall ----------
+   Join the Supporters' Wall, from the Locker's Super Fan tile or the Grown-Ups panel, for a club this device owns the unlock of. The
+   grown-up check first (the Grown-Ups card hides under it, as for a purchase), then the card: Are you 18 or over? with Yes, I'm 18 or
+   Over | Cancel, then How Your Name Appears with Continue | Cancel. Continue hands the email (storeWallMail) to the grown-up's own mail
+   app by the way every link leaves the game (storeOpenUrl), and closes the card. However the card closes, the field is emptied: the
+   name is in the email the grown-up sends, and nowhere in the game. */
+let storeWallUi = null;                    // while the card is up: { club, step, back, store } (store: the Grown-Ups card it hid)
+function storeWallAsk(key) {
+  const c = storeFanOwned().find(x => x.key === key);
+  if (!c || kidsGate || storeWallUi || storeUi.busy && !$('m-store').hidden) return false;
+  const back = typeof document !== 'undefined' ? document.activeElement : null, store = !$('m-store').hidden;
+  if (store) $('m-store').hidden = true;
+  parentGate(() => storeWallOpen(c, back, store), () => storeWallBack(back, store));
+  return true;
+}
+function storeWallOpen(c, back, store) {
+  storeWallUi = { club:c, step:'age', back:back || null, store };
+  $('wl-title').textContent = c.name;
+  $('wl-input').value = '';
+  $('m-wall').hidden = false;              // shown first, so the focus can land in it
+  storeWallStep('age');
+}
+function storeWallStep(step) {
+  const u = storeWallUi; if (!u) return;
+  u.step = step;
+  $('wl-age').hidden = step !== 'age'; $('wl-name').hidden = step !== 'name';
+  storeWallCheck();
+  setFocus(null);
+  if (lastDev === 'pad') return;            // a controller starts on DEFAULT_FOCUS with its first press
+  const el = step === 'age' ? $('wl-yes') : typeof importTouch === 'function' && importTouch() ? null : $('wl-input');   // on a touch screen no keyboard springs up over the card until the field is tapped
+  if (el && el.focus) el.focus();
+}
+function storeWallCheck() { $('wl-go').disabled = !storeWallMail(storeWallUi && storeWallUi.club, $('wl-input').value); }   // Continue once a name is there
+DEFAULT_FOCUS['m-wall'] = () => (storeWallUi && storeWallUi.step === 'name' ? ($('wl-go').disabled ? $('wl-cancel') : $('wl-go')) : $('wl-yes'));
+function storeWallGo() {
+  const u = storeWallUi; if (!u || u.step !== 'name') return;
+  const url = storeWallMail(u.club, $('wl-input').value);
+  if (!url) { storeWallCheck(); return; }
+  storeWallClose();
+  storeOpenUrl(url);
+}
+function storeWallClose() {
+  const u = storeWallUi; if (!u) return;
+  storeWallUi = null;
+  $('wl-input').value = '';
+  $('m-wall').hidden = true;
+  storeWallBack(u.back, u.store);
+}
+function storeWallBack(back, store) {      // the card or the check closed: back to the Grown-Ups card it came from, or the Locker
+  setFocus(null);
+  if (store) { $('m-store').hidden = false; storeCardRender(); }
+  if (back && back.focus && back.isConnected !== false && !(back.closest && back.closest('[hidden]'))) back.focus();
+  else if (store) storeCardFocus();
+}
+
 $('m-store').hidden = true;                // closed until asked for (the test harness's stand-in elements start open)
 $('b-grown').addEventListener('click', () => storeOpen({ mode:'grown' }));
 $('st-back').addEventListener('click', storeClose);
@@ -9737,6 +9907,17 @@ $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support))
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
   if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-store').hidden) return;
   storeClose(); if (e.preventDefault) e.preventDefault();
+});
+$('m-wall').hidden = true;                 // closed until asked for (the test harness's stand-in elements start open)
+$('wl-yes').addEventListener('click', () => storeWallStep('name'));
+$('wl-no').addEventListener('click', storeWallClose);
+$('wl-cancel').addEventListener('click', storeWallClose);
+$('wl-go').addEventListener('click', storeWallGo);
+$('wl-input').addEventListener('input', storeWallCheck);
+$('wl-input').addEventListener('keydown', e => { if (e.key === 'Enter') { if (e.preventDefault) e.preventDefault(); storeWallGo(); } });
+window.addEventListener('keydown', e => {  // Escape closes the Supporters' Wall card too, the field emptied
+  if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-wall').hidden) return;
+  storeWallClose(); if (e.preventDefault) e.preventDefault();
 });
 /* =========================================================
    The drills: Skills Mini Games, and the career's Train.
@@ -10742,6 +10923,29 @@ function lockerSwatch(kind, it) {
 const lockerItemName = it => it.name + (it.kind === 'ball' ? ' Ball' : ' Boots');
 const LOCKER_LOCK = '<svg class="lk-lock" viewBox="0 0 14 18" aria-hidden="true"><path d="M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x=".5" y="7.6" width="13" height="10" rx="2" fill="currentColor"/></svg>';
 
+/* ---------- Super Fan trophies ----------
+   A gold cup with ribbons, a shield and a band in the club's kit colours: in the Locker's Super Fan tile (Medals, before the feats)
+   and in the Trophy Cabinet, its own kind (lockerFanCabinet). The club's name beside it and nothing more. */
+function lockerCup(t) {
+  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', g = '#ffcf3d', ink = '#5e4100';
+  return `<svg class="lk-cup" viewBox="0 0 48 48" aria-hidden="true"><g stroke="${tr}" stroke-width="1.4" stroke-linejoin="round"><path d="M11.5 14 7 36l4.6-3 3.4 4V16z" fill="${k}"/><path d="M36.5 14 41 36l-4.6-3-3.4 4V16z" fill="${k}"/></g>`
+    + `<path d="M13 9H8.5a5.5 5.5 0 0 0 6 8.5M35 9h4.5a5.5 5.5 0 0 1-6 8.5" fill="none" stroke="${g}" stroke-width="3" stroke-linecap="round"/>`
+    + `<path d="M12.5 5h23v12c0 6.8-5.2 11.8-11.5 11.8S12.5 23.8 12.5 17z" fill="${g}" stroke="${ink}" stroke-width="1.6"/><path d="M16.5 9v7" stroke="#fff4c8" stroke-width="2" stroke-linecap="round" opacity=".85"/>`
+    + `<path d="M24 9.4l5 1.8v3.9c0 3.3-2.1 5.6-5 6.8-2.9-1.2-5-3.5-5-6.8v-3.9z" fill="${k}" stroke="${tr}" stroke-width="1.4" stroke-linejoin="round"/>`
+    + `<path d="M21 28.5h6v6h-6z" fill="#e2ab27" stroke="${ink}" stroke-width="1.4"/><path d="M13.5 34.5h21v9h-21z" fill="${g}" stroke="${ink}" stroke-width="1.6"/><path d="M13.5 37.6h21v2.8h-21z" fill="${k}" stroke="${tr}" stroke-width="1"/></svg>`;
+}
+/* The Medals tab's Super Fan row: a tile a club, with Join the Supporters' Wall for a club whose unlock this device owns (src/ui-store.js).
+   Two clubs or more (.many): the tiles share the row, compact on a narrow phone; a third wraps under them. */
+function lockerFanHtml(news) {
+  const held = lockerFanClubs(); if (!held.length) return '';
+  const own = typeof storeFanOwned === 'function' ? storeFanOwned() : [];
+  return `<div class="lk-fanrow${held.length > 1 ? ' many' : ''}">${held.map(({ club:c, team:t }) => `<div class="lk-fan${news && news.has('fan:' + c.key) ? ' new' : ''}" role="group" aria-label="Super Fan Trophy, ${esc(c.name)}">${lockerCup(t)}<span class="lk-fanname"><b>Super Fan</b><span>${esc(c.name)}</span></span>${own.includes(c) ? `<button class="btn lk-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button>` : ''}</div>`).join('')}</div>`;
+}
+/* The Trophy Cabinet's Super Fan trophies (renderCabinet, src/ui-menus.js): first, each its own entry, never in the tally. */
+function lockerFanCabinet() {
+  return lockerFanClubs().map(({ club:c, team:t }) => `<article class="season-entry fan-entry"><p class="eyebrow"><span class="cup-kind" data-kind="fan" data-metal="${typeof trophyMetal === 'function' ? trophyMetal('fan') : 'gold'}" data-won>Super Fan</span></p><h3>${lockerCup(t)}<span>${esc(c.name)}</span></h3></article>`).join('');
+}
+
 /* ---------- the home button ---------- */
 function lockerHome() {                                      // from renderHome: a dot on Locker while a medal waits there unseen
   const b = $('b-locker'); if (!b || !b.classList) return;
@@ -10752,7 +10956,7 @@ function lockerHome() {                                      // from renderHome:
 /* ---------- the Locker ---------- */
 function lockerOpen(tab) {
   lockerTab = tab == null ? 0 : tab;
-  const news = new Set(LOCKER_FEATS.filter(f => lockerTier(f.id) > lockerSeen(f.id)).map(f => f.id));   // shown once with a ring, then seen
+  const news = new Set([...LOCKER_FEATS.filter(f => lockerTier(f.id) > lockerSeen(f.id)).map(f => f.id), ...lockerFanHeld().slice(locker.fanSeen || 0).map(k => 'fan:' + k)]);   // shown once with a ring, then seen
   renderLocker(news);
   showScreen('s-locker'); $('s-locker').scrollTop = 0;
   lockerMarkSeen(); lockerHome();
@@ -10763,13 +10967,15 @@ function renderLocker(news) {
   [...$('lk-tabs').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === lockerTab)));
   const body = $('lk-body');
   body.className = 'lk-body lk-t' + lockerTab;
-  if (lockerTab === 0) body.innerHTML = LOCKER_FEATS.map(f => {
-    const t = lockerTier(f.id), next = lockerNext(f.id), n = lockerCount(f.id);
-    return `<div class="lk-feat${news && news.has(f.id) ? ' new' : ''}" role="group" aria-label="${f.name}, ${t ? LOCKER_MEDALS[t - 1] : 'no medal yet'}, ${n}${next ? ' of ' + next : ''}">
+  if (lockerTab === 0) {
+    body.innerHTML = lockerFanHtml(news) + LOCKER_FEATS.map(f => {
+      const t = lockerTier(f.id), next = lockerNext(f.id), n = lockerCount(f.id);
+      return `<div class="lk-feat${news && news.has(f.id) ? ' new' : ''}" role="group" aria-label="${f.name}, ${t ? LOCKER_MEDALS[t - 1] : 'no medal yet'}, ${n}${next ? ' of ' + next : ''}">
       <span class="lk-ic">${lockerIcon(f.id)}</span><b class="lk-name">${f.name}</b><span class="lk-line">${f.line}</span>
       <span class="lk-pips">${[1, 2, 3].map(k => lockerPip(k, t >= k)).join('')}<span class="lk-n">${next ? n + '/' + next : n}</span></span></div>`;
-  }).join('');
-  else if (lockerTab < 3) {
+    }).join('');
+    for (const b of body.querySelectorAll('[data-wall]')) b.addEventListener('click', () => storeWallAsk(b.dataset.wall));   // the grown-up check first (src/ui-store.js)
+  } else if (lockerTab < 3) {
     const kind = lockerTab === 1 ? 'ball' : 'boots', list = kind === 'ball' ? LOCKER_BALLS : LOCKER_BOOTS;
     body.innerHTML = list.map(it => {
       const has = lockerHas(kind, it.id), on = locker[kind] === it.id, src = lockerSource(kind, it.id);
@@ -11679,8 +11885,8 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
-  store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
-  locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak },
+  store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, fanOwned:storeFanOwned, crest:storeCrest, shield:storeShield, theme:storeTheme, contrast:storeContrast, wallName:storeWallName, wallMail:storeWallMail, wallAsk:storeWallAsk, wallStep:storeWallStep, wallGo:storeWallGo, wallClose:storeWallClose, wall:() => storeWallUi, MAIL:STORE_MAIL, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
+  locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak, fanAward:lockerFanAward, fanDrop:lockerFanDrop, fanHeld:lockerFanHeld, fanClubs:lockerFanClubs, fanHtml:lockerFanHtml, fanCabinet:lockerFanCabinet, cup:lockerCup },
   home:{ HL:HOME_HL, select:homeSelect, show:homeShow, first:homeFirst, render:renderHome, champ:champHome, champPick, comps:champComps, tier:() => homeTier, setTier:v => { homeTier = v; }, myClub:myClubTeam, myNat:myNatTeam, myFind:myClubFind, myPool, myIs, myPick, teamDefault, ownPick:teamOwnPick, importHome, importOffer, importShown, importCommit, ring:setFocus },
   get M() { return M; } };
 

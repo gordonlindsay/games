@@ -4,14 +4,14 @@ What to enter in App Store Connect for Tryline Rugby Sevens, and why each answer
 
 The owner's decisions this follows (2026-11-08): the Sports category, **not** Apple's Kids category; an age rating of 4+; a free download with one-off unlocks, no subscriptions and no ads; the kids-safe behaviour kept anyway (no ads, no tracking, no third-party analytics, the grown-up check in front of purchases and anything that leaves the app).
 
-And his further answers the same day: the store name **Tryline Rugby Sevens** with the subtitle **Play and support your club**; **SignCheck Ltd** as the seller, through its existing Apple Developer account; the bundle id **`ai.signcheck.tryline`**; the **App Store only at launch** (iPhone first; Google Play is phase 2); Super Fan at **£3.99**, with **50% of what Apple pays us** for each unlock going to the club; support at **support@signcheck.ai**.
+And his further answers the same day: the store name **Tryline Rugby Sevens** with the subtitle **Play as and support your club** (his wording of 9 November 2026, "play as and support your club"; it was Play and support your club); **SignCheck Ltd** as the seller, through its existing Apple Developer account; the bundle id **`ai.signcheck.tryline`**; the **App Store only at launch** (iPhone first; Google Play is phase 2); Super Fan at **£3.99**, with **50% of what Apple pays us** for each unlock going to the club; support at **support@signcheck.ai**.
 
 ## App Information
 
 | Field | Answer | Why |
 |---|---|---|
 | Name | Tryline Rugby Sevens | The owner's choice (20 of 30). LISTING.md has a fallback if the name is taken. |
-| Subtitle | Play and support your club | The owner's choice (26 of 30). |
+| Subtitle | Play as and support your club | The owner's wording (29 of 30), 9 November 2026. |
 | Primary language | English (U.K.) | The copy is UK English. |
 | Bundle ID | `ai.signcheck.tryline` | The owner's choice: SignCheck Ltd's domain, signcheck.ai, reversed. It cannot be changed after the first upload, and the build must carry exactly this id: the native project's `appId` in `app/capacitor.config.json` and the bundle identifier in Xcode. The native scaffold was first made with the placeholder `com.gordonlindsay.tryline`; check it says `ai.signcheck.tryline` before the first upload. |
 | SKU | TRYLINE1 | Internal only, never shown. Any unique text works. |
@@ -50,9 +50,9 @@ Apple works the rating out from the answers. Every answer below is "None" or "No
 | Question | Answer | Reason |
 |---|---|---|
 | Unrestricted Web Access | No | There is no browser or web view anyone can navigate. Import fetches the one club or tournament page pasted in (and at most two pages it links to on the same site), reads team names and a table out of it, and shows none of the page. The privacy and support pages open in the system browser, outside the app, behind the grown-up check. Answering Yes would make the app 16+. |
-| User-Generated Content | No | Team names and a player's first name are typed by the player but stay on the device; nothing is shared with, or shown to, anyone else. Apple's definition is "broad distribution of content created by users". |
+| User-Generated Content | No | Team names and a player's first name are typed by the player but stay on the device; nothing is shared with, or shown to, anyone else. Apple's definition is "broad distribution of content created by users". The Supporters' Wall (Super Fan only) is not distribution by the app: a grown-up of 18 or over emails us a name from their own email app, and we check it by hand before it goes on our own web page. Nothing anyone types is shown in the app to anyone else. |
 | Social Media | No | No feed, likes, comments or sharing. |
-| Messaging and Chat | No | No way to contact anyone. |
+| Messaging and Chat | No | No way to contact anyone. The Supporters' Wall opens the grown-up's own email app with a message to us written out; the app itself sends nothing and has no messaging. |
 | Advertising | No | No ads of any kind. |
 
 **Mature Themes, Medical or Wellness, Sexuality or Nudity**
@@ -99,6 +99,7 @@ Apple's rule: data is "collected" when it is sent off the device so that the dev
 - **Super Fan.** Each partner club is its own product (`tryline.fan.<club>`), so Apple's own sales report shows each club's sales. The game sends nothing to count them.
 - **Import.** A player pastes a club or tournament link; the app fetches that public page from the device and reads team names out of it. The club's site sees an ordinary web request (the device's IP address and a plain `TryLineRugby` user agent), as it would from any browser. Nothing about the player goes with it, and nothing comes to us. Apple's guidance on IP addresses sent with a request and not kept points the same way; and the site is the one the user chose to read, not a partner of ours.
 - **Fonts.** The app has its two typefaces built in (the native work bundles them), so it makes no request to Google Fonts. Check this is still so in the build being submitted: a Google Fonts request from the app would send the device's IP address to a third party on every launch.
+- **The Supporters' Wall (Super Fan only).** A grown-up who has Super Fan can ask for a name to go on the club's wall on superfan.html. Behind the grown-up check, they confirm they are 18 or over and type the name as they want it shown; Continue opens their own email app with a message to support@signcheck.ai written out (the name, the club, and their agreement to be listed). The app sends nothing, keeps no name, and the field is emptied when the card closes. The email is sent by the person, from their own email account, outside the app, as any email to support would be; nothing passes from the app to us. Apple's own guidance also makes optional to disclose data collected only in infrequent cases outside the app's main use, that the user chooses to provide in the app's interface with their name shown in the form alongside it, affirmatively, each time: the wall would meet that too. So the label stays **Data Not Collected**. Check the wording of Apple's App Privacy Details page on the day; if it reads otherwise, the answer to change is Contact Info, Name, not linked to tracking, App Functionality. privacy.html sets out what SignCheck Ltd keeps (the name and the club, to publish them) and how to be taken off.
 - **No SDKs.** No analytics, crash reporting, ads or attribution SDK. Capacitor's own plugins (Preferences, Haptics, the HTTP used by Import) and the in-app purchase plugin collect nothing. Any SDK added later means answering this again.
 
 ## Export Compliance
@@ -126,8 +127,8 @@ All are **Non-Consumable**. Create them under Monetisation, In-App Purchases, be
 
 | Product ID | Reference name | Price | Notes |
 |---|---|---|---|
-| `tryline.full` | Full Game | £1.99 | Championship, Career, Create Team, Hard and the Legends sides. |
-| `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Add Your Team and the club badge. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set and `agreed:true` is on its FAN_CLUBS entry, in the build submitted. |
+| `tryline.full` | Full Game | £1.99 | Career, Championship and International modes, Create Team, Hard and the Legends sides. |
+| `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Add Your Team, the club's colours on the home with the Super Fan badge, and a Super Fan trophy. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set and `agreed:true` is on its FAN_CLUBS entry, in the build submitted. |
 | `tryline.fan.<club>` | Super Fan (club name) | £3.99 | One per partner club, same shape. There is no generic `tryline.fan`. |
 
 The ids are the store builder's (src/store.js, `FAN_CLUBS`, and `trylinerugby/store/README.md`); they must match exactly.
@@ -141,8 +142,10 @@ Full Game
 
 <!-- copy:apple.iap.full.description -->
 ```text
-Championship, Career, Create Team, Legends
+Career, Championship and International modes
 ```
+
+The owner's wording (44 of 45), 9 November 2026: "play as and support your club" and "career, championship, international modes". Create Team, Hard and the Legends sides are in the Full Game too; they are named on the Unlock card in the game, where there is room (Career · Championship · International · Create Team · Hard · Legends).
 
 <!-- copy:apple.iap.fan.name -->
 ```text
@@ -170,7 +173,7 @@ Without Super Fan (attach `tryline.full` only):
 ```text
 Tryline Rugby Sevens is a rugby sevens game. The whole game runs from files inside the app and plays offline; it downloads no code.
 
-Unlock: Full Game (tryline.full) is a non-consumable in-app purchase. Championship, Career, Create Team, Hard and the Legends sides (won with medals, played with the Full Game) show a lock, and open an Unlock card. Restore Purchases is in the Grown-Ups panel: Settings, at the bottom of the home screen, then Grown-Ups.
+Unlock: Full Game (tryline.full) is a non-consumable in-app purchase. Career, Championship and International modes, Create Team, Hard and the Legends sides (won with medals, played with the Full Game) show a lock, and open an Unlock card. Restore Purchases is in the Grown-Ups panel: Settings, at the bottom of the home screen, then Grown-Ups.
 
 Grown-up check: purchases, Restore Purchases and the privacy and support links first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
 
@@ -188,6 +191,8 @@ Unlocks: Full Game (tryline.full) and Super Fan for a partner club (tryline.fan.
 Grown-up check: purchases, Restore Purchases, the privacy and support links and Add Your Team first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
 
 Add Your Team (part of Super Fan: at the top of the home screen, and on the team screen beside Create Team) reads a club or tournament page you paste in. A public link to try: [OWNER: the partner club's own page, used with the club's consent]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
+
+Supporters' Wall (Super Fan only: the Super Fan tile in the Locker, and the Grown-Ups panel): after the grown-up check, a grown-up who confirms they are 18 or over can type a first name and a town or initial, and Continue opens their own email app with a request to us written out. The app sends nothing and keeps no name. We check each request by hand before the name goes on our Super Fan web page, and take a name off whenever asked.
 
 Super Fan is an ordinary purchase of an unlock. Before purchase the game states the share of what we receive for each Super Fan unlock that goes to the partner club (50% of Apple's proceeds); SignCheck Ltd pays that share to the club under a written agreement.
 

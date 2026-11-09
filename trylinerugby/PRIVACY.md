@@ -1,8 +1,8 @@
 # Privacy: Tryline Rugby Sevens
 
-Tryline Rugby Sevens is made to be safe for children. It collects nothing about you or your child. Nobody, including us, receives your name, your email, where you are or how you play.
+Tryline Rugby Sevens is made to be safe for children. It collects nothing about you or your child. Nobody, including us, receives your name, your email, where you are or how you play from the game. The one thing that can reach us is an email a grown-up chooses to send (see Supporters' Wall).
 
-Last updated 8 November 2026. This covers the app from the App Store, the Android app once it is on Google Play, and the game on the web.
+Last updated 9 November 2026. This covers the app from the App Store, the Android app once it is on Google Play, and the game on the web.
 
 ## What the game keeps
 
@@ -26,6 +26,12 @@ Every purchase, and Restore Purchases, starts with the grown-up check. If your c
 
 Super Fan supports a partner club: before you buy, the game states the share of what we receive for each Super Fan unlock that goes to the club. We count each club's unlocks from the sales reports Apple and Google send us. Those reports say how many of each unlock sold and what we were paid for them, not who bought them. Neither we nor the club learn who you are.
 
+## Supporters' Wall
+
+A grown-up with Super Fan, aged 18 or over, can ask to have a name shown on their club's Supporters' Wall, on our Super Fan page. In the app, Join the Supporters' Wall comes after the grown-up check and a question that you are 18 or over. You type the name as you want it shown (a first name and a town, or a first name and an initial), and Continue opens your own email app with the request written out to support@signcheck.ai. The game sends nothing itself, and it keeps nothing you typed: the field is emptied when the card closes.
+
+Requests to join the wall arrive by email. SignCheck Ltd checks each one by hand and keeps only the name and the club, to publish them on the Super Fan page; once the name is up, or we decide not to list it, we delete the email. We never list a child, or anything but a first name with a town or an initial. To have a name taken off, email support@signcheck.ai at any time and we will remove it from the page. The page is published from a public code repository on GitHub, so its earlier versions, with any name that was on them, can still be read in that repository's history after a name comes off the page.
+
 ## Going online
 
 Once loaded, the game plays offline. When it is online it fetches only its own files, from the site it came from, to load and to update itself. The app has its files built in, and updates come through the App Store or Google Play.
@@ -38,11 +44,11 @@ Add Your Team, the import of a club and its league, is part of Super Fan, in the
 
 ## The grown-up check
 
-Anything that leaves the game or costs money first asks a grown-up to answer a multiplication written out in words: a purchase, Restore Purchases, Get the App, the privacy and support pages, installing the web version and Add Your Team. After two wrong answers in a row it waits before it takes another, so tapping at random does not get past it. In the app the wait is kept on the device, under `tryline.gate`, so closing the app does not skip it.
+Anything that leaves the game or costs money first asks a grown-up to answer a multiplication written out in words: a purchase, Restore Purchases, Get the App, the privacy and support pages, installing the web version, Add Your Team and the Supporters' Wall. After two wrong answers in a row it waits before it takes another, so tapping at random does not get past it. In the app the wait is kept on the device, under `tryline.gate`, so closing the app does not skip it.
 
 ## Your information
 
-The game holds nothing about you anywhere but on your own device (and in your phone's own backup), so there is nothing for us to show you, correct or delete. To remove everything it keeps, delete the app or clear the site's data in your browser.
+The game holds nothing about you anywhere but on your own device (and in your phone's own backup), so there is nothing for us to show you, correct or delete. To remove everything it keeps, delete the app or clear the site's data in your browser. The one exception is a name on a Supporters' Wall, which you asked us to show: email support@signcheck.ai to see or change it, or to take it off the page (earlier versions of the page stay readable, as Supporters' Wall says).
 
 ## Contact
 

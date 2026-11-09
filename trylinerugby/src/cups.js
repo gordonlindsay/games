@@ -20,7 +20,7 @@ const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] }
    Championship's or a career's, or an international championship) and the Triple Crown. The one map: the Trophy Cabinet's trophies,
    tags and tallies, the career's trophy row and every cup's trophy read it (data-metal, whose tones are styles.css's --gold and
    --silver), and each still names its kind in words. */
-const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver' };
+const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold' };   // fan: the Super Fan trophy (src/ui-locker.js)
 function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
 /* Each trophy's shape, so the kinds tell apart at a glance in the same metal (the owner, 2026-11-09, shown three gold cups alike on the
    career's row: "different shapes"). A filled silhouette in a 24 by 24 box, read at 10px on the career's row and the Trophy Cabinet's

@@ -4,7 +4,7 @@
 
 ## What Super Fan Is
 
-A one-off unlock in the app, one product per partner club (`tryline.fan.<club>`, for example `tryline.fan.farnham`). It includes everything in Full Game (Championship, Career, Create Team, Hard, the Legends sides) and Add Your Team (the import of a club and its league), and marks the player as a Super Fan of that club: the club's kit and name on the Super Fan badge, and the club offered first in Career and Championship. SignCheck Ltd, the seller, shares part of each sale with the club.
+A one-off unlock in the app, one product per partner club (`tryline.fan.<club>`, for example `tryline.fan.farnham`). It includes everything in Full Game (Career, Championship and International modes, Create Team, Hard, the Legends sides) and Add Your Team (the import of a club and its league), and marks the player as a Super Fan of that club: the home screen in the club's kit colours, with a plain shield in those colours and the club's name on the Super Fan badge (the club's crest only where the club has given it, below), a gold Super Fan trophy for the club in the Locker and the Trophy Cabinet, and the club offered first in Career and Championship. A grown-up who has it can also ask to be named on the club's Supporters' Wall (below). SignCheck Ltd, the seller, shares part of each sale with the club.
 
 The owner's decisions (8 November 2026): Super Fan costs **£3.99** (Full Game stays £1.99); each club's share is **50% of what Apple pays us** for its unlocks, after Apple's commission and VAT; the first partner is **Farnham RUFC** (`tryline.fan.farnham`), whose 50% is **to be confirmed in writing with the club before launch**.
 
@@ -22,17 +22,26 @@ The partner clubs live in one list in the game, `FAN_CLUBS = [{ key, name, produ
 ## What the Club Gets
 
 - The stated share of every Super Fan unlock for that club, net of refunds, paid on an agreed timetable with a statement each time.
-- Its name and kit colours on the Super Fan badge, and first place in the team lists for its supporters.
-- A listing on superfan.html, once it has confirmed in writing.
+- Its name and kit colours on the Super Fan badge and across its supporters' home screen, a Super Fan trophy in its colours, and first place in the team lists for its supporters.
+- A listing on superfan.html, once it has confirmed in writing, with its Supporters' Wall there (below).
 - Something to tell members about: a link to the store pages (and, once the app is live, the web version's Get the App button). Any promotion is the club's choice.
-- What the club does **not** get: anything about who bought. The stores' reports count sales by product and country; they do not name buyers, and the game collects nothing. Say so in the agreement, so nobody expects a supporters' list.
+- What the club does **not** get: anything about who bought. The stores' reports count sales by product and country; they do not name buyers, and the game collects nothing. Say so in the agreement, so nobody expects a list of buyers. The Supporters' Wall is not one: it is the names grown-ups chose to send us to be shown publicly, and the club sees it on superfan.html as anyone does. No email address or anything else from a request is passed on.
 
 ## What the Club Gives
 
 - Permission, in writing, to use its name and kit colours in the game and on the store and web pages (no crest unless agreed separately).
+- Optionally, its crest, supplied by the club with its **written permission** to show it in the game. Without that, the Super Fan's shield is plain, in the kit colours. With it, the crest file goes in `crests/` and its path in the club's `crest` in `FAN_CLUBS` (it is `crest:null` until then); the build then carries it offline and into the app. Keep the permission with the agreement.
 - Approval of the exact words used about the partnership.
 - Bank details for payments, and a named contact.
 - Optionally, promotion to its members, in words both sides have agreed.
+
+## The Supporters' Wall
+
+A Super Fan's grown-up can ask to be named on the club's wall on superfan.html (the owner's idea, 9 November 2026: "depending on age, approve name, their choice"). It is opt-in, adults only, and the game itself collects nothing:
+
+- In the app (the Super Fan tile in the Locker, or the Grown-Ups panel), Join the Supporters' Wall comes after the grown-up check, then asks Are you 18 or over? and How Your Name Appears (a first name and a town, or a first name and an initial). Continue opens the grown-up's own email app with the request written out to support@signcheck.ai: the name as typed, the club, and that they are 18 or over, agree to be listed and can ask to be removed at any time. The game sends nothing and keeps no name.
+- SignCheck Ltd checks each request by hand (LAUNCH_CHECKLIST.md has the steps) and adds the name under the club on superfan.html. It keeps only the name and the club, to publish them, deletes the email once done, and takes a name off the page whenever asked. superfan.html is in a public repository, so a name taken off stays in its history; privacy.html and superfan.html say so, and LAUNCH_CHECKLIST.md has the owner's decision on where the names live before the first goes up.
+- It is part of what a supporter gets, never a donation or charity, and it is shown only for a club that has agreed in writing.
 
 ## How Each Club's Sales Are Counted
 
@@ -91,9 +100,9 @@ A short agreement with each club, signed before its share is set in the game and
 2. **What**: Super Fan for that club, the product id, what it unlocks, and that it is sold through the App Store and Google Play at prices SignCheck Ltd sets (£3.99 at launch).
 3. **The share**: 50% of what the store pays SignCheck Ltd for that club's unlocks, after the store's commission and VAT (see "How It Is Worded"), net of refunds and chargebacks, counted from the stores' financial reports. For Farnham RUFC this is the line to have confirmed in writing before launch.
 4. **Payment**: how often, any minimum, the statement, the currency, the bank account, and how long after the store pays.
-5. **Permission to use the club's name and kit colours**, where (the game, the store pages, superfan.html), and that the club can ask for changes.
+5. **Permission to use the club's name and kit colours**, where (the game, the store pages, superfan.html), and that the club can ask for changes. If the club wants its crest in the game, it supplies the file with its written permission to show it there; it can withdraw it, and the next update shows the plain shield again.
 6. **The wording** both sides use about the partnership, word for word, and that it is never called a donation or a charity.
-7. **No personal data**: the owner has none to share and will not collect any; the club gets sales counts only.
+7. **No personal data**: the owner has none to share and will not collect any; the club gets sales counts only. The Supporters' Wall's names are published by SignCheck Ltd on superfan.html, with each person's agreement, and nothing more from a request (no email address) goes to the club.
 8. **Changing the share**: only by agreement, with notice, taking effect from a date. The share is shown in the app, so a change needs an app update; until a player updates, an older copy shows the old figure. Sales are paid at the share the buyer was shown. Raising a share is simple; lowering one needs care.
 9. **Ending it**: notice on either side; the offer comes off sale in the next update; anyone who bought keeps their unlock and their badge; a final statement and payment for sales up to the end, and refunds after it netted off.
 10. **Tax**: each side handles its own. Whether the club's receipts are trading income, and whether VAT applies to anything the club does in return (promotion, say), is for the club's own adviser.

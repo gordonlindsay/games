@@ -1,5 +1,8 @@
 // Store: the one-off unlocks (Full Game, Super Fan of a partner club), who has them, the adapter to the app stores, the locks,
-// the Unlock card and the Grown-Ups panel, and that the web with STORE_WEB_TIER 'full' plays exactly as it did before.
+// the Unlock card and the Grown-Ups panel, and that the web with STORE_WEB_TIER 'full' plays exactly as it did before. Then the Super Fan's
+// extras (2026-11-09): the store copy's Full Game on the Unlock card, the gold Super Fan trophy (once a club, restored, never on the web),
+// the home in the club's colours and the crest only as a file of the game's own, and the Supporters' Wall (an owned club only, the
+// grown-up check, 18 or over, the email built exactly, no name kept).
 // node tools/store.mjs   Exits 1 on any failure.
 const { T, fire } = await import('./harness.mjs');
 import fs from 'node:fs';
@@ -50,7 +53,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(S.FULL === 'tryline.full', 'Full Game is tryline.full');
   ok(S.FAN_CLUBS.length >= 1 && FARNHAM.key === 'farnham' && FARNHAM.name === 'Farnham RUFC' && FARNHAM.product === 'tryline.fan.farnham' && FARNHAM.team === 'FAR', 'Farnham RUFC is the first partner club, tryline.fan.farnham, playing as Farnham');
   const fanSrc = src.slice(src.indexOf('const FAN_CLUBS'), src.indexOf('\n];', src.indexOf('const FAN_CLUBS')) + 3);
-  ok(/\{ key:'farnham', name:'Farnham RUFC', product:'tryline\.fan\.farnham', share:50, agreed:false, team:'FAR' \}/.test(fanSrc) && FARNHAM.share === 50 && FARNHAM.agreed === false, 'Farnham\'s share is 50 (of what we receive), not yet agreed in writing: agreed:false');
+  ok(/\{ key:'farnham', name:'Farnham RUFC', product:'tryline\.fan\.farnham', share:50, agreed:false, team:'FAR', crest:null \}/.test(fanSrc) && FARNHAM.share === 50 && FARNHAM.agreed === false && FARNHAM.crest === null, 'Farnham\'s share is 50 (of what we receive), not yet agreed in writing: agreed:false; no crest until the club supplies one with its written permission');
   let parsed = null; try { parsed = Function('"use strict"; return (' + fanSrc.match(/=\s*(\[[\s\S]*\])/)[1] + ');')(); } catch (e) { /* not plain data */ }
   ok(Array.isArray(parsed) && JSON.stringify(parsed) === JSON.stringify(S.FAN_CLUBS), 'FAN_CLUBS is plain data, as tools/listing.mjs reads it');
   for (const c of S.FAN_CLUBS) {
@@ -58,6 +61,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
     ok(c.share === null || (typeof c.share === 'number' && c.share > 0 && c.share <= 100), `${c.name}: a share is null or a percentage`);
     ok(typeof c.agreed === 'boolean' && (!c.agreed || c.share !== null), `${c.name}: agreed is true or false, and true only with a share`);
     ok(!!S.teamOf(c) && X.ALL_TEAMS.includes(S.teamOf(c)), `${c.name}: its side is in the game, for its kit and to be offered first`);
+    ok(c.crest === null || (S.crest(c) === c.crest && fs.existsSync(new URL('../' + c.crest, import.meta.url))), `${c.name}: its crest is null, or a file of the game's own that is there`);
   }
   ok(!S.ids().includes('tryline.fan') && !/'tryline\.fan'/.test(src + ui), 'no generic tryline.fan with no club share');
   ok(new Set(S.ids()).size === S.ids().length, 'every product id is its own');
@@ -182,7 +186,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // Get the App: once the links are in, through the grown-up check, the store for the device
   S.LINKS.ios = 'https://apps.apple.com/app/id1';
   S.open({ mode:'unlock', feature:'champ' });
-  ok(/id="st-app">Get the App<small class="hsub">Championship · Career · Create Team · Hard · Legends<\/small>/.test($('st-offers').innerHTML), 'Get the App, with what the Full Game holds');
+  ok(/id="st-app">Get the App<small class="hsub">Career · Championship · International · Create Team · Hard · Legends<\/small>/.test($('st-offers').innerHTML), 'Get the App, with what the Full Game holds, in the store\'s order (Career, Championship and International modes, Create Team, Hard, the Legends sides)');
   ok(S.appLink() === S.LINKS.ios, 'the App Store from a computer or an iPhone');
   android();
   ok(S.appLink() === null, 'an Android phone gets no App Store link (it stays on the full tier, above)');
@@ -444,7 +448,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   app(); FARNHAM.agreed = true; S.setBought(['tryline.fan.farnham']);
   ok(FEATURES.every(f => S.has(f)) && JSON.stringify(S.fan()) === '{"key":"farnham","name":"Farnham RUFC"}', 'Super Fan: everything in the Full Game, and Import; storeFan names the club');
   D.goHome();
-  ok(!$('st-fan').hidden && $('st-fan').innerHTML.includes('Super Fan · Farnham RUFC') && $('st-fan').innerHTML.includes('--kit:#1a1a1a') && $('home-tag').hidden, 'the home\'s badge: Farnham\'s kit and the club\'s name, in the tagline\'s place');
+  ok(!$('st-fan').hidden && $('st-fan').innerHTML.includes('Super Fan · Farnham RUFC') && /<svg class="fan-shield"[^>]*>[^]*fill="#1a1a1a" stroke="#f2efe6"/.test($('st-fan').innerHTML) && !/<img/.test($('st-fan').innerHTML) && $('home-tag').hidden, 'the home\'s badge: a plain shield in Farnham\'s kit colours and the club\'s name, in the tagline\'s place');
   ok(S.offers(null).length === 0, 'nothing more to sell');
   S.open({ mode:'grown' });
   ok($('st-title').textContent === 'Purchases' && $('st-have').innerHTML.includes('Super Fan · Farnham RUFC') && $('st-offers').innerHTML === '' && !$('st-links').hidden && $('st-back').textContent === 'Back to Menu', 'the Grown-Ups panel: what is owned, Privacy | Support, Restore Purchases | Back to Menu');
@@ -555,6 +559,199 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(!!ack && (ack[0].match(/purchaseToken/g) || []).length === 4 && /await P\.acknowledgePurchase\(\{ purchaseToken:t\.purchaseToken \}\)/.test(ack[0]) && !/fetch|XMLHttpRequest|sendBeacon|save\(|localStorage/.test(ack[0]), 'Google\'s purchase token is read in one place, storeAcknowledge, and goes only back to the plugin');
   const readme = read('store/README.md');
   ok(/@capgo\/native-purchases@8\.9\.6/.test(readme) && /tryline\.full/.test(readme) && /tryline\.fan\.farnham/.test(readme) && /STORE_WEB_TIER/.test(readme), 'store/README.md names the plugin and its version, the product ids and the tier flag');
+}
+
+// 13. the copy: the Full Game's contents on the Unlock card in the store copy's own order, and the Super Fan's new labels
+{
+  const block = (file, key) => { const m = read(file).match(new RegExp('<!--\\s*copy:' + key.replace(/\./g, '\\.') + '\\s*-->\\s*\\n```[a-z]*\\n([\\s\\S]*?)\\n```')); return m ? m[1] : ''; };
+  const apple = block('store-listing/APP_STORE.md', 'apple.iap.full.description'), google = block('store-listing/GOOGLE_PLAY.md', 'google.iap.full.description');
+  ok(apple === 'Career, Championship and International modes' && [...apple].length === 44, `the Full Game's App Store description: Career, Championship and International modes (${[...apple].length} of 45)`);
+  ok(google === 'Play as and support your club: Career, Championship and International modes, Create Team, the Hard level and the Legends sides. A one-off unlock.', 'the Full Game\'s Google Play description, as the owner gave it');
+  ok(block('store-listing/LISTING.md', 'apple.subtitle') === 'Play as and support your club', 'the App Store subtitle: Play as and support your club');
+  const items = S.LINE.full.split(' · '), at = items.map(w => google.indexOf(w));
+  ok(items.join() === 'Career,Championship,International,Create Team,Hard,Legends' && at.every((i, n) => i >= 0 && (n === 0 || i > at[n - 1])) && ['Career', 'Championship', 'International'].every((w, n, a) => apple.indexOf(w) >= 0 && (n === 0 || apple.indexOf(w) > apple.indexOf(a[n - 1]))),
+    `the Unlock card lists the Full Game as the store copy does, in its order (${S.LINE.full})`);
+  const SMALL = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
+  const title = t => t.split(/[ ·]+/).filter(Boolean).every((w, i) => (i > 0 && SMALL.has(w)) || /^[A-Z0-9£]/.test(w));
+  const wall = html.slice(html.indexOf('<div class="modal" id="m-wall"'), html.indexOf('</div>\n</div>', html.indexOf('<div class="modal" id="m-wall"')) + 12);
+  for (const l of ["Join the Supporters' Wall", "Supporters' Wall", "Yes, I'm 18 or Over", 'Cancel', 'Continue', 'How Your Name Appears', 'First Name and Town or Initial', 'Super Fan']) ok(title(l.replace(/,/g, '')) && (ui + html + read('src/ui-locker.js')).includes(l), `"${l}" is a Title Case label in use`);
+  ok(/<p class="wl-q">Are you 18 or over\?<\/p>/.test(wall), 'the question is a sentence, in sentence case');
+  ok((wall.match(/<div class="row2"><button class="btn" id="wl-(?:yes|go)"[^>]*>[^<]+<\/button><button class="btn" id="wl-(?:no|cancel)" data-back>Cancel<\/button><\/div>/g) || []).length === 2, 'each step is two balanced buttons in halves, the action then Cancel (a controller\'s Back)');
+  ok(!/donat|charit|good cause|—/i.test(wall + ui.slice(ui.indexOf('the Supporters\' Wall ----------')) + src.slice(src.indexOf('the Supporters\' Wall ----------'))) && !/[←-↙⇐-⇙]/.test(wall), 'never a donation or charity, no em dash, no arrow');
+  ok(!/<p\b(?![^>]*wl-q)[^>]*>/.test(wall.replace(/<p class="eyebrow"[^>]*>[^<]*<\/p>/, '')), 'no prose on the card beyond the question');
+}
+
+// 14. the Super Fan trophy: one a club, for an unlock the app owns; back with Restore Purchases; never on the web; never a win
+{
+  const L = T.locker, CU = T.cups, fresh = () => L.set(L.fresh()), json = JSON.stringify;
+  const cabinet = () => { CU.renderCabinet('home-history'); return $('home-history').innerHTML; };
+  for (const tier of [null, 'free']) {
+    reset(); fresh(); CU.setHistory([]); X.setChamp(null); S.setTier(tier); FARNHAM.agreed = true; S.setBought(['tryline.fan.farnham']);
+    D.settings().hl = 'champ'; D.goHome(); X.save();
+    ok(!L.fanClubs().length && !L.fanAward() && !('locker' in saved()) && !L.isNew() && L.fanHtml() === '' && L.fanCabinet() === '' && $('b-cabinet').hidden && !/fan-entry/.test(cabinet()),
+      `the web (${tier || 'full'}): no trophy though the save holds a Super Fan unlock (purchases are the app's), no locker field, no Super Fan row and no Trophy Cabinet`);
+    ok(!$('s-home').classList.contains('fan') && $('st-fan').hidden && S.fanOwned().length === 0, `the web (${tier || 'full'}): the home is as it was, no club colours and no badge`);
+  }
+  D.settings().hl = 'game';
+  // in the app: the Full Game earns nothing; a Super Fan earns its club's trophy once
+  app(); fresh(); FARNHAM.agreed = true; CU.setHistory([]); X.setChamp(null);
+  S.open({ mode:'unlock', feature:'champ' }); S.buyAsk('tryline.full'); pass(); await tick();
+  ok(S.has('champ') && !L.fanClubs().length && !('locker' in saved()), 'the Full Game earns no trophy');
+  S.open({ mode:'grown' }); S.buyAsk('tryline.fan.farnham'); pass(); await tick();
+  ok(json(L.state().fan) === '["farnham"]' && L.fanClubs()[0].club === FARNHAM && L.fanClubs()[0].team.id === 'FAR' && json(saved().locker.fan) === '["farnham"]' && saved().locker.fanSeen === 0, 'a Super Fan bought: Farnham\'s trophy, awarded and saved');
+  S.close(); D.goHome();
+  ok(L.isNew() && $('b-locker').classList.contains('note'), 'the Locker\'s dot: a new trophy waits there');
+  S.grant(['tryline.fan.farnham']); S.restoreAsk(); D.goHome(); D.goHome();
+  ok(json(L.state().fan) === '["farnham"]', 'awarded once: the same unlock again, and every render of the home, add nothing');
+  L.open(0);
+  const body = $('lk-body').innerHTML;
+  ok(/^<div class="lk-fanrow"><div class="lk-fan new" role="group" aria-label="Super Fan Trophy, Farnham RUFC"><svg class="lk-cup"/.test(body) && /fill="#ffcf3d"/.test(body) && /fill="#1a1a1a"/.test(body) && /stroke="#f2efe6"/.test(body) && /<b>Super Fan<\/b><span>Farnham RUFC<\/span>/.test(body) && body.indexOf('lk-fan') < body.indexOf('lk-feat'),
+    'the Locker\'s Medals: the trophy first, gold with Farnham\'s kit colours on it, Super Fan and the club\'s name, ringed once as new');
+  ok(/<button class="btn lk-wall" data-wall="farnham">Join the Supporters' Wall<\/button><\/div><\/div>/.test(body), 'and Join the Supporters\' Wall beside it');
+  ok(saved().locker.fanSeen === 1 && !L.isNew() && !$('b-locker').classList.contains('note'), 'seen once the Locker opens: the dot goes');
+  ok(L.golds() === 0 && /Gold 0/.test($('lk-tally').innerHTML) && L.FEATS.every(f => L.tier(f.id) === 0), 'never a medal: the tally and the Legends\' Golds are as they were');
+  // the Trophy Cabinet: its own kind, first, gold, never counted as a league or a cup
+  D.settings().hl = 'champ'; D.goHome();
+  ok(!$('b-cabinet').hidden, 'the Trophy Cabinet is on the home with a Super Fan trophy alone');
+  let cab = cabinet();
+  ok(/^<article class="season-entry fan-entry"><p class="eyebrow"><span class="cup-kind" data-kind="fan" data-metal="gold" data-won>Super Fan<\/span><\/p><h3><svg class="lk-cup"[^]*?<\/svg><span>Farnham RUFC<\/span><\/h3><\/article><p class="stat-note">/.test(cab), 'the Trophy Cabinet: the trophy first, its own kind (Super Fan, in gold), the club\'s name and no more');
+  X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); { const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } } X.save(); X.setChamp(null);
+  cab = cabinet(); const h = CU.savedHonours(), tally = (cab.match(/<p class="cabinet-tally">[^]*?<\/p>/) || [''])[0];
+  ok(h.seasons === 1 && h.cups === 0 && h.euro + h.world + h.tour === 0 && !/fan|Super Fan/.test(tally) && (cab.match(/fan-entry/g) || []).length === 1, `never counted as a league or a cup win: the tally is the season's alone (${tally.replace(/<[^>]+>/g, '')})`);
+  ok(T.cups.trophyMetal('fan') === 'gold' && /\[data-metal="gold"\]\{--kc:var\(--gold\)/.test(css), 'its kind\'s colour is gold, from the one map of metals (TROPHY_METAL, src/cups.js)');
+  CU.setHistory([]); X.save(); D.settings().hl = 'game'; D.goHome();
+  // Restore Purchases, a new phone or the app put back: the trophy comes back with the unlock, once
+  app(); fresh(); owns = ['tryline.fan.farnham'];
+  S.open({ mode:'grown' }); S.restoreAsk(); pass(); await tick();
+  ok(json(L.state().fan) === '["farnham"]' && json(saved().locker.fan) === '["farnham"]' && $('st-msg').textContent === S.MSG.restored, 'Restore Purchases: the Super Fan back, and its trophy with it, saved');
+  S.restoreAsk(); pass(); await tick();
+  ok(json(L.state().fan) === '["farnham"]' && $('st-msg').textContent === S.MSG.same, 'restored again: still the one trophy');
+  S.close();
+  app(); fresh(); owns = ['tryline.fan.farnham']; S.setStarted(false); D.goHome(); await tick(12);
+  ok(json(L.state().fan) === '["farnham"]', 'read back at the start, with no prompt: the trophy too');
+  app(); fresh(); S.setBought(['tryline.fan.farnham']); D.goHome();
+  ok(json(L.state().fan) === '["farnham"]', 'an unlock bought before the trophies came earns its trophy at the home');
+  // a refund takes it back with the unlock; the web never takes one away
+  app(); fresh(); FARNHAM.agreed = true; owns = ['tryline.full', 'tryline.fan.farnham']; S.setStarted(false); D.goHome(); await tick(12);
+  ok(json(L.state().fan) === '["farnham"]', 'both unlocks at the start, and the trophy');
+  owns = ['tryline.full']; listener({ productIdentifier:'tryline.fan.farnham', revocationDate:'2026-11-08T10:00:00Z' }); await tick();
+  ok(!L.fanClubs().length && !('fan' in L.state()) && !('locker' in saved()) && S.has('champ'), 'the Super Fan refunded: its trophy goes with it, and the save is as before');
+  ok(!L.fanDrop(), 'nothing more to drop');
+  reset(); L.set(L.clean({ fan:['farnham'] })); S.setBought([]);
+  ok(!L.fanDrop() && json(L.state().fan) === '["farnham"]', 'the web takes nothing away');
+  // an unlock that arrives during a drill: the trophy waits for the drill to end, then is saved
+  app(); S.setStarted(false); D.goHome(); await tick(12); fresh(); X.save();
+  T.practice.start('defend');
+  listener({ productIdentifier:'tryline.fan.farnham', transactionId:'12' }); await tick();
+  ok(json(L.state().fan) === '["farnham"]' && !('locker' in saved()) && saved().store.owned.join() === 'tryline.fan.farnham', 'during a drill: the unlock saved at once, the trophy held until the drill is over');
+  T.practice.leave(); D.goHome();
+  ok(json(saved().locker.fan) === '["farnham"]', 'and saved once it is');
+  // a second partner club: two trophies, in the order bought
+  app(); fresh(); S.FAN_CLUBS.push({ key:'guildford', name:'Guildford RFC', product:'tryline.fan.guildford', share:50, agreed:true, team:'GUI', crest:null });
+  S.grant(['tryline.fan.farnham']); S.grant(['tryline.fan.guildford']);
+  ok(json(L.state().fan) === '["farnham","guildford"]' && L.fanClubs().map(f => f.team.id).join() === 'FAR,GUI' && (L.fanCabinet().match(/fan-entry/g) || []).length === 2, 'two clubs: a trophy each, in the order bought');
+  // the save: validated, and a Locker without a trophy as it was
+  ok(json(L.clean({ fan:['guildford', 'farnham', 'farnham', 'nope', 7, null], fanSeen:9 })) === json({ ...L.fresh(), fan:['guildford', 'farnham'], fanSeen:2 }), 'a saved trophy list is put right: known clubs, each once, seen no more than held');
+  ok(json(L.clean({ fan:'farnham', fanSeen:1 })) === json(L.fresh()) && json(L.clean({ fan:[], fanSeen:3 })) === json(L.fresh()) && json(L.clean({ fan:['farnham'], fanSeen:-2 })) === json({ ...L.fresh(), fan:['farnham'], fanSeen:0 }), 'a broken one is no trophy, and a Locker with none keeps no field for them');
+  fresh(); X.save(); ok(!('locker' in saved()), 'nothing earned: still no locker field');
+  reset(); fresh();
+}
+
+// 15. a Super Fan's home in the club's colours, readable on the dark; the crest only where the club has given one
+{
+  const L = T.locker, contrast = S.contrast;
+  app(); L.set(L.fresh()); S.setBought(['tryline.fan.farnham']); D.goHome();
+  const th = S.theme(X.CLUBS[0]);
+  ok($('s-home').classList.contains('fan') && ['kit', 'trim', 'acc', 'ink', 'edge'].every(k => $('s-home').style.getPropertyValue('--fan-' + k) === th[k]), 'a Super Fan\'s home takes the club\'s colours (#s-home.fan, its five colours)');
+  ok(th.kit === '#1a1a1a' && th.trim === '#f2efe6' && th.acc === '#f2efe6' && th.ink === '#f1eee4' && th.edge === '#f2efe6', `Farnham's black and white: the white trim the accent and the edge, chalk on the black fill (${JSON.stringify(th)})`);
+  const bad = [];
+  for (const t of X.ALL_TEAMS) {
+    const v = S.theme(t), panel = '#17271d', night = '#0b130e', chalk = '#f1eee4';
+    if (contrast(v.acc, panel) < 4.5 || contrast(v.acc, night) < 4.5) bad.push(t.id + ' accent ' + v.acc);
+    if (contrast(v.ink, v.kit) < 3.9 || (contrast(chalk, v.kit) >= 4.5 && v.ink !== chalk)) bad.push(t.id + ' ink ' + v.ink + ' on ' + v.kit);
+    if (contrast(v.edge, night) < 3) bad.push(t.id + ' edge ' + v.edge);
+  }
+  ok(!bad.length && X.ALL_TEAMS.length > 50, `every side's colours read on the dark: the accent 4.5:1 on the panel and the night, the fill's word chalk wherever chalk reads (4.5:1), and the edge 3:1 (${bad.slice(0, 4).join(', ') || X.ALL_TEAMS.length + ' sides'})`);
+  ok(/#s-home\.fan \.btn\.hl\[aria-selected="true"\][^{]*\{color:var\(--fan-acc\);box-shadow:inset 0 3px 0 var\(--fan-acc\)\}/.test(css) && /#s-home\.fan \.hl-panel \.btn\.primary\{border-color:var\(--fan-edge\);background:var\(--fan-kit\);color:var\(--fan-ink\)/.test(css) && /#s-home\.fan \.home-top \.my-home\{border-color:var\(--fan-acc\)/.test(css),
+    'the accent on the chosen headline, the kit on the panel\'s primary (Play), and My Team\'s edge');
+  S.setBought(['tryline.full']); D.goHome();
+  ok(!$('s-home').classList.contains('fan') && $('st-fan').hidden, 'without a Super Fan unlock: no club colours, no shield');
+  // the crest: a file of the game's own, only where the club has given it
+  S.setBought(['tryline.fan.farnham']); FARNHAM.crest = 'crests/farnham.png'; D.goHome();
+  ok(/<img class="fan-shield fan-crest" src="crests\/farnham\.png" alt="" draggable="false"><span>Super Fan · Farnham RUFC<\/span>/.test($('st-fan').innerHTML) && !/<svg/.test($('st-fan').innerHTML), 'a crest given with the club\'s written permission: the shield shows it, the name beside it');
+  for (const c of ['https://example.com/crest.png', '//example.com/c.png', '../crest.png', 'crests/../x.png', 'crests/a b.png', 'crests/c.gif', 'crests/C.PNG', 'data:image/png;base64,AA', 'javascript:alert(1)', 'icons/icon-192.png', 7]) {
+    FARNHAM.crest = c; ok(S.crest(FARNHAM) === null, `a crest ${JSON.stringify(c)} is not one: the plain shield`);
+  }
+  D.goHome(); ok(/<svg class="fan-shield"/.test($('st-fan').innerHTML) && !/<img/.test($('st-fan').innerHTML), 'and the plain shield is back');
+  FARNHAM.crest = null;
+  const B = await import('./build.mjs');
+  ok(json(B.crestAssets()) === '[]' && !B.shellAssets.some(a => a.startsWith('crests/')), 'with every crest null, the game\'s shell is as it was');
+  ok(json(B.crestAssets(src.replace("crest:null", "crest:'crests/farnham.png'"))) === '["crests/farnham.png"]', 'a crest set in FAN_CLUBS goes into the shell (offline, and the app\'s copy)');
+  let threw = false; try { B.crestAssets(src.replace("crest:null", "crest:'https://example.com/c.png'")); } catch (e) { threw = true; }
+  ok(threw, 'and a crest from anywhere else fails the build');
+  S.setBought([]); reset();
+  function json(v) { return JSON.stringify(v); }
+}
+
+// 16. the Supporters' Wall: for a club the app owns, behind the grown-up check, 18 or over, the name into the grown-up's own email and
+//     nowhere else
+{
+  const L = T.locker, json = JSON.stringify;
+  const NAME = 'Sam, Farnham', MAIL = 'mailto:support@signcheck.ai?subject=' + encodeURIComponent("Supporters' Wall: Farnham RUFC") + '&body='
+    + encodeURIComponent("Name: Sam, Farnham\r\nClub: Farnham RUFC\r\n\r\nI am 18 or over. I agree to be listed on the Supporters' Wall by this name, and I can ask to be removed at any time.");
+  const type = v => { $('wl-input').value = v; $('wl-input').fire('input'); };
+  const nameKept = () => [json(memory), json(D.settings()), json(S.ui(), (k, v) => (k === 'back' ? undefined : v)), json(L.state()), json(S.wall())].some(t => t.includes('Sam'));
+  // nowhere without an owned club: the web, the free web, the app with nothing or the Full Game
+  for (const [where, set] of [['the web', () => { reset(); S.setBought(['tryline.fan.farnham']); }], ['the free web', () => { reset(); S.setTier('free'); S.setBought(['tryline.fan.farnham']); }], ['the app with nothing', () => { app(); }], ['the app with the Full Game', () => { app(); S.setBought(['tryline.full']); }]]) {
+    set(); FARNHAM.agreed = true; L.set(L.fresh()); D.goHome(); S.open({ mode:'grown' });
+    ok(!/data-wall/.test($('st-have').innerHTML) && L.fanHtml() === '' && S.wallAsk('farnham') === false && !K.gate() && $('m-wall').hidden, `${where}: no Supporters' Wall anywhere`);
+    S.close();
+  }
+  // the app with Farnham's Super Fan: offered in the Grown-Ups panel and the Locker
+  app(); FARNHAM.agreed = true; L.set(L.fresh()); S.setBought(['tryline.fan.farnham']); D.goHome();
+  S.open({ mode:'grown' });
+  ok(/^<p class="st-own st-fanown"><span class="jw[^]*?<\/span><span class="st-ownname">Super Fan · Farnham RUFC<\/span><button class="btn st-wall" data-wall="farnham">Join the Supporters' Wall<\/button><\/p>$/.test($('st-have').innerHTML), 'the Grown-Ups panel: Join the Supporters\' Wall on the line of the Super Fan it has, beside the club\'s name (a row of its own pushed the card off a phone)');
+  ok(/data-wall="farnham"/.test(L.fanHtml()), 'and the Locker\'s Super Fan tile');
+  ok(S.wallAsk('guildford') === false && !K.gate(), 'never for a club the device does not own');
+  opened.length = 0;
+  ok(S.wallAsk('farnham') === true && !!K.gate() && $('m-store').hidden && $('m-wall').hidden, 'Join asks a grown-up first, the Grown-Ups card hidden under the check');
+  cancel();
+  ok(!K.gate() && !$('m-store').hidden && $('m-wall').hidden && !opened.length, 'cancelled: the Grown-Ups card is back, and nothing more');
+  S.wallAsk('farnham'); pass();
+  ok(!$('m-wall').hidden && $('m-store').hidden && $('wl-title').textContent === 'Farnham RUFC' && !$('wl-age').hidden && $('wl-name').hidden && S.wall().step === 'age' && !opened.length, 'passed: the card, for Farnham RUFC, asking Are you 18 or over? first');
+  $('wl-no').click();
+  ok($('m-wall').hidden && !$('m-store').hidden && !S.wall() && !opened.length, 'Cancel: the card closes onto the Grown-Ups panel, and nothing opens');
+  S.wallAsk('farnham'); pass(); $('wl-yes').click();
+  ok($('wl-age').hidden && !$('wl-name').hidden && S.wall().step === 'name' && $('wl-go').disabled && $('wl-input').value === '', 'Yes, I\'m 18 or Over: How Your Name Appears, empty, and Continue waits for a name');
+  type(' '); ok($('wl-go').disabled, 'a blank name: Continue still waits');
+  type(NAME); ok(!$('wl-go').disabled, 'a name typed: Continue');
+  $('wl-go').click();
+  ok(opened.length === 1 && opened[0][0] === MAIL && opened[0][1] === '_blank' && opened[0].length === 2, `Continue: the grown-up's own email opens, to support@signcheck.ai, by the way every link leaves the app (${opened[0] && opened[0][0]})`);
+  const url = new URL(opened[0][0]), body = url.searchParams.get('body');
+  ok(url.protocol === 'mailto:' && url.pathname === 'support@signcheck.ai' && url.searchParams.get('subject') === "Supporters' Wall: Farnham RUFC" && [...url.searchParams.keys()].join() === 'subject,body', 'the subject names the club; nothing else is in the address');
+  ok(body.split('\r\n')[0] === 'Name: Sam, Farnham' && body.split('\r\n')[1] === 'Club: Farnham RUFC' && /I am 18 or over\. I agree to be listed on the Supporters' Wall by this name, and I can ask to be removed at any time\.$/.test(body), 'the body: the name as typed, the club, and the grown-up\'s yes: 18 or over, agreeing to be listed, and free to be removed at any time');
+  ok($('m-wall').hidden && !S.wall() && $('wl-input').value === '' && !$('m-store').hidden, 'the card closes, its field emptied, onto the Grown-Ups panel');
+  ok(!nameKept(), 'no name kept: not in the save, the settings, the store\'s state, the Locker or the card');
+  ok(!/fetch\(|XMLHttpRequest|sendBeacon|localStorage|save\(/.test(ui.slice(ui.indexOf('let storeWallUi'), ui.indexOf('$(\'m-wall\').hidden = true;')) + src.slice(src.indexOf('const storeWallName'), src.indexOf('/* ---------- the Super Fan\'s club, first'))), 'the wall\'s code sends nothing and saves nothing');
+  S.close();
+  // from the Locker: the same, and back to the Locker; Escape and Cancel empty the field
+  L.open(0); opened.length = 0;
+  S.wallAsk('farnham'); pass(); $('wl-yes').click(); type(NAME);
+  fire('keydown', { key:'Escape' });
+  ok($('m-wall').hidden && $('m-store').hidden && $('wl-input').value === '' && !opened.length && !$('s-locker').hidden, 'from the Locker: Escape closes the card, its field emptied, back on the Locker');
+  S.wallAsk('farnham'); pass(); $('wl-yes').click(); type(NAME); $('wl-cancel').click();
+  ok($('m-wall').hidden && $('wl-input').value === '' && !opened.length && !nameKept(), 'Cancel likewise');
+  S.wallAsk('farnham'); pass(); $('wl-yes').click(); type('  Jo\n\tB  '); $('wl-input').fire('keydown', { key:'Enter' });
+  ok(opened.length === 1 && new URL(opened[0][0]).searchParams.get('body').startsWith('Name: Jo B\r\nClub: Farnham RUFC'), 'Enter sends it on too; the name on one line, its spaces and breaks made plain');
+  // the name: one line, 40 characters at most, two at least
+  ok(S.wallName('x'.repeat(60)).length === 40 && S.wallMail(FARNHAM, 'x') === null && S.wallMail(FARNHAM, '') === null && S.wallMail(null, NAME) === null && S.wallMail(FARNHAM, NAME) === MAIL, 'a name is two to forty characters, for a club');
+  ok(/maxlength="40"/.test(html.slice(html.indexOf('id="wl-input"') - 40, html.indexOf('id="wl-input"') + 200)), 'the field takes forty');
+  // a purchase in flight, or the card already up: nothing more is asked
+  S.open({ mode:'grown' }); S.ui().busy = true;
+  ok(S.wallAsk('farnham') === false && !K.gate(), 'not while a purchase is under way');
+  S.ui().busy = false; S.close();
+  ok(/function storeWallAsk[\s\S]*?parentGate\(\(\) => storeWallOpen/.test(ui) && /DEFAULT_FOCUS\['m-wall'\]/.test(ui) && (ui.match(/window\.open\(/g) || []).length === 2, 'the grown-up check first, a controller\'s first press on the card, and storeOpenUrl still the one way out');
+  reset(); L.set(L.fresh());
 }
 
 reset();

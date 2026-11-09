@@ -1,6 +1,7 @@
 // The home: five headlines along the bottom (Quick Match, Championship, Career, Skills Mini Games, Settings) and the chosen one's buttons,
 // My Team, the Locker and Add Your Team at the top, the competitions by tier with their team lists, the Make This My Team offer after an import, the
-// Legends behind the Full Game, and the fit of every state at 844x390 and 667x375 (README, Home).   node tools/home.mjs   Exits 1 on any failure.
+// Legends behind the Full Game, a Super Fan's home in the club's colours (with its shield or a club's crest), and the fit of every state at
+// 844x390 and 667x375 (README, Home).   node tools/home.mjs   Exits 1 on any failure.
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 process.env.SEED ??= '61';
 const { T, reseed, bot } = await import('./harness.mjs');
@@ -388,7 +389,9 @@ async function browserChecks() {
   try { browser = await chrome.launch(); } catch (e) { console.log('skip the browser checks: Chromium would not start (' + e.message.split('\n')[0] + ')'); return; }
   const dir = fileURLToPath(new URL('../', import.meta.url));
   const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.woff2':'font/woff2', '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json' };
+  const CREST = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28"><path d="M12 1l11 4v8c0 7-5 12-11 14C6 25 1 20 1 13V5z" fill="#c8102e"/><path d="M6 9h12v3H6z" fill="#fff"/></svg>';   // a stand-in crest, served by this test only
   const server = http.createServer((req, res) => {
+    if (new URL(req.url, 'http://x').pathname === '/crests/test.svg') { res.writeHead(200, { 'content-type':'image/svg+xml' }); res.end(CREST); return; }
     const file = path.resolve(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
     if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'content-type':TYPES[path.extname(file)] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
@@ -405,16 +408,22 @@ async function browserChecks() {
       const kind = `${w}x${h} ${touch ? 'touch' : 'desk'}`;
       // every state: desk or not (2 Players showed on a desk; now it shows on neither), the app (Grown-Ups) or the web (Add Your Team), Install and Update showing or not, a Trophy
       // Cabinet or not, nothing saved, a championship and a career, or a cup, the free tier's locks or not, and in the app a Super Fan
-      // (the badge under the logo, two lines: it must not widen the logo's column and squeeze My Team); on every headline
+      // (the badge under the logo, two lines: it must not widen the logo's column and squeeze My Team), with the plain shield or a club's
+      // crest, the home in the club's colours and its trophy putting the Trophy Cabinet on the home; on every headline
+      await page.evaluate(() => new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = 'crests/test.svg'; }));   // the stand-in crest, loaded once
       const states = await page.evaluate(() => {
         const T = window.__tryline, X = T.teams, K = T.cups, out = [];
         const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
         const cabinet = () => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
-        for (const desk of [false, true]) for (const app of [false, true]) for (const tools of [false, true]) for (const cab of [false, true]) for (const busy of ['none', 'champ', 'cup']) for (const buy of ['full', 'free', 'fan']) {
+        const rgb = h => 'rgb(' + [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
+        const lum = c => { const v = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(n => +n/255).map(x => (x <= 0.03928 ? x/12.92 : ((x + 0.055)/1.055) ** 2.4)); return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
+        for (const desk of [false, true]) for (const app of [false, true]) for (const tools of [false, true]) for (const cab of [false, true]) for (const busy of ['none', 'champ', 'cup']) for (const buy of ['full', 'free', 'fan', 'crest']) {
           if (app && tools) continue;                         // the app has no Install or Update
-          if (!app && buy === 'fan') continue;                // nor the web a Super Fan
-          const free = buy === 'free';
-          T.store.setNative(app); T.store.setStarted(app); T.store.setBought(!app || free ? [] : buy === 'fan' ? ['tryline.fan.farnham'] : ['tryline.full']); T.store.setTier(!app && free ? 'free' : null);
+          if (!app && (buy === 'fan' || buy === 'crest')) continue;   // nor the web a Super Fan
+          const free = buy === 'free', fan = buy === 'fan' || buy === 'crest';
+          T.locker.set(T.locker.fresh()); T.store.FAN_CLUBS[0].crest = buy === 'crest' ? 'crests/test.svg' : null;   // each state its own device: no trophy carried from the last
+          T.store.setNative(app); T.store.setStarted(app); T.store.setBought(!app || free ? [] : fan ? ['tryline.fan.farnham'] : ['tryline.full']); T.store.setTier(!app && free ? 'free' : null);
           K.setHistory([]); if (cab) cabinet();
           X.setChamp(null); K.set(null); T.career.set(null);
           if (busy === 'champ') { X.newChamp(X.CLUBS[7] || X.CLUBS[0], X.CLUBS.slice(1, 6)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); }
@@ -430,19 +439,27 @@ async function browserChecks() {
             const clipped = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)
               .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = getComputedStyle(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }).map(e => e.id + "'s lock squeezed"));   // a lock beside a name keeps its size
             const overlap = btns.some((a, i) => btns.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && (() => { const p = box(a), q = box(b); return p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1; })()));
-            out.push({ state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', buy === 'fan' ? 'fan' : '', hl].filter(Boolean).join('+'), fan:buy === 'fan' && !document.getElementById('st-fan').hidden, fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth, small, clipped, overlap,
-              two:!document.getElementById('b-two') && !btns.some(b => /\b2 Players\b|Two Player/.test(b.textContent)), play:hl !== 'game' || (vis(document.getElementById('b-quick')) && box(document.getElementById('b-quick')).height >= 88 && btns.filter(b => document.getElementById('hp-game').contains(b)).length === 1), grown:vis(document.getElementById('b-grown')) === ((app || free) && hl === 'settings'), note:document.getElementById('hl-settings').classList.contains('note') === app, cabBtn:vis(document.getElementById('b-cabinet')) === (cab && hl === 'champ') });
+            // the club's colours: the chosen headline, the panel's primary and My Team's edge, readable on the dark; without, the home as it was
+            const tab = document.getElementById('hl-' + hl), prim = [...document.querySelectorAll('#hp-' + hl + ' .btn.primary')].find(vis), my = document.getElementById('b-my'), cs = e => getComputedStyle(e);
+            const v = k => cs(s).getPropertyValue('--fan-' + k).trim(), shield = document.querySelector('#st-fan .fan-shield');
+            const themed = fan ? s.classList.contains('fan') && cs(tab).color === rgb(v('acc')) && ratio(cs(tab).color, cs(tab).backgroundColor) >= 4.5 && cs(my).borderTopColor === rgb(v('acc'))
+                && (!prim || (cs(prim).backgroundColor === rgb(v('kit')) && cs(prim).color === rgb(v('ink')) && ratio(cs(prim).color, cs(prim).backgroundColor) >= 4.5))
+                && !!shield && (buy === 'crest' ? shield.tagName === 'IMG' && shield.complete && shield.naturalWidth > 0 : shield.tagName.toLowerCase() === 'svg') && box(shield).width <= 24 && box(shield).height <= 26
+              : !s.classList.contains('fan') && !s.style.cssText && cs(tab).color === 'rgb(255, 207, 61)' && (!prim || cs(prim).backgroundColor === 'rgb(255, 207, 61)') && cs(my).borderTopColor === 'rgb(58, 82, 66)';
+            out.push({ state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', fan ? buy : '', hl].filter(Boolean).join('+'), fan:fan && !document.getElementById('st-fan').hidden, themed, fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth, small, clipped, overlap,
+              two:!document.getElementById('b-two') && !btns.some(b => /\b2 Players\b|Two Player/.test(b.textContent)), play:hl !== 'game' || (vis(document.getElementById('b-quick')) && box(document.getElementById('b-quick')).height >= 88 && btns.filter(b => document.getElementById('hp-game').contains(b)).length === 1), grown:vis(document.getElementById('b-grown')) === ((app || free) && hl === 'settings'), note:document.getElementById('hl-settings').classList.contains('note') === app, cabBtn:vis(document.getElementById('b-cabinet')) === ((cab || fan) && hl === 'champ') });
             if (tools) { for (const id of ['app-tools', 'b-install', 'b-update', 'offline-status']) document.getElementById(id).hidden = true; }
           }
         }
-        X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.store.setNative(false); T.store.setStarted(false); T.store.setBought([]); T.store.setTier(null);
+        X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.store.setNative(false); T.store.setStarted(false); T.store.setBought([]); T.store.setTier(null); T.store.FAN_CLUBS[0].crest = null; T.locker.set(T.locker.fresh());
         const st = T.debug.settings(); st.kids = false; st.diff = 1; st.kidsR = 0; st.kidsTop = 0; st.hl = 'game';
         document.body.classList.remove('desk'); T.debug.goHome();
         return out;
       });
       const bad = f => states.filter(f).map(r => r.state);
-      ok(states.length === 420 && states.every(r => r.fits), `${kind}: the home fits without a scroll in every state, on every headline (${bad(r => !r.fits).slice(0, 6).join(', ') || states.length + ' states'})`);
-      ok(states.filter(r => r.fan).length === 60, `${kind}: 60 of them with the Super Fan badge under the logo (${states.filter(r => r.fan).length})`);
+      ok(states.length === 480 && states.every(r => r.fits), `${kind}: the home fits without a scroll in every state, on every headline (${bad(r => !r.fits).slice(0, 6).join(', ') || states.length + ' states'})`);
+      ok(states.filter(r => r.fan).length === 120, `${kind}: 120 of them with the Super Fan badge under the logo, its plain shield or a club's crest (${states.filter(r => r.fan).length})`);
+      ok(states.every(r => r.themed), `${kind}: a Super Fan's home in the club's colours (the chosen headline 4.5:1 on its ground, the primary's word 4.5:1 on the kit, My Team's edge) with its shield or crest, and every other home exactly as it was (${bad(r => !r.themed).slice(0, 4).join(', ') || 'all'})`);
       ok(states.every(r => !r.small.length), `${kind}: every button at least 44px (${states.filter(r => r.small.length).slice(0, 3).map(r => r.state + ': ' + r.small.join('/')).join('; ') || 'all'})`);
       ok(states.every(r => !r.clipped.length && !r.overlap), `${kind}: no name cut off nor lock squeezed, no button over another (${states.filter(r => r.clipped.length || r.overlap).slice(0, 3).map(r => r.state + ': ' + r.clipped.join('/') + (r.overlap ? ' overlap' : '')).join('; ') || 'none'})`);
       ok(states.every(r => r.two && r.play && r.grown && r.note && r.cabBtn), `${kind}: no 2 Players on any device, Quick Match one big Play (88px and more, alone in its panel), Grown-Ups in Settings where the store is live (the app, the free web), its dot on Settings, the Trophy Cabinet with a finished season (${bad(r => !(r.two && r.play && r.grown && r.note && r.cabBtn)).slice(0, 4).join(', ') || 'all'})`);
@@ -570,9 +587,10 @@ async function browserChecks() {
         const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
         const cabinet = () => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
         const TOOLS = ['app-tools', 'b-install', 'b-update', 'offline-status'];
-        for (const st of ['web', 'web tools', 'web free cab', 'app free', 'app fan', 'app full busy']) {
+        for (const st of ['web', 'web tools', 'web free cab', 'app free', 'app fan cab', 'app full busy']) {   // a Super Fan has the Trophy Cabinet: its trophy is in it
           const app = st.startsWith('app');
-          S.setNative(app); S.setStarted(app); S.setBought(st === 'app fan' ? ['tryline.fan.farnham'] : st === 'app full busy' ? ['tryline.full'] : []); S.setTier(st === 'web free cab' ? 'free' : null);
+          T.locker.set(T.locker.fresh());
+          S.setNative(app); S.setStarted(app); S.setBought(st === 'app fan cab' ? ['tryline.fan.farnham'] : st === 'app full busy' ? ['tryline.full'] : []); S.setTier(st === 'web free cab' ? 'free' : null);
           K.setHistory([]); if (st === 'web free cab') cabinet();
           X.setChamp(null); K.set(null); T.career.set(null);
           if (st === 'app full busy') { X.newChamp(X.CLUBS[7], X.CLUBS.slice(1, 6)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); }
@@ -597,7 +615,7 @@ async function browserChecks() {
             if (st === 'web tools') for (const id of TOOLS) document.getElementById(id).hidden = true;
           }
         }
-        S.setNative(false); S.setStarted(false); S.setBought([]); S.setTier(null); X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.home.setTier(null);
+        S.setNative(false); S.setStarted(false); S.setBought([]); S.setTier(null); X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.home.setTier(null); T.locker.set(T.locker.fresh());
         T.debug.settings().hl = 'game'; T.debug.goHome();
         return out;
       });

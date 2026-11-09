@@ -18,6 +18,11 @@
    - The save is one field, locker (cleanLocker), written only once something is in it, so an old save loads with nothing
      earned and a save with nothing earned stays as it was. A drill's three stars wait for the drill to end before saving,
      so a drill never writes the save while its settings are the drill's own.
+   - Super Fan trophies: a gold trophy for each club whose Super Fan unlock this device owns in the app (storeFanOwned, src/store.js),
+     awarded once (lockerFanAward: after a purchase, Restore Purchases, the start's read-back, or an unlock bought before the
+     trophies came) and kept as the club's key (fan). A refund takes it back with the unlock (lockerFanDrop). Never on the web, whatever
+     its tier: the web owns no unlock. It shows in the Locker and the Trophy Cabinet, its own kind, and is never a medal, a league or a
+     cup won.
    ========================================================= */
 const LOCKER_TIERS = [1, 3, 10];                            // Bronze, Silver, Gold
 const LOCKER_MEDALS = ['Bronze', 'Silver', 'Gold'];
@@ -112,7 +117,7 @@ const LEGENDS = [
 ];
 
 /* ---------- the record ---------- */
-const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOCKER_BOOTS[0].id, seen:{} });
+const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOCKER_BOOTS[0].id, seen:{} });   // fan and fanSeen join it with the first Super Fan trophy
 let locker = lockerFresh();
 let lockerDirty = false;                                     // a drill's three stars, waiting to be saved once the drill is over
 const lockerFeat = id => LOCKER_FEATS.find(f => f.id === id);
@@ -135,6 +140,31 @@ function lockerLegends(cat) {
   return LEGENDS.filter(t => t.cat === c).slice(0, lockerGolds());
 }
 function lockerAdd(id) { locker.n[id] = Math.min(LOCKER_MAX, (locker.n[id] || 0) + 1); }
+
+/* ---------- Super Fan trophies ---------- */
+const lockerFanKeys = () => (typeof FAN_CLUBS !== 'undefined' ? FAN_CLUBS.map(c => c.key) : []);
+const lockerFanHeld = () => (Array.isArray(locker.fan) ? locker.fan : []);   // the clubs' keys, in the order awarded; none until the first
+/* The clubs whose trophy is held, in the order awarded, each with its side for the kit colours. */
+const lockerFanClubs = () => lockerFanHeld().map(k => FAN_CLUBS.find(c => c.key === k)).filter(c => c && storeTeamOf(c)).map(c => ({ club:c, team:storeTeamOf(c) }));
+function lockerFanSet(keys) {                               // the trophies held, saved (once a drill is over: lockerFlush)
+  if (keys.length) { locker.fan = keys; locker.fanSeen = Math.min(locker.fanSeen || 0, keys.length); }
+  else { delete locker.fan; delete locker.fanSeen; }
+  if (practice) lockerDirty = true; else save();
+}
+function lockerFanAward() {                                 // each Super Fan unlock owned, its club's trophy once; true when one was added
+  const held = lockerFanHeld().slice();
+  for (const c of typeof storeFanOwned === 'function' ? storeFanOwned() : []) if (!held.includes(c.key)) held.push(c.key);
+  if (held.length === lockerFanHeld().length) return false;
+  lockerFanSet(held);
+  return true;
+}
+function lockerFanDrop() {                                  // a refunded unlock takes its trophy back; in the app only (the web owns nothing, and takes nothing)
+  if (typeof storeNative !== 'function' || !storeNative()) return false;
+  const own = storeFanOwned().map(c => c.key), keep = lockerFanHeld().filter(k => own.includes(k));
+  if (keep.length === lockerFanHeld().length) return false;
+  lockerFanSet(keep);
+  return true;
+}
 
 /* ---------- counting ---------- */
 const lockerSide = () => (M && M.side ? M.side.findIndex(s => s.human) : -1);   // your side: the human one, Player 1's in Two Player
@@ -195,7 +225,7 @@ function lockerFlush() { if (lockerDirty && !practice) { lockerDirty = false; sa
 
 /* ---------- what is new ---------- */
 const lockerSeen = id => Math.min(locker.seen[id] || 0, lockerTier(id));
-const lockerNew = () => LOCKER_FEATS.some(f => lockerTier(f.id) > lockerSeen(f.id));
+const lockerNew = () => LOCKER_FEATS.some(f => lockerTier(f.id) > lockerSeen(f.id)) || lockerFanHeld().length > (locker.fanSeen || 0);   // a medal, or a Super Fan trophy, not yet seen
 /* The tiers as a match you play began, kept on M (M.lkFrom) before its first count: at full time (lockerMatch) or at an event inside
    it, whichever comes first. Every count in a match goes through those two, so this is the Locker as the match found it, and the
    full-time card shows only what the match itself won. */
@@ -216,9 +246,10 @@ function lockerNews(from = lockerSeen) {
   for (let i = g0; i < g1; i++) legends.push(LEGENDS.filter(t => t.cat === 'men')[i], LEGENDS.filter(t => t.cat === 'women')[i]);
   return { medals, legends };
 }
-function lockerMarkSeen(ids) {                               // the medals shown: every feat (the Locker), or only those listed (the full-time card)
+function lockerMarkSeen(ids) {                               // the medals shown: every feat and trophy (the Locker), or only the medals listed (the full-time card)
   let changed = false;
   for (const f of LOCKER_FEATS) { if (ids && !ids.includes(f.id)) continue; const t = lockerTier(f.id); if ((locker.seen[f.id] || 0) !== t) { locker.seen[f.id] = t; changed = true; } }
+  if (!ids && lockerFanHeld().length && locker.fanSeen !== lockerFanHeld().length) { locker.fanSeen = lockerFanHeld().length; changed = true; }
   if (changed) save();
 }
 
@@ -236,8 +267,11 @@ function lockerSaved() {
   for (const f of LOCKER_FEATS) if (f.id !== 'star' && locker.n[f.id] > 0) n[f.id] = locker.n[f.id];
   const seen = {};
   for (const f of LOCKER_FEATS) if (locker.seen[f.id] > 0) seen[f.id] = locker.seen[f.id];
-  const empty = !Object.keys(n).length && !locker.drills.length && locker.ball === LOCKER_BALLS[0].id && locker.boots === LOCKER_BOOTS[0].id && !Object.keys(seen).length;
-  return empty ? undefined : { n, drills:locker.drills.slice(), ball:locker.ball, boots:locker.boots, seen };
+  const empty = !Object.keys(n).length && !locker.drills.length && locker.ball === LOCKER_BALLS[0].id && locker.boots === LOCKER_BOOTS[0].id && !Object.keys(seen).length && !lockerFanHeld().length;
+  if (empty) return undefined;
+  const out = { n, drills:locker.drills.slice(), ball:locker.ball, boots:locker.boots, seen };
+  if (lockerFanHeld().length) { out.fan = lockerFanHeld().slice(); out.fanSeen = locker.fanSeen || 0; }   // only with a Super Fan trophy, so every other save is as it was
+  return out;
 }
 /* A saved Locker, read back: anything unknown or broken is dropped, counts are whole and bounded, and a ball or boots not unlocked
    by those counts goes back to the default. Never throws; anything unreadable is a Locker with nothing in it. */
@@ -259,6 +293,9 @@ function cleanLocker(v) {
       if (Number.isInteger(s) && s > 0 && lockerTier(f.id) > 0) out.seen[f.id] = Math.min(s, lockerTier(f.id));
     }
   } finally { locker = keep; }
+  const fan = [];                                           // a club's trophy once, a club the game still has
+  if (Array.isArray(v.fan)) for (const k of v.fan.slice(0, 32)) if (typeof k === 'string' && lockerFanKeys().includes(k) && !fan.includes(k)) fan.push(k);
+  if (fan.length) { out.fan = fan; out.fanSeen = Number.isInteger(v.fanSeen) && v.fanSeen > 0 ? Math.min(v.fanSeen, fan.length) : 0; }
   return out;
 }
 

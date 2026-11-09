@@ -37,6 +37,29 @@ function lockerSwatch(kind, it) {
 const lockerItemName = it => it.name + (it.kind === 'ball' ? ' Ball' : ' Boots');
 const LOCKER_LOCK = '<svg class="lk-lock" viewBox="0 0 14 18" aria-hidden="true"><path d="M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x=".5" y="7.6" width="13" height="10" rx="2" fill="currentColor"/></svg>';
 
+/* ---------- Super Fan trophies ----------
+   A gold cup with ribbons, a shield and a band in the club's kit colours: in the Locker's Super Fan tile (Medals, before the feats)
+   and in the Trophy Cabinet, its own kind (lockerFanCabinet). The club's name beside it and nothing more. */
+function lockerCup(t) {
+  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', g = '#ffcf3d', ink = '#5e4100';
+  return `<svg class="lk-cup" viewBox="0 0 48 48" aria-hidden="true"><g stroke="${tr}" stroke-width="1.4" stroke-linejoin="round"><path d="M11.5 14 7 36l4.6-3 3.4 4V16z" fill="${k}"/><path d="M36.5 14 41 36l-4.6-3-3.4 4V16z" fill="${k}"/></g>`
+    + `<path d="M13 9H8.5a5.5 5.5 0 0 0 6 8.5M35 9h4.5a5.5 5.5 0 0 1-6 8.5" fill="none" stroke="${g}" stroke-width="3" stroke-linecap="round"/>`
+    + `<path d="M12.5 5h23v12c0 6.8-5.2 11.8-11.5 11.8S12.5 23.8 12.5 17z" fill="${g}" stroke="${ink}" stroke-width="1.6"/><path d="M16.5 9v7" stroke="#fff4c8" stroke-width="2" stroke-linecap="round" opacity=".85"/>`
+    + `<path d="M24 9.4l5 1.8v3.9c0 3.3-2.1 5.6-5 6.8-2.9-1.2-5-3.5-5-6.8v-3.9z" fill="${k}" stroke="${tr}" stroke-width="1.4" stroke-linejoin="round"/>`
+    + `<path d="M21 28.5h6v6h-6z" fill="#e2ab27" stroke="${ink}" stroke-width="1.4"/><path d="M13.5 34.5h21v9h-21z" fill="${g}" stroke="${ink}" stroke-width="1.6"/><path d="M13.5 37.6h21v2.8h-21z" fill="${k}" stroke="${tr}" stroke-width="1"/></svg>`;
+}
+/* The Medals tab's Super Fan row: a tile a club, with Join the Supporters' Wall for a club whose unlock this device owns (src/ui-store.js).
+   Two clubs or more (.many): the tiles share the row, compact on a narrow phone; a third wraps under them. */
+function lockerFanHtml(news) {
+  const held = lockerFanClubs(); if (!held.length) return '';
+  const own = typeof storeFanOwned === 'function' ? storeFanOwned() : [];
+  return `<div class="lk-fanrow${held.length > 1 ? ' many' : ''}">${held.map(({ club:c, team:t }) => `<div class="lk-fan${news && news.has('fan:' + c.key) ? ' new' : ''}" role="group" aria-label="Super Fan Trophy, ${esc(c.name)}">${lockerCup(t)}<span class="lk-fanname"><b>Super Fan</b><span>${esc(c.name)}</span></span>${own.includes(c) ? `<button class="btn lk-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button>` : ''}</div>`).join('')}</div>`;
+}
+/* The Trophy Cabinet's Super Fan trophies (renderCabinet, src/ui-menus.js): first, each its own entry, never in the tally. */
+function lockerFanCabinet() {
+  return lockerFanClubs().map(({ club:c, team:t }) => `<article class="season-entry fan-entry"><p class="eyebrow"><span class="cup-kind" data-kind="fan" data-metal="${typeof trophyMetal === 'function' ? trophyMetal('fan') : 'gold'}" data-won>Super Fan</span></p><h3>${lockerCup(t)}<span>${esc(c.name)}</span></h3></article>`).join('');
+}
+
 /* ---------- the home button ---------- */
 function lockerHome() {                                      // from renderHome: a dot on Locker while a medal waits there unseen
   const b = $('b-locker'); if (!b || !b.classList) return;
@@ -47,7 +70,7 @@ function lockerHome() {                                      // from renderHome:
 /* ---------- the Locker ---------- */
 function lockerOpen(tab) {
   lockerTab = tab == null ? 0 : tab;
-  const news = new Set(LOCKER_FEATS.filter(f => lockerTier(f.id) > lockerSeen(f.id)).map(f => f.id));   // shown once with a ring, then seen
+  const news = new Set([...LOCKER_FEATS.filter(f => lockerTier(f.id) > lockerSeen(f.id)).map(f => f.id), ...lockerFanHeld().slice(locker.fanSeen || 0).map(k => 'fan:' + k)]);   // shown once with a ring, then seen
   renderLocker(news);
   showScreen('s-locker'); $('s-locker').scrollTop = 0;
   lockerMarkSeen(); lockerHome();
@@ -58,13 +81,15 @@ function renderLocker(news) {
   [...$('lk-tabs').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === lockerTab)));
   const body = $('lk-body');
   body.className = 'lk-body lk-t' + lockerTab;
-  if (lockerTab === 0) body.innerHTML = LOCKER_FEATS.map(f => {
-    const t = lockerTier(f.id), next = lockerNext(f.id), n = lockerCount(f.id);
-    return `<div class="lk-feat${news && news.has(f.id) ? ' new' : ''}" role="group" aria-label="${f.name}, ${t ? LOCKER_MEDALS[t - 1] : 'no medal yet'}, ${n}${next ? ' of ' + next : ''}">
+  if (lockerTab === 0) {
+    body.innerHTML = lockerFanHtml(news) + LOCKER_FEATS.map(f => {
+      const t = lockerTier(f.id), next = lockerNext(f.id), n = lockerCount(f.id);
+      return `<div class="lk-feat${news && news.has(f.id) ? ' new' : ''}" role="group" aria-label="${f.name}, ${t ? LOCKER_MEDALS[t - 1] : 'no medal yet'}, ${n}${next ? ' of ' + next : ''}">
       <span class="lk-ic">${lockerIcon(f.id)}</span><b class="lk-name">${f.name}</b><span class="lk-line">${f.line}</span>
       <span class="lk-pips">${[1, 2, 3].map(k => lockerPip(k, t >= k)).join('')}<span class="lk-n">${next ? n + '/' + next : n}</span></span></div>`;
-  }).join('');
-  else if (lockerTab < 3) {
+    }).join('');
+    for (const b of body.querySelectorAll('[data-wall]')) b.addEventListener('click', () => storeWallAsk(b.dataset.wall));   // the grown-up check first (src/ui-store.js)
+  } else if (lockerTab < 3) {
     const kind = lockerTab === 1 ? 'ball' : 'boots', list = kind === 'ball' ? LOCKER_BALLS : LOCKER_BOOTS;
     body.innerHTML = list.map(it => {
       const has = lockerHas(kind, it.id), on = locker[kind] === it.id, src = lockerSource(kind, it.id);
