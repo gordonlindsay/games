@@ -173,6 +173,7 @@ function cleanSettings(g) {
   if (HOME_HL.includes(g.hl)) settings.hl = g.hl;   // the home's headline last chosen; a save from before it opens on Quick Match
   if (typeof g.myClub === 'string' && /^[A-Za-z0-9-]{1,24}$/.test(g.myClub)) settings.myClub = g.myClub;   // My Team's club, by its key (a built-in club's code, a made or imported team's key, a My League side's); one no longer there reads as the default (myClubTeam)
   if (typeof g.myNat === 'string' && NATIONS.some(n => n.id === g.myNat)) settings.myNat = g.myNat;   // My Team's country; a save from before My Team has neither, and is the Super Fan's club or Farnham, and England
+  if (g.cam === 0 || g.cam === 1 || g.cam === 2 || g.cam === 3) settings.cam = g.cam;   // 0 Top: an old save has none and stays there
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;

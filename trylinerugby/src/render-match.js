@@ -17,6 +17,8 @@ function render(dt) {
   const shake = M.shake > 0 && !RM ? 3*(M.shakeT/0.12)*(M.shake/M.shakeT) : 0;   // your Big Hit: a 3px shake for 0.12s (an arcade one bigger and longer), none under reduced motion
   if (M.shake > 0) M.shake -= dt;
   const camX = cam.x + shake*Math.sin(M.rt*173)/s, camY = cam.y + shake*Math.cos(M.rt*131)/s;
+  bvRelease();
+  if ((BV.on = behindOn())) return renderBehind(dt);
 
   ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*camX), d*(V.H/2 - s*camY));
   drawPitch();

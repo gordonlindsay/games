@@ -105,7 +105,9 @@ function keycapsFor(s, act) {                             // the keycaps a chip 
   const sch = seatScheme(s) || 'solo', R = sch === 'right', kc = code => (ARROW_KEY[code] ? `<kbd class="kc ar ${ARROW_KEY[code]}"></kbd>` : `<kbd class="kc">${KEYCAP[code]}</kbd>`);
   if (act === 'a' || act === 'b' || act === 'c') return kc(KB[sch][act][0]);
   if (act === 'x') return R ? kc('ArrowLeft') + kc('ArrowRight') : kc('KeyA') + kc('KeyD');
-  if (act === 'v') return R ? kc('ArrowUp') + kc('ArrowDown') : kc('KeyW') + kc('KeyS');
+  const behind = stickTurn(s);                             // a behind view: across the run is across the screen, and back is the down key
+  if (act === 'v') return behind ? (R ? kc('ArrowLeft') + kc('ArrowRight') : kc('KeyA') + kc('KeyD')) : R ? kc('ArrowUp') + kc('ArrowDown') : kc('KeyW') + kc('KeyS');
+  if (behind) return kc(R ? 'ArrowDown' : 'KeyS');
   const d = dirOf(Math.max(0, teamOfSeat(s)));             // back: the key toward his own line
   return kc(R ? (d > 0 ? 'ArrowLeft' : 'ArrowRight') : (d > 0 ? 'KeyA' : 'KeyD'));
 }
@@ -119,7 +121,7 @@ function chipHtml(s, ch) {
 function renderHint(s, h) {
   hintShown[s] = h;
   const el = $('hc' + s); if (!el) return;
-  const key = h ? JSON.stringify([h.title, h.rule, h.rows, h.kick, hintDev(s), seatScheme(s), teamOfSeat(s)]) : '';
+  const key = h ? JSON.stringify([h.title, h.rule, h.rows, h.kick, hintDev(s), seatScheme(s), teamOfSeat(s), stickTurn(s)]) : '';
   const c = M && M.cut, dim = !!(h && h.kick && c && c.kind === 'goal' && c.g.hcOver);
   el.classList.toggle('dim', dim); el.classList.toggle('two', !!(M && M.two));   // two player: the narrower limit, clear of the seat tags
   if (key === hintKey[s]) return;
@@ -134,7 +136,7 @@ function renderHint(s, h) {
 }
 function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines, Replay Tutorial
   const pair = !!(M && M.two && mode === 'match');
-  $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair;
+  $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair; $('pz-cam').hidden = pair || !!practice;
   for (const s of [0, 1]) { const seg = $('pz-h' + s); if (seg && seg.children) [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === hintsOn(s)))); }
   for (const s of [0, 1]) $('jt' + s).classList.toggle('off', !settings.twoHints[two.swapped ? 1 - s : s]);
   const ps = penCtx && M && M.two ? seatOfTeam(penCtx.team) : 0, on = hintsOn(ps);

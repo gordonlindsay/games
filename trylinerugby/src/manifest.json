@@ -22,6 +22,8 @@
   "render-setpieces.js",
   "render-duels.js",
   "render-goals.js",
+  "looks.js",
+  "render-behind.js",
   "render-match.js",
   "sound.js",
   "input-touch.js",

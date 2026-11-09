@@ -372,7 +372,7 @@ function dummyPass(c, r) {                                 // c shows a pass to 
   } else if (isHuman(t)) tag('Not Fooled', c.x, c.y);
   return true;
 }
-const dirKeyHeld = (inp, d) => { for (const code of inp.keys) { const k = KEYDIR[code]; if (k && (d == null || k[0]*d < 0)) return true; } return false; };   // any direction key, or (with d) one pointing back toward his own line
+const dirKeyHeld = (inp, d) => { for (const code of inp.keys) { const k = KEYDIR[code]; if (k && (d == null || keyFwd(inp, k)*d < 0)) return true; } return false; };   // any direction key, or (with d) one pointing back toward his own line
 function gestureStep(t, dt) {                              // one human side's open-play gestures, read once a step from its slot's history
   const inp = inputOf(t), c = ctrlOf(t), b = M.ball, S = sideOf(t), KS = MOVES.step, KD = MOVES.dummy;
   const peak = inp.latPeak; inp.latPeak = null;            // consumed this step, carrying or not, so a flick from a cut can't finish on the next carry

@@ -410,6 +410,14 @@ body.desk .desk-only{display:block}
   #br-stats th,#br-stats td{padding:2px 0}
   #br-stats .key{margin-top:4px}
 }
+@media (orientation:landscape) and (max-height:430px){
+  /* the pause card carries a Camera row in one player: on a phone in Safari, sideways, it must still fit, Quit Match included, because the modal doesn't scroll */
+  #m-pause{padding:8px}
+  #m-pause .card{gap:8px;padding:10px 16px}
+  #m-pause .btn,#m-pause .btn.primary{min-height:44px;padding-block:0}
+  #m-pause h3{font-size:22px}
+  #pz-hints{gap:6px 12px}
+}
 @media (max-height:340px){
   #m-break .card{gap:4px;padding:8px 12px}
   #m-break .final{font-size:22px}
