@@ -445,7 +445,7 @@ const STORE = 'tryline.v1';
    the tools call it since How to Play lost Replay Tutorial, 2026-11-09).
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
-const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
+const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop', 'maul'];   // appended only: a save's list is kept in this order
 const DRILL_IDS = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass', 'tag', 'back'];   // drillSeen: the drills whose Watch How has played on this device, each opened with it once (drill-demo.js)
 const COACH_IDS = ['offload', 'step', 'tackle', 'duel', 'kick', 'pass', 'sprint'];   // fleeting moments first, then the ones that stay available
 const COACH_LINE = {
@@ -1486,11 +1486,12 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   if ((!isHuman(c.team) || proRun(c)) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload (Pro Mode: so does a teammate of yours)
   return k;
 }
-function releaseBind(k) { for (const p of [k.c, k.q, k.q2]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }
+function releaseBind(k) { for (const p of [k.c, k.q, k.q2, k.mate]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }   // k.mate: the man who joined a maul (src/maul.js)
 function contactGuard() { const k = M.contact; if (!k) return; const b = M.ball; if (!(M.phase === 'play' && b.state === 'held' && b.carrier === k.c)) releaseBind(k); }
 function bindMove(p, dt) {                                 // velocities through the bind: the carrier runs down (or is driven back), the tackler is pulled onto his hip
   const k = p.bind;
   if (p === k.c) {
+    if (k.maul && k.maul.live) { p.vx = k.maul.v.x; p.vy = k.maul.v.y; return; }   // a maul driven in the world walks its ground (src/maul.js)
     const u = clamp(k.t/k.T, 0, 1);
     const f = k.tier === 'soft' ? 1 - 0.6*u : k.tier === 'wrap' ? 1 - u : (u < 0.4 ? 1 - u/0.4 : -0.35*(u - 0.4)/0.6);
     p.vx = k.v0.x*f; p.vy = k.v0.y*f;
@@ -1507,6 +1508,7 @@ function contactStep(c, dt) {                              // runs in place of t
   if (carrierChecks(c)) { releaseBind(k); return; }        // a bound carrier who crosses the line still scores; touch is still touch
   k.t += dt;
   if (k.aiOff != null && k.t >= k.aiOff) { k.aiOff = null; if (offload(k, false)) return; }
+  if (maulStep(k, dt)) return;                             // the maul: the CPU's call, the join, the drive (src/maul.js). Nothing at all with MAUL.on false
   if (!k.q2) for (const o of M.players) {
     if (o.team === c.team || o === k.q || !onFeet(o) || o.tcd > 0 || o.offside > 0) continue;
     if (dist(o, c) < CONTACT.second.r) { joinTackle(k, o); break; }
@@ -2536,6 +2538,7 @@ function updateCut(dt) {
   } else if (c.kind === 'scrum') updateScrum(c, dt);
   else if (c.kind === 'lineout') updateLineout(c, dt);
   else if (c.kind === 'goal') updateGoalCut(c, dt);
+  else if (c.kind === 'maul') updateMaul(c, dt);           // src/maul.js
   else updateDuel(c, dt);
   for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.flick = 0; inp.aCancel = inp.bCancel = inp.cCancel = false; }
 }
@@ -2674,6 +2677,203 @@ function autoLineout(s) {
   releaseTo(w, s.x, s.y, 'lineout');
 }
 
+/* ---------- the maul (2026-11-09) ----------
+   The owner: "For adult games, we could look at potentially having the ball carrier gets tackled, slows down, and maybe you could
+   switch and have another player join. And obviously that creates a ruck or a maul situation that you could then drive. So it could
+   bring up maul, for example, as a call out, and then you're into having to direction and tap like you would a scrum in order to
+   drive." He then chose a close-up like the scrum's.
+   Adult games only: never a Kids match, never a Minis one (matchMild), never a drill. A carrier held on his feet in a Soft or Wrap bind
+   (contactStep) can call it: your Switch press (B, dead in a bind until now) sends the nearest teammate within MAUL.r in, the bind
+   holds, 'Maul' is called and the close-up opens after MAUL.join. The CPU calls one on its own carrier sometimes (maulCpuRate: more
+   for a forward, near the line it attacks, with a Power edge), rolled once a bind at MAUL.cpu.at, and you defend it in the close-up.
+   With no human in it (AI v AI, the demo, a tool's headless match, a Pro Mode back's match) it is driven in the world instead, by the
+   same model with both packs on the CPU's terms (maulAutoStep), so nothing waits on a human.
+   The close-up: Bind, then Drive for MAUL.drive seconds. Taps on Push are the shove, read as scrumPush reads them (a timed first
+   shove on Drive is worth MAUL.hit metres); the stick's up and down wheels the maul across the pitch (as driveShape reads it), shown
+   as the maul's angle and on the pitch strip. Over the line is a maul try; MAUL.use metres or more is Use It, the ball back to the
+   scrum-half through a short ruck (a surge past MAUL.strong); less, or driven MAUL.back back, is Held Up and a scrum to the defence.
+   No new penalty. MAUL.on false draws exactly as the build before the maul (b706c3e): nothing here runs and no random number is drawn. */
+const MAUL = { on:true, r:4, join:0.3,
+  cpu:{ at:0.12, base:0.05, fwd:0.05, near:0.10, nearM:15, pow:0.03, max:0.35 },   // the CPU's call, rolled once a bind: base, + a forward, + within nearM of the line it attacks, + a Power point of edge
+  set:1.0, drive:3.0, speed:3.4, edge:0.2,   // the Bind call, the Drive's length, metres a second per unit of shove, the attack's edge
+  use:1.0, strong:3.0, back:1.5, hit:0.3,    // Use It from 1m, a surge from 3m, Held Up at 1.5m back; a timed first shove
+  wheel:0.9, ang:0.6, creep:0.8, edgeY:6,    // the stick turns it 0.9 rad/s to 0.6 rad either way; it slides 0.8 m/s along its turn; never within 6m of touch
+  useT:0.5, surge:2.0 };                     // the ruck after Use It, and the surge after a strong one
+// MAUL_TUNE
+const maulForward = p => CAREER_POS.F.includes(p.n);
+function maulMate(c) {                                     // the man who joins: the nearest teammate on his feet within MAUL.r, never one under a ring (Pro Mode's own player stays his own), never one in front of the ball (offside; supportFor's margin)
+  const dir = dirOf(c.team);
+  let best = null, bd = MAUL.r;
+  for (const p of M.players) {
+    if (p.team !== c.team || p === c || !onFeet(p) || p.offside > 0 || ringed(p) || (p.x - c.x)*dir > 0.3) continue;
+    const d = dist(p, c); if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+function maulOpen(k) {                                     // can this bind still become a maul: an adult match in play, the carrier held on his feet in a Soft or Wrap in the field of play (in his own in-goal the tackle is Held in Goal), nothing called yet
+  return MAUL.on && !practice && !matchMild() && !!k && M.contact === k && M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === k.c
+    && !k.maul && !k.offloaded && (k.tier === 'soft' || k.tier === 'wrap') && k.t < k.T && (k.c.x - ownLine(k.c.team))*dirOf(k.c.team) >= 0;
+}
+function maulCan(k) { return maulOpen(k) && !(proPinned(k.c.team) && proSkip()) && !!maulMate(k.c); }   // the B button's Maul: a man to join, and never a Pro Mode back's (his set pieces are played for the team)
+function maulPress(t) {                                    // B held in a tackle: the Maul. Nothing happens with nobody near
+  const c = ctrlOf(t), k = c && c.bind;
+  if (!k || k.c !== c || !maulCan(k)) return false;
+  maulCall(k, maulMate(c));
+  return true;
+}
+function maulCpuRate(c) {                                  // how often the CPU carrier calls one when it can
+  const P = MAUL.cpu, toLine = (oppLine(c.team) - c.x)*dirOf(c.team);
+  return clamp(P.base + (maulForward(c) ? P.fwd : 0) + (toLine <= P.nearM ? P.near : 0) + Math.max(0, powerOf(c.team) - powerOf(1 - c.team))*P.pow, 0, P.max);
+}
+function maulCall(k, mate) {
+  const c = k.c, d = dirOf(c.team);
+  k.maul = { t:0, live:false, cut:interactive() && !proSkip(), C:null };
+  k.offloaded = true; k.aiOff = null;                      // no offload once the maul is called
+  k.mate = mate; mate.bind = k; mate.bindOff = { x:-d*0.75, y:(mate.y >= c.y ? 1 : -1)*0.35 }; endSprint(mate);   // bound on his back: bindMove pulls him in as it pulls a tackler onto the hip
+  st('maulCall'); st('maulCall' + c.team);
+  if (k.maul.cut) say('Maul', '', c.team); else tag('Maul', c.x, c.y);
+  sfx('tackle'); if (ringed(c)) buzz(30, c.team);
+}
+/* contactStep's hook, every step of a bind: the CPU's call, the join, and the driven maul. True when it has the bind this step. */
+function maulStep(k, dt) {
+  if (!MAUL.on) return false;
+  const m = k.maul, c = k.c;
+  if (!m) {
+    if (k.maulTried || k.t < MAUL.cpu.at || k.aiOff != null || !(!isHuman(c.team) || proRun(c))) return false;
+    k.maulTried = true;
+    const mate = maulOpen(k) ? maulMate(c) : null;
+    if (!mate || rnd() >= maulCpuRate(c)) return false;
+    maulCall(k, mate);
+    return true;
+  }
+  m.t += dt;
+  if (!m.live) { if (m.t >= MAUL.join) maulForm(k); return true; }
+  maulAutoStep(k, dt);
+  return true;
+}
+function maulNew(k, auto) {                                // the maul's state, for the close-up or the world: each pack's base effort (a CPU pack's drawn as the scrum's), the wave
+  const c = k.c, att = c.team;
+  const C = { kind:'maul', team:att, x:c.x, y:c.y, k, auto, fwd:0, lat:0, ang:0, v:0, d:0, engaged:false, result:null, cut:!auto,
+    line:(oppLine(att) - c.x)*dirOf(att), rate:[0, 0], taps:[0, 0], hit:[false, false], early:[false, false], base:[0, 0], eff:[0, 0], wave:0, msg:[null, null] };
+  for (const t of [0, 1]) C.base[t] = maulCpu(C, t) ? (diffOf(t).scrumCpu + (powerOf(t) - 3)*0.06)*(0.75 + rnd()*0.5) : (powerOf(t) - 3)*0.06 + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0);
+  C.wave = rnd()*6;
+  return C;
+}
+const maulCpu = (C, t) => C.auto || cpuSide(t);           // a pack the CPU drives: a CPU side's, or both when nobody is in it
+function maulForm(k) {                                     // the join is done: the close-up, or the drive in the world
+  const m = k.maul, c = k.c;
+  st('mauls'); st('maul' + c.team);
+  if (m.cut) {
+    const C = maulNew(k, false); releaseBind(k); C.men = [c, k.mate, k.q, k.q2].filter(Boolean);
+    for (const inp of humanSlots()) { inp.pre = null; inp.reanchor(); inp.held = new Set(inp.keys); }   // as a duel's and a kick's cut-in: touch re-centred, a pad stick latched, held keys ignored (maulSteer)
+    startCut(C); return;
+  }
+  for (const key of ['q', 'q2']) if (k[key] && ringed(k[key])) { maulLetGo(k, k[key]); k[key] = null; }   // a man under a ring is never bound into a maul he cannot play (Pro Mode's back as the tackler)
+  m.C = maulNew(k, true); m.C.men = [c, k.mate, k.q, k.q2].filter(Boolean); m.live = true; m.v = { x:0, y:0 };
+}
+function maulLetGo(k, q) {                                 // a tackler let out of a maul in the world: he rolls away off its side and retires, as tackle() has him do from a ruck of the usual length
+  const c = k.c, d = dirOf(c.team), T = RUCK.t.normal + 0.25;
+  q.bind = null;
+  slide(q, clamp(c.x + d*1.0, 0.5, 119.5), clamp(c.y + (q.y >= c.y ? 1 : -1)*1.6, 1, 69), 0.15);
+  q.vx = q.vy = 0; q.down = T; q.tcd = q.offside = T + RUCK.retire;
+}
+const maulCpuEff = (C, s) => C.base[s]*(1 + 0.22*Math.sin(C.d*2.4 + C.wave + s*1.7));   // a CPU pack's shove, with a little wave
+function maulCpuSteer(C) {                                 // the CPU attack wheels gently towards the middle, with a sway
+  const y = C.y + C.lat;
+  return clamp((35 - y)/25, -1, 1)*0.35 + Math.sin(C.d*1.3 + C.wave)*0.25;
+}
+function maulSteer(inp) {                                  // a human's wheel: world()'s up and down, but never a key or a pad stick held into the close-up (a duel's sideX): a held key is skipped and a latched stick reads nothing
+  let x = inp.latch ? 0 : inp.jx, y = inp.latch ? 0 : inp.jy, px = 0, nx = 0, py = 0, ny = 0;
+  for (const code of inp.keys) { const d = KEYDIR[code]; if (!d || inp.held.has(code)) continue; if (d[0] > 0) px = 1; else if (d[0] < 0) nx = 1; if (d[1] > 0) py = 1; else if (d[1] < 0) ny = 1; }
+  const kx = px - nx, ky = py - ny;
+  if (kx || ky) { const m = hyp(kx, ky); x = kx/m; y = ky/m; }
+  const t = stickTurn(inp.seat);
+  return t ? x*t : y;                                      // a behind view turns the stick as world() does
+}
+function maulDrive(C, dt, eff) {                           // one step of the drive, the close-up's and the world's: the wheel, then the ground made along it
+  const att = C.team, def = 1 - att;
+  let s = 0;
+  for (const t of [0, 1]) if (!maulCpu(C, t)) { const inp = inputOf(t); if (inp) s += maulSteer(inp); }   // the stick's up and down, from each human in it
+  if (maulCpu(C, att)) s += maulCpuSteer(C);
+  const y = C.y + C.lat;
+  if ((y <= MAUL.edgeY && s < 0) || (y >= 70 - MAUL.edgeY && s > 0)) s = (35 - y)/35;   // never wheeled into touch: near it, the maul comes back off the line
+  C.ang = clamp(C.ang + clamp(s, -1, 1)*MAUL.wheel*dt, -MAUL.ang, MAUL.ang);
+  C.eff = eff; C.d += dt;
+  C.v = MAUL.speed*(eff[att] + MAUL.edge - eff[def]);
+  C.fwd += C.v*Math.cos(C.ang)*dt;
+  const lo = Math.min(C.y, MAUL.edgeY) - C.y, hi = Math.max(C.y, 70 - MAUL.edgeY) - C.y;
+  C.lat = clamp(C.lat + (C.v + MAUL.creep)*Math.sin(C.ang)*dt, lo, hi);
+}
+function maulOver(C) {                                     // the verdict, when there is one: over the line, driven back, or the Drive's time up
+  if (C.fwd >= C.line + 0.3) return 'try';
+  if (C.fwd <= -MAUL.back) return 'held';
+  if (C.d >= MAUL.drive) return C.fwd >= MAUL.use ? 'use' : 'held';
+  return null;
+}
+function maulPush(C, s, dt) {                              // a human pack's shove this step, as scrumPush: a timed first shove on Drive, then the taps of the last quarter second or so
+  const t = C.t, inp = inputOf(s), sign = s === C.team ? 1 : -1;
+  if (inp && inp.aPressed && t > CUT_IN) {
+    const note = text => { if (M.two) C.msg[s] = { text, at:t }; else say(text, 'small'); };
+    if (t < MAUL.set - 0.08) { if (!C.early[s] && !C.hit[s]) { C.early[s] = true; note('Early'); } }   // a press in the Bind call forfeits the timed shove, nothing more
+    else if (!C.hit[s] && !C.early[s] && t <= MAUL.set + 0.28) { C.hit[s] = true; C.fwd += MAUL.hit*sign; note('Good Timing'); buzz(25, s); }
+    if (t >= MAUL.set) { C.rate[s] += 1; C.taps[s]++; }
+  }
+  if (t < MAUL.set) return 0;
+  C.rate[s] *= Math.exp(-dt/0.25);
+  return 0.85*Math.min(1.3, C.rate[s]/1.25) + C.base[s];   // 5 taps a second is a full shove, about 6.5 the most, as the scrum
+}
+function updateMaul(C, dt) {                               // the close-up's step (updateCut)
+  const eff = [0, 1].map(s => (maulCpu(C, s) ? 0 : maulPush(C, s, dt)));
+  if (C.t < MAUL.set || C.result) return;
+  if (!C.engaged) { C.engaged = true; sfx('tackle'); buzz(40); }
+  for (const s of [0, 1]) if (maulCpu(C, s)) eff[s] = maulCpuEff(C, s);
+  maulDrive(C, dt, eff);
+  const res = maulOver(C); if (res) maulResult(C, res);
+}
+function maulAutoStep(k, dt) {                             // the maul driven in the world: the carrier walks the model's ground, the men bound to him follow (bindMove)
+  const C = k.maul.C, d = dirOf(C.team), f0 = C.fwd, l0 = C.lat;
+  maulDrive(C, dt, [maulCpuEff(C, 0), maulCpuEff(C, 1)]);
+  k.maul.v = { x:d*(C.fwd - f0)/dt, y:(C.lat - l0)/dt };
+  const res = maulOver(C); if (res) maulResult(C, res);
+}
+function maulPlace(C, ex, ey) {                            // the men where the maul ended; after a close-up everyone else moves with it too (the world was frozen under it)
+  const k = C.k, c = k.c, d = dirOf(C.team), dx = ex - c.x, dy = ey - c.y, men = new Set(C.men), sy = (k.q && k.q.y >= c.y) ? 1 : -1;
+  if (C.cut) for (const p of M.players) if (!men.has(p)) { p.x = clamp(p.x + dx, 0.5, 119.5); p.y = clamp(p.y + dy, 1, 69); p.drawFrom = null; }
+  const at = (p, x, y) => { if (!p) return; if (C.cut) { p.x = x; p.y = y; p.drawFrom = null; } else slide(p, x, y, 0.15); p.vx = p.vy = 0; p.bind = null; };
+  at(c, ex, ey); at(k.mate, ex - d*0.3, ey - sy*0.9); at(k.q, ex + d*0.9, ey + sy*0.6); at(k.q2, ex + d*0.9, ey - sy*0.9);
+  const T = MAUL.useT;
+  c.down = T + 0.15; if (k.mate) k.mate.down = T;
+  for (const q of [k.q, k.q2]) if (q) { q.down = T + 0.1; q.tcd = q.offside = T + 0.25 + RUCK.retire; }   // the defenders in it retire, as from a ruck
+}
+function maulResult(C, res) {
+  C.result = res;
+  const att = C.team, def = 1 - att, d = dirOf(att), k = C.k;
+  st('maul_' + res); st('maulM', C.fwd); st('maulDrive', C.d);
+  const ex = clamp(C.x + d*C.fwd, 0.5, 119.5), ey = clamp(C.y + C.lat, 1, 69), strong = res === 'use' && C.fwd >= MAUL.strong;
+  const apply = () => {
+    releaseBind(k);
+    if (C.cut) M.stats.gain[att] += C.fwd;               // the ground a close-up's maul made is carried ground (a maul in the world counts it as it goes)
+    maulPlace(C, ex, ey);
+    if (res === 'try') { const c = k.c; c.x = clamp(oppLine(att) + d*0.6, 0.5, 119.5); c.down = 0; scoreTry(c); return; }
+    if (res === 'held') { placeBall(ex, ey); deadBall(() => scrum(def, ex, ey, 'Held Up')); return; }
+    const bx = clamp(ex - d*0.4, 1, 119), by = clamp(ey, 1, 69);
+    placeBall(bx, by); M.phaseCount++;
+    startSet({ kind:'ruck', team:att, x:bx, y:by, t:MAUL.useT, maul:true, then:s => { releaseTo(att, s.x, s.y, 'ruck', s.picker); if (strong) surge(att, MAUL.surge); } });   // Use It: the ball back to the scrum-half, quick
+  };
+  if (!C.cut) { if (res === 'use') tag('Use It', ex, ey); else if (res === 'held') tag('Held Up', ex, ey); apply(); return; }   // driven in the world: its verdict on the pitch (a try says so itself)
+  say(res === 'try' ? 'Maul Try' : res === 'use' ? 'Use It' : 'Held Up', res === 'use' && !strong ? 'small' : '', res === 'held' ? def : att);
+  if (res === 'held') sfx('whistle'); else if (res === 'try') sfx('roar');
+  finishCut(apply, res === 'try' ? 0.6 : 0.8);
+}
+function maulResume(C) { if (!C.engaged) C.t = Math.max(CUT_IN, C.t - 0.6); }   // a pause before the Drive gives the thumb a moment, as the scrum's
+function maulCues(C) {                                     // two player's bottom bar: each pack's Push, and the stick for both
+  const out = [];
+  for (const t of [0, 1]) { const s = seatOfTeam(t); if (s != null) out.push([s, seatKey(s, 'a') + ' · Push · ' + maulSteerKey(s) + ' · Steer']); }
+  return out;
+}
+function maulSteerKey(s) { const sch = seatScheme(s); return !sch ? 'Stick' : sch === 'right' ? 'Arrows' : 'W S'; }   // the stick's up and down: a pad's stick, the arrows, or W and S
+function maulHint(C, t, kb) { return C.result ? null : card('Maul', C.team === t ? 'Your Ball' : 'Hold Them Up', [row([chip('v')], kb ? 'Steer' : 'Steer With the Stick'), row([chip('a', 'Push')], 'Tap Push to Drive')]); }
+function maulTutCards(name, steer) { return [['Maul', 'Steer With ' + steer], ['Maul', 'Tap ' + name('a', 'Push') + ' to Drive']]; }
 /* ---------- duels ----------
    Four one-on-one moments that cut to a chase-cam close-up: Get Past and
    Key Pass on attack, Tackle and Block on defence. A gold ring is the only
@@ -3689,7 +3889,7 @@ function userKick(t, power) {
 function canDive(q) {                                      // would a Tackle press act now: a carrier of the other side within 2.8m, and this man up, off cooldown, not retiring and unbound
   const b = M.ball, c = b.state === 'held' ? b.carrier : null;
   if (!q || !c || c.team === q.team || !onFeet(q) || q.tcd > 0 || q.offside > 0 || dist(q, c) >= 2.8) return false;
-  return !c.bind || (!c.bind.q2 && c.bind.q !== q);
+  return !c.bind || (!c.bind.maul && !c.bind.q2 && c.bind.q !== q);   // never into a maul once it is called (src/maul.js)
 }
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;
@@ -3833,6 +4033,7 @@ function userStep(t, i, dt) {
   tickUserPass(t, dt);
   if (i.b && !inp.bCancel) {
     if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    else if (M.phase === 'play' && b.state === 'held' && b.carrier === c && c.bind) maulPress(t);   // held in a tackle: the Maul, when a man is near (src/maul.js)
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
   if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick
@@ -6023,6 +6224,7 @@ function cutCues(c) {
   const out = [], key = (t, act) => seatKey(seatOfTeam(t), act);
   if (c.kind === 'scrum') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Push']); return out; }
   if (c.kind === 'lineout') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Jump']); return out; }
+  if (c.kind === 'maul') return c.result ? out : maulCues(c);   // src/maul.js
   if (c.kind === 'goal') { const t = c.g.team; if (!c.after && !c.g.out && !c.g.watch) out.push([seatOfTeam(t), c.g.type === 'drop' ? key(t, 'b') + ' · Drop Goal' : 'Hold ' + key(t, 'a') + ' · Kick']); return out; }
   if (c.out != null) return out;
   const k = c.kind, U = c.own, O = 1 - c.own;
@@ -6130,6 +6332,7 @@ function drawCut() {
   if (c.kind === 'scrum') drawScrum(c, g);
   else if (c.kind === 'lineout') drawLineout(c, g);
   else if (c.kind === 'goal') drawKick(c, g);
+  else if (c.kind === 'maul') drawMaul(c, g);              // src/render-maul.js
   else drawDuel(c, g);
   if (!practice) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07); }   // the broadcast bars are a match's
   if (!(hintShown[0] && hintShown[0].title)) cutTag(cutTitle(c), g);   // a hints card with a title sits where the tag goes and names the moment itself
@@ -6139,6 +6342,77 @@ function drawCut() {
   ctx.fillStyle = C.ctrl;
   if (ein < 1) ctx.fillRect(right - 3, 0, 6, g.H);
   if (eout > 0 && eout < 1) ctx.fillRect(left - 3, 0, 6, g.H);
+}
+/* ---------- the maul's close-up (src/maul.js): side-on, four a side, as the scrum's ----------
+   The two packs bound round the ball carrier, Bind then Drive, the maul turned by its wheel (the far men slide as it turns), a bar for
+   the metres driven at the foot between the stick and the buttons, and a pitch strip top right showing where it is going. */
+function maulGeom(W, H, ins, two) {                        // where the bar and the strip sit; tools/maul.mjs measures them against the stick, the buttons and the hints cards
+  ins = ins || { t:0, r:0, b:0, l:0 };
+  const bw = W*0.34, bh = Math.max(8, H*0.022), sw = clamp(W*0.18, 110, 160), sh = sw*70/120, sx = W - Math.max(16, ins.r + 8) - sw;
+  return { bar:{ x:W*0.5 - bw/2, y:H*0.885, w:bw, h:bh }, strip:{ x:sx, y:two ? H*0.93 - sh - 10 : H*0.33, w:sw, h:sh }, call:{ y:H*0.37, size:H*0.17 } };   // two player: Player 2's hints card is top right and there is no Push button, so the strip sits bottom right
+}
+const maulCol = t => (M.two ? ringCol(t) : isHuman(t) ? C.ctrl : showCol(t));   // a pack's colour on the bar and the strip: yours gold, theirs their shirt (two player: each seat's)
+const MAUL_MEN = [[-0.66, -0.3, 1], [-0.66, 0.38], [-1.16, -0.05], [-1.62, 0.3], [0.66, -0.3], [0.66, 0.38], [1.16, 0.05], [1.62, -0.25]];   // [along the drive, across (far +), the carrier]: the attack's four behind the line of contact, the defence's in front
+function drawMaul(c, g) {
+  drawStage(g);
+  const { W, H } = g, sc = H*0.185, ground = H*0.84, t = c.t, att = c.team, d = dirOf(att), a = c.ang;
+  const engaged = t >= MAUL.set, live = engaged && !c.result;
+  const mid = W*0.5 + d*clamp(c.fwd, -1.5, 3)*sc*0.15 + (live ? Math.sin(t*29)*1.2 : 0);   // the line of contact moves a little with the drive; the bar and the strip say how far
+  const lean = engaged ? 0.42 : 0.2, crouch = engaged ? 0.38 : 0.15, gap = engaged ? 0 : clamp((MAUL.set - t)/MAUL.set, 0, 1)*0.35;   // more upright than a scrum: a maul is on its feet
+  const men = MAUL_MEN.map(([u0, w, carrier]) => {
+    const team = u0 < 0 ? att : 1 - att, u = u0 + Math.sign(u0)*gap;
+    const ox = d*(u*Math.cos(a) + w*Math.sin(a)), depth = -(u*Math.sin(a) - w*Math.cos(a));   // turned by the wheel: across the pitch is depth, away from the camera up the screen
+    return { team, carrier:!!carrier, x:mid + ox*sc, depth };
+  }).sort((p, q) => q.depth - p.depth);
+  let ball = null;
+  for (const m of men) {
+    const s = sc*(1 - m.depth*0.08), gy = ground - m.depth*H*0.05, face = m.team === att ? d : -d;
+    fig(m.x, gy, s, kitOf(m.team), { face, lean, crouch, arms:'bind', drive:engaged, dim:clamp(m.depth*0.4, 0, 0.45) });
+    if (m.carrier) ball = [m.x + face*0.36*s, gy - (engaged ? 0.9 : 1.05)*s, s*0.9, face*0.4];
+  }
+  if (ball) cutBall(...ball);                              // over the men, so the ball always shows
+  if (M.two) for (const team of [0, 1]) {                   // the seat tag over each pack, and its Early or Good Timing for 0.9s
+    const px = mid - (team === att ? d : -d)*0.9*sc, ty = ground - 1.75*sc, tg = Math.max(16, H*0.045);
+    cutSeatTag(seatOfTeam(team), px, ty, tg);
+    const m = c.msg[team];
+    if (m && t - m.at < 0.9) { const out = px < mid ? -1 : 1; ctx.fillStyle = ringCol(team); ctx.font = `800 ${Math.round(H*0.045)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = out < 0 ? 'right' : 'left'; ctx.textBaseline = 'middle'; ctx.fillText(m.text.toUpperCase(), px + out*(tg*0.6 + 6), ty - tg*0.45); }   // beside the tag, out from the maul, clear of the call above
+  }
+  const G = maulGeom(W, H, safeInsets(), M.two);
+  const call = t < MAUL.set ? 'Bind' : t < MAUL.set + 0.6 && !c.result ? 'Drive' : null;
+  if (call && t > CUT_IN) cutText(call, G.call.y, call === 'Drive' ? G.call.size : H*0.13, call === 'Drive' ? 1 : 0.92);
+  drawMaulBar(c, G.bar, H);
+  drawMaulStrip(c, G.strip);
+}
+function drawMaulBar(c, B, H) {                            // the metres driven: from the Held Up line behind to the try line (or 8m) ahead, the attack's way across the screen
+  const att = c.team, d = dirOf(att), ahead = clamp(c.line + 0.3, 3, 8), span = MAUL.back + ahead, ppm = B.w/span;
+  const zero = d > 0 ? B.x + MAUL.back*ppm : B.x + B.w - MAUL.back*ppm, X = m => zero + d*m*ppm;
+  ctx.fillStyle = 'rgba(8,14,10,.8)'; rrect(B.x - 3, B.y - 3, B.w + 6, B.h + 6, 4); ctx.fill();
+  const m = clamp(c.fwd, -MAUL.back, ahead);
+  ctx.fillStyle = m >= 0 ? maulCol(att) : maulCol(1 - att);
+  const x0 = Math.min(zero, X(m)); ctx.fillRect(x0, B.y, Math.abs(X(m) - zero), B.h);
+  ctx.fillStyle = '#f1eee4'; ctx.fillRect(zero - 1, B.y - 4, 2, B.h + 8);   // where it started
+  const a0 = ctx.globalAlpha; ctx.globalAlpha = a0*0.7; ctx.fillRect(X(MAUL.use) - 1, B.y - 2, 2, B.h + 4); ctx.globalAlpha = a0;   // Use It from here
+  if (c.line + 0.3 <= ahead) { ctx.fillRect(X(c.line + 0.3) - 2, B.y - 6, 4, B.h + 12); }   // the try line, when it is in reach
+  ctx.font = `800 ${Math.round(H*0.04)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'right'; ctx.fillText(M.nat[0].id, B.x - 10, B.y + B.h/2);
+  ctx.textAlign = 'left'; ctx.fillText(M.nat[1].id, B.x + B.w + 10, B.y + B.h/2);
+}
+function drawMaulStrip(c, S) {                             // the whole pitch from above, as the Top camera has it: where the maul started, where it is, and where it is heading
+  const k = S.w/120, P = (x, y) => [S.x + x*k, S.y + y*k], att = c.team, d = dirOf(att);
+  ctx.fillStyle = 'rgba(8,14,10,.82)'; rrect(S.x - 4, S.y - 4, S.w + 8, S.h + 8, 5); ctx.fill();
+  ctx.fillStyle = '#2b6334'; ctx.fillRect(S.x, S.y, S.w, S.h);
+  ctx.fillStyle = '#245a2d'; ctx.fillRect(S.x, S.y, 10*k, S.h); ctx.fillRect(S.x + 110*k, S.y, 10*k, S.h);   // the in-goals
+  ctx.strokeStyle = 'rgba(244,241,232,.75)'; ctx.lineWidth = 1;
+  for (const x of [10, 60, 110]) { const [px] = P(x, 0); seg(px, S.y, px, S.y + S.h); }
+  ctx.strokeStyle = 'rgba(244,241,232,.35)';
+  for (const x of [32, 88]) { const [px] = P(x, 0); seg(px, S.y, px, S.y + S.h); }
+  ctx.strokeRect(S.x, S.y, S.w, S.h);
+  const [sx, sy] = P(c.x, c.y), [nx, ny] = P(clamp(c.x + d*c.fwd, 0, 120), clamp(c.y + c.lat, 0, 70)), col = maulCol(att);
+  ctx.strokeStyle = 'rgba(244,241,232,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, 7); ctx.stroke();
+  const L = 9*k; ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  seg(nx, ny, nx + d*Math.cos(c.ang)*L, ny + Math.sin(c.ang)*L);   // the heading: the way the wheel has it going
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(nx, ny, 4.5, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#08110b'; ctx.lineWidth = 1.2; ctx.stroke();
 }
 /* ---------- duel view: a chase-cam over your player's shoulder ----------
    Looks along +x, so screen-right is always world +y. A point (x, y, h)
@@ -6755,6 +7029,7 @@ function cutTitle(c) {
   if (c.duel) return DUEL[c.kind].name;
   if (c.kind === 'goal') return (c.g.kind === 'conversion' ? 'Conversion' : c.g.kind === 'penalty' ? 'Penalty Goal' : 'Drop Goal') + ' · ' + Math.round(c.g.dist) + 'm';
   if (c.kind === 'scrum') return 'Scrum · ' + M.nat[/^(win|steal)/.test(c.result || '') ? +c.result.slice(-1) : c.feed].id + ' Ball';   // the put-in's, then whoever won it (2026-11-09: Against the Head names the side that took it)
+  if (c.kind === 'maul') return 'Maul · ' + M.nat[c.team].id + ' Ball';
   return 'Lineout · ' + M.nat[c.team].id + ' Throw';
 }
 function duelLabels(c) {
@@ -8268,7 +8543,7 @@ function drawSeatMark(t, cx, cy, r, off) {
   ctx.globalAlpha = a0;
   const cue = cueOf(t);
   if (cue) {
-    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' || cue === 'Switch' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, G · SWITCH, / · TACKLE
+    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' || cue === 'Switch' || cue === 'Maul' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, G · SWITCH, / · TACKLE
     ctx.font = `800 12px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const m = ctx.measureText(text), tw = ((m && m.width) || text.length*6.5) + 12;
     ctx.fillStyle = 'rgba(8,14,10,.82)'; rrect(cx - tw/2, y - 9, tw, 18, 4); ctx.fill();
@@ -8281,7 +8556,7 @@ function cueOf(t) {                                        // the word the big o
   const b = M.ball, k = M.contact;
   if (ourBall(t)) {
     if (b.state !== 'held' || b.carrier !== c) return null;
-    if (c.bind) return k && k.c === c && canOffload(k) ? 'Offload' : null;
+    if (c.bind) return k && k.c === c && canOffload(k) ? 'Offload' : k && k.c === c && maulCan(k) ? 'Maul' : null;   // the Maul when no Offload is lit (src/maul.js)
     const p = sideOf(t).pass;
     if (p && p.mode === 'hold' && p.t >= LONG.arm && passAim(c, inputOf(t).world().y).far) return 'Long';
     return kickLabel(t) === 'Drop Goal' ? 'Drop Goal' : null;
@@ -9423,6 +9698,7 @@ function statusSync() {
 function cutLabels(c) {
   if (c.kind === 'scrum') return ['Push', null];
   if (c.kind === 'lineout') return ['Jump', null];
+  if (c.kind === 'maul') return ['Push', null];
   return duelLabels(c);
 }
 
@@ -9459,7 +9735,7 @@ function updateHud() {
   else if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
   else if (ours && proCalling(ht)) { la = 'Call for Ball'; lb = null; cueA = cueB = false; aAct = play && proCanCall(); bAct = false; }   // Pro Mode: a teammate has it (career-pro.js)
-  else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl; la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && carrying && (!held || cueA); bAct = play && carrying && !held; }   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
+  else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl, maul = held && maulCan(k); la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; if (maul) lb = 'Maul'; cueA = la === 'Offload'; cueB = maul; aAct = play && carrying && (!held || cueA); bAct = play && carrying && (!held || maul); }   // held with a man near, B is the Maul (src/maul.js); the kick label is still read, as before   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
   else { const tagging = practice && practice.tagOnly; la = tagging ? 'Pull Tag' : 'Tackle'; lb = proPinned(ht) ? null : 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && (tagging ? drillCanPull(ctrl) : canDive(ctrl)); bAct = play; }   // Tackle (Pull Tag for the youngest's drills) lights up only when a press would act now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
   const S = M.spr[ht], sprOn = D ? !!D.cOn : !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
@@ -9541,6 +9817,7 @@ function hintFor(s) {                                      // the card for seat 
     if (c.kind === 'scrum' && practice) return c.result || practice.ready ? null : card('Driving', 'Stay Low in the Green', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Keep Tapping')]);   // the game's own card, and none on its ready card
     if (c.kind === 'scrum') return c.result ? null : card('Scrum', c.feed === t ? 'Your Ball' : 'Steal Their Ball', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Tap Fast')]);
     if (c.kind === 'lineout') return c.outcome != null ? null : card('Lineout', c.team === t ? 'Your Throw' : 'Steal Their Throw', [row([chip('a', 'Jump')], 'Ball Halfway')]);
+    if (c.kind === 'maul') return maulHint(c, t, kb);        // src/maul.js
     if (c.kind === 'goal') {
       const g = c.g;
       if (g.watch || g.team !== t || c.t < CUT_IN || c.after || g.out) return null;
@@ -9668,6 +9945,7 @@ function tutCards(id, s) {
     case 'block': return [['Block', 'Their Pass Crosses Your Player'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
     case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
     case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
+    case 'maul': return maulTutCards(name, kb ? (stickTurn(s) ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : R ? 'the Arrows' : '{KeyW} and {KeyS}') : 'the Stick');   // src/maul.js: the stick's up and down (across the screen in a behind view)
     case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', aim + 'Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
     default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', ' + aim + 'Let Go in the Gold Before They Reach You']];
   }
@@ -9894,6 +10172,7 @@ function resume() {
   // scrums and lineouts give the thumb a moment too, without replaying a throw backwards
   else if (c && c.kind === 'lineout' && c.outcome == null) c.t = Math.max(CUT_IN, c.t >= c.throwT ? c.throwT : 0, c.t - 0.6);
   else if (c && c.kind === 'scrum' && !c.engaged) c.t = Math.max(CUT_IN, c.t - 0.6);
+  else if (c && c.kind === 'maul' && !c.after) maulResume(c);   // src/maul.js
 }
 /* A two-tap confirm (Quit, Delete Team, Start Fresh, Start New Career, Remove League): the first tap asks again, and the second
    counts only once CONFIRM.gap has passed, so a quick double tap (a child mashing, or one tap read twice) only asks. */
@@ -15482,7 +15761,7 @@ document.addEventListener('visibilitychange', () => { pauseKey = ''; });   // a 
 /* A step is always 1/60 of a simulated second, so below pace 1 a 60Hz screen gets a frame with no step about one time in eight (at 0.75, one in four) and the world would hitch.
    The picture blends the last step instead, a step behind the sim. Drawing only: every position goes back before anything else reads it, so the sim never sees this. A close-up draws from its clocks, so those blend the same way: what is judged reads them after they have gone back. */
 const PACE_KEEP = { M:null, was:[], now:[], cut:null, cutWas:[], cutNow:[] }, PACE_JUMP = 1.5;   // PACE_JUMP: metres in one step that can only be a teleport (a restart, a set piece): that man is drawn where he is
-const PACE_CUT = ['t', 'acc', 'exit', 'pos'], PACE_KICK = ['st', 'm', 'aim'], PACE_LEAP = 0.2;   // what a close-up's picture moves with: the scene clock and its slow-motion fraction, the slide out, the scrum's shove; a kick's run-up, meter and aim. PACE_LEAP: a change in one step that can only be a new stage: drawn as it is
+const PACE_CUT = ['t', 'acc', 'exit', 'pos', 'fwd', 'lat', 'ang'], PACE_KICK = ['st', 'm', 'aim'], PACE_LEAP = 0.2;   // what a close-up's picture moves with: the scene clock and its slow-motion fraction, the slide out, the scrum's shove, the maul's metres, slide and wheel; a kick's run-up, meter and aim. PACE_LEAP: a change in one step that can only be a new stage: drawn as it is
 function paceKeep() {                                       // the world before the step about to run
   if (matchPace() === 1) { PACE_KEEP.M = null; return; }
   const K = PACE_KEEP, w = K.was, b = M.ball, c = M.cut; let i = 0;
@@ -15610,6 +15889,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   behind:{ menuDemo, BV_DEMO_AT, BV_DEMO_CAM, BV_DEMO_IN, frameDraw, BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, artHairOf, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, BV_STAR, bvStack, artPalette, artPaletteOf, LOOK_SKIN, LOOK_HAIR, LOOK_STYLES, LOOK_LONG, LOOK_FEMALE, paintState:() => ({ ctx, SKIN, HAIR }) },
   sound:{ SOUND, NAMES:SOUND_NAMES, SND, FILES:SOUND_FILES, SYNTH:SOUND_SYNTH, SAMPLE, takes:soundTakes, load:sndLoad, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
   clarity:{ MATCH_PACE, matchPace, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
+  maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   get M() { return M; } };
 
 function start(data) {

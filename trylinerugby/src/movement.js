@@ -302,7 +302,7 @@ function userKick(t, power) {
 function canDive(q) {                                      // would a Tackle press act now: a carrier of the other side within 2.8m, and this man up, off cooldown, not retiring and unbound
   const b = M.ball, c = b.state === 'held' ? b.carrier : null;
   if (!q || !c || c.team === q.team || !onFeet(q) || q.tcd > 0 || q.offside > 0 || dist(q, c) >= 2.8) return false;
-  return !c.bind || (!c.bind.q2 && c.bind.q !== q);
+  return !c.bind || (!c.bind.maul && !c.bind.q2 && c.bind.q !== q);   // never into a maul once it is called (src/maul.js)
 }
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;
@@ -446,6 +446,7 @@ function userStep(t, i, dt) {
   tickUserPass(t, dt);
   if (i.b && !inp.bCancel) {
     if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    else if (M.phase === 'play' && b.state === 'held' && b.carrier === c && c.bind) maulPress(t);   // held in a tackle: the Maul, when a man is near (src/maul.js)
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
   if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick

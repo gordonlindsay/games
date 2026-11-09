@@ -979,8 +979,8 @@ begin('census');
   ok(jack === 0, 'no ruck ever has a jackal, a Steal prompt or a press window');
   ok(badLabel === 0 && ![...setLabels].some(l => /Releasing|Off Your Feet|Rolling Away|High Tackle|Sin Bin|Yellow/.test(l)), `every penalty is a plain Penalty: no new reasons (${[...setLabels].filter(l => /Penalty/.test(l)).join(', ')})`);
   ok(duelInBind === 0, 'no duel ever starts during a bind');
-  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On']);   // Pressure On added on purpose (2026-11-09, PRESSURE): the warning that the ball may be knocked loose, not a breakdown word
-  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the ten (${[...tagKinds].join(', ')})`);
+  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up']);   // Pressure On added on purpose (2026-11-09, PRESSURE): the warning that the ball may be knocked loose, not a breakdown word; the last three the maul's, on purpose (src/maul.js): a CPU maul in these headless matches is driven in the world and tagged
+  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the thirteen (${[...tagKinds].join(', ')})`);
   ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step and Pressure On ${(tagsN/m).toFixed(1)})`);
   ok(pressTags/m > 0 && pressTags/m <= 12, `Pressure On a few times a match, for both sides together (${(pressTags/m).toFixed(1)})`);
   ok(!/Not Releasing|Off Your Feet|Not Rolling Away|High Tackle|Sin Bin|Yellow Card|'Steal'|jackal/.test(script), 'the game has no steal, no new penalty and no sin bin');
@@ -1007,9 +1007,9 @@ begin('words');
 {
   const SMALL = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const title = s => s.split(' ').every((w, i) => (i > 0 && SMALL.has(w)) || /^[A-Z0-9][A-Za-z0-9:'-]*$/.test(w));
-  const labels = ['Pass', 'Offload', 'Tackle', 'Switch', 'Kick', 'Drop Goal', 'Push', 'Jump', 'Skip', 'Dummy', 'Block', 'Sprint'];
+  const labels = ['Pass', 'Offload', 'Tackle', 'Switch', 'Kick', 'Drop Goal', 'Push', 'Jump', 'Skip', 'Dummy', 'Block', 'Sprint', 'Maul'];
   const tags = [...script.matchAll(/tag\('([^']+)'/g)].map(m => m[1]);
-  const fixedTags = ['Fend', 'Big Hit', 'Stopped', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On'];   // Pressure On: PRESSURE (2026-11-09)
+  const fixedTags = ['Fend', 'Big Hit', 'Stopped', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up'];   // Pressure On: PRESSURE (2026-11-09); the last three: the maul's, on purpose (src/maul.js)
   ok(tags.length >= 9 && tags.every(t => fixedTags.includes(t)), `every tag in the code is on the list (${[...new Set(tags)].join(', ')})`);
   ok([...labels, ...fixedTags].every(title), 'labels and tags are Title Case');
   ok(![...labels, ...fixedTags].some(s => /[←→↑↓⇐⇒➜»›]/.test(s)) && !/[←→]/.test(script.replace(/\/\/.*$/gm, '')), 'no arrow glyph in a label, a tag or the code');

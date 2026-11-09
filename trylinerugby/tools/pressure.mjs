@@ -5,7 +5,7 @@
 // bounce untouched, the render drawing no random number, the words; and PRESSURE off drawing exactly as b706c3e.
 // node tools/pressure.mjs                     (SEED=11 unless set; VERBOSE=1 lists every check)
 // node tools/pressure.mjs --pins              prints this build's fingerprints with PRESSURE off (and Bouncy Egg's)
-// GAME=<b706c3e>/index.html node tools/pressure.mjs --pins   gives the same on b706c3e: how OFF below was pinned (EGG on 0b1293c, the same way)
+// GAME=<b706c3e>/index.html node tools/pressure.mjs --pins   gives the same on b706c3e: how OFF below was pinned (EGG on 0b1293c and OFF_MAUL on wt/maul, the same way)
 process.env.SEED ??= '11';
 const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
@@ -21,6 +21,7 @@ const hyp = Math.hypot, dirOf = t => t === 0 ? 1 : -1;
 //    live, a Kids match and a Minis match. Bouncy Egg plays as the build before pressure with PRESSURE on or off: the hop is shared, not
 //    changed. OFF comes from b706c3e's own bundle (GAME=<b706c3e>/index.html node tools/pressure.mjs --pins), EGG from 0b1293c's (below).
 const OFF = '1r5245s 7ga17c lz72hy 19t3owf 8h6xzj szztk';
+const OFF_MAUL = '1cnqco8 xnabgl acm9q0 19t3owf 8h6xzj 1pmg6gd';   // the merge of the maul into wt/pr14int (2026-11-09): GAME=<wt/maul c4980b8>/index.html node tools/pressure.mjs --pins gives it, third line
 const EGG = '1vrs907';   // re-pinned at the merge into wt/pr14int (2026-11-09): Bouncy Egg is the Skills Mini Games fixes' now (wt/eggcircle: two in three throws bounce, keep 0.66 to 0.8), so b706c3e's 1wwghxa is gone; GAME=<0b1293c, the build before this merge>/index.html node tools/pressure.mjs --pins gives 1vrs907 exactly, and so does this build with PRESSURE on or off
 const minis = () => { const t = { ...X.CLUBS[2], id:'MNI', cat:'minis' }; return t; };
 function offPins() {
@@ -44,16 +45,21 @@ function eggPin() {                                        // twelve throws of B
   T.practice.leave();
   return fnv(out);
 }
-if (process.argv.includes('--pins')) {
-  if (P) P.PRESSURE.on = false;
+const MA = T.maul && T.maul.MAUL;                         // the maul (src/maul.js), merged after pressure on wt/pr14int (2026-11-09)
+if (process.argv.includes('--pins')) {                     // PRESSURE and the maul off; Bouncy Egg; PRESSURE alone off (on a build with no PRESSURE, the build as it is)
+  if (P) P.PRESSURE.on = false; if (MA) MA.on = false;
   const off = offPins();
+  if (MA) MA.on = true;
+  const alone = offPins();
   if (P) P.PRESSURE.on = true;
-  console.log(off + '\n' + eggPin()); process.exit(0);
+  console.log(off + '\n' + eggPin() + '\n' + alone); process.exit(0);
 }
 begin('off is b706c3e');
 {
-  P.PRESSURE.on = false; const now = offPins(); P.PRESSURE.on = true;
-  ok(now === OFF, `PRESSURE off: AI v AI, the demo, a tool's match, a Kids match and a Minis match play as b706c3e, with the same draws (${now}, pinned ${OFF})`);
+  P.PRESSURE.on = false; if (MA) MA.on = false; const now = offPins(); if (MA) MA.on = true; P.PRESSURE.on = true;
+  ok(now === OFF, `PRESSURE off, and the maul (merged after it) off: AI v AI, the demo, a tool's match, a Kids match and a Minis match play as b706c3e, with the same draws (${now}, pinned ${OFF})`);
+  if (MA) { P.PRESSURE.on = false; const alone = offPins(); P.PRESSURE.on = true;
+    ok(alone === OFF_MAUL, `PRESSURE off alone: they play exactly as the maul's own build, wt/maul c4980b8, the merge's other parent (${alone}, pinned ${OFF_MAUL})`); }
   const on = offPins();
   ok(on !== OFF, `PRESSURE on moves them, on purpose (${on})`);
   const e1 = eggPin(); P.PRESSURE.on = false; const e0 = eggPin(); P.PRESSURE.on = true;

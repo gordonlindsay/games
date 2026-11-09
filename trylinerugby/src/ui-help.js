@@ -49,6 +49,7 @@ function hintFor(s) {                                      // the card for seat 
     if (c.kind === 'scrum' && practice) return c.result || practice.ready ? null : card('Driving', 'Stay Low in the Green', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Keep Tapping')]);   // the game's own card, and none on its ready card
     if (c.kind === 'scrum') return c.result ? null : card('Scrum', c.feed === t ? 'Your Ball' : 'Steal Their Ball', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Tap Fast')]);
     if (c.kind === 'lineout') return c.outcome != null ? null : card('Lineout', c.team === t ? 'Your Throw' : 'Steal Their Throw', [row([chip('a', 'Jump')], 'Ball Halfway')]);
+    if (c.kind === 'maul') return maulHint(c, t, kb);        // src/maul.js
     if (c.kind === 'goal') {
       const g = c.g;
       if (g.watch || g.team !== t || c.t < CUT_IN || c.after || g.out) return null;
@@ -176,6 +177,7 @@ function tutCards(id, s) {
     case 'block': return [['Block', 'Their Pass Crosses Your Player'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
     case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
     case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
+    case 'maul': return maulTutCards(name, kb ? (stickTurn(s) ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : R ? 'the Arrows' : '{KeyW} and {KeyS}') : 'the Stick');   // src/maul.js: the stick's up and down (across the screen in a behind view)
     case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', aim + 'Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
     default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', ' + aim + 'Let Go in the Gold Before They Reach You']];
   }

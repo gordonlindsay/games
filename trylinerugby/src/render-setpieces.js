@@ -102,6 +102,7 @@ function cutCues(c) {
   const out = [], key = (t, act) => seatKey(seatOfTeam(t), act);
   if (c.kind === 'scrum') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Push']); return out; }
   if (c.kind === 'lineout') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Jump']); return out; }
+  if (c.kind === 'maul') return c.result ? out : maulCues(c);   // src/maul.js
   if (c.kind === 'goal') { const t = c.g.team; if (!c.after && !c.g.out && !c.g.watch) out.push([seatOfTeam(t), c.g.type === 'drop' ? key(t, 'b') + ' · Drop Goal' : 'Hold ' + key(t, 'a') + ' · Kick']); return out; }
   if (c.out != null) return out;
   const k = c.kind, U = c.own, O = 1 - c.own;
@@ -209,6 +210,7 @@ function drawCut() {
   if (c.kind === 'scrum') drawScrum(c, g);
   else if (c.kind === 'lineout') drawLineout(c, g);
   else if (c.kind === 'goal') drawKick(c, g);
+  else if (c.kind === 'maul') drawMaul(c, g);              // src/render-maul.js
   else drawDuel(c, g);
   if (!practice) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07); }   // the broadcast bars are a match's
   if (!(hintShown[0] && hintShown[0].title)) cutTag(cutTitle(c), g);   // a hints card with a title sits where the tag goes and names the moment itself

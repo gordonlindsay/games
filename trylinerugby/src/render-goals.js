@@ -387,6 +387,7 @@ function cutTitle(c) {
   if (c.duel) return DUEL[c.kind].name;
   if (c.kind === 'goal') return (c.g.kind === 'conversion' ? 'Conversion' : c.g.kind === 'penalty' ? 'Penalty Goal' : 'Drop Goal') + ' · ' + Math.round(c.g.dist) + 'm';
   if (c.kind === 'scrum') return 'Scrum · ' + M.nat[/^(win|steal)/.test(c.result || '') ? +c.result.slice(-1) : c.feed].id + ' Ball';   // the put-in's, then whoever won it (2026-11-09: Against the Head names the side that took it)
+  if (c.kind === 'maul') return 'Maul · ' + M.nat[c.team].id + ' Ball';
   return 'Lineout · ' + M.nat[c.team].id + ' Throw';
 }
 function duelLabels(c) {

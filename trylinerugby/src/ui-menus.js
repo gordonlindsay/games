@@ -120,6 +120,7 @@ function resume() {
   // scrums and lineouts give the thumb a moment too, without replaying a throw backwards
   else if (c && c.kind === 'lineout' && c.outcome == null) c.t = Math.max(CUT_IN, c.t >= c.throwT ? c.throwT : 0, c.t - 0.6);
   else if (c && c.kind === 'scrum' && !c.engaged) c.t = Math.max(CUT_IN, c.t - 0.6);
+  else if (c && c.kind === 'maul' && !c.after) maulResume(c);   // src/maul.js
 }
 /* A two-tap confirm (Quit, Delete Team, Start Fresh, Start New Career, Remove League): the first tap asks again, and the second
    counts only once CONFIRM.gap has passed, so a quick double tap (a child mashing, or one tap read twice) only asks. */

@@ -13,7 +13,7 @@ const STORE = 'tryline.v1';
    the tools call it since How to Play lost Replay Tutorial, 2026-11-09).
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
-const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
+const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop', 'maul'];   // appended only: a save's list is kept in this order
 const DRILL_IDS = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass', 'tag', 'back'];   // drillSeen: the drills whose Watch How has played on this device, each opened with it once (drill-demo.js)
 const COACH_IDS = ['offload', 'step', 'tackle', 'duel', 'kick', 'pass', 'sprint'];   // fleeting moments first, then the ones that stay available
 const COACH_LINE = {
