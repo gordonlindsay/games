@@ -5139,7 +5139,8 @@ function traitMarks(r) {
    - Bronze, Silver and Gold are a feat done 1, 3 and 10 times (LOCKER_TIERS). Star Pupil counts the Skills Mini Games, each
      once, at three stars: Bronze and Silver are any 1 and any 3 of them, and its Gold is every game the player can see
      (lockerPupilGames: all ten, or the seven a Kids level or Minis player sees, since practiceBarred hides the three contact
-     games from them). A Gold once won is kept (pupil), so going back to all ten never takes it away. The events (lockerEvent)
+     games from them). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
+     PR #14, on the live game's eight drills (LOCKER_PUPIL_MAIN). The events (lockerEvent)
      count once a call, and once a match for one medal: 'champ' (Champions; the Championship's own league win calls it here),
      'euro', 'world', 'tour' and 'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
    - Every Bronze and every Silver unlocks one ball or one pair of boots (each feat's unlock). Every Gold unlocks the next
@@ -5264,6 +5265,11 @@ const lockerPupilSeen = () => lockerPupilGames().filter(id => locker.drills.incl
 const lockerPupilAll = () => { const n = lockerPupilGames().length; return n > 0 && lockerPupilSeen() === n; };
 const lockerPupilGold = () => locker.pupil === true || lockerPupilAll();
 function lockerPupilKeep() { if (locker.pupil !== true && lockerPupilAll()) locker.pupil = true; }   // a Gold won is kept: called as the save is written
+/* The live game before PR #14 (main, f20adc4) had eight drills, and its Star Pupil Gold was three stars in every one of them. Its saves
+   have no pupil key, so one with all eight starred is that Gold and keeps it (cleanLocker), on any level. A save written here with all
+   eight starred and no Gold carries pupil:false (lockerSaved), so it is never read back as one. */
+const LOCKER_PUPIL_MAIN = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass'];
+const lockerPupilMain = drills => LOCKER_PUPIL_MAIN.every(id => drills.includes(id));
 const lockerStarMax = () => Math.max(LOCKER_TIERS[1], lockerPupilGames().length);
 const lockerTiers = id => (id === 'star' ? [LOCKER_TIERS[0], LOCKER_TIERS[1], lockerStarMax()] : LOCKER_TIERS);
 const lockerCount = id => (id !== 'star' ? locker.n[id] || 0 : !lockerPupilGold() && locker.drills.length >= LOCKER_TIERS[1] ? lockerPupilSeen() : locker.drills.length);
@@ -5420,7 +5426,8 @@ function lockerSaved() {
   const empty = !Object.keys(n).length && !locker.drills.length && locker.ball === LOCKER_BALLS[0].id && locker.boots === LOCKER_BOOTS[0].id && !Object.keys(seen).length && !lockerFanHeld().length;
   if (empty) return undefined;
   const out = { n, drills:locker.drills.slice(), ball:locker.ball, boots:locker.boots, seen };
-  if (locker.pupil === true) out.pupil = true;              // only once Star Pupil's Gold is won, so every other save is as it was
+  if (locker.pupil === true) out.pupil = true;              // once Star Pupil's Gold is won, and false only with main's eight and no Gold,
+  else if (lockerPupilMain(locker.drills)) out.pupil = false;   // so it is never read back as main's Gold; every other save is as it was
   if (lockerFanHeld().length) { out.fan = lockerFanHeld().slice(); out.fanSeen = locker.fanSeen || 0; }   // only with a Super Fan trophy, so every other save is as it was
   return out;
 }
@@ -5437,6 +5444,7 @@ function cleanLocker(v) {
   if (Array.isArray(v.drills)) out.drills = ids.filter(id => v.drills.includes(id));
   const fewest = typeof PRACTICE_DRILLS !== 'undefined' ? PRACTICE_DRILLS.filter(d => !d.contact).map(d => d.id) : [];   // the fewest games anyone sees: a kept Gold has every one of them
   if (v.pupil === true && fewest.length && fewest.every(id => out.drills.includes(id))) out.pupil = true;
+  else if ((v.pupil === true || !('pupil' in v)) && lockerPupilMain(out.drills)) out.pupil = true;   // main's Gold (its eight), kept, then kept again
   const keep = locker; locker = out;                       // read the tiers from the cleaned counts
   try {
     if (typeof v.ball === 'string' && lockerHas('ball', v.ball)) out.ball = v.ball;
