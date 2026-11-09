@@ -49,7 +49,7 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
 /* The clubs' table, in the real order (the owner, 2026-11-09: "Pro leagues on top, then England 2, then Counties and Local clubs by their
    tables (Farnham about 61 to 64)"), from PR #14's ratings of last season's results (its CLUB_RATED at 05886e6: each side's place, scored
    and conceded, the figures on its list). Every nation is above every club (78 and up), and no club tops a team you can make (75).
-   - Top flights (England, France, Celtic and Italy, South Africa, Australia): 67 to 75, PR #14's own figure, its 64 and 61 held up to 67
+   - Top flights (England, France, the United Rugby Championship, South Africa, Australia): 67 to 75, PR #14's own figure, its 64 and 61 held up to 67
      (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide) so every top-flight side is above England 2. Only a
      national champion is 75: Northampton, Toulouse, Dublin. Bordeaux is rated by its table (8th, 70), not PR #14's European champion at 90.
      New Zealand and Japan (no figures) keep the abilities written in their lists, 67 to 75. Dunedin, 9th in Super Rugby Pacific under
@@ -64,7 +64,7 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
 const CLUB_RATED = {
   NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,                                                  // England: the Premiership, Northampton the champion
   TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,                    // France: the Top 14, Toulouse the champion
-  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // Celtic and Italy: the URC, Dublin the champion
+  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // the United Rugby Championship, Dublin the champion
   CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,                                                                            // South Africa: the URC's four, then the Currie Cup's
   BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67,                                                                                    // Australia: Super Rugby Pacific, then the two with no side now
   DUN:67,                                                                                                                            // New Zealand: Dunedin, under Sydney

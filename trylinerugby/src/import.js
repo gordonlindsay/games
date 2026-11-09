@@ -886,8 +886,8 @@ function importCommit() {
   const u = importUi; if (u.step !== 'preview' || !u.data) return;
   const res = importSave(u.data, { ...(u.draft || {}), level:u.level });
   if (res.added && u.from !== 'home') {                    // as Save Team: a club made while Player 1 picks his side is the one played as
-    if (pickMode === 'quick' && !quickPick) quickPick = res.club;
-    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; }
+    if (pickMode === 'quick' && !quickPick) { quickPick = res.club; teamsOpen = false; }   // on to Pick Opponent, folded, as after a card
+    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; teamsOpen = false; }
   }
   if (res.club && !myIs(res.club)) {                       // a club in: Make This My Team | Not Now
     u.step = 'mine'; u.club = res.club; u.sides = res.sides; u.data = null; u.token++;
@@ -897,7 +897,7 @@ function importCommit() {
 }
 function importDone(sides) {
   importClose();
-  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top
+  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; teamsOpen = false; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top, folded as a list picked
 }
 function importOffer(make) {                                 // the offer answered: the club is My Team's, or not
   const u = importUi; if (u.step !== 'mine') return;

@@ -589,7 +589,7 @@ async function browserChecks() {
     'ft-tour':`var cr = tour({}); C.open(); full(20, 13);`,
     'end-tour':`var cr = tour({ cat:'women' }); cupPlay(cr, 20, 10); cupPlay(cr, 10, 20); cupPlay(cr, 10, 20); C.open();`,
     'transfer':`var cr = mk({}); cr.year = 2; skillsTo(cr, 55); finish(cr, 3); C.advance(); for (let i = 0; i < 40 && cr.offers.length < 3; i++) cr.offers = T.career.offers(cr); C.open();`,
-    'transfer-long':`var cr = mk({ cat:'women' }); cr.year = 2; skillsTo(cr, 55); finish(cr, 3); C.advance(); cr.offers = ['Galway', 'Bloemfontein', 'Johannesburg'].map(n => X.NATIONAL.flat().find(t => t.name === n).id); C.open();`,   // the longest leagues, three offers and Stay: Celtic and Italy, South Africa
+    'transfer-long':`var cr = mk({ cat:'women' }); cr.year = 2; skillsTo(cr, 55); finish(cr, 3); C.advance(); cr.offers = ['Galway', 'Bloemfontein', 'Johannesburg'].map(n => X.NATIONAL.flat().find(t => t.name === n).id); C.open();`,   // the longest leagues, three offers and Stay: the United Rugby Championship, South Africa
   };
   const shots = process.env.SHOTS ? path.resolve(process.env.SHOTS) : null;
   if (shots) fs.mkdirSync(shots, { recursive:true });

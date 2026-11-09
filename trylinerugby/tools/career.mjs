@@ -306,7 +306,7 @@ C.setCups(false);                                    // no cups unless a section
     const p = C.create({ pos:'B', num:7, club }); C.set(p); finish(p, 1);
     ok(C.outcome(p).next.phase === 'transfer', `${club.name}: no European Cup (${C.league(p)})`);
   }
-  ok(C.EURO.join() === 'eng,fra,cel,rsa', 'the European leagues: England, France, Celtic and Italy, South Africa');
+  ok(C.EURO.join() === 'eng,fra,cel,rsa', 'the European leagues: England, France, the United Rugby Championship, South Africa');
   // the World Cup: years 4, 8, 12, his country
   const wc = C.create({ pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(wc); wc.year = 4; wc.country = 'NZL'; skillsTo(wc, overallAt(C.CALL.bar));
   finish(wc, 2); out = C.outcome(wc);
@@ -823,6 +823,27 @@ C.setCups(false);                                    // no cups unless a section
   ok(shown() === 's-career-new' && C.draft().club.id === 'TLS' && C.draft().league === 'fra' && />Toulouse</.test($('cn-mine').innerHTML) && />France</.test($('cn-mine').innerHTML), 'Toulouse picked: back to New Player, Toulouse of France');
   C.clubOpen();
   ok(C.draft().pool === 'fra' && !$('cc-nat').hidden, 'Change Club again opens on France');
+  // Fold to One Line, as the team screen (the owner, 2026-11-09): Pick Your Club, where the list is and Change; National | Local and the
+  // lists behind Change, a league picked folding them, a tier picked keeping them open for its league
+  { const sum = () => $('cc-sum').innerHTML.replace(/<[^>]+>/g, ''), folded = () => !C.clubOpened() && $('cc-ctl').hidden && $('cc-fold').textContent === 'Change', opened = () => C.clubOpened() && !$('cc-ctl').hidden && $('cc-fold').textContent === 'Done';
+    ok(folded() && sum() === 'National · France' && !$('cc-nat').hidden, `Change Club arrives folded on his club's list: National · France (${sum()})`);
+    $('cc-fold').click();
+    ok(opened(), 'Change opens National | Local and the lists, and becomes Done');
+    C.tierPick(2);
+    ok(opened() && C.draft().pool === 'sur' && sum() === 'Local · Surrey', 'Local keeps them open, Surrey on show');
+    C.poolPick('sur');
+    ok(folded() && sum() === 'Local · Surrey', 'the list on show picked folds them');
+    $('cc-fold').click(); C.tierPick(1);
+    ok(opened() && C.draft().pool === 'fra', 'National goes back to France, open for its league');
+    C.poolPick('cel');
+    ok(folded() && sum() === 'National · United Rugby Championship' && X.CELTIC.every(t => $('cc-grid').innerHTML.includes('>' + t.name + '<')), `a league folds them: National · United Rugby Championship, in full (${sum()})`);
+    $('cc-fold').click(); $('cc-fold').click();
+    ok(folded(), 'Done folds them');
+    C.clubPick(X.CELTIC[0]);
+    ok(shown() === 's-career-new' && C.draft().league === 'cel' && />United Rugby Championship</.test($('cn-mine').innerHTML), 'Dublin picked: New Player, Dublin of the United Rugby Championship (its key cel)');
+    C.clubOpen(); $('cc-fold').click(); C.clubOpen();
+    ok(folded() && sum() === 'National · United Rugby Championship', 'Change Club again arrives folded, on his club\'s list');
+    C.clubPick(X.FRANCE[0]); }
   C.catPick(1);
   ok(C.draft().cat === 'women' && C.draft().look.g === 1, 'Women picks it, and a female player with it: PR #14\'s Male | Female is this one control');
   // his look: Change Look opens Your Look, New Player's second step; a pick changes the picture, Back to New Player keeps it

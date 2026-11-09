@@ -179,7 +179,7 @@ const TEAM_LISTS = [
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
   { key:'en2', tier:1, name:'England 2',        teams:ENGLAND_TWO },   // PR #14's second tier
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
-  { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
+  { key:'cel', tier:1, name:'United Rugby Championship', teams:CELTIC },   // the real name (the owner, 9 Nov: generic enough); its key stays 'cel', as saves, the European Cup and settings.pool hold it
   { key:'sco', tier:1, name:'Scotland',         teams:SCOTLAND },
   { key:'rsa', tier:1, name:'South Africa',     teams:SOUTH_AFRICA },
   { key:'aus', tier:1, name:'Australia',        teams:AUSTRALIA },

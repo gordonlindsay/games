@@ -149,11 +149,13 @@
 
 <section class="screen" id="s-teams" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
-      <div class="seg cat" id="t-cat"></div></div>
-    <div class="pools"><div class="seg" id="t-tier"></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>
-    <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
-    <button class="btn primary" id="t-default" hidden></button>
+    <div class="fold-line"><div class="fold-name"><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
+      <p class="fold-sum"><span id="t-sum"></span> <b id="t-vs" hidden></b></p><button class="btn fold-go" id="t-fold" aria-expanded="false" aria-controls="t-ctl">Change</button>
+      <button class="btn primary" id="t-default" hidden></button></div>
+    <div class="fold-ctl" id="t-ctl" hidden>
+      <div class="pools"><div class="fold-top"><div class="seg cat" id="t-cat"></div><div class="seg" id="t-tier"></div></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>
+      <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
+    </div>
     <div class="teams" id="t-grid"></div>
     <button class="btn" id="t-back" data-back>Back to Menu</button>
   </div>
@@ -256,8 +258,11 @@
 
 <section class="screen" id="s-career-club" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow">New Player</p><h2 class="title">Pick Your Club</h2></div></div>
-    <div class="pools"><div class="seg" id="cc-tier"></div><div class="seg" id="cc-nat" hidden></div><div class="seg" id="cc-loc" hidden></div></div>
+    <div class="fold-line"><div class="fold-name"><p class="eyebrow">New Player</p><h2 class="title">Pick Your Club</h2></div>
+      <p class="fold-sum"><span id="cc-sum"></span></p><button class="btn fold-go" id="cc-fold" aria-expanded="false" aria-controls="cc-ctl">Change</button></div>
+    <div class="fold-ctl" id="cc-ctl" hidden>
+      <div class="pools"><div class="seg" id="cc-tier"></div><div class="seg" id="cc-nat" hidden></div><div class="seg" id="cc-loc" hidden></div></div>
+    </div>
     <div class="cr-clubs" id="cc-grid"></div>
     <button class="btn" id="cc-back" data-back>Back to New Player</button>
   </div>

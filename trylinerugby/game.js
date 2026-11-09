@@ -181,7 +181,7 @@ const TEAM_LISTS = [
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
   { key:'en2', tier:1, name:'England 2',        teams:ENGLAND_TWO },   // PR #14's second tier
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
-  { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
+  { key:'cel', tier:1, name:'United Rugby Championship', teams:CELTIC },   // the real name (the owner, 9 Nov: generic enough); its key stays 'cel', as saves, the European Cup and settings.pool hold it
   { key:'sco', tier:1, name:'Scotland',         teams:SCOTLAND },
   { key:'rsa', tier:1, name:'South Africa',     teams:SOUTH_AFRICA },
   { key:'aus', tier:1, name:'Australia',        teams:AUSTRALIA },
@@ -355,7 +355,7 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
 /* The clubs' table, in the real order (the owner, 2026-11-09: "Pro leagues on top, then England 2, then Counties and Local clubs by their
    tables (Farnham about 61 to 64)"), from PR #14's ratings of last season's results (its CLUB_RATED at 05886e6: each side's place, scored
    and conceded, the figures on its list). Every nation is above every club (78 and up), and no club tops a team you can make (75).
-   - Top flights (England, France, Celtic and Italy, South Africa, Australia): 67 to 75, PR #14's own figure, its 64 and 61 held up to 67
+   - Top flights (England, France, the United Rugby Championship, South Africa, Australia): 67 to 75, PR #14's own figure, its 64 and 61 held up to 67
      (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide) so every top-flight side is above England 2. Only a
      national champion is 75: Northampton, Toulouse, Dublin. Bordeaux is rated by its table (8th, 70), not PR #14's European champion at 90.
      New Zealand and Japan (no figures) keep the abilities written in their lists, 67 to 75. Dunedin, 9th in Super Rugby Pacific under
@@ -370,7 +370,7 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
 const CLUB_RATED = {
   NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,                                                  // England: the Premiership, Northampton the champion
   TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,                    // France: the Top 14, Toulouse the champion
-  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // Celtic and Italy: the URC, Dublin the champion
+  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // the United Rugby Championship, Dublin the champion
   CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,                                                                            // South Africa: the URC's four, then the Currie Cup's
   BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67,                                                                                    // Australia: Super Rugby Pacific, then the two with no side now
   DUN:67,                                                                                                                            // New Zealand: Dunedin, under Sydney
@@ -4431,7 +4431,7 @@ function cleanCupEntry(e) {
    - A year (career.year, from 1) runs in phases (career.phase, in CAREER_PHASES order), each one skipped unless he has earned it:
      'league'   his club's league: his club and five drawn from its list, a season of the championship's shape (six sides, five
                 rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
-     'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, Celtic and Italy, South Africa).
+     'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, the United Rugby Championship, South Africa).
      'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
                 his country's six in its category's twelve (natGroup) as a season, or in a World Cup year (4, 8, 12) the World Cup.
                 His country is picked at his first call-up, from the career's Men or Women twelve (natList), and kept.
@@ -9015,7 +9015,7 @@ const DEFAULT_FOCUS = { 's-home':() => $('b-quick'), 's-join':() => $('j-go'), '
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
 function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
 function navSide(seat) {                                   // the one button a restricted seat may still press: Player 1's Change Team while Player 2 picks
-  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-change');
+  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-ctl').hidden ? $('t-fold') : $('t-change');   // folded, his press opens the controls first, so the Change Team he presses next is on screen
   return null;
 }
 function navMove(seat, dx, dy) {                           // the nearest candidate within 60 degrees of the direction: the distance along it plus twice the sideways offset
@@ -9829,10 +9829,10 @@ function champHome() {
   for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.setAttribute('aria-pressed', String(+b.dataset.tier === homeTier));
   const comps = champComps(homeTier), key = comps.map(c => c[0]).join() + (storeLive() && !storeHas('champ') ? ':locked' : '');
   const box = $('hc-comps');
-  if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put
+  if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put; a long name (the United Rugby Championship) is .long: its lock goes in the corner (styles.css)
     box.dataset.key = key;
     box.className = 'hc-comps n' + comps.length;
-    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
+    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp${n.length > 20 ? ' long' : ''}" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
     for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
   }
   $('b-cabinet').hidden = !champHistory.length && !(typeof lockerFanClubs === 'function' && lockerFanClubs().length);   // a finished season or cup, or a Super Fan trophy (src/ui-locker.js)
@@ -9856,7 +9856,8 @@ $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });   /
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
-$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });
+$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; teamsFold(false); });   // back to Pick Your Team, folded, the focus and the ring on its first card
+$('t-fold').addEventListener('click', () => teamsFold(!teamsOpen));   // Change opens the controls, Done folds them
 $('t-default').addEventListener('click', () => { const t = teamDefault(); if (t) pickTeam(t); });   // My Team, picked for you in Championship; on a Home Nations Tour, the host in turn
 
 /* two player: the join screen (openJoin: no button on the home since 2026-11-09, the mode and its checks kept), then the team screen
@@ -9949,8 +9950,53 @@ function teamCard(t, i) {
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
 /* The lists: International | National | Local, then under it National's leagues or Local's Surrey and My League (none under
-   International), and Men | Women | Minis beside the title. Built from TEAM_TIERS, TEAM_LISTS and TEAM_CATS (data.js). */
+   International), and Men | Women | Minis beside the tiers. Built from TEAM_TIERS, TEAM_LISTS and TEAM_CATS (data.js). */
 let natLast = 'eng';                                       // National goes back to the league last looked at
+/* Fold to One Line (the owner, 2026-11-09: "have the team selection menus collapsable - i can't see half the screen once i'm in to
+   specific clubs"). The controls (Men | Women | Minis, the tiers, a tier's lists and Pick Opponent's your-team bar with Change Team) fold
+   away under one line: the title, where the list is (Men · National · Australia; Men · International, which has no league), your side
+   under it on Pick Opponent (v Farnham), and Change. The screen arrives folded, a list always being chosen; Change opens the controls and
+   becomes Done. Picking a list folds them again: International at once, National and Local once a league is picked (the one on show
+   included); Men | Women | Minis keeps them open. A side picked (a card, a made team, an imported club) and Change Team fold them too.
+   Championship's primary (Play as Farnham) is on the line, beside Change on a phone held sideways (styles.css). The career's club screen
+   folds the same way (src/ui-career.js). */
+let teamsOpen = false;
+const FOLD_MS = 200;                                       // one quick, calm move: the cards slide to where they land, the controls fade in
+const foldMotion = () => { try { return !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+/* Fold or open a screen's controls: draw() sets the state and redraws, then the cards slide from where they were to where they now are and
+   opened controls fade in (opacity and transform only, and nothing with reduced motion). The keyboard's focus and a controller's ring go to
+   to() where they were on the screen: the first card on folding, the current tier on opening. */
+function foldMove(scr, ctl, grid, draw, to) {
+  const a = document.activeElement, inScr = el => !!el && typeof el.closest === 'function' && !!el.closest('#' + scr);
+  const typed = inScr(a), ringed = !!focusEl && (typeof focusEl.closest !== 'function' || inScr(focusEl));
+  const was = grid.getBoundingClientRect().top;
+  draw();
+  const move = was - grid.getBoundingClientRect().top;
+  if (foldMotion() && typeof grid.animate === 'function') {
+    const ease = 'cubic-bezier(.2,.7,.2,1)';
+    if (move) grid.animate([{ transform:`translateY(${move}px)` }, { transform:'none' }], { duration:FOLD_MS, easing:ease });
+    if (!ctl.hidden) ctl.animate([{ opacity:0, transform:'translateY(-8px)' }, { opacity:1, transform:'none' }], { duration:FOLD_MS, easing:ease });
+  }
+  const el = to();
+  if (!el) return;
+  if (ringed) setFocus(el);
+  if (typed && el.focus) el.focus({ preventScroll:true });
+}
+const foldFirst = grid => (grid.querySelector && grid.querySelector('.team:not([aria-disabled="true"])')) || null;   // the first card that can be picked (Pick Opponent's own side can't)
+const foldPressed = id => ($(id).querySelector && !$(id).hidden && $(id).querySelector('[aria-pressed="true"]')) || null;
+function teamsFold(open) {
+  foldMove('s-teams', $('t-ctl'), $('t-grid'), () => { teamsOpen = !!open; renderTeams(); $('s-teams').scrollTop = 0; },
+    () => (teamsOpen ? foldPressed('t-tier') || foldPressed('t-cat') : foldFirst($('t-grid'))));   // Championship has no tiers: Men | Women | Minis
+}
+/* A controller's first press: the open controls' tier, or, folded, the primary (Championship's Play as) or the first card. */
+DEFAULT_FOCUS['s-teams'] = () => (teamsOpen ? foldPressed('t-tier') || foldPressed('t-cat') : !$('t-default').hidden ? $('t-default') : foldFirst($('t-grid')));
+/* The line's summary: the category, the tier and the list, in the controls' own words; a cup's own name for its sides (Men · World Cup).
+   foldSum draws the parts, each kept whole on its line, so a long one (United Rugby Championship) wraps at a dot, never inside its name. */
+function teamSummary(view, pool) {
+  const cat = (TEAM_CATS.find(c => c.id === settings.cat) || TEAM_CATS[0]).name, tier = poolTier(pool);
+  return [cat, ...(view ? [view.name] : [TEAM_TIERS[tier], ...(tier ? [champListName(pool)] : [])])];
+}
+const foldSum = parts => parts.map(p => `<span>${esc(p)}</span>`).join(' · ');
 const listOf = k => TEAM_LISTS.find(l => l.key === k);
 function teamPool() { const k = poolKey(settings.pool); return k === IMPORT_POOL && !importLeague ? 'sur' : k; }   // My League with no league saved is Surrey
 const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier);
@@ -9969,13 +10015,17 @@ function poolTeams(k) {                                   // International is th
   for (const id of ['t-nat', 't-loc']) for (const b of $(id).querySelectorAll('[data-pool]')) b.addEventListener('click', () => poolPick(b.dataset.pool));
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.addEventListener('click', () => catPick(b.dataset.cat));
 }
-function poolPick(k) {
+function poolPick(k, stay) {                               // a list picked folds the controls; stay keeps them open (a tier's first list, while its league is picked)
   k = poolKey(k);
   if (k === IMPORT_POOL && !importLeague) return;
   settings.pool = k; if (poolTier(k) === 1) natLast = k;
-  save(); renderTeams(); $('s-teams').scrollTop = 0;
+  save();
+  if (stay) { renderTeams(); $('s-teams').scrollTop = 0; } else teamsFold(false);
 }
-function tierPick(i) { if (poolTier(teamPool()) !== i) poolPick(i === 0 ? 'int' : i === 1 ? natLast : 'sur'); }
+function tierPick(i) {                                     // International is its own list, so it folds at once; National and Local show their first list and stay open for the league
+  if (i === 0) poolPick('int');
+  else if (poolTier(teamPool()) !== i) poolPick(i === 1 ? natLast : 'sur', true);
+}
 function catPick(id) {
   if (!TEAM_CATS.some(c => c.id === id)) return;
   settings.cat = id;
@@ -9990,7 +10040,7 @@ function catPick(id) {
    list key; My Team is picked for you on its primary) or 'my' (My Team: the club on National or Local, the country on International).
    Each opens on My Team's list (a team you made: Local · Surrey, as ever). */
 function openTeams(m, comp) {
-  pickMode = m; quickPick = null;
+  pickMode = m; quickPick = null; teamsOpen = false;        // it arrives folded: a list is always chosen
   if (m === 'champ') {
     const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
     if (typeof cupCompSet === 'function') cupCompSet(cupId);   // the World Cup or the Home Nations Tour have their own sides (src/ui-cups.js)
@@ -10018,7 +10068,7 @@ function renderTeams() {
   const quick = pickMode === 'quick', pair = pickMode === 'two', my = pickMode === 'my', inChamp = pickMode === 'champ', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick, view = teamsView();   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
   const pool = teamPool(), tier = poolTier(pool), cat = settings.cat, press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
   const eb = $('t-eyebrow');
-  eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : my ? 'My Team' : view ? view.name : 'Championship · ' + champListName(pool);
+  eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : my ? 'My Team' : view ? view.name : 'Championship';   // the list is the line's (teamSummary)
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
   $('t-title').textContent = view ? view.title : pair ? 'Player ' + (p + 1) + ' Team' : my ? (tier === 0 ? 'Pick Your Country' : 'Pick Your Club') : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
   press('t-tier', '[data-tier]', b => +b.dataset.tier === tier);
@@ -10026,6 +10076,11 @@ function renderTeams() {
   $('t-nat').hidden = inChamp || tier !== 1; $('t-loc').hidden = inChamp || tier !== 2; $('t-league').hidden = !importLeague;
   for (const id of ['t-nat', 't-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   press('t-cat', '[data-cat]', b => b.dataset.cat === cat);
+  $('t-ctl').hidden = !teamsOpen;
+  $('t-fold').textContent = teamsOpen ? 'Done' : 'Change'; $('t-fold').setAttribute('aria-expanded', String(teamsOpen));
+  $('t-sum').innerHTML = foldSum(teamSummary(view, pool));
+  const vs = (quick && quickPick) || (pair && p === 1) ? 'v ' + listName(catTeam(mine, cat) || mine) : '';   // your side, on Pick Opponent and Player 2's pick
+  $('t-vs').textContent = vs; $('t-vs').hidden = !vs;
   const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours) || my;
   $('t-yours').hidden = !yours; $('t-change').hidden = !!view || my;
   if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
@@ -10078,7 +10133,7 @@ function pickTeam(t) {
   if (t.legend && !storeGate('legends', () => pickTeam(t))) return;   // a Legends side is played with the Full Game (src/store.js); unlocked on any tier
   if (pickMode === 'my') { myPick(t); return; }
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
-    if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
+    if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; teamsFold(false); return; }   // Player 2's pick, folded, onto its first card
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
@@ -10089,7 +10144,7 @@ function pickTeam(t) {
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
     newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
-  if (quickPick == null) { quickPick = t; renderTeams(); $('s-teams').scrollTop = 0; return; }   // Player 1's side, picked by him: now the opponent
+  if (quickPick == null) { quickPick = t; teamsFold(false); return; }   // Player 1's side, picked by him: now the opponent, folded, onto the first card he can play
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
   const us = catTeam(quickPick, settings.cat), them = catTeam(t, settings.cat);
   if (us && them) startMatch(us, them, false);
@@ -10177,8 +10232,8 @@ function buildBuilder() {
       if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = custom[i];
     } else {
       custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
-      if (pickMode === 'quick' && !quickPick) quickPick = custom[custom.length - 1];   // made while picking his side: he plays as it
-      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; }   // Player 1 made it to play as it
+      if (pickMode === 'quick' && !quickPick) { quickPick = custom[custom.length - 1]; teamsOpen = false; }   // made while picking his side: he plays as it, Pick Opponent folded as after a card
+      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; teamsOpen = false; }   // Player 1 made it to play as it
       else if (pickMode === 'my') settings.myClub = custom[custom.length - 1].key;   // made on My Team: it is the club
     }
     save(); renderTeams(); showScreen('s-teams');
@@ -10385,7 +10440,7 @@ function cupBegin(id, opts) {
   return true;
 }
 
-/* A league won with a side from England, France, Celtic and Italy or South Africa offers the European Cup straight after. */
+/* A league won with a side from England, France, the United Rugby Championship or South Africa offers the European Cup straight after. */
 function cupEuroOn(c, rows) { return !!c && c.round >= 5 && rows[0].i === c.user && cupEuroSkip !== c.id && !!cupListOf(c.teams[c.user]); }
 function cupEuroHub(c, rows) {
   if (!cupEuroOn(c, rows)) return false;
@@ -11515,8 +11570,8 @@ function importCommit() {
   const u = importUi; if (u.step !== 'preview' || !u.data) return;
   const res = importSave(u.data, { ...(u.draft || {}), level:u.level });
   if (res.added && u.from !== 'home') {                    // as Save Team: a club made while Player 1 picks his side is the one played as
-    if (pickMode === 'quick' && !quickPick) quickPick = res.club;
-    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; }
+    if (pickMode === 'quick' && !quickPick) { quickPick = res.club; teamsOpen = false; }   // on to Pick Opponent, folded, as after a card
+    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; teamsOpen = false; }
   }
   if (res.club && !myIs(res.club)) {                       // a club in: Make This My Team | Not Now
     u.step = 'mine'; u.club = res.club; u.sides = res.sides; u.data = null; u.token++;
@@ -11526,7 +11581,7 @@ function importCommit() {
 }
 function importDone(sides) {
   importClose();
-  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top
+  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; teamsOpen = false; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top, folded as a list picked
 }
 function importOffer(make) {                                 // the offer answered: the club is My Team's, or not
   const u = importUi; if (u.step !== 'mine') return;
@@ -13994,8 +14049,16 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
    trophy row, whose five kinds in two figures need 11px beside the overall at 667x375. One marked data-fit="wrap" (a transfer offer's
    league) that is still too wide at its smallest goes on two lines or more at its own size instead, a word never broken. A side's name
    in the fixture also steps down while it runs to three lines (South Africa Women, London North Women at 667x375, and the hub would
-   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. */
+   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. A transfer offer's league still too wide on its
+   lines (a word of it wider than its column: Championship, the United Rugby Championship's, beside a shirt in a quarter of 667) takes the
+   card's whole width under the shirt, on every card of the window alike (.cr-offers.wide). */
 function careerFit(root) {
+  const offers = root.classList && root.classList.contains('cr-offers') ? [root] : [...root.querySelectorAll('.cr-offers')];
+  for (const o of offers) o.classList.remove('wide');
+  careerFitEach(root);
+  for (const o of offers) if ([...o.querySelectorAll('.lbl')].some(e => e.scrollWidth > e.clientWidth + 0.5)) { o.classList.add('wide'); careerFitEach(o); }
+}
+function careerFitEach(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
     el.style.fontSize = ''; el.style.letterSpacing = ''; el.style.whiteSpace = '';
     const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl') || el.classList.contains('eyebrow');
@@ -14078,7 +14141,7 @@ function careerNewOpen() {
 /* The picks change in place, so a controller's ring stays on the button it pressed; the numbers are redrawn only for a new position. */
 function renderCareerNew() {
   const d = careerDraft;
-  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit>${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;
+  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit="wrap">${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;   // the league, stepped down, then on two lines (United Rugby Championship)
   [...$('cn-cat').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === (d.cat === 'women'))));
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
   [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
@@ -14140,13 +14203,25 @@ $('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:
 for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
   [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
 $('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
-function careerClubOpen() { careerDraft.pool = careerDraft.league; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on
+/* The club screen folds to one line as the team screen does (foldMove, src/ui-menus.js): Pick Your Club, where the list is (National ·
+   England), and Change. It arrives folded on his club's list; Change opens National | Local and the lists and becomes Done; a league picked
+   folds them again, a tier picked keeps them open for its league. No category here: Men | Women is New Player's. */
+let careerClubOpenOn = false;
+function careerClubOpen() { careerDraft.pool = careerDraft.league; careerClubOpenOn = false; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on, folded
+function careerClubFold(open) {
+  foldMove('s-career-club', $('cc-ctl'), $('cc-grid'), () => { careerClubOpenOn = !!open; renderCareerClubs(); $('s-career-club').scrollTop = 0; },
+    () => (careerClubOpenOn ? foldPressed('cc-tier') : foldFirst($('cc-grid'))));
+}
+$('cc-fold').addEventListener('click', () => careerClubFold(!careerClubOpenOn));
 function renderCareerClubs() {
   const d = careerDraft, pool = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool, tier = poolTier(pool);
   const press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
   press('cc-tier', '[data-tier]', b => +b.dataset.tier === tier);
   $('cc-nat').hidden = tier !== 1; $('cc-loc').hidden = tier !== 2; $('cc-league').hidden = !importLeague;
   for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
+  $('cc-ctl').hidden = !careerClubOpenOn;
+  $('cc-fold').textContent = careerClubOpenOn ? 'Done' : 'Change'; $('cc-fold').setAttribute('aria-expanded', String(careerClubOpenOn));
+  $('cc-sum').innerHTML = foldSum([TEAM_TIERS[tier], careerLeagueName(pool)]);   // National · England, Local · Surrey, Local · My League
   const clubs = careerClubList(pool);
   $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
     return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');   // its name with its stars under it, beside its overall
@@ -14158,12 +14233,12 @@ function careerClubPick(t) {                         // a club tapped: his, with
   d.club = t; d.league = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool;
   renderCareerNew(); careerShow('s-career-new');
 }
-function careerPoolPick(k) {
+function careerPoolPick(k, stay) {                  // a league picked folds the controls; stay keeps them open (a tier's first list)
   if (k === IMPORT_POOL && !importLeague) return;
   careerDraft.pool = k; if (poolTier(k) === 1) careerDraft.nat = k;
-  renderCareerClubs(); $('s-career-club').scrollTop = 0;
+  if (stay) { renderCareerClubs(); $('s-career-club').scrollTop = 0; } else careerClubFold(false);
 }
-function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur'); }   // National goes back to the league last looked at
+function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur', true); }   // National goes back to the league last looked at, open for its league
 {
   const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
   $('cc-tier').innerHTML = [1, 2].map(i => btn(`data-tier="${i}"`, TEAM_TIERS[i])).join('');   // National | Local: a club is never a nation
@@ -14353,7 +14428,7 @@ $('ce-back').addEventListener('click', goHome);
 
 /* the first controller press lands on the screen's main action: his own club on the club screen, Stay in the transfer window (a
    mashed button never signs him anywhere), the first country at a call-up */
-Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
+Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => (careerClubOpenOn && foldPressed('cc-tier')) || $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
 /* =========================================================
    Career life: Energy, Morale and Team Spirit, and the dilemmas between matches.
 
@@ -14937,12 +15012,12 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
   ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },
-  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, fold:teamsFold, opened:() => teamsOpen, summary:teamSummary, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, builderLevel, levelChoosing:() => levelChoosing, levelNote:() => levelNote, draft:() => draft },
-  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, newGo:careerNewGo, lookOpen:careerLookOpen, lookSet:careerLookSet, look:careerLook, LOOK:CAREER_LOOK, BUILDS:CAREER_BUILDS, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, DIFF, diffOf },
+  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, newGo:careerNewGo, lookOpen:careerLookOpen, lookSet:careerLookSet, look:careerLook, LOOK:CAREER_LOOK, BUILDS:CAREER_BUILDS, clubOpen:careerClubOpen, clubFold:careerClubFold, clubOpened:() => careerClubOpenOn, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, DIFF, diffOf },
   careerPro:{ PRO, pinned:proPinned, run:proRun, spirit:proSpirit, open:proOpen, pass:proPass, carrier:proCarrier, canCall:proCanCall, call:proCall, calling:proCalling, skip:proSkip, mark:proMark, modePick:careerModePick, draft:() => careerDraft },
   careerLife:{ LIFE:CAREER_LIFE, KEYS:CAREER_LIFE_KEYS, COL:CAREER_LIFE_COL, DILEMMAS:CAREER_DILEMMAS, PLANS:CAREER_DILEMMA_PLANS, fresh:careerLifeNew, clean:careerLifeClean, spirit:careerSpirit, morale:careerMorale, energy:careerEnergy, tired:careerLifeTired, plan:careerDilemmaPlan, dilemma:careerDilemma, key:careerDilemmaKey, choose:careerLifeChoose, pick:careerLifePick, train:careerLifeTrain, round:careerLifeRound, arm:careerLifeArm, hands:careerLifeHands, pass:careerLifePass, support:careerLifeSupport, chip:careerLifeChip, barsHtml:careerLifeBarsHtml, dilemmaHtml:careerDilemmaHtml, render:careerLifeRender, hash:careerLifeHash },
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },

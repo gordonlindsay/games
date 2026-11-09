@@ -297,10 +297,10 @@ function champHome() {
   for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.setAttribute('aria-pressed', String(+b.dataset.tier === homeTier));
   const comps = champComps(homeTier), key = comps.map(c => c[0]).join() + (storeLive() && !storeHas('champ') ? ':locked' : '');
   const box = $('hc-comps');
-  if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put
+  if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put; a long name (the United Rugby Championship) is .long: its lock goes in the corner (styles.css)
     box.dataset.key = key;
     box.className = 'hc-comps n' + comps.length;
-    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
+    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp${n.length > 20 ? ' long' : ''}" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
     for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
   }
   $('b-cabinet').hidden = !champHistory.length && !(typeof lockerFanClubs === 'function' && lockerFanClubs().length);   // a finished season or cup, or a Super Fan trophy (src/ui-locker.js)
@@ -324,7 +324,8 @@ $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });   /
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
-$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });
+$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; teamsFold(false); });   // back to Pick Your Team, folded, the focus and the ring on its first card
+$('t-fold').addEventListener('click', () => teamsFold(!teamsOpen));   // Change opens the controls, Done folds them
 $('t-default').addEventListener('click', () => { const t = teamDefault(); if (t) pickTeam(t); });   // My Team, picked for you in Championship; on a Home Nations Tour, the host in turn
 
 /* two player: the join screen (openJoin: no button on the home since 2026-11-09, the mode and its checks kept), then the team screen
@@ -417,8 +418,53 @@ function teamCard(t, i) {
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
 /* The lists: International | National | Local, then under it National's leagues or Local's Surrey and My League (none under
-   International), and Men | Women | Minis beside the title. Built from TEAM_TIERS, TEAM_LISTS and TEAM_CATS (data.js). */
+   International), and Men | Women | Minis beside the tiers. Built from TEAM_TIERS, TEAM_LISTS and TEAM_CATS (data.js). */
 let natLast = 'eng';                                       // National goes back to the league last looked at
+/* Fold to One Line (the owner, 2026-11-09: "have the team selection menus collapsable - i can't see half the screen once i'm in to
+   specific clubs"). The controls (Men | Women | Minis, the tiers, a tier's lists and Pick Opponent's your-team bar with Change Team) fold
+   away under one line: the title, where the list is (Men · National · Australia; Men · International, which has no league), your side
+   under it on Pick Opponent (v Farnham), and Change. The screen arrives folded, a list always being chosen; Change opens the controls and
+   becomes Done. Picking a list folds them again: International at once, National and Local once a league is picked (the one on show
+   included); Men | Women | Minis keeps them open. A side picked (a card, a made team, an imported club) and Change Team fold them too.
+   Championship's primary (Play as Farnham) is on the line, beside Change on a phone held sideways (styles.css). The career's club screen
+   folds the same way (src/ui-career.js). */
+let teamsOpen = false;
+const FOLD_MS = 200;                                       // one quick, calm move: the cards slide to where they land, the controls fade in
+const foldMotion = () => { try { return !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+/* Fold or open a screen's controls: draw() sets the state and redraws, then the cards slide from where they were to where they now are and
+   opened controls fade in (opacity and transform only, and nothing with reduced motion). The keyboard's focus and a controller's ring go to
+   to() where they were on the screen: the first card on folding, the current tier on opening. */
+function foldMove(scr, ctl, grid, draw, to) {
+  const a = document.activeElement, inScr = el => !!el && typeof el.closest === 'function' && !!el.closest('#' + scr);
+  const typed = inScr(a), ringed = !!focusEl && (typeof focusEl.closest !== 'function' || inScr(focusEl));
+  const was = grid.getBoundingClientRect().top;
+  draw();
+  const move = was - grid.getBoundingClientRect().top;
+  if (foldMotion() && typeof grid.animate === 'function') {
+    const ease = 'cubic-bezier(.2,.7,.2,1)';
+    if (move) grid.animate([{ transform:`translateY(${move}px)` }, { transform:'none' }], { duration:FOLD_MS, easing:ease });
+    if (!ctl.hidden) ctl.animate([{ opacity:0, transform:'translateY(-8px)' }, { opacity:1, transform:'none' }], { duration:FOLD_MS, easing:ease });
+  }
+  const el = to();
+  if (!el) return;
+  if (ringed) setFocus(el);
+  if (typed && el.focus) el.focus({ preventScroll:true });
+}
+const foldFirst = grid => (grid.querySelector && grid.querySelector('.team:not([aria-disabled="true"])')) || null;   // the first card that can be picked (Pick Opponent's own side can't)
+const foldPressed = id => ($(id).querySelector && !$(id).hidden && $(id).querySelector('[aria-pressed="true"]')) || null;
+function teamsFold(open) {
+  foldMove('s-teams', $('t-ctl'), $('t-grid'), () => { teamsOpen = !!open; renderTeams(); $('s-teams').scrollTop = 0; },
+    () => (teamsOpen ? foldPressed('t-tier') || foldPressed('t-cat') : foldFirst($('t-grid'))));   // Championship has no tiers: Men | Women | Minis
+}
+/* A controller's first press: the open controls' tier, or, folded, the primary (Championship's Play as) or the first card. */
+DEFAULT_FOCUS['s-teams'] = () => (teamsOpen ? foldPressed('t-tier') || foldPressed('t-cat') : !$('t-default').hidden ? $('t-default') : foldFirst($('t-grid')));
+/* The line's summary: the category, the tier and the list, in the controls' own words; a cup's own name for its sides (Men · World Cup).
+   foldSum draws the parts, each kept whole on its line, so a long one (United Rugby Championship) wraps at a dot, never inside its name. */
+function teamSummary(view, pool) {
+  const cat = (TEAM_CATS.find(c => c.id === settings.cat) || TEAM_CATS[0]).name, tier = poolTier(pool);
+  return [cat, ...(view ? [view.name] : [TEAM_TIERS[tier], ...(tier ? [champListName(pool)] : [])])];
+}
+const foldSum = parts => parts.map(p => `<span>${esc(p)}</span>`).join(' · ');
 const listOf = k => TEAM_LISTS.find(l => l.key === k);
 function teamPool() { const k = poolKey(settings.pool); return k === IMPORT_POOL && !importLeague ? 'sur' : k; }   // My League with no league saved is Surrey
 const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier);
@@ -437,13 +483,17 @@ function poolTeams(k) {                                   // International is th
   for (const id of ['t-nat', 't-loc']) for (const b of $(id).querySelectorAll('[data-pool]')) b.addEventListener('click', () => poolPick(b.dataset.pool));
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.addEventListener('click', () => catPick(b.dataset.cat));
 }
-function poolPick(k) {
+function poolPick(k, stay) {                               // a list picked folds the controls; stay keeps them open (a tier's first list, while its league is picked)
   k = poolKey(k);
   if (k === IMPORT_POOL && !importLeague) return;
   settings.pool = k; if (poolTier(k) === 1) natLast = k;
-  save(); renderTeams(); $('s-teams').scrollTop = 0;
+  save();
+  if (stay) { renderTeams(); $('s-teams').scrollTop = 0; } else teamsFold(false);
 }
-function tierPick(i) { if (poolTier(teamPool()) !== i) poolPick(i === 0 ? 'int' : i === 1 ? natLast : 'sur'); }
+function tierPick(i) {                                     // International is its own list, so it folds at once; National and Local show their first list and stay open for the league
+  if (i === 0) poolPick('int');
+  else if (poolTier(teamPool()) !== i) poolPick(i === 1 ? natLast : 'sur', true);
+}
 function catPick(id) {
   if (!TEAM_CATS.some(c => c.id === id)) return;
   settings.cat = id;
@@ -458,7 +508,7 @@ function catPick(id) {
    list key; My Team is picked for you on its primary) or 'my' (My Team: the club on National or Local, the country on International).
    Each opens on My Team's list (a team you made: Local · Surrey, as ever). */
 function openTeams(m, comp) {
-  pickMode = m; quickPick = null;
+  pickMode = m; quickPick = null; teamsOpen = false;        // it arrives folded: a list is always chosen
   if (m === 'champ') {
     const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
     if (typeof cupCompSet === 'function') cupCompSet(cupId);   // the World Cup or the Home Nations Tour have their own sides (src/ui-cups.js)
@@ -486,7 +536,7 @@ function renderTeams() {
   const quick = pickMode === 'quick', pair = pickMode === 'two', my = pickMode === 'my', inChamp = pickMode === 'champ', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick, view = teamsView();   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
   const pool = teamPool(), tier = poolTier(pool), cat = settings.cat, press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
   const eb = $('t-eyebrow');
-  eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : my ? 'My Team' : view ? view.name : 'Championship · ' + champListName(pool);
+  eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : my ? 'My Team' : view ? view.name : 'Championship';   // the list is the line's (teamSummary)
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
   $('t-title').textContent = view ? view.title : pair ? 'Player ' + (p + 1) + ' Team' : my ? (tier === 0 ? 'Pick Your Country' : 'Pick Your Club') : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
   press('t-tier', '[data-tier]', b => +b.dataset.tier === tier);
@@ -494,6 +544,11 @@ function renderTeams() {
   $('t-nat').hidden = inChamp || tier !== 1; $('t-loc').hidden = inChamp || tier !== 2; $('t-league').hidden = !importLeague;
   for (const id of ['t-nat', 't-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   press('t-cat', '[data-cat]', b => b.dataset.cat === cat);
+  $('t-ctl').hidden = !teamsOpen;
+  $('t-fold').textContent = teamsOpen ? 'Done' : 'Change'; $('t-fold').setAttribute('aria-expanded', String(teamsOpen));
+  $('t-sum').innerHTML = foldSum(teamSummary(view, pool));
+  const vs = (quick && quickPick) || (pair && p === 1) ? 'v ' + listName(catTeam(mine, cat) || mine) : '';   // your side, on Pick Opponent and Player 2's pick
+  $('t-vs').textContent = vs; $('t-vs').hidden = !vs;
   const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours) || my;
   $('t-yours').hidden = !yours; $('t-change').hidden = !!view || my;
   if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
@@ -546,7 +601,7 @@ function pickTeam(t) {
   if (t.legend && !storeGate('legends', () => pickTeam(t))) return;   // a Legends side is played with the Full Game (src/store.js); unlocked on any tier
   if (pickMode === 'my') { myPick(t); return; }
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
-    if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
+    if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; teamsFold(false); return; }   // Player 2's pick, folded, onto its first card
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
@@ -557,7 +612,7 @@ function pickTeam(t) {
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
     newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
-  if (quickPick == null) { quickPick = t; renderTeams(); $('s-teams').scrollTop = 0; return; }   // Player 1's side, picked by him: now the opponent
+  if (quickPick == null) { quickPick = t; teamsFold(false); return; }   // Player 1's side, picked by him: now the opponent, folded, onto the first card he can play
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
   const us = catTeam(quickPick, settings.cat), them = catTeam(t, settings.cat);
   if (us && them) startMatch(us, them, false);
@@ -645,8 +700,8 @@ function buildBuilder() {
       if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = custom[i];
     } else {
       custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
-      if (pickMode === 'quick' && !quickPick) quickPick = custom[custom.length - 1];   // made while picking his side: he plays as it
-      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; }   // Player 1 made it to play as it
+      if (pickMode === 'quick' && !quickPick) { quickPick = custom[custom.length - 1]; teamsOpen = false; }   // made while picking his side: he plays as it, Pick Opponent folded as after a card
+      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; teamsOpen = false; }   // Player 1 made it to play as it
       else if (pickMode === 'my') settings.myClub = custom[custom.length - 1].key;   // made on My Team: it is the club
     }
     save(); renderTeams(); showScreen('s-teams');
