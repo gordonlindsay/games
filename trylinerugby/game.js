@@ -354,6 +354,8 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
    - England 2: a step up from PR #14's, 67 with a winning record and 64 without, so its winners are level with the top flights' foot.
    - Local and Counties: PR #14's ladder moved onto main's band a step for a step, Counties 5 at 61 up to Farnham at 75 (Regional 1). Its
      55 and 52 (Wimbledon, Ironsides) share 72, the one place two of its steps meet, so Farnham keeps the 75 Kids and Quick Match know.
+     So Local's best sit above England 2 and level with the top flights, where PR #14 had Local under both: with six values in the band,
+     the order between tiers and Farnham's 75 cannot both hold. Left for the owner's call (README, Teams); TEAM_LEVELS waits on it too.
    - Dunedin, 9th in Super Rugby Pacific under Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
    Sides not here keep the abilities written in their list: the nations (natList), Scotland's Premiership (61 and 64 as written), New Zealand
    and Japan (no figures), Quins (no figures). A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. */
@@ -620,7 +622,7 @@ function restore(s) {
   }
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
-  if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
+  if ('importLeague' in s) { const moved = new Map(); importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague, moved); if (typeof importRecode === 'function') importRecode(moved); }   // after the career and the championship: a recoded league side is followed into both, and by My Team
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
@@ -4524,10 +4526,13 @@ const careerNations = cat => natList(cat).filter(t => !t.legend);      // the tw
 const careerNation = (id, cat) => { const l = careerNations(cat); return l.find(t => t.id === id) || l.find(t => t.id === 'ENG'); };   // the category's own side
 const careerClubs = () => NATIONAL.flat();           // where an offer comes from: every national league, Scotland's included
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
-const careerListOf = t => (t && !t.custom ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's list, or null for one you made
-/* The list a club was picked from, as the save keeps it: a built-in club's own, else a national league's or My League's key, else Local. */
+const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
+const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+/* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
+   Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
-  const own = careerListOf(club); if (own) return own.key;
+  const own = careerListOf(club);
+  if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && l.teams.some(o => o.id === club.id)) ? key : own.key;
   return key === IMPORT_POOL || TEAM_LISTS.some(l => l.key === key && l.tier > 0) ? key : 'sur';
 }
 function careerLeague(cr) {                          // his club's league now: My League only while a league is saved
@@ -11243,17 +11248,17 @@ function importCode(name, used) {
 /* A saved league, read back: each side through cleanSide, a name that fits a card, passes importName and no other side
    in it has, a code no built-in side uses and no other side in it, at most 16. Anything broken is dropped; an empty
    league is null. */
-function cleanImportLeague(v) {
+function cleanImportLeague(v, moved) {
   if (!v || typeof v !== 'object' || Array.isArray(v) || !Array.isArray(v.teams)) return null;
-  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set(), mine = settings.myClub;   // mine: as the save has it, because a side's new key can be another's old one
+  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set();
   for (const raw of v.teams.slice(0, 64)) {
     const t = cleanSide(raw), name = t && importName(t.name), fit = name && importFit(name, names);
     if (!fit) continue;
     t.name = fit; names.add(importKey(fit));
     delete t.home; delete t.custom;
-    if (ids.has(t.id)) {                                   // a code a built-in list has taken since (England 2's and Counties' came with PR #14): My Team follows its side to the new one
+    if (ids.has(t.id)) {                                   // a code a built-in list has taken since (England 2's and Counties' came with PR #14): a new one, noted in moved by the old key for importRecode
       const was = t.key; t.id = importCode(t.name, ids);
-      if (was && mine === was) settings.myClub = 'lg-' + t.id;
+      if (was && moved) moved.set(was, t.id);
     }
     ids.add(t.id);
     t.key = 'lg-' + t.id;
@@ -11261,6 +11266,17 @@ function cleanImportLeague(v) {
     if (teams.length >= IMPORT_MAX_SIDES) break;
   }
   return teams.length ? { teams } : null;
+}
+/* A save's league sides recoded by cleanImportLeague (moved: old key to new code), followed everywhere the save holds them, in one pass
+   once the career, the championship and the league are all read back: My Team, the career's club and season, and the championship. By
+   the key the save has, so a side's new key that was another's old one moves nothing twice. Left as they were, the career's club would
+   keep a code a built-in club has now and be taken for that club, off My League (Merton into Counties, Bedford Athletic into England 2). */
+function importRecode(moved) {
+  if (!moved || !moved.size) return;
+  const fix = t => { const id = t && t.key && moved.get(t.key); if (id) { t.id = id; t.key = 'lg-' + id; } };
+  if (moved.has(settings.myClub)) settings.myClub = 'lg-' + moved.get(settings.myClub);
+  if (career) { fix(career.club); if (career.season) career.season.teams.forEach(fix); }
+  if (champ) champ.teams.forEach(fix);
 }
 /* One of your teams with the club's name, or null. */
 const importMine = data => { if (!data || !data.club) return null; const k = importKey(importShort(data.club.name)); return custom.find(t => importKey(t.name) === k) || null; };
@@ -13498,7 +13514,7 @@ function renderLocker(news) {
   } else {
     const g = Math.min(10, lockerGolds());
     const tile = (t, i) => i < g
-      ? `<div class="lk-leg" data-legend="1" role="group" aria-label="${esc(t.name)}, Overall ${overallOf(t)}">${jersey(t).replace(/<\/span>$/, `<span class="ovr">${overallOf(t)}</span></span>`)}<span class="lk-nat">${esc(t.nation)}</span><b class="lk-yr">${t.year}</b></div>`
+      ? `<div class="lk-leg" data-legend="1" role="group" aria-label="${esc(t.name)}, Overall ${overallOf(t)}">${jersey(t).replace(/<\/span>$/, `<span class="ovr">${overallOf(t)}</span></span>`)}<span class="lk-nat">${esc(t.nation)}</span><span class="lk-yrow"><b class="lk-yr">${t.year}</b>${ratedStars(t)}</span></div>`
       : `<div class="lk-leg lk-off" role="group" aria-label="Locked, ${i + 1} Gold ${i ? 'Medals' : 'Medal'}"><span class="lk-padlock">${LOCKER_LOCK}</span><span class="lk-need">${lockerPip(3, true)}${i + 1}</span></div>`;
     body.innerHTML = ['men', 'women'].map(cat => `<p class="lbl">${cat === 'men' ? 'Men' : 'Women'}</p><div class="lk-legrow">${LEGENDS.filter(t => t.cat === cat).map(tile).join('')}</div>`).join('');
     for (const el of body.querySelectorAll('[data-legend]')) storeMark(el, 'legends');   // won on any tier, played with the Full Game: the lock the team screen shows (src/ui-store.js)

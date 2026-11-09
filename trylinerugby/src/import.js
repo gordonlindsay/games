@@ -737,17 +737,17 @@ function importCode(name, used) {
 /* A saved league, read back: each side through cleanSide, a name that fits a card, passes importName and no other side
    in it has, a code no built-in side uses and no other side in it, at most 16. Anything broken is dropped; an empty
    league is null. */
-function cleanImportLeague(v) {
+function cleanImportLeague(v, moved) {
   if (!v || typeof v !== 'object' || Array.isArray(v) || !Array.isArray(v.teams)) return null;
-  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set(), mine = settings.myClub;   // mine: as the save has it, because a side's new key can be another's old one
+  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set();
   for (const raw of v.teams.slice(0, 64)) {
     const t = cleanSide(raw), name = t && importName(t.name), fit = name && importFit(name, names);
     if (!fit) continue;
     t.name = fit; names.add(importKey(fit));
     delete t.home; delete t.custom;
-    if (ids.has(t.id)) {                                   // a code a built-in list has taken since (England 2's and Counties' came with PR #14): My Team follows its side to the new one
+    if (ids.has(t.id)) {                                   // a code a built-in list has taken since (England 2's and Counties' came with PR #14): a new one, noted in moved by the old key for importRecode
       const was = t.key; t.id = importCode(t.name, ids);
-      if (was && mine === was) settings.myClub = 'lg-' + t.id;
+      if (was && moved) moved.set(was, t.id);
     }
     ids.add(t.id);
     t.key = 'lg-' + t.id;
@@ -755,6 +755,17 @@ function cleanImportLeague(v) {
     if (teams.length >= IMPORT_MAX_SIDES) break;
   }
   return teams.length ? { teams } : null;
+}
+/* A save's league sides recoded by cleanImportLeague (moved: old key to new code), followed everywhere the save holds them, in one pass
+   once the career, the championship and the league are all read back: My Team, the career's club and season, and the championship. By
+   the key the save has, so a side's new key that was another's old one moves nothing twice. Left as they were, the career's club would
+   keep a code a built-in club has now and be taken for that club, off My League (Merton into Counties, Bedford Athletic into England 2). */
+function importRecode(moved) {
+  if (!moved || !moved.size) return;
+  const fix = t => { const id = t && t.key && moved.get(t.key); if (id) { t.id = id; t.key = 'lg-' + id; } };
+  if (moved.has(settings.myClub)) settings.myClub = 'lg-' + moved.get(settings.myClub);
+  if (career) { fix(career.club); if (career.season) career.season.teams.forEach(fix); }
+  if (champ) champ.teams.forEach(fix);
 }
 /* One of your teams with the club's name, or null. */
 const importMine = data => { if (!data || !data.club) return null; const k = importKey(importShort(data.club.name)); return custom.find(t => importKey(t.name) === k) || null; };

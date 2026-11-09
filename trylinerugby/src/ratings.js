@@ -48,6 +48,8 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
    - England 2: a step up from PR #14's, 67 with a winning record and 64 without, so its winners are level with the top flights' foot.
    - Local and Counties: PR #14's ladder moved onto main's band a step for a step, Counties 5 at 61 up to Farnham at 75 (Regional 1). Its
      55 and 52 (Wimbledon, Ironsides) share 72, the one place two of its steps meet, so Farnham keeps the 75 Kids and Quick Match know.
+     So Local's best sit above England 2 and level with the top flights, where PR #14 had Local under both: with six values in the band,
+     the order between tiers and Farnham's 75 cannot both hold. Left for the owner's call (README, Teams); TEAM_LEVELS waits on it too.
    - Dunedin, 9th in Super Rugby Pacific under Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
    Sides not here keep the abilities written in their list: the nations (natList), Scotland's Premiership (61 and 64 as written), New Zealand
    and Japan (no figures), Quins (no figures). A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. */

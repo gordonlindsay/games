@@ -538,12 +538,12 @@ async function browserChecks() {
         for (const b of document.querySelectorAll('#s-locker .lk-leg[data-legend]')) {
           out.tiles++;
           const lock = lockOf(b);
-          if (!b.classList.contains('locked') || ['.ovr', '.jersey', '.lk-nat', '.lk-yr'].some(q => hit(b.querySelector(q).getBoundingClientRect(), lock))) out.over.push('tile ' + b.getAttribute('aria-label'));
+          if (!b.classList.contains('locked') || ['.ovr', '.jersey', '.lk-nat', '.lk-yr', '.rstars'].some(q => hit(b.querySelector(q).getBoundingClientRect(), lock))) out.over.push('tile ' + b.getAttribute('aria-label'));
         }
         S.setTier(null); L.set(saved); st.cat = cat0; T.debug.goHome();
         return out;
       });
-      ok(locks.cards === 18 && locks.tiles === 18 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge and name on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
+      ok(locks.cards === 18 && locks.tiles === 18 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge, name and stars on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
       // a controller: the first press on Play, down to the bar, along it, press, up into the panel; every button reachable
       const pad = await page.evaluate(() => {
         const T = window.__tryline, out = {};

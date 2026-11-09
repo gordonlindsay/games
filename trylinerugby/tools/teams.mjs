@@ -865,6 +865,46 @@ function settle(pick) {
     X.restore({ settings:{ myClub:'lg-XAN' }, importLeague:{ teams:[side, { ...side, key:'lg-XAN', id:'XAN', name:'Xanadu' }] } });
     ok(s.myClub === 'lg-XAN' && T.home.myClub().name === 'Xanadu', 'and My Team on another side stays where it was');
     s.myClub = was; X.restore({ importLeague:null }); }
+  // an old save (from before England 2 and Counties) with My League's sides on codes those lists took since: My Team at Merton, a career
+  // there on My League and a championship. The career stays on My League (it went to Counties, Merton being MER there, and a Bedford Athletic
+  // one to England 2), and its club and season follow the recode with My Team in the one pass, as does the championship (review, 2026-11-09)
+  { const C = T.career, I = T.importer, was = s.myClub, pool = s.pool;
+    const mk = (id, name) => ({ key:'lg-' + id, id, name, kit:'#1b2747', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3 });
+    const old = [['MER', 'Merton'], ['MIT', 'Mitcham'], ['FEL', 'Feltham'], ['EGH', 'Egham'], ['WAN', 'Wandsworthians'], ['EFF', 'Effingham'], ['BED', 'Bedford Athletic']].map(([id, n]) => mk(id, n));
+    ok(old.every(t => all.some(o => o.id === t.id)), 'each of the old league\'s codes is a built-in side\'s now');
+    const oldSave = club => {                              // the save as the build before PR #14's lists wrote it: the league as it was, never recoded
+      I.setLeague({ teams:old.map(t => ({ ...t })) });
+      const cr = C.create({ name:'Sam', pos:'B', num:10, club:old.find(t => t.name === club), league:'my' });
+      s.pool = 'my'; X.newChamp(old[0], old.slice(1, 6));
+      return JSON.parse(JSON.stringify({ settings:{ myClub:'lg-MER' }, career:cr, champ:X.champ(), importLeague:{ teams:old } }));
+    };
+    const saved = oldSave('Merton');
+    ok(saved.career.league === 'my' && saved.career.club.id === 'MER' && saved.career.club.key === 'lg-MER', 'the old career: Merton on My League, coded MER');
+    X.restore(saved);
+    const lg = I.league().teams, mer = lg.find(t => t.name === 'Merton'), cr = C.get(), keys = new Set(lg.map(t => t.key));
+    ok(mer.id !== 'MER' && s.myClub === mer.key && T.home.myClub() === mer, `My Team follows Merton to its new code (${mer.id})`);
+    ok(cr.league === 'my' && C.league(cr) === 'my' && C.leagueKey(cr.league, cr.club) === 'my', `the career stays on My League (${cr.league}, ${C.league(cr)})`);
+    ok(cr.club.id === mer.id && cr.club.key === mer.key && cr.season.teams[cr.season.user].key === mer.key, 'its club and the user\'s side of its season are the league\'s Merton, new code and key');
+    ok(cr.season.teams.every(t => keys.has(t.key) && !all.some(o => o.id === t.id)), `its season is all My League, no side on a built-in club's code (${cr.season.teams.map(t => t.id)})`);
+    ok(C.opponents(cr, 'league').every(t => keys.has(t.key)), `and next season draws from My League, never the built-in Counties (${C.opponents(cr, 'league').map(t => t.name)})`);
+    ok(X.champ().teams.every(t => keys.has(t.key) && !all.some(o => o.id === t.id)) && X.champ().teams[X.champ().user].key === mer.key, `the championship's sides follow too (${X.champ().teams.map(t => t.id)})`);
+    X.restore(oldSave('Bedford Athletic'));
+    const bed = I.league().teams.find(t => t.name === 'Bedford Athletic'), cb = C.get();
+    ok(cb.league === 'my' && C.league(cb) === 'my' && cb.club.id === bed.id && bed.id !== 'BED', `a Bedford Athletic career stays on My League, not England 2 (${cb.league}, ${cb.club.id})`);
+    ok(C.leagueKey('my', { ...mk('BED', 'Bedford Athletic') }) === 'my' && C.leagueKey('my', X.ENGLAND_TWO[1]) === 'en2', 'a My League side is never taken for the built-in club with its code; Bedford itself is England 2\'s');
+    C.set(null); X.setChamp(null); s.myClub = was; s.pool = pool; X.restore({ importLeague:null }); }
+  // Guildfordians is on Surrey and on Counties: a career at it plays in the list it was picked from. On Counties, its own league (Counties 5
+  // Surrey) and the reason that list is there, it went to Surrey (review, 2026-11-09)
+  { const C = T.career, gdn = X.CLUBS[7], pick = k => { C.set(null); C.newOpen(); C.clubOpen(); C.tierPick(2); C.poolPick(k); C.clubPick(gdn); return C.draft(); };
+    ok(X.CLUBS.includes(gdn) && X.COUNTIES.includes(gdn) && gdn.id === 'GDN', 'Guildfordians, one side on both lists');
+    const d = pick('cty'), cr = C.create({ name:'Sam', pos:'B', num:10, club:d.club, league:d.league });
+    ok(d.league === 'cty' && $('cn-mine').innerHTML.includes('data-fit>Counties</span>') && !$('cn-mine').innerHTML.includes('Surrey'), `picked on Counties, New Player says Counties (${$('cn-mine').innerHTML.replace(/<[^>]+>/g, ' ').trim()})`);
+    ok(cr.league === 'cty' && C.league(cr) === 'cty' && cr.season.teams.slice(1).every(t => X.COUNTIES.some(o => o.id === t.id)), `and the career plays Counties (${cr.season.teams.slice(1).map(t => t.name)})`);
+    ok(C.clean(JSON.parse(JSON.stringify(cr))).league === 'cty', 'a reload keeps it on Counties');
+    const d2 = pick('sur'), cr2 = C.create({ name:'Sam', pos:'B', num:10, club:d2.club, league:d2.league });
+    ok(cr2.league === 'sur' && cr2.season.teams.slice(1).every(t => X.CLUBS.some(o => o.id === t.id)) && C.clean(JSON.parse(JSON.stringify(cr2))).league === 'sur', 'picked on Surrey, Surrey, and a reload keeps it there');
+    ok(C.leagueKey('eng', gdn) === 'sur' && C.leagueKey('cty', X.CLUBS[0]) === 'sur' && C.leagueKey(null, gdn) === 'sur' && C.leagueKey('en2', X.ENGLAND[0]) === 'eng', 'a list the club is not on gives its own first list: Farnham is never Counties, Northampton never England 2');
+    C.set(null); T.debug.goHome(); }
 }
 
 console.log(`${passed} passed, ${failed} failed`);

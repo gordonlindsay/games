@@ -80,9 +80,9 @@ try {
     const PRE = `const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, H = T.home, S = D.settings(), $ = i => document.getElementById(i), by = id => X.ALL_TEAMS.find(t => t.id === id);`;
     const MEASURE = `(() => { const s = [...document.querySelectorAll('.screen')].find(e => !e.hidden), hit = (a, b) => a.left < b.right - .5 && b.left < a.right - .5 && a.top < b.bottom - .5 && b.top < a.bottom - .5;
       const stars = [...s.querySelectorAll('.rstars')].filter(e => e.getBoundingClientRect().width > 0), o = { n:stars.length, min:99, out:[], hit:[], side:Math.max(s.scrollWidth - s.clientWidth, document.documentElement.scrollWidth - innerWidth) };
-      for (const e of stars) { const r = e.getBoundingClientRect(), box = (e.closest('.team,.yours,.my-rec') || s).getBoundingClientRect(), card = e.closest('.team'); o.min = Math.min(o.min, r.height, r.width/5);
-        if (r.left < box.left - .5 || r.right > box.right + .5 || r.right > innerWidth) o.out.push(e.getAttribute('aria-label'));
-        if (card) { const v = card.querySelector('.ovr,.cr-rate'), t = card.querySelector('.tname'); if (v && hit(v.getBoundingClientRect(), r)) o.hit.push('overall on stars: ' + t.textContent); if (hit(t.getBoundingClientRect(), r)) o.hit.push('name on stars: ' + t.textContent); } }
+      for (const e of stars) { const r = e.getBoundingClientRect(), box = (e.closest('.team,.yours,.my-rec,.lk-leg') || s).getBoundingClientRect(), card = e.closest('.team,.lk-leg'), tile = card && card.classList.contains('lk-leg'); o.min = Math.min(o.min, r.height, r.width/5);
+        if (r.left < box.left - .5 || r.right > box.right + .5 || r.right > innerWidth || (tile && (r.top < box.top - .5 || r.bottom > box.bottom + .5))) o.out.push(e.getAttribute('aria-label'));
+        if (card) { const v = card.querySelector('.ovr,.cr-rate'), t = card.querySelector('.tname,.lk-nat'), y = card.querySelector('.lk-yr'); if (v && hit(v.getBoundingClientRect(), r)) o.hit.push('overall on stars: ' + t.textContent); if (hit(t.getBoundingClientRect(), r)) o.hit.push('name on stars: ' + t.textContent); if (y && hit(y.getBoundingClientRect(), r)) o.hit.push('year on stars: ' + t.textContent); } }
       return JSON.stringify(o); })()`;
     const SCREENS = [
       ['the home (My Team\'s club under Play)', `S.myClub = 'NTH'; S.hl = 'game'; D.goHome();`, 1],
@@ -95,6 +95,7 @@ try {
       ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 12],
       ['the career club list, England 2', `document.querySelector('#cc-tier [data-tier="1"]').click(); document.querySelector('#cc-nat [data-pool="en2"]').click();`, 13],
       ['the transfer window', `const cr = C.create({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(cr); cr.phase = 'transfer'; cr.offers = ['GAL', 'BLM', 'JHB']; C.open();`, 4],
+      ['the Locker\'s Legends', `C.set(null); const L = T.locker; window.__lkWas = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); L.open(3);`, w > 731 ? 18 : 0],   // every Legend won: its stars beside its year, inside its tile; none on a 667 phone, where a tile is too narrow for them (styles.css)
     ];
     const line = [];
     for (const [where, js, want] of SCREENS) {
@@ -108,6 +109,7 @@ try {
       line.push(where + ' ' + m.min);
     }
     console.log(`${name} stars, smallest px: ${line.join(', ')}`);
+    await pg.ev(`(() => { const T = window.__tryline; if (window.__lkWas) { T.locker.set(window.__lkWas); T.teams.save(); } })()`);   // the Legends won for the Locker's screen stay on this page: the save the next size opens on has none
     await pg.close();
   }
   // the level list and Import's preview fit a phone sideways with their buttons in the first view, and the overall's badge is clear of Stronger Side

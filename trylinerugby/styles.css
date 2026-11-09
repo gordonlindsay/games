@@ -745,6 +745,9 @@ body.desk .desk-only{display:block}
 .lk-leg .ovr{right:-18px;top:-2px;bottom:auto;min-width:22px;padding:2px 3px;font-size:12px}
 .lk-nat{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 11px/1.15 var(--body);color:var(--chalk-dim)}
 .lk-yr{font:800 15px/1 var(--display);letter-spacing:.03em}
+.lk-yrow{display:flex;align-items:center;justify-content:center;gap:4px;max-width:100%}
+.lk-leg .rstars{--star:12px}   /* the side's stars beside its year, under its name, as every listed side has by its overall (ratedStars): on the year's line, so the Legends tab still fits without a scroll */
+@media (max-width:731px){.lk-leg .rstars{display:none}}   /* a 667 phone: a tile is 90px, too narrow for the year and 60px of stars, and the tab has no height to spare for a line of them (it fills 343 of 343px). The team cards, where a Legend is picked, keep them */
 .lk-leg.lk-off{gap:4px;color:var(--chalk-dim);border-style:dashed}
 .lk-padlock svg{display:block;width:14px;height:18px}
 .lk-need{display:flex;align-items:center;gap:4px;font:800 15px/1 var(--display);color:var(--chalk)}
