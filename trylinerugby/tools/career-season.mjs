@@ -176,7 +176,7 @@ function turn(run) {
     if (cup && $('cr-line').textContent !== K.line(cr.cup)) bad(`a cup's line under the title is not the cup's own ("${$('cr-line').textContent}")`);
     for (const t of f.teams) { run.sides.push(t); if (legendary(t)) bad('a Legends side drawn: ' + t.name); }
     // the trophy row: a cup a kind he has won, and the count
-    const have = C.KINDS.filter(k => cr.trophies.some(t => t.kind === k)), cab = ($('cr-card').innerHTML.match(/aria-label="Trophies: ([^"]*)"/) || [])[1] || '';
+    const have = C.KINDS.filter(k => cr.trophies.some(t => t.kind === k)), cab = [...$('cr-card').innerHTML.matchAll(/class="cr-cup"[^>]*aria-label="([^"]+), (\d+)"/g)].map(m => m[1] + ' ' + m[2]).join(', ');   // each cup's own label
     const NAMES = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
     if (cab !== have.map(k => NAMES[k] + ' ' + cr.trophies.filter(t => t.kind === k).length).join(', ')) bad(`the trophy row reads "${cab}" for ${json(cr.trophies.map(t => t.kind))}`);
     if (cab && run.trophyRows.at(-1) !== cab) run.trophyRows.push(cab);

@@ -650,22 +650,24 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
     + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
-/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked with a trophy in its kind's metal
-   (TROPHY_METAL, src/cups.js: gold or silver) and its kind's name; the tally counts each kind won, in the same trophy and metal, a cup's
-   only once one is kept. An entry without a kind is a league season. */
+/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked in its kind's metal (TROPHY_METAL,
+   src/cups.js: gold or silver) with its kind's name; the tally counts each kind won, a cup's only once one is kept. A trophy is drawn
+   only for silverware held (data-won): an entry won (a title or a Grand Slam, a cup or a tour's series) and a count above 0. An entry
+   not won keeps a dot in its kind's metal, and a count of 0 no mark at all. An entry without a kind is a league season. */
 function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
   const tally = [['league', 'Title', 'Titles', totals.champions], ['league', 'Grand Slam', 'Grand Slams', totals.grandSlams], ['triple', 'Triple Crown', 'Triple Crowns', totals.tripleCrowns],
     ...[['euro', 'European Cup', 'European Cups'], ['world', 'World Cup', 'World Cups'], ['tour', 'Tour', 'Tours']].map(([k, a, b]) => [k, a, b, totals[k] || 0]).filter(t => t[3] > 0)];
   const metal = k => (typeof trophyMetal === 'function' ? trophyMetal(k) : 'silver');   // a build without the cups: every entry is a League
-  const kindTag = k => `<span class="cup-kind" data-kind="${k}" data-metal="${metal(k)}">${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
+  const won = on => (on ? ' data-won' : '');
+  const kindTag = (k, on) => `<span class="cup-kind" data-kind="${k}" data-metal="${metal(k)}"${won(on)}>${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
   $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
-    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}" data-metal="${metal(k)}">${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
-      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind));
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}" data-metal="${metal(k)}"${won(n > 0)}>${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
+      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind, cupWinner(c.cup) === c.cup.user));
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
-      return `<article class="season-entry"><p class="eyebrow">${kindTag('league')}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
+      return `<article class="season-entry"><p class="eyebrow">${kindTag('league', awards.includes('Champions') || awards.includes('Grand Slam'))}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
     }).join('') : '<p class="stat-note">Complete a championship to record your first season here.</p>');
 }
 function renderSeasonSummary(c) {

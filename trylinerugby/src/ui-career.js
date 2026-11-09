@@ -5,7 +5,7 @@
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
 /* The trophy row on the player card: a cup per kind he has won, in its metal (TROPHY_METAL, src/cups.js: gold or silver, as in the Trophy
-   Cabinet), and how many, in CAREER_KINDS order; the row's label names each kind. */
+   Cabinet), and how many, in CAREER_KINDS order; each cup's own label names its kind. */
 const CAREER_KIND_NAME = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
@@ -183,11 +183,11 @@ function careerCardHtml(cr, team) {
     <div class="cr-traits">${careerTraitChips(cr)}</div>`;
 }
 /* His trophies, counted by kind under his name: a cup in the kind's metal and the number, only the kinds he has won, each named in words
-   for a screen reader (the row's label) and a pointer (its title). */
+   for a screen reader (the cup's own label, as an image: European Cup, 1) and a pointer (its title), in a group named Trophies. */
 function careerCabinetHtml(cr) {
   const n = k => (cr.trophies || []).filter(t => t.kind === k).length, have = CAREER_KINDS.filter(n);
   if (!have.length) return '';
-  return `<p class="cr-cab" data-fit aria-label="Trophies: ${have.map(k => CAREER_KIND_NAME[k] + ' ' + n(k)).join(', ')}">${have.map(k => `<span class="cr-cup" data-kind="${k}" data-metal="${trophyMetal(k)}" title="${CAREER_KIND_NAME[k]}"><i></i><b>${n(k)}</b></span>`).join('')}</p>`;
+  return `<p class="cr-cab" data-fit role="group" aria-label="Trophies">${have.map(k => `<span class="cr-cup" data-kind="${k}" data-metal="${trophyMetal(k)}" role="img" aria-label="${CAREER_KIND_NAME[k]}, ${n(k)}" title="${CAREER_KIND_NAME[k]}"><i></i><b>${n(k)}</b></span>`).join('')}</p>`;
 }
 /* His star traits (src/traits.js), in TRAITS order: one he has in its skill's colour; a locked one dimmed, with the skill and the number it needs. */
 function careerTraitChips(cr) {

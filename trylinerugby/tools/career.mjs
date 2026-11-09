@@ -777,9 +777,11 @@ C.setCups(false);                                    // no cups unless a section
   cr.trophies = [{ kind:'league', year:1, name:'A' }, { kind:'league', year:2, name:'A' }, { kind:'world', year:4, name:'England' }, { kind:'triple', year:5, name:'England' }];
   C.render();
   const cab = ($('cr-card').innerHTML.match(/<p class="cr-cab"[^>]*>[\s\S]*?<\/p>/) || [''])[0];
-  ok(/aria-label="Trophies: League 2, World Cup 1, Triple Crown 1"/.test(cab) && (cab.match(/class="cr-cup"/g) || []).length === 3 && /<b>2<\/b>/.test(cab) && $('cr-card').innerHTML.indexOf('cr-cab') < $('cr-card').innerHTML.indexOf('cr-skills'), 'the trophy row under his name: League 2, World Cup 1, Triple Crown 1, in the card\'s header');
-  ok(/\.cr-cab\{[^}]*flex-wrap:nowrap[^}]*\}/.test(src) && /data-fit aria-label="Trophies/.test($('cr-card').innerHTML), 'one line, stepped down by careerFit where the card is narrow (it fits 667x375: README)');
-  const cups = [...cab.matchAll(/class="cr-cup" data-kind="(\w+)" data-metal="(\w+)" title="([^"]+)"/g)].map(m => m.slice(1).join(' '));
+  const named = [...cab.matchAll(/class="cr-cup"[^>]*role="img" aria-label="([^"]+)"/g)].map(m => m[1]);
+  ok(named.join(' | ') === 'League, 2 | World Cup, 1 | Triple Crown, 1' && (cab.match(/class="cr-cup"/g) || []).length === 3 && /<b>2<\/b>/.test(cab) && $('cr-card').innerHTML.indexOf('cr-cab') < $('cr-card').innerHTML.indexOf('cr-skills'), `the trophy row under his name, each cup named by its own label (${named.join(' | ')}), in the card's header`);
+  ok(/<p class="cr-cab" data-fit role="group" aria-label="Trophies">/.test(cab) && !/aria-label="Trophies:/.test(cab), 'the row a group named Trophies; no name on a paragraph left (the kinds are on the cups)');
+  ok(/\.cr-cab\{[^}]*flex-wrap:nowrap[^}]*\}/.test(src) && /class="cr-cab" data-fit/.test($('cr-card').innerHTML), 'one line, stepped down by careerFit where the card is narrow (it fits 667x375: README)');
+  const cups = [...cab.matchAll(/class="cr-cup" data-kind="(\w+)" data-metal="(\w+)" role="img" aria-label="[^"]+" title="([^"]+)"/g)].map(m => m.slice(1).join(' '));
   ok(cups.join() === 'league silver League,world gold World Cup,triple silver Triple Crown' && cups.every(c => c.split(' ')[1] === T.cups.trophyMetal(c.split(' ')[0])) && !/CAREER_CUP_COL|--k:#/.test(cab + src.slice(src.indexOf('function careerCabinetHtml'), src.indexOf('function careerTraitChips'))),
     `each cup in its kind's metal from the cups engine's map, as the Trophy Cabinet's, and named in words (${cups.join(', ')})`);
   // between phases

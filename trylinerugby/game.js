@@ -7970,22 +7970,24 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
     + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
-/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked with a trophy in its kind's metal
-   (TROPHY_METAL, src/cups.js: gold or silver) and its kind's name; the tally counts each kind won, in the same trophy and metal, a cup's
-   only once one is kept. An entry without a kind is a league season. */
+/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked in its kind's metal (TROPHY_METAL,
+   src/cups.js: gold or silver) with its kind's name; the tally counts each kind won, a cup's only once one is kept. A trophy is drawn
+   only for silverware held (data-won): an entry won (a title or a Grand Slam, a cup or a tour's series) and a count above 0. An entry
+   not won keeps a dot in its kind's metal, and a count of 0 no mark at all. An entry without a kind is a league season. */
 function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
   const tally = [['league', 'Title', 'Titles', totals.champions], ['league', 'Grand Slam', 'Grand Slams', totals.grandSlams], ['triple', 'Triple Crown', 'Triple Crowns', totals.tripleCrowns],
     ...[['euro', 'European Cup', 'European Cups'], ['world', 'World Cup', 'World Cups'], ['tour', 'Tour', 'Tours']].map(([k, a, b]) => [k, a, b, totals[k] || 0]).filter(t => t[3] > 0)];
   const metal = k => (typeof trophyMetal === 'function' ? trophyMetal(k) : 'silver');   // a build without the cups: every entry is a League
-  const kindTag = k => `<span class="cup-kind" data-kind="${k}" data-metal="${metal(k)}">${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
+  const won = on => (on ? ' data-won' : '');
+  const kindTag = (k, on) => `<span class="cup-kind" data-kind="${k}" data-metal="${metal(k)}"${won(on)}>${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
   $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
-    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}" data-metal="${metal(k)}">${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
-      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind));
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}" data-metal="${metal(k)}"${won(n > 0)}>${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
+      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind, cupWinner(c.cup) === c.cup.user));
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
-      return `<article class="season-entry"><p class="eyebrow">${kindTag('league')}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
+      return `<article class="season-entry"><p class="eyebrow">${kindTag('league', awards.includes('Champions') || awards.includes('Grand Slam'))}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
     }).join('') : '<p class="stat-note">Complete a championship to record your first season here.</p>');
 }
 function renderSeasonSummary(c) {
@@ -10785,7 +10787,7 @@ function lockerCard(kind) {
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
 /* The trophy row on the player card: a cup per kind he has won, in its metal (TROPHY_METAL, src/cups.js: gold or silver, as in the Trophy
-   Cabinet), and how many, in CAREER_KINDS order; the row's label names each kind. */
+   Cabinet), and how many, in CAREER_KINDS order; each cup's own label names its kind. */
 const CAREER_KIND_NAME = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
@@ -10963,11 +10965,11 @@ function careerCardHtml(cr, team) {
     <div class="cr-traits">${careerTraitChips(cr)}</div>`;
 }
 /* His trophies, counted by kind under his name: a cup in the kind's metal and the number, only the kinds he has won, each named in words
-   for a screen reader (the row's label) and a pointer (its title). */
+   for a screen reader (the cup's own label, as an image: European Cup, 1) and a pointer (its title), in a group named Trophies. */
 function careerCabinetHtml(cr) {
   const n = k => (cr.trophies || []).filter(t => t.kind === k).length, have = CAREER_KINDS.filter(n);
   if (!have.length) return '';
-  return `<p class="cr-cab" data-fit aria-label="Trophies: ${have.map(k => CAREER_KIND_NAME[k] + ' ' + n(k)).join(', ')}">${have.map(k => `<span class="cr-cup" data-kind="${k}" data-metal="${trophyMetal(k)}" title="${CAREER_KIND_NAME[k]}"><i></i><b>${n(k)}</b></span>`).join('')}</p>`;
+  return `<p class="cr-cab" data-fit role="group" aria-label="Trophies">${have.map(k => `<span class="cr-cup" data-kind="${k}" data-metal="${trophyMetal(k)}" role="img" aria-label="${CAREER_KIND_NAME[k]}, ${n(k)}" title="${CAREER_KIND_NAME[k]}"><i></i><b>${n(k)}</b></span>`).join('')}</p>`;
 }
 /* His star traits (src/traits.js), in TRAITS order: one he has in its skill's colour; a locked one dimmed, with the skill and the number it needs. */
 function careerTraitChips(cr) {
