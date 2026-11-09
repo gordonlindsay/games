@@ -211,14 +211,14 @@ const DV_DRAW = {
     },
   },
   egg:{
-    ground(cam) {                                           // the thrower's spot, the box you may run in, a line of cones six metres out; and the same closing ring whatever is coming
+    ground(cam) {                                           // the thrower's spot, the box you may run in, a line of cones six metres out; the same closing ring whatever is coming; and the gold ring while it helps
       const E = practice.egg, K = DRILL_EGG, B = K.box, w = Math.max(1.5, 0.07*cam.F/cam.back);
       if (!E) return;
       dvLine(cam, B[0], B[1], B[2], B[1], 'rgba(250,248,238,.5)', w, [7, 6]); dvLine(cam, B[2], B[1], B[2], B[3], 'rgba(250,248,238,.5)', w, [7, 6]);
       dvLine(cam, B[2], B[3], B[0], B[3], 'rgba(250,248,238,.5)', w, [7, 6]);
       groundRing(cam, K.from[0], K.from[1], 0.75, 'rgba(250,248,238,.75)', 2);
       if (E.stage === 'wind') { const u = clamp(E.t/E.wind, 0, 1); dvCircle(cam, E.tw.x, E.tw.y, 2.4 - 1.4*u, `rgba(255,255,255,${(0.45 + 0.5*u).toFixed(3)})`, 2.5); }
-      if (E.stage === 'fly' && E.aim) {                     // where the ball comes down, at release and again after every hop: a ring the size of your reach, and its centre
+      if (E.stage === 'fly' && E.aim && eggRing(E)) {       // where the ball comes down, at release and again after every hop: a ring the size of your reach, and its centre. Only where eggRing says (training.js)
         const lw = Math.max(2.5, 0.14*cam.F/cam.back);
         dvCircle(cam, E.aim.x, E.aim.y, K.reach, DV_GOLD, lw);
         dvCircle(cam, E.aim.x, E.aim.y, 0.18, DV_GOLD, lw);

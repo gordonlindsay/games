@@ -93,6 +93,35 @@ P.leave();
   for (let seed = 1; seed <= 6; seed++) { H.reseed(seed); begin('egg'); s = play(st => { stick(-1, 0); nearest = Math.min(nearest, st.egg.me.x - st.egg.tw.x); }); stars.push(s.stars); P.leave(); }
   ok(nearest >= 6 - 1e-9 && Math.max(...stars) <= 1, 'Bouncy Egg: camping towards the thrower stops six metres out, behind the marker cones, and earns no more than one star (' + stars.join(' ') + ')');
 }
+{ // the throws: one of each first, then about two in three a Bounce Pass, the Flat Pass and the High Ball the surprise, never three the same in a row
+  begin('egg'); const E = P.state().egg, seq = [];
+  for (let i = 0; i < 3000; i++) { E.me.x = 59; E.me.y = 35; X.eggThrow(E); seq.push(E.kind); }
+  const rest = seq.slice(X.EGG.first.length), share = k => rest.filter(x => x === k).length/rest.length;
+  let three = 0; for (let i = 2; i < seq.length; i++) if (seq[i] === seq[i - 1] && seq[i] === seq[i - 2]) three++;
+  ok(seq.slice(0, 3).join() === 'bounce,flat,high', 'Bouncy Egg: the first three are still one of each, in Watch How\'s order');
+  ok(share('bounce') >= 0.58 && share('bounce') <= 0.7, `Bouncy Egg: about two in three throws are a Bounce Pass (${share('bounce').toFixed(3)} of ${rest.length} seeded throws)`);
+  ok(share('flat') >= 0.12 && share('high') >= 0.12 && Math.abs(share('flat') - share('high')) < 0.05, `Bouncy Egg: the rest a Flat Pass or a High Ball, as often as each other (${share('flat').toFixed(3)}, ${share('high').toFixed(3)})`);
+  ok(three === 0, 'Bouncy Egg: never three the same in a row (' + three + ')');
+  P.leave();
+}
+{ // the gold ring is a help, not the game: the youngest see it on every throw, Easy and Normal on the first three, Hard never, Minis on Hard included.
+  // eggRing is the one gate, read by the drawing (render-drill.js); the ring's place (E.aim) is still worked out on every throw
+  const S = D.settings(), was = { kids:S.kids, diff:S.diff, cat:S.cat }, put = (k, v) => { if (v === undefined) delete S[k]; else S[k] = v; };
+  const RING = 'The gold ring shows where the ball comes down. Run to meet it and catch it.', WATCH = 'Watch the ball in. Run to meet it and catch it.';
+  for (const [name, kids, diff, cat, upTo] of [['the Kids level', true, 0, 'men', 99], ['Minis on Easy', false, 0, 'minis', 99], ['Minis on Normal', false, 1, 'minis', 99], ['Easy', false, 0, 'men', 3], ['Normal', false, 1, 'men', 3], ['Hard', false, 2, 'men', 0], ['Minis on Hard', false, 2, 'minis', 0]]) {
+    S.kids = kids; S.diff = diff; S.cat = cat;
+    H.reseed(55); begin('egg'); const st = P.state(), E = st.egg, b = T.M.ball, ring = [], aim = []; st.limit = 1e9;   // all twelve throws, hearts topped up
+    const cue = $('pr-cue').textContent;
+    play(() => { E.lives = 3; if (E.stage === 'fly') { ring[E.n] = X.eggRing(E); aim[E.n] = !!E.aim; E.me.x = b.x < 62 ? 72.9 : 51.1; E.me.y = b.y < 35 ? 45.9 : 24.1; } });
+    const n = ring.length - 1, want = i => i <= upTo;
+    ok(n === X.EGG.throws && ring.slice(1).every((r, i) => r === want(i + 1)), `Bouncy Egg, ${name}: the gold ring on ${upTo === 99 ? 'every throw' : upTo ? 'the first three throws only' : 'no throw'} (${ring.slice(1).map(r => (r ? 'R' : '-')).join('')})`);
+    ok(aim.slice(1).every(Boolean), `Bouncy Egg, ${name}: where the ball comes down is still worked out on every throw`);
+    ok(cue === (upTo === 99 ? RING : WATCH), `Bouncy Egg, ${name}: the card says ${upTo === 99 ? 'the gold ring line' : 'Watch the ball in'} ("${cue}")`);
+    P.leave();
+  }
+  for (const k of ['kids', 'diff', 'cat']) put(k, was[k]);
+  ok(/E\.stage === 'fly' && E\.aim && eggRing\(E\)/.test(fs.readFileSync(new URL('../src/render-drill.js', import.meta.url), 'utf8')) && !/rnd\(/.test(training.slice(training.indexOf('const eggRingAll'), training.indexOf('function eggStage'))), 'Bouncy Egg: the ring is drawn only where eggRing says, and the gate draws no random number');
+}
 
 // ---- Pass Around the Circle
 P.start('circle');

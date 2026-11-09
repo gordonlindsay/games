@@ -970,6 +970,17 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
     install(); stage(2); S.cam = 2; T.practice.start('cones'); D.render(STEP); ok(held() && !B.behindOn(), 'a drill keeps them: every Training Ground game draws with them'); T.practice.leave();
     fresh(0); inPlay(); D.render(STEP); ok(gone(), 'and a Top match after a drill frees them');
     install(); fresh(0); inPlay(); T.practice.start('egg'); ok(A.state === 'ready', 'a drill after a Top match keeps art already in'); T.practice.leave(); B.artFree();
+    { // with the art in, no Skills Mini Game draws a code-drawn man on any frame: anyone with no picture to hold is tinted at once, past the per-frame
+      // budget, as in the demo (render-art.js owed). A code-drawn man paints his skin in one of the looks' tones, which the art never sets as a fill
+      const seen = S.drillSeen, skin = new Set(B.LOOK_SKIN), code = {}; S.drillSeen = T.drills.DRILLS.map(d => d.id); install(); S.cam = 2;
+      for (const id of T.drills.DRILLS.map(d => d.id)) {
+        T.practice.start(id); $(id === 'circle' ? 'pr-runner' : 'pr-retry').click(); code[id] = 0;
+        globalThis.__ctxSpy = (k, a) => { if (k === 'fillStyle' && skin.has(a[0])) code[id]++; };
+        try { for (let i = 0; i < 400 && T.practice.state() && !T.practice.state().done; i++) { if (i % 7 === 0) T.input.aPressed = true; T.update(STEP); D.render(STEP); } } finally { globalThis.__ctxSpy = null; }
+        T.practice.leave();
+      }
+      B.artFree(); S.drillSeen = seen;
+      ok(Object.values(code).every(n => n === 0), 'with the art in, every Skills Mini Game draws every man from the art from his first frame, the close-ups\' packs and kickers included (' + Object.entries(code).map(([k, n]) => k + ' ' + n).join(', ') + ')'); }
     install(); stage(2); B.artFree();
     const live = { Image:globalThis.Image, fetch:globalThis.fetch, create:document.createElement };
     document.createElement = fakeCanvas(page()); globalThis.Image = Fine; globalThis.fetch = goodJson;
