@@ -739,13 +739,16 @@ function importCode(name, used) {
    league is null. */
 function cleanImportLeague(v) {
   if (!v || typeof v !== 'object' || Array.isArray(v) || !Array.isArray(v.teams)) return null;
-  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set();
+  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set(), mine = settings.myClub;   // mine: as the save has it, because a side's new key can be another's old one
   for (const raw of v.teams.slice(0, 64)) {
     const t = cleanSide(raw), name = t && importName(t.name), fit = name && importFit(name, names);
     if (!fit) continue;
     t.name = fit; names.add(importKey(fit));
     delete t.home; delete t.custom;
-    if (ids.has(t.id)) t.id = importCode(t.name, ids);
+    if (ids.has(t.id)) {                                   // a code a built-in list has taken since (England 2's and Counties' came with PR #14): My Team follows its side to the new one
+      const was = t.key; t.id = importCode(t.name, ids);
+      if (was && mine === was) settings.myClub = 'lg-' + t.id;
+    }
     ids.add(t.id);
     t.key = 'lg-' + t.id;
     teams.push(t);

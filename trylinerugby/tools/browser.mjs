@@ -72,39 +72,36 @@ try {
     if (!insets.left) console.log(`${name}: sign ${Math.round(box.stat.l)}-${Math.round(box.stat.r)} x ${Math.round(box.stat.t)}-${Math.round(box.stat.b)}, caption ${Math.round(box.cap.l)}-${Math.round(box.cap.r)} x ${Math.round(box.cap.t)}-${Math.round(box.cap.b)}`);
     await pg.close();
   }
-  // the stars beside every team wait for the teams builder (README, Integration with PR #14): recorded, not measured, until then
-  PENDING.push('the stars beside every team, at both phone sizes (the teams builder: the star display)');
-  if (false) // the stars, in a real layout: every screen where a side is picked or listed, at both phone sizes. Never under 12px a star, nothing outside its card or sideways off the screen, and the overall's badge clear of the stars and the name.
+  // the stars, in a real layout (the teams builder: PR #14's star display beside main's overall badge): every screen where a side is picked
+  // or listed, at both phone sizes. Never under 12px a star, nothing outside its card or sideways off the screen, and the overall's badge
+  // clear of the stars and the name.
   for (const [w, h] of [[844, 390], [667, 375]]) {
     const pg = await open(w, h, true), name = `${w}x${h}`;
-    const PRE = `const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, Y = T.yourTeam, S = D.settings(), $ = i => document.getElementById(i), by = id => X.ALL_TEAMS.find(t => t.id === id), only = id => { for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id; }, done = s => { s.results = s.fixtures.map(rd => rd.map(([h, a]) => ({ h, a, hs:h === s.user ? 30 : 10, as:a === s.user ? 30 : 12, ht:4, at:1 }))); s.round = 5; };`;
+    const PRE = `const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, H = T.home, S = D.settings(), $ = i => document.getElementById(i), by = id => X.ALL_TEAMS.find(t => t.id === id);`;
     const MEASURE = `(() => { const s = [...document.querySelectorAll('.screen')].find(e => !e.hidden), hit = (a, b) => a.left < b.right - .5 && b.left < a.right - .5 && a.top < b.bottom - .5 && b.top < a.bottom - .5;
-      const stars = [...s.querySelectorAll('.tstars')].filter(e => e.getBoundingClientRect().width > 0), o = { n:stars.length, min:99, out:[], hit:[], side:Math.max(s.scrollWidth - s.clientWidth, document.documentElement.scrollWidth - innerWidth) };
-      for (const e of stars) { const r = e.getBoundingClientRect(), box = (e.closest('.team,.yt,.yours,.lv,td,.fixture,.cr-tile') || s).getBoundingClientRect(), card = e.closest('.team'); o.min = Math.min(o.min, r.height, r.width/5);
+      const stars = [...s.querySelectorAll('.rstars')].filter(e => e.getBoundingClientRect().width > 0), o = { n:stars.length, min:99, out:[], hit:[], side:Math.max(s.scrollWidth - s.clientWidth, document.documentElement.scrollWidth - innerWidth) };
+      for (const e of stars) { const r = e.getBoundingClientRect(), box = (e.closest('.team,.yours,.my-rec') || s).getBoundingClientRect(), card = e.closest('.team'); o.min = Math.min(o.min, r.height, r.width/5);
         if (r.left < box.left - .5 || r.right > box.right + .5 || r.right > innerWidth) o.out.push(e.getAttribute('aria-label'));
-        if (card) { const v = card.querySelector('.ovr'), t = card.querySelector('.tname'); if (v && hit(v.getBoundingClientRect(), r)) o.hit.push('overall on stars: ' + t.textContent); if (hit(t.getBoundingClientRect(), r)) o.hit.push('name on stars: ' + t.textContent); } }
+        if (card) { const v = card.querySelector('.ovr,.cr-rate'), t = card.querySelector('.tname'); if (v && hit(v.getBoundingClientRect(), r)) o.hit.push('overall on stars: ' + t.textContent); if (hit(t.getBoundingClientRect(), r)) o.hit.push('name on stars: ' + t.textContent); } }
       return JSON.stringify(o); })()`;
     const SCREENS = [
-      ['the home', 12, `S.myTeam = 'NTH'; X.renderHome();`, 1],
-      ['the International tab', 12, `D.openTeams('champ'); S.pool = 0; D.renderTeams();`, 22],
-      ['the Local tab', 12, `S.pool = 1; D.renderTeams();`, 12],
-      ['the Counties tab', 12, `S.pool = X.POOLS.indexOf(X.COUNTIES); D.renderTeams();`, 7],
-      ['the picked-team bar', 12, `S.myTeam = 'GDN'; D.openTeams('quick'); S.pool = 1; D.renderTeams();`, 13],
-      ['the level choice', 12, `S.myTeam = 'FAR'; Y.openBuilder(null);`, 9],
-      ['the builder', 12, `$('bd-level-grid').querySelector('[data-level=c1]').click();`, 2],
-      ['the championship', 12, `X.newChamp(by('GDN'), ['HAR', 'FAR', 'WIM', 'IRO', 'GUI'].map(by)); X.renderHub(); only('s-hub');`, 8],
-      ['the career club list', 12, `X.setChamp(null); C.end(); C.newOpen();`, 12],
-      ['the career hub', 12, `C.start({ name:'Sam', pos:'B', num:10, club:by('FAR'), look:Y.careerDraft().look }); C.open();`, 2],
-      ['the career table', 12, `C.renderTable(); only('s-career-table');`, 6],
-      ['the next stage', 12, `done(C.get().season); C.open();`, 1],
-      ['the call-up', 12, `const cr = C.get(); cr.stage = 3; C.newSeason(cr); done(cr.season); C.open();`, 22],
+      ['the home (My Team\'s club under Play)', `S.myClub = 'NTH'; S.hl = 'game'; D.goHome();`, 1],
+      ['the International tab', `S.myClub = null; D.openTeams('quick'); X.tierPick(0);`, 12],
+      ['the Surrey tab', `X.tierPick(2); X.poolPick('sur');`, 12],
+      ['the Counties tab', `X.poolPick('cty');`, 7],
+      ['the England 2 tab', `X.tierPick(1); X.poolPick('en2');`, 13],
+      ['the picked-team bar', `X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[7]); X.tierPick(1); X.poolPick('eng');`, 11],
+      ['My Team\'s screen', `D.openTeams('my'); X.tierPick(2); X.poolPick('sur');`, 14],
+      ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 12],
+      ['the career club list, England 2', `document.querySelector('#cc-tier [data-tier="1"]').click(); document.querySelector('#cc-nat [data-pool="en2"]').click();`, 13],
+      ['the transfer window', `const cr = C.create({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(cr); cr.phase = 'transfer'; cr.offers = ['GAL', 'BLM', 'JHB']; C.open();`, 4],
     ];
     const line = [];
-    for (const [where, least, js, want] of SCREENS) {
+    for (const [where, js, want] of SCREENS) {
       await pg.ev(`(() => { ${PRE} ${js} })()`); await wait(120);
       const m = JSON.parse(await pg.ev(MEASURE));
       ok(m.n === want, `${name}: ${where} draws ${want} sets of stars (${m.n})`);
-      ok(m.min >= least, `${name}: ${where}: no star under ${least}px (${m.min})`);
+      ok(m.min >= 12, `${name}: ${where}: no star under 12px (${m.min})`);
       ok(!m.out.length, `${name}: ${where}: every star stays in its card (${m.out})`);
       ok(!m.hit.length, `${name}: ${where}: stars clear of the overall and the name (${m.hit})`);
       ok(m.side <= 0, `${name}: ${where}: nothing goes sideways (${m.side})`);

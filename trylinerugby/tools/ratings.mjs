@@ -37,7 +37,7 @@ const TABLE = {
 };
 // the star scale by hand, overall to stars: one scale for every side, whatever its list
 const STARS = { 40:1, 43:2, 46:2, 49:2.5, 52:2.5, 55:3, 58:3, 61:3.5, 64:3.5, 67:3.5, 70:4, 72:4, 75:4.5, 78:4.5, 81:4.5, 84:4.5, 87:4.5, 90:5, 93:5, 96:5, 99:5 };
-pending('1. the table, the club cap and every team at its overall (the teams builder: PR #14\'s club data into main\'s ratings)', () => {
+pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 22 nations (main\'s band instead: tools/teams.mjs 12)', () => {
   const wrong = Object.entries(TABLE).filter(([id, ov]) => !by(id) || X.overallOf(by(id)) !== ov).map(([id, ov]) => `${id} ${by(id) && X.overallOf(by(id))} not ${ov}`);
   ok(!wrong.length, `every listed team's overall is the table's (${wrong.join(', ') || Object.keys(TABLE).length + ' teams'})`);
   ok(X.ALL_TEAMS.every(t => t.id in TABLE) && Object.keys(TABLE).length === X.ALL_TEAMS.length, 'and every team in the game is on the table');
@@ -56,7 +56,7 @@ pending('1. the table, the club cap and every team at its overall (the teams bui
     ok([...seen].every(v => v in STARS) && Object.keys(STARS).length === seen.size, 'the scale names all 21 overalls a side can have');
     let last = 0, up = true; for (let v = 30; v <= 100; v++) { const st = R.starsOfOverall(v); if (st < last) up = false; last = st; }
     ok(up && R.starsOfOverall(30) === 1 && R.starsOfOverall(47) === 2 && R.starsOfOverall(60) === 3 && R.starsOfOverall(74) === 4 && R.starsOfOverall(89) === 4.5 && R.starsOfOverall(100) === 5, 'and a number between them (a career player can be any) takes the value below, 1 star the minimum');
-    pending('every team\'s stars against the table (the teams builder)', () => {
+    pending('every team\'s stars against PR #14\'s table (main\'s: tools/teams.mjs 12)', () => {
     const wrong = Object.entries(TABLE).filter(([id, ov]) => R.starsOf(by(id)) !== STARS[ov]).map(([id]) => id);
     ok(!wrong.length, `every team's stars are the table's (${wrong.join() || Object.keys(TABLE).length + ' teams'})`);
     const count = {}; for (const ov of Object.values(TABLE)) count[STARS[ov]] = (count[STARS[ov]] || 0) + 1;
@@ -77,7 +77,7 @@ pending('1. the table, the club cap and every team at its overall (the teams bui
     ok(saved(229, 0) && saved(229, 0).results[0][0].hs === 229, 'a saved 229 keeps the Championship and the score');
     ok(saved(3, 264) && saved(3, 264).results[0][0].as === 264, 'and so does 3-264');
     ok(!saved(1000, 0) && !saved(-1, 0), 'only a number no match could make is a damaged save'); }
-  pending('the new lists, the bands and PR #14\'s nations (the teams builder: England 2 and Counties, its 22 nations)', () => {
+  pending('PR #14\'s Wales Scotland Italy, its bands from 40 and its 22 nations (England 2 and Counties are in main\'s tiers: tools/teams.mjs 12)', () => {
   // the new lists
   ok(X.WALES_SCOTLAND_ITALY.map(t => t.name).join() === 'Glasgow,Cardiff,Swansea,Edinburgh,Treviso,Llanelli,Newport,Parma', 'Wales, Scotland and Italy, in table order');
   ok(X.ENGLAND_TWO.map(t => t.name).join() === 'Ealing,Bedford,Coventry,Worcester,Chinnor,Hartpury,Cornwall,Doncaster,Nottingham,Ampthill,Caldy,Richmond,Cambridge', 'England 2, in table order, the side from London left out');
@@ -100,7 +100,7 @@ pending('1. the table, the club cap and every team at its overall (the teams bui
   ok(JSON.stringify(R.BUNDLED.women) === JSON.stringify(WOMEN) && !['GEO', 'POR', 'TGA', 'CHI', 'ROU', 'ARG', 'URU'].some(id => id in R.BUNDLED.women), "the women's table is bundled with its 15 nations");
   ok(R.BUNDLED.date === '2026-11-07', 'the table carries its date');
   ok(Object.entries(R.BUNDLED.men).every(([id, ov]) => TABLE[id] === ov) && Object.keys(R.BUNDLED.men).length === 22, "the bundled men's table is the 22 nations (PR #14's, the shape ratings.json is checked against)");
-  pending('the 22 nations\' kits and codes (the teams builder)', () => {
+  pending('the 22 nations\' kits and codes (PR #14\'s nations: main has its fourteen)', () => {
   ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL' && X.MORE_NATIONS.every(t => /^#[0-9a-f]{6}$/i.test(t.kit + '') && /^#[0-9a-f]{6}$/i.test(t.trim) && /^#[0-9a-f]{6}$/i.test(t.alt) && /^#[0-9a-f]{6}$/i.test(t.altTrim)), 'the Six Nations keep their order; every other nation has kit, trim, alt kit and alt trim');
   ok(by('CAN').name === 'Canberra' && by('CDA').name === 'Canada', 'Canberra keeps CAN, Canada is CDA');
   const ids = X.ALL_TEAMS.map(t => t.id);
@@ -126,7 +126,7 @@ pending('1. the table, the club cap and every team at its overall (the teams bui
   // two sides with one overall: not one spent on what wins matches and one spent on what does not. These pairs played far apart under the old order
   ok(R.abilitiesFor({ pace:5, power:5, handling:5, kicking:5, stamina:5 }, 99).pace === 5 && sumOf(R.abilitiesFor({}, 1)) === 5, 'a sum out of range is held to 5 to 25');
   ok(R.sumOfOverall(96) === 24 && R.sumOfOverall(43) === 6 && R.sumOfOverall(75) === 17, 'overallOf, the other way');
-  pending('2. each listed side\'s abilities from PR #14\'s ratings (the teams builder)', () => {
+  pending('2. each listed side\'s abilities at PR #14\'s own ratings (main\'s band: tools/teams.mjs 12)', () => {
   const legs = t => t.pace + t.power, ab = t => KEYS.map(k => t[k]).join('');
   ok(ab(by('IRE')) === '44544' && ab(by('FRA')) === '55335' && ab(by('SCO')) === '54434' && ab(by('ENG')) === '45344', `Ireland and France at 87, England and Scotland at 84 (${[by('IRE'), by('FRA'), by('SCO'), by('ENG')].map(ab)})`);
   const w = id => T.sidesOf.WOMEN_NATIONS.find(t => t.id === id);
@@ -146,7 +146,7 @@ pending('1. the table, the club cap and every team at its overall (the teams bui
 }
 
 // 3. the league lines: real figures, read from the list
-pending('3. the league lines (the teams builder and My Team: PR #14\'s data)', () => {
+pending('3. the league lines with PR #14\'s codes, Cork, Ballymena and Twickenham (main\'s codes: tools/teams.mjs 12)', () => {
   const line = t => [t.league, t.place, t.w, t.d, t.l, t.pf, t.pa].join();
   ok(line(by('FAR')) === 'Regional 1 South Central,7,10,0,12,640,646', `Farnham's line (${line(by('FAR'))})`);
   ok(line(by('TLS')) === 'Top 14,1,18,0,8,981,617' && line(by('NTH')) === 'English Premiership,1,14,1,3,693,536' && line(by('DUB')) === 'United Rugby Championship,2,12,0,6,515,370', 'Toulouse, Northampton and Dublin');
@@ -413,7 +413,7 @@ pending('6. the career ladder (PR #14\'s stages, dropped for main\'s club season
   { const u = I.state(); u.step = 'preview'; u.data = { club:{ name:'Bracknell RFC', kit:'#399913', trim:'#e4c200' }, league:[], teams:[] }; u.draft = { kit:'#399913', trim:'#e4c200', hoops:false }; u.level = 'r2'; I.render();
     ok($('im-lv-name').textContent === 'Regional 2 · 2.5 Stars' && $('im-lv-stars').innerHTML === R.starsHtml(2.5, true), 'Import Club draws the level\'s stars beside its words'); }
   $('m-import').hidden = true;
-  pending('stars on screen beside every team (the teams builder: the star display), the Your Team panel (My Team\'s last-season info) and the career screens', async () => {
+  pending('stars on PR #14\'s screens: its Your Team panel, fixtures and tables (main\'s screens: tools/browser.mjs, tools/teams.mjs 12, tools/home.mjs 6b)', async () => {
   // team cards: every tab, men's and women's, a card's stars beside its overall, one for each team
   const cardsOk = g => { let bad = []; for (const pool of Y.POOL_TABS.slice(0, 9)) { S.pool = pool; S.womens = g; D.renderTeams(); const list = Y.teamList(), html = $('t-grid').innerHTML, parts = html.split('<button class="team').slice(1);
     list.forEach((t, i) => { if (!parts[i].includes('>' + t.name.replace(/&/g, '&amp;') + '</span>') || !parts[i].includes(label(t)) || !parts[i].includes('<span class="ovr" aria-label="Overall ' + X.overallOf(t) + '">')) bad.push(t.id); }); if (labels(html).length !== list.length) bad.push('count on ' + pool); } return bad; };

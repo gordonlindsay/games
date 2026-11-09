@@ -139,7 +139,7 @@ function renderCareerClubs() {
   for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   const clubs = careerClubList(pool);
   $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
-    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');
+    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');   // its name with its stars under it, beside its overall
   for (const b of $('cc-grid').querySelectorAll('[data-i]')) b.addEventListener('click', () => careerClubPick(clubs[+b.dataset.i]));
   if (!$('s-career-club').hidden) careerFit($('s-career-club'));
 }
@@ -303,7 +303,7 @@ function renderCareerEnd() {
   body.innerHTML = first ? '' : `<div class="cr-tiles" style="--n:${out.place ? 3 : 2}">${tiles}</div>`;
   if (first) {                                       // his first call-up: the country is the choice, and the choice starts the window (no tiles: Called Up and the twelve fill the screen)
     body.innerHTML += `<p class="lbl cr-pick">Pick Your Country</p>
-      <div class="cr-nations">${careerNations(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span></button>`).join('')}</div>`;
+      <div class="cr-nations">${careerNations(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span></button>`).join('')}</div>`;
     for (const b of body.querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerAdvance(b.dataset.n); careerOpen(); });
     act.innerHTML = '';
     return;
@@ -311,9 +311,9 @@ function renderCareerEnd() {
   act.innerHTML = `<button class="btn primary" id="ce-go">Continue</button>`;
   $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
 }
-/* The transfer window: each offer a club's card (its kit, name, rating and league), and his own club's card to Stay, in equal parts. */
+/* The transfer window: each offer a club's card (its kit, name, rating, stars and league), and his own club's card to Stay, in equal parts. */
 function careerOfferHtml(t, id, lbl) {
-  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
+  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jerseyRated(t)}<span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}<span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
 }
 function renderCareerMove() {
   const cr = career, team = careerTeamFor(cr, 'league'), cat = careerCat(cr), body = $('ce-body');
