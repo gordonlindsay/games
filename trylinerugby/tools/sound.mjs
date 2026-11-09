@@ -392,7 +392,7 @@ function loadAlone(html) {
   const A = sandbox.api, lic = read('../assets/sounds/LICENCES.md');
   ok(keys.every((k, i) => { const lines = cards[i].children.slice(2).map(c => c.textContent); return S.FILES[k] ? lines.length === S.FILES[k].length && S.FILES[k].every(([f], j) => lines[j] === 'Take ' + (j + 1) + ': ' + A.CREDITS[f]) : lines.join() === 'Synth Only'; }), 'under each, every take\'s sources and licence, or Synth Only');
   ok(Object.values(S.FILES).flat().every(([f]) => /^[^']+ by [^']+ \((?:OpenGameArt|kenney\.nl)\)(?:; [^']+ by [^']+ \((?:OpenGameArt|kenney\.nl)\))* · CC0$/.test(A.CREDITS[f] || '')
-    && A.CREDITS[f].split(' · ')[0].split('; ').every(c => lic.includes(c.split(' by ')[0]))), 'each credit names its pages and authors as LICENCES.md does, and CC0');
+    && A.CREDITS[f].split(' · ')[0].split('; ').every(c => { const m = c.match(/^(.+?) by (.+) \((?:OpenGameArt|kenney\.nl)\)$/); return !!m && lic.includes('/' + m[1] + ' (' + m[2] + ')'); })), 'each credit names its pages and authors as LICENCES.md does, and CC0');
   const post = pairs[keys.indexOf('post')];
   post[0].click();
   ok(A.VOICES.some(v => v.key === 'post') || made.made[0].state !== 'running', 'Recording plays its sound (its recipe until the recording is in)');

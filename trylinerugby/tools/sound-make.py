@@ -49,8 +49,8 @@ SRC = {
   'swish10': ('https://opengameart.org/content/swishes-sound-pack', 'artisticdude', 'CC0', 'x-swishes/swishes/swish-10.wav', 'a light swish'),
   'swish11': ('https://opengameart.org/content/swishes-sound-pack', 'artisticdude', 'CC0', 'x-swishes/swishes/swish-11.wav', 'a light swish'),
   'swish13': ('https://opengameart.org/content/swishes-sound-pack', 'artisticdude', 'CC0', 'x-swishes/swishes/swish-13.wav', 'a light swish'),
-  'sand1':   ('https://opengameart.org/content/fantozzis-footsteps-grasssand-stone', 'qubodup', 'CC0', 'x-Fantozzi-footsteps/Fantozzi-footsteps/flac/Fantozzi-SandL1.flac', 'a step on sand or grass'),
-  'sand2':   ('https://opengameart.org/content/fantozzis-footsteps-grasssand-stone', 'qubodup', 'CC0', 'x-Fantozzi-footsteps/Fantozzi-footsteps/flac/Fantozzi-SandL2.flac', 'a step on sand or grass'),
+  'sand1':   ('https://opengameart.org/content/fantozzis-footsteps-grasssand-stone', 'Fantozzi', 'CC0', 'x-Fantozzi-footsteps/Fantozzi-footsteps/flac/Fantozzi-SandL1.flac', 'a step on sand or grass'),
+  'sand2':   ('https://opengameart.org/content/fantozzis-footsteps-grasssand-stone', 'Fantozzi', 'CC0', 'x-Fantozzi-footsteps/Fantozzi-footsteps/flac/Fantozzi-SandL2.flac', 'a step on sand or grass'),
   'kpm0':    ('https://kenney.nl/assets/impact-sounds', 'Kenney', 'CC0', 'kenney_impact-sounds/Audio/impactPunch_medium_000.ogg', 'a body blow'),
   'kpm1':    ('https://kenney.nl/assets/impact-sounds', 'Kenney', 'CC0', 'kenney_impact-sounds/Audio/impactPunch_medium_001.ogg', 'a body blow'),
   'kpm2':    ('https://kenney.nl/assets/impact-sounds', 'Kenney', 'CC0', 'kenney_impact-sounds/Audio/impactPunch_medium_002.ogg', 'a body blow'),
@@ -71,8 +71,10 @@ SRC = {
 FETCHED = '2026-11-09'
 NOTES = {   # what a source's own page says that its download does not
   'claps': 'Its page: changed to CC0 on 2024-10-05, and the "CCBY3" left in the file\'s name is to be ignored.',
-  'towel6': 'Its page: CC0 since 2024-08-24, and the text file inside the download that names other licences is to be ignored.',
-  'towel12': 'Its page: CC0 since 2024-08-24, and the text file inside the download that names other licences is to be ignored.',
+  'towel6': 'Its page: "Available under cc0. Ignore the txt info file in the 7z that says otherwise."',
+  'towel12': 'Its page: "Available under cc0. Ignore the txt info file in the 7z that says otherwise."',
+  'sand1': 'Submitted to OpenGameArt by qubodup. Its page: the steps were taken from Fantozzi\'s Freesound pack 10338 under CC0.',
+  'sand2': 'Submitted to OpenGameArt by qubodup. Its page: the steps were taken from Fantozzi\'s Freesound pack 10338 under CC0.',
 }
 
 # A layer: (source, {start, dur, rate, at, db, hp, lp, fade}). rate > 1 is higher and shorter; rate may be [from, to], a glide
