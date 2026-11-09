@@ -4374,7 +4374,9 @@ function cleanCupEntry(e) {
    - Trophies (career.trophies, { kind, year, name }): a league or his country's six won ('league'), the European Cup ('euro'),
      the World Cup ('world'), the Home Nations Tour ('tour') and the Triple Crown ('triple'). The player card counts them by kind.
    - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
-     international window is that category's own twelve; nothing else changes.
+     international window is that category's own twelve; nothing else changes. It is also his body: Men a male player, Women a
+     female one (PR #14's Male | Female is this same control). His look (cr.look: build, skin, hair colour, hair style) goes on
+     his squad entry in his matches, so the behind views and the art draw him with it (careerLook, CAREER_LOOK).
    - Your player has a 1 to 99 rating in each ability (Pace, Power, Handling, Kicking, and Stamina even before the
      teams have it). The overall is the team cards' overallOf on the same 40 to 99 scale.
    - Skills rise from training (one session a round, between matches: a drill's stars give points to its skill,
@@ -4452,6 +4454,17 @@ function careerOverall(skills) {                     // overallOf's 40 to 99, fr
   return clamp(Math.round(40 + (mean - 1)*59/98), 40, 99);
 }
 function careerName(v) { return Array.from(String(v == null ? '' : v).normalize('NFC').replace(/[^\p{L}' -]/gu, '').replace(/\s+/g, ' ').trim()).slice(0, 12).join('').trim(); }
+/* His look (PR #14's player builder): build, skin, hair colour and hair style, picked on New Player's Your Look and drawn in the behind
+   views and the art (src/looks.js, src/render-art.js). Its body (g: 0 male, 1 female) is not a choice of its own: it is the career's
+   Men | Women, the one control, so a women's career is always a female player. Every field is there, so a saved look never depends on
+   the team's deal; a career saved before it, or a broken look, takes CAREER_LOOK on the career's own body. No height: his is the
+   shirt's, as every man's is. Kept on this device only, as the name is (PRIVACY.md). */
+const CAREER_LOOK = { g:0, skin:2, hair:1, style:0, b:1 };
+const CAREER_BUILDS = [0.92, 1, 1.12];                // Small | Medium | Big: the art's three bodies (slim, medium, stocky), the only builds the picker gives
+function careerLook(l, cat) {
+  const c = cleanLook(l), b = Number.isFinite(c.b) ? CAREER_BUILDS.reduce((a, v) => (Math.abs(v - c.b) < Math.abs(a - c.b) ? v : a)) : CAREER_LOOK.b;
+  return { g:cat === 'women' ? 1 : 0, skin:c.skin ?? CAREER_LOOK.skin, hair:c.hair ?? CAREER_LOOK.hair, style:c.style ?? CAREER_LOOK.style, b };
+}
 
 /* ---------- clubs, leagues and nations ---------- */
 const careerSide = t => cleanSide(t);
@@ -4505,6 +4518,7 @@ function careerCreate(o) {
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
   const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, league:careerLeagueKey(o.league, club), cat:careerCat(o),
+    look:careerLook(o.look, careerCat(o)),           // his look, on the career's body (Men | Women). In cleanCareer's order
     proMode:o.proMode === true,                      // Pro Mode, your player alone (career-pro.js). Its own line, and in cleanCareer's order
     country:null, skills, year:1, phase:'league', seasons:0, season:null, cup:null, offers:null, trained:false,
     history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 }, trophies:[] };
@@ -4705,8 +4719,8 @@ function careerMatchOpts(cr, f) {
 function careerPlay() {                              // Play Match on the hub
   const cr = career, f = careerAhead(cr);
   if (practice || !f) return false;
-  const opp = f.home === f.user ? f.away : f.home;
-  startMatch(f.teams[f.user], f.teams[opp], false, careerMatchOpts(cr, f));
+  const opp = f.home === f.user ? f.away : f.home, mine = f.teams[f.user];
+  startMatch({ ...mine, squad:[{ n:cr.num, look:careerLook(cr.look, careerCat(cr)) }] }, f.teams[opp], false, careerMatchOpts(cr, f));   // his look on his squad entry, for this match only (lookOf): the season's side is untouched
   careerArm();
   return true;
 }
@@ -4831,6 +4845,7 @@ function cleanCareer(c) {
   }
   const trophies = Array.isArray(c.trophies) ? careerTrophies(c.trophies) : careerTrophies(history.filter(h => h.place === 1).map(h => ({ kind:'league', year:h.year, name:h.name })));
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, league:careerLeagueKey(c.league, club), cat,
+    look:careerLook(c.look, cat),                    // a career from before the look builder, or a broken look, takes the default on its own body
     proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
     country, skills, year, phase, seasons:careerInt(c.seasons, 0, 100000) || 0, season, cup, offers,
     trained:c.trained === true && (season ? season.round < 5 : !!cup), history, totals, trophies,
@@ -6630,7 +6645,7 @@ function artLut(hex, gain = 1) {                            // 256 shades of one
   return L;
 }
 function artMix(a, b, t) { const x = hexRgb(a), y = hexRgb(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v)*t).toString(16).padStart(2, '0')).join(''); }
-function artPalette(p) { return artPaletteOf(kitOf(p.team), lookOf(p)); }   // part id to colour table, for this man in this match
+function artPalette(p) { return artPaletteOf(kitOf(p.team, p), lookOf(p)); }   // part id to colour table, for this man in this match. The kit knows the man: the Locker's boots on your side, his alone in a career, Rainbow's by shirt (lockerBoots)
 function artHairOf(look, kit, skin) {                       // a long style lies across the shirt and frames the face, so it must not melt into either: black hair on a black shirt comes up a little, brown hair on brown skin goes darker, by the smallest step that clears both. The eight older styles keep the colour as it was
   const base = LOOK_HAIR[look.hair];
   if (!(look.style >= LOOK_LONG)) return base;
@@ -6650,7 +6665,7 @@ function artPaletteOf(kit, look) {
   const trim = colorDist(kit.trim, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : kit.trim;
   // a lock is a plait, a bunch or a tail: hair on hair, a step darker, or lighter when the hair is too dark to go darker, so it shows against the head it falls over
   const lock = luma(hair) < 0.16 ? artMix(hair, '#8a6548', 0.24) : artMix(hair, '#17120e', 0.3);
-  const table = { shirt:kit.shirt, hoop:kit.hoops ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:'#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d', lock };
+  const table = { shirt:kit.shirt, hoop:kit.hoops ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:kit.boots || '#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d', lock };
   const out = [null];
   for (const name of ART.parts) out.push(artLut(table[name]));
   return out;
@@ -6866,7 +6881,7 @@ const BV_PRESET = [null, { ch:7.5, back:19, fy:0.60 }, { ch:10, back:22, fy:0.58
 const BV_TIERS = [28, 64];                                  // sprite cells, in device pixels per metre
 const BV_CELL = { stand:{ w:1.4, h:2.3, ox:0.7, oy:2.1 }, lying:{ w:2.6, h:1.2, ox:0.6, oy:0.7 } };   // in T, with the feet at ox, oy: 0.1T clear of the tallest head style
 const BV_RING = 0.6;                                        // the ring's base radius in metres: a top-down ring's radius would swallow a standing man
-const BV = { on:false, cam:null, M:null, rt:0, tx:0, ty:0, order:[], cells:[], edges:[], men:new WeakMap(), bakes:0, baked:0, fontsReady:false, fontsArmed:false, fade:1 };
+const BV = { on:false, cam:null, M:null, rt:0, tx:0, ty:0, order:[], cells:[], edges:[], men:new WeakMap(), bakes:0, baked:0, star:null, fontsReady:false, fontsArmed:false, fade:1 };
 const behindOn = () => settings.cam > 0 && playing() && !M.two && !M.auto && !practice;
 function stickTurn(seat) {                                  // the direction of the team this seat plays: 0 means the stick is read as it always was
   if (!behindOn()) return seat === 0 ? dvTurn() : 0;         // a Training Ground game may have a behind view of its own
@@ -6971,9 +6986,9 @@ function paintMan(g, p, o) {                                // o: k, view (0 bac
   const look = lookOf(p), keepCtx = ctx, keepSkin = SKIN, keepHair = HAIR;
   try {
     ctx = g; SKIN = LOOK_SKIN[look.skin]; HAIR = LOOK_HAIR[look.hair];
-    const stride = (o.frame || 0)*Math.PI/2;
-    if (o.view === 2) fig(0, 0, o.k, kitOf(p.team), { face:o.face || 1, stride, arms:o.arms === 'carry' ? 'carry' : 'down' });
-    else figFB(0, 0, o.k, p.team, { back:o.view === 0, num:p.n, stride, arms:o.arms, lying:o.lying, dive:o.dive, crouch:o.crouch });
+    const stride = (o.frame || 0)*Math.PI/2, kit = kitOf(p.team, p);   // the kit knows the man: the Locker's boots on your side, his alone in a career, Rainbow's by shirt (lockerBoots)
+    if (o.view === 2) fig(0, 0, o.k, kit, { face:o.face || 1, stride, arms:o.arms === 'carry' ? 'carry' : 'down' });
+    else figFB(0, 0, o.k, p.team, { kit, back:o.view === 0, num:p.n, stride, arms:o.arms, lying:o.lying, dive:o.dive, crouch:o.crouch });
     paintHead(look, p.team, o);
   } finally { ctx = keepCtx; SKIN = keepSkin; HAIR = keepHair; }
 }
@@ -7124,7 +7139,24 @@ function drawManBehind(cam, p, ctrl) {
     if (drawn && pose && pose.row.length > 12) { const q = kk/ART.man.px, m = pose.mirror ? -1 : 1, side = pose.deg === 90; cutBall(at.sx + m*pose.row[12]*q*look.b/ART.man.builds[pose.build]*sc, at.sy + pose.row[13]*q*sc, kk*0.95, side ? 0.2*m : pose.deg === 0 || pose.deg === 180 ? 1.25 : 0.7*m); }   // in his hands, as the art holds it
     else cutBall(at.sx + 0.18*kk*(s.view === 2 ? s.face : 1), at.sy - 1.15*kk*sc, kk*0.95, s.view === 2 ? 0.2*s.face : 1.25);
   }
+  if (M.arcade && p.tr && !(M.career && p === M.careerP)) bvTraitStar(at.sx + 0.34*kk*look.b*sc, at.sy - (down ? 0.6 : 1.62)*kk*sc, Math.max(4, 0.3*kk));   // a star player: traitMarks' gold star on his right shoulder, at his own depth, under every nearer man. Your career player has his own star
   if (alpha < 1) ctx.globalAlpha = 1;
+}
+const BV_STAR = { px:64, r:26 };                            // the star player's star, baked once: a cell this many pixels square, its points this far from the centre
+function bvTraitStar(x, y, s) {                             // traitMarks' star (src/traits.js), the same shape and gold: one drawImage, so a side of stars costs the frame almost nothing
+  if (x < -s || x > V.W + s || y < -s || y > V.H + s) return;
+  if (!BV.star) {
+    const cell = document.createElement('canvas'), g = cell.getContext('2d'), c = BV_STAR.px/2, r = BV_STAR.r;
+    cell.width = cell.height = BV_STAR.px;
+    g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r*0.45 : r; g.lineTo(c + Math.cos(a)*rr, c + Math.sin(a)*rr); }
+    g.closePath();
+    g.fillStyle = '#ffcf3d'; g.fill();
+    g.lineWidth = 0.3*r; g.lineJoin = 'round'; g.strokeStyle = C.outline; g.stroke();
+    BV.star = cell;
+  }
+  const h = s*BV_STAR.px/2/BV_STAR.r;
+  ctx.drawImage(BV.star, x - h, y - h, 2*h, 2*h);
 }
 function groundRing(cam, x, y, radius, style, width, dash) {
   const q = pr(cam, x, y, 0);
@@ -7137,8 +7169,9 @@ function groundRing(cam, x, y, radius, style, width, dash) {
 const BV_LOOSE = { rx:8.5, air:7, k:0.34, patch:'rgba(246,243,234,.3)' };                 // a ball not in anyone's hands: its half-length never under these px, and this share of a metre on the screen. It reads about 3m away on a phone
 function ballLaces(x, y, rx, ang) {                         // the laces that make a big ball a ball, the same on the grass, in the air, on the edge tag and in the marker
   const l = rx*0.42, h = rx*0.2;
+  const lk = lockerBall();                                   // the Locker's ball laced in its own line colour (src/locker.js)
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-  ctx.strokeStyle = BV_CARRY.lace; ctx.lineWidth = Math.max(1.1, rx*0.13); ctx.lineCap = 'round'; ctx.beginPath();
+  ctx.strokeStyle = lk ? lk.line : BV_CARRY.lace; ctx.lineWidth = Math.max(1.1, rx*0.13); ctx.lineCap = 'round'; ctx.beginPath();
   ctx.moveTo(-l, 0); ctx.lineTo(l, 0);
   for (const f of [-0.55, 0, 0.55]) { ctx.moveTo(f*l, -h); ctx.lineTo(f*l, h); }
   ctx.stroke(); ctx.restore();
@@ -7217,17 +7250,19 @@ function edgeTag(x, y, col, badge, ins) {
 }
 
 /* ---------- the frame ---------- */
-/* What stands over a man's head, bottom to top: the pointer (who you control), the ball's marker (who has it), the star (your player).
+/* What stands over a man's head, bottom to top: the pointer (who you control), the ball's marker (who has it), the star (your player),
+   and Pro Mode's No sign (a call he did not answer: proMark's, src/career-pro.js), o.no its outer radius.
    Pure, so the tools can read it. tip is the bottom of the stack; a man near the top of the frame moves the whole stack down, so nothing leaves the screen or sits on anything else. */
 const BV_CARRY = { w:26, h:17, tail:5, r:5, gap:2, fill:'#f6f3ea', edge:'#08110b', ball:'#fffdf6', lace:'#3b2f22' };
 const BV_STACK_HUD = 72;                                    // under the scorebug, the clock and the sign, a marked man's stack stops here: the page draws over the canvas, and a marker under them would not be seen
 function bvStack(tip, o) {
-  const P = o.pointer ? 8 : 0, B = o.carry ? BV_CARRY.h + BV_CARRY.tail : 0, S = o.star ? 2*o.star : 0, n = (P ? 1 : 0) + (B ? 1 : 0) + (S ? 1 : 0);
-  let y = Math.max(tip, (o.floor || 6) + P + B + S + Math.max(0, n - 1)*BV_CARRY.gap);
+  const P = o.pointer ? 8 : 0, B = o.carry ? BV_CARRY.h + BV_CARRY.tail : 0, S = o.star ? 2*o.star : 0, N = o.no ? 2*o.no : 0, n = (P ? 1 : 0) + (B ? 1 : 0) + (S ? 1 : 0) + (N ? 1 : 0);
+  let y = Math.max(tip, (o.floor || 6) + P + B + S + N + Math.max(0, n - 1)*BV_CARRY.gap);
   const out = {};
   if (P) { out.pointer = y; y -= P + BV_CARRY.gap; }
   if (B) { out.carry = y; y -= B + BV_CARRY.gap; }
-  if (S) out.star = y - o.star;
+  if (S) { out.star = y - o.star; y -= S + BV_CARRY.gap; }
+  if (N) out.no = y - o.no;
   return out;
 }
 function bvCarryMark(x, y) {                                // a chalk speech bubble with the game's own white laced ball in it, its tail on y. It has no ring and no words, and it reads the same over any kit: chalk on a dark kit, the dark edge on a white one
@@ -7236,15 +7271,17 @@ function bvCarryMark(x, y) {                                // a chalk speech bu
   ctx.beginPath(); ctx.moveTo(x - 5, top + K.h - 0.5); ctx.lineTo(x, y); ctx.lineTo(x + 5, top + K.h - 0.5); ctx.closePath(); ctx.fill(); ctx.stroke();
   rrect(l, top, K.w, K.h, K.r); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x - 4.5, top + K.h - 0.5); ctx.lineTo(x + 4.5, top + K.h - 0.5); ctx.lineWidth = 2; ctx.strokeStyle = K.fill; ctx.stroke();   // the tail runs into the bubble
+  const lk = lockerBall();                                   // the Locker's ball, as the ball itself is (cutBall)
   ctx.save(); ctx.translate(x, top + K.h/2); ctx.rotate(-0.35);
-  ctx.fillStyle = K.ball; ctx.strokeStyle = K.lace; ctx.lineWidth = 1.4; ellipse(0, 0, 9, 5.6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = lk ? lockerBallFill(lk, 9) : K.ball; ctx.strokeStyle = lk ? lk.line : K.lace; ctx.lineWidth = 1.4; ellipse(0, 0, 9, 5.6); ctx.fill(); ctx.stroke();
   ctx.restore();
   ballLaces(x, top + K.h/2, 9, -0.35);
 }
 function bvOverheads(cam, ctrls, plain) {                   // plain: a match you are playing, not a drill, the demo or a close-up. Everything else keeps the pointer alone
   const b = M.ball, carrier = plain && M.phase === 'play' && b.state === 'held' ? b.carrier : null, me = plain && M.career ? M.careerP : null;
-  const men = [ctrls[0], ctrls[1], carrier, me];
-  for (let i = 0; i < 4; i++) {
+  const N = plain && M.career && M.careerPro && M.proNo && M.proNo.p && M.dclock - M.proNo.at < PRO.noT ? M.proNo : null;   // Pro Mode: a call not answered, over the carrier it was made to
+  const men = [ctrls[0], ctrls[1], carrier, me, N ? N.p : null];
+  for (let i = 0; i < 5; i++) {
     const p = men[i];
     if (!p || men.indexOf(p) !== i) continue;                // one stack a man, whatever he is
     const ctrl = p === ctrls[0] || p === ctrls[1], col = ctrl ? ringCol(p === ctrls[0] ? 0 : 1) : null;
@@ -7253,10 +7290,11 @@ function bvOverheads(cam, ctrls, plain) {                   // plain: a match yo
       if (ctrl) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(clamp(x, 18, V.W - 18), clamp(q ? q.sy : V.H + 999, 18, V.H - 18), 7, 0, 7); ctx.fill(); }
       continue;
     }
-    const star = p === me ? Math.max(8, 0.34*q.k) : 0, S = bvStack(q.sy - (lookOf(p).h + 0.2)*q.k, { pointer:ctrl, carry:p === carrier, star, floor:plain && (p === carrier || star) && Math.abs(x - V.W/2) < 130 ? BV_STACK_HUD : 0 });
+    const star = p === me ? Math.max(8, 0.34*q.k) : 0, no = N && p === N.p ? Math.max(7, 0.4*q.k) + 3 : 0, S = bvStack(q.sy - (lookOf(p).h + 0.2)*q.k, { pointer:ctrl, carry:p === carrier, star, no, floor:plain && (p === carrier || star || no) && Math.abs(x - V.W/2) < 130 ? BV_STACK_HUD : 0 });
     if (ctrl) { const ty = S.pointer; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x - 6, ty - 8); ctx.lineTo(x + 6, ty - 8); ctx.lineTo(x, ty); ctx.closePath(); ctx.fill(); }
     if (S.carry != null) bvCarryMark(x, S.carry);
     if (star) careerStar(x, S.star, star, careerCol());
+    if (no) bvNoSign(x, S.no, no - 3, Math.min(1, 4*(1 - (M.dclock - N.at)/PRO.noT)));
   }
 }
 function bvEdgeMarks(cam, plain) {                          // the ball or its carrier off the frame, and your player. Not at a set piece: the game is about to cut to it, and it has its own banner
@@ -7264,6 +7302,24 @@ function bvEdgeMarks(cam, plain) {                          // the ball or its c
   const b = M.ball;
   if (M.phase === 'play' || (M.phase === 'set' && M.set && M.set.kind === 'ruck')) bvChevron(cam, b.state === 'held' && b.carrier ? b.carrier : b, BV_CARRY.fill, 'ball');
   if (M.career && M.careerP) bvChevron(cam, M.careerP, careerEdgeCol(), 'star');
+}
+/* Pro Mode (src/career-pro.js) in a behind view, as proMark draws it on Top: the call's ring going out from your player on the grass,
+   in the ring's colour, fading as it widens (under reduced motion it fades without widening), and the No sign, a slashed circle over
+   the carrier's head at the top of his stack (bvOverheads). */
+function bvProCall(cam) {
+  const call = M.proCue, now = M.dclock;
+  if (!call || !call.p || now - call.at >= PRO.callT) return;
+  const u = (now - call.at)/PRO.callT, [wx, wy] = drawPos(call.p), a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*(1 - u); groundRing(cam, wx, wy, BV_RING*(RM ? 1.9 : 1.5 + 1.4*u), ringCol(0), 3); ctx.globalAlpha = a0;
+}
+function bvNoSign(x, y, R, a) {
+  const a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*a;
+  ctx.fillStyle = 'rgba(8,14,10,.88)'; ctx.beginPath(); ctx.arc(x, y, R + 3, 0, 7); ctx.fill();
+  ctx.strokeStyle = SUPPORT.tint; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - R*0.7, y - R*0.7); ctx.lineTo(x + R*0.7, y + R*0.7); ctx.stroke();
+  ctx.globalAlpha = a0;
 }
 function renderBehind(dt) {
   const drill = !!practice, cam = BV.cam = drill ? dvCamera(dt) : bvFollow(dt), b = M.ball;   // the Training Ground has its own camera and field (render-drill.js), and the men and cues below
@@ -7280,6 +7336,7 @@ function renderBehind(dt) {
   BV.edges.length = 0;
   if (plain && M.phase === 'play' && b.state === 'loose') bvLooseMark(cam, b);
   for (const t of [0, 1]) if (ctrls[t]) groundRing(cam, ctrls[t].x, ctrls[t].y, BV_RING*1.55, ringCol(t), 2.5);
+  if (plain && M.career && M.careerPro) bvProCall(cam);      // on the grass with the ring, under the men
   bvPrepareMen(cam);
   if (artReady()) artPrepare(cam);
   const ctrlHuman = ctrls[0] || ctrls[1];
@@ -13846,7 +13903,7 @@ const careerClubList = k => storeFirst([...careerPoolTeams(k), ...custom]);
 const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom === !b.custom;
 function careerNewOpen() {
   const home = myPool() || 'sur', pool = poolTier(home) > 0 ? home : 'sur';
-  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked; Whole Team first and picked: Pro Mode is the harder way
+  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false, look:{ ...CAREER_LOOK } };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked; Whole Team first and picked: Pro Mode is the harder way; the default look, changed with Change Look
   $('cn-name').value = '';
   renderCareerNew(); careerShow('s-career-new');
 }
@@ -13863,8 +13920,9 @@ function renderCareerNew() {
     for (const b of $('cn-num').querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerDraft.num = +b.dataset.n; renderCareerNew(); });
   }
   for (const b of $('cn-num').querySelectorAll('[data-n]')) b.setAttribute('aria-pressed', String(+b.dataset.n === d.num));
+  if (!$('s-career-new').hidden) careerFit($('cn-mine'));   // a pick on the screen redraws Your Player: its name steps down again (Bloemfontein at 667x375)
 }
-function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; renderCareerNew(); }   // Men | Women: the career's teams are named for it (career.js)
+function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; careerDraft.look.g = i === 1 ? 1 : 0; renderCareerNew(); }   // Men | Women: the career's teams are named for it, and it is his body too, PR #14's Male | Female as one control (career.js)
 [...$('cn-cat').children].forEach((b, i) => b.addEventListener('click', () => careerCatPick(i)));
 [...$('cn-pos').children].forEach((b, i) => b.addEventListener('click', () => {
   const pos = i === 0 ? 'F' : 'B';
@@ -13874,13 +13932,46 @@ function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; renderC
 function careerModePick(i) { careerDraft.proMode = i === 1; renderCareerNew(); }   // Play as Whole Team (0) or My Player (1): Pro Mode (career-pro.js)
 [...$('cn-mode').children].forEach((b, i) => b.addEventListener('click', () => careerModePick(i)));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-$('cn-go').addEventListener('click', () => {
+function careerNewGo() {                            // Start Career: the player as picked, his look included
   const d = careerDraft;
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club:d.club, league:d.league, cat:d.cat, proMode:d.proMode })) return;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club:d.club, league:d.league, cat:d.cat, proMode:d.proMode, look:d.look })) return false;
   careerOpen();
-});
+  return true;
+}
+$('cn-go').addEventListener('click', careerNewGo);
 $('cn-back').addEventListener('click', goHome);
 $('cn-change').addEventListener('click', () => careerClubOpen());
+$('cn-look-go').addEventListener('click', () => careerLookOpen());
+
+/* ---------- his look (PR #14's player builder) ----------
+   Change Look opens Your Look, New Player's second step: his picture on the left, standing three-quarters on in his club's kit (the
+   rendered art, artPreview; his shirt with his number stands in while the art is not in, or if it never comes), and the pickers: Build
+   (Small | Medium | Big, the art's three bodies), Skin and Hair Colour (six swatches each) and Hair Style (all twelve, for either body).
+   Male or Female is not here: it is New Player's Team, Men | Women, one control. A pick changes the picture at once, and Back to New
+   Player keeps it; Start Career saves it with the career (careerLook validates it). */
+const CAREER_SKIN_NAMES = ['Skin 1', 'Skin 2', 'Skin 3', 'Skin 4', 'Skin 5', 'Skin 6'];   // lightest to darkest; a swatch's name, for a screen reader
+const CAREER_HAIR_NAMES = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red'];
+function careerLookOpen() {
+  renderCareerLook(); careerShow('s-career-look');
+  const art = ART.state === 'idle' ? artLoad() : ART.state === 'loading' ? ART.promise : null;   // the real sprite when it can be had
+  if (art && art.then) art.then(() => { if (careerDraft && !$('s-career-look').hidden) careerLookShow(); });
+}
+function careerLookSet(key, v) { careerDraft.look[key] = v; renderCareerLook(); }
+function careerLookShow() {                          // the picture: the art when it is in, his shirt when not
+  const d = careerDraft, cv = $('ck-pic'), drawn = artPreview(cv, d.club, d.look);
+  cv.hidden = !drawn; $('ck-shirt').hidden = drawn;
+  if (!drawn) $('ck-shirt').innerHTML = careerShirt(d.club, d.num, 'big');
+}
+function renderCareerLook() {                        // the picks change in place, so a controller's ring stays on the button it pressed
+  const L = careerDraft.look, press = (id, on) => [...$(id).children].forEach((b, i) => b.setAttribute('aria-pressed', String(on(i))));
+  press('ck-build', i => CAREER_BUILDS[i] === L.b); press('ck-skin', i => i === L.skin); press('ck-hair', i => i === L.hair); press('ck-style', i => i === L.style);
+  careerLookShow();
+}
+$('ck-skin').innerHTML = LOOK_SKIN.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_SKIN_NAMES[i]}"></button>`).join('');
+$('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_HAIR_NAMES[i]}"></button>`).join('');
+for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
+  [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
+$('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
 function careerClubOpen() { careerDraft.pool = careerDraft.league; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on
 function renderCareerClubs() {
   const d = careerDraft, pool = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool, tier = poolTier(pool);
@@ -14670,7 +14761,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
-  sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
+  sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
   ratings:{ BUNDLED:RATINGS_BUNDLED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
@@ -14678,7 +14769,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, builderLevel, levelChoosing:() => levelChoosing, levelNote:() => levelNote, draft:() => draft },
-  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, DIFF, diffOf },
+  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, newGo:careerNewGo, lookOpen:careerLookOpen, lookSet:careerLookSet, look:careerLook, LOOK:CAREER_LOOK, BUILDS:CAREER_BUILDS, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, DIFF, diffOf },
   careerPro:{ PRO, pinned:proPinned, run:proRun, spirit:proSpirit, open:proOpen, pass:proPass, carrier:proCarrier, canCall:proCanCall, call:proCall, calling:proCalling, skip:proSkip, mark:proMark, modePick:careerModePick, draft:() => careerDraft },
   careerLife:{ LIFE:CAREER_LIFE, KEYS:CAREER_LIFE_KEYS, COL:CAREER_LIFE_COL, DILEMMAS:CAREER_DILEMMAS, PLANS:CAREER_DILEMMA_PLANS, fresh:careerLifeNew, clean:careerLifeClean, spirit:careerSpirit, morale:careerMorale, energy:careerEnergy, tired:careerLifeTired, plan:careerDilemmaPlan, dilemma:careerDilemma, key:careerDilemmaKey, choose:careerLifeChoose, pick:careerLifePick, train:careerLifeTrain, round:careerLifeRound, arm:careerLifeArm, hands:careerLifeHands, pass:careerLifePass, support:careerLifeSupport, chip:careerLifeChip, barsHtml:careerLifeBarsHtml, dilemmaHtml:careerDilemmaHtml, render:careerLifeRender, hash:careerLifeHash },
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },
@@ -14689,7 +14780,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, fanOwned:storeFanOwned, crest:storeCrest, shield:storeShield, theme:storeTheme, contrast:storeContrast, wallName:storeWallName, wallMail:storeWallMail, wallAsk:storeWallAsk, wallStep:storeWallStep, wallGo:storeWallGo, wallClose:storeWallClose, wall:() => storeWallUi, MAIL:STORE_MAIL, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak, fanAward:lockerFanAward, fanDrop:lockerFanDrop, fanHeld:lockerFanHeld, fanClubs:lockerFanClubs, fanHtml:lockerFanHtml, fanCabinet:lockerFanCabinet, cup:lockerCup },
   home:{ HL:HOME_HL, select:homeSelect, show:homeShow, first:homeFirst, render:renderHome, champ:champHome, champPick, comps:champComps, tier:() => homeTier, setTier:v => { homeTier = v; }, myClub:myClubTeam, myNat:myNatTeam, myFind:myClubFind, myPool, myIs, myPick, teamDefault, ownPick:teamOwnPick, importHome, importOffer, importShown, importCommit, ring:setFocus },
-  behind:{ menuDemo, BV_DEMO_AT, BV_DEMO_CAM, BV_DEMO_IN, frameDraw, BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, artHairOf, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, LOOK_SKIN, LOOK_HAIR, LOOK_STYLES, LOOK_LONG, LOOK_FEMALE, paintState:() => ({ ctx, SKIN, HAIR }) },
+  behind:{ menuDemo, BV_DEMO_AT, BV_DEMO_CAM, BV_DEMO_IN, frameDraw, BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, artHairOf, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, BV_STAR, bvStack, artPalette, artPaletteOf, LOOK_SKIN, LOOK_HAIR, LOOK_STYLES, LOOK_LONG, LOOK_FEMALE, paintState:() => ({ ctx, SKIN, HAIR }) },
   sound:{ SOUND, NAMES:SOUND_NAMES, SND, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
   clarity:{ MATCH_PACE, matchPace, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
   get M() { return M; } };

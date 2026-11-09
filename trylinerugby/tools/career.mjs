@@ -39,7 +39,7 @@ const memory = {}; let writes = 0;
 globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; writes++; } };
 const saved = () => JSON.parse(memory['tryline.v1']);
 // the harness answers querySelectorAll('.screen') with its own list; the career's screens join it here, so showScreen toggles them
-const SCREENS = ['s-career-new', 's-career-club', 's-career', 's-career-train', 's-career-table', 's-career-end'];
+const SCREENS = ['s-career-new', 's-career-club', 's-career-look', 's-career', 's-career-train', 's-career-table', 's-career-end'];
 { const qsa = document.querySelectorAll;
   document.querySelectorAll = sel => (sel === '.screen' ? qsa(sel).concat(SCREENS.map(id => $(id))) : qsa(sel)); }
 const shown = () => ['s-home', ...SCREENS].find(id => !$(id).hidden);
@@ -727,9 +727,9 @@ C.setCups(false);                                    // no cups unless a section
   const d = C.draft();
   ok(shown() === 's-career-new' && d.club.id === 'FAR' && d.league === 'sur' && /Farnham/.test($('cn-mine').innerHTML) && />Surrey</.test($('cn-mine').innerHTML) && /<b>7<\/b>/.test($('cn-mine').innerHTML) === false && /<b>4<\/b>/.test($('cn-mine').innerHTML), 'New Player: Farnham of Surrey to start, his shirt with a back\'s first number');
   ok(/data-n="4"/.test($('cn-num').innerHTML) && !/data-n="3"/.test($('cn-num').innerHTML), 'and a back\'s numbers');
-  ok(/<span class="lbl">Your Club<\/span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"><\/span><button class="btn" id="cn-change">Change Club<\/button><\/div>/.test(html), 'Your Club: the club and Change Club in one row');
+  ok(/<span class="lbl">Your Player<\/span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"><\/span><div class="cr-yourbtns"><button class="btn" id="cn-change">Change Club<\/button><button class="btn" id="cn-look-go">Change Look<\/button><\/div><\/div>/.test(html), 'Your Player: his shirt, the club and its league, with Change Club over Change Look');
   const left = html.slice(html.indexOf('class="cr-left"'), html.indexOf('class="cr-form"')), right = html.slice(html.indexOf('class="cr-form"'), html.indexOf('id="s-career-club"'));
-  ok(['cn-mine', 'cn-cat', 'cn-mode'].every(id => left.includes(id)) && ['cn-name', 'cn-pos', 'cn-num', 'cn-go'].every(id => right.includes(id)) && left.indexOf('cn-mine') < left.indexOf('cn-cat') && left.indexOf('cn-cat') < left.indexOf('cn-mode'), 'Your Club, Team and Play as on the left; First Name, Position, Shirt Number and Start Career on the right, so Start Career is in view');
+  ok(['cn-mine', 'cn-look-go', 'cn-cat', 'cn-mode'].every(id => left.includes(id)) && ['cn-name', 'cn-pos', 'cn-num', 'cn-go'].every(id => right.includes(id)) && left.indexOf('cn-mine') < left.indexOf('cn-cat') && left.indexOf('cn-cat') < left.indexOf('cn-mode'), 'Your Player, Team and Play as on the left; First Name, Position, Shirt Number and Start Career on the right, so Start Career is in view');
   ok(d.cat === 'men' && /<div class="field"><span class="lbl">Team<\/span><div class="seg" id="cn-cat"><button>Men<\/button><button>Women<\/button><\/div><\/div>/.test(html), 'Team is Men | Women, two equal buttons, Men first and picked');
   C.clubOpen();
   ok(shown() === 's-career-club' && !$('cc-loc').hidden && $('cc-nat').hidden && $('cc-league').hidden && /class="team cr-club picked" data-i="0" aria-pressed="true">[\s\S]*?Farnham/.test($('cc-grid').innerHTML) && X.CLUBS.every(t => $('cc-grid').innerHTML.includes('>' + t.name + '<')), 'Change Club: Local · Surrey, its clubs, Farnham picked; no My League without an import');
@@ -743,11 +743,26 @@ C.setCups(false);                                    // no cups unless a section
   C.clubOpen();
   ok(C.draft().pool === 'fra' && !$('cc-nat').hidden, 'Change Club again opens on France');
   C.catPick(1);
-  ok(C.draft().cat === 'women', 'Women picks it');
+  ok(C.draft().cat === 'women' && C.draft().look.g === 1, 'Women picks it, and a female player with it: PR #14\'s Male | Female is this one control');
+  // his look: Change Look opens Your Look, New Player's second step; a pick changes the picture, Back to New Player keeps it
+  ok(json(C.draft().look) === json({ ...C.LOOK, g:1 }), 'the default look to start');
+  $('cn-look-go').click();
+  ok(shown() === 's-career-look' && !$('ck-shirt').hidden && /<b>4<\/b>/.test($('ck-shirt').innerHTML) && /--kit:/.test($('ck-shirt').innerHTML), 'Change Look: Your Look, with his shirt for a picture while the art is not in');
+  C.lookSet('b', 1.12); C.lookSet('skin', 5); C.lookSet('hair', 3); C.lookSet('style', 9);
+  $('ck-back').click();
+  ok(shown() === 's-career-new' && C.draft().club.id === 'TLS' && json(C.draft().look) === json({ g:1, skin:5, hair:3, style:9, b:1.12 }), 'Back to New Player keeps the picks and the club');
+  { const look = html.slice(html.indexOf('id="s-career-look"'), html.indexOf('id="s-career"'));
+    ok(/<h2 class="title">Your Look<\/h2>/.test(look) && /<p class="eyebrow">New Player<\/p>/.test(look) && ['Build', 'Skin', 'Hair Colour', 'Hair Style'].every(l => look.includes(`<span class="lbl">${l}</span>`)) && !/Male|Female|Team</.test(look), 'Your Look: Build, Skin, Hair Colour and Hair Style; no second Male | Female');
+    ok(/id="ck-build"><button>Small<\/button><button>Medium<\/button><button>Big<\/button>/.test(look) && (look.match(/<button>/g) || []).length === 15 && /<button class="btn" id="ck-back" data-back>Back to New Player<\/button>/.test(look), 'three builds, the twelve styles, and Back to New Player'); }
   $('cn-go').click();
   ok(C.get() && C.get().cat === 'women' && C.get().club.id === 'TLS' && C.get().league === 'fra' && C.get().season.teams[0].name === 'Toulouse Women' && saved().career.cat === 'women', 'Start Career: a women\'s career at Toulouse, in the Top 14, saved');
+  ok(json(C.get().look) === json({ g:1, skin:5, hair:3, style:9, b:1.12 }) && json(saved().career.look) === json(C.get().look), 'with his look, saved');
+  { const raw = JSON.parse(memory['tryline.v1']); delete raw.career.look; X.restore(raw);
+    ok(json(C.get().look) === json({ ...C.LOOK, g:1 }), 'a career saved before the look builder loads with the default look, on its own body (Women: female)');
+    raw.career.look = { g:0, skin:9, hair:'x', style:3, b:1.5 }; X.restore(raw);
+    ok(json(C.get().look) === json({ g:1, skin:5, hair:C.LOOK.hair, style:3, b:1.12 }), 'a saved look is checked: clamped, a bad field the default, the body the career\'s Men | Women'); }
   C.set(null); C.newOpen();
-  ok(C.draft().cat === 'men' && C.draft().club.id === 'FAR', 'a new player starts on Men at Farnham again');
+  ok(C.draft().cat === 'men' && C.draft().club.id === 'FAR' && json(C.draft().look) === json(C.LOOK), 'a new player starts on Men at Farnham again, with the default look');
   // a team you made follows every list, and plays the league it was picked on; My League with an import
   X.restore({ custom:[{ key:'my0', name:'My Town', id:'MYT', kit:'#123456', trim:'#abcdef', pace:3, power:3, handling:3, kicking:3, stamina:3 }] });
   C.clubOpen(); C.tierPick(1); C.poolPick('sco');

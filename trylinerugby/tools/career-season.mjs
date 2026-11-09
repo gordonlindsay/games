@@ -24,7 +24,7 @@ const canon = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !A
 { let now = Date.UTC(2026, 10, 8); Date.now = () => (now += 997); }   // a season's id (and so its dilemmas) and a cup's uid read the clock: the same every run
 const memory = {};
 globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; } };
-const SCREENS = ['s-career-new', 's-career-club', 's-career', 's-career-train', 's-career-table', 's-career-draw', 's-career-end', 's-cup'];
+const SCREENS = ['s-career-new', 's-career-club', 's-career-look', 's-career', 's-career-train', 's-career-table', 's-career-draw', 's-career-end', 's-cup'];
 { const qsa = document.querySelectorAll; document.querySelectorAll = sel => (sel === '.screen' ? qsa(sel).concat(SCREENS.map(id => $(id))) : qsa(sel)); }
 const shown = () => ['s-home', ...SCREENS].find(id => !$(id).hidden) || null;
 const settings = D.settings();
@@ -560,6 +560,10 @@ async function browserChecks() {
     var world = o => { const cr = mk(o); cr.year = 4; cr.country = 'ENG'; skillsTo(cr, 85); finish(cr, 2); C.advance(); return cr; };
     var tour = o => { const cr = mk({ pos:'F', num:2, club:club('DUB'), ...o }); cr.year = 6; cr.country = 'IRE'; skillsTo(cr, 95); finish(cr, 4); C.advance(); finish(cr, 3); C.advance(); return cr; };`;
   const STATES = {
+    'new':`C.newOpen();`,
+    'new-women':`var cr = null; C.newOpen(); C.clubPick(X.NATIONAL.flat().find(t => t.name === 'Bloemfontein')); C.catPick(1);`,   // a long club name and a long league on Women
+    'look':`C.newOpen(); window.__wait = T.behind.ART.state === 'ready' ? null : T.behind.ART.promise || T.behind.artLoad(); $('cn-look-go').click();`,
+    'look-women':`C.newOpen(); C.catPick(1); window.__wait = T.behind.ART.state === 'ready' ? null : T.behind.ART.promise || T.behind.artLoad(); $('cn-look-go').click(); C.lookSet('style', 10); C.lookSet('b', 1.12);`,
     'hub-dilemma':`var cr = mk({}); cr.year = 2; C.open();`,
     'hub-league':`var cr = mk({}); cr.year = 9; rounds(cr, 2); cr.life.done = cr.season.id + ':2'; cr.trophies = [].concat(...['league', 'euro', 'world', 'tour', 'triple'].map(k => Array.from({ length:12 }, (_, i) => ({ kind:k, year:i + 1, name:'Bath' })))); C.open();`,
     'end-league':`var cr = mk({}); cr.year = 2; finish(cr, 1); C.open();`,
@@ -602,6 +606,7 @@ async function browserChecks() {
       for (const [name, code] of Object.entries(STATES)) {
         const info = await page.evaluate(async src => {
           (0, eval)(src);
+          if (window.__wait) { await window.__wait; window.__wait = null; }   // Your Look's picture: the art, once it is in
           await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
           const s = [...document.querySelectorAll('.modal')].find(x => !x.hidden) || [...document.querySelectorAll('.screen')].find(x => !x.hidden);
           if (!s) return { name:null };
@@ -626,19 +631,22 @@ async function browserChecks() {
             const jb = box(j), nb = box(nm), gap = t.classList.contains('r') ? jb.left - nb.right : nb.left - jb.right;
             if (jb.width < 33.5 || gap < 8) cut.push(`${nm.textContent.trim().slice(0, 16)} jersey ${Math.round(jb.width)}px, gap ${Math.round(gap)}px`);
           }
-          const act = s.querySelector('#cr-play:not([hidden]), #ce-go, #br-go, #cd-back');
+          const act = s.querySelector('#cr-play:not([hidden]), #ce-go, #br-go, #cd-back, #cn-go, #ck-back');
           const a = act && box(act);
-          return { name:s.id, scroll:s.scrollHeight - s.clientHeight, over:over.slice(0, 4), small:small.slice(0, 4), cut:cut.slice(0, 4), act:a ? a.bottom <= innerHeight + 0.5 && a.top >= 0 : true };
+          const pic = s.id === 's-career-look' ? { art:!document.getElementById('ck-pic').hidden, shirt:!document.getElementById('ck-shirt').hidden } : null;   // Your Look: the art's picture, or his shirt
+          return { name:s.id, scroll:s.scrollHeight - s.clientHeight, over:over.slice(0, 4), small:small.slice(0, 4), cut:cut.slice(0, 4), act:a ? a.bottom <= innerHeight + 0.5 && a.top >= 0 : true, pic };
         }, PRELUDE + '\n' + code);
         if (shots) await page.screenshot({ path:path.join(shots, `int-${name}-${w}x${h}.png`) });
         results.push({ state:name, ...info });
         await page.evaluate(() => { const T = window.__tryline; if (T.M && !T.M.demo) T.debug.exitMatch(); document.getElementById('m-break').hidden = true; T.career.set(null); T.cups.set(null); T.debug.goHome(); });
       }
-      const want = { hub:'s-career', draw:'s-career-draw', end:'s-career-end', callup:'s-career-end', transfer:'s-career-end', ft:'m-break' };
+      const want = { new:'s-career-new', look:'s-career-look', hub:'s-career', draw:'s-career-draw', end:'s-career-end', callup:'s-career-end', transfer:'s-career-end', ft:'m-break' };
       const wrong = results.filter(r => r.name !== want[r.state.split('-')[0]]);
       ok(!wrong.length, `${w}x${h}: each state opens its screen (${wrong.map(r => r.state + ' on ' + r.name).join(', ') || results.length + ' states'})`);
       const fits = results.filter(r => r.scroll > 1 || r.over.length || !r.act);
-      ok(!fits.length, `${w}x${h}: every hub, draw, screen between phases, transfer window and cup full-time card fits with no scroll, nothing off the side, its main button in view (${fits.map(r => r.state + ' ' + json([r.scroll, r.over, r.act])).join('; ') || 'all ' + results.length})`);
+      ok(!fits.length, `${w}x${h}: New Player (Start Career in view), Your Look (Back to New Player in view), every hub, draw, screen between phases, transfer window and cup full-time card fits with no scroll, nothing off the side, its main button in view (${fits.map(r => r.state + ' ' + json([r.scroll, r.over, r.act])).join('; ') || 'all ' + results.length})`);
+      const looks = results.filter(r => r.state.startsWith('look'));
+      ok(looks.length === 2 && looks.every(r => r.pic && r.pic.art && !r.pic.shirt), `${w}x${h}: Your Look draws his picture from the art (${json(looks.map(r => r.pic))})`);
       const tight = results.filter(r => r.small.length || r.cut.length);
       ok(!tight.length, `${w}x${h}: every button at least 44px, no name cut, no word broken across two lines and every fixture's jersey clear of its name, the trophy row with five kinds in two figures, a tour's Tests and the longest names included (${tight.map(r => r.state + ' ' + json([r.small, r.cut])).join('; ') || 'all'})`);
       // a controller and the keyboard on the draw: the first press lands on Back to Career, B goes back to the hub
@@ -650,6 +658,27 @@ async function browserChecks() {
         return out;
       }, PRELUDE + '\n' + STATES['draw-world']);
       ok(json(pad) === json(['cd-back', 's-career']), `${w}x${h}: a controller on the draw lands on Back to Career, and Back goes to the hub (${json(pad)})`);
+      // New Player and Your Look with a controller or the keyboard: every button reached by moving the ring, Change Look into Your Look,
+      // and Back (B, Escape) from Your Look to New Player with the picks kept
+      for (const st of ['new', 'look']) {
+        const reach = await page.evaluate(async src => {
+          (0, eval)(src);
+          if (window.__wait) { await window.__wait; window.__wait = null; }
+          const T = window.__tryline, s = [...document.querySelectorAll('.screen')].find(x => !x.hidden);
+          const all = [...s.querySelectorAll('button')].filter(b => b.getBoundingClientRect().width > 0), seen = new Set(), todo = [T.navMove(0, 0, 0)];
+          while (todo.length) { const el = todo.pop(); if (!el || seen.has(el)) continue; seen.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); todo.push(T.navMove(0, dx, dy)); } }
+          return { screen:s.id, n:all.length, missed:all.filter(b => !seen.has(b)).map(b => b.id || b.textContent.trim() || b.getAttribute('aria-label')) };
+        }, PRELUDE + '\n' + STATES[st]);
+        ok(reach.n >= (st === 'new' ? 14 : 28) && !reach.missed.length, `${w}x${h}: ${reach.screen}: the ring reaches all ${reach.n} of its buttons (${json(reach.missed)})`);
+      }
+      const back = await page.evaluate(src => {
+        (0, eval)(src);
+        const T = window.__tryline, C = T.career, out = [];
+        C.lookSet('hair', 5); T.navBack(0); out.push([...document.querySelectorAll('.screen')].find(x => !x.hidden).id, C.draft().look.hair);
+        T.home.ring(document.getElementById('cn-look-go')); document.getElementById('cn-look-go').click(); out.push([...document.querySelectorAll('.screen')].find(x => !x.hidden).id);
+        return out;
+      }, PRELUDE + '\n' + STATES.look);
+      ok(json(back) === json(['s-career-new', 5, 's-career-look']), `${w}x${h}: Back from Your Look is New Player with the pick kept, and Change Look goes back in (${json(back)})`);
       // a World Cup's knockouts on the career's draw: the Pools button (its own id, not the Championship hub's) swaps the pools in, Bracket swaps back
       const swap = await page.evaluate(src => {
         (0, eval)(src);

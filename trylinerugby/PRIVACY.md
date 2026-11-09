@@ -6,7 +6,7 @@ Last updated 9 November 2026. This covers the app from the App Store, the Androi
 
 ## What the game keeps
 
-Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player), any league you import and the unlocks you have bought are saved on this device: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. The game never sends any of it anywhere, and we never receive it. On an iPhone, like any app's storage, it is part of the phone's own backup (iCloud, or a computer) if you use one, so it moves to a new iPhone with the rest. Deleting the app, or clearing the browser's data for the game's site, removes it from the device.
+Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player, your player's look and whether the career is Men or Women), any league you import and the unlocks you have bought are saved on this device: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. The game never sends any of it anywhere, and we never receive it. On an iPhone, like any app's storage, it is part of the phone's own backup (iCloud, or a computer) if you use one, so it moves to a new iPhone with the rest. Deleting the app, or clearing the browser's data for the game's site, removes it from the device.
 
 ## What the game does not do
 

@@ -26,7 +26,9 @@
    - Trophies (career.trophies, { kind, year, name }): a league or his country's six won ('league'), the European Cup ('euro'),
      the World Cup ('world'), the Home Nations Tour ('tour') and the Triple Crown ('triple'). The player card counts them by kind.
    - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
-     international window is that category's own twelve; nothing else changes.
+     international window is that category's own twelve; nothing else changes. It is also his body: Men a male player, Women a
+     female one (PR #14's Male | Female is this same control). His look (cr.look: build, skin, hair colour, hair style) goes on
+     his squad entry in his matches, so the behind views and the art draw him with it (careerLook, CAREER_LOOK).
    - Your player has a 1 to 99 rating in each ability (Pace, Power, Handling, Kicking, and Stamina even before the
      teams have it). The overall is the team cards' overallOf on the same 40 to 99 scale.
    - Skills rise from training (one session a round, between matches: a drill's stars give points to its skill,
@@ -104,6 +106,17 @@ function careerOverall(skills) {                     // overallOf's 40 to 99, fr
   return clamp(Math.round(40 + (mean - 1)*59/98), 40, 99);
 }
 function careerName(v) { return Array.from(String(v == null ? '' : v).normalize('NFC').replace(/[^\p{L}' -]/gu, '').replace(/\s+/g, ' ').trim()).slice(0, 12).join('').trim(); }
+/* His look (PR #14's player builder): build, skin, hair colour and hair style, picked on New Player's Your Look and drawn in the behind
+   views and the art (src/looks.js, src/render-art.js). Its body (g: 0 male, 1 female) is not a choice of its own: it is the career's
+   Men | Women, the one control, so a women's career is always a female player. Every field is there, so a saved look never depends on
+   the team's deal; a career saved before it, or a broken look, takes CAREER_LOOK on the career's own body. No height: his is the
+   shirt's, as every man's is. Kept on this device only, as the name is (PRIVACY.md). */
+const CAREER_LOOK = { g:0, skin:2, hair:1, style:0, b:1 };
+const CAREER_BUILDS = [0.92, 1, 1.12];                // Small | Medium | Big: the art's three bodies (slim, medium, stocky), the only builds the picker gives
+function careerLook(l, cat) {
+  const c = cleanLook(l), b = Number.isFinite(c.b) ? CAREER_BUILDS.reduce((a, v) => (Math.abs(v - c.b) < Math.abs(a - c.b) ? v : a)) : CAREER_LOOK.b;
+  return { g:cat === 'women' ? 1 : 0, skin:c.skin ?? CAREER_LOOK.skin, hair:c.hair ?? CAREER_LOOK.hair, style:c.style ?? CAREER_LOOK.style, b };
+}
 
 /* ---------- clubs, leagues and nations ---------- */
 const careerSide = t => cleanSide(t);
@@ -157,6 +170,7 @@ function careerCreate(o) {
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
   const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, league:careerLeagueKey(o.league, club), cat:careerCat(o),
+    look:careerLook(o.look, careerCat(o)),           // his look, on the career's body (Men | Women). In cleanCareer's order
     proMode:o.proMode === true,                      // Pro Mode, your player alone (career-pro.js). Its own line, and in cleanCareer's order
     country:null, skills, year:1, phase:'league', seasons:0, season:null, cup:null, offers:null, trained:false,
     history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 }, trophies:[] };
@@ -357,8 +371,8 @@ function careerMatchOpts(cr, f) {
 function careerPlay() {                              // Play Match on the hub
   const cr = career, f = careerAhead(cr);
   if (practice || !f) return false;
-  const opp = f.home === f.user ? f.away : f.home;
-  startMatch(f.teams[f.user], f.teams[opp], false, careerMatchOpts(cr, f));
+  const opp = f.home === f.user ? f.away : f.home, mine = f.teams[f.user];
+  startMatch({ ...mine, squad:[{ n:cr.num, look:careerLook(cr.look, careerCat(cr)) }] }, f.teams[opp], false, careerMatchOpts(cr, f));   // his look on his squad entry, for this match only (lookOf): the season's side is untouched
   careerArm();
   return true;
 }
@@ -483,6 +497,7 @@ function cleanCareer(c) {
   }
   const trophies = Array.isArray(c.trophies) ? careerTrophies(c.trophies) : careerTrophies(history.filter(h => h.place === 1).map(h => ({ kind:'league', year:h.year, name:h.name })));
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, league:careerLeagueKey(c.league, club), cat,
+    look:careerLook(c.look, cat),                    // a career from before the look builder, or a broken look, takes the default on its own body
     proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
     country, skills, year, phase, seasons:careerInt(c.seasons, 0, 100000) || 0, season, cup, offers,
     trained:c.trained === true && (season ? season.round < 5 : !!cup), history, totals, trophies,
