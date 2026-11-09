@@ -567,7 +567,7 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   ok(/<div class="set set-half"><span class="lbl">Half Length<\/span><div class="seg" data-key="half">/.test(home) && !/id="b-cam"|id="b-half"|ico-btn/.test(html), 'and Half Length a row there too: no icon buttons');
   ok(/<div class="set" id="pz-cam" hidden><span class="lbl">Camera<\/span><div class="seg" data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>/.test(pauseCard) && /<p class="pz-cam-note" id="pz-cam-note" hidden>The Camera Changes After This Close-Up<\/p>\s*<button class="btn warn" id="pz-quit">/.test(pauseCard), 'the pause card has the Camera row, and the close-up note over Quit Match');
   ok(!/data-key="half"|Half Length/.test(pauseCard), 'and no Half Length: the home\'s only');
-  ok(!/\p{Extended_Pictographic}/u.test(home.slice(home.indexOf('id="set-cam"'), home.indexOf('id="b-grown"'))), 'no emoji in the row');
+  ok(home.indexOf('id="set-cam"') > 0 && !/\p{Extended_Pictographic}/u.test(home.slice(home.indexOf('id="set-cam"'), home.indexOf('id="hl-bar"'))), 'no emoji in the row');   // to the bar: Grown-Ups is no longer after it (the Settings fit)
   ok(!/id="b-more"|id="set-more"|more-btn|More Settings|Fewer Settings/.test(html), 'More Settings is gone');
   // pressing a camera: the choice, the mark and the save
   { let kept = null; const was = localStorage.setItem; localStorage.setItem = (k, v) => { kept = v; };

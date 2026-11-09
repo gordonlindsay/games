@@ -1049,7 +1049,7 @@ begin('layout');
   $('btnC').hidden = true; ok(hit(527, 211) == null, 'Sprint hidden in a close-up takes no near miss'); $('btnC').hidden = false;
   $('btnA').rect = $('btnB').rect = $('btnC').rect = null;
   const short = [...css.matchAll(/@media \(orientation:landscape\) and \(max-height:420px\)\{([\s\S]*?)\n\}/g)].map(m => m[1]).join('\n');
-  ok(/\.hp-settings\.settings\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/.test(short) && /min-height:44px/.test(short) && !/min-height:(?:[1-3]?\d)px/.test(short.replace(/min-height:44px/g, '')), 'under 420px tall the home settings are two columns and no target drops below 44px');
+  ok(/\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings\.settings\{gap:6px 10px;padding:8px 10px\}/.test(short) && !/\.hp-settings\.settings\{[^}]*grid-template-columns/.test(short) && /min-height:44px/.test(short) && !/min-height:(?:[1-3]?\d)px/.test(short.replace(/min-height:44px/g, '')), 'under 420px tall the home settings keep their six columns (halves, and thirds with Grown-Ups) and no target drops below 44px');   // re-pinned for the Camera row: it was two columns
   // the home 320px tall (Safari sideways) is measured in Chromium now, by tools/home.mjs at 667x320 and 568x320: a sum of fixed heights here no longer described it
   const hud = 4 + (18 + 6) + 2 + (11 + 4), hud0 = 8 + (21 + 12) + 5 + (11 + 8);
   ok(hud < hud0 - 16 && /\.bug\{font-size:18px\}/.test(short), `the scorebug band drops from ${hud0}px to ${hud}px`);

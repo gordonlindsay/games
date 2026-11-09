@@ -158,7 +158,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok($('b-champ').classList.contains('locked') && $('b-champ').textContent === 'Continue Championship' && !$('champ-note').hidden, 'Continue Championship keeps its label and its note, with a lock');
   ok($('b-career').classList.contains('locked') && $('b-career').textContent === 'Continue Career', 'Continue Career likewise');
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
-  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('hl-champ').classList.contains('locked') && $('hl-career').classList.contains('locked') && !$('hl-game').classList.contains('locked') && !$('hl-drills').classList.contains('locked') && !$('hl-settings').classList.contains('locked'), 'Grown-Ups in Settings beside Half Length; the Championship and Career headlines carry the lock, Quick Match, Skills Mini Games and Settings none');
+  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('hl-champ').classList.contains('locked') && $('hl-career').classList.contains('locked') && !$('hl-game').classList.contains('locked') && !$('hl-drills').classList.contains('locked') && !$('hl-settings').classList.contains('locked'), 'Grown-Ups in Settings beside Sound and Match Help; the Championship and Career headlines carry the lock, Quick Match, Skills Mini Games and Settings none');
   $('b-champ').click();
   ok(!$('m-store').hidden && S.ui().mode === 'unlock' && S.ui().feature === 'champ' && $('s-hub').hidden && !$('s-home').hidden, 'Championship opens the Unlock card, not the hub');
   ok($('st-eyebrow').textContent === 'Unlock' && $('st-title').textContent === 'Championship', 'Unlock · Championship');
@@ -542,7 +542,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const block = html.slice(html.indexOf('<div class="modal" id="m-store"'), html.indexOf('<div class="modal" id="m-gate"'));
   ok(!/donat|charit|good cause/i.test(src + ui + block + read('store/README.md').replace(/never[^.]*(donation|charity)[^.]*\./gi, '')), 'never called a donation or charity (Apple 3.2.2): it says what the club gets');
   ok(!/—/.test(src + ui + block + read('store/README.md')) && !/[←-↙⇐-⇙]/.test(src + ui + block), 'no em dash or arrow');
-  ok(/\.hp-settings\.grown \.set-half\{grid-column:auto\}/.test(css) && /\.hp-settings #b-grown\{align-self:end;min-height:44px\}/.test(css), 'Grown-Ups shares Half Length\'s row in Settings, in equal halves, 44px');
+  ok(/\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css) && /\.hp-settings #b-grown\{align-self:end;min-height:47px;/.test(css), 'Grown-Ups shares Sound and Match Help\'s row in Settings, in equal thirds, a segment\'s height (44px inside its edges) (re-pinned for the Camera row: it was Half Length\'s, in halves)');
 }
 
 // 12. the contracts with the other builders
