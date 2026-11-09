@@ -30,23 +30,35 @@ async function open(w, h, touch) {
   await send('Emulation.setDeviceMetricsOverride', { width:w, height:h, deviceScaleFactor:2, mobile:touch });
   if (touch) await send('Emulation.setTouchEmulationEnabled', { enabled:true });
   await send('Page.navigate', { url:site + '/index.html' }); await wait(1500);
-  const ev = async expr => { const r = await send('Runtime.evaluate', { expression:expr, returnByValue:true }); return r.result.result.value; };
+  // a fixture or a measure that throws fails the run here: a check after it would otherwise measure a page it never set up
+  const ev = async expr => { const r = await send('Runtime.evaluate', { expression:expr, returnByValue:true }); const x = r.result && r.result.exceptionDetails;
+    if (r.error || x) throw Error('in the page: ' + (r.error ? r.error.message : (x.exception && x.exception.description) || x.text) + '\n  evaluating: ' + expr.slice(0, 160)); return r.result.result.value; };
   return { send, ev, close:async () => { ws.close(); await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`).catch(() => {}); } };
 }
-// the two notes in the game's own mid-season format, the cabinet, and a button in the tools row
-const SEASON = `(() => { const $ = i => document.getElementById(i);
+// a season under way on each headline that carries one, its note in the game's own mid-season format (Championship: Continue
+// Championship and the Trophy Cabinet), with the whole tools row: Offline Ready, Install Game and Updating. Shown, not saved, so the
+// next page opens on the save as it was. It returns what shows, so a fixture that stops matching the page fails rather than measures the plain home
+const SEASON = hl => `(() => { const $ = i => document.getElementById(i), on = e => !e.hidden && !e.closest('[hidden]') && e.getBoundingClientRect().height > 0;
+  for (const p of document.querySelectorAll('#hl-panels > .hl-panel')) p.hidden = p.id !== 'hp-${hl}';
   const n1 = $('champ-note'), n2 = $('career-note'); n1.textContent = 'Guildfordians · 2nd · Round 3 of 5'; n1.hidden = false; n2.textContent = 'Minis · Guildfordians · Round 3 of 5'; n2.hidden = false;
-  $('b-champ').textContent = 'Continue Championship'; $('home-cabinet').hidden = false; $('app-tools').hidden = false; $('b-update').hidden = false; $('b-install').hidden = true; })()`;
+  $('hc-go').hidden = false; $('hc-new').hidden = true; $('b-champ').textContent = 'Continue Championship'; $('b-cabinet').hidden = false; $('b-career').textContent = 'Continue Career';
+  for (const id of ['app-tools', 'offline-update', 'offline-status', 'b-install']) $(id).hidden = false;
+  return ['offline-status', 'b-install', 'offline-update', ...('${hl}' === 'champ' ? ['b-champ', 'champ-note', 'b-cabinet'] : ['b-career', 'career-note'])].filter(id => !on($(id))).join(); })()`;
 const FIT = `(() => { const s = document.getElementById('s-home'); return JSON.stringify([s.scrollHeight, s.clientHeight]); })()`;
 try {
   for (const [w, h, touch] of [[844, 390, false], [844, 390, true], [667, 375, false], [667, 375, true]]) {
     const pg = await open(w, h, touch), name = `${w}x${h} ${touch ? 'touch' : 'desk'}`;
     const [a0, a1] = JSON.parse(await pg.ev(FIT));
     ok(a0 <= a1, `${name}: a fresh home does not scroll (${a0} of ${a1})`);
-    await pg.ev(SEASON);
-    const [b0, b1] = JSON.parse(await pg.ev(FIT));
-    ok(b0 <= b1, `${name}: a season under way, with both notes, the cabinet and Update Game, does not scroll (${b0} of ${b1})`);
-    console.log(`${name}: ${a0} of ${a1}, mid-season ${b0} of ${b1}`);
+    const mid = [];
+    for (const hl of ['champ', 'career']) {
+      const missing = await pg.ev(SEASON(hl));
+      ok(missing === '', `${name}: ${hl}: the fixture shows its note${hl === 'champ' ? ', the Trophy Cabinet' : ''}, Offline Ready, Install Game and Updating (missing: ${missing || 'none'})`);
+      const [b0, b1] = JSON.parse(await pg.ev(FIT));
+      ok(b0 <= b1, `${name}: a ${hl === 'champ' ? 'championship' : 'career'} under way, its note${hl === 'champ' ? ', the Trophy Cabinet' : ''}, Offline Ready, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
+      mid.push(`${hl} ${b0} of ${b1}`);
+    }
+    console.log(`${name}: ${a0} of ${a1}, mid-season ${mid.join(', ')}`);
     await pg.close();
   }
   // the sign under the clock and the career caption, in a real layout, with and without an iPhone's notch and home bar

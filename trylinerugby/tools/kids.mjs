@@ -386,7 +386,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   K.close(false); ok(cancels === 3, 'a check with no onCancel just closes');
   let asks = new Set(); for (let i = 0; i < 200; i++) { K.parentGate(); asks.add(K.gate().a + 'x' + K.gate().b); K.close(false); }
   ok(asks.size > 18, `the questions vary (${asks.size} of the ${K.KIDS_ASKS.length} in 200)`);
-  // Install Game asks first; Update Game (the game's own files, already downloaded) does not
+  // Install Game asks first; an update (the game's own files, already downloaded) has nothing to tap and applies on the home by itself
   let installs = 0;
   fire('beforeinstallprompt', { preventDefault() {}, prompt() { installs++; return Promise.resolve(); }, userChoice:Promise.resolve({ outcome:'dismissed' }) });
   $('b-install').click();

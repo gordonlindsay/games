@@ -53,14 +53,20 @@ self.addEventListener('install', event => {
     }
   })());
 });
+// The game's own page, wherever a window has it open (the scope or index.html, with any query or hash). The folder's other
+// pages (privacy, support) run no game and take only the typefaces and the icon from a worker, so a switch can't break them.
+const GAME_PAGES = new Set([SCOPE.pathname, new URL('index.html', SCOPE).pathname]);
+async function gameWindows() {
+  const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  return all.filter(client => { try { const url = new URL(client.url); return url.origin === SCOPE.origin && GAME_PAGES.has(url.pathname); } catch (_) { return false; } });
+}
 self.addEventListener('activate', event => {
-  // Activation happens once old clients close, or after an explicit user request.
-  // Do not claim clients: first installation must not interrupt a running match.
+  // Activation happens once old clients close, when the game's only window asks from its quiet home menu (offline-client.js),
+  // or after a tap on an older page's Update Game. Do not claim clients: first installation must not interrupt a running match.
   event.waitUntil((async () => {
-    // Another tab may still be playing under the previous worker after an explicit
-    // update in this tab. Retain its immutable generation until an activation
-    // with no open game clients, so its in-flight shell requests remain coherent.
-    if ((await self.clients.matchAll({ type: 'window', includeUncontrolled: true })).length) return;
+    // An older page's Update Game can switch a second game window still playing under the previous worker: retain its
+    // generation then. With one game window at most (the one switching, which reloads into this generation) it goes.
+    if ((await gameWindows()).length > 1) return;
     for (const name of await caches.keys()) {
       if (name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME) await caches.delete(name);
     }
@@ -74,7 +80,22 @@ self.addEventListener('message', event => {
       event.ports[0].postMessage({ type: 'OFFLINE_READY', ready });
     })());
   }
-  if (event.data && event.data.type === 'SKIP_WAITING') event.waitUntil(self.skipWaiting());
+  // The home menu's two steps (offline-client.js), which every later worker must keep answering, as pages already open send them:
+  // GAME_WINDOWS wakes this worker and counts the game's windows, switching nothing; SKIP_WAITING with alone, sent once the home
+  // is still quiet, counts again and takes over only for the game's only window, so no window in a match has its files switched
+  // under it, and answers whether it did. A page from before asks SKIP_WAITING without alone, after a tap on Update Game.
+  const port = event.ports && event.ports[0];
+  if (event.data && event.data.type === 'GAME_WINDOWS' && port) {
+    event.waitUntil((async () => { port.postMessage({ type: 'GAME_WINDOWS', count: (await gameWindows()).length }); })());
+  }
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    if (!event.data.alone) event.waitUntil(self.skipWaiting());
+    else if (port) event.waitUntil((async () => {
+      const applied = (await gameWindows()).length <= 1;
+      port.postMessage({ type: 'SKIP_WAITING', applied });
+      if (applied) await self.skipWaiting();
+    })());
+  }
 });
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
