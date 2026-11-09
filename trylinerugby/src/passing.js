@@ -55,6 +55,7 @@ function runOnTarget(r, f, pace) {                          // the receiver whil
 }
 function passOk(c, q, maxR) {
   if (!q || q === c || q.team !== c.team || q.down > 0 || q.bind) return false;
+  if (practice && gapSpent(q)) return false;               // Create a Gap: a man who has passed is out of the line (training.js)
   if ((q.x - c.x)*dirOf(c.team) > 0.5) return false;
   const dd = dist(c, q);
   return dd >= 1.5 && dd <= maxR;
@@ -63,6 +64,7 @@ function pickReceiver(c, pref, maxR = 22) {                 // maxR: an offload 
   const d = dirOf(c.team); let best = null, bs = 1e9;
   for (const q of M.players) {
     if (q.team !== c.team || q === c || q.down > 0 || q.bind) continue;
+    if (practice && gapSpent(q)) continue;                 // Create a Gap: the man who passed to you is never the next pass (training.js)
     const dx = (q.x-c.x)*d; if (dx > 0.5) continue;
     const dy = q.y-c.y, dd = hyp(dx,dy);
     if (dd > maxR || dd < 1.5) continue;

@@ -27,7 +27,7 @@ T.locker.state().drills = X.DRILLS.map(d => d.id);   // the Locker's Star Pupil 
 // ---- the contract: ids, names, cards, pictures
 const ids = X.DRILLS.map(d => d.id);
 ok(JSON.stringify([...ids].sort()) === JSON.stringify(['back', 'circle', 'cones', 'defend', 'egg', 'kick', 'pass', 'scrum', 'tackle', 'tag']), 'PRACTICE_DRILLS holds exactly the ten contract ids');
-const names = { tag:'Tag Chase', back:'Ball Back', egg:'Bouncy Egg', circle:'Pass Around the Circle', tackle:'Tackling', cones:'Cones', kick:'Kicking', scrum:'Driving', defend:'Defend a Breakaway', pass:'Create a Two-on-One' };
+const names = { tag:'Tag Chase', back:'Ball Back', egg:'Bouncy Egg', circle:'Pass Around the Circle', tackle:'Tackling', cones:'Cones', kick:'Kicking', scrum:'Driving', defend:'Defend a Breakaway', pass:'Create a Gap' };
 for (const d of X.DRILLS) {
   ok(d.name === names[d.id] && isTitle(d.name), d.id + ' is named ' + names[d.id] + ', in Title Case');
   ok(new RegExp(`<button class="btn drill" id="pr-${d.id}"><span class="dc-icon" id="pi-${d.id}" aria-hidden="true"></span><span class="dc-name">${d.name}</span></button>`).test(html), d.id + ' has a drill card button (a nav candidate) with its name');
@@ -239,15 +239,93 @@ ok(s.done && s.drive.won === 0 && s.stars === 0 && s.drive.res.length === 3, 'Dr
 ok($('m-pen').hidden === true && !T.M.set, 'Driving: no penalty card or restart follows a drive');
 P.leave();
 
-// ---- the open-play scenarios: stars by how quickly
-begin('defend');
-T.contact.tackle(T.M.ball.carrier, T.sides.ctrlOf(0));
-ok(P.state().done && !P.state().won && P.state().stars === 0, 'Defend: a tackle without the switch is no star');
-P.leave();
-begin('defend');
-{ const tgt = T.contact.switchTarget(0); T.sides.setCtrl(0, tgt); T.update(T.STEP); T.contact.tackle(T.M.ball.carrier, tgt); }
-ok(P.state().done && P.state().won && P.state().stars === 3, 'Defend: a quick switch and tackle is three stars');
-P.leave();
+// ---- Create a Gap and Defend a Breakaway: five rounds each, restaged in open play, stars by rounds won (the Circle's 1, 3 and 5)
+{
+  const RN = X.ROUNDS, line = n => (n === 5 ? 'All 5 Rounds' : n + (n === 1 ? ' Round' : ' Rounds'));
+  const side = t => T.M.players.filter(p => p.team === t).length;
+  const held = (n = 1) => { for (let i = 0; i < n; i++) T.update(T.STEP); }, hold1 = Math.ceil(X.ROUNDS.show/(T.STEP*X.PACE.live)) + 2;   // hold1: steps for the round's word to have its time
+  const untilPlay = R => { let k = 0; while (R.stage !== 'play' && P.state() && !P.state().done && k++ < 600) T.update(T.STEP); return k; };
+  ok(RN.n === 5 && JSON.stringify(RN.stars) === '[1,3,5]' && [0, 1, 2, 3, 4, 5].map(n => X.starsOf(n, RN.stars)).join() === '0,1,1,2,2,3', 'rounds: five a run, and stars by rounds won, as the Circle: one for 1, two for 3, three for all 5');
+  ok(!('QUICK' in X) && !/drillQuickStars|drillPassStars|DRILL_QUICK/.test(training), 'no stars by time left in either game');
+  // the rename: Create a Gap is the old id
+  const gap = X.DRILLS.find(d => d.id === 'pass');
+  ok(gap.name === 'Create a Gap' && gap.objective === 'Draw Your Defender, Then Pass' && isTitle(gap.objective) && !/Two-on-One|Two on One/.test(html.slice(html.indexOf('id="pr-grid"'), html.indexOf('</ul>', html.indexOf('id="pr-grownups"')))), 'Create a Two-on-One is Create a Gap on the same id (pass), its objective in Title Case, the old name gone from the cards and the grown-ups\' panel');
+  { const w0 = writes, cr = T.career.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); T.career.set(cr);
+    const it = T.career.drills(cr).find(d => d.id === 'pass'), h0 = cr.skills.handling; cr.trained = false; T.career.trainDone({ id:'pass', stars:3 });
+    ok(it && it.name === 'Create a Gap' && cr.skills.handling > h0, 'the career\'s Train lists Create a Gap on the id pass, and its stars still feed Handling (' + h0 + ' to ' + cr.skills.handling + ')'); T.career.set(null);
+    writes = w0; }                                         // the career's own save, not a drill's: the isolation count below is the drills'
+  { const L = T.locker, was = L.state(); L.set(L.clean({ drills:['pass', 'egg'] }));
+    ok(L.state().drills.includes('pass') && L.count('star') === 2, 'an old save\'s three stars for pass are kept, and the Locker\'s Star Pupil still counts them');
+    L.set(was); }
+  // Create a Gap's line-ups: always one over, in lanes, each defender on one man
+  const lineup = [[2, 1], [3, 2], [4, 3], [4, 3], [5, 4]], gotGap = [];
+  P.start('pass');
+  for (let n = 1; n <= 5; n++) { const G = P.state().gap; if (n > 1) X.gapRestage(n); gotGap.push(side(0) + 'v' + side(1));
+    const lanes = G.lanes.map(p => p.y), free = G.lanes[G.lanes.length - 1];
+    ok(side(0) === lineup[n - 1][0] && side(1) === lineup[n - 1][1] && G.marks.length === side(1) && lanes.every((y, k) => !k || Math.abs(lanes[k - 1] - y - X.GAP.lane) < 1e-9) && G.marks.every((d, k) => Math.abs(d.y - lanes[k]) < 1e-9 && d.x > G.lanes[0].x) && X.gapMark(free) === null && T.M.ball.carrier === G.lanes[0] && T.sides.ctrlOf(0) === G.lanes[0] && P.state().limit === X.GAP.rounds[n - 1].limit,
+      'Create a Gap round ' + n + ' (' + X.GAP.rounds[n - 1].label + '): ' + lineup[n - 1].join(' on ') + ', a lane each, a defender in front of every man but the outside one, the ball with the inside man, its own clock'); }
+  ok(gotGap.join() === '2v1,3v2,4v3,4v3,5v4' && X.GAP.rounds[3].rush > X.GAP.rounds[2].rush && X.GAP.rounds.every(r => isTitle(r.label)), 'Create a Gap: 2 on 1, 3 on 2, 4 on 3, 4 on 3 with quicker defenders, then 5 on 4, its labels Title Case (' + gotGap + ')');
+  P.leave();
+  // Defend a Breakaway's line-ups: the chase as before, then a longer start, a support runner, a quicker one, two cover men
+  const want = [[2, 1], [2, 1], [2, 2], [2, 2], [3, 2]], gotDef = [];
+  P.start('defend');
+  for (let n = 1; n <= 5; n++) { const Dd = P.state().defend, r = X.DEFEND.rounds[n - 1]; if (n > 1) X.defendRestage(n); gotDef.push(side(0) + 'v' + side(1));
+    ok(side(0) === want[n - 1][0] && side(1) === want[n - 1][1] && T.M.ball.carrier === Dd.cpu[0] && T.sides.ctrlOf(0) === Dd.own[0] && P.state().initialCtrl === Dd.own[0] && !P.state().switched && T.M.players.filter(p => p.team === 0).slice(1).every(p => p.x < T.M.ball.carrier.x) && Dd.own[0].x > T.M.ball.carrier.x && isTitle(r.label),
+      'Defend round ' + n + ' (' + r.label + '): ' + want[n - 1].join(' against ') + ', the ring on the beaten man behind the ball, the cover goal-side'); }
+  ok(gotDef.join() === '2v1,2v1,2v2,2v2,3v2' && X.DEFEND.rounds[3].pace > 0 && JSON.stringify(X.DEFEND.rounds[0]) === JSON.stringify({ label:'The Chase', run:[49, 35], beaten:[56, 35], cover:[[36, 39]] }), 'Defend: the chase as it always was (49, 56 and 36 across, as before), then the rest (' + gotDef + ')');
+  P.leave();
+  // Defend: a tackle without the Switch ends the run with nothing
+  begin('defend');
+  T.contact.tackle(T.M.ball.carrier, T.sides.ctrlOf(0)); held(hold1);
+  ok(P.state().done && !P.state().won && P.state().stars === 0 && P.state().defend.R.lost === 'Switch First' && $('pr-feedback').textContent === '0 Rounds' && !$('pr-tip').hidden, 'Defend: a tackle without the Switch ends the run at 0 Rounds, no star, with a line on why');
+  P.leave();
+  // Defend, scripted through every round: the real Switch, then the real made-tackle path on whoever carries
+  begin('defend');
+  { const st = P.state(), Rd = st.defend.R; let held0 = null, card = null, early = null;
+    for (let n = 1; n <= 5; n++) {
+      if (n > 1) { const k = untilPlay(Rd); if (n === 2) card = card || k; }
+      inp.bPressed = true; T.update(T.STEP);
+      const q = T.sides.ctrlOf(0); ok(st.switched && q !== st.initialCtrl, 'Defend round ' + n + ': the Switch takes the ring off the beaten man');
+      T.contact.tackle(T.M.ball.carrier, q);
+      ok(Rd.won === n && !st.done && T.M.tags.some(t => t.text === 'Stopped'), 'Defend round ' + n + ': a switched tackle wins it, and says Stopped');
+      if (n === 1) { const pos = JSON.stringify(T.M.players.map(p => [p.x, p.y])), e = st.elapsed; inp.aPressed = true; held(30);
+        held0 = JSON.stringify(T.M.players.map(p => [p.x, p.y])) === pos && st.elapsed === e && Rd.stage === 'show' && st.space;
+        held(Math.round(RN.show/(T.STEP*X.PACE.live)) - 28); early = Rd.stage === 'card' && Rd.round === 2 && $('pr-objective').textContent === 'Round 2' && $('pr-cue').textContent === X.DEFEND.rounds[1].label && !$('practice-cue').hidden && st.elapsed === 0; }
+    }
+    ok(held0, 'Defend: between rounds the world holds, and the round\'s clock with it');
+    ok(early, 'Defend: then the next line-up under a Round 2 card naming it, on a full clock');
+    ok(card > 10 && card < 120, 'Defend: the card stays up about a second, then play (' + card + ' steps)');
+    held(hold1);
+    ok(st.done && st.won && st.stars === 3 && $('pr-feedback').textContent === 'All 5 Rounds' && $('pr-result').textContent === 'Well Played', 'Defend: all five rounds won is three stars, and the card says All 5 Rounds'); }
+  P.leave();
+  // Defend: a still player loses round one to a try, and nothing comes of it
+  begin('defend'); { const s = play(() => stick(0, 0)); ok(s.done && s.stars === 0 && s.defend.R.won === 0 && s.defend.R.lost === 'Try' && $('pr-feedback').textContent === '0 Rounds', 'Defend: doing nothing loses round one to a try: 0 Rounds'); } P.leave();
+  // Defend: only the ringed man tackles, and the round's clock runs out to a loss
+  begin('defend'); { const st = P.state(); X.defendRestage(5); st.defend.R.round = 5; const c = T.M.ball.carrier, still = T.M.players.filter(p => p.team === 0)[2]; still.x = c.x - 0.6; still.y = c.y; held(1);
+    ok(!T.M.contact && !T.M.stats.ta1, 'Defend: a cover man left standing never tackles, even with the carrier on him'); }
+  P.leave();
+  begin('defend'); { const st = P.state(); st.elapsed = st.limit - 0.001; T.M.ball.carrier.x = 60; held(2); ok(st.defend.R.lost === 'Time Up' && st.space, 'Defend: the round\'s clock running out loses it'); } P.leave();
+  // Create a Gap: an early pass loses round one at once; a drawn pass then the try wins it
+  begin('pass');
+  { const st = P.state(), G = st.gap; let n = 0; while (G.R.stage === 'play' && n++ < 400) { stick(1, 0); if (st.elapsed > 0.3) inp.aPressed = true; T.update(T.STEP); }
+    ok(G.R.lost === 'Too Early' && T.M.tags.some(t => t.text === 'Too Early'), 'Create a Gap: a pass with the defender outside the ring is Too Early, there and then');
+    held(hold1); ok(st.done && st.stars === 0 && $('pr-feedback').textContent === '0 Rounds' && /ring turns gold/.test($('pr-tip').textContent), 'Create a Gap: and the run ends at 0 Rounds, with a line on why'); }
+  P.leave();
+  const passer = at => { let who = null, round = 0; return st => { const G = st.gap, me = T.sides.ctrlOf(0), b = T.M.ball; if (G.R.round !== round) { round = G.R.round; who = null; } if (G.R.stage !== 'play' || !me) { stick(0, 0); return; } const d = X.gapMark(me); stick(1, 0); sprint(!d); if (d && b.state === 'held' && b.carrier === me && who !== me && Math.hypot(me.x - d.x, me.y - d.y) <= at) { inp.aPressed = true; who = me; } }; };
+  H.reseed(7919); begin('pass');
+  { const st = P.state(), G = st.gap, seen = [], drawn = [];
+    const bot = passer(5); let n = 0;
+    while (!st.done && n++ < 20000) { bot(st); const before = G.drawn.size; T.update(T.STEP); if (G.drawn.size > before) drawn.push(G.R.round); if (G.R.stage === 'play' && seen[seen.length - 1] !== G.R.round) seen.push(G.R.round); }
+    letGo();
+    ok(st.done && st.stars === 3 && G.R.won === 5 && $('pr-feedback').textContent === 'All 5 Rounds' && seen.join() === '1,2,3,4,5', 'Create a Gap, seeded: running at each man and passing once he is drawn wins all five rounds, three stars (' + G.R.won + ' rounds, ' + st.stars + ' stars)');
+    ok(drawn.filter(r => r === 1).length === 1 && drawn.filter(r => r === 5).length === 4, 'Create a Gap: one drawn pass in 2 on 1, four in 5 on 4 (' + drawn.join() + ')'); }
+  P.leave();
+  // the drill bar: a pip a round and the round's clock
+  begin('pass'); held(2); ok(($('dh-pips').innerHTML.match(/dh-pip/g) || []).length === 5 && /dh-pip now/.test($('dh-pips').innerHTML) && !$('dh-bar').hidden, 'both games show the Circle\'s five pips and the round\'s clock'); P.leave();
+  // the result lines
+  for (const n of [0, 1, 3, 5]) { begin('pass'); const st = P.state(); st.gap.R.won = n; st.gap.R.lost = n === 5 ? '' : 'Held'; st.gap.R.stage = 'show'; st.gap.R.t = 99; st.space = true; held(1);
+    ok($('pr-feedback').textContent === line(n) && st.stars === X.starsOf(n, RN.stars), 'the result card names the rounds: ' + line(n)); P.leave(); }
+}
 
 // ---- every drill draws and labels its buttons without error, its close-ups included
 D.view(844, 390);

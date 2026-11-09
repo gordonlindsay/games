@@ -240,6 +240,7 @@ function tackleChecks(c) {
   for (const q of M.players) {
     if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
     const user = ringed(q);
+    if (!user && practice && practice.id === 'defend') continue;   // Defend a Breakaway: only the man you switched to tackles; a cover man left standing never does (training.js)
     if (dist(q,c) < (user ? 1.35 : 1.5)) { commitTackle(q, c, user ? 'contact' : 'ai'); return true; }   // the first man to commit takes him; nobody else rolls while he is bound
   }
   return false;

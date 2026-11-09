@@ -104,6 +104,13 @@ for (const [id, want] of [['tag', ['a']], ['back', ['a']], ['tackle', ['a']], ['
   unsee(); P.start('circle'); const s = watch();
   ok([...s.caps].some(c => c.startsWith('Runner')) && [...s.caps].some(c => c.startsWith('Passer')), 'Circle: the demo shows the Runner, then the Passer'); P.leave();
 }
+for (const id of ['pass', 'defend']) { // Create a Gap and Defend a Breakaway: Watch How plays round one and ends on it, never reaching round two
+  for (let seed = 1; seed <= 6; seed++) {
+    H.reseed(seed*613); unsee(); P.start(id); let most = 0, round = 1, n = 0;
+    while (demo() && n++ < 9000) { T.update(STEP); if (!demo()) break; const R = (S().gap || S().defend).R; most = Math.max(most, R.won); round = Math.max(round, R.round); }
+    const L = X.demoLast(); ok(L.ok && L.why === 'end' && most === 1 && round === 1, id + ': Watch How wins round one and ends there, seed ' + seed + ' (' + most + ' won, round ' + round + ')'); P.leave();
+  }
+}
 
 // ---- the pilot is reliable: Tackling across seeds, and the rest across a few
 { let good = 0, longest = 0; const n = 60; /* a rep can't be retried unseen: the longest says how often it took a second one */ for (let seed = 1; seed <= n; seed++) { H.reseed(seed*131); unsee(); P.start('tackle'); watch(); const L = X.demoLast(); if (L.ok && L.why === 'end') good++; longest = Math.max(longest, L.wall); P.leave(); }

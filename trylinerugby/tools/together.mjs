@@ -106,10 +106,10 @@ const champBefore = JSON.stringify(X.champ());
   ok(!D.hintShown()[0], 'and none behind the result card');
   P.leave();
   P.start('pass'); D.hintOpen()[0].cur = 'sprint'; D.syncHints('Pass', 'Kick');
-  ok(!D.hintShown()[0], 'none behind the Two-on-One\'s ready card');
+  ok(!D.hintShown()[0], 'none behind Create a Gap\'s ready card');
   $('pr-retry').click();
   const H0 = D.hintOpen()[0]; H0.cur = 'sprint'; H0.until = T.M.dclock + 3; D.syncHints('Pass', 'Kick');
-  ok(!D.hintShown()[0], 'a Sprint card due in the Two-on-One is not shown over its cue');
+  ok(!D.hintShown()[0], 'a Sprint card due in Create a Gap is not shown over its cue');
   let seen = 0;
   for (let i = 0; i < 400 && P.state() && !P.state().done; i++) { T.update(T.STEP); D.syncHints('Pass', 'Kick'); if (D.hintShown()[0]) seen++; }
   ok(seen === 0 && D.hintOpen()[0].shown.size === 0, `no open-play card over the drill's cue (${seen} frames)`);
