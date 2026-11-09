@@ -30,6 +30,8 @@ export const CLUB_BAND = {
 // NEW_LISTS=off leaves PR #14's England 2 and Counties off the team lists (ALL_TEAMS as before them: the menu demo draws from it), the
 // other half of that proof
 if (process.env.NEW_LISTS === 'off') js = js.replace(/\n  \{ key:'en2'[^\n]*/, '').replace(/\n  \{ key:'cty'[^\n]*/, '');
+// MAUL='{"on":false}' turns the maul off (the build before it, b706c3e, exactly: the proof behind every re-pin since); MAUL='{"cpu":{"base":0.1}}' tries other levers. Deep-merged, as the contact levers below
+if (process.env.MAUL) js = js.replace('// MAUL_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(MAUL, ${process.env.MAUL}); }`);
 // CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion and Tackle duel trigger levers
 {
   const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
@@ -224,6 +226,16 @@ export function scrumBot(side, rate = 6, hitP = 0.7) {
   if (b.hit && !b.hitDone && c.t >= b.hitAt) { inp.aPressed = true; b.hitDone = true; b.next = c.t + 1/rate; return; }
   if (rate > 0 && c.t >= 1.4 && c.t >= b.next) { inp.aPressed = true; b.next = c.t + 1/rate; }
 }
+// maulBot(side, rate): taps Push at `rate` a second (an 18% jitter on each interval) from the Drive call, the stick left alone, an ordinary
+// thumb in the maul's close-up (src/maul.js). bot() uses it, so a match the bot plays never leaves a maul undefended; with MAUL off no
+// maul ever opens, and the bot plays exactly as before
+export function maulBot(side, rate = +process.env.MAUL_RATE || 5.5) {
+  const c = T.M.cut, inp = T.sides.inputOf(side);
+  if (!c || c.kind !== 'maul' || c.result || !inp || rate <= 0) return;
+  const s = (c.mbot ||= [null, null]);
+  if (!s[side]) s[side] = { next: T.maul.MAUL.set + Math.random()*0.12 };
+  if (c.t >= s[side].next) { inp.aPressed = true; s[side].next = c.t + Math.max(0.05, (1/rate)*(1 + 0.18*gauss())); }
+}
 // lineBot(side, sigma): one Jump, at the perfect moment with a spread of sigma seconds
 export function lineBot(side, sigma = 0.10) {
   const c = T.M.cut, inp = T.sides.inputOf(side);
@@ -246,6 +258,7 @@ export function lineBot(side, sigma = 0.10) {
 export const HABITS = process.env.HABITS !== '0' && !!T.contact;
 const NOSPRINT = !!process.env.NOSPRINT, NOSPRINTBALL = !!process.env.NOSPRINTBALL, NODIVE = !!process.env.NODIVE;
 const OFFLOAD_P = process.env.BOT_OFF != null ? +process.env.BOT_OFF : 0.4;
+const MAUL_BOT = +process.env.MAUL_BOT || 0;              // MAUL_BOT=0.5: held in a tackle with the Maul lit, he calls it half the time (off unless asked: the bot never presses Switch in a tackle)
 const MOVE_BOT = process.env.MOVE_BOT || '', MOVE_P = process.env.MOVE_P != null ? +process.env.MOVE_P : 0.5;
 const MOVE_STEP = MOVE_BOT === 'step' || MOVE_BOT === 'both', MOVE_DUMMY = MOVE_BOT === 'dummy' || MOVE_BOT === 'both';
 const moveState = [null, null];                           // per seat: the carrier it is tracking, the men it has already stepped for, whether it has dummied this carry, and the gesture under way
@@ -276,6 +289,7 @@ export function bot(side = 0) {
   inp.jx = 0; inp.jy = 0;
   if (M.phase === 'cut' && M.cut && M.cut.duel) { duelBot(M.cut); return; }
   if (M.phase === 'cut' && M.cut && M.cut.kind === 'goal') { (M.cut.g.type === 'drop' ? dropBot : kickBot)(M.cut); return; }
+  if (M.phase === 'cut' && M.cut && M.cut.kind === 'maul') { maulBot(side); return; }   // a maul (src/maul.js): he taps. None opens with MAUL off
   if (!c || M.phase !== 'play') { if (HABITS) inp.cDown = false; if (moveState[side]) moveState[side].g = null; return; }
   const S = HABITS ? M.spr[side] : null, k = HABITS ? M.contact : null, held = !!(k && k.c === c);
   let hold = false;
@@ -289,6 +303,7 @@ export function bot(side = 0) {
     const jx = 1, jy = near < 8 ? (ny > 0 ? -0.7 : 0.7) : (c.y < 10 ? 0.5 : c.y > 60 ? -0.5 : 0);
     const m = Math.hypot(jx, jy); inp.jx = dir * jx / m; inp.jy = jy / m;
     if (held) {                                                 // in a tackle: the offload, on its cue, or nothing
+      if (MAUL_BOT && k.mbAt == null) { k.mbAt = T.maul.can(k) && Math.random() < MAUL_BOT; if (k.mbAt) { inp.bPressed = true; return; } }   // MAUL_BOT: the Maul instead
       if (k.botAt == null) k.botAt = T.contact.canOffload(k) && Math.random() < OFFLOAD_P ? 0.08 + Math.random() * 0.12 : -1;
       if (k.botAt > 0 && k.t >= k.botAt) { inp.aPressed = true; k.botAt = -1; }
     } else if (near < 2.6 && c.hold > 0.4 && Math.random() < 0.12) inp.aPressed = true;   // a tap: aPressed without aDown. Holding aDown past 0.18s would charge a long pass

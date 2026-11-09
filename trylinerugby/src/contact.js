@@ -52,11 +52,12 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   if ((!isHuman(c.team) || proRun(c)) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload (Pro Mode: so does a teammate of yours)
   return k;
 }
-function releaseBind(k) { for (const p of [k.c, k.q, k.q2]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }
+function releaseBind(k) { for (const p of [k.c, k.q, k.q2, k.mate]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }   // k.mate: the man who joined a maul (src/maul.js)
 function contactGuard() { const k = M.contact; if (!k) return; const b = M.ball; if (!(M.phase === 'play' && b.state === 'held' && b.carrier === k.c)) releaseBind(k); }
 function bindMove(p, dt) {                                 // velocities through the bind: the carrier runs down (or is driven back), the tackler is pulled onto his hip
   const k = p.bind;
   if (p === k.c) {
+    if (k.maul && k.maul.live) { p.vx = k.maul.v.x; p.vy = k.maul.v.y; return; }   // a maul driven in the world walks its ground (src/maul.js)
     const u = clamp(k.t/k.T, 0, 1);
     const f = k.tier === 'soft' ? 1 - 0.6*u : k.tier === 'wrap' ? 1 - u : (u < 0.4 ? 1 - u/0.4 : -0.35*(u - 0.4)/0.6);
     p.vx = k.v0.x*f; p.vy = k.v0.y*f;
@@ -73,6 +74,7 @@ function contactStep(c, dt) {                              // runs in place of t
   if (carrierChecks(c)) { releaseBind(k); return; }        // a bound carrier who crosses the line still scores; touch is still touch
   k.t += dt;
   if (k.aiOff != null && k.t >= k.aiOff) { k.aiOff = null; if (offload(k, false)) return; }
+  if (maulStep(k, dt)) return;                             // the maul: the CPU's call, the join, the drive (src/maul.js). Nothing at all with MAUL.on false
   if (!k.q2) for (const o of M.players) {
     if (o.team === c.team || o === k.q || !onFeet(o) || o.tcd > 0 || o.offside > 0) continue;
     if (dist(o, c) < CONTACT.second.r) { joinTackle(k, o); break; }

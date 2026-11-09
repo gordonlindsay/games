@@ -741,6 +741,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/match.js`, `src/ball.js` | Match state, restarts, possession and ball flight |
 | `src/passing.js`, `src/contact.js`, `src/movement.js` | Passing, tackling, sprint, team movement and match update |
 | `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
+| `src/maul.js`, `src/render-maul.js` | The maul: the call, the close-up's drive, the maul driven in the world with nobody in it, and its close-up's drawing |
 | `src/championship.js` | Fixtures, results, standings and title race |
 | `src/cups.js`, `src/ui-cups.js` | Silverware: the European Cup, World Cup, Home Nations Tour and Triple Crown, their screens and the Trophy Cabinet's kinds |
 | `src/render-*.js` | Pitch, players, close-up scenes and match drawing; `render-behind.js` is the optional behind views |
@@ -896,7 +897,9 @@ The ladder would have gone backwards at County, so that is what moved, and only 
   Offloads, the ball jolted loose, Ankle Taps, Tripped and Fends are in. **Not** in, by Gordon's choice: breakdown
   steals (no jackal, no Steal prompt), new penalties (no Not Releasing, Off Your Feet, Not Rolling Away or High Tackle)
   and sin bins. The ruck stays automatic: a flat turnover roll (base raised to 0.11 so turnovers per match hold as
-  rucks fall), the losing side wrong-footed, and today's flat ruck penalty.
+  rucks fall), the losing side wrong-footed, and today's flat ruck penalty. The maul (2026-11-09) keeps all of that:
+  it has no penalty of its own, a maul that stops is Held Up and a scrum to the defence, and nothing in it is a
+  breakdown steal (the ball is never taken at a ruck: a held-up maul goes to a scrum, as a knock-on does).
 - **Ruck control** (2026-10-31): while a ruck is down, the ring leaves the tackled man and sits on the teammate who
   will pick the ball up. The stick places him; with the stick let go he still runs to the ball. Pass, Kick and Tackle
   stay dead until the ball is out. No jackal, no steal, and no new penalty — the ruck's length and the penalty and
@@ -1189,6 +1192,11 @@ Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock 
   Not pushing at all loses the ball, nothing worse.
 - **Lineout:** one jumper each in the middle. The hooker dummies, then throws. Press Jump so your jumper is at full
   height when the ball arrives. On their throw, beating their jumper to it is a steal.
+- **Maul** (grown-up matches only): your carrier held in a Soft or Wrap tackle with a teammate within 4m, B reads Maul;
+  press it and he binds on, Maul is called and the close-up opens. Bind, then Drive: tap Push to drive, the stick's up
+  and down wheels it across the pitch. Over the line is a maul try, a metre or more is Use It, less is Held Up and a
+  scrum to them. The CPU mauls too, more near your line, and you hold it up the same way. The numbers are in The maul,
+  below.
 - **Duels** fire at last-man moments, and only when you're running at the man. Steer away and none fires. There's
   at most one every 30s, never the same kind twice, 2–4 a half, plus one Last Play bonus after the hooter. Each one's
   run-in plays in slow motion after the slide-in (0.4x for 1.2 / 0.9 / 0.6s real by your level, `DUEL_SLOW`), ramping
@@ -1218,7 +1226,7 @@ against the CPU. The sweep that pins the leads is under Measured baseline.
 
 The hints card (`#hc0` top-left, `#hc1` top-right for Player 2) names the close-up and its control: the duel's name and
 "Flick on Gold" / "Pass or Dummy On Gold" / "Tackle On Gold" / "Block On Gold" (the chooser's "Guard a Shoulder", "Drift
-or Rush", "Step Left or Right", "Dummy: Tap It" in two player), the scrum's two rows, the lineout's one, the kick cards
+or Rush", "Step Left or Right", "Dummy: Tap It" in two player), the scrum's two rows, the lineout's one, the maul's two (Steer With the Stick, Steer on a keyboard; Tap Push to Drive), the kick cards
 ("Let Go in the Gold": Steer the Arrow, Hold It; "Before They Reach You": Steer, Let Go in the Gold), and the open-play
 cards (Long Pass: Skips a Man, Hold It; Sprint: Hold It; Side Step: Near a Tackler, Flick Across; Dummy: Fakes the Pass,
 Pull Back, Push On; Offload: As You're Tackled, Tap It; Drop Goal: In Range, Hold It), with Tap Across / Tap Back and
@@ -1337,6 +1345,116 @@ CPU sprints a match by level: 2.4 / 2.2 / 2.9 (2.1s of sprint on Hard). Big Hits
 Your offloads rose from 6.2 to 8.6 a match once the label and the press picked the same receiver (a fifth of the
 bot's presses on a lit Offload had been doing nothing). Win rates with and without Sprint are in Measured baseline
 below.
+
+### The maul
+
+Gordon, 2026-11-09: "For adult games, we could look at potentially having the ball carrier gets tackled, slows down, and
+maybe you could switch and have another player join. And obviously that creates a ruck or a maul situation that you
+could then drive. So it could bring up maul, for example, as a call out, and then you're into having to direction and
+tap like you would a scrum in order to drive." He chose a close-up like the scrum's. Every number is in `MAUL`
+(`src/maul.js`; the drawing is `src/render-maul.js`); `MAUL='{"cpu":{"base":0.1}}' node tools/maul.mjs --balance cut`
+tries values without an edit, and `MAUL='{"on":false}'` is the game before it, b706c3e, exactly.
+
+- **Where.** Grown-up matches only: never Kids, never Minis (`matchMild`), never a drill.
+- **Calling it.** Your carrier held in a Soft or Wrap tackle (not a Big Hit, not a broken tackle) with a teammate on
+  his feet within 4m (`MAUL.r`): B reads Maul and pulses, and Pass can read Offload at the same time (both are there).
+  The press lands in the tackle's 0.25s bind, as the Offload's does. The nearest teammate binds on (never a man under a
+  ring: Pro Mode's own player stays his own), there is no offload after it, Maul is called, and the close-up opens 0.3s
+  later (`MAUL.join`). With nobody within 4m B stays the dim Kick and does nothing. In two player the carrier's seat
+  presses its own Kick key (G or .), and the word under him is Maul when no Offload is lit.
+- **The CPU calls it** once a bind, 0.12s in, when its carrier is held in a Soft or Wrap with a man within 4m and no
+  offload planned: 5%, +5% for a forward (1 to 3), +10% within 15m of the line it attacks, +3% a Power point of edge,
+  at most 35%. A back mid-field 5%, a forward 10%, a forward near your line 20%. You defend it in the close-up.
+- **The close-up.** Bind (1.0s), then Drive (3.0s). Taps on Push are the shove, read as the scrum reads them (5 a
+  second is a full shove, about 6.5 the most). A press from 0.08s before Drive to 0.28s after it is Good Timing,
+  0.3m; a press in the Bind call is Early and forfeits that, nothing more. A CPU pack's shove is the scrum's, its
+  level's `scrumCpu` plus 0.06 a Power point over 3, x0.75 to 1.25 drawn as it forms, with a 22% wave; your pack's is
+  0.06 a Power point over 3 and your taps (two player adds `SCRUM_LEVEL`). The maul moves 3.4 m/s for each unit of
+  the attack's shove plus 0.2 over the defence's (`speed`, `edge`).
+- **The wheel.** The stick's up and down (across the pitch, as the Driving drill reads it) turns the maul at 0.9
+  rad/s, at most 0.6 rad either way; it moves along its heading and slides 0.8 m/s along its turn, and never comes
+  within 6m of touch. Both humans' sticks count in two player; the CPU's attack drifts towards the middle. It shows as
+  the maul's turn (the far men slide as it turns) and on the pitch strip.
+- **The verdict.** Over the try line: a maul try. A metre or more when the Drive ends: Use It, a 0.5s ruck at the back
+  of it (the stick places the scrum-half, as in any ruck) and a quick ball; 3m or more and the attack surges for 2s.
+  Under a metre, or driven 1.5m back at any time: Held Up, and a scrum to the defence where it stopped. No penalty
+  either way. The restart follows the metres and the wheel, and after a close-up every other man moves with it. The
+  metres count as carried on the full-time card.
+- **With nobody in it** (AI v AI, the demo, a headless tool's match, Pro Mode as a back): driven in the world by the
+  same model, both packs on the CPU's terms, the men bound to the carrier moving with him, tagged Maul and then Use It
+  or Held Up. It draws one random number for the call, three as it forms (two packs, the wave) and none as it drives.
+- **What you see.** Four a side, side-on; Bind, then Drive; at the foot, the bar from the Held Up line behind to the
+  try line (or 8m) ahead, with ticks where it started and at Use It; top right (bottom right in two player, where
+  Player 2's hints card is), the pitch strip with where it started, where it is and the way it is turned. The hints card: Maul, Your Ball or Hold Them Up, Stick: Steer With the Stick
+  (Steer on a keyboard, with W S or the arrows), Push: Tap Push to Drive. The tutorial's two cards: Maul, Steer With the
+  Stick; Maul, Tap Push to Drive (the keys on a keyboard, the Bottom Button on a controller). `maul` is appended to
+  `TUT_IDS`. Screenshots: `SHOTS=<dir> node tools/maul.mjs`.
+
+**Measured** (`node tools/maul.mjs --balance`, 2026-11-09). AI v AI, 300 matches, 4-minute halves, Normal, seeds 5000
+to 5299, the same seeds with the maul off and on, per match:
+
+| AI v AI | Off | On |
+|---|---|---|
+| Tries / points | 1.07 / 10.29 | 1.13 / 10.65 |
+| Turnovers / jolts | 12.63 / 2.91 | 12.27 / 2.73 |
+| Mauls (tries / Use It / Held Up) | none | 3.41 (0.02 / 2.47 / 0.90) |
+| Metres a maul | none | 2.06 |
+| Scrums / rucks | 11.52 / 112.4 | 12.58 / 107.4 |
+| Knock-ons / penalties | 12.60 / 5.41 | 12.79 / 5.13 |
+
+The harness's player against the CPU, 90 matches a level, headless (so every maul is driven in the world, his pack
+on the CPU's terms; he never calls one), per match:
+
+| Bot v CPU | Off: won, points, tries | On: won, points, tries | The CPU's mauls |
+|---|---|---|---|
+| Easy | 100%, 68.7-2.4, 10.13-0.17 | 100%, 68.3-2.9, 10.02-0.23 | 1.34 |
+| Normal | 98.9%, 44.9-6.2, 6.77-0.68 | 97.8%, 45.1-7.1, 6.82-0.79 | 1.62 |
+| Hard | 53.3%, 19.5-16.1, 2.92-2.16 | 64.4%, 19.9-13.4, 2.92-1.72 | 1.72 |
+
+The same player in matches you play (`--balance ibot`: interactive, so the CPU's mauls open the close-up and he taps 5.5
+a second in it), 30 matches a level, per match:
+
+| Bot v CPU, played | Off: won, points, tries | On: won, points, tries | The CPU's mauls (held up, tries) |
+|---|---|---|---|
+| Easy | 100%, 57.1-5.0, 8.27-0.60 | 100%, 66.3-4.7, 9.47-0.47 | 1.93 (1.60, 0) |
+| Normal | 90.0%, 39.4-10.8, 5.83-1.40 | 86.7%, 37.9-12.9, 5.50-1.40 | 1.57 (0.73, 0) |
+| Hard | 30.0%, 14.6-21.4, 2.00-2.90 | 33.3%, 14.7-22.9, 1.97-3.13 | 2.77 (0.83, 0.10) |
+
+Thirty matches a level is a small sample (a match's points vary by about 15), so these say the maul tilts nothing far:
+on Easy a 5.5-a-second thumb holds up most of the CPU's mauls and the scrums that follow are his ball; on Normal and
+Hard the CPU's mauls make it a point or two a match.
+
+The close-up, 200 a cell, ENG v FRA (equal Power), taps jittered 18%, the stick left alone: tries / Use It / Held Up
+in percent, and the metres on average. Attacking, from mid-field (from 5m out the same, but for the tries):
+
+| Taps a second | Easy | Normal | Hard |
+|---|---|---|---|
+| None | 0 / 0 / 100, -1.5m | 0 / 0 / 100, -1.5m | 0 / 0 / 100, -1.5m |
+| 4 | 0 / 86 / 14, 2.3m | 0 / 55 / 46, 1.1m | 0 / 45 / 56, 0.5m |
+| 5 | 0 / 100 / 0, 3.7m | 0 / 79 / 21, 2.5m | 0 / 69 / 32, 1.8m |
+| 6 | 0 / 100 / 0, 4.8m | 0 / 100 / 1, 3.7m | 0 / 90 / 11, 3.0m |
+| 7 | 0 / 100 / 0, 5.8m | 0 / 100 / 0, 4.6m | 0 / 99 / 2, 4.0m |
+
+From 5m out, the share that ends in a try at 5 / 6 / 7 taps a second: Easy 17 / 52 / 80%, Normal 2 / 22 / 47%, Hard
+0 / 11 / 37%. Defending the CPU's maul, mid-field:
+
+| Taps a second | Easy | Normal | Hard |
+|---|---|---|---|
+| None | 0 / 100 / 0, 8.0m | 0 / 100 / 0, 9.3m | 0 / 100 / 0, 10.1m |
+| 4 | 0 / 65 / 36, 1.7m | 0 / 97 / 4, 3.0m | 0 / 100 / 0, 3.8m |
+| 5 | 0 / 31 / 69, 0.3m | 0 / 68 / 33, 1.7m | 0 / 83 / 17, 2.5m |
+| 6 | 0 / 5 / 95, -0.6m | 0 / 38 / 63, 0.6m | 0 / 56 / 45, 1.3m |
+| 7 | 0 / 0 / 100, -1.1m | 0 / 21 / 80, -0.2m | 0 / 36 / 65, 0.4m |
+
+From 5m out, defending: no taps and every one is a try; at 4 / 5 a second the tries are Easy 0 / 0%, Normal 10 / 0%,
+Hard 28 / 4%. The rows add to 100 give or take the rounding. With equal packs and nobody in it the maul is Use It
+about two times in three (`tools/maul.mjs` section 6 measures 4,000).
+
+What it changed, on purpose: AI v AI scores a little more (a few more tries come from the 2m a maul makes and its
+quick ball) and has five fewer rucks and one more scrum a match (the held-up mauls). Against the headless bot the CPU's
+mauls are a small cost to it on Hard: driven in the world with the bot's pack at Hard's own strength a quarter of them
+are held up, a turnover a ruck gives only 11% of the time. In a match you play the maul is yours to defend in the
+close-up instead (the matches-you-play table above).
 
 ### Passing
 
@@ -1775,6 +1893,11 @@ a charger.
     still one press.
   - **`node tools/setpieces.mjs`:** scrums at 4-8 taps a second (jittered 18%, the thumb off the stick, with a Good Hit or
     a late first tap; SEED 1 unless set) and lineouts at different jump timings. ENG v FRA, equal packs.
+  - **`node tools/maul.mjs`:** about 230 asserts over the maul (SEED 5 unless set; the default gate runs it): the trigger
+    and every gate, the CPU's call and its rates, each result, the wheel, the maul driven in the world, two player, the
+    cards and `TUT_IDS`, MAUL off giving b706c3e's fingerprint exactly, the drawing, the words, and in Chromium the
+    close-up's fit at 844x390 and 667x375. `--balance [ai|bot|ibot|cut] [n]` measures the tables under The maul;
+    `SHOTS=<dir>` writes the close-up's screenshots.
   - **`node tools/passing.mjs`:** 46 asserts over the led pass and the open shoulder (above, under Passing).
   - **`node tools/moves.mjs`:** 99 asserts over the Side Step and the Dummy (SEED 5 unless set): each fires from each team each
     way, tags, the x0.65 odds and the dart; does not fire with no tackler inside 4m, inside the cooldown, for a slow swerve,

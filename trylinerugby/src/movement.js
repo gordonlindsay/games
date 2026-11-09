@@ -446,6 +446,7 @@ function userStep(t, i, dt) {
   tickUserPass(t, dt);
   if (i.b && !inp.bCancel) {
     if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    else if (M.phase === 'play' && b.state === 'held' && b.carrier === c && c.bind) maulPress(t);   // held in a tackle: the Maul, when a man is near (src/maul.js)
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
   if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick

@@ -61,6 +61,7 @@ function updateCut(dt) {
   } else if (c.kind === 'scrum') updateScrum(c, dt);
   else if (c.kind === 'lineout') updateLineout(c, dt);
   else if (c.kind === 'goal') updateGoalCut(c, dt);
+  else if (c.kind === 'maul') updateMaul(c, dt);           // src/maul.js
   else updateDuel(c, dt);
   for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.flick = 0; inp.aCancel = inp.bCancel = inp.cCancel = false; }
 }
