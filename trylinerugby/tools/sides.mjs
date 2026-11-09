@@ -10,8 +10,8 @@ const S = T.sidesOf, X = T.teams, C = T.career, D = T.debug, I = T.importer, B =
 let passed = 0, failed = 0;
 /* The merge (README, Integration with PR #14): main's Men | Women | Minis is the one control, and teamSide reads it (Women is 1, Minis mixed);
    a g of a team's own still wins, so the looks below run as they did. PR #14's toggle, women's lists and a made or imported team's own side
-   wait for the builders: those sections are recorded, not run, and named in the last line. The career look builder is in (11, 14, 14b, 16):
-   its Male | Female is the career's Men | Women, one control. */
+   wait for the builders: those sections are recorded, not run, and named in the last line. The career look builder is in (3b, 11, 14, 14b, 16):
+   its Male | Female is the career's Men | Women, one control, and a career PR #14's build saved as Female loads as Women (3b). */
 const PENDING = [];
 const pending = (what, fn) => { PENDING.push(what); };
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
@@ -60,30 +60,64 @@ pending('2. a made or saved side carrying its own g (the teams builder: main\'s 
   X.restore({ champ:{ user:0, teams, round:0, fixtures, results:[] } });
   ok(X.champ().id === 'legacy-1uhhq2b' && X.champ().teams.every(t => !('g' in t)), `an old championship keeps its fingerprint and its men's sides (${X.champ().id})`);
   X.setChamp(null);
-  pending('3. an old career through PR #14\'s stages, and its Men\'s | Women\'s setting (main\'s club seasons and category)', () => {
-  const old = { name:'Sam', pos:'B', num:5, club:side('FAR', 'Farnham'), pro:'BAT', country:'GEO', skills:{ pace:50, power:30, handling:40, kicking:35, stamina:36 }, stage:4, seasons:6,
-    season:{ user:0, teams, round:0, fixtures, results:[], id:'career-abc' }, trained:false, history:[], totals:{ matches:9, tries:2, tackles:3, goals:1 } };
-  X.restore({ career:old });
-  const got = C.get();
-  ok(hash(json(got)) === 'da78aa', `an old career loads exactly as it did (${hash(json(got))})`);
-  ok(!('look' in got) && got.country === 'GEO', 'with no look, and its country unchanged even where there is no women\'s side');
-  C.newSeason(got);
-  ok(got.season.teams.every(t => !('g' in t)) && got.season.teams[0].id === 'GEO' && got.season.teams[0].pace === by('GEO').pace, 'its next season is men\'s, at the men\'s rating');
-  X.restore({ career:{ ...old, stage:0, country:null } });
-  C.newSeason(C.get());
-  ok(C.get().season.teams.every(t => !('g' in t)), 'an old career in the Minis stays men\'s too: nothing it had changes');
-  C.play();
-  ok(!T.M.nat[0].squad && B.lookOf(T.M.players.find(p => p.team === 0 && p.n === 5)).g === 0, 'and has no squad entry');
-  D.exitMatch(); C.set(null);
-  X.setChamp(null);
+}
+// 3b. a career PR #14's build saved: its stages, and its Male | Female as main's Men | Women. PR #14 was never on main, so only the owner's
+//     own build wrote these: no cat, and Female is look.g 1 (its careerFemale). Main's club seasons take its stages (cleanCareer); one
+//     control decides the body and every side, and a kept season's sides come into the career's category with it.
+{
+  const teams = (g = null) => ['FAR', 'HAS', 'GUI', 'ALD', 'WEY', 'COB'].map(id => side(id, by(id).name, g == null ? {} : { g }));
+  const fixtures = [[[0, 5], [1, 4], [2, 3]], [[3, 0], [4, 2], [5, 1]], [[0, 4], [3, 1], [2, 5]], [[1, 0], [2, 4], [3, 5]], [[0, 2], [5, 4], [1, 3]]];
+  const results = [[{ h:0, a:5, hs:12, as:7, ht:5, at:0 }, { h:1, a:4, hs:3, as:3, ht:0, at:3 }, { h:2, a:3, hs:0, as:10, ht:0, at:5 }]];
+  const pr14 = (stage, look, g) => ({ name:'Sam', pos:'B', num:5, club:side('FAR', 'Farnham', g == null ? {} : { g }), pro:null, country:stage === 4 ? 'ENG' : null,
+    skills:{ pace:50, power:30, handling:40, kicking:35, stamina:36 }, ...(look ? { look } : {}), stage, seasons:6,
+    season:{ user:0, teams:teams(g), round:1, fixtures, results, id:'career-abc' }, trained:false, history:[], totals:{ matches:9, tries:2, tackles:3, goals:1 } });
+  const her = { g:1, skin:4, hair:2, style:6, b:1.12 }, his = { ...her, g:0 };
+  s.diff = 1; s.kids = false;                        // the match below on Normal, as 11 plays it
+  // no look (from before PR #14's builder) and a Male look: Men, as before
+  X.restore({ career:pr14(4, null) });
+  let got = C.get();
+  ok(got.cat === 'men' && json(got.look) === json(S.CAREER_LOOK) && got.phase === 'intl' && got.country === 'ENG', `a PR #14 career with no look is a men's one, in the window with its country (${got.cat}, ${got.phase}, ${got.country})`);
+  ok(got.season && got.season.round === 1 && got.season.teams.every(t => S.teamSide(t) === 0), 'its season kept as it was, men\'s');
+  X.restore({ career:pr14(3, his, 0) });
+  got = C.get();
+  ok(got.cat === 'men' && json(got.look) === json(his) && got.season.teams.every(t => S.teamSide(t) === 0), 'a PR #14 Male look: a men\'s career, the look his');
+  // Female: Women
+  for (const stage of [3, 4]) {
+    X.restore({ career:pr14(stage, her, 1) });
+    got = C.get();
+    ok(got.cat === 'women' && json(got.look) === json(her), `a PR #14 Female career (stage ${stage}) loads as Women, with her look (${got.cat}, ${json(got.look)})`);
+    ok(got.season && got.season.round === 1 && json(got.season.results[0][0]) === json(results[0][0]), `its season under way is kept, with its results (stage ${stage})`);
+    ok(got.season.teams.every(t => S.teamSide(t) === 1 && / Women$/.test(t.name)) && got.season.teams[0].name === 'Farnham Women', `and every side in it is women's, named for it (${got.season.teams.map(t => t.name).join(', ')})`);
+    C.play();
+    ok(T.M.players.every(p => B.lookOf(p).g === 1) && B.lookOf(T.M.careerP).skin === 4 && B.lookOf(T.M.careerP).style === 6, `so her match is women's on both sides, her look on her (stage ${stage})`);
+    D.exitMatch();
+    X.save(); C.set(null); X.load();
+    ok(C.get().cat === 'women' && saved().career.cat === 'women' && saved().career.look.g === 1, 'it saves as main\'s Women, and comes back');
+    C.set(null);
+  }
+  for (const stage of [0, 1, 2]) {
+    X.restore({ career:pr14(stage, her, stage === 0 ? 'mixed' : 1) });
+    got = C.get();
+    ok(got.cat === 'women' && got.phase === 'league' && !got.season, `a PR #14 Female career in ${['Minis', 'Juniors', 'County'][stage]} is a women's league year at her club, its old season dropped`);
+    ok(C.repair(got) && got.season.teams.every(t => S.teamSide(t) === 1), 'and the hub draws her a women\'s season');
+    C.set(null);
+  }
+  // a cat decides wherever there is one: main's own saves always carry it, and their look's g is drawn from it
+  const mine = JSON.parse(json(C.create({ pos:'B', num:5, club:X.CLUBS[0], look:his })));
+  ok(C.clean({ ...mine, look:her }).cat === 'men' && C.clean({ ...mine, look:her }).look.g === 0, 'a men\'s career with a female look in its save is still Men');
+  ok(C.clean({ ...mine, cat:'women', look:his }).cat === 'women' && C.clean({ ...mine, cat:'women', look:his }).look.g === 1, 'and a women\'s one with a male look Women');
+  for (const g of ['1', true, 2, null]) ok(C.clean({ ...pr14(3, { ...her, g }), cat:undefined }).cat === 'men', `a look.g of ${g} is not Female`);
+}
+// 3c. PR #14's saved Men's | Women's on the team screen (settings.womens) is not read into main's settings.cat: the team screen is the
+//     teams builder's (7, 9)
+pending('3c. PR #14\'s saved Men\'s | Women\'s team-screen setting (main\'s settings.cat, the teams builder)', () => {
   X.restore({ settings:{ half:1 } });
   ok(s.womens === 0, 'an old save\'s team screen is on Men\'s');
   for (const v of [2, '1', true, null]) { X.restore({ settings:{ womens:v } }); ok(s.womens === 0, `womens ${v} is ignored`); }
   X.restore({ settings:{ womens:1 } }); ok(s.womens === 1, 'and a saved Women\'s comes back');
   s.womens = 0; X.save(); ok(saved().settings.womens === 0, 'it is in the save');
   s.womens = 1; X.save(); s.womens = 0; X.load(); ok(s.womens === 1, 'and reads back'); s.womens = 0;
-  });
-}
+});
 
 // 4. looks. A men's squad is pinned against the build before this. Re-pinned once from r31ovt: renaming the one side coded HAR changes that squad's looks, because they are dealt from its name; with the old name put back on it the hash is r31ovt again, and no other team differs.
 {

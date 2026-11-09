@@ -4375,7 +4375,8 @@ function cleanCupEntry(e) {
      the World Cup ('world'), the Home Nations Tour ('tour') and the Triple Crown ('triple'). The player card counts them by kind.
    - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
      international window is that category's own twelve; nothing else changes. It is also his body: Men a male player, Women a
-     female one (PR #14's Male | Female is this same control). His look (cr.look: build, skin, hair colour, hair style) goes on
+     female one (PR #14's Male | Female is this same control, so a career its build saved as Female, look.g 1 and no cat, loads as
+     Women: cleanCareer). His look (cr.look: build, skin, hair colour, hair style) goes on
      his squad entry in his matches, so the behind views and the art draw him with it (careerLook, CAREER_LOOK).
    - Your player has a 1 to 99 rating in each ability (Pace, Power, Handling, Kicking, and Stamina even before the
      teams have it). The overall is the team cards' overallOf on the same 40 to 99 scale.
@@ -4810,7 +4811,10 @@ function cleanCareer(c) {
   const signed = was != null && was >= 3 ? careerClubById(c.pro) : null;   // the Pro Club side it signed for
   const club = cleanSide(signed || c.club);
   if (!club || !raw) return null;
-  const pos = c.pos === 'F' ? 'F' : 'B', cat = careerCat(c);   // an unknown position is a back, as careerCreate has it; a career from before Men | Women is Men
+  const pos = c.pos === 'F' ? 'F' : 'B';               // an unknown position is a back, as careerCreate has it
+  /* Men or Women. A career from before Men | Women is Men, except one PR #14's build saved: it has no cat, and its Female was look.g 1
+     (its careerFemale), the same one control, so that is a women's career. A cat, where there is one, decides. */
+  const cat = c.cat == null && c.look && typeof c.look === 'object' && c.look.g === 1 ? 'women' : careerCat(c);
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = typeof raw[k] === 'number' && Number.isFinite(raw[k]) ? clamp(Math.round(raw[k]), 1, 99) : (CAREER_START[pos][k] || CAREER_BASE);
   const T = c.totals && typeof c.totals === 'object' ? c.totals : {}, totals = {};
@@ -4827,6 +4831,7 @@ function cleanCareer(c) {
   const country = nations.some(t => t.id === c.country) ? c.country : phase === 'intl' || phase === 'tour' ? 'ENG' : null;
   let season = null, cup = null, offers = null;
   if ((phase === 'league' || phase === 'intl') && c.season != null && !(was != null && was < 3)) season = cleanChamp(c.season);   // a broken season is dropped (and a Minis, Juniors or County one): the hub draws a new one
+  if (season && cat !== 'men') season.teams = season.teams.map(t => (catOf(t) === cat ? t : catSide(t, cat)));   // a kept season is the career's category: PR #14's Pro Club or International season marked its women's sides with g, which cleanSide drops, so they would be men's around a female player
   if (phase !== 'league' && phase !== 'transfer' && !season && c.cup != null && K && K.cleanCup) cup = K.cleanCup(c.cup) || null;
   if (cup && cup.id !== CAREER_CUP_PHASE[phase]) cup = null;   // a European Cup saved in the window (or any cup in another's phase) would read and bank as the wrong cup
   if ((phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
