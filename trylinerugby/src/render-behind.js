@@ -8,7 +8,7 @@ const BV_PRESET = [null, { ch:7.5, back:19, fy:0.60 }, { ch:10, back:22, fy:0.58
 const BV_TIERS = [28, 64];                                  // sprite cells, in device pixels per metre
 const BV_CELL = { stand:{ w:1.4, h:2.3, ox:0.7, oy:2.1 }, lying:{ w:2.6, h:1.2, ox:0.6, oy:0.7 } };   // in T, with the feet at ox, oy: 0.1T clear of the tallest head style
 const BV_RING = 0.6;                                        // the ring's base radius in metres: a top-down ring's radius would swallow a standing man
-const BV = { on:false, cam:null, M:null, rt:0, tx:0, ty:0, order:[], cells:[], edges:[], men:new WeakMap(), bakes:0, baked:0, fontsReady:false, fontsArmed:false, fade:1 };
+const BV = { on:false, cam:null, M:null, rt:0, tx:0, ty:0, order:[], cells:[], edges:[], men:new WeakMap(), bakes:0, baked:0, star:null, fontsReady:false, fontsArmed:false, fade:1 };
 const behindOn = () => settings.cam > 0 && playing() && !M.two && !M.auto && !practice;
 function stickTurn(seat) {                                  // the direction of the team this seat plays: 0 means the stick is read as it always was
   if (!behindOn()) return seat === 0 ? dvTurn() : 0;         // a Training Ground game may have a behind view of its own
@@ -113,9 +113,9 @@ function paintMan(g, p, o) {                                // o: k, view (0 bac
   const look = lookOf(p), keepCtx = ctx, keepSkin = SKIN, keepHair = HAIR;
   try {
     ctx = g; SKIN = LOOK_SKIN[look.skin]; HAIR = LOOK_HAIR[look.hair];
-    const stride = (o.frame || 0)*Math.PI/2;
-    if (o.view === 2) fig(0, 0, o.k, kitOf(p.team), { face:o.face || 1, stride, arms:o.arms === 'carry' ? 'carry' : 'down' });
-    else figFB(0, 0, o.k, p.team, { back:o.view === 0, num:p.n, stride, arms:o.arms, lying:o.lying, dive:o.dive, crouch:o.crouch });
+    const stride = (o.frame || 0)*Math.PI/2, kit = kitOf(p.team, p);   // the kit knows the man: the Locker's boots on your side, his alone in a career, Rainbow's by shirt (lockerBoots)
+    if (o.view === 2) fig(0, 0, o.k, kit, { face:o.face || 1, stride, arms:o.arms === 'carry' ? 'carry' : 'down' });
+    else figFB(0, 0, o.k, p.team, { kit, back:o.view === 0, num:p.n, stride, arms:o.arms, lying:o.lying, dive:o.dive, crouch:o.crouch });
     paintHead(look, p.team, o);
   } finally { ctx = keepCtx; SKIN = keepSkin; HAIR = keepHair; }
 }
@@ -266,7 +266,24 @@ function drawManBehind(cam, p, ctrl) {
     if (drawn && pose && pose.row.length > 12) { const q = kk/ART.man.px, m = pose.mirror ? -1 : 1, side = pose.deg === 90; cutBall(at.sx + m*pose.row[12]*q*look.b/ART.man.builds[pose.build]*sc, at.sy + pose.row[13]*q*sc, kk*0.95, side ? 0.2*m : pose.deg === 0 || pose.deg === 180 ? 1.25 : 0.7*m); }   // in his hands, as the art holds it
     else cutBall(at.sx + 0.18*kk*(s.view === 2 ? s.face : 1), at.sy - 1.15*kk*sc, kk*0.95, s.view === 2 ? 0.2*s.face : 1.25);
   }
+  if (M.arcade && p.tr && !(M.career && p === M.careerP)) bvTraitStar(at.sx + 0.34*kk*look.b*sc, at.sy - (down ? 0.6 : 1.62)*kk*sc, Math.max(4, 0.3*kk));   // a star player: traitMarks' gold star on his right shoulder, at his own depth, under every nearer man. Your career player has his own star
   if (alpha < 1) ctx.globalAlpha = 1;
+}
+const BV_STAR = { px:64, r:26 };                            // the star player's star, baked once: a cell this many pixels square, its points this far from the centre
+function bvTraitStar(x, y, s) {                             // traitMarks' star (src/traits.js), the same shape and gold: one drawImage, so a side of stars costs the frame almost nothing
+  if (x < -s || x > V.W + s || y < -s || y > V.H + s) return;
+  if (!BV.star) {
+    const cell = document.createElement('canvas'), g = cell.getContext('2d'), c = BV_STAR.px/2, r = BV_STAR.r;
+    cell.width = cell.height = BV_STAR.px;
+    g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r*0.45 : r; g.lineTo(c + Math.cos(a)*rr, c + Math.sin(a)*rr); }
+    g.closePath();
+    g.fillStyle = '#ffcf3d'; g.fill();
+    g.lineWidth = 0.3*r; g.lineJoin = 'round'; g.strokeStyle = C.outline; g.stroke();
+    BV.star = cell;
+  }
+  const h = s*BV_STAR.px/2/BV_STAR.r;
+  ctx.drawImage(BV.star, x - h, y - h, 2*h, 2*h);
 }
 function groundRing(cam, x, y, radius, style, width, dash) {
   const q = pr(cam, x, y, 0);
@@ -279,8 +296,9 @@ function groundRing(cam, x, y, radius, style, width, dash) {
 const BV_LOOSE = { rx:8.5, air:7, k:0.34, patch:'rgba(246,243,234,.3)' };                 // a ball not in anyone's hands: its half-length never under these px, and this share of a metre on the screen. It reads about 3m away on a phone
 function ballLaces(x, y, rx, ang) {                         // the laces that make a big ball a ball, the same on the grass, in the air, on the edge tag and in the marker
   const l = rx*0.42, h = rx*0.2;
+  const lk = lockerBall();                                   // the Locker's ball laced in its own line colour (src/locker.js)
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-  ctx.strokeStyle = BV_CARRY.lace; ctx.lineWidth = Math.max(1.1, rx*0.13); ctx.lineCap = 'round'; ctx.beginPath();
+  ctx.strokeStyle = lk ? lk.line : BV_CARRY.lace; ctx.lineWidth = Math.max(1.1, rx*0.13); ctx.lineCap = 'round'; ctx.beginPath();
   ctx.moveTo(-l, 0); ctx.lineTo(l, 0);
   for (const f of [-0.55, 0, 0.55]) { ctx.moveTo(f*l, -h); ctx.lineTo(f*l, h); }
   ctx.stroke(); ctx.restore();
@@ -359,17 +377,19 @@ function edgeTag(x, y, col, badge, ins) {
 }
 
 /* ---------- the frame ---------- */
-/* What stands over a man's head, bottom to top: the pointer (who you control), the ball's marker (who has it), the star (your player).
+/* What stands over a man's head, bottom to top: the pointer (who you control), the ball's marker (who has it), the star (your player),
+   and Pro Mode's No sign (a call he did not answer: proMark's, src/career-pro.js), o.no its outer radius.
    Pure, so the tools can read it. tip is the bottom of the stack; a man near the top of the frame moves the whole stack down, so nothing leaves the screen or sits on anything else. */
 const BV_CARRY = { w:26, h:17, tail:5, r:5, gap:2, fill:'#f6f3ea', edge:'#08110b', ball:'#fffdf6', lace:'#3b2f22' };
 const BV_STACK_HUD = 72;                                    // under the scorebug, the clock and the sign, a marked man's stack stops here: the page draws over the canvas, and a marker under them would not be seen
 function bvStack(tip, o) {
-  const P = o.pointer ? 8 : 0, B = o.carry ? BV_CARRY.h + BV_CARRY.tail : 0, S = o.star ? 2*o.star : 0, n = (P ? 1 : 0) + (B ? 1 : 0) + (S ? 1 : 0);
-  let y = Math.max(tip, (o.floor || 6) + P + B + S + Math.max(0, n - 1)*BV_CARRY.gap);
+  const P = o.pointer ? 8 : 0, B = o.carry ? BV_CARRY.h + BV_CARRY.tail : 0, S = o.star ? 2*o.star : 0, N = o.no ? 2*o.no : 0, n = (P ? 1 : 0) + (B ? 1 : 0) + (S ? 1 : 0) + (N ? 1 : 0);
+  let y = Math.max(tip, (o.floor || 6) + P + B + S + N + Math.max(0, n - 1)*BV_CARRY.gap);
   const out = {};
   if (P) { out.pointer = y; y -= P + BV_CARRY.gap; }
   if (B) { out.carry = y; y -= B + BV_CARRY.gap; }
-  if (S) out.star = y - o.star;
+  if (S) { out.star = y - o.star; y -= S + BV_CARRY.gap; }
+  if (N) out.no = y - o.no;
   return out;
 }
 function bvCarryMark(x, y) {                                // a chalk speech bubble with the game's own white laced ball in it, its tail on y. It has no ring and no words, and it reads the same over any kit: chalk on a dark kit, the dark edge on a white one
@@ -378,15 +398,17 @@ function bvCarryMark(x, y) {                                // a chalk speech bu
   ctx.beginPath(); ctx.moveTo(x - 5, top + K.h - 0.5); ctx.lineTo(x, y); ctx.lineTo(x + 5, top + K.h - 0.5); ctx.closePath(); ctx.fill(); ctx.stroke();
   rrect(l, top, K.w, K.h, K.r); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x - 4.5, top + K.h - 0.5); ctx.lineTo(x + 4.5, top + K.h - 0.5); ctx.lineWidth = 2; ctx.strokeStyle = K.fill; ctx.stroke();   // the tail runs into the bubble
+  const lk = lockerBall();                                   // the Locker's ball, as the ball itself is (cutBall)
   ctx.save(); ctx.translate(x, top + K.h/2); ctx.rotate(-0.35);
-  ctx.fillStyle = K.ball; ctx.strokeStyle = K.lace; ctx.lineWidth = 1.4; ellipse(0, 0, 9, 5.6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = lk ? lockerBallFill(lk, 9) : K.ball; ctx.strokeStyle = lk ? lk.line : K.lace; ctx.lineWidth = 1.4; ellipse(0, 0, 9, 5.6); ctx.fill(); ctx.stroke();
   ctx.restore();
   ballLaces(x, top + K.h/2, 9, -0.35);
 }
 function bvOverheads(cam, ctrls, plain) {                   // plain: a match you are playing, not a drill, the demo or a close-up. Everything else keeps the pointer alone
   const b = M.ball, carrier = plain && M.phase === 'play' && b.state === 'held' ? b.carrier : null, me = plain && M.career ? M.careerP : null;
-  const men = [ctrls[0], ctrls[1], carrier, me];
-  for (let i = 0; i < 4; i++) {
+  const N = plain && M.career && M.careerPro && M.proNo && M.proNo.p && M.dclock - M.proNo.at < PRO.noT ? M.proNo : null;   // Pro Mode: a call not answered, over the carrier it was made to
+  const men = [ctrls[0], ctrls[1], carrier, me, N ? N.p : null];
+  for (let i = 0; i < 5; i++) {
     const p = men[i];
     if (!p || men.indexOf(p) !== i) continue;                // one stack a man, whatever he is
     const ctrl = p === ctrls[0] || p === ctrls[1], col = ctrl ? ringCol(p === ctrls[0] ? 0 : 1) : null;
@@ -395,10 +417,11 @@ function bvOverheads(cam, ctrls, plain) {                   // plain: a match yo
       if (ctrl) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(clamp(x, 18, V.W - 18), clamp(q ? q.sy : V.H + 999, 18, V.H - 18), 7, 0, 7); ctx.fill(); }
       continue;
     }
-    const star = p === me ? Math.max(8, 0.34*q.k) : 0, S = bvStack(q.sy - (lookOf(p).h + 0.2)*q.k, { pointer:ctrl, carry:p === carrier, star, floor:plain && (p === carrier || star) && Math.abs(x - V.W/2) < 130 ? BV_STACK_HUD : 0 });
+    const star = p === me ? Math.max(8, 0.34*q.k) : 0, no = N && p === N.p ? Math.max(7, 0.4*q.k) + 3 : 0, S = bvStack(q.sy - (lookOf(p).h + 0.2)*q.k, { pointer:ctrl, carry:p === carrier, star, no, floor:plain && (p === carrier || star || no) && Math.abs(x - V.W/2) < 130 ? BV_STACK_HUD : 0 });
     if (ctrl) { const ty = S.pointer; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x - 6, ty - 8); ctx.lineTo(x + 6, ty - 8); ctx.lineTo(x, ty); ctx.closePath(); ctx.fill(); }
     if (S.carry != null) bvCarryMark(x, S.carry);
     if (star) careerStar(x, S.star, star, careerCol());
+    if (no) bvNoSign(x, S.no, no - 3, Math.min(1, 4*(1 - (M.dclock - N.at)/PRO.noT)));
   }
 }
 function bvEdgeMarks(cam, plain) {                          // the ball or its carrier off the frame, and your player. Not at a set piece: the game is about to cut to it, and it has its own banner
@@ -406,6 +429,24 @@ function bvEdgeMarks(cam, plain) {                          // the ball or its c
   const b = M.ball;
   if (M.phase === 'play' || (M.phase === 'set' && M.set && M.set.kind === 'ruck')) bvChevron(cam, b.state === 'held' && b.carrier ? b.carrier : b, BV_CARRY.fill, 'ball');
   if (M.career && M.careerP) bvChevron(cam, M.careerP, careerEdgeCol(), 'star');
+}
+/* Pro Mode (src/career-pro.js) in a behind view, as proMark draws it on Top: the call's ring going out from your player on the grass,
+   in the ring's colour, fading as it widens (under reduced motion it fades without widening), and the No sign, a slashed circle over
+   the carrier's head at the top of his stack (bvOverheads). */
+function bvProCall(cam) {
+  const call = M.proCue, now = M.dclock;
+  if (!call || !call.p || now - call.at >= PRO.callT) return;
+  const u = (now - call.at)/PRO.callT, [wx, wy] = drawPos(call.p), a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*(1 - u); groundRing(cam, wx, wy, BV_RING*(RM ? 1.9 : 1.5 + 1.4*u), ringCol(0), 3); ctx.globalAlpha = a0;
+}
+function bvNoSign(x, y, R, a) {
+  const a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*a;
+  ctx.fillStyle = 'rgba(8,14,10,.88)'; ctx.beginPath(); ctx.arc(x, y, R + 3, 0, 7); ctx.fill();
+  ctx.strokeStyle = SUPPORT.tint; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - R*0.7, y - R*0.7); ctx.lineTo(x + R*0.7, y + R*0.7); ctx.stroke();
+  ctx.globalAlpha = a0;
 }
 function renderBehind(dt) {
   const drill = !!practice, cam = BV.cam = drill ? dvCamera(dt) : bvFollow(dt), b = M.ball;   // the Training Ground has its own camera and field (render-drill.js), and the men and cues below
@@ -422,6 +463,7 @@ function renderBehind(dt) {
   BV.edges.length = 0;
   if (plain && M.phase === 'play' && b.state === 'loose') bvLooseMark(cam, b);
   for (const t of [0, 1]) if (ctrls[t]) groundRing(cam, ctrls[t].x, ctrls[t].y, BV_RING*1.55, ringCol(t), 2.5);
+  if (plain && M.career && M.careerPro) bvProCall(cam);      // on the grass with the ring, under the men
   bvPrepareMen(cam);
   if (artReady()) artPrepare(cam);
   const ctrlHuman = ctrls[0] || ctrls[1];

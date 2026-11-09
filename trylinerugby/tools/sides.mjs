@@ -9,8 +9,9 @@ const { readGameSource } = await import('./source.mjs');
 const S = T.sidesOf, X = T.teams, C = T.career, D = T.debug, I = T.importer, B = T.behind, R = T.ratings, Y = T.yourTeam, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
 /* The merge (README, Integration with PR #14): main's Men | Women | Minis is the one control, and teamSide reads it (Women is 1, Minis mixed);
-   a g of a team's own still wins, so the looks below run as they did. PR #14's toggle, women's lists, a made or imported team's own side and
-   the career look builder wait for the builders: those sections are recorded, not run, and named in the last line. */
+   a g of a team's own still wins, so the looks below run as they did. PR #14's toggle, women's lists and a made or imported team's own side
+   wait for the builders: those sections are recorded, not run, and named in the last line. The career look builder is in (3b, 11, 14, 14b, 16):
+   its Male | Female is the career's Men | Women, one control, and a career PR #14's build saved as Female loads as Women (3b). */
 const PENDING = [];
 const pending = (what, fn) => { PENDING.push(what); };
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
@@ -59,30 +60,64 @@ pending('2. a made or saved side carrying its own g (the teams builder: main\'s 
   X.restore({ champ:{ user:0, teams, round:0, fixtures, results:[] } });
   ok(X.champ().id === 'legacy-1uhhq2b' && X.champ().teams.every(t => !('g' in t)), `an old championship keeps its fingerprint and its men's sides (${X.champ().id})`);
   X.setChamp(null);
-  pending('3. an old career through PR #14\'s stages, and its Men\'s | Women\'s setting (main\'s club seasons and category)', () => {
-  const old = { name:'Sam', pos:'B', num:5, club:side('FAR', 'Farnham'), pro:'BAT', country:'GEO', skills:{ pace:50, power:30, handling:40, kicking:35, stamina:36 }, stage:4, seasons:6,
-    season:{ user:0, teams, round:0, fixtures, results:[], id:'career-abc' }, trained:false, history:[], totals:{ matches:9, tries:2, tackles:3, goals:1 } };
-  X.restore({ career:old });
-  const got = C.get();
-  ok(hash(json(got)) === 'da78aa', `an old career loads exactly as it did (${hash(json(got))})`);
-  ok(!('look' in got) && got.country === 'GEO', 'with no look, and its country unchanged even where there is no women\'s side');
-  C.newSeason(got);
-  ok(got.season.teams.every(t => !('g' in t)) && got.season.teams[0].id === 'GEO' && got.season.teams[0].pace === by('GEO').pace, 'its next season is men\'s, at the men\'s rating');
-  X.restore({ career:{ ...old, stage:0, country:null } });
-  C.newSeason(C.get());
-  ok(C.get().season.teams.every(t => !('g' in t)), 'an old career in the Minis stays men\'s too: nothing it had changes');
-  C.play();
-  ok(!T.M.nat[0].squad && B.lookOf(T.M.players.find(p => p.team === 0 && p.n === 5)).g === 0, 'and has no squad entry');
-  D.exitMatch(); C.set(null);
-  X.setChamp(null);
+}
+// 3b. a career PR #14's build saved: its stages, and its Male | Female as main's Men | Women. PR #14 was never on main, so only the owner's
+//     own build wrote these: no cat, and Female is look.g 1 (its careerFemale). Main's club seasons take its stages (cleanCareer); one
+//     control decides the body and every side, and a kept season's sides come into the career's category with it.
+{
+  const teams = (g = null) => ['FAR', 'HAS', 'GUI', 'ALD', 'WEY', 'COB'].map(id => side(id, by(id).name, g == null ? {} : { g }));
+  const fixtures = [[[0, 5], [1, 4], [2, 3]], [[3, 0], [4, 2], [5, 1]], [[0, 4], [3, 1], [2, 5]], [[1, 0], [2, 4], [3, 5]], [[0, 2], [5, 4], [1, 3]]];
+  const results = [[{ h:0, a:5, hs:12, as:7, ht:5, at:0 }, { h:1, a:4, hs:3, as:3, ht:0, at:3 }, { h:2, a:3, hs:0, as:10, ht:0, at:5 }]];
+  const pr14 = (stage, look, g) => ({ name:'Sam', pos:'B', num:5, club:side('FAR', 'Farnham', g == null ? {} : { g }), pro:null, country:stage === 4 ? 'ENG' : null,
+    skills:{ pace:50, power:30, handling:40, kicking:35, stamina:36 }, ...(look ? { look } : {}), stage, seasons:6,
+    season:{ user:0, teams:teams(g), round:1, fixtures, results, id:'career-abc' }, trained:false, history:[], totals:{ matches:9, tries:2, tackles:3, goals:1 } });
+  const her = { g:1, skin:4, hair:2, style:6, b:1.12 }, his = { ...her, g:0 };
+  s.diff = 1; s.kids = false;                        // the match below on Normal, as 11 plays it
+  // no look (from before PR #14's builder) and a Male look: Men, as before
+  X.restore({ career:pr14(4, null) });
+  let got = C.get();
+  ok(got.cat === 'men' && json(got.look) === json(S.CAREER_LOOK) && got.phase === 'intl' && got.country === 'ENG', `a PR #14 career with no look is a men's one, in the window with its country (${got.cat}, ${got.phase}, ${got.country})`);
+  ok(got.season && got.season.round === 1 && got.season.teams.every(t => S.teamSide(t) === 0), 'its season kept as it was, men\'s');
+  X.restore({ career:pr14(3, his, 0) });
+  got = C.get();
+  ok(got.cat === 'men' && json(got.look) === json(his) && got.season.teams.every(t => S.teamSide(t) === 0), 'a PR #14 Male look: a men\'s career, the look his');
+  // Female: Women
+  for (const stage of [3, 4]) {
+    X.restore({ career:pr14(stage, her, 1) });
+    got = C.get();
+    ok(got.cat === 'women' && json(got.look) === json(her), `a PR #14 Female career (stage ${stage}) loads as Women, with her look (${got.cat}, ${json(got.look)})`);
+    ok(got.season && got.season.round === 1 && json(got.season.results[0][0]) === json(results[0][0]), `its season under way is kept, with its results (stage ${stage})`);
+    ok(got.season.teams.every(t => S.teamSide(t) === 1 && / Women$/.test(t.name)) && got.season.teams[0].name === 'Farnham Women', `and every side in it is women's, named for it (${got.season.teams.map(t => t.name).join(', ')})`);
+    C.play();
+    ok(T.M.players.every(p => B.lookOf(p).g === 1) && B.lookOf(T.M.careerP).skin === 4 && B.lookOf(T.M.careerP).style === 6, `so her match is women's on both sides, her look on her (stage ${stage})`);
+    D.exitMatch();
+    X.save(); C.set(null); X.load();
+    ok(C.get().cat === 'women' && saved().career.cat === 'women' && saved().career.look.g === 1, 'it saves as main\'s Women, and comes back');
+    C.set(null);
+  }
+  for (const stage of [0, 1, 2]) {
+    X.restore({ career:pr14(stage, her, stage === 0 ? 'mixed' : 1) });
+    got = C.get();
+    ok(got.cat === 'women' && got.phase === 'league' && !got.season, `a PR #14 Female career in ${['Minis', 'Juniors', 'County'][stage]} is a women's league year at her club, its old season dropped`);
+    ok(C.repair(got) && got.season.teams.every(t => S.teamSide(t) === 1), 'and the hub draws her a women\'s season');
+    C.set(null);
+  }
+  // a cat decides wherever there is one: main's own saves always carry it, and their look's g is drawn from it
+  const mine = JSON.parse(json(C.create({ pos:'B', num:5, club:X.CLUBS[0], look:his })));
+  ok(C.clean({ ...mine, look:her }).cat === 'men' && C.clean({ ...mine, look:her }).look.g === 0, 'a men\'s career with a female look in its save is still Men');
+  ok(C.clean({ ...mine, cat:'women', look:his }).cat === 'women' && C.clean({ ...mine, cat:'women', look:his }).look.g === 1, 'and a women\'s one with a male look Women');
+  for (const g of ['1', true, 2, null]) ok(C.clean({ ...pr14(3, { ...her, g }), cat:undefined }).cat === 'men', `a look.g of ${g} is not Female`);
+}
+// 3c. PR #14's saved Men's | Women's on the team screen (settings.womens) is not read into main's settings.cat: the team screen is the
+//     teams builder's (7, 9)
+pending('3c. PR #14\'s saved Men\'s | Women\'s team-screen setting (main\'s settings.cat, the teams builder)', () => {
   X.restore({ settings:{ half:1 } });
   ok(s.womens === 0, 'an old save\'s team screen is on Men\'s');
   for (const v of [2, '1', true, null]) { X.restore({ settings:{ womens:v } }); ok(s.womens === 0, `womens ${v} is ignored`); }
   X.restore({ settings:{ womens:1 } }); ok(s.womens === 1, 'and a saved Women\'s comes back');
   s.womens = 0; X.save(); ok(saved().settings.womens === 0, 'it is in the save');
   s.womens = 1; X.save(); s.womens = 0; X.load(); ok(s.womens === 1, 'and reads back'); s.womens = 0;
-  });
-}
+});
 
 // 4. looks. A men's squad is pinned against the build before this. Re-pinned once from r31ovt: renaming the one side coded HAR changes that squad's looks, because they are dealt from its name; with the old name put back on it the hash is r31ovt again, and no other team differs.
 {
@@ -340,87 +375,57 @@ pending('10. a women\'s championship through the toggle (main\'s category)', asy
   X.setChamp(null);
 });
 
-// 11. the career
-pending('11. the career player\'s look and Male | Female (the career builder: the look builder)', async () => {
-  const look = { g:1, skin:4, hair:2, style:6, b:1.12 };
+// 11. the career player's look, and his body: PR #14's Male | Female is main's Team (Men | Women), one control (the career builder)
+{
+  const look = { g:1, skin:4, hair:2, style:6, b:1.12 }, X0 = T.debug.settings();
   const male = C.create({ pos:'B', num:5, club:X.CLUBS[0] });
   ok(json(male.look) === json(S.CAREER_LOOK) && male.look.g === 0, 'a default look, male');
-  ok(json(S.careerLook({ g:7, skin:99, hair:-1, style:50, b:9, x:1 })) === json({ g:0, skin:5, hair:0, style:11, b:1.16 }), `a look is cleaned (${json(S.careerLook({ g:7, skin:99, hair:-1, style:50, b:9, x:1 }))})`);
-  const female = C.create({ pos:'F', num:2, club:X.CLUBS[2], look });
+  ok(json(S.careerLook({ g:7, skin:99, hair:-1, style:50, b:9, x:1 })) === json({ g:0, skin:5, hair:0, style:11, b:1.12 }), `a look is cleaned, its build one of the art's three (${json(S.careerLook({ g:7, skin:99, hair:-1, style:50, b:9, x:1 }))})`);
+  ok(S.careerLook({ g:0 }, 'women').g === 1 && S.careerLook({ g:1 }, 'men').g === 0 && S.careerLook(look).g === 0, 'the body is the career\'s Men | Women, whatever the look says: one control');
+  const female = C.create({ pos:'F', num:2, club:X.CLUBS[2], cat:'women', look });
   ok(json(female.look) === json(look), 'the look goes on the career');
-  ok(female.season.teams.every(t => t.g === 'mixed') && male.season.teams.every(t => t.g === 'mixed'), 'Minis: every side is mixed, for either player');
-  const stage = (cr, n, extra = {}) => { Object.assign(cr, { stage:n, ...extra }); C.newSeason(cr); return cr.season.teams; };
-  ok(stage(male, 1).every(t => !('g' in t)), 'Juniors on: a male player\'s sides are men\'s');
-  ok(stage(female, 1).every(t => t.g === 1), 'a female player\'s are women\'s');
-  ok(stage(male, 2).every(t => !('g' in t)) && stage(female, 2).every(t => t.g === 1), 'County the same');
-  ok(stage(male, 3, { pro:'BAT' }).every(t => !('g' in t)) && stage(female, 3, { pro:'BAT' }).every(t => t.g === 1), 'Pro Club the same');
-  const f4 = stage(female, 4, { country:'JPN' }), m4 = stage(male, 4, { country:'JPN' });
-  ok(f4.every(t => t.g === 1) && X.overallOf(f4[0]) === 52 && f4.slice(1).map(t => t.id).sort().join() === 'ESP,FIJ,SAM,SCO,WAL', 'International: a female player\'s Japan is at the women\'s rating, among the women\'s nearest');
-  ok(m4.every(t => !('g' in t)) && X.overallOf(m4[0]) === 70, 'a male player\'s at the men\'s');
-  const f6 = stage(female, 4, { country:'IRE' });
-  ok(f6.every(t => t.g === 1) && f6.map(t => t.id).sort().join() === 'ENG,FRA,IRE,ITA,SCO,WAL' && X.overallOf(f6[0]) === 72, 'a women\'s Six Nations side plays those six');
-  // the call-up list
-  const callUp = (cr) => {
-    cr.stage = 3; cr.pro = 'BAT'; cr.country = null; C.newSeason(cr); C.set(cr);
-    const c = cr.season; c.round = 5; c.results = c.fixtures.map(rd => rd.map(([h, a]) => { const mine = h === c.user || a === c.user; return { h, a, hs:mine ? (h === c.user ? 40 : 0) : 10, as:mine ? (a === c.user ? 40 : 0) : 10, ht:mine ? (h === c.user ? 6 : 0) : 1, at:mine ? (a === c.user ? 6 : 0) : 1 }; }));
-    S.renderCareerEnd();
-    return $('ce-body').innerHTML;
-  };
-  const fh = callUp(female);
-  ok((fh.match(/data-n="/g) || []).length === 15 && fh.includes('data-n="NZL"') && !fh.includes('data-n="GEO"'), 'a female player\'s country list is the fifteen');
-  ok(fh.indexOf('data-n="NZL"') < fh.indexOf('data-n="SAM"'), 'strongest first');
-  C.advance('GEO');
-  ok(female.country === 'ENG' && female.season.teams[0].g === 1, 'a nation with no women\'s side cannot be chosen: England');
-  const mh = callUp(male);
-  ok((mh.match(/data-n="/g) || []).length === 22 && mh.includes('data-n="GEO"'), 'a male player\'s is the twenty-two');
-  C.advance('GEO');
-  ok(male.country === 'GEO' && X.overallOf(male.season.teams[0]) === 67, 'and Georgia is there');
+  ok(female.season.teams.every(t => S.teamSide(t) === 1) && male.season.teams.every(t => S.teamSide(t) === 0), 'a women\'s career plays women\'s sides, a men\'s men\'s');
+  ok(C.create({ pos:'B', num:4, club:X.CLUBS[0], look }).look.g === 0, 'a female look on a men\'s career is a male player');
   // saves
-  const back = C.clean(JSON.parse(json(female)));
-  ok(json(back) === json(female), 'a female career loads back exactly');
-  ok(C.clean({ ...JSON.parse(json(female)), country:'GEO', stage:4 }).country === 'ENG', 'a saved Georgia on a female career falls back');
-  ok(json(C.clean({ ...JSON.parse(json(female)), look:{ g:'x' } }).look) === json(S.CAREER_LOOK), 'a broken look takes the default');
-  ok(!('look' in C.clean({ ...JSON.parse(json(female)), look:null })) && !('look' in C.clean({ ...JSON.parse(json(female)), look:[1] })), 'a look that is not one is none');
-  const mix = C.create({ pos:'B', num:4, club:X.CLUBS[0], look });
-  C.set(mix); X.save();
+  const canon = v => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v);   // cleanChamp writes a side's fields in its own order
+  ok(json(canon(C.clean(JSON.parse(json(female))))) === json(canon(female)), 'a female career loads back exactly');
+  const def = g => json({ ...S.CAREER_LOOK, g });
+  ok(json(C.clean({ ...JSON.parse(json(female)), look:{ g:'x' } }).look) === def(1), 'a broken look takes the default, on the career\'s own body');
+  ok(json(C.clean({ ...JSON.parse(json(female)), look:null }).look) === def(1) && json(C.clean({ ...JSON.parse(json(male)), look:[1] }).look) === def(0), 'and so does a look that is not one');
+  const old = JSON.parse(json(female)); delete old.look;
+  ok(json(C.clean(old).look) === def(1), 'a career saved before the look builder gets the default look on its own body');
+  C.set(female); X.save();
   ok(json(saved().career.look) === json(look), 'the look is in the save');
-  ok(saved().career.season.teams.every(t => t.g === 'mixed'), 'and the Minis sides stay mixed');
   C.set(null); X.load();
-  ok(json(C.get()) === json(mix), 'and comes back');
+  ok(json(C.get().look) === json(look), 'and comes back');
   // in the match: your player
-  C.play();
+  X0.diff = 1; X0.kids = false; C.play();
   const me = T.M.careerP, L = B.lookOf(me);
-  ok(me.n === 4 && L.g === 1 && L.skin === 4 && L.hair === 2 && L.style === 6 && L.b === 1.12, 'your player in the match has your look');
-  const fem = T.M.players.filter(p => p.team === 0).map(B.lookOf).filter(l => l.g === 1).length;
-  ok(fem >= 3 && fem <= 5 && T.M.nat[0].g === 'mixed' && T.M.nat[1].g === 'mixed', `a Minis match is mixed on both sides (${fem} of 7 female on yours)`);
+  ok(me.n === 2 && L.g === 1 && L.skin === 4 && L.hair === 2 && L.style === 6 && L.b === 1.12, 'your player in the match has your look');
+  ok(T.M.players.every(p => B.lookOf(p).g === 1), 'in a women\'s match, women on both sides');
   ok(T.M.career && T.M.careerNat.pace != null, 'and it is still a career match');
   D.exitMatch(); C.set(null);
-  const boy = C.create({ pos:'B', num:4, club:X.CLUBS[0], look:{ ...look, g:0, style:7 } });
-  boy.stage = 2; C.newSeason(boy); C.set(boy); C.play();
+  const boy = C.create({ pos:'B', num:4, club:X.CLUBS[0], look:{ ...look, style:7 } });
+  C.set(boy); C.play();
   ok(B.lookOf(T.M.careerP).g === 0 && B.lookOf(T.M.careerP).style === 7 && T.M.players.every(p => B.lookOf(p).g === 0), 'a male player in a men\'s side, with a plait if you like');
   D.exitMatch(); C.set(null);
-  // a team you made is only a name and a kit in a career
-  const mine = X.cleanTeam({ key:'myw', name:'Herons', g:1, pace:3, power:3, handling:3, kicking:3, stamina:3 }, 0);
-  const lad = C.create({ pos:'B', num:4, club:mine });
-  ok(lad.season.teams[0].g === 'mixed', 'Minis is mixed whatever your made team plays');
-  lad.stage = 1; C.newSeason(lad);
-  ok(!('g' in lad.season.teams[0]), 'and a male player\'s Juniors are men\'s');
-  // the New Player screen
+  // the New Player screen and Your Look
   S.careerNewOpen();
   const d = S.draft();
   ok(json(d.look) === json(S.CAREER_LOOK), 'the screen opens on the default look');
-  S.careerLookSet('g', 1); S.careerLookSet('skin', 5); S.careerLookSet('hair', 4); S.careerLookSet('style', 7); S.careerLookSet('b', 0.92);
-  ok(S.careerNewGo() && json(C.get().look) === json({ g:1, skin:5, hair:4, style:7, b:0.92 }), 'Start Career takes it');
+  C.catPick(1); ok(d.cat === 'women' && d.look.g === 1, 'Women on New Player: a female player');
+  C.catPick(0); ok(d.cat === 'men' && d.look.g === 0, 'Men: a male one'); C.catPick(1);
+  S.careerLookOpen(); S.careerLookSet('skin', 5); S.careerLookSet('hair', 4); S.careerLookSet('style', 7); S.careerLookSet('b', 0.92);
+  ok(S.careerNewGo() && json(C.get().look) === json({ g:1, skin:5, hair:4, style:7, b:0.92 }) && C.get().cat === 'women', 'Start Career takes it');
   C.set(null);
-  for (const [id, labels] of [['cn-g', 'Male,Female'], ['cn-build', 'Small,Medium,Big'], ['cn-style', 'Short,Shaved,Big Hair,Scrum Cap,Headband,Bun,Ponytail,Plait,Long Plait,Bunches,High Ponytail,Long Bob']]) {
+  for (const [id, labels] of [['cn-cat', 'Men,Women'], ['ck-build', 'Small,Medium,Big'], ['ck-style', 'Short,Shaved,Big Hair,Scrum Cap,Headband,Bun,Ponytail,Plait,Long Plait,Bunches,High Ponytail,Long Bob']]) {
     const row = body.match(new RegExp(`id="${id}">(.*?)</div>`))[1];
     ok([...row.matchAll(/<button[^>]*>([^<]+)<\/button>/g)].map(m => m[1]).join() === labels, `${id} reads ${labels}`);
   }
-  ok(/<span class="lbl">Player<\/span>/.test(body) && /<span class="lbl">Skin<\/span>/.test(body) && /<span class="lbl">Hair Colour<\/span>/.test(body) && /<span class="lbl">Hair Style<\/span>/.test(body) && /<span class="lbl">Build<\/span>/.test(body), 'the pickers\' labels');
-  ok(S.draft().look.b === 0.92 && [0.92, 1, 1.12].every(b => T.behind.cleanLook({ b }).b === b), 'each build is one the art draws');
-  // stages against the lever
-  ok(S.careerStageG({ look:{ g:1 } }, 0) === 'mixed' && S.careerStageG({ look:{ g:1 } }, 1) === 1 && S.careerStageG({}, 0) === 0, 'stages read the lever');
-});
+  ok(!/id="cn-g"/.test(body) && !/>Male</.test(body) && !/>Female</.test(body), 'one control: no Male | Female row of its own');
+  ok(['Your Player', 'Team', 'Build', 'Skin', 'Hair Colour', 'Hair Style'].every(l => body.includes(`<span class="lbl">${l}</span>`)), 'the pickers\' labels');
+  ok(S.CAREER_BUILDS.every(b => B.cleanLook({ b }).b === b), 'each build is one the art draws');
+}
 
 // 12. Create Team
 pending('12. Team on Create Team (the teams builder)', async () => {
@@ -506,7 +511,7 @@ pending('13. an import\'s side from its label (the teams builder)', async () => 
 });
 
 // 14. the preview on the New Player screen
-pending('14. the New Player picture (the career builder: the look builder)', async () => {
+{   // the career builder: Your Look's picture
   const man = JSON.parse(fs.readFileSync(new URL('../assets/players/players.json', import.meta.url), 'utf8'));
   const A = B.ART, cv = { width:126, height:158, getContext:() => ({ clearRect() {}, save() {}, restore() {}, translate() {}, scale() {}, drawImage() {} }) };
   A.state = 'off';
@@ -518,7 +523,7 @@ pending('14. the New Player picture (the career builder: the look builder)', asy
   const row = g => B.artSprite('idle', 0, 3, false, { ...S.CAREER_LOOK, g }).row;
   ok(json(row(1)) === json(man.sprites['medium.f'].idle[3*man.clips.idle.n]) && json(row(0)) === json(man.sprites['medium.m'].idle[3*man.clips.idle.n]), 'each from its own body');
   B.artOff();
-});
+}
 
 // 14b. women's hair: new styles appended, so nothing old moves, and each tells from the others from the front as well as the back
 {
@@ -543,10 +548,10 @@ pending('14. the New Player picture (the career builder: the look builder)', asy
   ok(lookWith({ g:1, style:10 }).style === 10 && lookWith({ g:0, style:9 }).style === 9, 'and a new one can be asked for, on either body');
   { const name = String(nat.key || nat.name || nat.id), hashOf = t => { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
     ok(lookWith({ g:1 }).style === (hashOf(name) + 3*5) % 8, 'a saved female look with no style still walks the same eight it did'); }
-  pending('14b. a career save keeping its look (the career builder: the look builder)', () => {
-  const cleanCareer = C.clean({ ...C.create({ pos:'B', num:4, club:X.CLUBS[0], look:{ g:1, skin:4, hair:2, style:6, b:1.12 } }) });
-  ok(cleanCareer && cleanCareer.look.style === 6 && C.create({ pos:'B', num:4, club:X.CLUBS[0], look:{ g:1, skin:4, hair:2, style:11, b:1 } }).look.style === 11, 'a career save keeps its style through a reload, and a new one is taken');
-  });
+  { // a career save keeping its look (the career builder)
+    const cleanCareer = C.clean(JSON.parse(json(C.create({ pos:'B', num:4, club:X.CLUBS[0], cat:'women', look:{ g:1, skin:4, hair:2, style:6, b:1.12 } }))));
+    ok(cleanCareer && cleanCareer.look.style === 6 && C.create({ pos:'B', num:4, club:X.CLUBS[0], look:{ g:1, skin:4, hair:2, style:11, b:1 } }).look.style === 11, 'a career save keeps its style through a reload, and a new one is taken');
+  }
   // hair against the shirt and the face. Only the long styles: every older look's colour is exactly as it was
   const skinsAll = B.LOOK_SKIN, hairsAll = B.LOOK_HAIR;
   let same = true, minSkin = 1e9, minShirt = 1e9, moved = 0, total = 0;
@@ -607,8 +612,8 @@ pending('14. the New Player picture (the career builder: the look builder)', asy
 
 // 16. the privacy page and the notes
 {
-  const privacy = fs.readFileSync(new URL('../PRIVACY.md', import.meta.url), 'utf8').split('\n')[6];
-  pending('16. PRIVACY.md naming the career player\'s look and Male or Female (the career builder, with the look builder)', () => ok(/look/.test(privacy) && /Male or Female/.test(privacy) && /on this device only/.test(privacy), 'PRIVACY.md line 7 lists the look and the choice'));
+  const privacy = fs.readFileSync(new URL('../PRIVACY.md', import.meta.url), 'utf8').split('\n').find(l => l.startsWith('Settings, the teams you make')) || '';
+  ok(/your player's look/.test(privacy) && /Men or Women/.test(privacy) && /saved on this device/.test(privacy), 'PRIVACY.md\'s "What the game keeps" names the career player\'s look and Men or Women, kept on this device');
   ok(/sides\.mjs/.test(fs.readFileSync(new URL('./CHECKS.md', import.meta.url), 'utf8')), 'CHECKS.md names this suite');
   ok(/MIXED_THROUGH/.test(fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8')), 'README names the lever');
 }

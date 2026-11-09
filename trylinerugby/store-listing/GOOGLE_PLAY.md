@@ -99,7 +99,7 @@ Expected result, to check against what IARC returns: **PEGI 3, ESRB Everyone, US
 
 Answering No ends the form; the store page then reads **No data collected** and **No data shared with third parties**. The reasons, against Google's terms:
 
-- **Collection** means data sent off the device. Everything the game keeps (settings, teams, championship, career and its optional first name, an imported league, the list of unlocks) stays on the device. Google says data processed only on the device need not be declared.
+- **Collection** means data sent off the device. Everything the game keeps (settings, teams, championship, career with its optional first name and the player's look, an imported league, the list of unlocks) stays on the device. Google says data processed only on the device need not be declared.
 - **Purchases** go through Google Play Billing. The game keeps only which products the account owns, on the device, and sends no purchase data anywhere: no server of ours, no third-party purchase service. Google Play's own handling of the payment is Google's, under its policy.
 - **Super Fan sales** are counted from Google's per-product earnings reports. The game sends nothing to count them.
 - **Import** fetches the page the player chose, from the device. Nothing about the player is sent with it and nothing reaches us; the site gets an ordinary web request, as from a browser.

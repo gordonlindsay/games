@@ -253,10 +253,9 @@ pending('6. a new career on your team (main\'s career picks My Team\'s club alre
 // 7. what a phone needs: no layout here, so these pin the rules the browser check measured
 pending('7. the panel\'s phone rules (the My Team builder)', async () => {
   const at = id => body.indexOf('id="' + id + '"');
-  ok(at('cn-g') < at('cn-name') && at('cn-go') > at('cn-style') && at('cn-go') > at('cn-g'), 'New Player: Male or Female comes first, and Start Career after every picker');
-  ok(/\.btn\.cr-go\{position:sticky;bottom:/.test(src), 'and Start Career stays in reach while they scroll');
-  ok(/\.cr-look \.swatches\{grid-template-columns:repeat\(6,44px\)/.test(src) && !/\.cr-look \.sw\{[^}]*width:auto/.test(src) && !/minmax\(0,44px\)/.test(src), 'swatches stay 44 wide: nothing lets them shrink to fit');
-  ok(/grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) 284px/.test(src), 'the look column holds six of them with their gaps');
+  // New Player's rules are the career builder's now (2026-11-09): main's New Player with Your Look as its second step (tools/career.mjs measures both)
+  ok(at('cn-cat') < at('cn-name') && at('cn-go') > at('cn-num') && at('cn-look-go') < at('cn-go') && at('ck-style') > at('cn-go'), 'New Player: Team (Men | Women, the one control) on the left, Start Career after every picker, Your Look a screen of its own');
+  ok(/\.swatches\.cr-sw\{grid-template-columns:repeat\(3,44px\)/.test(src) && !/minmax\(0,44px\)/.test(src), 'swatches stay 44 wide: nothing lets them shrink');
   ok(/\.app-action \{[^}]*min-height:44px/.test(src) && /\.home-cabinet summary\{min-height:44px/.test(src), 'Update Game, Install Game and the Trophy Cabinet are 44 tall');
   ok(/\.home-side \.app-tools\{flex:0 1 auto;flex-wrap:nowrap/.test(src) && /\.home-side \.home-cabinet\{flex:1 1 0;min-width:0/.test(src), 'the tools and the cabinet share one row, the cabinet taking what is left, so Update Game can not wrap off the screen');
   ok(/\.app-tools:has\(\.app-action:not\(\[hidden\]\)\) #offline-status\{display:none\}/.test(src), 'Offline Ready gives way first');

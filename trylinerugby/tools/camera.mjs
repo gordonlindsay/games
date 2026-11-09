@@ -8,6 +8,39 @@ import { shellAssets } from './build.mjs';
 const D = T.debug, B = T.behind, S = D.settings(), $ = id => document.getElementById(id), STEP = T.STEP;
 let passed = 0, failed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
+// TOP_HASH=1 [GAME=<another build's index.html>] node tools/camera.mjs prints the Top view's canvas output, hashed call by call (every
+// name and argument) over seeded scenarios, and stops. Run it here and on a snapshot of the build before: every line must match, which
+// proves a change to the behind views left Top exactly as it was.
+if (process.env.TOP_HASH) { topHash(); process.exit(0); }
+function topHash() {
+  const X = T.teams, C = T.career, P = T.careerPro, L = T.locker.state(), keep = { ball:L.ball, boots:L.boots };
+  S.cam = 0;
+  const fnv = (h, s) => { for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
+  const arg = v => (typeof v === 'number' ? (Object.is(v, -0) ? '-0' : String(v)) : typeof v === 'string' ? v : v && typeof v === 'object' ? (v.width != null ? 'canvas' + v.width + 'x' + v.height : 'obj') : String(v));
+  const run = (name, setup, frames, step) => {
+    let h = 2166136261, calls = 0;
+    globalThis.__ctxSpy = (k, a) => { calls++; h = fnv(h, k + '(' + a.map(arg).join(',') + ')'); };
+    try { setup(); for (let i = 0; i < frames; i++) { step(); T.update(STEP); D.render(STEP); D.updateHud(); } } finally { globalThis.__ctxSpy = null; }
+    console.log(name.padEnd(44), h.toString(36).padStart(8), String(calls).padStart(9), 'calls');
+    if (T.M && !T.M.demo) D.exitMatch();
+    D.setMode('menu');
+  };
+  const quick = o => () => { T.newMatch(0, 1, { halfLen:240, diff:1, ...o }); D.setMode('match'); D.setTwo(false); };
+  const played = step => () => { if (T.M.phase === 'break') { $('br-go').click(); return; } step(); };
+  Object.assign(S, { played:99, diff:1, kids:false, half:0 });
+  D.view(844, 390); reseed(11); run('844x390, close-ups off', quick({ headless:true, duels:'off' }), 600, () => bot(0));
+  reseed(11); run('844x390, close-ups live', quick({ duels:'live' }), 3000, () => bot(0));
+  D.view(667, 375); reseed(11); run('667x375, close-ups off', quick({ headless:true, duels:'off' }), 600, () => bot(0));
+  D.view(844, 390);
+  reseed(12); run('star sides, Rainbow ball and boots, On Fire', () => { L.ball = 'rainbow'; L.boots = 'rainbow'; T.newMatch(X.NATIONS.find(n => n.id === 'RSA'), X.NATIONS.find(n => n.id === 'NZL'), { halfLen:240, diff:1, duels:'live', arcade:true }); D.setMode('match'); D.setTwo(false); }, 3000, () => { bot(0); if (T.M.rt > 5 && T.M.rt < 12) T.M.fire[0].t = 5; });
+  reseed(13); run('Gold ball and Neon boots', () => { L.ball = 'gold'; L.boots = 'neon'; quick({ headless:true, duels:'off', arcade:true })(); }, 1500, () => bot(0));
+  reseed(14); run('a career in Pro Mode, calling for the ball', () => { L.boots = 'neon'; C.set(C.create({ pos:'B', num:5, club:X.CLUBS[1], proMode:true, look:{ skin:4, hair:5, style:9, b:1.12 } })); C.play(); }, 3000, played(() => { bot(0); if (P.canCall() && Math.random() < 0.02) inputs[0].aPressed = true; }));
+  C.set(null);
+  reseed(15); run('a women\'s career on Kids, Whole Team', () => { S.kids = true; S.diff = 0; C.set(C.create({ pos:'F', num:2, club:X.CLUBS[3], cat:'women', look:{ style:10 } })); C.play(); }, 3000, played(() => bot(0)));
+  C.set(null); S.kids = false; S.diff = 1;
+  reseed(16); run('AI v AI', () => { T.newMatch(2, 3, { halfLen:240, diff:1, humans:[false, false], headless:true, duels:'off' }); D.setMode('match'); }, 1500, () => {});
+  Object.assign(L, keep);
+}
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const hexOf = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const dirOf = t => (t === 0 ? 1 : -1);
@@ -661,6 +694,106 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   m.career = false; delete m.careerNat;
 }
 
+/* ---------- main's marks, in a behind view (the career builder, 2026-11-09) ---------- */
+// What Top draws for main's features (render-match.js, render-pitch.js) and the behind views did not: each star player's gold star
+// (traitMarks), Pro Mode's call ring and No sign (proMark), and the Locker's boots on the art and on every code-drawn man (lockerBoots)
+// and its ball in the carrier's marker and laces (lockerBall). On Fire, the sprint's streaks and the career star are checked above; the
+// trait's call-out is a tag (drawTags), the Sprint and stamina meters are the page's own buttons, and the Kids aids draw nothing.
+{
+  const L = T.locker.state(), keep = { ball:L.ball, boots:L.boots }, starLog = log => log.filter(e => e.k === 'drawImage' && e.a[0] === B.BV.star);
+  const starAt = p => { const at = atOf(p), Lp = B.lookOf(p), sc = Lp.h/1.8, kk = at.k, x = at.sx + 0.34*kk*Lp.b*sc, y = at.sy - (p.down > 0 ? 0.6 : 1.62)*kk*sc, h = Math.max(4, 0.3*kk)*B.BV_STAR.px/2/B.BV_STAR.r; return [x - h, y - h, 2*h, 2*h]; };
+  const onFrame = p => { const q = atOf(p); return q && q.sx > 0 && q.sx < 844 && q.sy > 60 && q.sy < 390 && B.BV.men.get(p).z > T.kick.CAM.fadeZ + T.kick.CAM.fadeW; };
+  // star players: a gold star on each one's shoulder, at his own depth, after him and under anyone nearer
+  let st = stage(2, { arcade:true, a:T.teams.NATIONS.find(n => n.id === 'RSA'), b:T.teams.NATIONS.find(n => n.id === 'NZL') }), log = frameLog();
+  const stars = st.m.players.filter(p => p.tr && onFrame(p)), drawn = starLog(log);
+  ok(stars.length >= 2 && st.m.players.some(p => !p.tr && onFrame(p)), `star players and plain ones on the frame (${stars.length} stars)`);
+  ok(drawn.length === stars.length && stars.every(p => drawn.some(e => e.a.slice(1).every((v, i) => near(v, starAt(p)[i], 1e-6)))), `each star player has his gold star on his shoulder, and no one else (${drawn.length} drawn)`);
+  const byDepth = st.m.players.slice().sort((a, b) => B.BV.men.get(b).z - B.BV.men.get(a).z), at = p => log.findIndex(e => e.k === 'drawImage' && e.a[0] === B.BV.star && near(e.a[1], starAt(p)[0], 1e-6));
+  ok(stars.every(p => { const i = at(p), j = byDepth.indexOf(p), next = byDepth.slice(j + 1).map(q => placeOf(log, q)).filter(n => n >= 0); return i > placeOf(log, p) && next.every(n => n > i); }), 'drawn after his own man, under every nearer man');
+  const baked = B.BV.star; frameLog(); ok(B.BV.star === baked && starLog(frameLog()).length === stars.length, 'the star is baked once and drawn from its cell after that');
+  st.m.career = true; st.m.careerP = stars[0]; log = frameLog();
+  ok(starLog(log).length === stars.length - 1 && !starLog(log).some(e => near(e.a[1], starAt(stars[0])[0], 1e-6)), 'your career player has his own star instead');
+  st.m.career = false; st.m.careerP = null;
+  st = stage(2); st.mine[2].tr = { burst:true }; ok(!starLog(frameLog()).length, 'no star outside a match you play');
+  // Pro Mode: the call's ring going out from your player on the grass, under the men; the No sign at the top of the carrier's stack
+  const PRO = T.careerPro.PRO, tint = T.contact.SUPPORT.tint;
+  st = stage(2); const m = st.m, you = st.mine[2], carrier = st.c;
+  Object.assign(m, { arcade:true, career:true, careerPro:true, careerP:you, careerNat:{ ...m.nat[0] } }); T.sides.setCtrl(0, you);   // Pro Mode: the ring stays on him
+  const callRing = (u, lg) => { const e = ringAt(lg, you.x, you.y, RING*(1.5 + 1.4*u)), i = lg.indexOf(e); return e && e.stroke === B.ringCol(0) && lg.slice(0, i).reverse().find(x => x.k === 'globalAlpha').a[0] === 1 - u ? i : -1; };
+  m.proCue = { p:you, at:m.dclock }; log = frameLog();
+  let ci = callRing(0, log);
+  ok(ci >= 0, 'Pro Mode: a call puts its ring round him on the grass, in the ring colour');
+  ok(ci >= 0 && m.players.every(p => placeOf(log, p) < 0 || placeOf(log, p) > ci), 'under every man, as the ring is');
+  m.proCue.at = m.dclock - PRO.callT*0.5; ok(callRing(0.5, frameLog()) >= 0, 'halfway through, wider and half faded');
+  m.proCue.at = m.dclock - PRO.callT - 0.01; log = frameLog(); ok(![0, 0.5, 0.99].some(u => ringAt(log, you.x, you.y, RING*(1.5 + 1.4*u))), 'and gone after it');
+  m.proNo = { p:carrier, at:m.dclock }; log = frameLog();
+  const q = atOf(carrier), R = Math.max(7, 0.4*q.k), S0 = B.bvStack(q.sy - (B.lookOf(carrier).h + 0.2)*q.k, { carry:true, no:R + 3, floor:Math.abs(q.sx - 422) < 130 ? 72 : 0 });
+  const noAt = log.findIndex(e => e.k === 'arc' && near(e.a[0], q.sx, 1e-6) && near(e.a[1], S0.no, 1e-6) && near(e.a[2], R, 1e-6) && e.stroke === tint);
+  const bubble = log.findIndex(e => e.k === 'moveTo' && near(e.a[0], q.sx - 5, 1e-6) && near(e.a[1], S0.carry - 5.5, 1e-6));   // the marker's tail
+  ok(noAt > 0 && log.some(e => e.k === 'moveTo' && near(e.a[0], q.sx - R*0.7, 1e-6) && near(e.a[1], S0.no - R*0.7, 1e-6)), 'a call not answered: the No sign, a slashed circle over the carrier\'s head');
+  ok(bubble > 0 && S0.no + R + 3 <= S0.carry - 17 - 5 && noAt > bubble, `over the ball's marker, never on it (${S0.no.toFixed(1)}, marker top ${(S0.carry - 22).toFixed(1)})`);
+  m.proNo.at = m.dclock - PRO.noT - 0.01; ok(!frameLog().some(e => e.k === 'arc' && near(e.a[2], R, 1e-6) && e.stroke === tint), 'and gone after its time');
+  m.careerPro = false; m.proCue = { p:you, at:m.dclock }; m.proNo = { p:carrier, at:m.dclock }; log = frameLog();
+  ok(!ringAt(log, you.x, you.y, RING*1.5) && !log.some(e => e.k === 'arc' && e.stroke === tint), 'neither in a Whole Team career match');
+  ok(B.bvStack(100, { pointer:true, carry:true, star:9 }).star === B.bvStack(100, { pointer:true, carry:true, star:9, no:0 }).star && B.bvStack(100, { carry:true }).no === undefined, 'with no No sign the stack is as it was');
+  // the Locker: your side's boots on every code-drawn man of it, Rainbow's by shirt, his alone in a career
+  const boots = (p, k = 64, view = 0) => { const R0 = recorder(); B.paintMan(R0.g, p, { k, view, face:1, frame:0, arms:'run' }); return R0.log.filter((e, i) => e.k === 'fillRect' && R0.log[i - 1] && R0.log[i - 1].k === 'fillStyle').map(e => R0.log[R0.log.indexOf(e) - 1].a[0]); };
+  const side = () => { st = stage(2, { arcade:true }); return st; };
+  const RB = T.locker.RAINBOW, rb = p => RB[p.n % RB.length];
+  L.boots = 'neon'; side();
+  ok(st.mine.every(p => boots(p).filter(c => c === '#7dff3d').length === 2) && st.opp.every(p => boots(p).filter(c => c === '#111').length === 2), 'the Locker\'s Neon Green boots on your side, black on theirs');
+  L.boots = 'rainbow'; side();
+  ok(st.mine.every(p => boots(p).filter(c => c === rb(p)).length === 2) && new Set(st.mine.map(p => boots(p)[0])).size > 1, 'Rainbow boots: a colour a shirt, as on Top');
+  ok(boots(st.mine[1], 64, 2).filter(c => c === rb(st.mine[1])).length === 2, 'and in the side view too');
+  st.m.career = true; st.m.careerP = st.mine[2];
+  ok(boots(st.mine[2]).filter(c => c === rb(st.mine[2])).length === 2 && st.mine.filter(p => p !== st.mine[2]).every(p => boots(p).filter(c => c === '#111').length === 2), 'a career match: his boots only');
+  st.m.career = false; st.m.careerP = null;
+  L.boots = 'black'; side(); ok(st.mine.every(p => boots(p).filter(c => c === '#111').length === 2), 'the default Black: black boots, as before');
+  // the ball: in his hands and loose (cutBall), and now the marker and the laces too
+  L.ball = 'pink'; side(); log = frameLog();
+  const cq = atOf(st.c), Lc = B.lookOf(st.c), bx = cq.sx + 0.18*cq.k, by = cq.sy - 1.15*cq.k*Lc.h/1.8, bi = log.findIndex(e => e.k === 'translate' && near(e.a[0], bx, 1e-6) && near(e.a[1], by, 1e-6));
+  ok(bi > 0 && log.slice(bi, bi + 12).some(e => e.k === 'fill' && e.fill === '#ff7eb6' && e.stroke === '#6e1a44'), 'the Locker\'s Pink ball in his hands');
+  ok(log.some(e => e.k === 'ellipse' && e.a[2] === 9 && e.a[3] === 5.6 && e.fill === '#ff7eb6' && e.stroke === '#6e1a44') && !log.some(e => e.k === 'ellipse' && e.a[2] === 9 && e.fill === '#fffdf6'), 'and in the ball\'s marker over his head');
+  ok(log.some(e => e.k === 'lineTo' && e.stroke === '#6e1a44') && !log.some(e => e.stroke === '#3b2f22'), 'laced in its own line colour');
+  Object.assign(st.m.ball, { state:'loose', carrier:null, x:st.c.x + 2, y:30, z:0, vx:0, vy:0 }); log = frameLog();
+  const lq = prNow(st.c.x + 2, 30), li = log.findIndex(e => e.k === 'translate' && near(e.a[0], lq.sx, 1e-6) && near(e.a[1], lq.sy, 1e-6));
+  ok(li > 0 && log.slice(li, li + 12).some(e => e.k === 'fill' && e.fill === '#ff7eb6'), 'and loose on the grass');
+  L.ball = 'classic'; side(); log = frameLog();
+  ok(log.some(e => e.k === 'ellipse' && e.a[2] === 9 && e.fill === '#fffdf6') && log.some(e => e.stroke === '#3b2f22') && !log.some(e => e.fill === '#ff7eb6'), 'the Classic ball as it was, marker and laces too');
+  // the trait's call-out is a tag, drawn by drawTags at its own place in a behind view as on Top
+  st = stage(2, { arcade:true, a:T.teams.NATIONS.find(n => n.id === 'RSA'), b:T.teams.NATIONS.find(n => n.id === 'NZL') });
+  const caller = st.m.players.find(p => p.tr), id = Object.keys(caller.tr)[0];
+  caller.trAt = null; T.traits.call(caller, id); log = frameLog();
+  const callName = T.traits.TRAITS.find(t => t.id === id).name;
+  ok(st.m.tags.length === 1 && log.some(e => e.k === 'fillText' && e.a[0] === callName.toUpperCase()), `a star's call-out shows, as its tag does on Top (${callName})`);
+  Object.assign(L, keep); D.setMode('menu');
+}
+
+/* ---------- the career player's look (PR #14's player builder) ---------- */
+{
+  const X = T.teams, C = T.career, look = { g:1, skin:4, hair:4, style:10, b:0.92 };
+  S.cam = 2; S.diff = 1; S.kids = false;
+  C.set(C.create({ pos:'B', num:5, club:X.CLUBS[3], cat:'women', look })); C.play(); D.setMode('match');
+  const me = T.M.careerP, L = B.lookOf(me), season = C.get().season;
+  ok(me.n === 5 && L.g === 1 && L.skin === 4 && L.hair === 4 && L.style === 10 && L.b === 0.92 && Number.isFinite(L.h), `your player in the match has your look, at his shirt's height (${JSON.stringify(L)})`);
+  ok(T.M.players.filter(p => p.team === 0 && p !== me).every(p => B.lookOf(p).g === 1), 'among a women\'s side');
+  ok(!season.teams.some(t => 'squad' in t) && T.M.nat[0].squad.length === 1 && T.M.nat[0].name === season.teams[season.user].name, 'his look rides on his squad entry for the match only: the season\'s side is untouched');
+  for (let i = 0; i < 8; i++) D.render(STEP);
+  const R0 = recorder(); B.paintMan(R0.g, me, { k:64, view:1, face:1, frame:0, arms:'run' });
+  ok(R0.log.some(e => e.k === 'fillStyle' && e.a[0] === B.LOOK_SKIN[4]) && R0.log.some(e => e.k === 'fillStyle' && e.a[0] === B.LOOK_HAIR[4]), 'the code-drawn man has his skin and hair');
+  D.exitMatch(); C.set(null);
+  C.set(C.create({ pos:'F', num:2, club:X.CLUBS[3] })); C.play();
+  ok(JSON.stringify(C.get().look) === JSON.stringify(C.LOOK) && B.lookOf(T.M.careerP).style === 0 && B.lookOf(T.M.careerP).g === 0, 'a career with no look picked: the default, on a male body');
+  D.exitMatch(); C.set(null);
+  // Top draws nothing of it: the same seeded career match on Top with two looks is the same canvas, call for call (TOP_HASH has the rest)
+  const topLog = lk => { S.cam = 0; reseed(21); C.set(C.create({ pos:'B', num:5, club:X.CLUBS[1], look:lk })); C.play(); D.setMode('match'); let h = 2166136261;
+    globalThis.__ctxSpy = (k, a) => { const t = k + '(' + a.map(v => (v && typeof v === 'object' ? 'o' : String(v))).join(',') + ')'; for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); };
+    try { for (let i = 0; i < 400; i++) { bot(0); T.update(STEP); D.render(STEP); } } finally { globalThis.__ctxSpy = null; }
+    D.exitMatch(); C.set(null); return h >>> 0; };
+  ok(topLog({ skin:0, hair:0, style:0, b:0.92 }) === topLog({ skin:5, hair:5, style:11, b:1.12 }), 'Top draws the same match the same whatever his look');
+  S.cam = 0; D.setMode('menu');
+}
+
 /* ---------- the rendered player art ---------- */
 // The real manifest, on synthetic pixels: Node can't decode WebP, and the art's pixels are looked at in a browser, not here. Nothing here needs Blender
 {
@@ -717,6 +850,25 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   { const dark = B.artLut('#1a1a1a'); ok(dark[255*3] > dark[120*3] + 10, 'even a black shirt keeps its folds'); }
   const r0 = rndCalls(); for (let i = 0; i < 30; i++) D.render(STEP); ok(rndCalls() === r0, 'art draws no random number');
   ok(!/^art|^aid|^dl$/.test(Object.keys(T.M.players[0]).join(' ')) && !Object.keys(T.M.players[0]).some(k => /art|pose|clip/i.test(k)), 'and adds nothing to the players');
+  { // the Locker's boots on the art (they were on the code-drawn men only), and the career player's look in his tints
+    const LK = T.locker.state(), keep = { boots:LK.boots }, bootsAt = man.parts.indexOf('boots') + 1, skinAt = man.parts.indexOf('skin') + 1, hairAt = man.parts.indexOf('hair') + 1, RB = T.locker.RAINBOW;
+    LK.boots = 'neon'; st = stage(2, { arcade:true });
+    ok(st.mine.every(p => B.artPalette(p)[bootsAt] === B.artLut('#7dff3d')) && st.opp.every(p => B.artPalette(p)[bootsAt] === B.artLut('#22252b')), 'the art: Neon Green boots on your side, the art\'s own dark ones on theirs');
+    LK.boots = 'rainbow'; st = stage(2, { arcade:true });
+    ok(st.mine.every(p => B.artPalette(p)[bootsAt] === B.artLut(RB[p.n % RB.length])), 'Rainbow by shirt');
+    st.m.career = true; st.m.careerP = st.mine[2];
+    ok(B.artPalette(st.mine[2])[bootsAt] === B.artLut(RB[st.mine[2].n % RB.length]) && st.mine.filter(p => p !== st.mine[2]).every(p => B.artPalette(p)[bootsAt] === B.artLut('#22252b')), 'a career match: his alone');
+    LK.boots = 'black'; st = stage(2, { arcade:true }); ok(st.mine.every(p => B.artPalette(p)[bootsAt] === B.artLut('#22252b')), 'the default Black: the art\'s own boots, as before');
+    LK.boots = 'neon'; st = stage(2); ok(st.mine.every(p => B.artPalette(p)[bootsAt] === B.artLut('#22252b')), 'and none outside a match you play');
+    Object.assign(LK, keep);
+    const X = T.teams, C = T.career, look = { g:1, skin:5, hair:4, style:11, b:1.12 };
+    C.set(C.create({ pos:'B', num:6, club:X.CLUBS[2], cat:'women', look })); C.play(); D.setMode('match'); for (let i = 0; i < 4; i++) D.render(STEP);
+    const me = T.M.careerP, pal = B.artPalette(me), pose = B.artSprite('run', 0, 0, false, B.lookOf(me));
+    ok(pal[skinAt] === B.artLut(B.LOOK_SKIN[5]) && pal[hairAt] === B.artLut(B.artHairOf(look, { shirt:T.M.kit[0].fill }, B.LOOK_SKIN[5])), 'his skin and hair in the art\'s tints');
+    ok(pose.build === 'stocky' && pose.row === man.sprites['stocky.f'].run[0], 'his build and body pick the art\'s own sprite (Big, female)');
+    ok([...A.map.values()].some(sl => sl.key >= 0) && B.BV.men.get(me) && B.BV.men.get(me).artSlot, 'and he is drawn from it');
+    D.exitMatch(); C.set(null);
+  }
 
   // poses
   const poseOf = (p, o = {}) => { const s = B.BV.men.get(p), k = o.k || null, tackler = !!(k && p !== k.c); return B.artPose(camNow(), p, s, k, tackler, !!o.carrier, o.sp ?? Math.hypot(p.vx, p.vy), o.spr || 0); };

@@ -899,23 +899,44 @@ body.desk .desk-only{display:block}
 }
 
 /* ===== career3 ===== */
-/* New Player: Your Club, Team and Play as on the left, First Name, Position, Shirt Number and Start Career on the right, so Start
-   Career is in view at 844x390 and 667x375 with no scroll. Your Club is his shirt with his number, the club and its league, and
-   Change Club, which opens the club screen (#s-career-club) */
+/* New Player: Your Player, Team and Play as on the left, First Name, Position, Shirt Number and Start Career on the right, so Start
+   Career is in view at 844x390 and 667x375 with no scroll. Your Player is his shirt with his number, the club and its league, and
+   Change Club over Change Look, two equal buttons: one opens the club screen (#s-career-club), the other his look (#s-career-look) */
 .cr-yours{padding:6px 8px 6px 10px;gap:10px}
 .cr-mineline{display:flex;align-items:center;gap:12px;min-width:0}
 .cr-mine{display:flex;flex-direction:column;gap:4px;min-width:0}
 .cr-mine b{font:900 28px/.95 var(--display);text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow-wrap:normal}
 .cr-mine .lbl{white-space:nowrap}
 .cr-yours .btn{min-height:44px;padding:8px 14px}
+.cr-yourbtns{display:flex;flex-direction:column;gap:6px;flex:none}
+/* Your Look (#s-career-look), New Player's second step: his picture on the grass with Build under it on the left; Skin and Hair Colour,
+   three swatches a row, in the middle; Hair Style (twelve, three across) and Back to New Player on the right. All of it in view at
+   844x390 and 667x375 */
+.cr-lookgrid{display:grid;grid-template-columns:168px auto minmax(0,1fr);gap:12px 16px;align-items:stretch}
+.cr-lookpic{flex:1;display:grid;place-items:center;min-height:120px;border:1.5px solid var(--rule-hi);border-radius:8px;background:#2f6a38}
+.cr-lookpic canvas{display:block;width:126px;height:158px;max-height:100%}
+.cr-lookpic [hidden]{display:none}
+.cr-lookcol{display:flex;flex-direction:column;gap:10px;min-width:0}
+#ck-build button{font-size:13px;padding:0 2px}
+.swatches.cr-sw{grid-template-columns:repeat(3,44px);gap:4px}
+.cr-styles{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr))}
+.cr-styles button{font-size:13px;line-height:1.05;padding:0 3px;white-space:normal}
+.cr-styles button+button{border-left:0}
+.cr-styles button:nth-child(3n+2),.cr-styles button:nth-child(3n+3){border-left:1.5px solid var(--rule-hi)}
+.cr-styles button:nth-child(n+4){border-top:1.5px solid var(--rule-hi)}
+#ck-back{margin-top:auto}
+@media (max-width:620px){
+  .cr-lookgrid{grid-template-columns:1fr}
+  .cr-lookpic{flex:none;padding:8px}
+}
 /* the club screen: National | Local and the lists as on the team screen, then the clubs, each its kit, name and rating */
 .team.cr-club{grid-template-columns:28px minmax(0,1fr) auto}
 .cr-rate{min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums}
 #cc-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}   /* four across at 844, three at 667: room for Guildfordians and Johannesburg beside the rating */
 #cc-grid .cr-club .tname{white-space:nowrap;overflow-wrap:normal}
 @media (orientation:landscape) and (max-height:560px){
-  #s-career-club .wrap{gap:12px}
-  #s-career-club h2.title{font-size:36px}
+  #s-career-club .wrap,#s-career-look .wrap{gap:12px}
+  #s-career-club h2.title,#s-career-look h2.title{font-size:36px}
 }
 .cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
 @media (max-width:731px){

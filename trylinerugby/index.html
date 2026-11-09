@@ -239,7 +239,7 @@
     <div class="head"><div><p class="eyebrow">Career</p><h2 class="title">New Player</h2></div><button class="btn cr-headback" id="cn-back" data-back>Back to Menu</button></div>
     <div class="cr-newgrid">
       <div class="cr-left">
-        <div class="field"><span class="lbl">Your Club</span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"></span><button class="btn" id="cn-change">Change Club</button></div></div>
+        <div class="field"><span class="lbl">Your Player</span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"></span><div class="cr-yourbtns"><button class="btn" id="cn-change">Change Club</button><button class="btn" id="cn-look-go">Change Look</button></div></div></div>
         <div class="field"><span class="lbl">Team</span><div class="seg" id="cn-cat"><button>Men</button><button>Women</button></div></div>
         <div class="field"><span class="lbl">Play as</span><div class="seg" id="cn-mode"><button>Whole Team</button><button>My Player</button></div></div>
       </div>
@@ -259,6 +259,26 @@
     <div class="pools"><div class="seg" id="cc-tier"></div><div class="seg" id="cc-nat" hidden></div><div class="seg" id="cc-loc" hidden></div></div>
     <div class="cr-clubs" id="cc-grid"></div>
     <button class="btn" id="cc-back" data-back>Back to New Player</button>
+  </div>
+</section>
+
+<section class="screen" id="s-career-look" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">New Player</p><h2 class="title">Your Look</h2></div></div>
+    <div class="cr-lookgrid">
+      <div class="cr-lookcol">
+        <div class="cr-lookpic"><canvas id="ck-pic" width="126" height="158" aria-hidden="true" hidden></canvas><span id="ck-shirt"></span></div>
+        <div class="field"><span class="lbl">Build</span><div class="seg" id="ck-build"><button>Small</button><button>Medium</button><button>Big</button></div></div>
+      </div>
+      <div class="cr-lookcol">
+        <div class="field"><span class="lbl">Skin</span><div class="swatches cr-sw" id="ck-skin"></div></div>
+        <div class="field"><span class="lbl">Hair Colour</span><div class="swatches cr-sw" id="ck-hair"></div></div>
+      </div>
+      <div class="cr-lookcol">
+        <div class="field"><span class="lbl">Hair Style</span><div class="seg cr-styles" id="ck-style"><button>Short</button><button>Shaved</button><button>Big Hair</button><button>Scrum Cap</button><button>Headband</button><button>Bun</button><button>Ponytail</button><button>Plait</button><button>Long Plait</button><button>Bunches</button><button>High Ponytail</button><button>Long Bob</button></div></div>
+        <button class="btn" id="ck-back" data-back>Back to New Player</button>
+      </div>
+    </div>
   </div>
 </section>
 

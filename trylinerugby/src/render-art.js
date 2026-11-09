@@ -93,7 +93,7 @@ function artLut(hex, gain = 1) {                            // 256 shades of one
   return L;
 }
 function artMix(a, b, t) { const x = hexRgb(a), y = hexRgb(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v)*t).toString(16).padStart(2, '0')).join(''); }
-function artPalette(p) { return artPaletteOf(kitOf(p.team), lookOf(p)); }   // part id to colour table, for this man in this match
+function artPalette(p) { return artPaletteOf(kitOf(p.team, p), lookOf(p)); }   // part id to colour table, for this man in this match. The kit knows the man: the Locker's boots on your side, his alone in a career, Rainbow's by shirt (lockerBoots)
 function artHairOf(look, kit, skin) {                       // a long style lies across the shirt and frames the face, so it must not melt into either: black hair on a black shirt comes up a little, brown hair on brown skin goes darker, by the smallest step that clears both. The eight older styles keep the colour as it was
   const base = LOOK_HAIR[look.hair];
   if (!(look.style >= LOOK_LONG)) return base;
@@ -113,7 +113,7 @@ function artPaletteOf(kit, look) {
   const trim = colorDist(kit.trim, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : kit.trim;
   // a lock is a plait, a bunch or a tail: hair on hair, a step darker, or lighter when the hair is too dark to go darker, so it shows against the head it falls over
   const lock = luma(hair) < 0.16 ? artMix(hair, '#8a6548', 0.24) : artMix(hair, '#17120e', 0.3);
-  const table = { shirt:kit.shirt, hoop:kit.hoops ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:'#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d', lock };
+  const table = { shirt:kit.shirt, hoop:kit.hoops ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:kit.boots || '#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d', lock };
   const out = [null];
   for (const name of ART.parts) out.push(artLut(table[name]));
   return out;
