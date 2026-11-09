@@ -86,11 +86,13 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .tname{min-width:0;font:800 clamp(20px,5.6vw,26px)/.95 var(--display);text-transform:uppercase;letter-spacing:.02em}
 .stats{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--chalk-dim)}
 .team .jw{position:relative}
+.team .tid{display:flex;flex-direction:column;gap:5px;min-width:0}   /* the name, and its stars under it, beside the overall's badge (ratedStars) */
+.team .tid .rstars{margin-left:3px}   /* clear of the badge, which stands 10px out past the shirt */
 .ovr{position:absolute;right:-10px;bottom:-8px;min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 2px 0 rgba(0,0,0,.35)}   /* the overall rating, a badge on the shirt */
 .pips{display:flex;gap:3px}
 .pips i{flex:1;height:5px;border-radius:1px;background:var(--rule-hi)}
 .pips i.on{background:var(--chalk)}
-.gap{grid-column:1/-1;margin-top:-4px;font:800 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--flood)}
+.gap{grid-column:1/-1;margin-top:-1px;font:800 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--flood)}
 /* the star traits a team's 5s bring (src/traits.js), under the ability rows behind a gold star as on the pitch. One line for one or two;
    three or four (Ireland, France) take a second at 844 and 667 wide, breaking only between names */
 .tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
@@ -102,11 +104,13 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .head > .cat{display:grid;gap:0;flex:0 1 264px;min-width:228px}
 .pools{display:flex;flex-direction:column;gap:8px;margin-top:-8px}
 .pools .seg button,.head > .cat button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
-/* National's eight leagues: one row where eight fit (a phone held sideways at 844), two balanced rows of four where they do not (667) */
+/* National's nine leagues (England 2 is PR #14's): one row where nine fit (a phone held sideways at 844), two rows where they do not (667),
+   five then four, each row in equal parts (twenty columns: a span of four, then of five). The career's club screen does the same (#cc-nat). */
 @media (max-width:731px){
-  #t-nat{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr))}
-  #t-nat button:nth-child(4n+1){border-left:0}
-  #t-nat button:nth-child(n+5){border-top:1.5px solid var(--rule-hi)}
+  #t-nat,#cc-nat{grid-auto-flow:row;grid-template-columns:repeat(20,minmax(0,1fr))}
+  #t-nat button,#cc-nat button{grid-column:span 4}
+  #t-nat button:nth-child(n+6),#cc-nat button:nth-child(n+6){grid-column:span 5;border-top:1.5px solid var(--rule-hi)}
+  #t-nat button:nth-child(6),#cc-nat button:nth-child(6){border-left:0}
 }
 .yours{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid var(--flood);border-radius:8px;background:var(--panel)}
 .yours .btn{width:auto;flex:none}
@@ -220,6 +224,21 @@ h2.title.gold{color:var(--flood)}
   .sub{padding:2px 7px}
 }
 #hud.gk .sub{visibility:hidden}
+/* what to do now, under the clock: a shape and a word, in the flow of the scorebug so it can't reach the score, the clock or the pause button */
+.bstat{display:flex;align-items:center;gap:5px;padding:3px 9px 3px 7px;border-radius:4px;background:rgba(8,14,10,.82);border-left:3px solid currentColor;color:var(--chalk);font:700 13px/1 var(--body)}
+.bstat i{display:block;width:18px;height:14px;color:var(--bs,var(--chalk))}
+.bstat i svg{display:block;width:100%;height:100%}
+.bstat{--bs:var(--chalk)}
+.bstat.ours{--bs:#7ddc8f;border-left-color:#7ddc8f}
+.bstat.stop{--bs:var(--alert);border-left-color:var(--alert)}
+.bstat.loose{--bs:var(--flood);border-left-color:var(--flood)}
+/* the career caption: at the foot of the screen between the stick and the buttons, out of the scorebug's column, so it can't move while it is read or sit on the marks at the top. Inside #hud, so it goes when the HUD does */
+.bcap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);display:flex;align-items:center;gap:9px;padding:3px 8px;border-radius:4px;background:rgba(8,14,10,.82);color:var(--chalk);font:700 12px/1 var(--body);white-space:nowrap}
+.bcap span{display:flex;align-items:center;gap:5px}
+@media (max-width:720px){.bcap{flex-direction:column;align-items:flex-start;gap:3px}}   /* a small phone: on two lines, to fit between the stick and the buttons */
+.bcap i{display:block;flex:none;width:13px;height:13px}
+.bcap i.ring{border:2.5px solid #ffcf3d;border-radius:50%;height:10px;width:16px}
+.bcap i.star{background:var(--chalk);clip-path:polygon(50% 0,63% 35%,100% 38%,71% 60%,82% 96%,50% 76%,18% 96%,29% 60%,0 38%,37% 35%)}
 .pause{position:fixed;z-index:6;touch-action:manipulation;top:calc(env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:6px;border:1px solid rgba(241,238,228,.25);background:rgba(8,14,10,.7);cursor:pointer;display:grid;place-items:center}
 .pause::before{content:"";width:14px;height:16px;border-left:4px solid var(--chalk);border-right:4px solid var(--chalk)}
 .pause::after{content:"";position:absolute;inset:-6px -2px -10px -10px}   /* the 44px glyph stays; the hit target grows inward, off the corner */
@@ -410,6 +429,14 @@ body.desk .desk-only{display:block}
   #br-stats th,#br-stats td{padding:2px 0}
   #br-stats .key{margin-top:4px}
 }
+@media (orientation:landscape) and (max-height:430px){
+  /* the pause card carries a Camera row in one player: on a phone in Safari, sideways, it must still fit, Quit Match included, because the modal doesn't scroll */
+  #m-pause{padding:8px}
+  #m-pause .card{gap:8px;padding:10px 16px}
+  #m-pause .btn,#m-pause .btn.primary{min-height:44px;padding-block:0}
+  #m-pause h3{font-size:22px}
+  #pz-hints{gap:6px 12px}
+}
 @media (max-height:340px){
   #m-break .card{gap:4px;padding:8px 12px}
   #m-break .final{font-size:22px}
@@ -444,7 +471,7 @@ body.desk .desk-only{display:block}
 /* Optional install and offline controls stay secondary to play. */
 .app-tools { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px 16px; margin:14px 0 0; font-size:12px; color:var(--muted, #acb7ac); }
 .app-tools[hidden], .app-tools [hidden] { display:none; }
-.app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; padding:7px 11px; font:inherit; cursor:pointer; }
+.app-action { appearance:none; border:1px solid #526052; border-radius:5px; background:transparent; color:inherit; min-height:44px; padding:7px 11px; font:inherit; white-space:nowrap; cursor:pointer; }
 .app-action:hover, .app-action:focus-visible { color:#fff; border-color:#d5b663; }
 .app-action:disabled { opacity:.55; cursor:wait; }
 
@@ -495,10 +522,21 @@ body.desk .desk-only{display:block}
 .cr-trait span{position:absolute;top:1px;right:3px;font-variant-numeric:tabular-nums}
 .cr-trait.off{align-items:flex-end;padding-bottom:4px;border-color:color-mix(in srgb,var(--k) 45%,var(--rule-hi));color:var(--chalk-dim);opacity:.8}   /* its skill's colour, faint: which skill earns it */
 .cr-trait.off span{font-size:10px;font-weight:700;line-height:1;color:var(--k)}
-.cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.btn.cr-drill{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:76px;padding:10px 12px;text-align:left}
-.cr-drill .nm{font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+/* Train: the Skills Mini Games' tiles, each its picture and name with the skill it trains under them; the open games in rows of four,
+   then Contact Games (U9 and Up) with the coach line and its three. On a phone held sideways the title and Back to Career stand on
+   the left, as the Locker's do, and the games fill the right, so all ten fit 844x390 and 667x375 without a scroll. */
+.ct-list{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ct-contact{display:flex;flex-direction:column;gap:6px}
+.ct-contact .pr-cg{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px;min-width:0}
+.ct-contact .pr-group{font-size:18px;white-space:nowrap}
+.ct-contact .pr-coach{font-size:13px;line-height:1.15}
+.cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.btn.cr-drill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:80px;padding:6px;text-align:center;font:700 15px/1.1 var(--body)}
+.cr-drill .dc-icon{width:28px;height:28px}
+.cr-drill .nm{display:block;text-wrap:balance}
 .cr-drill .nw{white-space:nowrap}
+.cr-drill .cr-chips{justify-content:center;gap:3px}
+.cr-drill .cr-chip{padding:3px 5px;letter-spacing:.04em;white-space:nowrap}
 .cr-chips{display:flex;flex-wrap:wrap;gap:6px}
 .cr-chip{padding:4px 8px;border-radius:4px;border:1.5px solid var(--k);color:var(--k);font:700 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase}
 .tbl tr.up td:first-child{box-shadow:inset 4px 0 0 #5fd38a}
@@ -541,6 +579,14 @@ body.desk .desk-only{display:block}
   .cr-life{gap:2px;padding-top:6px}
   .cr-tile{padding:10px 12px}
   .cr-tile b{font-size:28px}
+  #s-career-train .ct-wrap{max-width:900px;min-height:100%;display:grid;grid-template-columns:minmax(124px,150px) minmax(0,1fr);grid-template-areas:"head list" ". list" "back list";grid-template-rows:auto 1fr auto;gap:10px 14px}
+  .ct-head{grid-area:head}.ct-list{grid-area:list;align-self:center}.ct-back{grid-area:back}
+  .ct-list,.cr-drills{gap:6px}
+  .ct-contact{gap:4px}
+  .ct-contact .pr-group{font-size:16px}
+  .ct-contact .pr-coach{font-size:12px}
+  .btn.cr-drill{min-height:56px;padding:4px;gap:2px;font-size:13px;line-height:1.05}
+  .cr-drill .dc-icon{width:22px;height:22px}
 }
 @media (max-width:620px){
   .cr-hub,.cr-newgrid{grid-template-columns:1fr}
@@ -569,10 +615,20 @@ body.desk .desk-only{display:block}
 .im-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(284px,max-content));gap:10px 16px}
 .im-cols .swatches{gap:4px}
 #m-import .btn:disabled{opacity:.6;cursor:wait}
+/* the level an import is set at (src/import.js): a step down, the level and its stars, a step up */
+.im-level{grid-template-columns:auto 44px minmax(0,1fr) 44px}
+.im-level[hidden]{display:none}
+.im-kept{margin:-4px 0 0}
+.im-lv-name{text-align:center;font-weight:800}
 @media (max-height:420px){
   #m-import .card{gap:10px;padding:12px 14px}
   #m-import h3{font-size:30px}
   #m-import .btn.primary{min-height:50px}
+  #m-import .card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}   /* the primary and the row beside it, so the preview's buttons, its level row included, are in the first view (PR #14) */
+  #m-import .card > *{grid-column:1/-1}
+  #m-import .card > #im-go{grid-column:1}
+  #m-import .card > #im-row{grid-column:2}
+  #m-import .card > #im-go[hidden] ~ #im-row{grid-column:1/-1}
 }
 /* ===== kids ===== */
 /* the grown-up check (kids.js): over every other card (the practice card's is 35) and under only Turn Your Phone Sideways, which
@@ -708,6 +764,9 @@ body.desk .desk-only{display:block}
 .lk-leg .ovr{right:-18px;top:-2px;bottom:auto;min-width:22px;padding:2px 3px;font-size:12px}
 .lk-nat{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 11px/1.15 var(--body);color:var(--chalk-dim)}
 .lk-yr{font:800 15px/1 var(--display);letter-spacing:.03em}
+.lk-yrow{display:flex;align-items:center;justify-content:center;gap:4px;max-width:100%}
+.lk-leg .rstars{--star:12px}   /* the side's stars beside its year, under its name, as every listed side has by its overall (ratedStars): on the year's line, so the Legends tab still fits without a scroll */
+@media (max-width:731px){.lk-leg .rstars{display:none}}   /* a 667 phone: a tile is 90px, too narrow for the year and 60px of stars, and the tab has no height to spare for a line of them (it fills 343 of 343px). The team cards, where a Legend is picked, keep them */
 .lk-leg.lk-off{gap:4px;color:var(--chalk-dim);border-style:dashed}
 .lk-padlock svg{display:block;width:14px;height:18px}
 .lk-need{display:flex;align-items:center;gap:4px;font:800 15px/1 var(--display);color:var(--chalk)}
@@ -847,30 +906,48 @@ body.desk .desk-only{display:block}
 }
 
 /* ===== career3 ===== */
-/* New Player: Your Club, Team and Play as on the left, First Name, Position, Shirt Number and Start Career on the right, so Start
-   Career is in view at 844x390 and 667x375 with no scroll. Your Club is his shirt with his number, the club and its league, and
-   Change Club, which opens the club screen (#s-career-club) */
+/* New Player: Your Player, Team and Play as on the left, First Name, Position, Shirt Number and Start Career on the right, so Start
+   Career is in view at 844x390 and 667x375 with no scroll. Your Player is his shirt with his number, the club and its league, and
+   Change Club over Change Look, two equal buttons: one opens the club screen (#s-career-club), the other his look (#s-career-look) */
 .cr-yours{padding:6px 8px 6px 10px;gap:10px}
 .cr-mineline{display:flex;align-items:center;gap:12px;min-width:0}
 .cr-mine{display:flex;flex-direction:column;gap:4px;min-width:0}
 .cr-mine b{font:900 28px/.95 var(--display);text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow-wrap:normal}
 .cr-mine .lbl{white-space:nowrap}
 .cr-yours .btn{min-height:44px;padding:8px 14px}
+.cr-yourbtns{display:flex;flex-direction:column;gap:6px;flex:none}
+/* Your Look (#s-career-look), New Player's second step: his picture on the grass with Build under it on the left; Skin and Hair Colour,
+   three swatches a row, in the middle; Hair Style (twelve, three across) and Back to New Player on the right. All of it in view at
+   844x390 and 667x375 */
+.cr-lookgrid{display:grid;grid-template-columns:168px auto minmax(0,1fr);gap:12px 16px;align-items:stretch}
+.cr-lookpic{flex:1;display:grid;place-items:center;min-height:120px;border:1.5px solid var(--rule-hi);border-radius:8px;background:#2f6a38}
+.cr-lookpic canvas{display:block;width:126px;height:158px;max-height:100%}
+.cr-lookpic [hidden]{display:none}
+.cr-lookcol{display:flex;flex-direction:column;gap:10px;min-width:0}
+#ck-build button{font-size:13px;padding:0 2px}
+.swatches.cr-sw{grid-template-columns:repeat(3,44px);gap:4px}
+.cr-styles{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr))}
+.cr-styles button{font-size:13px;line-height:1.05;padding:0 3px;white-space:normal}
+.cr-styles button+button{border-left:0}
+.cr-styles button:nth-child(3n+2),.cr-styles button:nth-child(3n+3){border-left:1.5px solid var(--rule-hi)}
+.cr-styles button:nth-child(n+4){border-top:1.5px solid var(--rule-hi)}
+#ck-back{margin-top:auto}
+@media (max-width:620px){
+  .cr-lookgrid{grid-template-columns:1fr}
+  .cr-lookpic{flex:none;padding:8px}
+}
 /* the club screen: National | Local and the lists as on the team screen, then the clubs, each its kit, name and rating */
 .team.cr-club{grid-template-columns:28px minmax(0,1fr) auto}
 .cr-rate{min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums}
 #cc-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}   /* four across at 844, three at 667: room for Guildfordians and Johannesburg beside the rating */
 #cc-grid .cr-club .tname{white-space:nowrap;overflow-wrap:normal}
+.cr-club .tid{display:flex;flex-direction:column;gap:3px;min-width:0}   /* a club's or a country's name with its stars under it (ratedStars), within the card's 44px */
+.cr-club .rstars{--star:12px}
 @media (orientation:landscape) and (max-height:560px){
-  #s-career-club .wrap{gap:12px}
-  #s-career-club h2.title{font-size:36px}
+  #s-career-club .wrap,#s-career-look .wrap{gap:12px}
+  #s-career-club h2.title,#s-career-look h2.title{font-size:36px}
 }
 .cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
-@media (max-width:731px){
-  #cc-nat{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr))}
-  #cc-nat button:nth-child(4n+1){border-left:0}
-  #cc-nat button:nth-child(n+5){border-top:1.5px solid var(--rule-hi)}
-}
 /* the trophy row on the player card, under his name: each kind's trophy, in its shape and metal, and the count, only what he has won (as the Trophy Cabinet draws it) */
 /* one line, always (the card has no height to spare at 667x375): sized in em, so careerFit steps the whole row down where a narrow card can't hold it */
 .cr-cab{display:flex;flex-wrap:nowrap;gap:.4em;margin:3px 0 0;font:900 15px/1 var(--display);white-space:nowrap}
@@ -879,10 +956,11 @@ body.desk .desk-only{display:block}
 .cr-cup b{font:inherit}
 /* the transfer window: the offers and Stay in equal parts, each a club's card */
 .cr-offers{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:10px}
-.team.cr-offer{grid-template-columns:44px minmax(0,1fr);grid-template-rows:1fr 1fr;align-content:center;gap:4px 12px;min-height:76px;padding:10px 12px}   /* equal rows: the name on the card's middle line in every card, a league on two lines or one */
-.cr-offer .jw{grid-row:1/3}
+.team.cr-offer{grid-template-columns:44px minmax(0,1fr);grid-template-rows:1fr auto 1fr;align-content:center;gap:4px 12px;min-height:76px;padding:10px 12px}   /* equal outer rows: the name over the card's middle line and its stars on it in every card, a league on two lines or one under them */
+.cr-offer .jw{grid-row:1/4}
 .cr-offer .jersey{width:44px;height:44px}
 .cr-offer .tname{align-self:end;font-size:24px;white-space:nowrap;overflow-wrap:normal}
+.cr-offer .rstars{--star:12px}   /* the club's stars, between its name and its league (ratedStars) */
 .cr-offer .lbl{align-self:start;white-space:nowrap;overflow-wrap:normal}   /* one line, stepped down; one still too wide at 10px (Celtic and Italy, South Africa in a quarter of 667) wraps at its own size (careerFit, data-fit="wrap") */
 .cr-offer.stay{border-style:dashed}
 .cr-offer.stay .lbl{color:var(--chalk)}
@@ -930,26 +1008,51 @@ body.desk .desk-only{display:block}
 .hl-panel{display:flex;flex-direction:column;gap:10px;min-width:0}
 .hl-panel .btn.primary{min-height:72px;font-size:30px}
 .hl-panel.hp-game .btn.primary{min-height:128px;font-size:56px;letter-spacing:.04em}   /* Quick Match's one button, Play: bigger than any other panel's */
+/* My Team's club under Play: its shirt, name and stars, then last season's league and place and its record (PR #14's Your Team info,
+   myHome). Not a button: My Team at the top is the way in. Only where the club has figures. */
+.my-rec{display:flex;align-items:center;gap:6px 16px;min-width:0;padding:8px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
+.my-rec[hidden]{display:none}
+.my-rec-side{display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex:none;max-width:45%;min-width:0}
+.my-rec-side b{max-width:100%;font:800 20px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.my-rec-lines{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:13px;line-height:1.25;color:var(--chalk-dim)}
+.my-rec-lines span:first-child{color:var(--chalk);font-weight:700}
 .hp-career .resume-note,.hl-go .resume-note{margin-top:-4px}
 .hl-go{display:flex;flex-direction:column;gap:10px}
 .hc-new{display:flex;flex-direction:column;gap:8px}
 .hc-comps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .hc-comps.n8{grid-template-columns:repeat(4,minmax(0,1fr))}
+.hc-comps.n9{grid-template-columns:repeat(20,minmax(0,1fr))}   /* National's nine: five then four, each row in equal parts */
+.hc-comps.n9 > .btn{grid-column:span 4}
+.hc-comps.n9 > .btn:nth-child(n+6){grid-column:span 5}
 .hc-comps.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hc-comps.n1{grid-template-columns:1fr}
 .btn.hc-comp{display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;padding:6px 8px;font-size:16px;line-height:1.1;text-align:center;text-wrap:balance}
-.hc-comps.n8 .btn.hc-comp{min-height:52px;font-size:14px}
+.hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:52px;font-size:14px}
 .hc-comp .cup-trophy{width:16px;height:16px;flex:none}
 .hc-comp.locked::after{flex:none}   /* the lock keeps its size: the name wraps, never the lock */
-.hp-drills .drills{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}   /* the eight drills and How to Play, three rows of three */
+.hp-drills .drills{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}   /* PR #14's ten games in rows of four: seven and How to Play, then the three contact games and For Grown-Ups */
 .hp-drills .btn.drill{min-height:70px;padding:5px 6px;gap:3px;font-size:14px;line-height:1.1}
 .hp-drills .dc-icon{width:28px;height:28px}
-/* Settings: Difficulty across, then Sound | Match Help, then Half Length (and Grown-Ups beside it, where the store is live) */
-.hp-settings.settings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
-.hp-settings .set{grid-template-columns:1fr;gap:4px}
-.hp-settings .set-diff,.hp-settings .set-half{grid-column:1/-1}
-.hp-settings.grown .set-half{grid-column:auto}
-.hp-settings #b-grown{align-self:end;min-height:44px}
+.hp-drills .pr-games{display:flex;flex-direction:column;gap:8px}
+.hp-drills .pr-low{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}   /* Contact Games' line across, its three under it, For Grown-Ups in the fourth place; with the group hidden (Kids, Minis) For Grown-Ups keeps its place */
+.hp-drills #pr-contact,.hp-drills #pr-contact .drills{display:contents}   /* an id: practice.css's #pr-contact is a flex column */
+.hp-drills .pr-cg{grid-column:1/-1;margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px;min-width:0}
+.hp-drills .pr-cg .pr-group{font-size:18px;white-space:nowrap}
+.hp-drills .pr-cg .pr-coach{font-size:13px;line-height:1.15}
+.hp-drills .pr-grown{grid-column:4}
+.hp-drills:has(#pr-grownups:not([hidden])){flex:1 1 auto;min-height:0}   /* For Grown-Ups: the panel takes the row and scrolls inside it, Back to Skills at its foot */
+.hp-drills #pr-grownups{min-height:0;max-height:100%;overflow-y:auto;gap:8px;font-size:14px;line-height:1.3}
+.hp-drills #pr-grownups p,.hp-drills #pr-grownups h3{margin:0}
+.hp-drills #pr-grownups p.pr-line{color:var(--chalk);font-weight:700}
+/* Settings: Difficulty across, then Sound | Match Help, then Half Length | Camera, each label over its control. Where the store is live
+   Grown-Ups takes a third of Sound's row (Sound | Match Help | Grown-Ups): three rows, so the panel fits 844x390, 667x375 and 320px tall
+   with no scroll (a fourth row of its own does not fit 667x375 with the labels over their controls, nor 320px tall at all). Six columns,
+   so the halves and the thirds share their lines. */
+.hp-settings.settings{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 12px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
+.hp-settings .set{grid-template-columns:1fr;gap:4px;grid-column:span 3}
+.hp-settings .set-diff{grid-column:1/-1}
+.hp-settings.grown .set-sound,.hp-settings.grown .set-hints,.hp-settings #b-grown{grid-column:span 2}
+.hp-settings #b-grown{align-self:end;min-height:47px;padding-inline:8px;white-space:nowrap}   /* a segment's height (44px inside its edges), its foot on theirs */
 /* the bar: five headlines in equal parts, each a picture and its name; the chosen one lit, with a line along its top */
 .hl-bar{grid-area:bar;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1.5px solid var(--rule-hi);border-radius:10px;background:rgba(9,16,11,.92)}
 .btn.hl{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:5px 4px;border:0;border-radius:0;background:transparent;color:var(--chalk-dim);font:700 13px/1.1 var(--body);text-align:center}
@@ -969,6 +1072,8 @@ body.desk .desk-only{display:block}
 /* My Team on the team screen and the cards that are it: the club and the country side by side in the bar; "My Team" on the card */
 #t-mine:has(> .my-pair){gap:28px;flex-wrap:wrap}
 #t-mine .my-pair{display:inline-flex;align-items:center;gap:10px;min-width:0}
+#t-mine .tid{display:flex;flex-direction:column;gap:5px;min-width:0}   /* the picked side's name with its stars under it */
+#t-mine .rstars{--star:15px}
 .gap.mine{color:var(--flood)}
 .team.locked{position:relative}
 .team.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
@@ -993,17 +1098,21 @@ summary::-webkit-details-marker{display:none}
   /* a phone held sideways: the top row 48px, the bar 52px, the panel's buttons between */
   .home-top .btn{min-height:48px}
   .btn.hl{min-height:50px}
-  .hp-drills .btn.drill{min-height:66px;font-size:13px}
-  .hp-drills .dc-icon{width:26px;height:26px}
-  .hp-settings.settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px;padding:8px 10px}   /* two columns, every target 44px */
+  .hp-drills .btn.drill{min-height:58px;font-size:13px}
+  .hp-drills .dc-icon{width:24px;height:24px}
+  .hp-drills .drills,.hp-drills .pr-low{gap:6px}
+  .hp-drills .pr-games{gap:6px}
+  .hp-drills .pr-cg .pr-group{font-size:16px}
+  .hp-drills .pr-cg .pr-coach{font-size:12px}
+  .hp-settings.settings{gap:6px 10px;padding:8px 10px}   /* three rows, every target 44px */
   .hp-settings .seg button{font-size:13px}
 }
 @media (max-width:599px) and (min-height:421px){
   /* a narrow window: the wordmark over the rest, one column (a phone held sideways keeps two, below) */
   .home{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"mark" "top" "panel" "bar"}
   .home-top{justify-content:stretch}
-  .hp-drills .drills{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .hp-drills #b-help{grid-column:1/-1}
+  .hp-drills .drills,.hp-drills .pr-low{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hp-drills .pr-grown{grid-column:auto}
 }
 @media (orientation:landscape) and (max-height:340px){
   /* Safari sideways, about 320px tall (568x320, 667x320): the top row and the bar 44px, the wordmark smaller, each drill its picture
@@ -1023,13 +1132,21 @@ summary::-webkit-details-marker{display:none}
   .hl-panel .btn.primary{min-height:56px;font-size:26px}
   .hl-panel.hp-game .btn.primary{min-height:88px;font-size:40px}
   .hc-comps{gap:6px}
-  .btn.hc-comp,.hc-comps.n8 .btn.hc-comp{min-height:44px}
+  .btn.hc-comp,.hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:44px}
   .hp-drills .drills{gap:6px}
-  .hp-drills .btn.drill{flex-direction:row;justify-content:flex-start;gap:6px;min-height:52px;padding:4px 8px;text-align:left}
-  .hp-drills .dc-icon{width:24px;height:24px}
-  .hp-settings.settings{gap:4px 10px;padding:5px 10px}
+  .hp-drills .btn.drill{min-height:44px;padding:3px 4px;gap:1px;font-size:12px;line-height:1.05}   /* PR #14's ten in rows of four: each picture small over its name, so the three rows and Contact Games' lines fit the row */
+  .hp-drills .dc-icon{width:18px;height:18px}
+  .hp-drills .pr-cg .pr-group{font-size:15px;line-height:1}
+  .hp-drills .pr-cg .pr-coach{line-height:1.05}
+  .hp-drills .drills,.hp-drills .pr-low,.hp-drills .pr-games{gap:4px}
+  .hp-settings.settings{gap:4px 10px;padding:3px 10px}   /* the three rows, each label over its control, with 4px to spare: Difficulty's segment keeps the full width, so the ring steps a row at a time */
   .hp-settings .set{gap:2px}
   .hp-settings .lbl{font-size:10px;line-height:1}
+}
+@media (orientation:landscape) and (max-height:420px) and (min-height:341px) and (max-width:740px){
+  /* a smaller phone sideways (667x375): smaller pictures and tighter lines, so the three rows and Contact Games' two lines fit between the top row and the bar */
+  .hp-drills .btn.drill{min-height:52px;padding:4px 6px;gap:2px;line-height:1.05}
+  .hp-drills .dc-icon{width:20px;height:20px}
 }
 @media (orientation:landscape) and (max-width:619px){
   /* a phone under 620px wide held sideways (568x320): the five names a little smaller, so Skills Mini Games fits its fifth whole */
@@ -1104,3 +1221,24 @@ summary::-webkit-details-marker{display:none}
   #m-wall .card{gap:10px;padding:14px 16px}
   #m-wall .row2 .btn{min-height:44px}
 }
+
+/* ===== PR #14: rating stars and a made team's level ===== */
+/* A side's or a level's stars (starsHtml, ratedStars, ui-menus.js): drawn shapes, never under 12px a star, so a half star reads on a phone. Named
+   rstars, not tstars: tstars is the star traits' line on a team card (src/traits.js). On the levels, and beside every team's overall badge. */
+.rstars{--star:14px;display:block;flex:none;width:calc(var(--star)*5);height:var(--star)}
+.rstars .off{fill:rgba(241,238,228,.34)}
+.rstars .on{fill:var(--flood)}
+.bd-levels{display:flex;flex-direction:column;gap:10px}
+.bd-levels[hidden],#bd-form[hidden]{display:none}
+.lv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.lv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:6px 10px;text-transform:none}
+.lv[aria-pressed="true"]{border-color:var(--flood)}
+.lv-name{font-weight:800}
+.lv-sub{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--chalk-dim)}
+.lv-line{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 10px;min-width:0}
+.bd-level-now .lv-line{justify-content:flex-start}
+#bd-jersey .rstars{--star:15px}
+.bd-level-now{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
+.bd-level-now .btn{width:auto;min-height:44px;padding:0 12px}
+.bd-level .stat-note{margin:0}
+@media (orientation:landscape) and (max-height:420px){.lv{min-height:44px;padding:3px 10px}.bd-levels{gap:6px}}   /* nine levels and the row under them fit a phone sideways, on first sight */

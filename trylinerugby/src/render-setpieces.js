@@ -1,7 +1,7 @@
 /* ---------- close-up view: a side-on broadcast camera ---------- */
 const CROWD = Array.from({ length:280 }, () => [Math.random(), Math.random(), Math.floor(Math.random()*5)]);
 const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
-const SKIN = '#c69c7c', HAIR = '#2a1d16';
+let SKIN = '#c69c7c', HAIR = '#2a1d16';   // let: paintMan sets them for one man
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
 function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
@@ -126,7 +126,7 @@ function drawCutCues(c, g) {
   }
 }
 function drawScrum(c, g) {
-  drawStage(g);
+  if (practice) dvStage(g.H*0.62); else drawStage(g);
   const { W, H } = g, sc = H*0.2, ground = H*0.85;
   const t = c.t, engaged = t >= SCRUM_SET;
   const mid = W*0.5 + c.pos*sc*0.7 + (engaged && !c.result ? Math.sin(t*31)*1.5 : 0);
@@ -137,7 +137,7 @@ function drawScrum(c, g) {
     const s = sc*k;
     for (const team of [1, 0]) {
       const f = team === 0 ? 1 : -1;
-      fig(mid - f*(0.92 + gap/2)*s, ground + dy*H, s, kitOf(team), { face:f, lean, crouch, arms:'down', drive:t >= 0.75, dim });
+      if (!(practice && dvScrumMan(team, dim ? (dim > 0.3 ? 2 : 1) : 0, mid - f*(0.92 + gap/2)*s, ground + dy*H, s, f, t, engaged))) fig(mid - f*(0.92 + gap/2)*s, ground + dy*H, s, kitOf(team), { face:f, lean, crouch, arms:'down', drive:t >= 0.75, dim });
     }
   }
   if (M.two) for (const team of [0, 1]) {                     // the seat tag over each pack, and that pack's Early or Good Hit for 0.9s
@@ -160,8 +160,8 @@ function drawScrum(c, g) {
   if (frac >= 0) ctx.fillRect(W*0.5, by, bw/2*frac, bh); else ctx.fillRect(W*0.5 + bw/2*frac, by, -bw/2*frac, bh);
   ctx.fillStyle = '#f1eee4'; ctx.fillRect(W*0.5 - 1, by - 4, 2, bh + 8);
   ctx.font = `800 ${Math.round(H*0.04)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textBaseline = 'middle';
-  ctx.textAlign = 'right'; ctx.fillText(M.nat[0].id, bx - 10, by + bh/2);
-  ctx.textAlign = 'left'; ctx.fillText(M.nat[1].id, bx + bw + 10, by + bh/2);
+  ctx.textAlign = 'right'; ctx.fillText(practice ? 'YOU' : M.nat[0].id, bx - 10, by + bh/2);
+  ctx.textAlign = 'left'; ctx.fillText(practice ? 'THEM' : M.nat[1].id, bx + bw + 10, by + bh/2);
 }
 function drawLineout(c, g) {
   drawStage(g);
@@ -207,7 +207,7 @@ function drawCut() {
   else if (c.kind === 'lineout') drawLineout(c, g);
   else if (c.kind === 'goal') drawKick(c, g);
   else drawDuel(c, g);
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07);
+  if (!practice) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07); }   // the broadcast bars are a match's
   if (!(hintShown[0] && hintShown[0].title)) cutTag(cutTitle(c), g);   // a hints card with a title sits where the tag goes and names the moment itself
   if (M.two) drawCutCues(c, g);
   ctx.restore();

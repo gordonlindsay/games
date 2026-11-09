@@ -15,7 +15,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 // 0. Nothing moves outside a cup: AI v AI, a Quick Match you play (arcade, with a level finish into the Golden Try), a championship
 //    match (a league keeps its draw) and the demo, seeded, against the build before the cups (ed37be5). Run first, so nothing
 //    earlier in this file can move them.
-const BASE = '1o2r2g2 nj712u ck53ci 4n8zwk 1bk4uie';   // pinned from ed37be5 (GAME=<its index.html> CUPS_PRINT=1); this build gives the same
+const BASE = 'lhsdx3 ywg8pq rl67b4 1watfcp u8g5a0';   // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere, Farnham's opponent here, is 64 (13), was 67 (14); with CLUB_RATED=off this build gives the pin before it exactly, lhsdx3 ywg8pq 1cp7bss 1igh5kz u8g5a0 (AI v AI, the arcade match and the demo did not move). Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 nj712u ck53ci 4n8zwk 1bk4uie. Before that: pinned from ed37be5 (GAME=<its index.html> CUPS_PRINT=1); this build gives the same
 function fingerprint() {
   const out = [];
   reseed(23);
@@ -281,7 +281,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
     ['a knockout with no winner', (() => { const x = copy(e); delete x.results[0][0].w; return x; })()],
     ['a knockout won by the loser', (() => { const x = copy(e); const m = x.results[0][0]; m.w = m.w === m.h ? m.a : m.h; return x; })()],
     ['a level knockout with no reason', (() => { const x = copy(e); const m = x.results[0][0]; m.as = m.hs; m.at = m.ht; delete m.by; return x; })()],
-    ['a score off the scale', (() => { const x = copy(e); x.results[0][0].hs = 999; return x; })()],
+    ['a score off the scale', (() => { const x = copy(e); x.results[0][0].hs = 1000; return x; })()],   // ptsOf allows to 999 now (PTS_MAX, PR #14: a level 90 side passed the old 200); 999 was this case's number
     ['a Test after the series is won', (() => { const t = K.cupNew('tour', { user:K.cupTourSide('men') }); win(t); win(t); const x = copy(t); x.fixtures.push([[1, 0]]); return x; })()],
     ['pools with a side twice', (() => { const x = copy(cups[1]); x.pools[0][0] = x.pools[1][0]; return x; })()],
     ['a pool with two from one band', (() => { const x = copy(cups[1]); [x.pools[0][1], x.pools[0][2]] = [x.pools[0][2], x.pools[0][1]]; return x; })()],

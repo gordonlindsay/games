@@ -76,6 +76,7 @@ function showBreak(kind) {
   $('m-break').hidden = false;
 }
 function finishMatch() {
+  if (!M.two && !practice && settings.finished < 99) { settings.finished++; save(); }   // one player's own matches, played right through: quitting doesn't count (the Your Ball sign, ui-match.js)
   if (M.champ && champ) { const was = champ.round; recordChampResult(); if (champ.round > was && typeof cupTripleAfter === 'function') cupTripleAfter(champ); }   // a Triple Crown completed by this result tells the Locker (src/cups.js)
   if (M.cup && !M.career && cup && typeof cupRecordMatch === 'function') cupRecordMatch();   // a cup in Championship mode (src/ui-cups.js)
   if (M.career) careerRecordResult();
@@ -94,6 +95,7 @@ $('br-menu').addEventListener('click', () => { $('m-break').hidden = true; exitM
 
 /* pause */
 function pause() {
+  if (demoOn()) { demoStop(); return; }                    // Watch How has no pause card: a hidden app, a lost focus or a turned phone ends it on the ready card, so nothing can stay held or paused
   if (practice && (practice.done || practice.ready)) return;
   if (!playing() || M.over || M.phase === 'break') return;
   M.paused = true;
@@ -101,6 +103,7 @@ function pause() {
   $('pz-quit').textContent = practice ? practiceBackText() : 'Quit Match'; quitArmed = false;   // a drill goes back to where it came from (practice.js)
   if (two.lost && two.lost.length) seatLost(two.lost[0]); else $('pz-seat').hidden = true;
   renderHintSwitches();
+  $('pz-cam-note').hidden = true;
   setFocus(null);
   $('m-pause').hidden = false;
 }
@@ -162,6 +165,7 @@ function renderHome() {
   myHome();
   champHome();
   renderCareerHome();
+  practiceGroups();                                         // Skills Mini Games: the contact games hidden for the youngest, the grown-ups' panel shut (practice.js)
   lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
   if (typeof importHome === 'function') importHome();      // Add Your Team, where the team screen's Add Your Team card would show (src/import.js)
 }
@@ -208,10 +212,12 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
     if (key === 'diff' && i === 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
+    if (key === 'diff' && kidsLevel() && i !== 0) { parentGate(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // only a grown-up takes the game off the Kids level; a cancelled check leaves it as it was
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
+    if (key === 'cam') { settings.camPick = true; if (M && M.cut) $('pz-cam-note').hidden = false; if (!(M && M.paused) && !$('s-home').hidden) BV.peekUntil = performance.now() + BV_DEMO_PEEK; }   // on the home, the demo behind it shows the height just picked for a moment (PR #14); the pause card's row changes the match itself   // a real choice, so a Top chosen here survives a reload (cleanSettings); a close-up has its own camera, so the pause card says so
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
-    if (key === 'sound' && settings.sound) ac();
+    if (key === 'sound') { if (settings.sound) ac(); else soundOff(); }
   }));
 }
 
@@ -235,10 +241,19 @@ function myPool() {                                       // the list My Team's 
   return l ? l.key : 'sur';
 }
 const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat || 'ENG') : keyOf(t) === keyOf(myClubTeam()) && !t.custom === !myClubTeam().custom);
-function myHome() {                                        // the home's My Team: the club's and the country's shirts and names
+/* My Team's club, last season (PR #14's Your Team info, in main's home): its league and place, won and lost (drawn when there was a draw),
+   scored and conceded. Real figures from the club's list, so only a built-in club with a line has them; a nation, a team you made or
+   imported, a My League side and a club with no figures (Quins, New Zealand, Japan, Scotland) show none, never an invented one. */
+const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
+const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+function myHome() {                                        // the home's My Team: the club's and the country's shirts and names; under Play, the club's stars and last season
   const c = myClubTeam(), n = myNatTeam(null);
   $('my-kits').innerHTML = [c, n].map(t => `<span class="my-side">${jersey(t, 'mini')}<b>${esc(listName(t))}</b></span>`).join('');
   $('b-my').setAttribute('aria-label', 'My Team: ' + listName(c) + ', ' + listName(n));
+  const lg = myLeagueLine(c), rec = $('my-rec');
+  rec.hidden = !lg;
+  $('my-rec-side').innerHTML = lg ? `<b>${esc(listName(c))}</b>${ratedStars(c)}` : '';
+  $('my-rec-league').textContent = lg; $('my-rec-record').textContent = myRecordLine(c);
   homeFit();
 }
 function homeFit() {                                       // long names (Christchurch, South Africa) step down together until both fit, once the home has a size
@@ -258,7 +273,7 @@ $('b-my').addEventListener('click', () => { ac(); openTeams('my'); });
 let homeTier = null;                                       // the tier on show, while the game runs: first the one My Team's club is on
 const champComps = tier => (tier === 0 ? [['int', 'Championship'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']]
   : tier === 1 ? TEAM_LISTS.filter(l => l.tier === 1).map(l => [l.key, l.name])
-  : [['sur', 'Surrey'], ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
+  : [...TEAM_LISTS.filter(l => l.tier === 2).map(l => [l.key, l.name]), ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
 $('hc-tier').innerHTML = TEAM_TIERS.map((n, i) => `<button data-tier="${i}">${n}</button>`).join('');   // plain words (data.js)
 for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => { homeTier = +b.dataset.tier; champHome(); });
 function champHome() {
@@ -375,6 +390,11 @@ function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
   return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
 }
+/* A side's stars, from its overall on the one scale (starsOf, src/ratings.js): drawn beside its overall's badge wherever a team is picked or
+   listed (the team cards, the picked side's bar, My Team, the career's club picker, its transfer offers and call-up). Named ratedStars, not
+   teamStars: that is the star traits' (src/traits.js). The badge says the number; the stars carry their words for a screen reader. */
+const ratedStars = (t, quiet) => starsHtml(starsOf(t), quiet);
+const jerseyRated = t => jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`);   // the shirt with its overall's badge
 function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i <= v ? 'on' : ''}"></i>`; return `<span class="pips" aria-label="${v} of 5">${s}</span>`; }
 let teamList = [];
 /* Player 1 choosing his own side: Quick Match before his pick, 2 Players' Player 1, and Championship (bar a tour, where his side is the
@@ -389,7 +409,7 @@ function teamCard(t, i) {
   const stars = teamTraitNames(t);                         // the star traits its 5s bring (src/traits.js)
   const state = my ? ` aria-pressed="${picked}"` : picked ? ' aria-disabled="true"' : '';   // My Team's picks stay pressable; Quick Match's own side can't be its opponent
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}"${t.legend ? ' data-legend="1"' : ''}${state}>
-      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(listName(t))}</span>
+      ${jerseyRated(t)}<span class="tid"><span class="tname">${esc(listName(t))}</span>${ratedStars(t)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : mine ? '<span class="gap mine">My Team</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
       ${stars.length ? `<span class="tstars" aria-label="Star Traits: ${stars.join(', ')}">${stars.map(n => `<b>${n}</b>`).join(' · ')}</span>` : ''}
@@ -477,8 +497,8 @@ function renderTeams() {
   const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours) || my;
   $('t-yours').hidden = !yours; $('t-change').hidden = !!view || my;
   if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
-  else if (my) { const n = myNatTeam(null); $('t-mine').innerHTML = [myClubTeam(), n].map(t => `<span class="my-pair">${jersey(t)}<span>${esc(listName(t))}</span></span>`).join(''); }   // My Team: the club and the country
-  else if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, cat) || mine).name)}</span>`;
+  else if (my) { const n = myNatTeam(null); $('t-mine').innerHTML = [myClubTeam(), n].map(t => `<span class="my-pair">${jersey(t)}<span class="tid"><span>${esc(listName(t))}</span>${ratedStars(t)}</span></span>`).join(''); }   // My Team: the club and the country, each with its stars
+  else if (yours) { const m = catTeam(mine, cat) || mine; $('t-mine').innerHTML = `${jersey(mine)}<span class="tid"><span>${pair ? 'Player 1 · ' : ''}${esc(m.name)}</span>${ratedStars(m)}</span>`; }
   const def = teamDefault();
   $('t-default').hidden = !def;
   $('t-default').textContent = view && view.pick ? view.primary : def ? 'Play as ' + (catTeam(def, cat) || def).name : '';   // the side it starts: Farnham Women on Women
@@ -554,8 +574,36 @@ function myPick(t) {
 
 /* create team */
 let draft = null, editing = null, codeTouched = false, delArmed = false;
+let levelChoosing = false, levelNote = '';                 // a new team starts on the level list; the note says what a lower level took off
 const spent = d => ABILITIES.reduce((a, [k]) => a + d[k] - 1, 0);
+/* A level's stars, drawn: five star shapes, the lit ones over the dim, so a half star is half lit and half dim at any size. Inline, like the home's icons, so there is nothing to load. n is a whole or half star count
+   (starsOfOverall, src/ratings.js). The picture carries its words for a screen reader, or quiet leaves them out where the same words are already beside it. On the levels, and beside every
+   team's overall badge (ratedStars). */
+const STAR_SHAPE = (i, half) => {
+  const pts = []; for (let k = 0; k <= (half ? 5 : 9); k++) { const r = k % 2 ? 4.5 : 9.8, a = (-90 + (half ? -36 : 36)*k)*Math.PI/180; pts.push((10 + 20*i + r*Math.cos(a)).toFixed(1) + ' ' + (10.6 + r*Math.sin(a)).toFixed(1)); }
+  return 'M' + pts.join('L') + 'Z';
+};
+const STAR_OFF = [0, 1, 2, 3, 4].map(i => STAR_SHAPE(i)).join('');
+function starsHtml(n, quiet) {
+  const whole = Math.floor(n), on = [0, 1, 2, 3, 4].filter(i => i < whole).map(i => STAR_SHAPE(i)).join('') + (n > whole ? STAR_SHAPE(whole, true) : '');
+  return `<svg class="rstars" viewBox="0 0 100 20" ${quiet ? 'aria-hidden="true"' : `role="img" aria-label="${starsWords(n)}"`}><path class="off" d="${STAR_OFF}"/><path class="on" d="${on}"/></svg>`;
+}
+/* Setting the level sets the team's ability: a team set at four stars is a four-star team, with nothing more to do. The abilities go through cleanTeam's own cut, so what you see here is what it saves as, and any that came down are named; any points the level has left go on from what the team has now (abilitiesFor), and can be moved about. */
+function builderLevel(id) {
+  const l = TEAM_LEVELS.find(v => v.id === id); if (!l || !draft) return;
+  const cut = cleanTeam({ ...draft, level:id }, 0), down = ABILITIES.filter(([k]) => cut[k] < draft[k]).map(([, n]) => n);
+  for (const [k] of ABILITIES) draft[k] = cut[k];
+  const room = l.budget - spent(draft);
+  if (room > 0) Object.assign(draft, abilitiesFor(draft, ABILITIES.length + l.budget));
+  draft.level = id; levelChoosing = false;
+  levelNote = down.length ? `${l.name} has ${l.budget} ${l.budget === 1 ? 'point' : 'points'}, so ${down.length > 1 ? down.slice(0, -1).join(', ') + ' and ' + down[down.length - 1] + ' came' : down[0] + ' came'} down.` : room > 0 ? 'Your points are shared out. Take one off an ability to add it to another.' : '';
+  renderBuilder(); $('s-build').scrollTop = 0;
+}
 function buildBuilder() {
+  $('bd-level-grid').innerHTML = TEAM_LEVELS.map(l => `<button class="btn lv" data-level="${l.id}"><span class="lv-name">${l.name}</span><span class="lv-sub">${starsHtml(l.stars)}<span>${l.budget} ${l.budget === 1 ? 'Point' : 'Points'}</span></span></button>`).join('');
+  for (const b of $('bd-level-grid').querySelectorAll('[data-level]')) b.addEventListener('click', () => builderLevel(b.dataset.level));
+  $('bd-level-change').addEventListener('click', () => { levelChoosing = true; renderBuilder(); $('s-build').scrollTop = 0; });
+  $('bd-level-keep').addEventListener('click', () => { levelChoosing = false; renderBuilder(); });
   const sw = id => KIT_COLOURS.map(([n, h]) => `<button class="sw" style="--k:${h}" data-c="${h}" aria-label="${n}"></button>`).join('');
   for (const [id, key] of [['bd-kit', 'kit'], ['bd-trim', 'trim']]) {
     $(id).innerHTML = sw();
@@ -569,7 +617,7 @@ function buildBuilder() {
     </div>`).join(''));
   for (const b of $('bd-abs').querySelectorAll('.step')) b.addEventListener('click', () => {
     const k = b.dataset.ab, d = +b.dataset.d;
-    if (d > 0 && (draft[k] >= 5 || spent(draft) >= BUDGET)) return;
+    if (d > 0 && (draft[k] >= 5 || spent(draft) >= teamBudget(draft))) return;
     if (d < 0 && draft[k] <= 1) return;
     draft[k] += d; renderBuilder();
   });
@@ -618,8 +666,8 @@ function openBuilder(t) {
   $('bd-name').value = draft.name;
   $('bd-code').value = t ? t.id : autoCode('My Team');
   $('bd-eyebrow').textContent = t ? 'Edit Team' : 'Create Team';
-  $('bd-del').hidden = !t; $('bd-row').classList.toggle('one', !t);
   delArmed = false; $('bd-del').textContent = 'Delete Team';
+  levelChoosing = !t; levelNote = '';                        // a new team starts by choosing its level; a saved one opens as it is, with no level if it was made before them
   renderBuilder(); showScreen('s-build'); $('s-build').scrollTop = 0;
 }
 function renderBuilder() {
@@ -628,7 +676,15 @@ function renderBuilder() {
   [...$('bd-pat').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === (draft.hoops ? 1 : 0))));
   for (const [id, key] of [['bd-kit', 'kit'], ['bd-trim', 'trim']])
     for (const b of $(id).querySelectorAll('.sw')) b.setAttribute('aria-pressed', String(b.dataset.c === draft[key]));
-  const left = BUDGET - spent(draft);
+  const lv = teamLevelOf(draft), left = teamBudget(draft) - spent(draft);
+  $('bd-levels').hidden = !levelChoosing; $('bd-form').hidden = levelChoosing; $('bd-save').hidden = levelChoosing;
+  const keep = levelChoosing && !!(lv || editing), del = !levelChoosing && !!editing;   // the row under the screen: Keep This Level or Delete Team beside Back, so the level list fits a phone sideways
+  $('bd-level-keep').hidden = !keep; $('bd-del').hidden = !del; $('bd-row').classList.toggle('one', !keep && !del);
+  for (const b of $('bd-level-grid').querySelectorAll('[data-level]')) b.setAttribute('aria-pressed', String(!!lv && b.dataset.level === lv.id));
+  $('bd-level-name').textContent = lv ? `${lv.name} · ${starsWords(lv.stars)}` : `No Level Set · ${BUDGET} Points`;
+  $('bd-level-stars').innerHTML = lv ? starsHtml(lv.stars, true) : '';
+  const note = lv && left > 0 ? `Spend ${left} more ${left === 1 ? 'point' : 'points'} to reach ${starsWords(lv.stars)}.` : levelNote;   // points taken off and not put back: why the shirt reads under the level
+  $('bd-level-note').textContent = note; $('bd-level-note').hidden = !note;
   $('bd-left').textContent = 'Points Left ' + left; $('bd-left').classList.toggle('spent', left === 0);
   for (const [k] of ABILITIES) {
     $('bd-p-' + k).innerHTML = pips(draft[k]);

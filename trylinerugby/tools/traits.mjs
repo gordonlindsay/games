@@ -27,7 +27,7 @@ if (process.argv.includes('--balance')) { await balance(); process.exit(0); }
 // 0. AI v AI, the demo and a tool's match with star sides play exactly as at 30e13e2, the commit before traits (run first, so nothing
 //    below can move them). The same seeded runs on that build's bundle gave BASE. If another change moves AI v AI on purpose,
 //    re-pin from that change's bundle without src/traits.js (tools/career.mjs pins the same kind of thing for sides with no star).
-const BASE = '6igeb3 tagplu lxxgtn 14mjifb';
+const BASE = '4318of 1hlbjrh 8b7zl6 6cc5jm';   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 6igeb3 tagplu lxxgtn 14mjifb
 function pin() {
   const out = [];
   for (const [a, b, i] of [['FRA', 'IRE', 0], ['PRE', 'SCO', 1]]) {
@@ -78,7 +78,8 @@ function pin() {
     for (const [n, list] of stars) for (const id of list) if (!R.TRAITS.find(tr => tr.id === id).shirts.includes(n)) ok(false, `${t.name}: ${id} on ${n}, not a shirt it fits`);
   }
   ok(true, 'every built-in side has exactly the stars its 5s bring, each on a shirt it fits');
-  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA,MPL,PRE',   // every nation on the XV rankings has a 5 somewhere; Montpellier and Pretoria are the clubs with one
+  // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Ironsides, 72 from its table (was 70), gains a point where it is strongest, Power, to 5; with CLUB_RATED=off this build gives the list before it exactly
+  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA,MPL,PRE,IRO',   // every nation on the XV rankings has a 5 somewhere; Montpellier, Pretoria and Ironsides are the clubs with one
      `the sides with stars: ${X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id + ' ' + R.teamTraitNames(t).join('/')).join(', ')}`);
   const fra = R.teamStars(team('FRA')), ire = R.teamStars(team('IRE'));
   ok(fra.size === 4 && fra.get(7).join() === 'burst' && fra.get(6).join() === 'handoff' && [...fra].filter(([n]) => n <= 3).length === 2, `France: four stars, Burst on 7, Hand-Off on 6, Crunch and Engine on two forwards (${starMap(team('FRA'))})`);

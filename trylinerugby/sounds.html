@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sound Test</title>
+<style>
+:root{--night:#0b130e;--panel:#17271d;--rule:#3a5242;--chalk:#f1eee4;--dim:#a7b4a9;--flood:#ffcf3d;--ink:#1c1500;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--night);color:var(--chalk);font:16px/1.4 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;touch-action:manipulation;-webkit-text-size-adjust:100%}
+main{padding:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-right,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 24px) calc(env(safe-area-inset-left,0px) + 16px);max-width:900px;margin:auto}
+h1{font-size:24px;margin:0 0 4px}
+p{margin:0 0 12px;color:var(--dim)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+button{font:inherit;font-weight:700;color:var(--chalk);background:var(--panel);border:1px solid var(--rule);border-radius:10px;min-height:64px;padding:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:active{background:var(--rule)}
+button.on{background:var(--flood);border-color:var(--flood);color:var(--ink)}
+.wide{grid-column:1/-1}
+h2{font-size:18px;margin:20px 0 8px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:4px 8px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+</style>
+</head>
+<body>
+<main>
+  <h1>Sound Test</h1>
+  <p>Tap a button to hear it. On an iPhone, the silent switch on the side turns all of this off.</p>
+  <div class="grid" id="sounds"></div>
+  <h2>Together</h2>
+  <div class="grid">
+    <button class="act" id="bed">Crowd Bed</button>
+    <button class="act" id="try">Try Scored</button>
+    <button class="act" id="busy">All at Once</button>
+    <button class="act" id="soft">Small Bounce</button>
+  </div>
+  <h2>Levels</h2>
+  <p>The same sounds drawn silently and measured. Clipped should always be 0.</p>
+  <div class="grid"><button class="act wide" id="measure">Measure</button></div>
+  <div class="scroll"><table id="table" hidden></table></div>
+</main>
+<script>
+/* What src/sound.js reads from the game. This page is not part of the game: nothing links here and it is not in the service worker's list. */
+var settings = { sound:true }, M = {};
+</script>
+<script src="src/sound.js"></script>
+<script>
+var bedOn = false;
+var $ = function (id) { return document.getElementById(id); };
+Object.keys(SOUND_NAMES).forEach(function (k) {
+  var b = document.createElement('button');
+  b.className = 'act'; b.textContent = SOUND_NAMES[k]; b.dataset.key = k;      /* act: a button with its own sound, so no menu tap over it */
+  b.addEventListener('click', function () { sfx(k); });
+  $('sounds').appendChild(b);
+});
+$('bed').addEventListener('click', function () { bedOn = !bedOn; $('bed').classList.toggle('on', bedOn); ac(); bedSync(bedOn); });
+$('try').addEventListener('click', function () { sfx('whistle'); sfx('roar'); });
+$('busy').addEventListener('click', function () { Object.keys(SOUND_NAMES).forEach(function (k) { if (k !== 'tap') sfx(k); }); });
+$('soft').addEventListener('click', function () { sfx('bounce', 0.3); });
+setInterval(function () { soundFrame(bedOn); }, 250);      /* the game does this every frame */
+$('measure').addEventListener('click', function () {
+  var keys = Object.keys(SOUND_NAMES), rows = keys.map(function (k) { return [SOUND_NAMES[k], k]; }).concat([['Crowd Bed', 'bed'], ['All at Once', keys]]);
+  var t = $('table'); t.hidden = false; t.innerHTML = '<tr><th>Sound</th><th>Peak dB</th><th>RMS dB</th><th>Seconds</th><th>Clipped</th></tr>';
+  rows.reduce(function (p, r) {
+    return p.then(function () { return soundRender(r[1], { secs:r[1] === 'bed' ? 8 : 4 }); }).then(function (m) {
+      var tr = document.createElement('tr');
+      [r[0], m.peakDb.toFixed(1), m.rmsDb.toFixed(1), m.length.toFixed(2), m.clipped].forEach(function (v) { var c = document.createElement('td'); c.textContent = v; tr.appendChild(c); });
+      t.appendChild(tr);
+    });
+  }, Promise.resolve());
+});
+</script>
+</body>
+</html>

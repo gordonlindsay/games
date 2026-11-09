@@ -68,7 +68,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   for (const t of raw.teams) delete t.stamina;
   X.setChamp(null); X.restore({ champ:raw });
   const c = X.champ();
-  ok(c && c.teams.length === 6 && c.teams.every(t => t.stamina === 3) && c.teams[0].pace === 4, 'a championship saved before Stamina loads, every side at 3');
+  ok(c && c.teams.length === 6 && c.teams.every(t => t.stamina === 3) && c.teams[0].pace === X.CLUBS[0].pace, 'a championship saved before Stamina loads, every side at 3');
   ok(X.standings(c).length === 6, 'and its table still builds');
   const legacy = { user:0, round:0, fixtures:raw.fixtures, results:[] };   // saved before clubs: no teams, the nations by index
   X.setChamp(null); X.restore({ champ:legacy });
@@ -108,6 +108,30 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok($('bd-left').textContent === 'Points Left 12' && /aria-label="1 of 5"/.test($('bd-p-stamina').innerHTML), `the builder has a Stamina row and 12 points (${$('bd-left').textContent})`);
   S.openBuilder(X.custom()[0]);
   ok(S.draft().stamina === 3 && $('bd-left').textContent === 'Points Left 0', 'an old team opens with Stamina 3 and nothing left to spend');
+  // a level sets what a team can spend: the builder starts on it, and a lower level cuts where you can see it
+  ok(/^No Level Set · 12 Points$/.test($('bd-level-name').textContent) && !S.levelChoosing() && !$('bd-form').hidden && $('bd-levels').hidden, `an old team opens as it is, on its old 12 (${$('bd-level-name').textContent})`);
+  S.openBuilder(null);
+  ok(S.levelChoosing() && !$('bd-levels').hidden && $('bd-form').hidden && $('bd-save').hidden && $('bd-level-keep').hidden, 'a new team starts by choosing its level, with nothing else on the screen to fill in yet');
+  ok(!('level' in S.draft()), 'and has none until it chooses');
+  S.builderLevel('r1');
+  ok(S.draft().level === 'r1' && !S.levelChoosing() && $('bd-levels').hidden && !$('bd-form').hidden && !$('bd-save').hidden, 'choosing one opens the rest');
+  ok($('bd-left').textContent === 'Points Left 0' && $('bd-level-name').textContent === 'Regional 1 · 3 Stars' && X.overallOf(S.draft()) === 58, `the level sets the ability: Regional 1's 6 points are shared out, and it is already its own 58 and 3 stars (${$('bd-left').textContent}, ${$('bd-level-name').textContent}, ${X.overallOf(S.draft())})`);
+  ok($('bd-level-note').textContent === 'Your points are shared out. Take one off an ability to add it to another.', `and says so (${$('bd-level-note').textContent})`);
+  S.draft().pace--; S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 1' && $('bd-level-note').textContent === 'Spend 1 more point to reach 3 Stars.', `a point taken off and not put back says why the shirt reads under the level (${$('bd-level-note').textContent})`);
+  Object.assign(S.draft(), { pace:4, power:2, handling:2, kicking:2, stamina:1 }); S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 0', 'spending them all');
+  S.builderLevel('c1');
+  ok(KEYS.map(k => S.draft()[k]).join('') === '41111' && $('bd-left').textContent === 'Points Left 0' && !$('bd-level-note').hidden, `lowering the level cuts from the last in line (${KEYS.map(k => S.draft()[k]).join('')})`);
+  ok($('bd-level-note').textContent === 'Counties 1 has 3 points, so Power, Handling and Kicking came down.', `and says so (${$('bd-level-note').textContent})`);
+  S.builderLevel('euro');
+  ok($('bd-left').textContent === 'Points Left 0' && S.draft().pace >= 4 && X.overallOf(S.draft()) === 90, `raising it shares out the new points on from what is there: a level's team is its level (${KEYS.map(k => S.draft()[k]).join('')})`);
+  Object.assign(S.draft(), { pace:5, power:5, handling:5, kicking:3, stamina:4 }); S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 0', 'seventeen points at European Champions');
+  const big = X.cleanTeam({ ...S.draft(), name:'Giants', key:'myG' }, 0), reread = X.cleanTeam(JSON.parse(JSON.stringify(big)), 0);
+  ok(X.rateOf(big) === 22 && X.overallOf(big) === 90 && reread.level === 'euro' && X.rateOf(reread) === 22, 'a team above the old 12 keeps every point through a save and a reload');
+  const noLevel = X.cleanTeam({ name:'Oldie', key:'myO', pace:5, power:5, handling:5, kicking:3, stamina:4 }, 0);
+  ok(X.rateOf(noLevel) === 17 && !('level' in noLevel), 'and without a level the same abilities are cut to 12, as an old save always was');
   const src = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
   ok(/ABILITIES\.map\(\(\[k, l\]\) => `\s*<div class="ab">/.test(src), 'the builder rows come from ABILITIES');
 }

@@ -1,7 +1,8 @@
 /* =========================================================
    Rendering
    ========================================================= */
-const cv = $('cv'), ctx = cv.getContext('2d');
+const cv = $('cv');
+let ctx = cv.getContext('2d');   // let: paintMan points it at a sprite cell for one man
 const V = { W:0, H:0, dpr:1, s:10 };
 const C = { surround:'#0e2414', grassA:'#2a6233', grassB:'#2f6a38', line:'rgba(244,241,232,.92)', board:'#122018', boardHi:'#1c3125', pad:'#1b2747', ctrl:'#ffcf3d', p2:'#ff5fd2', head:'#2a1d16', outline:'#08110b' };
 const ringCol = t => (seatOfTeam(t) === 1 ? C.p2 : C.ctrl);   // the ring, the pointer and the kick aim: gold for seat 0, pink for Player 2
@@ -19,11 +20,12 @@ function unzoom() {
   requestAnimationFrame(() => { meta.content = c; window.scrollTo(0, 0); });
 }
 function resize() {
-  V.dpr = Math.min(2, window.devicePixelRatio || 1);
+  V.dpr = Math.min(dprMax(), window.devicePixelRatio || 1);
   V.W = window.innerWidth; V.H = window.innerHeight;
   cv.width = Math.round(V.W*V.dpr); cv.height = Math.round(V.H*V.dpr);
 }
 function toS(x, y) {
+  if (BV.on) return bvS(x, y);
   const s = V.s, c = M.cam;
   return [V.W/2 + (x-c.x)*s, V.H/2 + (y-c.y)*s];
 }
@@ -155,10 +157,13 @@ function drawBall(r) {
   let ang = 0;
   if (b.state === 'held') { const [fx, fy] = svec(b.carrier.fx, b.carrier.fy); ang = Math.atan2(fy, fx); }
   else { const [vx, vy] = svec(b.vx, b.vy); if (hyp(vx, vy) > 0.5) ang = Math.atan2(vy, vx); }
+  const tum = b.tumble != null && b.state !== 'held' ? b.tumble : null;   // Bouncy Egg: the ball tumbles end over end, so its length comes and goes as it turns. Nothing else sets it
+  if (tum != null) ang += tum*0.35;
+  const len = tum == null ? 1 : 0.62 + 0.38*Math.abs(Math.cos(tum));
   ctx.save(); ctx.translate(gx, gy - lift); ctx.rotate(ang);
   const look = lockerBall();                               // the Locker's ball in a match you play, or null for the classic one (src/locker.js)
   ctx.fillStyle = look ? lockerBallFill(look, rx*sc) : '#f6f3ea'; ctx.strokeStyle = look ? look.line : '#3b2f22'; ctx.lineWidth = 1.2;
-  ellipse(0, 0, rx*sc, rx*0.62*sc); ctx.fill(); ctx.stroke();
+  ellipse(0, 0, rx*sc*len, rx*0.62*sc); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(59,47,34,.6)'; ctx.beginPath(); ctx.moveTo(-rx*0.45*sc, 0); ctx.lineTo(rx*0.45*sc, 0); ctx.stroke();
   ctx.restore();
 }

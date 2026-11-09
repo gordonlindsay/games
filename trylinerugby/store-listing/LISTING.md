@@ -66,7 +66,7 @@ Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitc
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- Skills Mini Games: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
+- Skills Mini Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
@@ -98,7 +98,7 @@ Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitc
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- Skills Mini Games: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
+- Skills Mini Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
@@ -158,7 +158,7 @@ Tryline Rugby Sevens is rugby sevens for your phone and tablet. Seven a side on 
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- Skills Mini Games: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
+- Skills Mini Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)

@@ -226,7 +226,7 @@ function aiCarrier(p, dt) {
   if (toLine < 12) ay += (35-p.y)*0.015;
   const m = hyp(ax,ay) || 1, sp = maxSpeed(p)*0.95;
   steer(p, ax/m*sp, ay/m*sp, 15, dt);
-  if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; p.vy += (rnd() < 0.5 ? -1 : 1)*MOVES.step.cpuPush; }
+  if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; const s = rnd() < 0.5 ? -1 : 1; p.vy += s*MOVES.step.cpuPush; artStepped(p, s); }
   if (M.careerPro && proCarrier(p, dt)) return;          // Pro Mode: a Call for Ball answered, or a look for your player (career-pro.js)
   p.think -= dt; if (p.think > 0) return; p.think = 0.15;
   if (p.hold < 0.5) return;
@@ -306,7 +306,8 @@ function canDive(q) {                                      // would a Tackle pre
 }
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;
-  if (!canDive(q)) { st('ignored'); return; }
+  if (practice && practice.tagOnly) { drillTagPull(q); return; }   // the youngest pull a tag: no dive
+  if (!canDive(q)) { st('ignored'); if (practice && practice.id === 'defend') drillWhiff(q); return; }   // a press with nothing in reach costs a moment in that drill, so the timing counts
   const c = b.carrier;
   if (dropHolding(c)) { st('ignored'); return; }   // he is about to drop for goal: the close-up judges you as a charger
   if (c.bind) { joinTackle(c.bind, q); return; }
@@ -354,6 +355,7 @@ function sideStep(c, j, s) {                               // the carrier steps 
   M.stats.steps = (M.stats.steps || 0) + 1; st('steps' + c.team);
   if (ringed(c)) tag('Side Step', c.x, c.y);
   sfx('whoosh'); buzz(15, c.team);
+  artStepped(c, s);                                        // the art's feint: render-only, nothing else reads it
 }
 function dummyPass(c, r) {                                 // c shows a pass to r and keeps the ball: the nearest standing AI defender ahead may buy it. False when there is nobody to sell
   const K = MOVES.dummy, t = c.team, d = dirOf(t);
@@ -372,26 +374,30 @@ function dummyPass(c, r) {                                 // c shows a pass to 
   } else if (isHuman(t)) tag('Not Fooled', c.x, c.y);
   return true;
 }
-const dirKeyHeld = (inp, d) => { for (const code of inp.keys) { const k = KEYDIR[code]; if (k && (d == null || k[0]*d < 0)) return true; } return false; };   // any direction key, or (with d) one pointing back toward his own line
+const dirKeyHeld = (inp, d) => { for (const code of inp.keys) { const k = KEYDIR[code]; if (k && (d == null || keyFwd(inp, k)*d < 0)) return true; } return false; };   // any direction key, or (with d) one pointing back toward his own line
 function gestureStep(t, dt) {                              // one human side's open-play gestures, read once a step from its slot's history
   const inp = inputOf(t), c = ctrlOf(t), b = M.ball, S = sideOf(t), KS = MOVES.step, KD = MOVES.dummy;
   const peak = inp.latPeak; inp.latPeak = null;            // consumed this step, carrying or not, so a flick from a cut can't finish on the next carry
-  const G = inp.gest || (inp.gest = { who:null, n:-9, L:[], armed:true, run:0, lastRun:0, dropT:-9, pull:null, keyed:false, kb:false, v:null, t:0, tagAt:0, tagged:null });   // the Dummy's cooldown is not kept here: it is the carrier's (c.dumAt, on the match clock), so a lifted thumb, a pause or a duel's restore can't reset it
+  const G = inp.gest || (inp.gest = { who:null, n:-9, L:[], gap:[], armed:true, run:0, lastRun:0, dropT:-9, pull:null, keyed:false, kb:false, v:null, t:0, tagAt:0, tagged:null });   // the Dummy's cooldown is not kept here: it is the carrier's (c.dumAt, on the match clock), so a lifted thumb, a pause or a duel's restore can't reset it
   G.t += dt;
   if (G.tagged && G.t - G.tagAt <= 0.15 && (S.pass || (b.state === 'air' && b.f.kind === 'pass' && b.f.team === t))) { const i = M.tags.indexOf(G.tagged); if (i >= 0) M.tags.splice(i, 1); G.tagged = null; }   // Pass inside 0.15s of a step: that flick was an aim, so the tag comes off
   const carrying = M.phase === 'play' && !!c && b.state === 'held' && b.carrier === c && !c.bind && !inp.aDown && !inp.bDown && !S.charging;
   if (!carrying) { G.who = null; return; }
-  if (G.who !== c || G.n !== M.stepN - 1) { G.who = c; G.L.length = 0; G.armed = true; G.run = 0; G.lastRun = 0; G.dropT = -9; G.pull = null; G.keyed = false; G.kb = false; G.v = null; }   // a new carrier, or any step he was not carrying in open play (a cut, a set piece, the ball in the air): the history starts again
+  if (G.who !== c || G.n !== M.stepN - 1) { G.who = c; G.L.length = 0; G.gap.length = 0; G.armed = true; G.run = 0; G.lastRun = 0; G.dropT = -9; G.pull = null; G.keyed = false; G.kb = false; G.v = null; }   // a new carrier, or any step he was not carrying in open play (a cut, a set piece, the ball in the air): the history starts again
   G.n = M.stepN;
   const j = inp.world(), d = dirOf(t);
   let jx = j.x, jy = j.y, L = jy, mag = j.mag;
   if (typeof peak === 'number' && !inp.keys.size && Math.abs(peak) > Math.abs(jy)) { jy = peak; L = peak; mag = Math.max(mag, Math.abs(peak)); }   // a flick Chrome coalesced into one move: the peak across the run, not the sample that landed back near centre
   const F = jx*d;
   // the Side Step: a sharp rise across the run inside the window, armed
-  G.L.push(L); if (G.L.length > KS.win + 1) G.L.shift();
+  G.L.push(L); G.gap.push(stepGap); if (G.L.length > KS.win + 3) { G.L.shift(); G.gap.shift(); }   // the thumb lives in real time whatever the pace, so the window is real time too: a slower match must not make a slower thumb a flick
   if (Math.abs(L) < KS.rearm) G.armed = true;              // the investigation's re-arm: back inside rearm first (a key switch passes through 0; a thumb crosses the centre in a few steps)
   if (G.armed && Math.abs(L) >= KS.L && mag >= KS.mag) {
-    const s = Math.sign(L); let lo = Infinity; for (const v of G.L) lo = Math.min(lo, s*v);
+    const s = Math.sign(L), W = KS.win/60; let lo = s*L, back = 0;
+    for (let i = G.L.length - 1; i > 0 && back < W - 1e-9; i--) {   // back through the samples to the window's real start, the far one read part way along. At a step a frame this is simply the last win steps
+      const gap = G.gap[i] ?? 1/60, f = back + gap <= W + 1e-9 ? 1 : (W - back)/gap;
+      lo = Math.min(lo, s*(G.L[i] + (G.L[i - 1] - G.L[i])*f)); back += gap;
+    }
     if (s*L - lo >= KS.rise) {
       G.armed = false;                                     // the flick is spent whether or not it acts: outside a tackler's reach it is steering
       if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, { x:jx, y:jy }, s); G.tagged = M.tags[M.tags.length - 1] || null; G.tagAt = G.t; }
@@ -496,6 +502,7 @@ function moveAll(dt) {
     if (p.wf > 0) p.wf -= dt;
     if (p.bite > 0) p.bite -= dt;
     if (p.boost > 0) p.boost -= dt;
+    if (p.grace > 0) p.grace -= dt;                        // the moment after a catch: see PASS_FLIGHT
     if (p.side > -1) p.side -= dt;
     p.hold += dt;
     p.x = clamp(p.x, -4, 124);
@@ -513,8 +520,11 @@ function computeTargets() {
   return targets;
 }
 function update(dt) {
+  if (practice && practice.demo && demoStep(dt)) return;   // Watch How: the pilot writes the input first, or the world holds (drill-demo.js)
+  if (practice) dt *= drillRate();                         // a drill runs at its own pace, the world and its clocks together; a match is untouched
   if (!(practice && practice.space)) matchUpdate(dt);      // a training space has no match flow: its drill moves the men and the ball (training.js)
   practiceTick(dt);
+  if (practice && practice.demo) demoSync();               // the ghost shows what the input holds after the step
 }
 function matchUpdate(dt) {
   if (!M || M.phase === 'break' || M.phase === 'menu' || M.paused || M.over) return;

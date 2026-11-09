@@ -36,7 +36,8 @@ function lightKey(code, on) {                              // the join screen's 
 function lightPad(seat, which, on) { for (const el of document.querySelectorAll('#s-join .seat.s' + seat + ' [data-pad="' + which + '"]')) el.classList.toggle('on', on); }
 function onKey(e, down) {
   const code = e.code, r = keyRoute(code);
-  if (practice && (practice.done || practice.ready) && down && code === 'Escape') { if (e.preventDefault) e.preventDefault(); practiceChoose(); return; }
+  if (demoOn()) { if (down) demoKeyDown(e, r); return; }   // Watch How: Escape or P skips, and nothing else reaches the slots
+  if (practice && (practice.done || practice.ready) && down && code === 'Escape' && !e.repeat) { if (e.preventDefault) e.preventDefault(); practiceChoose(); return; }
   if (e.target && e.target.tagName === 'INPUT') return;    // typing a team name
   if (two.on && r && r[0] != null) lightKey(code, down);
   if (!down) {
@@ -106,6 +107,7 @@ function pollPads() {
     const P = padOf(gp), bit = 4 << gp.index, menu = onMenu();
     P.act = gp.vibrationActuator || null;
     if (two.on && P.owner == null) { if (padRise(gp, P)) twoClaim(P); continue; }
+    if (demoOn()) { demoPad(gp, P); continue; }            // Watch How: Start skips, and nothing else reaches the slots
     const seat = padSeat(P), inp = inputs[seat], join = two.on && !$('s-join').hidden;
     const n = P.std ? Math.min(gp.buttons.length, 16) : Math.min(gp.buttons.length, 2);   // a pad with no standard mapping: axes 0/1 and buttons 0/1 only, best effort
     for (let i = 0; i < n; i++) {
@@ -146,6 +148,7 @@ function padNav(P, seat, ax, ay, m) {                      // the stick on a men
   navMove(seat, dir === 'r' ? 1 : dir === 'l' ? -1 : 0, dir === 'd' ? 1 : dir === 'u' ? -1 : 0);
 }
 function padStart() {
+  if (demoOn()) { demoSkip(); return; }
   if (practice && (practice.done || practice.ready)) return;                                      // Start: pause and resume, and Second Half on the break card
   if (!playing()) return;
   if (M.paused) resume();
@@ -268,6 +271,7 @@ function navPress(seat) {
   return true;
 }
 function navBack(seat) {
+  if (demoOn()) { demoSkip(); return true; }
   if (practice && (practice.done || practice.ready)) { practiceChoose(); return true; }
   logNav('back', seat);
   if (!navOwner(seat)) return false;

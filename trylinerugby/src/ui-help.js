@@ -35,17 +35,18 @@ function hintFor(s) {                                      // the card for seat 
     if (c.duel) {
       if (c.out != null) return null;
       const own = seatOfTeam(c.own) === s, k = c.kind;
-      if (own) return k === 'past' ? card('Get Past', 'To His Open Side', [row([chip('x')], kb ? 'Step on Gold' : 'Flick on Gold')])
-        : k === 'pass' ? card('Key Pass', 'Dummy If He Drifts', [row([chip('a', 'Pass'), chip('b', 'Dummy')], 'On Gold')])
-        : k === 'tackle' ? card('Tackle', 'He May Step', [row([chip('a', 'Tackle')], 'On Gold')])
-        : card('Block', 'He May Dummy', [row([chip('a', 'Block')], 'On Gold')]);
+      if (own) return k === 'past' ? card('Get Past', 'To Their Open Side', [row([chip('x')], kb ? 'Step on Gold' : 'Flick on Gold')])
+        : k === 'pass' ? card('Key Pass', 'Dummy If They Drift', [row([chip('a', 'Pass'), chip('b', 'Dummy')], 'On Gold')])
+        : k === 'tackle' ? card('Tackle', 'They May Step', [row([chip('a', 'Tackle')], 'On Gold')])
+        : card('Block', 'They May Dummy', [row([chip('a', 'Block')], 'On Gold')]);
       if (!M.two || c.locked) return null;                   // the chooser's card goes at his lock, as his bottom-bar cue does
       return k === 'past' ? card('Get Past', 'Before Gold', [row([chip('x')], 'Guard a Shoulder')])
         : k === 'pass' ? card('Key Pass', 'Before Gold', [row([chip('x')], 'Drift or Rush')])
         : k === 'tackle' ? card('Tackle', 'Before Gold', [row([chip('x')], 'Step Left or Right')])
         : card('Block', 'Before the Pass', [row([chip('b', 'Dummy')], 'Tap It')]);
     }
-    if (c.kind === 'scrum') return c.result ? null : card('Scrum', c.feed === t ? 'Your Ball' : 'Steal Their Ball', [row([chip('a', 'Push')], 'Hit on Set'), row([chip('a', 'Push')], 'Then Tap Fast')]);
+    if (c.kind === 'scrum' && practice) return c.result || practice.ready ? null : card('Driving', 'Stay Low in the Green', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Keep Tapping')]);   // the game's own card, and none on its ready card
+    if (c.kind === 'scrum') return c.result ? null : card('Scrum', c.feed === t ? 'Your Ball' : 'Steal Their Ball', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Tap Fast')]);
     if (c.kind === 'lineout') return c.outcome != null ? null : card('Lineout', c.team === t ? 'Your Throw' : 'Steal Their Throw', [row([chip('a', 'Jump')], 'Ball Halfway')]);
     if (c.kind === 'goal') {
       const g = c.g;
@@ -57,7 +58,7 @@ function hintFor(s) {                                      // the card for seat 
   }
   const o = HO[s] && HO[s].cur;
   if (!o) return null;
-  return o === 'long' ? card('Long Pass', 'Skips a Man', [row([chip('a', 'Pass')], 'Hold It')])
+  return o === 'long' ? card('Long Pass', 'Skips a Player', [row([chip('a', 'Pass')], 'Hold It')])
     : o === 'sprint' ? card('Sprint', '', [row([chip('c', 'Sprint')], 'Hold It')])
     : o === 'step' ? card('Side Step', 'Near a Tackler', [row([chip('v')], kb ? 'Tap Across' : 'Flick Across')])
     : o === 'dummy' ? card('Dummy', 'Fakes the Pass', [row([chip('back')], kb ? 'Tap Back' : 'Pull Back, Push On')])
@@ -86,7 +87,7 @@ function hintOpenStep(s, t, la, lb) {
   const H = HO[s]; if (!H) return;
   if (!(M.phase === 'play' && !M.cut && !M.tut && hintsOn(s)) || practice) { H.cur = null; return; }   // a drill names its own controls in the cue at the top, where an open-play card would sit on it
   if (H.cur) { if (M.dclock < H.until) return; H.cur = null; }
-  if (M.dclock < H.last + OPEN_GAP) return;
+  if (M.dclock < H.last + OPEN_GAP || careerCaption()) return;   // and so does the card
   const id = hintOpenPick(s, t, la, lb);
   if (!id) return;
   H.cur = id; H.shown.add(id); H.last = M.dclock; H.until = M.dclock + OPEN_SECS;
@@ -105,7 +106,9 @@ function keycapsFor(s, act) {                             // the keycaps a chip 
   const sch = seatScheme(s) || 'solo', R = sch === 'right', kc = code => (ARROW_KEY[code] ? `<kbd class="kc ar ${ARROW_KEY[code]}"></kbd>` : `<kbd class="kc">${KEYCAP[code]}</kbd>`);
   if (act === 'a' || act === 'b' || act === 'c') return kc(KB[sch][act][0]);
   if (act === 'x') return R ? kc('ArrowLeft') + kc('ArrowRight') : kc('KeyA') + kc('KeyD');
-  if (act === 'v') return R ? kc('ArrowUp') + kc('ArrowDown') : kc('KeyW') + kc('KeyS');
+  const behind = stickTurn(s);                             // a behind view: across the run is across the screen, and back is the down key
+  if (act === 'v') return behind ? (R ? kc('ArrowLeft') + kc('ArrowRight') : kc('KeyA') + kc('KeyD')) : R ? kc('ArrowUp') + kc('ArrowDown') : kc('KeyW') + kc('KeyS');
+  if (behind) return kc(R ? 'ArrowDown' : 'KeyS');
   const d = dirOf(Math.max(0, teamOfSeat(s)));             // back: the key toward his own line
   return kc(R ? (d > 0 ? 'ArrowLeft' : 'ArrowRight') : (d > 0 ? 'KeyA' : 'KeyD'));
 }
@@ -119,7 +122,7 @@ function chipHtml(s, ch) {
 function renderHint(s, h) {
   hintShown[s] = h;
   const el = $('hc' + s); if (!el) return;
-  const key = h ? JSON.stringify([h.title, h.rule, h.rows, h.kick, hintDev(s), seatScheme(s), teamOfSeat(s)]) : '';
+  const key = h ? JSON.stringify([h.title, h.rule, h.rows, h.kick, hintDev(s), seatScheme(s), teamOfSeat(s), stickTurn(s)]) : '';
   const c = M && M.cut, dim = !!(h && h.kick && c && c.kind === 'goal' && c.g.hcOver);
   el.classList.toggle('dim', dim); el.classList.toggle('two', !!(M && M.two));   // two player: the narrower limit, clear of the seat tags
   if (key === hintKey[s]) return;
@@ -134,7 +137,7 @@ function renderHint(s, h) {
 }
 function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines, Replay Tutorial
   const pair = !!(M && M.two && mode === 'match');
-  $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair;
+  $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair; $('pz-cam').hidden = pair || !!practice;
   for (const s of [0, 1]) { const seg = $('pz-h' + s); if (seg && seg.children) [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === hintsOn(s)))); }
   for (const s of [0, 1]) $('jt' + s).classList.toggle('off', !settings.twoHints[two.swapped ? 1 - s : s]);
   const ps = penCtx && M && M.two ? seatOfTeam(penCtx.team) : 0, on = hintsOn(ps);
@@ -167,10 +170,10 @@ function tutCards(id, s) {
   const name = (act, word) => (kb ? key(act) : pad ? 'the ' + PAD[act] : word);   // a keycap, the Bottom Button, or the button's own word
   const flick = kb ? (R ? 'Tap an Arrow' : 'Tap {KeyA} or {KeyD}') : 'Flick the Stick', steer = kb ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : 'the Stick', aim = M && M.kids ? '' : 'Steer With ' + steer + ', ';   // Kids sets the aim
   switch (id) {
-    case 'past': return [['Get Past', 'Beat the Last Man'], ['Get Past', flick + ' Away From Him When the Ring Turns Gold']];
-    case 'pass': return [['Key Pass', 'Two on One'], ['Key Pass', 'Press ' + name('a', 'Pass') + ' on Gold, or ' + name('b', 'Dummy') + ' If He Drifts to Your Runner']];
-    case 'tackle': return [['Tackle', 'You Are the Last Man'], ['Tackle', 'Press ' + name('a', 'Tackle') + ' When the Ring Turns Gold. He May Step']];
-    case 'block': return [['Block', 'Their Pass Crosses Your Man'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
+    case 'past': return [['Get Past', 'Beat the Last Defender'], ['Get Past', flick + ' Away From Them When the Ring Turns Gold']];
+    case 'pass': return [['Key Pass', 'Two on One'], ['Key Pass', 'Press ' + name('a', 'Pass') + ' on Gold, or ' + name('b', 'Dummy') + ' If They Drift to Your Runner']];
+    case 'tackle': return [['Tackle', 'You Are the Last Defender'], ['Tackle', 'Press ' + name('a', 'Tackle') + ' When the Ring Turns Gold. They May Step']];
+    case 'block': return [['Block', 'Their Pass Crosses Your Player'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
     case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
     case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
     case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', aim + 'Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
@@ -263,7 +266,7 @@ function coachShow(id) {
 function coachTick() {
   if (!settings.coach || !M || !interactive() || M.paused || M.over || M.tut || M.phase === 'menu' || M.phase === 'break') return;
   const id = coachPick();
-  if (!id || performance.now() < coachUntil || bannerBusy() || M.tags.length >= 2) return;
+  if (!id || performance.now() < coachUntil || bannerBusy() || M.tags.length >= 2 || careerCaption()) return;   // one thing to read at a kick-off: the line waits for the caption
   coachShow(id);
 }
 

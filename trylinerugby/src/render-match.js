@@ -17,10 +17,12 @@ function render(dt) {
   const shake = M.shake > 0 && !RM ? 3*(M.shakeT/0.12)*(M.shake/M.shakeT) : 0;   // your Big Hit: a 3px shake for 0.12s (an arcade one bigger and longer), none under reduced motion
   if (M.shake > 0) M.shake -= dt;
   const camX = cam.x + shake*Math.sin(M.rt*173)/s, camY = cam.y + shake*Math.cos(M.rt*131)/s;
+  bvRelease();
+  if ((BV.on = behindOn() || dvOn() || menuDemo())) return renderBehind(dt);
+  if (!BV.M && playing() && (ART.state === 'ready' || ART.state === 'loading')) artFree();   // played without the art, and no behind match to come back to: a flip to Top and back in one match keeps it
 
   ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*camX), d*(V.H/2 - s*camY));
   drawPitch();
-  if (practice) drillDrawWorld();                          // a drill's cones, rings and lines, on the grass under the players
 
   ctx.setTransform(d, 0, 0, d, 0, 0);
   const r = Math.max(8, 0.95*s);
@@ -32,7 +34,7 @@ function render(dt) {
   }
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
-  if (M.career) careerMark(r);                             // a career match: your player's ring and the star on his back
+  if (M.career && !M.cut) careerMark(r);                   // a career match: your player's ring and the star on his back, or an arrow to him
   if (M.arcade) traitMarks(r);                             // a match you play: a gold star on each star player's shoulder (src/traits.js)
   // A short cue only where a decision matters; free pass targets keep just their ring.
   // Suppress edge cues rather than detach a label from an off-screen player or cover the scorebug.
@@ -104,7 +106,6 @@ function render(dt) {
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, V.W, V.H);
   if (M.cut) drawCut();
-  if (practice) drillDrawScreen();                         // a drill's own close-up (the Tackling drill's side-on view)
 }
 /* two player: the stick and the three buttons are off (they are seat 0's touch controls), so each player's marks are on the pitch: a
    numbered tag in his colour over his man where the pointer sits in one player, the Sprint meter as an arc round his ring (the button's
