@@ -448,6 +448,7 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
 //     one who always goes out with the team keeps it up. That is the train-or-socialise trade-off.
 {
   const career2 = (policy, pre = 'career-spirit-') => {   // the seasons' ids are fixed (the game's are the clock's), so the same dilemmas come up every run
+    C.setCups(false);                                // Farnham's county cup is not this check's: league, window, league (tools/county.mjs plays it)
     reseed(31); const cr = withId(C.create({ pos:'B', num:5, club:X.CLUBS[0] }), pre + '0'); C.set(cr); Object.assign(cr.life, { energy:80, morale:60, spirit:100 });
     const trail = [];
     for (let i = 0; i < 10; i++) {
@@ -461,7 +462,7 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
       C.arm(); runOut(); C.record();
       trail.push(cr.life.spirit);
     }
-    C.set(null);
+    C.set(null); C.setCups(null);
     return trail;
   };
   const pre = process.env.SPIRIT_IDS || 'career-spirit-', train = career2('train', pre), social = career2('social', pre);

@@ -118,7 +118,7 @@ C.setCups(false);                                    // no cups unless a section
   ok(new Set(c.fixtures.map(rd => rd.find(p => p.includes(0)).find(i => i))).size === 5, 'and everyone else once');
   ok(a.cup === null && a.offers === null && a.country === null && json(a.trophies) === '[]' && json(a.history) === '[]', 'no cup, no offers, no country and no trophies yet');
   ok(json(C.clean(a)) === json(a), 'a new career passes its own validator unchanged');
-  ok(C.PHASES.join() === 'league,cup,intl,tour,transfer', 'a year\'s phases, in order: the league, the European Cup, the international window, the tour, the transfer window');
+  ok(C.PHASES.join() === 'league,county,cup,intl,tour,transfer', 'a year\'s phases, in order: the league, the county cup (a Local club\'s), the European Cup, the international window, the tour, the transfer window');
 }
 
 // 2. his club's league, and his country's six
@@ -296,18 +296,19 @@ C.setCups(false);                                    // no cups unless a section
   C.advance(); ok(lost.trophies.map(t => t.kind).join() === 'league', 'nothing more banked');
   for (const club of [X.AUSTRALIA[0], X.SCOTLAND[0], X.JAPAN[0], X.NEW_ZEALAND[0], X.CLUBS[0]]) {
     const p = C.create({ pos:'B', num:7, club }); C.set(p); finish(p, 1);
-    ok(C.outcome(p).next.phase === 'transfer', `${club.name}: no European Cup (${C.league(p)})`);
+    ok(C.outcome(p).next.phase === (C.league(p) === 'sur' ? 'county' : 'transfer'), `${club.name}: no European Cup (${C.league(p)})${C.league(p) === 'sur' ? ', its county cup instead' : ''}`);
   }
   ok(C.EURO.join() === 'eng,fra,cel,rsa', 'the European leagues: England, France, Celtic and Italy, South Africa');
   // the World Cup: years 4, 8, 12, his country
-  const wc = C.create({ pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(wc); wc.year = 4; wc.country = 'NZL'; skillsTo(wc, overallAt(C.CALL.bar));
+  // a club with no county cup and no European Cup: the window straight after the league
+  const wc = C.create({ pos:'B', num:7, club:X.SCOTLAND[0], cat:'women' }); C.set(wc); wc.year = 4; wc.country = 'NZL'; skillsTo(wc, overallAt(C.CALL.bar));
   finish(wc, 2); out = C.outcome(wc);
   ok(json(out.next) === json({ phase:'intl', kind:'world', first:false }), 'year 4, rated: the World Cup');
   C.advance();
   ok(wc.phase === 'intl' && wc.season === null && wc.cup.id === 'world' && S.log.at(-1)[2].user.name === 'New Zealand Women' && S.log.at(-1)[2].cat === 'women', 'the World Cup, as New Zealand Women');
   ok(C.eyebrow(wc) === 'World Cup · Pool B' && C.teamFor(wc).id === 'NZL', 'World Cup · Pool B');
-  for (const y of [8, 12]) { const p = C.create({ pos:'B', num:7, club:X.CLUBS[0] }); p.year = y; p.country = 'ENG'; skillsTo(p, 85); finish(p, 3); ok(C.outcome(p).next.kind === 'world', `a World Cup in year ${y}`); }
-  for (const y of [3, 5, 6, 7]) { const p = C.create({ pos:'B', num:7, club:X.CLUBS[0] }); p.year = y; p.country = 'ENG'; skillsTo(p, 85); finish(p, 3); ok(C.outcome(p).next.kind === 'six', `his country's six in year ${y}`); }
+  for (const y of [8, 12]) { const p = C.create({ pos:'B', num:7, club:X.SCOTLAND[0] }); p.year = y; p.country = 'ENG'; skillsTo(p, 85); finish(p, 3); ok(C.outcome(p).next.kind === 'world', `a World Cup in year ${y}`); }
+  for (const y of [3, 5, 6, 7]) { const p = C.create({ pos:'B', num:7, club:X.SCOTLAND[0] }); p.year = y; p.country = 'ENG'; skillsTo(p, 85); finish(p, 3); ok(C.outcome(p).next.kind === 'six', `his country's six in year ${y}`); }
   // the Home Nations Tour: years 2, 6, 10, after the window, for a home-nation player rated CALL.tour
   const lose = p => { while (C.ahead(p)) { C.play(); T.M.half = 2; T.M.score = [0, 10]; T.M.tries = [0, 2]; T.arcade.endHalf(); D.exitMatch(); } };   // a cup played out, lost
   const tour = (year, country, ovr) => { const p = C.create({ pos:'F', num:2, club:X.CELTIC[3] }); C.set(p); p.year = year; p.country = country; skillsTo(p, overallAt(ovr)); finish(p, 4); C.advance(); if (p.season) finish(p, 3); else lose(p); ok(C.overall(p.skills) === ovr, `overall ${ovr}`); return p; };
@@ -404,7 +405,7 @@ C.setCups(false);                                    // no cups unless a section
     ok(card() === 'Test Won · Series 1 – 0', `the card: Test Won · Series 1 – 0 (${card()})`);
     D.exitMatch();
     // the World Cup: a pool match keeps its draw
-    const w = C.create({ pos:'B', num:7, club:X.CLUBS[0] }); C.set(w); w.year = 4; w.country = 'ENG'; skillsTo(w, overallAt(85));
+    const w = C.create({ pos:'B', num:7, club:X.SCOTLAND[0] }); C.set(w); w.year = 4; w.country = 'ENG'; skillsTo(w, overallAt(85));
     finish(w, 3); C.advance();
     ok(w.phase === 'intl' && w.cup && w.cup.id === 'world' && /^Pool [ABCD]$/.test(C.ahead(w).label) && C.ahead(w).ko === false, `England, year 4: the World Cup, ${C.ahead(w).label}, no knockout`);
     C.play();

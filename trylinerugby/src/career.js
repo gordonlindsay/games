@@ -6,6 +6,8 @@
    - A year (career.year, from 1) runs in phases (career.phase, in CAREER_PHASES order), each one skipped unless he has earned it:
      'league'   his club's league: his club and five drawn from its list, a season of the championship's shape (six sides, five
                 rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
+     'county'   his county's cup, every year he is at a Local club (careerLeague 'sur'): eight sides in the cup its county runs for its
+                level, the Surrey Cup down to the Surrey Bowl (src/competitions.js). A professional club has none.
      'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, Celtic and Italy, South Africa).
      'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
                 his country's six in its category's twelve (natGroup) as a season, or in a World Cup year (4, 8, 12) the World Cup.
@@ -13,7 +15,7 @@
      'tour'     the Home Nations Tour, in years 2, 6, 10, after the window, for a home-nation player (CAREER_HOME) rated
                 CAREER_CALL.tour or more.
      'transfer' two or three offers from clubs near his level (CAREER_MOVE), and Stay; then the next year, at his club's league.
-     The cups (the European Cup, the World Cup and the tour) are the cups engine's (src/cups.js: cupNew, cupFixture, cupRecord,
+     The cups (the county cup, the European Cup, the World Cup and the tour) are the cups engine's (src/cups.js: cupNew, cupFixture, cupRecord,
      cupWinner, cupLabel, cleanCup, cupTriple), read through careerCups. Without it they are skipped, and a World Cup year is his
      country's six as any other.
    - Any club: a side from a national league, a Local club, or a team you made or imported. The list it was picked from is its
@@ -23,7 +25,8 @@
      clubs from the national lists, Scotland's included, never his own, within CAREER_MOVE.band of that, the band widened a
      point at a time until there are two. One from each league first where it can be. A made, imported or Local club he started
      at is his to stay at; an offer is always from the national lists. The draw is made as the window opens and saved with it.
-   - Trophies (career.trophies, { kind, year, name }): a league or his country's six won ('league'), the European Cup ('euro'),
+   - Trophies (career.trophies, { kind, year, name }): a league or his country's six won ('league'), a county cup ('county', named
+     for the cup), the European Cup ('euro'),
      the World Cup ('world'), the Home Nations Tour ('tour') and the Triple Crown ('triple'). The player card counts them by kind.
    - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
      international window is that category's own twelve; nothing else changes.
@@ -40,7 +43,7 @@
      own save. Championship helpers that take the season as an argument (roundRobin, simMatch, standings, userFixture,
      honours) are reused; the ones that read the global champ (newChamp, recordChampResult, retainCompletedSeason) never are.
    ========================================================= */
-const CAREER_PHASES = ['league', 'cup', 'intl', 'tour', 'transfer'];
+const CAREER_PHASES = ['league', 'county', 'cup', 'intl', 'tour', 'transfer'];
 /* bar: the overall that earns a call-up (a scripted player is first called up at the end of year 3 or 4: tools/career.mjs);
    tour: the overall for the Home Nations Tour; every4: a World Cup in years 4, 8, 12, the tour in years tourAt + 4n (2, 6, 10). */
 const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
@@ -49,8 +52,8 @@ const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
 const CAREER_MOVE = { from:[61, 99], to:[61, 75], band:1, offers:[2, 3] };
 const CAREER_EURO = ['eng', 'fra', 'cel', 'rsa'];   // the leagues whose winners play the European Cup (the cups engine's CUPS.euro.lists)
 const CAREER_HOME = ['ENG', 'IRE', 'SCO', 'WAL'];   // the home nations: the tour is theirs (CUPS.tour.from), and so is the Triple Crown
-const CAREER_CUP_NAME = { euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // the cups engine's names (CUPS)
-const CAREER_KINDS = ['league', 'euro', 'world', 'tour', 'triple'];   // a trophy's kind, in the card's order
+const CAREER_CUP_NAME = { county:'County Cup', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // a county cup's own name is on the cup (cupTitle)   // the cups engine's names (CUPS)
+const CAREER_KINDS = ['league', 'county', 'euro', 'world', 'tour', 'triple'];   // a trophy's kind, in the card's order
 const CAREER_TROPHIES = 60;                          // the most kept, the latest
 const CAREER_POS = { F:[1, 2, 3], B:[4, 5, 6, 7] };   // sevens: forwards wear 1 to 3, backs 4 to 7
 /* A new player: about 61 overall, whatever the club. Any skill not listed starts at CAREER_BASE. */
@@ -84,7 +87,7 @@ function careerCups() {
        A stand-in without them gets the career's plain cup screens: no draw, no line. */
     cupLine:typeof cupLine === 'function' ? cupLine : null, cupLastHtml:typeof cupLastHtml === 'function' ? cupLastHtml : null, cupDrawHtml:typeof cupDrawHtml === 'function' ? cupDrawHtml : null, cupDrawBind:typeof cupDrawBind === 'function' ? cupDrawBind : null };
 }
-const CAREER_CUP_PHASE = { cup:'euro', intl:'world', tour:'tour' };   // the cup each phase can hold: a saved cup of another kind is not his
+const CAREER_CUP_PHASE = { county:'county', cup:'euro', intl:'world', tour:'tour' };   // the cup each phase can hold: a saved cup of another kind is not his
 /* A medal (the Locker). The career's own: his first call-up ('callup'), a transfer ('transfer') and a Triple Crown ('triple', as it is
    banked: the cups engine tells the Locker of one in Championship mode only). A cup he wins ('euro', 'world', 'tour') is the cups
    engine's to tell (cupRecord, in Championship mode and in a career alike), never the career's, so it is never counted twice. */
@@ -173,7 +176,8 @@ function careerStart(o) {                            // Start Career on the new 
 
 /* ---------- the next match, and the end of a phase ---------- */
 const careerCupUser = cup => (Number.isInteger(cup && cup.user) ? cup.user : 0);   // his side's index in the cup's teams
-const careerCupKind = cr => (cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
+const careerCupKind = cr => (cr.phase === 'county' ? 'county' : cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
+const careerCountyOn = cr => careerLeague(cr) === 'sur';   // a Local club's year has its county cup
 /* His next match in the phase: { teams, home, away, user, label, ko }, or null when the phase is over (or there is no match: the
    transfer window). ko: a cup's knockout or Test (cupFixture's), which cannot end level; a season's match never is. Reads the season
    or the cup, draws nothing. */
@@ -195,6 +199,7 @@ function careerNext(cr) {
   const K = careerCups(), ovr = careerOverall(cr.skills), from = CAREER_PHASES.indexOf(cr.phase);
   const won = cr.phase === 'league' && !!cr.season && cr.season.round >= 5 && careerPlace(cr.season) === 1;
   for (const ph of CAREER_PHASES.slice(from + 1)) {
+    if (ph === 'county' && K && careerCountyOn(cr)) return { phase:'county', kind:'county' };
     if (ph === 'cup' && won && K && CAREER_EURO.includes(careerLeague(cr))) return { phase:'cup', kind:'euro' };
     if (ph === 'intl' && ovr >= CAREER_CALL.bar) return { phase:'intl', kind:K && cr.year % CAREER_CALL.every === 0 ? 'world' : 'six', first:!cr.country };
     if (ph === 'tour' && K && cr.year % CAREER_CALL.every === CAREER_CALL.tourAt && CAREER_HOME.includes(cr.country) && ovr >= CAREER_CALL.tour) return { phase:'tour', kind:'tour' };
@@ -225,7 +230,7 @@ function careerBank(cr, out) {                       // the phase just finished 
     cr.history = cr.history.slice(-CAREER_HISTORY);
     if (out.won) careerTrophy(cr, 'league', name);
     if (out.triple) { careerTrophy(cr, 'triple', name); careerLocker('triple'); }
-  } else if (out.won) careerTrophy(cr, out.kind, cr.cup.teams[careerCupUser(cr.cup)].name);   // its medal is the cups engine's (cupRecord)
+  } else if (out.won) careerTrophy(cr, out.kind, out.kind === 'county' && cr.cup.name ? cr.cup.name : cr.cup.teams[careerCupUser(cr.cup)].name);   // a county cup by its name: the Surrey Shield   // its medal is the cups engine's (cupRecord)
 }
 /* Into a phase: its season, cup or offers drawn now, once, and saved with it. */
 function careerEnter(cr, next) {
@@ -233,7 +238,7 @@ function careerEnter(cr, next) {
   cr.phase = next.phase; cr.season = null; cr.cup = null; cr.offers = null; cr.trained = false;
   if (next.phase === 'transfer') { cr.offers = careerOffers(cr); return; }
   if (next.phase === 'league' || (next.phase === 'intl' && next.kind !== 'world')) { careerNewSeason(cr); return; }
-  const id = next.kind, opts = { user:careerTeamFor(cr, id === 'euro' ? 'league' : 'intl'), cat, year:cr.year };
+  const id = next.kind, opts = { user:careerTeamFor(cr, id === 'euro' || id === 'county' ? 'league' : 'intl'), cat, year:cr.year };
   if (id === 'euro') opts.list = careerLeague(cr);   // his league, never drawn again (a made team's is the list it was picked on)
   if (id === 'tour') opts.n = Math.floor(cr.year/CAREER_CALL.every);   // the hosts in turn: years 2, 6, 10 are 0, 1, 2
   const cup = K ? K.cupNew(id, opts) : null;
@@ -463,7 +468,7 @@ function cleanCareer(c) {
   if ((phase === 'league' || phase === 'intl') && c.season != null && !(was != null && was < 3)) season = cleanChamp(c.season);   // a broken season is dropped (and a Minis, Juniors or County one): the hub draws a new one
   if (phase !== 'league' && phase !== 'transfer' && !season && c.cup != null && K && K.cleanCup) cup = K.cleanCup(c.cup) || null;
   if (cup && cup.id !== CAREER_CUP_PHASE[phase]) cup = null;   // a European Cup saved in the window (or any cup in another's phase) would read and bank as the wrong cup
-  if ((phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
+  if ((phase === 'county' || phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
   if (phase === 'transfer' && Array.isArray(c.offers)) {
     offers = [...new Set(c.offers.filter(id => typeof id === 'string' && careerClubById(id) && (club.custom || id !== club.id)))].slice(0, CAREER_MOVE.offers[1]);
     if (!offers.length) offers = null;               // drawn again as the hub opens

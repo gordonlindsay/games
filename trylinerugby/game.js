@@ -3841,12 +3841,47 @@ function savedHonours() {
   return out;
 }
 /* =========================================================
+   Competitions: where a Local club sits in the English game, and the county cup it plays (docs/grassroots-competitions.md has
+   the real structure and every source). The cup itself is the cups engine's ('county', src/cups.js); this is only its data.
+   - A club's level is the league it played in 2025-26: 5 (Regional 1) down to 11 (Counties 5). A side with none here (a team you
+     made or imported) takes the level of the Local club nearest its overall.
+   - A club's county is inferred from its league and ground (Farnham is a joint Surrey and Hampshire member, and plays Surrey's).
+     A side with none plays the plain county table.
+   - A county runs its cups by level: the club enters the first whose `to` its level is within. Plain names, never a sponsor's.
+   ========================================================= */
+const CLUB_LEVEL = { FAR:5, WIM:5, GUI:6, IRO:6, COB:7, WEY:7, ORU:7, HAS:9, KIN:9, ALD:9, GDN:11, QUI:11 };   // QUI: Counties 5 Surrey by the club's own 2025-26 fixtures
+const CLUB_COUNTY = { FAR:'SUR', WIM:'SUR', GUI:'SUR', IRO:'SUR', COB:'SUR', WEY:'SUR', ORU:'SUR', HAS:'SUR', KIN:'SUR', GDN:'SUR', QUI:'SUR', ALD:'HAM' };
+const COUNTY_CUPS = {
+  SUR:[{ name:'Surrey Cup', to:5 }, { name:'Surrey Trophy', to:8 }, { name:'Surrey Shield', to:10 }, { name:'Surrey Bowl', to:12 }],
+  HAM:[{ name:'Hampshire Cup', to:7 }, { name:'Hampshire Bowl', to:9 }, { name:'Hampshire Plate', to:12 }],
+  ANY:[{ name:'County Cup', to:5 }, { name:'County Trophy', to:8 }, { name:'County Shield', to:10 }, { name:'County Bowl', to:12 }],
+};
+const COUNTY_CUP_NAMES = Object.values(COUNTY_CUPS).flat().map(c => c.name);   // every name a saved cup may carry
+function compLevelOf(t) {
+  if (!t) return null;
+  if (!t.custom && CLUB_LEVEL[t.id]) return CLUB_LEVEL[t.id];
+  const ov = overallOf(t);                           // a made side: the level of the Local club nearest its overall, the higher on a tie
+  const near = CLUBS.slice().sort((a, b) => Math.abs(overallOf(a) - ov) - Math.abs(overallOf(b) - ov) || CLUB_LEVEL[a.id] - CLUB_LEVEL[b.id])[0];
+  return CLUB_LEVEL[near.id];
+}
+const compCountyOf = t => (t && !t.custom && CLUB_COUNTY[t.id]) || null;
+function compCupFor(t) {
+  const list = COUNTY_CUPS[compCountyOf(t) || 'ANY'], level = compLevelOf(t);
+  return list.find(c => level <= c.to) || list[list.length - 1];
+}
+/* The seven a county cup draws: the Local clubs but your own, nearest your level first, in a random order within a level. Only the
+   cups engine's cupNew calls it, so the draw is never in a render or a save. */
+function compCupRivals(t, n = 7) {
+  const level = compLevelOf(t), same = o => o.id === t.id || o.name === t.name || (typeof importSame === 'function' && importSame(o.name, t.name));
+  return shuffle(CLUBS.filter(o => !same(o))).sort((a, b) => Math.abs(CLUB_LEVEL[a.id] - level) - Math.abs(CLUB_LEVEL[b.id] - level)).slice(0, n);
+}
+/* =========================================================
    Silverware: the European Cup, the World Cup, the Home Nations Tour and the Triple Crown (README, Silverware).
    A cup is a plain object that saves as it is: its sides, its rounds of fixtures and the results played so far.
    Every random draw happens in cupNew (the draw) or cupRecord (the other matches of a round, and a level knockout's
    toss), never in a render, a save or cleanCup. Championship mode keeps one in `cup` (persistence.js, ui-cups.js);
    Career keeps its own in career.cup. Both play through the same functions.
-     cup = { id:'euro'|'world'|'tour', uid, cat, year?, user, teams:[sides], pools?:[[i,j,k] x4],
+     cup = { id:'euro'|'world'|'tour'|'county', name? (a county cup's own), uid, cat, year?, user, teams:[sides], pools?:[[i,j,k] x4],
              fixtures:[[[home, away], ...] a round], results:[[{ h, a, hs, as, ht, at, w?, by? }, ...] a round], round }
    A round's results are in its fixtures' order. A knockout or Test result carries its winner, w; level on points it
    goes to the side with more tries (by:'tries'), then to the toss (by:'toss'). The match you play has the Golden Try
@@ -3856,13 +3891,16 @@ const CUPS = {
   euro:{ id:'euro', name:'European Cup', lists:['eng', 'fra', 'cel', 'rsa'] },
   world:{ id:'world', name:'World Cup' },
   tour:{ id:'tour', name:'Home Nations Tour', tests:3, hosts:['NZL', 'RSA', 'AUS'], from:['ENG', 'IRE', 'SCO', 'WAL'] },
+  county:{ id:'county', name:'County Cup' },   // a Local club's county knockout (src/competitions.js): each cup carries its own name, the Surrey Shield or the Hampshire Bowl
 };
+/* A cup's name: a county cup's own (c.name), else its kind's. */
+const cupTitle = c => (c.id === 'county' && c.name) || CUPS[c.id].name;
 const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] };
 /* Each trophy's metal: real silverware, gold or silver, and nothing else. Gold for the three cups; silver for a title (a league, the
    Championship's or a career's, or an international championship) and the Triple Crown. The one map: the Trophy Cabinet's trophies,
    tags and tallies, the career's trophy row and every cup's trophy read it (data-metal, whose tones are styles.css's --gold and
    --silver), and each still names its kind in words. */
-const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold' };   // fan: the Super Fan trophy (src/ui-locker.js)
+const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold', county:'silver' };   // county: silver, a step below the three big cups   // fan: the Super Fan trophy (src/ui-locker.js)
 function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
 /* Each trophy's shape, so the kinds tell apart at a glance in the same metal (the owner, 2026-11-09, shown three gold cups alike on the
    career's row: "different shapes"). A filled silhouette in a 24 by 24 box, read at 10px on the career's row and the Trophy Cabinet's
@@ -3878,6 +3916,7 @@ const TROPHY_SHAPE = {
   world:{ name:'cup with a ball on top', d:'M5.5 7.2C6 2.1 14.5-1.4 18.5 2C18 7.1 9.5 10.6 5.5 7.2zM5 10h14c0 4.4-2.3 7.1-5.5 7.9v1.8H17v2.8H7v-2.8h3.5v-1.8C7.3 17.1 5 14.4 5 10z' },
   tour:{ name:'plate', d:'M2.4 10a9.6 9.6 0 1 1 19.2 0a9.6 9.6 0 1 1-19.2 0zM4.8 10a7.2 7.2 0 1 0 14.4 0a7.2 7.2 0 1 0-14.4 0zM6 10a6 6 0 1 1 12 0a6 6 0 1 1-12 0zM10.6 19h2.8v1.6h3.1l1.5 2.4H6l1.5-2.4h3.1z' },
   triple:{ name:'crown', d:'M1.5 7.5l5.5 4.8L12 4.5l5 7.8 5.5-4.8-2 11.5h-17zM3.5 20h17v2.5h-17zM0 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0zM10 3a2 2 0 1 1 4 0a2 2 0 1 1-4 0zM20.4 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0z' },
+  county:{ name:'tankard', d:'M5 3h11v2h2.6c1.9 0 2.9 1.2 2.9 3v4.2c0 1.8-1 3-2.9 3H16v4.3c0 1.4-.9 2.5-2.4 2.5H7.4C5.9 22 5 20.9 5 19.5zM16 7.4v5.4h2.2c.5 0 .8-.3.8-.8V8.2c0-.5-.3-.8-.8-.8zM3.5 1h14v2.2h-14z' },
   fan:{ name:'rosette', d:'M8.6 13.5h3.4L9.2 23.3l-1.9-2.2-2.7 1zM12 13.5h3.4l4 8.8-2.7-1-1.9 2.2zM12 2A1.8 1.8 0 0 1 16.2 3.4A1.8 1.8 0 0 1 18.8 7A1.8 1.8 0 0 1 18.8 11.4A1.8 1.8 0 0 1 16.2 15A1.8 1.8 0 0 1 12 16.4A1.8 1.8 0 0 1 7.8 15A1.8 1.8 0 0 1 5.2 11.4A1.8 1.8 0 0 1 5.2 7A1.8 1.8 0 0 1 7.8 3.4A1.8 1.8 0 0 1 12 2zM7.8 9.2a4.2 4.2 0 1 0 8.4 0a4.2 4.2 0 1 0-8.4 0zM9 9.2a3 3 0 1 1 6 0a3 3 0 1 1-6 0z' },
 };
 function trophyShape(kind) { return TROPHY_SHAPE[kind] || TROPHY_SHAPE.league; }   // an unknown kind is a League, as its metal is
@@ -3887,8 +3926,8 @@ const trophyMask = kind => `url("data:image/svg+xml,${encodeURIComponent(`<svg x
 function trophyShapeCss() {
   return `:root{--trophy:${trophyMask('league')}}\n` + Object.keys(TROPHY_SHAPE).map(k => `[data-kind="${k}"]{--trophy:${trophyMask(k)}}`).join('\n');
 }
-const CUP_SIZE = { euro:4, world:12, tour:2 };             // sides in each
-const CUP_MADE = { euro:1, world:3, tour:1 };              // rounds drawn at the start; the rest follow from the results
+const CUP_SIZE = { euro:4, world:12, tour:2, county:8 };             // sides in each
+const CUP_MADE = { euro:1, world:3, tour:1, county:1 };              // rounds drawn at the start; the rest follow from the results
 const CUP_POOL = ['A', 'B', 'C', 'D'];
 const CUP_TOUR_SIDE = { id:'HNS', name:'Home Nations', kit:'#c41e3a', trim:'#f2efe6', alt:'#1b2747', altTrim:'#c41e3a' };   // the touring side: red, a code no club or nation has
 let cupSerial = 0;                                         // with the time, a cup's uid (the Trophy Cabinet keeps each one once)
@@ -3960,6 +3999,11 @@ function cupNew(id, opts) {
     Object.assign(c, { user:0, teams:[me, ...drawn.map(t => side(catTeam(t, cat)))] });
     const order = shuffle([0, 1, 2, 3]);
     c.fixtures = [[cupHome(c, order[0], order[1]), cupHome(c, order[2], order[3])]];
+  } else if (id === 'county') {                           // his club and seven Local clubs nearest its level, in the cup its county runs for that level
+    c.name = compCupFor(o.user).name;
+    Object.assign(c, { user:0, teams:[me, ...compCupRivals(o.user).map(t => side(catSide(t, cat)))] });
+    const order = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
+    c.fixtures = [[0, 2, 4, 6].map(i => cupHome(c, order[i], order[i + 1]))];
   } else if (id === 'world') {
     const list = cupTwelve(cat).map(side);
     let at = list.findIndex(t => t.id === me.id && !me.custom);
@@ -3992,6 +4036,7 @@ function cupSeries(c, k = c.results.length) {              // Tests won by each 
 function cupNext(c, k) {
   if (k < CUP_MADE[c.id]) return c.fixtures[k] || null;
   if (c.id === 'euro') return k === 1 ? [cupHome(c, cupW(c, 0, 0), cupW(c, 0, 1))] : null;
+  if (c.id === 'county') return k === 1 ? [cupHome(c, cupW(c, 0, 0), cupW(c, 0, 1)), cupHome(c, cupW(c, 0, 2), cupW(c, 0, 3))] : k === 2 ? [cupHome(c, cupW(c, 1, 0), cupW(c, 1, 1))] : null;
   if (c.id === 'tour') { const s = cupSeries(c, k); return k < CUPS.tour.tests && Math.max(...s) < 2 ? [[1, 0]] : null; }
   if (k === 3) {                                           // the Quarter-Finals: A1 v B2, C1 v D2, B1 v A2, D1 v C2
     const t = [0, 1, 2, 3].map(p => cupPoolRows(c, p, 3).map(r => r.i));
@@ -4026,6 +4071,7 @@ function cupSettle(c) {
 }
 function cupStage(c, k) {
   if (c.id === 'euro') return k === 0 ? 'Semi-Final' : 'Final';
+  if (c.id === 'county') return ['Quarter-Final', 'Semi-Final', 'Final'][k];
   if (c.id === 'tour') return 'Test ' + (k + 1) + ' of ' + CUPS.tour.tests;
   if (k < 3) return 'Pool ' + CUP_POOL[c.pools.findIndex(p => p.includes(c.user))];
   return ['Quarter-Final', 'Semi-Final', 'Final'][k - 3];
@@ -4127,6 +4173,7 @@ function cleanCup(c) {
   if (!Array.isArray(c.fixtures) || !Array.isArray(c.results) || c.round !== c.results.length || c.results.length > c.fixtures.length || c.fixtures.length > 6) return null;
   const out = { id:c.id, uid:typeof c.uid === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(c.uid) ? c.uid : '', cat:TEAM_CATS.some(x => x.id === c.cat) ? c.cat : 'men' };
   if (Number.isInteger(c.year) && c.year >= 0 && c.year <= 9999) out.year = c.year;
+  if (c.id === 'county') out.name = COUNTY_CUP_NAMES.includes(c.name) ? c.name : CUPS.county.name;
   Object.assign(out, { user:c.user, teams });
   const idx = v => Number.isInteger(v) && v >= 0 && v < n;
   const pairOk = p => Array.isArray(p) && p.length === 2 && idx(p[0]) && idx(p[1]) && p[0] !== p[1];
@@ -4139,9 +4186,9 @@ function cleanCup(c) {
   }
   out.fixtures = []; out.results = []; out.round = 0;
   const made = c.id === 'world' ? cupPoolRounds(out) : c.id === 'tour' ? [[[1, 0]]] : null;
-  if (c.id === 'euro') {
+  if (c.id === 'euro' || c.id === 'county') {               // a drawn first round: its ties, each side once, the home side the rule's
     const f = c.fixtures[0];
-    if (!Array.isArray(f) || f.length !== 2 || !f.every(pairOk) || new Set(f.flat()).size !== 4 || !f.every(p => same([cupHome(out, p[0], p[1])], [p]))) return null;
+    if (!Array.isArray(f) || f.length !== n/2 || !f.every(pairOk) || new Set(f.flat()).size !== n || !f.every(p => same([cupHome(out, p[0], p[1])], [p]))) return null;
   } else if (c.fixtures.length < made.length || !made.every((rd, k) => same(rd, c.fixtures[k]))) return null;
   for (let k = 0; k < c.fixtures.length; k++) {
     const want = k < CUP_MADE[c.id] ? (made ? made[k] : c.fixtures[0].map(p => p.slice())) : cupNext(out, k);
@@ -4195,6 +4242,8 @@ function cleanCupEntry(e) {
    - A year (career.year, from 1) runs in phases (career.phase, in CAREER_PHASES order), each one skipped unless he has earned it:
      'league'   his club's league: his club and five drawn from its list, a season of the championship's shape (six sides, five
                 rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
+     'county'   his county's cup, every year he is at a Local club (careerLeague 'sur'): eight sides in the cup its county runs for its
+                level, the Surrey Cup down to the Surrey Bowl (src/competitions.js). A professional club has none.
      'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, Celtic and Italy, South Africa).
      'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
                 his country's six in its category's twelve (natGroup) as a season, or in a World Cup year (4, 8, 12) the World Cup.
@@ -4202,7 +4251,7 @@ function cleanCupEntry(e) {
      'tour'     the Home Nations Tour, in years 2, 6, 10, after the window, for a home-nation player (CAREER_HOME) rated
                 CAREER_CALL.tour or more.
      'transfer' two or three offers from clubs near his level (CAREER_MOVE), and Stay; then the next year, at his club's league.
-     The cups (the European Cup, the World Cup and the tour) are the cups engine's (src/cups.js: cupNew, cupFixture, cupRecord,
+     The cups (the county cup, the European Cup, the World Cup and the tour) are the cups engine's (src/cups.js: cupNew, cupFixture, cupRecord,
      cupWinner, cupLabel, cleanCup, cupTriple), read through careerCups. Without it they are skipped, and a World Cup year is his
      country's six as any other.
    - Any club: a side from a national league, a Local club, or a team you made or imported. The list it was picked from is its
@@ -4212,7 +4261,8 @@ function cleanCupEntry(e) {
      clubs from the national lists, Scotland's included, never his own, within CAREER_MOVE.band of that, the band widened a
      point at a time until there are two. One from each league first where it can be. A made, imported or Local club he started
      at is his to stay at; an offer is always from the national lists. The draw is made as the window opens and saved with it.
-   - Trophies (career.trophies, { kind, year, name }): a league or his country's six won ('league'), the European Cup ('euro'),
+   - Trophies (career.trophies, { kind, year, name }): a league or his country's six won ('league'), a county cup ('county', named
+     for the cup), the European Cup ('euro'),
      the World Cup ('world'), the Home Nations Tour ('tour') and the Triple Crown ('triple'). The player card counts them by kind.
    - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
      international window is that category's own twelve; nothing else changes.
@@ -4229,7 +4279,7 @@ function cleanCupEntry(e) {
      own save. Championship helpers that take the season as an argument (roundRobin, simMatch, standings, userFixture,
      honours) are reused; the ones that read the global champ (newChamp, recordChampResult, retainCompletedSeason) never are.
    ========================================================= */
-const CAREER_PHASES = ['league', 'cup', 'intl', 'tour', 'transfer'];
+const CAREER_PHASES = ['league', 'county', 'cup', 'intl', 'tour', 'transfer'];
 /* bar: the overall that earns a call-up (a scripted player is first called up at the end of year 3 or 4: tools/career.mjs);
    tour: the overall for the Home Nations Tour; every4: a World Cup in years 4, 8, 12, the tour in years tourAt + 4n (2, 6, 10). */
 const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
@@ -4238,8 +4288,8 @@ const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
 const CAREER_MOVE = { from:[61, 99], to:[61, 75], band:1, offers:[2, 3] };
 const CAREER_EURO = ['eng', 'fra', 'cel', 'rsa'];   // the leagues whose winners play the European Cup (the cups engine's CUPS.euro.lists)
 const CAREER_HOME = ['ENG', 'IRE', 'SCO', 'WAL'];   // the home nations: the tour is theirs (CUPS.tour.from), and so is the Triple Crown
-const CAREER_CUP_NAME = { euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // the cups engine's names (CUPS)
-const CAREER_KINDS = ['league', 'euro', 'world', 'tour', 'triple'];   // a trophy's kind, in the card's order
+const CAREER_CUP_NAME = { county:'County Cup', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // a county cup's own name is on the cup (cupTitle)   // the cups engine's names (CUPS)
+const CAREER_KINDS = ['league', 'county', 'euro', 'world', 'tour', 'triple'];   // a trophy's kind, in the card's order
 const CAREER_TROPHIES = 60;                          // the most kept, the latest
 const CAREER_POS = { F:[1, 2, 3], B:[4, 5, 6, 7] };   // sevens: forwards wear 1 to 3, backs 4 to 7
 /* A new player: about 61 overall, whatever the club. Any skill not listed starts at CAREER_BASE. */
@@ -4273,7 +4323,7 @@ function careerCups() {
        A stand-in without them gets the career's plain cup screens: no draw, no line. */
     cupLine:typeof cupLine === 'function' ? cupLine : null, cupLastHtml:typeof cupLastHtml === 'function' ? cupLastHtml : null, cupDrawHtml:typeof cupDrawHtml === 'function' ? cupDrawHtml : null, cupDrawBind:typeof cupDrawBind === 'function' ? cupDrawBind : null };
 }
-const CAREER_CUP_PHASE = { cup:'euro', intl:'world', tour:'tour' };   // the cup each phase can hold: a saved cup of another kind is not his
+const CAREER_CUP_PHASE = { county:'county', cup:'euro', intl:'world', tour:'tour' };   // the cup each phase can hold: a saved cup of another kind is not his
 /* A medal (the Locker). The career's own: his first call-up ('callup'), a transfer ('transfer') and a Triple Crown ('triple', as it is
    banked: the cups engine tells the Locker of one in Championship mode only). A cup he wins ('euro', 'world', 'tour') is the cups
    engine's to tell (cupRecord, in Championship mode and in a career alike), never the career's, so it is never counted twice. */
@@ -4362,7 +4412,8 @@ function careerStart(o) {                            // Start Career on the new 
 
 /* ---------- the next match, and the end of a phase ---------- */
 const careerCupUser = cup => (Number.isInteger(cup && cup.user) ? cup.user : 0);   // his side's index in the cup's teams
-const careerCupKind = cr => (cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
+const careerCupKind = cr => (cr.phase === 'county' ? 'county' : cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
+const careerCountyOn = cr => careerLeague(cr) === 'sur';   // a Local club's year has its county cup
 /* His next match in the phase: { teams, home, away, user, label, ko }, or null when the phase is over (or there is no match: the
    transfer window). ko: a cup's knockout or Test (cupFixture's), which cannot end level; a season's match never is. Reads the season
    or the cup, draws nothing. */
@@ -4384,6 +4435,7 @@ function careerNext(cr) {
   const K = careerCups(), ovr = careerOverall(cr.skills), from = CAREER_PHASES.indexOf(cr.phase);
   const won = cr.phase === 'league' && !!cr.season && cr.season.round >= 5 && careerPlace(cr.season) === 1;
   for (const ph of CAREER_PHASES.slice(from + 1)) {
+    if (ph === 'county' && K && careerCountyOn(cr)) return { phase:'county', kind:'county' };
     if (ph === 'cup' && won && K && CAREER_EURO.includes(careerLeague(cr))) return { phase:'cup', kind:'euro' };
     if (ph === 'intl' && ovr >= CAREER_CALL.bar) return { phase:'intl', kind:K && cr.year % CAREER_CALL.every === 0 ? 'world' : 'six', first:!cr.country };
     if (ph === 'tour' && K && cr.year % CAREER_CALL.every === CAREER_CALL.tourAt && CAREER_HOME.includes(cr.country) && ovr >= CAREER_CALL.tour) return { phase:'tour', kind:'tour' };
@@ -4414,7 +4466,7 @@ function careerBank(cr, out) {                       // the phase just finished 
     cr.history = cr.history.slice(-CAREER_HISTORY);
     if (out.won) careerTrophy(cr, 'league', name);
     if (out.triple) { careerTrophy(cr, 'triple', name); careerLocker('triple'); }
-  } else if (out.won) careerTrophy(cr, out.kind, cr.cup.teams[careerCupUser(cr.cup)].name);   // its medal is the cups engine's (cupRecord)
+  } else if (out.won) careerTrophy(cr, out.kind, out.kind === 'county' && cr.cup.name ? cr.cup.name : cr.cup.teams[careerCupUser(cr.cup)].name);   // a county cup by its name: the Surrey Shield   // its medal is the cups engine's (cupRecord)
 }
 /* Into a phase: its season, cup or offers drawn now, once, and saved with it. */
 function careerEnter(cr, next) {
@@ -4422,7 +4474,7 @@ function careerEnter(cr, next) {
   cr.phase = next.phase; cr.season = null; cr.cup = null; cr.offers = null; cr.trained = false;
   if (next.phase === 'transfer') { cr.offers = careerOffers(cr); return; }
   if (next.phase === 'league' || (next.phase === 'intl' && next.kind !== 'world')) { careerNewSeason(cr); return; }
-  const id = next.kind, opts = { user:careerTeamFor(cr, id === 'euro' ? 'league' : 'intl'), cat, year:cr.year };
+  const id = next.kind, opts = { user:careerTeamFor(cr, id === 'euro' || id === 'county' ? 'league' : 'intl'), cat, year:cr.year };
   if (id === 'euro') opts.list = careerLeague(cr);   // his league, never drawn again (a made team's is the list it was picked on)
   if (id === 'tour') opts.n = Math.floor(cr.year/CAREER_CALL.every);   // the hosts in turn: years 2, 6, 10 are 0, 1, 2
   const cup = K ? K.cupNew(id, opts) : null;
@@ -4652,7 +4704,7 @@ function cleanCareer(c) {
   if ((phase === 'league' || phase === 'intl') && c.season != null && !(was != null && was < 3)) season = cleanChamp(c.season);   // a broken season is dropped (and a Minis, Juniors or County one): the hub draws a new one
   if (phase !== 'league' && phase !== 'transfer' && !season && c.cup != null && K && K.cleanCup) cup = K.cleanCup(c.cup) || null;
   if (cup && cup.id !== CAREER_CUP_PHASE[phase]) cup = null;   // a European Cup saved in the window (or any cup in another's phase) would read and bank as the wrong cup
-  if ((phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
+  if ((phase === 'county' || phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
   if (phase === 'transfer' && Array.isArray(c.offers)) {
     offers = [...new Set(c.offers.filter(id => typeof id === 'string' && careerClubById(id) && (club.custom || id !== club.id)))].slice(0, CAREER_MOVE.offers[1]);
     if (!offers.length) offers = null;               // drawn again as the hub opens
@@ -8261,13 +8313,13 @@ function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
 function cupHomeNote(el, c) {
   const tour = c.id === 'tour' && c.user === 0;
   const name = tour ? '' : `<span class="rn-name">${esc(c.teams[c.user].name + ' · ')}</span>`;
-  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : CUPS[c.id].name) + ' · ')}</span>${esc(cupLabel(c))}`;
+  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : cupTitle(c)) + ' · ')}</span>${esc(cupLabel(c))}`;
   el.hidden = false;
 }
 /* The cup by name: European Cup · Bath, or on tour, Tour of South Africa (the Home Nations are always the side on tour). */
 function cupName(c, long) {
   if (c.id === 'tour' && c.user === 0) return 'Tour of ' + listName(c.teams[1]);
-  return (long ? CUPS[c.id].name : c.teams[c.user].name + ' · ' + CUP_SHORT[c.id]) + (long ? ' · ' + c.teams[c.user].name : '');
+  return (long ? cupTitle(c) : c.teams[c.user].name + ' · ' + (CUP_SHORT[c.id] || cupTitle(c))) + (long ? ' · ' + c.teams[c.user].name : '');
 }
 function cupLastRound(c) {                                 // the latest round with a result of the user's
   for (let k = c.results.length - 1; k >= 0; k--) if (c.results[k].some(m => m.h === c.user || m.a === c.user)) return k;
@@ -8297,7 +8349,7 @@ function cupVerdict(c, k) {
     return { text:(won ? 'Test Won' : 'Test Lost') + how + ' · ' + end + mine + ' – ' + theirs, good:won };
   }
   if (!won) return { text:'Out' + how, good:false };
-  if (cupDone(c) && k === c.results.length - 1) return { text:CUPS[c.id].name + ' Winners' + how, good:true };
+  if (cupDone(c) && k === c.results.length - 1) return { text:cupTitle(c) + ' Winners' + how, good:true };
   return { text:'Through to the ' + CUP_PLURAL[cupStage(c, k + 1)] + how, good:true };
 }
 function cupBreakLine() {                                  // the full-time card, once the result is in (M.cupResultDone)
@@ -8309,10 +8361,10 @@ function cupBreakLine() {                                  // the full-time card
 function cupLine(c) {                                      // under the title
   const fx = cupFixture(c), T = c.teams;
   if (!fx) {
-    if (!cupDone(c)) return 'Out of the ' + CUPS[c.id].name;
+    if (!cupDone(c)) return 'Out of the ' + cupTitle(c);
     const w = cupWinner(c);
     if (c.id === 'tour') { const s = cupSeries(c); return T[w].name + ' win the series ' + Math.max(...s) + ' – ' + Math.min(...s); }
-    return T[w].name + ' win the ' + CUPS[c.id].name;
+    return T[w].name + ' win the ' + cupTitle(c);
   }
   if (c.id === 'tour') {
     const s = cupSeries(c), mine = s[c.user], theirs = s[1 - c.user];
@@ -8323,7 +8375,7 @@ function cupLine(c) {                                      // under the title
     const p = c.pools.findIndex(x => x.includes(c.user)), place = cupPoolRows(c, p).findIndex(r => r.i === c.user);
     return ordinal(place + 1) + ' in Pool ' + CUP_POOL[p] + ' · top two go through';
   }
-  return fx.label === 'Final' ? 'Win the ' + CUPS[c.id].name : 'Win to reach the ' + CUP_PLURAL[cupStage(c, fx.round + 1)];
+  return fx.label === 'Final' ? 'Win the ' + cupTitle(c) : 'Win to reach the ' + CUP_PLURAL[cupStage(c, fx.round + 1)];
 }
 
 /* Pieces. */
@@ -8364,7 +8416,7 @@ function cupFixtureHtml(c, fx, pre) {
 }
 function cupWinHtml(c, pre, label) {                       // the winner's card, and its button
   const w = cupWinner(c), won = w === c.user;
-  const head = w < 0 ? CUPS[c.id].name : c.id === 'tour' ? 'Series Winners' : CUPS[c.id].name + ' Winners';
+  const head = w < 0 ? cupTitle(c) : c.id === 'tour' ? 'Series Winners' : cupTitle(c) + ' Winners';
   const who = w < 0 ? c.teams[c.user] : c.teams[w];
   return `<div class="stack">
       <div class="cup-win${won ? ' mine' : ''}" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}">
@@ -8385,7 +8437,7 @@ function cupTieHtml(c, k, i, short) {
   return `<div class="cb-tie">${row(pair[0], m && m.hs)}${row(pair[1], m && m.as)}</div>`;
 }
 function cupBracketHtml(c) {                               // the knockouts (or a tour's Tests) as columns of ties, each round's name over its column
-  const cols = c.id === 'euro' ? [[0, 2], [1, 1]] : c.id === 'tour' ? [[0, 1], [1, 1], [2, 1]] : [[3, 4], [4, 2], [5, 1]];
+  const cols = c.id === 'euro' ? [[0, 2], [1, 1]] : c.id === 'county' ? [[0, 4], [1, 2], [2, 1]] : c.id === 'tour' ? [[0, 1], [1, 1], [2, 1]] : [[3, 4], [4, 2], [5, 1]];
   const name = k => (c.id === 'tour' ? 'Test ' + (k + 1) : CUP_PLURAL[cupStage(c, k)]);
   return `<div class="cup-bracket" style="--cols:${cols.length}">${cols.map(([k]) => `<p class="eyebrow">${name(k)}</p>`).join('')}${cols.map(([k, n]) => `<div class="cb-col">${Array.from({ length:n }, (_, i) => cupTieHtml(c, k, i, c.id !== 'euro')).join('')}</div>`).join('')}</div>`;
 }
@@ -8446,7 +8498,7 @@ $('cup-reset').addEventListener('click', () => {
 /* A finished cup in the Trophy Cabinet (renderCabinet, src/ui-menus.js). */
 function cupEntryHtml(e, i, tag) {
   const c = e.cup, s = cupRecordOf(c), w = cupWinner(c);
-  const award = w === c.user ? (c.id === 'tour' ? 'Series Won' : CUPS[c.id].name) : (c.id === 'tour' ? 'Series Won by ' : 'Won by ') + esc(c.teams[w].name);
+  const award = w === c.user ? (c.id === 'tour' ? 'Series Won' : cupTitle(c)) : (c.id === 'tour' ? 'Series Won by ' : 'Won by ') + esc(c.teams[w].name);
   return `<article class="season-entry"><p class="eyebrow">${tag}${i === 0 ? 'Most Recent' : 'Earlier Cup'}</p><h3>${esc(c.teams[c.user].name)} · ${esc(cupFinish(c))}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${award}</p></article>`;
 }
 /* =========================================================
@@ -11026,9 +11078,9 @@ function lockerCard(kind) {
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
 /* The trophy row on the player card: a trophy per kind he has won, in its kind's shape and metal (TROPHY_SHAPE and TROPHY_METAL,
-   src/cups.js: a shield, a cup with big handles, a cup with a ball on top, a plate, a crown; gold or silver, as in the Trophy Cabinet),
+   src/cups.js: a shield, a tankard (a county cup), a cup with big handles, a cup with a ball on top, a plate, a crown; gold or silver, as in the Trophy Cabinet),
    and how many, in CAREER_KINDS order; each trophy's own label names its kind. */
-const CAREER_KIND_NAME = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
+const CAREER_KIND_NAME = { league:'League', county:'County Cup', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
 function careerShirt(t, num, cls) {                  // the kit with his number on it
@@ -11036,7 +11088,7 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
    A label (Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing first, and may go down to 10px; so may the
-   trophy row, whose five kinds in two figures need 11px beside the overall at 667x375. One marked data-fit="wrap" (a transfer offer's
+   trophy row, whose five kinds in two figures need 11px beside the overall at 667x375 (six, with a county cup, 10px and the row's tight spacing). One marked data-fit="wrap" (a transfer offer's
    league) that is still too wide at its smallest goes on two lines or more at its own size instead, a word never broken. A side's name
    in the fixture also steps down while it runs to three lines (South Africa Women, London North Women at 667x375, and the hub would
    scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. */
@@ -11048,6 +11100,7 @@ function careerFit(root) {
     let px = parseFloat(getComputedStyle(el).fontSize) || 20;
     const floor = lbl || el.classList.contains('cr-cab') ? 10 : 12;
     while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
+    if (el.classList.contains('cr-cab')) el.classList.toggle('tight', over());   // six kinds in two figures (a county cup's too) at 667x375: closer together, still one line at 10px
     if (over() && el.getAttribute('data-fit') === 'wrap') {
       el.style.whiteSpace = 'normal'; el.style.fontSize = ''; el.style.letterSpacing = ''; px = parseFloat(getComputedStyle(el).fontSize) || 20;
       while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
@@ -11078,7 +11131,7 @@ function careerEyebrow(cr) {
   if (cr.phase === 'transfer' || (cr.season && cr.phase === 'league')) return team.name + ' · Year ' + cr.year;
   if (cr.season) return team.name + ' · International';
   const f = careerAhead(cr);
-  return CAREER_CUP_NAME[careerCupKind(cr)] + ' · ' + (f && f.label ? f.label : 'Year ' + cr.year);
+  return (cr.cup && cr.cup.id === 'county' && cr.cup.name ? cr.cup.name : CAREER_CUP_NAME[careerCupKind(cr)]) + ' · ' + (f && f.label ? f.label : 'Year ' + cr.year);   // a county cup by its own name: Surrey Shield · Semi-Final
 }
 /* A finished phase in a word or two: the championship's own (Champions, Runners-Up, Triple Crown), or a cup's: Winners, or how far he
    went (the cups engine's cupFinish: Runners-Up, Semi-Finalists, Quarter-Finalists, Pool Stage), Knocked Out where a build has no such word. */
@@ -11302,10 +11355,10 @@ $('cd-back').addEventListener('click', careerOpen);
 
 /* ---------- between phases: a season's or a cup's end, the call-up, the transfer window ---------- */
 function careerTile(label, value, extra) { return `<div class="cr-tile"><span class="lbl" data-fit>${label}</span>${extra || ''}<b data-fit>${value}</b></div>`; }
-const careerNextName = next => (next.phase === 'cup' ? 'European Cup' : next.phase === 'tour' ? 'Home Nations Tour' : next.phase === 'transfer' ? 'Transfers' : next.kind === 'world' ? 'World Cup' : 'International');
+const careerNextName = (next, cr) => (next.phase === 'county' ? (cr && typeof compCupFor === 'function' ? compCupFor(cr.club).name : 'County Cup') : next.phase === 'cup' ? 'European Cup' : next.phase === 'tour' ? 'Home Nations Tour' : next.phase === 'transfer' ? 'Transfers' : next.kind === 'world' ? 'World Cup' : 'International');
 function careerNextTile(cr, next) {                  // what comes next, with the side he plays it for where it is known
-  const side = next.phase === 'cup' ? careerTeamFor(cr, 'league') : next.phase === 'intl' && cr.country ? careerTeamFor(cr, 'intl') : null;
-  return careerTile('Next', careerNextName(next), side ? `<span class="cr-next">${jersey(side)}<span data-fit>${esc(side.name)}</span></span>` : '');
+  const side = next.phase === 'cup' || next.phase === 'county' ? careerTeamFor(cr, 'league') : next.phase === 'intl' && cr.country ? careerTeamFor(cr, 'intl') : null;
+  return careerTile('Next', careerNextName(next, cr), side ? `<span class="cr-next">${jersey(side)}<span data-fit>${esc(side.name)}</span></span>` : '');
 }
 function renderCareerEnd() {
   const cr = career, title = $('ce-title'), body = $('ce-body'), act = $('ce-act');
@@ -11874,7 +11927,8 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
-  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
+  comp:{ CLUB_LEVEL, CLUB_COUNTY, COUNTY_CUPS, COUNTY_CUP_NAMES, levelOf:compLevelOf, countyOf:compCountyOf, cupFor:compCupFor, rivals:compCupRivals },
+  cups:{ CUPS, cupTitle, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
