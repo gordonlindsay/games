@@ -285,7 +285,7 @@ function champHome() {
   if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put
     box.dataset.key = key;
     box.className = 'hc-comps n' + comps.length;
-    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? '<span class="cup-trophy" data-kind="euro" role="img" aria-label="European Cup"></span>' : ''}<span>${esc(n)}</span></button>`).join('');
+    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
     for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
   }
   $('b-cabinet').hidden = !champHistory.length;
@@ -650,16 +650,18 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
     + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
-/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked with its kind's colour and
-   name; the tally counts each kind won, a cup's only once one is kept. An entry without a kind is a league season. */
+/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked with a trophy in its kind's metal
+   (TROPHY_METAL, src/cups.js: gold or silver) and its kind's name; the tally counts each kind won, in the same trophy and metal, a cup's
+   only once one is kept. An entry without a kind is a league season. */
 function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
   const tally = [['league', 'Title', 'Titles', totals.champions], ['league', 'Grand Slam', 'Grand Slams', totals.grandSlams], ['triple', 'Triple Crown', 'Triple Crowns', totals.tripleCrowns],
     ...[['euro', 'European Cup', 'European Cups'], ['world', 'World Cup', 'World Cups'], ['tour', 'Tour', 'Tours']].map(([k, a, b]) => [k, a, b, totals[k] || 0]).filter(t => t[3] > 0)];
-  const kindTag = k => `<span class="cup-kind" data-kind="${k}">${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
+  const metal = k => (typeof trophyMetal === 'function' ? trophyMetal(k) : 'silver');   // a build without the cups: every entry is a League
+  const kindTag = k => `<span class="cup-kind" data-kind="${k}" data-metal="${metal(k)}">${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
   $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
-    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}">${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}" data-metal="${metal(k)}">${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
       if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind));
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);

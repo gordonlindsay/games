@@ -39,7 +39,7 @@ function cupBegin(id, opts) {
 function cupEuroOn(c, rows) { return !!c && c.round >= 5 && rows[0].i === c.user && cupEuroSkip !== c.id && !!cupListOf(c.teams[c.user]); }
 function cupEuroHub(c, rows) {
   if (!cupEuroOn(c, rows)) return false;
-  $('hub-next').innerHTML = `<div class="stack cup-offer"><button class="btn primary" id="hub-euro"><span class="cup-trophy" data-kind="euro" aria-hidden="true"></span>Play European Cup</button><button class="btn" id="hub-later">Not Now</button></div>`;
+  $('hub-next').innerHTML = `<div class="stack cup-offer"><button class="btn primary" id="hub-euro"><span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" aria-hidden="true"></span>Play European Cup</button><button class="btn" id="hub-later">Not Now</button></div>`;
   $('hub-euro').addEventListener('click', cupEuroStart);
   $('hub-later').addEventListener('click', () => { cupEuroSkip = champ ? champ.id : null; renderHub(); });
   return true;
@@ -83,12 +83,13 @@ function cupRetain(c) {
 
 /* Words. */
 function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
-/* The home's note under Continue Championship: a small trophy in the cup's colour, then Bath · European Cup · Semi-Final. A phone held
-   sideways leaves out the cup's name (styles.css): the trophy says which. */
+/* The home's note under Continue Championship: a small trophy in the cup's metal, then Bath · European Cup · Semi-Final. Every cup's
+   trophy is gold, so the cup's name stays on a phone held sideways too: the longest (London North Women · European Cup · Semi-Final)
+   fits its one line at 568x320. */
 function cupHomeNote(el, c) {
   const tour = c.id === 'tour' && c.user === 0;
   const name = tour ? '' : `<span class="rn-name">${esc(c.teams[c.user].name + ' · ')}</span>`;
-  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : CUPS[c.id].name) + ' · ')}</span>${esc(cupLabel(c))}`;
+  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : CUPS[c.id].name) + ' · ')}</span>${esc(cupLabel(c))}`;
   el.hidden = false;
 }
 /* The cup by name: European Cup · Bath, or on tour, Tour of South Africa (the Home Nations are always the side on tour). */
@@ -194,8 +195,8 @@ function cupWinHtml(c, pre, label) {                       // the winner's card,
   const head = w < 0 ? CUPS[c.id].name : c.id === 'tour' ? 'Series Winners' : CUPS[c.id].name + ' Winners';
   const who = w < 0 ? c.teams[c.user] : c.teams[w];
   return `<div class="stack">
-      <div class="cup-win${won ? ' mine' : ''}" data-kind="${c.id}">
-        <span class="cup-trophy" data-kind="${c.id}" aria-hidden="true"></span>
+      <div class="cup-win${won ? ' mine' : ''}" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}">
+        <span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>
         <div class="cup-who"><p class="eyebrow">${w < 0 ? 'Out' : esc(head)}</p><b data-fit>${esc(listName(who))}</b></div>
         ${jersey(who)}
       </div>

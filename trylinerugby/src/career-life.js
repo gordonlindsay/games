@@ -13,7 +13,9 @@
      back to 50, then a win adds 8, a draw 2, a loss takes 6, and each of his tries, tackles and goals adds 1 (3 at most);
      Team Spirit fades 4, and 1 more for every 10 it stands above 50 (9 at 100), then adds 1 for every six passes he throws
      or is thrown and 2 for each try he scores (6 at most): the more he is in the game the less it fades, but the higher it
-     is the faster it goes, so only going out with the team keeps it high.
+     is the faster it goes, so only going out with the team keeps it high. A cup match (the European Cup, the World Cup, the Home
+     Nations Tour: the career has a cup and no season) leaves Team Spirit alone, no fade and no gain: it carries over from the
+     league unchanged and goes on in the next league or international season. A cup has no dilemma either, so the bar holds.
      A training session costs 8 Energy.
    - In a career match the bars are read once, at careerArm (M.careerLife), so nothing changes mid-match:
      Energy under 60 takes up to 2.5 points off his Stamina ability for the match (all of it at 0, down to 0), so his
@@ -123,10 +125,11 @@ function careerLifeRound(cr, deeds) {                // full time in a career ma
   const l = cr.life, E = CAREER_LIFE.energy, R = CAREER_LIFE.morale, S = CAREER_LIFE.spirit, diff = M.score[0] - M.score[1];
   const dd = deeds || {}, did = ['tries', 'tackles', 'goals'].reduce((a, k) => a + Math.max(0, Math.floor(+dd[k] || 0)), 0);
   const st = M.careerLifeStats || {}, inv = Math.floor((st.passes || 0)/S.passes) + Math.max(0, Math.floor(+dd.tries || 0))*S.tryPts;
+  const cup = !cr.season && !!cr.cup;                // a cup match: Team Spirit as the league left it, for the next season to go on from
   const moved = careerLifeAdd(cr, {
     energy:Math.max(E.backMin, Math.round((100 - l.energy)*E.back)),
     morale:-Math.round((l.morale - 50)*R.drift) + (diff > 0 ? R.win : diff < 0 ? R.loss : R.draw) + Math.min(R.deedCap, did*R.deed),
-    spirit:S.fade - Math.floor(Math.max(0, l.spirit - 50)/S.high) + Math.min(S.cap, inv),   // the higher it is, the faster it fades: his part in a match never holds it up alone
+    spirit:cup ? 0 : S.fade - Math.floor(Math.max(0, l.spirit - 50)/S.high) + Math.min(S.cap, inv),   // the higher it is, the faster it fades: his part in a match never holds it up alone
   });
   if (careerLast) careerLast.life = moved.life;
   return moved.life;
