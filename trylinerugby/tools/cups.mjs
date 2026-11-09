@@ -351,8 +351,32 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
     `gold ${metals[0]} and silver ${metals[1]}: each text drawn in them reads at 4.5:1 or more on the panel and the night (${metals.map(m => grounds.map(g => ratio(m, g).toFixed(1)).join('/')).join(', ')}), neither the floodlight nor the chalk`);
   ok(/\[data-metal="gold"\]\{--kc:var\(--gold\)/.test(css) && /\[data-metal="silver"\]\{--kc:var\(--silver\)/.test(css) && !/\[data-kind(="\w+")?\]\{--kc/.test(css) && !/#6f9cff|#ff5a6e/.test(css),
     'the tones are the metals\' alone: no colour by kind left (the old blue and red gone; green is a pool\'s Through mark only)');
-  ok(/\.cup-kind\[data-won\]::before,\.ck\[data-won\]::before\{[^}]*clip-path:var\(--cup-shape\)/.test(css) && /\.cr-cup i\{[^}]*clip-path:var\(--cup-shape\)/.test(css) && /\.cup-trophy\{[^}]*var\(--kc\)/.test(css),
-    'the cabinet\'s trophies are the career row\'s cup, in the same metal; every cup\'s own trophy too');
+  // each kind's shape (the owner, 2026-11-09: "different shapes"): one map beside the metals, a silhouette of its own for every kind (the
+  // Super Fan's 'fan' ready for its kind), made into the page's rules, and every trophy drawn through them, in its metal
+  const SH = K.TROPHY_SHAPE, kinds = [...new Set([...T.career.KINDS, ...Object.keys(K.TROPHY_METAL), 'fan'])];
+  ok(json(Object.fromEntries(Object.entries(SH).map(([k, v]) => [k, v.name]))) === json({ league:'shield', euro:'cup with big handles', world:'cup with a ball on top', tour:'plate', triple:'crown', fan:'rosette' }),
+    'TROPHY_SHAPE: a title a shield, the European Cup a cup with big handles, the World Cup a cup with a ball on top, the Home Nations Tour a plate, the Triple Crown a crown, the Super Fan\'s trophy a rosette');
+  ok(kinds.every(k => SH[k] && /^M[0-9MmLlHhVvCcSsQqAaZz .-]+$/.test(SH[k].d) && /z$/i.test(SH[k].d)) && new Set(kinds.map(k => SH[k].d)).size === kinds.length && new Set(kinds.map(k => SH[k].name)).size === kinds.length && Object.keys(SH).length === kinds.length,
+    `every kind has a shape (${kinds.join(', ')}), a filled path, and no two kinds share one`);
+  ok(K.trophyShape('lions') === SH.league && K.trophyShape(undefined) === SH.league && kinds.every(k => K.trophyShape(k) === SH[k]), 'an unknown kind is a League\'s shield, as its metal is a League\'s silver');
+  {
+    const rules = K.trophyShapeCss().split('\n'), svg = k => `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='${SH[k].d}'/></svg>`;
+    const inner = r => decodeURIComponent((r.match(/\{--trophy:url\("data:image\/svg\+xml,([^"]+)"\)\}$/) || [])[1] || '');
+    ok(rules.length === kinds.length + 1 && rules[0].startsWith(':root{--trophy:') && inner(rules[0]) === svg('league') && Object.keys(SH).every((k, i) => rules[i + 1].startsWith(`[data-kind="${k}"]{--trophy:`) && inner(rules[i + 1]) === svg(k) && K.trophyMask(k) === rules[i + 1].slice(rules[i + 1].indexOf(':') + 1, -1)),
+      'the page\'s rules come from the map: --trophy for each data-kind, its mask exactly that kind\'s path, a League\'s shield by default');
+    const ui = fs.readFileSync(new URL('../src/ui-cups.js', import.meta.url), 'utf8');
+    ok(/^trophyShapesOn\(\);$/m.test(ui) && /el\.id = 'trophy-shapes'; el\.textContent = trophyShapeCss\(\);/.test(ui) && K.shapesOn() === false, 'ui-cups.js puts them on the page once, as the game loads (none here: the stand-in DOM has no head)');
+  }
+  const rule = sel => (css.match(new RegExp('(?:^|\\n|\\})' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')) || [])[1] || '';
+  const drawn = { cabinet:rule('.cup-kind[data-won]::before,.ck[data-won]::before'), row:rule('.cr-cup i'), cup:rule('.cup-trophy') };
+  ok(Object.values(drawn).every(r => /-webkit-mask:var\(--trophy\) center\/contain no-repeat;/.test(r) && /;mask:var\(--trophy\) center\/contain no-repeat/.test(r) && /background:linear-gradient\(150deg,var\(--kc-hi\),var\(--kc\) 55%,var\(--kc-lo\)\)/.test(r) && !/url\(|clip-path/.test(r)),
+    'every trophy, the cabinet\'s, the career row\'s and every cup\'s own, is its kind\'s shape (--trophy) in its kind\'s metal with the sheen: no one cup for every kind');
+  ok(!/--cup-shape/.test(css) && !/cup with two handles/.test(css), 'the one small cup for every kind is gone');
+  {
+    const srcs = ['src/ui-career.js', 'src/ui-menus.js', 'src/ui-cups.js'].map(f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8')).join('\n');
+    const marks = [...srcs.matchAll(/class="(cup-trophy|cr-cup|cup-kind|ck|cup-win)(\$\{[^}]*\})?"([^>]*)>/g)];
+    ok(marks.length >= 8 && marks.every(m => /^ data-kind="(\$\{[^}]+\}|euro|league|world|tour|triple)"/.test(m[3])) && marks.some(m => m[1] === 'cup-win'), `every trophy written anywhere carries its kind first, so its shape follows it (${marks.length} places)`);
+  }
   const kindMark = (css.match(/\.cup-kind::before\{([^}]*)\}/) || [])[1] || '';
   ok(/border-radius:50%/.test(kindMark) && !/clip-path/.test(kindMark) && !/\.ck::before\{/.test(css) && /\.ck\[data-won\]\{color:var\(--kc\)\}/.test(css) && !/\.ck\{[^}]*color:/.test(css),
     'nothing won, no trophy: an entry not won keeps a dot in its kind\'s metal, a count of 0 no mark and the tally\'s quiet colour');
@@ -537,5 +561,167 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(!/\u2014/.test(copyText), 'no em dashes');
 }
 
+// 12. each kind's trophy shape where a cup draws one: the home's note for a cup under way, and the winner's card, each in its kind
+//     (last, so its draws move nothing above; section 8 has the map, the page's rules and the stylesheet)
+{
+  K.setHistory([]); X.setChamp(null);
+  const marks = [];
+  for (const id of ['euro', 'world', 'tour']) {
+    const c = K.cupNew(id, { user:id === 'tour' ? K.cupTourSide('men') : id === 'euro' ? X.ENGLAND[0] : nat('NZL') });
+    K.set(c); D.settings().hl = 'champ'; D.goHome();
+    const note = $('champ-note').innerHTML;
+    for (let n = 0; n < 12 && !K.cupDone(c); n++) win(c);
+    const card = K.winHtml(c, 'cc', 'New Championship');
+    marks.push([id, note.startsWith(`<span class="cup-trophy" data-kind="${id}" data-metal="${K.trophyMetal(id)}" aria-hidden="true"></span>`),
+      K.cupDone(c) && new RegExp(`<div class="cup-win mine" data-kind="${id}" data-metal="${K.trophyMetal(id)}">\\s*<span class="cup-trophy" data-kind="${id}" data-metal="${K.trophyMetal(id)}" aria-hidden="true"></span>`).test(card)]);
+  }
+  K.set(null); K.setHistory([]); D.settings().hl = 'game'; D.goHome();
+  ok(marks.every(([, note, card]) => note && card), `the home's note and the winner's card each draw the cup's own trophy, by its kind, in its metal, hidden from a screen reader as before (${json(marks)})`);
+}
+
+await browserChecks();
+
 console.log(`Cups: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
+
+// The trophies' shapes in a browser (Chromium, where Playwright is installed), at 844x390 and 667x375: the page's rules from the map;
+// every kind's silhouette apart from every other's where it is drawn smallest (8.5px on the career's row with five kinds in two figures
+// at 667x375, 10px in the Trophy Cabinet); each place drawing its kind's shape in its kind's metal (the career's row, the cabinet's
+// tags and tally, the home's note for each cup under way, each cup's winner's card, the European Cup's trophy on the home's leagues and
+// on Play European Cup); a trophy only for silverware held (a dot for an entry not won); and the career's row and the cabinet fitting
+// (one line, nothing off the side, no taller with a trophy than without). SHOTS=<dir> writes shapes-*.png; NO_BROWSER=1 skips it.
+async function browserChecks() {
+  if (process.env.GAME || process.env.NO_BROWSER) { console.log('skip the browser checks (GAME or NO_BROWSER set)'); return; }
+  const { createRequire } = await import('node:module'), { execFileSync } = await import('node:child_process'), { fileURLToPath } = await import('node:url');
+  const http = await import('node:http'), path = await import('node:path');
+  const require = createRequire(import.meta.url);
+  let chrome = null;
+  for (const from of [() => require('playwright'), () => require(path.join(execFileSync('npm', ['root', '-g'], { stdio:['ignore', 'pipe', 'ignore'] }).toString().trim(), 'playwright'))]) {
+    try { chrome = from().chromium; break; } catch (e) { /* not here */ }
+  }
+  if (!chrome) { console.log('skip the browser checks: Playwright is not installed (npm i -g playwright && npx playwright install chromium)'); return; }
+  let browser;
+  try { browser = await chrome.launch(); } catch (e) { console.log('skip the browser checks: Chromium would not start (' + e.message.split('\n')[0] + ')'); return; }
+  const dir = fileURLToPath(new URL('../', import.meta.url));
+  const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.woff2':'font/woff2', '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json' };
+  const server = http.createServer((req, res) => {
+    const file = path.resolve(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
+    if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'content-type':TYPES[path.extname(file)] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}/`;
+  const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 } };
+  const shots = process.env.SHOTS ? path.resolve(process.env.SHOTS) : null;
+  if (shots) fs.mkdirSync(shots, { recursive:true });
+  const frames = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  try {
+    for (const [w, h] of [[844, 390], [667, 375]]) {
+      const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:shots ? 3 : 1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
+      const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
+      await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
+      await page.evaluate(`window.__frames = ${frames.toString()}`);
+      // the page's rules, once, from the map
+      const css = await page.evaluate(() => { const s = document.querySelectorAll('style#trophy-shapes'); return { n:s.length, same:s.length === 1 && s[0].textContent === window.__tryline.cups.trophyShapeCss(), again:window.__tryline.cups.shapesOn() }; });
+      ok(css.n === 1 && css.same && css.again === false, `${w}x${h}: the shapes' rules are on the page once, made from TROPHY_SHAPE (${json(css)})`);
+      // every silhouette apart from every other, drawn at the sizes the screens use (8.5px at the career row's floor, 10px in the cabinet, 13px
+      // on the home's note): of the pixels either covers, at least a quarter differ for every pair of kinds
+      if (w === 844) {
+        const apart = await page.evaluate(() => {
+          const S = window.__tryline.cups.TROPHY_SHAPE, kinds = Object.keys(S), out = { worst:1, pair:'' };
+          for (const px of [8.5, 10, 13]) {
+            const n = Math.ceil(px), cover = {};
+            for (const k of kinds) {
+              const cv = document.createElement('canvas'); cv.width = cv.height = n; const g = cv.getContext('2d');
+              g.scale(px / 24, px / 24); g.fill(new Path2D(S[k].d)); cover[k] = [...g.getImageData(0, 0, n, n).data].filter((v, i) => i % 4 === 3).map(a => a >= 128);
+            }
+            for (let i = 0; i < kinds.length; i++) for (let j = i + 1; j < kinds.length; j++) {
+              const a = cover[kinds[i]], b = cover[kinds[j]]; let or = 0, xor = 0;
+              for (let p = 0; p < a.length; p++) { if (a[p] || b[p]) or++; if (a[p] !== b[p]) xor++; }
+              if (xor / or < out.worst) { out.worst = xor / or; out.pair = `${kinds[i]} and ${kinds[j]} at ${px}px`; }
+            }
+          }
+          return out;
+        });
+        ok(apart.worst >= 0.25, `every kind's silhouette apart from every other's at 8.5, 10 and 13px (the closest pair, ${apart.pair}, differs in ${Math.round(apart.worst * 100)}% of its pixels)`);
+      }
+      // the career's row: five kinds in two figures, each its kind's shape in its metal, on one line
+      const row = await page.evaluate(async () => {
+        const T = window.__tryline, C = T.career, X = T.teams, K = T.cups;
+        const cr = C.create({ name:'Alfie', pos:'B', num:7, club:X.NATIONAL.flat().find(t => t.id === 'BTH') }); C.set(cr); cr.year = 9;
+        cr.trophies = [].concat(...C.KINDS.map(k => Array.from({ length:12 }, (_, i) => ({ kind:k, year:i + 1, name:'Bath' }))));
+        C.open(); await window.__frames();
+        const cab = document.querySelector('#cr-card .cr-cab'), cups = [...cab.querySelectorAll('.cr-cup')];
+        return { kinds:cups.map(c => c.dataset.kind).join(), shape:cups.every(c => getComputedStyle(c.querySelector('i')).webkitMaskImage === K.trophyMask(c.dataset.kind) && getComputedStyle(c.querySelector('i')).maskImage === K.trophyMask(c.dataset.kind)),
+          metal:cups.every(c => c.dataset.metal === K.trophyMetal(c.dataset.kind) && /linear-gradient/.test(getComputedStyle(c.querySelector('i')).backgroundImage)),
+          labels:cups.map(c => c.getAttribute('aria-label')).join(' | '), fits:cab.scrollWidth <= cab.clientWidth + 0.5 && new Set(cups.map(c => Math.round(c.getBoundingClientRect().top))).size === 1,
+          icon:Math.min(...cups.map(c => c.querySelector('i').getBoundingClientRect().width)), font:getComputedStyle(cab).fontSize, scroll:document.getElementById('s-career').scrollHeight - document.getElementById('s-career').clientHeight };
+      });
+      ok(row.kinds === 'league,euro,world,tour,triple' && row.shape && row.metal, `${w}x${h}: the career's row draws each kind's own shape in its metal (${row.kinds})`);
+      ok(row.labels === 'League, 12 | European Cup, 12 | World Cup, 12 | Home Nations Tour, 12 | Triple Crown, 12', `${w}x${h}: each trophy's label as it was (${row.labels})`);
+      ok(row.fits && row.icon >= 8.4 && row.scroll <= 1, `${w}x${h}: the row with five kinds in two figures fits on one line, the hub unscrolled, each trophy ${row.icon.toFixed(1)}px at ${row.font}`);
+      if (shots) {
+        await page.screenshot({ path:path.join(shots, `shapes-career-${w}x${h}.png`) });
+        const b = await page.evaluate(() => { const r = document.querySelector('#cr-card .cr-cab').getBoundingClientRect(); return { x:Math.max(0, r.x - 8), y:Math.max(0, r.y - 8), width:r.width + 16, height:r.height + 16 }; });
+        await page.screenshot({ path:path.join(shots, `shapes-career-row-${w}x${h}.png`), clip:b });
+      }
+      // the Trophy Cabinet: a Six Nations won (its title, Grand Slam and Triple Crown), each cup won, a World Cup and a league lost
+      const cab = await page.evaluate(async () => {
+        const T = window.__tryline, X = T.teams, K = T.cups;
+        T.career.set(null); K.set(null); K.setHistory([]);
+        const season = won => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(([h, a]) => ({ h, a, hs:h === c.user ? (won ? 30 : 5) : 10, as:a === c.user ? (won ? 30 : 5) : 10, ht:2, at:2 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
+        const play = (c, won) => { for (let n = 0; n < 12 && !K.cupDone(c); n++) { const f = K.cupFixture(c); if (!f) break; const home = f.home === c.user, us = won ? 30 : 5, them = won ? 10 : 30; K.cupRecord(c, home ? { score:[us, them], tries:[4, 1] } : { score:[them, us], tries:[1, 4] }); } return c; };
+        const nat = id => X.natList('men').find(t => t.id === id);
+        season(false); season(true);
+        K.retain(play(K.cupNew('euro', { user:X.ENGLAND[0] }), true));
+        K.retain(play(K.cupNew('world', { user:nat('NZL') }), true));
+        K.retain(play(K.cupNew('tour', { user:K.cupTourSide('men') }), true));
+        K.retain(play(K.cupNew('world', { user:nat('SCO') }), false));
+        T.debug.settings().hl = 'champ'; T.debug.goHome(); document.getElementById('b-cabinet').click(); await window.__frames();
+        const s = document.getElementById('s-cabinet'), panel = document.getElementById('home-history'), pb = panel.getBoundingClientRect();
+        const tags = [...s.querySelectorAll('.cup-kind, .ck')].map(e => { const b = getComputedStyle(e, '::before'), r = e.getBoundingClientRect(); return { cls:e.className, kind:e.dataset.kind, won:e.hasAttribute('data-won'), mask:b.webkitMaskImage, mask2:b.maskImage, content:b.content, round:b.borderRadius, h:r.height, top:r.top, right:r.right, left:r.left, metal:e.dataset.metal }; });
+        const kinds = new Set(tags.filter(t => t.won).map(t => t.kind));
+        return { shown:!s.hidden, over:s.scrollWidth - s.clientWidth, panelOver:panel.scrollWidth - panel.clientWidth, kinds:[...kinds].sort().join(),
+          shape:tags.filter(t => t.won).every(t => t.mask === K.trophyMask(t.kind) && t.mask2 === K.trophyMask(t.kind) && t.metal === K.trophyMetal(t.kind)),
+          dots:tags.filter(t => t.cls === 'cup-kind' && !t.won).map(t => t.kind + ' ' + (t.mask === 'none' && t.round === '50%' ? 'dot' : 'trophy')).join(),
+          lost:tags.filter(t => !t.won).length,
+          height:['cup-kind', 'ck'].map(c => tags.filter(t => t.cls === c)).every(g => g.every(t => Math.abs(t.h - g[0].h) < 0.5)),
+          inside:tags.every(t => t.left >= pb.left - 0.5 && t.right <= pb.right + 0.5), tally:document.querySelector('#home-history .cabinet-tally').textContent };
+      });
+      ok(cab.shown && cab.kinds === 'euro,league,tour,triple,world' && cab.shape, `${w}x${h}: the Trophy Cabinet draws each kind won in its own shape and metal, the tags and the tally (${cab.kinds}; ${cab.tally})`);
+      ok(cab.dots === 'world dot,league dot', `${w}x${h}: and only for silverware held: the World Cup and the league lost keep a dot (${cab.dots})`);
+      ok(cab.over <= 0 && cab.panelOver <= 0 && cab.inside && cab.height, `${w}x${h}: the cabinet fits its width, every tag and count inside the panel, a tag no taller with its trophy than a dot's (${json([cab.over, cab.panelOver, cab.inside, cab.height])})`);
+      if (shots) await page.screenshot({ path:path.join(shots, `shapes-cabinet-${w}x${h}.png`) });
+      // the home's note for each cup under way, each cup's winner's card, and the European Cup's trophy on the leagues and its offer
+      const cups = await page.evaluate(async () => {
+        const T = window.__tryline, X = T.teams, K = T.cups, D = T.debug, out = [];
+        const mask = el => (el ? getComputedStyle(el).webkitMaskImage : 'missing'), on = el => { const r = el.getBoundingClientRect(); return r.width >= 12 && r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; };
+        const nat = id => X.natList('men').find(t => t.id === id);
+        for (const id of ['euro', 'world', 'tour']) {
+          const c = K.cupNew(id, { user:id === 'tour' ? K.cupTourSide('men') : id === 'euro' ? X.ENGLAND[0] : nat('NZL') });
+          K.set(c); D.settings().hl = 'champ'; D.goHome(); await window.__frames();
+          const n = document.querySelector('#champ-note .cup-trophy');
+          out.push([id + ' note', mask(n) === K.trophyMask(id) && n.dataset.metal === K.trophyMetal(id) && on(n)]);
+          for (let k = 0; k < 12 && !K.cupDone(c); k++) { const f = K.cupFixture(c); if (!f) break; const home = f.home === c.user; K.cupRecord(c, home ? { score:[30, 10], tries:[4, 1] } : { score:[10, 30], tries:[1, 4] }); }
+          D.goHome(); document.getElementById('b-champ').click(); await window.__frames();
+          const cw = document.querySelector('#cup-next .cup-win .cup-trophy');
+          out.push([id + ' winner', !!cw && mask(cw) === K.trophyMask(id) && cw.dataset.metal === K.trophyMetal(id) && on(cw)]);
+          K.set(null); K.setHistory([]);
+        }
+        T.home.setTier(1); D.settings().hl = 'champ'; D.goHome(); await window.__frames();   // National: each country's league
+        const lg = document.querySelector('#hc-eng .cup-trophy');
+        out.push(['league button', !!lg && mask(lg) === K.trophyMask('euro') && lg.getAttribute('aria-label') === 'European Cup' && on(lg)]);
+        D.openTeams('champ'); X.poolPick('eng'); D.pickTeam(X.ENGLAND[0]);
+        const c = X.champ(); c.results = c.fixtures.map(rd => rd.map(([h, a]) => ({ h, a, hs:h === c.user ? 30 : 10, as:a === c.user ? 30 : 10, ht:4, at:1 }))); c.round = 5; D.renderHub(); await window.__frames();
+        const of = document.querySelector('#hub-euro .cup-trophy');
+        out.push(['offer', !!of && mask(of) === K.trophyMask('euro')]);
+        X.setChamp(null); K.setHistory([]); D.settings().hl = 'game'; D.goHome();
+        return out;
+      });
+      ok(cups.length === 8 && cups.every(([, good]) => good), `${w}x${h}: each cup's own trophy in its shape and metal: the home's note, the winner's card, the leagues' European Cup and Play European Cup (${cups.filter(c => !c[1]).map(c => c[0]).join(', ') || 'all eight'})`);
+      ok(!errors.length, `${w}x${h}: no page errors (${errors.join('; ')})`);
+      await ctx.close();
+    }
+  } finally { await browser.close(); server.close(); }
+}
