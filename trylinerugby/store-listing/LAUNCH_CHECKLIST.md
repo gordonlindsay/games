@@ -41,6 +41,13 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
   - `node tools/listing.mjs` prints which applies to the build as it stands.
 - [ ] **Pitchero's terms (Super Fan only).** Add Your Team, the import, is part of the paid Super Fan and reads Pitchero club pages. Before Super Fan goes on sale, read Pitchero's terms of use (APP_STORE.md, Content Rights, guideline 5.2.2). If they bar automated access or commercial use, get Pitchero's written permission and keep it ready for App Review, or keep Import to pages the club itself controls. Use the partner club's own page, with its consent, as the review notes' test link.
 - [ ] **A club confirms in writing before superfan.html lists it.** The page goes live as soon as the work is merged, long before the app, so it names no partner club until then. Once a club has signed, in one change: `agreed:true` and its share on its `FAN_CLUBS` entry (src/store.js) and its row on superfan.html. `node tools/listing.mjs` checks the two agree, and fails on a row, or the club's name, on superfan.html for a club not marked agreed.
+- [ ] **A crest only with the club's written permission.** The Super Fan's home shows a plain shield in the club's kit colours. A club's crest goes in only once the club has supplied the file with its written permission to show it in the game (SUPER_FAN.md, What the Club Gives): then put it in `crests/` (png, webp or svg), set the club's `crest` in `FAN_CLUBS` from `null` to its path, build and check. Keep the permission with the agreement. No permission, no crest: `crest:null` stays.
+- [ ] **The Supporters' Wall: reviewing and publishing names.** Requests arrive at support@signcheck.ai with the subject "Supporters' Wall: (club)", sent by grown-ups from their own email. For each one:
+  - Check it says the sender is 18 or over and agrees to be listed, and is for a club that has agreed in writing (its row on superfan.html).
+  - Check the name: a first name with a town or an initial, nothing more (no surname, address, email or phone), nothing rude, and nothing that reads as a child's name. If in doubt, leave it out; there is no need to reply to explain.
+  - Add it to the club's list on superfan.html (`<ul class="wall" data-club="KEY">`, the comment there has the shape), in the next change to the page; `node tools/listing.mjs` checks the list belongs to an agreed club. Merge, so GitHub Pages publishes it.
+  - Delete the email once the name is up or turned down: SignCheck Ltd keeps only the name and the club, as privacy.html says.
+  - A request to be taken off: remove the name in the next change, at once, and reply to say it is done.
 - [ ] **App Store Connect app record**: New App, iOS, Tryline Rugby Sevens, English (U.K.), bundle id `ai.signcheck.tryline`, SKU `TRYLINE1`. Then fill App Information, Age Rating, App Privacy and Pricing from APP_STORE.md.
 - [ ] **In-app purchases** (App Store): `tryline.full` at £1.99, and `tryline.fan.farnham` at £3.99 once Farnham RUFC has confirmed. Exact ids, non-consumable.
 - [x] **Family Sharing**: on for both products (owner, 2026-11-08). Set it as each product is created; it cannot be turned off once on.
@@ -58,6 +65,8 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
   - [ ] Delete the app, reinstall, **Restore Purchases**: both unlocks come back.
   - [ ] Import a real club page (behind the grown-up check, Super Fan only).
   - [ ] The privacy and support links open, behind the grown-up check.
+  - [ ] With a Super Fan bought: the home in the club's colours, the Super Fan trophy in the Locker and the Trophy Cabinet, and after deleting the app and Restore Purchases, the trophy back once.
+  - [ ] Join the Supporters' Wall (the Locker, and Grown-Ups): the grown-up check, Are you 18 or over?, then the name and Continue opens Mail with the request to support@signcheck.ai written out (subject, name, club and the 18 or over line). On a phone with no mail account set up, check what iOS shows.
   - [ ] The unlock card's share line reads "Supports Farnham RUFC: 50% of what we receive for every Super Fan unlock goes to the club.", the same words as superfan.html.
   - [ ] Nothing loads from Google Fonts or anywhere else at launch (a proxy such as Charles, or the Mac's network log, shows no request but Import's).
   - [ ] VoiceOver on the grown-up check and the unlock card.

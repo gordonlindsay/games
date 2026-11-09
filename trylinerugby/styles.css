@@ -1028,3 +1028,50 @@ summary::-webkit-details-marker{display:none}
   #s-cup .cup-poolbtn{min-height:44px;padding-block:6px}
   #s-cup .cup-side{gap:6px}
 }
+/* ===== super fan ===== */
+/* A Super Fan's home (ui-store.js, storeThemeHome): the club's kit colours on the chosen headline, the panel's primary (Play) and My
+   Team's edge. The accent is lifted toward chalk where the kit is dark, so it reads on the dark home; a word on the kit's fill is chalk,
+   or the night's ink on a fill too light for chalk. Without a Super Fan unlock the home has no .fan and is as it was. */
+#s-home.fan .btn.hl[aria-selected="true"],#s-home.fan .btn.hl[aria-selected="true"]:hover{color:var(--fan-acc);box-shadow:inset 0 3px 0 var(--fan-acc)}
+#s-home.fan .hl-panel .btn.primary{border-color:var(--fan-edge);background:var(--fan-kit);color:var(--fan-ink);box-shadow:inset 0 0 0 1.5px var(--fan-edge)}
+#s-home.fan .home-top .my-home{border-color:var(--fan-acc);box-shadow:inset 0 0 0 1px var(--fan-acc)}
+/* the shield beside the club's name under the logo: plain, in the kit colours, or the club's own crest where it has given one */
+.st-fan .fan-shield{display:block;width:20px;height:24px;flex:none;margin-block:-6px;filter:drop-shadow(0 0 1px rgba(241,238,228,.45))}
+.st-fan img.fan-shield{object-fit:contain;filter:none}
+/* the gold Super Fan trophy: in the Locker's Medals, a tile a club before the feats (the trophy, Super Fan, the club, and Join the
+   Supporters' Wall where the unlock is owned); in the Trophy Cabinet, its own kind, in gold */
+.lk-fanrow{grid-column:1/-1;display:flex;gap:8px;min-width:0}
+.lk-fan{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;padding:4px 6px 4px 8px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
+.lk-fan.new{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}
+.lk-cup{display:block;width:40px;height:40px;flex:none}
+.lk-fanname{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+.lk-fanname b{font:800 16px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;color:#ffcf3d}
+.lk-fanname span{font:700 14px/1.15 var(--body);overflow-wrap:anywhere}
+#s-locker .btn.lk-wall{width:auto;flex:0 1 auto;min-height:44px;padding:4px 12px;font-size:13px;line-height:1.1;text-wrap:balance}
+[data-kind="fan"]{--kc:#ffcf3d}
+.cabinet > .fan-entry:first-child{border-top:0;padding-top:2px}   /* first in the cabinet: no rule above it */
+.fan-entry h3{display:flex;align-items:center;gap:10px}
+.fan-entry .lk-cup{width:36px;height:36px}
+@media (orientation:landscape) and (max-height:420px){
+  .lk-fan{gap:8px;padding:2px 4px 2px 6px}
+  .lk-cup{width:34px;height:34px}
+  .lk-fanname b{font-size:15px}
+  .lk-fanname span{font-size:13px}
+}
+@media (orientation:landscape) and (max-height:420px) and (max-width:760px){
+  /* a narrower phone (667x375), where each medal's line takes two: with the trophy's row above them the medals' pictures step down
+     a little, so the twelve still fit under it without a scroll */
+  .lk-t0:has(.lk-fanrow) .lk-feat{padding:4px}
+  .lk-t0:has(.lk-fanrow) .lk-ic{width:20px;height:20px}
+}
+/* the Supporters' Wall card (ui-store.js): Are you 18 or over? with Yes, I'm 18 or Over | Cancel in halves, then How Your Name Appears
+   with Continue | Cancel; over the Locker or in the Grown-Ups card's place */
+#m-wall .card{margin:auto;width:min(460px,100%);gap:14px;padding:18px}
+#m-wall h3{font-size:clamp(28px,6vw,36px)}
+.wl-step{display:flex;flex-direction:column;gap:12px}
+.wl-q{margin:0;font:700 17px/1.3 var(--body)}
+#m-wall .row2 .btn{min-height:48px;padding-inline:10px;line-height:1.1}
+@media (orientation:landscape) and (max-height:420px){
+  #m-wall .card{gap:10px;padding:14px 16px}
+  #m-wall .row2 .btn{min-height:44px}
+}

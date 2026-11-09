@@ -2,10 +2,15 @@
    Store: the one-off unlocks, who has them, and the adapter to the app stores.
 
    Free: Quick Match, Skills Mini Games, Kids, Easy and Normal, How to Play, Two Player (no home button), the Locker and My Team. Full Game
-   (tryline.full) adds Championship, Career, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
-   Game and Add Your Team (the import), and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
-   Career and Championship. No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's
-   own field (store), and Restore Purchases reads it back from the App Store or Google Play.
+   (tryline.full) adds Career, Championship and International modes, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
+   Game and Add Your Team (the import), and marks the player as that club's Super Fan: the home in its kit colours with its shield and name,
+   a gold Super Fan trophy in the Locker and the Trophy Cabinet (src/locker.js), and the club offered first in Career and Championship.
+   No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's own field (store), and Restore
+   Purchases reads it back from the App Store or Google Play.
+
+   The Supporters' Wall (storeWallMail): a Super Fan's grown-up, 18 or over, can ask to be named on the club's Super Fan page. The game
+   builds an email for the grown-up's own mail app to send (a mailto: link, after the grown-up check); it sends nothing itself and keeps
+   no name. SignCheck Ltd checks each request by hand and lists it on superfan.html.
 
    Where it applies (storeHas):
    - The Try Line app: by purchases.
@@ -28,9 +33,12 @@ const STORE_FAN_HAS = [...STORE_FULL_HAS, 'import'];   // Super Fan: everything 
    offered first. share is the club's percentage of what we receive for each Super Fan unlock (the proceeds, after the store's
    commission). agreed turns true only once the club has confirmed that share in writing. The club's Super Fan offer is shown only
    with both, so it can never go out without its stated, agreed share. A club the game does not have yet is appended to CLUBS
-   (data.js) first. tools/listing.mjs reads this list as plain data: keep it literals only. */
+   (data.js) first. crest is null, or the club's crest as an image inside the game (crests/<key>.png, .webp or .svg), set only once the
+   club has supplied it with its written permission: the Super Fan's shield on the home then shows it in place of the kit colours, and
+   tools/build.mjs puts the file in the game's shell (offline, and in the app). tools/listing.mjs reads this list as plain data: keep it
+   literals only. */
 const FAN_CLUBS = [
-  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR' },
+  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR', crest:null },
 ];
 const STORE_LINKS = {                      // each opens outside the game, and only after the grown-up check
   privacy:'https://gordonlindsay.github.io/games/trylinerugby/privacy.html',
@@ -38,6 +46,8 @@ const STORE_LINKS = {                      // each opens outside the game, and o
   ios:null,                                // the App Store page for Get the App: set before STORE_WEB_TIER goes to 'free'
   android:null,                            // the Google Play page, likewise
 };
+const STORE_MAIL = 'support@signcheck.ai';   // the Supporters' Wall's requests, sent by the grown-up's own mail app (storeWallMail)
+const STORE_CREST = /^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/;   // a crest is a file of the game's own, never an address elsewhere
 const STORE_ID = /^tryline\.(?:full|fan\.[a-z0-9]{1,24})$/;   // a product id the save may keep: one from a club since dropped stays bought
 let storeNativeHook = null;                // the tests' stand-in for nativeOn (src/native.js)
 let storeTierHook = null;                  // the tests' stand-in for STORE_WEB_TIER
@@ -71,6 +81,15 @@ function storeFanClub() {                  // the club of the latest Super Fan u
   return null;
 }
 function storeFan() { const c = storeFanClub(); return c ? { key:c.key, name:c.name } : null; }
+/* Every club in FAN_CLUBS whose Super Fan unlock this device owns, in the order bought: in the app only, so the web (whatever its tier)
+   owns none. Each earns its Super Fan trophy (lockerFanAward) and can offer the Supporters' Wall. */
+function storeFanOwned() {
+  if (!storeNative()) return [];
+  const out = [];
+  for (const id of storeBought) { const c = storeClubOf(id); if (c && !out.includes(c)) out.push(c); }
+  return out;
+}
+const storeCrest = c => (c && typeof c.crest === 'string' && STORE_CREST.test(c.crest) ? c.crest : null);
 const storeAnyFan = () => storeNative() && storeBought.some(id => id.startsWith('tryline.fan.'));   // any Super Fan unlock, a club since dropped from FAN_CLUBS included, still unlocks
 function storeHas(f) {
   if (!STORE_FAN_HAS.includes(f)) return true;           // the free tier
@@ -95,6 +114,19 @@ function storeOffers(f) {
 /* A locked control is shown only where something unlocks it: in the app, Add Your Team stays away until a Super Fan club is on sale. */
 const storeOffered = f => storeHas(f) || !storeNative() || storeOffers(f).length > 0;
 
+/* ---------- the Supporters' Wall ----------
+   The name as the grown-up typed it, on one line and 40 characters at most, and the email it goes in: to STORE_MAIL, with the club in
+   the subject, and the name, the club and the grown-up's yes in the body. Built only when asked for and handed straight to the mail app
+   (storeWallGo, src/ui-store.js): nothing here keeps it. */
+const storeWallName = s => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40).trim();
+function storeWallMail(c, name) {
+  const n = storeWallName(name);
+  if (!c || !c.name || n.length < 2) return null;
+  const subject = "Supporters' Wall: " + c.name;
+  const body = ['Name: ' + n, 'Club: ' + c.name, '', "I am 18 or over. I agree to be listed on the Supporters' Wall by this name, and I can ask to be removed at any time."].join('\r\n');
+  return 'mailto:' + STORE_MAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+
 /* ---------- the Super Fan's club, first ---------- */
 const storeFanTeam = () => storeTeamOf(storeFanClub());
 const storeHomeTeam = () => storeFanTeam() || DEFAULT_TEAM;
@@ -109,7 +141,7 @@ function storeFirst(list) {                // the Super Fan's club moved to the 
 function storeGrant(ids) {                 // add only: a store that answers with less (offline, signed out) never takes one away
   let added = false;
   for (const id of Array.isArray(ids) ? ids : []) if (typeof id === 'string' && STORE_ID.test(id) && !storeBought.includes(id)) { storeBought.push(id); added = true; }
-  if (added) { storeKeep(); storeRefresh(true); }
+  if (added) { if (typeof lockerFanAward === 'function') lockerFanAward(); storeKeep(); storeRefresh(true); }   // a Super Fan unlock earns its club's trophy once (src/locker.js)
   return added;
 }
 /* A refund, or a family member's unlock that ends when they leave the Family Sharing group: Apple sends the transaction again with a
@@ -122,6 +154,7 @@ function storeRevoke(ids) {
     const before = storeBought.length;
     storeBought = storeBought.filter(id => !gone.includes(id) || own.includes(id));
     if (storeBought.length === before) return false;
+    if (typeof lockerFanDrop === 'function') lockerFanDrop();   // a refunded Super Fan takes its trophy with it
     storeKeep(); storeRefresh();
     return true;
   });

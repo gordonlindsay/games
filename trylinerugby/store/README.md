@@ -12,8 +12,14 @@ Grown-Ups panel). `node tools/store.mjs` checks them, and runs in `node tools/ch
 | Tier | Product id | What it unlocks | Price |
 |---|---|---|---|
 | Free | none | Quick Match, Skills Mini Games (all drills), Kids, Easy, Normal, How to Play, 2 Players (no home button since 2026-11-09), the Locker (its medals, balls, boots and Legends won), My Team | free |
-| Full Game | `tryline.full` | Championship, Career, Create Team (and Edit), Hard, playing the Legends sides (`legends`) | £1.99 |
-| Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Add Your Team (the import), and the Super Fan badge: the club's shirt and name on the home, and the club offered first in Career and Championship | £3.99 |
+| Full Game | `tryline.full` | Career, Championship and International modes, Create Team (and Edit), Hard, playing the Legends sides (`legends`) | £1.99 |
+| Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Add Your Team (the import), the home in the club's kit colours with the Super Fan badge (a plain shield in those colours and the club's name), a gold Super Fan trophy for the club, the club offered first in Career and Championship, and the Supporters' Wall (below) | £3.99 |
+
+The store copy says the same (the owner's wording, 9 November 2026): the App Store subtitle **Play as and support your club** (29 of
+30), the Full Game's App Store description **Career, Championship and International modes** (44 of 45), and its Google Play
+description **Play as and support your club: Career, Championship and International modes, Create Team, the Hard level and the
+Legends sides. A one-off unlock.** (145 of 200). The Unlock card lists the Full Game in the same order: Career · Championship ·
+International · Create Team · Hard · Legends.
 
 All of them are **non-consumable** in-app purchases. There is no generic `tryline.fan`: every Super Fan product belongs to one
 club, so Apple's and Google's sales reports count each club's unlocks with nothing collected by the game.
@@ -27,7 +33,7 @@ They live in one list, `FAN_CLUBS` in `src/store.js`:
 
 ```js
 const FAN_CLUBS = [
-  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR' },
+  { key:'farnham', name:'Farnham RUFC', product:'tryline.fan.farnham', share:50, agreed:false, team:'FAR', crest:null },
 ];
 ```
 
@@ -36,6 +42,10 @@ const FAN_CLUBS = [
 - `team`: the club's side in the game (`id` in `src/data.js`), for its shirt colours and to be offered first.
 - `share`: the club's percentage of **what we receive** for each Super Fan unlock: the proceeds Apple (or Google) pays after its
   commission, not the price. Farnham RUFC's is 50.
+- `crest`: `null`, or the club's crest as a file of the game's own (`crests/<key>.png`, `.webp` or `.svg`), set only once the club
+  has supplied it with its **written permission** to show it in the game. The Super Fan's shield on the home then shows it in place
+  of the plain shield in the kit colours, and `tools/build.mjs` adds the file to the game's shell, so it is there offline and in the
+  app. Anything else (an address on another site, a file outside `crests/`) is never shown and fails the build.
 - `agreed`: `true` only once the club has confirmed that share in writing. **Until a club has both a share and `agreed:true`, its
   Super Fan offer is not shown anywhere**, so it can never go on sale without its stated, agreed share (`tools/store.mjs` checks
   this). Until one club is on sale, Add Your Team is not offered in the app at all, as only Super Fan unlocks it.
@@ -186,6 +196,29 @@ or once the game is unlocked.
 
 ## Grown-Ups
 
-The home's **Grown-Ups** button (in the app, and on the free web) opens the panel: what this device owns, the offers not yet
-owned, Restore Purchases, and Privacy and Support, which open `privacy.html` and `support.html` on GitHub Pages in the system
-browser. Every one of those, and every purchase on the Unlock card, asks a grown-up first (`parentGate`, `src/kids.js`).
+The home's **Grown-Ups** button (in the app, and on the free web) opens the panel: what this device owns (with Join the
+Supporters' Wall under a Super Fan), the offers not yet owned, Restore Purchases, and Privacy and Support, which open
+`privacy.html` and `support.html` on GitHub Pages in the system browser. Every one of those, and every purchase on the Unlock
+card, asks a grown-up first (`parentGate`, `src/kids.js`).
+
+## The Super Fan trophy and home
+
+Owning a club's Super Fan unlock in the app earns a gold Super Fan trophy for that club, once (`lockerFanAward`, `src/locker.js`):
+after the purchase, after Restore Purchases, at the start's read-back, or at the home for an unlock bought before the trophies.
+It is kept in the save's `locker` field as the club's key, shows in the Locker (Medals, first) and the Trophy Cabinet (its own
+kind, Super Fan, in gold, never in the tally), and goes only with the unlock (a refund). Nothing is earned on the web, whatever
+`STORE_WEB_TIER` says: the web owns no unlock. With a Super Fan unlock the home takes the club's kit colours (`storeThemeHome`,
+`src/ui-store.js`): the chosen headline, the panel's primary button (Play) and My Team's edge, with the accent lifted toward chalk
+where the kit is too dark to read on the dark home. Without one the home is exactly as it was.
+
+## The Supporters' Wall
+
+A Super Fan's grown-up can ask to be named on the club's wall on `superfan.html`. The offer is on the Locker's Super Fan tile
+and in the Grown-Ups panel, only for a club whose unlock this device owns, in the app. It goes: the grown-up check, then
+**Are you 18 or over?** (Yes, I'm 18 or Over | Cancel), then **How Your Name Appears** (a first name and a town or an initial,
+40 characters at most) with Continue | Cancel. Continue opens the grown-up's own email app (a `mailto:` link, through
+`storeOpenUrl`, the way every link leaves the game) addressed to support@signcheck.ai, with the subject "Supporters' Wall:
+(club)" and the name, the club and the line "I am 18 or over. I agree to be listed on the Supporters' Wall by this name, and I can
+ask to be removed at any time." The game sends nothing and keeps no name: the field is emptied however the card closes, and
+nothing of it is saved. SignCheck Ltd checks each request by hand and lists the name (`store-listing/LAUNCH_CHECKLIST.md`). The
+privacy label stays Data Not Collected (`store-listing/APP_STORE.md` has the reasoning). Never call it a donation or charity.

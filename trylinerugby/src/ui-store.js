@@ -7,9 +7,14 @@
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
      first. The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
+   - A Super Fan's home takes the club's kit colours (storeThemeHome) and shows its shield, or its crest where the club has given one
+     with its written permission. Without a Super Fan unlock the home is exactly as it was.
+   - The Supporters' Wall (storeWallAsk): for a club whose Super Fan unlock this device owns, from the Locker's Super Fan tile and the
+     Grown-Ups panel. The grown-up check, then Are you 18 or over? and How Your Name Appears; Continue opens the grown-up's own mail app
+     with the request written out (storeWallMail, src/store.js). The game sends nothing and keeps no name.
    ========================================================= */
 const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Add Your Team', legends:'Legends' };
-const STORE_LINE = { full:'Championship · Career · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };
+const STORE_LINE = { full:'Career · Championship · International · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };   // the Full Game's in the store's own order (Career, Championship and International modes)
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
   failed:'The purchase did not go through.',
@@ -55,9 +60,47 @@ function storeRender() {
     if (settings.diff === 2) settings.diff = 1;
     if (settings.twoDiff.includes(2)) settings.twoDiff = settings.twoDiff.map(v => Math.min(v, 1));
   }
+  if (typeof lockerFanAward === 'function') lockerFanAward();   // an unlock owned before the trophies came earns its club's too (src/locker.js); in the app only
   const c = storeFanClub(), t = storeTeamOf(c), b = $('st-fan');   // a Super Fan's line under the logo, in place of Mobile Rugby · Sevens, so the home keeps its height
-  if (c && t) { b.innerHTML = jersey(t) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
+  if (c && t) { b.innerHTML = storeShield(t, c) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
   else if (!b.hidden) { b.hidden = true; $('home-tag').hidden = false; }
+  storeThemeHome(c && t ? t : null);
+}
+
+/* ---------- the Super Fan's home: the club's colours ----------
+   The chosen headline, the panel's primary button (Play) and My Team's edge take the club's kit colours (styles.css, #s-home.fan),
+   readable on the dark home. The accent, a line or a word on the dark, is whichever of the kit and the trim stands out more from the
+   panel, lifted toward chalk until it reads at 4.5:1. A word on the kit's fill is chalk wherever chalk reads on it (4.5:1), and the
+   night's ink only on a fill too light for it. The fill's edge is the trim where the trim shows on the dark, the accent where not. */
+const STORE_TONE = { chalk:'#f1eee4', night:'#0b130e', panel:'#17271d' };   // styles.css's --chalk, --night and --panel-hi
+const storeLum = h => { const v = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)/255).map(c => (c <= 0.03928 ? c/12.92 : ((c + 0.055)/1.055) ** 2.4)); return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
+const storeContrast = (a, b) => { const x = storeLum(a), y = storeLum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
+const storeMix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16)*(1 - t) + parseInt(b.slice(i, i + 2), 16)*t).toString(16).padStart(2, '0')).join('');
+function storeTheme(t) {
+  const kit = (HEX.test(t.kit) ? t.kit : '#888888').toLowerCase(), trim = (HEX.test(t.trim) ? t.trim : '#f2efe6').toLowerCase();
+  const base = storeContrast(kit, STORE_TONE.panel) >= storeContrast(trim, STORE_TONE.panel) ? kit : trim;
+  let acc = base;
+  for (let i = 1; i <= 10 && storeContrast(acc, STORE_TONE.panel) < 4.5; i++) acc = storeMix(base, STORE_TONE.chalk, i/10);
+  const chalk = storeContrast(kit, STORE_TONE.chalk), ink = chalk >= 4.5 || chalk >= storeContrast(kit, STORE_TONE.night) ? STORE_TONE.chalk : STORE_TONE.night;
+  return { kit, trim, acc, ink, edge:storeContrast(trim, STORE_TONE.night) >= 3 ? trim : acc };
+}
+let storeThemeOn = '';                     // the colours the home has now ('' for none), so it is touched only when they change
+function storeThemeHome(t) {
+  const s = $('s-home'), th = t ? storeTheme(t) : null, key = th ? Object.values(th).join() : '';
+  if (key === storeThemeOn) return;
+  storeThemeOn = key;
+  s.classList.toggle('fan', !!th);
+  for (const k of ['kit', 'trim', 'acc', 'ink', 'edge']) {
+    if (th) s.style.setProperty('--fan-' + k, th[k]);
+    else if (typeof s.style.removeProperty === 'function') s.style.removeProperty('--fan-' + k);
+  }
+}
+/* The Super Fan's shield: plain, in the kit colours, or the club's crest where FAN_CLUBS has one (a file of the game's own). */
+function storeShield(t, c) {
+  const crest = storeCrest(c);
+  if (crest) return `<img class="fan-shield fan-crest" src="${esc(crest)}" alt="" draggable="false">`;
+  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
+  return `<svg class="fan-shield" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 1.6l9.8 3.5v7.5c0 6.7-4.1 11.3-9.8 13.6C6.3 23.9 2.2 19.3 2.2 12.6V5.1z" fill="${k}" stroke="${tr}" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
 }
 function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Add Your Team, a Legends side
   storeMark($('t-create'), 'create');
@@ -120,10 +163,11 @@ function storeCardRender() {
   const have = [];
   if (app && grown) {                      // the panel says what this device has
     const c = storeFanClub();
-    if (c) have.push(`<p class="st-own">${jersey(storeTeamOf(c))}<span>Super Fan · ${esc(c.name)}</span></p>`);
+    if (c) have.push(`<p class="st-own">${jersey(storeTeamOf(c))}<span>Super Fan · ${esc(c.name)}</span></p>`, `<button class="btn st-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button>`);
     else if (storeBought.includes(STORE_FULL)) have.push('<p class="st-own"><span>Full Game Unlocked</span></p>');
   }
   $('st-have').innerHTML = have.join(''); $('st-have').hidden = !have.length;
+  for (const b of $('st-have').querySelectorAll('[data-wall]')) { b.disabled = u.busy; b.addEventListener('click', () => storeWallAsk(b.dataset.wall)); }
   const link = storeAppLink();
   $('st-offers').innerHTML = app ? storeOffers(grown ? null : u.feature).map(o => storeOfferHtml(o, u.busy)).join('')
     : link ? `<button class="btn primary" id="st-app">Get the App${u.feature === 'import' ? '' : `<small class="hsub">${STORE_LINE.full}</small>`}</button>` : '';   // Add Your Team is the Super Fan's, not the Full Game's
@@ -195,6 +239,61 @@ function storeOpenUrl(url) {
   try { if (storeNative()) window.open(url, '_blank'); else window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) { /* blocked */ }
 }
 
+/* ---------- the Supporters' Wall ----------
+   Join the Supporters' Wall, from the Locker's Super Fan tile or the Grown-Ups panel, for a club this device owns the unlock of. The
+   grown-up check first (the Grown-Ups card hides under it, as for a purchase), then the card: Are you 18 or over? with Yes, I'm 18 or
+   Over | Cancel, then How Your Name Appears with Continue | Cancel. Continue hands the email (storeWallMail) to the grown-up's own mail
+   app by the way every link leaves the game (storeOpenUrl), and closes the card. However the card closes, the field is emptied: the
+   name is in the email the grown-up sends, and nowhere in the game. */
+let storeWallUi = null;                    // while the card is up: { club, step, back, store } (store: the Grown-Ups card it hid)
+function storeWallAsk(key) {
+  const c = storeFanOwned().find(x => x.key === key);
+  if (!c || kidsGate || storeWallUi || storeUi.busy && !$('m-store').hidden) return false;
+  const back = typeof document !== 'undefined' ? document.activeElement : null, store = !$('m-store').hidden;
+  if (store) $('m-store').hidden = true;
+  parentGate(() => storeWallOpen(c, back, store), () => storeWallBack(back, store));
+  return true;
+}
+function storeWallOpen(c, back, store) {
+  storeWallUi = { club:c, step:'age', back:back || null, store };
+  $('wl-title').textContent = c.name;
+  $('wl-input').value = '';
+  $('m-wall').hidden = false;              // shown first, so the focus can land in it
+  storeWallStep('age');
+}
+function storeWallStep(step) {
+  const u = storeWallUi; if (!u) return;
+  u.step = step;
+  $('wl-age').hidden = step !== 'age'; $('wl-name').hidden = step !== 'name';
+  storeWallCheck();
+  setFocus(null);
+  if (lastDev === 'pad') return;            // a controller starts on DEFAULT_FOCUS with its first press
+  const el = step === 'age' ? $('wl-yes') : typeof importTouch === 'function' && importTouch() ? null : $('wl-input');   // on a touch screen no keyboard springs up over the card until the field is tapped
+  if (el && el.focus) el.focus();
+}
+function storeWallCheck() { $('wl-go').disabled = !storeWallMail(storeWallUi && storeWallUi.club, $('wl-input').value); }   // Continue once a name is there
+DEFAULT_FOCUS['m-wall'] = () => (storeWallUi && storeWallUi.step === 'name' ? ($('wl-go').disabled ? $('wl-cancel') : $('wl-go')) : $('wl-yes'));
+function storeWallGo() {
+  const u = storeWallUi; if (!u || u.step !== 'name') return;
+  const url = storeWallMail(u.club, $('wl-input').value);
+  if (!url) { storeWallCheck(); return; }
+  storeWallClose();
+  storeOpenUrl(url);
+}
+function storeWallClose() {
+  const u = storeWallUi; if (!u) return;
+  storeWallUi = null;
+  $('wl-input').value = '';
+  $('m-wall').hidden = true;
+  storeWallBack(u.back, u.store);
+}
+function storeWallBack(back, store) {      // the card or the check closed: back to the Grown-Ups card it came from, or the Locker
+  setFocus(null);
+  if (store) { $('m-store').hidden = false; storeCardRender(); }
+  if (back && back.focus && back.isConnected !== false && !(back.closest && back.closest('[hidden]'))) back.focus();
+  else if (store) storeCardFocus();
+}
+
 $('m-store').hidden = true;                // closed until asked for (the test harness's stand-in elements start open)
 $('b-grown').addEventListener('click', () => storeOpen({ mode:'grown' }));
 $('st-back').addEventListener('click', storeClose);
@@ -210,4 +309,15 @@ $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support))
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
   if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-store').hidden) return;
   storeClose(); if (e.preventDefault) e.preventDefault();
+});
+$('m-wall').hidden = true;                 // closed until asked for (the test harness's stand-in elements start open)
+$('wl-yes').addEventListener('click', () => storeWallStep('name'));
+$('wl-no').addEventListener('click', storeWallClose);
+$('wl-cancel').addEventListener('click', storeWallClose);
+$('wl-go').addEventListener('click', storeWallGo);
+$('wl-input').addEventListener('input', storeWallCheck);
+$('wl-input').addEventListener('keydown', e => { if (e.key === 'Enter') { if (e.preventDefault) e.preventDefault(); storeWallGo(); } });
+window.addEventListener('keydown', e => {  // Escape closes the Supporters' Wall card too, the field emptied
+  if (e.key !== 'Escape' || e.defaultPrevented || kidsGate || $('m-wall').hidden) return;
+  storeWallClose(); if (e.preventDefault) e.preventDefault();
 });

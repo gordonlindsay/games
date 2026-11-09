@@ -103,6 +103,7 @@ Answering No ends the form; the store page then reads **No data collected** and 
 - **Purchases** go through Google Play Billing. The game keeps only which products the account owns, on the device, and sends no purchase data anywhere: no server of ours, no third-party purchase service. Google Play's own handling of the payment is Google's, under its policy.
 - **Super Fan sales** are counted from Google's per-product earnings reports. The game sends nothing to count them.
 - **Import** fetches the page the player chose, from the device. Nothing about the player is sent with it and nothing reaches us; the site gets an ordinary web request, as from a browser.
+- **The Supporters' Wall** (Super Fan only) opens the grown-up's own email app, by an intent, with a request to us written out: a name for the club's wall on superfan.html, from someone who has confirmed they are 18 or over. The person sends it from their own email account, outside the app; the app sends nothing and keeps no name. Google counts data as collected when the app transmits it, which this does not. Check Google's wording on the day; if it reads otherwise, the type to declare is Personal info, Name, optional, for App functionality.
 - **Fonts** are built into the app, so there is no request to Google Fonts. **[OWNER: confirm in the build being submitted.]**
 - **No SDKs** that collect anything: no analytics, crash reporting, ads or attribution.
 
@@ -137,8 +138,10 @@ Full Game
 
 <!-- copy:google.iap.full.description -->
 ```text
-Championship, Career, Create Team, the Hard level and the Legends sides. A one-off unlock.
+Play as and support your club: Career, Championship and International modes, Create Team, the Hard level and the Legends sides. A one-off unlock.
 ```
+
+The owner's wording (145 of 200), 9 November 2026.
 
 <!-- copy:google.iap.fan.name -->
 ```text

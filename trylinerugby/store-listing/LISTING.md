@@ -27,10 +27,10 @@ The owner's choice (20 characters). Check the name is free in App Store Connect 
 
 <!-- copy:apple.subtitle -->
 ```text
-Play and support your club
+Play as and support your club
 ```
 
-The owner's choice (26 characters), from "play as your club, with your career, for your game". His earlier option: "Your club. Your career." (23).
+The owner's wording (29 characters), 9 November 2026: "play as and support your club". Before it: "Play and support your club" (26), from "play as your club, with your career, for your game", and "Your club. Your career." (23).
 
 ### Promotional Text (170 characters, can change without a new version)
 
@@ -70,8 +70,9 @@ Free to Play
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
-- Championship: your team and five others over five rounds, with a league table and bonus points
 - Career: one player at any club, season by season, with transfers, call-ups and training between matches
+- Championship: your team and five others over five rounds, with a league table and bonus points
+- International: play as your country against the other nations, in a championship of six, a world cup and a tour
 - Create Team: up to four teams of your own, with your kit, short name and abilities
 - Hard level
 
@@ -101,13 +102,14 @@ Free to Play
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
-- Championship: your team and five others over five rounds, with a league table and bonus points
 - Career: one player at any club, season by season, with transfers, call-ups and training between matches
+- Championship: your team and five others over five rounds, with a league table and bonus points
+- International: play as your country against the other nations, in a championship of six, a world cup and a tour
 - Create Team: up to four teams of your own, with your kit, short name and abilities
 - Hard level
 
 Super Fan
-For supporters of a partner club. Everything in Full Game, and Add Your Team, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
+For supporters of a partner club. Everything in Full Game, and Add Your Team, which brings your club and its league into the game from your club's web page or a tournament link. Your club's colours go on the home screen with your Super Fan badge, a gold Super Fan trophy goes in your Locker, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
 
 The Teams
 Twelve national sides, city sides from the leagues of England, France, Ireland, Scotland, Wales and Italy, South Africa, Australia, New Zealand and Japan, Scotland's club sides, and local clubs, as men, women or minis. Professional sides go by their city, club sides by their town, and every rating is made up.
@@ -160,13 +162,14 @@ Free to Play
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
-- Championship: your team and five others over five rounds, with a league table and bonus points
 - Career: one player at any club, season by season, with transfers, call-ups and training between matches
+- Championship: your team and five others over five rounds, with a league table and bonus points
+- International: play as your country against the other nations, in a championship of six, a world cup and a tour
 - Create Team: up to four teams of your own, with your kit, short name and abilities
 - Hard level
 
 Super Fan
-For supporters of a partner club. Everything in Full Game, and Add Your Team, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
+For supporters of a partner club. Everything in Full Game, and Add Your Team, which brings your club and its league into the game from your club's web page or a tournament link. Your club's colours go on the home screen with your Super Fan badge, a gold Super Fan trophy goes in your Locker, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
 
 The Teams
 Twelve national sides, city sides from the leagues of England, France, Ireland, Scotland, Wales and Italy, South Africa, Australia, New Zealand and Japan, Scotland's club sides, and local clubs, as men, women or minis. Professional sides go by their city, club sides by their town, and every rating is made up.
@@ -185,7 +188,7 @@ For Parents
 ## Before Publishing
 
 - Add a partner club's name to the descriptions only once its share is set in the game and the agreement is signed (see SUPER_FAN.md). Until then "a partner club" is accurate.
-- The subtitle (Play and support your club) and the promotional text's opening line (Support your club) are the owner's, and stay with either description. Without Super Fan they read as playing as your club; if the owner would rather they waited for Super Fan, "Your club. Your career." (23) is his earlier subtitle.
+- The subtitle (Play as and support your club) and the promotional text's opening line (Support your club) are the owner's, and stay with either description. Without Super Fan they read as playing as your club; if the owner would rather they waited for Super Fan, "Your club. Your career." (23) is his earlier subtitle.
 - Google Play's full description (phase 2) still has its Super Fan paragraph: when the Play listing is made, the same rule applies, so drop it there too unless a club is agreed in that build.
 - Controllers: the game supports them on the web. If they work in the app on a real iPhone, iPad and Android phone, "Works with game controllers" can be added, and Apple's game controller badge set in App Store Connect. Not claimed until tested.
 - Re-read the whole description against the build being submitted: anything the reviewer cannot find in the app is a guideline 2.3.1 rejection.

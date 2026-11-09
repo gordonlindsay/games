@@ -8,8 +8,10 @@
 // what we receive; privacy.html is PRIVACY.md; the fonts line in PRIVACY.md matches how index.html loads its fonts; superfan.html
 // lists exactly the FAN_CLUBS marked agreed, with their shares, and names no other; the game's share line (storeShareLine) uses
 // superfan.html's words; Apple's copy without Super Fan (for a build with no club agreed) names neither Super Fan nor Add Your Team (the import), and
-// the copy with it (the .fan keys) is there for when one is; every page names the company with its registration; the screenshots
-// are all there at their exact sizes with no alpha channel.
+// the copy with it (the .fan keys) is there for when one is; every page names the company with its registration; the owner's wording
+// of 9 November 2026 (the subtitle and the Full Game's descriptions) and every place that repeats it in step; the Supporters' Wall on
+// superfan.html (its steps, adults only, a list only for an agreed club), in PRIVACY.md and the launch checklist, and a crest only with
+// the club's written permission; the screenshots are all there at their exact sizes with no alpha channel.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -109,6 +111,13 @@ export const APPLE_AUDIENCE = [/\bfor\s+(?:kids|children|toddlers)\b/i, /\b\d+\s
 // A share is stated as a share of what we receive (the owner, 2026-11-08): "N% of every Super Fan unlock" reads as N% of the price.
 export const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the club.';
 export const shareLine = (name, share) => `Supports ${name}: ${share}${SHARE_WORDS}`;
+// The owner's wording (2026-11-09: "play as and support your club", "career, championship, international modes").
+export const OWNER_COPY = {
+  'apple.subtitle':'Play as and support your club',
+  'apple.iap.full.description':'Career, Championship and International modes',
+  'google.iap.full.description':'Play as and support your club: Career, Championship and International modes, Create Team, the Hard level and the Legends sides. A one-off unlock.',
+};
+export const FULL_GAME_WORDS = 'Career, Championship and International modes';   // how every page and document names the Full Game's modes
 const SHARE_OF_PRICE = /(?:%|\bshare)\s+of\s+(?:each|every)\s+Super Fan unlock/i;
 const NOT_ON_GOOGLE = [/\bapple\b/i, /\biphone\b/i, /\bipad\b/i, /\bapp store\b/i, /\bios\b/i];
 const US_SPELLING = [/\bcolor/i, /\bfavorite/i, /\bcenter\b/i, /\bdefense\b/i, /\boffense\b/i, /\blicense\b/i, /\btraveling\b/i, /\bgray\b/i, /\bpracticing\b/i];
@@ -217,7 +226,7 @@ if (fs.existsSync(at('privacy.html'))) ok(read('privacy.html') === privacyHtml(r
   ok(google === says, google ? 'index.html loads Google Fonts, and PRIVACY.md says so'
     : 'index.html no longer loads Google Fonts, so PRIVACY.md must not say it does: replace that paragraph with "Its two typefaces come with the game, on the web and in the app. It never loads fonts from Google Fonts or any other site." and run node tools/listing.mjs --write');
   ok(!/\bNo purchases\b/i.test(md), 'PRIVACY.md does not still say there are no purchases');
-  for (const want of ['App Store', 'Google Play', 'Restore Purchases', 'Super Fan', 'grown-up check']) ok(md.includes(want), `PRIVACY.md covers ${want}`);
+  for (const want of ['App Store', 'Google Play', 'Restore Purchases', 'Super Fan', 'grown-up check', "Supporters' Wall"]) ok(md.includes(want), `PRIVACY.md covers ${want}`);
 }
 
 // 6. the listing copy: limits, banned words, the other store's names, UK spelling
@@ -304,6 +313,44 @@ if (fs.existsSync(at('privacy.html'))) ok(read('privacy.html') === privacyHtml(r
 for (const f of fs.readdirSync(at('src')).filter(f => f.endsWith('.js'))) {
   const src = fs.readFileSync(at('src/' + f), 'utf8');
   for (const m of src.matchAll(/'https:\/\/gordonlindsay\.github\.io\/games\/trylinerugby\/([a-z]+\.html)'/g)) ok(fs.existsSync(at(m[1])), `src/${f} opens ${m[1]}, which is here`);
+}
+
+// 8b. the owner's wording of 9 November 2026, and every copy that repeats it kept in step
+{
+  const blocks = LISTING_DOCS.filter(f => fs.existsSync(at(f))).flatMap(f => copyBlocks(read(f)).map(b => ({ ...b, file:f })));
+  for (const [k, want] of Object.entries(OWNER_COPY)) {
+    const b = blocks.filter(x => x.key === k);
+    ok(b.length === 1 && b[0].text === want && [...want].length <= limitOf(k), `${k} is the owner's "${want}" (${[...want].length} of ${limitOf(k)})`);
+  }
+  ok(read('store-listing/APP_STORE.md').includes(`| Subtitle | ${OWNER_COPY['apple.subtitle']} |`) && read('store-listing/LISTING.md').includes(`The subtitle (${OWNER_COPY['apple.subtitle']})`), 'APP_STORE.md\'s table and LISTING.md\'s notes quote the same subtitle');
+  for (const f of ['store-listing/APP_STORE.md', 'store-listing/SUPER_FAN.md', 'store/README.md', 'superfan.html', 'support.html']) ok(read(f).includes(FULL_GAME_WORDS), `${f} names the Full Game's modes as the store copy does (${FULL_GAME_WORDS})`);
+  const all = [...OWN, 'store/README.md'].filter(f => fs.existsSync(at(f)) && !f.startsWith('tools/')).map(f => read(f)).join('\n');
+  ok(!/Championship, Career, Create Team/.test(all), 'the old order (Championship, Career, Create Team) is gone everywhere');
+  for (const k of ['apple.description', 'apple.description.fan', 'google.full']) {
+    const t = (blocks.find(b => b.key === k) || { text:'' }).text, i = ['- Career:', '- Championship:', '- International:'].map(w => t.indexOf(w));
+    ok(i.every((x, n) => x >= 0 && (!n || x > i[n - 1])), `${k} lists the Full Game's modes in the same order: Career, Championship, International`);
+  }
+}
+
+// 8c. the Supporters' Wall: on superfan.html (its steps, adults only, a list only for an agreed club, empty to start), in PRIVACY.md and
+// the launch checklist; and a crest only with the club's written permission
+{
+  const html = fs.existsSync(at('superfan.html')) ? read('superfan.html') : '', live = html.replace(/<!--[\s\S]*?-->/g, ' '), text = visible(html);
+  const wall = text.slice(text.indexOf("Supporters' Wall"), text.indexOf('For Clubs'));
+  ok(/<h2 id="wall">Supporters' Wall<\/h2>/.test(html) && html.indexOf('id="wall"') < html.indexOf('id="join"'), 'superfan.html has its Supporters\' Wall');
+  ok(/18 or over/.test(wall) && /Join the Supporters' Wall/.test(wall) && /grown-up check/.test(wall) && /support@signcheck\.ai/.test(wall) && /a first name and your town, or a first name and an initial/.test(wall) && /taken off/.test(wall) && /only the name and the club/.test(wall), 'with the same opt-in steps the app takes: the grown-up check, 18 or over, the name, the email the grown-up sends, and how to be taken off');
+  const fc = fanClubs(), agreed = fc && fc.clubs ? fc.clubs.filter(c => c.agreed === true).map(c => c.key) : [];
+  const lists = [...live.matchAll(/<ul class="wall" data-club="([a-z0-9]+)">([\s\S]*?)<\/ul>/g)];
+  ok((live.match(/class="wall"/g) || []).length === lists.length && lists.every(l => agreed.includes(l[1])), `each wall's list is in the checked shape and belongs to a club agreed in writing (${lists.map(l => l[1]).join(', ') || 'none yet'})`);
+  const names = lists.flatMap(l => [...l[2].matchAll(/<li>([^<]*)<\/li>/g)].map(m => visible(m[1]).trim()));
+  ok(names.every(n => n.length >= 2 && n.length <= 40 && !/@|\d{3}|https?:/i.test(n)), `every name on a wall is a short name, never an email, a number or a link (${names.length})`);
+  ok(lists.length || /No names yet\./.test(wall), 'empty to start: No names yet.');
+  const md = read('PRIVACY.md');
+  ok(/Requests to join the wall arrive by email\. SignCheck Ltd checks each one by hand and keeps only the name and the club, to publish them/.test(md) && /email support@signcheck\.ai at any time and we will remove it/.test(md) && /We never list a child/.test(md), 'PRIVACY.md: requests arrive by email, SignCheck Ltd keeps only the name and the club to publish them, removal on request, never a child');
+  const lc = read('store-listing/LAUNCH_CHECKLIST.md');
+  ok(/\*\*The Supporters' Wall: reviewing and publishing names\.\*\*/.test(lc) && /18 or over/.test(lc) && /Delete the email/.test(lc), 'the launch checklist has the owner\'s step: check each request, publish the name, delete the email, remove on request');
+  ok(/\*\*A crest only with the club's written permission\.\*\*/.test(lc) && /crest[^.]*\*\*written permission\*\*|written permission[^.]*crest|crest[^.]*written permission/i.test(read('store-listing/SUPER_FAN.md')), 'the launch checklist and SUPER_FAN.md: a crest only with the club\'s written permission');
+  if (fc && fc.clubs) ok(fc.clubs.every(c => c.crest === null || (/^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/.test(c.crest) && fs.existsSync(at(c.crest)))), 'every crest in FAN_CLUBS is null, or a file of the game\'s own that is there');
 }
 
 // 9. the screenshots: every size and moment, exact pixels, RGB with no alpha

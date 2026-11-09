@@ -71,6 +71,22 @@ export function fontAssets() {
 }
 shellAssets.push(...fontAssets());
 
+// A partner club's crest (crest in FAN_CLUBS, src/store.js: set only once the club has supplied it with its written permission) is a
+// shell asset too, so the Super Fan's shield shows it offline and in the app. While every crest is null nothing is added. A crest
+// that is not a file of the game's own in crests/, or that is not there, fails the build (assembleWorker reads every asset).
+export function crestAssets(source = fs.readFileSync(path.join(gameDirectory, 'src/store.js'), 'utf8')) {
+  const m = source.match(/const FAN_CLUBS\s*=\s*(\[[\s\S]*?\n\]);/);
+  if (!m) return [];
+  const clubs = new vm.Script('(' + m[1] + ')').runInNewContext({}), out = [];   // plain data, as tools/listing.mjs reads it
+  for (const c of clubs) {
+    if (c.crest == null) continue;
+    if (typeof c.crest !== 'string' || !/^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/.test(c.crest)) throw new Error(`FAN_CLUBS: ${c.key}'s crest must be null or crests/<name>.png, .webp or .svg.`);
+    if (!out.includes(c.crest)) out.push(c.crest);
+  }
+  return out;
+}
+shellAssets.push(...crestAssets());
+
 const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   try {

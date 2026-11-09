@@ -5,7 +5,9 @@
 // render hooks, and AI v AI, the demo and the balance tools pinned to d6192ad, the build before the Locker. Last, in a real browser
 // when Playwright is installed: the home rows in every state at 844x390 and 667x375 (and with a Trophy Cabinet, the Locker adding no
 // height), the Locker's tabs at both sizes, its keyboard and controller reach, Continue on the full-time card with medals on it, and
-// full time in Quick Match, Two Player, a Championship and a career never taller with medals than without.
+// full time in Quick Match, Two Player, a Championship and a career never taller with medals than without. The Super Fan trophy too:
+// first on the Medals tab, gold with the club's kit colours, never a medal; and in the browser the tab with it, the Supporters' Wall
+// card at both steps, the Grown-Ups panel with Join the Supporters' Wall and the Trophy Cabinet with the trophy first, at both sizes.
 // node tools/locker.mjs            (SEED=37 unless set; VERBOSE=1 lists every check)
 // node tools/locker.mjs --pins     prints this build's fingerprints; GAME=<d6192ad>/index.html node tools/locker.mjs --pins re-pins BASE
 process.env.SEED ??= '37';
@@ -435,6 +437,31 @@ function champAt4(userWins) {
   ok(/figFB\(it\.sx, it\.sy, it\.k, g\.team, \{ back:true, kit:kitOf\(g\.team, g\.kicker\)/.test(html) && /const add = \(a, man, back, extra\) => \{ if \(a\) actors\.push\(\{ a, team:man\.team, back, o:\{ kit:kitOf\(man\.team, man\), \.\.\.extra \} \}\); \};/.test(html), 'the close-ups that know the man pass him to kitOf: the goal kick its kicker, a duel its men');
 }
 
+// 13b. the Super Fan trophy (awarded by the store: tools/store.mjs): in the Medals tab first, gold with the club's kit colours, never a
+// medal; saved only once there is one, seen once, and a Locker with none exactly as it was
+{
+  const S = T.store;
+  fresh(); L.render();
+  ok(!/lk-fan/.test($('lk-body').innerHTML) && L.fanClubs().length === 0 && json(L.fresh()) === json({ n:{}, drills:[], ball:'classic', boots:'black', seen:{} }), 'no trophy: no Super Fan row, and the Locker\'s record as it was');
+  L.set(L.clean({ n:{ hat:3 }, fan:['farnham'] })); X.save();
+  ok(json(saved().locker) === json({ n:{ hat:3 }, drills:[], ball:'classic', boots:'black', seen:{}, fan:['farnham'], fanSeen:0 }), 'a trophy is saved as the club\'s key, with how many have been seen');
+  fresh(); X.load(); ok(json(L.state().fan) === '["farnham"]' && L.state().fanSeen === 0, 'and reads back');
+  ok(L.isNew() && L.golds() === 0 && L.FEATS.every(f => L.tier(f.id) === (f.id === 'hat' ? 2 : 0)) && L.legends('men').length === 0, 'new, never a medal: no tier moves and no Legends side unlocks');
+  X.renderHome(); ok($('b-locker').classList.contains('note'), 'a new trophy puts the dot on the home\'s Locker button');
+  L.open(0); const med = $('lk-body').innerHTML;
+  ok(/^<div class="lk-fanrow"><div class="lk-fan new" role="group" aria-label="Super Fan Trophy, Farnham RUFC"><svg class="lk-cup" viewBox="0 0 48 48" aria-hidden="true">/.test(med) && (med.match(/class="lk-feat/g) || []).length === 12, 'the Medals tab: the Super Fan trophy first, then the twelve medals');
+  ok(/fill="#1a1a1a"/.test(med) && /stroke="#f2efe6"/.test(med) && (med.match(/fill="#ffcf3d"/g) || []).length >= 2 && /<b>Super Fan<\/b><span>Farnham RUFC<\/span><\/span><\/div><\/div>/.test(med), 'a gold cup, Farnham\'s black and white on it, and the club\'s name: nothing more on the web, where no unlock is owned (no Join the Supporters\' Wall)');
+  ok(!L.isNew() && saved().locker.fanSeen === 1 && !$('b-locker').classList.contains('note'), 'seen once the Locker opens');
+  ok(isTitle('Super Fan') && isTitle('Super Fan Trophy') && /Super Fan Trophy, /.test(src), 'its label is Title Case');
+  S.FAN_CLUBS.push({ key:'guildford', name:'Guildford RFC', product:'tryline.fan.guildford', share:50, agreed:true, team:'GUI', crest:null });
+  L.set(L.clean({ fan:['guildford', 'farnham'], fanSeen:2 })); L.render(); const two = $('lk-body').innerHTML;
+  ok((two.match(/class="lk-fan"/g) || []).length === 2 && two.indexOf('Guildford RFC') < two.indexOf('Farnham RUFC') && /fill="#1a1e4f"/.test(two) && /stroke="#ffc014"/.test(two), 'two clubs: two trophies in one row, in the order awarded, each in its own colours');
+  S.FAN_CLUBS.length = 1;
+  ok(json(L.clean({ fan:['guildford', 'farnham'] }).fan) === '["farnham"]', 'a club the game no longer has drops out');
+  ok(/\.lk-fanrow\{grid-column:1\/-1;/.test(css), 'the row spans the Medals grid');
+  fresh(); X.save(); ok(!('locker' in saved()), 'nothing in the Locker: still no locker field');
+}
+
 // 14. a browser: the home rows in every state at both sizes (and with a Trophy Cabinet), the Locker's tabs, its keyboard and controller
 // reach, full time's Continue, and full time in every mode
 await browserChecks();
@@ -509,6 +536,49 @@ async function browserChecks() {
       });
       ok(tabs.every(r => r.fits), `${w}x${h}: every tab of the Locker fits without a scroll, nothing, some or everything earned`);
       ok(tabs.every(r => !r.small && !r.clipped), `${w}x${h}: every control at least 44px, and no label cut off`);
+      // a Super Fan in the app: the Medals tab with the trophy and Join the Supporters' Wall still fits, nothing, some or everything earned;
+      // the Supporters' Wall card fits at both its steps; the Grown-Ups panel with it fits; the Trophy Cabinet shows the trophy first
+      const fan = await page.evaluate(async () => {
+        const T = window.__tryline, L = T.locker, S = T.store, out = { tabs:[] }, box = el => el.getBoundingClientRect();
+        S.setNative(true); S.setStarted(true); S.setBought(['tryline.fan.farnham']);
+        const fit = el => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth;
+        const small = root => [...root.querySelectorAll('button')].filter(b => !b.closest('[hidden]') && box(b).width > 0).filter(b => box(b).height < 44 || box(b).width < 44).map(b => b.id || b.textContent.trim());
+        for (const v of [{}, { n:{ hat:4, sharp:1, hit:2, clean:3 } }, { n:{ hat:12, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, silver:10, callup:10 }, drills:T.drills.DRILLS.map(d => d.id) }]) {
+          L.set(L.clean(v)); L.fanAward(); L.open(0);   // the store awards it (lockerFanAward) for the unlock this device owns
+          const s = document.getElementById('s-locker'), tile = s.querySelector('.lk-fan'), btn = tile && tile.querySelector('.lk-wall'), cup = tile && tile.querySelector('.lk-cup');
+          const clipped = [...s.querySelectorAll('.lk-name, .lk-fanname b, .lk-fanname span, .lk-wall')].filter(e => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).map(e => e.textContent);
+          out.tabs.push({ fits:fit(s), small:small(s), clipped, tile:!!tile && s.querySelector('#lk-body').firstElementChild.classList.contains('lk-fanrow'), btn:!!btn && box(btn).height >= 44 && box(btn).right <= box(tile).right + 0.5,
+            cup:!!cup && box(cup).width >= 30 && /#1a1a1a/.test(cup.innerHTML) && /#ffcf3d/.test(cup.innerHTML), onScreen:!!tile && box(tile).top >= 0 && box(tile).bottom <= innerHeight });
+        }
+        // the Supporters' Wall card, from the Locker: the grown-up check, then each step
+        document.querySelector('#s-locker [data-wall]').click();
+        const g = T.kids.gate(); for (const d of g.answer) T.kids.type(d);
+        const card = () => { const m = document.getElementById('m-wall'), c = m.querySelector('.card'), r = box(c), halves = [...m.querySelectorAll('.wl-step:not([hidden]) .row2 .btn')].map(b => box(b));
+          return { open:!m.hidden, fits:r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth && fit(m), small:small(m), halves:halves.length === 2 && Math.abs(halves[0].width - halves[1].width) < 1 && Math.abs(halves[0].top - halves[1].top) < 1 && Math.abs(halves[0].height - halves[1].height) < 1,
+            clipped:[...m.querySelectorAll('.btn, h3, .wl-q, .lbl')].filter(e => !e.closest('[hidden]') && (e.scrollWidth > e.clientWidth + 1)).map(e => e.textContent) }; };
+        out.age = card();
+        document.getElementById('wl-yes').click(); const inp = document.getElementById('wl-input'); inp.value = 'Alexandra, Godalming'; inp.dispatchEvent(new Event('input'));
+        out.name = { ...card(), go:!document.getElementById('wl-go').disabled, field:box(inp).height >= 44 };
+        T.store.wallClose(); out.closed = document.getElementById('m-wall').hidden && inp.value === '' && !document.getElementById('s-locker').hidden;
+        // the Grown-Ups panel, with Join the Supporters' Wall
+        T.debug.goHome(); S.open({ mode:'grown' });
+        const m = document.getElementById('m-store'), c = m.querySelector('.card'), r = box(c), j = m.querySelector('[data-wall]');
+        out.grown = { fits:r.top >= 0 && r.bottom <= innerHeight && fit(m), small:small(m), join:!!j && box(j).height >= 44 };
+        S.close();
+        // the Trophy Cabinet: the trophy first
+        T.debug.settings().hl = 'champ'; T.debug.goHome(); document.getElementById('b-cabinet').click();
+        const first = document.querySelector('#home-history > *'), cup = first && first.querySelector('.lk-cup');
+        out.cab = { shown:!document.getElementById('s-cabinet').hidden, first:!!first && first.classList.contains('fan-entry') && /Farnham RUFC/.test(first.textContent), cup:!!cup && box(cup).width >= 30, gold:!!first && getComputedStyle(first.querySelector('.cup-kind')).color === 'rgb(255, 207, 61)' };
+        document.getElementById('cab-back').click();
+        S.setNative(false); S.setStarted(false); S.setBought([]); L.set(L.fresh()); T.debug.settings().hl = 'game'; T.debug.goHome();
+        return out;
+      });
+      ok(fan.tabs.length === 3 && fan.tabs.every(r => r.fits && r.tile && r.onScreen), `${w}x${h}: a Super Fan's Medals tab, the trophy first, fits without a scroll, nothing, some or everything earned (${json(fan.tabs.map(r => [r.fits, r.tile, r.onScreen]))})`);
+      ok(fan.tabs.every(r => !r.small.length && !r.clipped.length && r.btn && r.cup), `${w}x${h}: the trophy drawn in gold with the kit's colours, Join the Supporters' Wall 44px and inside its tile, nothing cut off (${json(fan.tabs.map(r => [r.small, r.clipped, r.btn, r.cup]))})`);
+      ok(fan.age.open && fan.age.fits && fan.age.halves && !fan.age.small.length && !fan.age.clipped.length, `${w}x${h}: the Supporters' Wall card's first step fits, Yes, I'm 18 or Over | Cancel in equal halves, 44px (${json(fan.age)})`);
+      ok(fan.name.open && fan.name.fits && fan.name.halves && fan.name.go && fan.name.field && !fan.name.small.length && !fan.name.clipped.length && fan.closed, `${w}x${h}: and its second, How Your Name Appears and Continue | Cancel; closed, its field empty, back on the Locker (${json(fan.name)})`);
+      ok(fan.grown.fits && fan.grown.join && !fan.grown.small.length, `${w}x${h}: the Grown-Ups panel with Join the Supporters' Wall fits, every button 44px (${json(fan.grown)})`);
+      ok(fan.cab.shown && fan.cab.first && fan.cab.cup && fan.cab.gold, `${w}x${h}: the Trophy Cabinet opens with the Super Fan trophy first, its kind in gold (${json(fan.cab)})`);
       // the keyboard: Tab reaches the tabs and the swatches, Enter presses, Escape goes home
       await page.evaluate(() => { const L = window.__tryline.locker; L.set(L.clean({ n:{ hat:3, sharp:1 } })); L.open(0); document.activeElement && document.activeElement.blur(); });
       await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await page.keyboard.press('Enter');
