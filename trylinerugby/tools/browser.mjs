@@ -152,6 +152,22 @@ try {
   ok(lv.tick[1] >= -33, 'Tick can be heard on a small speaker (' + lv.tick[1].toFixed(1) + ' dB above 300 Hz)');
   ok(lv.trip[1] >= -33, 'Trip can be heard on a small speaker (' + lv.trip[1].toFixed(1) + ' dB above 300 Hz)');
   ok(lv.tick[1] < lv.whistle[1] && lv.trip[1] < lv.whistle[1], 'and neither is louder than the whistle');
+  // the recordings: each decoded by the browser itself, and each played through the real bus as loud as the recipe it replaces (so SOUND.level
+  // still means what it did): the loudest 50 ms, the crowd's swells by their loudest 400 ms, the bed by its RMS. Eight renders of each, and none clips
+  await snd.send('Runtime.evaluate', { expression:`window.__rec = (async () => { const rate = 48000;
+    ac(); sndLoad(); for (let i = 0; i < 300 && SAMPLE.state !== 'done'; i++) await new Promise(r => setTimeout(r, 100));
+    const win = (d, s) => { const n = Math.floor(rate*s); let sum = 0, b = 0; for (let i = 0; i < d.length; i++) { sum += d[i]*d[i]; if (i >= n) sum -= d[i - n]*d[i - n]; if (sum > b) b = sum; } return 10*Math.log10(Math.max(1e-12, b/n)); };
+    const how = k => k === 'bed' ? (m => m.rmsDb) : (m => win(m.samples, ['roar', 'cheer', 'groan'].includes(k) ? 0.4 : 0.05));
+    const out = { state:SAMPLE.state, files:Object.values(SOUND_FILES).flat().map(([f, d, m]) => { const b = SAMPLE.bufs[f]; return b ? [f, b.lead, b.buf.duration - d - 2*(m || 0)] : [f]; }), keys:{} };
+    for (const k of Object.keys(SOUND_FILES)) { const r = [0, 0], clip = [0, 0]; for (const [j, synth] of [[0, false], [1, true]]) for (let i = 0; i < 8; i++) { const m = await soundRender(k, { secs:k === 'bed' ? 8 : 4, samples:true, rate, synth }); r[j] += how(k)(m)/8; clip[j] += m.clipped; } out.keys[k] = [r[0], r[1], clip[0] + clip[1]]; }
+    const all = await soundRender(Object.keys(SOUND_NAMES), { secs:4, rate }); out.all = [all.peakDb, all.clipped];
+    return JSON.stringify(out); })();0` });
+  const rec = JSON.parse((await snd.send('Runtime.evaluate', { expression:'window.__rec', awaitPromise:true, returnByValue:true })).result.result.value);
+  ok(rec.state === 'done' && rec.files.every(f => f.length === 3), `every recording fetched and decoded by the browser (${rec.files.filter(f => f.length === 3).length} of ${rec.files.length})`);
+  ok(rec.files.every(f => f[1] < 0.002 && Math.abs(f[2]) < 0.002), 'each starting at once and as long as the table says: the encoder\'s priming is not heard');
+  console.log('Recording v recipe through the bus, dB: ' + Object.entries(rec.keys).map(([k, v]) => k + ' ' + v[0].toFixed(1) + ' v ' + v[1].toFixed(1)).join('; '));
+  for (const [k, [r, s]] of Object.entries(rec.keys)) ok(Math.abs(r - s) <= 2, `${k}: the recording as loud as its recipe, within 2 dB (${(r - s).toFixed(1)})`);
+  ok(Object.values(rec.keys).every(v => v[2] === 0) && rec.all[1] === 0, `nothing clips, recordings or recipes, one at a time or all at once (all at once: ${rec.all[0].toFixed(1)} dB peak)`);
   await snd.close();
 } finally { browser.kill('SIGKILL'); server.close(); }
 console.log((failed ? `Home fit: ${passed} passed, ${failed} failed` : `Home fit: ${passed} checks passed`) + (PENDING.length ? ` · ${PENDING.length} pending for the builders: ${PENDING.join('; ')}` : ''));

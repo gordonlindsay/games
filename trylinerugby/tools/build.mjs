@@ -31,7 +31,11 @@ export function assembleBundle() {
 
 // The player art precaches with the shell, whatever hashed atlases tools/blender/regenerate.mjs last packed. No art in the tree is fine: the game draws its men in code
 const playerArt = () => { const dir = path.join(gameDirectory, 'assets/players'); return fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /^players[.-]/.test(f)).sort().map(f => 'assets/players/' + f) : []; };
-export const shellAssets = ['index.html', 'game.js', 'styles.css', 'practice.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', ...playerArt()];
+// The recordings (assets/sounds: tools/sound-make.py names each by its content's hash, as the art) precache with the shell too, so a match
+// offline has them once the game has been opened online, and the app carries them (app/scripts/copy-www.mjs copies shellAssets). None is fine:
+// every sound has its recipe in src/sound.js. LICENCES.md beside them is the list of sources, not a file the game loads
+export const soundFiles = () => { const dir = path.join(gameDirectory, 'assets/sounds'); return fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /^[a-z]+-\d+\.[0-9a-f]{10}\.m4a$/.test(f)).sort().map(f => 'assets/sounds/' + f) : []; };
+export const shellAssets = ['index.html', 'game.js', 'styles.css', 'practice.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', ...playerArt(), ...soundFiles()];
 export function assembleWorker(bundle = assembleBundle().bundle) {
   const template = fs.readFileSync(path.join(gameDirectory, 'src/service-worker.js'), 'utf8');
   const hash = createHash('sha256').update(template);

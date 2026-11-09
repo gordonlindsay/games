@@ -406,70 +406,16 @@ AI v AI at all three levels (asked to play Kids or not), the demo, the harness's
 `node tools/kids.mjs` checks the setting, the save (a round trip, old saves on each level, partial and bad ones), each lever on in Kids and off on Easy and in AI v AI, the ring staying on a bound tackler, the rating (the scale's start and ceiling lever by lever, the straight line between them, bounds, the update rule and its step sizes, each step the same size anywhere on the scale, a child who loses every other match going back to the start and one who wins big climbing to the top, its save, old saves, and who moves it: Quick Match, Championship and Career at full time, never a match quit early, Easy, two player, AI v AI, the demo or a drill), the check's pass and cancel paths, its three-figure answers, its rests (two keys in turn and random taps), the controller's focus, and its place over the other cards. `node tools/kidbots.mjs` is the calibration above: tens of minutes long, so not part of `check.mjs`.
 ## Sound
 
-Every effect is generated in `src/sound.js` with Web Audio: no samples and no downloads, so it adds code and nothing else. Each `sfx(key)` builds a small voice from layers (below), plays it and takes it apart. `sfx(key)` and `globalThis.__sfxSpy` work as they always did. **Nobody on this work could hear it: the numbers below say how loud and how long, not whether it sounds good. The owner's ears decide.** To change one sound's loudness, change its one number in `SOUND.level`.
+Fifteen of the game's twenty sounds, and the crowd bed under a match, are real recordings: 36 files in `assets/sounds` (AAC in .m4a, mono, 355 KB in all), every one CC0 from OpenGameArt and Kenney. [assets/sounds/LICENCES.md](assets/sounds/LICENCES.md) lists each file's sources, authors, the day they were fetched and what was done to them. Pea Whistle, Long Whistle and Horn are still synthesised (no CC0 referee's whistle or stadium hooter could be found, and Freesound refused the requests), and so are Trip, Tick and Menu Tap, cues made to carry on a phone speaker.
 
-| Key | Name on the test page | Layers |
-|---|---|---|
-| `whistle` | Pea Whistle | A tone near 2.8 kHz, a pea rattling its pitch and level about 38 times a second (measured, 11.6 dB deep), breath on the same note |
-| `long` | Long Whistle | The same, two short blasts and a long one |
-| `horn` | Horn | Two detuned reeds and a fifth, a filter opening as it sounds |
-| `kick` | Kick | Thump, a knock a phone speaker can play, leather slap, air |
-| `strike` | Goal Strike | The same with more of each, a small ring, a longer flight away |
-| `post` | Post Clang | Ball thud, a tick, four partials that do not line up, the high ones gone first |
-| `pass` | Pass | A swish and the fingers leaving the ball |
-| `catch` | Catch (new) | The ball into two hands |
-| `fumble` | Fumble (new) | Patted three times, then on to the grass |
-| `bounce` | Ball Bounce (new) | A low hollow note falling, its overtone, the turf. `sfx('bounce', 0 to 1)` says how hard: a smaller hop is softer and a little higher |
-| `tackle` | Tackle | Body, the chest's air, cloth, grass scuffed after |
-| `hit` | Big Hit | More body, a punch, grass thrown up, the crowd's breath in |
-| `whiff`, `trip`, `whoosh` | Whiff, Trip, Whoosh | Air, or a tap, a scuff and a foot down, or a body going past |
-| `tick` | Tick | A small bright click: a cue in play |
-| `tap` | Menu Tap (new) | A round soft press, on every button in the menus but the match's three action buttons. It plays over the demo; nothing else does |
-| `roar`, `cheer`, `groan` | Crowd Roar, Cheer, Groan | Three bands of pink noise and three low voices through a formant, under one swell that rises and falls and wavers. The groan's note and vowel both drop |
+- **Loading.** After the first tap each file is fetched and decoded once, one at a time in the background, and kept. Until a sound's recording is in, or when it cannot be had (offline on a first visit, a failed fetch or decode), its recipe in `src/sound.js` plays instead, and a later tap asks again. Headless runs, Sound Off and a page with no audio fetch nothing. The files precache with the shell and the app carries them.
+- **Playing.** `sfx(key)` plays a random take, a little faster or slower and louder or softer (`Math.random`, never `rnd()`), through the same voice, gap, rank, node cap and bus as before. The crowd bed is a 14 second loop with no audible seam, started from a random place, and it swells under a roar or a cheer.
+- **Levels.** Each recording is set so that at its `SOUND.level` it is as loud through the bus as the recipe it replaced (within 1.5 dB in Chrome), so `SOUND.level` still means what it did. Nothing clips, all twenty at once included, with every level times six.
+- **Phones.** The first tap makes the context, resumes it and plays the silent sample iOS wants; a stuck context is rebuilt after three taps; a hidden page plays nothing. The ring and silent switch silences it all on an iPhone, on purpose.
+- **Making them again.** `python3 tools/sound-make.py <downloads> --write` rebuilds the files, the table in `src/sound.js`, LICENCES.md and the test page's credits.
+- **The test page.** `sounds.html` plays each recording beside its old synth version, shows each take's sources and licence, and measures both. The game does not link to it and the worker does not cache it; delete it to keep it off the live site.
 
-**Where the new ones play.** The bounce: each hop of Bouncy Egg (it was a trip), every hop of a loose ball, and a kick landing. The catch: a clean catch, a sure pass arriving, a ball gathered, and Bouncy Egg's catch (it was a tick). The fumble: a knock-on (before its whistle), a dropped pass, and a ball jolted loose in the tackle.
-
-**The crowd bed** is two slow drifting bands of pink noise, far under everything. `frame()` asks for it every frame through `matchBedWanted`, so it plays only in a match you are playing: not the demo, Skills Mini Games, a headless run, the pause card, a tutorial card, a penalty card, half time or full time. It fades on any of those, is cut at once when the page is hidden, and never builds with Sound Off.
-
-**The bus and the cap.** Every voice runs through one bus: a low cut at 75 Hz (a phone cannot play under it), a top cut at 11 kHz, a limiter, a trim, and a ceiling that nothing can pass (0.89 at most). A voice holds its nodes only while it sounds. `SOUND.maxNodes` caps live nodes at 120 and `SOUND.maxVoices` voices at 14 (the bus's six nodes are on top); when full, the lowest-ranked and oldest gives way, and a voice is never cut for a lesser one, so a flurry of ticks cannot take the whistle or the bed. The same sound again inside its `SOUND.gap` is dropped. The real engine run at speed in a browser, about 60 seconds of a match with Sound On, reached 107 live nodes and 10 voices.
-
-**Random numbers.** Small variation in pitch, timing and level comes from `Math.random`, drawn only once a real context is running. `rnd()` is never used. The game's `rnd` is `Math.random` itself, so this matters only in that a seeded run has no audio context: Node has none, a headless match returns before it, and Sound Off draws nothing. `tools/sound.mjs` checks each of these. Real play in a browser is not seeded, so a sound drawing a number there moves nothing anyone replays.
-
-**iPhones.** The first tap makes the context, resumes it inside the tap and plays one silent sample. Every later tap asks again if it is not running (`suspended`, or iOS's `interrupted` after a call); after three separate taps still asleep the context is closed and a new one made. While a context is not running nothing is built, so sounds cannot pile up and go off together when it wakes: at most four are held for a quarter of a second, the first tap's own sound among them. A hidden page cuts every voice and suspends the context; on return it resumes (or iOS waits for the next tap). The **ring and silent switch silences Web Audio** on an iPhone. That is left alone on purpose: a parent's silent switch should mean silence.
-
-**The test page.** `sounds.html` at the game's root has one big button per sound with its name, Crowd Bed, Try Scored, All at Once and Small Bounce, and a Measure button that prints the table below on whatever device opens it. It loads `src/sound.js` itself, so it cannot drift from the game. The game does not link to it and the service worker does not list it or its script, so the worker passes both straight to the network, and it needs a connection. **How it ships:** like everything else in the folder, it goes live on GitHub Pages when `main` is pushed, at `/trylinerugby/sounds.html`, along with `src/` which is already public there. Anyone with the address can open it. It has no links, no other site, saves nothing, sends nothing, and asks not to be indexed. `tools/kids.mjs` scans `index.html` only, so `tools/sound.mjs` applies the same rules to this page itself. To keep it off the live site, delete the file: nothing depends on it.
-
-**Levels**, measured by `soundRender` through the real bus in an OfflineAudioContext at 48 kHz, Chromium desktop, 2026-11-08. Eight renders of each (three of the bed): the highest peak, the mean RMS over the part above -60 dB, the mean length. Full scale is 0 dB. Not measured on a phone, and a phone's speaker will change how each one sounds and how loud it seems.
-
-| Sound | Peak dB | RMS dB | Seconds | Clipped samples | Peak dB above 300 Hz (what a small speaker can play) |
-|---|---:|---:|---:|---:|---:|
-| Pea Whistle | -14.7 | -24.4 | 0.28 | 0 | -14.7 |
-| Long Whistle | -14.1 | -23.9 | 1.54 | 0 | -14.0 |
-| Horn | -11.2 | -24.7 | 1.02 | 0 | -14.2 |
-| Kick | -10.3 | -24.9 | 0.16 | 0 | -18.0 |
-| Goal Strike | -9.0 | -25.6 | 0.23 | 0 | -16.6 |
-| Post Clang | -13.3 | -27.1 | 0.62 | 0 | -13.6 |
-| Pass | -28.3 | -42.1 | 0.06 | 0 | -28.0 |
-| Catch | -23.7 | -36.8 | 0.04 | 0 | -27.7 |
-| Fumble | -18.6 | -36.4 | 0.35 | 0 | -26.0 |
-| Ball Bounce | -16.7 | -30.1 | 0.08 | 0 | -23.1 |
-| Tackle | -10.3 | -30.9 | 0.15 | 0 | -12.2 |
-| Big Hit | -8.9 | -25.9 | 0.54 | 0 | -14.1 |
-| Whiff | -24.0 | -41.1 | 0.11 | 0 | -26.8 |
-| Trip | -15.3 | -28.7 | 0.10 | 0 | -13.9 |
-| Whoosh | -23.9 | -40.3 | 0.17 | 0 | -25.5 |
-| Tick | -16.4 | -30.2 | 0.03 | 0 | -16.1 |
-| Menu Tap | -29.6 | -40.7 | 0.03 | 0 | -29.6 |
-| Crowd Roar | -8.6 | -25.2 | 3.31 | 0 | -9.6 |
-| Cheer | -12.8 | -30.6 | 2.04 | 0 | -12.4 |
-| Groan | -13.1 | -31.2 | 1.74 | 0 | -15.4 |
-| Crowd Bed | -29.7 | -44.2 | 7.89 | 0 | -30.2 |
-| All 20 at once | -5.6 | | | 0 | |
-| All 20 at once, every level times six | -2.5 | | | 0 | |
-
-Tick and Trip are cues in play, and the first version of this table had them far quieter than the sounds they replaced; they were raised against the numbers (loudest 50 ms above 300 Hz: Tick -44.8 to -31.8 dB, Trip -42.7 to -31.2 dB; before the rebuild -28.3 and -21.5), and `tools/browser.mjs` keeps them there. Nobody has heard them yet. The last row is the bus's proof: six times too loud, with everything at once, and it still does not clip. Every sound differed between renders.
-
-`node tools/sound.mjs` checks all of this that Node can: see [tools/CHECKS.md](tools/CHECKS.md).
+`node tools/sound.mjs` and `node tools/browser.mjs` check it: see [tools/CHECKS.md](tools/CHECKS.md). Nobody on this work could hear it: the owner's ears decide.
 
 ## Seeing what is going on (2026-11-09)
 
@@ -745,7 +691,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/cups.js`, `src/ui-cups.js` | Silverware: the European Cup, World Cup, Home Nations Tour and Triple Crown, their screens and the Trophy Cabinet's kinds |
 | `src/render-*.js` | Pitch, players, close-up scenes and match drawing; `render-behind.js` is the optional behind views |
 | `src/looks.js` | Player height, build, skin, hair and head style for the behind views |
-| `src/sound.js` | Every sound effect, generated in layers, the bus and the node cap; the crowd bed; waking on a phone; rumble. Also loaded as it is by `sounds.html` |
+| `src/sound.js` | Every sound: the recordings' table and loader, the recipes that stand in for them, the bus and the node cap; the crowd bed; waking on a phone; rumble. Also loaded as it is by `sounds.html` |
 | `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
 | `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
 | `src/practice.js` | Isolated drills and practice feedback |
