@@ -856,7 +856,10 @@ The ladder would have gone backwards at County, so that is what moved, and only 
   Offloads, the ball jolted loose, Ankle Taps, Tripped and Fends are in. **Not** in, by Gordon's choice: breakdown
   steals (no jackal, no Steal prompt), new penalties (no Not Releasing, Off Your Feet, Not Rolling Away or High Tackle)
   and sin bins. The ruck stays automatic: a flat turnover roll (base raised to 0.11 so turnovers per match hold as
-  rucks fall), the losing side wrong-footed, and today's flat ruck penalty.
+  rucks fall), the losing side wrong-footed, and today's flat ruck penalty. A **pressure spill** (2026-11-09, Contact
+  above) is not a breakdown steal: it is the ball knocked loose in the tackle itself, before there is any ruck, by the
+  same jolt roll as ever made likelier by the defence's pressure, and it is a Loose Ball anyone can gather. The ruck,
+  its one turnover roll and its penalty are untouched, and there is still no jackal, no Steal prompt and no new penalty.
 - **Ruck control** (2026-10-31): while a ruck is down, the ring leaves the tackled man and sits on the teammate who
   will pick the ball up. The stick places him; with the stick let go he still runs to the ball. Pass, Kick and Tackle
   stay dead until the ball is out. No jackal, no steal, and no new penalty — the ruck's length and the penalty and
@@ -1294,7 +1297,37 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   and 5.7 a match, and that rate cost a player who never sprints about a point on Normal and four on Hard).
 - **The ball jolted loose:** 9% of Big Hits, 2% of Wraps, 1% of Softs, x(1 + 0.15 a handling point under 3). 55%
   Knock-On (a scrum to the tacklers), 45% **Loose Ball**: it pops 2–5 m/s back towards the carrier's own line, for
-  anyone.
+  anyone. Those are the rates at no pressure; pressure adds to them (below). The Loose Ball hops as an egg, and the
+  Knock-On hops for 0.8s before its whistle (The egg, below).
+- **Pressure** (2026-11-09, `PRESSURE` in `src/contact.js`). Gordon: "after an amount of pressure, let's say consistent
+  big hits or multiple tackles in a row, for example, and the ball's not really moving, this could spark a loose ball".
+  Each side has a count, `M.pressure[t]`, of the pressure on its possession, built by the other side's tackles. A made
+  tackle (one that goes to a ruck) adds 1 when the carrier had gained under 3m past the last ruck's mark, or past where
+  the possession began; a Big Hit adds 2 anywhere short of a real gain; a tackle 3 to 10m on holds it. It goes back to
+  0 on a real gain (the carrier 10m past the mark), a kick, a loose ball, a change of possession, a set piece and a
+  try. At 4, the line, **Pressure On** is tagged over the carrier, the first time in a possession only. From the line
+  the tackle's jolt chance is multiplied by 1 + 4 x (count - 3) and capped at 25%, never under the chance at no
+  pressure: at 4 a Wrap jolts 10%, a Soft 5% and a Big Hit 25%; at 5 a Wrap 18%; from 6 a Wrap 25%. The share the
+  pressure adds is a **pressure spill**: always a Loose Ball, never a Knock-On scrum, so it can be fought for, and the
+  side that gathers it from the other gets the surge (x1.08 pace, as after a won scrum) for 2s. Both sides play the
+  same rule, so the defence's pressure works against you as much as yours against them. Kids and Minis cap it at 8%
+  (`capMild`), at Kids `KIDS.jolt` still applies to your carrier, and Stopped is as it was. A pressure spill is the
+  ball knocked loose in the tackle, before any ruck: it is not a breakdown steal (Decided, Contact).
+  `PRESSURE='{"on":false}' node tools/sim.mjs` plays exactly as b706c3e, draw for draw.
+- **The egg** (2026-11-09). A ball jolted loose or spilled by a failed offload, and a knocked-on ball, hops like
+  Bouncy Egg's. It is one model, `hopMove` and `hopBounce` in `src/ball.js`, shared with the drill (whose throws and
+  hops are unchanged, pinned in `tools/pressure.mjs`), at the match's own levers, `PRESSURE.egg`: a first hop of 3.4
+  to 5.2 m/s up (0.6 to 1.4m high) and 2 to 4 m/s along, each hop after it keeping 55 to 72% of the last one's lift
+  and 72% of its pace, turned 0.45 to 1.6 rad either way at random, then a roll once a hop would be under 1.15 m/s.
+  It tumbles end over end on Top and in the behind views (`b.tumble`, set in the sim; drawing draws no random number).
+  A hopping egg is gathered only below 0.5m, by the knees (any other loose ball at 1.0m, as ever), so a spill is a
+  short scramble. The CPU runs for where the hop comes down (at most 0.6s ahead) and sprints its nearest man at it from
+  2.5 to 12m. A knock-on hops forward for 0.8s (`PRESSURE.knock`), nobody may gather it, and then the whistle and the
+  scrum at the spot. The dead ball is decided at the knock-on, so one before the hooter keeps its scrum when the hooter
+  goes in the beat, and one after it ends the half at the whistle, as it always did. Kicks, dropped passes,
+  charge-downs and a ball off the posts keep the old bounce. A hopping egg goes into touch, over the dead-ball line or
+  into goal by the rules any loose ball always had. A spill is gathered in about 0.65s (nine in ten inside 1.4s), a
+  little over half of them after a hop, by either side about as often.
 - **The ruck.** The ball goes 0.4m behind the tackled man, who is down until the ruck ends + 0.15s. The tackler
   rolls to 1.0m beyond and 1.1m aside, down until the ruck ends + 0.25s, then retiring 0.6s more: he can't tackle
   and is never picked as a chaser. A Second Man retires for the same time, and Tackle stays dim for a retiring man
@@ -1330,7 +1363,7 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   recoiling from a Big Hit; a white impact ring on a Big Hit, with a 70ms hit-stop and a 3px shake when it is yours
   (no shake under reduced motion); the slide-off and the roll-away smoothed over at most 9 m/s, with a quarter turn;
   a wobble while tripped; the gold trail and two speed streaks on a sprint; and on-pitch tags (Big Hit, Ankle Tap,
-  Tripped, Fend, Offload, Loose Ball), at most two at a time, about 27 a match on Normal. Sounds: 'tackle' at the
+  Tripped, Fend, Offload, Loose Ball, Pressure On), at most two at a time, about 27 a match on Normal. Sounds: 'tackle' at the
   bind, 'hit', 'whiff', 'trip', 'whoosh' when a sprint starts, 'tick' when the meter fills.
 
 **Measured** (`bot.mjs`, 4-minute halves, duels live, 12 seeds x 120 matches a cell; `census.mjs`-style census of 60
@@ -1357,6 +1390,25 @@ CPU sprints a match by level: 2.4 / 2.2 / 2.9 (2.1s of sprint on Hard). Big Hits
 Your offloads rose from 6.2 to 8.6 a match once the label and the press picked the same receiver (a fifth of the
 bot's presses on a lit Offload had been doing nothing). Win rates with and without Sprint are in Measured baseline
 below.
+
+**Pressure measured** (AI v AI, `tools/sim.mjs`'s matches one at a time, 4-minute halves, seeds 300000 up; 300 matches on
+Normal, 150 on Easy and Hard; `PRESSURE` off, then on). Off is b706c3e exactly. There are no mauls in this build.
+
+| Per match, off / on | Easy | Normal | Hard |
+|---|---|---|---|
+| Tries | 1.67 / 1.62 | 1.08 / 1.06 | 0.87 / 0.85 |
+| Points | 13.8 / 13.5 | 10.6 / 10.4 | 9.4 / 9.4 |
+| Turnovers (rucks, loose balls) | 8.93 / 9.18 | 12.63 / 13.00 | 17.07 / 16.85 |
+| Balls jolted loose (pressure spills) | 2.90 / 4.17 (1.35) | 2.99 / 4.13 (1.23) | 3.29 / 4.14 (1.03) |
+| Pressure spills gathered by the tacklers | 0 / 0.61 | 0 / 0.54 | 0 / 0.47 |
+| Pressure On (both sides) | 0 / 8.4 | 0 / 8.9 | 0 / 8.7 |
+| Knock-ons | 11.53 / 11.41 | 13.32 / 12.98 | 14.91 / 14.86 |
+| Rucks | 103.8 / 101.9 | 111.4 / 109.3 | 121.0 / 116.6 |
+| CPU sprints (now also at a hopping ball) | 0.85 / 7.93 | 1.79 / 9.18 | 3.55 / 10.39 |
+
+Of the tackles on Normal, 54% come at no pressure, 18% at 1, 13% at 2, 7% at 3 and 9% at the line or over. Against the scripted
+player (`bot.mjs`, 24 matches a level, SEED 1) Pressure On is tagged 6.0 / 6.5 / 7.4 times a match (Easy / Normal / Hard,
+both sides together), a little more often than a Big Hit, and Loose Ball 2.4 / 3.2 / 3.0 (2.7 / 2.0 / 2.6 without).
 
 ### Passing
 
@@ -1618,6 +1670,16 @@ a charger.
     bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
     never presses Pass in a tackle, and a line of Side Steps and Dummies by side; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
     `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
+  - **`node tools/pressure.mjs`:** pressure, the spill and the egg (2026-11-09), in the default gate: the count's rises
+    and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
+    and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the
+    other, the egg's hops (seeded, each smaller, turned at least 0.45 rad, on the pitch or out by the old rules), the
+    chase's lead and the CPU's sprint at it, a knock-on's 0.8s beat (its scrum kept when the hooter goes in it), Kids
+    and Minis at the gentle cap with `KIDS.jolt` and Stopped as they were, 320 drawn frames with no random draw, the
+    words and this README. Its first section pins `PRESSURE` off to b706c3e (AI v AI, the demo, a tool's match, a Kids
+    and a Minis match, draw for draw) and Bouncy Egg, with it on or off, to the build before pressure (0b1293c, with the
+    Skills Mini Games fixes): `GAME=<b706c3e>/index.html node tools/pressure.mjs --pins` gives the first pin and
+    `GAME=<0b1293c>/index.html` the second.
   - **`node tools/contact.mjs`:** 336 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
     and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
     a scrum). It checks:

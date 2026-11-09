@@ -27,7 +27,7 @@ if (process.argv.includes('--balance')) { await balance(); process.exit(0); }
 // 0. AI v AI, the demo and a tool's match with star sides play exactly as at 30e13e2, the commit before traits (run first, so nothing
 //    below can move them). The same seeded runs on that build's bundle gave BASE. If another change moves AI v AI on purpose,
 //    re-pin from that change's bundle without src/traits.js (tools/career.mjs pins the same kind of thing for sides with no star).
-const BASE = '4318of 1hlbjrh 8b7zl6 6cc5jm';   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 6igeb3 tagplu lxxgtn 14mjifb
+const BASE = '6lf49d 1lj92ih 5pak35 h1zd4p';   // re-pinned at pressure (PRESSURE, src/contact.js, 2026-11-09), which changes AI v AI and every match on purpose (the count, the spill, the egg's hops, a knock-on's beat); with PRESSURE='{"on":false}' this build gives the pin before it exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 6igeb3 tagplu lxxgtn 14mjifb
 function pin() {
   const out = [];
   for (const [a, b, i] of [['FRA', 'IRE', 0], ['PRE', 'SCO', 1]]) {

@@ -70,7 +70,7 @@ const advance = (c, s) => { c.currentTime += s; };
   ok(titled, 'the names are Title Case');
   // where the new sounds are wired in
   const egg = read('../src/training.js'), ball = read('../src/ball.js'), match = read('../src/match.js');
-  ok(/function eggHop[\s\S]*?sfx\('bounce', Math\.min\(1, vz\/K\.pop\[1\]\)\)/.test(egg), 'Bouncy Egg sounds a bounce on each hop, by how big the hop is');
+  ok((egg.split('function eggHop(')[1] || '').split('\nfunction ')[0].includes('hopBounce(b, E, K, u, fit)') && /function hopBounce[\s\S]*?sfx\('bounce', Math\.min\(1, vz\/K\.pop\[1\]\)\)/.test(ball), 'Bouncy Egg sounds a bounce on each hop, by how big the hop is (the hop is hopBounce, src/ball.js, shared with a match\'s spilled ball since 2026-11-09)');
   ok(/function updateLoose[\s\S]*?sfx\('bounce', /.test(ball), 'a loose ball bounces');
   ok(/function catchBall[\s\S]*?setCarrier\(p\); sfx\('catch'\)/.test(match), 'a clean catch is heard');
   ok(/function knockOn[\s\S]*?sfx\('fumble'\)/.test(match), 'a knock-on fumbles');

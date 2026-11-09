@@ -20,6 +20,7 @@ const jobs = [
   ['locker', ['tools/locker.mjs']],                         // medals, balls and boots, the Legends (its browser part runs where Playwright is installed)
   ['career-season', ['tools/career-season.mjs']],           // scripted careers end to end with the real cups, old saves, every phase's screens
   ['home', ['tools/home.mjs']],                             // the home's headlines, My Team, the competitions by tier, the Legends' gate (its browser part runs where Playwright is installed)
+  ['pressure', ['tools/pressure.mjs']],                     // pressure, the spill and the egg's bounce; PRESSURE off pinned to b706c3e
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces', 'browser']) jobs.push([name, [`tools/${name}.mjs`]]);
