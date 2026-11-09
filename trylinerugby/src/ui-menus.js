@@ -651,7 +651,7 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
 /* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked in its kind's metal (TROPHY_METAL,
-   src/cups.js: gold or silver) with its kind's name; the tally counts each kind won, a cup's only once one is kept. A trophy is drawn
+   src/cups.js: gold or silver) with its kind's name, and a trophy in its kind's shape (TROPHY_SHAPE, by data-kind); the tally counts each kind won, a cup's only once one is kept. A trophy is drawn
    only for silverware held (data-won): an entry won (a title or a Grand Slam, a cup or a tour's series) and a count above 0. An entry
    not won keeps a dot in its kind's metal, and a count of 0 no mark at all. An entry without a kind is a league season. */
 function renderCabinet(id) {

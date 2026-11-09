@@ -3831,6 +3831,29 @@ const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] }
    --silver), and each still names its kind in words. */
 const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver' };
 function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
+/* Each trophy's shape, so the kinds tell apart at a glance in the same metal (the owner, 2026-11-09, shown three gold cups alike on the
+   career's row: "different shapes"). A filled silhouette in a 24 by 24 box, read at 10px on the career's row and the Trophy Cabinet's
+   tags: a title (a league, the Championship's or a career's, or an international championship, its Grand Slam with it) a shield; the
+   European Cup a cup with big handles; the World Cup a cup with a ball on top; the Home Nations Tour a plate on its stand (never a
+   plain disc: that is the cabinet's dot for an entry not won); the Triple Crown a crown; the Super Fan's trophy (its kind, 'fan') a
+   rosette. The one map: trophyShapeCss makes it a mask for each kind (data-kind), and the
+   career's row, the Trophy Cabinet's trophies and tallies, the home's cup notes and a cup's trophy all draw through it, each in its
+   kind's metal. A hole is drawn the other way round (the fill is nonzero), so the parts of a shape can overlap. */
+const TROPHY_SHAPE = {
+  league:{ name:'shield', d:'M2.5 1.5h19v9.6c0 6.4-4.3 9.9-9.5 11.9-5.2-2-9.5-5.5-9.5-11.9z' },
+  euro:{ name:'cup with big handles', d:'M7.5 1.5h9c0 5.6-1.3 9.4-3.4 11v5h-2.2v-5c-2.1-1.6-3.4-5.4-3.4-11zM8 18h8l1.6 4.5H6.4zM0.2 6.6a4.4 5.4 0 1 1 8.8 0a4.4 5.4 0 1 1-8.8 0zM2.6 6.6a2 3 0 1 0 4 0a2 3 0 1 0-4 0zM15 6.6a4.4 5.4 0 1 1 8.8 0a4.4 5.4 0 1 1-8.8 0zM17.4 6.6a2 3 0 1 0 4 0a2 3 0 1 0-4 0z' },
+  world:{ name:'cup with a ball on top', d:'M5.5 7.2C6 2.1 14.5-1.4 18.5 2C18 7.1 9.5 10.6 5.5 7.2zM5 10h14c0 4.4-2.3 7.1-5.5 7.9v1.8H17v2.8H7v-2.8h3.5v-1.8C7.3 17.1 5 14.4 5 10z' },
+  tour:{ name:'plate', d:'M2.4 10a9.6 9.6 0 1 1 19.2 0a9.6 9.6 0 1 1-19.2 0zM4.8 10a7.2 7.2 0 1 0 14.4 0a7.2 7.2 0 1 0-14.4 0zM6 10a6 6 0 1 1 12 0a6 6 0 1 1-12 0zM10.6 19h2.8v1.6h3.1l1.5 2.4H6l1.5-2.4h3.1z' },
+  triple:{ name:'crown', d:'M1.5 7.5l5.5 4.8L12 4.5l5 7.8 5.5-4.8-2 11.5h-17zM3.5 20h17v2.5h-17zM0 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0zM10 3a2 2 0 1 1 4 0a2 2 0 1 1-4 0zM20.4 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0z' },
+  fan:{ name:'rosette', d:'M8.6 13.5h3.4L9.2 23.3l-1.9-2.2-2.7 1zM12 13.5h3.4l4 8.8-2.7-1-1.9 2.2zM12 2A1.8 1.8 0 0 1 16.2 3.4A1.8 1.8 0 0 1 18.8 7A1.8 1.8 0 0 1 18.8 11.4A1.8 1.8 0 0 1 16.2 15A1.8 1.8 0 0 1 12 16.4A1.8 1.8 0 0 1 7.8 15A1.8 1.8 0 0 1 5.2 11.4A1.8 1.8 0 0 1 5.2 7A1.8 1.8 0 0 1 7.8 3.4A1.8 1.8 0 0 1 12 2zM7.8 9.2a4.2 4.2 0 1 0 8.4 0a4.2 4.2 0 1 0-8.4 0zM9 9.2a3 3 0 1 1 6 0a3 3 0 1 1-6 0z' },
+};
+function trophyShape(kind) { return TROPHY_SHAPE[kind] || TROPHY_SHAPE.league; }   // an unknown kind is a League, as its metal is
+const trophyMask = kind => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='${trophyShape(kind).d}'/></svg>`)}")`;
+/* The page's rules: --trophy, each kind's mask, on everything carrying its data-kind (styles.css draws every trophy through it), a
+   League's shield where no kind says otherwise. Put on the page once, by src/ui-cups.js. */
+function trophyShapeCss() {
+  return `:root{--trophy:${trophyMask('league')}}\n` + Object.keys(TROPHY_SHAPE).map(k => `[data-kind="${k}"]{--trophy:${trophyMask(k)}}`).join('\n');
+}
 const CUP_SIZE = { euro:4, world:12, tour:2 };             // sides in each
 const CUP_MADE = { euro:1, world:3, tour:1 };              // rounds drawn at the start; the rest follow from the results
 const CUP_POOL = ['A', 'B', 'C', 'D'];
@@ -7971,7 +7994,7 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
 /* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked in its kind's metal (TROPHY_METAL,
-   src/cups.js: gold or silver) with its kind's name; the tally counts each kind won, a cup's only once one is kept. A trophy is drawn
+   src/cups.js: gold or silver) with its kind's name, and a trophy in its kind's shape (TROPHY_SHAPE, by data-kind); the tally counts each kind won, a cup's only once one is kept. A trophy is drawn
    only for silverware held (data-won): an entry won (a title or a Grand Slam, a cup or a tour's series) and a count above 0. An entry
    not won keeps a dot in its kind's metal, and a count of 0 no mark at all. An entry without a kind is a league season. */
 function renderCabinet(id) {
@@ -8082,6 +8105,16 @@ let cupResetArmed = false;
 
 function cupCompSet(id) { champComp = CUP_COMPS.includes(id) ? id : 'league'; }
 const cupEuroLeague = key => CUPS.euro.lists.includes(key);   // a league whose winner goes on to the European Cup (its trophy on the home's button)
+/* Each kind's trophy shape on the page (TROPHY_SHAPE and trophyShapeCss, src/cups.js), once, as the game loads: before anything draws a
+   trophy, so the career's row, the Trophy Cabinet, the home's note and a cup's own trophy all take their shape from the one map. */
+function trophyShapesOn() {
+  if (typeof document === 'undefined' || !document.head || document.getElementById('trophy-shapes')) return false;
+  const el = document.createElement('style');
+  el.id = 'trophy-shapes'; el.textContent = trophyShapeCss();
+  document.head.appendChild(el);
+  return true;
+}
+trophyShapesOn();
 /* The team screen for the World Cup (the category's twelve, pick your nation: My Team's country picked for you on the primary) or the
    Home Nations Tour (your side is the Home Nations; the three hosts, the one in turn first and on the primary). null for a league. */
 function cupTeamsView() {
@@ -8151,7 +8184,7 @@ function cupRetain(c) {
 
 /* Words. */
 function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
-/* The home's note under Continue Championship: a small trophy in the cup's metal, then Bath · European Cup · Semi-Final. Every cup's
+/* The home's note under Continue Championship: a small trophy in the cup's shape and metal, then Bath · European Cup · Semi-Final. Every cup's
    trophy is gold, so the cup's name stays on a phone held sideways too: the longest (London North Women · European Cup · Semi-Final)
    fits its one line at 568x320. */
 function cupHomeNote(el, c) {
@@ -10786,8 +10819,9 @@ function lockerCard(kind) {
    through it.
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
-/* The trophy row on the player card: a cup per kind he has won, in its metal (TROPHY_METAL, src/cups.js: gold or silver, as in the Trophy
-   Cabinet), and how many, in CAREER_KINDS order; each cup's own label names its kind. */
+/* The trophy row on the player card: a trophy per kind he has won, in its kind's shape and metal (TROPHY_SHAPE and TROPHY_METAL,
+   src/cups.js: a shield, a cup with big handles, a cup with a ball on top, a plate, a crown; gold or silver, as in the Trophy Cabinet),
+   and how many, in CAREER_KINDS order; each trophy's own label names its kind. */
 const CAREER_KIND_NAME = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
@@ -10964,7 +10998,7 @@ function careerCardHtml(cr, team) {
     }).join('')}</div>
     <div class="cr-traits">${careerTraitChips(cr)}</div>`;
 }
-/* His trophies, counted by kind under his name: a cup in the kind's metal and the number, only the kinds he has won, each named in words
+/* His trophies, counted by kind under his name: the kind's trophy (its shape and metal, by data-kind and data-metal) and the number, only the kinds he has won, each named in words
    for a screen reader (the cup's own label, as an image: European Cup, 1) and a pointer (its title), in a group named Trophies. */
 function careerCabinetHtml(cr) {
   const n = k => (cr.trophies || []).filter(t => t.kind === k).length, have = CAREER_KINDS.filter(n);
@@ -11634,7 +11668,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
-  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
+  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },

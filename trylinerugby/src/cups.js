@@ -22,6 +22,29 @@ const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] }
    --silver), and each still names its kind in words. */
 const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver' };
 function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
+/* Each trophy's shape, so the kinds tell apart at a glance in the same metal (the owner, 2026-11-09, shown three gold cups alike on the
+   career's row: "different shapes"). A filled silhouette in a 24 by 24 box, read at 10px on the career's row and the Trophy Cabinet's
+   tags: a title (a league, the Championship's or a career's, or an international championship, its Grand Slam with it) a shield; the
+   European Cup a cup with big handles; the World Cup a cup with a ball on top; the Home Nations Tour a plate on its stand (never a
+   plain disc: that is the cabinet's dot for an entry not won); the Triple Crown a crown; the Super Fan's trophy (its kind, 'fan') a
+   rosette. The one map: trophyShapeCss makes it a mask for each kind (data-kind), and the
+   career's row, the Trophy Cabinet's trophies and tallies, the home's cup notes and a cup's trophy all draw through it, each in its
+   kind's metal. A hole is drawn the other way round (the fill is nonzero), so the parts of a shape can overlap. */
+const TROPHY_SHAPE = {
+  league:{ name:'shield', d:'M2.5 1.5h19v9.6c0 6.4-4.3 9.9-9.5 11.9-5.2-2-9.5-5.5-9.5-11.9z' },
+  euro:{ name:'cup with big handles', d:'M7.5 1.5h9c0 5.6-1.3 9.4-3.4 11v5h-2.2v-5c-2.1-1.6-3.4-5.4-3.4-11zM8 18h8l1.6 4.5H6.4zM0.2 6.6a4.4 5.4 0 1 1 8.8 0a4.4 5.4 0 1 1-8.8 0zM2.6 6.6a2 3 0 1 0 4 0a2 3 0 1 0-4 0zM15 6.6a4.4 5.4 0 1 1 8.8 0a4.4 5.4 0 1 1-8.8 0zM17.4 6.6a2 3 0 1 0 4 0a2 3 0 1 0-4 0z' },
+  world:{ name:'cup with a ball on top', d:'M5.5 7.2C6 2.1 14.5-1.4 18.5 2C18 7.1 9.5 10.6 5.5 7.2zM5 10h14c0 4.4-2.3 7.1-5.5 7.9v1.8H17v2.8H7v-2.8h3.5v-1.8C7.3 17.1 5 14.4 5 10z' },
+  tour:{ name:'plate', d:'M2.4 10a9.6 9.6 0 1 1 19.2 0a9.6 9.6 0 1 1-19.2 0zM4.8 10a7.2 7.2 0 1 0 14.4 0a7.2 7.2 0 1 0-14.4 0zM6 10a6 6 0 1 1 12 0a6 6 0 1 1-12 0zM10.6 19h2.8v1.6h3.1l1.5 2.4H6l1.5-2.4h3.1z' },
+  triple:{ name:'crown', d:'M1.5 7.5l5.5 4.8L12 4.5l5 7.8 5.5-4.8-2 11.5h-17zM3.5 20h17v2.5h-17zM0 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0zM10 3a2 2 0 1 1 4 0a2 2 0 1 1-4 0zM20.4 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0z' },
+  fan:{ name:'rosette', d:'M8.6 13.5h3.4L9.2 23.3l-1.9-2.2-2.7 1zM12 13.5h3.4l4 8.8-2.7-1-1.9 2.2zM12 2A1.8 1.8 0 0 1 16.2 3.4A1.8 1.8 0 0 1 18.8 7A1.8 1.8 0 0 1 18.8 11.4A1.8 1.8 0 0 1 16.2 15A1.8 1.8 0 0 1 12 16.4A1.8 1.8 0 0 1 7.8 15A1.8 1.8 0 0 1 5.2 11.4A1.8 1.8 0 0 1 5.2 7A1.8 1.8 0 0 1 7.8 3.4A1.8 1.8 0 0 1 12 2zM7.8 9.2a4.2 4.2 0 1 0 8.4 0a4.2 4.2 0 1 0-8.4 0zM9 9.2a3 3 0 1 1 6 0a3 3 0 1 1-6 0z' },
+};
+function trophyShape(kind) { return TROPHY_SHAPE[kind] || TROPHY_SHAPE.league; }   // an unknown kind is a League, as its metal is
+const trophyMask = kind => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='${trophyShape(kind).d}'/></svg>`)}")`;
+/* The page's rules: --trophy, each kind's mask, on everything carrying its data-kind (styles.css draws every trophy through it), a
+   League's shield where no kind says otherwise. Put on the page once, by src/ui-cups.js. */
+function trophyShapeCss() {
+  return `:root{--trophy:${trophyMask('league')}}\n` + Object.keys(TROPHY_SHAPE).map(k => `[data-kind="${k}"]{--trophy:${trophyMask(k)}}`).join('\n');
+}
 const CUP_SIZE = { euro:4, world:12, tour:2 };             // sides in each
 const CUP_MADE = { euro:1, world:3, tour:1 };              // rounds drawn at the start; the rest follow from the results
 const CUP_POOL = ['A', 'B', 'C', 'D'];

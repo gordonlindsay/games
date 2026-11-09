@@ -14,6 +14,16 @@ let cupResetArmed = false;
 
 function cupCompSet(id) { champComp = CUP_COMPS.includes(id) ? id : 'league'; }
 const cupEuroLeague = key => CUPS.euro.lists.includes(key);   // a league whose winner goes on to the European Cup (its trophy on the home's button)
+/* Each kind's trophy shape on the page (TROPHY_SHAPE and trophyShapeCss, src/cups.js), once, as the game loads: before anything draws a
+   trophy, so the career's row, the Trophy Cabinet, the home's note and a cup's own trophy all take their shape from the one map. */
+function trophyShapesOn() {
+  if (typeof document === 'undefined' || !document.head || document.getElementById('trophy-shapes')) return false;
+  const el = document.createElement('style');
+  el.id = 'trophy-shapes'; el.textContent = trophyShapeCss();
+  document.head.appendChild(el);
+  return true;
+}
+trophyShapesOn();
 /* The team screen for the World Cup (the category's twelve, pick your nation: My Team's country picked for you on the primary) or the
    Home Nations Tour (your side is the Home Nations; the three hosts, the one in turn first and on the primary). null for a league. */
 function cupTeamsView() {
@@ -83,7 +93,7 @@ function cupRetain(c) {
 
 /* Words. */
 function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
-/* The home's note under Continue Championship: a small trophy in the cup's metal, then Bath · European Cup · Semi-Final. Every cup's
+/* The home's note under Continue Championship: a small trophy in the cup's shape and metal, then Bath · European Cup · Semi-Final. Every cup's
    trophy is gold, so the cup's name stays on a phone held sideways too: the longest (London North Women · European Cup · Semi-Final)
    fits its one line at 568x320. */
 function cupHomeNote(el, c) {
