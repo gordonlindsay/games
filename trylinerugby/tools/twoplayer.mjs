@@ -553,8 +553,8 @@ begin('away side');
 }
 done('H away side');
 
-// I. the home and the join screen: 2 Players is a desk-only button under Quick Match on the home's Game headline (phones keep Quick Match
-// alone), the join screen seats both players on the keyboard halves with a legend each (keycaps or pad glyphs for
+// I. the home and the join screen: 2 Players has left the home on every device (the owner, 2026-11-09: "take out 2 player from the
+// menu. doesn't work for mobile"), so the join screen is reached through its own entry, openJoin (exported as debug.openJoin); it seats both players on the keyboard halves with a legend each (keycaps or pad glyphs for
 // Run Pass Kick Sprint, lit while held), fixed rows so the two cards line up, a pad claims a seat with one press and the screen follows,
 // Use Keyboard and Swap Players (the Difficulty goes with the player), then the team flow: Player 1 picks first, then Player 2 with
 // Player 1's team in the bar (Change Team is his, from his own seat), and the pick starts the match with both humans at their own levels
@@ -562,11 +562,11 @@ begin('join');
 {
   const fs = (await import('fs')).default, S = T.sides, X = T.teams;
   const src = readGameSource();
-  ok(/<button class="btn desk-only" id="b-two">2 Players<\/button>/.test(src), 'the home has a desk-only 2 Players button');
-  ok(/<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>/.test(src) && src.indexOf('id="b-quick"') < src.indexOf('id="b-two"') && src.indexOf('id="b-two"') < src.indexOf('id="b-champ"') && src.indexOf('id="b-champ"') < src.indexOf('id="b-help"'), 'Quick Match is still the gold first button with the focus; 2 Players under it, then Championship\'s, Career\'s and Training Drills\' panels');
+  ok(!/id="b-two"/.test(src) && !/\$\('b-two'\)/.test(src) && /\nfunction openJoin\(\) \{\n  resetSeats\(\); setTwo\(true\);/.test(src) && typeof D.openJoin === 'function', 'the home has no 2 Players button on any device; Two Player\'s entry is openJoin, kept and exported (debug.openJoin)');
+  ok(/<button class="btn primary" id="b-quick" autofocus>Play<\/button>/.test(src) && src.indexOf('id="b-quick"') < src.indexOf('id="b-champ"') && src.indexOf('id="b-champ"') < src.indexOf('id="b-help"'), 'Quick Match\'s Play is still the gold first button with the focus, then Championship\'s, Career\'s and Skills Mini Games\' panels');
   const gamePanel = src.match(/<div class="hl-panel hp-game" id="hp-game"[^>]*>([\s\S]*?)<\/div>/);
   const drillPanel = src.match(/<div class="hl-panel hp-drills" id="hp-drills"[^>]*>([\s\S]*?)<button class="btn drill" id="b-help">/);
-  ok(gamePanel && /id="b-quick"/.test(gamePanel[1]) && /class="btn desk-only" id="b-two"/.test(gamePanel[1]) && !/id="b-help"|id="b-champ"|id="b-career"/.test(gamePanel[1]) && drillPanel && /id="pr-grid"/.test(drillPanel[1]) && /\.row2\{display:grid;grid-template-columns:1fr 1fr;/.test(src) && /<nav class="hl-bar" id="hl-bar" role="tablist"/.test(src) && /\.hl-panel\{display:flex;flex-direction:column;/.test(src) && /\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/.test(src) && /\.desk-only\{display:none\}/.test(src), 'Game\'s panel is Quick Match and, on computers only, 2 Players; How to Play sits with the drills under Training Drills; the five headlines share the bar in equal parts');
+  ok(gamePanel && /id="b-quick"/.test(gamePanel[1]) && !/id="b-two"|2 Players/.test(gamePanel[1]) && !/id="b-help"|id="b-champ"|id="b-career"/.test(gamePanel[1]) && drillPanel && /id="pr-grid"/.test(drillPanel[1]) && /\.row2\{display:grid;grid-template-columns:1fr 1fr;/.test(src) && /<nav class="hl-bar" id="hl-bar" role="tablist"/.test(src) && /\.hl-panel\{display:flex;flex-direction:column;/.test(src) && /\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/.test(src) && /\.desk-only\{display:none\}/.test(src), 'Quick Match\'s panel is its Play alone, with no 2 Players on any device; How to Play sits with the drills under Skills Mini Games; the five headlines share the bar in equal parts');
   ok(/b\.classList\.toggle\('desk', PADS\.size > 0 \|\| !!\(deskQuery && deskQuery\.matches\)\)/.test(src) && /PADS\.delete\(index\);\n  setDesk\(\);/.test(src) && /function padConnected\(gp\) \{\n  padsOn = true;\n  if \(gp\) padOf\(gp\);\n  setDesk\(\);/.test(src), 'body.desk follows the pointer or the pads connected right now: a phone that had a pad goes back to its own layout when it is unplugged');
   // labels on the join screen are Title Case, with no arrow glyph anywhere in the markup
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);

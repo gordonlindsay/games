@@ -100,9 +100,9 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   T.stamina.openBuilder(null);
   ok($('m-store').hidden && !$('s-build').hidden, 'Create Team opens the builder');
   I.open();
-  ok($('m-store').hidden && !$('m-import').hidden && I.state().step === 'web', 'Import Club opens its card, which says it works in the app');
+  ok($('m-store').hidden && !$('m-import').hidden && I.state().step === 'web', 'Add Your Team opens its card, which says it works in the app');
   $('im-back').click(); D.goHome();
-  ok(I.card().includes('t-import'), 'and the Import Club card is on the team screen as before');
+  ok(I.card().includes('t-import'), 'and the Add Your Team card is on the team screen as before');
   // the save: byte for byte what it was, with no store field while nothing is bought
   X.save();
   ok(Object.keys(saved()).join() === 'settings,champ,custom,champHistory,seasonSerial,career,importLeague', `a web save has the same fields as before (${Object.keys(saved()).join(', ')})`);
@@ -131,7 +131,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
 {
   reset(); S.setTier('free');
   ok(S.live() && !S.native(), 'the free web is live, and not the app');
-  ok(['quick', 'drills', 'kids', 'easy', 'normal', 'help', 'two'].every(f => S.has(f)), 'Quick Match, the Training Ground, Kids, Easy, Normal, How to Play and Two Player are free');
+  ok(['quick', 'drills', 'kids', 'easy', 'normal', 'help', 'two'].every(f => S.has(f)), 'Quick Match, Skills Mini Games, Kids, Easy, Normal, How to Play and Two Player are free');
   ok(PAID.every(f => !S.has(f)) && !S.has('import'), 'Championship, Career, Create Team, Hard and Import are locked');
   // an Android browser, while there is no Google Play page (iPhone first): no lock with no app to get, everything as before
   android();
@@ -154,7 +154,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok($('b-champ').classList.contains('locked') && $('b-champ').textContent === 'Continue Championship' && !$('champ-note').hidden, 'Continue Championship keeps its label and its note, with a lock');
   ok($('b-career').classList.contains('locked') && $('b-career').textContent === 'Continue Career', 'Continue Career likewise');
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
-  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('hl-champ').classList.contains('locked') && $('hl-career').classList.contains('locked') && !$('hl-game').classList.contains('locked') && !$('hl-drills').classList.contains('locked') && !$('hl-settings').classList.contains('locked'), 'Grown-Ups in Settings beside Half Length; the Championship and Career headlines carry the lock, Game, Training Drills and Settings none');
+  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('hl-champ').classList.contains('locked') && $('hl-career').classList.contains('locked') && !$('hl-game').classList.contains('locked') && !$('hl-drills').classList.contains('locked') && !$('hl-settings').classList.contains('locked'), 'Grown-Ups in Settings beside Half Length; the Championship and Career headlines carry the lock, Quick Match, Skills Mini Games and Settings none');
   $('b-champ').click();
   ok(!$('m-store').hidden && S.ui().mode === 'unlock' && S.ui().feature === 'champ' && $('s-hub').hidden && !$('s-home').hidden, 'Championship opens the Unlock card, not the hub');
   ok($('st-eyebrow').textContent === 'Unlock' && $('st-title').textContent === 'Championship', 'Unlock · Championship');
@@ -198,7 +198,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(opened.length === 1 && opened[0][0] === S.LINKS.ios && opened[0][1] === '_blank' && /noopener/.test(opened[0][2]), 'passed: the store page opens in a new tab with no way back into the page');
   S.close();
   S.open({ mode:'unlock', feature:'import' });
-  ok(/id="st-app">Get the App<\/button>/.test($('st-offers').innerHTML), 'for Import Club, Get the App without the Full Game\'s list (Import is the Super Fan\'s)');
+  ok(/id="st-app">Get the App<\/button>/.test($('st-offers').innerHTML), 'for Add Your Team, Get the App without the Full Game\'s list (it is the Super Fan\'s)');
   S.close();
   S.open({ mode:'grown' });
   ok($('st-eyebrow').textContent === 'Grown-Ups' && !$('st-links').hidden && $('st-back').textContent === 'Back to Menu' && $('st-restore').hidden && $('st-row').classList.contains('one'), 'the web Grown-Ups panel: Get the App, Privacy | Support, and Back to Menu alone');
@@ -213,7 +213,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(PAID.every(f => !S.has(f)) && !S.has('import') && S.has('quick'), 'the free tier, and nothing more');
   ok(S.offers('champ').map(o => o.id).join() === 'tryline.full', 'while Farnham has not agreed its share in writing only the Full Game is on sale');
   ok(!S.offers(null).some(o => o.kind === 'fan') && !S.offers('import').length, 'no Super Fan offer anywhere');
-  ok(!S.offered('import') && I.card() === '', 'and Import Club, which only Super Fan unlocks, is not on the team screen');
+  ok(!S.offered('import') && I.card() === '', 'and Add Your Team, which only Super Fan unlocks, is not on the team screen');
   S.open({ mode:'unlock', feature:'champ' });
   ok(!/tryline\.fan|Super Fan|Supports/.test($('st-offers').innerHTML), 'the card shows no Super Fan offer and no share line');
   S.close();
@@ -227,22 +227,22 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(!/(?:%|\bshare)\s+of\s+(?:each|every)\s+Super Fan unlock/i.test(src + ui + read('store/README.md') + read('README.md')), 'nowhere is the share stated as of every unlock (the price)');
   for (const bad of [0, -5, 101, NaN, '20', Infinity]) { FARNHAM.share = bad; ok(!S.offers(null).some(o => o.kind === 'fan'), `a share of ${String(bad)} is not a share: no offer`); }
   FARNHAM.share = 50;
-  ok(S.offered('import') && I.card().includes('t-import'), 'Import Club is on the team screen once a Super Fan club is on sale');
+  ok(S.offered('import') && I.card().includes('t-import'), 'Add Your Team is on the team screen once a Super Fan club is on sale');
   S.open({ mode:'unlock', feature:'champ' });
   ok(/data-buy="tryline\.full"/.test($('st-offers').innerHTML) && /data-buy="tryline\.fan\.farnham"/.test($('st-offers').innerHTML) && $('st-offers').innerHTML.includes('Supports Farnham RUFC: 50' + SHARE_WORDS), 'the card: Full Game, Super Fan · Farnham RUFC and its share');
-  ok($('st-offers').innerHTML.replace(/\u00a0/g, ' ').includes('Full Game · Import Club · Super Fan Badge') && $('st-offers').innerHTML.includes('Super\u00a0Fan\u00a0Badge') && !/Club Badge/.test(ui.replace('Super Fan Badge', '')), 'the Super Fan perks: Full Game, Import Club and the Super Fan Badge (the shirt and name, never a crest)');
+  ok($('st-offers').innerHTML.replace(/\u00a0/g, ' ').includes('Full Game · Add Your Team · Super Fan Badge') && $('st-offers').innerHTML.includes('Super\u00a0Fan\u00a0Badge') && $('st-offers').innerHTML.includes('Add\u00a0Your\u00a0Team') && !/Club Badge/.test(ui.replace('Super Fan Badge', '')), 'the Super Fan perks: Full Game, Add Your Team and the Super Fan Badge (the shirt and name, never a crest)');
   ok(!$('st-restore').hidden && !$('st-row').classList.contains('one') && $('st-links').hidden && $('st-back').textContent === 'Back to Menu', 'Restore Purchases | Back to Menu under them');
   S.close();
   // locks
   D.goHome();
   ok(['b-champ', 'b-career'].every(id => $(id).classList.contains('locked')) && !$('b-grown').hidden, 'Championship and Career locked, Grown-Ups on the home');
   S.teamsRender();
-  ok($('t-create').classList.contains('locked') && $('t-import').classList.contains('locked'), 'Create Team and Import Club locked');
+  ok($('t-create').classList.contains('locked') && $('t-import').classList.contains('locked'), 'Create Team and Add Your Team locked');
   T.stamina.openBuilder(null);
   ok(!$('m-store').hidden && S.ui().feature === 'create' && $('s-build').hidden && !$('s-home').hidden, 'Create Team opens the Unlock card, not the builder');
   S.close();
   D.openTeams('quick'); I.open();
-  ok(!$('m-store').hidden && S.ui().feature === 'import' && $('m-import').hidden, 'Import Club opens the Unlock card, not the import');
+  ok(!$('m-store').hidden && S.ui().feature === 'import' && $('m-import').hidden && $('st-title').textContent === 'Add Your Team', 'Add Your Team opens the Unlock card, named Add Your Team, not the import');
   ok($('st-back').textContent === 'Back to Teams', 'and its Back says where it goes: Back to Teams');
   D.goHome();
   S.close();
@@ -382,11 +382,11 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   listener({ productIdentifier:'tryline.full', transactionId:'8' }); await tick();
   ok(!$('m-store').hidden && $('st-msg').hidden && $('st-have').innerHTML.includes('Full Game Unlocked'), 'approved: the panel stays, the message goes, and it shows the Full Game unlocked');
   S.close();
-  // a pending unlock for a feature it does not open (Full Game from Import Club's card) leaves the card up, message cleared
+  // a pending unlock for a feature it does not open (Full Game from Add Your Team's card) leaves the card up, message cleared
   app(); FARNHAM.agreed = true; S.setStarted(false); D.goHome(); await tick(12);
   S.open({ mode:'unlock', feature:'import' }); S.ui().msg = S.MSG.pending; S.cardRender();
   listener({ productIdentifier:'tryline.full', transactionId:'9' }); await tick();
-  ok(!$('m-store').hidden && S.ui().feature === 'import' && $('st-msg').hidden, 'the Full Game arriving on Import Club\'s card: still locked, so the card stays, its message gone');
+  ok(!$('m-store').hidden && S.ui().feature === 'import' && $('st-msg').hidden, 'the Full Game arriving on Add Your Team\'s card: still locked, so the card stays, its message gone');
   S.close();
   // the web never starts the store
   reset(); calls.length = 0; plugin(); S.setNative(false); D.goHome(); await tick();
@@ -449,7 +449,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   S.open({ mode:'grown' });
   ok($('st-title').textContent === 'Purchases' && $('st-have').innerHTML.includes('Super Fan · Farnham RUFC') && $('st-offers').innerHTML === '' && !$('st-links').hidden && $('st-back').textContent === 'Back to Menu', 'the Grown-Ups panel: what is owned, Privacy | Support, Restore Purchases | Back to Menu');
   S.close();
-  ok(I.card().includes('t-import'), 'Import Club is on the team screen');
+  ok(I.card().includes('t-import'), 'Add Your Team is on the team screen');
   I.open();
   ok($('m-store').hidden && !$('m-import').hidden, 'and opens the import');
   $('im-back').click();

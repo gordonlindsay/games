@@ -8,7 +8,7 @@
      links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
      User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
      browser on another site could not read its pages anyway.
-   - The Import Club card and its card (#m-import) on the team screen, and the My League list.
+   - Add Your Team: the team screen's card and the home's button, their card (#m-import), and the My League list.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -754,11 +754,11 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-/* The Import Club card: beside Create Team while there is room for a team, and kept with four made while a league is
+/* The team screen's Add Your Team card: beside Create Team while there is room for a team, and kept with four made while a league is
    saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is on sale (storeOffered). */
 const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
-function importCard() { return importShown() ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
-/* The home's Import Data, at the top beside My Team: the same card, shown where Import Club would be (room for a team, or a league to
+function importCard() { return importShown() ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Add Your Team</span></button>` : ''; }
+/* The home's Add Your Team, at the top beside My Team: the same card, shown where the team screen's would be (room for a team, or a league to
    refresh or remove, and in the app only once a Super Fan club is on sale), with its lock while Import is locked. */
 function importHome() {
   const b = $('b-import'), on = importShown();
@@ -770,10 +770,10 @@ function importBind() {
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
 }
 
-/* ---------- the Import Club card ----------
+/* ---------- the Add Your Team card ----------
    web: the app is needed. link: paste, then Import (a grown-up check first). busy: fetching. preview: the club, its
    colours and the league's size, then Save. mine: a club saved, Make This My Team | Not Now. The card hides while the grown-up
-   check is up, so the two never stack. from: 'home' (Import Data) or 'teams' (Import Club), where it closes to. */
+   check is up, so the two never stack. from: 'home' (the home's button) or 'teams' (the team screen's card), where it closes to. */
 let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0, from:'teams', club:null, sides:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
 const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
@@ -800,7 +800,7 @@ function importOpen() {
 function importClose() {
   importUi.token++; $('m-import').hidden = true;
   if (importUi.from !== 'home') { renderTeams(); return; }
-  renderHome();                                            // My Team and Import Data as they now are, the focus back on Import Data
+  renderHome();                                            // My Team and Add Your Team as they now are, the focus back on Add Your Team
   const b = $('b-import'); if (b && !b.hidden && typeof b.focus === 'function') b.focus();
 }
 let importGateHook = null;                               // the tests' stand-in for the grown-up check
@@ -859,7 +859,7 @@ function importOffer(make) {                                 // the offer answer
 function importRender() {
   const u = importUi, s = u.step, web = s === 'web', busy = s === 'busy', pre = s === 'preview', mine = s === 'mine';
   const c = pre && u.data.club, sides = pre ? importSides(u.data) : [], n = sides.length;
-  $('im-title').textContent = mine ? u.club.name : web ? 'Import Works in the Try Line App' : pre ? (c ? importShort(c.name) : 'My League') : 'Paste Your Link';
+  $('im-title').textContent = mine ? u.club.name : web ? 'Works in the Try Line App' : pre ? (c ? importShort(c.name) : 'My League') : 'Paste Your Link';
   $('im-mine').hidden = !mine; $('im-row').hidden = mine;
   $('im-back').textContent = u.from === 'home' ? 'Back to Menu' : 'Back to Teams';
   $('im-line').hidden = !web;

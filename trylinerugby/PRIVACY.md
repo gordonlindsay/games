@@ -32,13 +32,13 @@ Once loaded, the game plays offline. When it is online it fetches only its own f
 
 Its two typefaces come with the game, on the web and in the app. It never loads fonts from Google Fonts or any other site.
 
-## Import
+## Add Your Team
 
-Import is part of Super Fan, in the app only. A grown-up check comes first. Import then fetches the club or tournament page you paste and, if it needs them, up to two pages that page links to on the same site (its table and fixtures). That site receives those requests and your device's internet address, as any website you visit does; nothing about you or your child is sent with them. Import keeps only the team and competition details it needs, such as team names and fixtures, on your device. It never keeps any person's name, photo or contact details.
+Add Your Team, the import of a club and its league, is part of Super Fan, in the app only. A grown-up check comes first. It then fetches the club or tournament page you paste and, if it needs them, up to two pages that page links to on the same site (its table and fixtures). That site receives those requests and your device's internet address, as any website you visit does; nothing about you or your child is sent with them. It keeps only the team and competition details it needs, such as team names and fixtures, on your device. It never keeps any person's name, photo or contact details.
 
 ## The grown-up check
 
-Anything that leaves the game or costs money first asks a grown-up to answer a multiplication written out in words: a purchase, Restore Purchases, Get the App, the privacy and support pages, installing the web version and importing a club page. After two wrong answers in a row it waits before it takes another, so tapping at random does not get past it. In the app the wait is kept on the device, under `tryline.gate`, so closing the app does not skip it.
+Anything that leaves the game or costs money first asks a grown-up to answer a multiplication written out in words: a purchase, Restore Purchases, Get the App, the privacy and support pages, installing the web version and Add Your Team. After two wrong answers in a row it waits before it takes another, so tapping at random does not get past it. In the app the wait is kept on the device, under `tryline.gate`, so closing the app does not skip it.
 
 ## Your information
 

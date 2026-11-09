@@ -36,10 +36,10 @@ The owner's choice (26 characters), from "play as your club, with your career, f
 
 <!-- copy:apple.promo -->
 ```text
-Play as your club. Support your club. For the love of the game. Free: Quick Match, every Training Ground drill and the Kids level. Unlock Championship and Career.
+Play as your club. Support your club. For the love of the game. Free: Quick Match, every Skills Mini Game and the Kids level. Unlock Championship and Career.
 ```
 
-Opens with the owner's line. 162 characters.
+Opens with the owner's line. 157 characters.
 
 ### Keywords (100 bytes, commas, no spaces)
 
@@ -56,9 +56,9 @@ tackle,try,career,arcade,sport,minis,junior,7s,scrum,lineout,training,league,off
 
 ### Description (4,000 characters)
 
-Two versions, for the two ways the first version can go out (LAUNCH_CHECKLIST.md, section 4). Paste the one that matches the build being submitted; `node tools/listing.mjs` says which, from `FAN_CLUBS` in src/store.js. While no partner club has `agreed:true` in the build, the app offers the Full Game alone and has no Import Club, so a description that sells Super Fan or Import sends the reviewer looking for things the app does not have (guidelines 2.1 and 2.3.1).
+Two versions, for the two ways the first version can go out (LAUNCH_CHECKLIST.md, section 4). Paste the one that matches the build being submitted; `node tools/listing.mjs` says which, from `FAN_CLUBS` in src/store.js. While no partner club has `agreed:true` in the build, the app offers the Full Game alone and has no Add Your Team, so a description that sells Super Fan or Add Your Team sends the reviewer looking for things the app does not have (guidelines 2.1 and 2.3.1).
 
-**Without Super Fan**: no club has `agreed:true` in the build. The copy names neither Super Fan nor Import (`node tools/listing.mjs` checks).
+**Without Super Fan**: no club has `agreed:true` in the build. The copy names neither Super Fan nor Add Your Team (`node tools/listing.mjs` checks).
 
 <!-- copy:apple.description -->
 ```text
@@ -66,7 +66,7 @@ Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitc
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- The Training Ground: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
+- Skills Mini Games: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
@@ -97,7 +97,7 @@ Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitc
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- The Training Ground: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
+- Skills Mini Games: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
@@ -107,7 +107,7 @@ Full Game (a one-off unlock, no subscription)
 - Hard level
 
 Super Fan
-For supporters of a partner club. Everything in Full Game, and Import, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
+For supporters of a partner club. Everything in Full Game, and Add Your Team, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
 
 The Teams
 Twelve national sides, city sides from the leagues of England, France, Ireland, Scotland, Wales and Italy, South Africa, Australia, New Zealand and Japan, Scotland's club sides, and local clubs, as men, women or minis. Professional sides go by their city, club sides by their town, and every rating is made up.
@@ -120,7 +120,7 @@ For Parents
 - Nothing about you or your child is collected
 - A grown-up check before any purchase or link out of the game
 - The Kids level, a step below Easy
-- Plays offline; only Import and buying an unlock need a connection
+- Plays offline; only Add Your Team and buying an unlock need a connection
 ```
 
 ### What's New (first version)
@@ -156,7 +156,7 @@ Tryline Rugby Sevens is rugby sevens for your phone and tablet. Seven a side on 
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- The Training Ground: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
+- Skills Mini Games: eight short drills, from Bouncy Egg and Cones to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
@@ -166,7 +166,7 @@ Full Game (a one-off unlock, no subscription)
 - Hard level
 
 Super Fan
-For supporters of a partner club. Everything in Full Game, and Import, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
+For supporters of a partner club. Everything in Full Game, and Add Your Team, which brings your club and its league into the game from your club's web page or a tournament link. Your club's kit and name go on your Super Fan badge, and your club comes first in Career and Championship. A stated share of what we receive for every Super Fan unlock goes to the club, and the game shows that share before you buy.
 
 The Teams
 Twelve national sides, city sides from the leagues of England, France, Ireland, Scotland, Wales and Italy, South Africa, Australia, New Zealand and Japan, Scotland's club sides, and local clubs, as men, women or minis. Professional sides go by their city, club sides by their town, and every rating is made up.
@@ -179,7 +179,7 @@ For Parents
 - Nothing about you or your child is collected
 - A grown-up check before any purchase or link out of the game
 - A Kids level made for 6 to 10 year olds
-- Plays offline; only Import and buying an unlock need a connection
+- Plays offline; only Add Your Team and buying an unlock need a connection
 ```
 
 ## Before Publishing

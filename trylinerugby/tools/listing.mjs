@@ -7,7 +7,7 @@
 // store's name, and Apple's copy never says who the app is for by age (guideline 2.3.8); a share is always stated as a share of
 // what we receive; privacy.html is PRIVACY.md; the fonts line in PRIVACY.md matches how index.html loads its fonts; superfan.html
 // lists exactly the FAN_CLUBS marked agreed, with their shares, and names no other; the game's share line (storeShareLine) uses
-// superfan.html's words; Apple's copy without Super Fan (for a build with no club agreed) names neither Super Fan nor Import, and
+// superfan.html's words; Apple's copy without Super Fan (for a build with no club agreed) names neither Super Fan nor Add Your Team (the import), and
 // the copy with it (the .fan keys) is there for when one is; every page names the company with its registration; the screenshots
 // are all there at their exact sizes with no alpha channel.
 import fs from 'node:fs';
@@ -121,9 +121,9 @@ export function copyBlocks(md) {
 }
 const limitOf = key => COPY_LIMITS[key] ?? COPY_LIMITS[key.split('.').slice(0, 2).join('.')] ?? COPY_LIMITS[key.replace(/\.[^.]+\.(name|description)$/, '.$1')];
 // Copy for a build that sells Super Fan: apple.description.fan, apple.review.fan, apple.iap.fan.name and the like. The plain keys are
-// for a build with no partner club agreed (agreed:false everywhere), where the app has no Super Fan and no Import Club.
+// for a build with no partner club agreed (agreed:false everywhere), where the app has no Super Fan and no Add Your Team.
 export const isFanKey = key => /\.fan(?:\.|$)/.test(key);
-const FAN_WORDS = /\bsuper\s+fan\b|\bimport\b/i;
+const FAN_WORDS = /\bsuper\s+fan\b|\bimport\b|\badd\s+your\s+team\b/i;   // Add Your Team is the import's name in the game (2026-11-09)
 // where the fan copy sits in a file, so --launch can leave its placeholders until a club is agreed
 const fanRanges = md => [...md.matchAll(/<!--\s*copy:([a-z.]+)\s*-->\s*\n```[a-z]*\n[\s\S]*?\n```/g)].filter(m => isFanKey(m[1])).map(m => [m.index, m.index + m[0].length]);
 // The company line every page ends with: who makes the game, where it is registered, its number and its registered office (UK
@@ -236,11 +236,11 @@ if (fs.existsSync(at('privacy.html'))) ok(read('privacy.html') === privacyHtml(r
     if (b.key.startsWith('apple.')) for (const r of APPLE_AUDIENCE) ok(!r.test(b.text), `${b.file}: ${b.key} names no audience by age, which guideline 2.3.8 keeps for the Kids Category (${r.source})`);
     ok(!SHARE_OF_PRICE.test(b.text), `${b.file}: ${b.key} states a share as a share of what we receive`);
   }
-  // Super Fan in Apple's copy only where the build sells it: a reviewer sent looking for a purchase or Import Club the app does not
+  // Super Fan in Apple's copy only where the build sells it: a reviewer sent looking for a purchase or Add Your Team the app does not
   // have is a guideline 2.1 or 2.3.1 rejection (LAUNCH_CHECKLIST.md, section 4)
   for (const k of ['apple.description', 'apple.review', 'apple.description.fan', 'apple.review.fan']) ok(keys.has(k), `the listing copy has ${k}`);
-  for (const b of blocks.filter(b => b.key.startsWith('apple.') && !isFanKey(b.key))) ok(!FAN_WORDS.test(b.text), `${b.file}: ${b.key} is for a build with no Super Fan, so names neither Super Fan nor Import (those go in ${b.key}.fan)`);
-  for (const k of ['apple.description.fan', 'apple.review.fan']) { const b = blocks.find(x => x.key === k); if (b) ok(/\bSuper Fan\b/.test(b.text) && /\bImport\b/.test(b.text), `${b.file}: ${k} sells Super Fan and Import`); }
+  for (const b of blocks.filter(b => b.key.startsWith('apple.') && !isFanKey(b.key))) ok(!FAN_WORDS.test(b.text), `${b.file}: ${b.key} is for a build with no Super Fan, so names neither Super Fan nor Add Your Team (the import) (those go in ${b.key}.fan)`);
+  for (const k of ['apple.description.fan', 'apple.review.fan']) { const b = blocks.find(x => x.key === k); if (b) ok(/\bSuper Fan\b/.test(b.text) && /\bAdd Your Team\b/.test(b.text) && !/\bImport (?:Club|Data)\b/.test(b.text), `${b.file}: ${k} sells Super Fan and Add Your Team, by the game's name for it`); }
   {
     const fc = fanClubs(), agreed = !!(fc && fc.clubs && fc.clubs.some(c => c.agreed === true));
     console.log(agreed ? 'A partner club is agreed in FAN_CLUBS: submit with apple.description.fan and apple.review.fan, and attach its tryline.fan product with tryline.full'

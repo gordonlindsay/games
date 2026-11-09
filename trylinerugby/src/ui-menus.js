@@ -129,7 +129,7 @@ $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
   if (!quitArmed) { quitArmed = true; confirmArm(); $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
   if (confirmSoon()) return;
-  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Training, or Back to Career for a caller (which hears it as a quit)
+  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Skills, or Back to Career for a caller (which hears it as a quit)
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -138,10 +138,12 @@ function onOrientation() { if (uprightPhone.matches) phoneUpright(); }
 if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
-/* home. Five headlines along the bottom in equal parts (HOME_HL: Game, Championship, Career, Training Drills, Settings), the chosen
-   one's buttons above them, big, and My Team, the Locker and Import Data at the top beside the logo. The headline last chosen is
-   kept (settings.hl). The first press of a controller, and the focus, land on the chosen headline's first button: Quick Match on
-   Game. Left and Right move along the bar (the arrow keys, or a controller's ring), and pressing a headline shows its buttons. */
+/* home. Five headlines along the bottom in equal parts (HOME_HL: Quick Match, Championship, Career, Skills Mini Games, Settings),
+   the chosen one's buttons above them, big, and My Team, the Locker and Add Your Team at the top beside the logo. The headline last
+   chosen is kept (settings.hl; Quick Match's key is still 'game', so saves keep it). The first press of a controller, and the focus,
+   land on the chosen headline's first button: Play on Quick Match. Left and Right move along the bar (the arrow keys, or a
+   controller's ring), and pressing a headline shows its buttons. Two Player has no button here (the owner: "take out 2 player from
+   the menu. doesn't work for mobile"): openJoin is its way in, kept with the mode. */
 const BOOL = { sound:1, hints:1, coach:1 };
 const homeHl = () => (HOME_HL.includes(settings.hl) ? settings.hl : 'game');
 function renderHome() {
@@ -161,7 +163,7 @@ function renderHome() {
   champHome();
   renderCareerHome();
   lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
-  if (typeof importHome === 'function') importHome();      // Import Data, where Import Club would show (src/import.js)
+  if (typeof importHome === 'function') importHome();      // Add Your Team, where the team screen's Add Your Team card would show (src/import.js)
 }
 /* A note under Continue Championship or Continue Career: Bath · Round 2 of 5. The team's name (and its separator) is a span of its own
    (.rn-name); under a button the panel's width the note keeps it, and a long one ends in an ellipsis on a phone held sideways (styles.css). */
@@ -303,14 +305,15 @@ $('b-champ').addEventListener('click', () => {
 });
 $('b-cabinet').addEventListener('click', () => { renderCabinet('home-history'); showScreen('s-cabinet'); $('s-cabinet').scrollTop = 0; });
 $('cab-back').addEventListener('click', () => goHome($('b-cabinet')));
-$('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
+$('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });   // Quick Match's Play: Pick Your Team
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });
 $('t-default').addEventListener('click', () => { const t = teamDefault(); if (t) pickTeam(t); });   // My Team, picked for you in Championship; on a Home Nations Tour, the host in turn
 
-/* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
+/* two player: the join screen (openJoin: no button on the home since 2026-11-09, the mode and its checks kept), then the team screen
+   for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
    screen (the seats model is switched on here, so pads can claim), Use Keyboard gives it back, Swap Players swaps the halves and the
    Difficulty that goes with them. Each player's Difficulty is his own and is remembered. Each seat's card carries its legend: the
@@ -354,7 +357,6 @@ function startTwo() {                                    // Men | Women | Minis:
   if (!a || !b) return;
   navOnly = null; startMatch(a, b, false, { two:true, levels:twoSel.levels.slice() });
 }
-$('b-two').addEventListener('click', () => { ac(); openJoin(); });
 $('j-back').addEventListener('click', () => { setTwo(false); goHome(); });
 const saveTwoDiff = () => { settings.twoDiff = two.swapped ? twoSel.levels.slice().reverse() : twoSel.levels.slice(); save(); };   // stored by half (left, right): a fresh visit puts the halves back in order
 function swapPlayers() { twoSwap(); twoSel.levels.reverse(); saveTwoDiff(); renderJoin(); }   // Swap Players: the device, the half and the Difficulty go with the player
@@ -493,13 +495,13 @@ function renderTeams() {
   teamOwn = teamOwnPick(view);
   let html = teamList.map(teamCard).join('');
   if (!view && !nations && custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
-  if (!view && !nations) html += importCard();             // Import Club, src/import.js
+  if (!view && !nations) html += importCard();             // Add Your Team, src/import.js
   $('t-grid').innerHTML = html;
   for (const b of $('t-grid').querySelectorAll('.team[data-i]')) b.addEventListener('click', () => pickTeam(teamList[+b.dataset.i]));
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));
   const cr = $('t-create'); if (cr) cr.addEventListener('click', () => openBuilder(null));
   importBind();
-  storeTeamsRender();                                      // locks on Create Team, Edit, Import Club and the Legends (src/ui-store.js)
+  storeTeamsRender();                                      // locks on Create Team, Edit, Add Your Team and the Legends (src/ui-store.js)
   fitNames();
 }
 /* A name too long for its card steps down in size until its longest word fits. */

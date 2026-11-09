@@ -25,9 +25,9 @@ The first two or three are what most people see in search, so they are play, not
 | `02-fire.png` | On Fire | The On Fire banner as your side lights up | Get On Fire |
 | `03-lineout.png` | Set Piece | The lineout close-up, the jumpers lifted, the Jump hint | Win the Lineout |
 | `04-goal.png` | Goal Kick | A conversion: wind, the aim arrow, the meter filling | Kick for the Posts |
-| `05-drill.png` | Training Ground | The Tackling drill's side-on close-up: Position, Height, Timing, Power, Squeeze | Learn to Tackle |
+| `05-drill.png` | Skills Mini Games | The Tackling drill's side-on close-up: Position, Height, Timing, Power, Squeeze | Learn to Tackle |
 | `06-teams.png` | Team Picker | Quick Match's Pick Your Team: International, National and Local, Men, Women and Minis, My Team first, and the Local clubs' kits and ratings | Pick Your Team |
-| `07-home.png` | Home | The home screen as a new player sees it: the five headlines (Game, Championship, Career, Training Drills, Settings), Quick Match big, My Team and the Locker, and the locks on Championship and Career | Free to Play, Unlock the Full Game |
+| `07-home.png` | Home | The home screen as a new player sees it: the five headlines (Quick Match, Championship, Career, Skills Mini Games, Settings), Play big, My Team and the Locker, and the locks on Championship and Career | Free to Play, Unlock the Full Game |
 | `08-career.png` | Career (Full Game) | A player's card and his first year at his club, with the Full Game owned | Full Game: Club Seasons and Call-Ups |
 
 Google Play takes at most 8 per type; the App Store takes up to 10. Upload them in this order.

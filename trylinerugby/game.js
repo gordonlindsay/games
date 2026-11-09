@@ -279,7 +279,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-const HOME_HL = ['game', 'champ', 'career', 'drills', 'settings'];   // the home's five headlines, in the bar's order: Game, Championship, Career, Training Drills, Settings
+const HOME_HL = ['game', 'champ', 'career', 'drills', 'settings'];   // the home's five headlines, in the bar's order: Quick Match, Championship, Career, Skills Mini Games, Settings (the keys are the saves', kept from Game and Training Drills)
 let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, hl:'game', myClub:null, myNat:null };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); hl: the home's headline last chosen (HOME_HL, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, null for the default (myClubTeam, ui-menus.js)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
@@ -426,7 +426,7 @@ function cleanSettings(g) {
   if (typeof g.kids === 'boolean') settings.kids = g.kids;
   if (typeof g.kidsR === 'number' && Number.isFinite(g.kidsR) && g.kidsR >= 0 && g.kidsR <= 1) settings.kidsR = Math.round(g.kidsR*1000)/1000;   // a save from before the rating has none, and starts at 0
   if (Number.isInteger(g.kidsTop) && g.kidsTop >= 0 && g.kidsTop <= 99) settings.kidsTop = g.kidsTop;   // the run of big wins at the top of Kids (Move Up to Easy)
-  if (HOME_HL.includes(g.hl)) settings.hl = g.hl;   // the home's headline last chosen; a save from before it opens on Game
+  if (HOME_HL.includes(g.hl)) settings.hl = g.hl;   // the home's headline last chosen; a save from before it opens on Quick Match
   if (typeof g.myClub === 'string' && /^[A-Za-z0-9-]{1,24}$/.test(g.myClub)) settings.myClub = g.myClub;   // My Team's club, by its key (a built-in club's code, a made or imported team's key, a My League side's); one no longer there reads as the default (myClubTeam)
   if (typeof g.myNat === 'string' && NATIONS.some(n => n.id === g.myNat)) settings.myNat = g.myNat;   // My Team's country; a save from before My Team has neither, and is the Super Fan's club or Farnham, and England
 }
@@ -481,9 +481,9 @@ function coachMark(id) { if (!tipSeen(id)) { settings.tips.push(id); save(); } }
 /* =========================================================
    Store: the one-off unlocks, who has them, and the adapter to the app stores.
 
-   Free: Quick Match, the Training Ground, Kids, Easy and Normal, How to Play, Two Player, the Locker and My Team. Full Game
+   Free: Quick Match, Skills Mini Games, Kids, Easy and Normal, How to Play, Two Player (no home button), the Locker and My Team. Full Game
    (tryline.full) adds Championship, Career, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
-   Game and Import, and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
+   Game and Add Your Team (the import), and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
    Career and Championship. No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's
    own field (store), and Restore Purchases reads it back from the App Store or Google Play.
 
@@ -572,7 +572,7 @@ function storeOffers(f) {
   for (const c of FAN_CLUBS) if (storeShareOk(c) && storeTeamOf(c) && !storeBought.includes(c.product) && (f == null || !storeHas(f))) out.push({ id:c.product, kind:'fan', club:c });
   return out;
 }
-/* A locked control is shown only where something unlocks it: in the app, Import Club stays away until a Super Fan club is on sale. */
+/* A locked control is shown only where something unlocks it: in the app, Add Your Team stays away until a Super Fan club is on sale. */
 const storeOffered = f => storeHas(f) || !storeNative() || storeOffers(f).length > 0;
 
 /* ---------- the Super Fan's club, first ---------- */
@@ -7443,7 +7443,7 @@ $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
   if (!quitArmed) { quitArmed = true; confirmArm(); $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
   if (confirmSoon()) return;
-  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Training, or Back to Career for a caller (which hears it as a quit)
+  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Skills, or Back to Career for a caller (which hears it as a quit)
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -7452,10 +7452,12 @@ function onOrientation() { if (uprightPhone.matches) phoneUpright(); }
 if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
-/* home. Five headlines along the bottom in equal parts (HOME_HL: Game, Championship, Career, Training Drills, Settings), the chosen
-   one's buttons above them, big, and My Team, the Locker and Import Data at the top beside the logo. The headline last chosen is
-   kept (settings.hl). The first press of a controller, and the focus, land on the chosen headline's first button: Quick Match on
-   Game. Left and Right move along the bar (the arrow keys, or a controller's ring), and pressing a headline shows its buttons. */
+/* home. Five headlines along the bottom in equal parts (HOME_HL: Quick Match, Championship, Career, Skills Mini Games, Settings),
+   the chosen one's buttons above them, big, and My Team, the Locker and Add Your Team at the top beside the logo. The headline last
+   chosen is kept (settings.hl; Quick Match's key is still 'game', so saves keep it). The first press of a controller, and the focus,
+   land on the chosen headline's first button: Play on Quick Match. Left and Right move along the bar (the arrow keys, or a
+   controller's ring), and pressing a headline shows its buttons. Two Player has no button here (the owner: "take out 2 player from
+   the menu. doesn't work for mobile"): openJoin is its way in, kept with the mode. */
 const BOOL = { sound:1, hints:1, coach:1 };
 const homeHl = () => (HOME_HL.includes(settings.hl) ? settings.hl : 'game');
 function renderHome() {
@@ -7475,7 +7477,7 @@ function renderHome() {
   champHome();
   renderCareerHome();
   lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
-  if (typeof importHome === 'function') importHome();      // Import Data, where Import Club would show (src/import.js)
+  if (typeof importHome === 'function') importHome();      // Add Your Team, where the team screen's Add Your Team card would show (src/import.js)
 }
 /* A note under Continue Championship or Continue Career: Bath · Round 2 of 5. The team's name (and its separator) is a span of its own
    (.rn-name); under a button the panel's width the note keeps it, and a long one ends in an ellipsis on a phone held sideways (styles.css). */
@@ -7617,14 +7619,15 @@ $('b-champ').addEventListener('click', () => {
 });
 $('b-cabinet').addEventListener('click', () => { renderCabinet('home-history'); showScreen('s-cabinet'); $('s-cabinet').scrollTop = 0; });
 $('cab-back').addEventListener('click', () => goHome($('b-cabinet')));
-$('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
+$('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });   // Quick Match's Play: Pick Your Team
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });
 $('t-default').addEventListener('click', () => { const t = teamDefault(); if (t) pickTeam(t); });   // My Team, picked for you in Championship; on a Home Nations Tour, the host in turn
 
-/* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
+/* two player: the join screen (openJoin: no button on the home since 2026-11-09, the mode and its checks kept), then the team screen
+   for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
    screen (the seats model is switched on here, so pads can claim), Use Keyboard gives it back, Swap Players swaps the halves and the
    Difficulty that goes with them. Each player's Difficulty is his own and is remembered. Each seat's card carries its legend: the
@@ -7668,7 +7671,6 @@ function startTwo() {                                    // Men | Women | Minis:
   if (!a || !b) return;
   navOnly = null; startMatch(a, b, false, { two:true, levels:twoSel.levels.slice() });
 }
-$('b-two').addEventListener('click', () => { ac(); openJoin(); });
 $('j-back').addEventListener('click', () => { setTwo(false); goHome(); });
 const saveTwoDiff = () => { settings.twoDiff = two.swapped ? twoSel.levels.slice().reverse() : twoSel.levels.slice(); save(); };   // stored by half (left, right): a fresh visit puts the halves back in order
 function swapPlayers() { twoSwap(); twoSel.levels.reverse(); saveTwoDiff(); renderJoin(); }   // Swap Players: the device, the half and the Difficulty go with the player
@@ -7807,13 +7809,13 @@ function renderTeams() {
   teamOwn = teamOwnPick(view);
   let html = teamList.map(teamCard).join('');
   if (!view && !nations && custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
-  if (!view && !nations) html += importCard();             // Import Club, src/import.js
+  if (!view && !nations) html += importCard();             // Add Your Team, src/import.js
   $('t-grid').innerHTML = html;
   for (const b of $('t-grid').querySelectorAll('.team[data-i]')) b.addEventListener('click', () => pickTeam(teamList[+b.dataset.i]));
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));
   const cr = $('t-create'); if (cr) cr.addEventListener('click', () => openBuilder(null));
   importBind();
-  storeTeamsRender();                                      // locks on Create Team, Edit, Import Club and the Legends (src/ui-store.js)
+  storeTeamsRender();                                      // locks on Create Team, Edit, Add Your Team and the Legends (src/ui-store.js)
   fitNames();
 }
 /* A name too long for its card steps down in size until its longest word fits. */
@@ -8342,7 +8344,7 @@ function cupEntryHtml(e, i, tag) {
      links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
      User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
      browser on another site could not read its pages anyway.
-   - The Import Club card and its card (#m-import) on the team screen, and the My League list.
+   - Add Your Team: the team screen's card and the home's button, their card (#m-import), and the My League list.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -9088,11 +9090,11 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-/* The Import Club card: beside Create Team while there is room for a team, and kept with four made while a league is
+/* The team screen's Add Your Team card: beside Create Team while there is room for a team, and kept with four made while a league is
    saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is on sale (storeOffered). */
 const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
-function importCard() { return importShown() ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
-/* The home's Import Data, at the top beside My Team: the same card, shown where Import Club would be (room for a team, or a league to
+function importCard() { return importShown() ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Add Your Team</span></button>` : ''; }
+/* The home's Add Your Team, at the top beside My Team: the same card, shown where the team screen's would be (room for a team, or a league to
    refresh or remove, and in the app only once a Super Fan club is on sale), with its lock while Import is locked. */
 function importHome() {
   const b = $('b-import'), on = importShown();
@@ -9104,10 +9106,10 @@ function importBind() {
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
 }
 
-/* ---------- the Import Club card ----------
+/* ---------- the Add Your Team card ----------
    web: the app is needed. link: paste, then Import (a grown-up check first). busy: fetching. preview: the club, its
    colours and the league's size, then Save. mine: a club saved, Make This My Team | Not Now. The card hides while the grown-up
-   check is up, so the two never stack. from: 'home' (Import Data) or 'teams' (Import Club), where it closes to. */
+   check is up, so the two never stack. from: 'home' (the home's button) or 'teams' (the team screen's card), where it closes to. */
 let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0, from:'teams', club:null, sides:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
 const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
@@ -9134,7 +9136,7 @@ function importOpen() {
 function importClose() {
   importUi.token++; $('m-import').hidden = true;
   if (importUi.from !== 'home') { renderTeams(); return; }
-  renderHome();                                            // My Team and Import Data as they now are, the focus back on Import Data
+  renderHome();                                            // My Team and Add Your Team as they now are, the focus back on Add Your Team
   const b = $('b-import'); if (b && !b.hidden && typeof b.focus === 'function') b.focus();
 }
 let importGateHook = null;                               // the tests' stand-in for the grown-up check
@@ -9193,7 +9195,7 @@ function importOffer(make) {                                 // the offer answer
 function importRender() {
   const u = importUi, s = u.step, web = s === 'web', busy = s === 'busy', pre = s === 'preview', mine = s === 'mine';
   const c = pre && u.data.club, sides = pre ? importSides(u.data) : [], n = sides.length;
-  $('im-title').textContent = mine ? u.club.name : web ? 'Import Works in the Try Line App' : pre ? (c ? importShort(c.name) : 'My League') : 'Paste Your Link';
+  $('im-title').textContent = mine ? u.club.name : web ? 'Works in the Try Line App' : pre ? (c ? importShort(c.name) : 'My League') : 'Paste Your Link';
   $('im-mine').hidden = !mine; $('im-row').hidden = mine;
   $('im-back').textContent = u.from === 'home' ? 'Back to Menu' : 'Back to Teams';
   $('im-line').hidden = !web;
@@ -9246,7 +9248,7 @@ $('im-paste').addEventListener('click', async () => {
    flag, a saved diff means what it always did, an old save (no flag) loads exactly as it was, and anything that reads settings.diff
    or levelOf sees Easy, the nearest level. The flag counts only with diff 0, so a hand-edited kids:true on Hard is just Hard.
    The levers below act only in a match newMatch was asked to play as Kids (opts.kids, which startMatch passes): one player, on
-   Easy, never AI v AI, the demo or two player, and in the Training Ground only the Kicking and Driving drills (practice.js). Every
+   Easy, never AI v AI, the demo or two player, and in Skills Mini Games only the Kicking and Driving drills (practice.js). Every
    one reads M.kids, so the sims, the demo and the balance tools run the same numbers and the same random draws as before. */
 /* The Kids rating, r: one hidden number from 0, where every child starts, to 1, the ceiling, which is still a little easier than
    Easy. Each lever that moves is a pair [start, ceiling] in KIDS_SCALE, and kidsTune(r) puts KIDS on the straight line between them
@@ -9482,15 +9484,15 @@ window.addEventListener('keydown', e => {                  // while the check is
 /* =========================================================
    Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge on the home,
    and the links that leave the game. The rules are in src/store.js.
-   - A locked control (Championship and its competitions, Career, Create Team and Edit, Hard, Import Club and Import Data, a Legends
+   - A locked control (Championship and its competitions, Career, Create Team and Edit, Hard, Add Your Team on the home and the team screen, a Legends
      side the Locker has unlocked) keeps its place and its label, with a small
      lock (.locked), and opens the Unlock card instead. A championship or career under way keeps its note: it is saved, only locked.
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
      first. The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
    ========================================================= */
-const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Import Club', legends:'Legends' };
-const STORE_LINE = { full:'Championship · Career · Create Team · Hard · Legends', fan:'Full Game · Import Club · Super Fan Badge' };
+const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Add Your Team', legends:'Legends' };
+const STORE_LINE = { full:'Championship · Career · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
   failed:'The purchase did not go through.',
@@ -9540,7 +9542,7 @@ function storeRender() {
   if (c && t) { b.innerHTML = jersey(t) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
   else if (!b.hidden) { b.hidden = true; $('home-tag').hidden = false; }
 }
-function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Import Club, a Legends side
+function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Add Your Team, a Legends side
   storeMark($('t-create'), 'create');
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) storeMark(b, 'create');
   storeMark($('t-import'), 'import');
@@ -9607,7 +9609,7 @@ function storeCardRender() {
   $('st-have').innerHTML = have.join(''); $('st-have').hidden = !have.length;
   const link = storeAppLink();
   $('st-offers').innerHTML = app ? storeOffers(grown ? null : u.feature).map(o => storeOfferHtml(o, u.busy)).join('')
-    : link ? `<button class="btn primary" id="st-app">Get the App${u.feature === 'import' ? '' : `<small class="hsub">${STORE_LINE.full}</small>`}</button>` : '';   // Import is the Super Fan's, not the Full Game's
+    : link ? `<button class="btn primary" id="st-app">Get the App${u.feature === 'import' ? '' : `<small class="hsub">${STORE_LINE.full}</small>`}</button>` : '';   // Add Your Team is the Super Fan's, not the Full Game's
   for (const b of $('st-offers').querySelectorAll('[data-buy]')) b.addEventListener('click', () => storeBuyAsk(b.dataset.buy));
   const ga = $('st-offers').querySelector ? $('st-offers').querySelector('#st-app') : null;
   if (ga) ga.addEventListener('click', () => storeLeave(link));
@@ -9693,7 +9695,7 @@ window.addEventListener('keydown', e => {  // Escape closes the card (the grown-
   storeClose(); if (e.preventDefault) e.preventDefault();
 });
 /* =========================================================
-   Training Ground drills.
+   The drills: Skills Mini Games, and the career's Train.
    Bouncy Egg, Pass Around the Circle, Cones and Tackling each run in a training space of their own: the pitch, the kits and
    the controls of a match with none of its flow. While practice.space is set, update() skips matchUpdate and the drill moves
    the men and the ball itself (M.phase reads 'drill', so nothing in the HUD or the hints takes it for open play). Kicking
@@ -10509,7 +10511,7 @@ const drillIconSvg = id => `<svg viewBox="0 0 40 40" aria-hidden="true">${DRILL_
 const DRILL_STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.4l-6.1 3.5 1.5-6.8L2.2 9.5l6.9-.7z"/></svg>';
 function drillStarsHtml(n) { let s = ''; for (let i = 0; i < 3; i++) s += `<i class="${i < n ? 'on' : ''}">${DRILL_STAR}</i>`; return s; }
 /* =========================================================
-   Training Ground: the drill picker (the home's Training Drills), the ready and result card, and the rules every drill keeps.
+   Skills Mini Games: the drill picker (the home's Skills Mini Games headline), the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
    practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
    Career, or leaveLabel; Back or Escape on the card; Pause then Back to Career) restores the settings exactly as leaving does,
@@ -10558,13 +10560,13 @@ function practiceHandBack() {                              // a caller's drill e
   fn(res);
 }
 function practiceLeave() { if (practice && practice.opts) { practiceHandBack(); return; } practiceRestore(); exitMatch(); }
-function practiceChoose() {                                // Back to Training: the home, on Training Drills where every drill is picked, the drill just played in focus
+function practiceChoose() {                                // Back to Skills: the home, on Skills Mini Games where every drill is picked, the drill just played in focus
   if (practice && practice.opts) { practiceHandBack(); return; }
   const id = practice && practice.id;
   practiceRestore();
   setTwo(false); startDemo();
   $('hud').hidden = $('controls').hidden = $('b-pause').hidden = true;
-  goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings, the headline included: it was picked on Training Drills
+  goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings, the headline included: it was picked on Skills Mini Games
 }
 function practiceStart(id, opts) {
   const drill = PRACTICE_DRILLS.find(d => d.id === id); if (!drill) return;
@@ -10601,8 +10603,9 @@ function practiceStart(id, opts) {
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
 }
-const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training');   // the card's leave button and the pause card's
-function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
+const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Skills');   // the card's leave button and the pause card's
+function practiceLeaveLabel() {                            // Back to Skills on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
+  $('pr-eyebrow').textContent = practice.opts ? 'Training' : 'Skills Mini Games';   // the place it came from: the home's Skills Mini Games, or a caller's training (the career's Train)
   $('pr-select').textContent = practiceBackText();
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }

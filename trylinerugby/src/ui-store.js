@@ -1,15 +1,15 @@
 /* =========================================================
    Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge on the home,
    and the links that leave the game. The rules are in src/store.js.
-   - A locked control (Championship and its competitions, Career, Create Team and Edit, Hard, Import Club and Import Data, a Legends
+   - A locked control (Championship and its competitions, Career, Create Team and Edit, Hard, Add Your Team on the home and the team screen, a Legends
      side the Locker has unlocked) keeps its place and its label, with a small
      lock (.locked), and opens the Unlock card instead. A championship or career under way keeps its note: it is saved, only locked.
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
      first. The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
    ========================================================= */
-const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Import Club', legends:'Legends' };
-const STORE_LINE = { full:'Championship · Career · Create Team · Hard · Legends', fan:'Full Game · Import Club · Super Fan Badge' };
+const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Add Your Team', legends:'Legends' };
+const STORE_LINE = { full:'Championship · Career · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
   failed:'The purchase did not go through.',
@@ -59,7 +59,7 @@ function storeRender() {
   if (c && t) { b.innerHTML = jersey(t) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
   else if (!b.hidden) { b.hidden = true; $('home-tag').hidden = false; }
 }
-function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Import Club, a Legends side
+function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Add Your Team, a Legends side
   storeMark($('t-create'), 'create');
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) storeMark(b, 'create');
   storeMark($('t-import'), 'import');
@@ -126,7 +126,7 @@ function storeCardRender() {
   $('st-have').innerHTML = have.join(''); $('st-have').hidden = !have.length;
   const link = storeAppLink();
   $('st-offers').innerHTML = app ? storeOffers(grown ? null : u.feature).map(o => storeOfferHtml(o, u.busy)).join('')
-    : link ? `<button class="btn primary" id="st-app">Get the App${u.feature === 'import' ? '' : `<small class="hsub">${STORE_LINE.full}</small>`}</button>` : '';   // Import is the Super Fan's, not the Full Game's
+    : link ? `<button class="btn primary" id="st-app">Get the App${u.feature === 'import' ? '' : `<small class="hsub">${STORE_LINE.full}</small>`}</button>` : '';   // Add Your Team is the Super Fan's, not the Full Game's
   for (const b of $('st-offers').querySelectorAll('[data-buy]')) b.addEventListener('click', () => storeBuyAsk(b.dataset.buy));
   const ga = $('st-offers').querySelector ? $('st-offers').querySelector('#st-app') : null;
   if (ga) ga.addEventListener('click', () => storeLeave(link));

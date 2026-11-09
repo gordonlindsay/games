@@ -1,5 +1,5 @@
-// The home: five headlines along the bottom (Game, Championship, Career, Training Drills, Settings) and the chosen one's buttons, My Team,
-// the Locker and Import Data at the top, the competitions by tier with their team lists, the Make This My Team offer after an import, the
+// The home: five headlines along the bottom (Quick Match, Championship, Career, Skills Mini Games, Settings) and the chosen one's buttons,
+// My Team, the Locker and Add Your Team at the top, the competitions by tier with their team lists, the Make This My Team offer after an import, the
 // Legends behind the Full Game, and the fit of every state at 844x390 and 667x375 (README, Home).   node tools/home.mjs   Exits 1 on any failure.
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 process.env.SEED ??= '61';
@@ -56,7 +56,7 @@ const saved = () => JSON.parse(memory['tryline.v1']);
 const MORE = ['s-cup', 's-cabinet', 's-career-new', 's-career-club', 's-career', 's-locker'];   // screens the stand-in DOM does not list: showScreen hides and shows them too
 { const qsa = document.querySelectorAll; document.querySelectorAll = sel => (sel === '.screen' ? qsa(sel).concat(MORE.map(id => $(id))) : qsa(sel)); for (const id of MORE) $(id).hidden = true; }
 const shown = () => ['s-home', 's-teams', 's-hub', 's-help', 's-join', 's-build', ...MORE].find(id => !$(id).hidden);
-const fresh = () => {                                       // a new game on the web as shipped, the home on Game
+const fresh = () => {                                       // a new game on the web as shipped, the home on Quick Match
   S.setNative(null); S.setTier(null); S.setBought([]); S.setStarted(false);
   if (!$('m-store').hidden) S.close();
   X.setChamp(null); K.set(null); K.setHistory([]); C.set(null); I.setLeague(null); X.restore({ custom:[] });
@@ -67,31 +67,33 @@ const fresh = () => {                                       // a new game on the
 // 1. the markup: the bar, each headline's buttons, the top row, Title Case, no arrow
 {
   const bar = [...home.matchAll(/<button class="btn hl" id="hl-([a-z]+)" data-hl="\1" role="tab" aria-controls="hp-\1" aria-selected="(?:true|false)"><svg viewBox="0 0 24 24" aria-hidden="true">[\s\S]*?<\/svg><span class="hl-name">([^<]+)<\/span><\/button>/g)];
-  ok(json(bar.map(m => [m[1], m[2]])) === json([['game', 'Game'], ['champ', 'Championship'], ['career', 'Career'], ['drills', 'Training Drills'], ['settings', 'Settings']]) && json(H.HL) === json(bar.map(m => m[1])), `the bar: Game | Championship | Career | Training Drills | Settings, each a drawn picture and its name, in that order (${bar.map(m => m[2]).join(' | ')})`);
+  ok(json(bar.map(m => [m[1], m[2]])) === json([['game', 'Quick Match'], ['champ', 'Championship'], ['career', 'Career'], ['drills', 'Skills Mini Games'], ['settings', 'Settings']]) && json(H.HL) === json(bar.map(m => m[1])), `the bar: Quick Match | Championship | Career | Skills Mini Games | Settings, each a drawn picture and its name, in that order, the saves' keys kept (game, drills) (${bar.map(m => m[2]).join(' | ')})`);
   ok(/<nav class="hl-bar" id="hl-bar" role="tablist" aria-label="Menu">/.test(home) && home.indexOf('id="hl-bar"') > home.indexOf('id="hl-panels"'), 'the bar is a tablist, under the panels');
   ok(/\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/.test(css) && /\.btn\.hl\{position:relative;display:flex;flex-direction:column;[^}]*min-height:54px/.test(css), 'five equal parts, each 44px and more');
   const panel = id => (home.match(new RegExp(`<div class="hl-panel hp-${id}[^"]*" id="hp-${id}" role="tabpanel" aria-labelledby="hl-${id}"( hidden)?>`)) || [])[0];
-  ok(H.HL.every(panel) && !/ hidden/.test(panel('game')) && ['champ', 'career', 'drills', 'settings'].every(id => / hidden/.test(panel(id))), 'a panel a headline, Game\'s showing before a line of script runs');
-  ok(/<div class="hl-panel hp-game" id="hp-game"[^>]*>\s*<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>\s*<button class="btn desk-only" id="b-two">2 Players<\/button>\s*<\/div>/.test(home), 'Game: Quick Match, the primary, and 2 Players where Two Player showed (computers only: desk-only, as before)');
+  ok(H.HL.every(panel) && !/ hidden/.test(panel('game')) && ['champ', 'career', 'drills', 'settings'].every(id => / hidden/.test(panel(id))), 'a panel a headline, Quick Match\'s showing before a line of script runs');
+  ok(/<div class="hl-panel hp-game" id="hp-game"[^>]*>\s*<button class="btn primary" id="b-quick" autofocus>Play<\/button>\s*<\/div>/.test(home) && /\.hl-panel\.hp-game \.btn\.primary\{min-height:128px;font-size:56px/.test(css), 'Quick Match: one big Play button, the primary, bigger than any other panel\'s (no 2 Players under it, on any device)');
+  ok(!/id="b-two"|2 Players|Two Player/.test(home) && !/\$\('b-two'\)/.test(menus) && /^function openJoin\(\) \{/m.test(menus) && typeof D.openJoin === 'function', '2 Players has left the home on every device: no button, no listener; Two Player keeps its way in, openJoin (window.__tryline.debug.openJoin)');
   ok(/<div class="hl-go" id="hc-go" hidden>\s*<button class="btn primary" id="b-champ">Continue Championship<\/button>\s*<p class="resume-note" id="champ-note" hidden><\/p>\s*<\/div>\s*<div class="hc-new" id="hc-new">\s*<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>\s*<\/div>\s*<button class="btn" id="b-cabinet" hidden>Trophy Cabinet<\/button>/.test(home), 'Championship: Continue (when one is saved) first, else the tiers and their competitions; the Trophy Cabinet under them');
   ok(/<div class="hl-panel hp-career" id="hp-career"[^>]*>\s*<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(home), 'Career: New Career or Continue Career, with its note');
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
-  ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-pass">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<\/div>/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(css), `Training Drills: every drill as a big button with its picture (${drills.length}), then How to Play, three rows of three`);
+  ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-pass">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<\/div>/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/.test(css), `Skills Mini Games: every drill as a big button with its picture (${drills.length}), then How to Play, three rows of three`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
   ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half']) && /<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<\/div>\s*<\/div>\s*<nav/.test(home), `Settings: ${sets.join(', ')}, then Grown-Ups (where the store is live)`);
-  ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my" aria-label="My Team"><span class="lbl">My Team<\/span><span class="my-kits" id="my-kits"><\/span><\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Import Data<\/button>\s*<\/div>/.test(home), 'the top row: My Team (its kits and names), Locker, Import Data');
+  ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my" aria-label="My Team"><span class="lbl">My Team<\/span><span class="my-kits" id="my-kits"><\/span><\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(home), 'the top row: My Team (its kits and names), Locker, Add Your Team');
   ok(/<header class="mark">\s*<h1 class="word"[\s\S]*?<\/h1>\s*<p class="eyebrow" id="home-tag">Mobile Rugby&nbsp;· Sevens<\/p>[\s\S]*?<div class="app-tools" id="app-tools" hidden>[\s\S]*?id="b-install" hidden>Install Game<\/button>\s*<button class="app-action" id="b-update" hidden>Update Game<\/button>\s*<\/div>\s*<\/header>/.test(home), 'the logo stays, with Install Game and Update Game as small app actions under it');
   const text = s => s.replace(/<[^>]+>/g, '').trim();
   const labels = [...home.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map(m => text(m[1])).filter(Boolean).concat([...home.matchAll(/<span class="lbl">([^<]+)<\/span>/g)].map(m => m[1]));
   ok(labels.length >= 30 && labels.every(titled), `every label on the home is Title Case (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
   ok(!/[←-⇿▲-◅—]|<summary|<details/.test(home + menus.slice(menus.indexOf('/* home.'), menus.indexOf('/* two player'))), 'no arrow glyph, no em dash and no disclosure on the home');
   ok(!/id="t-comp"|id="s-practice"|id="b-more"|id="b-practice"|class="row2 home-row"|class="row2 learn-row"/.test(html), 'the old rows are gone: no competition row on the team screen, no Training Ground screen, no More Settings');
+  ok(!/>Game<|Training Drills|Training Ground|Import Data|Import Club|Back to Training/.test(html) && !/'Import Club'|'Back to Training'|Training Drills|Import Data/.test(menus + fs.readFileSync(new URL('../src/import.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/practice.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')), 'the old names are gone from the markup and the screens\' code: Game, Training Drills, Training Ground, Import Data, Import Club, Back to Training');
 }
 
 // 2. the headlines: shown one at a time, remembered, validated, moved along with the arrow keys
 {
   fresh();
-  ok(D.settings().hl === 'game' && !$('hp-game').hidden && ['champ', 'career', 'drills', 'settings'].every(k => $('hp-' + k).hidden), 'a new game opens on Game');
+  ok(D.settings().hl === 'game' && !$('hp-game').hidden && ['champ', 'career', 'drills', 'settings'].every(k => $('hp-' + k).hidden), 'a new game opens on Quick Match');
   for (const k of H.HL) {
     $('hl-' + k).click();
     ok(D.settings().hl === k && !$('hp-' + k).hidden && H.HL.filter(o => o !== k).every(o => $('hp-' + o).hidden) && saved().settings.hl === k, `pressing ${k} shows its buttons only, and is saved`);
@@ -116,11 +118,11 @@ const fresh = () => {                                       // a new game on the
 // 3. each headline's buttons go where they did
 {
   fresh();
-  $('b-quick').click(); ok(shown() === 's-teams' && D.pickMode() === 'quick', 'Quick Match opens the team screen');
-  D.goHome(); $('b-two').click(); ok(shown() === 's-join', '2 Players opens the join screen'); $('j-back').click();
+  $('b-quick').click(); ok(shown() === 's-teams' && D.pickMode() === 'quick' && $('t-title').textContent === 'Pick Your Team' && $('t-eyebrow').textContent === 'Quick Match', 'Play opens Quick Match\'s Pick Your Team');
+  D.goHome(); D.openJoin(); ok(shown() === 's-join', 'Two Player\'s own entry, openJoin, still opens the join screen'); $('j-back').click();
   H.select('drills');
   T.drills.DRILLS.forEach(d => { $('pr-' + d.id).click(); ok(T.drills.state() && T.drills.state().id === d.id, `${d.name} starts its drill`); T.practice.choose(); });
-  ok(shown() === 's-home' && D.settings().hl === 'drills', 'Back to Training: the home, on Training Drills');
+  ok(shown() === 's-home' && D.settings().hl === 'drills', 'Back to Skills: the home, on Skills Mini Games');
   $('b-help').click(); ok(shown() === 's-help', 'How to Play opens its screen'); $('h-back').click(); ok(shown() === 's-home', 'and comes back');
   $('b-locker').click(); ok(shown() === 's-locker', 'the Locker opens'); $('lk-back').click();
   H.select('career'); $('b-career').click(); ok(shown() === 's-career-new', 'New Career opens New Player'); D.goHome();
@@ -144,16 +146,16 @@ const fresh = () => {                                       // a new game on the
   fresh();
 }
 
-// 4. the gates: every paid entry keeps its Full Game gate and lock; Game, Training Drills, Settings, the Locker and My Team stay free
+// 4. the gates: every paid entry keeps its Full Game gate and lock; Quick Match, Skills Mini Games, Settings, the Locker and My Team stay free
 {
   fresh(); S.setTier('free'); D.goHome();
-  ok(['hl-champ', 'hl-career', 'b-career'].every(id => $(id).classList.contains('locked')) && ['hl-game', 'hl-drills', 'hl-settings', 'b-quick', 'b-two', 'b-my', 'b-locker', 'b-help'].every(id => !$(id).classList.contains('locked')), 'free: the Championship and Career headlines and New Career locked; Game, Training Drills, Settings, My Team and the Locker not');
-  ok($('b-import').classList.contains('locked'), 'Import Data locked: it is the Super Fan\'s');
+  ok(['hl-champ', 'hl-career', 'b-career'].every(id => $(id).classList.contains('locked')) && ['hl-game', 'hl-drills', 'hl-settings', 'b-quick', 'b-my', 'b-locker', 'b-help'].every(id => !$(id).classList.contains('locked')) && !/id="b-two"/.test(html), 'free: the Championship and Career headlines and New Career locked; Quick Match and its Play, Skills Mini Games, Settings, My Team and the Locker not (and no 2 Players to lock)');
+  ok($('b-import').classList.contains('locked'), 'Add Your Team locked: it is the Super Fan\'s');
   ok(/if \(seg && seg\.children\[3\]\) storeMark\(seg\.children\[3\], 'hard'\);/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')) && /if \(key === 'diff' && i === 3 && !storeGate\('hard'/.test(menus), 'Hard keeps its lock and its gate in Settings');
   H.champPick('eng'); ok(!$('m-store').hidden && S.ui().feature === 'champ' && shown() === 's-home', 'a competition opens the Unlock card, not the team screen'); S.close();
   $('b-career').click(); ok(!$('m-store').hidden && S.ui().feature === 'career', 'New Career opens the Unlock card'); S.close();
-  $('b-import').click(); ok(!$('m-store').hidden && S.ui().feature === 'import' && $('m-import').hidden, 'Import Data opens the Unlock card'); S.close();
-  $('b-quick').click(); ok($('m-store').hidden && shown() === 's-teams', 'Quick Match is free'); D.goHome();
+  $('b-import').click(); ok(!$('m-store').hidden && S.ui().feature === 'import' && $('m-import').hidden && $('st-title').textContent === 'Add Your Team', 'Add Your Team opens the Unlock card, named Add Your Team'); S.close();
+  $('b-quick').click(); ok($('m-store').hidden && shown() === 's-teams', 'Quick Match\'s Play is free'); D.goHome();
   $('b-my').click(); ok($('m-store').hidden && shown() === 's-teams' && D.pickMode() === 'my', 'My Team is free'); D.goHome();
   $('b-locker').click(); ok($('m-store').hidden && shown() === 's-locker', 'the Locker is free'); D.goHome();
   $('pr-cones').click(); ok($('m-store').hidden && T.drills.state(), 'a drill is free'); T.practice.choose();
@@ -189,7 +191,7 @@ const fresh = () => {                                       // a new game on the
   ok(X.champ().teams[X.champ().user].id === 'RSA' && !X.champ().teams.some(t => X.SIX_NATIONS.includes(t.id)), 'or change it there: South Africa plays the other six');
   X.setChamp(null); D.goHome();
   H.champPick('world');
-  ok(K.comp() === 'world' && $('t-title').textContent === 'Pick Your Nation' && $('t-eyebrow').textContent === 'World Cup' && cards() === 12 && $('t-default').textContent === 'Play as England' && !$('t-default').hidden && !/Create Team|Import Club/.test(grid()), 'World Cup: the twelve, England picked for you');
+  ok(K.comp() === 'world' && $('t-title').textContent === 'Pick Your Nation' && $('t-eyebrow').textContent === 'World Cup' && cards() === 12 && $('t-default').textContent === 'Play as England' && !$('t-default').hidden && !/Create Team|Add Your Team/.test(grid()), 'World Cup: the twelve, England picked for you');
   $('t-default').click();
   ok(K.get() && K.get().id === 'world' && K.get().teams[K.get().user].id === 'ENG' && shown() === 's-cup', 'Play as England starts England\'s World Cup');
   K.set(null); D.goHome();
@@ -233,11 +235,11 @@ const fresh = () => {                                       // a new game on the
   ok(/Farnham/.test($('my-kits').innerHTML) && /England/.test($('my-kits').innerHTML) && /--kit:/.test($('my-kits').innerHTML), 'the home\'s My Team: both kits and names, on one button');
   $('b-my').click();
   ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && X.teamPool() === 'sur' && !$('t-tier').hidden && !$('t-yours').hidden && $('t-change').hidden && $('t-default').hidden, 'My Team: Pick Your Club on its list, the tiers to look anywhere, the bar showing both');
-  ok(/data-i="0" aria-pressed="true">/.test($('t-grid').innerHTML) && /class="team picked"/.test($('t-grid').innerHTML) && /Create Team/.test($('t-grid').innerHTML), 'Farnham marked, the cards to pick from, Create Team and Import Club among them');
+  ok(/data-i="0" aria-pressed="true">/.test($('t-grid').innerHTML) && /class="team picked"/.test($('t-grid').innerHTML) && /Create Team/.test($('t-grid').innerHTML) && /<span class="tname">Add Your Team<\/span>/.test($('t-grid').innerHTML), 'Farnham marked, the cards to pick from, Create Team and Add Your Team among them');
   X.tierPick(1); X.poolPick('eng'); H.myPick(X.ENGLAND[0]);
   ok(D.settings().myClub === 'BTH' && saved().settings.myClub === 'BTH' && shown() === 's-teams' && /Bath/.test($('t-mine').innerHTML), 'a club picked: Bath, saved, the screen stays');
   X.tierPick(0);
-  ok($('t-title').textContent === 'Pick Your Country' && (($('t-grid').innerHTML.match(/class="team[ "]/g) || []).length === 12) && !/Create Team|Import Club/.test($('t-grid').innerHTML), 'International: Pick Your Country, the category\'s twelve and nothing else');
+  ok($('t-title').textContent === 'Pick Your Country' && (($('t-grid').innerHTML.match(/class="team[ "]/g) || []).length === 12) && !/Create Team|Add Your Team/.test($('t-grid').innerHTML), 'International: Pick Your Country, the category\'s twelve and nothing else');
   H.myPick(X.natList('men').find(t => t.id === 'WAL'));
   ok(D.settings().myNat === 'WAL' && D.settings().myClub === 'BTH' && /Wales/.test($('t-mine').innerHTML), 'a nation picked: the country, the club kept');
   X.catPick('women'); H.myPick(X.natList('women').find(t => t.id === 'CDN')); X.catPick('men');
@@ -261,7 +263,7 @@ const fresh = () => {                                       // a new game on the
   H.myPick(I.league().teams[0]); ok(D.settings().myClub === I.league().teams[0].key && H.myPool() === 'my', 'a side of My League can be My Team');
   I.setLeague(null); ok(H.myClub() === X.CLUBS[0], 'its league removed: the default');
   fresh();
-  // Quick Match: offered first in Player 1's list, marked, never picked or started
+  // Quick Match (its Play): offered first in Player 1's list, marked, never picked or started
   D.settings().myClub = 'BTH'; D.settings().myNat = 'WAL';
   const demo = T.M;
   $('b-quick').click();
@@ -276,7 +278,7 @@ const fresh = () => {                                       // a new game on the
   ok(D.quickPick && false || $('t-title').textContent === 'Pick Opponent' && /Guildford/.test($('t-mine').innerHTML) && T.M === demo, 'another side picked: his; now the opponent');
   X.tierPick(1); X.poolPick('eng');
   ok(/>Bath</.test(first()) === true && !/My Team/.test($('t-grid').innerHTML), 'the opponents\' list: in its own order, nothing marked');
-  // 2 Players: Player 1's list only
+  // 2 Players (off the home; its own entry, openJoin): Player 1's list only
   D.openJoin(); D.openTeams('two');
   ok(/>Bath</.test(first()) && /My Team/.test(first()) && D.twoSel().picking === 0 && !D.twoSel().teams[1], '2 Players: Bath first in Player 1\'s list, marked');
   D.pickTeam(X.CLUBS[0]);
@@ -299,12 +301,12 @@ const fresh = () => {                                       // a new game on the
   fresh();
 }
 
-// 7. Import Data: today's import, then Make This My Team | Not Now
+// 7. Add Your Team: today's import, then Make This My Team | Not Now
 {
   fresh();
-  ok(!$('b-import').hidden, 'on the web as shipped: Import Data shows (its card says it works in the app)');
+  ok(!$('b-import').hidden && /id="b-import" hidden>Add Your Team</.test(html), 'on the web as shipped: Add Your Team shows (its card says it works in the app)');
   $('b-import').click();
-  ok(!$('m-import').hidden && I.state().step === 'web' && I.state().from === 'home' && $('im-back').textContent === 'Back to Menu', 'it opens the import card over the home, Back to Menu');
+  ok(!$('m-import').hidden && I.state().step === 'web' && I.state().from === 'home' && $('im-back').textContent === 'Back to Menu' && $('im-title').textContent === 'Works in the Try Line App' && /aria-labelledby="im-eyebrow im-title">\s*<div class="im-head">\s*<div><p class="eyebrow" id="im-eyebrow">Add Your Team<\/p><h3 id="im-title">/.test(html), 'it opens the Add Your Team card over the home (Works in the Try Line App, the card named by both), Back to Menu');
   $('im-back').click(); ok($('m-import').hidden && shown() === 's-home', 'and closes back home');
   const offer = () => {                                      // a club and its league in, as the app's import hands them over
     I.open(); const u = I.state(); u.step = 'preview';
@@ -401,7 +403,7 @@ async function browserChecks() {
       await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
       await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
       const kind = `${w}x${h} ${touch ? 'touch' : 'desk'}`;
-      // every state: desk (2 Players) or not, the app (Grown-Ups) or the web (Import Data), Install and Update showing or not, a Trophy
+      // every state: desk or not (2 Players showed on a desk; now it shows on neither), the app (Grown-Ups) or the web (Add Your Team), Install and Update showing or not, a Trophy
       // Cabinet or not, nothing saved, a championship and a career, or a cup, the free tier's locks or not, and in the app a Super Fan
       // (the badge under the logo, two lines: it must not widen the logo's column and squeeze My Team); on every headline
       const states = await page.evaluate(() => {
@@ -429,7 +431,7 @@ async function browserChecks() {
               .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = getComputedStyle(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }).map(e => e.id + "'s lock squeezed"));   // a lock beside a name keeps its size
             const overlap = btns.some((a, i) => btns.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && (() => { const p = box(a), q = box(b); return p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1; })()));
             out.push({ state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', buy === 'fan' ? 'fan' : '', hl].filter(Boolean).join('+'), fan:buy === 'fan' && !document.getElementById('st-fan').hidden, fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth, small, clipped, overlap,
-              two:vis(document.getElementById('b-two')) === (desk && hl === 'game'), grown:vis(document.getElementById('b-grown')) === ((app || free) && hl === 'settings'), note:document.getElementById('hl-settings').classList.contains('note') === app, cabBtn:vis(document.getElementById('b-cabinet')) === (cab && hl === 'champ') });
+              two:!document.getElementById('b-two') && !btns.some(b => /\b2 Players\b|Two Player/.test(b.textContent)), play:hl !== 'game' || (vis(document.getElementById('b-quick')) && box(document.getElementById('b-quick')).height >= 88 && btns.filter(b => document.getElementById('hp-game').contains(b)).length === 1), grown:vis(document.getElementById('b-grown')) === ((app || free) && hl === 'settings'), note:document.getElementById('hl-settings').classList.contains('note') === app, cabBtn:vis(document.getElementById('b-cabinet')) === (cab && hl === 'champ') });
             if (tools) { for (const id of ['app-tools', 'b-install', 'b-update', 'offline-status']) document.getElementById(id).hidden = true; }
           }
         }
@@ -443,7 +445,7 @@ async function browserChecks() {
       ok(states.filter(r => r.fan).length === 60, `${kind}: 60 of them with the Super Fan badge under the logo (${states.filter(r => r.fan).length})`);
       ok(states.every(r => !r.small.length), `${kind}: every button at least 44px (${states.filter(r => r.small.length).slice(0, 3).map(r => r.state + ': ' + r.small.join('/')).join('; ') || 'all'})`);
       ok(states.every(r => !r.clipped.length && !r.overlap), `${kind}: no name cut off nor lock squeezed, no button over another (${states.filter(r => r.clipped.length || r.overlap).slice(0, 3).map(r => r.state + ': ' + r.clipped.join('/') + (r.overlap ? ' overlap' : '')).join('; ') || 'none'})`);
-      ok(states.every(r => r.two && r.grown && r.note && r.cabBtn), `${kind}: 2 Players on computers only, Grown-Ups in Settings where the store is live (the app, the free web), its dot on Settings, the Trophy Cabinet with a finished season (${bad(r => !(r.two && r.grown && r.note && r.cabBtn)).slice(0, 4).join(', ') || 'all'})`);
+      ok(states.every(r => r.two && r.play && r.grown && r.note && r.cabBtn), `${kind}: no 2 Players on any device, Quick Match one big Play (88px and more, alone in its panel), Grown-Ups in Settings where the store is live (the app, the free web), its dot on Settings, the Trophy Cabinet with a finished season (${bad(r => !(r.two && r.play && r.grown && r.note && r.cabBtn)).slice(0, 4).join(', ') || 'all'})`);
       // long names on My Team step down to fit
       const fit = await page.evaluate(() => {
         const T = window.__tryline, st = T.debug.settings(); st.myClub = 'CHC'; st.myNat = 'RSA'; T.debug.goHome();
@@ -496,7 +498,7 @@ async function browserChecks() {
         return out;
       });
       ok(locks.cards === 18 && locks.tiles === 18 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge and name on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
-      // a controller: the first press on Quick Match, down to the bar, along it, press, up into the panel; every button reachable
+      // a controller: the first press on Play, down to the bar, along it, press, up into the panel; every button reachable
       const pad = await page.evaluate(() => {
         const T = window.__tryline, out = {};
         T.debug.settings().hl = 'game'; T.debug.goHome(); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
@@ -534,7 +536,7 @@ async function browserChecks() {
         T.debug.settings().hl = 'game'; T.debug.goHome();
         return out;
       });
-      ok(pad.first === 'b-quick' && pad.down === 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Quick Match, Down reaches the bar on Game (the chosen headline), Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify({ ...pad, landed:undefined, unreached:undefined })})`);
+      ok(pad.first === 'b-quick' && pad.down === 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Play, Down reaches the bar on Quick Match (the chosen headline), Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify({ ...pad, landed:undefined, unreached:undefined })})`);
       ok(!pad.landed.length, `${kind}: Down from every button of every headline (each Championship tier too) reaches the bar on that headline (${pad.landed.slice(0, 4).join(', ') || 'all'})`);
       ok(!pad.unreached.length, `${kind}: every button on every headline is reached by moving the ring (${pad.unreached.join(', ') || 'all'})`);
       // the keyboard: Tab reaches the bar (one stop), the arrows move along it and show each, Enter presses what Tab reaches
