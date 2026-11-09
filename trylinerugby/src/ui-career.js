@@ -240,10 +240,15 @@ function careerChips(keys) {
   const label = Object.fromEntries(careerSkills());
   return keys.map(k => `<span class="cr-chip" style="--k:${CAREER_COL[k] || 'var(--chalk)'}">${label[k] || k}</span>`).join('');
 }
+/* Train: the Skills Mini Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
+   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three. The youngest never
+   see the contact games (careerDrills), so for them there is no group and no coach line. */
 function renderCareerTrain() {
-  $('ct-list').innerHTML = careerDrills(career).map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('');
+  const list = careerDrills(career), hard = list.filter(d => d.contact);
+  const tiles = ds => `<div class="cr-drills">${ds.map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="dc-icon" aria-hidden="true">${drillIconSvg(d.id)}</span><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('')}</div>`;
+  $('ct-list').innerHTML = tiles(list.filter(d => !d.contact))
+    + (hard.length ? `<div class="ct-contact"><p class="pr-cg"><span class="pr-group">Contact Games (U9 and Up)</span> <span class="pr-coach">${PRACTICE_COACH}</span></p>${tiles(hard)}</div>` : '');
   for (const b of $('ct-list').querySelectorAll('[data-drill]')) b.addEventListener('click', () => careerTrain(b.dataset.drill));
-  $('ct-coach').hidden = !careerDrills(career).some(d => PRACTICE_DRILLS.find(p => p.id === d.id).contact);   // the coach line goes with the contact games (src/practice.js)
 }
 $('ct-back').addEventListener('click', careerOpen);
 

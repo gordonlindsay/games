@@ -5,10 +5,13 @@
    - A feat (LOCKER_FEATS) counts once in a match you play, at most, at full time (lockerMatch, from finishMatch): any level,
      Kids included, Quick Match, Championship, Career and Two Player alike. Never AI v AI, the demo, a drill or a tool's
      headless match (only a match you play reaches finishMatch with M.arcade). Two Player counts Player 1's side (side 0).
-   - Bronze, Silver and Gold are a feat done 1, 3 and 10 times (LOCKER_TIERS). Star Pupil counts drills, each once, at three
-     stars, so its Gold is every drill (8 today, never more than 10). The events (lockerEvent) count once a call, and once a
-     match for one medal: 'champ' (Champions; the Championship's own league win calls it here), 'euro', 'world', 'tour' and
-     'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
+   - Bronze, Silver and Gold are a feat done 1, 3 and 10 times (LOCKER_TIERS). Star Pupil counts the Skills Mini Games, each
+     once, at three stars: Bronze and Silver are any 1 and any 3 of them, and its Gold is every game the player can see
+     (lockerPupilGames: all ten, or the seven a Kids level or Minis player sees, since practiceBarred hides the three contact
+     games from them). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
+     PR #14, on the live game's eight drills (LOCKER_PUPIL_MAIN). The events (lockerEvent)
+     count once a call, and once a match for one medal: 'champ' (Champions; the Championship's own league win calls it here),
+     'euro', 'world', 'tour' and 'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
    - Every Bronze and every Silver unlocks one ball or one pair of boots (each feat's unlock). Every Gold unlocks the next
      Legends side of each list, in date order: the nth Gold, the nth men's and the nth women's side. Nothing here is sold.
    - The match counts are plain counters on M.lk (drop goals and duel Big Hits by side, the half-time score), made only in a
@@ -39,7 +42,7 @@ const LOCKER_FEATS = [
   { id:'drop',     name:'Drop Goal',     line:'Score a drop goal.',              unlock:['ball:pink', 'boots:pink'] },
   { id:'fire',     name:'On Fire Twice', line:'Go On Fire twice in a match.',    unlock:['boots:neon', 'ball:neon'] },
   { id:'champ',    name:'Champions',     line:'Win a Championship.',             unlock:['boots:silver', 'ball:gold'] },
-  { id:'star',     name:'Star Pupil',    line:'Get 3 stars in a drill.',         unlock:['boots:purple', 'ball:stripes'] },
+  { id:'star',     name:'Star Pupil',    line:'Get 3 stars in a mini game.',     unlock:['boots:purple', 'ball:stripes'] },
   { id:'silver',   name:'Silverware',    line:'Win a cup or a crown.',           unlock:['ball:silver', 'boots:gold'] },
   { id:'callup',   name:'Call-Up',       line:'Get called up.',                  unlock:['boots:rainbow', 'ball:rainbow'] },
 ];
@@ -121,10 +124,29 @@ const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOC
 let locker = lockerFresh();
 let lockerDirty = false;                                     // a drill's three stars, waiting to be saved once the drill is over
 const lockerFeat = id => LOCKER_FEATS.find(f => f.id === id);
-const lockerStarMax = () => Math.min(LOCKER_TIERS[2], typeof PRACTICE_DRILLS !== 'undefined' ? PRACTICE_DRILLS.length : LOCKER_TIERS[2]);
+/* Star Pupil. Its games are the ones this player can see now: all ten, or seven at the Kids level or with Minis picked (practiceBarred,
+   src/practice.js, the same rule the Skills Mini Games, Next Game and the career's Train keep), never more than ten. Bronze and Silver
+   are any 1 and any 3 games at three stars; Gold is three stars in every one of them, and is kept once won (locker.pupil), so a Gold won
+   on the seven stays when the player moves up to all ten. Its count is the games starred, and on the way to Gold the games starred of
+   the ones the player can see (5/7 at Kids). */
+const lockerPupilGames = () => (typeof PRACTICE_DRILLS !== 'undefined' ? PRACTICE_DRILLS.filter(d => typeof practiceBarred !== 'function' || !practiceBarred(d.id)).map(d => d.id).slice(0, LOCKER_TIERS[2]) : []);
+const lockerPupilSeen = () => lockerPupilGames().filter(id => locker.drills.includes(id)).length;   // the games this player can see, starred
+const lockerPupilAll = () => { const n = lockerPupilGames().length; return n > 0 && lockerPupilSeen() === n; };
+const lockerPupilGold = () => locker.pupil === true || lockerPupilAll();
+function lockerPupilKeep() { if (locker.pupil !== true && lockerPupilAll()) locker.pupil = true; }   // a Gold won is kept: called as the save is written
+/* The live game before PR #14 (main, f20adc4) had eight drills, and its Star Pupil Gold was three stars in every one of them. Its saves
+   have no pupil key, so one with all eight starred is that Gold and keeps it (cleanLocker), on any level. A save written here with all
+   eight starred and no Gold carries pupil:false (lockerSaved), so it is never read back as one. */
+const LOCKER_PUPIL_MAIN = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass'];
+const lockerPupilMain = drills => LOCKER_PUPIL_MAIN.every(id => drills.includes(id));
+const lockerStarMax = () => Math.max(LOCKER_TIERS[1], lockerPupilGames().length);
 const lockerTiers = id => (id === 'star' ? [LOCKER_TIERS[0], LOCKER_TIERS[1], lockerStarMax()] : LOCKER_TIERS);
-const lockerCount = id => (id === 'star' ? locker.drills.length : locker.n[id] || 0);
-const lockerTier = id => { const n = lockerCount(id); return lockerTiers(id).filter(c => n >= c).length; };   // 0 none, 1 Bronze, 2 Silver, 3 Gold
+const lockerCount = id => (id !== 'star' ? locker.n[id] || 0 : !lockerPupilGold() && locker.drills.length >= LOCKER_TIERS[1] ? lockerPupilSeen() : locker.drills.length);
+function lockerTier(id) {                                    // 0 none, 1 Bronze, 2 Silver, 3 Gold
+  if (id === 'star') { const n = locker.drills.length; return lockerPupilGold() ? 3 : n >= LOCKER_TIERS[1] ? 2 : n >= LOCKER_TIERS[0] ? 1 : 0; }
+  const n = lockerCount(id);
+  return LOCKER_TIERS.filter(c => n >= c).length;
+}
 const lockerNext = id => { const t = lockerTier(id); return t < 3 ? lockerTiers(id)[t] : null; };          // the count the next medal needs
 const lockerGolds = (tiers = id => lockerTier(id)) => LOCKER_FEATS.filter(f => tiers(f.id) === 3).length;
 /* What unlocks an item: the feat and the tier (1 Bronze, 2 Silver), or null for the default. */
@@ -213,11 +235,13 @@ function lockerEvent(id) {
   save();
   return true;
 }
-/* A drill finished with its stars (practiceFinish): three stars in a drill not yet counted counts toward Star Pupil. Saved once
-   the drill is over (lockerFlush, from practiceRestore), never while the drill's own settings are in place. */
+/* A game finished with its stars (practiceFinish): three stars in a game not yet counted counts toward Star Pupil, and the Gold is
+   kept if that makes every game the player can see. Saved once the game is over (lockerFlush, from practiceRestore), never while the
+   game's own settings are in place. */
 function lockerDrill(id, stars) {
   if (stars < 3 || locker.drills.includes(id) || !PRACTICE_DRILLS.some(d => d.id === id)) return false;
   locker.drills = PRACTICE_DRILLS.map(d => d.id).filter(d => d === id || locker.drills.includes(d));
+  lockerPupilKeep();
   lockerDirty = true;
   return true;
 }
@@ -263,6 +287,7 @@ function lockerPick(kind, id) {                              // the Locker's swa
 /* ---------- the save ---------- */
 /* What the save keeps: undefined until something is earned or picked, so a save with nothing in the Locker is as it was. */
 function lockerSaved() {
+  lockerPupilKeep();                                         // a Star Pupil Gold showing now (every game this player can see) is kept from here on
   const n = {};
   for (const f of LOCKER_FEATS) if (f.id !== 'star' && locker.n[f.id] > 0) n[f.id] = locker.n[f.id];
   const seen = {};
@@ -270,6 +295,8 @@ function lockerSaved() {
   const empty = !Object.keys(n).length && !locker.drills.length && locker.ball === LOCKER_BALLS[0].id && locker.boots === LOCKER_BOOTS[0].id && !Object.keys(seen).length && !lockerFanHeld().length;
   if (empty) return undefined;
   const out = { n, drills:locker.drills.slice(), ball:locker.ball, boots:locker.boots, seen };
+  if (locker.pupil === true) out.pupil = true;              // once Star Pupil's Gold is won, and false only with main's eight and no Gold,
+  else if (lockerPupilMain(locker.drills)) out.pupil = false;   // so it is never read back as main's Gold; every other save is as it was
   if (lockerFanHeld().length) { out.fan = lockerFanHeld().slice(); out.fanSeen = locker.fanSeen || 0; }   // only with a Super Fan trophy, so every other save is as it was
   return out;
 }
@@ -284,6 +311,9 @@ function cleanLocker(v) {
   }
   const ids = typeof PRACTICE_DRILLS !== 'undefined' ? PRACTICE_DRILLS.map(d => d.id) : [];
   if (Array.isArray(v.drills)) out.drills = ids.filter(id => v.drills.includes(id));
+  const fewest = typeof PRACTICE_DRILLS !== 'undefined' ? PRACTICE_DRILLS.filter(d => !d.contact).map(d => d.id) : [];   // the fewest games anyone sees: a kept Gold has every one of them
+  if (v.pupil === true && fewest.length && fewest.every(id => out.drills.includes(id))) out.pupil = true;
+  else if ((v.pupil === true || !('pupil' in v)) && lockerPupilMain(out.drills)) out.pupil = true;   // main's Gold (its eight), kept, then kept again
   const keep = locker; locker = out;                       // read the tiers from the cleaned counts
   try {
     if (typeof v.ball === 'string' && lockerHas('ball', v.ball)) out.ball = v.ball;

@@ -58,10 +58,11 @@ const CAREER_POS = { F:[1, 2, 3], B:[4, 5, 6, 7] };   // sevens: forwards wear 1
 const CAREER_START = { F:{ pace:32, power:44, handling:36, kicking:26, stamina:38 }, B:{ pace:44, power:26, handling:38, kicking:34, stamina:34 } };
 const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
-/* Which skill a drill trains. A drill's own result wins when it names one: Pass Around the Circle trains Stamina as the
-   Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact) are hidden for the youngest (practiceBarred). */
+/* Which skill a game trains (Train lists the Skills Mini Games, in their order). A game's own result wins when it names one:
+   Pass Around the Circle trains Stamina as the Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact)
+   are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
+   from match tackles and the dilemmas (Tackle Drills, Gym Session). */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
-const CAREER_DRILL_ORDER = ['tag', 'egg', 'pass', 'circle', 'tackle', 'scrum', 'back', 'cones', 'defend', 'kick'];
 const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
    kicked a point of Kicking. At most CAREER_DEED_CAP points a match: training is where most of it comes from. */
@@ -291,10 +292,9 @@ function careerRepair(cr) {
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the drills that exist right now, in the career's order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
-  const have = new Map(PRACTICE_DRILLS.map(d => [d.id, d]));
-  return CAREER_DRILL_ORDER.filter(id => have.has(id) && !practiceBarred(id))
-    .map(id => ({ id, name:have.get(id).name || CAREER_DRILL_NAME[id], skills:id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[id]] }));
+function careerDrills(cr) {                          // the games that exist right now, in the Skills Mini Games' order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
+  return PRACTICE_DRILLS.filter(d => d.id in CAREER_DRILL_SKILL && !practiceBarred(d.id))
+    .map(d => ({ id:d.id, name:d.name || CAREER_DRILL_NAME[d.id], contact:!!d.contact, skills:d.id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[d.id]] }));
 }
 const careerCanTrain = cr => !!(cr && !cr.trained && careerAhead(cr));   // one session before each match, league, international or cup
 /* The drill's onDone ({ id, stars, success[, role, skill, quit] }), once its settings are restored. One session a round;

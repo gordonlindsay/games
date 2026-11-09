@@ -1,7 +1,7 @@
 // The Locker: medals for feats, the balls and boots they unlock, and the Legends. The tables, each feat counted from real played
 // matches (seeded, through Quick Match, Two Player, Kids, a career and a championship to full time), tiers at 1, 3 and 10, one count a
 // match, the unlocks, the Legends' order and ratings, lockerEvent, nothing counted in AI v AI, the demo, a drill's match or a tool's,
-// Star Pupil's one save after a drill, the save, the full-time card, the home button, the Locker screen, the team screen's hook, the
+// Star Pupil's one save after a game and its Gold over the games the player can see (ten, or seven at Kids or Minis), the save, the full-time card, the home button, the Locker screen, the team screen's hook, the
 // render hooks, and AI v AI, the demo and the balance tools pinned to d6192ad, the build before the Locker. Last, in a real browser
 // when Playwright is installed: the home rows in every state at 844x390 and 667x375 (and with a Trophy Cabinet, the Locker adding no
 // height), the Locker's tabs at both sizes, its keyboard and controller reach, Continue on the full-time card with medals on it, and
@@ -225,7 +225,7 @@ function played(seed, a, b, o = {}) {
   const tiers = []; for (let n = 0; n <= 12; n++) { L.state().n.hat = n; tiers.push(L.tier('hat')); }
   ok(json(tiers) === '[0,1,1,2,2,2,2,2,2,2,3,3,3]', 'Bronze at 1, Silver at 3, Gold at 10');
   L.state().n.hat = 2; ok(L.next('hat') === 3 && (L.state().n.hat = 9, L.next('hat') === 10) && (L.state().n.hat = 10, L.next('hat') === null), 'the count the next medal needs: 3, 10, then none');
-  fresh(); L.state().drills = ['egg', 'cones', 'kick']; ok(L.count('star') === 3 && L.tier('star') === 2 && L.next('star') === T.drills.DRILLS.length, 'Star Pupil counts drills: three is Silver, every drill Gold');
+  fresh(); L.state().drills = ['egg', 'cones', 'kick']; ok(L.count('star') === 3 && L.tier('star') === 2 && L.next('star') === T.drills.DRILLS.length, 'Star Pupil counts the games: three is Silver, every game Gold');
   fresh(); writes = 0;
   ok(L.event('euro') && L.event('world') && L.event('tour') && L.event('triple') && L.count('silver') === 4 && writes === 4, 'between matches each Silverware call counts, and saves');
   ok(L.event('callup') && L.count('callup') === 1 && L.event('champ') && L.count('champ') === 1, 'callup counts toward Call-Up, champ toward Champions');
@@ -296,6 +296,74 @@ function champAt4(userWins) {
   P.start('kick'); $('pr-retry').click(); P.finish(true, 'Done', 3); $('pr-retry').click();
   ok(L.count('star') === 2 && writes === 1 && json(saved().settings) === settingsBefore && json(saved().locker.drills) === '["cones","kick"]', 'Try Again after three stars saves them too, in the drills\' order');
   P.leave();
+}
+
+// 8b. Star Pupil over the Skills Mini Games (the skills builder, at the PR #14 merge): Bronze and Silver are any 1 and any 3 games at
+//     three stars; Gold is every game the player can see, all ten, or the seven at the Kids level or with Minis picked (the three
+//     contact games hidden, practiceBarred), and a Gold once won is kept, so moving up to all ten never takes it away
+{
+  const S = D.settings(), was = { kids:S.kids, diff:S.diff, cat:S.cat, drillSeen:S.drillSeen.slice() };
+  const ALL = T.drills.DRILLS.map(d => d.id), OPEN = T.drills.DRILLS.filter(d => !d.contact).map(d => d.id), CONTACT = ALL.filter(id => !OPEN.includes(id));
+  const at = (kids, cat) => { S.kids = kids; S.diff = kids ? 0 : 1; S.cat = cat; };
+  const three = id => { P.start(id); $(P.state().roles ? 'pr-runner' : 'pr-retry').click(); P.finish(true, 'Done', 3); P.leave(); };   // a game's three stars, through practiceFinish, then left
+  S.drillSeen = ALL.slice();                                // no Watch How on the way in: a first open plays it, and records nothing
+  ok(ALL.length === 10 && json(OPEN) === json(['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend']) && json(CONTACT) === json(['tackle', 'scrum', 'back']), `ten games: seven for everyone and the three contact games (${OPEN} | ${CONTACT})`);
+  fresh(); at(false, 'men');
+  const t = []; for (const [kids, cat] of [[false, 'men'], [false, 'women'], [true, 'men'], [false, 'minis'], [true, 'women']]) { at(kids, cat); t.push(L.tiers('star')[2]); }
+  ok(json(t) === '[10,10,7,7,7]', `Gold is every game the player can see: ten on Men or Women, seven at the Kids level or with Minis picked (${t})`);
+  fresh(); writes = 0; at(true, 'men'); X.save(); writes = 0;
+  for (const id of OPEN.slice(0, 6)) three(id);
+  ok(L.count('star') === 6 && L.tier('star') === 2 && L.next('star') === 7 && writes === 6 && !L.state().pupil, `the Kids level: six of its seven games is Silver, 6/7, each saved as its game is left (${L.count('star')}/${L.next('star')}, ${writes} writes)`);
+  three(OPEN[6]);
+  ok(L.tier('star') === 3 && L.next('star') === null && L.count('star') === 7 && L.state().pupil === true && saved().locker.pupil === true && json(saved().locker.drills) === json(OPEN), 'the seventh is Gold, saved as kept (pupil), the seven games in the Skills Mini Games\' order');
+  at(false, 'men');
+  ok(L.tier('star') === 3 && L.golds() === 1 && L.legends('men').length === 1 && L.legends('women').length === 1, 'moved up to Normal, the Gold stays, and so do the Legends it unlocked');
+  ok(L.count('star') === 7 && L.next('star') === null, 'its count is the games starred, 7, with nothing left to reach');
+  three('tackle'); ok(L.count('star') === 8 && L.tier('star') === 3, 'a contact game at three stars still counts, once the player can see it');
+  fresh(); at(false, 'men'); L.state().drills = OPEN.slice();
+  ok(L.tier('star') === 2 && L.count('star') === 7 && L.next('star') === 10 && !L.state().pupil, 'Normal: the seven open games are Silver, 7/10');
+  at(false, 'minis'); ok(L.tier('star') === 3 && L.isNew(), 'Minis picked: every game it sees has three stars, so the Gold shows, new');
+  X.save(); ok(saved().locker.pupil === true, 'and is kept as the save is written');
+  at(false, 'men'); ok(L.tier('star') === 3, 'back on Men it stays');
+  fresh(); at(false, 'men'); L.state().drills = CONTACT.slice();
+  ok(L.tier('star') === 2 && L.count('star') === 3 && L.next('star') === 10, 'three contact games: Silver, 3/10');
+  at(true, 'men'); ok(L.tier('star') === 2 && L.count('star') === 0 && L.next('star') === 7, 'at the Kids level the Silver stays (any three games), and the way to Gold counts the seven it sees: 0/7');
+  L.state().drills = ALL.filter(id => id !== 'defend'); ok(L.tier('star') === 2 && L.count('star') === 6, 'six of the seven, with the three it cannot see: still Silver, 6/7');
+  fresh(); at(false, 'men'); L.state().drills = ALL.slice(); ok(L.tier('star') === 3 && L.count('star') === 10, 'Normal: all ten is Gold, 10');
+  ok(L.clean({ drills:OPEN, pupil:true }).pupil === true && !('pupil' in L.clean({ drills:OPEN.slice(1), pupil:true })) && !('pupil' in L.clean({ drills:ALL, pupil:1 })) && !('pupil' in L.clean({ drills:ALL, pupil:false })) && !('pupil' in L.clean({ drills:OPEN })), 'a kept Gold reads back only with true and the seven open games starred (or main\'s eight, 8c)');
+  { L.set(L.clean({ drills:OPEN, pupil:true, seen:{ star:3 } })); at(false, 'men'); ok(L.tier('star') === 3 && L.seen('star') === 3, 'and it shows as Gold, seen, on Men'); }
+  fresh(); writes = 0; S.kids = was.kids; S.diff = was.diff; S.cat = was.cat; S.drillSeen = was.drillSeen;
+}
+
+// 8c. A Star Pupil Gold won on the live game before PR #14 (main, f20adc4: Gold was three stars in all eight of its drills, and its
+//     saves carry no pupil key) is kept on every level, with the Legends it unlocked, through the first save and the next launch. A
+//     save written here with those eight starred and no Gold says so (pupil:false), so a reload never turns 8/10 into a Gold
+{
+  const S = D.settings(), was = { kids:S.kids, diff:S.diff, cat:S.cat, drillSeen:S.drillSeen.slice() };
+  const ALL = T.drills.DRILLS.map(d => d.id), MAIN8 = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass'];
+  const at = (kids, cat) => { S.kids = kids; S.diff = kids ? 0 : 1; S.cat = cat; };
+  const three = id => { P.start(id); $(P.state().roles ? 'pr-runner' : 'pr-retry').click(); P.finish(true, 'Done', 3); P.leave(); };
+  const load = v => { L.set(L.clean(JSON.parse(json(v)))); };
+  const gold = () => L.tier('star') === 3 && L.golds() === 1 && json(L.legends('men').map(t => t.name)) === '["New Zealand 1987"]' && L.legends('women').length === 1 && L.seen('star') === 3;
+  S.drillSeen = ALL.slice();
+  ok(MAIN8.every(id => ALL.includes(id)), 'main\'s eight drills are all still games here');
+  const old = { n:{ hat:2 }, drills:MAIN8, ball:'classic', boots:'black', seen:{ hat:1, star:3 } };   // as f20adc4 wrote a Star Pupil Gold
+  for (const [kids, cat, name] of [[false, 'men', 'Men'], [false, 'women', 'Women'], [true, 'men', 'the Kids level'], [false, 'minis', 'Minis']]) {
+    at(kids, cat); load(old);
+    const first = gold();
+    writes = 0; X.save(); const w = saved().locker;
+    load(w);
+    ok(first && writes === 1 && w.pupil === true && gold(), `a Gold from main's eight drills stays Gold on ${name}, seen, with New Zealand 1987, saved as kept and Gold again at the next launch`);
+  }
+  ok(!('pupil' in L.clean({ drills:MAIN8.slice(1) })) && !('pupil' in L.clean({ drills:MAIN8, pupil:false })) && !('pupil' in L.clean({ drills:MAIN8, pupil:1 })), 'seven of main\'s eight is no Gold, and nor is a save marked pupil:false or a broken pupil');
+  fresh(); at(false, 'men'); L.state().drills = MAIN8.filter(id => id !== 'pass'); writes = 0;
+  three('pass');
+  ok(L.tier('star') === 2 && L.count('star') === 8 && L.next('star') === 10 && writes === 1 && saved().locker.pupil === false, 'main\'s eight starred here on Men: Silver, 8/10, saved with pupil:false');
+  load(saved().locker); ok(L.tier('star') === 2 && L.count('star') === 8 && !L.state().pupil, 'and read back the same, never main\'s Gold');
+  at(true, 'men'); load(saved().locker); ok(L.tier('star') === 2 && L.count('star') === 6 && L.next('star') === 7, 'at the Kids level too: Silver, 6/7, Tag Chase still to get');
+  at(false, 'men'); three('tag'); three('back');
+  ok(L.tier('star') === 3 && saved().locker.pupil === true, 'Tag Chase and Ball Back make all ten, a Gold saved as kept');
+  fresh(); writes = 0; S.kids = was.kids; S.diff = was.diff; S.cat = was.cat; S.drillSeen = was.drillSeen;
 }
 
 // 9. the unlocks and the picks

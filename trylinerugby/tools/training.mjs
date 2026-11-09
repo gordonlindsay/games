@@ -451,19 +451,19 @@ atLevel(true, () => {
   minis(() => {
     const list = C.drills(cr).map(d => d.id);
     ok(!list.some(id => CONTACT.includes(id)) && list.includes('tag') && list.length === OPEN.length, 'a career with Minis picked: Tag Chase in, Tackling, Driving and Ball Back out (' + list + ')');
-    C.renderTrain(); ok(!$('ct-list').innerHTML.includes('data-drill="tackle"') && $('ct-list').innerHTML.includes('data-drill="tag"') && $('ct-coach').hidden, 'Minis: the training screen shows Tag Chase, and no coach line since there is no contact game');
+    C.renderTrain(); ok(!$('ct-list').innerHTML.includes('data-drill="tackle"') && $('ct-list').innerHTML.includes('data-drill="tag"') && !/pr-coach|Contact Games/.test($('ct-list').innerHTML), 'Minis: the training screen shows Tag Chase, and no Contact Games group nor coach line since there is no contact game');   // the line is in the list's own markup since Train took the Skills Mini Games' groups (the skills builder)
     for (const id of CONTACT) { cr.trained = false; ok(C.train(id) === false && !P.state(), 'Minis, career train: ' + id + ' does not open'); P.start(id, { onDone() {} }); ok(!P.state(), 'Minis, a direct start with a caller: ' + id + ' does not open'); }
     cr.trained = false; ok(C.train('tag') === true && P.state() && P.state().id === 'tag', 'Minis: Tag Chase opens'); ok($('pr-next').hidden, 'Minis: no Next Drill on the way to a contact game'); P.leave();
   });
   cr.trained = false;
   const up = C.drills(cr).map(d => d.id); ok(CONTACT.every(id => up.includes(id)) && up.includes('tag') && up.length === X.DRILLS.length, 'Men: every game is offered');
-  C.renderTrain(); ok(!$('ct-coach').hidden, 'Men: the training screen carries the coach line');
+  C.renderTrain(); { const ct = $('ct-list').innerHTML, g = ct.indexOf('Contact Games (U9 and Up)'); ok(g > 0 && ct.indexOf('<span class="pr-coach">' + X.COACH + '</span>') > g && ['tackle', 'scrum', 'back'].every(id => ct.indexOf(`data-drill="${id}"`) > g) && ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'].every(id => ct.indexOf(`data-drill="${id}"`) < g), 'Men: the training screen carries Contact Games (U9 and Up) and the coach line over the three contact games, the open games before it'); }
   ok(C.train('tackle') === true && P.state().id === 'tackle' && !$('pr-coach').hidden, 'Men: Tackling opens, with the coach line on its card'); P.leave();
   C.set(null);
 }
 P.start('tackle'); ok(P.state() && P.state().id === 'tackle' && !$('pr-coach').hidden, 'grown-up levels: a contact game\'s card carries the coach line'); P.leave();
 P.start('egg'); ok($('pr-coach').hidden, 'an open game\'s card does not'); P.leave();
-ok(/id="pr-coach" hidden>Learn Real Tackling With a Club Coach\. Not One to Try at Home\.</.test(html) && /id="ct-coach" hidden>Learn Real Tackling With a Club Coach\. Not One to Try at Home\.</.test(html), 'the ready card and the career\'s list carry the line word for word');
+ok(/id="pr-coach" hidden>Learn Real Tackling With a Club Coach\. Not One to Try at Home\.</.test(html) && X.COACH === 'Learn Real Tackling With a Club Coach. Not One to Try at Home.' && /<span class="pr-coach">\$\{PRACTICE_COACH\}<\/span>/.test(fs.readFileSync(new URL('../src/ui-career.js', import.meta.url), 'utf8')), 'the ready card and the career\'s list carry the line word for word');
 P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the group'); P.leave();
 
 /* ---------- every id on the page is one element's: a game's card is pr-<id>, so a new game's id can't take another button's ---------- */
