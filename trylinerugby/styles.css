@@ -518,10 +518,21 @@ body.desk .desk-only{display:block}
 .cr-trait span{position:absolute;top:1px;right:3px;font-variant-numeric:tabular-nums}
 .cr-trait.off{align-items:flex-end;padding-bottom:4px;border-color:color-mix(in srgb,var(--k) 45%,var(--rule-hi));color:var(--chalk-dim);opacity:.8}   /* its skill's colour, faint: which skill earns it */
 .cr-trait.off span{font-size:10px;font-weight:700;line-height:1;color:var(--k)}
-.cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.btn.cr-drill{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:76px;padding:10px 12px;text-align:left}
-.cr-drill .nm{font:800 20px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+/* Train: the Skills Mini Games' tiles, each its picture and name with the skill it trains under them; the open games in rows of four,
+   then Contact Games (U9 and Up) with the coach line and its three. On a phone held sideways the title and Back to Career stand on
+   the left, as the Locker's do, and the games fill the right, so all ten fit 844x390 and 667x375 without a scroll. */
+.ct-list{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ct-contact{display:flex;flex-direction:column;gap:6px}
+.ct-contact .pr-cg{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px;min-width:0}
+.ct-contact .pr-group{font-size:18px;white-space:nowrap}
+.ct-contact .pr-coach{font-size:13px;line-height:1.15}
+.cr-drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.btn.cr-drill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:80px;padding:6px;text-align:center;font:700 15px/1.1 var(--body)}
+.cr-drill .dc-icon{width:28px;height:28px}
+.cr-drill .nm{display:block;text-wrap:balance}
 .cr-drill .nw{white-space:nowrap}
+.cr-drill .cr-chips{justify-content:center;gap:3px}
+.cr-drill .cr-chip{padding:3px 5px;letter-spacing:.04em;white-space:nowrap}
 .cr-chips{display:flex;flex-wrap:wrap;gap:6px}
 .cr-chip{padding:4px 8px;border-radius:4px;border:1.5px solid var(--k);color:var(--k);font:700 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase}
 .tbl tr.up td:first-child{box-shadow:inset 4px 0 0 #5fd38a}
@@ -564,6 +575,14 @@ body.desk .desk-only{display:block}
   .cr-life{gap:2px;padding-top:6px}
   .cr-tile{padding:10px 12px}
   .cr-tile b{font-size:28px}
+  #s-career-train .ct-wrap{max-width:900px;min-height:100%;display:grid;grid-template-columns:minmax(124px,150px) minmax(0,1fr);grid-template-areas:"head list" ". list" "back list";grid-template-rows:auto 1fr auto;gap:10px 14px}
+  .ct-head{grid-area:head}.ct-list{grid-area:list;align-self:center}.ct-back{grid-area:back}
+  .ct-list,.cr-drills{gap:6px}
+  .ct-contact{gap:4px}
+  .ct-contact .pr-group{font-size:16px}
+  .ct-contact .pr-coach{font-size:12px}
+  .btn.cr-drill{min-height:56px;padding:4px;gap:2px;font-size:13px;line-height:1.05}
+  .cr-drill .dc-icon{width:22px;height:22px}
 }
 @media (max-width:620px){
   .cr-hub,.cr-newgrid{grid-template-columns:1fr}

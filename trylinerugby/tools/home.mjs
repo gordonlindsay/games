@@ -557,6 +557,46 @@ async function browserChecks() {
       ok(pad.first === 'b-quick' && pad.down === 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Play, Down reaches the bar on Quick Match (the chosen headline), Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify({ ...pad, landed:undefined, unreached:undefined })})`);
       ok(!pad.landed.length, `${kind}: Down from every button of every headline (each Championship tier too) reaches the bar on that headline (${pad.landed.slice(0, 4).join(', ') || 'all'})`);
       ok(!pad.unreached.length, `${kind}: every button on every headline is reached by moving the ring (${pad.unreached.join(', ') || 'all'})`);
+      // Skills Mini Games for each player (the skills builder, at the PR #14 merge): Men the ten, How to Play, Contact Games (U9 and Up) and
+      // For Grown-Ups; the Kids level and Minis the seven, How to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches
+      // every button and Down from each lands on Skills Mini Games, For Grown-Ups opens its panel with Back to Skills in the ring's reach,
+      // every game's card offers Watch How in the ring's reach, and Tab reaches every button on the headline
+      for (const [who, kids, cat] of [['Men', false, 'men'], ['Kids', true, 'men'], ['Minis', false, 'minis']]) {
+        const sk = await page.evaluate(([kids, cat]) => {
+          const T = window.__tryline, st = T.debug.settings(), $ = id => document.getElementById(id);
+          const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
+          const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
+          const ringAll = () => { T.home.ring(null); const r = new Set(), q = [T.navMove(0, 0, 0)]; while (q.length) { const el = q.shift(); if (!el || r.has(el)) continue; r.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); const got = T.navMove(0, dx, dy); if (got && !r.has(got)) q.push(got); } } return r; };
+          const seen = st.drillSeen.slice(); st.drillSeen = T.drills.DRILLS.map(d => d.id);   // no Watch How playing on a card's first open
+          st.kids = kids; st.diff = kids ? 0 : 1; st.cat = cat; st.hl = 'drills'; T.debug.goHome(); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
+          const s = $('s-home'), panel = $('hp-drills'), btns = [...panel.querySelectorAll('.btn')].filter(vis);
+          const games = btns.filter(b => T.drills.DRILLS.some(d => 'pr-' + d.id === b.id)).map(b => b.id.slice(3));
+          const over = btns.filter((a, i) => btns.some((b, j) => j > i && meet(box(a), box(b)))).map(b => b.id);
+          const small = btns.filter(b => box(b).height < 44 || box(b).width < 44).map(b => b.id);
+          const cut = [...panel.querySelectorAll('.dc-name, .pr-group')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent);
+          const reach = ringAll(), unreached = btns.filter(b => !reach.has(b)).map(b => b.id);
+          const landed = btns.filter(b => { T.home.ring(b); let el = b, n = 0; while (el && !el.closest('#hl-bar') && n++ < 8) el = T.navMove(0, 0, 1); return !el || el.dataset.hl !== 'drills'; }).map(b => b.id);
+          T.home.ring(null); $('pr-grown').click();
+          const gp = $('pr-grownups'), back = $('pr-grown-back'), grown = vis(gp) && !vis($('pr-games')) && ringAll().has(back);
+          back.click(); const shut = vis($('pr-games')) && !vis(gp);
+          const watch = games.filter(id => { T.practice.start(id); const w = $('pr-watch'), good = vis(w) && w.textContent === 'Watch How' && ringAll().has(w); T.practice.choose(); return !good; });
+          T.home.ring(null); st.hl = 'drills'; T.debug.goHome();
+          const out = { games, contact:!$('pr-contact').hidden && !$('pr-contact').closest('[hidden]'), fits:s.scrollHeight <= s.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, over, small, cut, unreached, landed, grown, shut, watch, help:vis($('b-help')), grownBtn:vis($('pr-grown')), ids:btns.map(b => b.id) };
+          st.drillSeen = seen;
+          return out;
+        }, [kids, cat]);
+        await page.evaluate(() => { document.activeElement && document.activeElement.blur(); });
+        const tabbed = new Set();
+        for (let i = 0; i < 40; i++) { await page.keyboard.press('Tab'); const at = await page.evaluate(() => { const a = document.activeElement; return a && document.getElementById('hp-drills').contains(a) ? a.id : null; }); if (at) tabbed.add(at); }
+        const young = kids || cat === 'minis', open = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'];
+        ok(json(sk.games) === json(young ? open : open.concat(['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skills Mini Games shows ${young ? 'the seven open games, no Contact Games' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
+        ok(sk.fits && !sk.over.length && !sk.small.length && !sk.cut.length, `${kind} ${who}: Skills Mini Games fits with no scroll, every button 44px and more, none over another, no name cut off (${[...sk.over, ...sk.small, ...sk.cut].join(', ') || 'all clear'})`);
+        ok(!sk.unreached.length && !sk.landed.length, `${kind} ${who}: the ring reaches every button on Skills Mini Games, and Down from each lands on its headline (${[...sk.unreached, ...sk.landed].join(', ') || 'all'})`);
+        ok(sk.grown && sk.shut, `${kind} ${who}: For Grown-Ups opens its panel with Back to Skills in the ring's reach, and Back to Skills shuts it`);
+        ok(!sk.watch.length, `${kind} ${who}: every game's card offers Watch How, in the ring's reach (${sk.watch.join(', ') || 'all ' + sk.games.length})`);
+        ok(sk.ids.every(id => tabbed.has(id)), `${kind} ${who}: Tab reaches every button on Skills Mini Games (${sk.ids.filter(id => !tabbed.has(id)).join(', ') || 'all ' + sk.ids.length})`);
+      }
+      await page.evaluate(() => { const T = window.__tryline, st = T.debug.settings(); st.kids = false; st.diff = 1; st.cat = 'men'; st.hl = 'game'; T.home.ring(null); T.debug.goHome(); });
       // the keyboard: Tab reaches the bar (one stop), the arrows move along it and show each, Enter presses what Tab reaches
       await page.evaluate(() => { const T = window.__tryline; T.debug.settings().hl = 'game'; T.debug.goHome(); document.activeElement && document.activeElement.blur(); });
       let tabs = 0, onBar = false;

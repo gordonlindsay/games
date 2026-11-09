@@ -42,6 +42,26 @@ ok(drillWords.length >= 5 && drillWords.every(w => isTitle(w) || w === '+') && !
 ok(!/[\u2190-\u2199\u21D0-\u21D9]/.test(training) && !/\u2014/.test(training.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')), 'no arrow glyphs and no em dashes in the drills');
 ok(/"training\.js",\s*"practice\.js"/.test(fs.readFileSync(new URL('../src/manifest.json', import.meta.url), 'utf8')), 'training.js is built just before practice.js');
 
+// ---- the Skills Mini Games as one set (the skills builder, at the PR #14 merge): the home's order, the contact three, Watch How on every
+//      card, Next Game round all ten, and the skill each game hands a caller (the career's Train reads it)
+{
+  const CAREER = T.career.DRILL_SKILL;
+  ok(JSON.stringify(ids) === JSON.stringify(['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend', 'tackle', 'scrum', 'back']), 'the ten in the home\'s order: the seven open games, then the contact three (' + ids + ')');
+  ok(JSON.stringify(X.DRILLS.filter(d => d.contact).map(d => d.id)) === '["tackle","scrum","back"]', 'Tackling, Driving and Ball Back are the contact games, and only they');
+  const seen = D.settings().drillSeen; D.settings().drillSeen = ids.slice();   // a first open plays Watch How before the card: these read the card
+  const noWatch = ids.filter(id => { P.start(id); const good = P.state() && P.state().ready && !$('pr-watch').hidden && $('pr-eyebrow').textContent === 'Skills Mini Games' && $('pr-select').textContent === 'Back to Skills'; P.leave(); return !good; });
+  ok(!noWatch.length, 'every game\'s ready card offers Watch How and Back to Skills, under Skills Mini Games (' + (noWatch.join(', ') || 'all ten') + ')');
+  { P.start('tag'); const walk = []; for (let i = 0; i < 10; i++) { $('pr-next').click(); walk.push(P.state().id); } P.leave();
+    ok(JSON.stringify(walk) === JSON.stringify(ids.slice(1).concat(['tag'])), 'Next Game goes round all ten in the home\'s order, then back to the first (' + walk + ')'); }
+  const skill = {};
+  for (const id of ids) for (const role of id === 'circle' ? ['runner', 'passer'] : [null]) {
+    P.start(id, { onDone() {} }); $(role ? 'pr-' + role : 'pr-retry').click(); P.finish(true, 'Done', 2);
+    const r = X.result(P.state()); skill[id + (role ? ':' + role : '')] = r.skill; P.leave();
+  }
+  ok(Object.entries(skill).every(([k, v]) => v === (k === 'circle:runner' ? 'stamina' : k === 'circle:passer' ? 'handling' : CAREER[k])) && Object.keys(skill).length === 11, 'every game hands a caller the skill the career trains with it, the circle Stamina as the Runner and Handling as the Passer (' + Object.entries(skill).map(([k, v]) => k + ' ' + v).join(', ') + ')');
+  D.settings().drillSeen = seen;
+}
+
 // ---- star thresholds
 ok(X.starsOf(0, [4, 7, 10]) === 0 && X.starsOf(4, [4, 7, 10]) === 1 && X.starsOf(9, [4, 7, 10]) === 2 && X.starsOf(12, [4, 7, 10]) === 3, 'stars are one per threshold met');
 for (const [k, cuts] of [['EGG', X.EGG.stars], ['CIRCLE', X.CIRCLE.stars], ['TACKLE', X.TACKLE.stars], ['KICKS', X.KICKS.stars], ['DRIVE', X.DRIVE.stars]]) ok(cuts.length === 3 && cuts.every((c, i) => c > 0 && (!i || c > cuts[i - 1])), k + ' has three rising thresholds');
