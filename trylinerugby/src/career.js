@@ -6,7 +6,7 @@
    - A year (career.year, from 1) runs in phases (career.phase, in CAREER_PHASES order), each one skipped unless he has earned it:
      'league'   his club's league: his club and five drawn from its list, a season of the championship's shape (six sides, five
                 rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
-     'county'   his county's cup, every year he is at a Local club (careerLeague 'sur'): eight sides in the cup its county runs for its
+     'county'   his county's cup, every year he is at a Local club (a Local list: Surrey or Counties): eight sides in the cup its county runs for its
                 level, the Surrey Cup down to the Surrey Bowl (src/competitions.js). A professional club has none.
      'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, Celtic and Italy, South Africa).
      'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
@@ -197,7 +197,7 @@ function careerStart(o) {                            // Start Career on the new 
 /* ---------- the next match, and the end of a phase ---------- */
 const careerCupUser = cup => (Number.isInteger(cup && cup.user) ? cup.user : 0);   // his side's index in the cup's teams
 const careerCupKind = cr => (cr.phase === 'county' ? 'county' : cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
-const careerCountyOn = cr => careerLeague(cr) === 'sur';   // a Local club's year has its county cup
+const careerCountyOn = cr => TEAM_LISTS.some(l => l.key === careerLeague(cr) && l.tier === 2);   // a Local club's year (Surrey or Counties) has its county cup
 /* His next match in the phase: { teams, home, away, user, label, ko }, or null when the phase is over (or there is no match: the
    transfer window). ko: a cup's knockout or Test (cupFixture's), which cannot end level; a season's match never is. Reads the season
    or the cup, draws nothing. */

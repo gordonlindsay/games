@@ -524,7 +524,7 @@ C.setCups(false);                                    // no cups unless a section
     for (let n = 0; n < 99 && !trains(L.dilemma(c2)); n++) c2.season.id = 'skills-train-' + n;   // a season whose first dilemma has a training option (the plan follows the season's id)
     const d = L.dilemma(c2), i = d ? d.opts.findIndex(o => Object.keys(o.fx).some(k => C.skills().some(([q]) => q === k))) : -1, o = i >= 0 ? d.opts[i] : null;
     const k = o && Object.keys(o.fx).find(q => C.skills().some(([s2]) => s2 === q)), b = k && c2.skills[k];
-    ok(!!d && i >= 0 && L.choose(i) && c2.skills[k] === b + o.fx[k] && c2.life.energy === 80 + o.fx.energy, `round 1's dilemma: its training option (${o && o.name}) gives ${k} +${o && o.fx[k]} for ${o && -o.fx.energy} Energy`);
+    ok(!!d && i >= 0 && L.choose(i) && c2.skills[k] === b + o.fx[k] && c2.life.energy === 80 + (o.fx.energy || 0), `round 1's dilemma: its training option (${o && o.name}) gives ${k} +${o && o.fx[k]} for ${o && -(o.fx.energy || 0)} Energy`);   // Touch Rugby's costs none
     const e = c2.life.energy, h = c2.skills.handling;
     ok(C.train('egg') && ($('pr-retry').click(), P.finish(true, 'Well Played', 1), $('pr-select').click(), c2.trained) && c2.skills.handling === h + C.TRAIN[1] && c2.life.energy === e + L.LIFE.energy.train, 'and a session after it still trains and costs its Energy');
     c2.life.energy = 5; c2.trained = false; const e2 = c2.life.energy;

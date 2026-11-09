@@ -12,7 +12,7 @@ The RFU's own regulation pages refused automated reading and wouldn't load in th
 
 ## The main finding
 
-Written against an earlier build, where every Local club carried its real league and `CLUB_RATED` gave each league a rating band, and the career ran Minis, Juniors, County, Pro Club and International. Main's build has club seasons and 12 Local clubs without league data instead; What's built says what that changed. Either way, a league title was the only club trophy below the top.
+Written against an earlier build, where every Local club carried its real league and `CLUB_RATED` gave each league a rating band, and the career ran Minis, Juniors, County, Pro Club and International. Main's build has club seasons instead; What's built says what that changed. Either way, a league title was the only club trophy below the top.
 
 The design rule that follows from the 2026 RFU vote: **your club can climb as far as the Champ, but only you can reach the Prem.**
 
@@ -127,7 +127,7 @@ In 2026, [Ivybridge beat Old Albanian Saints II 40-17](https://plymouthsportsgaz
 
 ## The game's clubs
 
-The Level and League columns are what the earlier build held, from 2025-26. Main's Local list has 12 clubs: these, without Effingham, Wandsworth, Egham, Merton, Mitcham and Feltham, plus Quins (level 11). County is inferred from each club's league and location, not its official membership, except Farnham's, which is stated. Confirm counties and cups before use.
+The Level and League columns are what the earlier build held, from 2025-26. Main has all of these on its Surrey and Counties lists, plus Quins (level 11). County is inferred from each club's league and location, not its official membership, except Farnham's, which is stated. Confirm counties and cups before use.
 
 | Code | Game name | League in the game | Level | County | Likely county cup | 2026-27 (Reported) |
 |---|---|---|---|---|---|---|
@@ -171,7 +171,7 @@ Sources: [Regional 1 South Central](https://en.wikipedia.org/wiki/Regional_1_Sou
 **In the game (on main's club-season career):** the data spine and county cups. The rest of the table below is still a proposal.
 
 - **County cups in a Local club's year.** After its league, a Local club plays the cup its county runs for its level: Surrey Cup, Trophy, Shield or Bowl, or Hampshire's for Aldershot. Eight sides, Quarter-Finals to a Final. It's the cups engine's `county` kind (`src/cups.js`), so its screens, Golden Try, save and trophy come from the same code as the European Cup's. The data is `src/competitions.js`.
-- **Levels and counties are written down, not read.** Main's Local list is 12 Surrey-area clubs with no league data, rated on the professional sides' scale. So each club's level and county is a table taken from the club table above. Quins (the amateur club) is level 11: the club's own 2025-26 fixtures are in Counties 5 Surrey, though Wikipedia says Counties 4.
+- **Levels come from each club's league.** Main's data now carries every Local club's 2025-26 league, on two lists (Surrey and Counties, 18 clubs). Quins have none, so their level is written down as 11: the club's own 2025-26 fixtures are in Counties 5 Surrey, though Wikipedia says Counties 4. Counties are written down for every club.
 - **No Plates yet.** A first-round loser goes out. A Plate would mean a second bracket in the cups engine.
 - **Rivals come from the Local list.** Aldershot's Hampshire cup draws Surrey clubs, because the game has no other Hampshire clubs.
 - **Plain cup names.** A made club plays "County Cup", "County Bowl" and so on.

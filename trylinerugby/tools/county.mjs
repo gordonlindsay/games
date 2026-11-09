@@ -27,8 +27,10 @@ const tie = (c, win) => { const f = K.cupFixture(c), home = f.home === c.user, u
 
 // 1. the clubs: a level and a county for every Local club, as the brief has them
 {
-  const want = { FAR:5, WIM:5, GUI:6, IRO:6, COB:7, WEY:7, ORU:7, HAS:9, KIN:9, ALD:9, GDN:11, QUI:11 };
-  ok(X.CLUBS.every(t => P.CLUB_LEVEL[t.id] && P.CLUB_COUNTY[t.id]) && json(P.CLUB_LEVEL) === json(want), 'every Local club has its 2025-26 level (5 Regional 1 to 11 Counties 5) and a county');
+  const want = { FAR:5, WIM:5, GUI:6, IRO:6, COB:7, WEY:7, ORU:7, HAS:9, KIN:9, ALD:9, EFF:9, GDN:11, QUI:11, WAN:11, EGH:11, MER:11, MIT:11, FEL:11 };
+  const local = [...new Set([...X.CLUBS, ...X.COUNTIES])], got = Object.fromEntries(local.map(t => [t.id, P.levelOf(t)]));
+  ok(local.length === 18 && local.every(t => got[t.id] === want[t.id] && P.CLUB_COUNTY[t.id]), `every Local club, Surrey's and Counties', has its 2025-26 level from its league (5 Regional 1 to 11 Counties 5) and a county (${Object.entries(got).map(([k, v]) => k + ' ' + v).join(', ')})`);
+  ok(json(P.CLUB_LEVEL) === json({ QUI:11 }) && !local.find(t => t.id === 'QUI').league, 'only Quins, with no league in the data, have a level written down');
   ok(X.CLUBS.filter(t => P.CLUB_COUNTY[t.id] === 'HAM').map(t => t.id).join() === 'ALD', 'Aldershot are Hampshire\'s; the rest Surrey\'s');
   const cups = Object.fromEntries(X.CLUBS.map(t => [t.id, P.cupFor(t).name]));
   ok(cups.FAR === 'Surrey Cup' && cups.WIM === 'Surrey Cup' && cups.GUI === 'Surrey Trophy' && cups.COB === 'Surrey Trophy' && cups.HAS === 'Surrey Shield' && cups.GDN === 'Surrey Bowl' && cups.QUI === 'Surrey Bowl' && cups.ALD === 'Hampshire Bowl',
@@ -44,8 +46,8 @@ const tie = (c, win) => { const f = K.cupFixture(c), home = f.home === c.user, u
   const r0 = rndCalls(), far = K.cupNew('county', { user:club('FAR'), cat:'men', year:1 });
   ok(rndCalls() > r0, 'the draw is made in cupNew');
   ok(far && far.id === 'county' && far.name === 'Surrey Cup' && far.user === 0 && far.teams.length === 8 && far.teams[0].id === 'FAR', 'cupNew(\'county\'): Farnham in the Surrey Cup, first of eight');
-  ok(new Set(far.teams.map(t => t.id)).size === 8 && far.teams.slice(1).every(t => X.CLUBS.some(k => k.id === t.id)), 'seven other Local clubs, none twice');
-  const lv = far.teams.slice(1).map(t => P.CLUB_LEVEL[t.id]).sort((a, b) => a - b);
+  ok(new Set(far.teams.map(t => t.id)).size === 8 && far.teams.slice(1).every(t => [...X.CLUBS, ...X.COUNTIES].some(k => k.id === t.id)), 'seven other Local clubs (Surrey\'s and Counties\'), none twice');
+  const lv = far.teams.slice(1).map(t => P.levelOf(t)).sort((a, b) => a - b);
   ok(lv.join() === '5,6,6,7,7,7,9', `the seven nearest Farnham's level (${lv})`);
   ok(far.fixtures.length === 1 && far.fixtures[0].length === 4 && new Set(far.fixtures[0].flat()).size === 8, 'four Quarter-Final ties, each side once');
   const f = K.cupFixture(far);
@@ -126,6 +128,9 @@ const tie = (c, win) => { const f = K.cupFixture(c), home = f.home === c.user, u
   ok(out && !out.won && C.ahead(has) === null, 'out in the Quarter-Final');
   C.renderEnd(); ok($('ce-title').textContent === 'Quarter-Finalists', `the screen: ${$('ce-title').textContent}`);
   C.advance(); ok(has.trophies.length === 0 && has.phase === 'transfer', 'nothing banked, on to the window');
+  const mer = C.create({ pos:'B', num:5, club:X.COUNTIES.find(t => t.id === 'MER'), league:'cty' }); C.set(mer); finish(mer, 6);
+  ok(C.league(mer) === 'cty' && C.outcome(mer).next.phase === 'county', 'Merton, on the Counties list: its county cup too');
+  C.advance(); ok(mer.cup && mer.cup.name === 'Surrey Bowl' && mer.cup.teams.slice(1).every(t => P.levelOf(t) >= 9), `Merton: the Surrey Bowl, against clubs near its level (${mer.cup.teams.slice(1).map(t => t.id)})`);
   const bath = C.create({ pos:'B', num:7, club:X.ENGLAND[0] }); C.set(bath); finish(bath, 3);
   ok(C.outcome(bath).next.phase !== 'county', 'Bath, a professional club: no county cup');
   // signed by a professional club: no county cup the next year
