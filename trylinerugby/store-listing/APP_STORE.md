@@ -36,7 +36,7 @@ The owner chose Sports. In App Store Connect a game's primary category is **Game
 
 ## Age Rating: 4+
 
-Apple works the rating out from the answers. Every answer below is "None" or "No" except Contests, which is "Infrequent", and Apple rates Infrequent Contests 4+ too. That gives **4+**, unless the owner answers Cartoon or Fantasy Violence "Infrequent", which makes it **9+**. Guideline 2.3.6 asks for honest answers ("If your app is mis-rated, customers might be surprised by what they get, or it could trigger an inquiry from government regulators"), so Apple's definitions are quoted in full where an answer is close. The reasons are given so the owner can check each against the game.
+Apple works the rating out from the answers. Every answer below is "None" or "No". That gives **4+**, unless the owner answers Cartoon or Fantasy Violence "Infrequent", which makes it **9+**. Guideline 2.3.6 asks for honest answers ("If your app is mis-rated, customers might be surprised by what they get, or it could trigger an inquiry from government regulators"), so Apple's definitions are quoted in full where an answer is close. The reasons are given so the owner can check each against the game.
 
 **In-App Controls**
 
@@ -83,7 +83,7 @@ Apple works the rating out from the answers. Every answer below is "None" or "No
 |---|---|---|
 | Gambling | No | No real-money betting. |
 | Simulated Gambling | None | No betting or wagering of any kind. |
-| Contests | Infrequent | Apple's definition in full: "Events that allow users to compete with one another for rankings, rewards, or the achievement of personal goals. May include: skill-based competitions, trivia quizzes, or sport or fitness contests". Two Player is two people competing head to head in a sport match on one device, with a series score, which is that. It is not Frequent: there are no online rankings or leaderboards, and the championship and career are against the computer. Apple rates Infrequent Contests **4+** ("Frequent" would make it 13+). In Brazil, where Apple applies Brazil's own table, Infrequent contests rates **A6** instead of AL. |
+| Contests | None | Apple's definition in full: "Events that allow users to compete with one another for rankings, rewards, or the achievement of personal goals. May include: skill-based competitions, trivia quizzes, or sport or fitness contests". The one place users competed with one another was Two Player, two people head to head on one device with a series score, and it has had no way in since 2026-11-09: the owner took 2 Players off the home, and nothing in the game opens the mode now (its code is kept). What is left is one player against the computer: Quick Match, the championship and the career, with the drills' stars and the Locker's medals as a player's own goals, and no online rankings or leaderboards. If Two Player comes back to the home, answer **Infrequent** again: still **4+** ("Frequent" would make it 13+), but in Brazil, where Apple applies Brazil's own table, Infrequent contests rates **A6** instead of the **AL** that None gives. |
 | Loot Boxes | No | The two unlocks are fixed and known before you buy. Nothing is random and nothing is bought with in-game currency. |
 
 Questions added after this was written (two new content descriptors were reported for 16 November 2026, one of them about sharing a person's real-world location): the game shares no location and has no social features, so the answer to anything of that kind is No or None.
@@ -127,7 +127,7 @@ All are **Non-Consumable**. Create them under Monetisation, In-App Purchases, be
 | Product ID | Reference name | Price | Notes |
 |---|---|---|---|
 | `tryline.full` | Full Game | £1.99 | Championship, Career, Create Team, Hard and the Legends sides. |
-| `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Import and the club badge. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set and `agreed:true` is on its FAN_CLUBS entry, in the build submitted. |
+| `tryline.fan.farnham` | Super Fan Farnham RUFC | £3.99 | Full Game, Add Your Team and the club badge. Farnham RUFC's share is 50%, to be confirmed in writing by the club before launch (LAUNCH_CHECKLIST.md). On sale in the game only once its share is set and `agreed:true` is on its FAN_CLUBS entry, in the build submitted. |
 | `tryline.fan.<club>` | Super Fan (club name) | £3.99 | One per partner club, same shape. There is no generic `tryline.fan`. |
 
 The ids are the store builder's (src/store.js, `FAN_CLUBS`, and `trylinerugby/store/README.md`); they must match exactly.
@@ -151,7 +151,7 @@ Super Fan: Farnham RUFC
 
 <!-- copy:apple.iap.fan.description -->
 ```text
-Full Game and Import. Supports Farnham RUFC.
+Full Game, Add Your Team, for Farnham RUFC.
 ```
 
 **Family Sharing.** Non-consumables can be shared with a Family Sharing group. Turning it on is kind to families (one unlock for every child's device). It cannot be turned off again for a product once on. For Super Fan it means one sale can unlock several devices, and only the one sale is reported and shared with the club. **On for both products (owner, 2026-11-08).** Set it when each product is created; it cannot be switched off later. The support page tells parents a family member gets the unlocks on their own Apple Account.
@@ -185,9 +185,9 @@ Tryline Rugby Sevens is a rugby sevens game. The whole game runs from files insi
 
 Unlocks: Full Game (tryline.full) and Super Fan for a partner club (tryline.fan.<club>) are non-consumable in-app purchases. Locked modes show an Unlock card. Restore Purchases is in the Grown-Ups panel: Settings, at the bottom of the home screen, then Grown-Ups.
 
-Grown-up check: purchases, Restore Purchases, the privacy and support links and Import first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
+Grown-up check: purchases, Restore Purchases, the privacy and support links and Add Your Team first ask a multiplication written out in words, always with a three-figure answer (for example "What is seventeen times six?", 102). Tap the three figures; the answer is checked as the third goes in. Two wrong answers in a row make it wait before the next try.
 
-Import (part of Super Fan: Import Data at the top of the home screen, and Import Club on the team screen) reads a club or tournament page you paste in. A public link to try: [OWNER: the partner club's own page, used with the club's consent]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
+Add Your Team (part of Super Fan: at the top of the home screen, and on the team screen beside Create Team) reads a club or tournament page you paste in. A public link to try: [OWNER: the partner club's own page, used with the club's consent]. The app fetches only that page and up to two pages it links to on the same site, keeps team names and a table, and keeps nothing about any person.
 
 Super Fan is an ordinary purchase of an unlock. Before purchase the game states the share of what we receive for each Super Fan unlock that goes to the partner club (50% of Apple's proceeds); SignCheck Ltd pays that share to the club under a written agreement.
 

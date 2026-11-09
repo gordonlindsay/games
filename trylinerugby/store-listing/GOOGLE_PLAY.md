@@ -68,7 +68,7 @@ Because the audience includes children and adults, Google treats it as a **mixed
 
 ### App Access
 
-**All functionality is available without special access.** No login. The paid modes need a purchase: say in the notes that Google's reviewers can unlock with a test card, and that Import needs a club link to read (**[OWNER: a public club page link for testing]**).
+**All functionality is available without special access.** No login. The paid modes need a purchase: say in the notes that Google's reviewers can unlock with a test card, and that Add Your Team (at the top of the home screen) needs a club link to read (**[OWNER: a public club page link for testing]**).
 
 ### Content Rating (IARC Questionnaire)
 
@@ -83,7 +83,7 @@ Category: **Game**. Answers, with the reason for each:
 | Language | No | No swearing or crude language. |
 | Controlled substances (drugs, alcohol, tobacco) | No | |
 | Crude humour | No | |
-| Users can interact or exchange content | No | No chat, no sharing, no online play. Two Player is on one computer. |
+| Users can interact or exchange content | No | No chat, no sharing, no online play. |
 | Shares the user's current physical location | No | |
 | Digital purchases | Yes | Full Game and Super Fan, one-off in-app purchases. |
 | Unrestricted internet access (a browser or search) | No | Import reads one pasted page and shows none of it. |
@@ -147,7 +147,7 @@ Super Fan: Farnham RUFC
 
 <!-- copy:google.iap.fan.description -->
 ```text
-Everything in Full Game, and Import for your club and its league. Supports Farnham RUFC: the game states the club's share before you buy.
+Everything in Full Game, and Add Your Team: your club and its league. Supports Farnham RUFC: the game states the club's share before you buy.
 ```
 
 A Google Play merchant account (Monetise setup) and a payments profile must be in place before paid products can be made.

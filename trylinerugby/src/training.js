@@ -1,5 +1,5 @@
 /* =========================================================
-   Training Ground drills.
+   The drills: Skills Mini Games, and the career's Train.
    Bouncy Egg, Pass Around the Circle, Cones and Tackling each run in a training space of their own: the pitch, the kits and
    the controls of a match with none of its flow. While practice.space is set, update() skips matchUpdate and the drill moves
    the men and the ball itself (M.phase reads 'drill', so nothing in the HUD or the hints takes it for open play). Kicking

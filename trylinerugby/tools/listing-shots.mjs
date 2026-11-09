@@ -71,7 +71,7 @@ export const LISTING_MOMENTS = [
     for (let i = 0; i < 26; i++) T.update(T.STEP);
     M.paused = true;
   }, wait:700 },
-  { id:'drill', name:'Training Ground: Tackling', stage:() => {
+  { id:'drill', name:'Skills Mini Games: Tackling', stage:() => {
     const T = window.__tryline;
     T.practice.start('tackle'); document.getElementById('pr-retry').click();
     const P = T.practice.state(), M = T.M, inp = T.input;

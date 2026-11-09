@@ -383,7 +383,7 @@ function champAt4(userWins) {
   L.open(3); const leg = $('lk-body').innerHTML;
   ok(/New Zealand/.test(leg) && /1987/.test(leg) && (leg.match(/lk-leg lk-off/g) || []).length === 18 && /lk-padlock/.test(leg) && /lk-need[^<]*<i class="lk-pip t3 on"[^>]*><\/i>2</.test(leg), 'Legends: the unlocked sides, the rest a padlock and the Gold count each needs');
   $('lk-back').click(); ok(!$('s-home').hidden && $('s-locker').hidden, 'Back to Menu goes home');
-  ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my"[^>]*>[\s\S]*?<\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Import Data<\/button>\s*<\/div>/.test(html), 'the home button reads Locker, at the top beside My Team and Import Data (the home\'s headlines, ui-menus.js)');
+  ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my"[^>]*>[\s\S]*?<\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(html), 'the home button reads Locker, at the top beside My Team and Add Your Team (the home\'s headlines, ui-menus.js)');
   ok(/id="lk-back" data-back>Back to Menu</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Menu is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
   ok(![src, css].some(s => /[\u2014\u2190-\u21ff]/.test(s)), 'no em dash and no arrow in the Locker\'s code or styles');
 }
@@ -471,7 +471,7 @@ async function browserChecks() {
       const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
       await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
-      // the home: desk or not (2 Players), the app or the web (Grown-Ups, Import Data), and a championship and a career under way, on every
+      // the home: desk or not, the app or the web (Grown-Ups, Add Your Team), and a championship and a career under way, on every
       // headline: the Locker sits in the top row beside My Team, on screen, at least 44px, touching no other button, and the home fits
       const rows = await page.evaluate(() => {
         const T = window.__tryline, X = T.teams, out = [];
@@ -492,7 +492,7 @@ async function browserChecks() {
       });
       ok(rows.length === 40 && rows.every(r => r.fits), `${w}x${h}: the home fits without a scroll in every state, on every headline (${rows.filter(r => !r.fits).map(r => r.state).join(', ') || 'all forty'})`);
       ok(rows.every(r => r.lk && !r.overlap), `${w}x${h}: Locker is in the top row, on screen, at least 44px, touching no other button, in every state (${rows.filter(r => !r.lk || r.overlap).map(r => r.state).join(', ') || 'all'})`);
-      ok(rows.every(r => r.rows), `${w}x${h}: the five headlines are equal and level, 44px at least, and Quick Match takes its row, in every state (${rows.filter(r => !r.rows).map(r => r.state).join(', ') || 'all'})`);
+      ok(rows.every(r => r.rows), `${w}x${h}: the five headlines are equal and level, 44px at least, and Quick Match's Play takes its row, in every state (${rows.filter(r => !r.rows).map(r => r.state).join(', ') || 'all'})`);
       // the Locker: each tab with nothing, some and everything earned
       const tabs = await page.evaluate(() => {
         const L = window.__tryline.locker, out = [];

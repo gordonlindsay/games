@@ -6,7 +6,7 @@
 #m-practice .card{max-width:480px}
 @media(max-height:420px){#practice-cue{top:51px;width:min(490px,65vw);padding:4px 8px}#practice-cue strong{font-size:12px}#practice-cue span{font-size:11px}}
 
-/* ===== drills: the Training Ground (the home's Training Drills, styles.css) ===== */
+/* ===== drills: Skills Mini Games (the home's headline, styles.css) and the career's Train ===== */
 .drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .btn.drill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:88px;padding:10px 8px;text-align:center;font:700 15px/1.15 var(--body)}
 .dc-icon{display:block;width:40px;height:40px;flex:none}

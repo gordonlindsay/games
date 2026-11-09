@@ -132,7 +132,7 @@ const P = (f, url) => I.parse(fx(f), url);
 
 // 4. the native fetch path, through a stubbed Capacitor
 const pages = {}, calls = [];
-// In the app Import Club is the Super Fan's (src/store.js): with the app stubbed this suite plays as a Super Fan, so the native
+// In the app Add Your Team is the Super Fan's (src/store.js): with the app stubbed this suite plays as a Super Fan, so the native
 // builder's nativeOn (once merged) sees the app and Import stays open. On the web the purchase is never read.
 const native = on => {
   T.store.setBought(on ? ['tryline.fan.farnham'] : []);
@@ -236,7 +236,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok((await I.fetch(PIT)).error === 'web' && webFetches === 0, 'nor does Capacitor on the web');
   native(false);
   I.open();
-  ok(!$('m-import').hidden && I.state().step === 'web' && $('im-title').textContent === 'Import Works in the Try Line App', 'the card says import works in the app');
+  ok(!$('m-import').hidden && I.state().step === 'web' && $('im-title').textContent === 'Works in the Try Line App', 'the card says Add Your Team works in the app');
   ok(!$('im-line').hidden && $('im-field').hidden && $('im-go').hidden && $('im-alt').hidden, 'one plain line, no link field, no Import, one balanced Back button');
   $('im-back').click();
   ok($('m-import').hidden, 'Back to Teams closes it');
@@ -251,7 +251,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   for (const id of ['im-url', 'im-go', 'im-back', 'im-paste', 'im-make']) $(id).focus = () => { focused = id; };
   pages[LG] = html200('pitchero-league');
   D.openTeams('champ');
-  ok($('t-grid').innerHTML.includes('id="t-import"') && $('t-grid').innerHTML.includes('Import Club') && $('t-league').hidden, 'the team screen has an Import Club card beside Create Team, and no My League yet');
+  ok($('t-grid').innerHTML.includes('id="t-import"') && $('t-grid').innerHTML.includes('<span class="tname">Add Your Team</span>') && !$('t-grid').innerHTML.includes('Import Club') && $('t-league').hidden, 'the team screen has an Add Your Team card beside Create Team (the home\'s name for the same card), and no My League yet');
   X.poolPick(I.POOL);
   ok(D.settings().pool === 'sur' && X.teamPool() === 'sur', 'My League cannot be picked before there is one');
   I.open();
@@ -424,9 +424,9 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok($('t-league').hidden, 'no league, no My League');
   const full = Array.from({ length:4 }, (_, i) => ({ key:'f' + i, name:'Full ' + i }));
   X.restore({ custom:full }); D.renderTeams();
-  ok(!$('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four teams made and no league, Import Club goes with Create Team');
+  ok(!$('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four teams made and no league, Add Your Team goes with Create Team');
   I.setLeague(I.clean(mk(3))); D.renderTeams();
-  ok($('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four made and a league saved, Import Club stays: the way to refresh or remove it');
+  ok($('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four made and a league saved, Add Your Team stays: the way to refresh or remove it');
   native(true); reset(); I.setGate(go => go());
   pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
   I.open(); $('im-url').value = PIT + '/teams/3100/league-table'; I.go();
@@ -450,7 +450,8 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(!/[—←-↙⇐-⇙]/.test(block + src), 'no em dash or arrow in the import card or its source');
   const SMALL = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const title = s => s.split(' ').every((w, i) => (i > 0 && SMALL.has(w)) || /^[A-Z0-9]/.test(w));
-  const labels = ['Import Club', 'Paste Your Link', 'Import', 'Importing', 'Save Club', 'Save League', 'Change Link', 'Remove League', 'Confirm Remove', 'Back to Teams', 'Paste', 'My League', 'Import Works in the Try Line App', 'Shirt', 'Trim'];
+  const labels = ['Add Your Team', 'Paste Your Link', 'Import', 'Importing', 'Save Club', 'Save League', 'Change Link', 'Remove League', 'Confirm Remove', 'Back to Teams', 'Paste', 'My League', 'Works in the Try Line App', 'Shirt', 'Trim'];
+  ok(!/Import Club|Import Data|Import Works/.test(block + src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'one name for the flow, the home\'s and the team screen\'s alike: Add Your Team, never Import Club or Import Data');
   for (const l of labels) ok(title(l) && (src + block).includes(l), `"${l}" is a Title Case label in use`);
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
   ok(html.includes('<div class="seg" id="t-loc" hidden></div>') && menus.includes("btn('data-pool=\"my\" id=\"t-league\"', 'My League', ' hidden')"), 'Local\'s list carries My League after Surrey, hidden until there is one');

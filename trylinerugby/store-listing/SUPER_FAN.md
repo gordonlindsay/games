@@ -4,7 +4,7 @@
 
 ## What Super Fan Is
 
-A one-off unlock in the app, one product per partner club (`tryline.fan.<club>`, for example `tryline.fan.farnham`). It includes everything in Full Game (Championship, Career, Create Team, Hard, the Legends sides) and Import, and marks the player as a Super Fan of that club: the club's kit and name on the Super Fan badge, and the club offered first in Career and Championship. SignCheck Ltd, the seller, shares part of each sale with the club.
+A one-off unlock in the app, one product per partner club (`tryline.fan.<club>`, for example `tryline.fan.farnham`). It includes everything in Full Game (Championship, Career, Create Team, Hard, the Legends sides) and Add Your Team (the import of a club and its league), and marks the player as a Super Fan of that club: the club's kit and name on the Super Fan badge, and the club offered first in Career and Championship. SignCheck Ltd, the seller, shares part of each sale with the club.
 
 The owner's decisions (8 November 2026): Super Fan costs **£3.99** (Full Game stays £1.99); each club's share is **50% of what Apple pays us** for its unlocks, after Apple's commission and VAT; the first partner is **Farnham RUFC** (`tryline.fan.farnham`), whose 50% is **to be confirmed in writing with the club before launch**.
 

@@ -1,5 +1,5 @@
 /* =========================================================
-   Training Ground: the drill picker (the home's Training Drills), the ready and result card, and the rules every drill keeps.
+   Skills Mini Games: the drill picker (the home's Skills Mini Games headline), the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
    practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
    Career, or leaveLabel; Back or Escape on the card; Pause then Back to Career) restores the settings exactly as leaving does,
@@ -48,13 +48,13 @@ function practiceHandBack() {                              // a caller's drill e
   fn(res);
 }
 function practiceLeave() { if (practice && practice.opts) { practiceHandBack(); return; } practiceRestore(); exitMatch(); }
-function practiceChoose() {                                // Back to Training: the home, on Training Drills where every drill is picked, the drill just played in focus
+function practiceChoose() {                                // Back to Skills: the home, on Skills Mini Games where every drill is picked, the drill just played in focus
   if (practice && practice.opts) { practiceHandBack(); return; }
   const id = practice && practice.id;
   practiceRestore();
   setTwo(false); startDemo();
   $('hud').hidden = $('controls').hidden = $('b-pause').hidden = true;
-  goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings, the headline included: it was picked on Training Drills
+  goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings, the headline included: it was picked on Skills Mini Games
 }
 function practiceStart(id, opts) {
   const drill = PRACTICE_DRILLS.find(d => d.id === id); if (!drill) return;
@@ -91,8 +91,9 @@ function practiceStart(id, opts) {
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
 }
-const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training');   // the card's leave button and the pause card's
-function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
+const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Skills');   // the card's leave button and the pause card's
+function practiceLeaveLabel() {                            // Back to Skills on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
+  $('pr-eyebrow').textContent = practice.opts ? 'Training' : 'Skills Mini Games';   // the place it came from: the home's Skills Mini Games, or a caller's training (the career's Train)
   $('pr-select').textContent = practiceBackText();
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }

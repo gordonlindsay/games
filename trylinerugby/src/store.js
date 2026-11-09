@@ -1,9 +1,9 @@
 /* =========================================================
    Store: the one-off unlocks, who has them, and the adapter to the app stores.
 
-   Free: Quick Match, the Training Ground, Kids, Easy and Normal, How to Play, Two Player, the Locker and My Team. Full Game
+   Free: Quick Match, Skills Mini Games, Kids, Easy and Normal, How to Play, Two Player (no home button), the Locker and My Team. Full Game
    (tryline.full) adds Championship, Career, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
-   Game and Import, and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
+   Game and Add Your Team (the import), and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
    Career and Championship. No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's
    own field (store), and Restore Purchases reads it back from the App Store or Google Play.
 
@@ -92,7 +92,7 @@ function storeOffers(f) {
   for (const c of FAN_CLUBS) if (storeShareOk(c) && storeTeamOf(c) && !storeBought.includes(c.product) && (f == null || !storeHas(f))) out.push({ id:c.product, kind:'fan', club:c });
   return out;
 }
-/* A locked control is shown only where something unlocks it: in the app, Import Club stays away until a Super Fan club is on sale. */
+/* A locked control is shown only where something unlocks it: in the app, Add Your Team stays away until a Super Fan club is on sale. */
 const storeOffered = f => storeHas(f) || !storeNative() || storeOffers(f).length > 0;
 
 /* ---------- the Super Fan's club, first ---------- */

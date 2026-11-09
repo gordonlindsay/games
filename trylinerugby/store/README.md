@@ -11,9 +11,9 @@ Grown-Ups panel). `node tools/store.mjs` checks them, and runs in `node tools/ch
 
 | Tier | Product id | What it unlocks | Price |
 |---|---|---|---|
-| Free | none | Quick Match, Training Ground (all drills), Kids, Easy, Normal, How to Play, 2 Players, the Locker (its medals, balls, boots and Legends won), My Team | free |
+| Free | none | Quick Match, Skills Mini Games (all drills), Kids, Easy, Normal, How to Play, 2 Players (no home button since 2026-11-09), the Locker (its medals, balls, boots and Legends won), My Team | free |
 | Full Game | `tryline.full` | Championship, Career, Create Team (and Edit), Hard, playing the Legends sides (`legends`) | £1.99 |
-| Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Import Club, and the Super Fan badge: the club's shirt and name on the home, and the club offered first in Career and Championship | £3.99 |
+| Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Add Your Team (the import), and the Super Fan badge: the club's shirt and name on the home, and the club offered first in Career and Championship | £3.99 |
 
 All of them are **non-consumable** in-app purchases. There is no generic `tryline.fan`: every Super Fan product belongs to one
 club, so Apple's and Google's sales reports count each club's unlocks with nothing collected by the game.
@@ -38,7 +38,7 @@ const FAN_CLUBS = [
   commission, not the price. Farnham RUFC's is 50.
 - `agreed`: `true` only once the club has confirmed that share in writing. **Until a club has both a share and `agreed:true`, its
   Super Fan offer is not shown anywhere**, so it can never go on sale without its stated, agreed share (`tools/store.mjs` checks
-  this). Until one club is on sale, Import Club is not offered in the app at all, as only Super Fan unlocks it.
+  this). Until one club is on sale, Add Your Team is not offered in the app at all, as only Super Fan unlocks it.
   `tools/listing.mjs` reads the same flag: `superfan.html` names a club only once it is marked agreed.
 
 With the share agreed, the offer carries this sentence, and the game never describes it any other way:

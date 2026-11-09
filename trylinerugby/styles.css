@@ -278,7 +278,7 @@ body.desk.dev-pad .act .hint.pad{display:block}
 body.desk .desk-only{display:block}
 #pz-seat,#br-seat{margin:-4px 0 0;font:700 13px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--flood)}
 #pz-seat.s1,#br-seat.s1{color:var(--p2)}
-/* two player: the home's 2 Players is for computers only (body.desk). The join screen seats the two players side by side in their colours */
+/* two player: no button on the home since 2026-11-09 (openJoin is its way in); body.desk now drives How to Play's desk-only rows. The join screen seats the two players side by side in their colours */
 .eyebrow.p1{color:var(--flood)}.eyebrow.p2{color:var(--p2)}
 /* the seat tag: the numeral on the seat colour, beside the scorebug, on the Full Time row and on the join cards */
 .stag{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;background:var(--flood);color:var(--flood-ink);font:900 15px/1 var(--display);font-style:normal;vertical-align:middle;flex:none}
@@ -543,7 +543,7 @@ body.desk .desk-only{display:block}
   .cr-tiles,.cr-drills{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 /* ===== import ===== */
-/* the Import Club card beside Create Team: a chain link drawn in CSS */
+/* the Add Your Team card beside Create Team: a chain link drawn in CSS */
 .team.create .plus.link{border:0;border-radius:0;position:relative}
 .team.create .plus.link::before,.team.create .plus.link::after{content:"";position:absolute;width:24px;height:12px;border:3px solid currentColor;border-radius:7px;transform:rotate(-45deg)}
 .team.create .plus.link::before{left:3px;top:20px}
@@ -884,7 +884,7 @@ body.desk .desk-only{display:block}
   #s-career-draw .cb-tie.tbc{min-height:42px}
 }
 /* ===== home: five headlines (ui-menus.js) ===== */
-/* The wordmark on the left; My Team, Locker and Import Data along the top beside it; the chosen headline's buttons under them, big;
+/* The wordmark on the left; My Team, Locker and Add Your Team along the top beside it; the chosen headline's buttons under them, big;
    and the five headlines along the bottom in equal parts, the chosen one lit in the floodlight's colour. Fits 844x390 and 667x375
    with no scroll in every state. */
 .home{max-width:960px;height:100%;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;
@@ -908,7 +908,7 @@ body.desk .desk-only{display:block}
 .hl-panels{grid-area:panel;min-height:0;display:flex;flex-direction:column;justify-content:safe center}   /* safe: a panel too tall for its row starts at the row's top, never pushed up under the top row */
 .hl-panel{display:flex;flex-direction:column;gap:10px;min-width:0}
 .hl-panel .btn.primary{min-height:72px;font-size:30px}
-.hp-game .btn{min-height:56px}
+.hl-panel.hp-game .btn.primary{min-height:128px;font-size:56px;letter-spacing:.04em}   /* Quick Match's one button, Play: bigger than any other panel's */
 .hp-career .resume-note,.hl-go .resume-note{margin-top:-4px}
 .hl-go{display:flex;flex-direction:column;gap:10px}
 .hc-new{display:flex;flex-direction:column;gap:8px}
@@ -966,6 +966,7 @@ summary::-webkit-details-marker{display:none}
   .home .eyebrow{font-size:10px;letter-spacing:.12em}
   .home .mark{gap:10px}
   .hl-panel .btn.primary{min-height:64px;font-size:28px}
+  .hl-panel.hp-game .btn.primary{min-height:112px;font-size:48px}
 }
 @media (orientation:landscape) and (max-height:420px){
   /* a phone held sideways: the top row 48px, the bar 52px, the panel's buttons between */
@@ -999,6 +1000,7 @@ summary::-webkit-details-marker{display:none}
   .hl-panels{overflow-y:auto;margin:-6px;padding:6px;scrollbar-width:none}
   .hl-panel,.hl-go,.hc-new{gap:6px}
   .hl-panel .btn.primary{min-height:56px;font-size:26px}
+  .hl-panel.hp-game .btn.primary{min-height:88px;font-size:40px}
   .hc-comps{gap:6px}
   .btn.hc-comp,.hc-comps.n8 .btn.hc-comp{min-height:44px}
   .hp-drills .drills{gap:6px}
@@ -1007,6 +1009,15 @@ summary::-webkit-details-marker{display:none}
   .hp-settings.settings{gap:4px 10px;padding:5px 10px}
   .hp-settings .set{gap:2px}
   .hp-settings .lbl{font-size:10px;line-height:1}
+}
+@media (orientation:landscape) and (max-width:619px){
+  /* a phone under 620px wide held sideways (568x320): the five names a little smaller, so Skills Mini Games fits its fifth whole */
+  .btn.hl{padding-inline:2px}
+  .hl-name{font-size:11.5px}
+}
+@media (max-width:760px){
+  /* a phone's width: Add Your Team on two lines, its lock beside Team, so My Team keeps the room Import Data left it */
+  .home-top .im-home{white-space:normal;max-width:calc(4.6em + 24px);padding-inline:12px;text-wrap:balance}
 }
 @media (orientation:landscape) and (max-height:420px){
   /* a World Cup's Pools, swapped in for the bracket: a little tighter, so they and the Bracket button fit under the result card */
