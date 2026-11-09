@@ -10,6 +10,12 @@ let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST = ${process.env.BURST};`);
 // GKTUNE='{"band":[0.15,0.13,0.10]}' tries other goal-kick levers the same way
 if (process.env.GKTUNE) js = js.replace('// GKTUNE', 'Object.assign(KICK, ' + process.env.GKTUNE + ');');
+// CLUB_RATED=off rates no club from its table (every list's own abilities, as before the teams builder), the proof behind a re-pin;
+// CLUB_RATED='{"HAS":67}' tries other club ratings the same way
+if (process.env.CLUB_RATED) js = js.replace('// CLUB_TUNE', process.env.CLUB_RATED === 'off' ? 'for (const k in CLUB_RATED) delete CLUB_RATED[k];' : 'Object.assign(CLUB_RATED, ' + process.env.CLUB_RATED + ');');
+// NEW_LISTS=off leaves PR #14's England 2 and Counties off the team lists (ALL_TEAMS as before them: the menu demo draws from it), the
+// other half of that proof
+if (process.env.NEW_LISTS === 'off') js = js.replace(/\n  \{ key:'en2'[^\n]*/, '').replace(/\n  \{ key:'cty'[^\n]*/, '');
 // CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion and Tackle duel trigger levers
 {
   const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');

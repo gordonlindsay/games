@@ -199,7 +199,7 @@ function restore(s) {
   }
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
-  if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
+  if ('importLeague' in s) { const moved = new Map(); importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague, moved); if (typeof importRecode === 'function') importRecode(moved); }   // after the career and the championship: a recoded league side is followed into both, and by My Team
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none

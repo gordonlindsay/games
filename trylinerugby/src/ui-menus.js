@@ -241,10 +241,19 @@ function myPool() {                                       // the list My Team's 
   return l ? l.key : 'sur';
 }
 const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat || 'ENG') : keyOf(t) === keyOf(myClubTeam()) && !t.custom === !myClubTeam().custom);
-function myHome() {                                        // the home's My Team: the club's and the country's shirts and names
+/* My Team's club, last season (PR #14's Your Team info, in main's home): its league and place, won and lost (drawn when there was a draw),
+   scored and conceded. Real figures from the club's list, so only a built-in club with a line has them; a nation, a team you made or
+   imported, a My League side and a club with no figures (Quins, New Zealand, Japan, Scotland) show none, never an invented one. */
+const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
+const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+function myHome() {                                        // the home's My Team: the club's and the country's shirts and names; under Play, the club's stars and last season
   const c = myClubTeam(), n = myNatTeam(null);
   $('my-kits').innerHTML = [c, n].map(t => `<span class="my-side">${jersey(t, 'mini')}<b>${esc(listName(t))}</b></span>`).join('');
   $('b-my').setAttribute('aria-label', 'My Team: ' + listName(c) + ', ' + listName(n));
+  const lg = myLeagueLine(c), rec = $('my-rec');
+  rec.hidden = !lg;
+  $('my-rec-side').innerHTML = lg ? `<b>${esc(listName(c))}</b>${ratedStars(c)}` : '';
+  $('my-rec-league').textContent = lg; $('my-rec-record').textContent = myRecordLine(c);
   homeFit();
 }
 function homeFit() {                                       // long names (Christchurch, South Africa) step down together until both fit, once the home has a size
@@ -264,7 +273,7 @@ $('b-my').addEventListener('click', () => { ac(); openTeams('my'); });
 let homeTier = null;                                       // the tier on show, while the game runs: first the one My Team's club is on
 const champComps = tier => (tier === 0 ? [['int', 'Championship'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']]
   : tier === 1 ? TEAM_LISTS.filter(l => l.tier === 1).map(l => [l.key, l.name])
-  : [['sur', 'Surrey'], ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
+  : [...TEAM_LISTS.filter(l => l.tier === 2).map(l => [l.key, l.name]), ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
 $('hc-tier').innerHTML = TEAM_TIERS.map((n, i) => `<button data-tier="${i}">${n}</button>`).join('');   // plain words (data.js)
 for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => { homeTier = +b.dataset.tier; champHome(); });
 function champHome() {
@@ -381,6 +390,11 @@ function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
   return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
 }
+/* A side's stars, from its overall on the one scale (starsOf, src/ratings.js): drawn beside its overall's badge wherever a team is picked or
+   listed (the team cards, the picked side's bar, My Team, the career's club picker, its transfer offers and call-up). Named ratedStars, not
+   teamStars: that is the star traits' (src/traits.js). The badge says the number; the stars carry their words for a screen reader. */
+const ratedStars = (t, quiet) => starsHtml(starsOf(t), quiet);
+const jerseyRated = t => jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`);   // the shirt with its overall's badge
 function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i <= v ? 'on' : ''}"></i>`; return `<span class="pips" aria-label="${v} of 5">${s}</span>`; }
 let teamList = [];
 /* Player 1 choosing his own side: Quick Match before his pick, 2 Players' Player 1, and Championship (bar a tour, where his side is the
@@ -395,7 +409,7 @@ function teamCard(t, i) {
   const stars = teamTraitNames(t);                         // the star traits its 5s bring (src/traits.js)
   const state = my ? ` aria-pressed="${picked}"` : picked ? ' aria-disabled="true"' : '';   // My Team's picks stay pressable; Quick Match's own side can't be its opponent
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}"${t.legend ? ' data-legend="1"' : ''}${state}>
-      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(listName(t))}</span>
+      ${jerseyRated(t)}<span class="tid"><span class="tname">${esc(listName(t))}</span>${ratedStars(t)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : mine ? '<span class="gap mine">My Team</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
       ${stars.length ? `<span class="tstars" aria-label="Star Traits: ${stars.join(', ')}">${stars.map(n => `<b>${n}</b>`).join(' · ')}</span>` : ''}
@@ -483,8 +497,8 @@ function renderTeams() {
   const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours) || my;
   $('t-yours').hidden = !yours; $('t-change').hidden = !!view || my;
   if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
-  else if (my) { const n = myNatTeam(null); $('t-mine').innerHTML = [myClubTeam(), n].map(t => `<span class="my-pair">${jersey(t)}<span>${esc(listName(t))}</span></span>`).join(''); }   // My Team: the club and the country
-  else if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, cat) || mine).name)}</span>`;
+  else if (my) { const n = myNatTeam(null); $('t-mine').innerHTML = [myClubTeam(), n].map(t => `<span class="my-pair">${jersey(t)}<span class="tid"><span>${esc(listName(t))}</span>${ratedStars(t)}</span></span>`).join(''); }   // My Team: the club and the country, each with its stars
+  else if (yours) { const m = catTeam(mine, cat) || mine; $('t-mine').innerHTML = `${jersey(mine)}<span class="tid"><span>${pair ? 'Player 1 · ' : ''}${esc(m.name)}</span>${ratedStars(m)}</span>`; }
   const def = teamDefault();
   $('t-default').hidden = !def;
   $('t-default').textContent = view && view.pick ? view.primary : def ? 'Play as ' + (catTeam(def, cat) || def).name : '';   // the side it starts: Farnham Women on Women
@@ -563,8 +577,8 @@ let draft = null, editing = null, codeTouched = false, delArmed = false;
 let levelChoosing = false, levelNote = '';                 // a new team starts on the level list; the note says what a lower level took off
 const spent = d => ABILITIES.reduce((a, [k]) => a + d[k] - 1, 0);
 /* A level's stars, drawn: five star shapes, the lit ones over the dim, so a half star is half lit and half dim at any size. Inline, like the home's icons, so there is nothing to load. n is a whole or half star count
-   (starsOfOverall, src/ratings.js). The picture carries its words for a screen reader, or quiet leaves them out where the same words are already beside it. On the levels for now; beside every team's
-   overall badge is the teams builder's (README, integration list). */
+   (starsOfOverall, src/ratings.js). The picture carries its words for a screen reader, or quiet leaves them out where the same words are already beside it. On the levels, and beside every
+   team's overall badge (ratedStars). */
 const STAR_SHAPE = (i, half) => {
   const pts = []; for (let k = 0; k <= (half ? 5 : 9); k++) { const r = k % 2 ? 4.5 : 9.8, a = (-90 + (half ? -36 : 36)*k)*Math.PI/180; pts.push((10 + 20*i + r*Math.cos(a)).toFixed(1) + ' ' + (10.6 + r*Math.sin(a)).toFixed(1)); }
   return 'M' + pts.join('L') + 'Z';

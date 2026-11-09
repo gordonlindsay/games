@@ -27,84 +27,87 @@ const NATIONS = [   // append only: championships saved before clubs existed ind
   { id:'CDN', name:'Canada',       kit:'#d52b1e', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#d52b1e', pace:4, power:5, handling:4, kicking:4, stamina:5 },   // women's twelve only: CAN is Canberra's
   { id:'USA', name:'USA',          kit:'#1b2747', trim:'#c8102e', alt:'#f2efe6', altTrim:'#1b2747', pace:5, power:5, handling:3, kicking:3, stamina:4 },   // women's twelve only
 ];   // the six first, then the rest of the world, then the women's two; a nation's code never matches a club's (RSA, not a South African city's)
-/* Local clubs: kit colours are the clubs' own, ratings are made up. Append only, never reorder. */
+/* Local clubs: kit colours are the clubs' own. Each club's league line (league, place, w, d, l, pf, pa) is its last season's, real figures from
+   PR #14's lists, read from the list and never saved (cleanSide and cleanTeam keep none of it). Its rating comes from that season (CLUB_RATED, src/ratings.js);
+   the abilities written here are only how it plays. Quins has no line here, so it keeps the rating written here. Append only, never reorder. */
 const CLUBS = [
-  { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3 },
-  { id:'HAS', name:'Haslemere',     kit:'#2244aa', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3 },
-  { id:'GUI', name:'Guildford',     kit:'#1a1e4f', trim:'#ffc014', pace:3, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'ALD', name:'Aldershot',     kit:'#d8333a', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3, stamina:4 },
-  { id:'WEY', name:'Weybridge',     kit:'#1a1a1a', trim:'#0f8040', pace:3, power:3, handling:4, kicking:3, stamina:3 },
+  { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3, league:'Regional 1 South Central', place:7, w:10, d:0, l:12, pf:640, pa:646 },
+  { id:'HAS', name:'Haslemere',     kit:'#2244aa', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Counties 3 Surrey', place:9, w:4, d:0, l:16, pf:344, pa:598 },
+  { id:'GUI', name:'Guildford',     kit:'#1a1e4f', trim:'#ffc014', pace:3, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 South Central', place:10, w:6, d:0, l:16, pf:442, pa:897 },
+  { id:'ALD', name:'Aldershot',     kit:'#d8333a', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3, stamina:4, league:'Counties 3 Hampshire', place:8, w:5, d:0, l:11, pf:335, pa:480 },
+  { id:'WEY', name:'Weybridge',     kit:'#1a1a1a', trim:'#0f8040', pace:3, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Surrey/Sussex', place:2, w:18, d:0, l:2, pf:770, pa:336 },
   { id:'QUI', name:'Quins',         kit:'#c8306f', trim:'#7eb0dc', pace:4, power:3, handling:4, kicking:3, stamina:3 },
-  { id:'COB', name:'Cobham',        kit:'#26316f', trim:'#7a2338', hoops:true, pace:3, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'GDN', name:'Guildfordians', kit:'#12482a', trim:'#6b1a3a', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:2 },
-  { id:'IRO', name:'Ironsides',     kit:'#1f9a55', trim:'#c8191e', pace:3, power:4, handling:2, kicking:2, stamina:4 },
-  { id:'KIN', name:'Kingston',      kit:'#7c1431', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'ORU', name:'Old Ruts',      kit:'#2a3290', trim:'#f5c400', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:2 },
-  { id:'WIM', name:'Wimbledon',     kit:'#7c1956', trim:'#6cadde', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:4 },
+  { id:'COB', name:'Cobham',        kit:'#26316f', trim:'#7a2338', hoops:true, pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 1 Surrey/Sussex', place:1, w:20, d:0, l:0, pf:920, pa:412 },
+  { id:'GDN', name:'Guildfordians', kit:'#12482a', trim:'#6b1a3a', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:2, league:'Counties 5 Surrey', place:4, w:7, d:0, l:7, pf:422, pa:313 },
+  { id:'IRO', name:'Ironsides',     kit:'#1f9a55', trim:'#c8191e', pace:3, power:4, handling:2, kicking:2, stamina:4, league:'Regional 2 South East', place:6, w:12, d:0, l:10, pf:660, pa:708 },
+  { id:'KIN', name:'Kingston',      kit:'#7c1431', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 3 Surrey', place:7, w:9, d:0, l:11, pf:565, pa:638 },
+  { id:'ORU', name:'Old Ruts',      kit:'#2a3290', trim:'#f5c400', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:2, league:'Counties 1 Surrey/Sussex', place:7, w:9, d:1, l:10, pf:474, pa:585 },
+  { id:'WIM', name:'Wimbledon',     kit:'#7c1956', trim:'#6cadde', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:4, league:'Regional 1 South Central', place:9, w:9, d:0, l:13, pf:661, pa:740 },
 ];
 /* Professional sides go by their city, not the club's own name or nickname: the city is a place, the club name is a
-   trademark. Kit colours follow the clubs' own; ratings are made up, and no club tops a team you can make (5 + BUDGET).
-   They follow the XV game: each league's sides in the order of its last completed table, from 17 (75) down to 14 (67), and
-   Scotland's amateur clubs 13 and 12, below every professional side. Local (CLUBS) keeps its own: Kids and Quick Match read it.
+   trademark. Kit colours follow the clubs' own, and no club tops a team you can make (5 + BUDGET). A side with a league line (PR #14's
+   last-season figures) is rated from it inside main's club band (CLUB_RATED, src/ratings.js): a top flight 67 to 72, and 75 only for a
+   national champion; England 2 64 or 67; Scotland's amateur clubs 61 and 64, as written here. New Zealand and Japan have no figures and
+   keep the ratings written here. The abilities written in a list are how a side plays (its flavour, TEAM_FLAVOUR).
    Codes are unique across every list, nations included. Append only, never reorder. */
 const FRANCE = [   // the Top 14, rated by its 2025-26 table
-  { id:'TLS', name:'Toulouse',    kit:'#d01f2e', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'BOR', name:'Bordeaux',    kit:'#5c1a33', trim:'#f2efe6', pace:4, power:2, handling:4, kicking:2, stamina:3 },
-  { id:'LRO', name:'La Rochelle', kit:'#f5c400', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'TLN', name:'Toulon',      kit:'#1c1c1c', trim:'#d01f2e', pace:3, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'NAN', name:'Nanterre',    kit:'#7eb6e0', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'PAR', name:'Paris',       kit:'#e2457f', trim:'#1b2747', pace:3, power:3, handling:4, kicking:3, stamina:3 },
-  { id:'CLE', name:'Clermont',    kit:'#f5c400', trim:'#1b2747', pace:3, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'CAS', name:'Castres',     kit:'#2050b0', trim:'#f2efe6', pace:3, power:4, handling:2, kicking:3, stamina:3 },
-  { id:'MPL', name:'Montpellier', kit:'#1b2747', trim:'#6fb7e6', pace:3, power:5, handling:3, kicking:3, stamina:3 },
-  { id:'PAU', name:'Pau',         kit:'#0f7a3c', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'BAY', name:'Bayonne',     kit:'#6fb7e6', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:3 },
-  { id:'LYO', name:'Lyon',        kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3 },
-  { id:'PGN', name:'Perpignan',   kit:'#f2b01e', trim:'#c8102e', pace:3, power:3, handling:2, kicking:3, stamina:3 },
-  { id:'MTB', name:'Montauban',   kit:'#f2efe6', trim:'#2050b0', pace:3, power:3, handling:3, kicking:2, stamina:3 },
+  { id:'TLS', name:'Toulouse',    kit:'#d01f2e', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3, league:'Top 14', place:1, w:18, d:0, l:8, pf:981, pa:617 },
+  { id:'BOR', name:'Bordeaux',    kit:'#5c1a33', trim:'#f2efe6', pace:4, power:2, handling:4, kicking:2, stamina:3, league:'Top 14', place:8, w:14, d:0, l:12, pf:822, pa:719 },
+  { id:'LRO', name:'La Rochelle', kit:'#f5c400', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:3, league:'Top 14', place:6, w:15, d:0, l:11, pf:824, pa:634 },
+  { id:'TLN', name:'Toulon',      kit:'#1c1c1c', trim:'#d01f2e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Top 14', place:9, w:12, d:1, l:13, pf:714, pa:820 },
+  { id:'NAN', name:'Nanterre',    kit:'#7eb6e0', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:3, league:'Top 14', place:5, w:16, d:1, l:9, pf:828, pa:723 },
+  { id:'PAR', name:'Paris',       kit:'#e2457f', trim:'#1b2747', pace:3, power:3, handling:4, kicking:3, stamina:3, league:'Top 14', place:3, w:15, d:1, l:10, pf:869, pa:664 },
+  { id:'CLE', name:'Clermont',    kit:'#f5c400', trim:'#1b2747', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Top 14', place:7, w:15, d:0, l:11, pf:812, pa:708 },
+  { id:'CAS', name:'Castres',     kit:'#2050b0', trim:'#f2efe6', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Top 14', place:10, w:11, d:0, l:15, pf:660, pa:751 },
+  { id:'MPL', name:'Montpellier', kit:'#1b2747', trim:'#6fb7e6', pace:3, power:5, handling:3, kicking:3, stamina:3, league:'Top 14', place:2, w:17, d:1, l:8, pf:824, pa:587 },
+  { id:'PAU', name:'Pau',         kit:'#0f7a3c', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3, league:'Top 14', place:4, w:17, d:0, l:9, pf:817, pa:665 },
+  { id:'BAY', name:'Bayonne',     kit:'#6fb7e6', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:3, league:'Top 14', place:12, w:11, d:0, l:15, pf:747, pa:869 },
+  { id:'LYO', name:'Lyon',        kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Top 14', place:11, w:11, d:1, l:14, pf:734, pa:774 },
+  { id:'PGN', name:'Perpignan',   kit:'#f2b01e', trim:'#c8102e', pace:3, power:3, handling:2, kicking:3, stamina:3, league:'Top 14', place:13, w:6, d:0, l:20, pf:550, pa:797 },
+  { id:'MTB', name:'Montauban',   kit:'#f2efe6', trim:'#2050b0', pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Top 14', place:14, w:1, d:1, l:24, pf:495, pa:1349 },
 ];
 const AUSTRALIA = [   // the four Super Rugby cities (rated by the 2026 table), Melbourne (in Super Rugby until 2024) and Adelaide, invented: no sixth professional side exists
-  { id:'SYD', name:'Sydney',    kit:'#6fb7e6', trim:'#1b2747', pace:4, power:3, handling:3, kicking:2, stamina:3 },
-  { id:'BRI', name:'Brisbane',  kit:'#a3162f', trim:'#f2efe6', pace:4, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'CAN', name:'Canberra',  kit:'#1b2747', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'PTH', name:'Perth',     kit:'#2050b0', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:3, stamina:3 },
+  { id:'SYD', name:'Sydney',    kit:'#6fb7e6', trim:'#1b2747', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Super Rugby Pacific', place:8, w:5, d:0, l:9, pf:353, pa:402 },
+  { id:'BRI', name:'Brisbane',  kit:'#a3162f', trim:'#f2efe6', pace:4, power:4, handling:3, kicking:2, stamina:3, league:'Super Rugby Pacific', place:5, w:8, d:0, l:6, pf:364, pa:386 },
+  { id:'CAN', name:'Canberra',  kit:'#1b2747', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Super Rugby Pacific', place:6, w:7, d:0, l:7, pf:402, pa:373 },
+  { id:'PTH', name:'Perth',     kit:'#2050b0', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Super Rugby Pacific', place:7, w:7, d:0, l:7, pf:358, pa:383 },
   { id:'MEL', name:'Melbourne', kit:'#14235a', trim:'#c8102e', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3 },
   { id:'ADL', name:'Adelaide',  kit:'#c8102e', trim:'#1b2747', pace:3, power:3, handling:3, kicking:2, stamina:3 },
 ];
 const SOUTH_AFRICA = [   // the URC four and the Currie Cup's next three, rated by the 2025-26 URC and the 2026 Currie Cup
-  { id:'PRE', name:'Pretoria',     kit:'#2a5fb8', trim:'#f2efe6', pace:3, power:5, handling:3, kicking:3, stamina:3 },
-  { id:'CPT', name:'Cape Town',    kit:'#1c1c1c', trim:'#2a5fb8', hoops:true, pace:4, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'DUR', name:'Durban',       kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'JHB', name:'Johannesburg', kit:'#c8102e', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'BLM', name:'Bloemfontein', kit:'#e8731c', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:2, stamina:3 },
-  { id:'KIM', name:'Kimberley',    kit:'#f2efe6', trim:'#b0b4ba', pace:3, power:3, handling:3, kicking:2, stamina:3 },
-  { id:'MBO', name:'Mbombela',     kit:'#d8a823', trim:'#1c1c1c', pace:3, power:4, handling:2, kicking:2, stamina:3 },
+  { id:'PRE', name:'Pretoria',     kit:'#2a5fb8', trim:'#f2efe6', pace:3, power:5, handling:3, kicking:3, stamina:3, league:'United Rugby Championship', place:4, w:12, d:0, l:6, pf:566, pa:406 },
+  { id:'CPT', name:'Cape Town',    kit:'#1c1c1c', trim:'#2a5fb8', hoops:true, pace:4, power:4, handling:3, kicking:3, stamina:3, league:'United Rugby Championship', place:3, w:12, d:1, l:5, pf:504, pa:344 },
+  { id:'DUR', name:'Durban',       kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'United Rugby Championship', place:10, w:8, d:1, l:9, pf:467, pa:428 },
+  { id:'JHB', name:'Johannesburg', kit:'#c8102e', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3, league:'United Rugby Championship', place:7, w:10, d:1, l:7, pf:532, pa:473 },
+  { id:'BLM', name:'Bloemfontein', kit:'#e8731c', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:2, stamina:3, league:'Currie Cup', place:2, w:5, d:0, l:2, pf:245, pa:226 },
+  { id:'KIM', name:'Kimberley',    kit:'#f2efe6', trim:'#b0b4ba', pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Currie Cup', place:1, w:6, d:0, l:1, pf:271, pa:143 },
+  { id:'MBO', name:'Mbombela',     kit:'#d8a823', trim:'#1c1c1c', pace:3, power:4, handling:2, kicking:2, stamina:3, league:'Currie Cup', place:3, w:4, d:0, l:3, pf:201, pa:195 },
 ];
 const ENGLAND = [   // the Premiership, rated by its 2025-26 table. London North and London West are the two London clubs; Quins in Local is the amateur club
-  { id:'BTH', name:'Bath',         kit:'#1d4fa0', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'BRS', name:'Bristol',      kit:'#14235a', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:2, stamina:3 },
-  { id:'EXE', name:'Exeter',       kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'GLO', name:'Gloucester',   kit:'#a4123f', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:2, stamina:3 },
-  { id:'LEI', name:'Leicester',    kit:'#0f5a32', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'NCL', name:'Newcastle',    kit:'#1c1c1c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:3 },
-  { id:'NTH', name:'Northampton',  kit:'#0f6b3a', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3 },
-  { id:'SAL', name:'Sale',         kit:'#1b2747', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'LNO', name:'London North', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:4, handling:2, kicking:3, stamina:3 },
-  { id:'LWE', name:'London West',  kit:'#7eb0dc', trim:'#c8306f', pace:4, power:2, handling:3, kicking:2, stamina:3 },
+  { id:'BTH', name:'Bath',         kit:'#1d4fa0', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3, league:'English Premiership', place:2, w:13, d:0, l:5, pf:646, pa:424 },
+  { id:'BRS', name:'Bristol',      kit:'#14235a', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'English Premiership', place:6, w:11, d:0, l:7, pf:525, pa:509 },
+  { id:'EXE', name:'Exeter',       kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:3, league:'English Premiership', place:3, w:11, d:1, l:6, pf:521, pa:367 },
+  { id:'GLO', name:'Gloucester',   kit:'#a4123f', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:2, stamina:3, league:'English Premiership', place:8, w:5, d:0, l:13, pf:424, pa:576 },
+  { id:'LEI', name:'Leicester',    kit:'#0f5a32', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:3, league:'English Premiership', place:4, w:12, d:0, l:6, pf:583, pa:405 },
+  { id:'NCL', name:'Newcastle',    kit:'#1c1c1c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:3, league:'English Premiership', place:10, w:2, d:0, l:16, pf:325, pa:860 },
+  { id:'NTH', name:'Northampton',  kit:'#0f6b3a', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3, league:'English Premiership', place:1, w:14, d:1, l:3, pf:693, pa:536 },
+  { id:'SAL', name:'Sale',         kit:'#1b2747', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'English Premiership', place:7, w:5, d:0, l:13, pf:524, pa:602 },
+  { id:'LNO', name:'London North', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'English Premiership', place:5, w:10, d:0, l:8, pf:628, pa:449 },
+  { id:'LWE', name:'London West',  kit:'#7eb0dc', trim:'#c8306f', pace:4, power:2, handling:3, kicking:2, stamina:3, league:'English Premiership', place:9, w:6, d:0, l:12, pf:448, pa:589 },
 ];
 const CELTIC = [   // Ireland, Scotland, Wales and Italy's professional sides, in one league, rated by its 2025-26 table
-  { id:'DUB', name:'Dublin',    kit:'#1f4fa8', trim:'#f2b01e', pace:4, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'LIM', name:'Limerick',  kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'BEL', name:'Belfast',   kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'GAL', name:'Galway',    kit:'#0f5a32', trim:'#f2b01e', pace:3, power:3, handling:4, kicking:3, stamina:3 },
-  { id:'EDI', name:'Edinburgh', kit:'#14235a', trim:'#e8731c', pace:3, power:4, handling:3, kicking:2, stamina:3 },
-  { id:'GLA', name:'Glasgow',   kit:'#1c1c1c', trim:'#6fb7e6', pace:4, power:3, handling:4, kicking:3, stamina:3 },
-  { id:'CDF', name:'Cardiff',   kit:'#6fb7e6', trim:'#1c1c1c', pace:4, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'SWA', name:'Swansea',   kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'LLA', name:'Llanelli',  kit:'#c8102e', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:2, stamina:3 },
-  { id:'NPT', name:'Newport',   kit:'#1c1c1c', trim:'#e8731c', pace:3, power:4, handling:2, kicking:2, stamina:3 },
-  { id:'TRE', name:'Treviso',   kit:'#0f7a3c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:2 },
-  { id:'PRM', name:'Parma',     kit:'#1b2747', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:2, stamina:2 },
+  { id:'DUB', name:'Dublin',    kit:'#1f4fa8', trim:'#f2b01e', pace:4, power:4, handling:3, kicking:3, stamina:3, league:'United Rugby Championship', place:2, w:12, d:0, l:6, pf:515, pa:370 },
+  { id:'LIM', name:'Limerick',  kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:3, league:'United Rugby Championship', place:5, w:11, d:0, l:7, pf:396, pa:376 },
+  { id:'BEL', name:'Belfast',   kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'United Rugby Championship', place:9, w:9, d:1, l:8, pf:494, pa:420 },
+  { id:'GAL', name:'Galway',    kit:'#0f5a32', trim:'#f2b01e', pace:3, power:3, handling:4, kicking:3, stamina:3, league:'United Rugby Championship', place:8, w:10, d:0, l:8, pf:442, pa:395 },
+  { id:'EDI', name:'Edinburgh', kit:'#14235a', trim:'#e8731c', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'United Rugby Championship', place:12, w:7, d:0, l:11, pf:362, pa:439 },
+  { id:'GLA', name:'Glasgow',   kit:'#1c1c1c', trim:'#6fb7e6', pace:4, power:3, handling:4, kicking:3, stamina:3, league:'United Rugby Championship', place:1, w:13, d:0, l:5, pf:479, pa:338 },
+  { id:'CDF', name:'Cardiff',   kit:'#6fb7e6', trim:'#1c1c1c', pace:4, power:3, handling:3, kicking:3, stamina:3, league:'United Rugby Championship', place:6, w:11, d:0, l:7, pf:353, pa:372 },
+  { id:'SWA', name:'Swansea',   kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'United Rugby Championship', place:11, w:7, d:2, l:9, pf:376, pa:454 },
+  { id:'LLA', name:'Llanelli',  kit:'#c8102e', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:2, stamina:3, league:'United Rugby Championship', place:14, w:4, d:2, l:12, pf:361, pa:460 },
+  { id:'NPT', name:'Newport',   kit:'#1c1c1c', trim:'#e8731c', pace:3, power:4, handling:2, kicking:2, stamina:3, league:'United Rugby Championship', place:15, w:3, d:4, l:11, pf:350, pa:481 },
+  { id:'TRE', name:'Treviso',   kit:'#0f7a3c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:2, league:'United Rugby Championship', place:13, w:6, d:2, l:10, pf:327, pa:493 },
+  { id:'PRM', name:'Parma',     kit:'#1b2747', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:2, stamina:2, league:'United Rugby Championship', place:16, w:2, d:0, l:16, pf:312, pa:587 },
 ];
 const NEW_ZEALAND = [   // the five Super Rugby cities (rated by the 2026 table) and Taranaki, a provincial side
   { id:'AKL', name:'Auckland',     kit:'#1b3a8c', trim:'#f2efe6', pace:4, power:4, handling:3, kicking:2, stamina:3 },
@@ -135,6 +138,40 @@ const SCOTLAND = [   // the Scottish Premiership, 2025-26, in its table's order:
   { id:'ANN', name:'Anniesland', kit:'#b3121f', trim:'#f5c400', pace:3, power:2, handling:3, kicking:2, stamina:2 },
   { id:'SEL', name:'Selkirk',    kit:'#1b2747', trim:'#f2efe6', pace:2, power:3, handling:2, kicking:2, stamina:3 },
 ];
+/* England's second tier, the English Championship, in last season's table order (regular season, before the play-offs), from PR #14. Thirteen
+   of its fourteen: the side from London is left out, because London is taken by the top flight's sides and it was relegated. Rated 67 with
+   a winning record, else 64: one step under the top flights' best, its winners level with their foot (CLUB_RATED).
+   No two sides here share a shirt and a trim at a glance: where a club's own colours are close to another's, one wears hoops or the darker
+   shade. Weak sources, as PR #14 flagged them: Chinnor, Hartpury's hoops, Cornwall's trim, Doncaster, Nottingham's hoops, Ampthill's shade
+   and hoops and Caldy's hoops could not be sourced and are a free choice. Append only, never reorder. */
+const ENGLAND_TWO = [
+  { id:'EAL', name:'Ealing',     kit:'#0f5a32', trim:'#f2efe6', pace:4, power:4, handling:4, kicking:3, stamina:3, league:'English Championship', place:1, w:26, d:0, l:0, pf:1125, pa:435 },
+  { id:'BED', name:'Bedford',    kit:'#14235a', trim:'#6fb7e6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:3, league:'English Championship', place:2, w:18, d:1, l:7, pf:802, pa:643 },
+  { id:'COV', name:'Coventry',   kit:'#14307a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3, league:'English Championship', place:3, w:16, d:0, l:10, pf:1053, pa:723 },
+  { id:'WOR', name:'Worcester',  kit:'#14235a', trim:'#f2b01e', pace:3, power:4, handling:4, kicking:3, stamina:3, league:'English Championship', place:4, w:15, d:0, l:11, pf:899, pa:652 },
+  { id:'CHN', name:'Chinnor',    kit:'#f2efe6', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:3, stamina:4, league:'English Championship', place:5, w:16, d:0, l:10, pf:697, pa:635 },   // colours a free choice
+  { id:'HPY', name:'Hartpury',   kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:4, league:'English Championship', place:6, w:15, d:2, l:9, pf:772, pa:632 },   // hoops a free choice
+  { id:'CWL', name:'Cornwall',   kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:4, league:'English Championship', place:7, w:13, d:1, l:12, pf:770, pa:671 },   // trim a free choice
+  { id:'DON', name:'Doncaster',  kit:'#2050b0', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:3, league:'English Championship', place:8, w:12, d:3, l:11, pf:729, pa:655 },   // colours a free choice
+  { id:'NOT', name:'Nottingham', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:3, league:'English Championship', place:9, w:12, d:1, l:13, pf:639, pa:647 },   // hoops a free choice
+  { id:'AMP', name:'Ampthill',   kit:'#5e0f24', trim:'#f2b01e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:3, league:'English Championship', place:10, w:12, d:0, l:14, pf:828, pa:890 },   // shade and hoops a free choice
+  { id:'CAL', name:'Caldy',      kit:'#1c1c1c', trim:'#f5c400', hoops:true, pace:3, power:3, handling:3, kicking:3, stamina:3, league:'English Championship', place:11, w:9, d:0, l:17, pf:574, pa:814 },   // hoops a free choice
+  { id:'RIC', name:'Richmond',   kit:'#f2b01e', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'English Championship', place:12, w:7, d:1, l:18, pf:525, pa:823 },
+  { id:'CAM', name:'Cambridge',  kit:'#a3162f', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:2, stamina:3, league:'English Championship', place:14, w:0, d:1, l:25, pf:447, pa:1190 },
+];
+/* The foot of the game, from PR #14: Counties 5 Surrey, the league Guildfordians play in, in last season's table order, with one side from
+   Counties 3 Surrey above them. Guildfordians is the Local list's own object, so it stays one team with one code (ALL_TEAMS keeps it once).
+   Rated 61 for Counties 5 and 64 for Counties 3, the foot of main's band, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
+   PR #14 flagged them: Egham's and Mitcham's colours could not be sourced and are a free choice. Append only, never reorder. */
+const COUNTIES = [
+  { id:'EFF', name:'Effingham',  kit:'#f2b01e', trim:'#0f5a32', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 3 Surrey', place:2, w:16, d:0, l:4, pf:773, pa:291 },
+  { id:'WAN', name:'Wandsworth', kit:'#7a1f2b', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 5 Surrey', place:3, w:10, d:1, l:3, pf:420, pa:335 },
+  CLUBS[7],
+  { id:'EGH', name:'Egham',      kit:'#109a52', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Counties 5 Surrey', place:5, w:7, d:0, l:7, pf:366, pa:406 },   // colours a free choice
+  { id:'MER', name:'Merton',     kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:3, league:'Counties 5 Surrey', place:6, w:1, d:0, l:13, pf:114, pa:678 },
+  { id:'MIT', name:'Mitcham',    kit:'#2050b0', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:3, stamina:3, league:'Counties 5 Surrey', place:7, w:4, d:0, l:10, pf:180, pa:281 },   // colours a free choice
+  { id:'FEL', name:'Feltham',    kit:'#1b2747', trim:'#6fb7e6', pace:3, power:3, handling:3, kicking:2, stamina:2, league:'Counties 5 Surrey', place:10, w:1, d:0, l:13, pf:230, pa:409 },
+];
 /* The team screen: International | National | Local, then a list. Every list offers at least six sides, since a championship is
    your side and five from the list on screen. settings.pool holds a list's key; 'my' is My League (src/import.js), under Local while
    a league is saved. Keys never change: the save keeps them. */
@@ -142,6 +179,7 @@ const TEAM_TIERS = ['International', 'National', 'Local'];
 const TEAM_LISTS = [
   { key:'int', tier:0, name:'International',    teams:NATIONS },   // every nation, for the codes and the saves; the screen shows the category's twelve (natList)
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
+  { key:'en2', tier:1, name:'England 2',        teams:ENGLAND_TWO },   // PR #14's second tier
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
   { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
   { key:'sco', tier:1, name:'Scotland',         teams:SCOTLAND },
@@ -150,6 +188,7 @@ const TEAM_LISTS = [
   { key:'nzl', tier:1, name:'New Zealand',      teams:NEW_ZEALAND },
   { key:'jpn', tier:1, name:'Japan',            teams:JAPAN },
   { key:'sur', tier:2, name:'Surrey',           teams:CLUBS },
+  { key:'cty', tier:2, name:'Counties',         teams:COUNTIES },      // PR #14's foot of the game; Guildfordians is Surrey's own object
 ];
 const POOLS = TEAM_LISTS.map(l => l.teams);   // every built-in list
 const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's transfer offers come from these
@@ -160,7 +199,7 @@ function poolKey(v) {
   if (Number.isInteger(v) && v >= 0 && v < POOL_OLD.length) return POOL_OLD[v];
   return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? v : 'int';
 }
-const ALL_TEAMS = POOLS.flat();
+const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
 const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local · Surrey with it picked
 /* Men | Women | Minis on the team screen, for the match or championship being set up; Men | Women in Career. Only the name and the
    team's cat change ('England Women', 'Farnham Minis'): ratings, kit, code and the engine are the same. A women's or minis side
@@ -270,8 +309,8 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.flo
 
    - RATINGS_BUNDLED is the nations' table, from the world rankings and recent results, with its date. tools/ratings/update.mjs
      reads this line as JSON, so it stays one line of strict JSON. In the merged game it is the shape ratings.json is checked against;
-     the nations themselves are rated by main's official World Rugby tables (NATIONS, NAT_WOMEN, natList in data.js). PR #14's club
-     table (CLUB_RATED) and the rating of every list from it wait for the teams builder (README, integration list).
+     the nations themselves are rated by main's official World Rugby tables (NATIONS, NAT_WOMEN, natList in data.js).
+   - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), held inside main's club band.
    - starsOfOverall and TEAM_LEVELS are the star scale and the levels a team you make can be set at.
    - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities.
    - Players' devices only ever ask the game's own site: a same-origin ratings.json, read once at boot (online, or offline through
@@ -306,6 +345,33 @@ function abilitiesFor(flavour, sum) {
   return out;
 }
 const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILITIES.map(([k]) => [k, t[k]]))]));   // from the lists, before any rating is set: how each side plays (a drill's sides, practice.js)
+/* The clubs' table: PR #14's ratings from last season's results (its CLUB_RATED at 05886e6, set from each side's place, scored and conceded,
+   the figures on its list), held inside main's club band. Main's band is 61 to 75, every nation above it (78 and up), and no club tops a team
+   you can make (75). Each of PR #14's steps stays a step where the band has room:
+   - a top flight (England, France, Celtic and Italy, South Africa, Australia): PR #14's own figure, 67 to 75, its 64 and 61 held up to the
+     band's 67 (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide). Only a national champion is 75: Northampton,
+     Toulouse, Dublin. Bordeaux is rated by its table (8th, 70): PR #14's European champion at 90 is not in main's band.
+   - England 2: a step up from PR #14's, 67 with a winning record and 64 without, so its winners are level with the top flights' foot.
+   - Local and Counties: PR #14's ladder moved onto main's band a step for a step, Counties 5 at 61 up to Farnham at 75 (Regional 1). Its
+     55 and 52 (Wimbledon, Ironsides) share 72, the one place two of its steps meet, so Farnham keeps the 75 Kids and Quick Match know.
+     So Local's best sit above England 2 and level with the top flights, where PR #14 had Local under both: with six values in the band,
+     the order between tiers and Farnham's 75 cannot both hold. Left for the owner's call (README, Teams); TEAM_LEVELS waits on it too.
+   - Dunedin, 9th in Super Rugby Pacific under Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
+   Sides not here keep the abilities written in their list: the nations (natList), Scotland's Premiership (61 and 64 as written), New Zealand
+   and Japan (no figures), Quins (no figures). A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. */
+const CLUB_RATED = {
+  NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,                                                  // England: the Premiership, Northampton the champion
+  TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,                    // France: the Top 14, Toulouse the champion
+  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // Celtic and Italy: the URC, Dublin the champion
+  CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,                                                                            // South Africa: the URC's four, then the Currie Cup's
+  BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67,                                                                                    // Australia: Super Rugby Pacific, then the two with no side now
+  DUN:67,                                                                                                                            // New Zealand: Dunedin, under Sydney
+  EAL:67, BED:67, COV:67, WOR:67, CHN:67, HPY:67, CWL:67, DON:67, NOT:64, AMP:64, CAL:64, RIC:64, CAM:64,                            // England 2: a winning record 67
+  FAR:75, WIM:72, IRO:72, GUI:70, COB:70, WEY:70, ORU:67, KIN:64, HAS:64, ALD:64, GDN:61,                                            // Local: Regional 1 down to Counties 5
+  EFF:64, WAN:61, EGH:61, MER:61, MIT:61, FEL:61,                                                                                    // Counties: Counties 3 64, Counties 5 61
+};
+// CLUB_TUNE
+for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));
 
 /* ---------- ratings.json ---------- */
 let ratingsNow = RATINGS_BUNDLED, ratingsWaiting = null;   // waiting: checked and fetched, not yet used, so no pick under way changes under anyone
@@ -556,7 +622,7 @@ function restore(s) {
   }
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
-  if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
+  if ('importLeague' in s) { const moved = new Map(); importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague, moved); if (typeof importRecode === 'function') importRecode(moved); }   // after the career and the championship: a recoded league side is followed into both, and by My Team
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
@@ -4475,10 +4541,13 @@ const careerNations = cat => natList(cat).filter(t => !t.legend);      // the tw
 const careerNation = (id, cat) => { const l = careerNations(cat); return l.find(t => t.id === id) || l.find(t => t.id === 'ENG'); };   // the category's own side
 const careerClubs = () => NATIONAL.flat();           // where an offer comes from: every national league, Scotland's included
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
-const careerListOf = t => (t && !t.custom ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's list, or null for one you made
-/* The list a club was picked from, as the save keeps it: a built-in club's own, else a national league's or My League's key, else Local. */
+const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
+const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+/* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
+   Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
-  const own = careerListOf(club); if (own) return own.key;
+  const own = careerListOf(club);
+  if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && l.teams.some(o => o.id === club.id)) ? key : own.key;
   return key === IMPORT_POOL || TEAM_LISTS.some(l => l.key === key && l.tier > 0) ? key : 'sur';
 }
 function careerLeague(cr) {                          // his club's league now: My League only while a league is saved
@@ -9681,10 +9750,19 @@ function myPool() {                                       // the list My Team's 
   return l ? l.key : 'sur';
 }
 const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat || 'ENG') : keyOf(t) === keyOf(myClubTeam()) && !t.custom === !myClubTeam().custom);
-function myHome() {                                        // the home's My Team: the club's and the country's shirts and names
+/* My Team's club, last season (PR #14's Your Team info, in main's home): its league and place, won and lost (drawn when there was a draw),
+   scored and conceded. Real figures from the club's list, so only a built-in club with a line has them; a nation, a team you made or
+   imported, a My League side and a club with no figures (Quins, New Zealand, Japan, Scotland) show none, never an invented one. */
+const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
+const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+function myHome() {                                        // the home's My Team: the club's and the country's shirts and names; under Play, the club's stars and last season
   const c = myClubTeam(), n = myNatTeam(null);
   $('my-kits').innerHTML = [c, n].map(t => `<span class="my-side">${jersey(t, 'mini')}<b>${esc(listName(t))}</b></span>`).join('');
   $('b-my').setAttribute('aria-label', 'My Team: ' + listName(c) + ', ' + listName(n));
+  const lg = myLeagueLine(c), rec = $('my-rec');
+  rec.hidden = !lg;
+  $('my-rec-side').innerHTML = lg ? `<b>${esc(listName(c))}</b>${ratedStars(c)}` : '';
+  $('my-rec-league').textContent = lg; $('my-rec-record').textContent = myRecordLine(c);
   homeFit();
 }
 function homeFit() {                                       // long names (Christchurch, South Africa) step down together until both fit, once the home has a size
@@ -9704,7 +9782,7 @@ $('b-my').addEventListener('click', () => { ac(); openTeams('my'); });
 let homeTier = null;                                       // the tier on show, while the game runs: first the one My Team's club is on
 const champComps = tier => (tier === 0 ? [['int', 'Championship'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']]
   : tier === 1 ? TEAM_LISTS.filter(l => l.tier === 1).map(l => [l.key, l.name])
-  : [['sur', 'Surrey'], ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
+  : [...TEAM_LISTS.filter(l => l.tier === 2).map(l => [l.key, l.name]), ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
 $('hc-tier').innerHTML = TEAM_TIERS.map((n, i) => `<button data-tier="${i}">${n}</button>`).join('');   // plain words (data.js)
 for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => { homeTier = +b.dataset.tier; champHome(); });
 function champHome() {
@@ -9821,6 +9899,11 @@ function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
   return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
 }
+/* A side's stars, from its overall on the one scale (starsOf, src/ratings.js): drawn beside its overall's badge wherever a team is picked or
+   listed (the team cards, the picked side's bar, My Team, the career's club picker, its transfer offers and call-up). Named ratedStars, not
+   teamStars: that is the star traits' (src/traits.js). The badge says the number; the stars carry their words for a screen reader. */
+const ratedStars = (t, quiet) => starsHtml(starsOf(t), quiet);
+const jerseyRated = t => jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`);   // the shirt with its overall's badge
 function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i <= v ? 'on' : ''}"></i>`; return `<span class="pips" aria-label="${v} of 5">${s}</span>`; }
 let teamList = [];
 /* Player 1 choosing his own side: Quick Match before his pick, 2 Players' Player 1, and Championship (bar a tour, where his side is the
@@ -9835,7 +9918,7 @@ function teamCard(t, i) {
   const stars = teamTraitNames(t);                         // the star traits its 5s bring (src/traits.js)
   const state = my ? ` aria-pressed="${picked}"` : picked ? ' aria-disabled="true"' : '';   // My Team's picks stay pressable; Quick Match's own side can't be its opponent
   const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}"${t.legend ? ' data-legend="1"' : ''}${state}>
-      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(listName(t))}</span>
+      ${jerseyRated(t)}<span class="tid"><span class="tname">${esc(listName(t))}</span>${ratedStars(t)}</span>
       ${stronger ? '<span class="gap">Stronger Side</span>' : mine ? '<span class="gap mine">My Team</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
       ${stars.length ? `<span class="tstars" aria-label="Star Traits: ${stars.join(', ')}">${stars.map(n => `<b>${n}</b>`).join(' · ')}</span>` : ''}
@@ -9923,8 +10006,8 @@ function renderTeams() {
   const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours) || my;
   $('t-yours').hidden = !yours; $('t-change').hidden = !!view || my;
   if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
-  else if (my) { const n = myNatTeam(null); $('t-mine').innerHTML = [myClubTeam(), n].map(t => `<span class="my-pair">${jersey(t)}<span>${esc(listName(t))}</span></span>`).join(''); }   // My Team: the club and the country
-  else if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, cat) || mine).name)}</span>`;
+  else if (my) { const n = myNatTeam(null); $('t-mine').innerHTML = [myClubTeam(), n].map(t => `<span class="my-pair">${jersey(t)}<span class="tid"><span>${esc(listName(t))}</span>${ratedStars(t)}</span></span>`).join(''); }   // My Team: the club and the country, each with its stars
+  else if (yours) { const m = catTeam(mine, cat) || mine; $('t-mine').innerHTML = `${jersey(mine)}<span class="tid"><span>${pair ? 'Player 1 · ' : ''}${esc(m.name)}</span>${ratedStars(m)}</span>`; }
   const def = teamDefault();
   $('t-default').hidden = !def;
   $('t-default').textContent = view && view.pick ? view.primary : def ? 'Play as ' + (catTeam(def, cat) || def).name : '';   // the side it starts: Farnham Women on Women
@@ -10003,8 +10086,8 @@ let draft = null, editing = null, codeTouched = false, delArmed = false;
 let levelChoosing = false, levelNote = '';                 // a new team starts on the level list; the note says what a lower level took off
 const spent = d => ABILITIES.reduce((a, [k]) => a + d[k] - 1, 0);
 /* A level's stars, drawn: five star shapes, the lit ones over the dim, so a half star is half lit and half dim at any size. Inline, like the home's icons, so there is nothing to load. n is a whole or half star count
-   (starsOfOverall, src/ratings.js). The picture carries its words for a screen reader, or quiet leaves them out where the same words are already beside it. On the levels for now; beside every team's
-   overall badge is the teams builder's (README, integration list). */
+   (starsOfOverall, src/ratings.js). The picture carries its words for a screen reader, or quiet leaves them out where the same words are already beside it. On the levels, and beside every
+   team's overall badge (ratedStars). */
 const STAR_SHAPE = (i, half) => {
   const pts = []; for (let k = 0; k <= (half ? 5 : 9); k++) { const r = k % 2 ? 4.5 : 9.8, a = (-90 + (half ? -36 : 36)*k)*Math.PI/180; pts.push((10 + 20*i + r*Math.cos(a)).toFixed(1) + ' ' + (10.6 + r*Math.sin(a)).toFixed(1)); }
   return 'M' + pts.join('L') + 'Z';
@@ -11257,7 +11340,7 @@ function importCode(name, used) {
 /* A saved league, read back: each side through cleanSide, a name that fits a card, passes importName and no other side
    in it has, a code no built-in side uses and no other side in it, at most 16. Anything broken is dropped; an empty
    league is null. */
-function cleanImportLeague(v) {
+function cleanImportLeague(v, moved) {
   if (!v || typeof v !== 'object' || Array.isArray(v) || !Array.isArray(v.teams)) return null;
   const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set();
   for (const raw of v.teams.slice(0, 64)) {
@@ -11265,13 +11348,27 @@ function cleanImportLeague(v) {
     if (!fit) continue;
     t.name = fit; names.add(importKey(fit));
     delete t.home; delete t.custom;
-    if (ids.has(t.id)) t.id = importCode(t.name, ids);
+    if (ids.has(t.id)) {                                   // a code a built-in list has taken since (England 2's and Counties' came with PR #14): a new one, noted in moved by the old key for importRecode
+      const was = t.key; t.id = importCode(t.name, ids);
+      if (was && moved) moved.set(was, t.id);
+    }
     ids.add(t.id);
     t.key = 'lg-' + t.id;
     teams.push(t);
     if (teams.length >= IMPORT_MAX_SIDES) break;
   }
   return teams.length ? { teams } : null;
+}
+/* A save's league sides recoded by cleanImportLeague (moved: old key to new code), followed everywhere the save holds them, in one pass
+   once the career, the championship and the league are all read back: My Team, the career's club and season, and the championship. By
+   the key the save has, so a side's new key that was another's old one moves nothing twice. Left as they were, the career's club would
+   keep a code a built-in club has now and be taken for that club, off My League (Merton into Counties, Bedford Athletic into England 2). */
+function importRecode(moved) {
+  if (!moved || !moved.size) return;
+  const fix = t => { const id = t && t.key && moved.get(t.key); if (id) { t.id = id; t.key = 'lg-' + id; } };
+  if (moved.has(settings.myClub)) settings.myClub = 'lg-' + moved.get(settings.myClub);
+  if (career) { fix(career.club); if (career.season) career.season.teams.forEach(fix); }
+  if (champ) champ.teams.forEach(fix);
 }
 /* One of your teams with the club's name, or null. */
 const importMine = data => { if (!data || !data.club) return null; const k = importKey(importShort(data.club.name)); return custom.find(t => importKey(t.name) === k) || null; };
@@ -13509,7 +13606,7 @@ function renderLocker(news) {
   } else {
     const g = Math.min(10, lockerGolds());
     const tile = (t, i) => i < g
-      ? `<div class="lk-leg" data-legend="1" role="group" aria-label="${esc(t.name)}, Overall ${overallOf(t)}">${jersey(t).replace(/<\/span>$/, `<span class="ovr">${overallOf(t)}</span></span>`)}<span class="lk-nat">${esc(t.nation)}</span><b class="lk-yr">${t.year}</b></div>`
+      ? `<div class="lk-leg" data-legend="1" role="group" aria-label="${esc(t.name)}, Overall ${overallOf(t)}">${jersey(t).replace(/<\/span>$/, `<span class="ovr">${overallOf(t)}</span></span>`)}<span class="lk-nat">${esc(t.nation)}</span><span class="lk-yrow"><b class="lk-yr">${t.year}</b>${ratedStars(t)}</span></div>`
       : `<div class="lk-leg lk-off" role="group" aria-label="Locked, ${i + 1} Gold ${i ? 'Medals' : 'Medal'}"><span class="lk-padlock">${LOCKER_LOCK}</span><span class="lk-need">${lockerPip(3, true)}${i + 1}</span></div>`;
     body.innerHTML = ['men', 'women'].map(cat => `<p class="lbl">${cat === 'men' ? 'Men' : 'Women'}</p><div class="lk-legrow">${LEGENDS.filter(t => t.cat === cat).map(tile).join('')}</div>`).join('');
     for (const el of body.querySelectorAll('[data-legend]')) storeMark(el, 'legends');   // won on any tier, played with the Full Game: the lock the team screen shows (src/ui-store.js)
@@ -14016,7 +14113,7 @@ function renderCareerClubs() {
   for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   const clubs = careerClubList(pool);
   $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
-    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');
+    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');   // its name with its stars under it, beside its overall
   for (const b of $('cc-grid').querySelectorAll('[data-i]')) b.addEventListener('click', () => careerClubPick(clubs[+b.dataset.i]));
   if (!$('s-career-club').hidden) careerFit($('s-career-club'));
 }
@@ -14185,7 +14282,7 @@ function renderCareerEnd() {
   body.innerHTML = first ? '' : `<div class="cr-tiles" style="--n:${out.place ? 3 : 2}">${tiles}</div>`;
   if (first) {                                       // his first call-up: the country is the choice, and the choice starts the window (no tiles: Called Up and the twelve fill the screen)
     body.innerHTML += `<p class="lbl cr-pick">Pick Your Country</p>
-      <div class="cr-nations">${careerNations(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span></button>`).join('')}</div>`;
+      <div class="cr-nations">${careerNations(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span></button>`).join('')}</div>`;
     for (const b of body.querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerAdvance(b.dataset.n); careerOpen(); });
     act.innerHTML = '';
     return;
@@ -14193,9 +14290,9 @@ function renderCareerEnd() {
   act.innerHTML = `<button class="btn primary" id="ce-go">Continue</button>`;
   $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
 }
-/* The transfer window: each offer a club's card (its kit, name, rating and league), and his own club's card to Stay, in equal parts. */
+/* The transfer window: each offer a club's card (its kit, name, rating, stars and league), and his own club's card to Stay, in equal parts. */
 function careerOfferHtml(t, id, lbl) {
-  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
+  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jerseyRated(t)}<span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}<span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
 }
 function renderCareerMove() {
   const cr = career, team = careerTeamFor(cr, 'league'), cat = careerCat(cr), body = $('ce-body');
@@ -14802,9 +14899,9 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
-  ratings:{ BUNDLED:RATINGS_BUNDLED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
+  ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },
-  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
@@ -14819,7 +14916,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, fanOwned:storeFanOwned, crest:storeCrest, shield:storeShield, theme:storeTheme, contrast:storeContrast, wallName:storeWallName, wallMail:storeWallMail, wallAsk:storeWallAsk, wallStep:storeWallStep, wallGo:storeWallGo, wallClose:storeWallClose, wall:() => storeWallUi, MAIL:STORE_MAIL, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak, fanAward:lockerFanAward, fanDrop:lockerFanDrop, fanHeld:lockerFanHeld, fanClubs:lockerFanClubs, fanHtml:lockerFanHtml, fanCabinet:lockerFanCabinet, cup:lockerCup },
-  home:{ HL:HOME_HL, select:homeSelect, show:homeShow, first:homeFirst, render:renderHome, champ:champHome, champPick, comps:champComps, tier:() => homeTier, setTier:v => { homeTier = v; }, myClub:myClubTeam, myNat:myNatTeam, myFind:myClubFind, myPool, myIs, myPick, teamDefault, ownPick:teamOwnPick, importHome, importOffer, importShown, importCommit, ring:setFocus },
+  home:{ HL:HOME_HL, select:homeSelect, show:homeShow, first:homeFirst, render:renderHome, champ:champHome, champPick, comps:champComps, tier:() => homeTier, setTier:v => { homeTier = v; }, myClub:myClubTeam, myNat:myNatTeam, leagueLine:myLeagueLine, recordLine:myRecordLine, ratedStars, myFind:myClubFind, myPool, myIs, myPick, teamDefault, ownPick:teamOwnPick, importHome, importOffer, importShown, importCommit, ring:setFocus },
   behind:{ menuDemo, BV_DEMO_AT, BV_DEMO_CAM, BV_DEMO_IN, frameDraw, BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, artHairOf, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, BV_STAR, bvStack, artPalette, artPaletteOf, LOOK_SKIN, LOOK_HAIR, LOOK_STYLES, LOOK_LONG, LOOK_FEMALE, paintState:() => ({ ctx, SKIN, HAIR }) },
   sound:{ SOUND, NAMES:SOUND_NAMES, SND, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
   clarity:{ MATCH_PACE, matchPace, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },

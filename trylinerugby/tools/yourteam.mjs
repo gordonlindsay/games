@@ -20,7 +20,7 @@ const by = id => X.ALL_TEAMS.find(t => t.id === id);
 const src = readGameSource(), body = src.slice(src.indexOf('<body>'), src.indexOf('<script>'));
 
 // 1. the tabs and what they show
-pending('1. the tabs (main\'s International | National | Local wins; the teams builder adds England 2 and Counties there)', async () => {
+pending('1. PR #14\'s tabs (main\'s International | National | Local wins, with England 2 and Counties in it: tools/teams.mjs 12)', async () => {
   const row = body.match(/<div class="seg pool" data-key="pool">(.*?)<\/div>/)[1];
   const labels = [...row.matchAll(/<button[^>]*>([^<]+)<\/button>/g)].map(m => m[1]);
   ok(labels.join() === 'International,Local,Counties,England,England 2,Ireland,Wales Scotland Italy,France,Australia,South Africa,My League', `the tabs read in the owner's order (${labels})`);
@@ -100,7 +100,7 @@ pending('2. a save\'s pool number (main keeps list keys, poolKey)', async () => 
 });
 
 // 3. the two lines under the logo, and the panel
-pending('3. the Your Team panel (the My Team builder: its stars and last-season record into main\'s My Team)', async () => {
+pending('3. PR #14\'s Your Team panel (its stars and last-season record are main\'s line under Play: tools/home.mjs 6b)', async () => {
   const c = C.create({ pos:'B', num:4, club:X.CLUBS[3] }); C.set(c);
   X.renderHome();
   ok($('home-club').textContent !== 'Play as Aldershot · Support Aldershot', 'the first line no longer follows a career');
@@ -173,7 +173,7 @@ pending('4. Play as (main\'s My Team and Quick Match)', async () => {
 });
 
 // 4b. on Women's the panel says so, and shows no men's figures
-pending('4b. Women\'s on the panel (the My Team builder, with main\'s Men | Women | Minis)', async () => {
+pending('4b. Women\'s on PR #14\'s panel (main has no panel)', async () => {
   s.myTeam = 'FAR'; s.womens = 1; X.renderHome();
   ok($('yt-eyebrow').textContent === "Your Team · Women's" && $('yt-league').hidden && $('yt-record').hidden && $('yt-play').textContent === 'Play as Farnham', `Women's on: named on the panel, and the men's league line and record are gone (${$('yt-eyebrow').textContent})`);
   s.womens = 0; X.renderHome();
@@ -251,7 +251,7 @@ pending('6. a new career on your team (main\'s career picks My Team\'s club alre
 });
 
 // 7. what a phone needs: no layout here, so these pin the rules the browser check measured
-pending('7. the panel\'s phone rules (the My Team builder)', async () => {
+pending('7. PR #14\'s panel\'s phone rules (main\'s line under Play: tools/browser.mjs)', async () => {
   const at = id => body.indexOf('id="' + id + '"');
   // New Player's rules are the career builder's now (2026-11-09): main's New Player with Your Look as its second step (tools/career.mjs measures both)
   ok(at('cn-cat') < at('cn-name') && at('cn-go') > at('cn-num') && at('cn-look-go') < at('cn-go') && at('ck-style') > at('cn-go'), 'New Player: Team (Men | Women, the one control) on the left, Start Career after every picker, Your Look a screen of its own');

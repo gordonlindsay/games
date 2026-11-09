@@ -3,6 +3,7 @@
 // Legends behind the Full Game, a Super Fan's home in the club's colours (with its shield or a club's crest), and the fit of every state at
 // 844x390 and 667x375 (README, Home).   node tools/home.mjs   Exits 1 on any failure.
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
+// CLUB_RATED=off HOME_PRINT=1 node tools/home.mjs prints it with no club rated from PR #14's tables: the proof behind the last re-pin.
 process.env.SEED ??= '61';
 const { T, reseed, bot } = await import('./harness.mjs');
 import fs from 'node:fs';
@@ -19,7 +20,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 
 // 0. Nothing the home does moves a match: AI v AI, a tool's match (the balance tools' kind: the bot against the computer), an arcade
 //    Quick Match, a championship match and the demo, seeded, against the build before the headlines (2e4829d). Run first.
-const BASE = '1ux7bcz 10kl4wv 1nh2ksp jmrs3q q2h33q';   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 12rapqh 14qny5b 1dars3e 5k7me2 1amrgpj. Before that: pinned from 2e4829d (GAME=<its index.html> HOME_PRINT=1); this build gives the same
+const BASE = '1ux7bcz 6jcst0 jv4xeq 437myk q2h33q';   // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere, the three Farnham matches' other side, is 64 (13), was 67 (14); with CLUB_RATED=off this build gives the pin before it exactly, 1ux7bcz 10kl4wv 1nh2ksp jmrs3q q2h33q. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 12rapqh 14qny5b 1dars3e 5k7me2 1amrgpj. Before that: pinned from 2e4829d (GAME=<its index.html> HOME_PRINT=1); this build gives the same
 function fingerprint() {
   const out = [];
   reseed(31);
@@ -73,7 +74,7 @@ const fresh = () => {                                       // a new game on the
   ok(/\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/.test(css) && /\.btn\.hl\{position:relative;display:flex;flex-direction:column;[^}]*min-height:54px/.test(css), 'five equal parts, each 44px and more');
   const panel = id => (home.match(new RegExp(`<div class="hl-panel hp-${id}[^"]*" id="hp-${id}" role="tabpanel" aria-labelledby="hl-${id}"( hidden)?>`)) || [])[0];
   ok(H.HL.every(panel) && !/ hidden/.test(panel('game')) && ['champ', 'career', 'drills', 'settings'].every(id => / hidden/.test(panel(id))), 'a panel a headline, Quick Match\'s showing before a line of script runs');
-  ok(/<div class="hl-panel hp-game" id="hp-game"[^>]*>\s*<button class="btn primary" id="b-quick" autofocus>Play<\/button>\s*<\/div>/.test(home) && /\.hl-panel\.hp-game \.btn\.primary\{min-height:128px;font-size:56px/.test(css), 'Quick Match: one big Play button, the primary, bigger than any other panel\'s (no 2 Players under it, on any device)');
+  ok(/<div class="hl-panel hp-game" id="hp-game"[^>]*>\s*<button class="btn primary" id="b-quick" autofocus>Play<\/button>\s*<div class="my-rec" id="my-rec" hidden><span class="my-rec-side" id="my-rec-side"><\/span><span class="my-rec-lines"><span id="my-rec-league"><\/span><span id="my-rec-record"><\/span><\/span><\/div>\s*<\/div>/.test(home) && /\.hl-panel\.hp-game \.btn\.primary\{min-height:128px;font-size:56px/.test(css), 'Quick Match: one big Play button, the primary, bigger than any other panel\'s (no 2 Players under it, on any device)');
   ok(!/id="b-two"|2 Players|Two Player/.test(home) && !/\$\('b-two'\)/.test(menus) && /^function openJoin\(\) \{/m.test(menus) && typeof D.openJoin === 'function', '2 Players has left the home on every device: no button, no listener; Two Player keeps its way in, openJoin (window.__tryline.debug.openJoin)');
   ok(/<div class="hl-go" id="hc-go" hidden>\s*<button class="btn primary" id="b-champ">Continue Championship<\/button>\s*<p class="resume-note" id="champ-note" hidden><\/p>\s*<\/div>\s*<div class="hc-new" id="hc-new">\s*<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>\s*<\/div>\s*<button class="btn" id="b-cabinet" hidden>Trophy Cabinet<\/button>/.test(home), 'Championship: Continue (when one is saved) first, else the tiers and their competitions; the Trophy Cabinet under them');
   ok(/<div class="hl-panel hp-career" id="hp-career"[^>]*>\s*<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(home), 'Career: New Career or Continue Career, with its note');
@@ -171,11 +172,11 @@ const fresh = () => {                                       // a new game on the
   fresh(); H.setTier(0); H.select('champ');
   const comps = t => H.comps(t).map(c => c[0]).join();
   ok(comps(0) === 'int,world,tour' && H.comps(0).map(c => c[1]).join() === 'Championship,World Cup,Home Nations Tour', 'International: Championship, World Cup, Home Nations Tour');
-  ok(comps(1) === 'eng,fra,cel,sco,rsa,aus,nzl,jpn' && H.comps(1).map(c => c[1]).join() === X.TEAM_LISTS.filter(l => l.tier === 1).map(l => l.name).join(), 'National: each country\'s league');
-  ok(comps(2) === 'sur', 'Local: Surrey, and no My League without an import');
-  ok(['eng', 'fra', 'cel', 'rsa'].every(K.euroLeague) && !['sco', 'aus', 'nzl', 'jpn', 'sur', 'my', 'int'].some(K.euroLeague), 'the European Cup\'s trophy on the four leagues whose winner goes on to it');
+  ok(comps(1) === 'eng,en2,fra,cel,sco,rsa,aus,nzl,jpn' && H.comps(1).map(c => c[1]).join() === X.TEAM_LISTS.filter(l => l.tier === 1).map(l => l.name).join(), 'National: each country\'s league');
+  ok(comps(2) === 'sur,cty' && H.comps(2).map(c => c[1]).join() === 'Surrey,Counties', 'Local: Surrey and Counties (PR #14\'s), and no My League without an import');
+  ok(['eng', 'fra', 'cel', 'rsa'].every(K.euroLeague) && !['en2', 'sco', 'aus', 'nzl', 'jpn', 'sur', 'cty', 'my', 'int'].some(K.euroLeague), 'the European Cup\'s trophy on the four leagues whose winner goes on to it');
   H.setTier(1); H.champ();
-  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n8', 'the trophy, in the European Cup\'s gold, no prose; eight leagues in two rows of four');
+  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && /id="hc-en2" data-comp="en2"><span>England 2<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n9' && /\.hc-comps\.n9\{grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*\/\*[^*]*\*\/\s*\.hc-comps\.n9 > \.btn\{grid-column:span 4\}\s*\.hc-comps\.n9 > \.btn:nth-child\(n\+6\)\{grid-column:span 5\}/.test(css), 'the trophy, in the European Cup\'s gold, no prose; nine leagues (England 2 is PR #14\'s) in two rows, five then four, each in equal parts');
   ok(!$('hc-new').hidden && $('hc-go').hidden && $('b-cabinet').hidden, 'nothing saved: the competitions, and no Trophy Cabinet before a season is finished');
   // each competition's team screen: only its sides
   const grid = () => $('t-grid').innerHTML, cards = () => (grid().match(/class="team[ "]/g) || []).length - (grid().match(/class="team create/g) || []).length;
@@ -218,7 +219,7 @@ const fresh = () => {                                       // a new game on the
   K.set(null);
   // My League: Local, with an import
   I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id })) }); D.goHome(); H.setTier(2); H.champ();
-  ok(comps(2) === 'sur,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey');
+  ok(comps(2) === 'sur,cty,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey and Counties');
   H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship · My League', 'My League\'s team screen');
   // the European Cup is still reached by winning a European league
   fresh(); H.champPick('eng'); D.pickTeam(X.ENGLAND[0]);
@@ -303,6 +304,33 @@ const fresh = () => {                                       // a new game on the
   fresh();
 }
 
+// 6b. My Team's club on the home: its stars and last season (PR #14's Your Team info, the owner's "main's bottom bar + PR #14's Your Team info"),
+//     under Play, only where the club has real figures
+{
+  fresh();
+  const R5 = T.ratings, rec = () => [$('my-rec').hidden, $('my-rec-side').innerHTML, $('my-rec-league').textContent, $('my-rec-record').textContent];
+  const at = id => { D.settings().myClub = id; D.goHome(); return rec(); };
+  let r = rec();
+  ok(!r[0] && r[1] === '<b>Farnham</b>' + R5.starsHtml(4.5) && r[2] === 'Regional 1 South Central · 7th Last Season' && r[3] === 'Won 10 · Lost 12 · 640 Scored · 646 Conceded', `a new game: Farnham, 4.5 stars, 7th in Regional 1 South Central, won 10, lost 12, 640 scored, 646 conceded (${r.slice(1).join(' | ')})`);
+  ok(R5.starsHtml(4.5).includes('aria-label="4.5 Stars"') && R5.starsOf(X.CLUBS[0]) === 4.5, 'the stars carry their words for a screen reader');
+  r = at('NTH');
+  ok(r[2] === 'English Premiership · 1st Last Season' && r[3] === 'Won 14 · Drew 1 · Lost 3 · 693 Scored · 536 Conceded' && r[1].includes('<b>Northampton</b>'), `a draw shows when there was one (${r[3]})`);
+  ok(at('LWE')[2] === 'English Premiership · 9th Last Season' && at('COB')[2] === 'Counties 1 Surrey/Sussex · 1st Last Season' && at('MTB')[2] === 'Top 14 · 14th Last Season' && at('BED')[2] === 'English Championship · 2nd Last Season' && at('JHB')[2] === 'United Rugby Championship · 7th Last Season' && at('MBO')[2] === 'Currie Cup · 3rd Last Season', 'the ordinals read right, and every list with figures has them (England 2 and the Currie Cup too)');
+  for (const id of ['QUI', 'MEL', 'WLG', 'KOB', 'AYR']) { r = at(id); ok(r[0] && !r[1] && !r[2] && !r[3], `${id}: no figures, so nothing under Play, never an invented line`); }
+  D.settings().myClub = null;
+  T.stamina.openBuilder(null); $('bd-name').value = 'Red Lions'; T.stamina.draft().name = 'Red Lions'; $('bd-save').click();
+  const mine = X.custom().find(t => t.name === 'Red Lions'); H.myPick(mine); D.goHome();
+  ok($('my-rec').hidden && !$('my-rec-league').textContent, 'a team you made: none');
+  X.restore({ custom:[] }); D.settings().myClub = null;
+  I.setLeague(I.clean({ teams:[{ ...X.CLUBS[1], key:'lg-QQQ', id:'QQQ', name:'Quarry', league:'Fake', place:1, w:9, d:0, l:0, pf:1, pa:0 }] })); H.myPick(I.league().teams[0]); D.goHome();
+  ok(D.settings().myClub === 'lg-QQQ' && $('my-rec').hidden && !('league' in I.league().teams[0]), 'a My League side: none, even one handed figures (a league is kept through cleanImportLeague, which keeps no line)');
+  I.setLeague(null); fresh();
+  const panel = home.slice(home.indexOf('id="hp-game"'), home.indexOf('id="hp-champ"'));
+  ok((panel.match(/<button/g) || []).length === 1 && /<div class="my-rec" id="my-rec" hidden>/.test(panel), 'Play is still the panel\'s one button: the club\'s line under it is not a button (My Team at the top is the way in)');
+  ok(!/\b(he|his|him|she|her)\b/i.test(rec().slice(1).join(' ').replace(/<[^>]+>/g, ' ')) && titled('Won 10 · Lost 12 · 640 Scored · 646 Conceded') && titled('Regional 1 South Central · 7th Last Season'), 'no he or she, and its words in Title Case');
+  ok(/\.my-rec\{display:flex;[^}]*\}/.test(css) && /\.my-rec\[hidden\]\{display:none\}/.test(css), 'its style: one row, hidden when there are no figures');
+}
+
 // 7. Add Your Team: today's import, then Make This My Team | Not Now
 {
   fresh();
@@ -325,7 +353,7 @@ const fresh = () => {                                       // a new game on the
   ok($('m-import').hidden && D.settings().myClub === club.key && H.myClub() === club && /Godalming/.test($('my-kits').innerHTML) && saved().settings.myClub === club.key, 'Make This My Team: it is, saved, on the home');
   offer();
   ok($('m-import').hidden && I.state().step !== 'mine', 'importing My Team\'s club again asks nothing');
-  ok(I.league() && I.league().teams.length === 4 && I.league().teams.every(t => /^lg-/.test(t.key)) && H.comps(2).map(c => c[0]).join() === 'sur,my', 'the league comes in as ever: My League, beside Surrey');
+  ok(I.league() && I.league().teams.length === 4 && I.league().teams.every(t => /^lg-/.test(t.key)) && H.comps(2).map(c => c[0]).join() === 'sur,cty,my', 'the league comes in as ever: My League, beside Surrey and Counties');
   fresh();
 }
 
@@ -510,12 +538,12 @@ async function browserChecks() {
         for (const b of document.querySelectorAll('#s-locker .lk-leg[data-legend]')) {
           out.tiles++;
           const lock = lockOf(b);
-          if (!b.classList.contains('locked') || ['.ovr', '.jersey', '.lk-nat', '.lk-yr'].some(q => hit(b.querySelector(q).getBoundingClientRect(), lock))) out.over.push('tile ' + b.getAttribute('aria-label'));
+          if (!b.classList.contains('locked') || ['.ovr', '.jersey', '.lk-nat', '.lk-yr', '.rstars'].some(q => hit(b.querySelector(q).getBoundingClientRect(), lock))) out.over.push('tile ' + b.getAttribute('aria-label'));
         }
         S.setTier(null); L.set(saved); st.cat = cat0; T.debug.goHome();
         return out;
       });
-      ok(locks.cards === 18 && locks.tiles === 18 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge and name on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
+      ok(locks.cards === 18 && locks.tiles === 18 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge, name and stars on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
       // a controller: the first press on Play, down to the bar, along it, press, up into the panel; every button reachable
       const pad = await page.evaluate(() => {
         const T = window.__tryline, out = {};
@@ -615,7 +643,7 @@ async function browserChecks() {
     }
     // 320px tall (Safari sideways: 667x320, 568x320), not one of the sizes that must never scroll: the page still never scrolls, and the
     // logo, the top row and the bar are all on screen and never under anything; the panel holds what it can between them and scrolls
-    // inside its own row for the rest (only National's eight leagues with the Trophy Cabinet need it), the ring scrolling it into view
+    // inside its own row for the rest (only National's nine leagues with the Trophy Cabinet need it: England 2 made eight nine), the ring scrolling it into view
     for (const [w, h] of [[667, 320], [568, 320]]) {
       const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
       const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
@@ -664,7 +692,7 @@ async function browserChecks() {
       ok(r.length === 42 && r.every(x => x.page <= 0 && !x.off.length && !x.over.length), `${kind}: the page never scrolls, the logo, top row and bar are on screen and nothing sits over anything (${list(x => x.page > 0 || x.off.length || x.over.length) || r.length + ' states'})`);
       ok(r.every(x => !x.small.length && !x.cut.length), `${kind}: every target 44px, no name cut off nor lock squeezed (${list(x => x.small.length || x.cut.length) || 'all'})`);
       const scrolls = r.filter(x => x.scroll > 0);
-      ok(scrolls.every(x => /cab champ1$/.test(x.state) && x.ringed), `${kind}: only National's eight leagues with the Trophy Cabinet scroll inside the panel, and the ring brings the last button into view (${scrolls.map(x => x.state + ' ' + x.scroll + 'px' + (x.ringed ? '' : ' not ringed')).join(', ') || 'none'})`);
+      ok(scrolls.every(x => /cab champ1$/.test(x.state) && x.ringed), `${kind}: only National's nine leagues with the Trophy Cabinet scroll inside the panel, and the ring brings the last button into view (${scrolls.map(x => x.state + ' ' + x.scroll + 'px' + (x.ringed ? '' : ' not ringed')).join(', ') || 'none'})`);
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }
