@@ -105,7 +105,7 @@ function match(run, f, plan) {
       if (M.phase === 'break') { $('br-go').click(); continue; }          // half time: Second Half
       if (M.phase === 'menu' && !$('m-pen').hidden) { ($('p-goal').disabled ? $('p-tap') : $('p-goal')).click(); continue; }   // a penalty: the card's choice
       if (M.golden) golden = true;
-      if ((M.phase === 'play' || (M.phase === 'set' && M.set.kind === 'knock')) && M.hooter && M.half === 2 && !done[2] && plan.want) { done[2] = true; steer(plan.want); continue; }   // a knock-on's beat (PRESSURE, 2026-11-09) ends in its whistle, a dead ball: after the hooter that is full time, so the script's hand comes first there too
+      if (M.phase === 'play' && M.hooter && M.half === 2 && !done[2] && plan.want) { done[2] = true; steer(plan.want); continue; }
       if (M.half === 3 && M.hooter && !done[3]) {    // the Golden Try's end: a score (the next dead ball ends it) or its hooter. The script's result, a try clear
         done[3] = true;
         const w = plan.golden || 'win', me = w === 'win' ? 0 : 1;

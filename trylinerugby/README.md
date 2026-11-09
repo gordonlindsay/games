@@ -1303,9 +1303,11 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   A hopping egg is gathered only below 0.5m, by the knees (any other loose ball at 1.0m, as ever), so a spill is a
   short scramble. The CPU runs for where the hop comes down (at most 0.6s ahead) and sprints its nearest man at it from
   2.5 to 12m. A knock-on hops forward for 0.8s (`PRESSURE.knock`), nobody may gather it, and then the whistle and the
-  scrum at the spot. Kicks, dropped passes, charge-downs and a ball off the posts keep the old bounce. A hopping egg
-  goes into touch, over the dead-ball line or into goal by the rules any loose ball always had. A spill is gathered in
-  about 0.65s (nine in ten inside 1.4s), a little over half of them after a hop, by either side about as often.
+  scrum at the spot. The dead ball is decided at the knock-on, so one before the hooter keeps its scrum when the hooter
+  goes in the beat, and one after it ends the half at the whistle, as it always did. Kicks, dropped passes,
+  charge-downs and a ball off the posts keep the old bounce. A hopping egg goes into touch, over the dead-ball line or
+  into goal by the rules any loose ball always had. A spill is gathered in about 0.65s (nine in ten inside 1.4s), a
+  little over half of them after a hop, by either side about as often.
 - **The ruck.** The ball goes 0.4m behind the tackled man, who is down until the ruck ends + 0.15s. The tackler
   rolls to 1.0m beyond and 1.1m aside, down until the ruck ends + 0.25s, then retiring 0.6s more: he can't tackle
   and is never picked as a chaser. A Second Man retires for the same time, and Tackle stays dim for a retiring man
@@ -1374,19 +1376,19 @@ Normal, 150 on Easy and Hard; `PRESSURE` off, then on). Off is b706c3e exactly. 
 
 | Per match, off / on | Easy | Normal | Hard |
 |---|---|---|---|
-| Tries | 1.67 / 1.63 | 1.08 / 1.07 | 0.87 / 0.84 |
-| Points | 13.8 / 13.5 | 10.6 / 10.4 | 9.4 / 9.3 |
-| Turnovers (rucks, loose balls) | 8.93 / 9.15 | 12.63 / 12.94 | 17.07 / 16.83 |
-| Balls jolted loose (pressure spills) | 2.90 / 4.18 (1.35) | 2.99 / 4.13 (1.23) | 3.29 / 4.09 (0.99) |
-| Pressure spills gathered by the tacklers | 0 / 0.61 | 0 / 0.54 | 0 / 0.46 |
-| Pressure On (both sides) | 0 / 8.4 | 0 / 8.9 | 0 / 8.6 |
-| Knock-ons | 11.53 / 11.38 | 13.32 / 12.96 | 14.91 / 14.85 |
-| Rucks | 103.8 / 101.6 | 111.4 / 109.1 | 121.0 / 116.2 |
-| CPU sprints (now also at a hopping ball) | 0.85 / 7.93 | 1.79 / 9.15 | 3.55 / 10.20 |
+| Tries | 1.67 / 1.62 | 1.08 / 1.06 | 0.87 / 0.85 |
+| Points | 13.8 / 13.5 | 10.6 / 10.4 | 9.4 / 9.4 |
+| Turnovers (rucks, loose balls) | 8.93 / 9.18 | 12.63 / 13.00 | 17.07 / 16.85 |
+| Balls jolted loose (pressure spills) | 2.90 / 4.17 (1.35) | 2.99 / 4.13 (1.23) | 3.29 / 4.14 (1.03) |
+| Pressure spills gathered by the tacklers | 0 / 0.61 | 0 / 0.54 | 0 / 0.47 |
+| Pressure On (both sides) | 0 / 8.4 | 0 / 8.9 | 0 / 8.7 |
+| Knock-ons | 11.53 / 11.41 | 13.32 / 12.98 | 14.91 / 14.86 |
+| Rucks | 103.8 / 101.9 | 111.4 / 109.3 | 121.0 / 116.6 |
+| CPU sprints (now also at a hopping ball) | 0.85 / 7.93 | 1.79 / 9.18 | 3.55 / 10.39 |
 
-Of the tackles on Normal, 54% come at no pressure, 18% at 1, 13% at 2, 7% at 3 and 8% at the line or over. Against the scripted
-player (`bot.mjs`, 24 matches a level, SEED 1) Pressure On is tagged 5.6 / 6.3 / 8.5 times a match (Easy / Normal / Hard,
-both sides together), about as often as a Fend or a Big Hit, and Loose Ball 2.8 / 2.9 / 3.7 (2.7 / 2.0 / 2.6 without).
+Of the tackles on Normal, 54% come at no pressure, 18% at 1, 13% at 2, 7% at 3 and 9% at the line or over. Against the scripted
+player (`bot.mjs`, 24 matches a level, SEED 1) Pressure On is tagged 6.0 / 6.5 / 7.4 times a match (Easy / Normal / Hard,
+both sides together), a little more often than a Big Hit, and Loose Ball 2.4 / 3.2 / 3.0 (2.7 / 2.0 / 2.6 without).
 
 ### Passing
 
@@ -1639,10 +1641,11 @@ a charger.
     and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
     and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the
     other, the egg's hops (seeded, each smaller, turned at least 0.45 rad, on the pitch or out by the old rules), the
-    chase's lead and the CPU's sprint at it, a knock-on's 0.8s beat, Kids and Minis at the gentle cap with `KIDS.jolt`
-    and Stopped as they were, 320 drawn frames with no random draw, the words and this README. Its first section pins
-    `PRESSURE` off to b706c3e (AI v AI, the demo, a tool's match, a Kids and a Minis match, draw for draw) and Bouncy
-    Egg to b706c3e with it on or off: `GAME=<b706c3e>/index.html node tools/pressure.mjs --pins` gives both pins.
+    chase's lead and the CPU's sprint at it, a knock-on's 0.8s beat (its scrum kept when the hooter goes in it), Kids
+    and Minis at the gentle cap with `KIDS.jolt` and Stopped as they were, 320 drawn frames with no random draw, the
+    words and this README. Its first section pins `PRESSURE` off to b706c3e (AI v AI, the demo, a tool's match, a Kids
+    and a Minis match, draw for draw) and Bouncy Egg to b706c3e with it on or off:
+    `GAME=<b706c3e>/index.html node tools/pressure.mjs --pins` gives both pins.
   - **`node tools/contact.mjs`:** 336 asserts over the contact engine and Sprint, green on seeds 1, 2, 3, 5, 7, 14, 33
     and 99 (every staged bind that must end in a ruck runs with the jolt switched off, so no seed's draw can turn it into
     a scrum). It checks:

@@ -1755,7 +1755,8 @@ function knockBeat(p) {                                    // a knock-on in a ma
   const b = M.ball, d = dirOf(p.team), team = 1 - p.team, x = p.x, y = p.y, K = PRESSURE.egg;
   b.z = 1.0; b.vx = d*2.2 + 0.25*p.vx; b.vy = 0.25*p.vy; b.vz = 1.2;   // forward out of his hands, on along his run: that is what a knock-on is. No draw until it lands: the hops are the egg's
   eggStart(b, p.team, false, (p.vy >= 0 ? 1 : -1)*(K.spin[0] + K.spin[1])/2);
-  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); deadBall(() => scrum(team, x, y, 'Knock-On')); } });
+  const late = M.hooter && !M.demo;                        // the dead ball is decided at the knock-on, as deadBall does without the beat: one before the hooter keeps its scrum if the hooter goes in the beat
+  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); if (late) endHalf(); else scrum(team, x, y, 'Knock-On'); } });
   return true;
 }
 function eggLead(b) {                                      // where the chase runs for a hopping ball: where this hop comes down, or a little ahead of a roll; any other ball, where it is

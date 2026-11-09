@@ -290,7 +290,8 @@ begin('chase');
 }
 done('7 chase');
 
-// 8. a knock-on: the ball hops forward for PRESSURE.knock seconds, nobody gathers it, then the whistle and the scrum at the spot
+// 8. a knock-on: the ball hops forward for PRESSURE.knock seconds, nobody gathers it, then the whistle and the scrum at the spot,
+//    decided at the knock-on: the hooter going in the beat does not take the scrum away
 begin('knock-on');
 {
   reseed(91); fresh(); const s = stage({ cx:60, mark:60 }); const b = M().ball, x = s.c.x, y = s.c.y;
@@ -298,12 +299,27 @@ begin('knock-on');
   ok(rndCalls() === r0, 'the knock-on itself draws nothing: forward along his run, the spin by his drift; the hops in the beat draw as the egg does');
   ok(M().phase === 'set' && M().set.kind === 'knock' && near(M().set.t, K.knock, 1e-9) && b.egg && !b.egg.spill && b.vx*dirOf(1) > 0, `a knock-on: the ball goes forward and hops for ${K.knock}s`);
   for (const p of M().players) { p.x = b.x + 0.3; p.y = b.y; }   // everyone on top of it: still nobody may gather it
-  let zs = [], held = false, t = 0;
-  while (M().phase === 'set' && M().set.kind === 'knock' && t < 3) { T.update(STEP); t += STEP; zs.push(b.z); if (b.state === 'held') held = true; }
-  ok(!held && Math.max(...zs) > 0.5 && b.tumble !== null || M().set.kind === 'scrum', 'it hops in the beat, and nobody gathers it');
+  let maxZ = 0, held = false, tumbled = false, t = 0;
+  while (M().phase === 'set' && M().set.kind === 'knock' && t < 3) {   // read in the beat: after it the scrum is set and the egg is over
+    T.update(STEP); t += STEP;
+    if (M().phase === 'set' && M().set.kind === 'knock') { maxZ = Math.max(maxZ, b.z); if (b.tumble != null && b.tumble !== 0) tumbled = true; }
+    if (b.state === 'held') held = true;
+  }
+  ok(!held && maxZ > 0.5 && tumbled, `it hops in the beat (up to ${maxZ.toFixed(2)}m, tumbling), and nobody gathers it`);
   ok(near(t, K.knock, 2*STEP), `the beat lasts ${t.toFixed(3)}s`);
   ok(M().phase === 'set' && M().set.kind === 'scrum' && M().set.team === 0 && /Knock-On/.test(M().set.label) && near(M().set.x, Math.min(105, Math.max(15, x)), 1e-9) && near(M().set.y, Math.min(55, Math.max(15, y)), 1e-9), 'then the scrum to the other side, at the knock-on\'s spot');
   ok(!b.egg && b.tumble === null, 'the egg is over at the whistle');
+  // the hooter: the dead ball is decided at the knock-on, as it was without the beat. One 0.3s before the hooter keeps its scrum
+  // when the hooter goes in the beat, in either half; one after the hooter ends the half at the whistle
+  const late = (half, before) => {
+    reseed(93); fresh(); const s4 = stage({ cx:60, mark:60 }), m = M(); m.half = half; m.clock = T.arcade.periodLen() - before; m.dclock = 200; m.hooter = before < 0;
+    P.knockOn(s4.c, 'catch'); const hoot0 = m.hooter;
+    for (let i = 0; i < Math.round(1/STEP) && !m.over; i++) T.update(STEP);
+    return { hoot0, hooter:M().hooter, kind:M().phase === 'set' ? M().set.kind : M().phase, half:M().half, over:!!M().over };
+  };
+  for (const half of [1, 2]) { const r = late(half, 0.3); ok(!r.hoot0 && r.hooter && r.kind === 'scrum' && r.half === half && !r.over, `a knock-on 0.3s before the hooter in half ${half}: the hooter goes in the beat and the scrum is still given (${json(r)})`); }
+  { const r = late(1, -0.5); ok(r.hoot0 && r.half === 2 && r.kind === 'kickoff', `a knock-on after the hooter in half 1: half time at the whistle (${json(r)})`); }
+  { const r = late(2, -0.5); ok(r.hoot0 && r.over, `a knock-on after the hooter in half 2: full time at the whistle (${json(r)})`); }
   // a jolted Knock-On and a failed offload's take the same beat
   reseed(92); fresh(); C.CONTACT.jolt.wrap = 1; C.CONTACT.jolt.fwd = 1;
   { const s2 = stage({ cx:60, mark:60 }); const k = C.commitTackle(s2.q, s2.c, 'contact'); k.tier = 'wrap'; C.resolveContact(k); ok(M().phase === 'set' && M().set.kind === 'knock' && (M().stats.ko_contact || 0) === 1, 'a Knock-On in the tackle hops for its beat too'); }
