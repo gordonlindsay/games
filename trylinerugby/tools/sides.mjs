@@ -343,7 +343,7 @@ const side = (id, name, extra = {}) => ({ id, name, kit:'#112233', trim:'#445566
   const stage = (cr, n, extra = {}) => { Object.assign(cr, { stage:n, ...extra }); C.newSeason(cr); return cr.season.teams; };
   ok(stage(male, 1).every(t => !('g' in t)), 'Juniors on: a male player\'s sides are men\'s');
   ok(stage(female, 1).every(t => t.g === 1), 'a female player\'s are women\'s');
-  ok(stage(male, 2).every(t => !('g' in t)) && stage(female, 2).every(t => t.g === 1), 'County the same');
+  ok(stage(male, 2).every(t => !('g' in t)) && stage(female, 2).every(t => t.g === 1), 'Club the same');
   ok(stage(male, 3, { pro:'BAT' }).every(t => !('g' in t)) && stage(female, 3, { pro:'BAT' }).every(t => t.g === 1), 'Pro Club the same');
   const f4 = stage(female, 4, { country:'JPN' }), m4 = stage(male, 4, { country:'JPN' });
   ok(f4.every(t => t.g === 1) && X.overallOf(f4[0]) === 52 && f4.slice(1).map(t => t.id).sort().join() === 'ESP,FIJ,SAM,SCO,WAL', 'International: a female player\'s Japan is at the women\'s rating, among the women\'s nearest');

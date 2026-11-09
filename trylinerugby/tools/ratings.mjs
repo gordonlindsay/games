@@ -91,7 +91,7 @@ const STARS = { 40:1, 43:2, 46:2, 49:2.5, 52:2.5, 55:3, 58:3, 61:3.5, 64:3.5, 67
   ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL' && X.MORE_NATIONS.every(t => /^#[0-9a-f]{6}$/i.test(t.kit + '') && /^#[0-9a-f]{6}$/i.test(t.trim) && /^#[0-9a-f]{6}$/i.test(t.alt) && /^#[0-9a-f]{6}$/i.test(t.altTrim)), 'the Six Nations keep their order; every other nation has kit, trim, alt kit and alt trim');
   ok(by('CAN').name === 'Canberra' && by('CDA').name === 'Canada', 'Canberra keeps CAN, Canada is CDA');
   const ids = X.ALL_TEAMS.map(t => t.id);
-  ok(new Set(ids).size === ids.length && !C.COUNTIES.some(t => ids.includes(t.id)), 'every code is unique, nations and counties included');
+  ok(new Set(ids).size === ids.length && true, 'every code is unique, nations included');
 }
 
 // 2. abilities from a flavour and a sum
@@ -134,7 +134,7 @@ const STARS = { 40:1, 43:2, 46:2, 49:2.5, 52:2.5, 55:3, 58:3, 61:3.5, 64:3.5, 67
   ok(line(by('TLS')) === 'Top 14,1,18,0,8,981,617' && line(by('NTH')) === 'English Premiership,1,14,1,3,693,536' && line(by('DUB')) === 'United Rugby Championship,2,12,0,6,515,370', 'Toulouse, Northampton and Dublin');
   ok(line(by('COR')) === 'All-Ireland League 1A,5,10,0,8,430,391' && line(by('KIM')) === 'Currie Cup,1,6,0,1,271,143' && line(by('BRI')) === 'Super Rugby Pacific,5,8,0,6,364,386' && line(by('GDN')) === 'Counties 5 Surrey,4,7,0,7,422,313', 'Cork, Kimberley, Brisbane and Guildfordians');
   ok(line(by('GLA')) === 'United Rugby Championship,1,13,0,5,479,338' && line(by('PMA')) === 'United Rugby Championship,16,2,0,16,312,587' && line(by('EAL')) === 'English Championship,1,26,0,0,1125,435' && line(by('CAM')) === 'English Championship,14,0,1,25,447,1190', 'Glasgow, Parma, Ealing and Cambridge');
-  ok(!by('MEL').league && !by('ADL').league && X.allNations().every(t => !t.league) && C.COUNTIES.every(t => !t.league), 'Melbourne, Adelaide, the nations and the counties have no line');
+  ok(!by('MEL').league && !by('ADL').league && X.allNations().every(t => !t.league), 'Melbourne, Adelaide and the nations have no line');
   const withLine = X.ALL_TEAMS.filter(t => !X.allNations().includes(t) && t.id !== 'MEL' && t.id !== 'ADL');
   ok(withLine.every(t => t.league && Number.isInteger(t.place) && t.place >= 1 && ['w', 'd', 'l', 'pf', 'pa'].every(k => Number.isInteger(t[k]) && t[k] >= 0)), `every other club has a line (${withLine.length})`);
   X.newChamp(by('FAR'), X.CLUBS.slice(1, 6));
@@ -204,16 +204,16 @@ const STARS = { 40:1, 43:2, 46:2, 49:2.5, 52:2.5, 55:3, 58:3, 61:3.5, 64:3.5, 67
   C.set(null);
 }
 
-// 6. the ladder rises, stage by stage, and each pro list stands above the counties
+// 6. the ladder rises, stage by stage, and each pro list stands above Club
 {
   const mean = l => l.reduce((a, t) => a + X.overallOf(t), 0)/l.length;
   const cr = C.create({ pos:'B', num:4, club:X.CLUBS[0] });
   const stage = s => X.CLUBS.map(t => C.teamFor({ ...cr, club:t }, s));
   const PRO = [X.FRANCE, X.AUSTRALIA, X.SOUTH_AFRICA, X.ENGLAND, X.IRELAND, X.WALES_SCOTLAND_ITALY, X.ENGLAND_TWO];
-  const m = [mean(stage(0)), mean(stage(1)), mean(C.COUNTIES), mean(PRO.flat()), mean(X.NATIONS)];
-  ok(m.every((v, i) => !i || v > m[i - 1]), `Minis, Juniors, County, Pro Club and International each average higher (${m.map(v => v.toFixed(1)).join(' ')})`);
-  ok(PRO.every(p => mean(p) > m[2] && p.length >= 6), 'every pro list averages above the counties, and has at least six sides');
-  ok(Math.max(...C.COUNTIES.map(X.overallOf)) < 72, 'and the best county is under the best of the pro lists');
+  const m = [mean(stage(0)), mean(stage(1)), mean(stage(2)), mean(PRO.flat()), mean(X.NATIONS)];
+  ok(m.every((v, i) => !i || v > m[i - 1]), `Minis, Juniors, Club, Pro Club and International each average higher (${m.map(v => v.toFixed(1)).join(' ')})`);
+  ok(PRO.every(p => mean(p) > m[2] && p.length >= 6), 'every pro list averages above Club, and has at least six sides');
+  ok(Math.max(...stage(2).map(X.overallOf)) < 72, 'and the best Club side is under the best of the pro lists');
   ok(C.STAGES.map(s => s.bar).join() === '64,70,77,85,', 'the bars are as they were');
   const lg = I.sides({ league:['Ash Vale', 'Birch Lane', 'Cedar Park', 'Damson Hill', 'Elm Bridge', 'Fir Tree'].map(name => ({ name })), teams:[] });
   ok(X.overallOf(lg[0]) === 58 && X.overallOf(lg[lg.length - 1]) === 43 && lg.every(t => X.overallOf(t) <= 58), `an imported league sits with the Local clubs, 43 to 58, under the pro lists (${lg.map(X.overallOf)})`);

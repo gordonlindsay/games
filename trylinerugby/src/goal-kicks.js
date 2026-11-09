@@ -1,5 +1,6 @@
 /* ---------- penalties and goal kicks ---------- */
 function penalty(team, x, y) {
+  if (matchTag()) { freePass(team, x, y, 'Penalty'); return; }
   M.stats.pens++;
   sfx('whistle');
   placeBall(x, y);
@@ -39,7 +40,7 @@ function scoreTry(p) {
   placeBall(clamp(p.x,0,120), clamp(p.y,0,70));
   p.vx *= 0.3; p.vy *= 0.3;
   say(M.golden ? 'Golden Try' : 'Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
-  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => M.golden ? endHalf() : conversion(s.team, s.y) });   // a Golden Try needs no conversion
+  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => M.golden ? endHalf() : matchTag() ? deadBall(() => kickoff(1 - s.team)) : conversion(s.team, s.y) });   // a Golden Try needs no conversion
 }
 function conversion(team, y) {
   const yy = clamp(y, 4, 66);

@@ -227,9 +227,46 @@ function resolveRuck(s) {                                  // the ruck is automa
 }
 // a Drop Goal press: the 0.20s to the close-up is the kicker's, and a man close enough to stop it is judged as a charger in the cut
 const dropHolding = c => !!c && !!M.dropArmed[c.team] && !!sideOf(c.team).charging && M.ball.carrier === c;
+/* ---------- tag ----------
+   A match played with tags (M.rules, a career's Minis). Nobody goes to ground and nothing is contested: a defender in reach takes the tag, the carrier stops, and his side plays on from the mark.
+   After TAG.go tags in a row the ball goes over. The first man in reach on the other side has a go, at the level's own tackle rate, and if he grabs at nothing he needs a moment before he can again. Your ringed man's press reaches further (DRILL_TAG.pull.reach). */
+const TAG = { go:6, restart:0.75, miss:0.6, chance:0.5, mates:0.4, reach:1.2, back:9, away:1.3, grace:0.9 };   // chance, mates: shares of the level's tackle rate, for the other side and your teammates. reach: how near they must get. back, away: every defender this near the tag is out for the restart and this long after. grace: the next carrier's moment to get going. By bot, a two-minute match has about 12 tags and 3 tries (tools/rules.mjs)
+const matchCanPull = q => drillCanPull(q) && q.tcd <= 0 && q.offside <= 0;
+function tagCheck(c) {
+  for (const q of M.players) {
+    if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0) continue;
+    const user = ringed(q);
+    if (dist(q, c) >= (user ? 1.35 : TAG.reach)) continue;
+    if (!user && rnd() >= (cpuSide(q.team) ? TAG.chance*diffOf(q.team).cpuTackle : TAG.mates*diffOf(q.team).myTackle)) { q.tcd = TAG.miss; st('tagMissed'); if (ringed(c)) tag('Dodged', c.x, c.y); continue; }
+    tagMade(c, q);
+    return true;
+  }
+  return false;
+}
+function tagMade(c, q) {
+  const team = c.team, x = clamp(c.x, 1, 119), y = clamp(c.y, 1, 69);
+  M.stats.tackles++; countTk(q.team, true);
+  if (M.career) careerDeed('tackles', q);
+  sfx('tick'); buzz(20); heat(q.team, 'hit');
+  if (ringed(q)) tag('Got It', c.x, c.y);
+  c.vx *= 0.2; c.vy *= 0.2; c.drop = null;
+  q.vx = q.vy = 0;
+  for (const p of M.players) if (p.team !== team && dist(p, c) <= TAG.back) p.tcd = p.offside = TAG.restart + TAG.away;   // the defence goes back before it can tag again: the attack has room to play on
+  if ((c.x - ownLine(team))*dirOf(team) < 0) { placeBall(c.x, c.y); deadBall(() => freePass(1 - team, x, y, 'Held in Goal')); return; }
+  M.tagN = M.tagTeam === team ? M.tagN + 1 : 1; M.tagTeam = team;
+  placeBall(x, y);
+  M.phaseCount++;
+  if (M.tagN >= TAG.go) {                                  // the sixth tag: the other side's ball, and their count starts again
+    M.tagN = 0; M.tagTeam = null; M.stats.turnovers++;
+    deadBall(() => freePass(1 - team, x, y, 'Six Tags'));
+    return;
+  }
+  deadBall(() => startSet({ kind:'ruck', team, x, y, t:TAG.restart, label:'Tag ' + M.tagN + ' of ' + TAG.go, then:s => { releaseTo(s.team, s.x, s.y, 'ruck', s.picker); M.ball.carrier.grace = TAG.grace; } }));
+}
 function tackleChecks(c) {
   if (dropHolding(c) || c.grace > 0) return false;
   if (practice && practice.tagOnly) return drillTagCheck(c);   // the youngest play these drills with tags: no man here ever commits to a tackle
+  if (matchTag()) return tagCheck(c);
   for (const q of M.players) {
     if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
     const user = ringed(q);

@@ -23,9 +23,10 @@ for (let i = 0; i < seasons; i++) {
   if (stage === 4) cr.country = FIX.country || (g ? ['ENG', 'FRA', 'IRE', 'ITA', 'SCO', 'WAL'] : ['ENG', 'FRA', 'IRE', 'ITA', 'SCO', 'WAL'])[i % 6];
   C.set(cr);
   C.newSeason(cr);
-  for (let r = 0; r < 5; r++) {
+  while (cr.season.round < 5) {                                    // a cup tie is played but not counted, so a stage reads as its league
     for (const k of Object.keys(cr.skills)) cr.skills[k] = V;
     if (!C.play()) throw new Error('no match');
+    const cupTie = !!T.M.careerCup;
     const us = X.overallOf(T.M.nat[0]), them = X.overallOf(T.M.nat[1]);
     let steps = 0, off = false;
     while (!T.M.over && steps < 200000) {
@@ -38,8 +39,8 @@ for (let i = 0; i < seasons; i++) {
     }
     const a = T.M.score[0], b = T.M.score[1];
     if (a > b) W++; else if (a < b) L++; else Dr++;
-    pf += a; pa += b; sumUs += us; sumThem += them; n++;
-    if (!T.M.over) { stalls++; console.error('stalled', T.M.phase, T.M.half, T.M.clock.toFixed(1), JSON.stringify(Object.fromEntries(Object.entries(T.M.cut || {}).filter(([k, v]) => typeof v !== 'object'))), T.M.goal && T.M.goal.stage); T.M.over = true; T.M.half = 2; W -= a > b ? 1 : 0; L -= a < b ? 1 : 0; Dr -= a === b ? 1 : 0; pf -= a; pa -= b; n--; D.exitMatch(); break; }   // a bot stuck in a close-up: the season is dropped
+    if (!cupTie) { pf += a; pa += b; sumUs += us; sumThem += them; n++; } else if (a > b) W--; else if (a < b) L--; else Dr--;
+    if (!T.M.over) { stalls++; console.error('stalled', T.M.phase, T.M.half, T.M.clock.toFixed(1), JSON.stringify(Object.fromEntries(Object.entries(T.M.cut || {}).filter(([k, v]) => typeof v !== 'object'))), T.M.goal && T.M.goal.stage); T.M.over = true; T.M.half = 2; if (!cupTie) { W -= a > b ? 1 : 0; L -= a < b ? 1 : 0; Dr -= a === b ? 1 : 0; pf -= a; pa -= b; n--; } D.exitMatch(); break; }   // a bot stuck in a close-up: the season is dropped
     D.exitMatch();
   }
   const out = C.outcome(cr);

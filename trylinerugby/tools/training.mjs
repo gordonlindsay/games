@@ -440,7 +440,7 @@ atLevel(true, () => {
     ok(seen.every(id => !CONTACT.includes(id)) && OPEN.every(id => seen.includes(id)), 'Kids level, Next Drill: goes round every open game and never a contact game (' + [...new Set(seen)].join() + ')'); P.leave(); }
   { P.start('egg'); $('pr-retry').click(); const st = P.state(); st.egg.lives = 0; X.KIT.egg.next(st.egg); ok(P.state().done, 'a run ends'); $('pr-next').click(); ok(P.state() && !CONTACT.includes(P.state().id), 'Kids level, Next Drill off a result card: not a contact game'); P.leave(); }
   { const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); cr.stage = 2; C.set(cr);
-    ok(!C.drills(cr).some(d => CONTACT.includes(d.id)) && C.drills(cr).some(d => d.id === 'tag'), 'Kids level, a career past the Minis: no contact game on the list');
+    ok(!C.drills(cr).some(d => CONTACT.includes(d.id)) && C.drills(cr).some(d => d.id === 'pass'), 'Kids level, a career past the Minis: no contact game on the list');
     for (const id of CONTACT) { cr.trained = false; ok(C.train(id) === false && !P.state(), 'Kids level, career train: ' + id + ' does not open'); }
     C.set(null); }
   P.leave();
@@ -448,13 +448,14 @@ atLevel(true, () => {
 { const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); C.set(cr);
   ok(cr.stage === 0, 'a new career starts in the Minis');
   const list = C.drills(cr).map(d => d.id);
-  ok(!list.some(id => CONTACT.includes(id)) && list.includes('tag') && list.length === OPEN.length, 'Minis: Tag Chase in, Tackling, Driving and Ball Back out (' + list + ')');
+  ok(!list.some(id => CONTACT.includes(id)) && list.includes('tag') && !list.includes('kick') && list.length === OPEN.length - 1, 'Minis: Tag Chase in, Tackling, Driving, Ball Back and Kicking out (' + list + ')');
   C.renderTrain(); ok(!$('ct-list').innerHTML.includes('data-drill="tackle"') && $('ct-list').innerHTML.includes('data-drill="tag"') && $('ct-coach').hidden, 'Minis: the training screen shows Tag Chase, and no coach line since there is no contact game');
   for (const id of CONTACT) { cr.trained = false; ok(C.train(id) === false && !P.state(), 'Minis, career train: ' + id + ' does not open'); P.start(id, { onDone() {} }); ok(!P.state(), 'Minis, a direct start with a caller: ' + id + ' does not open'); }
   cr.trained = false; ok(C.train('tag') === true && P.state() && P.state().id === 'tag', 'Minis: Tag Chase opens'); ok($('pr-next').hidden, 'Minis: no Next Drill on the way to a contact game'); P.leave();
   C.open && C.open();
   cr.stage = 1; cr.trained = false;
-  const up = C.drills(cr).map(d => d.id); ok(CONTACT.every(id => up.includes(id)) && up.includes('tag') && up.length === X.DRILLS.length, 'Juniors on: every game is offered');
+  const up = C.drills(cr).map(d => d.id); ok(up.includes('tackle') && up.includes('back') && up.includes('egg') && !up.includes('scrum') && !up.includes('tag'), 'Juniors: contact and Bouncy Egg, no Driving and no Tag Chase');
+  { cr.stage = 2; const ad = C.drills(cr).map(d => d.id); ok(CONTACT.every(id => ad.includes(id)) && !ad.includes('egg') && !ad.includes('tag'), 'Club on: every contact game, no Bouncy Egg and no Tag Chase'); cr.stage = 1; }
   C.renderTrain(); ok(!$('ct-coach').hidden, 'Juniors on: the training screen carries the coach line');
   ok(C.train('tackle') === true && P.state().id === 'tackle' && !$('pr-coach').hidden, 'Juniors on: Tackling opens, with the coach line on its card'); P.leave();
   C.set(null);

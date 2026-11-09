@@ -15,7 +15,7 @@ if (flags.has('--help')) {
 const cwd = fileURLToPath(new URL('../', import.meta.url));
 const jobs = [
   ['Build', ['tools/build.mjs', '--check']],
-  ...['offline-core', 'offline-ui', 'practice', 'polish', 'feedback', 'transitions', 'input-lifecycle', 'tutorial', 'hints', 'postmatch', 'season-data', 'season-ui', 'season-flow', 'arcade', 'camera', 'stamina', 'career', 'importer', 'drills', 'drilldemo', 'training', 'together', 'kids', 'ratings', 'yourteam', 'sides', 'sound', 'clarity'].map(name => [name, [`tools/${name}.mjs`]]),
+  ...['offline-core', 'offline-ui', 'practice', 'polish', 'feedback', 'transitions', 'input-lifecycle', 'tutorial', 'hints', 'postmatch', 'season-data', 'season-ui', 'season-flow', 'arcade', 'camera', 'stamina', 'career', 'cups', 'rules', 'importer', 'drills', 'drilldemo', 'training', 'together', 'kids', 'ratings', 'yourteam', 'sides', 'sound', 'clarity'].map(name => [name, [`tools/${name}.mjs`]]),
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces', 'browser']) jobs.push([name, [`tools/${name}.mjs`]]);

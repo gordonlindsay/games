@@ -30,12 +30,12 @@ function fillMatchStats() {
   if (breakKind !== 'full') { el.hidden = true; return; }
   const S = M.stats, of = (made, att) => made + '/' + att;
   const row = (label, a, b) => `<tr><th scope="row">${label}</th><td>${a}</td><td>${b}</td></tr>`;
-  const rows = [row('Conversions', of(S.conv.made[0], S.conv.att[0]), of(S.conv.made[1], S.conv.att[1]))];
+  const rows = matchTag() ? [] : [row('Conversions', of(S.conv.made[0], S.conv.att[0]), of(S.conv.made[1], S.conv.att[1]))];   // tag has no goal kicks and no close-ups
   if (S.pen.att[0] + S.pen.att[1]) rows.push(row('Penalty Goals', of(S.pen.made[0], S.pen.att[0]), of(S.pen.made[1], S.pen.att[1])));
   if (S.dg.att[0] + S.dg.att[1]) rows.push(row('Drop Goals', of(S.dg.made[0], S.dg.att[0]), of(S.dg.made[1], S.dg.att[1])));
-  rows.push(row('Tackles', of(S.tk.made[0], S.tk.att[0]), of(S.tk.made[1], S.tk.att[1])));
+  rows.push(row(matchTag() ? 'Tags' : 'Tackles', of(S.tk.made[0], S.tk.att[0]), of(S.tk.made[1], S.tk.att[1])));
   const duel = t => isHuman(t) ? of(S.duelN.won[t], S.duelN.att[t]) : '\u2013';
-  rows.push(row('Duels', duel(0), duel(1)));
+  if (!matchTag()) rows.push(row('Duels', duel(0), duel(1)));
   const metres = t => { const n = Math.round(S.gain[t]); return n < 0 ? '\u2212' + (-n) : String(n); };
   rows.push(row('Metres Made', metres(0), metres(1)));
   const head = t => `<th scope="col">${esc(M.nat[t].id)}</th>`;
@@ -57,7 +57,11 @@ function showBreak(kind) {
     const [a, b] = M.score;
     const res = M.two ? (a > b ? 'Player 1 Wins' : a < b ? 'Player 2 Wins' : 'Draw') : a > b ? M.nat[0].name + ' Win' : a < b ? M.nat[1].name + ' Win' : 'Draw';   // two player names the player, since both can be Farnham
     $('br-tries').textContent = res + ' · Tries ' + M.tries[0] + ' – ' + M.tries[1];
-    if (M.champ || M.career) {
+    if (M.career && careerFestival(career)) { $('br-pts').hidden = true; }   // a festival has no table
+    else if (M.careerCup) {                                  // a cup tie has no table points: what it did instead
+      $('br-pts').textContent = (careerLast && careerLast.line) || '';
+      $('br-pts').hidden = !$('br-pts').textContent;
+    } else if (M.champ || M.career) {
       const mp = matchPoints(a, b, M.tries[0]);
       $('br-pts').textContent = '+' + mp.p + ' Table ' + (mp.p === 1 ? 'Point' : 'Points') + (mp.why.length ? ' · ' + mp.why.join(', ') : '');
       $('br-pts').hidden = false;

@@ -189,6 +189,8 @@
     <div class="cr-newgrid">
       <div class="field"><span class="lbl">Your Club</span><div class="cr-clubs" id="cn-clubs"></div></div>
       <div class="cr-form">
+        <div class="field"><span class="lbl">Who's Playing?</span><div class="seg" id="cn-who"><button>Me</button><button>My Child</button></div></div>
+        <div class="field"><span class="lbl">Start At</span><div class="seg" id="cn-start"><button>Juniors</button><button>Adult</button></div><p class="cr-startnote">This sets the rules, matches and training for this career.</p></div>
         <div class="field"><span class="lbl">Player</span><div class="seg" id="cn-g"><button>Male</button><button>Female</button></div></div>
         <div class="cr-namerow"><label class="field"><span class="lbl">First Name</span><input class="inp" id="cn-name" maxlength="12" placeholder="Optional" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label><span id="cn-shirt"></span></div>
         <div class="field"><span class="lbl">Position</span><div class="seg" id="cn-pos"><button>Forward</button><button>Back</button></div></div>
@@ -239,6 +241,7 @@
       <thead><tr><th class="rk">#</th><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PD</th><th>BP</th><th>Pts</th></tr></thead>
       <tbody id="cl-table"></tbody>
     </table></div>
+    <div class="results" id="cl-cup" hidden></div>
     <div class="results" id="cl-results"></div>
     <button class="btn" id="cl-back" data-back>Back to Career</button>
   </div>

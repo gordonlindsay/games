@@ -306,6 +306,7 @@ function canDive(q) {                                      // would a Tackle pre
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;
   if (practice && practice.tagOnly) { drillTagPull(q); return; }   // the youngest pull a tag: no dive
+  if (matchTag()) { if (matchCanPull(q)) tagMade(M.ball.carrier, q); else drillWhiff(q); return; }
   if (!canDive(q)) { st('ignored'); if (practice && practice.id === 'defend') drillWhiff(q); return; }   // a press with nothing in reach costs a moment in that drill, so the timing counts
   const c = b.carrier;
   if (dropHolding(c)) { st('ignored'); return; }   // he is about to drop for goal: the close-up judges you as a charger
@@ -442,7 +443,8 @@ function userStep(t, i, dt) {
   }
   tickUserPass(t, dt);
   if (i.b && !inp.bCancel) {
-    if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    if (matchTag() && ourBall(t)) { /* tag has no kicking */ }
+    else if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
   if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick

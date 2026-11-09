@@ -664,6 +664,7 @@ body.desk .home-row{grid-template-columns:1fr 1fr 1fr}
 .cr-next span{min-width:0;overflow-wrap:normal}
 .cr-next .jersey{width:28px;height:28px}
 .cr-pick{margin:0}
+.cr-startnote{margin:6px 0 0;color:var(--chalk-dim);font:600 13px/1.3 var(--body)}
 .cr-tile .lbl{align-self:stretch;min-width:0;overflow-wrap:normal}
 .cr-best .cr-tile{padding-right:6px}   /* everything in a tile sits left, so the stage row gives International its room on the right */
 .cr-best .cr-tile b{font-size:24px}

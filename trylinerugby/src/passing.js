@@ -192,6 +192,7 @@ function doKick(c, power, lat) {
   sfx('kick');
 }
 function aiKick(p, type) {
+  if (matchTag()) return;                                  // tag has no kicking: he runs or passes on his next think
   const d = dirOf(p.team), n = M.nat[p.team];
   if (type === 'clear') doKick(p, 0.8 + rnd()*0.2, p.y < 35 ? -0.75 : 0.75);
   else if (type === 'territory') doKick(p, 0.7 + rnd()*0.3, (rnd()-0.5)*0.8);

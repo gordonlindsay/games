@@ -86,16 +86,17 @@ function playOut(us, them, deeds) {
     ok(mn.every(v => [40, 43, 46].includes(v)) && new Set(mn).size === 3 && stars.every(v => v === 1 || v === 2), `every Minis side is 1 or 2 stars (${mn})`);
     ok(new Set(at(0).map(t => K.map(k => t[k]).join(''))).size >= 6, `and they stay different sides (${new Set(at(0).map(t => K.map(k => t[k]).join(''))).size} of ${at(0).length})`);
     ok(X.CLUBS.every((t, i) => X.CLUBS.every((o, j) => X.rateOf(t) < X.rateOf(o) ? mn[i] <= mn[j] && jn[i] <= jn[j] : true)), 'a stronger club is never the weaker side at either stage');
-    ok(jn.every(v => v >= 46 && v <= 55) && Math.max(...jn) < Math.min(...C.COUNTIES.map(X.overallOf)), `Juniors run 46 to 55, under every county (${jn})`);
-    ok(Math.max(...X.CLUBS.filter(t => t.id !== 'HAR').map(X.overallOf)) <= Math.min(...C.COUNTIES.map(X.overallOf)) && Math.max(...C.COUNTIES.map(X.overallOf)) <= 64, 'counties run from the best of Local to the foot of the top flights');
+    ok(jn.every(v => v >= 46 && v <= 55) && Math.max(...jn) < Math.min(...at(2).map(X.overallOf)), `Juniors run 46 to 55, under every Club side (${jn})`);
+    ok(at(2).every(t => X.overallOf(t) >= 58 && X.overallOf(t) <= 64), `Club runs from the best of Local to the foot of the top flights (${at(2).map(X.overallOf)})`);
+    ok(X.CLUBS.every((t, i) => X.CLUBS.every((o, j) => X.rateOf(t) < X.rateOf(o) ? at(2)[i] && X.overallOf(at(2)[i]) <= X.overallOf(at(2)[j]) : true)), 'a stronger club is never the weaker side at Club');
   }
   const opp = cr.season.teams.slice(1);
   ok(opp.every(t => X.CLUBS.some(k => k.id === t.id) && X.overallOf(t) <= 46) && !opp.some(t => t.id === 'FAR'), 'Minis opponents are five other Local clubs, read down too');
   const ratings = [0, 1, 2, 3, 4].flatMap(s => [C.teamFor({ ...cr, pro:'TLS', country:'SCO' }, s), ...C.opponents({ ...cr, pro:'TLS', country:'SCO' }, s)]);
   ok(ratings.every(t => ['pace', 'power', 'handling', 'kicking'].every(k => Number.isInteger(t[k]) && t[k] >= 1 && t[k] <= 5)), 'every side at every stage keeps whole abilities from 1 to 5');
-  const county = C.teamFor(cr, 2), counties = C.opponents(cr, 2);
-  ok(county.name === 'Surrey' && counties.map(t => t.id).join() === 'KEN,SSX,HAM,MDX,BRK', 'County: Surrey against the five invented county sides');
-  ok(C.COUNTIES.every(t => !X.ALL_TEAMS.some(o => o.id === t.id) && X.overallOf(t) >= 58 && X.overallOf(t) <= 64), `county codes are new to the scoreboard, and county sides are 58 to 64 (${C.COUNTIES.map(X.overallOf)})`);
+  const atClub = C.teamFor(cr, 2), rivals = C.opponents(cr, 2);
+  ok(atClub.name === cr.club.name && rivals.length === 5 && rivals.every(t => t.name !== cr.club.name), 'Club: your own club against five others');
+  ok(rivals.every(t => X.overallOf(t) >= 58 && X.overallOf(t) <= 64), `at Club's ratings (${rivals.map(X.overallOf)})`);
   const pro = C.teamFor({ ...cr, pro:'SYD' }, 3), pros = C.opponents({ ...cr, pro:'SYD' }, 3);
   ok(pro.name === 'Sydney' && pros.length === 5 && pros.every(t => X.AUSTRALIA.some(a => a.id === t.id) && t.id !== 'SYD'), 'Pro Club: your city side against five others from its list');
   const nat = C.teamFor({ ...cr, country:'WAL' }, 4), nats = C.opponents({ ...cr, country:'WAL' }, 4);
@@ -123,12 +124,13 @@ function playOut(us, them, deeds) {
   out = C.outcome(cr);
   ok(out.place === 6 && out.bar && out.promoted, 'last, but with the overall at the bar: up anyway');
   C.advance();
-  ok(cr.stage === 2 && cr.season.teams[0].name === 'Surrey', 'County: Surrey');
-  // County to Pro Club through real matches: the last game signs you, so the season's end can name the club
+  ok(cr.stage === 2 && cr.season.teams[0].name === cr.club.name, 'Club: your own club again');
+  // Club to Pro Club through real matches: the last game signs you, so the season's end can name the club
+  delete cr.cup;                                     // the league's own route here: tools/cups.mjs has the cup
   finish(cr, 1); cr.season.round = 4; cr.season.results.pop();
   for (const k of keys) cr.skills[k] = 50;
   playOut(30, 0);
-  ok(cr.season.round === 5 && C.outcome(cr).place === 1 && C.outcome(cr).promoted && /^[A-Z]{3}$/.test(cr.pro), `winning the County signs a Pro Club side (${cr.pro})`);
+  ok(cr.season.round === 5 && C.outcome(cr).place === 1 && C.outcome(cr).promoted && /^[A-Z]{3}$/.test(cr.pro), `winning at Club signs a Pro Club side (${cr.pro})`);
   const pro = cr.pro;
   C.advance();
   ok(cr.stage === 3 && cr.season.teams[0].id === pro, 'Pro Club: the side you signed for');
@@ -183,9 +185,16 @@ function playOut(us, them, deeds) {
   ok(C.TRAIN.every((v, i, a) => !i || v > a[i - 1]), 'more stars, more points');
   // the drill list: only drills that exist, never a contact game in the Minis
   const have = C.drillIds(), contact = ['tackle', 'scrum', 'back'];
-  ok(C.drills(cr).every(d => have.includes(d.id)) && C.drills(cr).length === have.filter(id => id in map).length - (cr.stage === 0 ? contact.length : 0), `the training list is the drills that exist (${C.drills(cr).map(d => d.id)})`);
+  ok(C.drills(cr).every(d => have.includes(d.id)), `the training list is drills that exist (${C.drills(cr).map(d => d.id)})`);
   ok(!C.drills({ stage:0 }).some(d => contact.includes(d.id)) && C.drills({ stage:0 }).some(d => d.id === 'tag'), 'no contact game in the Minis, and Tag Chase instead of Tackling');
-  if (have.includes('scrum')) ok(C.drills({ stage:1 }).some(d => d.id === 'scrum'), 'Driving from the Juniors on');
+  { const ids = stage => C.drills({ stage }).map(d => d.id).sort().join();
+    ok(ids(0) === 'circle,cones,defend,egg,pass,tag', `Minis train ${ids(0)}`);
+    ok(ids(1) === 'back,circle,cones,defend,egg,kick,pass,tackle', `Juniors train ${ids(1)}`);
+    for (const s of [2, 3, 4]) ok(ids(s) === 'back,circle,cones,defend,kick,pass,scrum,tackle', `stage ${s} trains as an adult (${ids(s)})`);
+    for (const s of [0, 1, 2]) ok(['stamina', 'pace', 'handling'].every(k => C.drills({ stage:s }).some(d => d.skills.includes(k))), `stage ${s} can train Stamina, Pace and Handling`);
+    for (const s of [1, 2]) ok(['power', 'kicking'].every(k => C.drills({ stage:s }).some(d => d.skills.includes(k))), `and stage ${s} Power and Kicking`);
+    ok(!C.drills({ stage:0 }).some(d => d.skills.includes('kicking') || d.skills.includes('power')), 'Minis train neither: tag has no kicks and no contact');
+    ok(new Set(Object.values(C.STAGE_DRILLS).flat()).size === have.filter(id => id in map).length, 'every drill is on some stage\'s list'); }
   if (have.includes('circle')) ok(json(C.drills(cr).find(d => d.id === 'circle').skills) === '["stamina","handling"]', 'the circle shows both skills');
   cr.trained = false;
   ok(!C.train('nothing-here'), 'a drill that does not exist cannot start');
@@ -243,7 +252,7 @@ function playOut(us, them, deeds) {
 
 // 6. the engine's career gate
 {
-  const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); cr.stage = 2; C.newSeason(cr); C.set(cr);   // County: Surrey has no ability on the floor; the Minis' sides now do in the Minis, so a weak player can be weaker than his side
+  const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); cr.stage = 2; C.newSeason(cr); C.set(cr);   // Club: a side with no ability on the floor; the Minis' sides now do in the Minis, so a weak player can be weaker than his side
   for (const k of keys) cr.skills[k] = 99;
   C.play();
   const M = T.M, me = M.careerP, mate = M.players.find(p => p.team === 0 && p !== me), foe = M.players.find(p => p.team === 1);
@@ -414,17 +423,15 @@ function playOut(us, them, deeds) {
     const c0 = C.clean(JSON.parse(JSON.stringify({ pos:'B', num:4, club:oldFar, skills:{ pace:70, power:70, handling:70, kicking:70, stamina:70 }, stage, pro:stage >= 3 ? 'TLS' : null, country:stage === 4 ? 'FRA' : null, seasons:1, history:[], season:{ ...season(six()).valueOf(), teams } })));
     ok(c0 && c0.stage === stage && c0.skills.pace === 70 && c0.season && c0.season.teams.every((t, i) => X.overallOf(t) === X.overallOf(teams[i])) && (stage < 3 || c0.pro === 'TLS') && (stage < 4 || c0.country === 'FRA'), `an old save at stage ${stage} loads with nothing moved`);
   }
-  // Surrey is yours for a whole stage, and at Pace 2 that stage played harder than the one above it (README)
-  const sur = C.COUNTIES[0];
-  ok(sur.id === 'SUR' && X.overallOf(sur) === Math.min(...C.COUNTIES.map(X.overallOf)) && sur.pace >= 3, `Surrey is at the counties' foot, and not the slowest (${sur.pace}, ${C.COUNTIES.map(t => t.pace)})`);
   { const mean = l => l.reduce((a, t) => a + X.overallOf(t), 0)/l.length, jc = { ...C.create({ pos:'B', num:4, club:X.CLUBS[1] }), stage:1 };
     ok(C.CUT[1].up === 1 && C.CUT[0].up === undefined, 'your rivals have a point on you in the Juniors, and none in the Minis');
     let out = 0; for (let i = 0; i < 40; i++) for (const t of C.opponents(jc, 1)) if (X.overallOf(t) > 55 || X.overallOf(t) < 49) out++;
     ok(!out, 'so Juniors rivals are 49 to 55');
-    ok(mean(C.COUNTIES.slice(1)) > X.overallOf(sur), `and the other counties average above Surrey (${mean(C.COUNTIES.slice(1)).toFixed(1)}, ${X.overallOf(sur)})`); }
-  // signing for a Pro Club: never a step down from the counties, and never a side that wins everything
-  const floor = Math.max(...C.COUNTIES.map(X.overallOf)), low = ['BMA', 'COR', 'BOR', 'DUB', 'LIM'], seen = new Set();
-  ok(floor === 64 && C.SIGN.rivals === floor, `a signing's rivals average at least the best county's rating (${floor})`);
+    const cc = { ...C.create({ pos:'B', num:4, club:X.CLUBS[7] }), stage:2 };
+    ok(C.CUT[2].up === 1 && mean(C.opponents(cc, 2)) > X.overallOf(C.teamFor(cc, 2)), `at Club your rivals have a point on you too (${mean(C.opponents(cc, 2)).toFixed(1)}, ${X.overallOf(C.teamFor(cc, 2))})`); }
+  // signing for a Pro Club: never a step down from Club, and never a side that wins everything
+  const floor = 64, low = ['BMA', 'COR', 'BOR', 'DUB', 'LIM'], seen = new Set();
+  ok(floor === 64 && C.SIGN.rivals === floor, `a signing's rivals average at least the best Club rating (${floor})`);
   const signer = { pro:null };
   reseed(5);
   for (let i = 0; i < 800; i++) { C.sign(signer); seen.add(signer.pro); }
@@ -469,16 +476,42 @@ function playOut(us, them, deeds) {
   ok($('b-career').textContent === 'Career' && $('career-note').hidden, 'home: Career, with no note before a career starts');
   const cr = C.create({ name:'Isla', pos:'B', num:7, club:{ id:'XSS', name:'<img src=x>', kit:'#123456', trim:'#abcdef', custom:true, pace:3, power:3, handling:3, kicking:3 } });
   C.set(cr); X.renderHome();
-  ok($('b-career').textContent === 'Continue Career' && !$('career-note').hidden && $('career-note').textContent === 'Minis · <img src=x> · Round 1 of 5', 'with one: Continue Career, the stage, the club and the round');
+  ok($('b-career').textContent === 'Continue Career' && !$('career-note').hidden && $('career-note').textContent === 'Minis · <img src=x> · Match 1 of 5', 'with one: Continue Career, the stage, the club and the match');
   // the new player screen
   C.set(null); C.newOpen();
+  { const S = D.settings(), d = () => C.draft();
+    ok(d().who === 0 && d().start === 2, 'New Player: Me and Adult to start');
+    ok(json(C.whoStarts(0)) === '[1,2]' && json(C.whoStarts(1)) === '[0,1]', 'Me offers Juniors or Adult, My Child Minis or Juniors');
+    C.whoPick(1);
+    ok(d().who === 1 && d().start === 0, 'My Child moves off Adult, to Minis');
+    C.startPick(1); C.whoPick(0);
+    ok(d().who === 0 && d().start === 1, 'Juniors stays picked across the two');
+    C.whoPick(1); C.startPick(0); $('cn-go').click();
+    ok(C.get() && C.get().stage === 0 && C.get().cup === undefined && shown() === 's-career', 'Start Career at Minis');
+    C.set(null); C.newOpen(); $('cn-go').click();
+    ok(C.get().stage === 2 && C.get().cup && C.overall(C.get().skills) === 70 && C.overall(C.get().skills) < C.STAGES[2].bar, `Start Career at Adult: your club, its cup, and an overall of 70 (${C.overall(C.get().skills)})`);
+    C.set(null); C.newOpen(); C.startPick(0); $('cn-go').click();
+    ok(C.get().stage === 1 && !C.get().cup && C.overall(C.get().skills) === 64, `Start Career at Juniors: an overall of 64 (${C.overall(C.get().skills)})`);
+    ok(C.create({ pos:'B', num:4, club:X.CLUBS[0], start:9 }).stage === 0 && C.create({ pos:'B', num:4, club:X.CLUBS[0], start:-1 }).stage === 0 && C.create({ pos:'B', num:4, club:X.CLUBS[0], start:'2' }).stage === 0, 'a start that is not one is Minis');
+    { const was = [S.kids, S.diff]; S.kids = true; S.diff = 0; C.set(null); C.newOpen();
+      ok(d().who === 1 && d().start === 0, 'the Kids level opens on My Child and Minis');
+      C.whoPick(0);
+      ok(d().who === 1 && !$('m-gate').hidden, 'and only a grown-up moves it to Me');
+      T.kids.close(); [S.kids, S.diff] = was; }
+    C.set(null); C.newOpen(); }
   ok(shown() === 's-career-new' && /Farnham/.test($('cn-clubs').innerHTML) && /data-n="4"/.test($('cn-num').innerHTML) && !/data-n="3"/.test($('cn-num').innerHTML), 'New Player: the clubs, and a back\'s numbers to start');
+  // an old save in the middle of a County season is drawn again at your club
+  { const old = JSON.parse(json(cr)); old.stage = 2; old.season = JSON.parse(json(C.create({ pos:'B', num:4, club:X.CLUBS[0] }).season)); old.season.teams[0] = { ...old.season.teams[0], id:'SUR', name:'Surrey' };
+    const back = C.clean(old);
+    ok(back && back.stage === 2 && back.season === null, 'a County season from an old save is dropped, and the career kept');
+    C.set(back); C.open();
+    ok(C.get().season.teams[0].name === back.club.name, 'and redrawn at your club'); C.set(null); }
   // the hub
   C.set(cr); C.open();
   const card = $('cr-card').innerHTML;
   ok(shown() === 's-career' && C.skills().every(([, l]) => card.includes(`>${l}<`)) && card.includes(`>${C.overall(cr.skills)}<`), 'the hub: the player card, his overall and a bar for every skill');
   ok(!card.includes('<img') && $('cr-next').innerHTML.includes('&lt;img src=x&gt;'), 'names are escaped');
-  ok($('cr-title').textContent === 'Round 1 of 5' && $('cr-eyebrow').textContent === 'Minis · Season 1' && $('cr-line').textContent === 'Top Two or Overall 64 to Go Up', 'the stage, the round and what it takes to go up');
+  ok($('cr-title').textContent === 'Match 1 of 5' && $('cr-eyebrow').textContent === 'Minis · Tag Festival' && /^Tag Rugby/.test($('cr-line').textContent), 'the stage, the match and what they play');
   cr.trained = false; C.trainDone({ id:'defend', stars:3 });
   ok(shown() === 's-career' && $('cr-train').disabled && $('cr-train').textContent === 'Trained' && $('cr-gain').textContent === `+${C.TRAIN[3]} Pace` && !$('cr-gain').hidden, 'after a session: Trained, and what it gave');
   C.renderTrain();
@@ -487,7 +520,7 @@ function playOut(us, them, deeds) {
   ok(($('cl-table').innerHTML.match(/<tr/g) || []).length === 6, 'the table has six rows');
   // the season's end
   finish(cr, 1); C.open();
-  ok(shown() === 's-career-end' && $('ce-title').textContent === 'Champions' && /Next Season/.test($('ce-act').innerHTML), 'a won season: Champions and Next Season');
+  ok(shown() === 's-career-end' && $('ce-title').textContent === 'Moved Up' && /Next Season/.test($('ce-act').innerHTML), 'a festival: Moved Up and Next Season');
   cr.stage = 3; C.newSeason(cr); finish(cr, 2); C.renderEnd();
   ok($('ce-title').textContent === 'Called Up' && ($('ce-body').innerHTML.match(/data-n="/g) || []).length === X.allNations().length && $('ce-act').innerHTML === '', 'called up: every country is the choice');
   cr.stage = 4; cr.country = 'ENG'; C.newSeason(cr); finish(cr, 4); C.renderEnd();

@@ -69,7 +69,7 @@ function hintOpenPick(s, t, la, lb) {                       // which open-play c
   const carry = b.state === 'held' && b.carrier === c && !c.bind, d = dirOf(t);
   const cands = [];
   if (la === 'Offload') cands.push('offload');
-  if (lb === 'Drop Goal') cands.push('drop');
+  if (lb === 'Drop Goal' && !matchTag()) cands.push('drop');
   if (carry && c.hold >= 0.8 && pressure(c) >= 5 && passAim(c, inputOf(t).world().y).far) cands.push('long');
   if (sprintOn(t) && ((carry && gapAhead(c) >= 8) || (b.state === 'held' && b.carrier.team !== t && dist(c, b.carrier) <= 12 && cleanThrough(b.carrier, t)))) cands.push('sprint');
   if (carry) {
@@ -228,7 +228,7 @@ function coachOpen(t) {                                   // which lines this hu
   const due = [], c = ctrlOf(t); if (!c) return due;
   const b = M.ball, k = M.contact, held = b.state === 'held' && b.carrier === c;
   if (held && c.bind && k && k.c === c && (k.tier === 'soft' || k.tier === 'wrap') && canOffload(k)) due.push('offload');
-  if (!ourBall(t) && canDive(c)) due.push('tackle');
+  if (!ourBall(t) && canDive(c) && !matchTag()) due.push('tackle');   // tag's button says Pull Tag, and needs no tip about tackling
   if (held && !c.bind) { if (coachStepNear(c)) due.push('step'); due.push('pass'); }
   if (sprintOn(t)) due.push('sprint');
   return due;

@@ -644,6 +644,7 @@ function newMatch(u, c, opts) {
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
     arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
     fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
+    rules:opts.rules === 'tag' || opts.rules === 'noscrum' ? opts.rules : 'full', tagN:0, tagTeam:null,   // what a career stage plays: tag, no scrums, or everything. Nothing but a career asks for less (tagMade, freePass)
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
@@ -750,12 +751,13 @@ function kickoffFormation(kTeam, kx) {
 function kickoff(team) {
   kickoffFormation(team, 60);
   placeBall(60, 35);
-  M.phaseCount = 0; M.poss = team;
-  startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => restartKick(team, 60, 35, 'kickoff') });
+  M.phaseCount = 0; M.poss = team; M.tagN = 0; M.tagTeam = null;
+  startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => { if (matchTag()) releaseTo(team, 60, 35, 'tap'); else restartKick(team, 60, 35, 'kickoff'); } });   // tag starts with a pass, not a kick
   if (!M.two && outmatched(M.nat[0], M.nat[1])) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless
   if (M.career) careerKickoff();                           // a career match: the ring starts on your player
 }
 function dropOut(team) {
+  if (matchTag()) { freePass(team, team === 0 ? 32 : 88, 35); return; }
   const kx = team === 0 ? 32 : 88;
   kickoffFormation(team, kx);
   placeBall(kx, 35);
@@ -769,13 +771,23 @@ function restartKick(team, x, y, kind) {
   kickBall(team, x, y, x + d*len, ty, kind === 'kickoff' ? 2.2 : 2.5, kind === 'kickoff' ? 11 : 13, 'restart');
   sfx('kick');
 }
+/* The rules a career stage plays (CAREER_STAGES[].rules). Every scrum goes through scrum() and every lineout through lineout(), so the rule is here and in the few restarts below, and any other match never reads it. */
+const matchTag = () => !!M && M.rules === 'tag';
+const matchNoScrum = () => !!M && (M.rules === 'tag' || M.rules === 'noscrum');
+function freePass(team, x, y, reason) {                    // where a scrum or, in tag, any set piece would be: the ball goes back in by hand, with the same pause and the same retreat as a tap and go
+  const fx = clamp(x, 15, 105), fy = clamp(y, 6, 64);
+  placeBall(fx, fy);
+  startSet({ kind:'tap', team, x:fx, y:fy, t:0.9, snap:true, label:(reason ? reason + ' · ' : '') + 'Free Pass ' + M.nat[team].id, then:s => releaseTo(s.team, s.x, s.y, 'tap') });
+}
 function scrum(team, x, y, reason) {
+  if (matchNoScrum()) { freePass(team, x, y, reason); return; }
   M.stats.scrums = (M.stats.scrums||0) + 1;
   placeBall(clamp(x,15,105), clamp(y,15,55));
   startSet({ kind:'scrum', team, x:clamp(x,15,105), y:clamp(y,15,55), t:interactive() ? 1.1 : 1.8, snap:true,
     label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() ? startScrum(s) : autoScrum(s) });
 }
 function lineout(team, x, y, reason) {
+  if (matchTag()) { freePass(team, x, y, reason); return; }
   const ly = y < 35 ? 8 : 62;
   placeBall(clamp(x,15,105), ly);
   startSet({ kind:'lineout', team, x:clamp(x,15,105), y:ly, t:interactive() ? 1.1 : 1.8, snap:true,
@@ -798,7 +810,7 @@ function releaseTo(team, x, y, kind, who) {
 /* ---------- possession ---------- */
 function setCarrier(p) {
   const b = M.ball;
-  if (M.poss !== p.team) M.phaseCount = 0;
+  if (M.poss !== p.team) { M.phaseCount = 0; M.tagN = 0; M.tagTeam = null; }
   b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   M.poss = p.team;
@@ -1036,6 +1048,7 @@ function doKick(c, power, lat) {
   sfx('kick');
 }
 function aiKick(p, type) {
+  if (matchTag()) return;                                  // tag has no kicking: he runs or passes on his next think
   const d = dirOf(p.team), n = M.nat[p.team];
   if (type === 'clear') doKick(p, 0.8 + rnd()*0.2, p.y < 35 ? -0.75 : 0.75);
   else if (type === 'territory') doKick(p, 0.7 + rnd()*0.3, (rnd()-0.5)*0.8);
@@ -1271,9 +1284,46 @@ function resolveRuck(s) {                                  // the ruck is automa
 }
 // a Drop Goal press: the 0.20s to the close-up is the kicker's, and a man close enough to stop it is judged as a charger in the cut
 const dropHolding = c => !!c && !!M.dropArmed[c.team] && !!sideOf(c.team).charging && M.ball.carrier === c;
+/* ---------- tag ----------
+   A match played with tags (M.rules, a career's Minis). Nobody goes to ground and nothing is contested: a defender in reach takes the tag, the carrier stops, and his side plays on from the mark.
+   After TAG.go tags in a row the ball goes over. The first man in reach on the other side has a go, at the level's own tackle rate, and if he grabs at nothing he needs a moment before he can again. Your ringed man's press reaches further (DRILL_TAG.pull.reach). */
+const TAG = { go:6, restart:0.75, miss:0.6, chance:0.5, mates:0.4, reach:1.2, back:9, away:1.3, grace:0.9 };   // chance, mates: shares of the level's tackle rate, for the other side and your teammates. reach: how near they must get. back, away: every defender this near the tag is out for the restart and this long after. grace: the next carrier's moment to get going. By bot, a two-minute match has about 12 tags and 3 tries (tools/rules.mjs)
+const matchCanPull = q => drillCanPull(q) && q.tcd <= 0 && q.offside <= 0;
+function tagCheck(c) {
+  for (const q of M.players) {
+    if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0) continue;
+    const user = ringed(q);
+    if (dist(q, c) >= (user ? 1.35 : TAG.reach)) continue;
+    if (!user && rnd() >= (cpuSide(q.team) ? TAG.chance*diffOf(q.team).cpuTackle : TAG.mates*diffOf(q.team).myTackle)) { q.tcd = TAG.miss; st('tagMissed'); if (ringed(c)) tag('Dodged', c.x, c.y); continue; }
+    tagMade(c, q);
+    return true;
+  }
+  return false;
+}
+function tagMade(c, q) {
+  const team = c.team, x = clamp(c.x, 1, 119), y = clamp(c.y, 1, 69);
+  M.stats.tackles++; countTk(q.team, true);
+  if (M.career) careerDeed('tackles', q);
+  sfx('tick'); buzz(20); heat(q.team, 'hit');
+  if (ringed(q)) tag('Got It', c.x, c.y);
+  c.vx *= 0.2; c.vy *= 0.2; c.drop = null;
+  q.vx = q.vy = 0;
+  for (const p of M.players) if (p.team !== team && dist(p, c) <= TAG.back) p.tcd = p.offside = TAG.restart + TAG.away;   // the defence goes back before it can tag again: the attack has room to play on
+  if ((c.x - ownLine(team))*dirOf(team) < 0) { placeBall(c.x, c.y); deadBall(() => freePass(1 - team, x, y, 'Held in Goal')); return; }
+  M.tagN = M.tagTeam === team ? M.tagN + 1 : 1; M.tagTeam = team;
+  placeBall(x, y);
+  M.phaseCount++;
+  if (M.tagN >= TAG.go) {                                  // the sixth tag: the other side's ball, and their count starts again
+    M.tagN = 0; M.tagTeam = null; M.stats.turnovers++;
+    deadBall(() => freePass(1 - team, x, y, 'Six Tags'));
+    return;
+  }
+  deadBall(() => startSet({ kind:'ruck', team, x, y, t:TAG.restart, label:'Tag ' + M.tagN + ' of ' + TAG.go, then:s => { releaseTo(s.team, s.x, s.y, 'ruck', s.picker); M.ball.carrier.grace = TAG.grace; } }));
+}
 function tackleChecks(c) {
   if (dropHolding(c) || c.grace > 0) return false;
   if (practice && practice.tagOnly) return drillTagCheck(c);   // the youngest play these drills with tags: no man here ever commits to a tackle
+  if (matchTag()) return tagCheck(c);
   for (const q of M.players) {
     if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
     const user = ringed(q);
@@ -1404,6 +1454,7 @@ function carrierChecks(c) {
 
 /* ---------- penalties and goal kicks ---------- */
 function penalty(team, x, y) {
+  if (matchTag()) { freePass(team, x, y, 'Penalty'); return; }
   M.stats.pens++;
   sfx('whistle');
   placeBall(x, y);
@@ -1443,7 +1494,7 @@ function scoreTry(p) {
   placeBall(clamp(p.x,0,120), clamp(p.y,0,70));
   p.vx *= 0.3; p.vy *= 0.3;
   say(M.golden ? 'Golden Try' : 'Try', 'big', team); sfx('whistle'); sfx('roar'); buzz(60);
-  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => M.golden ? endHalf() : conversion(s.team, s.y) });   // a Golden Try needs no conversion
+  startSet({ kind:'try', team, x:p.x, y:clamp(p.y,1,69), t:1.9, then:s => M.golden ? endHalf() : matchTag() ? deadBall(() => kickoff(1 - s.team)) : conversion(s.team, s.y) });   // a Golden Try needs no conversion
 }
 function conversion(team, y) {
   const yy = clamp(y, 4, 66);
@@ -2712,7 +2763,7 @@ function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; 
 function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }
 
 /* The Golden Try: level at the end of the second half, play on until somebody scores. */
-const goldenOn = () => !!(M && M.arcade && !M.champ && !M.career);   // a career season is a league too
+const goldenOn = () => !!(M && M.arcade && !M.champ && (!M.career || M.careerCup));   // a career season is a league too, but a cup tie needs a winner
 const periodLen = () => M.golden ? M.halfLen*ARCADE.golden.len : M.halfLen;
 function startGolden() {
   M.half = 3; M.golden = true; M.clock = 0; M.hooter = false;
@@ -3155,6 +3206,7 @@ function canDive(q) {                                      // would a Tackle pre
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;
   if (practice && practice.tagOnly) { drillTagPull(q); return; }   // the youngest pull a tag: no dive
+  if (matchTag()) { if (matchCanPull(q)) tagMade(M.ball.carrier, q); else drillWhiff(q); return; }
   if (!canDive(q)) { st('ignored'); if (practice && practice.id === 'defend') drillWhiff(q); return; }   // a press with nothing in reach costs a moment in that drill, so the timing counts
   const c = b.carrier;
   if (dropHolding(c)) { st('ignored'); return; }   // he is about to drop for goal: the close-up judges you as a charger
@@ -3291,7 +3343,8 @@ function userStep(t, i, dt) {
   }
   tickUserPass(t, dt);
   if (i.b && !inp.bCancel) {
-    if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    if (matchTag() && ourBall(t)) { /* tag has no kicking */ }
+    else if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
   if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick
@@ -3684,20 +3737,121 @@ function savedHonours() {
   return out;
 }
 /* =========================================================
+   Competitions: where a club sits in the English game, and the knockout its county runs for it.
+
+   The real structure and every source are in docs/grassroots-competitions.md. Nothing here reads or writes a save, and
+   nothing but a career calls it.
+   - A club's level is read from its league line, 1 (the top flight) to 11 (Counties 5). A side with no league (a team you
+     made or imported, whose league line a save never keeps) takes the level its rating would have (compLevelOf).
+   - A club's county is written down only for clubs that have one here. Counties sort their clubs differently, so a cup is
+     read from that county's own table. A side with no county plays the plain county table.
+   - A cup is eight sides over three ties. The four who lose the first tie drop into its Plate, as Kent's and the women's
+     national cups do, so a small club always gets a second match. Scores are the championship's, by simMatch.
+   ========================================================= */
+const COMP_LEAGUES = [[/^English Premiership/, 1], [/^English Championship/, 2], [/^National League 1/, 3], [/^National League 2/, 4], [/^Regional 1/, 5], [/^Regional 2/, 6], [/^Counties 1/, 7], [/^Counties 2/, 8], [/^Counties 3/, 9], [/^Counties 4/, 10], [/^Counties 5/, 11]];
+const COMP_RATED = [[55, 5], [49, 6], [46, 7], [43, 9], [0, 11]];   // overall to level, the Local bands in src/ratings.js
+const CLUB_COUNTY = { FAR:'SUR', WIM:'SUR', GUI:'SUR', IRO:'SUR', COB:'SUR', WEY:'SUR', ORU:'SUR', HAS:'SUR', KIN:'SUR', EFF:'SUR', GDN:'SUR', WAN:'SUR', EGH:'SUR', MER:'SUR', MIT:'SUR', FEL:'SUR', ALD:'HAM' };   // from each club's league and place; see the brief. Twickenham has none: it is a top-flight side
+/* to: the lowest level (highest number) a cup takes. A side above a county's top cup enters that cup. A Plate is named here because Hampshire already has a cup called the Plate. */
+const COUNTY_CUPS = {
+  SUR:[{ name:'Surrey Cup', plate:'Surrey Cup Plate', to:5 }, { name:'Surrey Trophy', plate:'Surrey Trophy Plate', to:8 }, { name:'Surrey Shield', plate:'Surrey Shield Plate', to:10 }, { name:'Surrey Bowl', plate:'Surrey Bowl Plate', to:12 }],
+  HAM:[{ name:'Hampshire Cup', plate:'Hampshire Cup Plate', to:7 }, { name:'Hampshire Bowl', plate:'Hampshire Bowl Plate', to:9 }, { name:'Hampshire Plate', plate:'Hampshire Salver', to:12 }],
+  ANY:[{ name:'County Cup', plate:'County Cup Plate', to:5 }, { name:'County Trophy', plate:'County Trophy Plate', to:8 }, { name:'County Shield', plate:'County Shield Plate', to:10 }, { name:'County Bowl', plate:'County Bowl Plate', to:12 }],
+};
+function compLevelOf(t) {
+  const league = t && !t.custom && !t.key ? t.league || (ALL_TEAMS.find(o => o.id === t.id) || {}).league : null, hit = league && COMP_LEAGUES.find(([re]) => re.test(league));
+  return hit ? hit[1] : COMP_RATED.find(([ov]) => overallOf(t) >= ov)[1];
+}
+const compCountyOf = t => (t && !t.custom && !t.key && CLUB_COUNTY[t.id]) || null;
+function compCupFor(t) {
+  const list = COUNTY_CUPS[compCountyOf(t) || 'ANY'], level = compLevelOf(t);
+  return list.find(c => level <= c.to) || list[list.length - 1];
+}
+/* The clubs a cup can draw: every grassroots side but your own and the top flight's, nearest your level first, in a random order within a level. */
+function compCupRivals(t, n = 7) {
+  const level = compLevelOf(t), pool = [...new Set([...CLUBS, ...COUNTIES])].filter(o => compLevelOf(o) > 2 && o.id !== t.id && o.name !== t.name);
+  return shuffle(pool).sort((a, b) => Math.abs(compLevelOf(a) - level) - Math.abs(compLevelOf(b) - level)).slice(0, n);
+}
+
+/* ---------- a knockout ---------- */
+const CUP_TIES = ['Quarter-Final', 'Semi-Final', 'Final'];
+function cupNew(entry, teams) {           // teams[0] is yours
+  return { name:entry.name, plate:entry.plate, user:0, teams, tie:0, draw:shuffle(teams.map((t, i) => i)), main:[], low:[] };
+}
+/* The winner of a result. Level after extra time, the side with more tries; level on those, the away side, as Dorset & Wilts' 2025-26 rules end. */
+const cupWinner = r => (r.hs !== r.as ? (r.hs > r.as ? r.h : r.a) : r.ht !== r.at ? (r.ht > r.at ? r.h : r.a) : r.a);
+const cupLoser = r => (cupWinner(r) === r.h ? r.a : r.h);
+const cupTwos = list => { const out = []; for (let i = 0; i + 1 < list.length; i += 2) out.push([list[i], list[i + 1]]); return out; };
+function cupMainPairs(cup, k) { return cupTwos(k === 0 ? cup.draw : cup.main[k - 1].map(cupWinner)); }
+function cupLowPairs(cup, k) { return k === 0 ? [] : cupTwos(k === 1 ? cup.main[0].map(cupLoser) : cup.low[k - 2].map(cupWinner)); }
+/* Your tie now, or null when you are out of both. plate: it is in the Plate. */
+function cupUserTie(cup) {
+  if (!cup || cup.tie >= CUP_TIES.length) return null;
+  const main = cupMainPairs(cup, cup.tie).find(p => p.includes(cup.user));
+  if (main) return { pair:main, plate:false, label:CUP_TIES[cup.tie] };
+  const low = cupLowPairs(cup, cup.tie).find(p => p.includes(cup.user));
+  return low ? { pair:low, plate:true, label:CUP_TIES[cup.tie] } : null;
+}
+/* One tie of both draws. mine: your result, for the pair it names; every other game is simulated. */
+function cupPlayTie(cup, mine) {
+  const k = cup.tie, play = ([h, a]) => (mine && mine.h === h && mine.a === a ? mine : simMatch(cup, h, a));
+  cup.main.push(cupMainPairs(cup, k).map(play));
+  if (k > 0) cup.low.push(cupLowPairs(cup, k).map(play));
+  cup.tie++;
+}
+/* How far you went: what the season's end shows. */
+function cupResult(cup) {
+  const u = cup.user, inLow = cup.low.some(rd => rd.some(x => x.h === u || x.a === u)), rounds = inLow ? cup.low : cup.main;
+  let k = rounds.length - 1;
+  while (k > 0 && !rounds[k].some(x => x.h === u || x.a === u)) k--;
+  const r = rounds[k].find(x => x.h === u || x.a === u), final = k === rounds.length - 1;
+  return (inLow ? 'Plate ' : '') + (final && cupWinner(r) === u ? 'Winners' : CUP_TIES[k + (inLow ? 1 : 0)]);
+}
+/* The line after your tie, and whether it won a trophy (its name). */
+function cupTieLine(cup, r, plate) {
+  const k = cup.tie - 1, won = cupWinner(r) === cup.user, level = r.hs === r.as, name = plate ? cup.plate : cup.name;
+  const how = !level ? '' : (r.ht !== r.at ? 'Level, Decided on Tries · ' : 'Level, Away Side Through · ');
+  if (won && k === 2) return { line:how + name + ' Winners', trophy:name };
+  if (won) return { line:how + 'Through to the ' + (plate ? 'Plate ' : '') + CUP_TIES[k + 1] };
+  if (k === 2) return { line:how + name + ' Runners-Up' };
+  return { line:how + (!plate && k === 0 ? 'Into the ' + cup.plate : 'Out of the ' + name) };
+}
+/* A cup as it comes back from a save: null if anything is off, and the career plays on without it. The pairs must be the ones the draw gives, so a result can't be saved against a tie that never happened. */
+function cleanCup(c) {
+  if (!c || typeof c !== 'object' || Array.isArray(c) || c.user !== 0 || !Array.isArray(c.teams) || c.teams.length !== 8) return null;
+  const words = v => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 32) : null), name = words(c.name), plate = words(c.plate);
+  if (!name || !plate || !Number.isInteger(c.tie) || c.tie < 0 || c.tie > 3) return null;
+  const teams = c.teams.map(cleanSide), draw = c.draw;
+  if (teams.some(t => !t) || !Array.isArray(draw) || draw.length !== 8 || new Set(draw).size !== 8 || draw.some(i => !Number.isInteger(i) || i < 0 || i > 7)) return null;
+  if (!Array.isArray(c.main) || !Array.isArray(c.low) || c.main.length !== c.tie || c.low.length !== Math.max(0, c.tie - 1)) return null;
+  const out = { name, plate, user:0, teams, tie:0, draw:draw.slice(), main:[], low:[] };
+  const score = v => Number.isInteger(v) && v >= 0 && v <= 999;
+  const round = (raw, pairs) => {
+    if (!Array.isArray(raw) || raw.length !== pairs.length) return null;
+    const rd = raw.map((r, i) => (r && r.h === pairs[i][0] && r.a === pairs[i][1] && score(r.hs) && score(r.as) && score(r.ht) && score(r.at) ? { h:r.h, a:r.a, hs:r.hs, as:r.as, ht:r.ht, at:r.at } : null));
+    return rd.every(Boolean) ? rd : null;
+  };
+  for (let k = 0; k < c.tie; k++) {
+    const m = round(c.main[k], cupMainPairs(out, k)); if (!m) return null;
+    if (k > 0) { const l = round(c.low[k - 1], cupLowPairs(out, k)); if (!l) return null; out.low.push(l); }
+    out.main.push(m); out.tie = k + 1;
+  }
+  return out;
+}
+/* =========================================================
    Career: one player, from the minis to the national team.
 
    The rules, all of them here:
    - Five stages, each a season of the championship's shape (six sides, five rounds, three games a round): Minis,
-     Juniors, County, Pro Club, International. Only your game is played; the other two are drawn by simMatch, as in a
+     Juniors, Club, Pro Club, International. You can start at the first three (careerCreate's start). Only your game is played; the other two are drawn by simMatch, as in a
      championship. Points are the championship's (4 a win, bonus points, 3 for a grand slam).
    - Minis and Juniors are your club against five other Local clubs drawn at random, every side at a lower rating worked
-     out from its own, so sides stay different: Minis 40 to 46, one and two stars, Juniors 46 to 55 (CAREER_CUT). County is Surrey against five invented county
-     sides, a little above it. Pro Club is the city side you sign for (drawn when you go up from the lists a step above the counties, and only a side that is not above its rivals: careerSign) against five others from its list. International is your country (picked from every nation
+     out from its own, so sides stay different: Minis 40 to 46, one and two stars, Juniors 46 to 55 (CAREER_CUT). Club is your club against the five clubs nearest its real league (compCupRivals), at 58 to 64, with its county's cup beside the league. Pro Club is the city side you sign for (drawn when you go up from the lists a step above the counties, and only a side that is not above its rivals: careerSign) against five others from its list. International is your country (picked from every nation
      when you are called up), at its own rating: a Six Nations side against the other five, any other against the five
      nations nearest in rating. The strongest comes last either way.
    - Your player's look and Male or Female (cr.look) go on your squad entry in the match. Minis is mixed (CAREER_STAGES[].age against
      MIXED_THROUGH); from Juniors on every side is your player's: a female player's clubs are women's sides and the country list the
      women's nations at the women's ratings. A save from before this has no look: it stays men's, with its country, in every season.
+   - What a stage plays is on CAREER_STAGES: Minis are tag festivals (short matches, no table, everyone moves up), Juniors play contact with a free pass for every scrum, and Club on play everything.
    - Promotion at the end of a season: finish in the top two, or reach the stage's bar with your overall rating
      (CAREER_STAGES[].bar). Otherwise you play the stage again, against a new draw. A finished International season
      ends the career, whatever the table says.
@@ -3716,41 +3870,40 @@ function savedHonours() {
      that read the global champ (newChamp, recordChampResult, retainCompletedSeason) never are.
    ========================================================= */
 const CAREER_STAGES = [
-  { id:'minis', name:'Minis', bar:64, age:10 },       // age: the stage's age group, against MIXED_THROUGH
-  { id:'juniors', name:'Juniors', bar:70, age:14 },
-  { id:'county', name:'County', bar:77 },
+  { id:'minis', name:'Minis', bar:64, age:10, rules:'tag', festival:true, note:'Tag Rugby: No Kicks, Six Tags Then the Ball Goes Over' },   // age: the stage's age group, against MIXED_THROUGH. rules: what its matches play (match.js). festival: short matches, no table, and everyone moves up
+  { id:'juniors', name:'Juniors', bar:70, age:14, rules:'noscrum', note:'Full Contact, With a Free Pass for Every Scrum' },
+  { id:'club', name:'Club', bar:77, cup:true },       // cup: your club enters its county's knockout (below). Stage 2 was County: a save there plays on as Club
   { id:'pro', name:'Pro Club', bar:85 },
   { id:'intl', name:'International', bar:null },   // the last stage: one season, then the career is over
 ];
+const CAREER_FESTIVAL_HALF = 60;                     // a festival match's half, match seconds, whatever the home screen's length
+const careerFestival = cr => !!(cr && CAREER_STAGES[cr.stage].festival);
+const careerMatchOpts = cr => { const st = CAREER_STAGES[cr.stage]; return { rules:st.rules, halfLen:st.festival ? CAREER_FESTIVAL_HALF : 0 }; };
 const CAREER_UP = 2;                                 // the top two go up
 /* How much harder the other side plays at each stage: the share of the step from Normal's levers to Hard's (DIFF), added to the level you chose, so each stage is a step whichever you play on. Minis is as chosen, and Hard, already the hardest, stays as it is. A Kids match keeps its own terms. */
-const CAREER_PUSH = [0, 0.08, 0.15, 0.25, 0.55];
+const CAREER_PUSH = [0, 0.20, 0.25, 0.25, 0.55];
 /* Minis and Juniors: a club's ability sum read on to a lower range. from: what a side at the Local floor (sum 5, 40 overall) plays at; per: how many of its points make one here; top: the most here, so Twickenham and a team you made
-   at a high level play as the best of the stage. Minis 5 to 7 is 40 to 46; Juniors 7 to 10 is 46 to 55, under the counties. */
-const CAREER_CUT = [{ from:5, per:3, top:7 }, { from:7, per:2, top:10, up:1 }];   // up: the points your rivals have on you at this stage, under the same top, so going up is a step up (README, the career ladder)
+   at a high level play as the best of the stage. Minis 5 to 7 is 40 to 46; Juniors 7 to 10 is 46 to 55; Club 11 to 13 is 58 to 64, under the top flights, so a Counties 5 club and a Regional 1 club each meet their own league's kind of rival. */
+const CAREER_CUT = [{ from:5, per:3, top:7 }, { from:7, per:2, top:10, up:1 }, { from:11, per:3, top:13, up:1 }];   // up: the points your rivals have on you at this stage, under the same top, so going up is a step up (README, the career ladder)
 const careerCutSum = (sum, c, up = 0) => Math.min(c.top, c.from + up + Math.ceil(Math.max(0, sum - ABILITIES.length)/c.per));
-/* Invented county sides: county names, made-up kits and ratings. The abilities written here are each side's flavour; every side
-   comes out four points under them, and never under Local's best, so 58 to 64 overall: between the Local list (58 at the top) and the top flights (64 at the foot). Surrey, yours, is at the foot: you go up to meet them.
-   Overall doesn't settle how a stage plays: Pace counts for more than the others, so what Surrey is good at matters
-   as much as its 58 (README, Ratings from real results). Surrey is yours. */
-const CAREER_COUNTIES = [
-  { id:'SUR', name:'Surrey',    kit:'#2a3d8f', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:3, stamina:3 },   // Pace: at Pace 2 Surrey was the slowest side in its stage and the stage played harder than Pro Club
-  { id:'KEN', name:'Kent',      kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'SSX', name:'Sussex',    kit:'#1c6fb8', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'HAM', name:'Hampshire', kit:'#c8102e', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:3 },
-  { id:'MDX', name:'Middlesex', kit:'#0f5a32', trim:'#f2efe6', hoops:true, pace:4, power:4, handling:3, kicking:3, stamina:3 },
-  { id:'BRK', name:'Berkshire', kit:'#5b2d8e', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:3 },
-].map((t, i) => ({ ...t, ...abilitiesFor(t, i ? Math.max(sumOfOverall(58), rateOf(t) - 4) : sumOfOverall(58)) }));
 const CAREER_PRO_POOLS = [FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, IRELAND, WALES_SCOTLAND_ITALY, ENGLAND_TWO];
 const CAREER_POS = { F:[1, 2, 3], B:[4, 5, 6, 7] };   // sevens: forwards wear 1 to 3, backs 4 to 7
 /* A new player: about 61 overall, above every Minis side (40 to 46) as a player's rating has always read, three short of the Minis bar. Rechecked by bot with the wider bands: kept, as the bars are (README). Any skill not listed starts at CAREER_BASE. */
 const CAREER_START = { F:{ pace:32, power:44, handling:36, kicking:26, stamina:38 }, B:{ pace:44, power:26, handling:38, kicking:34, stamina:34 } };
 const CAREER_BASE = 35;
+/* Where a career can start, and the points on every skill for starting there: a player arrives at each stage with about the overall the last one's bar asks of them, 61, 64 and 70 (tools/ladder.mjs). */
+const CAREER_STARTS = [0, 5, 15];
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
 /* Which skill a drill trains. A drill's own result wins when it names one: Pass Around the Circle trains Stamina as the
    Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact) are hidden in the Minis, which plays Tag Chase instead, and at the Kids level. */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
 const CAREER_DRILL_ORDER = ['tag', 'egg', 'pass', 'circle', 'tackle', 'scrum', 'back', 'cones', 'defend', 'kick'];
+/* The training each stage plays: bouncing the egg and running around for the young, set-piece work for the grown game. Every stage keeps the Circle, the one game that trains Stamina. Pro Club and International train as Club. */
+const CAREER_STAGE_DRILLS = {
+  minis:['tag', 'egg', 'pass', 'circle', 'cones', 'defend'],   // tag has no kicking and no contact, so Kicking and Power wait for the Juniors
+  juniors:['egg', 'pass', 'circle', 'tackle', 'back', 'cones', 'defend', 'kick'],
+  adult:['pass', 'circle', 'tackle', 'scrum', 'back', 'cones', 'defend', 'kick'],
+};
 const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
    kicked a point of Kicking. At most CAREER_DEED_CAP points a match: training is where most of it comes from. */
@@ -3798,8 +3951,7 @@ const careerNation = (id, cr) => careerNations(cr).find(t => t.id === id) || (ca
 const careerClubNow = cr => (cr.club.key || cr.club.custom ? cr.club : CLUBS.find(t => t.id === cr.club.id) || cr.club);
 function careerTeamFor(cr, stage) {
   const g = careerStageG(cr, stage);
-  if (stage <= 1) return careerSide(careerClubNow(cr), CAREER_CUT[stage], g);
-  if (stage === 2) return careerSide(CAREER_COUNTIES[0], null, g);
+  if (stage <= 2) return careerSide(careerClubNow(cr), CAREER_CUT[stage], g);
   if (stage === 3) return careerSide(careerProSide(cr.pro), null, g);
   return careerSide(careerNation(cr.country, cr), null, g);
 }
@@ -3809,7 +3961,7 @@ function careerOpponents(cr, stage) {               // five sides; the random dr
     const mine = cr.club, others = CLUBS.filter(t => t.id !== mine.id && t.name !== mine.name);
     return shuffle(others.slice()).slice(0, 5).map(t => careerSide(t, CAREER_CUT[stage], g, CAREER_CUT[stage].up));
   }
-  if (stage === 2) return CAREER_COUNTIES.slice(1).map(t => careerSide(t, null, g));
+  if (stage === 2) return compCupRivals(careerClubNow(cr), 5).map(t => careerSide(t, CAREER_CUT[2], g, CAREER_CUT[2].up));   // your club's own league first
   if (stage === 3) {
     const me = careerProSide(cr.pro), pool = CAREER_PRO_POOLS.find(p => p.includes(me)) || FRANCE;
     return shuffle(pool.filter(t => t !== me)).slice(0, 5).map(t => careerSide(t, null, g));
@@ -3825,6 +3977,7 @@ function careerNewSeason(cr) {
   cr.seasons++;
   cr.season = { user:0, teams:[user, ...five], round:0, fixtures:roundRobin(order), results:[], id:'career-' + Date.now().toString(36) + '-' + cr.seasons.toString(36) };   // cleanChamp's shape and order, so a reload is the same season
   cr.trained = false;
+  careerCupDraw(cr);
   return cr.season;
 }
 function careerCreate(o) {
@@ -3832,12 +3985,14 @@ function careerCreate(o) {
   const club = cleanSide(o && o.club);
   if (!club) return null;
   const skills = {};
-  for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
+  const stage = Number.isInteger(o && o.start) && o.start >= 0 && o.start < CAREER_STARTS.length ? o.start : 0;
+  for (const k of careerSkillKeys()) skills[k] = (CAREER_START[pos][k] || CAREER_BASE) + CAREER_STARTS[stage];
   const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, pro:null, country:null, skills, look:careerLook(o.look),
-    stage:0, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
+    stage, seasons:0, season:null, trained:false, history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 } };
   careerNewSeason(cr);
   return cr;
 }
+const careerWhoStarts = who => (who ? [0, 1] : [1, 2]);   // 0 Me: Juniors or Adult. 1 My Child: Minis or Juniors
 function careerStart(o) {                            // Start Career on the new player screen
   if (practice) return null;
   const cr = careerCreate(o); if (!cr) return null;
@@ -3853,10 +4008,10 @@ function careerOutcome(cr) {
   if (!c || c.round < 5) return null;
   const place = careerPlace(c), ovr = careerOverall(cr.skills), st = CAREER_STAGES[cr.stage];
   const final = cr.stage >= CAREER_STAGES.length - 1, top = place <= CAREER_UP, bar = st.bar != null && ovr >= st.bar;
-  return { place, ovr, final, top, bar, promoted:!final && (top || bar) };
+  return { place, ovr, final, top, bar, promoted:!final && (top || bar || !!st.festival) };
 }
-/* Going up to Pro Club: the draw must not decide how hard the stage is, so a first signing is only a side whose rivals are a step above the counties (their mean at least the best county's) and that is not far above or below them. gap: its overall less its rivals' mean.
-   That leaves out England 2, whose rivals are the counties' level; Dublin and Bordeaux, which won nearly everything (98% and 99% for the scripted bot, margins of +26 and +32), and the other sides well clear of their list; and the sides far under theirs, Cork and Ballymena. They are still on their lists to meet, and a saved career already at one stays. */
+/* Going up to Pro Club: the draw must not decide how hard the stage is, so a first signing is only a side whose rivals are a step above Club (their mean at least Club's best) and that is not far above or below them. gap: its overall less its rivals' mean.
+   That leaves out England 2, whose rivals are Club's level; Dublin and Bordeaux, which won nearly everything (98% and 99% for the scripted bot, margins of +26 and +32), and the other sides well clear of their list; and the sides far under theirs, Cork and Ballymena. They are still on their lists to meet, and a saved career already at one stays. */
 const CAREER_SIGN = { rivals:64, gap:[-7, -2.5] };
 function careerRivals(t) { const list = CAREER_PRO_POOLS.find(p => p.includes(t)).filter(o => o !== t); return list.reduce((a, o) => a + overallOf(o), 0)/list.length; }
 const careerSignable = () => CAREER_PRO_POOLS.flat().filter(t => { const m = careerRivals(t), gap = overallOf(t) - m; return m >= CAREER_SIGN.rivals && gap >= CAREER_SIGN.gap[0] && gap <= CAREER_SIGN.gap[1]; });
@@ -3883,9 +4038,10 @@ function careerAdvance(country) {                    // Next Season (or a countr
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the drills that exist right now, in the career's order; no contact game in the Minis or at the Kids level
+function careerDrills(cr) {                          // the drills that exist right now for this stage, in the career's order; no contact game at the Kids level
   const have = new Map(PRACTICE_DRILLS.map(d => [d.id, d]));
-  return CAREER_DRILL_ORDER.filter(id => have.has(id) && !(have.get(id).contact && ((cr && cr.stage === 0) || kidsLevel())))
+  const list = CAREER_STAGE_DRILLS[CAREER_STAGES[(cr && cr.stage) || 0].id] || CAREER_STAGE_DRILLS.adult;
+  return CAREER_DRILL_ORDER.filter(id => list.includes(id) && have.has(id) && !(have.get(id).contact && kidsLevel()))
     .map(id => ({ id, name:have.get(id).name || CAREER_DRILL_NAME[id], skills:id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[id]] }));
 }
 const careerCanTrain = cr => !!(cr && cr.season && cr.season.round < 5 && !cr.trained);
@@ -3940,9 +4096,11 @@ function careerArm() {                               // straight after startMatc
 function careerPlay() {                              // Play Match on the hub
   const cr = career, c = cr && cr.season;
   if (practice || !c || c.round >= 5) return false;
+  const due = careerCupDue(cr);
+  if (due) return careerCupPlay(cr, due);
   const { opp } = userFixture(c);
   const mine = c.teams[c.user];                      // your player's look is on the squad entry, for this match; a save from before it has none
-  if (!startMatch(cr.look ? { ...mine, squad:[{ n:cr.num, look:cr.look }] } : mine, c.teams[opp], false)) return false;   // no match started: nothing to arm
+  if (!startMatch(cr.look ? { ...mine, squad:[{ n:cr.num, look:cr.look }] } : mine, c.teams[opp], false, careerMatchOpts(cr))) return false;   // no match started: nothing to arm
   careerArm();
   return true;
 }
@@ -3979,6 +4137,7 @@ function careerDeedGains(deeds) {
 }
 /* Full time in a career match: the result into the career's season (never the championship), the deeds into his skills. */
 function careerRecordResult() {
+  if (M && M.career && M.careerCup) return careerCupRecord();
   const cr = career, c = cr && cr.season;
   if (!c || c.round >= 5 || !M || !M.career || M.demo || M.two || practice || M.careerDone) return false;
   const { pair } = userFixture(c), home = pair[0] === c.user;
@@ -3996,14 +4155,62 @@ function careerRecordResult() {
   T.matches++; T.tries += deeds.tries || 0; T.tackles += deeds.tackles || 0; T.goals += deeds.goals || 0;
   cr.trained = false;
   careerLast = { kind:'match', gains };
+  careerCupTick(cr);
   careerSettle(cr);
   save();
   return true;
 }
-function careerSettle(cr) {                          // going up to Pro Club: sign at the season's end, so the screen can name the club
+function careerSettle(cr) {                          // going up from Club to Pro Club: sign at the season's end, so the screen can name the club
   const out = careerOutcome(cr);
   if (!out || !out.promoted || cr.stage !== 2 || cr.pro) return false;
   careerSign(cr);
+  return true;
+}
+
+/* ---------- the county cup ----------
+   A stage with cup:true runs its county's knockout beside the league (src/competitions.js), in cr.cup, never in the season, so the five-round league and everything that reads it stay as they were.
+   A tie is due before the league round CUP_AT says, and is the next match until it is played; the last is done before the last league round, so a season always ends with its cup finished.
+   Cup rules for the ladder: a cup match counts in the totals but gives no skill points, and a cup never decides promotion. So the ladder is what it was. */
+const CUP_AT = [1, 3, 4];                            // league rounds played when each tie falls due
+const CAREER_TROPHIES = 40;
+function careerCupDraw(cr) {
+  delete cr.cup;
+  const st = CAREER_STAGES[cr.stage];
+  if (!st.cup) return;
+  const club = careerClubNow(cr), g = careerStageG(cr, cr.stage), cut = CAREER_CUT[cr.stage];
+  cr.cup = cupNew(compCupFor(club), [careerTeamFor(cr, cr.stage), ...compCupRivals(club).map(t => careerSide(t, cut, g, cut.up))]);
+}
+function careerCupDue(cr) {                          // your tie, when it is the next match
+  const cup = cr && cr.cup, c = cr && cr.season;
+  if (!cup || !c || cup.tie >= CUP_AT.length || c.round < CUP_AT[cup.tie]) return null;
+  return cupUserTie(cup);
+}
+function careerCupTick(cr) {                         // once you are out, the rest of the draw plays on when each tie falls due
+  const cup = cr.cup, c = cr.season;
+  while (cup && c && cup.tie < CUP_AT.length && c.round >= CUP_AT[cup.tie] && !cupUserTie(cup)) cupPlayTie(cup, null);
+}
+function careerCupPlay(cr, due) {
+  const cup = cr.cup, opp = due.pair[0] === cup.user ? due.pair[1] : due.pair[0], mine = cup.teams[cup.user];
+  if (!startMatch(cr.look ? { ...mine, squad:[{ n:cr.num, look:cr.look }] } : mine, cup.teams[opp], false, careerMatchOpts(cr))) return false;
+  careerArm();
+  M.careerCup = true;                                // read by goldenOn: a tie level at the hooter goes to sudden death
+  return true;
+}
+function careerCupRecord() {
+  const cr = career, cup = cr && cr.cup, due = careerCupDue(cr);
+  if (!due || !M || !M.career || M.demo || M.two || practice || M.careerDone) return false;
+  M.careerDone = true;
+  const home = due.pair[0] === cup.user;
+  const mine = home
+    ? { h:due.pair[0], a:due.pair[1], hs:M.score[0], as:M.score[1], ht:M.tries[0], at:M.tries[1] }
+    : { h:due.pair[0], a:due.pair[1], hs:M.score[1], as:M.score[0], ht:M.tries[1], at:M.tries[0] };
+  cupPlayTie(cup, mine);
+  const said = cupTieLine(cup, mine, due.plate), deeds = M.careerDeeds || {}, T = cr.totals;
+  T.matches++; T.tries += deeds.tries || 0; T.tackles += deeds.tackles || 0; T.goals += deeds.goals || 0;
+  if (said.trophy) cr.trophies = [...(cr.trophies || []), { name:said.trophy, season:cr.seasons }].slice(-CAREER_TROPHIES);
+  careerLast = { kind:'cup', gains:{}, line:said.line };
+  careerCupTick(cr);
+  save();
   return true;
 }
 
@@ -4029,11 +4236,14 @@ function cleanCareer(c) {
     if (e.stage == null || e.place == null || e.w == null || e.d == null || e.l == null || !e.name) continue;
     history.push(e);
   }
-  const season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
+  let season = c.season == null ? null : cleanChamp(c.season);   // a broken season is dropped; the hub draws a new one for the same stage
+  if (season && stage === 2 && season.teams[season.user].id === 'SUR') season = null;   // a County season from before the Club stage: the same stage, drawn again at your club
   const looks = c.look && typeof c.look === 'object' && !Array.isArray(c.look) ? { look:careerLook(c.look) } : {};   // no look is a save from before it: male, and men's sides
+  const cup = season && CAREER_STAGES[stage].cup ? cleanCup(c.cup) : null;   // none in a save from before cups, or if broken: that season plays on without one
+  const trophies = Array.isArray(c.trophies) ? c.trophies.slice(-CAREER_TROPHIES).map(t => ({ name:typeof t?.name === 'string' ? t.name.trim().slice(0, 32) : '', season:careerInt(t?.season, 0, 100000) })).filter(t => t.name && t.season != null) : [];
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club,
     pro:CAREER_PRO_POOLS.flat().some(t => t.id === c.pro) ? c.pro : null, country:careerNations(looks).some(t => t.id === c.country) ? c.country : (stage === 4 ? 'ENG' : null),
-    skills, ...looks, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals };
+    skills, ...looks, stage, seasons:careerInt(c.seasons, 0, 100000) || 0, season, trained:c.trained === true && !!season && season.round < 5, history, totals, ...(cup ? { cup } : {}), ...(trophies.length ? { trophies } : {}) };
 }
 /* Your player: a star in the trim, the shirt or chalk, whichever stands off the grass, on his back on Top and over his head in a behind
    view, drawn over the men so a ruck can't hide him. No ring of his own: a ring on the grass always means who you control now. */
@@ -7526,7 +7736,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel(),   // the switch is gone: a match you play always has duels; Kids is one player's
+  newMatch(u, c, { halfLen:(o && o.halfLen) || HALF_SECONDS[settings.half], rules:o && o.rules, diff:settings.diff, champ:isChamp, duels:o && o.rules === 'tag' ? 'off' : 'live', early:ease, arcade:true, kids:!pair && kidsLevel(),   // the switch is gone: a match you play always has duels; Kids is one player's
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   mode = 'match';
   showScreen(null);
@@ -7620,7 +7830,8 @@ function updateHud() {
   else if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
   else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl; la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && carrying && (!held || cueA); bAct = play && carrying && !held; }   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
-  else { const tagging = practice && practice.tagOnly; la = tagging ? 'Pull Tag' : 'Tackle'; lb = 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && (tagging ? drillCanPull(ctrl) : canDive(ctrl)); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
+  else { const tagging = (practice && practice.tagOnly) || matchTag(); la = tagging ? 'Pull Tag' : 'Tackle'; lb = 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && (matchTag() ? matchCanPull(ctrl) : tagging ? drillCanPull(ctrl) : canDive(ctrl)); bAct = play; }   // Tackle lights up only when a press would dive now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
+  if (!D && !goal && !cut && ours && matchTag()) { lb = ''; bAct = false; }   // tag has no kicking: the button goes
   const S = M.spr[ht], sprOn = D ? !!D.cOn : !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
   const bk = la + '|' + lb + aAct + bAct + cueA + cueB + (duel ? M.cut.kind + (M.cut.after ? 1 : 0) : '') + gs + '|' + (cut ? 'h' : sprOn ? 'r' : 'i') + sprCue + (passLong ? 'L' : '') + (D ? (D.c ? 'C' : 'c') : '');
@@ -7720,7 +7931,7 @@ function hintOpenPick(s, t, la, lb) {                       // which open-play c
   const carry = b.state === 'held' && b.carrier === c && !c.bind, d = dirOf(t);
   const cands = [];
   if (la === 'Offload') cands.push('offload');
-  if (lb === 'Drop Goal') cands.push('drop');
+  if (lb === 'Drop Goal' && !matchTag()) cands.push('drop');
   if (carry && c.hold >= 0.8 && pressure(c) >= 5 && passAim(c, inputOf(t).world().y).far) cands.push('long');
   if (sprintOn(t) && ((carry && gapAhead(c) >= 8) || (b.state === 'held' && b.carrier.team !== t && dist(c, b.carrier) <= 12 && cleanThrough(b.carrier, t)))) cands.push('sprint');
   if (carry) {
@@ -7879,7 +8090,7 @@ function coachOpen(t) {                                   // which lines this hu
   const due = [], c = ctrlOf(t); if (!c) return due;
   const b = M.ball, k = M.contact, held = b.state === 'held' && b.carrier === c;
   if (held && c.bind && k && k.c === c && (k.tier === 'soft' || k.tier === 'wrap') && canOffload(k)) due.push('offload');
-  if (!ourBall(t) && canDive(c)) due.push('tackle');
+  if (!ourBall(t) && canDive(c) && !matchTag()) due.push('tackle');   // tag's button says Pull Tag, and needs no tip about tackling
   if (held && !c.bind) { if (coachStepNear(c)) due.push('step'); due.push('pass'); }
   if (sprintOn(t)) due.push('sprint');
   return due;
@@ -7951,12 +8162,12 @@ function fillMatchStats() {
   if (breakKind !== 'full') { el.hidden = true; return; }
   const S = M.stats, of = (made, att) => made + '/' + att;
   const row = (label, a, b) => `<tr><th scope="row">${label}</th><td>${a}</td><td>${b}</td></tr>`;
-  const rows = [row('Conversions', of(S.conv.made[0], S.conv.att[0]), of(S.conv.made[1], S.conv.att[1]))];
+  const rows = matchTag() ? [] : [row('Conversions', of(S.conv.made[0], S.conv.att[0]), of(S.conv.made[1], S.conv.att[1]))];   // tag has no goal kicks and no close-ups
   if (S.pen.att[0] + S.pen.att[1]) rows.push(row('Penalty Goals', of(S.pen.made[0], S.pen.att[0]), of(S.pen.made[1], S.pen.att[1])));
   if (S.dg.att[0] + S.dg.att[1]) rows.push(row('Drop Goals', of(S.dg.made[0], S.dg.att[0]), of(S.dg.made[1], S.dg.att[1])));
-  rows.push(row('Tackles', of(S.tk.made[0], S.tk.att[0]), of(S.tk.made[1], S.tk.att[1])));
+  rows.push(row(matchTag() ? 'Tags' : 'Tackles', of(S.tk.made[0], S.tk.att[0]), of(S.tk.made[1], S.tk.att[1])));
   const duel = t => isHuman(t) ? of(S.duelN.won[t], S.duelN.att[t]) : '\u2013';
-  rows.push(row('Duels', duel(0), duel(1)));
+  if (!matchTag()) rows.push(row('Duels', duel(0), duel(1)));
   const metres = t => { const n = Math.round(S.gain[t]); return n < 0 ? '\u2212' + (-n) : String(n); };
   rows.push(row('Metres Made', metres(0), metres(1)));
   const head = t => `<th scope="col">${esc(M.nat[t].id)}</th>`;
@@ -7978,7 +8189,11 @@ function showBreak(kind) {
     const [a, b] = M.score;
     const res = M.two ? (a > b ? 'Player 1 Wins' : a < b ? 'Player 2 Wins' : 'Draw') : a > b ? M.nat[0].name + ' Win' : a < b ? M.nat[1].name + ' Win' : 'Draw';   // two player names the player, since both can be Farnham
     $('br-tries').textContent = res + ' · Tries ' + M.tries[0] + ' – ' + M.tries[1];
-    if (M.champ || M.career) {
+    if (M.career && careerFestival(career)) { $('br-pts').hidden = true; }   // a festival has no table
+    else if (M.careerCup) {                                  // a cup tie has no table points: what it did instead
+      $('br-pts').textContent = (careerLast && careerLast.line) || '';
+      $('br-pts').hidden = !$('br-pts').textContent;
+    } else if (M.champ || M.career) {
       const mp = matchPoints(a, b, M.tries[0]);
       $('br-pts').textContent = '+' + mp.p + ' Table ' + (mp.p === 1 ? 'Point' : 'Points') + (mp.why.length ? ' · ' + mp.why.join(', ') : '');
       $('br-pts').hidden = false;
@@ -11307,6 +11522,8 @@ const DEMO_PILOT = {
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerStageName = i => CAREER_STAGES[i].name;
+/* At the Club stage the eyebrow names your club's real league. */
+const careerEyebrow = cr => { if (careerFestival(cr)) return 'Minis · Tag Festival'; const lg = cr.stage === 2 ? careerClubNow(cr).league : ''; return (lg || careerStageName(cr.stage)) + ' · Season ' + careerSeasonNo(cr); };
 const careerSeasonNo = cr => cr.history.filter(h => h.stage === cr.stage).length + 1;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
 function careerShirt(t, num, cls) {                  // the kit with your number on it
@@ -11327,7 +11544,7 @@ function careerShow(id) { showScreen(id); const s = $(id); s.scrollTop = 0; care
 function careerNote(cr) {
   const c = cr.season, st = careerStageName(cr.stage);
   if (!c) return st;
-  if (c.round < 5) return st + ' · ' + c.teams[c.user].name + ' · Round ' + (c.round + 1) + ' of 5';
+  if (c.round < 5) return st + ' · ' + c.teams[c.user].name + (careerFestival(cr) ? ' · Match ' : ' · Round ') + (c.round + 1) + ' of 5';
   return st + ' · ' + (careerOutcome(cr).final ? 'Career Over' : 'Season Over');
 }
 function renderCareerHome() {
@@ -11340,7 +11557,8 @@ function renderCareerHome() {
 const careerClubs = () => [...CLUBS, ...custom];     // the Local list and the teams you made (an imported club is one of those)
 const CAREER_BUILDS = [0.92, 1, 1.12];                // Small | Medium | Big: one of the art's three builds each
 function careerNewOpen() {
-  careerDraft = { i:Math.max(0, careerClubs().indexOf(myTeamOf())), pos:'B', num:CAREER_POS.B[0], numsFor:null, look:{ ...CAREER_LOOK } };   // your club starts on Your Team, when it is one of these
+  const child = kidsLevel();                         // the Kids level starts on My Child; only a grown-up moves it to Me
+  careerDraft = { i:Math.max(0, careerClubs().indexOf(myTeamOf())), pos:'B', num:CAREER_POS.B[0], numsFor:null, look:{ ...CAREER_LOOK }, who:child ? 1 : 0, start:child ? 0 : 2 };   // your club starts on Your Team, when it is one of these
   $('cn-name').value = '';
   $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(t.name)}</span>${teamStars(t)}</span></button>`).join('');
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) b.addEventListener('click', () => { careerDraft.i = +b.dataset.i; renderCareerNew(); });
@@ -11359,6 +11577,9 @@ function renderCareerNew() {
   if (d.i >= clubs.length) d.i = 0;
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) { const on = +b.dataset.i === d.i; b.classList.toggle('picked', on); b.setAttribute('aria-pressed', String(on)); }
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
+  [...$('cn-who').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === d.who)));
+  const starts = careerWhoStarts(d.who);
+  [...$('cn-start').children].forEach((b, i) => { b.textContent = CAREER_STAGE_START[starts[i]]; b.setAttribute('aria-pressed', String(starts[i] === d.start)); });
   if (d.numsFor !== d.pos) {
     d.numsFor = d.pos;
     $('cn-num').innerHTML = CAREER_POS[d.pos].map(n => `<button data-n="${n}">${n}</button>`).join('');
@@ -11384,10 +11605,26 @@ for (const [id, key, of] of [['cn-g', 'g', i => i], ['cn-build', 'b', i => CAREE
   if (careerDraft.pos !== pos) { careerDraft.pos = pos; careerDraft.num = CAREER_POS[pos][0]; }
   renderCareerNew();
 }));
+/* Who's playing sets where the career can start. A choice here sets the stage and nothing else is kept: the stage then sets the rules, the matches and the training. */
+const CAREER_STAGE_START = ['Minis', 'Juniors', 'Adult'];
+function careerWhoSet(who) {
+  careerDraft.who = who;
+  const starts = careerWhoStarts(who);
+  if (!starts.includes(careerDraft.start)) careerDraft.start = who ? 0 : 2;
+  renderCareerNew();
+}
+function careerWhoPick(i) {
+  if (i === careerDraft.who) return;
+  if (i === 0 && kidsLevel()) { parentGate(() => careerWhoSet(0)); return; }   // the Kids level: only a grown-up takes a career out of the children's starts
+  careerWhoSet(i);
+}
+function careerStartPick(i) { careerDraft.start = careerWhoStarts(careerDraft.who)[i]; renderCareerNew(); }
+[...$('cn-who').children].forEach((b, i) => b.addEventListener('click', () => careerWhoPick(i)));
+[...$('cn-start').children].forEach((b, i) => b.addEventListener('click', () => careerStartPick(i)));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 function careerNewGo() {
   const d = careerDraft, club = careerClubs()[d.i];
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, look:d.look })) return false;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, look:d.look, start:d.start })) return false;
   careerOpen();
   return true;
 }
@@ -11412,26 +11649,30 @@ function careerCardHtml(cr, team) {
       return `<div class="cr-sk" style="--k:${CAREER_COL[k] || 'var(--chalk)'}"><span class="lbl">${l}</span><span class="bar" aria-hidden="true"><i style="width:${v}%"></i></span><b>${v}</b>${g[k] ? `<em>+${g[k]}</em>` : '<em></em>'}</div>`;
     }).join('')}</div>`;
 }
-function careerFixtureHtml(c) {
-  const { pair } = userFixture(c), [h, a] = pair, T = c.teams;
+function careerFixtureHtml(c, tie) {
+  const [h, a] = tie ? tie.pair : userFixture(c).pair, T = tie ? career.cup.teams : c.teams;
   return `<div class="fixture"><span class="fx-team">${jersey(T[h])}${fxName(T[h], true)}</span><span class="fx-v">V</span><span class="fx-team r">${fxName(T[a], true)}${jersey(T[a])}</span></div>`;
 }
 function careerLine(cr) {
   const c = cr.season, st = CAREER_STAGES[cr.stage];
   const place = c.round ? ordinal(careerPlace(c)) : '';
+  if (st.festival) return st.note;                   // no table, nothing to chase
   const goal = st.bar == null ? '' : 'Top Two or Overall ' + st.bar + ' to Go Up';
-  return [place, goal].filter(Boolean).join(' · ');
+  return (!c.round && st.note ? st.note + ' · ' : '') + [place, goal].filter(Boolean).join(' · ');
 }
 function careerGainText(g) { return careerSkills().filter(([k]) => g[k]).map(([k, l]) => '+' + g[k] + ' ' + l).join(' · '); }
+/* A cup tie on the hub: which cup, which round, and what losing means. */
+function careerTieLine(cup, tie) { return tie.label === 'Final' ? 'For the Trophy' : !tie.plate && cup.tie === 0 ? 'Lose and You Drop Into the Plate' : 'Lose and You Are Out'; }
 function renderCareer() {
-  const cr = career, c = cr.season, team = c.teams[c.user];
+  const cr = career, c = cr.season, team = c.teams[c.user], tie = careerCupDue(cr);
   $('cr-card').innerHTML = careerCardHtml(cr, team);
-  $('cr-eyebrow').textContent = careerStageName(cr.stage) + ' · Season ' + careerSeasonNo(cr);
-  $('cr-title').textContent = 'Round ' + (c.round + 1) + ' of 5';
-  $('cr-line').textContent = careerLine(cr); $('cr-line').hidden = !$('cr-line').textContent;
-  const gain = careerLast ? careerGainText(careerLast.gains) : '';
+  $('cr-eyebrow').textContent = careerEyebrow(cr);
+  $('cr-title').textContent = tie ? (tie.plate ? cr.cup.plate : cr.cup.name) + ' ' + tie.label : (careerFestival(cr) ? 'Match ' : 'Round ') + (c.round + 1) + ' of 5';
+  $('cr-table').hidden = careerFestival(cr);
+  $('cr-line').textContent = tie ? careerTieLine(cr.cup, tie) : careerLine(cr); $('cr-line').hidden = !$('cr-line').textContent;
+  const gain = careerLast ? careerLast.line || careerGainText(careerLast.gains) : '';
   $('cr-gain').textContent = gain; $('cr-gain').hidden = !gain;
-  $('cr-next').innerHTML = careerFixtureHtml(c);
+  $('cr-next').innerHTML = careerFixtureHtml(c, tie);
   const can = careerCanTrain(cr) && careerDrills(cr).length > 0;
   $('cr-train').textContent = cr.trained ? 'Trained' : 'Train'; $('cr-train').disabled = !can;
   $('cr-reset').textContent = 'Start Fresh'; careerResetArmed = false;
@@ -11468,9 +11709,20 @@ function careerTableRows(cr) {
       <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.PD > 0 ? '+' : ''}${r.PD}</td><td>${r.BP}</td><td class="pts">${r.Pts}</td>
     </tr>`).join('');
 }
+/* The cup under the table: the ties played, latest first, your own marked. */
+function careerCupHtml(cup) {
+  const T = cup.teams, rows = rd => rd.map(r => `<div class="res${r.h === cup.user || r.a === cup.user ? ' me' : ''}"><span class="h">${esc(T[r.h].name)}</span><span class="sc">${r.hs} – ${r.as}</span><span>${esc(T[r.a].name)}</span></div>`).join('');
+  const out = [];
+  for (let k = cup.tie - 1; k >= 0; k--) {
+    out.push(`<div class="rd"><p class="eyebrow">${esc(cup.name)} ${CUP_TIES[k]}</p>${rows(cup.main[k])}</div>`);
+    if (k > 0) out.push(`<div class="rd"><p class="eyebrow">${esc(cup.plate)} ${CUP_TIES[k]}</p>${rows(cup.low[k - 1])}</div>`);
+  }
+  return out.join('');
+}
 function renderCareerTable() {
   const cr = career, c = cr.season, T = c.teams;
-  $('cl-eyebrow').textContent = careerStageName(cr.stage) + ' · Season ' + careerSeasonNo(cr);
+  $('cl-cup').innerHTML = cr.cup ? careerCupHtml(cr.cup) : ''; $('cl-cup').hidden = !cr.cup || !cr.cup.tie;
+  $('cl-eyebrow').textContent = careerEyebrow(cr);
   $('cl-table').innerHTML = careerTableRows(cr);
   $('cl-results').innerHTML = c.results.map((rd, k) => ({ rd, k })).reverse().map(({ rd, k }) => `<div class="rd"><p class="eyebrow">Round ${k + 1}</p>${rd.map(r => {
     const mine = r.h === c.user || r.a === c.user;
@@ -11487,21 +11739,32 @@ function renderCareerEnd() {
   $('ce-shirt').innerHTML = careerShirt(team, cr.num, 'big');
   if (out.final) {                                   // the International season is the last: the honours
     const best = CAREER_STAGES.map((st, i) => {
+      if (st.festival) return '';                    // a festival has no table to have a place in
       const places = cr.history.filter(h => h.stage === i).map(h => h.place).concat(i === cr.stage ? [out.place] : []);
       return places.length ? careerTile(st.name, ordinal(Math.min(...places))) : '';
     }).filter(Boolean);
-    const titles = cr.history.filter(h => h.place === 1).length + (out.place === 1 ? 1 : 0);
+    const titles = cr.history.filter(h => h.place === 1 && !CAREER_STAGES[h.stage].festival).length + (out.place === 1 ? 1 : 0);
     $('ce-eyebrow').textContent = (cr.name ? cr.name + ' · ' : '') + careerPosWord(cr.pos) + ' · No. ' + cr.num;
     title.textContent = 'Hall of Fame'; title.classList.add('gold');
     $('ce-line').textContent = team.name + ' finish ' + ordinal(out.place);
-    body.innerHTML = `<div class="cr-tiles" style="--n:5">${careerTile('Overall', out.ovr)}${careerTile('Seasons', cr.seasons)}${careerTile('Matches', cr.totals.matches)}${careerTile('Tries', cr.totals.tries)}${careerTile('Titles', titles)}</div><div class="cr-tiles cr-best" style="--n:${best.length}">${best.join('')}</div>`;
+    body.innerHTML = `<div class="cr-tiles" style="--n:5">${careerTile('Overall', out.ovr)}${careerTile('Seasons', cr.seasons)}${careerTile('Matches', cr.totals.matches)}${careerTile('Tries', cr.totals.tries)}${careerTile('Titles', titles)}</div><div class="cr-tiles cr-best" style="--n:${best.length}">${best.join('')}</div>${cr.trophies && cr.trophies.length ? `<p class="chase cr-cups">Cups: ${cr.trophies.map(t => esc(t.name)).join(' · ')}</p>` : ''}`;
     act.innerHTML = `<button class="btn primary" id="ce-go">Start New Career</button>`;
     careerRestartArmed = false;
     $('ce-go').addEventListener('click', careerRestart);
     return;
   }
   const next = out.promoted ? cr.stage + 1 : cr.stage;
-  $('ce-eyebrow').textContent = careerStageName(cr.stage) + ' · Season ' + careerSeasonNo(cr);
+  if (careerFestival(cr)) {                          // no table and no places: what you played, and where you go
+    const s = seasonSummary(c), nt = careerTeamFor(cr, next);
+    $('ce-eyebrow').textContent = careerEyebrow(cr);
+    title.textContent = 'Moved Up'; title.classList.add('gold');
+    $('ce-line').textContent = team.name + ' · Festival Done';
+    body.innerHTML = `<div class="cr-tiles">${careerTile('Played', s.played)}${careerTile('Tries', s.triesFor)}${careerTile('Next', careerStageName(next), `<span class="cr-next">${jersey(nt)}${fxName(nt, true)}</span>`)}</div>`;
+    act.innerHTML = `<button class="btn primary" id="ce-go">Next Season</button>`;
+    $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
+    return;
+  }
+  $('ce-eyebrow').textContent = careerEyebrow(cr);
   title.textContent = out.place === 1 ? 'Champions' : out.promoted ? (next === 4 ? 'Called Up' : 'Promoted') : 'One More Season';
   title.classList.toggle('gold', out.promoted);
   $('ce-line').textContent = team.name + ' finish ' + ordinal(out.place) + (out.promoted && !out.top ? ' · Overall ' + out.ovr : '');
@@ -11514,7 +11777,8 @@ function renderCareerEnd() {
     return;
   }
   const nextTeam = out.promoted ? careerTeamFor(cr, next) : team;
-  body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile(out.promoted ? 'Next' : 'Again', careerStageName(next), `<span class="cr-next">${jersey(nextTeam)}${fxName(nextTeam, true)}</span>`)}</div>`;
+  const cupLine = cr.cup && cr.cup.tie >= CUP_AT.length ? `<p class="chase cr-cups">${esc(cr.cup.name)}: ${esc(cupResult(cr.cup))}</p>` : '';
+  body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile(out.promoted ? 'Next' : 'Again', careerStageName(next), `<span class="cr-next">${jersey(nextTeam)}${fxName(nextTeam, true)}</span>`)}</div>${cupLine}`;
   act.innerHTML = `<button class="btn primary" id="ce-go">Next Season</button>`;
   $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
 }
@@ -11738,7 +12002,9 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, builderLevel, levelChoosing:() => levelChoosing, levelNote:() => levelNote, draft:() => draft },
-  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, sign:careerSign, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, PUSH:CAREER_PUSH, SIGN:CAREER_SIGN, signable:careerSignable, rivals:careerRivals, DIFF, diffOf, CUT:CAREER_CUT },
+  comp:{ levelOf:compLevelOf, countyOf:compCountyOf, cupFor:compCupFor, rivals:compCupRivals, COUNTY_CUPS, CLUB_COUNTY, cupNew, cupWinner, cupLoser, cupUserTie, cupPlayTie, cupResult, cupTieLine, cleanCup, cupMainPairs, cupLowPairs, CUP_TIES, CUP_AT, cupDue:careerCupDue, cupTick:careerCupTick },
+  rules:{ matchTag, matchNoScrum, freePass, tagMade, tagCheck, matchCanPull, TAG, scrum, lineout, kickoff, penalty, dropOut, FESTIVAL_HALF:CAREER_FESTIVAL_HALF, festival:careerFestival },
+  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, sign:careerSign, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, STARTS:CAREER_STARTS, STAGE_DRILLS:CAREER_STAGE_DRILLS, whoStarts:careerWhoStarts, whoPick:careerWhoPick, startPick:careerStartPick, draft:() => careerDraft, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, PUSH:CAREER_PUSH, SIGN:CAREER_SIGN, signable:careerSignable, rivals:careerRivals, DIFF, diffOf, CUT:CAREER_CUT },
   importer:{ levelFrom:importLevelFrom, level:importLevel, top:importTop, levelStep:importLevelStep, url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, tackleMeterBox, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },

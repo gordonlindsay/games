@@ -13,6 +13,7 @@
   "ball.js",
   "movement.js",
   "championship.js",
+  "competitions.js",
   "career.js",
   "render-pitch.js",
   "render-setpieces.js",

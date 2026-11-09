@@ -67,7 +67,9 @@ const champBefore = JSON.stringify(X.champ());
   const cr = fresh();
   ok(!C.drills(cr).some(d => d.id === 'scrum'), 'Driving is hidden in the Minis');
   cr.stage = 1;
-  ok(C.drills(cr).some(d => d.id === 'scrum') && C.drills(cr).length === T.drills.DRILLS.length, 'and every drill is offered from the Juniors');
+  ok(!C.drills(cr).some(d => d.id === 'scrum'), 'and in the Juniors, who play no scrums');
+  cr.stage = 2;
+  ok(C.drills(cr).some(d => d.id === 'scrum'), 'and offered from Club on');
   C.set(null);
 }
 

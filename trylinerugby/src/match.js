@@ -80,6 +80,7 @@ function newMatch(u, c, opts) {
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
     arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
     fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
+    rules:opts.rules === 'tag' || opts.rules === 'noscrum' ? opts.rules : 'full', tagN:0, tagTeam:null,   // what a career stage plays: tag, no scrums, or everything. Nothing but a career asks for less (tagMade, freePass)
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
@@ -186,12 +187,13 @@ function kickoffFormation(kTeam, kx) {
 function kickoff(team) {
   kickoffFormation(team, 60);
   placeBall(60, 35);
-  M.phaseCount = 0; M.poss = team;
-  startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => restartKick(team, 60, 35, 'kickoff') });
+  M.phaseCount = 0; M.poss = team; M.tagN = 0; M.tagTeam = null;
+  startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => { if (matchTag()) releaseTo(team, 60, 35, 'tap'); else restartKick(team, 60, 35, 'kickoff'); } });   // tag starts with a pass, not a kick
   if (!M.two && outmatched(M.nat[0], M.nat[1])) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless
   if (M.career) careerKickoff();                           // a career match: the ring starts on your player
 }
 function dropOut(team) {
+  if (matchTag()) { freePass(team, team === 0 ? 32 : 88, 35); return; }
   const kx = team === 0 ? 32 : 88;
   kickoffFormation(team, kx);
   placeBall(kx, 35);
@@ -205,13 +207,23 @@ function restartKick(team, x, y, kind) {
   kickBall(team, x, y, x + d*len, ty, kind === 'kickoff' ? 2.2 : 2.5, kind === 'kickoff' ? 11 : 13, 'restart');
   sfx('kick');
 }
+/* The rules a career stage plays (CAREER_STAGES[].rules). Every scrum goes through scrum() and every lineout through lineout(), so the rule is here and in the few restarts below, and any other match never reads it. */
+const matchTag = () => !!M && M.rules === 'tag';
+const matchNoScrum = () => !!M && (M.rules === 'tag' || M.rules === 'noscrum');
+function freePass(team, x, y, reason) {                    // where a scrum or, in tag, any set piece would be: the ball goes back in by hand, with the same pause and the same retreat as a tap and go
+  const fx = clamp(x, 15, 105), fy = clamp(y, 6, 64);
+  placeBall(fx, fy);
+  startSet({ kind:'tap', team, x:fx, y:fy, t:0.9, snap:true, label:(reason ? reason + ' · ' : '') + 'Free Pass ' + M.nat[team].id, then:s => releaseTo(s.team, s.x, s.y, 'tap') });
+}
 function scrum(team, x, y, reason) {
+  if (matchNoScrum()) { freePass(team, x, y, reason); return; }
   M.stats.scrums = (M.stats.scrums||0) + 1;
   placeBall(clamp(x,15,105), clamp(y,15,55));
   startSet({ kind:'scrum', team, x:clamp(x,15,105), y:clamp(y,15,55), t:interactive() ? 1.1 : 1.8, snap:true,
     label:(reason ? reason + ' · ' : '') + 'Scrum ' + M.nat[team].id, then:s => interactive() ? startScrum(s) : autoScrum(s) });
 }
 function lineout(team, x, y, reason) {
+  if (matchTag()) { freePass(team, x, y, reason); return; }
   const ly = y < 35 ? 8 : 62;
   placeBall(clamp(x,15,105), ly);
   startSet({ kind:'lineout', team, x:clamp(x,15,105), y:ly, t:interactive() ? 1.1 : 1.8, snap:true,
@@ -234,7 +246,7 @@ function releaseTo(team, x, y, kind, who) {
 /* ---------- possession ---------- */
 function setCarrier(p) {
   const b = M.ball;
-  if (M.poss !== p.team) M.phaseCount = 0;
+  if (M.poss !== p.team) { M.phaseCount = 0; M.tagN = 0; M.tagTeam = null; }
   b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   M.poss = p.team;
