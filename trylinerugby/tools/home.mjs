@@ -173,7 +173,7 @@ const fresh = () => {                                       // a new game on the
   ok(comps(2) === 'sur', 'Local: Surrey, and no My League without an import');
   ok(['eng', 'fra', 'cel', 'rsa'].every(K.euroLeague) && !['sco', 'aus', 'nzl', 'jpn', 'sur', 'my', 'int'].some(K.euroLeague), 'the European Cup\'s trophy on the four leagues whose winner goes on to it');
   H.setTier(1); H.champ();
-  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n8', 'the trophy, no prose; eight leagues in two rows of four');
+  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n8', 'the trophy, in the European Cup\'s gold, no prose; eight leagues in two rows of four');
   ok(!$('hc-new').hidden && $('hc-go').hidden && $('b-cabinet').hidden, 'nothing saved: the competitions, and no Trophy Cabinet before a season is finished');
   // each competition's team screen: only its sides
   const grid = () => $('t-grid').innerHTML, cards = () => (grid().match(/class="team[ "]/g) || []).length - (grid().match(/class="team create/g) || []).length;

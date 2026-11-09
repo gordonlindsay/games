@@ -335,8 +335,38 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(hon.seasons === 1 && hon.champions === 1 && hon.cups === 2 && hon.euro === 1 && hon.world === 0 && hon.tour === 0, `counted by kind: one title, one European Cup, the World Cup lost (${json(hon)})`);
   K.renderCabinet('home-history');
   const html = $('home-history').innerHTML;
-  ok(/data-kind="league">League</.test(html) && /data-kind="euro">European Cup</.test(html) && /data-kind="world">World Cup</.test(html), 'each entry shows its kind, the old ones League');
-  ok(/data-kind="euro">1 European Cup</.test(html) && /data-kind="league">1 Title</.test(html) && !/World Cups?</.test(html.match(/cabinet-tally">([\s\S]*?)<\/p>/)[1]), 'the tally counts each kind won, a cup kind once one is won');
+  ok(/data-kind="league" data-metal="silver" data-won>League</.test(html) && /data-kind="euro" data-metal="gold" data-won>European Cup</.test(html) && /data-kind="world" data-metal="gold">World Cup</.test(html), 'each entry shows its kind in words, in its metal, the old ones League; a trophy beside the league and the cup won, none beside the World Cup lost');
+  ok(/data-kind="euro" data-metal="gold" data-won>1 European Cup</.test(html) && /data-kind="league" data-metal="silver" data-won>1 Title</.test(html) && /data-kind="triple" data-metal="silver">0 Triple Crowns</.test(html) && !/World Cups?</.test(html.match(/cabinet-tally">([\s\S]*?)<\/p>/)[1]), 'the tally counts each kind won, a cup kind once one is won, each in its metal, a trophy only beside a count held (none beside 0 Triple Crowns)');
+  // real silverware: one map of each kind's metal, gold or silver, read by every trophy; the tones read on the dark panel
+  const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  ok(json(K.TROPHY_METAL) === json({ league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver' }) && T.career.KINDS.every(k => K.trophyMetal(k) === K.TROPHY_METAL[k]) && K.trophyMetal('lions') === 'silver' && K.trophyMetal(undefined) === 'silver',
+    'TROPHY_METAL: gold for the European Cup, the World Cup and the Home Nations Tour, silver for a title and the Triple Crown; anything else a League\'s silver');
+  const tags = [...html.matchAll(/class="(?:cup-kind|ck)" data-kind="(\w+)" data-metal="(\w+)"(?: data-won)?>/g)];
+  ok(tags.length >= 5 && tags.every(([, k, m]) => m === K.trophyMetal(k)) && !/class="(?:cup-kind|ck)" data-kind="\w+">/.test(html), `every tag and tally carries its kind's metal from the map (${tags.map(t => t[1] + ' ' + t[2]).join(', ')})`);
+  const tone = n => (css.match(new RegExp(`--${n}:(#[0-9a-f]{6})`)) || [])[1];
+  const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)/255).map(v => (v <= 0.03928 ? v/12.92 : ((v + 0.055)/1.055)**2.4)); return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]; };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
+  const metals = ['gold', 'silver'].map(tone), grounds = ['panel', 'panel-hi', 'night'].map(tone);
+  ok(metals.every(Boolean) && grounds.every(Boolean) && metals.every(m => grounds.every(g => ratio(m, g) >= 4.5)) && !metals.includes(tone('flood')) && !metals.includes(tone('chalk')),
+    `gold ${metals[0]} and silver ${metals[1]}: each text drawn in them reads at 4.5:1 or more on the panel and the night (${metals.map(m => grounds.map(g => ratio(m, g).toFixed(1)).join('/')).join(', ')}), neither the floodlight nor the chalk`);
+  ok(/\[data-metal="gold"\]\{--kc:var\(--gold\)/.test(css) && /\[data-metal="silver"\]\{--kc:var\(--silver\)/.test(css) && !/\[data-kind(="\w+")?\]\{--kc/.test(css) && !/#6f9cff|#ff5a6e/.test(css),
+    'the tones are the metals\' alone: no colour by kind left (the old blue and red gone; green is a pool\'s Through mark only)');
+  ok(/\.cup-kind\[data-won\]::before,\.ck\[data-won\]::before\{[^}]*clip-path:var\(--cup-shape\)/.test(css) && /\.cr-cup i\{[^}]*clip-path:var\(--cup-shape\)/.test(css) && /\.cup-trophy\{[^}]*var\(--kc\)/.test(css),
+    'the cabinet\'s trophies are the career row\'s cup, in the same metal; every cup\'s own trophy too');
+  const kindMark = (css.match(/\.cup-kind::before\{([^}]*)\}/) || [])[1] || '';
+  ok(/border-radius:50%/.test(kindMark) && !/clip-path/.test(kindMark) && !/\.ck::before\{/.test(css) && /\.ck\[data-won\]\{color:var\(--kc\)\}/.test(css) && !/\.ck\{[^}]*color:/.test(css),
+    'nothing won, no trophy: an entry not won keeps a dot in its kind\'s metal, a count of 0 no mark and the tally\'s quiet colour');
+  // a cabinet with nothing won: a league season lost (the Wooden Spoon), a cup out in its pool, a tour's series lost; every count 0
+  {
+    const keep = K.history(), flip = c => ({ ...copy(c), id:'lost-' + c.id, results:c.results.map(rd => rd.map(r => ({ ...r, hs:r.as, as:r.hs, ht:r.at, at:r.ht }))) });
+    const tourLost = K.cupNew('tour', { user:K.cupTourSide('men') }); while (!K.cupDone(tourLost)) lose(tourLost);
+    K.setHistory([flip(keep[0]), keep[2], { kind:'tour', id:tourLost.uid, cup:K.cleanCup(copy(tourLost)) }]);
+    K.renderCabinet('home-history');
+    const none = $('home-history').innerHTML, ws = K.savedHonours();
+    ok(ws.champions === 0 && ws.grandSlams === 0 && ws.tripleCrowns === 0 && ws.world === 0 && ws.tour === 0 && ws.woodenSpoons === 1 && !/data-won/.test(none) && /data-kind="league" data-metal="silver">League</.test(none) && /data-kind="world" data-metal="gold">World Cup</.test(none) && /data-kind="tour" data-metal="gold">Home Nations Tour</.test(none) && /Wooden Spoon/.test(none) && /Series Lost/.test(none) && /0 Titles/.test(none),
+      `nothing won, no trophy anywhere: the lost season, the pool exit and the series lost each a dot in its metal, every count 0 unmarked (${(none.match(/cabinet-tally">([\s\S]*?)<\/p>/) || [])[1]})`);
+    K.setHistory(keep);
+  }
   ok(/Bath · Winners/.test(html) && /Scotland · Pool Stage/.test(html) && /Won by /.test(html), 'a cup\'s entry: your side, how far, and who won it');
   X.save();
   const back = copy(saved().champHistory);

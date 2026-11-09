@@ -413,7 +413,7 @@ function careerRecordResult() {
   T.matches++; T.tries += deeds.tries || 0; T.tackles += deeds.tackles || 0; T.goals += deeds.goals || 0;
   cr.trained = false;
   careerLast = { kind:'match', gains };
-  careerLifeRound(cr, deeds);                        // Energy back, Morale from the result, Team Spirit from his part in it
+  careerLifeRound(cr, deeds);                        // Energy back, Morale from the result, Team Spirit from his part in it (held in a cup)
   save();
   return true;
 }

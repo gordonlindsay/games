@@ -16,6 +16,12 @@ const CUPS = {
   tour:{ id:'tour', name:'Home Nations Tour', tests:3, hosts:['NZL', 'RSA', 'AUS'], from:['ENG', 'IRE', 'SCO', 'WAL'] },
 };
 const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] };
+/* Each trophy's metal: real silverware, gold or silver, and nothing else. Gold for the three cups; silver for a title (a league, the
+   Championship's or a career's, or an international championship) and the Triple Crown. The one map: the Trophy Cabinet's trophies,
+   tags and tallies, the career's trophy row and every cup's trophy read it (data-metal, whose tones are styles.css's --gold and
+   --silver), and each still names its kind in words. */
+const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver' };
+function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
 const CUP_SIZE = { euro:4, world:12, tour:2 };             // sides in each
 const CUP_MADE = { euro:1, world:3, tour:1 };              // rounds drawn at the start; the rest follow from the results
 const CUP_POOL = ['A', 'B', 'C', 'D'];

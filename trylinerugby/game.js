@@ -3825,6 +3825,12 @@ const CUPS = {
   tour:{ id:'tour', name:'Home Nations Tour', tests:3, hosts:['NZL', 'RSA', 'AUS'], from:['ENG', 'IRE', 'SCO', 'WAL'] },
 };
 const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] };
+/* Each trophy's metal: real silverware, gold or silver, and nothing else. Gold for the three cups; silver for a title (a league, the
+   Championship's or a career's, or an international championship) and the Triple Crown. The one map: the Trophy Cabinet's trophies,
+   tags and tallies, the career's trophy row and every cup's trophy read it (data-metal, whose tones are styles.css's --gold and
+   --silver), and each still names its kind in words. */
+const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver' };
+function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
 const CUP_SIZE = { euro:4, world:12, tour:2 };             // sides in each
 const CUP_MADE = { euro:1, world:3, tour:1 };              // rounds drawn at the start; the rest follow from the results
 const CUP_POOL = ['A', 'B', 'C', 'D'];
@@ -4540,7 +4546,7 @@ function careerRecordResult() {
   T.matches++; T.tries += deeds.tries || 0; T.tackles += deeds.tackles || 0; T.goals += deeds.goals || 0;
   cr.trained = false;
   careerLast = { kind:'match', gains };
-  careerLifeRound(cr, deeds);                        // Energy back, Morale from the result, Team Spirit from his part in it
+  careerLifeRound(cr, deeds);                        // Energy back, Morale from the result, Team Spirit from his part in it (held in a cup)
   save();
   return true;
 }
@@ -7599,7 +7605,7 @@ function champHome() {
   if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put
     box.dataset.key = key;
     box.className = 'hc-comps n' + comps.length;
-    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? '<span class="cup-trophy" data-kind="euro" role="img" aria-label="European Cup"></span>' : ''}<span>${esc(n)}</span></button>`).join('');
+    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
     for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
   }
   $('b-cabinet').hidden = !champHistory.length;
@@ -7964,20 +7970,24 @@ function recordedStatsHtml(s, label = 'Recorded Match Stats') {
     + row('Tackles', pair(s.tk)) + row('Duels', pair(s.duelN, 'won')) + row('Metres Made', Math.round(s.gain))
   }</tbody></table><p class="stat-note">Made / attempted; duels won / attempted. Metres Made is ground gained with the ball.</p>`;
 }
-/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked with its kind's colour and
-   name; the tally counts each kind won, a cup's only once one is kept. An entry without a kind is a league season. */
+/* The Trophy Cabinet: league seasons and, beside them, finished cups (src/ui-cups.js), each marked in its kind's metal (TROPHY_METAL,
+   src/cups.js: gold or silver) with its kind's name; the tally counts each kind won, a cup's only once one is kept. A trophy is drawn
+   only for silverware held (data-won): an entry won (a title or a Grand Slam, a cup or a tour's series) and a count above 0. An entry
+   not won keeps a dot in its kind's metal, and a count of 0 no mark at all. An entry without a kind is a league season. */
 function renderCabinet(id) {
   const history = champHistory.slice().reverse();
   const totals = savedHonours();
   const tally = [['league', 'Title', 'Titles', totals.champions], ['league', 'Grand Slam', 'Grand Slams', totals.grandSlams], ['triple', 'Triple Crown', 'Triple Crowns', totals.tripleCrowns],
     ...[['euro', 'European Cup', 'European Cups'], ['world', 'World Cup', 'World Cups'], ['tour', 'Tour', 'Tours']].map(([k, a, b]) => [k, a, b, totals[k] || 0]).filter(t => t[3] > 0)];
-  const kindTag = k => `<span class="cup-kind" data-kind="${k}">${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
+  const metal = k => (typeof trophyMetal === 'function' ? trophyMetal(k) : 'silver');   // a build without the cups: every entry is a League
+  const won = on => (on ? ' data-won' : '');
+  const kindTag = (k, on) => `<span class="cup-kind" data-kind="${k}" data-metal="${metal(k)}"${won(on)}>${{ league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' }[k]}</span>`;
   $(id).innerHTML = `<p class="stat-note">Last 10 completed seasons and 10 cups · saved on this device.</p>`
-    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}">${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
-      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind));
+    + (history.length ? `<p class="cabinet-tally">${tally.map(([k, singular, plural, n]) => `<span class="ck" data-kind="${k}" data-metal="${metal(k)}"${won(n > 0)}>${n} ${n === 1 ? singular : plural}</span>`).join(' · ')}</p>` + history.map((c, i) => {
+      if (c.kind && c.kind !== 'league') return cupEntryHtml(c, i, kindTag(c.kind, cupWinner(c.cup) === c.cup.user));
       const rows = standings(c), place = rows.findIndex(r => r.i === c.user) + 1, s = seasonSummary(c);
       const awards = honours(c, rows).filter(h => h[1] === c.user).map(h => h[0]);
-      return `<article class="season-entry"><p class="eyebrow">${kindTag('league')}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
+      return `<article class="season-entry"><p class="eyebrow">${kindTag('league', awards.includes('Champions') || awards.includes('Grand Slam'))}${i === 0 ? 'Most Recent' : 'Earlier Season'}</p><h3>${esc(c.teams[c.user].name)} · ${ordinal(place)}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${awards.length ? awards.join(' · ') : 'No honours'}</p></article>`;
     }).join('') : '<p class="stat-note">Complete a championship to record your first season here.</p>');
 }
 function renderSeasonSummary(c) {
@@ -8097,7 +8107,7 @@ function cupBegin(id, opts) {
 function cupEuroOn(c, rows) { return !!c && c.round >= 5 && rows[0].i === c.user && cupEuroSkip !== c.id && !!cupListOf(c.teams[c.user]); }
 function cupEuroHub(c, rows) {
   if (!cupEuroOn(c, rows)) return false;
-  $('hub-next').innerHTML = `<div class="stack cup-offer"><button class="btn primary" id="hub-euro"><span class="cup-trophy" data-kind="euro" aria-hidden="true"></span>Play European Cup</button><button class="btn" id="hub-later">Not Now</button></div>`;
+  $('hub-next').innerHTML = `<div class="stack cup-offer"><button class="btn primary" id="hub-euro"><span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" aria-hidden="true"></span>Play European Cup</button><button class="btn" id="hub-later">Not Now</button></div>`;
   $('hub-euro').addEventListener('click', cupEuroStart);
   $('hub-later').addEventListener('click', () => { cupEuroSkip = champ ? champ.id : null; renderHub(); });
   return true;
@@ -8141,12 +8151,13 @@ function cupRetain(c) {
 
 /* Words. */
 function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
-/* The home's note under Continue Championship: a small trophy in the cup's colour, then Bath · European Cup · Semi-Final. A phone held
-   sideways leaves out the cup's name (styles.css): the trophy says which. */
+/* The home's note under Continue Championship: a small trophy in the cup's metal, then Bath · European Cup · Semi-Final. Every cup's
+   trophy is gold, so the cup's name stays on a phone held sideways too: the longest (London North Women · European Cup · Semi-Final)
+   fits its one line at 568x320. */
 function cupHomeNote(el, c) {
   const tour = c.id === 'tour' && c.user === 0;
   const name = tour ? '' : `<span class="rn-name">${esc(c.teams[c.user].name + ' · ')}</span>`;
-  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : CUPS[c.id].name) + ' · ')}</span>${esc(cupLabel(c))}`;
+  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : CUPS[c.id].name) + ' · ')}</span>${esc(cupLabel(c))}`;
   el.hidden = false;
 }
 /* The cup by name: European Cup · Bath, or on tour, Tour of South Africa (the Home Nations are always the side on tour). */
@@ -8252,8 +8263,8 @@ function cupWinHtml(c, pre, label) {                       // the winner's card,
   const head = w < 0 ? CUPS[c.id].name : c.id === 'tour' ? 'Series Winners' : CUPS[c.id].name + ' Winners';
   const who = w < 0 ? c.teams[c.user] : c.teams[w];
   return `<div class="stack">
-      <div class="cup-win${won ? ' mine' : ''}" data-kind="${c.id}">
-        <span class="cup-trophy" data-kind="${c.id}" aria-hidden="true"></span>
+      <div class="cup-win${won ? ' mine' : ''}" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}">
+        <span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>
         <div class="cup-who"><p class="eyebrow">${w < 0 ? 'Out' : esc(head)}</p><b data-fit>${esc(listName(who))}</b></div>
         ${jersey(who)}
       </div>
@@ -10775,8 +10786,8 @@ function lockerCard(kind) {
    through it.
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
-/* The trophy row on the player card: a cup per kind he has won, in its colour, and how many. None a skill's or a bar's colour. */
-const CAREER_CUP_COL = { league:'#dfe3e5', euro:'#8aa2ff', world:'#f5c542', tour:'#e5484d', triple:'#d39b62' };
+/* The trophy row on the player card: a cup per kind he has won, in its metal (TROPHY_METAL, src/cups.js: gold or silver, as in the Trophy
+   Cabinet), and how many, in CAREER_KINDS order; each cup's own label names its kind. */
 const CAREER_KIND_NAME = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
@@ -10953,11 +10964,12 @@ function careerCardHtml(cr, team) {
     }).join('')}</div>
     <div class="cr-traits">${careerTraitChips(cr)}</div>`;
 }
-/* His trophies, counted by kind under his name: a cup in the kind's colour and the number, only the kinds he has won. */
+/* His trophies, counted by kind under his name: a cup in the kind's metal and the number, only the kinds he has won, each named in words
+   for a screen reader (the cup's own label, as an image: European Cup, 1) and a pointer (its title), in a group named Trophies. */
 function careerCabinetHtml(cr) {
   const n = k => (cr.trophies || []).filter(t => t.kind === k).length, have = CAREER_KINDS.filter(n);
   if (!have.length) return '';
-  return `<p class="cr-cab" data-fit aria-label="Trophies: ${have.map(k => CAREER_KIND_NAME[k] + ' ' + n(k)).join(', ')}">${have.map(k => `<span class="cr-cup" style="--k:${CAREER_CUP_COL[k]}"><i></i><b>${n(k)}</b></span>`).join('')}</p>`;
+  return `<p class="cr-cab" data-fit role="group" aria-label="Trophies">${have.map(k => `<span class="cr-cup" data-kind="${k}" data-metal="${trophyMetal(k)}" role="img" aria-label="${CAREER_KIND_NAME[k]}, ${n(k)}" title="${CAREER_KIND_NAME[k]}"><i></i><b>${n(k)}</b></span>`).join('')}</p>`;
 }
 /* His star traits (src/traits.js), in TRAITS order: one he has in its skill's colour; a locked one dimmed, with the skill and the number it needs. */
 function careerTraitChips(cr) {
@@ -11122,7 +11134,9 @@ Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new
      back to 50, then a win adds 8, a draw 2, a loss takes 6, and each of his tries, tackles and goals adds 1 (3 at most);
      Team Spirit fades 4, and 1 more for every 10 it stands above 50 (9 at 100), then adds 1 for every six passes he throws
      or is thrown and 2 for each try he scores (6 at most): the more he is in the game the less it fades, but the higher it
-     is the faster it goes, so only going out with the team keeps it high.
+     is the faster it goes, so only going out with the team keeps it high. A cup match (the European Cup, the World Cup, the Home
+     Nations Tour: the career has a cup and no season) leaves Team Spirit alone, no fade and no gain: it carries over from the
+     league unchanged and goes on in the next league or international season. A cup has no dilemma either, so the bar holds.
      A training session costs 8 Energy.
    - In a career match the bars are read once, at careerArm (M.careerLife), so nothing changes mid-match:
      Energy under 60 takes up to 2.5 points off his Stamina ability for the match (all of it at 0, down to 0), so his
@@ -11232,10 +11246,11 @@ function careerLifeRound(cr, deeds) {                // full time in a career ma
   const l = cr.life, E = CAREER_LIFE.energy, R = CAREER_LIFE.morale, S = CAREER_LIFE.spirit, diff = M.score[0] - M.score[1];
   const dd = deeds || {}, did = ['tries', 'tackles', 'goals'].reduce((a, k) => a + Math.max(0, Math.floor(+dd[k] || 0)), 0);
   const st = M.careerLifeStats || {}, inv = Math.floor((st.passes || 0)/S.passes) + Math.max(0, Math.floor(+dd.tries || 0))*S.tryPts;
+  const cup = !cr.season && !!cr.cup;                // a cup match: Team Spirit as the league left it, for the next season to go on from
   const moved = careerLifeAdd(cr, {
     energy:Math.max(E.backMin, Math.round((100 - l.energy)*E.back)),
     morale:-Math.round((l.morale - 50)*R.drift) + (diff > 0 ? R.win : diff < 0 ? R.loss : R.draw) + Math.min(R.deedCap, did*R.deed),
-    spirit:S.fade - Math.floor(Math.max(0, l.spirit - 50)/S.high) + Math.min(S.cap, inv),   // the higher it is, the faster it fades: his part in a match never holds it up alone
+    spirit:cup ? 0 : S.fade - Math.floor(Math.max(0, l.spirit - 50)/S.high) + Math.min(S.cap, inv),   // the higher it is, the faster it fades: his part in a match never holds it up alone
   });
   if (careerLast) careerLast.life = moved.life;
   return moved.life;
@@ -11619,7 +11634,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
-  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
+  cups:{ CUPS, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },

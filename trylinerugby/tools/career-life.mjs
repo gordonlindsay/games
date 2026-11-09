@@ -260,6 +260,80 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
   C.set(null);
 }
 
+// 6b. Team Spirit in a cup: no fade and no gain from a cup match, so it carries over from the league unchanged and goes on in the next
+//     league or international season. Whole scripted runs through the real path (Play Match, full time, Continue between phases) with
+//     the real cups engine: the European Cup and the World Cup after a won league, the Home Nations Tour after a six, each match with
+//     the passes and tries that would give a league round the most it can. Energy and Morale move at every one, as ever.
+{
+  const K = C.cups(), club = id => X.NATIONAL.flat().find(t => t.id === id), clip = v => Math.max(0, Math.min(100, v));
+  const rule = (l, us, them, o, cup) => {            // the bars after a match, by the rules, from the bars before it
+    const did = Math.min(LF.morale.deedCap, ['tries', 'tackles', 'goals'].reduce((a, k) => a + (o.deeds[k] || 0), 0)*LF.morale.deed);
+    const inv = Math.min(LF.spirit.cap, Math.floor(o.passes/LF.spirit.passes) + (o.deeds.tries || 0)*LF.spirit.tryPts);
+    return { energy:clip(l.energy + Math.max(LF.energy.backMin, Math.round((100 - l.energy)*LF.energy.back))),
+      morale:clip(l.morale - Math.round((l.morale - 50)*LF.morale.drift) + (us > them ? LF.morale.win : us < them ? LF.morale.loss : LF.morale.draw) + did),
+      spirit:cup ? l.spirit : clip(l.spirit + LF.spirit.fade - Math.floor(Math.max(0, l.spirit - 50)/LF.spirit.high) + inv) };
+  };
+  const BUSY = { passes:30, deeds:{ tries:3, tackles:2, goals:1 } };   // in a league round: +6 Team Spirit, the most a match gives
+  const play = (cr, us, them, o, tag) => {           // one match through Play Match and full time; true when the bars are as the rules say
+    const cup = !cr.season && !!cr.cup, before = { ...cr.life };
+    playOut(us, them, o);
+    const want = rule(before, us, them, o, cup), got = { energy:cr.life.energy, morale:cr.life.morale, spirit:cr.life.spirit };
+    const fine = json(got) === json(want) && (!cup || !('spirit' in ((C.last() && C.last().life) || {})));
+    if (!fine) console.log('  ', tag, json(before), json(o), 'got', json(got), 'want', json(want), json(C.last()));
+    return fine;
+  };
+  const run = (cr, us, them, o, tag) => { let n = 0, fine = true; while (C.ahead(cr) && n < 12) { fine = play(cr, us, them, o, tag + ' ' + n) && fine; n++; } return { n, fine }; };
+  ok(K && K.cupNew === T.cups.cupNew, 'the career plays the real cups engine here');
+  // a back at Bath in a World Cup year: the league won, the European Cup, the World Cup, then year 5's league, its European Cup and the six
+  const cr = C.create({ pos:'B', num:7, club:club('BTH') }); C.set(cr);
+  cr.year = 4; cr.country = 'ENG'; for (const k of skillKeys) cr.skills[k] = 90;
+  Object.assign(cr.life, { energy:50, morale:50, spirit:70 });
+  const lg = run(cr, 30, 0, { passes:12, deeds:{ tries:1 } }, 'league');
+  ok(lg.n === 5 && lg.fine && cr.season.round === 5 && cr.life.spirit < 70, `the league as ever: Team Spirit fades and gains at each round (70 to ${cr.life.spirit})`);
+  const held = cr.life.spirit, e0 = cr.life.energy, m0 = cr.life.morale;
+  C.advance();
+  ok(cr.phase === 'cup' && cr.cup && cr.cup.id === 'euro', 'the league won: the European Cup');
+  const eu = run(cr, 30, 0, BUSY, 'euro');
+  ok(eu.n === 2 && eu.fine && cr.life.spirit === held, `the European Cup, Semi-Final and Final: Team Spirit exactly where the league left it (${held}), Energy and Morale as ever (${e0} to ${cr.life.energy}, ${m0} to ${cr.life.morale})`);
+  ok(K.cupWinner(cr.cup) === cr.cup.user, 'and won');
+  C.advance();
+  ok(cr.phase === 'intl' && cr.cup && cr.cup.id === 'world' && !cr.season, 'then the World Cup, in year 4');
+  const wc = run(cr, 30, 0, BUSY, 'world');
+  ok(wc.n === 5 && wc.fine && cr.life.spirit === held, `the World Cup, two pool matches and three knockouts: still ${held} (${cr.life.spirit})`);
+  C.advance(); ok(cr.phase === 'transfer', 'then the transfer window');
+  C.sign(null);
+  ok(cr.year === 5 && cr.phase === 'league' && cr.life.spirit === held, 'the next year starts at the cups\' Team Spirit');
+  const r1 = { ...cr.life };
+  ok(play(cr, 30, 0, { passes:12, deeds:{ tries:1 } }, 'next league') && cr.life.spirit !== held && cr.life.spirit === rule(r1, 30, 0, { passes:12, deeds:{ tries:1 } }, false).spirit, `and its first league round fades and gains again (${held} to ${cr.life.spirit})`);
+  const rest = run(cr, 30, 0, { passes:0, deeds:{} }, 'league 5');
+  ok(rest.n === 4 && rest.fine, 'the rest of the league as ever');
+  const held5 = cr.life.spirit;
+  C.advance(); ok(cr.phase === 'cup', 'the league won again: the European Cup');
+  const eu5 = run(cr, 30, 0, BUSY, 'euro 5');
+  ok(eu5.fine && cr.life.spirit === held5, `held there too (${held5})`);
+  C.advance();
+  ok(cr.phase === 'intl' && cr.season && !cr.cup, 'then his country\'s six, in a year without a World Cup');
+  ok(play(cr, 30, 0, { passes:0, deeds:{} }, 'six') && cr.life.spirit === held5 + LF.spirit.fade - Math.floor(Math.max(0, held5 - 50)/LF.spirit.high), `and the international season fades it again (${held5} to ${cr.life.spirit})`);
+  C.set(null);
+  // a forward at Dublin in a tour year: the league lost, his country's six, the Home Nations Tour, then year 7's league
+  const fw = C.create({ pos:'F', num:2, club:club('DUB') }); C.set(fw);
+  fw.year = 6; fw.country = 'IRE'; for (const k of skillKeys) fw.skills[k] = 95;
+  Object.assign(fw.life, { energy:60, morale:60, spirit:40 });
+  const lost = run(fw, 0, 30, { passes:6, deeds:{} }, 'league lost');
+  C.advance();
+  ok(lost.fine && fw.phase === 'intl' && fw.season, 'no league title: on to his country\'s six');
+  const six = run(fw, 30, 0, { passes:24, deeds:{ tries:1 } }, 'six');
+  ok(six.n === 5 && six.fine, `the six as a league (${fw.life.spirit})`);
+  const held6 = fw.life.spirit;
+  C.advance();
+  ok(fw.phase === 'tour' && fw.cup && fw.cup.id === 'tour', 'then the Home Nations Tour, in year 6');
+  const tests = [[30, 0], [0, 30], [30, 0]].map(([us, them], i) => (C.ahead(fw) ? play(fw, us, them, BUSY, 'Test ' + (i + 1)) && fw.life.spirit === held6 : true));
+  ok(tests.every(Boolean) && !C.ahead(fw) && fw.life.spirit === held6, `three Tests, won, lost and won: Team Spirit still ${held6}, Morale up and down with them (${fw.life.morale})`);
+  C.advance(); C.sign(null);
+  ok(fw.year === 7 && fw.phase === 'league' && play(fw, 10, 20, { passes:6, deeds:{} }, 'year 7') && fw.life.spirit === rule({ ...fw.life, spirit:held6 }, 10, 20, { passes:6, deeds:{} }, false).spirit, `year 7's league goes on from it (${held6} to ${fw.life.spirit})`);
+  C.set(null);
+}
+
 // 7. a career match: what the bars do
 {
   const cr = C.create({ pos:'B', num:6, club:X.CLUBS[0] }); C.set(cr);

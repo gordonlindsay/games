@@ -133,7 +133,8 @@ function match(run, f, plan) {
   const now = cupNow ? (run.cr.cup ? run.cr.cup.results.length : before.done + 1) : run.cr.season ? run.cr.season.round : before.done + 1;
   if (!['s-career', 's-career-end'].includes(shown())) bad(`Continue led to ${shown()}`);
   if (run.cr.totals.matches !== before.n + 1 || now <= before.done) bad('the result is not in the career');
-  run.matches.push({ where, real:!!plan.real, steps, scripted, golden, line, score, cup:M.cup, ko:M.cupKO, pro:M.careerPro, kids:M.kids, life:{ ...run.cr.life } });
+  run.matches.push({ where, real:!!plan.real, steps, scripted, golden, line, score, cup:M.cup, ko:M.cupKO, pro:M.careerPro, kids:M.kids, life:{ ...run.cr.life },
+    kick:{ ...M.careerLife }, passes:(M.careerLifeStats || {}).passes || 0, tries:(M.careerDeeds || {}).tries || 0 });   // the bars at kick-off and his part, for Team Spirit's rule
   return { score, won, golden, line };
 }
 
@@ -175,7 +176,7 @@ function turn(run) {
     if (cup && $('cr-line').textContent !== K.line(cr.cup)) bad(`a cup's line under the title is not the cup's own ("${$('cr-line').textContent}")`);
     for (const t of f.teams) { run.sides.push(t); if (legendary(t)) bad('a Legends side drawn: ' + t.name); }
     // the trophy row: a cup a kind he has won, and the count
-    const have = C.KINDS.filter(k => cr.trophies.some(t => t.kind === k)), cab = ($('cr-card').innerHTML.match(/aria-label="Trophies: ([^"]*)"/) || [])[1] || '';
+    const have = C.KINDS.filter(k => cr.trophies.some(t => t.kind === k)), cab = [...$('cr-card').innerHTML.matchAll(/class="cr-cup"[^>]*aria-label="([^"]+), (\d+)"/g)].map(m => m[1] + ' ' + m[2]).join(', ');   // each cup's own label
     const NAMES = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
     if (cab !== have.map(k => NAMES[k] + ' ' + cr.trophies.filter(t => t.kind === k).length).join(', ')) bad(`the trophy row reads "${cab}" for ${json(cr.trophies.map(t => t.kind))}`);
     if (cab && run.trophyRows.at(-1) !== cab) run.trophyRows.push(cab);
@@ -366,8 +367,22 @@ const [A, B, Cc, Dd] = RUNS;
   ok(dm.length === 1 && dm[0].real && dm[0].kids && !dm[0].pro && Dd.cr.trophies.length === 1, `D: on Kids, Whole Team plays the European Cup Semi-Final at Kids, and loses it: Semi-Finalists (${dm[0] && dm[0].score.join('-')})`);
 }
 // The bars through the years: a session costs Energy and a round gives it back, Morale rises with wins and falls with defeats, and Team
-// Spirit falls for a player who always trains (A) and holds for one who goes out with the team (B), cup phases with no dilemma included
+// Spirit falls for a player who always trains (A) and holds for one who goes out with the team (B); a cup holds it where the league left it
 ok(RUNS.every(r => r.bars.energy.lo < 80 && r.bars.morale.hi > 60), `the bars move through the year (Energy ${RUNS.map(r => r.bars.energy.lo + '-' + r.bars.energy.hi).join(', ')}; Morale ${RUNS.map(r => r.bars.morale.lo + '-' + r.bars.morale.hi).join(', ')})`);
+// Team Spirit in a cup: every cup match, played or scripted, leaves it exactly as it stood at kick-off (as the league or the six left it:
+// a cup has no dilemma), while Energy and Morale still move; every league and international round fades and gains by the rule, the first
+// after a cup run going on from the cup's value
+{
+  const S = L.LIFE.spirit, bad = [];
+  let cups = 0, moved = 0, after = 0;
+  for (const r of RUNS) r.matches.forEach((m, i) => {
+    const s0 = m.kick.spirit, want = m.cup ? s0 : Math.max(0, Math.min(100, s0 + S.fade - Math.floor(Math.max(0, s0 - 50)/S.high) + Math.min(S.cap, Math.floor(m.passes/S.passes) + m.tries*S.tryPts)));
+    if (m.life.spirit !== want) bad.push(`${r.spec.label.slice(0, 1)} ${m.where}: ${s0} to ${m.life.spirit}, not ${want}`);
+    if (m.cup) { cups++; if (m.life.energy !== m.kick.energy || m.life.morale !== m.kick.morale) moved++; }
+    else if (i && r.matches[i - 1].cup) after++;
+  });
+  ok(!bad.length && cups >= 40 && moved === cups && after >= 8, `Team Spirit held through all ${cups} cup matches (Energy or Morale moved at each: ${moved}), and every league and international round faded and gained by the rule, ${after} of them straight after a cup (${bad.slice(0, 4).join('; ') || 'all'})`);
+}
 ok(A.bars.spirit.lo <= 10 && B.bars.spirit.hi > 50 && B.bars.spirit.lo >= 10, `Team Spirit: A, always training, falls to ${A.bars.spirit.lo}; B, always out with the team, ${B.bars.spirit.lo} to ${B.bars.spirit.hi} over six years of cups and windows`);
 
 // A cup match left before full time (Pause, Quit Match twice): nothing recorded, the same fixture on the hub, Play Match again
