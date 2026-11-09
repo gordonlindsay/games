@@ -68,12 +68,17 @@ function surge(team, secs) { M.surge = { team, t:secs }; }
 
 /* Scrum: Crouch, Bind, Set. Press on Set for a good start, then tap Push fast to drive: the taps alone are the shove, the stick
    plays no part (2026-10-17: it used to scale the taps by 0.55 at rest and 0.2 held back, and nothing on screen said so). pos is
-   metres gained by your pack. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty (a pushover
-   within 8m of the line); the steal line is 1.2, half way up the bar. */
-const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4;
+   metres gained by team 0's pack from the mark. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty
+   (a pushover within 8m of the line). Short of it, the ball goes to the pack ahead on the bar when the scrum ends (2026-11-09,
+   Gordon: "if a team wins a scrum, they should also win possession"). The feeding pack starts SCRUM_HEAD ahead: the bar's middle,
+   the line that decides the ball (c.line, in pos), sits that far towards the other pack, so the other pack has to drive the scrum
+   back 1.2m to draw level, as far as it always had to to steal (the old steal line, so the old rates hold), and the bar leans the
+   feeder's way from Crouch. Each half of the bar fills at its own pack's penalty line. Dead level, nearer the line than SCRUM_TIE,
+   is the feeder's ball. A drill's scrum has no ball to win: its line is the mark, and its bar reads as it always did. */
+const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4, SCRUM_HEAD = 1.2, SCRUM_TIE = 0.05;
 function startScrum(s) {
   // every scrum is a little different: a CPU pack's strength varies, and the side putting in gets a small edge. pos is metres gained by team 0's pack
-  const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, engaged:false, mine:0, theirs:0, result:null,
+  const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, line:practice ? 0 : -dirOf(s.team)*SCRUM_HEAD, engaged:false, mine:0, theirs:0, result:null,
     rate:[0, 0], taps:[0, 0], hit:[false, false], early:[false, false], base:[0, 0], wave:0, msg:[null, null] };   // a pack a side: a human's taps and timing, every pack's base effort; msg: two player's Early / Good Hit tag over each pack
   for (const t of [0, 1]) c.base[t] = cpuSide(t) ? (diffOf(t).scrumCpu + (powerOf(t)-3)*0.06)*(0.75 + rnd()*0.5) + (s.team === t ? 0.08 : 0) : (powerOf(t)-3)*0.06 + (s.team === t ? 0.08 : 0) + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0) + (M.kids ? KIDS.scrum : 0);
   c.wave = rnd()*6;
@@ -102,8 +107,8 @@ function updateScrum(c, dt) {
   if (t >= SCRUM_SET + SCRUM_PUSH || Math.abs(c.pos) >= SCRUM_DOM) resolveScrum(c);
 }
 function resolveScrum(c) {
-  const p = c.pos, F = c.feed;
-  let res = p >= SCRUM_DOM ? 'dom0' : p <= -SCRUM_DOM ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
+  const p = c.pos, F = c.feed, ahead = scrumAhead(c);
+  let res = p >= SCRUM_DOM ? 'dom0' : p <= -SCRUM_DOM ? 'dom1' : (ahead === F ? 'win' : 'steal') + ahead;
   if (res === 'dom1' && !cpuSide(0) && !c.taps[0] && !c.hit[0]) res = F === 0 ? 'steal1' : 'win1';   // a human pack that never pushed loses the ball, nothing worse
   if (res === 'dom0' && !cpuSide(1) && !c.taps[1] && !c.hit[1]) res = F === 1 ? 'steal0' : 'win0';
   c.result = res;
@@ -122,6 +127,11 @@ function resolveScrum(c) {
   const strong = w === 0 ? p > 0.8 : p < -0.8;
   say(stolen ? 'Against the Head' : strong ? 'Go-Forward Ball' : 'Scrum Won', stolen || strong ? '' : 'small', w);
   finishCut(() => { releaseTo(w, mx, y, 'scrum'); if (stolen || strong) surge(w, 2.5); }, 0.8);
+}
+function scrumAhead(c) { const d = c.pos - c.line; return Math.abs(d) < SCRUM_TIE ? c.feed : d > 0 ? 0 : 1; }   // whose ball it is as the shove stands: the pack ahead of the line, the feeder's when dead level
+function scrumBar(c) {                                     // the bar's fill, -1 to 1 from its middle (the line): + towards team 1's end as team 0 gains. Each half fills at that pack's penalty line; dead level shows none
+  const d = c.pos - c.line;
+  return Math.abs(d) < SCRUM_TIE ? 0 : d > 0 ? Math.min(1, d/(SCRUM_DOM - c.line)) : -Math.min(1, -d/(SCRUM_DOM + c.line));
 }
 function autoScrum(s) {
   const F = s.team, o = 1-F, edge = (powerOf(F) - powerOf(o))*0.03, r = rnd();

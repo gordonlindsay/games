@@ -1124,6 +1124,34 @@ The ladder would have gone backwards at County, so that is what moved, and only 
   home button on any device, the mode itself kept; and "instead of 'import data' change to 'add your team'", so the home's
   button and the team screen's card, one flow, are both **Add Your Team**, in the store copy too. The saved headline keys stay
   `'game'` and `'drills'`, so every save opens where it did.
+- **The pack ahead wins the ball** (2026-11-09). Gordon: "if a team wins a scrum, they should also win possession". The
+  feeding pack used to keep the ball unless the other got 1.2m up the bar, so a pack could be ahead on the bar, lose the
+  ball and hear Scrum Won said for the other side. Now the ball goes to whichever pack is ahead of the bar's middle when
+  the scrum ends, and that middle is the line that decides it: the feeding pack starts `SCRUM_HEAD` 1.2m ahead of it, so
+  the bar leans the feeder's way from Crouch, a ball by one side's name shows whose ball it is as the shove stands, and
+  the corner tag names the winner once it is won. Dead level, nearer the line than `SCRUM_TIE` (5cm), is the feeder's.
+  Against the Head when the other pack ends ahead, Go-Forward Ball past 0.8m gained, Scrum Won otherwise, each said for
+  the side with the ball. `SCRUM_DOM`, the Pushover, the never-pushed rule and the physics are as they were; each half of
+  the bar fills at its own pack's penalty line. `autoScrum` (AI v AI, the demo, the balance tools) is untouched, and the
+  Driving drill's line is the mark, so its bar and its scoring read as before. Possession by the sign of the shove alone,
+  or a bigger feeder's edge, was measured and turned down (duels.mjs's cells, Farnham v Haslemere, 300 a cell, SEED 1):
+
+  | Variant | Normal 7 a second + hit: own kept / penalty on own | Steals Easy / Normal / Hard (7 + hit) | Hard 6 + hit | Normal 7, no hit | Normal 8 + hit: penalty on own |
+  |---|---|---|---|---|---|
+  | Before (steal line 1.2m) | 100 / 2.3 | 67.7 / 26.7 / 12.0 | 0.3 | 0 | 16.7 |
+  | By sign, edge 0.08 | 100 / 2.3 | 100 / 97.3 / 79.3 | 50 | 46.7 | 16.7 |
+  | By sign, edge 0.30 | 100 / 66.3 | 78 / 42.3 / 14 | 0.3 | 0 | 88.3 |
+  | By sign, the feeder 1.1m up at Set | 100 / 70.7 | 76.3 / 33.3 / 13 | 0 | 0 | 91.7 |
+  | By sign, a 0.25 hold for the feeder | 100 / 3.0 | 87 / 48.7 / 32.7 | 7.7 | 28.7 | 19.7 |
+  | **The line 1.2m on, shown on the bar** | **100 / 2.3** | **63.7 / 24.7 / 9.7** | **0** | **0** | **16.7** |
+
+  A bigger edge, or a head start in the shove itself, puts the feeder 1.1-1.2m nearer its own penalty line, so penalties
+  on your own ball go from 2% to 66-92%; the hold makes the Good Hit irrelevant (steals with no hit 20-35%). The line on
+  the bar keeps every pinned rate, 2-4 points fewer steals than before from the dead-level band: `setpieces.mjs` (ENG v
+  FRA) Normal 7 a second with a hit steals 32% (35% before), 8 a second 46% (49%), Easy and Hard at 7 63% and 15% (67%
+  and 17%). Kids (start of the scale) keeps its own put-in at every row as before and steals at 4 a second late 32% (39%),
+  4 with a hit 96% (98%), 5 late 87% (91%), and 100% from 5 with a hit up, as before. Two player at levels Normal and Normal, Player 1's put-in at 5 to 8
+  taps a second each, and 7 v 6, 8 v 6, 8 v 7 either way: the feeder keeps 100%, before and after.
 
 ## Controls
 
@@ -1152,9 +1180,12 @@ Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock 
 
 - **Scrum:** the referee calls Crouch, Bind, Set. Press Push on Set for a good hit, then tap it fast. The taps alone
   are the shove, on every device and in both seats (see Decided, 2026-10-17). The scrum moves with your shove, and the
-  ball comes out where it ends up. Out-shove them on their ball to steal it. Dominate to win a penalty (the bar fills
-  exactly at the penalty line, `SCRUM_DOM` 2.4m; the steal line is half way), or a pushover try within 8m of their line.
-  Not pushing at all loses the ball, nothing worse.
+  ball comes out where it ends up. The middle of the bar is the line that decides the ball: the pack ahead of it when
+  the scrum ends has the ball, and a ball beside one side's name shows whose it is as the shove stands (see Decided,
+  2026-11-09). The side putting in starts 1.2m ahead (`SCRUM_HEAD`), so the bar leans its way from Crouch; drive them
+  back past the line on their ball to steal it. Dead level, nearer the line than `SCRUM_TIE` (5cm), is the put-in's.
+  Dominate to win a penalty (each half of the bar fills exactly at that pack's penalty line, `SCRUM_DOM` 2.4m from the
+  mark), or a pushover try within 8m of their line. Not pushing at all loses the ball, nothing worse.
 - **Lineout:** one jumper each in the middle. The hooker dummies, then throws. Press Jump so your jumper is at full
   height when the ball arrives. On their throw, beating their jumper to it is a steal.
 - **Duels** fire at last-man moments, and only when you're running at the man. Steer away and none fires. There's
@@ -1531,11 +1562,20 @@ a charger.
     - the scrum (2026-10-17): the stick at rest, forward and back giving the same shove at every step and the same result
       (home side and one player as the away side), the Normal rates at 6 and 7 taps a second with and without a Good Hit
       (your put-in kept, theirs stolen 20-45%, no penalties against), the steal order Easy > Normal > Hard, the penalty
-      line at `SCRUM_DOM` and the steal line at 1.2m, the Pushover from 10m out, the same line in `updateScrum` (both packs
-      stilled, a shove staged 0.2m short runs on, at the line it ends on the next step) and in `drawScrum`'s bar (a quarter
-      full at 1.2m, half at the line), 8 taps a second winning a penalty or pushover on your own put-in over 10% of the time
-      (0% with the scrum ending at the old 2.0), and that neither the Help page nor the README tells the player to hold the
-      stick;
+      line at `SCRUM_DOM`, the Pushover from 10m out, the same line in `updateScrum` (both packs stilled, a shove staged
+      0.2m short runs on, at the line it ends on the next step), 8 taps a second winning a penalty or pushover on your own
+      put-in over 10% of the time (0% with the scrum ending at the old 2.0), and that neither the Help page nor the README
+      tells the player to hold the stick;
+    - the ball to the pack ahead (2026-11-09), staged with both packs stilled: 0.3m past the line on their put-in is yours,
+      Against the Head said in your colour, 0.3m short (and 0.3m up from the mark) theirs, Scrum Won said in theirs; on your
+      put-in 0.3m ahead of the line kept, 0.3m behind it lost Against the Head, 1.0m gained Go-Forward Ball; dead level on
+      the line and inside `SCRUM_TIE` the put-in's both ways, 5cm past it not; the corner tag naming the put-in, then the
+      side that won the ball; at every 1cm of the shove on both put-ins the bar's fill leaning the way of the side whose
+      ball it is (none at dead level); `drawScrum`'s bar a third full your way at the mark, empty on the line, half full
+      their way 0.6m behind it and a whole half at `SCRUM_DOM` either way, with the ball drawn by the name of the side
+      whose ball it is; two player both seats, staged (0.3m past the line on the other's put-in wins it, said for that
+      player; 0.3m short leaves it) and played (7 taps a second each keeps the feeder's ball 10 of 10 both ways, 8 a
+      second against an idle pack takes it); and Kids' line and shove (`KIDS.scrum`);
     - the Key Pass runner box (7m fires, 8m is a Get Past), and the gesture history cleared by the stick's restore after a duel;
     - slow motion (2026-10-17): for every kind at every level, the windows, tells, plan, verdict, judged time and random draws
       are the same with and without it on one seed, the scene clock is always on a whole frame and the slide-in is not slowed,
@@ -1902,7 +1942,8 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   - **Scrums** (duels.mjs, 300 a cell, Farnham v Haslemere, jittered taps, thumb off the stick; `scrum.mjs` at 400): on
     Normal at 7 taps a second with a Good Hit your put-in is kept 100%, theirs stolen 31-33% (Against the Head), with no
     penalty against and a penalty on your own ball 7-8%; at 6 a second 100% / 7-8% / 0 / 0; at 5 a second 100% / 0; at
-    8 a second 100% / 47-48% / 0 / 21-22%; with a late first tap (no hit) 7 a second keeps 100% and steals 0. Easy
+    8 a second 100% / 47-48% / 0 / 21-22%; with a late first tap (no hit) 7 a second keeps 100% and steals 0 (since the
+    ball goes to the pack ahead, 2026-11-09, steals run 2-4 points lower: see Decided). Easy
     steals 7 / 40 / 65 / 87% at 5 / 6 / 7 / 8 a second, Hard 0 / 1 / 14 / 29%. The rows with the stick at rest, forward
     and back are identical; the away side (SEED 3) reads 0 / 9 / 29 / 49% on Normal; against Guildford (power 4) Normal
     steals 1 / 17 / 34% at 6 / 7 / 8. Before: 7 a second with the thumb off the stick kept 85-87% of your own and stole
