@@ -456,7 +456,7 @@ function settle(pick) {
   D.renderHub();
   ok(!document.getElementById('hub-next').innerHTML.includes('Stronger Side'), 'Farnham\'s weakest club opponent is not marked');
 
-  D.openTeams('quick'); X.tierPick(0);
+  D.openTeams('quick'); D.pickTeam(far); X.tierPick(0);   // Farnham picked by Player 1: the opponents
   const grid = document.getElementById('t-grid').innerHTML;
   const card = name => { const i = grid.indexOf('>' + name + '<'); return grid.slice(i, grid.indexOf('</button>', i)); };
   ok(card('France').includes('Stronger Side') && card('Ireland').includes('Stronger Side') && card('England').includes('Stronger Side') && !card('Italy').includes('Stronger Side') && !card('Japan').includes('Stronger Side'), 'Quick Match marks a side three points stronger');   // re-pinned at the XV ratings: England is now one, Italy and Japan are not
@@ -581,7 +581,8 @@ function settle(pick) {
   X.poolPick('jpn');
   X.tierPick(0);
   const inOrder = l => l.every((t, i) => i === 0 || grid().indexOf('>' + X.listName(t) + '<') > grid().indexOf('>' + X.listName(l[i - 1]) + '<'));
-  ok(s.pool === 'int' && $('t-nat').hidden && $('t-loc').hidden && names(X.natList('men')) && inOrder(X.natList('men')) && !grid().includes('>Canada<') && !grid().includes('>USA<'), 'International: the men\'s twelve in table order, with nothing under it');   // re-pinned at the official tables: natList, not NATIONS
+  const engAt = grid().indexOf('>England<');
+  ok(s.pool === 'int' && $('t-nat').hidden && $('t-loc').hidden && names(X.natList('men')) && inOrder(X.natList('men').filter(t => t.id !== 'ENG')) && engAt >= 0 && engAt < grid().indexOf('>South Africa<') && /data-i="0"[\s\S]*?>England<[\s\S]*?My Team/.test(grid().split('data-i="1"')[0]) && !grid().includes('>Canada<') && !grid().includes('>USA<'), 'International: the men\'s twelve in table order, with nothing under it (in Player 1\'s list My Team\'s England first, marked)');   // re-pinned at the official tables: natList, not NATIONS
   ok(X.poolTeams('int') === X.natList('men') && grid().includes('aria-label="Overall 93">93<'), 'Men: the list is natList(\'men\'), South Africa at 93');
   X.catPick('women');
   ok(X.poolTeams('int') === X.natList('women') && X.natList('women').every(t => grid().includes('>' + X.listName(t) + '<')) && inOrder(X.natList('women')) && !grid().includes('>Argentina<') && !grid().includes('>Japan<') && !grid().includes(' Women<'), 'Women: the women\'s twelve in table order, Canada and the USA in, each card by the nation\'s name as the club cards are');
@@ -688,7 +689,7 @@ function settle(pick) {
   ok(em.name === 'England Minis' && em.cat === 'minis' && em.home === true && em.alt === X.NATIONS[0].alt, 'Minis: England Minis, still a home nation in its change kit');
   ok(X.catSide({ name: 'Farnham Minis', id: 'FAN' }, 'minis').name === 'Farnham Minis' && X.catSide({ name: 'Farnham Minis', id: 'FAN' }, 'women').name === 'Farnham Minis Women', 'a name already ending in its word is not doubled');
   // Quick Match
-  D.openTeams('quick'); X.catPick('women');
+  D.openTeams('quick'); D.pickTeam(far); X.catPick('women');
   ok(s.cat === 'women' && $('t-mine').innerHTML.includes('Farnham Women'), 'the bar names your side for the category');
   ok($('t-grid').innerHTML.includes('>Haslemere<') && !$('t-grid').innerHTML.includes('Haslemere Women'), 'the cards keep the club\'s name');
   D.pickTeam(has);

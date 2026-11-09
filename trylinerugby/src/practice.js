@@ -1,5 +1,5 @@
 /* =========================================================
-   Training Ground: the drill picker, the ready and result card, and the rules every drill keeps.
+   Training Ground: the drill picker (the home's Training Drills), the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
    practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
    Career, or leaveLabel; Back or Escape on the card; Pause then Back to Career) restores the settings exactly as leaving does,
@@ -48,12 +48,13 @@ function practiceHandBack() {                              // a caller's drill e
   fn(res);
 }
 function practiceLeave() { if (practice && practice.opts) { practiceHandBack(); return; } practiceRestore(); exitMatch(); }
-function practiceChoose() {
+function practiceChoose() {                                // Back to Training: the home, on Training Drills where every drill is picked, the drill just played in focus
   if (practice && practice.opts) { practiceHandBack(); return; }
+  const id = practice && practice.id;
   practiceRestore();
   setTwo(false); startDemo();
   $('hud').hidden = $('controls').hidden = $('b-pause').hidden = true;
-  showScreen('s-practice');
+  goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings, the headline included: it was picked on Training Drills
 }
 function practiceStart(id, opts) {
   const drill = PRACTICE_DRILLS.find(d => d.id === id); if (!drill) return;
@@ -132,8 +133,6 @@ function practiceTick(dt) {
   }
   if (practice && !practice.done) drillHudSync();
 }
-$('b-practice').addEventListener('click', practiceChoose);
-$('pr-back').addEventListener('click', goHome);
 for (const d of PRACTICE_DRILLS) { $('pr-' + d.id).addEventListener('click', () => practiceStart(d.id)); $('pi-' + d.id).innerHTML = drillIconSvg(d.id); }
 $('pr-retry').addEventListener('click', () => {
   if (!practice) return;

@@ -46,6 +46,7 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
 - [x] **Family Sharing**: on for both products (owner, 2026-11-08). Set it as each product is created; it cannot be turned off once on.
 - [x] **iPad**: iPhone only for the first version (owner, 2026-11-08). The native project's device family is iPhone; iPad comes later, once the layout scales up.
 - [ ] **Screenshots**: after the merge, and again after the Mac session's new graphics, re-shoot (SCREENSHOTS.md) and upload the iPhone 6.9-inch set (iPhone only for now).
+  - The **Home** (`07-home.png`) and **Team Picker** (`06-teams.png`) shots in `screenshots/` show the home before its five headlines (2026-11-08) and Quick Match's old Pick Opponent: re-shoot both (`node tools/listing-shots.mjs`) before they are uploaded.
 
 ## 5. Build and Test on Apple (TestFlight)
 

@@ -707,17 +707,16 @@ C.setCups(false);                                    // no cups unless a section
   const words = ['Transfer Window', 'Continue', 'Called Up', 'Pick Your Country', 'Winners', 'Knocked Out', 'Series Won', 'Series Lost', 'Transfers', 'Stay', 'Start New Career', 'Change Club', 'Pick Your Club', 'Back to New Player', 'European Cup', 'World Cup', 'Home Nations Tour', 'Triple Crown'];
   ok(words.every(titled) && words.every(w => src.includes(w)), 'and the ones the screens write: Transfer Window, Called Up, Stay, Winners, Series Won and the rest');
   ok(!/Hall of Fame|to Go Up|One More Season|CAREER_STAGES|CAREER_COUNTIES|CAREER_CUT/.test(src), 'no stages left: no Hall of Fame, no "to Go Up", no counties');
-  const row = src.match(/<div class="row2 home-row">([\s\S]*?)<div class="row2 learn-row">/);
-  const at = id => row[1].indexOf('id="' + id + '"');
-  ok(row && at('b-champ') >= 0 && at('b-champ') < at('b-career') && at('b-career') < at('b-two') && !/career-row/.test(src), 'Career sits beside Championship in the home row, Two Player after them (the orchestrator\'s layout at merge)');
-  ok(/\.home-row \.col\{display:flex;/.test(src) && !/\.home-row \.col\{grid-column:1\/-1/.test(src) && /body\.desk \.home-row\{grid-template-columns:1fr 1fr 1fr\}/.test(src), 'equal halves on a phone, thirds with Two Player on a desk');
+  const panel = (src.match(/<div class="hl-panel hp-career" id="hp-career"[^>]*>([\s\S]*?)<\/div>/) || [])[1] || '';
+  ok(/<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(panel) && /<button class="btn hl" id="hl-career" data-hl="career"[^>]*>[\s\S]*?<span class="hl-name">Career<\/span><\/button>/.test(src), 'Career is a headline on the home\'s bar: its panel is New Career (or Continue Career) with its note under it');
+  ok(/\.hl-panel \.btn\.primary\{min-height:72px;/.test(src) && /\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/.test(src), 'the button big, the headlines in five equal parts');
   ok(!/[←-↙⇐-⇙]/.test(career), 'no arrow glyph on the career screens');
   for (const id of SCREENS) ok(new RegExp(`id="${id}"[\\s\\S]*?data-back>Back to (Menu|Career|New Player)<`).test(html), `${id} has a Back button`);
   ok(/id="cr-play">Play Match</.test(career) && /<div class="row2" id="cr-trow"><button class="btn" id="cr-train">Train<\/button><button class="btn" id="cr-table">Table<\/button><\/div>/.test(career), 'the hub: Play Match on its own, Train and Table as equal halves');
   ok(/<div class="row2"><button class="btn" id="ce-back" data-back>Back to Menu<\/button><button class="btn warn" id="ce-new">Start New Career<\/button><\/div>/.test(career), 'between phases: Back to Menu and Start New Career as equal halves, as the hub\'s Back to Menu and Start Fresh');
   // home
   C.set(null); C.renderHome();
-  ok($('b-career').textContent === 'Career' && $('career-note').hidden, 'home: Career, with no note before a career starts');
+  ok($('b-career').textContent === 'New Career' && $('career-note').hidden, 'home: New Career, with no note before a career starts');
   const cr = C.create({ name:'Isla', pos:'B', num:7, club:{ id:'XSS', name:'<img src=x>', kit:'#123456', trim:'#abcdef', custom:true, pace:3, power:3, handling:3, kicking:3 } });
   C.set(cr); X.renderHome();
   ok($('b-career').textContent === 'Continue Career' && !$('career-note').hidden && $('career-note').innerHTML === 'Year 1 · <span class="rn-name">&lt;img src=x&gt; · </span>Round 1 of 5', 'with one: Continue Career, the year, the club (escaped, in a span a phone held sideways leaves out) and the round');

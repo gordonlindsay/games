@@ -1,38 +1,30 @@
 /* =========================================================
-   Silverware in Championship mode (README, Silverware): the team screen's competition row (League | World Cup | Home Nations
-   Tour), the European Cup offered after a European league is won, the cup hub (the stage, your next fixture, Play, the
+   Silverware in Championship mode (README, Silverware): the World Cup and the Home Nations Tour, chosen on the home's Championship
+   (ui-menus.js), and their team screens, the European Cup offered after a European league is won, the cup hub (the stage, your next fixture, Play, the
    bracket, the pools or the Tests), the last round's result card, the winner's card, the full-time line, and the cups in the
    Trophy Cabinet. The rules are src/cups.js's; the cup under way is `cup` (persistence.js). All of it sits behind
    Championship's Full Game gate, as the button that leads here does.
    ========================================================= */
-const CUP_COMPS = [['league', 'League'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']];
+const CUP_COMPS = ['league', 'world', 'tour'];            // a league (or the nation's championship), and the two cups started from the team screen
 const CUP_SHORT = { euro:'European Cup', world:'World Cup', tour:'Tour' };   // the home screen's note, one line under its half
 const CUP_PLURAL = { 'Semi-Final':'Semi-Finals', 'Quarter-Final':'Quarter-Finals', Final:'Final' };
-let champComp = 'league';                                  // the competition row; League, today's flow, each time the screen opens
+let champComp = 'league';                                  // the competition the home sent the team screen: a league's, or a cup's
 let cupEuroSkip = null;                                    // Not Now: the league season whose European Cup offer was put off, this visit
 let cupResetArmed = false;
 
-{
-  $('t-comp').innerHTML = CUP_COMPS.map(([id, n]) => `<button data-comp="${id}">${n}</button>`).join('');
-  for (const b of $('t-comp').querySelectorAll('[data-comp]')) b.addEventListener('click', () => cupCompPick(b.dataset.comp));
-}
-function cupCompReset() { champComp = 'league'; }
-function cupCompPick(id) {
-  if (!CUP_COMPS.some(c => c[0] === id)) return;
-  champComp = id;
-  renderTeams(); $('s-teams').scrollTop = 0;
-}
-/* The team screen for the World Cup (the category's twelve, pick your nation) or the Home Nations Tour (your side is the
-   Home Nations; the three hosts, the one in turn first and on the primary). null for League. */
+function cupCompSet(id) { champComp = CUP_COMPS.includes(id) ? id : 'league'; }
+const cupEuroLeague = key => CUPS.euro.lists.includes(key);   // a league whose winner goes on to the European Cup (its trophy on the home's button)
+/* The team screen for the World Cup (the category's twelve, pick your nation: My Team's country picked for you on the primary) or the
+   Home Nations Tour (your side is the Home Nations; the three hosts, the one in turn first and on the primary). null for a league. */
 function cupTeamsView() {
   if (champComp === 'world') {
-    const cat = settings.cat;
-    return { comp:'world', title:'Pick Your Nation', list:cupTwelve(cat), start:t => cupBegin('world', { user:catTeam(t, cat) || t, cat }) };
+    const cat = settings.cat, list = cupTwelve(cat), mine = typeof myNatTeam === 'function' ? myNatTeam(cat) : null, pick = mine && list.find(t => t.id === mine.id);
+    return { comp:'world', name:CUPS.world.name, title:'Pick Your Nation', list, pick:pick || null, primary:pick ? 'Play as ' + pick.name : '', start:t => cupBegin('world', { user:catTeam(t, cat) || t, cat }) };
   }
   if (champComp !== 'tour') return null;
   const cat = settings.cat, hosts = CUPS.tour.hosts, at = cupTurn % hosts.length;
   const list = [0, 1, 2].map(i => cupNation(hosts[(at + i) % hosts.length], cat)).filter(Boolean);
-  return { comp:'tour', title:'Pick the Host', list, yours:cupTourSide(cat), pick:list[0], primary:'Tour ' + listName(list[0]),
+  return { comp:'tour', name:CUPS.tour.name, title:'Pick the Host', list, yours:cupTourSide(cat), pick:list[0], primary:'Tour ' + listName(list[0]),
     start:t => { if (!hosts.includes(t.id)) return; cupTurn = hosts.indexOf(t.id) + 1; cupBegin('tour', { user:cupTourSide(cat), cat, host:t.id }); } };
 }
 function cupBegin(id, opts) {
@@ -91,8 +83,8 @@ function cupRetain(c) {
 
 /* Words. */
 function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
-/* The home screen's note under Championship: a small trophy in the cup's colour, then Bath · European Cup · Semi-Final. A phone held
-   sideways leaves out the side's name and the cup's (styles.css), so it stays one line under its half: the trophy and Semi-Final. */
+/* The home's note under Continue Championship: a small trophy in the cup's colour, then Bath · European Cup · Semi-Final. A phone held
+   sideways leaves out the cup's name (styles.css): the trophy says which. */
 function cupHomeNote(el, c) {
   const tour = c.id === 'tour' && c.user === 0;
   const name = tour ? '' : `<span class="rn-name">${esc(c.teams[c.user].name + ' · ')}</span>`;
@@ -230,10 +222,17 @@ function cupPoolsHtml(c) {
       ${cupPoolRows(c, p).map((r, n) => `<span class="cp-row${r.i === c.user ? ' me' : ''}${c.round >= 3 && n < 2 ? ' thru' : ''}"><span class="cp-t">${cupChip(c.teams[r.i])}<span class="cb-nm">${esc(c.teams[r.i].id)}</span></span><span>${r.P}</span><b>${r.Pts}</b></span>`).join('')}
     </div>`).join('')}</div>`;
 }
-function cupDrawHtml(c) {
+/* A World Cup's knockouts show the bracket; the pools it came from are a plain Pools button away (Bracket brings it back), with no
+   disclosure triangle. cupPoolsOn is this visit's choice, back to the bracket whenever the hub is drawn afresh. */
+let cupPoolsOn = false;
+function cupDrawHtml(c, pre = 'cup') {                    // pre: the screen's id prefix ('cup' here, 'cd' on a career's draw), so no two Pools buttons share an id
   if (c.id !== 'world') return cupBracketHtml(c);
   if (c.round < 3) return cupPoolsHtml(c);
-  return cupBracketHtml(c) + `<details class="cabinet cup-pooled"><summary>Pools</summary>${cupPoolsHtml(c)}</details>`;
+  return (cupPoolsOn ? cupPoolsHtml(c) : cupBracketHtml(c)) + `<button class="btn cup-poolbtn" id="${pre}-pools" aria-pressed="${cupPoolsOn}">${cupPoolsOn ? 'Bracket' : 'Pools'}</button>`;
+}
+function cupDrawBind(c = cup, pre = 'cup', host = 'cup-draw') {   // the Pools | Bracket swap, for the hub's own cup or a career's (src/ui-career.js)
+  const b = $(pre + '-pools'); if (!b) return;
+  b.addEventListener('click', () => { cupPoolsOn = !cupPoolsOn; $(host).innerHTML = cupDrawHtml(c, pre); cupDrawBind(c, pre, host); const again = $(pre + '-pools'); if (again && again.focus) again.focus(); if (again && focusEl) setFocus(again); });
 }
 
 /* The cup hub. */
@@ -249,10 +248,10 @@ function renderCup() {
   $('cup-line').classList.toggle('payoff', won);
   $('cup-next').innerHTML = fx ? cupFixtureHtml(c, fx, 'cup') : cupWinHtml(c, 'cup', 'New Championship');
   if (fx) $('cup-play').addEventListener('click', cupPlay);
-  else $('cup-new').addEventListener('click', () => { cupRetain(cup); cup = null; save(); openTeams('champ'); });
+  else $('cup-new').addEventListener('click', () => { cupRetain(cup); cup = null; save(); homeShow('champ'); });   // the competitions are on the home
   $('cup-last').innerHTML = cupLastHtml(c);
   $('cup-last').hidden = !$('cup-last').innerHTML;
-  $('cup-draw').innerHTML = cupDrawHtml(c);
+  cupPoolsOn = false; $('cup-draw').innerHTML = cupDrawHtml(c); cupDrawBind();
   $('cup-reset').textContent = 'Start Fresh'; cupResetArmed = false;
   cupFit($('s-cup'));
 }

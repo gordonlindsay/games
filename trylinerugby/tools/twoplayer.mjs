@@ -553,8 +553,8 @@ begin('away side');
 }
 done('H away side');
 
-// I. the home and the join screen: Two Player is a desk-only button beside Championship (How to Play drops to its own row there, phones keep
-// Championship | How to Play), the join screen seats both players on the keyboard halves with a legend each (keycaps or pad glyphs for
+// I. the home and the join screen: 2 Players is a desk-only button under Quick Match on the home's Game headline (phones keep Quick Match
+// alone), the join screen seats both players on the keyboard halves with a legend each (keycaps or pad glyphs for
 // Run Pass Kick Sprint, lit while held), fixed rows so the two cards line up, a pad claims a seat with one press and the screen follows,
 // Use Keyboard and Swap Players (the Difficulty goes with the player), then the team flow: Player 1 picks first, then Player 2 with
 // Player 1's team in the bar (Change Team is his, from his own seat), and the pick starts the match with both humans at their own levels
@@ -562,11 +562,11 @@ begin('join');
 {
   const fs = (await import('fs')).default, S = T.sides, X = T.teams;
   const src = readGameSource();
-  ok(/<button class="btn desk-only" id="b-two">Two Player<\/button>/.test(src), 'the home has a desk-only Two Player button');
-  ok(/<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>/.test(src) && src.indexOf('id="b-champ"') < src.indexOf('id="b-two"') && src.indexOf('id="b-two"') < src.indexOf('id="b-help"'), 'Quick Match is still the gold first button with the focus; Championship, Two Player, How to Play follow');
-  const matchRow = src.match(/<div class="row2 home-row">([\s\S]*?)<div class="row2 learn-row">/);
-  const learnRow = src.match(/<div class="row2 learn-row">([\s\S]*?)<\/div>/);
-  ok(matchRow && /id="b-champ"/.test(matchRow[1]) && /class="btn desk-only" id="b-two"/.test(matchRow[1]) && !/id="b-help"|id="b-practice"/.test(matchRow[1]) && learnRow && /id="b-help"/.test(learnRow[1]) && /id="b-practice"/.test(learnRow[1]) && /\.row2\{display:grid;grid-template-columns:1fr 1fr;/.test(src) && /id="b-career"/.test(matchRow[1]) && matchRow[1].indexOf('id="b-career"') < matchRow[1].indexOf('id="b-two"') && /\.home-row \.col\{display:flex;/.test(src) && /body\.desk \.home-row\{grid-template-columns:1fr 1fr 1fr\}/.test(src) && /\.desk-only\{display:none\}/.test(src), 'How to Play and Training Ground share a symmetric learn row; Championship and Career share the phone match row in halves, and Two Player joins them in thirds on computers');
+  ok(/<button class="btn desk-only" id="b-two">2 Players<\/button>/.test(src), 'the home has a desk-only 2 Players button');
+  ok(/<button class="btn primary" id="b-quick" autofocus>Quick Match<\/button>/.test(src) && src.indexOf('id="b-quick"') < src.indexOf('id="b-two"') && src.indexOf('id="b-two"') < src.indexOf('id="b-champ"') && src.indexOf('id="b-champ"') < src.indexOf('id="b-help"'), 'Quick Match is still the gold first button with the focus; 2 Players under it, then Championship\'s, Career\'s and Training Drills\' panels');
+  const gamePanel = src.match(/<div class="hl-panel hp-game" id="hp-game"[^>]*>([\s\S]*?)<\/div>/);
+  const drillPanel = src.match(/<div class="hl-panel hp-drills" id="hp-drills"[^>]*>([\s\S]*?)<button class="btn drill" id="b-help">/);
+  ok(gamePanel && /id="b-quick"/.test(gamePanel[1]) && /class="btn desk-only" id="b-two"/.test(gamePanel[1]) && !/id="b-help"|id="b-champ"|id="b-career"/.test(gamePanel[1]) && drillPanel && /id="pr-grid"/.test(drillPanel[1]) && /\.row2\{display:grid;grid-template-columns:1fr 1fr;/.test(src) && /<nav class="hl-bar" id="hl-bar" role="tablist"/.test(src) && /\.hl-panel\{display:flex;flex-direction:column;/.test(src) && /\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/.test(src) && /\.desk-only\{display:none\}/.test(src), 'Game\'s panel is Quick Match and, on computers only, 2 Players; How to Play sits with the drills under Training Drills; the five headlines share the bar in equal parts');
   ok(/b\.classList\.toggle\('desk', PADS\.size > 0 \|\| !!\(deskQuery && deskQuery\.matches\)\)/.test(src) && /PADS\.delete\(index\);\n  setDesk\(\);/.test(src) && /function padConnected\(gp\) \{\n  padsOn = true;\n  if \(gp\) padOf\(gp\);\n  setDesk\(\);/.test(src), 'body.desk follows the pointer or the pads connected right now: a phone that had a pad goes back to its own layout when it is unplugged');
   // labels on the join screen are Title Case, with no arrow glyph anywhere in the markup
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
@@ -610,7 +610,7 @@ begin('join');
   D.settings().twoDiff = [1, 1];
   // the team flow: Player 1 first
   D.openTeams('two');
-  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === 'Two Player' && $('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Player 1 Team', 'Player 1 picks first: Player 1 Team, the eyebrow in his colour');
+  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === '2 Players' && $('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Player 1 Team', 'Player 1 picks first: Player 1 Team, the eyebrow in his colour');
   ok($('t-yours').hidden && $('t-default').hidden && $('t-back').textContent === 'Back to Players' && D.navOnly() === 0 && D.navOwner(0) && !D.navOwner(1) && D.navOwner(null), 'no team in the bar yet, the Play as Farnham button is off, Back to Players, and only seat 0 (or the mouse) acts');
   D.pickTeam(X.NATIONS[0]);
   ok(sel.teams[0] === X.NATIONS[0] && sel.picking === 1 && $('t-title').textContent === 'Player 2 Team' && $('t-eyebrow').classList.contains('p2') && !$('t-yours').hidden && D.navOnly() === 1 && !M().two, 'Player 1 picked England: Player 2 Team, England in the bar with Change Team, only seat 1 acts; nothing has started');
@@ -629,7 +629,7 @@ begin('join');
   D.exitMatch();
   // one player's team screen is as it was
   D.openTeams('quick');
-  ok($('t-eyebrow').textContent === 'Quick Match' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Opponent' && !$('t-yours').hidden && $('t-back').textContent === 'Back to Menu' && D.navOnly() == null, 'Quick Match: Pick Opponent with Farnham in the bar, Back to Menu, nobody restricted');
+  ok($('t-eyebrow').textContent === 'Quick Match' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Your Team' && $('t-yours').hidden && $('t-default').hidden && $('t-back').textContent === 'Back to Menu' && D.navOnly() == null, 'Quick Match: Pick Your Team, nothing picked for him (My Team only offered first), Back to Menu, nobody restricted');
   fresh({ headless:false }); $('h-t0').hidden = $('h-t1').hidden = false; D.startMatch(0, 1, false); ok($('h-t0').hidden && $('h-t1').hidden && !$('controls').hidden, 'a one-player match: no seat tags on the scorebug, the touch controls on'); D.exitMatch();
   D.goHome(); menu();
   // Difficulty is saved by keyboard half: swapped Easy/Hard, then a fresh visit puts the halves back in order and each half keeps its own level

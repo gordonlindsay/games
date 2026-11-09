@@ -1,8 +1,8 @@
 /* =========================================================
    Store: the one-off unlocks, who has them, and the adapter to the app stores.
 
-   Free: Quick Match, the Training Ground, Kids, Easy and Normal, How to Play and Two Player. Full Game (tryline.full) adds
-   Championship, Career, Create Team and Hard. Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
+   Free: Quick Match, the Training Ground, Kids, Easy and Normal, How to Play, Two Player, the Locker and My Team. Full Game
+   (tryline.full) adds Championship, Career, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
    Game and Import, and marks the player as that club's Super Fan: its kit and name on the home, and the club offered first in
    Career and Championship. No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's
    own field (store), and Restore Purchases reads it back from the App Store or Google Play.
@@ -21,7 +21,7 @@
    ========================================================= */
 const STORE_WEB_TIER = 'full';             // the web build: 'full' now, 'free' at launch (trylinerugby/store/README.md)
 const STORE_FULL = 'tryline.full';         // Full Game, £1.99; Super Fan, £3.99 (prices live in App Store Connect and Play Console)
-const STORE_FULL_HAS = ['champ', 'career', 'create', 'hard'];
+const STORE_FULL_HAS = ['champ', 'career', 'create', 'hard', 'legends'];   // legends: a Legends side unlocked in the Locker is played with the Full Game (src/locker.js); won on any tier
 const STORE_FAN_HAS = [...STORE_FULL_HAS, 'import'];   // Super Fan: everything in the Full Game, and Import
 /* Partner clubs. key names the product (tryline.fan.<key>), so Apple's and Google's sales reports count each club's unlocks with
    nothing collected by us. name is how the game names the club; team is its side in data.js, for the badge's kit and the side

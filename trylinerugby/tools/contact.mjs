@@ -1049,9 +1049,8 @@ begin('layout');
   $('btnC').hidden = true; ok(hit(527, 211) == null, 'Sprint hidden in a close-up takes no near miss'); $('btnC').hidden = false;
   $('btnA').rect = $('btnB').rect = $('btnC').rect = null;
   const short = [...css.matchAll(/@media \(orientation:landscape\) and \(max-height:420px\)\{([\s\S]*?)\n\}/g)].map(m => m[1]).join('\n');
-  ok(/grid-template-columns:1fr 1fr/.test(short) && /min-height:44px/.test(short) && !/min-height:(?:[1-3]?\d)px/.test(short.replace(/min-height:44px/g, '')), 'under 420px tall the home settings are two columns and no target drops below 44px');
-  const homeH = 44 + 6 + 44 + 6 + (8 + 64 + 8 + 64 + 8), avail = 320 - (12 + 21 + 12);
-  ok(homeH <= avail, `that home fits a 320px landscape with a 21px home indicator (${homeH}px of ${avail})`);
+  ok(/\.hp-settings\.settings\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/.test(short) && /min-height:44px/.test(short) && !/min-height:(?:[1-3]?\d)px/.test(short.replace(/min-height:44px/g, '')), 'under 420px tall the home settings are two columns and no target drops below 44px');
+  // the home 320px tall (Safari sideways) is measured in Chromium now, by tools/home.mjs at 667x320 and 568x320: a sum of fixed heights here no longer described it
   const hud = 4 + (18 + 6) + 2 + (11 + 4), hud0 = 8 + (21 + 12) + 5 + (11 + 8);
   ok(hud < hud0 - 16 && /\.bug\{font-size:18px\}/.test(short), `the scorebug band drops from ${hud0}px to ${hud}px`);
   ok(/\.pause::after\{[^}]*inset:-6px -2px -10px -10px/.test(css), 'the pause glyph stays 44px and its hit target grows inward');

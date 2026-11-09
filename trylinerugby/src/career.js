@@ -82,7 +82,7 @@ function careerCups() {
     cupFinish:typeof cupFinish === 'function' ? cupFinish : null,   // how far he went: Runners-Up, Semi-Finalists, Series Lost
     /* the cups' own pieces for the career's screens (src/ui-cups.js): the line under the title, the last round's card and the draw.
        A stand-in without them gets the career's plain cup screens: no draw, no line. */
-    cupLine:typeof cupLine === 'function' ? cupLine : null, cupLastHtml:typeof cupLastHtml === 'function' ? cupLastHtml : null, cupDrawHtml:typeof cupDrawHtml === 'function' ? cupDrawHtml : null };
+    cupLine:typeof cupLine === 'function' ? cupLine : null, cupLastHtml:typeof cupLastHtml === 'function' ? cupLastHtml : null, cupDrawHtml:typeof cupDrawHtml === 'function' ? cupDrawHtml : null, cupDrawBind:typeof cupDrawBind === 'function' ? cupDrawBind : null };
 }
 const CAREER_CUP_PHASE = { cup:'euro', intl:'world', tour:'tour' };   // the cup each phase can hold: a saved cup of another kind is not his
 /* A medal (the Locker). The career's own: his first call-up ('callup'), a transfer ('transfer') and a Triple Crown ('triple', as it is

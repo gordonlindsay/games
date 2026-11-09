@@ -12,13 +12,12 @@ globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memo
 const saved = () => JSON.parse(memory['tryline.v1']);
 const read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const html = read('index.html'), src = read('src/store.js'), ui = read('src/ui-store.js'), menus = read('src/ui-menus.js'), css = read('styles.css');
-const FEATURES = ['champ', 'career', 'create', 'hard', 'import'], PAID = ['champ', 'career', 'create', 'hard'];
+const FEATURES = ['champ', 'career', 'create', 'hard', 'import', 'legends'], PAID = ['champ', 'career', 'create', 'hard', 'legends'];
 const opened = [];
 globalThis.open = (...a) => { opened.push(a); return null; };
 const pass = () => { const g = K.gate(); if (!g) return false; for (const d of g.answer) K.type(d); return true; };   // a grown-up answers the check
 const cancel = () => K.close(false);
 const FARNHAM = S.FAN_CLUBS[0];
-$('b-grown').parentNode = $('learn-row');                  // the stand-in DOM has no parents: Grown-Ups sits in the learn row, as in index.html
 const reset = () => {                                       // the web as shipped, nothing bought, nothing open
   S.setNative(null); S.setTier(null); S.setBackend(null); S.setBought([]); S.setPrices({}); S.setAsked(false); S.setStarted(false);
   FARNHAM.share = 50; FARNHAM.agreed = false; S.FAN_CLUBS.length = 1; S.LINKS.ios = null; S.LINKS.android = null;
@@ -80,22 +79,22 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // index.html: every new element starts hidden, so the page is as it was before a line of script runs
   ok(/<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>/.test(html) && /<p class="eyebrow st-fan" id="st-fan" hidden><\/p>/.test(html) && /<div class="modal" id="m-store" hidden>/.test(html) && /<span id="st-locked" hidden>Locked<\/span>/.test(html), 'Grown-Ups, the badge, the card and the Locked note start hidden');
   // the home: storeRender changes nothing while the store is not live
-  const els = ['b-champ', 'b-career', 'b-grown', 'st-fan', 'home-tag', 'learn-row', 't-create', 't-import'].map($);
+  const els = ['b-champ', 'b-career', 'b-grown', 'st-fan', 'home-tag', 'hp-settings', 't-create', 't-import', 'hl-champ', 'hl-career', 'hl-settings', 'b-import'].map($);
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
-  const look = () => JSON.stringify([...els, ...seg.children].map(e => [e.hidden, e.classList.contains('locked'), e.classList.contains('three')]));
+  const look = () => JSON.stringify([...els, ...seg.children].map(e => [e.hidden, e.classList.contains('locked'), e.classList.contains('grown'), e.classList.contains('note')]));
   $('b-grown').hidden = true; $('st-fan').hidden = true;
   const before = look();
-  const sets = [], keep = els.map(e => e.setAttribute);
-  els.forEach((e, i) => { e.setAttribute = (...a) => { sets.push([e.id, ...a]); return keep[i].apply(e, a); }; });
+  const spied = els.filter(e => !/^hl-/.test(e.id)), sets = [], keep = spied.map(e => e.setAttribute);   // the headlines' aria-selected is the home's own, every render
+  spied.forEach((e, i) => { e.setAttribute = (...a) => { sets.push([e.id, ...a]); return keep[i].apply(e, a); }; });
   D.goHome(); S.render(); S.teamsRender();
-  ok(look() === before && !sets.length, 'rendering the home and the team screen touches no control: no lock, no Grown-Ups, no badge, no thirds');
-  els.forEach((e, i) => { e.setAttribute = keep[i]; });
+  ok(look() === before && !sets.length, `rendering the home and the team screen touches no control: no lock, no Grown-Ups, no badge, no dot (${JSON.stringify(sets)})`);
+  spied.forEach((e, i) => { e.setAttribute = keep[i]; });
   const s = D.settings(); s.diff = 2; s.twoDiff = [2, 2]; D.goHome();
   ok(s.diff === 2 && s.twoDiff.join() === '2,2', 'Hard stays Hard, one player and two');
   s.diff = 1; s.twoDiff = [1, 1];
   // every way in goes ahead, with no card
-  X.setChamp(null); $('b-champ').click();
-  ok($('m-store').hidden && D.pickMode() === 'champ' && !$('s-teams').hidden, 'Championship opens its team screen');
+  X.setChamp(null); T.home.champPick('sur');
+  ok($('m-store').hidden && D.pickMode() === 'champ' && !$('s-teams').hidden, 'Championship (a league picked on the home) opens its team screen');
   C.set(null); $('cn-mine').innerHTML = ''; C.open();
   ok($('m-store').hidden && /Farnham/.test($('cn-mine').innerHTML), 'Career opens the new player screen');
   T.stamina.openBuilder(null);
@@ -138,7 +137,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   android();
   ok(S.tier() === 'full' && !S.live() && FEATURES.every(f => S.has(f)), 'an Android browser stays on the full tier until the Google Play link is set');
   D.goHome();
-  ok(!$('b-champ').classList.contains('locked') && $('b-grown').hidden && !$('learn-row').classList.contains('three'), 'and its home has no lock and no Grown-Ups');
+  ok(!$('b-champ').classList.contains('locked') && $('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'and its home has no lock and no Grown-Ups');
   S.LINKS.android = 'https://play.google.com/store/apps/details?id=x';
   ok(S.tier() === 'free' && S.live() && PAID.every(f => !S.has(f)) && S.appLink() === S.LINKS.android, 'once it is set: the free tier, and Get the App opens Google Play');
   S.LINKS.android = null; delete navigator.userAgent;
@@ -155,7 +154,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok($('b-champ').classList.contains('locked') && $('b-champ').textContent === 'Continue Championship' && !$('champ-note').hidden, 'Continue Championship keeps its label and its note, with a lock');
   ok($('b-career').classList.contains('locked') && $('b-career').textContent === 'Continue Career', 'Continue Career likewise');
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
-  ok(!$('b-grown').hidden && $('learn-row').classList.contains('three'), 'Grown-Ups joins How to Play and Training Ground in thirds');
+  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('hl-champ').classList.contains('locked') && $('hl-career').classList.contains('locked') && !$('hl-game').classList.contains('locked') && !$('hl-drills').classList.contains('locked') && !$('hl-settings').classList.contains('locked'), 'Grown-Ups in Settings beside Half Length; the Championship and Career headlines carry the lock, Game, Training Drills and Settings none');
   $('b-champ').click();
   ok(!$('m-store').hidden && S.ui().mode === 'unlock' && S.ui().feature === 'champ' && $('s-hub').hidden && !$('s-home').hidden, 'Championship opens the Unlock card, not the hub');
   ok($('st-eyebrow').textContent === 'Unlock' && $('st-title').textContent === 'Championship', 'Unlock · Championship');
@@ -168,7 +167,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   X.save();
   ok(JSON.stringify(saved().champ) === c0 && JSON.stringify(saved().career) === cr0, 'and in the save');
   S.setTier(null); D.goHome();
-  ok(!$('b-champ').classList.contains('locked') && !$('b-career').classList.contains('locked') && $('b-grown').hidden && !$('learn-row').classList.contains('three'), 'back on the full tier the locks and Grown-Ups go');
+  ok(!$('b-champ').classList.contains('locked') && !$('b-career').classList.contains('locked') && !$('hl-champ').classList.contains('locked') && $('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'back on the full tier the locks and Grown-Ups go');
   $('b-champ').click();
   ok($('m-store').hidden && !$('s-hub').hidden, 'and Continue Championship goes to the hub');
   D.goHome();
@@ -183,7 +182,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // Get the App: once the links are in, through the grown-up check, the store for the device
   S.LINKS.ios = 'https://apps.apple.com/app/id1';
   S.open({ mode:'unlock', feature:'champ' });
-  ok(/id="st-app">Get the App<small class="hsub">Championship · Career · Create Team · Hard<\/small>/.test($('st-offers').innerHTML), 'Get the App, with what the Full Game holds');
+  ok(/id="st-app">Get the App<small class="hsub">Championship · Career · Create Team · Hard · Legends<\/small>/.test($('st-offers').innerHTML), 'Get the App, with what the Full Game holds');
   ok(S.appLink() === S.LINKS.ios, 'the App Store from a computer or an iPhone');
   android();
   ok(S.appLink() === null, 'an Android phone gets no App Store link (it stays on the full tier, above)');
@@ -461,14 +460,14 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   C.set(null); C.newOpen(); C.clubOpen();
   const cn = $('cc-grid').innerHTML;
   ok(cn.indexOf('Guildford') > 0 && cn.indexOf('Guildford') < cn.indexOf('Farnham') && /--kit:#1a1e4f/.test($('cn-mine').innerHTML) && C.draft().club.id === 'GUI', 'Career\'s new player: Guildford picked, and first on its list');
-  X.setChamp(null); D.goHome(); $('b-champ').click();
-  ok(D.settings().pool === 'sur' && X.teamPool() === 'sur' && $('t-default').textContent === 'Play as Guildford' && !$('t-default').hidden, 'Championship opens on the club\'s list (Local · Surrey) with Play as Guildford');
+  X.setChamp(null); D.goHome(); T.home.champPick(T.home.myPool());
+  ok(T.home.myClub().id === 'GUI' && D.settings().pool === 'sur' && X.teamPool() === 'sur' && $('t-default').textContent === 'Play as Guildford' && !$('t-default').hidden, 'My Team, unset, is the Super Fan\'s club: Championship on its list (Local · Surrey) with Play as Guildford');
   ok(/data-i="0"[^>]*>[\s\S]*?Guildford/.test($('t-grid').innerHTML.split('data-i="1"')[0]), 'Guildford is the first card');
   S.FAN_CLUBS.push({ key:'toulouse', name:'Toulouse', product:'tryline.fan.toulouse', share:50, agreed:true, team:'TLS' });
   S.grant(['tryline.fan.toulouse']);
   ok(S.homePool() === 'fra', 'a club in another list opens that list (National · France)');
-  X.setChamp(null); D.goHome(); $('b-champ').click();
-  ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && !$('t-nat').hidden && $('t-loc').hidden && !$('t-default').hidden && $('t-default').textContent === 'Play as Toulouse', 'and the team screen opens on National · France with Play as Toulouse');
+  X.setChamp(null); D.goHome(); T.home.champPick(T.home.myPool());
+  ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && $('t-eyebrow').textContent === 'Championship · France' && !$('t-default').hidden && $('t-default').textContent === 'Play as Toulouse', 'and France\'s league (National) has Play as Toulouse');
   X.poolPick('eng');
   ok($('t-default').hidden, 'Play as Toulouse only shows on its own list');
   C.set(null); C.newOpen(); C.clubOpen();
@@ -483,8 +482,8 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // careerClubs: the Super Fan's club first on the new player screen
   S.setBought(['tryline.fan.guildford']);
   const careerSrc = read('src/ui-career.js');
-  ok(/const careerClubList = k => storeFirst\(\[\.\.\.careerPoolTeams\(k\), \.\.\.custom\]\)/.test(careerSrc) && /careerDraft = \{ club:storeHomeTeam\(\), league:pool/.test(careerSrc), 'Career\'s club lists put the Super Fan\'s club first, and a new player starts with it');
-  ok(/if \(pickMode === 'champ'\) teamList = storeFirst\(teamList\)/.test(menus), 'and so does Championship\'s team screen');
+  ok(/const careerClubList = k => storeFirst\(\[\.\.\.careerPoolTeams\(k\), \.\.\.custom\]\)/.test(careerSrc) && /careerDraft = \{ club:myClubTeam\(\), league:pool/.test(careerSrc) && /const myClubTeam = \(\) => myClubFind\(settings\.myClub\) \|\| storeHomeTeam\(\);/.test(menus), 'Career\'s club lists put the Super Fan\'s club first, and a new player starts with My Team\'s club (the Super Fan\'s until one is picked)');
+  ok(/if \(inChamp\) teamList = storeFirst\(teamList\)/.test(menus), 'and so does Championship\'s team screen');
   S.setBought([]); D.goHome();
   ok($('st-fan').hidden && !$('home-tag').hidden, 'no Super Fan: the tagline is back');
 }
@@ -539,7 +538,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const block = html.slice(html.indexOf('<div class="modal" id="m-store"'), html.indexOf('<div class="modal" id="m-gate"'));
   ok(!/donat|charit|good cause/i.test(src + ui + block + read('store/README.md').replace(/never[^.]*(donation|charity)[^.]*\./gi, '')), 'never called a donation or charity (Apple 3.2.2): it says what the club gets');
   ok(!/—/.test(src + ui + block + read('store/README.md')) && !/[←-↙⇐-⇙]/.test(src + ui + block), 'no em dash or arrow');
-  ok(/@media \(orientation:landscape\) and \(max-height:420px\)\{\n  \.learn-row\.three \.btn\{padding-block:4px;line-height:1\.05\}/.test(css), 'in thirds on a narrow phone the row stays 44px');
+  ok(/\.hp-settings\.grown \.set-half\{grid-column:auto\}/.test(css) && /\.hp-settings #b-grown\{align-self:end;min-height:44px\}/.test(css), 'Grown-Ups shares Half Length\'s row in Settings, in equal halves, 44px');
 }
 
 // 12. the contracts with the other builders

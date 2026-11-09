@@ -756,15 +756,25 @@ function importOthers(t) {
 }
 /* The Import Club card: beside Create Team while there is room for a team, and kept with four made while a league is
    saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is on sale (storeOffered). */
-function importCard() { return (custom.length < MAX_CUSTOM || importLeague) && storeOffered('import') ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
+const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
+function importCard() { return importShown() ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
+/* The home's Import Data, at the top beside My Team: the same card, shown where Import Club would be (room for a team, or a league to
+   refresh or remove, and in the app only once a Super Fan club is on sale), with its lock while Import is locked. */
+function importHome() {
+  const b = $('b-import'), on = importShown();
+  if (b.hidden === on) b.hidden = !on;
+  storeMark(b, 'import');
+}
+$('b-import').addEventListener('click', () => { ac(); importOpen(); });
 function importBind() {
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
 }
 
 /* ---------- the Import Club card ----------
    web: the app is needed. link: paste, then Import (a grown-up check first). busy: fetching. preview: the club, its
-   colours and the league's size, then Save. The card hides while the grown-up check is up, so the two never stack. */
-let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0 };
+   colours and the league's size, then Save. mine: a club saved, Make This My Team | Not Now. The card hides while the grown-up
+   check is up, so the two never stack. from: 'home' (Import Data) or 'teams' (Import Club), where it closes to. */
+let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0, from:'teams', club:null, sides:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
 const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
 /* The control a step starts on: the link field (on a touch screen Import, so no keyboard springs up over the card),
@@ -772,7 +782,7 @@ const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(poi
 function importFocusEl(button) {
   const s = importUi.step;
   if (s === 'link') return !button && !importTouch() ? $('im-url') : button && !$('im-paste').hidden ? $('im-paste') : $('im-go');
-  return s === 'preview' ? $('im-go') : $('im-back');
+  return s === 'preview' ? $('im-go') : s === 'mine' ? $('im-make') : $('im-back');
 }
 function importFocus() {
   const el = importFocusEl(false);
@@ -781,13 +791,18 @@ function importFocus() {
 DEFAULT_FOCUS['m-import'] = () => importFocusEl(true);
 function importOpen() {
   if (!storeGate('import', importOpen)) return;            // Import comes with Super Fan (src/store.js); a league already saved stays
-  importUi = { step:importHttp() ? 'link' : 'web', data:null, draft:null, pick:false, err:'', armed:false, token:importUi.token + 1 };
+  importUi = { step:importHttp() ? 'link' : 'web', data:null, draft:null, pick:false, err:'', armed:false, token:importUi.token + 1, from:$('s-home').hidden ? 'teams' : 'home', club:null, sides:0 };
   $('im-url').value = '';
   importRender();
   $('m-import').hidden = false;
   importFocus();
 }
-function importClose() { importUi.token++; $('m-import').hidden = true; renderTeams(); }
+function importClose() {
+  importUi.token++; $('m-import').hidden = true;
+  if (importUi.from !== 'home') { renderTeams(); return; }
+  renderHome();                                            // My Team and Import Data as they now are, the focus back on Import Data
+  const b = $('b-import'); if (b && !b.hidden && typeof b.focus === 'function') b.focus();
+}
 let importGateHook = null;                               // the tests' stand-in for the grown-up check
 function importGate(go, cancel) {
   if (importGateHook) importGateHook(go, cancel);
@@ -822,28 +837,42 @@ async function importRun(href, token, opts) {
 function importCommit() {
   const u = importUi; if (u.step !== 'preview' || !u.data) return;
   const res = importSave(u.data, u.draft || {});
-  if (res.added) {                                         // as Save Team: a club made from Quick Match or Player 1's pick is the one played as
-    if (pickMode === 'quick' && quickAuto) { quickPick = res.club; quickAuto = false; }
+  if (res.added && u.from !== 'home') {                    // as Save Team: a club made while Player 1 picks his side is the one played as
+    if (pickMode === 'quick' && !quickPick) quickPick = res.club;
     else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; }
   }
+  if (res.club && !myIs(res.club)) {                       // a club in: Make This My Team | Not Now
+    u.step = 'mine'; u.club = res.club; u.sides = res.sides; u.data = null; u.token++;
+    importRender(); importFocus(); return;
+  }
+  importDone(res.sides);
+}
+function importDone(sides) {
   importClose();
-  if (res.sides) { settings.pool = IMPORT_POOL; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top
+  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top
+}
+function importOffer(make) {                                 // the offer answered: the club is My Team's, or not
+  const u = importUi; if (u.step !== 'mine') return;
+  if (make && u.club) { settings.myClub = keyOf(u.club); save(); }
+  importDone(u.sides);
 }
 function importRender() {
-  const u = importUi, s = u.step, web = s === 'web', busy = s === 'busy', pre = s === 'preview';
+  const u = importUi, s = u.step, web = s === 'web', busy = s === 'busy', pre = s === 'preview', mine = s === 'mine';
   const c = pre && u.data.club, sides = pre ? importSides(u.data) : [], n = sides.length;
-  $('im-title').textContent = web ? 'Import Works in the Try Line App' : pre ? (c ? importShort(c.name) : 'My League') : 'Paste Your Link';
+  $('im-title').textContent = mine ? u.club.name : web ? 'Import Works in the Try Line App' : pre ? (c ? importShort(c.name) : 'My League') : 'Paste Your Link';
+  $('im-mine').hidden = !mine; $('im-row').hidden = mine;
+  $('im-back').textContent = u.from === 'home' ? 'Back to Menu' : 'Back to Teams';
   $('im-line').hidden = !web;
-  $('im-field').hidden = web || pre;
+  $('im-field').hidden = web || pre || mine;
   $('im-url').disabled = busy;
   $('im-paste').hidden = !importCanPaste(); $('im-paste').disabled = busy;
-  $('im-err').hidden = !u.err || pre; $('im-err').textContent = u.err;
-  $('im-jersey').hidden = !c; $('im-jersey').innerHTML = c ? jersey(u.draft) : '';
+  $('im-err').hidden = !u.err || pre || mine; $('im-err').textContent = u.err;
+  $('im-jersey').hidden = !c && !mine; $('im-jersey').innerHTML = c ? jersey(u.draft) : mine ? jersey(u.club) : '';
   $('im-league').hidden = !n;
   $('im-league').innerHTML = n ? sides.slice(0, 12).map(t => jersey(t, 'mini')).join('') + `<span class="lbl">My League · ${n} Team${n === 1 ? '' : 's'}</span>` : '';
   $('im-cols').hidden = !(c && u.pick);
   for (const [id, key] of [['im-kit', 'kit'], ['im-trim', 'trim']]) for (const b of $(id).querySelectorAll('.sw')) b.setAttribute('aria-pressed', String(!!u.draft && b.dataset.c === u.draft[key]));
-  $('im-go').hidden = web; $('im-go').disabled = busy;
+  $('im-go').hidden = web || mine; $('im-go').disabled = busy;
   $('im-go').textContent = busy ? 'Importing' : pre ? (c ? 'Save Club' : 'Save League') : 'Import';
   const alt = pre ? 'Change Link' : importLeague && !busy ? (u.armed ? 'Confirm Remove' : 'Remove League') : '';
   $('im-alt').hidden = !alt; $('im-alt').textContent = alt; $('im-alt').classList.toggle('warn', !pre);
@@ -866,6 +895,8 @@ for (const [id, key] of [['im-kit', 'kit'], ['im-trim', 'trim']]) {
 $('im-go').addEventListener('click', importGo);
 $('im-alt').addEventListener('click', importAlt);
 $('im-back').addEventListener('click', importClose);
+$('im-make').addEventListener('click', () => importOffer(true));
+$('im-not').addEventListener('click', () => importOffer(false));
 $('im-url').addEventListener('input', () => { if (importUi.err) { importUi.err = ''; importRender(); } });
 $('im-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); importGo(); } });
 $('im-paste').addEventListener('click', async () => {

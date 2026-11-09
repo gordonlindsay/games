@@ -138,48 +138,70 @@ function onOrientation() { if (uprightPhone.matches) phoneUpright(); }
 if (uprightPhone.addEventListener) uprightPhone.addEventListener('change', onOrientation);
 else if (uprightPhone.addListener) uprightPhone.addListener(onOrientation);
 
-/* home. Quick Match is the gold button and the keyboard focus. */
+/* home. Five headlines along the bottom in equal parts (HOME_HL: Game, Championship, Career, Training Drills, Settings), the chosen
+   one's buttons above them, big, and My Team, the Locker and Import Data at the top beside the logo. The headline last chosen is
+   kept (settings.hl). The first press of a controller, and the focus, land on the chosen headline's first button: Quick Match on
+   Game. Left and Right move along the bar (the arrow keys, or a controller's ring), and pressing a headline shows its buttons. */
 const BOOL = { sound:1, hints:1, coach:1 };
+const homeHl = () => (HOME_HL.includes(settings.hl) ? settings.hl : 'game');
 function renderHome() {
   storeRender();                                           // the locks, Grown-Ups and the Super Fan badge (src/ui-store.js); nothing on the web today
-  renderCabinet('home-history');
-  $('home-cabinet').hidden = !champHistory.length;
+  const hl = homeHl();
+  for (const k of HOME_HL) {
+    const tab = $('hl-' + k), on = k === hl;
+    tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1;   // one stop on the bar for Tab; the arrow keys move along it
+    $('hp-' + k).hidden = !on;
+  }
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
     const val = key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
-  const note = $('champ-note');
-  const live = champ && champ.teams && champ.teams[champ.user] && champ.round < 5;
-  const done = champ && champ.teams && champ.teams[champ.user] && champ.round >= 5;
-  if (cup && typeof cupNote === 'function') {                // a cup under way, or finished and not yet put away (src/ui-cups.js)
-    $('b-champ').textContent = cupFixture(cup) ? 'Continue Championship' : 'Final Result';
-    cupHomeNote(note, cup);
-  } else if (live) {
-    $('b-champ').textContent = 'Continue Championship';
-    homeNote(note, champNote(champ), champ.teams[champ.user].name);
-  } else if (done) {
-    $('b-champ').textContent = 'Final Table';
-    homeNote(note, champNote(champ), champ.teams[champ.user].name);
-  } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
+  myHome();
+  champHome();
   renderCareerHome();
   lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
+  if (typeof importHome === 'function') importHome();      // Import Data, where Import Club would show (src/import.js)
 }
-/* A note under Championship or Career. The team's name (and its separator) is a span of its own, which a phone held sideways
-   leaves out (styles.css), so the note stays one line under its half: Round 2 of 5, Minis · Round 1 of 5. */
+/* A note under Continue Championship or Continue Career: Bath · Round 2 of 5. The team's name (and its separator) is a span of its own
+   (.rn-name); under a button the panel's width the note keeps it, and a long one ends in an ellipsis on a phone held sideways (styles.css). */
 function homeNote(el, text, name) {
   const i = name ? text.indexOf(name + ' · ') : -1;
   el.innerHTML = i < 0 ? esc(text) : esc(text.slice(0, i)) + '<span class="rn-name">' + esc(name + ' · ') + '</span>' + esc(text.slice(i + name.length + 3));
   el.hidden = false;
 }
-function goHome() {
+/* The chosen headline's first button that can be pressed: where the focus and a controller's first press land. */
+function homeFirst() {
+  const p = $('hp-' + homeHl());
+  const live = b => !b.hidden && !b.disabled && !(b.closest && b.closest('[hidden]')) && (!b.getBoundingClientRect || b.getBoundingClientRect().width > 0);
+  return (p && p.querySelectorAll && [...p.querySelectorAll('.btn, .seg button')].find(live)) || $('hl-' + homeHl());
+}
+DEFAULT_FOCUS['s-home'] = homeFirst;
+function goHome(focus) {
   if (typeof nativePutBack === 'function') nativePutBack();   // the app: a save Preferences gave back late goes in first (native.js)
   navOnly = null;
   renderHome();
   showScreen('s-home');
-  const b = $('b-quick');
+  homeFit();
+  const b = focus && !focus.hidden && !(focus.closest && focus.closest('[hidden]')) ? focus : homeFirst();
   if (b && typeof b.focus === 'function') b.focus();
 }
+/* A headline picked: its buttons show and it is remembered. focus: where the focus goes after (the headline itself, from the bar). */
+function homeSelect(k, focus) {
+  if (!HOME_HL.includes(k)) return;
+  if (settings.hl !== k) { settings.hl = k; save(); }
+  renderHome();
+  if (focus && typeof focus.focus === 'function') focus.focus();
+}
+function homeShow(k, focus) { if (HOME_HL.includes(k) && settings.hl !== k) { settings.hl = k; save(); } goHome(focus); }   // the home, on a headline (New Championship: Championship, where the competitions are)
+for (const k of HOME_HL) $('hl-' + k).addEventListener('click', () => { ac(); homeSelect(k, $('hl-' + k)); });
+$('hl-bar').addEventListener('keydown', e => {             // Left and Right along the bar (Home and End to its ends), each headline shown as it is reached
+  const i = HOME_HL.indexOf(homeHl());
+  const j = e.key === 'ArrowRight' ? Math.min(i + 1, HOME_HL.length - 1) : e.key === 'ArrowLeft' ? Math.max(i - 1, 0) : e.key === 'Home' ? 0 : e.key === 'End' ? HOME_HL.length - 1 : -1;
+  if (j < 0) return;
+  if (e.preventDefault) e.preventDefault();
+  homeSelect(HOME_HL[j], $('hl-' + HOME_HL[j]));
+});
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
@@ -190,22 +212,103 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
     if (key === 'sound' && settings.sound) ac();
   }));
 }
+
+/* My Team: your club and your country, picked once on the team screen (openTeams('my')) and kept as settings.myClub and myNat. A club is
+   any side the team picker offers bar a nation: a national league's, Local's, one you made or imported, or a side of My League. Unset,
+   or gone (a team deleted, its league removed), it is the Super Fan's club or Farnham, as the game always started; the country unset is
+   England. Quick Match and 2 Players only offer it first in Player 1's list, marked My Team, and never pick it; Championship (the club
+   for a league, the country for an international competition) and a new Career pick it for you, to change there. */
+function myClubFind(k) {
+  if (typeof k !== 'string' || !k) return null;
+  return custom.find(t => t.key === k) || (importLeague && importLeague.teams.find(t => keyOf(t) === k))
+    || TEAM_LISTS.filter(l => l.tier > 0).map(l => l.teams.find(t => t.id === k)).find(Boolean) || null;
+}
+const myClubTeam = () => myClubFind(settings.myClub) || storeHomeTeam();
+function myNatTeam(cat) { const id = settings.myNat || 'ENG'; return cat ? natList(cat).find(n => n.id === id) || null : NATIONS.find(n => n.id === id); }   // in the category's twelve, or null (Canada on Men)
+function myPool() {                                       // the list My Team's club is on: a built-in list, My League, or (a team you made, which follows every list) null
+  const t = myClubTeam();
+  if (t.custom) return null;
+  if (importLeague && importLeague.teams.includes(t)) return IMPORT_POOL;
+  const l = TEAM_LISTS.find(x => x.tier > 0 && x.teams.includes(t));
+  return l ? l.key : 'sur';
+}
+const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat || 'ENG') : keyOf(t) === keyOf(myClubTeam()) && !t.custom === !myClubTeam().custom);
+function myHome() {                                        // the home's My Team: the club's and the country's shirts and names
+  const c = myClubTeam(), n = myNatTeam(null);
+  $('my-kits').innerHTML = [c, n].map(t => `<span class="my-side">${jersey(t, 'mini')}<b>${esc(listName(t))}</b></span>`).join('');
+  $('b-my').setAttribute('aria-label', 'My Team: ' + listName(c) + ', ' + listName(n));
+  homeFit();
+}
+function homeFit() {                                       // long names (Christchurch, South Africa) step down together until both fit, once the home has a size
+  const box = $('my-kits'); if ($('s-home').hidden || !box.style || !box.querySelectorAll) return;
+  box.style.fontSize = '';
+  const names = [...box.querySelectorAll('b')], over = () => names.some(b => b.scrollWidth > b.clientWidth + 0.5);
+  let px = parseFloat(getComputedStyle(box).fontSize) || 19;
+  while (over() && px > 12) { px -= 1; box.style.fontSize = px + 'px'; }
+}
+$('b-my').addEventListener('click', () => { ac(); openTeams('my'); });
+
+/* Championship's buttons: Continue first while a championship or a cup is saved (its hub then has New Championship or Start Fresh);
+   otherwise International | National | Local, the team screen's tier names, and that tier's competitions: the nation's championship
+   (its six), the World Cup and the Home Nations Tour; each national league, a trophy on the four that lead to the European Cup; Surrey
+   and My League. Each goes to the team screen with only that competition's sides. The Trophy Cabinet is here too. All of it is the
+   Full Game's but the Trophy Cabinet (src/store.js). */
+let homeTier = null;                                       // the tier on show, while the game runs: first the one My Team's club is on
+const champComps = tier => (tier === 0 ? [['int', 'Championship'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']]
+  : tier === 1 ? TEAM_LISTS.filter(l => l.tier === 1).map(l => [l.key, l.name])
+  : [['sur', 'Surrey'], ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
+$('hc-tier').innerHTML = TEAM_TIERS.map((n, i) => `<button data-tier="${i}">${n}</button>`).join('');   // plain words (data.js)
+for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => { homeTier = +b.dataset.tier; champHome(); });
+function champHome() {
+  const note = $('champ-note');
+  const live = champ && champ.teams && champ.teams[champ.user] && champ.round < 5;
+  const done = champ && champ.teams && champ.teams[champ.user] && champ.round >= 5;
+  const saved = !!cup || !!live || !!done;
+  $('hc-go').hidden = !saved; $('hc-new').hidden = saved;
+  if (cup && typeof cupHomeNote === 'function') {           // a cup under way, or finished and not yet put away (src/ui-cups.js)
+    $('b-champ').textContent = cupFixture(cup) ? 'Continue Championship' : 'Final Result';
+    cupHomeNote(note, cup);
+  } else if (live) {
+    $('b-champ').textContent = 'Continue Championship';
+    homeNote(note, champNote(champ), champ.teams[champ.user].name);
+  } else if (done) {
+    $('b-champ').textContent = 'Final Table';
+    homeNote(note, champNote(champ), champ.teams[champ.user].name);
+  } else { $('b-champ').textContent = 'Continue Championship'; note.hidden = true; }
+  storeMark($('b-champ'), 'champ');
+  if (homeTier == null) homeTier = poolTier(myPool() || 'sur');
+  for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.setAttribute('aria-pressed', String(+b.dataset.tier === homeTier));
+  const comps = champComps(homeTier), key = comps.map(c => c[0]).join() + (storeLive() && !storeHas('champ') ? ':locked' : '');
+  const box = $('hc-comps');
+  if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put
+    box.dataset.key = key;
+    box.className = 'hc-comps n' + comps.length;
+    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? '<span class="cup-trophy" data-kind="euro" role="img" aria-label="European Cup"></span>' : ''}<span>${esc(n)}</span></button>`).join('');
+    for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
+  }
+  $('b-cabinet').hidden = !champHistory.length;
+}
+function champPick(k) {
+  ac();
+  if (!storeGate('champ', () => champPick(k))) return;     // locked: the Unlock card
+  if (cup || champ) { $('b-champ').click(); return; }      // one is saved: its own hub (the home shows Continue then)
+  openTeams('champ', k);
+}
 $('b-champ').addEventListener('click', () => {
   ac();
   if (!storeGate('champ', () => $('b-champ').click())) return;   // locked: the Unlock card; a championship under way stays saved
   if (cup) { renderCup(); showScreen('s-cup'); }          // a cup under way (src/ui-cups.js)
   else if (champ) { renderHub(); showScreen('s-hub'); }
-  else openTeams('champ');
+  else { homeSelect('champ'); }
 });
+$('b-cabinet').addEventListener('click', () => { renderCabinet('home-history'); showScreen('s-cabinet'); $('s-cabinet').scrollTop = 0; });
+$('cab-back').addEventListener('click', () => goHome($('b-cabinet')));
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
-$('b-more').addEventListener('click', () => {   // Half Length lives here: 2 Min is the default, the longer halves are a deliberate choice
-  const open = $('set-more').hidden; $('set-more').hidden = !open; $('b-more').setAttribute('aria-expanded', String(open)); $('b-more').textContent = open ? 'Fewer Settings' : 'More Settings';
-});
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
-$('h-back').addEventListener('click', goHome);
+$('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
-$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
-$('t-default').addEventListener('click', () => { const v = teamsView(); pickTeam(v && v.pick ? v.pick : storeHomeTeam()); });   // Farnham, or the Super Fan's club; on a Home Nations Tour, the host in turn
+$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });
+$('t-default').addEventListener('click', () => { const t = teamDefault(); if (t) pickTeam(t); });   // My Team, picked for you in Championship; on a Home Nations Tour, the host in turn
 
 /* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
@@ -272,13 +375,20 @@ function jersey(t, cls) {
 }
 function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i <= v ? 'on' : ''}"></i>`; return `<span class="pips" aria-label="${v} of 5">${s}</span>`; }
 let teamList = [];
+/* Player 1 choosing his own side: Quick Match before his pick, 2 Players' Player 1, and Championship (bar a tour, where his side is the
+   Home Nations and the list is the hosts). My Team is marked there; in Quick Match and 2 Players it is also first in the list. */
+const teamOwnPick = view => (pickMode === 'quick' && !quickPick) || (pickMode === 'two' && twoSel.picking === 0) || (pickMode === 'champ' && !(view && view.comp === 'tour'));
+let teamOwn = false;                                       // renderTeams' teamOwnPick, for the cards it draws
 function teamCard(t, i) {
-  const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
+  const my = pickMode === 'my';
+  const picked = my ? myIs(t) : pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
+  const mine = !my && teamOwn && myIs(t);
   const stars = teamTraitNames(t);                         // the star traits its 5s bring (src/traits.js)
-  const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
+  const state = my ? ` aria-pressed="${picked}"` : picked ? ' aria-disabled="true"' : '';   // My Team's picks stay pressable; Quick Match's own side can't be its opponent
+  const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}"${t.legend ? ' data-legend="1"' : ''}${state}>
       ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(listName(t))}</span>
-      ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
+      ${stronger ? '<span class="gap">Stronger Side</span>' : mine ? '<span class="gap mine">My Team</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
       ${stars.length ? `<span class="tstars" aria-label="Star Traits: ${stars.join(', ')}">${stars.map(n => `<b>${n}</b>`).join(' · ')}</span>` : ''}
     </button>`;
@@ -317,53 +427,79 @@ function catPick(id) {
   settings.cat = id;
   // a nation already picked follows the category to its own side there; one its list does not have (Canada or the USA on Men) is unpicked
   const follow = t => (isNation(t) ? natList(id).find(n => n.id === t.id) || null : t);
-  if (quickPick) { quickPick = follow(quickPick); if (!quickPick) quickAuto = false; }
+  if (quickPick) quickPick = follow(quickPick);
   if (twoSel.teams[0]) { const t = follow(twoSel.teams[0]); twoSel.teams[0] = t || DEFAULT_TEAM; if (!t) twoSel.picking = 0; }
   save(); renderTeams();
 }
-function openTeams(m) {
-  pickMode = m; settings.pool = m === 'champ' ? storeHomePool() : 'sur'; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
-  if (typeof cupCompReset === 'function') cupCompReset();   // Championship opens on League, today's flow (src/ui-cups.js)
+/* The team screen, for m: 'quick' (Quick Match: Player 1's side, then the opponent; nothing picked for him), 'two' (2 Players: Player 1,
+   then Player 2), 'champ' (a competition chosen on the home: comp is 'int' for the nation's championship, 'world', 'tour', or a league's
+   list key; My Team is picked for you on its primary) or 'my' (My Team: the club on National or Local, the country on International).
+   Each opens on My Team's list (a team you made: Local · Surrey, as ever). */
+function openTeams(m, comp) {
+  pickMode = m; quickPick = null;
+  if (m === 'champ') {
+    const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
+    if (typeof cupCompSet === 'function') cupCompSet(cupId);   // the World Cup or the Home Nations Tour have their own sides (src/ui-cups.js)
+    settings.pool = cupId !== 'league' ? 'int' : poolKey(k) === k ? k : 'sur';
+  } else settings.pool = myPool() || 'sur';
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
-/* Championship's World Cup or Home Nations Tour, picked on the team screen's competition row: its title, its list, its side
-   and its primary (src/ui-cups.js); null for League, today's flow, and for every other mode. */
+/* Championship's World Cup or Home Nations Tour, chosen on the home: its title, its list, its side and its primary (src/ui-cups.js);
+   null for a league or the nation's championship, and for every other mode. */
 const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
+const champListName = pool => (pool === 'int' ? 'International' : pool === IMPORT_POOL ? 'My League' : (listOf(pool) || TEAM_LISTS[0]).name);
+/* The side picked for you, on the primary: Championship's My Team (the club, if the league has it or it is one you made; the country on
+   International and in the World Cup), or a tour's host in turn. null where nothing is picked for you: Quick Match, 2 Players, My Team. */
+function teamDefault() {
+  if (pickMode !== 'champ') return null;
+  const view = teamsView();
+  if (view) return view.pick || null;
+  const pool = teamPool();
+  if (pool === 'int') return myNatTeam(settings.cat);
+  const c = myClubTeam();
+  return c.custom || poolTeams(pool).includes(c) ? c : null;
+}
 function renderTeams() {
-  const quick = pickMode === 'quick', pair = pickMode === 'two', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick, view = teamsView();   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
+  const quick = pickMode === 'quick', pair = pickMode === 'two', my = pickMode === 'my', inChamp = pickMode === 'champ', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick, view = teamsView();   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
+  const pool = teamPool(), tier = poolTier(pool), cat = settings.cat, press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
   const eb = $('t-eyebrow');
-  eb.textContent = quick ? 'Quick Match' : pair ? 'Two Player' : 'Championship';
+  eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : my ? 'My Team' : view ? view.name : 'Championship · ' + champListName(pool);
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
-  $('t-title').textContent = view ? view.title : pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
-  const pool = teamPool(), tier = poolTier(pool), press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
-  $('t-comp').hidden = pickMode !== 'champ';               // League | World Cup | Home Nations Tour, Championship only (src/ui-cups.js)
-  press('t-comp', '[data-comp]', b => b.dataset.comp === (view ? view.comp : 'league'));
+  $('t-title').textContent = view ? view.title : pair ? 'Player ' + (p + 1) + ' Team' : my ? (tier === 0 ? 'Pick Your Country' : 'Pick Your Club') : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
   press('t-tier', '[data-tier]', b => +b.dataset.tier === tier);
-  $('t-tier').hidden = !!view;                             // a cup's sides are its own: no lists to pick from
-  $('t-nat').hidden = !!view || tier !== 1; $('t-loc').hidden = !!view || tier !== 2; $('t-league').hidden = !importLeague;
+  $('t-tier').hidden = inChamp;                            // Championship's competition is chosen on the home: its sides only
+  $('t-nat').hidden = inChamp || tier !== 1; $('t-loc').hidden = inChamp || tier !== 2; $('t-league').hidden = !importLeague;
   for (const id of ['t-nat', 't-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
-  press('t-cat', '[data-cat]', b => b.dataset.cat === settings.cat);
-  const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours);
-  $('t-yours').hidden = !yours; $('t-change').hidden = !!view;
+  press('t-cat', '[data-cat]', b => b.dataset.cat === cat);
+  const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours) || my;
+  $('t-yours').hidden = !yours; $('t-change').hidden = !!view || my;
   if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
-  else if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, settings.cat) || mine).name)}</span>`;
-  $('t-default').hidden = view ? !view.pick : quick || pair || pool !== (pickMode === 'champ' ? storeHomePool() : 'sur');
+  else if (my) { const n = myNatTeam(null); $('t-mine').innerHTML = [myClubTeam(), n].map(t => `<span class="my-pair">${jersey(t)}<span>${esc(listName(t))}</span></span>`).join(''); }   // My Team: the club and the country
+  else if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc((catTeam(mine, cat) || mine).name)}</span>`;
+  const def = teamDefault();
+  $('t-default').hidden = !def;
+  $('t-default').textContent = view && view.pick ? view.primary : def ? 'Play as ' + (catTeam(def, cat) || def).name : '';   // the side it starts: Farnham Women on Women
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
-  $('t-default').textContent = view && view.pick ? view.primary : 'Play as ' + catSide(storeHomeTeam(), settings.cat).name;   // the side it starts: Farnham Women on Women
-  teamList = view ? view.list : [...poolTeams(pool), ...custom];   // My League: src/import.js
-  if (!view && poolTeams(pool) === natList(settings.cat) && typeof lockerLegends === 'function') teamList.splice(natList(settings.cat).length, 0, ...lockerLegends(settings.cat));   // International: the Legends unlocked so far, after the nations, for the category in play (src/locker.js); never in a cup's list
-  if (pickMode === 'champ') teamList = storeFirst(teamList);   // the Super Fan's club first (src/store.js); a cup's nations and hosts are never a partner club
+  const nations = my && tier === 0;                        // My Team's country: the category's twelve, no Legends and no club
+  teamList = view ? view.list : nations ? natList(cat).slice() : [...poolTeams(pool), ...custom];   // My League: src/import.js
+  if (!view && !my && poolTeams(pool) === natList(cat) && typeof lockerLegends === 'function') teamList.splice(natList(cat).length, 0, ...lockerLegends(cat));   // International: the Legends unlocked so far, after the nations, for the category in play (src/locker.js); never in a cup's list
+  if (inChamp) teamList = storeFirst(teamList);            // the Super Fan's club first (src/store.js); a cup's nations and hosts are never a partner club
+  else if ((quick || pair) && teamOwnPick(view)) {          // Player 1's list: My Team first (the country on International, the club elsewhere), marked, never picked
+    const i = teamList.findIndex(o => myIs(o) && isNation(o) === (tier === 0));
+    if (i > 0) teamList = [teamList[i], ...teamList.slice(0, i), ...teamList.slice(i + 1)];
+  }
+  teamOwn = teamOwnPick(view);
   let html = teamList.map(teamCard).join('');
-  if (!view && custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
-  if (!view) html += importCard();                         // Import Club, src/import.js
+  if (!view && !nations && custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
+  if (!view && !nations) html += importCard();             // Import Club, src/import.js
   $('t-grid').innerHTML = html;
   for (const b of $('t-grid').querySelectorAll('.team[data-i]')) b.addEventListener('click', () => pickTeam(teamList[+b.dataset.i]));
   for (const b of $('t-grid').querySelectorAll('[data-edit]')) b.addEventListener('click', () => openBuilder(teamList[+b.dataset.edit]));
   const cr = $('t-create'); if (cr) cr.addEventListener('click', () => openBuilder(null));
   importBind();
-  storeTeamsRender();                                      // locks on Create Team, Edit and Import Club (src/ui-store.js)
+  storeTeamsRender();                                      // locks on Create Team, Edit, Import Club and the Legends (src/ui-store.js)
   fitNames();
 }
 /* A name too long for its card steps down in size until its longest word fits. */
@@ -381,6 +517,9 @@ function fitNames() {
    of a match, and a nation is the category's own side (catTeam). */
 const champFrom = (pool, t, cat) => (isNation(t) ? natGroup(t.id, cat) : poolTeams(pool));
 function pickTeam(t) {
+  if (!t) return;
+  if (t.legend && !storeGate('legends', () => pickTeam(t))) return;   // a Legends side is played with the Full Game (src/store.js); unlocked on any tier
+  if (pickMode === 'my') { myPick(t); return; }
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
     if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
     twoSel.teams[1] = t; startTwo(); return;
@@ -393,10 +532,22 @@ function pickTeam(t) {
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
     newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
-  if (quickPick == null) { quickPick = t; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; return; }
+  if (quickPick == null) { quickPick = t; renderTeams(); $('s-teams').scrollTop = 0; return; }   // Player 1's side, picked by him: now the opponent
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
   const us = catTeam(quickPick, settings.cat), them = catTeam(t, settings.cat);
   if (us && them) startMatch(us, them, false);
+}
+
+/* My Team picked on the team screen: a nation is the country, anything else the club. The screen stays, with the pick marked, and the
+   focus (or a controller's ring) stays on the card. */
+function myPick(t) {
+  if (isNation(t)) settings.myNat = t.id; else settings.myClub = keyOf(t);
+  save();
+  const i = teamList.indexOf(t), had = focusEl && focusEl.dataset && focusEl.dataset.i != null, typed = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.i != null;
+  renderTeams();
+  const again = $('t-grid').querySelector && $('t-grid').querySelector(`.team[data-i="${i}"]`);
+  if (again && had) setFocus(again);
+  if (again && typed && again.focus) again.focus();
 }
 
 /* create team */
@@ -441,8 +592,9 @@ function buildBuilder() {
       if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = custom[i];
     } else {
       custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
-      if (pickMode === 'quick' && quickAuto) { quickPick = custom[custom.length - 1]; quickAuto = false; }   // made it to play as it
+      if (pickMode === 'quick' && !quickPick) quickPick = custom[custom.length - 1];   // made while picking his side: he plays as it
       else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; }   // Player 1 made it to play as it
+      else if (pickMode === 'my') settings.myClub = custom[custom.length - 1].key;   // made on My Team: it is the club
     }
     save(); renderTeams(); showScreen('s-teams');
   });
@@ -563,7 +715,7 @@ function renderHub() {
     if (typeof cupEuroHub === 'function' && cupEuroHub(c, rows)) { /* won a European league: Play European Cup or Not Now (src/ui-cups.js) */ }
     else {
       $('hub-next').innerHTML = `<button class="btn primary" id="hub-new">New Championship</button>`;
-      $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); openTeams('champ'); });
+      $('hub-new').addEventListener('click', () => { archiveChampionship(champ); champ = null; save(); homeShow('champ'); });   // the competitions are on the home
     }
     $('hub-hon').innerHTML = honours(c, rows).map(([t, i, gold]) => `<div class="hon${gold ? ' gold' : ''}"><span class="eyebrow">${t}</span><b>${esc(T[i].name)}</b></div>`).join('');
     $('hub-hon').hidden = false;

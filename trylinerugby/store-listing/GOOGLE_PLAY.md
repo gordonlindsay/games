@@ -137,7 +137,7 @@ Full Game
 
 <!-- copy:google.iap.full.description -->
 ```text
-Championship, Career, Create Team and the Hard level. A one-off unlock.
+Championship, Career, Create Team, the Hard level and the Legends sides. A one-off unlock.
 ```
 
 <!-- copy:google.iap.fan.name -->

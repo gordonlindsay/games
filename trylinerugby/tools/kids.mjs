@@ -469,7 +469,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(!/sendBeacon|google-analytics|googletagmanager|gtag\(|doubleclick|adsbygoogle|facebook\.com|connect\.facebook\.net|fbq\(|mixpanel|segment\.io|amplitude/i.test(game), 'no analytics, ads or tracking in the game');
   const priv = fs.readFileSync(new URL('../PRIVACY.md', import.meta.url), 'utf8');
   ok(/no ads/i.test(priv) && /no analytics/i.test(priv) && /tracking/i.test(priv) && /tryline\.v1/.test(priv) && /photo/i.test(priv) && /contact details/i.test(priv) && /Google Fonts/.test(priv), 'PRIVACY.md says what is stored, that nothing is collected, and what import keeps');
-  const gate = html.slice(html.indexOf('id="m-gate"'), html.indexOf('<section class="screen" id="s-practice"'));
+  const gate = html.slice(html.indexOf('id="m-gate"'), html.indexOf('<section', html.indexOf('id="m-gate"')));   // the card, up to the next screen
   ok(!/—/.test(priv + gate) && !/[←-↙]/.test(gate), 'no em dashes or arrows in the new copy');
   ok(/>Ask a Grown-Up</.test(gate) && />Delete</.test(gate) && />Cancel</.test(gate) && /data-back/.test(gate), 'the card\'s labels are Title Case, and Cancel is its Back');
   ok((gate.match(/class="btn" id="pg-k[0-9]"/g) || []).length === 10, 'ten figure keys, each a button the controller reaches');

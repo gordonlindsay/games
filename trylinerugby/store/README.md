@@ -11,8 +11,8 @@ Grown-Ups panel). `node tools/store.mjs` checks them, and runs in `node tools/ch
 
 | Tier | Product id | What it unlocks | Price |
 |---|---|---|---|
-| Free | none | Quick Match, Training Ground (all drills), Kids, Easy, Normal, How to Play, Two Player | free |
-| Full Game | `tryline.full` | Championship, Career, Create Team (and Edit), Hard | £1.99 |
+| Free | none | Quick Match, Training Ground (all drills), Kids, Easy, Normal, How to Play, 2 Players, the Locker (its medals, balls, boots and Legends won), My Team | free |
+| Full Game | `tryline.full` | Championship, Career, Create Team (and Edit), Hard, playing the Legends sides (`legends`) | £1.99 |
 | Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Import Club, and the Super Fan badge: the club's shirt and name on the home, and the club offered first in Career and Championship | £3.99 |
 
 All of them are **non-consumable** in-app purchases. There is no generic `tryline.fan`: every Super Fan product belongs to one

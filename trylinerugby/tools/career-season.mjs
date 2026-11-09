@@ -634,6 +634,15 @@ async function browserChecks() {
         return out;
       }, PRELUDE + '\n' + STATES['draw-world']);
       ok(json(pad) === json(['cd-back', 's-career']), `${w}x${h}: a controller on the draw lands on Back to Career, and Back goes to the hub (${json(pad)})`);
+      // a World Cup's knockouts on the career's draw: the Pools button (its own id, not the Championship hub's) swaps the pools in, Bracket swaps back
+      const swap = await page.evaluate(src => {
+        (0, eval)(src);
+        const b = () => document.getElementById('cd-pools'), out = [b() && b().textContent, !!document.querySelector('#cd-draw .cup-bracket')];
+        b().click(); out.push(b() && b().textContent, !!document.querySelector('#cd-draw .cup-pools'));
+        b().click(); out.push(b() && b().textContent, !!document.querySelector('#cd-draw .cup-bracket'), document.querySelectorAll('#cup-pools').length);
+        return out;
+      }, PRELUDE + '\n' + STATES['draw-world-ko']);
+      ok(json(swap) === json(['Pools', true, 'Bracket', true, 'Pools', true, 0]), `${w}x${h}: a career's World Cup draw swaps Pools and Bracket with its own button (${json(swap)})`);
       ok(!errors.length, `${w}x${h}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }

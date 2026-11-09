@@ -288,9 +288,9 @@ begin('cards');
   fresh({ humans:[true, true], levels:[1, 1] }); D.pause(); ok($('pz-hl0').textContent === 'Player 1 Hints' && !$('pz-hrow1').hidden, 'two player paused: a row each'); D.resume(); D.setTwo(false);
   // the markup: the home's fourth row, the pause rows, the penalty sublines, the two cards, the Help entries, Replay Tutorial beside Back to Menu
   const home = html.slice(html.indexOf('id="s-home"'), html.indexOf('id="s-teams"'));
-  const rows = [...home.matchAll(/<div class="set"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"[^>]*>/g)].map(m => m[1] + ':' + m[2]);
-  ok(rows.join() === 'Difficulty:diff,Sound:sound,Match Help:hints', `the home's rows: ${rows.join(', ')}`);
-  ok(/<div class="set more" id="set-more" hidden><span class="lbl">Half Length<\/span><div class="seg" data-key="half">/.test(home) && /<button class="btn more-btn" id="b-more" aria-expanded="false">More Settings<\/button>/.test(home), 'Half Length waits behind More Settings, hidden until asked for');
+  const rows = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"[^>]*>/g)].map(m => m[1] + ':' + m[2]);
+  ok(rows.join() === 'Difficulty:diff,Sound:sound,Match Help:hints,Half Length:half', `the home's Settings rows: ${rows.join(', ')}`);
+  ok(/<div class="hl-panel hp-settings settings" id="hp-settings"[^>]*>[\s\S]*<div class="set set-half"><span class="lbl">Half Length<\/span><div class="seg" data-key="half"><button>2 Min<\/button><button>4 Min<\/button><button>6 Min<\/button><\/div><\/div>/.test(home) && !/id="b-more"|id="set-more"/.test(home) && T.debug.settings().half === 0, 'Half Length is in Settings under the others (it was behind More Settings), 2 Min the default');
   ok(T.debug.settings && JSON.parse(JSON.stringify(T.debug.settings())).half !== undefined, 'settings carry a half length');
   ok(/<div class="hc" id="hc0" hidden>/.test(html) && /<div class="hc s1" id="hc1" hidden>/.test(html) && /id="ht0"/.test(html) && /id="ht1"/.test(html), 'two cards, #hc0 and #hc1, each with its tick');
   ok(/id="pz-h0"/.test(html) && /id="pz-h1"/.test(html) && /Player 2 Hints/.test(html), 'the pause card carries the Hints rows');

@@ -383,7 +383,7 @@ function champAt4(userWins) {
   L.open(3); const leg = $('lk-body').innerHTML;
   ok(/New Zealand/.test(leg) && /1987/.test(leg) && (leg.match(/lk-leg lk-off/g) || []).length === 18 && /lk-padlock/.test(leg) && /lk-need[^<]*<i class="lk-pip t3 on"[^>]*><\/i>2</.test(leg), 'Legends: the unlocked sides, the rest a padlock and the Gold count each needs');
   $('lk-back').click(); ok(!$('s-home').hidden && $('s-locker').hidden, 'Back to Menu goes home');
-  ok(/<header class="mark">[\s\S]*<button class="btn lk-home" id="b-locker">[\s\S]*Locker<\/button>\s*<\/header>/.test(html), 'the home button reads Locker, with the logo');
+  ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my"[^>]*>[\s\S]*?<\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Import Data<\/button>\s*<\/div>/.test(html), 'the home button reads Locker, at the top beside My Team and Import Data (the home\'s headlines, ui-menus.js)');
   ok(/id="lk-back" data-back>Back to Menu</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Menu is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
   ok(![src, css].some(s => /[\u2014\u2190-\u21ff]/.test(s)), 'no em dash and no arrow in the Locker\'s code or styles');
 }
@@ -471,27 +471,28 @@ async function browserChecks() {
       const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
       await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
-      // the home: desk or not (Two Player), the app or the web (Grown-Ups), and a championship and a career under way (their notes)
+      // the home: desk or not (2 Players), the app or the web (Grown-Ups, Import Data), and a championship and a career under way, on every
+      // headline: the Locker sits in the top row beside My Team, on screen, at least 44px, touching no other button, and the home fits
       const rows = await page.evaluate(() => {
         const T = window.__tryline, X = T.teams, out = [];
-        const box = el => el.getBoundingClientRect(), vis = el => !el.hidden && box(el).width > 0;
-        for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) {
+        const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && box(el).width > 0;
+        for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) for (const hl of T.home.HL) {
           T.store.setNative(app); T.store.setStarted(app); if (app) T.store.setBought(['tryline.full']);
           if (busy) { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); } else { X.setChamp(null); T.career.set(null); }
-          document.body.classList.toggle('desk', desk); T.debug.goHome();
-          const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk);
-          const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b) && !b.closest('.settings'));
+          document.body.classList.toggle('desk', desk); T.debug.settings().hl = hl; T.debug.goHome();
+          const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk), top = box(document.getElementById('home-top'));
+          const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b));
           const overlap = others.some(b => { const q = box(b); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; });
-          const rowsOk = [...s.querySelectorAll('.stack > .row2')].map(row => [...row.querySelectorAll(':scope > button, :scope > .col > button')].filter(vis).map(box)).every(bs => bs.length >= 2 && bs.length <= 3 && bs.every(q => Math.abs(q.width - bs[0].width) < 1 && Math.abs(q.top - bs[0].top) < 1 && q.height >= 44));
-          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : ''), fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth, lk:vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0, overlap, rowsOk,
-            quick:Math.abs(box(document.getElementById('b-quick')).width - box(document.querySelector('#s-home .stack')).width) < 1 });
+          const bar = [...document.querySelectorAll('#hl-bar .hl')].map(box), panel = box(document.getElementById('hp-' + hl));
+          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : '') + '+' + hl, fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth, lk:vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0 && r.top >= top.top - 1 && r.bottom <= top.bottom + 1, overlap,
+            rows:bar.length === 5 && bar.every(q => Math.abs(q.width - bar[0].width) < 1.5 && Math.abs(q.top - bar[0].top) < 1 && q.height >= 44) && (hl !== 'game' || Math.abs(box(document.getElementById('b-quick')).width - panel.width) < 1) });
         }
-        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.goHome();
+        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.settings().hl = 'game'; T.debug.goHome();
         return out;
       });
-      ok(rows.length === 8 && rows.every(r => r.fits), `${w}x${h}: the home fits without a scroll in every state (${rows.filter(r => !r.fits).map(r => r.state).join(', ') || 'all eight'})`);
-      ok(rows.every(r => r.lk && !r.overlap), `${w}x${h}: Locker is on screen, at least 44px, touching no other button, in every state`);
-      ok(rows.every(r => r.rowsOk && r.quick), `${w}x${h}: Quick Match takes its row; every other row is two or three equal buttons, level and 44px, in every state`);
+      ok(rows.length === 40 && rows.every(r => r.fits), `${w}x${h}: the home fits without a scroll in every state, on every headline (${rows.filter(r => !r.fits).map(r => r.state).join(', ') || 'all forty'})`);
+      ok(rows.every(r => r.lk && !r.overlap), `${w}x${h}: Locker is in the top row, on screen, at least 44px, touching no other button, in every state (${rows.filter(r => !r.lk || r.overlap).map(r => r.state).join(', ') || 'all'})`);
+      ok(rows.every(r => r.rows), `${w}x${h}: the five headlines are equal and level, 44px at least, and Quick Match takes its row, in every state (${rows.filter(r => !r.rows).map(r => r.state).join(', ') || 'all'})`);
       // the Locker: each tab with nothing, some and everything earned
       const tabs = await page.evaluate(() => {
         const L = window.__tryline.locker, out = [];
@@ -568,29 +569,29 @@ async function browserChecks() {
       const pair = mode => [modes.find(r => r.mode === mode && !r.medals), modes.find(r => r.mode === mode && r.medals)];
       ok(modes.length === 8 && modes.every(r => r.rows === (r.medals ? 7 : 0)) && pair('two').every(r => r.extra === 'br-series+br-row') && ['champ', 'career'].every(m => pair(m).every(r => r.extra === 'br-pts')), `${w}x${h}: each mode's card, with no medal row and with six medals and the new Legends (${json(modes.map(r => [r.mode, r.rows, r.extra]))})`);
       ok(['quick', 'two', 'champ', 'career'].every(m => { const [a, b] = pair(m); return b.over <= Math.max(0, a.over); }), `${w}x${h}: the medals never make the full-time card taller, in any mode (scroll without and with: ${json(['quick', 'two', 'champ', 'career'].map(m => [m, ...pair(m).map(r => r.over)]))})`);
-      // the Trophy Cabinet (a championship finished; last, since it stays): the home scrolled with one before the Locker, so the Locker
-      // must add nothing to it, in any of the eight states
+      // the Trophy Cabinet (a championship finished; last, since it stays): a button in Championship's panel now, so the Locker beside it
+      // adds no height in any of the eight states
       const cab = await page.evaluate(() => {
         const T = window.__tryline, X = T.teams, out = [];
-        const box = el => el.getBoundingClientRect(), vis = el => !el.hidden && box(el).width > 0;
+        const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && box(el).width > 0;
         X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ();
         for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; }
         X.setChamp(c); X.save(); X.load();
         for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) {
           T.store.setNative(app); T.store.setStarted(app); if (app) T.store.setBought(['tryline.full']);
           if (busy) { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); } else { X.setChamp(null); T.career.set(null); }
-          document.body.classList.toggle('desk', desk); T.debug.goHome();
+          document.body.classList.toggle('desk', desk); T.debug.settings().hl = 'champ'; T.debug.goHome();
           const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk);
-          const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b) && !b.closest('.settings'));
+          const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b));
           const overlap = others.some(b => { const q = box(b); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; });
           const withIt = s.scrollHeight; lk.style.display = 'none'; const without = s.scrollHeight; lk.style.display = '';
-          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : ''), cab:vis(document.getElementById('home-cabinet')), grow:withIt - without, scroll:withIt - s.clientHeight,
+          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : ''), cab:vis(document.getElementById('b-cabinet')), grow:withIt - without, scroll:withIt - s.clientHeight,
             lk:vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0, overlap });
         }
-        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.goHome();
+        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.settings().hl = 'game'; T.debug.goHome();
         return out;
       });
-      ok(cab.length === 8 && cab.every(r => r.cab && r.grow <= 0), `${w}x${h}: with a Trophy Cabinet the Locker adds no height to the home, in every state (${json(cab.map(r => [r.state, r.grow, r.scroll]))})`);
+      ok(cab.length === 8 && cab.every(r => r.cab && r.grow <= 0 && r.scroll <= 0), `${w}x${h}: with a Trophy Cabinet the Locker adds no height and the home does not scroll, in every state (${json(cab.map(r => [r.state, r.grow, r.scroll]))})`);
       ok(cab.every(r => r.lk && !r.overlap), `${w}x${h}: and Locker is on screen, at least 44px, touching no other button`);
       ok(!errors.length, `${w}x${h}: no page errors (${errors.join('; ')})`);
       await ctx.close();
