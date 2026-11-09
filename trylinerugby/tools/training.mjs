@@ -159,6 +159,39 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
   ok(chestStart >= 5 && start, 'Circle: the Runner\'s first pass is timed on the same ring, and a chest pass counts');
   H.reseed(5); P.start('circle'); $('pr-runner').click(); { const Cc = P.state().circle, first = st => {}; for (let i = 0; i < 400 && Math.abs(X.circleStartE(Cc)) > 0.05; i++) T.update(STEP); inp.aPressed = true; T.update(STEP); ok(Cc.stage === 'race' && Cc.v > 3, `Circle: a Runner off a chest pass gets away already moving (${Cc.v.toFixed(1)} m/s)`); } P.leave();
   H.reseed(5); P.start('circle'); $('pr-runner').click(); { const Cc = P.state().circle; for (let i = 0; i < 400 && Math.abs(X.circleStartE(Cc)) < 0.4; i++) T.update(STEP); inp.aPressed = true; T.update(STEP); ok(Cc.stage === 'race' && Cc.v < 3, 'Circle: off a mistimed pass the Runner starts from standing'); } P.leave(); }
+{ // the Runner's passers: each pass graded at random as yours are as the Passer, with the same words and flights, the ball's lap held to the step
+  const K = X.CIRCLE, G = ['Perfect', 'Good', 'Early', 'Late'], count = Object.fromEntries(G.map(g => [g, [0, 0, 0, 0, 0]])), tags = new Set(), plans = {};
+  let worst = 0, exact = true, laps = 0, flights = true;
+  const round = (Cc, r) => {                               // round r on its own: a chest start and a runner who stands still, so the ball always goes all the way round
+    Cc.round = r; X.KIT.circle.role('runner');
+    for (let i = 0; i < 400 && Cc.stage === 'start'; i++) { stick(0, 0); if (Math.abs(X.circleStartE(Cc)) < 0.05) inp.aPressed = true; T.update(STEP); }
+    const plan = Cc.plan.slice(1).map(q => q.grade); let prev = 0;
+    for (let i = 0; i < 3000 && !Cc.ballHome && Cc.stage === 'race'; i++) {
+      stick(0, 0); prev = Cc.t; const f = Cc.fly; T.update(STEP); for (const t of T.M.tags) tags.add(t.text);
+      if (Cc.fly && Cc.fly !== f && Cc.fly.from > 0) { const g = Cc.plan[Cc.fly.from].grade, a = Cc.men[Cc.fly.from], b = X.circleSpot(Cc.fly.to, Cc.R), want = Math.max(0.12, Math.hypot(b.x - a.x, b.y - a.y)/(g === 'Perfect' ? K.fast : g === 'Early' ? K.slow : K.good)); if (Math.abs(Cc.fly.T - want) > 1e-9 || Cc.fly.rushed !== (g === 'Early')) flights = false; }
+    }
+    const lap = prev + STEP*X.PACE.live, v = T.contact.maxSpeed(Cc.men[0]), cal = (X.circleLap(Cc.R)/v + v/(2*K.acc))*K.runF[r - 1];
+    worst = Math.max(worst, Math.abs(lap/cal - 1)); if (Math.abs(lap - Cc.lapT) > 1e-6) exact = false; laps++;
+    return plan;
+  };
+  for (let seed = 1; seed <= 16; seed++) {
+    H.reseed(seed*613); P.start('circle'); $('pr-runner').click();
+    const Cc = P.state().circle, mine = [];
+    for (let r = 1; r <= K.rounds; r++) { const plan = round(Cc, r); plan.forEach(g => count[g][r - 1]++); mine.push(plan.join()); }
+    plans[seed] = mine.join('|'); P.leave();
+  }
+  ok(G.every(g => count[g].reduce((a, b) => a + b, 0) > 0), 'Circle, Runner: the CPU passers throw every grade over a run of seeds (' + G.map(g => g + ' ' + count[g].join('/')).join(', ') + ')');
+  ok(['Chest', 'Good', 'Too High', 'Too Low', 'Fumble'].every(w => tags.has(w)), 'Circle, Runner: and say so as you do, Chest, Good, Too High, Too Low, and Fumble at the catcher (' + [...tags].join(', ') + ')');
+  ok(flights, 'Circle, Runner: each CPU pass flies as yours does: Chest quick, Too High slow and fumbled, Good and Too Low at the Good pace');
+  ok(count.Perfect[3] + count.Perfect[4] > count.Perfect[0] + count.Perfect[1] && count.Early[0] + count.Early[1] > count.Early[3] + count.Early[4], 'Circle, Runner: more Chest passes in the late rounds, more fumbles in the early ones');
+  ok(exact && worst < 0.05, `Circle, Runner: every round's lap is the one it was before the grades, to the step, inside 5% of the calibrated time (${laps} laps, worst ${(worst*100).toFixed(1)}%)`);
+  { H.reseed(7*613); P.start('circle'); $('pr-runner').click(); const Cc = P.state().circle, again = []; for (let r = 1; r <= K.rounds; r++) again.push(round(Cc, r).join()); P.leave();
+    ok(again.join('|') === plans[7], 'Circle, Runner: the same seed throws the same passes'); }
+  { P.start('circle'); const r0 = H.rndCalls(); $('pr-passer').click(); const Cc = P.state().circle; let n = 0;
+    for (; n < 4000 && Cc.round === 1 && !P.state().done; n++) { if (Cc.stage === 'start' && Cc.t > 0.2) inp.aPressed = true; if (Cc.hold && Math.abs(Cc.hold.t - Cc.hold.tc) < STEP/2 + 1e-9) inp.aPressed = true; T.update(STEP); }
+    ok(H.rndCalls() === r0 && Cc.plan === null, 'Circle, Passer: picking Passer and a round played draw no random number, so the Passer is as it was');
+    P.leave(); }
+}
 { const shape = stars('scrum', null, () => driveBot(6, 1)), tapOnly = stars('scrum', null, () => driveBot(7, 1, false)), slowShape = stars('scrum', null, () => driveBot(4, 1));
   ok(shape.mean > tapOnly.mean && tapOnly.mean <= 1, `Driving: body shape and timing beat tapping alone (${showMean(shape)} to ${showMean(tapOnly)})`);
   ok(slowShape.mean > tapOnly.mean, `Driving: slower taps in a good shape beat faster taps in a bad one (${showMean(slowShape)} to ${showMean(tapOnly)})`);
@@ -273,16 +306,25 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
   ok(hops >= 30 && worstHop < 0.3, `Egg: a bounce pass comes down inside its ring, and every hop inside the ring that moved for it (${hops} landings, worst ${worstHop.toFixed(2)} m off centre)`);
   ok(thrown >= 6 && worstThrow < 0.5, `Egg: a flat pass and a high ball pass through their ring at catching height (${thrown} throws, worst ${worstThrow.toFixed(2)} m off centre)`);
   ok(rolled >= 5 && worstRoll < 0.3, `Egg: a rolling ball stops in the ring that moved for it (${rolled} rolls, worst ${worstRoll.toFixed(2)} m)`);
-  // the ring makes it easier, so the reward has to stay with moving: a child who reads the ring and stands in it, against one who reads it and runs on to it
+  // the ring makes it easier, so the reward has to stay with moving: a child who reads the ring and stands in it, against one who reads it and runs on to it.
+  // At the Kids level, where the ring shows on every throw (eggRing). Re-pinned when two in three throws became a Bounce Pass: these were whole-run stars
+  // (stand-in at most 2.2, run-on at least as many), but a Bounce Pass's ring moves with every hop, so going to it is running on to the ball (the stand-in
+  // child meets 258 of 278 at 0.4 s, 2.52 stars). A ring can only be stood in for a Flat Pass or a High Ball, so those are where the two are measured,
+  // in points a throw over 40 runs: stand-in 1.23 and 0.93 at 0.4 and 0.8 s, run-on 1.32 and 1.16 (the build before: 1.11 and 0.96, run-on 1.38 and 1.11).
+  // The whole run keeps a ceiling of its own: following the ring, Bounce Passes and all, stays short of three stars (stand-in 2.52 and 1.98, at most 2.8)
   const ringAt = E => E.aim || E.me;
   const standIn = lag => { const n = lagged(lag); let t = 0; return st => { const E = st.egg; if (E.stage !== 'fly') { t = 0; stick(0, 0); return; } if (t++ < n) return; toward(E.me, ringAt(E).x, ringAt(E).y, 0.3); }; };
   const runOn = lag => { const n = lagged(lag); let t = 0; return st => { const E = st.egg, b = T.M.ball; if (E.stage !== 'fly') { t = 0; stick(0, 0); return; } if (t++ < n) return; const a = ringAt(E), d = Math.hypot(a.x - E.me.x, a.y - E.me.y); if (d > 2.2) toward(E.me, a.x, a.y, 0.02); else toward(E.me, b.x, b.y, 0.02); }; };
-  for (const lag of [0.4, 0.8]) {
-    const stood = stars('egg', null, () => standIn(lag), 20), ran = stars('egg', null, () => runOn(lag), 20);
-    ok(stood.mean >= 0.5, `Egg: a child ${lag} s slow who only stands in the ring earns stars (${showMean(stood)})`);
-    ok(stood.mean <= 2.2, `Egg: and going to the ring and no further stays short of the top stars (${showMean(stood)})`);
-    ok(ran.mean >= stood.mean, `Egg: running on to the ball from the ring earns at least as much as stopping in it (${showMean(ran)} to ${showMean(stood)})`);
-  }
+  const flatHigh = (make, lag) => { const t = { throws:0, points:0 }; const r = stars('egg', null, () => { const bot = make(lag); let n = 0, score = 0; return st => { const E = st.egg; if (E.n !== n) { n = E.n; if (E.kind !== 'bounce') t.throws++; } if (E.score !== score) { if (E.kind !== 'bounce') t.points += E.score - score; score = E.score; } bot(st); }; }, 40); return { ...r, fh:t.points/t.throws }; };
+  atLevel(true, () => {
+    for (const lag of [0.4, 0.8]) {
+      const stood = flatHigh(standIn, lag), ran = flatHigh(runOn, lag), top = X.EGG.stars[2]/X.EGG.throws;
+      ok(stood.mean >= 0.5, `Egg: a child ${lag} s slow who only stands in the ring earns stars (${showMean(stood)})`);
+      ok(stood.fh < top, `Egg: and going to the ring and no further, where it can be stood in, stays short of the top stars (${stood.fh.toFixed(2)} points a Flat Pass or High Ball, the top stars' pace ${top.toFixed(2)})`);
+      ok(stood.mean <= 2.8, `Egg: and over a whole run, Bounce Passes and all, a child ${lag} s slow who only follows the ring stays short of three stars (${showMean(stood)}, at most 2.8)`);
+      ok(ran.fh >= stood.fh, `Egg: running on to the ball from the ring earns at least as much as stopping in it (${ran.fh.toFixed(2)} to ${stood.fh.toFixed(2)} points a Flat Pass or High Ball; whole runs ${showMean(ran)} to ${showMean(stood)} stars)`);
+    }
+  });
 }
 { // the same catch, moving or waiting
   const catchAt = run => { H.reseed(11); P.start('egg'); $('pr-retry').click(); const st = P.state(), E = st.egg, b = T.M.ball; while (E.stage !== 'fly') T.update(STEP); for (let i = 0; i < 300 && E.bounced === false; i++) { T.update(STEP); } E.me.x = b.x + 0.8; E.me.y = b.y; E.me.vx = run ? -6 : 0; E.me.vy = 0; if (run) stick(-1, 0); T.update(STEP); letGo(); const out = { caught:E.caught, score:E.score, met:E.met }; P.leave(); return out; };

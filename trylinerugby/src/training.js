@@ -81,7 +81,12 @@ function drillCue(objective, cue) {                        // the in-play line, 
    lot with no reactions at all. named: while the first three are named the line at the top of the screen is up, so they keep clear of it. */
 const DRILL_EGG = { throws:12, lives:3, reach:1.15, lo:0.35, hi:2.4, wind:[1.0, 0.55], gap:0.6, miss:1.3, box:[51, 24, 73, 46], at:[60, 35], from:[45, 35], cam:[55, 35], zoom:1.45,
   first:['bounce', 'flat', 'high'], names:{ bounce:'Bounce Pass', flat:'Flat Pass', high:'High Ball' }, lines:{ bounce:'Catch it on any hop.', flat:'Run to meet it before it lands.', high:'Get under it. Watch the ball in.' },
-  named:7, flatTop:1.8, meet:1.5, points:[1, 2], pop:[4.6, 7.0], hopOut:[2.2, 4.7], keep:[0.6, 0.74], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:3.5, still:0.4, stars:[8, 14, 20] };
+  named:7, flatTop:1.8, meet:1.5, points:[1, 2], pop:[4.6, 7.0], hopOut:[2.2, 4.7], keep:[0.66, 0.8], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:3.5, still:0.4, stars:[8, 14, 20], bounce:0.9 };
+/* bounce: after the first three, a throw is a Bounce Pass this often, else a Flat Pass or a High Ball, the surprise. Never three the same in a row caps
+   it: about two in three bounce (0.63 measured over many seeded throws). The gold ring is a help, not the game: the youngest see it on every
+   throw, Easy and Normal on the first three, Hard never; Watch How always. eggRing is the one gate, and draws no random number. */
+const eggRingAll = () => practiceYoung() && settings.diff < 2;   // the Kids level or Minis, and not on Hard: the ring every throw
+const eggRing = E => !!practice && (!!practice.demo || (settings.diff < 2 && (eggRingAll() || E.n <= DRILL_EGG.first.length)));
 function eggStage(E, stage) { E.stage = stage; E.t = 0; }
 function eggReady(E) {                                     // the ball back in the thrower's hands and the wind-up begins, a little shorter each throw
   const u = Math.min(1, E.n/(DRILL_EGG.throws - 2));
@@ -94,7 +99,7 @@ function eggReady(E) {                                     // the ball back in t
 function eggThrow(E) {
   const b = M.ball, me = E.me, tw = E.tw, K = DRILL_EGG, u = Math.min(1, E.n/(K.throws - 2)), wild = 0.6 + 1.6*u;
   const kinds = ['bounce', 'flat', 'high'];
-  let kind = kinds[Math.floor(rnd()*3)];
+  let kind = rnd() < K.bounce ? 'bounce' : rnd() < 0.5 ? 'flat' : 'high';   // mostly a Bounce Pass: a Flat Pass or a High Ball is the surprise
   if (kind === E.hist[0] && kind === E.hist[1]) kind = kinds[(kinds.indexOf(kind) + 1 + Math.floor(rnd()*2)) % 3];   // never three the same in a row
   if (E.n < K.first.length) kind = K.first[E.n];           // the first three: one of each, in the order Watch How shows them
   E.hist.unshift(kind); E.hist.length = Math.min(E.hist.length, 2);
@@ -208,7 +213,7 @@ const drillEgg = {
   labels() { return { a:null, b:null, c:false }; },
   hud() { const E = practice.egg; return { lives:[E.lives, DRILL_EGG.lives], num:String(E.score), icon:'ball' }; },
   cue() { const E = practice.egg, K = DRILL_EGG; return E.stage === 'fly' && E.n <= K.first.length ? [K.names[E.kind], K.lines[E.kind]] : null; },   // the first three throws, named as they come
-  howTo() { return 'The gold ring shows where the ball comes down. Run to meet it and catch it.'; },
+  howTo() { return eggRingAll() ? 'The gold ring shows where the ball comes down. Run to meet it and catch it.' : 'Watch the ball in. Run to meet it and catch it.'; },
   tip() { const E = practice.egg; return E.met*2 >= E.caught && E.caught ? 'Running to meet the ball scored double.' : 'Run to meet the ball. It scores double.'; },
   result() { return { skill:'handling' }; },
 };
@@ -220,8 +225,14 @@ const drillEgg = {
    Passer: you make every pass with a timed tap as the closing ring meets the gold one, the hands finishing at the catcher's
    chest: on the gold is a Chest pass and quickest, an early tap goes over their head and is fumbled, a late one drops low and
    hangs. The runner speeds up. Either way the first pass of a round is timed on the same ring: to the chest and the passer's
-   hands are free at once (the Runner gets away already moving, the Passer's ball is quicker). Stars by rounds survived. */
+   hands are free at once (the Runner gets away already moving, the Passer's ball is quicker). Stars by rounds survived.
+   The Runner's passers are graded at random, as yours are as the Passer, with the same words and flights: Chest (quick), Good, Too High
+   (fumbled and gathered) and Too Low (late, hanging). More Chest passes as the rounds go on, more fumbles early (cpu: each grade's share a
+   round, Good the rest). The round's grades and holds are drawn as it starts (circleGo), and the holds rescaled so the ball's lap is the
+   one runF set, to the step (cpuPass's flights and one fixed hold each, as before the grades: lapT), so every Runner's stars are as they
+   were. cpuMin: the least a hold is scaled by. */
 const DRILL_CIRCLE = { n:6, r0:5, grow:1, rounds:5, out:1.6, acc:10, runF:[1.30, 1.05, 0.93, 0.915, 0.89], cpuPass:14, passG:[3.0, 1.45, 1.0, 0.8, 0.54],
+  cpu:{ Perfect:[0.15, 0.25, 0.35, 0.45, 0.55], Early:[0.25, 0.2, 0.15, 0.1, 0.05], Late:[0.2, 0.18, 0.15, 0.12, 0.1] }, cpuMin:0.6,
   fast:16, good:12, slow:8, ready:0.6, perfect:0.1, ok:0.25, fumble:1.1, late:0.5, growT:0.8, endT:1.1, at:[60, 35], zoom:1.35, stars:[1, 3, 5], beat:1.2, chestAt:0.9, rolling:0.8, follow:0.2, offLine:0.5, words:{ Perfect:'Chest', Good:'Good', Early:'Too High', Late:'Too Low' } };
 const circleRadius = (role, round) => DRILL_CIRCLE.r0 + DRILL_CIRCLE.grow*(role === 'passer' ? DRILL_CIRCLE.rounds - round : round - 1);   // this round's ring: the Runner's small to large, the Passer's large to small
 const circleStartE = C => ((C.t - DRILL_CIRCLE.chestAt + DRILL_CIRCLE.beat/2 + 2*DRILL_CIRCLE.beat) % DRILL_CIRCLE.beat) - DRILL_CIRCLE.beat/2;   // the round's first pass: seconds off the gold, the ring closing over and over until you tap
@@ -237,13 +248,54 @@ function circleRunAt(R, s) {                               // where the runner i
   return { x:K.at[0] + r*Math.cos(a), y:K.at[1] + r*Math.sin(a), a, r };
 }
 function circleChord(R) { return 2*R*Math.sin(Math.PI/DRILL_CIRCLE.n); }
+const circleSpeed = g => (g === 'Perfect' ? DRILL_CIRCLE.fast : g === 'Early' ? DRILL_CIRCLE.slow : DRILL_CIRCLE.good);   // a grade's flight, yours as the Passer and the CPU's alike
+function circleCpuGrade(k) {                               // a CPU pass in round k + 1: Chest more often as the rounds go on, Too High less
+  const P = DRILL_CIRCLE.cpu, u = rnd(), a = P.Perfect[k], b = a + P.Early[k], c = b + P.Late[k];
+  return u < a ? 'Perfect' : u < b ? 'Early' : u < c ? 'Late' : 'Good';
+}
+function circleCpuBase(g) {                                // its hold before scaling, as a Passer's tap would be: on the gold, a little off it, early or late
+  const K = DRILL_CIRCLE;
+  if (g === 'Perfect') return K.ready;
+  if (g === 'Early') return K.ready - K.ok - rnd()*0.2;
+  if (g === 'Late') return K.ready + K.ok + rnd()*(K.late - K.ok);
+  return K.ready + (rnd() < 0.5 ? -1 : 1)*(K.perfect + rnd()*(K.ok - K.perfect));
+}
+function circleSteps(T, dt, hold) {                       // the steps a flight (or a hold) of T seconds takes, counted as circleBall counts them
+  let t = 0, n = 0;
+  do { t += dt; n++; } while (hold ? !(t >= T) : Math.min(1, t/T) < 1);
+  return n;
+}
+function circlePlan(C) {                                   // the round's five CPU passes, a grade and a hold each, as it starts: the ball's lap is the one the one fixed hold made, step for step
+  const K = DRILL_CIRCLE, n = K.n, k = C.round - 1, dt = STEP*drillRate(), men = C.men;
+  const fly = (i, g) => { const a = men[i], b = circleSpot((i + 1) % n, C.R); return circleSteps(Math.max(0.12, hyp(b.x - a.x, b.y - a.y)/(g ? circleSpeed(g) : K.cpuPass)), dt); };
+  const first = fly(0, 'Good');                            // your own pass to the first man (circleGo)
+  let goal = first;                                        // the lap before the grades: cpuPass's flights and C.cpuHold at every man
+  for (let i = 1; i < n; i++) goal += fly(i, null) + circleSteps(C.cpuHold, dt, true) - 1;   // a hold's first step is its catch's last
+  C.lapT = goal*dt;
+  for (let tries = 0; ; tries++) {                         // a draw with too many fumbles for the round's time is drawn again; after eight, all Good
+    const plan = [null];
+    for (let i = 1; i < n; i++) { const grade = tries < 8 ? circleCpuGrade(k) : 'Good'; plan.push({ grade, base:circleCpuBase(grade), fum:i > 1 && plan[i - 1].grade === 'Early' ? K.fumble : 0 }); }
+    let left = goal - first + (n - 1), base = 0, fum = 0;  // the hold steps the lap leaves, each passer's gather of a fumble included (not the pass home: home ends it)
+    for (let i = 1; i < n; i++) { left -= fly(i, plan[i].grade); base += plan[i].base; fum += plan[i].fum; }
+    const s = ((left - (n - 1)/2)*dt - fum)/base;          // the holds' scale; a hold of k steps is set half a step short of k*dt, so it takes exactly k
+    if (s < K.cpuMin && tries < 8) continue;
+    const least = plan.slice(1).map(q => Math.ceil(q.fum/dt) + 1), want = plan.slice(1).map((q, i) => Math.max(least[i], (q.base*s + q.fum)/dt + 0.5)), steps = want.map(Math.floor);
+    let spare = left - steps.reduce((a, b) => a + b, 0);    // whole steps, the largest remainders rounded up, so they add up to exactly what the lap leaves
+    const order = want.map((w, i) => [w - steps[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+    for (let j = 0; spare > 0; j = (j + 1) % order.length, spare--) steps[order[j][1]]++;
+    for (let j = order.length - 1; spare < 0 && j >= 0; j--) if (steps[order[j][1]] > least[order[j][1]]) { steps[order[j][1]]--; spare++; }
+    for (let i = 1; i < n; i++) plan[i].hold = (steps[i - 1] - 0.5)*dt - plan[i].fum;
+    return plan;
+  }
+}
 function circleSetRound(C) {                               // this round's race: the ring's size, the CPU's pace, and everyone on his spot
   const K = DRILL_CIRCLE, k = C.round - 1;
   C.R = circleRadius(C.role, C.round); C.L = circleLap(C.R);
   const chord = circleChord(C.R), n = K.n;
+  C.plan = null; C.lapT = 0;
   if (C.role === 'runner') {                               // the ball's lap against a runner at top speed with no Sprint: a slower lap early, a quicker one later
     const v = maxSpeed(C.men[0]), ref = C.L/v + v/(2*K.acc), T = ref*K.runF[k];
-    C.cpuHold = Math.max(0.12, (T - n*chord/K.cpuPass)/(n - 1));
+    C.cpuHold = Math.max(0.12, (T - n*chord/K.cpuPass)/(n - 1));   // the one hold every passer had before the grades: the lap it made is still the lap. The passes are drawn as the round starts (circleGo): picking Passer draws none
   } else {                                                 // the runner's lap against your passes: room for a few slow ones early, Perfect passes needed late
     const first = chord/K.good, perfect = first + (n - 1)*(K.ready + chord/K.fast), good = n*chord/K.good + (n - 1)*K.ready;
     const T = perfect + (good - perfect)*K.passG[k];
@@ -267,6 +319,7 @@ function circlePass(C, from, speed, rushed) {
 }
 function circleGo(C) {                                     // the runner passes, then sets off: already moving off a pass to the chest
   const K = DRILL_CIRCLE, chest = Math.abs(circleStartE(C)) <= K.ok;
+  if (C.role === 'runner') C.plan = circlePlan(C);           // the round's CPU passes, graded and timed now
   if (chest) { C.chest++; st('circleChest'); drillTag('Chest', C.men[0].x, C.men[0].y); }
   circlePass(C, 0, chest && C.role === 'passer' ? K.fast : K.good, false);
   C.stage = 'race'; C.t = 0; C.s = 0; C.v = chest && C.role === 'runner' ? maxSpeed(C.men[0])*K.rolling : 0;
@@ -308,13 +361,17 @@ function circleBall(C, dt, tap) {
   if (!C.hold) return;
   const H = C.hold, p = C.men[H.i];
   drillHold(p); H.t += dt;
-  if (C.role === 'runner') { if (H.t >= C.cpuHold + H.fumble) circlePass(C, H.i, K.cpuPass, false); return; }
+  if (C.role === 'runner') {                               // the CPU's pass, graded at the round's start: the Passer's words and flights
+    const q = C.plan[H.i];
+    if (H.t >= q.hold + H.fumble) { drillTag(K.words[q.grade], p.x, p.y); circlePass(C, H.i, circleSpeed(q.grade), q.grade === 'Early'); }
+    return;
+  }
   if (tap && H.t >= H.fumble) {                            // your timed tap (not while he is still gathering a fumble): on the gold is Perfect and quickest; early is fumbled at the next man
     const e = H.t - H.tc, a = Math.abs(e);
     const grade = a <= K.perfect ? 'Perfect' : a <= K.ok ? 'Good' : e < 0 ? 'Early' : 'Late';
     st('circle' + grade); if (grade === 'Perfect') C.chest++;
     drillTag(K.words[grade], p.x, p.y);
-    circlePass(C, H.i, grade === 'Perfect' ? K.fast : grade === 'Early' ? K.slow : K.good, grade === 'Early');
+    circlePass(C, H.i, circleSpeed(grade), grade === 'Early');
     if (grade === 'Perfect') buzz(15, 0);
   } else if (H.t >= H.tc + K.late) { st('circleLate'); drillTag(K.words.Late, p.x, p.y); circlePass(C, H.i, K.good, false); }
 }

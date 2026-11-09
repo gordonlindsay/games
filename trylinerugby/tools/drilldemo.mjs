@@ -100,6 +100,15 @@ for (const [id, want] of [['tag', ['a']], ['back', ['a']], ['tackle', ['a']], ['
   unsee(); P.start('tackle'); let marks = null; for (let i = 0; i < 9000 && demo(); i++) { T.update(STEP); if (demo() && S().tackle.made) marks = S().tackle.marks; }
   ok(marks && ['pos', 'height', 'time', 'power', 'squeeze'].every(k => marks[k] && marks[k].ok), 'Tackling: every element is marked right by the drill\'s own judge'); P.leave();
 }
+{ // Bouncy Egg: Watch How always shows the gold ring, on Normal (where a run shows it for the first three) and on Hard (where a run never does)
+  const set = D.settings(), was = { diff:set.diff, seen:set.drillSeen.slice() };
+  for (const [diff, name] of [[1, 'Normal'], [2, 'Hard']]) {
+    set.diff = diff; unsee(); P.start('egg'); let flying = 0, ringed = 0;
+    for (let i = 0; i < 9000 && demo(); i++) { const E = S().egg; if (E.stage === 'fly') { flying++; if (X.eggRing(E)) ringed++; } T.update(STEP); }
+    ok(flying > 0 && ringed === flying && X.demoLast().ok, `Bouncy Egg Watch How on ${name}: the gold ring on every throw, all the way down (${ringed} of ${flying} steps in the air)`); P.leave();
+  }
+  set.diff = was.diff; set.drillSeen = was.seen;
+}
 { // Circle: both roles
   unsee(); P.start('circle'); const s = watch();
   ok([...s.caps].some(c => c.startsWith('Runner')) && [...s.caps].some(c => c.startsWith('Passer')), 'Circle: the demo shows the Runner, then the Passer'); P.leave();
