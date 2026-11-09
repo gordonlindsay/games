@@ -1,8 +1,11 @@
 // Scripted children for the Kids rating (src/kids.js): a 6 year old, a 7 to 8 year old, a sharp 10 year old and a stick masher, each
 // playing one-player Kids matches through the real input path, with 2-minute halves and Quick Match's rules (arcade on: On Fire, the Golden Try).
+// A Kids half is 2 minutes on a real clock, so 90 simulated seconds at the Kids pace (newMatch); plain Easy keeps its 120. HALF=90 gives
+// Easy the same simulated half, for a like-for-like comparison with the ceiling.
 //   node tools/kidbots.mjs at [r=0,1] [matches=200]                  scorelines for each child at fixed ratings (easy: plain Easy, for comparison)
 //   node tools/kidbots.mjs settle [runs=16] [matches=150] [skip=60]  each child from r = 0, the rating moved after every match by kidsAdapt's
-//                                                                  rule; settled is each run after its first `skip` matches
+//                                                                  rule; settled is each run after its first `skip` matches, and Move Up to
+//                                                                  Easy (KIDS_EASY) is counted in each run as kidsAdapt counts it
 // Add a profile name (six, eight, ten, or masher, who runs only when named) to run one child only. Every match is seeded on its own (SEED,
 // then its run and number), so a line is the same whatever else runs. JOBS=n splits the matches over n processes (default: the machine's
 // cores, at most 8). SIDES=FAR,HAS plays one pairing instead of the six nations in turn (below). A ± is a standard error. Where r settles has it across the runs; a settled margin and win share have it counting each
@@ -108,7 +111,7 @@ export function kidStep(P, S) {
   inp.cDown = sprint;
 }
 
-/* One seeded Kids match for child `who` at rating r: Quick Match's terms, 2-minute halves, the teams rotated by its number. The six nations
+/* One seeded Kids match for child `who` at rating r: Quick Match's terms, 2-minute halves (HALF: another, in seconds), the teams rotated by its number. The six nations
    play at the ratings the calibration in README.md was measured with: the XV ratings (2026-11-08) moved England, Italy, Scotland and Wales.
    SIDES=FAR,HAS plays that one pairing instead, the child's side first, at its list's ratings as the game has them (CLUB_RATED=band: the
    ratings before the real order), for a pairing the team screen offers: Quick Match's first two cards are Farnham and Haslemere. */
@@ -116,16 +119,17 @@ const CALIBRATED = { ENG:[4, 5, 3, 4, 4], ITA:[4, 3, 3, 3, 3], SCO:[5, 3, 4, 3, 
 const sixAt = i => { const t = T.teams.NATIONS[i], v = CALIBRATED[t.id]; return v ? { ...t, pace:v[0], power:v[1], handling:v[2], kicking:v[3], stamina:v[4] } : t; };
 const PAIR = process.env.SIDES ? process.env.SIDES.split(',').map(id => T.teams.ALL_TEAMS.find(t => t.id === id)) : null;
 if (PAIR && (PAIR.length !== 2 || !PAIR.every(Boolean))) throw new Error('SIDES names two sides by code, e.g. SIDES=FAR,HAS');
+const HALF = +process.env.HALF || 120;                    // the half as Settings gives it: a Kids match plays it on a real clock, 90 simulated seconds
 export function kidsMatch(who, r, seed) {
   reseed(seed);
   const P = KID_BOTS[who], i = seed % 30, a = i % 6, b = (a + 1 + (i % 5)) % 6;
-  T.newMatch(PAIR ? PAIR[0] : sixAt(a), PAIR ? PAIR[1] : sixAt(b), { halfLen:120, diff:0, headless:true, duels:'live', arcade:true, kids:r >= 0, kidsR:r });   // r < 0: plain Easy, for comparison
+  T.newMatch(PAIR ? PAIR[0] : sixAt(a), PAIR ? PAIR[1] : sixAt(b), { halfLen:HALF, diff:0, headless:true, duels:'live', arcade:true, kids:r >= 0, kidsR:r });   // r < 0: plain Easy, for comparison
   const S = { wobT:0, defT:0, lag:0 };
   let n = 0;
   while (!T.M.over && n < 400000) { kidStep(P, S); T.update(STEP); n++; }
   for (const inp of T.inputs) { inp.jx = inp.jy = 0; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; inp.flick = 0; }
   const M = T.M;
-  return { score:M.score.slice(), tries:M.tries.slice(), r:M.kidsR, done:M.over };
+  return { score:M.score.slice(), tries:M.tries.slice(), r:M.kidsR, done:M.over, half:M.halfLen };
 }
 
 /* ---------- the command line ---------- */
@@ -156,6 +160,8 @@ async function main() {
       const jumps = Math.max(...seqs.flatMap(s => s.map(m => Math.abs(m.next - m.r))));
       console.log(`${KID_BOTS[k].name}: r settles at ${mean.toFixed(3)} ± ${seR.toFixed(3)} (runs' spread ${sdRuns.toFixed(3)}; the runs' mean rating before match ${curve}; largest step ${jumps.toFixed(3)})`);
       console.log('  ' + line(`settled (from match ${skip + 1})`, late.flat(), late));
+      const up = seqs.map(moveUp).filter(i => i != null).sort((a, b) => a - b);   // the match each run would first offer Move Up to Easy, if it does
+      console.log(`  Move Up to Easy in ${up.length} of ${seqs.length} runs${up.length ? ` (median match ${up[(up.length - 1) >> 1]}, first ${up[0]})` : ''}; a half of ${seqs[0][0].half} simulated seconds`);
     }
   } else { console.error('Usage: node tools/kidbots.mjs at [r,r] [matches] | settle [runs] [matches] [skip] [six|eight|ten|masher]'); process.exitCode = 2; }
 }
@@ -176,6 +182,11 @@ function fan(jobs, n, spec) {                              // the items 0..n-1 o
     const p = spawn(process.execPath, [self, '--job', JSON.stringify(o)], { env:process.env, stdio:['ignore', 'pipe', 'inherit'] });
     let s = ''; p.stdout.on('data', d => { s += d; }); p.on('close', code => (code ? bad(new Error('job failed')) : ok(JSON.parse(s))));
   }))).then(r => r.flat());
+}
+function moveUp(seq) {                                     // kidsAdapt's run: wins by more than KIDS_EASY.margin tries, the rating after each at KIDS_EASY.top or above
+  const E = K.KIDS_EASY; let run = 0;
+  for (let i = 0; i < seq.length; i++) { const m = seq[i]; run = m.next >= E.top && m.tries[0] - m.tries[1] > E.margin ? run + 1 : 0; if (run >= E.run) return i + 1; }
+  return null;
 }
 function meanSe(v) { const n = v.length, m = v.reduce((a, b) => a + b, 0)/n, sd = Math.sqrt(v.reduce((a, x) => a + (x - m)**2, 0)/Math.max(1, n - 1)); return [m, sd/Math.sqrt(n), sd]; }   // mean, its standard error, the spread
 function line(label, res, runs) {                          // mean scoreline and tries, the try margin (mean ± its standard error, median), wins by how much, tries conceded; runs: the same errors across them too

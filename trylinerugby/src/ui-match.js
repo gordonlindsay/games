@@ -125,6 +125,7 @@ function cutLabels(c) {
 }
 
 function fmtClock() {
+  if (M.realClock) { const s = Math.floor(Math.min(M.clock, periodLen())/M.realClock + 1e-6); return Math.floor(s/60) + ':' + String(s % 60).padStart(2, '0'); }   // a Kids match: each half (and the Golden Try) on a real clock, 0:00 to 2:00 (match.js)
   const mins = M.golden ? 80 + Math.min(M.clock/periodLen(), 1)*10 : (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;   // extra time runs 80 to 90
   const mm = Math.floor(mins), ss = Math.floor((mins-mm)*60);
   return String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
