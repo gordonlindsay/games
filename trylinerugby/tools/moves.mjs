@@ -254,7 +254,9 @@ guard(() => {
   // re-pinned 2026-11-09: How to Play's Stick, Keyboard and Controller prose rows became the picture, whose stick names both moves with how
   // (a pad's stick moves the same), and the hint card names them for the device in use: Tap Across and Tap Back on a keyboard
   const stick = (html.match(/<div class="ctl-js x">([\s\S]*?)<\/div>/) || [])[1] || '';
-  ok(/<small>Flick Across<\/small> Side Step/.test(stick) && /<small>Pull Back<\/small> Dummy/.test(stick) && /card\('Side Step', [^\n]*kb \? 'Tap Across' : 'Flick Across'/.test(js) && /card\('Dummy', [^\n]*kb \? 'Tap Back' : 'Pull Back, Push On'/.test(js), 'How to Play\'s stick names Side Step and Dummy with how, and the hint card names them for a keyboard and a controller');
+  // re-pinned again 2026-11-09 (review): the picture said Flick Across and Pull Back on a computer too; each pill now carries a touch
+  // screen's or a controller's how (.tp) and a computer's keys' (.k), the hint card's Tap Across and Tap Back, CSS showing the device's
+  ok(/<small class="tp">Flick Across<\/small><small class="k">Tap Across<\/small> Side Step/.test(stick) && /<small class="tp">Pull Back<\/small><small class="k">Tap Back<\/small> Dummy/.test(stick) && /card\('Side Step', [^\n]*kb \? 'Tap Across' : 'Flick Across'/.test(js) && /card\('Dummy', [^\n]*kb \? 'Tap Back' : 'Pull Back, Push On'/.test(js), 'How to Play\'s stick names Side Step and Dummy with how, on a touch screen or a controller and on a computer\'s keys, as the hint card does');
   ok(!/\bstep<\/b> him|to step him/.test(html), 'the old "flick it sideways to step him" line is gone');
   ok(!/p\.lastA\s*=|p\.turn\s*=|lastA:0|turn:0/.test(js) && !/'turn'|'lastA'/.test(js), 'the old turn-rate step (p.turn, p.lastA) is gone from the engine');
 });

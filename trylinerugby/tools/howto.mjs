@@ -1,9 +1,11 @@
 // How to Play (2026-11-09, Gordon: "it's a block of text - better to show controls from a UI perspective and leave it there"): a picture
 // of the match screen sideways, the stick and the three action buttons where they sit in play and in their own colours, each part named
-// with its jobs; the scoring strip; on a computer or with a controller, the keys and the pad's buttons; Back to Menu alone. Replay
-// Tutorial, which only forgot the tutorial (a press showed nothing), is gone, and tutReset stays for the tools. In Chromium (where
-// Playwright is installed): one screen with no scroll at 844x390 and 667x375, touch and desk, with an iPhone's insets too; nothing over
-// anything; the keyboard and a controller reach Back to Menu.   node tools/howto.mjs   Exits 1 on any failure.
+// with its jobs (the stick's how in the words of the device: Tap Across and Tap Back on a computer's keys); the scoring strip; on a
+// computer or with a controller, the keys and the pad's buttons; Back to Menu alone. Replay Tutorial, which only forgot the tutorial
+// (a press showed nothing), is gone, and tutReset stays for the tools. In Chromium (where Playwright is installed): one screen with no
+// scroll at 844x390 and 667x375, touch and desk, with an iPhone's insets too, and at 640x360, 740x360, an iPhone X's 812x375 and a
+// controller on a Pro Max's 926x428; nothing over anything; the keyboard and a controller reach Back to Menu.
+//   node tools/howto.mjs   Exits 1 on any failure.
 process.env.SEED ??= '5';
 const { T } = await import('./harness.mjs');
 import fs from 'node:fs';
@@ -19,29 +21,38 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
 const read = f => fs.readFileSync(path.join(dir, f), 'utf8');
 const html = read('index.html'), css = read('styles.css'), game = readGameSource(), js = game.match(/<script>([\s\S]*)<\/script>/)[1];
 const at = html.indexOf('<section class="screen" id="s-help"'), help = html.slice(at, html.indexOf('</section>', at));
-const text = h => h.replace(/<small>([^<]*)<\/small>\s*/g, '$1: ').replace(/<[^>]+>/g, '').trim();
+const SHOW = { touch:['', 't', 'tp'], kb:['', 'k'], pad:['', 'tp'] };   // the how-words each device sees (styles.css): .t a touch screen's only, .tp a touch screen's or a controller's, .k a computer's keys
+const text = (h, dev = 'touch') => h.replace(/<small(?: class="([a-z]+)")?>([^<]*)<\/small>\s*/g, (m, c, w) => SHOW[dev].includes(c || '') ? w + ': ' : '').replace(/<[^>]+>/g, '').trim();
 const SMALL = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
 const titled = s => s.split(/\s+/).filter(Boolean).every((w, i) => (i && SMALL.has(w)) || /^[A-Z0-9]/.test(w));
 
-// 1. the picture: every control named, in Title Case, one label per job, no sentence
+// 1. the picture: every control named, in Title Case, one label per job, no sentence; the stick's how in each device's words
 {
   ok(at > 0 && /<h2 class="title">How to Play<\/h2>/.test(help) && /<div class="ctl" id="h-pic">/.test(help), 'How to Play is its title and the picture');
   const faces = [...help.matchAll(/<span class="ctl-b ([abc])">([^<]+)<\/span>/g)].map(m => m[1] + ':' + m[2]);
   ok(faces.join() === 'c:Sprint,b:Kick,a:Pass', `the three buttons wear their words in play, in the HUD's order (${faces.join(', ')})`);
   const hud = html.slice(html.indexOf('<div id="controls"'), html.indexOf('</div>', html.indexOf('id="btnA"')));
   ok(/<span id="lc">Sprint<\/span>/.test(hud) && /<span id="lb">Kick<\/span>/.test(hud) && /<span id="la">Pass<\/span>/.test(hud) && /<div id="stick"><div id="knob"><\/div><\/div>/.test(hud), 'and they are the HUD\'s: the stick, Sprint, Kick and Pass');
-  const group = k => [...((help.match(new RegExp(`<div class="ctl-js ${k}">([\\s\\S]*?)<\\/div>`)) || [])[1] || '').matchAll(/<b class="ctl-j [a-z]+">([\s\S]*?)<\/b>/g)].map(m => text(m[1]));
-  const want = { x:['Drag: Run', 'Flick Across: Side Step', 'Pull Back: Dummy'], b:['Tap: Chip', 'Switch', 'Drop Goal'], a:['Hold: Long Pass', 'Tackle', 'Offload'], p:['Pause'] };
+  const group = (k, dev) => [...((help.match(new RegExp(`<div class="ctl-js ${k}">([\\s\\S]*?)<\\/div>`)) || [])[1] || '').matchAll(/<b class="ctl-j [a-z]+">([\s\S]*?)<\/b>/g)].map(m => text(m[1], dev));
+  const want = { x:['Drag: Run', 'Flick Across: Side Step', 'Pull Back: Dummy'], b:['Tap: Chip', 'Switch', 'Drop Goal'], a:['Scrum: Push', 'Lineout: Jump', 'Hold: Long Pass', 'Tackle', 'Offload'], p:['Pause'] };
   for (const [k, list] of Object.entries(want)) ok(JSON.stringify(group(k)) === JSON.stringify(list), `${{ x:'the stick', b:'Kick', a:'Pass', p:'the pause button' }[k]} is labelled ${list.join(', ')} (${group(k).join(', ')})`);
+  // the stick's how, for the device in use: a computer's keys tap (the hint card's Tap Across and Tap Back, and Run's keys are in the row
+  // under the picture); a controller's stick flicks and pulls back as a thumb does. 2026-11-09 review: it said Flick Across on a keyboard
+  const words = { kb:['Run', 'Tap Across: Side Step', 'Tap Back: Dummy'], pad:['Run', 'Flick Across: Side Step', 'Pull Back: Dummy'] };
+  for (const [dev, list] of Object.entries(words)) ok(JSON.stringify(group('x', dev)) === JSON.stringify(list), `on ${dev === 'kb' ? 'a computer\'s keys' : 'a controller'} the stick reads ${list.join(', ')} (${group('x', dev).join(', ')})`);
+  ok(/card\('Side Step', [^\n]*kb \? 'Tap Across' : 'Flick Across'/.test(js) && /card\('Dummy', [^\n]*kb \? 'Tap Back' : 'Pull Back, Push On'/.test(js), 'the keyboard\'s words are the hint card\'s: Tap Across, Tap Back');
+  ok(/\.ctl-j small\.k,body\.desk \.ctl-j small\.t,body\.desk:not\(\.dev-pad\) \.ctl-j small\.tp\{display:none\}body\.desk:not\(\.dev-pad\) \.ctl-j small\.k\{display:block\}/.test(css) && /b\.classList\.toggle\('dev-pad', d === 'pad'\)/.test(js), 'CSS shows each device its words, following setDev\'s dev-pad as it changes (a computer\'s keys unless a controller acted last)');
   ok(/<b class="ctl-j x">/.test(help) && [...help.matchAll(/<div class="ctl-js ([abpx])">([\s\S]*?)<\/div>/g)].every(m => [...m[2].matchAll(/class="ctl-j ([a-z])"/g)].every(c => c[1] === m[1])), 'each job wears its control\'s colour: the stick\'s chalk, Kick\'s dark ring, Pass\'s gold');
   const all = [...help.matchAll(/<b class="ctl-j [a-z]+">([\s\S]*?)<\/b>/g)].flatMap(m => text(m[1]).split(': ')).concat(faces.map(f => f.slice(2)));
-  const jobs = ['Run', 'Side Step', 'Dummy', 'Pass', 'Long Pass', 'Tackle', 'Offload', 'Kick', 'Chip', 'Switch', 'Drop Goal', 'Sprint', 'Pause'];
-  ok(jobs.every(j => all.includes(j)) && jobs.every(j => all.filter(x => x === j).length === 1), `the picture names each control's every job once: ${jobs.join(', ')}`);
-  ok(all.every(titled) && !/[.!?]\s|[.!?]<|—|–/.test(help.replace(/<[^>]+>/g, ' ')), `every label is Title Case, and none is a sentence or carries a dash (${all.filter(s => !titled(s)).join(', ') || 'all'})`);
+  const jobs = ['Run', 'Side Step', 'Dummy', 'Pass', 'Long Pass', 'Tackle', 'Offload', 'Push', 'Jump', 'Kick', 'Chip', 'Switch', 'Drop Goal', 'Sprint', 'Pause'];
+  ok(jobs.every(j => all.includes(j)) && jobs.every(j => all.filter(x => x === j).length === 1), `the picture names each job in open play, at a scrum and at a lineout, once: ${jobs.join(', ')} (a duel's Block, and Dummy on Kick in a Key Pass, are its own card's)`);
+  const every = Object.keys(SHOW).flatMap(dev => [...help.matchAll(/<b class="ctl-j [a-z]+">([\s\S]*?)<\/b>/g)].flatMap(m => text(m[1], dev).split(': ')));
+  ok(every.every(titled) && all.every(titled) && !/[.!?]\s|[.!?]<|—|–/.test(help.replace(/<[^>]+>/g, ' ')), `every label on every device is Title Case, and none is a sentence or carries a dash (${every.concat(all).filter(s => !titled(s)).join(', ') || 'all'})`);
   ok(!/[←→↑↓⇐⇒➜»›]/.test(help) && !/[←→↑↓⇐⇒➜»›]/.test(js.slice(js.indexOf('function renderHowTo'), js.indexOf('function renderHowTo') + 1600)), 'no arrow glyph on the screen or in its rows (the arrow keys are CSS triangles)');
   // the jobs are the words the HUD really writes on those buttons
   const hudJs = js.slice(js.indexOf('function updateHud'), js.indexOf("$('la').textContent"));
   ok(/'Offload' : passLong \? 'Long' : 'Pass'/.test(hudJs) && /'Pull Tag' : 'Tackle'/.test(hudJs) && /lb = proPinned\(ht\) \? null : 'Switch'/.test(hudJs) && /return dropZone\(c\)\.ok \? 'Drop Goal' : 'Kick'/.test(js), 'Pass reads Offload, Long and Tackle in play, and Kick reads Switch and Drop Goal: the jobs the picture names');
+  ok(/if \(c\.kind === 'scrum'\) return \['Push', null\];/.test(js) && /if \(c\.kind === 'lineout'\) return \['Jump', null\];/.test(js) && /\[la, lb\] = cutLabels\(M\.cut\)/.test(hudJs), 'and Pass reads Push at a scrum and Jump at a lineout (cutLabels), as the picture names them');
   // where they sit: the HUD's own offsets, scaled
   const hudPx = cls => { const r = (css.match(new RegExp('\\.act\\.' + cls + '\\{([^}]*)\\}')) || [])[1] || ''; const w = +(r.match(/width:(\d+)px/) || [])[1], add = +(r.match(/inset-right,0px\)\) \+ (\d+)px/) || [0, 0])[1], bot = +(r.match(/inset-bottom,0px\) \+ (\d+)px/) || [])[1]; return [w, 20 + add, bot]; };
   const picPx = cls => { const r = (css.match(new RegExp('\\.ctl-b\\.' + cls + '\\{([^}]*)\\}')) || [])[1] || ''; return [+(r.match(/width:calc\(var\(--s\)\*(\d+)px\)/) || [])[1], +(r.match(/right:calc\(var\(--s\)\*(\d+)px\)/) || [])[1], +(r.match(/bottom:calc\(var\(--s\)\*(\d+)px\)/) || [])[1]]; };
@@ -97,9 +108,10 @@ function chromium() {
   }
   return null;
 }
-// 4. In Chromium: one screen with no scroll at 844x390 and 667x375 (touch, desk, an iPhone's insets), nothing over anything and all in
-//    the frame, nothing under 12px, Back to Menu full width at 48px; at 568x320 a scroll but still nothing over anything; Tab and a
-//    controller reach Back to Menu, and it goes home.
+// 4. In Chromium: one screen with no scroll at 844x390 and 667x375 (touch, desk, an iPhone's insets), and at 640x360 and 740x360 (a
+//    360-tall phone), an iPhone X's 812x375 with its insets and a Pro Max's 926x428 with them, nothing over anything and all in the
+//    frame, nothing under 12px, Back to Menu full width at 48px; at 568x320 a scroll but still nothing over anything; the stick's words
+//    the device's; Tab and a controller reach Back to Menu, and it goes home.
 async function browserChecks() {
   if (process.env.GAME || process.env.NO_BROWSER) { console.log('skip the browser checks (GAME or NO_BROWSER set)'); return; }
   const chrome = chromium();
@@ -116,7 +128,7 @@ async function browserChecks() {
   const base = `http://127.0.0.1:${server.address().port}/`;
   const measure = () => {
     const $ = id => document.getElementById(id), s = $('s-help'), pic = $('h-pic'), R = el => el.getBoundingClientRect();
-    const parts = [...pic.querySelectorAll('.ctl-ring, .ctl-b, .ctl-p, .ctl-j')].filter(e => R(e).width > 0).map(e => { const r = R(e); return { n:e.textContent.trim() || e.className, l:r.left, t:r.top, r:r.right, b:r.bottom, round:/ctl-ring|ctl-b/.test(e.className) }; });
+    const parts = [...pic.querySelectorAll('.ctl-ring, .ctl-b, .ctl-p, .ctl-j')].filter(e => R(e).width > 0).map(e => { const r = R(e); return { n:e.innerText.replace(/\s+/g, ' ').trim() || e.className, l:r.left, t:r.top, r:r.right, b:r.bottom, round:/ctl-ring|ctl-b/.test(e.className) }; });
     const hit = (a, b) => {
       if (!(a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5)) return false;
       if (a.round && b.round) { const ra = (a.r - a.l)/2, rb = (b.r - b.l)/2; return Math.hypot((a.l + a.r)/2 - (b.l + b.r)/2, (a.t + a.b)/2 - (b.t + b.b)/2) < ra + rb - 0.5; }
@@ -128,10 +140,11 @@ async function browserChecks() {
     const P = R(pic), out = parts.filter(q => q.l < P.left + 1 || q.r > P.right - 1 || q.t < P.top + 1 || q.b > P.bottom - 1).map(q => q.n);
     const small = [...s.querySelectorAll('.ctl-j, .ctl-j small, .ctl-b, .ctl-k, .lbl, .scoring span')].filter(e => R(e).width > 0 && parseFloat(getComputedStyle(e).fontSize) < 12).map(e => e.textContent.trim());
     const back = R($('h-back')), wrap = R(s.querySelector('.wrap')), keys = $('h-keys'), rows = [...s.querySelectorAll('.ctl-krow')].map(r => Math.round(R(r).height));
-    return { scroll:s.scrollHeight - s.clientHeight, wide:document.documentElement.scrollWidth - innerWidth, over, out, small, back:[Math.round(back.width), Math.round(back.height), Math.round(wrap.width)], pic:[Math.round(P.width), Math.round(P.height)], rows:keys && R(keys).height > 0 ? rows : [], backIn:back.bottom <= innerHeight + 0.5 };
+    const stick = [...pic.querySelectorAll('.ctl-js.x .ctl-j')].map(e => e.innerText.replace(/\s+/g, ' ').trim()).join(', ');
+    return { scroll:s.scrollHeight - s.clientHeight, wide:document.documentElement.scrollWidth - innerWidth, over, out, small, back:[Math.round(back.width), Math.round(back.height), Math.round(wrap.width)], pic:[Math.round(P.width), Math.round(P.height)], rows:keys && R(keys).height > 0 ? rows : [], backIn:back.bottom <= innerHeight + 0.5, stick };
   };
   try {
-    for (const [w, h, insets] of [[844, 390, null], [667, 375, null], [844, 390, { top:0, left:47, bottom:21, right:47 }], [568, 320, null]]) for (const desk of [false, true]) {
+    for (const [w, h, insets] of [[844, 390, null], [667, 375, null], [844, 390, { top:0, left:47, bottom:21, right:47 }], [640, 360, null], [740, 360, null], [812, 375, { top:0, left:44, bottom:21, right:44 }], [926, 428, { top:0, left:47, bottom:21, right:47 }], [568, 320, null]]) for (const desk of [false, true]) {
       const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:2, hasTouch:!desk, isMobile:!desk });
       const page = await ctx.newPage(), errors = [];
       page.on('pageerror', e => errors.push(String(e.message || e)));
@@ -148,6 +161,8 @@ async function browserChecks() {
         ok(desk ? m.rows.length === 2 && m.rows.every(r => r <= 30) : !m.rows.length, `${kind}: ${desk ? 'the two rows, each on one line' : 'no keys or pad rows on a phone'} (${m.rows.join(', ') || 'none'})`);
       }
       ok(!m.small.length, `${kind}: nothing under 12px (${m.small.join(', ') || 'none'})`);
+      const said = desk ? 'Run, Tap Across Side Step, Tap Back Dummy' : 'Drag Run, Flick Across Side Step, Pull Back Dummy';
+      ok(m.stick === said, `${kind}: the stick reads ${said} (${m.stick})`);
       if (w === 844 && !insets) {   // the keyboard's Tab and a controller reach Back to Menu, and it goes home; the hint switches render with no Replay Tutorial
         await page.keyboard.press('Tab');
         const tab = await page.evaluate(() => document.activeElement && document.activeElement.id);
@@ -156,6 +171,11 @@ async function browserChecks() {
         ok(tab === 'h-back' && home, `${kind}: Tab lands on Back to Menu (${tab}) and Enter goes home`);
         const pad = await page.evaluate(() => { const T = window.__tryline, D = T.debug; document.getElementById('b-help').click(); T.navMove(0, 0, 1); const f = D.focus(); const id = f && f.id; T.navPress(0); D.renderHintSwitches(); return { id, home:!document.getElementById('s-home').hidden, replay:!!document.getElementById('h-replay') }; });
         ok(pad.id === 'h-back' && pad.home && !pad.replay, `${kind}: a controller's first press rings Back to Menu (${pad.id}) and the button goes home; renderHintSwitches with no #h-replay`);
+        if (desk) {   // the stick's words follow the device that acted last, while the screen is up
+          const as = async d => { await page.evaluate(d => { window.__tryline.debug.setDev(d); if (document.getElementById('s-help').hidden) document.getElementById('b-help').click(); }, d); return (await page.evaluate(measure)).stick; };
+          const dev = { pad:await as('pad'), kb:await as('kb') };
+          ok(dev.pad === 'Run, Flick Across Side Step, Pull Back Dummy' && dev.kb === 'Run, Tap Across Side Step, Tap Back Dummy', `${kind}: a controller's last press turns the stick's words to Flick Across and Pull Back, a key back to Tap Across and Tap Back (${dev.pad}; ${dev.kb})`);
+        }
       }
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
