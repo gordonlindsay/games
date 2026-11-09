@@ -607,7 +607,8 @@ pending('13. an import\'s side from its label (the teams builder)', async () => 
   const page = body.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ');
   ok(!WORD.test(clean(page)), `the page's own text (${(clean(page).match(WORD) || [])[0]})`);
   ok(scanned > 2000, `every string read (${scanned})`);
-  ok(/Beat the Last Defender/.test(page) && /White means they are free/.test(page), 'the new words are there');
+  // re-pinned 2026-11-09: How to Play's Pass row ("White means they are free") went with its prose; its picture's Hold Long Pass is the page text read there now
+  ok(/Beat the Last Defender/.test(page) && /Hold\s+Long Pass/.test(page) && !/White means he is free/.test(page), 'the new words are there');
 }
 
 // 16. the privacy page and the notes

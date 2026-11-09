@@ -432,7 +432,8 @@ function ratingsBoot() {
    ========================================================= */
 const STORE = 'tryline.v1';
 /* hints: the card in the top corner naming each close-up's control (one player); twoHints: the same per player in two player, stored
-   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; Replay Tutorial empties it.
+   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; tutReset empties it (only
+   the tools call it since How to Play lost Replay Tutorial, 2026-11-09).
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
 const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
@@ -9245,7 +9246,8 @@ function updateHud() {
    changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
    dropZone is never run again and nothing random is drawn. The tutorial pauses the first time each moment comes up on this device
    (while that seat's Hints are On): the close-up holds its first frame under a card or two, Next then Play, a tap anywhere or the
-   pass key advancing, the match clock and the world frozen; Replay Tutorial on How to Play forgets them all.
+   pass key advancing, the match clock and the world frozen. Nothing replays them: Replay Tutorial, which only forgot them, left How to
+   Play on 2026-11-09 (tutReset stays, for the tools). How to Play is now a picture of the controls; renderHowTo fills its two rows.
    ========================================================= */
 const hintShown = [null, null], hintKey = ['', ''], HO = [null, null];   // what each card shows now (the tools read it); the last content key; open-play state per seat
 const OPEN_HINTS = ['offload', 'drop', 'long', 'sprint', 'step', 'dummy'], OPEN_SECS = 3.0, OPEN_GAP = 4.0;
@@ -9372,7 +9374,7 @@ function renderHint(s, h) {
   $('ht' + s).hidden = h.kick;                              // kick cards sit inside the stick zone: no tick a steering thumb could hit
   $('hc' + s + '-b').innerHTML = h.rows.map(r => `<div class="hc-row">${r.chips.map(ch => chipHtml(s, ch)).join('<span class="hc-or">or</span>')}<span>${esc(r.text)}</span></div>`).join('');
 }
-function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines, Replay Tutorial
+function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines
   const pair = !!(M && M.two && mode === 'match');
   $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair; $('pz-cam').hidden = pair || !!practice;
   for (const s of [0, 1]) { const seg = $('pz-h' + s); if (seg && seg.children) [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === hintsOn(s)))); }
@@ -9380,7 +9382,6 @@ function renderHintSwitches() {                            // the pause card's r
   const ps = penCtx && M && M.two ? seatOfTeam(penCtx.team) : 0, on = hintsOn(ps);
   $('m-pen').classList.toggle('nohints', !on); $('ht-pen').classList.toggle('off', !on);
   $('p-goal-s').textContent = $('p-goal').disabled ? 'Out of Range' : '3 Points';
-  $('h-replay').disabled = !settings.tut.length;
 }
 /* the tutorial */
 function tutMoment(c) { return c.duel ? c.kind : c.kind === 'goal' ? (c.g.watch || !isHuman(c.g.team) ? null : c.g.type === 'drop' ? 'drop' : 'goal') : c.kind; }
@@ -9444,7 +9445,17 @@ $('m-tut').addEventListener('click', e => { if (e.target && e.target.closest && 
 $('tu-next').addEventListener('click', tutAdvance);
 $('tu-skip').addEventListener('click', tutPlay);
 $('tu-play').addEventListener('click', tutPlay);
-$('h-replay').addEventListener('click', () => { tutReset(); renderHintSwitches(); });
+/* How to Play's two rows on a computer or with a controller (.desk-only): the solo map's first key for each job, as the buttons' corner
+   keycaps show them (the arrows as CSS triangles, never a glyph), and the pad's glyphs by position, as the hint chips draw them */
+function renderHowTo() {
+  const kc = code => (ARROW_KEY[code] ? `<kbd class="kc ar ${ARROW_KEY[code]}"></kbd>` : `<kbd class="kc">${esc(KEYCAP[code] || code.replace(/^Key/, ''))}</kbd>`);
+  const caps = (codes, alt) => `<span class="ctl-kk${alt ? ' alt' : ''}">${codes.map(kc).join('')}</span>`, glyph = g => `<span class="ctl-kk">${g}</span>`;
+  const cell = (badge, label) => `<span class="ctl-k">${badge}${esc(label)}</span>`, K = KB.solo;
+  $('h-kb').innerHTML = '<span class="lbl">Keyboard</span>' + cell(caps(K.m.slice(0, 4)) + caps(['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'], true), 'Run')
+    + cell(caps([K.a[0]]), 'Pass') + cell(caps([K.b[0]]), 'Kick') + cell(caps([K.c[0]]), 'Sprint') + cell(caps(['KeyP']), 'Pause');
+  $('h-pad').innerHTML = '<span class="lbl">Controller</span>' + cell(glyph('<i class="pad stick"></i>'), 'Run') + cell(glyph(PAD_GLYPH.a), 'Pass')
+    + cell(glyph(PAD_GLYPH.b), 'Kick') + cell(glyph(PAD_GLYPH.c), 'Sprint') + cell(glyph('<i class="pad st"></i>'), 'Pause');
+}
 
 /* ---------- first-match coach (2026-10-30)
    One short line the first time each open-play move comes up on this device, through say() so it stays a banner (the on-pitch
@@ -9830,7 +9841,7 @@ $('b-champ').addEventListener('click', () => {
 $('b-cabinet').addEventListener('click', () => { renderCabinet('home-history'); showScreen('s-cabinet'); $('s-cabinet').scrollTop = 0; });
 $('cab-back').addEventListener('click', () => goHome($('b-cabinet')));
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });   // Quick Match's Play: Pick Your Team
-$('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
+$('b-help').addEventListener('click', () => { renderHowTo(); showScreen('s-help'); });
 $('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });
@@ -14534,7 +14545,7 @@ function careerLifePick(i) {                         // a tap on an option: its 
 /* =========================================================
    The Try Line app. What the game does differently inside the iOS and Android app (Capacitor, app/ at the repo root):
    - no service worker, and no Install Game, Update Game or Offline Ready: the app carries its own files (offlineStart asks
-     nativeOn first). How to Play swaps its browser entries (.web-only) for the app's (.app-only).
+     nativeOn first). Anything marked .web-only goes and .app-only comes in (nothing is since 2026-11-09: see nativeWebOnly).
    - landscape either way up, set in the native projects (Info.plist, and sensorLandscape on Android: app/scripts/
      native-config.mjs), never locked at run time, as a lock pins one side and a phone held the other way stays upside
      down. The status bar (and Android's navigation bar) is hidden through the plugins when present; a match skips the
@@ -14625,8 +14636,9 @@ function nativeStart() {
   const app = nativePlugin('App');
   if (app && typeof app.addListener === 'function') { try { app.addListener('backButton', nativeBack); } catch (e) { /* Back keeps the platform's own */ } }
 }
-/* How to Play's browser entries (Install & Offline: Safari, Add to Home Screen and Update Game; Saving: this browser, reloading)
-   mean nothing in the app: they go, and the app's own (.app-only, hidden in index.html, so a browser never shows them) come in. */
+/* A browser's own entries (.web-only) mean nothing in the app: they go, and the app's own (.app-only, hidden in index.html, so a
+   browser never shows them) come in. How to Play's Install & Offline and Saving entries were the ones; they went with its prose on
+   2026-11-09, when it became a picture of the controls, the same in a browser and the app. The swap stays for the next. */
 function nativeWebOnly() {
   for (const el of document.querySelectorAll('.web-only')) el.hidden = true;
   for (const el of document.querySelectorAll('.app-only')) el.hidden = false;

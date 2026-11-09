@@ -1,6 +1,6 @@
 // The Try Line app (src/native.js, ../app): native detection stays off on the web and the web build behaves as before;
-// under a stubbed window.Capacitor every in-app change applies (no service worker or install buttons, How to Play's app
-// entries, no orientation lock, no bars, haptics, Android's Back); the save goes to Preferences and comes back; the typefaces are the game's own files, with
+// under a stubbed window.Capacitor every in-app change applies (no service worker or install buttons, the app's own
+// entries for the browser's, How to Play the same picture in both, no orientation lock, no bars, haptics, Android's Back); the save goes to Preferences and comes back; the typefaces are the game's own files, with
 // Google Fonts gone; and the app's scripts copy the right files and set the native projects.
 // node tools/native.mjs   Exits 1 on any failure.
 import fs from 'node:fs';
@@ -84,7 +84,7 @@ let isNative = true;
 globalThis.Capacitor = { isNativePlatform:() => isNative, getPlatform:() => 'android', Plugins };
 const vibes = []; navigator.vibrate = ms => { vibes.push(ms); return true; };
 // The harness builds its stand-in document when it loads. Wrapped as it is set, so the test can fire document events and
-// find How to Play's web-only and app-only entries, which the stand-in does not model.
+// find the web-only and app-only entries, which the stand-in does not model.
 const docEvents = {}, webOnly = [{ hidden:false }, { hidden:false }, { hidden:false }, { hidden:false }], appOnly = [{ hidden:true }, { hidden:true }];
 let theDoc = null;
 Object.defineProperty(globalThis, 'document', { configurable:true, get:() => theDoc, set:d => {
@@ -104,7 +104,7 @@ ok(N.on() === true, 'nativeOn() is true inside the app');
 ok(!log.some(([p]) => p === 'ScreenOrientation'), 'the app never locks the orientation: a lock pins one side, and the native projects already allow landscape either way up');
 ok(calls('StatusBar', 'hide').length === 1 && calls('SystemBars', 'hide').length === 1, 'the status bar (StatusBar) and the system bars (SystemBars) are hidden at start');
 ok(typeof appListeners.backButton === 'function', 'Android\'s Back is taken by the game');
-ok(webOnly.every(e => e.hidden) && appOnly.every(e => !e.hidden), 'How to Play\'s browser entries (Install & Offline, Saving) are hidden in the app, and its app entries shown');
+ok(webOnly.every(e => e.hidden) && appOnly.every(e => !e.hidden), 'the browser\'s entries (.web-only) are hidden in the app, and the app\'s (.app-only) shown');
 ok(calls('Preferences', 'get').length === 1 && calls('Preferences', 'get')[0][2].key === STORE, 'with the web view\'s save gone, the start asks Preferences for tryline.v1');
 ok(!N.state().ready, 'the game does not start before Preferences answers');
 
@@ -325,14 +325,12 @@ const html = read('index.html');
   ok(/## Going online\n\n[^\n]*The app has its files built in/.test(priv), 'PRIVACY.md says the app has its files built in, rather than fetching them');
 }
 
-// ---------- 4b. How to Play: the browser's Saving entry on the web, the app's in the app ----------
+// ---------- 4b. How to Play: the same picture in a browser and in the app ----------
+// re-pinned 2026-11-09: its Saving (the browser's and the app's) and Install & Offline entries went with the prose, so nothing on it is the web's or the app's alone
 {
   const entries = [...html.matchAll(/<(dt|dd)(?: class="([^"]*)")?( hidden)?>([\s\S]*?)<\/\1>/g)].map(m => ({ tag:m[1], cls:(m[2] || '').split(' '), hidden:!!m[3], text:m[4] }));
-  const saving = cls => entries.filter(e => e.cls.includes(cls) && (e.text === 'Saving' || /keeps your settings/.test(e.text)));
-  const web = saving('web-only'), app = saving('app-only');
-  const before = 'This browser keeps your settings, the teams you make, and a championship\'s fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table clears the current championship and keeps completed seasons in the Trophy Cabinet. Leaving a match, or reloading, keeps the same round to play again.';
-  ok(web.length === 2 && web[0].tag === 'dt' && !web.some(e => e.hidden) && web[1].text === before, 'on the web How to Play\'s Saving is the browser\'s, word for word as before');
-  ok(app.length === 2 && app[0].tag === 'dt' && !/browser|reload/i.test(app[1].text) && /closing the app/.test(app[1].text), 'the app\'s Saving speaks of the game and closing the app, not a browser or reloading');
+  const help = html.slice(html.indexOf('id="s-help"'), html.indexOf('</section>', html.indexOf('id="s-help"')));
+  ok(help.includes('id="h-pic"') && !/web-only|app-only|Saving|Install|Safari|browser/i.test(help), 'How to Play has no browser or app entry: no Saving, no Install & Offline');
   ok(entries.filter(e => e.cls.includes('app-only')).every(e => e.hidden) && /\[hidden\]\{display:none!important\}/.test(read('styles.css')), 'every app-only entry starts hidden, so a browser never shows one');
   ok(!entries.some(e => !e.cls.includes('web-only') && !e.cls.includes('app-only') && e.text === 'Saving'), 'no Saving entry is shown to both');
 }

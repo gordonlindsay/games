@@ -662,7 +662,7 @@ PR #14 (branch `claude/tryline-25d-camera`, 05886e6) was built on 261ac61 and me
 
 ## Install and offline play
 
-The game includes a web app manifest, app icons and a scoped service worker. On a supported HTTPS browser, visit online and wait for **Offline Ready** before relying on cached play. The home offers **Install Game**, under the wordmark, when the browser provides an install prompt; How to Play includes manual home-screen guidance. Installation does not move your browser save between browsers or devices.
+The game includes a web app manifest, app icons and a scoped service worker. On a supported HTTPS browser, visit online and wait for **Offline Ready** before relying on cached play. The home offers **Install Game**, under the wordmark, when the browser provides an install prompt. Installation does not move your browser save between browsers or devices.
 
 The worker caches only this game's local shell and checks downloaded file hashes against the generated version. The shell includes the game's own typefaces (`fonts/`, under the Open Font License), so offline play keeps the look and no page calls Google Fonts. It does not cache other games, arbitrary requests or browser saves. Cache storage must remain available; verified files can refill missing entries when online. A mismatched or incomplete new deployment leaves the working version in place.
 
@@ -683,7 +683,7 @@ The stores link three pages beside the game, served by GitHub Pages and styled b
 `app/` at the repository root wraps the game for the App Store (Google Play in phase 2) with Capacitor; `app/README.md`
 has the steps on a Mac. The app carries the same files the site serves, and its native projects are landscape either
 way up. What it does differently is in `src/native.js`, and none of it runs in a browser (`nativeOn()` is false there):
-no service worker or Install and Update buttons, How to Play's app entries, no status bar, haptics through the phone's
+no service worker or Install and Update buttons, no status bar, haptics through the phone's
 own engine, the save copied into the app's own storage and put back if the web view loses it, and Android's Back as the
 game's own. `node tools/native.mjs` checks it under a stand-in Capacitor, the web build unchanged, the typefaces and the
 app's scripts.
@@ -717,7 +717,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
 | `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
 | `src/practice.js` | Isolated drills and practice feedback |
-| `src/native.js` | The Try Line app (Capacitor): `nativeOn()`, haptics, the save's copy, bars, How to Play's app entries and Back |
+| `src/native.js` | The Try Line app (Capacitor): `nativeOn()`, haptics, the save's copy, bars, the `.web-only` swap and Back |
 | `src/offline-client.js` | Optional browser installation, offline status and safe update controls |
 | `src/service-worker.js` | Separate worker template; cached shell and integrity checks (outside the game bundle) |
 | `src/boot.js` | Frame loop, diagnostic API and startup |
@@ -1077,7 +1077,8 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     that seat's Hints are On (Hints Off is one switch for both), and the moment is remembered either way, per device,
     in `settings.tut`, so the old `duelSeen` and `kickSeen` flags are gone: the first-duel window aid (+0.08s) now
     comes once per duel kind and the first-kick path aid once for a goal kick and once for a drop, keyed off the same
-    memory. Replay Tutorial on How to Play forgets them all (dim when there is nothing to replay). A drop goal's thumb
+    memory. Nothing replays them: Replay Tutorial, which only forgot them (a press showed nothing until each close-up's
+    next first time), left How to Play on 2026-11-09, and `tutReset` stays for the tools. A drop goal's thumb
     still down carries over Play as at the press; one lifted under the card needs a fresh press.
 - **Phone landscape** (2026-10-30). The fan, Sprint-as-hold and the resting stick at 96, H−118 with no inset stay as
   they are. Four things that were fiddly on a phone, each checked rather than redesigned:
@@ -1146,6 +1147,23 @@ Controllers need HTTPS or localhost (the Gamepad API is off on an insecure page)
 
 Checked with `bot.mjs`, 36 matches a difficulty at SEED 1 and again at SEED 2 (72 matches, 4-minute halves, duels live). Wins were 100% / 84.7% / 55.6% (Easy / Normal / Hard), against 99.0 / 87.8 / 52.0 in the measured table below. The scripted player still taps, so every long pass in that run was the CPU's: about 2.6 / 3.4 / 3.5 a match.
 
+### How to Play (2026-11-09)
+
+Gordon: "'how to play' says 'repeat tutorial' but none ever shows. it's a block of text - better to show controls from a UI
+perspective and leave it there". It is now a picture of the match screen sideways: the stick's ring and knob in its resting
+corner and Sprint, Kick and Pass where `.act c/b/a` sit in play (the HUD's own offsets and sizes times `--s`, .8, or .68 on a
+short desk and under 340px tall), in their own colours, with the pause button top right. Beside each part are its jobs as
+pills in its colour, one per job: the stick's Drag Run, Flick Across Side Step and Pull Back Dummy in the knob's chalk; Kick's
+Tap Chip, Switch and Drop Goal, dark with a ring; Pass's Hold Long Pass, Tackle and Offload in gold; Pause. Under it the scoring
+strip (Try 5, Conversion 2, Penalty 3, Drop Goal 3), and on a computer or with a controller (`.desk-only`) two rows of keycaps
+filled by `renderHowTo` from `KB.solo` and the hint chips' pad glyphs: W A S D (and the arrows, drawn by CSS, where the row
+has room) Run, J Pass, K Kick, L Sprint, P Pause; the stick, bottom, right, shoulder and Start. Two Players stays off it, as on
+the home. Back to Menu is the one button, a full row. It fits one screen with no scroll at 844x390 (an iPhone's insets too,
+Back sitting on the home bar's inset) and 667x375, touch and desk; at 568x320 it scrolls. Replay Tutorial went (it only emptied
+`settings.tut`, so a press showed nothing), and with it every prose row: Hints, Tutorial, The Ball, Coach, Table, First
+Matches, 50:22, Saving and Install & Offline. Nothing moved to Settings: no check or PWA flow needs the install line, since
+Install Game, Offline Ready and Update Game are on the home. `node tools/howto.mjs` checks it.
+
 ### Close-ups
 
 Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock freeze while it runs.
@@ -1202,7 +1220,7 @@ below the stick whenever their top would reach the card's bottom (`platesFloor`)
 little high on a phone no longer slides them under Flick on Gold. The pause card's two Hints rows share one grid, so both
 On | Off controls start on the same line. The tutorial card (`#m-tut`) holds the first close-up of each kind on this
 device: Skip | Next, then Play; while it holds, two player re-centres only the owner's stick (as the grace does), so the
-chooser's push during the card counts on a pad as it does on keys. Replay Tutorial is on How to Play. The words are
+chooser's push during the card counts on a pad as it does on keys. The words are
 pinned by `hints.mjs` and `tutorial.mjs`.
 
 ### Contact
@@ -1790,8 +1808,8 @@ a charger.
     drop's thumb still down carrying over Play and one lifted needing a fresh press); the words on every device and for each
     seat, Title Case, no arrows, every key a `{code}` token drawn as a keycap by `tutHtml` (Player 2's / and . as `<kbd>` in
     the sentence; with the keycaps read as a word, no card on any device or seat names a key as bare punctuation or a lone
-    letter), the Help entry and the card's markup; Hints Off giving no card but the memory and the +0.08
-    aid once per kind; headless never pausing; the save round-trip and cleaning; Replay Tutorial; pause under the card; two
+    letter), no Tutorial entry or Replay Tutorial on How to Play, and the card's markup; Hints Off giving no card but the memory and the +0.08
+    aid once per kind; headless never pausing; the save round-trip and cleaning; `tutReset`; pause under the card; two
     player naming the owner with either seat advancing and the memory the device's; a CPU scrum's card yours; no card for the
     CPU's kick; Quit Match taking the card down. On a build without it, it exits at once with one failure.
 

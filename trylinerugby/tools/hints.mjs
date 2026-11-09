@@ -286,7 +286,7 @@ begin('cards');
   // the pause card's rows: one in one player, Player 1 and Player 2 in two player
   D.pause(); ok(M().paused && $('pz-hl0').textContent === 'Hints' && $('pz-hrow1').hidden, 'one player paused: one Hints row'); D.resume();
   fresh({ humans:[true, true], levels:[1, 1] }); D.pause(); ok($('pz-hl0').textContent === 'Player 1 Hints' && !$('pz-hrow1').hidden, 'two player paused: a row each'); D.resume(); D.setTwo(false);
-  // the markup: the home's fourth row, the pause rows, the penalty sublines, the two cards, the Help entries, Replay Tutorial beside Back to Menu
+  // the markup: the home's fourth row, the pause rows, the penalty sublines, the two cards, How to Play's Back to Menu alone
   const home = html.slice(html.indexOf('id="s-home"'), html.indexOf('id="s-teams"'));
   const rows = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"[^>]*>/g)].map(m => m[1] + ':' + m[2]);
   ok(rows.join() === 'Difficulty:diff,Sound:sound,Match Help:hints,Half Length:half', `the home's Settings rows: ${rows.join(', ')}`);
@@ -299,8 +299,11 @@ begin('cards');
   fresh({ humans:[true, true], levels:[1, 1] }); D.stage('past', 1); T.update(STEP); sync(); ok($('hc0').classList.contains('two') && $('hc1').classList.contains('two'), 'the cards carry the two-player class in a two-player match'); runUntil(() => M().phase !== 'cut', 900);
   D.setTwo(false); fresh(); D.stage('past'); T.update(STEP); sync(); ok(!$('hc0').classList.contains('two'), 'and not in one player'); runUntil(() => M().phase !== 'cut', 900);
   ok(/<small class="hsub" id="p-goal-s">3 Points<\/small>/.test(html) && /Kick to Touch<small class="hsub">Lineout Upfield<\/small>/.test(html) && /Tap and Go<small class="hsub">Play On Now<\/small>/.test(html) && /id="ht-pen"/.test(html), 'the penalty card\'s sublines and tick');
-  ok(/<dt>Hints<\/dt><dd>The card in the top corner names the control for each close-up\. Untick <b>Hints<\/b> on it, or set <b>Match Help<\/b> to Off on the menu\.<\/dd>/.test(html), 'the Help page\'s Hints entry');
-  ok(/<div class="row2"><button class="btn" id="h-replay">Replay Tutorial<\/button><button class="btn" id="h-back" data-back>Back to Menu<\/button><\/div>/.test(html), 'Replay Tutorial and Back to Menu share a balanced row on How to Play');
+  // re-pinned 2026-11-09, How to Play a picture of the controls: its Hints prose went (the card's tick and Settings' Match Help, both pinned here, switch them), and Replay Tutorial, which showed nothing, with it
+  const help = html.slice(html.indexOf('id="s-help"'), html.indexOf('</section>', html.indexOf('id="s-help"')));
+  ok(!/<dt>|<dl|Hints/.test(help), 'How to Play has no Hints entry, nor any prose row');
+  ok(/<button class="btn" id="h-back" data-back>Back to Menu<\/button>\s*<\/div>\s*$/.test(help) && (help.match(/<button/g) || []).length === 1 && !/class="row2"/.test(help), 'Back to Menu takes its row alone, the one button on How to Play');
+  ok(![...html.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].some(m => /Replay Tutorial/.test(m[1])), 'no button reads Replay Tutorial');
   ok(/id="jt0"/.test(html) && /id="jt1"/.test(html), 'each join card has a Hints tick');
   const labels = [...html.matchAll(/<button class="hc-tick" id="[a-z0-9-]+" aria-label="([^"]+)"><i><\/i><span>([^<]+)<\/span><\/button>/g)].map(m => m[2]);
   ok(labels.length === 5 && labels.every(l => l === 'Hints'), `every tick is labelled Hints (${labels.length})`);

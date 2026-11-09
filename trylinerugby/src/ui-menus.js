@@ -321,7 +321,7 @@ $('b-champ').addEventListener('click', () => {
 $('b-cabinet').addEventListener('click', () => { renderCabinet('home-history'); showScreen('s-cabinet'); $('s-cabinet').scrollTop = 0; });
 $('cab-back').addEventListener('click', () => goHome($('b-cabinet')));
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });   // Quick Match's Play: Pick Your Team
-$('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
+$('b-help').addEventListener('click', () => { renderHowTo(); showScreen('s-help'); });
 $('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });

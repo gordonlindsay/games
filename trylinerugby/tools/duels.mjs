@@ -262,10 +262,11 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
     const fillAt = (fs, w) => fs.some(a => Math.abs(a[0] - W*0.5) < 1e-6 && Math.abs(a[2] - w) < 1e-6);
     ok(fillAt(fills(1.2), bw/4) && fillAt(fills(SD), bw/2) && !fillAt(fills(1.2), bw/2*1.2/2.0), `drawScrum's bar fills by pos/SCRUM_DOM: a quarter of it at the 1.2m steal line, half at ${SD}m (not 0.3 of it at 1.2, the old /2.0)`);
     runUntil(() => M().phase !== 'cut', 4000); }
-  // the words: neither the Help page nor the README tells the player to hold the stick at a scrum
+  // the words: neither the scrum's cards nor the README tells the player to hold the stick at a scrum (re-pinned 2026-11-09 from How to
+  // Play's Scrum row, which went with its prose: the tutorial card and the hint card are where a player reads what a scrum wants)
   const html = readGameSource(), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
-  const help = (html.match(/<dt>Scrum<\/dt><dd>([\s\S]*?)<\/dd>/) || [])[1] || '', bullet = (readme.match(/- \*\*Scrum:\*\*([\s\S]*?)\n- \*\*/) || [])[1] || '';
-  ok(help && !/stick/i.test(help) && /tap it fast/i.test(help), `the Help page's Scrum row says tap it fast and never mentions the stick (${help.slice(0, 90)})`);
+  const help = T.debug.tutCards('scrum', 0).map(c => c.join(' ')).join(' / '), bullet = (readme.match(/- \*\*Scrum:\*\*([\s\S]*?)\n- \*\*/) || [])[1] || '';
+  ok(!/<dt>Scrum<\/dt>/.test(html) && help && !/stick/i.test(help) && /tap it fast/i.test(help) && /card\('Scrum', [^\n]*'Then Tap Fast'/.test(html), `the scrum's tutorial card says tap it fast and never mentions the stick, and so does its hint card (${help.slice(0, 90)})`);
   ok(bullet && !/stick/i.test(bullet), `the README's Scrum bullet never mentions the stick`);
 }
 // 4. no input falls back to the open game's odds
@@ -383,7 +384,7 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
       ok(a.score === b.score && a.duels === b.duels && a.won === b.won && a.fr > b.fr + 0.5*a.duels, `a bot match is the same match (${a.score}, ${a.duels} duels, ${a.won} won) with ${a.fr.toFixed(1)}s frozen in duels against ${b.fr.toFixed(1)}s without slow motion`); }
     // the words
     const html = readGameSource(), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
-    ok(/<dt>Duels<\/dt><dd>[^<]*(<b>[^<]*<\/b>[^<]*)*slow motion/.test(html) && /slow motion/i.test(readme), 'the Help page\'s Duels row and the README say the duel starts in slow motion');
+    ok(!/<dt>Duels<\/dt>/.test(html) && /slow motion/i.test(readme), 'the README says the duel starts in slow motion (re-pinned 2026-11-09: How to Play\'s Duels row went with its prose; the slow run-in shows it)');
   }
 }
 
