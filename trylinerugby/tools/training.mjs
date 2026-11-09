@@ -310,7 +310,8 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
   // At the Kids level, where the ring shows on every throw (eggRing). Re-pinned when two in three throws became a Bounce Pass: these were whole-run stars
   // (stand-in at most 2.2, run-on at least as many), but a Bounce Pass's ring moves with every hop, so going to it is running on to the ball (the stand-in
   // child meets 258 of 278 at 0.4 s, 2.52 stars). A ring can only be stood in for a Flat Pass or a High Ball, so those are where the two are measured,
-  // in points a throw over 40 runs: stand-in 1.23 and 0.93 at 0.4 and 0.8 s, run-on 1.32 and 1.16 (the build before: 1.11 and 0.96, run-on 1.38 and 1.11)
+  // in points a throw over 40 runs: stand-in 1.23 and 0.93 at 0.4 and 0.8 s, run-on 1.32 and 1.16 (the build before: 1.11 and 0.96, run-on 1.38 and 1.11).
+  // The whole run keeps a ceiling of its own: following the ring, Bounce Passes and all, stays short of three stars (stand-in 2.52 and 1.98, at most 2.8)
   const ringAt = E => E.aim || E.me;
   const standIn = lag => { const n = lagged(lag); let t = 0; return st => { const E = st.egg; if (E.stage !== 'fly') { t = 0; stick(0, 0); return; } if (t++ < n) return; toward(E.me, ringAt(E).x, ringAt(E).y, 0.3); }; };
   const runOn = lag => { const n = lagged(lag); let t = 0; return st => { const E = st.egg, b = T.M.ball; if (E.stage !== 'fly') { t = 0; stick(0, 0); return; } if (t++ < n) return; const a = ringAt(E), d = Math.hypot(a.x - E.me.x, a.y - E.me.y); if (d > 2.2) toward(E.me, a.x, a.y, 0.02); else toward(E.me, b.x, b.y, 0.02); }; };
@@ -320,6 +321,7 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
       const stood = flatHigh(standIn, lag), ran = flatHigh(runOn, lag), top = X.EGG.stars[2]/X.EGG.throws;
       ok(stood.mean >= 0.5, `Egg: a child ${lag} s slow who only stands in the ring earns stars (${showMean(stood)})`);
       ok(stood.fh < top, `Egg: and going to the ring and no further, where it can be stood in, stays short of the top stars (${stood.fh.toFixed(2)} points a Flat Pass or High Ball, the top stars' pace ${top.toFixed(2)})`);
+      ok(stood.mean <= 2.8, `Egg: and over a whole run, Bounce Passes and all, a child ${lag} s slow who only follows the ring stays short of three stars (${showMean(stood)}, at most 2.8)`);
       ok(ran.fh >= stood.fh, `Egg: running on to the ball from the ring earns at least as much as stopping in it (${ran.fh.toFixed(2)} to ${stood.fh.toFixed(2)} points a Flat Pass or High Ball; whole runs ${showMean(ran)} to ${showMean(stood)} stars)`);
     }
   });
