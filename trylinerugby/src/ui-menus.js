@@ -511,6 +511,9 @@ function renderTeams() {
   else if ((quick || pair) && teamOwnPick(view)) {          // Player 1's list: My Team first (the country on International, the club elsewhere), marked, never picked
     const i = teamList.findIndex(o => myIs(o) && isNation(o) === (tier === 0));
     if (i > 0) teamList = [teamList[i], ...teamList.slice(0, i), ...teamList.slice(i + 1)];
+  } else if (quick && quickPick && !view) {                 // Pick Opponent: the picked side's own league first where it has a rival on the list, so Farnham's first opponent is Wimbledon (61 v 58), a fair derby (the real order, 2026-11-09). Only the order changes
+    const lg = quickPick.league, rival = o => !!lg && o.league === lg;
+    if (teamList.some(o => rival(o) && keyOf(o) !== keyOf(quickPick))) teamList = [...teamList.filter(rival), ...teamList.filter(o => !rival(o))];
   }
   teamOwn = teamOwnPick(view);
   let html = teamList.map(teamCard).join('');

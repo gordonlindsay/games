@@ -262,7 +262,7 @@ function catchBall(p, kind) {
   setCarrier(p); sfx('catch');
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
-  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? PASS_FLIGHT.graceKids : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit
+  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? KIDS.grace : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit (Kids: its rating's, kidsTune)
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'

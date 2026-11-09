@@ -506,7 +506,8 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const levers = flat(SCALE);
   // the start is the Kids level as it was before the scale, lever for lever
   const was = { 'diff.cpuSpeed':0.92, 'diff.cpuTackle':0.45, 'diff.cpuIntercept':0.05, 'diff.turnover':-0.05, 'diff.scrumCpu':0.45, 'diff.lineSigma':0.28, 'diff.lineContest':0.35,
-    tackle:0.10, hands:0.1, jolt:0.15, offload:0.95, passErr:0.4, duelWin:0.20, save:1, 'kick.band':2, 'kick.bandMax':0.34, 'kick.fill':1.6, 'kick.rush':0.65, scrum:0.25, reach:0.12 };
+    tackle:0.10, hands:0.1, jolt:0.15, offload:0.95, passErr:0.4, duelWin:0.20, save:1, 'kick.band':2, 'kick.bandMax':0.34, 'kick.fill':1.6, 'kick.rush':0.65, scrum:0.25, reach:0.12,
+    flight:C.PASS_FLIGHT.kids, grace:C.PASS_FLIGHT.graceKids };   // the passing pace: PR #14's Kids, 1.4 and 0.35
   ok(levers.length === Object.keys(was).length && levers.every(([k, v]) => v[0] === was[k]), `the scale starts where Kids was (${levers.length} levers)`);
   K.tune(0); ok(levers.every(([k, v]) => at(k) === v[0]), 'at r = 0 every lever is at its start');
   K.tune(1); ok(levers.every(([k, v]) => at(k) === v[1]), 'at r = 1 every lever is at its ceiling');
@@ -524,6 +525,18 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const way = Object.entries(easy).map(([k, e]) => { const v = SCALE[k.split('.')[0]], [a, b] = Array.isArray(v) ? v : v[k.split('.')[1]]; return [k, (b - a)/(e - a)]; });
   ok(way.every(([, f]) => f > 0.7 && f < 0.9), `each ceiling is 70 to 90% of the way from the start to Easy, never at Easy (${way.map(([k, f]) => k + ' ' + f.toFixed(2)).join(', ')})`);
   ok(SCALE.offload[1] >= 0.85 && SCALE.offload[1] < SCALE.offload[0], `an offload you press gets away ${100*SCALE.offload[1]}% at the ceiling, the top of Easy's 70 to 85%`);
+  // the passing pace (the owner, 2026-11-09: "Keep Kids at Most Easy"): a child starting out keeps PR #14's calm passing, and the ceiling is the old
+  // pace, the one the calibration was measured at (tools/kidbots.mjs, README.md). The two pass Easy's on the way up; the ceiling as a whole is still easier
+  ok(C.PASS_FLIGHT.kids === 1.4 && C.PASS_FLIGHT.graceKids === 0.35 && SCALE.flight.join() === '1.4,1' && SCALE.grace.join() === '0.35,0', `the passing pace runs from PR #14's Kids (${SCALE.flight[0]}, ${SCALE.grace[0]}s) to the old pace at the ceiling (${SCALE.flight[1]}, ${SCALE.grace[1]}s)`);
+  { const n = X.NATIONS[0], old = 15 + n.handling*1.1, sp = r => { play(true, { kidsR:r }); return C.passSpeed(n, false); };
+    ok(near(sp(0), old/1.4) && near(sp(0.5), old/1.2) && near(sp(1), old), `a Kids match's short pass at r 0, 0.5 and 1: ${[0, 0.5, 1].map(r => sp(r).toFixed(2)).join(', ')} m/s (the old pace ${old.toFixed(2)})`);
+    play(false, { kidsR:1 }); ok(near(C.passSpeed(n, false), old/C.PASS_FLIGHT.match), 'Easy keeps the match\'s, whatever the rating');
+    T.newMatch(X.NATIONS[0], X.NATIONS[3], { halfLen:60, diff:0, auto:true, headless:true, kids:true, kidsR:0.5 }); ok(near(C.passSpeed(n, false), old/C.PASS_FLIGHT.match), 'and so does AI v AI'); }
+  { const grace = r => { play(true, { kidsR:r }); const p = M().players.find(q => q.team === 0 && q.id !== M().ball.carrier?.id) || M().players[1];
+      for (let i = 0; i < 9 && M().ball.carrier !== p; i++) { M().phase = 'play'; M().hooter = false; M().ball.f = { kind:'pass', team:0 }; K.catchBall(p, 'pass'); }
+      return M().ball.carrier === p ? p.grace : NaN; };
+    const g = [0, 0.5, 1].map(grace);
+    ok(near(g[0], 0.35) && near(g[1], 0.175) && g[2] === 0, `your catcher's moment before an AI man can commit, at r 0, 0.5 and 1: ${g.map(v => v.toFixed(3)).join(', ')}s`); }
   // the levers a match plays: the rating it was started at, or the start when nothing says
   play(true); ok(M().kidsR === 0 && KIDS.r === 0 && KIDS.diff.cpuSpeed === SCALE.diff.cpuSpeed[0], 'a Kids match not given a rating plays the start');
   play(true, { kidsR:0.6 }); ok(M().kidsR === 0.6 && near(KIDS.diff.cpuTackle, 0.4*SCALE.diff.cpuTackle[0] + 0.6*SCALE.diff.cpuTackle[1], 1e-12) && K.diffOf(1) === KIDS.diff, 'one given r = 0.6 plays the levers at 0.6');

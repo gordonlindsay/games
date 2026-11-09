@@ -16,14 +16,16 @@ const SUPPORT = { lat:5, back:2.6, clear:5, mark:5, latMax:11.2, backMax:6.4, ti
 /* How long a pass hangs in the air (2026-11-08, from the owner's phone playtest: passing in a match is a little hectic). The ball's speed is
    divided by this, so the flight lasts longer and the lead, the Block lane and the sure pass all aim for the slower ball. It is the one lever to
    retune after the kid test: 1 is the old pace. match: every match but Kids, Two Player and Training included (your passes hang 13% longer on the
-   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer). A long pass stays off it: it hangs already. A short pass capped by the law
-   stays near the old pace too (capSpeed), or he brakes for it.
+   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer), at the start of the Kids scale: KIDS_SCALE.flight runs from it to the old
+   pace at the ceiling (src/kids.js). A long pass stays off it: it hangs already. A short pass capped by the law stays near the old pace too
+   (capSpeed), or he brakes for it.
    grace: a slower ball alone left your catcher tackled in the next 0.3s far more often (Kids 22% to 34%, Normal 32% to 38%, Hard 36% to 45%), and
    easing the defence or the receiver in the air did not bring that back. So your catcher has this long after a catch, by level, before an AI man can
-   commit: Kids, then Easy, Normal, Hard. It costs the bot's Hard balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
+   commit: Kids (at the start of its scale: KIDS_SCALE.grace runs from it to none at the ceiling), then Easy, Normal, Hard. It costs the bot's Hard
+   balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
    PASS_FLIGHT='{"match":1.25}' node tools/bot.mjs tries a value without an edit. */
 const PASS_FLIGHT = { match:1.2, kids:1.4, grace:[0.25, 0.25, 0.15], graceKids:0.35 };
-const passFlight = () => (M && M.kids ? PASS_FLIGHT.kids : PASS_FLIGHT.match);
+const passFlight = () => (M && M.kids ? KIDS.flight : PASS_FLIGHT.match);   // a Kids match plays its rating's (kidsTune)
 const passSpeedOld = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // the ball before the lever: a long pass hangs a little, so the loop reads
 const passSpeed = (n, long) => passSpeedOld(n, long) / (long ? 1 : passFlight());   // a long pass keeps its pace: it hangs already, and the lever on top held one up to 2.9s with the stick doing nothing
 const passPace = team => (isHuman(team) ? 1 : RUNON.cpu);   // how hard a side's receiver runs onto the ball, by role

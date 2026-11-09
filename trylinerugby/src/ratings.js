@@ -20,10 +20,11 @@ const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text altern
 /* A team you make or import is set at a level, which gives it a fixed amount of ability: the one table of level, overall and stars. budget: the points to spend above 1 in each ability.
    Each level is the best built-in side of that league on the clubs' ladder (CLUB_RATED), so a level means what a built-in side of it means:
    Counties 5 43 and Counties 3 46 (every side of each), Counties 1 52 (Cobham, Weybridge), Regional 2 55 (Ironsides), Regional 1 61 (Farnham),
-   National League 64 (England 2 with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75. PR #14's European Champions (90, its
+   Championship 64 (England 2, the English Championship, with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75.
+   An imported National League page (England's third and fourth tiers) is Regional 1 (src/import.js). PR #14's European Champions (90, its
    Bordeaux) has gone with Bordeaux's 90: no club is above a nation, and a save holding it reads as National Champions (LEVEL_WAS).
-   The id is what a save holds, so it never changes. A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
-const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'National League', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
+   The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
+const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
   .map(([id, name, overall]) => ({ id, name, overall, stars:starsOfOverall(overall), budget:sumOfOverall(overall) - ABILITIES.length }));
 const LEVEL_WAS = { euro:'champ' };   // a level that has gone, as a save may still hold it
 const levelById = id => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => l.id === LEVEL_WAS[id]) || null;

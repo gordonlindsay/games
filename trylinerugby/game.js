@@ -326,10 +326,11 @@ const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text altern
 /* A team you make or import is set at a level, which gives it a fixed amount of ability: the one table of level, overall and stars. budget: the points to spend above 1 in each ability.
    Each level is the best built-in side of that league on the clubs' ladder (CLUB_RATED), so a level means what a built-in side of it means:
    Counties 5 43 and Counties 3 46 (every side of each), Counties 1 52 (Cobham, Weybridge), Regional 2 55 (Ironsides), Regional 1 61 (Farnham),
-   National League 64 (England 2 with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75. PR #14's European Champions (90, its
+   Championship 64 (England 2, the English Championship, with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75.
+   An imported National League page (England's third and fourth tiers) is Regional 1 (src/import.js). PR #14's European Champions (90, its
    Bordeaux) has gone with Bordeaux's 90: no club is above a nation, and a save holding it reads as National Champions (LEVEL_WAS).
-   The id is what a save holds, so it never changes. A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
-const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'National League', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
+   The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
+const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
   .map(([id, name, overall]) => ({ id, name, overall, stars:starsOfOverall(overall), budget:sumOfOverall(overall) - ABILITIES.length }));
 const LEVEL_WAS = { euro:'champ' };   // a level that has gone, as a save may still hold it
 const levelById = id => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => l.id === LEVEL_WAS[id]) || null;
@@ -1196,7 +1197,7 @@ function catchBall(p, kind) {
   setCarrier(p); sfx('catch');
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
-  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? PASS_FLIGHT.graceKids : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit
+  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? KIDS.grace : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit (Kids: its rating's, kidsTune)
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
@@ -1237,14 +1238,16 @@ const SUPPORT = { lat:5, back:2.6, clear:5, mark:5, latMax:11.2, backMax:6.4, ti
 /* How long a pass hangs in the air (2026-11-08, from the owner's phone playtest: passing in a match is a little hectic). The ball's speed is
    divided by this, so the flight lasts longer and the lead, the Block lane and the sure pass all aim for the slower ball. It is the one lever to
    retune after the kid test: 1 is the old pace. match: every match but Kids, Two Player and Training included (your passes hang 13% longer on the
-   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer). A long pass stays off it: it hangs already. A short pass capped by the law
-   stays near the old pace too (capSpeed), or he brakes for it.
+   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer), at the start of the Kids scale: KIDS_SCALE.flight runs from it to the old
+   pace at the ceiling (src/kids.js). A long pass stays off it: it hangs already. A short pass capped by the law stays near the old pace too
+   (capSpeed), or he brakes for it.
    grace: a slower ball alone left your catcher tackled in the next 0.3s far more often (Kids 22% to 34%, Normal 32% to 38%, Hard 36% to 45%), and
    easing the defence or the receiver in the air did not bring that back. So your catcher has this long after a catch, by level, before an AI man can
-   commit: Kids, then Easy, Normal, Hard. It costs the bot's Hard balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
+   commit: Kids (at the start of its scale: KIDS_SCALE.grace runs from it to none at the ceiling), then Easy, Normal, Hard. It costs the bot's Hard
+   balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
    PASS_FLIGHT='{"match":1.25}' node tools/bot.mjs tries a value without an edit. */
 const PASS_FLIGHT = { match:1.2, kids:1.4, grace:[0.25, 0.25, 0.15], graceKids:0.35 };
-const passFlight = () => (M && M.kids ? PASS_FLIGHT.kids : PASS_FLIGHT.match);
+const passFlight = () => (M && M.kids ? KIDS.flight : PASS_FLIGHT.match);   // a Kids match plays its rating's (kidsTune)
 const passSpeedOld = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // the ball before the lever: a long pass hangs a little, so the loop reads
 const passSpeed = (n, long) => passSpeedOld(n, long) / (long ? 1 : passFlight());   // a long pass keeps its pace: it hangs already, and the lever on top held one up to 2.9s with the stick doing nothing
 const passPace = team => (isHuman(team) ? 1 : RUNON.cpu);   // how hard a side's receiver runs onto the ball, by role
@@ -4441,7 +4444,7 @@ function cleanCupEntry(e) {
    - Any club: a side from a national league, a Local club, or a team you made or imported. The list it was picked from is its
      league (career.league): a built-in club's is always its own list, a made one's the list it was picked on (My League for an
      imported one, Local while no league is saved). Every player starts a rookie (CAREER_START, about 61), whatever the club.
-   - Transfers: his overall (61 to 99) maps onto the clubs' band (61 to 75) linearly and capped (careerTarget); the offers are
+   - Transfers: his overall (61 to 99) maps onto the national clubs' band (58 to 75) linearly and capped (careerTarget); the offers are
      clubs from the national lists, Scotland's included, never his own, within CAREER_MOVE.band of that, the band widened a
      point at a time until there are two. One from each league first where it can be. A made, imported or Local club he started
      at is his to stay at; an offer is always from the national lists. The draw is made as the window opens and saved with it.
@@ -4470,9 +4473,10 @@ const CAREER_PHASES = ['league', 'cup', 'intl', 'tour', 'transfer'];
 /* bar: the overall that earns a call-up (a scripted player is first called up at the end of year 3 or 4: tools/career.mjs);
    tour: the overall for the Home Nations Tour; every4: a World Cup in years 4, 8, 12, the tour in years tourAt + 4n (2, 6, 10). */
 const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
-/* from: his overall's range; to: the clubs' (Scotland's amateur sides at 61 to the top professional sides at 75); band: how near
-   a club's overall must be to the target, widened a point at a time until there are two; offers: two or three. */
-const CAREER_MOVE = { from:[61, 99], to:[61, 75], band:1, offers:[2, 3] };
+/* from: his overall's range; to: the national clubs' (Scotland's bottom five at 58 to the national champions at 75, the real order), so
+   every national club can be offered; band: how near a club's overall must be to the target, widened a point at a time until there are
+   two; offers: two or three. */
+const CAREER_MOVE = { from:[61, 99], to:[58, 75], band:1, offers:[2, 3] };
 const CAREER_EURO = ['eng', 'fra', 'cel', 'rsa'];   // the leagues whose winners play the European Cup (the cups engine's CUPS.euro.lists)
 const CAREER_HOME = ['ENG', 'IRE', 'SCO', 'WAL'];   // the home nations: the tour is theirs (CUPS.tour.from), and so is the Triple Crown
 const CAREER_CUP_NAME = { euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // the cups engine's names (CUPS)
@@ -4551,6 +4555,15 @@ const careerClubs = () => NATIONAL.flat();           // where an offer comes fro
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
 const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
 const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+/* A built-in club as its list rates it now. A save keeps the abilities its club had when it was saved, and a re-rating (the real order,
+   2026-11-09: Farnham 75 to 61) would leave a career's club at the old ones while every league it draws is at the new. So a loaded
+   career's club takes its list's abilities (cleanCareer); a team you made or a My League side keeps its own, and a season in progress
+   keeps its sides as saved, as a championship does. */
+function careerRated(club) {
+  const l = careerListOf(club), now = l && l.teams.find(o => o.id === club.id);
+  if (now) for (const [k] of ABILITIES) club[k] = clamp(Math.round(abilityOf(now, k) || 1), 1, 5);
+  return club;
+}
 /* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
    Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
@@ -4888,6 +4901,7 @@ function cleanCareer(c) {
   const signed = was != null && was >= 3 ? careerClubById(c.pro) : null;   // the Pro Club side it signed for
   const club = cleanSide(signed || c.club);
   if (!club || !raw) return null;
+  careerRated(club);                                   // a built-in club at its list's ratings now, whatever it was saved at
   const pos = c.pos === 'F' ? 'F' : 'B';               // an unknown position is a back, as careerCreate has it
   /* Men or Women. A career from before Men | Women is Men, except one PR #14's build saved: it has no cat, and its Female was look.g 1
      (its careerFemale), the same one control, so that is a women's career. A cat, where there is one, decides. */
@@ -10028,6 +10042,9 @@ function renderTeams() {
   else if ((quick || pair) && teamOwnPick(view)) {          // Player 1's list: My Team first (the country on International, the club elsewhere), marked, never picked
     const i = teamList.findIndex(o => myIs(o) && isNation(o) === (tier === 0));
     if (i > 0) teamList = [teamList[i], ...teamList.slice(0, i), ...teamList.slice(i + 1)];
+  } else if (quick && quickPick && !view) {                 // Pick Opponent: the picked side's own league first where it has a rival on the list, so Farnham's first opponent is Wimbledon (61 v 58), a fair derby (the real order, 2026-11-09). Only the order changes
+    const lg = quickPick.league, rival = o => !!lg && o.league === lg;
+    if (teamList.some(o => rival(o) && keyOf(o) !== keyOf(quickPick))) teamList = [...teamList.filter(rival), ...teamList.filter(o => !rival(o))];
   }
   teamOwn = teamOwnPick(view);
   let html = teamList.map(teamCard).join('');
@@ -11298,8 +11315,10 @@ async function importFetch(url, opts = {}) {
    Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
    by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
 const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham (and Quins), at 61: Regional 1
-/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them. Null when the words say nothing. */
-const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b/, 'r1'], [/\bnational league\b|\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
+/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them, and so does National
+   League (England's third and fourth tiers, between Regional 1 and the Championship): Regional 1, 61, level with England 2's foot and under
+   its winners, so no import listed under Local is above an England 2 side. Null when the words say nothing. */
+const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b|\bnational league\b/, 'r1'], [/\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
 function importLevelFrom(texts) {
   for (const t of texts) { const s = String(t || '').toLowerCase().slice(0, 300), hit = IMPORT_LEVEL_WORDS.find(([re]) => re.test(s)); if (hit) return hit[1]; }
   return null;
@@ -11592,7 +11611,7 @@ $('im-paste').addEventListener('click', async () => {
    as a Kids match starts (newMatch). The aids in KIDS outside the scale hold all the way up: the aim set at a goal kick, any press
    acting in a close-up, the ring finding your best defender, and the chase when the stick is let go. After each completed one-player
    Kids match kidsAdapt moves r by the result (KIDS_ADAPT) and saves it as settings.kidsR. Nothing on screen ever shows it. */
-const KIDS_SCALE = {       // [start, ceiling]. The start is the Kids level as it was before the scale; the ceiling is 80% of the way from there to Easy
+const KIDS_SCALE = {       // [start, ceiling]. The start is the Kids level as it was before the scale; the ceiling is 80% of the way from there to Easy, but for the passing pace (flight, grace: below)
   diff:{ cpuSpeed:[0.92, 0.96], cpuTackle:[0.45, 0.54], cpuIntercept:[0.05, 0.09], turnover:[-0.05, -0.035], scrumCpu:[0.45, 0.57], lineSigma:[0.28, 0.21], lineContest:[0.35, 0.51] },   // the other side (Easy: 0.97, 0.56, 0.10, -0.03, 0.60, 0.19, 0.55): slower, weaker in the tackle, less often intercepting or turning the ball over, soft at scrum and lineout
   tackle:[0.10, 0.02],     // your ringed man's own tackles (his contact tackle and his dive) are this much surer (Easy 0)
   hands:[0.1, 0.82],       // your side's catches knock on this share as often (Easy 1)
@@ -11604,6 +11623,13 @@ const KIDS_SCALE = {       // [start, ceiling]. The start is the Kids level as i
   kick:{ band:[2, 1.2], bandMax:[0.34, 0.26], fill:[1.6, 1.12], rush:[0.65, 0.93] },   // goal kicks (Easy 1, 0.24, 1, 1): the gold band this much wider (at most bandMax), the meter this much slower; drop-goal chargers at this share of their pace
   scrum:[0.25, 0.05],      // your pack's own shove (Easy 0)
   reach:[0.12, 0.03],      // your lineout jumper's reach, in metres (Easy 0)
+  /* How long a pass hangs (PASS_FLIGHT, src/passing.js), both sides' passes, and your catcher's moment before an AI man can commit. A child
+     starting out keeps PR #14's calm passing (PASS_FLIGHT's Kids); the ceiling is the old pace, the one the calibration was measured at
+     (the owner, 2026-11-09: "Keep Kids at Most Easy"). PR #14's passing all the way up took the settled 7 to 8 year old from 81% won by 2.7
+     tries to 92% by 3.5; on this scale he settles at 0.97, winning 83% by 2.7 (tools/kidbots.mjs, README.md). These two pass Easy's (1.2, 0.25)
+     on the way up; every other lever stops short of it, and the ceiling as a whole is still easier than Easy (84% won by 2.9 against 81% by 2.2). */
+  flight:[PASS_FLIGHT.kids, 1],
+  grace:[PASS_FLIGHT.graceKids, 0],
 };
 const KIDS = {             // the levers of the Kids match being played: kidsTune fills in the scale, and the rest never moves
   diff:{ ...DIFF[0] }, kick:{},
@@ -11631,7 +11657,8 @@ kidsTune(0);
    wins outweigh his losses and it climbs, above it the other way, and the nearer it gets the more nearly they cancel, so it drifts
    in more and more slowly rather than swinging from end to end. Scripted children (tools/kidbots.mjs) settle at about 0.73 (a 6 year
    old, winning 72%), 0.96 (a 7 to 8 year old, winning 81% by 2.7 tries) and the ceiling (a sharp 10 year old), and a child who never
-   defends at about 0.12; README.md has the scorelines. */
+   defends at about 0.12; README.md has the scorelines. Since PR #14, with its passing on the scale, the 7 to 8 year old settles at 0.97,
+   winning 83% by 2.7 (2026-11-09). */
 const KIDS_ADAPT = { big:3, raise:0.05, nudge:0.01, draw:-0.01, lose:-0.05, heavy:-0.10 };
 function kidsStep(score, tries, h = 0) {                    // the step one result moves r, up if above 0, down if below. h is the child's side
   const pts = score[h] - score[1 - h], m = tries[h] - tries[1 - h], A = KIDS_ADAPT;

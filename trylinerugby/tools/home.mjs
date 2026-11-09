@@ -281,6 +281,18 @@ const fresh = () => {                                       // a new game on the
   ok(D.quickPick && false || $('t-title').textContent === 'Pick Opponent' && /Guildford/.test($('t-mine').innerHTML) && T.M === demo, 'another side picked: his; now the opponent');
   X.tierPick(1); X.poolPick('eng');
   ok(/>Bath</.test(first()) === true && !/My Team/.test($('t-grid').innerHTML), 'the opponents\' list: in its own order, nothing marked');
+  // Pick Opponent puts the picked side's own league rivals first (the real order, 2026-11-09): Farnham's first opponent is Wimbledon, a fair derby
+  {
+    const list = () => T.yourTeam.teamList(), ids = () => list().map(t => t.id), sur = X.CLUBS.map(t => t.id);
+    $('t-change').click(); X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[0]);
+    const opp = list().find(t => t.id !== 'FAR');
+    ok($('t-title').textContent === 'Pick Opponent' && ids()[0] === 'FAR' && opp.id === 'WIM' && opp.league === X.CLUBS[0].league && X.overallOf(X.CLUBS[0]) - X.overallOf(opp) <= 3, `Farnham picked: the first opponent is Wimbledon, his own league's (${ids().slice(0, 3).join(' ')}, ${X.overallOf(X.CLUBS[0])} v ${X.overallOf(opp)})`);
+    ok(ids().length === sur.length && [...ids()].sort().join() === [...sur].sort().join() && ids().filter(id => id !== 'WIM').join() === sur.filter(id => id !== 'WIM').join(), 'only the order changes: the same sides, the rest in the list\'s own order');
+    X.poolPick('cty'); const c = ids();
+    ok(c.join() === X.COUNTIES.map(t => t.id).join(), `a list without a rival of his: in its own order (${c.slice(0, 3).join(' ')})`);
+    $('t-change').click(); X.poolPick('sur'); D.pickTeam(X.CLUBS.find(t => t.id === 'GDN'));
+    ok(ids().join() === sur.join(), 'a side with no rival on its list leaves the list as it is (Guildfordians on Surrey)');
+  }
   // 2 Players (off the home; its own entry, openJoin): Player 1's list only
   D.openJoin(); D.openTeams('two');
   ok(/>Bath</.test(first()) && /My Team/.test(first()) && D.twoSel().picking === 0 && !D.twoSel().teams[1], '2 Players: Bath first in Player 1\'s list, marked');

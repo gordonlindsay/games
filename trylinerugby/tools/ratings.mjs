@@ -69,8 +69,8 @@ pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 
   // the levels: one table, with what each can spend
   { const row = R.TEAM_LEVELS.map(l => [l.id, l.name, l.overall, l.stars, l.budget].join(':')).join();
     // re-pinned at the real order (2026-11-09): each level is the best built-in side of its league on the clubs' ladder (Farnham's Regional 1 61,
-    // England 2's National League 64), PR #14's 40 to 58 a step up; its European Champions (90) went with Bordeaux's 90, read as National Champions
-    ok(row === 'c5:Counties 5:43:2:1,c3:Counties 3:46:2:2,c1:Counties 1:52:2.5:4,r2:Regional 2:55:3:5,r1:Regional 1:61:3.5:7,nat:National League:64:3.5:8,top:Top Flight:72:4:11,champ:National Champions:75:4.5:12', `the level table (${row})`);
+    // England 2's Championship 64, the level named National League until the review, its id 'nat' unchanged), PR #14's 40 to 58 a step up; its European Champions (90) went with Bordeaux's 90, read as National Champions
+    ok(row === 'c5:Counties 5:43:2:1,c3:Counties 3:46:2:2,c1:Counties 1:52:2.5:4,r2:Regional 2:55:3:5,r1:Regional 1:61:3.5:7,nat:Championship:64:3.5:8,top:Top Flight:72:4:11,champ:National Champions:75:4.5:12', `the level table (${row})`);
     const best = re => Math.max(...X.ALL_TEAMS.filter(t => re.test(t.league || '')).map(X.overallOf));
     ok([[/Counties 5/, 'c5'], [/Counties 3/, 'c3'], [/Counties 1/, 'c1'], [/Regional 2/, 'r2'], [/Regional 1/, 'r1'], [/English Championship/, 'nat']].every(([re, id]) => best(re) === R.TEAM_LEVELS.find(l => l.id === id).overall) && R.TEAM_LEVELS.find(l => l.id === 'champ').overall === Math.max(...X.ALL_TEAMS.filter(t => !X.isNation(t)).map(X.overallOf)), 'each level is the best built-in side of its league, National Champions the best club');
     ok(R.TEAM_LEVELS.every(l => R.starsOfOverall(l.overall) === l.stars && R.abilitiesFor({}, 5 + l.budget) && X.overallOf(R.abilitiesFor({}, 5 + l.budget)) === l.overall), 'a level spent in full is its own overall and stars');
