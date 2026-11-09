@@ -5,7 +5,7 @@
 //                                                                  rule; settled is each run after its first `skip` matches
 // Add a profile name (six, eight, ten, or masher, who runs only when named) to run one child only. Every match is seeded on its own (SEED,
 // then its run and number), so a line is the same whatever else runs. JOBS=n splits the matches over n processes (default: the machine's
-// cores, at most 8). A ± is a standard error. Where r settles has it across the runs; a settled margin and win share have it counting each
+// cores, at most 8). SIDES=FAR,HAS plays one pairing instead of the six nations in turn (below). A ± is a standard error. Where r settles has it across the runs; a settled margin and win share have it counting each
 // match on its own, and across the runs in brackets (the rating's feedback holds a run's results together, so the matches are not independent).
 // Not part of check.mjs: it is a calibration tool, tens of minutes long. tools/kids.mjs checks the rule and the scale themselves.
 import { spawn } from 'node:child_process';
@@ -109,13 +109,17 @@ export function kidStep(P, S) {
 }
 
 /* One seeded Kids match for child `who` at rating r: Quick Match's terms, 2-minute halves, the teams rotated by its number. The six nations
-   play at the ratings the calibration in README.md was measured with: the XV ratings (2026-11-08) moved England, Italy, Scotland and Wales. */
+   play at the ratings the calibration in README.md was measured with: the XV ratings (2026-11-08) moved England, Italy, Scotland and Wales.
+   SIDES=FAR,HAS plays that one pairing instead, the child's side first, at its list's ratings as the game has them (CLUB_RATED=band: the
+   ratings before the real order), for a pairing the team screen offers: Quick Match's first two cards are Farnham and Haslemere. */
 const CALIBRATED = { ENG:[4, 5, 3, 4, 4], ITA:[4, 3, 3, 3, 3], SCO:[5, 3, 4, 3, 4], WAL:[3, 4, 3, 3, 4] };
 const sixAt = i => { const t = T.teams.NATIONS[i], v = CALIBRATED[t.id]; return v ? { ...t, pace:v[0], power:v[1], handling:v[2], kicking:v[3], stamina:v[4] } : t; };
+const PAIR = process.env.SIDES ? process.env.SIDES.split(',').map(id => T.teams.ALL_TEAMS.find(t => t.id === id)) : null;
+if (PAIR && (PAIR.length !== 2 || !PAIR.every(Boolean))) throw new Error('SIDES names two sides by code, e.g. SIDES=FAR,HAS');
 export function kidsMatch(who, r, seed) {
   reseed(seed);
   const P = KID_BOTS[who], i = seed % 30, a = i % 6, b = (a + 1 + (i % 5)) % 6;
-  T.newMatch(sixAt(a), sixAt(b), { halfLen:120, diff:0, headless:true, duels:'live', arcade:true, kids:r >= 0, kidsR:r });   // r < 0: plain Easy, for comparison
+  T.newMatch(PAIR ? PAIR[0] : sixAt(a), PAIR ? PAIR[1] : sixAt(b), { halfLen:120, diff:0, headless:true, duels:'live', arcade:true, kids:r >= 0, kidsR:r });   // r < 0: plain Easy, for comparison
   const S = { wobT:0, defT:0, lag:0 };
   let n = 0;
   while (!T.M.over && n < 400000) { kidStep(P, S); T.update(STEP); n++; }

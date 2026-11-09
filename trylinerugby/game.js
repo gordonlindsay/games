@@ -29,7 +29,7 @@ const NATIONS = [   // append only: championships saved before clubs existed ind
 ];   // the six first, then the rest of the world, then the women's two; a nation's code never matches a club's (RSA, not a South African city's)
 /* Local clubs: kit colours are the clubs' own. Each club's league line (league, place, w, d, l, pf, pa) is its last season's, real figures from
    PR #14's lists, read from the list and never saved (cleanSide and cleanTeam keep none of it). Its rating comes from that season (CLUB_RATED, src/ratings.js);
-   the abilities written here are only how it plays. Quins has no line here, so it keeps the rating written here. Append only, never reorder. */
+   the abilities written here are only how it plays. Quins has no line here: it is rated level with Farnham, as written here. Append only, never reorder. */
 const CLUBS = [
   { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3, league:'Regional 1 South Central', place:7, w:10, d:0, l:12, pf:640, pa:646 },
   { id:'HAS', name:'Haslemere',     kit:'#2244aa', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Counties 3 Surrey', place:9, w:4, d:0, l:16, pf:344, pa:598 },
@@ -46,9 +46,9 @@ const CLUBS = [
 ];
 /* Professional sides go by their city, not the club's own name or nickname: the city is a place, the club name is a
    trademark. Kit colours follow the clubs' own, and no club tops a team you can make (5 + BUDGET). A side with a league line (PR #14's
-   last-season figures) is rated from it inside main's club band (CLUB_RATED, src/ratings.js): a top flight 67 to 72, and 75 only for a
-   national champion; England 2 64 or 67; Scotland's amateur clubs 61 and 64, as written here. New Zealand and Japan have no figures and
-   keep the ratings written here. The abilities written in a list are how a side plays (its flavour, TEAM_FLAVOUR).
+   last-season figures) is rated from it in the real order of the tiers (CLUB_RATED, src/ratings.js): a top flight 67 to 72, and 75 only
+   for a national champion; England 2 61 or 64; Scotland's amateur clubs 58 and 61, a step under the ratings written here. New Zealand
+   and Japan have no figures and keep the ratings written here. The abilities written in a list are how a side plays (its flavour, TEAM_FLAVOUR).
    Codes are unique across every list, nations included. Append only, never reorder. */
 const FRANCE = [   // the Top 14, rated by its 2025-26 table
   { id:'TLS', name:'Toulouse',    kit:'#d01f2e', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3, league:'Top 14', place:1, w:18, d:0, l:8, pf:981, pa:617 },
@@ -139,8 +139,8 @@ const SCOTLAND = [   // the Scottish Premiership, 2025-26, in its table's order:
   { id:'SEL', name:'Selkirk',    kit:'#1b2747', trim:'#f2efe6', pace:2, power:3, handling:2, kicking:2, stamina:3 },
 ];
 /* England's second tier, the English Championship, in last season's table order (regular season, before the play-offs), from PR #14. Thirteen
-   of its fourteen: the side from London is left out, because London is taken by the top flight's sides and it was relegated. Rated 67 with
-   a winning record, else 64: one step under the top flights' best, its winners level with their foot (CLUB_RATED).
+   of its fourteen: the side from London is left out, because London is taken by the top flight's sides and it was relegated. Rated 64 with
+   a winning record, else 61, PR #14's own figures: under every top-flight side, and above every Local and Counties side (CLUB_RATED).
    No two sides here share a shirt and a trim at a glance: where a club's own colours are close to another's, one wears hoops or the darker
    shade. Weak sources, as PR #14 flagged them: Chinnor, Hartpury's hoops, Cornwall's trim, Doncaster, Nottingham's hoops, Ampthill's shade
    and hoops and Caldy's hoops could not be sourced and are a free choice. Append only, never reorder. */
@@ -161,7 +161,7 @@ const ENGLAND_TWO = [
 ];
 /* The foot of the game, from PR #14: Counties 5 Surrey, the league Guildfordians play in, in last season's table order, with one side from
    Counties 3 Surrey above them. Guildfordians is the Local list's own object, so it stays one team with one code (ALL_TEAMS keeps it once).
-   Rated 61 for Counties 5 and 64 for Counties 3, the foot of main's band, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
+   Rated 43 for Counties 5 and 46 for Counties 3, the foot of the ladder, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
    PR #14 flagged them: Egham's and Mitcham's colours could not be sourced and are a free choice. Append only, never reorder. */
 const COUNTIES = [
   { id:'EFF', name:'Effingham',  kit:'#f2b01e', trim:'#0f5a32', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 3 Surrey', place:2, w:16, d:0, l:4, pf:773, pa:291 },
@@ -310,7 +310,7 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.flo
    - RATINGS_BUNDLED is the nations' table, from the world rankings and recent results, with its date. tools/ratings/update.mjs
      reads this line as JSON, so it stays one line of strict JSON. In the merged game it is the shape ratings.json is checked against;
      the nations themselves are rated by main's official World Rugby tables (NATIONS, NAT_WOMEN, natList in data.js).
-   - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), held inside main's club band.
+   - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), in the real order of the tiers.
    - starsOfOverall and TEAM_LEVELS are the star scale and the levels a team you make can be set at.
    - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities.
    - Players' devices only ever ask the game's own site: a same-origin ratings.json, read once at boot (online, or offline through
@@ -324,10 +324,16 @@ function starsOfOverall(ov) { return ov >= 90 ? 5 : ov >= 75 ? 4.5 : ov >= 70 ? 
 const starsOf = t => starsOfOverall(overallOf(t));
 const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text alternative, and the words on a level
 /* A team you make or import is set at a level, which gives it a fixed amount of ability: the one table of level, overall and stars. budget: the points to spend above 1 in each ability.
+   Each level is the best built-in side of that league on the clubs' ladder (CLUB_RATED), so a level means what a built-in side of it means:
+   Counties 5 43 and Counties 3 46 (every side of each), Counties 1 52 (Cobham, Weybridge), Regional 2 55 (Ironsides), Regional 1 61 (Farnham),
+   National League 64 (England 2 with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75. PR #14's European Champions (90, its
+   Bordeaux) has gone with Bordeaux's 90: no club is above a nation, and a save holding it reads as National Champions (LEVEL_WAS).
    The id is what a save holds, so it never changes. A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
-const TEAM_LEVELS = [['c5', 'Counties 5', 40], ['c3', 'Counties 3', 43], ['c1', 'Counties 1', 49], ['r2', 'Regional 2', 52], ['r1', 'Regional 1', 58], ['nat', 'National League', 61], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75], ['euro', 'European Champions', 90]]
+const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'National League', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
   .map(([id, name, overall]) => ({ id, name, overall, stars:starsOfOverall(overall), budget:sumOfOverall(overall) - ABILITIES.length }));
-const teamLevelOf = t => (t && TEAM_LEVELS.find(l => l.id === t.level)) || null;
+const LEVEL_WAS = { euro:'champ' };   // a level that has gone, as a save may still hold it
+const levelById = id => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => l.id === LEVEL_WAS[id]) || null;
+const teamLevelOf = t => (t && levelById(t.level)) || null;
 const teamBudget = t => { const l = teamLevelOf(t); return l ? l.budget : BUDGET; };
 /* Whole abilities 1 to 5 adding up to sum, from a side's flavour. Short of it, a point goes to where the side is already
    strong; over it, a point comes off where it is weakest. Each ability takes its turn, strongest (or weakest) first, so
@@ -345,20 +351,21 @@ function abilitiesFor(flavour, sum) {
   return out;
 }
 const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILITIES.map(([k]) => [k, t[k]]))]));   // from the lists, before any rating is set: how each side plays (a drill's sides, practice.js)
-/* The clubs' table: PR #14's ratings from last season's results (its CLUB_RATED at 05886e6, set from each side's place, scored and conceded,
-   the figures on its list), held inside main's club band. Main's band is 61 to 75, every nation above it (78 and up), and no club tops a team
-   you can make (75). Each of PR #14's steps stays a step where the band has room:
-   - a top flight (England, France, Celtic and Italy, South Africa, Australia): PR #14's own figure, 67 to 75, its 64 and 61 held up to the
-     band's 67 (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide). Only a national champion is 75: Northampton,
-     Toulouse, Dublin. Bordeaux is rated by its table (8th, 70): PR #14's European champion at 90 is not in main's band.
-   - England 2: a step up from PR #14's, 67 with a winning record and 64 without, so its winners are level with the top flights' foot.
-   - Local and Counties: PR #14's ladder moved onto main's band a step for a step, Counties 5 at 61 up to Farnham at 75 (Regional 1). Its
-     55 and 52 (Wimbledon, Ironsides) share 72, the one place two of its steps meet, so Farnham keeps the 75 Kids and Quick Match know.
-     So Local's best sit above England 2 and level with the top flights, where PR #14 had Local under both: with six values in the band,
-     the order between tiers and Farnham's 75 cannot both hold. Left for the owner's call (README, Teams); TEAM_LEVELS waits on it too.
-   - Dunedin, 9th in Super Rugby Pacific under Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
-   Sides not here keep the abilities written in their list: the nations (natList), Scotland's Premiership (61 and 64 as written), New Zealand
-   and Japan (no figures), Quins (no figures). A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. */
+/* The clubs' table, in the real order (the owner, 2026-11-09: "Pro leagues on top, then England 2, then Counties and Local clubs by their
+   tables (Farnham about 61 to 64)"), from PR #14's ratings of last season's results (its CLUB_RATED at 05886e6: each side's place, scored
+   and conceded, the figures on its list). Every nation is above every club (78 and up), and no club tops a team you can make (75).
+   - Top flights (England, France, Celtic and Italy, South Africa, Australia): 67 to 75, PR #14's own figure, its 64 and 61 held up to 67
+     (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide) so every top-flight side is above England 2. Only a
+     national champion is 75: Northampton, Toulouse, Dublin. Bordeaux is rated by its table (8th, 70), not PR #14's European champion at 90.
+     New Zealand and Japan (no figures) keep the abilities written in their lists, 67 to 75. Dunedin, 9th in Super Rugby Pacific under
+     Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
+   - England 2: 61 to 64, PR #14's own figures, 64 with a winning record and 61 without.
+   - Scotland's Premiership (an amateur league, no figures, in its table's order): 61 for the top five and 58 for the rest, a step under
+     the 64 and 61 written in its list, so no Scottish side is above an England 2 side.
+   - Local and Counties: PR #14's ladder a step up, so Farnham (Regional 1, 7th) is 61 and nothing local is above England 2: Regional 1
+     61 to 58, Regional 2 55 to 52, Counties 1 52 to 49, Counties 3 46, Counties 5 43. Quins (no figures) stays level with Farnham, as main had it.
+   A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. Sides not here keep the abilities written in their
+   list: the nations (natList), New Zealand and Japan. TEAM_LEVELS is on the same ladder. */
 const CLUB_RATED = {
   NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,                                                  // England: the Premiership, Northampton the champion
   TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,                    // France: the Top 14, Toulouse the champion
@@ -366,9 +373,10 @@ const CLUB_RATED = {
   CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,                                                                            // South Africa: the URC's four, then the Currie Cup's
   BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67,                                                                                    // Australia: Super Rugby Pacific, then the two with no side now
   DUN:67,                                                                                                                            // New Zealand: Dunedin, under Sydney
-  EAL:67, BED:67, COV:67, WOR:67, CHN:67, HPY:67, CWL:67, DON:67, NOT:64, AMP:64, CAL:64, RIC:64, CAM:64,                            // England 2: a winning record 67
-  FAR:75, WIM:72, IRO:72, GUI:70, COB:70, WEY:70, ORU:67, KIN:64, HAS:64, ALD:64, GDN:61,                                            // Local: Regional 1 down to Counties 5
-  EFF:64, WAN:61, EGH:61, MER:61, MIT:61, FEL:61,                                                                                    // Counties: Counties 3 64, Counties 5 61
+  EAL:64, BED:64, COV:64, WOR:64, CHN:64, HPY:64, CWL:64, DON:64, NOT:61, AMP:61, CAL:61, RIC:61, CAM:61,                            // England 2: a winning record 64
+  AYR:61, CUR:61, GOL:61, MYR:61, KEL:61, GIF:58, HAW:58, MLR:58, ANN:58, SEL:58,                                                    // Scotland: the Premiership's top five 61
+  FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,                                    // Local: Regional 1 down to Counties 5
+  EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,                                                                                    // Counties: Counties 3 46, Counties 5 43
 };
 // CLUB_TUNE
 for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));
@@ -503,7 +511,7 @@ function cleanTeam(t, i) {
   let left = teamBudget(t);
   for (const k of hasStamina ? keys : ['stamina', ...keys.filter(x => x !== 'stamina')]) { const v = clamp(Math.round(abilityOf(t, k) || 1), 1, 5); const spend = Math.min(v - 1, left); got[k] = 1 + spend; left -= spend; }
   for (const k of keys) team[k] = got[k];
-  if (teamLevelOf(t)) team.level = t.level;                      // no level is no field, so an old team reads and saves as it did
+  if (teamLevelOf(t)) team.level = teamLevelOf(t).id;            // no level is no field, so an old team reads and saves as it did; a level that has gone saves as the one it reads as (LEVEL_WAS)
   return team;
 }
 /* The short name filled in for you skips codes already on the scoreboard elsewhere: Farnham Minis is FAN, not FAR. */
@@ -11289,7 +11297,7 @@ async function importFetch(url, opts = {}) {
    fall between the two by name. With nothing chosen and nothing known the level is the best Local club's (importTop), so a league you add sits with the Local list, under the professional lists.
    Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
    by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
-const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham, at 58
+const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham (and Quins), at 61: Regional 1
 /* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them. Null when the words say nothing. */
 const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b/, 'r1'], [/\bnational league\b|\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
 function importLevelFrom(texts) {
@@ -11298,7 +11306,7 @@ function importLevelFrom(texts) {
 }
 const importLevelDefault = () => TEAM_LEVELS.find(l => sumOfOverall(l.overall) === importTop()) || TEAM_LEVELS[4];
 /* The level an import is set at: the one chosen, else what its page says, else the Local list's best. */
-const importLevel = (data, id) => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => data && l.id === data.level) || importLevelDefault();
+const importLevel = (data, id) => levelById(id) || (data && levelById(data.level)) || importLevelDefault();
 function importSides(data, levelId) {
   if (!data) return [];
   const table = data.league || [], rows = table.filter(r => !r.own), fromTable = rows.length > 0;

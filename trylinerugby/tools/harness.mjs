@@ -11,8 +11,22 @@ if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST 
 // GKTUNE='{"band":[0.15,0.13,0.10]}' tries other goal-kick levers the same way
 if (process.env.GKTUNE) js = js.replace('// GKTUNE', 'Object.assign(KICK, ' + process.env.GKTUNE + ');');
 // CLUB_RATED=off rates no club from its table (every list's own abilities, as before the teams builder), the proof behind a re-pin;
-// CLUB_RATED='{"HAS":67}' tries other club ratings the same way
-if (process.env.CLUB_RATED) js = js.replace('// CLUB_TUNE', process.env.CLUB_RATED === 'off' ? 'for (const k in CLUB_RATED) delete CLUB_RATED[k];' : 'Object.assign(CLUB_RATED, ' + process.env.CLUB_RATED + ');');
+// CLUB_RATED=band is the table as the teams builder left it (5e0aa24: main's band, 61 to 75, Farnham 75, Scotland and Quins as written),
+// the proof behind the real order's re-pins; CLUB_RATED='{"HAS":67}' tries other club ratings the same way
+export const CLUB_BAND = {
+  NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,
+  TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,
+  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,
+  CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,
+  BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67, DUN:67,
+  EAL:67, BED:67, COV:67, WOR:67, CHN:67, HPY:67, CWL:67, DON:67, NOT:64, AMP:64, CAL:64, RIC:64, CAM:64,
+  FAR:75, WIM:72, IRO:72, GUI:70, COB:70, WEY:70, ORU:67, KIN:64, HAS:64, ALD:64, GDN:61,
+  EFF:64, WAN:61, EGH:61, MER:61, MIT:61, FEL:61,
+};
+{
+  const v = process.env.CLUB_RATED, wipe = 'for (const k in CLUB_RATED) delete CLUB_RATED[k];';
+  if (v) js = js.replace('// CLUB_TUNE', v === 'off' ? wipe : v === 'band' ? wipe + ' Object.assign(CLUB_RATED, ' + JSON.stringify(CLUB_BAND) + ');' : 'Object.assign(CLUB_RATED, ' + v + ');');
+}
 // NEW_LISTS=off leaves PR #14's England 2 and Counties off the team lists (ALL_TEAMS as before them: the menu demo draws from it), the
 // other half of that proof
 if (process.env.NEW_LISTS === 'off') js = js.replace(/\n  \{ key:'en2'[^\n]*/, '').replace(/\n  \{ key:'cty'[^\n]*/, '');

@@ -115,21 +115,24 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok(!('level' in S.draft()), 'and has none until it chooses');
   S.builderLevel('r1');
   ok(S.draft().level === 'r1' && !S.levelChoosing() && $('bd-levels').hidden && !$('bd-form').hidden && !$('bd-save').hidden, 'choosing one opens the rest');
-  ok($('bd-left').textContent === 'Points Left 0' && $('bd-level-name').textContent === 'Regional 1 · 3 Stars' && X.overallOf(S.draft()) === 58, `the level sets the ability: Regional 1's 6 points are shared out, and it is already its own 58 and 3 stars (${$('bd-left').textContent}, ${$('bd-level-name').textContent}, ${X.overallOf(S.draft())})`);
+  // re-pinned at the real order (2026-11-09): Regional 1 is Farnham's 61, 7 points and 3.5 stars (was 58, 6 and 3)
+  ok($('bd-left').textContent === 'Points Left 0' && $('bd-level-name').textContent === 'Regional 1 · 3.5 Stars' && X.overallOf(S.draft()) === 61, `the level sets the ability: Regional 1's 7 points are shared out, and it is already its own 61 and 3.5 stars (${$('bd-left').textContent}, ${$('bd-level-name').textContent}, ${X.overallOf(S.draft())})`);
   ok($('bd-level-note').textContent === 'Your points are shared out. Take one off an ability to add it to another.', `and says so (${$('bd-level-note').textContent})`);
   S.draft().pace--; S.renderBuilder();
-  ok($('bd-left').textContent === 'Points Left 1' && $('bd-level-note').textContent === 'Spend 1 more point to reach 3 Stars.', `a point taken off and not put back says why the shirt reads under the level (${$('bd-level-note').textContent})`);
-  Object.assign(S.draft(), { pace:4, power:2, handling:2, kicking:2, stamina:1 }); S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 1' && $('bd-level-note').textContent === 'Spend 1 more point to reach 3.5 Stars.', `a point taken off and not put back says why the shirt reads under the level (${$('bd-level-note').textContent})`);
+  Object.assign(S.draft(), { pace:4, power:2, handling:2, kicking:2, stamina:2 }); S.renderBuilder();
   ok($('bd-left').textContent === 'Points Left 0', 'spending them all');
-  S.builderLevel('c1');
-  ok(KEYS.map(k => S.draft()[k]).join('') === '41111' && $('bd-left').textContent === 'Points Left 0' && !$('bd-level-note').hidden, `lowering the level cuts from the last in line (${KEYS.map(k => S.draft()[k]).join('')})`);
-  ok($('bd-level-note').textContent === 'Counties 1 has 3 points, so Power, Handling and Kicking came down.', `and says so (${$('bd-level-note').textContent})`);
-  S.builderLevel('euro');
-  ok($('bd-left').textContent === 'Points Left 0' && S.draft().pace >= 4 && X.overallOf(S.draft()) === 90, `raising it shares out the new points on from what is there: a level's team is its level (${KEYS.map(k => S.draft()[k]).join('')})`);
-  Object.assign(S.draft(), { pace:5, power:5, handling:5, kicking:3, stamina:4 }); S.renderBuilder();
-  ok($('bd-left').textContent === 'Points Left 0', 'seventeen points at European Champions');
+  S.builderLevel('c1');   // re-pinned at the real order: Counties 1 is 52, 4 points (was 49, 3), so Power keeps its 2 and Stamina comes down with Handling and Kicking
+  ok(KEYS.map(k => S.draft()[k]).join('') === '42111' && $('bd-left').textContent === 'Points Left 0' && !$('bd-level-note').hidden, `lowering the level cuts from the last in line (${KEYS.map(k => S.draft()[k]).join('')})`);
+  ok($('bd-level-note').textContent === 'Counties 1 has 4 points, so Handling, Kicking and Stamina came down.', `and says so (${$('bd-level-note').textContent})`);
+  S.builderLevel('champ');   // re-pinned at the real order: PR #14's European Champions (90) went with Bordeaux's 90, so the top level is National Champions (75)
+  ok($('bd-left').textContent === 'Points Left 0' && S.draft().pace >= 4 && X.overallOf(S.draft()) === 75, `raising it shares out the new points on from what is there: a level's team is its level (${KEYS.map(k => S.draft()[k]).join('')})`);
+  Object.assign(S.draft(), { pace:5, power:5, handling:3, kicking:2, stamina:2 }); S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 0', 'twelve points at National Champions');
   const big = X.cleanTeam({ ...S.draft(), name:'Giants', key:'myG' }, 0), reread = X.cleanTeam(JSON.parse(JSON.stringify(big)), 0);
-  ok(X.rateOf(big) === 22 && X.overallOf(big) === 90 && reread.level === 'euro' && X.rateOf(reread) === 22, 'a team above the old 12 keeps every point through a save and a reload');
+  ok(X.rateOf(big) === 17 && X.overallOf(big) === 75 && reread.level === 'champ' && X.rateOf(reread) === 17, 'a team at the top level keeps every point through a save and a reload');
+  const euro = X.cleanTeam({ name:'Giants', key:'myE', level:'euro', pace:5, power:5, handling:5, kicking:3, stamina:4 }, 0);
+  ok(euro.level === 'champ' && X.rateOf(euro) === 17 && X.overallOf(euro) === 75, 'a team saved at European Champions (90) reads as National Champions: its 22 points cut to 17, as a lower level cuts');
   const noLevel = X.cleanTeam({ name:'Oldie', key:'myO', pace:5, power:5, handling:5, kicking:3, stamina:4 }, 0);
   ok(X.rateOf(noLevel) === 17 && !('level' in noLevel), 'and without a level the same abilities are cut to 12, as an old save always was');
   const src = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
