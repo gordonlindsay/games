@@ -8165,15 +8165,17 @@ function cueOf(t) {                                        // the word the big o
 }
 
 /* =========================================================
-   Sound: every effect is built here from layers of Web Audio oscillators and filtered noise, with
-   no samples and nothing to download. It starts after a tap.
+   Sound: recordings where there are good ones, and every effect also built here from layers of Web Audio oscillators and
+   filtered noise. It starts after a tap.
 
-   A sound is a voice: a small graph with its own gain, built by a recipe in SND, and gone when its
-   time is up. Every voice runs into one bus (a low cut for what a phone speaker cannot play, a top
-   cut, a limiter, a trim and a hard ceiling), so nothing can clip however many play at once.
-   Variation is Math.random, and only once a real context is running: the game's rnd() is never
-   used, and headless runs, Sound Off and a page with no audio draw nothing at all.
-   The sound test page loads this very file; soundRender draws a recipe silently so it can be measured.
+   A sound is a voice: a small graph with its own gain, gone when its time is up. The recordings (assets/sounds, CC0, listed
+   with their sources in assets/sounds/LICENCES.md) are fetched and decoded once, after the first tap, in the background.
+   Until a sound's recording is in, or if it cannot be had (offline on a first visit, a failed fetch or decode), its recipe in
+   SND plays instead, so nothing goes silent. Every voice runs into one bus (a low cut for what a phone speaker cannot play,
+   a top cut, a limiter, a trim and a hard ceiling), so nothing can clip however many play at once.
+   Variation is Math.random (which take, its speed and level), and only once a real context is running: the game's rnd() is
+   never used, and headless runs, Sound Off and a page with no audio fetch nothing and draw nothing at all.
+   The sound test page loads this very file; soundRender draws a sound silently so it can be measured.
    ========================================================= */
 const SOUND = {
   highpass:75, lowpass:11000,                                // the bus: a phone cannot play under the first, and over the second is only hiss
@@ -8188,6 +8190,10 @@ const SOUND = {
   gap:{ roar:0.9, cheer:0.6, groan:0.6, long:0.5, horn:0.5, whistle:0.12, post:0.1, tick:0.05, tap:0.04, catch:0.05, bounce:0.05, pass:0.04 },
   // which sound gives way when there are too many: the lowest first, then the oldest. A voice is never cut for a lesser one
   rank:{ whistle:3, long:3, horn:3, roar:2, cheer:2, groan:2, strike:2, post:2, hit:2, kick:2, tackle:2 },
+  // a recording each time: how far its speed may move either way (pitch with it). Unlisted: 0.04
+  vary:{ pass:0.07, whoosh:0.07, whiff:0.07, bounce:0.05, roar:0.02, cheer:0.02, groan:0.02, post:0.015 },
+  swell:{ roar:[2.2, 1.4, 2.4], cheer:[1.6, 0.7, 1.6] },     // the crowd bed under a roar or a cheer: rises to this, holds so many seconds, settles over so many
+  loadTries:3, loadGap:20,                                   // a recording that failed is asked for again at a later tap, this many times, this many seconds apart
 };
 // the key every sfx() call uses, and the name on the sound test page, in the page's order
 const SOUND_NAMES = {
@@ -8195,6 +8201,31 @@ const SOUND_NAMES = {
   pass:'Pass', catch:'Catch', fumble:'Fumble', bounce:'Ball Bounce', tackle:'Tackle', hit:'Big Hit', whiff:'Whiff', trip:'Trip', whoosh:'Whoosh',
   tick:'Tick', tap:'Menu Tap', roar:'Crowd Roar', cheer:'Cheer', groan:'Groan',
 };
+// Always their recipes: no CC0 referee's whistle or stadium hooter could be found, and Trip, Tick and Menu Tap are cues made to carry on a phone speaker
+const SOUND_SYNTH = ['whistle', 'long', 'horn', 'trip', 'tick', 'tap'];
+// The recordings, by key: [file in assets/sounds, seconds of sound in it, and for the crowd's loop the seconds of margin either side of it], a take each.
+// Written by tools/sound-make.py
+// sound-make: files from here
+const SOUND_FILES = {
+  tackle:[['tackle-0.3630d97b0e.m4a', 0.32], ['tackle-1.2b7e735d9b.m4a', 0.32], ['tackle-2.a1516b3697.m4a', 0.32], ['tackle-3.260731cb99.m4a', 0.32]],
+  pass:[['pass-0.eda535ea0d.m4a', 0.149333], ['pass-1.7d682e84aa.m4a', 0.128], ['pass-2.db65b252be.m4a', 0.106667]],
+  catch:[['catch-0.346604bd67.m4a', 0.128], ['catch-1.5eccddc419.m4a', 0.149333], ['catch-2.c43b8d2ef3.m4a', 0.149333]],
+  kick:[['kick-0.9a118871ed.m4a', 0.256], ['kick-1.706e4e8a8c.m4a', 0.256], ['kick-2.47e47014a3.m4a', 0.256]],
+  bounce:[['bounce-0.c8f19a6d27.m4a', 0.213333], ['bounce-1.bb9ee801f9.m4a', 0.213333], ['bounce-2.cc6b8ddeb1.m4a', 0.213333]],
+  whoosh:[['whoosh-0.95de910210.m4a', 0.106667], ['whoosh-1.a734fa8a5b.m4a', 0.106667], ['whoosh-2.ff9a60a1b9.m4a', 0.170667]],
+  whiff:[['whiff-0.5f1336e665.m4a', 0.106667], ['whiff-1.33f1aa3c5a.m4a', 0.149333]],
+  hit:[['hit-0.7c02e02f4d.m4a', 0.618667], ['hit-1.76444026bb.m4a', 0.618667]],
+  bed:[['bed-0.b9dedf3a3c.m4a', 13.994667, 0.042667]],
+  roar:[['roar-0.ca12be3a02.m4a', 3.413333], ['roar-1.6000d56367.m4a', 3.413333]],
+  cheer:[['cheer-0.5c6640c3af.m4a', 2.112], ['cheer-1.73a6b9be23.m4a', 2.112]],
+  groan:[['groan-0.952fdad619.m4a', 1.813333], ['groan-1.b4d6f98d12.m4a', 1.813333]],
+  strike:[['strike-0.ef07d6d4dc.m4a', 0.426667], ['strike-1.4335da66d0.m4a', 0.405333]],
+  post:[['post-0.533a9c8f66.m4a', 1.002667], ['post-1.fc3534fe13.m4a', 1.002667]],
+  fumble:[['fumble-0.f004113141.m4a', 0.512], ['fumble-1.f7b3380943.m4a', 0.512]],
+};
+// sound-make: files to here
+const SOUND_BASE = 'assets/sounds/';
+const SAMPLE = { state:'idle', bufs:{}, tries:0, at:-1e9 };   // bufs: file -> { buf, lead } once decoded
 let AC = null, NOISE = null, PINK = null, BUS = null, BED = null, soundUnlocked = false, soundWakes = 0, soundWakeAt = -1;
 const VOICES = [], soundPend = [], soundLast = {};
 
@@ -8318,6 +8349,42 @@ function sndCrowd(V, o) {
 function sndPat(V, at, f, peak) {                            // leather on a hand
   sndTone(V, { f, to:f*0.56, at, dur:0.055, peak });
   sndBurst(V, { white:true, f:1300, q:1.1, at, dur:0.028, peak:peak*0.42 });
+}
+
+/* ---------- the recordings ---------- */
+function sndDecode(a, ab) {                                  // the promise form, or the callback form an older Safari has
+  return new Promise((ok, no) => { try { const p = a.decodeAudioData(ab, ok, no); if (p && p.then) p.then(ok, no); } catch (e) { no(e); } });
+}
+// Where the sound starts. Each file is AAC with 1024 samples of the encoder's priming at 48 kHz, and a whole number of 1024-sample frames
+// long, so a decoder that kept the priming (one that ignores the MP4's edit list) hands back exactly one frame more than the table's length
+const sndLead = (buf, d) => (buf.duration - d > 512/48000 ? 1024/48000 : 0);
+function sndLoad() {                                         // after the first tap, in the background: each file fetched and decoded once, one at a time, and kept
+  const a = AC;
+  if (!a || SAMPLE.state !== 'idle' || typeof fetch !== 'function' || typeof a.decodeAudioData !== 'function') return;
+  const todo = [], len = {};
+  for (const k in SOUND_FILES) for (const [f, d, m] of SOUND_FILES[k]) { len[f] = d + 2*(m || 0); if (!SAMPLE.bufs[f]) todo.push(f); }
+  if (!todo.length) { SAMPLE.state = 'done'; return; }
+  const now = performance.now();
+  if (SAMPLE.tries >= SOUND.loadTries || now - SAMPLE.at < SOUND.loadGap*1000) return;   // offline, say: the recipes play, and a later tap asks again
+  SAMPLE.state = 'loading'; SAMPLE.tries++; SAMPLE.at = now;
+  const one = f => Promise.resolve().then(() => fetch(SOUND_BASE + f))
+    .then(r => { if (!r.ok) throw new Error('no ' + f); return r.arrayBuffer(); })
+    .then(ab => sndDecode(a, ab)).then(buf => { SAMPLE.bufs[f] = { buf, lead:sndLead(buf, len[f]) }; }, () => { /* this one stays its recipe */ });
+  todo.reduce((p, f) => p.then(() => one(f)), Promise.resolve())
+    .then(() => { SAMPLE.state = todo.every(f => SAMPLE.bufs[f]) ? 'done' : 'idle'; });
+}
+const soundTakes = k => (SOUND_FILES[k] || []).filter(([f]) => SAMPLE.bufs[f]).map(([f, d, m]) => [SAMPLE.bufs[f], d, m || 0]);
+const sndHas = k => (SOUND_FILES[k] || []).some(([f]) => SAMPLE.bufs[f]);
+function sndSample(V, k, amt) {                              // a recording: one of its takes, a little faster or slower, louder or softer, each time. False when none is in
+  const takes = soundTakes(k);
+  if (!takes.length) return false;
+  const [b, d] = takes[Math.floor(Math.random()*takes.length)], src = sndAdd(V, V.a.createBufferSource());
+  let rate = sndVary(1, SOUND.vary[k] == null ? 0.04 : SOUND.vary[k]), gain = sndVary(1, 0.08);
+  if (k === 'bounce') { gain *= 0.45 + 0.55*amt; rate *= 1 + (1 - amt)*0.15; }   // a smaller hop: softer and a little higher, as the recipe
+  src.buffer = b.buf; src.playbackRate.value = rate; V.out.gain.value *= gain;
+  src.connect(V.out);
+  sndRun(V, src, V.t, V.t + d/rate, b.lead);
+  return true;
 }
 
 /* ---------- the recipes. V is the voice, amt how hard (only the bounce uses it) ---------- */
@@ -8444,16 +8511,16 @@ function sndRoom(rank) {                                     // room for one mor
   }
   return true;
 }
-function sndStart(a, into, k, amt) {                         // the one way a recipe becomes a voice, heard or measured
-  const V = sndVoice(a, into, k);
-  try { SND[k](V, amt == null ? 1 : Math.max(0, Math.min(1, amt))); } catch (e) { sndKill(V); return null; }   // a sound that fails is a silence, never a stopped game
+function sndStart(a, into, k, amt, synth) {                  // the one way a sound becomes a voice, heard or measured: its recording if one is in (synth: the recipe all the same), else its recipe
+  const V = sndVoice(a, into, k), how = amt == null ? 1 : Math.max(0, Math.min(1, amt));
+  try { if (synth || !sndSample(V, k, how)) SND[k](V, how); } catch (e) { sndKill(V); return null; }   // a sound that fails is a silence, never a stopped game
   return V;
 }
-function soundPlay(k, amt) {
+function soundPlay(k, amt, synth) {
   if (!SND[k]) return;
   const a = ac(); if (!a || document.hidden) return;
   if (a.state !== 'running') {                               // not awake yet (the first tap is often this): held a moment. Scheduled now, they would all go off together when it wakes
-    if (soundPend.length < 4) soundPend.push({ k, amt, at:performance.now() });
+    if (soundPend.length < 4) soundPend.push({ k, amt, synth, at:performance.now() });
     return;
   }
   soundSweep();
@@ -8461,14 +8528,14 @@ function soundPlay(k, amt) {
   if (soundLast[k] != null && now - soundLast[k] < gap) return;
   if (!sndRoom(SOUND.rank[k] || 1)) return;
   soundLast[k] = now;
-  const V = sndStart(a, BUS.input, k, amt);
-  if (V) VOICES.push(V);
+  const V = sndStart(a, BUS.input, k, amt, synth);
+  if (V) { VOICES.push(V); if (SOUND.swell[k]) bedSwell(k); }
 }
 function sndWoke() {                                         // the context is running: what was held plays if it is still fresh
   if (!AC || AC.state !== 'running') return;
   soundWakes = 0;
   const fresh = soundPend.splice(0).filter(p => performance.now() - p.at <= SOUND.pendAge*1000);
-  for (const p of fresh) soundPlay(p.k, p.amt);
+  for (const p of fresh) soundPlay(p.k, p.amt, p.synth);
 }
 function ac() {
   if (!settings.sound) return null;
@@ -8485,21 +8552,28 @@ function ac() {
     return AC;
   } catch (e) { return null; }
 }
-function sfx(k, amt) {
+function sfx(k, amt, synth) {                                // synth: the recipe even when the recording is in (the sound test page's comparison)
   if (globalThis.__sfxSpy) globalThis.__sfxSpy(k, M && M.cut ? M.cut.t : null);   // the tools count sounds
   if (k !== 'tap' && (!M || M.demo || M.headless)) return;   // a menu tap plays over the demo; nothing else does
-  soundPlay(k, amt);
+  soundPlay(k, amt, synth);
 }
 
 /* ---------- the crowd under a match ---------- */
-function bedBuild(a, into) {                                 // two slow bands of pink noise, each drifting, far under everything else
-  const V = sndVoice(a, into, 'bed'), S = SOUND.bed;
-  V.end = Infinity; V.rank = Infinity;
+function bedBuild(a, into, synth) {                          // the crowd recording, looped from a random place; until it is in, two slow drifting bands of pink noise. Far under everything else
+  const V = sndVoice(a, into, 'bed'), S = SOUND.bed, swell = sndAdd(V, a.createGain());
+  V.end = Infinity; V.rank = Infinity; V.swell = swell; swell.connect(V.out);
   V.out.gain.setValueAtTime(0.0001, V.t); V.out.gain.linearRampToValueAtTime(S.peak, V.t + S.fadeIn);
+  const take = !synth && soundTakes('bed')[0];
+  if (take) {
+    const [b, d, m] = take, src = sndAdd(V, a.createBufferSource());   // the loop is the file less its margins, which hold what the codec gets least right
+    src.buffer = b.buf; src.loop = true; src.loopStart = b.lead + m; src.loopEnd = Math.min(b.buf.duration, src.loopStart + d);
+    src.connect(swell); src.start(V.t, src.loopStart + Math.random()*d*0.9); V.srcs.push(src); V.sample = true;
+    return V;
+  }
   [[620, 0.5, 0.032, 0.13, 1], [1500, 0.7, 0.014, 0.31, 0.83]].forEach(([f, q, level, rate, speed]) => {
     const src = sndAdd(V, a.createBufferSource()), g = sndAdd(V, a.createGain()), flt = sndFilter(V, 'bandpass', sndVary(f, 0.05), q, g);
     src.buffer = PINK; src.loop = true; src.playbackRate.value = speed;
-    src.connect(flt); g.connect(V.out); g.gain.value = level;
+    src.connect(flt); g.connect(swell); g.gain.value = level;
     src.start(V.t, Math.random()*2); V.srcs.push(src);
     const l = sndAdd(V, a.createOscillator()), lg = sndAdd(V, a.createGain());
     l.frequency.value = sndVary(rate, 0.1); lg.gain.value = level*0.3; l.connect(lg); lg.connect(g.gain);
@@ -8514,12 +8588,19 @@ function bedStop() {                                         // fades, then the 
   for (const s of v.srcs) { try { s.stop(now + S.fadeOut + 0.05); } catch (e) { /* already stopped */ } }
   v.end = now + S.fadeOut + 0.1; v.rank = 0;
 }
-function bedSync(want) {                                     // called every frame. Never builds a context by itself, and waits for the tap that wakes one
+function bedSync(want, synth) {                              // called every frame. Never builds a context by itself, and waits for the tap that wakes one. synth: the test page's other crowd
   const on = !!want && !!settings.sound && !document.hidden && !!AC && AC.state === 'running' && !!BUS;
   if (!on) { if (BED) bedStop(); return; }
-  if (!BED) { BED = bedBuild(AC, BUS.input); VOICES.push(BED); }
+  if (BED && !!BED.sample !== (!synth && sndHas('bed'))) bedStop();   // the recording has come in under the synthesised crowd: one fades out as the other fades in
+  if (!BED) { BED = bedBuild(AC, BUS.input, synth); VOICES.push(BED); }
 }
-function soundFrame(want) { try { soundSweep(); bedSync(want); } catch (e) { /* the frame goes on */ } }
+function bedSwell(k) {                                       // a roar or a cheer: the crowd under it rises with it and settles
+  if (!BED || !BED.swell) return;
+  const g = BED.swell.gain, now = BED.a.currentTime, [up, hold, back] = SOUND.swell[k];
+  g.cancelScheduledValues(now); g.setValueAtTime(Math.max(1, Math.min(up, g.value || 1)), now);
+  g.linearRampToValueAtTime(up, now + 0.25); g.setTargetAtTime(1, now + 0.25 + hold, back/3);
+}
+function soundFrame(want, synth) { try { soundSweep(); bedSync(want, synth); } catch (e) { /* the frame goes on */ } }
 
 /* ---------- quiet, hidden, off, and waking up ---------- */
 function soundQuiet() {                                      // leaving a match: what is sounding fades in a moment, and the crowd with it
@@ -8550,6 +8631,7 @@ function soundUnlock() {                                     // every tap and ke
   if (!soundUnlocked) {                                      // the first tap plays one silent sample, the old iOS unlock
     try { const s = a.createBufferSource(); s.buffer = a.createBuffer(1, 1, a.sampleRate); s.connect(a.destination); s.start(0); soundUnlocked = true; } catch (e) { /* the next tap tries again */ }
   }
+  if (soundUnlocked) sndLoad();                              // the recordings: once, in the background (a later tap asks again for any that failed)
   if (a.state === 'running') { soundWakes = 0; return; }
   const now = performance.now()/1000;                        // one tap fires several events: they count once
   if (now - soundWakeAt < SOUND.wakeGap) return;
@@ -8581,12 +8663,12 @@ function sndMeasure(d, rate) {
   const rms = n ? Math.sqrt(sum/n) : 0, db = x => (x > 0 ? 20*Math.log10(x) : -Infinity);
   return { peak, peakDb:db(peak), rms, rmsDb:db(rms), length:n/rate, clipped };
 }
-function soundRender(keys, o = {}) {                         // keys: a key, 'bed', or a list struck together. Resolves to its peak, RMS, length and clipped samples
+function soundRender(keys, o = {}) {                         // keys: a key, 'bed', or a list struck together; o.synth: the recipes even where a recording is in. Resolves to its peak, RMS, length and clipped samples
   const Off = window.OfflineAudioContext || window.webkitOfflineAudioContext, rate = o.rate || 48000, secs = o.secs || 4;
   const a = new Off(1, Math.floor(rate*secs), rate);
   sndNoiseMake(a);
   const bus = sndBus(a);
-  for (const k of [].concat(keys)) { if (k === 'bed') bedBuild(a, bus.input); else sndStart(a, bus.input, k, o.amt); }
+  for (const k of [].concat(keys)) { if (k === 'bed') bedBuild(a, bus.input, o.synth); else sndStart(a, bus.input, k, o.amt, o.synth); }
   return a.startRendering().then(buf => {
     const m = sndMeasure(buf.getChannelData(0), rate);
     if (o.samples) m.samples = buf.getChannelData(0);
@@ -15412,7 +15494,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak, fanAward:lockerFanAward, fanDrop:lockerFanDrop, fanHeld:lockerFanHeld, fanClubs:lockerFanClubs, fanHtml:lockerFanHtml, fanCabinet:lockerFanCabinet, cup:lockerCup },
   home:{ HL:HOME_HL, select:homeSelect, show:homeShow, first:homeFirst, render:renderHome, champ:champHome, champPick, comps:champComps, tier:() => homeTier, setTier:v => { homeTier = v; }, myClub:myClubTeam, myNat:myNatTeam, leagueLine:myLeagueLine, recordLine:myRecordLine, ratedStars, myFind:myClubFind, myPool, myIs, myPick, teamDefault, ownPick:teamOwnPick, importHome, importOffer, importShown, importCommit, ring:setFocus },
   behind:{ menuDemo, BV_DEMO_AT, BV_DEMO_CAM, BV_DEMO_IN, frameDraw, BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, artHairOf, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, BV_STAR, bvStack, artPalette, artPaletteOf, LOOK_SKIN, LOOK_HAIR, LOOK_STYLES, LOOK_LONG, LOOK_FEMALE, paintState:() => ({ ctx, SKIN, HAIR }) },
-  sound:{ SOUND, NAMES:SOUND_NAMES, SND, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
+  sound:{ SOUND, NAMES:SOUND_NAMES, SND, FILES:SOUND_FILES, SYNTH:SOUND_SYNTH, SAMPLE, takes:soundTakes, load:sndLoad, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
   clarity:{ MATCH_PACE, matchPace, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
   get M() { return M; } };
 

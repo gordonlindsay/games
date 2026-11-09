@@ -13,7 +13,14 @@ main{padding:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-
 h1{font-size:24px;margin:0 0 4px}
 p{margin:0 0 12px;color:var(--dim)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-button{font:inherit;font-weight:700;color:var(--chalk);background:var(--panel);border:1px solid var(--rule);border-radius:10px;min-height:64px;padding:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.sound{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:8px}
+.sound h3{font-size:16px;margin:0 0 8px}
+.pair{display:flex;gap:8px}
+.pair button{flex:1;min-width:0}
+.sound small{display:block;color:var(--dim);font-size:13px;margin-top:6px;overflow-wrap:anywhere}
+button{font:inherit;font-weight:700;color:var(--chalk);background:var(--panel);border:1px solid var(--rule);border-radius:10px;min-height:48px;padding:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.grid button{min-height:64px}
 button:active{background:var(--rule)}
 button.on{background:var(--flood);border-color:var(--flood);color:var(--ink)}
 .wide{grid-column:1/-1}
@@ -21,52 +28,110 @@ h2{font-size:18px;margin:20px 0 8px}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{padding:4px 8px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
-th:first-child,td:first-child{text-align:left}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
 </style>
 </head>
 <body>
 <main>
   <h1>Sound Test</h1>
   <p>Tap a button to hear it. On an iPhone, the silent switch on the side turns all of this off.</p>
-  <div class="grid" id="sounds"></div>
+  <p id="status">Recordings In: 0</p>
+  <div class="list" id="sounds"></div>
   <h2>Together</h2>
   <div class="grid">
     <button class="act" id="bed">Crowd Bed</button>
+    <button class="act" id="bedsynth">Crowd Bed Synth</button>
     <button class="act" id="try">Try Scored</button>
     <button class="act" id="busy">All at Once</button>
     <button class="act" id="soft">Small Bounce</button>
   </div>
   <h2>Levels</h2>
-  <p>The same sounds drawn silently and measured. Clipped should always be 0.</p>
+  <p>The same sounds drawn silently and measured, each recording beside its synth. Clipped should always be 0.</p>
   <div class="grid"><button class="act wide" id="measure">Measure</button></div>
   <div class="scroll"><table id="table" hidden></table></div>
 </main>
 <script>
 /* What src/sound.js reads from the game. This page is not part of the game: nothing links here and it is not in the service worker's list. */
 var settings = { sound:true }, M = {};
+/* Each recording's sources and licence (assets/sounds/LICENCES.md has the pages): written by tools/sound-make.py */
+/* sound-make: credits from here */
+var CREDITS = {
+  'tackle-0.3630d97b0e.m4a':'impact-sounds by Kenney (kenney.nl); rpg-audio by Kenney (kenney.nl); fantozzis-footsteps-grasssand-stone by Fantozzi (OpenGameArt) · CC0',
+  'tackle-1.2b7e735d9b.m4a':'impact-sounds by Kenney (kenney.nl); rpg-audio by Kenney (kenney.nl); fantozzis-footsteps-grasssand-stone by Fantozzi (OpenGameArt) · CC0',
+  'tackle-2.a1516b3697.m4a':'impact-sounds by Kenney (kenney.nl); rpg-audio by Kenney (kenney.nl); fantozzis-footsteps-grasssand-stone by Fantozzi (OpenGameArt) · CC0',
+  'tackle-3.260731cb99.m4a':'impact-sounds by Kenney (kenney.nl); rpg-audio by Kenney (kenney.nl); fantozzis-footsteps-grasssand-stone by Fantozzi (OpenGameArt) · CC0',
+  'pass-0.eda535ea0d.m4a':'swishes-sound-pack by artisticdude (OpenGameArt); thwack-sounds by AntumDeluge (OpenGameArt) · CC0',
+  'pass-1.7d682e84aa.m4a':'swishes-sound-pack by artisticdude (OpenGameArt); thwack-sounds by AntumDeluge (OpenGameArt) · CC0',
+  'pass-2.db65b252be.m4a':'swishes-sound-pack by artisticdude (OpenGameArt); thwack-sounds by AntumDeluge (OpenGameArt) · CC0',
+  'catch-0.346604bd67.m4a':'thwack-sounds by AntumDeluge (OpenGameArt) · CC0',
+  'catch-1.5eccddc419.m4a':'40-wet-towel-clubpoundhitattack-sounds by qubodup (OpenGameArt) · CC0',
+  'catch-2.c43b8d2ef3.m4a':'40-wet-towel-clubpoundhitattack-sounds by qubodup (OpenGameArt) · CC0',
+  'kick-0.9a118871ed.m4a':'punch by qubodup (OpenGameArt) · CC0',
+  'kick-1.706e4e8a8c.m4a':'punch by qubodup (OpenGameArt) · CC0',
+  'kick-2.47e47014a3.m4a':'thwack-sounds by AntumDeluge (OpenGameArt) · CC0',
+  'bounce-0.c8f19a6d27.m4a':'impact-sounds by Kenney (kenney.nl) · CC0',
+  'bounce-1.bb9ee801f9.m4a':'impact-sounds by Kenney (kenney.nl) · CC0',
+  'bounce-2.cc6b8ddeb1.m4a':'impact-sounds by Kenney (kenney.nl); fantozzis-footsteps-grasssand-stone by Fantozzi (OpenGameArt) · CC0',
+  'whoosh-0.95de910210.m4a':'swishes-sound-pack by artisticdude (OpenGameArt) · CC0',
+  'whoosh-1.a734fa8a5b.m4a':'swishes-sound-pack by artisticdude (OpenGameArt) · CC0',
+  'whoosh-2.ff9a60a1b9.m4a':'swishes-sound-pack by artisticdude (OpenGameArt) · CC0',
+  'whiff-0.5f1336e665.m4a':'swishes-sound-pack by artisticdude (OpenGameArt) · CC0',
+  'whiff-1.33f1aa3c5a.m4a':'swishes-sound-pack by artisticdude (OpenGameArt) · CC0',
+  'hit-0.7c02e02f4d.m4a':'impact-sounds by Kenney (kenney.nl); punch by qubodup (OpenGameArt); rpg-audio by Kenney (kenney.nl) · CC0',
+  'hit-1.76444026bb.m4a':'impact-sounds by Kenney (kenney.nl); punch by qubodup (OpenGameArt); rpg-audio by Kenney (kenney.nl) · CC0',
+  'bed-0.b9dedf3a3c.m4a':'crowd-shoutingspeaking-ambience by StarNinjas (OpenGameArt) · CC0',
+  'roar-0.ca12be3a02.m4a':'crowd-shoutingspeaking-ambience by StarNinjas (OpenGameArt); applause-in-a-large-hall-or-church by eXpl0it3r (OpenGameArt); oooooooooooooo by Nocturnal_Vanguard (OpenGameArt) · CC0',
+  'roar-1.6000d56367.m4a':'crowd-shoutingspeaking-ambience by StarNinjas (OpenGameArt); applause-in-a-large-hall-or-church by eXpl0it3r (OpenGameArt); oooooooooooooo by Nocturnal_Vanguard (OpenGameArt) · CC0',
+  'cheer-0.5c6640c3af.m4a':'applause-in-a-large-hall-or-church by eXpl0it3r (OpenGameArt); well-done by qubodup (OpenGameArt); crowd-shoutingspeaking-ambience by StarNinjas (OpenGameArt) · CC0',
+  'cheer-1.73a6b9be23.m4a':'applause-in-a-large-hall-or-church by eXpl0it3r (OpenGameArt); well-done by qubodup (OpenGameArt); crowd-shoutingspeaking-ambience by StarNinjas (OpenGameArt) · CC0',
+  'groan-0.952fdad619.m4a':'oooooooooooooo by Nocturnal_Vanguard (OpenGameArt); crowd-shoutingspeaking-ambience by StarNinjas (OpenGameArt) · CC0',
+  'groan-1.b4d6f98d12.m4a':'oooooooooooooo by Nocturnal_Vanguard (OpenGameArt); crowd-shoutingspeaking-ambience by StarNinjas (OpenGameArt) · CC0',
+  'strike-0.ef07d6d4dc.m4a':'punch by qubodup (OpenGameArt); swishes-sound-pack by artisticdude (OpenGameArt) · CC0',
+  'strike-1.4335da66d0.m4a':'thwack-sounds by AntumDeluge (OpenGameArt); swishes-sound-pack by artisticdude (OpenGameArt) · CC0',
+  'post-0.533a9c8f66.m4a':'metal-clang-sounds by bart (OpenGameArt); impact-sounds by Kenney (kenney.nl); thwack-sounds by AntumDeluge (OpenGameArt) · CC0',
+  'post-1.fc3534fe13.m4a':'metal-clang-sounds by bart (OpenGameArt); impact-sounds by Kenney (kenney.nl); thwack-sounds by AntumDeluge (OpenGameArt) · CC0',
+  'fumble-0.f004113141.m4a':'thwack-sounds by AntumDeluge (OpenGameArt); 40-wet-towel-clubpoundhitattack-sounds by qubodup (OpenGameArt); impact-sounds by Kenney (kenney.nl) · CC0',
+  'fumble-1.f7b3380943.m4a':'40-wet-towel-clubpoundhitattack-sounds by qubodup (OpenGameArt); thwack-sounds by AntumDeluge (OpenGameArt); impact-sounds by Kenney (kenney.nl) · CC0',
+};
+/* sound-make: credits to here */
 </script>
 <script src="src/sound.js"></script>
 <script>
-var bedOn = false;
+var bedOn = false, bedSynth = false;
 var $ = function (id) { return document.getElementById(id); };
+var mk = function (tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 Object.keys(SOUND_NAMES).forEach(function (k) {
-  var b = document.createElement('button');
-  b.className = 'act'; b.textContent = SOUND_NAMES[k]; b.dataset.key = k;      /* act: a button with its own sound, so no menu tap over it */
-  b.addEventListener('click', function () { sfx(k); });
-  $('sounds').appendChild(b);
+  var files = SOUND_FILES[k] || [], card = mk('div', 'sound'), pair = mk('div', 'pair');
+  card.appendChild(mk('h3', '', SOUND_NAMES[k]));
+  /* act: a button with its own sound, so no menu tap over it */
+  if (files.length) { var rec = mk('button', 'act', 'Recording'); rec.dataset.key = k; rec.addEventListener('click', function () { sfx(k); }); pair.appendChild(rec); }
+  var syn = mk('button', 'act', 'Synth'); syn.dataset.key = k; syn.dataset.synth = '1'; syn.addEventListener('click', function () { sfx(k, null, true); }); pair.appendChild(syn);
+  card.appendChild(pair);
+  files.forEach(function (f, i) { card.appendChild(mk('small', '', 'Take ' + (i + 1) + ': ' + (CREDITS[f[0]] || f[0]))); });
+  if (!files.length) card.appendChild(mk('small', '', 'Synth Only'));
+  $('sounds').appendChild(card);
 });
-$('bed').addEventListener('click', function () { bedOn = !bedOn; $('bed').classList.toggle('on', bedOn); ac(); bedSync(bedOn); });
+var bedButtons = function () { $('bed').classList.toggle('on', bedOn && !bedSynth); $('bedsynth').classList.toggle('on', bedOn && bedSynth); };
+$('bed').addEventListener('click', function () { bedOn = !(bedOn && !bedSynth); bedSynth = false; bedButtons(); ac(); bedSync(bedOn); });
+$('bedsynth').addEventListener('click', function () { bedOn = !(bedOn && bedSynth); bedSynth = true; bedButtons(); ac(); bedSync(bedOn, true); });
 $('try').addEventListener('click', function () { sfx('whistle'); sfx('roar'); });
 $('busy').addEventListener('click', function () { Object.keys(SOUND_NAMES).forEach(function (k) { if (k !== 'tap') sfx(k); }); });
 $('soft').addEventListener('click', function () { sfx('bounce', 0.3); });
-setInterval(function () { soundFrame(bedOn); }, 250);      /* the game does this every frame */
+var total = Object.keys(SOUND_FILES).reduce(function (n, k) { return n + SOUND_FILES[k].length; }, 0);
+setInterval(function () { soundFrame(bedOn, bedSynth); $('status').textContent = 'Recordings In: ' + Object.keys(SAMPLE.bufs).length + ' of ' + total; }, 250);      /* the game does this every frame */
 $('measure').addEventListener('click', function () {
-  var keys = Object.keys(SOUND_NAMES), rows = keys.map(function (k) { return [SOUND_NAMES[k], k]; }).concat([['Crowd Bed', 'bed'], ['All at Once', keys]]);
-  var t = $('table'); t.hidden = false; t.innerHTML = '<tr><th>Sound</th><th>Peak dB</th><th>RMS dB</th><th>Seconds</th><th>Clipped</th></tr>';
+  var keys = Object.keys(SOUND_NAMES), rows = [];
+  keys.concat(['bed']).forEach(function (k) {
+    var name = SOUND_NAMES[k] || 'Crowd Bed';
+    if (k === 'bed' ? soundTakes('bed').length : soundTakes(k).length) rows.push([name, 'Recording', k, false]);
+    rows.push([name, 'Synth', k, true]);
+  });
+  rows.push(['All at Once', '', keys, false]);
+  var t = $('table'); t.hidden = false; t.innerHTML = '<tr><th>Sound</th><th>Version</th><th>Peak dB</th><th>RMS dB</th><th>Seconds</th><th>Clipped</th></tr>';
   rows.reduce(function (p, r) {
-    return p.then(function () { return soundRender(r[1], { secs:r[1] === 'bed' ? 8 : 4 }); }).then(function (m) {
+    return p.then(function () { return soundRender(r[2], { secs:r[2] === 'bed' ? 8 : 4, synth:r[3] }); }).then(function (m) {
       var tr = document.createElement('tr');
-      [r[0], m.peakDb.toFixed(1), m.rmsDb.toFixed(1), m.length.toFixed(2), m.clipped].forEach(function (v) { var c = document.createElement('td'); c.textContent = v; tr.appendChild(c); });
+      [r[0], r[1], m.peakDb.toFixed(1), m.rmsDb.toFixed(1), m.length.toFixed(2), m.clipped].forEach(function (v) { var c = document.createElement('td'); c.textContent = v; tr.appendChild(c); });
       t.appendChild(tr);
     });
   }, Promise.resolve());
