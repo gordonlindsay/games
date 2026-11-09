@@ -11,9 +11,9 @@ const PRACTICE_DRILLS = [                                   // tag and handling 
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
   { id:'cones', name:'Cones', objective:'Beat the Clock', limit:45 },
-  { id:'pass', name:'Create a Two-on-One', objective:'Draw the Defender, Then Pass', cue:'Run towards the defender to draw them in. Pass to the dashed-ringed runner, then run for the try line.', limit:22 },
+  { id:'pass', name:'Create a Gap', objective:'Draw Your Defender, Then Pass', cue:'Run at your defender. Pass when the ring turns gold.', limit:22 },   // the id from when it was Create a Two-on-One: saves, stars, the career and the Locker read it
   { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Aim the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
-  { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Your first defender is beaten. Press Switch, run across to the carrier and Tackle. Sprint helps you close the gap.', tagCue:'Your first defender is beaten. Press Switch, run across to the carrier and Pull Tag. Sprint helps you close the gap.', limit:18 },
+  { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Press Switch, run across and Tackle. Sprint closes the gap.', tagCue:'Press Switch, run across and Pull Tag. Sprint closes the gap.', limit:18 },
   { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90, contact:true },
   { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true },
   { id:'back', name:'Ball Back', objective:'Hands, Landing, Ball Back', limit:60, contact:true },
@@ -35,8 +35,8 @@ function practiceGroups() {                                // the picker as this
 }
 function practiceInstructions(id) {
   const name = drillName;
-  if (id === 'defend') return 'Your first defender is beaten. Press ' + name('Switch', 'b') + ', run across to the carrier and ' + name(practiceYoung() ? 'Pull Tag' : 'Tackle', 'a') + '. ' + name('Sprint', 'c') + ' helps you close the gap.';
-  if (id === 'pass') return 'Run towards the defender to draw them in. ' + name('Pass', 'a') + ' to the dashed-ringed runner, then run for the try line.';
+  if (id === 'defend') return 'Press ' + name('Switch', 'b') + ', run across and ' + name(practiceYoung() ? 'Pull Tag' : 'Tackle', 'a') + '. ' + name('Sprint', 'c') + ' closes the gap.';
+  if (id === 'pass') return 'Run at your defender. ' + name('Pass', 'a') + ' when the ring turns gold.';
   const kit = DRILL_KIT[id];
   return kit && kit.howTo ? kit.howTo() : '';
 }

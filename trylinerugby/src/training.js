@@ -3,8 +3,8 @@
    Tag Chase, Bouncy Egg, Pass Around the Circle, Cones, Tackling and Ball Back each run in a training space of their own: a practice field (drawn in
    render-drill.js) and the controls of a match with none of its flow. While practice.space is set, update() skips matchUpdate and the drill moves
    the men and the ball itself (M.phase reads 'drill', so nothing in the HUD or the hints takes it for open play). Kicking
-   and Driving use the match's own goal-kick and scrum close-ups; Defend a Breakaway and Create a Two-on-One restage open
-   play. Every engine hook checks `practice` first, so matches, AI v AI, the demo and the balance tools never reach any of it,
+   and Driving use the match's own goal-kick and scrum close-ups; Defend a Breakaway and Create a Gap restage open play,
+   five rounds each. Every engine hook checks `practice` first, so matches, AI v AI, the demo and the balance tools never reach any of it,
    and nothing here draws a random number outside a drill.
    ========================================================= */
 const DRILL_PACE = { live:0.75 };                           // the Training Ground's one speed lever: a live drill's dt is scaled by this, so its windows, meters and clocks all stretch together. Matches never read it
@@ -893,11 +893,55 @@ const drillDrive = {
   result() { return { skill:'power' }; },
 };
 
-/* ---------- the two open-play scenarios, as before; stars by how quickly they are done ---------- */
-const DRILL_QUICK = { defend:[7, 11], pass:[10, 15], draw:6.5 };    // seconds for three stars, then two; any later win is one. draw: a pass only draws the defender with them this near
-const drillQuickStars = (id, won) => !won ? 0 : practice.elapsed <= DRILL_QUICK[id][0] ? 3 : practice.elapsed <= DRILL_QUICK[id][1] ? 2 : 1;
-const drillPassDrawn = () => practice.drawAt != null && practice.drawAt <= DRILL_QUICK.draw;   // Two-on-One: the moment of the pass is what scores
-const drillPassStars = () => (!drillPassDrawn() ? 1 : practice.elapsed <= DRILL_QUICK.pass[1] ? 3 : 2);
+/* ---------- Create a Gap and Defend a Breakaway: open play, five rounds each ----------
+   Both restage open play: the match's own men, AI, passes and tackles. Five rounds each, harder as they go. A round is won by a
+   try after a drawn pass (Create a Gap) or by stopping the carrier (Defend); anything else ends the run, as the Circle's lost
+   round does. Between rounds the world holds (practice.space, so update() skips the match flow, as it does for a training
+   space): the round's word on the pitch (show), then the next line-up under a Round N card (card), then play. Each round has its
+   own clock (practice.limit). Stars by rounds won, as the Circle's: 1, 3 and all 5. Watch How plays round one, which is set up
+   exactly as the one-round game it replaced was. */
+const DRILL_ROUNDS = { n:5, stars:[1, 3, 5], show:1.1, card:1.0, word:0.3 };   // word: how new a word on the pitch is (seconds) for the round's word to take its place
+const roundsLine = n => (n === DRILL_ROUNDS.n ? 'All ' + n + ' Rounds' : n + (n === 1 ? ' Round' : ' Rounds'));   // the result card's line, as the Circle's
+const roundsNew = () => ({ round:1, won:0, lost:'', again:false, stage:'play', t:0, at:0 });
+function roundsHold(R, stage) { R.stage = stage; R.t = 0; R.at = practice.elapsed; practice.space = true; }
+function roundWord(word, p) { M.tags = M.tags.filter(t => t.t > DRILL_ROUNDS.word || dist(t, p) > 3); drillTag(word, p.x, p.y); }   // the round's word takes the place of one just put down where it ends (Got It, Big Hit, the match's Stopped), so there is one word to read, never two printed over each other
+function roundWon(R, word, p) { if (R.stage !== 'play') return; R.won++; st('roundsWon'); roundWord(word, p); sfx('cheer'); roundsHold(R, 'show'); }
+function roundLost(R, word, p) { if (R.stage !== 'play') return; R.lost = word; roundWord(word, p); sfx('groan'); roundsHold(R, 'show'); }
+function roundAgain(R, word, p) { if (R.stage !== 'play') return; R.again = true; roundWord(word, p); roundsHold(R, 'show'); }   // neither side's doing (their dropped pass, say): the same round again
+function roundsStage() {                                   // open play from nothing, as a kick-off leaves it: no set piece and no bind, both Sprint meters full, the half's clock at 0 so no round reaches the hooter. Round one finds all of it so already
+  M.phase = 'play'; M.set = null; M.cut = null; M.goal = null; M.contact = null; M.surge = null; M.duelPending = null;
+  M.clock = 0; M.hooter = false; M.phaseCount = 0; M.dropArmed = [false, false]; M.dropOn = [false, false]; M.tags = []; M.fx = [];
+  clearCharge(); for (const s of M.side) s.pass = null;
+  for (const S of M.spr) { S.m = 1; S.p = null; S.spent = false; }
+  for (const p of M.players) { p.grace = 0; p.bite = 0; p.biteTo = null; p.drop = null; p.quick = false; p.hold = 0; p.side = 0; }
+}
+function roundsTick(R, dt, restage) {                      // each kit's tick runs this first: true while the world is held between rounds
+  if (R.stage === 'play') return false;
+  R.t += dt;
+  if (R.stage === 'show') {
+    practice.elapsed = R.at;                               // the bar stays where the round ended
+    if (R.t < DRILL_ROUNDS.show) return true;
+    if (R.lost || R.won >= DRILL_ROUNDS.n) { roundsEnd(R); return true; }
+    if (!R.again) R.round++;
+    R.again = false; R.stage = 'card'; R.t = 0;
+    clearBanner(); restage(R.round);
+  }
+  practice.elapsed = 0;                                    // a full bar under the card: the round's clock starts at the whistle
+  if (R.t >= DRILL_ROUNDS.card) {
+    R.stage = 'play'; practice.space = false;
+    for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.gest = null; }   // nothing pressed under the card goes off at the whistle
+  }
+  return true;
+}
+function roundsEnd(R) { const stars = drillStarsOf(R.won, DRILL_ROUNDS.stars); practiceFinish(stars > 0, roundsLine(R.won), stars); }
+function roundsPips(R) { const out = []; for (let i = 1; i <= DRILL_ROUNDS.n; i++) out.push(i <= R.won ? 'got' : i !== R.round ? 'todo' : R.lost ? 'miss' : 'now'); return out; }   // the Circle's pips: one a round
+const roundsHud = R => ({ pips:roundsPips(R), bar:1 - practice.elapsed/practice.limit });
+function roundsCue(R, label) {                             // the card between rounds, then nothing; round one keeps the game's own line, as before
+  if (R.stage === 'card') return ['Round ' + R.round, label];
+  if (R.stage === 'play' && R.round === 1) return [(practice.tagOnly && practice.tagObjective) || practice.objective, practiceInstructions(practice.id)];
+  return null;
+}
+
 const DRILL_WHIFF = { t:0.45, mul:0.55 };                  // a Tackle or Pull Tag pressed with nothing in reach in Defend: a stumble this long, at this share of speed
 function drillWhiff(q) { if (!q) return; q.stumble = DRILL_WHIFF.t; q.stumbleMul = DRILL_WHIFF.mul; st('drillWhiff'); drillTag('Too Far', q.x, q.y); sfx('whiff'); }
 const drillCanPull = q => { const b = M.ball, c = b.state === 'held' ? b.carrier : null; return !!(q && c && c.team !== q.team && onFeet(q) && dist(q, c) <= DRILL_TAG.pull.reach); };
@@ -906,42 +950,152 @@ function drillTagPull(q) {                                 // the Kids level and
   sfx('tick'); buzz(20, 0); drillTag('Got It', q.x, q.y); st('drillPulled');
   const k = drillKit(); if (k && k.onPull) k.onPull(q);
 }
-function drillTagCheck(c) {                                // the Kids level and the Minis, in place of the automatic tackle: nobody commits. In Two-on-One a defender reaching the carrier ends the run with a tag
-  if (practice.id === 'pass' && c.team === 0 && M.players.some(q => q.team === 1 && dist(q, c) < 1.5)) { st('drillTagged'); practiceFinish(false, 'Tagged. Pass before they reach you.', 0); return true; }
+function drillTagCheck(c) {                                // the Kids level and the Minis, in place of the automatic tackle: nobody commits. In Create a Gap a defender still in it reaching the carrier ends the run with a tag
+  const G = practice.gap;
+  if (practice.id === 'pass' && c.team === 0 && M.players.some(q => q.team === 1 && !G.drawn.has(q) && dist(q, c) < 1.5)) { st('drillTagged'); roundLost(G.R, 'Tagged', c); return true; }
   return false;
 }
+
+/* Defend a Breakaway: your first defender is beaten, so Switch into cover, get across and stop the carrier. The rounds: the chase
+   as it always was; a longer start for the runner, the cover further across (7 m off the runner's line, not 4); a support runner the carrier
+   may pass to (the match's own carrier: under pressure, or held too long); the same with quicker runners; two cover men to Switch
+   between, the runners quicker still. Won by stopping whoever carries with the man you switched to
+   (Pull Tag for the youngest); a try, the clock or a tackle without the Switch ends the run. Only your ringed man commits here
+   (contact.js tackleChecks), so a cover man left standing can neither win it nor lose it. Once you have switched, the ring never goes
+   back to the beaten man: not by Sprint (contact.js sprintPick), as before, and not when their pass is caught far from your man or
+   with him down (defendRepick). A dropped pass of theirs, or the ball loose, plays the round again. */
+const DRILL_DEFEND = { limit:18, rounds:[
+  { label:'The Chase', run:[49, 35], beaten:[56, 35], cover:[[36, 39]] },
+  { label:'Longer Start', run:[49, 33], beaten:[57, 33], cover:[[36, 40]] },
+  { label:'Support Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]] },
+  { label:'Quicker Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]], pace:2 },
+  { label:'Two Cover Defenders', run:[49, 33], support:[52, 40], beaten:[57, 33], cover:[[38, 25], [37, 42]], pace:2 },
+] };
+function defendRestage(n) {
+  const D = practice.defend, r = DRILL_DEFEND.rounds[n - 1], run = D.cpu[0], sup = r.support ? D.cpu[1] : null, beaten = D.own[0], covers = D.own.slice(1, 1 + r.cover.length);
+  M.players = [beaten, ...covers, run, ...(sup ? [sup] : [])];
+  drillPlace(run, r.run[0], r.run[1]); if (sup) drillPlace(sup, r.support[0], r.support[1]);
+  drillPlace(beaten, r.beaten[0], r.beaten[1]); covers.forEach((p, i) => drillPlace(p, r.cover[i][0], r.cover[i][1]));
+  roundsStage();
+  M.nat[1].pace = D.pace + (r.pace || 0);                  // this match's copy of their side: a quicker runner, and back again
+  setCarrier(run); setCtrl(0, beaten); if (n > 1) drillHold(run);   // the ball in his hands under the card; round one's first step puts it there, as it always did
+  practice.initialCtrl = beaten; practice.switched = false; practice.limit = DRILL_DEFEND.limit;
+}
+const DEFEND_VIEW = [{ sy:0.46, lean:0, zoom:0.88 }, { sy:0.56, lean:1, zoom:0.88 }];   // the camera (render-drill.js) with one cover defender and with two: where the field sits up the screen, metres towards the beaten man until the Switch, and a touch out. Measured at 667x375, the tighter size: every man clear of the stick, the buttons and the card, on the card and as play starts, in all five rounds
+const defendView = () => DEFEND_VIEW[practice.defend && DRILL_DEFEND.rounds[practice.defend.R.round - 1].cover.length > 1 ? 1 : 0];
+function defendRepick(t, c) {                              // setCarrier (match.js) moves the ring when their pass is caught with your man down or far off: to the nearest of yours on his feet, as in a match, but once you have switched never back to the beaten man. With nobody else free the ring stays where it is
+  return nearestOf(M.players.filter(q => q.team === t && q.down <= 0 && !q.bind && !(practice.switched && q === practice.initialCtrl)), c.x, c.y);
+}
+const DEFEND_TIP = { 'Switch First':'Switch to the defender ahead of the ball first.', 'Time Up':'Get across early and close the gap.', Try:'Switch early, then run to where the carrier is going.' };
 const drillDefend = {
-  onPull(q) { const won = practice.switched && q === ctrlOf(0); practiceFinish(won, won ? 'You got across and pulled the tag.' : 'Switch to the defender ahead of the ball, then get across to the runner.', drillQuickStars('defend', won)); },
   setup(own, cpu) {
-    M.players = [own[0], own[1], cpu[0]];
-    drillPlace(cpu[0], 49, 35); drillPlace(own[0], 56, 35); drillPlace(own[1], 36, 39);
-    setCarrier(cpu[0]); setCtrl(0, own[0]); practice.initialCtrl = own[0];
+    practice.defend = { own, cpu, pace:M.nat[1].pace, R:roundsNew() };
+    defendRestage(1);
     practice.cam = null; M.cam.x = 44; M.cam.y = 35;
   },
-  tick() { if (ctrlOf(0) !== practice.initialCtrl) practice.switched = true; },
-  onTackle(c, q) {                                         // any made tackle on the runner, the one that jolts the ball loose included
+  tick(dt) {
+    const R = practice.defend.R;
+    if (roundsTick(R, dt, defendRestage)) return;
+    if (ctrlOf(0) !== practice.initialCtrl) practice.switched = true;
+    const b = M.ball, c = b.state === 'held' ? b.carrier : null;
+    if (c && c.team === 0 && practice.switched) { roundWon(R, 'Stopped', c); return; }   // their pass taken, or the ball won back
+    if (M.phase !== 'play' || b.state === 'loose' || b.state === 'dead' || (b.state === 'air' && b.f.kind !== 'pass') || (c && c.team === 0)) roundAgain(R, 'Go Again', b);
+  },
+  stop(q, c) {                                             // a tackle or a pulled tag on whoever carries for them
+    const R = practice.defend.R, won = practice.switched && q === ctrlOf(0);
+    if (won) roundWon(R, 'Stopped', c); else roundLost(R, 'Switch First', c);
+  },
+  onPull(q) { this.stop(q, q); },
+  onTackle(c, q) {                                         // any made tackle on their carrier, the one that jolts the ball loose included
     if (c.team !== 1) return false;
-    const won = practice.switched && q === ctrlOf(0);
-    practiceFinish(won, won ? 'You got across and stopped the runner.' : 'Switch to the defender ahead of the ball, then get across to the runner.', drillQuickStars('defend', won));
+    this.stop(q, c);
     return true;
   },
-  hud() { return { bar:1 - practice.elapsed/practice.limit }; },
+  onTry(p) { roundLost(practice.defend.R, 'Try', p); },
+  timeUp() { const b = M.ball; roundLost(practice.defend.R, 'Time Up', b); },
+  labels() { return { a:practice.tagOnly ? 'Pull Tag' : 'Tackle', aOn:false, b:'Switch', bOn:false, c:true, cOn:false }; },   // only between rounds: every button where it will be, none lit
+  hud() { return roundsHud(practice.defend.R); },
+  cue() { const R = practice.defend.R; return roundsCue(R, DRILL_DEFEND.rounds[R.round - 1].label); },
+  tip() { const R = practice.defend.R; return R.won >= DRILL_ROUNDS.n ? 'Switch early and run to where the carrier is going.' : DEFEND_TIP[R.lost] || DEFEND_TIP.Try; },
   result() { return { skill:'pace' }; },
 };
+
+/* Create a Gap: always one over. Your men stand in lanes, each a stride deeper than the man inside, and each defender marks one
+   of them, the outside man free. Run at your man and pass once he comes to you, inside DRILL_GAP.draw (the ring turns gold): a
+   pass from further out is Too Early and ends the run, since he would only drift on to the next man. A drawn defender stays on
+   the man who drew him, out of it. The next one keeps hold metres off his man until that man has the ball, then comes at him,
+   so every man has to draw his own. Held, tagged (Kids and Minis), the ball lost or a pass too early ends the run; a try after
+   a drawn pass wins the round. A man who has passed trails further back (trail) and is offered no pass again (gapSpent, in
+   passing.js), so the next man out is always the pass. Round four's defenders come quicker and wait closer (hold); round five is 5 on 4, a touch quicker than the first three. */
+const DRILL_GAP = { draw:6.5, lane:6, depth:2.5, trail:5, ahead:11, x:83, hold:7.5, fixed:0.5, zoom:[1, 1, 0.85, 0.72], cam:3,   // zoom: the camera's, by men a side less one, so the whole line is on the screen. cam: metres nearer than the line's middle it looks, so play sits above the thumbs
+  rounds:[{ att:2, rush:0.9, limit:22, label:'2 on 1' }, { att:3, rush:0.9, limit:24, label:'3 on 2' }, { att:4, rush:0.9, limit:26, label:'4 on 3' },
+    { att:4, rush:1.15, pace:2, hold:7, limit:26, label:'4 on 3, Quicker' }, { att:5, rush:0.95, limit:30, label:'5 on 4' }] };
+function gapRestage(n) {
+  const G = practice.gap, K = DRILL_GAP, r = K.rounds[n - 1], y0 = 35 + (r.att - 1)*K.lane/2;   // the carrier nearest the camera, the line out up the screen
+  G.lanes = G.own.slice(0, r.att); G.marks = G.cpu.slice(0, r.att - 1); G.y = G.lanes.map((p, k) => y0 - k*K.lane);
+  M.players = G.lanes.concat(G.marks);
+  G.lanes.forEach((p, k) => drillPlace(p, K.x - K.depth*k, G.y[k]));
+  G.marks.forEach((p, k) => drillPlace(p, K.x + K.ahead, G.y[k]));
+  roundsStage();
+  M.nat[1].pace = G.pace + (r.pace || 0);
+  G.rush = r.rush; G.hold = r.hold || K.hold; G.drawn = new Set(); G.passed = new Set(); G.passes = M.stats.passes; G.ko = M.stats.ko_catch || 0; G.last = G.lanes[0];
+  practice.completedPass = false; practice.limit = r.limit;
+  setCarrier(G.lanes[0]); if (n > 1) drillHold(G.lanes[0]);
+}
+function gapTargets(T) {                                   // Create a Gap's men (computeTargets, movement.js): yours hold their lanes, and each defender marks one of them
+  const G = practice.gap; if (!G || G.R.stage !== 'play') return;
+  const K = DRILL_GAP, b = M.ball, f = b.state === 'air' && b.f.kind === 'pass' ? b.f : null, held = b.state === 'held', c = held ? b.carrier : f ? f.target : null;
+  const ci = G.lanes.indexOf(c), bx = held ? c.x : b.x;
+  G.lanes.forEach((p, k) => {
+    if (k === ci || ringed(p) || !onFeet(p)) return;       // the carrier, and the man a pass is for, run their own way
+    const back = ci < 0 ? K.depth*k : k > ci ? K.depth*(k - ci) : K.trail + K.depth*(ci - k - 1);
+    T.set(p, { x:clamp(bx - back, 1, 119), y:G.y[k], s:maxSpeed(p) });
+  });
+  G.marks.forEach((d, k) => {
+    if (!onFeet(d)) return;
+    const a = G.lanes[k];
+    if (G.drawn.has(d) || (held && ci > k)) T.set(d, { x:a.x + 1, y:a.y, s:maxSpeed(d)*K.fixed });   // drawn, or the ball is already past him: he stays on his man
+    else if (held && a === c) { const lead = clamp(dist(d, a)/9, 0, 0.7); T.set(d, { x:a.x + a.vx*lead, y:a.y + a.vy*lead, s:maxSpeed(d)*G.rush, a:COVER.acc[0], pursue:true }); }   // his man has it: at him
+    else T.set(d, { x:Math.max(d.x, a.x + G.hold), y:a.y, s:maxSpeed(d)*G.rush });   // still to come: level with his man and no nearer than hold, until the ball is his
+  });
+}
+const gapZoom = () => (practice.gap ? DRILL_GAP.zoom[practice.gap.lanes.length - 2] || 1 : 1);
+const gapAimY = () => 35 + (M.ball.y - 35)*0.5 + DRILL_GAP.cam;   // half way from the line's middle to the ball
+const gapSpent = q => !!(practice.gap && practice.gap.passed.has(q));   // passing.js: a man who has passed this round is offered no pass, so the next man out is the pass
+const gapMark = c => { const G = practice.gap, d = G && c ? G.marks[G.lanes.indexOf(c)] : null; return d && !G.drawn.has(d) ? d : null; };   // the defender still to draw: the carrier's own man (the ring on the grass)
+const GAP_TIP = { 'Too Early':'Run at your defender until the ring turns gold, then pass.', Held:'Pass before they reach you.', Tagged:'Pass before they reach you.', 'Ball Lost':'Run straight and pass to the next runner.', 'Pass First':'Pass to the spare runner before the line.', 'Time Up':'Keep running at your defender.' };
 const drillPass = {
   setup(own, cpu) {
-    M.players = [own[0], own[1], cpu[0]];
-    drillPlace(own[0], 83, 31); drillPlace(own[1], 80, 42); drillPlace(cpu[0], 94, 31);
-    setCarrier(own[0]); practice.firstCarrier = own[0];
+    practice.gap = { own, cpu, pace:M.nat[1].pace, R:roundsNew(), lanes:[], marks:[], y:[], drawn:new Set(), passed:new Set(), passes:0, last:null, rush:1 };
+    gapRestage(1);
     M.cam.x = 91; M.cam.y = 35;
   },
-  tick() {
-    const b = M.ball;
-    if (practice.drawAt == null && M.stats.passes > 0) { const def = M.players.find(p => p.team === 1); practice.drawAt = def ? dist(practice.firstCarrier, def) : 99; }   // how near the defender was when the ball left your hands
-    if (b.state === 'held' && b.carrier.team === 0 && b.carrier !== practice.firstCarrier && M.stats.passes > 0) practice.completedPass = true;
-    if ((b.state === 'held' && b.carrier.team === 1) || M.phase === 'set') practiceFinish(false, 'Keep the defender with the ball carrier, then pass before contact. Try again.', 0);
+  tick(dt) {
+    const G = practice.gap, R = G.R;
+    if (roundsTick(R, dt, gapRestage)) return;
+    const b = M.ball, c = b.state === 'held' ? b.carrier : null;
+    if (M.stats.passes > G.passes) {                       // a pass has just left your hands: judged on how near the passer's own defender was
+      G.passes = M.stats.passes;
+      const d = G.marks[G.lanes.indexOf(G.last)];
+      G.passed.add(G.last);                                // the passer is out of the line: never the next pass (gapSpent)
+      if (d && !G.drawn.has(d) && dist(G.last, d) > DRILL_GAP.draw) { st('gapEarly'); roundLost(R, 'Too Early', G.last); return; }
+      if (d && !G.drawn.has(d)) { G.drawn.add(d); d.tcd = 99; st('gapDrawn'); }   // he went for the passer: out of it, and no tackle left in him
+    }
+    if (c && c.team === 0) { if (c !== G.last) practice.completedPass = true; G.last = c; }
+    if ((M.stats.ko_catch || 0) > G.ko) { roundAgain(R, 'Go Again', b); return; }   // a pass dropped by the catcher: the match's own handling roll, which no button changes, so the round again
+    if (M.phase !== 'play' || (c && c.team === 1) || b.state === 'loose' || b.state === 'dead' || (b.state === 'air' && b.f.kind !== 'pass')) { st('gapLost'); roundLost(R, 'Ball Lost', b); }
   },
-  hud() { return { bar:1 - practice.elapsed/practice.limit }; },
+  onTackle(c) {                                            // a made tackle on your carrier: held
+    if (c.team !== 0) return false;
+    st('gapHeld'); roundLost(practice.gap.R, 'Held', c);
+    return true;
+  },
+  onTry(p) { const R = practice.gap.R; if (p.team === 0 && practice.completedPass) roundWon(R, 'Try', p); else roundLost(R, 'Pass First', p); },
+  timeUp() { roundLost(practice.gap.R, 'Time Up', M.ball); },
+  labels() { return { a:'Pass', aOn:false, b:kickLabel(0), bOn:false, c:true, cOn:false }; },   // only between rounds: every button where it will be, none lit
+  hud() { return roundsHud(practice.gap.R); },
+  cue() { const R = practice.gap.R; return roundsCue(R, DRILL_GAP.rounds[R.round - 1].label); },
+  tip() { const R = practice.gap.R; return R.won >= DRILL_ROUNDS.n ? 'Draw your defender, then pass. That makes the gap.' : GAP_TIP[R.lost] || GAP_TIP['Too Early']; },
   result() { return { skill:'handling' }; },
 };
 
@@ -1203,9 +1357,9 @@ const drillKit = () => (practice ? DRILL_KIT[practice.id] : null);
 function practiceTackle(c, q) { const k = drillKit(); return !!(k && k.onTackle && k.onTackle(c, q)); }
 function practiceGoal(g) { const k = drillKit(); return !!(k && k.onGoal && k.onGoal(g)); }
 function practiceScrum(c) { const k = drillKit(); return !!(k && k.onScrum && k.onScrum(c)); }
-function practiceTry(p) {                                  // a try inside a drill ends it: only the two-on-one is won that way
-  if (practice.id === 'pass' && p.team === 0 && practice.completedPass) { practiceFinish(true, drillPassDrawn() ? 'You drew the defender, then passed. That made the try.' : 'You scored, but you passed early. Run at the defender first.', drillPassStars()); return; }
-  practiceFinish(false, p.team === 0 ? 'Draw the defender, then pass to your supporting runner before scoring.' : 'The runner got through. Switch into cover and run towards the ball.', 0);
+function practiceTry(p) {                                  // a try inside a drill: Create a Gap's and Defend a Breakaway's to judge, the only games that restage open play
+  const k = drillKit();
+  if (k && k.onTry) k.onTry(p); else practiceFinish(false, '', 0);
 }
 function drillLabels() { const k = drillKit(); return (k && k.labels && k.labels()) || { a:null, b:null, c:false }; }
 function drillDrawScreen() { const k = drillKit(); if (k && k.drawScreen) k.drawScreen(); }
