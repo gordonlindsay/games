@@ -80,7 +80,7 @@ function cleanTeam(t, i) {
   let left = teamBudget(t);
   for (const k of hasStamina ? keys : ['stamina', ...keys.filter(x => x !== 'stamina')]) { const v = clamp(Math.round(abilityOf(t, k) || 1), 1, 5); const spend = Math.min(v - 1, left); got[k] = 1 + spend; left -= spend; }
   for (const k of keys) team[k] = got[k];
-  if (teamLevelOf(t)) team.level = t.level;                      // no level is no field, so an old team reads and saves as it did
+  if (teamLevelOf(t)) team.level = teamLevelOf(t).id;            // no level is no field, so an old team reads and saves as it did; a level that has gone saves as the one it reads as (LEVEL_WAS)
   return team;
 }
 /* The short name filled in for you skips codes already on the scoreboard elsewhere: Farnham Minis is FAN, not FAR. */

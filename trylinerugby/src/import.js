@@ -686,16 +686,18 @@ async function importFetch(url, opts = {}) {
    fall between the two by name. With nothing chosen and nothing known the level is the best Local club's (importTop), so a league you add sits with the Local list, under the professional lists.
    Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
    by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
-const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham, at 58
-/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them. Null when the words say nothing. */
-const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b/, 'r1'], [/\bnational league\b|\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
+const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham (and Quins), at 61: Regional 1
+/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them, and so does National
+   League (England's third and fourth tiers, between Regional 1 and the Championship): Regional 1, 61, level with England 2's foot and under
+   its winners, so no import listed under Local is above an England 2 side. Null when the words say nothing. */
+const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b|\bnational league\b/, 'r1'], [/\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
 function importLevelFrom(texts) {
   for (const t of texts) { const s = String(t || '').toLowerCase().slice(0, 300), hit = IMPORT_LEVEL_WORDS.find(([re]) => re.test(s)); if (hit) return hit[1]; }
   return null;
 }
 const importLevelDefault = () => TEAM_LEVELS.find(l => sumOfOverall(l.overall) === importTop()) || TEAM_LEVELS[4];
 /* The level an import is set at: the one chosen, else what its page says, else the Local list's best. */
-const importLevel = (data, id) => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => data && l.id === data.level) || importLevelDefault();
+const importLevel = (data, id) => levelById(id) || (data && levelById(data.level)) || importLevelDefault();
 function importSides(data, levelId) {
   if (!data) return [];
   const table = data.league || [], rows = table.filter(r => !r.own), fromTable = rows.length > 0;

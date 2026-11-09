@@ -24,7 +24,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 //    (bc8fabf): two AI v AI matches, an arcade match you play and a plain one, both played by the harness's bot. Run first,
 //    so nothing earlier in this file can move them. If another change moves non-career play on purpose, re-pin it from
 //    that change's bundle without the career sources.
-const BASE = 'lhsdx3 1wmrjk7 n3fvw5';   // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere, Farnham's opponent here, is 64 (13), was 67 (14); with CLUB_RATED=off this build gives the pin before it exactly, lhsdx3 1wmrjk7 uge569 (the arcade match and AI v AI did not move). Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 1uombq7 12cy4qs. Before that: re-pinned at the Stamina merge (the arcade match moved: Stamina acts in arcade matches), and again when the nations were rated on the XV hierarchy: England and Italy, in the two AI v AI matches, have new ratings; with their old ones put back the value is the earlier 1vg5qro, so the career still changes no non-career play
+const BASE = 'lhsdx3 1vnm2gm 70qhmw';   // re-pinned at the real order (src/ratings.js, CLUB_RATED, 2026-11-09): Farnham v Haslemere, the two matches here, are 61 (12) v 46 (7), were 75 (17) v 64 (13); with CLUB_RATED=band this build gives the pin before it exactly, lhsdx3 1wmrjk7 n3fvw5 (AI v AI did not move). Before that: re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere, Farnham's opponent here, is 64 (13), was 67 (14); with CLUB_RATED=off this build gives the pin before it exactly, lhsdx3 1wmrjk7 uge569 (the arcade match and AI v AI did not move). Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 1uombq7 12cy4qs. Before that: re-pinned at the Stamina merge (the arcade match moved: Stamina acts in arcade matches), and again when the nations were rated on the XV hierarchy: England and Italy, in the two AI v AI matches, have new ratings; with their old ones put back the value is the earlier 1vg5qro, so the career still changes no non-career play
 // re-pinned at the official XV tables: England, France and Italy (the AI v AI matches) re-rated; with the XV hierarchy's ratings put back the value is that commit's 18qgoe5
 function fingerprint() {
   const out = [];
@@ -245,7 +245,9 @@ C.setCups(false);                                    // no cups unless a section
   ok(LOCKER || medals.join() === 'triple', `and the Locker hears of it, once, as it is banked (${medals})`);
   // the transfer offers, measured
   const target = C.target;
-  ok(target(61) === 61 && target(99) === 75 && target(40) === 61 && Math.abs(target(80) - 68) < 1e-9 && Math.abs(target(70) - (61 + 9*14/38)) < 1e-9, 'his overall 61 to 99 maps onto the clubs\' 61 to 75, linearly and capped');
+  ok(target(61) === 58 && target(99) === 75 && target(40) === 58 && Math.abs(target(80) - 66.5) < 1e-9 && Math.abs(target(70) - (58 + 9*17/38)) < 1e-9, 'his overall 61 to 99 maps onto the national clubs\' 58 to 75, linearly and capped');
+  { const lo = Math.min(...X.NATIONAL.flat().map(X.overallOf)), hi = Math.max(...X.NATIONAL.flat().map(X.overallOf)), never = X.NATIONAL.flat().filter(t => !Array.from({ length:39 }, (_, i) => target(61 + i)).some(v => Math.abs(X.overallOf(t) - v) <= 1));
+    ok(lo === 58 && hi === 75 && !never.length, `the band is the national lists' own (${lo} to ${hi}), so every national club is within a point of some target, Scotland's bottom five (58) included (never: ${never.map(t => t.id)})`); }
   const near = [], counts = new Set();
   let leaguesMixed = 0, draws = 0, own = 0, sorted = true;
   for (const ovr of [61, 66, 72, 80, 88, 95, 99]) for (const club of [X.CLUBS[0], X.ENGLAND[0], X.SCOTLAND[0]]) for (let i = 0; i < 20; i++) {
@@ -523,7 +525,7 @@ C.setCups(false);                                    // no cups unless a section
     for (let n = 0; n < 99 && !trains(L.dilemma(c2)); n++) c2.season.id = 'skills-train-' + n;   // a season whose first dilemma has a training option (the plan follows the season's id)
     const d = L.dilemma(c2), i = d ? d.opts.findIndex(o => Object.keys(o.fx).some(k => C.skills().some(([q]) => q === k))) : -1, o = i >= 0 ? d.opts[i] : null;
     const k = o && Object.keys(o.fx).find(q => C.skills().some(([s2]) => s2 === q)), b = k && c2.skills[k];
-    ok(!!d && i >= 0 && L.choose(i) && c2.skills[k] === b + o.fx[k] && c2.life.energy === 80 + o.fx.energy, `round 1's dilemma: its training option (${o && o.name}) gives ${k} +${o && o.fx[k]} for ${o && -o.fx.energy} Energy`);
+    ok(!!d && i >= 0 && L.choose(i) && c2.skills[k] === b + o.fx[k] && c2.life.energy === 80 + (o.fx.energy || 0), `round 1's dilemma: its training option (${o && o.name}) gives ${k} +${o && o.fx[k]} for ${o && -(o.fx.energy || 0)} Energy`);   // Touch Rugby costs no Energy: the season's id carries the clock, so which option comes up varies from run to run
     const e = c2.life.energy, h = c2.skills.handling;
     ok(C.train('egg') && ($('pr-retry').click(), P.finish(true, 'Well Played', 1), $('pr-select').click(), c2.trained) && c2.skills.handling === h + C.TRAIN[1] && c2.life.energy === e + L.LIFE.energy.train, 'and a session after it still trains and costs its Energy');
     c2.life.energy = 5; c2.trained = false; const e2 = c2.life.energy;
@@ -667,6 +669,22 @@ C.setCups(false);                                    // no cups unless a section
   const good = json2(cr);                            // a career in its league, for the broken saves below
   C.set(cr); finish(cr, 1); C.advance(); X.save(); C.set(null); X.load();
   ok(json(C.get()) === json(cr) && C.get().phase === 'transfer' && C.get().offers.length >= 2 && C.get().trophies.length === 1, 'a transfer window, its offers and the trophies too');
+  // a career saved on the live game before the real order (2026-11-09): main's Farnham as written, 75 (17), loads at Farnham as the list has
+  // him now, 61 (12), and so does every season after the one in progress, which keeps its sides as saved, as a championship does
+  {
+    const abil = t => ['pace', 'power', 'handling', 'kicking', 'stamina'].map(k => t[k]).join();
+    const mainFar = { ...json2(X.CLUBS[0]), pace:4, power:3, handling:4, kicking:3, stamina:3 }, p = C.create({ name:'Sam', pos:'B', num:5, club:mainFar });
+    ok(X.overallOf(p.club) === 75 && X.overallOf(p.season.teams[0]) === 75, 'a main-era Farnham career, as the live game saved it (75)');
+    X.restore({ career:json2(p) }); const k = C.get();
+    ok(abil(k.club) === abil(X.CLUBS[0]) && X.rateOf(k.club) === X.rateOf(X.CLUBS[0]) && X.overallOf(k.club) === 61 && k.club.name === 'Farnham' && k.club.kit === X.CLUBS[0].kit, `loads at Farnham as the list has him now (${X.overallOf(k.club)}, ${abil(k.club)})`);
+    ok(json(k.season) === json(p.season) && X.overallOf(k.season.teams[0]) === 75, 'its season in progress kept as saved');
+    for (let y = 0; y < 3; y++) { C.newSeason(k); ok(X.rateOf(k.season.teams[0]) === X.rateOf(X.CLUBS[0]) && k.season.teams.slice(1).every(t => X.CLUBS.some(o => o.id === t.id && X.rateOf(o) === X.rateOf(t))), `and season ${k.seasons} plays him at 61 against Surrey as the list has it (${k.season.teams.map(t => t.id + ' ' + X.overallOf(t)).join(', ')})`); }
+    const made = C.create({ name:'Sam', pos:'B', num:5, club:{ ...mainFar, custom:true } }); X.restore({ career:json2(made) });
+    ok(abil(C.get().club) === abil(mainFar) && C.get().club.custom, 'a team you made with a built-in club\'s code keeps its own abilities');
+    const lg = C.create({ name:'Sam', pos:'B', num:5, club:{ ...mainFar, key:'lg-FAR' } }); X.restore({ career:json2(lg) });
+    ok(abil(C.get().club) === abil(mainFar), 'and so does a My League side');
+    C.set(null);
+  }
   // saves from before the career
   const old = { settings:{ half:1, diff:2, sound:false }, champ:null, custom:[{ name:'Old Club', id:'OLD', kit:'#123456', trim:'#abcdef', pace:2, power:2, handling:2, kicking:2 }], champHistory:[], seasonSerial:4 };
   C.set(null); X.restore(JSON.parse(json(old)));

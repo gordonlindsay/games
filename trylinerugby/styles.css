@@ -1230,7 +1230,9 @@ summary::-webkit-details-marker{display:none}
 .rstars .on{fill:var(--flood)}
 .bd-levels{display:flex;flex-direction:column;gap:10px}
 .bd-levels[hidden],#bd-form[hidden]{display:none}
-.lv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.lv-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}   /* eight levels (TEAM_LEVELS): three a row, the last two in the middle so every row is balanced */
+.lv-grid .lv{grid-column:span 2}
+.lv-grid .lv:nth-child(3n+1):nth-last-child(2){grid-column:2 / span 2}
 .lv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:6px 10px;text-transform:none}
 .lv[aria-pressed="true"]{border-color:var(--flood)}
 .lv-name{font-weight:800}
@@ -1241,4 +1243,4 @@ summary::-webkit-details-marker{display:none}
 .bd-level-now{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
 .bd-level-now .btn{width:auto;min-height:44px;padding:0 12px}
 .bd-level .stat-note{margin:0}
-@media (orientation:landscape) and (max-height:420px){.lv{min-height:44px;padding:3px 10px}.bd-levels{gap:6px}}   /* nine levels and the row under them fit a phone sideways, on first sight */
+@media (orientation:landscape) and (max-height:420px){.lv{min-height:44px;padding:3px 10px}.bd-levels{gap:6px}}   /* eight levels and the row under them fit a phone sideways, on first sight */

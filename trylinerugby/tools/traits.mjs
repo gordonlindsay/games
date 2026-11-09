@@ -79,7 +79,8 @@ function pin() {
   }
   ok(true, 'every built-in side has exactly the stars its 5s bring, each on a shirt it fits');
   // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Ironsides, 72 from its table (was 70), gains a point where it is strongest, Power, to 5; with CLUB_RATED=off this build gives the list before it exactly
-  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA,MPL,PRE,IRO',   // every nation on the XV rankings has a 5 somewhere; Montpellier, Pretoria and Ironsides are the clubs with one
+  // re-pinned at the real order (2026-11-09): Ironsides is 55 (Regional 2), its Power 3, so it has no 5; with CLUB_RATED=band this build gives the list before it exactly
+  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA,MPL,PRE',   // every nation on the XV rankings has a 5 somewhere; Montpellier and Pretoria are the clubs with one
      `the sides with stars: ${X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id + ' ' + R.teamTraitNames(t).join('/')).join(', ')}`);
   const fra = R.teamStars(team('FRA')), ire = R.teamStars(team('IRE'));
   ok(fra.size === 4 && fra.get(7).join() === 'burst' && fra.get(6).join() === 'handoff' && [...fra].filter(([n]) => n <= 3).length === 2, `France: four stars, Burst on 7, Hand-Off on 6, Crunch and Engine on two forwards (${starMap(team('FRA'))})`);
