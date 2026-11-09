@@ -21,16 +21,28 @@ function simMatch(c, h, a) {                              // pace, power, handli
   return { h, a, hs:pts(H, ht), as:pts(A, at), ht, at };
 }
 /* Six teams: yours and five others. The championship keeps its own copy, so editing a team later can't change one under way.
-   The five are whoever was passed in (a random draw, at the team screen). You play the weakest of them first and the
+   The five are whoever was passed in (at the team screen: champOthers). You play the weakest of them first and the
    strongest last: circle position 0 stays put and meets position 5, then the new position 5, each round. */
+const champSide = ({ league, place, w, d, l, pf, pa, level, ...side }) => ({ ...side });   // the league line is read from the list, never saved; nor is a made team's level, which only the builder reads
 function newChamp(user, others) {
   if (practice) return;
   retainCompletedSeason(champ);
   const five = others.slice(0, 5);
   const ranked = five.map((t, i) => ({ i:i + 1, r:rateOf(t) })).sort((a, b) => a.r - b.r || a.i - b.i);
   const order = [0, ranked[4].i, ranked[3].i, ranked[2].i, ranked[1].i, ranked[0].i];
-  champ = { id:'season-' + Date.now().toString(36) + '-' + (++seasonSerial).toString(36), user:0, teams:[user, ...five].map(t => ({ ...t })), round:0, fixtures:roundRobin(order), results:[] };
+  champ = { id:'season-' + Date.now().toString(36) + '-' + (++seasonSerial).toString(36), user:0, teams:[user, ...five].map(champSide), round:0, fixtures:roundRobin(order), results:[] };
   save();
+}
+/* Who a side plays, from the list on screen. The Six Nations stays those six; any other side on International plays the
+   five nations nearest in rating; every other list is a random draw. g: the men's or the women's list, so all six are the same side. */
+function champOthers(t, pool, g = teamSide(t) === 1 ? 1 : 0) {
+  if (pool === IMPORT_POOL) return importOthers(t, g);
+  if (pool === 0) {
+    const six = g ? womenSix() : NATIONS;
+    return six.includes(t) ? shuffle(six.filter(o => o !== t)) : nationsNearest(t, g);
+  }
+  const base = t.key ? t : ALL_TEAMS.find(o => o.id === t.id) || t, rest = shuffle(POOLS[pool].filter(o => o !== base));
+  return g ? rest.map(womenClub) : rest;
 }
 function userFixture(c) {
   const pair = c.fixtures[c.round].find(p => p[0] === c.user || p[1] === c.user);

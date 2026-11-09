@@ -66,7 +66,7 @@ function updateCut(dt) {
 }
 function surge(team, secs) { M.surge = { team, t:secs }; }
 
-/* Scrum: Crouch, Bind, Set. Press on Set for a good hit, then tap Push fast to drive: the taps alone are the shove, the stick
+/* Scrum: Crouch, Bind, Set. Press on Set for a good start, then tap Push fast to drive: the taps alone are the shove, the stick
    plays no part (2026-10-17: it used to scale the taps by 0.55 at rest and 0.2 held back, and nothing on screen said so). pos is
    metres gained by your pack. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty (a pushover
    within 8m of the line); the steal line is 1.2, half way up the bar. */
@@ -84,8 +84,8 @@ function scrumPush(c, s, dt) {                             // a human pack's sho
   if (inp && inp.aPressed) {
     const note = text => { if (M.two) c.msg[s] = { text, at:t }; else say(text, 'small'); };   // two player: a tag over that pack in its seat colour, so two hits at once don't fight over the banner
     if (t < SCRUM_SET - 0.08) { if (!c.early[s] && !c.hit[s]) { c.early[s] = true; c.pos -= 0.25*d; note('Early'); } }
-    else if (!c.hit[s] && !c.early[s] && t <= SCRUM_SET + 0.28) { c.hit[s] = true; c.pos += 0.35*d; note('Good Hit'); buzz(25, s); }
-    if (t >= SCRUM_SET) { c.rate[s] += 1; c.taps[s]++; }
+    else if (!c.hit[s] && !c.early[s] && t <= SCRUM_SET + 0.28) { c.hit[s] = true; c.pos += 0.35*d; note('Good Timing'); buzz(25, s); }
+    if (t >= SCRUM_SET) { c.rate[s] += practice && !practice.demo ? drillRate() : 1; c.taps[s]++; }   // a live drill's clock runs slow, so a real tap counts for less and the same thumb makes the same shove. A demo's pilot taps on the drill's own clock
   }
   if (t < SCRUM_SET) return 0;
   c.rate[s] *= Math.exp(-dt/0.25);
@@ -93,6 +93,7 @@ function scrumPush(c, s, dt) {                             // a human pack's sho
 }
 function updateScrum(c, dt) {
   const t = c.t, eff = [0, 1].map(s => (cpuSide(s) ? 0 : scrumPush(c, s, dt)));   // a human's press is read before Set too (Early, or the Good Hit)
+  if (practice && practice.drive) driveShape(c, dt, eff);    // the Driving drill's body shape; nothing else reaches it
   if (t < SCRUM_SET) return;
   if (!c.engaged) { c.engaged = true; sfx('tackle'); buzz(40); }
   for (const s of [0, 1]) if (cpuSide(s)) eff[s] = c.base[s]*(1 + 0.22*Math.sin((t-SCRUM_SET)*2.4 + c.wave));

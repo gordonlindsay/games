@@ -1,12 +1,15 @@
 // The behind views (Low, Mid, High): the gate, the stick's turn, engine parity with Top, drawing safety, framing, looks and the saved setting.
 process.env.SEED ??= '11';
-const { T, inputs, bot, reseed, rndCalls } = await import('./harness.mjs');
+const { T, inputs, bot, reseed, rndCalls, camStart } = await import('./harness.mjs');
 import { readGameSource } from './source.mjs';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import { shellAssets } from './build.mjs';
 const D = T.debug, B = T.behind, S = D.settings(), $ = id => document.getElementById(id), STEP = T.STEP;
 let passed = 0, failed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
+const hexOf = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const dirOf = t => (t === 0 ? 1 : -1);
 const clearInput = () => { for (const inp of inputs) { inp.keys.clear(); inp.jx = inp.jy = 0; inp.latPeak = null; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; inp.gest = null; } };
 function fresh(cam, o = {}) {
@@ -65,7 +68,7 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   fresh(2); T.M.demo = true; ok(!B.behindOn() && B.stickTurn(0) === 0, 'off for the menu demo'); T.M.demo = false;
   fresh(2); D.setMode('menu'); ok(!B.behindOn(), 'off outside a match'); D.setMode('match');
   S.cam = 2; T.practice.start('pass'); ok(T.practice.state() && !B.behindOn() && B.stickTurn(0) === 0, 'off in Practice');
-  D.render(STEP); ok(B.BV.on === false, 'a Practice frame runs the Top path');
+  D.render(STEP); ok(B.BV.on === true && !B.behindOn() && T.drills.DV.cam && T.drills.DV.cam.id === 'pass', 'a Practice frame draws through the Training Ground view, not the match camera');
   T.practice.leave(); ok(S.cam === 2, 'and the saved choice survives Practice');
   fresh(2, { humans:[false, true] }); ok(B.stickTurn(0) === -1 && B.stickTurn(1) === 0, 'the away side: seat 0 plays team 1, seat 1 is nobody');
   S.cam = 0;
@@ -510,20 +513,53 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   ok(JSON.parse(saved).settings.cam === 3, 'the camera is saved');
   S.cam = 0; T.teams.restore(JSON.parse(saved)); ok(S.cam === 3, 'and comes back');
   for (const v of [4, -1, 1.5, '2', null, true, []]) { S.cam = 1; T.teams.restore({ settings:{ cam:v } }); ok(S.cam === 1, `a saved cam of ${JSON.stringify(v)} is ignored`); }
-  S.cam = 0; T.teams.restore({ settings:{ diff:1 } }); ok(S.cam === 0, 'an old save opens on Top');
+  // the real boot: a new game and a save with no cam open on Mid, a save holding a cam keeps it, a bad one falls back to Mid
+  ok(camStart === 2, `a new game opens on Mid (cam ${camStart})`);
+  const bootCam = save => { const r = spawnSync(process.execPath, ['--input-type=module', '-e', `const { camStart } = await import(${JSON.stringify(new URL('./harness.mjs', import.meta.url).href)}); console.log(camStart);`], { env:{ ...process.env, SEED:'11', SAVE:JSON.stringify(save) }, encoding:'utf8' }); return r.stdout.trim(); };
+  ok(bootCam({ settings:{ diff:1 } }) === '2', 'a save with no cam opens on Mid');
+  for (const c of [1, 2, 3]) ok(bootCam({ settings:{ cam:c } }) === String(c), `a save holding cam ${c} keeps it`);
+  ok(bootCam({ settings:{ cam:0 } }) === '2', 'a save holding the last build\'s default Top, chosen by nobody, opens on Mid');
+  ok(bootCam({ settings:{ cam:0, camPick:true } }) === '0', 'a Top chosen on the camera button stays Top');
+  { // the button sets the mark, and the mark and the choice come back
+    let kept = null; const was = localStorage.setItem; localStorage.setItem = (k, v) => { kept = v; };
+    S.camPick = false; S.cam = 3;
+    $('b-cam').click(); ok(S.cam === 0 && S.camPick === true && JSON.parse(kept).settings.camPick === true, 'pressing round to Top marks it as chosen, and saves'); S.cam = 2; S.camPick = false; T.teams.restore(JSON.parse(kept)); ok(S.cam === 0 && S.camPick === true, 'and it comes back'); S.cam = 2; S.camPick = false;
+    localStorage.setItem = was;
+  }
+  ok(bootCam({ settings:{ cam:9 } }) === '2', 'a save with a broken cam opens on Mid');
   const html = readGameSource(), home = html.slice(html.indexOf('id="s-home"'), html.indexOf('id="s-teams"'));
-  ok(/<div class="set more" id="set-cam" hidden><span class="lbl">Camera<\/span><div class="seg" data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button>/.test(home), 'More Settings has the Camera row, hidden until asked for');
-  const pauseCard = html.slice(html.indexOf('id="m-pause"'), html.indexOf('id="pz-quit"'));
-  ok(/<div class="set" id="pz-cam" hidden><span class="lbl">Camera<\/span><div class="seg" data-key="cam">/.test(pauseCard), 'the pause card has one too');
-  ok(/max-height:420px\)\{[^@]*#set-cam\{grid-column:1\/-1\}/.test(html), 'on a small phone the home Camera row takes the whole width, so its four buttons stay 44px');
-  // More Settings opens both rows together
-  $('set-cam').hidden = $('set-more').hidden = true; $('b-more').setAttribute = () => {}; $('b-more').click();
-  ok($('set-cam').hidden === false && $('set-more').hidden === false, 'More Settings shows Camera with Half Length'); $('b-more').click();
-  ok($('set-cam').hidden === true, 'and Fewer Settings hides it');
-  // the generic row handler sets and saves it
-  const segs = document.querySelectorAll('.seg[data-key]').filter(s => s.dataset.key === 'cam');
-  ok(segs.length === 2, 'two Camera rows are wired');
-  S.cam = 0; segs[0].children[1].click(); ok(S.cam === 1, 'pressing Low sets cam 1'); segs[1].children[0].click(); ok(S.cam === 0, 'pressing Top on the pause card sets cam 0');
+  const pauseCard = html.slice(html.indexOf('id="m-pause"'), html.indexOf('id="m-gate"'));
+  // the camera and clock buttons: what is on the page
+  const button = (part, id) => (part.match(new RegExp(`<button class="btn ico-btn" id="${id}" aria-label="[^"]+"(?: hidden)?>(.*?)</button>`)) || [])[1];
+  ok(/^<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">.*<\/svg><span id="b-cam-w">Mid<\/span>$/.test(button(home, 'b-cam') || ''), 'home: a camera button, an inline icon and the choice in words');
+  ok(/^<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">.*<\/svg><span id="b-half-w">2 Min<\/span>$/.test(button(home, 'b-half') || ''), 'home: a clock button, the same way');
+  ok(/<button class="btn ico-btn" id="pz-cam" aria-label="Camera: Mid" hidden><svg class="ico"[^>]*>.*<\/svg><span id="pz-cam-w">Mid<\/span><\/button><button class="btn warn" id="pz-quit">/.test(pauseCard), 'the pause card has the camera, beside Quit Match');
+  ok(/\.pz-foot\{display:flex/.test(html), 'and Quit Match takes the row when the camera is hidden');
+  ok(!/id="b-half"|Half Length/.test(pauseCard), 'and no clock: the half length is the home screen\'s only');
+  ok(!/\p{Extended_Pictographic}/u.test(button(home, 'b-cam') + button(home, 'b-half') + button(pauseCard, 'pz-cam')) && !/xmlns|<img/.test(button(home, 'b-cam') + button(home, 'b-half')), 'no emoji, no image, no address in the icons');
+  ok(/\.ico-btn\{[^}]*min-width:44px;min-height:44px/.test(html) && /\.btn, \.team, \.seg button/.test(html), 'a 44px target at the least, and a .btn, so a controller reaches them');
+  ok(!/data-key="(cam|half)"|id="b-more"|id="set-more"|id="set-cam"|more-btn|More Settings|Fewer Settings/.test(html), 'the Camera and Half Length rows and More Settings are gone');
+  ok([...home.matchAll(/class="set"/g)].length === 3, 'the settings panel is Difficulty, Sound and Match Help');
+  // pressing the camera: the next choice, the word, the aria label, the mark and the save
+  { const labels = {}, spy = id => { const el = $(id); el.setAttribute = (k, v) => { if (k === 'aria-label') labels[id] = v; }; }; spy('b-cam'); spy('pz-cam'); spy('b-half');
+    let kept = null; const was = localStorage.setItem; localStorage.setItem = (k, v) => { kept = v; };
+    S.cam = 2; S.camPick = false; B.renderIcons(); ok($('b-cam-w').textContent === 'Mid' && labels['b-cam'] === 'Camera: Mid' && labels['pz-cam'] === 'Camera: Mid' && S.camPick === false, 'drawing the button chooses nothing');
+    const seen = []; for (let i = 0; i < 4; i++) { $('b-cam').click(); seen.push($('b-cam-w').textContent + S.cam + $('pz-cam-w').textContent); }
+    ok(seen.join() === 'High3High,Top0Top,Low1Low,Mid2Mid', `a press moves round the four, on both buttons (${seen})`);
+    ok(labels['b-cam'] === 'Camera: Mid' && S.camPick === true && JSON.parse(kept).settings.cam === 2 && JSON.parse(kept).settings.camPick === true, 'with the label kept up, the mark set and the choice saved');
+    // the clock: three lengths, on the home screen, used by the next match
+    S.half = 0; B.renderIcons(); ok($('b-half-w').textContent === '2 Min' && labels['b-half'] === 'Half Length: 2 Min', 'the clock shows 2 Min');
+    const lens = []; for (let i = 0; i < 3; i++) { $('b-half').click(); lens.push($('b-half-w').textContent + S.half + JSON.parse(kept).settings.half); }
+    ok(lens.join() === '4 Min11,6 Min22,2 Min00', `a press moves round the three, and saves (${lens})`);
+    $('b-half').click(); D.startMatch(T.teams.NATIONS[0], T.teams.NATIONS[1], false); ok(T.M.halfLen === 240, 'the next match plays the length shown'); D.exitMatch(); S.half = 0; B.renderIcons();
+    // paused in a match: the change takes effect in that match
+    const m = fresh(2); inPlay(); for (let i = 0; i < 4; i++) D.render(STEP); const men = m.players[3];
+    D.pause(); ok(m.paused && $('pz-cam-w').textContent === 'Mid', 'paused, the card shows the camera in use');
+    ok(B.BV.cam.ch === 10, 'on Mid'); $('pz-cam').click(); D.render(STEP); ok(T.M === m && S.cam === 3 && B.BV.cam.ch === 13 && B.behindOn(), 'a press moves that match to High there and then');
+    $('pz-cam').click(); D.render(STEP); ok(T.M === m && S.cam === 0 && !B.behindOn() && B.stickTurn(0) === 0 && S.camPick === true, 'the next to Top, and the stick with it');
+    ok(m.players[3] === men && T.M.paused, 'and it is still the same match, still paused'); D.resume();
+    S.cam = 2; S.camPick = false; localStorage.setItem = was;
+  }
   // the pause row: one player only, not Practice or Two Player
   fresh(2); D.pause(); ok($('pz-cam').hidden === false, 'one player: Camera on the pause card'); D.resume();
   T.newMatch(0, 1, { halfLen:240, diff:1, headless:true, duels:'off', humans:[true, true], levels:[1, 1] }); D.setMode('match'); D.setTwo(true); D.pause(); ok($('pz-cam').hidden === true, 'Two Player: hidden'); D.resume(); D.setTwo(false);
@@ -549,8 +585,8 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   const script = `
     Object.defineProperty(globalThis, 'localStorage', { configurable:true, get:() => ({ getItem:() => JSON.stringify({ settings:{ cam:2 } }), setItem() {} }), set() {} });
     let loop = null; Object.defineProperty(globalThis, 'requestAnimationFrame', { configurable:true, get:() => f => { loop = f; }, set() {} });
-    const { T } = await import(${JSON.stringify(harness)});
-    const D = T.debug, S = D.settings(), out = { booted:S.cam };
+    const { T, camStart } = await import(${JSON.stringify(harness)});
+    const D = T.debug, S = D.settings(), out = { booted:camStart };
     const dpr = () => { loop(performance.now() + 16); return document.getElementById('cv').width/innerWidth; };
     const match = () => { T.newMatch(0, 1, { halfLen:240, diff:1, headless:true, duels:'off' }); D.setMode('match'); T.M.phase = 'play'; T.M.set = null; T.M.cut = null; };
     S.cam = 0; match(); out.top = dpr();
@@ -566,11 +602,63 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   ok(w.back === 2, `and Top gets its 2x back (${w.back})`);
 }
 
-{ // a career match keeps your player's ring, star and own kicking in the behind views
+/* ---------- the demo and the pause card in the real frame loop ---------- */
+{
+  const harness = new URL('./harness.mjs', import.meta.url).href;
+  const script = `
+    const mq = { matches:false, addEventListener() {}, addListener() {} };
+    Object.defineProperty(globalThis, 'matchMedia', { configurable:true, get:() => () => mq, set() {} });
+    let loop = null; Object.defineProperty(globalThis, 'requestAnimationFrame', { configurable:true, get:() => f => { loop = f; }, set() {} });
+    const { T } = await import(${JSON.stringify(harness)});
+    const D = T.debug, S = D.settings(), out = {};
+    let t = performance.now() + 100;
+    const tick = n => { for (let i = 0; i < n; i++) { t += 1000/60; loop(t); } };
+    const rts = n => { let draws = 0; for (let i = 0; i < n; i++) { const a = T.M.rt; tick(1); if (T.M.rt !== a) draws++; } return draws; };
+    S.cam = 0; tick(2);
+    out.dpr = document.getElementById('cv').width/innerWidth; out.demo = T.M.demo; out.on = T.behind.BV.on;
+    out.demoDraws = rts(120); { const a = T.M.clock; tick(60); out.demoSim = +(T.M.clock - a).toFixed(2); }
+    { const a = T.M.rt; tick(60); out.demoClock = +(T.M.rt - a).toFixed(2); }
+    mq.matches = true; { const a = T.M.clock, b = T.M.rt; tick(60); out.coveredSim = T.M.clock - a; out.coveredDraws = T.M.rt - b; } mq.matches = false;
+    const demoM = T.M; S.cam = 2; D.startMatch(T.teams.NATIONS[0], T.teams.NATIONS[1], false); const m = T.M; m.phase = 'play'; m.set = null; m.cut = null;
+    out.real = !m.demo && m !== demoM; { const a = demoM.clock, b = demoM.rt; tick(30); out.oldDemoSim = demoM.clock - a; out.oldDemoDraws = demoM.rt - b; out.matchDraws = rts(30); }
+    D.pause(); { const c = m.clock; out.pausedFirst = rts(25); out.pausedLater = rts(120); out.pausedSim = m.clock - c; }
+    document.getElementById('pz-cam').click(); out.camChange = rts(25); out.camSettled = rts(60); out.camNow = T.behind.BV.cam.ch; out.sameMatch = T.M === m;
+    innerWidth = 667; tick(1); out.resizeDraws = rts(25); out.resizeSettled = rts(30); innerWidth = 844; tick(30);
+    D.resume(); out.resumed = rts(30);
+    D.exitMatch(); tick(2); out.backDemo = !!T.M.demo && T.M !== demoM; out.backOn = T.behind.BV.on;
+    console.log(JSON.stringify(out));
+  `;
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', script], { env:{ ...process.env, SEED:'11' }, encoding:'utf8' });
+  let w = {}; try { w = JSON.parse(r.stdout.trim().split('\n').pop()); } catch (e) { console.log(r.stdout, r.stderr); }
+  ok(w.demo === true && w.on === true && w.dpr === 1.5, `the demo draws in the behind view at 1.5x, with Top saved (${w.dpr})`);
+  ok(w.demoDraws >= 55 && w.demoDraws <= 65, `at about 30 a second on a 60Hz screen (${w.demoDraws} of 120)`);
+  { const pace = T.clarity.MATCH_PACE.match; ok(w.demoSim > pace - 0.05 && w.demoSim < pace + 0.05, `the sim runs at the match's pace, as a match does (${w.demoSim}s in 1s, MATCH_PACE ${pace})`);
+    ok(w.demoClock > pace - 0.05 && w.demoClock < pace + 0.05, `and so do its strides, for all the frames skipped (${w.demoClock}s in 1s)`); }
+  ok(w.coveredSim === 0 && w.coveredDraws === 0, 'under Turn Your Phone Sideways it neither plays nor draws');
+  ok(w.real && w.oldDemoSim === 0 && w.oldDemoDraws === 0, 'behind a real match the old demo neither plays nor draws');
+  ok(w.matchDraws === 30, `the real match draws every frame (${w.matchDraws} of 30)`);
+  ok(w.pausedFirst > 0 && w.pausedFirst <= 20 && w.pausedLater === 0 && w.pausedSim === 0, `behind the pause card the picture stands: ${w.pausedFirst} frames to settle, then none in 120`);
+  ok(w.camChange > 0 && w.camChange <= 20 && w.camSettled === 0 && w.camNow === 13 && w.sameMatch, `a press of the camera there draws the new view (${w.camChange} frames), then rests, in the same match`);
+  ok(w.resizeDraws > 0 && w.resizeDraws <= 20 && w.resizeSettled === 0, `a resize blanks the canvas, so it draws again (${w.resizeDraws}), then rests`);
+  ok(w.resumed === 30, 'resumed, every frame draws');
+  ok(w.backDemo && w.backOn, 'back on the menus a new demo draws');
+  // art at boot in every case: a save on Top loads it for the demo
+  const boot = `
+    const asked = []; globalThis.Image = class {}; globalThis.fetch = async u => { asked.push(String(u)); throw new Error('offline'); };
+    const { T } = await import(${JSON.stringify(harness)});
+    await new Promise(res => setTimeout(res, 20));
+    console.log(JSON.stringify({ asked:asked.filter(u => u.includes('players')), state:T.behind.ART.state }));
+  `;
+  const r2 = spawnSync(process.execPath, ['--input-type=module', '-e', boot], { env:{ ...process.env, SEED:'11', SAVE:JSON.stringify({ settings:{ cam:0, camPick:true } }) }, encoding:'utf8' });
+  let b2 = {}; try { b2 = JSON.parse(r2.stdout.trim().split('\n').pop()); } catch (e) { console.log(r2.stdout, r2.stderr); }
+  ok((b2.asked || []).length === 1 && b2.state === 'off', `a save on Top still loads the art at boot, and a failed load settles (${JSON.stringify(b2)})`);
+}
+
+{ // a career match keeps your player's star and own kicking in the behind views; the ring is who you control, and his own is gone (tools/clarity.mjs)
   fresh(2); inPlay();
   const m = T.M, lineTos = () => { let n = 0; globalThis.__ctxSpy = k => { if (k === 'lineTo') n++; }; try { D.render(STEP); } finally { globalThis.__ctxSpy = null; } return n; };
   for (let i = 0; i < 8; i++) D.render(STEP);
-  const you = m.players.find(p => p.team === 0), plain = lineTos();
+  const you = T.sides.ctrlOf(0), plain = lineTos();   // the ring's man: on the frame, so no edge arrow here
   m.career = true; m.careerP = you; m.careerNat = { ...m.nat[0], kicking:5 };
   const marked = lineTos();
   ok(marked - plain === 10, `the career star is drawn in Behind (${marked - plain} extra points)`);
@@ -579,6 +667,262 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
   m.careerP = null;
   ok(lineTos() === plain, 'no career player, no star');
   m.career = false; delete m.careerNat;
+}
+
+/* ---------- the rendered player art ---------- */
+// The real manifest, on synthetic pixels: Node can't decode WebP, and the art's pixels are looked at in a browser, not here. Nothing here needs Blender
+{
+  const A = B.ART, gameDir = new URL('../', import.meta.url), artDir = new URL('assets/players/', gameDir), man = JSON.parse(fs.readFileSync(new URL('players.json', artDir), 'utf8'));
+  const BODIES = ['slim.m', 'slim.f', 'medium.m', 'medium.f', 'stocky.m', 'stocky.f'], SHAPE = { idle:2, carryidle:1, run:8, sprint:8, carry:8, pass:3, sidestep:6, tackle:3, fall:3, lying:1, getup:3 };
+  // what shipped
+  ok(BODIES.every(b => man.sprites[b]), 'all six bodies are in the atlas: every build, male and female');
+  for (const [clip, n] of Object.entries(SHAPE)) {
+    ok(man.clips[clip] && man.clips[clip].n === n, `${clip} has ${n} pictures`);
+    const dirs = man.clips[clip].dirs.length;
+    ok(dirs === (clip === 'pass' || clip === 'sidestep' ? 8 : 5), `${clip} has its facings (${dirs})`);
+    ok(BODIES.every(b => man.sprites[b][clip].length === n*dirs && man.sprites[b][clip].every(r => r[0] < man.pages.length && r[3] <= 256 && r[4] <= 256)), `${clip}: every body has every picture, each fitting the tint's scratch`);
+  }
+  ok(man.styles.length === 12 && man.styles.every(st => man.hair[st] && man.hair[st].every(Boolean)), 'all twelve hair styles are in the atlas, at every head turn');
+  ok(man.parts.length <= 15, 'the part ids fit the green channel');
+  const bytes = man.pages.reduce((n, f) => n + fs.statSync(new URL(f, artDir)).size, fs.statSync(new URL('players.json', artDir)).size);
+  ok(bytes < 8*1048576, `the sprites are under the hard stop (${(bytes/1048576).toFixed(2)} MB)`);
+  const shell = new Set(shellAssets), sw = fs.readFileSync(new URL('sw.js', gameDir), 'utf8');
+  ok(['players.json', ...man.pages].every(f => shell.has('assets/players/' + f) && sw.includes('assets/players/' + f)), 'every sprite file is in the service worker precache');
+
+  // the load: any failure leaves the code-drawn men, and a harness with no Image never starts
+  const keep = { Image:globalThis.Image, fetch:globalThis.fetch, create:document.createElement };
+  const tryLoad = async (fetcher, img) => { B.artOff(); A.state = 'idle'; globalThis.fetch = fetcher; globalThis.Image = img; await B.artLoad('assets/players/'); return A.state; };
+  const goodJson = async () => ({ ok:true, json:async () => ({ ...man, pages:[man.pages[0]] }) });
+  class Fine { set src(v) { this.naturalWidth = 8; this.naturalHeight = 8; setTimeout(() => this.onload(), 0); } }
+  class Broken { set src(v) { setTimeout(() => this.onerror(), 0); } }
+  const page = (g = 16) => { const d = new Uint8ClampedArray(8*8*4); for (let i = 0; i < d.length; i += 4) { d[i] = 180; d[i + 1] = g; d[i + 2] = 255; d[i + 3] = 255; } return d; };
+  const fakeCanvas = data => () => ({ width:0, height:0, getContext:() => ({ drawImage() {}, getImageData:() => ({ data }) }) });
+  ok(await tryLoad(async () => { throw new Error('offline'); }, Fine) === 'off', 'a manifest that fails falls back');
+  ok(await tryLoad(async () => ({ ok:false }), Fine) === 'off', 'a 404 falls back');
+  ok(await tryLoad(goodJson, Broken) === 'off', 'an atlas that fails falls back');
+  document.createElement = fakeCanvas(page(17));
+  ok(await tryLoad(goodJson, Fine) === 'off', 'an atlas whose ids a browser altered falls back');
+  document.createElement = fakeCanvas(page());
+  ok(await tryLoad(goodJson, Fine) === 'ready', 'a good atlas installs, off the main path');
+  ok(typeof A.loadMs === 'number' && A.pages.length === 1, 'and notes how long it took');
+  document.createElement = keep.create; globalThis.fetch = keep.fetch; if (keep.Image) globalThis.Image = keep.Image; else delete globalThis.Image;
+  B.artOff();
+  { const st = stage(2); const log = frameLog(); ok(!B.artReady() && st.m.players.every(p => placeOf(log, p) >= 0 || !atOf(p)), 'art off: no crash and every man still drawn in code'); }
+
+  // synthetic pages big enough for the real rows: every pixel a shirt at 180 of light, whole coverage
+  const pages = man.pages.map(() => { const w = 2048, h = 2048, data = new Uint8ClampedArray(w*h*4); for (let i = 0; i < data.length; i += 4) { data[i] = 180; data[i + 1] = 16; data[i + 2] = 255; } return { w, h, data }; });
+  const install = () => { B.artInstall(man, pages); A.img = { data:new Uint8ClampedArray(256*256*4) }; A.scratch = { width:256, height:256 }; A.sg = { putImageData() {} }; };
+  install();
+  const slotImage = e => e.k === 'drawImage' && A.map.size && [...A.map.values()].some(sl => sl.cv === e.a[0]);
+  let st = stage(2);
+  for (let i = 0; i < 12; i++) D.render(STEP);
+  ok(B.artReady() && A.baked > 0, `art in: pictures are tinted (${A.baked})`);
+  const seen = frameLog().filter(slotImage).length;
+  ok(seen >= st.m.players.filter(p => { const q = atOf(p); return q && q.sx > -q.k*1.5 && q.sx < 844 + q.k*1.5; }).length - 1, `art in: the men are drawn from the sheets (${seen} on this frame)`);
+  ok(!frameLog().some(e => e.k === 'getImageData'), 'and nothing is read back on a frame');
+  { const before = A.baked; frameLog(); frameLog(); ok(A.baked === before, 'a still picture costs no more tints'); }
+  { const L = A.img.data, kit = T.M.kit[0], cut = B.artLut(kit.fill); ok(L.some(v => v > 0), 'the tint writes pixels'); ok(cut[180*3] === Math.min(255, Math.round(hexOf(kit.fill)[0]*Math.min(180/255/0.70, 1.06) + (180/255 - 0.46)*62)), 'the shade is the colour at its own light'); }
+  { const dark = B.artLut('#1a1a1a'); ok(dark[255*3] > dark[120*3] + 10, 'even a black shirt keeps its folds'); }
+  const r0 = rndCalls(); for (let i = 0; i < 30; i++) D.render(STEP); ok(rndCalls() === r0, 'art draws no random number');
+  ok(!/^art|^aid|^dl$/.test(Object.keys(T.M.players[0]).join(' ')) && !Object.keys(T.M.players[0]).some(k => /art|pose|clip/i.test(k)), 'and adds nothing to the players');
+
+  // poses
+  const poseOf = (p, o = {}) => { const s = B.BV.men.get(p), k = o.k || null, tackler = !!(k && p !== k.c); return B.artPose(camNow(), p, s, k, tackler, !!o.carrier, o.sp ?? Math.hypot(p.vx, p.vy), o.spr || 0); };
+  st = stage(2); const man0 = st.opp[2], c0 = st.c;
+  Object.assign(man0, { vx:0, vy:0 }); ok(poseOf(man0).clip === 'idle', 'standing still: idle');
+  ok(poseOf(man0, { carrier:true }).clip === 'carryidle', 'standing with the ball: the ball held in both arms');
+  ok(poseOf(man0, { sp:5 }).clip === 'run', 'moving: run'); ok(poseOf(man0, { sp:5, spr:1 }).clip === 'sprint', 'sprinting: the sprint lean'); ok(poseOf(man0, { sp:5, carrier:true }).clip === 'carry', 'with the ball: the carry');
+  { // the stride follows ground: one cycle of the art's own stride walks all eight pictures, in order, and backward running reverses them
+    const s = B.BV.men.get(man0), L = man.stride.run*B.lookOf(man0).h/1.8, got = [];
+    s.ph = 0; s.dl = s.dist;
+    for (let i = 0; i < 8; i++) { got.push(poseOf(man0, { sp:5 }).frame); s.dist += L/8; }
+    ok(new Set(got).size === 8 && got.every((f, i) => i === 0 || f === ((got[i - 1] + 1) & 7)), `a stride of ${L.toFixed(2)}m walks the eight frames (${got})`);
+    const f0 = poseOf(man0, { sp:5 }).frame; s.dist += 0; Object.assign(man0, { vx:-man0.fx*5, vy:-man0.fy*5 }); s.dist += L/8; const f1 = poseOf(man0, { sp:5 }).frame; Object.assign(man0, { vx:0, vy:0 });
+    ok(f1 === ((f0 - 1) & 7), 'running backward runs the cycle backward');
+    const same = poseOf(man0, { sp:5 }).frame; ok(poseOf(man0, { sp:5 }).frame === same, 'and with no ground covered the feet stay');
+  }
+  { // going down, lying, getting up, on his own clock
+    const s = B.BV.men.get(man0); man0.down = 1; s.dn = false;
+    ok(poseOf(man0).clip === 'fall', 'going down'); T.M.rt += 0.3; man0.down = 0.7; ok(poseOf(man0).clip === 'lying', 'lying'); man0.down = 0.1; ok(poseOf(man0).clip === 'getup', 'getting up'); man0.down = 0; ok(poseOf(man0).clip === 'idle', 'and up');
+  }
+  { // the tackle
+    const k = { c:c0, q:man0, t:0, T:0.3, mode:'ai', tier:'wrap' }, s = B.BV.men.get(man0);
+    ok(poseOf(man0, { k }).clip === 'tackle' && poseOf(man0, { k }).frame === 0, 'the tackler lunges'); k.t = 0.25; ok(poseOf(man0, { k }).frame === 1, 'and wraps');
+    k.mode = 'dive'; ok(poseOf(man0, { k }).frame === 2, 'a dive is a dive');
+    s.wx = c0.x; s.wy = c0.y + 2; const facing = poseOf(man0, { k }); ok(facing.clip === 'tackle' && Number.isInteger(facing.dir), 'he faces the man he is on'); s.wx = man0.x; s.wy = man0.y;
+  }
+  { // the Side Step, both ways, is the same picture mirrored, on render-only state
+    const s = B.BV.men.get(c0), keys = Object.keys(c0).join(), snap = JSON.stringify([c0.x, c0.y, c0.vx, c0.vy, c0.side]);
+    Object.assign(c0, { fx:T.M.ball ? dirOf(st.team) : 1, fy:0, vx:0, vy:0 });
+    s.d8 = null;
+    B.artStepped(c0, 1); const R = { ...poseOf(c0, { carrier:true, sp:5 }) };
+    ok(R.clip === 'sidestep' && R.frame === 0, 'the Side Step opens on the feint');
+    ok(Object.keys(c0).join() === keys && JSON.stringify([c0.x, c0.y, c0.vx, c0.vy, c0.side]) !== 'x', 'and leaves the man alone');
+    B.artStepped(c0, -1); const Lf = { ...poseOf(c0, { carrier:true, sp:5 }) };
+    ok(R.mirror !== Lf.mirror && R.clip === Lf.clip, 'the other way is its mirror');
+    const frames = []; for (let u = 0; u < 0.36; u += 0.06) { B.ART_STEP.get(c0).at = T.M.rt - u - 0.001; frames.push(poseOf(c0, { carrier:true, sp:5 }).frame); }
+    ok(frames.join() === '0,1,2,3,4,5', `the six pictures play in order (${frames})`);
+    B.ART_STEP.get(c0).at = T.M.rt - 0.4; ok(poseOf(c0, { carrier:true, sp:5 }).clip === 'carry', 'then the carry again');
+    B.ART_STEP.get(c0).at = T.M.rt; ok(poseOf(c0, { sp:5 }).clip !== 'sidestep', 'a man without the ball has no Side Step to show');
+    // the real trigger
+    const J = { x:0, y:1 }, OPEN = T.contact;
+    B.ART_STEP.delete(c0); const r1 = rndCalls(); OPEN.sideStep(c0, J, 1); if (B.ART_STEP.get(c0)) ok(B.ART_STEP.get(c0).s === 1 && rndCalls() === r1, 'sideStep itself sets it off and draws nothing'); else failed++, console.log('FAIL sideStep did not reach the art');
+  }
+  { // pass follow-through
+    const s = B.BV.men.get(man0); s.passAt = T.M.rt; s.passSide = 1; const P = { ...poseOf(man0, { sp:0 }) }; ok(P.clip === 'pass' && P.mirror, 'the follow-through, thrown to the right, is the left one mirrored'); s.passSide = -1; ok(!poseOf(man0, { sp:0 }).mirror, 'and to the left it is not'); s.passAt = null;
+  }
+  // male and female, per player
+  {
+    const c = B.cleanLook({ g:1 }), bad = [B.cleanLook({ g:2 }), B.cleanLook({ g:'1' }), B.cleanLook({ g:0.5 }), B.cleanLook({ g:null })];
+    ok(c.g === 1 && B.cleanLook({ g:0 }).g === 0, 'cleanLook keeps g'); ok(bad.every(l => !('g' in l)), 'and drops anything else');
+    ok(B.cleanLook({ style:7 }).style === 7 && B.cleanLook({ style:9 }).style === 9 && B.cleanLook({ style:11 }).style === 11 && B.cleanLook({ style:12 }).style === 11, 'and the twelve styles');
+    const nat = T.teams.NATIONS[0];
+    nat.squad = [{ n:2, look:{ g:1 } }, { n:3, look:{ g:1, style:6 } }, { n:5, look:{ g:1, style:7, b:1.16 } }, { n:6, look:{ g:0, b:0.9 } }];
+    const m = fresh(2);
+    const of = n => m.players.find(p => p.team === 0 && p.n === n), Lk = n => B.lookOf(of(n));
+    ok(Lk(2).g === 1 && Lk(4).g === 0, 'g works per player, and the default is 0');
+    ok(Lk(3).style === 6 && Lk(5).style === 7, 'a ponytail and a plait can be asked for');
+    const r2 = rndCalls(), a = JSON.stringify(Lk(2)); ok(rndCalls() === r2 && a === JSON.stringify(Lk(2)), 'looks stay deterministic');
+    ok(B.artSprite('run', 0, 0, false, Lk(5)).row === man.sprites['stocky.f'].run[0], 'a stocky female uses her own mesh');
+    ok(B.artSprite('run', 0, 0, false, Lk(6)).row === man.sprites['slim.m'].run[0], 'a slim male his');
+    ok(man.sprites['stocky.f'].run[0] !== man.sprites['stocky.m'].run[0] && man.sprites['stocky.m'].idle[0][3] > man.sprites['slim.m'].idle[0][3], 'the meshes differ, and a stocky man is wider than a slim one');
+    delete nat.squad;
+    inPlay(); for (let i = 0; i < 20; i++) D.render(STEP);
+    ok(frameLog().filter(slotImage).length > 0, 'a mixed team renders from the sheets');
+  }
+  // the bound: thousands of pictures fit fixed sheets
+  {
+    fresh(2); inPlay(); install();
+    const p = T.M.players[0], s = {}, C = B.artClass('stand', 0);
+    for (let i = 0; i < 3000; i++) { const sl = B.artSlot(C); sl.key = i + 1; sl.t = i; A.map.set(i + 1, sl); }
+    const cap = C.cap, per = C.slots.length/C.canvases.length;
+    ok(C.canvases.length === cap, `a shape's sheets stop at its cap (${C.canvases.length})`);
+    ok(A.map.size === C.slots.length && A.map.size === cap*per, `old pictures go, so the cache holds what the sheets hold (${A.map.size})`);
+    ok(A.sheets <= 7, `no more than seven sheets (28MB) at the very most (${A.sheets})`);
+    const oldest = [...A.map.values()].reduce((a, b) => (b.t < a.t ? b : a));
+    const taken = B.artSlot(C); ok(taken === oldest, 'the slot reused is the one unseen for longest');
+    // the per-frame budget
+    fresh(2); inPlay(); install();
+    let most = 0; for (let i = 0; i < 6; i++) { B.BV.bakes = 0; D.render(STEP); most = Math.max(most, B.BV.bakes); }
+    ok(most > 0 && most <= 7, `tints per frame stay in budget (${most}, the man you run may add one)`);
+  }
+  // Top and Two Player are untouched by the art being in, and a close-up still draws in code
+  {
+    const logOf = fn => JSON.stringify(capture(fn).map(e => [e.k, e.a.map(v => (typeof v === 'object' ? 0 : v))]));
+    const run = (cam, two) => { reseed(5); fresh(cam); if (two) T.M.two = true; inPlay(); for (let i = 0; i < 10; i++) D.render(STEP); return logOf(() => D.render(STEP)); };
+    B.artOff(); const top0 = run(0, false), two0 = run(2, true);
+    install(); const top1 = run(0, false), two1 = run(2, true);
+    ok(top0 === top1, 'Top issues the same canvas calls with the art in');
+    T.M.two = true; ok(two0 === two1 && !B.behindOn(), 'and so does Two Player, which stays on its own view');
+    install(); fresh(2); inPlay();
+  }
+  // the art's memory goes when a match or a drill is played without it, and comes back with the next behind view
+  {
+    const held = () => A.pages.length > 0 && A.sheets > 0, gone = () => A.state === 'idle' && !A.pages.length && !A.sheets && !Object.keys(A.classes).length && !A.map.size;
+    stage(2); ok(held(), 'a behind match holds the pages and the sheets');
+    S.cam = 0; for (let i = 0; i < 3; i++) D.render(STEP); ok(held(), 'a flip to Top in the same match keeps them, for the flip back'); S.cam = 2;
+    fresh(0); inPlay(); D.render(STEP); ok(gone(), 'a new match on Top frees the sheets and the pages');
+    install(); stage(2); ok(held(), 'and again'); fresh(2, { humans:[true, true], levels:[1, 1] }); D.setTwo(true); inPlay(); D.render(STEP); ok(gone(), 'a Two Player match frees them too'); D.setTwo(false);
+    install(); stage(2); S.cam = 2; T.practice.start('cones'); D.render(STEP); ok(held() && !B.behindOn(), 'a drill keeps them: every Training Ground game draws with them'); T.practice.leave();
+    fresh(0); inPlay(); D.render(STEP); ok(gone(), 'and a Top match after a drill frees them');
+    install(); fresh(0); inPlay(); T.practice.start('egg'); ok(A.state === 'ready', 'a drill after a Top match keeps art already in'); T.practice.leave(); B.artFree();
+    install(); stage(2); B.artFree();
+    const live = { Image:globalThis.Image, fetch:globalThis.fetch, create:document.createElement };
+    document.createElement = fakeCanvas(page()); globalThis.Image = Fine; globalThis.fetch = goodJson;
+    const n0 = A.gen, p0 = B.artLoad('assets/players/'); ok(A.state === 'loading', 'a load under way');
+    fresh(0); inPlay(); D.render(STEP); await p0; ok(gone() && A.gen > n0, 'a match without the art drops a load under way too, and it installs nothing');
+    document.createElement = live.create; fresh(2); inPlay(); D.render(STEP); ok(A.state === 'loading', 'the next behind view loads them again');
+    document.createElement = fakeCanvas(page()); await A.promise; ok(A.state === 'ready' && A.pages.length === 1, 'and they are back');
+    B.artFree(); document.createElement = live.create; T.practice.start('egg'); D.render(STEP); ok(A.state === 'loading', 'a drill loads them when they are not in'); document.createElement = fakeCanvas(page()); await A.promise; ok(A.state === 'ready', 'and has them'); T.practice.leave();
+    document.createElement = live.create; fresh(0); inPlay(); D.render(STEP); ok(gone(), 'and they go again with the next Top match');
+    document.createElement = live.create; globalThis.fetch = live.fetch; if (live.Image) globalThis.Image = live.Image; else delete globalThis.Image;
+    B.artOff(); fresh(0); inPlay(); D.render(STEP); ok(A.state === 'off', 'art that failed stays off: no retry on every Top frame');
+    install(); fresh(2); inPlay();
+  }
+  /* ---------- the demo behind the menus ---------- */
+  {
+    const demoMatch = (o = {}) => { D.setMode('menu'); D.setTwo(false); T.newMatch(o.a ?? 2, o.b ?? 4, { halfLen:1e9, diff:1, auto:true, demo:true }); return T.M; };
+    const step = (n, draw = true) => { for (let i = 0; i < n; i++) { T.update(STEP); if (draw) D.render(STEP); } };
+    const men = () => T.M.players.filter(p => { const q = atOf(p); return q && q.sx > -q.k*1.5 && q.sx < 844 + q.k*1.5 && q.sy > -q.k*0.5 && q.sy < 390 + q.k*2.5 && B.BV.men.get(p).z > 1; });
+    // Mid always, whatever camera is chosen, and the saved settings never move
+    let saves = 0; const was = localStorage.setItem; localStorage.setItem = () => { saves++; };
+    B.BV.peekUntil = 0;                                     // an earlier check's press on Camera has had its moment
+    for (const cam of [0, 1, 2, 3]) {
+      S.cam = cam; S.camPick = true; install(); demoMatch(); const before = JSON.stringify(S);
+      step(20);
+      ok(B.menuDemo() && B.BV.on && B.BV.cam.ch === 10 && B.BV.cam.back === 22 && B.BV.cam.key.split('x')[2] === '2', `the camera chosen is ${cam}: the demo is on Mid`);
+      ok(S.cam === cam && JSON.stringify(S) === before && saves === 0, 'and the settings are as they were, with nothing saved');
+      ok(!B.behindOn() && B.stickTurn(0) === 0, 'the stick knows nothing about it');
+      ok(frameLog().some(slotImage), 'and the men are the art');
+    }
+    localStorage.setItem = was; S.cam = 0; S.camPick = false;
+    // a phone held sideways: Mid's height and distance, framed in the gap between the home's columns, and a match's own Mid is untouched
+    { install(); demoMatch(); D.view(844, 390); step(3); const c = B.BV.cam; ok(c.ch === 10 && c.back === 22 && Math.abs(c.cx - B.BV_DEMO_AT.x*844) < 1, 'the demo is framed in the gap the home leaves (ball at ' + Math.round(c.cx) + ' px across)');
+      const q = D.pr(c, T.M.ball.x, T.M.ball.y, 0); ok(q && q.sy < 390*0.6, 'and up the screen, clear of the settings (' + Math.round(q.sy) + ' px)');
+      S.cam = 2; S.camPick = true; fresh(2); inPlay(); D.view(844, 390); D.render(STEP); ok(B.BV.cam.cx === 422 && !/d$/.test(B.BV.cam.key), 'a match on Mid is centred as ever'); S.cam = 0; S.camPick = false;
+      const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8'), al = [...css.match(/#s-home \.settings,#s-home \.yt\{background:rgba\(16,27,20,([\d.]+)\)/)][1], btn = css.match(/#s-home \.btn:not\(\.primary\)\{background:rgba\(16,27,20,([\d.]+)\)/);
+      ok(+al <= 0.75 && btn && +btn[1] <= 0.7, 'the home\'s panels and buttons let the men show through (' + al + ', ' + (btn && btn[1]) + ')'); }
+    // pressing Camera on the home: the demo shows that height for a moment, then goes back to Mid, and Top's look draws too
+    { install(); demoMatch(); D.view(844, 390); step(2);
+      for (const [cam, ch] of [[1, 7.5], [3, 13], [0, 34], [2, 10]]) { S.cam = (cam + 3) % 4; $('b-cam').click(); ok(S.cam === cam, 'Camera moves to ' + B.CAM_WORDS[cam]); let threw = null; try { step(2); } catch (e) { threw = e; } ok(!threw && B.menuDemo() && B.BV.cam.ch === ch, 'and the demo shows it straight away (' + B.BV.cam.ch + ')' + (threw ? ' ' + threw.message : '')); }
+      B.BV.peekUntil = 1; step(2); ok(B.BV.cam.ch === 10, 'then it goes back to Mid'); S.cam = 0; S.camPick = false; }
+    // pressing Camera on the pause card in a close-up says why the picture has not moved
+    { S.cam = 2; S.camPick = true; fresh(2); inPlay(); D.pause(); ok($('pz-cam-note').hidden, 'pause in open play: no note'); $('pz-cam').click(); ok($('pz-cam-note').hidden && S.cam === 3, 'and a press there changes the view at once, with no note'); D.resume && D.resume(); T.M.paused = false; $('m-pause').hidden = true;
+      T.stamina.startScrum({ team:0, x:60, y:35 }); D.pause(); ok($('pz-cam-note').hidden, 'pause in a close-up: nothing yet'); $('pz-cam').click(); ok(!$('pz-cam-note').hidden, 'a press in a close-up says the camera changes after it'); T.M.paused = false; $('m-pause').hidden = true; $('pz-cam-note').hidden = true; S.cam = 0; S.camPick = false; }
+    // it draws no random number, with the art or without, and a seeded game is the same whether it ran first or not
+    install(); demoMatch(); step(5); { const r0 = rndCalls(); for (let i = 0; i < 300; i++) D.render(STEP); ok(rndCalls() === r0, 'drawing the demo draws no random number, art in'); }
+    B.artOff(); demoMatch(); step(5); { const r0 = rndCalls(); for (let i = 0; i < 300; i++) D.render(STEP); ok(rndCalls() === r0, 'nor with the art off'); }
+    const seeded = () => { T.newMatch(1, 3, { halfLen:60, diff:1, auto:true, headless:true }); let n = 0; while (!T.M.over && n++ < 100000) T.update(STEP); return JSON.stringify([T.M.score, T.M.tries, T.M.stats]); };
+    reseed(4242); const plain = seeded();
+    install(); demoMatch(); reseed(777); step(120, false); const r1 = rndCalls(); for (let i = 0; i < 200; i++) D.render(STEP); ok(rndCalls() === r1, 'still none'); reseed(4242);
+    ok(seeded() === plain, 'a seeded match after the demo has drawn plays as one with no demo before it');
+    const demoRun = draw => { install(); reseed(77); demoMatch(); step(600, draw); return JSON.stringify(T.M.players.map(p => [p.x, p.y])) + T.M.score; };
+    ok(demoRun(false) === demoRun(true), 'and the demo itself plays the same drawn or not');
+    // a real match after it starts as if the demo had never been: the same canvas calls, on the camera chosen
+    const realFrame = cam => { reseed(9); const st = stage(cam); return JSON.stringify(capture(() => D.render(STEP)).map(e => [e.k, e.a.map(v => (typeof v === 'object' ? 0 : v))])) + st.m.score; };
+    B.artOff(); const lowPlain = realFrame(1), midPlain = realFrame(2);
+    S.cam = 1; demoMatch(); step(40); ok(realFrame(1) === lowPlain && B.BV.cam.ch === 7.5 && B.BV.M === T.M, 'after the demo, a Low match draws what it would have, with the Low camera');
+    S.cam = 2; demoMatch(); step(40); ok(realFrame(2) === midPlain, 'and so does a Mid match');
+    ok(B.BV.fade === 1, 'with no fade left over'); S.cam = 0;
+    // the first frames: a calm pitch while the art loads, then the men fade in, all of them the art from the first frame
+    B.artOff(); A.state = 'loading'; demoMatch(); B.BV.baked = 0;
+    let log = capture(() => D.render(STEP));
+    ok(B.BV.fade === 0 && !log.some(e => e.k === 'drawImage') && B.BV.baked === 0 && !log.some(e => e.k === 'translate'), 'loading: an empty pitch, with no code-drawn men to flash');
+    ok(!B.BV.cells.length, 'and nothing baked for them');
+    A.state = 'ready'; B.artInstall(man, pages); A.img = { data:new Uint8ClampedArray(256*256*4) }; A.scratch = { width:256, height:256 }; A.sg = { putImageData() {} };
+    T.M.players.forEach((p, i) => { p.x = 60 + (i % 7)*2; p.y = 18 + i*2.6; p.vx = p.vy = 0; p.down = 0; });
+    const cells0 = B.BV.cells.length, baked0 = A.baked; D.render(1/30);
+    ok(B.BV.fade > 0 && B.BV.fade < 0.1, `the art in: the fade starts (${B.BV.fade.toFixed(3)})`);
+    ok(A.baked - baked0 >= men().length && men().length > 6, `every man on the frame has his picture at once, past the budget, so none shows a hole (${A.baked - baked0} tints, ${men().length} men)`);
+    ok(B.BV.cells.length === cells0, 'and no code-drawn man is baked');
+    for (let i = 0; i < 40; i++) D.render(1/30); ok(B.BV.fade === 1, 'then the fade is done');
+    for (let i = 0; i < 400; i++) { T.update(STEP); T.update(STEP); D.render(1/30); } ok(B.BV.cells.length === cells0, 'playing on, every frame is the art, never a code-drawn man');
+    // art that fails: the same fade, then the code-drawn men, at the smaller size only
+    B.artOff(); A.state = 'loading'; demoMatch(); D.render(1/30); A.state = 'off'; D.render(1/30); ok(B.BV.fade > 0 && B.BV.fade < 0.1, 'art off: the code-drawn men fade in the same way');
+    for (let i = 0; i < 30; i++) D.render(1/30);
+    ok(B.BV.fade === 1 && B.BV.cells.length > 0 && B.BV.cells.every(c => c.width <= 40), `in the smaller cells (${B.BV.cells.length})`);
+    { D.setRM(true); A.state = 'loading'; demoMatch(); D.render(1/30); const none = B.BV.fade; A.state = 'off'; D.render(1/30); ok(none === 0 && B.BV.fade === 1, 'reduced motion: no fade, the men are simply there'); D.setRM(false); B.artOff(); }
+    // the art's memory on the menus: one sheet a shape, the smaller tier, however long it runs
+    B.artFree(); install(); demoMatch(); for (let i = 0; i < 3000; i++) { const C = B.artClass('stand', 0), sl = B.artSlot(C); sl.key = 1e6 + i; sl.t = i; A.map.set(sl.key, sl); }
+    ok(B.artClass('stand', 0).canvases.length === 1 && A.sheets === 1, `the demo keeps to one sheet (${A.sheets})`);
+    for (let i = 0; i < 300; i++) { T.update(STEP); T.update(STEP); D.render(1/30); }
+    ok(!Object.keys(A.classes).some(k => k.endsWith('1')) && A.sheets <= 2, `two at the most, both the smaller tier: 8MB (${Object.keys(A.classes)})`);
+    // a match may use all its sheets, and they go when the menus come back
+    { const m = fresh(2); inPlay(); for (const [shape, tier] of [['stand', 0], ['stand', 1]]) { const C = B.artClass(shape, tier); for (let i = 0; i < 2000; i++) { const sl = B.artSlot(C); sl.key = 2e6 + i + tier*5000; sl.t = i; A.map.set(sl.key, sl); } } D.render(STEP); const held = A.sheets; demoMatch(); D.render(1/30);
+      const C0 = B.artClass('stand', 0), slotsOk = C0.slots.every(sl => sl.cv === C0.canvases[0]);
+      ok(m.players && held >= 5 && A.sheets <= 2 && C0.canvases.length === 1 && slotsOk && !A.classes.stand1?.canvases.length, `a match's sheets go back to one on the menus (${held} to ${A.sheets})`);
+      const again = fresh(2); inPlay(); for (let i = 0; i < 20; i++) D.render(STEP); ok(again && frameLog().some(slotImage), 'and the next match has what it needs'); demoMatch(); }
+    // a hold on a sheet that has gone can't throw
+    B.artFree(); install(); D.render(1/30); ok(true, 'freeing the art under a demo man holding a picture draws on'); B.artOff();
+    ok(!Object.keys(T.M.players[0]).some(k => /art|pose|clip|fade/i.test(k)), 'and it adds nothing to the players');
+    D.setMode('menu'); S.cam = 2;
+  }
+  // a new match forgets the old one's pictures, and keeps the sheets
+  {
+    const s0 = A.sheets; fresh(2); inPlay(); D.render(STEP); fresh(2); inPlay(); D.render(STEP);
+    ok(A.sheets >= s0 && A.sheets <= 7 && [...A.map.keys()].length <= 12, `a new match starts clean (${A.map.size} pictures)`);
+  }
+  B.artOff();
 }
 
 D.setMode('menu');

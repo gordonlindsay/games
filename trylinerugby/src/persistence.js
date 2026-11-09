@@ -13,17 +13,18 @@ const STORE = 'tryline.v1';
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
 const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
+const DRILL_IDS = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass', 'tag', 'back'];   // drillSeen: the drills whose Watch How has played on this device, each opened with it once (drill-demo.js)
 const COACH_IDS = ['offload', 'step', 'tackle', 'duel', 'kick', 'pass', 'sprint'];   // fleeting moments first, then the ones that stay available
 const COACH_LINE = {
   offload: 'Tap Pass \u2014 offload!',
   step: 'Flick across \u2014 side step',
-  tackle: 'Tap Tackle \u2014 he\u2019s in reach',
+  tackle: 'Tap Tackle \u2014 they\u2019re in reach',
   duel: 'Wait for gold, then go',
   kick: 'Hold it, let go in the gold',
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy (kids.js)
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false, drillSeen:[], camPick:false, poolV:3, myTeam:DEFAULT_TEAM.id, womens:0, finished:0 };   // finished: one-player matches played to full time, for the Your Ball sign under the clock (ui-match.js); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy (kids.js); camPick: the camera button has been used (cleanSettings); poolV: what pool's numbers mean (cleanSettings); myTeam: Your Team on the home screen, the key of a side, read through myTeamOf; womens: 1 when the team screen is on Women's
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
@@ -57,11 +58,14 @@ function cleanTeam(t, i) {
     kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   // spent in ABILITIES order, so an overspent team loses from the last; a team without Stamina (saved before it, or an import) has its 3
   // set aside first, so a cut falls on the other four. A team saved before Stamina spent at most 10, so nothing of it is cut.
+  // The budget is the team's own level's; a team with no level (saved before levels) keeps BUDGET, and is cut as it always was.
   const keys = ABILITIES.map(([k]) => k), hasStamina = !keys.includes('stamina') || (typeof t.stamina === 'number' && Number.isFinite(t.stamina));
   const got = {};
-  let left = BUDGET;
+  let left = teamBudget(t);
   for (const k of hasStamina ? keys : ['stamina', ...keys.filter(x => x !== 'stamina')]) { const v = clamp(Math.round(abilityOf(t, k) || 1), 1, 5); const spend = Math.min(v - 1, left); got[k] = 1 + spend; left -= spend; }
   for (const k of keys) team[k] = got[k];
+  if (teamSide(t)) team.g = teamSide(t);                     // men's is no field at all
+  if (teamLevelOf(t)) team.level = t.level;                      // no level is no field, so an old team reads and saves as it did
   return team;
 }
 /* The short name filled in for you skips codes already on the scoreboard elsewhere: Farnham Minis is FAN, not FAR. */
@@ -73,22 +77,25 @@ function autoCode(name, own) {
 }
 function codeFor(s, name) { const l = v => String(v || '').toUpperCase().replace(/[^A-Z]/g, ''); return (l(s) + l(name) + 'XXX').slice(0, 3); }
 function idx6(n) { return Number.isInteger(n) && n >= 0 && n <= 5; }
+const PTS_MAX = 999;   // far past any real score: a level 90 side on Easy with long halves has passed 260, and a real result must never cost a saved season
 function ptsOf(n) {
-  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > 200) return null;
+  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > PTS_MAX) return null;
   return Math.round(n);
 }
 /* A side inside a saved championship. A built-in side keeps its home-nation flag and its change kit. */
 function cleanSide(t) {
   if (!t || typeof t !== 'object') return null;
-  const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
+  let name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   if (!name) return null;
   const id = /^[A-Z]{3}$/.test(t.id) ? t.id : codeFor(t.id, name);
+  if (id === 'HAR' && !t.key && !t.custom) name = CLUBS[5].name;   // a save from before this side went by its place; a team you made or imported keeps the name you gave it
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;
   if (t.key) team.key = String(t.key).slice(0, 24);
   if (HEX.test(t.alt)) team.alt = t.alt;
   if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
+  if (teamSide(t)) team.g = teamSide(t);                     // men's is no field, so an old season's fingerprint (legacySeasonId) stays as it was
   for (const [k] of ABILITIES) team[k] = clamp(Math.round(abilityOf(t, k) || 1), 1, 5);   // a side saved before Stamina gets 3
   return team;
 }
@@ -103,6 +110,7 @@ function cleanChamp(c) {
     teams = c.teams.map(cleanSide);
     if (teams.some(t => !t)) return null;
   }
+  if (teams.some(t => !sidesMeet(teams[c.user], t))) return null;   // your side could never play this one: no normal play makes it, only a damaged save
   if (!Array.isArray(c.fixtures) || c.fixtures.length !== 5 || !Array.isArray(c.results) || c.results.length !== c.round) return null;
   const fixtures = [], results = [];
   for (const rd of c.fixtures) {
@@ -146,11 +154,17 @@ function cleanSettings(g) {
   if (Array.isArray(g.tut)) settings.tut = TUT_IDS.filter(id => g.tut.includes(id));   // only moments the game knows, each once, in the game's order
   if (typeof g.coach === 'boolean') settings.coach = g.coach;
   if (Array.isArray(g.tips)) settings.tips = COACH_IDS.filter(id => g.tips.includes(id));   // coach lines already heard, in the game's order, unknown ones dropped
-  if ('pool' in g) settings.pool = Number.isInteger(g.pool) && g.pool >= 0 && g.pool < POOLS.length ? g.pool : 0;
+  /* What a save's pool number means. poolV 3: POOLS now. poolV 2, before Wales, Scotland and Italy and England 2: 7 was My League, and the rest are as they are now. No poolV, before England and Ireland: 5 was My League. */
+  if ('pool' in g) { const my = POOLS.length, n = g.pool; settings.pool = !Number.isInteger(n) || n < 0 ? 0 : g.poolV === 3 ? (n <= my ? n : 0) : g.poolV === 2 ? (n === 7 ? my : n < 7 ? n : 0) : n === 5 ? my : n < 5 && POOLS[n] ? n : 0; }
+  if (typeof g.myTeam === 'string' && /^[A-Za-z0-9-]{1,24}$/.test(g.myTeam)) settings.myTeam = g.myTeam;   // a key that names no side now (a deleted team) reads as the default: myTeamOf
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
+  if (Number.isInteger(g.finished) && g.finished >= 0 && g.finished <= 99) settings.finished = g.finished;   // a save from before it has none, so an old player gets the sign for a few matches too: it is new to them
   if (typeof g.kids === 'boolean') settings.kids = g.kids;
-  if (g.cam === 0 || g.cam === 1 || g.cam === 2 || g.cam === 3) settings.cam = g.cam;   // 0 Top: an old save has none and stays there
+  if (g.womens === 0 || g.womens === 1) settings.womens = g.womens;
+  if (Array.isArray(g.drillSeen)) settings.drillSeen = DRILL_IDS.filter(id => g.drillSeen.includes(id));   // only drills the game knows, each once; a save from before Watch How has none, so each plays once
+  if (typeof g.camPick === 'boolean') settings.camPick = g.camPick;
+  if (g.cam === 1 || g.cam === 2 || g.cam === 3 || (g.cam === 0 && g.camPick === true)) settings.cam = g.cam;   // a save with no cam starts on the default, Mid (render-behind.js). So does a Top nobody chose: one build wrote cam 0 into every save as its default, so a 0 counts only with camPick, set by the camera button
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -170,6 +184,7 @@ function restore(s) {
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
   if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague);
+  if (settings.pool === POOLS.length && !importLeague) settings.pool = 0;   // My League, with no league
   retainCompletedSeason(champ);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played
 }
@@ -180,11 +195,12 @@ function load() {
   } catch (e) { /* missing, blocked, or not JSON: keep a fresh game */ }
   settings.duels = true;
 }
+function saveWith(s) { try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague })); } catch (e) { /* private mode, or full */ } }
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
   settings.duels = true;
   retainCompletedSeason(champ);
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague })); } catch (e) { /* private mode, or full */ }
+  saveWith(settings);
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }

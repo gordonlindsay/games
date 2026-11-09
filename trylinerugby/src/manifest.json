@@ -1,5 +1,6 @@
 [
   "data.js",
+  "ratings.js",
   "persistence.js",
   "match.js",
   "passing.js",
@@ -18,7 +19,9 @@
   "render-duels.js",
   "render-goals.js",
   "looks.js",
+  "render-art.js",
   "render-behind.js",
+  "render-drill.js",
   "render-match.js",
   "sound.js",
   "input-touch.js",
@@ -30,6 +33,7 @@
   "kids.js",
   "training.js",
   "practice.js",
+  "drill-demo.js",
   "ui-career.js",
   "offline-client.js",
   "boot.js"

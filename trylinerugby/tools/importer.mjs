@@ -111,7 +111,7 @@ const P = (f, url) => I.parse(fx(f), url);
   for (const [f, u] of Object.entries(urls)) {
     const r = I.parse(fx(f), u), text = JSON.stringify(r).toLowerCase();
     for (const p of PEOPLE) ok(!text.includes(p), `${f}: "${p}" never reaches the result`);
-    ok(Object.keys(r).join() === 'source,club,teams,league' && (!r.club || Object.keys(r.club).join() === 'name,kit,trim') && r.teams.every(t => Object.keys(t).join() === 'name,kit,trim') && r.league.every(x => Object.keys(x).every(k => ROW.includes(k))), `${f}: only names, colours and table numbers leave the parser`);
+    ok(Object.keys(r).filter(k => k !== 'level').join() === 'source,club,teams,league' && (r.level == null || T.ratings.TEAM_LEVELS.some(l => l.id === r.level)) && (!r.club || Object.keys(r.club).join() === 'name,kit,trim') && r.teams.every(t => Object.keys(t).join() === 'name,kit,trim') && r.league.every(x => Object.keys(x).every(k => ROW.includes(k))), `${f}: only names, colours and table numbers leave the parser`);
   }
   const sg = I.parse(fx('pitchero-safeguarding'), PIT + '/teams/3100/league-table');
   ok(names(sg.league) === 'Sevenoaks,Tunbridge Wells,Bracknell' && names(sg.teams) === 'Hornets RFC,Farnham', `person-shaped rows and opponents are dropped, the real ones kept (${names(sg.league)} / ${names(sg.teams)})`);
@@ -271,18 +271,31 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok($('im-league').innerHTML.includes('My League · 5 Teams') && ($('im-league').innerHTML.match(/class="jersey/g) || []).length === 5, 'and the league\'s shirts and size');
   ok($('im-cols').hidden && $('im-go').textContent === 'Save Club' && $('im-alt').textContent === 'Change Link' && !$('im-alt').classList.contains('warn') && focused === 'im-go', 'page colours need no picking; Save Club, focused, then Change Link beside Back');
   I.go();
-  const club = X.custom().find(t => t.name === 'Bracknell RFC'), NA = I.ABILITIES.length, TOP = NA + X.BUDGET;
-  ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && X.rateOf(club) === TOP && I.ABILITIES.every(([k]) => club[k] === 3 || ((k === 'pace' || k === 'handling') && club[k] === 4)) && club.pace === 4 && club.handling === 4,
-    `Save Club adds it through cleanTeam, the budget spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
+  const club = X.custom().find(t => t.name === 'Bracknell RFC'), NA = I.ABILITIES.length, TOP = I.top();
+  ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && TOP === 11 && X.rateOf(club) === TOP && club.level === 'r1' && I.ABILITIES.every(([k]) => club[k] === 2 || club[k] === 3) && club.pace === 3,
+    `Save Club adds it through cleanTeam, at the level its page names, Regional 1, spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
   ok($('m-import').hidden && D.settings().pool === I.POOL && !$('t-league').hidden, 'the card closes on My League');
   ok($('t-grid').innerHTML.includes('Sevenoaks') && $('t-grid').innerHTML.includes('Bracknell RFC'), 'My League lists the league and your teams');
   const sv = saved();
   ok(sv.importLeague.teams.length === 5 && sv.custom.some(t => t.name === 'Bracknell RFC'), 'both are in the browser save');
   const lead = I.league().teams[0], foot = I.league().teams[4];
-  ok(X.rateOf(lead) === TOP && X.rateOf(foot) === Math.round(TOP - NA*4/5) && lead.kit !== foot.kit && I.league().teams.every(t => I.ABILITIES.every(([k]) => Number.isInteger(t[k]))), `ratings follow the table over every ability, the leader a team you can make (${X.rateOf(lead)} top, ${X.rateOf(foot)} fifth of six)`);
+  ok(X.rateOf(lead) === TOP && X.rateOf(foot) === Math.round(TOP - NA*4/5) && lead.kit !== foot.kit && I.league().teams.every(t => I.ABILITIES.every(([k]) => Number.isInteger(t[k]))), `ratings follow the table over every ability, the leader level with the best Local club (${X.rateOf(lead)} top, ${X.rateOf(foot)} fifth of six)`);
   const opp = I.sides({ teams:['Ash Vale', 'Birch Lane', 'Cedar Park', 'Damson Hill', 'Elm Bridge', 'Fir Tree'].map(name => ({ name })), league:[] });
   ok(opp.every(t => X.rateOf(t) > TOP - NA && X.rateOf(t) < TOP), `fixture opponents fall between a table's foot and its leader (${opp.map(X.rateOf).join(' ')})`);
+  // the level: what the page says, what you choose, and what it does to the league
+  { const lv = l => T.ratings.TEAM_LEVELS.find(x => x.id === l);
+    ok(I.levelFrom(['Counties 5 Surrey']) === 'c5' && I.levelFrom(['Counties 3 Hampshire']) === 'c3' && I.levelFrom(['Counties 1 Surrey/Sussex']) === 'c1' && I.levelFrom(['Regional 2 South East']) === 'r2' && I.levelFrom(['London & SE Division - Regional 1 South Central']) === 'r1' && I.levelFrom(['National League 2 West']) === 'nat' && I.levelFrom(['Top 14']) === 'top', 'a league named on the page gives its level');
+    ok(I.levelFrom(['Counties 4 Kent']) === 'c5' && I.levelFrom(['Counties 2 Essex']) === 'c3', 'a league between two levels takes the one under it');
+    ok(I.levelFrom(['Friendlies', 'Bracknell RFC', 'Under 12s Championship', '', null]) === null, 'and a page that names none gives none');
+    ok(I.level({}, null).id === 'r1' && lv('r1').overall === 58 && I.top() === 11, 'nothing known: Regional 1, level with the best Local club');
+    ok(I.level({ level:'c3' }, null).id === 'c3' && I.level({ level:'c3' }, 'top').id === 'top', 'a page preset is used until you choose');
+    const data = { league:['Ash Vale', 'Birch Lane', 'Cedar Park', 'Damson Hill', 'Elm Bridge', 'Fir Tree'].map(name => ({ name })), teams:[] };
+    const at = id => I.sides(data, id).map(X.overallOf);
+    ok(at('r1')[0] === 58 && at('r1')[5] === 43 && JSON.stringify(at('r1')) === JSON.stringify(I.sides(data).map(X.overallOf)), `a league at Regional 1 runs 58 to 43, the Local range (${at('r1')})`);
+    ok(at('c5').every(v => v === 40) && at('top')[0] === 72 && at('top')[5] === 58 && at('euro')[0] === 90, `the league follows the level chosen (${at('c5')} / ${at('top')} / ${at('euro')})`);
+    ok(I.sides({ teams:data.league, league:[] }, 'c5').every(t => X.overallOf(t) === 40), 'and fixture opponents stay inside it at the floor');
+  }
   const ids = [...I.league().teams, ...X.custom()].map(t => t.id);
   ok(new Set(ids).size === ids.length && !ids.some(id => X.ALL_TEAMS.some(t => t.id === id)), `codes are unique and clear of the built-in sides (${ids.join(' ')})`);
 
@@ -290,6 +303,15 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
   I.go();
   ok(X.custom().filter(t => t.name === 'Bracknell RFC').length === 1, 'importing the same club again keeps your one copy and its edits');
+  // and the preview says so: the level is the league's, your team stays as you made it, in its own colours
+  { const mine = X.custom().find(t => t.name === 'Bracknell RFC'), before = JSON.stringify(mine);
+    I.open(); $('im-url').value = LG; I.go(); gate.go();
+    for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+    ok(!$('im-kept').hidden && $('im-kept').textContent === `${mine.name} stays as you made it. This sets its league.` && $('im-level-lbl').textContent === 'League' && $('im-go').textContent === 'Save League', `a re-import says the level is its league's (${$('im-kept').textContent}, ${$('im-go').textContent})`);
+    ok($('im-cols').hidden && I.state().draft.kit === mine.kit && I.state().draft.trim === mine.trim, 'and shows your own shirt, with no colours to pick that would do nothing');
+    I.state().level = 'euro'; I.render(); I.go();
+    ok(JSON.stringify(X.custom().find(t => t.name === 'Bracknell RFC')) === before, 'and your team is as it was, at any level chosen');
+    ok(X.overallOf(I.league().teams[0]) === 90, `while the league follows the level (${X.overallOf(I.league().teams[0])})`); }
 
   pages['https://plain.example.org/'] = html200('<meta property="og:site_name" content="Plain Lane RFC"><table><tr><th>Team</th><th>P</th><th>W</th><th>L</th><th>Pts</th></tr><tr><td>Plain Lane</td><td>2</td><td>2</td><td>0</td><td>8</td></tr><tr><td>Quarry Hill</td><td>2</td><td>0</td><td>2</td><td>0</td></tr></table>');
   I.open(); $('im-url').value = 'plain.example.org'; I.go(); gate.go();
@@ -365,6 +387,13 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(m0.kit === '#2050b0' && m0.trim === '#f2efe6' && m0.pace === 5 && m0.power === 1 && m0.handling === 3 && m0.kicking === 1 && !m0.home && !m0.custom && !('extra' in m0), 'each side is put right through cleanSide, flags and unknown fields dropped');
   ok(m0.id !== 'FAR' && m1.id !== 'FAR' && m0.id !== m1.id && m0.key === 'lg-' + m0.id, `a built-in or repeated code is replaced (${m0.id} ${m1.id})`);
   ok(m1.name === 'London Scottish' && !messy.teams.some(t => /Smith|Joe|script/.test(t.name)) && messy.teams.length === I.MAX_SIDES, 'names fit a card, people and junk are dropped, at most sixteen');
+  // a shortened name is a name: never a word that only leads into one, and never ending on one
+  const cut = n => I.fit(n, new Set());
+  ok(cut('Old Wimbledonians') === 'Old Wimbledonian', `not cut to Old (${cut('Old Wimbledonians')})`);
+  ok(cut("Bishop's Stortford RFC") === "Bishop's Stortfo", `nor to Bishop's (${cut("Bishop's Stortford RFC")})`);
+  ok(cut('St Bedes Old Boys') === 'St Bedes', `nor ending on Old (${cut('St Bedes Old Boys')})`);
+  ok(cut('Ealing Trailfinders') === 'Ealing', `a place name stands by itself (${cut('Ealing Trailfinders')})`);
+  ok(cut('Old Ruts') === 'Old Ruts' && cut('The Old Boys RFC') === 'The Old Boys RFC' && cut('Tunbridge Wells RFC') === 'Tunbridge Wells', 'and a name that fits is left alone');
   const short = I.sides({ league:['Tunbridge Wells', 'Tunbridge Wells II', 'Old Whitgiftians', 'Old Whitgiftians II', 'Sevenoaks Minis A', 'Sevenoaks Minis B'].map(name => ({ name })), teams:[] });
   ok(names(short) === 'Tunbridge Wells,Tunbridge II,Old Whitgiftians,Sevenoaks A,Sevenoaks B', `sides that would shorten to one name keep their labels, or one is left out (${names(short)})`);
   ok(names(I.clean({ teams:[{ name:'Tunbridge Wells' }, { name:'Tunbridge Wells' }, { name:'Tunbridge Wells II' }] }).teams) === 'Tunbridge Wells,Tunbridge II', 'a saved league never shows two sides of one name');

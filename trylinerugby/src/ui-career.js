@@ -7,7 +7,7 @@ let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerStageName = i => CAREER_STAGES[i].name;
 const careerSeasonNo = cr => cr.history.filter(h => h.stage === cr.stage).length + 1;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
-function careerShirt(t, num, cls) {                  // the kit with his number on it
+function careerShirt(t, num, cls) {                  // the kit with your number on it
   return `<span class="cr-shirt${cls ? ' ' + cls : ''}">${jersey(t)}<b>${num}</b></span>`;
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
@@ -36,12 +36,20 @@ function renderCareerHome() {
 
 /* ---------- the new player ---------- */
 const careerClubs = () => [...CLUBS, ...custom];     // the Local list and the teams you made (an imported club is one of those)
+const CAREER_BUILDS = [0.92, 1, 1.12];                // Small | Medium | Big: one of the art's three builds each
 function careerNewOpen() {
-  careerDraft = { i:0, pos:'B', num:CAREER_POS.B[0], numsFor:null };
+  careerDraft = { i:Math.max(0, careerClubs().indexOf(myTeamOf())), pos:'B', num:CAREER_POS.B[0], numsFor:null, look:{ ...CAREER_LOOK } };   // your club starts on Your Team, when it is one of these
   $('cn-name').value = '';
-  $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('');
+  $('cn-clubs').innerHTML = careerClubs().map((t, i) => `<button class="team cr-club" data-i="${i}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(t.name)}</span>${teamStars(t)}</span></button>`).join('');
   for (const b of $('cn-clubs').querySelectorAll('[data-i]')) b.addEventListener('click', () => { careerDraft.i = +b.dataset.i; renderCareerNew(); });
   renderCareerNew(); careerShow('s-career-new');
+  const art = ART.state === 'idle' ? artLoad() : ART.state === 'loading' ? ART.promise : null;   // the real sprite when it can be had; the shirt stands in until then, or if it never comes
+  if (art && art.then) art.then(() => { if (careerDraft && !$('s-career-new').hidden) careerLookShow(); });
+}
+function careerLookSet(key, v) { careerDraft.look[key] = v; renderCareerNew(); }
+function careerLookShow() {
+  const cv = $('cn-look'), d = careerDraft;
+  cv.hidden = !artPreview(cv, careerClubs()[d.i], d.look);
 }
 /* The picks change in place, so a controller's ring stays on the button it pressed; the numbers are redrawn only for a new position. */
 function renderCareerNew() {
@@ -56,22 +64,37 @@ function renderCareerNew() {
   }
   for (const b of $('cn-num').querySelectorAll('[data-n]')) b.setAttribute('aria-pressed', String(+b.dataset.n === d.num));
   $('cn-shirt').innerHTML = careerShirt(clubs[d.i], d.num, 'big');
+  const L = d.look;
+  [...$('cn-g').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === L.g)));
+  [...$('cn-build').children].forEach((b, i) => b.setAttribute('aria-pressed', String(CAREER_BUILDS[i] === L.b)));
+  [...$('cn-skin').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === L.skin)));
+  [...$('cn-hair').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === L.hair)));
+  [...$('cn-style').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === L.style)));
+  careerLookShow();
 }
+const CAREER_HAIR_NAMES = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red'];
+$('cn-skin').innerHTML = LOOK_SKIN.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="Skin ${i + 1}"></button>`).join('');
+$('cn-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_HAIR_NAMES[i]}"></button>`).join('');
+for (const [id, key, of] of [['cn-g', 'g', i => i], ['cn-build', 'b', i => CAREER_BUILDS[i]], ['cn-skin', 'skin', i => i], ['cn-hair', 'hair', i => i], ['cn-style', 'style', i => i]])
+  [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
 [...$('cn-pos').children].forEach((b, i) => b.addEventListener('click', () => {
   const pos = i === 0 ? 'F' : 'B';
   if (careerDraft.pos !== pos) { careerDraft.pos = pos; careerDraft.num = CAREER_POS[pos][0]; }
   renderCareerNew();
 }));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-$('cn-go').addEventListener('click', () => {
+function careerNewGo() {
   const d = careerDraft, club = careerClubs()[d.i];
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club })) return;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club, look:d.look })) return false;
   careerOpen();
-});
+  return true;
+}
+$('cn-go').addEventListener('click', careerNewGo);
 $('cn-back').addEventListener('click', goHome);
 
 /* ---------- the hub ---------- */
 function careerOpen() {
+  ratingsSync();
   if (!career) { careerNewOpen(); return; }
   if (!career.season) { careerNewSeason(career); save(); }   // a broken season was dropped on load: a new draw for the same stage
   if (career.season.round >= 5) { if (careerSettle(career)) save(); renderCareerEnd(); careerShow('s-career-end'); return; }
@@ -89,7 +112,7 @@ function careerCardHtml(cr, team) {
 }
 function careerFixtureHtml(c) {
   const { pair } = userFixture(c), [h, a] = pair, T = c.teams;
-  return `<div class="fixture"><span class="fx-team">${jersey(T[h])}<span data-fit>${esc(T[h].name)}</span></span><span class="fx-v">V</span><span class="fx-team r"><span data-fit>${esc(T[a].name)}</span>${jersey(T[a])}</span></div>`;
+  return `<div class="fixture"><span class="fx-team">${jersey(T[h])}${fxName(T[h], true)}</span><span class="fx-v">V</span><span class="fx-team r">${fxName(T[a], true)}${jersey(T[a])}</span></div>`;
 }
 function careerLine(cr) {
   const c = cr.season, st = CAREER_STAGES[cr.stage];
@@ -129,6 +152,7 @@ function careerChips(keys) {
 function renderCareerTrain() {
   $('ct-list').innerHTML = careerDrills(career).map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('');
   for (const b of $('ct-list').querySelectorAll('[data-drill]')) b.addEventListener('click', () => careerTrain(b.dataset.drill));
+  $('ct-coach').hidden = !careerDrills(career).some(d => PRACTICE_DRILLS.find(p => p.id === d.id).contact);
 }
 $('ct-back').addEventListener('click', careerOpen);
 
@@ -138,7 +162,7 @@ function careerTableRows(cr) {
   return standings(c).map((r, n) => `
     <tr class="${r.i === c.user ? 'me' : ''}${up && c.round && n < CAREER_UP ? ' up' : ''}">
       <td class="rk">${c.round ? n + 1 : '–'}</td>
-      <td class="t"><span class="chip" style="--k:${HEX.test(T[r.i].kit) ? T[r.i].kit : '#888888'}"></span>${esc(T[r.i].name)}</td>
+      <td class="t"><span class="chip" style="--k:${HEX.test(T[r.i].kit) ? T[r.i].kit : '#888888'};--t:${HEX.test(T[r.i].trim) ? T[r.i].trim : '#f2efe6'}"></span>${esc(T[r.i].name)}${teamStars(T[r.i])}</td>
       <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.PD > 0 ? '+' : ''}${r.PD}</td><td>${r.BP}</td><td class="pts">${r.Pts}</td>
     </tr>`).join('');
 }
@@ -182,13 +206,13 @@ function renderCareerEnd() {
   const tiles = careerTile('Place', ordinal(out.place)) + careerTile('Overall', out.ovr);
   if (out.promoted && next === 4) {                  // called up: the country is the choice, and the choice starts the season
     body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile('Next', careerStageName(next))}</div><p class="lbl cr-pick">Pick Your Country</p>
-      <div class="cr-nations">${NATIONS.map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(t.name)}</span></button>`).join('')}</div>`;
+      <div class="cr-nations">${nationsRanked(careerFemale(cr) ? 1 : 0).map(t => `<button class="team cr-club" data-n="${t.id}">${jerseyRated(t)}<span class="tid"><span class="tname" data-fit>${esc(t.name)}</span>${teamStars(t)}</span></button>`).join('')}</div>`;
     for (const b of body.querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerAdvance(b.dataset.n); careerOpen(); });
     act.innerHTML = '';
     return;
   }
   const nextTeam = out.promoted ? careerTeamFor(cr, next) : team;
-  body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile(out.promoted ? 'Next' : 'Again', careerStageName(next), `<span class="cr-next">${jersey(nextTeam)}<span data-fit>${esc(nextTeam.name)}</span></span>`)}</div>`;
+  body.innerHTML = `<div class="cr-tiles">${tiles}${careerTile(out.promoted ? 'Next' : 'Again', careerStageName(next), `<span class="cr-next">${jersey(nextTeam)}${fxName(nextTeam, true)}</span>`)}</div>`;
   act.innerHTML = `<button class="btn primary" id="ce-go">Next Season</button>`;
   $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
 }

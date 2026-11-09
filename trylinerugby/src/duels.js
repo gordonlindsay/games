@@ -340,7 +340,7 @@ function settle(c, res, act) {
       else { out = 'broken'; verdict = 'Broken Tackle'; }
     } else { out = 'early'; verdict = 'Too Early'; }
   } else if (c.kind === 'tackle') {
-    if (won) { out = 'bighit'; verdict = 'Big Hit'; }
+    if (won) { out = 'bighit'; verdict = matchMild() ? 'Stopped' : 'Big Hit'; }
     else if (rnd() < tackleChance(U, O, res === 'early' ? 'dive' : 'contact', O.side > 0)) { out = 'tackled'; verdict = res === 'early' ? 'Too Early' : 'Too Late'; }
     else { out = 'missed'; verdict = 'Missed'; }
   } else {
@@ -393,7 +393,7 @@ function applyDuel(c) {
       const o = c.open;
       put(U, at(1.3, 1.2*o), true); put(O, at(0, -0.6*o));
       O.down = 0.9; O.tcd = 1; O.vx = O.vy = 0;
-      U.side = 0.35;
+      U.side = 0.35; artStepped(U, frameVec(own, { x:0, y:o }).y);   // he comes out of the close-up on the art's feint: render-only
       const m = hyp(1, 0.3); face(U, 1/m, 0.3*o/m);
       setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
       U.autoDir = o;
@@ -405,6 +405,7 @@ function applyDuel(c) {
       const lat = c.res === 'early' && c.act ? 0.8*c.act : 0;
       put(U, at(1.0, lat), true); put(O, at(0.4));
       U.side = 0.35; O.down = 0.5; O.tcd = 1; O.vx = O.vy = 0; M.stats.broken++; countTk(O.team, false);
+      if (c.kind === 'past') artStepped(U, frameVec(own, { x:0, y:lat || 1 }).y);   // and here
       break;
     }
     case 'pass:drawn':

@@ -18,7 +18,6 @@
    an email, a phone number or a link. The structure does the work: the first-name list in importPersonal is a last
    net, not the defence. Nothing about a person, the link itself or the page is kept.
    ========================================================= */
-const IMPORT_POOL = POOLS.length;                 // My League: the team screen's button after South Africa
 const IMPORT_MAX_SIDES = 16;                      // league opponents saved
 const IMPORT_MAX_ROWS = 24;                       // rows or names a parser returns
 const IMPORT_MAX_REQUESTS = 3;                    // the pasted page, a league table, fixtures
@@ -72,6 +71,19 @@ const IMPORT_NONE = ['#cccccc', '#999999'];       // Pitchero's grey pair for a 
 const IMPORT_SUFFIX = /\s+(?:r\.?u\.?f\.?c\.?|r\.?f\.?c\.?|rugby union football club|rugby football club|rugby union club|rugby club|rugby union|rugby|f\.?c\.?)$/i;
 /* A side's own label, not a club: U10s, 1st XV, U9 & U10 Girls, Academy U18 1XV. Every word must be one of these. */
 const IMPORT_LABEL = /^(?:u\d{1,2}s?|under|\d{1,2}s?|minis?|juniors?|colts|youth|ladies|women|womens|girls|boys|mixed|vets|veterans|academy|development|dev|seniors?|first|second|third|fourth|\d{1,2}(?:st|nd|rd|th)|xv|xvs|\d?xv|sevens|7s|team|squad|[a-d]|&|and|\+)$/i;
+/* A side's label says who plays, read from the whole name before any of it is shortened away. In this order: U11 and under (the lever, MIXED_THROUGH),
+   Minis or Mixed is mixed; Girls, Ladies, Women or Womens is women's; everything else is men's, U12 and above included, and U12 and above with Girls is women's.
+   Where a label gives more than one age (U11 & U12), the oldest counts. */
+function importSideOf(name) {
+  const s = String(name || '').toLowerCase().replace(/['\u2019]/g, ''), ages = [...s.matchAll(/\b(?:u|under)[\s-]*(\d{1,2})s?\b/g)].map(m => +m[1]);
+  if (/\b(?:minis?|mixed)\b/.test(s) || (ages.length && Math.max(...ages) <= MIXED_THROUGH)) return 'mixed';
+  return /\b(?:girls|ladies|women|womens)\b/.test(s) ? 1 : 0;
+}
+/* The club's side: its own name, then its row in the league table, then a label in the page's title (Under 10s | Riverside RFC). */
+function importClubSide(data) {
+  const own = data && (data.league || []).find(r => r.own);
+  return (data && data.club && importSideOf(data.club.name)) || (own && importSideOf(own.name)) || (data && importSideOf(data.label)) || 0;
+}
 const IMPORT_NOT_TEAM = /\b(?:festival|tournament|training|session|tbc|tba|tbd|bye|cancelled|postponed|to be confirmed|friendly|friendlies|winners?|losers?|runners?[- ]up|(?:pool|group) [a-h1-8]|(?:semi|quarter)[- ]?finals?|finals?|play[- ]?offs?)\b/i;
 const IMPORT_PLATFORMS = /^(?:pitchero|tournify|leaguerepublic|league republic|spond|teamapp|team app|teamer|sportlomo|england rugby|rfu|google|facebook|instagram|twitter|youtube|wordpress|wix|squarespace|home|homepage|welcome|fixtures?|results?|fixtures (?:and|&) results|league tables?|tables?|standings|news|teams?|clubs?)$/i;
 
@@ -137,7 +149,9 @@ function importBase(s) {
   return importKey(w.join(' '));
 }
 const importSame = (a, b) => { const x = importBase(a); return !!x && x === importBase(b); };
-/* Shortened to fit a team card: the rugby suffix goes first, then whole words from the end. */
+/* Shortened to fit a team card: the rugby suffix goes first, then whole words from the end. A word that only leads into the name (Old, St, Bishop's) is
+   no name by itself and doesn't end one, so where whole words would leave that the name keeps its letters up to the limit: Old Wimbledonian, not Old. */
+const IMPORT_LEADING = /^(?:old|st|st\.|saint|the|new|royal|north|south|east|west|upper|lower|great|little|port|mount|\p{L}+['\u2019]s)$/iu;
 function importShort(name, max = 16) {
   let s = String(name || '').replace(/\s+/g, ' ').trim();
   if (s.length <= max) return s;
@@ -146,7 +160,9 @@ function importShort(name, max = 16) {
   if (bare.length >= 3) s = bare;
   const cut = s.slice(0, max + 1), sp = cut.lastIndexOf(' ');
   const out = (sp >= 3 ? cut.slice(0, sp) : s.slice(0, max)).trim();
-  return out.replace(/(?:\s+(?:&|and|of|the|on|in|at|-))+$/i, '').trim() || out;   // never ends on a joining word
+  const words = out.replace(/(?:\s+(?:&|and|of|the|on|in|at|-))+$/i, '').trim().split(' ');   // never ends on a joining word
+  while (words.length > 1 && IMPORT_LEADING.test(words[words.length - 1])) words.pop();
+  return words.length === 1 && IMPORT_LEADING.test(words[0]) ? s.slice(0, max).trim() : words.join(' ');
 }
 /* A name for a card that no side already in the league has (taken holds their importKeys), or '' to leave the side
    out. Where shortening makes two sides the same (Sevenoaks Minis A and B, Tunbridge Wells and Tunbridge Wells II), a
@@ -158,7 +174,7 @@ function importFit(name, taken, label) {
   let kept = '';
   if (tail && tail.length <= 6 && (IMPORT_LABEL.test(tail) || /^[ivx]{1,4}$/i.test(tail))) {
     const head = importShort(w.slice(0, -1).join(' '), 16 - tail.length - 1);
-    if (/\p{L}{4}/u.test(head)) kept = head + ' ' + tail;
+    if (/\p{L}{4}/u.test(head) && (w.slice(0, -1).join(' ') + ' ').startsWith(head + ' ')) kept = head + ' ' + tail;   // whole words in front, or not at all
   }
   for (const c of label ? [kept, s] : [s, kept]) if (c && !taken.has(importKey(c))) return c;
   return '';
@@ -570,14 +586,30 @@ function importUrl(text) {
 function importParse(html, url) { return importRead(importDoc(html), url); }
 function importRead(doc, url) {
   const href = importUrl(String(url || '')) || '';
-  const src = IMPORT_SOURCES.find(s => s.test(href, doc));
-  return importSafe(src.id, src.parse(doc, href), href);
+  const src = IMPORT_SOURCES.find(s => s.test(href, doc)), out = importSafe(src.id, src.parse(doc, href), href);
+  const label = [doc.meta && doc.meta['og:title'], doc.title].flatMap(t => String(t || '').slice(0, 300).split(/\s+[|\-\u2013\u2014\u00b7:]+\s+/)).map(s => s.trim()).find(s => s && importLabel(s));
+  if (label) out.label = label;                            // only ever a label's own words: U10s, Ladies
+  const level = importLevelFrom([doc.meta && doc.meta['og:title'], doc.title, ...importDivisions(doc)]);
+  if (level) out.level = level;                            // only ever a level's id, not the page's words
+  return out;
+}
+/* The league's name on a Pitchero page, for the level: the fixtures' division, the competitions, a table's own name. */
+function importDivisions(doc) {
+  const out = [];
+  for (const b of doc.blobs || []) {
+    const st = b.id === '__NEXT_DATA__' && b.json.props && b.json.props.initialReduxState && b.json.props.initialReduxState.teams; if (!st) continue;
+    importWalk([st.fixtures, st.leagueTable], v => { for (const k of ['division', 'name', 'competition', 'league', 'title']) if (!Array.isArray(v) && typeof v[k] === 'string' && out.length < 400) out.push(v[k]); });
+  }
+  return out;
 }
 function importMerge(a, b) {
   const teams = [...a.teams];
   for (const t of b.teams) if (teams.length < IMPORT_MAX_ROWS && !teams.some(x => importKey(x.name) === importKey(t.name)) && !(a.club && importSame(t.name, a.club.name))) teams.push(t);
   const league = a.league.some(r => !r.own) || !b.league.length ? a.league : b.league;
-  return { source:a.source, club:a.club || b.club, teams, league };
+  const out = { source:a.source, club:a.club || b.club, teams, league }, label = a.label || b.label, level = a.level || b.level;
+  if (label) out.label = label;
+  if (level) out.level = level;
+  return out;
 }
 
 /* ---------- fetching, in the app only ---------- */
@@ -661,15 +693,26 @@ async function importFetch(url, opts = {}) {
 
 /* ---------- saving ---------- */
 /* The league as saved: the table's other sides (the club's own row left out), else the fixture opponents, at most 16,
-   each with a name no other side in it has (importFit). Ratings are made up, as the built-in clubs' are, and count
-   every ability in ABILITIES: a table's leader totals a team you make, spent in full (one point each plus BUDGET),
-   and its foot one point an ability less, below every Local club; fixture opponents, with no table to go on, fall
-   between the two by name. Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
+   each with a name no other side in it has (importFit). Ratings are made up and count every ability in ABILITIES, at the level
+   chosen for the club: a table's leader totals the level's rating and its foot one point an ability less, not under the floor; fixture opponents, with no table to go on,
+   fall between the two by name. With nothing chosen and nothing known the level is the best Local club's (importTop), so a league you add sits with the Local list, under the professional lists.
+   Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
    by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
-function importSides(data) {
+const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham, at 58
+/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them. Null when the words say nothing. */
+const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b/, 'r1'], [/\bnational league\b|\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
+function importLevelFrom(texts) {
+  for (const t of texts) { const s = String(t || '').toLowerCase().slice(0, 300), hit = IMPORT_LEVEL_WORDS.find(([re]) => re.test(s)); if (hit) return hit[1]; }
+  return null;
+}
+const importLevelDefault = () => TEAM_LEVELS.find(l => sumOfOverall(l.overall) === importTop()) || TEAM_LEVELS[4];
+/* The level an import is set at: the one chosen, else what its page says, else the Local list's best. */
+const importLevel = (data, id) => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => data && l.id === data.level) || importLevelDefault();
+function importSides(data, levelId) {
   if (!data) return [];
+  const clubG = importClubSide(data);                      // a side with nothing in its name to say otherwise plays as the club does
   const table = data.league || [], rows = table.filter(r => !r.own), fromTable = rows.length > 0;
-  const n = ABILITIES.length, top = n + BUDGET, foot = top - n;
+  const n = ABILITIES.length, top = sumOfOverall(importLevel(data, levelId).overall), foot = Math.max(n, top - n);
   const used = new Set([...ALL_TEAMS, ...custom].map(t => t.id)), names = new Set(), out = [], list = fromTable ? rows : data.teams || [];
   const shared = new Map();                                // how many sides each short name stands for
   for (const t of list) { const k = importKey(importShort(t.name)); shared.set(k, (shared.get(k) || 0) + 1); }
@@ -677,8 +720,8 @@ function importSides(data) {
     if (out.length >= IMPORT_MAX_SIDES) break;
     const name = importFit(t.name, names, shared.get(importKey(importShort(t.name))) > 1); if (!name) continue;
     const h = importHash(name), id = importCode(name, used);
-    const total = fromTable ? Math.round(top - (top - foot)*table.indexOf(t)/Math.max(1, table.length - 1)) : foot + 1 + h % Math.max(1, top - foot - 1);
-    const side = cleanSide(importSpread({ key:'lg-' + id, id, name, ...importColours(t, h) }, total, ABILITIES.map((_, i) => ABILITIES[(i + h) % n][0])));
+    const total = fromTable ? Math.round(top - (top - foot)*table.indexOf(t)/Math.max(1, table.length - 1)) : Math.min(top, foot + 1 + h % Math.max(1, top - foot - 1));
+    const side = cleanSide(importSpread({ key:'lg-' + id, id, name, g:importSideOf(t.name) || clubG, ...importColours(t, h) }, total, ABILITIES.map((_, i) => ABILITIES[(i + h) % n][0])));
     if (!side) continue;
     names.add(importKey(name)); used.add(id); out.push(side);
   }
@@ -709,13 +752,16 @@ function importCode(name, used) {
    league is null. */
 function cleanImportLeague(v) {
   if (!v || typeof v !== 'object' || Array.isArray(v) || !Array.isArray(v.teams)) return null;
-  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set();
+  const teams = [], ids = new Set(ALL_TEAMS.map(t => t.id)), names = new Set(), mine = settings.myTeam;   // mine: as the save has it, because a side's new key can be another's old one
   for (const raw of v.teams.slice(0, 64)) {
     const t = cleanSide(raw), name = t && importName(t.name), fit = name && importFit(name, names);
     if (!fit) continue;
     t.name = fit; names.add(importKey(fit));
     delete t.home; delete t.custom;
-    if (ids.has(t.id)) t.id = importCode(t.name, ids);
+    if (ids.has(t.id)) {                                   // a code a new built-in list has taken: Your Team follows its side to the new one
+      const was = t.key; t.id = importCode(t.name, ids);
+      if (was && mine === was) settings.myTeam = 'lg-' + t.id;
+    }
     ids.add(t.id);
     t.key = 'lg-' + t.id;
     teams.push(t);
@@ -728,16 +774,17 @@ const importMine = data => { if (!data || !data.club) return null; const k = imp
 /* Is there a place for the club among your teams: one of yours has its name, or there is room for another. */
 const importRoom = data => !!importMine(data) || custom.length < MAX_CUSTOM;
 /* Save: the club joins your teams through cleanTeam, unless one of yours already has its name (re-importing keeps your
-   edits), with the whole budget spent evenly over every ability (the odd points to pace and handling), and the
-   colours picked. Its league replaces any saved before; an import with no league leaves the old one. */
+   edits), set at the level chosen with all of that level's points spent evenly over every ability (the odd points to pace and handling),
+   so it starts with the top of its league and can move them about, and the colours picked. Its league replaces any saved before; an import with no league leaves the old one. */
 function importSave(data, draft) {
   let club = importMine(data), added = false;
+  const level = importLevel(data, draft && draft.level);
   if (data.club && !club && custom.length < MAX_CUSTOM) {
     const name = importShort(data.club.name);
-    club = cleanTeam(importSpread({ key:'imp' + Date.now().toString(36), id:autoCode(name), name, kit:draft.kit, trim:draft.trim, hoops:false }, ABILITIES.length + BUDGET, ['pace', 'handling']), custom.length);
+    club = cleanTeam(importSpread({ key:'imp' + Date.now().toString(36), id:autoCode(name), name, g:importClubSide(data), kit:draft.kit, trim:draft.trim, hoops:false, level:level.id }, sumOfOverall(level.overall), ['pace', 'handling']), custom.length);
     custom.push(club); added = true;
   }
-  const sides = importSides(data);
+  const sides = importSides(data, level.id);
   if (sides.length) importLeague = { teams:sides };
   save();
   return { club, added, sides:sides.length };
@@ -747,18 +794,19 @@ function importSave(data, draft) {
 const importTeams = () => importLeague ? importLeague.teams : CLUBS;
 /* A championship is six sides, yours and five others (newChamp). From My League the five are drawn at random from the
    league, leaving out the team you picked and any side of the same name. A league of fewer than five is topped up
-   with Local clubs, drawn the same way, so a three-team league plays your club, its three and two Local clubs. */
-function importOthers(t) {
-  const same = o => keyOf(o) === keyOf(t) || importKey(o.name) === importKey(t.name);
-  const five = shuffle(importTeams().filter(o => !same(o))).slice(0, 5);
-  if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
+   with Local clubs, drawn the same way, so a three-team league plays your club, its three and two Local clubs. Only sides that meet
+   the pick's (g, men's or women's): a league's other side stays out, and the Local clubs top up as that side. */
+function importOthers(t, g = teamSide(t) === 1 ? 1 : 0) {
+  const same = o => keyOf(o) === keyOf(t) || importKey(o.name) === importKey(t.name), fits = o => { const s = teamSide(o); return s === 'mixed' || s === g; };
+  const five = shuffle(importTeams().filter(o => fits(o) && !same(o))).slice(0, 5);
+  if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length).map(o => (g ? womenClub(o) : o)));
   return five;
 }
 /* The Import Club card: beside Create Team while there is room for a team, and kept with four made while a league is
    saved, as the way to refresh it or remove it. */
 function importCard() { return custom.length < MAX_CUSTOM || importLeague ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Import Club</span></button>` : ''; }
 function importBind() {
-  $('t-league').hidden = !importLeague;
+  $('t-league').hidden = !(importLeague && importLeague.teams.some(pickFits));   // a league all of the other side waits on its own side's view
   const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
 }
 
@@ -814,24 +862,26 @@ async function importRun(href, token, opts) {
   const full = r.ok && !!r.data.club && !importRoom(r.data), data = full ? { ...r.data, club:null } : r.data;   // four teams made: the league can come in, the club can't
   const empty = r.ok && !data.club && !importSides(data).length;
   if (!r.ok || empty) { u.step = 'link'; u.err = IMPORT_MSG[!r.ok ? r.error : full ? 'full' : 'empty'] || IMPORT_MSG.net; importRender(); importFocus(); return; }
-  const c = data.club;
-  u.data = data; u.pick = !!c && !c.kit;
-  u.draft = c ? { kit:c.kit || '#2050b0', trim:c.trim || importContrast(c.kit || '#2050b0'), hoops:false } : null;
+  const c = data.club, mine = importMine(data);
+  u.data = data; u.pick = !!c && !c.kit && !mine;
+  u.level = importLevel(data, mine && mine.level).id;   // preset: your own team's level on a re-import, else what the page says, else the Local list's best
+  u.draft = mine ? { kit:mine.kit, trim:mine.trim, hoops:mine.hoops } : c ? { kit:c.kit || '#2050b0', trim:c.trim || importContrast(c.kit || '#2050b0'), hoops:false } : null;
   u.step = 'preview'; importRender(); importFocus();
 }
 function importCommit() {
   const u = importUi; if (u.step !== 'preview' || !u.data) return;
-  const res = importSave(u.data, u.draft || {});
+  const res = importSave(u.data, { ...(u.draft || {}), level:u.level });
   if (res.added) {                                         // as Save Team: a club made from Quick Match or Player 1's pick is the one played as
-    if (pickMode === 'quick' && quickAuto) { quickPick = res.club; quickAuto = false; }
-    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; }
+    if (pickMode === 'quick' && quickAuto) { quickPick = res.club; quickAuto = false; pickFollow(res.club); }
+    else if (pickMode === 'two' && twoSel.picking === 0 && pickFits(res.club)) { twoSel.teams[0] = res.club; twoSel.picking = 1; }
+    else if (pickMode === 'my') { settings.myTeam = keyOf(res.club); save(); importClose(); goHome(); return; }   // Change Team: the club you added is your team
   }
   importClose();
-  if (res.sides) { settings.pool = IMPORT_POOL; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top
+  if (res.sides) { if (!quickPick) pickFollow(importLeague.teams[0]); settings.pool = IMPORT_POOL; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top
 }
 function importRender() {
   const u = importUi, s = u.step, web = s === 'web', busy = s === 'busy', pre = s === 'preview';
-  const c = pre && u.data.club, sides = pre ? importSides(u.data) : [], n = sides.length;
+  const c = pre && u.data.club, sides = pre ? importSides(u.data, u.level) : [], n = sides.length;
   $('im-title').textContent = web ? 'Import Works in the Try Line App' : pre ? (c ? importShort(c.name) : 'My League') : 'Paste Your Link';
   $('im-line').hidden = !web;
   $('im-field').hidden = web || pre;
@@ -842,9 +892,18 @@ function importRender() {
   $('im-league').hidden = !n;
   $('im-league').innerHTML = n ? sides.slice(0, 12).map(t => jersey(t, 'mini')).join('') + `<span class="lbl">My League · ${n} Team${n === 1 ? '' : 's'}</span>` : '';
   $('im-cols').hidden = !(c && u.pick);
+  const mine = c ? importMine(u.data) : null;               // re-importing keeps your team as you made it (importSave): the level is only its league's, and the screen says so
+  const lv = pre && (n || !mine) ? importLevel(u.data, u.level) : null, li = lv ? TEAM_LEVELS.indexOf(lv) : 0;
+  $('im-level').hidden = !lv;
+  $('im-level-lbl').textContent = mine || !c ? 'League' : 'Level';
+  $('im-kept').hidden = !mine;
+  $('im-kept').textContent = mine ? `${mine.name} stays as you made it.${n ? ' This sets its league.' : ''}` : '';
+  $('im-lv-name').textContent = lv ? `${lv.name} · ${starsWords(lv.stars)}` : '';
+  $('im-lv-stars').innerHTML = lv ? starsHtml(lv.stars, true) : '';
+  $('im-lv-down').disabled = li <= 0; $('im-lv-up').disabled = li >= TEAM_LEVELS.length - 1;
   for (const [id, key] of [['im-kit', 'kit'], ['im-trim', 'trim']]) for (const b of $(id).querySelectorAll('.sw')) b.setAttribute('aria-pressed', String(!!u.draft && b.dataset.c === u.draft[key]));
   $('im-go').hidden = web; $('im-go').disabled = busy;
-  $('im-go').textContent = busy ? 'Importing' : pre ? (c ? 'Save Club' : 'Save League') : 'Import';
+  $('im-go').textContent = busy ? 'Importing' : pre ? (c && !mine ? 'Save Club' : 'Save League') : 'Import';
   const alt = pre ? 'Change Link' : importLeague && !busy ? (u.armed ? 'Confirm Remove' : 'Remove League') : '';
   $('im-alt').hidden = !alt; $('im-alt').textContent = alt; $('im-alt').classList.toggle('warn', !pre);
   $('im-row').classList.toggle('one', !alt);
@@ -858,6 +917,13 @@ function importAlt() {
   if (settings.pool === IMPORT_POOL) settings.pool = 1;
   save(); importRender(); importFocus();                   // Remove League has gone: focus to the step's own control
 }
+function importLevelStep(d) {
+  const u = importUi; if (u.step !== 'preview') return;
+  const l = TEAM_LEVELS[TEAM_LEVELS.indexOf(importLevel(u.data, u.level)) + d];
+  if (l) { u.level = l.id; importRender(); }
+}
+$('im-lv-down').addEventListener('click', () => importLevelStep(-1));
+$('im-lv-up').addEventListener('click', () => importLevelStep(1));
 for (const [id, key] of [['im-kit', 'kit'], ['im-trim', 'trim']]) {
   $(id).innerHTML = KIT_COLOURS.map(([n, h]) => `<button class="sw" style="--k:${h}" data-c="${h}" aria-label="${n}"></button>`).join('');
   for (const b of $(id).querySelectorAll('.sw')) b.addEventListener('click', () => { if (importUi.draft) { importUi.draft[key] = b.dataset.c; importRender(); } });

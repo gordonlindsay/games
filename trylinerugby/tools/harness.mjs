@@ -10,9 +10,9 @@ let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST = ${process.env.BURST};`);
 // GKTUNE='{"band":[0.15,0.13,0.10]}' tries other goal-kick levers the same way
 if (process.env.GKTUNE) js = js.replace('// GKTUNE', 'Object.assign(KICK, ' + process.env.GKTUNE + ');');
-// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' deep-merge into the contact, ruck, Sprint, passing, support, open-play move, duel slow-motion and Tackle duel trigger levers
+// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion and Tackle duel trigger levers
 {
-  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
+  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
   if (tune) js = js.replace('// CONTACT_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; ${tune} }`);
 }
 
@@ -58,13 +58,16 @@ export const fire = (type, ev) => { for (const fn of listeners[type] || []) fn(e
 // padStub([gp, ...]) is what navigator.getGamepads() returns from then on: plain objects shaped like a Gamepad ({ index, mapping, buttons:[{ pressed, value }], axes, connected })
 export function padStub(pads) { navigator.getGamepads = () => pads; }
 globalThis.requestAnimationFrame = noop;
-globalThis.localStorage = { getItem: () => null, setItem: noop };
+globalThis.localStorage = { getItem: () => process.env.SAVE || null, setItem: noop };   // SAVE='{"settings":{"cam":0}}' boots the game on that save
 globalThis.getComputedStyle = () => ({ fontSize: "24px" });
 globalThis.matchMedia = () => ({ matches: false, addEventListener: noop, addListener: noop });
 new Function(js)();
 
 export const T = window.__tryline;
+export const camStart = T.debug.settings().cam;   // the camera this boot opened on, before the line below
+T.debug.settings().cam = 0;                       // the tools write the stick in world directions, so they play on Top unless they ask for a behind view (camera.mjs does, with its own turn)
 if (T.debug.TUT_IDS) T.debug.settings().tut = T.debug.TUT_IDS.slice(); else T.debug.settings().duelSeen = T.debug.settings().kickSeen = true;   // the tools play as a player who has had the tutorial: no moment pauses, no first-time aid (tutorial.mjs empties it where it tests them); a GAME= snapshot from before the tutorial gets its old flags set the same way
+if (T.drills && T.drills.DRILL_IDS) T.debug.settings().drillSeen = T.drills.DRILL_IDS.slice();   // and who has seen every drill's Watch How, so a drill opens on its ready card (drilldemo.mjs empties it where it tests the demo)
 if (T.debug.COACH_IDS) T.debug.settings().tips = T.debug.COACH_IDS.slice();   // and who has heard every coach line, so a tool's updateHud stays quiet (tutorial.mjs clears them where it tests the coach)
 export const inputs = T.inputs;                   // one slot a seat; T.input is slot 0
 const inp = T.input;
@@ -120,7 +123,7 @@ export function kickBot(c, o = {}) {
 }
 function planRelease(g, o, sig) {
   if (o.m != null) return o.m * g.fill + 1e-6;
-  let t = g.ctr * g.fill + 0.012 + sig * gauss();
+  let t = g.ctr * g.fill + 0.012 + sig * gauss() - (o.ahead || 0);   // ahead: a player who knows they are slow lets go this much early
   if (Math.random() < 0.04) t = Math.random() * g.fill * 1.15;
   return t;
 }

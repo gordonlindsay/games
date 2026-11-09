@@ -11,7 +11,7 @@ const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const src = fs.readFileSync(new URL('../game.js', import.meta.url), 'utf8');
 const training = fs.readFileSync(new URL('../src/training.js', import.meta.url), 'utf8');
 const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
-function stick(x, y) { const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; } inp.jx = x; inp.jy = y; }
+function stick(x, y) { const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; } const t = T.behind.stickTurn(0); if (t) { const sx = y*t, sy = -x*t; x = sx; y = sy; } inp.jx = x; inp.jy = y; }   // x, y on the field: where a game's own view turns the stick, the thumb that means that
 function hold(on) { if (on && !inp.aDown) inp.aPressed = true; inp.aDown = on; inp.src.a = on ? 1 : 0; }
 function sprint(on) { if (on && !inp.cDown) inp.cPressed = true; inp.cDown = on; inp.src.c = on ? 1 : 0; }
 function letGo() { stick(0, 0); hold(false); sprint(false); inp.keys.clear(); }
@@ -25,8 +25,8 @@ let writes = 0; localStorage.setItem = () => writes++;
 
 // ---- the contract: ids, names, cards, pictures
 const ids = X.DRILLS.map(d => d.id);
-ok(JSON.stringify([...ids].sort()) === JSON.stringify(['circle', 'cones', 'defend', 'egg', 'kick', 'pass', 'scrum', 'tackle']), 'PRACTICE_DRILLS holds exactly the eight contract ids');
-const names = { egg:'Bouncy Egg', circle:'Pass Around the Circle', tackle:'Tackling', cones:'Cones', kick:'Kicking', scrum:'Driving', defend:'Defend a Breakaway', pass:'Create a Two-on-One' };
+ok(JSON.stringify([...ids].sort()) === JSON.stringify(['back', 'circle', 'cones', 'defend', 'egg', 'kick', 'pass', 'scrum', 'tackle', 'tag']), 'PRACTICE_DRILLS holds exactly the ten contract ids');
+const names = { tag:'Tag Chase', back:'Ball Back', egg:'Bouncy Egg', circle:'Pass Around the Circle', tackle:'Tackling', cones:'Cones', kick:'Kicking', scrum:'Driving', defend:'Defend a Breakaway', pass:'Create a Two-on-One' };
 for (const d of X.DRILLS) {
   ok(d.name === names[d.id] && isTitle(d.name), d.id + ' is named ' + names[d.id] + ', in Title Case');
   ok(new RegExp(`<button class="btn drill" id="pr-${d.id}"><span class="dc-icon" id="pi-${d.id}" aria-hidden="true"></span><span class="dc-name">${d.name}</span></button>`).test(html), d.id + ' has a drill card button (a nav candidate) with its name');
@@ -34,7 +34,7 @@ for (const d of X.DRILLS) {
   ok(d.limit > 0 && d.limit <= 150, d.id + ' has a time limit');
 }
 ok(/<button class="btn" id="b-practice">Training Ground<\/button>/.test(html) && /<h2 class="title">Training Ground<\/h2>/.test(html) && !/Practice Ground/.test(html), 'the home button and the screen read Training Ground');
-ok(/id="pr-select" data-back>Back to Training</.test(html) && /id="pr-next">Next Drill</.test(html) && /id="pr-runner">Runner</.test(html) && /id="pr-passer">Passer</.test(html), 'the card offers Try Again, Next Drill and Back to Training, and the circle\'s Runner and Passer');
+ok(/id="pr-select" data-back>Back to Games</.test(html) && /id="pr-next">Next Game</.test(html) && /id="pr-runner">Runner</.test(html) && /id="pr-passer">Passer</.test(html), 'the card offers Try Again, Next Game and Back to Games, and the circle\'s Runner and Passer');
 ok(!/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="s-practice"'), html.indexOf('<script'))) && !/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(training), 'drill pictures are drawn, with no image files and no emoji');
 const drillWords = [...training.matchAll(/drillTag\('([^']+)'/g)].map(m => m[1]);
 ok(drillWords.length >= 5 && drillWords.every(w => isTitle(w) || w === '+') && !/\btag\(/.test(training), 'the drills\' on-pitch words are Title Case, and none is a match tag (' + [...new Set(drillWords)].join(', ') + ')');
@@ -58,9 +58,14 @@ s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly') { E.me.x
 ok(s.done && s.egg.lives === 0 && s.egg.caught < X.EGG.stars[0] && s.stars === 0 && !s.won && $('pr-result').textContent === 'Have Another Go', 'Bouncy Egg: three balls landing untouched ends the run, no star');
 P.leave();
 begin('egg');
-s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > X.EGG.lo + 0.05 && b.z < X.EGG.hi - 0.05) { E.me.x = b.x; E.me.y = b.y; } });   // a scripted catcher who is always there
-ok(s.done && s.egg.caught === X.EGG.throws && s.stars === 3 && s.won && $('pr-feedback').textContent === X.EGG.throws + ' Catches', 'Bouncy Egg: twelve clean catches is three stars');
+const meeter = st => { const E = st.egg, b = T.M.ball; if (E.stage === 'wind') { E.me.x = 70; E.me.y = 35; E.me.vx = E.me.vy = 0; } if (E.stage === 'fly' && b.x > X.EGG.box[0] + 0.5 && b.z > X.EGG.lo + 0.05 && b.z < X.EGG.hi - 0.05) { E.me.x = b.x + 0.6; E.me.y = b.y; E.me.vx = -5; E.me.vy = 0; } };   // a scripted catcher who is always there, running at the ball
+s = play(meeter);
+ok(s.done && s.egg.caught === X.EGG.throws && s.egg.met === X.EGG.throws && s.egg.score === X.EGG.throws*X.EGG.points[1] && s.stars === 3 && s.won && $('pr-feedback').textContent === X.EGG.throws + ' Catches', 'Bouncy Egg: twelve clean catches on the run is three stars');
 ok(T.M.stats.eggCatch === X.EGG.throws && /class="on"/.test($('pr-stars').innerHTML) && !$('pr-stars').hidden, 'Bouncy Egg: the result card shows the stars');
+P.leave();
+begin('egg');
+s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > X.EGG.lo + 0.05 && b.z < X.EGG.hi - 0.05) { E.me.x = b.x; E.me.y = b.y; E.me.vx = E.me.vy = 0; } });   // and one who is always there, standing waiting
+ok(s.done && s.egg.caught === X.EGG.throws && s.egg.met === 0 && s.egg.score === X.EGG.throws && s.stars === 1, 'Bouncy Egg: the same twelve catches standing still is one star: moving to the ball is what scores');
 P.leave();
 { // a camper: the stick held towards the thrower all run and nothing else. Every throw leaves his hands, so in his face it would catch the lot
   let nearest = Infinity; const stars = [];
@@ -79,12 +84,13 @@ ok(s.done && s.stars === 0 && s.circle.survived === 0 && T.M.stats.circleRounds 
 ok(JSON.stringify(X.result(s)) === JSON.stringify({ id:'circle', stars:0, success:false, role:'runner', skill:'stamina' }), 'Circle runner: the result names the role and trains stamina');
 P.leave();
 begin('circle', 'runner');
-s = play(st => { const C = st.circle; if (C.stage === 'start') { if (C.t > 0.2) inp.aPressed = true; stick(0, 0); sprint(false); return; } stick(1, 0); sprint(C.s > C.L*0.45); });
-ok(s.done && s.circle.survived === X.CIRCLE.rounds && s.stars === 3, 'Circle runner: running every lap and sprinting the second half survives all five rounds');
+s = play(st => { const C = st.circle; if (C.stage === 'start') { if (Math.abs(X.circleStartE(C)) < 0.05) inp.aPressed = true; stick(0, 0); sprint(false); return; } const a = X.circleRunAt(C.R, C.s), b = X.circleRunAt(C.R, C.s + 0.25); stick((b.x - a.x)*9, (b.y - a.y)*9); sprint(C.s > C.L*0.45); });
+ok(s.done && s.circle.survived === X.CIRCLE.rounds && s.stars === 3, 'Circle runner: a pass to the chest, the thumb going round with the run and Sprint on the second half survive all five rounds');
 ok(s.circle.R === X.CIRCLE.r0 + X.CIRCLE.grow*(X.CIRCLE.rounds - 1), 'Circle: the ring grows a metre a round');
+for (let r = 1; r <= 5; r++) ok(X.circleRadius('runner', r) === 4 + r && X.circleRadius('passer', r) === 10 - r, `Circle round ${r}: the Runner's ring is ${4 + r} m and the Passer's ${10 - r} m`);
 P.leave();
 begin('circle', 'runner');
-s = play(st => { const C = st.circle; if (C.stage === 'start') { if (C.t > 0.2) inp.aPressed = true; stick(0, 0); return; } stick(1, 0); });
+s = play(st => { const C = st.circle; if (C.stage === 'start') { if (C.t > 0.2) inp.aPressed = true; stick(0, 0); return; } const a = X.circleRunAt(C.R, C.s), b = X.circleRunAt(C.R, C.s + 0.25); stick((b.x - a.x)*9, (b.y - a.y)*9); });
 ok(s.done && s.circle.survived >= 2 && s.circle.survived < X.CIRCLE.rounds, 'Circle runner: without Sprint the late rounds are lost');
 P.leave();
 begin('circle', 'passer');
@@ -127,6 +133,7 @@ P.leave();
 const tackleBot = o => { let at = null; return st => {
   const Tk = st.tackle, me = Tk.me;
   if (Tk.stage === 'approach') { const dy = Tk.lane + (o.off || 0) - me.y; stick(0, Math.abs(dy) > 0.15 ? Math.max(-1, Math.min(1, dy*0.7)) : 0); hold(false); at = null; return; }
+  if (Tk.stage === 'head') { stick(o.head === 'wrong' ? Tk.drift : o.head === 'none' ? 0 : Tk.safe, 0); hold(false); return; }
   if (Tk.stage === 'side') { const e = o.h - Tk.h; stick(0, Math.abs(e) > 0.03 ? -Math.sign(e) : 0); if (at == null) at = o.d; hold(o.tap ? Tk.d > at && Tk.d < at + 0.1 : Tk.d > at); return; }
   stick(0, 0);
   if (Tk.stage === 'squeeze' && o.squeeze) { if (Math.round(Tk.t*60) % 7 === 0) { hold(false); inp.aPressed = true; } } else hold(false);
@@ -136,7 +143,7 @@ s = P.state();
 ok(s.space && T.M.players.length === 2 && s.tackle.ru.team === 1 && T.M.ball.carrier === s.tackle.ru && Math.abs(s.tackle.lane - X.TACKLE.at[1]) >= X.TACKLE.lane[0], 'Tackling: one runner, coming down a lane off yours');
 s = play(tackleBot({ h:0.4, d:1.8, squeeze:true }));
 ok(s.done && s.tackle.made === X.TACKLE.reps && s.stars === 3 && s.tackle.results.every(Boolean), 'Tackling: set, thighs, on the gold with power, then squeeze: five good reps, three stars');
-ok(Object.values(s.tackle.marks).every(m => m.ok) && s.tackle.marks.height.word === 'Height', 'Tackling: every element is named right');
+ok(Object.values(s.tackle.marks).every(m => m.ok) && s.tackle.marks.height.word === 'Height' && s.tackle.marks.head.word === 'Head', 'Tackling: every element is named right');
 P.leave();
 const firstFail = o => { begin('tackle'); const bot = tackleBot(o); let n = 0; while (P.state().tackle.stage !== 'show' && n < 1200) { bot(P.state()); T.update(T.STEP); n++; } letGo(); const st = P.state(); const r = { marks:st.tackle.marks, good:st.tackle.results[0], made:st.tackle.made }; P.leave(); return r; };
 let r = firstFail({ h:0.75, d:1.8, squeeze:true });
@@ -149,6 +156,10 @@ r = firstFail({ h:0.4, d:1.8, tap:true, squeeze:true });
 ok(r.good === false && r.marks.power.word === 'Weak', 'Tackling: a quick tap has no power');
 r = firstFail({ h:0.4, d:1.8, squeeze:false });
 ok(r.good === false && r.marks.squeeze.word === 'Loose', 'Tackling: no squeeze and he breaks free');
+r = firstFail({ h:0.4, d:1.8, squeeze:true, head:'wrong' });
+ok(r.good === false && r.marks.head.word === 'Wrong Side' && r.marks.height.ok === true && r.made === 0, 'Tackling: the head on the wrong side is a fail even with the rest right (the second safety point)');
+r = firstFail({ h:0.4, d:1.8, squeeze:true, head:'none' });
+ok(r.good === false && r.marks.head.word === 'No Side', 'Tackling: no head side chosen in time is a fail too');
 r = firstFail({ h:0.4, d:1.8, squeeze:true, off:3 });
 ok(r.good === false && r.marks.pos.word === 'Off Line' && r.marks.height.ok === null, 'Tackling: out of his path, Position fails and nothing else is reached');
 { // a young child on a keyboard, a D-pad or a stick pushed all the way: steers the bracket by its colour, seeing it 0.4 s late, lets go mid-gold and taps Squeeze
@@ -157,6 +168,7 @@ ok(r.good === false && r.marks.pos.word === 'Off Line' && r.marks.height.ok === 
   s = play(st => {
     const Tk = st.tackle, me = Tk.me;
     if (Tk.stage === 'approach') { seen = []; const dy = Tk.lane - me.y; stick(0, Math.abs(dy) > 0.15 ? Math.max(-1, Math.min(1, dy*0.7)) : 0); hold(false); return; }
+    if (Tk.stage === 'head') { seen.push(0); stick(seen.length > lag ? Tk.safe : 0, 0); hold(false); return; }
     if (Tk.stage === 'side') {
       seen.push(Tk.h); const h = seen[Math.max(0, seen.length - 1 - lag)];
       stick(0, h > K.height[1] ? 1 : h < K.height[0] ? -1 : 0); hold(Tk.d > (K.zone[0] + K.zone[1])/2);
@@ -192,8 +204,13 @@ P.leave();
 // ---- Driving
 begin('scrum');
 ok(T.M.phase === 'cut' && T.M.cut.kind === 'scrum' && T.M.cut.feed === 0, 'Driving: our own scrum close-up');
-s = play(() => H.scrumBot(0, 7, 1));
-ok(s.done && s.drive.won === 3 && s.stars === 3 && X.result(s).skill === 'power', 'Driving: a Good Hit and fast taps win all three drives');
+const inGreen = () => { const c = T.M.cut; stick(0, 0); if (c && c.kind === 'scrum' && c.shape != null) { const B = X.DRIVE.shape.band; stick(0, c.shape > B[1] - 0.06 ? 1 : c.shape < B[0] + 0.06 ? -1 : 0); } };
+s = play(() => { H.scrumBot(0, 7, 1); inGreen(); });
+ok(s.done && s.drive.won === 3 && s.stars === 3 && X.result(s).skill === 'power', 'Driving: low in the green, a push on Set and fast taps win all three drives');
+P.leave();
+begin('scrum');
+s = play(() => { H.scrumBot(0, 7, 1); stick(0, 0); });
+ok(s.done && s.drive.won <= 1 && s.stars <= 1, 'Driving: the same taps and hit, standing up out of the green, win no more than one (' + s.drive.won + ')');
 P.leave();
 begin('scrum');
 s = play(() => {});
@@ -229,19 +246,22 @@ for (const d of X.DRILLS) {
   letGo(); P.leave();
 }
 begin('tackle'); { const Tk = P.state().tackle; let seen = new Set(), threw = null, alone = null;
-  try { for (let i = 0; i < 900; i++) { if (Tk.stage === 'approach') { Tk.me.y = Tk.lane; Tk.me.vx = Tk.me.vy = 0; } if (Tk.stage === 'side') Tk.h = 0.4; hold(Tk.stage === 'side' && Tk.d > 1.8); if (Tk.stage === 'squeeze') inp.aPressed = true; T.update(T.STEP); seen.add(Tk.stage); D.render(1/60); D.updateHud(); if (Tk.stage === 'side' && alone == null) alone = $('la').textContent === 'Tackle' && $('btnB').hidden && $('btnC').hidden; } } catch (e) { threw = e; }
+  try { for (let i = 0; i < 900; i++) { if (Tk.stage === 'approach') { Tk.me.y = Tk.lane; Tk.me.vx = Tk.me.vy = 0; } stick(Tk.stage === 'head' ? Tk.safe : 0, 0); if (Tk.stage === 'side') Tk.h = 0.4; hold(Tk.stage === 'side' && Tk.d > 1.8); if (Tk.stage === 'squeeze') inp.aPressed = true; T.update(T.STEP); seen.add(Tk.stage); D.render(1/60); D.updateHud(); if (Tk.stage === 'side' && alone == null) alone = $('la').textContent === 'Tackle' && $('btnB').hidden && $('btnC').hidden; } } catch (e) { threw = e; }
   ok(alone === true, 'Tackling: Tackle alone in the close-up');
-  ok(!threw && ['side', 'lunge', 'squeeze', 'down', 'show'].every(k => seen.has(k)), 'Tackling: the side-on close-up draws through every stage' + (threw ? ' (' + threw.message + ')' : '')); }
+  ok(!threw && ['head', 'side', 'lunge', 'squeeze', 'down', 'show'].every(k => seen.has(k)), 'Tackling: the front-on look and the side-on close-up draw through every stage' + (threw ? ' (' + threw.message + ')' : '')); }
 letGo(); P.leave();
 for (const [W, Ht] of [[844, 390], [667, 375]]) {           // where a thumb rests on the touch stick: the ring at stickRest, 62px round
   const rest = D.stickRest(W, Ht, { t:0, r:0, b:0, l:0 }), ring = { x0:rest.x - 62, y0:rest.y - 62, x1:rest.x + 62, y1:rest.y + 62 };
   const clear = b => b.x1 < ring.x0 - 4 || b.x0 > ring.x1 + 4 || b.y1 < ring.y0 - 4 || b.y0 > ring.y1 + 4;
   D.view(W, Ht); begin('cones');
-  let tf = [1, 0, 0, 1, 0, 0]; const strip = [];
-  globalThis.__ctxSpy = (k, a) => { if (k === 'setTransform') tf = a; if (k === 'fillRect' && a[0] === X.CONES.line - 0.5 && a[2] === 1) strip.push({ x0:tf[0]*a[0] + tf[4], y0:tf[3]*a[1] + tf[5], x1:tf[0]*(a[0] + 1) + tf[4], y1:tf[3]*(a[1] + 1) + tf[5] }); };
-  D.render(1/60); globalThis.__ctxSpy = null;
-  ok(strip.length === 10 && strip.every(clear), 'Cones: the chequered finish is drawn clear of the resting touch stick at ' + W + 'x' + Ht);
+  // the camera runs with you: the finish is on screen when you reach it, and the thumb has to be clear of it then
+  { const Q = P.state().cones, K = X.CONES, y = K.gates[K.gates.length - 1][1]; Q.me.x = K.line + 0.5; Q.me.y = y; for (let i = 0; i < 400; i++) D.render(1/60);
+    const cam = T.behind.BV.cam, strip = []; for (let i = 0; i < 10; i++) { const a = D.pr(cam, K.line - 0.5, y - 5 + i, 0), b = D.pr(cam, K.line + 0.5, y - 4 + i, 0); strip.push({ x0:Math.min(a.sx, b.sx), y0:Math.min(a.sy, b.sy), x1:Math.max(a.sx, b.sx), y1:Math.max(a.sy, b.sy) }); }
+    ok(strip.every(clear), 'Cones: the chequered finish is clear of the resting touch stick at ' + W + 'x' + Ht + ' as you reach it'); }
   P.leave();
+  { const asBox = b => ({ x0:b.x, y0:b.y, x1:b.x + b.w, y1:b.y + b.h }), gauge = X.driveGaugeBox(W, Ht), chest = X.circleChestBox(W, Ht);
+    ok(clear(asBox(gauge)), 'Driving: the body shape gauge sits clear of the resting touch stick at ' + W + 'x' + Ht);
+    ok(clear(asBox(chest)), 'Circle: the catcher in the corner sits clear of the resting touch stick at ' + W + 'x' + Ht); }
   const m = X.tackleMeterBox(W, Ht), box = { x0:m.x - 2, y0:m.y - 4, x1:m.x + m.w + 2, y1:m.y + m.h + 4 }, chips = Math.max(96, Ht*0.27) + 28, head = Ht*0.8 - 0.4*Ht*0.96;
   ok(clear(box) && box.y0 > chips && box.y1 < head, 'Tackling: the power meter sits between the chips and his head, clear of the resting touch stick at ' + W + 'x' + Ht);
   begin('tackle'); { const Tk = P.state().tackle; Tk.stage = 'side'; Tk.t = 0; Tk.d = X.TACKLE.side; }
@@ -262,16 +282,16 @@ const onDone = res => calls.push({ res, settings:JSON.stringify(D.settings()), p
 P.start('egg', { onDone });
 ok($('pr-select').textContent === 'Back to Career' && $('pr-row').classList.contains('one'), 'onDone: the ready card leaves with Back to Career when the caller names nothing else');
 $('pr-retry').click();
-s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > 0.5 && b.z < 2) { E.me.x = b.x; E.me.y = b.y; } });
+s = play(meeter);
 ok(s.done && $('pr-next').hidden && $('pr-select').textContent === 'Back to Career' && calls.length === 0, 'onDone: the result card offers Try Again and Back to Career, no Next Drill');
 $('pr-retry').click(); ok(P.state() && P.state().ready && P.state().opts && P.state().opts.onDone === onDone, 'onDone: Try Again keeps the caller');
 $('pr-retry').click();
-s = play(st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > 0.5 && b.z < 2) { E.me.x = b.x; E.me.y = b.y; } });
+s = play(meeter);
 const shown = s.stars;
 $('pr-select').click(); $('pr-select').click();
 ok(calls.length === 1 && calls[0].res.id === 'egg' && calls[0].res.stars === shown && Number.isInteger(calls[0].res.stars) && calls[0].res.success === true && calls[0].res.skill === 'handling' && !('quit' in calls[0].res), 'onDone fires once, with the stars shown');
 ok(calls[0].settings === originalSettings && calls[0].practice === null && calls[0].home, 'onDone runs after the settings are restored, with the home screen up');
-const catcher = st => { const E = st.egg, b = T.M.ball; if (E.stage === 'fly' && b.z > 0.5 && b.z < 2) { E.me.x = b.x; E.me.y = b.y; } };
+const catcher = meeter;
 calls = [];
 P.start('egg', { onDone, leaveLabel:'Back to the Club' });
 ok($('pr-select').textContent === 'Back to the Club', 'onDone: a caller may name its own way back');
@@ -298,8 +318,8 @@ ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.stars === 0 
 calls = [];
 P.start('tackle', { onDone }); D.keyDown({ code:'Escape', repeat:false, preventDefault() {} });
 ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.skill === 'power' && !X.state(), 'onDone: Escape on the ready card hands back once');
-P.start('cones'); ok(!P.state().opts && $('pr-select').textContent === 'Back to Training', 'without opts the card goes Back to Training');
-$('pr-select').click(); ok(!X.state() && !$('s-practice').hidden && calls.length === 1, 'Back to Training returns to the drill picker and calls nobody');
+P.start('cones'); ok(!P.state().opts && $('pr-select').textContent === 'Back to Games', 'without opts the card goes Back to Games');
+$('pr-select').click(); ok(!X.state() && !$('s-practice').hidden && calls.length === 1, 'Back to Games returns to the drill picker and calls nobody');
 
 // ---- isolation
 ok(writes === 0, 'no drill writes the browser save');
@@ -318,7 +338,7 @@ ok(JSON.stringify(T.teams.champ()) === originalChamp && JSON.stringify(T.teams.c
 }
 
 // ---- matches, AI v AI and the demo never reach the drills
-ok(/if \(!\(practice && practice\.space\)\) matchUpdate\(dt\);/.test(src) && /if \(practice\) drillDrawWorld\(\);/.test(src) && /if \(practice\) drillDrawScreen\(\);/.test(src) && /if \(practice && practice\.cam\)/.test(src), 'the engine hooks are gated on practice');
+ok(/if \(!\(practice && practice\.space\)\) matchUpdate\(dt\);/.test(src) && /if \(drill\) drillDrawScreen\(\);/.test(src) && /const drill = !!practice/.test(src) && /if \(practice && practice\.cam\)/.test(src), 'the engine hooks are gated on practice');
 ok(!/cone/i.test(src.slice(src.indexOf('function collide()'), src.indexOf('function collide()') + 2500)), 'cones are not in the match collision');
 T.newMatch(0, 1, { halfLen:240, diff:1, auto:true, headless:true });
 for (let i = 0; i < 600; i++) T.update(T.STEP);

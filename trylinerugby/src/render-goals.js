@@ -216,19 +216,22 @@ function drawKick(c, g0) {
   const ds = tf + k.hitStop;                                                   // the shake is deterministic: no Math.random
   if (!RM && ds >= 0 && ds < 0.12) { const a = 4*Math.exp(-ds/0.04); ctx.translate(a*Math.sin(97*t), a*Math.cos(83*t)); }
   ctx.translate(gx, gy + tilt); ctx.scale(Z, Z); ctx.translate(-gx, -gy);
-  drawStands(g0, hz, -tilt - 8);
-  ctx.fillStyle = C.surround; ctx.fillRect(0, hz, W, H - hz + tilt + 8);
-  for (let i = 0; i < 12; i++) groundPoly(cam, BANDS[i], 0, i % 2 ? C.grassA : C.grassB);
-  ctx.globalAlpha = a0*0.14;
-  groundPoly(cam, BANDS[11], 0, M.kit[1 - g.team].fill);
-  groundPoly(cam, BANDS[0], 0, M.kit[g.team].fill);
-  ctx.globalAlpha = a0;
-  ctx.strokeStyle = C.line;
-  for (const x of [10, 110, 32, 88, 60]) groundLine(cam, x, 0, x, 70, false);
-  for (const x of [50, 70, 15, 105]) groundLine(cam, x, 0, x, 70, true);
-  for (const y of [0, 70]) groundLine(cam, 0, y, 120, y, false);
-  for (const x of [0, 120]) groundLine(cam, x, 0, x, 70, false);
-  groundLine(cam, g.x - 0.25, g.y, g.x + 0.25, g.y, false); groundLine(cam, g.x, g.y - 0.25, g.x, g.y + 0.25, false);   // the kick mark
+  if (practice) dvKickField(cam, g, hz, W, H, tilt);
+  else {
+    drawStands(g0, hz, -tilt - 8);
+    ctx.fillStyle = C.surround; ctx.fillRect(0, hz, W, H - hz + tilt + 8);
+    for (let i = 0; i < 12; i++) groundPoly(cam, BANDS[i], 0, i % 2 ? C.grassA : C.grassB);
+    ctx.globalAlpha = a0*0.14;
+    groundPoly(cam, BANDS[11], 0, M.kit[1 - g.team].fill);
+    groundPoly(cam, BANDS[0], 0, M.kit[g.team].fill);
+    ctx.globalAlpha = a0;
+    ctx.strokeStyle = C.line;
+    for (const x of [10, 110, 32, 88, 60]) groundLine(cam, x, 0, x, 70, false);
+    for (const x of [50, 70, 15, 105]) groundLine(cam, x, 0, x, 70, true);
+    for (const y of [0, 70]) groundLine(cam, 0, y, 120, y, false);
+    for (const x of [0, 120]) groundLine(cam, x, 0, x, 70, false);
+    groundLine(cam, g.x - 0.25, g.y, g.x + 0.25, g.y, false); groundLine(cam, g.x, g.y - 0.25, g.x, g.y + 0.25, false);   // the kick mark
+  }
   // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's
   const struck = tf >= -k.hitStop;
   let arrowA = g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6;
@@ -241,7 +244,7 @@ function drawKick(c, g0) {
     drawArrow(cam, g, aimShown, arrowA, g.watch);
   }
   // far figures and the posts, then the chargers closing from the posts' side
-  drawTouchJudges(cam, g, g.judged && g.ok);
+  if (!practice) drawTouchJudges(cam, g, g.judged && g.ok);
   drawPosts(cam, g, tf);
   drawPennants(cam, g, t);
   // the kicker, the ball and the chargers in one list, far to near. Until the strike the ball is in his hands or at his feet, so it goes over him
@@ -249,6 +252,7 @@ function drawKick(c, g0) {
   { const s = seatOfTeam(g.team), cw = Math.min(340, W/2 - 116), top = 0.07*H + 56, bot = top + 112, l = s === 1 ? W - 62 - cw : 12, r = l + cw;   // a charger drawn under the kick hint card dims it (the card is 12..12+cw by 0.07H+56..+112 at the left, mirrored for Player 2)
     g.hcOver = s != null && scene.some(it => it.kind === 'charger' && it.sx + 0.45*it.k > l && it.sx - 0.45*it.k < r && it.sy > top && it.sy - 1.85*it.k < bot); }
   const ball = () => {
+    if (practice) dvTee(cam, g);                               // the tee, on the mark
     if (qb.z < CAM.near) return;
     const pb = proj(cam, qb), sh = pr(cam, P.bx, P.by, 0);
     if (tf > 0 && !RM) {                                                       // a chalk trail over the last 0.4s, sampled from the drawn ball's own path
@@ -259,7 +263,7 @@ function drawKick(c, g0) {
   };
   for (const it of scene) {
     if (it.kind === 'ball') ball();
-    else if (it.kind === 'kicker') { figFB(it.sx, it.sy, it.k, g.team, { back:true, num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' }); if (M.two && !g.judged) cutSeatTag(seatOfTeam(g.team), it.sx, it.sy - 2.25*it.k, 0.4*it.k); }   // the seat tag over the kicker
+    else if (it.kind === 'kicker') { if (!(practice && dvKicker(it, g, P, tf))) figFB(it.sx, it.sy, it.k, g.team, { back:true, num:g.kicker ? g.kicker.n : 10, stride:P.stride, kickLeg:P.leg, arms:P.held ? 'carry' : 'run' }); if (M.two && !g.judged) cutSeatTag(seatOfTeam(g.team), it.sx, it.sy - 2.25*it.k, 0.4*it.k); }   // the seat tag over the kicker
     else { ctx.globalAlpha = a0*it.alpha; figFB(it.sx, it.sy, it.k, 1 - g.team, it.o); ctx.globalAlpha = a0; }
   }
   ctx.restore();
@@ -379,6 +383,7 @@ function figFB(sx, sy, k, team, o) {
   ctx.restore();
 }
 function cutTitle(c) {
+  if (practice) return '';                                     // the Training Ground names its own moments
   if (c.duel) return DUEL[c.kind].name;
   if (c.kind === 'goal') return (c.g.kind === 'conversion' ? 'Conversion' : c.g.kind === 'penalty' ? 'Penalty Goal' : 'Drop Goal') + ' · ' + Math.round(c.g.dist) + 'm';
   if (c.kind === 'scrum') return 'Scrum · ' + M.nat[c.feed].id + ' Ball';

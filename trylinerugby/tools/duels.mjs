@@ -98,7 +98,7 @@ for (const dir of [-1, 1]) {
 {
   fresh(); T.debug.stage('past');
   const inp = T.input;
-  inp.gest = { who:M().ball.carrier, n:M().stepN, L:[0, 0.2, 0.4], armed:true, run:0, lastRun:0, dropT:-9, pull:null, keyed:false, kb:false, v:null, t:1, tagAt:0, tagged:null };
+  inp.gest = { who:M().ball.carrier, n:M().stepN, L:[0, 0.2, 0.4], gap:[1/60, 1/60, 1/60], armed:true, run:0, lastRun:0, dropT:-9, pull:null, keyed:false, kb:false, v:null, t:1, tagAt:0, tagged:null };
   T.update(STEP);
   ok(M().phase === 'cut' && M().cut.kind === 'past', 'a Get Past cuts in with a half-made flick in the slot\'s history');
   const c = M().cut, s0 = M().stats.steps || 0; play(c, c.open, c.centre);
@@ -182,7 +182,7 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
 // keeps its own put-in and steals about a third of theirs on Normal; SCRUM_DOM is the one penalty line. Farnham v Haslemere (equal
 // packs, power 3), taps jittered 18% as a thumb's are, the stick at rest unless the test says otherwise
 {
-  const SD = T.debug.SCRUM_DOM ?? 2.4, FAR = T.teams.CLUBS[0], HAS = T.teams.CLUBS[1];   // (a build without SCRUM_DOM is the old 2.0 line: the staged asserts below then fail, as they should)
+  const SD = T.debug.SCRUM_DOM ?? 2.4, FAR = { ...T.teams.CLUBS[0], pace:4, power:2, handling:3, kicking:2, stamina:2 }, HAS = { ...T.teams.CLUBS[1], pace:2, power:2, handling:2, kicking:1, stamina:1 };   // two packs level in Power, written out, because these rates are the scrum's and not a league's: the league bands put these two clubs a point of Power apart, which took the steal to 46%;   // (a build without SCRUM_DOM is the old 2.0 line: the staged asserts below then fail, as they should)
   const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
   let made = 0, away = false;
   const freshFH = (diff, aw) => { away = !!aw; T.newMatch(away ? HAS : FAR, away ? FAR : HAS, { halfLen:240, diff, headless:false, duels:'off', humans:away ? [false, true] : [true, false] }); for (let i = 0; i < 120; i++) T.update(STEP); made = 0; };

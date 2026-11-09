@@ -48,12 +48,13 @@ function updateBallAir(dt) {
   if (u >= 1) {
     b.state = 'loose'; b.f = null;
     b.vx = (f.x1-f.x0)/f.T*0.32; b.vy = (f.y1-f.y0)/f.T*0.32; b.vz = 3.2; b.z = 0.01;
+    sfx('bounce');
   }
 }
 function resolvePass() {
   const b = M.ball, f = b.f, tgt = f.target;
   if (f.sure && tgt && tgt.down <= 0 && hyp(tgt.x-b.x, tgt.y-b.y) < 3.5) {
-    setCarrier(tgt);
+    setCarrier(tgt); sfx('catch');
     if (f.boost) { tgt.fx = dirOf(tgt.team); tgt.fy = 0; setBoost(tgt, ...f.boost); }   // the burst goes upfield, not along his catching angle
     return;
   }
@@ -62,7 +63,7 @@ function resolvePass() {
   if (!f.sure) for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
   if (best) { catchBall(best, best.team === f.team ? 'pass' : 'intercept'); return; }
   b.state = 'loose'; b.vx = (f.x1-f.x0)/f.T*0.25; b.vy = (f.y1-f.y0)/f.T*0.25; b.vz = 1.5; b.z = 0.9; b.f = null;
-  say('Dropped', 'small');
+  say('Dropped', 'small'); sfx('fumble');
 }
 function updateLoose(dt) {
   const b = M.ball;
@@ -71,7 +72,7 @@ function updateLoose(dt) {
   b.vz -= 9.8*dt; b.z += b.vz*dt;
   if (b.z <= 0) {
     b.z = 0;
-    if (Math.abs(b.vz) > 1.2) { b.vz = -b.vz*0.45; b.vx += (rnd()-0.5)*2.5; b.vy += (rnd()-0.5)*2.5; } else b.vz = 0;
+    if (Math.abs(b.vz) > 1.2) { sfx('bounce', Math.min(1, Math.abs(b.vz)/5)); b.vz = -b.vz*0.45; b.vx += (rnd()-0.5)*2.5; b.vy += (rnd()-0.5)*2.5; } else b.vz = 0;
   }
   if (b.y < 0 || b.y > 70) {
     const ki = b.kickInfo;

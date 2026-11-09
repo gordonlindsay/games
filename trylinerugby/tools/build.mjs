@@ -29,7 +29,9 @@ export function assembleBundle() {
   return { bundle, files };
 }
 
-export const shellAssets = ['index.html', 'game.js', 'styles.css', 'practice.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png'];
+// The player art precaches with the shell, whatever hashed atlases tools/blender/regenerate.mjs last packed. No art in the tree is fine: the game draws its men in code
+const playerArt = () => { const dir = path.join(gameDirectory, 'assets/players'); return fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /^players[.-]/.test(f)).sort().map(f => 'assets/players/' + f) : []; };
+export const shellAssets = ['index.html', 'game.js', 'styles.css', 'practice.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', ...playerArt()];
 export function assembleWorker(bundle = assembleBundle().bundle) {
   const template = fs.readFileSync(path.join(gameDirectory, 'src/service-worker.js'), 'utf8');
   const hash = createHash('sha256').update(template);

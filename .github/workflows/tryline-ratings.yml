@@ -1,0 +1,27 @@
+# Try Line Rugby: rebuild trylinerugby/ratings.json. Run by hand only. A schedule needs the owner's approval on main:
+# the feed is unofficial and no permission to use it has been seen (see trylinerugby/README.md).
+name: Try Line ratings
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trylinerugby
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/ratings/update.mjs
+      - name: Commit the new file, if it changed
+        run: |
+          git add ratings.json
+          git diff --cached --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Try Line Rugby: refresh ratings.json"
+          git push

@@ -34,7 +34,13 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   seg.children[0].click();
   ok(s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === true, 'pressing Kids on the home row sets it and saves');
   seg.children[1].click();
-  ok(!s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === false, 'pressing Easy takes it off and saves');
+  ok(K.gate() && s.kids && !$('m-gate').hidden, 'pressing Easy asks the grown-up check first, and the level has not moved');
+  K.close(false);
+  ok(!K.gate() && s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === true, 'a cancelled check leaves it on Kids, in the save too');
+  seg.children[1].click(); { const g = K.gate(); for (const d of g.answer) K.type(d); }
+  ok(!K.gate() && !s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === false, 'a right answer takes it off and saves');
+  seg.children[0].click(); ok(!K.gate() && s.kids, 'going on to Kids needs no check'); K.segSet(1);
+  ok(/if \(key === 'diff' && kidsLevel\(\) && i !== 0\) \{ parentGate\(/.test(fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8')), 'every button but Kids goes through the check, and only while on Kids');
 }
 
 // 2. the save: a round trip, an old save, a partial and a bad one
@@ -290,7 +296,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   p = stage(true); M().side[0].ctrlT = 0; T.update(STEP);
   ok(T.sides.ctrlOf(0) === p[3], `the ring stays put for its first ${KIDS.switchHold}s on a man`);
   {                                                        // your ringed man commits a tackle with a teammate as near the carrier: the ring stays on him until it ends, so a dominant one is his Big Hit
-    let made = 0, left = 0, doms = 0, big = 0;
+    let made = 0, left = 0, doms = 0, big = 0, praised = 0;
     for (let i = 0; i < 200 && doms < 3; i++) {
       const p = stage(true), c = p[10], q = p[3];
       q.x = 59; q.y = 35; p[2].x = 64; p[2].y = 38;
@@ -298,10 +304,10 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
       const k = C.commitTackle(q, c, 'contact'); if (!k || k.tier === 'broken') continue;
       made++; const b0 = M().stats['tag_Big Hit'] || 0;
       for (let n = 0; n < 120 && M().contact; n++) { T.update(STEP); if (M().contact && T.sides.ctrlOf(0) !== q) { left++; break; } }
-      if (k.tier === 'dom') { doms++; if ((M().stats['tag_Big Hit'] || 0) > b0) big++; }
+      if (k.tier === 'dom') { doms++; if ((M().stats['tag_Stopped'] || 0) > b0) big++; if ((M().stats['tag_Big Hit'] || 0) || M().stop > 0) praised++; }
     }
     ok(made > 0 && left === 0, `Kids: the ring stays on your man while he is bound in his tackle (it left him in ${left} of ${made})`);
-    ok(doms > 0 && big === doms, `so your dominant tackle is still your Big Hit (${big} of ${doms})`);
+    ok(doms > 0 && big === doms && !praised, `so your dominant tackle reads Stopped, with no Big Hit and no hit-stop (${big} of ${doms}, ${praised} praised)`);
   }
   // the stick let go: your ringed man closes on the carrier
   const chase = (kids, jx, jy) => {                        // how far the man in the ring runs in a third of a second, and how much of it is toward the carrier
@@ -318,6 +324,19 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(cS.moved > 0.5 && cS.toward < 0.5*cS.moved, `Kids with the stick held: the stick drives him (${cS.moved.toFixed(2)}m, ${cS.toward.toFixed(2)}m of it toward the carrier)`);
   T.newMatch(0, 3, { halfLen:60, diff:0, auto:true, headless:true, kids:true });
   ok(!K.kidsChase(M().players[3], inp, STEP), 'AI v AI has no chase');
+  { // the promised chase holds through a CPU pass: the ringed man with the stick let go runs on to where it will land, and does not stop dead for the flight
+    play(true); const m = T.M; m.phase = 'play'; m.set = null; m.cut = null; quiet();
+    const cpu = m.players.filter(p => p.team === 1), me = m.players.find(p => p.team === 0);
+    const from = cpu[0], to = cpu[1]; Object.assign(from, { x:60, y:35, vx:0, vy:0, hold:2 }); Object.assign(to, { x:66, y:26, vx:0, vy:0, down:0, bind:null }); Object.assign(me, { x:40, y:30, vx:6, vy:0, down:0, bind:null, offside:0 });
+    T.sides.setCtrl(0, me); T.sides.setCarrier ? T.sides.setCarrier(from) : (m.ball.state = 'held', m.ball.carrier = from); m.ball.state = 'held'; m.ball.carrier = from;
+    C.doPass(from, to, {}); const T0 = m.ball.f.T; let least = 9, n = 0;
+    while (m.ball.state === 'air' && n++ < 400) { quiet(); T.update(STEP); least = Math.min(least, Math.hypot(me.vx, me.vy)); }
+    ok(n > 10 && T0 > 0.3 && least > 3, 'Kids: the ringed man chases through a CPU pass with the stick let go (slowest ' + least.toFixed(2) + ' m/s over a ' + T0.toFixed(2) + 's flight)');
+    play(true); const m2 = T.M; m2.phase = 'play'; m2.set = null; m2.cut = null; quiet();
+    const own = m2.players.filter(p => p.team === 0), a = own[0], c = own[1], w = own[2]; Object.assign(a, { x:60, y:35, hold:2 }); Object.assign(c, { x:55, y:40 }); Object.assign(w, { x:40, y:10, vx:0, vy:0 });
+    m2.ball.state = 'held'; m2.ball.carrier = a; C.doPass(a, c, {}); T.sides.setCtrl(0, w);
+    ok(!K.kidsChase(w, inp, STEP), 'and your own side\'s pass is not something to chase');
+  }
   D.setMode('menu');
 }
 

@@ -74,10 +74,10 @@ begin('words');
 {
   settingsOn();
   const want = {
-    past:['Get Past', 'To His Open Side', { touch:'x:Stick Flick on Gold', kb:'x:Stick Step on Gold', pad:'x:Stick Flick on Gold' }],
-    pass:['Key Pass', 'Dummy If He Drifts', { touch:'a:Pass|b:Dummy On Gold', kb:'a:Pass|b:Dummy On Gold', pad:'a:Pass|b:Dummy On Gold' }],
-    tackle:['Tackle', 'He May Step', { touch:'a:Tackle On Gold', kb:'a:Tackle On Gold', pad:'a:Tackle On Gold' }],
-    block:['Block', 'He May Dummy', { touch:'a:Block On Gold', kb:'a:Block On Gold', pad:'a:Block On Gold' }],
+    past:['Get Past', 'To Their Open Side', { touch:'x:Stick Flick on Gold', kb:'x:Stick Step on Gold', pad:'x:Stick Flick on Gold' }],
+    pass:['Key Pass', 'Dummy If They Drift', { touch:'a:Pass|b:Dummy On Gold', kb:'a:Pass|b:Dummy On Gold', pad:'a:Pass|b:Dummy On Gold' }],
+    tackle:['Tackle', 'They May Step', { touch:'a:Tackle On Gold', kb:'a:Tackle On Gold', pad:'a:Tackle On Gold' }],
+    block:['Block', 'They May Dummy', { touch:'a:Block On Gold', kb:'a:Block On Gold', pad:'a:Block On Gold' }],
   };
   const all = [];
   for (const kind of ['past', 'pass', 'tackle', 'block']) for (const dev of ['touch', 'kb', 'pad']) {
@@ -121,7 +121,7 @@ begin('words');
   // set pieces and kicks
   T.newMatch(0, 1, { halfLen:240, diff:1, headless:false, duels:'live' }); D.setMode('match'); D.setTwo(false); runUntil(() => M().phase === 'play', 400);
   T.scrum(0, 60, 35, ''); runUntil(() => M().phase === 'cut', 400);
-  let h = sync(); ok(h[0] && h[0].title === 'Scrum' && h[0].rule === 'Your Ball' && rowsOf(h[0]) === 'a:Push Hit on Set / a:Push Then Tap Fast', `our scrum: ${h[0] && h[0].rule} · ${h[0] && rowsOf(h[0])}`); if (h[0]) all.push(h[0]);
+  let h = sync(); ok(h[0] && h[0].title === 'Scrum' && h[0].rule === 'Your Ball' && rowsOf(h[0]) === 'a:Push Push on Set / a:Push Then Tap Fast', `our scrum: ${h[0] && h[0].rule} · ${h[0] && rowsOf(h[0])}`); if (h[0]) all.push(h[0]);
   runUntil(() => M().cut.result, 4000); h = sync(); ok(h[0] == null, 'and the card goes at the result');
   runUntil(() => M().phase === 'play', 4000);
   T.scrum(1, 60, 35, ''); runUntil(() => M().phase === 'cut', 400); h = sync(); ok(h[0] && h[0].rule === 'Steal Their Ball', `their scrum: ${h[0] && h[0].rule}`); if (h[0]) all.push(h[0]);
@@ -151,7 +151,7 @@ begin('words');
   runUntil(() => M().phase !== 'cut', 900);
   // open play
   fresh();
-  const open = { long:['Long Pass', 'Skips a Man', 'a:Pass Hold It'], sprint:['Sprint', '', 'c:Sprint Hold It'], step:['Side Step', 'Near a Tackler', 'v:Stick Flick Across'], dummy:['Dummy', 'Fakes the Pass', 'back:Stick Pull Back, Push On'], offload:['Offload', 'As You’re Tackled', 'a:Offload Tap It'], drop:['Drop Goal', 'In Range', 'b:Drop Goal Hold It'] };
+  const open = { long:['Long Pass', 'Skips a Player', 'a:Pass Hold It'], sprint:['Sprint', '', 'c:Sprint Hold It'], step:['Side Step', 'Near a Tackler', 'v:Stick Flick Across'], dummy:['Dummy', 'Fakes the Pass', 'back:Stick Pull Back, Push On'], offload:['Offload', 'As You’re Tackled', 'a:Offload Tap It'], drop:['Drop Goal', 'In Range', 'b:Drop Goal Hold It'] };
   for (const [id, [title, rule, rows]] of Object.entries(open)) { D.hintOpen()[0].cur = id; const hh = D.hintFor(0); ok(hh && hh.title === title && hh.rule === rule && rowsOf(hh) === rows, `${id}: ${hh && hh.title} · ${hh && hh.rule} · ${hh && rowsOf(hh)}`); if (hh) all.push(hh); }
   D.setDev('kb'); D.hintOpen()[0].cur = 'step'; ok(rowsOf(D.hintFor(0)) === 'v:Stick Tap Across', 'Side Step on keys: Tap Across (W or S)'); D.hintOpen()[0].cur = 'dummy'; ok(rowsOf(D.hintFor(0)) === 'back:Stick Tap Back', 'Dummy on keys: Tap Back'); D.setDev('touch'); D.hintOpen()[0].cur = null;
   // Title Case, no arrows, the width budget (title at most 9 characters, rule 21, row text 18: the 217px limit at 667x375)
@@ -183,7 +183,7 @@ begin('visibility');
   runUntil(() => M().phase !== 'cut', 900);
   // two player: the chooser's card goes at his lock, the owner's stays
   fresh({ humans:[true, true], levels:[1, 1] }); D.stage('past', 0); T.update(STEP);
-  const c2 = M().cut; h = sync(); ok(h[0] && h[0].rule === 'To His Open Side' && h[1] && h[1].rule === 'Before Gold', 'Player 1 owns: his card and Player 2\'s chooser card');
+  const c2 = M().cut; h = sync(); ok(h[0] && h[0].rule === 'To Their Open Side' && h[1] && h[1].rule === 'Before Gold', 'Player 1 owns: his card and Player 2\'s chooser card');
   runUntil(() => c2.locked, 600); h = sync(); ok(c2.locked && h[0] && h[1] == null, 'at the lock the chooser\'s card goes and the owner\'s stays');
   runUntil(() => M().phase !== 'cut', 900); D.setTwo(false);
   // the match's end and the demo: no cards
@@ -199,7 +199,7 @@ begin('clearance');
     D.view(W, H);
     const cardR = 12 + Math.min(340, W/2 - 116), cb = 85;
     let duels = 0, over = 0, ring = 0, minGap = 1e9;
-    for (let m = 0; m < 4; m++) {
+    for (let m = 0; m < 5; m++) {                           // five matches: four gave 7 duels at the calmer pass, one short of the floor below, with nothing under the card
       reseed(900 + m); T.newMatch(m % 6, (m + 1 + (m % 5)) % 6, { halfLen:120, diff:m % 3, headless:true, duels:'live' });
       let steps = 0, seen = null;
       while (!M().over && steps < 200000) {
@@ -290,11 +290,11 @@ begin('cards');
   const home = html.slice(html.indexOf('id="s-home"'), html.indexOf('id="s-teams"'));
   const rows = [...home.matchAll(/<div class="set"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"[^>]*>/g)].map(m => m[1] + ':' + m[2]);
   ok(rows.join() === 'Difficulty:diff,Sound:sound,Match Help:hints', `the home's rows: ${rows.join(', ')}`);
-  ok(/<div class="set more" id="set-more" hidden><span class="lbl">Half Length<\/span><div class="seg" data-key="half">/.test(home) && /<button class="btn more-btn" id="b-more" aria-expanded="false">More Settings<\/button>/.test(home), 'Half Length waits behind More Settings, hidden until asked for');
+  ok(/<button class="btn ico-btn" id="b-half" aria-label="Half Length: 2 Min">/.test(home) && !/data-key="half"|id="b-more"|id="set-more"/.test(html), 'Half Length is the clock button on the home screen: the row and More Settings are gone (tools/camera.mjs presses it)');
   ok(T.debug.settings && JSON.parse(JSON.stringify(T.debug.settings())).half !== undefined, 'settings carry a half length');
   ok(/<div class="hc" id="hc0" hidden>/.test(html) && /<div class="hc s1" id="hc1" hidden>/.test(html) && /id="ht0"/.test(html) && /id="ht1"/.test(html), 'two cards, #hc0 and #hc1, each with its tick');
   ok(/id="pz-h0"/.test(html) && /id="pz-h1"/.test(html) && /Player 2 Hints/.test(html), 'the pause card carries the Hints rows');
-  ok(/<div id="pz-hints">\s*<div class="set"><span class="lbl" id="pz-hl0">Hints<\/span>[\s\S]*?<div class="set" id="pz-hrow1" hidden>[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn warn" id="pz-quit">/.test(html) && /#pz-hints\{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:14px 12px\}[^\n]*\n#pz-hints \.set\{display:contents\}\n#pz-hints \.set\[hidden\]\{display:none\}/.test(html), 'the two Hints rows share one grid (one label column), so both On | Off controls start on the same line');
+  ok(/<div id="pz-hints">\s*<div class="set"><span class="lbl" id="pz-hl0">Hints<\/span>[\s\S]*?<div class="set" id="pz-hrow1" hidden>[\s\S]*?<\/div>\s*<\/div>\s*(?:<p id="pz-cam-note" hidden>[^<]*<\/p>\s*)?<div class="pz-foot">[\s\S]*?<button class="btn warn" id="pz-quit">/.test(html) && /#pz-hints\{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:14px 12px\}[^\n]*\n#pz-hints \.set\{display:contents\}\n#pz-hints \.set\[hidden\]\{display:none\}/.test(html), 'the two Hints rows share one grid (one label column), so both On | Off controls start on the same line');
   ok(/\.hc\.s1\{[^}]*max-width:min\(340px,calc\(50% - 190px\)\)/.test(html) && /\.hc\.two\{max-width:min\(340px,calc\(50% - 140px\)\)\}/.test(html) && /\.hc\{[^}]*max-width:min\(340px,calc\(50% - 116px\)\)/.test(html) && /\.hc-row\{display:flex;flex-wrap:wrap;/.test(html) && !/\.hc-rule\{[^}]*white-space:nowrap/.test(html), 'in two player each card stops 12px short of the scorebug\'s seat tags (Player 1 from 12px in, Player 2 from 62px in, by the pause button), and a bound card wraps its rule and rows rather than spilling');
   fresh({ humans:[true, true], levels:[1, 1] }); D.stage('past', 1); T.update(STEP); sync(); ok($('hc0').classList.contains('two') && $('hc1').classList.contains('two'), 'the cards carry the two-player class in a two-player match'); runUntil(() => M().phase !== 'cut', 900);
   D.setTwo(false); fresh(); D.stage('past'); T.update(STEP); sync(); ok(!$('hc0').classList.contains('two'), 'and not in one player'); runUntil(() => M().phase !== 'cut', 900);

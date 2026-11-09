@@ -10,7 +10,7 @@ const X = T.teams, STEP = T.STEP;
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
 const all = X.ALL_TEAMS;
-const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
+const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA, ...X.ENGLAND, ...X.IRELAND];
 
 // 1. the lists
 {
@@ -19,18 +19,19 @@ const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
   ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL', 'the nations keep their order, which saved championships index into');
   ok(X.CLUBS[0].id === 'FAR', 'Farnham comes first in Local');
   ok(X.CLUBS.length >= 6, `Local has enough clubs for a championship (${X.CLUBS.length})`);
-  ok(X.POOLS.length === 5 && X.POOLS[0] === X.NATIONS && X.POOLS[1] === X.CLUBS, 'International and Local keep their places, which saved settings index into');
+  ok(X.POOLS.length === 10 && X.POOLS[7] === X.WALES_SCOTLAND_ITALY && X.POOLS[8] === X.ENGLAND_TWO && X.POOLS[9] === X.COUNTIES && X.POOLS[0] === X.NATIONS && X.POOLS[1] === X.CLUBS && X.POOLS[2] === X.FRANCE && X.POOLS[3] === X.AUSTRALIA && X.POOLS[4] === X.SOUTH_AFRICA && X.POOLS[5] === X.ENGLAND && X.POOLS[6] === X.IRELAND, 'the first five lists keep their places, which saved settings index into, and England and Ireland come after');
   ok(X.POOLS.every(p => p.length >= 6), `every list has enough sides for a championship (${X.POOLS.map(p => p.length).join(' ')})`);
   ok(X.FRANCE.length === 14, `France is the Top 14 (${X.FRANCE.length})`);
-  ok(all.length === X.POOLS.reduce((a, p) => a + p.length, 0), 'ALL_TEAMS is every list');
+  ok(all.length === X.POOLS.reduce((a, p) => a + p.length, 0) + X.MORE_NATIONS.length - 2 && X.POOLS.flat().every(t => all.includes(t)) && X.MORE_NATIONS.every(t => all.includes(t)), 'ALL_TEAMS is every list and every nation, with the two sides in two lists once each');
   ok(X.NATIONS.filter(t => t.home).map(t => t.id).join() === 'ENG,IRE,SCO,WAL', 'the home nations are England, Ireland, Scotland and Wales');
   const R = ['pace', 'power', 'handling', 'kicking', 'stamina'];
   ok(all.every(t => R.every(k => Number.isInteger(t[k]) && t[k] >= 1 && t[k] <= 5)), 'every rating is 1 to 5');
   const top = Math.max(...clubs.map(t => R.reduce((a, k) => a + t[k], 0)));
-  ok(top <= 5 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${5 + X.BUDGET})`);
+  const R5 = T.ratings, over = clubs.filter(t => X.rateOf(t) > R5.TEAM_LEVELS.find(l => l.id === 'champ').budget + 5).map(t => t.id);
+  ok(over.join() === 'BOR' && X.overallOf(clubs.find(t => t.id === 'BOR')) === 90 && top === 5 + R5.TEAM_LEVELS.find(l => l.id === 'euro').budget, `no club tops a team you can make at the National Champions level, but Bordeaux, the one named exception, which is the European Champions level (${over}, ${top})`);
   ok(all.every(t => /^#[0-9a-f]{6}$/i.test(t.kit) && /^#[0-9a-f]{6}$/i.test(t.trim)), 'every kit colour is a hex');
   ok(X.overallOf({ pace:1, power:1, handling:1, kicking:1, stamina:1 }) === 40 && X.overallOf({ pace:5, power:5, handling:5, kicking:5, stamina:5 }) === 99, 'the overall rating runs 40 to 99');
-  ok(X.overallOf(X.NATIONS[1]) === 93 && X.overallOf({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75, `France is 93 and a team you make tops out at 75 (${X.overallOf(X.NATIONS[1])})`);
+  ok(X.overallOf(X.NATIONS[1]) === 87 && X.overallOf({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75, `France is 87 and a team you make tops out at 75 (${X.overallOf(X.NATIONS[1])})`);
   ok(all.every(t => { const o = X.overallOf(t); return Number.isInteger(o) && o >= 40 && o <= 99; }), 'every built-in team has a whole-number overall');
 }
 
@@ -72,6 +73,23 @@ const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA];
   ok(t.kit === '#2050b0' && t.trim === '#f2efe6', 'bad colours fall back');
   const sum = t.pace + t.power + t.handling + t.kicking + t.stamina;
   ok(sum === 5 + X.BUDGET && [t.pace, t.power, t.handling, t.kicking, t.stamina].every(v => v >= 1 && v <= 5), `abilities are held to the budget (${sum})`);
+  // a team's level sets what it can spend; a team with no level, from an old save, keeps 12 and is cut as it always was
+  { const R5 = T.ratings, K = ['pace', 'power', 'handling', 'kicking', 'stamina'], total = v => K.reduce((a, k) => a + v[k], 0), full = { name:'Otters', pace:5, power:5, handling:5, kicking:5, stamina:5 };
+    ok(!('level' in t) && R5.teamBudget({}) === 12 && R5.teamBudget({ level:'nope' }) === 12 && R5.teamBudget(null) === 12, 'no level, or one the game does not know, is the old budget of 12');
+    ok(!('level' in X.cleanTeam({ ...full, level:'nope' }, 0)) && total(X.cleanTeam({ ...full, level:'nope' }, 0)) === 17, 'and a level the game does not know is dropped');
+    for (const l of R5.TEAM_LEVELS) {
+      const c = X.cleanTeam({ ...full, level:l.id }, 0), back = X.cleanTeam(JSON.parse(JSON.stringify(c)), 0);
+      ok(c.level === l.id && total(c) === 5 + l.budget && X.overallOf(c) === l.overall && JSON.stringify(back) === JSON.stringify(c), `${l.name}: held to ${l.budget} points, ${l.overall} overall, and reloading loses nothing (${K.map(k => c[k]).join('')})`);
+    }
+    const c3 = X.cleanTeam({ name:'Cubs', level:'c3', pace:3, power:1, handling:1, kicking:1, stamina:1 }, 0);
+    ok(c3.pace === 2 && total(c3) === 6, 'the cut falls from the last in line, as it always has');
+    const under = X.cleanTeam({ name:'Tenners', level:'top', pace:2, power:2, handling:2, kicking:2, stamina:2 }, 0);
+    ok(total(under) === 10 && X.overallOf(under) === 55 && under.level === 'top', 'a team under its level keeps what it has');
+    const old13 = X.cleanTeam({ key:'my1', name:'Old13', pace:5, power:5, handling:3, kicking:1, stamina:1 }, 0), old17 = X.cleanTeam({ key:'my2', name:'Old17', pace:5, power:5, handling:3, kicking:3, stamina:1 }, 0);
+    ok(K.map(k => old13[k]).join('') === '55311' && K.map(k => old17[k]).join('') === '55331' && !('level' in old13), 'old saves: teams at and under the old 12 points keep every ability, with no level');
+    const c0 = X.cleanSide({ ...under, league:'x' });
+    ok(!('level' in c0), 'a side in a saved championship or career holds no level: it keeps its abilities as they are');
+  }
   ok(t.id === 'QAV', `the short name is letters only, topped up from the name (${t.id})`);
   ok(X.codeFor('', 'Old Ruts') === 'OLD' && X.codeFor('ab', 'x') === 'ABX', 'short names fill to three letters');
   ok(X.cleanTeam({ name: '' }, 0).name === 'My Team', 'an empty name becomes My Team');
@@ -402,15 +420,15 @@ function settle(pick) {
   const near = (a, b) => Math.abs(a - b) < 1e-9;
   const speed = (pace, mul) => (7.6 + pace * 0.25) * mul;
   ok(E.games === 2 && E.gap === 3 && E.nudge.cpuSpeed === -0.03 && E.nudge.myTackle === 0.14, 'two Normal matches and a gap of three');
-  const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0];
-  ok(!X.outmatched(far, has) && !X.outmatched(far, eng) && X.outmatched(far, fra), 'France is a stronger side than Farnham; England and Haslemere are not');
-  ok(X.rateOf(fra) === 23 && X.rateOf(far) === 17 && X.rateOf(has) === 14, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
+  const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0], by0 = id => X.ALL_TEAMS.find(t => t.id === id);
+  ok(!X.outmatched(far, has) && !X.outmatched(far, by0('WIM')) && X.outmatched(far, X.NATIONS[3]) && X.outmatched(far, eng) && X.outmatched(far, fra), 'France, England and now Italy are stronger sides than Farnham; Wimbledon and Haslemere are not');
+  ok(X.rateOf(fra) === 21 && X.rateOf(far) === 11 && X.rateOf(has) === 6, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);
   // Stronger Side leaves Stamina out, so it marks the pairs it did before Stamina: within a pool, as the hub shows them
   const by = id => X.ALL_TEAMS.find(t => t.id === id), marks = (u, t) => X.outmatched(by(u), by(t));
-  ok(marks('HAS', 'FAR') && marks('IRO', 'HAR') && marks('ADL', 'SYD') && marks('ADL', 'CAN') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS'),
+  ok(marks('HAS', 'FAR') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'ENG') && marks('PGN', 'TLS') && marks('NEW', 'BAT') && marks('BMA', 'DUB'),
     'a side three points stronger in Pace, Power, Handling and Kicking is marked, whatever the Stamina');
-  ok(!marks('GDN', 'WIM') && !marks('MTB', 'CLE'), 'two points apart in the four and Stamina on top is not a Stronger Side');
-  ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 2, power: 2, handling: 2, kicking: 2 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...eng, stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');
+  ok(!marks('HAS', 'GUI') && !marks('PGN', 'PAU') && !marks('ALD', 'GUI'), 'two points apart in the four and Stamina on top is not a Stronger Side');
+  ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 1, power: 1, handling: 1, kicking: 1 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...eng, stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');
 
   T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, duels: 'off' });
   ok(!T.M.early && near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(has.pace, 1)), 'a headless match is not eased, and Normal pace is unchanged');
@@ -428,7 +446,7 @@ function settle(pick) {
   T.newMatch(far, fra, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });
   ok(T.M.early && document.getElementById('banner').innerHTML === '', 'an eased headless kick-off stays quiet, stronger side included');
   ok(near(C.maxSpeed(T.M.players.find(p => p.team === 1)), speed(fra.pace, 1 + E.nudge.cpuSpeed)) && near(C.maxSpeed(T.M.players.find(p => p.team === 0)), speed(far.pace, 1)), 'eased CPU pace, and yours is not');
-  T.newMatch(far, has, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });
+  T.newMatch({ ...far, pace: 3, power: 3 }, { ...has, pace: 3, power: 3 }, { halfLen: 30, diff: 1, headless: true, early: true, duels: 'off' });   // level in Power, so the tackle chances are the plain lever's
   const q = T.M.players[0], opp = T.M.players[7], mate = T.M.players[8];
   q.x = opp.x = mate.x = 40; q.y = opp.y = mate.y = 35; opp.side = q.side = -1;
   ok(near(C.tackleChance(q, opp, 'ai', false), 0.48 + E.nudge.myTackle), `teammates tackle more surely (${C.tackleChance(q, opp, 'ai', false)})`);
@@ -438,11 +456,11 @@ function settle(pick) {
   X.newChamp(far, five);
   const ch = X.champ();
   const opps = ch.fixtures.map(rd => { const p = rd.find(x => x[0] === ch.user || x[1] === ch.user); return p[0] === ch.user ? p[1] : p[0]; });
-  ok(opps.map(i => X.rateOf(ch.teams[i])).join() === '14,16,16,16,17', `weakest first (${opps.map(i => ch.teams[i].id).join(' ')})`);
+  ok(opps.map(i => X.rateOf(ch.teams[i])).join() === '6,6,8,8,14', `weakest first (${opps.map(i => ch.teams[i].id).join(' ')})`);
   ok(ch.teams.map(t => t.id).join() === 'FAR,HAR,HAS,GUI,ALD,WEY', 'the draw stays in the order it was given');
 
   const weak = X.cleanTeam({ name: 'Cubs', pace: 1, power: 1, handling: 1, kicking: 1 }, 0);
-  X.newChamp(weak, five);
+  X.newChamp(weak, ['FAR', 'WIM', 'IRO', 'GUI', 'HAR'].map(id => X.CLUBS.find(t => t.id === id)));
   D.renderHub();
   ok(document.getElementById('hub-next').innerHTML.includes('Stronger Side'), 'the hub names a stronger first opponent');
   X.newChamp(far, five);
@@ -452,7 +470,7 @@ function settle(pick) {
   D.openTeams('quick'); s.pool = 0; D.renderTeams();
   const grid = document.getElementById('t-grid').innerHTML;
   const card = name => { const i = grid.indexOf('>' + name + '<'); return grid.slice(i, grid.indexOf('</button>', i)); };
-  ok(card('France').includes('Stronger Side') && card('Ireland').includes('Stronger Side') && !card('England').includes('Stronger Side') && !card('Italy').includes('Stronger Side'), 'Quick Match marks a side three points stronger');
+  ok(card('France').includes('Stronger Side') && card('Ireland').includes('Stronger Side') && card('England').includes('Stronger Side') && card('Italy').includes('Stronger Side') && !card('Romania').includes('Stronger Side') && !card('Uruguay').includes('Stronger Side'), 'Quick Match marks a side three points stronger');
   s.pool = 1; D.renderTeams();
   ok(!document.getElementById('t-grid').innerHTML.includes('Stronger Side'), 'no local card is marked stronger than Farnham');
 

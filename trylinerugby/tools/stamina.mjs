@@ -19,10 +19,10 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok(S.ABILITIES.length === 5 && S.ABILITIES[4][0] === 'stamina' && S.ABILITIES[4][1] === 'Stamina' && S.ABILITIES[3][0] === 'kicking', `Stamina is the fifth ability, after Kicking (${S.ABILITIES.map(a => a[1]).join(' ')})`);
   ok(X.ALL_TEAMS.every(t => Number.isInteger(t.stamina) && t.stamina >= 1 && t.stamina <= 5), 'every built-in team has a Stamina of 1 to 5');
   ok(new Set(X.ALL_TEAMS.map(t => t.stamina)).size >= 4, `the sides differ in Stamina (${[...new Set(X.ALL_TEAMS.map(t => t.stamina))].sort().join(' ')})`);
-  const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA], top = Math.max(...clubs.map(sum));
-  ok(top <= 5 + S.BUDGET, `no club tops a team you can make (${top} v ${5 + S.BUDGET})`);
-  ok(S.BUDGET === 12, `a made team has 12 points: the old builder's 10 and 2 for Stamina 3 (${S.BUDGET})`);
-  ok(X.NATIONS.map(t => t.stamina).join() === '4,5,5,3,4,4', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')})`);
+  const clubs = [...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA, ...X.ENGLAND, ...X.IRELAND, ...X.WALES_SCOTLAND_ITALY, ...X.ENGLAND_TWO, ...X.COUNTIES], over = clubs.filter(t => sum(t) > 5 + S.BUDGET).map(t => t.id);
+  ok(over.join() === 'BOR', `no club tops an old team's 12 points but Bordeaux, the named exception (${over})`);
+  ok(S.BUDGET === 12, `a team with no level has 12 points: the old builder's 10 and 2 for Stamina 3 (${S.BUDGET})`);
+  ok(X.NATIONS.map(t => t.stamina).join() === '4,5,4,2,4,4', `the nations' Stamina (${X.NATIONS.map(t => t.id + ' ' + t.stamina).join(', ')})`);
 }
 
 // 2. reading Stamina, and a team without it
@@ -68,7 +68,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   for (const t of raw.teams) delete t.stamina;
   X.setChamp(null); X.restore({ champ:raw });
   const c = X.champ();
-  ok(c && c.teams.length === 6 && c.teams.every(t => t.stamina === 3) && c.teams[0].pace === 4, 'a championship saved before Stamina loads, every side at 3');
+  ok(c && c.teams.length === 6 && c.teams.every(t => t.stamina === 3) && c.teams[0].pace === X.CLUBS[0].pace, 'a championship saved before Stamina loads, every side at 3');
   ok(X.standings(c).length === 6, 'and its table still builds');
   const legacy = { user:0, round:0, fixtures:raw.fixtures, results:[] };   // saved before clubs: no teams, the nations by index
   X.setChamp(null); X.restore({ champ:legacy });
@@ -86,9 +86,9 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 {
   const O = X.overallOf;
   ok(O({ pace:1, power:1, handling:1, kicking:1, stamina:1 }) === 40 && O({ pace:5, power:5, handling:5, kicking:5, stamina:5 }) === 99, 'the overall rating still runs 40 to 99');
-  ok(O(X.NATIONS[1]) === 93 && O(X.NATIONS[2]) === 93 && O(X.NATIONS[0]) === 84, `France and Ireland 93, England 84 (${X.NATIONS.map(t => t.id + ' ' + O(t)).join(', ')})`);
+  ok(O(X.NATIONS[1]) === 87 && O(X.NATIONS[2]) === 87 && O(X.NATIONS[0]) === 84, `France and Ireland 87, England 84 (${X.NATIONS.map(t => t.id + ' ' + O(t)).join(', ')})`);
   ok(O({ pace:5, power:5, handling:3, kicking:2, stamina:2 }) === 75 && O({ pace:4, power:4, handling:3, kicking:3, stamina:3 }) === 75, 'a team you make tops out at 75');
-  ok([...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA].every(t => O(t) <= 75), 'no club is rated above a team you can make');
+  ok([...X.CLUBS, ...X.FRANCE, ...X.AUSTRALIA, ...X.SOUTH_AFRICA].filter(t => t.id !== 'BOR').every(t => O(t) <= 75) && O(X.FRANCE.find(t => t.id === 'BOR')) === 90, 'no club is rated above an old team\'s 75, but Bordeaux, the named exception at 90');
   ok(X.ALL_TEAMS.every(t => Number.isInteger(O(t)) && O(t) >= 40 && O(t) <= 99), 'every built-in team has a whole-number overall');
   ok(O({ pace:4, power:4, handling:4, kicking:4 }) === O({ pace:4, power:4, handling:4, kicking:4, stamina:3 }), 'a team without Stamina is rated as Stamina 3');
   const st1 = side('AAA', 1), st5 = side('BBB', 5), up3 = side('CCC', 1, { pace:4, power:4, kicking:4 });
@@ -108,6 +108,30 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   ok($('bd-left').textContent === 'Points Left 12' && /aria-label="1 of 5"/.test($('bd-p-stamina').innerHTML), `the builder has a Stamina row and 12 points (${$('bd-left').textContent})`);
   S.openBuilder(X.custom()[0]);
   ok(S.draft().stamina === 3 && $('bd-left').textContent === 'Points Left 0', 'an old team opens with Stamina 3 and nothing left to spend');
+  // a level sets what a team can spend: the builder starts on it, and a lower level cuts where you can see it
+  ok(/^No Level Set · 12 Points$/.test($('bd-level-name').textContent) && !S.levelChoosing() && !$('bd-form').hidden && $('bd-levels').hidden, `an old team opens as it is, on its old 12 (${$('bd-level-name').textContent})`);
+  S.openBuilder(null);
+  ok(S.levelChoosing() && !$('bd-levels').hidden && $('bd-form').hidden && $('bd-save').hidden && $('bd-level-keep').hidden, 'a new team starts by choosing its level, with nothing else on the screen to fill in yet');
+  ok(!('level' in S.draft()), 'and has none until it chooses');
+  S.builderLevel('r1');
+  ok(S.draft().level === 'r1' && !S.levelChoosing() && $('bd-levels').hidden && !$('bd-form').hidden && !$('bd-save').hidden, 'choosing one opens the rest');
+  ok($('bd-left').textContent === 'Points Left 0' && $('bd-level-name').textContent === 'Regional 1 · 3 Stars' && X.overallOf(S.draft()) === 58, `the level sets the ability: Regional 1's 6 points are shared out, and it is already its own 58 and 3 stars (${$('bd-left').textContent}, ${$('bd-level-name').textContent}, ${X.overallOf(S.draft())})`);
+  ok($('bd-level-note').textContent === 'Your points are shared out. Take one off an ability to add it to another.', `and says so (${$('bd-level-note').textContent})`);
+  S.draft().pace--; S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 1' && $('bd-level-note').textContent === 'Spend 1 more point to reach 3 Stars.', `a point taken off and not put back says why the shirt reads under the level (${$('bd-level-note').textContent})`);
+  Object.assign(S.draft(), { pace:4, power:2, handling:2, kicking:2, stamina:1 }); S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 0', 'spending them all');
+  S.builderLevel('c1');
+  ok(KEYS.map(k => S.draft()[k]).join('') === '41111' && $('bd-left').textContent === 'Points Left 0' && !$('bd-level-note').hidden, `lowering the level cuts from the last in line (${KEYS.map(k => S.draft()[k]).join('')})`);
+  ok($('bd-level-note').textContent === 'Counties 1 has 3 points, so Power, Handling and Kicking came down.', `and says so (${$('bd-level-note').textContent})`);
+  S.builderLevel('euro');
+  ok($('bd-left').textContent === 'Points Left 0' && S.draft().pace >= 4 && X.overallOf(S.draft()) === 90, `raising it shares out the new points on from what is there: a level's team is its level (${KEYS.map(k => S.draft()[k]).join('')})`);
+  Object.assign(S.draft(), { pace:5, power:5, handling:5, kicking:3, stamina:4 }); S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 0', 'seventeen points at European Champions');
+  const big = X.cleanTeam({ ...S.draft(), name:'Giants', key:'myG' }, 0), reread = X.cleanTeam(JSON.parse(JSON.stringify(big)), 0);
+  ok(X.rateOf(big) === 22 && X.overallOf(big) === 90 && reread.level === 'euro' && X.rateOf(reread) === 22, 'a team above the old 12 keeps every point through a save and a reload');
+  const noLevel = X.cleanTeam({ name:'Oldie', key:'myO', pace:5, power:5, handling:5, kicking:3, stamina:4 }, 0);
+  ok(X.rateOf(noLevel) === 17 && !('level' in noLevel), 'and without a level the same abilities are cut to 12, as an old save always was');
   const src = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
   ok(/ABILITIES\.map\(\(\[k, l\]\) => `\s*<div class="ab">/.test(src), 'the builder rows come from ABILITIES');
 }

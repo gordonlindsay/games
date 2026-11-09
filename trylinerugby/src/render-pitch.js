@@ -156,9 +156,12 @@ function drawBall(r) {
   let ang = 0;
   if (b.state === 'held') { const [fx, fy] = svec(b.carrier.fx, b.carrier.fy); ang = Math.atan2(fy, fx); }
   else { const [vx, vy] = svec(b.vx, b.vy); if (hyp(vx, vy) > 0.5) ang = Math.atan2(vy, vx); }
+  const tum = b.tumble != null && b.state !== 'held' ? b.tumble : null;   // Bouncy Egg: the ball tumbles end over end, so its length comes and goes as it turns. Nothing else sets it
+  if (tum != null) ang += tum*0.35;
+  const len = tum == null ? 1 : 0.62 + 0.38*Math.abs(Math.cos(tum));
   ctx.save(); ctx.translate(gx, gy - lift); ctx.rotate(ang);
   ctx.fillStyle = '#f6f3ea'; ctx.strokeStyle = '#3b2f22'; ctx.lineWidth = 1.2;
-  ellipse(0, 0, rx*sc, rx*0.62*sc); ctx.fill(); ctx.stroke();
+  ellipse(0, 0, rx*sc*len, rx*0.62*sc); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(59,47,34,.6)'; ctx.beginPath(); ctx.moveTo(-rx*0.45*sc, 0); ctx.lineTo(rx*0.45*sc, 0); ctx.stroke();
   ctx.restore();
 }

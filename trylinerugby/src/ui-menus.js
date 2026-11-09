@@ -73,6 +73,7 @@ function showBreak(kind) {
   $('m-break').hidden = false;
 }
 function finishMatch() {
+  if (!M.two && !practice && settings.finished < 99) { settings.finished++; save(); }   // one player's own matches, played right through: quitting doesn't count
   if (M.champ && champ) recordChampResult();
   if (M.career) careerRecordResult();
   showBreak('full');
@@ -88,13 +89,15 @@ $('br-menu').addEventListener('click', () => { $('m-break').hidden = true; exitM
 
 /* pause */
 function pause() {
+  if (demoOn()) { demoStop(); return; }                    // Watch How has no pause card: a hidden app, a lost focus or a turned phone ends it on the ready card, so nothing can stay held or paused
   if (practice && (practice.done || practice.ready)) return;
   if (!playing() || M.over || M.phase === 'break') return;
   M.paused = true;
-  $('pz-score').textContent = M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash)
-  $('pz-quit').textContent = 'Quit Match'; quitArmed = false;
+  $('pz-score').textContent = practice ? practice.name : M.nat[0].name + ' ' + M.score[0] + '\u00a0–\u2060\u00a0' + M.score[1] + ' ' + M.nat[1].name;   // the score never splits across lines (the joiner stops a break after the dash). A Training Ground game is not a match: its own name, and no sides
+  $('pz-quit').textContent = practice ? 'Leave Game' : 'Quit Match'; quitArmed = false;
   if (two.lost && two.lost.length) seatLost(two.lost[0]); else $('pz-seat').hidden = true;
-  renderHintSwitches();
+  renderHintSwitches(); renderIcons();
+  $('pz-cam-note').hidden = true;
   setFocus(null);
   $('m-pause').hidden = false;
 }
@@ -116,7 +119,7 @@ let quitArmed = false;
 $('b-pause').addEventListener('click', pause);
 $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
-  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = isDesk() ? 'Press Again to Quit' : 'Tap Again to Quit'; return; }
+  if (!quitArmed) { quitArmed = true; $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
   exitMatch();
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
@@ -133,7 +136,7 @@ function renderHome() {
   $('home-cabinet').hidden = !champHistory.length;
   for (const seg of document.querySelectorAll('.seg[data-key]')) {
     const key = seg.dataset.key;
-    const val = key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
+    const val = key === 'pool' ? POOL_TABS.indexOf(settings.pool) : key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
   const note = $('champ-note');
@@ -149,21 +152,47 @@ function renderHome() {
     note.hidden = false;
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
   renderCareerHome();
+  renderYourTeam();
+  renderIcons();
 }
+/* Your Team: the side you support, whichever you pick. Its league line and record show only where the list has real
+   figures; a team you made or imported has none, so it shows none. The key names no side once a team is deleted or a
+   league removed, and then this is the default. */
+const myTeamOf = () => { const k = settings.myTeam; return ALL_TEAMS.find(t => t.id === k) || custom.find(t => t.key === k) || (importLeague && importLeague.teams.find(t => t.key === k)) || DEFAULT_TEAM; };
+const yourTeamLeague = t => (t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
+const yourTeamRecord = t => (t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+function renderYourTeam() {
+  const t = myTeamOf(), league = $('yt-league'), rec = $('yt-record');
+  const womens = t.key ? teamSide(t) === 1 : settings.womens === 1;   // a listed side's figures are the men's, so they don't show on Women's; a team you made has its own side
+  $('yt-jersey').innerHTML = jersey(t);
+  const rated = t.key ? t : sideVersion(t, settings.womens);   // on Women's, a nation's own rating, and none for a nation with no women's side
+  $('yt-stars').innerHTML = rated ? teamStars(rated) : '';
+  $('yt-name').textContent = t.name;
+  $('yt-eyebrow').textContent = womens ? "Your Team · Women's" : 'Your Team';
+  league.textContent = womens ? '' : yourTeamLeague(t); league.hidden = !league.textContent;
+  rec.textContent = womens ? '' : yourTeamRecord(t); rec.hidden = !rec.textContent;
+  $('yt-play').textContent = t.key || sideVersion(t, settings.womens) ? 'Play as ' + t.name : 'Pick a Team';   // on Women's, a nation with no women's side
+}
+function yourTeamFit() { careerFit($('yt-panel')); }       // once the screen shows: a long name steps down until it fits
+$('yt-play').addEventListener('click', () => { ac(); openTeams('quick'); });
+$('yt-change').addEventListener('click', () => { ac(); openTeams('my'); });
 function goHome() {
   navOnly = null;
+  ratingsSync();
   renderHome();
   showScreen('s-home');
+  yourTeamFit();
   const b = $('b-quick');
   if (b && typeof b.focus === 'function') b.focus();
 }
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
-    if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
+    if (key === 'diff' && kidsLevel() && i !== 0) { parentGate(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // only a grown-up takes the game off the Kids level; a cancelled check leaves it as it was
+    if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else if (key === 'pool') settings.pool = POOL_TABS[i]; else if (key === 'womens') pickSideSet(i); else settings[key] = i;
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
-    if (key === 'sound' && settings.sound) ac();
+    if (key === 'sound') { if (settings.sound) ac(); else soundOff(); }
     if (key === 'pool') { renderTeams(); $('s-teams').scrollTop = 0; }
   }));
 }
@@ -173,14 +202,24 @@ $('b-champ').addEventListener('click', () => {
   else openTeams('champ');
 });
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });
-$('b-more').addEventListener('click', () => {   // Half Length lives here: 2 Min is the default, the longer halves are a deliberate choice
-  const open = $('set-more').hidden; $('set-more').hidden = !open; $('set-cam').hidden = !open; $('b-more').setAttribute('aria-expanded', String(open)); $('b-more').textContent = open ? 'Fewer Settings' : 'More Settings';
-});
+/* The camera and the half length: an icon button each, and a press moves to the next choice, with the choice in words on the button. Camera is on the home screen and the
+   pause card (renderHintSwitches hides it for Two Player and the Training Ground, where it doesn't apply), and a change there takes effect in that match. Half length is the home screen's only. */
+const CAM_WORDS = ['Top', 'Low', 'Mid', 'High'], HALF_WORDS = HALF_SECONDS.map(s => s/60 + ' Min');
+function iconWord(id, name, word) { const b = $(id), label = name + ': ' + word; $(id + '-w').textContent = word; b.setAttribute('aria-label', label); b.title = label; }
+function renderIcons() {
+  for (const id of ['b-cam', 'pz-cam']) iconWord(id, 'Camera', CAM_WORDS[settings.cam]);
+  iconWord('b-half', 'Half Length', HALF_WORDS[settings.half]);
+}
+function camNext() { settings.cam = (settings.cam + 1) % CAM_WORDS.length; settings.camPick = true; save(); renderIcons(); }   // a real choice, so a Top chosen here survives a reload (cleanSettings)
+function halfNext() { settings.half = (settings.half + 1) % HALF_WORDS.length; save(); renderIcons(); }
+$('b-cam').addEventListener('click', () => { camNext(); BV.peekUntil = performance.now() + BV_DEMO_PEEK; });   // the demo behind the home shows the height just picked for a moment, so the word has a picture
+$('pz-cam').addEventListener('click', () => { camNext(); $('pz-cam-note').hidden = !(M && M.cut); });   // a close-up has its own camera: say so, or the press looks as if it did nothing
+$('b-half').addEventListener('click', halfNext);
 $('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
 $('h-back').addEventListener('click', goHome);
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
 $('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else { quickPick = null; quickAuto = false; } renderTeams(); $('s-teams').scrollTop = 0; });
-$('t-default').addEventListener('click', () => pickTeam(DEFAULT_TEAM));
+$('t-default').addEventListener('click', () => pickTeam(myTeamOf()));   // pickTeam makes it the side on screen
 
 /* two player: the join screen (computers only: the home button is desk-only), then the team screen for each player, then the match.
    Both seats start on the keyboard halves, so a keyboard pair has nothing to set up; a controller takes a seat with one press on this
@@ -240,38 +279,111 @@ function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
   return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
 }
+/* A side's stars, drawn: five star shapes, the lit ones over the dim, so a half star is half lit and half dim at any size. Inline, like the home's icons, so there is nothing to load. n is starsOf's value, whole or half.
+   The picture carries its words for a screen reader, or quiet leaves them out where the same words are already beside it. */
+const STAR_SHAPE = (i, half) => {
+  const pts = []; for (let k = 0; k <= (half ? 5 : 9); k++) { const r = k % 2 ? 4.5 : 9.8, a = (-90 + (half ? -36 : 36)*k)*Math.PI/180; pts.push((10 + 20*i + r*Math.cos(a)).toFixed(1) + ' ' + (10.6 + r*Math.sin(a)).toFixed(1)); }
+  return 'M' + pts.join('L') + 'Z';
+};
+const STAR_OFF = [0, 1, 2, 3, 4].map(i => STAR_SHAPE(i)).join('');
+function starsHtml(n, quiet) {
+  const whole = Math.floor(n), on = [0, 1, 2, 3, 4].filter(i => i < whole).map(i => STAR_SHAPE(i)).join('') + (n > whole ? STAR_SHAPE(whole, true) : '');
+  return `<svg class="tstars" viewBox="0 0 100 20" ${quiet ? 'aria-hidden="true"' : `role="img" aria-label="${starsWords(n)}"`}><path class="off" d="${STAR_OFF}"/><path class="on" d="${on}"/></svg>`;
+}
+const teamStars = t => starsHtml(starsOf(t));
+const fxName = (t, fit) => `<span class="fx-name"><span${fit ? ' data-fit' : ''}>${esc(t.name)}</span>${teamStars(t)}</span>`;   // a side's name with its stars under it, in a fixture
+const jerseyRated = t => jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`);
 function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i <= v ? 'on' : ''}"></i>`; return `<span class="pips" aria-label="${v} of 5">${s}</span>`; }
 let teamList = [];
 function teamCard(t, i) {
   const picked = pickMode === 'quick' && quickPick && keyOf(quickPick) === keyOf(t);
   const stronger = pickMode === 'quick' && quickPick && !picked && outmatched(quickPick, t);
-  const btn = `<button class="team${picked ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}>
-      ${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname">${esc(t.name)}</span>
+  const yours = pickMode === 'my' && keyOf(myTeamOf()) === keyOf(t);   // Change Team: your team now is marked and can still be pressed, to keep it
+  const btn = `<button class="team${picked || yours ? ' picked' : ''}" data-i="${i}" ${picked ? 'aria-disabled="true"' : ''}${yours ? ' aria-current="true"' : ''}>
+      ${jerseyRated(t)}<span class="tid"><span class="tname">${esc(t.name)}</span>${teamStars(t)}</span>
+      ${t.league ? `<span class="tline">${ordinal(t.place)} · ${t.pf} Scored · ${t.pa} Conceded</span>` : ''}
       ${stronger ? '<span class="gap">Stronger Side</span>' : ''}
       <span class="stats">${ABILITIES.map(([k, l]) => `<span>${l}</span>${pips(Math.round(abilityOf(t, k)))}`).join('')}</span>
     </button>`;
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
+/* The list on a tab, as Men's (0) or Women's (1): International is every nation of that side, strongest first; a club list is the same clubs at the same ratings. */
+const poolTeams = (i, g = 0) => (i === IMPORT_POOL ? (importLeague ? importLeague.teams.filter(t => pickMode === 'my' || sidesMeet(t, { g })) : g ? CLUBS.map(womenClub) : CLUBS) : i === 0 ? nationsRanked(g) : g ? POOLS[i].map(womenClub) : POOLS[i]);
+/* Men's | Women's is for Quick Match and a Championship, and goes for the whole pick. Two Player has no toggle (Top shows no body difference) and plays men's ratings. */
+const pickToggled = () => pickMode === 'quick' || pickMode === 'champ';
+const pickG = () => (pickToggled() ? settings.womens : 0);
+/* A club tab reads strongest first, as International does, level sides in list order, so England stays in its table order. My League keeps its own table's order. */
+const tabTeams = (i, g = 0) => { const l = poolTeams(i, g); return i === IMPORT_POOL || i === 0 ? l : l.slice().sort((a, b) => rateOf(b) - rateOf(a)); };
+/* The line under the tabs says where the numbers come from. A women's club has no results of its own here yet. My League's come from your league's table, and the import says so. */
+const tabRatingsLine = (i, g = 0) => (i === IMPORT_POOL ? '' : i === 0 ? ratingsLine() : g ? "Club Ratings Use the Men's Results for Now" : "Ratings from Last Season's Table, Scored and Conceded");
+const pickFits = t => pickMode === 'my' || sidesMeet(t, { g:pickG() });   // a team you made or imported keeps its side, so it shows only where it can play; Your Team's picker shows them all
+/* Your own team keeps its side, so the toggle goes with it: a picked team that has no version on the new side is put down, never left to play the wrong one. */
+function pickFollow(t) {
+  const s = teamSide(t);
+  if (!pickToggled() || s === 'mixed' || settings.womens === s) return;
+  settings.womens = s;
+  if (quickPick && quickPick !== t) quickPick = sideVersion(quickPick, s);
+}
+/* The toggle: the team you have picked becomes its own other side (England's women, Farnham's women), or, with none (Georgia, a men's team you made), is put down, and you pick again. */
+function pickSideSet(g) {
+  if (!pickToggled() || (g !== 0 && g !== 1) || settings.womens === g) return;
+  settings.womens = g;
+  if (quickPick) { quickPick = sideVersion(quickPick, g); if (!quickPick) quickAuto = false; }
+  renderTeams(); $('s-teams').scrollTop = 0;
+}
+function poolOfTeam(t) {                                   // the tab a side is on: its own list first, Local for a team you made
+  if (t.custom) return 1;
+  if (importLeague && importLeague.teams.includes(t)) return IMPORT_POOL;
+  return allNations().includes(t) ? 0 : Math.max(1, POOLS.findIndex(p => p.includes(t)));
+}
+function poolTabCue(row) {                                 // a fade on the side with more tabs to swipe to: the scrollbar is hidden, and a tab past the edge would otherwise look gone
+  const left = row.scrollLeft, room = row.scrollWidth - row.clientWidth;
+  row.classList.toggle('more-l', left > 1);
+  row.classList.toggle('more-r', left < room - 1);
+}
+function poolTabShow() {                                   // the tabs scroll sideways on a narrow screen: keep the one in use in view, without moving the page
+  for (const b of document.querySelectorAll('.pool button')) {
+    const row = b.parentElement;
+    if (!row) continue;
+    if (b.getAttribute('aria-pressed') === 'true') {
+      const r = b.getBoundingClientRect(), o = row.getBoundingClientRect();
+      if (r.left < o.left) row.scrollLeft += r.left - o.left;
+      else if (r.right > o.right) row.scrollLeft += r.right - o.right;
+    }
+    poolTabCue(row);
+  }
+}
+for (const row of document.querySelectorAll('.pool')) row.addEventListener('scroll', () => poolTabCue(row), { passive:true });
 function openTeams(m) {
-  pickMode = m; settings.pool = 1; quickPick = m === 'quick' ? DEFAULT_TEAM : null; quickAuto = m === 'quick';
+  ratingsSync();                                           // new ratings count from a new pick on
+  const mine = m === 'two' ? null : myTeamOf();            // Your Team's tab; Two Player opens on Local
+  pickMode = m; settings.pool = mine ? poolOfTeam(mine) : 1;
+  if ((m === 'quick' || m === 'champ') && mine.key) pickFollow(mine);
+  quickPick = m === 'quick' ? sideVersion(mine, settings.womens) : null; quickAuto = !!quickPick;
   if (m === 'two') twoSel.picking = 0;                     // Player 1 picks first (Change Teams after a match comes back here too)
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
 }
 function renderTeams() {
-  const quick = pickMode === 'quick', pair = pickMode === 'two', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick;   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
+  const quick = pickMode === 'quick', pair = pickMode === 'two', my = pickMode === 'my', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick;   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
   const eb = $('t-eyebrow');
-  eb.textContent = quick ? 'Quick Match' : pair ? 'Two Player' : 'Championship';
+  eb.textContent = quick ? 'Quick Match' : pair ? 'Two Player' : my ? 'Your Team' : 'Championship';
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
   $('t-title').textContent = pair ? 'Player ' + (p + 1) + ' Team' : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
-  [...document.querySelectorAll('.pool button')].forEach((b, i) => b.setAttribute('aria-pressed', String(i === settings.pool)));
+  if (settings.pool === IMPORT_POOL && importLeague && !importLeague.teams.some(pickFits)) settings.pool = 1;   // the league is all the other side
+  [...document.querySelectorAll('.pool button')].forEach((b, i) => b.setAttribute('aria-pressed', String(POOL_TABS[i] === settings.pool)));
+  poolTabShow();
+  $('t-side').hidden = !pickToggled();
+  [...$('t-side').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === settings.womens)));
+  $('t-ratings').textContent = tabRatingsLine(settings.pool, pickG()); $('t-ratings').hidden = !$('t-ratings').textContent;
   const yours = (quick && !!quickPick) || (pair && p === 1);
   $('t-yours').hidden = !yours;
-  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span>${pair ? 'Player 1 · ' : ''}${esc(mine.name)}</span>`;
-  $('t-default').hidden = quick || pair || settings.pool !== 1;
+  if (yours) $('t-mine').innerHTML = `${jersey(mine)}<span class="fx-name"><span>${pair ? 'Player 1 · ' : ''}${esc(mine.name)}</span>${teamStars(mine)}</span>`;
+  const supported = myTeamOf();                            // a championship's gold button: Your Team, on the tab it plays from, where it has a side to play
+  $('t-default').hidden = pickMode !== 'champ' || settings.pool !== poolOfTeam(supported) || !sideVersion(supported, settings.womens);
   $('t-back').textContent = pair ? 'Back to Players' : 'Back to Menu';
   navOnly = pair ? p : null;
-  $('t-default').textContent = 'Play as ' + DEFAULT_TEAM.name;
-  teamList = [...(settings.pool === IMPORT_POOL ? importTeams() : POOLS[settings.pool]), ...custom];   // My League: src/import.js
+  $('t-default').textContent = 'Play as ' + supported.name;
+  teamList = [...tabTeams(settings.pool, pickG()), ...custom.filter(pickFits)];   // My League: src/import.js
   let html = teamList.map(teamCard).join('');
   if (custom.length < MAX_CUSTOM) html += `<button class="team create" id="t-create"><span class="plus" aria-hidden="true">+</span><span class="tname">Create Team</span></button>`;
   html += importCard();                                    // Import Club, src/import.js
@@ -290,15 +402,18 @@ function fitNames() {
     while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px -= 1; el.style.fontSize = px + 'px'; }
   }
 }
-/* A championship is your team and five others from the list on screen. */
+/* A championship is your team and five others from the list on screen (champOthers). */
 function pickTeam(t) {
-  if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
+  if (pickMode === 'my') { settings.myTeam = keyOf(t); save(); goHome(); return; }
+  if (!pickFits(t) && (t.key || pickMode === 'two')) return;   // a side the list on screen would not show
+  if (pickMode === 'two') {                                  // Player 1 changing their team comes back to Player 2's pick; Player 2's pick starts the match
     if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
     twoSel.teams[1] = t; startTwo(); return;
   }
+  t = sideVersion(t, settings.womens);                       // the whole pick is one side
+  if (!t) return;
   if (pickMode === 'champ') {
-    const others = settings.pool === IMPORT_POOL ? importOthers(t) : shuffle(POOLS[settings.pool].filter(o => keyOf(o) !== keyOf(t)));
-    newChamp(t, others); renderHub(); showScreen('s-hub'); return;
+    newChamp(t, champOthers(t, settings.pool, settings.womens)); renderHub(); showScreen('s-hub'); return;
   }
   if (quickPick == null) { quickPick = t; quickAuto = false; renderTeams(); $('s-teams').scrollTop = 0; return; }
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
@@ -307,8 +422,25 @@ function pickTeam(t) {
 
 /* create team */
 let draft = null, editing = null, codeTouched = false, delArmed = false;
+let levelChoosing = false, levelNote = '';                 // a new team starts on the level list; the note says what a lower level took off
 const spent = d => ABILITIES.reduce((a, [k]) => a + d[k] - 1, 0);
+const BD_SIDES = [0, 1, 'mixed'];                            // Men's | Women's | Mixed
+/* Setting the level sets the team's ability: a team set at four stars is a four-star team, with nothing more to do. The abilities go through cleanTeam's own cut, so what you see here is what it saves as, and any that came down are named; any points the level has left go on from what the team has now (abilitiesFor), and can be moved about. */
+function builderLevel(id) {
+  const l = TEAM_LEVELS.find(v => v.id === id); if (!l || !draft) return;
+  const cut = cleanTeam({ ...draft, level:id }, 0), down = ABILITIES.filter(([k]) => cut[k] < draft[k]).map(([, n]) => n);
+  for (const [k] of ABILITIES) draft[k] = cut[k];
+  const room = l.budget - spent(draft);
+  if (room > 0) Object.assign(draft, abilitiesFor(draft, ABILITIES.length + l.budget));
+  draft.level = id; levelChoosing = false;
+  levelNote = down.length ? `${l.name} has ${l.budget} ${l.budget === 1 ? 'point' : 'points'}, so ${down.length > 1 ? down.slice(0, -1).join(', ') + ' and ' + down[down.length - 1] + ' came' : down[0] + ' came'} down.` : room > 0 ? 'Your points are shared out. Take one off an ability to add it to another.' : '';
+  renderBuilder(); $('s-build').scrollTop = 0;
+}
 function buildBuilder() {
+  $('bd-level-grid').innerHTML = TEAM_LEVELS.map(l => `<button class="btn lv" data-level="${l.id}"><span class="lv-name">${l.name}</span><span class="lv-sub">${starsHtml(l.stars)}<span>${l.budget} ${l.budget === 1 ? 'Point' : 'Points'}</span></span></button>`).join('');
+  for (const b of $('bd-level-grid').querySelectorAll('[data-level]')) b.addEventListener('click', () => builderLevel(b.dataset.level));
+  $('bd-level-change').addEventListener('click', () => { levelChoosing = true; renderBuilder(); $('s-build').scrollTop = 0; });
+  $('bd-level-keep').addEventListener('click', () => { levelChoosing = false; renderBuilder(); });
   const sw = id => KIT_COLOURS.map(([n, h]) => `<button class="sw" style="--k:${h}" data-c="${h}" aria-label="${n}"></button>`).join('');
   for (const [id, key] of [['bd-kit', 'kit'], ['bd-trim', 'trim']]) {
     $(id).innerHTML = sw();
@@ -322,11 +454,12 @@ function buildBuilder() {
     </div>`).join(''));
   for (const b of $('bd-abs').querySelectorAll('.step')) b.addEventListener('click', () => {
     const k = b.dataset.ab, d = +b.dataset.d;
-    if (d > 0 && (draft[k] >= 5 || spent(draft) >= BUDGET)) return;
+    if (d > 0 && (draft[k] >= 5 || spent(draft) >= teamBudget(draft))) return;
     if (d < 0 && draft[k] <= 1) return;
     draft[k] += d; renderBuilder();
   });
   [...$('bd-pat').children].forEach((b, i) => b.addEventListener('click', () => { draft.hoops = i === 1; renderBuilder(); }));
+  [...$('bd-side').children].forEach((b, i) => b.addEventListener('click', () => { draft.g = BD_SIDES[i]; renderBuilder(); }));
   $('bd-name').addEventListener('input', () => {
     draft.name = $('bd-name').value;
     if (!codeTouched) $('bd-code').value = autoCode(draft.name.trim() || 'My Team', editing && editing.key);
@@ -343,12 +476,17 @@ function buildBuilder() {
     if (editing) {
       const i = custom.findIndex(c => c.key === editing.key);
       custom[i] = cleanTeam({ ...t, key:editing.key }, i);
-      if (quickPick && keyOf(quickPick) === editing.key) quickPick = custom[i];
-      if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = custom[i];
+      const was = quickPick && keyOf(quickPick) === editing.key;
+      if (was) quickPick = custom[i];
+      if (was || !quickPick) pickFollow(custom[i]);          // your team's side changed, or nothing is picked: the list follows, so the team stays in view
+      if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = teamSide(custom[i]) === 1 ? DEFAULT_TEAM : custom[i];   // Two Player plays men's sides
     } else {
       custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
-      if (pickMode === 'quick' && quickAuto) { quickPick = custom[custom.length - 1]; quickAuto = false; }   // made it to play as it
-      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; }   // Player 1 made it to play as it
+      const made = custom[custom.length - 1];
+      if (pickMode === 'quick' && quickAuto) { quickPick = made; quickAuto = false; pickFollow(made); }   // made it to play as it
+      else if (pickMode === 'two' && twoSel.picking === 0 && pickFits(made)) { twoSel.teams[0] = made; twoSel.picking = 1; }   // Player 1 made it to play as it
+      else if (pickToggled() && !quickPick) pickFollow(made);   // nothing picked yet: the list follows, so the new team is there
+      else if (pickMode === 'my') { settings.myTeam = keyOf(custom[custom.length - 1]); save(); goHome(); return; }   // made it to support it
     }
     save(); renderTeams(); showScreen('s-teams');
   });
@@ -356,6 +494,7 @@ function buildBuilder() {
   $('bd-del').addEventListener('click', () => {
     if (!delArmed) { delArmed = true; $('bd-del').textContent = 'Confirm Delete'; return; }
     custom = custom.filter(c => c.key !== editing.key);
+    if (settings.myTeam === editing.key) settings.myTeam = DEFAULT_TEAM.id;
     if (quickPick && keyOf(quickPick) === editing.key) quickPick = null;
     if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = DEFAULT_TEAM;
     save(); renderTeams(); showScreen('s-teams');
@@ -368,17 +507,26 @@ function openBuilder(t) {
   $('bd-name').value = draft.name;
   $('bd-code').value = t ? t.id : autoCode('My Team');
   $('bd-eyebrow').textContent = t ? 'Edit Team' : 'Create Team';
-  $('bd-del').hidden = !t; $('bd-row').classList.toggle('one', !t);
   delArmed = false; $('bd-del').textContent = 'Delete Team';
+  levelChoosing = !t; levelNote = '';                        // a new team starts by choosing its level; a saved one opens as it is, with no level if it was made before them
   renderBuilder(); showScreen('s-build'); $('s-build').scrollTop = 0;
 }
 function renderBuilder() {
   $('bd-title').textContent = draft.name.trim() || 'My Team';
-  $('bd-jersey').innerHTML = jersey(draft);
+  $('bd-jersey').innerHTML = jersey(draft) + (levelChoosing ? '' : teamStars(draft));   // once a level is chosen: what the points spent come to, on the same scale as every other side, and the level's own stars with them all spent
   [...$('bd-pat').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === (draft.hoops ? 1 : 0))));
+  [...$('bd-side').children].forEach((b, i) => b.setAttribute('aria-pressed', String(BD_SIDES[i] === teamSide(draft))));
   for (const [id, key] of [['bd-kit', 'kit'], ['bd-trim', 'trim']])
     for (const b of $(id).querySelectorAll('.sw')) b.setAttribute('aria-pressed', String(b.dataset.c === draft[key]));
-  const left = BUDGET - spent(draft);
+  const lv = teamLevelOf(draft), left = teamBudget(draft) - spent(draft);
+  $('bd-levels').hidden = !levelChoosing; $('bd-form').hidden = levelChoosing; $('bd-save').hidden = levelChoosing;
+  const keep = levelChoosing && !!(lv || editing), del = !levelChoosing && !!editing;   // the row under the screen: Keep This Level or Delete Team beside Back, so the level list fits a phone sideways
+  $('bd-level-keep').hidden = !keep; $('bd-del').hidden = !del; $('bd-row').classList.toggle('one', !keep && !del);
+  for (const b of $('bd-level-grid').querySelectorAll('[data-level]')) b.setAttribute('aria-pressed', String(!!lv && b.dataset.level === lv.id));
+  $('bd-level-name').textContent = lv ? `${lv.name} · ${starsWords(lv.stars)}` : `No Level Set · ${BUDGET} Points`;
+  $('bd-level-stars').innerHTML = lv ? starsHtml(lv.stars, true) : '';
+  const note = lv && left > 0 ? `Spend ${left} more ${left === 1 ? 'point' : 'points'} to reach ${starsWords(lv.stars)}.` : levelNote;   // points taken off and not put back: why the shirt reads under the level
+  $('bd-level-note').textContent = note; $('bd-level-note').hidden = !note;
   $('bd-left').textContent = 'Points Left ' + left; $('bd-left').classList.toggle('spent', left === 0);
   for (const [k] of ABILITIES) {
     $('bd-p-' + k).innerHTML = pips(draft[k]);
@@ -444,9 +592,9 @@ function renderHub() {
     $('hub-next').innerHTML = `
       <div class="stack">
         <div class="fixture">
-          <span class="fx-team">${jersey(T[h])}<span>${esc(T[h].name)}</span></span>
+          <span class="fx-team">${jersey(T[h])}${fxName(T[h])}</span>
           <span class="fx-v">V</span>
-          <span class="fx-team r"><span>${esc(T[a].name)}</span>${jersey(T[a])}</span>
+          <span class="fx-team r">${fxName(T[a])}${jersey(T[a])}</span>
           ${stake ? `<p class="stake">${stake}</p>` : ''}
         </div>
         ${outmatched(T[c.user], foe) ? '<p class="eyebrow">Stronger Side</p>' : ''}
@@ -467,7 +615,7 @@ function renderHub() {
   $('hub-table').innerHTML = rows.map((r, n) => `
     <tr class="${r.i === c.user ? 'me' : ''}">
       <td class="rk">${c.round ? n + 1 : '–'}</td>
-      <td class="t"><span class="chip" style="--k:${HEX.test(T[r.i].kit) ? T[r.i].kit : '#888888'}"></span>${esc(T[r.i].name)}</td>
+      <td class="t"><span class="chip" style="--k:${HEX.test(T[r.i].kit) ? T[r.i].kit : '#888888'};--t:${HEX.test(T[r.i].trim) ? T[r.i].trim : '#f2efe6'}"></span>${esc(T[r.i].name)}${teamStars(T[r.i])}</td>
       <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.PD > 0 ? '+' : ''}${r.PD}</td><td>${r.BP}</td><td class="pts">${r.Pts}</td>
     </tr>`).join('');
   $('hub-results').innerHTML = c.results.map((rd, k) => ({ rd, k })).reverse().map(({ rd, k }) => `

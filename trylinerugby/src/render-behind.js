@@ -1,34 +1,44 @@
 /* =========================================================
-   The behind views: an optional 2.5D camera for one-player matches (Low, Mid, High). Top stays today's view through today's code: render
+   The behind views: a 2.5D camera for one-player matches (Low, Mid, High), and Mid is where a new game starts. Top is still there, through its own code: render
    returns here only when behindOn(), and toS's one extra line issues no canvas call. Fixed height and pitch, no yaw, roll, bob or shake:
    only depth and a little lateral follow. Up on the stick is always toward the opposition's line. Nothing here draws a random number.
    ========================================================= */
-settings.cam = 0;                                           // 0 Top, 1 Low, 2 Mid, 3 High
+settings.cam = 2;                                           // 0 Top, 1 Low, 2 Mid, 3 High. The default: load() runs later, and a save holding a cam keeps it (cleanSettings: a Top only if the camera button chose it)
 const BV_PRESET = [null, { ch:7.5, back:19, fy:0.60 }, { ch:10, back:22, fy:0.58 }, { ch:13, back:25, fy:0.58 }];
 const BV_TIERS = [28, 64];                                  // sprite cells, in device pixels per metre
 const BV_CELL = { stand:{ w:1.4, h:2.3, ox:0.7, oy:2.1 }, lying:{ w:2.6, h:1.2, ox:0.6, oy:0.7 } };   // in T, with the feet at ox, oy: 0.1T clear of the tallest head style
 const BV_RING = 0.6;                                        // the ring's base radius in metres: a top-down ring's radius would swallow a standing man
-const BV = { on:false, cam:null, M:null, rt:0, tx:0, ty:0, order:[], cells:[], men:new WeakMap(), bakes:0, baked:0, fontsReady:false, fontsArmed:false };
+const BV = { on:false, cam:null, M:null, rt:0, tx:0, ty:0, order:[], cells:[], edges:[], men:new WeakMap(), bakes:0, baked:0, fontsReady:false, fontsArmed:false, fade:1 };
 const behindOn = () => settings.cam > 0 && playing() && !M.two && !M.auto && !practice;
 function stickTurn(seat) {                                  // the direction of the team this seat plays: 0 means the stick is read as it always was
-  if (!behindOn()) return 0;
+  if (!behindOn()) return seat === 0 ? dvTurn() : 0;         // a Training Ground game may have a behind view of its own
   const t = teamOfSeat(seat);
   return t < 0 ? 0 : dirOf(t);
 }
 function keyFwd(inp, k) { const t = stickTurn(inp.seat); return t ? -k[1]*t : k[0]; }   // a direction key's pull along the pitch
-const dprMax = () => (behindOn() ? 1.5 : 2);
+const dprMax = () => (behindOn() || dvOn() || menuDemo() ? 1.5 : 2);
+/* The demo behind the menus: the rendered men on Mid, whatever camera the player chose. It reads nothing saved and writes nothing saved, and the stick and behindOn() don't know about it. */
+const BV_DEMO_CAM = 2, BV_DEMO_IN = 0.6;                    // the men fade in over this long once the art is in; until then, a calm empty pitch
+const menuDemo = () => !!(M && M.demo) && !practice;
+const BV_DEMO_PEEK = 2500, BV_DEMO_TOP = { ch:34, back:15, fy:0.5 };   // how long a Camera press on the home shows its height (ms); Top's look in that peek, drawn with the demo's own men
+const bvPick = () => (menuDemo() ? (BV.peekUntil && performance.now() < BV.peekUntil ? settings.cam : BV_DEMO_CAM) : settings.cam);
+const BV_DEMO_AT = { x:0.33, y:0.42 };                      // a phone held sideways: Mid's height and distance, with the ball framed in the gap the home's two columns leave, where a man is clear of the panels
+const bvDemoFrame = (W, H) => (menuDemo() && W > H && H <= 560 ? BV_DEMO_AT : null);
 
 /* ---------- camera and follow ---------- */
 function bvRelease() {                                      // the sprites die with their match, whichever view comes next
+  if (!practice) dvFree();                                   // the Training Ground's painted backdrops go as soon as it is left
   if (!BV.M || BV.M === M) return;
   for (const c of BV.cells) c.width = 0;
   BV.cells.length = 0; BV.men = new WeakMap(); BV.order.length = 0; BV.M = null;
+  artClear();
+  if (M.demo) artTrim();
 }
 function bvCam() {
-  const W = V.W, H = V.H, t = teamOfSeat(0), d = t < 0 ? 1 : dirOf(t), key = W + 'x' + H + 'x' + settings.cam + 'x' + d;
+  const W = V.W, H = V.H, t = teamOfSeat(0), d = t < 0 ? 1 : dirOf(t), pick = bvPick(), at = bvDemoFrame(W, H), key = W + 'x' + H + 'x' + pick + 'x' + d + (at ? 'd' : '');
   if (BV.cam && BV.cam.key === key) return BV.cam;
-  const P = BV_PRESET[settings.cam], F = Math.min(0.703*W, 1.25*H);
-  BV.cam = { key, W, H, cx:W/2, F, ch:P.ch, back:P.back, hz:P.fy*H - F*P.ch/P.back, u:{ x:d, y:0 }, r:{ x:0, y:d }, Cx:BV.cam ? BV.cam.Cx : 60, Cy:BV.cam ? BV.cam.Cy : 35 };
+  const P = BV_PRESET[pick] || BV_DEMO_TOP, F = Math.min(0.703*W, 1.25*H);
+  BV.cam = { key, W, H, ins:safeInsets(), cx:at ? at.x*W : W/2, F, ch:P.ch, back:P.back, hz:(at ? at.y : P.fy)*H - F*P.ch/P.back, u:{ x:d, y:0 }, r:{ x:0, y:d }, Cx:BV.cam ? BV.cam.Cx : 60, Cy:BV.cam ? BV.cam.Cy : 35 };
   return BV.cam;
 }
 function bvFollow(dt) {
@@ -169,6 +179,7 @@ function bvArmFonts() {                                     // a shirt number ba
     BV.fontsReady = true;
     for (const c of BV.cells) c.width = 0;
     BV.cells.length = 0; BV.men = new WeakMap(); BV.order.length = 0;
+    artClear();
   });
 }
 
@@ -202,7 +213,7 @@ function drawManBehind(cam, p, ctrl) {
   if (tackler && p.bindOff) at = pr(cam, k.c.x + p.bindOff.x, k.c.y + p.bindOff.y, 0) || at;   // bound on to the carrier, on the side he came from
   if (!at || at.sx < -at.k*1.5 || at.sx > V.W + at.k*1.5 || at.sy < -at.k*0.5 || at.sy > V.H + at.k*2.5) return;
   const look = lookOf(p), sc = look.h/1.8, kk = at.k, sp = hyp(p.vx, p.vy), spr = sprintLevel(p), fire = onFire(p.team), flat = bvFlat(cam, s.z);
-  const alpha = clamp((s.z - CAM.fadeZ)/CAM.fadeW, 0, 1);
+  const alpha = clamp((s.z - CAM.fadeZ)/CAM.fadeW, 0, 1)*BV.fade;
   if (alpha < 1) ctx.globalAlpha = alpha;
   const R = 0.95*kk;
   if (fire && p.down <= 0) {                                 // On Fire: the same pulse as the top view, flat on the grass
@@ -229,9 +240,10 @@ function drawManBehind(cam, p, ctrl) {
   if (k && !tackler) ang += (k.tier === 'soft' ? 0.15 : k.tier === 'dom' && k.t/k.T >= 0.4 ? -0.12 : 0)*(s.face);   // a bound carrier leans into a Soft tackle and recoils from a Big Hit
   const view = down ? 3 : s.view, flip = view >= 2 && s.face < 0;
   const place = () => { ctx.save(); ctx.translate(at.sx, at.sy); ctx.scale(look.b*sc, sc); if (ang) ctx.rotate(ang); };   // height, build and lean sit outside the figure, for sprites and live men alike
-  let drawn = false;
-  if (!live) {
-    const want = kk*V.dpr > 40 ? 1 : 0, mine = cellFor(p, s, view, frame, want), other = mine ? null : s.cells[bvCellKey(view, frame, 1 - want)], cell = mine || other;
+  let drawn = false, pose = null;
+  if (artReady() && (pose = artPose(cam, p, s, k, tackler, carrier, sp, spr))) drawn = !!artDraw(at, p, s, kk, sc, ang, pose, p === ctrl);   // the rendered art, for everyone: the code-drawn man below is what shows until it is in
+  if (!drawn && !live) {
+    const want = kk*V.dpr > 40 && !M.demo ? 1 : 0, mine = cellFor(p, s, view, frame, want), other = mine ? null : s.cells[bvCellKey(view, frame, 1 - want)], cell = mine || other;
     if (cell) {
       const shape = down ? BV_CELL.lying : BV_CELL.stand;
       place(); if (flip) ctx.scale(-1, 1);
@@ -250,7 +262,10 @@ function drawManBehind(cam, p, ctrl) {
     const a = p.fendA, l = 0.95*(0.9 + 0.5*(1 - p.fend/0.2)), q0 = pr(cam, s.wx + Math.cos(a)*0.38, s.wy + Math.sin(a)*0.38, 1.3), q1 = pr(cam, s.wx + Math.cos(a)*l, s.wy + Math.sin(a)*l, 1.3);
     if (q0 && q1) { ctx.strokeStyle = M.kit[p.team].trim; ctx.lineWidth = Math.max(2, 0.2*kk); ctx.lineCap = 'round'; seg(q0.sx, q0.sy, q1.sx, q1.sy); }
   }
-  if (carrier) cutBall(at.sx + 0.18*kk*(s.view === 2 ? s.face : 1), at.sy - 1.15*kk*sc, kk*0.95, s.view === 2 ? 0.2*s.face : 1.25);   // straight after him, so a nearer man can cover it
+  if (carrier) {                                             // straight after him, so a nearer man can cover it
+    if (drawn && pose && pose.row.length > 12) { const q = kk/ART.man.px, m = pose.mirror ? -1 : 1, side = pose.deg === 90; cutBall(at.sx + m*pose.row[12]*q*look.b/ART.man.builds[pose.build]*sc, at.sy + pose.row[13]*q*sc, kk*0.95, side ? 0.2*m : pose.deg === 0 || pose.deg === 180 ? 1.25 : 0.7*m); }   // in his hands, as the art holds it
+    else cutBall(at.sx + 0.18*kk*(s.view === 2 ? s.face : 1), at.sy - 1.15*kk*sc, kk*0.95, s.view === 2 ? 0.2*s.face : 1.25);
+  }
   if (alpha < 1) ctx.globalAlpha = 1;
 }
 function groundRing(cam, x, y, radius, style, width, dash) {
@@ -259,6 +274,28 @@ function groundRing(cam, x, y, radius, style, width, dash) {
   const rx = Math.max(6, radius*q.k);
   ctx.strokeStyle = style; ctx.lineWidth = width; ctx.setLineDash(dash || []);
   ellipse(q.sx, q.sy, rx, rx*bvFlat(cam, q.z)); ctx.stroke(); ctx.setLineDash([]);
+}
+/* The ball's own marks. None of them is a ring: a solid ring is who you control, a dashed one a pass, a Switch or where a kick comes down. */
+const BV_LOOSE = { rx:8.5, air:7, k:0.34, patch:'rgba(246,243,234,.3)' };                 // a ball not in anyone's hands: its half-length never under these px, and this share of a metre on the screen. It reads about 3m away on a phone
+function ballLaces(x, y, rx, ang) {                         // the laces that make a big ball a ball, the same on the grass, in the air, on the edge tag and in the marker
+  const l = rx*0.42, h = rx*0.2;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  ctx.strokeStyle = BV_CARRY.lace; ctx.lineWidth = Math.max(1.1, rx*0.13); ctx.lineCap = 'round'; ctx.beginPath();
+  ctx.moveTo(-l, 0); ctx.lineTo(l, 0);
+  for (const f of [-0.55, 0, 0.55]) { ctx.moveTo(f*l, -h); ctx.lineTo(f*l, h); }
+  ctx.stroke(); ctx.restore();
+}
+function bvLooseMark(cam, b) {                              // on the grass, under the men: a pale patch with the rays of a burst
+  const q = pr(cam, b.x, b.y, 0);
+  if (!q) return;
+  const f = bvFlat(cam, q.z), R = Math.max(20, 1.15*q.k)*(RM ? 1 : 1 + 0.08*Math.sin(M.rt*2*Math.PI*1.5));
+  ctx.fillStyle = BV_LOOSE.patch; ellipse(q.sx, q.sy, R, R*f); ctx.fill();
+  ctx.lineCap = 'round';
+  for (const [style, width] of [['rgba(8,17,11,.55)', 4.5], ['#f6f3ea', 2.5]]) {
+    ctx.strokeStyle = style; ctx.lineWidth = width; ctx.beginPath();
+    for (let i = 0; i < 8; i++) { const a = i*Math.PI/4 + Math.PI/8, c = Math.cos(a), s = Math.sin(a); ctx.moveTo(q.sx + c*R*1.1, q.sy + s*R*1.1*f); ctx.lineTo(q.sx + c*R*1.5, q.sy + s*R*1.5*f); }
+    ctx.stroke();
+  }
 }
 function bvBall(cam) {                                      // a ball not in anyone's hands, after the men
   const b = M.ball;
@@ -269,45 +306,127 @@ function bvBall(cam) {                                      // a ball not in any
   }
   if (!q) return;
   const sh = pr(cam, b.x, b.y, 0), scG = 1/(1 + Math.max(0, b.z)*0.16);
-  if (sh) { ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.globalAlpha = 0.45 + 0.55*scG; ellipse(sh.sx, sh.sy, Math.max(3.5, 0.2*sh.k)*scG, Math.max(1.5, 0.08*sh.k)*scG); ctx.fill(); ctx.globalAlpha = 1; }
-  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y;
-  cutBall(q.sx, q.sy, q.k*1.1, hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0);
+  if (sh) { ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.globalAlpha = 0.45 + 0.55*scG; ellipse(sh.sx, sh.sy, Math.max(7, 0.3*sh.k)*scG, Math.max(2.5, 0.11*sh.k)*scG); ctx.fill(); ctx.globalAlpha = 1; }
+  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y, ang = hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0;
+  if (b.state === 'dead') { cutBall(q.sx, q.sy, q.k*1.1, ang); return; }   // waiting at a kick-off or a ruck, among the men: its old size, so it never sits on a man like a plate. No one needs to chase it
+  const rx = Math.max(b.state === 'air' ? BV_LOOSE.air : BV_LOOSE.rx, BV_LOOSE.k*q.k);
+  cutBall(q.sx, q.sy, rx/0.17, ang);                         // cutBall's half-length is 0.17 of its scale
+  ballLaces(q.sx, q.sy, rx, ang);
 }
-function bvChevron(cam, q, col) {                           // an off-frame pass or Switch target: a chevron on the edge, in the ring's colour
+const bvHudHides = (x, y, ins) => (y < BV_STACK_HUD && Math.abs(x - V.W/2) < 96) || (y < 54 && x > V.W - 70 - (ins ? ins.r : 0));   // the page draws over the canvas: a ball behind the scorebug, the clock, the sign or pause is not seen
+function bvChevron(cam, q, col, badge) {                    // an off-frame pass or Switch target: a chevron on the edge, in the ring's colour. With a badge, the ball or your player: a tag that says which
   const W = V.W, H = V.H, view = camPt(cam, q.x, q.y, 0);
   let [x, y] = bvS(q.x, q.y);
   if (view.z < CAM.near) x = cam.cx + view.a*18;
-  if (x >= 0 && x <= W && y >= 0 && y <= H) return;
+  const ball = q === M.ball, up = ball && q.z > 0 ? pr(cam, q.x, q.y, q.z) : null;
+  if (up) { x = up.sx; y = up.sy; }                         // a ball in the air is where it is drawn, not where its shadow is
+  if (x >= 0 && x <= W && y >= (ball ? 8 : 0) && y <= H && !(ball && bvHudHides(x, y, cam.ins))) return false;
+  if (badge) { edgeTag(x, y, col, badge, cam.ins); return true; }
   const ex = clamp(x, 14, W - 14), ey = clamp(y, 14, H - 14), a = Math.atan2(y - H/2, x - W/2), ca = Math.cos(a), sa = Math.sin(a);
   ctx.fillStyle = col; ctx.beginPath();
   ctx.moveTo(ex + ca*9, ey + sa*9); ctx.lineTo(ex - ca*5 - sa*8, ey - sa*5 + ca*8); ctx.lineTo(ex - ca*5 + sa*8, ey - sa*5 - ca*8); ctx.closePath(); ctx.fill();
+  BV.edges.push({ x:ex, y:ey });
+  return true;
+}
+/* The edge tag: a dark disc holding what it points at, and the chevron. It keeps out of the notch, the scorebug, the pause button, the stick's resting place, the buttons, the career caption and any other edge mark. */
+const BV_TAG = { r:13, tip:21, margin:24, clear:28, disc:'rgba(8,14,10,.9)' };
+function edgeTagAt(x, y, ins) {                             // where a tag for a thing at screen x, y goes. It changes nothing, for the tools
+  const W = V.W, H = V.H, m = BV_TAG.margin, I = ins || { t:0, r:0, b:0, l:0 }, lo = m + I.l, hi = W - m - I.r;
+  let ex = clamp(x, lo, hi), ey = clamp(y, m + I.t, H - m - I.b);
+  if (ey < 88 && Math.abs(ex - W/2) < 170) ey = 88;          // the scorebug, the clock and the sign under it
+  if (ey < 72 && ex > W - 84 - I.r) ey = 72;                 // the pause button
+  const floor = H - 128 - I.b, wall = W - 205 - I.r;         // the Pass, Kick and Sprint buttons fill the corner
+  if (ey > floor && ex > wall) { if (ex > W - 100 - I.r) ey = floor; else ex = wall; }
+  const st = stickRest(W, H, I), R = 62 + BV_TAG.r + 5, dx = ex - st.x;   // the thumb rests on the stick: a tag there is under it
+  if (Math.abs(dx) < R) {
+    if (ex <= lo + 1) ey = Math.min(ey, st.y - Math.sqrt(R*R - dx*dx));   // on the left edge: above the ring
+    else if (hyp(dx, ey - st.y) < R) ex = st.x + Math.sqrt(R*R - (ey - st.y)*(ey - st.y));   // along the bottom: to its right
+  }
+  if (careerCaption() && ey > H - 66 - I.b && Math.abs(ex - W/2) < 170) ey = H - 66 - I.b;   // over the kick-off caption
+  return [ex, ey];
+}
+function edgeTag(x, y, col, badge, ins) {
+  let [ex, ey] = edgeTagAt(x, y, ins);
+  const W = V.W, H = V.H, side = ex <= BV_TAG.margin + (ins ? ins.l : 0) + 1 || ex >= W - BV_TAG.margin - (ins ? ins.r : 0) - 1;
+  for (const e of BV.edges) if (hyp(e.x - ex, e.y - ey) < BV_TAG.clear) { if (side) ey += ey > H/3 ? -BV_TAG.clear : BV_TAG.clear; else ex += ex > W/2 ? -BV_TAG.clear : BV_TAG.clear; }
+  BV.edges.push({ x:ex, y:ey });
+  const a = Math.atan2(y - H/2, x - W/2), ca = Math.cos(a), sa = Math.sin(a), r = BV_TAG.r, tip = BV_TAG.tip;
+  ctx.fillStyle = BV_TAG.disc; ctx.beginPath(); ctx.arc(ex, ey, r, 0, 7); ctx.fill();
+  ctx.fillStyle = col; ctx.beginPath();
+  ctx.moveTo(ex + ca*tip, ey + sa*tip); ctx.lineTo(ex + ca*(r - 1) - sa*7, ey + sa*(r - 1) + ca*7); ctx.lineTo(ex + ca*(r - 1) + sa*7, ey + sa*(r - 1) - ca*7); ctx.closePath(); ctx.fill();
+  if (badge === 'star') careerStar(ex, ey, 8, col);
+  else { cutBall(ex, ey, 7/0.17, -0.35); ballLaces(ex, ey, 7, -0.35); }
 }
 
 /* ---------- the frame ---------- */
-function bvCareerMark(cam) {
-  const p = M.careerP; if (!p) return;
-  const [wx, wy] = drawPos(p), q = pr(cam, wx, wy, 0), k = M.kit[0];
-  if (!q) return;
-  const col = colorDist(k.trim, '#2f6a38') >= 90 ? k.trim : colorDist(k.fill, '#2f6a38') >= 90 ? k.fill : '#f1eee4';
-  groundRing(cam, wx, wy, BV_RING*1.3, col, 3);
-  const r = Math.max(6, 0.3*q.k), cx = q.sx, cy = Math.max(r + 2, q.sy - (lookOf(p).h + 0.5)*q.k);   // the star floats over his head: on his back it would hide the shirt number
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r*0.42 : r; ctx.lineTo(cx + Math.cos(a)*rr, cy + Math.sin(a)*rr); }
-  ctx.closePath();
-  ctx.fillStyle = col; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = C.outline; ctx.stroke();
+/* What stands over a man's head, bottom to top: the pointer (who you control), the ball's marker (who has it), the star (your player).
+   Pure, so the tools can read it. tip is the bottom of the stack; a man near the top of the frame moves the whole stack down, so nothing leaves the screen or sits on anything else. */
+const BV_CARRY = { w:26, h:17, tail:5, r:5, gap:2, fill:'#f6f3ea', edge:'#08110b', ball:'#fffdf6', lace:'#3b2f22' };
+const BV_STACK_HUD = 72;                                    // under the scorebug, the clock and the sign, a marked man's stack stops here: the page draws over the canvas, and a marker under them would not be seen
+function bvStack(tip, o) {
+  const P = o.pointer ? 8 : 0, B = o.carry ? BV_CARRY.h + BV_CARRY.tail : 0, S = o.star ? 2*o.star : 0, n = (P ? 1 : 0) + (B ? 1 : 0) + (S ? 1 : 0);
+  let y = Math.max(tip, (o.floor || 6) + P + B + S + Math.max(0, n - 1)*BV_CARRY.gap);
+  const out = {};
+  if (P) { out.pointer = y; y -= P + BV_CARRY.gap; }
+  if (B) { out.carry = y; y -= B + BV_CARRY.gap; }
+  if (S) out.star = y - o.star;
+  return out;
+}
+function bvCarryMark(x, y) {                                // a chalk speech bubble with the game's own white laced ball in it, its tail on y. It has no ring and no words, and it reads the same over any kit: chalk on a dark kit, the dark edge on a white one
+  const K = BV_CARRY, top = y - K.tail - K.h, l = x - K.w/2;
+  ctx.fillStyle = K.fill; ctx.strokeStyle = K.edge; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - 5, top + K.h - 0.5); ctx.lineTo(x, y); ctx.lineTo(x + 5, top + K.h - 0.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+  rrect(l, top, K.w, K.h, K.r); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 4.5, top + K.h - 0.5); ctx.lineTo(x + 4.5, top + K.h - 0.5); ctx.lineWidth = 2; ctx.strokeStyle = K.fill; ctx.stroke();   // the tail runs into the bubble
+  ctx.save(); ctx.translate(x, top + K.h/2); ctx.rotate(-0.35);
+  ctx.fillStyle = K.ball; ctx.strokeStyle = K.lace; ctx.lineWidth = 1.4; ellipse(0, 0, 9, 5.6); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  ballLaces(x, top + K.h/2, 9, -0.35);
+}
+function bvOverheads(cam, ctrls, plain) {                   // plain: a match you are playing, not a drill, the demo or a close-up. Everything else keeps the pointer alone
+  const b = M.ball, carrier = plain && M.phase === 'play' && b.state === 'held' ? b.carrier : null, me = plain && M.career ? M.careerP : null;
+  const men = [ctrls[0], ctrls[1], carrier, me];
+  for (let i = 0; i < 4; i++) {
+    const p = men[i];
+    if (!p || men.indexOf(p) !== i) continue;                // one stack a man, whatever he is
+    const ctrl = p === ctrls[0] || p === ctrls[1], col = ctrl ? ringCol(p === ctrls[0] ? 0 : 1) : null;
+    const [wx, wy] = drawPos(p), q = pr(cam, wx, wy, 0), x = q ? q.sx : V.W/2;
+    if (!q || x < 0 || x > V.W || q.sy < 0 || q.sy > V.H) {  // off the frame: a dot on the edge for the ring's man; the ball and your player get bvEdgeMarks
+      if (ctrl) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(clamp(x, 18, V.W - 18), clamp(q ? q.sy : V.H + 999, 18, V.H - 18), 7, 0, 7); ctx.fill(); }
+      continue;
+    }
+    const star = p === me ? Math.max(8, 0.34*q.k) : 0, S = bvStack(q.sy - (lookOf(p).h + 0.2)*q.k, { pointer:ctrl, carry:p === carrier, star, floor:plain && (p === carrier || star) && Math.abs(x - V.W/2) < 130 ? BV_STACK_HUD : 0 });
+    if (ctrl) { const ty = S.pointer; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x - 6, ty - 8); ctx.lineTo(x + 6, ty - 8); ctx.lineTo(x, ty); ctx.closePath(); ctx.fill(); }
+    if (S.carry != null) bvCarryMark(x, S.carry);
+    if (star) careerStar(x, S.star, star, careerCol());
+  }
+}
+function bvEdgeMarks(cam, plain) {                          // the ball or its carrier off the frame, and your player. Not at a set piece: the game is about to cut to it, and it has its own banner
+  if (!plain) return;
+  const b = M.ball;
+  if (M.phase === 'play' || (M.phase === 'set' && M.set && M.set.kind === 'ruck')) bvChevron(cam, b.state === 'held' && b.carrier ? b.carrier : b, BV_CARRY.fill, 'ball');
+  if (M.career && M.careerP) bvChevron(cam, M.careerP, careerEdgeCol(), 'star');
 }
 function renderBehind(dt) {
-  const cam = BV.cam = bvFollow(dt), b = M.ball;
+  const drill = !!practice, cam = BV.cam = drill ? dvCamera(dt) : bvFollow(dt), b = M.ball;   // the Training Ground has its own camera and field (render-drill.js), and the men and cues below
   BV.bakes = 0;
   ctx.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
-  drawPitchBehind(cam);
+  if (ART.state === 'idle') artLoad();
+  const demo = menuDemo();
+  BV.fade = !demo ? 1 : artReady() || ART.state === 'off' ? (RM ? 1 : Math.min(1, BV.fade + dt/BV_DEMO_IN)) : 0;   // loading: no men yet, so never a flash of the code-drawn ones. No art at all: they fade in the same way
+  if (drill && dvCovered()) { if (artReady()) artPrepare(cam); drillDrawScreen(); return; }
+  const dd = drill ? DV_DRAW[practice.id] : null;
+  if (drill) { dvGround(cam); if (dd && dd.ground && !M.cut) dd.ground(cam); if (dd && dd.spots) dd.spots(cam); } else drawPitchBehind(cam);
   const ctrls = [0, 1].map(t => (isHuman(t) ? ctrlOf(t) : null));
+  const plain = !drill && !demo && !M.cut;
+  BV.edges.length = 0;
+  if (plain && M.phase === 'play' && b.state === 'loose') bvLooseMark(cam, b);
   for (const t of [0, 1]) if (ctrls[t]) groundRing(cam, ctrls[t].x, ctrls[t].y, BV_RING*1.55, ringCol(t), 2.5);
   bvPrepareMen(cam);
+  if (artReady()) artPrepare(cam);
   const ctrlHuman = ctrls[0] || ctrls[1];
-  for (const p of BV.order) drawManBehind(cam, p, ctrlHuman);
-  if (M.career) bvCareerMark(cam);                           // a career match: your player's ring and star, as careerMark draws them on Top
+  if (drill) dvMen(cam, ctrlHuman, dt);
+  else if (BV.fade > 0) for (const p of BV.order) drawManBehind(cam, p, ctrlHuman);
   // the same cues as the top view, each sized by its own man's depth
   const targetCue = (q, text, colour) => {
     const at = pr(cam, q.x, q.y, 0);
@@ -356,13 +475,10 @@ function renderBehind(dt) {
     const hw = Math.max(5, 0.32*q.k), hh = hw*bvFlat(cam, q.z);
     ctx.beginPath(); ctx.moveTo(q.sx - hw, q.sy - hh); ctx.lineTo(q.sx + hw, q.sy + hh); ctx.moveTo(q.sx + hw, q.sy - hh); ctx.lineTo(q.sx - hw, q.sy + hh); ctx.stroke();
   }
-  bvBall(cam);
+  if (drill) { if (dd && dd.after) dd.after(cam, dt); dvBall(cam); } else if (BV.fade >= 1) bvBall(cam);
   drawTags(dt, 0.95*cam.F/cam.back);                         // its clocks must run; its impact ring stays a circle on the screen in this slice
-  for (const t of [0, 1]) if (ctrls[t]) {                    // the pointer over his head, or a dot on the edge when he is off the frame
-    const q = pr(cam, ctrls[t].x, ctrls[t].y, 0), tip = q ? q.sy - (lookOf(ctrls[t]).h + 0.2)*q.k : V.H + 999, x = q ? q.sx : V.W/2;
-    ctx.fillStyle = ringCol(t);
-    if (!q || x < 0 || x > V.W || q.sy < 0 || q.sy > V.H) { ctx.beginPath(); ctx.arc(clamp(x, 18, V.W - 18), clamp(q ? q.sy : V.H + 999, 18, V.H - 18), 7, 0, 7); ctx.fill(); }
-    else { const ty = Math.max(14, tip); ctx.beginPath(); ctx.moveTo(x - 6, ty - 8); ctx.lineTo(x + 6, ty - 8); ctx.lineTo(x, ty); ctx.closePath(); ctx.fill(); }
-  }
+  bvOverheads(cam, ctrls, plain);                            // the pointer, the ball's marker and the star, stacked over a man's head
+  bvEdgeMarks(cam, plain);
   if (M.cut) drawCut();
+  if (drill) drillDrawScreen();                              // a drill's own close-up or corner picture
 }
