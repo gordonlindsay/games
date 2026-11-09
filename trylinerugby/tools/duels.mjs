@@ -242,26 +242,103 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
   const n8 = cell(1, 0, { rate:8, hit:true });
   ok(n8('dom0') > 10, `Normal, 8 a second with a Good Hit on your own put-in: a penalty or pushover ${n8('dom0').toFixed(1)}% of the time (over 10)`);
   // the penalty line: the shove staged with both packs stilled (no taps, so no drift). SCRUM_DOM is a penalty, a hair less is Go-Forward Ball;
-  // 1.2 on their put-in is a steal, a hair less leaves it theirs; a penalty within 8m of their line is a Pushover try
+  // a penalty within 8m of their line is a Pushover try
   freshFH(1, false);
-  const staged = (feed, pos, x) => { const tries = M().tries[0]; const c = scrum(feed, { pin:[0, 0], pos, x }); return { res:c.result, pos:c.pos, scored:M().tries[0] > tries || (M().phase === 'set' && M().set && M().set.kind === 'try') }; };
+  const staged = (feed, pos, x) => { const tries = M().tries[0]; const c = scrum(feed, { pin:[0, 0], pos, x }); return { res:c.result, pos:c.pos, line:c.line, tag:T.kick.cutTitle(c), scored:M().tries[0] > tries || (M().phase === 'set' && M().set && M().set.kind === 'try') }; };
   const a = staged(0, SD - 0.1), b = staged(0, SD);
   ok(a.res === 'win0' && b.res === 'dom0', `your put-in: ${(SD - 0.1).toFixed(1)}m gained is Go-Forward Ball (${a.res}), ${SD}m is a penalty (${b.res})`);
-  const c1 = staged(1, 1.19), c2 = staged(1, 1.2);
-  ok(c1.res === 'win1' && c2.res === 'steal0', `their put-in: 1.19m gained leaves it theirs (${c1.res}), 1.2m is Against the Head (${c2.res})`);
   const over = staged(0, SD, 100);
   ok(over.res === 'dom0' && over.scored, `a penalty from a scrum 10m out is a Pushover try (${over.res}, try scored ${over.scored})`);
+  // the ball goes to the pack ahead on the bar (2026-11-09, Gordon: "if a team wins a scrum, they should also win possession"). The bar's
+  // middle is the line that decides it, SCRUM_HEAD (1.2m, the old steal line) towards the pack not putting in: the feeder's head start, so
+  // the rates above hold. Staged with both packs stilled, and the words heard with the colour they are said in: 0.3m past the line on their
+  // put-in wins it Against the Head, said for you; 0.3m short leaves it theirs; on your put-in 0.3m ahead keeps it, 0.3m behind loses it;
+  // dead level, or nearer the line than SCRUM_TIE, is the feeder's. Go-Forward Ball is past 0.8m gained, as before
+  {
+    const HEAD = T.debug.SCRUM_HEAD, TIE = T.debug.SCRUM_TIE, doc = globalThis.document, mk = doc.createElement, tn = doc.createTextNode, heard = [];
+    doc.createTextNode = t => ({ said:t }); doc.createElement = tag => { const e = mk(tag); e.appendChild = n => { if (n && n.said != null) heard.push([n.said, e.style.getPropertyValue('--k')]); }; return e; };
+    const col = t => T.teams.showCol(t);
+    const said = (feed, pos) => { heard.length = 0; const r = staged(feed, pos); return { ...r, words:heard.length ? heard[heard.length - 1][0] : null, to:heard.length ? [0, 1].find(t => col(t) === heard[heard.length - 1][1]) : null }; };
+    ok(HEAD === 1.2 && TIE === 0.05 && col(0) !== col(1), `the line sits ${HEAD}m towards the pack not putting in, dead level is nearer it than ${TIE}m (the two sides' colours differ: ${col(0)} v ${col(1)})`);
+    const L1 = 1.2, L0 = -1.2;                              // the line in pos (metres gained by your pack from the mark) on their put-in and on yours
+    const t1 = said(1, L1 + 0.3), t2 = said(1, L1 - 0.3), t3 = said(1, 0.3);
+    ok(t1.line === L1 && t1.res === 'steal0' && t1.words === 'Against the Head' && t1.to === 0, `their put-in, 0.3m past the line: your ball, Against the Head said for you (${t1.res}, ${t1.words}, ${t1.to})`);
+    ok(t2.res === 'win1' && t2.words === 'Scrum Won' && t2.to === 1 && t3.res === 'win1', `their put-in, 0.3m short of the line: their ball, Scrum Won said for them (${t2.res}, ${t2.words}, ${t2.to}); 0.3m up from the mark is short of it too (${t3.res})`);
+    const o1 = said(0, L0 + 0.3), o2 = said(0, L0 - 0.3), o3 = said(0, 1.0);
+    ok(o1.line === L0 && o1.res === 'win0' && o1.words === 'Scrum Won' && o1.to === 0, `your put-in, 0.3m ahead of the line: you keep it, Scrum Won said for you (${o1.res}, ${o1.words}, ${o1.to})`);
+    ok(o2.res === 'steal1' && o2.words === 'Against the Head' && o2.to === 1, `your put-in, 0.3m behind the line: theirs, Against the Head said for them (${o2.res}, ${o2.words}, ${o2.to})`);
+    ok(o3.res === 'win0' && o3.words === 'Go-Forward Ball' && o3.to === 0, `your put-in, 1.0m gained: Go-Forward Ball said for you (${o3.res}, ${o3.words}, ${o3.to})`);
+    const tag = t => 'Scrum · ' + M().nat[t].id + ' Ball';   // the tag in the corner: the put-in's, then the side that won the ball
+    ok(T.kick.cutTitle({ kind:'scrum', feed:1, result:null }) === tag(1) && T.kick.cutTitle({ kind:'scrum', feed:1, result:'dom0' }) === tag(1) && t1.tag === tag(0) && t2.tag === tag(1) && o1.tag === tag(0) && o2.tag === tag(1), `the corner tag names the put-in until the ball is won (and at a penalty), then the side with it: ${t1.tag}, ${t2.tag}, ${o1.tag}, ${o2.tag}`);
+    const d1 = said(1, L1), d2 = said(1, L1 + TIE - 0.01), d3 = said(1, L1 + TIE), d4 = said(0, L0), d5 = said(0, L0 - TIE + 0.01);
+    ok(d1.res === 'win1' && d2.res === 'win1' && d3.res === 'steal0' && d4.res === 'win0' && d5.res === 'win0', `dead level is the feeder's: their put-in on the line ${d1.res}, ${(TIE - 0.01).toFixed(2)}m past it ${d2.res}, ${TIE}m past it ${d3.res}; your put-in on the line ${d4.res}, ${(TIE - 0.01).toFixed(2)}m behind it ${d5.res}`);
+    doc.createElement = mk; doc.createTextNode = tn;
+    // what the bar shows is what you get: across the whole shove, both put-ins, the bar's fill leans the way of the side whose ball it is,
+    // none at dead level (the feeder's), and the result agrees
+    let bad = 0, n = 0;
+    for (const feed of [0, 1]) for (let p = -2.35; p <= 2.35; p += 0.01) { const c = { feed, pos:p, line:feed === 0 ? L0 : L1 }, f = T.debug.scrumBar(c), w = T.debug.scrumAhead(c); n++; if ((f > 0 ? 0 : f < 0 ? 1 : feed) !== w) bad++; }
+    ok(bad === 0 && n > 900, `the bar leans the way of the side whose ball it is at every 1cm of the shove, both put-ins (${bad} of ${n} wrong)`);
+  }
   // the one line is updateScrum's too: both packs stilled, the shove staged 0.2 short of SCRUM_DOM runs on (the old 2.0 ended it at once), staged at
-  // SCRUM_DOM it ends there and then; and drawScrum's bar fills by pos/SCRUM_DOM: a quarter at the 1.2 steal line, half at the penalty line
+  // SCRUM_DOM it ends there and then. drawScrum's bar (2026-11-09): its middle is the line, each half fills exactly at its pack's penalty line,
+  // so on your put-in it leans your way a third at the mark (1.2m of 3.6), none on the line, half your half 0.6m behind it, and full at SD
+  // either way; the ball drawn by the side whose ball it is
   { const still = () => { freshFH(1, false); T.scrum(0, 60, 35, ''); runUntil(() => M().phase === 'cut', 600); const c = M().cut; c.base[0] = c.base[1] = 0; c.wave = 0; T.input.jx = T.input.jy = 0; runUntil(() => c.engaged, 200); return c; };
     const c = still(); c.pos = SD - 0.2; T.update(STEP); const ran = c.result, p1 = c.pos; c.pos = SD; T.update(STEP);
     ok(ran == null && Math.abs(p1 - (SD - 0.2)) < 1e-9 && c.result === 'dom0', `updateScrum ends the scrum at ${SD}m and not before: staged at ${(SD - 0.2).toFixed(1)}m it runs on (${ran}), at ${SD}m it is a penalty on the next step (${c.result})`);
     runUntil(() => M().phase !== 'cut', 4000);
     const c2 = still(), W = 667, bw = W*0.38;
-    const fills = pos => { c2.pos = pos; const out = []; globalThis.__ctxSpy = (k, a) => { if (k === 'fillRect') out.push(a); }; T.debug.view(W, 375); T.debug.drawCut(); globalThis.__ctxSpy = null; return out; };
-    const fillAt = (fs, w) => fs.some(a => Math.abs(a[0] - W*0.5) < 1e-6 && Math.abs(a[2] - w) < 1e-6);
-    ok(fillAt(fills(1.2), bw/4) && fillAt(fills(SD), bw/2) && !fillAt(fills(1.2), bw/2*1.2/2.0), `drawScrum's bar fills by pos/SCRUM_DOM: a quarter of it at the 1.2m steal line, half at ${SD}m (not 0.3 of it at 1.2, the old /2.0)`);
-    runUntil(() => M().phase !== 'cut', 4000); }
+    const fills = (pos, cc = c2) => { cc.pos = pos; const out = [], props = []; let fs = '', ball = null; globalThis.__ctxSpy = (k, a) => { if (k === 'fillStyle') fs = a[0]; else if (k === 'fillRect') out.push([...a, fs]); else if (k === 'translate') { ball = a[0]; if (Math.abs(a[1] - 375*0.85) < 1e-6) props.push(a[0]); } }; T.debug.view(W, 375); T.debug.drawCut(); globalThis.__ctxSpy = null; out.ball = ball; out.meet = props.length === 2 ? (props[0] + props[1])/2 : NaN; return out; };   // meet: where the packs meet, half way between the two near props (fig's translate at the ground line)
+    const bar = fs => fs.filter(a => Math.abs(a[1] - 375*0.885) < 1e-6 && Math.abs(a[3] - Math.max(8, 375*0.022)) < 1e-6);   // the fill, not the frame or the line
+    const right = (fs, w) => bar(fs).some(a => Math.abs(a[0] - W*0.5) < 1e-6 && Math.abs(a[2] - w) < 1e-6), left = (fs, w) => bar(fs).some(a => Math.abs(a[0] + a[2] - W*0.5) < 1e-6 && Math.abs(a[2] - w) < 1e-6);
+    const atMark = fills(0), onLine = fills(-1.2), behind = fills(-1.8), pen = fills(SD), penThem = fills(-SD);
+    ok(right(atMark, bw/6) && bar(onLine).length === 0 && left(behind, bw/4) && right(pen, bw/2) && left(penThem, bw/2), `drawScrum's bar on your put-in: a third of your half at the mark, none on the line, half of theirs 0.6m behind it, a whole half at ${SD}m either way`);
+    ok(atMark.ball < W*0.5 && onLine.ball < W*0.5 && behind.ball > W*0.5, `the ball by the name of the side whose ball it is: yours at the mark and on the line, theirs behind it (${atMark.ball.toFixed(0)}, ${onLine.ball.toFixed(0)}, ${behind.ball.toFixed(0)} of ${W})`);
+    // the packs agree (2026-11-09 review: they moved by the shove from the mark, so on their put-in your pack could be seen driving
+    // theirs back up to 1.2m while the ball went to them). They meet on the line at dead level, lean the way of the pack ahead, and at
+    // a penalty stand where they always did: the screen's middle plus 0.7 of a metre's scale per metre, SD out (the wobble is 1.5px)
+    const sc = 375*0.2, at = m => W*0.5 + m*sc*0.7, near = (o, m) => Math.abs(o.meet - at(m)) <= 1.6;
+    ok(near(atMark, 0.8) && near(onLine, 0) && near(behind, -1.2) && near(pen, SD) && near(penThem, -SD), `drawScrum's packs on your put-in meet a third of the way your way at the mark, in the middle on the line, half way their way 0.6m behind it, and where they always did at ${SD}m either way (${[atMark, onLine, behind, pen, penThem].map(o => (o.meet - W*0.5).toFixed(0)).join(', ')}px from the middle)`);
+    runUntil(() => M().phase !== 'cut', 4000);
+    const c3 = (() => { freshFH(1, false); T.scrum(1, 60, 35, ''); runUntil(() => M().phase === 'cut', 600); const k = M().cut; k.base[0] = k.base[1] = 0; k.wave = 0; runUntil(() => k.engaged, 200); return k; })();
+    const short = fills(0.9, c3), past = fills(1.5, c3);
+    ok(short.meet < W*0.5 - 5 && short.ball > W*0.5 && past.meet > W*0.5 + 5 && past.ball < W*0.5, `their put-in, 0.3m short of the line: their pack is seen driving yours back, by their name (packs ${(short.meet - W*0.5).toFixed(0)}px); 0.3m past it, yours driving theirs (${(past.meet - W*0.5).toFixed(0)}px)`);
+    runUntil(() => M().phase !== 'cut', 4000);
+    let wrong = 0, cells = 0;
+    for (const feed of [0, 1]) for (let p = -2.4; p <= 2.4; p += 0.01) { const k = { feed, pos:p, line:feed === 0 ? -1.2 : 1.2 }, m = T.debug.scrumShown(k), d = p - k.line; cells++; if (Math.abs(d) < T.debug.SCRUM_TIE ? Math.abs(m) > 2*T.debug.SCRUM_TIE : (m > 0 ? 0 : 1) !== T.debug.scrumAhead(k)) wrong++; }
+    const drill = [0, 0.37, -0.81, 2.4, -2.5].every(p => T.debug.scrumShown({ pos:p, line:0 }) === p);
+    ok(wrong === 0 && cells > 900 && drill, `the packs lean the way of the side whose ball it is at every 1cm of the shove, both put-ins (${wrong} of ${cells} wrong); a drill's packs, line at the mark, stand exactly where the shove puts them (${drill})`); }
+  // two player, both seats: a pack a side and the same line. Staged, a pack 0.3m past the line on the other's put-in wins it, said for that side,
+  // and 0.3m short leaves it with the feeder; played, equal thumbs keep the feeder's ball, and a thumb against an idle pack takes it
+  {
+    const pair = () => { T.newMatch(FAR, HAS, { halfLen:240, diff:1, headless:false, duels:'off', humans:[true, true], levels:[1, 1] }); T.debug.setMode('match'); for (let i = 0; i < 120; i++) T.update(STEP); };
+    const doc = globalThis.document, mk = doc.createElement, tn = doc.createTextNode, heard = [];
+    doc.createTextNode = t => ({ said:t }); doc.createElement = tag => { const e = mk(tag); e.appendChild = n => { if (n && n.said != null) heard.push([n.said, e.style.getPropertyValue('--k')]); }; return e; };
+    const two = (feed, rates, pos) => {
+      heard.length = 0; if (M().over) pair();
+      T.scrum(feed, 60, 35, ''); runUntil(() => M().phase === 'cut', 600);
+      const c = M().cut, ins = [T.sides.inputOf(0), T.sides.inputOf(1)], next = [1.45, 1.47]; let g = 0;
+      while (M().cut === c && !c.result && g++ < 3000) { if (pos != null && c.engaged) c.pos = pos; for (const s of [0, 1]) if (rates[s] && c.t >= next[s]) { ins[s].aPressed = true; next[s] = c.t + 1/rates[s]; } T.update(STEP); }
+      runUntil(() => M().phase !== 'cut', 4000);
+      const h = heard[heard.length - 1]; return { res:c.result, to:h ? [0, 1].find(t => T.teams.showCol(t) === h[1]) : null, words:h && h[0] };
+    };
+    pair();
+    const a1 = two(1, [0, 0], 1.5), a2 = two(1, [0, 0], 0.9), b1 = two(0, [0, 0], -1.5), b2 = two(0, [0, 0], -0.9);
+    ok(M().two && a1.res === 'steal0' && a1.to === 0 && a1.words === 'Against the Head' && a2.res === 'win1' && a2.to === 1, `two player, Player 2's put-in: Player 1 0.3m past the line wins it, said for him (${a1.res}, ${a1.words}, ${a1.to}); 0.3m short leaves it Player 2's (${a2.res}, ${a2.to})`);
+    ok(b1.res === 'steal1' && b1.to === 1 && b1.words === 'Against the Head' && b2.res === 'win0' && b2.to === 0, `two player, Player 1's put-in: Player 2 0.3m past the line wins it, said for him (${b1.res}, ${b1.words}, ${b1.to}); 0.3m short leaves it Player 1's (${b2.res}, ${b2.to})`);
+    pair();
+    const kept = [0, 1].map(feed => { let k = 0; for (let i = 0; i < 10; i++) { const r = two(feed, [7, 7]).res; if (r === 'win' + feed || r === 'dom' + feed) k++; } return k; });
+    const took = [two(1, [8, 0]).res, two(0, [0, 8]).res];
+    ok(kept[0] === 10 && kept[1] === 10 && took[0] === 'steal0' && took[1] === 'steal1', `two player, 7 a second each: the feeder keeps it ${kept[0]} and ${kept[1]} of 10; 8 a second against an idle pack takes it, never a penalty (${took.join(', ')})`);
+    doc.createElement = mk; doc.createTextNode = tn;
+  }
+  // Kids (KIDS.scrum, your pack's shove +0.25 at the start of the scale): the same line, the help still the pack's own
+  {
+    T.newMatch(FAR, HAS, { halfLen:240, diff:0, headless:false, duels:'off', humans:[true, false], kids:true }); for (let i = 0; i < 120; i++) T.update(STEP);
+    T.scrum(1, 60, 35, ''); runUntil(() => M().phase === 'cut', 600); const c = M().cut;
+    ok(M().kids && c.line === 1.2 && Math.abs(c.base[0] - ((M().nat[0].power - 3)*0.06 + T.kids.KIDS.scrum)) < 1e-9, `Kids: the line sits 1.2m towards you on their put-in (${c.line}) and your pack keeps its shove (+${T.kids.KIDS.scrum})`);
+    runUntil(() => M().phase !== 'cut', 4000);
+  }
   // the words: neither the scrum's cards nor the README tells the player to hold the stick at a scrum (re-pinned 2026-11-09 from How to
   // Play's Scrum row, which went with its prose: the tutorial card and the hint card are where a player reads what a scrum wants)
   const html = readGameSource(), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');

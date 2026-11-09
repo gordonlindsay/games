@@ -2446,12 +2446,18 @@ function surge(team, secs) { M.surge = { team, t:secs }; }
 
 /* Scrum: Crouch, Bind, Set. Press on Set for a good start, then tap Push fast to drive: the taps alone are the shove, the stick
    plays no part (2026-10-17: it used to scale the taps by 0.55 at rest and 0.2 held back, and nothing on screen said so). pos is
-   metres gained by your pack. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty (a pushover
-   within 8m of the line); the steal line is 1.2, half way up the bar. */
-const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4;
+   metres gained by team 0's pack from the mark. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty
+   (a pushover within 8m of the line). Short of it, the ball goes to the pack ahead on the bar when the scrum ends (2026-11-09,
+   Gordon: "if a team wins a scrum, they should also win possession"). The feeding pack starts SCRUM_HEAD ahead: the bar's middle,
+   the line that decides the ball (c.line, in pos), sits that far towards the other pack, so the other pack has to drive the scrum
+   back 1.2m to draw level, as far as it always had to to steal (the old steal line, so the old rates hold), and the bar leans the
+   feeder's way from Crouch. Each half of the bar fills at its own pack's penalty line. Dead level, nearer the line than SCRUM_TIE,
+   is the feeder's ball. The packs on screen show the shove from the line too (scrumShown), not from the mark. A drill's scrum has
+   no ball to win: its line is the mark, and its bar and its packs read as they always did. */
+const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4, SCRUM_HEAD = 1.2, SCRUM_TIE = 0.05;
 function startScrum(s) {
   // every scrum is a little different: a CPU pack's strength varies, and the side putting in gets a small edge. pos is metres gained by team 0's pack
-  const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, engaged:false, mine:0, theirs:0, result:null,
+  const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, line:practice ? 0 : -dirOf(s.team)*SCRUM_HEAD, engaged:false, mine:0, theirs:0, result:null,
     rate:[0, 0], taps:[0, 0], hit:[false, false], early:[false, false], base:[0, 0], wave:0, msg:[null, null] };   // a pack a side: a human's taps and timing, every pack's base effort; msg: two player's Early / Good Hit tag over each pack
   for (const t of [0, 1]) c.base[t] = cpuSide(t) ? (diffOf(t).scrumCpu + (powerOf(t)-3)*0.06)*(0.75 + rnd()*0.5) + (s.team === t ? 0.08 : 0) : (powerOf(t)-3)*0.06 + (s.team === t ? 0.08 : 0) + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0) + (M.kids ? KIDS.scrum : 0);
   c.wave = rnd()*6;
@@ -2480,8 +2486,8 @@ function updateScrum(c, dt) {
   if (t >= SCRUM_SET + SCRUM_PUSH || Math.abs(c.pos) >= SCRUM_DOM) resolveScrum(c);
 }
 function resolveScrum(c) {
-  const p = c.pos, F = c.feed;
-  let res = p >= SCRUM_DOM ? 'dom0' : p <= -SCRUM_DOM ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
+  const p = c.pos, F = c.feed, ahead = scrumAhead(c);
+  let res = p >= SCRUM_DOM ? 'dom0' : p <= -SCRUM_DOM ? 'dom1' : (ahead === F ? 'win' : 'steal') + ahead;
   if (res === 'dom1' && !cpuSide(0) && !c.taps[0] && !c.hit[0]) res = F === 0 ? 'steal1' : 'win1';   // a human pack that never pushed loses the ball, nothing worse
   if (res === 'dom0' && !cpuSide(1) && !c.taps[1] && !c.hit[1]) res = F === 1 ? 'steal0' : 'win0';
   c.result = res;
@@ -2500,6 +2506,15 @@ function resolveScrum(c) {
   const strong = w === 0 ? p > 0.8 : p < -0.8;
   say(stolen ? 'Against the Head' : strong ? 'Go-Forward Ball' : 'Scrum Won', stolen || strong ? '' : 'small', w);
   finishCut(() => { releaseTo(w, mx, y, 'scrum'); if (stolen || strong) surge(w, 2.5); }, 0.8);
+}
+function scrumAhead(c) { const d = c.pos - c.line; return Math.abs(d) < SCRUM_TIE ? c.feed : d > 0 ? 0 : 1; }   // whose ball it is as the shove stands: the pack ahead of the line, the feeder's when dead level
+function scrumShown(c) {                                   // where drawScrum's packs meet, in metres either side of the screen's middle: the shove from the line, not the mark (2026-11-09 review), each side stretched so its pack's penalty line sits SCRUM_DOM out as the bar's halves fill. Level on the line, they meet in the middle; ahead of it, they lean that pack's way, so the packs, the bar and the ball agree. A drill's line is the mark: exactly pos, as before
+  const d = c.pos - c.line;
+  return d*(SCRUM_DOM/(SCRUM_DOM - Math.sign(d)*c.line));
+}
+function scrumBar(c) {                                     // the bar's fill, -1 to 1 from its middle (the line): + towards team 1's end as team 0 gains. Each half fills at that pack's penalty line; dead level shows none
+  const d = c.pos - c.line;
+  return Math.abs(d) < SCRUM_TIE ? 0 : d > 0 ? Math.min(1, d/(SCRUM_DOM - c.line)) : -Math.min(1, -d/(SCRUM_DOM + c.line));
 }
 function autoScrum(s) {
   const F = s.team, o = 1-F, edge = (powerOf(F) - powerOf(o))*0.03, r = rnd();
@@ -5909,7 +5924,7 @@ function drawScrum(c, g) {
   if (practice) dvStage(g.H*0.62); else drawStage(g);
   const { W, H } = g, sc = H*0.2, ground = H*0.85;
   const t = c.t, engaged = t >= SCRUM_SET;
-  const mid = W*0.5 + c.pos*sc*0.7 + (engaged && !c.result ? Math.sin(t*31)*1.5 : 0);
+  const mid = W*0.5 + scrumShown(c)*sc*0.7 + (engaged && !c.result ? Math.sin(t*31)*1.5 : 0);   // the packs meet on the line at dead level and lean the way of the pack ahead, as the bar does
   const gap = engaged ? 0 : t < 0.75 ? 0.9 : 0.4;
   const lean = engaged ? 1 : t < 0.75 ? 0.5 : 0.85, crouch = engaged ? 0.75 : t < 0.75 ? 0.35 : 0.65;
   // far prop, hooker, near prop: the far two sit just behind and darker
@@ -5926,22 +5941,25 @@ function drawScrum(c, g) {
     const m = c.msg[team];
     if (m && t - m.at < 0.9) { ctx.fillStyle = ringCol(team); ctx.font = `800 ${Math.round(H*0.045)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(m.text.toUpperCase(), px, ty - tag*0.9 - 4); }
   }
-  // the feed: the ball waits at the mouth of the tunnel, then rolls in
-  const roll = engaged ? clamp((t - SCRUM_SET - 0.2)/0.35, 0, 1) : 0, shF = c.feed === 0 ? 1 : -1;
-  cutBall(mid - shF*0.5*sc*(1 - roll), ground + (0.06 - 0.075*roll)*H, sc*(1.1 - 0.25*roll), roll*6);
+  // whose ball it will be (2026-11-09): the bar's middle is the line that decides it, and the feeder's head start leans the bar its
+  // way from Crouch (SCRUM_HEAD). Each half fills at that pack's penalty line, in the colour of the pack ahead; dead level shows no
+  // fill and is the feeder's. The ball sits between the bar and the name of the side whose ball it is. A drill's bar has no ball:
+  // its line is the mark, and it reads as it always did
+  const bw = W*0.38, bx = W*0.5 - bw/2, by = H*0.885, bh = Math.max(8, H*0.022), frac = scrumBar(c), rb = bh*1.1, slot = practice ? 0 : 2*rb + 8;
+  // the feed: the ball waits at the mouth of the tunnel, clear of the bar, then rolls in
+  const roll = engaged ? clamp((t - SCRUM_SET - 0.2)/0.35, 0, 1) : 0, shF = c.feed === 0 ? 1 : -1, fs = sc*(1.1 - 0.25*roll);
+  cutBall(mid - shF*0.5*sc*(1 - roll), Math.min(ground + (0.06 - 0.075*roll)*H, by - 7 - Math.max(5, fs*0.17)*0.62), fs, roll*6);
   // calls
   const call = t < 0.75 ? 'Crouch' : t < 1.3 ? 'Bind' : t < 1.9 ? 'Set' : null;
   if (call && t > CUT_IN) cutText(call, H*0.37, H*(call === 'Set' ? 0.17 : 0.13), call === 'Set' ? 1 : 0.92);
-  // who is winning the shove
-  const bw = W*0.38, bx = W*0.5 - bw/2, by = H*0.885, bh = Math.max(8, H*0.022);
   ctx.fillStyle = 'rgba(8,14,10,.8)'; rrect(bx - 3, by - 3, bw + 6, bh + 6, 4); ctx.fill();
-  const frac = clamp(c.pos/SCRUM_DOM, -1, 1);                // the bar fills exactly at a penalty; the steal line sits half way
   ctx.fillStyle = M.two ? (frac >= 0 ? ringCol(0) : ringCol(1)) : (frac >= 0 ? C.ctrl : showCol(1));   // two player: each pack's gain in its player's colour
-  if (frac >= 0) ctx.fillRect(W*0.5, by, bw/2*frac, bh); else ctx.fillRect(W*0.5 + bw/2*frac, by, -bw/2*frac, bh);
-  ctx.fillStyle = '#f1eee4'; ctx.fillRect(W*0.5 - 1, by - 4, 2, bh + 8);
+  if (frac > 0) ctx.fillRect(W*0.5, by, bw/2*frac, bh); else if (frac < 0) ctx.fillRect(W*0.5 + bw/2*frac, by, -bw/2*frac, bh);
+  ctx.fillStyle = '#f1eee4'; ctx.fillRect(W*0.5 - 2, by - 6, 4, bh + 12);   // the line
   ctx.font = `800 ${Math.round(H*0.04)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textBaseline = 'middle';
-  ctx.textAlign = 'right'; ctx.fillText(practice ? 'YOU' : M.nat[0].id, bx - 10, by + bh/2);
-  ctx.textAlign = 'left'; ctx.fillText(practice ? 'THEM' : M.nat[1].id, bx + bw + 10, by + bh/2);
+  ctx.textAlign = 'right'; ctx.fillText(practice ? 'YOU' : M.nat[0].id, bx - 10 - slot, by + bh/2);
+  ctx.textAlign = 'left'; ctx.fillText(practice ? 'THEM' : M.nat[1].id, bx + bw + 10 + slot, by + bh/2);
+  if (!practice) cutBall(scrumAhead(c) === 0 ? bx - 7 - rb : bx + bw + 7 + rb, by + bh/2, rb/0.17);
 }
 function drawLineout(c, g) {
   drawStage(g);
@@ -6610,7 +6628,7 @@ function cutTitle(c) {
   if (practice) return '';                                     // the Training Ground names its own moments
   if (c.duel) return DUEL[c.kind].name;
   if (c.kind === 'goal') return (c.g.kind === 'conversion' ? 'Conversion' : c.g.kind === 'penalty' ? 'Penalty Goal' : 'Drop Goal') + ' · ' + Math.round(c.g.dist) + 'm';
-  if (c.kind === 'scrum') return 'Scrum · ' + M.nat[c.feed].id + ' Ball';
+  if (c.kind === 'scrum') return 'Scrum · ' + M.nat[/^(win|steal)/.test(c.result || '') ? +c.result.slice(-1) : c.feed].id + ' Ball';   // the put-in's, then whoever won it (2026-11-09: Against the Head names the side that took it)
   return 'Lineout · ' + M.nat[c.team].id + ' Throw';
 }
 function duelLabels(c) {
@@ -13100,7 +13118,7 @@ function driveNext(D) {
 }
 const drillDrive = {
   setup() { practice.drive = { i:0, won:0, res:[], all:0, good:0 }; driveNext(practice.drive); },
-  onScrum(c) {
+  onScrum(c) {                                             // a drill's scrum has its line at the mark (startScrum), so half a metre gained is always win0, never a steal
     const D = practice.drive, won = c.result === 'dom0' || (c.result === 'win0' && c.pos >= DRILL_DRIVE.gain);
     D.res.push(won); if (won) D.won++;
     say(won ? 'Drive Won' : c.pos < 0 ? 'Pushed Back' : 'Held', won ? '' : 'small', won ? 0 : 1); sfx(won ? 'cheer' : 'groan');
@@ -15366,7 +15384,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     duelCam, duelPose, camAt, startMatch, exitMatch, pickOwner,
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
-    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk, CONFIRM,
+    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, SCRUM_HEAD, SCRUM_TIE, scrumAhead, scrumBar, scrumShown, goHome, exitMatch, setDesk, isDesk, CONFIRM,
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, safeInsets, stickRest, tagBox, nearestAct, releaseTouch, phoneUpright, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
   contact:{ matchMild, CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, switchTarget, switchUseful, switchPlayer, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,

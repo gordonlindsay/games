@@ -1170,8 +1170,9 @@ begin('render');
       ok(log.bad === 0 && log.texts.some(([t, f]) => t === 'PLAYER 1 · F · PUSH' && f === '#ffcf3d') && log.texts.some(([t, f]) => t === 'PLAYER 2 · / · PUSH' && f === '#ff5fd2'), `${at}: the scrum cues name each player's key in his colour`);
       ok(log.texts.filter(([t, f]) => t === '1' && f === '#1c1500').length >= 1 && log.texts.filter(([t, f]) => t === '2' && f === '#2a0a22').length >= 1 && log.texts.some(([t, f]) => t === 'EARLY' && f === '#ff5fd2'), `${at}: a seat tag over each pack, and Player 2's Early as a pink tag at his pack`);
       ok(log.rects.some(([a, f]) => f === '#ffcf3d' && near(a[0], W*0.5, 1e-6) && a[2] > 0 && a[2] <= barW/2 + 1e-6), `${at}: Player 1 gaining fills the bar gold from the centre, inside W·0.38`);
-      c.pos = -0.8; log = spy(); D.drawCut(); off();
-      ok(log.rects.some(([a, f]) => f === '#ff5fd2' && a[0] < W*0.5 && near(a[0] + a[2], W*0.5, 1e-6)), `${at}: Player 2 gaining fills it pink to the left`);
+      c.pos = -0.8; log = spy(); D.drawCut(); off(); const short = log.rects.some(([a, f]) => f === '#ffcf3d' && near(a[0], W*0.5, 1e-6) && a[2] > 0) && !log.rects.some(([, f]) => f === '#ff5fd2');
+      c.pos = c.line - 0.4; log = spy(); D.drawCut(); off();   // 2026-11-09: the bar's middle is the line that decides the ball, 1.2m towards Player 2 on Player 1's put-in, so 0.8m up is still Player 1's ball
+      ok(short && log.rects.some(([a, f]) => f === '#ff5fd2' && a[0] < W*0.5 && near(a[0] + a[2], W*0.5, 1e-6)), `${at}: Player 2 0.8m up on Player 1's put-in is short of the line and the bar stays gold; 0.4m past it fills it pink to the left`);
       c.pos = 0; let g = 0; while (M().phase === 'cut' && g++ < 4000) T.update(STEP); }
     // a lineout: both jumpers tagged
     M().headless = false; T.lineout(1, 60, 5, ''); { let g = 0; while (M().phase !== 'cut' && g++ < 400) T.update(STEP); } M().headless = true;
