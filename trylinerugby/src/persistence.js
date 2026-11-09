@@ -9,7 +9,8 @@
    ========================================================= */
 const STORE = 'tryline.v1';
 /* hints: the card in the top corner naming each close-up's control (one player); twoHints: the same per player in two player, stored
-   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; Replay Tutorial empties it.
+   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; tutReset empties it (only
+   the tools call it since How to Play lost Replay Tutorial, 2026-11-09).
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
 const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];

@@ -10,7 +10,7 @@ make yourself, as men, women or minis. Professional sides go by their city, Scot
 
 Five headlines along the bottom in equal parts, each a drawn picture and its name: **Quick Match | Championship | Career | Skills Mini Games | Settings** (the owner: "Game / Championship / Career / Training Drills / Settings. Key headlines menu. Alongside my team / country choice and 'import data'", then on seeing it, 2026-11-09: "what's the difference between 'quick match' and a game?", "change training to 'Skills Mini Games' - more compelling", "take out 2 player from the menu. doesn't work for mobile" and "instead of 'import data' change to 'add your team'"). The chosen headline's buttons show above the bar, big, and the one last chosen is kept (`settings.hl`, checked against `HOME_HL` as a save loads; a save from before it opens on Quick Match). The keys are the saves' and did not change with the names: Quick Match is still `'game'` and Skills Mini Games `'drills'`. The wordmark stays on the left, with Offline Ready and Install Game under it where the browser offers them, and Updating while a new version goes in (never in the app). Along the top beside it: **My Team** (your club's and your country's shirts and names, on one button), **Locker** (its dot while a new medal waits) and **Add Your Team** (on a phone's width on two lines, its lock beside Team, so My Team keeps its room).
 
-- **Quick Match**: one big **Play** button, which opens Pick Your Team as Quick Match always did (My Team offered first in Player 1's list, never picked for him). Under it, **My Team's club, last season** (PR #14's Your Team info: the owner chose "main's bottom bar + PR #14's Your Team info"): the club's name and stars, then its league and place and its record, as PR #14 wrote them (Regional 1 South Central · 7th Last Season; Won 10 · Lost 12 · 640 Scored · 646 Conceded, with Drew when there was one). Only a club with real figures has it (`myHome`, `myLeagueLine`, `myRecordLine`): a nation, a team you made or imported, a My League side and a club with none (Quins, New Zealand, Japan, Scotland) show nothing there, never an invented line. It is not a button (Play stays the panel's one); My Team at the top is the way in. It sits under Play because the top row has no height to spare: a third line in My Team's button would take it from Skills Mini Games' three rows at 667x375. **2 Players** has left the home on every device, a computer included; the mode, its screens (which still say 2 Players), How to Play's keys and `tools/twoplayer.mjs` are kept, and `openJoin` is its way in (`window.__tryline.debug.openJoin`).
+- **Quick Match**: one big **Play** button, which opens Pick Your Team as Quick Match always did (My Team offered first in Player 1's list, never picked for him). Under it, **My Team's club, last season** (PR #14's Your Team info: the owner chose "main's bottom bar + PR #14's Your Team info"): the club's name and stars, then its league and place and its record, as PR #14 wrote them (Regional 1 South Central · 7th Last Season; Won 10 · Lost 12 · 640 Scored · 646 Conceded, with Drew when there was one). Only a club with real figures has it (`myHome`, `myLeagueLine`, `myRecordLine`): a nation, a team you made or imported, a My League side and a club with none (Quins, New Zealand, Japan, Scotland) show nothing there, never an invented line. It is not a button (Play stays the panel's one); My Team at the top is the way in. It sits under Play because the top row has no height to spare: a third line in My Team's button would take it from Skills Mini Games' three rows at 667x375. **2 Players** has left the home on every device, a computer included; the mode, its screens (which still say 2 Players, and the join screen's legends each seat's keys) and `tools/twoplayer.mjs` are kept (How to Play's 2 Players keys went on 2026-11-09), and `openJoin` is its way in (`window.__tryline.debug.openJoin`).
 - **Championship**: while a championship or a cup is saved, Continue Championship (Final Table, Final Result) with its note, and the hub's New Championship or Start Fresh brings the competitions back. Otherwise **International | National | Local**, the team screen's tier names, and that tier's competitions as big buttons: International is the nation's **Championship** (its six: the Six Nations, or the other six), the **World Cup** and the **Home Nations Tour**; National is each country's league, England 2 among them (nine: two rows, four then five, each in equal parts, so the United Rugby Championship, fourth, has the quarter its name needs, its trophy over the name; at 568 wide the nine step down to 12px), with the European Cup's trophy on the four whose winner goes on to it (England, France, the United Rugby Championship, South Africa; `cupEuroLeague`); Local is **Surrey** and **Counties**, and **My League** once a league is imported. A competition opens the team screen with only its sides (and the teams you made, as ever); Men | Women | Minis stays there. The **Trophy Cabinet** opens on its own screen once a season or a cup is finished. The tier on show starts on My Team's.
 - **Career**: Continue Career with its note (the year, the side and the round), or New Career.
 - **Skills Mini Games** (it was Training Drills): PR #14's ten games, each its drawn picture and name: seven tag and handling games and **How to Play** in rows of four, then **Contact Games (U9 and Up)** with its coach line (hidden for the youngest) and **For Grown-Ups** beside them. The Training Ground's own screen is gone: **Back to Skills** after a game (the card's half row has no room for the whole name) comes back here, the game just played in focus, and a game still writes nothing but `drillSeen`. The drill's card reads Skills Mini Games over its name; a career's drill reads Training, as its Train does.
@@ -698,7 +698,7 @@ PR #14 (branch `claude/tryline-25d-camera`, 05886e6) was built on 261ac61 and me
 
 ## Install and offline play
 
-The game includes a web app manifest, app icons and a scoped service worker. On a supported HTTPS browser, visit online and wait for **Offline Ready** before relying on cached play. The home offers **Install Game**, under the wordmark, when the browser provides an install prompt; How to Play includes manual home-screen guidance. Installation does not move your browser save between browsers or devices.
+The game includes a web app manifest, app icons and a scoped service worker. On a supported HTTPS browser, visit online and wait for **Offline Ready** before relying on cached play. The home offers **Install Game**, under the wordmark, when the browser provides an install prompt. Installation does not move your browser save between browsers or devices.
 
 The worker caches only this game's local shell and checks downloaded file hashes against the generated version. The shell includes the game's own typefaces (`fonts/`, under the Open Font License), so offline play keeps the look and no page calls Google Fonts. It does not cache other games, arbitrary requests or browser saves. Cache storage must remain available; verified files can refill missing entries when online. A mismatched or incomplete new deployment leaves the working version in place.
 
@@ -728,7 +728,7 @@ The stores link three pages beside the game, served by GitHub Pages and styled b
 `app/` at the repository root wraps the game for the App Store (Google Play in phase 2) with Capacitor; `app/README.md`
 has the steps on a Mac. The app carries the same files the site serves, and its native projects are landscape either
 way up. What it does differently is in `src/native.js`, and none of it runs in a browser (`nativeOn()` is false there):
-no service worker, no Install Game or Updating, How to Play's app entries, no status bar, haptics through the phone's
+no service worker, no Install Game or Updating, no status bar, haptics through the phone's
 own engine, the save copied into the app's own storage and put back if the web view loses it, and Android's Back as the
 game's own. `node tools/native.mjs` checks it under a stand-in Capacitor, the web build unchanged, the typefaces and the
 app's scripts.
@@ -762,7 +762,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/input-touch.js`, `src/input-devices.js` | Input slots, touch, keyboard, controllers and navigation |
 | `src/ui-match.js`, `src/ui-help.js`, `src/ui-menus.js` | HUD, hints, tutorial, pause, teams and menus |
 | `src/practice.js` | Isolated drills and practice feedback |
-| `src/native.js` | The Try Line app (Capacitor): `nativeOn()`, haptics, the save's copy, bars, How to Play's app entries and Back |
+| `src/native.js` | The Try Line app (Capacitor): `nativeOn()`, haptics, the save's copy, bars, the `.web-only` swap and Back |
 | `src/offline-client.js` | Optional browser installation, offline status and updates that go in by themselves on a quiet home menu |
 | `src/service-worker.js` | Separate worker template; cached shell and integrity checks (outside the game bundle) |
 | `src/boot.js` | Frame loop, diagnostic API and startup |
@@ -1123,7 +1123,8 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     that seat's Hints are On (Hints Off is one switch for both), and the moment is remembered either way, per device,
     in `settings.tut`, so the old `duelSeen` and `kickSeen` flags are gone: the first-duel window aid (+0.08s) now
     comes once per duel kind and the first-kick path aid once for a goal kick and once for a drop, keyed off the same
-    memory. Replay Tutorial on How to Play forgets them all (dim when there is nothing to replay). A drop goal's thumb
+    memory. Nothing replays them: Replay Tutorial, which only forgot them (a press showed nothing until each close-up's
+    next first time), left How to Play on 2026-11-09, and `tutReset` stays for the tools. A drop goal's thumb
     still down carries over Play as at the press; one lifted under the card needs a fresh press.
 - **Phone landscape** (2026-10-30). The fan, Sprint-as-hold and the resting stick at 96, H−118 with no inset stay as
   they are. Four things that were fiddly on a phone, each checked rather than redesigned:
@@ -1192,6 +1193,29 @@ Controllers need HTTPS or localhost (the Gamepad API is off on an insecure page)
 
 Checked with `bot.mjs`, 36 matches a difficulty at SEED 1 and again at SEED 2 (72 matches, 4-minute halves, duels live). Wins were 100% / 84.7% / 55.6% (Easy / Normal / Hard), against 99.0 / 87.8 / 52.0 in the measured table below. The scripted player still taps, so every long pass in that run was the CPU's: about 2.6 / 3.4 / 3.5 a match.
 
+### How to Play (2026-11-09)
+
+Gordon: "'how to play' says 'repeat tutorial' but none ever shows. it's a block of text - better to show controls from a UI
+perspective and leave it there". It is now a picture of the match screen sideways: the stick's ring and knob in its resting
+corner and Sprint, Kick and Pass where `.act c/b/a` sit in play (the HUD's own offsets and sizes times `--s`: .8; .68 up to
+380px tall, and on a desk up to 460; .6 on a desk up to 380), in their own colours, with the pause button top right. Beside
+each part are its jobs as pills in its colour, one per job: the stick's Drag Run, Flick Across Side Step and Pull Back Dummy in
+the knob's chalk; Kick's Tap Chip, Switch and Drop Goal, dark with a ring; Pass's Scrum Push, Lineout Jump, Hold Long Pass,
+Tackle and Offload in gold; Pause. On a computer the stick reads Run, Tap Across Side Step and Tap Back Dummy, the hint card's
+words for keys (Run's keys are in the row under it), and with a controller acting last (`body.dev-pad`) Flick Across and Pull
+Back again; CSS swaps them, so they follow the device as it changes. A duel's own words (Block, and Dummy on Kick in a Key
+Pass) stay with that duel's hint card, which names its button: the picture has no room for them at 667x375. Under it the scoring
+strip (Try 5, Conversion 2, Penalty 3, Drop Goal 3), and on a computer or with a controller (`.desk-only`) two rows of keycaps
+filled by `renderHowTo` from `KB.solo` and the hint chips' pad glyphs: W A S D (and the arrows, drawn by CSS, where the row
+has room) Run, J Pass, K Kick, L Sprint, P Pause; the stick, bottom, right, shoulder and Start. Two Players stays off it, as on
+the home. Back to Menu is the one button, a full row. It fits one screen with no scroll at 844x390 (an iPhone's insets too,
+Back sitting on the home bar's inset) and 667x375, touch and desk, and at 640x360 and 740x360 (Android's common height),
+812x375 with an iPhone X's insets and a controller on a Pro Max's 926x428; where the row of Pass's jobs reaches under the
+stick's, the stick's sit higher than the ring's middle. At 568x320 it scrolls. Replay Tutorial went (it only emptied
+`settings.tut`, so a press showed nothing), and with it every prose row: Hints, Tutorial, The Ball, Coach, Table, First
+Matches, 50:22, Saving and Install & Offline. Nothing moved to Settings: no check or PWA flow needs the install line, since
+Install Game, Offline Ready and Update Game are on the home. `node tools/howto.mjs` checks it.
+
 ### Close-ups
 
 Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock freeze while it runs.
@@ -1248,7 +1272,7 @@ below the stick whenever their top would reach the card's bottom (`platesFloor`)
 little high on a phone no longer slides them under Flick on Gold. The pause card's two Hints rows share one grid, so both
 On | Off controls start on the same line. The tutorial card (`#m-tut`) holds the first close-up of each kind on this
 device: Skip | Next, then Play; while it holds, two player re-centres only the owner's stick (as the grace does), so the
-chooser's push during the card counts on a pad as it does on keys. Replay Tutorial is on How to Play. The words are
+chooser's push during the card counts on a pad as it does on keys. The words are
 pinned by `hints.mjs` and `tutorial.mjs`.
 
 ### Contact
@@ -1836,8 +1860,8 @@ a charger.
     drop's thumb still down carrying over Play and one lifted needing a fresh press); the words on every device and for each
     seat, Title Case, no arrows, every key a `{code}` token drawn as a keycap by `tutHtml` (Player 2's / and . as `<kbd>` in
     the sentence; with the keycaps read as a word, no card on any device or seat names a key as bare punctuation or a lone
-    letter), the Help entry and the card's markup; Hints Off giving no card but the memory and the +0.08
-    aid once per kind; headless never pausing; the save round-trip and cleaning; Replay Tutorial; pause under the card; two
+    letter), no Tutorial entry or Replay Tutorial on How to Play, and the card's markup; Hints Off giving no card but the memory and the +0.08
+    aid once per kind; headless never pausing; the save round-trip and cleaning; `tutReset`; pause under the card; two
     player naming the owner with either seat advancing and the memory the device's; a CPU scrum's card yours; no card for the
     CPU's kick; Quit Match taking the card down. On a build without it, it exits at once with one failure.
 

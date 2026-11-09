@@ -195,7 +195,7 @@ function playOut() {
   ok(/<button class="btn primary" id="b-quick" autofocus>Play<\/button>/.test(html) && /<span class="hl-name">Quick Match<\/span>/.test(html), 'Quick Match\'s Play is the primary button and takes focus');
   ok(!html.includes('data-key="duels"'), 'the Duels switch is gone');
   ok(html.includes("duels:'live'"), 'a match you play passes live duels');
-  ok(/<dt class="web-only">Saving<\/dt>/.test(html) && /<dt class="app-only" hidden>Saving<\/dt>/.test(html) && html.includes('Start Fresh'), 'How to Play explains saving and starting fresh');
+  ok(!/<dt[^>]*>Saving<\/dt>/.test(html) && /<button class="btn warn" id="hub-reset">Start Fresh<\/button>/.test(html), 'Start Fresh is the table\'s own button (re-pinned 2026-11-09: How to Play\'s Saving entry, which explained it, went with the prose)');
 
   X.newChamp(X.NATIONS[0], X.NATIONS.slice(1));
   const c0 = X.champ();

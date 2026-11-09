@@ -159,8 +159,8 @@ upload as in step 4 (and step 5 once Android is out).
 All in `trylinerugby/src/native.js` (the landscape and the backup setting in `scripts/native-config.mjs`), and none of
 it runs in a browser:
 
-- No service worker, and no Install Game, Update Game or Offline Ready: the app carries its files. How to Play leaves
-  out the website's install entry, and its Saving entry speaks of the app rather than a browser.
+- No service worker, and no Install Game, Update Game or Offline Ready: the app carries its files. How to Play is the
+  same picture of the controls as on the website.
 - Landscape only, either way up, and no status bar (Android's navigation bar hides too, and comes back with a swipe).
   The native projects set the landscape, so the game turns with the phone; nothing locks one side at run time. Matches
   skip the website's fullscreen request.

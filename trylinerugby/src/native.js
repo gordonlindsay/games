@@ -1,7 +1,7 @@
 /* =========================================================
    The Try Line app. What the game does differently inside the iOS and Android app (Capacitor, app/ at the repo root):
    - no service worker, and no Install Game, Updating or Offline Ready: the app carries its own files (offlineStart asks
-     nativeOn first). How to Play swaps its browser entries (.web-only) for the app's (.app-only).
+     nativeOn first). Anything marked .web-only goes and .app-only comes in (nothing is since 2026-11-09: see nativeWebOnly).
    - landscape either way up, set in the native projects (Info.plist, and sensorLandscape on Android: app/scripts/
      native-config.mjs), never locked at run time, as a lock pins one side and a phone held the other way stays upside
      down. The status bar (and Android's navigation bar) is hidden through the plugins when present; a match skips the
@@ -92,8 +92,9 @@ function nativeStart() {
   const app = nativePlugin('App');
   if (app && typeof app.addListener === 'function') { try { app.addListener('backButton', nativeBack); } catch (e) { /* Back keeps the platform's own */ } }
 }
-/* How to Play's browser entries (Install & Offline: Safari, Add to Home Screen and Update Game; Saving: this browser, reloading)
-   mean nothing in the app: they go, and the app's own (.app-only, hidden in index.html, so a browser never shows them) come in. */
+/* A browser's own entries (.web-only) mean nothing in the app: they go, and the app's own (.app-only, hidden in index.html, so a
+   browser never shows them) come in. How to Play's Install & Offline and Saving entries were the ones; they went with its prose on
+   2026-11-09, when it became a picture of the controls, the same in a browser and the app. The swap stays for the next. */
 function nativeWebOnly() {
   for (const el of document.querySelectorAll('.web-only')) el.hidden = true;
   for (const el of document.querySelectorAll('.app-only')) el.hidden = false;

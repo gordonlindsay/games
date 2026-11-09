@@ -1005,7 +1005,9 @@ begin('words');
   ok(![...labels, ...fixedTags].some(s => /[←→↑↓⇐⇒➜»›]/.test(s)) && !/[←→]/.test(script.replace(/\/\/.*$/gm, '')), 'no arrow glyph in a label, a tag or the code');
   const lc = html.match(/<span id="lc">([^<]+)<\/span>/);
   ok(lc && lc[1] === 'Sprint', 'the third button is labelled Sprint');
-  ok(/<dt>Sprint<\/dt>/.test(html) && /<dt>Offload<\/dt>/.test(html) && /<b>L<\/b> Sprint/.test(html), 'How to Play has Sprint and Offload rows and L on the keyboard line');
+  // re-pinned 2026-11-09: How to Play's Sprint and Offload prose rows became the picture's Sprint button and Offload on Pass's side, and the keyboard row's L
+  $('b-help').click();   // renderHowTo: the keyboard row
+  ok(/<span class="ctl-b c">Sprint<\/span>/.test(html) && /<b class="ctl-j a">Offload<\/b>/.test(html) && /<kbd class="kc">L<\/kbd><\/span>Sprint<\/span>/.test($('h-kb').innerHTML), 'How to Play has the Sprint button, Offload beside Pass and L on Sprint in the keyboard row');
 }
 done('21 words');
 
@@ -1048,7 +1050,9 @@ begin('layout');
   ok(hit(10, 10) == null, 'a tap on the pitch, away from the fan, is nothing');
   $('btnC').hidden = true; ok(hit(527, 211) == null, 'Sprint hidden in a close-up takes no near miss'); $('btnC').hidden = false;
   $('btnA').rect = $('btnB').rect = $('btnC').rect = null;
-  const short = [...css.matchAll(/@media \(orientation:landscape\) and \(max-height:420px\)\{([\s\S]*?)\n\}/g)].map(m => m[1]).join('\n');
+  // each short-landscape block read to its own closing brace (2026-11-09: the old /{([\s\S]*?)\n}/ ran a one-line block on into the
+  // next rules, How to Play's 26px pills among them, which sit in no media block; every block, the one-line ones too, is still read whole)
+  const short = [...css.matchAll(/@media \(orientation:landscape\) and \(max-height:420px\)\{/g)].map(m => { let d = 1, i = m.index + m[0].length; const s = i; while (d && i < css.length) { const c = css[i++]; if (c === '{') d++; else if (c === '}') d--; } return css.slice(s, i - 1); }).join('\n');
   ok(/\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings\.settings\{gap:6px 10px;padding:8px 10px\}/.test(short) && !/\.hp-settings\.settings\{[^}]*grid-template-columns/.test(short) && /min-height:44px/.test(short) && !/min-height:(?:[1-3]?\d)px/.test(short.replace(/min-height:44px/g, '')), 'under 420px tall the home settings keep their six columns (halves, and thirds with Grown-Ups) and no target drops below 44px');   // re-pinned for the Camera row: it was two columns
   // the home 320px tall (Safari sideways) is measured in Chromium now, by tools/home.mjs at 667x320 and 568x320: a sum of fixed heights here no longer described it
   const hud = 4 + (18 + 6) + 2 + (11 + 4), hud0 = 8 + (21 + 12) + 5 + (11 + 8);

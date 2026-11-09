@@ -734,7 +734,9 @@ P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the gr
   ok(T.contact.matchMild() && dom() && !T.M.stats['tag_Big Hit'] && T.M.stats.tag_Stopped > 0 && !(T.M.stop > 0) && !T.M.shake, 'Kids match: a dominant tackle reads Stopped, with no freeze and no shake');
   T.newMatch(NAT[0], NAT[3], { halfLen:120, diff:0, humans:[true, false], arcade:true }); T.M.phase = 'play';
   ok(!T.contact.matchMild(), 'an Easy match is not mild'); const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); C.set(cr); T.M.career = true; ok(!T.contact.matchMild(), 'a men\'s career match is not'); C.set(null); T.M.career = false; T.newMatch(T.teams.catSide(NAT[0], 'minis'), T.teams.catSide(NAT[3], 'minis'), { halfLen:120, diff:1, humans:[true, false], arcade:true }); T.M.phase = 'play'; ok(T.contact.matchMild(), 'a Minis match is (Men | Women | Minis: PR #14\'s career Minis, in the merge)'); D.exitMatch();
-  ok(/It lights up when you can reach them/.test(html), 'Help says when the button lights without teaching a dive'); }
+  // re-pinned 2026-11-09: How to Play's Tackle row ("It lights up when you can reach them") went with its prose; the picture names Tackle beside Pass, and still teaches no dive
+  { const at = html.indexOf('id="s-help"'), help = html.slice(at, html.indexOf('</section>', at));
+    ok(/<b class="ctl-j a">Tackle<\/b>/.test(help) && !/dive/i.test(help) && !/close enough to dive/i.test(html), 'How to Play names Tackle without teaching a dive'); } }
 
 console.log(failed ? `Training games: ${passed} passed, ${failed} failed` : `Training games: ${passed} assertions passed`);
 process.exitCode = failed ? 1 : 0;

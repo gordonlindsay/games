@@ -251,9 +251,13 @@ guard(() => {
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const title = s => s.split(' ').every((w, i) => (i > 0 && small.has(w)) || /^[A-Z0-9]/.test(w));
   ok(texts.length >= 3 && ['Side Step', 'Dummy', 'Not Fooled'].every(t => texts.includes(t)) && texts.every(title), `every on-pitch tag is Title Case and the three moves are among them (${[...new Set(texts)].join(', ')})`);
-  const stick = (html.match(/<dt>Stick<\/dt><dd>([\s\S]*?)<\/dd>/) || [])[1] || '', keys = (html.match(/<dt>Keyboard<\/dt><dd>([\s\S]*?)<\/dd>/) || [])[1] || '', pad = (html.match(/<dt class="desk-only">Controller<\/dt><dd class="desk-only">([\s\S]*?)<\/dd>/) || [])[1] || '';
-  ok(/Side Step/.test(stick) && /Dummy/.test(stick) && /Side Step/.test(keys) && /Dummy/.test(keys) && /Side Step/.test(pad) && /Dummy/.test(pad), 'the Help page names Side Step and Dummy for the stick, the keyboard and a controller');
-  ok(!/\bstep<\/b> him|to step him/.test(stick), 'the old "flick it sideways to step him" line is gone');
+  // re-pinned 2026-11-09: How to Play's Stick, Keyboard and Controller prose rows became the picture, whose stick names both moves with how
+  // (a pad's stick moves the same), and the hint card names them for the device in use: Tap Across and Tap Back on a keyboard
+  const stick = (html.match(/<div class="ctl-js x">([\s\S]*?)<\/div>/) || [])[1] || '';
+  // re-pinned again 2026-11-09 (review): the picture said Flick Across and Pull Back on a computer too; each pill now carries a touch
+  // screen's or a controller's how (.tp) and a computer's keys' (.k), the hint card's Tap Across and Tap Back, CSS showing the device's
+  ok(/<small class="tp">Flick Across<\/small><small class="k">Tap Across<\/small> Side Step/.test(stick) && /<small class="tp">Pull Back<\/small><small class="k">Tap Back<\/small> Dummy/.test(stick) && /card\('Side Step', [^\n]*kb \? 'Tap Across' : 'Flick Across'/.test(js) && /card\('Dummy', [^\n]*kb \? 'Tap Back' : 'Pull Back, Push On'/.test(js), 'How to Play\'s stick names Side Step and Dummy with how, on a touch screen or a controller and on a computer\'s keys, as the hint card does');
+  ok(!/\bstep<\/b> him|to step him/.test(html), 'the old "flick it sideways to step him" line is gone');
   ok(!/p\.lastA\s*=|p\.turn\s*=|lastA:0|turn:0/.test(js) && !/'turn'|'lastA'/.test(js), 'the old turn-rate step (p.turn, p.lastA) is gone from the engine');
 });
 done('8 words');
