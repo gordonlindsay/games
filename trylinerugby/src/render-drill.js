@@ -6,7 +6,7 @@
    up the screen on touch, keys and a pad alike, and Watch How writes through the same turn (demoStart's go). Nothing here draws a random number.
    ========================================================= */
 const DV_SIDE = { u:{ x:0, y:-1 }, r:{ x:1, y:0 } }, DV_BEHIND = { u:{ x:1, y:0 }, r:{ x:0, y:1 } };
-// k: px a metre at the focus at 844x390. z: the lens' distance from the focus (longer is flatter). tilt: its height over that distance. sy: where the focus sits up the screen. aim: where it looks, x, y and a zoom
+// k: px a metre at the focus at 844x390. z: the lens' distance from the focus (longer is flatter). tilt: its height over that distance. sy: where the focus sits up the screen. aim: where it looks, x, y and a zoom, and an sy of its own if the view's changes as it plays
 const DV_VIEW = {
   tag:{ ...DV_BEHIND, k:30, z:18, tilt:0.42, sy:0.74, cut:10, aim:() => { const T = practice.tag, m = T.me; return [tagMode(T) === 'keep' ? m.x : Math.min(m.x, T.them.x), 35 + (m.y - 35)*0.35]; } },   // a dodge reads best across the screen, and both hips show
   egg:{ ...DV_SIDE, k:24, z:40, tilt:0.34, sy:0.5, aim:() => [clamp((58 + practice.egg.me.x)/2, 54, 60), 35] },               // from the side, low, so a hop's height reads above its shadow. It leans a little after you, never so far that the thrower goes off
@@ -15,11 +15,11 @@ const DV_VIEW = {
   tackle:{ ...DV_BEHIND, k:30, z:18, tilt:0.42, sy:0.74, aim:() => [DRILL_TACKLE.at[0], 35] },                                  // behind you, to get in their path. The close-ups take over from Head Side on
   back:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [60, 35] },                                                      // all close-up, so only ever seen under nothing
   pass:{ ...DV_SIDE, k:23, z:36, tilt:0.42, sy:0.58, cut:30, aim:() => [clamp(M.ball.x + 3, 72, 98), gapAimY(), gapZoom()] },   // from the side: how near the defender is reads as a distance across the screen. Up the line with the ball, and further out for a longer line
-  defend:{ ...DV_SIDE, k:21, z:38, tilt:0.42, sy:0.58, cut:30, aim:() => { const c = practice.switched ? ctrlOf(0) : M.players[1], b = M.ball; return [c ? (b.x + c.x)/2 + (practice.switched ? 0 : 2) : b.x, 35 + (b.y - 35)*0.4, defendZoom()]; } },   // between the runner and the cover: the man you switch to starts clear of the thumb, and until the Switch a little towards the beaten man, so at 667x375 he is clear of Sprint. A touch further out with two cover men
+  defend:{ ...DV_SIDE, k:21, z:38, tilt:0.42, sy:0.58, cut:30, aim:() => { const c = practice.switched ? ctrlOf(0) : M.players[1], b = M.ball, f = defendView(); return [c ? (b.x + c.x)/2 + (practice.switched ? 0 : f.lean) : b.x, 35 + (b.y - 35)*0.4, f.zoom, f.sy]; } },   // between the runner and the cover. How high the field sits, how far it leans before the Switch and how far out it is go by the round (DEFEND_VIEW), so at 667x375 nobody stands under a thumb
   kick:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [90, 35] },                                                      // its own close-up: this is only what a wipe uncovers
   scrum:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [60, 35] },
 };
-const DV = { cam:null, tx:0, ty:0, zoom:1, sky:new Map(), props:{}, egg:null };
+const DV = { cam:null, tx:0, ty:0, zoom:1, sy:0.5, sky:new Map(), props:{}, egg:null };
 const DV_GRASS = ['#4f9b4b', '#59a553'], DV_CHALK = 'rgba(250,248,238,.9)', DV_FAINT = 'rgba(250,248,238,.17)', DV_GOLD = 'rgba(255,207,61,.95)', DV_GREEN = 'rgba(98,214,128,.95)', DV_RED = 'rgba(255,132,102,.95)';
 const DV_KITS = [{ fill:'#1d4f9c', trim:'#ffcf3d', hoops:false }, { fill:'#ee6c22', trim:'#1b1d22', hoops:false }];   // training colours, for both sides of every game: yours blue, theirs an orange bib
 const dvOn = () => !!practice && playing();
@@ -37,15 +37,15 @@ function dvCamera(dt) {
   let c = DV.cam;
   const fresh = !c || c.id !== practice.id || c.W !== W || c.H !== H || BV.M !== M;
   if (fresh) c = DV.cam = { id:practice.id, key:'dv', W, H, cx:W/2, F:0, ch:v.tilt*v.z, back:v.z, hz:0, u:v.u, r:v.r, Cx:0, Cy:0 };
-  const z = a[2] || 1, dx = a[0] - DV.tx, dy = a[1] - DV.ty, cut = v.cut || 25;
-  if (fresh || Math.abs(dx) > cut || Math.abs(dy) > cut) { DV.tx = a[0]; DV.ty = a[1]; DV.zoom = z; }
+  const z = a[2] || 1, sy = a[3] || v.sy, dx = a[0] - DV.tx, dy = a[1] - DV.ty, cut = v.cut || 25;
+  if (fresh || Math.abs(dx) > cut || Math.abs(dy) > cut) { DV.tx = a[0]; DV.ty = a[1]; DV.zoom = z; DV.sy = sy; }
   else {
     DV.tx += clamp(dx*Math.min(1, dt*4), -14*dt, 14*dt); DV.ty += clamp(dy*Math.min(1, dt*3), -14*dt, 14*dt);
-    DV.zoom += (z - DV.zoom)*Math.min(1, dt*3);
+    DV.zoom += (z - DV.zoom)*Math.min(1, dt*3); DV.sy += (sy - DV.sy)*Math.min(1, dt*3);
   }
   BV.M = M; BV.rt = M.rt;
   const k = v.k*q*DV.zoom;
-  c.F = k*v.z; c.hz = (tall ? v.sy*0.72 : v.sy)*H - k*c.ch; c.Cx = DV.tx - v.z*v.u.x; c.Cy = DV.ty - v.z*v.u.y;
+  c.F = k*v.z; c.hz = (tall ? DV.sy*0.72 : DV.sy)*H - k*c.ch; c.Cx = DV.tx - v.z*v.u.x; c.Cy = DV.ty - v.z*v.u.y;
   return c;
 }
 function dvFree() { if (!DV.sky.size) return; for (const c of DV.sky.values()) c.width = 0; DV.sky.clear(); }

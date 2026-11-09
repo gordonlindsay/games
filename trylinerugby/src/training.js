@@ -843,13 +843,14 @@ const drillDrive = {
    space): the round's word on the pitch (show), then the next line-up under a Round N card (card), then play. Each round has its
    own clock (practice.limit). Stars by rounds won, as the Circle's: 1, 3 and all 5. Watch How plays round one, which is set up
    exactly as the one-round game it replaced was. */
-const DRILL_ROUNDS = { n:5, stars:[1, 3, 5], show:1.1, card:1.0 };
+const DRILL_ROUNDS = { n:5, stars:[1, 3, 5], show:1.1, card:1.0, word:0.3 };   // word: how new a word on the pitch is (seconds) for the round's word to take its place
 const roundsLine = n => (n === DRILL_ROUNDS.n ? 'All ' + n + ' Rounds' : n + (n === 1 ? ' Round' : ' Rounds'));   // the result card's line, as the Circle's
 const roundsNew = () => ({ round:1, won:0, lost:'', again:false, stage:'play', t:0, at:0 });
 function roundsHold(R, stage) { R.stage = stage; R.t = 0; R.at = practice.elapsed; practice.space = true; }
-function roundWon(R, word, p) { if (R.stage !== 'play') return; R.won++; st('roundsWon'); drillTag(word, p.x, p.y); sfx('cheer'); roundsHold(R, 'show'); }
-function roundLost(R, word, p) { if (R.stage !== 'play') return; R.lost = word; drillTag(word, p.x, p.y); sfx('groan'); roundsHold(R, 'show'); }
-function roundAgain(R, word, p) { if (R.stage !== 'play') return; R.again = true; drillTag(word, p.x, p.y); roundsHold(R, 'show'); }   // neither side's doing (their dropped pass, say): the same round again
+function roundWord(word, p) { M.tags = M.tags.filter(t => t.t > DRILL_ROUNDS.word || dist(t, p) > 3); drillTag(word, p.x, p.y); }   // the round's word takes the place of one just put down where it ends (Got It, Big Hit, the match's Stopped), so there is one word to read, never two printed over each other
+function roundWon(R, word, p) { if (R.stage !== 'play') return; R.won++; st('roundsWon'); roundWord(word, p); sfx('cheer'); roundsHold(R, 'show'); }
+function roundLost(R, word, p) { if (R.stage !== 'play') return; R.lost = word; roundWord(word, p); sfx('groan'); roundsHold(R, 'show'); }
+function roundAgain(R, word, p) { if (R.stage !== 'play') return; R.again = true; roundWord(word, p); roundsHold(R, 'show'); }   // neither side's doing (their dropped pass, say): the same round again
 function roundsStage() {                                   // open play from nothing, as a kick-off leaves it: no set piece and no bind, both Sprint meters full, the half's clock at 0 so no round reaches the hooter. Round one finds all of it so already
   M.phase = 'play'; M.set = null; M.cut = null; M.goal = null; M.contact = null; M.surge = null; M.duelPending = null;
   M.clock = 0; M.hooter = false; M.phaseCount = 0; M.dropArmed = [false, false]; M.dropOn = [false, false]; M.tags = []; M.fx = [];
@@ -903,13 +904,14 @@ function drillTagCheck(c) {                                // the Kids level and
    may pass to (the match's own carrier: under pressure, or held too long); the same with quicker runners; two cover men to Switch
    between, the runners quicker still. Won by stopping whoever carries with the man you switched to
    (Pull Tag for the youngest); a try, the clock or a tackle without the Switch ends the run. Only your ringed man commits here
-   (contact.js tackleChecks), so a cover man left standing can neither win it nor lose it, and Sprint never hands the ring back to
-   the beaten man (contact.js sprintPick), as before. A dropped pass of theirs, or the ball loose, plays the round again. */
+   (contact.js tackleChecks), so a cover man left standing can neither win it nor lose it. Once you have switched, the ring never goes
+   back to the beaten man: not by Sprint (contact.js sprintPick), as before, and not when their pass is caught far from your man or
+   with him down (defendRepick). A dropped pass of theirs, or the ball loose, plays the round again. */
 const DRILL_DEFEND = { limit:18, rounds:[
   { label:'The Chase', run:[49, 35], beaten:[56, 35], cover:[[36, 39]] },
   { label:'Longer Start', run:[49, 33], beaten:[57, 33], cover:[[36, 40]] },
-  { label:'Support Runner', run:[49, 32], support:[56, 39], beaten:[57, 32], cover:[[36, 36]] },
-  { label:'Quicker Runner', run:[49, 32], support:[56, 39], beaten:[57, 32], cover:[[36, 36]], pace:2 },
+  { label:'Support Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]] },
+  { label:'Quicker Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]], pace:2 },
   { label:'Two Cover Defenders', run:[49, 33], support:[52, 40], beaten:[57, 33], cover:[[38, 25], [37, 42]], pace:2 },
 ] };
 function defendRestage(n) {
@@ -922,7 +924,11 @@ function defendRestage(n) {
   setCarrier(run); setCtrl(0, beaten); if (n > 1) drillHold(run);   // the ball in his hands under the card; round one's first step puts it there, as it always did
   practice.initialCtrl = beaten; practice.switched = false; practice.limit = DRILL_DEFEND.limit;
 }
-const defendZoom = () => (practice.defend && DRILL_DEFEND.rounds[practice.defend.R.round - 1].cover.length > 1 ? 0.9 : 1);   // the camera a touch further out with two cover defenders, so both are clear of the thumbs at 667x375
+const DEFEND_VIEW = [{ sy:0.46, lean:0, zoom:0.88 }, { sy:0.56, lean:1, zoom:0.88 }];   // the camera (render-drill.js) with one cover defender and with two: where the field sits up the screen, metres towards the beaten man until the Switch, and a touch out. Measured at 667x375, the tighter size: every man clear of the stick, the buttons and the card, on the card and as play starts, in all five rounds
+const defendView = () => DEFEND_VIEW[practice.defend && DRILL_DEFEND.rounds[practice.defend.R.round - 1].cover.length > 1 ? 1 : 0];
+function defendRepick(t, c) {                              // setCarrier (match.js) moves the ring when their pass is caught with your man down or far off: to the nearest of yours on his feet, as in a match, but once you have switched never back to the beaten man. With nobody else free the ring stays where it is
+  return nearestOf(M.players.filter(q => q.team === t && q.down <= 0 && !q.bind && !(practice.switched && q === practice.initialCtrl)), c.x, c.y);
+}
 const DEFEND_TIP = { 'Switch First':'Switch to the defender ahead of the ball first.', 'Time Up':'Get across early and close the gap.', Try:'Switch early, then run to where the carrier is going.' };
 const drillDefend = {
   setup(own, cpu) {

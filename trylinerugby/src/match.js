@@ -246,7 +246,7 @@ function setCarrier(p) {
   for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
     if (!isHuman(t)) continue;
     if (p.team === t) setCtrl(t, p);
-    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }
+    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = practice && practice.id === 'defend' ? defendRepick(t, p) : nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }   // Defend a Breakaway: never back to the beaten man (training.js)
   }
 }
 function catchBall(p, kind) {

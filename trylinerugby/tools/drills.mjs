@@ -305,13 +305,33 @@ P.leave();
     ok(!T.M.contact && !T.M.stats.ta1, 'Defend: a cover man left standing never tackles, even with the carrier on him'); }
   P.leave();
   begin('defend'); { const st = P.state(); st.elapsed = st.limit - 0.001; T.M.ball.carrier.x = 60; held(2); ok(st.defend.R.lost === 'Time Up' && st.space, 'Defend: the round\'s clock running out loses it'); } P.leave();
+  // Defend: their pass, seeded, through the match's own pass and catch. Once you have switched the ring never goes back to the beaten man,
+  // caught far from your man or with him down after a missed dive (setCarrier's re-pick), and your man is not left pinned where he stands
+  for (const [n, how] of [[3, 'far'], [3, 'down'], [5, 'far']]) {
+    H.reseed(977*n + (how === 'down' ? 1 : 0)); begin('defend');
+    const st = P.state(), Rd = st.defend.R, Dd = st.defend; Rd.round = n; Rd.won = n - 1; X.defendRestage(n);
+    inp.bPressed = true; T.update(T.STEP); const cover = T.sides.ctrlOf(0), sup = Dd.cpu[1];
+    if (how === 'down') cover.down = 1;
+    T.contact.doPass(Dd.cpu[0], sup); let k = 0; while (T.M.ball.state === 'air' && k++ < 400) T.update(T.STEP);
+    const c = T.M.ball.carrier, now = T.sides.ctrlOf(0), far = c ? Math.hypot(c.x - cover.x, c.y - cover.y) : 0;
+    const x0 = now.x; if (how === 'far') { for (let i = 0; i < 20; i++) { stick(1, 0); T.update(T.STEP); } letGo(); }
+    ok(st.switched && c === sup && Rd.stage === 'play' && (how === 'down' || far > 8) && now !== st.initialCtrl && (n === 5 ? now !== cover && Dd.own.includes(now) : now === cover) && (how === 'down' || now.x > x0 + 0.5),
+      'Defend round ' + n + ': their pass caught ' + (how === 'far' ? far.toFixed(1) + ' m from your man' : 'with your man down') + ', the ring stays off the beaten man (' + (now === st.initialCtrl ? 'the beaten man' : now === cover ? 'the same man' : 'the other cover man') + ')' + (how === 'far' ? ', and he still runs' : ''));
+    P.leave();
+  }
+  // Defend: a round's word takes the place of one put down in the same moment (the match's Big Hit, Got It), so one word shows, never two printed over each other
+  { let wins = 0, hits = 0, two = 0;
+    for (let s = 1; s <= 20; s++) { H.reseed(s*31); begin('defend'); const st = P.state(); inp.bPressed = true; T.update(T.STEP);
+      let n = 0; while (!st.done && st.defend.R.stage === 'play' && n++ < 3000) { const q = T.sides.ctrlOf(0), c = T.M.ball.state === 'held' ? T.M.ball.carrier : null; if (q && c && c.team === 1) { const dx = c.x - q.x, dy = c.y - q.y, m = Math.hypot(dx, dy) || 1; stick(dx/m, dy/m); sprint(true); if (m < 2) inp.aPressed = true; } T.update(T.STEP); }
+      letGo(); if (st.defend.R.won === 1) { wins++; if (T.M.stats['tag_Big Hit']) hits++; if (T.M.tags.length !== 1 || T.M.tags[0].text !== 'Stopped') two++; } P.leave(); }
+    ok(wins >= 10 && hits >= 3 && !two, 'Defend: a round won says Stopped and nothing over it, a Big Hit included (' + wins + ' of 20 won, ' + hits + ' with a Big Hit, ' + two + ' with two words)'); }
   // Create a Gap: an early pass loses round one at once; a drawn pass then the try wins it
   begin('pass');
   { const st = P.state(), G = st.gap; let n = 0; while (G.R.stage === 'play' && n++ < 400) { stick(1, 0); if (st.elapsed > 0.3) inp.aPressed = true; T.update(T.STEP); }
     ok(G.R.lost === 'Too Early' && T.M.tags.some(t => t.text === 'Too Early'), 'Create a Gap: a pass with the defender outside the ring is Too Early, there and then');
     held(hold1); ok(st.done && st.stars === 0 && $('pr-feedback').textContent === '0 Rounds' && /ring turns gold/.test($('pr-tip').textContent), 'Create a Gap: and the run ends at 0 Rounds, with a line on why'); }
   P.leave();
-  const passer = at => { let who = null, round = 0; return st => { const G = st.gap, me = T.sides.ctrlOf(0), b = T.M.ball; if (G.R.round !== round) { round = G.R.round; who = null; } if (G.R.stage !== 'play' || !me) { stick(0, 0); return; } const d = X.gapMark(me); stick(1, 0); sprint(!d); if (d && b.state === 'held' && b.carrier === me && who !== me && Math.hypot(me.x - d.x, me.y - d.y) <= at) { inp.aPressed = true; who = me; } }; };
+  const passer = at => { let who = null; return st => { const G = st.gap, me = T.sides.ctrlOf(0), b = T.M.ball; if (G.R.stage !== 'play') who = null; if (G.R.stage !== 'play' || !me) { stick(0, 0); return; } const d = X.gapMark(me); stick(1, 0); sprint(!d); if (d && b.state === 'held' && b.carrier === me && who !== me && Math.hypot(me.x - d.x, me.y - d.y) <= at) { inp.aPressed = true; who = me; } }; };
   H.reseed(7919); begin('pass');
   { const st = P.state(), G = st.gap, seen = [], drawn = [];
     const bot = passer(5); let n = 0;

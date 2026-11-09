@@ -1172,7 +1172,7 @@ function setCarrier(p) {
   for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
     if (!isHuman(t)) continue;
     if (p.team === t) setCtrl(t, p);
-    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }
+    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = practice && practice.id === 'defend' ? defendRepick(t, p) : nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }   // Defend a Breakaway: never back to the beaten man (training.js)
   }
 }
 function catchBall(p, kind) {
@@ -7513,7 +7513,7 @@ function renderBehind(dt) {
    up the screen on touch, keys and a pad alike, and Watch How writes through the same turn (demoStart's go). Nothing here draws a random number.
    ========================================================= */
 const DV_SIDE = { u:{ x:0, y:-1 }, r:{ x:1, y:0 } }, DV_BEHIND = { u:{ x:1, y:0 }, r:{ x:0, y:1 } };
-// k: px a metre at the focus at 844x390. z: the lens' distance from the focus (longer is flatter). tilt: its height over that distance. sy: where the focus sits up the screen. aim: where it looks, x, y and a zoom
+// k: px a metre at the focus at 844x390. z: the lens' distance from the focus (longer is flatter). tilt: its height over that distance. sy: where the focus sits up the screen. aim: where it looks, x, y and a zoom, and an sy of its own if the view's changes as it plays
 const DV_VIEW = {
   tag:{ ...DV_BEHIND, k:30, z:18, tilt:0.42, sy:0.74, cut:10, aim:() => { const T = practice.tag, m = T.me; return [tagMode(T) === 'keep' ? m.x : Math.min(m.x, T.them.x), 35 + (m.y - 35)*0.35]; } },   // a dodge reads best across the screen, and both hips show
   egg:{ ...DV_SIDE, k:24, z:40, tilt:0.34, sy:0.5, aim:() => [clamp((58 + practice.egg.me.x)/2, 54, 60), 35] },               // from the side, low, so a hop's height reads above its shadow. It leans a little after you, never so far that the thrower goes off
@@ -7522,11 +7522,11 @@ const DV_VIEW = {
   tackle:{ ...DV_BEHIND, k:30, z:18, tilt:0.42, sy:0.74, aim:() => [DRILL_TACKLE.at[0], 35] },                                  // behind you, to get in their path. The close-ups take over from Head Side on
   back:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [60, 35] },                                                      // all close-up, so only ever seen under nothing
   pass:{ ...DV_SIDE, k:23, z:36, tilt:0.42, sy:0.58, cut:30, aim:() => [clamp(M.ball.x + 3, 72, 98), gapAimY(), gapZoom()] },   // from the side: how near the defender is reads as a distance across the screen. Up the line with the ball, and further out for a longer line
-  defend:{ ...DV_SIDE, k:21, z:38, tilt:0.42, sy:0.58, cut:30, aim:() => { const c = practice.switched ? ctrlOf(0) : M.players[1], b = M.ball; return [c ? (b.x + c.x)/2 + (practice.switched ? 0 : 2) : b.x, 35 + (b.y - 35)*0.4, defendZoom()]; } },   // between the runner and the cover: the man you switch to starts clear of the thumb, and until the Switch a little towards the beaten man, so at 667x375 he is clear of Sprint. A touch further out with two cover men
+  defend:{ ...DV_SIDE, k:21, z:38, tilt:0.42, sy:0.58, cut:30, aim:() => { const c = practice.switched ? ctrlOf(0) : M.players[1], b = M.ball, f = defendView(); return [c ? (b.x + c.x)/2 + (practice.switched ? 0 : f.lean) : b.x, 35 + (b.y - 35)*0.4, f.zoom, f.sy]; } },   // between the runner and the cover. How high the field sits, how far it leans before the Switch and how far out it is go by the round (DEFEND_VIEW), so at 667x375 nobody stands under a thumb
   kick:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [90, 35] },                                                      // its own close-up: this is only what a wipe uncovers
   scrum:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [60, 35] },
 };
-const DV = { cam:null, tx:0, ty:0, zoom:1, sky:new Map(), props:{}, egg:null };
+const DV = { cam:null, tx:0, ty:0, zoom:1, sy:0.5, sky:new Map(), props:{}, egg:null };
 const DV_GRASS = ['#4f9b4b', '#59a553'], DV_CHALK = 'rgba(250,248,238,.9)', DV_FAINT = 'rgba(250,248,238,.17)', DV_GOLD = 'rgba(255,207,61,.95)', DV_GREEN = 'rgba(98,214,128,.95)', DV_RED = 'rgba(255,132,102,.95)';
 const DV_KITS = [{ fill:'#1d4f9c', trim:'#ffcf3d', hoops:false }, { fill:'#ee6c22', trim:'#1b1d22', hoops:false }];   // training colours, for both sides of every game: yours blue, theirs an orange bib
 const dvOn = () => !!practice && playing();
@@ -7544,15 +7544,15 @@ function dvCamera(dt) {
   let c = DV.cam;
   const fresh = !c || c.id !== practice.id || c.W !== W || c.H !== H || BV.M !== M;
   if (fresh) c = DV.cam = { id:practice.id, key:'dv', W, H, cx:W/2, F:0, ch:v.tilt*v.z, back:v.z, hz:0, u:v.u, r:v.r, Cx:0, Cy:0 };
-  const z = a[2] || 1, dx = a[0] - DV.tx, dy = a[1] - DV.ty, cut = v.cut || 25;
-  if (fresh || Math.abs(dx) > cut || Math.abs(dy) > cut) { DV.tx = a[0]; DV.ty = a[1]; DV.zoom = z; }
+  const z = a[2] || 1, sy = a[3] || v.sy, dx = a[0] - DV.tx, dy = a[1] - DV.ty, cut = v.cut || 25;
+  if (fresh || Math.abs(dx) > cut || Math.abs(dy) > cut) { DV.tx = a[0]; DV.ty = a[1]; DV.zoom = z; DV.sy = sy; }
   else {
     DV.tx += clamp(dx*Math.min(1, dt*4), -14*dt, 14*dt); DV.ty += clamp(dy*Math.min(1, dt*3), -14*dt, 14*dt);
-    DV.zoom += (z - DV.zoom)*Math.min(1, dt*3);
+    DV.zoom += (z - DV.zoom)*Math.min(1, dt*3); DV.sy += (sy - DV.sy)*Math.min(1, dt*3);
   }
   BV.M = M; BV.rt = M.rt;
   const k = v.k*q*DV.zoom;
-  c.F = k*v.z; c.hz = (tall ? v.sy*0.72 : v.sy)*H - k*c.ch; c.Cx = DV.tx - v.z*v.u.x; c.Cy = DV.ty - v.z*v.u.y;
+  c.F = k*v.z; c.hz = (tall ? DV.sy*0.72 : DV.sy)*H - k*c.ch; c.Cx = DV.tx - v.z*v.u.x; c.Cy = DV.ty - v.z*v.u.y;
   return c;
 }
 function dvFree() { if (!DV.sky.size) return; for (const c of DV.sky.values()) c.width = 0; DV.sky.clear(); }
@@ -12982,13 +12982,14 @@ const drillDrive = {
    space): the round's word on the pitch (show), then the next line-up under a Round N card (card), then play. Each round has its
    own clock (practice.limit). Stars by rounds won, as the Circle's: 1, 3 and all 5. Watch How plays round one, which is set up
    exactly as the one-round game it replaced was. */
-const DRILL_ROUNDS = { n:5, stars:[1, 3, 5], show:1.1, card:1.0 };
+const DRILL_ROUNDS = { n:5, stars:[1, 3, 5], show:1.1, card:1.0, word:0.3 };   // word: how new a word on the pitch is (seconds) for the round's word to take its place
 const roundsLine = n => (n === DRILL_ROUNDS.n ? 'All ' + n + ' Rounds' : n + (n === 1 ? ' Round' : ' Rounds'));   // the result card's line, as the Circle's
 const roundsNew = () => ({ round:1, won:0, lost:'', again:false, stage:'play', t:0, at:0 });
 function roundsHold(R, stage) { R.stage = stage; R.t = 0; R.at = practice.elapsed; practice.space = true; }
-function roundWon(R, word, p) { if (R.stage !== 'play') return; R.won++; st('roundsWon'); drillTag(word, p.x, p.y); sfx('cheer'); roundsHold(R, 'show'); }
-function roundLost(R, word, p) { if (R.stage !== 'play') return; R.lost = word; drillTag(word, p.x, p.y); sfx('groan'); roundsHold(R, 'show'); }
-function roundAgain(R, word, p) { if (R.stage !== 'play') return; R.again = true; drillTag(word, p.x, p.y); roundsHold(R, 'show'); }   // neither side's doing (their dropped pass, say): the same round again
+function roundWord(word, p) { M.tags = M.tags.filter(t => t.t > DRILL_ROUNDS.word || dist(t, p) > 3); drillTag(word, p.x, p.y); }   // the round's word takes the place of one just put down where it ends (Got It, Big Hit, the match's Stopped), so there is one word to read, never two printed over each other
+function roundWon(R, word, p) { if (R.stage !== 'play') return; R.won++; st('roundsWon'); roundWord(word, p); sfx('cheer'); roundsHold(R, 'show'); }
+function roundLost(R, word, p) { if (R.stage !== 'play') return; R.lost = word; roundWord(word, p); sfx('groan'); roundsHold(R, 'show'); }
+function roundAgain(R, word, p) { if (R.stage !== 'play') return; R.again = true; roundWord(word, p); roundsHold(R, 'show'); }   // neither side's doing (their dropped pass, say): the same round again
 function roundsStage() {                                   // open play from nothing, as a kick-off leaves it: no set piece and no bind, both Sprint meters full, the half's clock at 0 so no round reaches the hooter. Round one finds all of it so already
   M.phase = 'play'; M.set = null; M.cut = null; M.goal = null; M.contact = null; M.surge = null; M.duelPending = null;
   M.clock = 0; M.hooter = false; M.phaseCount = 0; M.dropArmed = [false, false]; M.dropOn = [false, false]; M.tags = []; M.fx = [];
@@ -13042,13 +13043,14 @@ function drillTagCheck(c) {                                // the Kids level and
    may pass to (the match's own carrier: under pressure, or held too long); the same with quicker runners; two cover men to Switch
    between, the runners quicker still. Won by stopping whoever carries with the man you switched to
    (Pull Tag for the youngest); a try, the clock or a tackle without the Switch ends the run. Only your ringed man commits here
-   (contact.js tackleChecks), so a cover man left standing can neither win it nor lose it, and Sprint never hands the ring back to
-   the beaten man (contact.js sprintPick), as before. A dropped pass of theirs, or the ball loose, plays the round again. */
+   (contact.js tackleChecks), so a cover man left standing can neither win it nor lose it. Once you have switched, the ring never goes
+   back to the beaten man: not by Sprint (contact.js sprintPick), as before, and not when their pass is caught far from your man or
+   with him down (defendRepick). A dropped pass of theirs, or the ball loose, plays the round again. */
 const DRILL_DEFEND = { limit:18, rounds:[
   { label:'The Chase', run:[49, 35], beaten:[56, 35], cover:[[36, 39]] },
   { label:'Longer Start', run:[49, 33], beaten:[57, 33], cover:[[36, 40]] },
-  { label:'Support Runner', run:[49, 32], support:[56, 39], beaten:[57, 32], cover:[[36, 36]] },
-  { label:'Quicker Runner', run:[49, 32], support:[56, 39], beaten:[57, 32], cover:[[36, 36]], pace:2 },
+  { label:'Support Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]] },
+  { label:'Quicker Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]], pace:2 },
   { label:'Two Cover Defenders', run:[49, 33], support:[52, 40], beaten:[57, 33], cover:[[38, 25], [37, 42]], pace:2 },
 ] };
 function defendRestage(n) {
@@ -13061,7 +13063,11 @@ function defendRestage(n) {
   setCarrier(run); setCtrl(0, beaten); if (n > 1) drillHold(run);   // the ball in his hands under the card; round one's first step puts it there, as it always did
   practice.initialCtrl = beaten; practice.switched = false; practice.limit = DRILL_DEFEND.limit;
 }
-const defendZoom = () => (practice.defend && DRILL_DEFEND.rounds[practice.defend.R.round - 1].cover.length > 1 ? 0.9 : 1);   // the camera a touch further out with two cover defenders, so both are clear of the thumbs at 667x375
+const DEFEND_VIEW = [{ sy:0.46, lean:0, zoom:0.88 }, { sy:0.56, lean:1, zoom:0.88 }];   // the camera (render-drill.js) with one cover defender and with two: where the field sits up the screen, metres towards the beaten man until the Switch, and a touch out. Measured at 667x375, the tighter size: every man clear of the stick, the buttons and the card, on the card and as play starts, in all five rounds
+const defendView = () => DEFEND_VIEW[practice.defend && DRILL_DEFEND.rounds[practice.defend.R.round - 1].cover.length > 1 ? 1 : 0];
+function defendRepick(t, c) {                              // setCarrier (match.js) moves the ring when their pass is caught with your man down or far off: to the nearest of yours on his feet, as in a match, but once you have switched never back to the beaten man. With nobody else free the ring stays where it is
+  return nearestOf(M.players.filter(q => q.team === t && q.down <= 0 && !q.bind && !(practice.switched && q === practice.initialCtrl)), c.x, c.y);
+}
 const DEFEND_TIP = { 'Switch First':'Switch to the defender ahead of the ball first.', 'Time Up':'Get across early and close the gap.', Try:'Switch early, then run to where the carrier is going.' };
 const drillDefend = {
   setup(own, cpu) {
