@@ -1139,10 +1139,9 @@ summary::-webkit-details-marker{display:none}
   .hp-drills .pr-cg .pr-group{font-size:15px;line-height:1}
   .hp-drills .pr-cg .pr-coach{line-height:1.05}
   .hp-drills .drills,.hp-drills .pr-low,.hp-drills .pr-games{gap:4px}
-  .hp-settings.settings{gap:4px 10px;padding:5px 10px}
+  .hp-settings.settings{gap:4px 10px;padding:3px 10px}   /* the three rows, each label over its control, with 4px to spare: Difficulty's segment keeps the full width, so the ring steps a row at a time */
   .hp-settings .set{gap:2px}
   .hp-settings .lbl{font-size:10px;line-height:1}
-  .hp-settings .set-diff{grid-template-columns:auto minmax(0,1fr);gap:10px}   /* Difficulty's label beside its control (its row has the width to spare), so the three rows fit with room */
 }
 @media (orientation:landscape) and (max-height:420px) and (min-height:341px) and (max-width:740px){
   /* a smaller phone sideways (667x375): smaller pictures and tighter lines, so the three rows and Contact Games' two lines fit between the top row and the bar */

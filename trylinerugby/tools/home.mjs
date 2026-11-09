@@ -430,6 +430,32 @@ async function browserChecks() {
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}/`;
   const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 } };
+  // Settings row by row, at every size (the Settings fit: Difficulty's label beside its control at 320px tall once moved its segment right,
+  // and the ring skipped a row): the web's halves and the thirds where Grown-Ups shows (the free web, the app), desk or not. Down from every
+  // control lands on the row under it, the last row's on the Settings headline, never two rows down; Left and Right never two rows away either
+  const settingsRows = () => {
+    const T = window.__tryline, S = T.store, st = T.debug.settings(), $ = id => document.getElementById(id), panel = $('hp-settings'), out = { rows:[], moves:0, bad:[] };
+    const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
+    const name = el => !el ? 'nothing' : el.id || (el.closest('.seg') ? el.closest('.seg').dataset.key + ':' : '') + el.textContent.trim();
+    for (const desk of [false, true]) for (const store of ['web', 'free', 'app']) {
+      const app = store === 'app', at = store + (desk ? ' desk' : '');
+      S.setNative(app); S.setStarted(app); S.setBought([]); S.setTier(store === 'free' ? 'free' : null);
+      st.kids = app; st.diff = app ? 0 : 1; st.hl = 'settings'; document.body.classList.toggle('desk', desk); T.debug.goHome(); T.home.ring(null);
+      const btns = [...panel.querySelectorAll('button')].filter(vis), foot = el => box(el.closest('.set') || el).bottom;   // a control's row: its setting's foot (Grown-Ups stands on its row's)
+      const feet = btns.map(foot).sort((a, b) => a - b).filter((f, i, a) => !i || f - a[i - 1] > 8);
+      const row = el => !el ? -1 : panel.contains(el) ? feet.findIndex(f => Math.abs(foot(el) - f) <= 8) : el === $('hl-settings') ? feet.length : -2;
+      out.rows.push(feet.length);
+      for (const b of btns) {
+        const r = row(b);
+        T.home.ring(b); const down = T.navMove(0, 0, 1); out.moves++;
+        if (row(down) !== r + 1) out.bad.push(`${at}: Down from ${name(b)} to ${name(down)}`);
+        for (const dx of [-1, 1]) { T.home.ring(b); const to = T.navMove(0, dx, 0); out.moves++; if (to && panel.contains(to) && Math.abs(row(to) - r) > 1) out.bad.push(`${at}: ${dx < 0 ? 'Left' : 'Right'} from ${name(b)} to ${name(to)}`); }
+      }
+    }
+    S.setNative(false); S.setStarted(false); S.setTier(null); st.kids = false; st.diff = 1; st.hl = 'game'; document.body.classList.remove('desk'); T.home.ring(null); T.debug.goHome();
+    return out;
+  };
+  const rowsOk = (kind, r) => ok(r.rows.length === 6 && r.rows.every(n => n === 3) && !r.bad.length, `${kind}: Settings in three rows (the web, the free web, the app, desk or not), Down from every control on the row under it (the last row's on the Settings headline), Left and Right never two rows away (${r.bad.slice(0, 4).join(', ') || r.moves + ' moves'}; rows ${r.rows.join(' ')})`);
   try {
     for (const [w, h] of [[844, 390], [667, 375]]) for (const touch of [true, false]) {
       const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });
@@ -587,6 +613,7 @@ async function browserChecks() {
       ok(pad.first === 'b-quick' && pad.down === 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Play, Down reaches the bar on Quick Match (the chosen headline), Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify({ ...pad, landed:undefined, unreached:undefined })})`);
       ok(!pad.landed.length, `${kind}: Down from every button of every headline (each Championship tier too) reaches the bar on that headline (${pad.landed.slice(0, 4).join(', ') || 'all'})`);
       ok(!pad.unreached.length, `${kind}: every button on every headline is reached by moving the ring (${pad.unreached.join(', ') || 'all'})`);
+      rowsOk(kind, await page.evaluate(settingsRows));
       // Skills Mini Games for each player (the skills builder, at the PR #14 merge): Men the ten, How to Play, Contact Games (U9 and Up) and
       // For Grown-Ups; the Kids level and Minis the seven, How to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches
       // every button and Down from each lands on Skills Mini Games, For Grown-Ups opens its panel with Back to Skills in the ring's reach,
@@ -695,6 +722,7 @@ async function browserChecks() {
       ok(r.every(x => !x.small.length && !x.cut.length), `${kind}: every target 44px, no name cut off nor lock squeezed (${list(x => x.small.length || x.cut.length) || 'all'})`);
       const scrolls = r.filter(x => x.scroll > 0);
       ok(scrolls.every(x => /cab champ1$/.test(x.state) && x.ringed), `${kind}: only National's nine leagues with the Trophy Cabinet scroll inside the panel, and the ring brings the last button into view (${scrolls.map(x => x.state + ' ' + x.scroll + 'px' + (x.ringed ? '' : ' not ringed')).join(', ') || 'none'})`);
+      rowsOk(kind, await page.evaluate(settingsRows));
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }
