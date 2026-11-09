@@ -178,17 +178,19 @@ const fresh = () => {                                       // a new game on the
   ok(comps(2) === 'sur,cty' && H.comps(2).map(c => c[1]).join() === 'Surrey,Counties', 'Local: Surrey and Counties (PR #14\'s), and no My League without an import');
   ok(['eng', 'fra', 'cel', 'rsa'].every(K.euroLeague) && !['en2', 'sco', 'aus', 'nzl', 'jpn', 'sur', 'cty', 'my', 'int'].some(K.euroLeague), 'the European Cup\'s trophy on the four leagues whose winner goes on to it');
   H.setTier(1); H.champ();
-  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && /id="hc-en2" data-comp="en2"><span>England 2<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n9' && /\.hc-comps\.n9\{grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*\/\*[^*]*\*\/\s*\.hc-comps\.n9 > \.btn\{grid-column:span 4\}\s*\.hc-comps\.n9 > \.btn:nth-child\(n\+6\)\{grid-column:span 5\}/.test(css), 'the trophy, in the European Cup\'s gold, no prose; nine leagues (England 2 is PR #14\'s) in two rows, five then four, each in equal parts');
+  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && /id="hc-en2" data-comp="en2"><span>England 2<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n9' && /\.hc-comps\.n9\{grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*\.hc-comps\.n9 > \.btn\{grid-column:span 5\}\s*\.hc-comps\.n9 > \.btn:nth-child\(n\+5\)\{grid-column:span 4\}/.test(css), 'the trophy, in the European Cup\'s gold, no prose; nine leagues (England 2 is PR #14\'s) in two rows, each in equal parts (re-pinned for the United Rugby Championship: four then five, so it has a quarter)');
+  ok(/id="hc-cel" data-comp="cel"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>United Rugby Championship<\/span>/.test($('hc-comps').innerHTML) && /class="btn hc-comp long" id="hc-cel"/.test($('hc-comps').innerHTML) && ($('hc-comps').innerHTML.match(/ long"/g) || []).length === 1, 'the United Rugby Championship by its name, with the European Cup\'s trophy, the one long name (its lock goes in the corner)');
   ok(!$('hc-new').hidden && $('hc-go').hidden && $('b-cabinet').hidden, 'nothing saved: the competitions, and no Trophy Cabinet before a season is finished');
   // each competition's team screen: only its sides
   const grid = () => $('t-grid').innerHTML, cards = () => (grid().match(/class="team[ "]/g) || []).length - (grid().match(/class="team create/g) || []).length;
+  const sum = () => $('t-sum').innerHTML.replace(/<[^>]+>/g, '');   // re-pinned for Fold to One Line: the list is on the folded line (Men · National · France), under a plain Championship
   for (const l of X.TEAM_LISTS.filter(l => l.tier > 0)) {
     H.champPick(l.key);
-    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && $('t-tier').hidden && $('t-nat').hidden && $('t-loc').hidden && cards() === l.teams.length && l.teams.every(t => grid().includes('>' + X.listName(t) + '<')) && $('t-eyebrow').textContent === 'Championship · ' + l.name, `${l.name}: its ${l.teams.length} sides only, no lists to wander off to`);
+    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && $('t-tier').hidden && $('t-nat').hidden && $('t-loc').hidden && cards() === l.teams.length && l.teams.every(t => grid().includes('>' + X.listName(t) + '<')) && $('t-eyebrow').textContent === 'Championship' && sum() === 'Men · ' + X.TEAM_TIERS[l.tier] + ' · ' + l.name && !X.opened(), `${l.name}: its ${l.teams.length} sides only, no lists to wander off to, folded on Men · ${X.TEAM_TIERS[l.tier]} · ${l.name}`);
     D.goHome();
   }
   H.champPick('int');
-  ok(X.teamPool() === 'int' && cards() === 12 && X.natList('men').every(t => grid().includes('>' + X.listName(t) + '<')) && $('t-eyebrow').textContent === 'Championship · International' && $('t-default').textContent === 'Play as England', 'International Championship: the twelve, England (My Team\'s country) picked for you on Play as England');
+  ok(X.teamPool() === 'int' && cards() === 12 && X.natList('men').every(t => grid().includes('>' + X.listName(t) + '<')) && $('t-eyebrow').textContent === 'Championship' && sum() === 'Men · International' && $('t-default').textContent === 'Play as England', 'International Championship: the twelve, England (My Team\'s country) picked for you on Play as England');
   $('t-default').click();
   ok(X.champ() && X.champ().teams[X.champ().user].id === 'ENG' && X.champ().teams.every(t => X.SIX_NATIONS.includes(t.id)) && shown() === 's-hub', 'and Play as England starts the Six Nations');
   X.setChamp(null); D.goHome();
@@ -222,7 +224,7 @@ const fresh = () => {                                       // a new game on the
   // My League: Local, with an import
   I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id })) }); D.goHome(); H.setTier(2); H.champ();
   ok(comps(2) === 'sur,cty,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey and Counties');
-  H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship · My League', 'My League\'s team screen');
+  H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship' && sum() === 'Men · Local · My League', 'My League\'s team screen, Men · Local · My League on the line');
   // the European Cup is still reached by winning a European league
   fresh(); H.champPick('eng'); D.pickTeam(X.ENGLAND[0]);
   const c = X.champ(), order = [c.user, 1, 2, 3, 4, 5].filter((v, i, a) => a.indexOf(v) === i), rk = i => order.indexOf(i);
@@ -715,7 +717,7 @@ async function browserChecks() {
             const over = outer.filter((a, i) => outer.some((b, j) => j > i && meet(box(a), box(b))) || inner.some(b => meet(box(a), seen(b))) || (clip && meet(box(a), pr)))
               .concat(inner.filter((a, i) => inner.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && meet(box(a), box(b)))));
             const small = btns.filter(b => !b.classList.contains('app-action') && (box(b).height < 44 || box(b).width < 44));
-            const cut = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1)
+            const cut = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1)   // a competition's button too: its name and lock (the free tier) inside it
               .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = getComputedStyle(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }));
             const scroll = p.scrollHeight - p.clientHeight;
             let ringed = true;
@@ -732,10 +734,144 @@ async function browserChecks() {
       const list = f => r.filter(f).slice(0, 4).map(x => x.state + ': ' + [...x.off, ...x.over, ...x.small, ...x.cut].join('/')).join('; ');
       ok(r.length === 42 && r.every(x => x.page <= 0 && !x.off.length && !x.over.length), `${kind}: the page never scrolls, the logo, top row and bar are on screen and nothing sits over anything (${list(x => x.page > 0 || x.off.length || x.over.length) || r.length + ' states'})`);
       ok(r.every(x => !x.small.length && !x.cut.length), `${kind}: every target 44px, no name cut off nor lock squeezed (${list(x => x.small.length || x.cut.length) || 'all'})`);
+      const nine = await page.evaluate(() => { const T = window.__tryline; T.debug.settings().hl = 'champ'; T.home.setTier(1); T.debug.goHome();
+        const px = [...new Set([...document.querySelectorAll('#hc-comps .hc-comp')].map(b => getComputedStyle(b).fontSize))], n = document.querySelectorAll('#hc-comps .hc-comp').length;
+        T.home.setTier(null); T.debug.settings().hl = 'game'; T.debug.goHome(); return { n, px }; });
+      ok(nine.n === 9 && json(nine.px) === json([w < 620 ? '12px' : '14px']), `${kind}: National's nine at ${w < 620 ? '12px under 620 wide (the step down placed after their 14px, which otherwise wins)' : 'their 14px'} (${json(nine)})`);
       const scrolls = r.filter(x => x.scroll > 0);
       ok(scrolls.every(x => /cab champ1$/.test(x.state) && x.ringed), `${kind}: only National's nine leagues with the Trophy Cabinet scroll inside the panel, and the ring brings the last button into view (${scrolls.map(x => x.state + ' ' + x.scroll + 'px' + (x.ringed ? '' : ' not ringed')).join(', ') || 'none'})`);
       rowsOk(kind, await page.evaluate(settingsRows));
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
+      await ctx.close();
+    }
+    // 11. The team screen folds to one line (the owner, 2026-11-09, from Safari sideways: "i can't see half the screen once i'm in to
+    //     specific clubs"): at every phone size, Safari's bars included, the folded line fits with nothing cut or off the side and the first
+    //     row of cards is wholly in view, on Pick Your Team and Pick Opponent (International's nations, the tallest cards, included), in every
+    //     Championship with its primary (Play as, Tour) on the line beside Change, and in the career's club screen, whose title is the team
+    //     screen's size; opened, nothing goes off the side or under the bottom edge and every control is 44px. The keyboard and a controller
+    //     follow it: Change onto the current tier, a league onto the first card, a side picked or Change Team onto the first card.
+    //     The fold moves by opacity and transform only, and not at all with reduced motion.
+    for (const [w, h] of [[844, 390], [667, 375], [844, 340], [667, 320], [568, 320]]) {
+      const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
+      const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
+      await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
+      const kind = `${w}x${h}`;
+      const STATES = {
+        'Pick Your Team':`D.openTeams('quick');`,
+        'Pick Opponent':`D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); X.fold(true); X.tierPick(1); X.poolPick('aus');`,
+        'Pick Opponent on the United Rugby Championship, Women':`D.openTeams('quick'); D.pickTeam(X.CLUBS[7]); X.fold(true); X.catPick('women'); X.tierPick(1); X.poolPick('cel');`,
+        'Player 2 Team':`D.openJoin(); D.openTeams('two'); D.pickTeam(X.NATIONS[3]); X.fold(true); X.tierPick(1); X.poolPick('cel');`,
+        'My Team on International':`D.setTwo(false); D.openTeams('my'); X.fold(true); X.tierPick(0);`,
+        'Pick Opponent on International':`D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); X.fold(true); X.tierPick(0);`,
+        'Championship, a league':`T.home.champPick('cel');`,
+        'Championship, Surrey, Play as Farnham':`T.home.champPick('sur');`,
+        'Championship, International, Play as England':`T.home.champPick('int');`,
+        'Championship, the United Rugby Championship, Play as Dublin Women':`S.myClub = 'DUB'; S.cat = 'women'; T.home.champPick('cel');`,
+        'the World Cup, Play as England':`T.home.champPick('world');`,
+        'the Home Nations Tour':`T.home.champPick('tour');`,
+        'the career\'s club screen':`C.set(null); C.newOpen(); C.clubOpen(); C.tierPick(1); C.poolPick('cel');`,
+      };
+      const PRIMARY = /Play as|Tour/;                        // the states whose line carries Championship's primary
+      const MEASURE = `(() => { const s = [...document.querySelectorAll('.screen')].find(e => !e.hidden), box = e => e.getBoundingClientRect(), vis = e => !!e && !e.closest('[hidden]') && box(e).width > 0;
+        const line = s.querySelector('.fold-line'), lb = box(line), name = e => e.id || e.className || e.textContent.trim().slice(0, 16);
+        const off = [...s.querySelectorAll('*')].filter(vis).filter(e => box(e).right > innerWidth + 0.5 || box(e).left < -0.5).map(name);
+        const cut = [...line.querySelectorAll('*'), ...s.querySelectorAll('.fold-ctl button')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1 || box(e).right > lb.right + 0.5).map(name);
+        const small = [...s.querySelectorAll('.fold-line button, .fold-ctl button')].filter(vis).filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(name);
+        const cards = [...s.querySelectorAll('.team')].filter(vis), top = cards.length ? box(cards[0]).top : 0, row = cards.filter(c => Math.abs(box(c).top - top) < 2);
+        const sum = s.querySelector('.fold-sum'), sw = box(sum).width, words = [...sum.querySelectorAll('span span')].filter(e => box(e).width > 0);
+        // a part on more than one line is broken unless it is wider on one line than the whole summary (the United Rugby Championship
+        // beside Play as at 568 wide, which then wraps between its words, never past the edge: cut, above)
+        const broken = words.filter(e => { if (box(e).height <= parseFloat(getComputedStyle(e).lineHeight) * 1.5) return false; e.style.whiteSpace = 'nowrap'; const wide = e.scrollWidth > sw + 0.5; e.style.whiteSpace = ''; return !wide; }).map(e => e.textContent);
+        const def = s.querySelector('#t-default'), db = vis(def) ? box(def) : null, ctl = s.querySelector('.fold-ctl');
+        return { open:!ctl.hidden, line:Math.round(lb.height), first:Math.round(Math.max(...row.map(c => box(c).bottom))), n:row.length, H:innerHeight, off, cut, small, broken,
+          primary:db ? (db.top >= lb.top - 0.5 && db.bottom <= lb.bottom + 0.5 && db.height >= 43.5 ? 'on the line' : 'off the line') : null, ctlBottom:ctl.hidden ? 0 : Math.round(box(ctl).bottom),
+          side:Math.max(s.scrollWidth - s.clientWidth, document.documentElement.scrollWidth - innerWidth), sum:sum.textContent, page:document.documentElement.scrollHeight - innerHeight }; })()`;
+      const lines = [];
+      for (const [where, js] of Object.entries(STATES)) {
+        for (const opened of [false, true]) {
+          await page.evaluate(`(() => { const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, $ = i => document.getElementById(i), S = D.settings();
+            T.cups.set(null); X.setChamp(null); D.setTwo(false); S.myClub = null; S.cat = 'men'; D.goHome();   // each state from the save's own: My Team Farnham and England, Men
+            ${js} ${opened ? `(document.getElementById('t-fold').offsetParent ? X.fold(true) : C.clubFold(true));` : ''} })()`);
+          await page.waitForTimeout(260);
+          const m = await page.evaluate(MEASURE);
+          const name = `${kind}: ${where}${opened ? ', opened' : ''}`;
+          ok(m.open === opened && !m.off.length && m.side <= 0 && m.page <= 0 && m.ctlBottom <= m.H + 0.5, `${name}: nothing off the side or (opened) under the bottom edge, the page never scrolls (${json({ off:m.off, side:m.side, page:m.page, ctl:m.ctlBottom })})`);
+          ok(!m.cut.length && !m.small.length && !m.broken.length, `${name}: nothing on the line or in the controls cut, every control 44px, each part of the summary whole (${json({ cut:m.cut, small:m.small, broken:m.broken })})`);
+          ok(m.primary === (PRIMARY.test(where) ? 'on the line' : null), `${name}: Championship's primary on the line beside Change, 44px, and only where it has one (${m.primary})`);
+          if (!opened) ok(m.line <= 64 && m.n >= 2 && m.first <= m.H + 0.5, `${name}: one line (${m.line}px) and the first row of cards wholly in view (${m.first} of ${m.H}, ${m.n} cards)`);
+          if (!opened) lines.push(`${where} ${m.line}px, first row to ${m.first}`);
+        }
+      }
+      console.log(`${kind} folded: ${lines.join('; ')}`);
+      const titles = await page.evaluate(() => ['s-teams', 's-career-club'].map(id => getComputedStyle(document.querySelector(`#${id} .fold-line h2.title`)).fontSize));
+      ok(titles[0] === titles[1] && parseFloat(titles[0]) <= 30, `${kind}: the club screen's folded title is the team screen's size, smaller than a screen's own title (${titles.join(', ')})`);
+      // the keyboard: Change opens onto the current tier; National keeps them open; a league folds onto the first card that can be picked
+      const keys = [];
+      const at = () => page.evaluate(() => { const a = document.activeElement; return a ? (a.id || (a.dataset.tier != null ? 'tier ' + a.dataset.tier : a.dataset.pool ? 'pool ' + a.dataset.pool : a.dataset.i != null ? 'card ' + a.dataset.i : a.tagName)) : null; });
+      await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); T.debug.pickTeam(T.teams.CLUBS[0]); });
+      await page.focus('#t-fold'); await page.keyboard.press('Enter'); keys.push(await at());
+      await page.focus('#t-tier [data-tier="1"]'); await page.keyboard.press('Enter'); keys.push(await at(), await page.evaluate(() => window.__tryline.teams.opened()));
+      await page.focus('#t-nat [data-pool="aus"]'); await page.keyboard.press('Enter'); keys.push(await at(), await page.evaluate(() => window.__tryline.teams.opened()));
+      await page.keyboard.press('Shift+Tab'); keys.push(await at());
+      ok(json(keys) === json(['tier 2', 'tier 1', true, 'card 0', false, 't-fold']), `${kind}: the keyboard: Change onto Local (the tier on show), National keeps them open, Australia folds onto the first card, and back from it is Change (${json(keys)})`);
+      // a side picked from the opened controls, and Change Team, fold onto the first card too (Farnham, his own, can't be his opponent)
+      const sides = [];
+      await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); T.teams.fold(true); });
+      await page.focus('#t-grid .team[data-i="0"]'); await page.keyboard.press('Enter'); sides.push(await page.evaluate(() => document.getElementById('t-title').textContent), await at(), await page.evaluate(() => window.__tryline.teams.opened()));
+      await page.evaluate(() => window.__tryline.teams.fold(true));
+      await page.focus('#t-change'); await page.keyboard.press('Enter'); sides.push(await page.evaluate(() => document.getElementById('t-title').textContent), await at(), await page.evaluate(() => window.__tryline.teams.opened()));
+      sides.push(await page.evaluate(() => { const T = window.__tryline, $ = i => document.getElementById(i); T.home.ring(null); T.debug.pickTeam(T.teams.CLUBS[0]); T.teams.fold(true); T.home.ring($('t-change')); T.navPress(0); const f = T.debug.focus(); T.home.ring(null); return f && f.dataset.i; }));
+      ok(json(sides) === json(['Pick Opponent', 'card 1', false, 'Pick Your Team', 'card 0', false, '0']), `${kind}: Player 1's side picked from the opened controls folds onto the first opponent he can play, Change Team back onto the first card, the keyboard's and a controller's ring alike (${json(sides)})`);
+      const club = [];   // the career's club screen the same way
+      await page.evaluate(() => { const C = window.__tryline.career; C.set(null); C.newOpen(); C.clubOpen(); });
+      await page.focus('#cc-fold'); await page.keyboard.press('Enter'); club.push(await at());
+      await page.focus('#cc-tier [data-tier="1"]'); await page.keyboard.press('Enter'); club.push(await at(), await page.evaluate(() => window.__tryline.career.clubOpened()));
+      await page.focus('#cc-nat [data-pool="cel"]'); await page.keyboard.press('Enter'); club.push(await at(), await page.evaluate(() => window.__tryline.career.clubOpened()));
+      await page.evaluate(() => { const T = window.__tryline; T.home.ring(null); T.home.ring(document.getElementById('cc-fold')); T.navPress(0); });
+      club.push(await page.evaluate(() => { const f = window.__tryline.debug.focus(); return f && f.dataset.tier; }));
+      await page.evaluate(() => { const T = window.__tryline; T.home.ring(document.querySelector('#cc-nat [data-pool="eng"]')); T.navPress(0); });
+      club.push(await page.evaluate(() => { const f = window.__tryline.debug.focus(); return f && f.dataset.i; }));
+      await page.evaluate(() => { const T = window.__tryline; T.home.ring(null); T.career.set(null); T.debug.goHome(); });
+      ok(json(club) === json(['tier 2', 'tier 1', true, 'card 0', false, '1', '0']), `${kind}: the career's club screen too: Change onto Local, National open, a league onto the first club; a controller's ring the same (${json(club)})`);
+      // a controller: the first press on the first card that can be picked, Change onto the tier, a league onto the first card; folded, the ring
+      // reaches Change, every card and Back; opened, every control too
+      const pad = await page.evaluate(() => {
+        const T = window.__tryline, D = T.debug, X = T.teams, $ = i => document.getElementById(i), f = () => T.debug.focus(), id = el => el && (el.id || (el.dataset.tier != null ? 'tier ' + el.dataset.tier : el.dataset.pool ? 'pool ' + el.dataset.pool : el.dataset.i != null ? 'card ' + el.dataset.i : el.textContent.trim()));
+        const reach = () => { const s = $('s-teams'), seen = new Set(), todo = [T.navMove(0, 0, 0)]; while (todo.length) { const el = todo.pop(); if (!el || seen.has(el)) continue; seen.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); todo.push(T.navMove(0, dx, dy)); } }
+          const all = [...s.querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0 && b.getAttribute('aria-disabled') !== 'true'); T.home.ring(null); return all.filter(b => !seen.has(b)).map(id); };
+        const out = [];
+        D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); T.home.ring(null);
+        out.push(id(T.navMove(0, 0, 0)));                    // Farnham, picked, can't be: Wimbledon, his derby, first
+        T.home.ring($('t-fold')); T.navPress(0); out.push(id(f()), X.opened());
+        out.push(JSON.stringify(reach()));
+        T.home.ring($('t-tier').querySelector('[data-tier="1"]')); T.navPress(0); T.home.ring($('t-nat').querySelector('[data-pool="cel"]')); T.navPress(0); out.push(id(f()), X.opened());
+        out.push(JSON.stringify(reach()));
+        D.openTeams('champ', 'sur'); T.home.ring(null); out.push(id(T.navMove(0, 0, 0)));   // Surrey, My Team's list: Play as Farnham
+        T.home.ring(null); D.goHome();
+        return out;
+      });
+      ok(json(pad) === json(['card 1', 'tier 2', true, '[]', 'card 0', false, '[]', 't-default']), `${kind}: a controller: the first press on the first card that can be picked, Change onto the tier, a league onto the first card, the ring reaching everything folded or open, Championship's first press on Play as (${json(pad)})`);
+      ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
+      await ctx.close();
+    }
+    // the motion: transform and opacity only, quick; nothing at all with reduced motion
+    for (const reduced of [false, true]) {
+      const ctx = await browser.newContext({ viewport:{ width:667, height:375 }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block', reducedMotion:reduced ? 'reduce' : 'no-preference' });
+      const page = await ctx.newPage();
+      await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
+      await page.goto(base + 'index.html', { waitUntil:'load' });
+      const m = await page.evaluate(() => {
+        const T = window.__tryline, X = T.teams, $ = i => document.getElementById(i), mine = () => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#s-teams'));
+        T.debug.openTeams('quick'); mine().forEach(a => a.finish());
+        $('t-fold').click(); const open = mine();
+        const props = open.flatMap(a => a.effect.getKeyframes().flatMap(k => Object.keys(k).filter(p => !['offset', 'computedOffset', 'easing', 'composite'].includes(p))));
+        const ms = open.map(a => a.effect.getTiming().duration);
+        open.forEach(a => a.finish()); X.tierPick(0); const shut = mine();
+        T.debug.goHome();
+        return { open:open.length, shut:shut.length, props:[...new Set(props)], ms:Math.max(0, ...ms) };
+      });
+      ok(reduced ? m.open === 0 && m.shut === 0 : m.open === 2 && m.shut === 1 && json(m.props.sort()) === json(['opacity', 'transform']) && m.ms > 0 && m.ms <= 250, `${reduced ? 'reduced motion: the fold does not move' : 'the fold moves the cards and fades the controls in, by transform and opacity only, in a quarter of a second at most'} (${json(m)})`);
       await ctx.close();
     }
   } finally { await browser.close(); server.close(); }

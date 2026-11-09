@@ -98,22 +98,62 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
 .tstars b{font-weight:700;color:var(--chalk);white-space:nowrap}
 .tstars::before{content:"";display:inline-block;width:11px;height:11px;margin:0 5px -1px 0;background:var(--flood);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
-
-/* Men | Women | Minis beside the title (under it when the row is short); International | National | Local, then National's leagues
-   or Local's lists, each row in equal parts. A long league name takes two lines rather than push the row wider than the screen. */
-.head > .cat{display:grid;gap:0;flex:0 1 264px;min-width:228px}
-.pools{display:flex;flex-direction:column;gap:8px;margin-top:-8px}
-.pools .seg button,.head > .cat button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
-/* National's nine leagues (England 2 is PR #14's): one row where nine fit (a phone held sideways at 844), two rows where they do not (667),
-   five then four, each row in equal parts (twenty columns: a span of four, then of five). The career's club screen does the same (#cc-nat). */
-@media (max-width:731px){
-  #t-nat,#cc-nat{grid-auto-flow:row;grid-template-columns:repeat(20,minmax(0,1fr))}
-  #t-nat button,#cc-nat button{grid-column:span 4}
-  #t-nat button:nth-child(n+6),#cc-nat button:nth-child(n+6){grid-column:span 5;border-top:1.5px solid var(--rule-hi)}
-  #t-nat button:nth-child(6),#cc-nat button:nth-child(6){border-left:0}
+/* Safari sideways with its bars (320px tall): the card's rows closer, so a nation's whole card (Stronger Side and two lines of traits)
+   is in view under the folded line */
+@media (orientation:landscape) and (max-height:330px){
+  #t-grid .team{row-gap:6px}
+  #t-grid .team .jw{margin-bottom:4px}   /* the overall's badge, 8px under the shirt, still clear of the row under it */
+  #t-grid .stats{row-gap:2px}
 }
+
+/* Fold to One Line (the team screen and the career's club screen, foldMove in src/ui-menus.js): the eyebrow over a smaller title, where the
+   list is (Men · National · Australia) with your side under it on Pick Opponent (v Farnham), and Change (Done while open), one row of
+   48px; the controls open under it. The summary takes the room left and wraps, never the title or the button. Championship's primary
+   (Play as Farnham, Tour Scotland) is on the line too: a row of its own under it where the screen is tall, and beside Change on a phone
+   held sideways (below), so the first row of cards is in view there as well */
+.fold-line{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-height:48px}
+.fold-name{display:flex;flex-direction:column;gap:4px;flex:none;min-width:0}
+.fold-name .eyebrow,.fold-line h2.title{white-space:nowrap}
+.fold-line h2.title{font-size:30px;line-height:.9}
+.fold-sum{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 15px/1.2 var(--body);color:var(--chalk-dim);text-wrap:balance}
+.fold-sum b{font-weight:700;color:var(--chalk)}
+.fold-sum span span{display:inline-block;max-width:100%}   /* each part whole: a long summary wraps at a dot, and inside a part only where the part alone is wider than the room (the United Rugby Championship beside Play as at 568 wide) */
+.btn.fold-go{width:auto;flex:none;min-height:44px;min-width:88px;padding:8px 16px}
+.fold-line > .primary{flex:1 0 100%}
+@media (orientation:landscape) and (max-height:560px){
+  .fold-line{flex-wrap:nowrap}
+  .fold-line > .primary{flex:0 1 auto;width:auto;max-width:30%;min-height:44px;padding:4px 12px;font-size:16px;line-height:1;letter-spacing:.03em;text-wrap:balance}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:620px){
+  /* 568 wide: a little closer and the title a little smaller, so beside Play as the summary keeps three lines at most, International and
+     Championship each whole on one */
+  .fold-line{gap:8px}
+  .fold-line h2.title{font-size:26px}
+  .fold-line > .primary{max-width:128px;padding-inline:8px;font-size:15px}
+}
+.fold-ctl{display:flex;flex-direction:column;gap:12px}
+/* Men | Women | Minis beside the tiers (over them where the row is short); International | National | Local, then National's leagues
+   or Local's lists, each row in equal parts. A long league name takes two lines rather than push the row wider than the screen. */
+.fold-top{display:flex;flex-wrap:wrap;gap:8px}
+.fold-top > .seg{flex:1.4 1 330px}
+.fold-top > .cat{flex:1 1 228px}
+@media (orientation:landscape) and (max-height:560px){ .fold-top > .seg{flex-basis:290px} .fold-top > .cat{flex-basis:200px} }   /* one row at 568 wide too, so the opened controls stay on a 320px screen */
+.pools{display:flex;flex-direction:column;gap:8px}
+.pools .seg button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
+/* National's nine leagues (England 2 is PR #14's), five then four at every width, each row in equal parts (twenty columns: a span of
+   four, then of five): the United Rugby Championship takes two lines, and its Championship needs a fifth of the row. The career's club
+   screen does the same (#cc-nat) */
+#t-nat,#cc-nat{grid-auto-flow:row;grid-template-columns:repeat(20,minmax(0,1fr))}
+#t-nat button,#cc-nat button{grid-column:span 4;padding:4px 3px}
+#t-nat button:nth-child(n+6),#cc-nat button:nth-child(n+6){grid-column:span 5;border-top:1.5px solid var(--rule-hi)}
+#t-nat button:nth-child(6),#cc-nat button:nth-child(6){border-left:0}
 .yours{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid var(--flood);border-radius:8px;background:var(--panel)}
 .yours .btn{width:auto;flex:none}
+/* in the opened controls the bar is compact, your side being on the line already (v Farnham) */
+.fold-ctl .yours{padding:6px 12px}
+.fold-ctl .yours .btn{min-height:44px;padding:8px 16px}
+.fold-ctl #t-mine{font-size:26px}
+.fold-ctl #t-mine .rstars{--star:12px}
 .tcard{min-width:0;display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
 .tcard .team{flex:1;border:0;background:transparent}
 .tcard .btn{width:auto;min-height:44px;margin:0 12px 12px}
@@ -944,8 +984,8 @@ body.desk .desk-only{display:block}
 .cr-club .tid{display:flex;flex-direction:column;gap:3px;min-width:0}   /* a club's or a country's name with its stars under it (ratedStars), within the card's 44px */
 .cr-club .rstars{--star:12px}
 @media (orientation:landscape) and (max-height:560px){
-  #s-career-club .wrap,#s-career-look .wrap{gap:12px}
-  #s-career-club h2.title,#s-career-look h2.title{font-size:36px}
+  #s-career-club .wrap,#s-career-look .wrap,#s-teams .wrap{gap:12px}
+  #s-career-look h2.title{font-size:36px}   /* the club screen's title is the folded line's, as the team screen's (.fold-line h2.title) */
 }
 .cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
 /* the trophy row on the player card, under his name: each kind's trophy, in its shape and metal, and the count, only what he has won (as the Trophy Cabinet draws it) */
@@ -961,7 +1001,10 @@ body.desk .desk-only{display:block}
 .cr-offer .jersey{width:44px;height:44px}
 .cr-offer .tname{align-self:end;font-size:24px;white-space:nowrap;overflow-wrap:normal}
 .cr-offer .rstars{--star:12px}   /* the club's stars, between its name and its league (ratedStars) */
-.cr-offer .lbl{align-self:start;white-space:nowrap;overflow-wrap:normal}   /* one line, stepped down; one still too wide at 10px (Celtic and Italy, South Africa in a quarter of 667) wraps at its own size (careerFit, data-fit="wrap") */
+.cr-offer .lbl{align-self:start;white-space:nowrap;overflow-wrap:normal}   /* one line, stepped down; one still too wide at 10px (South Africa in a quarter of 667) wraps at its own size (careerFit, data-fit="wrap"); one with a word wider than its column (the United Rugby Championship's) goes under the shirt (.cr-offers.wide) */
+.cr-offers.wide .team.cr-offer{grid-template-rows:1fr 1fr auto}   /* a league too wide beside the shirt (careerFit): under it, across the card, on every card alike */
+.cr-offers.wide .cr-offer .jw{grid-row:1/3}
+.cr-offers.wide .cr-offer .lbl{grid-column:1/-1}
 .cr-offer.stay{border-style:dashed}
 .cr-offer.stay .lbl{color:var(--chalk)}
 @media (max-width:620px){ .cr-offers{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -1021,13 +1064,21 @@ body.desk .desk-only{display:block}
 .hc-new{display:flex;flex-direction:column;gap:8px}
 .hc-comps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .hc-comps.n8{grid-template-columns:repeat(4,minmax(0,1fr))}
-.hc-comps.n9{grid-template-columns:repeat(20,minmax(0,1fr))}   /* National's nine: five then four, each row in equal parts */
-.hc-comps.n9 > .btn{grid-column:span 4}
-.hc-comps.n9 > .btn:nth-child(n+6){grid-column:span 5}
+/* National's nine: four then five, each row in equal parts, so the United Rugby Championship, fourth, has a quarter, the room its
+   Championship needs. Beside a trophy, a name takes the room left (wrapping between words) and the trophy goes over it where the two
+   can't sit side by side, as can a lock (the free tier) under it; a long name's lock sits in the corner rather than take a line of its
+   own. Where even a quarter is narrow (568 wide, the panel scrolling in its row there anyway) the names step down to 12px. */
+.hc-comps.n9{grid-template-columns:repeat(20,minmax(0,1fr))}
+.hc-comps.n9 > .btn{grid-column:span 5}
+.hc-comps.n9 > .btn:nth-child(n+5){grid-column:span 4}
+.hc-comps.n9 .btn.hc-comp:has(.cup-trophy){flex-wrap:wrap;row-gap:2px;position:relative}
+.hc-comps.n9 .hc-comp:has(.cup-trophy) > span:last-child{flex:1 1 0}
+.hc-comps.n9 .hc-comp.long.locked::after{position:absolute;top:5px;right:6px;margin:0;width:10px;height:13px}
 .hc-comps.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hc-comps.n1{grid-template-columns:1fr}
 .btn.hc-comp{display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;padding:6px 8px;font-size:16px;line-height:1.1;text-align:center;text-wrap:balance}
 .hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:52px;font-size:14px}
+@media (max-width:620px){ .hc-comps.n9 .btn.hc-comp{padding:4px;font-size:12px} }   /* after the nine's 14px, which would otherwise win (the same weight, later) */
 .hc-comp .cup-trophy{width:16px;height:16px;flex:none}
 .hc-comp.locked::after{flex:none}   /* the lock keeps its size: the name wraps, never the lock */
 .hp-drills .drills{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}   /* PR #14's ten games in rows of four: seven and How to Play, then the three contact games and For Grown-Ups */

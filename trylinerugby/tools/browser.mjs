@@ -90,8 +90,8 @@ try {
       ['the Surrey tab', `X.tierPick(2); X.poolPick('sur');`, 12],
       ['the Counties tab', `X.poolPick('cty');`, 7],
       ['the England 2 tab', `X.tierPick(1); X.poolPick('en2');`, 13],
-      ['the picked-team bar', `X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[7]); X.tierPick(1); X.poolPick('eng');`, 11],
-      ['My Team\'s screen', `D.openTeams('my'); X.tierPick(2); X.poolPick('sur');`, 14],
+      ['the picked-team bar', `X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[7]); X.tierPick(1); X.poolPick('eng'); X.fold(true);`, 11],   // the bar is in the controls, behind Change (Fold to One Line)
+      ['My Team\'s screen', `D.openTeams('my'); X.tierPick(2); X.poolPick('sur'); X.fold(true);`, 14],
       ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 12],
       ['the career club list, England 2', `document.querySelector('#cc-tier [data-tier="1"]').click(); document.querySelector('#cc-nat [data-pool="en2"]').click();`, 13],
       ['the transfer window', `const cr = C.create({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(cr); cr.phase = 'transfer'; cr.offers = ['GAL', 'BLM', 'JHB']; C.open();`, 4],

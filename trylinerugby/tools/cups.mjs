@@ -64,7 +64,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
 // 1. the competitions
 {
   ok(json(Object.keys(K.CUPS)) === '["euro","world","tour"]' && K.CUPS.euro.name === 'European Cup' && K.CUPS.world.name === 'World Cup' && K.CUPS.tour.name === 'Home Nations Tour' && K.CUP_TRIPLE.name === 'Triple Crown', 'European Cup, World Cup, Home Nations Tour and the Triple Crown, in Title Case');
-  ok(json(K.CUPS.euro.lists) === '["eng","fra","cel","rsa"]' && K.CUPS.euro.lists.every(k => X.TEAM_LISTS.some(l => l.key === k && l.tier === 1)), 'the European Cup is for the winners of England, France, Celtic and Italy and South Africa');
+  ok(json(K.CUPS.euro.lists) === '["eng","fra","cel","rsa"]' && K.CUPS.euro.lists.every(k => X.TEAM_LISTS.some(l => l.key === k && l.tier === 1)), 'the European Cup is for the winners of England, France, the United Rugby Championship and South Africa');
   ok(K.CUPS.tour.tests === 3 && json(K.CUPS.tour.hosts) === '["NZL","RSA","AUS"]' && json(K.CUPS.tour.from) === '["ENG","IRE","SCO","WAL"]' && json(K.CUP_TRIPLE.nations) === json(K.CUPS.tour.from), 'the tour: three Tests, New Zealand, South Africa and Australia in turn, from the four home nations');
   ok(['men', 'women'].every(cat => [...K.CUPS.tour.hosts, ...K.CUPS.tour.from].every(id => nat(id, cat))), 'every host and every home nation is on both the men\'s and the women\'s twelve');
   ok(!/Lions/i.test(fs.readFileSync(new URL('../src/cups.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/ui-cups.js', import.meta.url), 'utf8')), 'the tour never borrows the Lions\' name (a registered trademark)');
@@ -503,7 +503,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(K.get().teams[1].id === 'AUS' && K.turn() === 3, 'or pick the host: Australia, and New Zealand is next');
   K.set(null);
   H.champPick('eng');
-  ok(K.comp() === 'league' && X.teamPool() === 'eng' && $('t-tier').hidden && $('t-eyebrow').textContent === 'Championship · England', 'after a cup, a league from the home is a league again: England\'s sides');
+  ok(K.comp() === 'league' && X.teamPool() === 'eng' && $('t-tier').hidden && $('t-eyebrow').textContent === 'Championship' && $('t-sum').innerHTML.replace(/<[^>]+>/g, '') === 'Men · National · England', 'after a cup, a league from the home is a league again: England\'s sides (re-pinned for Fold to One Line: the list on the line, Men · National · England, under a plain Championship)');
   // the European Cup offer after a league won with a side from a European league
   const finish = (c, place) => {   // every game won by the higher-ranked side, the user ranked place
     const order = [1, 2, 3, 4, 5]; order.splice(place - 1, 0, c.user);

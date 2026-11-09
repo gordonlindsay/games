@@ -235,7 +235,7 @@ const DEFAULT_FOCUS = { 's-home':() => $('b-quick'), 's-join':() => $('j-go'), '
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
 function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
 function navSide(seat) {                                   // the one button a restricted seat may still press: Player 1's Change Team while Player 2 picks
-  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-change');
+  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-ctl').hidden ? $('t-fold') : $('t-change');   // folded, his press opens the controls first, so the Change Team he presses next is on screen
   return null;
 }
 function navMove(seat, dx, dy) {                           // the nearest candidate within 60 degrees of the direction: the distance along it plus twice the sideways offset

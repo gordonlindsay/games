@@ -281,9 +281,12 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
     `Save Club adds it through cleanTeam, at the level its page names, Regional 1, spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
   ok(!$('m-import').hidden && I.state().step === 'mine' && $('im-title').textContent === 'Bracknell RFC' && !$('im-mine').hidden && $('im-row').hidden && $('im-go').hidden && !$('im-jersey').hidden && focused === 'im-make', 'then the card offers Make This My Team | Not Now, in the club\'s shirt, focus on Make This My Team');
+  X.fold(true);                                            // the team screen under the card with its controls opened
   $('im-not').click();
   ok(D.settings().myClub == null, 'Not Now leaves My Team as it was');
   ok($('m-import').hidden && D.settings().pool === I.POOL && X.teamPool() === 'my' && X.poolTier('my') === 2 && !$('t-league').hidden && $('t-tier').hidden, 'the card closes on My League (Local\'s, beside Surrey), Championship\'s list now that its competition is chosen on the home');
+  { const sum = $('t-sum').innerHTML.replace(/<[^>]+>/g, '');
+    ok(!X.opened() && $('t-ctl').hidden && sum === 'Men · Local · My League', `and folded, as a list picked folds: ${sum}`); }
   ok($('t-grid').innerHTML.includes('Sevenoaks') && $('t-grid').innerHTML.includes('Bracknell RFC'), 'My League lists the league and your teams');
   const sv = saved();
   ok(sv.importLeague.teams.length === 5 && sv.custom.some(t => t.name === 'Bracknell RFC'), 'both are in the browser save');
