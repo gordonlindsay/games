@@ -95,7 +95,7 @@ try {
       ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 12],
       ['the career club list, England 2', `document.querySelector('#cc-tier [data-tier="1"]').click(); document.querySelector('#cc-nat [data-pool="en2"]').click();`, 13],
       ['the transfer window', `const cr = C.create({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(cr); cr.phase = 'transfer'; cr.offers = ['GAL', 'BLM', 'JHB']; C.open();`, 4],
-      ['the Locker\'s Legends', `C.set(null); const L = T.locker; window.__lkWas = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); L.open(3);`, w > 731 ? 18 : 0],   // every Legend won: its stars beside its year, inside its tile; none on a 667 phone, where a tile is too narrow for them (styles.css)
+      ['the Locker\'s Legends', `C.set(null); const L = T.locker; window.__lkWas = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); L.open(3);`, w > 731 ? 14 : 0],   // every Legend won: its stars beside its year, inside its tile; none on a 667 phone, where a tile is too narrow for them (styles.css). Nine Golds (star:10 is no Gold): nine men's and the five women's, 14 (18 with ten women's, before 2026-11-09)
     ];
     const line = [];
     for (const [where, js, want] of SCREENS) {

@@ -583,7 +583,8 @@ async function browserChecks() {
         S.setTier(null); L.set(saved); st.cat = cat0; T.debug.goHome();
         return out;
       });
-      ok(locks.cards === 18 && locks.tiles === 18 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge, name and stars on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
+      // nine Golds (star:10 is no Gold: Star Pupil counts drills): nine men's sides and all five women's, 14 (18 with ten women's, before 2026-11-09)
+      ok(locks.cards === 14 && locks.tiles === 14 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge, name and stars on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
       // a controller: the first press on Play, down to the bar, along it, press, up into the panel; every button reachable
       const pad = await page.evaluate(() => {
         const T = window.__tryline, out = {};
