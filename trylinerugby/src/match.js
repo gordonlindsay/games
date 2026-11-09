@@ -88,8 +88,8 @@ function newMatch(u, c, opts) {
      the half is that share of the chosen half in simulated seconds (2 minutes: 90), and the clock on the scorebug reads real time
      (fmtClock), 2:00 at the hooter. The Golden Try is half of it (periodLen). Only where the Kids pace runs (matchPace): a drill keeps
      its own clock, and every other match keeps the half as given. The close-up quota reads the simulated half, as everything else in a
-     half does: one close-up in a 2-minute half instead of two, but it was seldom reached (2.3 a match for the 7 to 8 year old, 2.45 with
-     the quota left at two). */
+     half does: one close-up in a 2-minute half instead of two. It binds (the settled 7 to 8 year old has 2.2 a match, 2.6 with a quota of
+     two, 3.0 in the 120-second half), but keeps the rate per real minute he had before (0.55 against 0.56; README.md, The half). */
   M.realClock = M.kids && !practice ? MATCH_PACE.kids : 0;
   if (M.realClock) M.halfLen = opts.halfLen*M.realClock;
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
