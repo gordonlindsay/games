@@ -302,7 +302,7 @@ function userKick(t, power) {
 function canDive(q) {                                      // would a Tackle press act now: a carrier of the other side within 2.8m, and this man up, off cooldown, not retiring and unbound
   const b = M.ball, c = b.state === 'held' ? b.carrier : null;
   if (!q || !c || c.team === q.team || !onFeet(q) || q.tcd > 0 || q.offside > 0 || dist(q, c) >= 2.8) return false;
-  return !c.bind || (!c.bind.q2 && c.bind.q !== q);
+  return !c.bind || (!c.bind.maul && !c.bind.q2 && c.bind.q !== q);   // never into a maul once it is called (src/maul.js)
 }
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;

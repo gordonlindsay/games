@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-const { T, inputs, rndCalls, reseed, bot, maulBot } = await import('./harness.mjs');
+const { T, inputs, rndCalls, reseed, bot, maulBot, fire, padStub } = await import('./harness.mjs');
 const D = T.debug, X = T.teams, C = T.contact, K = T.kick, STEP = T.STEP, M = () => T.M, inp = inputs[0], $ = id => document.getElementById(id);
 const L = T.maul, MAUL = L ? L.MAUL : null;
 const hyp = Math.hypot, clamp = (v, a, b) => v < a ? a : v > b ? b : v, dirOf = t => t === 0 ? 1 : -1, near = (a, b, e) => Math.abs(a - b) <= e;
@@ -164,6 +164,22 @@ const noMaul = (label, s, o = {}) => {
   return lb;
 };
 { fresh(); noMaul('nobody within 4m (5m back)', bind({ cx:60, cy:35, mate:5 }, 'wrap')); ok(M().phase === 'set' && M().set.kind === 'ruck', 'nobody near: the ruck, as ever'); }
+{ // his own in-goal: a maul never forms there, and the tackle is Held in Goal as ever; the CPU never calls one there either
+  fresh(); const s = bind({ cx:7, cy:35, mate:2.5 }, 'wrap');
+  ok(s.c.x < 10 && L.mate(s.c) === s.mate && !L.can(s.k), `held in his own in-goal (x ${s.c.x.toFixed(1)}) with a man behind him: no maul`);
+  noMaul('his own in-goal', s);
+  ok(M().set && M().set.kind === 'scrum' && /^Held in Goal/.test(M().set.label), `the tackle is Held in Goal (${M().set && M().set.label})`);
+  MAUL.cpu.base = 1; MAUL.cpu.max = 1; fresh(); const s2 = bind({ ct:1, cx:113, cy:35, mate:2.5 }, 'soft'); run(() => M().contact !== s2.k, 60);
+  ok(!s2.k.maul && M().phase !== 'cut', 'the CPU in its own in-goal: none, whatever its rate'); reset();
+  fresh(); const s3 = bind({ cx:10.5, cy:35, mate:2.5 }, 'wrap'); ok(L.can(s3.k), 'on his own line, in the field of play: the Maul is there'); C.releaseBind(s3.k);
+}
+{ // a man in front of the ball is offside: never the one who binds on (supportFor's 0.3m margin)
+  fresh(); let s = bind({ cx:60, cy:35, mate:-3 }, 'wrap');
+  ok(L.mate(s.c) == null && !L.can(s.k), 'the only man near is 3m in front of the ball: no maul'); noMaul('a man in front', s);
+  fresh(); s = bind({ cx:60, cy:35, mate:-1.5 }, 'wrap'); const back = s.own.find(p => p !== s.c && p !== s.mate && p.n !== 4); Object.assign(back, { x:57, y:35.6 });
+  ok(L.mate(s.c) === back, `a man 1.5m in front and one 3m behind: the one behind binds on (number ${L.mate(s.c) && L.mate(s.c).n})`); C.releaseBind(s.k);
+  fresh(); s = bind({ cx:60, cy:35, mate:-0.2 }, 'wrap'); ok(L.mate(s.c) === s.mate && L.can(s.k), 'a man level with him (0.2m up) binds on'); C.releaseBind(s.k);
+}
 { fresh(); const s = bind({ cx:60, cy:35, mate:2.5 }, 'dom'); ok(!L.can(s.k), 'a Big Hit: no maul (L.can false)'); noMaul('a Big Hit', s); }
 { fresh(); let br = null; for (let i = 0; i < 400 && !br; i++) { const s = stage({ cx:60, cy:35, mate:2.5 }), k = C.commitTackle(s.q, s.c, 'ai'); if (k.tier === 'broken') br = k; else C.releaseBind(k); }
   ok(br && !M().contact && !br.maul && D.cueOf(0) !== 'Maul', 'a broken tackle: no bind, so nothing to maul'); }
@@ -186,6 +202,17 @@ const noMaul = (label, s, o = {}) => {
   const s3 = bind({ ct:1, cx:60, cy:35, mate:2.5 }, 'soft'); T.sides.side(0).ctrl = m.careerP;
   run(() => !!s3.k.maul, 30); run(() => M().contact !== s3.k || M().phase === 'cut', 400);
   ok(s3.k.maul && !s3.k.maul.cut && M().phase !== 'cut', 'the other side\'s maul in his match: driven in the world too');
+  // his own player made the tackle: let go as it forms, rolling away and retiring as from a ruck, and his Tackle never joins it
+  const P5 = m.careerP, R = C.RUCK; let k5 = null;
+  for (let i = 0; i < 400 && !k5; i++) { const s = stage({ ct:1, cx:60, cy:35, mate:2.5 }); s.q.x = 20; Object.assign(P5, { x:58.8, y:35, vx:3, vy:0, tcd:0, down:0, offside:0, bind:null }); const kk = C.commitTackle(P5, s.c, 'contact'); if (kk.T > 0) { kk.tier = 'soft'; kk.aiOff = null; k5 = kk; } else C.releaseBind(kk); }
+  ok(k5 && k5.q === P5, 'Pro Mode: his own player, a back, tackles their carrier');
+  run(() => k5.maul && k5.maul.live, 60);
+  ok(k5.maul && k5.maul.live && !k5.maul.cut && !P5.bind && k5.q == null && !k5.maul.C.men.includes(P5), 'their maul forms in the world without him: he is let go, never bound into it');
+  ok(near(P5.down, R.t.normal + 0.25, 0.02) && near(P5.offside, R.t.normal + 0.25 + R.retire, 0.02) && P5.tcd === P5.offside, `he rolls away and retires as from a ruck (down ${P5.down.toFixed(2)}s, retiring ${P5.offside.toFixed(2)}s, against the maul's ${MAUL.drive}s)`);
+  Object.assign(P5, { x:k5.c.x - 1, y:k5.c.y, down:0, tcd:0, offside:0, vx:0, vy:0 });
+  ok(!C.canDive(P5), 'up again beside it, his Tackle cannot join it');
+  inputs[0].aPressed = true; T.update(STEP); ok(!P5.bind && k5.q2 !== P5 && M().contact === k5, 'and a press leaves the maul as it is');
+  run(() => M().contact !== k5, 400); ok(k5.maul.C.result, `the maul ends without him (${k5.maul.C.result})`);
   reset();
   // a forward in Pro Mode: his B is the Maul, and the close-up is his
   fresh(); const f = M(); f.careerPro = true; f.careerP = f.players.find(p => p.team === 0 && p.n === 2);
@@ -228,7 +255,7 @@ begin('cpu call');
   run(() => M().phase === 'cut', 60);
   const cut = M().cut;
   ok(cut && cut.kind === 'maul' && cut.team === 1 && said.includes('Maul') && K.cutTitle(cut) === 'Maul · FRA Ball', `the CPU calls it and the close-up opens: you defend (${cut && K.cutTitle(cut)})`);
-  if (cut) { playCut(cut, [7, 0]); ok(cut.result === 'held', `tap 7 a second against it and it is held up (${cut.result}, ${cut.fwd.toFixed(2)}m)`); }
+  if (cut) { cut.base[1] = 0.72; playCut(cut, [7, 0]); ok(cut.result === 'held', `tap 7 a second against an average pack (Normal's 0.72, as section 4) and it is held up (${cut.result}, ${cut.fwd.toFixed(2)}m)`); }   // the pack's drawn x0.75 to 1.25 set at its middle, so what ran before it cannot decide this
   reset();
 }
 done('3 cpu call');
@@ -301,6 +328,35 @@ begin('wheel');
   ok(ends.up.ang < -0.3 && ends.down.ang > 0.3 && near(ends.level.ang, 0, 0.35), `the maul's angle follows the stick (${ends.up.ang.toFixed(2)}, ${ends.level.ang.toFixed(2)}, ${ends.down.ang.toFixed(2)} rad)`);
   ok(ends.up.y < ends.level.y - 1.5 && ends.down.y > ends.level.y + 1.5, `and the restart moves across the pitch (${ends.up.y.toFixed(1)}, ${ends.level.y.toFixed(1)}, ${ends.down.y.toFixed(1)})`);
   ok(Math.abs(ends.up.ang) <= MAUL.ang + 1e-9 && Math.abs(ends.down.ang) <= MAUL.ang + 1e-9, `never past ${MAUL.ang} rad`);
+  // a key or a stick held into the close-up is never a steer (as a duel's and a kick's cut-in: src/duels.js, src/goal-kicks.js): the
+  // angle stays 0 through the Drive, and a fresh press steers
+  const tapTo = (cut, until, drive) => { let next = MAUL.set + 0.02; run(() => cut.t >= until || !!cut.result, 600, () => { if (drive) drive(); if (cut.t >= next) { inputs[0].aPressed = true; next = cut.t + 1/6; } }); };
+  { reseed(77); fresh(); const s = bind({ cx:50, cy:35, mate:2.5 }, 'wrap'); T.onKey({ code:'KeyW' }, true);
+    const cut = call(s); tapTo(cut, MAUL.set + 1.2);
+    ok(cut.ang === 0 && cut.lat === 0 && L.steer(inputs[0]) === 0, `W held from the run into it: no wheel (${cut.ang.toFixed(2)} rad, ${cut.lat.toFixed(2)}m)`);
+    T.onKey({ code:'KeyW' }, false); T.onKey({ code:'KeyW' }, true); tapTo(cut, MAUL.set + 2.0);
+    ok(cut.ang < -0.3, `W pressed again: it wheels (${cut.ang.toFixed(2)} rad)`); T.onKey({ code:'KeyW' }, false); playCut(cut); run(() => M().phase !== 'cut', 200); }
+  { reseed(77); fresh(); const s = bind({ cx:50, cy:35, mate:2.5 }, 'wrap'), zone = $('zone');
+    zone.fire('pointerdown', { pointerId:7, clientX:100, clientY:300 }); zone.fire('pointermove', { pointerId:7, clientX:100 + 0.8*52, clientY:300 - 0.6*52 });
+    const j0 = inputs[0].jy, cut = call(s); tapTo(cut, MAUL.set + 1.2);
+    ok(j0 < -0.5 && cut.ang === 0, `the touch stick held up from the run (${j0.toFixed(2)}): re-centred under the thumb, no wheel (${cut.ang.toFixed(2)} rad)`);
+    zone.fire('pointermove', { pointerId:7, clientX:100 + 0.8*52, clientY:300 - 1.4*52 }); tapTo(cut, MAUL.set + 2.0);
+    ok(cut.ang < -0.3, `the thumb moved up from there: it wheels (${cut.ang.toFixed(2)} rad)`); zone.fire('pointerup', { pointerId:7 }); playCut(cut); run(() => M().phase !== 'cut', 200); }
+  { const pad = { index:0, mapping:'standard', connected:true, buttons:Array.from({ length:17 }, () => ({ pressed:false, value:0 })), axes:[0.8, -0.6, 0, 0] };
+    padStub([pad]); fire('gamepadconnected', { gamepad:pad });
+    reseed(77); fresh(); const s = bind({ cx:50, cy:35, mate:2.5 }, 'wrap'); T.pollPads(); const j0 = inputs[0].jy;
+    inputs[0].bPressed = true; T.update(STEP); run(() => M().phase === 'cut', 40, () => T.pollPads()); const cut = M().cut;
+    tapTo(cut, MAUL.set + 1.2, () => T.pollPads());
+    ok(j0 < -0.3 && inputs[0].latch && cut.ang === 0, `a pad stick held up from the run (${j0.toFixed(2)}): latched, no wheel (${cut.ang.toFixed(2)} rad)`);
+    pad.axes = [0, 0, 0, 0]; T.pollPads(); pad.axes = [0, -1, 0, 0]; tapTo(cut, MAUL.set + 2.0, () => T.pollPads());
+    ok(!inputs[0].latch && cut.ang < -0.3, `back to the centre and pushed up again: it wheels (${cut.ang.toFixed(2)} rad)`);
+    pad.axes = [0, 0, 0, 0]; T.pollPads(); fire('gamepaddisconnected', { gamepad:pad }); padStub([]); playCut(cut); run(() => M().phase !== 'cut', 200); D.setDev('touch'); }
+  { // defending their maul with W held from the chase: your stick adds nothing until a fresh press
+    fresh(); MAUL.cpu.base = 1; MAUL.cpu.max = 1; const s = bind({ ct:1, cx:60, cy:35, mate:2.5 }, 'soft');
+    run(() => s.k.maul && s.k.maul.t >= MAUL.join - 2*STEP, 60); T.onKey({ code:'KeyW' }, true); run(() => M().phase === 'cut', 10); reset();
+    const cut = M().cut; let worst = 0; tapTo(cut, MAUL.set + 1.0, () => { worst = Math.max(worst, Math.abs(L.steer(inputs[0]))); });
+    ok(cut && cut.team === 1 && worst === 0, `W held into their close-up: your steer reads nothing (${worst})`);
+    T.onKey({ code:'KeyW' }, false); T.onKey({ code:'KeyW' }, true); ok(L.steer(inputs[0]) === -1, 'pressed again, it steers'); T.onKey({ code:'KeyW' }, false); playCut(cut); run(() => M().phase !== 'cut', 200); }
   // near touch it never goes over: a maul 4m in, wheeled at touch
   fresh(); const cut = call(bind({ cx:50, cy:4, mate:2.5 }, 'wrap')); playCut(cut, [6, 0], [-1, 0]);
   ok(cut.y + cut.lat >= Math.min(4, MAUL.edgeY) - 1e-9 && M().phase !== 'cut', `wheeled at touch from 4m in, it stays in (${(cut.y + cut.lat).toFixed(2)}m)`);
@@ -453,6 +509,18 @@ begin('render');
     }
   }
   globalThis.__ctxSpy = null; D.setRM(false); D.view(844, 390);
+  { // at match pace (0.88, a frame with no step) the picture blends the maul's metres, slide and wheel a step behind, as the scrum's shove (PACE_CUT in src/boot.js)
+    const Y = T.clarity, G = L.geom(844, 390, { t:0, r:0, b:0, l:0 }, false), B = G.bar;
+    fresh(); const cut = call(bind({ cx:50, cy:35, mate:2.5 }, 'wrap'));
+    let next = MAUL.set + 0.02; run(() => cut.t >= MAUL.set + 0.35, 400, () => { inputs[0].jy = -1; if (cut.t >= next) { inputs[0].aPressed = true; next = cut.t + 1/6; } });
+    const barOf = draw => { const rects = []; globalThis.__ctxSpy = (k, a) => { if (k === 'fillRect' && a[1] === B.y && a[3] === B.h) rects.push(+a[2].toFixed(4)); }; draw(); globalThis.__ctxSpy = null; return rects.join(); };
+    const before = barOf(() => D.render(STEP)), was = [cut.fwd, cut.lat, cut.ang];
+    Y.paceKeep(); inputs[0].jy = -1; inputs[0].aPressed = true; T.update(STEP);
+    const now = [cut.fwd, cut.lat, cut.ang], plain = barOf(() => D.render(STEP)), paced = barOf(() => Y.renderPaced(STEP));
+    ok(Y.matchPace() < 1 && now.every((v, i) => v !== was[i]) && plain !== before, `a step moves the metres, the slide and the wheel (${was.map(v => v.toFixed(3))} to ${now.map(v => v.toFixed(3))})`);
+    ok(paced === before && [cut.fwd, cut.lat, cut.ang].every((v, i) => v === now[i]), `drawn blended (a frame with no step draws the step before: ${paced} against ${before}), then put back`);
+    quiet(); playCut(cut); run(() => M().phase !== 'cut', 200);
+  }
   ok(bad.size === 0, `nothing non-finite reaches the canvas over ${frames} frames (${[...bad.entries()].map(([k, v]) => k + ' x' + v).join(', ')})`);
   ok(rndIn === 0, `drawing draws no random number (${rndIn} frames did)`);
   ok(['BIND', 'DRIVE', 'MAUL · ENG BALL', 'MAUL · FRA BALL'].every(t => texts.has(t)) && texts.has('ENG') && texts.has('FRA'), `the calls, the title and the bar's codes are drawn (${[...texts].filter(t => /BIND|DRIVE|MAUL/.test(t)).join(', ')})`);

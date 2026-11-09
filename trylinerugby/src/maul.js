@@ -22,17 +22,18 @@ const MAUL = { on:true, r:4, join:0.3,
   useT:0.5, surge:2.0 };                     // the ruck after Use It, and the surge after a strong one
 // MAUL_TUNE
 const maulForward = p => CAREER_POS.F.includes(p.n);
-function maulMate(c) {                                     // the man who joins: the nearest teammate on his feet within MAUL.r, never one under a ring (Pro Mode's own player stays his own)
+function maulMate(c) {                                     // the man who joins: the nearest teammate on his feet within MAUL.r, never one under a ring (Pro Mode's own player stays his own), never one in front of the ball (offside; supportFor's margin)
+  const dir = dirOf(c.team);
   let best = null, bd = MAUL.r;
   for (const p of M.players) {
-    if (p.team !== c.team || p === c || !onFeet(p) || p.offside > 0 || ringed(p)) continue;
+    if (p.team !== c.team || p === c || !onFeet(p) || p.offside > 0 || ringed(p) || (p.x - c.x)*dir > 0.3) continue;
     const d = dist(p, c); if (d < bd) { bd = d; best = p; }
   }
   return best;
 }
-function maulOpen(k) {                                     // can this bind still become a maul: an adult match in play, the carrier held on his feet in a Soft or Wrap, nothing called yet
+function maulOpen(k) {                                     // can this bind still become a maul: an adult match in play, the carrier held on his feet in a Soft or Wrap in the field of play (in his own in-goal the tackle is Held in Goal), nothing called yet
   return MAUL.on && !practice && !matchMild() && !!k && M.contact === k && M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === k.c
-    && !k.maul && !k.offloaded && (k.tier === 'soft' || k.tier === 'wrap') && k.t < k.T;
+    && !k.maul && !k.offloaded && (k.tier === 'soft' || k.tier === 'wrap') && k.t < k.T && (k.c.x - ownLine(k.c.team))*dirOf(k.c.team) >= 0;
 }
 function maulCan(k) { return maulOpen(k) && !(proPinned(k.c.team) && proSkip()) && !!maulMate(k.c); }   // the B button's Maul: a man to join, and never a Pro Mode back's (his set pieces are played for the team)
 function maulPress(t) {                                    // B held in a tackle: the Maul. Nothing happens with nobody near
@@ -83,18 +84,37 @@ const maulCpu = (C, t) => C.auto || cpuSide(t);           // a pack the CPU driv
 function maulForm(k) {                                     // the join is done: the close-up, or the drive in the world
   const m = k.maul, c = k.c;
   st('mauls'); st('maul' + c.team);
-  if (m.cut) { const C = maulNew(k, false); releaseBind(k); C.men = [c, k.mate, k.q, k.q2].filter(Boolean); startCut(C); return; }
+  if (m.cut) {
+    const C = maulNew(k, false); releaseBind(k); C.men = [c, k.mate, k.q, k.q2].filter(Boolean);
+    for (const inp of humanSlots()) { inp.pre = null; inp.reanchor(); inp.held = new Set(inp.keys); }   // as a duel's and a kick's cut-in: touch re-centred, a pad stick latched, held keys ignored (maulSteer)
+    startCut(C); return;
+  }
+  for (const key of ['q', 'q2']) if (k[key] && ringed(k[key])) { maulLetGo(k, k[key]); k[key] = null; }   // a man under a ring is never bound into a maul he cannot play (Pro Mode's back as the tackler)
   m.C = maulNew(k, true); m.C.men = [c, k.mate, k.q, k.q2].filter(Boolean); m.live = true; m.v = { x:0, y:0 };
+}
+function maulLetGo(k, q) {                                 // a tackler let out of a maul in the world: he rolls away off its side and retires, as tackle() has him do from a ruck of the usual length
+  const c = k.c, d = dirOf(c.team), T = RUCK.t.normal + 0.25;
+  q.bind = null;
+  slide(q, clamp(c.x + d*1.0, 0.5, 119.5), clamp(c.y + (q.y >= c.y ? 1 : -1)*1.6, 1, 69), 0.15);
+  q.vx = q.vy = 0; q.down = T; q.tcd = q.offside = T + RUCK.retire;
 }
 const maulCpuEff = (C, s) => C.base[s]*(1 + 0.22*Math.sin(C.d*2.4 + C.wave + s*1.7));   // a CPU pack's shove, with a little wave
 function maulCpuSteer(C) {                                 // the CPU attack wheels gently towards the middle, with a sway
   const y = C.y + C.lat;
   return clamp((35 - y)/25, -1, 1)*0.35 + Math.sin(C.d*1.3 + C.wave)*0.25;
 }
+function maulSteer(inp) {                                  // a human's wheel: world()'s up and down, but never a key or a pad stick held into the close-up (a duel's sideX): a held key is skipped and a latched stick reads nothing
+  let x = inp.latch ? 0 : inp.jx, y = inp.latch ? 0 : inp.jy, px = 0, nx = 0, py = 0, ny = 0;
+  for (const code of inp.keys) { const d = KEYDIR[code]; if (!d || inp.held.has(code)) continue; if (d[0] > 0) px = 1; else if (d[0] < 0) nx = 1; if (d[1] > 0) py = 1; else if (d[1] < 0) ny = 1; }
+  const kx = px - nx, ky = py - ny;
+  if (kx || ky) { const m = hyp(kx, ky); x = kx/m; y = ky/m; }
+  const t = stickTurn(inp.seat);
+  return t ? x*t : y;                                      // a behind view turns the stick as world() does
+}
 function maulDrive(C, dt, eff) {                           // one step of the drive, the close-up's and the world's: the wheel, then the ground made along it
   const att = C.team, def = 1 - att;
   let s = 0;
-  for (const t of [0, 1]) if (!maulCpu(C, t)) { const inp = inputOf(t); if (inp) s += inp.world().y; }   // the stick's up and down, from each human in it
+  for (const t of [0, 1]) if (!maulCpu(C, t)) { const inp = inputOf(t); if (inp) s += maulSteer(inp); }   // the stick's up and down, from each human in it
   if (maulCpu(C, att)) s += maulCpuSteer(C);
   const y = C.y + C.lat;
   if ((y <= MAUL.edgeY && s < 0) || (y >= 70 - MAUL.edgeY && s > 0)) s = (35 - y)/35;   // never wheeled into touch: near it, the maul comes back off the line
