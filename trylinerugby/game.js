@@ -11860,7 +11860,7 @@ function storeRender() {
   storeStart();
   const live = storeLive();
   const g = $('b-grown'), set = $('hp-settings');
-  g.hidden = !live; set.classList.toggle('grown', live);    // Settings: Half Length | Grown-Ups in halves
+  g.hidden = !live; set.classList.toggle('grown', live);    // Settings: Sound | Match Help | Grown-Ups in thirds
   const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there, and on the Settings headline; touched only when it changes
   if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
   const hs = $('hl-settings');

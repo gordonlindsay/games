@@ -80,8 +80,10 @@ const fresh = () => {                                       // a new game on the
   ok(/<div class="hl-panel hp-career" id="hp-career"[^>]*>\s*<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(home), 'Career: New Career or Continue Career, with its note');
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
   ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skills Mini Games: every game as a big button with its picture (${drills.length}), seven and How to Play in rows of four, then Contact Games and For Grown-Ups (re-pinned for PR #14's ten games: it was eight drills and How to Play, three rows of three)`);
-  const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half']) && /<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<\/div>\s*<\/div>\s*<nav/.test(home), `Settings: ${sets.join(', ')}, then Grown-Ups (where the store is live)`);
+  const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<\/div>\s*<\/div>\s*<nav/.test(home)
+    && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css),
+    `Settings: ${sets.join(', ')}; Difficulty across, Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help (re-pinned for the Camera row: Grown-Ups was last, beside Half Length)`);
   ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my" aria-label="My Team"><span class="lbl">My Team<\/span><span class="my-kits" id="my-kits"><\/span><\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(home), 'the top row: My Team (its kits and names), Locker, Add Your Team');
   ok(/<header class="mark">\s*<h1 class="word"[\s\S]*?<\/h1>\s*<p class="eyebrow" id="home-tag">Mobile Rugby&nbsp;· Sevens<\/p>[\s\S]*?<div class="app-tools" id="app-tools" hidden>[\s\S]*?id="b-install" hidden>Install Game<\/button>\s*<button class="app-action" id="b-update" hidden>Update Game<\/button>\s*<\/div>\s*<\/header>/.test(home), 'the logo stays, with Install Game and Update Game as small app actions under it');
   const text = s => s.replace(/<[^>]+>/g, '').trim();
@@ -140,7 +142,7 @@ const fresh = () => {                                       // a new game on the
   D.settings().diff = 1;
   ok($('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'no Grown-Ups on the web as shipped');
   S.setNative(true); S.setStarted(true); D.goHome();
-  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown'), 'in the app Grown-Ups shares Half Length\'s row');
+  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown'), 'in the app Grown-Ups shares Sound and Match Help\'s row');
   $('b-grown').click(); ok(!$('m-store').hidden && S.ui().mode === 'grown', 'and opens the Grown-Ups panel, as it did'); S.close();
   const s = D.settings(); s.kids = true; s.diff = 0; s.kidsR = 1; s.kidsTop = 9; D.goHome();
   ok(T.kids.ready() && $('b-grown').classList.contains('note') && $('hl-settings').classList.contains('note'), 'Move Up to Easy waiting: its dot on Grown-Ups and on the Settings headline');
@@ -428,6 +430,32 @@ async function browserChecks() {
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}/`;
   const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 } };
+  // Settings row by row, at every size (the Settings fit: Difficulty's label beside its control at 320px tall once moved its segment right,
+  // and the ring skipped a row): the web's halves and the thirds where Grown-Ups shows (the free web, the app), desk or not. Down from every
+  // control lands on the row under it, the last row's on the Settings headline, never two rows down; Left and Right never two rows away either
+  const settingsRows = () => {
+    const T = window.__tryline, S = T.store, st = T.debug.settings(), $ = id => document.getElementById(id), panel = $('hp-settings'), out = { rows:[], moves:0, bad:[] };
+    const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
+    const name = el => !el ? 'nothing' : el.id || (el.closest('.seg') ? el.closest('.seg').dataset.key + ':' : '') + el.textContent.trim();
+    for (const desk of [false, true]) for (const store of ['web', 'free', 'app']) {
+      const app = store === 'app', at = store + (desk ? ' desk' : '');
+      S.setNative(app); S.setStarted(app); S.setBought([]); S.setTier(store === 'free' ? 'free' : null);
+      st.kids = app; st.diff = app ? 0 : 1; st.hl = 'settings'; document.body.classList.toggle('desk', desk); T.debug.goHome(); T.home.ring(null);
+      const btns = [...panel.querySelectorAll('button')].filter(vis), foot = el => box(el.closest('.set') || el).bottom;   // a control's row: its setting's foot (Grown-Ups stands on its row's)
+      const feet = btns.map(foot).sort((a, b) => a - b).filter((f, i, a) => !i || f - a[i - 1] > 8);
+      const row = el => !el ? -1 : panel.contains(el) ? feet.findIndex(f => Math.abs(foot(el) - f) <= 8) : el === $('hl-settings') ? feet.length : -2;
+      out.rows.push(feet.length);
+      for (const b of btns) {
+        const r = row(b);
+        T.home.ring(b); const down = T.navMove(0, 0, 1); out.moves++;
+        if (row(down) !== r + 1) out.bad.push(`${at}: Down from ${name(b)} to ${name(down)}`);
+        for (const dx of [-1, 1]) { T.home.ring(b); const to = T.navMove(0, dx, 0); out.moves++; if (to && panel.contains(to) && Math.abs(row(to) - r) > 1) out.bad.push(`${at}: ${dx < 0 ? 'Left' : 'Right'} from ${name(b)} to ${name(to)}`); }
+      }
+    }
+    S.setNative(false); S.setStarted(false); S.setTier(null); st.kids = false; st.diff = 1; st.hl = 'game'; document.body.classList.remove('desk'); T.home.ring(null); T.debug.goHome();
+    return out;
+  };
+  const rowsOk = (kind, r) => ok(r.rows.length === 6 && r.rows.every(n => n === 3) && !r.bad.length, `${kind}: Settings in three rows (the web, the free web, the app, desk or not), Down from every control on the row under it (the last row's on the Settings headline), Left and Right never two rows away (${r.bad.slice(0, 4).join(', ') || r.moves + ' moves'}; rows ${r.rows.join(' ')})`);
   try {
     for (const [w, h] of [[844, 390], [667, 375]]) for (const touch of [true, false]) {
       const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });
@@ -585,6 +613,7 @@ async function browserChecks() {
       ok(pad.first === 'b-quick' && pad.down === 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Play, Down reaches the bar on Quick Match (the chosen headline), Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify({ ...pad, landed:undefined, unreached:undefined })})`);
       ok(!pad.landed.length, `${kind}: Down from every button of every headline (each Championship tier too) reaches the bar on that headline (${pad.landed.slice(0, 4).join(', ') || 'all'})`);
       ok(!pad.unreached.length, `${kind}: every button on every headline is reached by moving the ring (${pad.unreached.join(', ') || 'all'})`);
+      rowsOk(kind, await page.evaluate(settingsRows));
       // Skills Mini Games for each player (the skills builder, at the PR #14 merge): Men the ten, How to Play, Contact Games (U9 and Up) and
       // For Grown-Ups; the Kids level and Minis the seven, How to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches
       // every button and Down from each lands on Skills Mini Games, For Grown-Ups opens its panel with Back to Skills in the ring's reach,
@@ -693,6 +722,7 @@ async function browserChecks() {
       ok(r.every(x => !x.small.length && !x.cut.length), `${kind}: every target 44px, no name cut off nor lock squeezed (${list(x => x.small.length || x.cut.length) || 'all'})`);
       const scrolls = r.filter(x => x.scroll > 0);
       ok(scrolls.every(x => /cab champ1$/.test(x.state) && x.ringed), `${kind}: only National's nine leagues with the Trophy Cabinet scroll inside the panel, and the ring brings the last button into view (${scrolls.map(x => x.state + ' ' + x.scroll + 'px' + (x.ringed ? '' : ' not ringed')).join(', ') || 'none'})`);
+      rowsOk(kind, await page.evaluate(settingsRows));
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }

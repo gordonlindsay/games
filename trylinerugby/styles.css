@@ -1044,12 +1044,15 @@ body.desk .desk-only{display:block}
 .hp-drills #pr-grownups{min-height:0;max-height:100%;overflow-y:auto;gap:8px;font-size:14px;line-height:1.3}
 .hp-drills #pr-grownups p,.hp-drills #pr-grownups h3{margin:0}
 .hp-drills #pr-grownups p.pr-line{color:var(--chalk);font-weight:700}
-/* Settings: Difficulty across, then Sound | Match Help, then Half Length (and Grown-Ups beside it, where the store is live) */
-.hp-settings.settings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
-.hp-settings .set{grid-template-columns:1fr;gap:4px}
-.hp-settings .set-diff,.hp-settings .set-half{grid-column:1/-1}
-.hp-settings.grown .set-half{grid-column:auto}
-.hp-settings #b-grown{align-self:end;min-height:44px}
+/* Settings: Difficulty across, then Sound | Match Help, then Half Length | Camera, each label over its control. Where the store is live
+   Grown-Ups takes a third of Sound's row (Sound | Match Help | Grown-Ups): three rows, so the panel fits 844x390, 667x375 and 320px tall
+   with no scroll (a fourth row of its own does not fit 667x375 with the labels over their controls, nor 320px tall at all). Six columns,
+   so the halves and the thirds share their lines. */
+.hp-settings.settings{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 12px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
+.hp-settings .set{grid-template-columns:1fr;gap:4px;grid-column:span 3}
+.hp-settings .set-diff{grid-column:1/-1}
+.hp-settings.grown .set-sound,.hp-settings.grown .set-hints,.hp-settings #b-grown{grid-column:span 2}
+.hp-settings #b-grown{align-self:end;min-height:47px;padding-inline:8px;white-space:nowrap}   /* a segment's height (44px inside its edges), its foot on theirs */
 /* the bar: five headlines in equal parts, each a picture and its name; the chosen one lit, with a line along its top */
 .hl-bar{grid-area:bar;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1.5px solid var(--rule-hi);border-radius:10px;background:rgba(9,16,11,.92)}
 .btn.hl{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:5px 4px;border:0;border-radius:0;background:transparent;color:var(--chalk-dim);font:700 13px/1.1 var(--body);text-align:center}
@@ -1101,7 +1104,7 @@ summary::-webkit-details-marker{display:none}
   .hp-drills .pr-games{gap:6px}
   .hp-drills .pr-cg .pr-group{font-size:16px}
   .hp-drills .pr-cg .pr-coach{font-size:12px}
-  .hp-settings.settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px;padding:8px 10px}   /* two columns, every target 44px */
+  .hp-settings.settings{gap:6px 10px;padding:8px 10px}   /* three rows, every target 44px */
   .hp-settings .seg button{font-size:13px}
 }
 @media (max-width:599px) and (min-height:421px){
@@ -1136,7 +1139,7 @@ summary::-webkit-details-marker{display:none}
   .hp-drills .pr-cg .pr-group{font-size:15px;line-height:1}
   .hp-drills .pr-cg .pr-coach{line-height:1.05}
   .hp-drills .drills,.hp-drills .pr-low,.hp-drills .pr-games{gap:4px}
-  .hp-settings.settings{gap:4px 10px;padding:5px 10px}
+  .hp-settings.settings{gap:4px 10px;padding:3px 10px}   /* the three rows, each label over its control, with 4px to spare: Difficulty's segment keeps the full width, so the ring steps a row at a time */
   .hp-settings .set{gap:2px}
   .hp-settings .lbl{font-size:10px;line-height:1}
 }
