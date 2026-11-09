@@ -4,7 +4,8 @@
 //      a CPU passer leads less (RUNON.cpu)
 //   2. never forward: 5,000 random staged passes, every landing spot behind the passer after the handling error
 //   3. runs onto it: the human receiver takes a led pass at pace whatever the stick says (upfield, toward touch, let go), an AI
-//      receiver at his side's pace; a won Key Pass's sure pass keeps today's target and seek exactly
+//      receiver at his side's pace; the capped short pass at every handling and on Kids; a long pass off the flight lever; the moment after a catch;
+//      a won Key Pass's sure pass keeps today's target and seek exactly
 //   4. the line in the air: the supports keep running while a pass is in the air
 //   5. the Block lane is the line the ball will take
 //   6. census guard: 12 bot matches a level with the thumb holding its direction through the flight
@@ -22,7 +23,7 @@ const guard = fn => { try { fn(); } catch (e) { ok(false, `threw ${e && e.messag
 const mean = a => a.reduce((s, v) => s + v, 0)/(a.length || 1);
 const team = (id, handling, pace = 3) => ({ id, name:id, kit:'#1a1a1a', trim:'#f2efe6', pace, power:3, handling, kicking:3 });
 // a match of two sides with the given handling, both human (two player) or the human at home against the CPU; everyone parked 40m+ away
-const fresh = (o = {}) => { T.newMatch(team('TA', o.h ?? 3), team('TB', o.h ?? 3), { halfLen:240, diff:o.diff ?? 1, headless:true, duels:o.duels || 'off', humans:o.humans || [true, false] }); const m = M(); m.phase = 'play'; m.set = null; m.clock = 30; m.dclock = 100; return m; };
+const fresh = (o = {}) => { T.newMatch(team('TA', o.h ?? 3), team('TB', o.h ?? 3), { halfLen:240, diff:o.diff ?? 1, headless:true, duels:o.duels || 'off', humans:o.humans || [true, false], kids:!!o.kids }); const m = M(); m.phase = 'play'; m.set = null; m.clock = 30; m.dclock = 100; return m; };
 // stage a pass: the passer of team t at (x, y) running (vx, vy) upfield, the receiver `back` m behind him and `wide` m across (sign: screen down), running (rvx, rvy) in his own frame
 function stage(t, o) {
   const m = M(), d = dirOf(t), P = m.players, own = P.filter(p => p.team === t), opp = P.filter(p => p.team !== t);
@@ -116,6 +117,8 @@ guard(() => {
   // six shapes of pass: the investigation's (4.5m back, 6.5m wide, jogging), a standing man out wide, a short one to a man already at pace
   // (the lead is capped 0.4m behind the passer, so he takes it a little slower), a drifting one, and two deeper ones
   const geoms = [{ back:4.5, wide:6.5, rvx:2 }, { back:8, wide:12, rvx:0 }, { back:2, wide:5, rvx:5 }, { back:6, wide:-9, rvx:1, rvy:-2 }, { back:5, wide:7, rvx:4 }, { back:10, wide:15, rvx:3 }];
+  // that short one's spot is fixed by the law, so a slower ball could only make him brake: capSpeed throws it just slowly enough for him to reach the spot at his run. 4.82 m/s at the old ball pace, and still
+  const capped = 4.5;
   for (const [label, stick] of [['the stick held upfield', () => [1, 0]], ['the stick held toward touch', () => [0, 1]], ['the stick let go', () => [0, 0]], ['the stick pulled back', () => [-1, 0]]]) {
     fresh({ h:5, humans:[true, false] });
     let caught = 0, knocks = 0, dropped = 0, far = 0, slow = 0, slow0 = 0, n = 0, speeds = [];
@@ -123,9 +126,9 @@ guard(() => {
       const g = geoms[i % geoms.length], { from, to } = stage(0, { x:50, y:35, vx:7, ...g });
       C.doPass(from, to, {});
       const r = fly(0, stick); n++;
-      if (r.out === 'caught') { caught++; speeds.push(r.up); if (r.miss > 0.6) far++; if (r.up < 4.5) slow++; if (i % geoms.length === 0 && r.up < 5) slow0++; } else if (r.out === 'knock') knocks++; else if (r.out === 'dropped') dropped++;
+      if (r.out === 'caught') { caught++; speeds.push(r.up); if (r.miss > 0.6) far++; if (r.up < (i % geoms.length === 2 ? capped : 4.5)) slow++; if (i % geoms.length === 0 && r.up < 5) slow0++; } else if (r.out === 'knock') knocks++; else if (r.out === 'dropped') dropped++;
     }
-    ok(dropped === 0 && caught + knocks === n && caught >= n - 4 && far === 0 && slow === 0 && slow0 === 0 && mean(speeds) >= 5.5, `${label}: ${caught} of ${n} caught by the target (${knocks} knocked on, ${dropped} dropped), ${far} further than 0.6m from the landing spot, ${slow} under 4.5 m/s upfield, ${slow0} of the investigation's pass under 5; mean ${mean(speeds).toFixed(2)} m/s upfield (5.5 or more)`);
+    ok(dropped === 0 && caught + knocks === n && caught >= n - 4 && far === 0 && slow === 0 && slow0 === 0 && mean(speeds) >= 5.5, `${label}: ${caught} of ${n} caught by the target (${knocks} knocked on, ${dropped} dropped), ${far} further than 0.6m from the landing spot, ${slow} under 4.5 m/s upfield (${capped} for the capped short pass), ${slow0} of the investigation's pass under 5; mean ${mean(speeds).toFixed(2)} m/s upfield (5.5 or more)`);
   }
   // an AI receiver runs onto it at his side's pace (RUNON.cpu x top speed; the arrive cap leaves him a shade under it)
   {
@@ -136,9 +139,49 @@ guard(() => {
       const g = geoms[i % geoms.length], { from, to } = stage(1, { x:70, y:35, vx:7, ...g });
       C.doPass(from, to, {});
       const r = fly(1, null); n++;
-      if (r.out === 'caught') { caught++; speeds.push(r.up); if (r.miss > 0.6) far++; if (r.up < floor) slow++; }
+      if (r.out === 'caught') { caught++; speeds.push(r.up); if (r.miss > 0.6) far++; if (r.up < (i % geoms.length === 2 ? capped : floor)) slow++; }
     }
-    ok(caught >= n - 4 && far === 0 && slow === 0 && mean(speeds) >= 0.88*C.RUNON.cpu*C.maxSpeed(M().players[7]), `an AI receiver: ${caught} of ${n} caught, ${far} further than 0.6m from the spot, ${slow} under 0.85 x ${C.RUNON.cpu} x top speed (${floor.toFixed(2)}); mean ${mean(speeds).toFixed(2)} m/s upfield`);
+    ok(caught >= n - 4 && far === 0 && slow === 0 && mean(speeds) >= 0.88*C.RUNON.cpu*C.maxSpeed(M().players[7]), `an AI receiver: ${caught} of ${n} caught, ${far} further than 0.6m from the spot, ${slow} under 0.85 x ${C.RUNON.cpu} x top speed (${floor.toFixed(2)}; ${capped} for the capped short pass); mean ${mean(speeds).toFixed(2)} m/s upfield without that one`);
+  }
+  // the capped short pass at the handling a real side has, on every level's ball: the floor is not just the best hands' (handling 3 was 3.67 m/s and Kids 3.13, slowest 2.66, when the flight lever applied in full; the slowest here is the handling error's)
+  for (const [label, o, floor, least] of [['handling 3', { h:3 }, 4.2, 2.5], ['handling 3 on Kids', { h:3, kids:true, diff:0 }, 4.2, 3.6], ['handling 5 on Kids', { h:5, kids:true, diff:0 }, 4.4, 4]]) {
+    fresh({ ...o, humans:[true, false] });
+    const up = []; let spot = 0;
+    for (let i = 0; i < 60; i++) {
+      const { from, to } = stage(0, { x:50, y:35, vx:7, back:2, wide:5, rvx:5 });
+      C.doPass(from, to, {});
+      const r = fly(0, () => [0, 0]);
+      if (r.out === 'caught') { up.push(r.up); if (r.miss > 0.6) spot++; }
+    }
+    ok(up.length >= 50 && spot === 0 && mean(up) >= floor && Math.min(...up) >= least, `the capped short pass, ${label}: ${mean(up).toFixed(2)} m/s upfield (at least ${floor}), slowest ${Math.min(...up).toFixed(2)} (at least ${least}), ${spot} far from the spot, ${up.length} caught`);
+  }
+  // a long pass keeps its own pace: the flight lever is on the short ones, and on top of the long pass's hang it held a ball up to 2.9s with the stick doing nothing
+  for (const kids of [false, true]) {
+    fresh({ h:3, kids, diff:0 });
+    const n = M().nat[0], old = 15 + n.handling*1.1, F = kids ? C.PASS_FLIGHT.kids : C.PASS_FLIGHT.match;
+    ok(near(C.passSpeed(n, true), old*0.88, 1e-9) && near(C.passSpeed(n, false), old/F, 1e-9), `${kids ? 'Kids' : 'a match'}: a long pass flies at ${C.passSpeed(n, true).toFixed(2)} m/s whatever the lever, a short one at ${C.passSpeed(n, false).toFixed(2)}`);
+    const { from, to } = stage(0, { x:60, y:35, vx:0, back:6, wide:31, rvx:0 });
+    C.doPass(from, to, { long:true });
+    ok(M().ball.f.T < 2.3, `${kids ? 'Kids' : 'a match'}: a 32m long pass at handling 3 hangs ${M().ball.f.T.toFixed(2)}s (under 2.3)`);
+  }
+  // a moment to see the catch: an AI man beside your catcher can't commit until PASS_FLIGHT.grace has run, longer on Kids. A CPU catcher gets none
+  for (const [label, o, want] of [['Normal', { h:5 }, C.PASS_FLIGHT.grace[1]], ['Hard', { h:5, diff:2 }, C.PASS_FLIGHT.grace[2]], ['Kids', { h:5, kids:true, diff:0 }, C.PASS_FLIGHT.graceKids]]) {
+    fresh({ ...o, humans:[true, false] });
+    const { from, to } = stage(0, { x:60, y:35, vx:0, back:3, wide:6, rvx:0 }), m = M(), tackler = m.players.find(p => p.team === 1);
+    C.doPass(from, to, {}); from.x -= 8;
+    let n = 0; while (m.ball.state === 'air' && n++ < 400) { tackler.x = to.x + 1.2; tackler.y = to.y; T.update(STEP); }
+    if (m.ball.carrier === to) {
+      let t = 0; while (!to.bind && t < 1.5 && m.ball.carrier === to) { tackler.x = to.x + 1.2; tackler.y = to.y; tackler.tcd = 0; T.update(STEP); t += STEP; }
+      ok(t >= want - 2*STEP, `${label}: an AI man at his shoulder waits ${t.toFixed(2)}s to commit (the moment is ${want}s)`);
+      ok(want > 0.12, `${label}: the moment outlasts the 0.12s catch gate`);
+    } else ok(false, `${label}: the staged catch was not made`);
+  }
+  {
+    fresh({ h:5, humans:[true, false] });
+    const { from, to } = stage(1, { x:60, y:35, vx:0, back:3, wide:6, rvx:0 }), m = M();
+    C.doPass(from, to, {}); from.x += 8;
+    let n = 0; while (m.ball.state === 'air' && n++ < 400) T.update(STEP);
+    ok(!(to.grace > 0), 'a CPU catcher has no such moment');
   }
   // a won Key Pass's sure pass keeps today's target and seek exactly
   {

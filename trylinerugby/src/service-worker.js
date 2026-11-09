@@ -9,6 +9,28 @@ const CACHE_NAME = CACHE_PREFIX + VERSION;
 const URLS = ASSETS.map(asset => new URL(asset, SCOPE).href);
 const ALLOWED = new Set(URLS);
 const INDEX = new URL('index.html', SCOPE).href;
+// The ratings file is data, not shell: never precached or checked against a digest, and it outlives every shell generation.
+const RATINGS = new URL('ratings.json', SCOPE).href;
+const RATINGS_CACHE = 'tryline-ratings-' + encodeURIComponent(SCOPE.pathname);
+// A host's fallback page, or a broken publish, can answer 200: only something shaped like the file may replace a good copy. The page checks it fully (ratingsClean).
+async function ratingsShaped(response) {
+  if (/html/i.test(response.headers.get('content-type') || '')) return false;
+  try {
+    const v = await response.clone().json(), table = t => !!t && typeof t === 'object' && !Array.isArray(t) && Object.keys(t).length > 0 && Object.values(t).every(o => Number.isInteger(o) && o >= 40 && o <= 99);
+    return !!v && typeof v === 'object' && !Array.isArray(v) && typeof v.date === 'string' && table(v.men) && table(v.women);
+  } catch (_) { return false; }
+}
+async function ratingsResponse() {
+  const cache = await caches.open(RATINGS_CACHE);
+  try {
+    const response = await fetch(new Request(RATINGS, { cache: 'no-cache', credentials: 'same-origin' }));
+    if (response.ok && !response.redirected && await ratingsShaped(response)) {
+      try { await cache.put(RATINGS, response.clone()); } catch (_) { /* Still usable online when storage is full. */ }
+      return response;
+    }
+  } catch (_) { /* Offline: the copy below, if there is one. */ }
+  return (await cache.match(RATINGS)) || Response.error();
+}
 async function verifiedResponse(url, asset) {
   const response = await fetch(new Request(url, { cache: 'reload', credentials: 'same-origin' }));
   if (!response.ok || response.redirected || (response.type && !['basic', 'default'].includes(response.type))) throw new Error('Shell asset unavailable: ' + url);
@@ -58,6 +80,7 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== SCOPE.origin || url.search || url.hash) return;
+  if (url.href === RATINGS) { event.respondWith(ratingsResponse()); return; }
   const ownNavigation = event.request.mode === 'navigate' && (url.href === SCOPE.href || url.href === INDEX);
   if (!ownNavigation && !ALLOWED.has(url.href)) return;
   // A generation always serves its own HTML and scripts, even while online.

@@ -36,6 +36,7 @@ function makeInput(seat) {
       for (const code of this.keys) { const d = KEYDIR[code]; if (!d) continue; if (d[0] > 0) px = 1; else if (d[0] < 0) nx = 1; if (d[1] > 0) py = 1; else if (d[1] < 0) ny = 1; }
       const kx = px - nx, ky = py - ny;
       if (kx || ky) { const m = hyp(kx, ky); x = kx/m; y = ky/m; }
+      const t = stickTurn(this.seat); if (t) { const sx = x; x = -y*t; y = sx*t; }   // a behind view: up is toward the opposition's line, across is across the screen
       const mag = hyp(x, y);
       return { x, y, mag };
     },
@@ -96,6 +97,7 @@ function placeStick(x, y) {
 }
 function restStick() { const p = stickRest(window.innerWidth, window.innerHeight, safeInsets()); placeStick(p.x, p.y); }
 zone.addEventListener('pointerdown', e => {
+  if (demoOn()) return;                                    // Watch How: the pilot has the stick
   if (M && M.cut && ((M.cut.duel && M.cut.after) || (M.cut.kind === 'goal' && (M.cut.after || M.cut.g.watch)))) input.aPressed = true;   // tap to skip the verdict, or a CPU kick
   setDev('touch');
   if (input.stickId !== null) return;
@@ -111,7 +113,7 @@ function notePeak(samples) {                               // the largest sidewa
   for (const p of samples) {
     const dx = p.clientX - input.ox, dy = p.clientY - input.oy, m = hyp(dx, dy);
     if (m < 1e-6) continue;
-    const uy = dy/m*Math.min(1, m/STICK_R);
+    const t = stickTurn(0), uy = (t ? dx*t : dy)/m*Math.min(1, m/STICK_R);
     if (Math.abs(uy) > Math.abs(best)) best = uy;
   }
   if (Math.abs(best) >= 0.12) input.latPeak = best;
@@ -155,6 +157,7 @@ function nearestAct(x, y) {                                // the button whose c
   return best;
 }
 function beginAct(el, key, e) {
+  if (demoOn()) return;
   if (el._held) return; // one finger owns an action until its own release or cancellation
   if (e && e.preventDefault) e.preventDefault();
   try { if (e && e.pointerId != null) el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -175,7 +178,7 @@ function bindAct(el, key) {
 }
 for (const [id, key] of ACTS) bindAct($(id), key);
 cv.addEventListener('pointerdown', e => {                 // a tap in the gap falls through to the pitch. If it is within HIT_SLOP of a button, that button takes it
-  if (!playing() || $('controls').hidden) return;
+  if (!playing() || $('controls').hidden || demoOn()) return;
   const hit = nearestAct(e.clientX, e.clientY);
   if (hit) beginAct(hit.el, hit.key, e);
 });

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 const root = new URL('../src/', import.meta.url);
 const source = ['persistence.js','championship.js'].map(f => fs.readFileSync(new URL(f, root),'utf8')).join('\n');
 const context = vm.createContext({ console, Date, Math, localStorage:{ getItem(){return null;}, setItem(k,v){context.stored=v;} } });
-vm.runInContext(`const NATIONS = Array.from({length:6},(_,i)=>({id:'AA'+String.fromCharCode(65+i),name:'Side '+i,pace:3,power:3,handling:3,kicking:3})), CLUBS=[], POOLS=[NATIONS, CLUBS], ALL_TEAMS=POOLS.flat(), ABILITIES=[['pace'],['power'],['handling'],['kicking']], BUDGET=12, MAX_CUSTOM=12, EARLY={games:3}; let practice=null, M=null; const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)); let randomCalls=0; const rnd=()=>{randomCalls++;return .5;}; const rateOf=t=>12;\n` + source, context);
+vm.runInContext(`const NATIONS = Array.from({length:6},(_,i)=>({id:'AA'+String.fromCharCode(65+i),name:'Side '+i,pace:3,power:3,handling:3,kicking:3})), CLUBS=[], DEFAULT_TEAM=NATIONS[0], POOLS=[NATIONS, CLUBS], ALL_TEAMS=POOLS.flat(), ABILITIES=[['pace'],['power'],['handling'],['kicking']], BUDGET=12, teamBudget=()=>BUDGET, teamLevelOf=()=>null, MAX_CUSTOM=12, EARLY={games:3}; let practice=null, M=null; const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)); let randomCalls=0; const rnd=()=>{randomCalls++;return .5;}; const rateOf=t=>12;\n` + source, context);
 const run = s => vm.runInContext(s, context);
 const data = fs.readFileSync(new URL('data.js', root), 'utf8');
 run(data.match(/^const staminaOf .*\nconst abilityOf .*$/m)[0]);   // data.js's ability readers, which cleanTeam and cleanSide call

@@ -5,7 +5,7 @@ const LONG = { arm:0.18, auto:0.6, gate:0.12, range:32, knock:0.03 };   // hold 
    running on upfield, he runs onto it at pace whatever the stick says (the stick takes over at the catch), and the line keeps running
    while the ball is in the air. Every lever is here: a: his pick-up (m/s²) from his upfield speed now to top speed × pace; cpu: the
    CPU receiver's pace (a human's is 1; this is the one-player balance lever: 0.6 gives about 87 / 47 on Normal / Hard, 0.7 about
-   81 / 42); keep: how much of his sideways drift the aim keeps; back: the landing spot is capped this far behind the passer at
+   81 / 42 at the old ball pace; PASS_FLIGHT left it at 0.65: paired runs could not tell 0.65 from 0.68, so don't read a small Hard move as this lever's); keep: how much of his sideways drift the aim keeps; back: the landing spot is capped this far behind the passer at
    release, and never forward after the handling error (the law); line: the support slots' upfield lead while a pass is in the air,
    in seconds of the receiver's top speed; kpBack: how far behind the carrier the Key Pass runner may be (6 before the lead). */
 const RUNON = { a:18, cpu:0.65, keep:0.5, back:0.4, line:0.45, kpBack:7.5 };
@@ -13,19 +13,41 @@ const RUNON = { a:18, cpu:0.65, keep:0.5, back:0.4, line:0.45, kpBack:7.5 };
    while a defender is closer than this. mark: the pass ring tints when a defender is closer than this to the man it is on.
    latMax / backMax keep him inside the Key Pass box (4–12m wide, inside kpBack). tint: the marked colour, the alert chalk. */
 const SUPPORT = { lat:5, back:2.6, clear:5, mark:5, latMax:11.2, backMax:6.4, tint:'#ff8466' };
-const passSpeed = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // a long pass hangs a little, so the loop reads
+/* How long a pass hangs in the air (2026-11-08, from the owner's phone playtest: passing in a match is a little hectic). The ball's speed is
+   divided by this, so the flight lasts longer and the lead, the Block lane and the sure pass all aim for the slower ball. It is the one lever to
+   retune after the kid test: 1 is the old pace. match: every match but Kids, Two Player and Training included (your passes hang 13% longer on the
+   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer). A long pass stays off it: it hangs already. A short pass capped by the law
+   stays near the old pace too (capSpeed), or he brakes for it.
+   grace: a slower ball alone left your catcher tackled in the next 0.3s far more often (Kids 22% to 34%, Normal 32% to 38%, Hard 36% to 45%), and
+   easing the defence or the receiver in the air did not bring that back. So your catcher has this long after a catch, by level, before an AI man can
+   commit: Kids, then Easy, Normal, Hard. It costs the bot's Hard balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
+   PASS_FLIGHT='{"match":1.25}' node tools/bot.mjs tries a value without an edit. */
+const PASS_FLIGHT = { match:1.2, kids:1.4, grace:[0.25, 0.25, 0.15], graceKids:0.35 };
+const passFlight = () => (M && M.kids ? PASS_FLIGHT.kids : PASS_FLIGHT.match);
+const passSpeedOld = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // the ball before the lever: a long pass hangs a little, so the loop reads
+const passSpeed = (n, long) => passSpeedOld(n, long) / (long ? 1 : passFlight());   // a long pass keeps its pace: it hangs already, and the lever on top held one up to 2.9s with the stick doing nothing
 const passPace = team => (isHuman(team) ? 1 : RUNON.cpu);   // how hard a side's receiver runs onto the ball, by role
 function runOn(r, d, t, pace) {                             // how far upfield r gets in t seconds running on from his upfield speed now, picking up at RUNON.a to top speed × pace
   const vm = maxSpeed(r)*pace, v0 = clamp(r.vx*d, 0, vm), ta = Math.min(t, (vm - v0)/RUNON.a);
   return v0*ta + 0.5*RUNON.a*ta*ta + vm*(t - ta);
 }
+function capSpeed(to, d, need, far, fast, slow, pace) {      // the law fixes the landing spot, so a longer flight only makes him brake for it: the ball's speed, between the old pace and the lever's, that lets him reach the spot at his run
+  const t = v => far/v + 0.06;
+  if (need <= runOn(to, d, t(fast), pace)) return fast;
+  if (need >= runOn(to, d, t(slow), pace)) return slow;
+  for (let i = 0; i < 8; i++) { const v = (fast + slow)/2; if (runOn(to, d, t(v), pace) < need) fast = v; else slow = v; }
+  return slow;
+}
 function leadPass(from, to, o) {                            // the aim: where the ball lands if he runs onto it, before the handling error. blockSpec reads the same point, so the Block close-up shows the line the ball takes
   o = o || {};
-  const d = dirOf(from.team), spd = passSpeed(M.nat[from.team], o.long), pace = passPace(from.team);
-  let tx = to.x, ty = to.y, T = 0.2;
+  const d = dirOf(from.team), n = M.nat[from.team], pace = passPace(from.team);
+  let spd = passSpeed(n, o.long), tx = to.x, ty = to.y, T = 0.2;
   for (let i = 0; i < 4; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + d*runOn(to, d, T, pace); ty = to.y + to.vy*RUNON.keep*T; }
-  if ((tx-from.x)*d > -RUNON.back) tx = from.x - d*RUNON.back;
-  return { x:tx, y:ty, T };
+  if ((tx-from.x)*d > -RUNON.back) {
+    tx = from.x - d*RUNON.back;
+    spd = capSpeed(to, d, (tx-to.x)*d, hyp(tx-from.x, ty-from.y), passSpeedOld(n, o.long), spd, pace);
+  }
+  return { x:tx, y:ty, T, spd };
 }
 function runOnTarget(r, f, pace) {                          // the receiver while the pass is in the air: onto the landing spot as the ball gets there, at pace, never braking for it
   const rem = Math.max(STEP, f.T - f.t), dd = hyp(f.x1 - r.x, f.y1 - r.y);
@@ -105,18 +127,18 @@ function doPass(from, to, o) {
   if (M.careerPro) [to, o] = proPass(from, to, o);       // Pro Mode: a teammate may give it to your player instead (career-pro.js)
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
   const spd = passSpeed(n, o.long);
-  let tx, ty, T;
+  let tx, ty, T, v = spd;
   if (o.sure) {                                            // a won Key Pass: thrown at where the runner is going, as it always was, and never caught in touch
     tx = to.x; ty = to.y; T = 0.2;
     for (let i = 0; i < 3; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + to.vx*T; ty = to.y + to.vy*T; }
     if ((tx-from.x)*d > 0) tx = from.x;
     ty = clamp(ty, 3, 67);
   } else {                                                 // led: where he will be running on, then the handling error, and never forward of the passer (the law)
-    const a = leadPass(from, to, o); tx = a.x; ty = a.y;
+    const a = leadPass(from, to, o); tx = a.x; ty = a.y; v = a.spd;
     const err = ((5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0))*(M.kids && isHuman(from.team) ? KIDS.passErr : 1); tx += gauss()*err; ty += gauss()*err;   // Kids: your passes stray less
     if ((tx-from.x)*d > 0) tx = from.x;
   }
-  T = hyp(tx-b.x, ty-b.y)/spd + 0.06;
+  T = hyp(tx-b.x, ty-b.y)/v + 0.06;
   const dist = hyp(tx-b.x, ty-b.y);
   const H = o.long ? Math.min(6.4, 1.5 + dist*0.11) : 0.5;   // higher with the distance, so it sails over the skipped man's defender
   b.state = 'air'; b.carrier = null; b.last = from.team;

@@ -10,6 +10,7 @@ const st = (k, n) => { M.stats[k] = (M.stats[k] || 0) + (n == null ? 1 : n); };
 const countTk = (team, made) => { const tk = M.stats.tk; tk.att[team]++; if (made) tk.made[team]++; };   // a tackle attempt by that side: made is a completed tackle, missed is a broken one
 const cpuEdge = (q, c, arr) => (!isHuman(q.team) && isHuman(c.team)) ? arr[levelOf(c.team)] : 0;   // a CPU edge over a human, by the level that human plays
 const slide = (p, x, y, T, spin) => { T = Math.max(T, hyp(x - p.x, y - p.y)/9); p.drawFrom = { x:p.x, y:p.y, t:T, T, spin:spin || 0 }; p.x = x; p.y = y; };   // a teleport in the logic, smoothed in the drawing at no more than 9 m/s
+const matchMild = () => !!(M && (M.kids || catOf(M.nat[0]) === 'minis'));   // a Kids match, or a Minis one (Men | Women | Minis: every side of a match is one category)
 function tag(text, x, y) { if (M.auto) return; st('tag_' + text); M.tags.push({ text, x, y, t:0 }); while (M.tags.length > 2) M.tags.shift(); }
 function impact(x, y) { M.fx.push({ x, y, t:0 }); }
 function hitStop(ms, shake) { if (!interactive()) return; M.stop = ms/1000; if (!RM) M.shake = M.shakeT = shake || 0.12; }   // shake: its length, which also sets its size
@@ -92,7 +93,7 @@ function offloadTarget(k) {                                // the one receiver t
 function canOffload(k) { return !!offloadTarget(k); }
 function looseInContact(c) {                               // the ball comes loose behind him, for anyone
   const b = M.ball, d = dirOf(c.team);
-  tag('Loose Ball', c.x, c.y);
+  tag('Loose Ball', c.x, c.y); sfx('fumble');
   b.state = 'loose'; b.carrier = null; b.f = null; b.last = c.team; b.kickInfo = null;
   b.x = c.x - d*0.4; b.y = c.y; b.z = 0.6; b.vx = -d*(2 + rnd()*3); b.vy = (rnd() - 0.5)*4; b.vz = 1.5;
   c.hold = 0;
@@ -144,12 +145,16 @@ function resolveContact(k) {                               // the end of the bin
     return;
   }
   if (tier === 'dom') {
-    st('dom' + q.team); impact(c.x, c.y); sfx('hit'); buzz(45); if (k.hit) traitCall(q, 'crunch', c.x, c.y);   // a Big Hit his Crunch made
+    st('dom' + q.team);
+    if (matchMild()) {                                       // the youngest: a plain word, no freeze, no shake and no praise for hitting hard (no Crunch call either). It draws no random number, so the match plays the same
+      sfx('tackle'); buzz(20); if (M.arcade) heat(q.team, 'hit');
+      if (ringed(q)) tag('Stopped', c.x, c.y);
+    } else { impact(c.x, c.y); sfx('hit'); buzz(45); if (k.hit) traitCall(q, 'crunch', c.x, c.y);   // a Big Hit his Crunch made
     if (M.arcade) {                                          // arcade: the whole screen knows. Yours freezes and shakes hard; one on your carrier shakes too
       heat(q.team, 'hit');
       if (ringed(q)) { say('Big Hit', 'big hit', q.team); hitStop(ARCADE.hit.stop, ARCADE.hit.shake); }
       else if (ringed(c) && !RM && interactive()) M.shake = M.shakeT = ARCADE.hit.hitShake;
-    } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); }
+    } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); } }
   }
   const jolt0 = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0), jolt = jolt0 + traitJolt(q);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more, and so does a Crunch
   if (practice && practiceTackle(c, q)) return;            // a drill takes a made tackle before the ball can jolt loose
@@ -230,7 +235,8 @@ function resolveRuck(s) {                                  // the ruck is automa
 // a Drop Goal press: the 0.20s to the close-up is the kicker's, and a man close enough to stop it is judged as a charger in the cut
 const dropHolding = c => !!c && !!M.dropArmed[c.team] && !!sideOf(c.team).charging && M.ball.carrier === c;
 function tackleChecks(c) {
-  if (dropHolding(c)) return false;
+  if (dropHolding(c) || c.grace > 0) return false;
+  if (practice && practice.tagOnly) return drillTagCheck(c);   // the youngest play these drills with tags: no man here ever commits to a tackle
   for (const q of M.players) {
     if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
     const user = ringed(q);
@@ -283,6 +289,7 @@ function bestChaser(team) {                                // the nearest man of
   return best;
 }
 function sprintPick(t) {                                   // the man a Sprint press would move the ring to: the best chaser when yours is down or another is over SPRINT.pick nearer their carrier; null to stay put
+  if (practice && practice.id === 'defend' && ctrlOf(t) !== practice.initialCtrl) return null;   // Defend a Breakaway: once you have switched into cover, Sprint never hands the ring back to the beaten man
   const b = M.ball, p = ctrlOf(t), c = b.state === 'held' && b.carrier.team !== t ? b.carrier : null, best = c ? bestChaser(t) : null;
   return c && best && best !== p && !proPinned(t) && (!p || !onFeet(p) || dist(p, c) - dist(best, c) > SPRINT.pick) ? best : null;   // Pro Mode: the ring never moves
 }

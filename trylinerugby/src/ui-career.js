@@ -96,7 +96,7 @@ const careerClubList = k => storeFirst([...careerPoolTeams(k), ...custom]);
 const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom === !b.custom;
 function careerNewOpen() {
   const home = myPool() || 'sur', pool = poolTier(home) > 0 ? home : 'sur';
-  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked; Whole Team first and picked: Pro Mode is the harder way
+  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false, look:{ ...CAREER_LOOK } };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked; Whole Team first and picked: Pro Mode is the harder way; the default look, changed with Change Look
   $('cn-name').value = '';
   renderCareerNew(); careerShow('s-career-new');
 }
@@ -113,8 +113,9 @@ function renderCareerNew() {
     for (const b of $('cn-num').querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerDraft.num = +b.dataset.n; renderCareerNew(); });
   }
   for (const b of $('cn-num').querySelectorAll('[data-n]')) b.setAttribute('aria-pressed', String(+b.dataset.n === d.num));
+  if (!$('s-career-new').hidden) careerFit($('cn-mine'));   // a pick on the screen redraws Your Player: its name steps down again (Bloemfontein at 667x375)
 }
-function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; renderCareerNew(); }   // Men | Women: the career's teams are named for it (career.js)
+function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; careerDraft.look.g = i === 1 ? 1 : 0; renderCareerNew(); }   // Men | Women: the career's teams are named for it, and it is his body too, PR #14's Male | Female as one control (career.js)
 [...$('cn-cat').children].forEach((b, i) => b.addEventListener('click', () => careerCatPick(i)));
 [...$('cn-pos').children].forEach((b, i) => b.addEventListener('click', () => {
   const pos = i === 0 ? 'F' : 'B';
@@ -124,13 +125,46 @@ function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; renderC
 function careerModePick(i) { careerDraft.proMode = i === 1; renderCareerNew(); }   // Play as Whole Team (0) or My Player (1): Pro Mode (career-pro.js)
 [...$('cn-mode').children].forEach((b, i) => b.addEventListener('click', () => careerModePick(i)));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-$('cn-go').addEventListener('click', () => {
+function careerNewGo() {                            // Start Career: the player as picked, his look included
   const d = careerDraft;
-  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club:d.club, league:d.league, cat:d.cat, proMode:d.proMode })) return;
+  if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club:d.club, league:d.league, cat:d.cat, proMode:d.proMode, look:d.look })) return false;
   careerOpen();
-});
+  return true;
+}
+$('cn-go').addEventListener('click', careerNewGo);
 $('cn-back').addEventListener('click', goHome);
 $('cn-change').addEventListener('click', () => careerClubOpen());
+$('cn-look-go').addEventListener('click', () => careerLookOpen());
+
+/* ---------- his look (PR #14's player builder) ----------
+   Change Look opens Your Look, New Player's second step: his picture on the left, standing three-quarters on in his club's kit (the
+   rendered art, artPreview; his shirt with his number stands in while the art is not in, or if it never comes), and the pickers: Build
+   (Small | Medium | Big, the art's three bodies), Skin and Hair Colour (six swatches each) and Hair Style (all twelve, for either body).
+   Male or Female is not here: it is New Player's Team, Men | Women, one control. A pick changes the picture at once, and Back to New
+   Player keeps it; Start Career saves it with the career (careerLook validates it). */
+const CAREER_SKIN_NAMES = ['Skin 1', 'Skin 2', 'Skin 3', 'Skin 4', 'Skin 5', 'Skin 6'];   // lightest to darkest; a swatch's name, for a screen reader
+const CAREER_HAIR_NAMES = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red'];
+function careerLookOpen() {
+  renderCareerLook(); careerShow('s-career-look');
+  const art = ART.state === 'idle' ? artLoad() : ART.state === 'loading' ? ART.promise : null;   // the real sprite when it can be had
+  if (art && art.then) art.then(() => { if (careerDraft && !$('s-career-look').hidden) careerLookShow(); });
+}
+function careerLookSet(key, v) { careerDraft.look[key] = v; renderCareerLook(); }
+function careerLookShow() {                          // the picture: the art when it is in, his shirt when not
+  const d = careerDraft, cv = $('ck-pic'), drawn = artPreview(cv, d.club, d.look);
+  cv.hidden = !drawn; $('ck-shirt').hidden = drawn;
+  if (!drawn) $('ck-shirt').innerHTML = careerShirt(d.club, d.num, 'big');
+}
+function renderCareerLook() {                        // the picks change in place, so a controller's ring stays on the button it pressed
+  const L = careerDraft.look, press = (id, on) => [...$(id).children].forEach((b, i) => b.setAttribute('aria-pressed', String(on(i))));
+  press('ck-build', i => CAREER_BUILDS[i] === L.b); press('ck-skin', i => i === L.skin); press('ck-hair', i => i === L.hair); press('ck-style', i => i === L.style);
+  careerLookShow();
+}
+$('ck-skin').innerHTML = LOOK_SKIN.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_SKIN_NAMES[i]}"></button>`).join('');
+$('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_HAIR_NAMES[i]}"></button>`).join('');
+for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
+  [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
+$('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
 function careerClubOpen() { careerDraft.pool = careerDraft.league; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on
 function renderCareerClubs() {
   const d = careerDraft, pool = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool, tier = poolTier(pool);
@@ -140,7 +174,7 @@ function renderCareerClubs() {
   for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   const clubs = careerClubList(pool);
   $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
-    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');
+    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');   // its name with its stars under it, beside its overall
   for (const b of $('cc-grid').querySelectorAll('[data-i]')) b.addEventListener('click', () => careerClubPick(clubs[+b.dataset.i]));
   if (!$('s-career-club').hidden) careerFit($('s-career-club'));
 }
@@ -241,8 +275,14 @@ function careerChips(keys) {
   const label = Object.fromEntries(careerSkills());
   return keys.map(k => `<span class="cr-chip" style="--k:${CAREER_COL[k] || 'var(--chalk)'}">${label[k] || k}</span>`).join('');
 }
+/* Train: the Skills Mini Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
+   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three. The youngest never
+   see the contact games (careerDrills), so for them there is no group and no coach line. */
 function renderCareerTrain() {
-  $('ct-list').innerHTML = careerDrills(career).map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('');
+  const list = careerDrills(career), hard = list.filter(d => d.contact);
+  const tiles = ds => `<div class="cr-drills">${ds.map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="dc-icon" aria-hidden="true">${drillIconSvg(d.id)}</span><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('')}</div>`;
+  $('ct-list').innerHTML = tiles(list.filter(d => !d.contact))
+    + (hard.length ? `<div class="ct-contact"><p class="pr-cg"><span class="pr-group">Contact Games (U9 and Up)</span> <span class="pr-coach">${PRACTICE_COACH}</span></p>${tiles(hard)}</div>` : '');
   for (const b of $('ct-list').querySelectorAll('[data-drill]')) b.addEventListener('click', () => careerTrain(b.dataset.drill));
 }
 $('ct-back').addEventListener('click', careerOpen);
@@ -303,7 +343,7 @@ function renderCareerEnd() {
   body.innerHTML = first ? '' : `<div class="cr-tiles" style="--n:${out.place ? 3 : 2}">${tiles}</div>`;
   if (first) {                                       // his first call-up: the country is the choice, and the choice starts the window (no tiles: Called Up and the twelve fill the screen)
     body.innerHTML += `<p class="lbl cr-pick">Pick Your Country</p>
-      <div class="cr-nations">${careerNations(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tname" data-fit>${esc(listName(t))}</span></button>`).join('')}</div>`;
+      <div class="cr-nations">${careerNations(careerCat(cr)).map(t => `<button class="team cr-club" data-n="${t.id}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span></button>`).join('')}</div>`;
     for (const b of body.querySelectorAll('[data-n]')) b.addEventListener('click', () => { careerAdvance(b.dataset.n); careerOpen(); });
     act.innerHTML = '';
     return;
@@ -311,9 +351,9 @@ function renderCareerEnd() {
   act.innerHTML = `<button class="btn primary" id="ce-go">Continue</button>`;
   $('ce-go').addEventListener('click', () => { careerAdvance(); careerOpen(); });
 }
-/* The transfer window: each offer a club's card (its kit, name, rating and league), and his own club's card to Stay, in equal parts. */
+/* The transfer window: each offer a club's card (its kit, name, rating, stars and league), and his own club's card to Stay, in equal parts. */
 function careerOfferHtml(t, id, lbl) {
-  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jersey(t).replace(/<\/span>$/, `<span class="ovr" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></span>`)}<span class="tname" data-fit>${esc(listName(t))}</span><span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
+  return `<button class="team cr-offer${id ? '' : ' stay'}" data-sign="${id}">${jerseyRated(t)}<span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}<span class="lbl" data-fit="wrap">${esc(lbl)}</span></button>`;
 }
 function renderCareerMove() {
   const cr = career, team = careerTeamFor(cr, 'league'), cat = careerCat(cr), body = $('ce-body');

@@ -29,13 +29,17 @@
      for the cup), the European Cup ('euro'),
      the World Cup ('world'), the Home Nations Tour ('tour') and the Triple Crown ('triple'). The player card counts them by kind.
    - Men or Women, picked with the player (cat): every side of the career is named for it ('Farnham Women'), and its
-     international window is that category's own twelve; nothing else changes.
+     international window is that category's own twelve; nothing else changes. It is also his body: Men a male player, Women a
+     female one (PR #14's Male | Female is this same control, so a career its build saved as Female, look.g 1 and no cat, loads as
+     Women: cleanCareer). His look (cr.look: build, skin, hair colour, hair style) goes on
+     his squad entry in his matches, so the behind views and the art draw him with it (careerLook, CAREER_LOOK).
    - Your player has a 1 to 99 rating in each ability (Pace, Power, Handling, Kicking, and Stamina even before the
      teams have it). The overall is the team cards' overallOf on the same 40 to 99 scale.
    - Skills rise from training (one session a round, between matches: a drill's stars give points to its skill,
      CAREER_TRAIN) and a little from what your player does in a match (CAREER_DEEDS, capped a match).
-   - In a career match only (M.career, set by careerArm after startMatch), your player wears a star and a ring in the
-     kit's trim, the ring starts on him at every kick-off, he takes your side's goal kicks, and his skills shade HIS
+   - In a career match only (M.career, set by careerArm after startMatch), your player wears a star in the kit's trim. The
+     star means your player and the ring means who you control now, and only one of each is drawn. The ring starts on
+     him at every kick-off and moves with Switch and passes, he takes your side's goal kicks, and his skills shade HIS
      speed, catching, tackling, kicking and stamina from the team's baseline (CAREER_SHADE). Every engine site reads
      the side's own value unless M.career is set, and careerNatOf, careerAbility, careerFade and careerSprintDrain add
      the shade for your player only, so no other match and no other man changes.
@@ -60,11 +64,12 @@ const CAREER_POS = { F:[1, 2, 3], B:[4, 5, 6, 7] };   // sevens: forwards wear 1
 const CAREER_START = { F:{ pace:32, power:44, handling:36, kicking:26, stamina:38 }, B:{ pace:44, power:26, handling:38, kicking:34, stamina:34 } };
 const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
-/* Which skill a drill trains. A drill's own result wins when it names one: Pass Around the Circle trains Stamina as the
-   Runner and Handling as the Passer. */
-const CAREER_DRILL_SKILL = { egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', cones:'pace', defend:'pace', kick:'kicking' };
-const CAREER_DRILL_ORDER = ['egg', 'pass', 'circle', 'tackle', 'scrum', 'cones', 'defend', 'kick'];
-const CAREER_DRILL_NAME = { egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
+/* Which skill a game trains (Train lists the Skills Mini Games, in their order). A game's own result wins when it names one:
+   Pass Around the Circle trains Stamina as the Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact)
+   are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
+   from match tackles and the dilemmas (Tackle Drills, Gym Session). */
+const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
+const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
    kicked a point of Kicking. At most CAREER_DEED_CAP points a match: training is where most of it comes from. */
 const CAREER_DEEDS = { tries:{ pace:1, handling:1 }, goals:{ kicking:1 }, tackles:{ power:1 } };
@@ -106,6 +111,17 @@ function careerOverall(skills) {                     // overallOf's 40 to 99, fr
   return clamp(Math.round(40 + (mean - 1)*59/98), 40, 99);
 }
 function careerName(v) { return Array.from(String(v == null ? '' : v).normalize('NFC').replace(/[^\p{L}' -]/gu, '').replace(/\s+/g, ' ').trim()).slice(0, 12).join('').trim(); }
+/* His look (PR #14's player builder): build, skin, hair colour and hair style, picked on New Player's Your Look and drawn in the behind
+   views and the art (src/looks.js, src/render-art.js). Its body (g: 0 male, 1 female) is not a choice of its own: it is the career's
+   Men | Women, the one control, so a women's career is always a female player. Every field is there, so a saved look never depends on
+   the team's deal; a career saved before it, or a broken look, takes CAREER_LOOK on the career's own body. No height: his is the
+   shirt's, as every man's is. Kept on this device only, as the name is (PRIVACY.md). */
+const CAREER_LOOK = { g:0, skin:2, hair:1, style:0, b:1 };
+const CAREER_BUILDS = [0.92, 1, 1.12];                // Small | Medium | Big: the art's three bodies (slim, medium, stocky), the only builds the picker gives
+function careerLook(l, cat) {
+  const c = cleanLook(l), b = Number.isFinite(c.b) ? CAREER_BUILDS.reduce((a, v) => (Math.abs(v - c.b) < Math.abs(a - c.b) ? v : a)) : CAREER_LOOK.b;
+  return { g:cat === 'women' ? 1 : 0, skin:c.skin ?? CAREER_LOOK.skin, hair:c.hair ?? CAREER_LOOK.hair, style:c.style ?? CAREER_LOOK.style, b };
+}
 
 /* ---------- clubs, leagues and nations ---------- */
 const careerSide = t => cleanSide(t);
@@ -114,10 +130,13 @@ const careerNations = cat => natList(cat).filter(t => !t.legend);      // the tw
 const careerNation = (id, cat) => { const l = careerNations(cat); return l.find(t => t.id === id) || l.find(t => t.id === 'ENG'); };   // the category's own side
 const careerClubs = () => NATIONAL.flat();           // where an offer comes from: every national league, Scotland's included
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
-const careerListOf = t => (t && !t.custom ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's list, or null for one you made
-/* The list a club was picked from, as the save keeps it: a built-in club's own, else a national league's or My League's key, else Local. */
+const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
+const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+/* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
+   Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
-  const own = careerListOf(club); if (own) return own.key;
+  const own = careerListOf(club);
+  if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && l.teams.some(o => o.id === club.id)) ? key : own.key;
   return key === IMPORT_POOL || TEAM_LISTS.some(l => l.key === key && l.tier > 0) ? key : 'sur';
 }
 function careerLeague(cr) {                          // his club's league now: My League only while a league is saved
@@ -159,6 +178,7 @@ function careerCreate(o) {
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = CAREER_START[pos][k] || CAREER_BASE;
   const cr = { name:careerName(o.name), pos, num:nums.includes(o.num) ? o.num : nums[0], club, league:careerLeagueKey(o.league, club), cat:careerCat(o),
+    look:careerLook(o.look, careerCat(o)),           // his look, on the career's body (Men | Women). In cleanCareer's order
     proMode:o.proMode === true,                      // Pro Mode, your player alone (career-pro.js). Its own line, and in cleanCareer's order
     country:null, skills, year:1, phase:'league', seasons:0, season:null, cup:null, offers:null, trained:false,
     history:[], totals:{ matches:0, tries:0, tackles:0, goals:0 }, trophies:[] };
@@ -295,10 +315,9 @@ function careerRepair(cr) {
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the drills that exist right now, in the career's order
-  const have = new Map(PRACTICE_DRILLS.map(d => [d.id, d]));
-  return CAREER_DRILL_ORDER.filter(id => have.has(id))
-    .map(id => ({ id, name:have.get(id).name || CAREER_DRILL_NAME[id], skills:id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[id]] }));
+function careerDrills(cr) {                          // the games that exist right now, in the Skills Mini Games' order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
+  return PRACTICE_DRILLS.filter(d => d.id in CAREER_DRILL_SKILL && !practiceBarred(d.id))
+    .map(d => ({ id:d.id, name:d.name || CAREER_DRILL_NAME[d.id], contact:!!d.contact, skills:d.id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[d.id]] }));
 }
 const careerCanTrain = cr => !!(cr && !cr.trained && careerAhead(cr));   // one session before each match, league, international or cup
 /* The drill's onDone ({ id, stars, success[, role, skill, quit] }), once its settings are restored. One session a round;
@@ -337,6 +356,8 @@ function careerNatFor(team, skills) {                // the team's abilities, ea
   }
   return out;
 }
+const CAREER_CAP = { matches:3, secs:4 };            // the kick-off caption: a player's first matches, this long on M.rt. Over the play, never stopping it
+const careerCaption = () => !!(M && M.career && M.capUntil > M.rt && !M.cut && !M.tut && !M.paused && !M.over && !practice);
 function careerArm() {                               // straight after startMatch: this match is a career match
   if (!M || !career) return;
   M.career = true;
@@ -346,6 +367,7 @@ function careerArm() {                               // straight after startMatc
   M.careerDeeds = { tries:0, tackles:0, goals:0 };
   careerLifeArm();                                   // the bars as they are now, for the whole match: Energy and Morale into M.careerNat
   traitsArm();                                       // his own traits, and his shirt kept for him (src/traits.js)
+  M.capUntil = settings.hints && career.totals && career.totals.matches < CAREER_CAP.matches ? M.rt + CAREER_CAP.secs : 0;
   careerKickoff();
 }
 /* startMatch's options for his next match f: Easy for My Player on Kids, and for a cup match the cup's id and whether it is a knockout
@@ -358,8 +380,8 @@ function careerMatchOpts(cr, f) {
 function careerPlay() {                              // Play Match on the hub
   const cr = career, f = careerAhead(cr);
   if (practice || !f) return false;
-  const opp = f.home === f.user ? f.away : f.home;
-  startMatch(f.teams[f.user], f.teams[opp], false, careerMatchOpts(cr, f));
+  const opp = f.home === f.user ? f.away : f.home, mine = f.teams[f.user];
+  startMatch({ ...mine, squad:[{ n:cr.num, look:careerLook(cr.look, careerCat(cr)) }] }, f.teams[opp], false, careerMatchOpts(cr, f));   // his look on his squad entry, for this match only (lookOf): the season's side is untouched
   careerArm();
   return true;
 }
@@ -449,7 +471,10 @@ function cleanCareer(c) {
   const signed = was != null && was >= 3 ? careerClubById(c.pro) : null;   // the Pro Club side it signed for
   const club = cleanSide(signed || c.club);
   if (!club || !raw) return null;
-  const pos = c.pos === 'F' ? 'F' : 'B', cat = careerCat(c);   // an unknown position is a back, as careerCreate has it; a career from before Men | Women is Men
+  const pos = c.pos === 'F' ? 'F' : 'B';               // an unknown position is a back, as careerCreate has it
+  /* Men or Women. A career from before Men | Women is Men, except one PR #14's build saved: it has no cat, and its Female was look.g 1
+     (its careerFemale), the same one control, so that is a women's career. A cat, where there is one, decides. */
+  const cat = c.cat == null && c.look && typeof c.look === 'object' && c.look.g === 1 ? 'women' : careerCat(c);
   const skills = {};
   for (const k of careerSkillKeys()) skills[k] = typeof raw[k] === 'number' && Number.isFinite(raw[k]) ? clamp(Math.round(raw[k]), 1, 99) : (CAREER_START[pos][k] || CAREER_BASE);
   const T = c.totals && typeof c.totals === 'object' ? c.totals : {}, totals = {};
@@ -466,6 +491,7 @@ function cleanCareer(c) {
   const country = nations.some(t => t.id === c.country) ? c.country : phase === 'intl' || phase === 'tour' ? 'ENG' : null;
   let season = null, cup = null, offers = null;
   if ((phase === 'league' || phase === 'intl') && c.season != null && !(was != null && was < 3)) season = cleanChamp(c.season);   // a broken season is dropped (and a Minis, Juniors or County one): the hub draws a new one
+  if (season && cat !== 'men') season.teams = season.teams.map(t => (catOf(t) === cat ? t : catSide(t, cat)));   // a kept season is the career's category: PR #14's Pro Club or International season marked its women's sides with g, which cleanSide drops, so they would be men's around a female player
   if (phase !== 'league' && phase !== 'transfer' && !season && c.cup != null && K && K.cleanCup) cup = K.cleanCup(c.cup) || null;
   if (cup && cup.id !== CAREER_CUP_PHASE[phase]) cup = null;   // a European Cup saved in the window (or any cup in another's phase) would read and bank as the wrong cup
   if ((phase === 'county' || phase === 'cup' || phase === 'tour') && !cup) phase = 'transfer';   // a cup that cannot be kept (a build without the cups): on to the window
@@ -484,25 +510,27 @@ function cleanCareer(c) {
   }
   const trophies = Array.isArray(c.trophies) ? careerTrophies(c.trophies) : careerTrophies(history.filter(h => h.place === 1).map(h => ({ kind:'league', year:h.year, name:h.name })));
   return { name:careerName(c.name), pos, num:CAREER_POS[pos].includes(c.num) ? c.num : CAREER_POS[pos][0], club, league:careerLeagueKey(c.league, club), cat,
+    look:careerLook(c.look, cat),                    // a career from before the look builder, or a broken look, takes the default on its own body
     proMode:c.proMode === true,                      // Pro Mode (career-pro.js): a career from before it is Whole Team
     country, skills, year, phase, seasons:careerInt(c.seasons, 0, 100000) || 0, season, cup, offers,
     trained:c.trained === true && (season ? season.round < 5 : !!cup), history, totals, trophies,
     life:careerLifeClean(c.life) };
 }
-/* Your player: a ring in the kit's trim round him and a star on his back (the trim, or the shirt, or chalk, whichever
-   stands off the grass), drawn over the men so a ruck can't hide him. */
-function careerMark(r) {
-  const p = M.careerP; if (!p) return;
-  const [wx, wy] = drawPos(p), [sx, sy] = toS(wx, wy), k = M.kit[0];
-  const col = colorDist(k.trim, '#2f6a38') >= 90 ? k.trim : colorDist(k.fill, '#2f6a38') >= 90 ? k.fill : '#f1eee4';
-  ctx.save(); ctx.translate(sx, sy);
-  ctx.lineWidth = 3; ctx.strokeStyle = col;
-  ctx.beginPath(); ctx.arc(0, 0, r*1.3, 0, 7); ctx.stroke();
+/* Your player: a star in the trim, the shirt or chalk, whichever stands off the grass, on his back on Top and over his head in a behind
+   view, drawn over the men so a ruck can't hide him. No ring of his own: a ring on the grass always means who you control now. */
+function careerCol() { const k = M.kit[0]; return colorDist(k.trim, '#2f6a38') >= 90 ? k.trim : colorDist(k.fill, '#2f6a38') >= 90 ? k.fill : '#f1eee4'; }
+const careerEdgeCol = () => { const c = careerCol(); return colorDist(c, '#08110b') >= 90 ? c : '#f1eee4'; };   // the edge arrow sits on a dark disc: a near-black trim would vanish there
+function careerStar(cx, cy, r, col) {
   ctx.beginPath();
-  for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r*0.42 : r*1.0; ctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr); }
+  for (let i = 0; i < 10; i++) { const a = -Math.PI/2 + i*Math.PI/5, rr = i % 2 ? r*0.42 : r; ctx.lineTo(cx + Math.cos(a)*rr, cy + Math.sin(a)*rr); }
   ctx.closePath();
   ctx.fillStyle = col; ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = C.outline; ctx.stroke();
-  ctx.restore();
+}
+function careerMark(r) {
+  const p = M.careerP; if (!p) return;
+  const [wx, wy] = drawPos(p), [sx, sy] = toS(wx, wy);
+  if (sx < 0 || sx > V.W || sy < 0 || sy > V.H) { BV.edges.length = 0; edgeTag(sx, sy, careerEdgeCol(), 'star', safeInsets()); }
+  else careerStar(sx, sy, r, careerCol());
   if (M.careerPro) proMark(r);                             // Pro Mode: the call's ring and the No sign (career-pro.js)
 }

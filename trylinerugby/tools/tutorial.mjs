@@ -31,14 +31,14 @@ begin('first duel');
   unseen(); fresh(); D.stage('past'); T.update(STEP);
   const c = M().cut, tu = D.tut();
   ok(c && c.kind === 'past' && tu && tu.id === 'past' && tu.seat === 0 && tu.step === 0 && tu.cut === c && !$('m-tut').hidden, 'the first Get Past opens the tutorial card at the cut');
-  ok($('tu-eye').textContent === 'Tutorial' && $('tu-title').textContent === 'Get Past' && tuText() === 'Beat the Last Man' && !$('tu-row').hidden && $('tu-play').hidden, `card 1: ${$('tu-title').textContent} · ${tuText()}, Skip | Next`);
+  ok($('tu-eye').textContent === 'Tutorial' && $('tu-title').textContent === 'Get Past' && tuText() === 'Beat the Last Defender' && !$('tu-row').hidden && $('tu-play').hidden, `card 1: ${$('tu-title').textContent} · ${tuText()}, Skip | Next`);
   ok(settings().tut.includes('past'), 'the moment is remembered at once');
   runUntil(() => c.t >= D.CUT_IN, 30);
   const a = snap(), r0 = rndCalls();
   for (let i = 0; i < 600; i++) { inputs[0].jx = 1; inputs[0].flick = 1; T.update(STEP); }
   ok(snap() === a && rndCalls() === r0 && c.res == null && D.tut() === tu, 'the close-up holds its first frame for 10s: nothing moves, no clock runs, no random number is drawn, a flick is not judged');
   ok(inputs[0].jx === 0, 'the stick is re-centred under the thumb through the hold');
-  press(); ok(D.tut() && D.tut().step === 1 && tuText() === 'Flick the Stick Away From Him When the Ring Turns Gold' && $('tu-row').hidden && !$('tu-play').hidden, `a press: card 2 (${tuText()}), Play`);
+  press(); ok(D.tut() && D.tut().step === 1 && tuText() === 'Flick the Stick Away From Them When the Ring Turns Gold' && $('tu-row').hidden && !$('tu-play').hidden, `a press: card 2 (${tuText()}), Play`);
   const t1 = c.t; press(); ok(D.tut() == null && $('m-tut').hidden && c.slowFrom === t1 && c.res == null, 'a second press: Play, and the slow run-in starts from here');
   let n = 0; while (c.t < c.win[0] && n++ < 600) T.update(STEP);
   ok(c.t >= c.win[0] && n > 60, `the run-in then plays, ${(n*STEP).toFixed(2)}s real to the ring`);
@@ -98,19 +98,19 @@ begin('words');
   ok(all.every(([, , , text]) => !/[←-↙⇐-⇙]/.test(text)), 'no arrow glyph');
   const text = (dev, id) => { D.setDev(dev); const t = D.tutCards(id, 0)[1][1]; D.setDev('touch'); return t; };
   // on a keyboard every key is a {code} token, which the card draws as a keycap (as the hint chips do): never 'A' as a word or '/' as punctuation
-  ok(text('touch', 'past') === 'Flick the Stick Away From Him When the Ring Turns Gold' && text('kb', 'past') === 'Tap {KeyA} or {KeyD} Away From Him When the Ring Turns Gold' && text('pad', 'past') === 'Flick the Stick Away From Him When the Ring Turns Gold', 'Get Past names the stick, or the A and D keycaps on a keyboard');
-  ok(text('touch', 'pass') === 'Press Pass on Gold, or Dummy If He Drifts to Your Runner' && text('kb', 'pass') === 'Press {KeyJ} on Gold, or {KeyK} If He Drifts to Your Runner' && text('pad', 'pass') === 'Press the Bottom Button on Gold, or the Right Button If He Drifts to Your Runner', `Key Pass names the buttons for the device (${text('pad', 'pass')})`);
+  ok(text('touch', 'past') === 'Flick the Stick Away From Them When the Ring Turns Gold' && text('kb', 'past') === 'Tap {KeyA} or {KeyD} Away From Them When the Ring Turns Gold' && text('pad', 'past') === 'Flick the Stick Away From Them When the Ring Turns Gold', 'Get Past names the stick, or the A and D keycaps on a keyboard');
+  ok(text('touch', 'pass') === 'Press Pass on Gold, or Dummy If They Drift to Your Runner' && text('kb', 'pass') === 'Press {KeyJ} on Gold, or {KeyK} If They Drift to Your Runner' && text('pad', 'pass') === 'Press the Bottom Button on Gold, or the Right Button If They Drift to Your Runner', `Key Pass names the buttons for the device (${text('pad', 'pass')})`);
   ok(text('touch', 'scrum') === 'Press Push on Set, Then Tap It Fast' && text('kb', 'scrum') === 'Press {KeyJ} on Set, Then Tap It Fast', 'the scrum');
   ok(text('touch', 'goal') === 'Steer With the Stick, Hold Kick, Let Go in the Gold' && text('kb', 'goal') === 'Steer With {KeyA} and {KeyD}, Hold {KeyJ}, Let Go in the Gold', 'the goal kick');
   ok(text('touch', 'drop') === 'Hold Kick, Steer With the Stick, Let Go in the Gold Before They Reach You' && text('kb', 'drop') === 'Hold {KeyK}, Steer With {KeyA} and {KeyD}, Let Go in the Gold Before They Reach You', 'the drop goal');
-  ok(D.tutCards('tackle', 0)[0].join(' · ') === 'Tackle · You Are the Last Man' && D.tutCards('block', 0)[0].join(' · ') === 'Block · Their Pass Crosses Your Man' && D.tutCards('lineout', 0)[1][1] === 'Press Jump So Your Jumper Is Up When the Ball Arrives', 'Tackle, Block and the lineout');
-  ok(D.tutHtml('Press {KeyJ} on Gold, or {KeyK} If He Drifts') === 'Press <kbd class="kc">J</kbd> on Gold, or <kbd class="kc">K</kbd> If He Drifts' && D.tutHtml('a <b> & {Slash}') === 'a &lt;b&gt; &amp; <kbd class="kc">/</kbd>', 'tutHtml draws each token as a keycap and escapes the words');
+  ok(D.tutCards('tackle', 0)[0].join(' · ') === 'Tackle · You Are the Last Defender' && D.tutCards('block', 0)[0].join(' · ') === 'Block · Their Pass Crosses Your Player' && D.tutCards('lineout', 0)[1][1] === 'Press Jump So Your Jumper Is Up When the Ball Arrives', 'Tackle, Block and the lineout');
+  ok(D.tutHtml('Press {KeyJ} on Gold, or {KeyK} If They Drift') === 'Press <kbd class="kc">J</kbd> on Gold, or <kbd class="kc">K</kbd> If They Drift' && D.tutHtml('a <b> & {Slash}') === 'a &lt;b&gt; &amp; <kbd class="kc">/</kbd>', 'tutHtml draws each token as a keycap and escapes the words');
   // two player: each seat's own keys
   fresh({ humans:[true, true], levels:[1, 1] });
-  ok(D.tutCards('pass', 0)[1][1] === 'Press {KeyF} on Gold, or {KeyG} If He Drifts to Your Runner' && D.tutCards('pass', 1)[1][1] === 'Press {Slash} on Gold, or {Period} If He Drifts to Your Runner' && D.tutCards('past', 1)[1][1] === 'Tap an Arrow Away From Him When the Ring Turns Gold' && D.tutCards('goal', 1)[1][1] === 'Steer With the Arrows, Hold {Slash}, Let Go in the Gold', `two player: Player 1's F and G, Player 2's / . and the arrows (${D.tutCards('past', 1)[1][1]})`);
-  // Player 2's cards as drawn: / and . are keycaps in the sentence, never a full stop or a typo (they read 'Press / on Gold, or . If He Drifts')
+  ok(D.tutCards('pass', 0)[1][1] === 'Press {KeyF} on Gold, or {KeyG} If They Drift to Your Runner' && D.tutCards('pass', 1)[1][1] === 'Press {Slash} on Gold, or {Period} If They Drift to Your Runner' && D.tutCards('past', 1)[1][1] === 'Tap an Arrow Away From Them When the Ring Turns Gold' && D.tutCards('goal', 1)[1][1] === 'Steer With the Arrows, Hold {Slash}, Let Go in the Gold', `two player: Player 1's F and G, Player 2's / . and the arrows (${D.tutCards('past', 1)[1][1]})`);
+  // Player 2's cards as drawn: / and . are keycaps in the sentence, never a full stop or a typo (they read 'Press / on Gold, or . If They Drift')
   M().tut = { id:'pass', seat:1, step:0, cut:null }; D.tutAdvance();
-  ok($('tu-text').innerHTML === 'Press <kbd class="kc">/</kbd> on Gold, or <kbd class="kc">.</kbd> If He Drifts to Your Runner', `Player 2's Key Pass card draws / and . as keycaps (${$('tu-text').innerHTML})`);
+  ok($('tu-text').innerHTML === 'Press <kbd class="kc">/</kbd> on Gold, or <kbd class="kc">.</kbd> If They Drift to Your Runner', `Player 2's Key Pass card draws / and . as keycaps (${$('tu-text').innerHTML})`);
   M().tut = { id:'drop', seat:1, step:0, cut:null }; D.tutAdvance();
   ok($('tu-text').innerHTML === 'Hold <kbd class="kc">.</kbd>, Steer With the Arrows, Let Go in the Gold Before They Reach You', `and his Drop Goal card (${$('tu-text').innerHTML})`);
   M().tut = null; $('m-tut').hidden = true;
@@ -152,9 +152,9 @@ begin('memory and seats');
   $('tu-skip').click(); runUntil(() => M().phase !== 'cut', 900);
   // two player: the owner's seat is named, either seat advances, the memory is the device's
   unseen(); fresh({ humans:[true, true], levels:[1, 1] }); D.stage('past', 1); T.update(STEP); c = M().cut;
-  ok(c && c.own === 1 && D.tut() && D.tut().seat === 1 && $('tu-eye').textContent === 'Player 2 · Tutorial' && $('tu-eye').classList.contains('p2') && tuText() === 'Beat the Last Man', `Player 2's first Get Past: ${$('tu-eye').textContent}`);
+  ok(c && c.own === 1 && D.tut() && D.tut().seat === 1 && $('tu-eye').textContent === 'Player 2 · Tutorial' && $('tu-eye').classList.contains('p2') && tuText() === 'Beat the Last Defender', `Player 2's first Get Past: ${$('tu-eye').textContent}`);
   runUntil(() => c.t >= D.CUT_IN, 30); inputs[0].aPressed = true; T.update(STEP); ok(D.tut() && D.tut().step === 1, 'Player 1\'s press advances it too (either can skip)');
-  ok(tuText() === 'Tap an Arrow Away From Him When the Ring Turns Gold', `card 2 names Player 2's keys (${tuText()})`);
+  ok(tuText() === 'Tap an Arrow Away From Them When the Ring Turns Gold', `card 2 names Player 2's keys (${tuText()})`);
   inputs[1].aPressed = true; T.update(STEP); ok(D.tut() == null, 'and Player 2\'s press is Play');
   runUntil(() => M().phase !== 'cut', 900);
   fresh({ humans:[true, true], levels:[1, 1] }); D.stage('past', 0); T.update(STEP); ok(D.tut() == null && settings().tut.includes('past'), 'Player 1\'s first Get Past on this device shows no card: the memory is the device\'s'); runUntil(() => M().phase !== 'cut', 900);

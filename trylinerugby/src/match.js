@@ -4,6 +4,8 @@
    y: 0..70 touchline to touchline. Team 0 (you) attacks +x.
    ========================================================= */
 let M = null;
+let stepGap = 1/60;                                         // real seconds since the last step. The frame loop sets it below pace 1; a plain update(STEP) always sees 1/60
+const matchPace = () => (!M || practice ? 1 : M.kids ? MATCH_PACE.kids : MATCH_PACE.match);   // real time to match time, for the frame loop and the banner's timer. A drill is 1 here: it scales its own steps (drillRate)
 const dirOf = t => t === 0 ? 1 : -1;
 const oppLine = t => t === 0 ? 110 : 10;
 const ownLine = t => t === 0 ? 10 : 110;
@@ -257,15 +259,16 @@ function catchBall(p, kind) {
   if (M.career) k *= careerLifeHands(p, kind, f);          // a career match: Team Spirit, on a pass to or from your player
   const r = rnd();
   if (r < traitHands(p, k)) { knockOn(p); return; }        // Safe Hands: hardly ever
-  setCarrier(p);
+  setCarrier(p); sfx('catch');
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
+  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? PASS_FLIGHT.graceKids : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
   placeBall(p.x, p.y);
-  sfx('whistle');
+  sfx('fumble'); sfx('whistle');
   deadBall(() => scrum(1-p.team, p.x, p.y, 'Knock-On'));
 }
 function pickUp(p) {
@@ -278,7 +281,7 @@ function pickUp(p) {
     return;
   }
   const turn = p.team !== b.last && !b.kickInfo;
-  setCarrier(p);
+  setCarrier(p); sfx('catch');
   if (turn) { M.stats.turnovers++; say('Turnover', 'small'); heat(p.team, 'turnover'); }
 }
 

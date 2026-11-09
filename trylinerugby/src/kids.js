@@ -115,12 +115,12 @@ function kidsSwitch(t) {                                   // defending, the rin
   const q = sprintPick(t) || (switchUseful(t) ? switchTarget(t) : null);
   if (q && q !== cur) { setCtrl(t, q); st('kidsSwitch'); }
 }
-function kidsChase(p, inp, dt) {                           // the stick let go while defending: the ringed man chases the carrier, or runs to a kicked or loose ball, as his teammates do
+function kidsChase(p, inp, dt) {                           // the stick let go while defending: the ringed man chases the carrier, or runs to a kicked or loose ball or to where their pass will land, as his teammates do
   if (!M.kids || inp.world().mag >= KIDS.rest || M.phase !== 'play' || p.offside > 0) return false;   // a retiring tackler stays out, as his teammates do
   const b = M.ball;
   let x, y;
   if (b.state === 'held' && b.carrier.team !== p.team) { const c = b.carrier, lead = clamp(dist(p, c)/9, 0, 0.7); x = c.x + c.vx*lead; y = c.y + c.vy*lead; }
-  else if (b.state === 'air' && b.f && b.f.kind !== 'pass') { x = b.f.x1; y = b.f.y1; }
+  else if (b.state === 'air' && b.f && (b.f.kind !== 'pass' || b.f.team !== p.team)) { x = b.f.x1; y = b.f.y1; }
   else if (b.state === 'loose') { x = b.x; y = b.y; }
   else return false;
   seek(p, x, y, maxSpeed(p)*KIDS.chase, 15, dt, true);

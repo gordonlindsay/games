@@ -12,7 +12,8 @@
 // of 9 November 2026 (the subtitle and the Full Game's descriptions) and every place that repeats it in step; the Supporters' Wall on
 // superfan.html (its steps, adults only, a list only for an agreed club), in PRIVACY.md and the launch checklist (removal takes a name
 // off the page, and its earlier versions stay readable in the public repository's history, said plainly), and a crest only with
-// the club's written permission; the screenshots are all there at their exact sizes with no alpha channel.
+// the club's written permission; the Skills Mini Games counted as src/practice.js has them; the screenshots are all there at their
+// exact sizes with no alpha channel.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -358,6 +359,23 @@ for (const f of fs.readdirSync(at('src')).filter(f => f.endsWith('.js'))) {
   ok(/\*\*The Supporters' Wall: where the names live, decided before the first one goes up\.\*\*[^\n]*public repository[^\n]*history/.test(lc) && /reply to say it is off the page, and that earlier versions of the page stay in the public repository's history/.test(lc) && lc.indexOf('where the names live') < lc.indexOf('reviewing and publishing names'), 'and, before it, the owner\'s decision on where the names live, with the public history spelled out; a removal\'s reply says the same');
   ok(/\*\*A crest only with the club's written permission\.\*\*/.test(lc) && /crest[^.]*\*\*written permission\*\*|written permission[^.]*crest|crest[^.]*written permission/i.test(read('store-listing/SUPER_FAN.md')), 'the launch checklist and SUPER_FAN.md: a crest only with the club\'s written permission');
   if (fc && fc.clubs) ok(fc.clubs.every(c => c.crest === null || (/^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/.test(c.crest) && fs.existsSync(at(c.crest)))), 'every crest in FAN_CLUBS is null, or a file of the game\'s own that is there');
+}
+
+// 8d. the Skills Mini Games counted as the game has them (PRACTICE_DRILLS, src/practice.js): the three descriptions, the reviewer's note
+// in the launch checklist and the support page's Free row (they said eight drills for a while after PR #14 brought ten)
+{
+  const p = fs.existsSync(at('src/practice.js')) ? read('src/practice.js') : '', m = p.match(/const PRACTICE_DRILLS\s*=\s*\[([\s\S]*?)\n\];/);
+  const n = m ? (m[1].match(/^\s*\{ id:'/gm) || []).length : 0, word = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][n];
+  ok(!!word, `PRACTICE_DRILLS in src/practice.js is read (${n} games); update tools/listing.mjs if its shape moved`);
+  if (word) {
+    const blocks = LISTING_DOCS.filter(f => fs.existsSync(at(f))).flatMap(f => copyBlocks(read(f)).map(b => ({ ...b, file:f })));
+    for (const k of ['apple.description', 'apple.description.fan', 'google.full']) {
+      const t = (blocks.find(b => b.key === k) || { text:'' }).text;
+      ok(t.includes(`- Skills Mini Games: ${word} short games,`), `${k} counts the Skills Mini Games as the game has them: ${word}`);
+    }
+    ok(read('store-listing/LAUNCH_CHECKLIST.md').includes(`; ${word} Skills Mini Games;`), `the launch checklist's note to the reviewer counts ${word} Skills Mini Games`);
+    ok(read('support.html').includes(`Skills Mini Games (all ${word})`), `support.html's Free row counts all ${word} Skills Mini Games`);
+  }
 }
 
 // 9. the screenshots: every size and moment, exact pixels, RGB with no alpha

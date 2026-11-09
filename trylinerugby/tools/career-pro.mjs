@@ -25,7 +25,7 @@ const ready = () => { settings.played = 99; settings.diff = 1; settings.kids = f
 // TEAM re-pinned at club seasons (2026-11-08): a career's first year at Farnham and Aldershot is their Local league at full strength,
 // no longer the Minis one off every ability. With the Minis' sides put back (team(true): the same draw, one off every ability) this
 // build gives the pin from before Pro Mode, TEAM_MINIS, exactly.
-const NON_CAREER = '1o2r2g2 1uombq7 12cy4qs', TEAM = 'kui40f 1x06cnw', TEAM_MINIS = '1c73jxu 1d1uovf';
+const NON_CAREER = 'lhsdx3 1wmrjk7 n3fvw5', TEAM = '1hz0lk0 66vc32', TEAM_MINIS = '3wqcqk 1xh2mp';   // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere (64, was 67) in the non-career match, and the career's Local league at Farnham and Aldershot re-rated from last season's tables (Aldershot 64, was 72); with CLUB_RATED=off this build gives the pins before it exactly, lhsdx3 1wmrjk7 uge569, 1k1rp0v d3xoxp and 3wqcqk 14ancgg. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 1uombq7 12cy4qs, kui40f 1x06cnw and 1c73jxu 1d1uovf
 function nonCareer() {
   const out = [];
   reseed(23);
@@ -414,7 +414,7 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
 {
   const src = readGameSource(), html = src.slice(src.indexOf('id="s-career-new"'), src.indexOf('id="s-career"'));
   ok(/<span class="lbl">Play as<\/span><div class="seg" id="cn-mode"><button>Whole Team<\/button><button>My Player<\/button><\/div>/.test(html), 'New Player: Play as, Whole Team first, My Player second, one balanced row of two');
-  ok(html.indexOf('id="cn-mine"') < html.indexOf('id="cn-mode"') && html.indexOf('id="cn-mode"') < html.indexOf('class="cr-form"') && html.indexOf('class="cr-form"') < html.indexOf('id="cn-go"'), 'under Your Club and Team on the left, so Start Career stays in view on the right');
+  ok(html.indexOf('id="cn-mine"') < html.indexOf('id="cn-mode"') && html.indexOf('id="cn-mode"') < html.indexOf('class="cr-form"') && html.indexOf('class="cr-form"') < html.indexOf('id="cn-go"'), 'under Your Player and Team on the left, so Start Career stays in view on the right');
   C.set(null); C.newOpen();
   ok(P.draft().proMode === false, 'Whole Team is picked to start');
   $('cn-go').click();

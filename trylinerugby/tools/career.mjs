@@ -5,6 +5,12 @@
 // checked against a stand-in that keeps to its contract (stubCups, through careerCups' hook), so this file needs no cups.
 // node tools/career.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
+import fs from 'node:fs';
+import path from 'node:path';
+import http from 'node:http';
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const C = T.career, X = T.teams, D = T.debug, L = T.careerLife, $ = id => document.getElementById(id);
@@ -18,7 +24,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 //    (bc8fabf): two AI v AI matches, an arcade match you play and a plain one, both played by the harness's bot. Run first,
 //    so nothing earlier in this file can move them. If another change moves non-career play on purpose, re-pin it from
 //    that change's bundle without the career sources.
-const BASE = '1o2r2g2 1uombq7 12cy4qs';   // re-pinned at the Stamina merge (the arcade match moved: Stamina acts in arcade matches), and again when the nations were rated on the XV hierarchy: England and Italy, in the two AI v AI matches, have new ratings; with their old ones put back the value is the earlier 1vg5qro, so the career still changes no non-career play
+const BASE = 'lhsdx3 1wmrjk7 n3fvw5';   // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere, Farnham's opponent here, is 64 (13), was 67 (14); with CLUB_RATED=off this build gives the pin before it exactly, lhsdx3 1wmrjk7 uge569 (the arcade match and AI v AI did not move). Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 1o2r2g2 1uombq7 12cy4qs. Before that: re-pinned at the Stamina merge (the arcade match moved: Stamina acts in arcade matches), and again when the nations were rated on the XV hierarchy: England and Italy, in the two AI v AI matches, have new ratings; with their old ones put back the value is the earlier 1vg5qro, so the career still changes no non-career play
 // re-pinned at the official XV tables: England, France and Italy (the AI v AI matches) re-rated; with the XV hierarchy's ratings put back the value is that commit's 18qgoe5
 function fingerprint() {
   const out = [];
@@ -39,7 +45,7 @@ const memory = {}; let writes = 0;
 globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; writes++; } };
 const saved = () => JSON.parse(memory['tryline.v1']);
 // the harness answers querySelectorAll('.screen') with its own list; the career's screens join it here, so showScreen toggles them
-const SCREENS = ['s-career-new', 's-career-club', 's-career', 's-career-train', 's-career-table', 's-career-end'];
+const SCREENS = ['s-career-new', 's-career-club', 's-career-look', 's-career', 's-career-train', 's-career-table', 's-career-end'];
 { const qsa = document.querySelectorAll;
   document.querySelectorAll = sel => (sel === '.screen' ? qsa(sel).concat(SCREENS.map(id => $(id))) : qsa(sel)); }
 const shown = () => ['s-home', ...SCREENS].find(id => !$(id).hidden);
@@ -445,10 +451,11 @@ C.setCups(false);                                    // no cups unless a section
   { const src = readGameSource(); ok(/practiceStart\(id, \{ onDone:careerTrainDone, leaveLabel:'Back to Career' \}\)/.test(src), 'a career drill\'s leave button reads Back to Career'); }
   cr.skills.handling = 97; ok(gain({ id:'egg', stars:3 }, 'handling') === 2 && cr.skills.handling === 99, 'skills stop at 99');
   ok(C.TRAIN.every((v, i, a) => !i || v > a[i - 1]), 'more stars, more points');
-  // the drill list: every drill that exists, Driving from the first year (no stage hides it now)
-  const have = C.drillIds();
+  // the drill list: every game that exists, Driving from the first year; never a contact game for the youngest (practiceBarred: the Kids level, or Minis)
+  const have = C.drillIds(), contact = ['tackle', 'scrum', 'back'];
   ok(C.drills(cr).every(d => have.includes(d.id)) && C.drills(cr).length === have.filter(id => id in map).length, `the training list is the drills that exist (${C.drills(cr).map(d => d.id)})`);
   if (have.includes('scrum')) ok(cr.year === 1 && C.drills(cr).some(d => d.id === 'scrum'), 'Driving in the first year');
+  { const s = D.settings(), was = s.cat; s.cat = 'minis'; ok(!C.drills(cr).some(d => contact.includes(d.id)) && C.drills(cr).some(d => d.id === 'tag'), 'no contact game on Minis, and Tag Chase is there'); s.cat = was; }
   if (have.includes('circle')) ok(json(C.drills(cr).find(d => d.id === 'circle').skills) === '["stamina","handling"]', 'the circle shows both skills');
   cr.trained = false;
   ok(!C.train('nothing-here'), 'a drill that does not exist cannot start');
@@ -466,6 +473,63 @@ C.setCups(false);                                    // no cups unless a section
   ok(C.trainDone({ id:'pass', stars:3 }) === null && writes === w0 && json(cr.skills) === s0, 'a result arriving mid-drill changes and writes nothing');
   T.practice.leave();
   C.set(null);
+}
+
+// 4b. Train is the Skills Mini Games (the skills builder, at the PR #14 merge): the ten in the home's order, each game's skill from its own
+//     result (the circle's from its role), a real session through each game's card and Back to Career, Energy for each, the contact
+//     games and their group never for the youngest (the Kids level, or Minis), and the dilemmas' training options alongside
+{
+  const S = D.settings(), was = { kids:S.kids, diff:S.diff, cat:S.cat, drillSeen:S.drillSeen.slice() }, P = T.practice;
+  const at = (kids, cat) => { S.kids = kids; S.diff = kids ? 0 : 1; S.cat = cat; };
+  const ALL = T.drills.DRILLS.map(d => d.id), OPEN = T.drills.DRILLS.filter(d => !d.contact).map(d => d.id), CONTACT = ALL.filter(id => !OPEN.includes(id));
+  S.drillSeen = ALL.slice();                                // no Watch How on a first open: it plays before the card and records nothing
+  const cr = C.create({ pos:'B', num:9, club:X.CLUBS[0] }); C.set(cr); at(false, 'men');
+  ok(json(C.drills(cr).map(d => d.id)) === json(ALL) && C.drills(cr).every(d => d.name === T.drills.DRILLS.find(x => x.id === d.id).name), `Train lists the ten Skills Mini Games, in the home's order, by their names (${C.drills(cr).map(d => d.id)})`);
+  ok(C.drills(cr).every(d => d.contact === CONTACT.includes(d.id)), 'and knows which are the contact games');
+  // each game's skill: the chips on Train are what the game's own result hands the career (the circle's two, by role)
+  ok(C.drills(cr).every(d => (d.id === 'circle' ? json(d.skills) === '["stamina","handling"]' : d.skills.length === 1 && d.skills[0] === C.DRILL_SKILL[d.id])), 'each game shows the skill it trains, the circle both');
+  // a real session through each game: Train, the game's card, its result, Back to Career
+  const ran = [];
+  for (const id of ALL) for (const role of id === 'circle' ? ['runner', 'passer'] : [null]) {
+    cr.trained = false; cr.life.energy = 80; C.open();
+    const skill = id === 'circle' ? (role === 'runner' ? 'stamina' : 'handling') : C.DRILL_SKILL[id], b = cr.skills[skill];
+    const started = C.train(id) && P.state() && P.state().id === id && P.state().opts && $('pr-select').textContent === 'Back to Career' && $('pr-eyebrow').textContent === 'Training';
+    $(role ? 'pr-' + role : 'pr-retry').click(); P.finish(true, 'Well Played', 2);
+    const handed = P.state() && P.state().done && P.state().best && P.state().best.skill === skill;
+    $('pr-select').click();                                  // Back to Career: the settings restored, then the career's onDone
+    ran.push(id + (role ? ':' + role : ''));
+    if (!(started && handed && !P.state() && shown() === 's-career' && cr.trained && cr.skills[skill] === Math.min(99, b + C.TRAIN[2]) && cr.life.energy === 80 + L.LIFE.energy.train && C.last().kind === 'train' && json(C.last().gains) === json({ [skill]:C.TRAIN[2] })))
+      ok(false, `a session of ${id}${role ? ' as the ' + role : ''}: +${C.TRAIN[2]} ${skill} for ${-L.LIFE.energy.train} Energy (${started}, ${handed}, ${shown()}, ${b} to ${cr.skills[skill]}, Energy ${cr.life.energy})`);
+  }
+  ok(ran.length === 11, `a real session through each of the ten games (the circle as Runner and as Passer) gives its own skill +${C.TRAIN[2]} for two stars and costs ${-L.LIFE.energy.train} Energy, back on the hub (${ran.join(', ')})`);
+  { cr.trained = false; C.train('egg'); $('pr-retry').click(); P.finish(false, 'Have Another Go', 0); $('pr-retry').click(); $('pr-retry').click(); P.finish(true, 'Well Played', 3); $('pr-retry').click(); const b = cr.skills.handling; $('pr-select').click();
+    ok(cr.skills.handling === b + C.TRAIN[3] && cr.trained, 'Try Again on the card: the visit\'s best run is what the career gets'); }
+  { cr.trained = false; const b = json(cr.skills), e = cr.life.energy; C.train('kick'); $('pr-select').click();
+    ok(json(cr.skills) === b && cr.life.energy === e && !cr.trained && shown() === 's-career', 'a game left from its card before playing gives nothing, costs nothing and keeps the session'); }
+  // the youngest: the seven open games, no Contact Games group and no coach line, and a contact game never opens from the career
+  for (const [kids, cat, who] of [[true, 'men', 'the Kids level'], [false, 'minis', 'Minis picked']]) {
+    at(kids, cat); cr.trained = false; C.renderTrain();
+    const ct = $('ct-list').innerHTML;
+    ok(json(C.drills(cr).map(d => d.id)) === json(OPEN) && OPEN.every(id => ct.includes(`data-drill="${id}"`)) && !CONTACT.some(id => ct.includes(`data-drill="${id}"`)) && !/Contact Games|pr-coach/.test(ct), `${who}: Train lists the seven open games, with no Contact Games and no coach line`);
+    ok(CONTACT.every(id => C.train(id) === false && !P.state()) && !cr.trained, `${who}: no contact game opens from the career`);
+  }
+  at(false, 'women'); C.renderTrain();
+  { const ct = $('ct-list').innerHTML, g = ct.indexOf('Contact Games (U9 and Up)');
+    ok(g > 0 && ct.includes(T.drills.COACH) && OPEN.every(id => ct.indexOf(`data-drill="${id}"`) < g) && CONTACT.every(id => ct.indexOf(`data-drill="${id}"`) > g), 'Women: the open games, then Contact Games (U9 and Up) with the coach line over its three'); }
+  { const ct = $('ct-list').innerHTML; ok(ALL.every(id => ct.includes(`data-drill="${id}"`) && ct.includes(T.drills.icons[id])), 'each game on Train carries its Skills Mini Games picture'); }
+  // the dilemmas and the bars: a dilemma's training option and a session both move him, once each, in the same round
+  at(false, 'men');
+  { const c2 = C.create({ pos:'F', num:2, club:X.CLUBS[1] }); C.set(c2); c2.life.energy = 80;
+    const trains = d => !!d && d.opts.some(o => Object.keys(o.fx).some(k => C.skills().some(([q]) => q === k)));
+    for (let n = 0; n < 99 && !trains(L.dilemma(c2)); n++) c2.season.id = 'skills-train-' + n;   // a season whose first dilemma has a training option (the plan follows the season's id)
+    const d = L.dilemma(c2), i = d ? d.opts.findIndex(o => Object.keys(o.fx).some(k => C.skills().some(([q]) => q === k))) : -1, o = i >= 0 ? d.opts[i] : null;
+    const k = o && Object.keys(o.fx).find(q => C.skills().some(([s2]) => s2 === q)), b = k && c2.skills[k];
+    ok(!!d && i >= 0 && L.choose(i) && c2.skills[k] === b + o.fx[k] && c2.life.energy === 80 + o.fx.energy, `round 1's dilemma: its training option (${o && o.name}) gives ${k} +${o && o.fx[k]} for ${o && -o.fx.energy} Energy`);
+    const e = c2.life.energy, h = c2.skills.handling;
+    ok(C.train('egg') && ($('pr-retry').click(), P.finish(true, 'Well Played', 1), $('pr-select').click(), c2.trained) && c2.skills.handling === h + C.TRAIN[1] && c2.life.energy === e + L.LIFE.energy.train, 'and a session after it still trains and costs its Energy');
+    c2.life.energy = 5; c2.trained = false; const e2 = c2.life.energy;
+    ok(C.train('cones') && ($('pr-retry').click(), P.finish(true, 'Well Played', 3), $('pr-select').click(), c2.trained) && c2.life.energy === Math.max(0, e2 + L.LIFE.energy.train), 'a tired player can still train, Energy never under 0'); }
+  C.set(null); S.kids = was.kids; S.diff = was.diff; S.cat = was.cat; S.drillSeen = was.drillSeen;
 }
 
 // 5. match deeds
@@ -541,10 +605,11 @@ C.setCups(false);                                    // no cups unless a section
   ok(M.half === 2 && T.sides.ctrlOf(0) === me, 'the second-half kick-off puts the ring back on him');
   // the mark on the pitch: drawn in a career match only
   let calls = 0; globalThis.__ctxSpy = () => { calls++; };
+  const arc = M.arcade; M.arcade = false;                  // no trait stars (traitMarks): with every skill at 99 his own traits would star him outside a career too, the same calls as his career star
   D.view(844, 390); D.render(0.016); const withMark = calls;
-  M.career = false; calls = 0; D.render(0.016); const without = calls; M.career = true;
+  M.career = false; calls = 0; D.render(0.016); const without = calls; M.career = true; M.arcade = arc;
   globalThis.__ctxSpy = null;
-  ok(withMark > without, `the ring and star are drawn in a career match only (${withMark} > ${without} draw calls)`);
+  ok(withMark > without, `the star is drawn in a career match only (${withMark} > ${without} draw calls; PR #14: no ring of his own, the ring is who you control)`);
   // a league keeps its draws
   M.half = 2; M.score = [7, 7]; T.arcade.endHalf();
   ok(M.over && !M.golden, 'a career match level at full time is a draw, no Golden Try');
@@ -726,9 +791,9 @@ C.setCups(false);                                    // no cups unless a section
   const d = C.draft();
   ok(shown() === 's-career-new' && d.club.id === 'FAR' && d.league === 'sur' && /Farnham/.test($('cn-mine').innerHTML) && />Surrey</.test($('cn-mine').innerHTML) && /<b>7<\/b>/.test($('cn-mine').innerHTML) === false && /<b>4<\/b>/.test($('cn-mine').innerHTML), 'New Player: Farnham of Surrey to start, his shirt with a back\'s first number');
   ok(/data-n="4"/.test($('cn-num').innerHTML) && !/data-n="3"/.test($('cn-num').innerHTML), 'and a back\'s numbers');
-  ok(/<span class="lbl">Your Club<\/span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"><\/span><button class="btn" id="cn-change">Change Club<\/button><\/div>/.test(html), 'Your Club: the club and Change Club in one row');
+  ok(/<span class="lbl">Your Player<\/span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"><\/span><div class="cr-yourbtns"><button class="btn" id="cn-change">Change Club<\/button><button class="btn" id="cn-look-go">Change Look<\/button><\/div><\/div>/.test(html), 'Your Player: his shirt, the club and its league, with Change Club over Change Look');
   const left = html.slice(html.indexOf('class="cr-left"'), html.indexOf('class="cr-form"')), right = html.slice(html.indexOf('class="cr-form"'), html.indexOf('id="s-career-club"'));
-  ok(['cn-mine', 'cn-cat', 'cn-mode'].every(id => left.includes(id)) && ['cn-name', 'cn-pos', 'cn-num', 'cn-go'].every(id => right.includes(id)) && left.indexOf('cn-mine') < left.indexOf('cn-cat') && left.indexOf('cn-cat') < left.indexOf('cn-mode'), 'Your Club, Team and Play as on the left; First Name, Position, Shirt Number and Start Career on the right, so Start Career is in view');
+  ok(['cn-mine', 'cn-look-go', 'cn-cat', 'cn-mode'].every(id => left.includes(id)) && ['cn-name', 'cn-pos', 'cn-num', 'cn-go'].every(id => right.includes(id)) && left.indexOf('cn-mine') < left.indexOf('cn-cat') && left.indexOf('cn-cat') < left.indexOf('cn-mode'), 'Your Player, Team and Play as on the left; First Name, Position, Shirt Number and Start Career on the right, so Start Career is in view');
   ok(d.cat === 'men' && /<div class="field"><span class="lbl">Team<\/span><div class="seg" id="cn-cat"><button>Men<\/button><button>Women<\/button><\/div><\/div>/.test(html), 'Team is Men | Women, two equal buttons, Men first and picked');
   C.clubOpen();
   ok(shown() === 's-career-club' && !$('cc-loc').hidden && $('cc-nat').hidden && $('cc-league').hidden && /class="team cr-club picked" data-i="0" aria-pressed="true">[\s\S]*?Farnham/.test($('cc-grid').innerHTML) && X.CLUBS.every(t => $('cc-grid').innerHTML.includes('>' + t.name + '<')), 'Change Club: Local · Surrey, its clubs, Farnham picked; no My League without an import');
@@ -742,11 +807,26 @@ C.setCups(false);                                    // no cups unless a section
   C.clubOpen();
   ok(C.draft().pool === 'fra' && !$('cc-nat').hidden, 'Change Club again opens on France');
   C.catPick(1);
-  ok(C.draft().cat === 'women', 'Women picks it');
+  ok(C.draft().cat === 'women' && C.draft().look.g === 1, 'Women picks it, and a female player with it: PR #14\'s Male | Female is this one control');
+  // his look: Change Look opens Your Look, New Player's second step; a pick changes the picture, Back to New Player keeps it
+  ok(json(C.draft().look) === json({ ...C.LOOK, g:1 }), 'the default look to start');
+  $('cn-look-go').click();
+  ok(shown() === 's-career-look' && !$('ck-shirt').hidden && /<b>4<\/b>/.test($('ck-shirt').innerHTML) && /--kit:/.test($('ck-shirt').innerHTML), 'Change Look: Your Look, with his shirt for a picture while the art is not in');
+  C.lookSet('b', 1.12); C.lookSet('skin', 5); C.lookSet('hair', 3); C.lookSet('style', 9);
+  $('ck-back').click();
+  ok(shown() === 's-career-new' && C.draft().club.id === 'TLS' && json(C.draft().look) === json({ g:1, skin:5, hair:3, style:9, b:1.12 }), 'Back to New Player keeps the picks and the club');
+  { const look = html.slice(html.indexOf('id="s-career-look"'), html.indexOf('id="s-career"'));
+    ok(/<h2 class="title">Your Look<\/h2>/.test(look) && /<p class="eyebrow">New Player<\/p>/.test(look) && ['Build', 'Skin', 'Hair Colour', 'Hair Style'].every(l => look.includes(`<span class="lbl">${l}</span>`)) && !/Male|Female|Team</.test(look), 'Your Look: Build, Skin, Hair Colour and Hair Style; no second Male | Female');
+    ok(/id="ck-build"><button>Small<\/button><button>Medium<\/button><button>Big<\/button>/.test(look) && (look.match(/<button>/g) || []).length === 15 && /<button class="btn" id="ck-back" data-back>Back to New Player<\/button>/.test(look), 'three builds, the twelve styles, and Back to New Player'); }
   $('cn-go').click();
   ok(C.get() && C.get().cat === 'women' && C.get().club.id === 'TLS' && C.get().league === 'fra' && C.get().season.teams[0].name === 'Toulouse Women' && saved().career.cat === 'women', 'Start Career: a women\'s career at Toulouse, in the Top 14, saved');
+  ok(json(C.get().look) === json({ g:1, skin:5, hair:3, style:9, b:1.12 }) && json(saved().career.look) === json(C.get().look), 'with his look, saved');
+  { const raw = JSON.parse(memory['tryline.v1']); delete raw.career.look; X.restore(raw);
+    ok(json(C.get().look) === json({ ...C.LOOK, g:1 }), 'a career saved before the look builder loads with the default look, on its own body (Women: female)');
+    raw.career.look = { g:0, skin:9, hair:'x', style:3, b:1.5 }; X.restore(raw);
+    ok(json(C.get().look) === json({ g:1, skin:5, hair:C.LOOK.hair, style:3, b:1.12 }), 'a saved look is checked: clamped, a bad field the default, the body the career\'s Men | Women'); }
   C.set(null); C.newOpen();
-  ok(C.draft().cat === 'men' && C.draft().club.id === 'FAR', 'a new player starts on Men at Farnham again');
+  ok(C.draft().cat === 'men' && C.draft().club.id === 'FAR' && json(C.draft().look) === json(C.LOOK), 'a new player starts on Men at Farnham again, with the default look');
   // a team you made follows every list, and plays the league it was picked on; My League with an import
   X.restore({ custom:[{ key:'my0', name:'My Town', id:'MYT', kit:'#123456', trim:'#abcdef', pace:3, power:3, handling:3, kicking:3, stamina:3 }] });
   C.clubOpen(); C.tierPick(1); C.poolPick('sco');
@@ -830,5 +910,92 @@ C.setCups(false);                                    // no cups unless a section
   Date.now = realNow; D.CONFIRM.gap = 0;
 }
 
+// 16. in Chromium (where Playwright is installed): Train at 844x390 and 667x375, for Men, Women, the Kids level and Minis: no scroll,
+//     every target 44px, nothing over anything and no name cut off, the open games then Contact Games for the grown-up levels only, a
+//     controller's ring and the keyboard's Tab reaching every game and Back to Career, and a game pressed with the ring opening its card
+await browserChecks();
+
 console.log(`Career: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
+
+function chromium() {
+  const require = createRequire(import.meta.url);
+  for (const from of [() => require('playwright'), () => require(path.join(execFileSync('npm', ['root', '-g'], { stdio:['ignore', 'pipe', 'ignore'] }).toString().trim(), 'playwright'))]) {
+    try { return from().chromium; } catch (e) { /* not here */ }
+  }
+  return null;
+}
+async function browserChecks() {
+  if (process.env.GAME || process.env.NO_BROWSER) { console.log('skip the browser checks (GAME or NO_BROWSER set)'); return; }
+  const chrome = chromium();
+  if (!chrome) { console.log('skip the browser checks: Playwright is not installed (npm i -g playwright && npx playwright install chromium)'); return; }
+  let browser;
+  try { browser = await chrome.launch(); } catch (e) { console.log('skip the browser checks: Chromium would not start (' + e.message.split('\n')[0] + ')'); return; }
+  const dir = fileURLToPath(new URL('../', import.meta.url));
+  const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.woff2':'font/woff2', '.svg':'image/svg+xml', '.png':'image/png', '.webp':'image/webp', '.json':'application/json', '.webmanifest':'application/manifest+json' };
+  const server = http.createServer((req, res) => {
+    const file = path.resolve(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
+    if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'content-type':TYPES[path.extname(file)] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}/`;
+  const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5, drillSeen:['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend', 'tackle', 'scrum', 'back'] } };
+  try {
+    for (const [w, h] of [[844, 390], [667, 375]]) for (const touch of [true, false]) {
+      const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });
+      const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
+      await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
+      const kind = `${w}x${h} ${touch ? 'touch' : 'desk'}`;
+      for (const [who, kids, cat] of [['Men', false, 'men'], ['Women', false, 'women'], ['Kids', true, 'men'], ['Minis', false, 'minis']]) {
+        const r = await page.evaluate(([kids, cat, desk]) => {
+          const T = window.__tryline, C = T.career, X = T.teams, s = T.debug.settings(), $ = id => document.getElementById(id);
+          s.kids = kids; s.diff = kids ? 0 : 1; s.cat = cat; document.body.classList.toggle('desk', desk);
+          C.set(C.create({ name:'Sam', pos:'B', num:10, club:X.CLUBS[3] })); C.open(); $('cr-train').click();
+          const scr = $('s-career-train'), box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
+          const btns = [...scr.querySelectorAll('button')].filter(vis), tiles = btns.filter(b => b.dataset.drill);
+          const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
+          const over = btns.filter((a, i) => btns.some((b, j) => j > i && meet(box(a), box(b)))).map(b => b.dataset.drill || b.id);
+          const off = btns.filter(b => { const q = box(b); return q.top < -0.5 || q.bottom > innerHeight + 0.5 || q.left < -0.5 || q.right > innerWidth + 0.5; }).map(b => b.dataset.drill || b.id);
+          const small = btns.filter(b => box(b).height < 44 || box(b).width < 44).map(b => b.dataset.drill || b.id);
+          const cut = tiles.filter(b => [...b.querySelectorAll('.nm, .cr-chip')].some(e => e.scrollWidth > e.clientWidth + 1 || !(box(e).left >= box(b).left - 0.5 && box(e).right <= box(b).right + 0.5 && box(e).top >= box(b).top - 0.5 && box(e).bottom <= box(b).bottom + 0.5))).map(b => b.dataset.drill);
+          const grp = scr.querySelector('.ct-contact'), coach = scr.querySelector('.ct-contact .pr-coach');
+          const below = grp ? tiles.filter(b => grp.contains(b)).map(b => b.dataset.drill) : [];
+          // a controller: the first press, then every button by moving the ring; a game pressed opens its card
+          T.debug.focus() && T.debug.focus().classList.remove('padfocus');
+          const first = T.navMove(0, 0, 0);
+          const reach = new Set(), todo = [first];
+          while (todo.length) { const el = todo.shift(); if (!el || reach.has(el)) continue; reach.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); const got = T.navMove(0, dx, dy); if (got && !reach.has(got)) todo.push(got); } }
+          const unreached = btns.filter(b => !reach.has(b)).map(b => b.dataset.drill || b.id);
+          return { fits:scr.scrollHeight <= scr.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, ids:tiles.map(b => b.dataset.drill), below, coach:!!coach && vis(coach) && coach.textContent === T.drills.COACH,
+            heading:!!grp && grp.querySelector('.pr-group').textContent, over, off, small, cut, first:first && (first.dataset.drill || first.id), unreached, back:vis($('ct-back')) && box($('ct-back')).bottom <= innerHeight };
+        }, [kids, cat, !touch]);
+        const young = kids || cat === 'minis', open = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'], all = open.concat(['tackle', 'scrum', 'back']);
+        ok(r.fits && r.back && !r.off.length, `${kind} ${who}: Train fits without a scroll, Back to Career on screen (${JSON.stringify({ fits:r.fits, back:r.back, off:r.off })})`);
+        ok(!r.small.length && !r.over.length && !r.cut.length, `${kind} ${who}: every button 44px and more, none over another, no name or skill cut off or out of its tile (${[...r.small, ...r.over, ...r.cut].join(', ') || 'all clear'})`);
+        ok(young ? json(r.ids) === json(open) && !r.heading && !r.below.length : json(r.ids) === json(all) && r.heading === 'Contact Games (U9 and Up)' && r.coach && json(r.below) === json(['tackle', 'scrum', 'back']), `${kind} ${who}: ${young ? 'the seven open games, no Contact Games' : 'the seven, then Contact Games (U9 and Up) with the coach line over Tackling, Driving and Ball Back'} (${r.ids.join(', ')})`);
+        ok(r.first === 'tag' && !r.unreached.length, `${kind} ${who}: a controller's first press lands on the first game, and the ring reaches every game and Back to Career (${r.first}; ${r.unreached.join(', ') || 'all reached'})`);
+        // the keyboard: Tab goes through every game in order, then Back to Career
+        await page.evaluate(() => { document.activeElement && document.activeElement.blur(); });
+        const cyc = [];
+        for (let i = 0; i < 16; i++) { await page.keyboard.press('Tab'); const at = await page.evaluate(() => { const a = document.activeElement; return a && document.getElementById('s-career-train').contains(a) ? (a.dataset.drill || a.id) : null; }); if (at && !cyc.includes(at)) cyc.push(at); }
+        const order = cyc.slice(cyc.indexOf('tag')).concat(cyc.slice(0, Math.max(0, cyc.indexOf('tag'))));   // Tab starts where focus last was: read the loop from the first game
+        ok(json(order) === json((young ? open : all).concat(['ct-back'])), `${kind} ${who}: Tab goes round every game in order, then Back to Career (${order.join(', ')})`);
+      }
+      // press a game with the ring: its card, with Back to Career, then back to the hub
+      const pressed = await page.evaluate(() => {
+        const T = window.__tryline, C = T.career, s = T.debug.settings(), $ = id => document.getElementById(id);
+        s.kids = false; s.diff = 1; s.cat = 'men'; C.open(); $('cr-train').click(); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
+        T.navMove(0, 0, 0); T.home.ring($('ct-list').querySelector('[data-drill="kick"]')); T.navPress(0);
+        const card = T.drills.state() && T.drills.state().id === 'kick' && !$('m-practice').hidden && $('pr-select').textContent === 'Back to Career' && $('pr-eyebrow').textContent === 'Training';
+        $('pr-select').click();
+        return { card, hub:!$('s-career').hidden && !T.drills.state() };
+      });
+      ok(pressed.card && pressed.hub, `${kind}: a game pressed with the ring opens its card under Training with Back to Career, and Back to Career returns to the hub (${JSON.stringify(pressed)})`);
+      await page.evaluate(() => { const T = window.__tryline; T.career.set(null); document.body.classList.remove('desk'); });
+      ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
+      await ctx.close();
+    }
+  } finally { await browser.close(); server.close(); }
+}
