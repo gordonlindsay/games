@@ -288,13 +288,26 @@ for (const [label, offset, want] of [['inner', 0, 'intercept'], ['outer', 0.42, 
     ok(ran == null && Math.abs(p1 - (SD - 0.2)) < 1e-9 && c.result === 'dom0', `updateScrum ends the scrum at ${SD}m and not before: staged at ${(SD - 0.2).toFixed(1)}m it runs on (${ran}), at ${SD}m it is a penalty on the next step (${c.result})`);
     runUntil(() => M().phase !== 'cut', 4000);
     const c2 = still(), W = 667, bw = W*0.38;
-    const fills = pos => { c2.pos = pos; const out = []; let fs = '', ball = null; globalThis.__ctxSpy = (k, a) => { if (k === 'fillStyle') fs = a[0]; else if (k === 'fillRect') out.push([...a, fs]); else if (k === 'translate') ball = a[0]; }; T.debug.view(W, 375); T.debug.drawCut(); globalThis.__ctxSpy = null; out.ball = ball; return out; };
+    const fills = (pos, cc = c2) => { cc.pos = pos; const out = [], props = []; let fs = '', ball = null; globalThis.__ctxSpy = (k, a) => { if (k === 'fillStyle') fs = a[0]; else if (k === 'fillRect') out.push([...a, fs]); else if (k === 'translate') { ball = a[0]; if (Math.abs(a[1] - 375*0.85) < 1e-6) props.push(a[0]); } }; T.debug.view(W, 375); T.debug.drawCut(); globalThis.__ctxSpy = null; out.ball = ball; out.meet = props.length === 2 ? (props[0] + props[1])/2 : NaN; return out; };   // meet: where the packs meet, half way between the two near props (fig's translate at the ground line)
     const bar = fs => fs.filter(a => Math.abs(a[1] - 375*0.885) < 1e-6 && Math.abs(a[3] - Math.max(8, 375*0.022)) < 1e-6);   // the fill, not the frame or the line
     const right = (fs, w) => bar(fs).some(a => Math.abs(a[0] - W*0.5) < 1e-6 && Math.abs(a[2] - w) < 1e-6), left = (fs, w) => bar(fs).some(a => Math.abs(a[0] + a[2] - W*0.5) < 1e-6 && Math.abs(a[2] - w) < 1e-6);
     const atMark = fills(0), onLine = fills(-1.2), behind = fills(-1.8), pen = fills(SD), penThem = fills(-SD);
     ok(right(atMark, bw/6) && bar(onLine).length === 0 && left(behind, bw/4) && right(pen, bw/2) && left(penThem, bw/2), `drawScrum's bar on your put-in: a third of your half at the mark, none on the line, half of theirs 0.6m behind it, a whole half at ${SD}m either way`);
     ok(atMark.ball < W*0.5 && onLine.ball < W*0.5 && behind.ball > W*0.5, `the ball by the name of the side whose ball it is: yours at the mark and on the line, theirs behind it (${atMark.ball.toFixed(0)}, ${onLine.ball.toFixed(0)}, ${behind.ball.toFixed(0)} of ${W})`);
-    runUntil(() => M().phase !== 'cut', 4000); }
+    // the packs agree (2026-11-09 review: they moved by the shove from the mark, so on their put-in your pack could be seen driving
+    // theirs back up to 1.2m while the ball went to them). They meet on the line at dead level, lean the way of the pack ahead, and at
+    // a penalty stand where they always did: the screen's middle plus 0.7 of a metre's scale per metre, SD out (the wobble is 1.5px)
+    const sc = 375*0.2, at = m => W*0.5 + m*sc*0.7, near = (o, m) => Math.abs(o.meet - at(m)) <= 1.6;
+    ok(near(atMark, 0.8) && near(onLine, 0) && near(behind, -1.2) && near(pen, SD) && near(penThem, -SD), `drawScrum's packs on your put-in meet a third of the way your way at the mark, in the middle on the line, half way their way 0.6m behind it, and where they always did at ${SD}m either way (${[atMark, onLine, behind, pen, penThem].map(o => (o.meet - W*0.5).toFixed(0)).join(', ')}px from the middle)`);
+    runUntil(() => M().phase !== 'cut', 4000);
+    const c3 = (() => { freshFH(1, false); T.scrum(1, 60, 35, ''); runUntil(() => M().phase === 'cut', 600); const k = M().cut; k.base[0] = k.base[1] = 0; k.wave = 0; runUntil(() => k.engaged, 200); return k; })();
+    const short = fills(0.9, c3), past = fills(1.5, c3);
+    ok(short.meet < W*0.5 - 5 && short.ball > W*0.5 && past.meet > W*0.5 + 5 && past.ball < W*0.5, `their put-in, 0.3m short of the line: their pack is seen driving yours back, by their name (packs ${(short.meet - W*0.5).toFixed(0)}px); 0.3m past it, yours driving theirs (${(past.meet - W*0.5).toFixed(0)}px)`);
+    runUntil(() => M().phase !== 'cut', 4000);
+    let wrong = 0, cells = 0;
+    for (const feed of [0, 1]) for (let p = -2.4; p <= 2.4; p += 0.01) { const k = { feed, pos:p, line:feed === 0 ? -1.2 : 1.2 }, m = T.debug.scrumShown(k), d = p - k.line; cells++; if (Math.abs(d) < T.debug.SCRUM_TIE ? Math.abs(m) > 2*T.debug.SCRUM_TIE : (m > 0 ? 0 : 1) !== T.debug.scrumAhead(k)) wrong++; }
+    const drill = [0, 0.37, -0.81, 2.4, -2.5].every(p => T.debug.scrumShown({ pos:p, line:0 }) === p);
+    ok(wrong === 0 && cells > 900 && drill, `the packs lean the way of the side whose ball it is at every 1cm of the shove, both put-ins (${wrong} of ${cells} wrong); a drill's packs, line at the mark, stand exactly where the shove puts them (${drill})`); }
   // two player, both seats: a pack a side and the same line. Staged, a pack 0.3m past the line on the other's put-in wins it, said for that side,
   // and 0.3m short leaves it with the feeder; played, equal thumbs keep the feeder's ball, and a thumb against an idle pack takes it
   {

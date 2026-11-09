@@ -74,7 +74,8 @@ function surge(team, secs) { M.surge = { team, t:secs }; }
    the line that decides the ball (c.line, in pos), sits that far towards the other pack, so the other pack has to drive the scrum
    back 1.2m to draw level, as far as it always had to to steal (the old steal line, so the old rates hold), and the bar leans the
    feeder's way from Crouch. Each half of the bar fills at its own pack's penalty line. Dead level, nearer the line than SCRUM_TIE,
-   is the feeder's ball. A drill's scrum has no ball to win: its line is the mark, and its bar reads as it always did. */
+   is the feeder's ball. The packs on screen show the shove from the line too (scrumShown), not from the mark. A drill's scrum has
+   no ball to win: its line is the mark, and its bar and its packs read as they always did. */
 const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4, SCRUM_HEAD = 1.2, SCRUM_TIE = 0.05;
 function startScrum(s) {
   // every scrum is a little different: a CPU pack's strength varies, and the side putting in gets a small edge. pos is metres gained by team 0's pack
@@ -129,6 +130,10 @@ function resolveScrum(c) {
   finishCut(() => { releaseTo(w, mx, y, 'scrum'); if (stolen || strong) surge(w, 2.5); }, 0.8);
 }
 function scrumAhead(c) { const d = c.pos - c.line; return Math.abs(d) < SCRUM_TIE ? c.feed : d > 0 ? 0 : 1; }   // whose ball it is as the shove stands: the pack ahead of the line, the feeder's when dead level
+function scrumShown(c) {                                   // where drawScrum's packs meet, in metres either side of the screen's middle: the shove from the line, not the mark (2026-11-09 review), each side stretched so its pack's penalty line sits SCRUM_DOM out as the bar's halves fill. Level on the line, they meet in the middle; ahead of it, they lean that pack's way, so the packs, the bar and the ball agree. A drill's line is the mark: exactly pos, as before
+  const d = c.pos - c.line;
+  return d*(SCRUM_DOM/(SCRUM_DOM - Math.sign(d)*c.line));
+}
 function scrumBar(c) {                                     // the bar's fill, -1 to 1 from its middle (the line): + towards team 1's end as team 0 gains. Each half fills at that pack's penalty line; dead level shows none
   const d = c.pos - c.line;
   return Math.abs(d) < SCRUM_TIE ? 0 : d > 0 ? Math.min(1, d/(SCRUM_DOM - c.line)) : -Math.min(1, -d/(SCRUM_DOM + c.line));

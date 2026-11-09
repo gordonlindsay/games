@@ -129,7 +129,7 @@ function drawScrum(c, g) {
   if (practice) dvStage(g.H*0.62); else drawStage(g);
   const { W, H } = g, sc = H*0.2, ground = H*0.85;
   const t = c.t, engaged = t >= SCRUM_SET;
-  const mid = W*0.5 + c.pos*sc*0.7 + (engaged && !c.result ? Math.sin(t*31)*1.5 : 0);
+  const mid = W*0.5 + scrumShown(c)*sc*0.7 + (engaged && !c.result ? Math.sin(t*31)*1.5 : 0);   // the packs meet on the line at dead level and lean the way of the pack ahead, as the bar does
   const gap = engaged ? 0 : t < 0.75 ? 0.9 : 0.4;
   const lean = engaged ? 1 : t < 0.75 ? 0.5 : 0.85, crouch = engaged ? 0.75 : t < 0.75 ? 0.35 : 0.65;
   // far prop, hooker, near prop: the far two sit just behind and darker

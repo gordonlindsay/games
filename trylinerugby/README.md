@@ -1132,9 +1132,13 @@ The ladder would have gone backwards at County, so that is what moved, and only 
   the corner tag names the winner once it is won. Dead level, nearer the line than `SCRUM_TIE` (5cm), is the feeder's.
   Against the Head when the other pack ends ahead, Go-Forward Ball past 0.8m gained, Scrum Won otherwise, each said for
   the side with the ball. `SCRUM_DOM`, the Pushover, the never-pushed rule and the physics are as they were; each half of
-  the bar fills at its own pack's penalty line. `autoScrum` (AI v AI, the demo, the balance tools) is untouched, and the
-  Driving drill's line is the mark, so its bar and its scoring read as before. Possession by the sign of the shove alone,
-  or a bigger feeder's edge, was measured and turned down (duels.mjs's cells, Farnham v Haslemere, 300 a cell, SEED 1):
+  the bar fills at its own pack's penalty line. The packs on screen show the shove from the line as well, not from the
+  mark (`scrumShown`, from review): level on the line they meet in the middle, and they lean the way of the pack ahead,
+  each side stretched so a penalty lands where it always did. Before, on their put-in your pack could be seen driving
+  theirs back up to 1.2m while the ball went to them. `autoScrum` (AI v AI, the demo, the balance tools) is untouched,
+  and the Driving drill's line is the mark, so its bar, its packs and its scoring read as before. Possession by the sign
+  of the shove alone, or a bigger feeder's edge, was measured and turned down (duels.mjs's cells, Farnham v Haslemere,
+  300 a cell, SEED 1):
 
   | Variant | Normal 7 a second + hit: own kept / penalty on own | Steals Easy / Normal / Hard (7 + hit) | Hard 6 + hit | Normal 7, no hit | Normal 8 + hit: penalty on own |
   |---|---|---|---|---|---|
@@ -1181,11 +1185,12 @@ Scrums, lineouts, duels and goal kicks open a close-up: the pitch and the clock 
 - **Scrum:** the referee calls Crouch, Bind, Set. Press Push on Set for a good hit, then tap it fast. The taps alone
   are the shove, on every device and in both seats (see Decided, 2026-10-17). The scrum moves with your shove, and the
   ball comes out where it ends up. The middle of the bar is the line that decides the ball: the pack ahead of it when
-  the scrum ends has the ball, and a ball beside one side's name shows whose it is as the shove stands (see Decided,
-  2026-11-09). The side putting in starts 1.2m ahead (`SCRUM_HEAD`), so the bar leans its way from Crouch; drive them
-  back past the line on their ball to steal it. Dead level, nearer the line than `SCRUM_TIE` (5cm), is the put-in's.
-  Dominate to win a penalty (each half of the bar fills exactly at that pack's penalty line, `SCRUM_DOM` 2.4m from the
-  mark), or a pushover try within 8m of their line. Not pushing at all loses the ball, nothing worse.
+  the scrum ends has the ball, the packs lean that pack's way, and a ball beside one side's name shows whose it is as
+  the shove stands (see Decided, 2026-11-09). The side putting in starts 1.2m ahead (`SCRUM_HEAD`), so the bar and the
+  packs lean its way from Crouch; drive them back past the line on their ball to steal it. Dead level, nearer the line
+  than `SCRUM_TIE` (5cm), is the put-in's. Dominate to win a penalty (each half of the bar fills exactly at that pack's
+  penalty line, `SCRUM_DOM` 2.4m from the mark), or a pushover try within 8m of their line. Not pushing at all loses the
+  ball, nothing worse.
 - **Lineout:** one jumper each in the middle. The hooker dummies, then throws. Press Jump so your jumper is at full
   height when the ball arrives. On their throw, beating their jumper to it is a steal.
 - **Duels** fire at last-man moments, and only when you're running at the man. Steer away and none fires. There's
@@ -1573,9 +1578,13 @@ a charger.
       side that won the ball; at every 1cm of the shove on both put-ins the bar's fill leaning the way of the side whose
       ball it is (none at dead level); `drawScrum`'s bar a third full your way at the mark, empty on the line, half full
       their way 0.6m behind it and a whole half at `SCRUM_DOM` either way, with the ball drawn by the name of the side
-      whose ball it is; two player both seats, staged (0.3m past the line on the other's put-in wins it, said for that
-      player; 0.3m short leaves it) and played (7 taps a second each keeps the feeder's ball 10 of 10 both ways, 8 a
-      second against an idle pack takes it); and Kids' line and shove (`KIDS.scrum`);
+      whose ball it is; its packs meeting a third of the way your way at the mark, in the middle on the line, half way
+      their way 0.6m behind it and where they always did at `SCRUM_DOM`, on their put-in 0.3m short of the line their
+      pack seen driving yours back and 0.3m past it yours driving theirs, leaning the way of the side whose ball it is
+      at every 1cm on both put-ins, and a drill's exactly where the shove puts them; two player both seats, staged (0.3m
+      past the line on the other's put-in wins it, said for that player; 0.3m short leaves it) and played (7 taps a
+      second each keeps the feeder's ball 10 of 10 both ways, 8 a second against an idle pack takes it); and Kids' line
+      and shove (`KIDS.scrum`);
     - the Key Pass runner box (7m fires, 8m is a Get Past), and the gesture history cleared by the stick's restore after a duel;
     - slow motion (2026-10-17): for every kind at every level, the windows, tells, plan, verdict, judged time and random draws
       are the same with and without it on one seed, the scene clock is always on a whole frame and the slide-in is not slowed,
