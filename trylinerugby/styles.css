@@ -619,6 +619,13 @@ body.desk .desk-only{display:block}
 .st-have{display:flex;flex-direction:column;gap:6px}
 .st-own{display:flex;align-items:center;gap:10px;margin:0;font:700 13px/1.2 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--chalk)}
 .st-own .jersey{width:28px;height:28px}
+/* a Super Fan's line in Grown-Ups: Join the Supporters' Wall beside the club's name, which takes two lines to make room (a row of its
+   own pushed the panel off a phone held sideways). The name is never narrower than its longest word; where the two cannot share a
+   line (a tall phone, a very long name) the button drops under the name, across the card */
+.st-own.st-fanown{flex-wrap:wrap;row-gap:6px}
+.st-fanown > .jw{flex:none}
+.st-fanown > .st-ownname{flex:999 1 120px}
+#m-store .st-fanown .btn.st-wall{width:auto;flex:1 0 auto;min-height:44px;padding:4px 12px;font:700 13px/1.1 var(--body);letter-spacing:normal;text-transform:none;text-wrap:balance}
 .st-msg{margin:0;color:var(--chalk);font-weight:700}
 .st-fanbuy{display:flex;flex-direction:column;gap:6px}
 .st-fanbuy .btn{display:flex;align-items:center;gap:12px;text-align:left}
@@ -637,7 +644,14 @@ body.desk .desk-only{display:block}
   #m-store .btn.primary{min-height:54px;font-size:22px}
   #m-store .btn{min-height:44px}
   #m-store .hsub{letter-spacing:.05em}
-  .st-foot .btn{padding-inline:8px;line-height:1.05}   /* Restore Purchases may take two lines in its half; the row stays 44px */
+  .st-foot .btn{padding:4px 8px;line-height:1.05}   /* Restore Purchases may take two lines in its half; the row stays 44px */
+  /* a Super Fan's line beside something still on offer: the columns go to halves, so the club's name and Join the Supporters' Wall
+     (each on two lines) share the left one's line */
+  #m-store .card:not(.solo):has(.st-fanown){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #m-store .card:has(.st-fanown) .st-head{gap:8px}   /* the Super Fan's line is 44px with its button: the head gives a little back, */
+  #m-store .card:has(.st-fanown) .st-msg{line-height:1.2}   /* so a two-line message still fits beside an offer with both Kids buttons */
+  #m-store .card:not(.solo) .st-fanown > .st-ownname{flex:1 1 115px}
+  #m-store .card:not(.solo) .st-fanown .btn.st-wall{flex:1 1 120px;padding-inline:8px}
 }
 @media (orientation:landscape) and (max-height:420px){
   #b-grown{white-space:nowrap}
@@ -1040,13 +1054,16 @@ summary::-webkit-details-marker{display:none}
 .st-fan img.fan-shield{object-fit:contain;filter:none}
 /* the gold Super Fan trophy: in the Locker's Medals, a tile a club before the feats (the trophy, Super Fan, the club, and Join the
    Supporters' Wall where the unlock is owned); in the Trophy Cabinet, its own kind, in gold */
-.lk-fanrow{grid-column:1/-1;display:flex;gap:8px;min-width:0}
+.lk-fanrow{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;min-width:0}
 .lk-fan{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;padding:4px 6px 4px 8px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
+.lk-fanrow.many .lk-fan{flex-basis:220px}   /* two a row on every phone held sideways; a third wraps under them */
+#s-locker .lk-fanrow.many .btn.lk-wall{flex-basis:132px}   /* two a row: Join the Supporters' Wall on two lines, the club's name on one */
 .lk-fan.new{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}
 .lk-cup{display:block;width:40px;height:40px;flex:none}
-.lk-fanname{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
-.lk-fanname b{font:800 16px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;color:#ffcf3d}
-.lk-fanname span{font:700 14px/1.15 var(--body);overflow-wrap:anywhere}
+/* the name never narrower than its longest word, so a club's name breaks only between words; Join the Supporters' Wall yields first */
+.lk-fanname{flex:1 1 auto;display:flex;flex-direction:column;gap:3px}
+.lk-fanname b{font:800 16px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;color:#ffcf3d;white-space:nowrap}
+.lk-fanname span{font:700 14px/1.15 var(--body)}
 #s-locker .btn.lk-wall{width:auto;flex:0 1 auto;min-height:44px;padding:4px 12px;font-size:13px;line-height:1.1;text-wrap:balance}
 [data-kind="fan"]{--kc:#ffcf3d}
 .cabinet > .fan-entry:first-child{border-top:0;padding-top:2px}   /* first in the cabinet: no rule above it */
@@ -1063,6 +1080,12 @@ summary::-webkit-details-marker{display:none}
      a little, so the twelve still fit under it without a scroll */
   .lk-t0:has(.lk-fanrow) .lk-feat{padding:4px}
   .lk-t0:has(.lk-fanrow) .lk-ic{width:20px;height:20px}
+  /* two clubs side by side: a smaller cup and tighter tiles, the club's name on two lines and Join the Supporters' Wall on two */
+  .lk-fanrow.many .lk-fan{gap:6px;padding:2px 4px 2px 5px}
+  .lk-fanrow.many .lk-cup{width:28px;height:28px}
+  .lk-fanrow.many .lk-fanname{gap:2px}
+  .lk-fanrow.many .lk-fanname span{line-height:1.08}
+  #s-locker .lk-fanrow.many .btn.lk-wall{flex-basis:auto;padding-inline:6px}
 }
 /* the Supporters' Wall card (ui-store.js): Are you 18 or over? with Yes, I'm 18 or Over | Cancel in halves, then How Your Name Appears
    with Continue | Cancel; over the Locker or in the Grown-Ups card's place */

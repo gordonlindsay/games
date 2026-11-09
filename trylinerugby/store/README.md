@@ -197,7 +197,7 @@ or once the game is unlocked.
 ## Grown-Ups
 
 The home's **Grown-Ups** button (in the app, and on the free web) opens the panel: what this device owns (with Join the
-Supporters' Wall under a Super Fan), the offers not yet owned, Restore Purchases, and Privacy and Support, which open
+Supporters' Wall beside a Super Fan's club), the offers not yet owned, Restore Purchases, and Privacy and Support, which open
 `privacy.html` and `support.html` on GitHub Pages in the system browser. Every one of those, and every purchase on the Unlock
 card, asks a grown-up first (`parentGate`, `src/kids.js`).
 
@@ -220,5 +220,6 @@ and in the Grown-Ups panel, only for a club whose unlock this device owns, in th
 `storeOpenUrl`, the way every link leaves the game) addressed to support@signcheck.ai, with the subject "Supporters' Wall:
 (club)" and the name, the club and the line "I am 18 or over. I agree to be listed on the Supporters' Wall by this name, and I can
 ask to be removed at any time." The game sends nothing and keeps no name: the field is emptied however the card closes, and
-nothing of it is saved. SignCheck Ltd checks each request by hand and lists the name (`store-listing/LAUNCH_CHECKLIST.md`). The
+nothing of it is saved. SignCheck Ltd checks each request by hand and lists the name (`store-listing/LAUNCH_CHECKLIST.md`); superfan.html is in this public
+repository, so a name taken off the page stays in its history, as PRIVACY.md and superfan.html say. The
 privacy label stays Data Not Collected (`store-listing/APP_STORE.md` has the reasoning). Never call it a donation or charity.

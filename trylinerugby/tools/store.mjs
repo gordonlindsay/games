@@ -710,7 +710,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // the app with Farnham's Super Fan: offered in the Grown-Ups panel and the Locker
   app(); FARNHAM.agreed = true; L.set(L.fresh()); S.setBought(['tryline.fan.farnham']); D.goHome();
   S.open({ mode:'grown' });
-  ok(/<p class="st-own">[^]*Super Fan · Farnham RUFC<\/span><\/p><button class="btn st-wall" data-wall="farnham">Join the Supporters' Wall<\/button>/.test($('st-have').innerHTML), 'the Grown-Ups panel: Join the Supporters\' Wall under the Super Fan it has');
+  ok(/^<p class="st-own st-fanown"><span class="jw[^]*?<\/span><span class="st-ownname">Super Fan · Farnham RUFC<\/span><button class="btn st-wall" data-wall="farnham">Join the Supporters' Wall<\/button><\/p>$/.test($('st-have').innerHTML), 'the Grown-Ups panel: Join the Supporters\' Wall on the line of the Super Fan it has, beside the club\'s name (a row of its own pushed the card off a phone)');
   ok(/data-wall="farnham"/.test(L.fanHtml()), 'and the Locker\'s Super Fan tile');
   ok(S.wallAsk('guildford') === false && !K.gate(), 'never for a club the device does not own');
   opened.length = 0;

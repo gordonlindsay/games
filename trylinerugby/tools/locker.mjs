@@ -7,7 +7,9 @@
 // height), the Locker's tabs at both sizes, its keyboard and controller reach, Continue on the full-time card with medals on it, and
 // full time in Quick Match, Two Player, a Championship and a career never taller with medals than without. The Super Fan trophy too:
 // first on the Medals tab, gold with the club's kit colours, never a medal; and in the browser the tab with it, the Supporters' Wall
-// card at both steps, the Grown-Ups panel with Join the Supporters' Wall and the Trophy Cabinet with the trophy first, at both sizes.
+// card at both steps, the Grown-Ups panel with Join the Supporters' Wall beside the club's name (plain, with the Kids buttons and a
+// message, after a real Restore Purchases), two clubs' trophies sharing the row (names never broken inside a word) and the Grown-Ups
+// panel beside a second club on offer, and the Trophy Cabinet with the trophy first, at both sizes.
 // node tools/locker.mjs            (SEED=37 unless set; VERBOSE=1 lists every check)
 // node tools/locker.mjs --pins     prints this build's fingerprints; GAME=<d6192ad>/index.html node tools/locker.mjs --pins re-pins BASE
 process.env.SEED ??= '37';
@@ -456,6 +458,8 @@ function champAt4(userWins) {
   S.FAN_CLUBS.push({ key:'guildford', name:'Guildford RFC', product:'tryline.fan.guildford', share:50, agreed:true, team:'GUI', crest:null });
   L.set(L.clean({ fan:['guildford', 'farnham'], fanSeen:2 })); L.render(); const two = $('lk-body').innerHTML;
   ok((two.match(/class="lk-fan"/g) || []).length === 2 && two.indexOf('Guildford RFC') < two.indexOf('Farnham RUFC') && /fill="#1a1e4f"/.test(two) && /stroke="#ffc014"/.test(two), 'two clubs: two trophies in one row, in the order awarded, each in its own colours');
+  ok(/^<div class="lk-fanrow many">/.test(two) && /^<div class="lk-fanrow">/.test(med), 'two or more: the row is marked many (two a row, compact on a narrow phone, a third wrapping under them); one is not');
+  ok(!/\.lk-fan[^{]*\{[^}]*overflow-wrap:anywhere/.test(css) && /\.lk-fanname\{[^}]*\}/.test(css) && !/\.lk-fanname\{[^}]*min-width:0/.test(css), 'a club\'s name breaks only between words: no overflow-wrap:anywhere, and the name never narrower than its longest word');
   S.FAN_CLUBS.length = 1;
   ok(json(L.clean({ fan:['guildford', 'farnham'] }).fan) === '["farnham"]', 'a club the game no longer has drops out');
   ok(/\.lk-fanrow\{grid-column:1\/-1;/.test(css), 'the row spans the Medals grid');
@@ -560,11 +564,26 @@ async function browserChecks() {
         document.getElementById('wl-yes').click(); const inp = document.getElementById('wl-input'); inp.value = 'Alexandra, Godalming'; inp.dispatchEvent(new Event('input'));
         out.name = { ...card(), go:!document.getElementById('wl-go').disabled, field:box(inp).height >= 44 };
         T.store.wallClose(); out.closed = document.getElementById('m-wall').hidden && inp.value === '' && !document.getElementById('s-locker').hidden;
-        // the Grown-Ups panel, with Join the Supporters' Wall
-        T.debug.goHome(); S.open({ mode:'grown' });
-        const m = document.getElementById('m-store'), c = m.querySelector('.card'), r = box(c), j = m.querySelector('[data-wall]');
-        out.grown = { fits:r.top >= 0 && r.bottom <= innerHeight && fit(m), small:small(m), join:!!j && box(j).height >= 44 };
-        S.close();
+        // the Grown-Ups panel, with Join the Supporters' Wall beside the club's name on its line: plain, and with Reset Kids Level, and
+        // with Move Up to Easy beside it, each with a message showing (the store's longest, and Purchases are up to date from a real
+        // Restore Purchases through the grown-up check); a row of its own once pushed the card off both phones in these
+        const st = T.debug.settings(), was = { kids:st.kids, diff:st.diff, kidsR:st.kidsR, kidsTop:st.kidsTop };
+        const grown = label => {
+          const m = document.getElementById('m-store'), c = m.querySelector('.card'), r = box(c), j = m.querySelector('[data-wall]'), own = m.querySelector('.st-fanown'), nm = own && own.querySelector('.st-ownname');
+          return { label, open:!m.hidden, fits:r.top >= 0 && r.bottom <= innerHeight && fit(m), small:small(m), msg:document.getElementById('st-msg').hidden ? '' : document.getElementById('st-msg').textContent,
+            kids:['st-reset', 'st-easy'].filter(id => !document.getElementById(id).hidden), join:!!j && !!nm && j.parentElement === own && box(j).height >= 44 && box(j).top < box(nm).bottom && box(nm).top < box(j).bottom && box(j).left >= box(nm).right && box(j).right <= box(c).right,
+            clipped:[...m.querySelectorAll('.btn, .st-ownname')].filter(e => !e.closest('[hidden]') && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)).map(e => e.textContent) };
+        };
+        out.grown = [];
+        for (const [label, kidsR, kidsTop, msg] of [['plain', 0, 0, ''], ['Reset Kids Level', 3, 0, S.MSG.store], ['Reset Kids Level | Move Up to Easy', 3, 6, S.MSG.store]]) {
+          Object.assign(st, { kids:true, diff:0, kidsR, kidsTop }); T.debug.goHome(); S.open({ mode:'grown' }); S.ui().msg = msg; S.cardRender();
+          out.grown.push(grown(label)); S.close();
+        }
+        Object.assign(st, { kids:true, diff:0, kidsR:3, kidsTop:6 }); T.debug.goHome(); S.open({ mode:'grown' });
+        S.setBackend({ restore:async () => ({ ok:true, ids:['tryline.fan.farnham'] }), purchases:async () => ({ ok:true, owned:['tryline.fan.farnham'] }), prices:async () => ({ ok:true, prices:{} }) });
+        S.restoreAsk(); const rg = T.kids.gate(); for (const d of rg.answer) T.kids.type(d);
+        for (let i = 0; i < 50 && (i < 1 || S.ui().busy); i++) await new Promise(r => setTimeout(r, 10));   // the restore answers
+        out.grown.push(grown('Restore Purchases, Reset Kids Level | Move Up to Easy')); S.close(); S.setBackend(null); Object.assign(st, was);
         // the Trophy Cabinet: the trophy first
         T.debug.settings().hl = 'champ'; T.debug.goHome(); document.getElementById('b-cabinet').click();
         const first = document.querySelector('#home-history > *'), cup = first && first.querySelector('.lk-cup');
@@ -577,8 +596,53 @@ async function browserChecks() {
       ok(fan.tabs.every(r => !r.small.length && !r.clipped.length && r.btn && r.cup), `${w}x${h}: the trophy drawn in gold with the kit's colours, Join the Supporters' Wall 44px and inside its tile, nothing cut off (${json(fan.tabs.map(r => [r.small, r.clipped, r.btn, r.cup]))})`);
       ok(fan.age.open && fan.age.fits && fan.age.halves && !fan.age.small.length && !fan.age.clipped.length, `${w}x${h}: the Supporters' Wall card's first step fits, Yes, I'm 18 or Over | Cancel in equal halves, 44px (${json(fan.age)})`);
       ok(fan.name.open && fan.name.fits && fan.name.halves && fan.name.go && fan.name.field && !fan.name.small.length && !fan.name.clipped.length && fan.closed, `${w}x${h}: and its second, How Your Name Appears and Continue | Cancel; closed, its field empty, back on the Locker (${json(fan.name)})`);
-      ok(fan.grown.fits && fan.grown.join && !fan.grown.small.length, `${w}x${h}: the Grown-Ups panel with Join the Supporters' Wall fits, every button 44px (${json(fan.grown)})`);
+      ok(fan.grown.length === 4 && fan.grown.every(r => r.open && r.fits && r.join && !r.small.length && !r.clipped.length), `${w}x${h}: the Grown-Ups panel with Join the Supporters' Wall beside the club's name fits, every button 44px and nothing cut off: plain, with Reset Kids Level, with Move Up to Easy beside it, a message showing (${json(fan.grown.filter(r => !(r.open && r.fits && r.join && !r.small.length && !r.clipped.length)))})`);
+      ok(json(fan.grown.map(r => [r.kids.length, r.msg])) === json([[0, ''], [1, 'Could not reach the store. Try again later.'], [2, 'Could not reach the store. Try again later.'], [2, 'Purchases are up to date.']]), `${w}x${h}: and those were the states measured: the Kids buttons and the message each showing (${json(fan.grown.map(r => [r.label, r.kids, r.msg]))})`);
       ok(fan.cab.shown && fan.cab.first && fan.cab.cup && fan.cab.gold, `${w}x${h}: the Trophy Cabinet opens with the Super Fan trophy first, its kind in gold (${json(fan.cab)})`);
+      // a second partner club (Guildford RFC, a stand-in): both owned, the Medals tab's two trophies share the row and the tab still fits,
+      // nothing, some or everything earned, each name whole (never broken inside a word) and each Join the Supporters' Wall 44px inside
+      // its tile; then only Farnham owned and Guildford on offer, the Grown-Ups panel in two columns, plain and with both Kids buttons
+      // and a message
+      const two = await page.evaluate(() => {
+        const T = window.__tryline, L = T.locker, S = T.store, out = { tabs:[], grown:[] }, box = el => el.getBoundingClientRect();
+        const fit = el => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth;
+        const small = root => [...root.querySelectorAll('button')].filter(b => !b.closest('[hidden]') && box(b).width > 0).filter(b => box(b).height < 44 || box(b).width < 44).map(b => b.id || b.textContent.trim());
+        const broken = root => {                   // a word's own boxes, split at spaces, on more than one line
+          const cut = [], walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), range = document.createRange();
+          for (let n = walk.nextNode(); n; n = walk.nextNode()) for (const m of n.data.matchAll(/[^\s]+/g)) {
+            range.setStart(n, m.index); range.setEnd(n, m.index + m[0].length);
+            if (new Set([...range.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top))).size > 1) cut.push(m[0]);
+          }
+          return cut;
+        };
+        S.FAN_CLUBS.push({ key:'guildford', name:'Guildford RFC', product:'tryline.fan.guildford', share:50, agreed:true, team:'GUI', crest:null });
+        const agreed = S.FAN_CLUBS[0].agreed; S.FAN_CLUBS[0].agreed = true;
+        S.setNative(true); S.setStarted(true); S.setBought(['tryline.fan.farnham', 'tryline.fan.guildford']);
+        for (const v of [{}, { n:{ hat:4, sharp:1, hit:2, clean:3 } }, { n:{ hat:12, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, silver:10, callup:10 }, drills:T.drills.DRILLS.map(d => d.id) }]) {
+          L.set(L.clean(v)); L.fanAward(); L.open(0);
+          const s = document.getElementById('s-locker'), row = s.querySelector('.lk-fanrow'), tiles = [...s.querySelectorAll('.lk-fan')];
+          out.tabs.push({ fits:fit(s), many:!!row && row.classList.contains('many'), tiles:tiles.length, level:tiles.length === 2 && Math.abs(box(tiles[0]).top - box(tiles[1]).top) < 1 && Math.abs(box(tiles[0]).width - box(tiles[1]).width) < 1,
+            names:tiles.map(t => t.querySelector('.lk-fanname span').textContent), small:small(s), broken:row ? broken(row) : ['no row'],
+            clipped:[...s.querySelectorAll('.lk-fanname b, .lk-fanname span, .lk-wall')].filter(e => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).map(e => e.textContent),
+            inside:tiles.every(t => { const b = t.querySelector('.lk-wall'), q = b && box(b), r = box(t), nm = box(t.querySelector('.lk-fanname')); return !!b && q.height >= 44 && q.left >= nm.right && q.right <= r.right + 0.5 && q.top >= r.top && q.bottom <= r.bottom + 0.5; }) });
+        }
+        S.setBought(['tryline.fan.farnham']); L.set(L.fresh()); L.fanAward();
+        const st = T.debug.settings(), was = { kids:st.kids, diff:st.diff, kidsR:st.kidsR, kidsTop:st.kidsTop };
+        for (const [kidsR, kidsTop, msg] of [[0, 0, ''], [3, 6, S.MSG.store]]) {
+          Object.assign(st, { kids:true, diff:0, kidsR, kidsTop }); T.debug.goHome(); S.open({ mode:'grown' }); S.ui().msg = msg; S.cardRender();
+          const m = document.getElementById('m-store'), c = m.querySelector('.card'), r = box(c), j = m.querySelector('[data-wall]'), nm = m.querySelector('.st-ownname');
+          out.grown.push({ card:[Math.round(r.top), Math.round(r.bottom)], msg:document.getElementById('st-msg').textContent, kids:['st-reset', 'st-easy'].filter(id => !document.getElementById(id).hidden).length, two:!c.classList.contains('solo') && /Guildford RFC/.test(document.getElementById('st-offers').textContent), fits:r.top >= 0 && r.bottom <= innerHeight && fit(m), small:small(m), broken:broken(m.querySelector('.st-have')),
+            join:!!j && !!nm && box(j).height >= 44 && box(j).top < box(nm).bottom && box(nm).top < box(j).bottom && box(j).left >= box(nm).right,
+            clipped:[...m.querySelectorAll('.btn, .st-ownname, .st-share')].filter(e => !e.closest('[hidden]') && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)).map(e => e.textContent) });
+          S.close();
+        }
+        Object.assign(st, was); S.FAN_CLUBS.length = 1; S.FAN_CLUBS[0].agreed = agreed;
+        S.setNative(false); S.setStarted(false); S.setBought([]); L.set(L.fresh()); T.debug.goHome();
+        return out;
+      });
+      ok(two.tabs.length === 3 && two.tabs.every(r => r.fits && r.many && r.tiles === 2 && r.level), `${w}x${h}: two clubs' Super Fan trophies share the Medals tab's row, equal and level, and the tab still fits without a scroll, nothing, some or everything earned (${json(two.tabs.map(r => [r.fits, r.many, r.tiles, r.level]))})`);
+      ok(two.tabs.every(r => !r.small.length && !r.broken.length && !r.clipped.length && r.inside && json(r.names) === '["Farnham RUFC","Guildford RFC"]'), `${w}x${h}: and each club's name whole, never broken inside a word, with its Join the Supporters' Wall 44px beside it in its tile (${json(two.tabs.map(r => [r.small, r.broken, r.clipped, r.inside]))})`);
+      ok(two.grown.length === 2 && two.grown.every(r => r.two && r.fits && r.join && !r.small.length && !r.broken.length && !r.clipped.length) && json(two.grown.map(r => [r.kids, r.msg])) === json([[0, ''], [2, 'Could not reach the store. Try again later.']]), `${w}x${h}: the Grown-Ups panel beside a second club on offer, in two columns, fits with Join the Supporters' Wall beside the club's name, plain and with Reset Kids Level | Move Up to Easy and the store's longest message (${json(two.grown)})`);
       // the keyboard: Tab reaches the tabs and the swatches, Enter presses, Escape goes home
       await page.evaluate(() => { const L = window.__tryline.locker; L.set(L.clean({ n:{ hat:3, sharp:1 } })); L.open(0); document.activeElement && document.activeElement.blur(); });
       await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await page.keyboard.press('Enter');

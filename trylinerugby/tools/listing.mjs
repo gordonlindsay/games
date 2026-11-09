@@ -10,7 +10,8 @@
 // superfan.html's words; Apple's copy without Super Fan (for a build with no club agreed) names neither Super Fan nor Add Your Team (the import), and
 // the copy with it (the .fan keys) is there for when one is; every page names the company with its registration; the owner's wording
 // of 9 November 2026 (the subtitle and the Full Game's descriptions) and every place that repeats it in step; the Supporters' Wall on
-// superfan.html (its steps, adults only, a list only for an agreed club), in PRIVACY.md and the launch checklist, and a crest only with
+// superfan.html (its steps, adults only, a list only for an agreed club), in PRIVACY.md and the launch checklist (removal takes a name
+// off the page, and its earlier versions stay readable in the public repository's history, said plainly), and a crest only with
 // the club's written permission; the screenshots are all there at their exact sizes with no alpha channel.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -347,8 +348,14 @@ for (const f of fs.readdirSync(at('src')).filter(f => f.endsWith('.js'))) {
   ok(lists.length || /No names yet\./.test(wall), 'empty to start: No names yet.');
   const md = read('PRIVACY.md');
   ok(/Requests to join the wall arrive by email\. SignCheck Ltd checks each one by hand and keeps only the name and the club, to publish them/.test(md) && /email support@signcheck\.ai at any time and we will remove it/.test(md) && /We never list a child/.test(md), 'PRIVACY.md: requests arrive by email, SignCheck Ltd keeps only the name and the club to publish them, removal on request, never a child');
+  // the names are published by committing them to superfan.html in a public repository: taking one off the page leaves it in the
+  // repository's history, and every page that promises removal says so plainly (the owner decides before the first name goes up)
+  const history = /The page is published from a public code repository on GitHub, so its earlier versions, with any name that was on them, can still be read in that repository's history after a name comes off the page\./;
+  ok(/email support@signcheck\.ai at any time and we will remove it from the page\./.test(md) && history.test(md) && /to take it off the page \(earlier versions of the page stay readable, as Supporters' Wall says\)/.test(md) && !/we will remove it\.(?!\w)/.test(md), 'PRIVACY.md (and so privacy.html): removal takes a name off the page, and earlier versions stay readable in the public repository\'s history');
+  ok(/we will remove it from this page\. This page is published from a public code repository on GitHub, so its earlier versions, with any name that was on them, can still be read in that repository's history after a name comes off the page\./.test(wall), 'superfan.html says the same where it promises removal');
   const lc = read('store-listing/LAUNCH_CHECKLIST.md');
   ok(/\*\*The Supporters' Wall: reviewing and publishing names\.\*\*/.test(lc) && /18 or over/.test(lc) && /Delete the email/.test(lc), 'the launch checklist has the owner\'s step: check each request, publish the name, delete the email, remove on request');
+  ok(/\*\*The Supporters' Wall: where the names live, decided before the first one goes up\.\*\*[^\n]*public repository[^\n]*history/.test(lc) && /reply to say it is off the page, and that earlier versions of the page stay in the public repository's history/.test(lc) && lc.indexOf('where the names live') < lc.indexOf('reviewing and publishing names'), 'and, before it, the owner\'s decision on where the names live, with the public history spelled out; a removal\'s reply says the same');
   ok(/\*\*A crest only with the club's written permission\.\*\*/.test(lc) && /crest[^.]*\*\*written permission\*\*|written permission[^.]*crest|crest[^.]*written permission/i.test(read('store-listing/SUPER_FAN.md')), 'the launch checklist and SUPER_FAN.md: a crest only with the club\'s written permission');
   if (fc && fc.clubs) ok(fc.clubs.every(c => c.crest === null || (/^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/.test(c.crest) && fs.existsSync(at(c.crest)))), 'every crest in FAN_CLUBS is null, or a file of the game\'s own that is there');
 }

@@ -48,11 +48,12 @@ function lockerCup(t) {
     + `<path d="M24 9.4l5 1.8v3.9c0 3.3-2.1 5.6-5 6.8-2.9-1.2-5-3.5-5-6.8v-3.9z" fill="${k}" stroke="${tr}" stroke-width="1.4" stroke-linejoin="round"/>`
     + `<path d="M21 28.5h6v6h-6z" fill="#e2ab27" stroke="${ink}" stroke-width="1.4"/><path d="M13.5 34.5h21v9h-21z" fill="${g}" stroke="${ink}" stroke-width="1.6"/><path d="M13.5 37.6h21v2.8h-21z" fill="${k}" stroke="${tr}" stroke-width="1"/></svg>`;
 }
-/* The Medals tab's Super Fan row: a tile a club, with Join the Supporters' Wall for a club whose unlock this device owns (src/ui-store.js). */
+/* The Medals tab's Super Fan row: a tile a club, with Join the Supporters' Wall for a club whose unlock this device owns (src/ui-store.js).
+   Two clubs or more (.many): the tiles share the row, compact on a narrow phone; a third wraps under them. */
 function lockerFanHtml(news) {
   const held = lockerFanClubs(); if (!held.length) return '';
   const own = typeof storeFanOwned === 'function' ? storeFanOwned() : [];
-  return `<div class="lk-fanrow">${held.map(({ club:c, team:t }) => `<div class="lk-fan${news && news.has('fan:' + c.key) ? ' new' : ''}" role="group" aria-label="Super Fan Trophy, ${esc(c.name)}">${lockerCup(t)}<span class="lk-fanname"><b>Super Fan</b><span>${esc(c.name)}</span></span>${own.includes(c) ? `<button class="btn lk-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button>` : ''}</div>`).join('')}</div>`;
+  return `<div class="lk-fanrow${held.length > 1 ? ' many' : ''}">${held.map(({ club:c, team:t }) => `<div class="lk-fan${news && news.has('fan:' + c.key) ? ' new' : ''}" role="group" aria-label="Super Fan Trophy, ${esc(c.name)}">${lockerCup(t)}<span class="lk-fanname"><b>Super Fan</b><span>${esc(c.name)}</span></span>${own.includes(c) ? `<button class="btn lk-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button>` : ''}</div>`).join('')}</div>`;
 }
 /* The Trophy Cabinet's Super Fan trophies (renderCabinet, src/ui-menus.js): first, each its own entry, never in the tally. */
 function lockerFanCabinet() {

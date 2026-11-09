@@ -40,7 +40,7 @@ The partner clubs live in one list in the game, `FAN_CLUBS = [{ key, name, produ
 A Super Fan's grown-up can ask to be named on the club's wall on superfan.html (the owner's idea, 9 November 2026: "depending on age, approve name, their choice"). It is opt-in, adults only, and the game itself collects nothing:
 
 - In the app (the Super Fan tile in the Locker, or the Grown-Ups panel), Join the Supporters' Wall comes after the grown-up check, then asks Are you 18 or over? and How Your Name Appears (a first name and a town, or a first name and an initial). Continue opens the grown-up's own email app with the request written out to support@signcheck.ai: the name as typed, the club, and that they are 18 or over, agree to be listed and can ask to be removed at any time. The game sends nothing and keeps no name.
-- SignCheck Ltd checks each request by hand (LAUNCH_CHECKLIST.md has the steps) and adds the name under the club on superfan.html. It keeps only the name and the club, to publish them, deletes the email once done, and takes a name off whenever asked. privacy.html says so.
+- SignCheck Ltd checks each request by hand (LAUNCH_CHECKLIST.md has the steps) and adds the name under the club on superfan.html. It keeps only the name and the club, to publish them, deletes the email once done, and takes a name off the page whenever asked. superfan.html is in a public repository, so a name taken off stays in its history; privacy.html and superfan.html say so, and LAUNCH_CHECKLIST.md has the owner's decision on where the names live before the first goes up.
 - It is part of what a supporter gets, never a donation or charity, and it is shown only for a club that has agreed in writing.
 
 ## How Each Club's Sales Are Counted

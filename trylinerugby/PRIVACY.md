@@ -30,7 +30,7 @@ Super Fan supports a partner club: before you buy, the game states the share of 
 
 A grown-up with Super Fan, aged 18 or over, can ask to have a name shown on their club's Supporters' Wall, on our Super Fan page. In the app, Join the Supporters' Wall comes after the grown-up check and a question that you are 18 or over. You type the name as you want it shown (a first name and a town, or a first name and an initial), and Continue opens your own email app with the request written out to support@signcheck.ai. The game sends nothing itself, and it keeps nothing you typed: the field is emptied when the card closes.
 
-Requests to join the wall arrive by email. SignCheck Ltd checks each one by hand and keeps only the name and the club, to publish them on the Super Fan page; once the name is up, or we decide not to list it, we delete the email. We never list a child, or anything but a first name with a town or an initial. To have a name taken off, email support@signcheck.ai at any time and we will remove it.
+Requests to join the wall arrive by email. SignCheck Ltd checks each one by hand and keeps only the name and the club, to publish them on the Super Fan page; once the name is up, or we decide not to list it, we delete the email. We never list a child, or anything but a first name with a town or an initial. To have a name taken off, email support@signcheck.ai at any time and we will remove it from the page. The page is published from a public code repository on GitHub, so its earlier versions, with any name that was on them, can still be read in that repository's history after a name comes off the page.
 
 ## Going online
 
@@ -48,7 +48,7 @@ Anything that leaves the game or costs money first asks a grown-up to answer a m
 
 ## Your information
 
-The game holds nothing about you anywhere but on your own device (and in your phone's own backup), so there is nothing for us to show you, correct or delete. To remove everything it keeps, delete the app or clear the site's data in your browser. The one exception is a name on a Supporters' Wall, which you asked us to show: email support@signcheck.ai to see, change or remove it.
+The game holds nothing about you anywhere but on your own device (and in your phone's own backup), so there is nothing for us to show you, correct or delete. To remove everything it keeps, delete the app or clear the site's data in your browser. The one exception is a name on a Supporters' Wall, which you asked us to show: email support@signcheck.ai to see or change it, or to take it off the page (earlier versions of the page stay readable, as Supporters' Wall says).
 
 ## Contact
 

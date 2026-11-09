@@ -163,7 +163,7 @@ function storeCardRender() {
   const have = [];
   if (app && grown) {                      // the panel says what this device has
     const c = storeFanClub();
-    if (c) have.push(`<p class="st-own">${jersey(storeTeamOf(c))}<span>Super Fan · ${esc(c.name)}</span></p>`, `<button class="btn st-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button>`);
+    if (c) have.push(`<p class="st-own st-fanown">${jersey(storeTeamOf(c))}<span class="st-ownname">Super Fan · ${esc(c.name)}</span><button class="btn st-wall" data-wall="${esc(c.key)}">Join the Supporters' Wall</button></p>`);   // beside the club's name, as on the Locker's tile: a row of its own pushed the panel off a phone with the Kids buttons and a message up
     else if (storeBought.includes(STORE_FULL)) have.push('<p class="st-own"><span>Full Game Unlocked</span></p>');
   }
   $('st-have').innerHTML = have.join(''); $('st-have').hidden = !have.length;
