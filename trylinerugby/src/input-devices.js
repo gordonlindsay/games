@@ -134,6 +134,7 @@ function pollPads() {
     if (m >= 0.20 && !inp.latch) { const k = Math.min(1, (m - 0.20)/0.80)/m; inp.jx = ax*k; inp.jy = ay*k; inp.padStick = true; P.stick = true; if (m >= 0.5) setDev('pad'); }
     else if (m < 0.20 && P.stick) { P.stick = false; if (inp.padStick) { inp.jx = inp.jy = 0; inp.padStick = false; } }   // zeroed once, and only if the stick was the last writer
     if (join && (m >= 0.5) !== !!P.stickLit) { P.stickLit = m >= 0.5; lightPad(seat, 'stick', P.stickLit); }
+    if (m >= 0.20 || P.b.some(Boolean)) offlineInput();    // a button held or the stick off centre is input on every poll, so no update applies on the home mid-press and the quiet starts at the release (offline-client.js)
     if (menu) padNav(P, seat, ax, ay, m);
   }
 }

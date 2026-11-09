@@ -44,12 +44,12 @@ const STORE = 'tryline.v1';
   }
 }
 
-// ---------- 2. offline-client.js: the app registers no worker and shows no Install or Update; the web is unchanged ----------
+// ---------- 2. offline-client.js: the app registers no worker and shows no Install or Updating; the web is unchanged ----------
 {
   const client = read('src/offline-client.js'), native = read('src/native.js');
   const run = (prefix, extra) => {
     let registrations = 0; const winEvents = [];
-    const elements = Object.fromEntries(['app-tools', 'b-install', 'b-update', 'offline-status'].map(id => [id, { hidden:true, disabled:false, addEventListener() {} }]));
+    const elements = Object.fromEntries(['app-tools', 'b-install', 'offline-update', 'offline-status'].map(id => [id, { hidden:true, disabled:false, addEventListener() {} }]));
     const window = { isSecureContext:true, addEventListener:t => winEvents.push(t), location:{ reload() {} }, ...extra };
     const serviceWorker = { controller:null, addEventListener() {}, register() { registrations++; return Promise.resolve({ addEventListener() {}, active:null, waiting:null, installing:null }); } };
     const ctx = vm.createContext({ window, navigator:{ serviceWorker }, MessageChannel:undefined, setTimeout, clearTimeout, $:id => elements[id], STORE, Promise });
@@ -59,7 +59,8 @@ const STORE = 'tryline.v1';
   };
   const app = run(native, { Capacitor:{ isNativePlatform:() => true, Plugins:{} } });
   ok(app.registrations === 0, 'in the app no service worker is registered');
-  ok(!app.winEvents.includes('beforeinstallprompt') && Object.values(app.elements).every(e => e.hidden), 'in the app Install Game, Update Game and Offline Ready stay hidden, and no install prompt is taken');
+  ok(!app.winEvents.includes('beforeinstallprompt') && Object.values(app.elements).every(e => e.hidden), 'in the app Install Game, Updating and Offline Ready stay hidden, and no install prompt is taken');
+  ok(!app.winEvents.length, 'and no input is watched for an update: the app has none to apply');
   const browser = run(native, {});
   ok(browser.registrations === 1 && browser.winEvents.includes('beforeinstallprompt'), 'in a browser the worker and the install prompt are as before');
   const bare = run('', {});

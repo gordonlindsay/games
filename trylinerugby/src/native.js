@@ -1,6 +1,6 @@
 /* =========================================================
    The Try Line app. What the game does differently inside the iOS and Android app (Capacitor, app/ at the repo root):
-   - no service worker, and no Install Game, Update Game or Offline Ready: the app carries its own files (offlineStart asks
+   - no service worker, and no Install Game, Updating or Offline Ready: the app carries its own files (offlineStart asks
      nativeOn first). How to Play swaps its browser entries (.web-only) for the app's (.app-only).
    - landscape either way up, set in the native projects (Info.plist, and sensorLandscape on Android: app/scripts/
      native-config.mjs), never locked at run time, as a lock pins one side and a phone held the other way stays upside
