@@ -295,7 +295,8 @@ function collide() {                                       // standing men push 
    hopBounce, src/ball.js) at match levers: a first hop of 0.6 to 1.4m, lower than the drill's, and gathered only below `reach`
    (0.5m, by the knees; any other loose ball, 1.0m as ever). knock: the seconds a knocked-on ball hops before the whistle and the
    scrum. lead: how far ahead the chase looks at a hopping ball, in seconds of its flight.
-   on:false plays exactly as b706c3e did, draw for draw: PRESSURE='{"on":false}' node tools/sim.mjs. */
+   on:false with the maul off too (MAUL.on false) plays exactly as b706c3e did, draw for draw: PRESSURE='{"on":false}'
+   MAUL='{"on":false}' node tools/sim.mjs. on:false alone plays as the maul's own build (wt/maul c4980b8). */
 const PRESSURE = { on:true, little:3, gain:10, rise:1, hit:2, line:4, per:4, cap:0.25, capMild:0.08, surge:2.0, knock:0.8, lead:0.6,
   egg:{ pop:[3.4, 5.2], hopOut:[2.0, 4.0], keep:[0.55, 0.72], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:2.5, wild:0.6, spin:[6, 9], reach:0.5 } };
 const pressLive = () => PRESSURE.on && !practice && !!M.press;   // a match: a drill never has it

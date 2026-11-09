@@ -2,9 +2,10 @@
 // jolt's scaling and its cap, Pressure On once a possession, a pressure spill going loose (never a knock-on scrum), the surge to
 // the side that gathers it, the egg's hops (seeded, each smaller, staying on the pitch or going to touch by the old rules), the
 // chase's lead and sprint, a knock-on hopping for its beat before the whistle, Kids and Minis gentler, Bouncy Egg and the old
-// bounce untouched, the render drawing no random number, the words; and PRESSURE off drawing exactly as b706c3e.
+// bounce untouched, the render drawing no random number, the words; and PRESSURE off, with the maul off too, drawing exactly as
+// b706c3e (PRESSURE off alone: as the maul's own build, wt/maul c4980b8).
 // node tools/pressure.mjs                     (SEED=11 unless set; VERBOSE=1 lists every check)
-// node tools/pressure.mjs --pins              prints this build's fingerprints with PRESSURE off (and Bouncy Egg's)
+// node tools/pressure.mjs --pins              prints this build's fingerprints with PRESSURE and the maul off, Bouncy Egg's, and PRESSURE off alone
 // GAME=<b706c3e>/index.html node tools/pressure.mjs --pins   gives the same on b706c3e: how OFF below was pinned (EGG on 0b1293c and OFF_MAUL on wt/maul, the same way)
 process.env.SEED ??= '11';
 const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
@@ -17,7 +18,8 @@ const json = v => JSON.stringify(v), near = (a, b, e) => Math.abs(a - b) <= e;
 const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
 const hyp = Math.hypot, dirOf = t => t === 0 ? 1 : -1;
 
-// 0. With PRESSURE off the build plays exactly as b706c3e, draw for draw: AI v AI, the demo, a tool's match you play with duels
+// 0. With PRESSURE off, and the maul off too, the build plays exactly as b706c3e, draw for draw (PRESSURE off alone: as the maul's
+//    own build, OFF_MAUL): AI v AI, the demo, a tool's match you play with duels
 //    live, a Kids match and a Minis match. Bouncy Egg plays as the build before pressure with PRESSURE on or off: the hop is shared, not
 //    changed. OFF comes from b706c3e's own bundle (GAME=<b706c3e>/index.html node tools/pressure.mjs --pins), EGG from 0b1293c's (below).
 const OFF = '1r5245s 7ga17c lz72hy 19t3owf 8h6xzj szztk';

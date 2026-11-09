@@ -13,7 +13,9 @@
    shove on Drive is worth MAUL.hit metres); the stick's up and down wheels the maul across the pitch (as driveShape reads it), shown
    as the maul's angle and on the pitch strip. Over the line is a maul try; MAUL.use metres or more is Use It, the ball back to the
    scrum-half through a short ruck (a surge past MAUL.strong); less, or driven MAUL.back back, is Held Up and a scrum to the defence.
-   No new penalty. MAUL.on false draws exactly as the build before the maul (b706c3e): nothing here runs and no random number is drawn. */
+   No new penalty. MAUL.on false: nothing here runs and no random number is drawn, so alone it draws exactly as the build before the
+   maul (b706c3e on its own branch; on wt/pr14int, where pressure came first, the pressure merge ca3f3b7), and with PRESSURE.on false
+   too exactly as b706c3e. */
 const MAUL = { on:true, r:4, join:0.3,
   cpu:{ at:0.12, base:0.05, fwd:0.05, near:0.10, nearM:15, pow:0.03, max:0.35 },   // the CPU's call, rolled once a bind: base, + a forward, + within nearM of the line it attacks, + a Power point of edge
   set:1.0, drive:3.0, speed:3.4, edge:0.2,   // the Bind call, the Drive's length, metres a second per unit of shove, the attack's edge

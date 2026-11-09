@@ -1322,7 +1322,8 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   same rule, so the defence's pressure works against you as much as yours against them. Kids and Minis cap it at 8%
   (`capMild`), at Kids `KIDS.jolt` still applies to your carrier, and Stopped is as it was. A pressure spill is the
   ball knocked loose in the tackle, before any ruck: it is not a breakdown steal (Decided, Contact).
-  `PRESSURE='{"on":false}' node tools/sim.mjs` plays exactly as b706c3e, draw for draw.
+  With the maul off too, `PRESSURE='{"on":false}' MAUL='{"on":false}' node tools/sim.mjs` plays exactly as b706c3e,
+  draw for draw; `PRESSURE='{"on":false}'` alone plays as the maul's own build (wt/maul c4980b8).
 - **The egg** (2026-11-09). A ball jolted loose or spilled by a failed offload, and a knocked-on ball, hops like
   Bouncy Egg's. It is one model, `hopMove` and `hopBounce` in `src/ball.js`, shared with the drill (whose throws and
   hops are unchanged, pinned in `tools/pressure.mjs`), at the match's own levers, `PRESSURE.egg`: a first hop of 3.4
