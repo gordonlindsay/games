@@ -99,12 +99,20 @@ export function casualStep(P, S) {
 }
 
 /* The Line Break as src/edge.js calls it, watched from outside the game so a build without it counts the same moments: side 0's
-   carrier, on his feet and running forward at 2.5 m/s or more, 5m or more out, with no standing defender ahead of him within 15m
-   across (the lane the CPU's Sprint calls a clean break by), having had one there earlier in the same carry (a close-up in between
-   included), and none within 3m of him at all; once a carry. */
-const LB = { lane:15, clear:3, fwd:2.5, line:5 };
+   carrier, on his feet and running forward at 2.5 m/s or more, 5m or more out, with no standing defender ahead of him inside a window
+   15m across beside him that widens a metre for every metre ahead (so the deep cover man counts while he is placed to come across),
+   having had one there earlier in the same carry, and none within 3m of him at all; or a Get Past close-up won the right way, whose
+   verdict is Line Break in every build. Once a carry. LB is EDGE.brk's rule, and tools/edge.mjs holds the two together. */
+export const LB = { lane:15, cone:1, clear:3, fwd:2.5, line:5 };
 export function lbWatch(W) {
-  const M = T.M, b = M.ball;
+  const M = T.M, b = M.ball, k = M.cut;
+  if (k && k.duel && k.kind === 'past' && k.out === 'break' && k.own === 0 && W.cut !== k) {   // the close-up's own Line Break: the carry's
+    W.cut = k;
+    if (W.c !== k.U || W.hold > k.U.hold) { W.c = k.U; W.fired = false; }
+    W.hold = k.U.hold; W.had = true;
+    if (!W.fired) { W.fired = true; W.n++; }
+    return;
+  }
   if (M.phase !== 'play' || b.state !== 'held' || b.carrier.team !== 0) return;
   const c = b.carrier;
   if (W.c !== c || W.hold > c.hold) { W.c = c; W.had = false; W.fired = false; }   // a new carry: the carrier changed, or his time on the ball began again
@@ -113,7 +121,8 @@ export function lbWatch(W) {
   let near = 99;
   for (const q of M.players) {
     if (q.team !== 1 || q.down > 0 || q.bind) continue;
-    if (q.x - c.x > 0 && Math.abs(q.y - c.y) < LB.lane) { W.had = true; return; }
+    const ahead = q.x - c.x;
+    if (ahead > 0 && Math.abs(q.y - c.y) < LB.lane + LB.cone*ahead) { W.had = true; return; }
     near = Math.min(near, Math.hypot(q.x - c.x, q.y - c.y));
   }
   if (W.had && near >= LB.clear && c.vx >= LB.fwd && 110 - c.x >= LB.line) { W.fired = true; W.n++; }

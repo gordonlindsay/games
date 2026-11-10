@@ -631,8 +631,9 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // Re-pinned at the edge on Easy (src/edge.js, 2026-11-10): the first match, Quick Match on Easy, is a person against the CPU on Easy, so
   // the edge acts in it on purpose (its Line Break, On Fire after two good moments, its carrier's levers); nothing else moved. Proof:
   // EDGE='{"on":false}' node tools/kids.mjs gives the pin before it exactly, to1ovz lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv,
-  // as GAME=<90353c3>/index.html KIDS_PRINT=1 does
-  const PIN = '1wazr74 lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
+  // as GAME=<90353c3>/index.html KIDS_PRINT=1 does. Re-pinned again the same day for the review (a won Get Past is the carry's Line
+  // Break, its window widens ahead; the first match moved, 1wazr74 before), with the same proof: EDGE off still gives to1ovz
+  const PIN = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
   const pin = () => {
     const out = [];
     s.played = 99; s.kidsR = 0;

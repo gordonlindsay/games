@@ -399,6 +399,7 @@ function applyDuel(c) {
       const m = hyp(1, 0.3); face(U, 1/m, 0.3*o/m);
       setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
       U.autoDir = o;
+      edgeBroke(U);                                       // Easy: the verdict's Line Break is the carry's, never called twice (src/edge.js)
       break;
     }
     case 'past:tackled': case 'pass:tackled':

@@ -1,10 +1,12 @@
-// The edge (src/edge.js; README.md, Easy): who has it, each lever's size, the Line Break (once a carry, its call, its sound, its
-// heat, its hit-stop and the youngest's none, the cover's lag), On Fire's Easy numbers and the meter, and EDGE off drawing exactly as
-// 90353c3, the build before it, with AI v AI, the demo, a tool's balance match, Normal, Hard and Two Player never moving at all.
+// The edge (src/edge.js; README.md, Easy): who has it, each lever's size, the Line Break (once a carry, a won Get Past close-up's own
+// call included, its window, its call, its sound, its heat and the On Fire banner it lights, its hit-stop and the youngest's none, the
+// cover's lag), On Fire's Easy numbers and the meter, and EDGE off drawing exactly as 90353c3, the build before it, with AI v AI, the
+// demo, a tool's balance match, Normal, Hard and Two Player never moving at all.
 // node tools/edge.mjs           (SEED=17 unless set; VERBOSE=1 lists every check)
 // node tools/edge.mjs --pins    prints this build's fingerprints with EDGE off; GAME=<90353c3>/index.html node tools/edge.mjs --pins pinned BASE
 process.env.SEED ??= '17';
 const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { LB, PROFILES, casualStep } = await import('./bot.mjs');   // the casual adult, and the Line Break rule bot.mjs watches from outside
 const X = T.teams, D = T.debug, E = T.edge, C = T.career, STEP = T.STEP, M = () => T.M, $ = id => document.getElementById(id);
 let passed = 0, failed = 0, group = '';
 const ok = (cond, msg) => { if (cond) passed++; else failed++; if (!cond || process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', group + ':', msg); };
@@ -14,6 +16,7 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 const memory = {};
 globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; } };
 const said = []; document.createTextNode = t => { said.push(String(t)); return {}; };   // every banner the game says
+const made = [], mk = document.createElement; document.createElement = t => { const e = mk(t); made.push(e); return e; };   // and its parts: a banner's grade is a span over it
 const heard = []; globalThis.__sfxSpy = k => { heard.push(k); };                         // every sound it asks for
 const settings = D.settings();
 const ready = (diff = 0) => { settings.played = 99; settings.diff = diff; settings.kids = false; settings.half = 0; };   // no gentler start, 2-minute halves
@@ -22,7 +25,7 @@ const ready = (diff = 0) => { settings.played = 99; settings.diff = diff; settin
    on Easy (no arcade), an arcade match the bot plays on Normal and on Hard, Two Player on Easy, and their random draws. EASY moves on
    purpose: an arcade Quick Match on Easy and a Kids match at its ceiling, each the bot's; with EDGE off both play as 90353c3. */
 const BASE = { same:'1hzoeux ishkxt wwi9x a3ytt3 1a6etmy 1onyo2q z7225g', easy:'lwmcb9 109vndd 12fxhxe' };   // GAME=<90353c3>/index.html node tools/edge.mjs --pins
-const ON = '1qlb7jq 5j98i 1biwcs7';   // EASY with the edge as README.md gives it (2026-11-10): re-pin only from a change to the edge, on purpose
+const ON = 'omto7e 5j98i 11w1g1f';   // EASY with the edge as README.md gives it (2026-11-10, re-pinned the same day for the review: the Line Break's window widening ahead, a won Get Past as the carry's Line Break): re-pin only from a change to the edge, on purpose
 const play = (seed, a, b, o, two) => { reseed(seed); T.newMatch(a, b, { halfLen:60, headless:true, humans:two ? [true, true] : [true, false], ...o }); let n = 0; while (!M().over && n < 200000) { bot(0); if (two) bot(1); T.update(STEP); n++; } return json([M().score, M().tries, M().stats, n]); };
 function pins() {
   const same = [], easy = [], r0 = rndCalls();
@@ -91,8 +94,9 @@ done('1 who');
 begin('2 levers');
 {
   const V = E.EDGE;
-  ok(json([V.pace, V.hold, V.step, V.bite, V.lag, V.fire, V.brk]) === json([1.03, 0.92, 0.85, 0.06, 0.3, { need:2, secs:15, pts:{ hit:1, turnover:1, try:1, line:1 } }, { lane:15, clear:3, fwd:2.5, line:5, stop:110 }]),
+  ok(json([V.pace, V.hold, V.step, V.bite, V.lag, V.fire, V.brk]) === json([1.03, 0.92, 0.85, 0.06, 0.3, { need:2, secs:15, pts:{ hit:1, turnover:1, try:1, line:1 } }, { lane:15, cone:1, clear:3, fwd:2.5, line:5, stop:110 }]),
     `the table as README.md gives it (${json(V)})`);
+  ok(Object.keys(LB).every(k => LB[k] === V.brk[k]) && Object.keys(LB).length === 5, `tools/bot.mjs watches the Line Break by the same rule (${json(LB)})`);
   const scene = (o = {}) => { T.newMatch(X.CLUBS[0], X.CLUBS[0], { halfLen:600, headless:true, humans:[true, false], duels:'off', diff:0, arcade:true, ...o }); M().phase = 'play'; M().set = null; return M(); };
   const give = p => { const b = M().ball; b.state = 'held'; b.carrier = p; b.f = null; p.hold = 1; };
   // pace
@@ -171,7 +175,7 @@ begin('3 Line Break');
   ok(E.line(c) === true && m.stats.lineBreak0 === 2, 'his next carry (his time on the ball starts again at a catch) can have its own');
   // the cover's lag
   ({ m, c, q } = scene()); E.line(c); q.x = 56; q.y = 33;
-  const cover = m.players[12]; cover.x = 75; cover.y = 60; cover.vx = -1; cover.vy = 2;
+  const cover = m.players[12]; cover.x = 70; cover.y = 62; cover.vx = -1; cover.vy = 2;   // 10m ahead, 27m across: outside the window (25m there)
   E.line(c);
   let tg = E.matchTargets().get(cover);
   ok(tg && near(tg.x, cover.x + cover.vx*0.5) && near(tg.y, cover.y + cover.vy*0.5) && near(tg.s, Math.hypot(cover.vx, cover.vy)), `for ${V.lag}s the CPU's cover runs on as it was running`);
@@ -183,6 +187,21 @@ begin('3 Line Break');
   notIf(`not inside ${K.line}m of the line`, (m, c) => { c.x = 106; });
   notIf(`not with a man within ${K.clear}m of him`, (m, c, q) => { q.x = 59; q.y = 33.5; });
   notIf(`not with a man in front of him ${K.lane - 1}m across`, (m, c) => { m.players[11].x = 80; m.players[11].y = 35 + K.lane - 1; });
+  // the window widens ahead: the deep cover man, 15m ahead and just past the lane across, is still in front of him
+  notIf('not with the cover man 15m ahead and 15.5m across (the lane widens a metre for each metre ahead)', (m, c) => { m.players[11].x = 75; m.players[11].y = 35 + 15.5; });
+  notIf('not with a man 30m ahead and 34m across', (m, c) => { m.players[11].x = 90; m.players[11].y = 35 + 34; });
+  ({ m, c, q } = scene()); E.line(c); q.x = 56; q.y = 33; c.hold = 0.6; m.players[11].x = 75; m.players[11].y = 35 + K.lane + 15*K.cone + 0.5;
+  ok(E.line(c) === true, `but past him once he is outside it: 15m ahead and ${K.lane + 15*K.cone + 0.5}m across`);
+  ({ m, c, q } = scene()); E.line(c); q.x = 56; q.y = 33; c.hold = 0.6; m.players[11].x = 60.5; m.players[11].y = 35 + K.lane + 1;
+  ok(E.line(c) === true, `and a man level with him (half a metre ahead), ${K.lane + 1}m across, is not in front`);
+  // the call lights On Fire: the On Fire banner carries Line Break over it, so the call is seen
+  ({ m, c, q } = scene()); E.line(c); q.x = 56; q.y = 33; c.hold = 0.6; m.fire[0].heat = 1; made.length = 0;
+  ok(E.line(c) === true && E.onFire(0) && said.join() === 'Line Break,On Fire', `from a run of one: Line Break, then On Fire (${said.join(', ')})`);
+  const lastMsg = made.map((e, i) => [e, i]).filter(([e]) => /^msg/.test(e.className)).pop(), grade = lastMsg && made.slice(lastMsg[1]).find(e => e.className === 'grade');
+  ok(lastMsg && /fire/.test(lastMsg[0].className) && grade && grade.textContent === 'Line Break', `and the banner left showing is On Fire with Line Break over it (${lastMsg && lastMsg[0].className}, ${grade && grade.textContent})`);
+  ({ m, c, q } = scene()); m.fire[0].heat = 1; made.length = 0; E.heat(0, 'hit');
+  const plain = made.filter(e => e.className === 'grade');
+  ok(E.onFire(0) && plain.length === 0, 'On Fire lit by anything else: no grade, as before');
   ({ m, c, q } = scene()); q.x = 56; q.y = 33;
   ok(E.line(c) === false, 'not when nobody was in front of him in this carry: there was no line to break');
   notIf('not on Normal', () => {}, { diff:1 });
@@ -195,21 +214,67 @@ begin('3 Line Break');
     ({ m, c, q } = scene(o)); E.line(c); q.x = 56; q.y = 33; c.hold = 0.6;
     ok(E.matchMild() && E.line(c) === true && said.includes('Line Break') && heard.includes('cheer') && m.stop === 0 && m.fire[0].heat === 1, `${label}: Line Break called and heard, the heat point, and no slow-motion`);
   }
-  // in a real match on Easy, through the frame loop's own path
-  let breaks = 0, carries = 0, calls = 0;
-  for (let s = 0; s < 4; s++) {
+  // a Get Past close-up won the right way: its verdict is Line Break with the crowd's cheer, and that is the carry's. Every other man of
+  // theirs is behind him, so the moment the close-up hands back he is clear by the rule: before the review the edge called it again there
+  const getPast = on => {
+    V.on = on;
+    T.newMatch(X.NATIONS[0], X.NATIONS[1], { halfLen:600, headless:false, humans:[true, false], duels:'live', diff:0, arcade:true });
+    D.setMode('match');
+    const { U, O } = D.stage('past');
+    for (const p of M().players) if (p.team === 1 && p !== O) { p.x = 30 + 2*p.n; p.y = 5 + p.n*8; p.vx = p.vy = 0; }
+    said.length = 0; heard.length = 0; made.length = 0;
+    E.line(U);                                             // the steps before it: the carry has seen the man in front of him
+    T.update(STEP);
+    const k = M().cut, r = { open:!!(k && k.duel && k.kind === 'past') };
+    if (!r.open) { V.on = true; return r; }
+    let n = 0;
+    while (M().cut === k && k.t < k.centre && n++ < 600) T.update(STEP);
+    T.input.flick = k.open; T.update(STEP);
+    while (M().cut === k && n++ < 1200) T.update(STEP);
+    r.verdict = k.verdict; r.back = M().phase === 'play' && M().ball.carrier === U; r.at = M().lb && M().lb.at; r.dclock = M().dclock;
+    r.lag = E.lag(U); const back = heard.length;
+    for (let i = 0; i < 120 && M().phase === 'play' && M().ball.carrier === U; i++) { T.input.jx = 1; T.input.jy = 0; T.update(STEP); }   // two seconds of running on, clear
+    r.ran = U.x - 70;
+    r.calls = said.filter(w => w === 'Line Break').length + made.filter(e => e.className === 'grade' && e.textContent === 'Line Break').length;
+    r.cheers = heard.filter(w => w === 'cheer').length; r.whoosh = heard.slice(back).filter(w => w === 'whoosh').length;
+    r.stat = M().stats.lineBreak0 || 0; r.heat = M().fire[0].heat + (E.onFire(0) ? 99 : 0); r.lb = !!(M().lb && M().lb.c === U && M().lb.fired);
+    V.on = true; T.input.jx = 0;
+    return r;
+  };
+  let g = getPast(true);
+  ok(g.open && g.verdict === 'Line Break' && g.back, `a staged Get Past on Easy, flicked the open way in the gold: ${g.verdict}, and play hands back to him`);
+  ok(g.calls === 1 && g.cheers === 1 && g.whoosh === 0, `Line Break called once over the close-up and two seconds of clear running after it (${g.calls}), one cheer (${g.cheers}), no whoosh after it (${g.whoosh}), ${g.ran.toFixed(1)}m on`);
+  ok(g.stat === 1 && g.lb && g.heat === 1, `and it is the carry's Line Break: counted (${g.stat}), its heat point (${g.heat}), the edge's own call spent`);
+  ok(g.lag === true, 'the CPU\'s cover is slow to react from the close-up\'s hand-back');
+  g = getPast(false);
+  ok(g.open && g.calls === 1 && g.cheers === 1 && g.stat === 0 && g.heat === 0, `EDGE off: the close-up's own Line Break as before, nothing counted and no heat point (${g.calls}, ${g.stat}, ${g.heat})`);
+  // in real matches on Easy, through the frame loop's own path: per carry, every Line Break called, the close-up's verdict and the edge's own
+  // (the stat rising other than as a close-up hands back), never two; the scripted bot and the casual adult, four matches each
+  const real = (who, s) => {
     reseed(300 + s); T.newMatch(X.NATIONS[s], X.NATIONS[(s + 2) % 6], { halfLen:120, diff:0, headless:true, duels:'live', arcade:true, humans:[true, false] });
-    let n = 0, last = null, hold = 0, fired = 0;
-    while (!M().over && n < 200000) {
-      bot(0); T.update(STEP); n++;
-      const b = M().ball, k = M().stats.lineBreak0 || 0;
-      if (b.state === 'held' && b.carrier.team === 0) { if (b.carrier !== last || b.carrier.hold < hold) { carries++; last = b.carrier; fired = 0; } hold = b.carrier.hold; }
-      if (k > breaks + calls) { fired += k - breaks - calls; calls = k - breaks; if (fired > 1) ok(false, `match ${s + 1}: two Line Breaks in one carry`); }
+    const P = PROFILES[who], S = { wobT:0, defT:0, lag:0 }, o = { calls:0, carries:0, twice:0, them:0 };
+    let n = 0, carry = null, hold = 0, now = 0, seen = null;
+    const end = () => { if (now > 1) o.twice++; now = 0; };
+    while (!M().over && n < 400000) {
+      const k0 = M().cut, l0 = M().stats.lineBreak0 || 0;
+      if (P) casualStep(P, S); else bot(0);
+      T.update(STEP); n++;
+      const b = M().ball, k = M().cut;
+      const c = b.state === 'held' && b.carrier.team === 0 ? b.carrier : (k && k.duel && k.kind === 'past' && k.own === 0 ? k.U : null);
+      if (c) { if (c !== carry || c.hold < hold) { end(); carry = c; o.carries++; } hold = c.hold; }
+      else if (!(k && k.duel)) { end(); carry = null; }
+      if (k && k.duel && k.kind === 'past' && k.verdict === 'Line Break' && seen !== k) { seen = k; now++; o.calls++; }
+      if ((M().stats.lineBreak0 || 0) > l0 && !(k0 && k0.duel && k0.out === 'break' && M().cut !== k0)) { now++; o.calls++; }
     }
-    breaks += M().stats.lineBreak0 || 0; calls = 0;
-    ok(!M().stats.lineBreak1, `match ${s + 1}: the CPU never has one`);
+    end(); o.them = M().stats.lineBreak1 || 0;
+    for (const inp of T.inputs) { inp.jx = inp.jy = 0; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; inp.flick = 0; }
+    return o;
+  };
+  for (const who of ['bot', 'casual']) {
+    const t = { calls:0, carries:0, twice:0, them:0 };
+    for (let s = 0; s < 4; s++) { const o = real(who, s); for (const k in t) t[k] += o[k]; }
+    ok(t.calls > 0 && t.calls < t.carries && t.twice === 0 && t.them === 0, `${who === 'bot' ? 'the scripted bot' : 'the casual adult'}, four Easy matches: ${t.calls} Line Breaks called in ${t.carries} carries, ${t.twice} carries with two, the CPU ${t.them}`);
   }
-  ok(breaks > 0 && breaks < carries, `the scripted bot's four Easy matches: ${breaks} Line Breaks in ${carries} carries, never two in one`);
 }
 done('3 Line Break');
 

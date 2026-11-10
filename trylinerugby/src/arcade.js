@@ -10,7 +10,7 @@ const ARCADE = {
 };
 const onFire = t => !!(M && M.arcade && M.fire[t].t > 0);
 /* A good moment for side t: a broken tackle, a Big Hit, a turnover won or a try. Each breaks the other side's run; all but the broken tackle build this one's. */
-function heat(t, why) {
+function heat(t, why, grade) {                               // grade: a word over the On Fire banner, if this lights it (a Line Break's, src/edge.js)
   if (!M || !M.arcade) return;
   const F = M.fire[t], O = M.fire[1 - t];
   O.heat = 0;
@@ -20,7 +20,7 @@ function heat(t, why) {
   F.heat = Math.min(need, F.heat + ((edgeOn(t) && EDGE.fire.pts || ARCADE.fire.pts)[why] || 0));   // on Easy your side's moments are EDGE.fire.pts
   if (F.heat < need) return;
   F.heat = 0; F.t = fireSecs(t)*staminaLasts(t); st('fire' + t);   // longer or shorter by the side's Stamina (src/stamina.js); on Easy yours burns EDGE.fire.secs
-  say('On Fire', 'big fire', t); sfx('roar'); buzz(50, t);
+  say('On Fire', 'big fire', t, grade); sfx('roar'); buzz(50, t);
 }
 function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }
 function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }
