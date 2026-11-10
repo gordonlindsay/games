@@ -65,8 +65,10 @@ function tackleChance(q, c, mode, stepped) {
   let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
   p += ((M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team)) + traitEdge(q, c))*0.05;   // a career match: your player's own power. An Engine keeps most of his (src/traits.js)
   if (M.kids && isHuman(q.team) && mode !== 'ai') p += KIDS.tackle;   // Kids: your ringed man's contact tackle and dive
-  if (stepped) p *= MOVES.step.odds;
+  const edge = mode === 'ai' && cpuSide(q.team) && edgeMan(c);   // Easy: the CPU's tackle on your carrier (src/edge.js)
+  if (stepped) p *= MOVES.step.odds*(edge ? EDGE.step : 1);
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
+  if (edge) p *= EDGE.hold;
   return clamp(p, 0.08, 0.95);
 }
 function setBoost(p, mul, secs) {
@@ -397,6 +399,7 @@ function applyDuel(c) {
       const m = hyp(1, 0.3); face(U, 1/m, 0.3*o/m);
       setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
       U.autoDir = o;
+      edgeBroke(U);                                       // Easy: the verdict's Line Break is the carry's, never called twice (src/edge.js)
       break;
     }
     case 'past:tackled': case 'pass:tackled':

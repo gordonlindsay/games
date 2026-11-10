@@ -157,7 +157,10 @@ function matchTargets() {
   assignByY(T, rest, slots, lead);
   if (pod) T.set(pod.holder, { x:clamp(pod.at.x + lead, 1, 119), y:pod.at.y, s:maxSpeed(pod.holder) });
   let sweep = true;
-  if (mode === 'held') {
+  if (mode === 'held' && edgeLag(carrier)) {                       // Easy: a Line Break, and the cover has not reacted yet. Every man runs on as he was running, at Easy's cover acceleration (src/edge.js)
+    for (const p of D) if (!(p.offside > 0)) T.set(p, edgeHold(p, COVER.acc[0]));
+    D = D.filter(p => !T.has(p)); sweep = false;
+  } else if (mode === 'held') {
     const live = D.filter(p => !(p.offside > 0));                  // a retiring tackler is never the chaser, and never the man who comes up
     const depthOf = p => (p.x - carrier.x) * dA;
     const L = levelOf(att), lv = L === 0 || L === 2 ? L : 1;         // how hard the defence is for this attacker: his side's level
@@ -365,7 +368,7 @@ function dummyPass(c, r) {                                 // c shows a pass to 
   if (!q) return false;
   st('dummies' + t);
   sfx('whoosh');
-  if (rnd() < K.bite[levelOf(t)]) {                        // he bites: wrong-footed, drifting onto the runner, no tackle for a moment
+  if (rnd() < K.bite[levelOf(t)] + (edgeMan(c) ? EDGE.bite : 0)) {   // he bites: wrong-footed, drifting onto the runner, no tackle for a moment. Easy: yours sells more often (src/edge.js)
     q.wf = Math.max(q.wf, K.wf); q.tcd = Math.max(q.tcd, K.tcd);
     q.vy += (Math.sign(r.y - q.y) || 1)*K.shove;
     q.bite = K.drift; q.biteTo = r;
@@ -549,7 +552,7 @@ function matchUpdate(dt) {
     if (b.state === 'held') {
       const c = b.carrier;
       b.x = c.x + c.fx*0.55; b.y = c.y + c.fy*0.55; b.z = 1.0;
-      if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
+      if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) { edgeLine(c); tackleChecks(c); }   // Easy: a Line Break (src/edge.js) is called before anyone can commit
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
     if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
