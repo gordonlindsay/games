@@ -178,7 +178,7 @@ function maulResult(C, res) {
     if (C.cut) M.stats.gain[att] += C.fwd;               // the ground a close-up's maul made is carried ground (a maul in the world counts it as it goes)
     maulPlace(C, ex, ey);
     if (res === 'try') { const c = k.c; c.x = clamp(oppLine(att) + d*0.6, 0.5, 119.5); c.down = 0; scoreTry(c); return; }
-    if (res === 'held') { placeBall(ex, ey); deadBall(() => scrum(def, ex, ey, 'Held Up')); return; }
+    if (res === 'held') { placeBall(ex, ey); restart('maulHeldUp', def, ex, ey); return; }
     const bx = clamp(ex - d*0.4, 1, 119), by = clamp(ey, 1, 69);
     placeBall(bx, by); M.phaseCount++;
     startSet({ kind:'ruck', team:att, x:bx, y:by, t:MAUL.useT, maul:true, then:s => { releaseTo(att, s.x, s.y, 'ruck', s.picker); if (strong) surge(att, MAUL.surge); } });   // Use It: the ball back to the scrum-half, quick

@@ -149,6 +149,7 @@ function start(data) {
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); if (!$('s-cup').hidden) cupFit($('s-cup')); homeFit(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
+  $('home-tag').textContent = 'Mobile Rugby\u00a0· Sevens · v' + GAME_VERSION;   // the tagline with the version: the same line, so the home keeps its height
   startDemo();
   goHome();
   try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => homeFit()); } catch (e) { /* no font loading API */ }   // My Team's names fitted again in the game's own typeface

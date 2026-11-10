@@ -292,6 +292,65 @@ const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fm
 // GKTUNE
 const D2R = Math.PI/180, MPH = 0.44704;
 const HALF_SECONDS = [120, 240, 360];
+const GAME_VERSION = '1.1';                                 // shown on the home screen, after the tagline (src/boot.js)
+
+/* ---------- rule sets ----------
+   A match plays one rule set (M.rules, chosen in newMatch). The same three are meant to hold wherever the game is played:
+   a match, a career stage and a drill. In this build every match plays Normal, exactly as before. Junior and Minis are
+   written down here from the RFU's Age Grade Rules of Play (Regulation 15: Under 9s, Transitional Contact; Under 8s, Tag
+   Rugby; the 2025-26 copies), kept simple. They are marked pending: the engine does not play them yet, and nothing reads them.
+   Close-ups for call-outs and events stay under every rule set, wherever the event still exists.
+   restarts: why play stopped -> how it restarts. The place that stops play says why, which side gets the ball and where;
+   this table alone says what follows. playOn: taken even after the hooter. */
+const RESTARTS_NORMAL = {
+  halfStart:      { kind:'kickoff', playOn:true },
+  afterScore:     { kind:'kickoff' },
+  knockOn:        { kind:'scrum',   label:'Knock-On' },
+  heldInGoal:     { kind:'scrum',   label:'Held in Goal' },
+  maulHeldUp:     { kind:'scrum',   label:'Held Up' },
+  deadBallCarried:{ kind:'scrum',   label:'Dead Ball' },
+  touchCarried:   { kind:'lineout', label:'Into Touch' },
+  touchKick:      { kind:'lineout', label:'Into Touch' },
+  outOnFull:      { kind:'lineout', label:'Out on the Full' },
+  touchLoose:     { kind:'lineout', label:'Into Touch' },
+  fiftyTwentyTwo: { kind:'lineout', label:'50:22' },
+  penaltyTouch:   { kind:'lineout', label:'Kick to Touch', playOn:true },
+  groundedInGoal: { kind:'dropOut' },
+  deadBallLoose:  { kind:'dropOut' },
+  goalMissed:     { kind:'dropOut' },
+  ruckPenalty:    { kind:'penalty', playOn:true },
+  scrumPenalty:   { kind:'penalty', playOn:true },
+};
+const POINTS_NORMAL = { try:5, conversion:2, penalty:3, dropGoal:3 };
+/* Junior and Minis: every stoppage is a free pass to the side that gets the ball, the other side 7m back. at: where it is taken.
+   centre: halfway. mark: where it happened. in5: 5m in from touch. touch: on the touchline. Any mark within 7m of a goal line
+   is moved out to 7m. The kicking rows of Normal (a kick to touch, out on the full, 50:22, a missed goal) cannot happen. */
+const fp = at => ({ kind:'freePass', at });
+const RESTARTS_JUNIOR = { halfStart:{ ...fp('centre'), playOn:true }, afterScore:fp('centre'), knockOn:fp('mark'), infringement:fp('mark'), tackleLimit:fp('mark'),
+  touchCarried:fp('in5'), touchLoose:fp('in5'), heldInGoal:fp('mark'), deadBallCarried:fp('mark'), groundedInGoal:fp('mark'), deadBallLoose:fp('mark') };
+const RESTARTS_MINIS = { ...RESTARTS_JUNIOR, touchCarried:fp('touch'), touchLoose:fp('touch') };
+const POINTS_TRIES = { try:5 };                             // tries only: no kicking, so no conversions, penalty goals or drop goals. The RFU text gives a try no value; 5 keeps the tables working
+const RULES = {
+  normal: { id:'normal', name:'Normal', contact:'tackle', rucks:true, scrums:true, lineouts:true, kicking:true, fend:true,
+    points:POINTS_NORMAL, restarts:RESTARTS_NORMAL },
+  // Under 9s. A tackle is not contested: the carrier passes within 3 seconds and the tackler lets him. The tackle is below the base of the sternum.
+  // tackles: the RFU's optional variation, agreed by the coaches: six tackles, and the seventh hands the ball over. Set to 0 to play without it.
+  junior: { id:'junior', name:'Junior', contact:'tackle', rucks:false, scrums:false, lineouts:false, kicking:false, fend:false,
+    afterContact:{ passWithin:3, contest:false, limit:6 }, freePassBack:7,
+    real:{ perSide:7, pitch:[60, 30], inGoal:5, halfMinutes:15 },
+    points:POINTS_TRIES, restarts:RESTARTS_JUNIOR, pending:true },
+  // Under 8s. A tag, not a tackle: the carrier stops inside about three strides and passes within 3 seconds. The seventh tag hands the ball over (in the rules, not optional).
+  minis: { id:'minis', name:'Minis', contact:'tag', rucks:false, scrums:false, lineouts:false, kicking:false, fend:false,
+    afterContact:{ passWithin:3, contest:false, limit:6 }, freePassBack:7,
+    real:{ perSide:6, pitch:[45, 22], inGoal:5, halfMinutes:10 },
+    points:POINTS_TRIES, restarts:RESTARTS_MINIS, pending:true },
+};
+/* Which rule set a match plays, from the player's age group (the Under-N he plays in: a 12-year-old plays Under 13s).
+   Three bands: Under 7s and 8s play Minis, Under 9s to 12s play Junior, Under 13s and up play Normal. A national or
+   professional side always plays Normal, whatever the player's age. Not called yet: every match still plays Normal. */
+const RULE_BANDS = [{ upTo:8, rules:'minis' }, { upTo:12, rules:'junior' }, { upTo:Infinity, rules:'normal' }];
+const rulesForAge = under => RULE_BANDS.find(b => under <= b.upTo).rules;
+const rulesFor = (under, national) => national || under == null ? 'normal' : rulesForAge(under);
 const STEP = 1/60;
 /* How fast a match you see runs against real time: the one lever. The frame loop (boot.js) feeds the sim and the drawing dt times this, so a step is still 1/60 of a simulated second and update() never knows: seeded results per simulated second, the bots and the headless tools are as they were. Every window a person has to hit widens by 1/pace in real time, and a half takes that much longer. Two Player and the menu demo run at match; only M.kids reads kids; the Training Ground has its own (DRILL_PACE). */
 const MATCH_PACE = { match:0.88, kids:0.75 };
@@ -1018,6 +1077,7 @@ function newMatch(u, c, opts) {
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
     arcade:!!opts.arcade && !auto && !opts.demo,       // On Fire, the louder Big Hit and the Golden Try: a match you play, never AI v AI, the demo or practice
     fire:[0, 1].map(() => ({ heat:0, t:0 })), golden:false,   // each side's run towards On Fire and its seconds alight; extra time
+    rules:RULES[opts.rules] || RULES.normal,           // the rule set this match plays (src/data.js): Normal unless the caller names another
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   if (M.kids) { M.kidsR = kidsTune(opts.kidsR).r; M.kidsDone = false; }   // its rating sets the levers before anything reads them: the start (0) unless the caller says (startMatch passes settings.kidsR)
@@ -1050,7 +1110,7 @@ function newMatch(u, c, opts) {
   traitsArm();                                             // the star traits, in a match you play only (src/traits.js)
   for (const inp of inputs) inp.gest = null;               // the open-play gesture history starts clean
   M.tut = null; hintReset(); coachUntil = 0;               // the hints cards start hidden, the open-play hints unshown, and a coach line from the last match does not hold the next one
-  kickoff(M.firstKick);
+  restart('halfStart', M.firstKick);
 }
 
 function maxSpeed(p) {
@@ -1116,9 +1176,19 @@ function startSet(o) {
     const q = nearestFree(t, o.x, o.y); if (q) setCtrl(t, q);
   }
 }
-function deadBall(fn) { if (M.hooter && !M.demo) endHalf(); else fn(); }
 
-/* ---------- restarts ---------- */
+/* ---------- restarts ----------
+   Every stoppage comes through restart(): why play stopped (a row of the match's rule set, src/data.js), the side that gets
+   the ball, and where. Once the hooter has gone a stoppage ends the half instead, unless its row plays on. */
+const RESTART_KIND = { kickoff, dropOut, scrum, lineout, penalty };
+function restart(why, team, x, y) {
+  if (M.hooter && !M.demo && !M.rules.restarts[why].playOn) { endHalf(); return; }
+  restartNow(why, team, x, y);
+}
+function restartNow(why, team, x, y) {                     // the restart with no look at the hooter: for a caller that settled the dead ball earlier (knockBeat, src/contact.js)
+  const r = M.rules.restarts[why];
+  RESTART_KIND[r.kind](team, x, y, r.label);
+}
 function kickoffFormation(kTeam, kx) {
   const d = dirOf(kTeam);
   const KY = [6,16,26,35,44,54,64];
@@ -1218,7 +1288,7 @@ function knockOn(p, why) {                                 // why: 'catch' (the 
   sfx('fumble');
   if (knockBeat(p)) return;                                // PRESSURE: it hops for a beat before the whistle (src/contact.js)
   sfx('whistle');
-  deadBall(() => scrum(1-p.team, p.x, p.y, 'Knock-On'));
+  restart('knockOn', 1-p.team, p.x, p.y);
 }
 function pickUp(p) {
   const b = M.ball;
@@ -1226,7 +1296,7 @@ function pickUp(p) {
     const defTeam = b.x < 10 ? 0 : 1;
     if (p.team !== defTeam) { scoreTry(p); return; }
     placeBall(b.x, b.y); sfx('whistle');
-    deadBall(() => dropOut(defTeam));
+    restart('groundedInGoal', defTeam);
     return;
   }
   const turn = p.team !== b.last && !b.kickInfo;
@@ -1632,7 +1702,7 @@ function tackle(c, q, o) {
     sfx('tackle'); buzz(30);
     if ((c.x-ownLine(team))*d < 0) {
       placeBall(c.x, c.y);
-      deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
+      restart('heldInGoal', 1-team, c.x, c.y);
       return;
     }
     placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
@@ -1645,7 +1715,7 @@ function tackle(c, q, o) {
   if ((c.x-ownLine(team))*d < 0) {
     c.down = 1.25; q.down = 1.0; q.tcd = 1.0;
     placeBall(c.x, c.y);
-    deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
+    restart('heldInGoal', 1-team, c.x, c.y);
     return;
   }
   const bx = clamp(c.x - d*0.4, 1, 119), by = clamp(c.y, 1, 69), ball = { x:bx, y:by };   // the ball goes behind the tackled man
@@ -1674,7 +1744,7 @@ function wrongFoot(team, x, y) {                           // the side that lost
 }
 function resolveRuck(s) {                                  // the ruck is automatic: a flat penalty roll, then a flat turnover roll
   const att = s.team, def = 1-att;
-  if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
+  if (rnd() < RUCK.pen) { restart('ruckPenalty', rnd() < 0.55 ? def : att, s.x, s.y); return; }
   const pT = s.dom ? s.domP : RUCK.flatBase + (powerOf(def) - powerOf(att))*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
     M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
@@ -1772,7 +1842,7 @@ function knockBeat(p) {                                    // a knock-on in a ma
   b.z = 1.0; b.vx = d*2.2 + 0.25*p.vx; b.vy = 0.25*p.vy; b.vz = 1.2;   // forward out of his hands, on along his run: that is what a knock-on is. No draw until it lands: the hops are the egg's
   eggStart(b, p.team, false, (p.vy >= 0 ? 1 : -1)*(K.spin[0] + K.spin[1])/2);
   const late = M.hooter && !M.demo;                        // the dead ball is decided at the knock-on, as deadBall does without the beat: one before the hooter keeps its scrum if the hooter goes in the beat
-  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); if (late) endHalf(); else scrum(team, x, y, 'Knock-On'); } });
+  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); if (late) endHalf(); else restartNow('knockOn', team, x, y); } });
   return true;
 }
 function eggLead(b) {                                      // where the chase runs for a hopping ball: where this hop comes down, or a little ahead of a roll; any other ball, where it is
@@ -1894,13 +1964,13 @@ function carrierChecks(c) {
   const d = dirOf(c.team);
   if (c.y < 0 || c.y > 70) {
     placeBall(c.x, clamp(c.y,0,70)); sfx('whistle');
-    deadBall(() => lineout(1-c.team, c.x, c.y, 'Into Touch'));
+    restart('touchCarried', 1-c.team, c.x, c.y);
     return true;
   }
   if ((c.x-oppLine(c.team))*d >= 0.3) { scoreTry(c); return true; }
   if (c.team === 0 ? c.x < 0 : c.x > 120) {
     placeBall(c.x, c.y);
-    deadBall(() => scrum(1-c.team, c.x, c.y, 'Dead Ball'));
+    restart('deadBallCarried', 1-c.team, c.x, c.y);
     return true;
   }
   return false;
@@ -1934,13 +2004,13 @@ function penChoice(team, x, y, c, g) {
   else if (c === 'touch') {
     const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3 + traitTouch(team, x, y)), 15, 105);   // a Long Boot finds touch further on (src/traits.js)
     sfx('kick');
-    lineout(team, nx, y, 'Kick to Touch');   // after the hooter too: the kicking side gets its lineout
+    restart('penaltyTouch', team, nx, y);    // after the hooter too: the kicking side gets its lineout
   } else startSet({ kind:'tap', team, x, y, t:0.8, snap:true, label:'Tap and Go', then:s => releaseTo(s.team, s.x, s.y, 'tap') });
 }
 function scoreTry(p) {
   if (practice) { practiceTry(p); return; }
   const team = p.team;
-  M.score[team] += 5; M.tries[team]++;
+  M.score[team] += M.rules.points.try; M.tries[team]++;
   if (M.career) careerDeed('tries', p);                    // a career match: a try by your player
   heat(team, 'try'); fireOut(1 - team);                    // a try lights the scorers and puts the other side out
   goldenScored();
@@ -2129,7 +2199,7 @@ function scoreGoal(g) {                                    // the verdict moment
   g.judged = true;
   const { team, ok, kind } = g;
   if (ok) {
-    M.score[team] += kind === 'conversion' ? 2 : 3; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
+    M.score[team] += M.rules.points[kind === 'conversion' ? 'conversion' : kind === 'drop' ? 'dropGoal' : 'penalty']; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
     if (kind === 'conversion') M.stats.conv.made[team]++; else if (kind === 'penalty') M.stats.pen.made[team]++;
     if (M.career) careerDeed('goals', g.kicker);            // a career match: a goal kicked by your player
     goldenScored();
@@ -2148,7 +2218,7 @@ function settleGoal(g) {
   const w = toWorld(g.team, g.X.x, g.X.y), x = clamp(w.x, 0, 120), y = clamp(w.y, 0, 70);
   placeBall(x, y);
   const { team, ok, kind } = g;
-  startSet({ kind:'score', team, x, y, t:M.phase === 'goal' ? 1.0 : 0.6, then:() => deadBall(() => (kind === 'penalty' && !ok) ? dropOut(1-team) : kickoff(1-team)) });
+  startSet({ kind:'score', team, x, y, t:M.phase === 'goal' ? 1.0 : 0.6, then:() => restart((kind === 'penalty' && !ok) ? 'goalMissed' : 'afterScore', 1-team) });
 }
 /* ---------- the close-up ---------- */
 function startGoalCut(g) {
@@ -2219,9 +2289,9 @@ function goalLabels(c) {
 }
 function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
   lockerTally('drops', team);                              // every drop goal, the open-play kind too, for the Locker (a plain counter, src/locker.js)
-  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
+  if (!quiet) { M.score[team] += M.rules.points.dropGoal; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
   placeBall(M.ball.x, M.ball.y);
-  startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });
+  startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => restart('afterScore', 1-team) });
 }
 
 /* ---------- drop goals ----------
@@ -2382,7 +2452,7 @@ function applyDrop(c) {
   if (g.X.land) { kk.hold = 0; launchG3d(g, kk, Math.min(0.6, g.X.t)); return; }   // the flight the cut left 0.6s into
   if (g.res === 'post' || g.res === 'bar') { looseOffWood(g); return; }
   placeBall(clamp(w.x, 0, 120), clamp(w.y, 0, 70));
-  deadBall(() => dropOut(1 - team));                       // wide, or under the bar and dead: their 22
+  restart('goalMissed', 1 - team);                         // wide, or under the bar and dead: their 22
 }
 function stopSpot(g, q, back) {                            // where the charger who stopped the kick lands: `back` metres from the kick spot on the side he came from, in the world
   const r = g.rush && g.rush.find(r => r.q === q), ux = r ? r.ux : -1, uy = r ? r.uy : 0;
@@ -2417,7 +2487,7 @@ function updateG3d(dt) {                                   // the g3d ball in th
       if (scores(res)) { if (f.drop) M.stats.dg.made[team]++; dropGoal(team); return; }
       if (res === 'post' || res === 'bar') { looseOffWood({ team, X }); sfx('post'); return; }
       placeBall(clamp(b.x, 0, 120), clamp(b.y, 0, 70)); sfx('whistle');
-      deadBall(() => dropOut(1 - team));
+      restart('goalMissed', 1 - team);
       return;
     }
     b.state = 'loose'; b.f = null; b.vx = v.x*0.32; b.vy = v.y*0.32; b.vz = 3.2; b.z = 0.01;
@@ -2426,7 +2496,7 @@ function updateG3d(dt) {                                   // the g3d ball in th
   if (b.y < 0 || b.y > 70) {
     const own22 = team === 0 ? f.x0 <= 32 : f.x0 >= 88;
     placeBall(b.x, clamp(b.y, 0, 70));
-    deadBall(() => lineout(1 - team, own22 ? b.x : f.x0, b.y, own22 ? 'Into Touch' : 'Out on the Full'));
+    restart(own22 ? 'touchKick' : 'outOnFull', 1 - team, own22 ? b.x : f.x0, b.y);
     return;
   }
   if (f.t/X.t > 0.45 && b.z < 2.7) {
@@ -2608,7 +2678,7 @@ function resolveScrum(c) {
     say(over ? 'Pushover' : 'Scrum Penalty ' + M.nat[t].id, '', t); sfx('whistle');
     finishCut(() => {
       if (over) { const q = nearestFree(t, mx, y) || M.players.find(p => p.team === t); q.x = oppLine(t) + dirOf(t)*0.8; q.y = y; scoreTry(q); }
-      else penalty(t, mx, y);
+      else restart('scrumPenalty', t, mx, y);
     });
     return;
   }
@@ -2628,7 +2698,7 @@ function scrumBar(c) {                                     // the bar's fill, -1
 }
 function autoScrum(s) {
   const F = s.team, o = 1-F, edge = (powerOf(F) - powerOf(o))*0.03, r = rnd();
-  if (r < 0.035) { penalty(rnd() < 0.6 + edge ? F : o, s.x, s.y); return; }
+  if (r < 0.035) { restart('scrumPenalty', rnd() < 0.6 + edge ? F : o, s.x, s.y); return; }
   if (r < 0.035 + clamp(0.07 - edge, 0.02, 0.12)) { say('Against the Head', 'small'); releaseTo(o, s.x, s.y, 'scrum'); return; }
   releaseTo(F, s.x, s.y, 'scrum');
 }
@@ -2867,7 +2937,7 @@ function maulResult(C, res) {
     if (C.cut) M.stats.gain[att] += C.fwd;               // the ground a close-up's maul made is carried ground (a maul in the world counts it as it goes)
     maulPlace(C, ex, ey);
     if (res === 'try') { const c = k.c; c.x = clamp(oppLine(att) + d*0.6, 0.5, 119.5); c.down = 0; scoreTry(c); return; }
-    if (res === 'held') { placeBall(ex, ey); deadBall(() => scrum(def, ex, ey, 'Held Up')); return; }
+    if (res === 'held') { placeBall(ex, ey); restart('maulHeldUp', def, ex, ey); return; }
     const bx = clamp(ex - d*0.4, 1, 119), by = clamp(ey, 1, 69);
     placeBall(bx, by); M.phaseCount++;
     startSet({ kind:'ruck', team:att, x:bx, y:by, t:MAUL.useT, maul:true, then:s => { releaseTo(att, s.x, s.y, 'ruck', s.picker); if (strong) surge(att, MAUL.surge); } });   // Use It: the ball back to the scrum-half, quick
@@ -3443,7 +3513,7 @@ function startGolden() {
   M.half = 3; M.golden = true; M.clock = 0; M.hooter = false;
   for (const t of [0, 1]) fireOut(t);
   sfx('horn'); st('golden');
-  kickoff(M.firstKick);
+  restart('halfStart', M.firstKick);
   say('Golden Try', 'big');
 }
 function goldenScored() { if (M.golden) M.hooter = true; }   // any score in extra time wins it: the next dead ball ends the match
@@ -3590,7 +3660,7 @@ function updateBallAir(dt) {
     const lx = (f.kind === 'restart' || own22) ? b.x : f.x0;
     const full = f.kind === 'kick' && !own22;
     placeBall(b.x, clamp(b.y,0,70));
-    deadBall(() => lineout(1-f.team, lx, b.y, full ? 'Out on the Full' : 'Into Touch'));
+    restart(full ? 'outOnFull' : 'touchKick', 1-f.team, lx, b.y);
     return;
   }
   if (u > 0.45 && b.z < 2.7) {
@@ -3661,17 +3731,17 @@ function updateLoose(dt) {
   }
   if (b.y < 0 || b.y > 70) {
     const ki = b.kickInfo;
-    let t = 1-b.last, reason = 'Into Touch';
-    if (ki && ki.ownHalf && (ki.team === 0 ? b.x >= 88 : b.x <= 32)) { t = ki.team; reason = '50:22'; }
+    let t = 1-b.last, why = 'touchLoose';
+    if (ki && ki.ownHalf && (ki.team === 0 ? b.x >= 88 : b.x <= 32)) { t = ki.team; why = 'fiftyTwentyTwo'; }
     const x = b.x, y = b.y;
     placeBall(x, clamp(y,0,70)); sfx('whistle');
-    deadBall(() => lineout(t, x, y, reason));
+    restart(why, t, x, y);
     return;
   }
   if (b.x < 0 || b.x > 120) {
     const defTeam = b.x < 0 ? 0 : 1;
     placeBall(clamp(b.x,0,120), b.y); sfx('whistle');
-    deadBall(() => dropOut(defTeam));
+    restart('deadBallLoose', defTeam);
     return;
   }
   if (b.z < (b.egg ? PRESSURE.egg.reach : 1.0)) {          // an egg on the hop is gathered only once it is down by the knees
@@ -4251,7 +4321,7 @@ function matchUpdate(dt) {
 function endHalf() {
   placeBall(M.ball.x, M.ball.y);
   for (const s of M.side) s.charging = false;
-  if (M.demo) { M.clock = 0; M.hooter = false; kickoff(rnd() < 0.5 ? 0 : 1); return; }
+  if (M.demo) { M.clock = 0; M.hooter = false; restart('halfStart', rnd() < 0.5 ? 0 : 1); return; }
   sfx('long');
   if (M.half === 1) {
     if (M.headless) { secondHalf(); return; }
@@ -4263,7 +4333,7 @@ function endHalf() {
     if (!M.headless) finishMatch();
   }
 }
-function secondHalf() { lockerHalf(); M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; kickoff(1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
+function secondHalf() { lockerHalf(); M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; restart('halfStart', 1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
 
 /* =========================================================
    Championship
@@ -16070,6 +16140,7 @@ function start(data) {
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); if (!$('s-cup').hidden) cupFit($('s-cup')); homeFit(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
+  $('home-tag').textContent = 'Mobile Rugby\u00a0· Sevens · v' + GAME_VERSION;   // the tagline with the version: the same line, so the home keeps its height
   startDemo();
   goHome();
   try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => homeFit()); } catch (e) { /* no font loading API */ }   // My Team's names fitted again in the game's own typeface
