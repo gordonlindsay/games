@@ -16,6 +16,7 @@
   "ball.js",
   "movement.js",
   "championship.js",
+  "competitions.js",
   "cups.js",
   "career.js",
   "career-pro.js",

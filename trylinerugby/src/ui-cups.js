@@ -99,13 +99,13 @@ function cupNote(c) { return cupName(c) + ' · ' + cupLabel(c); }
 function cupHomeNote(el, c) {
   const tour = c.id === 'tour' && c.user === 0;
   const name = tour ? '' : `<span class="rn-name">${esc(c.teams[c.user].name + ' · ')}</span>`;
-  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : CUPS[c.id].name) + ' · ')}</span>${esc(cupLabel(c))}`;
+  el.innerHTML = `<span class="cup-trophy" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}" aria-hidden="true"></span>${name}<span class="rn-cup">${esc((tour ? 'Tour of ' + listName(c.teams[1]) : cupTitle(c)) + ' · ')}</span>${esc(cupLabel(c))}`;
   el.hidden = false;
 }
 /* The cup by name: European Cup · Bath, or on tour, Tour of South Africa (the Home Nations are always the side on tour). */
 function cupName(c, long) {
   if (c.id === 'tour' && c.user === 0) return 'Tour of ' + listName(c.teams[1]);
-  return (long ? CUPS[c.id].name : c.teams[c.user].name + ' · ' + CUP_SHORT[c.id]) + (long ? ' · ' + c.teams[c.user].name : '');
+  return (long ? cupTitle(c) : c.teams[c.user].name + ' · ' + (CUP_SHORT[c.id] || cupTitle(c))) + (long ? ' · ' + c.teams[c.user].name : '');
 }
 function cupLastRound(c) {                                 // the latest round with a result of the user's
   for (let k = c.results.length - 1; k >= 0; k--) if (c.results[k].some(m => m.h === c.user || m.a === c.user)) return k;
@@ -135,7 +135,7 @@ function cupVerdict(c, k) {
     return { text:(won ? 'Test Won' : 'Test Lost') + how + ' · ' + end + mine + ' – ' + theirs, good:won };
   }
   if (!won) return { text:'Out' + how, good:false };
-  if (cupDone(c) && k === c.results.length - 1) return { text:CUPS[c.id].name + ' Winners' + how, good:true };
+  if (cupDone(c) && k === c.results.length - 1) return { text:cupTitle(c) + ' Winners' + how, good:true };
   return { text:'Through to the ' + CUP_PLURAL[cupStage(c, k + 1)] + how, good:true };
 }
 function cupBreakLine() {                                  // the full-time card, once the result is in (M.cupResultDone)
@@ -147,10 +147,10 @@ function cupBreakLine() {                                  // the full-time card
 function cupLine(c) {                                      // under the title
   const fx = cupFixture(c), T = c.teams;
   if (!fx) {
-    if (!cupDone(c)) return 'Out of the ' + CUPS[c.id].name;
+    if (!cupDone(c)) return 'Out of the ' + cupTitle(c);
     const w = cupWinner(c);
     if (c.id === 'tour') { const s = cupSeries(c); return T[w].name + ' win the series ' + Math.max(...s) + ' – ' + Math.min(...s); }
-    return T[w].name + ' win the ' + CUPS[c.id].name;
+    return T[w].name + ' win the ' + cupTitle(c);
   }
   if (c.id === 'tour') {
     const s = cupSeries(c), mine = s[c.user], theirs = s[1 - c.user];
@@ -161,7 +161,7 @@ function cupLine(c) {                                      // under the title
     const p = c.pools.findIndex(x => x.includes(c.user)), place = cupPoolRows(c, p).findIndex(r => r.i === c.user);
     return ordinal(place + 1) + ' in Pool ' + CUP_POOL[p] + ' · top two go through';
   }
-  return fx.label === 'Final' ? 'Win the ' + CUPS[c.id].name : 'Win to reach the ' + CUP_PLURAL[cupStage(c, fx.round + 1)];
+  return fx.label === 'Final' ? 'Win the ' + cupTitle(c) : 'Win to reach the ' + CUP_PLURAL[cupStage(c, fx.round + 1)];
 }
 
 /* Pieces. */
@@ -202,7 +202,7 @@ function cupFixtureHtml(c, fx, pre) {
 }
 function cupWinHtml(c, pre, label) {                       // the winner's card, and its button
   const w = cupWinner(c), won = w === c.user;
-  const head = w < 0 ? CUPS[c.id].name : c.id === 'tour' ? 'Series Winners' : CUPS[c.id].name + ' Winners';
+  const head = w < 0 ? cupTitle(c) : c.id === 'tour' ? 'Series Winners' : cupTitle(c) + ' Winners';
   const who = w < 0 ? c.teams[c.user] : c.teams[w];
   return `<div class="stack">
       <div class="cup-win${won ? ' mine' : ''}" data-kind="${c.id}" data-metal="${trophyMetal(c.id)}">
@@ -223,7 +223,7 @@ function cupTieHtml(c, k, i, short) {
   return `<div class="cb-tie">${row(pair[0], m && m.hs)}${row(pair[1], m && m.as)}</div>`;
 }
 function cupBracketHtml(c) {                               // the knockouts (or a tour's Tests) as columns of ties, each round's name over its column
-  const cols = c.id === 'euro' ? [[0, 2], [1, 1]] : c.id === 'tour' ? [[0, 1], [1, 1], [2, 1]] : [[3, 4], [4, 2], [5, 1]];
+  const cols = c.id === 'euro' ? [[0, 2], [1, 1]] : c.id === 'county' ? [[0, 4], [1, 2], [2, 1]] : c.id === 'tour' ? [[0, 1], [1, 1], [2, 1]] : [[3, 4], [4, 2], [5, 1]];
   const name = k => (c.id === 'tour' ? 'Test ' + (k + 1) : CUP_PLURAL[cupStage(c, k)]);
   return `<div class="cup-bracket" style="--cols:${cols.length}">${cols.map(([k]) => `<p class="eyebrow">${name(k)}</p>`).join('')}${cols.map(([k, n]) => `<div class="cb-col">${Array.from({ length:n }, (_, i) => cupTieHtml(c, k, i, c.id !== 'euro')).join('')}</div>`).join('')}</div>`;
 }
@@ -284,6 +284,6 @@ $('cup-reset').addEventListener('click', () => {
 /* A finished cup in the Trophy Cabinet (renderCabinet, src/ui-menus.js). */
 function cupEntryHtml(e, i, tag) {
   const c = e.cup, s = cupRecordOf(c), w = cupWinner(c);
-  const award = w === c.user ? (c.id === 'tour' ? 'Series Won' : CUPS[c.id].name) : (c.id === 'tour' ? 'Series Won by ' : 'Won by ') + esc(c.teams[w].name);
+  const award = w === c.user ? (c.id === 'tour' ? 'Series Won' : cupTitle(c)) : (c.id === 'tour' ? 'Series Won by ' : 'Won by ') + esc(c.teams[w].name);
   return `<article class="season-entry"><p class="eyebrow">${tag}${i === 0 ? 'Most Recent' : 'Earlier Cup'}</p><h3>${esc(c.teams[c.user].name)} · ${esc(cupFinish(c))}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${award}</p></article>`;
 }

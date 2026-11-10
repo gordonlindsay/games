@@ -984,6 +984,7 @@ body.desk .desk-only{display:block}
 .cr-cup{display:inline-flex;align-items:center;gap:.15em;color:var(--kc);font-variant-numeric:tabular-nums}
 .cr-cup i{display:block;width:.85em;height:.95em;background:linear-gradient(150deg,var(--kc-hi),var(--kc) 55%,var(--kc-lo));-webkit-mask:var(--trophy) center/contain no-repeat;mask:var(--trophy) center/contain no-repeat}
 .cr-cup b{font:inherit}
+.cr-cab.tight{gap:.15em}.cr-cab.tight .cr-cup{gap:0}   /* six kinds in two figures at 667x375 (careerFit) */
 /* the transfer window: the offers and Stay in equal parts, each a club's card */
 .cr-offers{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:10px}
 .team.cr-offer{grid-template-columns:44px minmax(0,1fr);grid-template-rows:1fr auto 1fr;align-content:center;gap:4px 12px;min-height:76px;padding:10px 12px}   /* equal outer rows: the name over the card's middle line and its stars on it in every card, a league on two lines or one under them */

@@ -63,7 +63,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
 
 // 1. the competitions
 {
-  ok(json(Object.keys(K.CUPS)) === '["euro","world","tour"]' && K.CUPS.euro.name === 'European Cup' && K.CUPS.world.name === 'World Cup' && K.CUPS.tour.name === 'Home Nations Tour' && K.CUP_TRIPLE.name === 'Triple Crown', 'European Cup, World Cup, Home Nations Tour and the Triple Crown, in Title Case');
+  ok(json(Object.keys(K.CUPS)) === '["euro","world","tour","county"]' && K.CUPS.euro.name === 'European Cup' && K.CUPS.world.name === 'World Cup' && K.CUPS.tour.name === 'Home Nations Tour' && K.CUPS.county.name === 'County Cup' && K.CUP_TRIPLE.name === 'Triple Crown', 'European Cup, World Cup, Home Nations Tour, County Cup (a Local club\'s, tools/county.mjs) and the Triple Crown, in Title Case');
   ok(json(K.CUPS.euro.lists) === '["eng","fra","cel","rsa"]' && K.CUPS.euro.lists.every(k => X.TEAM_LISTS.some(l => l.key === k && l.tier === 1)), 'the European Cup is for the winners of England, France, the United Rugby Championship and South Africa');
   ok(K.CUPS.tour.tests === 3 && json(K.CUPS.tour.hosts) === '["NZL","RSA","AUS"]' && json(K.CUPS.tour.from) === '["ENG","IRE","SCO","WAL"]' && json(K.CUP_TRIPLE.nations) === json(K.CUPS.tour.from), 'the tour: three Tests, New Zealand, South Africa and Australia in turn, from the four home nations');
   ok(['men', 'women'].every(cat => [...K.CUPS.tour.hosts, ...K.CUPS.tour.from].every(id => nat(id, cat))), 'every host and every home nation is on both the men\'s and the women\'s twelve');
@@ -339,8 +339,8 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(/data-kind="euro" data-metal="gold" data-won>1 European Cup</.test(html) && /data-kind="league" data-metal="silver" data-won>1 Title</.test(html) && /data-kind="triple" data-metal="silver">0 Triple Crowns</.test(html) && !/World Cups?</.test(html.match(/cabinet-tally">([\s\S]*?)<\/p>/)[1]), 'the tally counts each kind won, a cup kind once one is won, each in its metal, a trophy only beside a count held (none beside 0 Triple Crowns)');
   // real silverware: one map of each kind's metal, gold or silver, read by every trophy; the tones read on the dark panel
   const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  ok(json(K.TROPHY_METAL) === json({ league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold' }) && T.career.KINDS.every(k => K.trophyMetal(k) === K.TROPHY_METAL[k]) && K.trophyMetal('lions') === 'silver' && K.trophyMetal(undefined) === 'silver',
-    'TROPHY_METAL: gold for the European Cup, the World Cup, the Home Nations Tour and the Super Fan trophy, silver for a title and the Triple Crown; anything else a League\'s silver');
+  ok(json(K.TROPHY_METAL) === json({ league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold', county:'silver' }) && T.career.KINDS.every(k => K.trophyMetal(k) === K.TROPHY_METAL[k]) && K.trophyMetal('lions') === 'silver' && K.trophyMetal(undefined) === 'silver',
+    'TROPHY_METAL: gold for the European Cup, the World Cup, the Home Nations Tour and the Super Fan trophy, silver for a title, a county cup and the Triple Crown; anything else a League\'s silver');
   const tags = [...html.matchAll(/class="(?:cup-kind|ck)" data-kind="(\w+)" data-metal="(\w+)"(?: data-won)?>/g)];
   ok(tags.length >= 5 && tags.every(([, k, m]) => m === K.trophyMetal(k)) && !/class="(?:cup-kind|ck)" data-kind="\w+">/.test(html), `every tag and tally carries its kind's metal from the map (${tags.map(t => t[1] + ' ' + t[2]).join(', ')})`);
   const tone = n => (css.match(new RegExp(`--${n}:(#[0-9a-f]{6})`)) || [])[1];
@@ -354,8 +354,8 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   // each kind's shape (the owner, 2026-11-09: "different shapes"): one map beside the metals, a silhouette of its own for every kind (the
   // Super Fan's 'fan' ready for its kind), made into the page's rules, and every trophy drawn through them, in its metal
   const SH = K.TROPHY_SHAPE, kinds = [...new Set([...T.career.KINDS, ...Object.keys(K.TROPHY_METAL), 'fan'])];
-  ok(json(Object.fromEntries(Object.entries(SH).map(([k, v]) => [k, v.name]))) === json({ league:'shield', euro:'cup with big handles', world:'cup with a ball on top', tour:'plate', triple:'crown', fan:'rosette' }),
-    'TROPHY_SHAPE: a title a shield, the European Cup a cup with big handles, the World Cup a cup with a ball on top, the Home Nations Tour a plate, the Triple Crown a crown, the Super Fan\'s trophy a rosette');
+  ok(json(Object.fromEntries(Object.entries(SH).map(([k, v]) => [k, v.name]))) === json({ league:'shield', euro:'cup with big handles', world:'cup with a ball on top', tour:'plate', triple:'crown', county:'tankard', fan:'rosette' }),
+    'TROPHY_SHAPE: a title a shield, the European Cup a cup with big handles, the World Cup a cup with a ball on top, the Home Nations Tour a plate, the Triple Crown a crown, a county cup a tankard, the Super Fan\'s trophy a rosette');
   ok(kinds.every(k => SH[k] && /^M[0-9MmLlHhVvCcSsQqAaZz .-]+$/.test(SH[k].d) && /z$/i.test(SH[k].d)) && new Set(kinds.map(k => SH[k].d)).size === kinds.length && new Set(kinds.map(k => SH[k].name)).size === kinds.length && Object.keys(SH).length === kinds.length,
     `every kind has a shape (${kinds.join(', ')}), a filled path, and no two kinds share one`);
   ok(K.trophyShape('lions') === SH.league && K.trophyShape(undefined) === SH.league && kinds.every(k => K.trophyShape(k) === SH[k]), 'an unknown kind is a League\'s shield, as its metal is a League\'s silver');
@@ -551,7 +551,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
 {
   const src = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
   const order = JSON.parse(src('src/manifest.json'));
-  ok(order.indexOf('cups.js') === order.indexOf('championship.js') + 1 && order.indexOf('ui-cups.js') === order.indexOf('ui-menus.js') + 1, 'cups.js after championship.js, ui-cups.js after ui-menus.js');
+  ok(order.indexOf('competitions.js') === order.indexOf('championship.js') + 1 && order.indexOf('cups.js') === order.indexOf('competitions.js') + 1 && order.indexOf('ui-cups.js') === order.indexOf('ui-menus.js') + 1, 'cups.js after championship.js and competitions.js (the county cups\' data), ui-cups.js after ui-menus.js');
   ok(/^  cups:\{ CUPS, /m.test(src('src/boot.js')), 'the tests\' namespace, cups, on its own line in window.__tryline');
   ok(!/id="t-comp"/.test(src('index.html')) && /<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>/.test(src('index.html')) && /<section class="screen" id="s-cup" hidden>/.test(src('index.html')), 'index.html: the competitions on the home (the team screen\'s row gone), and the cup hub');
   ok(/\/\* ===== cups ===== \*\//.test(src('styles.css')), 'styles.css: one block, under its heading');

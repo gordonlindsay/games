@@ -4,7 +4,7 @@
    Every random draw happens in cupNew (the draw) or cupRecord (the other matches of a round, and a level knockout's
    toss), never in a render, a save or cleanCup. Championship mode keeps one in `cup` (persistence.js, ui-cups.js);
    Career keeps its own in career.cup. Both play through the same functions.
-     cup = { id:'euro'|'world'|'tour', uid, cat, year?, user, teams:[sides], pools?:[[i,j,k] x4],
+     cup = { id:'euro'|'world'|'tour'|'county', name? (a county cup's own), uid, cat, year?, user, teams:[sides], pools?:[[i,j,k] x4],
              fixtures:[[[home, away], ...] a round], results:[[{ h, a, hs, as, ht, at, w?, by? }, ...] a round], round }
    A round's results are in its fixtures' order. A knockout or Test result carries its winner, w; level on points it
    goes to the side with more tries (by:'tries'), then to the toss (by:'toss'). The match you play has the Golden Try
@@ -14,13 +14,16 @@ const CUPS = {
   euro:{ id:'euro', name:'European Cup', lists:['eng', 'fra', 'cel', 'rsa'] },
   world:{ id:'world', name:'World Cup' },
   tour:{ id:'tour', name:'Home Nations Tour', tests:3, hosts:['NZL', 'RSA', 'AUS'], from:['ENG', 'IRE', 'SCO', 'WAL'] },
+  county:{ id:'county', name:'County Cup' },   // a Local club's county knockout (src/competitions.js): each cup carries its own name, the Surrey Shield or the Hampshire Bowl
 };
+/* A cup's name: a county cup's own (c.name), else its kind's. */
+const cupTitle = c => (c.id === 'county' && c.name) || CUPS[c.id].name;
 const CUP_TRIPLE = { name:'Triple Crown', nations:['ENG', 'IRE', 'SCO', 'WAL'] };
 /* Each trophy's metal: real silverware, gold or silver, and nothing else. Gold for the three cups; silver for a title (a league, the
    Championship's or a career's, or an international championship) and the Triple Crown. The one map: the Trophy Cabinet's trophies,
    tags and tallies, the career's trophy row and every cup's trophy read it (data-metal, whose tones are styles.css's --gold and
    --silver), and each still names its kind in words. */
-const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold' };   // fan: the Super Fan trophy (src/ui-locker.js)
+const TROPHY_METAL = { league:'silver', euro:'gold', world:'gold', tour:'gold', triple:'silver', fan:'gold', county:'silver' };   // county: silver, a step below the three big cups   // fan: the Super Fan trophy (src/ui-locker.js)
 function trophyMetal(kind) { return TROPHY_METAL[kind] || 'silver'; }   // a declaration: a typeof guard works wherever its file sits. An unknown kind (an entry from before the cups) is a League
 /* Each trophy's shape, so the kinds tell apart at a glance in the same metal (the owner, 2026-11-09, shown three gold cups alike on the
    career's row: "different shapes"). A filled silhouette in a 24 by 24 box, read at 10px on the career's row and the Trophy Cabinet's
@@ -36,6 +39,7 @@ const TROPHY_SHAPE = {
   world:{ name:'cup with a ball on top', d:'M5.5 7.2C6 2.1 14.5-1.4 18.5 2C18 7.1 9.5 10.6 5.5 7.2zM5 10h14c0 4.4-2.3 7.1-5.5 7.9v1.8H17v2.8H7v-2.8h3.5v-1.8C7.3 17.1 5 14.4 5 10z' },
   tour:{ name:'plate', d:'M2.4 10a9.6 9.6 0 1 1 19.2 0a9.6 9.6 0 1 1-19.2 0zM4.8 10a7.2 7.2 0 1 0 14.4 0a7.2 7.2 0 1 0-14.4 0zM6 10a6 6 0 1 1 12 0a6 6 0 1 1-12 0zM10.6 19h2.8v1.6h3.1l1.5 2.4H6l1.5-2.4h3.1z' },
   triple:{ name:'crown', d:'M1.5 7.5l5.5 4.8L12 4.5l5 7.8 5.5-4.8-2 11.5h-17zM3.5 20h17v2.5h-17zM0 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0zM10 3a2 2 0 1 1 4 0a2 2 0 1 1-4 0zM20.4 6.4a1.8 1.8 0 1 1 3.6 0a1.8 1.8 0 1 1-3.6 0z' },
+  county:{ name:'tankard', d:'M5 3h11v2h2.6c1.9 0 2.9 1.2 2.9 3v4.2c0 1.8-1 3-2.9 3H16v4.3c0 1.4-.9 2.5-2.4 2.5H7.4C5.9 22 5 20.9 5 19.5zM16 7.4v5.4h2.2c.5 0 .8-.3.8-.8V8.2c0-.5-.3-.8-.8-.8zM3.5 1h14v2.2h-14z' },
   fan:{ name:'rosette', d:'M8.6 13.5h3.4L9.2 23.3l-1.9-2.2-2.7 1zM12 13.5h3.4l4 8.8-2.7-1-1.9 2.2zM12 2A1.8 1.8 0 0 1 16.2 3.4A1.8 1.8 0 0 1 18.8 7A1.8 1.8 0 0 1 18.8 11.4A1.8 1.8 0 0 1 16.2 15A1.8 1.8 0 0 1 12 16.4A1.8 1.8 0 0 1 7.8 15A1.8 1.8 0 0 1 5.2 11.4A1.8 1.8 0 0 1 5.2 7A1.8 1.8 0 0 1 7.8 3.4A1.8 1.8 0 0 1 12 2zM7.8 9.2a4.2 4.2 0 1 0 8.4 0a4.2 4.2 0 1 0-8.4 0zM9 9.2a3 3 0 1 1 6 0a3 3 0 1 1-6 0z' },
 };
 function trophyShape(kind) { return TROPHY_SHAPE[kind] || TROPHY_SHAPE.league; }   // an unknown kind is a League, as its metal is
@@ -45,8 +49,8 @@ const trophyMask = kind => `url("data:image/svg+xml,${encodeURIComponent(`<svg x
 function trophyShapeCss() {
   return `:root{--trophy:${trophyMask('league')}}\n` + Object.keys(TROPHY_SHAPE).map(k => `[data-kind="${k}"]{--trophy:${trophyMask(k)}}`).join('\n');
 }
-const CUP_SIZE = { euro:4, world:12, tour:2 };             // sides in each
-const CUP_MADE = { euro:1, world:3, tour:1 };              // rounds drawn at the start; the rest follow from the results
+const CUP_SIZE = { euro:4, world:12, tour:2, county:8 };             // sides in each
+const CUP_MADE = { euro:1, world:3, tour:1, county:1 };              // rounds drawn at the start; the rest follow from the results
 const CUP_POOL = ['A', 'B', 'C', 'D'];
 const CUP_TOUR_SIDE = { id:'HNS', name:'Home Nations', kit:'#c41e3a', trim:'#f2efe6', alt:'#1b2747', altTrim:'#c41e3a' };   // the touring side: red, a code no club or nation has
 let cupSerial = 0;                                         // with the time, a cup's uid (the Trophy Cabinet keeps each one once)
@@ -118,6 +122,11 @@ function cupNew(id, opts) {
     Object.assign(c, { user:0, teams:[me, ...drawn.map(t => side(catTeam(t, cat)))] });
     const order = shuffle([0, 1, 2, 3]);
     c.fixtures = [[cupHome(c, order[0], order[1]), cupHome(c, order[2], order[3])]];
+  } else if (id === 'county') {                           // his club and seven Local clubs nearest its level, in the cup its county runs for that level
+    c.name = compCupFor(o.user).name;
+    Object.assign(c, { user:0, teams:[me, ...compCupRivals(o.user).map(t => side(catSide(t, cat)))] });
+    const order = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
+    c.fixtures = [[0, 2, 4, 6].map(i => cupHome(c, order[i], order[i + 1]))];
   } else if (id === 'world') {
     const list = cupTwelve(cat).map(side);
     let at = list.findIndex(t => t.id === me.id && !me.custom);
@@ -150,6 +159,7 @@ function cupSeries(c, k = c.results.length) {              // Tests won by each 
 function cupNext(c, k) {
   if (k < CUP_MADE[c.id]) return c.fixtures[k] || null;
   if (c.id === 'euro') return k === 1 ? [cupHome(c, cupW(c, 0, 0), cupW(c, 0, 1))] : null;
+  if (c.id === 'county') return k === 1 ? [cupHome(c, cupW(c, 0, 0), cupW(c, 0, 1)), cupHome(c, cupW(c, 0, 2), cupW(c, 0, 3))] : k === 2 ? [cupHome(c, cupW(c, 1, 0), cupW(c, 1, 1))] : null;
   if (c.id === 'tour') { const s = cupSeries(c, k); return k < CUPS.tour.tests && Math.max(...s) < 2 ? [[1, 0]] : null; }
   if (k === 3) {                                           // the Quarter-Finals: A1 v B2, C1 v D2, B1 v A2, D1 v C2
     const t = [0, 1, 2, 3].map(p => cupPoolRows(c, p, 3).map(r => r.i));
@@ -184,6 +194,7 @@ function cupSettle(c) {
 }
 function cupStage(c, k) {
   if (c.id === 'euro') return k === 0 ? 'Semi-Final' : 'Final';
+  if (c.id === 'county') return ['Quarter-Final', 'Semi-Final', 'Final'][k];
   if (c.id === 'tour') return 'Test ' + (k + 1) + ' of ' + CUPS.tour.tests;
   if (k < 3) return 'Pool ' + CUP_POOL[c.pools.findIndex(p => p.includes(c.user))];
   return ['Quarter-Final', 'Semi-Final', 'Final'][k - 3];
@@ -285,6 +296,7 @@ function cleanCup(c) {
   if (!Array.isArray(c.fixtures) || !Array.isArray(c.results) || c.round !== c.results.length || c.results.length > c.fixtures.length || c.fixtures.length > 6) return null;
   const out = { id:c.id, uid:typeof c.uid === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(c.uid) ? c.uid : '', cat:TEAM_CATS.some(x => x.id === c.cat) ? c.cat : 'men' };
   if (Number.isInteger(c.year) && c.year >= 0 && c.year <= 9999) out.year = c.year;
+  if (c.id === 'county') out.name = COUNTY_CUP_NAMES.includes(c.name) ? c.name : CUPS.county.name;
   Object.assign(out, { user:c.user, teams });
   const idx = v => Number.isInteger(v) && v >= 0 && v < n;
   const pairOk = p => Array.isArray(p) && p.length === 2 && idx(p[0]) && idx(p[1]) && p[0] !== p[1];
@@ -297,9 +309,9 @@ function cleanCup(c) {
   }
   out.fixtures = []; out.results = []; out.round = 0;
   const made = c.id === 'world' ? cupPoolRounds(out) : c.id === 'tour' ? [[[1, 0]]] : null;
-  if (c.id === 'euro') {
+  if (c.id === 'euro' || c.id === 'county') {               // a drawn first round: its ties, each side once, the home side the rule's
     const f = c.fixtures[0];
-    if (!Array.isArray(f) || f.length !== 2 || !f.every(pairOk) || new Set(f.flat()).size !== 4 || !f.every(p => same([cupHome(out, p[0], p[1])], [p]))) return null;
+    if (!Array.isArray(f) || f.length !== n/2 || !f.every(pairOk) || new Set(f.flat()).size !== n || !f.every(p => same([cupHome(out, p[0], p[1])], [p]))) return null;
   } else if (c.fixtures.length < made.length || !made.every((rd, k) => same(rd, c.fixtures[k]))) return null;
   for (let k = 0; k < c.fixtures.length; k++) {
     const want = k < CUP_MADE[c.id] ? (made ? made[k] : c.fixtures[0].map(p => p.slice())) : cupNext(out, k);
