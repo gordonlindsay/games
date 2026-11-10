@@ -628,7 +628,11 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // Re-pinned at the merge of wt/kidshalf into wt/pr14int (2026-11-10), after pressure and the maul joined: both change these matches on
   // purpose. Proof: PRESSURE='{"on":false}' MAUL='{"on":false}' node tools/kids.mjs still gives 909fe3a's pin, 1f0hz9i 12yifyb trg1ag
   // ec8vp2 yio7xz 1db7d9g 1wytmos 1if8lrm (the Two Player part, 1db7d9g, does not move either way)
-  const PIN = 'to1ovz lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
+  // Re-pinned at the edge on Easy (src/edge.js, 2026-11-10): the first match, Quick Match on Easy, is a person against the CPU on Easy, so
+  // the edge acts in it on purpose (its Line Break, On Fire after two good moments, its carrier's levers); nothing else moved. Proof:
+  // EDGE='{"on":false}' node tools/kids.mjs gives the pin before it exactly, to1ovz lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv,
+  // as GAME=<90353c3>/index.html KIDS_PRINT=1 does
+  const PIN = '1wazr74 lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
   const pin = () => {
     const out = [];
     s.played = 99; s.kidsR = 0;

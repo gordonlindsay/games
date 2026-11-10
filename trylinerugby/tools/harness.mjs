@@ -32,6 +32,9 @@ export const CLUB_BAND = {
 if (process.env.NEW_LISTS === 'off') js = js.replace(/\n  \{ key:'en2'[^\n]*/, '').replace(/\n  \{ key:'cty'[^\n]*/, '');
 // MAUL='{"on":false}' turns the maul off (the build before it exactly: b706c3e on its branch; on wt/pr14int the pressure merge, and with PRESSURE='{"on":false}' as well 0b1293c: the proof behind every re-pin since); MAUL='{"cpu":{"base":0.1}}' tries other levers. Deep-merged, as the contact levers below
 if (process.env.MAUL) js = js.replace('// MAUL_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(MAUL, ${process.env.MAUL}); }`);
+// EDGE='{"on":false}' turns the edge off (src/edge.js: Easy against the CPU plays exactly as 90353c3, the build before it, draw for draw: the
+// proof behind every re-pin since); EDGE='{"hold":0.9,"fire":{"need":3}}' tries other levers. Deep-merged, as the contact levers below
+if (process.env.EDGE) js = js.replace('// EDGE_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(EDGE, ${process.env.EDGE}); }`);
 // CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' PRESSURE='{"on":false}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion, Tackle duel trigger and pressure levers
 {
   const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL', 'PRESSURE'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
