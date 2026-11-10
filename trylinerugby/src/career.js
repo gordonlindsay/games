@@ -8,7 +8,7 @@
                 rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
      'county'   his county's cup, every year he is at a Local club (a Local list: Surrey or Counties): eight sides in the cup its county runs for its
                 level, the Surrey Cup down to the Surrey Bowl (src/competitions.js). A professional club has none.
-     'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, Celtic and Italy, South Africa).
+     'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, the United Rugby Championship, South Africa).
      'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
                 his country's six in its category's twelve (natGroup) as a season, or in a World Cup year (4, 8, 12) the World Cup.
                 His country is picked at his first call-up, from the career's Men or Women twelve (natList), and kept.
@@ -21,7 +21,7 @@
    - Any club: a side from a national league, a Local club, or a team you made or imported. The list it was picked from is its
      league (career.league): a built-in club's is always its own list, a made one's the list it was picked on (My League for an
      imported one, Local while no league is saved). Every player starts a rookie (CAREER_START, about 61), whatever the club.
-   - Transfers: his overall (61 to 99) maps onto the clubs' band (61 to 75) linearly and capped (careerTarget); the offers are
+   - Transfers: his overall (61 to 99) maps onto the national clubs' band (58 to 75) linearly and capped (careerTarget); the offers are
      clubs from the national lists, Scotland's included, never his own, within CAREER_MOVE.band of that, the band widened a
      point at a time until there are two. One from each league first where it can be. A made, imported or Local club he started
      at is his to stay at; an offer is always from the national lists. The draw is made as the window opens and saved with it.
@@ -51,9 +51,10 @@ const CAREER_PHASES = ['league', 'county', 'cup', 'intl', 'tour', 'transfer'];
 /* bar: the overall that earns a call-up (a scripted player is first called up at the end of year 3 or 4: tools/career.mjs);
    tour: the overall for the Home Nations Tour; every4: a World Cup in years 4, 8, 12, the tour in years tourAt + 4n (2, 6, 10). */
 const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
-/* from: his overall's range; to: the clubs' (Scotland's amateur sides at 61 to the top professional sides at 75); band: how near
-   a club's overall must be to the target, widened a point at a time until there are two; offers: two or three. */
-const CAREER_MOVE = { from:[61, 99], to:[61, 75], band:1, offers:[2, 3] };
+/* from: his overall's range; to: the national clubs' (Scotland's bottom five at 58 to the national champions at 75, the real order), so
+   every national club can be offered; band: how near a club's overall must be to the target, widened a point at a time until there are
+   two; offers: two or three. */
+const CAREER_MOVE = { from:[61, 99], to:[58, 75], band:1, offers:[2, 3] };
 const CAREER_EURO = ['eng', 'fra', 'cel', 'rsa'];   // the leagues whose winners play the European Cup (the cups engine's CUPS.euro.lists)
 const CAREER_HOME = ['ENG', 'IRE', 'SCO', 'WAL'];   // the home nations: the tour is theirs (CUPS.tour.from), and so is the Triple Crown
 const CAREER_CUP_NAME = { county:'County Cup', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // a county cup's own name is on the cup (cupTitle)   // the cups engine's names (CUPS)
@@ -69,7 +70,7 @@ const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2
    are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
    from match tackles and the dilemmas (Tackle Drills, Gym Session). */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
-const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
+const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Gap', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
    kicked a point of Kicking. At most CAREER_DEED_CAP points a match: training is where most of it comes from. */
 const CAREER_DEEDS = { tries:{ pace:1, handling:1 }, goals:{ kicking:1 }, tackles:{ power:1 } };
@@ -132,6 +133,15 @@ const careerClubs = () => NATIONAL.flat();           // where an offer comes fro
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
 const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
 const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+/* A built-in club as its list rates it now. A save keeps the abilities its club had when it was saved, and a re-rating (the real order,
+   2026-11-09: Farnham 75 to 61) would leave a career's club at the old ones while every league it draws is at the new. So a loaded
+   career's club takes its list's abilities (cleanCareer); a team you made or a My League side keeps its own, and a season in progress
+   keeps its sides as saved, as a championship does. */
+function careerRated(club) {
+  const l = careerListOf(club), now = l && l.teams.find(o => o.id === club.id);
+  if (now) for (const [k] of ABILITIES) club[k] = clamp(Math.round(abilityOf(now, k) || 1), 1, 5);
+  return club;
+}
 /* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
    Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
@@ -471,6 +481,7 @@ function cleanCareer(c) {
   const signed = was != null && was >= 3 ? careerClubById(c.pro) : null;   // the Pro Club side it signed for
   const club = cleanSide(signed || c.club);
   if (!club || !raw) return null;
+  careerRated(club);                                   // a built-in club at its list's ratings now, whatever it was saved at
   const pos = c.pos === 'F' ? 'F' : 'B';               // an unknown position is a back, as careerCreate has it
   /* Men or Women. A career from before Men | Women is Men, except one PR #14's build saved: it has no cat, and its Female was look.g 1
      (its careerFemale), the same one control, so that is a women's career. A cat, where there is one, decides. */

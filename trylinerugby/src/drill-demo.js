@@ -115,8 +115,8 @@ function demoPad(gp, P) {                                  // the pad's edges ar
 
 /* ---------- the pilots ----------
    Each reads the drill as a player reads the screen and says, step by step, what the thumb and the fingers do. dt is the drill
-   time this step will take. A rep that goes wrong just rolls on to the drill's next rep; a drill with only one (Defend, Two-on-One)
-   is built afresh and goes again. Its rules are never bent: a dive is about two in three, for the pilot as for anyone. */
+   time this step will take. A rep that goes wrong just rolls on to the drill's next rep; one that ends the run (Defend's and
+   Create a Gap's round one) is built afresh and goes again. Its rules are never bent: a dive is about two in three, for the pilot as for anyone. */
 function demoEggSpot(E) {                                  // where to run: the first point on the ball's flight within reach in time, or where this hop lands. t: how long until the ball is there
   const b = M.ball, me = E.me, K = DRILL_EGG, v = maxSpeed(me)*0.8, lo = E.bounced ? 0.05 : E.kind === 'bounce' ? 99 : K.lo + 0.1;   // a Bounce Pass can't be caught before it lands, so run to where it lands
   let x = b.x, y = b.y, z = b.z, vz = b.vz;
@@ -236,8 +236,10 @@ const DEMO_PILOT = {
     D.step('Drive', 'Stay in the green and keep tapping ' + demoName('Push', 'a') + '.');
     if (c.t >= (D.n.next || 0)) { D.tap('a'); D.n.next = c.t + 1/7; }
   },
-  defend(D) {
-    const me = ctrlOf(0), b = M.ball, c = b.state === 'held' ? b.carrier : null, tagging = practice.tagOnly, press = tagging ? 'Pull Tag' : 'Tackle';
+  defend(D) {                                              // round one, the chase
+    const me = ctrlOf(0), b = M.ball, c = b.state === 'held' ? b.carrier : null, tagging = practice.tagOnly, press = tagging ? 'Pull Tag' : 'Tackle', R = practice.defend.R;
+    if (R.won) { D.end(true); return; }
+    if (R.stage !== 'play') return;
     if (!practice.switched) { D.slow = true; D.step('Switch', 'Tap ' + demoName('Switch', 'b') + ' to pick the defender in front.'); if (D.wall - D.began >= 1.5) D.tap('b'); return; }
     if (demoMissed()) { D.end(false); return; }
     if (!me || !c || c.team !== 1) return;
@@ -283,19 +285,17 @@ const DEMO_PILOT = {
       if (T.t >= K.grace + 0.3) D.go(T.team, 0);
     }
   },
-  pass(D) {
-    const me = ctrlOf(0), b = M.ball, def = M.players.find(p => p.team === 1);
-    if (practice.completedPass) {
-      D.step('Score', demoMove() + ' to run for the try line.');
-      if (me && def) { D.go(1, dist(me, def) < 6 && def.x >= me.x - 1 ? (me.y >= def.y ? 0.7 : -0.7) : 0); D.hold('c'); }   // round the defender, then straight home
-      return;
-    }
+  pass(D) {                                                // round one, 2 on 1
+    const G = practice.gap, me = ctrlOf(0), b = M.ball, def = gapMark(me);
+    if (G.R.won) { D.end(true); return; }
+    if (G.R.stage !== 'play') return;
     if (b.state !== 'held') { D.slow = true; D.go(1, 0); D.step('Pass', 'The ball goes to the runner with the dashed ring.'); return; }
-    if (b.carrier !== me || !def) return;
+    if (b.carrier !== me) return;
     D.go(1, 0);
-    if (dist(me, def) > 5) { D.step('Draw', demoMove() + ' to run at the defender and draw them in.'); return; }
+    if (!def) { D.step('Score', demoMove() + ' to run for the try line.'); D.hold('c'); return; }   // the free man: straight home
+    if (dist(me, def) > 5) { D.step('Draw', demoMove() + ' to run at your defender and draw them in.'); return; }
     D.slow = true; D.mark('pass');
-    D.step('Pass', 'Tap ' + demoName('Pass', 'a') + ' before they reach you.');
+    D.step('Pass', 'Tap ' + demoName('Pass', 'a') + ' when the ring turns gold.');
     D.tap('a');
   },
 };

@@ -256,8 +256,8 @@ pending('7. PR #14\'s panel\'s phone rules (main\'s line under Play: tools/brows
   // New Player's rules are the career builder's now (2026-11-09): main's New Player with Your Look as its second step (tools/career.mjs measures both)
   ok(at('cn-cat') < at('cn-name') && at('cn-go') > at('cn-num') && at('cn-look-go') < at('cn-go') && at('ck-style') > at('cn-go'), 'New Player: Team (Men | Women, the one control) on the left, Start Career after every picker, Your Look a screen of its own');
   ok(/\.swatches\.cr-sw\{grid-template-columns:repeat\(3,44px\)/.test(src) && !/minmax\(0,44px\)/.test(src), 'swatches stay 44 wide: nothing lets them shrink');
-  ok(/\.app-action \{[^}]*min-height:44px/.test(src) && /\.home-cabinet summary\{min-height:44px/.test(src), 'Update Game, Install Game and the Trophy Cabinet are 44 tall');
-  ok(/\.home-side \.app-tools\{flex:0 1 auto;flex-wrap:nowrap/.test(src) && /\.home-side \.home-cabinet\{flex:1 1 0;min-width:0/.test(src), 'the tools and the cabinet share one row, the cabinet taking what is left, so Update Game can not wrap off the screen');
+  ok(/\.app-action \{[^}]*min-height:44px/.test(src) && /\.home-cabinet summary\{min-height:44px/.test(src), 'Install Game and the Trophy Cabinet are 44 tall');
+  ok(/\.home-side \.app-tools\{flex:0 1 auto;flex-wrap:nowrap/.test(src) && /\.home-side \.home-cabinet\{flex:1 1 0;min-width:0/.test(src), 'the tools and the cabinet share one row, the cabinet taking what is left, so Install Game can not wrap off the screen');
   ok(/\.app-tools:has\(\.app-action:not\(\[hidden\]\)\) #offline-status\{display:none\}/.test(src), 'Offline Ready gives way first');
   // the tab row's cue: a fade where more tabs are, from its own scroll metrics
   const row = () => { const on = new Set(); return { scrollLeft:0, scrollWidth:747, clientWidth:632, classList:{ toggle:(c, v) => { if (v) on.add(c); else on.delete(c); } }, on }; };

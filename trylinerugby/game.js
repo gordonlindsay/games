@@ -29,7 +29,7 @@ const NATIONS = [   // append only: championships saved before clubs existed ind
 ];   // the six first, then the rest of the world, then the women's two; a nation's code never matches a club's (RSA, not a South African city's)
 /* Local clubs: kit colours are the clubs' own. Each club's league line (league, place, w, d, l, pf, pa) is its last season's, real figures from
    PR #14's lists, read from the list and never saved (cleanSide and cleanTeam keep none of it). Its rating comes from that season (CLUB_RATED, src/ratings.js);
-   the abilities written here are only how it plays. Quins has no line here, so it keeps the rating written here. Append only, never reorder. */
+   the abilities written here are only how it plays. Quins has no line here: it is rated level with Farnham, as written here. Append only, never reorder. */
 const CLUBS = [
   { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3, league:'Regional 1 South Central', place:7, w:10, d:0, l:12, pf:640, pa:646 },
   { id:'HAS', name:'Haslemere',     kit:'#2244aa', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Counties 3 Surrey', place:9, w:4, d:0, l:16, pf:344, pa:598 },
@@ -46,9 +46,9 @@ const CLUBS = [
 ];
 /* Professional sides go by their city, not the club's own name or nickname: the city is a place, the club name is a
    trademark. Kit colours follow the clubs' own, and no club tops a team you can make (5 + BUDGET). A side with a league line (PR #14's
-   last-season figures) is rated from it inside main's club band (CLUB_RATED, src/ratings.js): a top flight 67 to 72, and 75 only for a
-   national champion; England 2 64 or 67; Scotland's amateur clubs 61 and 64, as written here. New Zealand and Japan have no figures and
-   keep the ratings written here. The abilities written in a list are how a side plays (its flavour, TEAM_FLAVOUR).
+   last-season figures) is rated from it in the real order of the tiers (CLUB_RATED, src/ratings.js): a top flight 67 to 72, and 75 only
+   for a national champion; England 2 61 or 64; Scotland's amateur clubs 58 and 61, a step under the ratings written here. New Zealand
+   and Japan have no figures and keep the ratings written here. The abilities written in a list are how a side plays (its flavour, TEAM_FLAVOUR).
    Codes are unique across every list, nations included. Append only, never reorder. */
 const FRANCE = [   // the Top 14, rated by its 2025-26 table
   { id:'TLS', name:'Toulouse',    kit:'#d01f2e', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3, league:'Top 14', place:1, w:18, d:0, l:8, pf:981, pa:617 },
@@ -139,8 +139,8 @@ const SCOTLAND = [   // the Scottish Premiership, 2025-26, in its table's order:
   { id:'SEL', name:'Selkirk',    kit:'#1b2747', trim:'#f2efe6', pace:2, power:3, handling:2, kicking:2, stamina:3 },
 ];
 /* England's second tier, the English Championship, in last season's table order (regular season, before the play-offs), from PR #14. Thirteen
-   of its fourteen: the side from London is left out, because London is taken by the top flight's sides and it was relegated. Rated 67 with
-   a winning record, else 64: one step under the top flights' best, its winners level with their foot (CLUB_RATED).
+   of its fourteen: the side from London is left out, because London is taken by the top flight's sides and it was relegated. Rated 64 with
+   a winning record, else 61, PR #14's own figures: under every top-flight side, and above every Local and Counties side (CLUB_RATED).
    No two sides here share a shirt and a trim at a glance: where a club's own colours are close to another's, one wears hoops or the darker
    shade. Weak sources, as PR #14 flagged them: Chinnor, Hartpury's hoops, Cornwall's trim, Doncaster, Nottingham's hoops, Ampthill's shade
    and hoops and Caldy's hoops could not be sourced and are a free choice. Append only, never reorder. */
@@ -161,7 +161,7 @@ const ENGLAND_TWO = [
 ];
 /* The foot of the game, from PR #14: Counties 5 Surrey, the league Guildfordians play in, in last season's table order, with one side from
    Counties 3 Surrey above them. Guildfordians is the Local list's own object, so it stays one team with one code (ALL_TEAMS keeps it once).
-   Rated 61 for Counties 5 and 64 for Counties 3, the foot of main's band, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
+   Rated 43 for Counties 5 and 46 for Counties 3, the foot of the ladder, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
    PR #14 flagged them: Egham's and Mitcham's colours could not be sourced and are a free choice. Append only, never reorder. */
 const COUNTIES = [
   { id:'EFF', name:'Effingham',  kit:'#f2b01e', trim:'#0f5a32', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 3 Surrey', place:2, w:16, d:0, l:4, pf:773, pa:291 },
@@ -181,7 +181,7 @@ const TEAM_LISTS = [
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
   { key:'en2', tier:1, name:'England 2',        teams:ENGLAND_TWO },   // PR #14's second tier
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
-  { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
+  { key:'cel', tier:1, name:'United Rugby Championship', teams:CELTIC },   // the real name (the owner, 9 Nov: generic enough); its key stays 'cel', as saves, the European Cup and settings.pool hold it
   { key:'sco', tier:1, name:'Scotland',         teams:SCOTLAND },
   { key:'rsa', tier:1, name:'South Africa',     teams:SOUTH_AFRICA },
   { key:'aus', tier:1, name:'Australia',        teams:AUSTRALIA },
@@ -310,7 +310,7 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.flo
    - RATINGS_BUNDLED is the nations' table, from the world rankings and recent results, with its date. tools/ratings/update.mjs
      reads this line as JSON, so it stays one line of strict JSON. In the merged game it is the shape ratings.json is checked against;
      the nations themselves are rated by main's official World Rugby tables (NATIONS, NAT_WOMEN, natList in data.js).
-   - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), held inside main's club band.
+   - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), in the real order of the tiers.
    - starsOfOverall and TEAM_LEVELS are the star scale and the levels a team you make can be set at.
    - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities.
    - Players' devices only ever ask the game's own site: a same-origin ratings.json, read once at boot (online, or offline through
@@ -324,10 +324,17 @@ function starsOfOverall(ov) { return ov >= 90 ? 5 : ov >= 75 ? 4.5 : ov >= 70 ? 
 const starsOf = t => starsOfOverall(overallOf(t));
 const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text alternative, and the words on a level
 /* A team you make or import is set at a level, which gives it a fixed amount of ability: the one table of level, overall and stars. budget: the points to spend above 1 in each ability.
-   The id is what a save holds, so it never changes. A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
-const TEAM_LEVELS = [['c5', 'Counties 5', 40], ['c3', 'Counties 3', 43], ['c1', 'Counties 1', 49], ['r2', 'Regional 2', 52], ['r1', 'Regional 1', 58], ['nat', 'National League', 61], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75], ['euro', 'European Champions', 90]]
+   Each level is the best built-in side of that league on the clubs' ladder (CLUB_RATED), so a level means what a built-in side of it means:
+   Counties 5 43 and Counties 3 46 (every side of each), Counties 1 52 (Cobham, Weybridge), Regional 2 55 (Ironsides), Regional 1 61 (Farnham),
+   Championship 64 (England 2, the English Championship, with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75.
+   An imported National League page (England's third and fourth tiers) is Regional 1 (src/import.js). PR #14's European Champions (90, its
+   Bordeaux) has gone with Bordeaux's 90: no club is above a nation, and a save holding it reads as National Champions (LEVEL_WAS).
+   The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
+const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
   .map(([id, name, overall]) => ({ id, name, overall, stars:starsOfOverall(overall), budget:sumOfOverall(overall) - ABILITIES.length }));
-const teamLevelOf = t => (t && TEAM_LEVELS.find(l => l.id === t.level)) || null;
+const LEVEL_WAS = { euro:'champ' };   // a level that has gone, as a save may still hold it
+const levelById = id => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => l.id === LEVEL_WAS[id]) || null;
+const teamLevelOf = t => (t && levelById(t.level)) || null;
 const teamBudget = t => { const l = teamLevelOf(t); return l ? l.budget : BUDGET; };
 /* Whole abilities 1 to 5 adding up to sum, from a side's flavour. Short of it, a point goes to where the side is already
    strong; over it, a point comes off where it is weakest. Each ability takes its turn, strongest (or weakest) first, so
@@ -345,30 +352,32 @@ function abilitiesFor(flavour, sum) {
   return out;
 }
 const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILITIES.map(([k]) => [k, t[k]]))]));   // from the lists, before any rating is set: how each side plays (a drill's sides, practice.js)
-/* The clubs' table: PR #14's ratings from last season's results (its CLUB_RATED at 05886e6, set from each side's place, scored and conceded,
-   the figures on its list), held inside main's club band. Main's band is 61 to 75, every nation above it (78 and up), and no club tops a team
-   you can make (75). Each of PR #14's steps stays a step where the band has room:
-   - a top flight (England, France, Celtic and Italy, South Africa, Australia): PR #14's own figure, 67 to 75, its 64 and 61 held up to the
-     band's 67 (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide). Only a national champion is 75: Northampton,
-     Toulouse, Dublin. Bordeaux is rated by its table (8th, 70): PR #14's European champion at 90 is not in main's band.
-   - England 2: a step up from PR #14's, 67 with a winning record and 64 without, so its winners are level with the top flights' foot.
-   - Local and Counties: PR #14's ladder moved onto main's band a step for a step, Counties 5 at 61 up to Farnham at 75 (Regional 1). Its
-     55 and 52 (Wimbledon, Ironsides) share 72, the one place two of its steps meet, so Farnham keeps the 75 Kids and Quick Match know.
-     So Local's best sit above England 2 and level with the top flights, where PR #14 had Local under both: with six values in the band,
-     the order between tiers and Farnham's 75 cannot both hold. Left for the owner's call (README, Teams); TEAM_LEVELS waits on it too.
-   - Dunedin, 9th in Super Rugby Pacific under Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
-   Sides not here keep the abilities written in their list: the nations (natList), Scotland's Premiership (61 and 64 as written), New Zealand
-   and Japan (no figures), Quins (no figures). A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. */
+/* The clubs' table, in the real order (the owner, 2026-11-09: "Pro leagues on top, then England 2, then Counties and Local clubs by their
+   tables (Farnham about 61 to 64)"), from PR #14's ratings of last season's results (its CLUB_RATED at 05886e6: each side's place, scored
+   and conceded, the figures on its list). Every nation is above every club (78 and up), and no club tops a team you can make (75).
+   - Top flights (England, France, the United Rugby Championship, South Africa, Australia): 67 to 75, PR #14's own figure, its 64 and 61 held up to 67
+     (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide) so every top-flight side is above England 2. Only a
+     national champion is 75: Northampton, Toulouse, Dublin. Bordeaux is rated by its table (8th, 70), not PR #14's European champion at 90.
+     New Zealand and Japan (no figures) keep the abilities written in their lists, 67 to 75. Dunedin, 9th in Super Rugby Pacific under
+     Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
+   - England 2: 61 to 64, PR #14's own figures, 64 with a winning record and 61 without.
+   - Scotland's Premiership (an amateur league, no figures, in its table's order): 61 for the top five and 58 for the rest, a step under
+     the 64 and 61 written in its list, so no Scottish side is above an England 2 side.
+   - Local and Counties: PR #14's ladder a step up, so Farnham (Regional 1, 7th) is 61 and nothing local is above England 2: Regional 1
+     61 to 58, Regional 2 55 to 52, Counties 1 52 to 49, Counties 3 46, Counties 5 43. Quins (no figures) stays level with Farnham, as main had it.
+   A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. Sides not here keep the abilities written in their
+   list: the nations (natList), New Zealand and Japan. TEAM_LEVELS is on the same ladder. */
 const CLUB_RATED = {
   NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,                                                  // England: the Premiership, Northampton the champion
   TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,                    // France: the Top 14, Toulouse the champion
-  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // Celtic and Italy: the URC, Dublin the champion
+  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // the United Rugby Championship, Dublin the champion
   CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,                                                                            // South Africa: the URC's four, then the Currie Cup's
   BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67,                                                                                    // Australia: Super Rugby Pacific, then the two with no side now
   DUN:67,                                                                                                                            // New Zealand: Dunedin, under Sydney
-  EAL:67, BED:67, COV:67, WOR:67, CHN:67, HPY:67, CWL:67, DON:67, NOT:64, AMP:64, CAL:64, RIC:64, CAM:64,                            // England 2: a winning record 67
-  FAR:75, WIM:72, IRO:72, GUI:70, COB:70, WEY:70, ORU:67, KIN:64, HAS:64, ALD:64, GDN:61,                                            // Local: Regional 1 down to Counties 5
-  EFF:64, WAN:61, EGH:61, MER:61, MIT:61, FEL:61,                                                                                    // Counties: Counties 3 64, Counties 5 61
+  EAL:64, BED:64, COV:64, WOR:64, CHN:64, HPY:64, CWL:64, DON:64, NOT:61, AMP:61, CAL:61, RIC:61, CAM:61,                            // England 2: a winning record 64
+  AYR:61, CUR:61, GOL:61, MYR:61, KEL:61, GIF:58, HAW:58, MLR:58, ANN:58, SEL:58,                                                    // Scotland: the Premiership's top five 61
+  FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,                                    // Local: Regional 1 down to Counties 5
+  EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,                                                                                    // Counties: Counties 3 46, Counties 5 43
 };
 // CLUB_TUNE
 for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));
@@ -432,10 +441,11 @@ function ratingsBoot() {
    ========================================================= */
 const STORE = 'tryline.v1';
 /* hints: the card in the top corner naming each close-up's control (one player); twoHints: the same per player in two player, stored
-   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; Replay Tutorial empties it.
+   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; tutReset empties it (only
+   the tools call it since How to Play lost Replay Tutorial, 2026-11-09).
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
-const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
+const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop', 'maul'];   // appended only: a save's list is kept in this order
 const DRILL_IDS = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass', 'tag', 'back'];   // drillSeen: the drills whose Watch How has played on this device, each opened with it once (drill-demo.js)
 const COACH_IDS = ['offload', 'step', 'tackle', 'duel', 'kick', 'pass', 'sprint'];   // fleeting moments first, then the ones that stay available
 const COACH_LINE = {
@@ -503,7 +513,7 @@ function cleanTeam(t, i) {
   let left = teamBudget(t);
   for (const k of hasStamina ? keys : ['stamina', ...keys.filter(x => x !== 'stamina')]) { const v = clamp(Math.round(abilityOf(t, k) || 1), 1, 5); const spend = Math.min(v - 1, left); got[k] = 1 + spend; left -= spend; }
   for (const k of keys) team[k] = got[k];
-  if (teamLevelOf(t)) team.level = t.level;                      // no level is no field, so an old team reads and saves as it did
+  if (teamLevelOf(t)) team.level = teamLevelOf(t).id;            // no level is no field, so an old team reads and saves as it did; a level that has gone saves as the one it reads as (LEVEL_WAS)
   return team;
 }
 /* The short name filled in for you skips codes already on the scoreboard elsewhere: Farnham Minis is FAN, not FAR. */
@@ -525,7 +535,7 @@ function cleanSide(t) {
   if (!t || typeof t !== 'object') return null;
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   if (!name) return null;
-  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W94: src/locker.js)
+  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W91: src/locker.js), and so does one dropped since (W94)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;
@@ -1002,6 +1012,7 @@ function newMatch(u, c, opts) {
     dropOn:[false, false], dropArmed:[false, false],   // the drop-goal label, per side: what it read on the last frame, and what it promised at the B press
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the label last saw (as the hold would leave them), and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
+    pressure:[0, 0], press:{ poss:null, mark:[null, null], said:[false, false] },   // PRESSURE (src/contact.js): the pressure on each side's possession, who has it, the last breakdown's mark and whether Pressure On was said
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
@@ -1010,6 +1021,14 @@ function newMatch(u, c, opts) {
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   if (M.kids) { M.kidsR = kidsTune(opts.kidsR).r; M.kidsDone = false; }   // its rating sets the levers before anything reads them: the start (0) unless the caller says (startMatch passes settings.kidsR)
+  /* A Kids half lasts the half chosen on a real clock (the owner, 2026-11-09: "2 Real Minutes"). The match runs at MATCH_PACE.kids, so
+     the half is that share of the chosen half in simulated seconds (2 minutes: 90), and the clock on the scorebug reads real time
+     (fmtClock), 2:00 at the hooter. The Golden Try is half of it (periodLen). Only where the Kids pace runs (matchPace): a drill keeps
+     its own clock, and every other match keeps the half as given. The close-up quota reads the simulated half, as everything else in a
+     half does: one close-up in a 2-minute half instead of two. It binds (the settled 7 to 8 year old has 2.2 a match, 2.6 with a quota of
+     two, 3.0 in the 120-second half), but keeps the rate per real minute he had before (0.55 against 0.56; README.md, The half). */
+  M.realClock = M.kids && !practice ? MATCH_PACE.kids : 0;
+  if (M.realClock) M.halfLen = opts.halfLen*M.realClock;
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
   let seat = 0;
@@ -1072,6 +1091,7 @@ function seek(p, tx, ty, speed, acc, dt, pursue) {
 function placeBall(x, y) {
   const b = M.ball;
   b.state = 'dead'; b.carrier = null; b.f = null; b.x = x; b.y = y; b.z = 0; b.vx = b.vy = b.vz = 0;
+  eggOff(b);
 }
 function playFrom(team, x, y, kind) {                      // the mark the ball is played from: a ruck 1.6m behind, a scrum 1.2, a lineout 1.5 and out to the side
   const d = dirOf(team);
@@ -1164,7 +1184,7 @@ function releaseTo(team, x, y, kind, who) {
 function setCarrier(p) {
   const b = M.ball;
   if (M.poss !== p.team) M.phaseCount = 0;
-  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
+  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b);
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
@@ -1172,7 +1192,7 @@ function setCarrier(p) {
   for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
     if (!isHuman(t)) continue;
     if (p.team === t) setCtrl(t, p);
-    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }
+    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = practice && practice.id === 'defend' ? defendRepick(t, p) : nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }   // Defend a Breakaway: never back to the beaten man (training.js)
   }
 }
 function catchBall(p, kind) {
@@ -1188,13 +1208,15 @@ function catchBall(p, kind) {
   setCarrier(p); sfx('catch');
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
-  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? PASS_FLIGHT.graceKids : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit
+  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? KIDS.grace : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit (Kids: its rating's, kidsTune)
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
   placeBall(p.x, p.y);
-  sfx('fumble'); sfx('whistle');
+  sfx('fumble');
+  if (knockBeat(p)) return;                                // PRESSURE: it hops for a beat before the whistle (src/contact.js)
+  sfx('whistle');
   deadBall(() => scrum(1-p.team, p.x, p.y, 'Knock-On'));
 }
 function pickUp(p) {
@@ -1229,14 +1251,16 @@ const SUPPORT = { lat:5, back:2.6, clear:5, mark:5, latMax:11.2, backMax:6.4, ti
 /* How long a pass hangs in the air (2026-11-08, from the owner's phone playtest: passing in a match is a little hectic). The ball's speed is
    divided by this, so the flight lasts longer and the lead, the Block lane and the sure pass all aim for the slower ball. It is the one lever to
    retune after the kid test: 1 is the old pace. match: every match but Kids, Two Player and Training included (your passes hang 13% longer on the
-   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer). A long pass stays off it: it hangs already. A short pass capped by the law
-   stays near the old pace too (capSpeed), or he brakes for it.
+   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer), at the start of the Kids scale: KIDS_SCALE.flight runs from it to the old
+   pace at the ceiling (src/kids.js). A long pass stays off it: it hangs already. A short pass capped by the law stays near the old pace too
+   (capSpeed), or he brakes for it.
    grace: a slower ball alone left your catcher tackled in the next 0.3s far more often (Kids 22% to 34%, Normal 32% to 38%, Hard 36% to 45%), and
    easing the defence or the receiver in the air did not bring that back. So your catcher has this long after a catch, by level, before an AI man can
-   commit: Kids, then Easy, Normal, Hard. It costs the bot's Hard balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
+   commit: Kids (at the start of its scale: KIDS_SCALE.grace runs from it to none at the ceiling), then Easy, Normal, Hard. It costs the bot's Hard
+   balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
    PASS_FLIGHT='{"match":1.25}' node tools/bot.mjs tries a value without an edit. */
 const PASS_FLIGHT = { match:1.2, kids:1.4, grace:[0.25, 0.25, 0.15], graceKids:0.35 };
-const passFlight = () => (M && M.kids ? PASS_FLIGHT.kids : PASS_FLIGHT.match);
+const passFlight = () => (M && M.kids ? KIDS.flight : PASS_FLIGHT.match);   // a Kids match plays its rating's (kidsTune)
 const passSpeedOld = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // the ball before the lever: a long pass hangs a little, so the loop reads
 const passSpeed = (n, long) => passSpeedOld(n, long) / (long ? 1 : passFlight());   // a long pass keeps its pace: it hangs already, and the lever on top held one up to 2.9s with the stick doing nothing
 const passPace = team => (isHuman(team) ? 1 : RUNON.cpu);   // how hard a side's receiver runs onto the ball, by role
@@ -1268,6 +1292,7 @@ function runOnTarget(r, f, pace) {                          // the receiver whil
 }
 function passOk(c, q, maxR) {
   if (!q || q === c || q.team !== c.team || q.down > 0 || q.bind) return false;
+  if (practice && gapSpent(q)) return false;               // Create a Gap: a man who has passed is out of the line (training.js)
   if ((q.x - c.x)*dirOf(c.team) > 0.5) return false;
   const dd = dist(c, q);
   return dd >= 1.5 && dd <= maxR;
@@ -1276,6 +1301,7 @@ function pickReceiver(c, pref, maxR = 22) {                 // maxR: an offload 
   const d = dirOf(c.team); let best = null, bs = 1e9;
   for (const q of M.players) {
     if (q.team !== c.team || q === c || q.down > 0 || q.bind) continue;
+    if (practice && gapSpent(q)) continue;                 // Create a Gap: the man who passed to you is never the next pass (training.js)
     const dx = (q.x-c.x)*d; if (dx > 0.5) continue;
     const dy = q.y-c.y, dd = hyp(dx,dy);
     if (dd > maxR || dd < 1.5) continue;
@@ -1468,11 +1494,12 @@ function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI 
   if ((!isHuman(c.team) || proRun(c)) && tier !== 'dom' && rnd() < CONTACT.off.cpu*(0.6 + 0.2*(M.nat[c.team].handling - 3))) k.aiOff = 0.10 + rnd()*0.15;   // the AI carrier tries an offload (Pro Mode: so does a teammate of yours)
   return k;
 }
-function releaseBind(k) { for (const p of [k.c, k.q, k.q2]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }
+function releaseBind(k) { for (const p of [k.c, k.q, k.q2, k.mate]) if (p) p.bind = null; if (M.contact === k) M.contact = null; }   // k.mate: the man who joined a maul (src/maul.js)
 function contactGuard() { const k = M.contact; if (!k) return; const b = M.ball; if (!(M.phase === 'play' && b.state === 'held' && b.carrier === k.c)) releaseBind(k); }
 function bindMove(p, dt) {                                 // velocities through the bind: the carrier runs down (or is driven back), the tackler is pulled onto his hip
   const k = p.bind;
   if (p === k.c) {
+    if (k.maul && k.maul.live) { p.vx = k.maul.v.x; p.vy = k.maul.v.y; return; }   // a maul driven in the world walks its ground (src/maul.js)
     const u = clamp(k.t/k.T, 0, 1);
     const f = k.tier === 'soft' ? 1 - 0.6*u : k.tier === 'wrap' ? 1 - u : (u < 0.4 ? 1 - u/0.4 : -0.35*(u - 0.4)/0.6);
     p.vx = k.v0.x*f; p.vy = k.v0.y*f;
@@ -1489,6 +1516,7 @@ function contactStep(c, dt) {                              // runs in place of t
   if (carrierChecks(c)) { releaseBind(k); return; }        // a bound carrier who crosses the line still scores; touch is still touch
   k.t += dt;
   if (k.aiOff != null && k.t >= k.aiOff) { k.aiOff = null; if (offload(k, false)) return; }
+  if (maulStep(k, dt)) return;                             // the maul: the CPU's call, the join, the drive (src/maul.js). Nothing at all with MAUL.on false
   if (!k.q2) for (const o of M.players) {
     if (o.team === c.team || o === k.q || !onFeet(o) || o.tcd > 0 || o.offside > 0) continue;
     if (dist(o, c) < CONTACT.second.r) { joinTackle(k, o); break; }
@@ -1507,12 +1535,13 @@ function offloadTarget(k) {                                // the one receiver t
   return inp ? pickReceiver(c, inp.world().y, CONTACT.off.range) : supportFor(c);
 }
 function canOffload(k) { return !!offloadTarget(k); }
-function looseInContact(c) {                               // the ball comes loose behind him, for anyone
+function looseInContact(c, spill) {                        // the ball comes loose behind him, for anyone. spill: knocked loose by the pressure (PRESSURE)
   const b = M.ball, d = dirOf(c.team);
   tag('Loose Ball', c.x, c.y); sfx('fumble');
   b.state = 'loose'; b.carrier = null; b.f = null; b.last = c.team; b.kickInfo = null;
   b.x = c.x - d*0.4; b.y = c.y; b.z = 0.6; b.vx = -d*(2 + rnd()*3); b.vy = (rnd() - 0.5)*4; b.vz = 1.5;
   c.hold = 0;
+  if (pressLive()) eggStart(b, c.team, !!spill);           // it hops like Bouncy Egg's ball
 }
 function offload(k, user) {                                // user: the carrier's own Pass press while held; otherwise the AI's try
   const c = k.c;
@@ -1581,6 +1610,12 @@ function resolveContact(k) {                               // the end of the bin
     if (rnd() < CONTACT.jolt.fwd) { st('joltKnock'); knockOn(c, 'contact'); } else { st('joltLoose'); looseInContact(c); }
     return;
   }
+  if (rj < pressJolt(c.team, jolt)*kj) {                   // the share the defence's pressure adds (PRESSURE): always loose, for anyone, never a knock-on scrum
+    st('jolts'); st('pressSpill');
+    c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
+    looseInContact(c, true);
+    return;
+  }
   if (k.mode === 'ankle') { sfx('trip'); if (ringed(q)) { tag('Ankle Tap', c.x, c.y); buzz(20, q.team); } }
   tackle(c, q, { tier, q2 });
 }
@@ -1601,6 +1636,7 @@ function tackle(c, q, o) {
     }
     placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
     M.phaseCount++; M.stats.rucks++;
+    pressTackle(c, !!o.dom, clamp(c.x,1,119));             // no draw: the duels stay as they were
     startSet({ kind:'ruck', team, x:clamp(c.x,1,119), y:clamp(c.y,1,69), t:o.dom ? DOM_RUCK : 1.05, dom:!!o.dom, domP:o.domP, then:resolveRuck });
     return;
   }
@@ -1614,6 +1650,7 @@ function tackle(c, q, o) {
   const bx = clamp(c.x - d*0.4, 1, 119), by = clamp(c.y, 1, 69), ball = { x:bx, y:by };   // the ball goes behind the tackled man
   placeBall(bx, by);
   M.phaseCount++; M.stats.rucks++;
+  pressTackle(c, o.tier === 'dom', bx);
   const tier = o.tier, sy = q.y >= by ? 1 : -1;
   c.x = clamp(bx + d*0.45, 0.5, 119.5); c.y = by;
   // the race to the ball sets the ruck's length: the attack's first support against the defence's first man other than the tackler
@@ -1656,6 +1693,7 @@ function tackleChecks(c) {
   for (const q of M.players) {
     if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
     const user = ringed(q);
+    if (!user && practice && practice.id === 'defend') continue;   // Defend a Breakaway: only the man you switched to tackles; a cover man left standing never does (training.js)
     if (dist(q,c) < (user ? 1.35 : 1.5)) { commitTackle(q, c, user ? 'contact' : 'ai'); return true; }   // the first man to commit takes him; nobody else rolls while he is bound
   }
   return false;
@@ -1681,6 +1719,89 @@ function collide() {                                       // standing men push 
       }
     }
   }
+}
+
+/* ---------- Pressure ----------
+   Gordon, 2026-11-09: "after an amount of pressure, let's say consistent big hits or multiple tackles in a row ... and the ball's
+   not really moving, this could spark a loose ball, which could then bounce egg style around. And obviously, whoever picks that up
+   is able to take advantage of it." M.pressure[t] is the pressure on side t's possession, built by the other side's tackles: a made
+   tackle (one that ends in a ruck) adds `rise` when the carrier had gained under `little` metres past the last breakdown's mark (or
+   past where the possession began), and a Big Hit adds `hit` anywhere short of a real gain. It goes back to 0 on a real gain (the
+   carrier `gain` metres past the mark), a kick, a change of possession, a set piece, a try, and when the ball goes loose. From the
+   `line` up it scales the tackle's jolt chance by (1 + `per` x (count - line + 1)), the whole chance capped at `cap` (`capMild` for
+   Kids and Minis, matchMild), never below the chance at no pressure; the share over that is a pressure spill, which always goes loose (never straight to a
+   knock-on scrum), and the side that gathers it from the other gets the surge (surge(), src/set-pieces.js) for `surge` seconds.
+   'Pressure On' is tagged the first time a possession's count reaches `line`. Both sides play the same rule. A pressure spill is the
+   ball knocked loose in the tackle, before any ruck: the ruck itself is as it was, with its one flat turnover roll and no new penalty.
+   egg: the hop of a ball spilled in the tackle (a jolt or a failed offload) or knocked on, Bouncy Egg's model (hopMove and
+   hopBounce, src/ball.js) at match levers: a first hop of 0.6 to 1.4m, lower than the drill's, and gathered only below `reach`
+   (0.5m, by the knees; any other loose ball, 1.0m as ever). knock: the seconds a knocked-on ball hops before the whistle and the
+   scrum. lead: how far ahead the chase looks at a hopping ball, in seconds of its flight.
+   on:false with the maul off too (MAUL.on false) plays exactly as b706c3e did, draw for draw: PRESSURE='{"on":false}'
+   MAUL='{"on":false}' node tools/sim.mjs. on:false alone plays as the maul's own build (wt/maul c4980b8). */
+const PRESSURE = { on:true, little:3, gain:10, rise:1, hit:2, line:4, per:4, cap:0.25, capMild:0.08, surge:2.0, knock:0.8, lead:0.6,
+  egg:{ pop:[3.4, 5.2], hopOut:[2.0, 4.0], keep:[0.55, 0.72], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:2.5, wild:0.6, spin:[6, 9], reach:0.5 } };
+const pressLive = () => PRESSURE.on && !practice && !!M.press;   // a match: a drill never has it
+function pressZero() { M.pressure[0] = M.pressure[1] = 0; }
+function pressReset() { const P = M.press; pressZero(); P.poss = null; P.mark[0] = P.mark[1] = null; P.said[0] = P.said[1] = false; }   // a set piece, a try, a restart: the next possession starts clean
+function pressJolt(t, j) {                                 // the jolt chance with the defence's pressure on side t's carrier: never under j, never over the cap
+  const n = pressLive() ? M.pressure[t] - PRESSURE.line + 1 : 0;   // nothing below the line: Pressure On is the warning
+  return n > 0 ? Math.max(j, Math.min(matchMild() ? PRESSURE.capMild : PRESSURE.cap, j*(1 + PRESSURE.per*n))) : j;
+}
+function pressTackle(c, dom, mx) {                         // a made tackle that ends in a ruck at mx: the count rises if the ball has hardly moved, and mx is the new mark
+  if (!pressLive()) return;
+  const P = M.press, t = c.team, d = dirOf(t), gain = P.mark[t] == null ? 0 : (c.x - P.mark[t])*d, n0 = M.pressure[t];
+  if (dom && gain < PRESSURE.gain) M.pressure[t] += PRESSURE.hit;
+  else if (gain < PRESSURE.little) M.pressure[t] += PRESSURE.rise;
+  P.poss = t; P.mark[t] = mx;
+  if (n0 < PRESSURE.line && M.pressure[t] >= PRESSURE.line && !P.said[t]) { P.said[t] = true; st('pressOn'); tag('Pressure On', c.x, c.y); }   // once a possession, so the player learns the word
+}
+function eggStart(b, team, spill, spin) {                  // the ball is an egg from here: its hops are drawn in the sim, and drawBall tumbles it. spin: given, or drawn
+  const K = PRESSURE.egg;
+  b.egg = { g:9.8, hops:[], hopV:0, spin:spin != null ? spin : (rnd() < 0.5 ? -1 : 1)*(K.spin[0] + rnd()*(K.spin[1] - K.spin[0])), rolling:false, spill, team };
+  b.tumble = 0;
+}
+function pressGather(p, E) {                               // a pressure spill gathered by the other side: the turnover gets the surge
+  if (!E.spill || p.team === E.team || M.ball.state !== 'held' || M.ball.carrier !== p) return;
+  st('pressTurn'); surge(p.team, PRESSURE.surge);
+}
+function knockBeat(p) {                                    // a knock-on in a match: the ball hops on for PRESSURE.knock seconds, then the whistle and the scrum (knockOn, src/match.js)
+  if (!pressLive() || !(PRESSURE.knock > 0)) return false;
+  const b = M.ball, d = dirOf(p.team), team = 1 - p.team, x = p.x, y = p.y, K = PRESSURE.egg;
+  b.z = 1.0; b.vx = d*2.2 + 0.25*p.vx; b.vy = 0.25*p.vy; b.vz = 1.2;   // forward out of his hands, on along his run: that is what a knock-on is. No draw until it lands: the hops are the egg's
+  eggStart(b, p.team, false, (p.vy >= 0 ? 1 : -1)*(K.spin[0] + K.spin[1])/2);
+  const late = M.hooter && !M.demo;                        // the dead ball is decided at the knock-on, as deadBall does without the beat: one before the hooter keeps its scrum if the hooter goes in the beat
+  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); if (late) endHalf(); else scrum(team, x, y, 'Knock-On'); } });
+  return true;
+}
+function eggLead(b) {                                      // where the chase runs for a hopping ball: where this hop comes down, or a little ahead of a roll; any other ball, where it is
+  const E = b.egg;
+  if (!E || !pressLive()) return b;
+  const t = E.rolling ? Math.min(PRESSURE.lead, 1/PRESSURE.egg.roll) : Math.min(PRESSURE.lead, (b.vz + Math.sqrt(Math.max(0, b.vz*b.vz + 2*E.g*b.z)))/E.g);
+  return { x:b.x + b.vx*t, y:b.y + b.vy*t };
+}
+function eggChaser(t, S) {                                 // the CPU sprints its nearest man at a hopping ball, 2.5 to 12m off, with no draw; he keeps it while he is still the nearest
+  const L = eggLead(M.ball); let best = null, bd = 1e9;
+  for (const p of M.players) if (p.team === t && onFeet(p) && !(p.offside > 0)) { const dd = dist(p, L); if (dd < bd) { bd = dd; best = p; } }
+  if (!best) return null;
+  if (S.p) return S.p === best && bd > 1 ? best : null;
+  return bd >= SPRINT.cpu.min && bd <= SPRINT.cpu.max ? best : null;
+}
+function pressTick(dt) {                                   // once a step in a match (matchUpdate): the resets, the possession's mark, and a knocked-on ball's beat
+  if (!pressLive()) return;
+  const b = M.ball, P = M.press;
+  if (M.phase === 'set') {
+    if (M.set.kind === 'knock') { if (b.egg) { const K = PRESSURE.egg; if (hopMove(b, b.egg, K, dt)) hopBounce(b, b.egg, K, K.wild); if (b.x < 0 || b.x > 120 || b.y < 0 || b.y > 70) { b.x = clamp(b.x, 0, 120); b.y = clamp(b.y, 0, 70); b.vx = b.vy = 0; } } }   // dead already: it stays on the field and nobody gathers it
+    else if (M.set.kind !== 'ruck') pressReset();
+    return;
+  }
+  if (M.phase !== 'play') { if (M.phase === 'goal') pressReset(); return; }
+  if (b.state === 'loose' || (b.state === 'air' && b.f && b.f.kind !== 'pass')) { pressZero(); return; }   // a loose ball or a kick lets the pressure go
+  if (b.state !== 'held') return;
+  const c = b.carrier, t = c.team;
+  if (P.poss !== t) { pressZero(); P.said[0] = P.said[1] = false; P.poss = t; P.mark[t] = c.x; P.mark[1 - t] = null; return; }   // a new possession, marked where it began
+  if (P.mark[t] == null) P.mark[t] = c.x;
+  else if (M.pressure[t] > 0 && (c.x - P.mark[t])*dirOf(t) >= PRESSURE.gain) M.pressure[t] = 0;   // a real gain
 }
 
 /* ---------- Sprint ----------
@@ -1724,7 +1845,9 @@ function ahead(c, t) { const d = dirOf(c.team); let n = 0; for (const q of M.pla
 function cleanThrough(c, t) { return ahead(c, t) === 0; }
 function cpuSprintWant(t, S, dt) {                         // the AI side's policy: who should be sprinting on its meter this step, if anyone
   if (S.spent) { S.spent = false; return null; }
-  const b = M.ball; if (b.state !== 'held') return null;
+  const b = M.ball;
+  if (b.state === 'loose' && b.egg && pressLive()) return eggChaser(t, S);   // a hopping ball: run it down (PRESSURE)
+  if (b.state !== 'held') return null;
   const c = b.carrier, d = dirOf(c.team), P = SPRINT.cpu, lv = levelOf(t);
   const think = p => { S.think -= dt; if (S.think > 0) return false; S.think = P.think; return rnd() < p; };
   if (c.team === t) {                                      // carrying: a burst into a clean break, kept while the space lasts
@@ -2424,6 +2547,7 @@ function updateCut(dt) {
   } else if (c.kind === 'scrum') updateScrum(c, dt);
   else if (c.kind === 'lineout') updateLineout(c, dt);
   else if (c.kind === 'goal') updateGoalCut(c, dt);
+  else if (c.kind === 'maul') updateMaul(c, dt);           // src/maul.js
   else updateDuel(c, dt);
   for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.flick = 0; inp.aCancel = inp.bCancel = inp.cCancel = false; }
 }
@@ -2431,12 +2555,18 @@ function surge(team, secs) { M.surge = { team, t:secs }; }
 
 /* Scrum: Crouch, Bind, Set. Press on Set for a good start, then tap Push fast to drive: the taps alone are the shove, the stick
    plays no part (2026-10-17: it used to scale the taps by 0.55 at rest and 0.2 held back, and nothing on screen said so). pos is
-   metres gained by your pack. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty (a pushover
-   within 8m of the line); the steal line is 1.2, half way up the bar. */
-const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4;
+   metres gained by team 0's pack from the mark. SCRUM_DOM is the one penalty line: a pack that has gained that much wins a penalty
+   (a pushover within 8m of the line). Short of it, the ball goes to the pack ahead on the bar when the scrum ends (2026-11-09,
+   Gordon: "if a team wins a scrum, they should also win possession"). The feeding pack starts SCRUM_HEAD ahead: the bar's middle,
+   the line that decides the ball (c.line, in pos), sits that far towards the other pack, so the other pack has to drive the scrum
+   back 1.2m to draw level, as far as it always had to to steal (the old steal line, so the old rates hold), and the bar leans the
+   feeder's way from Crouch. Each half of the bar fills at its own pack's penalty line. Dead level, nearer the line than SCRUM_TIE,
+   is the feeder's ball. The packs on screen show the shove from the line too (scrumShown), not from the mark. A drill's scrum has
+   no ball to win: its line is the mark, and its bar and its packs read as they always did. */
+const SCRUM_SET = 1.4, SCRUM_PUSH = 2.6, SCRUM_DOM = 2.4, SCRUM_HEAD = 1.2, SCRUM_TIE = 0.05;
 function startScrum(s) {
   // every scrum is a little different: a CPU pack's strength varies, and the side putting in gets a small edge. pos is metres gained by team 0's pack
-  const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, engaged:false, mine:0, theirs:0, result:null,
+  const c = { kind:'scrum', feed:s.team, x:s.x, y:s.y, pos:0, line:practice ? 0 : -dirOf(s.team)*SCRUM_HEAD, engaged:false, mine:0, theirs:0, result:null,
     rate:[0, 0], taps:[0, 0], hit:[false, false], early:[false, false], base:[0, 0], wave:0, msg:[null, null] };   // a pack a side: a human's taps and timing, every pack's base effort; msg: two player's Early / Good Hit tag over each pack
   for (const t of [0, 1]) c.base[t] = cpuSide(t) ? (diffOf(t).scrumCpu + (powerOf(t)-3)*0.06)*(0.75 + rnd()*0.5) + (s.team === t ? 0.08 : 0) : (powerOf(t)-3)*0.06 + (s.team === t ? 0.08 : 0) + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0) + (M.kids ? KIDS.scrum : 0);
   c.wave = rnd()*6;
@@ -2465,8 +2595,8 @@ function updateScrum(c, dt) {
   if (t >= SCRUM_SET + SCRUM_PUSH || Math.abs(c.pos) >= SCRUM_DOM) resolveScrum(c);
 }
 function resolveScrum(c) {
-  const p = c.pos, F = c.feed;
-  let res = p >= SCRUM_DOM ? 'dom0' : p <= -SCRUM_DOM ? 'dom1' : F === 0 ? (p <= -1.2 ? 'steal1' : 'win0') : (p >= 1.2 ? 'steal0' : 'win1');
+  const p = c.pos, F = c.feed, ahead = scrumAhead(c);
+  let res = p >= SCRUM_DOM ? 'dom0' : p <= -SCRUM_DOM ? 'dom1' : (ahead === F ? 'win' : 'steal') + ahead;
   if (res === 'dom1' && !cpuSide(0) && !c.taps[0] && !c.hit[0]) res = F === 0 ? 'steal1' : 'win1';   // a human pack that never pushed loses the ball, nothing worse
   if (res === 'dom0' && !cpuSide(1) && !c.taps[1] && !c.hit[1]) res = F === 1 ? 'steal0' : 'win0';
   c.result = res;
@@ -2485,6 +2615,15 @@ function resolveScrum(c) {
   const strong = w === 0 ? p > 0.8 : p < -0.8;
   say(stolen ? 'Against the Head' : strong ? 'Go-Forward Ball' : 'Scrum Won', stolen || strong ? '' : 'small', w);
   finishCut(() => { releaseTo(w, mx, y, 'scrum'); if (stolen || strong) surge(w, 2.5); }, 0.8);
+}
+function scrumAhead(c) { const d = c.pos - c.line; return Math.abs(d) < SCRUM_TIE ? c.feed : d > 0 ? 0 : 1; }   // whose ball it is as the shove stands: the pack ahead of the line, the feeder's when dead level
+function scrumShown(c) {                                   // where drawScrum's packs meet, in metres either side of the screen's middle: the shove from the line, not the mark (2026-11-09 review), each side stretched so its pack's penalty line sits SCRUM_DOM out as the bar's halves fill. Level on the line, they meet in the middle; ahead of it, they lean that pack's way, so the packs, the bar and the ball agree. A drill's line is the mark: exactly pos, as before
+  const d = c.pos - c.line;
+  return d*(SCRUM_DOM/(SCRUM_DOM - Math.sign(d)*c.line));
+}
+function scrumBar(c) {                                     // the bar's fill, -1 to 1 from its middle (the line): + towards team 1's end as team 0 gains. Each half fills at that pack's penalty line; dead level shows none
+  const d = c.pos - c.line;
+  return Math.abs(d) < SCRUM_TIE ? 0 : d > 0 ? Math.min(1, d/(SCRUM_DOM - c.line)) : -Math.min(1, -d/(SCRUM_DOM + c.line));
 }
 function autoScrum(s) {
   const F = s.team, o = 1-F, edge = (powerOf(F) - powerOf(o))*0.03, r = rnd();
@@ -2547,6 +2686,205 @@ function autoLineout(s) {
   releaseTo(w, s.x, s.y, 'lineout');
 }
 
+/* ---------- the maul (2026-11-09) ----------
+   The owner: "For adult games, we could look at potentially having the ball carrier gets tackled, slows down, and maybe you could
+   switch and have another player join. And obviously that creates a ruck or a maul situation that you could then drive. So it could
+   bring up maul, for example, as a call out, and then you're into having to direction and tap like you would a scrum in order to
+   drive." He then chose a close-up like the scrum's.
+   Adult games only: never a Kids match, never a Minis one (matchMild), never a drill. A carrier held on his feet in a Soft or Wrap bind
+   (contactStep) can call it: your Switch press (B, dead in a bind until now) sends the nearest teammate within MAUL.r in, the bind
+   holds, 'Maul' is called and the close-up opens after MAUL.join. The CPU calls one on its own carrier sometimes (maulCpuRate: more
+   for a forward, near the line it attacks, with a Power edge), rolled once a bind at MAUL.cpu.at, and you defend it in the close-up.
+   With no human in it (AI v AI, the demo, a tool's headless match, a Pro Mode back's match) it is driven in the world instead, by the
+   same model with both packs on the CPU's terms (maulAutoStep), so nothing waits on a human.
+   The close-up: Bind, then Drive for MAUL.drive seconds. Taps on Push are the shove, read as scrumPush reads them (a timed first
+   shove on Drive is worth MAUL.hit metres); the stick's up and down wheels the maul across the pitch (as driveShape reads it), shown
+   as the maul's angle and on the pitch strip. Over the line is a maul try; MAUL.use metres or more is Use It, the ball back to the
+   scrum-half through a short ruck (a surge past MAUL.strong); less, or driven MAUL.back back, is Held Up and a scrum to the defence.
+   No new penalty. MAUL.on false: nothing here runs and no random number is drawn, so alone it draws exactly as the build before the
+   maul (b706c3e on its own branch; on wt/pr14int, where pressure came first, the pressure merge ca3f3b7), and with PRESSURE.on false
+   too exactly as b706c3e. */
+const MAUL = { on:true, r:4, join:0.3,
+  cpu:{ at:0.12, base:0.05, fwd:0.05, near:0.10, nearM:15, pow:0.03, max:0.35 },   // the CPU's call, rolled once a bind: base, + a forward, + within nearM of the line it attacks, + a Power point of edge
+  set:1.0, drive:3.0, speed:3.4, edge:0.2,   // the Bind call, the Drive's length, metres a second per unit of shove, the attack's edge
+  use:1.0, strong:3.0, back:1.5, hit:0.3,    // Use It from 1m, a surge from 3m, Held Up at 1.5m back; a timed first shove
+  wheel:0.9, ang:0.6, creep:0.8, edgeY:6,    // the stick turns it 0.9 rad/s to 0.6 rad either way; it slides 0.8 m/s along its turn; never within 6m of touch
+  useT:0.5, surge:2.0 };                     // the ruck after Use It, and the surge after a strong one
+// MAUL_TUNE
+const maulForward = p => CAREER_POS.F.includes(p.n);
+function maulMate(c) {                                     // the man who joins: the nearest teammate on his feet within MAUL.r, never one under a ring (Pro Mode's own player stays his own), never one in front of the ball (offside; supportFor's margin)
+  const dir = dirOf(c.team);
+  let best = null, bd = MAUL.r;
+  for (const p of M.players) {
+    if (p.team !== c.team || p === c || !onFeet(p) || p.offside > 0 || ringed(p) || (p.x - c.x)*dir > 0.3) continue;
+    const d = dist(p, c); if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+function maulOpen(k) {                                     // can this bind still become a maul: an adult match in play, the carrier held on his feet in a Soft or Wrap in the field of play (in his own in-goal the tackle is Held in Goal), nothing called yet
+  return MAUL.on && !practice && !matchMild() && !!k && M.contact === k && M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === k.c
+    && !k.maul && !k.offloaded && (k.tier === 'soft' || k.tier === 'wrap') && k.t < k.T && (k.c.x - ownLine(k.c.team))*dirOf(k.c.team) >= 0;
+}
+function maulCan(k) { return maulOpen(k) && !(proPinned(k.c.team) && proSkip()) && !!maulMate(k.c); }   // the B button's Maul: a man to join, and never a Pro Mode back's (his set pieces are played for the team)
+function maulPress(t) {                                    // B held in a tackle: the Maul. Nothing happens with nobody near
+  const c = ctrlOf(t), k = c && c.bind;
+  if (!k || k.c !== c || !maulCan(k)) return false;
+  maulCall(k, maulMate(c));
+  return true;
+}
+function maulCpuRate(c) {                                  // how often the CPU carrier calls one when it can
+  const P = MAUL.cpu, toLine = (oppLine(c.team) - c.x)*dirOf(c.team);
+  return clamp(P.base + (maulForward(c) ? P.fwd : 0) + (toLine <= P.nearM ? P.near : 0) + Math.max(0, powerOf(c.team) - powerOf(1 - c.team))*P.pow, 0, P.max);
+}
+function maulCall(k, mate) {
+  const c = k.c, d = dirOf(c.team);
+  k.maul = { t:0, live:false, cut:interactive() && !proSkip(), C:null };
+  k.offloaded = true; k.aiOff = null;                      // no offload once the maul is called
+  k.mate = mate; mate.bind = k; mate.bindOff = { x:-d*0.75, y:(mate.y >= c.y ? 1 : -1)*0.35 }; endSprint(mate);   // bound on his back: bindMove pulls him in as it pulls a tackler onto the hip
+  st('maulCall'); st('maulCall' + c.team);
+  if (k.maul.cut) say('Maul', '', c.team); else tag('Maul', c.x, c.y);
+  sfx('tackle'); if (ringed(c)) buzz(30, c.team);
+}
+/* contactStep's hook, every step of a bind: the CPU's call, the join, and the driven maul. True when it has the bind this step. */
+function maulStep(k, dt) {
+  if (!MAUL.on) return false;
+  const m = k.maul, c = k.c;
+  if (!m) {
+    if (k.maulTried || k.t < MAUL.cpu.at || k.aiOff != null || !(!isHuman(c.team) || proRun(c))) return false;
+    k.maulTried = true;
+    const mate = maulOpen(k) ? maulMate(c) : null;
+    if (!mate || rnd() >= maulCpuRate(c)) return false;
+    maulCall(k, mate);
+    return true;
+  }
+  m.t += dt;
+  if (!m.live) { if (m.t >= MAUL.join) maulForm(k); return true; }
+  maulAutoStep(k, dt);
+  return true;
+}
+function maulNew(k, auto) {                                // the maul's state, for the close-up or the world: each pack's base effort (a CPU pack's drawn as the scrum's), the wave
+  const c = k.c, att = c.team;
+  const C = { kind:'maul', team:att, x:c.x, y:c.y, k, auto, fwd:0, lat:0, ang:0, v:0, d:0, engaged:false, result:null, cut:!auto,
+    line:(oppLine(att) - c.x)*dirOf(att), rate:[0, 0], taps:[0, 0], hit:[false, false], early:[false, false], base:[0, 0], eff:[0, 0], wave:0, msg:[null, null] };
+  for (const t of [0, 1]) C.base[t] = maulCpu(C, t) ? (diffOf(t).scrumCpu + (powerOf(t) - 3)*0.06)*(0.75 + rnd()*0.5) : (powerOf(t) - 3)*0.06 + (M.two ? SCRUM_LEVEL[levelOf(t)] : 0);
+  C.wave = rnd()*6;
+  return C;
+}
+const maulCpu = (C, t) => C.auto || cpuSide(t);           // a pack the CPU drives: a CPU side's, or both when nobody is in it
+function maulForm(k) {                                     // the join is done: the close-up, or the drive in the world
+  const m = k.maul, c = k.c;
+  st('mauls'); st('maul' + c.team);
+  if (m.cut) {
+    const C = maulNew(k, false); releaseBind(k); C.men = [c, k.mate, k.q, k.q2].filter(Boolean);
+    for (const inp of humanSlots()) { inp.pre = null; inp.reanchor(); inp.held = new Set(inp.keys); }   // as a duel's and a kick's cut-in: touch re-centred, a pad stick latched, held keys ignored (maulSteer)
+    startCut(C); return;
+  }
+  for (const key of ['q', 'q2']) if (k[key] && ringed(k[key])) { maulLetGo(k, k[key]); k[key] = null; }   // a man under a ring is never bound into a maul he cannot play (Pro Mode's back as the tackler)
+  m.C = maulNew(k, true); m.C.men = [c, k.mate, k.q, k.q2].filter(Boolean); m.live = true; m.v = { x:0, y:0 };
+}
+function maulLetGo(k, q) {                                 // a tackler let out of a maul in the world: he rolls away off its side and retires, as tackle() has him do from a ruck of the usual length
+  const c = k.c, d = dirOf(c.team), T = RUCK.t.normal + 0.25;
+  q.bind = null;
+  slide(q, clamp(c.x + d*1.0, 0.5, 119.5), clamp(c.y + (q.y >= c.y ? 1 : -1)*1.6, 1, 69), 0.15);
+  q.vx = q.vy = 0; q.down = T; q.tcd = q.offside = T + RUCK.retire;
+}
+const maulCpuEff = (C, s) => C.base[s]*(1 + 0.22*Math.sin(C.d*2.4 + C.wave + s*1.7));   // a CPU pack's shove, with a little wave
+function maulCpuSteer(C) {                                 // the CPU attack wheels gently towards the middle, with a sway
+  const y = C.y + C.lat;
+  return clamp((35 - y)/25, -1, 1)*0.35 + Math.sin(C.d*1.3 + C.wave)*0.25;
+}
+function maulSteer(inp) {                                  // a human's wheel: world()'s up and down, but never a key or a pad stick held into the close-up (a duel's sideX): a held key is skipped and a latched stick reads nothing
+  let x = inp.latch ? 0 : inp.jx, y = inp.latch ? 0 : inp.jy, px = 0, nx = 0, py = 0, ny = 0;
+  for (const code of inp.keys) { const d = KEYDIR[code]; if (!d || inp.held.has(code)) continue; if (d[0] > 0) px = 1; else if (d[0] < 0) nx = 1; if (d[1] > 0) py = 1; else if (d[1] < 0) ny = 1; }
+  const kx = px - nx, ky = py - ny;
+  if (kx || ky) { const m = hyp(kx, ky); x = kx/m; y = ky/m; }
+  const t = stickTurn(inp.seat);
+  return t ? x*t : y;                                      // a behind view turns the stick as world() does
+}
+function maulDrive(C, dt, eff) {                           // one step of the drive, the close-up's and the world's: the wheel, then the ground made along it
+  const att = C.team, def = 1 - att;
+  let s = 0;
+  for (const t of [0, 1]) if (!maulCpu(C, t)) { const inp = inputOf(t); if (inp) s += maulSteer(inp); }   // the stick's up and down, from each human in it
+  if (maulCpu(C, att)) s += maulCpuSteer(C);
+  const y = C.y + C.lat;
+  if ((y <= MAUL.edgeY && s < 0) || (y >= 70 - MAUL.edgeY && s > 0)) s = (35 - y)/35;   // never wheeled into touch: near it, the maul comes back off the line
+  C.ang = clamp(C.ang + clamp(s, -1, 1)*MAUL.wheel*dt, -MAUL.ang, MAUL.ang);
+  C.eff = eff; C.d += dt;
+  C.v = MAUL.speed*(eff[att] + MAUL.edge - eff[def]);
+  C.fwd += C.v*Math.cos(C.ang)*dt;
+  const lo = Math.min(C.y, MAUL.edgeY) - C.y, hi = Math.max(C.y, 70 - MAUL.edgeY) - C.y;
+  C.lat = clamp(C.lat + (C.v + MAUL.creep)*Math.sin(C.ang)*dt, lo, hi);
+}
+function maulOver(C) {                                     // the verdict, when there is one: over the line, driven back, or the Drive's time up
+  if (C.fwd >= C.line + 0.3) return 'try';
+  if (C.fwd <= -MAUL.back) return 'held';
+  if (C.d >= MAUL.drive) return C.fwd >= MAUL.use ? 'use' : 'held';
+  return null;
+}
+function maulPush(C, s, dt) {                              // a human pack's shove this step, as scrumPush: a timed first shove on Drive, then the taps of the last quarter second or so
+  const t = C.t, inp = inputOf(s), sign = s === C.team ? 1 : -1;
+  if (inp && inp.aPressed && t > CUT_IN) {
+    const note = text => { if (M.two) C.msg[s] = { text, at:t }; else say(text, 'small'); };
+    if (t < MAUL.set - 0.08) { if (!C.early[s] && !C.hit[s]) { C.early[s] = true; note('Early'); } }   // a press in the Bind call forfeits the timed shove, nothing more
+    else if (!C.hit[s] && !C.early[s] && t <= MAUL.set + 0.28) { C.hit[s] = true; C.fwd += MAUL.hit*sign; note('Good Timing'); buzz(25, s); }
+    if (t >= MAUL.set) { C.rate[s] += 1; C.taps[s]++; }
+  }
+  if (t < MAUL.set) return 0;
+  C.rate[s] *= Math.exp(-dt/0.25);
+  return 0.85*Math.min(1.3, C.rate[s]/1.25) + C.base[s];   // 5 taps a second is a full shove, about 6.5 the most, as the scrum
+}
+function updateMaul(C, dt) {                               // the close-up's step (updateCut)
+  const eff = [0, 1].map(s => (maulCpu(C, s) ? 0 : maulPush(C, s, dt)));
+  if (C.t < MAUL.set || C.result) return;
+  if (!C.engaged) { C.engaged = true; sfx('tackle'); buzz(40); }
+  for (const s of [0, 1]) if (maulCpu(C, s)) eff[s] = maulCpuEff(C, s);
+  maulDrive(C, dt, eff);
+  const res = maulOver(C); if (res) maulResult(C, res);
+}
+function maulAutoStep(k, dt) {                             // the maul driven in the world: the carrier walks the model's ground, the men bound to him follow (bindMove)
+  const C = k.maul.C, d = dirOf(C.team), f0 = C.fwd, l0 = C.lat;
+  maulDrive(C, dt, [maulCpuEff(C, 0), maulCpuEff(C, 1)]);
+  k.maul.v = { x:d*(C.fwd - f0)/dt, y:(C.lat - l0)/dt };
+  const res = maulOver(C); if (res) maulResult(C, res);
+}
+function maulPlace(C, ex, ey) {                            // the men where the maul ended; after a close-up everyone else moves with it too (the world was frozen under it)
+  const k = C.k, c = k.c, d = dirOf(C.team), dx = ex - c.x, dy = ey - c.y, men = new Set(C.men), sy = (k.q && k.q.y >= c.y) ? 1 : -1;
+  if (C.cut) for (const p of M.players) if (!men.has(p)) { p.x = clamp(p.x + dx, 0.5, 119.5); p.y = clamp(p.y + dy, 1, 69); p.drawFrom = null; }
+  const at = (p, x, y) => { if (!p) return; if (C.cut) { p.x = x; p.y = y; p.drawFrom = null; } else slide(p, x, y, 0.15); p.vx = p.vy = 0; p.bind = null; };
+  at(c, ex, ey); at(k.mate, ex - d*0.3, ey - sy*0.9); at(k.q, ex + d*0.9, ey + sy*0.6); at(k.q2, ex + d*0.9, ey - sy*0.9);
+  const T = MAUL.useT;
+  c.down = T + 0.15; if (k.mate) k.mate.down = T;
+  for (const q of [k.q, k.q2]) if (q) { q.down = T + 0.1; q.tcd = q.offside = T + 0.25 + RUCK.retire; }   // the defenders in it retire, as from a ruck
+}
+function maulResult(C, res) {
+  C.result = res;
+  const att = C.team, def = 1 - att, d = dirOf(att), k = C.k;
+  st('maul_' + res); st('maulM', C.fwd); st('maulDrive', C.d);
+  const ex = clamp(C.x + d*C.fwd, 0.5, 119.5), ey = clamp(C.y + C.lat, 1, 69), strong = res === 'use' && C.fwd >= MAUL.strong;
+  const apply = () => {
+    releaseBind(k);
+    if (C.cut) M.stats.gain[att] += C.fwd;               // the ground a close-up's maul made is carried ground (a maul in the world counts it as it goes)
+    maulPlace(C, ex, ey);
+    if (res === 'try') { const c = k.c; c.x = clamp(oppLine(att) + d*0.6, 0.5, 119.5); c.down = 0; scoreTry(c); return; }
+    if (res === 'held') { placeBall(ex, ey); deadBall(() => scrum(def, ex, ey, 'Held Up')); return; }
+    const bx = clamp(ex - d*0.4, 1, 119), by = clamp(ey, 1, 69);
+    placeBall(bx, by); M.phaseCount++;
+    startSet({ kind:'ruck', team:att, x:bx, y:by, t:MAUL.useT, maul:true, then:s => { releaseTo(att, s.x, s.y, 'ruck', s.picker); if (strong) surge(att, MAUL.surge); } });   // Use It: the ball back to the scrum-half, quick
+  };
+  if (!C.cut) { if (res === 'use') tag('Use It', ex, ey); else if (res === 'held') tag('Held Up', ex, ey); apply(); return; }   // driven in the world: its verdict on the pitch (a try says so itself)
+  say(res === 'try' ? 'Maul Try' : res === 'use' ? 'Use It' : 'Held Up', res === 'use' && !strong ? 'small' : '', res === 'held' ? def : att);
+  if (res === 'held') sfx('whistle'); else if (res === 'try') sfx('roar');
+  finishCut(apply, res === 'try' ? 0.6 : 0.8);
+}
+function maulResume(C) { if (!C.engaged) C.t = Math.max(CUT_IN, C.t - 0.6); }   // a pause before the Drive gives the thumb a moment, as the scrum's
+function maulCues(C) {                                     // two player's bottom bar: each pack's Push, and the stick for both
+  const out = [];
+  for (const t of [0, 1]) { const s = seatOfTeam(t); if (s != null) out.push([s, seatKey(s, 'a') + ' · Push · ' + maulSteerKey(s) + ' · Steer']); }
+  return out;
+}
+function maulSteerKey(s) { const sch = seatScheme(s); return !sch ? 'Stick' : sch === 'right' ? 'Arrows' : 'W S'; }   // the stick's up and down: a pad's stick, the arrows, or W and S
+function maulHint(C, t, kb) { return C.result ? null : card('Maul', C.team === t ? 'Your Ball' : 'Hold Them Up', [row([chip('v')], kb ? 'Steer' : 'Steer With the Stick'), row([chip('a', 'Push')], 'Tap Push to Drive')]); }
+function maulTutCards(name, steer) { return [['Maul', 'Steer With ' + steer], ['Maul', 'Tap ' + name('a', 'Push') + ' to Drive']]; }
 /* ---------- duels ----------
    Four one-on-one moments that cut to a chase-cam close-up: Get Past and
    Key Pass on attack, Tackle and Block on defence. A gold ring is the only
@@ -3199,14 +3537,42 @@ function resolvePass() {
   b.state = 'loose'; b.vx = (f.x1-f.x0)/f.T*0.25; b.vy = (f.y1-f.y0)/f.T*0.25; b.vz = 1.5; b.z = 0.9; b.f = null;
   say('Dropped', 'small'); sfx('fumble');
 }
+/* The egg's hop (2026-11-09): one model for Bouncy Egg's ball (src/training.js) and a match's ball spilled in the tackle or knocked on
+   (PRESSURE, src/contact.js). H is the hop state ({ g, hops, hopV, spin, rolling }), K the levers (pop, hopOut, keep, turn, slow,
+   stop, roll), u (0..1) how much wider the turn gets, and fit(b, vx, vy, air), if given, sets a hop's speeds so it comes down inside
+   an area (the drill's box). A kick, a dropped pass, a charge-down and a ball off the posts keep the old bounce below. */
+function hopMove(b, H, K, dt) {                            // through the air, then along the ground once its hops are done. True the step it lands
+  b.tumble = (b.tumble || 0) + H.spin*dt;
+  if (H.rolling) { const f = Math.exp(-K.roll*dt); b.vx *= f; b.vy *= f; b.x += b.vx*dt; b.y += b.vy*dt; b.z = 0; b.vz = 0; H.spin *= f; return false; }
+  b.vz -= H.g*dt; b.x += b.vx*dt; b.y += b.vy*dt; b.z += b.vz*dt;
+  if (b.z > 0) return false;
+  b.z = 0; H.g = 9.8;                                      // whatever it was thrown as, its hops are real ones
+  return true;
+}
+function hopBounce(b, H, K, u, fit) {                      // off the ground again, at an odd angle, each hop smaller than the last. Too small a hop and it rolls (false)
+  const first = !H.hops.length;
+  const vz = first ? K.pop[0] + rnd()*(K.pop[1] - K.pop[0]) : H.hopV*(K.keep[0] + rnd()*(K.keep[1] - K.keep[0]));
+  const sp = first ? K.hopOut[0] + rnd()*(K.hopOut[1] - K.hopOut[0]) : hyp(b.vx, b.vy)*K.slow;
+  if (vz < K.stop) { H.rolling = true; b.vz = 0; return false; }
+  const dir = Math.atan2(b.vy, b.vx) + (rnd() < 0.5 ? -1 : 1)*(K.turn[0] + rnd()*(K.turn[1] - K.turn[0] + 0.5*u));
+  const air = 2*vz/9.8, vx = Math.cos(dir)*sp, vy = Math.sin(dir)*sp;
+  if (fit) fit(b, vx, vy, air); else { b.vx = vx; b.vy = vy; }
+  b.vz = vz; H.hopV = vz; H.hops.push(vz); H.spin = -H.spin*1.1;
+  sfx('bounce', Math.min(1, vz/K.pop[1]));                  // each hop smaller than the last, and softer
+  return true;
+}
+function eggOff(b) { if (b.egg) { b.egg = null; b.tumble = null; } }   // the match's egg is over: gathered or dead (placeBall, setCarrier). The drill never sets b.egg
 function updateLoose(dt) {
   const b = M.ball;
-  const fr = Math.exp(-1.4*dt); b.vx *= fr; b.vy *= fr;
-  b.x += b.vx*dt; b.y += b.vy*dt;
-  b.vz -= 9.8*dt; b.z += b.vz*dt;
-  if (b.z <= 0) {
-    b.z = 0;
-    if (Math.abs(b.vz) > 1.2) { sfx('bounce', Math.min(1, Math.abs(b.vz)/5)); b.vz = -b.vz*0.45; b.vx += (rnd()-0.5)*2.5; b.vy += (rnd()-0.5)*2.5; } else b.vz = 0;
+  if (b.egg) { const K = PRESSURE.egg; if (hopMove(b, b.egg, K, dt)) hopBounce(b, b.egg, K, K.wild); }   // spilled in the tackle: it hops like Bouncy Egg's ball (PRESSURE, src/contact.js)
+  else {                                                   // a kick's run, a dropped pass, a charge-down, off the posts: the old bounce
+    const fr = Math.exp(-1.4*dt); b.vx *= fr; b.vy *= fr;
+    b.x += b.vx*dt; b.y += b.vy*dt;
+    b.vz -= 9.8*dt; b.z += b.vz*dt;
+    if (b.z <= 0) {
+      b.z = 0;
+      if (Math.abs(b.vz) > 1.2) { sfx('bounce', Math.min(1, Math.abs(b.vz)/5)); b.vz = -b.vz*0.45; b.vx += (rnd()-0.5)*2.5; b.vy += (rnd()-0.5)*2.5; } else b.vz = 0;
+    }
   }
   if (b.y < 0 || b.y > 70) {
     const ki = b.kickInfo;
@@ -3223,10 +3589,10 @@ function updateLoose(dt) {
     deadBall(() => dropOut(defTeam));
     return;
   }
-  if (b.z < 1.0) {
+  if (b.z < (b.egg ? PRESSURE.egg.reach : 1.0)) {          // an egg on the hop is gathered only once it is down by the knees
     let best = null, bd = 1.1;
     for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
-    if (best) pickUp(best);
+    if (best) { const E = b.egg; pickUp(best); if (E) pressGather(best, E); }
   }
 }
 
@@ -3361,7 +3727,7 @@ function matchTargets() {
   else if (b.state === 'held') { carrier = b.carrier; att = carrier.team; fx = carrier.x; fy = carrier.y; mode = 'held'; }
   else if (b.state === 'air' && b.f.kind === 'pass') { att = b.f.team; fx = b.f.x1; fy = b.f.y1; mode = 'pass'; }
   else if (b.state === 'air') { att = 1-b.f.team; fx = b.f.x1; fy = b.f.y1; mode = 'kick'; }
-  else { att = 1-b.last; fx = b.x; fy = b.y; mode = 'kick'; }
+  else { att = 1-b.last; const L = eggLead(b); fx = L.x; fy = L.y; mode = 'kick'; }   // a hopping egg: where it comes down (src/contact.js)
   const dA = dirOf(att);
   let A = P.filter(p => p.team === att && free(p)), D = P.filter(p => p.team !== att && free(p));
   if (mode === 'kick') {
@@ -3534,7 +3900,7 @@ function userKick(t, power) {
 function canDive(q) {                                      // would a Tackle press act now: a carrier of the other side within 2.8m, and this man up, off cooldown, not retiring and unbound
   const b = M.ball, c = b.state === 'held' ? b.carrier : null;
   if (!q || !c || c.team === q.team || !onFeet(q) || q.tcd > 0 || q.offside > 0 || dist(q, c) >= 2.8) return false;
-  return !c.bind || (!c.bind.q2 && c.bind.q !== q);
+  return !c.bind || (!c.bind.maul && !c.bind.q2 && c.bind.q !== q);   // never into a maul once it is called (src/maul.js)
 }
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;
@@ -3678,6 +4044,7 @@ function userStep(t, i, dt) {
   tickUserPass(t, dt);
   if (i.b && !inp.bCancel) {
     if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    else if (M.phase === 'play' && b.state === 'held' && b.carrier === c && c.bind) maulPress(t);   // held in a tackle: the Maul, when a man is near (src/maul.js)
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
   if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick
@@ -3748,6 +4115,7 @@ function computeTargets() {
   if (practice && practice.id === 'defend') for (const p of M.players) {
     if (p.team === 0 && p !== ctrlOf(0)) targets.set(p, { x:p.x, y:p.y, s:0 });
   }
+  if (practice && practice.id === 'pass') gapTargets(targets);   // Create a Gap: your men hold their lanes and each defender marks one of them (training.js)
   if (M.career) careerLifeSupport(targets);                // a career match: Team Spirit pulls your player's support line towards the ball
   return targets;
 }
@@ -3787,6 +4155,7 @@ function matchUpdate(dt) {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
   } else if (M.phase === 'goal') updateGoal(dt);
+  pressTick(dt);                                           // PRESSURE's resets and marks, and a knocked-on ball's beat (src/contact.js)
   if (M.duelPending) startPendingDuel();
 }
 
@@ -4479,7 +4848,7 @@ function cleanCupEntry(e) {
                 rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
      'county'   his county's cup, every year he is at a Local club (a Local list: Surrey or Counties): eight sides in the cup its county runs for its
                 level, the Surrey Cup down to the Surrey Bowl (src/competitions.js). A professional club has none.
-     'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, Celtic and Italy, South Africa).
+     'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, the United Rugby Championship, South Africa).
      'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
                 his country's six in its category's twelve (natGroup) as a season, or in a World Cup year (4, 8, 12) the World Cup.
                 His country is picked at his first call-up, from the career's Men or Women twelve (natList), and kept.
@@ -4492,7 +4861,7 @@ function cleanCupEntry(e) {
    - Any club: a side from a national league, a Local club, or a team you made or imported. The list it was picked from is its
      league (career.league): a built-in club's is always its own list, a made one's the list it was picked on (My League for an
      imported one, Local while no league is saved). Every player starts a rookie (CAREER_START, about 61), whatever the club.
-   - Transfers: his overall (61 to 99) maps onto the clubs' band (61 to 75) linearly and capped (careerTarget); the offers are
+   - Transfers: his overall (61 to 99) maps onto the national clubs' band (58 to 75) linearly and capped (careerTarget); the offers are
      clubs from the national lists, Scotland's included, never his own, within CAREER_MOVE.band of that, the band widened a
      point at a time until there are two. One from each league first where it can be. A made, imported or Local club he started
      at is his to stay at; an offer is always from the national lists. The draw is made as the window opens and saved with it.
@@ -4522,9 +4891,10 @@ const CAREER_PHASES = ['league', 'county', 'cup', 'intl', 'tour', 'transfer'];
 /* bar: the overall that earns a call-up (a scripted player is first called up at the end of year 3 or 4: tools/career.mjs);
    tour: the overall for the Home Nations Tour; every4: a World Cup in years 4, 8, 12, the tour in years tourAt + 4n (2, 6, 10). */
 const CAREER_CALL = { bar:80, tour:88, every:4, tourAt:2 };
-/* from: his overall's range; to: the clubs' (Scotland's amateur sides at 61 to the top professional sides at 75); band: how near
-   a club's overall must be to the target, widened a point at a time until there are two; offers: two or three. */
-const CAREER_MOVE = { from:[61, 99], to:[61, 75], band:1, offers:[2, 3] };
+/* from: his overall's range; to: the national clubs' (Scotland's bottom five at 58 to the national champions at 75, the real order), so
+   every national club can be offered; band: how near a club's overall must be to the target, widened a point at a time until there are
+   two; offers: two or three. */
+const CAREER_MOVE = { from:[61, 99], to:[58, 75], band:1, offers:[2, 3] };
 const CAREER_EURO = ['eng', 'fra', 'cel', 'rsa'];   // the leagues whose winners play the European Cup (the cups engine's CUPS.euro.lists)
 const CAREER_HOME = ['ENG', 'IRE', 'SCO', 'WAL'];   // the home nations: the tour is theirs (CUPS.tour.from), and so is the Triple Crown
 const CAREER_CUP_NAME = { county:'County Cup', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour' };   // a county cup's own name is on the cup (cupTitle)   // the cups engine's names (CUPS)
@@ -4540,7 +4910,7 @@ const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2
    are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
    from match tackles and the dilemmas (Tackle Drills, Gym Session). */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
-const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Two-on-One', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
+const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Gap', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
    kicked a point of Kicking. At most CAREER_DEED_CAP points a match: training is where most of it comes from. */
 const CAREER_DEEDS = { tries:{ pace:1, handling:1 }, goals:{ kicking:1 }, tackles:{ power:1 } };
@@ -4603,6 +4973,15 @@ const careerClubs = () => NATIONAL.flat();           // where an offer comes fro
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
 const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
 const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+/* A built-in club as its list rates it now. A save keeps the abilities its club had when it was saved, and a re-rating (the real order,
+   2026-11-09: Farnham 75 to 61) would leave a career's club at the old ones while every league it draws is at the new. So a loaded
+   career's club takes its list's abilities (cleanCareer); a team you made or a My League side keeps its own, and a season in progress
+   keeps its sides as saved, as a championship does. */
+function careerRated(club) {
+  const l = careerListOf(club), now = l && l.teams.find(o => o.id === club.id);
+  if (now) for (const [k] of ABILITIES) club[k] = clamp(Math.round(abilityOf(now, k) || 1), 1, 5);
+  return club;
+}
 /* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
    Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
@@ -4942,6 +5321,7 @@ function cleanCareer(c) {
   const signed = was != null && was >= 3 ? careerClubById(c.pro) : null;   // the Pro Club side it signed for
   const club = cleanSide(signed || c.club);
   if (!club || !raw) return null;
+  careerRated(club);                                   // a built-in club at its list's ratings now, whatever it was saved at
   const pos = c.pos === 'F' ? 'F' : 'B';               // an unknown position is a back, as careerCreate has it
   /* Men or Women. A career from before Men | Women is Men, except one PR #14's build saved: it has no cat, and its Female was look.g 1
      (its careerFemale), the same one control, so that is a women's career. A cat, where there is one, decides. */
@@ -5295,7 +5675,8 @@ function traitMarks(r) {
      count once a call, and once a match for one medal: 'champ' (Champions; the Championship's own league win calls it here),
      'euro', 'world', 'tour' and 'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
    - Every Bronze and every Silver unlocks one ball or one pair of boots (each feat's unlock). Every Gold unlocks the next
-     Legends side of each list, in date order: the nth Gold, the nth men's and the nth women's side. Nothing here is sold.
+     Legends side of each list, in date order: the nth Gold, the nth men's side and the nth women's while there is one, so Golds
+     1 to 5 bring one of each and Golds 6 to 10 a men's side only (ten men's, five women's). Nothing here is sold.
    - The match counts are plain counters on M.lk (drop goals and duel Big Hits by side, the half-time score), made only in a
      match you play; nothing here draws a random number, so AI v AI, the demo and every tool play exactly as before.
    - The chosen ball and boots are drawn only in a match you play (lockerBall, lockerBoots); AI v AI, the demo and the drills
@@ -5363,9 +5744,15 @@ const LOCKER_BOOTS = [
 ];
 const LOCKER_RAINBOW = ['#ff4f4f', '#ff9a2a', '#ffe03d', '#5fd35f', '#3a9bff', '#8a5cff'];
 /* The Legends: the sides that won a World Cup, named by nation and year only (never a player's name, likeness or nickname), in
-   date order, men's then women's. Ratings at the top of the scale: every ability 5 (overall 99) or one 4 (96); style is the side's
+   date order, men's then women's. Ten men's, every winner; five women's, spread over the years and the nations (the owner, 2026-11-09:
+   "just have a few female legends teams as they are less prominent. red roses WC winners and similar make sense over the years", then
+   "Maybe some other women's legendary clubs not just England"): USA 1991, the first winners; New Zealand 1998, the first of their four
+   in a row; England 2014; New Zealand 2017; England 2025. The two lists are not the same length, so nothing reads one by the other's
+   index (lockerList). Ratings at the top of the scale: every ability 5 (overall 99) or one 4 (96); style is the side's
    strength, as the Locker shows it. Kit colours are the nation's. A women's side already says Women, with cat 'women', so the team
-   screen's Men | Women | Minis (catSide) leaves its name alone. Codes are unique across every list: L and the year, W and the year. */
+   screen's Men | Women | Minis (catSide) leaves its name alone. Codes are unique across every list: L and the year, W and the year.
+   A code dropped (W94, W02, W06, W10, W21: women's sides of an earlier build) is no Legend now: a saved Championship keeps its side
+   as saved (cleanSide), and a My Team or settings value naming one reads as any unknown code does (myClubFind, the myNat check). */
 const LEGEND_KIT = {
   'New Zealand':  { kit:'#1c1c1c', trim:'#f2efe6', alt:'#f2efe6', altTrim:'#1c1c1c' },
   'Australia':    { kit:'#f2b01e', trim:'#0f5a32', alt:'#0f5a32', altTrim:'#f2b01e' },
@@ -5390,16 +5777,12 @@ const LEGENDS = [
   legend('men', 'South Africa', 2019, 'power', 'pace'),
   legend('men', 'South Africa', 2023, 'stamina', null),
   legend('women', 'USA', 1991, 'pace', 'kicking'),
-  legend('women', 'England', 1994, 'power', 'pace'),
   legend('women', 'New Zealand', 1998, 'handling', 'kicking'),
-  legend('women', 'New Zealand', 2002, 'power', 'kicking'),
-  legend('women', 'New Zealand', 2006, 'stamina', 'kicking'),
-  legend('women', 'New Zealand', 2010, 'handling', null),
   legend('women', 'England', 2014, 'kicking', 'pace'),
   legend('women', 'New Zealand', 2017, 'pace', 'power'),
-  legend('women', 'New Zealand', 2021, 'pace', 'kicking'),   // the 2021 World Cup, played in 2022
   legend('women', 'England', 2025, 'power', null),
 ];
+const lockerList = cat => LEGENDS.filter(t => t.cat === cat);   // one list, 'men' or 'women', in date order: the nth Gold unlocks its nth side, if it has one
 
 /* ---------- the record ---------- */
 const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOCKER_BOOTS[0].id, seen:{} });   // fan and fanSeen join it with the first Super Fan trophy
@@ -5440,8 +5823,7 @@ const lockerHas = (kind, id) => { const s = lockerSource(kind, id); return s ? l
 const lockerItem = (kind, id) => (kind === 'ball' ? LOCKER_BALLS : LOCKER_BOOTS).find(x => x.id === id) || null;
 /* The unlocked Legends of one list: 'men' or 'women' (minis play the men's). The team screen's International list shows them. */
 function lockerLegends(cat) {
-  const c = cat === 'women' ? 'women' : 'men';
-  return LEGENDS.filter(t => t.cat === c).slice(0, lockerGolds());
+  return lockerList(cat === 'women' ? 'women' : 'men').slice(0, lockerGolds());
 }
 function lockerAdd(id) { locker.n[id] = Math.min(LOCKER_MAX, (locker.n[id] || 0) + 1); }
 
@@ -5540,16 +5922,15 @@ function lockerFrom() {
   return M.lkFrom;
 }
 /* Each medal won since `from` (a feat's tier then; the last one shown by default): { feat, tier, item } (item null for a Gold), and
-   the Legends the new Golds bring. */
+   the Legends the new Golds bring: for each new Gold, its men's side and its women's side, the women's only while there is one. */
 function lockerNews(from = lockerSeen) {
   const medals = [];
   for (const f of LOCKER_FEATS) for (let t = from(f.id) + 1; t <= lockerTier(f.id); t++) {
     const u = t < 3 ? f.unlock[t - 1].split(':') : null;
     medals.push({ feat:f, tier:t, item:u ? { kind:u[0], ...lockerItem(u[0], u[1]) } : null });
   }
-  const g0 = Math.min(10, lockerGolds(from)), g1 = Math.min(10, lockerGolds());
   const legends = [];
-  for (let i = g0; i < g1; i++) legends.push(LEGENDS.filter(t => t.cat === 'men')[i], LEGENDS.filter(t => t.cat === 'women')[i]);
+  for (let i = lockerGolds(from); i < lockerGolds(); i++) for (const cat of ['men', 'women']) { const t = lockerList(cat)[i]; if (t) legends.push(t); }
   return { medals, legends };
 }
 function lockerMarkSeen(ids) {                               // the medals shown: every feat and trophy (the Locker), or only the medals listed (the full-time card)
@@ -5916,6 +6297,7 @@ function cutCues(c) {
   const out = [], key = (t, act) => seatKey(seatOfTeam(t), act);
   if (c.kind === 'scrum') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Push']); return out; }
   if (c.kind === 'lineout') { for (const t of [0, 1]) out.push([seatOfTeam(t), key(t, 'a') + ' · Jump']); return out; }
+  if (c.kind === 'maul') return c.result ? out : maulCues(c);   // src/maul.js
   if (c.kind === 'goal') { const t = c.g.team; if (!c.after && !c.g.out && !c.g.watch) out.push([seatOfTeam(t), c.g.type === 'drop' ? key(t, 'b') + ' · Drop Goal' : 'Hold ' + key(t, 'a') + ' · Kick']); return out; }
   if (c.out != null) return out;
   const k = c.kind, U = c.own, O = 1 - c.own;
@@ -5943,7 +6325,7 @@ function drawScrum(c, g) {
   if (practice) dvStage(g.H*0.62); else drawStage(g);
   const { W, H } = g, sc = H*0.2, ground = H*0.85;
   const t = c.t, engaged = t >= SCRUM_SET;
-  const mid = W*0.5 + c.pos*sc*0.7 + (engaged && !c.result ? Math.sin(t*31)*1.5 : 0);
+  const mid = W*0.5 + scrumShown(c)*sc*0.7 + (engaged && !c.result ? Math.sin(t*31)*1.5 : 0);   // the packs meet on the line at dead level and lean the way of the pack ahead, as the bar does
   const gap = engaged ? 0 : t < 0.75 ? 0.9 : 0.4;
   const lean = engaged ? 1 : t < 0.75 ? 0.5 : 0.85, crouch = engaged ? 0.75 : t < 0.75 ? 0.35 : 0.65;
   // far prop, hooker, near prop: the far two sit just behind and darker
@@ -5960,22 +6342,25 @@ function drawScrum(c, g) {
     const m = c.msg[team];
     if (m && t - m.at < 0.9) { ctx.fillStyle = ringCol(team); ctx.font = `800 ${Math.round(H*0.045)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(m.text.toUpperCase(), px, ty - tag*0.9 - 4); }
   }
-  // the feed: the ball waits at the mouth of the tunnel, then rolls in
-  const roll = engaged ? clamp((t - SCRUM_SET - 0.2)/0.35, 0, 1) : 0, shF = c.feed === 0 ? 1 : -1;
-  cutBall(mid - shF*0.5*sc*(1 - roll), ground + (0.06 - 0.075*roll)*H, sc*(1.1 - 0.25*roll), roll*6);
+  // whose ball it will be (2026-11-09): the bar's middle is the line that decides it, and the feeder's head start leans the bar its
+  // way from Crouch (SCRUM_HEAD). Each half fills at that pack's penalty line, in the colour of the pack ahead; dead level shows no
+  // fill and is the feeder's. The ball sits between the bar and the name of the side whose ball it is. A drill's bar has no ball:
+  // its line is the mark, and it reads as it always did
+  const bw = W*0.38, bx = W*0.5 - bw/2, by = H*0.885, bh = Math.max(8, H*0.022), frac = scrumBar(c), rb = bh*1.1, slot = practice ? 0 : 2*rb + 8;
+  // the feed: the ball waits at the mouth of the tunnel, clear of the bar, then rolls in
+  const roll = engaged ? clamp((t - SCRUM_SET - 0.2)/0.35, 0, 1) : 0, shF = c.feed === 0 ? 1 : -1, fs = sc*(1.1 - 0.25*roll);
+  cutBall(mid - shF*0.5*sc*(1 - roll), Math.min(ground + (0.06 - 0.075*roll)*H, by - 7 - Math.max(5, fs*0.17)*0.62), fs, roll*6);
   // calls
   const call = t < 0.75 ? 'Crouch' : t < 1.3 ? 'Bind' : t < 1.9 ? 'Set' : null;
   if (call && t > CUT_IN) cutText(call, H*0.37, H*(call === 'Set' ? 0.17 : 0.13), call === 'Set' ? 1 : 0.92);
-  // who is winning the shove
-  const bw = W*0.38, bx = W*0.5 - bw/2, by = H*0.885, bh = Math.max(8, H*0.022);
   ctx.fillStyle = 'rgba(8,14,10,.8)'; rrect(bx - 3, by - 3, bw + 6, bh + 6, 4); ctx.fill();
-  const frac = clamp(c.pos/SCRUM_DOM, -1, 1);                // the bar fills exactly at a penalty; the steal line sits half way
   ctx.fillStyle = M.two ? (frac >= 0 ? ringCol(0) : ringCol(1)) : (frac >= 0 ? C.ctrl : showCol(1));   // two player: each pack's gain in its player's colour
-  if (frac >= 0) ctx.fillRect(W*0.5, by, bw/2*frac, bh); else ctx.fillRect(W*0.5 + bw/2*frac, by, -bw/2*frac, bh);
-  ctx.fillStyle = '#f1eee4'; ctx.fillRect(W*0.5 - 1, by - 4, 2, bh + 8);
+  if (frac > 0) ctx.fillRect(W*0.5, by, bw/2*frac, bh); else if (frac < 0) ctx.fillRect(W*0.5 + bw/2*frac, by, -bw/2*frac, bh);
+  ctx.fillStyle = '#f1eee4'; ctx.fillRect(W*0.5 - 2, by - 6, 4, bh + 12);   // the line
   ctx.font = `800 ${Math.round(H*0.04)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textBaseline = 'middle';
-  ctx.textAlign = 'right'; ctx.fillText(practice ? 'YOU' : M.nat[0].id, bx - 10, by + bh/2);
-  ctx.textAlign = 'left'; ctx.fillText(practice ? 'THEM' : M.nat[1].id, bx + bw + 10, by + bh/2);
+  ctx.textAlign = 'right'; ctx.fillText(practice ? 'YOU' : M.nat[0].id, bx - 10 - slot, by + bh/2);
+  ctx.textAlign = 'left'; ctx.fillText(practice ? 'THEM' : M.nat[1].id, bx + bw + 10 + slot, by + bh/2);
+  if (!practice) cutBall(scrumAhead(c) === 0 ? bx - 7 - rb : bx + bw + 7 + rb, by + bh/2, rb/0.17);
 }
 function drawLineout(c, g) {
   drawStage(g);
@@ -6020,6 +6405,7 @@ function drawCut() {
   if (c.kind === 'scrum') drawScrum(c, g);
   else if (c.kind === 'lineout') drawLineout(c, g);
   else if (c.kind === 'goal') drawKick(c, g);
+  else if (c.kind === 'maul') drawMaul(c, g);              // src/render-maul.js
   else drawDuel(c, g);
   if (!practice) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, g.W, g.H*0.07); ctx.fillRect(0, g.H*0.93, g.W, g.H*0.07); }   // the broadcast bars are a match's
   if (!(hintShown[0] && hintShown[0].title)) cutTag(cutTitle(c), g);   // a hints card with a title sits where the tag goes and names the moment itself
@@ -6029,6 +6415,77 @@ function drawCut() {
   ctx.fillStyle = C.ctrl;
   if (ein < 1) ctx.fillRect(right - 3, 0, 6, g.H);
   if (eout > 0 && eout < 1) ctx.fillRect(left - 3, 0, 6, g.H);
+}
+/* ---------- the maul's close-up (src/maul.js): side-on, four a side, as the scrum's ----------
+   The two packs bound round the ball carrier, Bind then Drive, the maul turned by its wheel (the far men slide as it turns), a bar for
+   the metres driven at the foot between the stick and the buttons, and a pitch strip top right showing where it is going. */
+function maulGeom(W, H, ins, two) {                        // where the bar and the strip sit; tools/maul.mjs measures them against the stick, the buttons and the hints cards
+  ins = ins || { t:0, r:0, b:0, l:0 };
+  const bw = W*0.34, bh = Math.max(8, H*0.022), sw = clamp(W*0.18, 110, 160), sh = sw*70/120, sx = W - Math.max(16, ins.r + 8) - sw;
+  return { bar:{ x:W*0.5 - bw/2, y:H*0.885, w:bw, h:bh }, strip:{ x:sx, y:two ? H*0.93 - sh - 10 : H*0.33, w:sw, h:sh }, call:{ y:H*0.37, size:H*0.17 } };   // two player: Player 2's hints card is top right and there is no Push button, so the strip sits bottom right
+}
+const maulCol = t => (M.two ? ringCol(t) : isHuman(t) ? C.ctrl : showCol(t));   // a pack's colour on the bar and the strip: yours gold, theirs their shirt (two player: each seat's)
+const MAUL_MEN = [[-0.66, -0.3, 1], [-0.66, 0.38], [-1.16, -0.05], [-1.62, 0.3], [0.66, -0.3], [0.66, 0.38], [1.16, 0.05], [1.62, -0.25]];   // [along the drive, across (far +), the carrier]: the attack's four behind the line of contact, the defence's in front
+function drawMaul(c, g) {
+  drawStage(g);
+  const { W, H } = g, sc = H*0.185, ground = H*0.84, t = c.t, att = c.team, d = dirOf(att), a = c.ang;
+  const engaged = t >= MAUL.set, live = engaged && !c.result;
+  const mid = W*0.5 + d*clamp(c.fwd, -1.5, 3)*sc*0.15 + (live ? Math.sin(t*29)*1.2 : 0);   // the line of contact moves a little with the drive; the bar and the strip say how far
+  const lean = engaged ? 0.42 : 0.2, crouch = engaged ? 0.38 : 0.15, gap = engaged ? 0 : clamp((MAUL.set - t)/MAUL.set, 0, 1)*0.35;   // more upright than a scrum: a maul is on its feet
+  const men = MAUL_MEN.map(([u0, w, carrier]) => {
+    const team = u0 < 0 ? att : 1 - att, u = u0 + Math.sign(u0)*gap;
+    const ox = d*(u*Math.cos(a) + w*Math.sin(a)), depth = -(u*Math.sin(a) - w*Math.cos(a));   // turned by the wheel: across the pitch is depth, away from the camera up the screen
+    return { team, carrier:!!carrier, x:mid + ox*sc, depth };
+  }).sort((p, q) => q.depth - p.depth);
+  let ball = null;
+  for (const m of men) {
+    const s = sc*(1 - m.depth*0.08), gy = ground - m.depth*H*0.05, face = m.team === att ? d : -d;
+    fig(m.x, gy, s, kitOf(m.team), { face, lean, crouch, arms:'bind', drive:engaged, dim:clamp(m.depth*0.4, 0, 0.45) });
+    if (m.carrier) ball = [m.x + face*0.36*s, gy - (engaged ? 0.9 : 1.05)*s, s*0.9, face*0.4];
+  }
+  if (ball) cutBall(...ball);                              // over the men, so the ball always shows
+  if (M.two) for (const team of [0, 1]) {                   // the seat tag over each pack, and its Early or Good Timing for 0.9s
+    const px = mid - (team === att ? d : -d)*0.9*sc, ty = ground - 1.75*sc, tg = Math.max(16, H*0.045);
+    cutSeatTag(seatOfTeam(team), px, ty, tg);
+    const m = c.msg[team];
+    if (m && t - m.at < 0.9) { const out = px < mid ? -1 : 1; ctx.fillStyle = ringCol(team); ctx.font = `800 ${Math.round(H*0.045)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = out < 0 ? 'right' : 'left'; ctx.textBaseline = 'middle'; ctx.fillText(m.text.toUpperCase(), px + out*(tg*0.6 + 6), ty - tg*0.45); }   // beside the tag, out from the maul, clear of the call above
+  }
+  const G = maulGeom(W, H, safeInsets(), M.two);
+  const call = t < MAUL.set ? 'Bind' : t < MAUL.set + 0.6 && !c.result ? 'Drive' : null;
+  if (call && t > CUT_IN) cutText(call, G.call.y, call === 'Drive' ? G.call.size : H*0.13, call === 'Drive' ? 1 : 0.92);
+  drawMaulBar(c, G.bar, H);
+  drawMaulStrip(c, G.strip);
+}
+function drawMaulBar(c, B, H) {                            // the metres driven: from the Held Up line behind to the try line (or 8m) ahead, the attack's way across the screen
+  const att = c.team, d = dirOf(att), ahead = clamp(c.line + 0.3, 3, 8), span = MAUL.back + ahead, ppm = B.w/span;
+  const zero = d > 0 ? B.x + MAUL.back*ppm : B.x + B.w - MAUL.back*ppm, X = m => zero + d*m*ppm;
+  ctx.fillStyle = 'rgba(8,14,10,.8)'; rrect(B.x - 3, B.y - 3, B.w + 6, B.h + 6, 4); ctx.fill();
+  const m = clamp(c.fwd, -MAUL.back, ahead);
+  ctx.fillStyle = m >= 0 ? maulCol(att) : maulCol(1 - att);
+  const x0 = Math.min(zero, X(m)); ctx.fillRect(x0, B.y, Math.abs(X(m) - zero), B.h);
+  ctx.fillStyle = '#f1eee4'; ctx.fillRect(zero - 1, B.y - 4, 2, B.h + 8);   // where it started
+  const a0 = ctx.globalAlpha; ctx.globalAlpha = a0*0.7; ctx.fillRect(X(MAUL.use) - 1, B.y - 2, 2, B.h + 4); ctx.globalAlpha = a0;   // Use It from here
+  if (c.line + 0.3 <= ahead) { ctx.fillRect(X(c.line + 0.3) - 2, B.y - 6, 4, B.h + 12); }   // the try line, when it is in reach
+  ctx.font = `800 ${Math.round(H*0.04)}px 'Big Shoulders Display', Impact, sans-serif`; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'right'; ctx.fillText(M.nat[0].id, B.x - 10, B.y + B.h/2);
+  ctx.textAlign = 'left'; ctx.fillText(M.nat[1].id, B.x + B.w + 10, B.y + B.h/2);
+}
+function drawMaulStrip(c, S) {                             // the whole pitch from above, as the Top camera has it: where the maul started, where it is, and where it is heading
+  const k = S.w/120, P = (x, y) => [S.x + x*k, S.y + y*k], att = c.team, d = dirOf(att);
+  ctx.fillStyle = 'rgba(8,14,10,.82)'; rrect(S.x - 4, S.y - 4, S.w + 8, S.h + 8, 5); ctx.fill();
+  ctx.fillStyle = '#2b6334'; ctx.fillRect(S.x, S.y, S.w, S.h);
+  ctx.fillStyle = '#245a2d'; ctx.fillRect(S.x, S.y, 10*k, S.h); ctx.fillRect(S.x + 110*k, S.y, 10*k, S.h);   // the in-goals
+  ctx.strokeStyle = 'rgba(244,241,232,.75)'; ctx.lineWidth = 1;
+  for (const x of [10, 60, 110]) { const [px] = P(x, 0); seg(px, S.y, px, S.y + S.h); }
+  ctx.strokeStyle = 'rgba(244,241,232,.35)';
+  for (const x of [32, 88]) { const [px] = P(x, 0); seg(px, S.y, px, S.y + S.h); }
+  ctx.strokeRect(S.x, S.y, S.w, S.h);
+  const [sx, sy] = P(c.x, c.y), [nx, ny] = P(clamp(c.x + d*c.fwd, 0, 120), clamp(c.y + c.lat, 0, 70)), col = maulCol(att);
+  ctx.strokeStyle = 'rgba(244,241,232,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, 7); ctx.stroke();
+  const L = 9*k; ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  seg(nx, ny, nx + d*Math.cos(c.ang)*L, ny + Math.sin(c.ang)*L);   // the heading: the way the wheel has it going
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(nx, ny, 4.5, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#08110b'; ctx.lineWidth = 1.2; ctx.stroke();
 }
 /* ---------- duel view: a chase-cam over your player's shoulder ----------
    Looks along +x, so screen-right is always world +y. A point (x, y, h)
@@ -6644,7 +7101,8 @@ function cutTitle(c) {
   if (practice) return '';                                     // the Training Ground names its own moments
   if (c.duel) return DUEL[c.kind].name;
   if (c.kind === 'goal') return (c.g.kind === 'conversion' ? 'Conversion' : c.g.kind === 'penalty' ? 'Penalty Goal' : 'Drop Goal') + ' · ' + Math.round(c.g.dist) + 'm';
-  if (c.kind === 'scrum') return 'Scrum · ' + M.nat[c.feed].id + ' Ball';
+  if (c.kind === 'scrum') return 'Scrum · ' + M.nat[/^(win|steal)/.test(c.result || '') ? +c.result.slice(-1) : c.feed].id + ' Ball';   // the put-in's, then whoever won it (2026-11-09: Against the Head names the side that took it)
+  if (c.kind === 'maul') return 'Maul · ' + M.nat[c.team].id + ' Ball';
   return 'Lineout · ' + M.nat[c.team].id + ' Throw';
 }
 function duelLabels(c) {
@@ -7025,7 +7483,7 @@ function artCell(p, s, pose, tier, mine) {                  // his picture at th
 }
 function artDraw(at, p, s, kk, sc, ang, pose, mine) {       // draws him where at says, and gives back the slot drawn, or null if nothing can be yet
   const want = kk*V.dpr > 46 && !M.demo ? 1 : 0, numbered = pose.mirror && artNumbered(ART.man.clips[pose.clip].shape, pose.deg);   // the dim demo keeps to the smaller sheets
-  const owed = M.demo && !(s.artSlot && s.artSlot.key === s.artKey);   // the demo never shows a hole or a code-drawn man: anyone with no picture to hold gets his now, past the budget
+  const owed = (M.demo || !!practice) && !(s.artSlot && s.artSlot.key === s.artKey);   // the demo and the Skills Mini Games never show a hole or a code-drawn man: anyone with no picture to hold gets his now, past the budget
   let slot = artCell(p, s, pose, want, mine || owed), flip = pose.mirror && !numbered;
   if (!slot && s.artSlot && s.artSlot.key === s.artKey) { slot = s.artSlot; flip = s.artFlip; }   // tints spent: hold his last picture a frame
   if (!slot) return null;
@@ -7364,8 +7822,8 @@ function bvBall(cam) {                                      // a ball not in any
   if (!q) return;
   const sh = pr(cam, b.x, b.y, 0), scG = 1/(1 + Math.max(0, b.z)*0.16);
   if (sh) { ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.globalAlpha = 0.45 + 0.55*scG; ellipse(sh.sx, sh.sy, Math.max(7, 0.3*sh.k)*scG, Math.max(2.5, 0.11*sh.k)*scG); ctx.fill(); ctx.globalAlpha = 1; }
-  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y, ang = hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0;
-  if (b.state === 'dead') { cutBall(q.sx, q.sy, q.k*1.1, ang); return; }   // waiting at a kick-off or a ruck, among the men: its old size, so it never sits on a man like a plate. No one needs to chase it
+  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y, ang = (hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0) + (b.tumble != null ? b.tumble*0.5 : 0);   // a spilled or knocked-on egg turns end over end (b.tumble, set in the sim; PRESSURE)
+  if (b.state === 'dead' && !b.egg) { cutBall(q.sx, q.sy, q.k*1.1, ang); return; }   // waiting at a kick-off or a ruck, among the men: its old size, so it never sits on a man like a plate. No one needs to chase it. A knock-on hopping before its whistle is drawn as a loose ball
   const rx = Math.max(b.state === 'air' ? BV_LOOSE.air : BV_LOOSE.rx, BV_LOOSE.k*q.k);
   cutBall(q.sx, q.sy, rx/0.17, ang);                         // cutBall's half-length is 0.17 of its scale
   ballLaces(q.sx, q.sy, rx, ang);
@@ -7571,7 +8029,7 @@ function renderBehind(dt) {
    up the screen on touch, keys and a pad alike, and Watch How writes through the same turn (demoStart's go). Nothing here draws a random number.
    ========================================================= */
 const DV_SIDE = { u:{ x:0, y:-1 }, r:{ x:1, y:0 } }, DV_BEHIND = { u:{ x:1, y:0 }, r:{ x:0, y:1 } };
-// k: px a metre at the focus at 844x390. z: the lens' distance from the focus (longer is flatter). tilt: its height over that distance. sy: where the focus sits up the screen. aim: where it looks, x, y and a zoom
+// k: px a metre at the focus at 844x390. z: the lens' distance from the focus (longer is flatter). tilt: its height over that distance. sy: where the focus sits up the screen. aim: where it looks, x, y and a zoom, and an sy of its own if the view's changes as it plays
 const DV_VIEW = {
   tag:{ ...DV_BEHIND, k:30, z:18, tilt:0.42, sy:0.74, cut:10, aim:() => { const T = practice.tag, m = T.me; return [tagMode(T) === 'keep' ? m.x : Math.min(m.x, T.them.x), 35 + (m.y - 35)*0.35]; } },   // a dodge reads best across the screen, and both hips show
   egg:{ ...DV_SIDE, k:24, z:40, tilt:0.34, sy:0.5, aim:() => [clamp((58 + practice.egg.me.x)/2, 54, 60), 35] },               // from the side, low, so a hop's height reads above its shadow. It leans a little after you, never so far that the thrower goes off
@@ -7579,12 +8037,12 @@ const DV_VIEW = {
   cones:{ ...DV_SIDE, k:25, z:30, tilt:0.5, sy:0.56, cut:30, aim:() => { const m = practice.cones.me; return [clamp(m.x + m.vx*0.6, 30, 62), clamp(m.y*0.65 + 37*0.35, 30, 44)]; } },            // runs with you: the next gate is what matters
   tackle:{ ...DV_BEHIND, k:30, z:18, tilt:0.42, sy:0.74, aim:() => [DRILL_TACKLE.at[0], 35] },                                  // behind you, to get in their path. The close-ups take over from Head Side on
   back:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [60, 35] },                                                      // all close-up, so only ever seen under nothing
-  pass:{ ...DV_SIDE, k:23, z:36, tilt:0.42, sy:0.58, cut:30, aim:() => [clamp(M.ball.x + 3, 72, 98), 36] },                    // from the side: how near the defender is reads as a distance across the screen
-  defend:{ ...DV_SIDE, k:21, z:38, tilt:0.42, sy:0.58, cut:30, aim:() => { const c = practice.switched ? ctrlOf(0) : M.players[1], b = M.ball; return [c ? (b.x + c.x)/2 : b.x, 35 + (b.y - 35)*0.4]; } },   // between the runner and the cover: the man you switch to starts clear of the thumb
+  pass:{ ...DV_SIDE, k:23, z:36, tilt:0.42, sy:0.58, cut:30, aim:() => [clamp(M.ball.x + 3, 72, 98), gapAimY(), gapZoom()] },   // from the side: how near the defender is reads as a distance across the screen. Up the line with the ball, and further out for a longer line
+  defend:{ ...DV_SIDE, k:21, z:38, tilt:0.42, sy:0.58, cut:30, aim:() => { const c = practice.switched ? ctrlOf(0) : M.players[1], b = M.ball, f = defendView(); return [c ? (b.x + c.x)/2 + (practice.switched ? 0 : f.lean) : b.x, 35 + (b.y - 35)*0.4, f.zoom, f.sy]; } },   // between the runner and the cover. How high the field sits, how far it leans before the Switch and how far out it is go by the round (DEFEND_VIEW), so at 667x375 nobody stands under a thumb
   kick:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [90, 35] },                                                      // its own close-up: this is only what a wipe uncovers
   scrum:{ ...DV_SIDE, k:20, z:36, tilt:0.42, sy:0.58, aim:() => [60, 35] },
 };
-const DV = { cam:null, tx:0, ty:0, zoom:1, sky:new Map(), props:{}, egg:null };
+const DV = { cam:null, tx:0, ty:0, zoom:1, sy:0.5, sky:new Map(), props:{}, egg:null };
 const DV_GRASS = ['#4f9b4b', '#59a553'], DV_CHALK = 'rgba(250,248,238,.9)', DV_FAINT = 'rgba(250,248,238,.17)', DV_GOLD = 'rgba(255,207,61,.95)', DV_GREEN = 'rgba(98,214,128,.95)', DV_RED = 'rgba(255,132,102,.95)';
 const DV_KITS = [{ fill:'#1d4f9c', trim:'#ffcf3d', hoops:false }, { fill:'#ee6c22', trim:'#1b1d22', hoops:false }];   // training colours, for both sides of every game: yours blue, theirs an orange bib
 const dvOn = () => !!practice && playing();
@@ -7602,15 +8060,15 @@ function dvCamera(dt) {
   let c = DV.cam;
   const fresh = !c || c.id !== practice.id || c.W !== W || c.H !== H || BV.M !== M;
   if (fresh) c = DV.cam = { id:practice.id, key:'dv', W, H, cx:W/2, F:0, ch:v.tilt*v.z, back:v.z, hz:0, u:v.u, r:v.r, Cx:0, Cy:0 };
-  const z = a[2] || 1, dx = a[0] - DV.tx, dy = a[1] - DV.ty, cut = v.cut || 25;
-  if (fresh || Math.abs(dx) > cut || Math.abs(dy) > cut) { DV.tx = a[0]; DV.ty = a[1]; DV.zoom = z; }
+  const z = a[2] || 1, sy = a[3] || v.sy, dx = a[0] - DV.tx, dy = a[1] - DV.ty, cut = v.cut || 25;
+  if (fresh || Math.abs(dx) > cut || Math.abs(dy) > cut) { DV.tx = a[0]; DV.ty = a[1]; DV.zoom = z; DV.sy = sy; }
   else {
     DV.tx += clamp(dx*Math.min(1, dt*4), -14*dt, 14*dt); DV.ty += clamp(dy*Math.min(1, dt*3), -14*dt, 14*dt);
-    DV.zoom += (z - DV.zoom)*Math.min(1, dt*3);
+    DV.zoom += (z - DV.zoom)*Math.min(1, dt*3); DV.sy += (sy - DV.sy)*Math.min(1, dt*3);
   }
   BV.M = M; BV.rt = M.rt;
   const k = v.k*q*DV.zoom;
-  c.F = k*v.z; c.hz = (tall ? v.sy*0.72 : v.sy)*H - k*c.ch; c.Cx = DV.tx - v.z*v.u.x; c.Cy = DV.ty - v.z*v.u.y;
+  c.F = k*v.z; c.hz = (tall ? DV.sy*0.72 : DV.sy)*H - k*c.ch; c.Cx = DV.tx - v.z*v.u.x; c.Cy = DV.ty - v.z*v.u.y;
   return c;
 }
 function dvFree() { if (!DV.sky.size) return; for (const c of DV.sky.values()) c.width = 0; DV.sky.clear(); }
@@ -7776,14 +8234,14 @@ const DV_DRAW = {
     },
   },
   egg:{
-    ground(cam) {                                           // the thrower's spot, the box you may run in, a line of cones six metres out; and the same closing ring whatever is coming
+    ground(cam) {                                           // the thrower's spot, the box you may run in, a line of cones six metres out; the same closing ring whatever is coming; and the gold ring while it helps
       const E = practice.egg, K = DRILL_EGG, B = K.box, w = Math.max(1.5, 0.07*cam.F/cam.back);
       if (!E) return;
       dvLine(cam, B[0], B[1], B[2], B[1], 'rgba(250,248,238,.5)', w, [7, 6]); dvLine(cam, B[2], B[1], B[2], B[3], 'rgba(250,248,238,.5)', w, [7, 6]);
       dvLine(cam, B[2], B[3], B[0], B[3], 'rgba(250,248,238,.5)', w, [7, 6]);
       groundRing(cam, K.from[0], K.from[1], 0.75, 'rgba(250,248,238,.75)', 2);
       if (E.stage === 'wind') { const u = clamp(E.t/E.wind, 0, 1); dvCircle(cam, E.tw.x, E.tw.y, 2.4 - 1.4*u, `rgba(255,255,255,${(0.45 + 0.5*u).toFixed(3)})`, 2.5); }
-      if (E.stage === 'fly' && E.aim) {                     // where the ball comes down, at release and again after every hop: a ring the size of your reach, and its centre
+      if (E.stage === 'fly' && E.aim && eggRing(E)) {       // where the ball comes down, at release and again after every hop: a ring the size of your reach, and its centre. Only where eggRing says (training.js)
         const lw = Math.max(2.5, 0.14*cam.F/cam.back);
         dvCircle(cam, E.aim.x, E.aim.y, K.reach, DV_GOLD, lw);
         dvCircle(cam, E.aim.x, E.aim.y, 0.18, DV_GOLD, lw);
@@ -7875,10 +8333,10 @@ const DV_DRAW = {
     },
   },
   pass:{
-    ground(cam) {                                           // the line to score on, and how close the defender has to be: the ball leaving your hands in here is what draws them
-      const w = Math.max(2, 0.12*cam.F/cam.back), def = M.players.find(p => p.team === 1), me = ctrlOf(0);
+    ground(cam) {                                           // the line to score on, and the ring round the man you have to draw: the ball leaving your hands inside it, once it is gold, is what draws him
+      const w = Math.max(2, 0.12*cam.F/cam.back), b = M.ball, c = b.state === 'held' && b.carrier.team === 0 ? b.carrier : null, d = c && practice.gap.R.stage === 'play' ? gapMark(c) : null;
       dvLine(cam, 110, 12, 110, 58, DV_CHALK, w);
-      if (def && M.stats.passes === 0) { const inside = me && dist(me, def) <= DRILL_QUICK.draw; dvCircle(cam, def.x, def.y, DRILL_QUICK.draw, inside ? DV_GOLD : 'rgba(250,248,238,.55)', Math.max(1.5, w*0.6), inside ? null : [7, 6]); }
+      if (d) { const inside = dist(c, d) <= DRILL_GAP.draw; dvCircle(cam, d.x, d.y, DRILL_GAP.draw, inside ? DV_GOLD : 'rgba(250,248,238,.55)', Math.max(1.5, w*0.6), inside ? null : [7, 6]); }
     },
     props() { return [['flag', 110, 22], ['flag', 110, 50], ['cone', 110, 29], ['cone', 110, 36], ['cone', 110, 43], ['balls', 70, 24]]; },
   },
@@ -8158,7 +8616,7 @@ function drawSeatMark(t, cx, cy, r, off) {
   ctx.globalAlpha = a0;
   const cue = cueOf(t);
   if (cue) {
-    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' || cue === 'Switch' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, G · SWITCH, / · TACKLE
+    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' || cue === 'Switch' || cue === 'Maul' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, G · SWITCH, / · TACKLE
     ctx.font = `800 12px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const m = ctx.measureText(text), tw = ((m && m.width) || text.length*6.5) + 12;
     ctx.fillStyle = 'rgba(8,14,10,.82)'; rrect(cx - tw/2, y - 9, tw, 18, 4); ctx.fill();
@@ -8171,7 +8629,7 @@ function cueOf(t) {                                        // the word the big o
   const b = M.ball, k = M.contact;
   if (ourBall(t)) {
     if (b.state !== 'held' || b.carrier !== c) return null;
-    if (c.bind) return k && k.c === c && canOffload(k) ? 'Offload' : null;
+    if (c.bind) return k && k.c === c && canOffload(k) ? 'Offload' : k && k.c === c && maulCan(k) ? 'Maul' : null;   // the Maul when no Offload is lit (src/maul.js)
     const p = sideOf(t).pass;
     if (p && p.mode === 'hold' && p.t >= LONG.arm && passAim(c, inputOf(t).world().y).far) return 'Long';
     return kickLabel(t) === 'Drop Goal' ? 'Drop Goal' : null;
@@ -8181,15 +8639,17 @@ function cueOf(t) {                                        // the word the big o
 }
 
 /* =========================================================
-   Sound: every effect is built here from layers of Web Audio oscillators and filtered noise, with
-   no samples and nothing to download. It starts after a tap.
+   Sound: recordings where there are good ones, and every effect also built here from layers of Web Audio oscillators and
+   filtered noise. It starts after a tap.
 
-   A sound is a voice: a small graph with its own gain, built by a recipe in SND, and gone when its
-   time is up. Every voice runs into one bus (a low cut for what a phone speaker cannot play, a top
-   cut, a limiter, a trim and a hard ceiling), so nothing can clip however many play at once.
-   Variation is Math.random, and only once a real context is running: the game's rnd() is never
-   used, and headless runs, Sound Off and a page with no audio draw nothing at all.
-   The sound test page loads this very file; soundRender draws a recipe silently so it can be measured.
+   A sound is a voice: a small graph with its own gain, gone when its time is up. The recordings (assets/sounds, CC0, listed
+   with their sources in assets/sounds/LICENCES.md) are fetched and decoded once, after the first tap, in the background.
+   Until a sound's recording is in, or if it cannot be had (offline on a first visit, a failed fetch or decode), its recipe in
+   SND plays instead, so nothing goes silent. Every voice runs into one bus (a low cut for what a phone speaker cannot play,
+   a top cut, a limiter, a trim and a hard ceiling), so nothing can clip however many play at once.
+   Variation is Math.random (which take, its speed and level), and only once a real context is running: the game's rnd() is
+   never used, and headless runs, Sound Off and a page with no audio fetch nothing and draw nothing at all.
+   The sound test page loads this very file; soundRender draws a sound silently so it can be measured.
    ========================================================= */
 const SOUND = {
   highpass:75, lowpass:11000,                                // the bus: a phone cannot play under the first, and over the second is only hiss
@@ -8204,6 +8664,10 @@ const SOUND = {
   gap:{ roar:0.9, cheer:0.6, groan:0.6, long:0.5, horn:0.5, whistle:0.12, post:0.1, tick:0.05, tap:0.04, catch:0.05, bounce:0.05, pass:0.04 },
   // which sound gives way when there are too many: the lowest first, then the oldest. A voice is never cut for a lesser one
   rank:{ whistle:3, long:3, horn:3, roar:2, cheer:2, groan:2, strike:2, post:2, hit:2, kick:2, tackle:2 },
+  // a recording each time: how far its speed may move either way (pitch with it). Unlisted: 0.04
+  vary:{ pass:0.07, whoosh:0.07, whiff:0.07, bounce:0.05, roar:0.02, cheer:0.02, groan:0.02, post:0.015 },
+  swell:{ roar:[2.2, 1.4, 2.4], cheer:[1.6, 0.7, 1.6] },     // the crowd bed under a roar or a cheer: rises to this, holds so many seconds, settles over so many
+  loadTries:3, loadGap:20,                                   // a recording that failed is asked for again at a later tap, this many times, this many seconds apart
 };
 // the key every sfx() call uses, and the name on the sound test page, in the page's order
 const SOUND_NAMES = {
@@ -8211,6 +8675,31 @@ const SOUND_NAMES = {
   pass:'Pass', catch:'Catch', fumble:'Fumble', bounce:'Ball Bounce', tackle:'Tackle', hit:'Big Hit', whiff:'Whiff', trip:'Trip', whoosh:'Whoosh',
   tick:'Tick', tap:'Menu Tap', roar:'Crowd Roar', cheer:'Cheer', groan:'Groan',
 };
+// Always their recipes: no CC0 referee's whistle or stadium hooter could be found, and Trip, Tick and Menu Tap are cues made to carry on a phone speaker
+const SOUND_SYNTH = ['whistle', 'long', 'horn', 'trip', 'tick', 'tap'];
+// The recordings, by key: [file in assets/sounds, seconds of sound in it, and for the crowd's loop the seconds of margin either side of it], a take each.
+// Written by tools/sound-make.py
+// sound-make: files from here
+const SOUND_FILES = {
+  tackle:[['tackle-0.3630d97b0e.m4a', 0.32], ['tackle-1.2b7e735d9b.m4a', 0.32], ['tackle-2.a1516b3697.m4a', 0.32], ['tackle-3.260731cb99.m4a', 0.32]],
+  pass:[['pass-0.eda535ea0d.m4a', 0.149333], ['pass-1.7d682e84aa.m4a', 0.128], ['pass-2.db65b252be.m4a', 0.106667]],
+  catch:[['catch-0.346604bd67.m4a', 0.128], ['catch-1.5eccddc419.m4a', 0.149333], ['catch-2.c43b8d2ef3.m4a', 0.149333]],
+  kick:[['kick-0.9a118871ed.m4a', 0.256], ['kick-1.706e4e8a8c.m4a', 0.256], ['kick-2.47e47014a3.m4a', 0.256]],
+  bounce:[['bounce-0.c8f19a6d27.m4a', 0.213333], ['bounce-1.bb9ee801f9.m4a', 0.213333], ['bounce-2.cc6b8ddeb1.m4a', 0.213333]],
+  whoosh:[['whoosh-0.95de910210.m4a', 0.106667], ['whoosh-1.a734fa8a5b.m4a', 0.106667], ['whoosh-2.ff9a60a1b9.m4a', 0.170667]],
+  whiff:[['whiff-0.5f1336e665.m4a', 0.106667], ['whiff-1.33f1aa3c5a.m4a', 0.149333]],
+  hit:[['hit-0.7c02e02f4d.m4a', 0.618667], ['hit-1.76444026bb.m4a', 0.618667]],
+  bed:[['bed-0.b9dedf3a3c.m4a', 13.994667, 0.042667]],
+  roar:[['roar-0.ca12be3a02.m4a', 3.413333], ['roar-1.6000d56367.m4a', 3.413333]],
+  cheer:[['cheer-0.5c6640c3af.m4a', 2.112], ['cheer-1.73a6b9be23.m4a', 2.112]],
+  groan:[['groan-0.952fdad619.m4a', 1.813333], ['groan-1.b4d6f98d12.m4a', 1.813333]],
+  strike:[['strike-0.ef07d6d4dc.m4a', 0.426667], ['strike-1.4335da66d0.m4a', 0.405333]],
+  post:[['post-0.533a9c8f66.m4a', 1.002667], ['post-1.fc3534fe13.m4a', 1.002667]],
+  fumble:[['fumble-0.f004113141.m4a', 0.512], ['fumble-1.f7b3380943.m4a', 0.512]],
+};
+// sound-make: files to here
+const SOUND_BASE = 'assets/sounds/';
+const SAMPLE = { state:'idle', bufs:{}, tries:0, at:-1e9 };   // bufs: file -> { buf, lead } once decoded
 let AC = null, NOISE = null, PINK = null, BUS = null, BED = null, soundUnlocked = false, soundWakes = 0, soundWakeAt = -1;
 const VOICES = [], soundPend = [], soundLast = {};
 
@@ -8334,6 +8823,42 @@ function sndCrowd(V, o) {
 function sndPat(V, at, f, peak) {                            // leather on a hand
   sndTone(V, { f, to:f*0.56, at, dur:0.055, peak });
   sndBurst(V, { white:true, f:1300, q:1.1, at, dur:0.028, peak:peak*0.42 });
+}
+
+/* ---------- the recordings ---------- */
+function sndDecode(a, ab) {                                  // the promise form, or the callback form an older Safari has
+  return new Promise((ok, no) => { try { const p = a.decodeAudioData(ab, ok, no); if (p && p.then) p.then(ok, no); } catch (e) { no(e); } });
+}
+// Where the sound starts. Each file is AAC with 1024 samples of the encoder's priming at 48 kHz, and a whole number of 1024-sample frames
+// long, so a decoder that kept the priming (one that ignores the MP4's edit list) hands back exactly one frame more than the table's length
+const sndLead = (buf, d) => (buf.duration - d > 512/48000 ? 1024/48000 : 0);
+function sndLoad() {                                         // after the first tap, in the background: each file fetched and decoded once, one at a time, and kept
+  const a = AC;
+  if (!a || SAMPLE.state !== 'idle' || typeof fetch !== 'function' || typeof a.decodeAudioData !== 'function') return;
+  const todo = [], len = {};
+  for (const k in SOUND_FILES) for (const [f, d, m] of SOUND_FILES[k]) { len[f] = d + 2*(m || 0); if (!SAMPLE.bufs[f]) todo.push(f); }
+  if (!todo.length) { SAMPLE.state = 'done'; return; }
+  const now = performance.now();
+  if (SAMPLE.tries >= SOUND.loadTries || now - SAMPLE.at < SOUND.loadGap*1000) return;   // offline, say: the recipes play, and a later tap asks again
+  SAMPLE.state = 'loading'; SAMPLE.tries++; SAMPLE.at = now;
+  const one = f => Promise.resolve().then(() => fetch(SOUND_BASE + f))
+    .then(r => { if (!r.ok) throw new Error('no ' + f); return r.arrayBuffer(); })
+    .then(ab => sndDecode(a, ab)).then(buf => { SAMPLE.bufs[f] = { buf, lead:sndLead(buf, len[f]) }; }, () => { /* this one stays its recipe */ });
+  todo.reduce((p, f) => p.then(() => one(f)), Promise.resolve())
+    .then(() => { SAMPLE.state = todo.every(f => SAMPLE.bufs[f]) ? 'done' : 'idle'; });
+}
+const soundTakes = k => (SOUND_FILES[k] || []).filter(([f]) => SAMPLE.bufs[f]).map(([f, d, m]) => [SAMPLE.bufs[f], d, m || 0]);
+const sndHas = k => (SOUND_FILES[k] || []).some(([f]) => SAMPLE.bufs[f]);
+function sndSample(V, k, amt) {                              // a recording: one of its takes, a little faster or slower, louder or softer, each time. False when none is in
+  const takes = soundTakes(k);
+  if (!takes.length) return false;
+  const [b, d] = takes[Math.floor(Math.random()*takes.length)], src = sndAdd(V, V.a.createBufferSource());
+  let rate = sndVary(1, SOUND.vary[k] == null ? 0.04 : SOUND.vary[k]), gain = sndVary(1, 0.08);
+  if (k === 'bounce') { gain *= 0.45 + 0.55*amt; rate *= 1 + (1 - amt)*0.15; }   // a smaller hop: softer and a little higher, as the recipe
+  src.buffer = b.buf; src.playbackRate.value = rate; V.out.gain.value *= gain;
+  src.connect(V.out);
+  sndRun(V, src, V.t, V.t + d/rate, b.lead);
+  return true;
 }
 
 /* ---------- the recipes. V is the voice, amt how hard (only the bounce uses it) ---------- */
@@ -8460,16 +8985,16 @@ function sndRoom(rank) {                                     // room for one mor
   }
   return true;
 }
-function sndStart(a, into, k, amt) {                         // the one way a recipe becomes a voice, heard or measured
-  const V = sndVoice(a, into, k);
-  try { SND[k](V, amt == null ? 1 : Math.max(0, Math.min(1, amt))); } catch (e) { sndKill(V); return null; }   // a sound that fails is a silence, never a stopped game
+function sndStart(a, into, k, amt, synth) {                  // the one way a sound becomes a voice, heard or measured: its recording if one is in (synth: the recipe all the same), else its recipe
+  const V = sndVoice(a, into, k), how = amt == null ? 1 : Math.max(0, Math.min(1, amt));
+  try { if (synth || !sndSample(V, k, how)) SND[k](V, how); } catch (e) { sndKill(V); return null; }   // a sound that fails is a silence, never a stopped game
   return V;
 }
-function soundPlay(k, amt) {
+function soundPlay(k, amt, synth) {
   if (!SND[k]) return;
   const a = ac(); if (!a || document.hidden) return;
   if (a.state !== 'running') {                               // not awake yet (the first tap is often this): held a moment. Scheduled now, they would all go off together when it wakes
-    if (soundPend.length < 4) soundPend.push({ k, amt, at:performance.now() });
+    if (soundPend.length < 4) soundPend.push({ k, amt, synth, at:performance.now() });
     return;
   }
   soundSweep();
@@ -8477,14 +9002,14 @@ function soundPlay(k, amt) {
   if (soundLast[k] != null && now - soundLast[k] < gap) return;
   if (!sndRoom(SOUND.rank[k] || 1)) return;
   soundLast[k] = now;
-  const V = sndStart(a, BUS.input, k, amt);
-  if (V) VOICES.push(V);
+  const V = sndStart(a, BUS.input, k, amt, synth);
+  if (V) { VOICES.push(V); if (SOUND.swell[k]) bedSwell(k); }
 }
 function sndWoke() {                                         // the context is running: what was held plays if it is still fresh
   if (!AC || AC.state !== 'running') return;
   soundWakes = 0;
   const fresh = soundPend.splice(0).filter(p => performance.now() - p.at <= SOUND.pendAge*1000);
-  for (const p of fresh) soundPlay(p.k, p.amt);
+  for (const p of fresh) soundPlay(p.k, p.amt, p.synth);
 }
 function ac() {
   if (!settings.sound) return null;
@@ -8501,21 +9026,28 @@ function ac() {
     return AC;
   } catch (e) { return null; }
 }
-function sfx(k, amt) {
+function sfx(k, amt, synth) {                                // synth: the recipe even when the recording is in (the sound test page's comparison)
   if (globalThis.__sfxSpy) globalThis.__sfxSpy(k, M && M.cut ? M.cut.t : null);   // the tools count sounds
   if (k !== 'tap' && (!M || M.demo || M.headless)) return;   // a menu tap plays over the demo; nothing else does
-  soundPlay(k, amt);
+  soundPlay(k, amt, synth);
 }
 
 /* ---------- the crowd under a match ---------- */
-function bedBuild(a, into) {                                 // two slow bands of pink noise, each drifting, far under everything else
-  const V = sndVoice(a, into, 'bed'), S = SOUND.bed;
-  V.end = Infinity; V.rank = Infinity;
+function bedBuild(a, into, synth) {                          // the crowd recording, looped from a random place; until it is in, two slow drifting bands of pink noise. Far under everything else
+  const V = sndVoice(a, into, 'bed'), S = SOUND.bed, swell = sndAdd(V, a.createGain());
+  V.end = Infinity; V.rank = Infinity; V.swell = swell; swell.connect(V.out);
   V.out.gain.setValueAtTime(0.0001, V.t); V.out.gain.linearRampToValueAtTime(S.peak, V.t + S.fadeIn);
+  const take = !synth && soundTakes('bed')[0];
+  if (take) {
+    const [b, d, m] = take, src = sndAdd(V, a.createBufferSource());   // the loop is the file less its margins, which hold what the codec gets least right
+    src.buffer = b.buf; src.loop = true; src.loopStart = b.lead + m; src.loopEnd = Math.min(b.buf.duration, src.loopStart + d);
+    src.connect(swell); src.start(V.t, src.loopStart + Math.random()*d*0.9); V.srcs.push(src); V.sample = true;
+    return V;
+  }
   [[620, 0.5, 0.032, 0.13, 1], [1500, 0.7, 0.014, 0.31, 0.83]].forEach(([f, q, level, rate, speed]) => {
     const src = sndAdd(V, a.createBufferSource()), g = sndAdd(V, a.createGain()), flt = sndFilter(V, 'bandpass', sndVary(f, 0.05), q, g);
     src.buffer = PINK; src.loop = true; src.playbackRate.value = speed;
-    src.connect(flt); g.connect(V.out); g.gain.value = level;
+    src.connect(flt); g.connect(swell); g.gain.value = level;
     src.start(V.t, Math.random()*2); V.srcs.push(src);
     const l = sndAdd(V, a.createOscillator()), lg = sndAdd(V, a.createGain());
     l.frequency.value = sndVary(rate, 0.1); lg.gain.value = level*0.3; l.connect(lg); lg.connect(g.gain);
@@ -8530,12 +9062,19 @@ function bedStop() {                                         // fades, then the 
   for (const s of v.srcs) { try { s.stop(now + S.fadeOut + 0.05); } catch (e) { /* already stopped */ } }
   v.end = now + S.fadeOut + 0.1; v.rank = 0;
 }
-function bedSync(want) {                                     // called every frame. Never builds a context by itself, and waits for the tap that wakes one
+function bedSync(want, synth) {                              // called every frame. Never builds a context by itself, and waits for the tap that wakes one. synth: the test page's other crowd
   const on = !!want && !!settings.sound && !document.hidden && !!AC && AC.state === 'running' && !!BUS;
   if (!on) { if (BED) bedStop(); return; }
-  if (!BED) { BED = bedBuild(AC, BUS.input); VOICES.push(BED); }
+  if (BED && !!BED.sample !== (!synth && sndHas('bed'))) bedStop();   // the recording has come in under the synthesised crowd: one fades out as the other fades in
+  if (!BED) { BED = bedBuild(AC, BUS.input, synth); VOICES.push(BED); }
 }
-function soundFrame(want) { try { soundSweep(); bedSync(want); } catch (e) { /* the frame goes on */ } }
+function bedSwell(k) {                                       // a roar or a cheer: the crowd under it rises with it and settles
+  if (!BED || !BED.swell) return;
+  const g = BED.swell.gain, now = BED.a.currentTime, [up, hold, back] = SOUND.swell[k];
+  g.cancelScheduledValues(now); g.setValueAtTime(Math.max(1, Math.min(up, g.value || 1)), now);
+  g.linearRampToValueAtTime(up, now + 0.25); g.setTargetAtTime(1, now + 0.25 + hold, back/3);
+}
+function soundFrame(want, synth) { try { soundSweep(); bedSync(want, synth); } catch (e) { /* the frame goes on */ } }
 
 /* ---------- quiet, hidden, off, and waking up ---------- */
 function soundQuiet() {                                      // leaving a match: what is sounding fades in a moment, and the crowd with it
@@ -8566,6 +9105,7 @@ function soundUnlock() {                                     // every tap and ke
   if (!soundUnlocked) {                                      // the first tap plays one silent sample, the old iOS unlock
     try { const s = a.createBufferSource(); s.buffer = a.createBuffer(1, 1, a.sampleRate); s.connect(a.destination); s.start(0); soundUnlocked = true; } catch (e) { /* the next tap tries again */ }
   }
+  if (soundUnlocked) sndLoad();                              // the recordings: once, in the background (a later tap asks again for any that failed)
   if (a.state === 'running') { soundWakes = 0; return; }
   const now = performance.now()/1000;                        // one tap fires several events: they count once
   if (now - soundWakeAt < SOUND.wakeGap) return;
@@ -8597,12 +9137,12 @@ function sndMeasure(d, rate) {
   const rms = n ? Math.sqrt(sum/n) : 0, db = x => (x > 0 ? 20*Math.log10(x) : -Infinity);
   return { peak, peakDb:db(peak), rms, rmsDb:db(rms), length:n/rate, clipped };
 }
-function soundRender(keys, o = {}) {                         // keys: a key, 'bed', or a list struck together. Resolves to its peak, RMS, length and clipped samples
+function soundRender(keys, o = {}) {                         // keys: a key, 'bed', or a list struck together; o.synth: the recipes even where a recording is in. Resolves to its peak, RMS, length and clipped samples
   const Off = window.OfflineAudioContext || window.webkitOfflineAudioContext, rate = o.rate || 48000, secs = o.secs || 4;
   const a = new Off(1, Math.floor(rate*secs), rate);
   sndNoiseMake(a);
   const bus = sndBus(a);
-  for (const k of [].concat(keys)) { if (k === 'bed') bedBuild(a, bus.input); else sndStart(a, bus.input, k, o.amt); }
+  for (const k of [].concat(keys)) { if (k === 'bed') bedBuild(a, bus.input, o.synth); else sndStart(a, bus.input, k, o.amt, o.synth); }
   return a.startRendering().then(buf => {
     const m = sndMeasure(buf.getChannelData(0), rate);
     if (o.samples) m.samples = buf.getChannelData(0);
@@ -8953,6 +9493,7 @@ function pollPads() {
     if (m >= 0.20 && !inp.latch) { const k = Math.min(1, (m - 0.20)/0.80)/m; inp.jx = ax*k; inp.jy = ay*k; inp.padStick = true; P.stick = true; if (m >= 0.5) setDev('pad'); }
     else if (m < 0.20 && P.stick) { P.stick = false; if (inp.padStick) { inp.jx = inp.jy = 0; inp.padStick = false; } }   // zeroed once, and only if the stick was the last writer
     if (join && (m >= 0.5) !== !!P.stickLit) { P.stickLit = m >= 0.5; lightPad(seat, 'stick', P.stickLit); }
+    if (m >= 0.20 || P.b.some(Boolean)) offlineInput();    // a button held or the stick off centre is input on every poll, so no update applies on the home mid-press and the quiet starts at the release (offline-client.js)
     if (menu) padNav(P, seat, ax, ay, m);
   }
 }
@@ -9054,7 +9595,7 @@ const DEFAULT_FOCUS = { 's-home':() => $('b-quick'), 's-join':() => $('j-go'), '
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
 function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
 function navSide(seat) {                                   // the one button a restricted seat may still press: Player 1's Change Team while Player 2 picks
-  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-change');
+  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-ctl').hidden ? $('t-fold') : $('t-change');   // folded, his press opens the controls first, so the Change Team he presses next is on screen
   return null;
 }
 function navMove(seat, dx, dy) {                           // the nearest candidate within 60 degrees of the direction: the distance along it plus twice the sideways offset
@@ -9230,10 +9771,12 @@ function statusSync() {
 function cutLabels(c) {
   if (c.kind === 'scrum') return ['Push', null];
   if (c.kind === 'lineout') return ['Jump', null];
+  if (c.kind === 'maul') return ['Push', null];
   return duelLabels(c);
 }
 
 function fmtClock() {
+  if (M.realClock) { const s = Math.floor(Math.min(M.clock, periodLen())/M.realClock + 1e-6); return Math.floor(s/60) + ':' + String(s % 60).padStart(2, '0'); }   // a Kids match: each half (and the Golden Try) on a real clock, 0:00 to 2:00 (match.js)
   const mins = M.golden ? 80 + Math.min(M.clock/periodLen(), 1)*10 : (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;   // extra time runs 80 to 90
   const mm = Math.floor(mins), ss = Math.floor((mins-mm)*60);
   return String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
@@ -9266,7 +9809,7 @@ function updateHud() {
   else if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
   else if (ours && proCalling(ht)) { la = 'Call for Ball'; lb = null; cueA = cueB = false; aAct = play && proCanCall(); bAct = false; }   // Pro Mode: a teammate has it (career-pro.js)
-  else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl; la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && carrying && (!held || cueA); bAct = play && carrying && !held; }   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
+  else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl, maul = held && maulCan(k); la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; if (maul) lb = 'Maul'; cueA = la === 'Offload'; cueB = maul; aAct = play && carrying && (!held || cueA); bAct = play && carrying && (!held || maul); }   // held with a man near, B is the Maul (src/maul.js); the kick label is still read, as before   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
   else { const tagging = practice && practice.tagOnly; la = tagging ? 'Pull Tag' : 'Tackle'; lb = proPinned(ht) ? null : 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && (tagging ? drillCanPull(ctrl) : canDive(ctrl)); bAct = play; }   // Tackle (Pull Tag for the youngest's drills) lights up only when a press would act now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
   const S = M.spr[ht], sprOn = D ? !!D.cOn : !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;
@@ -9307,7 +9850,8 @@ function updateHud() {
    changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
    dropZone is never run again and nothing random is drawn. The tutorial pauses the first time each moment comes up on this device
    (while that seat's Hints are On): the close-up holds its first frame under a card or two, Next then Play, a tap anywhere or the
-   pass key advancing, the match clock and the world frozen; Replay Tutorial on How to Play forgets them all.
+   pass key advancing, the match clock and the world frozen. Nothing replays them: Replay Tutorial, which only forgot them, left How to
+   Play on 2026-11-09 (tutReset stays, for the tools). How to Play is now a picture of the controls; renderHowTo fills its two rows.
    ========================================================= */
 const hintShown = [null, null], hintKey = ['', ''], HO = [null, null];   // what each card shows now (the tools read it); the last content key; open-play state per seat
 const OPEN_HINTS = ['offload', 'drop', 'long', 'sprint', 'step', 'dummy'], OPEN_SECS = 3.0, OPEN_GAP = 4.0;
@@ -9347,6 +9891,7 @@ function hintFor(s) {                                      // the card for seat 
     if (c.kind === 'scrum' && practice) return c.result || practice.ready ? null : card('Driving', 'Stay Low in the Green', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Keep Tapping')]);   // the game's own card, and none on its ready card
     if (c.kind === 'scrum') return c.result ? null : card('Scrum', c.feed === t ? 'Your Ball' : 'Steal Their Ball', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Tap Fast')]);
     if (c.kind === 'lineout') return c.outcome != null ? null : card('Lineout', c.team === t ? 'Your Throw' : 'Steal Their Throw', [row([chip('a', 'Jump')], 'Ball Halfway')]);
+    if (c.kind === 'maul') return maulHint(c, t, kb);        // src/maul.js
     if (c.kind === 'goal') {
       const g = c.g;
       if (g.watch || g.team !== t || c.t < CUT_IN || c.after || g.out) return null;
@@ -9434,7 +9979,7 @@ function renderHint(s, h) {
   $('ht' + s).hidden = h.kick;                              // kick cards sit inside the stick zone: no tick a steering thumb could hit
   $('hc' + s + '-b').innerHTML = h.rows.map(r => `<div class="hc-row">${r.chips.map(ch => chipHtml(s, ch)).join('<span class="hc-or">or</span>')}<span>${esc(r.text)}</span></div>`).join('');
 }
-function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines, Replay Tutorial
+function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines
   const pair = !!(M && M.two && mode === 'match');
   $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair; $('pz-cam').hidden = pair || !!practice;
   for (const s of [0, 1]) { const seg = $('pz-h' + s); if (seg && seg.children) [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === hintsOn(s)))); }
@@ -9442,7 +9987,6 @@ function renderHintSwitches() {                            // the pause card's r
   const ps = penCtx && M && M.two ? seatOfTeam(penCtx.team) : 0, on = hintsOn(ps);
   $('m-pen').classList.toggle('nohints', !on); $('ht-pen').classList.toggle('off', !on);
   $('p-goal-s').textContent = $('p-goal').disabled ? 'Out of Range' : '3 Points';
-  $('h-replay').disabled = !settings.tut.length;
 }
 /* the tutorial */
 function tutMoment(c) { return c.duel ? c.kind : c.kind === 'goal' ? (c.g.watch || !isHuman(c.g.team) ? null : c.g.type === 'drop' ? 'drop' : 'goal') : c.kind; }
@@ -9475,6 +10019,7 @@ function tutCards(id, s) {
     case 'block': return [['Block', 'Their Pass Crosses Your Player'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
     case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
     case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
+    case 'maul': return maulTutCards(name, kb ? (stickTurn(s) ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : R ? 'the Arrows' : '{KeyW} and {KeyS}') : 'the Stick');   // src/maul.js: the stick's up and down (across the screen in a behind view)
     case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', aim + 'Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
     default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', ' + aim + 'Let Go in the Gold Before They Reach You']];
   }
@@ -9506,7 +10051,17 @@ $('m-tut').addEventListener('click', e => { if (e.target && e.target.closest && 
 $('tu-next').addEventListener('click', tutAdvance);
 $('tu-skip').addEventListener('click', tutPlay);
 $('tu-play').addEventListener('click', tutPlay);
-$('h-replay').addEventListener('click', () => { tutReset(); renderHintSwitches(); });
+/* How to Play's two rows on a computer or with a controller (.desk-only): the solo map's first key for each job, as the buttons' corner
+   keycaps show them (the arrows as CSS triangles, never a glyph), and the pad's glyphs by position, as the hint chips draw them */
+function renderHowTo() {
+  const kc = code => (ARROW_KEY[code] ? `<kbd class="kc ar ${ARROW_KEY[code]}"></kbd>` : `<kbd class="kc">${esc(KEYCAP[code] || code.replace(/^Key/, ''))}</kbd>`);
+  const caps = (codes, alt) => `<span class="ctl-kk${alt ? ' alt' : ''}">${codes.map(kc).join('')}</span>`, glyph = g => `<span class="ctl-kk">${g}</span>`;
+  const cell = (badge, label) => `<span class="ctl-k">${badge}${esc(label)}</span>`, K = KB.solo;
+  $('h-kb').innerHTML = '<span class="lbl">Keyboard</span>' + cell(caps(K.m.slice(0, 4)) + caps(['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'], true), 'Run')
+    + cell(caps([K.a[0]]), 'Pass') + cell(caps([K.b[0]]), 'Kick') + cell(caps([K.c[0]]), 'Sprint') + cell(caps(['KeyP']), 'Pause');
+  $('h-pad').innerHTML = '<span class="lbl">Controller</span>' + cell(glyph('<i class="pad stick"></i>'), 'Run') + cell(glyph(PAD_GLYPH.a), 'Pass')
+    + cell(glyph(PAD_GLYPH.b), 'Kick') + cell(glyph(PAD_GLYPH.c), 'Sprint') + cell(glyph('<i class="pad st"></i>'), 'Pause');
+}
 
 /* ---------- first-match coach (2026-10-30)
    One short line the first time each open-play move comes up on this device, through say() so it stays a banner (the on-pitch
@@ -9691,6 +10246,7 @@ function resume() {
   // scrums and lineouts give the thumb a moment too, without replaying a throw backwards
   else if (c && c.kind === 'lineout' && c.outcome == null) c.t = Math.max(CUT_IN, c.t >= c.throwT ? c.throwT : 0, c.t - 0.6);
   else if (c && c.kind === 'scrum' && !c.engaged) c.t = Math.max(CUT_IN, c.t - 0.6);
+  else if (c && c.kind === 'maul' && !c.after) maulResume(c);   // src/maul.js
 }
 /* A two-tap confirm (Quit, Delete Team, Start Fresh, Start New Career, Remove League): the first tap asks again, and the second
    counts only once CONFIRM.gap has passed, so a quick double tap (a child mashing, or one tap read twice) only asks. */
@@ -9868,10 +10424,10 @@ function champHome() {
   for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.setAttribute('aria-pressed', String(+b.dataset.tier === homeTier));
   const comps = champComps(homeTier), key = comps.map(c => c[0]).join() + (storeLive() && !storeHas('champ') ? ':locked' : '');
   const box = $('hc-comps');
-  if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put
+  if (box.dataset.key !== key) {                            // drawn again only when the tier or a lock changes, so a controller's ring stays put; a long name (the United Rugby Championship) is .long: its lock goes in the corner (styles.css)
     box.dataset.key = key;
     box.className = 'hc-comps n' + comps.length;
-    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
+    box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp${n.length > 20 ? ' long' : ''}" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
     for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
   }
   $('b-cabinet').hidden = !champHistory.length && !(typeof lockerFanClubs === 'function' && lockerFanClubs().length);   // a finished season or cup, or a Super Fan trophy (src/ui-locker.js)
@@ -9892,10 +10448,11 @@ $('b-champ').addEventListener('click', () => {
 $('b-cabinet').addEventListener('click', () => { renderCabinet('home-history'); showScreen('s-cabinet'); $('s-cabinet').scrollTop = 0; });
 $('cab-back').addEventListener('click', () => goHome($('b-cabinet')));
 $('b-quick').addEventListener('click', () => { ac(); openTeams('quick'); });   // Quick Match's Play: Pick Your Team
-$('b-help').addEventListener('click', () => { renderHintSwitches(); showScreen('s-help'); });   // Replay Tutorial is dim with nothing to replay
+$('b-help').addEventListener('click', () => { renderHowTo(); showScreen('s-help'); });
 $('h-back').addEventListener('click', () => goHome($('b-help')));
 $('t-back').addEventListener('click', () => { if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; } goHome(); });
-$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; renderTeams(); $('s-teams').scrollTop = 0; });
+$('t-change').addEventListener('click', () => { if (pickMode === 'two') twoSel.picking = 0; else quickPick = null; teamsFold(false); });   // back to Pick Your Team, folded, the focus and the ring on its first card
+$('t-fold').addEventListener('click', () => teamsFold(!teamsOpen));   // Change opens the controls, Done folds them
 $('t-default').addEventListener('click', () => { const t = teamDefault(); if (t) pickTeam(t); });   // My Team, picked for you in Championship; on a Home Nations Tour, the host in turn
 
 /* two player: the join screen (openJoin: no button on the home since 2026-11-09, the mode and its checks kept), then the team screen
@@ -9988,8 +10545,53 @@ function teamCard(t, i) {
   return t.custom ? `<div class="tcard">${btn}<button class="btn" data-edit="${i}">Edit</button></div>` : btn;
 }
 /* The lists: International | National | Local, then under it National's leagues or Local's Surrey and My League (none under
-   International), and Men | Women | Minis beside the title. Built from TEAM_TIERS, TEAM_LISTS and TEAM_CATS (data.js). */
+   International), and Men | Women | Minis beside the tiers. Built from TEAM_TIERS, TEAM_LISTS and TEAM_CATS (data.js). */
 let natLast = 'eng';                                       // National goes back to the league last looked at
+/* Fold to One Line (the owner, 2026-11-09: "have the team selection menus collapsable - i can't see half the screen once i'm in to
+   specific clubs"). The controls (Men | Women | Minis, the tiers, a tier's lists and Pick Opponent's your-team bar with Change Team) fold
+   away under one line: the title, where the list is (Men · National · Australia; Men · International, which has no league), your side
+   under it on Pick Opponent (v Farnham), and Change. The screen arrives folded, a list always being chosen; Change opens the controls and
+   becomes Done. Picking a list folds them again: International at once, National and Local once a league is picked (the one on show
+   included); Men | Women | Minis keeps them open. A side picked (a card, a made team, an imported club) and Change Team fold them too.
+   Championship's primary (Play as Farnham) is on the line, beside Change on a phone held sideways (styles.css). The career's club screen
+   folds the same way (src/ui-career.js). */
+let teamsOpen = false;
+const FOLD_MS = 200;                                       // one quick, calm move: the cards slide to where they land, the controls fade in
+const foldMotion = () => { try { return !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+/* Fold or open a screen's controls: draw() sets the state and redraws, then the cards slide from where they were to where they now are and
+   opened controls fade in (opacity and transform only, and nothing with reduced motion). The keyboard's focus and a controller's ring go to
+   to() where they were on the screen: the first card on folding, the current tier on opening. */
+function foldMove(scr, ctl, grid, draw, to) {
+  const a = document.activeElement, inScr = el => !!el && typeof el.closest === 'function' && !!el.closest('#' + scr);
+  const typed = inScr(a), ringed = !!focusEl && (typeof focusEl.closest !== 'function' || inScr(focusEl));
+  const was = grid.getBoundingClientRect().top;
+  draw();
+  const move = was - grid.getBoundingClientRect().top;
+  if (foldMotion() && typeof grid.animate === 'function') {
+    const ease = 'cubic-bezier(.2,.7,.2,1)';
+    if (move) grid.animate([{ transform:`translateY(${move}px)` }, { transform:'none' }], { duration:FOLD_MS, easing:ease });
+    if (!ctl.hidden) ctl.animate([{ opacity:0, transform:'translateY(-8px)' }, { opacity:1, transform:'none' }], { duration:FOLD_MS, easing:ease });
+  }
+  const el = to();
+  if (!el) return;
+  if (ringed) setFocus(el);
+  if (typed && el.focus) el.focus({ preventScroll:true });
+}
+const foldFirst = grid => (grid.querySelector && grid.querySelector('.team:not([aria-disabled="true"])')) || null;   // the first card that can be picked (Pick Opponent's own side can't)
+const foldPressed = id => ($(id).querySelector && !$(id).hidden && $(id).querySelector('[aria-pressed="true"]')) || null;
+function teamsFold(open) {
+  foldMove('s-teams', $('t-ctl'), $('t-grid'), () => { teamsOpen = !!open; renderTeams(); $('s-teams').scrollTop = 0; },
+    () => (teamsOpen ? foldPressed('t-tier') || foldPressed('t-cat') : foldFirst($('t-grid'))));   // Championship has no tiers: Men | Women | Minis
+}
+/* A controller's first press: the open controls' tier, or, folded, the primary (Championship's Play as) or the first card. */
+DEFAULT_FOCUS['s-teams'] = () => (teamsOpen ? foldPressed('t-tier') || foldPressed('t-cat') : !$('t-default').hidden ? $('t-default') : foldFirst($('t-grid')));
+/* The line's summary: the category, the tier and the list, in the controls' own words; a cup's own name for its sides (Men · World Cup).
+   foldSum draws the parts, each kept whole on its line, so a long one (United Rugby Championship) wraps at a dot, never inside its name. */
+function teamSummary(view, pool) {
+  const cat = (TEAM_CATS.find(c => c.id === settings.cat) || TEAM_CATS[0]).name, tier = poolTier(pool);
+  return [cat, ...(view ? [view.name] : [TEAM_TIERS[tier], ...(tier ? [champListName(pool)] : [])])];
+}
+const foldSum = parts => parts.map(p => `<span>${esc(p)}</span>`).join(' · ');
 const listOf = k => TEAM_LISTS.find(l => l.key === k);
 function teamPool() { const k = poolKey(settings.pool); return k === IMPORT_POOL && !importLeague ? 'sur' : k; }   // My League with no league saved is Surrey
 const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier);
@@ -10008,13 +10610,17 @@ function poolTeams(k) {                                   // International is th
   for (const id of ['t-nat', 't-loc']) for (const b of $(id).querySelectorAll('[data-pool]')) b.addEventListener('click', () => poolPick(b.dataset.pool));
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.addEventListener('click', () => catPick(b.dataset.cat));
 }
-function poolPick(k) {
+function poolPick(k, stay) {                               // a list picked folds the controls; stay keeps them open (a tier's first list, while its league is picked)
   k = poolKey(k);
   if (k === IMPORT_POOL && !importLeague) return;
   settings.pool = k; if (poolTier(k) === 1) natLast = k;
-  save(); renderTeams(); $('s-teams').scrollTop = 0;
+  save();
+  if (stay) { renderTeams(); $('s-teams').scrollTop = 0; } else teamsFold(false);
 }
-function tierPick(i) { if (poolTier(teamPool()) !== i) poolPick(i === 0 ? 'int' : i === 1 ? natLast : 'sur'); }
+function tierPick(i) {                                     // International is its own list, so it folds at once; National and Local show their first list and stay open for the league
+  if (i === 0) poolPick('int');
+  else if (poolTier(teamPool()) !== i) poolPick(i === 1 ? natLast : 'sur', true);
+}
 function catPick(id) {
   if (!TEAM_CATS.some(c => c.id === id)) return;
   settings.cat = id;
@@ -10029,7 +10635,7 @@ function catPick(id) {
    list key; My Team is picked for you on its primary) or 'my' (My Team: the club on National or Local, the country on International).
    Each opens on My Team's list (a team you made: Local · Surrey, as ever). */
 function openTeams(m, comp) {
-  pickMode = m; quickPick = null;
+  pickMode = m; quickPick = null; teamsOpen = false;        // it arrives folded: a list is always chosen
   if (m === 'champ') {
     const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
     if (typeof cupCompSet === 'function') cupCompSet(cupId);   // the World Cup or the Home Nations Tour have their own sides (src/ui-cups.js)
@@ -10057,7 +10663,7 @@ function renderTeams() {
   const quick = pickMode === 'quick', pair = pickMode === 'two', my = pickMode === 'my', inChamp = pickMode === 'champ', p = twoSel.picking, mine = pair ? twoSel.teams[0] : quickPick, view = teamsView();   // two player: Player 1 picks first; while Player 2 picks, Player 1's team sits in the bar with Change Team (his own big action presses it); the title and eyebrow are the picker's, in his colour
   const pool = teamPool(), tier = poolTier(pool), cat = settings.cat, press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
   const eb = $('t-eyebrow');
-  eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : my ? 'My Team' : view ? view.name : 'Championship · ' + champListName(pool);
+  eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : my ? 'My Team' : view ? view.name : 'Championship';   // the list is the line's (teamSummary)
   eb.classList.toggle('p1', pair && p === 0); eb.classList.toggle('p2', pair && p === 1);
   $('t-title').textContent = view ? view.title : pair ? 'Player ' + (p + 1) + ' Team' : my ? (tier === 0 ? 'Pick Your Country' : 'Pick Your Club') : quick && quickPick ? 'Pick Opponent' : 'Pick Your Team';
   press('t-tier', '[data-tier]', b => +b.dataset.tier === tier);
@@ -10065,6 +10671,11 @@ function renderTeams() {
   $('t-nat').hidden = inChamp || tier !== 1; $('t-loc').hidden = inChamp || tier !== 2; $('t-league').hidden = !importLeague;
   for (const id of ['t-nat', 't-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
   press('t-cat', '[data-cat]', b => b.dataset.cat === cat);
+  $('t-ctl').hidden = !teamsOpen;
+  $('t-fold').textContent = teamsOpen ? 'Done' : 'Change'; $('t-fold').setAttribute('aria-expanded', String(teamsOpen));
+  $('t-sum').innerHTML = foldSum(teamSummary(view, pool));
+  const vs = (quick && quickPick) || (pair && p === 1) ? 'v ' + listName(catTeam(mine, cat) || mine) : '';   // your side, on Pick Opponent and Player 2's pick
+  $('t-vs').textContent = vs; $('t-vs').hidden = !vs;
   const yours = (quick && !!quickPick) || (pair && p === 1) || !!(view && view.yours) || my;
   $('t-yours').hidden = !yours; $('t-change').hidden = !!view || my;
   if (view && view.yours) $('t-mine').innerHTML = `${jersey(view.yours)}<span>${esc(view.yours.name)}</span>`;   // the Home Nations, on tour
@@ -10082,6 +10693,9 @@ function renderTeams() {
   else if ((quick || pair) && teamOwnPick(view)) {          // Player 1's list: My Team first (the country on International, the club elsewhere), marked, never picked
     const i = teamList.findIndex(o => myIs(o) && isNation(o) === (tier === 0));
     if (i > 0) teamList = [teamList[i], ...teamList.slice(0, i), ...teamList.slice(i + 1)];
+  } else if (quick && quickPick && !view) {                 // Pick Opponent: the picked side's own league first where it has a rival on the list, so Farnham's first opponent is Wimbledon (61 v 58), a fair derby (the real order, 2026-11-09). Only the order changes
+    const lg = quickPick.league, rival = o => !!lg && o.league === lg;
+    if (teamList.some(o => rival(o) && keyOf(o) !== keyOf(quickPick))) teamList = [...teamList.filter(rival), ...teamList.filter(o => !rival(o))];
   }
   teamOwn = teamOwnPick(view);
   let html = teamList.map(teamCard).join('');
@@ -10114,7 +10728,7 @@ function pickTeam(t) {
   if (t.legend && !storeGate('legends', () => pickTeam(t))) return;   // a Legends side is played with the Full Game (src/store.js); unlocked on any tier
   if (pickMode === 'my') { myPick(t); return; }
   if (pickMode === 'two') {                                  // Player 1 changing his team comes back to Player 2's pick; Player 2's pick starts the match
-    if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; renderTeams(); $('s-teams').scrollTop = 0; return; }
+    if (twoSel.picking === 0) { twoSel.teams[0] = t; twoSel.picking = 1; teamsFold(false); return; }   // Player 2's pick, folded, onto its first card
     twoSel.teams[1] = t; startTwo(); return;
   }
   if (pickMode === 'champ') {
@@ -10125,7 +10739,7 @@ function pickTeam(t) {
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
     newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;
   }
-  if (quickPick == null) { quickPick = t; renderTeams(); $('s-teams').scrollTop = 0; return; }   // Player 1's side, picked by him: now the opponent
+  if (quickPick == null) { quickPick = t; teamsFold(false); return; }   // Player 1's side, picked by him: now the opponent, folded, onto the first card he can play
   if (keyOf(quickPick) === keyOf(t)) return;   // the picked card can still be reached from the keyboard
   const us = catTeam(quickPick, settings.cat), them = catTeam(t, settings.cat);
   if (us && them) startMatch(us, them, false);
@@ -10213,8 +10827,8 @@ function buildBuilder() {
       if (twoSel.teams[0] && keyOf(twoSel.teams[0]) === editing.key) twoSel.teams[0] = custom[i];
     } else {
       custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
-      if (pickMode === 'quick' && !quickPick) quickPick = custom[custom.length - 1];   // made while picking his side: he plays as it
-      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; }   // Player 1 made it to play as it
+      if (pickMode === 'quick' && !quickPick) { quickPick = custom[custom.length - 1]; teamsOpen = false; }   // made while picking his side: he plays as it, Pick Opponent folded as after a card
+      else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = custom[custom.length - 1]; twoSel.picking = 1; teamsOpen = false; }   // Player 1 made it to play as it
       else if (pickMode === 'my') settings.myClub = custom[custom.length - 1].key;   // made on My Team: it is the club
     }
     save(); renderTeams(); showScreen('s-teams');
@@ -10421,7 +11035,7 @@ function cupBegin(id, opts) {
   return true;
 }
 
-/* A league won with a side from England, France, Celtic and Italy or South Africa offers the European Cup straight after. */
+/* A league won with a side from England, France, the United Rugby Championship or South Africa offers the European Cup straight after. */
 function cupEuroOn(c, rows) { return !!c && c.round >= 5 && rows[0].i === c.user && cupEuroSkip !== c.id && !!cupListOf(c.teams[c.user]); }
 function cupEuroHub(c, rows) {
   if (!cupEuroOn(c, rows)) return false;
@@ -11351,16 +11965,18 @@ async function importFetch(url, opts = {}) {
    fall between the two by name. With nothing chosen and nothing known the level is the best Local club's (importTop), so a league you add sits with the Local list, under the professional lists.
    Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
    by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
-const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham, at 58
-/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them. Null when the words say nothing. */
-const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b/, 'r1'], [/\bnational league\b|\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
+const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham (and Quins), at 61: Regional 1
+/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them, and so does National
+   League (England's third and fourth tiers, between Regional 1 and the Championship): Regional 1, 61, level with England 2's foot and under
+   its winners, so no import listed under Local is above an England 2 side. Null when the words say nothing. */
+const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b|\bnational league\b/, 'r1'], [/\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
 function importLevelFrom(texts) {
   for (const t of texts) { const s = String(t || '').toLowerCase().slice(0, 300), hit = IMPORT_LEVEL_WORDS.find(([re]) => re.test(s)); if (hit) return hit[1]; }
   return null;
 }
 const importLevelDefault = () => TEAM_LEVELS.find(l => sumOfOverall(l.overall) === importTop()) || TEAM_LEVELS[4];
 /* The level an import is set at: the one chosen, else what its page says, else the Local list's best. */
-const importLevel = (data, id) => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => data && l.id === data.level) || importLevelDefault();
+const importLevel = (data, id) => levelById(id) || (data && levelById(data.level)) || importLevelDefault();
 function importSides(data, levelId) {
   if (!data) return [];
   const table = data.league || [], rows = table.filter(r => !r.own), fromTable = rows.length > 0;
@@ -11549,8 +12165,8 @@ function importCommit() {
   const u = importUi; if (u.step !== 'preview' || !u.data) return;
   const res = importSave(u.data, { ...(u.draft || {}), level:u.level });
   if (res.added && u.from !== 'home') {                    // as Save Team: a club made while Player 1 picks his side is the one played as
-    if (pickMode === 'quick' && !quickPick) quickPick = res.club;
-    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; }
+    if (pickMode === 'quick' && !quickPick) { quickPick = res.club; teamsOpen = false; }   // on to Pick Opponent, folded, as after a card
+    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; teamsOpen = false; }
   }
   if (res.club && !myIs(res.club)) {                       // a club in: Make This My Team | Not Now
     u.step = 'mine'; u.club = res.club; u.sides = res.sides; u.data = null; u.token++;
@@ -11560,7 +12176,7 @@ function importCommit() {
 }
 function importDone(sides) {
   importClose();
-  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top
+  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; teamsOpen = false; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top, folded as a list picked
 }
 function importOffer(make) {                                 // the offer answered: the club is My Team's, or not
   const u = importUi; if (u.step !== 'mine') return;
@@ -11646,7 +12262,7 @@ $('im-paste').addEventListener('click', async () => {
    as a Kids match starts (newMatch). The aids in KIDS outside the scale hold all the way up: the aim set at a goal kick, any press
    acting in a close-up, the ring finding your best defender, and the chase when the stick is let go. After each completed one-player
    Kids match kidsAdapt moves r by the result (KIDS_ADAPT) and saves it as settings.kidsR. Nothing on screen ever shows it. */
-const KIDS_SCALE = {       // [start, ceiling]. The start is the Kids level as it was before the scale; the ceiling is 80% of the way from there to Easy
+const KIDS_SCALE = {       // [start, ceiling]. The start is the Kids level as it was before the scale; the ceiling is 80% of the way from there to Easy, but for the passing pace (flight, grace: below)
   diff:{ cpuSpeed:[0.92, 0.96], cpuTackle:[0.45, 0.54], cpuIntercept:[0.05, 0.09], turnover:[-0.05, -0.035], scrumCpu:[0.45, 0.57], lineSigma:[0.28, 0.21], lineContest:[0.35, 0.51] },   // the other side (Easy: 0.97, 0.56, 0.10, -0.03, 0.60, 0.19, 0.55): slower, weaker in the tackle, less often intercepting or turning the ball over, soft at scrum and lineout
   tackle:[0.10, 0.02],     // your ringed man's own tackles (his contact tackle and his dive) are this much surer (Easy 0)
   hands:[0.1, 0.82],       // your side's catches knock on this share as often (Easy 1)
@@ -11658,6 +12274,13 @@ const KIDS_SCALE = {       // [start, ceiling]. The start is the Kids level as i
   kick:{ band:[2, 1.2], bandMax:[0.34, 0.26], fill:[1.6, 1.12], rush:[0.65, 0.93] },   // goal kicks (Easy 1, 0.24, 1, 1): the gold band this much wider (at most bandMax), the meter this much slower; drop-goal chargers at this share of their pace
   scrum:[0.25, 0.05],      // your pack's own shove (Easy 0)
   reach:[0.12, 0.03],      // your lineout jumper's reach, in metres (Easy 0)
+  /* How long a pass hangs (PASS_FLIGHT, src/passing.js), both sides' passes, and your catcher's moment before an AI man can commit. A child
+     starting out keeps PR #14's calm passing (PASS_FLIGHT's Kids); the ceiling is the old pace, the one the calibration was measured at
+     (the owner, 2026-11-09: "Keep Kids at Most Easy"). PR #14's passing all the way up took the settled 7 to 8 year old from 81% won by 2.7
+     tries to 92% by 3.5; on this scale he settles at 0.97, winning 83% by 2.7 (tools/kidbots.mjs, README.md). These two pass Easy's (1.2, 0.25)
+     on the way up; every other lever stops short of it, and the ceiling as a whole is still easier than Easy (84% won by 2.9 against 81% by 2.2). */
+  flight:[PASS_FLIGHT.kids, 1],
+  grace:[PASS_FLIGHT.graceKids, 0],
 };
 const KIDS = {             // the levers of the Kids match being played: kidsTune fills in the scale, and the rest never moves
   diff:{ ...DIFF[0] }, kick:{},
@@ -11685,7 +12308,9 @@ kidsTune(0);
    wins outweigh his losses and it climbs, above it the other way, and the nearer it gets the more nearly they cancel, so it drifts
    in more and more slowly rather than swinging from end to end. Scripted children (tools/kidbots.mjs) settle at about 0.73 (a 6 year
    old, winning 72%), 0.96 (a 7 to 8 year old, winning 81% by 2.7 tries) and the ceiling (a sharp 10 year old), and a child who never
-   defends at about 0.12; README.md has the scorelines. */
+   defends at about 0.12; README.md has the scorelines. Since PR #14, with its passing on the scale, the 7 to 8 year old settles at 0.97,
+   winning 83% by 2.7 (2026-11-09). With the half on a real clock (90 simulated seconds for 2 minutes, match.js) he still settles at
+   0.97, winning 82% by 2.2: the margin shrinks with the half, the share won does not, so these steps are unchanged. */
 const KIDS_ADAPT = { big:3, raise:0.05, nudge:0.01, draw:-0.01, lose:-0.05, heavy:-0.10 };
 function kidsStep(score, tries, h = 0) {                    // the step one result moves r, up if above 0, down if below. h is the child's side
   const pts = score[h] - score[1 - h], m = tries[h] - tries[1 - h], A = KIDS_ADAPT;
@@ -11712,8 +12337,12 @@ function kidsAdapt() {                                     // full time in a Kid
    KIDS_EASY.top or above. Chosen by replaying the calibration's settle runs (tools/kidbots.mjs, SEED 7 and 13, 150 matches each):
    wins by 5 or more tries, five in a row, never came up for the 7 to 8 year old Kids is tuned for (0 of 32 runs), the 6 year old
    (0 of 32) or the stick masher (0 of 16), and came up for every sharp 10 year old (16 of 16, median match 39). A margin of 4 or
-   more (more than 3) caught 5 of 32 of the 7 to 8 year olds, so it is more than 4. Nothing on the child's screens changes. */
-const KIDS_EASY = { top:0.95, margin:4, run:5 };
+   more (more than 3) caught 5 of 32 of the 7 to 8 year olds, so it was more than 4. With the half on a real clock (2 minutes is
+   90 simulated seconds, match.js) a quarter less happens in a match: wins by 5 or more came up for only 15 of 32 sharp 10 year olds
+   (SEED 7 and 13), so it is more than 3 now, the old 5 tries scaled by the shorter half. Replayed over the new runs, that never
+   comes up for the 7 to 8 year old (0 of 32), the 6 year old or the masher, and does for 28 of 32 10 year olds (median match 51
+   on SEED 7, 43 on SEED 13). Nothing on the child's screens changes. */
+const KIDS_EASY = { top:0.95, margin:3, run:5 };
 const kidsReady = () => kidsLevel() && (settings.kidsTop | 0) >= KIDS_EASY.run;
 const kidsLevel = () => !!settings.kids && settings.diff === 0;
 /* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
@@ -12200,8 +12829,8 @@ window.addEventListener('keydown', e => {  // Escape closes the Supporters' Wall
    Tag Chase, Bouncy Egg, Pass Around the Circle, Cones, Tackling and Ball Back each run in a training space of their own: a practice field (drawn in
    render-drill.js) and the controls of a match with none of its flow. While practice.space is set, update() skips matchUpdate and the drill moves
    the men and the ball itself (M.phase reads 'drill', so nothing in the HUD or the hints takes it for open play). Kicking
-   and Driving use the match's own goal-kick and scrum close-ups; Defend a Breakaway and Create a Two-on-One restage open
-   play. Every engine hook checks `practice` first, so matches, AI v AI, the demo and the balance tools never reach any of it,
+   and Driving use the match's own goal-kick and scrum close-ups; Defend a Breakaway and Create a Gap restage open play,
+   five rounds each. Every engine hook checks `practice` first, so matches, AI v AI, the demo and the balance tools never reach any of it,
    and nothing here draws a random number outside a drill.
    ========================================================= */
 const DRILL_PACE = { live:0.75 };                           // the Training Ground's one speed lever: a live drill's dt is scaled by this, so its windows, meters and clocks all stretch together. Matches never read it
@@ -12278,7 +12907,12 @@ function drillCue(objective, cue) {                        // the in-play line, 
    lot with no reactions at all. named: while the first three are named the line at the top of the screen is up, so they keep clear of it. */
 const DRILL_EGG = { throws:12, lives:3, reach:1.15, lo:0.35, hi:2.4, wind:[1.0, 0.55], gap:0.6, miss:1.3, box:[51, 24, 73, 46], at:[60, 35], from:[45, 35], cam:[55, 35], zoom:1.45,
   first:['bounce', 'flat', 'high'], names:{ bounce:'Bounce Pass', flat:'Flat Pass', high:'High Ball' }, lines:{ bounce:'Catch it on any hop.', flat:'Run to meet it before it lands.', high:'Get under it. Watch the ball in.' },
-  named:7, flatTop:1.8, meet:1.5, points:[1, 2], pop:[4.6, 7.0], hopOut:[2.2, 4.7], keep:[0.6, 0.74], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:3.5, still:0.4, stars:[8, 14, 20] };
+  named:7, flatTop:1.8, meet:1.5, points:[1, 2], pop:[4.6, 7.0], hopOut:[2.2, 4.7], keep:[0.66, 0.8], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:3.5, still:0.4, stars:[8, 14, 20], bounce:0.9 };
+/* bounce: after the first three, a throw is a Bounce Pass this often, else a Flat Pass or a High Ball, the surprise. Never three the same in a row caps
+   it: about two in three bounce (0.63 measured over many seeded throws). The gold ring is a help, not the game: the youngest see it on every
+   throw, Easy and Normal on the first three, Hard never; Watch How always. eggRing is the one gate, and draws no random number. */
+const eggRingAll = () => practiceYoung() && settings.diff < 2;   // the Kids level or Minis, and not on Hard: the ring every throw
+const eggRing = E => !!practice && (!!practice.demo || (settings.diff < 2 && (eggRingAll() || E.n <= DRILL_EGG.first.length)));
 function eggStage(E, stage) { E.stage = stage; E.t = 0; }
 function eggReady(E) {                                     // the ball back in the thrower's hands and the wind-up begins, a little shorter each throw
   const u = Math.min(1, E.n/(DRILL_EGG.throws - 2));
@@ -12291,7 +12925,7 @@ function eggReady(E) {                                     // the ball back in t
 function eggThrow(E) {
   const b = M.ball, me = E.me, tw = E.tw, K = DRILL_EGG, u = Math.min(1, E.n/(K.throws - 2)), wild = 0.6 + 1.6*u;
   const kinds = ['bounce', 'flat', 'high'];
-  let kind = kinds[Math.floor(rnd()*3)];
+  let kind = rnd() < K.bounce ? 'bounce' : rnd() < 0.5 ? 'flat' : 'high';   // mostly a Bounce Pass: a Flat Pass or a High Ball is the surprise
   if (kind === E.hist[0] && kind === E.hist[1]) kind = kinds[(kinds.indexOf(kind) + 1 + Math.floor(rnd()*2)) % 3];   // never three the same in a row
   if (E.n < K.first.length) kind = K.first[E.n];           // the first three: one of each, in the order Watch How shows them
   E.hist.unshift(kind); E.hist.length = Math.min(E.hist.length, 2);
@@ -12324,26 +12958,13 @@ function eggThrow(E) {
   eggStage(E, 'fly');
   sfx('pass');
 }
-function eggMove(E, dt) {                                  // the ball through the air, then along the ground once its hops are done. True the step it lands
-  const b = M.ball, K = DRILL_EGG;
-  b.tumble = (b.tumble || 0) + E.spin*dt;
-  if (E.rolling) { const f = Math.exp(-K.roll*dt); b.vx *= f; b.vy *= f; b.x += b.vx*dt; b.y += b.vy*dt; b.z = 0; b.vz = 0; E.spin *= f; return false; }
-  b.vz -= E.g*dt; b.x += b.vx*dt; b.y += b.vy*dt; b.z += b.vz*dt;
-  if (b.z > 0) return false;
-  b.z = 0; E.g = 9.8;                                      // whatever it was thrown as, its hops are real ones
-  return true;
-}
+function eggMove(E, dt) { return hopMove(M.ball, E, DRILL_EGG, dt); }   // the ball through the air, then along the ground once its hops are done. True the step it lands. The hop is shared with a match's spilled ball (src/ball.js)
 function eggHop(E) {                                       // off the ground again, at an odd angle, each hop smaller than the last. Too small a hop and it rolls
-  const b = M.ball, K = DRILL_EGG, B = K.box, u = Math.min(1, (E.n - 1)/(K.throws - 2)), first = !E.hops.length;
-  const vz = first ? K.pop[0] + rnd()*(K.pop[1] - K.pop[0]) : E.hopV*(K.keep[0] + rnd()*(K.keep[1] - K.keep[0]));
-  const sp = first ? K.hopOut[0] + rnd()*(K.hopOut[1] - K.hopOut[0]) : hyp(b.vx, b.vy)*K.slow;
-  if (vz < K.stop) { E.rolling = true; b.vz = 0; E.aim = { x:b.x + b.vx/K.roll, y:b.y + b.vy/K.roll }; return; }   // the ring moves to where it will roll to a stop
-  const dir = Math.atan2(b.vy, b.vx) + (rnd() < 0.5 ? -1 : 1)*(K.turn[0] + rnd()*(K.turn[1] - K.turn[0] + 0.5*u));
-  const air = 2*vz/9.8;                                    // and it comes down inside the area: as it goes, else turned back, else aimed at the nearest spot in it
-  b.vx = eggPop(b.x, Math.cos(dir)*sp, air, B[0] + 1.5, B[2] - 1.5); b.vy = eggPop(b.y, Math.sin(dir)*sp, air, E.n <= K.first.length ? B[1] + K.named : B[1] + 1.5, B[3] - 1.5); b.vz = vz;
+  const b = M.ball, K = DRILL_EGG, B = K.box, u = Math.min(1, (E.n - 1)/(K.throws - 2));
+  const fit = (b, vx, vy, air) => { b.vx = eggPop(b.x, vx, air, B[0] + 1.5, B[2] - 1.5); b.vy = eggPop(b.y, vy, air, E.n <= K.first.length ? B[1] + K.named : B[1] + 1.5, B[3] - 1.5); };   // it comes down inside the area: as it goes, else turned back, else aimed at the nearest spot in it
+  if (!hopBounce(b, E, K, u, fit)) { E.aim = { x:b.x + b.vx/K.roll, y:b.y + b.vy/K.roll }; return; }   // the ring moves to where it will roll to a stop
+  const air = 2*b.vz/9.8;
   E.aim = { x:b.x + b.vx*air, y:b.y + b.vy*air };          // the ring moves to where this hop comes down
-  E.hopV = vz; E.hops.push(vz); E.spin = -E.spin*1.1;
-  sfx('bounce', Math.min(1, vz/K.pop[1]));                  // each hop smaller than the last, and softer
 }
 function eggMiss(E) {
   const b = M.ball;
@@ -12405,7 +13026,7 @@ const drillEgg = {
   labels() { return { a:null, b:null, c:false }; },
   hud() { const E = practice.egg; return { lives:[E.lives, DRILL_EGG.lives], num:String(E.score), icon:'ball' }; },
   cue() { const E = practice.egg, K = DRILL_EGG; return E.stage === 'fly' && E.n <= K.first.length ? [K.names[E.kind], K.lines[E.kind]] : null; },   // the first three throws, named as they come
-  howTo() { return 'The gold ring shows where the ball comes down. Run to meet it and catch it.'; },
+  howTo() { return eggRingAll() ? 'The gold ring shows where the ball comes down. Run to meet it and catch it.' : 'Watch the ball in. Run to meet it and catch it.'; },
   tip() { const E = practice.egg; return E.met*2 >= E.caught && E.caught ? 'Running to meet the ball scored double.' : 'Run to meet the ball. It scores double.'; },
   result() { return { skill:'handling' }; },
 };
@@ -12417,8 +13038,14 @@ const drillEgg = {
    Passer: you make every pass with a timed tap as the closing ring meets the gold one, the hands finishing at the catcher's
    chest: on the gold is a Chest pass and quickest, an early tap goes over their head and is fumbled, a late one drops low and
    hangs. The runner speeds up. Either way the first pass of a round is timed on the same ring: to the chest and the passer's
-   hands are free at once (the Runner gets away already moving, the Passer's ball is quicker). Stars by rounds survived. */
+   hands are free at once (the Runner gets away already moving, the Passer's ball is quicker). Stars by rounds survived.
+   The Runner's passers are graded at random, as yours are as the Passer, with the same words and flights: Chest (quick), Good, Too High
+   (fumbled and gathered) and Too Low (late, hanging). More Chest passes as the rounds go on, more fumbles early (cpu: each grade's share a
+   round, Good the rest). The round's grades and holds are drawn as it starts (circleGo), and the holds rescaled so the ball's lap is the
+   one runF set, to the step (cpuPass's flights and one fixed hold each, as before the grades: lapT), so every Runner's stars are as they
+   were. cpuMin: the least a hold is scaled by. */
 const DRILL_CIRCLE = { n:6, r0:5, grow:1, rounds:5, out:1.6, acc:10, runF:[1.30, 1.05, 0.93, 0.915, 0.89], cpuPass:14, passG:[3.0, 1.45, 1.0, 0.8, 0.54],
+  cpu:{ Perfect:[0.15, 0.25, 0.35, 0.45, 0.55], Early:[0.25, 0.2, 0.15, 0.1, 0.05], Late:[0.2, 0.18, 0.15, 0.12, 0.1] }, cpuMin:0.6,
   fast:16, good:12, slow:8, ready:0.6, perfect:0.1, ok:0.25, fumble:1.1, late:0.5, growT:0.8, endT:1.1, at:[60, 35], zoom:1.35, stars:[1, 3, 5], beat:1.2, chestAt:0.9, rolling:0.8, follow:0.2, offLine:0.5, words:{ Perfect:'Chest', Good:'Good', Early:'Too High', Late:'Too Low' } };
 const circleRadius = (role, round) => DRILL_CIRCLE.r0 + DRILL_CIRCLE.grow*(role === 'passer' ? DRILL_CIRCLE.rounds - round : round - 1);   // this round's ring: the Runner's small to large, the Passer's large to small
 const circleStartE = C => ((C.t - DRILL_CIRCLE.chestAt + DRILL_CIRCLE.beat/2 + 2*DRILL_CIRCLE.beat) % DRILL_CIRCLE.beat) - DRILL_CIRCLE.beat/2;   // the round's first pass: seconds off the gold, the ring closing over and over until you tap
@@ -12434,13 +13061,54 @@ function circleRunAt(R, s) {                               // where the runner i
   return { x:K.at[0] + r*Math.cos(a), y:K.at[1] + r*Math.sin(a), a, r };
 }
 function circleChord(R) { return 2*R*Math.sin(Math.PI/DRILL_CIRCLE.n); }
+const circleSpeed = g => (g === 'Perfect' ? DRILL_CIRCLE.fast : g === 'Early' ? DRILL_CIRCLE.slow : DRILL_CIRCLE.good);   // a grade's flight, yours as the Passer and the CPU's alike
+function circleCpuGrade(k) {                               // a CPU pass in round k + 1: Chest more often as the rounds go on, Too High less
+  const P = DRILL_CIRCLE.cpu, u = rnd(), a = P.Perfect[k], b = a + P.Early[k], c = b + P.Late[k];
+  return u < a ? 'Perfect' : u < b ? 'Early' : u < c ? 'Late' : 'Good';
+}
+function circleCpuBase(g) {                                // its hold before scaling, as a Passer's tap would be: on the gold, a little off it, early or late
+  const K = DRILL_CIRCLE;
+  if (g === 'Perfect') return K.ready;
+  if (g === 'Early') return K.ready - K.ok - rnd()*0.2;
+  if (g === 'Late') return K.ready + K.ok + rnd()*(K.late - K.ok);
+  return K.ready + (rnd() < 0.5 ? -1 : 1)*(K.perfect + rnd()*(K.ok - K.perfect));
+}
+function circleSteps(T, dt, hold) {                       // the steps a flight (or a hold) of T seconds takes, counted as circleBall counts them
+  let t = 0, n = 0;
+  do { t += dt; n++; } while (hold ? !(t >= T) : Math.min(1, t/T) < 1);
+  return n;
+}
+function circlePlan(C) {                                   // the round's five CPU passes, a grade and a hold each, as it starts: the ball's lap is the one the one fixed hold made, step for step
+  const K = DRILL_CIRCLE, n = K.n, k = C.round - 1, dt = STEP*drillRate(), men = C.men;
+  const fly = (i, g) => { const a = men[i], b = circleSpot((i + 1) % n, C.R); return circleSteps(Math.max(0.12, hyp(b.x - a.x, b.y - a.y)/(g ? circleSpeed(g) : K.cpuPass)), dt); };
+  const first = fly(0, 'Good');                            // your own pass to the first man (circleGo)
+  let goal = first;                                        // the lap before the grades: cpuPass's flights and C.cpuHold at every man
+  for (let i = 1; i < n; i++) goal += fly(i, null) + circleSteps(C.cpuHold, dt, true) - 1;   // a hold's first step is its catch's last
+  C.lapT = goal*dt;
+  for (let tries = 0; ; tries++) {                         // a draw with too many fumbles for the round's time is drawn again; after eight, all Good
+    const plan = [null];
+    for (let i = 1; i < n; i++) { const grade = tries < 8 ? circleCpuGrade(k) : 'Good'; plan.push({ grade, base:circleCpuBase(grade), fum:i > 1 && plan[i - 1].grade === 'Early' ? K.fumble : 0 }); }
+    let left = goal - first + (n - 1), base = 0, fum = 0;  // the hold steps the lap leaves, each passer's gather of a fumble included (not the pass home: home ends it)
+    for (let i = 1; i < n; i++) { left -= fly(i, plan[i].grade); base += plan[i].base; fum += plan[i].fum; }
+    const s = ((left - (n - 1)/2)*dt - fum)/base;          // the holds' scale; a hold of k steps is set half a step short of k*dt, so it takes exactly k
+    if (s < K.cpuMin && tries < 8) continue;
+    const least = plan.slice(1).map(q => Math.ceil(q.fum/dt) + 1), want = plan.slice(1).map((q, i) => Math.max(least[i], (q.base*s + q.fum)/dt + 0.5)), steps = want.map(Math.floor);
+    let spare = left - steps.reduce((a, b) => a + b, 0);    // whole steps, the largest remainders rounded up, so they add up to exactly what the lap leaves
+    const order = want.map((w, i) => [w - steps[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+    for (let j = 0; spare > 0; j = (j + 1) % order.length, spare--) steps[order[j][1]]++;
+    for (let j = order.length - 1; spare < 0 && j >= 0; j--) if (steps[order[j][1]] > least[order[j][1]]) { steps[order[j][1]]--; spare++; }
+    for (let i = 1; i < n; i++) plan[i].hold = (steps[i - 1] - 0.5)*dt - plan[i].fum;
+    return plan;
+  }
+}
 function circleSetRound(C) {                               // this round's race: the ring's size, the CPU's pace, and everyone on his spot
   const K = DRILL_CIRCLE, k = C.round - 1;
   C.R = circleRadius(C.role, C.round); C.L = circleLap(C.R);
   const chord = circleChord(C.R), n = K.n;
+  C.plan = null; C.lapT = 0;
   if (C.role === 'runner') {                               // the ball's lap against a runner at top speed with no Sprint: a slower lap early, a quicker one later
     const v = maxSpeed(C.men[0]), ref = C.L/v + v/(2*K.acc), T = ref*K.runF[k];
-    C.cpuHold = Math.max(0.12, (T - n*chord/K.cpuPass)/(n - 1));
+    C.cpuHold = Math.max(0.12, (T - n*chord/K.cpuPass)/(n - 1));   // the one hold every passer had before the grades: the lap it made is still the lap. The passes are drawn as the round starts (circleGo): picking Passer draws none
   } else {                                                 // the runner's lap against your passes: room for a few slow ones early, Perfect passes needed late
     const first = chord/K.good, perfect = first + (n - 1)*(K.ready + chord/K.fast), good = n*chord/K.good + (n - 1)*K.ready;
     const T = perfect + (good - perfect)*K.passG[k];
@@ -12464,6 +13132,7 @@ function circlePass(C, from, speed, rushed) {
 }
 function circleGo(C) {                                     // the runner passes, then sets off: already moving off a pass to the chest
   const K = DRILL_CIRCLE, chest = Math.abs(circleStartE(C)) <= K.ok;
+  if (C.role === 'runner') C.plan = circlePlan(C);           // the round's CPU passes, graded and timed now
   if (chest) { C.chest++; st('circleChest'); drillTag('Chest', C.men[0].x, C.men[0].y); }
   circlePass(C, 0, chest && C.role === 'passer' ? K.fast : K.good, false);
   C.stage = 'race'; C.t = 0; C.s = 0; C.v = chest && C.role === 'runner' ? maxSpeed(C.men[0])*K.rolling : 0;
@@ -12505,13 +13174,17 @@ function circleBall(C, dt, tap) {
   if (!C.hold) return;
   const H = C.hold, p = C.men[H.i];
   drillHold(p); H.t += dt;
-  if (C.role === 'runner') { if (H.t >= C.cpuHold + H.fumble) circlePass(C, H.i, K.cpuPass, false); return; }
+  if (C.role === 'runner') {                               // the CPU's pass, graded at the round's start: the Passer's words and flights
+    const q = C.plan[H.i];
+    if (H.t >= q.hold + H.fumble) { drillTag(K.words[q.grade], p.x, p.y); circlePass(C, H.i, circleSpeed(q.grade), q.grade === 'Early'); }
+    return;
+  }
   if (tap && H.t >= H.fumble) {                            // your timed tap (not while he is still gathering a fumble): on the gold is Perfect and quickest; early is fumbled at the next man
     const e = H.t - H.tc, a = Math.abs(e);
     const grade = a <= K.perfect ? 'Perfect' : a <= K.ok ? 'Good' : e < 0 ? 'Early' : 'Late';
     st('circle' + grade); if (grade === 'Perfect') C.chest++;
     drillTag(K.words[grade], p.x, p.y);
-    circlePass(C, H.i, grade === 'Perfect' ? K.fast : grade === 'Early' ? K.slow : K.good, grade === 'Early');
+    circlePass(C, H.i, circleSpeed(grade), grade === 'Early');
     if (grade === 'Perfect') buzz(15, 0);
   } else if (H.t >= H.tc + K.late) { st('circleLate'); drillTag(K.words.Late, p.x, p.y); circlePass(C, H.i, K.good, false); }
 }
@@ -12998,7 +13671,7 @@ function driveNext(D) {
 }
 const drillDrive = {
   setup() { practice.drive = { i:0, won:0, res:[], all:0, good:0 }; driveNext(practice.drive); },
-  onScrum(c) {
+  onScrum(c) {                                             // a drill's scrum has its line at the mark (startScrum), so half a metre gained is always win0, never a steal
     const D = practice.drive, won = c.result === 'dom0' || (c.result === 'win0' && c.pos >= DRILL_DRIVE.gain);
     D.res.push(won); if (won) D.won++;
     say(won ? 'Drive Won' : c.pos < 0 ? 'Pushed Back' : 'Held', won ? '' : 'small', won ? 0 : 1); sfx(won ? 'cheer' : 'groan');
@@ -13033,11 +13706,55 @@ const drillDrive = {
   result() { return { skill:'power' }; },
 };
 
-/* ---------- the two open-play scenarios, as before; stars by how quickly they are done ---------- */
-const DRILL_QUICK = { defend:[7, 11], pass:[10, 15], draw:6.5 };    // seconds for three stars, then two; any later win is one. draw: a pass only draws the defender with them this near
-const drillQuickStars = (id, won) => !won ? 0 : practice.elapsed <= DRILL_QUICK[id][0] ? 3 : practice.elapsed <= DRILL_QUICK[id][1] ? 2 : 1;
-const drillPassDrawn = () => practice.drawAt != null && practice.drawAt <= DRILL_QUICK.draw;   // Two-on-One: the moment of the pass is what scores
-const drillPassStars = () => (!drillPassDrawn() ? 1 : practice.elapsed <= DRILL_QUICK.pass[1] ? 3 : 2);
+/* ---------- Create a Gap and Defend a Breakaway: open play, five rounds each ----------
+   Both restage open play: the match's own men, AI, passes and tackles. Five rounds each, harder as they go. A round is won by a
+   try after a drawn pass (Create a Gap) or by stopping the carrier (Defend); anything else ends the run, as the Circle's lost
+   round does. Between rounds the world holds (practice.space, so update() skips the match flow, as it does for a training
+   space): the round's word on the pitch (show), then the next line-up under a Round N card (card), then play. Each round has its
+   own clock (practice.limit). Stars by rounds won, as the Circle's: 1, 3 and all 5. Watch How plays round one, which is set up
+   exactly as the one-round game it replaced was. */
+const DRILL_ROUNDS = { n:5, stars:[1, 3, 5], show:1.1, card:1.0, word:0.3 };   // word: how new a word on the pitch is (seconds) for the round's word to take its place
+const roundsLine = n => (n === DRILL_ROUNDS.n ? 'All ' + n + ' Rounds' : n + (n === 1 ? ' Round' : ' Rounds'));   // the result card's line, as the Circle's
+const roundsNew = () => ({ round:1, won:0, lost:'', again:false, stage:'play', t:0, at:0 });
+function roundsHold(R, stage) { R.stage = stage; R.t = 0; R.at = practice.elapsed; practice.space = true; }
+function roundWord(word, p) { M.tags = M.tags.filter(t => t.t > DRILL_ROUNDS.word || dist(t, p) > 3); drillTag(word, p.x, p.y); }   // the round's word takes the place of one just put down where it ends (Got It, Big Hit, the match's Stopped), so there is one word to read, never two printed over each other
+function roundWon(R, word, p) { if (R.stage !== 'play') return; R.won++; st('roundsWon'); roundWord(word, p); sfx('cheer'); roundsHold(R, 'show'); }
+function roundLost(R, word, p) { if (R.stage !== 'play') return; R.lost = word; roundWord(word, p); sfx('groan'); roundsHold(R, 'show'); }
+function roundAgain(R, word, p) { if (R.stage !== 'play') return; R.again = true; roundWord(word, p); roundsHold(R, 'show'); }   // neither side's doing (their dropped pass, say): the same round again
+function roundsStage() {                                   // open play from nothing, as a kick-off leaves it: no set piece and no bind, both Sprint meters full, the half's clock at 0 so no round reaches the hooter. Round one finds all of it so already
+  M.phase = 'play'; M.set = null; M.cut = null; M.goal = null; M.contact = null; M.surge = null; M.duelPending = null;
+  M.clock = 0; M.hooter = false; M.phaseCount = 0; M.dropArmed = [false, false]; M.dropOn = [false, false]; M.tags = []; M.fx = [];
+  clearCharge(); for (const s of M.side) s.pass = null;
+  for (const S of M.spr) { S.m = 1; S.p = null; S.spent = false; }
+  for (const p of M.players) { p.grace = 0; p.bite = 0; p.biteTo = null; p.drop = null; p.quick = false; p.hold = 0; p.side = 0; }
+}
+function roundsTick(R, dt, restage) {                      // each kit's tick runs this first: true while the world is held between rounds
+  if (R.stage === 'play') return false;
+  R.t += dt;
+  if (R.stage === 'show') {
+    practice.elapsed = R.at;                               // the bar stays where the round ended
+    if (R.t < DRILL_ROUNDS.show) return true;
+    if (R.lost || R.won >= DRILL_ROUNDS.n) { roundsEnd(R); return true; }
+    if (!R.again) R.round++;
+    R.again = false; R.stage = 'card'; R.t = 0;
+    clearBanner(); restage(R.round);
+  }
+  practice.elapsed = 0;                                    // a full bar under the card: the round's clock starts at the whistle
+  if (R.t >= DRILL_ROUNDS.card) {
+    R.stage = 'play'; practice.space = false;
+    for (const inp of inputs) { inp.aPressed = inp.bPressed = inp.cPressed = false; inp.gest = null; }   // nothing pressed under the card goes off at the whistle
+  }
+  return true;
+}
+function roundsEnd(R) { const stars = drillStarsOf(R.won, DRILL_ROUNDS.stars); practiceFinish(stars > 0, roundsLine(R.won), stars); }
+function roundsPips(R) { const out = []; for (let i = 1; i <= DRILL_ROUNDS.n; i++) out.push(i <= R.won ? 'got' : i !== R.round ? 'todo' : R.lost ? 'miss' : 'now'); return out; }   // the Circle's pips: one a round
+const roundsHud = R => ({ pips:roundsPips(R), bar:1 - practice.elapsed/practice.limit });
+function roundsCue(R, label) {                             // the card between rounds, then nothing; round one keeps the game's own line, as before
+  if (R.stage === 'card') return ['Round ' + R.round, label];
+  if (R.stage === 'play' && R.round === 1) return [(practice.tagOnly && practice.tagObjective) || practice.objective, practiceInstructions(practice.id)];
+  return null;
+}
+
 const DRILL_WHIFF = { t:0.45, mul:0.55 };                  // a Tackle or Pull Tag pressed with nothing in reach in Defend: a stumble this long, at this share of speed
 function drillWhiff(q) { if (!q) return; q.stumble = DRILL_WHIFF.t; q.stumbleMul = DRILL_WHIFF.mul; st('drillWhiff'); drillTag('Too Far', q.x, q.y); sfx('whiff'); }
 const drillCanPull = q => { const b = M.ball, c = b.state === 'held' ? b.carrier : null; return !!(q && c && c.team !== q.team && onFeet(q) && dist(q, c) <= DRILL_TAG.pull.reach); };
@@ -13046,42 +13763,152 @@ function drillTagPull(q) {                                 // the Kids level and
   sfx('tick'); buzz(20, 0); drillTag('Got It', q.x, q.y); st('drillPulled');
   const k = drillKit(); if (k && k.onPull) k.onPull(q);
 }
-function drillTagCheck(c) {                                // the Kids level and the Minis, in place of the automatic tackle: nobody commits. In Two-on-One a defender reaching the carrier ends the run with a tag
-  if (practice.id === 'pass' && c.team === 0 && M.players.some(q => q.team === 1 && dist(q, c) < 1.5)) { st('drillTagged'); practiceFinish(false, 'Tagged. Pass before they reach you.', 0); return true; }
+function drillTagCheck(c) {                                // the Kids level and the Minis, in place of the automatic tackle: nobody commits. In Create a Gap a defender still in it reaching the carrier ends the run with a tag
+  const G = practice.gap;
+  if (practice.id === 'pass' && c.team === 0 && M.players.some(q => q.team === 1 && !G.drawn.has(q) && dist(q, c) < 1.5)) { st('drillTagged'); roundLost(G.R, 'Tagged', c); return true; }
   return false;
 }
+
+/* Defend a Breakaway: your first defender is beaten, so Switch into cover, get across and stop the carrier. The rounds: the chase
+   as it always was; a longer start for the runner, the cover further across (7 m off the runner's line, not 4); a support runner the carrier
+   may pass to (the match's own carrier: under pressure, or held too long); the same with quicker runners; two cover men to Switch
+   between, the runners quicker still. Won by stopping whoever carries with the man you switched to
+   (Pull Tag for the youngest); a try, the clock or a tackle without the Switch ends the run. Only your ringed man commits here
+   (contact.js tackleChecks), so a cover man left standing can neither win it nor lose it. Once you have switched, the ring never goes
+   back to the beaten man: not by Sprint (contact.js sprintPick), as before, and not when their pass is caught far from your man or
+   with him down (defendRepick). A dropped pass of theirs, or the ball loose, plays the round again. */
+const DRILL_DEFEND = { limit:18, rounds:[
+  { label:'The Chase', run:[49, 35], beaten:[56, 35], cover:[[36, 39]] },
+  { label:'Longer Start', run:[49, 33], beaten:[57, 33], cover:[[36, 40]] },
+  { label:'Support Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]] },
+  { label:'Quicker Runner', run:[49, 32], support:[53, 36], beaten:[57, 32], cover:[[36, 36]], pace:2 },
+  { label:'Two Cover Defenders', run:[49, 33], support:[52, 40], beaten:[57, 33], cover:[[38, 25], [37, 42]], pace:2 },
+] };
+function defendRestage(n) {
+  const D = practice.defend, r = DRILL_DEFEND.rounds[n - 1], run = D.cpu[0], sup = r.support ? D.cpu[1] : null, beaten = D.own[0], covers = D.own.slice(1, 1 + r.cover.length);
+  M.players = [beaten, ...covers, run, ...(sup ? [sup] : [])];
+  drillPlace(run, r.run[0], r.run[1]); if (sup) drillPlace(sup, r.support[0], r.support[1]);
+  drillPlace(beaten, r.beaten[0], r.beaten[1]); covers.forEach((p, i) => drillPlace(p, r.cover[i][0], r.cover[i][1]));
+  roundsStage();
+  M.nat[1].pace = D.pace + (r.pace || 0);                  // this match's copy of their side: a quicker runner, and back again
+  setCarrier(run); setCtrl(0, beaten); if (n > 1) drillHold(run);   // the ball in his hands under the card; round one's first step puts it there, as it always did
+  practice.initialCtrl = beaten; practice.switched = false; practice.limit = DRILL_DEFEND.limit;
+}
+const DEFEND_VIEW = [{ sy:0.46, lean:0, zoom:0.88 }, { sy:0.56, lean:1, zoom:0.88 }];   // the camera (render-drill.js) with one cover defender and with two: where the field sits up the screen, metres towards the beaten man until the Switch, and a touch out. Measured at 667x375, the tighter size: every man clear of the stick, the buttons and the card, on the card and as play starts, in all five rounds
+const defendView = () => DEFEND_VIEW[practice.defend && DRILL_DEFEND.rounds[practice.defend.R.round - 1].cover.length > 1 ? 1 : 0];
+function defendRepick(t, c) {                              // setCarrier (match.js) moves the ring when their pass is caught with your man down or far off: to the nearest of yours on his feet, as in a match, but once you have switched never back to the beaten man. With nobody else free the ring stays where it is
+  return nearestOf(M.players.filter(q => q.team === t && q.down <= 0 && !q.bind && !(practice.switched && q === practice.initialCtrl)), c.x, c.y);
+}
+const DEFEND_TIP = { 'Switch First':'Switch to the defender ahead of the ball first.', 'Time Up':'Get across early and close the gap.', Try:'Switch early, then run to where the carrier is going.' };
 const drillDefend = {
-  onPull(q) { const won = practice.switched && q === ctrlOf(0); practiceFinish(won, won ? 'You got across and pulled the tag.' : 'Switch to the defender ahead of the ball, then get across to the runner.', drillQuickStars('defend', won)); },
   setup(own, cpu) {
-    M.players = [own[0], own[1], cpu[0]];
-    drillPlace(cpu[0], 49, 35); drillPlace(own[0], 56, 35); drillPlace(own[1], 36, 39);
-    setCarrier(cpu[0]); setCtrl(0, own[0]); practice.initialCtrl = own[0];
+    practice.defend = { own, cpu, pace:M.nat[1].pace, R:roundsNew() };
+    defendRestage(1);
     practice.cam = null; M.cam.x = 44; M.cam.y = 35;
   },
-  tick() { if (ctrlOf(0) !== practice.initialCtrl) practice.switched = true; },
-  onTackle(c, q) {                                         // any made tackle on the runner, the one that jolts the ball loose included
+  tick(dt) {
+    const R = practice.defend.R;
+    if (roundsTick(R, dt, defendRestage)) return;
+    if (ctrlOf(0) !== practice.initialCtrl) practice.switched = true;
+    const b = M.ball, c = b.state === 'held' ? b.carrier : null;
+    if (c && c.team === 0 && practice.switched) { roundWon(R, 'Stopped', c); return; }   // their pass taken, or the ball won back
+    if (M.phase !== 'play' || b.state === 'loose' || b.state === 'dead' || (b.state === 'air' && b.f.kind !== 'pass') || (c && c.team === 0)) roundAgain(R, 'Go Again', b);
+  },
+  stop(q, c) {                                             // a tackle or a pulled tag on whoever carries for them
+    const R = practice.defend.R, won = practice.switched && q === ctrlOf(0);
+    if (won) roundWon(R, 'Stopped', c); else roundLost(R, 'Switch First', c);
+  },
+  onPull(q) { this.stop(q, q); },
+  onTackle(c, q) {                                         // any made tackle on their carrier, the one that jolts the ball loose included
     if (c.team !== 1) return false;
-    const won = practice.switched && q === ctrlOf(0);
-    practiceFinish(won, won ? 'You got across and stopped the runner.' : 'Switch to the defender ahead of the ball, then get across to the runner.', drillQuickStars('defend', won));
+    this.stop(q, c);
     return true;
   },
-  hud() { return { bar:1 - practice.elapsed/practice.limit }; },
+  onTry(p) { roundLost(practice.defend.R, 'Try', p); },
+  timeUp() { const b = M.ball; roundLost(practice.defend.R, 'Time Up', b); },
+  labels() { return { a:practice.tagOnly ? 'Pull Tag' : 'Tackle', aOn:false, b:'Switch', bOn:false, c:true, cOn:false }; },   // only between rounds: every button where it will be, none lit
+  hud() { return roundsHud(practice.defend.R); },
+  cue() { const R = practice.defend.R; return roundsCue(R, DRILL_DEFEND.rounds[R.round - 1].label); },
+  tip() { const R = practice.defend.R; return R.won >= DRILL_ROUNDS.n ? 'Switch early and run to where the carrier is going.' : DEFEND_TIP[R.lost] || DEFEND_TIP.Try; },
   result() { return { skill:'pace' }; },
 };
+
+/* Create a Gap: always one over. Your men stand in lanes, each a stride deeper than the man inside, and each defender marks one
+   of them, the outside man free. Run at your man and pass once he comes to you, inside DRILL_GAP.draw (the ring turns gold): a
+   pass from further out is Too Early and ends the run, since he would only drift on to the next man. A drawn defender stays on
+   the man who drew him, out of it. The next one keeps hold metres off his man until that man has the ball, then comes at him,
+   so every man has to draw his own. Held, tagged (Kids and Minis), the ball lost or a pass too early ends the run; a try after
+   a drawn pass wins the round. A man who has passed trails further back (trail) and is offered no pass again (gapSpent, in
+   passing.js), so the next man out is always the pass. Round four's defenders come quicker and wait closer (hold); round five is 5 on 4, a touch quicker than the first three. */
+const DRILL_GAP = { draw:6.5, lane:6, depth:2.5, trail:5, ahead:11, x:83, hold:7.5, fixed:0.5, zoom:[1, 1, 0.85, 0.72], cam:3,   // zoom: the camera's, by men a side less one, so the whole line is on the screen. cam: metres nearer than the line's middle it looks, so play sits above the thumbs
+  rounds:[{ att:2, rush:0.9, limit:22, label:'2 on 1' }, { att:3, rush:0.9, limit:24, label:'3 on 2' }, { att:4, rush:0.9, limit:26, label:'4 on 3' },
+    { att:4, rush:1.15, pace:2, hold:7, limit:26, label:'4 on 3, Quicker' }, { att:5, rush:0.95, limit:30, label:'5 on 4' }] };
+function gapRestage(n) {
+  const G = practice.gap, K = DRILL_GAP, r = K.rounds[n - 1], y0 = 35 + (r.att - 1)*K.lane/2;   // the carrier nearest the camera, the line out up the screen
+  G.lanes = G.own.slice(0, r.att); G.marks = G.cpu.slice(0, r.att - 1); G.y = G.lanes.map((p, k) => y0 - k*K.lane);
+  M.players = G.lanes.concat(G.marks);
+  G.lanes.forEach((p, k) => drillPlace(p, K.x - K.depth*k, G.y[k]));
+  G.marks.forEach((p, k) => drillPlace(p, K.x + K.ahead, G.y[k]));
+  roundsStage();
+  M.nat[1].pace = G.pace + (r.pace || 0);
+  G.rush = r.rush; G.hold = r.hold || K.hold; G.drawn = new Set(); G.passed = new Set(); G.passes = M.stats.passes; G.ko = M.stats.ko_catch || 0; G.last = G.lanes[0];
+  practice.completedPass = false; practice.limit = r.limit;
+  setCarrier(G.lanes[0]); if (n > 1) drillHold(G.lanes[0]);
+}
+function gapTargets(T) {                                   // Create a Gap's men (computeTargets, movement.js): yours hold their lanes, and each defender marks one of them
+  const G = practice.gap; if (!G || G.R.stage !== 'play') return;
+  const K = DRILL_GAP, b = M.ball, f = b.state === 'air' && b.f.kind === 'pass' ? b.f : null, held = b.state === 'held', c = held ? b.carrier : f ? f.target : null;
+  const ci = G.lanes.indexOf(c), bx = held ? c.x : b.x;
+  G.lanes.forEach((p, k) => {
+    if (k === ci || ringed(p) || !onFeet(p)) return;       // the carrier, and the man a pass is for, run their own way
+    const back = ci < 0 ? K.depth*k : k > ci ? K.depth*(k - ci) : K.trail + K.depth*(ci - k - 1);
+    T.set(p, { x:clamp(bx - back, 1, 119), y:G.y[k], s:maxSpeed(p) });
+  });
+  G.marks.forEach((d, k) => {
+    if (!onFeet(d)) return;
+    const a = G.lanes[k];
+    if (G.drawn.has(d) || (held && ci > k)) T.set(d, { x:a.x + 1, y:a.y, s:maxSpeed(d)*K.fixed });   // drawn, or the ball is already past him: he stays on his man
+    else if (held && a === c) { const lead = clamp(dist(d, a)/9, 0, 0.7); T.set(d, { x:a.x + a.vx*lead, y:a.y + a.vy*lead, s:maxSpeed(d)*G.rush, a:COVER.acc[0], pursue:true }); }   // his man has it: at him
+    else T.set(d, { x:Math.max(d.x, a.x + G.hold), y:a.y, s:maxSpeed(d)*G.rush });   // still to come: level with his man and no nearer than hold, until the ball is his
+  });
+}
+const gapZoom = () => (practice.gap ? DRILL_GAP.zoom[practice.gap.lanes.length - 2] || 1 : 1);
+const gapAimY = () => 35 + (M.ball.y - 35)*0.5 + DRILL_GAP.cam;   // half way from the line's middle to the ball
+const gapSpent = q => !!(practice.gap && practice.gap.passed.has(q));   // passing.js: a man who has passed this round is offered no pass, so the next man out is the pass
+const gapMark = c => { const G = practice.gap, d = G && c ? G.marks[G.lanes.indexOf(c)] : null; return d && !G.drawn.has(d) ? d : null; };   // the defender still to draw: the carrier's own man (the ring on the grass)
+const GAP_TIP = { 'Too Early':'Run at your defender until the ring turns gold, then pass.', Held:'Pass before they reach you.', Tagged:'Pass before they reach you.', 'Ball Lost':'Run straight and pass to the next runner.', 'Pass First':'Pass to the spare runner before the line.', 'Time Up':'Keep running at your defender.' };
 const drillPass = {
   setup(own, cpu) {
-    M.players = [own[0], own[1], cpu[0]];
-    drillPlace(own[0], 83, 31); drillPlace(own[1], 80, 42); drillPlace(cpu[0], 94, 31);
-    setCarrier(own[0]); practice.firstCarrier = own[0];
+    practice.gap = { own, cpu, pace:M.nat[1].pace, R:roundsNew(), lanes:[], marks:[], y:[], drawn:new Set(), passed:new Set(), passes:0, last:null, rush:1 };
+    gapRestage(1);
     M.cam.x = 91; M.cam.y = 35;
   },
-  tick() {
-    const b = M.ball;
-    if (practice.drawAt == null && M.stats.passes > 0) { const def = M.players.find(p => p.team === 1); practice.drawAt = def ? dist(practice.firstCarrier, def) : 99; }   // how near the defender was when the ball left your hands
-    if (b.state === 'held' && b.carrier.team === 0 && b.carrier !== practice.firstCarrier && M.stats.passes > 0) practice.completedPass = true;
-    if ((b.state === 'held' && b.carrier.team === 1) || M.phase === 'set') practiceFinish(false, 'Keep the defender with the ball carrier, then pass before contact. Try again.', 0);
+  tick(dt) {
+    const G = practice.gap, R = G.R;
+    if (roundsTick(R, dt, gapRestage)) return;
+    const b = M.ball, c = b.state === 'held' ? b.carrier : null;
+    if (M.stats.passes > G.passes) {                       // a pass has just left your hands: judged on how near the passer's own defender was
+      G.passes = M.stats.passes;
+      const d = G.marks[G.lanes.indexOf(G.last)];
+      G.passed.add(G.last);                                // the passer is out of the line: never the next pass (gapSpent)
+      if (d && !G.drawn.has(d) && dist(G.last, d) > DRILL_GAP.draw) { st('gapEarly'); roundLost(R, 'Too Early', G.last); return; }
+      if (d && !G.drawn.has(d)) { G.drawn.add(d); d.tcd = 99; st('gapDrawn'); }   // he went for the passer: out of it, and no tackle left in him
+    }
+    if (c && c.team === 0) { if (c !== G.last) practice.completedPass = true; G.last = c; }
+    if ((M.stats.ko_catch || 0) > G.ko) { roundAgain(R, 'Go Again', b); return; }   // a pass dropped by the catcher: the match's own handling roll, which no button changes, so the round again
+    if (M.phase !== 'play' || (c && c.team === 1) || b.state === 'loose' || b.state === 'dead' || (b.state === 'air' && b.f.kind !== 'pass')) { st('gapLost'); roundLost(R, 'Ball Lost', b); }
   },
-  hud() { return { bar:1 - practice.elapsed/practice.limit }; },
+  onTackle(c) {                                            // a made tackle on your carrier: held
+    if (c.team !== 0) return false;
+    st('gapHeld'); roundLost(practice.gap.R, 'Held', c);
+    return true;
+  },
+  onTry(p) { const R = practice.gap.R; if (p.team === 0 && practice.completedPass) roundWon(R, 'Try', p); else roundLost(R, 'Pass First', p); },
+  timeUp() { roundLost(practice.gap.R, 'Time Up', M.ball); },
+  labels() { return { a:'Pass', aOn:false, b:kickLabel(0), bOn:false, c:true, cOn:false }; },   // only between rounds: every button where it will be, none lit
+  hud() { return roundsHud(practice.gap.R); },
+  cue() { const R = practice.gap.R; return roundsCue(R, DRILL_GAP.rounds[R.round - 1].label); },
+  tip() { const R = practice.gap.R; return R.won >= DRILL_ROUNDS.n ? 'Draw your defender, then pass. That makes the gap.' : GAP_TIP[R.lost] || GAP_TIP['Too Early']; },
   result() { return { skill:'handling' }; },
 };
 
@@ -13343,9 +14170,9 @@ const drillKit = () => (practice ? DRILL_KIT[practice.id] : null);
 function practiceTackle(c, q) { const k = drillKit(); return !!(k && k.onTackle && k.onTackle(c, q)); }
 function practiceGoal(g) { const k = drillKit(); return !!(k && k.onGoal && k.onGoal(g)); }
 function practiceScrum(c) { const k = drillKit(); return !!(k && k.onScrum && k.onScrum(c)); }
-function practiceTry(p) {                                  // a try inside a drill ends it: only the two-on-one is won that way
-  if (practice.id === 'pass' && p.team === 0 && practice.completedPass) { practiceFinish(true, drillPassDrawn() ? 'You drew the defender, then passed. That made the try.' : 'You scored, but you passed early. Run at the defender first.', drillPassStars()); return; }
-  practiceFinish(false, p.team === 0 ? 'Draw the defender, then pass to your supporting runner before scoring.' : 'The runner got through. Switch into cover and run towards the ball.', 0);
+function practiceTry(p) {                                  // a try inside a drill: Create a Gap's and Defend a Breakaway's to judge, the only games that restage open play
+  const k = drillKit();
+  if (k && k.onTry) k.onTry(p); else practiceFinish(false, '', 0);
 }
 function drillLabels() { const k = drillKit(); return (k && k.labels && k.labels()) || { a:null, b:null, c:false }; }
 function drillDrawScreen() { const k = drillKit(); if (k && k.drawScreen) k.drawScreen(); }
@@ -13396,9 +14223,9 @@ const PRACTICE_DRILLS = [                                   // tag and handling 
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
   { id:'cones', name:'Cones', objective:'Beat the Clock', limit:45 },
-  { id:'pass', name:'Create a Two-on-One', objective:'Draw the Defender, Then Pass', cue:'Run towards the defender to draw them in. Pass to the dashed-ringed runner, then run for the try line.', limit:22 },
+  { id:'pass', name:'Create a Gap', objective:'Draw Your Defender, Then Pass', cue:'Run at your defender. Pass when the ring turns gold.', limit:22 },   // the id from when it was Create a Two-on-One: saves, stars, the career and the Locker read it
   { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Aim the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
-  { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Your first defender is beaten. Press Switch, run across to the carrier and Tackle. Sprint helps you close the gap.', tagCue:'Your first defender is beaten. Press Switch, run across to the carrier and Pull Tag. Sprint helps you close the gap.', limit:18 },
+  { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Press Switch, run across and Tackle. Sprint closes the gap.', tagCue:'Press Switch, run across and Pull Tag. Sprint closes the gap.', limit:18 },
   { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90, contact:true },
   { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true },
   { id:'back', name:'Ball Back', objective:'Hands, Landing, Ball Back', limit:60, contact:true },
@@ -13420,8 +14247,8 @@ function practiceGroups() {                                // the picker as this
 }
 function practiceInstructions(id) {
   const name = drillName;
-  if (id === 'defend') return 'Your first defender is beaten. Press ' + name('Switch', 'b') + ', run across to the carrier and ' + name(practiceYoung() ? 'Pull Tag' : 'Tackle', 'a') + '. ' + name('Sprint', 'c') + ' helps you close the gap.';
-  if (id === 'pass') return 'Run towards the defender to draw them in. ' + name('Pass', 'a') + ' to the dashed-ringed runner, then run for the try line.';
+  if (id === 'defend') return 'Press ' + name('Switch', 'b') + ', run across and ' + name(practiceYoung() ? 'Pull Tag' : 'Tackle', 'a') + '. ' + name('Sprint', 'c') + ' closes the gap.';
+  if (id === 'pass') return 'Run at your defender. ' + name('Pass', 'a') + ' when the ring turns gold.';
   const kit = DRILL_KIT[id];
   return kit && kit.howTo ? kit.howTo() : '';
 }
@@ -13666,11 +14493,11 @@ function renderLocker(news) {
     }).join('');
     for (const b of body.querySelectorAll('.lk-item')) b.addEventListener('click', () => { if (lockerPick(b.dataset.kind, b.dataset.id)) { renderLocker(); const again = $('lk-body').querySelector(`[data-id="${b.dataset.id}"]`); if (again && again.focus) again.focus(); if (again && focusEl) setFocus(again); } });
   } else {
-    const g = Math.min(10, lockerGolds());
+    const g = lockerGolds();                                 // the nth Gold, the nth side of each list (ten men's, five women's)
     const tile = (t, i) => i < g
       ? `<div class="lk-leg" data-legend="1" role="group" aria-label="${esc(t.name)}, Overall ${overallOf(t)}">${jersey(t).replace(/<\/span>$/, `<span class="ovr">${overallOf(t)}</span></span>`)}<span class="lk-nat">${esc(t.nation)}</span><span class="lk-yrow"><b class="lk-yr">${t.year}</b>${ratedStars(t)}</span></div>`
       : `<div class="lk-leg lk-off" role="group" aria-label="Locked, ${i + 1} Gold ${i ? 'Medals' : 'Medal'}"><span class="lk-padlock">${LOCKER_LOCK}</span><span class="lk-need">${lockerPip(3, true)}${i + 1}</span></div>`;
-    body.innerHTML = ['men', 'women'].map(cat => `<p class="lbl">${cat === 'men' ? 'Men' : 'Women'}</p><div class="lk-legrow">${LEGENDS.filter(t => t.cat === cat).map(tile).join('')}</div>`).join('');
+    body.innerHTML = ['men', 'women'].map(cat => `<p class="lbl">${cat === 'men' ? 'Men' : 'Women'}</p><div class="lk-legrow">${lockerList(cat).map(tile).join('')}</div>`).join('');
     for (const el of body.querySelectorAll('[data-legend]')) storeMark(el, 'legends');   // won on any tier, played with the Full Game: the lock the team screen shows (src/ui-store.js)
   }
 }
@@ -13816,8 +14643,8 @@ function demoPad(gp, P) {                                  // the pad's edges ar
 
 /* ---------- the pilots ----------
    Each reads the drill as a player reads the screen and says, step by step, what the thumb and the fingers do. dt is the drill
-   time this step will take. A rep that goes wrong just rolls on to the drill's next rep; a drill with only one (Defend, Two-on-One)
-   is built afresh and goes again. Its rules are never bent: a dive is about two in three, for the pilot as for anyone. */
+   time this step will take. A rep that goes wrong just rolls on to the drill's next rep; one that ends the run (Defend's and
+   Create a Gap's round one) is built afresh and goes again. Its rules are never bent: a dive is about two in three, for the pilot as for anyone. */
 function demoEggSpot(E) {                                  // where to run: the first point on the ball's flight within reach in time, or where this hop lands. t: how long until the ball is there
   const b = M.ball, me = E.me, K = DRILL_EGG, v = maxSpeed(me)*0.8, lo = E.bounced ? 0.05 : E.kind === 'bounce' ? 99 : K.lo + 0.1;   // a Bounce Pass can't be caught before it lands, so run to where it lands
   let x = b.x, y = b.y, z = b.z, vz = b.vz;
@@ -13937,8 +14764,10 @@ const DEMO_PILOT = {
     D.step('Drive', 'Stay in the green and keep tapping ' + demoName('Push', 'a') + '.');
     if (c.t >= (D.n.next || 0)) { D.tap('a'); D.n.next = c.t + 1/7; }
   },
-  defend(D) {
-    const me = ctrlOf(0), b = M.ball, c = b.state === 'held' ? b.carrier : null, tagging = practice.tagOnly, press = tagging ? 'Pull Tag' : 'Tackle';
+  defend(D) {                                              // round one, the chase
+    const me = ctrlOf(0), b = M.ball, c = b.state === 'held' ? b.carrier : null, tagging = practice.tagOnly, press = tagging ? 'Pull Tag' : 'Tackle', R = practice.defend.R;
+    if (R.won) { D.end(true); return; }
+    if (R.stage !== 'play') return;
     if (!practice.switched) { D.slow = true; D.step('Switch', 'Tap ' + demoName('Switch', 'b') + ' to pick the defender in front.'); if (D.wall - D.began >= 1.5) D.tap('b'); return; }
     if (demoMissed()) { D.end(false); return; }
     if (!me || !c || c.team !== 1) return;
@@ -13984,19 +14813,17 @@ const DEMO_PILOT = {
       if (T.t >= K.grace + 0.3) D.go(T.team, 0);
     }
   },
-  pass(D) {
-    const me = ctrlOf(0), b = M.ball, def = M.players.find(p => p.team === 1);
-    if (practice.completedPass) {
-      D.step('Score', demoMove() + ' to run for the try line.');
-      if (me && def) { D.go(1, dist(me, def) < 6 && def.x >= me.x - 1 ? (me.y >= def.y ? 0.7 : -0.7) : 0); D.hold('c'); }   // round the defender, then straight home
-      return;
-    }
+  pass(D) {                                                // round one, 2 on 1
+    const G = practice.gap, me = ctrlOf(0), b = M.ball, def = gapMark(me);
+    if (G.R.won) { D.end(true); return; }
+    if (G.R.stage !== 'play') return;
     if (b.state !== 'held') { D.slow = true; D.go(1, 0); D.step('Pass', 'The ball goes to the runner with the dashed ring.'); return; }
-    if (b.carrier !== me || !def) return;
+    if (b.carrier !== me) return;
     D.go(1, 0);
-    if (dist(me, def) > 5) { D.step('Draw', demoMove() + ' to run at the defender and draw them in.'); return; }
+    if (!def) { D.step('Score', demoMove() + ' to run for the try line.'); D.hold('c'); return; }   // the free man: straight home
+    if (dist(me, def) > 5) { D.step('Draw', demoMove() + ' to run at your defender and draw them in.'); return; }
     D.slow = true; D.mark('pass');
-    D.step('Pass', 'Tap ' + demoName('Pass', 'a') + ' before they reach you.');
+    D.step('Pass', 'Tap ' + demoName('Pass', 'a') + ' when the ring turns gold.');
     D.tap('a');
   },
 };
@@ -14020,8 +14847,16 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
    trophy row, whose five kinds in two figures need 11px beside the overall at 667x375 (six, with a county cup, 10px and the row's tight spacing). One marked data-fit="wrap" (a transfer offer's
    league) that is still too wide at its smallest goes on two lines or more at its own size instead, a word never broken. A side's name
    in the fixture also steps down while it runs to three lines (South Africa Women, London North Women at 667x375, and the hub would
-   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. */
+   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. A transfer offer's league still too wide on its
+   lines (a word of it wider than its column: Championship, the United Rugby Championship's, beside a shirt in a quarter of 667) takes the
+   card's whole width under the shirt, on every card of the window alike (.cr-offers.wide). */
 function careerFit(root) {
+  const offers = root.classList && root.classList.contains('cr-offers') ? [root] : [...root.querySelectorAll('.cr-offers')];
+  for (const o of offers) o.classList.remove('wide');
+  careerFitEach(root);
+  for (const o of offers) if ([...o.querySelectorAll('.lbl')].some(e => e.scrollWidth > e.clientWidth + 0.5)) { o.classList.add('wide'); careerFitEach(o); }
+}
+function careerFitEach(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
     el.style.fontSize = ''; el.style.letterSpacing = ''; el.style.whiteSpace = '';
     const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl') || el.classList.contains('eyebrow');
@@ -14105,7 +14940,7 @@ function careerNewOpen() {
 /* The picks change in place, so a controller's ring stays on the button it pressed; the numbers are redrawn only for a new position. */
 function renderCareerNew() {
   const d = careerDraft;
-  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit>${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;
+  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit="wrap">${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;   // the league, stepped down, then on two lines (United Rugby Championship)
   [...$('cn-cat').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === (d.cat === 'women'))));
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
   [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
@@ -14167,13 +15002,25 @@ $('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:
 for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
   [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
 $('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
-function careerClubOpen() { careerDraft.pool = careerDraft.league; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on
+/* The club screen folds to one line as the team screen does (foldMove, src/ui-menus.js): Pick Your Club, where the list is (National ·
+   England), and Change. It arrives folded on his club's list; Change opens National | Local and the lists and becomes Done; a league picked
+   folds them again, a tier picked keeps them open for its league. No category here: Men | Women is New Player's. */
+let careerClubOpenOn = false;
+function careerClubOpen() { careerDraft.pool = careerDraft.league; careerClubOpenOn = false; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on, folded
+function careerClubFold(open) {
+  foldMove('s-career-club', $('cc-ctl'), $('cc-grid'), () => { careerClubOpenOn = !!open; renderCareerClubs(); $('s-career-club').scrollTop = 0; },
+    () => (careerClubOpenOn ? foldPressed('cc-tier') : foldFirst($('cc-grid'))));
+}
+$('cc-fold').addEventListener('click', () => careerClubFold(!careerClubOpenOn));
 function renderCareerClubs() {
   const d = careerDraft, pool = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool, tier = poolTier(pool);
   const press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
   press('cc-tier', '[data-tier]', b => +b.dataset.tier === tier);
   $('cc-nat').hidden = tier !== 1; $('cc-loc').hidden = tier !== 2; $('cc-league').hidden = !importLeague;
   for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
+  $('cc-ctl').hidden = !careerClubOpenOn;
+  $('cc-fold').textContent = careerClubOpenOn ? 'Done' : 'Change'; $('cc-fold').setAttribute('aria-expanded', String(careerClubOpenOn));
+  $('cc-sum').innerHTML = foldSum([TEAM_TIERS[tier], careerLeagueName(pool)]);   // National · England, Local · Surrey, Local · My League
   const clubs = careerClubList(pool);
   $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
     return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');   // its name with its stars under it, beside its overall
@@ -14185,12 +15032,12 @@ function careerClubPick(t) {                         // a club tapped: his, with
   d.club = t; d.league = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool;
   renderCareerNew(); careerShow('s-career-new');
 }
-function careerPoolPick(k) {
+function careerPoolPick(k, stay) {                  // a league picked folds the controls; stay keeps them open (a tier's first list)
   if (k === IMPORT_POOL && !importLeague) return;
   careerDraft.pool = k; if (poolTier(k) === 1) careerDraft.nat = k;
-  renderCareerClubs(); $('s-career-club').scrollTop = 0;
+  if (stay) { renderCareerClubs(); $('s-career-club').scrollTop = 0; } else careerClubFold(false);
 }
-function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur'); }   // National goes back to the league last looked at
+function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur', true); }   // National goes back to the league last looked at, open for its league
 {
   const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
   $('cc-tier').innerHTML = [1, 2].map(i => btn(`data-tier="${i}"`, TEAM_TIERS[i])).join('');   // National | Local: a club is never a nation
@@ -14380,7 +15227,7 @@ $('ce-back').addEventListener('click', goHome);
 
 /* the first controller press lands on the screen's main action: his own club on the club screen, Stay in the transfer window (a
    mashed button never signs him anywhere), the first country at a call-up */
-Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
+Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => (careerClubOpenOn && foldPressed('cc-tier')) || $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
 /* =========================================================
    Career life: Energy, Morale and Team Spirit, and the dilemmas between matches.
 
@@ -14596,8 +15443,8 @@ function careerLifePick(i) {                         // a tap on an option: its 
 { const base = DEFAULT_FOCUS['s-career']; DEFAULT_FOCUS['s-career'] = () => (careerDilemma(career) && $('cr-dilemma').querySelectorAll('.btn')[0]) || base(); }   // a dilemma waiting: the first press lands on its first option
 /* =========================================================
    The Try Line app. What the game does differently inside the iOS and Android app (Capacitor, app/ at the repo root):
-   - no service worker, and no Install Game, Update Game or Offline Ready: the app carries its own files (offlineStart asks
-     nativeOn first). How to Play swaps its browser entries (.web-only) for the app's (.app-only).
+   - no service worker, and no Install Game, Updating or Offline Ready: the app carries its own files (offlineStart asks
+     nativeOn first). Anything marked .web-only goes and .app-only comes in (nothing is since 2026-11-09: see nativeWebOnly).
    - landscape either way up, set in the native projects (Info.plist, and sensorLandscape on Android: app/scripts/
      native-config.mjs), never locked at run time, as a lock pins one side and a phone held the other way stays upside
      down. The status bar (and Android's navigation bar) is hidden through the plugins when present; a match skips the
@@ -14688,8 +15535,9 @@ function nativeStart() {
   const app = nativePlugin('App');
   if (app && typeof app.addListener === 'function') { try { app.addListener('backButton', nativeBack); } catch (e) { /* Back keeps the platform's own */ } }
 }
-/* How to Play's browser entries (Install & Offline: Safari, Add to Home Screen and Update Game; Saving: this browser, reloading)
-   mean nothing in the app: they go, and the app's own (.app-only, hidden in index.html, so a browser never shows them) come in. */
+/* A browser's own entries (.web-only) mean nothing in the app: they go, and the app's own (.app-only, hidden in index.html, so a
+   browser never shows them) come in. How to Play's Install & Offline and Saving entries were the ones; they went with its prose on
+   2026-11-09, when it became a picture of the controls, the same in a browser and the app. The swap stays for the next. */
 function nativeWebOnly() {
   for (const el of document.querySelectorAll('.web-only')) el.hidden = true;
   for (const el of document.querySelectorAll('.app-only')) el.hidden = false;
@@ -14757,34 +15605,156 @@ function nativeBack() {
   const home = $('s-home');
   if (home && !home.hidden && navLayer() === home) nativeCall('App', 'minimizeApp');
 }
-/* Optional browser installation and cached play. No automatic reloads. */
-const offlineApp = { started:false, home:false, ready:false, readinessRequest:0, prompt:null, waiting:null, requested:false, requestedWorker:null, changed:false, reloaded:false };
+/* Optional browser installation and cached play. A new version applies by itself, on the home menu only: once the home has
+   been quiet for OFFLINE.idle (no pointer, key or controller input, and nothing still held down) with nothing open over it,
+   and this is the game's only window, the waiting worker takes over and the page reloads on the new version ('Updating'
+   shows meanwhile). A match, a drill or any other screen never reloads: the version waits for the next home. Saves are
+   written before the home shows. */
+const OFFLINE = { idle:1500, tick:250, again:5000, check:3600e3, answer:4000 };   // ms: the quiet a home needs; how often it looks while a version waits; the wait after another window held it back; between checks for a new version; for the worker's answer
+const offlineApp = { started:false, live:false, home:false, ready:false, readinessRequest:0, prompt:null, prompting:false, waiting:null, asking:null, requested:false, changed:false, reloaded:false,
+  controller:null, registration:null, homeAt:0, inputAt:0, retryAt:0, checkedAt:0, timer:0, held:new Map(), touches:0 };
+const offlineNow = () => Date.now();
 function offlineRender() {
-  const bar = $('app-tools'), install = $('b-install'), update = $('b-update'), status = $('offline-status');
-  if (!bar || !install || !update || !status) return;
+  const bar = $('app-tools'), install = $('b-install'), updating = $('offline-update'), status = $('offline-status');
+  if (!bar || !install || !updating || !status) return;
   install.hidden = !offlineApp.prompt;
-  update.hidden = !offlineApp.waiting && !offlineApp.requested;
-  update.disabled = offlineApp.requested;
-  update.textContent = offlineApp.requested ? 'Updating…' : 'Update Game';
+  updating.hidden = !offlineApp.requested;
   status.hidden = !offlineApp.ready;
-  bar.hidden = !offlineApp.home || (install.hidden && update.hidden && status.hidden);
+  bar.hidden = !offlineApp.home || (install.hidden && updating.hidden && status.hidden);
 }
+/* The page is now under a newer worker than the one that served it: it reloads into it from a quiet home, never anywhere else,
+   whoever made the switch (this page, another window, or an older page's Update Game). Updating shows as it goes. */
 function offlineReload() {
-  if (!offlineApp.home || !offlineApp.requested || !offlineApp.changed || offlineApp.reloaded) return;
-  offlineApp.reloaded = true;
+  if (!offlineApp.home || !offlineApp.changed || offlineApp.reloaded) return;
+  if (!offlineQuiet()) { offlineSoon(); return; }
+  offlineApp.requested = offlineApp.reloaded = true;
+  offlineRender();
   window.location.reload();
 }
+/* Anything input does: input-devices.js calls this for a controller (polled, so no event reaches the window), on every poll while
+   a button is held or the stick is off centre. The clock is read only where a worker can update the game: the app and the tools'
+   seeded runs (career-season.mjs moves its clock on every read) never read it. */
+function offlineInput() { if (offlineApp.live) offlineApp.inputAt = offlineNow(); }
+/* What is held down now: pointers by id, keys by code, and fingers by the browser's own count. A press still down is input however
+   still it is held, so the quiet starts at its release. Each entry also clears itself where an up event could go missing: a mouse
+   moving with no button down, a primary touch (no other finger is down), a touch event's count of 0, the Command key let go (macOS
+   sends no keyup for keys pressed with it), and the game losing the focus or going to the back (blur, visibilitychange). */
+function offlineEvent(type, e) {
+  offlineInput();
+  if (!offlineApp.live) return;
+  const held = offlineApp.held, drop = kind => { for (const [k, v] of held) if (v === kind) held.delete(k); };
+  const id = e && e.pointerId, kind = (e && e.pointerType) || 'mouse', key = e && (e.code || e.key);
+  if (type === 'pointerdown') { if (kind === 'touch' && e.isPrimary) drop('touch'); held.set('p' + id, kind); }
+  else if (type === 'pointerup' || type === 'pointercancel') held.delete('p' + id);
+  else if (type === 'pointermove') { if (e && e.buttons === 0) held.delete('p' + id); }
+  else if (type === 'touchstart' || type === 'touchend' || type === 'touchcancel') { offlineApp.touches = (e && e.touches && e.touches.length) || 0; if (!offlineApp.touches) drop('touch'); }
+  else if (type === 'keydown') { if (key) held.set('k' + key, 'key'); }
+  else if (type === 'keyup') { if (/^(Meta|OS)/.test(key || '')) drop('key'); else held.delete('k' + key); }
+  else if (type === 'blur' || type === 'hidden') { held.clear(); offlineApp.touches = 0; }
+}
+const offlineHeld = () => offlineApp.held.size > 0 || offlineApp.touches > 0;
+/* Nothing open over the home: no card (the grown-up check, the store and Grown-Ups, the Supporters' Wall, Add Your Team and its
+   confirm, any .modal), not the For Grown-Ups panel, not the browser's install prompt, and no text field taking typing. */
+function offlineClear() {
+  if (offlineApp.prompting) return false;
+  if (typeof document === 'undefined') return true;
+  const shown = el => !!el && !el.hidden && !(el.closest && el.closest('[hidden]'));
+  for (const m of document.querySelectorAll('.modal')) if (shown(m)) return false;
+  if (shown($('pr-grownups'))) return false;
+  const a = document.activeElement;
+  return !(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName || ''));
+}
+function offlineControlled() { return typeof navigator !== 'undefined' && !!navigator.serviceWorker && !!navigator.serviceWorker.controller; }
+/* Work for the home: a version waiting (on a page a worker controls: one loaded from the network has nothing old to replace),
+   or a switch already made that this page has to reload into. */
+function offlinePending() {
+  if (offlineApp.reloaded || offlineApp.asking) return false;
+  return offlineApp.changed || (!offlineApp.requested && !!offlineApp.waiting && offlineControlled());
+}
+function offlineSoon() {
+  if (offlineApp.timer || !offlineApp.home || !offlinePending()) return;
+  offlineApp.timer = setTimeout(offlineTick, OFFLINE.tick);
+}
+function offlineStop() { if (offlineApp.timer) { clearTimeout(offlineApp.timer); offlineApp.timer = 0; } }
+/* The home's quiet: nothing held down, OFFLINE.idle since its last input and since it showed, nothing over it, and not in a match
+   or a drill. A press still held moves the last input on, so the wait counts from its release even if the release is never heard. */
+function offlineQuiet() {
+  const now = offlineNow();
+  if (!offlineApp.home) return false;
+  if (offlineHeld()) { offlineApp.inputAt = now; return false; }
+  if (now - Math.max(offlineApp.inputAt, offlineApp.homeAt) < OFFLINE.idle) return false;
+  if (typeof playing === 'function' && playing()) return false;
+  if (typeof practice !== 'undefined' && practice) return false;
+  return offlineClear();
+}
+function offlineTick() {
+  offlineApp.timer = 0;
+  if (!offlineApp.home || !offlinePending()) return;
+  if (offlineApp.changed) { offlineReload(); return; }
+  if (!offlineQuiet() || offlineNow() < offlineApp.retryAt) { offlineSoon(); return; }
+  offlineApply();
+}
+/* One question to a worker, answered on a channel of its own: then(data), or then(null) if no answer comes in OFFLINE.answer.
+   An answer that comes after the switch (or after this page stopped asking) is not heard. */
+function offlineAsk(worker, message, then) {
+  const channel = new MessageChannel();
+  let timer = 0, over = false;
+  const done = data => { if (over) return; over = true; clearTimeout(timer); channel.port1.close(); if (offlineApp.asking === worker) then(data); };
+  timer = setTimeout(() => done(null), OFFLINE.answer);
+  channel.port1.onmessage = event => done(event.data);
+  try { worker.postMessage(message, [channel.port2]); } catch (e) { done(null); }
+}
+/* The waiting worker takes over only if this is the game's only window (sw.js counts them): a tab in a match must never have its
+   files switched under it, as a worker serves only its own generation. Two steps, so that what switches is a home quiet a moment
+   ago, not one the player left while the worker woke up (an idle one is stopped: asked in one step, the switch landed up to 400 ms
+   after the ask in Chromium). GAME_WINDOWS wakes the worker and counts the windows, switching nothing; then this page looks at its
+   home again and, still quiet, sends SKIP_WAITING alone to the worker now awake, which counts again (a window may have opened) and
+   takes over. What is left is one round trip to a running worker (3 to 6 ms in Chromium). A tap inside it that leaves the home
+   lands under the new generation; that page reloads into it from its next quiet home, like a switch another window made. With
+   others open it waits and asks again later. */
+function offlineApply() {
+  const worker = offlineApp.waiting;
+  if (!worker || typeof MessageChannel === 'undefined') return;
+  offlineApp.asking = worker;
+  const stop = () => { offlineApp.asking = null; };
+  const later = () => { stop(); offlineApp.retryAt = offlineNow() + OFFLINE.again; offlineSoon(); };
+  offlineAsk(worker, { type:'GAME_WINDOWS' }, data => {
+    if (!data || data.type !== 'GAME_WINDOWS' || typeof data.count !== 'number' || data.count > 1) { later(); return; }
+    if (offlineApp.waiting !== worker || !offlineQuiet()) { stop(); offlineSoon(); return; }   // the player moved, or left the home, while it woke
+    offlineAsk(worker, { type:'SKIP_WAITING', alone:true }, data => {
+      if (!data || data.type !== 'SKIP_WAITING' || data.applied !== true) { later(); return; }
+      stop();
+      if (!offlineApp.home) return;                         // off the home already: it reloads from the next quiet home (offlineReload)
+      offlineApp.requested = true; offlineRender(); offlineReload();
+      // the switch normally follows at once (controllerchange); if it never does (a newer version replaced this one meanwhile), Updating goes and the home asks again
+      setTimeout(() => { if (!offlineApp.changed && !offlineApp.reloaded && offlineApp.requested) { offlineApp.requested = false; offlineRender(); later(); } }, OFFLINE.answer);
+    });
+  });
+}
 function offlineScreen(id) {
-  // Leaving home while activation is pending defers the reload until home returns.
-  offlineApp.home = id === 's-home';
+  const home = id === 's-home';
+  if (home && !offlineApp.home && offlineApp.live) offlineApp.homeAt = offlineNow();   // the home's quiet starts as it shows
+  offlineApp.home = home;
+  if (!home) { offlineStop(); if (!offlineApp.reloaded) offlineApp.requested = false; }   // a match, a drill, a picker or any other screen: the version waits for the home, and a fresh quiet there
   offlineRender();
   offlineReload();
+  if (home) { offlineSoon(); offlineCheck(); }
+}
+/* A game left open (a home-screen app back from the background has not loaded again) still hears of a new version: at most
+   once an hour, from the home. */
+function offlineCheck() {
+  const r = offlineApp.registration;
+  if (!r || typeof r.update !== 'function') return;
+  const now = offlineNow();
+  if (now - offlineApp.checkedAt < OFFLINE.check) return;
+  offlineApp.checkedAt = now;
+  try { Promise.resolve(r.update()).catch(() => {}); } catch (e) { /* offline: the next check */ }
 }
 function offlineReady(worker) {
   if (!worker || typeof MessageChannel === 'undefined') return;
   const request = ++offlineApp.readinessRequest;
   const channel = new MessageChannel();
-  const timer = setTimeout(() => { channel.port1.close(); }, 4000);
+  const timer = setTimeout(() => { channel.port1.close(); }, OFFLINE.answer);
   channel.port1.onmessage = event => {
     clearTimeout(timer); channel.port1.close();
     if (request === offlineApp.readinessRequest && event.data && event.data.type === 'OFFLINE_READY' && typeof event.data.ready === 'boolean') {
@@ -14795,10 +15765,12 @@ function offlineReady(worker) {
   catch (e) { clearTimeout(timer); channel.port1.close(); }
 }
 function offlineRegistration(registration) {
+  offlineApp.registration = registration; offlineApp.checkedAt = offlineNow();   // registering has just checked
   const refresh = () => {
     offlineApp.waiting = registration.waiting || null;
     offlineRender();
     offlineReady(registration.active);
+    offlineSoon();
   };
   const watch = worker => {
     if (!worker || typeof worker.addEventListener !== 'function') return;
@@ -14812,22 +15784,17 @@ function offlineRegistration(registration) {
 function offlineStart() {
   if (offlineApp.started) return;
   offlineApp.started = true;
-  if (typeof nativeOn === 'function' && nativeOn()) return;   // the Try Line app carries its own files: no worker, and Install, Update and Offline Ready stay hidden (native.js)
-  const install = $('b-install'), update = $('b-update');
+  if (typeof nativeOn === 'function' && nativeOn()) return;   // the Try Line app carries its own files: no worker, and Install, Updating and Offline Ready stay hidden (native.js)
+  const install = $('b-install');
   if (install) install.addEventListener('click', () => {
     const go = async () => {
       const prompt = offlineApp.prompt;
       if (!prompt) return;
-      offlineApp.prompt = null; offlineRender();
+      offlineApp.prompt = null; offlineApp.prompting = true; offlineRender();   // the browser's prompt is over the home: no update meanwhile
       try { await prompt.prompt(); await prompt.userChoice; } catch (e) { /* browser dismissed or unavailable */ }
+      offlineApp.prompting = false; offlineInput(); offlineSoon();
     };
     if (typeof parentGate === 'function') parentGate(go); else go();   // a grown-up check first (kids.js): installing hands over to the browser
-  });
-  if (update) update.addEventListener('click', () => {
-    if (!offlineApp.home || !offlineApp.waiting || offlineApp.requested) return;
-    offlineApp.requested = true; offlineApp.requestedWorker = offlineApp.waiting; offlineApp.changed = false; offlineRender();
-    try { offlineApp.waiting.postMessage({ type:'SKIP_WAITING' }); }
-    catch (e) { offlineApp.requested = false; offlineRender(); }
   });
   if (typeof window.addEventListener === 'function') {
     window.addEventListener('beforeinstallprompt', event => {
@@ -14838,9 +15805,27 @@ function offlineStart() {
   }
   if (!window.isSecureContext || typeof navigator === 'undefined' || !navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
   const workers = navigator.serviceWorker;
+  offlineApp.live = true;
+  if (offlineApp.home) offlineApp.homeAt = offlineNow();   // the home showed before this started (boot.js): its quiet starts now
+  offlineApp.controller = workers.controller || null;      // the generation that served this page
+  // Input on the home holds an update back: a tap, a key, a scroll or a press still held, in the last OFFLINE.idle (a controller:
+  // offlineInput, from pollPads). Scroll is caught on its way down, as an element's scroll does not bubble.
+  for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'touchstart', 'touchend', 'touchcancel', 'keydown', 'keyup', 'wheel', 'scroll']) window.addEventListener(type, e => offlineEvent(type, e), { capture:true, passive:true });
+  window.addEventListener('focus', () => offlineInput());
+  window.addEventListener('blur', () => offlineEvent('blur'));
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { offlineEvent('hidden'); return; }   // whatever was held down is let go out of the game's sight
+    offlineInput();                                        // back to the game: whoever came back may be about to tap
+    if (offlineApp.home) { offlineCheck(); offlineSoon(); }
+  });
   workers.addEventListener('controllerchange', () => {
-    if (offlineApp.requested && workers.controller === offlineApp.requestedWorker) { offlineApp.changed = true; offlineReload(); }
-    offlineReady(workers.controller);
+    const now = workers.controller;
+    if (now && now !== offlineApp.controller) {
+      offlineApp.changed = true;
+      if (offlineApp.asking === now) offlineApp.asking = null;   // the switch came before the worker's answer: that answer changes nothing now
+      offlineRender(); offlineReload(); offlineSoon();
+    }
+    offlineReady(now);
   });
   try {
     Promise.resolve(workers.register('./sw.js')).then(offlineRegistration).catch(() => {});
@@ -14856,7 +15841,7 @@ document.addEventListener('visibilitychange', () => { pauseKey = ''; });   // a 
 /* A step is always 1/60 of a simulated second, so below pace 1 a 60Hz screen gets a frame with no step about one time in eight (at 0.75, one in four) and the world would hitch.
    The picture blends the last step instead, a step behind the sim. Drawing only: every position goes back before anything else reads it, so the sim never sees this. A close-up draws from its clocks, so those blend the same way: what is judged reads them after they have gone back. */
 const PACE_KEEP = { M:null, was:[], now:[], cut:null, cutWas:[], cutNow:[] }, PACE_JUMP = 1.5;   // PACE_JUMP: metres in one step that can only be a teleport (a restart, a set piece): that man is drawn where he is
-const PACE_CUT = ['t', 'acc', 'exit', 'pos'], PACE_KICK = ['st', 'm', 'aim'], PACE_LEAP = 0.2;   // what a close-up's picture moves with: the scene clock and its slow-motion fraction, the slide out, the scrum's shove; a kick's run-up, meter and aim. PACE_LEAP: a change in one step that can only be a new stage: drawn as it is
+const PACE_CUT = ['t', 'acc', 'exit', 'pos', 'fwd', 'lat', 'ang'], PACE_KICK = ['st', 'm', 'aim'], PACE_LEAP = 0.2;   // what a close-up's picture moves with: the scene clock and its slow-motion fraction, the slide out, the scrum's shove, the maul's metres, slide and wheel; a kick's run-up, meter and aim. PACE_LEAP: a change in one step that can only be a new stage: drawn as it is
 function paceKeep() {                                       // the world before the step about to run
   if (matchPace() === 1) { PACE_KEEP.M = null; return; }
   const K = PACE_KEEP, w = K.was, b = M.ball, c = M.cut; let i = 0;
@@ -14953,7 +15938,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     duelCam, duelPose, camAt, startMatch, exitMatch, pickOwner,
     render, updateHud, setMode:v => { mode = v; }, keyDown:e => onKey(e, true), keyUp:e => onKey(e, false), frameStep:dt => { if (M.stop > 0) { M.stop -= dt; return 0; } update(STEP); return 1; },
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
-    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, goHome, exitMatch, setDesk, isDesk, CONFIRM,
+    openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, SCRUM_HEAD, SCRUM_TIE, scrumAhead, scrumBar, scrumShown, goHome, exitMatch, setDesk, isDesk, CONFIRM,
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, safeInsets, stickRest, tagBox, nearestAct, releaseTouch, phoneUpright, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
   contact:{ matchMild, CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, switchTarget, switchUseful, switchPlayer, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
@@ -14964,26 +15949,28 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
   ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },
-  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, poolPick, tierPick, catPick, natLast:() => natLast, fold:teamsFold, opened:() => teamsOpen, summary:teamSummary, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   comp:{ COMP_LEAGUES, CLUB_LEVEL, CLUB_COUNTY, COUNTY_CUPS, COUNTY_CUP_NAMES, levelOf:compLevelOf, countyOf:compCountyOf, cupFor:compCupFor, rivals:compCupRivals },
   cups:{ CUPS, cupTitle, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
+  press:{ PRESSURE, pressJolt, pressTackle, pressTick, pressReset, knockOn, knockBeat, eggStart, eggLead, eggChaser, hopMove, hopBounce, updateLoose, pickUp, surge },   // pressure, the spill and the egg's hop (src/contact.js, src/ball.js)
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, builderLevel, levelChoosing:() => levelChoosing, levelNote:() => levelNote, draft:() => draft },
-  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, newGo:careerNewGo, lookOpen:careerLookOpen, lookSet:careerLookSet, look:careerLook, LOOK:CAREER_LOOK, BUILDS:CAREER_BUILDS, clubOpen:careerClubOpen, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, DIFF, diffOf },
+  career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, ahead:careerAhead, outcome:careerOutcome, next:careerNext, advance:careerAdvance, sign:careerSign, offers:careerOffers, target:careerTarget, repair:careerRepair, league:careerLeague, leagueKey:careerLeagueKey, nations:careerNations, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, matchOpts:careerMatchOpts, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, newGo:careerNewGo, lookOpen:careerLookOpen, lookSet:careerLookSet, look:careerLook, LOOK:CAREER_LOOK, BUILDS:CAREER_BUILDS, clubOpen:careerClubOpen, clubFold:careerClubFold, clubOpened:() => careerClubOpenOn, clubPick:careerClubPick, poolPick:careerPoolPick, tierPick:careerTierPick, clubList:careerClubList, render:renderCareer, renderEnd:renderCareerEnd, renderClubs:renderCareerClubs, restart:careerRestart, catPick:careerCatPick, draft:() => careerDraft, cat:careerCat, eyebrow:careerEyebrow, note:careerNote, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, cups:careerCups, setCups:v => { careerCupsHook = v; }, PHASES:CAREER_PHASES, CALL:CAREER_CALL, MOVE:CAREER_MOVE, EURO:CAREER_EURO, HOME:CAREER_HOME, KINDS:CAREER_KINDS, CUP_NAME:CAREER_CUP_NAME, START:CAREER_START, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE, DIFF, diffOf },
   careerPro:{ PRO, pinned:proPinned, run:proRun, spirit:proSpirit, open:proOpen, pass:proPass, carrier:proCarrier, canCall:proCanCall, call:proCall, calling:proCalling, skip:proSkip, mark:proMark, modePick:careerModePick, draft:() => careerDraft },
   careerLife:{ LIFE:CAREER_LIFE, KEYS:CAREER_LIFE_KEYS, COL:CAREER_LIFE_COL, DILEMMAS:CAREER_DILEMMAS, PLANS:CAREER_DILEMMA_PLANS, fresh:careerLifeNew, clean:careerLifeClean, spirit:careerSpirit, morale:careerMorale, energy:careerEnergy, tired:careerLifeTired, plan:careerDilemmaPlan, dilemma:careerDilemma, key:careerDilemmaKey, choose:careerLifeChoose, pick:careerLifePick, train:careerLifeTrain, round:careerLifeRound, arm:careerLifeArm, hands:careerLifeHands, pass:careerLifePass, support:careerLifeSupport, chip:careerLifeChip, barsHtml:careerLifeBarsHtml, dilemmaHtml:careerDilemmaHtml, render:careerLifeRender, hash:careerLifeHash },
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },
   importer:{ levelFrom:importLevelFrom, level:importLevel, top:importTop, levelStep:importLevelStep, url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
-  drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
+  drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, ROUNDS:DRILL_ROUNDS, GAP:DRILL_GAP, DEFEND:DRILL_DEFEND, gapMark, gapRestage, defendRestage, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, eggRing, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, fanOwned:storeFanOwned, crest:storeCrest, shield:storeShield, theme:storeTheme, contrast:storeContrast, wallName:storeWallName, wallMail:storeWallMail, wallAsk:storeWallAsk, wallStep:storeWallStep, wallGo:storeWallGo, wallClose:storeWallClose, wall:() => storeWallUi, MAIL:STORE_MAIL, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak, fanAward:lockerFanAward, fanDrop:lockerFanDrop, fanHeld:lockerFanHeld, fanClubs:lockerFanClubs, fanHtml:lockerFanHtml, fanCabinet:lockerFanCabinet, cup:lockerCup },
   home:{ HL:HOME_HL, select:homeSelect, show:homeShow, first:homeFirst, render:renderHome, champ:champHome, champPick, comps:champComps, tier:() => homeTier, setTier:v => { homeTier = v; }, myClub:myClubTeam, myNat:myNatTeam, leagueLine:myLeagueLine, recordLine:myRecordLine, ratedStars, myFind:myClubFind, myPool, myIs, myPick, teamDefault, ownPick:teamOwnPick, importHome, importOffer, importShown, importCommit, ring:setFocus },
   behind:{ menuDemo, BV_DEMO_AT, BV_DEMO_CAM, BV_DEMO_IN, frameDraw, BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, artHairOf, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, BV_STAR, bvStack, artPalette, artPaletteOf, LOOK_SKIN, LOOK_HAIR, LOOK_STYLES, LOOK_LONG, LOOK_FEMALE, paintState:() => ({ ctx, SKIN, HAIR }) },
-  sound:{ SOUND, NAMES:SOUND_NAMES, SND, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
-  clarity:{ MATCH_PACE, matchPace, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
+  sound:{ SOUND, NAMES:SOUND_NAMES, SND, FILES:SOUND_FILES, SYNTH:SOUND_SYNTH, SAMPLE, takes:soundTakes, load:sndLoad, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
+  clarity:{ MATCH_PACE, matchPace, HALF_SECONDS, fmtClock, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
+  maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   get M() { return M; } };
 
 function start(data) {

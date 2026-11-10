@@ -471,7 +471,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   S.grant(['tryline.fan.toulouse']);
   ok(S.homePool() === 'fra', 'a club in another list opens that list (National · France)');
   X.setChamp(null); D.goHome(); T.home.champPick(T.home.myPool());
-  ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && $('t-eyebrow').textContent === 'Championship · France' && !$('t-default').hidden && $('t-default').textContent === 'Play as Toulouse', 'and France\'s league (National) has Play as Toulouse');
+  ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && $('t-eyebrow').textContent === 'Championship' && $('t-sum').innerHTML.replace(/<[^>]+>/g, '') === 'Men · National · France' && !$('t-default').hidden && $('t-default').textContent === 'Play as Toulouse', 'and France\'s league (National, on the folded line) has Play as Toulouse');
   X.poolPick('eng');
   ok($('t-default').hidden, 'Play as Toulouse only shows on its own list');
   C.set(null); C.newOpen(); C.clubOpen();

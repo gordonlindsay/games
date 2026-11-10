@@ -68,7 +68,11 @@ pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 
   }
   // the levels: one table, with what each can spend
   { const row = R.TEAM_LEVELS.map(l => [l.id, l.name, l.overall, l.stars, l.budget].join(':')).join();
-    ok(row === 'c5:Counties 5:40:1:0,c3:Counties 3:43:2:1,c1:Counties 1:49:2.5:3,r2:Regional 2:52:2.5:4,r1:Regional 1:58:3:6,nat:National League:61:3.5:7,top:Top Flight:72:4:11,champ:National Champions:75:4.5:12,euro:European Champions:90:5:17', `the level table (${row})`);
+    // re-pinned at the real order (2026-11-09): each level is the best built-in side of its league on the clubs' ladder (Farnham's Regional 1 61,
+    // England 2's Championship 64, the level named National League until the review, its id 'nat' unchanged), PR #14's 40 to 58 a step up; its European Champions (90) went with Bordeaux's 90, read as National Champions
+    ok(row === 'c5:Counties 5:43:2:1,c3:Counties 3:46:2:2,c1:Counties 1:52:2.5:4,r2:Regional 2:55:3:5,r1:Regional 1:61:3.5:7,nat:Championship:64:3.5:8,top:Top Flight:72:4:11,champ:National Champions:75:4.5:12', `the level table (${row})`);
+    const best = re => Math.max(...X.ALL_TEAMS.filter(t => re.test(t.league || '')).map(X.overallOf));
+    ok([[/Counties 5/, 'c5'], [/Counties 3/, 'c3'], [/Counties 1/, 'c1'], [/Regional 2/, 'r2'], [/Regional 1/, 'r1'], [/English Championship/, 'nat']].every(([re, id]) => best(re) === R.TEAM_LEVELS.find(l => l.id === id).overall) && R.TEAM_LEVELS.find(l => l.id === 'champ').overall === Math.max(...X.ALL_TEAMS.filter(t => !X.isNation(t)).map(X.overallOf)), 'each level is the best built-in side of its league, National Champions the best club');
     ok(R.TEAM_LEVELS.every(l => R.starsOfOverall(l.overall) === l.stars && R.abilitiesFor({}, 5 + l.budget) && X.overallOf(R.abilitiesFor({}, 5 + l.budget)) === l.overall), 'a level spent in full is its own overall and stars');
     ok(R.TEAM_LEVELS.find(l => l.id === 'champ').budget === X.BUDGET, 'and the old budget of 12 is the National Champions level');
   }
@@ -77,7 +81,7 @@ pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 
     ok(saved(229, 0) && saved(229, 0).results[0][0].hs === 229, 'a saved 229 keeps the Championship and the score');
     ok(saved(3, 264) && saved(3, 264).results[0][0].as === 264, 'and so does 3-264');
     ok(!saved(1000, 0) && !saved(-1, 0), 'only a number no match could make is a damaged save'); }
-  pending('PR #14\'s Wales Scotland Italy, its bands from 40 and its 22 nations (England 2 and Counties are in main\'s tiers: tools/teams.mjs 12)', () => {
+  pending('PR #14\'s Wales Scotland Italy, its bands from 40 and its 22 nations (England 2 and Counties are in main\'s tiers: tools/teams.mjs 12; its English bands are live since the real order, below)', () => {
   // the new lists
   ok(X.WALES_SCOTLAND_ITALY.map(t => t.name).join() === 'Glasgow,Cardiff,Swansea,Edinburgh,Treviso,Llanelli,Newport,Parma', 'Wales, Scotland and Italy, in table order');
   ok(X.ENGLAND_TWO.map(t => t.name).join() === 'Ealing,Bedford,Coventry,Worcester,Chinnor,Hartpury,Cornwall,Doncaster,Nottingham,Ampthill,Caldy,Richmond,Cambridge', 'England 2, in table order, the side from London left out');
@@ -96,6 +100,12 @@ pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 
   }
   ok(Math.max(...X.allNations().map(X.overallOf)) === 96, 'nations may go above it, and South Africa is 96');
   });
+  // PR #14's English bands, live in main's lists since the real order (2026-11-09): England 2 64 or 61, and each level of the English game
+  // starts where the last stops, Counties 5 up to the Premiership
+  ok(X.ENGLAND_TWO.every(t => X.overallOf(t) === (t.w > t.l ? 64 : 61)), 'England 2 is 64 with a winning record, else 61, between Regional 1 and the top flight');
+  { const band = re => X.ALL_TEAMS.filter(t => re.test(t.league || '')).map(X.overallOf), span = re => [Math.min(...band(re)), Math.max(...band(re))];
+    const steps = [/Counties 5/, /Counties 3/, /Counties 1/, /Regional 2/, /Regional 1/, /English Championship/, /English Premiership/].map(span);
+    ok(steps.every((v, i) => !i || v[0] >= steps[i - 1][1]) && steps.map(v => v.join('-')).join() === '43-43,46-46,49-52,52-55,58-61,61-64,67-75', `each level of the English game starts where the last stops (${steps.map(v => v.join('-')).join(', ')})`); }
   const WOMEN = { NZL:96, ENG:96, CDA:93, FRA:84, USA:72, IRE:72, AUS:70, RSA:64, ITA:64, SCO:61, WAL:58, FIJ:58, JPN:52, ESP:49, SAM:43 };
   ok(JSON.stringify(R.BUNDLED.women) === JSON.stringify(WOMEN) && !['GEO', 'POR', 'TGA', 'CHI', 'ROU', 'ARG', 'URU'].some(id => id in R.BUNDLED.women), "the women's table is bundled with its 15 nations");
   ok(R.BUNDLED.date === '2026-11-07', 'the table carries its date');
@@ -404,14 +414,14 @@ pending('6. the career ladder (PR #14\'s stages, dropped for main\'s club season
   Y.openBuilder(null);
   ok(labels($('bd-level-grid').innerHTML).join() === R.TEAM_LEVELS.map(l => R.starsWords(l.stars)).join(), 'the builder\'s level choice draws each level\'s stars');
   T.stamina.builderLevel('r1');
-  ok($('bd-level-stars').innerHTML.includes('aria-hidden') && $('bd-level-name').textContent === 'Regional 1 · 3 Stars', 'a chosen level has its stars beside its words');
+  ok($('bd-level-stars').innerHTML.includes('aria-hidden') && $('bd-level-name').textContent === 'Regional 1 · 3.5 Stars', 'a chosen level has its stars beside its words');   // re-pinned at the real order: Regional 1 is Farnham's 61, 3.5 stars (was 58, 3)
   { const made = X.custom(), n = made.length; D.openTeams('quick'); Y.openBuilder(null); T.stamina.builderLevel('top'); $('bd-name').value = 'Cubs'; $('bd-save').click();
     const cubs = made[made.length - 1];
     ok(made.length === n + 1 && cubs.name === 'Cubs' && cubs.level === 'top' && X.overallOf(cubs) === 72 && R.starsOf(cubs) === 4, `Top Flight and Save Team, with no + pressed, is a 72 and 4 stars (${X.overallOf(cubs)})`);
     made.length = n; }
   D.openTeams('champ'); I.open();
   { const u = I.state(); u.step = 'preview'; u.data = { club:{ name:'Bracknell RFC', kit:'#399913', trim:'#e4c200' }, league:[], teams:[] }; u.draft = { kit:'#399913', trim:'#e4c200', hoops:false }; u.level = 'r2'; I.render();
-    ok($('im-lv-name').textContent === 'Regional 2 · 2.5 Stars' && $('im-lv-stars').innerHTML === R.starsHtml(2.5, true), 'Import Club draws the level\'s stars beside its words'); }
+    ok($('im-lv-name').textContent === 'Regional 2 · 3 Stars' && $('im-lv-stars').innerHTML === R.starsHtml(3, true), 'Import Club draws the level\'s stars beside its words'); }   // re-pinned at the real order: Regional 2 is 55, 3 stars (was 52, 2.5)
   $('m-import').hidden = true;
   pending('stars on PR #14\'s screens: its Your Team panel, fixtures and tables (main\'s screens: tools/browser.mjs, tools/teams.mjs 12, tools/home.mjs 6b)', async () => {
   // team cards: every tab, men's and women's, a card's stars beside its overall, one for each team
@@ -454,7 +464,7 @@ pending('6. the career ladder (PR #14\'s stages, dropped for main\'s club season
   // Import Club's level
   D.openTeams('champ'); I.open();
   { const u = I.state(); u.step = 'preview'; u.data = { club:{ name:'Bracknell RFC', kit:'#399913', trim:'#e4c200' }, league:[], teams:[] }; u.draft = { kit:'#399913', trim:'#e4c200', hoops:false }; u.level = 'r2'; I.render();
-    ok($('im-lv-name').textContent === 'Regional 2 · 2.5 Stars' && $('im-lv-stars').innerHTML === R.starsHtml(2.5, true), 'Import Club draws the level\'s stars beside its words'); }
+    ok($('im-lv-name').textContent === 'Regional 2 · 3 Stars' && $('im-lv-stars').innerHTML === R.starsHtml(3, true), 'Import Club draws the level\'s stars beside its words'); }   // re-pinned at the real order: Regional 2 is 55, 3 stars (was 52, 2.5)
   $('m-import').hidden = true;
   const made = X.cleanTeam({ name:'Kestrels', id:'KES', kit:'#2050b0', trim:'#f2efe6', level:'r1', ...R.abilitiesFor({}, 11), key:'mystar' }, 0);
   ok(R.teamStars(made).includes('3 Stars'), 'a made team spent in full wears its level\'s stars');

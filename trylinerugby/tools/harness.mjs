@@ -11,14 +11,30 @@ if (process.env.BURST) js = js.replace(/const BURST = \{[^}]*\};/, `const BURST 
 // GKTUNE='{"band":[0.15,0.13,0.10]}' tries other goal-kick levers the same way
 if (process.env.GKTUNE) js = js.replace('// GKTUNE', 'Object.assign(KICK, ' + process.env.GKTUNE + ');');
 // CLUB_RATED=off rates no club from its table (every list's own abilities, as before the teams builder), the proof behind a re-pin;
-// CLUB_RATED='{"HAS":67}' tries other club ratings the same way
-if (process.env.CLUB_RATED) js = js.replace('// CLUB_TUNE', process.env.CLUB_RATED === 'off' ? 'for (const k in CLUB_RATED) delete CLUB_RATED[k];' : 'Object.assign(CLUB_RATED, ' + process.env.CLUB_RATED + ');');
+// CLUB_RATED=band is the table as the teams builder left it (5e0aa24: main's band, 61 to 75, Farnham 75, Scotland and Quins as written),
+// the proof behind the real order's re-pins; CLUB_RATED='{"HAS":67}' tries other club ratings the same way
+export const CLUB_BAND = {
+  NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,
+  TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,
+  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,
+  CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,
+  BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67, DUN:67,
+  EAL:67, BED:67, COV:67, WOR:67, CHN:67, HPY:67, CWL:67, DON:67, NOT:64, AMP:64, CAL:64, RIC:64, CAM:64,
+  FAR:75, WIM:72, IRO:72, GUI:70, COB:70, WEY:70, ORU:67, KIN:64, HAS:64, ALD:64, GDN:61,
+  EFF:64, WAN:61, EGH:61, MER:61, MIT:61, FEL:61,
+};
+{
+  const v = process.env.CLUB_RATED, wipe = 'for (const k in CLUB_RATED) delete CLUB_RATED[k];';
+  if (v) js = js.replace('// CLUB_TUNE', v === 'off' ? wipe : v === 'band' ? wipe + ' Object.assign(CLUB_RATED, ' + JSON.stringify(CLUB_BAND) + ');' : 'Object.assign(CLUB_RATED, ' + v + ');');
+}
 // NEW_LISTS=off leaves PR #14's England 2 and Counties off the team lists (ALL_TEAMS as before them: the menu demo draws from it), the
 // other half of that proof
 if (process.env.NEW_LISTS === 'off') js = js.replace(/\n  \{ key:'en2'[^\n]*/, '').replace(/\n  \{ key:'cty'[^\n]*/, '');
-// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion and Tackle duel trigger levers
+// MAUL='{"on":false}' turns the maul off (the build before it exactly: b706c3e on its branch; on wt/pr14int the pressure merge, and with PRESSURE='{"on":false}' as well 0b1293c: the proof behind every re-pin since); MAUL='{"cpu":{"base":0.1}}' tries other levers. Deep-merged, as the contact levers below
+if (process.env.MAUL) js = js.replace('// MAUL_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(MAUL, ${process.env.MAUL}); }`);
+// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' PRESSURE='{"on":false}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion, Tackle duel trigger and pressure levers
 {
-  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
+  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL', 'PRESSURE'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
   if (tune) js = js.replace('// CONTACT_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; ${tune} }`);
 }
 
@@ -210,6 +226,16 @@ export function scrumBot(side, rate = 6, hitP = 0.7) {
   if (b.hit && !b.hitDone && c.t >= b.hitAt) { inp.aPressed = true; b.hitDone = true; b.next = c.t + 1/rate; return; }
   if (rate > 0 && c.t >= 1.4 && c.t >= b.next) { inp.aPressed = true; b.next = c.t + 1/rate; }
 }
+// maulBot(side, rate): taps Push at `rate` a second (an 18% jitter on each interval) from the Drive call, the stick left alone, an ordinary
+// thumb in the maul's close-up (src/maul.js). bot() uses it, so a match the bot plays never leaves a maul undefended; with MAUL off no
+// maul ever opens, and the bot plays exactly as before
+export function maulBot(side, rate = +process.env.MAUL_RATE || 5.5) {
+  const c = T.M.cut, inp = T.sides.inputOf(side);
+  if (!c || c.kind !== 'maul' || c.result || !inp || rate <= 0) return;
+  const s = (c.mbot ||= [null, null]);
+  if (!s[side]) s[side] = { next: T.maul.MAUL.set + Math.random()*0.12 };
+  if (c.t >= s[side].next) { inp.aPressed = true; s[side].next = c.t + Math.max(0.05, (1/rate)*(1 + 0.18*gauss())); }
+}
 // lineBot(side, sigma): one Jump, at the perfect moment with a spread of sigma seconds
 export function lineBot(side, sigma = 0.10) {
   const c = T.M.cut, inp = T.sides.inputOf(side);
@@ -232,6 +258,7 @@ export function lineBot(side, sigma = 0.10) {
 export const HABITS = process.env.HABITS !== '0' && !!T.contact;
 const NOSPRINT = !!process.env.NOSPRINT, NOSPRINTBALL = !!process.env.NOSPRINTBALL, NODIVE = !!process.env.NODIVE;
 const OFFLOAD_P = process.env.BOT_OFF != null ? +process.env.BOT_OFF : 0.4;
+const MAUL_BOT = +process.env.MAUL_BOT || 0;              // MAUL_BOT=0.5: held in a tackle with the Maul lit, he calls it half the time (off unless asked: the bot never presses Switch in a tackle)
 const MOVE_BOT = process.env.MOVE_BOT || '', MOVE_P = process.env.MOVE_P != null ? +process.env.MOVE_P : 0.5;
 const MOVE_STEP = MOVE_BOT === 'step' || MOVE_BOT === 'both', MOVE_DUMMY = MOVE_BOT === 'dummy' || MOVE_BOT === 'both';
 const moveState = [null, null];                           // per seat: the carrier it is tracking, the men it has already stepped for, whether it has dummied this carry, and the gesture under way
@@ -262,6 +289,7 @@ export function bot(side = 0) {
   inp.jx = 0; inp.jy = 0;
   if (M.phase === 'cut' && M.cut && M.cut.duel) { duelBot(M.cut); return; }
   if (M.phase === 'cut' && M.cut && M.cut.kind === 'goal') { (M.cut.g.type === 'drop' ? dropBot : kickBot)(M.cut); return; }
+  if (M.phase === 'cut' && M.cut && M.cut.kind === 'maul') { maulBot(side); return; }   // a maul (src/maul.js): he taps. None opens with MAUL off
   if (!c || M.phase !== 'play') { if (HABITS) inp.cDown = false; if (moveState[side]) moveState[side].g = null; return; }
   const S = HABITS ? M.spr[side] : null, k = HABITS ? M.contact : null, held = !!(k && k.c === c);
   let hold = false;
@@ -275,6 +303,7 @@ export function bot(side = 0) {
     const jx = 1, jy = near < 8 ? (ny > 0 ? -0.7 : 0.7) : (c.y < 10 ? 0.5 : c.y > 60 ? -0.5 : 0);
     const m = Math.hypot(jx, jy); inp.jx = dir * jx / m; inp.jy = jy / m;
     if (held) {                                                 // in a tackle: the offload, on its cue, or nothing
+      if (MAUL_BOT && k.mbAt == null) { k.mbAt = T.maul.can(k) && Math.random() < MAUL_BOT; if (k.mbAt) { inp.bPressed = true; return; } }   // MAUL_BOT: the Maul instead
       if (k.botAt == null) k.botAt = T.contact.canOffload(k) && Math.random() < OFFLOAD_P ? 0.08 + Math.random() * 0.12 : -1;
       if (k.botAt > 0 && k.t >= k.botAt) { inp.aPressed = true; k.botAt = -1; }
     } else if (near < 2.6 && c.hold > 0.4 && Math.random() < 0.12) inp.aPressed = true;   // a tap: aPressed without aDown. Holding aDown past 0.18s would charge a long pass

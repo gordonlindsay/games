@@ -83,15 +83,52 @@ await h.lifecycle('message', {data:{type:'OFFLINE_STATUS'}, ports:[{postMessage:
 assert.equal(status.ready,false, 'readiness requires every shell entry');
 currentStore.set(scope + 'game.js', cachedScript);
 await h.lifecycle('message',{data:{type:'other'}}); assert.equal(h.skipped(),0);
-await h.lifecycle('message',{data:{type:'SKIP_WAITING'}}); assert.equal(h.skipped(),1);
+await h.lifecycle('message',{data:{type:'SKIP_WAITING'}}); assert.equal(h.skipped(),1, 'an older page\'s Update Game still switches');
+// The home menu asks with alone: the waiting worker takes over only when the game has one window at most, and answers either way
+{
+  const ask = async clients => {
+    const w = harness({ clients:clients.map(url => ({ url })) }); let answer = null;
+    await w.lifecycle('message', { data:{ type:'SKIP_WAITING', alone:true }, ports:[{ postMessage:value => answer = value }] });
+    return { answer, skipped:w.skipped() };
+  };
+  for (const [name, clients, applied] of [
+    ['the asking window alone', [scope], true],
+    ['no window counted (asked from an uncounted page)', [], true],
+    ['alone with the privacy page, the support page and another game open', [scope, scope + 'privacy.html', scope + 'support.html', 'https://example.test/games/other/', 'https://elsewhere.test/games/rugby/'], true],
+    ['a second game window', [scope, scope + 'index.html'], false],
+    ['a second game window with a query or a hash', [scope, scope + '?from=home#x'], false],
+    ['three game windows', [scope, scope, scope + 'index.html'], false],
+  ]) {
+    const { answer, skipped } = await ask(clients);
+    assert.equal(JSON.stringify(answer), JSON.stringify({ type:'SKIP_WAITING', applied }), name + ': the answer');
+    assert.equal(skipped, applied ? 1 : 0, name + (applied ? ': it takes over' : ': it waits'));
+  }
+  const noPort = harness({ clients:[{ url:scope }] });
+  await noPort.lifecycle('message', { data:{ type:'SKIP_WAITING', alone:true } });
+  assert.equal(noPort.skipped(), 0, 'asked alone with nowhere to answer: nothing');
+  // The first step, GAME_WINDOWS, wakes the worker and counts the game's windows the same way, and never switches
+  for (const [name, clients, count] of [['one game window', [scope], 1], ['none', [], 0], ['one with the privacy page and another game', [scope, scope + 'privacy.html', 'https://example.test/games/other/'], 1], ['two', [scope, scope + 'index.html?x'], 2]]) {
+    const w = harness({ clients:clients.map(url => ({ url })) }); let answer = null;
+    await w.lifecycle('message', { data:{ type:'GAME_WINDOWS' }, ports:[{ postMessage:value => answer = value }] });
+    assert.equal(JSON.stringify(answer), JSON.stringify({ type:'GAME_WINDOWS', count }), name + ': counted');
+    assert.equal(w.skipped(), 0, name + ': counting switches nothing');
+  }
+  const quiet = harness({ clients:[{ url:scope }] });
+  await quiet.lifecycle('message', { data:{ type:'GAME_WINDOWS' } });
+  assert.equal(quiet.skipped(), 0, 'counted with nowhere to answer: nothing');
+}
 for (const options of [{fail:'game.js'}, {badBytes:'styles.css'}, {putFailure:true}]) {
  const failed=harness(options); failed.stores.set('working-old-cache',new Map());
  await assert.rejects(failed.lifecycle('install')); assert.deepEqual([...failed.stores.keys()], ['working-old-cache']);
 }
-const tabs = harness({clients:[{url:scope}]});
-tabs.stores.set('tryline-shell-%2Fgames%2Frugby%2F-old',new Map());
-await tabs.lifecycle('install'); await tabs.lifecycle('activate');
-assert(tabs.stores.has('tryline-shell-%2Fgames%2Frugby%2F-old'), 'open older tabs retain their generation');
+// An older page's Update Game can switch a second game window still playing: its generation is kept. One game window (the one
+// switching, which reloads into the new generation) or other pages only: the old generation goes, so updates never pile up.
+for (const [name, clients, kept] of [['two game windows', [scope, scope + 'index.html'], true], ['the one game window', [scope], false], ['one game window and the privacy page', [scope, scope + 'privacy.html'], false], ['no window', [], false]]) {
+  const tabs = harness({ clients:clients.map(url => ({ url })) });
+  tabs.stores.set('tryline-shell-%2Fgames%2Frugby%2F-old',new Map());
+  await tabs.lifecycle('install'); await tabs.lifecycle('activate');
+  assert.equal(tabs.stores.has('tryline-shell-%2Fgames%2Frugby%2F-old'), kept, name + (kept ? ': the older generation is kept' : ': the older generation goes'));
+}
 const evicted = harness(); await evicted.lifecycle('install'); evicted.stores.clear();
 assert((await evicted.get(scope, 'navigate')).ok);
 assert((await evicted.get(scope+'game.js')).ok);
@@ -104,4 +141,4 @@ const expected = assembleWorker().version;
 const css = new URL('practice.css',root); const bytes=fs.readFileSync(css);
 try { fs.appendFileSync(css,'\n/* drift probe */\n'); assert.notEqual(assembleWorker().version,expected); }
 finally { fs.writeFileSync(css,bytes); }
-console.log('Offline core: atomic install, byte verification, immutable shell, navigation, exclusions, cache isolation, readiness, explicit update, content drift and the ratings file passed.');
+console.log('Offline core: atomic install, byte verification, immutable shell, navigation, exclusions, cache isolation, readiness, an update only for a lone game window (counted first, switching nothing), content drift and the ratings file passed.');
