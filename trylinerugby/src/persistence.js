@@ -9,10 +9,11 @@
    ========================================================= */
 const STORE = 'tryline.v1';
 /* hints: the card in the top corner naming each close-up's control (one player); twoHints: the same per player in two player, stored
-   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; Replay Tutorial empties it.
+   by keyboard half like twoDiff. tut: the tutorial moments this device has seen (TUT_IDS), each shown once; tutReset empties it (only
+   the tools call it since How to Play lost Replay Tutorial, 2026-11-09).
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
-const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
+const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop', 'maul'];   // appended only: a save's list is kept in this order
 const DRILL_IDS = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass', 'tag', 'back'];   // drillSeen: the drills whose Watch How has played on this device, each opened with it once (drill-demo.js)
 const COACH_IDS = ['offload', 'step', 'tackle', 'duel', 'kick', 'pass', 'sprint'];   // fleeting moments first, then the ones that stay available
 const COACH_LINE = {
@@ -80,7 +81,7 @@ function cleanTeam(t, i) {
   let left = teamBudget(t);
   for (const k of hasStamina ? keys : ['stamina', ...keys.filter(x => x !== 'stamina')]) { const v = clamp(Math.round(abilityOf(t, k) || 1), 1, 5); const spend = Math.min(v - 1, left); got[k] = 1 + spend; left -= spend; }
   for (const k of keys) team[k] = got[k];
-  if (teamLevelOf(t)) team.level = t.level;                      // no level is no field, so an old team reads and saves as it did
+  if (teamLevelOf(t)) team.level = teamLevelOf(t).id;            // no level is no field, so an old team reads and saves as it did; a level that has gone saves as the one it reads as (LEVEL_WAS)
   return team;
 }
 /* The short name filled in for you skips codes already on the scoreboard elsewhere: Farnham Minis is FAN, not FAR. */
@@ -102,7 +103,7 @@ function cleanSide(t) {
   if (!t || typeof t !== 'object') return null;
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 24);
   if (!name) return null;
-  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W94: src/locker.js)
+  const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W91: src/locker.js), and so does one dropped since (W94)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;

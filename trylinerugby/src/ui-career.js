@@ -18,8 +18,16 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
    trophy row, whose five kinds in two figures need 11px beside the overall at 667x375. One marked data-fit="wrap" (a transfer offer's
    league) that is still too wide at its smallest goes on two lines or more at its own size instead, a word never broken. A side's name
    in the fixture also steps down while it runs to three lines (South Africa Women, London North Women at 667x375, and the hub would
-   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. */
+   scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. A transfer offer's league still too wide on its
+   lines (a word of it wider than its column: Championship, the United Rugby Championship's, beside a shirt in a quarter of 667) takes the
+   card's whole width under the shirt, on every card of the window alike (.cr-offers.wide). */
 function careerFit(root) {
+  const offers = root.classList && root.classList.contains('cr-offers') ? [root] : [...root.querySelectorAll('.cr-offers')];
+  for (const o of offers) o.classList.remove('wide');
+  careerFitEach(root);
+  for (const o of offers) if ([...o.querySelectorAll('.lbl')].some(e => e.scrollWidth > e.clientWidth + 0.5)) { o.classList.add('wide'); careerFitEach(o); }
+}
+function careerFitEach(root) {
   for (const el of root.querySelectorAll('[data-fit]')) {
     el.style.fontSize = ''; el.style.letterSpacing = ''; el.style.whiteSpace = '';
     const over = () => el.scrollWidth > el.clientWidth + 0.5, lbl = el.classList.contains('lbl') || el.classList.contains('eyebrow');
@@ -102,7 +110,7 @@ function careerNewOpen() {
 /* The picks change in place, so a controller's ring stays on the button it pressed; the numbers are redrawn only for a new position. */
 function renderCareerNew() {
   const d = careerDraft;
-  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit>${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;
+  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit="wrap">${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;   // the league, stepped down, then on two lines (United Rugby Championship)
   [...$('cn-cat').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === (d.cat === 'women'))));
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
   [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
@@ -164,13 +172,25 @@ $('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:
 for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
   [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
 $('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
-function careerClubOpen() { careerDraft.pool = careerDraft.league; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on
+/* The club screen folds to one line as the team screen does (foldMove, src/ui-menus.js): Pick Your Club, where the list is (National ·
+   England), and Change. It arrives folded on his club's list; Change opens National | Local and the lists and becomes Done; a league picked
+   folds them again, a tier picked keeps them open for its league. No category here: Men | Women is New Player's. */
+let careerClubOpenOn = false;
+function careerClubOpen() { careerDraft.pool = careerDraft.league; careerClubOpenOn = false; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on, folded
+function careerClubFold(open) {
+  foldMove('s-career-club', $('cc-ctl'), $('cc-grid'), () => { careerClubOpenOn = !!open; renderCareerClubs(); $('s-career-club').scrollTop = 0; },
+    () => (careerClubOpenOn ? foldPressed('cc-tier') : foldFirst($('cc-grid'))));
+}
+$('cc-fold').addEventListener('click', () => careerClubFold(!careerClubOpenOn));
 function renderCareerClubs() {
   const d = careerDraft, pool = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool, tier = poolTier(pool);
   const press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
   press('cc-tier', '[data-tier]', b => +b.dataset.tier === tier);
   $('cc-nat').hidden = tier !== 1; $('cc-loc').hidden = tier !== 2; $('cc-league').hidden = !importLeague;
   for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
+  $('cc-ctl').hidden = !careerClubOpenOn;
+  $('cc-fold').textContent = careerClubOpenOn ? 'Done' : 'Change'; $('cc-fold').setAttribute('aria-expanded', String(careerClubOpenOn));
+  $('cc-sum').innerHTML = foldSum([TEAM_TIERS[tier], careerLeagueName(pool)]);   // National · England, Local · Surrey, Local · My League
   const clubs = careerClubList(pool);
   $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
     return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');   // its name with its stars under it, beside its overall
@@ -182,12 +202,12 @@ function careerClubPick(t) {                         // a club tapped: his, with
   d.club = t; d.league = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool;
   renderCareerNew(); careerShow('s-career-new');
 }
-function careerPoolPick(k) {
+function careerPoolPick(k, stay) {                  // a league picked folds the controls; stay keeps them open (a tier's first list)
   if (k === IMPORT_POOL && !importLeague) return;
   careerDraft.pool = k; if (poolTier(k) === 1) careerDraft.nat = k;
-  renderCareerClubs(); $('s-career-club').scrollTop = 0;
+  if (stay) { renderCareerClubs(); $('s-career-club').scrollTop = 0; } else careerClubFold(false);
 }
-function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur'); }   // National goes back to the league last looked at
+function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur', true); }   // National goes back to the league last looked at, open for its league
 {
   const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
   $('cc-tier').innerHTML = [1, 2].map(i => btn(`data-tier="${i}"`, TEAM_TIERS[i])).join('');   // National | Local: a club is never a nation
@@ -377,4 +397,4 @@ $('ce-back').addEventListener('click', goHome);
 
 /* the first controller press lands on the screen's main action: his own club on the club screen, Stay in the transfer window (a
    mashed button never signs him anywhere), the first country at a call-up */
-Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
+Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => (careerClubOpenOn && foldPressed('cc-tier')) || $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });

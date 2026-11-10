@@ -15,11 +15,13 @@ if (flags.has('--help')) {
 const cwd = fileURLToPath(new URL('../', import.meta.url));
 const jobs = [
   ['Build', ['tools/build.mjs', '--check']],
-  ...['offline-core', 'offline-ui', 'practice', 'polish', 'feedback', 'transitions', 'input-lifecycle', 'tutorial', 'hints', 'postmatch', 'season-data', 'season-ui', 'season-flow', 'arcade', 'camera', 'stamina', 'career', 'career-pro', 'traits', 'cups', 'importer', 'drills', 'drilldemo', 'training', 'together', 'kids', 'store', 'listing', 'native', 'ratings', 'yourteam', 'sides', 'sound', 'clarity'].map(name => [name, [`tools/${name}.mjs`]]),
+  ...['offline-core', 'offline-ui', 'practice', 'polish', 'feedback', 'transitions', 'input-lifecycle', 'tutorial', 'hints', 'howto', 'postmatch', 'season-data', 'season-ui', 'season-flow', 'arcade', 'camera', 'stamina', 'career', 'career-pro', 'traits', 'cups', 'importer', 'drills', 'drilldemo', 'training', 'together', 'kids', 'store', 'listing', 'native', 'ratings', 'yourteam', 'sides', 'sound', 'clarity'].map(name => [name, [`tools/${name}.mjs`]]),
   ['career-life', ['tools/career-life.mjs']],               // the career's Energy, Morale, Team Spirit and dilemmas
   ['locker', ['tools/locker.mjs']],                         // medals, balls and boots, the Legends (its browser part runs where Playwright is installed)
   ['career-season', ['tools/career-season.mjs']],           // scripted careers end to end with the real cups, old saves, every phase's screens
   ['home', ['tools/home.mjs']],                             // the home's headlines, My Team, the competitions by tier, the Legends' gate (its browser part runs where Playwright is installed)
+  ['pressure', ['tools/pressure.mjs']],                     // pressure, the spill and the egg's bounce; PRESSURE off pinned to b706c3e
+  ['maul', ['tools/maul.mjs']],                             // the maul: the trigger and its gates, the CPU's call, each result, the wheel, the world's maul, two player, the cards, MAUL off as before (its browser part runs where Playwright is installed)
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces', 'browser']) jobs.push([name, [`tools/${name}.mjs`]]);

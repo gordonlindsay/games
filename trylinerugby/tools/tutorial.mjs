@@ -1,7 +1,7 @@
 import { readGameSource } from './source.mjs';
-// The first-time tutorial (2026-10-17): the first time each duel kind, the scrum, the lineout, a goal kick and a drop goal comes up
+// The first-time tutorial (2026-10-17): the first time each duel kind, the scrum, the lineout, a goal kick, a drop goal and a maul comes up
 // on this device (with Hints On) play pauses under a card or two; Next then Play; a press advances; the world and the clock are
-// frozen; each moment is remembered once seen; Replay Tutorial forgets them; two player names the owner. Exits 1 on any failure.
+// frozen; each moment is remembered once seen; tutReset forgets them; two player names the owner. Exits 1 on any failure.
 // node tools/tutorial.mjs            (SEED=2 unless set)
 process.env.SEED ??= '2';
 import fs from 'fs';
@@ -83,6 +83,19 @@ begin('every moment');
   settings().tut = settings().tut.filter(id => id !== 'drop');
   { const c = drop(); runUntil(() => c.t >= D.CUT_IN, 30); inputs[0].bDown = false; $('tu-skip').click(); T.update(STEP); ok(c.g.stage === 'wait' && c.g.m === 0, 'the thumb lifted under the card: back to Wait for a fresh press');
     inputs[0].bPressed = true; inputs[0].bDown = true; T.update(STEP); ok(c.g.stage === 'hold', 'which starts the hold'); inputs[0].bDown = false; runUntil(() => M().phase !== 'cut', 900); }
+  // the maul (src/maul.js, 2026-11-09): your carrier held in a Wrap with a teammate near, B calls it, and its first close-up has the card
+  if (T.maul) {
+    fresh({ duels:'off' }); const m = M(), P = m.players, c = P.find(p => p.team === 0 && p.n === 2), mate = P.find(p => p.team === 0 && p.n === 1), q = P.find(p => p.team === 1 && p.n === 1);
+    m.phase = 'play'; m.set = null; m.contact = null;
+    for (const p of P) { Object.assign(p, { vx:0, vy:0, down:0, tcd:0, bind:null, offside:0 }); if (p !== c && p !== mate && p !== q) { p.x = p.team === 0 ? 30 : 20; p.y = 5 + p.n*8; } }
+    Object.assign(mate, { x:57.5, y:35.6 }); m.poss = 0; S.setCtrl(0, c);
+    let k = null;
+    for (let i = 0; i < 200 && !k; i++) { Object.assign(c, { x:60, y:35, vx:6, vy:0, bind:null }); Object.assign(q, { x:61.2, y:35, vx:-3, vy:0, tcd:0, down:0, bind:null }); m.contact = null; m.ball.state = 'held'; m.ball.carrier = c; const kk = T.contact.commitTackle(q, c, 'ai'); if (kk.T > 0) { kk.tier = 'wrap'; k = kk; } else T.contact.releaseBind(kk); }
+    inputs[0].bPressed = true; runUntil(() => M().phase === 'cut', 60);
+    ok(M().cut && M().cut.kind === 'maul' && D.tut() && D.tut().id === 'maul' && $('tu-title').textContent === 'Maul' && tuText() === 'Steer With the Stick', `the first maul: the card (${tuText()})`);
+    $('tu-next').click(); ok(D.tut() && D.tut().step === 1 && tuText() === 'Tap Push to Drive', 'Next'); $('tu-play').click(); ok(D.tut() == null, 'Play');
+    runUntil(() => M().phase !== 'cut', 900);
+  }
   ok(D.TUT_IDS.filter(id => id !== 'past').every(id => settings().tut.includes(id)), `every moment is now remembered (${settings().tut.join(', ')})`);
 }
 done('B every moment');
@@ -120,12 +133,15 @@ begin('words');
   { const drawn = all.map(a => [a[0], a[1], D.tutHtml(a[3]).replace(/<kbd class="kc">[^<]*<\/kbd>/g, 'KEY').replace(/<[^>]+>/g, '')]);   // each keycap read as the word KEY, so the sentence's own commas stay attached
     const wrong = drawn.filter(([, , t]) => bare.test(t) || /[{}]/.test(t));
     ok(drawn.length >= 48 && wrong.length === 0, `no card names a key as bare punctuation or a lone letter outside a keycap, on ${drawn.length} cards (${wrong.map(w => w[0] + ' ' + w[1] + ': ' + w[2]).join(' | ') || 'none'})`); }
-  ok(/<dt>Tutorial<\/dt><dd>The first time each close-up comes up, play pauses and a card says what to do\. <b>Replay Tutorial<\/b> below shows them all again\.<\/dd>/.test(html), 'the Help page\'s Tutorial entry');
+  // re-pinned 2026-11-09: How to Play's Tutorial entry promised that Replay Tutorial showed the cards again, and a press showed nothing
+  // (it only forgot them, for each close-up's next first time). How to Play is now a picture of the controls; the cards still come by themselves (D)
+  { const help = html.slice(html.indexOf('id="s-help"'), html.indexOf('</section>', html.indexOf('id="s-help"')));
+    ok(help.includes('id="h-pic"') && !/Tutorial|h-replay/.test(help) && !/id="h-replay"|>Replay Tutorial</.test(html), 'How to Play has no Tutorial entry and no Replay Tutorial button'); }
   ok(/<div class="modal" id="m-tut" hidden>/.test(html) && /<div class="row2" id="tu-row"><button class="btn" id="tu-skip">Skip<\/button><button class="btn" id="tu-next">Next<\/button><\/div>/.test(html) && /<button class="btn primary" id="tu-play" hidden>Play<\/button>/.test(html), 'the card: Skip | Next balanced, then Play on its own row');
 }
 done('C words');
 
-// D. Hints Off, headless, the memory, Replay Tutorial, pause under the card, two player
+// D. Hints Off, headless, the memory, tutReset, pause under the card, two player
 begin('memory and seats');
 {
   unseen(); settings().hints = false;
@@ -141,9 +157,9 @@ begin('memory and seats');
   X.restore({ settings:{ tut:'scrum' } }); ok(settings().tut.join() === 'scrum,goal', 'a string is ignored');
   const kept = globalThis.localStorage, mem = {}; globalThis.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
   X.save(); ok(JSON.parse(mem['tryline.v1']).settings.tut.join() === 'scrum,goal', 'save writes it'); settings().tut = []; X.load(); ok(settings().tut.join() === 'scrum,goal', 'load reads it back'); globalThis.localStorage = kept;
-  // Replay Tutorial
-  seenAll(); D.renderHintSwitches(); ok($('h-replay').disabled === false, 'Replay Tutorial is live with moments seen');
-  $('h-replay').click(); ok(settings().tut.length === 0 && $('h-replay').disabled === true, 'pressing it forgets them all and dims the button');
+  // tutReset: Replay Tutorial's call until the button left How to Play (2026-11-09), re-pinned to the call itself, which the tools keep
+  seenAll(); ok(settings().tut.length === D.TUT_IDS.length, 'every moment seen');
+  D.tutReset(); D.renderHintSwitches(); ok(settings().tut.length === 0, 'tutReset forgets them all, and the hint switches render with no Replay Tutorial to dim');
   fresh(); D.stage('past'); T.update(STEP); ok(D.tut() && D.tut().id === 'past', 'and the next Get Past has its card again'); runUntil(() => M().phase !== 'cut', 900);
   // pause under the card, then resume: the card is still there and Play still works
   unseen(); fresh(); D.stage('pass'); T.update(STEP); c = M().cut; runUntil(() => c.t >= D.CUT_IN, 30);

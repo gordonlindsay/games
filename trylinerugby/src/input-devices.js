@@ -134,6 +134,7 @@ function pollPads() {
     if (m >= 0.20 && !inp.latch) { const k = Math.min(1, (m - 0.20)/0.80)/m; inp.jx = ax*k; inp.jy = ay*k; inp.padStick = true; P.stick = true; if (m >= 0.5) setDev('pad'); }
     else if (m < 0.20 && P.stick) { P.stick = false; if (inp.padStick) { inp.jx = inp.jy = 0; inp.padStick = false; } }   // zeroed once, and only if the stick was the last writer
     if (join && (m >= 0.5) !== !!P.stickLit) { P.stickLit = m >= 0.5; lightPad(seat, 'stick', P.stickLit); }
+    if (m >= 0.20 || P.b.some(Boolean)) offlineInput();    // a button held or the stick off centre is input on every poll, so no update applies on the home mid-press and the quiet starts at the release (offline-client.js)
     if (menu) padNav(P, seat, ax, ay, m);
   }
 }
@@ -235,7 +236,7 @@ const DEFAULT_FOCUS = { 's-home':() => $('b-quick'), 's-join':() => $('j-go'), '
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
 function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
 function navSide(seat) {                                   // the one button a restricted seat may still press: Player 1's Change Team while Player 2 picks
-  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-change');
+  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-ctl').hidden ? $('t-fold') : $('t-change');   // folded, his press opens the controls first, so the Change Team he presses next is on screen
   return null;
 }
 function navMove(seat, dx, dy) {                           // the nearest candidate within 60 degrees of the direction: the distance along it plus twice the sideways offset

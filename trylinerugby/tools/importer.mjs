@@ -276,14 +276,17 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok($('im-league').innerHTML.includes('My League · 5 Teams') && ($('im-league').innerHTML.match(/class="jersey/g) || []).length === 5, 'and the league\'s shirts and size');
   ok($('im-cols').hidden && $('im-go').textContent === 'Save Club' && $('im-alt').textContent === 'Change Link' && !$('im-alt').classList.contains('warn') && focused === 'im-go', 'page colours need no picking; Save Club, focused, then Change Link beside Back');
   I.go();
-  const club = X.custom().find(t => t.name === 'Bracknell RFC'), NA = I.ABILITIES.length, TOP = 11;   // the page names Regional 1: 58, 11 points. PR #14 had I.top() here, its Farnham at 58 too; main's Local list tops at 75 (17), so the level the page names is the measure until the teams builder sets TEAM_LEVELS against main's band
-  ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && X.rateOf(club) === 11 && club.level === 'r1' && I.ABILITIES.every(([k]) => club[k] === 2 || club[k] === 3) && club.pace === 3,
+  const club = X.custom().find(t => t.name === 'Bracknell RFC'), NA = I.ABILITIES.length, TOP = 12;   // the page names Regional 1: re-pinned at the real order (2026-11-09), when TEAM_LEVELS came onto the clubs' ladder, to Farnham's 61, 12 points (was PR #14's 58, 11). It is I.top() again, as PR #14 had it: the best Local club is Regional 1's Farnham
+  ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && X.rateOf(club) === TOP && club.level === 'r1' && I.ABILITIES.every(([k]) => club[k] === 2 || club[k] === 3) && club.pace === 3,
     `Save Club adds it through cleanTeam, at the level its page names, Regional 1, spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
   ok(!$('m-import').hidden && I.state().step === 'mine' && $('im-title').textContent === 'Bracknell RFC' && !$('im-mine').hidden && $('im-row').hidden && $('im-go').hidden && !$('im-jersey').hidden && focused === 'im-make', 'then the card offers Make This My Team | Not Now, in the club\'s shirt, focus on Make This My Team');
+  X.fold(true);                                            // the team screen under the card with its controls opened
   $('im-not').click();
   ok(D.settings().myClub == null, 'Not Now leaves My Team as it was');
   ok($('m-import').hidden && D.settings().pool === I.POOL && X.teamPool() === 'my' && X.poolTier('my') === 2 && !$('t-league').hidden && $('t-tier').hidden, 'the card closes on My League (Local\'s, beside Surrey), Championship\'s list now that its competition is chosen on the home');
+  { const sum = $('t-sum').innerHTML.replace(/<[^>]+>/g, '');
+    ok(!X.opened() && $('t-ctl').hidden && sum === 'Men · Local · My League', `and folded, as a list picked folds: ${sum}`); }
   ok($('t-grid').innerHTML.includes('Sevenoaks') && $('t-grid').innerHTML.includes('Bracknell RFC'), 'My League lists the league and your teams');
   const sv = saved();
   ok(sv.importLeague.teams.length === 5 && sv.custom.some(t => t.name === 'Bracknell RFC'), 'both are in the browser save');
@@ -293,16 +296,17 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(opp.every(t => X.rateOf(t) > TOP - NA && X.rateOf(t) < TOP), `fixture opponents fall between a table's foot and its leader (${opp.map(X.rateOf).join(' ')})`);
   // the level: what the page says, what you choose, and what it does to the league
   { const lv = l => T.ratings.TEAM_LEVELS.find(x => x.id === l);
-    ok(I.levelFrom(['Counties 5 Surrey']) === 'c5' && I.levelFrom(['Counties 3 Hampshire']) === 'c3' && I.levelFrom(['Counties 1 Surrey/Sussex']) === 'c1' && I.levelFrom(['Regional 2 South East']) === 'r2' && I.levelFrom(['London & SE Division - Regional 1 South Central']) === 'r1' && I.levelFrom(['National League 2 West']) === 'nat' && I.levelFrom(['Top 14']) === 'top', 'a league named on the page gives its level');
+    ok(I.levelFrom(['Counties 5 Surrey']) === 'c5' && I.levelFrom(['Counties 3 Hampshire']) === 'c3' && I.levelFrom(['Counties 1 Surrey/Sussex']) === 'c1' && I.levelFrom(['Regional 2 South East']) === 'r2' && I.levelFrom(['London & SE Division - Regional 1 South Central']) === 'r1' && I.levelFrom(['RFU Championship']) === 'nat' && I.levelFrom(['Top 14']) === 'top', 'a league named on the page gives its level');
+    ok(I.levelFrom(['National League 2 West']) === 'r1' && I.levelFrom(['National League 1']) === 'r1' && lv('r1').overall <= Math.min(...X.ENGLAND_TWO.map(X.overallOf)) && lv('nat').name === 'Championship' && lv('nat').overall === Math.max(...X.ENGLAND_TWO.map(X.overallOf)), `a National League page (England's third and fourth tiers) is Regional 1, ${lv('r1').overall}, under every England 2 side; the Championship, England 2, is ${lv('nat').overall}`);
     ok(I.levelFrom(['Counties 4 Kent']) === 'c5' && I.levelFrom(['Counties 2 Essex']) === 'c3', 'a league between two levels takes the one under it');
     ok(I.levelFrom(['Friendlies', 'Bracknell RFC', 'Under 12s Championship', '', null]) === null, 'and a page that names none gives none');
-    ok(I.level({}, null).id === 'champ' && lv('r1').overall === 58 && I.top() === 17, 'nothing known: level with the best Local club (main\'s Farnham, 75: National Champions; PR #14\'s was 58, Regional 1)');
+    ok(I.level({}, null).id === 'r1' && lv('r1').overall === 61 && I.top() === 12, 'nothing known: level with the best Local club (Farnham, 61: Regional 1, as PR #14 had it with its Farnham at 58; main\'s band had him at 75, National Champions)');   // re-pinned at the real order
     ok(I.level({ level:'c3' }, null).id === 'c3' && I.level({ level:'c3' }, 'top').id === 'top', 'a page preset is used until you choose');
     const data = { league:['Ash Vale', 'Birch Lane', 'Cedar Park', 'Damson Hill', 'Elm Bridge', 'Fir Tree'].map(name => ({ name })), teams:[] };
     const at = id => I.sides(data, id).map(X.overallOf);
-    ok(at('r1')[0] === 58 && at('r1')[5] === 43 && JSON.stringify(at('champ')) === JSON.stringify(I.sides(data).map(X.overallOf)), `a league at Regional 1 runs 58 to 43, and with no level it is the default's, level with main's best Local club (${at('r1')})`);
-    ok(at('c5').every(v => v === 40) && at('top')[0] === 72 && at('top')[5] === 58 && at('euro')[0] === 90, `the league follows the level chosen (${at('c5')} / ${at('top')} / ${at('euro')})`);
-    ok(I.sides({ teams:data.league, league:[] }, 'c5').every(t => X.overallOf(t) === 40), 'and fixture opponents stay inside it at the floor');
+    ok(at('r1')[0] === 61 && at('r1')[5] === 46 && JSON.stringify(at('r1')) === JSON.stringify(I.sides(data).map(X.overallOf)), `a league at Regional 1 runs 61 to 46, and with no level it is the default's, level with the best Local club (${at('r1')})`);   // re-pinned at the real order: 61 to 46 (was 58 to 43), and the default is Regional 1 (was National Champions)
+    ok(at('c5').join() === '43,43,43,40,40,40' && at('top')[0] === 72 && at('top')[5] === 58 && at('champ')[0] === 75 && JSON.stringify(at('euro')) === JSON.stringify(at('champ')), `the league follows the level chosen, and a level that has gone (European Champions) is National Champions (${at('c5')} / ${at('top')} / ${at('euro')})`);   // re-pinned at the real order: Counties 5 is 43 (was 40), its foot one an ability less; European Champions (90) went with Bordeaux's 90
+    ok(I.sides({ teams:data.league, league:[] }, 'c5').every(t => X.overallOf(t) === 43), 'and fixture opponents stay inside it at the floor');
   }
   const ids = [...I.league().teams, ...X.custom()].map(t => t.id);
   ok(new Set(ids).size === ids.length && !ids.some(id => X.ALL_TEAMS.some(t => t.id === id)), `codes are unique and clear of the built-in sides (${ids.join(' ')})`);
@@ -317,9 +321,9 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
     for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
     ok(!$('im-kept').hidden && $('im-kept').textContent === `${mine.name} stays as you made it. This sets its league.` && $('im-level-lbl').textContent === 'League' && $('im-go').textContent === 'Save League', `a re-import says the level is its league's (${$('im-kept').textContent}, ${$('im-go').textContent})`);
     ok($('im-cols').hidden && I.state().draft.kit === mine.kit && I.state().draft.trim === mine.trim, 'and shows your own shirt, with no colours to pick that would do nothing');
-    I.state().level = 'euro'; I.render(); I.go();
+    I.state().level = 'champ'; I.render(); I.go();
     ok(JSON.stringify(X.custom().find(t => t.name === 'Bracknell RFC')) === before, 'and your team is as it was, at any level chosen');
-    ok(X.overallOf(I.league().teams[0]) === 90, `while the league follows the level (${X.overallOf(I.league().teams[0])})`); }
+    ok(X.overallOf(I.league().teams[0]) === 75, `while the league follows the level (${X.overallOf(I.league().teams[0])})`); }   // re-pinned at the real order: the top level is National Champions, 75 (European Champions, 90, went with Bordeaux's 90)
 
   pages['https://plain.example.org/'] = html200('<meta property="og:site_name" content="Plain Lane RFC"><table><tr><th>Team</th><th>P</th><th>W</th><th>L</th><th>Pts</th></tr><tr><td>Plain Lane</td><td>2</td><td>2</td><td>0</td><td>8</td></tr><tr><td>Quarry Hill</td><td>2</td><td>0</td><td>2</td><td>0</td></tr></table>');
   I.open(); $('im-url').value = 'plain.example.org'; I.go(); gate.go();

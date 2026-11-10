@@ -8,7 +8,8 @@
    changes. The open-play triggers read the labels updateHud already computed (cueOf in two player), so
    dropZone is never run again and nothing random is drawn. The tutorial pauses the first time each moment comes up on this device
    (while that seat's Hints are On): the close-up holds its first frame under a card or two, Next then Play, a tap anywhere or the
-   pass key advancing, the match clock and the world frozen; Replay Tutorial on How to Play forgets them all.
+   pass key advancing, the match clock and the world frozen. Nothing replays them: Replay Tutorial, which only forgot them, left How to
+   Play on 2026-11-09 (tutReset stays, for the tools). How to Play is now a picture of the controls; renderHowTo fills its two rows.
    ========================================================= */
 const hintShown = [null, null], hintKey = ['', ''], HO = [null, null];   // what each card shows now (the tools read it); the last content key; open-play state per seat
 const OPEN_HINTS = ['offload', 'drop', 'long', 'sprint', 'step', 'dummy'], OPEN_SECS = 3.0, OPEN_GAP = 4.0;
@@ -48,6 +49,7 @@ function hintFor(s) {                                      // the card for seat 
     if (c.kind === 'scrum' && practice) return c.result || practice.ready ? null : card('Driving', 'Stay Low in the Green', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Keep Tapping')]);   // the game's own card, and none on its ready card
     if (c.kind === 'scrum') return c.result ? null : card('Scrum', c.feed === t ? 'Your Ball' : 'Steal Their Ball', [row([chip('a', 'Push')], 'Push on Set'), row([chip('a', 'Push')], 'Then Tap Fast')]);
     if (c.kind === 'lineout') return c.outcome != null ? null : card('Lineout', c.team === t ? 'Your Throw' : 'Steal Their Throw', [row([chip('a', 'Jump')], 'Ball Halfway')]);
+    if (c.kind === 'maul') return maulHint(c, t, kb);        // src/maul.js
     if (c.kind === 'goal') {
       const g = c.g;
       if (g.watch || g.team !== t || c.t < CUT_IN || c.after || g.out) return null;
@@ -135,7 +137,7 @@ function renderHint(s, h) {
   $('ht' + s).hidden = h.kick;                              // kick cards sit inside the stick zone: no tick a steering thumb could hit
   $('hc' + s + '-b').innerHTML = h.rows.map(r => `<div class="hc-row">${r.chips.map(ch => chipHtml(s, ch)).join('<span class="hc-or">or</span>')}<span>${esc(r.text)}</span></div>`).join('');
 }
-function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines, Replay Tutorial
+function renderHintSwitches() {                            // the pause card's rows, the join cards' ticks, the penalty card's tick and sublines
   const pair = !!(M && M.two && mode === 'match');
   $('pz-hl0').textContent = pair ? 'Player 1 Hints' : 'Hints'; $('pz-hrow1').hidden = !pair; $('pz-cam').hidden = pair || !!practice;
   for (const s of [0, 1]) { const seg = $('pz-h' + s); if (seg && seg.children) [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === hintsOn(s)))); }
@@ -143,7 +145,6 @@ function renderHintSwitches() {                            // the pause card's r
   const ps = penCtx && M && M.two ? seatOfTeam(penCtx.team) : 0, on = hintsOn(ps);
   $('m-pen').classList.toggle('nohints', !on); $('ht-pen').classList.toggle('off', !on);
   $('p-goal-s').textContent = $('p-goal').disabled ? 'Out of Range' : '3 Points';
-  $('h-replay').disabled = !settings.tut.length;
 }
 /* the tutorial */
 function tutMoment(c) { return c.duel ? c.kind : c.kind === 'goal' ? (c.g.watch || !isHuman(c.g.team) ? null : c.g.type === 'drop' ? 'drop' : 'goal') : c.kind; }
@@ -176,6 +177,7 @@ function tutCards(id, s) {
     case 'block': return [['Block', 'Their Pass Crosses Your Player'], ['Block', 'Press ' + name('a', 'Block') + ' on the Real Release, Not the Dummy']];
     case 'scrum': return [['Scrum', 'Crouch, Bind, Set'], ['Scrum', 'Press ' + name('a', 'Push') + ' on Set, Then Tap It Fast']];
     case 'lineout': return [['Lineout', 'One Jumper Each'], ['Lineout', 'Press ' + name('a', 'Jump') + ' So Your Jumper Is Up When the Ball Arrives']];
+    case 'maul': return maulTutCards(name, kb ? (stickTurn(s) ? (R ? 'the Arrows' : '{KeyA} and {KeyD}') : R ? 'the Arrows' : '{KeyW} and {KeyS}') : 'the Stick');   // src/maul.js: the stick's up and down (across the screen in a behind view)
     case 'goal': return [['Goal Kick', 'Kick Between the Posts'], ['Goal Kick', aim + 'Hold ' + name('a', 'Kick') + ', Let Go in the Gold']];
     default: return [['Drop Goal', 'Three Points From Open Play'], ['Drop Goal', 'Hold ' + name('b', 'Kick') + ', ' + aim + 'Let Go in the Gold Before They Reach You']];
   }
@@ -207,7 +209,17 @@ $('m-tut').addEventListener('click', e => { if (e.target && e.target.closest && 
 $('tu-next').addEventListener('click', tutAdvance);
 $('tu-skip').addEventListener('click', tutPlay);
 $('tu-play').addEventListener('click', tutPlay);
-$('h-replay').addEventListener('click', () => { tutReset(); renderHintSwitches(); });
+/* How to Play's two rows on a computer or with a controller (.desk-only): the solo map's first key for each job, as the buttons' corner
+   keycaps show them (the arrows as CSS triangles, never a glyph), and the pad's glyphs by position, as the hint chips draw them */
+function renderHowTo() {
+  const kc = code => (ARROW_KEY[code] ? `<kbd class="kc ar ${ARROW_KEY[code]}"></kbd>` : `<kbd class="kc">${esc(KEYCAP[code] || code.replace(/^Key/, ''))}</kbd>`);
+  const caps = (codes, alt) => `<span class="ctl-kk${alt ? ' alt' : ''}">${codes.map(kc).join('')}</span>`, glyph = g => `<span class="ctl-kk">${g}</span>`;
+  const cell = (badge, label) => `<span class="ctl-k">${badge}${esc(label)}</span>`, K = KB.solo;
+  $('h-kb').innerHTML = '<span class="lbl">Keyboard</span>' + cell(caps(K.m.slice(0, 4)) + caps(['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'], true), 'Run')
+    + cell(caps([K.a[0]]), 'Pass') + cell(caps([K.b[0]]), 'Kick') + cell(caps([K.c[0]]), 'Sprint') + cell(caps(['KeyP']), 'Pause');
+  $('h-pad').innerHTML = '<span class="lbl">Controller</span>' + cell(glyph('<i class="pad stick"></i>'), 'Run') + cell(glyph(PAD_GLYPH.a), 'Pass')
+    + cell(glyph(PAD_GLYPH.b), 'Kick') + cell(glyph(PAD_GLYPH.c), 'Sprint') + cell(glyph('<i class="pad st"></i>'), 'Pause');
+}
 
 /* ---------- first-match coach (2026-10-30)
    One short line the first time each open-play move comes up on this device, through say() so it stays a banner (the on-pitch

@@ -120,10 +120,12 @@ function statusSync() {
 function cutLabels(c) {
   if (c.kind === 'scrum') return ['Push', null];
   if (c.kind === 'lineout') return ['Jump', null];
+  if (c.kind === 'maul') return ['Push', null];
   return duelLabels(c);
 }
 
 function fmtClock() {
+  if (M.realClock) { const s = Math.floor(Math.min(M.clock, periodLen())/M.realClock + 1e-6); return Math.floor(s/60) + ':' + String(s % 60).padStart(2, '0'); }   // a Kids match: each half (and the Golden Try) on a real clock, 0:00 to 2:00 (match.js)
   const mins = M.golden ? 80 + Math.min(M.clock/periodLen(), 1)*10 : (M.half-1)*40 + Math.min(M.clock/M.halfLen, 1)*40;   // extra time runs 80 to 90
   const mm = Math.floor(mins), ss = Math.floor((mins-mm)*60);
   return String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
@@ -156,7 +158,7 @@ function updateHud() {
   else if (goal) { [la, lb, cueA, cueB] = goalLabels(M.cut); aAct = bAct = !M.cut.after && !M.cut.g.out && (M.cut.g.watch || gs === 'aim' || gs === 'power' || gs === 'hold' || gs === 'wait'); }
   else if (cut) { [la, lb] = cutLabels(M.cut); cueA = !!(!M.cut.after && la); cueB = !!(!M.cut.after && lb); aAct = bAct = !M.cut.after; }
   else if (ours && proCalling(ht)) { la = 'Call for Ball'; lb = null; cueA = cueB = false; aAct = play && proCanCall(); bAct = false; }   // Pro Mode: a teammate has it (career-pro.js)
-  else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl; la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; cueA = la === 'Offload'; cueB = false; aAct = play && carrying && (!held || cueA); bAct = play && carrying && !held; }   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
+  else if (ours) { const carrying = b.state === 'held' && b.carrier === ctrl, maul = held && maulCan(k); la = held && canOffload(k) ? 'Offload' : passLong ? 'Long' : 'Pass'; lb = ctrl ? kickLabel(M.ctrl.team) : 'Kick'; if (maul) lb = 'Maul'; cueA = la === 'Offload'; cueB = maul; aAct = play && carrying && (!held || cueA); bAct = play && carrying && (!held || maul); }   // held with a man near, B is the Maul (src/maul.js); the kick label is still read, as before   // own pass in flight: neither action can act; held in a tackle, only an available Offload lights Pass
   else { const tagging = practice && practice.tagOnly; la = tagging ? 'Pull Tag' : 'Tackle'; lb = proPinned(ht) ? null : 'Switch'; cueA = false; cueB = switchUseful(ht); aAct = play && (tagging ? drillCanPull(ctrl) : canDive(ctrl)); bAct = play; }   // Tackle (Pull Tag for the youngest's drills) lights up only when a press would act now. Switch pulses when the man in the ring can still meet the ball and yours is behind it
   const S = M.spr[ht], sprOn = D ? !!D.cOn : !cut && sprintOn(ht), sprCue = sprOn && S.cue > 0;   // Sprint: dim exactly when a press would do nothing (the same test the press makes)
   const duel = cut && M.cut.duel;

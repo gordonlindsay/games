@@ -126,7 +126,7 @@ function drawSeatMark(t, cx, cy, r, off) {
   ctx.globalAlpha = a0;
   const cue = cueOf(t);
   if (cue) {
-    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' || cue === 'Switch' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, G · SWITCH, / · TACKLE
+    const text = (cue === 'Long' ? cue : seatKey(s, cue === 'Drop Goal' || cue === 'Switch' || cue === 'Maul' ? 'b' : 'a') + ' · ' + cue).toUpperCase(), y = cy + r*2.1;   // the key, then the word: F · OFFLOAD, G · DROP GOAL, G · SWITCH, / · TACKLE
     ctx.font = `800 12px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const m = ctx.measureText(text), tw = ((m && m.width) || text.length*6.5) + 12;
     ctx.fillStyle = 'rgba(8,14,10,.82)'; rrect(cx - tw/2, y - 9, tw, 18, 4); ctx.fill();
@@ -139,7 +139,7 @@ function cueOf(t) {                                        // the word the big o
   const b = M.ball, k = M.contact;
   if (ourBall(t)) {
     if (b.state !== 'held' || b.carrier !== c) return null;
-    if (c.bind) return k && k.c === c && canOffload(k) ? 'Offload' : null;
+    if (c.bind) return k && k.c === c && canOffload(k) ? 'Offload' : k && k.c === c && maulCan(k) ? 'Maul' : null;   // the Maul when no Offload is lit (src/maul.js)
     const p = sideOf(t).pass;
     if (p && p.mode === 'hold' && p.t >= LONG.arm && passAim(c, inputOf(t).world().y).far) return 'Long';
     return kickLabel(t) === 'Drop Goal' ? 'Drop Goal' : null;

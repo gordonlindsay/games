@@ -970,6 +970,29 @@ const RING = 0.6, WHITE = 'rgba(244,241,232,.95)', frameLog = () => capture(() =
     install(); stage(2); S.cam = 2; T.practice.start('cones'); D.render(STEP); ok(held() && !B.behindOn(), 'a drill keeps them: every Training Ground game draws with them'); T.practice.leave();
     fresh(0); inPlay(); D.render(STEP); ok(gone(), 'and a Top match after a drill frees them');
     install(); fresh(0); inPlay(); T.practice.start('egg'); ok(A.state === 'ready', 'a drill after a Top match keeps art already in'); T.practice.leave(); B.artFree();
+    { // with the art in, no Skills Mini Game draws a code-drawn man on any frame: anyone with no picture to hold is tinted at once, past the per-frame
+      // budget, as in the demo (render-art.js owed). A code-drawn man paints his skin in one of the looks' tones, which the art never sets as a fill.
+      // Whether a frame runs out of tints on its own turns on the draws, not the screen: without owed, the kick's close-up overflows on seeds 7 and 8
+      // and not on 1 to 6, at 844x390 and 667x375 alike, and Driving's on every seed. So each drill plays on seed 7 at both phone sizes, and then once
+      // more with every frame's tints spent before a man is drawn, which leaves owed the only way in for anyone new on any seed
+      const seen = S.drillSeen, skin = new Set(B.LOOK_SKIN), ids = T.drills.DRILLS.map(d => d.id); S.drillSeen = ids;
+      const play = (W, H, spent) => {
+        D.view(W, H); B.artFree(); install(); S.cam = 2; const code = {};
+        if (spent) Object.defineProperty(B.BV, 'bakes', { configurable:true, get:() => Infinity, set:() => {} });
+        try {
+          for (const id of ids) {
+            reseed(7); T.practice.start(id); $(id === 'circle' ? 'pr-runner' : 'pr-retry').click(); code[id] = 0;
+            globalThis.__ctxSpy = (k, a) => { if (k === 'fillStyle' && skin.has(a[0])) code[id]++; };
+            try { for (let i = 0; i < 400 && T.practice.state() && !T.practice.state().done; i++) { if (i % 7 === 0) T.input.aPressed = true; T.update(STEP); D.render(STEP); } } finally { globalThis.__ctxSpy = null; }
+            T.practice.leave();
+          }
+        } finally { if (spent) { delete B.BV.bakes; B.BV.bakes = 0; } }
+        return code;
+      };
+      const show = code => Object.entries(code).map(([k, n]) => k + ' ' + n).join(', '), none = code => Object.values(code).every(n => n === 0);
+      for (const [W, H] of [[844, 390], [667, 375]]) { const code = play(W, H, false); ok(none(code), `with the art in, every Skills Mini Game draws every man from the art from his first frame at ${W}x${H}, the close-ups' packs and kickers included (${show(code)})`); }
+      { const code = play(844, 390, true); ok(none(code), `and with every frame's tints already spent, anyone with no picture to hold still gets his, in every Skills Mini Game (${show(code)})`); }
+      B.artFree(); S.drillSeen = seen; D.view(844, 390); }
     install(); stage(2); B.artFree();
     const live = { Image:globalThis.Image, fetch:globalThis.fetch, create:document.createElement };
     document.createElement = fakeCanvas(page()); globalThis.Image = Fine; globalThis.fetch = goodJson;
