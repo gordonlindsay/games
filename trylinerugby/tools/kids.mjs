@@ -625,7 +625,10 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // Quick Match on Easy, Normal and Hard at 2 minutes and Normal at 4 and 6 (a first half each, the harness's player on the stick, and the
   // clock at its hooter), Two Player with the setting on Kids, and AI v AI and the demo asked to play Kids. The same runs on 909fe3a, the
   // build before (GAME=<its index.html> KIDS_PRINT=1), gave PIN.
-  const PIN = '1f0hz9i 12yifyb trg1ag ec8vp2 yio7xz 1db7d9g 1wytmos 1if8lrm';
+  // Re-pinned at the merge of wt/kidshalf into wt/pr14int (2026-11-10), after pressure and the maul joined: both change these matches on
+  // purpose. Proof: PRESSURE='{"on":false}' MAUL='{"on":false}' node tools/kids.mjs still gives 909fe3a's pin, 1f0hz9i 12yifyb trg1ag
+  // ec8vp2 yio7xz 1db7d9g 1wytmos 1if8lrm (the Two Player part, 1db7d9g, does not move either way)
+  const PIN = 'to1ovz lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
   const pin = () => {
     const out = [];
     s.played = 99; s.kidsR = 0;

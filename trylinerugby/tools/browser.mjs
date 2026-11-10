@@ -114,7 +114,7 @@ try {
       await pg.ev(`(() => { ${PRE} ${js} })()`); await wait(120);
       const m = JSON.parse(await pg.ev(MEASURE));
       ok(m.n === want, `${name}: ${where} draws ${want} sets of stars (${m.n})`);
-      ok(m.min >= 12, `${name}: ${where}: no star under 12px (${m.min})`);
+      ok(m.min >= 12 - 0.005, `${name}: ${where}: no star under 12px (${m.min})`);   // 0.005px allows the layout's float noise only: a run on 2026-11-10 measured 11.99997 for a 12px star, then 12 on two reruns
       ok(!m.out.length, `${name}: ${where}: every star stays in its card (${m.out})`);
       ok(!m.hit.length, `${name}: ${where}: stars clear of the overall and the name (${m.hit})`);
       ok(m.side <= 0, `${name}: ${where}: nothing goes sideways (${m.side})`);
