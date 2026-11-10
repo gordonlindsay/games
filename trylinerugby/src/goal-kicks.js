@@ -26,13 +26,13 @@ function penChoice(team, x, y, c, g) {
   else if (c === 'touch') {
     const nx = clamp(x + dirOf(team)*(20 + M.nat[team].kicking*3 + traitTouch(team, x, y)), 15, 105);   // a Long Boot finds touch further on (src/traits.js)
     sfx('kick');
-    lineout(team, nx, y, 'Kick to Touch');   // after the hooter too: the kicking side gets its lineout
+    restart('penaltyTouch', team, nx, y);    // after the hooter too: the kicking side gets its lineout
   } else startSet({ kind:'tap', team, x, y, t:0.8, snap:true, label:'Tap and Go', then:s => releaseTo(s.team, s.x, s.y, 'tap') });
 }
 function scoreTry(p) {
   if (practice) { practiceTry(p); return; }
   const team = p.team;
-  M.score[team] += 5; M.tries[team]++;
+  M.score[team] += M.rules.points.try; M.tries[team]++;
   if (M.career) careerDeed('tries', p);                    // a career match: a try by your player
   heat(team, 'try'); fireOut(1 - team);                    // a try lights the scorers and puts the other side out
   goldenScored();
@@ -221,7 +221,7 @@ function scoreGoal(g) {                                    // the verdict moment
   g.judged = true;
   const { team, ok, kind } = g;
   if (ok) {
-    M.score[team] += kind === 'conversion' ? 2 : 3; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
+    M.score[team] += M.rules.points[kind === 'conversion' ? 'conversion' : kind === 'drop' ? 'dropGoal' : 'penalty']; (kind === 'drop' ? M.stats.dg : M.stats.gk).made[team]++;
     if (kind === 'conversion') M.stats.conv.made[team]++; else if (kind === 'penalty') M.stats.pen.made[team]++;
     if (M.career) careerDeed('goals', g.kicker);            // a career match: a goal kicked by your player
     goldenScored();
@@ -240,7 +240,7 @@ function settleGoal(g) {
   const w = toWorld(g.team, g.X.x, g.X.y), x = clamp(w.x, 0, 120), y = clamp(w.y, 0, 70);
   placeBall(x, y);
   const { team, ok, kind } = g;
-  startSet({ kind:'score', team, x, y, t:M.phase === 'goal' ? 1.0 : 0.6, then:() => deadBall(() => (kind === 'penalty' && !ok) ? dropOut(1-team) : kickoff(1-team)) });
+  startSet({ kind:'score', team, x, y, t:M.phase === 'goal' ? 1.0 : 0.6, then:() => restart((kind === 'penalty' && !ok) ? 'goalMissed' : 'afterScore', 1-team) });
 }
 /* ---------- the close-up ---------- */
 function startGoalCut(g) {
@@ -311,9 +311,9 @@ function goalLabels(c) {
 }
 function dropGoal(team, quiet) {                           // quiet: the close-up has already shown the verdict and added the points
   lockerTally('drops', team);                              // every drop goal, the open-play kind too, for the Locker (a plain counter, src/locker.js)
-  if (!quiet) { M.score[team] += 3; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
+  if (!quiet) { M.score[team] += M.rules.points.dropGoal; say('Drop Goal', 'big', team); sfx('roar'); goldenScored(); }
   placeBall(M.ball.x, M.ball.y);
-  startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => deadBall(() => kickoff(1-team)) });
+  startSet({ kind:'score', team, x:M.ball.x, y:M.ball.y, t:quiet ? 0.6 : 1.6, then:() => restart('afterScore', 1-team) });
 }
 
 /* ---------- drop goals ----------
@@ -474,7 +474,7 @@ function applyDrop(c) {
   if (g.X.land) { kk.hold = 0; launchG3d(g, kk, Math.min(0.6, g.X.t)); return; }   // the flight the cut left 0.6s into
   if (g.res === 'post' || g.res === 'bar') { looseOffWood(g); return; }
   placeBall(clamp(w.x, 0, 120), clamp(w.y, 0, 70));
-  deadBall(() => dropOut(1 - team));                       // wide, or under the bar and dead: their 22
+  restart('goalMissed', 1 - team);                         // wide, or under the bar and dead: their 22
 }
 function stopSpot(g, q, back) {                            // where the charger who stopped the kick lands: `back` metres from the kick spot on the side he came from, in the world
   const r = g.rush && g.rush.find(r => r.q === q), ux = r ? r.ux : -1, uy = r ? r.uy : 0;
@@ -509,7 +509,7 @@ function updateG3d(dt) {                                   // the g3d ball in th
       if (scores(res)) { if (f.drop) M.stats.dg.made[team]++; dropGoal(team); return; }
       if (res === 'post' || res === 'bar') { looseOffWood({ team, X }); sfx('post'); return; }
       placeBall(clamp(b.x, 0, 120), clamp(b.y, 0, 70)); sfx('whistle');
-      deadBall(() => dropOut(1 - team));
+      restart('goalMissed', 1 - team);
       return;
     }
     b.state = 'loose'; b.f = null; b.vx = v.x*0.32; b.vy = v.y*0.32; b.vz = 3.2; b.z = 0.01;
@@ -518,7 +518,7 @@ function updateG3d(dt) {                                   // the g3d ball in th
   if (b.y < 0 || b.y > 70) {
     const own22 = team === 0 ? f.x0 <= 32 : f.x0 >= 88;
     placeBall(b.x, clamp(b.y, 0, 70));
-    deadBall(() => lineout(1 - team, own22 ? b.x : f.x0, b.y, own22 ? 'Into Touch' : 'Out on the Full'));
+    restart(own22 ? 'touchKick' : 'outOnFull', 1 - team, own22 ? b.x : f.x0, b.y);
     return;
   }
   if (f.t/X.t > 0.45 && b.z < 2.7) {

@@ -189,7 +189,7 @@ function tackle(c, q, o) {
     sfx('tackle'); buzz(30);
     if ((c.x-ownLine(team))*d < 0) {
       placeBall(c.x, c.y);
-      deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
+      restart('heldInGoal', 1-team, c.x, c.y);
       return;
     }
     placeBall(clamp(c.x,1,119), clamp(c.y,1,69));
@@ -202,7 +202,7 @@ function tackle(c, q, o) {
   if ((c.x-ownLine(team))*d < 0) {
     c.down = 1.25; q.down = 1.0; q.tcd = 1.0;
     placeBall(c.x, c.y);
-    deadBall(() => scrum(1-team, c.x, c.y, 'Held in Goal'));
+    restart('heldInGoal', 1-team, c.x, c.y);
     return;
   }
   const bx = clamp(c.x - d*0.4, 1, 119), by = clamp(c.y, 1, 69), ball = { x:bx, y:by };   // the ball goes behind the tackled man
@@ -231,7 +231,7 @@ function wrongFoot(team, x, y) {                           // the side that lost
 }
 function resolveRuck(s) {                                  // the ruck is automatic: a flat penalty roll, then a flat turnover roll
   const att = s.team, def = 1-att;
-  if (rnd() < RUCK.pen) { penalty(rnd() < 0.55 ? def : att, s.x, s.y); return; }
+  if (rnd() < RUCK.pen) { restart('ruckPenalty', rnd() < 0.55 ? def : att, s.x, s.y); return; }
   const pT = s.dom ? s.domP : RUCK.flatBase + (powerOf(def) - powerOf(att))*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
     M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
@@ -329,7 +329,7 @@ function knockBeat(p) {                                    // a knock-on in a ma
   b.z = 1.0; b.vx = d*2.2 + 0.25*p.vx; b.vy = 0.25*p.vy; b.vz = 1.2;   // forward out of his hands, on along his run: that is what a knock-on is. No draw until it lands: the hops are the egg's
   eggStart(b, p.team, false, (p.vy >= 0 ? 1 : -1)*(K.spin[0] + K.spin[1])/2);
   const late = M.hooter && !M.demo;                        // the dead ball is decided at the knock-on, as deadBall does without the beat: one before the hooter keeps its scrum if the hooter goes in the beat
-  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); if (late) endHalf(); else scrum(team, x, y, 'Knock-On'); } });
+  startSet({ kind:'knock', team, x, y, t:PRESSURE.knock, then:() => { sfx('whistle'); if (late) endHalf(); else restartNow('knockOn', team, x, y); } });
   return true;
 }
 function eggLead(b) {                                      // where the chase runs for a hopping ball: where this hop comes down, or a little ahead of a roll; any other ball, where it is
@@ -451,13 +451,13 @@ function carrierChecks(c) {
   const d = dirOf(c.team);
   if (c.y < 0 || c.y > 70) {
     placeBall(c.x, clamp(c.y,0,70)); sfx('whistle');
-    deadBall(() => lineout(1-c.team, c.x, c.y, 'Into Touch'));
+    restart('touchCarried', 1-c.team, c.x, c.y);
     return true;
   }
   if ((c.x-oppLine(c.team))*d >= 0.3) { scoreTry(c); return true; }
   if (c.team === 0 ? c.x < 0 : c.x > 120) {
     placeBall(c.x, c.y);
-    deadBall(() => scrum(1-c.team, c.x, c.y, 'Dead Ball'));
+    restart('deadBallCarried', 1-c.team, c.x, c.y);
     return true;
   }
   return false;

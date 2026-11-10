@@ -121,7 +121,7 @@ function resolveScrum(c) {
     say(over ? 'Pushover' : 'Scrum Penalty ' + M.nat[t].id, '', t); sfx('whistle');
     finishCut(() => {
       if (over) { const q = nearestFree(t, mx, y) || M.players.find(p => p.team === t); q.x = oppLine(t) + dirOf(t)*0.8; q.y = y; scoreTry(q); }
-      else penalty(t, mx, y);
+      else restart('scrumPenalty', t, mx, y);
     });
     return;
   }
@@ -141,7 +141,7 @@ function scrumBar(c) {                                     // the bar's fill, -1
 }
 function autoScrum(s) {
   const F = s.team, o = 1-F, edge = (powerOf(F) - powerOf(o))*0.03, r = rnd();
-  if (r < 0.035) { penalty(rnd() < 0.6 + edge ? F : o, s.x, s.y); return; }
+  if (r < 0.035) { restart('scrumPenalty', rnd() < 0.6 + edge ? F : o, s.x, s.y); return; }
   if (r < 0.035 + clamp(0.07 - edge, 0.02, 0.12)) { say('Against the Head', 'small'); releaseTo(o, s.x, s.y, 'scrum'); return; }
   releaseTo(F, s.x, s.y, 'scrum');
 }
