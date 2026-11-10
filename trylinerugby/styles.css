@@ -291,6 +291,7 @@ h2.title.gold{color:var(--flood)}
 #banner .msg.coach{font:700 18px/1.25 var(--body);text-transform:none;letter-spacing:0;padding:8px 14px;max-width:min(28em,92vw)}
 #banner .msg.big{border:0;background:none;padding:0;font-size:clamp(84px,22vw,170px);color:var(--chalk);text-shadow:0 5px 0 var(--k,#000),0 8px 0 rgba(0,0,0,.45),0 0 40px rgba(0,0,0,.5)}
 #banner .msg.fire{color:#ffcf3d;text-shadow:0 5px 0 #ff5a14,0 8px 0 rgba(0,0,0,.45),0 0 48px rgba(255,90,20,.65)}   /* On Fire */
+#banner .msg.big .grade{text-shadow:0 2px 0 rgba(0,0,0,.6),0 0 12px rgba(0,0,0,.5)}   /* a word over a big banner (On Fire lit by a Line Break): the small grade without the big letters' drop */
 #banner .msg.hit{animation:pop .22s ease-out,thud .3s ease-out}   /* Big Hit lands with a jolt */
 @keyframes thud{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,2px)}}
 @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:none;opacity:1}}

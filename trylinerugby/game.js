@@ -1060,6 +1060,7 @@ function maxSpeed(p) {
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
   if (onFire(p.team)) f *= ARCADE.fire.speed;
+  if (edgeCarry(p)) f *= EDGE.pace;                          // Easy: your carrier, a little quicker with the ball (src/edge.js)
   f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
   if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp)*traitBurst(p, sp);   // a Burst sprints a little quicker
@@ -1455,7 +1456,7 @@ const slide = (p, x, y, T, spin) => { T = Math.max(T, hyp(x - p.x, y - p.y)/9); 
 const matchMild = () => !!(M && (M.kids || catOf(M.nat[0]) === 'minis'));   // a Kids match, or a Minis one (Men | Women | Minis: every side of a match is one category)
 function tag(text, x, y) { if (M.auto) return; st('tag_' + text); M.tags.push({ text, x, y, t:0 }); while (M.tags.length > 2) M.tags.shift(); }
 function impact(x, y) { M.fx.push({ x, y, t:0 }); }
-function hitStop(ms, shake) { if (!interactive()) return; M.stop = ms/1000; if (!RM) M.shake = M.shakeT = shake || 0.12; }   // shake: its length, which also sets its size
+function hitStop(ms, shake) { if (!interactive()) return; M.stop = ms/1000; if (!RM && shake !== 0) M.shake = M.shakeT = shake || 0.12; }   // shake: its length, which also sets its size; 0 holds the world with no shake (a Line Break, src/edge.js)
 function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI defender's reach), 'contact' (your ringed man's automatic tackle), 'dive' (a Tackle press), 'ankle' (a dive from behind)
   const d = dirOf(c.team), rx = q.x - c.x, ry = q.y - c.y, rm = hyp(rx, ry) || 1;
   const cv = hyp(c.vx, c.vy), cosF = cv > 0.5 ? (rx*c.vx + ry*c.vy)/(rm*cv) : rx*d/rm;
@@ -2952,8 +2953,10 @@ function tackleChance(q, c, mode, stepped) {
   let p = mode === 'dive' ? (dist(q, c) < 1.7 ? CONTACT.dive[0] : CONTACT.dive[1]) : mode === 'contact' ? CONTACT.contact[levelOf(q.team)] : (cpuSide(q.team) ? diffOf(q.team).cpuTackle : M.two ? TWO.tackle[levelOf(c.team)] : diffOf(q.team).myTackle);   // an AI tackler: the CPU's rate at its level, or (two player) the rate the carrier's level faces
   p += ((M.career ? careerAbility(q, 'power') - careerAbility(c, 'power') : powerOf(q.team) - powerOf(c.team)) + traitEdge(q, c))*0.05;   // a career match: your player's own power. An Engine keeps most of his (src/traits.js)
   if (M.kids && isHuman(q.team) && mode !== 'ai') p += KIDS.tackle;   // Kids: your ringed man's contact tackle and dive
-  if (stepped) p *= MOVES.step.odds;
+  const edge = mode === 'ai' && cpuSide(q.team) && edgeMan(c);   // Easy: the CPU's tackle on your carrier (src/edge.js)
+  if (stepped) p *= MOVES.step.odds*(edge ? EDGE.step : 1);
   if ((q.x - c.x)*dirOf(c.team) < -0.3) p *= 0.75;
+  if (edge) p *= EDGE.hold;
   return clamp(p, 0.08, 0.95);
 }
 function setBoost(p, mul, secs) {
@@ -3284,6 +3287,7 @@ function applyDuel(c) {
       const m = hyp(1, 0.3); face(U, 1/m, 0.3*o/m);
       setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
       U.autoDir = o;
+      edgeBroke(U);                                       // Easy: the verdict's Line Break is the carry's, never called twice (src/edge.js)
       break;
     }
     case 'past:tackled': case 'pass:tackled':
@@ -3410,22 +3414,23 @@ function forceDuel(kind, team) {
    same. Both sides can go On Fire, the CPU included. The Golden Try is for Quick Match and Two Player: a championship is a
    league, and a league keeps its draws. */
 const ARCADE = {
-  fire:{ need:3, secs:12, speed:1.06, hands:0.5, pts:{ break:0, hit:1, turnover:1, try:2 } },   // 3 points unanswered (about two a match at the middle length) lights it for 12 match seconds: 6% quicker, half the handling errors. A try is worth two; a broken tackle (90-odd a match) only breaks the other side's run
+  fire:{ need:3, secs:12, speed:1.06, hands:0.5, pts:{ break:0, hit:1, turnover:1, try:2, line:1 } },   // 3 points unanswered (about two a match at the middle length) lights it for 12 match seconds: 6% quicker, half the handling errors. A try is worth two; a broken tackle (90-odd a match) only breaks the other side's run; a Line Break (src/edge.js, Easy only) is worth one. On Easy your side needs EDGE.fire.need and burns EDGE.fire.secs (fireNeed, fireSecs)
   hit:{ jolt:0.12, stop:180, shake:0.28, hitShake:0.18 },    // your Big Hit: an extra 12% chance the ball spills, a 180ms freeze and a harder shake; taking one shakes too
   golden:{ len:0.5 },                                         // sudden-death extra time is half a half; still level at its hooter, the draw stands
 };
 const onFire = t => !!(M && M.arcade && M.fire[t].t > 0);
 /* A good moment for side t: a broken tackle, a Big Hit, a turnover won or a try. Each breaks the other side's run; all but the broken tackle build this one's. */
-function heat(t, why) {
+function heat(t, why, grade) {                               // grade: a word over the On Fire banner, if this lights it (a Line Break's, src/edge.js)
   if (!M || !M.arcade) return;
   const F = M.fire[t], O = M.fire[1 - t];
   O.heat = 0;
   st('heat_' + why);
   if (F.t > 0) return;                                        // already alight: the run starts again when it goes out
-  F.heat = Math.min(ARCADE.fire.need, F.heat + (ARCADE.fire.pts[why] || 0));
-  if (F.heat < ARCADE.fire.need) return;
-  F.heat = 0; F.t = ARCADE.fire.secs*staminaLasts(t); st('fire' + t);   // longer or shorter by the side's Stamina (src/stamina.js)
-  say('On Fire', 'big fire', t); sfx('roar'); buzz(50, t);
+  const need = fireNeed(t);                                   // ARCADE.fire.need, or on Easy your side's EDGE.fire.need (src/edge.js)
+  F.heat = Math.min(need, F.heat + ((edgeOn(t) && EDGE.fire.pts || ARCADE.fire.pts)[why] || 0));   // on Easy your side's moments are EDGE.fire.pts
+  if (F.heat < need) return;
+  F.heat = 0; F.t = fireSecs(t)*staminaLasts(t); st('fire' + t);   // longer or shorter by the side's Stamina (src/stamina.js); on Easy yours burns EDGE.fire.secs
+  say('On Fire', 'big fire', t, grade); sfx('roar'); buzz(50, t);
 }
 function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }
 function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }
@@ -3442,6 +3447,86 @@ function startGolden() {
   say('Golden Try', 'big');
 }
 function goldenScored() { if (M.golden) M.hooter = true; }   // any score in extra time wins it: the next dead ball ends the match
+/* ---------- the edge: Easy, you against the CPU ----------
+   The owner, 2026-11-10, who plays on Easy: "Provide more of an edge", then, choosing More Edge for You v the CPU, "It Just Feels
+   Flat: nothing is wrong exactly; I want to feel more powerful: bigger runs, more line breaks, more tries for me".
+   Who has it: a side a person plays against the CPU on Easy (levelOf 0, so Kids as well): Quick Match, Championship, Career, and in
+   Pro Mode his own player (never a teammate the computer runs, proRun). Never Two Player, AI v AI, the demo, a drill, a tool's
+   balance match, Normal or Hard: edgeOn reads M.arcade, which only startMatch asks for (AI v AI, the demo, the drills and the
+   tools' balance matches are never arcade), and the human must face the CPU. Every lever reads edgeOn or edgeMan and draws no random
+   number of its own, so with EDGE.on false (EDGE='{"on":false}' in the harness) the game plays exactly as 90353c3, draw for draw.
+   - The Line Break. Your carrier gets past the last man in front of him: no standing defender ahead of him inside a window that is
+     brk.lane metres across beside him (the lane the CPU's Sprint calls a clean break by, SPRINT.cpu.lane) and widens by brk.cone
+     metres for every metre ahead, so the deep cover man still counts while he is placed to come across; where one was earlier in the
+     same carry; none within brk.clear metres of him at all; running forward at brk.fwd m/s or more, brk.line metres or more out.
+     Once a carry (a new carrier, or the same man's next catch, starts another): Line Break is called (the small banner in your
+     colour, as Turnover is, so the run stays in sight), a whoosh and the crowd, a heat point towards On Fire, and a brk.stop ms
+     hit-stop with no shake, shorter than a Big Hit's 180 (never for Kids or Minis: matchMild). If the point lights On Fire, the On
+     Fire banner carries Line Break over it, so the call is still seen. A Get Past close-up won the right way already says Line Break
+     with its cheer (settle, src/duels.js), so that is the carry's Line Break (edgeBroke): its heat point and the cover's lag, never a
+     second call. The CPU's cover then runs on as it was running for `lag` seconds before it reacts (matchTargets).
+   - On Fire sooner and longer: your side lights after fire.need good moments unanswered, a try, a Line Break, a Big Hit and a
+     turnover won one each (fire.pts), and burns fire.secs match seconds; ARCADE.fire's three points, a try two, and twelve seconds
+     for every other side. Each by Stamina, as before. With a try worth two here as well, the casual adult went On Fire 4.4 times a
+     match (every try lit it): the call stopped being one.
+   - Your carrier, against the CPU only (its own carriers are as they were): `pace` times his top speed with the ball; the CPU's tackle
+     on him holds `hold` of the times it did (tackleChance, an AI tackler, in open play and in a close-up's fallback); a Side Step's
+     tackle odds `step` times MOVES.step.odds; a Dummy bought `bite` more often (Easy's 0.9).
+   Measured with a casual adult (tools/bot.mjs, PROFILE=casual) and the children (tools/kidbots.mjs): README.md, Easy. */
+const EDGE = {
+  on:true,
+  pace:1.03,                  // your carrier's top speed with the ball
+  hold:0.92,                  // the CPU's tackle on your carrier holds this share of the times it did
+  step:0.85,                  // a Side Step's tackle odds: MOVES.step.odds (0.65) times this
+  bite:0.06,                  // a Dummy is bought this much more often (Easy 0.9)
+  lag:0.3,                    // seconds after a Line Break the CPU's cover holds its line before it reacts
+  fire:{ need:2, secs:15, pts:{ hit:1, turnover:1, try:1, line:1 } },   // On Fire: two good moments unanswered, a try one of them, light it for 15 match seconds (ARCADE.fire: 3 points, a try two, for 12)
+  brk:{ lane:15, cone:1, clear:3, fwd:2.5, line:5, stop:110 },   // the Line Break: metres across beside him and the window's widening a metre ahead, metres clear of every man, m/s forward, metres out, the hit-stop in ms
+};
+// EDGE_TUNE
+const edgeOn = t => !!(EDGE.on && M && M.arcade && !M.two && !practice && isHuman(t) && !isHuman(1 - t) && levelOf(t) === 0);   // side t: a person on Easy against the CPU, in a match he plays
+const edgeMan = p => !!p && edgeOn(p.team) && !proRun(p);   // p is yours: in Pro Mode, your own player only
+const edgeCarry = p => M.ball.state === 'held' && M.ball.carrier === p && edgeMan(p);   // your carrier, for his pace
+const fireNeed = t => (edgeOn(t) ? EDGE.fire.need : ARCADE.fire.need);
+const fireSecs = t => (edgeOn(t) ? EDGE.fire.secs : ARCADE.fire.secs);
+/* Once a step while your carrier runs in open play, after the try line and the close-ups have had their look (matchUpdate). M.lb is
+   the carry being watched: its man, whether a defender has been in front of him, and whether and when Line Break was called. */
+function edgeLine(c) {
+  if (!edgeMan(c) || c.bind || c.down > 0) return false;
+  let L = M.lb;
+  if (!L || L.c !== c || c.hold < L.hold) L = M.lb = { c, had:false, fired:false, at:0, hold:0 };   // a new carry: his time on the ball starts again at every catch
+  L.hold = c.hold;
+  if (L.fired) return false;
+  const d = dirOf(c.team), K = EDGE.brk;
+  let near = 99;
+  for (const q of M.players) {
+    if (q.team === c.team || q.down > 0 || q.bind) continue;
+    const ahead = (q.x - c.x)*d;
+    if (ahead > 0 && Math.abs(q.y - c.y) < K.lane + K.cone*ahead) { L.had = true; return false; }   // a man still in front of him, the deep cover man too
+    near = Math.min(near, dist(q, c));
+  }
+  if (!L.had || near < K.clear || c.vx*d < K.fwd || (oppLine(c.team) - c.x)*d < K.line) return false;   // away from the man he beat, and running on
+  L.fired = true; L.at = M.dclock;
+  st('lineBreak' + c.team);
+  say('Line Break', 'small', c.team); sfx('whoosh'); sfx('cheer'); buzz(30, c.team);
+  if (!matchMild()) hitStop(K.stop, 0);                    // the youngest: the call and the sound, no slow-motion
+  heat(c.team, 'line', 'Line Break');                      // lighting On Fire, its banner carries the call
+  return true;
+}
+/* A Get Past close-up won the right way (applyDuel's past:break): the close-up has said Line Break and cheered, so it is this carry's
+   Line Break. The count, the heat point and the cover's lag, and no second call however clear he then is. */
+function edgeBroke(c) {
+  if (!edgeMan(c)) return;
+  let L = M.lb;
+  if (!L || L.c !== c || c.hold < L.hold) L = M.lb = { c, had:true, fired:false, at:0, hold:0 };
+  L.hold = c.hold;
+  if (L.fired) return;
+  L.had = true; L.fired = true; L.at = M.dclock;
+  st('lineBreak' + c.team);
+  heat(c.team, 'line');
+}
+const edgeLag = c => !!(M.lb && M.lb.c === c && M.lb.fired && M.dclock - M.lb.at < EDGE.lag);   // the CPU's cover has not reacted yet
+const edgeHold = (p, a) => ({ x:p.x + p.vx*0.5, y:p.y + p.vy*0.5, s:hyp(p.vx, p.vy), a });   // he runs on the line he was running, at the pace he had
 /* ---------- stamina ----------
    The fifth ability (staminaOf in data.js reads it, 3 when a team has none). Only a match you play feels it: the same M.arcade as
    On Fire, which only startMatch sets, so AI v AI, the demo, practice and the balance tools read every side as they always have.
@@ -3755,7 +3840,10 @@ function matchTargets() {
   assignByY(T, rest, slots, lead);
   if (pod) T.set(pod.holder, { x:clamp(pod.at.x + lead, 1, 119), y:pod.at.y, s:maxSpeed(pod.holder) });
   let sweep = true;
-  if (mode === 'held') {
+  if (mode === 'held' && edgeLag(carrier)) {                       // Easy: a Line Break, and the cover has not reacted yet. Every man runs on as he was running, at Easy's cover acceleration (src/edge.js)
+    for (const p of D) if (!(p.offside > 0)) T.set(p, edgeHold(p, COVER.acc[0]));
+    D = D.filter(p => !T.has(p)); sweep = false;
+  } else if (mode === 'held') {
     const live = D.filter(p => !(p.offside > 0));                  // a retiring tackler is never the chaser, and never the man who comes up
     const depthOf = p => (p.x - carrier.x) * dA;
     const L = levelOf(att), lv = L === 0 || L === 2 ? L : 1;         // how hard the defence is for this attacker: his side's level
@@ -3963,7 +4051,7 @@ function dummyPass(c, r) {                                 // c shows a pass to 
   if (!q) return false;
   st('dummies' + t);
   sfx('whoosh');
-  if (rnd() < K.bite[levelOf(t)]) {                        // he bites: wrong-footed, drifting onto the runner, no tackle for a moment
+  if (rnd() < K.bite[levelOf(t)] + (edgeMan(c) ? EDGE.bite : 0)) {   // he bites: wrong-footed, drifting onto the runner, no tackle for a moment. Easy: yours sells more often (src/edge.js)
     q.wf = Math.max(q.wf, K.wf); q.tcd = Math.max(q.tcd, K.tcd);
     q.vy += (Math.sign(r.y - q.y) || 1)*K.shove;
     q.bite = K.drift; q.biteTo = r;
@@ -4147,7 +4235,7 @@ function matchUpdate(dt) {
     if (b.state === 'held') {
       const c = b.carrier;
       b.x = c.x + c.fx*0.55; b.y = c.y + c.fy*0.55; b.z = 1.0;
-      if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
+      if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) { edgeLine(c); tackleChecks(c); }   // Easy: a Line Break (src/edge.js) is called before anyone can commit
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
     if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
@@ -9790,7 +9878,7 @@ function updateHud() {
     lastHud = key;
     $('h-s0').textContent = M.score[0]; $('h-s1').textContent = M.score[1];
     $('h-sub').innerHTML = fmtClock() + ' · ' + sub;
-    for (const t of [0, 1]) { const el = $('h-f' + t), F = M.fire[t]; el.hidden = !M.arcade; el.className = 'heat' + (F.t > 0 ? ' on' : ''); el.style.setProperty('--n', F.t > 0 ? ARCADE.fire.need : F.heat); }   // the run towards On Fire, under each side's code
+    for (const t of [0, 1]) { const el = $('h-f' + t), F = M.fire[t]; el.hidden = !M.arcade; el.className = 'heat' + (F.t > 0 ? ' on' : ''); el.style.setProperty('--n', F.t > 0 ? ARCADE.fire.need : F.heat*ARCADE.fire.need/fireNeed(t)); }   // the run towards On Fire, under each side's code, in thirds of the meter: on Easy yours needs EDGE.fire.need (src/edge.js)
   }
   const cut = M.phase === 'cut' && M.cut;
   const goal = cut && M.cut.kind === 'goal';
@@ -15970,6 +16058,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   behind:{ menuDemo, BV_DEMO_AT, BV_DEMO_CAM, BV_DEMO_IN, frameDraw, BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, artHairOf, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, BV_STAR, bvStack, artPalette, artPaletteOf, LOOK_SKIN, LOOK_HAIR, LOOK_STYLES, LOOK_LONG, LOOK_FEMALE, paintState:() => ({ ctx, SKIN, HAIR }) },
   sound:{ SOUND, NAMES:SOUND_NAMES, SND, FILES:SOUND_FILES, SYNTH:SOUND_SYNTH, SAMPLE, takes:soundTakes, load:sndLoad, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
   clarity:{ MATCH_PACE, matchPace, HALF_SECONDS, fmtClock, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
+  edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   get M() { return M; } };
 

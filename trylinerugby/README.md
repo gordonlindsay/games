@@ -43,7 +43,7 @@ Your club and your country, picked once on the team screen (`openTeams('my')`, f
 
 Matches you play are arcade; AI v AI, the demo, practice and the balance tools are not, so their numbers are unchanged.
 
-- **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds: 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length.
+- **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds (on Easy, your side against the CPU: two good moments, a Line Break one of them, for 15 seconds; Easy, below): 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length.
 - **Big Hit.** Your dominant tackle now takes the full banner, a 180ms freeze and a harder shake, and spills the ball 12% more often. Taking one shakes the screen too.
 - **Golden Try.** Quick Match and Two Player level at full time go to sudden-death extra time, half a half long. Any score wins it; a try needs no conversion. Still level at its hooter, the draw stands. A championship keeps its draws; a cup's knockout or Test has the Golden Try too, and is never left level (Silverware).
 
@@ -310,6 +310,75 @@ Inside a match you play, one medal counts once a match however many of its ids c
 
 The rules are in `src/locker.js` and the screens in `src/ui-locker.js`; the styles are the `locker` block at the end of `styles.css`. `node tools/locker.mjs` checks the tables and the Legends (the ten men's and five women's sides in date order with their codes, the unlock order by Gold for both lists, the New Legends over Golds 4 to 7, the Legends tab's tiles and padlocks at 0, 3, 7 and 11 Golds, and old saves naming every dropped code); every feat counted from real played matches (seeded Quick Matches, a Kids match, a career match, Two Player and a Championship's last round, played to full time); tiers, events, unlocks and Star Pupil's save; nothing counted in AI v AI, the demo, a drill or a tool's match; the save; the full-time card, the home dot, the screens and the team screen's hook; the render hooks; and a fingerprint pinning AI v AI, the demo, a balance tool's match, a tool's match, a played Quick Match and a drill (with their random draws) to d6192ad, the build before the Locker. Where Playwright is installed it also checks, in Chromium, the home in all eight states (phone or computer, web or app, with or without a championship and a career under way) at 844x390 and 667x375, and the same eight with a Trophy Cabinet (the Locker adds no height), every Locker tab at both sizes, its keyboard and controller reach, Continue on a full-time card with medals, and full time in Quick Match, Two Player (series shown), a Championship and a career with and without medals (never taller with them).
 
+## Easy
+
+The owner plays on Easy (2026-11-10): "Provide more of an edge", then, choosing More Edge for You v the CPU, "It Just Feels Flat: nothing is wrong exactly; I want to feel more powerful: bigger runs, more line breaks, more tries for me".
+
+**Who has it.** A side a person plays against the CPU on Easy: Quick Match, Championship, Career (in Pro Mode, his own player only, never a teammate the computer runs) and Kids, which is Easy underneath. Never Two Player, AI v AI, the demo, the drills, Normal or Hard, and never a tool's balance match: `edgeOn` reads `M.arcade`, which only `startMatch` asks for. One table, `EDGE` in `src/edge.js`, with an on switch; `EDGE='{"on":false}'` in the harness plays exactly as 90353c3, draw for draw.
+
+- **Line Break.** Your carrier gets past the last man in front of him: no standing defender ahead of him inside a window 15m across beside him (the lane the CPU's Sprint calls a clean break by) that widens a metre for every metre ahead, so the deep cover man, 15m ahead and 16m across, is still in front of him while he is placed to come across; where one was earlier in the same carry; none within 3m of him at all; running forward at 2.5 m/s or more, 5m or more out. Once a carry: **Line Break** is called (the small banner in your colour, so the run stays in sight), a whoosh and the crowd, a point towards On Fire, and a 110ms hold with no shake (a Big Hit's is 180ms). If that point lights On Fire, the On Fire banner carries Line Break over it, so the call is still seen. A Get Past close-up won the right way already says Line Break with its cheer, so that is the carry's Line Break: its point and the cover's lag, and no second call when play hands back. Kids and Minis get the call, the sound and the point, and no hold. For 0.3 seconds after it the CPU's cover runs on as it was running before it reacts.
+- **On Fire sooner and longer.** Your side lights after two good moments unanswered, a try, a Line Break, a Big Hit and a turnover won one each, and burns 15 match seconds instead of 12 (each by Stamina). Every other side keeps three points, a try two, and 12 seconds. With a try worth two on Easy as well (need 2 and 15 seconds on the old points), the casual adult below went On Fire 4.4 times a match, since every try lit it, and the call stopped being one.
+- **A stronger carrier**, against the CPU only (its own carriers are as they were):
+
+| Lever (`EDGE`) | Value | What it does |
+|---|---|---|
+| `pace` | 1.03 | Your carrier's top speed with the ball |
+| `hold` | 0.92 | The CPU's tackle on your carrier holds 0.92 of the times it did (open play and a close-up's fallback) |
+| `step` | 0.85 | A Side Step's tackle odds, on top of `MOVES.step.odds` (0.65 to 0.55) |
+| `bite` | 0.06 | A Dummy is bought 0.96 of the time (Easy's 0.9) |
+| `lag` | 0.3s | The CPU's cover after a Line Break |
+| `fire` | 2 moments, 15s | On Fire (`ARCADE.fire`: 3 points, 12s) |
+| `brk` | 15m and 1m a metre ahead, 3m, 2.5 m/s, 5m, 110ms | The Line Break's window, clear space, pace, distance out and hold |
+
+**Measured against a person, not the perfect bot.** `PROFILE=casual node tools/bot.mjs` is a casual adult, built from `kidbots.mjs`'s children: he reacts about 0.3s late to a change of possession, defends nine tenths of the time (in a lapse he lets go of the stick, or keeps pushing at the try line), presses Tackle on 12% of the steps a carrier is in reach, sprints after a clean break on 40% of them and presses Switch now and then; with the ball a light weave, a step away from the man in front on half his carries (the other half he runs into contact), Sprint into space on half, a pass when a tackler is on him now and then, a Dummy on a fifth of carries, an offload on 30% of the cues; in a close-up he presses 95% of the time about the gold with a 0.12s spread, the right way four times in five. Easy, Quick Match's rules, 2-minute halves, 400 matches on SEED 7, each match on its own seed, so before (EDGE off, which is 90353c3) and after are the same draws until the edge changes them:
+
+| Casual adult on Easy | Before | After |
+|---|---|---|
+| Won | 80% (W321 D13 L66) | 90% (W361 D13 L26) |
+| Score | 12.4-3.1 | 18.1-2.6 |
+| Tries for and against | 1.71-0.34 | 2.59-0.28 |
+| Line Breaks a match | 1.18 | 1.75 |
+| Broken tackles (the CPU's) | 36.3 (19.2) | 40.8 (18.1) |
+| Fends | 5.5 | 6.6 |
+| On Fire a match (the CPU's) | 1.34 (0.58) | 3.35 (0.43) |
+| Dummies sold | 2.93 of 3.27 | 3.45 of 3.56 |
+| Metres carried | 409 | 466 |
+
+A Line Break here is counted by the rule above, a won Get Past included, watched from outside the game (`lbWatch`), so the build before counts the same moments; the game's own count after agrees (1.75). After the review (2026-11-10) the rule is stricter: the window used to be 15m across however far ahead, so a quarter of the calls came with the deep cover man still ahead at about 45 degrees, and only a third of those runs scored, against three quarters with nobody ahead. Now three in four calls lead to a try within 10 seconds (under two in three on the old window), and the counts are lower than the first measurement's (1.54 before and 2.15 after on the old window). A won Get Past used to be called twice, by the close-up and again by the edge as play handed back, on a quarter of the casual adult's calls.
+
+**The owner's choice (2026-11-10): As Built.** The casual adult wins 80% before the edge; with it he wins 90%, by half as many tries again, and makes 1.75 Line Breaks a match. The measured options he chose from, the same 400 seeds:
+
+| Casual adult on Easy | Won | Tries | Line Breaks | On Fire |
+|---|---|---|---|---|
+| Before (EDGE off) | 80% | 1.71-0.34 | 1.18 | 1.34 |
+| The Line Break and On Fire alone (`pace` 1, `hold` 1, `step` 1, `bite` 0, `lag` 0) | 85% | 1.89-0.32 | 1.48 | 3.30 |
+| As built (`pace` 1.03, `hold` 0.92) | 90% | 2.59-0.28 | 1.75 | 3.35 |
+| A stronger carrier (`pace` 1.05, `hold` 0.88) | 91% | 2.88-0.31 | 2.04 | 3.65 |
+
+Two Line Breaks a match costs a stronger carrier, and nothing here gets back to 80%: what he loses comes from elsewhere, so the levers buy tries and Line Breaks far more than wins. Before the review, on the old window (200 matches each, before 81% by 1.78 tries), the Side Step and Dummy levers and the cover's lag moved nothing a casual adult's results could show (86% by 1.97, 85% by 2.00), so they are there for the feel, and `pace` 1.04 with `hold` 0.88 was 94% by 2.81. Kids is Easy underneath, so a stronger carrier would take the 7 to 8 year old further from 81% too (Kids, below).
+
+The scripted bot (`bot()`, the perfect player) with Quick Match's rules (`PROFILE=bot`, the same 400 seeds): won 100% before and after, tries 5.34-0.13 before and 7.47-0.14 after, Line Breaks 3.50 and 5.28, On Fire 3.10 and 5.72, metres 590 and 686. `node tools/bot.mjs` as it always ran (18 matches a level at SEED 1, 4-minute halves, a tool's balance match) prints the same lines before and after: the edge is never in it.
+
+**The children** (`kidbots.mjs at`, 200 matches each, SEED 7; Easy as played is 120 simulated seconds a half, a Kids half 90, so Easy at 90 is like for like with the ceiling):
+
+| Child | Easy as played, before / after | Easy at 90, before / after | Kids ceiling (r 1), before / after |
+|---|---|---|---|
+| 6 year old | 58% by 0.96 / 78% by 2.44 | 64% by 1.02 / 73% by 1.61 | 60% by 0.95 / 69% by 1.62 |
+| 7 to 8 year old | 77% by 1.85 / 89% by 3.07 | 77% by 1.60 / 86% by 2.35 | 81% by 2.04 / 90% by 3.02 |
+| sharp 10 year old | 100% by 5.38 / 100% by 7.27 | 98% by 4.17 / 100% by 5.39 | 99% by 4.35 / 100% by 5.77 |
+
+**Kids at Most Easy**, by margin and by matches won, the ceiling against Easy at the same half (each share won ± about 3 points):
+
+| Child | Margin, before / after | Matches won, before / after |
+|---|---|---|
+| 6 year old | -0.07 / +0.01 | -4 / -4 |
+| 7 to 8 year old | +0.44 / +0.67 | +4 / +4 |
+| sharp 10 year old | +0.18 / +0.38 | +1 / 0 |
+
+By margin the ceiling is at least as easy as Easy for every child; for the 6 year old it is level, and by matches won 4 points under Easy (69% against 73%), the same gap as before the edge and inside the noise. Kids is Easy underneath, so it has the same edge. The 7 to 8 year old no longer settles near 81%: 16 runs of 150 from r 0 (settled from match 61) put him at 0.984 ± 0.002, winning 89 ± 1% by 3.07 (median 3), where before they put him at 0.957 ± 0.005, winning 82 ± 1% by 2.20 (median 2). He settles at the ceiling, so what he wins is what the ceiling gives him, and the ceiling may not be harder than Easy, which is easier for him now. Two recalibrations were measured at the ceiling before the review and not kept: Kids with half of the carrier levers, 87% by 2.62 for him and 63% by 1.25 for the 6 year old; with none of them, 86% by 2.29 and 58% by 1.08. Either brings him nearer, and either makes the ceiling harder than Easy for the 6 year old, by margin and by matches won (Easy at 90 was then 75% by 1.64), which the rule does not allow. Move Up to Easy now comes up in 4 of his 16 runs (median match 97), 1 of 16 before. **Open for the owner:** 89% against the 81% aim. Which way to go is his: a smaller edge on Easy (which brings both down), Kids without the carrier levers (harder than Easy for the youngest), or Kids as it is.
+
+`node tools/edge.mjs`, in the default gate, checks who has it, each lever's size, the Line Break (its window, its call, once a carry with a won Get Past's own call counted, the On Fire banner it lights carrying the call), On Fire's Easy numbers and the meter, and EDGE off drawing as 90353c3. The meter by each team code fills in thirds: a run of one moment of two shows half.
+
 ## Kids
 
 A level below Easy for 6 to 10 year olds, and a grown-up check in front of anything that leaves the game. The home's Difficulty row (under Settings) reads **Kids | Easy | Normal | Hard**; a new game starts on Normal as before, and an old save loads on the level it had.
@@ -406,6 +475,8 @@ Easy against the ceiling, the ceiling is a little easier for each of the first t
 Before the scale (Easy against Kids for the same player, scratch bots, SEED 7 and 11): the harness's average player went from 30-2 to 60-1, a rough child who defends half the time from 13-6 to 37-1, and one who never defends from 9-13 to 35-2. The hands-off chase is what saves a child who never defends: without it that child conceded 3.1 tries a match even on Kids; with it, 0.2. Its pace hardly matters (0.15 to 0.2 tries against from 60% to 80%; 0.03 at full pace), so it runs at 80%, a little behind his teammates.
 
 AI v AI at all three levels (asked to play Kids or not), the demo, the harness's player at Easy, Normal and Hard (with and without Quick Match's arcade) and two player at three pairs of levels all hash identically to 0397251, the build before the rating (SEED 5 and SEED 41, with the fixed-step rule), with the same number of random draws: nothing outside Kids changes.
+
+**Since the edge on Easy** (2026-11-10, Easy above). Kids is Easy underneath, so it has the edge too: the Line Break (called and heard, no hold), On Fire after two good moments for 15 seconds, and the stronger carrier. The ceiling is still at most Easy at the same half for each child by margin, and for the 6 year old 4 points under it by matches won, as before the edge; the 7 to 8 year old now settles at the ceiling (0.984), winning 89% by 3.1 tries where he won 82% by 2.2. Bringing him back nearer 81% would take a ceiling harder than the new Easy for the 6 year old; the owner chose to keep the edge in Kids (2026-11-10), so children win more and Move Up to Easy comes sooner.
 
 **Two Player** keeps Easy | Normal | Hard per player. Kids there would need its own per-player store, per-side levers and a rule for a close-up the other player chooses; Two Player is for computers, so it is left as it is.
 
@@ -1845,6 +1916,11 @@ a charger.
     bot holds Sprint to run down a carrier who is clean through and to carry into space, offloads on 40% of cues and
     never presses Pass in a tackle, and a line of Side Steps and Dummies by side; `HABITS=0` is the old bot exactly (it mashes Pass in a tackle), `NOSPRINT=1`,
     `NOSPRINTBALL=1` and `NODIVE=1` turn single habits off. `GAME=path` runs any tool against another copy of the game.
+    `--arcade` plays Quick Match's rules (and on Easy the edge). `PROFILE=casual` plays the casual adult on Easy (2026-11-10),
+    `PROFILE=bot` the scripted bot the same way: Quick Match's rules, 2-minute halves, each match on its own seed (SEED 7 unless
+    set) over `JOBS` processes, reporting wins, tries, Line Breaks, broken tackles, Fends, On Fire, Side Steps and Dummies (Easy).
+  - **`node tools/edge.mjs`:** the edge on Easy (2026-11-10), in the default gate: who has it, each lever's size, the Line
+    Break and its call, On Fire's Easy numbers and the meter, EDGE off drawing exactly as 90353c3 (Easy).
   - **`node tools/pressure.mjs`:** pressure, the spill and the egg (2026-11-09), in the default gate: the count's rises
     and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
     and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the
