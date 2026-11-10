@@ -346,7 +346,7 @@ The owner plays on Easy (2026-11-10): "Provide more of an edge", then, choosing 
 
 A Line Break here is counted by the rule above, a won Get Past included, watched from outside the game (`lbWatch`), so the build before counts the same moments; the game's own count after agrees (1.75). After the review (2026-11-10) the rule is stricter: the window used to be 15m across however far ahead, so a quarter of the calls came with the deep cover man still ahead at about 45 degrees, and only a third of those runs scored, against three quarters with nobody ahead. Now three in four calls lead to a try within 10 seconds (under two in three on the old window), and the counts are lower than the first measurement's (1.54 before and 2.15 after on the old window). A won Get Past used to be called twice, by the close-up and again by the edge as play handed back, on a quarter of the casual adult's calls.
 
-**Two aims the owner set do not meet here, so the levers are his call.** The casual adult wins 80% before the edge, which was the aim for after: with it he wins 90%, by half as many tries again, and makes 1.75 Line Breaks a match, under the aim of two or more. Measured options, the same 400 seeds:
+**The owner's choice (2026-11-10): As Built.** The casual adult wins 80% before the edge; with it he wins 90%, by half as many tries again, and makes 1.75 Line Breaks a match. The measured options he chose from, the same 400 seeds:
 
 | Casual adult on Easy | Won | Tries | Line Breaks | On Fire |
 |---|---|---|---|---|
@@ -476,7 +476,7 @@ Before the scale (Easy against Kids for the same player, scratch bots, SEED 7 an
 
 AI v AI at all three levels (asked to play Kids or not), the demo, the harness's player at Easy, Normal and Hard (with and without Quick Match's arcade) and two player at three pairs of levels all hash identically to 0397251, the build before the rating (SEED 5 and SEED 41, with the fixed-step rule), with the same number of random draws: nothing outside Kids changes.
 
-**Since the edge on Easy** (2026-11-10, Easy above). Kids is Easy underneath, so it has the edge too: the Line Break (called and heard, no hold), On Fire after two good moments for 15 seconds, and the stronger carrier. The ceiling is still at most Easy at the same half for each child by margin, and for the 6 year old 4 points under it by matches won, as before the edge; the 7 to 8 year old now settles at the ceiling (0.984), winning 89% by 3.1 tries where he won 82% by 2.2. Bringing him back nearer 81% would take a ceiling harder than the new Easy for the 6 year old, so it is the owner's call (Easy has the figures).
+**Since the edge on Easy** (2026-11-10, Easy above). Kids is Easy underneath, so it has the edge too: the Line Break (called and heard, no hold), On Fire after two good moments for 15 seconds, and the stronger carrier. The ceiling is still at most Easy at the same half for each child by margin, and for the 6 year old 4 points under it by matches won, as before the edge; the 7 to 8 year old now settles at the ceiling (0.984), winning 89% by 3.1 tries where he won 82% by 2.2. Bringing him back nearer 81% would take a ceiling harder than the new Easy for the 6 year old; the owner chose to keep the edge in Kids (2026-11-10), so children win more and Move Up to Easy comes sooner.
 
 **Two Player** keeps Easy | Normal | Hard per player. Kids there would need its own per-player store, per-side levers and a rule for a close-up the other player chooses; Two Player is for computers, so it is left as it is.
 
