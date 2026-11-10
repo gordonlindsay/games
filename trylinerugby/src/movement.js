@@ -129,7 +129,7 @@ function matchTargets() {
   else if (b.state === 'held') { carrier = b.carrier; att = carrier.team; fx = carrier.x; fy = carrier.y; mode = 'held'; }
   else if (b.state === 'air' && b.f.kind === 'pass') { att = b.f.team; fx = b.f.x1; fy = b.f.y1; mode = 'pass'; }
   else if (b.state === 'air') { att = 1-b.f.team; fx = b.f.x1; fy = b.f.y1; mode = 'kick'; }
-  else { att = 1-b.last; fx = b.x; fy = b.y; mode = 'kick'; }
+  else { att = 1-b.last; const L = eggLead(b); fx = L.x; fy = L.y; mode = 'kick'; }   // a hopping egg: where it comes down (src/contact.js)
   const dA = dirOf(att);
   let A = P.filter(p => p.team === att && free(p)), D = P.filter(p => p.team !== att && free(p));
   if (mode === 'kick') {
@@ -157,7 +157,10 @@ function matchTargets() {
   assignByY(T, rest, slots, lead);
   if (pod) T.set(pod.holder, { x:clamp(pod.at.x + lead, 1, 119), y:pod.at.y, s:maxSpeed(pod.holder) });
   let sweep = true;
-  if (mode === 'held') {
+  if (mode === 'held' && edgeLag(carrier)) {                       // Easy: a Line Break, and the cover has not reacted yet. Every man runs on as he was running, at Easy's cover acceleration (src/edge.js)
+    for (const p of D) if (!(p.offside > 0)) T.set(p, edgeHold(p, COVER.acc[0]));
+    D = D.filter(p => !T.has(p)); sweep = false;
+  } else if (mode === 'held') {
     const live = D.filter(p => !(p.offside > 0));                  // a retiring tackler is never the chaser, and never the man who comes up
     const depthOf = p => (p.x - carrier.x) * dA;
     const L = levelOf(att), lv = L === 0 || L === 2 ? L : 1;         // how hard the defence is for this attacker: his side's level
@@ -302,7 +305,7 @@ function userKick(t, power) {
 function canDive(q) {                                      // would a Tackle press act now: a carrier of the other side within 2.8m, and this man up, off cooldown, not retiring and unbound
   const b = M.ball, c = b.state === 'held' ? b.carrier : null;
   if (!q || !c || c.team === q.team || !onFeet(q) || q.tcd > 0 || q.offside > 0 || dist(q, c) >= 2.8) return false;
-  return !c.bind || (!c.bind.q2 && c.bind.q !== q);
+  return !c.bind || (!c.bind.maul && !c.bind.q2 && c.bind.q !== q);   // never into a maul once it is called (src/maul.js)
 }
 function userTackle(t) {                                   // the Tackle press for the human on side t: a dive, an Ankle Tap from behind, or joining a bind; beyond reach it does nothing
   const q = ctrlOf(t), b = M.ball;
@@ -365,7 +368,7 @@ function dummyPass(c, r) {                                 // c shows a pass to 
   if (!q) return false;
   st('dummies' + t);
   sfx('whoosh');
-  if (rnd() < K.bite[levelOf(t)]) {                        // he bites: wrong-footed, drifting onto the runner, no tackle for a moment
+  if (rnd() < K.bite[levelOf(t)] + (edgeMan(c) ? EDGE.bite : 0)) {   // he bites: wrong-footed, drifting onto the runner, no tackle for a moment. Easy: yours sells more often (src/edge.js)
     q.wf = Math.max(q.wf, K.wf); q.tcd = Math.max(q.tcd, K.tcd);
     q.vy += (Math.sign(r.y - q.y) || 1)*K.shove;
     q.bite = K.drift; q.biteTo = r;
@@ -446,6 +449,7 @@ function userStep(t, i, dt) {
   tickUserPass(t, dt);
   if (i.b && !inp.bCancel) {
     if (M.phase === 'play' && b.state === 'held' && b.carrier === c && !c.bind) { S.charging = true; S.charge = 0; S.holdN = 0; M.dropArmed[t] = dropPress(c); }   // what the label promised at the press
+    else if (M.phase === 'play' && b.state === 'held' && b.carrier === c && c.bind) maulPress(t);   // held in a tackle: the Maul, when a man is near (src/maul.js)
     else if (M.phase === 'play' && !ourBall(t)) switchPlayer(t);
   }
   if (i.c && !inp.cCancel && c) sprintPress(t);                            // the hold itself is read by sprintTick
@@ -516,6 +520,7 @@ function computeTargets() {
   if (practice && practice.id === 'defend') for (const p of M.players) {
     if (p.team === 0 && p !== ctrlOf(0)) targets.set(p, { x:p.x, y:p.y, s:0 });
   }
+  if (practice && practice.id === 'pass') gapTargets(targets);   // Create a Gap: your men hold their lanes and each defender marks one of them (training.js)
   if (M.career) careerLifeSupport(targets);                // a career match: Team Spirit pulls your player's support line towards the ball
   return targets;
 }
@@ -547,7 +552,7 @@ function matchUpdate(dt) {
     if (b.state === 'held') {
       const c = b.carrier;
       b.x = c.x + c.fx*0.55; b.y = c.y + c.fy*0.55; b.z = 1.0;
-      if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) tackleChecks(c);
+      if (M.contact) contactStep(c, dt); else if (!carrierChecks(c) && !duelCheck(c)) { edgeLine(c); tackleChecks(c); }   // Easy: a Line Break (src/edge.js) is called before anyone can commit
     } else if (b.state === 'air') updateBallAir(dt);
     else if (b.state === 'loose') updateLoose(dt);
     if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
@@ -555,6 +560,7 @@ function matchUpdate(dt) {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
   } else if (M.phase === 'goal') updateGoal(dt);
+  pressTick(dt);                                           // PRESSURE's resets and marks, and a knocked-on ball's beat (src/contact.js)
   if (M.duelPending) startPendingDuel();
 }
 

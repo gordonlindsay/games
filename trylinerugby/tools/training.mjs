@@ -33,9 +33,16 @@ const circleBot = (role, sig, chest, lead = 0) => { let plan = null; return st =
 const conesRoute = () => { const Q = X.CONES; return [...Q.gates.slice(0, Q.out).map(([x, y]) => [x + 0.5, y]), [Q.turn[0] + 2, Q.turn[1] - 3], [Q.turn[0] + 2, Q.turn[1] + 2], ...Q.gates.slice(Q.out).map(([x, y]) => [x - 0.5, y]), [Q.line - 3, 46]]; };
 const conesWide = () => { const Q = X.CONES, out = []; Q.gates.slice(0, Q.out).forEach(([x, y], i) => { const s = i % 2 ? 1 : -1; out.push([x - 2.5, y - s*4], [x, y - s*1.3], [x + 2.5, y - s*4]); }); return [...out, [Q.turn[0] + 5, Q.turn[1] - 9], [Q.turn[0] + 5, Q.turn[1] + 6], ...Q.gates.slice(Q.out).map(([x, y]) => [x - 0.5, y + 1]), [Q.line - 3, 46]]; };
 const conesBot = (route, sp, mag = 1) => { const R = route(); let i = 0; return st => { const me = st.cones.me; const [tx, ty] = R[Math.min(i, R.length - 1)], dx = tx - me.x, dy = ty - me.y, d = Math.hypot(dx, dy); if (d < 1.2 && i < R.length - 1) i++; stick(dx/d*mag, dy/d*mag); sprint(sp(i, R)); }; };
-const passBot = at => { let threw = false; return st => { const me = T.sides.ctrlOf(0), b = T.M.ball, def = T.M.players.find(p => p.team === 1); if (!me || !def) return; if (st.completedPass) { stick(1, Math.hypot(me.x - def.x, me.y - def.y) < 6 && def.x >= me.x - 1 ? (me.y >= def.y ? 0.7 : -0.7) : 0); sprint(true); return; } stick(1, 0); if (b.state === 'held' && b.carrier === me && !threw && Math.hypot(me.x - def.x, me.y - def.y) <= at) { inp.aPressed = true; threw = true; } }; };
+// Create a Gap: every carrier runs at his own man (the ringed defender, X.gapMark) and passes once he is this near; the free man runs home round anyone still in it.
+// Re-armed whenever the world holds between rounds, a Go Again's replay of the same round included (keyed on the round number, a dropped catch left the bot never passing again)
+const passBot = at => { let who = null; return st => { const G = st.gap, me = T.sides.ctrlOf(0), b = T.M.ball; if (G.R.stage !== 'play') who = null; if (G.R.stage !== 'play' || !me) { stick(0, 0); sprint(false); return; } const def = X.gapMark(me); if (!def) { const q = T.M.players.find(p => p.team === 1 && !G.drawn.has(p) && p.down <= 0 && Math.hypot(me.x - p.x, me.y - p.y) < 6 && p.x >= me.x - 1); stick(1, q ? (me.y >= q.y ? 0.7 : -0.7) : 0); sprint(true); return; } stick(1, 0); sprint(false); if (b.state === 'held' && b.carrier === me && who !== me && Math.hypot(me.x - def.x, me.y - def.y) <= at) { inp.aPressed = true; who = me; } }; };
 const kickBot = (o = {}) => () => { const c = T.M.cut; if (c && c.kind === 'goal') H.kickBot(c, o); };
-const defendBot = (at, lead = 0.25) => { let done = false; return st => { const me = T.sides.ctrlOf(0), b = T.M.ball, c = b.state === 'held' ? b.carrier : null; if (!st.switched) { if (st.elapsed >= at && !done) { inp.bPressed = true; done = true; } return; } if (!me || !c || c.team !== 1) return; toward(me, c.x + c.vx*lead, c.y + c.vy*lead, 0.05); sprint(true); if (Math.hypot(me.x - c.x, me.y - c.y) < 1.5) inp.aPressed = true; }; };
+// Defend a Breakaway, round by round: Switch this long into each round, then chase whoever carries; when the ball changes hands, Switch again if the other cover man is the nearer (the man a Switch would go to).
+// Re-armed whenever the world holds between rounds, a Go Again's replay included, as passBot is
+const coverFor = (st, me, c) => T.M.players.find(p => p.team === 0 && p !== me && p !== st.initialCtrl && p.x < c.x && Math.hypot(p.x - c.x, p.y - c.y) < Math.hypot(me.x - c.x, me.y - c.y) - 2);
+const roundsOf = (make, sw = true) => { let done = false, last = null; return st => { const R = st.defend.R; if (R.stage !== 'play') { done = false; last = null; stick(0, 0); sprint(false); return null; } const me = T.sides.ctrlOf(0), b = T.M.ball, c = b.state === 'held' ? b.carrier : null; if (sw && st.switched && me && c && c.team === 1 && c !== last) { last = c; const q = coverFor(st, me, c); if (q && T.contact.switchTarget(0) === q) inp.bPressed = true; } return make(st, R, me, c, () => { if (done) return false; done = true; return true; }); }; };
+const defendBot = (at, lead = 0.25) => roundsOf((st, R, me, c, first) => { if (!st.switched) { if (st.elapsed >= at && first()) inp.bPressed = true; return; } if (!me || !c || c.team !== 1) return; toward(me, c.x + c.vx*lead, c.y + c.vy*lead, 0.05); sprint(true); if (Math.hypot(me.x - c.x, me.y - c.y) < 1.5) inp.aPressed = true; });
+const defendSpam = hz => () => { const tap = every(hz, () => { inp.aPressed = true; }); return roundsOf((st, R, me, c, first) => { tap(st); if (!st.switched) { if (first()) inp.bPressed = true; return; } if (me && c && c.team === 1) { toward(me, c.x + c.vx*0.25, c.y + c.vy*0.25, 0.05); sprint(true); } }, false); };   // Tackle on a timer, never once close: Switch at the start of each round and run at the carrier
 const tackleBot = (lag, sq, head = true, edge = false, soft = false, aimLag = 0) => { const n = lagged(lag), Q = X.TACKLE; let seen = []; return st => { const Tk = st.tackle, me = Tk.me; if (Tk.stage === 'approach') { seen = []; const dy = Tk.lane - me.y; stick(0, Math.abs(dy) > (soft ? 0.5 : 0.15) ? Math.max(-1, Math.min(1, dy*(soft ? 0.2 : 0.7))) : 0); hold(false); return; } if (Tk.stage === 'head') { seen.push(1); stick(seen.length > n && head ? Tk.safe : 0, 0); hold(false); if (seen.length > n && !head) stick(Tk.drift, 0); return; } if (Tk.stage === 'side') { seen.push(Tk.h); const h = seen[Math.max(0, seen.length - 1 - n)]; stick(0, h > (aimLag ? (Q.height[0] + Q.height[1])/2 + aimLag*0.3 : Q.height[1]) ? 1 : h < Q.height[0] ? -1 : 0); hold(Tk.d > (edge ? Q.zone[1] - 0.1 : (Q.zone[0] + Q.zone[1])/2)); return; } stick(0, 0); if (Tk.stage === 'squeeze') { if (Math.round(Tk.t*60) % sq === 0) { hold(false); inp.aPressed = true; } } else hold(false); }; };
 const driveBot = (rate, hit, shape = true) => () => { const c = T.M.cut; H.scrumBot(0, rate, hit); stick(0, 0); if (shape && c && c.kind === 'scrum' && c.shape != null) { const B = X.DRIVE.shape.band; stick(0, c.shape > B[1] - 0.06 ? 1 : c.shape < B[0] + 0.06 ? -1 : 0); } };
 const tagBot = (lag, ahead = 0) => { const n = lagged(lag), seen = []; let side = 0, rep = 0; return st => { const G = st.tag, me = G.me, th = G.them; if (G.rep !== rep) { rep = G.rep; side = 0; seen.length = 0; } seen.push({ l:!!G.lunge, x:th.x, y:th.y, vx:th.vx, vy:th.vy, can:X.tagCanPull(G) }); const o = seen[Math.max(0, seen.length - 1 - n)]; if (G.stage !== 'play') { stick(0, 0); return; } if (G.rep % 2 === 1) { if (o.l && !side) side = me.y >= 35 ? -1 : 1; if (th.x <= me.x || !side) { stick(1, 0); return; } if (G.lunge || G.rest > 0) { stick(0.45, side*0.9); return; } stick(1, 0); return; } const s = me.y >= o.y ? 1 : -1, lead = 0.3 + (lag + ahead)*0.75; toward(me, o.x + o.vx*lead, o.y + o.vy*lead + s*1.2, 0.2); if (o.can) inp.aPressed = true; }; };
@@ -60,7 +67,7 @@ const table = [
   ['circle', 'runner', 'Circle, Runner', () => circleBot('runner', 0, true), () => circleBot('runner', 0.1, true)],
   ['circle', 'passer', 'Circle, Passer', () => circleBot('passer', 0.05, true), () => circleBot('passer', 0.14, true)],
   ['cones', null, 'Cones', () => conesBot(conesRoute, (i, R) => i > X.CONES.out + 1), () => conesBot(conesRoute, () => false, 0.9)],
-  ['pass', null, 'Two-on-One', () => passBot(5), () => passBot(4)],
+  ['pass', null, 'Create a Gap', () => passBot(5), () => passBot(4)],
   ['kick', null, 'Kicking', () => kickBot(), () => kickBot()],
   ['defend', null, 'Breakaway', () => defendBot(0.5), () => defendBot(1.2)],
   ['tackle', null, 'Tackling', () => tackleBot(0.2, 7), () => tackleBot(0.4, 12)],
@@ -87,9 +94,9 @@ const SLOW = [
   ['circle', 'runner', 'Circle, Runner', () => circleBot('runner', 0, true), l => circleBot('runner', 0, true, l*0.75), () => st => { const Cc = st.circle; inp.aPressed = true; stick(1, 0); sprint(true); }],
   ['circle', 'passer', 'Circle, Passer', () => circleBot('passer', 0.06, true), l => circleBot('passer', 0.06, true, l*0.75), () => every(12, () => { inp.aPressed = true; })],
   ['cones', null, 'Cones', () => conesBot(conesRoute, () => false, 0.9), () => conesBot(conesRoute, () => false, 0.9), () => conesBot(conesRoute, () => true)],
-  ['pass', null, 'Two-on-One', () => passBot(5), () => passBot(6), () => passBot(99)],
+  ['pass', null, 'Create a Gap', () => passBot(5), () => passBot(6), () => passBot(99)],
   ['kick', null, 'Kicking', () => kickBot(), l => kickBot({ ahead:l*0.75 }), () => every(10, () => { inp.aPressed = true; inp.aDown = !inp.aDown; })],
-  ['defend', null, 'Breakaway', () => defendBot(0.3), l => defendBot(0.3, 0.25 + l*0.75), () => { let sw = false; const tap = every(10, () => { inp.aPressed = true; }); return st => { const me = T.sides.ctrlOf(0), b = T.M.ball, c = b.state === 'held' ? b.carrier : null; tap(st); if (!st.switched) { if (!sw) { inp.bPressed = true; sw = true; } return; } if (me && c && c.team === 1) { toward(me, c.x + c.vx*0.25, c.y + c.vy*0.25, 0.05); sprint(true); } }; }],
+  ['defend', null, 'Breakaway', () => defendBot(0.3), l => defendBot(0.3, 0.25 + l*0.75), defendSpam(10)],
   ['tackle', null, 'Tackling', () => tackleBot(0, 12, true, false, true), l => tackleBot(0, 12, true, true, true, l), () => { const tap = every(10, () => { inp.aPressed = true; }); return st => { tap(st); stick(0, 1); hold(Math.random() < 0.5); }; }],
   ['scrum', null, 'Driving', () => driveBot(4.5, 0.5), () => driveBot(4.5, 1), () => driveBot(20, 1, false)],
   ['back', null, 'Ball Back', () => backBot(0.15, 0.2), () => backBot(0.15, 0.2, true), () => { const tap = every(10, () => { inp.aPressed = true; }); return st => { tap(st); stick(Math.random() < 0.5 ? 1 : -1, 0); }; }],
@@ -123,7 +130,7 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
   ok(noSprint.mean <= 1, 'Circle, Runner: no Sprint is worth a star at most (' + showMean(noSprint) + ')');
   ok(fixed.mean === 0 && fixedR.mean === 0, 'Circle, Runner: a stick held one way does not run the lap (' + showMean(fixed) + ', ' + showMean(fixedR) + ')'); }
 { // Breakaway: a press with nothing in reach costs a moment
-  const tap = hz => () => { let sw = false; const t = every(hz, () => { inp.aPressed = true; }); return st => { const me = T.sides.ctrlOf(0), b = T.M.ball, c = b.state === 'held' ? b.carrier : null; t(st); if (!st.switched) { if (!sw) { inp.bPressed = true; sw = true; } return; } if (me && c && c.team === 1) { toward(me, c.x + c.vx*0.25, c.y + c.vy*0.25, 0.05); sprint(true); } }; };
+  const tap = defendSpam;
   const good = stars('defend', null, () => defendBot(0.5), 60);
   for (const hz of [5, 10, 15]) { const r = stars('defend', null, tap(hz), 60); ok(r.mean <= good.mean - 0.5, 'Breakaway: Tackle spammed at ' + hz + ' a second is well behind tackling once close (' + showMean(r) + ' to ' + showMean(good) + ')'); }
   P.start('defend'); $('pr-retry').click(); inp.bPressed = true; T.update(STEP); const me = T.sides.ctrlOf(0); inp.aPressed = true; T.update(STEP); ok(me.stumble > 0 && T.M.stats.drillWhiff === 1 && T.M.tags.some(t => t.text === 'Too Far'), 'Breakaway: a press out of reach stumbles, and says Too Far'); P.leave(); }
@@ -152,13 +159,46 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
   const all = runOnce('cones', null, () => conesBot(conesRoute, () => true), 1), allT = all.elapsed + all.cones.pen, allS = all.stars; P.leave();
   ok(homeT < allT && homeS > allS, `Cones: Sprint saved for the straight beats Sprint through the turns (${homeT.toFixed(1)} s, ${homeS} stars, to ${allT.toFixed(1)} s, ${allS} stars)`); }
 { const drawn = stars('pass', null, () => passBot(5)), early = stars('pass', null, () => passBot(11));
-  ok(drawn.mean > early.mean && Math.max(...early.list) <= 1, `Two-on-One: passing once the defender is drawn scores more than passing early (${showMean(drawn)} to ${showMean(early)})`); }
+  ok(drawn.mean > early.mean && Math.max(...early.list) <= 1, `Create a Gap: passing once the defender is drawn scores more than passing early (${showMean(drawn)} to ${showMean(early)})`); }
 { const chestP = stars('circle', 'passer', () => circleBot('passer', 0.05, true)), lateP = stars('circle', 'passer', () => st => { const Cc = st.circle; if (Cc.stage === 'start') { if (Cc.t > 0.2) inp.aPressed = true; return; } if (Cc.hold && Cc.hold.t >= Cc.hold.tc + X.CIRCLE.ok + 0.05) inp.aPressed = true; });
   ok(chestP.mean > lateP.mean, `Circle: passes to the chest beat passes that drop low (${showMean(chestP)} to ${showMean(lateP)})`);
   const start = runOnce('circle', 'runner', () => circleBot('runner', 0, true), 3); const chestStart = T.M.stats.circleChest; P.leave();
   ok(chestStart >= 5 && start, 'Circle: the Runner\'s first pass is timed on the same ring, and a chest pass counts');
   H.reseed(5); P.start('circle'); $('pr-runner').click(); { const Cc = P.state().circle, first = st => {}; for (let i = 0; i < 400 && Math.abs(X.circleStartE(Cc)) > 0.05; i++) T.update(STEP); inp.aPressed = true; T.update(STEP); ok(Cc.stage === 'race' && Cc.v > 3, `Circle: a Runner off a chest pass gets away already moving (${Cc.v.toFixed(1)} m/s)`); } P.leave();
   H.reseed(5); P.start('circle'); $('pr-runner').click(); { const Cc = P.state().circle; for (let i = 0; i < 400 && Math.abs(X.circleStartE(Cc)) < 0.4; i++) T.update(STEP); inp.aPressed = true; T.update(STEP); ok(Cc.stage === 'race' && Cc.v < 3, 'Circle: off a mistimed pass the Runner starts from standing'); } P.leave(); }
+{ // the Runner's passers: each pass graded at random as yours are as the Passer, with the same words and flights, the ball's lap held to the step
+  const K = X.CIRCLE, G = ['Perfect', 'Good', 'Early', 'Late'], count = Object.fromEntries(G.map(g => [g, [0, 0, 0, 0, 0]])), tags = new Set(), plans = {};
+  let worst = 0, exact = true, laps = 0, flights = true;
+  const round = (Cc, r) => {                               // round r on its own: a chest start and a runner who stands still, so the ball always goes all the way round
+    Cc.round = r; X.KIT.circle.role('runner');
+    for (let i = 0; i < 400 && Cc.stage === 'start'; i++) { stick(0, 0); if (Math.abs(X.circleStartE(Cc)) < 0.05) inp.aPressed = true; T.update(STEP); }
+    const plan = Cc.plan.slice(1).map(q => q.grade); let prev = 0;
+    for (let i = 0; i < 3000 && !Cc.ballHome && Cc.stage === 'race'; i++) {
+      stick(0, 0); prev = Cc.t; const f = Cc.fly; T.update(STEP); for (const t of T.M.tags) tags.add(t.text);
+      if (Cc.fly && Cc.fly !== f && Cc.fly.from > 0) { const g = Cc.plan[Cc.fly.from].grade, a = Cc.men[Cc.fly.from], b = X.circleSpot(Cc.fly.to, Cc.R), want = Math.max(0.12, Math.hypot(b.x - a.x, b.y - a.y)/(g === 'Perfect' ? K.fast : g === 'Early' ? K.slow : K.good)); if (Math.abs(Cc.fly.T - want) > 1e-9 || Cc.fly.rushed !== (g === 'Early')) flights = false; }
+    }
+    const lap = prev + STEP*X.PACE.live, v = T.contact.maxSpeed(Cc.men[0]), cal = (X.circleLap(Cc.R)/v + v/(2*K.acc))*K.runF[r - 1];
+    worst = Math.max(worst, Math.abs(lap/cal - 1)); if (Math.abs(lap - Cc.lapT) > 1e-6) exact = false; laps++;
+    return plan;
+  };
+  for (let seed = 1; seed <= 16; seed++) {
+    H.reseed(seed*613); P.start('circle'); $('pr-runner').click();
+    const Cc = P.state().circle, mine = [];
+    for (let r = 1; r <= K.rounds; r++) { const plan = round(Cc, r); plan.forEach(g => count[g][r - 1]++); mine.push(plan.join()); }
+    plans[seed] = mine.join('|'); P.leave();
+  }
+  ok(G.every(g => count[g].reduce((a, b) => a + b, 0) > 0), 'Circle, Runner: the CPU passers throw every grade over a run of seeds (' + G.map(g => g + ' ' + count[g].join('/')).join(', ') + ')');
+  ok(['Chest', 'Good', 'Too High', 'Too Low', 'Fumble'].every(w => tags.has(w)), 'Circle, Runner: and say so as you do, Chest, Good, Too High, Too Low, and Fumble at the catcher (' + [...tags].join(', ') + ')');
+  ok(flights, 'Circle, Runner: each CPU pass flies as yours does: Chest quick, Too High slow and fumbled, Good and Too Low at the Good pace');
+  ok(count.Perfect[3] + count.Perfect[4] > count.Perfect[0] + count.Perfect[1] && count.Early[0] + count.Early[1] > count.Early[3] + count.Early[4], 'Circle, Runner: more Chest passes in the late rounds, more fumbles in the early ones');
+  ok(exact && worst < 0.05, `Circle, Runner: every round's lap is the one it was before the grades, to the step, inside 5% of the calibrated time (${laps} laps, worst ${(worst*100).toFixed(1)}%)`);
+  { H.reseed(7*613); P.start('circle'); $('pr-runner').click(); const Cc = P.state().circle, again = []; for (let r = 1; r <= K.rounds; r++) again.push(round(Cc, r).join()); P.leave();
+    ok(again.join('|') === plans[7], 'Circle, Runner: the same seed throws the same passes'); }
+  { P.start('circle'); const r0 = H.rndCalls(); $('pr-passer').click(); const Cc = P.state().circle; let n = 0;
+    for (; n < 4000 && Cc.round === 1 && !P.state().done; n++) { if (Cc.stage === 'start' && Cc.t > 0.2) inp.aPressed = true; if (Cc.hold && Math.abs(Cc.hold.t - Cc.hold.tc) < STEP/2 + 1e-9) inp.aPressed = true; T.update(STEP); }
+    ok(H.rndCalls() === r0 && Cc.plan === null, 'Circle, Passer: picking Passer and a round played draw no random number, so the Passer is as it was');
+    P.leave(); }
+}
 { const shape = stars('scrum', null, () => driveBot(6, 1)), tapOnly = stars('scrum', null, () => driveBot(7, 1, false)), slowShape = stars('scrum', null, () => driveBot(4, 1));
   ok(shape.mean > tapOnly.mean && tapOnly.mean <= 1, `Driving: body shape and timing beat tapping alone (${showMean(shape)} to ${showMean(tapOnly)})`);
   ok(slowShape.mean > tapOnly.mean, `Driving: slower taps in a good shape beat faster taps in a bad one (${showMean(slowShape)} to ${showMean(tapOnly)})`);
@@ -273,16 +313,25 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
   ok(hops >= 30 && worstHop < 0.3, `Egg: a bounce pass comes down inside its ring, and every hop inside the ring that moved for it (${hops} landings, worst ${worstHop.toFixed(2)} m off centre)`);
   ok(thrown >= 6 && worstThrow < 0.5, `Egg: a flat pass and a high ball pass through their ring at catching height (${thrown} throws, worst ${worstThrow.toFixed(2)} m off centre)`);
   ok(rolled >= 5 && worstRoll < 0.3, `Egg: a rolling ball stops in the ring that moved for it (${rolled} rolls, worst ${worstRoll.toFixed(2)} m)`);
-  // the ring makes it easier, so the reward has to stay with moving: a child who reads the ring and stands in it, against one who reads it and runs on to it
+  // the ring makes it easier, so the reward has to stay with moving: a child who reads the ring and stands in it, against one who reads it and runs on to it.
+  // At the Kids level, where the ring shows on every throw (eggRing). Re-pinned when two in three throws became a Bounce Pass: these were whole-run stars
+  // (stand-in at most 2.2, run-on at least as many), but a Bounce Pass's ring moves with every hop, so going to it is running on to the ball (the stand-in
+  // child meets 258 of 278 at 0.4 s, 2.52 stars). A ring can only be stood in for a Flat Pass or a High Ball, so those are where the two are measured,
+  // in points a throw over 40 runs: stand-in 1.23 and 0.93 at 0.4 and 0.8 s, run-on 1.32 and 1.16 (the build before: 1.11 and 0.96, run-on 1.38 and 1.11).
+  // The whole run keeps a ceiling of its own: following the ring, Bounce Passes and all, stays short of three stars (stand-in 2.52 and 1.98, at most 2.8)
   const ringAt = E => E.aim || E.me;
   const standIn = lag => { const n = lagged(lag); let t = 0; return st => { const E = st.egg; if (E.stage !== 'fly') { t = 0; stick(0, 0); return; } if (t++ < n) return; toward(E.me, ringAt(E).x, ringAt(E).y, 0.3); }; };
   const runOn = lag => { const n = lagged(lag); let t = 0; return st => { const E = st.egg, b = T.M.ball; if (E.stage !== 'fly') { t = 0; stick(0, 0); return; } if (t++ < n) return; const a = ringAt(E), d = Math.hypot(a.x - E.me.x, a.y - E.me.y); if (d > 2.2) toward(E.me, a.x, a.y, 0.02); else toward(E.me, b.x, b.y, 0.02); }; };
-  for (const lag of [0.4, 0.8]) {
-    const stood = stars('egg', null, () => standIn(lag), 20), ran = stars('egg', null, () => runOn(lag), 20);
-    ok(stood.mean >= 0.5, `Egg: a child ${lag} s slow who only stands in the ring earns stars (${showMean(stood)})`);
-    ok(stood.mean <= 2.2, `Egg: and going to the ring and no further stays short of the top stars (${showMean(stood)})`);
-    ok(ran.mean >= stood.mean, `Egg: running on to the ball from the ring earns at least as much as stopping in it (${showMean(ran)} to ${showMean(stood)})`);
-  }
+  const flatHigh = (make, lag) => { const t = { throws:0, points:0 }; const r = stars('egg', null, () => { const bot = make(lag); let n = 0, score = 0; return st => { const E = st.egg; if (E.n !== n) { n = E.n; if (E.kind !== 'bounce') t.throws++; } if (E.score !== score) { if (E.kind !== 'bounce') t.points += E.score - score; score = E.score; } bot(st); }; }, 40); return { ...r, fh:t.points/t.throws }; };
+  atLevel(true, () => {
+    for (const lag of [0.4, 0.8]) {
+      const stood = flatHigh(standIn, lag), ran = flatHigh(runOn, lag), top = X.EGG.stars[2]/X.EGG.throws;
+      ok(stood.mean >= 0.5, `Egg: a child ${lag} s slow who only stands in the ring earns stars (${showMean(stood)})`);
+      ok(stood.fh < top, `Egg: and going to the ring and no further, where it can be stood in, stays short of the top stars (${stood.fh.toFixed(2)} points a Flat Pass or High Ball, the top stars' pace ${top.toFixed(2)})`);
+      ok(stood.mean <= 2.8, `Egg: and over a whole run, Bounce Passes and all, a child ${lag} s slow who only follows the ring stays short of three stars (${showMean(stood)}, at most 2.8)`);
+      ok(ran.fh >= stood.fh, `Egg: running on to the ball from the ring earns at least as much as stopping in it (${ran.fh.toFixed(2)} to ${stood.fh.toFixed(2)} points a Flat Pass or High Ball; whole runs ${showMean(ran)} to ${showMean(stood)} stars)`);
+    }
+  });
 }
 { // the same catch, moving or waiting
   const catchAt = run => { H.reseed(11); P.start('egg'); $('pr-retry').click(); const st = P.state(), E = st.egg, b = T.M.ball; while (E.stage !== 'fly') T.update(STEP); for (let i = 0; i < 300 && E.bounced === false; i++) { T.update(STEP); } E.me.x = b.x + 0.8; E.me.y = b.y; E.me.vx = run ? -6 : 0; E.me.vy = 0; if (run) stick(-1, 0); T.update(STEP); letGo(); const out = { caught:E.caught, score:E.score, met:E.met }; P.leave(); return out; };
@@ -374,7 +423,6 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
 
 /* ---------- every game shows a short line after a run ---------- */
 for (const d of X.DRILLS) {
-  if (d.id === 'defend' || d.id === 'pass') continue;      // their result line is that line
   const made = runOnce(d.id, d.roles ? 'passer' : null, stillBot, 1); const tip = $('pr-tip').textContent;
   ok(made.done && !$('pr-tip').hidden && tip.length > 8 && tip.length <= 70 && !/\b(he|she|his|her|him)\b/i.test(tip), d.id + ': a short line after a run: ' + tip);
   P.leave();
@@ -403,17 +451,19 @@ const minis = fn => { const s = D.settings(), was = s.cat; s.cat = 'minis'; try 
   D.settings().cat = 'women'; ok(!X.barred('tackle'), 'Women picked, it opens again'); P.choose(); ok(!$('pr-contact').hidden, 'and the picker shows it'); P.leave(); D.settings().cat = 'men';
   ok(!X.barred('tackle'), 'with Men and no Kids level, it opens');
 }
-{ // Kids level and the Minis: Breakaway and Two-on-One are games of tag. No dive, no bind, no Big Hit
-  const pullBot = () => { let done = false; return st => { const me = T.sides.ctrlOf(0), b = T.M.ball, c = b.state === 'held' ? b.carrier : null; if (!st.switched) { if (st.elapsed >= 0.4 && !done) { inp.bPressed = true; done = true; } return; } if (!me || !c || c.team !== 1) return; toward(me, c.x + c.vx*0.25, c.y + c.vy*0.25, 0.05); sprint(true); if (Math.hypot(me.x - c.x, me.y - c.y) < 1.5) inp.aPressed = true; }; };
+{ // Kids level and the Minis: Breakaway and Create a Gap are games of tag, every round. No dive, no bind, no Big Hit
+  const pullBot = () => defendBot(0.4);                   // Tackle is Pull Tag here: the same press, once close
   const young = fn => { const s = D.settings(), was = [s.kids, s.diff]; K.segSet(0); try { fn(); } finally { s.kids = was[0]; s.diff = was[1]; } };
   for (const [name, wrap] of [['Kids level', young], ['Minis', minis]]) wrap(() => {
     P.start('defend'); ok(P.state().tagOnly && $('pr-objective').textContent === 'Get Across and Pull the Tag' && /Pull Tag/.test($('pr-feedback').textContent) && !/Tackle/.test($('pr-feedback').textContent) && $('pr-coach').hidden, name + ': the Breakaway card asks for a tag, not a tackle'); P.leave();
     let won = 0, binds = 0, words = 0, tackles = 0, whiffs = 0;
-    for (let s = 1; s <= 30; s++) { const st = runOnce('defend', null, pullBot, s*911); if (st.won) won++; tackles += (T.M.stats.ta1 || 0) + (T.M.stats.ta0 || 0); for (const p of T.M.players) if (p.bind) binds++; if ((T.M.stats['tag_Big Hit'] || 0) || (T.M.stats.dom0 || 0)) words++; P.leave(); }
-    ok(won >= 25 && !tackles && !binds && !words, name + ': Breakaway is won by a tag, with no tackle, bind or Big Hit (' + won + ' of 30 won; ' + tackles + ' tackles, ' + words + ' Big Hits)');
+    let rounds = 0, pulls = 0;
+    for (let s = 1; s <= 30; s++) { const st = runOnce('defend', null, pullBot, s*911); if (st.won) won++; rounds += st.defend.R.won; pulls += T.M.stats.drillPulled || 0; tackles += (T.M.stats.ta1 || 0) + (T.M.stats.ta0 || 0); for (const p of T.M.players) if (p.bind) binds++; if ((T.M.stats['tag_Big Hit'] || 0) || (T.M.stats.dom0 || 0)) words++; P.leave(); }
+    ok(won >= 25 && pulls >= rounds && rounds > won && !tackles && !binds && !words, name + ': Breakaway is won by a tag in every round, with no tackle, bind or Big Hit (' + won + ' of 30 won, ' + rounds + ' rounds, ' + pulls + ' tags pulled; ' + tackles + ' tackles, ' + words + ' Big Hits)');
     P.start('defend'); $('pr-retry').click(); inp.bPressed = true; T.update(STEP); D.updateHud(); ok($('la').textContent === 'Pull Tag', name + ': the button reads Pull Tag'); 
-    const st = P.state(), me = T.sides.ctrlOf(0), c = T.M.ball.carrier; me.x = c.x + 1.2; me.y = c.y; inp.aPressed = true; T.update(STEP); ok(st.done && st.won && /tag/i.test($('pr-feedback').textContent), name + ': a press in reach pulls the tag and ends it: ' + $('pr-feedback').textContent); P.leave();
-    H.reseed(5); P.start('pass'); $('pr-retry').click(); { const stp = P.state(); let n = 0; while (!stp.done && n++ < 3000) { stick(0, 0); T.update(STEP); } ok(stp.done && !stp.won && !T.M.stats.tackles && !T.M.stats.ta0 && /Tagged/.test($('pr-feedback').textContent), name + ': a Two-on-One carrier who stands still is tagged, not tackled: ' + $('pr-feedback').textContent); } P.leave();
+    const st = P.state(), me = T.sides.ctrlOf(0), c = T.M.ball.carrier; me.x = c.x + 1.2; me.y = c.y; inp.aPressed = true; const pulled = T.M.stats.drillPulled || 0; T.update(STEP); ok(!st.done && st.defend.R.won === 1 && st.defend.R.stage === 'show' && T.M.stats.drillPulled === pulled + 1 && T.M.tags.map(t => t.text).join() === 'Stopped', name + ': a press in reach pulls the tag and wins the round, and one word says so, Stopped in the place of Got It (' + T.M.tags.map(t => t.text) + ')'); P.leave();
+    for (const n of [1, 3, 5]) { H.reseed(5); P.start('pass'); const stp = P.state(); if (n > 1) { stp.gap.R.round = n; stp.gap.R.won = n - 1; X.gapRestage(n); } $('pr-retry').click(); let k = 0; while (!stp.done && k++ < 3000) { stick(0, 0); T.update(STEP); }
+      ok(stp.done && !stp.won === (n === 1) && stp.gap.R.lost === 'Tagged' && !T.M.stats.tackles && !T.M.stats.ta0 && /Pass before they reach you/.test($('pr-tip').textContent), name + ': in Create a Gap round ' + n + ', a carrier who stands still is tagged, not tackled, and the run ends: ' + stp.gap.R.lost + ', ' + $('pr-tip').textContent); P.leave(); }
     { D.settings().drillSeen = []; P.start('defend'); ok($('demo-coach').hidden, name + ': Watch How has no coach line in a game of tag'); let n = 0; const caps = new Set(); while (P.state() && P.state().demo && n++ < 12000) { T.update(STEP); caps.add($('demo-cap').textContent); } const L = X.demoLast(); ok(L && L.ok && [...caps].some(t => /Pull Tag/.test(t)) && ![...caps].some(t => /Tackle/.test(t)), name + ': and its Watch How pulls a tag (' + [...caps].filter(t => /Tag/.test(t)).join(' ; ') + ')'); P.leave(); seeAll(); }
   });
   P.start('defend'); ok(!P.state().tagOnly && !$('pr-coach').hidden && /Tackle/.test($('pr-feedback').textContent), 'grown-up levels: Breakaway is a tackle, and its card carries the coach line'); P.leave();
@@ -504,8 +554,13 @@ P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the gr
 { // the ladder of the existing skills' points never moves: 1, 3, 5, 8
   ok(JSON.stringify(C.TRAIN) === '[1,3,5,8]', 'the career\'s points for 0 to 3 stars are unchanged');
   // what the game's own measured play earns stays where it was (before the rework, tools/CHECKS.md): a band round each old mean, not a pin
-  const bands = { egg:[1.6, 2.6], cones:[1.8, 3], tackle:[2.5, 3], kick:[1.8, 3], defend:[2, 3], pass:[2, 3] };
-  for (const [id, role, name, good, child] of table) { const b = bands[id]; if (!b) continue; const m = stars(id, role, child, 20); ok(m.mean >= b[0] && m.mean <= b[1], `Career: a child's ${name} stays in its old band, ${b[0]} to ${b[1]} stars (${showMean(m)})`); }
+  // defend re-pinned at the rounds (2026-11-09) from [2, 3]: round one wins the same 16 of these 20 seeds as at 84e61b1, so 2.40 to 1.45 is the star rule (rounds won, 1, 3 and 5) alone.
+  // 1.45 to 1.30 when rounds three and four's support runner moved from (56, 39) to (53, 36), clear of the thumbs at 667x375: the same 16 seeds win round one, and the bots' re-arm on a Go Again left this band where it was
+  // pass: with the bot re-armed on a Go Again a child with no lag wins all five rounds (3.00, the band's top, 2.30 before); the lagged table above is the honest figure
+  const bands = { egg:[1.6, 2.6], cones:[1.8, 3], tackle:[2.5, 3], kick:[1.8, 3], defend:[1, 1.8], pass:[2, 3] };
+  const said = [];
+  for (const [id, role, name, good, child] of table) { const b = bands[id]; if (!b) continue; const m = stars(id, role, child, 20); said.push(name + ' ' + showMean(m)); ok(m.mean >= b[0] && m.mean <= b[1], `Career: a child's ${name} stays in its old band, ${b[0]} to ${b[1]} stars (${showMean(m)})`); }
+  console.log('Career bands, a child\'s mean of 20 runs: ' + said.join(', '));
   const drive = stars('scrum', null, () => driveBot(4.5, 0.5), 20); ok(drive.mean >= 1.5 && drive.mean <= 2.5, `Career: a child's Driving, keeping the green, stays in its old band (${showMean(drive)})`);
 }
 { // an old save: no drill field, an old career, its Watch How list from before the two new games
@@ -679,7 +734,9 @@ P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the gr
   ok(T.contact.matchMild() && dom() && !T.M.stats['tag_Big Hit'] && T.M.stats.tag_Stopped > 0 && !(T.M.stop > 0) && !T.M.shake, 'Kids match: a dominant tackle reads Stopped, with no freeze and no shake');
   T.newMatch(NAT[0], NAT[3], { halfLen:120, diff:0, humans:[true, false], arcade:true }); T.M.phase = 'play';
   ok(!T.contact.matchMild(), 'an Easy match is not mild'); const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); C.set(cr); T.M.career = true; ok(!T.contact.matchMild(), 'a men\'s career match is not'); C.set(null); T.M.career = false; T.newMatch(T.teams.catSide(NAT[0], 'minis'), T.teams.catSide(NAT[3], 'minis'), { halfLen:120, diff:1, humans:[true, false], arcade:true }); T.M.phase = 'play'; ok(T.contact.matchMild(), 'a Minis match is (Men | Women | Minis: PR #14\'s career Minis, in the merge)'); D.exitMatch();
-  ok(/It lights up when you can reach them/.test(html), 'Help says when the button lights without teaching a dive'); }
+  // re-pinned 2026-11-09: How to Play's Tackle row ("It lights up when you can reach them") went with its prose; the picture names Tackle beside Pass, and still teaches no dive
+  { const at = html.indexOf('id="s-help"'), help = html.slice(at, html.indexOf('</section>', at));
+    ok(/<b class="ctl-j a">Tackle<\/b>/.test(help) && !/dive/i.test(help) && !/close enough to dive/i.test(html), 'How to Play names Tackle without teaching a dive'); } }
 
 console.log(failed ? `Training games: ${passed} passed, ${failed} failed` : `Training games: ${passed} assertions passed`);
 process.exitCode = failed ? 1 : 0;

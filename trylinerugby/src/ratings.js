@@ -4,7 +4,7 @@
    - RATINGS_BUNDLED is the nations' table, from the world rankings and recent results, with its date. tools/ratings/update.mjs
      reads this line as JSON, so it stays one line of strict JSON. In the merged game it is the shape ratings.json is checked against;
      the nations themselves are rated by main's official World Rugby tables (NATIONS, NAT_WOMEN, natList in data.js).
-   - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), held inside main's club band.
+   - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), in the real order of the tiers.
    - starsOfOverall and TEAM_LEVELS are the star scale and the levels a team you make can be set at.
    - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities.
    - Players' devices only ever ask the game's own site: a same-origin ratings.json, read once at boot (online, or offline through
@@ -18,10 +18,17 @@ function starsOfOverall(ov) { return ov >= 90 ? 5 : ov >= 75 ? 4.5 : ov >= 70 ? 
 const starsOf = t => starsOfOverall(overallOf(t));
 const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text alternative, and the words on a level
 /* A team you make or import is set at a level, which gives it a fixed amount of ability: the one table of level, overall and stars. budget: the points to spend above 1 in each ability.
-   The id is what a save holds, so it never changes. A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
-const TEAM_LEVELS = [['c5', 'Counties 5', 40], ['c3', 'Counties 3', 43], ['c1', 'Counties 1', 49], ['r2', 'Regional 2', 52], ['r1', 'Regional 1', 58], ['nat', 'National League', 61], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75], ['euro', 'European Champions', 90]]
+   Each level is the best built-in side of that league on the clubs' ladder (CLUB_RATED), so a level means what a built-in side of it means:
+   Counties 5 43 and Counties 3 46 (every side of each), Counties 1 52 (Cobham, Weybridge), Regional 2 55 (Ironsides), Regional 1 61 (Farnham),
+   Championship 64 (England 2, the English Championship, with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75.
+   An imported National League page (England's third and fourth tiers) is Regional 1 (src/import.js). PR #14's European Champions (90, its
+   Bordeaux) has gone with Bordeaux's 90: no club is above a nation, and a save holding it reads as National Champions (LEVEL_WAS).
+   The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
+const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
   .map(([id, name, overall]) => ({ id, name, overall, stars:starsOfOverall(overall), budget:sumOfOverall(overall) - ABILITIES.length }));
-const teamLevelOf = t => (t && TEAM_LEVELS.find(l => l.id === t.level)) || null;
+const LEVEL_WAS = { euro:'champ' };   // a level that has gone, as a save may still hold it
+const levelById = id => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => l.id === LEVEL_WAS[id]) || null;
+const teamLevelOf = t => (t && levelById(t.level)) || null;
 const teamBudget = t => { const l = teamLevelOf(t); return l ? l.budget : BUDGET; };
 /* Whole abilities 1 to 5 adding up to sum, from a side's flavour. Short of it, a point goes to where the side is already
    strong; over it, a point comes off where it is weakest. Each ability takes its turn, strongest (or weakest) first, so
@@ -39,30 +46,32 @@ function abilitiesFor(flavour, sum) {
   return out;
 }
 const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILITIES.map(([k]) => [k, t[k]]))]));   // from the lists, before any rating is set: how each side plays (a drill's sides, practice.js)
-/* The clubs' table: PR #14's ratings from last season's results (its CLUB_RATED at 05886e6, set from each side's place, scored and conceded,
-   the figures on its list), held inside main's club band. Main's band is 61 to 75, every nation above it (78 and up), and no club tops a team
-   you can make (75). Each of PR #14's steps stays a step where the band has room:
-   - a top flight (England, France, Celtic and Italy, South Africa, Australia): PR #14's own figure, 67 to 75, its 64 and 61 held up to the
-     band's 67 (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide). Only a national champion is 75: Northampton,
-     Toulouse, Dublin. Bordeaux is rated by its table (8th, 70): PR #14's European champion at 90 is not in main's band.
-   - England 2: a step up from PR #14's, 67 with a winning record and 64 without, so its winners are level with the top flights' foot.
-   - Local and Counties: PR #14's ladder moved onto main's band a step for a step, Counties 5 at 61 up to Farnham at 75 (Regional 1). Its
-     55 and 52 (Wimbledon, Ironsides) share 72, the one place two of its steps meet, so Farnham keeps the 75 Kids and Quick Match know.
-     So Local's best sit above England 2 and level with the top flights, where PR #14 had Local under both: with six values in the band,
-     the order between tiers and Farnham's 75 cannot both hold. Left for the owner's call (README, Teams); TEAM_LEVELS waits on it too.
-   - Dunedin, 9th in Super Rugby Pacific under Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
-   Sides not here keep the abilities written in their list: the nations (natList), Scotland's Premiership (61 and 64 as written), New Zealand
-   and Japan (no figures), Quins (no figures). A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. */
+/* The clubs' table, in the real order (the owner, 2026-11-09: "Pro leagues on top, then England 2, then Counties and Local clubs by their
+   tables (Farnham about 61 to 64)"), from PR #14's ratings of last season's results (its CLUB_RATED at 05886e6: each side's place, scored
+   and conceded, the figures on its list). Every nation is above every club (78 and up), and no club tops a team you can make (75).
+   - Top flights (England, France, the United Rugby Championship, South Africa, Australia): 67 to 75, PR #14's own figure, its 64 and 61 held up to 67
+     (Newcastle, Montauban, Parma, the Currie Cup's three, Melbourne and Adelaide) so every top-flight side is above England 2. Only a
+     national champion is 75: Northampton, Toulouse, Dublin. Bordeaux is rated by its table (8th, 70), not PR #14's European champion at 90.
+     New Zealand and Japan (no figures) keep the abilities written in their lists, 67 to 75. Dunedin, 9th in Super Rugby Pacific under
+     Sydney's 8th, is held to Sydney's 67 so the one table reads in order across the two lists.
+   - England 2: 61 to 64, PR #14's own figures, 64 with a winning record and 61 without.
+   - Scotland's Premiership (an amateur league, no figures, in its table's order): 61 for the top five and 58 for the rest, a step under
+     the 64 and 61 written in its list, so no Scottish side is above an England 2 side.
+   - Local and Counties: PR #14's ladder a step up, so Farnham (Regional 1, 7th) is 61 and nothing local is above England 2: Regional 1
+     61 to 58, Regional 2 55 to 52, Counties 1 52 to 49, Counties 3 46, Counties 5 43. Quins (no figures) stays level with Farnham, as main had it.
+   A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. Sides not here keep the abilities written in their
+   list: the nations (natList), New Zealand and Japan. TEAM_LEVELS is on the same ladder. */
 const CLUB_RATED = {
   NTH:75, BTH:72, EXE:72, LEI:72, LNO:70, BRS:70, SAL:67, GLO:67, LWE:67, NCL:67,                                                  // England: the Premiership, Northampton the champion
   TLS:75, MPL:72, PAR:72, PAU:72, NAN:72, LRO:70, CLE:70, BOR:70, TLN:70, CAS:70, LYO:67, BAY:67, PGN:67, MTB:67,                    // France: the Top 14, Toulouse the champion
-  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // Celtic and Italy: the URC, Dublin the champion
+  DUB:75, GLA:72, LIM:72, CDF:70, GAL:70, BEL:70, SWA:70, EDI:67, TRE:67, LLA:67, NPT:67, PRM:67,                                    // the United Rugby Championship, Dublin the champion
   CPT:72, PRE:72, JHB:70, DUR:70, KIM:67, BLM:67, MBO:67,                                                                            // South Africa: the URC's four, then the Currie Cup's
   BRI:70, CAN:70, PTH:70, SYD:67, MEL:67, ADL:67,                                                                                    // Australia: Super Rugby Pacific, then the two with no side now
   DUN:67,                                                                                                                            // New Zealand: Dunedin, under Sydney
-  EAL:67, BED:67, COV:67, WOR:67, CHN:67, HPY:67, CWL:67, DON:67, NOT:64, AMP:64, CAL:64, RIC:64, CAM:64,                            // England 2: a winning record 67
-  FAR:75, WIM:72, IRO:72, GUI:70, COB:70, WEY:70, ORU:67, KIN:64, HAS:64, ALD:64, GDN:61,                                            // Local: Regional 1 down to Counties 5
-  EFF:64, WAN:61, EGH:61, MER:61, MIT:61, FEL:61,                                                                                    // Counties: Counties 3 64, Counties 5 61
+  EAL:64, BED:64, COV:64, WOR:64, CHN:64, HPY:64, CWL:64, DON:64, NOT:61, AMP:61, CAL:61, RIC:61, CAM:61,                            // England 2: a winning record 64
+  AYR:61, CUR:61, GOL:61, MYR:61, KEL:61, GIF:58, HAW:58, MLR:58, ANN:58, SEL:58,                                                    // Scotland: the Premiership's top five 61
+  FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,                                    // Local: Regional 1 down to Counties 5
+  EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,                                                                                    // Counties: Counties 3 46, Counties 5 43
 };
 // CLUB_TUNE
 for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));

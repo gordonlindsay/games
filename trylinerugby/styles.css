@@ -98,22 +98,62 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
 .tstars b{font-weight:700;color:var(--chalk);white-space:nowrap}
 .tstars::before{content:"";display:inline-block;width:11px;height:11px;margin:0 5px -1px 0;background:var(--flood);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
-
-/* Men | Women | Minis beside the title (under it when the row is short); International | National | Local, then National's leagues
-   or Local's lists, each row in equal parts. A long league name takes two lines rather than push the row wider than the screen. */
-.head > .cat{display:grid;gap:0;flex:0 1 264px;min-width:228px}
-.pools{display:flex;flex-direction:column;gap:8px;margin-top:-8px}
-.pools .seg button,.head > .cat button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
-/* National's nine leagues (England 2 is PR #14's): one row where nine fit (a phone held sideways at 844), two rows where they do not (667),
-   five then four, each row in equal parts (twenty columns: a span of four, then of five). The career's club screen does the same (#cc-nat). */
-@media (max-width:731px){
-  #t-nat,#cc-nat{grid-auto-flow:row;grid-template-columns:repeat(20,minmax(0,1fr))}
-  #t-nat button,#cc-nat button{grid-column:span 4}
-  #t-nat button:nth-child(n+6),#cc-nat button:nth-child(n+6){grid-column:span 5;border-top:1.5px solid var(--rule-hi)}
-  #t-nat button:nth-child(6),#cc-nat button:nth-child(6){border-left:0}
+/* Safari sideways with its bars (320px tall): the card's rows closer, so a nation's whole card (Stronger Side and two lines of traits)
+   is in view under the folded line */
+@media (orientation:landscape) and (max-height:330px){
+  #t-grid .team{row-gap:6px}
+  #t-grid .team .jw{margin-bottom:4px}   /* the overall's badge, 8px under the shirt, still clear of the row under it */
+  #t-grid .stats{row-gap:2px}
 }
+
+/* Fold to One Line (the team screen and the career's club screen, foldMove in src/ui-menus.js): the eyebrow over a smaller title, where the
+   list is (Men · National · Australia) with your side under it on Pick Opponent (v Farnham), and Change (Done while open), one row of
+   48px; the controls open under it. The summary takes the room left and wraps, never the title or the button. Championship's primary
+   (Play as Farnham, Tour Scotland) is on the line too: a row of its own under it where the screen is tall, and beside Change on a phone
+   held sideways (below), so the first row of cards is in view there as well */
+.fold-line{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-height:48px}
+.fold-name{display:flex;flex-direction:column;gap:4px;flex:none;min-width:0}
+.fold-name .eyebrow,.fold-line h2.title{white-space:nowrap}
+.fold-line h2.title{font-size:30px;line-height:.9}
+.fold-sum{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 15px/1.2 var(--body);color:var(--chalk-dim);text-wrap:balance}
+.fold-sum b{font-weight:700;color:var(--chalk)}
+.fold-sum span span{display:inline-block;max-width:100%}   /* each part whole: a long summary wraps at a dot, and inside a part only where the part alone is wider than the room (the United Rugby Championship beside Play as at 568 wide) */
+.btn.fold-go{width:auto;flex:none;min-height:44px;min-width:88px;padding:8px 16px}
+.fold-line > .primary{flex:1 0 100%}
+@media (orientation:landscape) and (max-height:560px){
+  .fold-line{flex-wrap:nowrap}
+  .fold-line > .primary{flex:0 1 auto;width:auto;max-width:30%;min-height:44px;padding:4px 12px;font-size:16px;line-height:1;letter-spacing:.03em;text-wrap:balance}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:620px){
+  /* 568 wide: a little closer and the title a little smaller, so beside Play as the summary keeps three lines at most, International and
+     Championship each whole on one */
+  .fold-line{gap:8px}
+  .fold-line h2.title{font-size:26px}
+  .fold-line > .primary{max-width:128px;padding-inline:8px;font-size:15px}
+}
+.fold-ctl{display:flex;flex-direction:column;gap:12px}
+/* Men | Women | Minis beside the tiers (over them where the row is short); International | National | Local, then National's leagues
+   or Local's lists, each row in equal parts. A long league name takes two lines rather than push the row wider than the screen. */
+.fold-top{display:flex;flex-wrap:wrap;gap:8px}
+.fold-top > .seg{flex:1.4 1 330px}
+.fold-top > .cat{flex:1 1 228px}
+@media (orientation:landscape) and (max-height:560px){ .fold-top > .seg{flex-basis:290px} .fold-top > .cat{flex-basis:200px} }   /* one row at 568 wide too, so the opened controls stay on a 320px screen */
+.pools{display:flex;flex-direction:column;gap:8px}
+.pools .seg button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
+/* National's nine leagues (England 2 is PR #14's), five then four at every width, each row in equal parts (twenty columns: a span of
+   four, then of five): the United Rugby Championship takes two lines, and its Championship needs a fifth of the row. The career's club
+   screen does the same (#cc-nat) */
+#t-nat,#cc-nat{grid-auto-flow:row;grid-template-columns:repeat(20,minmax(0,1fr))}
+#t-nat button,#cc-nat button{grid-column:span 4;padding:4px 3px}
+#t-nat button:nth-child(n+6),#cc-nat button:nth-child(n+6){grid-column:span 5;border-top:1.5px solid var(--rule-hi)}
+#t-nat button:nth-child(6),#cc-nat button:nth-child(6){border-left:0}
 .yours{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid var(--flood);border-radius:8px;background:var(--panel)}
 .yours .btn{width:auto;flex:none}
+/* in the opened controls the bar is compact, your side being on the line already (v Farnham) */
+.fold-ctl .yours{padding:6px 12px}
+.fold-ctl .yours .btn{min-height:44px;padding:8px 16px}
+.fold-ctl #t-mine{font-size:26px}
+.fold-ctl #t-mine .rstars{--star:12px}
 .tcard{min-width:0;display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
 .tcard .team{flex:1;border:0;background:transparent}
 .tcard .btn{width:auto;min-height:44px;margin:0 12px 12px}
@@ -192,17 +232,6 @@ h2.title.gold{color:var(--flood)}
 .res .sc{font:800 18px/1 var(--display);min-width:5.2em;text-align:center}
 .res.me{box-shadow:inset 3px 0 0 var(--flood)}
 
-/* help */
-.help{display:grid;grid-template-columns:minmax(7.5em,auto) 1fr;gap:12px 16px;margin:0;padding:16px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
-.help dt{font:800 20px/1.05 var(--display);text-transform:uppercase;color:var(--chalk)}
-.help dd{margin:0;color:var(--chalk-dim);max-width:60ch}
-.help dd b{color:var(--chalk)}
-.scoring{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.scoring div{padding:10px;border:1.5px solid var(--rule);border-radius:6px;background:var(--panel);text-align:center}
-.scoring b{display:block;font:900 32px/1 var(--display)}
-.scoring span{font-size:12px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.08em}
-@media (max-width:420px){.scoring{grid-template-columns:repeat(2,1fr)}.help{grid-template-columns:1fr;gap:4px}.help dd{margin-bottom:10px}}
-
 /* ---------- in-match HUD ---------- */
 #hud{position:fixed;left:0;right:0;top:0;z-index:5;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:calc(env(safe-area-inset-top,0px) + 8px)}
 .bug{display:flex;align-items:stretch;background:rgba(8,14,10,.88);border:1px solid rgba(241,238,228,.2);border-radius:4px;overflow:hidden;font:800 21px/1 var(--display);text-transform:uppercase;font-variant-numeric:tabular-nums}
@@ -262,6 +291,7 @@ h2.title.gold{color:var(--flood)}
 #banner .msg.coach{font:700 18px/1.25 var(--body);text-transform:none;letter-spacing:0;padding:8px 14px;max-width:min(28em,92vw)}
 #banner .msg.big{border:0;background:none;padding:0;font-size:clamp(84px,22vw,170px);color:var(--chalk);text-shadow:0 5px 0 var(--k,#000),0 8px 0 rgba(0,0,0,.45),0 0 40px rgba(0,0,0,.5)}
 #banner .msg.fire{color:#ffcf3d;text-shadow:0 5px 0 #ff5a14,0 8px 0 rgba(0,0,0,.45),0 0 48px rgba(255,90,20,.65)}   /* On Fire */
+#banner .msg.big .grade{text-shadow:0 2px 0 rgba(0,0,0,.6),0 0 12px rgba(0,0,0,.5)}   /* a word over a big banner (On Fire lit by a Line Break): the small grade without the big letters' drop */
 #banner .msg.hit{animation:pop .22s ease-out,thud .3s ease-out}   /* Big Hit lands with a jolt */
 @keyframes thud{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,2px)}}
 @keyframes pop{from{transform:scale(.82);opacity:0}to{transform:none;opacity:1}}
@@ -944,8 +974,8 @@ body.desk .desk-only{display:block}
 .cr-club .tid{display:flex;flex-direction:column;gap:3px;min-width:0}   /* a club's or a country's name with its stars under it (ratedStars), within the card's 44px */
 .cr-club .rstars{--star:12px}
 @media (orientation:landscape) and (max-height:560px){
-  #s-career-club .wrap,#s-career-look .wrap{gap:12px}
-  #s-career-club h2.title,#s-career-look h2.title{font-size:36px}
+  #s-career-club .wrap,#s-career-look .wrap,#s-teams .wrap{gap:12px}
+  #s-career-look h2.title{font-size:36px}   /* the club screen's title is the folded line's, as the team screen's (.fold-line h2.title) */
 }
 .cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
 /* the trophy row on the player card, under his name: each kind's trophy, in its shape and metal, and the count, only what he has won (as the Trophy Cabinet draws it) */
@@ -961,7 +991,10 @@ body.desk .desk-only{display:block}
 .cr-offer .jersey{width:44px;height:44px}
 .cr-offer .tname{align-self:end;font-size:24px;white-space:nowrap;overflow-wrap:normal}
 .cr-offer .rstars{--star:12px}   /* the club's stars, between its name and its league (ratedStars) */
-.cr-offer .lbl{align-self:start;white-space:nowrap;overflow-wrap:normal}   /* one line, stepped down; one still too wide at 10px (Celtic and Italy, South Africa in a quarter of 667) wraps at its own size (careerFit, data-fit="wrap") */
+.cr-offer .lbl{align-self:start;white-space:nowrap;overflow-wrap:normal}   /* one line, stepped down; one still too wide at 10px (South Africa in a quarter of 667) wraps at its own size (careerFit, data-fit="wrap"); one with a word wider than its column (the United Rugby Championship's) goes under the shirt (.cr-offers.wide) */
+.cr-offers.wide .team.cr-offer{grid-template-rows:1fr 1fr auto}   /* a league too wide beside the shirt (careerFit): under it, across the card, on every card alike */
+.cr-offers.wide .cr-offer .jw{grid-row:1/3}
+.cr-offers.wide .cr-offer .lbl{grid-column:1/-1}
 .cr-offer.stay{border-style:dashed}
 .cr-offer.stay .lbl{color:var(--chalk)}
 @media (max-width:620px){ .cr-offers{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -1021,13 +1054,21 @@ body.desk .desk-only{display:block}
 .hc-new{display:flex;flex-direction:column;gap:8px}
 .hc-comps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .hc-comps.n8{grid-template-columns:repeat(4,minmax(0,1fr))}
-.hc-comps.n9{grid-template-columns:repeat(20,minmax(0,1fr))}   /* National's nine: five then four, each row in equal parts */
-.hc-comps.n9 > .btn{grid-column:span 4}
-.hc-comps.n9 > .btn:nth-child(n+6){grid-column:span 5}
+/* National's nine: four then five, each row in equal parts, so the United Rugby Championship, fourth, has a quarter, the room its
+   Championship needs. Beside a trophy, a name takes the room left (wrapping between words) and the trophy goes over it where the two
+   can't sit side by side, as can a lock (the free tier) under it; a long name's lock sits in the corner rather than take a line of its
+   own. Where even a quarter is narrow (568 wide, the panel scrolling in its row there anyway) the names step down to 12px. */
+.hc-comps.n9{grid-template-columns:repeat(20,minmax(0,1fr))}
+.hc-comps.n9 > .btn{grid-column:span 5}
+.hc-comps.n9 > .btn:nth-child(n+5){grid-column:span 4}
+.hc-comps.n9 .btn.hc-comp:has(.cup-trophy){flex-wrap:wrap;row-gap:2px;position:relative}
+.hc-comps.n9 .hc-comp:has(.cup-trophy) > span:last-child{flex:1 1 0}
+.hc-comps.n9 .hc-comp.long.locked::after{position:absolute;top:5px;right:6px;margin:0;width:10px;height:13px}
 .hc-comps.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hc-comps.n1{grid-template-columns:1fr}
 .btn.hc-comp{display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;padding:6px 8px;font-size:16px;line-height:1.1;text-align:center;text-wrap:balance}
 .hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:52px;font-size:14px}
+@media (max-width:620px){ .hc-comps.n9 .btn.hc-comp{padding:4px;font-size:12px} }   /* after the nine's 14px, which would otherwise win (the same weight, later) */
 .hc-comp .cup-trophy{width:16px;height:16px;flex:none}
 .hc-comp.locked::after{flex:none}   /* the lock keeps its size: the name wraps, never the lock */
 .hp-drills .drills{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}   /* PR #14's ten games in rows of four: seven and How to Play, then the three contact games and For Grown-Ups */
@@ -1230,7 +1271,9 @@ summary::-webkit-details-marker{display:none}
 .rstars .on{fill:var(--flood)}
 .bd-levels{display:flex;flex-direction:column;gap:10px}
 .bd-levels[hidden],#bd-form[hidden]{display:none}
-.lv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.lv-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}   /* eight levels (TEAM_LEVELS): three a row, the last two in the middle so every row is balanced */
+.lv-grid .lv{grid-column:span 2}
+.lv-grid .lv:nth-child(3n+1):nth-last-child(2){grid-column:2 / span 2}
 .lv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:6px 10px;text-transform:none}
 .lv[aria-pressed="true"]{border-color:var(--flood)}
 .lv-name{font-weight:800}
@@ -1241,4 +1284,54 @@ summary::-webkit-details-marker{display:none}
 .bd-level-now{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
 .bd-level-now .btn{width:auto;min-height:44px;padding:0 12px}
 .bd-level .stat-note{margin:0}
-@media (orientation:landscape) and (max-height:420px){.lv{min-height:44px;padding:3px 10px}.bd-levels{gap:6px}}   /* nine levels and the row under them fit a phone sideways, on first sight */
+@media (orientation:landscape) and (max-height:420px){.lv{min-height:44px;padding:3px 10px}.bd-levels{gap:6px}}   /* eight levels and the row under them fit a phone sideways, on first sight */
+
+/* ===== how to play ===== */
+/* How to Play (2026-11-09, Gordon: "better to show controls from a UI perspective"): the match screen sideways, the stick in its corner
+   and the three action buttons in their fan where #stick and .act a/b/c sit in play, at --s of their size and in their own colours;
+   beside each, its other jobs in its colour (the stick's in the knob's chalk); the pause button and Pause. Then, on a computer or with a
+   controller (.desk-only), the keys and the pad's buttons (renderHowTo), the scoring strip and Back to Menu. One screen at 844x390 and
+   667x375, at 360 tall (640 and 740 wide), on an iPhone X's 812x375 and a Pro Max's 926x428 with their insets; a scroll only from
+   568x320 */
+#s-help .wrap{min-height:100%;gap:10px}
+.ctl{--s:.8;position:relative;flex:1 1 auto;min-height:calc(var(--s)*198px + 40px);max-height:320px;border:2px solid var(--rule-hi);border-radius:14px;overflow:hidden;
+  background:repeating-linear-gradient(180deg,#2b6033 0 26px,#285a30 26px 52px)}   /* Sprint's top, 198px up in play, clears Pause's label */
+.ctl-ring{position:absolute;left:calc(var(--s)*34px);bottom:calc(var(--s)*56px);width:calc(var(--s)*124px);height:calc(var(--s)*124px);border-radius:50%;border:2px solid rgba(241,238,228,.62);background:rgba(8,14,10,.32)}
+.ctl-ring i{position:absolute;left:50%;top:50%;width:calc(var(--s)*54px);height:calc(var(--s)*54px);transform:translate(-50%,-50%);border-radius:50%;background:rgba(241,238,228,.88);box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.ctl-b{position:absolute;display:grid;place-items:center;border-radius:50%;border:2px solid rgba(241,238,228,.55);background:rgba(8,14,10,.58);color:var(--chalk);font:900 max(12px,calc(var(--s)*18px))/1 var(--display);letter-spacing:.03em;text-transform:uppercase}
+.ctl-b.a{right:calc(var(--s)*20px);bottom:calc(var(--s)*26px);width:calc(var(--s)*88px);height:calc(var(--s)*88px);border-color:var(--flood);background:var(--flood);color:var(--flood-ink)}
+.ctl-b.b{right:calc(var(--s)*124px);bottom:calc(var(--s)*70px);width:calc(var(--s)*68px);height:calc(var(--s)*68px)}
+.ctl-b.c{right:calc(var(--s)*64px);bottom:calc(var(--s)*130px);width:calc(var(--s)*68px);height:calc(var(--s)*68px);border-color:var(--flood);color:var(--flood);letter-spacing:0;
+  background:radial-gradient(closest-side,rgba(8,14,10,.82) calc(100% - var(--s)*6px),var(--flood) calc(100% - var(--s)*6px + 1px))}   /* Sprint's ring full, as at kick-off */
+.ctl-p{position:absolute;top:calc(var(--s)*6px);right:calc(var(--s)*10px);width:calc(var(--s)*44px);height:calc(var(--s)*44px);display:grid;place-items:center;border-radius:6px;border:1px solid rgba(241,238,228,.25);background:rgba(8,14,10,.7)}
+.ctl-p::before{content:"";width:calc(var(--s)*14px);height:calc(var(--s)*16px);border-left:3px solid var(--chalk);border-right:3px solid var(--chalk)}
+.ctl-js{position:absolute;display:flex;align-items:center;gap:6px}
+.ctl-js.x{left:calc(var(--s)*158px + 10px);bottom:max(calc(var(--s)*118px),96px);transform:translateY(50%);flex-direction:column;align-items:flex-start}   /* beside the ring, on its middle, or as near it as clears the row of Pass's jobs under it */
+.ctl-js.b{right:calc(var(--s)*192px + 8px);bottom:calc(var(--s)*104px);transform:translateY(50%)}   /* left of Kick, on its middle */
+.ctl-js.a{right:calc(var(--s)*108px + 8px);bottom:4px;align-items:flex-end}   /* left of Pass, under Kick */
+.ctl-js.p{right:calc(var(--s)*54px + 8px);top:calc(var(--s)*28px);transform:translateY(-50%)}
+.ctl-j{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-height:26px;padding:2px 10px;border-radius:13px;font:700 15px/1 var(--body);white-space:nowrap}
+.ctl-j small{font:700 12px/1 var(--body);opacity:.8}   /* how: Hold, Tap, Drag, Flick Across, Pull Back */
+.ctl-j small.k,body.desk .ctl-j small.t,body.desk:not(.dev-pad) .ctl-j small.tp{display:none}body.desk:not(.dev-pad) .ctl-j small.k{display:block}   /* a computer's keys: Tap Across, Tap Back, as the hint card says them (a controller's stick flicks as a thumb does); Run's keys are in the row under it */
+.ctl-j.a{background:var(--flood);color:var(--flood-ink)}
+.ctl-j.b{background:rgba(8,14,10,.84);box-shadow:inset 0 0 0 1.5px rgba(241,238,228,.55);color:var(--chalk)}
+.ctl-j.x{background:rgba(241,238,228,.92);color:var(--night)}
+.ctl-j.p{background:rgba(8,14,10,.78);color:var(--chalk);border-radius:6px}
+.ctl-krow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-height:26px}
+.ctl-krow + .ctl-krow{margin-top:4px}
+.ctl-krow .lbl{min-width:7.2em}
+.ctl-k{display:inline-flex;align-items:center;gap:6px;font:700 15px/1 var(--body)}
+.ctl-kk{display:inline-flex;align-items:center;gap:3px}
+.ctl-kk + .ctl-kk{margin-left:4px}
+.ctl-kk .pad.st{width:24px;height:16px;border-radius:8px;background:linear-gradient(currentColor 0 0) 50% 4px/10px 1.5px no-repeat,linear-gradient(currentColor 0 0) 50% 7px/10px 1.5px no-repeat,linear-gradient(currentColor 0 0) 50% 10px/10px 1.5px no-repeat,rgba(8,14,10,.9)}   /* Start: the pad's menu button */
+#s-help .scoring{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#s-help .scoring div{display:flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:2px 8px;border:1.5px solid var(--rule);border-radius:6px;background:var(--panel)}
+#s-help .scoring b{font:900 26px/1 var(--display)}
+#s-help .scoring span{font:700 13px/1.1 var(--body);color:var(--chalk-dim);text-transform:uppercase;letter-spacing:.06em}
+@media (orientation:landscape) and (max-height:560px){#s-help h2.title{font-size:40px}#s-help{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}}   /* an iPhone's home bar: Back to Menu sits on its inset, not 12px over it */
+@media (max-height:460px){body.desk #s-help .wrap{gap:8px}body.desk .ctl{--s:.68;min-height:140px}body.desk .ctl-js.p{display:none}body.desk .ctl-js.x{bottom:calc(var(--s)*118px)}}   /* a phone with a controller, a Pro Max's 428-440 too: the rows fit under a smaller picture and name Pause for it; the stick's jobs keep the ring's middle, Pass's clearing them sideways */
+@media (max-height:380px){.ctl{--s:.68}body.desk .ctl{--s:.6;min-height:126px}}   /* 360 tall (Android's common height) and an iPhone X's 375 with its home bar: a smaller picture, and a computer's smaller still for its rows */
+@media (max-height:340px){body.desk .ctl{min-height:134px}body.desk .ctl-js.x{bottom:max(calc(var(--s)*118px),84px)}}   /* 568x320 scrolls anyway: a computer's picture tall enough for the stick's jobs to clear Pass's */
+@media (max-width:700px){.ctl-kk.alt{display:none}}   /* the arrows: W A S D only, where the row would wrap */
+@media (max-width:700px){.ctl-j{min-height:24px;padding:2px 7px;font-size:13px}.ctl-js.x{left:calc(var(--s)*158px + 4px)}}   /* up to 700 wide: Pass's five jobs and Kick's clear the stick's */
+@media (max-width:420px){#s-help .scoring{grid-template-columns:repeat(2,minmax(0,1fr))}}

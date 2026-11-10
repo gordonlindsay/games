@@ -678,7 +678,7 @@ begin('cpu sprint');
 {
   const perLevel = [];
   for (const di of [0, 1, 2]) {
-    let bad = 0, starts = 0, m = 0, chaseOk = 0, chaseBad = 0, speedBad = 0;
+    let bad = 0, starts = 0, m = 0, chaseOk = 0, chaseBad = 0, speedBad = 0, eggOk = 0, eggBad = 0;
     for (let i = 0; i < 10; i++) {
       reseed(500 + di*31 + i); fresh(di, { a:i % 6, b:(i + 1 + (i % 5)) % 6 });
       const S = M().spr[1], base = (7.6 + M().nat[1].pace*0.25)*M().diff.cpuSpeed;
@@ -690,7 +690,9 @@ begin('cpu sprint');
         T.update(STEP);
         if (S.m < -1e-9 || S.m > 1 + 1e-9) bad++;
         if (S.p && !prevP) { starts++; if (prev < SPRINT.floor) bad++; if (S.p.team !== 1) bad++;
-          if (c0 && c0.team === 0) { const dd = dist(S.p, c0); if (dd >= SPRINT.cpu.min - 0.5 && dd <= SPRINT.cpu.max + 0.5) chaseOk++; else chaseBad++; } }
+          const B = M().ball;
+          if (B.state === 'loose' && B.egg) { const dd = dist(S.p, T.press.eggLead(B)); if (dd >= SPRINT.cpu.min - 1 && dd <= SPRINT.cpu.max + 1) eggOk++; else eggBad++; }   // PRESSURE (2026-11-09): a ball spilled in this step, by an offload pressed or a jolt, is run down from 2.5-12m of where it comes down
+          else if (c0 && c0.team === 0) { const dd = dist(S.p, c0); if (dd >= SPRINT.cpu.min - 0.5 && dd <= SPRINT.cpu.max + 0.5) chaseOk++; else chaseBad++; } }
         if (S.p && prevP === S.p && phase === 'play' && !fading) { const d1 = STEP/SPRINT.secs, d2 = d1*SPRINT.ballDrain; if (!near(prev - S.m, d1, 1e-6) && !near(prev - S.m, d2, 1e-6) && S.m > 0) bad++; }
         if (S.p && phase === 'play') { const sp = C.maxSpeed(S.p), want = base*(M().ball.carrier === S.p ? SPRINT.mulBall[di] : SPRINT.mul[di]); if (sp > want*1.001 && !(S.p.boost > 0) && !M().surge) speedBad++; }
         if (fading && easing.some(p => p.sprint > 0) && S.m > prev + 1e-9) bad++;   // nothing refills while an ease-out is still running; a tackle this step can cancel it, and that step may refill
@@ -703,6 +705,7 @@ begin('cpu sprint');
     perLevel.push(starts/m);
     ok(bad === 0, `level ${di}: the CPU's meter obeys the floor, the drain and the refill (${bad} breaches)`);
     ok(chaseBad === 0, `level ${di}: a CPU chaser sprints only from ${SPRINT.cpu.min}–${SPRINT.cpu.max}m (${chaseBad} outside, ${chaseOk} in)`);
+    ok(eggBad === 0, `level ${di}: and at a hopping ball only from ${SPRINT.cpu.min}–${SPRINT.cpu.max}m of where it comes down (${eggBad} outside, ${eggOk} in)`);
     ok(speedBad === 0, `level ${di}: a CPU sprinter runs at the same multiplier as yours (${speedBad} steps over)`);
   }
   ok(perLevel.every(v => v > 0), `the CPU sprints on every level (${perLevel.map(v => v.toFixed(1)).join(' / ')} a match)`);   // how many a match follows how often a break stays clean, which the fullback coming up changes; the rates themselves are checked below
@@ -850,7 +853,9 @@ begin('offload');
 }
 done('15 offload');
 
-// 16. the ball jolted loose: 9 / 2 / 1% by tier (handling 3), split 55 / 45 Knock-On / Loose Ball
+// 16. the ball jolted loose: 9 / 2 / 1% by tier (handling 3), split 55 / 45 Knock-On / Loose Ball, at no pressure. Pressure (PRESSURE,
+// src/contact.js, 2026-11-09) only adds to it, and its share always goes loose: tools/pressure.mjs measures that. Each staged tackle
+// here starts the side's count at 0, as the first tackle of a possession does; a Knock-On now hops for PRESSURE.knock before its scrum
 begin('jolt');
 {
   const team = (id, h) => T.teams.cleanTeam({ name:id, kit:id === 'A' ? '#f2efe6' : '#1d3a8f', trim:'#c8102e', pace:3, power:3, handling:h, kicking:3 }, 0);
@@ -861,6 +866,7 @@ begin('jolt');
     let j = 0;
     for (let i = 0; i < N; i++) {
       const k = bind(FRONT, 'ai', tier), j0 = M().stats.jolts || 0, k0 = M().stats.joltKnock || 0;
+      M().pressure[0] = M().pressure[1] = 0;                 // no pressure: each staged ruck would otherwise add to the count
       C.resolveContact(k);
       if ((M().stats.jolts || 0) > j0) { j++; if ((M().stats.joltKnock || 0) > k0) knock++; else loose++; }
     }
@@ -868,12 +874,15 @@ begin('jolt');
     ok(near(got[tier], CONTACT.jolt[tier], 0.005), `${tier}: the ball comes loose ${(100*got[tier]).toFixed(2)}% of the time (${(100*CONTACT.jolt[tier]).toFixed(0)}%)`);
   }
   ok(near(knock/(knock + loose), CONTACT.jolt.fwd, 0.03), `split Knock-On / Loose Ball ${(100*knock/(knock + loose)).toFixed(1)} / ${(100*loose/(knock + loose)).toFixed(1)}`);
+  ok((M().stats.pressSpill || 0) === 0, 'at no pressure nothing is a pressure spill');
   // a loose ball pops back, for anyone; a knock-on is a scrum to the other side
   fresh(1); CONTACT.jolt.wrap = 1; CONTACT.jolt.fwd = 0;
   let k = bind(FRONT, 'ai', 'wrap'); C.resolveContact(k);
   ok(M().ball.state === 'loose' && M().ball.vx < 0 && M().phase === 'play', 'a Loose Ball pops back towards the carrier\'s own line, live for anyone');
   CONTACT.jolt.fwd = 1; k = bind(FRONT, 'ai', 'wrap'); C.resolveContact(k);
-  ok(M().phase === 'set' && M().set.kind === 'scrum' && M().set.team === 1 && (M().stats.ko_contact || 0) >= 1, 'a Knock-On in contact is a scrum to the tacklers');
+  ok(M().phase === 'set' && M().set.kind === 'knock' && M().set.team === 1, 'a Knock-On in contact hops for its beat first');
+  run(() => M().phase === 'set' && M().set.kind === 'scrum', Math.ceil(T.press.PRESSURE.knock/STEP) + 2);
+  ok(M().phase === 'set' && M().set.kind === 'scrum' && M().set.team === 1 && (M().stats.ko_contact || 0) >= 1, 'then a Knock-On in contact is a scrum to the tacklers');
   reset();
 }
 done('16 jolt');
@@ -926,7 +935,7 @@ begin('census');
   // reseed 1, not 9032: ruck ball within 0.5s is about 7.6% whatever the ratings and moves half a point with the reseed (these six: 8.1% at
   // 9032, 7.5% at 1, 7.2 to 8.0% at 2, 3 and 4), and 9032 sat on the 8% bar; 1 is the nearest of the five to their mean, not the lowest
   reseed(1);
-  let m = 0, runover = 0, rk = 0, rk05 = 0, tov = 0, tov1 = 0, early = 0, badLabel = 0, jack = 0, duelInBind = 0, tagsN = 0, fendTags = 0;
+  let m = 0, runover = 0, rk = 0, rk05 = 0, tov = 0, tov1 = 0, early = 0, badLabel = 0, jack = 0, duelInBind = 0, tagsN = 0, fendTags = 0, pressTags = 0;
   const tagKinds = new Set(), setLabels = new Set();
   for (let i = 0; i < 60; i++) {
     fresh(1, { a:i % 6, b:(i + 1 + (i % 5)) % 6, duels:'live' });
@@ -961,7 +970,7 @@ begin('census');
       } else nearSet.clear();
     }
     m++;
-    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); if (k !== 'tag_Side Step') tagsN += v; if (k === 'tag_Fend') fendTags += v; }   // the bot's bang-bang swerve fires Side Steps a thumb never would (about 37 a match), so they are counted apart
+    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); if (k !== 'tag_Side Step' && k !== 'tag_Pressure On') tagsN += v; if (k === 'tag_Fend') fendTags += v; if (k === 'tag_Pressure On') pressTags += v; }   // Pressure On (2026-11-09) is counted apart too: at most once a possession by construction, and bounded below   // the bot's bang-bang swerve fires Side Steps a thumb never would (about 37 a match), so they are counted apart
   }
   ok(runover/m < 2, `run-overs ${(runover/m).toFixed(2)} a match (under 2)`);
   ok(rk05/rk < 0.09, `ruck ball tackled within 0.5s ${(100*rk05/rk).toFixed(1)}% (under 9%)`);   // 8% until PASS_FLIGHT. Eight batches of this census pooled: 7.7% at the old ball pace (7.3 to 8.0), 8.1% now (7.3 to 9.0). A rise of 0.4, left as it is: a ruck ball is picked up, not caught, so the moment after a catch doesn't reach it
@@ -970,9 +979,10 @@ begin('census');
   ok(jack === 0, 'no ruck ever has a jackal, a Steal prompt or a press window');
   ok(badLabel === 0 && ![...setLabels].some(l => /Releasing|Off Your Feet|Rolling Away|High Tackle|Sin Bin|Yellow/.test(l)), `every penalty is a plain Penalty: no new reasons (${[...setLabels].filter(l => /Penalty/.test(l)).join(', ')})`);
   ok(duelInBind === 0, 'no duel ever starts during a bind');
-  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled']);
-  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the nine (${[...tagKinds].join(', ')})`);
-  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step ${(tagsN/m).toFixed(1)})`);
+  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up']);   // Pressure On added on purpose (2026-11-09, PRESSURE): the warning that the ball may be knocked loose, not a breakdown word; the last three the maul's, on purpose (src/maul.js): a CPU maul in these headless matches is driven in the world and tagged
+  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the thirteen (${[...tagKinds].join(', ')})`);
+  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step and Pressure On ${(tagsN/m).toFixed(1)})`);
+  ok(pressTags/m > 0 && pressTags/m <= 12, `Pressure On a few times a match, for both sides together (${(pressTags/m).toFixed(1)})`);
   ok(!/Not Releasing|Off Your Feet|Not Rolling Away|High Tackle|Sin Bin|Yellow Card|'Steal'|jackal/.test(script), 'the game has no steal, no new penalty and no sin bin');
 }
 done('19 census');
@@ -997,15 +1007,17 @@ begin('words');
 {
   const SMALL = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const title = s => s.split(' ').every((w, i) => (i > 0 && SMALL.has(w)) || /^[A-Z0-9][A-Za-z0-9:'-]*$/.test(w));
-  const labels = ['Pass', 'Offload', 'Tackle', 'Switch', 'Kick', 'Drop Goal', 'Push', 'Jump', 'Skip', 'Dummy', 'Block', 'Sprint'];
+  const labels = ['Pass', 'Offload', 'Tackle', 'Switch', 'Kick', 'Drop Goal', 'Push', 'Jump', 'Skip', 'Dummy', 'Block', 'Sprint', 'Maul'];
   const tags = [...script.matchAll(/tag\('([^']+)'/g)].map(m => m[1]);
-  const fixedTags = ['Fend', 'Big Hit', 'Stopped', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled'];
+  const fixedTags = ['Fend', 'Big Hit', 'Stopped', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up'];   // Pressure On: PRESSURE (2026-11-09); the last three: the maul's, on purpose (src/maul.js)
   ok(tags.length >= 9 && tags.every(t => fixedTags.includes(t)), `every tag in the code is on the list (${[...new Set(tags)].join(', ')})`);
   ok([...labels, ...fixedTags].every(title), 'labels and tags are Title Case');
   ok(![...labels, ...fixedTags].some(s => /[←→↑↓⇐⇒➜»›]/.test(s)) && !/[←→]/.test(script.replace(/\/\/.*$/gm, '')), 'no arrow glyph in a label, a tag or the code');
   const lc = html.match(/<span id="lc">([^<]+)<\/span>/);
   ok(lc && lc[1] === 'Sprint', 'the third button is labelled Sprint');
-  ok(/<dt>Sprint<\/dt>/.test(html) && /<dt>Offload<\/dt>/.test(html) && /<b>L<\/b> Sprint/.test(html), 'How to Play has Sprint and Offload rows and L on the keyboard line');
+  // re-pinned 2026-11-09: How to Play's Sprint and Offload prose rows became the picture's Sprint button and Offload on Pass's side, and the keyboard row's L
+  $('b-help').click();   // renderHowTo: the keyboard row
+  ok(/<span class="ctl-b c">Sprint<\/span>/.test(html) && /<b class="ctl-j a">Offload<\/b>/.test(html) && /<kbd class="kc">L<\/kbd><\/span>Sprint<\/span>/.test($('h-kb').innerHTML), 'How to Play has the Sprint button, Offload beside Pass and L on Sprint in the keyboard row');
 }
 done('21 words');
 
@@ -1048,7 +1060,9 @@ begin('layout');
   ok(hit(10, 10) == null, 'a tap on the pitch, away from the fan, is nothing');
   $('btnC').hidden = true; ok(hit(527, 211) == null, 'Sprint hidden in a close-up takes no near miss'); $('btnC').hidden = false;
   $('btnA').rect = $('btnB').rect = $('btnC').rect = null;
-  const short = [...css.matchAll(/@media \(orientation:landscape\) and \(max-height:420px\)\{([\s\S]*?)\n\}/g)].map(m => m[1]).join('\n');
+  // each short-landscape block read to its own closing brace (2026-11-09: the old /{([\s\S]*?)\n}/ ran a one-line block on into the
+  // next rules, How to Play's 26px pills among them, which sit in no media block; every block, the one-line ones too, is still read whole)
+  const short = [...css.matchAll(/@media \(orientation:landscape\) and \(max-height:420px\)\{/g)].map(m => { let d = 1, i = m.index + m[0].length; const s = i; while (d && i < css.length) { const c = css[i++]; if (c === '{') d++; else if (c === '}') d--; } return css.slice(s, i - 1); }).join('\n');
   ok(/\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings\.settings\{gap:6px 10px;padding:8px 10px\}/.test(short) && !/\.hp-settings\.settings\{[^}]*grid-template-columns/.test(short) && /min-height:44px/.test(short) && !/min-height:(?:[1-3]?\d)px/.test(short.replace(/min-height:44px/g, '')), 'under 420px tall the home settings keep their six columns (halves, and thirds with Grown-Ups) and no target drops below 44px');   // re-pinned for the Camera row: it was two columns
   // the home 320px tall (Safari sideways) is measured in Chromium now, by tools/home.mjs at 667x320 and 568x320: a sum of fixed heights here no longer described it
   const hud = 4 + (18 + 6) + 2 + (11 + 4), hud0 = 8 + (21 + 12) + 5 + (11 + 8);

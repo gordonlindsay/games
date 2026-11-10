@@ -3,7 +3,8 @@
 // The rating's scale, its update rule, its bounds, its save and its gating are section 13; tools/kidbots.mjs calibrates it with scripted children.
 // node tools/kids.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
-const { T, reseed, fire, kickBot, dropBot } = await import('./harness.mjs');
+const { T, reseed, fire, kickBot, dropBot, bot } = await import('./harness.mjs');
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 const K = T.kids, D = T.debug, X = T.teams, C = T.contact, KK = T.kick, STEP = T.STEP, inp = T.input;
 const KIDS = K.KIDS, SCALE = K.KIDS_SCALE, ADAPT = K.KIDS_ADAPT, KIDS_GATE = K.KIDS_GATE, S = () => D.settings(), M = () => T.M, $ = id => document.getElementById(id);
@@ -386,7 +387,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   K.close(false); ok(cancels === 3, 'a check with no onCancel just closes');
   let asks = new Set(); for (let i = 0; i < 200; i++) { K.parentGate(); asks.add(K.gate().a + 'x' + K.gate().b); K.close(false); }
   ok(asks.size > 18, `the questions vary (${asks.size} of the ${K.KIDS_ASKS.length} in 200)`);
-  // Install Game asks first; Update Game (the game's own files, already downloaded) does not
+  // Install Game asks first; an update (the game's own files, already downloaded) has nothing to tap and applies on the home by itself
   let installs = 0;
   fire('beforeinstallprompt', { preventDefault() {}, prompt() { installs++; return Promise.resolve(); }, userChoice:Promise.resolve({ outcome:'dismissed' }) });
   $('b-install').click();
@@ -506,7 +507,8 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const levers = flat(SCALE);
   // the start is the Kids level as it was before the scale, lever for lever
   const was = { 'diff.cpuSpeed':0.92, 'diff.cpuTackle':0.45, 'diff.cpuIntercept':0.05, 'diff.turnover':-0.05, 'diff.scrumCpu':0.45, 'diff.lineSigma':0.28, 'diff.lineContest':0.35,
-    tackle:0.10, hands:0.1, jolt:0.15, offload:0.95, passErr:0.4, duelWin:0.20, save:1, 'kick.band':2, 'kick.bandMax':0.34, 'kick.fill':1.6, 'kick.rush':0.65, scrum:0.25, reach:0.12 };
+    tackle:0.10, hands:0.1, jolt:0.15, offload:0.95, passErr:0.4, duelWin:0.20, save:1, 'kick.band':2, 'kick.bandMax':0.34, 'kick.fill':1.6, 'kick.rush':0.65, scrum:0.25, reach:0.12,
+    flight:C.PASS_FLIGHT.kids, grace:C.PASS_FLIGHT.graceKids };   // the passing pace: PR #14's Kids, 1.4 and 0.35
   ok(levers.length === Object.keys(was).length && levers.every(([k, v]) => v[0] === was[k]), `the scale starts where Kids was (${levers.length} levers)`);
   K.tune(0); ok(levers.every(([k, v]) => at(k) === v[0]), 'at r = 0 every lever is at its start');
   K.tune(1); ok(levers.every(([k, v]) => at(k) === v[1]), 'at r = 1 every lever is at its ceiling');
@@ -524,6 +526,18 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const way = Object.entries(easy).map(([k, e]) => { const v = SCALE[k.split('.')[0]], [a, b] = Array.isArray(v) ? v : v[k.split('.')[1]]; return [k, (b - a)/(e - a)]; });
   ok(way.every(([, f]) => f > 0.7 && f < 0.9), `each ceiling is 70 to 90% of the way from the start to Easy, never at Easy (${way.map(([k, f]) => k + ' ' + f.toFixed(2)).join(', ')})`);
   ok(SCALE.offload[1] >= 0.85 && SCALE.offload[1] < SCALE.offload[0], `an offload you press gets away ${100*SCALE.offload[1]}% at the ceiling, the top of Easy's 70 to 85%`);
+  // the passing pace (the owner, 2026-11-09: "Keep Kids at Most Easy"): a child starting out keeps PR #14's calm passing, and the ceiling is the old
+  // pace, the one the calibration was measured at (tools/kidbots.mjs, README.md). The two pass Easy's on the way up; the ceiling as a whole is still easier
+  ok(C.PASS_FLIGHT.kids === 1.4 && C.PASS_FLIGHT.graceKids === 0.35 && SCALE.flight.join() === '1.4,1' && SCALE.grace.join() === '0.35,0', `the passing pace runs from PR #14's Kids (${SCALE.flight[0]}, ${SCALE.grace[0]}s) to the old pace at the ceiling (${SCALE.flight[1]}, ${SCALE.grace[1]}s)`);
+  { const n = X.NATIONS[0], old = 15 + n.handling*1.1, sp = r => { play(true, { kidsR:r }); return C.passSpeed(n, false); };
+    ok(near(sp(0), old/1.4) && near(sp(0.5), old/1.2) && near(sp(1), old), `a Kids match's short pass at r 0, 0.5 and 1: ${[0, 0.5, 1].map(r => sp(r).toFixed(2)).join(', ')} m/s (the old pace ${old.toFixed(2)})`);
+    play(false, { kidsR:1 }); ok(near(C.passSpeed(n, false), old/C.PASS_FLIGHT.match), 'Easy keeps the match\'s, whatever the rating');
+    T.newMatch(X.NATIONS[0], X.NATIONS[3], { halfLen:60, diff:0, auto:true, headless:true, kids:true, kidsR:0.5 }); ok(near(C.passSpeed(n, false), old/C.PASS_FLIGHT.match), 'and so does AI v AI'); }
+  { const grace = r => { play(true, { kidsR:r }); const p = M().players.find(q => q.team === 0 && q.id !== M().ball.carrier?.id) || M().players[1];
+      for (let i = 0; i < 9 && M().ball.carrier !== p; i++) { M().phase = 'play'; M().hooter = false; M().ball.f = { kind:'pass', team:0 }; K.catchBall(p, 'pass'); }
+      return M().ball.carrier === p ? p.grace : NaN; };
+    const g = [0, 0.5, 1].map(grace);
+    ok(near(g[0], 0.35) && near(g[1], 0.175) && g[2] === 0, `your catcher's moment before an AI man can commit, at r 0, 0.5 and 1: ${g.map(v => v.toFixed(3)).join(', ')}s`); }
   // the levers a match plays: the rating it was started at, or the start when nothing says
   play(true); ok(M().kidsR === 0 && KIDS.r === 0 && KIDS.diff.cpuSpeed === SCALE.diff.cpuSpeed[0], 'a Kids match not given a rating plays the start');
   play(true, { kidsR:0.6 }); ok(M().kidsR === 0.6 && near(KIDS.diff.cpuTackle, 0.4*SCALE.diff.cpuTackle[0] + 0.6*SCALE.diff.cpuTackle[1], 1e-12) && K.diffOf(1) === KIDS.diff, 'one given r = 0.6 plays the levers at 0.6');
@@ -599,6 +613,117 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   T.practice.start('kick'); M().over = true; ok(K.adapt() === null && s.kidsR === r2, 'and a drill, even one that takes the Kids help'); T.practice.leave();
   play(true, { kidsR:r2 }); ok(K.adapt() === null && s.kidsR === r2, 'and a Kids match not yet over');
   s.kidsR = 0; K.segSet(1); X.save();
+}
+
+// 14. the half: a Kids half lasts the half chosen on a real clock (the owner, 2026-11-09: "2 Real Minutes"), so 2 minutes is 90 simulated
+//     seconds at the Kids pace, and its clock reads real time, 2:00 at the hooter. Every other match keeps its half and its clock exactly
+{
+  const s = S(), Y = T.clarity, A = T.arcade, HALF = [120, 240, 360];
+  const keep = { half:s.half, played:s.played, kidsR:s.kidsR, finished:s.finished };
+  const shown = () => { D.updateHud(); return $('h-sub').innerHTML.split(' · ')[0]; };   // the clock on the scorebug
+  const fnv = t => { let h = 2166136261; for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
+  // Quick Match on Easy, Normal and Hard at 2 minutes and Normal at 4 and 6 (a first half each, the harness's player on the stick, and the
+  // clock at its hooter), Two Player with the setting on Kids, and AI v AI and the demo asked to play Kids. The same runs on 909fe3a, the
+  // build before (GAME=<its index.html> KIDS_PRINT=1), gave PIN.
+  // Re-pinned at the merge of wt/kidshalf into wt/pr14int (2026-11-10), after pressure and the maul joined: both change these matches on
+  // purpose. Proof: PRESSURE='{"on":false}' MAUL='{"on":false}' node tools/kids.mjs still gives 909fe3a's pin, 1f0hz9i 12yifyb trg1ag
+  // ec8vp2 yio7xz 1db7d9g 1wytmos 1if8lrm (the Two Player part, 1db7d9g, does not move either way)
+  // Re-pinned at the edge on Easy (src/edge.js, 2026-11-10): the first match, Quick Match on Easy, is a person against the CPU on Easy, so
+  // the edge acts in it on purpose (its Line Break, On Fire after two good moments, its carrier's levers); nothing else moved. Proof:
+  // EDGE='{"on":false}' node tools/kids.mjs gives the pin before it exactly, to1ovz lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv,
+  // as GAME=<90353c3>/index.html KIDS_PRINT=1 does. Re-pinned again the same day for the review (a won Get Past is the carry's Line
+  // Break, its window widens ahead; the first match moved, 1wazr74 before), with the same proof: EDGE off still gives to1ovz
+  const PIN = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
+  const pin = () => {
+    const out = [];
+    s.played = 99; s.kidsR = 0;
+    const half = (m, each) => { let n = 0, at = null; while (m.phase !== 'break' && !m.over && n < 90000) { if (each) each(); T.update(STEP); n++; if (m.hooter && at == null) at = shown(); } return [n, at]; };
+    for (const [seg, h] of [[1, 0], [2, 0], [3, 0], [2, 1], [2, 2]]) {
+      K.segSet(seg); s.half = h; reseed(900 + 10*seg + h); D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+      const m = M(), [n, at] = half(m, () => bot(0));
+      out.push(JSON.stringify([m.halfLen, m.score, m.tries, m.stats, n, at])); quiet(); D.exitMatch();
+    }
+    K.segSet(0); s.half = 0; reseed(950); D.startMatch(X.CLUBS[0], X.CLUBS[1], false, { two:true, levels:[0, 0] });
+    { const m = M(), [n, at] = half(m); out.push(JSON.stringify([m.kids, m.halfLen, m.score, m.tries, m.stats, n, at])); } D.setTwo(false); D.exitMatch();
+    reseed(951); T.newMatch(1, 4, { halfLen:60, diff:0, auto:true, headless:true, kids:true });
+    { const m = M(); let n = 0; while (!m.over && n < 90000) { T.update(STEP); n++; } out.push(JSON.stringify([m.halfLen, m.score, m.tries, m.stats, n])); }
+    reseed(952); T.newMatch(3, 5, { halfLen:1e9, diff:0, auto:true, demo:true, kids:true });
+    for (let n = 0; n < 3000; n++) T.update(STEP);
+    out.push(JSON.stringify([M().score, M().players.map(p => [p.x.toFixed(6), p.y.toFixed(6)])]));
+    K.segSet(1); s.half = keep.half; s.played = keep.played; s.kidsR = keep.kidsR;
+    return out.map(fnv).join(' ');
+  };
+  { const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now); ok(now === PIN, `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${PIN})`); }
+
+  // how long: the chosen half times the Kids pace, in simulated seconds, which is the chosen half in real time
+  const pace = Y.MATCH_PACE.kids;
+  ok(Y.HALF_SECONDS.join() === HALF.join() && pace === 0.75, `the halves are ${Y.HALF_SECONDS.join(', ')}s and the Kids pace ${pace}`);
+  for (let h = 0; h < 3; h++) {
+    K.segSet(0); s.half = h; D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+    const m = M();
+    ok(m.kids && m.realClock === pace && m.halfLen === HALF[h]*pace && A.periodLen() === m.halfLen, `a Kids Quick Match's ${HALF[h]/60} minute half is ${m.halfLen} simulated seconds (the chosen half times ${pace})`);
+    ok(Y.matchPace() === pace && m.halfLen/Y.matchPace() === HALF[h], `and lasts ${m.halfLen/Y.matchPace()}s at the Kids pace: ${HALF[h]/60}:00 on a real clock`);
+    A.startGolden(); ok(A.periodLen() === m.halfLen/2 && A.periodLen()/Y.matchPace() === HALF[h]/2, `its Golden Try is half of it, ${A.periodLen()} simulated seconds, ${A.periodLen()/Y.matchPace()}s real`);
+    D.exitMatch();
+  }
+  X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); s.half = 0;
+  { const c = X.champ(), opp = c.fixtures[0].find(p => p.includes(c.user)).find(i => i !== c.user); D.startMatch(c.teams[c.user], c.teams[opp], true); }
+  ok(M().kids && M().halfLen === 90 && M().realClock === pace, 'a Kids Championship match the same');
+  D.exitMatch(); X.setChamp(null);
+  { const cr = T.career.create({ pos:'F', num:2, club:X.CLUBS[0] }); T.career.set(cr); T.career.play(); ok(M().kids && M().halfLen === 90, 'and a Kids Whole Team career match'); D.exitMatch(); T.career.set(null); }
+  { const cr = T.career.create({ pos:'F', num:2, club:X.CLUBS[0], proMode:true }); T.career.set(cr); T.career.play(); ok(!M().kids && M().halfLen === 120 && !M().realClock, 'a My Player career match on Kids plays Easy, at its own half'); D.exitMatch(); T.career.set(null); }
+  // every other match keeps the half as given and its clock as it was
+  for (const [seg, name] of [[1, 'Easy'], [2, 'Normal'], [3, 'Hard']]) for (let h = 0; h < 3; h++) {
+    K.segSet(seg); s.half = h; D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+    ok(!M().kids && !M().realClock && M().halfLen === HALF[h], `${name} at ${HALF[h]/60} minutes: ${M().halfLen} simulated seconds, as given`); D.exitMatch();
+  }
+  K.segSet(0); s.half = 0; D.startMatch(X.CLUBS[0], X.CLUBS[1], false, { two:true, levels:[0, 0] }); ok(!M().kids && M().halfLen === 120 && !M().realClock, 'Two Player with the setting on Kids'); D.setTwo(false); D.exitMatch();
+  T.newMatch(0, 1, { halfLen:60, diff:0, auto:true, headless:true, kids:true }); ok(M().halfLen === 60 && !M().realClock, 'AI v AI asked to play Kids');
+  T.newMatch(0, 1, { halfLen:1e9, diff:0, auto:true, demo:true, kids:true }); ok(M().halfLen === 1e9 && !M().realClock, 'the demo');
+  T.practice.start('kick'); ok(M().kids && M().halfLen === 120 && !M().realClock && Y.matchPace() === 1, 'and a drill that takes the Kids help keeps its own clock'); T.practice.leave(); D.exitMatch();
+
+  // the clock: real time on a Kids scorebug, each half and the Golden Try counting up from 0:00; the match clock everywhere else
+  K.segSet(0); s.half = 0; D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+  { const m = M(), at = (half, clock) => { m.half = half; m.clock = clock; return shown(); };
+    const want = [[1, 0, '0:00'], [1, 0.75, '0:01'], [1, 45, '1:00'], [1, 89.99, '1:59'], [1, 90, '2:00'], [1, 110, '2:00'], [2, 0, '0:00'], [2, 30, '0:40'], [2, 90, '2:00']];
+    const got = want.map(([h, c]) => at(h, c));
+    ok(got.every((g, i) => g === want[i][2]), `a Kids half reads ${got.join(', ')}: real time, 2:00 at the hooter and after it`);
+    A.startGolden(); m.clock = 22.5; const g1 = shown(); m.clock = 45; const g2 = shown(); m.clock = 60; const g3 = shown();
+    ok(g1 === '0:30' && g2 === '1:00' && g3 === '1:00', `its Golden Try ${g1}, ${g2} at its hooter, ${g3} after`);
+    D.exitMatch(); }
+  s.half = 2; D.startMatch(X.CLUBS[0], X.CLUBS[1], false); M().clock = 270; ok(shown() === '6:00', 'a 6 minute Kids half ends on 6:00'); D.exitMatch();
+  K.segSet(2); s.half = 0; D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
+  { const m = M(), at = (half, clock) => { m.half = half; m.clock = clock; return shown(); };
+    const got = [at(1, 0), at(1, 60), at(1, 120), at(2, 120)]; A.startGolden(); m.clock = 60; got.push(shown());
+    ok(got.join() === '00:00,20:00,40:00,80:00,90:00', `Normal keeps the match clock (${got.join(', ')})`); D.exitMatch(); }
+  ok(/<p class="eyebrow">Paused<\/p>\s*<h3 id="pz-score">/.test(html) && !/id="br-[^"]*clock/.test(html), 'the pause card and the full-time card show no clock, so the scorebug is the only one');
+
+  // a whole Kids half through the real frame loop (in a process of its own): 2:00 of real time while the clock runs, read off the scorebug
+  {
+    const harness = new URL('./harness.mjs', import.meta.url).href;
+    const script = `
+      let loop = null; Object.defineProperty(globalThis, 'requestAnimationFrame', { configurable:true, get:() => f => { loop = f; }, set() {} });
+      const { T, bot, kickBot, dropBot } = await import(${JSON.stringify(harness)});
+      const D = T.debug, K = T.kids, s = D.settings(), out = { at:{} };
+      let t = performance.now() + 100;
+      K.segSet(0); s.half = 0; s.tut = D.TUT_IDS.slice(); D.startMatch(T.teams.CLUBS[0], T.teams.CLUBS[1], false);
+      const m = T.M, on = () => m.phase === 'play' || (m.phase === 'set' && m.set.kind !== 'try' && m.set.kind !== 'score');
+      let frames = 0, real = 0;
+      while (!m.hooter && frames < 60*600) {
+        const c = m.phase === 'cut' && m.cut;            // the harness's player on the stick, so nothing of ours waits for him; on Kids the aim at a goal kick is set
+        if (c && c.kind === 'goal') (c.g.type === 'drop' ? dropBot : kickBot)(c, { aim:c.g.aim }); else bot(0);
+        const was = on(); t += 1000/60; loop(t); frames++;
+        if (was && on()) real++;                         // a frame the clock ran right through
+        for (const k of [30, 60, 90]) if (real === k*60 && out.at[k] == null) out.at[k] = document.getElementById('h-sub').innerHTML.split(' · ')[0];
+      }
+      out.real = real/60; out.clock = m.clock; out.end = document.getElementById('h-sub').innerHTML.split(' · ')[0]; out.kids = m.kids;
+      console.log(JSON.stringify(out));`;
+    const r = spawnSync(process.execPath, ['--input-type=module', '-e', script], { env:{ ...process.env, SEED:'17' }, encoding:'utf8', maxBuffer:64*1024*1024 });
+    let o = {}; try { o = JSON.parse(r.stdout.trim().split('\n').pop()); } catch (e) { console.log(r.stdout, r.stderr); }
+    ok(o.kids && Math.abs(o.real - 120) < 0.5, `a Kids half through the frame loop: the clock ran ${o.real && o.real.toFixed(2)}s of real time to the hooter (${o.clock && o.clock.toFixed(2)} simulated)`);
+    ok(o.at && ['0:3', '1:0', '1:3'].every((p, i) => (o.at[[30, 60, 90][i]] || '').startsWith(p)) && o.end === '2:00', `and the scorebug kept up: ${o.at && [o.at[30], o.at[60], o.at[90]].join(', ')}, then ${o.end}`);
+  }
+  K.segSet(1); s.half = keep.half; s.played = keep.played; s.kidsR = keep.kidsR; s.finished = keep.finished; X.save();
 }
 
 console.log(`${passed} passed, ${failed} failed`);

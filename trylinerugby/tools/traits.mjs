@@ -27,7 +27,7 @@ if (process.argv.includes('--balance')) { await balance(); process.exit(0); }
 // 0. AI v AI, the demo and a tool's match with star sides play exactly as at 30e13e2, the commit before traits (run first, so nothing
 //    below can move them). The same seeded runs on that build's bundle gave BASE. If another change moves AI v AI on purpose,
 //    re-pin from that change's bundle without src/traits.js (tools/career.mjs pins the same kind of thing for sides with no star).
-const BASE = '4318of 1hlbjrh 8b7zl6 6cc5jm';   // re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 6igeb3 tagplu lxxgtn 14mjifb
+const BASE = '3tgax5 1h1bhwf 15rrose 1b2asjm';   // re-pinned at the merge of pressure and the maul into wt/pr14int (2026-11-09), which together move AI v AI again on purpose; with PRESSURE='{"on":false}' MAUL='{"on":false}' this build gives 0b1293c's pin exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm; with MAUL off alone, pressure's, 6lf49d 1lj92ih 5pak35 h1zd4p; with PRESSURE off alone, the maul's, 4h557g 58fkyu f1m7h 15018yi. Pressure's note: re-pinned at pressure (PRESSURE, src/contact.js, 2026-11-09), which changes AI v AI and every match on purpose (the count, the spill, the egg's hops, a knock-on's beat); with PRESSURE='{"on":false}' this build gives the pin before it exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm. The maul's note: re-pinned at the maul (src/maul.js, 2026-11-09, as reviewed: never in the carrier's own in-goal or with a man from in front of the ball, a ringed tackler let go of a maul in the world, no Tackle into one once called): the CPU calls mauls in AI v AI, the demo and a tool's match, so all four moved; with MAUL='{"on":false}' this build gives the pin before it exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 6igeb3 tagplu lxxgtn 14mjifb
 function pin() {
   const out = [];
   for (const [a, b, i] of [['FRA', 'IRE', 0], ['PRE', 'SCO', 1]]) {
@@ -79,7 +79,8 @@ function pin() {
   }
   ok(true, 'every built-in side has exactly the stars its 5s bring, each on a shirt it fits');
   // re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Ironsides, 72 from its table (was 70), gains a point where it is strongest, Power, to 5; with CLUB_RATED=off this build gives the list before it exactly
-  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA,MPL,PRE,IRO',   // every nation on the XV rankings has a 5 somewhere; Montpellier, Pretoria and Ironsides are the clubs with one
+  // re-pinned at the real order (2026-11-09): Ironsides is 55 (Regional 2), its Power 3, so it has no 5; with CLUB_RATED=band this build gives the list before it exactly
+  ok(X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id).join() === 'ENG,FRA,IRE,SCO,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA,MPL,PRE',   // every nation on the XV rankings has a 5 somewhere; Montpellier and Pretoria are the clubs with one
      `the sides with stars: ${X.ALL_TEAMS.filter(t => R.teamStars(t).size).map(t => t.id + ' ' + R.teamTraitNames(t).join('/')).join(', ')}`);
   const fra = R.teamStars(team('FRA')), ire = R.teamStars(team('IRE'));
   ok(fra.size === 4 && fra.get(7).join() === 'burst' && fra.get(6).join() === 'handoff' && [...fra].filter(([n]) => n <= 3).length === 2, `France: four stars, Burst on 7, Hand-Off on 6, Crunch and Engine on two forwards (${starMap(team('FRA'))})`);

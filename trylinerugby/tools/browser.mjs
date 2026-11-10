@@ -30,23 +30,35 @@ async function open(w, h, touch) {
   await send('Emulation.setDeviceMetricsOverride', { width:w, height:h, deviceScaleFactor:2, mobile:touch });
   if (touch) await send('Emulation.setTouchEmulationEnabled', { enabled:true });
   await send('Page.navigate', { url:site + '/index.html' }); await wait(1500);
-  const ev = async expr => { const r = await send('Runtime.evaluate', { expression:expr, returnByValue:true }); return r.result.result.value; };
+  // a fixture or a measure that throws fails the run here: a check after it would otherwise measure a page it never set up
+  const ev = async expr => { const r = await send('Runtime.evaluate', { expression:expr, returnByValue:true }); const x = r.result && r.result.exceptionDetails;
+    if (r.error || x) throw Error('in the page: ' + (r.error ? r.error.message : (x.exception && x.exception.description) || x.text) + '\n  evaluating: ' + expr.slice(0, 160)); return r.result.result.value; };
   return { send, ev, close:async () => { ws.close(); await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`).catch(() => {}); } };
 }
-// the two notes in the game's own mid-season format, the cabinet, and a button in the tools row
-const SEASON = `(() => { const $ = i => document.getElementById(i);
+// a season under way on each headline that carries one, its note in the game's own mid-season format (Championship: Continue
+// Championship and the Trophy Cabinet), with the whole tools row: Offline Ready, Install Game and Updating. Shown, not saved, so the
+// next page opens on the save as it was. It returns what shows, so a fixture that stops matching the page fails rather than measures the plain home
+const SEASON = hl => `(() => { const $ = i => document.getElementById(i), on = e => !e.hidden && !e.closest('[hidden]') && e.getBoundingClientRect().height > 0;
+  for (const p of document.querySelectorAll('#hl-panels > .hl-panel')) p.hidden = p.id !== 'hp-${hl}';
   const n1 = $('champ-note'), n2 = $('career-note'); n1.textContent = 'Guildfordians · 2nd · Round 3 of 5'; n1.hidden = false; n2.textContent = 'Minis · Guildfordians · Round 3 of 5'; n2.hidden = false;
-  $('b-champ').textContent = 'Continue Championship'; $('home-cabinet').hidden = false; $('app-tools').hidden = false; $('b-update').hidden = false; $('b-install').hidden = true; })()`;
+  $('hc-go').hidden = false; $('hc-new').hidden = true; $('b-champ').textContent = 'Continue Championship'; $('b-cabinet').hidden = false; $('b-career').textContent = 'Continue Career';
+  for (const id of ['app-tools', 'offline-update', 'offline-status', 'b-install']) $(id).hidden = false;
+  return ['offline-status', 'b-install', 'offline-update', ...('${hl}' === 'champ' ? ['b-champ', 'champ-note', 'b-cabinet'] : ['b-career', 'career-note'])].filter(id => !on($(id))).join(); })()`;
 const FIT = `(() => { const s = document.getElementById('s-home'); return JSON.stringify([s.scrollHeight, s.clientHeight]); })()`;
 try {
   for (const [w, h, touch] of [[844, 390, false], [844, 390, true], [667, 375, false], [667, 375, true]]) {
     const pg = await open(w, h, touch), name = `${w}x${h} ${touch ? 'touch' : 'desk'}`;
     const [a0, a1] = JSON.parse(await pg.ev(FIT));
     ok(a0 <= a1, `${name}: a fresh home does not scroll (${a0} of ${a1})`);
-    await pg.ev(SEASON);
-    const [b0, b1] = JSON.parse(await pg.ev(FIT));
-    ok(b0 <= b1, `${name}: a season under way, with both notes, the cabinet and Update Game, does not scroll (${b0} of ${b1})`);
-    console.log(`${name}: ${a0} of ${a1}, mid-season ${b0} of ${b1}`);
+    const mid = [];
+    for (const hl of ['champ', 'career']) {
+      const missing = await pg.ev(SEASON(hl));
+      ok(missing === '', `${name}: ${hl}: the fixture shows its note${hl === 'champ' ? ', the Trophy Cabinet' : ''}, Offline Ready, Install Game and Updating (missing: ${missing || 'none'})`);
+      const [b0, b1] = JSON.parse(await pg.ev(FIT));
+      ok(b0 <= b1, `${name}: a ${hl === 'champ' ? 'championship' : 'career'} under way, its note${hl === 'champ' ? ', the Trophy Cabinet' : ''}, Offline Ready, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
+      mid.push(`${hl} ${b0} of ${b1}`);
+    }
+    console.log(`${name}: ${a0} of ${a1}, mid-season ${mid.join(', ')}`);
     await pg.close();
   }
   // the sign under the clock and the career caption, in a real layout, with and without an iPhone's notch and home bar
@@ -90,19 +102,19 @@ try {
       ['the Surrey tab', `X.tierPick(2); X.poolPick('sur');`, 12],
       ['the Counties tab', `X.poolPick('cty');`, 7],
       ['the England 2 tab', `X.tierPick(1); X.poolPick('en2');`, 13],
-      ['the picked-team bar', `X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[7]); X.tierPick(1); X.poolPick('eng');`, 11],
-      ['My Team\'s screen', `D.openTeams('my'); X.tierPick(2); X.poolPick('sur');`, 14],
+      ['the picked-team bar', `X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[7]); X.tierPick(1); X.poolPick('eng'); X.fold(true);`, 11],   // the bar is in the controls, behind Change (Fold to One Line)
+      ['My Team\'s screen', `D.openTeams('my'); X.tierPick(2); X.poolPick('sur'); X.fold(true);`, 14],
       ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 12],
       ['the career club list, England 2', `document.querySelector('#cc-tier [data-tier="1"]').click(); document.querySelector('#cc-nat [data-pool="en2"]').click();`, 13],
       ['the transfer window', `const cr = C.create({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(cr); cr.phase = 'transfer'; cr.offers = ['GAL', 'BLM', 'JHB']; C.open();`, 4],
-      ['the Locker\'s Legends', `C.set(null); const L = T.locker; window.__lkWas = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); L.open(3);`, w > 731 ? 18 : 0],   // every Legend won: its stars beside its year, inside its tile; none on a 667 phone, where a tile is too narrow for them (styles.css)
+      ['the Locker\'s Legends', `C.set(null); const L = T.locker; window.__lkWas = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); L.open(3);`, w > 731 ? 14 : 0],   // every Legend won: its stars beside its year, inside its tile; none on a 667 phone, where a tile is too narrow for them (styles.css). Nine Golds (star:10 is no Gold): nine men's and the five women's, 14 (18 with ten women's, before 2026-11-09)
     ];
     const line = [];
     for (const [where, js, want] of SCREENS) {
       await pg.ev(`(() => { ${PRE} ${js} })()`); await wait(120);
       const m = JSON.parse(await pg.ev(MEASURE));
       ok(m.n === want, `${name}: ${where} draws ${want} sets of stars (${m.n})`);
-      ok(m.min >= 12, `${name}: ${where}: no star under 12px (${m.min})`);
+      ok(m.min >= 12 - 0.005, `${name}: ${where}: no star under 12px (${m.min})`);   // 0.005px allows the layout's float noise only: a run on 2026-11-10 measured 11.99997 for a 12px star, then 12 on two reruns
       ok(!m.out.length, `${name}: ${where}: every star stays in its card (${m.out})`);
       ok(!m.hit.length, `${name}: ${where}: stars clear of the overall and the name (${m.hit})`);
       ok(m.side <= 0, `${name}: ${where}: nothing goes sideways (${m.side})`);
@@ -152,6 +164,22 @@ try {
   ok(lv.tick[1] >= -33, 'Tick can be heard on a small speaker (' + lv.tick[1].toFixed(1) + ' dB above 300 Hz)');
   ok(lv.trip[1] >= -33, 'Trip can be heard on a small speaker (' + lv.trip[1].toFixed(1) + ' dB above 300 Hz)');
   ok(lv.tick[1] < lv.whistle[1] && lv.trip[1] < lv.whistle[1], 'and neither is louder than the whistle');
+  // the recordings: each decoded by the browser itself, and each played through the real bus as loud as the recipe it replaces (so SOUND.level
+  // still means what it did): the loudest 50 ms, the crowd's swells by their loudest 400 ms, the bed by its RMS. Eight renders of each, and none clips
+  await snd.send('Runtime.evaluate', { expression:`window.__rec = (async () => { const rate = 48000;
+    ac(); sndLoad(); for (let i = 0; i < 300 && SAMPLE.state !== 'done'; i++) await new Promise(r => setTimeout(r, 100));
+    const win = (d, s) => { const n = Math.floor(rate*s); let sum = 0, b = 0; for (let i = 0; i < d.length; i++) { sum += d[i]*d[i]; if (i >= n) sum -= d[i - n]*d[i - n]; if (sum > b) b = sum; } return 10*Math.log10(Math.max(1e-12, b/n)); };
+    const how = k => k === 'bed' ? (m => m.rmsDb) : (m => win(m.samples, ['roar', 'cheer', 'groan'].includes(k) ? 0.4 : 0.05));
+    const out = { state:SAMPLE.state, files:Object.values(SOUND_FILES).flat().map(([f, d, m]) => { const b = SAMPLE.bufs[f]; return b ? [f, b.lead, b.buf.duration - d - 2*(m || 0)] : [f]; }), keys:{} };
+    for (const k of Object.keys(SOUND_FILES)) { const r = [0, 0], clip = [0, 0]; for (const [j, synth] of [[0, false], [1, true]]) for (let i = 0; i < 8; i++) { const m = await soundRender(k, { secs:k === 'bed' ? 8 : 4, samples:true, rate, synth }); r[j] += how(k)(m)/8; clip[j] += m.clipped; } out.keys[k] = [r[0], r[1], clip[0] + clip[1]]; }
+    const all = await soundRender(Object.keys(SOUND_NAMES), { secs:4, rate }); out.all = [all.peakDb, all.clipped];
+    return JSON.stringify(out); })();0` });
+  const rec = JSON.parse((await snd.send('Runtime.evaluate', { expression:'window.__rec', awaitPromise:true, returnByValue:true })).result.result.value);
+  ok(rec.state === 'done' && rec.files.every(f => f.length === 3), `every recording fetched and decoded by the browser (${rec.files.filter(f => f.length === 3).length} of ${rec.files.length})`);
+  ok(rec.files.every(f => f[1] < 0.002 && Math.abs(f[2]) < 0.002), 'each starting at once and as long as the table says: the encoder\'s priming is not heard');
+  console.log('Recording v recipe through the bus, dB: ' + Object.entries(rec.keys).map(([k, v]) => k + ' ' + v[0].toFixed(1) + ' v ' + v[1].toFixed(1)).join('; '));
+  for (const [k, [r, s]] of Object.entries(rec.keys)) ok(Math.abs(r - s) <= 2, `${k}: the recording as loud as its recipe, within 2 dB (${(r - s).toFixed(1)})`);
+  ok(Object.values(rec.keys).every(v => v[2] === 0) && rec.all[1] === 0, `nothing clips, recordings or recipes, one at a time or all at once (all at once: ${rec.all[0].toFixed(1)} dB peak)`);
   await snd.close();
 } finally { browser.kill('SIGKILL'); server.close(); }
 console.log((failed ? `Home fit: ${passed} passed, ${failed} failed` : `Home fit: ${passed} checks passed`) + (PENDING.length ? ` · ${PENDING.length} pending for the builders: ${PENDING.join('; ')}` : ''));

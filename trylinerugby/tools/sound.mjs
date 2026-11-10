@@ -1,10 +1,14 @@
-// Sound: the keys, Sound Off, the crowd bed stopping, the cap on live nodes, the phone's waking up, no use of the match's random numbers, and the
+// Sound: the keys, Sound Off, the crowd bed stopping, the cap on live nodes, the phone's waking up, no use of the match's random numbers, the
+// recordings (the table, the files, their licences, the precache, loading after the first tap, a take played, the recipe when one cannot be had) and the
 // sound test page. Node has no audio, so a stand-in AudioContext records what the code asks for. What it sounds like, and the levels, need a browser
-// and ears (the levels table in the README is from OfflineAudioContext in a browser). Exits 1 on any failure.
+// and ears: tools/browser.mjs measures the recordings against the recipes through the real bus in Chrome. Exits 1 on any failure.
 // node tools/sound.mjs
 process.env.SEED ??= '41';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 const { T, rndCalls, reseed } = await import('./harness.mjs');
 const { shellAssets } = await import('./build.mjs');
 const S = T.sound, D = T.debug, X = T.teams, set = D.settings(), STEP = T.STEP;
@@ -66,7 +70,7 @@ const advance = (c, s) => { c.currentTime += s; };
   ok(titled, 'the names are Title Case');
   // where the new sounds are wired in
   const egg = read('../src/training.js'), ball = read('../src/ball.js'), match = read('../src/match.js');
-  ok(/function eggHop[\s\S]*?sfx\('bounce', Math\.min\(1, vz\/K\.pop\[1\]\)\)/.test(egg), 'Bouncy Egg sounds a bounce on each hop, by how big the hop is');
+  ok((egg.split('function eggHop(')[1] || '').split('\nfunction ')[0].includes('hopBounce(b, E, K, u, fit)') && /function hopBounce[\s\S]*?sfx\('bounce', Math\.min\(1, vz\/K\.pop\[1\]\)\)/.test(ball), 'Bouncy Egg sounds a bounce on each hop, by how big the hop is (the hop is hopBounce, src/ball.js, shared with a match\'s spilled ball since 2026-11-09)');
   ok(/function updateLoose[\s\S]*?sfx\('bounce', /.test(ball), 'a loose ball bounces');
   ok(/function catchBall[\s\S]*?setCarrier\(p\); sfx\('catch'\)/.test(match), 'a clean catch is heard');
   ok(/function knockOn[\s\S]*?sfx\('fumble'\)/.test(match), 'a knock-on fumbles');
@@ -378,13 +382,190 @@ function loadAlone(html) {
   const scripts = [...page.matchAll(/<script(?: src="([^"]+)")?>([\s\S]*?)<\/script>/g)].map(m => (m[1] ? fs.readFileSync(new URL(m[1], root), 'utf8') : m[2]));
   ok(scripts.length === 3, 'the page is its settings, the sound file and its buttons');
   vm.runInContext(scripts.join('\n'), sandbox);
-  const buttons = els.sounds.children, names = Object.values(S.NAMES), keys = Object.keys(S.NAMES);
-  ok(buttons.length === keys.length && buttons.every((b, i) => b.textContent === names[i] && b.dataset.key === keys[i]), `one button for each of the ${keys.length} sounds, with its name`);
+  const cards = els.sounds.children, names = Object.values(S.NAMES), keys = Object.keys(S.NAMES), pairs = cards.map(c => c.children[1].children);
+  ok(cards.length === keys.length && cards.every((c, i) => c.children[0].textContent === names[i]), `one card for each of the ${keys.length} sounds, with its name`);
+  ok(keys.every((k, i) => S.FILES[k] ? pairs[i].map(b => b.textContent).join() === 'Recording,Synth' : pairs[i].map(b => b.textContent).join() === 'Synth')
+    && pairs.flat().every(b => b.dataset.key === keys[pairs.findIndex(p => p.includes(b))]), 'a recorded sound has Recording and Synth side by side, a synthesised one Synth alone');
+  const buttons = pairs.flat();
   ok(buttons.every(b => b.className === 'act') && (page.match(/<button class="act[ "]/g) || []).length === (page.match(/<button/g) || []).length, 'no menu tap plays over a button on the page: each is marked as having its own sound');
-  vm.runInContext('this.api = { VOICES, SOUND, bedOn:() => !!BED }', sandbox);
-  buttons.find(b => b.dataset.key === 'post').click();
-  ok(sandbox.api.VOICES.some(v => v.key === 'post') || made.made[0].state !== 'running', 'a button plays its sound');
-  els.bed.click(); ok(sandbox.api.bedOn(), 'Crowd Bed turns the crowd on'); els.bed.click(); ok(!sandbox.api.bedOn(), 'and off');
+  vm.runInContext('this.api = { VOICES, SOUND, SAMPLE, SOUND_FILES, CREDITS, bedOn:() => !!BED, bedSample:() => !!(BED && BED.sample) }', sandbox);
+  const A = sandbox.api, lic = read('../assets/sounds/LICENCES.md');
+  ok(keys.every((k, i) => { const lines = cards[i].children.slice(2).map(c => c.textContent); return S.FILES[k] ? lines.length === S.FILES[k].length && S.FILES[k].every(([f], j) => lines[j] === 'Take ' + (j + 1) + ': ' + A.CREDITS[f]) : lines.join() === 'Synth Only'; }), 'under each, every take\'s sources and licence, or Synth Only');
+  ok(Object.values(S.FILES).flat().every(([f]) => /^[^']+ by [^']+ \((?:OpenGameArt|kenney\.nl)\)(?:; [^']+ by [^']+ \((?:OpenGameArt|kenney\.nl)\))* · CC0$/.test(A.CREDITS[f] || '')
+    && A.CREDITS[f].split(' · ')[0].split('; ').every(c => { const m = c.match(/^(.+?) by (.+) \((?:OpenGameArt|kenney\.nl)\)$/); return !!m && lic.includes('/' + m[1] + ' (' + m[2] + ')'); })), 'each credit names its pages and authors as LICENCES.md does, and CC0');
+  const post = pairs[keys.indexOf('post')];
+  post[0].click();
+  ok(A.VOICES.some(v => v.key === 'post') || made.made[0].state !== 'running', 'Recording plays its sound (its recipe until the recording is in)');
+  const ctx = made.made[0];
+  for (const [f, d] of A.SOUND_FILES.post) A.SAMPLE.bufs[f] = { buf:{ duration:d, sampleRate:48000, getChannelData:() => new Float32Array(8) }, lead:0 };   // as if decoded
+  for (const v of A.VOICES.slice()) v.end = 0;
+  ctx.currentTime += 5; post[0].click();
+  const rec = A.VOICES.find(v => v.key === 'post');
+  ok(!!rec && rec.srcs.length === 1 && A.SOUND_FILES.post.some(([f]) => A.SAMPLE.bufs[f].buf === rec.srcs[0].buffer), 'with the recording in, Recording plays a take of it');
+  ctx.currentTime += 5; post[1].click();
+  const syn = A.VOICES.filter(v => v.key === 'post').pop();
+  ok(syn !== rec && syn.srcs.length > 1, 'and Synth beside it plays the recipe');
+  els.bed.click(); ok(A.bedOn(), 'Crowd Bed turns the crowd on'); els.bed.click(); ok(!A.bedOn(), 'and off');
+  els.bedsynth.click(); ok(A.bedOn() && !A.bedSample(), 'Crowd Bed Synth plays the synthesised crowd'); els.bedsynth.click(); ok(!A.bedOn(), 'and off');
+}
+
+// 11. the recordings: a recording or a named recipe for every key, the files and their budget, their licences, the precache and the app, loading
+// once after the first tap and only then, a take played through the same voice, the crowd loop and its swell, and the recipe whenever a recording is not in
+{
+  const FILES = S.FILES, keys = Object.keys(S.NAMES), dir = new URL('../assets/sounds/', import.meta.url);
+  for (const k of keys) ok(!!FILES[k] !== S.SYNTH.includes(k), `${k}: ${FILES[k] ? FILES[k].length + ' recorded take' + (FILES[k].length > 1 ? 's' : '') : 'synth only, and named so'}`);
+  ok(Object.keys(FILES).every(k => k === 'bed' || keys.includes(k)), 'the table names only the game\'s sounds and the crowd bed');
+  for (const k of ['kick', 'catch', 'pass', 'tackle']) ok(FILES[k].length >= 2 && FILES[k].length <= 4, `${k}: two to four takes`);
+  ok(FILES.bed.length === 1 && FILES.bed[0][1] >= 10 && FILES.bed[0][1] <= 20 && FILES.bed[0][2] > 0, 'the crowd bed: one loop of 10 to 20 seconds, with a margin either side');
+  ok(Object.entries(FILES).every(([k, t]) => t.every(e => k === 'bed' ? e.length === 3 : e.length === 2)), 'only the loop has margins');
+  const table = Object.fromEntries(Object.values(FILES).flat().map(([f, d, m]) => [f, d + 2*(m || 0)]));   // each file's whole length
+  const listed = Object.values(FILES).flat().map(f => f[0]), onDisk = fs.readdirSync(dir).filter(f => !f.startsWith('.'));
+  ok(onDisk.filter(f => f.endsWith('.m4a')).sort().join() === [...listed].sort().join() && onDisk.every(f => f.endsWith('.m4a') || f === 'LICENCES.md'), 'every file in the folder is in the table and every one in the table is there, with LICENCES.md and nothing else');
+  ok(listed.every(f => /^[a-z]+-\d+\.[0-9a-f]{10}\.m4a$/.test(f) && createHash('sha256').update(fs.readFileSync(new URL(f, dir))).digest('hex').startsWith(f.split('.')[1])), 'each named by its content\'s hash, as the player art is');
+  const sizes = listed.map(f => fs.statSync(new URL(f, dir)).size), total = sizes.reduce((a, b) => a + b, 0);
+  ok(total <= 0.8*1024*1024, `within the budget: ${(total/1024).toFixed(0)} KB in all, never over 819 (the largest ${(Math.max(...sizes)/1024).toFixed(0)} KB)`);
+  if (spawnSync('ffprobe', ['-version']).error) console.log('ffprobe is not installed here: the files\' codec, channels and length are not checked');
+  else for (const [f, d, m] of Object.values(FILES).flat()) {
+    const path = fileURLToPath(new URL(f, dir)), r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_name,channels,sample_rate:format=duration', '-of', 'json', path], { encoding:'utf8' });
+    const j = r.status === 0 ? JSON.parse(r.stdout) : { streams:[{}], format:{} }, st = j.streams[0] || {}, dec = spawnSync('ffmpeg', ['-v', 'error', '-i', path, '-f', 'null', '-'], { encoding:'utf8' });
+    ok(st.codec_name === 'aac' && st.channels === 1 && +st.sample_rate === 48000 && Math.abs(+j.format.duration - table[f]) < 0.03 && dec.status === 0 && !dec.stderr.trim(), `${f}: AAC, mono, 48 kHz, ${m ? d + ' s and its margins' : d + ' s'} as the table says, and decodes cleanly (${st.codec_name}, ${st.channels}, ${(+j.format.duration).toFixed(3)})`);
+  }
+  // the licences
+  const lic = read('../assets/sounds/LICENCES.md'), rows = lic.split('\n');
+  for (const f of listed) {
+    const row = rows.find(l => l.startsWith('| `' + f + '` |')) || '', cells = row.split(' | ');
+    ok(cells[2] === 'CC0' && /https:\/\/(?:opengameart\.org\/content|kenney\.nl\/assets)\/[a-z0-9-]+ \([^)]+\)/.test(cells[1]) && /^20\d\d-\d\d-\d\d$/.test(cells[3]) && /mono, 48 kHz, AAC/.test(cells[4] || ''), `${f}: in LICENCES.md, CC0, its source pages and authors, the day fetched and what was done`);
+  }
+  const srcRows = rows.filter(l => /^\| `[a-z0-9]+` \| https:/.test(l));
+  ok(srcRows.length >= 10 && srcRows.every(l => l.split(' | ')[3] === 'CC0'), `every source is CC0 (${srcRows.length} sources)`);
+  ok(!/CC-BY|CC BY|GPL|OGA-BY|personal use|non-?commercial/i.test(lic), 'and no other licence is named');
+  ok(/assets\/sounds\/LICENCES\.md/.test(read('../README.md')), 'README links the list');
+  // the precache, and the app
+  const sw = read('../sw.js'), { wwwFiles } = await import('../../app/scripts/copy-www.mjs'), www = wwwFiles();
+  ok(listed.every(f => shellAssets.includes('assets/sounds/' + f) && sw.includes('"assets/sounds/' + f + '"')) && !sw.includes('LICENCES.md'), 'every recording is in the service worker\'s precache, so a match offline has them');
+  ok(listed.every(f => www.includes('assets/sounds/' + f)), 'and the app carries them (app/scripts/copy-www.mjs copies the precache list)');
+  // a stand-in network and decoder: what is fetched, when, and what comes back
+  const net = { mode:'ok', urls:[], decodes:0, log:'' }, realFetch = globalThis.fetch;
+  globalThis.fetch = url => { net.urls.push(url); net.log += 'f'; return net.mode === 'fail' ? Promise.reject(new Error('offline')) : Promise.resolve(net.mode === '404' ? { ok:false, status:404 } : { ok:true, arrayBuffer:() => Promise.resolve({ url }) }); };
+  const pcm = new Float32Array(64).fill(0.25);
+  const decoder = c => { c.decodeAudioData = (ab, yes, no) => { net.decodes++; net.log += 'd'; if (net.mode === 'bad') { no(new Error('bad data')); return; } const d = table[ab.url.split('/').pop()] + (net.prime ? 1024/48000 : 0); yes({ url:ab.url, sampleRate:48000, duration:d, length:Math.round(d*48000), getChannelData:() => pcm }); }; return c; };
+  const forget = () => { for (const f in S.SAMPLE.bufs) delete S.SAMPLE.bufs[f]; Object.assign(S.SAMPLE, { state:'idle', tries:0, at:-1e9 }); };
+  const settle = async () => { for (let i = 0; i < 400 && S.SAMPLE.state === 'loading'; i++) await new Promise(r => setTimeout(r, 0)); };
+  // nothing is fetched with Sound Off, with no audio, or in a headless match, and a page that never taps fetches nothing
+  forget(); set.sound = false; { const f = makeFake(); globalThis.AudioContext = f.Ctx; } S.unlock(); S.sfx('kick');
+  ok(net.urls.length === 0 && S.SAMPLE.state === 'idle', 'Sound Off: a tap fetches nothing');
+  set.sound = true; { const old = S.ctx(); if (old) { S.off(); old.close(); } } delete globalThis.AudioContext; S.unlock();
+  ok(net.urls.length === 0, 'no audio: a tap fetches nothing');
+  { const f = makeFake(); globalThis.AudioContext = f.Ctx; reseed(77); T.newMatch(0, 3, { halfLen:60, diff:0, auto:true, headless:true }); for (let i = 0; i < 3000 && !T.M.over; i++) T.update(STEP);
+    ok(net.urls.length === 0, 'a headless match with a context there: nothing fetched'); }
+  // the first tap: everything fetched and decoded once, one at a time, in the background
+  let { c } = freshAudio(); decoder(c); forget();
+  T.newMatch(0, 1, { halfLen:60, diff:0, humans:[true, false] });
+  S.unlock();
+  ok(S.SAMPLE.state === 'loading' && net.urls.length === 0, 'the first tap starts the fetching, in the background (nothing inside the tap itself)');
+  advance(c, 1); S.sfx('kick'); const early = S.voices().find(v => v.key === 'kick');
+  ok(!!early && early.srcs.length >= 2, 'until a recording is in, its recipe plays');
+  await settle();
+  ok(S.SAMPLE.state === 'done' && net.urls.length === listed.length && net.decodes === listed.length && Object.keys(S.SAMPLE.bufs).length === listed.length, `then all ${listed.length} are in: each fetched and decoded once`);
+  ok(net.log === 'fd'.repeat(listed.length), 'one at a time: each decoded before the next is fetched');
+  ok(net.urls.every(u => /^assets\/sounds\/[a-z]+-\d+\.[0-9a-f]{10}\.m4a$/.test(u)) && net.urls.slice(0, 4).every(u => /\/(tackle|pass|catch|kick)-/.test(u)), 'from assets/sounds, the most frequent first');
+  S.unlock(); S.unlock(); await settle();
+  ok(net.urls.length === listed.length, 'later taps fetch nothing more');
+  // a take played: one source through the voice, a random take, speed and level, its end on time
+  S.off(); c.state = 'running'; advance(c, 5);
+  const seenBufs = new Set(), rates = new Set(), gains = [];
+  for (let i = 0; i < 60; i++) {
+    advance(c, 0.5); const m = c.nodes.length; S.sfx('kick');
+    const v = S.voices().find(x => x.key === 'kick' && x.born >= c.currentTime), src = v && v.srcs[0];
+    if (!v) continue;
+    seenBufs.add(src.buffer); rates.add(src.playbackRate.value); gains.push(v.out.gain.value);
+    if (i === 0) {
+      ok(v.srcs.length === 1 && v.nodes.length === 2 && c.nodes.length - m === 2, 'a kick: one recording through its own gain, two nodes');
+      ok(FILES.kick.some(([f]) => S.SAMPLE.bufs[f].buf === src.buffer) && src.offset === 0 && src.started && src.stops.length === 1, 'one of the kick\'s takes, started where its sound starts');
+      ok(Math.abs(src.stops[0] - (v.t + src.buffer.duration/src.playbackRate.value + 0.02)) < 1e-9 && Math.abs(v.end - (v.t + src.buffer.duration/src.playbackRate.value + 0.03)) < 1e-9, 'and stopped, and the voice ended, when its sound is over at that speed');
+      ok(v.out.on === S.ctx().nodes.find(n => n.bus && n.kind === 'gain' && !n.on) || v.out.on && v.out.on.bus, 'into the bus, as every voice');
+    }
+  }
+  ok(seenBufs.size === FILES.kick.length, `a random take each time: all ${FILES.kick.length} heard in 60 kicks`);
+  ok(rates.size > 50 && [...rates].every(r => r >= 0.96 && r <= 1.04), 'a little faster or slower each time, within 4%');
+  ok(Math.max(...gains)/Math.min(...gains) > 1.1 && gains.every(g => g > S.SOUND.level.kick*0.85 && g < S.SOUND.level.kick*1.16), 'and a little louder or softer, about its level');
+  S.off(); c.state = 'running'; advance(c, 5);
+  const hop = amt => { let g = 0, r = 0; for (let i = 0; i < 40; i++) { advance(c, 0.3); S.sfx('bounce', amt); const v = S.voices().filter(x => x.key === 'bounce').pop(); g += v.out.gain.value/40; r += v.srcs[0].playbackRate.value/40; } S.off(); c.state = 'running'; return [g, r]; };
+  const [gBig, rBig] = hop(1), [gSmall, rSmall] = hop(0.2);
+  ok(gSmall < gBig*0.7 && rSmall > rBig*1.05, `a small hop's bounce is softer and a little higher (${(gSmall/gBig).toFixed(2)} of the level, ${(rSmall/rBig).toFixed(2)} the speed)`);
+  advance(c, 2); S.sfx('kick', null, true); ok(S.voices().filter(v => v.key === 'kick').pop().srcs.length >= 2, 'asked for the recipe (the test page\'s Synth), the recipe plays');
+  const synthOnly = S.SYNTH.map(k => { advance(c, 2); S.sfx(k); return S.voices().filter(v => v.key === k).pop(); });
+  ok(synthOnly.every(v => v && v.srcs.length >= 2), 'the synth-only sounds still play their recipes');
+  // the cap holds with the recordings in, and every node leaves
+  S.off(); c.state = 'running'; advance(c, 10); const mark = c.nodes.length; let maxN = 0, maxV = 0;
+  for (let i = 0; i < 3000; i++) { S.sfx(keys[i % keys.length]); maxN = Math.max(maxN, S.live()); maxV = Math.max(maxV, S.voices().length); if (i % 3 === 0) advance(c, 0.012); }
+  advance(c, 10); S.frame();
+  ok(maxN <= S.SOUND.maxNodes && maxV <= S.SOUND.maxVoices && S.live() === 0 && c.nodes.slice(mark).every(n => n.off), `3000 sounds with the recordings in: at most ${maxN} live nodes, ${maxV} voices, and every node gone after`);
+  ok(net.urls.length === listed.length && net.decodes === listed.length, 'decoded once and reused: 3000 sounds fetched and decoded nothing more');
+  // the crowd: the loop, from a random place, and its swell under a roar or a cheer
+  S.off(); c.state = 'running';
+  D.startMatch(X.CLUBS[0], X.CLUBS[1], false); S.frame();
+  const bed = S.voices().find(v => v.rank === Infinity), loop = bed && bed.srcs[0], [bedFile, bedLen, bedM] = FILES.bed[0];
+  ok(!!bed && bed.srcs.length === 1 && loop.buffer === S.SAMPLE.bufs[bedFile].buf && loop.loop && loop.loopStart === bedM && Math.abs(loop.loopEnd - (bedM + bedLen)) < 1e-9 && loop.offset >= bedM && loop.offset < bedM + bedLen, 'the crowd bed: the recording, looped whole between its margins, from a random place');
+  const sw0 = bed.swell.gain.log.length; S.sfx('roar');
+  const sl = bed.swell.gain.log.slice(sw0);
+  ok(sl.some(l => l[0] === 'lin' && l[1] === S.SOUND.swell.roar[0]) && sl.some(l => l[0] === 'tgt' && l[1] === 1), 'a roar: the crowd under it swells and settles');
+  advance(c, 1); S.sfx('cheer'); ok(bed.swell.gain.log.slice(sw0).some(l => l[0] === 'lin' && l[1] === S.SOUND.swell.cheer[0]), 'and a cheer, less');
+  advance(c, 1); const sw1 = bed.swell.gain.log.length; S.sfx('tackle'); S.sfx('groan'); ok(bed.swell.gain.log.length === sw1, 'nothing else moves it');
+  D.exitMatch(); advance(c, 1); S.frame();
+  // the synthesised crowd until the loop is in, and the loop taking over when it arrives
+  forget(); S.off(); c.state = 'running';
+  D.startMatch(X.CLUBS[0], X.CLUBS[1], false); S.frame();
+  const synthBed = S.voices().find(v => v.rank === Infinity);
+  ok(!!synthBed && !synthBed.sample && synthBed.srcs.length === 4, 'no recording yet: the synthesised crowd');
+  for (const [f] of FILES.bed) S.SAMPLE.bufs[f] = { buf:{ duration:table[f], sampleRate:48000, getChannelData:() => pcm }, lead:0 };
+  advance(c, 0.02); S.frame();
+  const nowBed = S.voices().find(v => v.rank === Infinity);
+  ok(!!nowBed && nowBed.sample && synthBed.rank === 0 && synthBed.out.gain.log.some(l => l[0] === 'tgt' && l[1] === 0), 'the recording in: the synthesised crowd fades as the recording fades in');
+  D.exitMatch(); advance(c, 1); S.frame(); T.newMatch(0, 1, { halfLen:60, diff:0, humans:[true, false] });
+  // a decoder that keeps the encoder's 1024 samples of priming (one that ignores the MP4's edit list): every take starts after them, and the loop runs from them
+  ok(Object.values(table).every(d => Math.abs(d*48000/1024 - Math.round(d*48000/1024)) < 1e-3), 'every file is a whole number of AAC frames, so the length alone tells the two kinds of decoder apart');
+  forget(); S.off(); c.state = 'running'; net.prime = true; S.unlock(); await settle(); net.prime = false;
+  ok(Object.values(S.SAMPLE.bufs).length === listed.length && Object.values(S.SAMPLE.bufs).every(b => b.lead === 1024/48000), 'the priming kept: each take is known to start 1024 samples in');
+  T.newMatch(0, 1, { halfLen:60, diff:0, humans:[true, false] }); advance(c, 1); S.sfx('kick');
+  const primed = S.voices().filter(v => v.key === 'kick').pop().srcs[0];
+  ok(primed.offset === 1024/48000 && Math.abs(primed.stops[0] - (primed.at + (primed.buffer.duration - 1024/48000)/primed.playbackRate.value + 0.02)) < 1e-9, 'and plays from there, to its end');
+  D.startMatch(X.CLUBS[0], X.CLUBS[1], false); S.frame();
+  const pl = S.voices().find(v => v.rank === Infinity).srcs[0];
+  ok(Math.abs(pl.loopStart - (1024/48000 + bedM)) < 1e-9 && Math.abs(pl.loopEnd - (1024/48000 + bedM + bedLen)) < 1e-9, 'and the crowd loops from there, its whole length and no more');
+  D.exitMatch(); advance(c, 1); S.frame(); T.newMatch(0, 1, { halfLen:60, diff:0, humans:[true, false] });
+  // a failed fetch, a bad file: the recipes, and a later tap asks again, a few times, a while apart
+  forget(); S.off(); c.state = 'running'; net.mode = 'fail'; net.urls.length = 0;
+  S.unlock(); await settle();
+  ok(S.SAMPLE.state === 'idle' && Object.keys(S.SAMPLE.bufs).length === 0 && net.urls.length === listed.length, 'offline: every fetch fails, nothing is kept');
+  advance(c, 1); S.sfx('tackle'); ok(S.voices().filter(v => v.key === 'tackle').pop().srcs.length >= 2, 'and the recipe plays: never a silence');
+  S.unlock(); await settle(); ok(net.urls.length === listed.length, 'a tap straight after does not ask again');
+  const realNow = performance.now; let clock = realNow.call(performance) + (S.SOUND.loadGap + 1)*1000; performance.now = () => clock;
+  net.mode = '404'; S.unlock(); await settle();
+  ok(net.urls.length === 2*listed.length && S.SAMPLE.state === 'idle', `${S.SOUND.loadGap} seconds on, a tap asks again (a 404 this time, kept as nothing)`);
+  net.mode = 'bad'; clock += (S.SOUND.loadGap + 1)*1000; S.unlock(); await settle();
+  ok(net.urls.length === 3*listed.length && Object.keys(S.SAMPLE.bufs).length === 0, 'a file that will not decode is kept as nothing too');
+  advance(c, 1); S.sfx('kick'); ok(S.voices().filter(v => v.key === 'kick').pop().srcs.length >= 2, 'and its recipe plays');
+  net.mode = 'ok'; clock += (S.SOUND.loadGap + 1)*1000; S.unlock(); await settle();
+  ok(net.urls.length === 3*listed.length, `after ${S.SOUND.loadTries} tries it asks no more until the page is opened again`);
+  performance.now = realNow;
+  globalThis.fetch = realFetch; S.off();
+  // the sim never hears any of it: AI v AI and the demo, seeded, play the same with the recordings in as with no audio at all, draw for draw
+  const sim = audio => {
+    if (audio) { const f = makeFake(); globalThis.AudioContext = f.Ctx; S.ac(); for (const [file] of Object.values(FILES).flat()) S.SAMPLE.bufs[file] = { buf:{ duration:table[file], sampleRate:48000, getChannelData:() => pcm }, lead:0 }; }
+    else { const old = S.ctx(); if (old) { S.off(); old.close(); } delete globalThis.AudioContext; forget(); }
+    reseed(4242); T.newMatch(0, 3, { halfLen:60, diff:0, auto:true, headless:true }); let n = 0; const r0 = rndCalls();
+    while (!T.M.over && n < 60000) { T.update(STEP); n++; }
+    const ai = [T.M.score, T.M.tries, T.M.stats, rndCalls() - r0];
+    reseed(4243); T.newMatch(0, 1, { halfLen:1e9, diff:0, auto:true, demo:true }); const r1 = rndCalls();
+    for (let i = 0; i < 3000; i++) { T.update(STEP); S.frame(); }
+    return JSON.stringify([ai, T.M.score, T.M.ball.x, T.M.ball.y, rndCalls() - r1]);
+  };
+  const heard = sim(true), silent = sim(false);
+  ok(heard === silent, 'AI v AI and the demo, seeded: the same with every recording in as with no audio, draw for draw');
+  S.off(); forget();
+  const code = read('../src/sound.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  ok((code.match(/\bfetch\(/g) || []).length === 1 && /function soundUnlock\(\) \{[\s\S]*?if \(soundUnlocked\) sndLoad\(\);/.test(code) && (code.match(/(?<!function )\bsndLoad\(\)/g) || []).length === 1, 'one fetch in the file, reached only from a tap');
 }
 
 // 10. the notes

@@ -27,7 +27,7 @@ const NATIONS = [   // append only: championships saved before clubs existed ind
 ];   // the six first, then the rest of the world, then the women's two; a nation's code never matches a club's (RSA, not a South African city's)
 /* Local clubs: kit colours are the clubs' own. Each club's league line (league, place, w, d, l, pf, pa) is its last season's, real figures from
    PR #14's lists, read from the list and never saved (cleanSide and cleanTeam keep none of it). Its rating comes from that season (CLUB_RATED, src/ratings.js);
-   the abilities written here are only how it plays. Quins has no line here, so it keeps the rating written here. Append only, never reorder. */
+   the abilities written here are only how it plays. Quins has no line here: it is rated level with Farnham, as written here. Append only, never reorder. */
 const CLUBS = [
   { id:'FAR', name:'Farnham',       kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3, league:'Regional 1 South Central', place:7, w:10, d:0, l:12, pf:640, pa:646 },
   { id:'HAS', name:'Haslemere',     kit:'#2244aa', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Counties 3 Surrey', place:9, w:4, d:0, l:16, pf:344, pa:598 },
@@ -44,9 +44,9 @@ const CLUBS = [
 ];
 /* Professional sides go by their city, not the club's own name or nickname: the city is a place, the club name is a
    trademark. Kit colours follow the clubs' own, and no club tops a team you can make (5 + BUDGET). A side with a league line (PR #14's
-   last-season figures) is rated from it inside main's club band (CLUB_RATED, src/ratings.js): a top flight 67 to 72, and 75 only for a
-   national champion; England 2 64 or 67; Scotland's amateur clubs 61 and 64, as written here. New Zealand and Japan have no figures and
-   keep the ratings written here. The abilities written in a list are how a side plays (its flavour, TEAM_FLAVOUR).
+   last-season figures) is rated from it in the real order of the tiers (CLUB_RATED, src/ratings.js): a top flight 67 to 72, and 75 only
+   for a national champion; England 2 61 or 64; Scotland's amateur clubs 58 and 61, a step under the ratings written here. New Zealand
+   and Japan have no figures and keep the ratings written here. The abilities written in a list are how a side plays (its flavour, TEAM_FLAVOUR).
    Codes are unique across every list, nations included. Append only, never reorder. */
 const FRANCE = [   // the Top 14, rated by its 2025-26 table
   { id:'TLS', name:'Toulouse',    kit:'#d01f2e', trim:'#1c1c1c', pace:4, power:4, handling:3, kicking:3, stamina:3, league:'Top 14', place:1, w:18, d:0, l:8, pf:981, pa:617 },
@@ -137,8 +137,8 @@ const SCOTLAND = [   // the Scottish Premiership, 2025-26, in its table's order:
   { id:'SEL', name:'Selkirk',    kit:'#1b2747', trim:'#f2efe6', pace:2, power:3, handling:2, kicking:2, stamina:3 },
 ];
 /* England's second tier, the English Championship, in last season's table order (regular season, before the play-offs), from PR #14. Thirteen
-   of its fourteen: the side from London is left out, because London is taken by the top flight's sides and it was relegated. Rated 67 with
-   a winning record, else 64: one step under the top flights' best, its winners level with their foot (CLUB_RATED).
+   of its fourteen: the side from London is left out, because London is taken by the top flight's sides and it was relegated. Rated 64 with
+   a winning record, else 61, PR #14's own figures: under every top-flight side, and above every Local and Counties side (CLUB_RATED).
    No two sides here share a shirt and a trim at a glance: where a club's own colours are close to another's, one wears hoops or the darker
    shade. Weak sources, as PR #14 flagged them: Chinnor, Hartpury's hoops, Cornwall's trim, Doncaster, Nottingham's hoops, Ampthill's shade
    and hoops and Caldy's hoops could not be sourced and are a free choice. Append only, never reorder. */
@@ -159,7 +159,7 @@ const ENGLAND_TWO = [
 ];
 /* The foot of the game, from PR #14: Counties 5 Surrey, the league Guildfordians play in, in last season's table order, with one side from
    Counties 3 Surrey above them. Guildfordians is the Local list's own object, so it stays one team with one code (ALL_TEAMS keeps it once).
-   Rated 61 for Counties 5 and 64 for Counties 3, the foot of main's band, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
+   Rated 43 for Counties 5 and 46 for Counties 3, the foot of the ladder, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
    PR #14 flagged them: Egham's and Mitcham's colours could not be sourced and are a free choice. Append only, never reorder. */
 const COUNTIES = [
   { id:'EFF', name:'Effingham',  kit:'#f2b01e', trim:'#0f5a32', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 3 Surrey', place:2, w:16, d:0, l:4, pf:773, pa:291 },
@@ -179,7 +179,7 @@ const TEAM_LISTS = [
   { key:'eng', tier:1, name:'England',          teams:ENGLAND },
   { key:'en2', tier:1, name:'England 2',        teams:ENGLAND_TWO },   // PR #14's second tier
   { key:'fra', tier:1, name:'France',           teams:FRANCE },
-  { key:'cel', tier:1, name:'Celtic and Italy', teams:CELTIC },
+  { key:'cel', tier:1, name:'United Rugby Championship', teams:CELTIC },   // the real name (the owner, 9 Nov: generic enough); its key stays 'cel', as saves, the European Cup and settings.pool hold it
   { key:'sco', tier:1, name:'Scotland',         teams:SCOTLAND },
   { key:'rsa', tier:1, name:'South Africa',     teams:SOUTH_AFRICA },
   { key:'aus', tier:1, name:'Australia',        teams:AUSTRALIA },
@@ -305,6 +305,7 @@ const RESTARTS_NORMAL = {
   afterScore:     { kind:'kickoff' },
   knockOn:        { kind:'scrum',   label:'Knock-On' },
   heldInGoal:     { kind:'scrum',   label:'Held in Goal' },
+  maulHeldUp:     { kind:'scrum',   label:'Held Up' },
   deadBallCarried:{ kind:'scrum',   label:'Dead Ball' },
   touchCarried:   { kind:'lineout', label:'Into Touch' },
   touchKick:      { kind:'lineout', label:'Into Touch' },

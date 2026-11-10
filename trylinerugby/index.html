@@ -55,7 +55,7 @@
       <div class="app-tools" id="app-tools" hidden>
         <span id="offline-status" role="status" hidden>Offline Ready</span>
         <button class="app-action" id="b-install" hidden>Install Game</button>
-        <button class="app-action" id="b-update" hidden>Update Game</button>
+        <span id="offline-update" role="status" hidden>Updating</span>
       </div>
     </header>
     <div class="home-top" id="home-top">
@@ -90,7 +90,7 @@
             <button class="btn drill" id="pr-egg"><span class="dc-icon" id="pi-egg" aria-hidden="true"></span><span class="dc-name">Bouncy Egg</span></button>
             <button class="btn drill" id="pr-circle"><span class="dc-icon" id="pi-circle" aria-hidden="true"></span><span class="dc-name">Pass Around the Circle</span></button>
             <button class="btn drill" id="pr-cones"><span class="dc-icon" id="pi-cones" aria-hidden="true"></span><span class="dc-name">Cones</span></button>
-            <button class="btn drill" id="pr-pass"><span class="dc-icon" id="pi-pass" aria-hidden="true"></span><span class="dc-name">Create a Two-on-One</span></button>
+            <button class="btn drill" id="pr-pass"><span class="dc-icon" id="pi-pass" aria-hidden="true"></span><span class="dc-name">Create a Gap</span></button>
             <button class="btn drill" id="pr-kick"><span class="dc-icon" id="pi-kick" aria-hidden="true"></span><span class="dc-name">Kicking</span></button>
             <button class="btn drill" id="pr-defend"><span class="dc-icon" id="pi-defend" aria-hidden="true"></span><span class="dc-name">Defend a Breakaway</span></button>
             <button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><rect x="6" y="6" width="28" height="28" rx="3"/><path d="M11 12l5 5M16 12l-5 5"/><circle cx="27" cy="25" r="3.5" class="acc"/><path class="dash" d="M16 18l8 5"/></svg></span><span class="dc-name">How to Play</span></button>
@@ -115,9 +115,9 @@
             <li><b>Bouncy Egg:</b> going to meet the ball, with eyes on it until it arrives.</li>
             <li><b>Pass Around the Circle:</b> passes that finish at chest height, where they are easiest to catch.</li>
             <li><b>Cones:</b> footwork and clean changes of direction.</li>
-            <li><b>Create a Two-on-One:</b> running at a defender, then passing at the right moment.</li>
+            <li><b>Create a Gap:</b> running at a defender, then passing at the right moment, with more players a side as the rounds go on.</li>
             <li><b>Kicking:</b> aiming first, then a controlled strike.</li>
-            <li><b>Defend a Breakaway:</b> getting across to help when a team-mate is beaten. At the Kids level and on Minis it ends with a tag, not a tackle.</li>
+            <li><b>Defend a Breakaway:</b> getting across to help when a team-mate is beaten, and reading a support runner. At the Kids level and on Minis it ends with a tag, not a tackle.</li>
             <li><b>Tackling:</b> head behind the ball carrier, eyes up, aiming low at the legs and well below the chest, arms round and legs driving.</li>
             <li><b>Driving:</b> a low, strong body shape with the hips lower than the shoulders, and timing the push.</li>
             <li><b>Ball Back:</b> a safe two-handed hold, falling without an arm out to stop the fall, and getting the ball back to the team.</li>
@@ -149,11 +149,13 @@
 
 <section class="screen" id="s-teams" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
-      <div class="seg cat" id="t-cat"></div></div>
-    <div class="pools"><div class="seg" id="t-tier"></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>
-    <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
-    <button class="btn primary" id="t-default" hidden></button>
+    <div class="fold-line"><div class="fold-name"><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
+      <p class="fold-sum"><span id="t-sum"></span> <b id="t-vs" hidden></b></p><button class="btn fold-go" id="t-fold" aria-expanded="false" aria-controls="t-ctl">Change</button>
+      <button class="btn primary" id="t-default" hidden></button></div>
+    <div class="fold-ctl" id="t-ctl" hidden>
+      <div class="pools"><div class="fold-top"><div class="seg cat" id="t-cat"></div><div class="seg" id="t-tier"></div></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>
+      <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
+    </div>
     <div class="teams" id="t-grid"></div>
     <button class="btn" id="t-back" data-back>Back to Menu</button>
   </div>
@@ -256,8 +258,11 @@
 
 <section class="screen" id="s-career-club" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow">New Player</p><h2 class="title">Pick Your Club</h2></div></div>
-    <div class="pools"><div class="seg" id="cc-tier"></div><div class="seg" id="cc-nat" hidden></div><div class="seg" id="cc-loc" hidden></div></div>
+    <div class="fold-line"><div class="fold-name"><p class="eyebrow">New Player</p><h2 class="title">Pick Your Club</h2></div>
+      <p class="fold-sum"><span id="cc-sum"></span></p><button class="btn fold-go" id="cc-fold" aria-expanded="false" aria-controls="cc-ctl">Change</button></div>
+    <div class="fold-ctl" id="cc-ctl" hidden>
+      <div class="pools"><div class="seg" id="cc-tier"></div><div class="seg" id="cc-nat" hidden></div><div class="seg" id="cc-loc" hidden></div></div>
+    </div>
     <div class="cr-clubs" id="cc-grid"></div>
     <button class="btn" id="cc-back" data-back>Back to New Player</button>
   </div>
@@ -339,41 +344,20 @@
 
 <section class="screen" id="s-help" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow">Controls</p><h2 class="title">How to Play</h2></div></div>
-    <dl class="help">
-      <dt>Stick</dt><dd>Touch anywhere on the left half and drag. Near a tackler, flick it sideways to <b>Side Step</b>. Pull it back and push on for a <b>Dummy</b>.</dd>
-      <dt>Pass</dt><dd>A tap goes to the teammate in the ring. White means they are free; the ring tints when a defender is on them. Tilt the stick toward a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest player and floats to the next one out. A tint inside the gold means that player is marked too.</dd>
-      <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
-      <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
-      <dt>Drop Goal</dt><dd>In range the small button reads <b>Drop Goal</b>. Hold it, steer, let go in the gold before they reach you.</dd>
-      <dt>Tackle</dt><dd>When they have the ball. It lights up when you can reach them. Miss and you're on the floor.</dd>
-      <dt>Sprint</dt><dd>Hold it for a burst of speed, with the ball or without. The ring drains while you hold and refills when you let go.</dd>
-      <dt>Offload</dt><dd>Press Pass as you're tackled, when it glows.</dd>
-      <dt>Switch</dt><dd>The dashed ring shows who. Nearest the ball, or the next one if that is you. If your player is behind the ball, the nearest teammate still in front, and the button pulses.</dd>
-      <dt>Ruck</dt><dd>The ring moves to the teammate who will pick the ball up. Place them with the stick, or let go and they run to the ball. Pass, Kick and Tackle stay dead until it is out.</dd>
-      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when they drift to your runner. Each one starts in slow motion.</dd>
-      <dt>Hints</dt><dd>The card in the top corner names the control for each close-up. Untick <b>Hints</b> on it, or set <b>Match Help</b> to Off on the menu.</dd>
-      <dt>Tutorial</dt><dd>The first time each close-up comes up, play pauses and a card says what to do. <b>Replay Tutorial</b> below shows them all again.</dd>
-      <dt>The Ball</dt><dd>A white bubble with a ball in it stands over whoever has the ball, on either side, and an arrow at the edge points to it when it is off the screen. On the grass, rays mean it is loose. In your first matches a sign under the clock says <b>Your Ball</b>, <b>Stop Them</b> or <b>Get the Ball</b>. In a career the <b>star</b> is your player and the <b>ring</b> is who you control now.</dd>
-      <dt>Coach</dt><dd>The first time Pass, Tackle, an offload, Sprint or a side step comes up, one line tells you. The menu’s <b>Match Help</b> switch controls these tips and the control hints together.</dd>
-      <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good start, then tap it fast. Out-shove theirs to steal it.</dd>
-      <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
-      <dt>Keyboard</dt><dd>Arrows or WASD to run: tap across near a tackler to <b>Side Step</b>, tap back for a <b>Dummy</b>. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
-      <dt class="desk-only">Controller</dt><dd class="desk-only">Stick or D-Pad to run: flick across near a tackler to <b>Side Step</b>, pull back and push on for a <b>Dummy</b>. <b>Bottom Button</b> Pass / Tackle. <b>Right Button</b> Kick / Switch. <b>Shoulder</b> Sprint. <b>Start</b> Pause. Press any button to connect it.</dd>
-      <dt class="desk-only">2 Players</dt><dd class="desk-only">Player 1: <b>W A S D</b> Run, <b>F</b> Pass, <b>G</b> Kick, <b>H</b> Sprint. Player 2: <b>Arrows</b> Run, <b>/</b> Pass, <b>.</b> Kick, <b>,</b> Sprint. Pass is also Tackle, the goal kick (hold it), Push and Jump; Kick is also Switch, Drop Goal and Dummy. A controller takes a seat with one press. In a duel the other player guards, drifts or steps with their run keys before the ring opens, or presses <b>Kick</b> for a Dummy as the passer.</dd>
-    </dl>
+    <div class="head"><div><h2 class="title">How to Play</h2></div></div>
+    <div class="ctl" id="h-pic">
+      <i class="ctl-ring" aria-hidden="true"><i></i></i>
+      <div class="ctl-js x"><b class="ctl-j x"><small class="t">Drag</small> Run</b><b class="ctl-j x"><small class="tp">Flick Across</small><small class="k">Tap Across</small> Side Step</b><b class="ctl-j x"><small class="tp">Pull Back</small><small class="k">Tap Back</small> Dummy</b></div>
+      <span class="ctl-b c">Sprint</span><span class="ctl-b b">Kick</span><span class="ctl-b a">Pass</span><i class="ctl-p" aria-hidden="true"></i>
+      <div class="ctl-js b"><b class="ctl-j b"><small>Tap</small> Chip</b><b class="ctl-j b">Switch</b><b class="ctl-j b">Drop Goal</b></div>
+      <div class="ctl-js a"><b class="ctl-j a"><small>Scrum</small> Push</b><b class="ctl-j a"><small>Lineout</small> Jump</b><b class="ctl-j a"><small>Hold</small> Long Pass</b><b class="ctl-j a">Tackle</b><b class="ctl-j a">Offload</b></div>
+      <div class="ctl-js p"><b class="ctl-j p">Pause</b></div>
+    </div>
+    <div class="ctl-keys desk-only" id="h-keys"><div class="ctl-krow" id="h-kb"><span class="lbl">Keyboard</span></div><div class="ctl-krow" id="h-pad"><span class="lbl">Controller</span></div></div>
     <div class="scoring">
       <div><b>5</b><span>Try</span></div><div><b>2</b><span>Conversion</span></div><div><b>3</b><span>Penalty</span></div><div><b>3</b><span>Drop Goal</span></div>
     </div>
-    <dl class="help">
-      <dt>Table</dt><dd>Win 4, draw 2. <b>+1</b> for four or more tries. <b>+1</b> for losing by seven or fewer. <b>+3</b> for a Grand Slam.</dd>
-      <dt class="web-only">Install &amp; Offline</dt><dd class="web-only">On iPhone or iPad, open in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. Other browsers may offer <b>Install</b> in their menu. Visit online first and wait for <b>Offline Ready</b> on the home menu before playing without a connection. Browser storage must remain available. Updates appear on the home menu and wait for you to choose <b>Update Game</b>.</dd>
-      <dt class="web-only">Saving</dt><dd class="web-only">This browser keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table clears the current championship and keeps completed seasons in the Trophy Cabinet. Leaving a match, or reloading, keeps the same round to play again.</dd>
-      <dt class="app-only" hidden>Saving</dt><dd class="app-only" hidden>The game keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table clears the current championship and keeps completed seasons in the Trophy Cabinet. Leaving a match, or closing the app, keeps the same round to play again.</dd>
-      <dt>First Matches</dt><dd>The first two games on Normal are a little kinder while you learn to turn and chase. A card marked <b>Stronger Side</b> is rated well above yours.</dd>
-      <dt>50:22</dt><dd>Kick from your own half that bounces out inside their 22 and the lineout throw is yours.</dd>
-    </dl>
-    <div class="row2"><button class="btn" id="h-replay">Replay Tutorial</button><button class="btn" id="h-back" data-back>Back to Menu</button></div>
+    <button class="btn" id="h-back" data-back>Back to Menu</button>
   </div>
 </section>
 

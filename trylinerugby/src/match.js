@@ -76,6 +76,7 @@ function newMatch(u, c, opts) {
     dropOn:[false, false], dropArmed:[false, false],   // the drop-goal label, per side: what it read on the last frame, and what it promised at the B press
     dropSeen:[null, null], dropSet:[null, null],       // the chargers the label last saw (as the hold would leave them), and the ones the press committed the cut to
     contact:null,                                      // the bind under way: { c, q, q2, mode, tier, t, T, ... }
+    pressure:[0, 0], press:{ poss:null, mark:[null, null], said:[false, false] },   // PRESSURE (src/contact.js): the pressure on each side's possession, who has it, the last breakdown's mark and whether Pressure On was said
     spr:[0, 1].map(() => ({ m:1, p:null, spent:false, cue:0, tick:-9, think:0 })),   // one Sprint meter a side: its level 0..1, who is sprinting on it, and whether a hold ran it dry
     stepN:0,                                           // every update counts one, close-ups included (gestureStep reads it)
     tags:[], fx:[], stop:0, shake:0, shakeT:0.12, rt:0, // render only: on-pitch tags, impact rings, the Big Hit's hit-stop, its shake and the shake's length, the render clock
@@ -85,6 +86,14 @@ function newMatch(u, c, opts) {
     kids:!!opts.kids && di === 0 && !auto && !two && !opts.demo,   // the Kids level's levers (kids.js): asked for, on Easy, one player only; never AI v AI, the demo or two player
   };
   if (M.kids) { M.kidsR = kidsTune(opts.kidsR).r; M.kidsDone = false; }   // its rating sets the levers before anything reads them: the start (0) unless the caller says (startMatch passes settings.kidsR)
+  /* A Kids half lasts the half chosen on a real clock (the owner, 2026-11-09: "2 Real Minutes"). The match runs at MATCH_PACE.kids, so
+     the half is that share of the chosen half in simulated seconds (2 minutes: 90), and the clock on the scorebug reads real time
+     (fmtClock), 2:00 at the hooter. The Golden Try is half of it (periodLen). Only where the Kids pace runs (matchPace): a drill keeps
+     its own clock, and every other match keeps the half as given. The close-up quota reads the simulated half, as everything else in a
+     half does: one close-up in a 2-minute half instead of two. It binds (the settled 7 to 8 year old has 2.2 a match, 2.6 with a quota of
+     two, 3.0 in the 120-second half), but keeps the rate per real minute he had before (0.55 against 0.56; README.md, The half). */
+  M.realClock = M.kids && !practice ? MATCH_PACE.kids : 0;
+  if (M.realClock) M.halfLen = opts.halfLen*M.realClock;
   // the sides: a human's seat is the next free slot (the lone human of an away-side match sits in seat 0). A CPU side's level is the
   // level it is played at: its human opponent's, or the match's in AI v AI
   let seat = 0;
@@ -116,6 +125,7 @@ function maxSpeed(p) {
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
   if (onFire(p.team)) f *= ARCADE.fire.speed;
+  if (edgeCarry(p)) f *= EDGE.pace;                          // Easy: your carrier, a little quicker with the ball (src/edge.js)
   f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it
   const sp = sprintLevel(p);                                 // the bigger of the sprint and the duel's burst applies, never both
   if (sp > 0) f = Math.max(f, 1 + ((M.ball.carrier === p ? SPRINT.mulBall : SPRINT.mul)[levelOf(p.team)] - 1)*sp)*traitBurst(p, sp);   // a Burst sprints a little quicker
@@ -147,6 +157,7 @@ function seek(p, tx, ty, speed, acc, dt, pursue) {
 function placeBall(x, y) {
   const b = M.ball;
   b.state = 'dead'; b.carrier = null; b.f = null; b.x = x; b.y = y; b.z = 0; b.vx = b.vy = b.vz = 0;
+  eggOff(b);
 }
 function playFrom(team, x, y, kind) {                      // the mark the ball is played from: a ruck 1.6m behind, a scrum 1.2, a lineout 1.5 and out to the side
   const d = dirOf(team);
@@ -176,8 +187,11 @@ function startSet(o) {
    the ball, and where. Once the hooter has gone a stoppage ends the half instead, unless its row plays on. */
 const RESTART_KIND = { kickoff, dropOut, scrum, lineout, penalty };
 function restart(why, team, x, y) {
+  if (M.hooter && !M.demo && !M.rules.restarts[why].playOn) { endHalf(); return; }
+  restartNow(why, team, x, y);
+}
+function restartNow(why, team, x, y) {                     // the restart with no look at the hooter: for a caller that settled the dead ball earlier (knockBeat, src/contact.js)
   const r = M.rules.restarts[why];
-  if (M.hooter && !M.demo && !r.playOn) { endHalf(); return; }
   RESTART_KIND[r.kind](team, x, y, r.label);
 }
 function kickoffFormation(kTeam, kx) {
@@ -246,7 +260,7 @@ function releaseTo(team, x, y, kind, who) {
 function setCarrier(p) {
   const b = M.ball;
   if (M.poss !== p.team) M.phaseCount = 0;
-  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null;
+  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b);
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
@@ -254,7 +268,7 @@ function setCarrier(p) {
   for (const t of [0, 1]) {                                // the carrier's side takes him; any other human side re-picks when its man is down or far off
     if (!isHuman(t)) continue;
     if (p.team === t) setCtrl(t, p);
-    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }
+    else { const cur = ctrlOf(t); if (!cur || cur.down > 0 || dist(cur, p) > 8) { const q = practice && practice.id === 'defend' ? defendRepick(t, p) : nearestFree(t, p.x, p.y); if (q) setCtrl(t, q); } }   // Defend a Breakaway: never back to the beaten man (training.js)
   }
 }
 function catchBall(p, kind) {
@@ -270,13 +284,15 @@ function catchBall(p, kind) {
   setCarrier(p); sfx('catch');
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
-  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? PASS_FLIGHT.graceKids : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit
+  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? KIDS.grace : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit (Kids: its rating's, kidsTune)
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
   placeBall(p.x, p.y);
-  sfx('fumble'); sfx('whistle');
+  sfx('fumble');
+  if (knockBeat(p)) return;                                // PRESSURE: it hops for a beat before the whistle (src/contact.js)
+  sfx('whistle');
   restart('knockOn', 1-p.team, p.x, p.y);
 }
 function pickUp(p) {

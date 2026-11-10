@@ -45,7 +45,7 @@ function cupBegin(id, opts) {
   return true;
 }
 
-/* A league won with a side from England, France, Celtic and Italy or South Africa offers the European Cup straight after. */
+/* A league won with a side from England, France, the United Rugby Championship or South Africa offers the European Cup straight after. */
 function cupEuroOn(c, rows) { return !!c && c.round >= 5 && rows[0].i === c.user && cupEuroSkip !== c.id && !!cupListOf(c.teams[c.user]); }
 function cupEuroHub(c, rows) {
   if (!cupEuroOn(c, rows)) return false;

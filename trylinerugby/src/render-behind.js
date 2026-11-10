@@ -325,8 +325,8 @@ function bvBall(cam) {                                      // a ball not in any
   if (!q) return;
   const sh = pr(cam, b.x, b.y, 0), scG = 1/(1 + Math.max(0, b.z)*0.16);
   if (sh) { ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.globalAlpha = 0.45 + 0.55*scG; ellipse(sh.sx, sh.sy, Math.max(7, 0.3*sh.k)*scG, Math.max(2.5, 0.11*sh.k)*scG); ctx.fill(); ctx.globalAlpha = 1; }
-  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y, ang = hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0;
-  if (b.state === 'dead') { cutBall(q.sx, q.sy, q.k*1.1, ang); return; }   // waiting at a kick-off or a ruck, among the men: its old size, so it never sits on a man like a plate. No one needs to chase it
+  const across = b.vx*cam.r.x + b.vy*cam.r.y, along = b.vx*cam.u.x + b.vy*cam.u.y, ang = (hyp(across, along) > 0.5 ? Math.atan2(-along*bvFlat(cam, q.z), across) : 0) + (b.tumble != null ? b.tumble*0.5 : 0);   // a spilled or knocked-on egg turns end over end (b.tumble, set in the sim; PRESSURE)
+  if (b.state === 'dead' && !b.egg) { cutBall(q.sx, q.sy, q.k*1.1, ang); return; }   // waiting at a kick-off or a ruck, among the men: its old size, so it never sits on a man like a plate. No one needs to chase it. A knock-on hopping before its whistle is drawn as a loose ball
   const rx = Math.max(b.state === 'air' ? BV_LOOSE.air : BV_LOOSE.rx, BV_LOOSE.k*q.k);
   cutBall(q.sx, q.sy, rx/0.17, ang);                         // cutBall's half-length is 0.17 of its scale
   ballLaces(q.sx, q.sy, rx, ang);
