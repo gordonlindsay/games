@@ -11,6 +11,7 @@
   "maul.js",
   "duels.js",
   "arcade.js",
+  "edge.js",
   "stamina.js",
   "ball.js",
   "movement.js",
