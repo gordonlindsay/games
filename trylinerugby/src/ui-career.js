@@ -5,9 +5,9 @@
    ========================================================= */
 const CAREER_COL = { pace:'#5fb8ff', power:'#ff6b5a', handling:'#5fd38a', kicking:'#ff9f43', stamina:'#c58cff' };   // a colour per skill, always beside its name
 /* The trophy row on the player card: a trophy per kind he has won, in its kind's shape and metal (TROPHY_SHAPE and TROPHY_METAL,
-   src/cups.js: a shield, a cup with big handles, a cup with a ball on top, a plate, a crown; gold or silver, as in the Trophy Cabinet),
+   src/cups.js: a shield, a tankard (a county cup), a cup with big handles, a cup with a ball on top, a plate, a crown; gold or silver, as in the Trophy Cabinet),
    and how many, in CAREER_KINDS order; each trophy's own label names its kind. */
-const CAREER_KIND_NAME = { league:'League', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
+const CAREER_KIND_NAME = { league:'League', county:'County Cup', euro:'European Cup', world:'World Cup', tour:'Home Nations Tour', triple:'Triple Crown' };
 let careerDraft = null, careerResetArmed = false, careerRestartArmed = false;
 const careerPosWord = pos => (pos === 'F' ? 'Forward' : 'Back');
 function careerShirt(t, num, cls) {                  // the kit with his number on it
@@ -15,7 +15,7 @@ function careerShirt(t, num, cls) {                  // the kit with his number 
 }
 /* A name too long for its box steps down in size until its longest word fits, as fitNames does on the team cards. Run once the screen shows.
    A label (Forward · No. 1 on the player card at 667 wide) gives up most of its letter spacing first, and may go down to 10px; so may the
-   trophy row, whose five kinds in two figures need 11px beside the overall at 667x375. One marked data-fit="wrap" (a transfer offer's
+   trophy row, whose five kinds in two figures need 11px beside the overall at 667x375 (six, with a county cup, 10px and the row's tight spacing). One marked data-fit="wrap" (a transfer offer's
    league) that is still too wide at its smallest goes on two lines or more at its own size instead, a word never broken. A side's name
    in the fixture also steps down while it runs to three lines (South Africa Women, London North Women at 667x375, and the hub would
    scroll), to 16px at most: three lines there are no taller than two at the hub's 24px. A transfer offer's league still too wide on its
@@ -35,6 +35,7 @@ function careerFitEach(root) {
     let px = parseFloat(getComputedStyle(el).fontSize) || 20;
     const floor = lbl || el.classList.contains('cr-cab') ? 10 : 12;
     while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
+    if (el.classList.contains('cr-cab')) el.classList.toggle('tight', over());   // six kinds in two figures (a county cup's too) at 667x375: closer together, still one line at 10px
     if (over() && el.getAttribute('data-fit') === 'wrap') {
       el.style.whiteSpace = 'normal'; el.style.fontSize = ''; el.style.letterSpacing = ''; px = parseFloat(getComputedStyle(el).fontSize) || 20;
       while (over() && px > floor) { px -= 1; el.style.fontSize = px + 'px'; }
@@ -65,7 +66,7 @@ function careerEyebrow(cr) {
   if (cr.phase === 'transfer' || (cr.season && cr.phase === 'league')) return team.name + ' · Year ' + cr.year;
   if (cr.season) return team.name + ' · International';
   const f = careerAhead(cr);
-  return CAREER_CUP_NAME[careerCupKind(cr)] + ' · ' + (f && f.label ? f.label : 'Year ' + cr.year);
+  return (cr.cup && cr.cup.id === 'county' && cr.cup.name ? cr.cup.name : CAREER_CUP_NAME[careerCupKind(cr)]) + ' · ' + (f && f.label ? f.label : 'Year ' + cr.year);   // a county cup by its own name: Surrey Shield · Semi-Final
 }
 /* A finished phase in a word or two: the championship's own (Champions, Runners-Up, Triple Crown), or a cup's: Winners, or how far he
    went (the cups engine's cupFinish: Runners-Up, Semi-Finalists, Quarter-Finalists, Pool Stage), Knocked Out where a build has no such word. */
@@ -301,10 +302,10 @@ $('cd-back').addEventListener('click', careerOpen);
 
 /* ---------- between phases: a season's or a cup's end, the call-up, the transfer window ---------- */
 function careerTile(label, value, extra) { return `<div class="cr-tile"><span class="lbl" data-fit>${label}</span>${extra || ''}<b data-fit>${value}</b></div>`; }
-const careerNextName = next => (next.phase === 'cup' ? 'European Cup' : next.phase === 'tour' ? 'Home Nations Tour' : next.phase === 'transfer' ? 'Transfers' : next.kind === 'world' ? 'World Cup' : 'International');
+const careerNextName = (next, cr) => (next.phase === 'county' ? (cr && typeof compCupFor === 'function' ? compCupFor(cr.club).name : 'County Cup') : next.phase === 'cup' ? 'European Cup' : next.phase === 'tour' ? 'Home Nations Tour' : next.phase === 'transfer' ? 'Transfers' : next.kind === 'world' ? 'World Cup' : 'International');
 function careerNextTile(cr, next) {                  // what comes next, with the side he plays it for where it is known
-  const side = next.phase === 'cup' ? careerTeamFor(cr, 'league') : next.phase === 'intl' && cr.country ? careerTeamFor(cr, 'intl') : null;
-  return careerTile('Next', careerNextName(next), side ? `<span class="cr-next">${jersey(side)}<span data-fit>${esc(side.name)}</span></span>` : '');
+  const side = next.phase === 'cup' || next.phase === 'county' ? careerTeamFor(cr, 'league') : next.phase === 'intl' && cr.country ? careerTeamFor(cr, 'intl') : null;
+  return careerTile('Next', careerNextName(next, cr), side ? `<span class="cr-next">${jersey(side)}<span data-fit>${esc(side.name)}</span></span>` : '');
 }
 function renderCareerEnd() {
   const cr = career, title = $('ce-title'), body = $('ce-body'), act = $('ce-act');

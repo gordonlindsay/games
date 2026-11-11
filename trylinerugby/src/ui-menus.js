@@ -344,7 +344,7 @@ function homeCareerFix(cr) {
 function homeContinueLine(w) {
   if (w === 'champ' && cup && typeof cupFixture === 'function') {
     const fx = cupFixture(cup);
-    return CUPS[cup.id].name + ' · ' + (fx ? homeVs(fx.label, cup.teams[fx.opp]) : cupLabel(cup));
+    return cupTitle(cup) + ' · ' + (fx ? homeVs(fx.label, cup.teams[fx.opp]) : cupLabel(cup));   // a cup by its own name (cupTitle, src/cups.js: a county cup's is on the cup)
   }
   if (w === 'champ') return 'Championship · ' + (champ.round >= 5 ? 'Final Table' : homeVs('Round ' + (champ.round + 1), champ.teams[userFixture(champ).opp]));
   if (w === 'career') return 'Career · ' + homeCareerFix(career);

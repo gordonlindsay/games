@@ -568,7 +568,7 @@ function matchUpdate(dt) {
 function endHalf() {
   placeBall(M.ball.x, M.ball.y);
   for (const s of M.side) s.charging = false;
-  if (M.demo) { M.clock = 0; M.hooter = false; kickoff(rnd() < 0.5 ? 0 : 1); return; }
+  if (M.demo) { M.clock = 0; M.hooter = false; restart('halfStart', rnd() < 0.5 ? 0 : 1); return; }
   sfx('long');
   if (M.half === 1) {
     if (M.headless) { secondHalf(); return; }
@@ -580,5 +580,5 @@ function endHalf() {
     if (!M.headless) finishMatch();
   }
 }
-function secondHalf() { lockerHalf(); M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; kickoff(1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
+function secondHalf() { lockerHalf(); M.half = 2; M.clock = 0; M.hooter = false; M.wind.a += Math.PI; restart('halfStart', 1-M.firstKick); }   // you always attack +x, so the wind turns instead of the ends
 

@@ -66,7 +66,8 @@ const titled = s => s.split(/\s+/).filter(Boolean).every((w, i) => (i && SMALL.h
 {
   const score = [...help.matchAll(/<div><b>(\d)<\/b><span>([^<]+)<\/span><\/div>/g)].map(m => m[2] + ' ' + m[1]);
   ok(score.join() === 'Try 5,Conversion 2,Penalty 3,Drop Goal 3', `the scoring strip: ${score.join(', ')}`);
-  ok(/M\.score\[team\] \+= 5; M\.tries/.test(js) && /M\.score\[team\] \+= kind === 'conversion' \? 2 : 3/.test(js) && /M\.score\[team\] \+= 3; say\('Drop Goal'/.test(js), 'and they are the points the game adds');
+  const pts = (js.match(/const POINTS_NORMAL = \{ try:(\d), conversion:(\d), penalty:(\d), dropGoal:(\d) \};/) || []).slice(1);   // the Normal rule set's points (RULES, src/data.js): every match adds from its rule set
+  ok(pts.join() === score.map(s => s.slice(-1)).join() && /M\.score\[team\] \+= M\.rules\.points\.try; M\.tries/.test(js) && /M\.score\[team\] \+= M\.rules\.points\[kind === 'conversion' \? 'conversion' : kind === 'drop' \? 'dropGoal' : 'penalty'\]/.test(js) && /M\.score\[team\] \+= M\.rules\.points\.dropGoal; say\('Drop Goal'/.test(js), 'and they are the points the game adds');
   ok(/<div class="ctl-keys desk-only" id="h-keys"><div class="ctl-krow" id="h-kb"><span class="lbl">Keyboard<\/span><\/div><div class="ctl-krow" id="h-pad"><span class="lbl">Controller<\/span><\/div><\/div>/.test(help), 'the Keyboard and Controller rows, on a computer or with a controller only (desk-only)');
   ok(help.indexOf('id="h-pic"') < help.indexOf('id="h-keys"') && help.indexOf('id="h-keys"') < help.indexOf('class="scoring"') && help.indexOf('class="scoring"') < help.indexOf('id="h-back"'), 'in order: the picture, the rows, the scoring strip, Back to Menu');
   ok((help.match(/<button/g) || []).length === 1 && /<button class="btn" id="h-back" data-back>Back to Menu<\/button>\s*<\/div>\s*$/.test(help) && !/row2/.test(help), 'Back to Menu is the only button, a row to itself');

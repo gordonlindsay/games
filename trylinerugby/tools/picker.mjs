@@ -363,7 +363,8 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(rndCalls() === before, `the team screen draws no random number (${rndCalls() - before})`);
   ok(T.GAME_VERSION === '1.2' && $('ver').textContent === 'Version 1.2', 'GAME_VERSION is 1.2, on window.__tryline and at the foot of Settings');
   const src = readGameSource();
-  ok(src.includes("const GAME_VERSION = '1.2';") && /<p class="ver" id="ver">Version 1\.2<\/p>/.test(src), 'one constant, and the line in Settings');
+  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.2';") && /<p class="ver" id="ver">Version 1\.2<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
+  ok(!/id="home-tag"|\$\('home-tag'\)/.test(src), 'and no home tagline for it: PR #17\'s v1.1 line went with the tidied home, so nothing writes to an element that is not there');
   ok(!/[←-⇿⟵-⟿]/.test(src.slice(src.indexOf('<section class="screen" id="s-teams"'), src.indexOf('<section class="screen" id="s-build"'))), 'no arrow glyph on the team screen');
   fresh();
 }
