@@ -4,7 +4,7 @@
 // picks kept (each side's last, its Recent, the Favourites) through a save and from saves before them; each one-side mode (Championship,
 // Career, My Team, the World Cup and the Home Nations Tour); GAME_VERSION. Its last part needs Playwright and Chromium (as
 // tools/home.mjs's does) and is skipped, saying so, where they are missing: the screen at 844x390, 667x375, 844x340, 667x320 and 568x320
-// with no scroll and every target 44px or more, the keyboard, a controller, a finger's swipe, and reduced motion.
+// with no scroll and every target 44px or more, the keyboard, a controller and the lift's hint, a finger's swipe, and reduced motion.
 // node tools/picker.mjs
 import fs from 'node:fs';
 import http from 'node:http';
@@ -334,6 +334,26 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   D.setTwo(false); D.goHome(); fresh();
 }
 
+// 7c. The lift's hint (the owner, 2026-11-11: "Keep, Show a Hint"), without a browser: a controller's only, X: Buttons on the active side
+//     while no ring is lifted; none on touch or the keyboard, none in 2 Players (left as it is for now), none off the team screen. Its other
+//     wording, X: Team, and its fit need layout: the browser part
+{
+  fresh(); D.openTeams('quick');
+  D.setDev('touch'); ok(P.hintState() === null && P.hint() === null, 'touch: no hint');
+  D.setDev('kb'); ok(P.hintState() === null, 'the keyboard: no hint');
+  D.setDev('pad'); let h = P.hintState();
+  ok(h && h.s === 0 && h.text === 'X: Buttons', `a controller: X: Buttons on Your Team's side, the active one (${json(h)})`);
+  P.set(0); h = P.hintState();
+  ok(h && h.s === 1 && h.text === 'X: Buttons', `Your Team set: on the Opponent's, where X would lift the ring now (${json(h)})`);
+  D.openTeams('champ', 'sur'); h = P.hintState();
+  ok(h && h.s === 0 && h.text === 'X: Buttons', `one side (Championship): on it (${json(h)})`);
+  D.openJoin(); D.openTeams('two');
+  ok(P.hintState() === null, '2 Players with a controller: no hint, as before');
+  D.setTwo(false); D.goHome();
+  ok(P.hintState() === null, 'off the team screen: none');
+  D.setDev('touch'); fresh();
+}
+
 // 8. Nothing drawn at random; GAME_VERSION
 {
   fresh();
@@ -585,6 +605,61 @@ async function browserChecks() {
           });
           ok(k.lift === 'sheet' && k.up === 'men' && k.cat === 'women' && /^(prev|next|t-back|t-go)$/.test(k.down) && k.moved === 'next' && k.back === 'pick' && k.drive === 2, `${at}: Y lifts the ring onto the group's button, Up reaches Men | Women | Minis (Men, chosen) and A on Women presses it, Down passes over the card to the buttons under it, A on Next steps the team, Y puts the ring back on the card to drive it (${json(k)})`);
           ok(k.left === 't-back' && k.right === 't-go' && k.order === 't-back,t-go', `${at}: the bottom row Back | Kick Off: Left from Kick Off is Back, Right back again, and Back first for Tab (${json(k)})`);
+          // the lift's hint (the owner, 2026-11-11: "Keep, Show a Hint"), driven by a pad's own presses: a chip under the count of the side
+          // the ring is on, X: Buttons on the card and X: Team off it; gone on a touch or a key, kept by a mouse; none in 2 Players. Wherever
+          // it shows (either side, either wording, one side alone) it overlaps nothing, a button's ring included, cuts no word, keeps the
+          // row at its buttons' height and leaves the screen unscrolled
+          k = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), scr = $('s-teams'), out = { seq:[], bad:[] };
+            const chip = () => { const c = scr.querySelector('.pk-hint'); return c && c.getClientRects().length ? c.closest('.pk-side').id.slice(-1) + ' ' + [...c.children].filter(w => getComputedStyle(w).visibility === 'visible' && w.getAttribute('aria-hidden') !== 'true').map(w => w.textContent).join('|') : 'none'; };
+            const pads = [{ index:0, mapping:'standard', connected:true, axes:[0, 0], buttons:Array.from({ length:17 }, () => ({ pressed:false, value:0 })) }];
+            navigator.getGamepads = () => pads; D.padConnected(pads[0]);
+            const press = i => { pads[0].buttons[i] = { pressed:true, value:1 }; T.pollPads(); pads[0].buttons[i] = { pressed:false, value:0 }; T.pollPads(); };
+            const R = el => el.getBoundingClientRect();
+            const lap = (a, b, m) => Math.min(a.right, b.right + m) - Math.max(a.left, b.left - m) > 0.5 && Math.min(a.bottom, b.bottom + m) - Math.max(a.top, b.top - m) > 0.5;
+            const fits = what => {
+              const c = scr.querySelector('.pk-hint');
+              if (!c || !c.getClientRects().length) { out.bad.push(what + ': no chip'); return; }
+              const r = R(c), step = c.parentNode, prev = step.querySelector('[data-act="prev"]');
+              for (const el of scr.querySelectorAll('*')) {
+                if (el === c || el.contains(c) || c.contains(el) || !el.getClientRects().length) continue;
+                if (lap(r, R(el), el.matches('button') ? 5 : 0)) out.bad.push(`${what}: on ${el.id || el.dataset.act || el.className || el.tagName}`);   // a button's ring: 3px of outline, 2px out
+              }
+              for (const el of [c, ...step.children]) if (el.scrollWidth > el.clientWidth + 0.5) out.bad.push(`${what}: ${el.textContent} cut`);
+              if (Math.abs(R(step).height - R(prev).height) > 0.5 || R(prev).height < 43.5) out.bad.push(`${what}: the row ${R(step).height}px`);
+              if (r.left < 0 || r.right > innerWidth || r.bottom > innerHeight) out.bad.push(`${what}: out of view`);
+              if (scr.scrollHeight > scr.clientHeight + 0.5) out.bad.push(`${what}: scrolls`);
+              if (getComputedStyle(c).textTransform !== 'none') out.bad.push(`${what}: not Title Case`);
+            };
+            const widths = {}, see = what => {                               // and Previous keeps one width a side, either wording: nothing shifts as X is pressed
+              out.seq.push(chip()); if (chip() === 'none') return;
+              fits(what); const c = scr.querySelector('.pk-hint'), k = P.one() + c.closest('.pk-side').id; (widths[k] ||= new Set()).add(Math.round(R(c.parentNode.querySelector('[data-act="prev"]')).width*10));
+            };
+            D.settings().pick = [null, null]; D.setTwo(false); D.openTeams('quick'); T.home.ring(null);
+            D.setDev('touch'); see('touch');
+            D.setDev('kb'); see('keyboard');
+            press(12); see('the first press, on the card');                   // a pad: the ring on Your Team's card
+            press(2); see('X, lifted');                                         // X: onto its side's buttons
+            press(2); see('X again, back on the card');
+            press(15); see('Right, the next team');                             // the d-pad drives the card, the hint stays
+            press(0); see('A, on to the Opponent');                             // A sets Your Team: the ring on the Opponent's card
+            press(2); see('the Opponent lifted');
+            T.home.ring($('t-go')); see('on the primary');                      // the bottom row: the active side's, still lifted
+            press(2); see('back on the active side\'s card');
+            D.keyDown({ code:'ArrowRight', key:'ArrowRight', repeat:false, target:document.body, preventDefault() {} }); D.keyUp({ code:'ArrowRight', key:'ArrowRight', target:document.body, preventDefault() {} });
+            see('a key');
+            press(12); see('the pad again');
+            scr.querySelector('.pk-n').dispatchEvent(new PointerEvent('pointerdown', { pointerType:'mouse', bubbles:true })); see('a mouse');
+            scr.querySelector('.pk-n').dispatchEvent(new PointerEvent('pointerdown', { pointerType:'touch', bubbles:true })); see('a finger');
+            D.settings().pick = [null, null]; D.openTeams('champ', 'sur'); T.home.ring(null); press(12); see('one side');
+            press(2); see('one side, lifted');
+            D.openJoin(); D.openTeams('two'); see('2 Players');
+            D.setTwo(false); T.home.ring(null); D.setDev('touch'); D.goHome();
+            out.shift = Object.entries(widths).filter(([, w]) => w.size !== 1).map(([k, w]) => k + ' ' + [...w].join('/'));
+            return out;
+          });
+          ok(json(k.seq) === json(['none', 'none', '0 X: Buttons', '0 X: Team', '0 X: Buttons', '0 X: Buttons', '1 X: Buttons', '1 X: Team', '1 X: Team', '1 X: Buttons', 'none', '1 X: Buttons', '1 X: Buttons', 'none', '0 X: Buttons', '0 X: Team', 'none']), `${at}: the lift's hint: none on touch or a key; with a pad X: Buttons on the side the ring drives and X: Team once X lifts it (the same press back), on the Opponent's once A moves on, the active side's from the bottom row; a key or a finger hides it, a mouse leaves it; one side alone too; none in 2 Players (${k.seq.join(', ')})`);
+          ok(k.bad.length === 0 && k.shift.length === 0, `${at}: the hint fits wherever it shows: on nothing (a button's ring included), no word cut, the row its buttons' 44px, no scroll, Title Case; and Previous and Next keep their width whichever it says (${[...k.bad.slice(0, 6), ...k.shift].join('; ')})`);
           // 2 Players: Escape with the ladder sheet open closes the sheet, and nothing more
           k = await page.evaluate(async () => {
             const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), out = [];

@@ -233,6 +233,7 @@ function setFocus(el) {
   if (focusEl && focusEl !== el) focusEl.classList.remove('padfocus');
   focusEl = el || null;
   if (focusEl) { focusEl.classList.add('padfocus'); if (focusEl.scrollIntoView) focusEl.scrollIntoView({ block:'nearest' }); }
+  if (typeof pickHint === 'function') pickHint();          // the team screen's hint for the lift follows the ring (src/ui-menus.js)
 }
 const DEFAULT_FOCUS = { 's-home':() => $('b-continue'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either

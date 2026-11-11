@@ -9316,6 +9316,7 @@ function setDev(d) {                                       // the last device th
   lastDev = d;
   const b = document.body;
   if (b) { b.classList.toggle('dev-kb', d === 'kb'); b.classList.toggle('dev-pad', d === 'pad'); }
+  if (typeof pickHint === 'function') pickHint();          // the team screen's hint for the lift: a controller's only (src/ui-menus.js)
 }
 function platesFloor() {                                   // the Step Left | Step Right plates never go under the hints card (a thumb a little high on a phone put them under Flick on Gold): its bottom while it is up, else the clock line
   const hc = $('hc0'), r = hc && !hc.hidden && typeof hc.getBoundingClientRect === 'function' ? hc.getBoundingClientRect() : null;
@@ -9681,6 +9682,7 @@ function setFocus(el) {
   if (focusEl && focusEl !== el) focusEl.classList.remove('padfocus');
   focusEl = el || null;
   if (focusEl) { focusEl.classList.add('padfocus'); if (focusEl.scrollIntoView) focusEl.scrollIntoView({ block:'nearest' }); }
+  if (typeof pickHint === 'function') pickHint();          // the team screen's hint for the lift follows the ring (src/ui-menus.js)
 }
 const DEFAULT_FOCUS = { 's-home':() => $('b-continue'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
@@ -11230,6 +11232,7 @@ function renderTeams() {
   if (ring) { const el = [ring.act, 'sheet', 'fav', 'pick'].map(a => pickEl(ring.s, a)).find(live); if (el) setFocus(el); }   // a ring off the card stays off it
   if (typed) { const el = [typed.act, 'pick'].map(a => pickEl(typed.s, a)).find(live); if (el && el.focus) el.focus({ preventScroll:true }); }
   if (pick.sheet != null && !$('m-ladder').hidden) pickSheetDraw();
+  pickHint();                                                // the lift's hint, on the side as drawn again
 }
 /* A move seen: the card slides in from where the team came from (Next from the right, Down from below), opacity and transform only, and
    nothing with reduced motion. */
@@ -11467,6 +11470,30 @@ function pickLift(seat) {
 }
 /* A controller's first press: the active side's card. */
 DEFAULT_FOCUS['s-teams'] = () => pickEl(pick.on, 'pick') || $('t-go');
+/* The lift's hint (the owner, 2026-11-11: "Keep, Show a Hint"): a small chip under the count of the side the ring is on (else the active
+   side, where X or Y would take it), X: Buttons while the d-pad drives the card and X: Team while the ring is off it, so the same press reads
+   as the way back. Only while a controller acted last (lastDev), so never on touch or the keyboard; one player only (2 Players is left as
+   it is for now). It sits under the count between Previous and Next, so it takes no room the screen needs (styles.css, .pk-hint). The code
+   names no PlayStation button, so it says X. setFocus, setDev and renderTeams keep it in step; null where it is not shown. */
+function pickHintState() {
+  const scr = $('s-teams');
+  if (!scr || scr.hidden || lastDev !== 'pad' || two.on) return null;
+  const at = focusEl && pickAt(focusEl);
+  return { s:at ? at.s : pick.on, text:pickLifted(0) ? 'X: Team' : 'X: Buttons' };
+}
+function pickHint() {
+  const h = pickHintState(), scr = $('s-teams');
+  if (!scr || typeof scr.querySelector !== 'function') return h;
+  const step = h ? scr.querySelector('#t-side' + h.s + ' .pk-step') : null;
+  let chip = scr.querySelector('.pk-hint');
+  for (const st of scr.querySelectorAll('.pk-step')) st.classList.toggle('hinted', st === step);
+  if (!step) { if (chip) chip.remove(); return h; }
+  if (!chip) { chip = document.createElement('span'); chip.className = 'chip pk-hint'; chip.innerHTML = '<span>X: Buttons</span><span>X: Team</span>'; }   // both wordings in one cell, the other unseen and unread, so the chip keeps the wider's width and nothing beside it shifts as X is pressed
+  if (chip.parentNode !== step) step.appendChild(chip);
+  for (const w of chip.children) { if (w.textContent === h.text) w.removeAttribute('aria-hidden'); else w.setAttribute('aria-hidden', 'true'); }
+  return h;
+}
+$('s-teams').addEventListener('pointerdown', e => { if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
 /* Men | Women | Minis: the sides follow to the category's own (England to England Women); one it has not got (Canada on Men) is the
    next one there, and no longer set. */
 $('t-cat').innerHTML = TEAM_CATS.map(c => `<button data-cat="${c.id}">${esc(c.name)}</button>`).join('');
@@ -16730,7 +16757,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   clarity:{ MATCH_PACE, matchPace, HALF_SECONDS, fmtClock, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
-  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, first:() => DEFAULT_FOCUS['s-teams'](), sheetShut:pickSheetShut, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
+  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), sheetShut:pickSheetShut, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   GAME_VERSION,
   get M() { return M; } };
 
