@@ -83,7 +83,7 @@ const champBefore = JSON.stringify(X.champ());
 // 6. pausing a drill: its name, not a match score, and a way back to where it came from, not Quit Match
 {
   P.start('cones'); $('pr-retry').click(); T.update(T.STEP); D.pause();
-  ok($('pz-score').textContent === 'Cones' && $('pz-quit').textContent === 'Back to Skills', `a paused drill reads its name and Back to Skills (${$('pz-score').textContent}, ${$('pz-quit').textContent})`);
+  ok($('pz-score').textContent === 'Cones' && $('pz-quit').textContent === 'Back to Skill Games', `a paused drill reads its name and Back to Skill Games (${$('pz-score').textContent}, ${$('pz-quit').textContent})`);
   $('pz-quit').click();
   ok(/^(Tap|Press) Again to Leave$/.test($('pz-quit').textContent), `the second press is asked for as Leave (${$('pz-quit').textContent})`);
   $('pz-quit').click();

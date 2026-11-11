@@ -714,7 +714,7 @@ P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the gr
   D.setDev('kb'); ok(X.drillName('Tackle', 'a') === 'Tackle (J)', 'keyboard: its own key'); D.setDev('touch'); ok(X.drillName('Tackle', 'a') === 'Tackle', 'touch: no key');
 }
 { // the pause card in a game
-  P.start('tackle'); $('pr-retry').click(); D.pause(); ok($('pz-score').textContent === 'Tackling' && !/\d/.test($('pz-score').textContent), 'pause in a game: its name, no clubs and no score (' + $('pz-score').textContent + ')'); ok($('pz-quit').textContent === 'Back to Skills', 'and Back to Skills, not Quit Match (main\'s way back: Skill Games)'); $('pz-quit').click(); ok(/Again to Leave/.test($('pz-quit').textContent), 'it asks once more in the same words: ' + $('pz-quit').textContent); P.leave(); }
+  P.start('tackle'); $('pr-retry').click(); D.pause(); ok($('pz-score').textContent === 'Tackling' && !/\d/.test($('pz-score').textContent), 'pause in a game: its name, no clubs and no score (' + $('pz-score').textContent + ')'); ok($('pz-quit').textContent === 'Back to Skill Games', 'and Back to Skill Games, not Quit Match (main\'s way back: Skill Games)'); $('pz-quit').click(); ok(/Again to Leave/.test($('pz-quit').textContent), 'it asks once more in the same words: ' + $('pz-quit').textContent); P.leave(); }
 { // Driving's own hint card, and none on its ready card
   const s = D.settings(), was = s.hints; s.hints = true; P.start('scrum');
   ok(!D.hintFor(0), 'Driving\'s ready card has no hint card over it'); $('pr-retry').click(); const c = T.M.cut; c.t = 1; const h = D.hintFor(0);

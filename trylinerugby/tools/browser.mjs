@@ -36,8 +36,8 @@ async function open(w, h, touch) {
   return { send, ev, close:async () => { ws.close(); await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`).catch(() => {}); } };
 }
 // a season under way, its line in the game's own mid-season format, on the five boxes (Continue's line, the Career box's note, the Trophy
-// Cabinet's strip) and on Competitions (Continue Championship and its note), with the whole tools row: Offline Ready, Install Game and
-// Updating. Shown, not saved, so the next page opens on the save as it was. It returns what does not show, so a fixture that stops matching the
+// Cabinet's strip) and on Competitions (Continue Championship and its note), with the whole tools row: Install Game and Updating, Offline
+// Ready giving way to Updating (re-pinned 2026-11-11: Updating takes its place, so the wordmark keeps its size). Shown, not saved, so the next page opens on the save as it was. It returns what does not show, so a fixture that stops matching the
 // page fails rather than measures the plain home
 const SEASON = view => `(() => { const T = window.__tryline, $ = i => document.getElementById(i), on = e => !e.hidden && !e.closest('[hidden]') && e.getBoundingClientRect().height > 0;
   T.debug.goHome(); if ('${view}' === 'champ') T.home.open('champ');
@@ -45,7 +45,7 @@ const SEASON = view => `(() => { const T = window.__tryline, $ = i => document.g
   $('hc-go').hidden = false; $('hc-new').hidden = true; $('b-champ').textContent = 'Continue Championship'; $('b-cabinet').hidden = false; $('cont-name').textContent = 'Continue'; $('cont-note').textContent = 'Championship · Round 3 v Guildfordians';
   for (const id of ['app-tools', 'offline-update', 'offline-status', 'b-install']) $(id).hidden = false;
   T.home.fit();
-  return ['offline-status', 'b-install', 'offline-update', ...('${view}' === 'champ' ? ['b-champ', 'champ-note'] : ['cont-note', 'career-note', 'b-cabinet'])].filter(id => !on($(id))).join(); })()`;
+  return ['b-install', 'offline-update', ...('${view}' === 'champ' ? ['b-champ', 'champ-note'] : ['cont-note', 'career-note', 'b-cabinet'])].filter(id => !on($(id))).concat(on($('offline-status')) ? ['Offline Ready beside Updating'] : []).join(); })()`;
 const FIT = `(() => { const s = document.getElementById('s-home'); return JSON.stringify([s.scrollHeight, s.clientHeight]); })()`;
 try {
   for (const [w, h, touch] of [[844, 390, false], [844, 390, true], [667, 375, false], [667, 375, true]]) {
@@ -55,9 +55,9 @@ try {
     const mid = [];
     for (const view of ['boxes', 'champ']) {
       const missing = await pg.ev(SEASON(view));
-      ok(missing === '', `${name}: ${view === 'champ' ? 'Competitions' : 'the five boxes'}: the fixture shows ${view === 'champ' ? 'Continue Championship and its note' : 'Continue\'s line, the Career box\'s note and the Trophy Cabinet'}, Offline Ready, Install Game and Updating (missing: ${missing || 'none'})`);
+      ok(missing === '', `${name}: ${view === 'champ' ? 'Competitions' : 'the five boxes'}: the fixture shows ${view === 'champ' ? 'Continue Championship and its note' : 'Continue\'s line, the Career box\'s note and the Trophy Cabinet'}, Install Game and Updating in Offline Ready's place (missing: ${missing || 'none'})`);
       const [b0, b1] = JSON.parse(await pg.ev(FIT));
-      ok(b0 <= b1, `${name}: a championship and a career under way, ${view === 'champ' ? 'on Competitions' : 'on the five boxes with the Trophy Cabinet'}, Offline Ready, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
+      ok(b0 <= b1, `${name}: a championship and a career under way, ${view === 'champ' ? 'on Competitions' : 'on the five boxes with the Trophy Cabinet'}, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
       mid.push(`${view} ${b0} of ${b1}`);
     }
     console.log(`${name}: ${a0} of ${a1}, mid-season ${mid.join(', ')}`);

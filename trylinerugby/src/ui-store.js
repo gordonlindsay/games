@@ -64,7 +64,7 @@ function storeRender() {
   const c = storeFanMine(), t = storeTeamOf(c), b = $('st-fan');   // a Super Fan of My Team's club: the badge over the name in My Team's box, and the box in the club's colours
   if (c && t) {
     const rosette = typeof lockerFanClubs === 'function' && lockerFanClubs().some(x => x.club === c);   // the Super Fan trophy, once it is held (src/locker.js)
-    b.innerHTML = storeShield(t, c) + '<span>Super Fan</span>' + (rosette ? `<span class="cup-trophy" data-kind="fan" data-metal="${typeof trophyMetal === 'function' ? trophyMetal('fan') : 'gold'}" role="img" aria-label="Super Fan Trophy"></span>` : '');
+    b.innerHTML = storeShield(t, c) + '<span>Super Fan</span>' + (rosette ? `<span class="my-ros"><span class="cup-trophy" data-kind="fan" data-metal="${typeof trophyMetal === 'function' ? trophyMetal('fan') : 'gold'}" role="img" aria-label="Super Fan Trophy"></span></span>` : '');   // the rosette in a span of its own: a filter on the trophy itself would be masked away with it
     b.hidden = false;
   } else if (!b.hidden) { b.hidden = true; b.innerHTML = ''; }
   storeThemeHome(c && t ? t : null);
@@ -80,9 +80,14 @@ function storeFanMine() {
 /* ---------- the Super Fan's home: the club's colours ----------
    My Team's box takes the club's colours (styles.css, #s-home.fan): its ground the kit, darkened toward the night only where neither chalk
    nor the night's ink would read on it at 4.5:1, every word on it in whichever of the two reads better (gink), and its edge the trim where
-   the trim shows on the dark, the accent where not. Continue and a step's primary are filled with the same ground. The accent, a line or a
-   word on the dark, is whichever of the kit and the trim stands out more from the panel, lifted toward chalk until it reads at 4.5:1. */
-const STORE_TONE = { chalk:'#f1eee4', night:'#0b130e', panel:'#17271d' };   // styles.css's --chalk, --night and --panel-hi
+   the trim shows on the dark, the accent where not. The Super Fan tab on the box's top edge is filled with the edge (darkened the same
+   way where no ink would read on it), its words in the ink that reads (tink). The rating stars stay the floodlight's yellow where it shows
+   on the ground at 3:1, and take gink where not (star); a result's chip whose fill is under 3:1 on the ground is ringed in gink (ringw,
+   ringd, ringl), so every mark in the box reads on any kit (WCAG 1.4.11). The shirt sits on a tile of the plain box's panel (styles.css),
+   so it reads as it does on the plain box. The accent, a line or a word on the dark, is whichever of the kit and the trim stands out more
+   from the panel, lifted toward chalk until it reads at 4.5:1. */
+const STORE_TONE = { chalk:'#f1eee4', night:'#0b130e', panel:'#17271d', flood:'#ffcf3d', silver:'#c3ccd3', alert:'#ff8466' };   // styles.css's --chalk, --night, --panel-hi, --flood, --silver and --alert
+const STORE_THEME_KEYS = ['kit', 'trim', 'acc', 'ink', 'edge', 'ground', 'gink', 'tab', 'tink', 'star', 'ringw', 'ringd', 'ringl'];   // each set on the home as --fan-<key>
 const storeLum = h => { const v = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)/255).map(c => (c <= 0.03928 ? c/12.92 : ((c + 0.055)/1.055) ** 2.4)); return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
 const storeContrast = (a, b) => { const x = storeLum(a), y = storeLum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
 const storeMix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16)*(1 - t) + parseInt(b.slice(i, i + 2), 16)*t).toString(16).padStart(2, '0')).join('');
@@ -95,8 +100,13 @@ function storeTheme(t) {
   const best = g => Math.max(storeContrast(g, STORE_TONE.chalk), storeContrast(g, STORE_TONE.night));
   let ground = kit;
   for (let i = 1; i <= 10 && best(ground) < 4.5; i++) ground = storeMix(kit, STORE_TONE.night, i/10);
-  const gink = storeContrast(ground, STORE_TONE.chalk) >= storeContrast(ground, STORE_TONE.night) ? STORE_TONE.chalk : STORE_TONE.night;
-  return { kit, trim, acc, ink, edge:storeContrast(trim, STORE_TONE.night) >= 3 ? trim : acc, ground, gink };
+  const inkOn = g => (storeContrast(g, STORE_TONE.chalk) >= storeContrast(g, STORE_TONE.night) ? STORE_TONE.chalk : STORE_TONE.night);
+  const gink = inkOn(ground), edge = storeContrast(trim, STORE_TONE.night) >= 3 ? trim : acc;
+  let tab = edge;
+  for (let i = 1; i <= 10 && best(tab) < 4.5; i++) tab = storeMix(edge, STORE_TONE.night, i/10);
+  const ring = fill => (storeContrast(fill, ground) >= 3 ? 'transparent' : gink);
+  return { kit, trim, acc, ink, edge, ground, gink, tab, tink:inkOn(tab), star:storeContrast(STORE_TONE.flood, ground) >= 3 ? STORE_TONE.flood : gink,
+    ringw:ring(STORE_TONE.flood), ringd:ring(STORE_TONE.silver), ringl:ring(STORE_TONE.alert) };
 }
 let storeThemeOn = '';                     // the colours the home has now ('' for none), so it is touched only when they change
 function storeThemeHome(t) {
@@ -104,7 +114,7 @@ function storeThemeHome(t) {
   if (key === storeThemeOn) return;
   storeThemeOn = key;
   s.classList.toggle('fan', !!th);
-  for (const k of ['kit', 'trim', 'acc', 'ink', 'edge', 'ground', 'gink']) {
+  for (const k of STORE_THEME_KEYS) {
     if (th) s.style.setProperty('--fan-' + k, th[k]);
     else if (typeof s.style.removeProperty === 'function') s.style.removeProperty('--fan-' + k);
   }

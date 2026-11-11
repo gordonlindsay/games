@@ -134,7 +134,7 @@ $('pz-resume').addEventListener('click', resume);
 $('pz-quit').addEventListener('click', () => {
   if (!quitArmed) { quitArmed = true; confirmArm(); $('pz-quit').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + (practice ? 'Leave' : 'Quit'); return; }
   if (confirmSoon()) return;
-  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Skills, or Back to Career for a caller (which hears it as a quit)
+  if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Skill Games, or Back to Career for a caller (which hears it as a quit)
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -178,7 +178,7 @@ function renderHome() {
   if (typeof importHome === 'function') importHome();      // Add Your Team in My Team's box, where the team screen's Add Your Team card would show (src/import.js)
   homeStepDraw();
 }
-/* The five boxes, or one step in their place with its title and Back (hidden while For Grown-Ups, which has its own Back to Skills, is open),
+/* The five boxes, or one step in their place with its title and Back (hidden while For Grown-Ups, which has its own Back to Skill Games, is open),
    Offline Ready, Install Game and Updating going with whichever shows. */
 function homeStepDraw() {
   const k = HOME_STEPS[homeStep] ? homeStep : null, st = k && HOME_STEPS[k];
@@ -250,24 +250,43 @@ $('b-comps').addEventListener('click', () => { ac(); homeOpen('champ'); });   //
 $('b-drills').addEventListener('click', () => { ac(); homeOpen('drills'); });
 $('b-set').addEventListener('click', () => { ac(); homeOpen('settings'); });
 $('hs-back').addEventListener('click', () => homeBack());
-$('pr-grown').addEventListener('click', () => { $('hs-back').hidden = true; });          // For Grown-Ups: its own Back to Skills (practice.js)
+$('pr-grown').addEventListener('click', () => { $('hs-back').hidden = true; });          // For Grown-Ups: its own Back to Skill Games (practice.js)
 $('pr-grown-back').addEventListener('click', () => { $('hs-back').hidden = false; });
 /* The home's own moves, for the arrow keys and a controller's ring alike (navMove asks it first); undefined leaves the move to the nearest
    button that way (navNearest). On the five boxes: Down from Continue is Match, the first half, never whichever half is a pixel nearer; Left
-   from the boxes' first column goes into My Team's column at the button level with it (its buttons, or the Trophy Cabinet), never down
-   the boxes' own column; Up and Down in My Team's column stay in it; Continue has nothing to its right. On a step, Down from Back lands on
-   the step's first row (Competitions' tiers, which sit to its right). */
+   from Continue is Change, the first of My Team's column; Left from the boxes' first column goes into My Team's column at the button level
+   with it (its buttons, or the Trophy Cabinet), never down the boxes' own column, and Right from the end of a row in My Team's column goes
+   to the box level with it, or back to the box Left came from (homeNavLeft), so Left then Right is where it started; Up and Down in My
+   Team's column stay in it; Continue has nothing to its right. On a step, Down from Back lands on the step's first row (Competitions'
+   tiers, which sit to its right), and Up from that row goes back to Back. */
+let homeNavLeft = null;                                      // the last Left from a box into My Team's column: { at:the button it landed on, box:the box it left }
 function homeNavTo(from, dx, dy, cands) {
   if (!from || $('s-home').hidden) return undefined;
+  const to = homeNavPick(from, dx, dy, cands);
+  if (dx < 0 && !dy && to && $('home-main').contains(from) && $('home-side').contains(to)) homeNavLeft = { at:to, box:from };
+  return to;
+}
+function homeNavPick(from, dx, dy, cands) {
   const main = $('home-main'), side = $('home-side'), r = el => el.getBoundingClientRect(), mid = (el, k) => { const q = r(el); return k === 'x' ? q.left + q.width/2 : q.top + q.height/2; };
   if (homeStep) {
-    if (from !== $('hs-back') || dx || dy <= 0) return undefined;
-    const p = $('hp-' + homeStep), inside = cands.filter(el => p.contains(el)), top = Math.min(...inside.map(el => r(el).top));   // Down from a step's Back: its first row, never past it
-    const row = inside.filter(el => r(el).top - top < 4).sort((a, b) => Math.abs(mid(a, 'x') - mid(from, 'x')) - Math.abs(mid(b, 'x') - mid(from, 'x')));
-    return row[0] || null;
+    const back = $('hs-back'), p = $('hp-' + homeStep), inside = cands.filter(el => p.contains(el)), top = Math.min(...inside.map(el => r(el).top));
+    if (from === back && !dx && dy > 0) {                          // Down from a step's Back: its first row, never past it
+      const row = inside.filter(el => r(el).top - top < 4).sort((a, b) => Math.abs(mid(a, 'x') - mid(from, 'x')) - Math.abs(mid(b, 'x') - mid(from, 'x')));
+      return row[0] || null;
+    }
+    if (from !== back && !dx && dy < 0 && inside.includes(from) && r(from).top - top < 4 && cands.includes(back)) return back;   // Up from the step's first row: Back
+    return undefined;
   }
   if (from === $('b-continue') && !dy && dx > 0) return null;          // Continue is alone in its row: nothing to its right
   if (from === $('b-continue') && dy > 0 && !dx) return $('b-match');
+  if (from === $('b-continue') && !dy && dx < 0) return cands.includes($('b-my')) ? $('b-my') : undefined;   // Left from Continue: the first of My Team's column
+  if (dx > 0 && !dy && side.contains(from)) {                        // Right in My Team's column: along its row, and from the row's end to the box level with it
+    const y = mid(from, 'y'), x = mid(from, 'x'), along = cands.filter(el => side.contains(el) && Math.abs(mid(el, 'y') - y) < 4 && mid(el, 'x') > x + 4);
+    if (along.length) return along.sort((a, b) => mid(a, 'x') - mid(b, 'x'))[0];
+    if (homeNavLeft && homeNavLeft.at === from && cands.includes(homeNavLeft.box)) return homeNavLeft.box;   // straight back to the box Left came from
+    const boxes = cands.filter(el => main.contains(el)).sort((a, b) => Math.abs(mid(a, 'y') - y) - Math.abs(mid(b, 'y') - y) || r(a).left - r(b).left);
+    return boxes[0] || null;
+  }
   if (dy && !dx && side.contains(from)) {                          // Up and Down in My Team's column stay in it: its three, then the Trophy Cabinet across the column
     const y = mid(from, 'y'), x = mid(from, 'x'), next = cands.filter(el => side.contains(el) && (mid(el, 'y') - y)*dy > 4);
     next.sort((a, b) => Math.abs(mid(a, 'y') - y) - Math.abs(mid(b, 'y') - y) || Math.abs(mid(a, 'x') - x) - Math.abs(mid(b, 'x') - x));
@@ -313,24 +332,38 @@ function homeUnder() {
   return ch && cr ? (settings.last === 'career' ? 'career' : 'champ') : ch ? 'champ' : cr ? 'career' : null;
 }
 const homeVs = (label, t) => [String(label || '').replace(/ of \d+$/, ''), t ? 'v ' + listName(t) : ''].filter(Boolean).join(' ');
-/* Continue's one line: Championship · Round 3 v Wimbledon, World Cup · Semi-Final v France, Career · Round 2 v Bath; Quick Match for Play. */
+/* A career's fixture, as Continue and the Career box say it: Round 2 v Bath, Pool A v France, Transfer Window; once the year's matches
+   are played, how it ended (careerResult: the title chase, Winners, Knocked Out, Series Won). */
+function homeCareerFix(cr) {
+  if (cr.phase === 'transfer') return 'Transfer Window';
+  const f = typeof careerAhead === 'function' ? careerAhead(cr) : null;
+  if (f) return homeVs(f.label, f.teams[f.home === f.user ? f.away : f.home]);
+  return typeof careerResult === 'function' && typeof careerOutcome === 'function' ? careerResult(cr, careerOutcome(cr)) : 'Year ' + cr.year;
+}
+/* Continue's line: Championship · Round 3 v Wimbledon, World Cup · Semi-Final v France, Career · Round 2 v Bath; Quick Match for Play. */
 function homeContinueLine(w) {
   if (w === 'champ' && cup && typeof cupFixture === 'function') {
     const fx = cupFixture(cup);
     return CUPS[cup.id].name + ' · ' + (fx ? homeVs(fx.label, cup.teams[fx.opp]) : cupLabel(cup));
   }
   if (w === 'champ') return 'Championship · ' + (champ.round >= 5 ? 'Final Table' : homeVs('Round ' + (champ.round + 1), champ.teams[userFixture(champ).opp]));
-  if (w === 'career') {
-    if (career.phase === 'transfer') return 'Career · Transfer Window';
-    const f = typeof careerAhead === 'function' ? careerAhead(career) : null;
-    return 'Career · ' + (f ? homeVs(f.label, f.teams[f.home === f.user ? f.away : f.home]) : 'Year ' + career.year);
-  }
+  if (w === 'career') return 'Career · ' + homeCareerFix(career);
   return 'Quick Match';
 }
+/* A line in its parts, each kept whole (styles.css, .bx-sub .nw), so where the box needs two lines it breaks between them and never inside one:
+   Championship · | Round 3 | v Wimbledon. */
+function homeChunks(text) {
+  return String(text).split(' · ').flatMap((part, i, all) => {
+    const m = part.match(/^(.+?) (v .+)$/), bits = m ? [m[1], m[2]] : [part];
+    if (i < all.length - 1) bits[bits.length - 1] += ' ·';
+    return bits;
+  }).map(b => '<span class="nw">' + esc(b) + '</span>').join(' ');
+}
+function homeLine(el, text) { el.textContent = text; el.innerHTML = homeChunks(text); el.hidden = false; }   // the text first: the tools' stand-in DOM keeps no children
 function homeContinue() {
   const w = homeUnder(), b = $('b-continue');
   $('cont-name').textContent = w ? 'Continue' : 'Play';
-  $('cont-note').textContent = homeContinueLine(w);
+  homeLine($('cont-note'), homeContinueLine(w));
   b.setAttribute('aria-label', (w ? 'Continue' : 'Play') + ', ' + homeContinueLine(w));
   storeMark(b, w || 'free');                                 // a championship or a career under way on the free tier: locked, its line kept
 }
@@ -364,8 +397,9 @@ function myPool() {                                       // the list My Team's 
 const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat || 'ENG') : keyOf(t) === keyOf(myClubTeam()) && !t.custom === !myClubTeam().custom);
 /* My Team's club, last season (PR #14's Your Team info): its league and place, as its list has them. Real figures from the club's list, so
    only a built-in club with a line has one; a nation, a team you made or imported, a My League side and a club with no figures (Quins, New
-   Zealand, Japan, Scotland) show none, never an invented one. myRecordLine is the rest of PR #14's line (won, lost, scored, conceded): the
-   home's box shows the games you have played as the club instead, so only the team screen and the tools read it. */
+   Zealand, Japan, Scotland) show none, never an invented one. myRecordLine is the rest of PR #14's line (won, lost, scored, conceded):
+   since 2026-11-11 the game shows it nowhere (the home's box shows the games you have played as the club instead), and only the tools
+   read it (tools/home.mjs 6b), kept so the figures stay checked against the club's list. */
 const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
 const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
 const FORM_WORD = { W:'Won', D:'Drawn', L:'Lost' };
@@ -404,14 +438,19 @@ function homeCabinet() {
   b.setAttribute('aria-label', 'Trophy Cabinet' + (said.length ? ': ' + said.join(', ') : ''));
   homeFit();
 }
-/* Long names step down until they fit (Christchurch, Bloemfontein), the strip's words go where its trophies need the room, once the home
-   has a size (again once the game's typefaces load). */
+/* My Team's box steps down a level at a time (styles.css, .my-box[data-fit]) until it holds everything it shows: while its lines are too
+   many for its height, and while the league or the country is cut short, for the levels that only shrink (up to 3: a smaller shirt leaves
+   the words more room), never dropping a line for a long name. Long names then step down until they fit (Christchurch, Bloemfontein), and
+   the strip's words go where its trophies need the room, once the home has a size (again once the game's typefaces load). */
+const HOME_FIT_SHRINK = 3;
 function homeFit() {
   const box = $('my-box'), name = $('my-name'), strip = $('b-cabinet');
   if ($('s-home').hidden || !box.dataset || !name.style || !name.getBoundingClientRect || box.getBoundingClientRect().height === 0) return;
   name.style.fontSize = '';
   delete box.dataset.fit;
-  for (let lvl = 1; lvl <= 6 && box.scrollHeight > box.clientHeight + 0.5; lvl++) box.dataset.fit = String(lvl);
+  const cut = e => !!e && e.offsetWidth > 0 && e.scrollWidth > e.clientWidth + 0.5;
+  const over = lvl => box.scrollHeight > box.clientHeight + 0.5 || (lvl < HOME_FIT_SHRINK && [...box.querySelectorAll('.my-league > span, .my-nat b')].some(cut));
+  for (let lvl = 1; lvl <= 6 && over(lvl - 1); lvl++) box.dataset.fit = String(lvl);
   let px = parseFloat(getComputedStyle(name).fontSize) || 30;
   while (name.scrollWidth > name.clientWidth + 0.5 && px > 16) { px -= 1; name.style.fontSize = px + 'px'; }
   if (!strip.hidden) {

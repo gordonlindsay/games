@@ -440,7 +440,7 @@ ok(A.bars.spirit.lo <= 10 && B.bars.spirit.hi > 50 && B.bars.spirit.lo >= 10, `T
   X.renderHome();
   ok(/^Career · Pool [ABCD] v /.test($('cont-note').textContent) && $('career-note').hidden && $('b-champ').textContent === 'Continue Championship' && /World Cup.*Pool [ABCD]/.test($('champ-note').innerHTML) && /France/.test($('champ-note').innerHTML), `the menu: Continue on the career (played last) with its line, and Competitions' Continue Championship with its own note (${$('cont-note').textContent} / ${$('champ-note').innerHTML.replace(/<[^>]+>/g, '')})`);
   T.debug.settings().last = 'champ'; X.renderHome();
-  ok(/^World Cup · Pool [ABCD] v /.test($('cont-note').textContent) && !$('career-note').hidden && /^Year 4 · .*England.*Pool [ABCD]$/.test($('career-note').innerHTML), `the World Cup played last: Continue on it, and the Career box's own note (${$('cont-note').textContent} / ${$('career-note').innerHTML.replace(/<[^>]+>/g, '')})`);
+  ok(/^World Cup · Pool [ABCD] v /.test($('cont-note').textContent) && !$('career-note').hidden && /^Pool [ABCD] v \S/.test($('career-note').textContent), `the World Cup played last: Continue on it, and the Career box's own note, the career's fixture in its Pool (re-pinned 2026-11-11: no year or side, My Team's box names it) (${$('cont-note').textContent} / ${$('career-note').innerHTML.replace(/<[^>]+>/g, '')})`);
   K.set(null); C.set(null); X.save();
 }
 

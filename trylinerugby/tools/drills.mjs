@@ -35,7 +35,7 @@ for (const d of X.DRILLS) {
   ok(d.limit > 0 && d.limit <= 150, d.id + ' has a time limit');
 }
 ok(/<button class="btn bx" id="b-drills">[\s\S]*?<span class="bx-name">Skill Games<\/span><\/span><\/button>/.test(html) && /<div class="hs-panel hp-drills" id="hp-drills" data-step="drills"[^>]*>\s*<div class="pr-games" id="pr-games">\s*<div class="drills hl-drills" id="pr-grid">/.test(html) && /<p class="eyebrow" id="pr-eyebrow">Skill Games<\/p>/.test(html) && !/id="s-practice"|id="b-practice"|Practice Ground|Training Ground|Training Drills/.test(html), 'the games are the home\'s Skill Games (its box and the step it opens; PR #14\'s Training Ground screen folded into it, as the drills were), and the card reads Skill Games');
-ok(/id="pr-select" data-back>Back to Skills</.test(html) && /id="pr-next">Next Game</.test(html) && /id="pr-watch">Watch How</.test(html) && /id="pr-runner">Runner</.test(html) && /id="pr-passer">Passer</.test(html), 'the card offers Try Again, Watch How, Next Game and Back to Skills, and the circle\'s Runner and Passer');   // Next Drill became Next Game with PR #14's games
+ok(/id="pr-select" data-back>Back to Skill Games</.test(html) && /id="pr-next">Next Game</.test(html) && /id="pr-watch">Watch How</.test(html) && /id="pr-runner">Runner</.test(html) && /id="pr-passer">Passer</.test(html), 'the card offers Try Again, Watch How, Next Game and Back to Skill Games, and the circle\'s Runner and Passer');   // Next Drill became Next Game with PR #14's games
 ok(!/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="pr-grid"'), html.indexOf('id="pr-grownups"'))) && !/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="m-practice"'), html.indexOf('<script'))) && !/[\u{1F300}-\u{1FAFF}☀-➿]/u.test(training), 'drill pictures are drawn, with no image files and no emoji');
 const drillWords = [...training.matchAll(/drillTag\('([^']+)'/g)].map(m => m[1]);
 ok(drillWords.length >= 5 && drillWords.every(w => isTitle(w) || w === '+') && !/\btag\(/.test(training), 'the drills\' on-pitch words are Title Case, and none is a match tag (' + [...new Set(drillWords)].join(', ') + ')');
@@ -49,8 +49,8 @@ ok(/"training\.js",\s*"practice\.js"/.test(fs.readFileSync(new URL('../src/manif
   ok(JSON.stringify(ids) === JSON.stringify(['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend', 'tackle', 'scrum', 'back']), 'the ten in the home\'s order: the seven open games, then the contact three (' + ids + ')');
   ok(JSON.stringify(X.DRILLS.filter(d => d.contact).map(d => d.id)) === '["tackle","scrum","back"]', 'Tackling, Driving and Ball Back are the contact games, and only they');
   const seen = D.settings().drillSeen; D.settings().drillSeen = ids.slice();   // a first open plays Watch How before the card: these read the card
-  const noWatch = ids.filter(id => { P.start(id); const good = P.state() && P.state().ready && !$('pr-watch').hidden && $('pr-eyebrow').textContent === 'Skill Games' && $('pr-select').textContent === 'Back to Skills'; P.leave(); return !good; });
-  ok(!noWatch.length, 'every game\'s ready card offers Watch How and Back to Skills, under Skill Games (' + (noWatch.join(', ') || 'all ten') + ')');
+  const noWatch = ids.filter(id => { P.start(id); const good = P.state() && P.state().ready && !$('pr-watch').hidden && $('pr-eyebrow').textContent === 'Skill Games' && $('pr-select').textContent === 'Back to Skill Games'; P.leave(); return !good; });
+  ok(!noWatch.length, 'every game\'s ready card offers Watch How and Back to Skill Games, under Skill Games (' + (noWatch.join(', ') || 'all ten') + ')');
   { P.start('tag'); const walk = []; for (let i = 0; i < 10; i++) { $('pr-next').click(); walk.push(P.state().id); } P.leave();
     ok(JSON.stringify(walk) === JSON.stringify(ids.slice(1).concat(['tag'])), 'Next Game goes round all ten in the home\'s order, then back to the first (' + walk + ')'); }
   const skill = {};
@@ -466,8 +466,8 @@ ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.stars === 0 
 calls = [];
 P.start('tackle', { onDone }); D.keyDown({ code:'Escape', repeat:false, preventDefault() {} });
 ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.skill === 'power' && !X.state(), 'onDone: Escape on the ready card hands back once');
-P.start('cones'); ok(!P.state().opts && $('pr-select').textContent === 'Back to Skills' && $('pr-eyebrow').textContent === 'Skill Games', 'without opts the card reads Skill Games and goes Back to Skills');
-$('pr-select').click(); ok(!X.state() && !$('s-home').hidden && T.home.step() === 'drills' && calls.length === 1, 'Back to Skills returns to the drill picker (the home\'s Skill Games step) and calls nobody');
+P.start('cones'); ok(!P.state().opts && $('pr-select').textContent === 'Back to Skill Games' && $('pr-eyebrow').textContent === 'Skill Games', 'without opts the card reads Skill Games and goes Back to Skill Games');
+$('pr-select').click(); ok(!X.state() && !$('s-home').hidden && T.home.step() === 'drills' && calls.length === 1, 'Back to Skill Games returns to the drill picker (the home\'s Skill Games step) and calls nobody');
 
 // ---- isolation
 ok(writes === 0, 'no drill writes the browser save');

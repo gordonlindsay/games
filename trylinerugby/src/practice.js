@@ -65,7 +65,7 @@ function practiceHandBack() {                              // a caller's drill e
   fn(res);
 }
 function practiceLeave() { if (practice && practice.opts) { practiceHandBack(); return; } practiceRestore(); exitMatch(); }
-function practiceChoose() {                                // Back to Skills: the home, on Skill Games where every drill is picked, the drill just played in focus
+function practiceChoose() {                                // Back to Skill Games: the home, on Skill Games where every drill is picked, the drill just played in focus
   if (practice && practice.opts) { practiceHandBack(); return; }
   const id = practice && practice.id;
   practiceRestore();
@@ -116,8 +116,8 @@ function practiceStart(id, opts, noDemo) {                 // noDemo: Watch How 
   if (first.focus) first.focus();
   if (firstTime) demoStart();
 }
-const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Skills');   // the card's leave button and the pause card's
-function practiceLeaveLabel() {                            // Back to Skills on its own row, or beside Next Game; a caller's drill goes Back to Career unless it names its own
+const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Skill Games');   // the card's leave button and the pause card's
+function practiceLeaveLabel() {                            // Back to Skill Games on its own row, or beside Next Game; a caller's drill goes Back to Career unless it names its own
   $('pr-eyebrow').textContent = practice.opts ? 'Training' : 'Skill Games';   // the place it came from: the home's Skill Games, or a caller's training (the career's Train)
   $('pr-select').textContent = practiceBackText();
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
@@ -176,6 +176,6 @@ for (const role of ['runner', 'passer']) $('pr-' + role).addEventListener('click
 });
 $('pr-watch').addEventListener('click', () => { if (practice && practice.ready) demoStart(); });
 $('pr-next').addEventListener('click', () => practiceStart(practiceNextId(practice.id), practice.opts));
-$('pr-grown').addEventListener('click', () => { $('pr-games').hidden = true; $('pr-grownups').hidden = false; setFocus(null); const b = $('pr-grown-back'); if (b.focus) b.focus({ preventScroll:true }); $('pr-grownups').scrollTop = 0; });   // opens at its top (it scrolls inside the panel), with Back to Skills a key press away
+$('pr-grown').addEventListener('click', () => { $('pr-games').hidden = true; $('pr-grownups').hidden = false; setFocus(null); const b = $('pr-grown-back'); if (b.focus) b.focus({ preventScroll:true }); $('pr-grownups').scrollTop = 0; });   // opens at its top (it scrolls inside the panel), with Back to Skill Games a key press away
 $('pr-grown-back').addEventListener('click', () => { $('pr-games').hidden = false; $('pr-grownups').hidden = true; setFocus(null); const b = $('pr-grown'); if (b.focus) b.focus(); });
 $('pr-select').addEventListener('click', practiceChoose);

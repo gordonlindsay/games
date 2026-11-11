@@ -668,8 +668,10 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const L = T.locker, contrast = S.contrast;
   app(); L.set(L.fresh()); S.setBought(['tryline.fan.farnham']); D.goHome();
   const th = S.theme(X.CLUBS[0]);
-  ok($('s-home').classList.contains('fan') && ['kit', 'trim', 'acc', 'ink', 'edge', 'ground', 'gink'].every(k => $('s-home').style.getPropertyValue('--fan-' + k) === th[k]), 'a Super Fan of My Team\'s club: the home takes the club\'s colours (#s-home.fan, its seven colours)');
+  const KEYS = ['kit', 'trim', 'acc', 'ink', 'edge', 'ground', 'gink', 'tab', 'tink', 'star', 'ringw', 'ringd', 'ringl'];
+  ok($('s-home').classList.contains('fan') && json(Object.keys(th)) === json(KEYS) && KEYS.every(k => $('s-home').style.getPropertyValue('--fan-' + k) === th[k]), 'a Super Fan of My Team\'s club: the home takes the club\'s colours (#s-home.fan, its thirteen colours)');
   ok(th.kit === '#1a1a1a' && th.trim === '#f2efe6' && th.acc === '#f2efe6' && th.ink === '#f1eee4' && th.edge === '#f2efe6' && th.ground === '#1a1a1a' && th.gink === '#f1eee4', `Farnham's black and white: the white trim the accent and the edge, the black the box's ground with chalk on it (${JSON.stringify(th)})`);
+  ok(th.tab === '#f2efe6' && th.tink === '#0b130e' && th.star === '#ffcf3d' && th.ringw === 'transparent' && th.ringd === 'transparent' && th.ringl === 'transparent', `and its Super Fan tab the white edge with the night's ink on it, the stars still yellow and no chip ringed: every one reads on the black (${[th.tab, th.tink, th.star, th.ringw].join(' ')})`);
   const bad = [];
   for (const t of X.ALL_TEAMS) {
     const v = S.theme(t), panel = '#17271d', night = '#0b130e', chalk = '#f1eee4';
@@ -677,10 +679,20 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
     if (contrast(v.ink, v.kit) < 3.9 || (contrast(chalk, v.kit) >= 4.5 && v.ink !== chalk)) bad.push(t.id + ' ink ' + v.ink + ' on ' + v.kit);
     if (contrast(v.edge, night) < 3) bad.push(t.id + ' edge ' + v.edge);
     if (contrast(v.gink, v.ground) < 4.5) bad.push(t.id + ' box ' + v.gink + ' on ' + v.ground);
+    if (contrast(v.tink, v.tab) < 4.5) bad.push(t.id + ' tab ' + v.tink + ' on ' + v.tab);
+    if (contrast(v.star, v.ground) < 3) bad.push(t.id + ' stars ' + v.star + ' on ' + v.ground);   // non-text marks: 3:1 (WCAG 1.4.11)
+    for (const [k, fill] of [['ringw', '#ffcf3d'], ['ringd', '#c3ccd3'], ['ringl', '#ff8466']]) {
+      const ring = v[k];
+      if (contrast(fill, v.ground) < 3 ? ring !== v.gink || contrast(ring, v.ground) < 4.5 : ring !== 'transparent') bad.push(t.id + ' ' + k + ' ' + ring + ' for ' + fill + ' on ' + v.ground);
+    }
   }
-  ok(!bad.length && X.ALL_TEAMS.length > 50, `every side's colours read on the dark: the accent 4.5:1 on the panel and the night, the fill's word chalk wherever chalk reads (4.5:1), the edge 3:1, and every word on My Team's box 4.5:1 on its ground (${bad.slice(0, 4).join(', ') || X.ALL_TEAMS.length + ' sides'})`);
+  ok(!bad.length && X.ALL_TEAMS.length > 50, `every side's colours read on the dark: the accent 4.5:1 on the panel and the night, the fill's word chalk wherever chalk reads (4.5:1), the edge 3:1, every word on My Team's box 4.5:1 on its ground and on the Super Fan tab, the rating stars 3:1 on the ground, and a result's chip under 3:1 ringed in the box's ink, every other one not (${bad.slice(0, 4).join(', ') || X.ALL_TEAMS.length + ' sides'})`);
+  { const n = X.ALL_TEAMS.map(S.theme), gold = n.filter(v => v.star === '#ffcf3d').length, rung = n.filter(v => v.ringw !== 'transparent').length;
+    ok(gold > 50 && gold < n.length && rung > 10, `and both ways are taken: the stars yellow on ${gold} grounds and in the box's ink on ${n.length - gold}, a Won chip ringed on ${rung} (England's white, La Rochelle's yellow)`); }
   ok(/#s-home\.fan \.my-box\{background:var\(--fan-ground\);border-color:var\(--fan-edge\);[^}]*color:var\(--fan-gink\)\}/.test(css) && !/#s-home\.fan \.btn\.bx-go/.test(css),
     'My Team\'s box on the club\'s ground with its edge, every word in the ink that reads; Continue stays the floodlight\'s yellow');
+  ok(/#s-home\.fan \.my-box \.rstars \.on\{fill:var\(--fan-star\)\}/.test(css) && ['w', 'd', 'l'].every(k => new RegExp(`#s-home\\.fan \\.my-box \\.fm\\.${k}\\{box-shadow:0 0 0 2px var\\(--fan-ring${k}\\)\\}`).test(css)) && /#s-home\.fan \.my-shirt\{[^}]*background:var\(--panel\)\}/.test(css) && /#s-home\.fan \.my-marks\{background:var\(--fan-tab\);[^}]*color:var\(--fan-tink\)\}/.test(css),
+    'and the stars, the chips\' rings, the shirt\'s tile and the Super Fan tab take theirs');
   S.setBought(['tryline.full']); D.goHome();
   ok(!$('s-home').classList.contains('fan') && $('st-fan').hidden, 'without a Super Fan unlock: no club colours, no shield');
   // the crest: a file of the game's own, only where the club has given it

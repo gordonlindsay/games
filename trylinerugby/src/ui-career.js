@@ -83,16 +83,12 @@ const careerDrawName = c => (c.id === 'tour' ? 'Series' : c.id === 'world' && c.
 /* The line under a cup's title on the hub and at its end: the cups' own (Win to Reach the Final, 2nd in Pool B · top two go through,
    Bath win the European Cup), as Championship mode's cup hub has it; nothing without the cups' screens. */
 function careerCupLine(cr) { const K = careerCups(); return cr.cup && K && K.cupLine ? K.cupLine(cr.cup) : ''; }
-/* The note under Continue Career: Year 2 · Bath · Round 1 of 5, Year 2 · England · Semi-Final, Year 3 · Transfer Window. A phone held
-   sideways leaves out the side's name (homeNote), so the note stays one line under its half. */
-function careerNote(cr) {
-  const team = careerTeamNow(cr), f = careerAhead(cr);
-  return 'Year ' + cr.year + ' · ' + team.name + ' · ' + (cr.phase === 'transfer' ? 'Transfer Window' : f ? f.label : careerResult(cr, careerOutcome(cr)));
-}
-function renderCareerHome() {                       // the home's Career box: Career, and its note while a career is under way and Continue shows something else
+/* The home's Career box: Career, and while a career is under way and Continue shows something else, its fixture (Round 2 v Bath, Transfer
+   Window: homeCareerFix, src/ui-menus.js), on two lines where the half needs them. My Team's box already names the club. */
+function renderCareerHome() {
   const note = $('career-note');
   if (!career || (typeof homeUnder === 'function' && homeUnder() === 'career')) { note.hidden = true; return; }
-  homeNote(note, careerNote(career), careerTeamNow(career).name);
+  homeLine(note, homeCareerFix(career));
 }
 
 /* ---------- the new player, and his club ---------- */

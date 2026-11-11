@@ -803,7 +803,8 @@ C.setCups(false);                                    // no cups unless a section
   C.set(cr); X.renderHome();
   ok($('career-note').hidden && /^Career · Round 1 v /.test($('cont-note').textContent), 'with one and nothing else under way: Continue says it (Career · Round 1 v ...), so the box keeps no note of its own');
   T.debug.settings().last = 'champ'; X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); X.renderHome();
-  ok(!$('career-note').hidden && $('career-note').innerHTML === 'Year 1 · <span class="rn-name">&lt;img src=x&gt; · </span>Round 1 of 5', 'with a championship on Continue: the Career box\'s note, the year, the club (escaped, in a span a phone held sideways leaves out) and the round');
+  { const f = C.ahead(cr), opp = f.teams[f.home === f.user ? f.away : f.home].name, safe = opp.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    ok(!$('career-note').hidden && $('career-note').textContent === 'Round 1 v ' + opp && $('career-note').innerHTML === `<span class="nw">Round 1</span> <span class="nw">v ${safe}</span>` && !/img/.test($('career-note').innerHTML), `with a championship on Continue: the Career box's note, its fixture (Round 1 v ${opp}) in its parts, with no year and no club (My Team's box names it), so the club's name never reaches it unescaped`); }
   X.setChamp(null);
   // the new player screen, and his club
   C.set(null); C.newOpen();

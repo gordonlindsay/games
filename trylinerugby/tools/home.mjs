@@ -122,9 +122,9 @@ const fresh = () => {                                       // a new game on the
   $('hs-back').click(); ok(H.step() === null, 'and Back to Menu home');
   $('b-set').click(); $('s-home').fire('keydown', { key:'Escape' }); ok(H.step() === null, 'Escape on a step is Back');
   $('b-drills').click(); $('pr-grown').click();
-  ok($('hs-back').hidden && !$('pr-grownups').hidden && H.step() === 'drills', 'For Grown-Ups: its own Back to Skills, the step\'s Back put away (a controller\'s B finds Back to Skills)');
+  ok($('hs-back').hidden && !$('pr-grownups').hidden && H.step() === 'drills', 'For Grown-Ups: its own Back to Skill Games, the step\'s Back put away (a controller\'s B finds Back to Skill Games)');
   $('s-home').fire('keydown', { key:'Escape' }); ok(H.step() === 'drills', 'and Escape leaves the step alone while it is open');
-  $('pr-grown-back').click(); ok(!$('hs-back').hidden && $('pr-grownups').hidden, 'Back to Skills shuts it, the step\'s Back again');
+  $('pr-grown-back').click(); ok(!$('hs-back').hidden && $('pr-grownups').hidden, 'Back to Skill Games shuts it, the step\'s Back again');
   D.goHome(); ok(H.step() === null, 'going home is the five boxes');
   D.goHome($('pr-cones')); ok(H.step() === 'drills', 'going home to a button inside a step (a drill just played) is that step');
   D.goHome($('b-quick')); ok(H.step() === 'match', 'Quick Match\'s is Match');
@@ -155,7 +155,7 @@ const fresh = () => {                                       // a new game on the
   $('t-back').click(); ok(shown() === 's-home' && H.step() === null, 'its Back to Menu comes back to the boxes');
   D.goHome(); D.openJoin(); ok(shown() === 's-join', 'Two Player\'s own entry, openJoin, still opens the join screen'); $('j-back').click();
   $('b-drills').click();
-  T.drills.DRILLS.forEach(d => { $('pr-' + d.id).click(); ok(T.drills.state() && T.drills.state().id === d.id, `${d.name} starts its drill`); T.practice.choose(); ok(shown() === 's-home' && H.step() === 'drills', `Back to Skills after ${d.name}: the home, on Skill Games`); });
+  T.drills.DRILLS.forEach(d => { $('pr-' + d.id).click(); ok(T.drills.state() && T.drills.state().id === d.id, `${d.name} starts its drill`); T.practice.choose(); ok(shown() === 's-home' && H.step() === 'drills', `Back to Skill Games after ${d.name}: the home, on Skill Games`); });
   $('b-help').click(); ok(shown() === 's-help', 'How to Play opens its screen'); $('h-back').click(); ok(shown() === 's-home' && H.step() === 'drills', 'and comes back to Skill Games');
   D.goHome();
   $('b-locker').click(); ok(shown() === 's-locker', 'the Locker, in My Team\'s box, opens'); $('lk-back').click(); ok(shown() === 's-home', 'and comes back');
@@ -298,6 +298,8 @@ const fresh = () => {                                       // a new game on the
   X.newChamp(X.CLUBS[0], X.CLUBS.slice(1, 6)); D.goHome();
   const opp = X.champ().teams[(p => (p[0] === X.champ().user ? p[1] : p[0]))(X.champ().fixtures[0].find(p => p.includes(X.champ().user)))];
   ok(H.under() === 'champ' && $('cont-name').textContent === 'Continue' && $('cont-note').textContent === 'Championship · Round 1 v ' + opp.name, `a championship: Continue, Championship · Round 1 v ${opp.name} (${$('cont-note').textContent})`);
+  ok($('cont-note').innerHTML === `<span class="nw">Championship ·</span> <span class="nw">Round 1</span> <span class="nw">v ${opp.name}</span>`, `in its parts, each kept whole, so where Continue needs two lines it breaks between them and never inside one: the opponent is never what is cut off (${$('cont-note').innerHTML})`);
+  ok(H.chunks('Quick Match') === '<span class="nw">Quick Match</span>' && H.chunks('Career · Transfer Window') === '<span class="nw">Career ·</span> <span class="nw">Transfer Window</span>' && H.chunks('World Cup · Pool A v <b>') === '<span class="nw">World Cup ·</span> <span class="nw">Pool A</span> <span class="nw">v &lt;b&gt;</span>' && H.chunks('v France') === '<span class="nw">v France</span>', 'the parts: a line without a fixture is one or two, a name escaped');
   $('b-continue').click(); ok(shown() === 's-hub', 'Continue opens its hub');
   { const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } }
   D.goHome(); ok($('cont-note').textContent === 'Championship · Final Table', 'finished and not put away: Championship · Final Table');
@@ -316,7 +318,8 @@ const fresh = () => {                                       // a new game on the
   $('b-career').click(); ok(shown() === 's-career', 'and so does the Career box');
   // both: the one played last
   X.newChamp(X.CLUBS[0], X.CLUBS.slice(1, 6)); D.settings().last = null; D.goHome();
-  ok(H.under() === 'champ' && !$('career-note').hidden && /^Year 1 · /.test($('career-note').innerHTML), 'a championship and a career, neither played: the championship first, the career\'s note in its box');
+  ok(H.under() === 'champ' && !$('career-note').hidden && $('career-note').textContent === 'Round 1 v ' + copp.name && $('career-note').innerHTML === `<span class="nw">Round 1</span> <span class="nw">v ${copp.name}</span>`, `a championship and a career, neither played: the championship first, the career's fixture in its box, no year or club (My Team's box names it), in its parts (${$('career-note').textContent})`);
+  { const cr = C.get(), was = cr.phase; cr.phase = 'transfer'; D.goHome(); ok($('career-note').textContent === 'Transfer Window' && H.careerFix(cr) === 'Transfer Window', 'between seasons: Transfer Window'); cr.phase = was; D.goHome(); }
   C.play(); ok(D.settings().last === 'career' && saved().settings.last === 'career', 'a career match started: the career is the one played last, saved'); D.exitMatch(); D.goHome();
   ok(H.under() === 'career' && /^Career · /.test($('cont-note').textContent) && $('career-note').hidden, 'Continue picks it up');
   $('hub-play') && (D.renderHub(), $('hub-play').click()); ok(D.settings().last === 'champ' && T.M.champ, 'a championship match started: the championship'); D.exitMatch(); D.goHome();
@@ -476,7 +479,13 @@ const fresh = () => {                                       // a new game on the
   ok(json(figs()) === json([8, 4, 2, 2]) && F.get().map(r => r.k).join() === 'c:BTH,c:FAR,n:ENG', `back to Farnham: Farnham's again, every side kept, the one played as last first (${F.get().map(r => r.k).join()})`);
   // the save: read back, cleaned, old saves at nought
   { const was = json(F.get()); X.save(); F.set([]); X.load(); D.goHome(); ok(json(F.get()) === was && json(figs()) === json([8, 4, 2, 2]), 'saved and loaded'); }
-  X.restore({ settings:{} }); ok(json(F.get()) === '[]', 'an old save (no record): every side at nought');
+  { const was = json(F.get()), keep = memory['tryline.v1'];
+    X.restore({ settings:{} }); ok(json(F.get()) === was, 'a save or a snapshot without the record leaves it as it is, as every other field (a viewer\'s hot reload never wipes it)');
+    F.set([]); memory['tryline.v1'] = JSON.stringify({ settings:{ played:3 }, champHistory:[] }); X.load(); D.goHome();   // a new page (the record at nought) loading a save from before it
+    ok(json(F.get()) === '[]' && json(figs()) === json([0, 0, 0, 0]), 'an old save (no record), loaded: every side at nought');
+    memory['tryline.v1'] = keep; X.load(); ok(json(F.get()) === was, 'and the record comes back with the save that has it');
+    const boot = fs.readFileSync(new URL('../src/boot.js', import.meta.url), 'utf8');
+    ok(/hot\?\.snapshot\?\.\(\(\) => \(\{.*\bform:formRec \}\)\)/.test(boot) && /'form' in data\)\) restore\(data\)/.test(boot), 'the viewer\'s hot snapshot carries the record, and a start from one restores it'); }
   ok(json(F.clean([{ k:'c:FAR', w:2, d:0, l:1, last:'WLW' }, { k:'c:FAR', w:9 }, { k:'x:FAR', w:1 }, { k:'c:<b>', w:1 }, null, 7, [], { k:'n:ENG', w:-1, d:1.5, l:'3', last:'DDDDDD' }, { k:'c:BTH', w:1, d:0, l:0, last:'LL' }])) === json([{ k:'c:FAR', w:2, d:0, l:1, last:'WLW' }, { k:'n:ENG', w:0, d:0, l:0, last:'' }, { k:'c:BTH', w:1, d:0, l:0, last:'' }]), 'cleaned as it loads: a key once, known kinds and safe characters, whole counts at nought or more, the last five only W, D and L and never more of one than its count');
   ok(json(F.clean('nope')) === '[]' && json(F.clean({ k:'c:FAR' })) === '[]', 'anything else: none');
   ok(F.clean(Array.from({ length:30 }, (_, i) => ({ k:'c:T' + i, w:1, d:0, l:0, last:'W' }))).length === F.KEEP && F.KEEP === 12, 'twelve sides at most');
@@ -678,24 +687,33 @@ async function browserChecks() {
             const s = $('s-home'), my = $('my-box'), cont = $('b-continue'), cs = e => getComputedStyle(e);
             const btns = [...s.querySelectorAll('button')].filter(vis);
             const small = btns.filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(b => b.id || b.textContent.trim());
-            const clipped = [...s.querySelectorAll('.bx-name, .my-name, .tc-name, .hs-title, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)
+            const clipped = [...s.querySelectorAll('.bx-name, .my-name, .tc-name, .hs-title, .hc-comp span, .dc-name, .my-league > span, .my-nat b, .bx-sub .nw')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)
+              .concat([$('cont-note'), $('career-note')].filter(vis).filter(e => e.scrollHeight > e.clientHeight + 1).map(e => e.id + ' past two lines'))
               .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = cs(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }).map(e => e.id + "'s lock squeezed"));
             const panel = step && $('hp-' + step), pr = panel && box(panel), clip = !!panel && cs(panel).overflowY !== 'visible';
             const seen = b => { const q = box(b); return clip && panel.contains(b) ? { left:Math.max(q.left, pr.left), right:Math.min(q.right, pr.right), top:Math.max(q.top, pr.top), bottom:Math.min(q.bottom, pr.bottom) } : q; };
             const overlap = btns.some((a, i) => btns.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && (() => { const p = seen(a), q = seen(b); return p.bottom > p.top && q.bottom > q.top && p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1; })()));
             const off = btns.filter(b => { const q = box(b); return (!clip || !panel.contains(b)) && (q.top < -0.5 || q.bottom > innerHeight + 0.5 || q.left < -0.5 || q.right > innerWidth + 0.5); }).map(b => b.id || b.textContent.trim());
             const inner = step ? 0 : Math.max(0, my.scrollHeight - my.clientHeight);   // My Team's box holds everything it shows (homeFit)
-            let themed = true, words = [], why = '';
+            let themed = true, words = [], why = '', tab = true;
             if (!step) {
-              const v = k => cs(s).getPropertyValue('--fan-' + k).trim();
-              words = [...my.querySelectorAll('.my-name, .my-league, .my-rec dt, .my-rec dd, .my-nat b, .my-fan > span:not(.cup-trophy)')].filter(vis).map(e => ratio(cs(e).color, cs(my).backgroundColor));
-              const sh = $('st-fan').querySelector('.fan-shield');
-              why = fan ? [s.classList.contains('fan'), cs(my).backgroundColor === rgb(v('ground')), cs(my).borderTopColor === rgb(v('edge')), words.every(r => r >= 4.5), cs(cont).backgroundColor === 'rgb(255, 207, 61)', ratio(cs(cont).color, cs(cont).backgroundColor) >= 4.5, vis($('st-fan')), !!sh && (buy === 'crest' ? sh.tagName === 'IMG' && /\/crests\/test\.svg$/.test(sh.src) : sh.tagName.toLowerCase() === 'svg'), !!sh && box(sh).width <= 20 && box(sh).height <= 22].map(Number).join('') : '';
+              const v = k => cs(s).getPropertyValue('--fan-' + k).trim(), marks = $('my-marks');
+              words = [...my.querySelectorAll('.my-name, .my-league, .my-rec dt, .my-rec dd, .my-nat b')].filter(vis).map(e => ratio(cs(e).color, cs(my).backgroundColor));
+              const tabWords = [...marks.querySelectorAll('.my-fan > span:not(.my-ros)')].filter(vis).map(e => ratio(cs(e).color, cs(marks).backgroundColor));
+              const sh = $('st-fan').querySelector('.fan-shield'), on = my.querySelector('.rstars .on'), chips = [...my.querySelectorAll('.fm:not(.none)')];
+              const marks3 = !on || ratio(cs(on).fill, cs(my).backgroundColor) >= 3;   // the stars, and each chip by its fill or its ring, 3:1 on the ground
+              const chips3 = chips.every(c => ratio(cs(c).backgroundColor, cs(my).backgroundColor) >= 3 || (/^rgb\(/.test(cs(c).boxShadow) && ratio(cs(c).boxShadow, cs(my).backgroundColor) >= 3));
+              why = fan ? [s.classList.contains('fan'), cs(my).backgroundColor === rgb(v('ground')), cs(my).borderTopColor === rgb(v('edge')), words.every(r => r >= 4.5), cs(cont).backgroundColor === 'rgb(255, 207, 61)', ratio(cs(cont).color, cs(cont).backgroundColor) >= 4.5, vis($('st-fan')), !!sh && (buy === 'crest' ? sh.tagName === 'IMG' && /\/crests\/test\.svg$/.test(sh.src) : sh.tagName.toLowerCase() === 'svg'), !!sh && box(sh).width <= 20 && box(sh).height <= 22,
+                cs(marks).backgroundColor === rgb(v('tab')), tabWords.length > 0 && tabWords.every(r => r >= 4.5), marks3, chips3, cs($('my-shirt')).backgroundColor === 'rgb(16, 27, 20)'].map(Number).join('') : '';
               themed = fan ? !why.includes('0')
-                : !s.classList.contains('fan') && !s.style.cssText && cs(cont).backgroundColor === 'rgb(255, 207, 61)' && cs(my).backgroundColor === 'rgba(16, 27, 20, 0.94)' && !vis($('st-fan')) && words.every(r => r >= 4.5);
+                : !s.classList.contains('fan') && !s.style.cssText && cs(cont).backgroundColor === 'rgb(255, 207, 61)' && cs(my).backgroundColor === 'rgba(16, 27, 20, 0.94)' && !vis($('st-fan')) && !vis(marks) && words.every(r => r >= 4.5) && marks3 && chips3;
+              if (fan) {                                         // the tab on the box's top edge: over it, clear of the wordmark above and of the shirt and the name inside
+                const t = box(marks), b = box(my), w = box(document.querySelector('#s-home .word')), head = box(my.querySelector('.my-head'));
+                tab = t.top < b.top && t.bottom > b.top && t.top >= w.bottom - 0.5 && t.bottom <= head.top + 0.5 && t.right <= b.right;
+              }
             }
             const line = $('cont-note').textContent, want = busy === 'none' ? /^Quick Match$/ : busy === 'champ' || busy === 'both' ? /^Championship · Round 1 v / : busy === 'cup' ? /^European Cup · Semi-Final v / : /^Career · Round 1 v /;
-            out.push({ why, state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', fan ? buy : '', step ? step + (tier != null ? tier : '') : 'boxes'].filter(Boolean).join('+'), step, fan:fan && vis($('st-fan')), themed, words:words.length,
+            out.push({ why, tab, state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', fan ? buy : '', step ? step + (tier != null ? tier : '') : 'boxes'].filter(Boolean).join('+'), step, fan:fan && vis($('st-fan')), themed, words:words.length,
               fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight, inner, small, clipped, overlap, off,
               scroll:panel ? panel.scrollHeight - panel.clientHeight : 0,
               two:!$('b-two') && !btns.some(b => /\b2 Players\b|Two Player/.test(b.textContent)),
@@ -714,7 +732,8 @@ async function browserChecks() {
       ok(states.length === 160*VIEWS.length && states.every(r => r.fits), `${kind}: the page never scrolls in every state, on the five boxes and every step (${bad(r => !r.fits).slice(0, 6).join(', ') || states.length + ' states'})`);
       ok(states.every(r => !r.inner && !r.off.length), `${kind}: My Team's box holds all it shows, and nothing is off the screen (${states.filter(r => r.inner || r.off.length).slice(0, 4).map(r => r.state + ': ' + r.inner + 'px ' + r.off.join('/')).join('; ') || 'all'})`);
       ok(states.filter(r => r.fan).length === 40, `${kind}: 40 of the boxes' states with the Super Fan badge in My Team's box, its plain shield or a club's crest (${states.filter(r => r.fan).length})`);
-      ok(states.every(r => r.themed), `${kind}: a Super Fan's box in the club's colours (its ground and edge, every word on it 4.5:1 and more; Continue still the floodlight's yellow) with its shield or crest, and every other home in the plain dark style, every word in the box 4.5:1 and more (${states.filter(r => !r.themed).slice(0, 4).map(r => r.state + ' ' + r.why).join(', ') || 'all'})`);
+      ok(states.every(r => r.themed), `${kind}: a Super Fan's box in the club's colours (its ground and edge, every word on it 4.5:1 and more; Continue still the floodlight's yellow) with its shield or crest in the Super Fan tab (the tab in the edge's colour, its words 4.5:1 and more on it), the stars and every result's chip 3:1 on the ground (by fill or ring), the shirt on the plain panel's tile; every other home in the plain dark style, no tab, every word in the box 4.5:1 and more (${states.filter(r => !r.themed).slice(0, 4).map(r => r.state + ' ' + r.why).join(', ') || 'all'})`);
+      ok(states.every(r => r.tab), `${kind}: the Super Fan tab sits on the box's top edge, clear of the wordmark above it and of the shirt and the name inside (${bad(r => !r.tab).slice(0, 4).join(', ') || 'all'})`);
       ok(states.every(r => !r.small.length), `${kind}: every button at least 44px (${states.filter(r => r.small.length).slice(0, 3).map(r => r.state + ': ' + r.small.join('/')).join('; ') || 'all'})`);
       ok(states.every(r => !r.clipped.length && !r.overlap), `${kind}: no name cut off nor lock squeezed, no button over another (${states.filter(r => r.clipped.length || r.overlap).slice(0, 3).map(r => r.state + ': ' + r.clipped.join('/') + (r.overlap ? ' overlap' : '')).join('; ') || 'none'})`);
       ok(states.every(r => r.tools), `${kind}: Offline Ready, Install Game and Updating beside the wordmark, and at a step's top right, showing wherever the home is (${bad(r => !r.tools).slice(0, 4).join(', ') || 'all'})`);
@@ -727,6 +746,33 @@ async function browserChecks() {
         return out;
       });
       ok(crest.img && crest.loaded && crest.w <= 20 && crest.h <= 22, `${kind}: a club's crest, agreed, loads in the Super Fan badge at the shield's size (${json(crest)})`);
+      // every club as the next one in FAN_CLUBS (a change of data alone): its Super Fan box reads, every word 4.5:1 on its ground and on the
+      // tab, the stars and each result's chip 3:1 (by fill or ring), the shirt on the plain panel's tile. Colours, not layout: at one size
+      if (w === 844 && touch) {
+        const kits = await page.evaluate(() => {
+          const T = window.__tryline, X = T.teams, S = T.store, H = T.home, st = T.debug.settings(), $ = id => document.getElementById(id), out = { tried:0, bad:[] };
+          const cs = e => getComputedStyle(e), lum = c => { const v = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(n => +n/255).map(x => (x <= 0.03928 ? x/12.92 : ((x + 0.055)/1.055) ** 2.4)); return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
+          const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
+          const lock = T.locker.state(), form = H.form.get(), my = $('my-box'), marks = $('my-marks');
+          S.setNative(true); S.setStarted(true);
+          for (const t of X.TEAM_LISTS.filter(l => l.tier > 0).flatMap(l => l.teams)) {
+            const c = { key:'kit' + out.tried, name:t.name, product:'tryline.fan.kit' + out.tried, share:50, agreed:false, team:t.id, crest:null };
+            S.FAN_CLUBS.push(c); S.setBought([c.product]); st.myClub = t.id; H.form.set([{ k:H.form.key(t), w:2, d:1, l:2, last:'WDLWL' }]); T.debug.goHome(); out.tried++;
+            const g = cs(my).backgroundColor, why = [];
+            if (!$('s-home').classList.contains('fan') || !$('st-fan').querySelector('svg.fan-shield')) why.push('no theme');
+            if ([...my.querySelectorAll('.my-name, .my-league, .my-rec dt, .my-rec dd, .my-nat b')].some(e => e.offsetWidth && ratio(cs(e).color, g) < 4.5)) why.push('words');
+            if ([...marks.querySelectorAll('.my-fan > span:not(.my-ros)')].some(e => ratio(cs(e).color, cs(marks).backgroundColor) < 4.5)) why.push('tab');
+            if (ratio(cs(my.querySelector('.rstars .on')).fill, g) < 3) why.push('stars');
+            if ([...my.querySelectorAll('.fm:not(.none)')].some(e => ratio(cs(e).backgroundColor, g) < 3 && !(/^rgb\(/.test(cs(e).boxShadow) && ratio(cs(e).boxShadow, g) >= 3))) why.push('chips');
+            if (cs($('my-shirt')).backgroundColor !== 'rgb(16, 27, 20)') why.push('shirt');
+            if (why.length) out.bad.push(t.id + ' ' + why.join('/'));
+            S.FAN_CLUBS.pop();
+          }
+          S.setNative(false); S.setStarted(false); S.setBought([]); st.myClub = null; H.form.set(form); T.locker.set(lock); T.debug.goHome();
+          return out;
+        });
+        ok(kits.tried > 100 && !kits.bad.length, `${kind}: every club as a Super Fan club (${kits.tried}): its box's words 4.5:1 on its ground and on the tab, its stars and result chips 3:1, its shirt on the plain panel's tile (${kits.bad.slice(0, 6).join(', ') || 'all'})`);
+      }
       const scrolls = states.filter(r => r.scroll > 0);
       ok(scrolls.every(r => h <= 340 && /champ1$|drills$/.test(r.state)), `${kind}: a step scrolls inside itself only where 320px cannot hold it (National's nine, Skill Games), never the page (${[...new Set(scrolls.map(r => r.state.split('+').pop()))].join(', ') || 'none'})`);
       // long names: the club's steps down until it fits; every built-in club with England, South Africa and New Zealand fits the box
@@ -740,14 +786,47 @@ async function browserChecks() {
             st.myClub = c.id; st.myNat = nat; T.debug.goHome();
             const n = $('my-name'), b = $('my-nat').querySelector('b'), box = $('my-box');
             px.push(parseFloat(getComputedStyle(n).fontSize));
-            if (n.scrollWidth > n.clientWidth + 1 || (b && b.offsetWidth && b.scrollWidth > b.clientWidth + 1) || box.scrollHeight > box.clientHeight + 0.5) cut.push(c.name + ' + ' + nat);
+            const league = [...box.querySelectorAll('.my-league > span')].filter(e => e.offsetWidth && e.scrollWidth > e.clientWidth + 1);
+            if (n.scrollWidth > n.clientWidth + 1 || (b && b.offsetWidth && b.scrollWidth > b.clientWidth + 1) || league.length || box.scrollHeight > box.clientHeight + 0.5) cut.push(c.name + ' + ' + nat);
           }
           out[state] = { tried:clubs.length*3, cut:cut.length, of:cut.slice(0, 4), min:Math.min(...px) };
         }
         S.setNative(false); S.setStarted(false); S.setBought([]); st.myClub = null; st.myNat = null; T.debug.goHome();
         return out;
       });
-      ok(Object.values(names).every(r => r.tried > 200 && !r.cut && r.min >= 16), `${kind}: every club with England, South Africa or New Zealand fits My Team's box, its name 16px and more (Christchurch, Bloemfontein), the Super Fan badge showing or not (${JSON.stringify(names)})`);
+      ok(Object.values(names).every(r => r.tried > 200 && !r.cut && r.min >= 16), `${kind}: every club with England, South Africa or New Zealand fits My Team's box, nothing in it cut (the name 16px and more: Christchurch, Bloemfontein; the league: the United Rugby Championship for Johannesburg; the country: South Africa), the Super Fan tab showing or not (${JSON.stringify(names)})`);
+      // Continue's line and the Career box's note with the longest names in the game: never a part cut, never past two lines
+      const longest = await page.evaluate(() => {
+        const T = window.__tryline, X = T.teams, H = T.home, $ = id => document.getElementById(id), bad = [];
+        T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); X.newChamp(X.CLUBS[0], X.CLUBS.slice(1, 6)); T.debug.settings().last = null; T.debug.goHome();
+        const c = document.createElement('canvas').getContext('2d'); c.font = getComputedStyle($('career-note')).font;
+        const names = [...new Set(X.ALL_TEAMS.map(t => t.name.replace(/ (Women|Minis)$/, '')))].sort((a, b) => c.measureText(b).width - c.measureText(a).width).slice(0, 3);
+        const test = (id, text) => { const el = $(id); H.line(el, text); H.fit(); const cut = [...el.querySelectorAll('.nw')].filter(e => e.scrollWidth > e.clientWidth + 0.5); if (cut.length || el.scrollHeight > el.clientHeight + 1) bad.push(id + ': ' + text); };
+        for (const n of names) {
+          for (const pre of ['Championship · Round 5', 'European Cup · Semi-Final', 'World Cup · Quarter-Final', 'Home Nations Tour · Test 3', 'Career · Quarter-Final']) test('cont-note', pre + ' v ' + n);
+          for (const pre of ['Round 5', 'Quarter-Final', 'Semi-Final']) test('career-note', pre + ' v ' + n);
+        }
+        T.career.set(null); X.setChamp(null); T.debug.goHome();
+        return { names, bad };
+      });
+      // the wordmark keeps its size beside Offline Ready (which an installed game always shows) or Updating; only Install Game takes room from it
+      const word = await page.evaluate(() => {
+        const T = window.__tryline, $ = id => document.getElementById(id), px = () => parseFloat(getComputedStyle(document.querySelector('#s-home .word')).fontSize), TOOLS = ['app-tools', 'b-install', 'offline-update', 'offline-status'];
+        const at = on => { T.debug.goHome(); for (const id of TOOLS) $(id).hidden = !on.includes(id); T.home.fit(); const m = $('home-mark').getBoundingClientRect(), s = $('offline-status').getBoundingClientRect(); return { px:px(), h:m.height, ready:on.includes('offline-status') ? s.right <= m.right + 0.5 && s.width > 0 : true }; };
+        const out = { none:at([]), ready:at(['app-tools', 'offline-status']), install:at(['app-tools', 'offline-status', 'b-install']), update:at(['app-tools', 'offline-status', 'offline-update']) };
+        for (const id of TOOLS) $(id).hidden = true; T.debug.goHome();
+        return out;
+      });
+      ok(word.ready.px === word.none.px && Math.abs(word.ready.h - word.none.h) < 1 && word.ready.ready && word.update.px === word.none.px && Math.abs(word.update.h - word.none.h) < 1 && word.install.px < word.none.px, `${kind}: the wordmark keeps its size (${word.none.px}px) with Offline Ready beside it, or Updating in its place, the row no taller; only Install Game (the web, before it is installed) makes it smaller (${word.install.px}px) (${json(word)})`);
+      // Competitions with one to three on a tier: big boxes, as Match's are, not a strip with the step empty under it
+      const comps = await page.evaluate(() => {
+        const T = window.__tryline, $ = id => document.getElementById(id), out = [];
+        for (const tier of [0, 2]) { T.home.setTier(tier); T.debug.goHome(); T.home.open('champ'); const b = [...$('hc-comps').querySelectorAll('.hc-comp')]; out.push(tier + ':' + b.length + ':' + Math.round(Math.min(...b.map(e => e.getBoundingClientRect().height)))); }
+        T.home.setTier(null); T.debug.goHome();
+        return out;
+      });
+      ok(comps.every(c => +c.split(':')[1] <= 3 && +c.split(':')[2] >= 140), `${kind}: International's three and Local's two or three as big boxes, 140px and more (${comps.join(' ')})`);
+      ok(longest.names.length === 3 && !longest.bad.length, `${kind}: Continue's line and the Career box's note keep every part whole within two lines for the longest names in the game (${longest.names.join(', ')}; ${longest.bad.slice(0, 3).join('; ') || 'none cut'})`);
       // a locked Legend: the padlock clears the name on its team card and the jersey, its badge and its name on the Locker's tile
       const locks = await page.evaluate(async () => {
         const T = window.__tryline, L = T.locker, S = T.store, st = T.debug.settings(), cat0 = st.cat, out = { cards:0, tiles:0, over:[] };
@@ -788,6 +867,13 @@ async function browserChecks() {
         out.moves = [[0, 1], [0, 1], [1, 0], [0, -1], [0, -1], [1, 0], [0, -1], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => id(T.navMove(0, dx, dy)));
         T.home.ring($('b-locker')); out.moves.push(id(T.navMove(0, -1, 0)), id(T.navMove(0, -1, 0)), id(T.navMove(0, -1, 0)));   // along My Team's three, to the end
         T.home.ring($('b-locker')); out.moves.push(id(T.navMove(0, 1, 0)));   // and out to the box level with it
+        // Right from the end of a row in My Team's column (the Locker, the Trophy Cabinet): the box level with it; Left from a box of the first
+        // column and Right again: back where it started
+        const level = from => { const y = (q => q.top + q.height/2)(from.getBoundingClientRect()); return ['b-match', 'b-drills'].map($).sort((a, b) => Math.abs((q => q.top + q.height/2)(a.getBoundingClientRect()) - y) - Math.abs((q => q.top + q.height/2)(b.getBoundingClientRect()) - y))[0]; };
+        out.right = [];
+        for (const b of ['b-locker', 'b-cabinet']) { T.home.ring($(b)); const to = T.navMove(0, 1, 0); if (to !== level($(b))) out.right.push(b + '>' + id(to)); }
+        T.home.ring($('b-my')); { const to = T.navMove(0, 1, 0); if (to !== $('b-import')) out.right.push('b-my>' + id(to)); }
+        for (const b of ['b-match', 'b-drills']) { T.home.ring($(b)); const left = T.navMove(0, -1, 0); const back = T.navMove(0, 1, 0); if (!left || !$('home-side').contains(left) || back !== $(b)) out.right.push(b + '<' + id(left) + '>' + id(back)); }
         // the rows: Continue; Match | Career; Skill Games | Settings; and My Team's column: Change | Add Your Team | Locker, then the Trophy Cabinet
         const rows = [['b-continue'], ['b-match', 'b-career'], ['b-drills', 'b-set'], ['b-my', 'b-import', 'b-locker'], ['b-cabinet']], rowOf = el => rows.findIndex(r => r.includes(el && el.id));
         out.down = [];
@@ -795,7 +881,7 @@ async function browserChecks() {
         for (const b of rows[3]) { T.home.ring($(b)); const to = T.navMove(0, 0, 1); if (to !== $('b-cabinet')) out.down.push(b + '>' + id(to)); }
         T.home.ring($('b-cabinet')); { const to = T.navMove(0, 0, 1); if (to !== null) out.down.push('b-cabinet>' + id(to)); }
         // every visible button, on the boxes and on every step, reached by moving the ring from the first press; Down never skips a row
-        out.unreached = []; out.skipped = [];
+        out.unreached = []; out.skipped = []; out.up = [];
         for (const [step, tier] of VIEWS) {
           T.home.setTier(tier); T.debug.goHome(); if (step) T.home.open(step); T.home.ring(null);
           const all = [...document.querySelectorAll('#s-home .btn, #s-home .seg button')].filter(vis);
@@ -809,12 +895,17 @@ async function browserChecks() {
             const mid = el => { const r = el.getBoundingClientRect(); return r.top + r.height/2; }, tops = [...new Set(all.map(b => Math.round(mid(b))))].sort((a, b) => a - b);
             const rowIx = el => tops.findIndex(t => Math.abs(t - mid(el)) <= 6);
             for (const b of all) { T.home.ring(b); const to = T.navMove(0, 0, 1); if (to && rowIx(to) - rowIx(b) > 1 && !b.closest('.seg') && !to.closest('.seg')) out.skipped.push(step + ':' + id(b) + '>' + id(to)); }
+            const panel = $('hp-' + step), inside = all.filter(b => panel.contains(b)), top = Math.min(...inside.map(b => b.getBoundingClientRect().top));   // Up from the step's first row: Back
+            for (const b of inside.filter(b => b.getBoundingClientRect().top - top < 4)) { T.home.ring(b); const to = T.navMove(0, 0, -1); if (to !== $('hs-back')) out.up.push(step + (tier != null ? tier : '') + ':' + id(b) + '^' + id(to)); }
+            T.home.ring($('hs-back')); { const to = T.navMove(0, 0, 1); if (!to || !panel.contains(to) || to.getBoundingClientRect().top - top >= 4) out.up.push(step + ':hs-back>' + id(to)); }
           }
         }
         T.home.setTier(null); T.home.ring(null); K.setHistory([]); T.debug.goHome();
         return out;
       }, VIEWS);
-      ok(pad.first === 'b-continue' && json(pad.moves.slice(0, 9)) === json(['b-match', 'b-drills', 'b-set', 'b-career', 'b-continue', 'none', 'none', 'b-locker', 'b-cabinet']) && ['b-my', 'b-import', 'b-locker'].includes(pad.moves[9]) && json(pad.moves.slice(10)) === json(['b-import', 'b-my', 'none', 'b-drills']), `${kind}: a controller's first press lands on Continue; Down to Match, Down to Skill Games, Right to Settings, Up to Career and Continue, no further right (Continue is alone in its row) nor up; Left into My Team's column at the Locker, Down to the Trophy Cabinet, Up back to the three, along them to Change and no further, Right from the Locker to Skill Games, level with it (${json(pad.moves)})`);
+      ok(pad.first === 'b-continue' && json(pad.moves.slice(0, 9)) === json(['b-match', 'b-drills', 'b-set', 'b-career', 'b-continue', 'none', 'none', 'b-my', 'b-cabinet']) && ['b-my', 'b-import', 'b-locker'].includes(pad.moves[9]) && json(pad.moves.slice(10)) === json(['b-import', 'b-my', 'none', 'b-drills']), `${kind}: a controller's first press lands on Continue; Down to Match, Down to Skill Games, Right to Settings, Up to Career and Continue, no further right (Continue is alone in its row) nor up; Left from Continue to Change, the first of My Team's column (re-pinned from the Locker at the review, 2026-11-11), Down to the Trophy Cabinet, Up back to the three, along them to Change and no further, Right from the Locker to Skill Games, level with it (${json(pad.moves)})`);
+      ok(!pad.right.length, `${kind}: Right from the end of a row in My Team's column (the Locker, the Trophy Cabinet) to the box level with it, Right from Change along its row, and Left then Right from Match and from Skill Games back where it started (${pad.right.join(', ') || 'all'})`);
+      ok(!pad.up.length, `${kind}: on every step (Competitions on each tier) Up from the first row goes back to Back, and Down from Back to that row (${pad.up.slice(0, 6).join(', ') || 'all'})`);
       ok(!pad.down.length, `${kind}: Down from every box lands on the row below (nothing under the last), Up on the row above, and in My Team's column Down goes to the Trophy Cabinet (${pad.down.slice(0, 6).join(', ') || 'all'})`);
       ok(!pad.unreached.length, `${kind}: every button on the boxes and on every step is reached by moving the ring (${pad.unreached.slice(0, 8).join(', ') || 'all'})`);
       ok(!pad.skipped.length, `${kind}: on every step Down from a button never skips a row (${pad.skipped.slice(0, 6).join(', ') || 'none'})`);
@@ -822,19 +913,20 @@ async function browserChecks() {
       // the keyboard: the arrow keys move as the ring does, Enter presses, Escape is Back, Tab reaches every box
       await page.evaluate(() => { const T = window.__tryline, X = T.teams, K = T.cups; K.setHistory([]); X.setChamp(null); T.home.ring(null); T.debug.goHome(); });
       const keyed = [await page.evaluate(() => document.activeElement.id)];
-      for (const k of ['ArrowDown', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowLeft', 'ArrowRight']) { await page.keyboard.press(k); keyed.push(await page.evaluate(() => document.activeElement.id)); }
+      for (const k of ['ArrowDown', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'ArrowRight', 'ArrowRight']) { await page.keyboard.press(k); keyed.push(await page.evaluate(() => document.activeElement.id)); }
       await page.keyboard.press('ArrowUp'); await page.keyboard.press('Enter');
       const opened = await page.evaluate(() => [window.__tryline.home.step(), document.activeElement.id]);
-      await page.keyboard.press('ArrowRight'); const right = await page.evaluate(() => document.activeElement.id);
+      const stepKeys = [];
+      for (const k of ['ArrowRight', 'ArrowUp', 'ArrowDown']) { await page.keyboard.press(k); stepKeys.push(await page.evaluate(() => document.activeElement.id)); }
       await page.keyboard.press('Escape'); const esc = await page.evaluate(() => [window.__tryline.home.step(), document.activeElement.id]);
-      ok(json(keyed) === json(['b-continue', 'b-match', 'b-career', 'b-set', 'b-drills', 'b-match', 'b-continue', 'b-locker', 'b-drills']) && json(opened) === json(['match', 'b-quick']) && right === 'b-comps' && json(esc) === json([null, 'b-match']), `${kind}: the keyboard: Continue focused, the arrows as the ring (Down Match, Right Career, Down Settings, Left Skill Games, Up Match, Up Continue, Left the Locker, Right Skill Games, level with it), Up and Enter open Match on Quick Match, Right Competitions, Escape back on Match (${json([keyed, opened, right, esc])})`);
+      ok(json(keyed) === json(['b-continue', 'b-match', 'b-career', 'b-set', 'b-drills', 'b-match', 'b-continue', 'b-my', 'b-import', 'b-locker', 'b-drills']) && json(opened) === json(['match', 'b-quick']) && json(stepKeys) === json(['b-comps', 'hs-back', 'b-quick']) && json(esc) === json([null, 'b-match']), `${kind}: the keyboard: Continue focused, the arrows as the ring (Down Match, Right Career, Down Settings, Left Skill Games, Up Match, Up Continue, Left Change, Right along to Add Your Team and the Locker, Right again to Skill Games, level with it), Up and Enter open Match on Quick Match, Right Competitions, Up Back to Menu, Down Quick Match, Escape back on Match (${json([keyed, opened, stepKeys, esc])})`);
       await page.evaluate(() => { document.activeElement && document.activeElement.blur(); });
       const tabbed = new Set();
       for (let i = 0; i < 14; i++) { await page.keyboard.press('Tab'); tabbed.add(await page.evaluate(() => document.activeElement.id)); }
       ok(['b-my', 'b-import', 'b-locker', 'b-continue', 'b-match', 'b-career', 'b-drills', 'b-set'].every(id => tabbed.has(id)), `${kind}: Tab reaches every box and My Team's three (${[...tabbed].filter(Boolean).join(' ')})`);
       // Skill Games for each player: Men the ten, How to Play, Contact Games (U9 and Up) and For Grown-Ups; the Kids level and Minis the seven, How
       // to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches every button, For Grown-Ups opens its panel with
-      // Back to Skills in the ring's reach (the step's Back put away), every game's card offers Watch How in the ring's reach, and Tab reaches
+      // Back to Skill Games in the ring's reach (the step's Back put away), every game's card offers Watch How in the ring's reach, and Tab reaches
       // every button on the step
       for (const [who, kids, cat] of [['Men', false, 'men'], ['Kids', true, 'men'], ['Minis', false, 'minis']]) {
         const sk = await page.evaluate(([kids, cat]) => {
@@ -866,8 +958,8 @@ async function browserChecks() {
         ok(json(sk.games) === json(young ? open : open.concat(['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skill Games shows ${young ? 'the seven open games, no Contact Games' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
         ok(sk.fits && !sk.over.length && !sk.small.length && !sk.cut.length, `${kind} ${who}: Skill Games fits with no page scroll, every button 44px and more, none over another, no name cut off (${[...sk.over, ...sk.small, ...sk.cut].join(', ') || 'all clear'})`);
         ok(!sk.unreached.length, `${kind} ${who}: the ring reaches every button on Skill Games and its Back (${sk.unreached.join(', ') || 'all'})`);
-        ok(sk.grown, `${kind} ${who}: For Grown-Ups opens its panel with Back to Skills in the ring's reach, the step's Back put away, and B (Back to Skills) shuts it, the step's Back again`);
-        ok(!sk.watch.length, `${kind} ${who}: every game's card offers Watch How, in the ring's reach, and Back to Skills comes back to the step (${sk.watch.join(', ') || 'all ' + sk.games.length})`);
+        ok(sk.grown, `${kind} ${who}: For Grown-Ups opens its panel with Back to Skill Games in the ring's reach, the step's Back put away, and B (Back to Skill Games) shuts it, the step's Back again`);
+        ok(!sk.watch.length, `${kind} ${who}: every game's card offers Watch How, in the ring's reach, and Back to Skill Games comes back to the step (${sk.watch.join(', ') || 'all ' + sk.games.length})`);
         ok(sk.ids.every(id => tabbed.has(id)), `${kind} ${who}: Tab reaches every button on Skill Games (${sk.ids.filter(id => !tabbed.has(id)).join(', ') || 'all ' + sk.ids.length})`);
       }
       await page.evaluate(() => { const T = window.__tryline, st = T.debug.settings(); st.kids = false; st.diff = 1; st.cat = 'men'; T.home.ring(null); T.debug.goHome(); });
