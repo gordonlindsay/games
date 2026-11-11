@@ -11,8 +11,10 @@
    or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
    Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
 
-   What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the Men | Women | Minis switch, the level
-   and My Team stay changeable as ever without rewriting the age group or the gender.
+   What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the level and My Team stay changeable as
+   ever without rewriting the age group or the gender. The two answers are changed in Settings too, under Difficulty (profileSettings,
+   the owner, 2026-11-11: "once gender / age section chosen, have them in settings to change - don't include on the team selection page
+   the filter for age"); once they decide the category (profileDecides) the team screen has no Men | Women | Minis but on 2 Players.
    - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
      Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
      MIXED_THROUGH), otherwise Men. An answer left blank keeps the side as it is (profileCat): a gender alone never moves a side off
@@ -62,6 +64,10 @@ function profileCat(age, gender, cur) {
   if (gender) return gender === 'female' ? 'women' : 'men';
   return cur === 'women' ? 'women' : 'men';
 }
+/* The category the profile decides, or null while it decides none: Minis for a Mini, else Men or Women by the gender (Not Say Men), once
+   both are given. With an answer missing (a setup skipped, a save from before the profile) the team screen keeps Men | Women | Minis and
+   the category picked there (pickCatFixed, src/ui-menus.js). */
+function profileDecides() { return profile.age === 'mini' || (profile.age && profile.gender) ? profileCat(profile.age, profile.gender, settings.cat) : null; }
 const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
 /* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
    Difficulty row's own rule); a cancelled check sets nothing. */
@@ -252,13 +258,9 @@ function profileOpen(focus) {
 }
 DEFAULT_FOCUS['s-profile'] = () => ($('pf-age').querySelector && $('pf-age').querySelector('[aria-pressed="true"]')) || $('pf-back');
 function profileRender() {
-  const c = myClubTeam(), n = myNatTeam(null), seg = (id, list, now) => {
-    const el = $(id);
-    if (!el.dataset.built) { el.dataset.built = '1'; el.innerHTML = list.map(o => `<button data-v="${o.id}">${o.line ? `<b>${esc(o.name)}</b><span>${esc(o.line)}</span>` : esc(o.name)}</button>`).join(''); for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.addEventListener('click', () => (id === 'pf-age' ? profileAge(b.dataset.v) : profileGender(b.dataset.v))); }
-    for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.setAttribute('aria-pressed', String(b.dataset.v === now));
-  };
-  seg('pf-age', PROFILE_AGES, profile.age);
-  seg('pf-gender', PROFILE_GENDERS, profile.gender);
+  const c = myClubTeam(), n = myNatTeam(null);
+  profileSeg('pf-age', PROFILE_AGES, profile.age, true);
+  profileSeg('pf-gender', PROFILE_GENDERS, profile.gender, false);
   $('pf-club').innerHTML = `${jersey(c)}<span class="pf-names"><b>${esc(listName(c))}</b><span>${esc(listName(n))}</span></span>`;
   $('pf-team').setAttribute('aria-label', 'Change My Team: ' + listName(c) + ', ' + listName(n));
   const drawn = profileDraw($('pf-cv'), c, profile.look);
@@ -267,13 +269,35 @@ function profileRender() {
   $('pf-look').textContent = profile.look ? 'Change Look' : 'Make Your Look';
   if (!drawn && profile.look && typeof ART !== 'undefined' && ART.state === 'idle' && typeof artLoad === 'function') artLoad();   // the picture once the art is in (profileArtIn)
 }
+/* An age group's or a gender's row, built once and pressed as the profile stands (none where it has no answer): My Profile's, each age
+   group with its ages (lines), and Settings', the names alone as its other rows are. A press is profileAge's or profileGender's wherever
+   the row is, so the two screens set the same things and show the same answers. */
+function profileSeg(id, list, now, lines) {
+  const el = $(id), all = () => (el.querySelectorAll ? [...el.querySelectorAll('[data-v]')] : []);
+  if (!el.dataset.built) {
+    el.dataset.built = '1';
+    el.innerHTML = list.map(o => `<button data-v="${o.id}">${lines && o.line ? `<b>${esc(o.name)}</b><span>${esc(o.line)}</span>` : esc(o.name)}</button>`).join('');
+    for (const b of all()) b.addEventListener('click', () => (list === PROFILE_AGES ? profileAge(b.dataset.v) : profileGender(b.dataset.v)));
+  }
+  for (const b of all()) b.setAttribute('aria-pressed', String(b.dataset.v === now));
+}
+/* Settings' Age Group | Gender, under Difficulty (the home's Settings step: renderHome draws it). */
+function profileSettings() {
+  profileSeg('set-age', PROFILE_AGES, profile.age, false);
+  profileSeg('set-gender', PROFILE_GENDERS, profile.gender, false);
+}
+/* An answer set from My Profile or Settings: whichever shows, drawn again, and the home with it (the Difficulty row, Settings' rows). */
+function profileShown() {
+  if (!$('s-profile').hidden) profileRender();
+  renderHome();
+}
 function profileAge(v) {
   if (!profileKnows(PROFILE_AGES, v) || v === profile.age) return;   // the row already chosen: nothing set again (a level or side moved since stays as it is)
-  profileSet(v, profile.gender, { then:() => { profileRender(); renderHome(); } });
+  profileSet(v, profile.gender, { then:profileShown });
 }
 function profileGender(v) {
   if (!profileKnows(PROFILE_GENDERS, v) || v === profile.gender) return;
-  profileSet(profile.age, v, { level:false, then:() => { profileRender(); renderHome(); } });   // the gender moves the category, never the level
+  profileSet(profile.age, v, { level:false, then:profileShown });   // the gender moves the category, never the level
 }
 $('pf-back').addEventListener('click', () => goHome($('b-my')));
 $('pf-team').addEventListener('click', () => openTeams('my', null, { from:$('pf-team') }));   // My Team's picker, its old job: the club, then the country; back here after

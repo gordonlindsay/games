@@ -10571,6 +10571,7 @@ function renderHome() {
     const val = key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
+  if (typeof profileSettings === 'function') profileSettings();   // Age Group | Gender under Difficulty: the profile's answers (src/profile.js)
   myHome();
   homeCabinet();
   champHome();
@@ -10662,7 +10663,8 @@ $('pr-grown-back').addEventListener('click', () => { $('hs-back').hidden = false
    with it (its buttons, or the Trophy Cabinet), never down the boxes' own column, and Right from the end of a row in My Team's column goes
    to the box level with it, or back to the box Left came from (homeNavLeft), so Left then Right is where it started; Up and Down in My
    Team's column stay in it; Continue has nothing to its right. On a step, Down from Back lands on the step's first row (Competitions'
-   tiers, which sit to its right), and Up from that row goes back to Back. */
+   tiers, which sit to its right), and Up from that row goes back to Back; in Settings Up and Down go a row at a time, to the button
+   nearest across (Difficulty, Age Group | Gender, Sound | Match Help, Half Length | Camera), the last row's Down to nothing. */
 let homeNavLeft = null;                                      // the last Left from a box into My Team's column: { at:the button it landed on, box:the box it left }
 function homeNavTo(from, dx, dy, cands) {
   if (!from || $('s-home').hidden) return undefined;
@@ -10679,6 +10681,12 @@ function homeNavPick(from, dx, dy, cands) {
       return row[0] || null;
     }
     if (from !== back && !dx && dy < 0 && inside.includes(from) && r(from).top - top < 4 && cands.includes(back)) return back;   // Up from the step's first row: Back
+    if (homeStep === 'settings' && !dx && dy && inside.includes(from)) {   // Settings: Up and Down a row at a time, on its button nearest across (Age Group's thirds over Sound's halves would otherwise send Junior two rows down)
+      const foot = el => r(el).bottom, f0 = foot(from), way = inside.filter(el => (foot(el) - f0)*dy > 8);   // a row by its foot: Grown-Ups stands on Sound's
+      if (!way.length) return null;                                       // the last row: nothing under it
+      const near = way.reduce((a, el) => (Math.abs(foot(el) - f0) < Math.abs(foot(a) - f0) ? el : a));
+      return way.filter(el => Math.abs(foot(el) - foot(near)) <= 8).sort((a, b) => Math.abs(mid(a, 'x') - mid(from, 'x')) - Math.abs(mid(b, 'x') - mid(from, 'x')))[0];
+    }
     return undefined;
   }
   if (from === $('b-continue') && !dy && dx > 0) return null;          // Continue is alone in its row: nothing to its right
@@ -11092,6 +11100,10 @@ let pickView = [null, null];                               // each side as drawn
 const FL = { open:false, s:0, path:[], q:'', from:null, cols:[], hits:[], refit:false, vv:null, only:null };   // the Filter (below): open or not, its side, the path its columns show, the text, what opened it ('find' or 'sheet'), the window resized under it, the one seat it answers (2 Players)
 const pickOne = () => pickMode !== 'quick' && pickMode !== 'two';   // Championship, Career, My Team and the cups: one side, centred
 const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : pickMode === 'setup' && typeof profileSetupCat === 'function' ? profileSetupCat() : settings.cat);   // the setup's Club: the category its answers give (src/profile.js)
+/* Men | Women | Minis is the profile's once it decides the category (profileDecides: a Mini, or a Junior or an Adult with a gender; changed in
+   Settings or My Profile): Quick Match, Championship and My Team play it, with no switch on the screen. 2 Players keeps the switch (two people
+   share the device, and the profile is one of them's); Career and the setup have their own category, as ever. null: the switch as it was. */
+const pickCatFixed = () => (pickMode === 'two' || pickMode === 'career' || pickMode === 'setup' || typeof profileDecides !== 'function' ? null : profileDecides());
 /* Championship's World Cup or Home Nations Tour, chosen on the home: its title, its list, its side and its primary (src/ui-cups.js);
    null for a league or the nation's championship, and for every other mode. */
 const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
@@ -11373,6 +11385,7 @@ function openTeams(m, comp, o) {
     settings.pool = cupId !== 'league' ? 'int' : poolKey(k) === k ? k : 'sur';
   } else if (m !== 'career') settings.pool = myPool() || 'sur';
   if (!pickOne()) { const cats = settings.pick.filter(Boolean).map(p => p.cat); if (cats.length && cats.every(c => c === cats[0]) && TEAM_CATS.some(c => c.id === cats[0])) settings.cat = cats[0]; }   // Quick Match and 2 Players reopen in the category their sides were picked in (Championship may have moved it)
+  const decided = pickCatFixed(); if (decided) settings.cat = decided;   // a profile that decides the category: the teams follow it, and a side remembered in another falls back as a category changed does (pickOpen)
   pickOpen(0); if (!pickOne()) pickOpen(1);
   const play = m === 'quick' && !!(o && o.play);
   if (play) pickPlay();
@@ -11393,7 +11406,7 @@ function renderTeams() {
   eb.classList.remove('p1'); eb.classList.remove('p2');
   const t0 = pickView[0] && pickView[0].team;
   $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' || setup ? 'Pick Your Club' : 'Pick Your Team';
-  $('t-cat').hidden = pickMode === 'career' || setup;        // Men | Women is New Player's; the setup's category comes from its answers
+  $('t-cat').hidden = pickMode === 'career' || setup || !!pickCatFixed();   // Men | Women is New Player's; the setup's category comes from its answers; a profile that decides it, in Settings
   $('t-find').hidden = !pickFilterable(pickView[pick.on]); $('t-find').setAttribute('aria-label', 'Search ' + pickFindWord());   // the Filter's icon, for the side being set: none on a fixed list (the World Cup, the tour)
   $('t-sback').hidden = $('t-skip').hidden = !setup; $('t-back').hidden = setup;   // the setup's Back and Skip along the top, as on its other steps (src/profile.js)
   $('s-teams').classList.toggle('pk-setup', setup);
@@ -11886,8 +11899,8 @@ function pickNav(seat, dx, dy) {
       const o = focusEl === go ? back : go, a = focusEl.getBoundingClientRect(), b = o.getBoundingClientRect();
       if (!o.hidden && b.width && Math.abs(a.top - b.top) < 4 && (b.left - a.left)*dx > 0) { setFocus(o); return true; }
     }
-    const cat = $('t-cat'), chosen = !cat.hidden && cat.querySelector && cat.querySelector('[aria-pressed="true"]');
-    if (dy < 0 && !dx && chosen && focusEl.closest && focusEl.closest('.pk-head')) { setFocus(chosen); return true; }   // Up from either side's head: Men | Women | Minis, on the one chosen
+    const cat = $('t-cat'), chosen = !cat.hidden && cat.querySelector && cat.querySelector('[aria-pressed="true"]'), up = chosen || (pickCatFixed() && !$('t-find').hidden ? $('t-find') : null);
+    if (dy < 0 && !dx && up && focusEl.closest && focusEl.closest('.pk-head')) { setFocus(up); return true; }   // Up from either side's head: Men | Women | Minis, on the one chosen; with no switch (the profile decides the category), the search icon, the top bar's one control
     return false;                                            // the ring moves as on every screen (navMove)
   }
   let s = null;
@@ -16126,8 +16139,10 @@ const DEMO_PILOT = {
    or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
    Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
 
-   What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the Men | Women | Minis switch, the level
-   and My Team stay changeable as ever without rewriting the age group or the gender.
+   What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the level and My Team stay changeable as
+   ever without rewriting the age group or the gender. The two answers are changed in Settings too, under Difficulty (profileSettings,
+   the owner, 2026-11-11: "once gender / age section chosen, have them in settings to change - don't include on the team selection page
+   the filter for age"); once they decide the category (profileDecides) the team screen has no Men | Women | Minis but on 2 Players.
    - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
      Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
      MIXED_THROUGH), otherwise Men. An answer left blank keeps the side as it is (profileCat): a gender alone never moves a side off
@@ -16177,6 +16192,10 @@ function profileCat(age, gender, cur) {
   if (gender) return gender === 'female' ? 'women' : 'men';
   return cur === 'women' ? 'women' : 'men';
 }
+/* The category the profile decides, or null while it decides none: Minis for a Mini, else Men or Women by the gender (Not Say Men), once
+   both are given. With an answer missing (a setup skipped, a save from before the profile) the team screen keeps Men | Women | Minis and
+   the category picked there (pickCatFixed, src/ui-menus.js). */
+function profileDecides() { return profile.age === 'mini' || (profile.age && profile.gender) ? profileCat(profile.age, profile.gender, settings.cat) : null; }
 const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
 /* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
    Difficulty row's own rule); a cancelled check sets nothing. */
@@ -16367,13 +16386,9 @@ function profileOpen(focus) {
 }
 DEFAULT_FOCUS['s-profile'] = () => ($('pf-age').querySelector && $('pf-age').querySelector('[aria-pressed="true"]')) || $('pf-back');
 function profileRender() {
-  const c = myClubTeam(), n = myNatTeam(null), seg = (id, list, now) => {
-    const el = $(id);
-    if (!el.dataset.built) { el.dataset.built = '1'; el.innerHTML = list.map(o => `<button data-v="${o.id}">${o.line ? `<b>${esc(o.name)}</b><span>${esc(o.line)}</span>` : esc(o.name)}</button>`).join(''); for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.addEventListener('click', () => (id === 'pf-age' ? profileAge(b.dataset.v) : profileGender(b.dataset.v))); }
-    for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.setAttribute('aria-pressed', String(b.dataset.v === now));
-  };
-  seg('pf-age', PROFILE_AGES, profile.age);
-  seg('pf-gender', PROFILE_GENDERS, profile.gender);
+  const c = myClubTeam(), n = myNatTeam(null);
+  profileSeg('pf-age', PROFILE_AGES, profile.age, true);
+  profileSeg('pf-gender', PROFILE_GENDERS, profile.gender, false);
   $('pf-club').innerHTML = `${jersey(c)}<span class="pf-names"><b>${esc(listName(c))}</b><span>${esc(listName(n))}</span></span>`;
   $('pf-team').setAttribute('aria-label', 'Change My Team: ' + listName(c) + ', ' + listName(n));
   const drawn = profileDraw($('pf-cv'), c, profile.look);
@@ -16382,13 +16397,35 @@ function profileRender() {
   $('pf-look').textContent = profile.look ? 'Change Look' : 'Make Your Look';
   if (!drawn && profile.look && typeof ART !== 'undefined' && ART.state === 'idle' && typeof artLoad === 'function') artLoad();   // the picture once the art is in (profileArtIn)
 }
+/* An age group's or a gender's row, built once and pressed as the profile stands (none where it has no answer): My Profile's, each age
+   group with its ages (lines), and Settings', the names alone as its other rows are. A press is profileAge's or profileGender's wherever
+   the row is, so the two screens set the same things and show the same answers. */
+function profileSeg(id, list, now, lines) {
+  const el = $(id), all = () => (el.querySelectorAll ? [...el.querySelectorAll('[data-v]')] : []);
+  if (!el.dataset.built) {
+    el.dataset.built = '1';
+    el.innerHTML = list.map(o => `<button data-v="${o.id}">${lines && o.line ? `<b>${esc(o.name)}</b><span>${esc(o.line)}</span>` : esc(o.name)}</button>`).join('');
+    for (const b of all()) b.addEventListener('click', () => (list === PROFILE_AGES ? profileAge(b.dataset.v) : profileGender(b.dataset.v)));
+  }
+  for (const b of all()) b.setAttribute('aria-pressed', String(b.dataset.v === now));
+}
+/* Settings' Age Group | Gender, under Difficulty (the home's Settings step: renderHome draws it). */
+function profileSettings() {
+  profileSeg('set-age', PROFILE_AGES, profile.age, false);
+  profileSeg('set-gender', PROFILE_GENDERS, profile.gender, false);
+}
+/* An answer set from My Profile or Settings: whichever shows, drawn again, and the home with it (the Difficulty row, Settings' rows). */
+function profileShown() {
+  if (!$('s-profile').hidden) profileRender();
+  renderHome();
+}
 function profileAge(v) {
   if (!profileKnows(PROFILE_AGES, v) || v === profile.age) return;   // the row already chosen: nothing set again (a level or side moved since stays as it is)
-  profileSet(v, profile.gender, { then:() => { profileRender(); renderHome(); } });
+  profileSet(v, profile.gender, { then:profileShown });
 }
 function profileGender(v) {
   if (!profileKnows(PROFILE_GENDERS, v) || v === profile.gender) return;
-  profileSet(profile.age, v, { level:false, then:() => { profileRender(); renderHome(); } });   // the gender moves the category, never the level
+  profileSet(profile.age, v, { level:false, then:profileShown });   // the gender moves the category, never the level
 }
 $('pf-back').addEventListener('click', () => goHome($('b-my')));
 $('pf-team').addEventListener('click', () => openTeams('my', null, { from:$('pf-team') }));   // My Team's picker, its old job: the club, then the country; back here after
@@ -17581,7 +17618,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     filter:pickFilter, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
     first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
-    profileOpen, render:profileRender, age:profileAge, gender:profileGender, homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },
+    profileOpen, render:profileRender, age:profileAge, gender:profileGender, settings:profileSettings, decides:profileDecides, catFixed:() => pickCatFixed(), homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },
   GAME_VERSION,
   get M() { return M; } };
 

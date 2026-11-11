@@ -236,6 +236,74 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   $('pf-back').click();
 }
 
+// 6b. Settings' Age Group | Gender, under Difficulty (the owner, 2026-11-11: "once gender / age section chosen, have them in settings to
+//     change"): the profile's answers, none pressed with none; a tap does what My Profile's does (profileAge, profileGender: the same
+//     functions, wired to both rows by profileSeg): the level and the category, the grown-up check on leaving the Kids level and a cancelled
+//     one changing nothing, the Difficulty row moved at once, Difficulty moved later never rewriting the profile. Pressed in the browser part.
+{
+  fresh(); H.open('settings');
+  ok(H.step() === 'settings' && /^<button data-v="mini">Mini<\/button><button data-v="junior">Junior<\/button><button data-v="adult">Adult<\/button>$/.test($('set-age').innerHTML) && /^<button data-v="male">Male<\/button><button data-v="female">Female<\/button><button data-v="na">Not Say<\/button>$/.test($('set-gender').innerHTML), 'Settings: Age Group (Mini | Junior | Adult) and Gender (Male | Female | Not Say), the names alone, as its other rows');
+  const src = fs.readFileSync(new URL('../src/profile.js', import.meta.url), 'utf8'), menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
+  ok(/function profileSettings\(\) \{\s*profileSeg\('set-age', PROFILE_AGES, profile\.age, false\);\s*profileSeg\('set-gender', PROFILE_GENDERS, profile\.gender, false\);\s*\}/.test(src) && /profileSeg\('pf-age', PROFILE_AGES, profile\.age, true\);\s*profileSeg\('pf-gender', PROFILE_GENDERS, profile\.gender, false\);/.test(src)
+    && /b\.addEventListener\('click', \(\) => \(list === PROFILE_AGES \? profileAge\(b\.dataset\.v\) : profileGender\(b\.dataset\.v\)\)\)/.test(src) && /if \(typeof profileSettings === 'function'\) profileSettings\(\);/.test(menus),
+    'one builder for both screens\' rows (profileSeg): a press is profileAge or profileGender on My Profile and in Settings alike, and the home draws Settings\' each time it renders');
+  // each tap, from a new game (Normal, Men): the age group's level, the category by the gender
+  const want = { mini:[0, true], junior:[0, false], adult:[1, false] }, bad = [];
+  for (const g of ['male', 'female', 'na']) for (const a of ['mini', 'junior', 'adult']) {
+    fresh(); H.open('settings'); F.gender(g); F.age(a);
+    const cat = a === 'mini' ? 'minis' : g === 'female' ? 'women' : 'men';
+    if (st.cat !== cat || st.diff !== want[a][0] || st.kids !== want[a][1] || F.get().age !== a || F.get().gender !== g || H.step() !== 'settings' || shown() !== 's-home' || saved().profile.age !== a) bad.push(`${g}/${a}: ${st.cat} ${st.diff} ${st.kids}`);
+  }
+  ok(!bad.length, `Gender then Age Group in Settings: Mini the Kids level and Minis, Junior Easy, Adult Normal; Men for Male and Not Say, Women for Female; saved, Settings still open (${bad.join('; ') || '9 pairs'})`);
+  fresh(); H.open('settings'); F.age('adult'); F.gender('female'); T.kids.segSet(3); F.gender('male');
+  ok(st.diff === 2 && st.cat === 'men' && F.get().gender === 'male', 'a gender tapped moves the category only, never the level (Hard kept)');
+  T.kids.segSet(0); H.render(); ok(F.get().age === 'adult' && st.kids, 'Difficulty moved afterwards (Kids) never rewrites the profile: still Adult');
+  // the grown-up check on leaving the Kids level, from Settings as from the Difficulty row and My Profile
+  fresh(); H.open('settings'); F.age('mini'); ok(st.kids && st.diff === 0 && st.cat === 'minis' && $('m-gate').hidden, 'Mini from Normal: the Kids level and Minis, no check (going on to Kids needs none)');
+  F.age('adult'); ok(!$('m-gate').hidden && st.kids && st.cat === 'minis' && F.get().age === 'mini', 'Adult from the Kids level: the grown-up check first, nothing changed yet');
+  T.kids.close(false); ok($('m-gate').hidden && st.kids && st.diff === 0 && st.cat === 'minis' && F.get().age === 'mini' && H.step() === 'settings' && saved().profile.age === 'mini', 'cancelled: still Mini, still the Kids level and Minis, in the save too, Settings open');
+  F.gender('female'); ok($('m-gate').hidden && st.kids && st.cat === 'minis' && F.get().gender === 'female', 'a gender tapped on the Kids level asks nothing and keeps Minis (mixed)');
+  F.age('junior'); { const q = T.kids.gate(); if (q) for (const d of q.answer) T.kids.type(d); }
+  ok($('m-gate').hidden && !st.kids && st.diff === 0 && st.cat === 'women' && F.get().age === 'junior' && H.step() === 'settings', 'answered: Junior, Easy with the Kids level off, Women (Female)');
+  F.age('junior'); ok(!T.kids.gate() && F.get().age === 'junior', 'the age group already chosen, pressed again: nothing set again');
+  // My Profile and Settings: one profile, so each shows what the other set (drawn and pressed: the browser part)
+  $('b-my').click(); F.gender('na'); H.open('settings'); ok(F.get().gender === 'na' && st.cat === 'men' && H.step() === 'settings', 'Not Say on My Profile, then Settings: the same profile (Junior, Not Say), Men');
+}
+
+// 6c. The team screen (the owner: "don't include on the team selection page the filter for age"): once the profile decides the category (a
+//     Mini, or a Junior or an Adult with a gender) Men | Women | Minis is hidden and the teams follow the profile as the screen opens; with
+//     an answer missing the switch stays, the category as it was. 2 Players keeps the switch (two people share the device); Career and the
+//     setup hide it as ever. A side remembered in a category the profile no longer plays falls back as a category changed does.
+{
+  const cases = [[null, null, null], ['adult', null, null], ['junior', null, null], [null, 'female', null], [null, 'na', null], ['mini', null, 'minis'], ['mini', 'female', 'minis'], ['junior', 'male', 'men'], ['junior', 'female', 'women'], ['adult', 'female', 'women'], ['adult', 'na', 'men']];
+  const bad = [];
+  for (const [age, gender, cat] of cases) for (const mode of ['quick', 'champ', 'my']) {
+    fresh(); F.set({ age, gender, look:null }); st.cat = 'women'; st.pick = [null, null];
+    if (mode === 'champ') D.openTeams('champ', 'int'); else D.openTeams(mode);
+    const want = cat || 'women';
+    if (F.decides() !== cat || $('t-cat').hidden !== !!cat || st.cat !== want) bad.push(`${age}/${gender} ${mode}: hidden ${$('t-cat').hidden}, ${st.cat}`);
+  }
+  ok(!bad.length, `Quick Match, Championship and My Team: Men | Women | Minis hidden once the profile decides (a Mini; a Junior or an Adult with a gender), the category the profile's as the screen opens; shown, the category kept, with an answer missing (${bad.join('; ') || cases.length*3 + ' cases'})`);
+  fresh(); F.set({ age:'adult', gender:'female', look:null }); st.cat = 'men'; D.openTeams('champ', 'int');
+  ok($('t-cat').hidden && /Women$/.test($('t-go').textContent) && P.view(0).team === X.natList('women').find(t => t.id === P.view(0).team.id), `Championship as an Adult and Female: no switch, the women's twelve (${$('t-go').textContent})`);
+  fresh(); F.set({ age:'adult', gender:'male', look:null }); st.cat = 'women'; D.openTeams('quick'); P.set(0);
+  ok($('t-cat').hidden && /^Pick (?!.*Women)/.test($('t-go').textContent) && st.cat === 'men', `Quick Match as an Adult and Male: Men, named so (${$('t-go').textContent})`);
+  fresh(); F.set({ age:'adult', gender:'male', look:null }); st.cat = 'women'; D.openJoin(); D.openTeams('two');
+  ok(!$('t-cat').hidden && st.cat === 'women' && F.catFixed() === null, '2 Players keeps Men | Women | Minis and its own category (two people share the device): the profile decides nothing there');
+  X.catPick('minis'); ok(st.cat === 'minis' && F.get().age === 'adult', 'and its switch still works, never rewriting the profile'); D.setTwo(false); D.goHome();
+  fresh(); F.set({ age:'adult', gender:'female', look:null }); C.newOpen(); C.clubOpen();
+  ok(D.pickMode() === 'career' && $('t-cat').hidden && C.draft().cat === 'women', 'Career\'s Change Club: no switch, as ever (New Player has its own Men | Women)');
+  C.catPick('men'); C.clubOpen(); ok(C.draft().cat === 'men' && D.pickMode() === 'career' && $('t-cat').hidden, 'its own category, Men, kept against the profile\'s Women'); D.goHome();
+  // a side remembered in another category: Bath (in every category) set again as Bath on Men; Canada (Women only) gone, no longer set
+  fresh(); F.set({ age:'adult', gender:'male', look:null }); st.pick = [{ id:'CDN', cat:'women', g:'nat.cdn' }, { id:'BTH', cat:'women', g:'eng' }];
+  D.openTeams('quick');
+  ok(st.cat === 'men' && $('t-cat').hidden && X.listName(P.view(0).team) === 'Farnham' && !P.state().sides[0].set && X.listName(P.view(1).team) === 'Bath' && P.state().sides[1].set, `picks remembered on Women, the profile Men: Canada gone (Your Team back on My Team's club, not set), Bath set as Bath on Men (${X.listName(P.view(0).team)}, ${X.listName(P.view(1).team)})`);
+  fresh(); F.set({ age:'adult', gender:'female', look:null }); st.pick = [{ id:'CDN', cat:'women', g:'nat.cdn' }, { id:'BTH', cat:'women', g:'eng' }];
+  D.openTeams('quick'); ok(st.cat === 'women' && P.view(0).team.id === 'CDN' && P.state().sides[0].set && P.state().sides[1].set, 'the same picks with the profile Women: both set again, as before');
+  fresh(); D.openTeams('quick'); ok(!$('t-cat').hidden && st.cat === 'men', 'no profile (a save from before it, or the setup skipped): the switch as ever');
+  D.goHome();
+}
+
 // 7. Your player: in My Team's box (the art, where it is in: the browser part below), in Career's New Player, and on one man of your side in
 //    each mode you play: Quick Match, Championship, a cup. Never a career's (its own player), AI v AI, the demo, Two Player or a tool's match.
 {
@@ -366,6 +434,89 @@ async function browserChecks() {
       await p3.goto(base + 'index.html', { waitUntil:'load' }); const bot = await p3.evaluate(() => [[...document.querySelectorAll('.screen')].find(x => !x.hidden).id, navigator.webdriver]); await ctx2.close();
       ok(withSave === 's-home' && bot[0] === 's-home' && bot[1] === true, `${kind}: with a save, or under automation (the tools), the home as ever (${withSave}, ${json(bot)})`);
       ok(!errors.length, `${kind}: no page errors (${errors.slice(0, 2).join(' | ')})`);
+      // Settings' Age Group | Gender pressed for real (sections 6b and 6c): the profile's answers drawn, none pressed with none; each tap's
+      // level on the Difficulty row at once; the grown-up check and its cancel; My Profile in step both ways; the step whole at this size on
+      // the web and in the app (Grown-Ups), reduced motion or not; the team screen without Men | Women | Minis once the profile decides it
+      {
+        const ctx5 = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });
+        const p5 = await ctx5.newPage(); const err5 = []; p5.on('pageerror', e => err5.push(e.message));
+        await p5.addInitScript(() => localStorage.setItem('tryline.v1', '{"settings":{"played":3}}'));
+        await p5.goto(base + 'index.html', { waitUntil:'load' }); await p5.evaluate(() => document.fonts.ready);
+        const SET = `window.__set = () => {
+          const T = window.__tryline, $ = id => document.getElementById(id), r = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && r(el).width > 0;
+          const on = sel => [...document.querySelectorAll(sel + ' button')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.v || b.textContent.trim()).join() || 'none';
+          const p = $('hp-settings'), home = $('s-home'), btns = [...p.querySelectorAll('button')].filter(vis);
+          return { age:on('#set-age'), gender:on('#set-gender'), diff:on('#hp-settings [data-key="diff"]'), cat:T.debug.settings().cat, gate:!$('m-gate').hidden, step:T.home.step(),
+            page:home.scrollHeight - home.clientHeight, wide:document.documentElement.scrollWidth - innerWidth, inner:p.scrollHeight - p.clientHeight, n:btns.length,
+            rows:[...p.querySelectorAll('.set')].filter(vis).filter(x => r(x).top < r(p).top - 0.5 || r(x).bottom > r(p).bottom + 0.5 || r(x).bottom > innerHeight + 0.5).map(x => x.className),
+            small:btns.filter(b => r(b).height < 43.5 || r(b).width < 43.5).map(b => b.textContent.trim()),
+            cut:[...p.querySelectorAll('.lbl, .ver, button')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent.trim()), grown:vis($('b-grown')) };
+        };`;
+        await p5.evaluate(SET);
+        const fitBad = m => m.page > 0 || m.wide > 0 || m.inner > 0 || m.rows.length || m.small.length || m.cut.length;
+        const run = await p5.evaluate(() => {
+          const T = window.__tryline, S = T.store, $ = id => document.getElementById(id), out = {}, tap = (id, v) => $(id).querySelector(`[data-v="${v}"]`).click();
+          T.profile.set({ age:null, gender:null, look:null }); T.debug.goHome(); T.home.open('settings'); out.none = window.__set();
+          for (const app of [false, true]) { S.setNative(app); S.setStarted(app); S.setBought([]); T.debug.goHome(); T.home.open('settings'); out[app ? 'app' : 'web'] = window.__set(); }
+          S.setNative(false); S.setStarted(false); T.debug.goHome(); T.home.open('settings');
+          tap('set-age', 'mini'); out.mini = window.__set();
+          tap('set-age', 'junior'); out.ask = window.__set(); $('pg-cancel').click(); out.cancel = window.__set();
+          tap('set-age', 'junior'); for (const d of T.kids.gate().answer) $('pg-k' + d).click(); out.junior = window.__set();
+          tap('set-gender', 'female'); out.female = window.__set();
+          tap('set-age', 'adult'); out.adult = window.__set();
+          tap('set-gender', 'na'); out.na = window.__set();
+          $('hs-back').click(); $('b-my').click();
+          const mine = sel => [...document.querySelectorAll(sel + ' button')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.v).join() || 'none';
+          out.profile = [mine('#pf-age'), mine('#pf-gender')];
+          $('pf-gender').querySelector('[data-v="female"]').click(); $('pf-back').click(); T.home.open('settings'); out.back = window.__set();
+          // the team screen: no switch once the profile decides (Adult, Female now), the switch while it does not, 2 Players keeping it
+          const top = () => { const bar = document.querySelector('.pk-top').getBoundingClientRect(), f = $('t-find').getBoundingClientRect(), n = document.querySelector('.pk-name').getBoundingClientRect(), sc = $('s-teams');
+            return { cat:$('t-cat').hidden ? 'none' : [...$('t-cat').children].find(b => b.getAttribute('aria-pressed') === 'true').dataset.cat, played:T.debug.settings().cat, right:Math.round(bar.right - f.right), clear:n.right <= f.left, scroll:sc.scrollHeight - sc.clientHeight, wide:document.documentElement.scrollWidth - innerWidth }; };
+          T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); out.quick = top();
+          T.debug.openTeams('champ', 'int'); out.champ = top();
+          T.debug.openJoin(); T.debug.openTeams('two'); out.two = top(); T.debug.setTwo(false);
+          T.profile.set({ age:'adult', gender:null, look:null }); T.debug.settings().cat = 'minis'; T.debug.openTeams('quick'); out.open = top();
+          T.profile.set({ age:null, gender:null, look:null }); T.debug.goHome();
+          return out;
+        });
+        const st5 = k => [run[k].age, run[k].gender, run[k].diff, run[k].cat].join(' ');
+        ok(st5('none') === 'none none Normal men' && run.none.n === 21 && !run.none.grown, `${kind}: Settings with no profile: no age group or gender pressed, 21 buttons (${st5('none')})`);
+        const fits = ['none', 'web', 'app', 'mini', 'ask', 'cancel', 'junior', 'adult', 'na', 'back'].filter(k => fitBad(run[k]));
+        ok(!fits.length && run.app.grown && run.app.n === 22, `${kind}: Settings whole with its four rows, the web and the app (Grown-Ups a third of Sound's row): no page scroll, nothing scrolled inside the step, every row inside its panel and the screen, every target 44px, nothing cut (${fits.map(k => k + ' ' + json(run[k])).join('; ') || 'every state'})`);
+        ok(st5('mini') === 'mini none Kids minis' && !run.mini.gate && run.mini.step === 'settings', `${kind}: Mini: the Difficulty row on Kids at once, Minis (${st5('mini')})`);
+        ok(run.ask.gate && st5('ask') === 'mini none Kids minis' && !run.cancel.gate && st5('cancel') === 'mini none Kids minis' && run.cancel.step === 'settings', `${kind}: Junior from the Kids level: the grown-up check, nothing moved; Cancel: still Mini and Kids, Settings open (${st5('ask')}, ${st5('cancel')})`);
+        ok(st5('junior') === 'junior none Easy men' && st5('female') === 'junior female Easy women' && st5('adult') === 'adult female Normal women' && st5('na') === 'adult na Normal men', `${kind}: answered, Junior and Easy; Female, Women, the level kept; Adult, Normal; Not Say, Men (${['junior', 'female', 'adult', 'na'].map(st5).join('; ')})`);
+        ok(json(run.profile) === json(['adult', 'na']) && run.back.gender === 'female' && run.back.cat === 'women', `${kind}: My Profile shows what Settings set (Adult, Not Say), and Settings what My Profile set (Female, Women) (${json(run.profile)}, ${run.back.gender})`);
+        ok(run.quick.cat === 'none' && run.quick.played === 'women' && run.champ.cat === 'none' && run.quick.right === 0 && run.quick.clear && run.champ.right === 0 && !run.quick.scroll && !run.quick.wide && !run.champ.scroll, `${kind}: the team screen as an Adult and Female: no Men | Women | Minis in Quick Match or Championship, Women played, the search icon at the top bar's right end, clear of the title, no scroll (${json([run.quick, run.champ])})`);
+        ok(run.two.cat === 'women' && run.open.cat === 'minis' && run.open.played === 'minis', `${kind}: 2 Players keeps the switch; with no gender the switch is back and the side as it was (Minis) (${json([run.two, run.open])})`);
+        await p5.emulateMedia({ reducedMotion:'reduce' });
+        const calm = await p5.evaluate(() => { const T = window.__tryline; T.profile.set({ age:'junior', gender:'male', look:null }); T.debug.goHome(); T.home.open('settings'); return window.__set(); });
+        ok(!fitBad(calm) && calm.age === 'junior' && calm.gender === 'male', `${kind}: reduced motion: Settings as ever, whole, its answers pressed (${json([calm.age, calm.gender, calm.inner])})`);
+        if (!touch) {
+          // the keyboard: Tab in order (Difficulty, Age Group, Gender, then the rest); the arrows a row at a time, Up from the first row to Back
+          await p5.evaluate(() => { const T = window.__tryline; T.debug.goHome(); T.home.open('settings'); document.querySelector('#hp-settings [data-key="diff"] button').focus(); });
+          const name = () => p5.evaluate(() => { const a = document.activeElement, s = a && a.closest('.seg'); return !a ? 'none' : s ? (s.dataset.key || s.id) + ':' + (a.dataset.v || a.textContent.trim()) : a.id; });
+          const tabs = [await name()]; for (let i = 0; i < 10; i++) { await p5.keyboard.press('Tab'); tabs.push(await name()); }
+          const arrows = []; await p5.evaluate(() => document.querySelector('#hp-settings [data-key="diff"] button').focus());
+          for (const k of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowUp']) { await p5.keyboard.press(k); arrows.push(await name()); }
+          await p5.evaluate(() => document.querySelector('#set-gender [data-v="na"]').focus()); await p5.keyboard.press('ArrowDown'); arrows.push(await name()); await p5.keyboard.press('ArrowUp'); arrows.push(await name());
+          ok(json(tabs) === json(['diff:Kids', 'diff:Easy', 'diff:Normal', 'diff:Hard', 'set-age:mini', 'set-age:junior', 'set-age:adult', 'set-gender:male', 'set-gender:female', 'set-gender:na', 'sound:On']), `${kind}: Tab goes Difficulty, then Age Group, then Gender, then the rest (${tabs.join(' ')})`);
+          ok(json(arrows) === json(['set-age:mini', 'sound:On', 'half:2 Min', 'sound:On', 'set-age:mini', 'diff:Kids', 'hs-back', 'hints:Off', 'set-gender:na']), `${kind}: Down from Kids to Mini, to Sound's On, to Half Length's 2 Min, and Up back the same way to Back; Down from Not Say to Match Help's Off and Up again (${arrows.join(' ')})`);
+          // a controller: the ring from its first press reaches every button of Settings, and Down from Kids goes a row at a time
+          const pad = await p5.evaluate(() => {
+            const T = window.__tryline, $ = id => document.getElementById(id), p = $('hp-settings'); T.debug.goHome(); T.home.open('settings'); T.home.ring(null);
+            const all = [...p.querySelectorAll('button')].filter(b => !b.hidden && !b.closest('[hidden]') && b.getBoundingClientRect().width > 0), seen = new Set(), todo = [T.navMove(0, 0, 0)];
+            while (todo.length) { const el = todo.pop(); if (!el || seen.has(el)) continue; seen.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); todo.push(T.navMove(0, dx, dy)); } }
+            const nm = el => !el ? 'none' : el.closest('.seg') ? (el.closest('.seg').dataset.key || el.closest('.seg').id) + ':' + (el.dataset.v || el.textContent.trim()) : el.id;
+            T.home.ring(p.querySelector('[data-key="diff"] button')); const path = []; for (let i = 0; i < 4; i++) path.push(nm(T.navMove(0, 0, 1)));
+            T.home.ring(null);
+            return { missing:all.filter(b => !seen.has(b)).map(nm), path };
+          });
+          ok(!pad.missing.length && json(pad.path) === json(['set-age:mini', 'sound:On', 'half:2 Min', 'none']), `${kind}: a controller's ring reaches every button of Settings, Age Group and Gender among them, and Down goes a row at a time (${json(pad)})`);
+        }
+        ok(!err5.length, `${kind}: no page errors in Settings or on the team screen (${err5.slice(0, 2).join(' | ')})`);
+        await ctx5.close();
+      }
       // the keyboard and a controller (once a size, on the computer)
       if (!touch) {
         const ctx4 = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, serviceWorkers:'block' });   // its own storage: a first launch again

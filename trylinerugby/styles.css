@@ -317,7 +317,7 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 /* the game's version, small at the foot of Settings (GAME_VERSION): on the last row's label line, at its right end, set as a label is (the
    Camera's on the left), so it takes no row of its own and never sits on a button */
 .ver{margin:0;font:700 12px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim);pointer-events:none}
-.hp-settings.settings .set-cam,.hp-settings.settings .ver{grid-row:3;grid-column:4/-1}   /* the two share the Camera's cell, the version over its label line's right end */
+.hp-settings.settings .set-cam,.hp-settings.settings .ver{grid-row:4;grid-column:4/-1}   /* the two share the Camera's cell, the version over its label line's right end */
 .hp-settings .ver{justify-self:end;align-self:start;white-space:nowrap}
 
 /* create team */
@@ -1329,7 +1329,8 @@ body.desk .desk-only{display:block}
 .hp-settings .set{grid-template-columns:1fr;gap:4px;grid-column:span 3}
 .hp-settings .set-diff{grid-column:1/-1}
 .hp-settings.settings{flex:0 1 auto;margin-block:auto}
-.hp-settings .seg button:focus-visible{outline-offset:-4px}   /* inside its segment, which clips anything outside it */
+.hp-settings .seg button:focus-visible,.hp-settings .seg button.padfocus{outline-offset:-4px}   /* inside its segment, which clips anything outside it: the keyboard's focus and a controller's ring alike (the ring's top and bottom were cut off) */
+.hp-settings .seg button[aria-pressed="true"]:focus-visible,.hp-settings .seg button[aria-pressed="true"].padfocus{outline-color:var(--night)!important}   /* on the chalk of the one pressed, in the night's ink: chalk on chalk was no ring at all */
 .hp-settings.grown .set-sound,.hp-settings.grown .set-hints,.hp-settings #b-grown{grid-column:span 2}
 .hp-settings #b-grown{align-self:end;min-height:47px;padding-inline:8px;white-space:nowrap}   /* a segment's height (44px inside its edges), its foot on theirs */
 .im-home{white-space:normal}
@@ -1414,9 +1415,13 @@ summary::-webkit-details-marker{display:none}
   .hp-settings.settings{gap:6px 10px;padding:6px 10px}
   .hp-settings .set{gap:2px}
   .hp-settings .lbl,.hp-settings .ver{font-size:11px;line-height:1}
+  .hp-settings .seg{border:0;outline:1.5px solid var(--rule-hi);outline-offset:-1.5px}   /* each row's buttons the 44px floor with the segment's edge drawn inside them, not round them, so four rows fit (Age Group | Gender under Difficulty) */
+  .hp-settings #b-grown{min-height:44px}   /* Grown-Ups as tall as the segments beside it, as above */
 }
 @media (orientation:landscape) and (max-height:340px) and (max-width:700px){
   /* 667x320 and 568x320 */
+  .hp-settings.settings{gap:4px 10px;padding:3px 10px}   /* Settings' four rows whole in what is left under Back: each label 1px over its own row, 4px under the one before */
+  .hp-settings .set{gap:1px}
   .my-acts .btn{font-size:13px;padding-inline:3px}
   .home{grid-template-columns:minmax(0,42fr) minmax(0,56fr)}
   .home .word{font-size:38px}

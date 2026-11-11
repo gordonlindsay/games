@@ -168,6 +168,7 @@ function renderHome() {
     const val = key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
+  if (typeof profileSettings === 'function') profileSettings();   // Age Group | Gender under Difficulty: the profile's answers (src/profile.js)
   myHome();
   homeCabinet();
   champHome();
@@ -259,7 +260,8 @@ $('pr-grown-back').addEventListener('click', () => { $('hs-back').hidden = false
    with it (its buttons, or the Trophy Cabinet), never down the boxes' own column, and Right from the end of a row in My Team's column goes
    to the box level with it, or back to the box Left came from (homeNavLeft), so Left then Right is where it started; Up and Down in My
    Team's column stay in it; Continue has nothing to its right. On a step, Down from Back lands on the step's first row (Competitions'
-   tiers, which sit to its right), and Up from that row goes back to Back. */
+   tiers, which sit to its right), and Up from that row goes back to Back; in Settings Up and Down go a row at a time, to the button
+   nearest across (Difficulty, Age Group | Gender, Sound | Match Help, Half Length | Camera), the last row's Down to nothing. */
 let homeNavLeft = null;                                      // the last Left from a box into My Team's column: { at:the button it landed on, box:the box it left }
 function homeNavTo(from, dx, dy, cands) {
   if (!from || $('s-home').hidden) return undefined;
@@ -276,6 +278,12 @@ function homeNavPick(from, dx, dy, cands) {
       return row[0] || null;
     }
     if (from !== back && !dx && dy < 0 && inside.includes(from) && r(from).top - top < 4 && cands.includes(back)) return back;   // Up from the step's first row: Back
+    if (homeStep === 'settings' && !dx && dy && inside.includes(from)) {   // Settings: Up and Down a row at a time, on its button nearest across (Age Group's thirds over Sound's halves would otherwise send Junior two rows down)
+      const foot = el => r(el).bottom, f0 = foot(from), way = inside.filter(el => (foot(el) - f0)*dy > 8);   // a row by its foot: Grown-Ups stands on Sound's
+      if (!way.length) return null;                                       // the last row: nothing under it
+      const near = way.reduce((a, el) => (Math.abs(foot(el) - f0) < Math.abs(foot(a) - f0) ? el : a));
+      return way.filter(el => Math.abs(foot(el) - foot(near)) <= 8).sort((a, b) => Math.abs(mid(a, 'x') - mid(from, 'x')) - Math.abs(mid(b, 'x') - mid(from, 'x')))[0];
+    }
     return undefined;
   }
   if (from === $('b-continue') && !dy && dx > 0) return null;          // Continue is alone in its row: nothing to its right
@@ -689,6 +697,10 @@ let pickView = [null, null];                               // each side as drawn
 const FL = { open:false, s:0, path:[], q:'', from:null, cols:[], hits:[], refit:false, vv:null, only:null };   // the Filter (below): open or not, its side, the path its columns show, the text, what opened it ('find' or 'sheet'), the window resized under it, the one seat it answers (2 Players)
 const pickOne = () => pickMode !== 'quick' && pickMode !== 'two';   // Championship, Career, My Team and the cups: one side, centred
 const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : pickMode === 'setup' && typeof profileSetupCat === 'function' ? profileSetupCat() : settings.cat);   // the setup's Club: the category its answers give (src/profile.js)
+/* Men | Women | Minis is the profile's once it decides the category (profileDecides: a Mini, or a Junior or an Adult with a gender; changed in
+   Settings or My Profile): Quick Match, Championship and My Team play it, with no switch on the screen. 2 Players keeps the switch (two people
+   share the device, and the profile is one of them's); Career and the setup have their own category, as ever. null: the switch as it was. */
+const pickCatFixed = () => (pickMode === 'two' || pickMode === 'career' || pickMode === 'setup' || typeof profileDecides !== 'function' ? null : profileDecides());
 /* Championship's World Cup or Home Nations Tour, chosen on the home: its title, its list, its side and its primary (src/ui-cups.js);
    null for a league or the nation's championship, and for every other mode. */
 const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
@@ -970,6 +982,7 @@ function openTeams(m, comp, o) {
     settings.pool = cupId !== 'league' ? 'int' : poolKey(k) === k ? k : 'sur';
   } else if (m !== 'career') settings.pool = myPool() || 'sur';
   if (!pickOne()) { const cats = settings.pick.filter(Boolean).map(p => p.cat); if (cats.length && cats.every(c => c === cats[0]) && TEAM_CATS.some(c => c.id === cats[0])) settings.cat = cats[0]; }   // Quick Match and 2 Players reopen in the category their sides were picked in (Championship may have moved it)
+  const decided = pickCatFixed(); if (decided) settings.cat = decided;   // a profile that decides the category: the teams follow it, and a side remembered in another falls back as a category changed does (pickOpen)
   pickOpen(0); if (!pickOne()) pickOpen(1);
   const play = m === 'quick' && !!(o && o.play);
   if (play) pickPlay();
@@ -990,7 +1003,7 @@ function renderTeams() {
   eb.classList.remove('p1'); eb.classList.remove('p2');
   const t0 = pickView[0] && pickView[0].team;
   $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' || setup ? 'Pick Your Club' : 'Pick Your Team';
-  $('t-cat').hidden = pickMode === 'career' || setup;        // Men | Women is New Player's; the setup's category comes from its answers
+  $('t-cat').hidden = pickMode === 'career' || setup || !!pickCatFixed();   // Men | Women is New Player's; the setup's category comes from its answers; a profile that decides it, in Settings
   $('t-find').hidden = !pickFilterable(pickView[pick.on]); $('t-find').setAttribute('aria-label', 'Search ' + pickFindWord());   // the Filter's icon, for the side being set: none on a fixed list (the World Cup, the tour)
   $('t-sback').hidden = $('t-skip').hidden = !setup; $('t-back').hidden = setup;   // the setup's Back and Skip along the top, as on its other steps (src/profile.js)
   $('s-teams').classList.toggle('pk-setup', setup);
@@ -1483,8 +1496,8 @@ function pickNav(seat, dx, dy) {
       const o = focusEl === go ? back : go, a = focusEl.getBoundingClientRect(), b = o.getBoundingClientRect();
       if (!o.hidden && b.width && Math.abs(a.top - b.top) < 4 && (b.left - a.left)*dx > 0) { setFocus(o); return true; }
     }
-    const cat = $('t-cat'), chosen = !cat.hidden && cat.querySelector && cat.querySelector('[aria-pressed="true"]');
-    if (dy < 0 && !dx && chosen && focusEl.closest && focusEl.closest('.pk-head')) { setFocus(chosen); return true; }   // Up from either side's head: Men | Women | Minis, on the one chosen
+    const cat = $('t-cat'), chosen = !cat.hidden && cat.querySelector && cat.querySelector('[aria-pressed="true"]'), up = chosen || (pickCatFixed() && !$('t-find').hidden ? $('t-find') : null);
+    if (dy < 0 && !dx && up && focusEl.closest && focusEl.closest('.pk-head')) { setFocus(up); return true; }   // Up from either side's head: Men | Women | Minis, on the one chosen; with no switch (the profile decides the category), the search icon, the top bar's one control
     return false;                                            // the ring moves as on every screen (navMove)
   }
   let s = null;

@@ -43,6 +43,15 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(!K.gate() && !s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === false, 'a right answer takes it off and saves');
   seg.children[0].click(); ok(!K.gate() && s.kids, 'going on to Kids needs no check'); K.segSet(1);
   ok(/if \(key === 'diff' && kidsLevel\(\) && i !== 0\) \{ parentGate\(/.test(fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8')), 'every button but Kids goes through the check, and only while on Kids');
+  // Settings' Age Group under Difficulty (src/profile.js) leaves the Kids level only past the same check; a gender never moves the level
+  const F = T.profile; F.set({ age:null, gender:null, look:null }); K.segSet(1); T.home.open('settings');
+  F.age('mini'); ok(!K.gate() && s.kids && s.diff === 0, 'Settings\' Mini: on to Kids, no check (as Kids itself)');
+  F.age('adult'); ok(K.gate() && s.kids && F.get().age === 'mini', 'Settings\' Adult from the Kids level: the grown-up check first, the level and the age group not moved');
+  K.close(false); ok(!K.gate() && s.kids && s.diff === 0 && F.get().age === 'mini' && JSON.parse(memory['tryline.v1']).settings.kids === true, 'cancelled: still Kids, still Mini, in the save too');
+  F.gender('male'); ok(!K.gate() && s.kids && F.get().gender === 'male', 'a gender asks nothing and leaves the Kids level on');
+  F.age('junior'); { const g = K.gate(); for (const d of g.answer) K.type(d); }
+  ok(!K.gate() && !s.kids && s.diff === 0 && F.get().age === 'junior', 'answered: Junior, Easy with the Kids level off');
+  F.set({ age:null, gender:null, look:null }); K.segSet(1); s.cat = 'men'; D.goHome();
 }
 
 // 2. the save: a round trip, an old save, a partial and a bad one
