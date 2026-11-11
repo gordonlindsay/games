@@ -1109,11 +1109,22 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     the pitch) left the run held with no thumb on the glass and every new thumb on the zone ignored, until a blur, the phone
     upright or Quit. Now a held finger also lets go on its own lift anywhere on the page (the window hears it first), when the
     zone loses its capture and can't take it back, and when the page is hidden or `pagehide` (as a blur already did: a
-    home-screen app may send no blur). And a new finger takes over at once when the old one is plainly gone: the new press has
-    the old finger's id, or the stick or the button no longer holds the old finger's capture, or a touchstart's list of the
-    fingers on the glass is all new ones. A finger still on the glass is none of these, so a second finger never takes the
-    stick or a button from a live one (a palm on the zone is ignored, as before), and a stale Kick is let go as cancelled,
-    never fired. Nothing here draws a random number.
+    home-screen app may send no blur). At any new press anywhere, before it reaches its own target, a stick or a button that
+    no longer holds its finger's capture (the browser saw the lift), or whose finger's id the new press has, lets go, and the
+    new finger takes it if it pressed that one. And the glass has the last word (the review's follow-up, the same day, after
+    the owner saw it stuck at full deflection twice in iPhone Safari): every touchstart, touchend and touchcancel lists the
+    fingers really down, and a hold whose finger isn't listed lets go whatever the pointer events said, a finger this
+    touchstart's own press turned away from it taking its place; with no finger listed, nothing touch holds is held. So the
+    release no longer hangs on which event WebKit drops: the pointerup, the capture or the touch's end each does it alone,
+    and a dead thumb's run stops at the next touch of any finger, with Sprint held or the browser still claiming its capture.
+    A pointer's id is not its touch's identifier (not in WebKit, and in Chromium a thumb's pointer id can be Sprint's touch
+    identifier), so each hold is named with its touch by where it went down: the touchstart that comes with its pointerdown
+    (after it, in the same task) has a touch at that spot (0px apart in Chromium; two fingertips never land within 24px), and
+    a browser that sent the touchstart first has the hold named at the next touch event, by where its finger is then. A hold
+    never named lets go only when no finger is listed, or at a touchstart whose fingers are all new. A finger still on the
+    glass is none of these, so a second finger never takes the stick or a button from a live one (a palm on the zone is
+    ignored, as before), and a stale Kick is let go as cancelled, never fired. A mouse's or a pen's hold, the keys and a pad
+    are not the glass's to judge. Nothing here draws a random number.
   - **A card under a second finger** (the same day). A browser makes a click from a tap only when no other finger is on the
     glass, and every card and Pause act on a click, so with a thumb on the stick or on Sprint a tap on the tutorial card's
     Next, Skip or Play, on Pause, Resume, the penalty card, Second Half or Continue did nothing until every other finger

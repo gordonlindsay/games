@@ -16,10 +16,14 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
 const begin = name => { group = name; };
 const done = () => console.log(`${group.padEnd(34)} ${failed ? 'FAIL so far ' + failed : 'ok'} (${passed} passed)`);
 
-/* The glass, as a browser keeps it: the fingers down (live) and who holds each one's capture. A lift the page hears goes to the window
-   first, then to the element holding the finger; one it never hears leaves the page as it was. Chromium lets the capture go when it
-   sees the lift, whether or not the page hears it (gone); an iPhone that never saw the lift itself would still claim it (stale). */
-const live = new Set(), caps = new Map();
+/* The glass, as a browser keeps it: the fingers down (live: each pointer's touch, with its own identifier and where it is now) and who
+   holds each one's capture. A press goes to the window first (its capture phase), then to its target, then its touchstart; a lift the
+   page hears goes to the window, then to the element holding the finger, then its touchend. One it never hears leaves the page as it was.
+   Chromium lets the capture go when it sees the lift, whether or not the page hears it (gone); an iPhone that never saw the lift itself
+   would still claim it (stale). A touch's identifier is never its pointer's id here (WebKit's isn't, nor Chromium's), so a hold matched
+   to its touch by the pointer's id would find none. */
+const live = new Map(), caps = new Map();
+let nextTouch = 7000;
 function capturable(el) {
   el.setPointerCapture = id => { if (!live.has(id)) throw Error('NotFoundError'); caps.set(id, el); };
   el.hasPointerCapture = id => caps.get(id) === el;
@@ -28,14 +32,24 @@ function capturable(el) {
 for (const id of ['zone', 'btnA', 'btnB', 'btnC']) capturable($(id));
 let clock = 1000;                                          // the events' own timeStamp: each new press is a second after the last
 const P = (id, x = 160, y = 290, o = {}) => ({ pointerId:id, pointerType:'touch', clientX:x, clientY:y, timeStamp:clock, ...o });
-const down = (el, id, x, y, o = {}) => { clock += 1000; live.add(id); $(el).fire('pointerdown', P(id, x, y)); if (o.touch !== false) touchstart([id], [...live]); };   // a press, then its touchstart (o.touch false: the touchstart comes later, by hand)
-const move = (id, x, y) => $('zone').fire('pointermove', P(id, x, y));
+const down = (el, id, x = 160, y = 290, o = {}) => {        // a press, then its touchstart (o.touch false: the touchstart comes later, by hand; o.first: before the pointerdown, as a browser might)
+  clock += 1000; live.set(id, { identifier:nextTouch++, clientX:x, clientY:y });
+  if (o.first) touchstart([id], [...live.keys()]);
+  const e = P(id, x, y, o.type ? { pointerType:o.type } : {}); fire('pointerdown', e); $(el).fire('pointerdown', e);
+  if (o.touch !== false && !o.first) touchstart([id], [...live.keys()]);
+};
+const move = (id, x, y) => { const t = live.get(id); if (t) { t.clientX = x; t.clientY = y; } $('zone').fire('pointermove', P(id, x, y)); };
 const holder = id => caps.get(id) || $('cv');
-const up = (id, type = 'pointerup') => { live.delete(id); const e = P(id); fire(type, e); holder(id).fire(type, e); caps.delete(id); };   // heard: the window, then the holder
+const up = (id, type = 'pointerup') => {                   // heard: the window, then the holder, then the touch's end
+  const t = live.get(id); live.delete(id); const e = P(id); fire(type, e); holder(id).fire(type, e); caps.delete(id);
+  if (t) touchEnd([t], type === 'pointercancel' ? 'touchcancel' : 'touchend');
+};
 const gone = id => { live.delete(id); caps.delete(id); };     // lifted, never heard by the page; the browser saw it and let the capture go
 const stale = id => { live.delete(id); };                    // lifted, and the browser itself never saw it: the capture still claimed
-const touchList = ids => ids.map(id => ({ identifier:id, clientX:160, clientY:290 }));
+const touchList = ids => ids.map(id => ({ ...(live.get(id) || { identifier:90000 + id, clientX:160, clientY:290 }) }));
 const touchstart = (fresh, all) => { const e = { changedTouches:touchList(fresh), touches:touchList(all), timeStamp:clock }; fire('touchstart', e); fireDoc('touchstart', e); };
+const touchEnd = (ended, type = 'touchend') => { const e = { changedTouches:ended.map(t => ({ ...t })), touches:touchList([...live.keys()]), timeStamp:clock }; fire(type, e); fireDoc(type, e); };   // the fingers listed are the ones still live
+const lose = id => { const t = { ...live.get(id) }; stale(id); return t; };   // a lift whose pointer events the page never hears: its touch's end still comes (touchEnd([t]))
 function fresh(kind = 'past') {
   D.releaseTouch(); D.releaseAll(); D.setTwo(false); live.clear(); caps.clear();
   T.newMatch(0, 1, { halfLen:240, diff:1, duels:'off' }); D.setMode('match'); if (kind) D.stage(kind);
@@ -163,7 +177,115 @@ begin('a button\'s lift lost');
 }
 done();
 
-// 7. A card's button under a second finger: the finger's own lift on it clicks it. A browser makes no click from a tap while another
+// 7. A hold whose lift was lost (the browser saw it and let its capture go) lets go at any new press anywhere, before the press reaches its
+//    own target: a button as cancelled, so a stale Kick is never a kick, and a press on that same stick or button takes it fresh. A live
+//    finger still holds its capture, so it keeps its hold. (The review of 4defbcd: a stale Sprint was let go only by a press on Sprint
+//    itself or a touchstart with every finger new.) No touch event is heard here: the press alone must tell
+begin('any press frees a stale hold');
+{
+  fresh(); down('zone', 50); move(50, 230, 290); down('btnC', 51, 700, 300); run();
+  gone(51);
+  down('btnA', 52, 760, 250, { touch:false });
+  ok(!I.cDown && !$('btnC')._held && !$('btnC').classList.contains('press') && I.cCancel, 'Sprint\'s lift lost, then a tap on Pass: Sprint lets go, as cancelled');
+  ok(I.aDown && $('btnA')._pointerId === 52 && I.stickId === 50 && I.jx === 1, 'Pass is pressed and the thumb still runs');
+  run(); up(52, 'pointercancel'); up(50);
+  const m = fresh(), c = T.sides.ctrlOf(0); m.ball.state = 'held'; m.ball.carrier = c;
+  down('btnB', 53, 640, 330); run(5); ok(m.side[0].charging, 'Kick held: charging');
+  const kicks = m.stats.kicks; gone(53);
+  down('zone', 54, 160, 290, { touch:false });
+  ok(!I.bDown && !$('btnB')._held && I.bCancel && I.stickId === 54, 'Kick\'s lift lost, then a thumb on the zone: Kick lets go as cancelled, and the thumb has the stick');
+  run(3); ok(m.stats.kicks === kicks && !m.side[0].charging, 'and no kick is fired from it');
+  down('btnB', 55, 640, 330); run(5); gone(55);
+  down('btnB', 56, 640, 330, { touch:false });
+  ok(I.bDown && I.bPressed && !I.bCancel && $('btnB')._pointerId === 56, 'a stale Kick and a press on Kick itself: the new finger takes it as a fresh press, never a cancel');
+  run(3); ok(m.side[0].charging && m.stats.kicks === kicks, 'charging again from the new press, and no kick from the old one');
+  up(56, 'pointercancel'); up(54);
+  fresh(); down('zone', 57); move(57, 230, 290); gone(57);
+  run(3); ok(I.stickId === 57 && I.jx === 1, 'the thumb\'s lift lost with nothing heard: still running (the most the page can know)');
+  down('btnC', 58, 700, 300, { touch:false });
+  ok(!held() && I.cDown && $('btnC')._pointerId === 58, 'then a press on Sprint: the stick lets go, and Sprint is pressed');
+  run(3); ok(I.world().mag === 0, 'no run with no thumb on the glass');
+  up(58);
+  fresh(); down('zone', 59); move(59, 230, 290); down('btnC', 60, 700, 300); down('btnB', 61, 640, 330, { touch:false }); down('zone', 62, 330, 200, { touch:false });
+  ok(I.stickId === 59 && I.jx === 1 && I.cDown && $('btnC')._pointerId === 60 && I.bDown && $('btnB')._pointerId === 61, 'presses beside live fingers let go of nothing: the stick, Sprint and Kick all held, a palm on the zone ignored');
+  up(62); up(61, 'pointercancel'); up(60); up(59); ok(!held() && !I.cDown && !I.bDown, 'each lifts on its own');
+}
+done();
+
+// 8. The stick's lift lost while the browser still claims the dead thumb's capture, and another finger is down (Sprint held): a new
+//    thumb's touchstart lists Sprint's finger and itself but not the old thumb, so the old hold goes and the new thumb takes the stick.
+//    (The review of 4defbcd: a touchstart let go of a stale hold only when every finger on it was new, so with Sprint down it never did)
+begin('a stale stick beside a live finger');
+{
+  fresh(); down('zone', 63); move(63, 230, 290); down('btnC', 64, 700, 300); run();
+  stale(63);
+  run(5); ok(I.stickId === 63 && I.jx === 1, 'the thumb\'s lift lost, nothing heard: the run is still held (the most the page can know)');
+  down('zone', 65, 260, 300);
+  ok(I.stickId === 65 && I.ox === 260 && I.jx === 0, 'a new thumb on the zone with Sprint down: its touchstart lacks the old thumb, so the new thumb takes the stick');
+  ok(I.cDown && $('btnC')._pointerId === 64, 'and Sprint, whose finger it lists, stays held');
+  move(65, 190, 300); ok(I.jx < -0.5, 'and steers');
+  up(65); ok(!held() && I.cDown, 'its lift lets go of the stick, not of Sprint');
+  down('zone', 66); move(66, 230, 290); stale(66);
+  down('cv', 67, 450, 120);
+  ok(!held() && I.cDown, 'or a finger on the pitch: its touchstart lets go of the stale stick, and Sprint stays');
+  up(67);
+  down('zone', 68); move(68, 230, 290); down('zone', 69, 330, 200);
+  ok(I.stickId === 68 && I.jx === 1 && I.cDown, 'a live thumb beside Sprint: a palm on the zone is ignored, as ever');
+  up(69); ok(I.stickId === 68 && I.jx === 1, 'and its lift too');
+  up(68); up(64); ok(!held() && !I.cDown, 'each lifts on its own');
+}
+done();
+
+// 9. The backstop: every touchstart, touchend and touchcancel lists the fingers on the glass, and a hold whose finger isn't listed lets go
+//    (a Kick as cancelled) whatever the pointer events said; with no finger listed nothing is held. Here no pointer event is heard and
+//    every capture is still claimed, so only the touch list can tell
+begin('the glass has the last word');
+{
+  const m = fresh(), c = T.sides.ctrlOf(0); m.ball.state = 'held'; m.ball.carrier = c;
+  down('zone', 70); move(70, 230, 290); down('btnC', 71, 700, 300); down('btnB', 72, 640, 330); run(5);
+  ok(I.stickId === 70 && I.cDown && m.side[0].charging, 'the stick, Sprint and Kick held, Kick charging');
+  const kicks = m.stats.kicks;
+  touchEnd([lose(71)]);
+  ok(!I.cDown && !$('btnC')._held && I.stickId === 70 && I.jx === 1 && I.bDown, 'Sprint\'s lift with only its touch\'s end heard: Sprint lets go; the stick and Kick, whose fingers it lists, stay');
+  run(); touchEnd([lose(70)]);
+  ok(!held() && I.bDown && $('btnB')._held && m.side[0].charging, 'the thumb\'s: the stick lets go, Kick still charging');
+  run(); touchEnd([lose(72)]);
+  ok(!I.bDown && !$('btnB')._held && I.bCancel, 'the last finger\'s: no finger on the glass, so Kick lets go, as cancelled');
+  run(3); ok(m.stats.kicks === kicks && !m.side[0].charging, 'and no kick is fired');
+  fresh(); down('zone', 73); move(73, 230, 290); down('btnC', 74, 700, 300); down('btnA', 75, 760, 250);
+  touchEnd([lose(73), lose(74), lose(75)], 'touchcancel');
+  ok(!held() && !I.cDown && !I.aDown && !$('btnA')._held && !$('btnC')._held, 'a touchcancel with no finger left: the stick, Sprint and Pass all let go');
+  fresh(); down('zone', 76, 160, 290, { touch:false }); move(76, 230, 290); down('btnC', 77, 700, 300, { touch:false });
+  for (const id of [76, 77]) live.get(id).clientX += 100;  // their touches nowhere near where the pointer events put them, so nothing can name them
+  ok(I.stickId === 76 && I.cDown, 'two holds whose touchstarts were never heard');
+  down('cv', 78, 450, 120); ok(I.stickId === 76 && I.jx === 1 && I.cDown && I.stickTid === null && $('btnC')._tid === null, 'unnamed, and other fingers on the glass: kept (they may be live)');
+  stale(76); stale(77); up(78); ok(!held() && !I.cDown, 'the last finger lifts and the glass is empty: both let go');
+  fresh(); fire('pointerdown', P(79, 700, 300, { pointerType:'mouse' })); $('btnC').fire('pointerdown', P(79, 700, 300, { pointerType:'mouse' })); caps.set(79, $('btnC'));
+  down('cv', 80, 450, 120); up(80);
+  ok(I.cDown && $('btnC')._pointerId === 79, 'a mouse\'s hold is not the glass\'s to judge: a touch\'s end with no finger left leaves it');
+  fire('pointerup', P(79, 700, 300, { pointerType:'mouse' })); $('btnC').fire('pointerup', P(79, 700, 300, { pointerType:'mouse' })); ok(!I.cDown, 'its own lift lets go');
+}
+done();
+
+// 10. Each hold knows its touch by where it went down, never by its pointer's id
+begin('each hold knows its touch');
+{
+  fresh(); down('zone', 81); move(81, 230, 290);
+  live.set(82, { identifier:nextTouch++, clientX:700, clientY:300 }); live.set(83, { identifier:nextTouch++, clientX:760, clientY:250 });
+  fire('pointerdown', P(82, 700, 300)); $('btnC').fire('pointerdown', P(82, 700, 300)); fire('pointerdown', P(83, 760, 250)); $('btnA').fire('pointerdown', P(83, 760, 250));
+  touchstart([82, 83], [...live.keys()]);
+  ok(I.stickTid === live.get(81).identifier && $('btnC')._tid === live.get(82).identifier && $('btnA')._tid === live.get(83).identifier, 'two fingers in one touchstart: each hold named with its own touch, by its spot');
+  touchEnd([lose(83)]); ok(!I.aDown && I.cDown && I.stickId === 81 && I.jx === 1, 'Pass\'s touch ends: only Pass lets go');
+  down('btnB', 84, 640, 330, { first:true });
+  ok($('btnB')._held && $('btnB')._tid === null, 'a browser that sends the touchstart first: Kick held, not yet named');
+  down('cv', 85, 450, 120);
+  ok($('btnB')._tid === live.get(84).identifier && I.bDown, 'named at the next touch event, by where its finger is');
+  up(85); touchEnd([lose(84)]); ok(!I.bDown && I.cDown && I.stickId === 81, 'and its touch\'s end lets go of Kick alone');
+  up(82); up(81); ok(!held() && !I.cDown, 'each lifts on its own');
+}
+done();
+
+// 10. A card's button under a second finger: the finger's own lift on it clicks it. A browser makes no click from a tap while another
 //    finger is down, so before this a card met mid-run ignored the other thumb (the harness can't make that rule; the browser part does)
 begin('a card under a second finger');
 {
@@ -182,11 +304,11 @@ begin('a card under a second finger');
   let tid = 100;
   const tap = (el, o = {}) => {                            // a second finger's tap: down at the button's middle, up after o.dx/o.dy
     const r = el.rect, x = r.left + r.width/2, y = r.top + r.height/2, t = { identifier:++tid, clientX:x, clientY:y };
-    const s = { target:el, changedTouches:[t], touches:[...touchList([...live]), t], timeStamp:clock };   // the thumb on the stick is on the glass too
+    const s = { target:el, changedTouches:[t], touches:[...touchList([...live.keys()]), t], timeStamp:clock };   // the thumb on the stick is on the glass too
     fire('touchstart', s); fireDoc('touchstart', s);
     const u = { identifier:t.identifier, clientX:x + (o.dx || 0), clientY:y + (o.dy || 0) };
-    const e = { target:el, changedTouches:[u], touches:touchList([...live]), cancelable:o.cancelable !== false, defaultPrevented:false, preventDefault() { this.defaultPrevented = true; } };
-    fireDoc('touchend', e);
+    const e = { target:el, changedTouches:[u], touches:touchList([...live.keys()]), cancelable:o.cancelable !== false, defaultPrevented:false, preventDefault() { this.defaultPrevented = true; } };
+    fire('touchend', e); fireDoc('touchend', e);
     return e;
   };
   const cardUp = () => { D.settings().tut = []; D.settings().hints = true; const m = fresh(); T.scrum(0, 60, 35, 'Knock-On'); for (let i = 0; i < 200 && !m.tut; i++) T.update(STEP); return m; };
@@ -237,7 +359,7 @@ begin('a card under a second finger');
 }
 done();
 
-// 8. Nothing else moves: the stick's own lift, a cancel, rotation and blur as before, and no random number drawn by any of it
+// 11. Nothing else moves: the stick's own lift, a cancel, rotation and blur as before, and no random number drawn by any of it
 begin('as before');
 {
   const { rndCalls } = await import('./harness.mjs');
@@ -261,7 +383,7 @@ function chromium() {
   }
   return null;
 }
-/* 9. In Chromium with real touches (CDP Input.dispatchTouchEvent), 844x390, a phone with a new profile: every tutorial card up. A lift the
+/* 12. In Chromium with real touches (CDP Input.dispatchTouchEvent), 844x390, a phone with a new profile: every tutorial card up. A lift the
       page must not hear is stopped at the window before the game's own listeners (an init script), as a lost touchend would be. */
 async function browserChecks() {
   if (process.env.GAME || process.env.NO_BROWSER) { console.log('skip the browser checks (GAME or NO_BROWSER set)'); return; }
@@ -302,7 +424,7 @@ async function browserChecks() {
       async at(sel) { return page.evaluate(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { x:r.left + r.width/2, y:r.top + r.height/2 }; }, sel); },
       async tap(id, sel) { const c = await F.at(sel); await F.down(id, c.x, c.y); await wait(50); await F.up(id); await wait(120); },
       async thumb(id = 1) { await F.down(id, ZX, ZY); await wait(30); await F.move(id, ZX + 60, ZY); await wait(80); },   // the thumb on the stick, running right
-      state: () => page.evaluate(() => { const T = window.__tryline, I = T.input, M = T.M; return { stickId:I.stickId, jx:+I.jx.toFixed(2), jy:+I.jy.toFixed(2), cDown:I.cDown, paused:!!M.paused, tut:M.tut ? M.tut.id + ':' + M.tut.step : null, cut:M.cut ? M.cut.kind : null, phase:M.phase, pen:!document.getElementById('m-pen').hidden, clicks:window.__clicks.splice(0) }; }),
+      state: () => page.evaluate(() => { const T = window.__tryline, I = T.input, M = T.M; return { stickId:I.stickId, jx:+I.jx.toFixed(2), jy:+I.jy.toFixed(2), aDown:I.aDown, bDown:I.bDown, cDown:I.cDown, bCancels:window.__bCancels || 0, paused:!!M.paused, tut:M.tut ? M.tut.id + ':' + M.tut.step : null, cut:M.cut ? M.cut.kind : null, phase:M.phase, pen:!document.getElementById('m-pen').hidden, clicks:window.__clicks.splice(0) }; }),
       close: () => ctx.close(),
     };
     await F.ev(o => { const T = window.__tryline, X = T.teams; T.debug.startMatch(X.CLUBS[0], X.CLUBS[1], false); if (o.seen) T.debug.settings().tut = T.debug.TUT_IDS.slice(); }, o);
@@ -407,6 +529,54 @@ async function browserChecks() {
       B(s.stickId === id0 && s.cDown, 'a tap on Pass leaves the stick and Sprint held');
       await F.up(2); await F.up(1); await wait(80); s = await F.state(); B(!s.cDown && s.stickId === null, 'each lifts on its own');
       await F.close();
+    }
+    done();
+    begin('browser: stale holds, any finger down');
+    const claim = (F, ids) => F.ev(ids => { for (const id of ids) document.getElementById(id).hasPointerCapture = () => true; }, ids);   // a browser still claiming a dead finger's capture (an iPhone that never saw the lift)
+    const countCancels = F => F.ev(() => { const I = window.__tryline.input; let v = I.bCancel; window.__bCancels = 0; Object.defineProperty(I, 'bCancel', { configurable:true, get:() => v, set:x => { if (x && !v) window.__bCancels++; v = x; } }); });   // each time Kick is let go as cancelled
+    for (const path of ['press', 'list']) {               // 7 and 9: Sprint's lift lost with the thumb on the stick, then a tap on Pass. press: its touchstart unheard, so the press alone tells; list: Sprint's capture claimed, so the touchstart's list alone tells
+      const F = await open({ seen:true }); const C = await F.at('#btnC'), A = await F.at('#btnA');
+      if (path === 'list') await claim(F, ['btnC']);
+      await F.thumb(1); await F.down(2, C.x, C.y); await wait(100);
+      await F.ev(L => { window.__lose = new Set(L); }, LOSE); await F.up(2); await F.ev(() => { window.__lose = null; }); await wait(100);
+      let s = await F.state(); B(s.cDown && s.stickId !== null && s.jx > 0.5, `${path}: Sprint's lift lost, nothing heard: still held as far as the page knows`);
+      if (path === 'press') await F.ev(() => { window.__lose = new Set(['touchstart']); });
+      await F.down(3, A.x, A.y); await wait(60); await F.ev(() => { window.__lose = null; });
+      s = await F.state(); B(!s.cDown && s.aDown && s.stickId !== null && s.jx > 0.5, `${path}: then a tap on Pass lets go of Sprint, Pass pressed and the thumb still running (cDown ${s.cDown}, aDown ${s.aDown}, jx ${s.jx})`);
+      await F.up(3); await wait(80); s = await F.state(); B(!s.aDown && !s.cDown && s.stickId !== null && s.jx > 0.5, `${path}: Pass lets go on its lift, the thumb still running (jx ${s.jx})`);
+      await F.up(1); await wait(80); s = await F.state(); B(s.stickId === null && s.jx === 0, `${path}: and the thumb lets go on its own`);
+      B(!F.errors.length, `${path}: no page errors (${F.errors.join('; ')})`); await F.close();
+    }
+    {                                                      // 8: the browser still claims the dead thumb's capture, and Sprint is down: a new thumb takes the stick at its touchstart
+      const F = await open({ seen:true }); const C = await F.at('#btnC');
+      await claim(F, ['zone']);
+      await F.thumb(1); await F.down(2, C.x, C.y); await wait(100);
+      await F.ev(L => { window.__lose = new Set(L); }, LOSE); await F.up(1); await F.ev(() => { window.__lose = null; }); await wait(150);
+      let s = await F.state(); B(s.stickId !== null && s.jx > 0.5 && s.cDown, 'claimed capture, Sprint down: the thumb\'s lift unheard, so the run is still held (the page can\'t know yet)');
+      await F.down(3, 260, 300); await wait(50); s = await F.state();
+      B(s.stickId !== null && s.jx === 0 && s.cDown, `a new thumb with Sprint down takes the stick at once (jx ${s.jx}), Sprint still held`);
+      await F.move(3, 190, 300); await wait(80); s = await F.state(); B(s.jx < -0.5, `and steers (jx ${s.jx})`);
+      await F.up(3); await wait(80); s = await F.state(); B(s.stickId === null && s.jx === 0 && s.cDown, 'its lift lets go of the stick, and Sprint is still held');
+      await F.up(2); await wait(80); s = await F.state(); B(!s.cDown, 'Sprint lets go on its own lift');
+      B(!F.errors.length, `no page errors (${F.errors.join('; ')})`); await F.close();
+    }
+    {                                                      // 9: every capture claimed and no pointer lift heard, only the touches' ends: each hold lets go as its finger leaves the list (Chromium's pointer ids aren't its touch identifiers either), and with none left nothing is held, Kick as cancelled
+      const F = await open({ seen:true }); const C = await F.at('#btnC'), K = await F.at('#btnB');
+      await claim(F, ['zone', 'btnA', 'btnB', 'btnC']); await countCancels(F);
+      await F.thumb(1); await F.down(2, C.x, C.y); await F.down(3, K.x, K.y); await wait(100);
+      let s = await F.state(); B(s.stickId !== null && s.jx > 0.5 && s.cDown && s.bDown, 'the stick, Sprint and Kick held at once');
+      const ids = await F.ev(() => ({ pointers:[window.__tryline.input.stickId, document.getElementById('btnC')._pointerId], touches:[window.__tryline.input.stickTid, document.getElementById('btnC')._tid] }));
+      B(ids.touches.every(t => t != null) && ids.touches.join() !== ids.pointers.join(), `each hold named with its own touch, which isn't its pointer's id (pointers ${ids.pointers}, touches ${ids.touches})`);
+      await F.ev(() => { window.__lose = new Set(['pointerup', 'pointercancel', 'lostpointercapture']); });
+      await F.up(2); await wait(60); s = await F.state();
+      B(!s.cDown && s.stickId !== null && s.jx > 0.5 && s.bDown, `Sprint's touch ends, its pointerup unheard: Sprint lets go; the stick and Kick, whose touches it lists, stay (cDown ${s.cDown}, jx ${s.jx}, bDown ${s.bDown})`);
+      await F.up(1); await wait(60); s = await F.state(); B(s.stickId === null && s.jx === 0 && s.bDown, `the thumb's: the stick lets go, Kick stays (stick ${s.stickId}, bDown ${s.bDown})`);
+      const c0 = s.bCancels; await F.up(3); await wait(100); s = await F.state();
+      B(!s.bDown && s.bCancels === c0 + 1, `Kick's, the glass now empty: nothing held, Kick let go as cancelled (bDown ${s.bDown}, cancels ${s.bCancels - c0})`);
+      await F.ev(() => { window.__lose = null; });
+      await F.down(4, 260, 300); await F.move(4, 190, 300); await wait(80); s = await F.state(); B(s.stickId !== null && s.jx < -0.5, `a new thumb takes the stick and steers (jx ${s.jx})`);
+      await F.up(4); await wait(60);
+      B(!F.errors.length, `no page errors (${F.errors.join('; ')})`); await F.close();
     }
     done();
   } finally { await browser.close(); server.close(); }

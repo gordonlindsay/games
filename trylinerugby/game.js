@@ -9467,7 +9467,7 @@ function makeInput(seat) {
       return kx || (!this.latch && Math.abs(this.jx) >= 0.5 ? Math.sign(this.jx) : 0);
     },
   };
-  if (seat === 0) Object.assign(inp, { stickId:null, ox:0, oy:0, px:0, py:0, stickType:'', stickAt:0, stickNo:null, retook:false });   // the touch stick feeds seat 0 only; who holds it (src/input-touch.js, a finger the page lost)
+  if (seat === 0) Object.assign(inp, { stickId:null, ox:0, oy:0, px:0, py:0, stickType:'', stickAt:0, stickTid:null, stickNo:null, retook:false });   // the touch stick feeds seat 0 only; who holds it (src/input-touch.js, a finger the page lost)
   return inp;
 }
 const inputs = [makeInput(0), makeInput(1)];
@@ -9523,19 +9523,24 @@ function restStick() { const p = stickRest(window.innerWidth, window.innerHeight
    - on its own lift or cancel anywhere on the page: the window hears it first (below);
    - when the zone loses its capture and can't take it back (lostpointercapture);
    - when the page is hidden, as a blur already did (src/ui-menus.js);
-   - when a new finger shows it gone: the new press has the old finger's own id, or the stick or the button no longer holds the old
-     finger's capture (the browser saw it end), or a touchstart's list of fingers on the glass is all new ones. The new finger then takes
-     over at once. A finger still on the glass is none of these, so a second finger never takes a stick or a button from a live one: a
-     palm on the zone is ignored, as before. A stale press is let go as cancelled, never fired as a kick. */
+   - at any new press, anywhere, when the stick or the button no longer holds its finger's capture (the browser saw it end), or the new
+     press has the old finger's own id: the new finger, if it pressed that stick or button, takes over at once;
+   - at every touchstart, touchend and touchcancel, when the touch's own list of the fingers on the glass doesn't have it (below), and
+     when that list is empty nothing touch holds stays held.
+   A finger still on the glass is none of these, so a second finger never takes a stick or a button from a live one: a palm on the zone
+   is ignored, as before. A stale press is let go as cancelled, never fired as a kick. */
 let touchGen = 0;                                          // touchstarts heard so far: a hold made since the last one belongs to the next (a touch's pointerdown comes before its touchstart, in the same task)
 const touchy = type => type !== 'mouse' && type !== 'pen'; // a hold the glass's count speaks for (a test's events carry no type)
-function fingerGone(el, id, e) {                           // at a new press on el (the zone, or a button), is el's finger plainly off the glass?
+const TOUCH_NEAR = 24;                                     // a pointerdown and its own touch share one spot (0px apart in Chromium); two fingertips never land this close
+function fingerGone(el, id, e) {                           // at a new press, is el's finger (the zone's, or a button's) plainly off the glass?
   if (e.pointerId === id) return true;                     // one pointer can't go down twice: the old one ended unheard
   try { return typeof el.hasPointerCapture === 'function' && !el.hasPointerCapture(id); } catch (err) { return false; }   // the browser saw it end and let the capture go
 }
-const fingerOf = e => ({ pointerId:e.pointerId, pointerType:e.pointerType, clientX:e.clientX, clientY:e.clientY, gen:touchGen });   // a press turned away, kept in case its own touchstart shows the holder gone
+const tidOf = e => (e && e.tid != null ? e.tid : null);   // the touch identifier a hold carries over from a finger turned away (a real event has none: its touchstart names it)
+const fingerOf = e => ({ pointerId:e.pointerId, pointerType:e.pointerType, clientX:e.clientX, clientY:e.clientY, gen:touchGen, tid:tidOf(e) });   // a press turned away, kept in case its own touchstart shows the holder gone
+const freed = { by:null, keys:new Set() };                // the buttons the latest press let go of, stale, before it reached its own target
 function grabStick(e) {                                    // a finger takes the stick: the ring under it, the pointer captured by the zone
-  input.stickId = e.pointerId; input.stickType = e.pointerType || ''; input.stickAt = touchGen; input.stickNo = null; input.retook = false;
+  input.stickId = e.pointerId; input.stickType = e.pointerType || ''; input.stickAt = touchGen; input.stickTid = tidOf(e); input.stickNo = null; input.retook = false;
   input.ox = input.px = e.clientX; input.oy = input.py = e.clientY; input.latPeak = null;
   try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
   placeStick(e.clientX, e.clientY); stick.classList.add('on');
@@ -9580,7 +9585,7 @@ zone.addEventListener('pointermove', onStickMove);
 zone.addEventListener('pointerrawupdate', onStickMove);   // Chromium delivers this a frame ahead of pointermove. Where it doesn't exist, nothing calls it
 const endStick = e => {
   if (!e || e.pointerId !== input.stickId) return;
-  input.stickId = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null; input.retook = false;   // a lifted thumb clears the gesture history
+  input.stickId = null; input.stickTid = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null; input.retook = false;   // a lifted thumb clears the gesture history
   knob.style.transform = ''; stick.classList.remove('on'); restStick();
 };
 zone.addEventListener('pointerup', endStick);
@@ -9612,12 +9617,14 @@ function beginAct(el, key, e) {
   if (e && e.preventDefault) e.preventDefault();
   try { if (e && e.pointerId != null) el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
   el._held = true; el._pointerId = e && e.pointerId != null ? e.pointerId : null; el._type = (e && e.pointerType) || ''; el._at = touchGen; el._no = null; el.classList.add('press');
+  el._tid = tidOf(e); el._x = e ? +e.clientX || 0 : 0; el._y = e ? +e.clientY || 0 : 0;   // where it went down: its touch is named by that (the glass's own list, below)
   setDev('touch'); btn(input, key, 2, true);
+  if (e && freed.by === e.pointerId && freed.keys.delete(key)) input[key + 'Cancel'] = false;   // this press let go of the button's stale hold on its way here: a fresh press, never a cancel
   ac();
 }
 function endAct(el, key, cancel, e) {
   if (!el._held || (el._pointerId != null && (!e || e.pointerId !== el._pointerId))) return;
-  el._held = false; el._pointerId = null; el.classList.remove('press'); btn(input, key, 2, false);
+  el._held = false; el._pointerId = null; el._tid = null; el.classList.remove('press'); btn(input, key, 2, false);
   if (cancel && !input[key + 'Down']) input[key + 'Cancel'] = true; // cancel this action only when no other source still holds it
 }
 function bindAct(el, key) {
@@ -9640,30 +9647,71 @@ for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type,
   if (input.stickNo && input.stickNo.pointerId === e.pointerId) input.stickNo = null;   // a finger turned away and lifted is no longer waiting
   for (const [id] of ACTS) { const el = $(id); if (el._no && el._no.pointerId === e.pointerId) el._no = null; }
 }, true);
-/* A touchstart whose fingers are all new: the glass has no finger from before on it, so every touch hold from before is one the page
-   lost. Let go of it, a button as cancelled (a stale Kick is never a kick); a hold made since the last touchstart is this touch's own
-   (its pointerdown came first), and a finger the stale hold turned away since then, this touch's, takes its place. The touch list is
-   the phone's own, whatever the page last heard. A mouse's or a pen's hold is not the glass's to judge. */
-function freeStale() {
-  const old = at => at !== touchGen, mine = no => (no && no.gen === touchGen ? no : null);
-  if (input.stickId !== null && touchy(input.stickType) && old(input.stickAt)) {
+window.addEventListener('pointerdown', e => {              // any new press, before its own target hears it: a hold whose capture the browser has let go of saw its finger end, so it lets go, a button as cancelled (a stale Kick is never a kick). A press on that same stick or button then takes it fresh
+  freed.by = e.pointerId; freed.keys.clear();
+  if (input.stickId !== null && fingerGone(zone, input.stickId, e)) endStick({ pointerId:input.stickId });
+  for (const [id, key] of ACTS) {
+    const el = $(id);
+    if (!el._held || el._pointerId == null || !fingerGone(el, el._pointerId, e)) continue;
+    const was = input[key + 'Cancel'];
+    endAct(el, key, true, { pointerId:el._pointerId });
+    if (!was && input[key + 'Cancel']) freed.keys.add(key);
+  }
+}, true);
+/* The glass's own list. Each touch event lists the fingers on the glass (e.touches), whatever the page heard before, so every touchstart,
+   touchend and touchcancel checks each touch hold against it: a hold whose finger isn't listed lets go, a button as cancelled (a stale
+   Kick is never a kick), and with no finger listed nothing touch holds stays held. A finger that this touchstart's own press turned away
+   from that stick or button takes its place. A pointer's id is not its touch's identifier (in WebKit or in Chromium), so a hold is named
+   by where it went down: a touch's pointerdown and its touchstart share one spot (0px apart in Chromium), two fingertips never land within
+   TOUCH_NEAR of each other, and the touchstart that comes with a press (after its pointerdown, in the same task) names it. A browser that
+   sent the touchstart first has the hold named at the next touch event, by where its finger is then. A hold still unnamed (no touch heard
+   at its spot) lets go only when the list is empty, or at a touchstart whose fingers are all new. A mouse's or a pen's hold is not the
+   glass's to judge, nor are the keys or a pad. */
+function nameHolds(all) {                                  // each unnamed touch hold, and each finger turned away, takes the identifier of the touch at its spot
+  const named = new Set(), want = [];
+  const note = (type, tid, x, y, put) => { if (!touchy(type)) return; if (tid != null) named.add(tid); else want.push({ x, y, put, done:false }); };
+  if (input.stickId !== null) note(input.stickType, input.stickTid, input.px, input.py, t => { input.stickTid = t; });
+  const sn = input.stickNo; if (sn) note(sn.pointerType, sn.tid, sn.clientX, sn.clientY, t => { sn.tid = t; });
+  for (const [id] of ACTS) {
+    const el = $(id), n = el._no;
+    if (el._held) note(el._type, el._tid, el._x, el._y, t => { el._tid = t; });
+    if (n) note(n.pointerType, n.tid, n.clientX, n.clientY, t => { n.tid = t; });
+  }
+  if (!want.length) return;
+  const pairs = [];
+  for (const w of want) for (const t of all) { const d = hyp(t.clientX - w.x, t.clientY - w.y); if (!named.has(t.identifier) && d <= TOUCH_NEAR) pairs.push({ w, t, d }); }
+  pairs.sort((a, b) => a.d - b.d);                         // the nearest first: two fingers landing in one touchstart each get their own
+  for (const { w, t } of pairs) if (!w.done && !named.has(t.identifier)) { w.done = true; named.add(t.identifier); w.put(t.identifier); }
+}
+function onGlass(e, start) {
+  const all = Array.from(e.touches || []), fresh = start ? Array.from(e.changedTouches || []) : [];
+  nameHolds(all);
+  const on = new Set(all.map(t => t.identifier));
+  const allNew = start && fresh.length > 0 && all.length <= fresh.length;   // no finger from before on the glass
+  const off = (tid, at) => (tid != null ? !on.has(tid) : !all.length || (allNew && at !== touchGen));   // named: not listed. Unnamed: the glass empty, or all new and the hold older than this touch
+  const mine = no => (start && no && touchy(no.pointerType) && no.gen === touchGen && (no.tid == null || on.has(no.tid)) ? no : null);   // a finger this touch's own press turned away, on the glass
+  if (input.stickId !== null && touchy(input.stickType) && off(input.stickTid, input.stickAt)) {
     const no = mine(input.stickNo);
     endStick({ pointerId:input.stickId });
     if (no) grabStick(no);
   }
   for (const [id, key] of ACTS) {
     const el = $(id);
-    if (!el._held || !touchy(el._type) || !old(el._at)) continue;
+    if (!el._held || !touchy(el._type) || !off(el._tid, el._at)) continue;
     const no = mine(el._no);
     endAct(el, key, !no, { pointerId:el._pointerId });
     if (no) beginAct(el, key, no);
   }
+  const lifted = no => !!no && (!all.length || (no.tid != null && !on.has(no.tid)));   // a finger turned away and off the glass is no longer waiting
+  if (lifted(input.stickNo)) input.stickNo = null;
+  for (const [id] of ACTS) { const el = $(id); if (lifted(el._no)) el._no = null; }
+  if (start) touchGen++;
 }
-window.addEventListener('touchstart', e => { if (e.touches && e.changedTouches && e.touches.length <= e.changedTouches.length) freeStale(); touchGen++; }, { capture:true, passive:true });
+for (const type of ['touchstart', 'touchend', 'touchcancel']) window.addEventListener(type, e => onGlass(e, type === 'touchstart'), { capture:true, passive:true });
 function releaseTouch() {                                  // the phone turned, the page hidden, or the stick has to come up: the ring goes home and no button stays pressed
-  input.stickId = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null; input.stickNo = null; input.retook = false;
+  input.stickId = null; input.stickTid = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null; input.stickNo = null; input.retook = false;
   knob.style.transform = ''; stick.classList.remove('on'); restStick();
-  for (const [id, key] of ACTS) { const el = $(id); el._held = false; el._pointerId = null; el._no = null; el.classList.remove('press'); }
+  for (const [id, key] of ACTS) { const el = $(id); el._held = false; el._pointerId = null; el._tid = null; el._no = null; el.classList.remove('press'); }
   for (const inp of inputs) {
     inp.jx = inp.jy = 0; inp.latPeak = null; inp.gest = null;
     inp.src.a = inp.src.b = inp.src.c = 0;
