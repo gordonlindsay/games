@@ -192,7 +192,7 @@ function playOut() {
   const html = readGameSource();
   const quick = html.indexOf('id="b-quick"'), champBtn = html.indexOf('id="b-champ"');
   ok(quick > 0 && champBtn > quick, 'Quick Match comes before Championship');
-  ok(/<button class="btn primary" id="b-quick" autofocus>Play<\/button>/.test(html) && /<span class="hl-name">Quick Match<\/span>/.test(html), 'Quick Match\'s Play is the primary button and takes focus');
+  ok(/<button class="btn bx bx-go" id="b-continue" autofocus>[\s\S]*?<span class="bx-name" id="cont-name">Play<\/span><span class="bx-sub" id="cont-note">Quick Match<\/span>/.test(html) && /<button class="btn bx" id="b-quick">[\s\S]*?<span class="bx-name">Quick Match<\/span>/.test(html), 'Continue (Play, a Quick Match, while nothing is under way) is the primary and takes focus; Quick Match is Match\'s first box');
   ok(!html.includes('data-key="duels"'), 'the Duels switch is gone');
   ok(html.includes("duels:'live'"), 'a match you play passes live duels');
   ok(!/<dt[^>]*>Saving<\/dt>/.test(html) && /<button class="btn warn" id="hub-reset">Start Fresh<\/button>/.test(html), 'Start Fresh is the table\'s own button (re-pinned 2026-11-09: How to Play\'s Saving entry, which explained it, went with the prose)');
@@ -479,18 +479,15 @@ function settle(pick) {
   D.renderHub();
   ok(!document.getElementById('hub-next').innerHTML.includes('Stronger Side'), 'Farnham\'s weakest club opponent is not marked');
 
-  D.openTeams('quick'); D.pickTeam(far); X.tierPick(0);   // Farnham picked by Player 1: the opponents
-  const grid = document.getElementById('t-grid').innerHTML;
-  const card = name => { const i = grid.indexOf('>' + name + '<'); return grid.slice(i, grid.indexOf('</button>', i)); };
-  ok(X.natList('men').every(t => card(t.name).includes('Stronger Side')), 'Quick Match marks a side three points stronger: every nation, against Farnham');   // re-pinned at the XV ratings: England is now one, Italy and Japan were not. Re-pinned at the real order: Farnham is 10 in the four (61), every nation 15 or more
-  X.tierPick(1); X.poolPick('eng');
-  { const g = document.getElementById('t-grid').innerHTML, c = name => { const i = g.indexOf('>' + name + '<'); return g.slice(i, g.indexOf('</button>', i)); };
-    ok(c('Northampton').includes('Stronger Side') && c('Bath').includes('Stronger Side') && !c('Newcastle').includes('Stronger Side') && !c('Sale').includes('Stronger Side'), 'and on England the strongest are, its foot (67, one in the four) not'); }
-  X.poolPick('en2');
-  ok(!document.getElementById('t-grid').innerHTML.includes('Stronger Side'), 'no England 2 card is (64 at most, within one in the four)');
-  X.poolPick('eng');   // National goes back to the league last looked at: England, as the screen's own checks (10) expect
-  X.tierPick(2);
-  ok(!document.getElementById('t-grid').innerHTML.includes('Stronger Side'), 'no local card is marked stronger than Farnham');
+  // re-pinned for the side-by-side team screen (2026-11-11): Farnham set as Your Team, each Opponent group walked side by side
+  s.pick = [null, null]; D.openTeams('quick'); D.pickTeam(far);   // Farnham picked by Player 1: the opponents
+  const P9 = T.picker, strong = key => { P9.group(1, P9.view(1).ladder.findIndex(g => g.key === key) - P9.view(1).gi); const out = []; for (const t of P9.view(1).group.teams) { if (document.getElementById('t-side1').innerHTML.includes('Stronger Side')) out.push(P9.view(1).team.name); P9.step(1, 1); } return out; };
+  const natMarked = X.natList('men').filter(n => strong('nat.' + n.id.toLowerCase()).includes(n.name));
+  ok(natMarked.length === 12, 'Quick Match marks a side three points stronger: every nation, against Farnham');   // re-pinned at the XV ratings: England is now one, Italy and Japan were not. Re-pinned at the real order: Farnham is 10 in the four (61), every nation 15 or more
+  { const eng = strong('eng');
+    ok(eng.includes('Northampton') && eng.includes('Bath') && !eng.includes('Newcastle') && !eng.includes('Sale'), 'and on England the strongest are, its foot (67, one in the four) not'); }
+  ok(strong('en2').length === 0, 'no England 2 side is (64 at most, within one in the four)');
+  ok(strong('sur').length === 0 && strong('cty').length === 0, 'no local side is marked stronger than Farnham');
 
   s.played = 0; s.tut = []; X.setChamp(null);
   X.restore({ settings: { tut: ['past'] } });
@@ -619,38 +616,38 @@ function settle(pick) {
   ok(pro.every(t => total(t) <= 5 + X.BUDGET) && X.NATIONS.every(t => R.every(k => t[k] >= 1 && t[k] <= 5)), `no league side is stronger than a team you can make (top ${Math.max(...pro.map(total))})`);
   ok(X.NATIONS.slice(6).every(t => /^#[0-9a-f]{6}$/i.test(t.alt) && /^#[0-9a-f]{6}$/i.test(t.altTrim)), 'each new nation has a change kit, as the six do');
 
-  // the hierarchy on screen
-  X.setChamp(null); D.openTeams('quick');
-  ok(X.teamPool() === 'sur' && X.poolTier(X.teamPool()) === 2 && !$('t-loc').hidden && $('t-nat').hidden && $('t-league').hidden, 'Quick Match opens on Local · Surrey; no My League without an import');
-  const grid = () => $('t-grid').innerHTML, names = l => l.every(t => grid().includes('>' + t.name + '<'));
-  ok(names(X.CLUBS), 'Surrey lists the Local clubs');
-  X.tierPick(1);
-  ok(s.pool === 'eng' && !$('t-nat').hidden && $('t-loc').hidden && names(X.ENGLAND) && !grid().includes('>Farnham<'), 'National opens on England, its league under it');
-  X.poolPick('jpn');
-  ok(s.pool === 'jpn' && names(X.JAPAN) && !grid().includes('>Bath<'), 'a league shows its own sides');
-  X.poolPick('sco');
-  ok(s.pool === 'sco' && names(X.SCOTLAND) && !grid().includes('>Edinburgh<') && !grid().includes('>Glasgow<') && X.teamPool() === 'sco' && X.poolTier('sco') === 1 && !$('t-nat').hidden, 'Scotland, under National, shows the Premiership\'s clubs; the pro sides stay in the United Rugby Championship');
-  X.poolPick('jpn');
-  X.tierPick(0);
-  const inOrder = l => l.every((t, i) => i === 0 || grid().indexOf('>' + X.listName(t) + '<') > grid().indexOf('>' + X.listName(l[i - 1]) + '<'));
-  const engAt = grid().indexOf('>England<');
-  ok(s.pool === 'int' && $('t-nat').hidden && $('t-loc').hidden && names(X.natList('men')) && inOrder(X.natList('men').filter(t => t.id !== 'ENG')) && engAt >= 0 && engAt < grid().indexOf('>South Africa<') && /data-i="0"[\s\S]*?>England<[\s\S]*?My Team/.test(grid().split('data-i="1"')[0]) && !grid().includes('>Canada<') && !grid().includes('>USA<'), 'International: the men\'s twelve in table order, with nothing under it (in Player 1\'s list My Team\'s England first, marked)');   // re-pinned at the official tables: natList, not NATIONS
-  ok(X.poolTeams('int') === X.natList('men') && grid().includes('aria-label="Overall 93">93<'), 'Men: the list is natList(\'men\'), South Africa at 93');
+  // the hierarchy on screen: the side-by-side team screen's ladder (re-pinned 2026-11-11, the owner: "a side-by-side picker in the style
+  // of EA FC's kick-off screen"; Up and Down one ladder of groups, North | South | Mine; tools/picker.mjs checks it whole)
+  const PK = T.picker, pv = n => PK.view(n), at = (n, key) => { PK.group(n, pv(n).ladder.findIndex(g => g.key === key) - pv(n).gi); return pv(n); };
+  const grp = (n, key) => pv(n).ladder.find(g => g.key === key), ids = l => l.map(t => t.id).join();
+  X.setChamp(null); s.pick = [null, null]; D.openTeams('quick');
+  ok(X.teamPool() === 'sur' && pv(0).group.key === 'sur' && pv(0).team.id === 'FAR' && PK.where(pv(0).group) === 'North · England · Local' && grp(0, 'mine.league').teams.every(t => t.act), 'Quick Match opens Your Team on Local · Surrey (North · England · Local); no My League side without an import');
+  ok(ids(grp(0, 'sur').teams) === ids(X.CLUBS), 'Surrey lists the Local clubs, in their order');
+  PK.group(0, -1); PK.group(0, -1);
+  ok(pv(0).group.key === 'eng' && pv(0).group.name === 'Premiership' && ids(pv(0).group.teams) === ids(X.ENGLAND) && !pv(0).group.teams.some(t => t.id === 'FAR'), 'up from Surrey: England\'s Championship, then its Premiership, its own sides');
+  at(0, 'jpn');
+  ok(pv(0).group.name === 'Clubs' && ids(pv(0).group.teams) === ids(X.JAPAN) && PK.where(pv(0).group) === 'North · Japan', 'a list shows its own sides (Japan\'s clubs, in the North)');
+  at(0, 'sco');
+  ok(pv(0).group.name === 'Premiership' && ids(pv(0).group.teams) === ids(X.SCOTLAND) && ids(grp(0, 'cel.sco').teams) === 'EDI,GLA' && grp(0, 'cel.sco').name === 'URC', 'Scotland\'s Premiership shows its clubs; the pro sides stay in the URC, Scotland\'s two (Edinburgh, Glasgow)');
+  const nats = cat => pv(0).ladder.filter(g => g.key.startsWith('nat.')).map(g => g.teams[0]), byTable = (l, cat) => { const o = X.natList(cat).map(t => t.id); return l.every((t, i) => i === 0 || o.indexOf(t.id) > o.indexOf(l[i - 1].id) || PK.HEMI[t.id] !== PK.HEMI[l[i - 1].id]); };
+  at(0, 'nat.eng');
+  ok(nats('men').length === 12 && X.natList('men').every(t => nats('men').includes(t)) && byTable(nats('men'), 'men') && !nats('men').some(t => ['CDN', 'USA'].includes(t.id)) && /My Team/.test($('t-side0').innerHTML), 'International: the men\'s twelve, each its own National group, in table order North then South (Your Team\'s England marked My Team)');
+  at(0, 'nat.rsa');
+  ok(X.poolTeams('int') === X.natList('men') && /aria-label="Overall 93">93</.test($('t-side0').innerHTML), 'Men: the nations are natList(\'men\'), South Africa at 93');
   X.catPick('women');
-  ok(X.poolTeams('int') === X.natList('women') && X.natList('women').every(t => grid().includes('>' + X.listName(t) + '<')) && inOrder(X.natList('women')) && !grid().includes('>Argentina<') && !grid().includes('>Japan<') && !grid().includes(' Women<'), 'Women: the women\'s twelve in table order, Canada and the USA in, each card by the nation\'s name as the club cards are');
+  ok(nats('women').length === 12 && X.natList('women').every(t => nats('women').includes(t)) && byTable(nats('women'), 'women') && !pv(0).ladder.some(g => g.key === 'nat.arg' || g.key === 'nat.jpn') && at(0, 'nat.cdn') && />Canada</.test($('t-side0').innerHTML) && !/ Women</.test($('t-side0').innerHTML), 'Women: the women\'s twelve in table order, Canada and the USA in, each by the nation\'s name as the clubs are');
   X.catPick('minis');
-  ok(X.poolTeams('int') === X.natList('minis') && names(X.natList('men')) && !grid().includes('>Canada<'), 'Minis: the men\'s twelve');
+  ok(nats('minis').length === 12 && nats('minis').every((t, i) => t.id === nats('men')[i] ? true : X.natList('minis').includes(t)) && !pv(0).ladder.some(g => g.key === 'nat.cdn'), 'Minis: the men\'s twelve');
   X.catPick('men');
-  X.tierPick(1);
-  ok(s.pool === 'jpn', 'National goes back to the league last looked at');
-  X.tierPick(1);
-  ok(s.pool === 'jpn', 'and pressing it again stays put');
-  X.tierPick(2);
-  ok(s.pool === 'sur', 'Local is Surrey');
-  X.poolPick('nope'); ok(s.pool === 'int', 'a list that does not exist is International');
+  at(0, 'jpn'); PK.step(0, 2); const still = pv(0).team; D.renderTeams();
+  ok(pv(0).team === still && pv(0).group.key === 'jpn', 'a side keeps its group and its team when the screen is drawn again');
+  at(0, 'nat.arg'); PK.step(0, 1);
+  ok(pv(0).group.key === 'nat.arg' && pv(0).i === 0 && / disabled>Previous</.test($('t-side0').innerHTML), 'and Left and Right stay put on a group of one (Argentina), Previous and Next off');
+  ok(ids(grp(0, 'sur').teams) === ids(X.CLUBS) && ids(grp(0, 'cty').teams) === ids(X.COUNTIES) && pv(0).ladder.findIndex(g => g.key === 'cty') === pv(0).ladder.findIndex(g => g.key === 'sur') + 1, 'Local is Surrey, then Counties');
+  D.openTeams('champ', 'nope'); ok(X.poolKey('nope') === 'int' && X.teamPool() === 'sur' && pv(0).group.name === 'Surrey', 'a list that does not exist is International to a save, and the team screen\'s Championship opens on Surrey');
   // a championship from every list: your side and five from it
   for (const l of L) {
-    D.openTeams('champ'); X.poolPick(l.key);
+    D.openTeams('champ', l.key);
     D.pickTeam(l.teams[1]);
     const c = X.champ();
     ok(c.teams.length === 6 && c.teams[0].id === l.teams[1].id && c.teams.slice(1).every(t => l.teams.some(o => o.id === t.id) && t.id !== l.teams[1].id), `a championship from ${l.name} is your side and five from ${l.name}`);
@@ -664,7 +661,7 @@ function settle(pick) {
   for (const cat of ['men', 'women', 'minis']) {
     const l = X.natList(cat);
     for (const n of l) {
-      D.openTeams('champ'); X.catPick(cat); X.poolPick('int'); D.pickTeam(n);
+      X.catPick(cat); D.openTeams('champ', 'int'); D.pickTeam(n);
       const c = X.champ(), got = sixOf(c.teams), want = X.SIX_NATIONS.includes(n.id) ? SIX : REST[cat];
       const rated = c.teams.every(t => { const o = l.find(x => x.id === t.id); return o && R.every(k => t[k] === o[k]) && t.name === o.name && (cat === 'men' ? !('cat' in t) : t.cat === cat); });
       ok(c.teams[c.user].id === n.id && got === want && rated && sixOf(X.natGroup(n.id, cat)) === want, `${cat}: a championship as ${n.name} from International is its own six, at its list's ratings (${got})`);
@@ -673,34 +670,35 @@ function settle(pick) {
   }
   ok(X.natGroup('NZL', 'women').map(t => t.id).join() === 'NZL,CDN,USA,AUS,RSA,FIJ' && X.natGroup('ENG', 'men').map(t => t.id).join() === 'IRE,FRA,ENG,SCO,WAL,ITA', 'a group keeps its table\'s order');
   for (const cat of ['men', 'women']) {
-    D.openTeams('champ'); X.catPick(cat); X.poolPick('int'); D.pickTeam(X.natList(cat).find(t => t.id === 'ENG'));
+    X.catPick(cat); D.openTeams('champ', 'int'); D.pickTeam(X.natList(cat).find(t => t.id === 'ENG'));
     const c = playOut(), hon = X.honours(c, X.standings(c)).filter(h => h[1] === c.user).map(h => h[0]);
     ok(c.teams.filter(t => t.home).length === 4 && hon.includes('Triple Crown'), `${cat}: England picked on the team screen can win the Triple Crown (${hon.join(', ')})`);
     X.setChamp(null);
     const mine = X.cleanTeam({ name: 'Badgers', pace: 5, power: 5 }, 0);
-    D.openTeams('champ'); X.catPick(cat); X.poolPick('int'); D.pickTeam(mine);
+    X.catPick(cat); D.openTeams('champ', 'int'); D.pickTeam(mine);
     const m = X.champ(), l = X.natList(cat);
     ok(m.teams[m.user].name === (cat === 'men' ? 'Badgers' : 'Badgers Women') && m.teams.length === 6 && m.teams.filter((t, i) => i !== m.user).every(t => l.some(n => n.id === t.id && n.name === t.name && R.every(k => n[k] === t[k]))), `${cat}: a team you made, on International, plays five of the category's twelve`);
     X.setChamp(null);
   }
-  D.openTeams('champ'); X.catPick('men'); X.poolPick('int'); D.pickTeam(X.NATIONS[12]);
+  X.catPick('men'); D.openTeams('champ', 'int'); D.pickTeam(X.NATIONS[12]);
   ok(X.champ() == null, 'Canada handed to the team screen on Men starts nothing: the men\'s list has no Canada');
-  // a pick follows the category: Quick Match and Two Player
-  D.openTeams('quick'); $('t-change').click(); X.catPick('women'); X.poolPick('int'); D.pickTeam(X.natList('women')[2]);
-  ok($('t-mine').innerHTML.includes('Canada Women') && $('t-title').textContent === 'Pick Opponent', 'Quick Match on Women: Canada Women is your team');
+  // a pick follows the category: Quick Match and Two Player (re-pinned for the side-by-side screen: a side set to a nation follows it to
+  // the category's own side, still set; one the category has not got is no longer set, and is the side to pick again)
+  s.pick = [null, null]; D.openTeams('quick'); X.catPick('women'); at(0, 'nat.cdn'); PK.set(0);
+  ok(pv(0).team === X.natList('women')[2] && PK.state().sides[0].set && $('t-title').textContent === 'Pick Opponent', 'Quick Match on Women: Canada Women is Your Team');
   X.catPick('minis');
-  ok($('t-yours').hidden && $('t-title').textContent === 'Pick Your Team', 'Minis has no Canada: the pick is undone, and the screen asks for your team');
-  D.pickTeam(X.natList('minis')[4]); X.catPick('women');
-  ok($('t-mine').innerHTML.includes('England Women'), 'England Minis picked, then Women: England Women');
-  D.pickTeam(X.natList('women')[1]);
+  ok(!PK.state().sides[0].set && pv(0).team.id !== 'CDN' && $('t-title').textContent === 'Pick Your Team', 'Minis has no Canada: the pick is undone, and the screen asks for your team');
+  at(0, 'nat.eng'); PK.set(0); X.catPick('women');
+  ok(pv(0).team === X.natList('women')[0] && PK.state().sides[0].set && PK.primary() !== 'Pick England', 'England Minis picked, then Women: England Women, still set');
+  at(1, 'nat.nzl'); PK.set(1); PK.go();
   ok(T.M.nat[0] === X.natList('women')[0] && T.M.nat[1] === X.natList('women')[1] && T.M.nat[0].pace === 4 && T.M.nat[0].stamina === 5, 'England Women v New Zealand Women: the women\'s sides, at the women\'s ratings');
   D.exitMatch();
-  D.openJoin(); D.openTeams('two'); X.catPick('women'); X.poolPick('int'); D.pickTeam(X.natList('women')[5]);
-  ok(D.twoSel().picking === 1 && $('t-mine').innerHTML.includes('USA Women'), 'Two Player on Women: Player 1 is the USA');
+  s.pick = [null, null]; D.openJoin(); D.openTeams('two'); X.catPick('women'); at(0, 'nat.usa'); PK.set(0);
+  ok(PK.state().sides[0].set && pv(0).team === X.natList('women')[5] && PK.who(0) === 'Player 1' && PK.state().on === 1, 'Two Player on Women: Player 1 is the USA, and Player 2 is next');
   X.catPick('men');
-  ok(D.twoSel().picking === 0 && D.twoSel().teams[0] === X.CLUBS[0], 'Men has no USA: Player 1 picks again, from Farnham');
-  D.pickTeam(X.natList('women')[0]); X.catPick('men');
-  ok(D.twoSel().teams[0] === X.NATIONS[0] && $('t-mine').innerHTML.includes('Player 1 · England<'), 'England Women, then Men: England');
+  ok(!PK.state().sides[0].set && PK.state().on === 0 && pv(0).team.id !== 'USA', 'Men has no USA: Player 1 picks again');
+  at(0, 'nat.eng'); X.catPick('women'); PK.set(0); X.catPick('men');
+  ok(pv(0).team === X.NATIONS[0] && PK.state().sides[0].set && /<span class="tname">England<\/span>/.test($('t-side0').innerHTML), 'England Women, then Men: England');
   D.setTwo(false); X.catPick('men'); D.goHome();
   // old saves: each index the team screen used to save goes to where it was
   const want = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];
@@ -723,7 +721,7 @@ function settle(pick) {
   }
   const kept = globalThis.localStorage, mem = {};
   globalThis.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
-  D.openTeams('champ'); X.poolPick('nzl'); X.catPick('women');
+  D.openTeams('champ', 'nzl'); X.catPick('women');
   const w = JSON.parse(mem['tryline.v1']).settings;
   ok(w.pool === 'nzl' && w.cat === 'women', 'the save keeps the list\'s key and the category');
   globalThis.localStorage = kept;
@@ -741,15 +739,16 @@ function settle(pick) {
   ok(em.name === 'England Minis' && em.cat === 'minis' && em.home === true && em.alt === X.NATIONS[0].alt, 'Minis: England Minis, still a home nation in its change kit');
   ok(X.catSide({ name: 'Farnham Minis', id: 'FAN' }, 'minis').name === 'Farnham Minis' && X.catSide({ name: 'Farnham Minis', id: 'FAN' }, 'women').name === 'Farnham Minis Women', 'a name already ending in its word is not doubled');
   // Quick Match
-  D.openTeams('quick'); D.pickTeam(far); X.catPick('women');
-  ok(s.cat === 'women' && $('t-mine').innerHTML.includes('Farnham Women'), 'the bar names your side for the category');
-  ok($('t-grid').innerHTML.includes('>Haslemere<') && !$('t-grid').innerHTML.includes('Haslemere Women'), 'the cards keep the club\'s name');
-  D.pickTeam(has);
+  const P11 = T.picker;   // the side-by-side team screen (2026-11-11): the primary names the side as it plays, the cards keep the club's name
+  s.pick = [null, null]; D.openTeams('quick'); D.pickTeam(far); X.catPick('women');
+  ok(s.cat === 'women' && P11.state().sides[0].set && P11.view(0).team === far && $('t-go').textContent === 'Pick Wimbledon Women', `the primary names the side for the category (${$('t-go').textContent})`);
+  ok($('t-side1').innerHTML.includes('>Wimbledon<') && !$('t-side1').innerHTML.includes('Wimbledon Women') && $('t-side0').innerHTML.includes('>Farnham<'), 'the cards keep the club\'s name');
+  D.pickTeam(has); P11.go();
   ok(T.M.nat[0].name === 'Farnham Women' && T.M.nat[1].name === 'Haslemere Women' && T.M.nat.every(n => n.cat === 'women') && T.M.nat[0].id === 'FAR' && T.M.nat[1].id === 'HAS', 'a women\'s Quick Match: both sides named for it and carrying cat, the scoreboard codes unchanged');
   ok(R.every(k => T.M.nat[0][k] === far[k] && T.M.nat[1][k] === has[k]) && T.M.kit[0].fill === far.kit, 'ratings and kits as the men\'s');
   D.exitMatch();
   // a championship keeps the category it was started with
-  D.openTeams('champ'); X.catPick('minis'); X.poolPick('int');
+  X.catPick('minis'); D.openTeams('champ', 'int');
   D.pickTeam(X.NATIONS[2]);
   let c = X.champ();
   ok(c.teams.every(t => t.cat === 'minis' && / Minis$/.test(t.name)) && c.teams[0].name === 'Ireland Minis', `a minis championship names all six (${c.teams.map(t => t.name).join(', ')})`);
@@ -769,17 +768,17 @@ function settle(pick) {
   X.setChamp(null);
   // Play as Farnham names the side it starts
   D.openTeams('champ'); X.catPick('women');
-  ok(!$('t-default').hidden && $('t-default').textContent === 'Play as Farnham Women', `Play as names the category (${$('t-default').textContent})`);
-  $('t-default').click();
+  ok(!$('t-go').hidden && $('t-go').textContent === 'Play as Farnham Women', `Play as names the category (${$('t-go').textContent})`);
+  $('t-go').click();
   ok(X.champ() && X.champ().teams[X.champ().user].name === 'Farnham Women', 'and starts the side it names');
   X.setChamp(null); X.catPick('men'); D.openTeams('champ');
-  ok($('t-default').textContent === 'Play as Farnham', 'on Men it is Farnham, as before');
+  ok($('t-go').textContent === 'Play as Farnham', 'on Men it is Farnham, as before');
   // Two Player
-  D.openJoin(); D.openTeams('two'); X.catPick('women');
-  D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]);
+  s.pick = [null, null]; D.openJoin(); D.openTeams('two'); X.catPick('women');
+  D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]); P11.go();
   ok(T.M.two && T.M.nat[0].name === 'England Women' && T.M.nat[1].name === 'France Women' && T.M.nat.every(n => n.cat === 'women'), 'Two Player plays the category too');
   D.setTwo(false); D.exitMatch(); X.catPick('men');
-  D.openJoin(); D.openTeams('two'); D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]);
+  s.pick = [null, null]; D.openJoin(); D.openTeams('two'); D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]); P11.go();
   ok(T.M.nat[0] === X.NATIONS[0] && T.M.nat[1] === X.NATIONS[1], 'on Men a match is given the very teams it always was');
   D.setTwo(false); D.exitMatch();
   const demoIds = new Set();   // the home screen's demo (exitMatch starts it): a men's match, so never Canada or the USA
@@ -787,18 +786,19 @@ function settle(pick) {
   ok(T.M.demo && !demoIds.has('CDN') && !demoIds.has('USA') && X.natList('men').some(t => demoIds.has(t.id)) && X.CLUBS.some(t => demoIds.has(t.id)), `the demo is a men's match: nations and clubs, never Canada or the USA (${demoIds.size} sides in 400 demos)`);
   // the screen: labels, controls and no arrows
   const html = readGameSource(), menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
-  // re-pinned for Fold to One Line: Men | Women | Minis beside the tiers, their lists under them, all in the controls under the line
-  ok(html.includes('<div class="fold-ctl" id="t-ctl" hidden>') && html.includes('<div class="pools"><div class="fold-top"><div class="seg cat" id="t-cat"></div><div class="seg" id="t-tier"></div></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>'), 'Men | Women | Minis beside the tiers, the tiers\' lists under them, in the controls under the line');
+  // re-pinned for the side-by-side screen (2026-11-11): Men | Women | Minis beside the title, the two sides with the V between, the one primary
+  // and Back; the ladder in its own sheet, behind each side's group button
+  ok(html.includes('<div class="pk-top"><div class="pk-name"><p class="eyebrow" id="t-eyebrow">Quick Match</p><h2 class="title" id="t-title">Pick Your Team</h2></div>\n      <div class="seg cat" id="t-cat" aria-label="Men, Women or Minis"></div></div>') && html.includes('<div class="pk-side" id="t-side0" data-side="0" role="group"></div>\n      <div class="pk-v" id="t-v" aria-hidden="true">V</div>\n      <div class="pk-side" id="t-side1" data-side="1" role="group"></div>') && html.includes('<div class="pk-foot"><button class="btn" id="t-back" data-back>Back to Menu</button><button class="btn primary" id="t-go"></button></div>') && html.includes('<div class="modal" id="m-ladder" hidden role="dialog" aria-modal="true" aria-labelledby="ldr-title">'), 'Men | Women | Minis beside the title, Your Team V the Opponent, one primary and Back; the ladder in its sheet');
   ok(!html.includes('data-key="pool"'), 'the old five-list control has gone');
   const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  // re-pinned for PR #14's England 2: nine leagues, five then four where nine do not fit; and for the United Rugby Championship, five
-  // then four at every width (its Championship needs a fifth of the row, more than a ninth of 844)
-  ok(X.TEAM_LISTS.filter(l => l.tier === 1).length === 9 && /\n#t-nat,#cc-nat\{grid-auto-flow:row;grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*#t-nat button,#cc-nat button\{grid-column:span 4;padding:4px 3px\}\s*#t-nat button:nth-child\(n\+6\),#cc-nat button:nth-child\(n\+6\)\{grid-column:span 5;/.test(css) && !/@media \(max-width:731px\)\{\s*#t-nat/.test(css), 'National\'s nine leagues: five then four at every width, each row in equal parts');
+  // re-pinned for the side-by-side screen: each side's Previous and Next in equal halves (the count between); taller, the primary on its own
+  // row over Back; on a phone held sideways Back | the primary in equal halves, Back first in the order there too (pickFit), for Tab
+  ok(X.TEAM_LISTS.filter(l => l.tier === 1).length === 9 && css.includes('.pk-step{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}') && css.includes('.pk-foot{display:flex;flex-direction:column;gap:8px}') && /@media \(max-height:440px\)\{\s*\.pk-foot\{flex-direction:row\}\s*\.pk-foot \.btn\{flex:1 1 0;/.test(css) && menus.includes("if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);"), 'Previous and Next in equal halves, the count between; the primary over Back, or on a phone held sideways Back | the primary in equal halves, in that order for Tab');
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const titled = t => t.split(' ').every((w, i) => (i && small.has(w)) || /^[A-Z0-9]/.test(w));   // a number stands as it is (England 2)
-  const labels = [...X.TEAM_TIERS, ...X.TEAM_LISTS.map(l => l.name), ...X.TEAM_CATS.map(c => c.name), 'My League'];
+  const labels = [...X.TEAM_TIERS, ...X.TEAM_LISTS.map(l => l.name), ...X.TEAM_CATS.map(c => c.name), 'My League', ...new Set(T.picker.ladder('men', { nations:true, legends:true, clubs:true, mine:'all' }).map(g => g.name)), ...Object.values(T.picker.PICK_HEMI), 'Previous', 'Next', 'Favourite', 'Edit', 'Kick Off', 'Create Team', 'Add Your Team', 'Your Team', 'Opponent', 'Your Club', 'My Club', 'My Country', 'Your Nation', 'Host', 'Done', 'Back'];
   ok(labels.every(titled), `every label is Title Case (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
-  ok(!/[←-↙⇐-⇙—]/.test(labels.join(' ') + menus.slice(menus.indexOf('let natLast'), menus.indexOf('function openTeams'))), 'no arrow or em dash');
+  ok(!/[←-↙⇐-⇙—]/.test(labels.join(' ') + menus.slice(menus.indexOf('/* ---------- The team screen: Your Team v Opponent'), menus.indexOf('function myPick'))), 'no arrow or em dash');
 }
 
 // 12. PR #14's data in main's tiers (2026-11-09, the owner: "main's tiers + PR #14's data"): its last-season club tables rate and order
@@ -860,28 +860,35 @@ function settle(pick) {
     ok(!blocks(X.ENGLAND_TWO) && !blocks(X.COUNTIES), `and no two share a table chip, shirt over trim (${blocks(X.ENGLAND_TWO)})`);
     const src = fs.readFileSync(new URL('../src/data.js', import.meta.url), 'utf8');
     ok(['Chinnor', 'Hartpury', 'Cornwall', 'Doncaster', 'Nottingham', 'Ampthill', 'Caldy', 'Egham', 'Mitcham'].every(n => new RegExp(n + "'[^\\n]*free choice").test(src)), 'the sides whose colours could not be sourced say so where they are written, as PR #14 flagged them'); }
-  // on screen: England 2 under National after England, Counties under Local after Surrey, each with its sides
-  X.setChamp(null); D.openTeams('quick'); X.tierPick(1);
-  const segNames = id => [...$(id).innerHTML.matchAll(/data-pool="([^"]+)"[^>]*>([^<]+)</g)].map(m => m[2]);
-  ok(segNames('t-nat').join() === 'England,England 2,France,United Rugby Championship,Scotland,South Africa,Australia,New Zealand,Japan' && segNames('t-loc').join() === 'Surrey,Counties,My League', `National's nine and Local's lists (${segNames('t-nat')} | ${segNames('t-loc')})`);
-  X.poolPick('en2');
-  ok(s.pool === 'en2' && X.ENGLAND_TWO.every(t => $('t-grid').innerHTML.includes('>' + t.name + '<')) && !$('t-grid').innerHTML.includes('>Bath<'), 'England 2 shows its thirteen');
-  X.poolPick('cty');
-  ok(s.pool === 'cty' && X.COUNTIES.every(t => $('t-grid').innerHTML.includes('>' + t.name + '<')) && $('t-nat').hidden && !$('t-loc').hidden && X.poolTier('cty') === 2, 'Counties shows its seven, under Local');
+  // on screen (re-pinned for the side-by-side screen, 2026-11-11): England 2 is England's Championship after its Premiership, Counties under
+  // Local after Surrey, each a group of the ladder with its sides
+  const P12 = T.picker, v12 = n => P12.view(n), to12 = (n, key) => { P12.group(n, v12(n).ladder.findIndex(g => g.key === key) - v12(n).gi); return v12(n); };
+  X.setChamp(null); s.pick = [null, null]; D.openTeams('quick');
+  const engGroups = v12(0).ladder.filter(g => g.home === 'ENG').map(g => g.key + ':' + g.name).join();
+  ok(engGroups === 'nat.eng:National,eng:Premiership,en2:Championship,sur:Surrey,cty:Counties' && ['fra', 'cel.ire', 'sco', 'rsa.urc', 'aus', 'nzl', 'jpn'].every(k => v12(0).ladder.some(g => g.key === k)), `the national leagues each a group of their country's, England's Championship after its Premiership, Local's Surrey then Counties (${engGroups})`);
+  to12(0, 'en2');
+  ok(v12(0).group.name === 'Championship' && v12(0).group.teams.map(t => t.id).join() === X.ENGLAND_TWO.map(t => t.id).join() && !v12(0).group.teams.some(t => t.id === 'BTH'), 'England 2 shows its thirteen, as England\'s Championship');
+  to12(0, 'cty');
+  ok(v12(0).group.teams.map(t => t.id).join() === X.COUNTIES.map(t => t.id).join() && v12(0).group.local && P12.where(v12(0).group) === 'North · England · Local' && X.poolTier('cty') === 2, 'Counties shows its seven, under Local');
   ok(X.poolKey('en2') === 'en2' && X.poolKey('cty') === 'cty', 'the save keeps either list\'s key');
-  // the stars beside every overall badge: each card's name with the side's stars under it, its words for a screen reader
+  // the stars beside every overall badge: each side's name with its stars under it, its words for a screen reader
   const stars = t => R5.starsHtml(R5.starsOf(t));
+  const badged = t => $('t-side0').innerHTML.includes(`aria-label="Overall ${X.overallOf(t)}">${X.overallOf(t)}</span></span><span class="tid"><span class="tname">${X.listName(t)}</span><span class="pk-rate">${stars(t)}`);
   for (const k of ['int', 'eng', 'en2', 'sur', 'cty']) {
-    X.poolPick(k); const g = $('t-grid').innerHTML, list = X.poolTeams(k);
-    ok(list.every(t => g.includes(`aria-label="Overall ${X.overallOf(t)}">${X.overallOf(t)}</span></span><span class="tid"><span class="tname">${X.listName(t)}</span>${stars(t)}</span>`)), `${k}: every card's stars beside its overall's badge, under its name`);
+    const list = X.poolTeams(k), got = [];
+    if (k === 'int') for (const n of list) { to12(0, 'nat.' + n.id.toLowerCase()); got.push(badged(n)); }
+    else { to12(0, k); for (const t of v12(0).group.teams) { got.push(badged(v12(0).team) && list.includes(v12(0).team)); P12.step(0, 1); } }
+    ok(got.length === list.length && got.every(Boolean), `${k}: every side's stars beside its overall's badge, under its name`);
   }
   ok(R5.starsOf(by('FAR')) === 3.5 && R5.starsOf(by('HAS')) === 2 && R5.starsOf(by('BTH')) === 4 && R5.starsOf(by('RSA')) === 5 && stars(by('FAR')).includes('aria-label="3.5 Stars"'), 'on the one scale: Farnham 3.5 stars, Haslemere 2, Bath 4, South Africa 5, each with its words');   // re-pinned at the real order: Farnham 61 (was 75, 4.5), Haslemere 46 (was 64, 3.5)
-  X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[0]);
-  ok($('t-mine').innerHTML.includes('<span class="tid"><span>Farnham</span>' + stars(X.CLUBS[0]) + '</span>'), 'Quick Match\'s picked side shows its stars in the bar');
-  X.catPick('women');
-  ok($('t-mine').innerHTML.includes('<span>Farnham Women</span>'), 'named for the category, at the same rating');
+  s.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[0]);
+  ok(P12.state().sides[0].set && $('t-side0').innerHTML.includes('<span class="tname">Farnham</span><span class="pk-rate">' + stars(X.CLUBS[0])), 'Quick Match\'s picked side shows its stars');
+  X.catPick('women'); P12.step(0, 1); P12.step(0, -1);
+  ok($('t-go').textContent === 'Pick Farnham Women' && $('t-side0').innerHTML.includes('<span class="tname">Farnham</span><span class="pk-rate">' + stars(X.CLUBS[0])), 'named for the category on the primary, at the same rating');
   X.catPick('men'); D.openTeams('my');
-  ok($('t-mine').innerHTML.includes('<span class="tid"><span>Farnham</span>' + stars(X.CLUBS[0]) + '</span>') && $('t-mine').innerHTML.includes('<span class="tid"><span>England</span>' + stars(X.NATIONS[0]) + '</span>'), 'My Team\'s screen: the club and the country, each with its stars');
+  const myClubStars = $('t-side0').innerHTML.includes('<span class="tname">Farnham</span><span class="pk-rate">' + stars(X.CLUBS[0]));
+  to12(0, 'nat.eng');
+  ok(myClubStars && $('t-side0').innerHTML.includes('<span class="tname">England</span><span class="pk-rate">' + stars(X.NATIONS[0])), 'My Team\'s screen: the club and the country, each with its stars');
   // a My League side saved under a code PR #14's lists took since: recoded, and My Team goes with it
   { const was = s.myClub, side = { key:'lg-EAL', id:'EAL', name:'Ealing Town', kit:'#1b2747', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3 };
     X.restore({ settings:{ myClub:'lg-EAL' }, importLeague:{ teams:[side, { ...side, key:'lg-XAN', id:'XAN', name:'Xanadu' }] } });
@@ -920,7 +927,7 @@ function settle(pick) {
     C.set(null); X.setChamp(null); s.myClub = was; s.pool = pool; X.restore({ importLeague:null }); }
   // Guildfordians is on Surrey and on Counties: a career at it plays in the list it was picked from. On Counties, its own league (Counties 5
   // Surrey) and the reason that list is there, it went to Surrey (review, 2026-11-09)
-  { const C = T.career, gdn = X.CLUBS[7], pick = k => { C.set(null); C.newOpen(); C.clubOpen(); C.tierPick(2); C.poolPick(k); C.clubPick(gdn); return C.draft(); };
+  { const C = T.career, gdn = X.CLUBS[7], P = T.picker, pick = k => { C.set(null); C.newOpen(); C.clubOpen(); P.group(0, P.view(0).ladder.findIndex(g => g.key === k) - P.view(0).gi); while (P.view(0).team !== gdn) P.step(0, 1); P.go(); return C.draft(); };   // Change Club on the team screen: the group, then Guildfordians in it
     ok(X.CLUBS.includes(gdn) && X.COUNTIES.includes(gdn) && gdn.id === 'GDN', 'Guildfordians, one side on both lists');
     const d = pick('cty'), cr = C.create({ name:'Sam', pos:'B', num:10, club:d.club, league:d.league });
     ok(d.league === 'cty' && $('cn-mine').innerHTML.includes('data-fit="wrap">Counties</span>') && !$('cn-mine').innerHTML.includes('Surrey'), `picked on Counties, New Player says Counties (${$('cn-mine').innerHTML.replace(/<[^>]+>/g, ' ').trim()})`);
@@ -932,134 +939,137 @@ function settle(pick) {
     C.set(null); T.debug.goHome(); }
 }
 
-// 13. Fold to One Line (the owner, 2026-11-09: "have the team selection menus collapsable - i can't see half the screen once i'm in to
-//     specific clubs"): the controls fold under one line, the title, where the list is and Change. It arrives folded; Change opens them
-//     (Done folds them); a list picked folds them again (International at once, National and Local once a league is picked); Men | Women |
-//     Minis keeps them open. The United Rugby Championship is the cel list's real name, the key unchanged. The real layout, the focus and
-//     the motion are checked in a browser by tools/home.mjs.
+// 13. The side-by-side team screen (the owner, 2026-11-11: "Rebuild the team select screen ... as a side-by-side picker in the style of EA FC's
+//     kick-off screen"), re-pinned from Fold to One Line, behaviour by behaviour: each side's head (who it is, where on the ladder, its group's
+//     button and the ladder sheet), the Opponent following Your Team until moved, Pick Opponent, 2 Players, My Team, Championship and the
+//     cups, My League, the focus and the ring, the United Rugby Championship's key, old saves, the labels and the motion. tools/picker.mjs
+//     checks the ladder whole and the real layout, the keyboard, a controller, a finger and the motion in a browser.
 {
-  const D = T.debug, s = D.settings(), $ = id => document.getElementById(id), H = T.home, K = T.cups;
-  const sum = () => $('t-sum').innerHTML.replace(/<[^>]+>/g, ''), folded = () => !X.opened() && $('t-ctl').hidden && $('t-fold').textContent === 'Change';
-  const opened = () => X.opened() && !$('t-ctl').hidden && $('t-fold').textContent === 'Done', vs = () => ($('t-vs').hidden ? '' : $('t-vs').textContent);
-  X.setChamp(null); K.set(null); s.cat = 'men'; s.myClub = null; s.myNat = null;
+  const D = T.debug, s = D.settings(), $ = id => document.getElementById(id), H = T.home, K = T.cups, P = T.picker;
+  const v = n => P.view(n), to = (n, key) => { P.group(n, v(n).ladder.findIndex(g => g.key === key) - v(n).gi); return v(n); };
+  const head = n => $('t-side' + n).innerHTML.slice(0, $('t-side' + n).innerHTML.indexOf('<div class="pk-card'));
+  X.setChamp(null); K.set(null); s.cat = 'men'; s.myClub = null; s.myNat = null; s.pick = [null, null]; s.fav = []; s.recent = [[], []];
   D.openTeams('quick');
-  ok(folded() && sum() === 'Men · Local · Surrey' && !vs(), `Quick Match arrives folded on Men · Local · Surrey, nothing beside it (${sum()})`);
-  ok(!$('t-tier').hidden && !$('t-loc').hidden && $('t-nat').hidden, 'folded, the rows keep their own state for when they open: the tiers and Local\'s lists');
-  $('t-fold').click();
-  ok(opened(), 'Change opens the controls and becomes Done');
-  $('t-fold').click();
-  ok(folded(), 'Done folds them');
-  $('t-fold').click(); X.tierPick(0);
-  ok(folded() && s.pool === 'int' && sum() === 'Men · International', `International folds at once: Men · International, no league (${sum()})`);
-  $('t-fold').click(); X.tierPick(0);
-  ok(folded() && s.pool === 'int', 'and pressed again, on International already, it folds too');
-  $('t-fold').click(); X.tierPick(1);
-  ok(opened() && s.pool === X.natLast() && !$('t-nat').hidden, 'National keeps them open, its league to pick, its first list on show');
+  ok(v(0).group.key === 'sur' && v(0).team.id === 'FAR' && !P.state().sides[0].set && v(1).team.id === 'WIM' && !P.state().sides[1].set && $('t-title').textContent === 'Pick Your Team', 'Quick Match arrives: Your Team on Farnham (offered, not set), the Opponent on Wimbledon, Pick Your Team');
+  ok(/<span class="pk-who">Your Team<\/span><span class="pk-ctx"><span><span>North<\/span> <span>England<\/span> <span>Local<\/span><\/span><\/span>/.test(head(0)) && /<span class="pk-who">Opponent<\/span>/.test(head(1)) && /<button class="btn pk-group" data-act="sheet" aria-haspopup="dialog">Surrey<\/button>/.test(head(0)), 'each side\'s head: who it is, where on the ladder, and its group as a button');
+  P.sheet(0);
+  ok(!$('m-ladder').hidden && $('ldr-title').textContent === 'Your Team' && /data-g="\d+" aria-pressed="true">Surrey</.test($('ldr-list').innerHTML), 'the group\'s button opens the ladder sheet, the side\'s name over it, its group lit');
+  ok(($('ldr-list').innerHTML.match(/class="btn ldr-g"/g) || []).length === v(0).ladder.length && ['North', 'South', 'Mine'].every(h => $('ldr-list').innerHTML.includes(`<h3 class="ldr-h">${h}</h3>`)) && /<p class="ldr-c">England · Local<\/p>/.test($('ldr-list').innerHTML), 'the sheet lists every group, under its hemisphere and its country (Local apart)');
+  P.sheetClose(v(0).ladder.findIndex(g => g.key === 'fra'));
+  ok($('m-ladder').hidden && v(0).group.key === 'fra' && v(0).i === 0, 'a group picked there: the side on its first team, the sheet shut');
+  P.sheet(0); P.sheetClose(null);
+  ok($('m-ladder').hidden && v(0).group.key === 'fra', 'Back shuts it with nothing changed');
+  to(0, 'sur');
+  ok(v(1).group.key === 'sur' && v(1).team.id === 'WIM', 'the Opponent, not yet moved, follows Your Team: Wimbledon again for Farnham');
+  to(0, 'en2');
+  ok(v(1).group.key === 'en2' && v(1).team.id !== v(0).team.id, 'and on to England\'s Championship with it, never on the same side');
+  P.step(1, 2); const moved = v(1).team; to(0, 'jpn');
+  ok(v(1).team === moved, 'once moved, the Opponent stays where it was put');
   X.catPick('women');
-  ok(opened() && s.cat === 'women', 'Men | Women | Minis keeps them open');
-  X.poolPick('cel');
-  ok(folded() && s.pool === 'cel' && sum() === 'Women · National · United Rugby Championship' && X.CELTIC.every(t => $('t-grid').innerHTML.includes('>' + t.name + '<')), `a league folds them: Women · National · United Rugby Championship, in full, its twelve under it (${sum()})`);
-  ok(/<span>United Rugby Championship<\/span>/.test($('t-sum').innerHTML) && $('t-sum').innerHTML.split('</span> · <span>').length === 3, 'each part of the line whole, so it wraps at a dot');
-  $('t-fold').click(); X.tierPick(2);
-  ok(opened() && s.pool === 'sur' && !$('t-loc').hidden, 'Local keeps them open, Surrey on show');
-  X.catPick('minis'); X.poolPick('sur');
-  ok(folded() && sum() === 'Minis · Local · Surrey', `the league already on show folds them as well (${sum()})`);
-  $('t-fold').click(); X.tierPick(1);
-  const kept = s.pool; X.tierPick(1);
-  ok(opened() && s.pool === kept, 'National pressed again stays open where it was');
-  X.poolPick('cty');
-  ok(folded() && sum() === 'Minis · Local · Counties', 'Counties, picked from National\'s open controls, folds them');
+  ok(v(0).group.key === 'jpn' && v(1).team === moved && s.cat === 'women', 'Men | Women | Minis keeps each side where it was');
+  to(0, 'cel.ire');
+  ok(v(0).group.teams.length === 4 && /<span class="tname">Dublin<\/span>/.test($('t-side0').innerHTML) && !/Dublin Women/.test($('t-side0').innerHTML), 'on Women: Ireland\'s URC, its four, each card by the club\'s name');
+  ok(/<span class="pk-league">United Rugby Championship<\/span>/.test($('t-side0').innerHTML), 'the card\'s league line: United Rugby Championship, in full');
+  ok(P.panel(0).includes('<button class="btn pk-group" data-act="sheet" aria-haspopup="dialog">URC</button>') && fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8').includes('.btn.pk-group{flex:0 1 auto;min-width:0;max-width:48%;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'), 'the group\'s button on one line, its name whole (URC)');
   X.catPick('men');
-  // Pick Opponent: your side on the line (v Farnham), the bar with Change Team inside the opened controls
-  D.openTeams('quick'); $('t-fold').click(); D.pickTeam(X.CLUBS[0]);
-  ok(folded() && $('t-title').textContent === 'Pick Opponent' && vs() === 'v Farnham' && !$('t-yours').hidden && !$('t-change').hidden, `a side picked arrives on Pick Opponent folded, v Farnham on the line, the bar and Change Team behind Change (${vs()})`);
+  // Pick Opponent: Your Team set, the Opponent next
+  s.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[0]);
+  ok(P.state().sides[0].set && /aria-pressed="true"/.test($('t-side0').innerHTML) && $('t-title').textContent === 'Pick Opponent' && $('t-go').textContent === 'Pick Wimbledon', 'a side picked arrives on Pick Opponent: Your Team set and pressed, Pick Wimbledon');
   X.catPick('women');
-  ok(vs() === 'v Farnham' && sum() === 'Women · Local · Surrey' && $('t-mine').innerHTML.includes('Farnham Women'), 'on Women the line says v Farnham, the category in the summary, the bar Farnham Women');
-  X.catPick('men'); $('t-fold').click(); X.tierPick(1); X.poolPick('aus');
-  ok(folded() && sum() === 'Men · National · Australia' && vs() === 'v Farnham', `the owner's example: Men · National · Australia, v Farnham (${sum()}, ${vs()})`);
-  $('t-fold').click(); $('t-change').click();
-  ok(folded() && $('t-title').textContent === 'Pick Your Team' && !vs() && $('t-yours').hidden, 'Change Team, in the opened controls: back to Pick Your Team, folded');
-  { const had = X.custom().length;                          // a team made on Create Team is his side as a card would be: Pick Opponent, folded
-    D.openTeams('quick'); X.fold(true); T.yourTeam.openBuilder(null); $('bd-name').value = 'Zed Town'; $('bd-save').click();
-    ok(folded() && $('t-title').textContent === 'Pick Opponent' && vs() === 'v Zed Town', `a team made from the opened controls: Pick Opponent, folded, as after a card (${vs()})`);
+  ok($('t-go').textContent === 'Pick Wimbledon Women' && /<span class="tname">Farnham<\/span>/.test($('t-side0').innerHTML) && P.state().sides[0].set, 'on Women the primary says Wimbledon Women, Your Team still Farnham, still set');
+  X.catPick('men'); to(1, 'aus');
+  ok(P.where(v(1).group) === 'South · Australia' && v(1).group.name === 'Clubs' && $('t-go').textContent === 'Pick Sydney' && P.state().sides[0].set, `the owner's example: the Opponent on Australia's clubs, Your Team still Farnham (${P.where(v(1).group)}, ${$('t-go').textContent})`);
+  P.step(0, 1);
+  ok(!P.state().sides[0].set && $('t-title').textContent === 'Pick Your Team' && $('t-go').textContent === 'Pick ' + v(0).team.name, 'moving Your Team frees it: back to Pick Your Team');
+  { const had = X.custom().length;                          // a team made on Create Team is his side as a card would be: Pick Opponent
+    s.pick = [null, null]; D.openTeams('quick'); to(0, 'mine.made'); P.go(); $('bd-name').value = 'Zed Town'; $('bd-save').click();
+    ok(P.state().sides[0].set && v(0).team.name === 'Zed Town' && $('t-title').textContent === 'Pick Opponent' && !v(1).ladder.some(g => g.teams.some(t => t.name === 'Zed Town')), `a team made from Your Team's side: set, Pick Opponent, the Opponent never shown it (${v(1).team.name})`);
+    ok(!v(1).team.act && v(1).group.key === 'sur' && $('t-go').textContent === 'Pick ' + v(1).team.name, `and the Opponent on a real side, not Create Team (Made Teams holds nothing else for it): My Team's group, Surrey, Pick ${v(1).team.name} (${v(1).group.key}, ${$('t-go').textContent})`);
     X.restore({ custom:X.custom().slice(0, had) }); D.goHome(); }
-  // 2 Players: Player 2's pick says whom he plays
-  D.openJoin(); D.openTeams('two');
-  ok(folded() && !vs(), 'Player 1\'s pick: folded, nothing beside the summary');
-  $('t-fold').click(); D.pickTeam(X.NATIONS[0]);
-  ok(folded() && $('t-title').textContent === 'Player 2 Team' && vs() === 'v England' && $('t-eyebrow').classList.contains('p2'), `Player 2 Team: folded, v England (${vs()})`);
+  // 2 Players: Player 1 and Player 2, each his own side
+  s.pick = [null, null]; D.openJoin(); D.openTeams('two');
+  ok($('t-eyebrow').textContent === '2 Players' && $('t-title').textContent === 'Pick Teams' && P.who(0) === 'Player 1' && P.who(1) === 'Player 2' && $('t-side0').classList.contains('p1') && $('t-side1').classList.contains('p2'), '2 Players: Pick Teams, Player 1 and Player 2 side by side, each in his colour');
   T.navPress(0);
-  ok(opened() && $('t-title').textContent === 'Player 2 Team', 'Player 1\'s press while Player 2 picks opens the folded controls first, so the Change Team he presses is on screen');
+  ok(P.state().sides[0].set && $('t-title').textContent === 'Pick Teams' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2'), 'Player 1\'s A sets his side: the title stays Pick Teams (the sides say whose is whose), whoever moved last');
   T.navPress(0);
-  ok(folded() && $('t-title').textContent === 'Player 1 Team', 'and his next press is Change Team: Player 1 Team, folded');
+  ok(P.state().sides[0].set && !P.state().sides[1].set && !(T.M && T.M.two && !T.M.demo), 'his press again waits for Player 2: no match yet');
+  T.navBack(0);
+  ok(!P.state().sides[0].set && $('t-title').textContent === 'Pick Teams', 'and his B frees his side: still Pick Teams');
   D.setTwo(false); D.goHome();
-  // My Team: the club and the country; the line has no side of its own (the cards mark them)
+  // My Team: the club, then the country
   D.openTeams('my');
-  ok(folded() && sum() === 'Men · Local · Surrey' && !vs() && $('t-eyebrow').textContent === 'My Team', 'My Team arrives folded');
-  $('t-fold').click(); X.tierPick(0);
-  ok(folded() && $('t-title').textContent === 'Pick Your Country' && sum() === 'Men · International', 'and International folds to Pick Your Country');
+  ok($('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && $('t-go').textContent === 'Done' && P.who(0) === 'My Club', 'My Team arrives on the club: Pick Your Club, Done while it is My Team\'s');
+  to(0, 'nat.eng');
+  ok($('t-title').textContent === 'Pick Your Country' && P.who(0) === 'My Country' && $('t-go').textContent === 'Done', 'and on a nation: Pick Your Country');
   D.goHome();
-  // Championship: Men | Women | Minis alone behind Change; the list is the line's, the eyebrow plain Championship
+  // Championship: one side, the competition's name on its group
   H.setTier(1); H.champPick('cel');
-  ok(folded() && $('t-eyebrow').textContent === 'Championship' && sum() === 'Men · National · United Rugby Championship' && $('t-tier').hidden && $('t-nat').hidden, `a league from the home: folded, Championship over the title, the list on the line (${sum()})`);
-  $('t-fold').click(); X.catPick('women');
-  ok(opened() && sum() === 'Women · National · United Rugby Championship', 'Change opens Men | Women | Minis; a category picked keeps it open');
-  $('t-fold').click();
-  ok(folded(), 'and Done folds it');
-  X.catPick('men'); D.goHome(); H.champPick('int');
-  ok(folded() && sum() === 'Men · International' && $('t-default').textContent === 'Play as England', 'the nation\'s championship: Men · International');
+  ok(P.one() && $('t-eyebrow').textContent === 'Championship' && v(0).group.name === 'United Rugby Championship' && P.where(v(0).group) === 'National' && v(0).group.teams.length === 12, 'a league from the home: one side, Championship over the title, the competition its group (United Rugby Championship, all twelve)');
+  X.catPick('women');
+  ok($('t-go').textContent === 'Play as ' + v(0).team.name + ' Women', 'Men | Women | Minis there too: Play as names the category');
+  P.sheet(0);
+  ok(($('ldr-list').innerHTML.match(/class="btn ldr-g"/g) || []).length === 2 && />United Rugby Championship</.test($('ldr-list').innerHTML) && />Made Teams</.test($('ldr-list').innerHTML), 'its sheet: the competition and Made Teams');
+  P.sheetClose(null); X.catPick('men'); D.goHome(); H.champPick('int');
+  ok(v(0).group.name === 'International' && $('t-go').textContent === 'Play as England', 'the nation\'s championship: International, Play as England');
   D.goHome(); H.champPick('world');
-  ok(folded() && sum() === 'Men · World Cup' && $('t-eyebrow').textContent === 'World Cup', 'the World Cup: Men · World Cup');
+  ok($('t-eyebrow').textContent === 'World Cup' && v(0).group.fixed && v(0).group.name === 'World Cup', 'the World Cup: its own list, fixed');
   D.goHome(); H.champPick('tour');
-  ok(folded() && sum() === 'Men · Home Nations Tour' && !vs() && !$('t-yours').hidden, 'the tour: Men · Home Nations Tour, the Home Nations\' bar behind Change');
+  ok(/<span>Your Side<\/span> <span>Home Nations<\/span>/.test(head(0)) && P.where(v(0).group) === 'Your Side · Home Nations' && P.who(0) === 'Host', 'the tour: the host, your side the Home Nations');
   K.set(null); X.setChamp(null); D.goHome();
   // My League, once a league is saved
   { const side = (id, name) => ({ key:'lg-' + id, id, name, kit:'#1b2747', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3 });
     X.restore({ importLeague:{ teams:[side('XAA', 'Ash'), side('XBB', 'Birch'), side('XCC', 'Cedar'), side('XDD', 'Dene'), side('XEE', 'Elm'), side('XFF', 'Fir')] } });
-    D.openTeams('quick'); $('t-fold').click(); X.tierPick(2); X.poolPick('my');
-    ok(folded() && sum() === 'Men · Local · My League' && $('t-grid').innerHTML.includes('>Ash<'), `My League folds: Men · Local · My League (${sum()})`);
+    s.pick = [null, null]; D.openTeams('quick'); to(0, 'mine.league');
+    ok(v(0).team.name === 'Ash' && v(0).group.teams.filter(t => !t.act).length === 6 && P.where(v(0).group) === 'Mine', `My League in Mine, its six: Ash first (${P.where(v(0).group)})`);
+    ok(/<span class="pk-league dup">My League<\/span>/.test($('t-side0').innerHTML), 'a My League side\'s line says My League (marked as its group\'s name again, the line pickFit drops last of all)');
     X.restore({ importLeague:null }); D.goHome(); }
-  // focus: where it was on the screen, the first card on folding (one that can be picked) and the current tier on opening
-  { const mk = id => ({ id, closest:sel => (sel === '#s-teams' ? {} : null), focus() { this.got = (this.got || 0) + 1; }, classList:{ add() {}, remove() {} }, scrollIntoView() {} });
-    const card = mk('card'), tier = mk('tier'), cat = mk('cat'), grid = $('t-grid'), tt = $('t-tier'), tc = $('t-cat');
-    const was = [grid.querySelector, tt.querySelector, tc.querySelector, document.activeElement];
-    grid.querySelector = sel => (sel === '.team:not([aria-disabled="true"])' ? card : null);
-    tt.querySelector = sel => (sel === '[aria-pressed="true"]' ? tier : null); tc.querySelector = sel => (sel === '[aria-pressed="true"]' ? cat : null);
-    D.openTeams('quick'); document.activeElement = mk('t-fold'); X.fold(true);
-    ok(tier.got === 1 && !card.got, 'the keyboard: Change opens on the current tier');
-    document.activeElement = tier; X.poolPick('int');
-    ok(card.got === 1, 'and a list picked folds onto the first card');
-    document.activeElement = null; T.home.ring(mk('t-fold')); X.fold(true);
-    ok(D.focus() === tier && tier.got === 1, 'a controller\'s ring: on the tier on opening, the keyboard\'s focus left alone');
-    T.home.ring(tier); X.fold(false);
-    ok(D.focus() === card && card.got === 1, 'and on the first card on folding');
-    T.home.ring(null); X.fold(true); X.fold(false);
-    ok(D.focus() === null && card.got === 1 && tier.got === 1, 'a tap, with no ring and no keyboard focus on the screen, moves neither');
-    D.openTeams('quick'); X.fold(true); document.activeElement = mk('a card'); D.pickTeam(X.CLUBS[0]);
-    ok(card.got === 2 && folded() && $('t-title').textContent === 'Pick Opponent', 'Player 1\'s side picked from the opened controls folds onto Pick Opponent\'s first card he can play, as a list picked does');
-    X.fold(true); document.activeElement = null; T.home.ring(mk('t-change')); $('t-change').click();
-    ok(D.focus() === card && card.got === 2 && folded() && $('t-title').textContent === 'Pick Your Team', 'Change Team folds back to Pick Your Team, a controller\'s ring onto its first card');
-    T.home.ring(null);
-    D.openTeams('champ', 'cel'); T.home.ring(mk('t-fold')); X.fold(true);
-    ok(D.focus() === cat, 'Championship, with no tiers: Men | Women | Minis takes the focus on opening');
-    [grid.querySelector, tt.querySelector, tc.querySelector, document.activeElement] = was; T.home.ring(null); D.goHome(); }
+  // focus: a press on a side's card moves the keyboard's focus and a controller's ring on (Your Team, the Opponent, Kick Off); a side drawn
+  // again keeps them on the same control
+  { const mk = (side, act) => { const el = { dataset:{ act }, got:0, focus() { this.got++; document.activeElement = this; }, classList:{ add() {}, remove() {} }, scrollIntoView() {} }; el.closest = sel => (sel === '.pk-side' ? { dataset:{ side:String(side) } } : sel === '[data-act]' ? el : null); return el; };
+    const els = { 0:{ pick:mk(0, 'pick'), next:mk(0, 'next') }, 1:{ pick:mk(1, 'pick'), next:mk(1, 'next') } }, go = $('t-go');
+    const was = [$('t-side0').querySelector, $('t-side1').querySelector, document.activeElement, go.focus];
+    for (const n of [0, 1]) $('t-side' + n).querySelector = sel => { const m = /data-act="(\w+)"/.exec(sel); return m ? els[n][m[1]] || null : null; };
+    let goFocus = 0; go.focus = () => { goFocus++; document.activeElement = go; };
+    s.pick = [null, null]; D.openTeams('quick');
+    document.activeElement = els[0].pick; P.click({ target:els[0].pick });
+    ok(P.state().sides[0].set && els[1].pick.got === 1, 'the keyboard: Enter on Your Team\'s card sets it and moves the focus to the Opponent\'s');
+    P.click({ target:els[1].pick });
+    ok(P.ready() && goFocus === 1, 'and on the Opponent\'s: Kick Off takes it');
+    document.activeElement = null; T.home.ring(els[0].pick); P.step(0, 1);
+    ok(D.focus() === els[0].pick, 'a controller\'s ring stays on the card it drives as the side is drawn again');
+    P.step(1, 1); T.home.ring(els[0].pick); P.click({ target:els[0].pick });
+    ok(D.focus() === els[1].pick, 'and A on a card moves it on: the Opponent\'s card, while it is still to pick');
+    T.home.ring(els[0].next); P.step(0, 1);
+    ok(D.focus() === els[0].next, 'Next keeps the ring on Next');
+    T.home.ring(null); document.activeElement = null; const before = [els[0].pick.got, els[1].pick.got, goFocus]; P.step(0, 1); P.set(0);
+    ok(D.focus() === null && els[0].pick.got === before[0] && els[1].pick.got === before[1] && goFocus === before[2], 'a tap, with no ring and no keyboard focus on the screen, moves neither');
+    T.home.ring(null); D.openTeams('quick'); const first = P.first();
+    ok(first === els[0].pick, 'a controller\'s first press lands on the active side\'s card (its reach from there, every button on the screen: tools/picker.mjs, in a browser)');
+    [$('t-side0').querySelector, $('t-side1').querySelector, document.activeElement, go.focus] = was; T.home.ring(null); D.goHome(); }
   // the United Rugby Championship keeps the key cel: the European Cup's lists, a save's pool, a career's league
   ok(X.TEAM_LISTS.find(l => l.name === 'United Rugby Championship').key === 'cel' && K.CUPS.euro.lists.includes('cel') && T.home.comps(1).some(([k, n]) => k === 'cel' && n === 'United Rugby Championship'), 'the United Rugby Championship is still cel: the European Cup draws from it, the home lists it by its name');
-  for (const [v, want] of [['cel', 'cel'], [0, 'int'], [1, 'sur'], [2, 'fra'], [3, 'aus'], [4, 'rsa'], ['my', 'my'], ['nope', 'int']]) {
-    X.restore({ settings:{ pool:v } }); D.renderTeams();
-    const tier = X.poolTier(X.teamPool()), name = X.teamPool() === 'my' ? 'My League' : X.TEAM_LISTS.find(l => l.key === X.teamPool()).name;
-    ok(s.pool === want && sum() === ['Men', X.TEAM_TIERS[tier], ...(tier ? [name] : [])].join(' · '), `an old saved pool ${JSON.stringify(v)} lands on ${want}: ${sum()}`);
+  for (const [val, want] of [['cel', 'cel'], [0, 'int'], [1, 'sur'], [2, 'fra'], [3, 'aus'], [4, 'rsa'], ['my', 'my'], ['nope', 'int']]) {
+    X.restore({ settings:{ pool:val } });
+    const kept = s.pool; D.openTeams('champ', X.teamPool());
+    const name = X.teamPool() === 'int' ? 'International' : X.TEAM_LISTS.find(l => l.key === X.teamPool()).name;
+    ok(kept === want && v(0).group.name === name, `an old saved pool ${JSON.stringify(val)} loads as ${want}, its Championship on ${name}`);
   }
   { const C = T.career, cr = C.create({ name:'Sam', pos:'B', num:10, club:X.CELTIC[0], league:'cel' });
     ok(cr.league === 'cel' && C.clean(JSON.parse(JSON.stringify(cr))).league === 'cel', 'a career at Dublin plays the cel list and keeps it through a reload'); C.set(null); }
-  X.restore({ settings:{ pool:'int', cat:'men' } });
-  // labels: Title Case, no arrow glyphs or disclosure triangles, minimal prose
+  X.restore({ settings:{ pool:'int', cat:'men' } }); D.goHome();
+  // labels: Title Case, no arrow glyphs or disclosure triangles, minimal prose; 44px; the motion
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8'), body = readGameSource(), css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  ok(/id="t-fold" aria-expanded="false" aria-controls="t-ctl">Change<\/button>/.test(body) && /id="cc-fold" aria-expanded="false" aria-controls="cc-ctl">Change<\/button>/.test(body), 'Change, a button that says what it opens to a screen reader (aria-expanded, aria-controls), on both screens');
-  const fold = menus.slice(menus.indexOf('/* Fold to One Line'), menus.indexOf('function poolPick'));
-  ok(!/[←-↙⇐-⇙▲-◿—]/.test(fold + body.slice(body.indexOf('id="s-teams"'), body.indexOf('id="s-build"'))) && !/summary|details/.test(body.slice(body.indexOf('id="s-teams"'), body.indexOf('id="s-build"'))), 'no arrow, triangle or em dash, and no disclosure summary');
-  ok(/const foldMotion = \(\) => \{ try \{ return !matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches;/.test(menus) && /\{ transform:`translateY\(\$\{move\}px\)` \}, \{ transform:'none' \}/.test(menus) && /\{ opacity:0, transform:'translateY\(-8px\)' \}, \{ opacity:1, transform:'none' \}/.test(menus), 'the motion is opacity and transform only, and none with reduced motion');
-  ok(/\.fold-line\{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-height:48px\}/.test(css) && /\.btn\.fold-go\{[^}]*min-height:44px/.test(css) && /\.fold-line\{flex-wrap:nowrap\}\s*\.fold-line > \.primary\{flex:0 1 auto;[^}]*min-height:44px/.test(css), 'the line 48px, Change at least 44; Championship\'s primary on the line, a row of its own under it where the screen is tall, beside Change at 44px on a phone held sideways');
+  ok(/<div class="modal" id="m-ladder" hidden role="dialog" aria-modal="true" aria-labelledby="ldr-title">/.test(body) && menus.includes('data-act="sheet" aria-haspopup="dialog"'), 'the group\'s button says what it opens (aria-haspopup), and the sheet is a labelled dialog');
+  const screen = menus.slice(menus.indexOf('/* ---------- The team screen: Your Team v Opponent'), menus.indexOf('function myPick'));
+  ok(!/[←-↙⇐-⇙▲-◿—]/.test(screen + body.slice(body.indexOf('id="s-teams"'), body.indexOf('id="s-build"'))) && !/summary|details/.test(body.slice(body.indexOf('id="s-teams"'), body.indexOf('id="s-build"'))), 'no arrow, triangle or em dash, and no disclosure summary');
+  ok(/const motionOn = \(\) => \{ try \{ return !matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches;/.test(menus) && /if \(!how \|\| !motionOn\(\)\) return;/.test(menus) && /el\.animate\(\[\{ opacity:0, transform:from \}, \{ opacity:1, transform:'none' \}\], \{ duration:PICK\.ms,/.test(menus) && /PICK = \{ ms:200,/.test(menus), 'the motion is opacity and transform only, 200ms, and none with reduced motion');
+  ok(/\.btn\.pk-group,\.btn\.pk-fav,\.btn\.pk-edit\{width:auto;flex:none;min-height:44px/.test(css) && /\.pk-step \.btn\{min-height:44px\}/.test(css) && /\.btn\.pk-fav\{[^}]*min-width:44px/.test(css), 'every target 44px: the group\'s button, Favourite, Edit, Previous and Next');
+  s.pick = [null, null]; D.openTeams('quick');
+  ok(/<button class="btn pk-fav" data-act="fav" aria-pressed="false" aria-label="Favourite"><i aria-hidden="true"><\/i><span>Favourite<\/span><\/button>/.test(P.panel(0)), 'Favourite: a toggle (aria-pressed), named Favourite');
+  ok(/<button class="btn" data-act="prev">Previous<\/button><span class="pk-n">1 of 12<\/span><button class="btn" data-act="next">Next<\/button>/.test(P.panel(0)), 'Previous and Next, the count between them: 1 of 12');
+  to(0, 'nat.arg');
+  ok(/data-act="prev" disabled>Previous<\/button><span class="pk-n">1 of 1<\/span><button class="btn" data-act="next" disabled>/.test(P.panel(0)), 'a group of one: both off, 1 of 1');
+  D.goHome();
 }
 
 console.log(`${passed} passed, ${failed} failed`);

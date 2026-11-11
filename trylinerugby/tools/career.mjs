@@ -45,7 +45,7 @@ const memory = {}; let writes = 0;
 globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; writes++; } };
 const saved = () => JSON.parse(memory['tryline.v1']);
 // the harness answers querySelectorAll('.screen') with its own list; the career's screens join it here, so showScreen toggles them
-const SCREENS = ['s-career-new', 's-career-club', 's-career-look', 's-career', 's-career-train', 's-career-table', 's-career-end'];
+const SCREENS = ['s-career-new', 's-teams', 's-career-look', 's-career', 's-career-train', 's-career-table', 's-career-end'];
 { const qsa = document.querySelectorAll;
   document.querySelectorAll = sel => (sel === '.screen' ? qsa(sel).concat(SCREENS.map(id => $(id))) : qsa(sel)); }
 const shown = () => ['s-home', ...SCREENS].find(id => !$(id).hidden);
@@ -477,7 +477,7 @@ C.setCups(false);                                    // no cups unless a section
   C.set(null);
 }
 
-// 4b. Train is the Skills Mini Games (the skills builder, at the PR #14 merge): the ten in the home's order, each game's skill from its own
+// 4b. Train is the Skill Games (the skills builder, at the PR #14 merge): the ten in the home's order, each game's skill from its own
 //     result (the circle's from its role), a real session through each game's card and Back to Career, Energy for each, the contact
 //     games and their group never for the youngest (the Kids level, or Minis), and the dilemmas' training options alongside
 {
@@ -486,7 +486,7 @@ C.setCups(false);                                    // no cups unless a section
   const ALL = T.drills.DRILLS.map(d => d.id), OPEN = T.drills.DRILLS.filter(d => !d.contact).map(d => d.id), CONTACT = ALL.filter(id => !OPEN.includes(id));
   S.drillSeen = ALL.slice();                                // no Watch How on a first open: it plays before the card and records nothing
   const cr = C.create({ pos:'B', num:9, club:X.CLUBS[0] }); C.set(cr); at(false, 'men');
-  ok(json(C.drills(cr).map(d => d.id)) === json(ALL) && C.drills(cr).every(d => d.name === T.drills.DRILLS.find(x => x.id === d.id).name), `Train lists the ten Skills Mini Games, in the home's order, by their names (${C.drills(cr).map(d => d.id)})`);
+  ok(json(C.drills(cr).map(d => d.id)) === json(ALL) && C.drills(cr).every(d => d.name === T.drills.DRILLS.find(x => x.id === d.id).name), `Train lists the ten Skill Games, in the home's order, by their names (${C.drills(cr).map(d => d.id)})`);
   ok(C.drills(cr).every(d => d.contact === CONTACT.includes(d.id)), 'and knows which are the contact games');
   // each game's skill: the chips on Train are what the game's own result hands the career (the circle's two, by role)
   ok(C.drills(cr).every(d => (d.id === 'circle' ? json(d.skills) === '["stamina","handling"]' : d.skills.length === 1 && d.skills[0] === C.DRILL_SKILL[d.id])), 'each game shows the skill it trains, the circle both');
@@ -518,7 +518,7 @@ C.setCups(false);                                    // no cups unless a section
   at(false, 'women'); C.renderTrain();
   { const ct = $('ct-list').innerHTML, g = ct.indexOf('Contact Games (U9 and Up)');
     ok(g > 0 && ct.includes(T.drills.COACH) && OPEN.every(id => ct.indexOf(`data-drill="${id}"`) < g) && CONTACT.every(id => ct.indexOf(`data-drill="${id}"`) > g), 'Women: the open games, then Contact Games (U9 and Up) with the coach line over its three'); }
-  { const ct = $('ct-list').innerHTML; ok(ALL.every(id => ct.includes(`data-drill="${id}"`) && ct.includes(T.drills.icons[id])), 'each game on Train carries its Skills Mini Games picture'); }
+  { const ct = $('ct-list').innerHTML; ok(ALL.every(id => ct.includes(`data-drill="${id}"`) && ct.includes(T.drills.icons[id])), 'each game on Train carries its Skill Games picture'); }
   // the dilemmas and the bars: a dilemma's training option and a session both move him, once each, in the same round
   at(false, 'men');
   { const c2 = C.create({ pos:'F', num:2, club:X.CLUBS[1] }); C.set(c2); c2.life.energy = 80;
@@ -791,60 +791,68 @@ C.setCups(false);                                    // no cups unless a section
   const words = ['Transfer Window', 'Continue', 'Called Up', 'Pick Your Country', 'Winners', 'Knocked Out', 'Series Won', 'Series Lost', 'Transfers', 'Stay', 'Start New Career', 'Change Club', 'Pick Your Club', 'Back to New Player', 'European Cup', 'World Cup', 'Home Nations Tour', 'Triple Crown'];
   ok(words.every(titled) && words.every(w => src.includes(w)), 'and the ones the screens write: Transfer Window, Called Up, Stay, Winners, Series Won and the rest');
   ok(!/Hall of Fame|to Go Up|One More Season|CAREER_STAGES|CAREER_COUNTIES|CAREER_CUT/.test(src), 'no stages left: no Hall of Fame, no "to Go Up", no counties');
-  const panel = (src.match(/<div class="hl-panel hp-career" id="hp-career"[^>]*>([\s\S]*?)<\/div>/) || [])[1] || '';
-  ok(/<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(panel) && /<button class="btn hl" id="hl-career" data-hl="career"[^>]*>[\s\S]*?<span class="hl-name">Career<\/span><\/button>/.test(src), 'Career is a headline on the home\'s bar: its panel is New Career (or Continue Career) with its note under it');
-  ok(/\.hl-panel \.btn\.primary\{min-height:72px;/.test(src) && /\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/.test(src), 'the button big, the headlines in five equal parts');
+  ok(/<button class="btn bx" id="b-career"><svg viewBox="0 0 24 24" aria-hidden="true">[\s\S]*?<\/svg><span class="bx-text"><span class="bx-name">Career<\/span><span class="bx-sub" id="career-note" hidden><\/span><\/span><\/button>/.test(src) && /\$\('b-career'\)\.addEventListener\('click', \(\) => \{ ac\(\); careerOpen\(\); \}\);/.test(src), 'Career is one of the home\'s five boxes, its picture and its word, its note under it; pressed, it opens the career (New Player, or the hub of one under way)');
+  ok(/\.btn\.bx\{display:flex;[^}]*height:100%;/.test(src) && /\.home-main\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);/.test(src), 'the box big, in a half of its row (Match | Career)');
   ok(!/[←-↙⇐-⇙]/.test(career), 'no arrow glyph on the career screens');
   for (const id of SCREENS) ok(new RegExp(`id="${id}"[\\s\\S]*?data-back>Back to (Menu|Career|New Player)<`).test(html), `${id} has a Back button`);
   ok(/id="cr-play">Play Match</.test(career) && /<div class="row2" id="cr-trow"><button class="btn" id="cr-train">Train<\/button><button class="btn" id="cr-table">Table<\/button><\/div>/.test(career), 'the hub: Play Match on its own, Train and Table as equal halves');
   ok(/<div class="row2"><button class="btn" id="ce-back" data-back>Back to Menu<\/button><button class="btn warn" id="ce-new">Start New Career<\/button><\/div>/.test(career), 'between phases: Back to Menu and Start New Career as equal halves, as the hub\'s Back to Menu and Start Fresh');
   // home
-  C.set(null); C.renderHome();
-  ok($('b-career').textContent === 'New Career' && $('career-note').hidden, 'home: New Career, with no note before a career starts');
+  C.set(null); X.setChamp(null); C.renderHome();
+  ok($('career-note').hidden, 'home: the Career box with no note before a career starts');
   const cr = C.create({ name:'Isla', pos:'B', num:7, club:{ id:'XSS', name:'<img src=x>', kit:'#123456', trim:'#abcdef', custom:true, pace:3, power:3, handling:3, kicking:3 } });
   C.set(cr); X.renderHome();
-  ok($('b-career').textContent === 'Continue Career' && !$('career-note').hidden && $('career-note').innerHTML === 'Year 1 · <span class="rn-name">&lt;img src=x&gt; · </span>Round 1 of 5', 'with one: Continue Career, the year, the club (escaped, in a span a phone held sideways leaves out) and the round');
+  ok($('career-note').hidden && /^Career · Round 1 v /.test($('cont-note').textContent), 'with one and nothing else under way: Continue says it (Career · Round 1 v ...), so the box keeps no note of its own');
+  T.debug.settings().last = 'champ'; X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); X.renderHome();
+  { const f = C.ahead(cr), opp = f.teams[f.home === f.user ? f.away : f.home].name, safe = opp.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    ok(!$('career-note').hidden && $('career-note').textContent === 'Round 1 v ' + opp && $('career-note').innerHTML === `<span class="nw">Round 1</span> <span class="nw">v ${safe}</span>` && !/img/.test($('career-note').innerHTML), `with a championship on Continue: the Career box's note, its fixture (Round 1 v ${opp}) in its parts, with no year and no club (My Team's box names it), so the club's name never reaches it unescaped`); }
+  X.setChamp(null);
   // the new player screen, and his club
   C.set(null); C.newOpen();
   const d = C.draft();
   ok(shown() === 's-career-new' && d.club.id === 'FAR' && d.league === 'sur' && /Farnham/.test($('cn-mine').innerHTML) && />Surrey</.test($('cn-mine').innerHTML) && /<b>7<\/b>/.test($('cn-mine').innerHTML) === false && /<b>4<\/b>/.test($('cn-mine').innerHTML), 'New Player: Farnham of Surrey to start, his shirt with a back\'s first number');
   ok(/data-n="4"/.test($('cn-num').innerHTML) && !/data-n="3"/.test($('cn-num').innerHTML), 'and a back\'s numbers');
   ok(/<span class="lbl">Your Player<\/span><div class="yours cr-yours"><span class="cr-mineline" id="cn-mine"><\/span><div class="cr-yourbtns"><button class="btn" id="cn-change">Change Club<\/button><button class="btn" id="cn-look-go">Change Look<\/button><\/div><\/div>/.test(html), 'Your Player: his shirt, the club and its league, with Change Club over Change Look');
-  const left = html.slice(html.indexOf('class="cr-left"'), html.indexOf('class="cr-form"')), right = html.slice(html.indexOf('class="cr-form"'), html.indexOf('id="s-career-club"'));
+  const left = html.slice(html.indexOf('class="cr-left"'), html.indexOf('class="cr-form"')), right = html.slice(html.indexOf('class="cr-form"'), html.indexOf('id="s-career-look"'));
   ok(['cn-mine', 'cn-look-go', 'cn-cat', 'cn-mode'].every(id => left.includes(id)) && ['cn-name', 'cn-pos', 'cn-num', 'cn-go'].every(id => right.includes(id)) && left.indexOf('cn-mine') < left.indexOf('cn-cat') && left.indexOf('cn-cat') < left.indexOf('cn-mode'), 'Your Player, Team and Play as on the left; First Name, Position, Shirt Number and Start Career on the right, so Start Career is in view');
   ok(d.cat === 'men' && /<div class="field"><span class="lbl">Team<\/span><div class="seg" id="cn-cat"><button>Men<\/button><button>Women<\/button><\/div><\/div>/.test(html), 'Team is Men | Women, two equal buttons, Men first and picked');
+  // Change Club is the team screen in its Career mode (re-pinned for the side-by-side team screen, 2026-11-11): one side, the ladder's
+  // clubs only, Pick and the club; a group's whole list is the career's league, Dublin's the URC (cel)
+  const PK = T.picker, at = key => { PK.group(0, PK.view(0).ladder.findIndex(g => g.key === key) - PK.view(0).gi); return PK.view(0); }, to = id => { while (PK.view(0).team.id !== id) PK.step(0, 1); };
   C.clubOpen();
-  ok(shown() === 's-career-club' && !$('cc-loc').hidden && $('cc-nat').hidden && $('cc-league').hidden && /class="team cr-club picked" data-i="0" aria-pressed="true">[\s\S]*?Farnham/.test($('cc-grid').innerHTML) && X.CLUBS.every(t => $('cc-grid').innerHTML.includes('>' + t.name + '<')), 'Change Club: Local · Surrey, its clubs, Farnham picked; no My League without an import');
-  ok(X.CLUBS.every(t => $('cc-grid').innerHTML.includes(`aria-label="Overall ${X.overallOf(t)}">${X.overallOf(t)}<`)), 'each club with its rating');
-  C.tierPick(1);
-  ok(!$('cc-nat').hidden && $('cc-loc').hidden && C.draft().pool === 'eng' && X.ENGLAND.every(t => $('cc-grid').innerHTML.includes('>' + t.name + '<')), 'National: England\'s Premiership first');
-  C.poolPick('fra');
-  ok(X.FRANCE.every(t => $('cc-grid').innerHTML.includes('>' + t.name + '<')) && !$('cc-grid').innerHTML.includes('>Bath<'), 'France: the Top 14');
-  C.clubPick(X.FRANCE[0]);
+  ok(shown() === 's-teams' && D.pickMode() === 'career' && $('t-eyebrow').textContent === 'New Player' && $('t-title').textContent === 'Pick Your Club' && $('t-back').textContent === 'Back to New Player' && PK.one() && PK.view(0).group.key === 'sur' && PK.view(0).team.id === 'FAR' && /Your Club/.test($('t-side0').innerHTML) && !PK.view(0).ladder.some(g => g.key === 'mine.league'), 'Change Club: the team screen, New Player · Pick Your Club, on Farnham in Local · Surrey, marked Your Club; no My League without an import');
+  { const badges = []; for (let i = 0; i < X.CLUBS.length; i++) { badges.push(new RegExp(`aria-label="Overall ${X.overallOf(PK.view(0).team)}">${X.overallOf(PK.view(0).team)}<`).test($('t-side0').innerHTML) && PK.view(0).team === X.CLUBS[i]); PK.step(0, 1); }
+    ok(badges.every(Boolean), 'each club with its rating, Surrey\'s twelve in their order'); }
+  ok(PK.view(0).ladder.every(g => !g.key.startsWith('nat.') && g.teams.every(t => !t.legend && !t.act && !X.isNation(t))), 'clubs only: no National group, no Legend, no Create Team or Add Your Team');
+  ok(json(PK.view(0).ladder.filter(g => g.home === 'ENG').map(g => g.name)) === json(['Premiership', 'Championship', 'Surrey', 'Counties']), 'England\'s Premiership first, then its Championship, then Local');
+  at('fra'); ok(PK.view(0).group.name === 'Top 14' && X.FRANCE.every((t, i) => PK.view(0).group.teams[i] === t), 'France: the Top 14');
+  ok(PK.primary() === 'Pick Toulouse', 'Pick Toulouse');
+  $('t-go').click();
   ok(shown() === 's-career-new' && C.draft().club.id === 'TLS' && C.draft().league === 'fra' && />Toulouse</.test($('cn-mine').innerHTML) && />France</.test($('cn-mine').innerHTML), 'Toulouse picked: back to New Player, Toulouse of France');
   C.clubOpen();
-  ok(C.draft().pool === 'fra' && !$('cc-nat').hidden, 'Change Club again opens on France');
-  // Fold to One Line, as the team screen (the owner, 2026-11-09): Pick Your Club, where the list is and Change; National | Local and the
-  // lists behind Change, a league picked folding them, a tier picked keeping them open for its league
-  { const sum = () => $('cc-sum').innerHTML.replace(/<[^>]+>/g, ''), folded = () => !C.clubOpened() && $('cc-ctl').hidden && $('cc-fold').textContent === 'Change', opened = () => C.clubOpened() && !$('cc-ctl').hidden && $('cc-fold').textContent === 'Done';
-    ok(folded() && sum() === 'National · France' && !$('cc-nat').hidden, `Change Club arrives folded on his club's list: National · France (${sum()})`);
-    $('cc-fold').click();
-    ok(opened(), 'Change opens National | Local and the lists, and becomes Done');
-    C.tierPick(2);
-    ok(opened() && C.draft().pool === 'sur' && sum() === 'Local · Surrey', 'Local keeps them open, Surrey on show');
-    C.poolPick('sur');
-    ok(folded() && sum() === 'Local · Surrey', 'the list on show picked folds them');
-    $('cc-fold').click(); C.tierPick(1);
-    ok(opened() && C.draft().pool === 'fra', 'National goes back to France, open for its league');
-    C.poolPick('cel');
-    ok(folded() && sum() === 'National · United Rugby Championship' && X.CELTIC.every(t => $('cc-grid').innerHTML.includes('>' + t.name + '<')), `a league folds them: National · United Rugby Championship, in full (${sum()})`);
-    $('cc-fold').click(); $('cc-fold').click();
-    ok(folded(), 'Done folds them');
-    C.clubPick(X.CELTIC[0]);
-    ok(shown() === 's-career-new' && C.draft().league === 'cel' && />United Rugby Championship</.test($('cn-mine').innerHTML), 'Dublin picked: New Player, Dublin of the United Rugby Championship (its key cel)');
-    C.clubOpen(); $('cc-fold').click(); C.clubOpen();
-    ok(folded() && sum() === 'National · United Rugby Championship', 'Change Club again arrives folded, on his club\'s list');
-    C.clubPick(X.FRANCE[0]); }
+  ok(PK.view(0).group.key === 'fra' && PK.view(0).team.id === 'TLS', 'Change Club again opens on Toulouse, in the Top 14');
+  PK.step(0, 1); ok(PK.primary() === 'Pick ' + PK.view(0).team.name && PK.view(0).team === X.FRANCE[1], 'the primary follows the club shown');
+  { const n = PK.view(0).ladder.length, g0 = PK.view(0).gi; for (let k = 0; k < n; k++) PK.group(0, 1); ok(PK.view(0).gi === g0, `Down through all ${n} groups comes round again`); }
+  PK.sheet(0);
+  ok(!$('m-ladder').hidden && !/>National</.test($('ldr-list').innerHTML) && />Top 14</.test($('ldr-list').innerHTML) && />Surrey</.test($('ldr-list').innerHTML), 'the ladder sheet: the clubs\' groups only');
+  PK.sheetClose(null);
+  // the URC's sides go by country, but a side picked from any of them plays the whole URC, as the career always did
+  at('cel.ire'); ok(PK.view(0).group.name === 'URC' && PK.view(0).team.id === 'DUB', 'Ireland\'s URC: Dublin first');
+  $('t-go').click();
+  ok(shown() === 's-career-new' && C.draft().club.id === 'DUB' && C.draft().league === 'cel' && />United Rugby Championship</.test($('cn-mine').innerHTML), 'Dublin picked: New Player, Dublin of the United Rugby Championship (its key cel)');
+  C.clubOpen();
+  ok(PK.view(0).group.key === 'cel.ire' && PK.view(0).team.id === 'DUB', 'Change Club again opens on his club, in its group');
+  at('cel.sco'); $('t-go').click();
+  ok(C.draft().club.id === 'EDI' && C.draft().league === 'cel', 'Edinburgh, from Scotland\'s URC: the URC too');
+  C.clubOpen(); at('rsa.urc'); $('t-go').click();
+  ok(C.draft().club.id === 'PRE' && C.draft().league === 'rsa', 'Pretoria, from South Africa\'s URC: South Africa\'s list, as its own');
+  C.clubOpen(); at('cty'); to('GDN'); $('t-go').click();
+  ok(C.draft().club.id === 'GDN' && C.draft().league === 'cty', 'Guildfordians from Counties plays Counties');
+  C.clubOpen(); at('sur'); to('GDN'); $('t-go').click();
+  ok(C.draft().club.id === 'GDN' && C.draft().league === 'sur', 'and from Surrey, Surrey');
+  C.clubOpen(); PK.step(0, 1); $('t-back').click();
+  ok(shown() === 's-career-new' && C.draft().club.id === 'GDN', 'Back to New Player keeps the club he had');
+  C.clubOpen(); at('fra'); $('t-go').click();
   C.catPick(1);
   ok(C.draft().cat === 'women' && C.draft().look.g === 1, 'Women picks it, and a female player with it: PR #14\'s Male | Female is this one control');
   // his look: Change Look opens Your Look, New Player's second step; a pick changes the picture, Back to New Player keeps it
@@ -866,17 +874,20 @@ C.setCups(false);                                    // no cups unless a section
     ok(json(C.get().look) === json({ g:1, skin:5, hair:C.LOOK.hair, style:3, b:1.12 }), 'a saved look is checked: clamped, a bad field the default, the body the career\'s Men | Women'); }
   C.set(null); C.newOpen();
   ok(C.draft().cat === 'men' && C.draft().club.id === 'FAR' && json(C.draft().look) === json(C.LOOK), 'a new player starts on Men at Farnham again, with the default look');
-  // a team you made follows every list, and plays the league it was picked on; My League with an import
+  // a team you made: Made Teams, keeping the league the career had (a team you made follows every list); My League with an import
   X.restore({ custom:[{ key:'my0', name:'My Town', id:'MYT', kit:'#123456', trim:'#abcdef', pace:3, power:3, handling:3, kicking:3, stamina:3 }] });
-  C.clubOpen(); C.tierPick(1); C.poolPick('sco');
-  ok($('cc-grid').innerHTML.includes('>My Town<') && C.clubList('sco').at(-1).custom, 'a team you made follows the list on screen');
-  C.clubPick(C.clubList('sco').at(-1));
-  ok(C.draft().club.name === 'My Town' && C.draft().league === 'sco' && />Scotland</.test($('cn-mine').innerHTML), 'picked on Scotland: Scotland\'s Premiership is its league');
-  C.clubOpen(); C.poolPick('my');
-  ok(C.draft().pool === 'sco', 'no My League to pick without an import');
+  C.clubOpen(); at('sco'); $('t-go').click();
+  C.clubOpen(); at('mine.made');
+  ok(PK.view(0).team.name === 'My Town' && PK.view(0).group.teams.every(t => t.custom), 'a team you made is in Made Teams');
+  $('t-go').click();
+  ok(C.draft().club.name === 'My Town' && C.draft().league === 'sco' && />Scotland</.test($('cn-mine').innerHTML), 'picked after Ayr: Scotland\'s Premiership is its league');
+  C.clubOpen();
+  ok(!PK.view(0).ladder.some(g => g.key === 'mine.league'), 'no My League to pick without an import');
   T.importer.setLeague({ teams:[0, 1, 2].map(i => ({ id:'IM' + 'ABC'[i], name:'Import ' + 'ABC'[i], kit:'#123456', trim:'#abcdef', pace:3, power:3, handling:3, kicking:3, stamina:3 })) });
-  C.tierPick(2); C.poolPick('my');
-  ok(!$('cc-league').hidden && C.draft().pool === 'my' && $('cc-grid').innerHTML.includes('>Import A<'), 'with one: My League, its clubs');
+  D.renderTeams(); at('mine.league');
+  ok(PK.view(0).group.key === 'mine.league' && PK.view(0).team.name === 'Import A' && PK.view(0).group.teams.length === 3, 'with one: My League, its clubs');
+  $('t-go').click();
+  ok(C.draft().club.name === 'Import A' && C.draft().league === 'my', 'and a side of it plays My League');
   T.importer.setLeague(null); X.restore({ custom:[] });
   // the hub
   C.set(cr); C.open();

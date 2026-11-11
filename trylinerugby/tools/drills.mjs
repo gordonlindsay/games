@@ -1,4 +1,4 @@
-// Skills Mini Games (the drills): every drill's setup, a scripted success and failure, the star thresholds, the onDone hand-back to a
+// Skill Games (the drills, the home's Skills Mini Games until 2026-11-11): every drill's setup, a scripted success and failure, the star thresholds, the onDone hand-back to a
 // caller, and isolation (no save, settings, championship or tutorial writes; matches, AI v AI and the demo untouched).
 process.env.SEED ??= '21';
 import fs from 'node:fs';
@@ -34,23 +34,23 @@ for (const d of X.DRILLS) {
   ok(X.KIT[d.id] && typeof X.KIT[d.id].setup === 'function' && X.icons[d.id] && /<(path|circle|ellipse|rect)\b/.test(X.icons[d.id]), d.id + ' has a drill and a drawn picture');
   ok(d.limit > 0 && d.limit <= 150, d.id + ' has a time limit');
 }
-ok(/<button class="btn hl" id="hl-drills" data-hl="drills"[^>]*>[\s\S]*?<span class="hl-name">Skills Mini Games<\/span><\/button>/.test(html) && /<div class="hl-panel hp-drills" id="hp-drills"[^>]*>\s*<div class="pr-games" id="pr-games">\s*<div class="drills hl-drills" id="pr-grid">/.test(html) && /<p class="eyebrow" id="pr-eyebrow">Skills Mini Games<\/p>/.test(html) && !/id="s-practice"|id="b-practice"|Practice Ground|Training Ground|Training Drills/.test(html), 'the games are the home\'s Skills Mini Games (PR #14\'s Training Ground screen folded into it, as the drills were), and the card reads Skills Mini Games');
-ok(/id="pr-select" data-back>Back to Skills</.test(html) && /id="pr-next">Next Game</.test(html) && /id="pr-watch">Watch How</.test(html) && /id="pr-runner">Runner</.test(html) && /id="pr-passer">Passer</.test(html), 'the card offers Try Again, Watch How, Next Game and Back to Skills, and the circle\'s Runner and Passer');   // Next Drill became Next Game with PR #14's games
+ok(/<button class="btn bx" id="b-drills">[\s\S]*?<span class="bx-name">Skill Games<\/span><\/span><\/button>/.test(html) && /<div class="hs-panel hp-drills" id="hp-drills" data-step="drills"[^>]*>\s*<div class="pr-games" id="pr-games">\s*<div class="drills hl-drills" id="pr-grid">/.test(html) && /<p class="eyebrow" id="pr-eyebrow">Skill Games<\/p>/.test(html) && !/id="s-practice"|id="b-practice"|Practice Ground|Training Ground|Training Drills/.test(html), 'the games are the home\'s Skill Games (its box and the step it opens; PR #14\'s Training Ground screen folded into it, as the drills were), and the card reads Skill Games');
+ok(/id="pr-select" data-back>Back to Skill Games</.test(html) && /id="pr-next">Next Game</.test(html) && /id="pr-watch">Watch How</.test(html) && /id="pr-runner">Runner</.test(html) && /id="pr-passer">Passer</.test(html), 'the card offers Try Again, Watch How, Next Game and Back to Skill Games, and the circle\'s Runner and Passer');   // Next Drill became Next Game with PR #14's games
 ok(!/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="pr-grid"'), html.indexOf('id="pr-grownups"'))) && !/<img\b|\.png|\.jpg|\.gif/.test(html.slice(html.indexOf('id="m-practice"'), html.indexOf('<script'))) && !/[\u{1F300}-\u{1FAFF}☀-➿]/u.test(training), 'drill pictures are drawn, with no image files and no emoji');
 const drillWords = [...training.matchAll(/drillTag\('([^']+)'/g)].map(m => m[1]);
 ok(drillWords.length >= 5 && drillWords.every(w => isTitle(w) || w === '+') && !/\btag\(/.test(training), 'the drills\' on-pitch words are Title Case, and none is a match tag (' + [...new Set(drillWords)].join(', ') + ')');
 ok(!/[\u2190-\u2199\u21D0-\u21D9]/.test(training) && !/\u2014/.test(training.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')), 'no arrow glyphs and no em dashes in the drills');
 ok(/"training\.js",\s*"practice\.js"/.test(fs.readFileSync(new URL('../src/manifest.json', import.meta.url), 'utf8')), 'training.js is built just before practice.js');
 
-// ---- the Skills Mini Games as one set (the skills builder, at the PR #14 merge): the home's order, the contact three, Watch How on every
+// ---- the Skill Games as one set (the skills builder, at the PR #14 merge): the home's order, the contact three, Watch How on every
 //      card, Next Game round all ten, and the skill each game hands a caller (the career's Train reads it)
 {
   const CAREER = T.career.DRILL_SKILL;
   ok(JSON.stringify(ids) === JSON.stringify(['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend', 'tackle', 'scrum', 'back']), 'the ten in the home\'s order: the seven open games, then the contact three (' + ids + ')');
   ok(JSON.stringify(X.DRILLS.filter(d => d.contact).map(d => d.id)) === '["tackle","scrum","back"]', 'Tackling, Driving and Ball Back are the contact games, and only they');
   const seen = D.settings().drillSeen; D.settings().drillSeen = ids.slice();   // a first open plays Watch How before the card: these read the card
-  const noWatch = ids.filter(id => { P.start(id); const good = P.state() && P.state().ready && !$('pr-watch').hidden && $('pr-eyebrow').textContent === 'Skills Mini Games' && $('pr-select').textContent === 'Back to Skills'; P.leave(); return !good; });
-  ok(!noWatch.length, 'every game\'s ready card offers Watch How and Back to Skills, under Skills Mini Games (' + (noWatch.join(', ') || 'all ten') + ')');
+  const noWatch = ids.filter(id => { P.start(id); const good = P.state() && P.state().ready && !$('pr-watch').hidden && $('pr-eyebrow').textContent === 'Skill Games' && $('pr-select').textContent === 'Back to Skill Games'; P.leave(); return !good; });
+  ok(!noWatch.length, 'every game\'s ready card offers Watch How and Back to Skill Games, under Skill Games (' + (noWatch.join(', ') || 'all ten') + ')');
   { P.start('tag'); const walk = []; for (let i = 0; i < 10; i++) { $('pr-next').click(); walk.push(P.state().id); } P.leave();
     ok(JSON.stringify(walk) === JSON.stringify(ids.slice(1).concat(['tag'])), 'Next Game goes round all ten in the home\'s order, then back to the first (' + walk + ')'); }
   const skill = {};
@@ -428,7 +428,7 @@ P.leave();
 let calls = [];
 const onDone = res => calls.push({ res, settings:JSON.stringify(D.settings()), practice:X.state(), home:!$('s-home').hidden });
 P.start('egg', { onDone });
-ok($('pr-select').textContent === 'Back to Career' && $('pr-row').classList.contains('one') && $('pr-eyebrow').textContent === 'Training', 'onDone: the ready card leaves with Back to Career when the caller names nothing else, under the caller\'s Training (never Skills Mini Games)');
+ok($('pr-select').textContent === 'Back to Career' && $('pr-row').classList.contains('one') && $('pr-eyebrow').textContent === 'Training', 'onDone: the ready card leaves with Back to Career when the caller names nothing else, under the caller\'s Training (never Skill Games)');
 $('pr-retry').click();
 s = play(meeter);
 ok(s.done && $('pr-next').hidden && $('pr-select').textContent === 'Back to Career' && calls.length === 0, 'onDone: the result card offers Try Again and Back to Career, no Next Drill');
@@ -466,8 +466,8 @@ ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.stars === 0 
 calls = [];
 P.start('tackle', { onDone }); D.keyDown({ code:'Escape', repeat:false, preventDefault() {} });
 ok(calls.length === 1 && calls[0].res.quit === true && calls[0].res.skill === 'power' && !X.state(), 'onDone: Escape on the ready card hands back once');
-P.start('cones'); ok(!P.state().opts && $('pr-select').textContent === 'Back to Skills' && $('pr-eyebrow').textContent === 'Skills Mini Games', 'without opts the card reads Skills Mini Games and goes Back to Skills');
-$('pr-select').click(); ok(!X.state() && !$('s-home').hidden && calls.length === 1, 'Back to Skills returns to the drill picker (the home\'s Skills Mini Games) and calls nobody');
+P.start('cones'); ok(!P.state().opts && $('pr-select').textContent === 'Back to Skill Games' && $('pr-eyebrow').textContent === 'Skill Games', 'without opts the card reads Skill Games and goes Back to Skill Games');
+$('pr-select').click(); ok(!X.state() && !$('s-home').hidden && T.home.step() === 'drills' && calls.length === 1, 'Back to Skill Games returns to the drill picker (the home\'s Skill Games step) and calls nobody');
 
 // ---- isolation
 ok(writes === 0, 'no drill writes the browser save');

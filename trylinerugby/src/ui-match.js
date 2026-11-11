@@ -9,6 +9,7 @@ const playing = () => mode === 'match' && M && !M.demo;
 function showScreen(id) {
   if (typeof offlineScreen === 'function') offlineScreen(id);
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+  if (typeof pickSheetShut === 'function') pickSheetShut();   // the team screen's ladder sheet never outlives it (src/ui-menus.js)
   setFocus(null);
   if (id === 's-teams') fitNames();
   if (id === 's-cup' && typeof cupFit === 'function') cupFit($('s-cup'));   // the cup hub's long names, once it has a size (src/ui-cups.js)
@@ -62,6 +63,7 @@ function startMatch(u, c, isChamp, o) {
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
   newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
+  if (!pair && (M.champ || M.cup) && settings.last !== 'champ') { settings.last = 'champ'; save(); }   // the home's Continue picks up the one played last (ui-menus.js); a career's own cup match is the career's (careerArm)
   mode = 'match';
   showScreen(null);
   $('hud').hidden = false; $('controls').hidden = pair; $('b-pause').hidden = false;   // two player: the stick and the three buttons are seat 0's touch controls, and nobody is touching; each player's marks are drawn on the pitch

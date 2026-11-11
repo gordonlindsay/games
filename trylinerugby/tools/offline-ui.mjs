@@ -363,7 +363,7 @@ for (const step of ['count', 'answer']) {
   const quick = { hidden:false, disabled:false };
   const candidates = [quick, t.elements['b-install'], t.elements['offline-update']];
   candidates.forEach((el, i) => {
-    const id = ['b-quick', 'b-install', 'offline-update'][i];
+    const id = ['b-continue', 'b-install', 'offline-update'][i];
     const tag = html.match(new RegExp('<(?:button|span)[^>]*id="' + id + '"[^>]*>'))[0];
     const classes = (tag.match(/class="([^"]+)"/) || [0, ''])[1].split(/\s+/);
     el.matches = selector => selector.startsWith('.') && classes.includes(selector.slice(1));
@@ -379,14 +379,14 @@ for (const step of ['count', 'answer']) {
   } };
   t.context.M = null;
   t.context.document = { querySelectorAll:selector => selector === '.screen' ? [layer] : [] };
-  t.context.$ = id => id === 'b-quick' ? quick : t.elements[id];
+  t.context.$ = id => id === 'b-continue' ? quick : t.elements[id];
   vm.runInContext(navSource, t.context);
   const nav = t.context;
   t.elements['offline-update'].hidden = false;             // as while Updating shows
   ok(Array.from(nav.navCands(layer)).length === 1 && nav.navCands(layer)[0] === quick, 'hidden install is not a pad candidate, nor is Updating');
   t.window.emit('beforeinstallprompt', t.installEvent());
   ok(Array.from(nav.navCands(layer)).length === 2 && nav.navCands(layer)[1] === t.elements['b-install'], 'visible install uses the production selector');
-  ok(nav.navMove(0, 0, 0) === quick, 'the ring starts on Play');
+  ok(nav.navMove(0, 0, 0) === quick, 'the ring starts on Continue (Play)');
   ok(nav.navMove(0, 0, 1) === t.elements['b-install'], 'down to Install Game');
   ok(nav.navPress(0) === true, 'pressed'); await tick();
   ok(t.installs === 1, 'pad confirm invokes the real install handler');
@@ -456,7 +456,7 @@ async function browserChecks() {
   const state = pg => read(pg, () => {
     const T = window.__tryline, c = T.teams.champ(), cr = T.career.get(), $ = id => document.getElementById(id);
     return { save:localStorage.getItem('tryline.v1'), seen:JSON.stringify({ round:c && c.round, results:c && c.results.length, year:cr && cr.year, played:cr && cr.season && cr.season.round, sound:T.debug.settings().sound,
-      notes:[$('b-champ').textContent, $('champ-note').textContent, $('b-career').textContent, $('career-note').textContent] }) };
+      notes:[$('b-champ').textContent, $('champ-note').textContent, $('cont-name').textContent + ' · ' + $('cont-note').textContent, $('career-note').textContent] }) };
   });
   const same = (a, b) => a.save === b.save && a.seen === b.seen;
   try {
@@ -483,7 +483,7 @@ async function browserChecks() {
     // the player's progress: Sound Off by its button, a championship two rounds in, a career one match in through Play Match to full time
     await read(page, () => {
       const T = window.__tryline, X = T.teams, C = T.career, D = T.debug;
-      document.getElementById('hl-settings').click(); document.querySelector('.seg[data-key="sound"]').children[1].click();
+      document.getElementById('b-set').click(); document.querySelector('.seg[data-key="sound"]').children[1].click();
       X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); const c = X.champ();
       for (let i = 0; i < 2; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; }
       X.save();
@@ -493,7 +493,7 @@ async function browserChecks() {
       return true;
     });
     const before = await state(page), was = JSON.parse(before.seen);
-    check(was.round === 2 && was.results === 2 && was.played === 1 && was.sound === false && /Continue Championship/.test(was.notes[0]) && /Continue Career/.test(was.notes[2]), `a championship and a career mid-way, Sound Off (${was.round}, ${was.played})`);
+    check(was.round === 2 && was.results === 2 && was.played === 1 && was.sound === false && /Continue Championship/.test(was.notes[0]) && /^Continue · Career · /.test(was.notes[2]), `a championship and a career mid-way (Continue on the career, played last), Sound Off (${was.round}, ${was.played})`);
 
     // 1. the owner's case: build two is published and the page reloaded: it opens on build one, the new worker waits, and with the
     //    pointer moving nothing happens; once the home is quiet it becomes build two with no tap
@@ -538,10 +538,11 @@ async function browserChecks() {
     await wait(1000);
     check(await buildOf(page) === 'two' && await read(page, () => window.__stay === 1 && !document.getElementById('s-home').hidden), 'back on the home: not at once');
     held = await state(page);
-    // a finger held still on the wordmark for 3 s (touch through the DevTools protocol: pointer and touch events, as a phone sends them)
+    // a finger held still on the wordmark, or a step's title (back from a drill the home is on Skill Games), for 3 s (touch through the DevTools
+    // protocol: pointer and touch events, as a phone sends them)
     const cdp = await context.newCDPSession(page);
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled:true, maxTouchPoints:5 });
-    const finger = await page.locator('#s-home .word').boundingBox(), at = { x:finger.x + finger.width / 2, y:finger.y + finger.height / 2 };
+    const finger = await page.locator('#s-home :is(.word, .hs-title):visible').first().boundingBox(), at = { x:finger.x + finger.width / 2, y:finger.y + finger.height / 2 };
     await read(page, () => { window.__touch = []; for (const k of ['pointerdown', 'touchstart', 'pointerup', 'touchend']) window.addEventListener(k, e => window.__touch.push(e.type + (e.pointerType ? ':' + e.pointerType : ''))); return true; });
     await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[at] });
     await wait(3000);
@@ -590,7 +591,7 @@ async function browserChecks() {
     await read(page, () => { sessionStorage.removeItem('tl-said'); window.__ctl = navigator.serviceWorker.controller; return true; });
     const sw = await context.newCDPSession(page);
     await sw.send('ServiceWorker.enable'); await sw.send('ServiceWorker.stopAllWorkers');
-    await read(page, () => { window.__onSay = m => { if (m.type !== 'GAME_WINDOWS') return; window.__onSay = null; document.getElementById('b-quick').click(); }; return true; });
+    await read(page, () => { window.__onSay = m => { if (m.type !== 'GAME_WINDOWS') return; window.__onSay = null; document.getElementById('b-quick').click(); }; return true; });   // Match's Quick Match
     check(await until(page, () => !document.getElementById('s-teams').hidden, 15000), 'Play pressed as the page asks for the count');
     await wait(3000);
     const off = await read(page, () => ({ said:sessionStorage.getItem('tl-said'), same:navigator.serviceWorker.controller === window.__ctl, home:!document.getElementById('s-home').hidden }));

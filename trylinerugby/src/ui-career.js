@@ -84,23 +84,16 @@ const careerDrawName = c => (c.id === 'tour' ? 'Series' : c.id === 'world' && c.
 /* The line under a cup's title on the hub and at its end: the cups' own (Win to Reach the Final, 2nd in Pool B · top two go through,
    Bath win the European Cup), as Championship mode's cup hub has it; nothing without the cups' screens. */
 function careerCupLine(cr) { const K = careerCups(); return cr.cup && K && K.cupLine ? K.cupLine(cr.cup) : ''; }
-/* The note under Continue Career: Year 2 · Bath · Round 1 of 5, Year 2 · England · Semi-Final, Year 3 · Transfer Window. A phone held
-   sideways leaves out the side's name (homeNote), so the note stays one line under its half. */
-function careerNote(cr) {
-  const team = careerTeamNow(cr), f = careerAhead(cr);
-  return 'Year ' + cr.year + ' · ' + team.name + ' · ' + (cr.phase === 'transfer' ? 'Transfer Window' : f ? f.label : careerResult(cr, careerOutcome(cr)));
-}
-function renderCareerHome() {                       // the home's Career: Continue Career with its note, or New Career
-  const b = $('b-career'), note = $('career-note');
-  if (!career) { b.textContent = 'New Career'; note.hidden = true; return; }
-  b.textContent = 'Continue Career'; homeNote(note, careerNote(career), careerTeamNow(career).name);
+/* The home's Career box: Career, and while a career is under way and Continue shows something else, its fixture (Round 2 v Bath, Transfer
+   Window: homeCareerFix, src/ui-menus.js), on two lines where the half needs them. My Team's box already names the club. */
+function renderCareerHome() {
+  const note = $('career-note');
+  if (!career || (typeof homeUnder === 'function' && homeUnder() === 'career')) { note.hidden = true; return; }
+  homeLine(note, homeCareerFix(career));
 }
 
 /* ---------- the new player, and his club ---------- */
-/* Your Club is picked on its own screen with the team screen's rows: National | Local, then National's leagues or Local's Surrey and
-   My League (while one is saved). The teams you made follow every list (an imported club is one of those), the Super Fan's club first. */
-const careerPoolTeams = k => (k === IMPORT_POOL ? importTeams() : (TEAM_LISTS.find(l => l.key === k && l.tier > 0) || TEAM_LISTS.find(l => l.key === 'sur')).teams);
-const careerClubList = k => storeFirst([...careerPoolTeams(k), ...custom]);
+/* Your Club is picked on the team screen, in its Career mode (careerClubOpen, below). */
 const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom === !b.custom;
 function careerNewOpen() {
   const home = myPool() || 'sur', pool = poolTier(home) > 0 ? home : 'sur';
@@ -173,52 +166,19 @@ $('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:
 for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
   [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
 $('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
-/* The club screen folds to one line as the team screen does (foldMove, src/ui-menus.js): Pick Your Club, where the list is (National ·
-   England), and Change. It arrives folded on his club's list; Change opens National | Local and the lists and becomes Done; a league picked
-   folds them again, a tier picked keeps them open for its league. No category here: Men | Women is New Player's. */
-let careerClubOpenOn = false;
-function careerClubOpen() { careerDraft.pool = careerDraft.league; careerClubOpenOn = false; renderCareerClubs(); careerShow('s-career-club'); }   // opens on the list his club is on, folded
-function careerClubFold(open) {
-  foldMove('s-career-club', $('cc-ctl'), $('cc-grid'), () => { careerClubOpenOn = !!open; renderCareerClubs(); $('s-career-club').scrollTop = 0; },
-    () => (careerClubOpenOn ? foldPressed('cc-tier') : foldFirst($('cc-grid'))));
-}
-$('cc-fold').addEventListener('click', () => careerClubFold(!careerClubOpenOn));
-function renderCareerClubs() {
-  const d = careerDraft, pool = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool, tier = poolTier(pool);
-  const press = (id, sel, on) => { for (const b of $(id).querySelectorAll(sel)) b.setAttribute('aria-pressed', String(on(b))); };
-  press('cc-tier', '[data-tier]', b => +b.dataset.tier === tier);
-  $('cc-nat').hidden = tier !== 1; $('cc-loc').hidden = tier !== 2; $('cc-league').hidden = !importLeague;
-  for (const id of ['cc-nat', 'cc-loc']) press(id, '[data-pool]', b => b.dataset.pool === pool);
-  $('cc-ctl').hidden = !careerClubOpenOn;
-  $('cc-fold').textContent = careerClubOpenOn ? 'Done' : 'Change'; $('cc-fold').setAttribute('aria-expanded', String(careerClubOpenOn));
-  $('cc-sum').innerHTML = foldSum([TEAM_TIERS[tier], careerLeagueName(pool)]);   // National · England, Local · Surrey, Local · My League
-  const clubs = careerClubList(pool);
-  $('cc-grid').innerHTML = clubs.map((t, i) => { const on = careerSame(t, d.club);
-    return `<button class="team cr-club${on ? ' picked' : ''}" data-i="${i}" aria-pressed="${on}">${jersey(t)}<span class="tid"><span class="tname" data-fit>${esc(listName(t))}</span>${ratedStars(t)}</span><span class="cr-rate" aria-label="Overall ${overallOf(t)}">${overallOf(t)}</span></button>`; }).join('');   // its name with its stars under it, beside its overall
-  for (const b of $('cc-grid').querySelectorAll('[data-i]')) b.addEventListener('click', () => careerClubPick(clubs[+b.dataset.i]));
-  if (!$('s-career-club').hidden) careerFit($('s-career-club'));
-}
-function careerClubPick(t) {                         // a club tapped: his, with the list on screen as its league; back to New Player
-  const d = careerDraft; if (!t) return;
-  d.club = t; d.league = d.pool === IMPORT_POOL && !importLeague ? 'sur' : d.pool;
+/* The club: the team screen in its Career mode (openTeams('career'), src/ui-menus.js), one side, centred: the ladder's clubs only (no nation,
+   no Legend), Made Teams and My League, the Super Fan's club first in its group, opening on his club. Pick takes it, with the group's list
+   as its league (Dublin plays the URC), and goes back to New Player; a team you made keeps the league it had. No category there: Men |
+   Women is New Player's. */
+function careerClubOpen() { openTeams('career'); }
+function careerClubPick(t, list) {                   // a club picked: his, with its group's list as its league; back to New Player
+  const d = careerDraft; if (!t || !d) return;
+  d.club = t;
+  if (list === IMPORT_POOL ? !!importLeague : TEAM_LISTS.some(l => l.key === list && l.tier > 0)) d.league = list;
+  else if (!t.custom) d.league = careerLeagueKey(d.league, t);
+  d.pool = d.league;
   renderCareerNew(); careerShow('s-career-new');
 }
-function careerPoolPick(k, stay) {                  // a league picked folds the controls; stay keeps them open (a tier's first list)
-  if (k === IMPORT_POOL && !importLeague) return;
-  careerDraft.pool = k; if (poolTier(k) === 1) careerDraft.nat = k;
-  if (stay) { renderCareerClubs(); $('s-career-club').scrollTop = 0; } else careerClubFold(false);
-}
-function careerTierPick(i) { if (poolTier(careerDraft.pool) !== i) careerPoolPick(i === 1 ? careerDraft.nat : 'sur', true); }   // National goes back to the league last looked at, open for its league
-{
-  const btn = (attr, label, more) => `<button ${attr}${more || ''}>${esc(label)}</button>`;
-  $('cc-tier').innerHTML = [1, 2].map(i => btn(`data-tier="${i}"`, TEAM_TIERS[i])).join('');   // National | Local: a club is never a nation
-  $('cc-nat').innerHTML = TEAM_LISTS.filter(l => l.tier === 1).map(l => btn(`data-pool="${l.key}"`, l.name)).join('');
-  $('cc-loc').innerHTML = TEAM_LISTS.filter(l => l.tier === 2).map(l => btn(`data-pool="${l.key}"`, l.name)).join('') + btn(`data-pool="${IMPORT_POOL}" id="cc-league"`, 'My League', ' hidden');
-  for (const b of $('cc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => careerTierPick(+b.dataset.tier));
-  for (const id of ['cc-nat', 'cc-loc']) for (const b of $(id).querySelectorAll('[data-pool]')) b.addEventListener('click', () => careerPoolPick(b.dataset.pool));
-}
-$('cc-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
-
 /* ---------- the hub ---------- */
 function careerOpen() {
   if (!storeGate('career', careerOpen)) return;            // Career is in the Full Game (src/store.js); a career under way stays saved
@@ -295,7 +255,7 @@ function careerChips(keys) {
   const label = Object.fromEntries(careerSkills());
   return keys.map(k => `<span class="cr-chip" style="--k:${CAREER_COL[k] || 'var(--chalk)'}">${label[k] || k}</span>`).join('');
 }
-/* Train: the Skills Mini Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
+/* Train: the Skill Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
    of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three. The youngest never
    see the contact games (careerDrills), so for them there is no group and no coach line. */
 function renderCareerTrain() {
@@ -398,4 +358,4 @@ $('ce-back').addEventListener('click', goHome);
 
 /* the first controller press lands on the screen's main action: his own club on the club screen, Stay in the transfer window (a
    mashed button never signs him anywhere), the first country at a call-up */
-Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career-club':() => (careerClubOpenOn && foldPressed('cc-tier')) || $('cc-grid').querySelector('.picked') || $('cc-grid').querySelector('.team'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });
+Object.assign(DEFAULT_FOCUS, { 's-career-draw':() => $('cd-back'), 's-career-new':() => $('cn-go'), 's-career':() => $('cr-play'), 's-career-train':() => $('ct-list').querySelector('.btn'), 's-career-end':() => $('ce-go') || $('ce-body').querySelector('.stay') || $('ce-body').querySelector('.team') });

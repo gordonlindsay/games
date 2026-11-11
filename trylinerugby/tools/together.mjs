@@ -1,5 +1,5 @@
 // The merged features working together, which no single feature's suite could prove on its own branch:
-// the career's Train runs a real drill (the home's Skills Mini Games' own) and its stars come back as skill points; a quit keeps the session;
+// the career's Train runs a real drill (the home's Skill Games' own) and its stars come back as skill points; a quit keeps the session;
 // the circle's roles train stamina or handling; a drill opened from the career leaves the championship alone.
 // node tools/together.mjs   Exits 1 on any failure.
 process.env.SEED ??= '31';
@@ -83,11 +83,11 @@ const champBefore = JSON.stringify(X.champ());
 // 6. pausing a drill: its name, not a match score, and a way back to where it came from, not Quit Match
 {
   P.start('cones'); $('pr-retry').click(); T.update(T.STEP); D.pause();
-  ok($('pz-score').textContent === 'Cones' && $('pz-quit').textContent === 'Back to Skills', `a paused drill reads its name and Back to Skills (${$('pz-score').textContent}, ${$('pz-quit').textContent})`);
+  ok($('pz-score').textContent === 'Cones' && $('pz-quit').textContent === 'Back to Skill Games', `a paused drill reads its name and Back to Skill Games (${$('pz-score').textContent}, ${$('pz-quit').textContent})`);
   $('pz-quit').click();
   ok(/^(Tap|Press) Again to Leave$/.test($('pz-quit').textContent), `the second press is asked for as Leave (${$('pz-quit').textContent})`);
   $('pz-quit').click();
-  ok(!P.state() && $('m-pause').hidden && !$('s-home').hidden, 'and it goes back to the home\'s Skills Mini Games');
+  ok(!P.state() && $('m-pause').hidden && !$('s-home').hidden, 'and it goes back to the home\'s Skill Games');
   const cr = fresh(); C.train('cones'); $('pr-retry').click(); T.update(T.STEP); D.pause();
   ok($('pz-quit').textContent === 'Back to Career', 'a drill from the career leaves Back to Career');
   $('pz-quit').click(); $('pz-quit').click();

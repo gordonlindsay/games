@@ -469,7 +469,7 @@ const minis = fn => { const s = D.settings(), was = s.cat; s.cat = 'minis'; try 
   P.start('defend'); ok(!P.state().tagOnly && !$('pr-coach').hidden && /Tackle/.test($('pr-feedback').textContent), 'grown-up levels: Breakaway is a tackle, and its card carries the coach line'); P.leave();
 }
 ok(X.DRILLS.filter(d => d.contact).map(d => d.id).join() === CONTACT.join() && X.DRILLS.slice(0, OPEN.length).map(d => d.id).join() === OPEN.join(), 'Tag and handling games come first; Tackling, Driving and Ball Back are the contact group');
-{ const body = html.slice(html.indexOf('id="hp-drills"'), html.indexOf('id="pr-grownups"')), group = body.slice(body.indexOf('id="pr-contact"'), body.indexOf('id="pr-grown"'));   // Skills Mini Games, under the home's bar
+{ const body = html.slice(html.indexOf('id="hp-drills"'), html.indexOf('id="pr-grownups"')), group = body.slice(body.indexOf('id="pr-contact"'), body.indexOf('id="pr-grown"'));   // Skill Games, under the home's bar
   ok(/<span class="pr-group">Contact Games \(U9 and Up\)<\/span>/.test(group), 'the group reads Contact Games (U9 and Up)');
   ok(CONTACT.every(id => group.includes(`id="pr-${id}"`)) && OPEN.every(id => !group.includes(`id="pr-${id}"`) && body.includes(`id="pr-${id}"`)), 'the three contact cards are inside that group, and nothing else');
   ok(group.includes(X.COACH), 'the group carries the coach line');
@@ -481,7 +481,7 @@ function atLevel(on, fn) { const s = D.settings(), was = [s.kids, s.diff]; setKi
 atLevel(true, () => {
   ok(K.kidsLevel(), 'Kids level is on');
   P.leave(); P.choose();
-  ok($('pr-contact').hidden && !$('s-home').hidden, 'Kids level, picker (Skills Mini Games, on the home): the contact group is hidden');
+  ok($('pr-contact').hidden && !$('s-home').hidden, 'Kids level, picker (Skill Games, on the home): the contact group is hidden');
   for (const id of CONTACT) {
     P.start(id); ok(!P.state(), 'Kids level, a direct start: ' + id + ' does not open');
     $('pr-' + id).click(); ok(!P.state(), 'Kids level, its card pressed anyway: ' + id + ' does not open');
@@ -501,7 +501,7 @@ atLevel(true, () => {
   minis(() => {
     const list = C.drills(cr).map(d => d.id);
     ok(!list.some(id => CONTACT.includes(id)) && list.includes('tag') && list.length === OPEN.length, 'a career with Minis picked: Tag Chase in, Tackling, Driving and Ball Back out (' + list + ')');
-    C.renderTrain(); ok(!$('ct-list').innerHTML.includes('data-drill="tackle"') && $('ct-list').innerHTML.includes('data-drill="tag"') && !/pr-coach|Contact Games/.test($('ct-list').innerHTML), 'Minis: the training screen shows Tag Chase, and no Contact Games group nor coach line since there is no contact game');   // the line is in the list's own markup since Train took the Skills Mini Games' groups (the skills builder)
+    C.renderTrain(); ok(!$('ct-list').innerHTML.includes('data-drill="tackle"') && $('ct-list').innerHTML.includes('data-drill="tag"') && !/pr-coach|Contact Games/.test($('ct-list').innerHTML), 'Minis: the training screen shows Tag Chase, and no Contact Games group nor coach line since there is no contact game');   // the line is in the list's own markup since Train took the Skill Games' groups (the skills builder)
     for (const id of CONTACT) { cr.trained = false; ok(C.train(id) === false && !P.state(), 'Minis, career train: ' + id + ' does not open'); P.start(id, { onDone() {} }); ok(!P.state(), 'Minis, a direct start with a caller: ' + id + ' does not open'); }
     cr.trained = false; ok(C.train('tag') === true && P.state() && P.state().id === 'tag', 'Minis: Tag Chase opens'); ok($('pr-next').hidden, 'Minis: no Next Drill on the way to a contact game'); P.leave();
   });
@@ -714,7 +714,7 @@ P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the gr
   D.setDev('kb'); ok(X.drillName('Tackle', 'a') === 'Tackle (J)', 'keyboard: its own key'); D.setDev('touch'); ok(X.drillName('Tackle', 'a') === 'Tackle', 'touch: no key');
 }
 { // the pause card in a game
-  P.start('tackle'); $('pr-retry').click(); D.pause(); ok($('pz-score').textContent === 'Tackling' && !/\d/.test($('pz-score').textContent), 'pause in a game: its name, no clubs and no score (' + $('pz-score').textContent + ')'); ok($('pz-quit').textContent === 'Back to Skills', 'and Back to Skills, not Quit Match (main\'s way back: Skills Mini Games)'); $('pz-quit').click(); ok(/Again to Leave/.test($('pz-quit').textContent), 'it asks once more in the same words: ' + $('pz-quit').textContent); P.leave(); }
+  P.start('tackle'); $('pr-retry').click(); D.pause(); ok($('pz-score').textContent === 'Tackling' && !/\d/.test($('pz-score').textContent), 'pause in a game: its name, no clubs and no score (' + $('pz-score').textContent + ')'); ok($('pz-quit').textContent === 'Back to Skill Games', 'and Back to Skill Games, not Quit Match (main\'s way back: Skill Games)'); $('pz-quit').click(); ok(/Again to Leave/.test($('pz-quit').textContent), 'it asks once more in the same words: ' + $('pz-quit').textContent); P.leave(); }
 { // Driving's own hint card, and none on its ready card
   const s = D.settings(), was = s.hints; s.hints = true; P.start('scrum');
   ok(!D.hintFor(0), 'Driving\'s ready card has no hint card over it'); $('pr-retry').click(); const c = T.M.cut; c.t = 1; const h = D.hintFor(0);

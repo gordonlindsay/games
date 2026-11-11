@@ -8,7 +8,7 @@
      links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
      User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
      browser on another site could not read its pages anyway.
-   - Add Your Team: the team screen's card and the home's button, their card (#m-import), and the My League list.
+   - Add Your Team: the team screen's entry (Mine's My League) and the home's button, their card (#m-import), and the My League group.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -801,11 +801,11 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-/* The team screen's Add Your Team card: beside Create Team while there is room for a team, and kept with four made while a league is
-   saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is on sale (storeOffered). */
+/* Add Your Team on the team screen (an entry of Mine's My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
+   team, and kept with four made while a league is saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is
+   on sale (storeOffered). */
 const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
-function importCard() { return importShown() ? `<button class="team create" id="t-import"><span class="plus link" aria-hidden="true"></span><span class="tname">Add Your Team</span></button>` : ''; }
-/* The home's Add Your Team, at the top beside My Team: the same card, shown where the team screen's would be (room for a team, or a league to
+/* The home's Add Your Team, at the top beside My Team: shown where the team screen's entry is (room for a team, or a league to
    refresh or remove, and in the app only once a Super Fan club is on sale), with its lock while Import is locked. */
 function importHome() {
   const b = $('b-import'), on = importShown();
@@ -813,9 +813,6 @@ function importHome() {
   storeMark(b, 'import');
 }
 $('b-import').addEventListener('click', () => { ac(); importOpen(); });
-function importBind() {
-  const b = $('t-import'); if (b) b.addEventListener('click', importOpen);
-}
 
 /* ---------- the Add Your Team card ----------
    web: the app is needed. link: paste, then Import (a grown-up check first). busy: fetching. preview: the club, its
@@ -885,10 +882,7 @@ async function importRun(href, token, opts) {
 function importCommit() {
   const u = importUi; if (u.step !== 'preview' || !u.data) return;
   const res = importSave(u.data, { ...(u.draft || {}), level:u.level });
-  if (res.added && u.from !== 'home') {                    // as Save Team: a club made while Player 1 picks his side is the one played as
-    if (pickMode === 'quick' && !quickPick) { quickPick = res.club; teamsOpen = false; }   // on to Pick Opponent, folded, as after a card
-    else if (pickMode === 'two' && twoSel.picking === 0) { twoSel.teams[0] = res.club; twoSel.picking = 1; teamsOpen = false; }
-  }
+  if (res.added && u.from !== 'home') pickMade(res.club);   // as Save Team: on the side that asked, the one played as when it was Your Team's (ui-menus.js)
   if (res.club && !myIs(res.club)) {                       // a club in: Make This My Team | Not Now
     u.step = 'mine'; u.club = res.club; u.sides = res.sides; u.data = null; u.token++;
     importRender(); importFocus(); return;
@@ -897,7 +891,7 @@ function importCommit() {
 }
 function importDone(sides) {
   importClose();
-  if (sides && importUi.from !== 'home') { settings.pool = IMPORT_POOL; teamsOpen = false; renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league, from the top, folded as a list picked
+  if (sides && importUi.from !== 'home') { pickLeague(); renderTeams(); $('s-teams').scrollTop = 0; }   // straight to the new league: My League on the side that asked (Championship's competition becomes it)
 }
 function importOffer(make) {                                 // the offer answered: the club is My Team's, or not
   const u = importUi; if (u.step !== 'mine') return;

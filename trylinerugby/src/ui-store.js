@@ -1,5 +1,5 @@
 /* =========================================================
-   Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge on the home,
+   Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge in My Team's box,
    and the links that leave the game. The rules are in src/store.js.
    - A locked control (Championship and its competitions, Career, Create Team and Edit, Hard, Add Your Team on the home and the team screen, a Legends
      side the Locker has unlocked) keeps its place and its label, with a small
@@ -7,8 +7,8 @@
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
      first. The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
-   - A Super Fan's home takes the club's kit colours (storeThemeHome) and shows its shield, or its crest where the club has given one
-     with its written permission. Without a Super Fan unlock the home is exactly as it was.
+   - A Super Fan of My Team's club gets My Team's box in the club's colours (storeThemeHome) with the Super Fan badge, its shield (or its
+     crest where the club has agreed and given one with its written permission) and the trophy's rosette. Without it the box is plain.
    - The Supporters' Wall (storeWallAsk): for a club whose Super Fan unlock this device owns, from the Locker's Super Fan tile and the
      Grown-Ups panel. The grown-up check, then Are you 18 or over? and How Your Name Appears; Continue opens the grown-up's own mail app
      with the request written out (storeWallMail, src/store.js). The game sends nothing and keeps no name.
@@ -49,11 +49,11 @@ function storeRender() {
   const live = storeLive();
   const g = $('b-grown'), set = $('hp-settings');
   g.hidden = !live; set.classList.toggle('grown', live);    // Settings: Sound | Match Help | Grown-Ups in thirds
-  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there, and on the Settings headline; touched only when it changes
+  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there, and on the Settings box; touched only when it changes
   if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
-  const hs = $('hl-settings');
+  const hs = $('b-set');                                   // the Settings box carries the dot too
   if (hs.classList.contains('note') !== ready) { hs.classList.toggle('note', ready); hs.setAttribute('aria-label', ready ? 'Settings, a suggestion waiting' : 'Settings'); }
-  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('hl-champ'), 'champ'); storeMark($('hl-career'), 'career');
+  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('b-comps'), 'champ');   // Continue's own lock is homeContinue's (src/ui-menus.js)
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
   if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
   if (!storeHas('hard')) {
@@ -61,18 +61,33 @@ function storeRender() {
     if (settings.twoDiff.includes(2)) settings.twoDiff = settings.twoDiff.map(v => Math.min(v, 1));
   }
   if (typeof lockerFanAward === 'function') lockerFanAward();   // an unlock owned before the trophies came earns its club's too (src/locker.js); in the app only
-  const c = storeFanClub(), t = storeTeamOf(c), b = $('st-fan');   // a Super Fan's line under the logo, in place of Mobile Rugby · Sevens, so the home keeps its height
-  if (c && t) { b.innerHTML = storeShield(t, c) + `<span>Super Fan · ${esc(c.name)}</span>`; b.hidden = false; $('home-tag').hidden = true; }
-  else if (!b.hidden) { b.hidden = true; $('home-tag').hidden = false; }
+  const c = storeFanMine(), t = storeTeamOf(c), b = $('st-fan');   // a Super Fan of My Team's club: the badge over the name in My Team's box, and the box in the club's colours
+  if (c && t) {
+    const rosette = typeof lockerFanClubs === 'function' && lockerFanClubs().some(x => x.club === c);   // the Super Fan trophy, once it is held (src/locker.js)
+    b.innerHTML = storeShield(t, c) + '<span>Super Fan</span>' + (rosette ? `<span class="my-ros"><span class="cup-trophy" data-kind="fan" data-metal="${typeof trophyMetal === 'function' ? trophyMetal('fan') : 'gold'}" role="img" aria-label="Super Fan Trophy"></span></span>` : '');   // the rosette in a span of its own: a filter on the trophy itself would be masked away with it
+    b.hidden = false;
+  } else if (!b.hidden) { b.hidden = true; b.innerHTML = ''; }
   storeThemeHome(c && t ? t : null);
+}
+/* The club whose Super Fan unlock this device owns and whose side is My Team's club (the latest bought, where there are two), or null. A Super Fan
+   whose My Team is another club keeps the trophy (the Locker, the Trophy Cabinet's strip) and the box stays plain. */
+function storeFanMine() {
+  const my = typeof myClubTeam === 'function' ? myClubTeam() : null;
+  if (!my || my.custom) return null;
+  return storeFanOwned().slice().reverse().find(c => { const t = storeTeamOf(c); return t && t.id === my.id; }) || null;
 }
 
 /* ---------- the Super Fan's home: the club's colours ----------
-   The chosen headline, the panel's primary button (Play) and My Team's edge take the club's kit colours (styles.css, #s-home.fan),
-   readable on the dark home. The accent, a line or a word on the dark, is whichever of the kit and the trim stands out more from the
-   panel, lifted toward chalk until it reads at 4.5:1. A word on the kit's fill is chalk wherever chalk reads on it (4.5:1), and the
-   night's ink only on a fill too light for it. The fill's edge is the trim where the trim shows on the dark, the accent where not. */
-const STORE_TONE = { chalk:'#f1eee4', night:'#0b130e', panel:'#17271d' };   // styles.css's --chalk, --night and --panel-hi
+   My Team's box takes the club's colours (styles.css, #s-home.fan): its ground the kit, darkened toward the night only where neither chalk
+   nor the night's ink would read on it at 4.5:1, every word on it in whichever of the two reads better (gink), and its edge the trim where
+   the trim shows on the dark, the accent where not. The Super Fan tab on the box's top edge is filled with the edge (darkened the same
+   way where no ink would read on it), its words in the ink that reads (tink). The rating stars stay the floodlight's yellow where it shows
+   on the ground at 3:1, and take gink where not (star); a result's chip whose fill is under 3:1 on the ground is ringed in gink (ringw,
+   ringd, ringl), so every mark in the box reads on any kit (WCAG 1.4.11). The shirt sits on a tile of the plain box's panel (styles.css),
+   so it reads as it does on the plain box. The accent, a line or a word on the dark, is whichever of the kit and the trim stands out more
+   from the panel, lifted toward chalk until it reads at 4.5:1. */
+const STORE_TONE = { chalk:'#f1eee4', night:'#0b130e', panel:'#17271d', flood:'#ffcf3d', silver:'#c3ccd3', alert:'#ff8466' };   // styles.css's --chalk, --night, --panel-hi, --flood, --silver and --alert
+const STORE_THEME_KEYS = ['kit', 'trim', 'acc', 'ink', 'edge', 'ground', 'gink', 'tab', 'tink', 'star', 'ringw', 'ringd', 'ringl'];   // each set on the home as --fan-<key>
 const storeLum = h => { const v = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)/255).map(c => (c <= 0.03928 ? c/12.92 : ((c + 0.055)/1.055) ** 2.4)); return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
 const storeContrast = (a, b) => { const x = storeLum(a), y = storeLum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
 const storeMix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16)*(1 - t) + parseInt(b.slice(i, i + 2), 16)*t).toString(16).padStart(2, '0')).join('');
@@ -82,7 +97,16 @@ function storeTheme(t) {
   let acc = base;
   for (let i = 1; i <= 10 && storeContrast(acc, STORE_TONE.panel) < 4.5; i++) acc = storeMix(base, STORE_TONE.chalk, i/10);
   const chalk = storeContrast(kit, STORE_TONE.chalk), ink = chalk >= 4.5 || chalk >= storeContrast(kit, STORE_TONE.night) ? STORE_TONE.chalk : STORE_TONE.night;
-  return { kit, trim, acc, ink, edge:storeContrast(trim, STORE_TONE.night) >= 3 ? trim : acc };
+  const best = g => Math.max(storeContrast(g, STORE_TONE.chalk), storeContrast(g, STORE_TONE.night));
+  let ground = kit;
+  for (let i = 1; i <= 10 && best(ground) < 4.5; i++) ground = storeMix(kit, STORE_TONE.night, i/10);
+  const inkOn = g => (storeContrast(g, STORE_TONE.chalk) >= storeContrast(g, STORE_TONE.night) ? STORE_TONE.chalk : STORE_TONE.night);
+  const gink = inkOn(ground), edge = storeContrast(trim, STORE_TONE.night) >= 3 ? trim : acc;
+  let tab = edge;
+  for (let i = 1; i <= 10 && best(tab) < 4.5; i++) tab = storeMix(edge, STORE_TONE.night, i/10);
+  const ring = fill => (storeContrast(fill, ground) >= 3 ? 'transparent' : gink);
+  return { kit, trim, acc, ink, edge, ground, gink, tab, tink:inkOn(tab), star:storeContrast(STORE_TONE.flood, ground) >= 3 ? STORE_TONE.flood : gink,
+    ringw:ring(STORE_TONE.flood), ringd:ring(STORE_TONE.silver), ringl:ring(STORE_TONE.alert) };
 }
 let storeThemeOn = '';                     // the colours the home has now ('' for none), so it is touched only when they change
 function storeThemeHome(t) {
@@ -90,23 +114,29 @@ function storeThemeHome(t) {
   if (key === storeThemeOn) return;
   storeThemeOn = key;
   s.classList.toggle('fan', !!th);
-  for (const k of ['kit', 'trim', 'acc', 'ink', 'edge']) {
+  for (const k of STORE_THEME_KEYS) {
     if (th) s.style.setProperty('--fan-' + k, th[k]);
     else if (typeof s.style.removeProperty === 'function') s.style.removeProperty('--fan-' + k);
   }
 }
-/* The Super Fan's shield: plain, in the kit colours, or the club's crest where FAN_CLUBS has one (a file of the game's own). */
+/* The Super Fan's shield: plain, in the kit colours, or the club's crest where FAN_CLUBS has one and the club has agreed (a file of the game's own). */
 function storeShield(t, c) {
-  const crest = storeCrest(c);
+  const crest = c && c.agreed === true ? storeCrest(c) : null;   // a crest only where the club has agreed and supplied it
   if (crest) return `<img class="fan-shield fan-crest" src="${esc(crest)}" alt="" draggable="false">`;
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
   return `<svg class="fan-shield" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 1.6l9.8 3.5v7.5c0 6.7-4.1 11.3-9.8 13.6C6.3 23.9 2.2 19.3 2.2 12.6V5.1z" fill="${k}" stroke="${tr}" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
 }
-function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Add Your Team, a Legends side
-  storeMark($('t-create'), 'create');
-  for (const b of $('t-grid').querySelectorAll('[data-edit]')) storeMark(b, 'create');
-  storeMark($('t-import'), 'import');
-  for (const b of $('t-grid').querySelectorAll('[data-legend]')) storeMark(b, 'legends');   // unlocked by Gold medals on any tier, played with the Full Game
+/* The team screen's part, from renderTeams: Create Team, Edit, Add Your Team and a Legends side, each on its card and on the primary while
+   it is the side on show (Create Team, Add Your Team, Pick England 2003). */
+function storeTeamsRender() {
+  const scr = $('s-teams');
+  for (const b of scr.querySelectorAll('[data-make="create"], [data-act="edit"]')) storeMark(b, 'create');
+  for (const b of scr.querySelectorAll('[data-make="import"]')) storeMark(b, 'import');
+  for (const b of scr.querySelectorAll('[data-legend]')) storeMark(b, 'legends');   // unlocked by Gold medals on any tier, played with the Full Game
+  const v = pickView[pick.on], ready = typeof pickReady === 'function' && pickReady(), t = ready ? [pickView[0].team, pickView[1].team].find(x => x.legend) : v && v.team;   // Kick Off: locked while either side is a Legend and the Full Game is not had
+  const f = !t ? null : t.act === 'create' ? 'create' : t.act === 'import' ? 'import' : t.legend ? 'legends' : null, go = $('t-go');
+  if (f) storeMark(go, f);
+  else if (go.classList.contains('locked')) { go.classList.remove('locked'); if (typeof go.removeAttribute === 'function') go.removeAttribute('aria-describedby'); }
 }
 function storeJoinRender() {               // Two Player's Hard, from renderJoin (a saved Hard was played as Normal by storeRender)
   for (const s of [0, 1]) { const b = $('j-diff' + s).children[2]; if (b) storeMark(b, 'hard'); }

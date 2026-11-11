@@ -68,6 +68,7 @@ function setDev(d) {                                       // the last device th
   lastDev = d;
   const b = document.body;
   if (b) { b.classList.toggle('dev-kb', d === 'kb'); b.classList.toggle('dev-pad', d === 'pad'); }
+  if (typeof pickHint === 'function') pickHint();          // the team screen's hint for the lift: a controller's only (src/ui-menus.js)
 }
 function platesFloor() {                                   // the Step Left | Step Right plates never go under the hints card (a thumb a little high on a phone put them under Flick on Gold): its bottom while it is up, else the clock line
   const hc = $('hc0'), r = hc && !hc.hidden && typeof hc.getBoundingClientRect === 'function' ? hc.getBoundingClientRect() : null;

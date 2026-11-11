@@ -8,7 +8,7 @@
    flag, a saved diff means what it always did, an old save (no flag) loads exactly as it was, and anything that reads settings.diff
    or levelOf sees Easy, the nearest level. The flag counts only with diff 0, so a hand-edited kids:true on Hard is just Hard.
    The levers below act only in a match newMatch was asked to play as Kids (opts.kids, which startMatch passes): one player, on
-   Easy, never AI v AI, the demo or two player, and in Skills Mini Games only the Kicking and Driving drills (practice.js). Every
+   Easy, never AI v AI, the demo or two player, and in Skill Games only the Kicking and Driving drills (practice.js). Every
    one reads M.kids, so the sims, the demo and the balance tools run the same numbers and the same random draws as before. */
 /* The Kids rating, r: one hidden number from 0, where every child starts, to 1, the ceiling, which is still a little easier than
    Easy. Each lever that moves is a pair [start, ceiling] in KIDS_SCALE, and kidsTune(r) puts KIDS on the straight line between them

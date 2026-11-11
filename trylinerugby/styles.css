@@ -71,8 +71,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
   .seg button{padding:0 4px;white-space:nowrap}
 }
 
-/* team select */
-.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+/* team cards: the team screen's (pickPanel), the career's clubs, offers and call-up */
 .team{appearance:none;text-align:left;min-width:0;align-content:start;padding:12px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);cursor:pointer;display:grid;grid-template-columns:48px 1fr;align-items:center;gap:10px 12px}
 .team:hover{border-color:var(--chalk-dim)}
 .team[aria-disabled="true"]{opacity:.32;pointer-events:none}
@@ -98,67 +97,164 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
 .tstars b{font-weight:700;color:var(--chalk);white-space:nowrap}
 .tstars::before{content:"";display:inline-block;width:11px;height:11px;margin:0 5px -1px 0;background:var(--flood);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
-/* Safari sideways with its bars (320px tall): the card's rows closer, so a nation's whole card (Stronger Side and two lines of traits)
-   is in view under the folded line */
-@media (orientation:landscape) and (max-height:330px){
-  #t-grid .team{row-gap:6px}
-  #t-grid .team .jw{margin-bottom:4px}   /* the overall's badge, 8px under the shirt, still clear of the row under it */
-  #t-grid .stats{row-gap:2px}
-}
-
-/* Fold to One Line (the team screen and the career's club screen, foldMove in src/ui-menus.js): the eyebrow over a smaller title, where the
-   list is (Men · National · Australia) with your side under it on Pick Opponent (v Farnham), and Change (Done while open), one row of
-   48px; the controls open under it. The summary takes the room left and wraps, never the title or the button. Championship's primary
-   (Play as Farnham, Tour Scotland) is on the line too: a row of its own under it where the screen is tall, and beside Change on a phone
-   held sideways (below), so the first row of cards is in view there as well */
-.fold-line{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-height:48px}
-.fold-name{display:flex;flex-direction:column;gap:4px;flex:none;min-width:0}
-.fold-name .eyebrow,.fold-line h2.title{white-space:nowrap}
-.fold-line h2.title{font-size:30px;line-height:.9}
-.fold-sum{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 15px/1.2 var(--body);color:var(--chalk-dim);text-wrap:balance}
-.fold-sum b{font-weight:700;color:var(--chalk)}
-.fold-sum span span{display:inline-block;max-width:100%}   /* each part whole: a long summary wraps at a dot, and inside a part only where the part alone is wider than the room (the United Rugby Championship beside Play as at 568 wide) */
-.btn.fold-go{width:auto;flex:none;min-height:44px;min-width:88px;padding:8px 16px}
-.fold-line > .primary{flex:1 0 100%}
-@media (orientation:landscape) and (max-height:560px){
-  .fold-line{flex-wrap:nowrap}
-  .fold-line > .primary{flex:0 1 auto;width:auto;max-width:30%;min-height:44px;padding:4px 12px;font-size:16px;line-height:1;letter-spacing:.03em;text-wrap:balance}
-}
-@media (orientation:landscape) and (max-height:560px) and (max-width:620px){
-  /* 568 wide: a little closer and the title a little smaller, so beside Play as the summary keeps three lines at most, International and
-     Championship each whole on one */
-  .fold-line{gap:8px}
-  .fold-line h2.title{font-size:26px}
-  .fold-line > .primary{max-width:128px;padding-inline:8px;font-size:15px}
-}
-.fold-ctl{display:flex;flex-direction:column;gap:12px}
-/* Men | Women | Minis beside the tiers (over them where the row is short); International | National | Local, then National's leagues
-   or Local's lists, each row in equal parts. A long league name takes two lines rather than push the row wider than the screen. */
-.fold-top{display:flex;flex-wrap:wrap;gap:8px}
-.fold-top > .seg{flex:1.4 1 330px}
-.fold-top > .cat{flex:1 1 228px}
-@media (orientation:landscape) and (max-height:560px){ .fold-top > .seg{flex-basis:290px} .fold-top > .cat{flex-basis:200px} }   /* one row at 568 wide too, so the opened controls stay on a 320px screen */
-.pools{display:flex;flex-direction:column;gap:8px}
-.pools .seg button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
-/* National's nine leagues (England 2 is PR #14's), five then four at every width, each row in equal parts (twenty columns: a span of
-   four, then of five): the United Rugby Championship takes two lines, and its Championship needs a fifth of the row. The career's club
-   screen does the same (#cc-nat) */
-#t-nat,#cc-nat{grid-auto-flow:row;grid-template-columns:repeat(20,minmax(0,1fr))}
-#t-nat button,#cc-nat button{grid-column:span 4;padding:4px 3px}
-#t-nat button:nth-child(n+6),#cc-nat button:nth-child(n+6){grid-column:span 5;border-top:1.5px solid var(--rule-hi)}
-#t-nat button:nth-child(6),#cc-nat button:nth-child(6){border-left:0}
 .yours{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid var(--flood);border-radius:8px;background:var(--panel)}
 .yours .btn{width:auto;flex:none}
-/* in the opened controls the bar is compact, your side being on the line already (v Farnham) */
-.fold-ctl .yours{padding:6px 12px}
-.fold-ctl .yours .btn{min-height:44px;padding:8px 16px}
-.fold-ctl #t-mine{font-size:26px}
-.fold-ctl #t-mine .rstars{--star:12px}
-.tcard{min-width:0;display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
-.tcard .team{flex:1;border:0;background:transparent}
-.tcard .btn{width:auto;min-height:44px;margin:0 12px 12px}
-.team.create{border-style:dashed;grid-template-columns:1fr;place-items:center;align-content:center;gap:8px;min-height:150px;color:var(--chalk-dim)}
-.team.create .plus{width:44px;height:44px;border:2px solid currentColor;border-radius:50%;display:grid;place-items:center;font:800 28px/1 var(--display)}
+/* The team screen (pickPanel, src/ui-menus.js; the owner, 2026-11-11: "a side-by-side picker in the style of EA FC's kick-off screen"):
+   the title and Men | Women | Minis along the top, Your Team and the Opponent side by side with a big V between (one side, centred, in
+   Championship, Career, My Team and the cups), then the one primary and Back. Each side: who it is and where on the ladder (North ·
+   England) beside its group's button (the ladder sheet) and Favourite; its team, the shirt and overall, the name, stars, league line and
+   tag beside five bars and the count; Previous | Next in equal halves. The whole screen fits without scrolling at 844x390, 667x375,
+   Safari's 844x340 and 667x320, and 568x320; every target is 44px or more. */
+#s-teams{display:flex;flex-direction:column;--pkj:96px;--pkn:36px;--pkk:1}   /* the shirt's and the name's size, stepped down together (--pkk) where a long name or traits line would make the screen scroll: pickFit */
+#s-teams[data-fit="1"]{--pkk:.88}
+#s-teams[data-fit="2"]{--pkk:.78}
+#s-teams[data-fit="3"]{--pkk:.68}
+.pk{flex:1 0 auto;width:100%;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.pk-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.pk-name{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pk-name .eyebrow,.pk-name h2.title{white-space:nowrap}
+.pk-top h2.title{font-size:30px;line-height:.9}
+.pk-top .cat{flex:0 1 300px}
+.pk-sides{flex:1 0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
+.pk-sides.one{grid-template-columns:minmax(0,600px);justify-content:center}
+.pk-v{align-self:center;font:900 48px/1 var(--display);color:var(--chalk-dim)}
+.pk-side{min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px;border:1.5px solid var(--rule);border-radius:10px;background:var(--panel)}
+.pk-side.on{border-color:var(--rule-hi)}
+.pk-head{display:flex;align-items:center;gap:8px;min-height:44px}
+.pk-where{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 13px/1.1 var(--body);color:var(--chalk-dim)}
+.pk-who{font:700 12px/1.1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--chalk)}
+/* the context line, North · England · Local: each part whole, a dot before each; where it wraps, the dot that would start a line sits in the
+   clipped margin, so no line starts or ends with one */
+.pk-ctx{display:block;overflow:hidden}
+.pk-ctx>span{display:flex;flex-wrap:wrap;margin-left:-.9em}
+.pk-ctx>span>span{white-space:nowrap}
+.pk-ctx>span>span::before{content:"\00b7";display:inline-block;width:.9em;text-align:center}
+.pk-side.pk-set .pk-who,.pk-side.p1 .pk-who{color:var(--flood)}
+.pk-side.p2 .pk-who{color:var(--p2)}
+.btn.pk-group,.btn.pk-fav,.btn.pk-edit{width:auto;flex:none;min-height:44px;padding:6px 12px}
+.btn.pk-group{flex:0 1 auto;min-width:0;max-width:48%;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align:right}
+.btn.pk-fav{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;padding-inline:10px}
+.pk-fav i{width:16px;height:16px;flex:none;background:var(--chalk-dim);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.pk-fav[aria-pressed="true"]{border-color:var(--flood)}
+.pk-fav[aria-pressed="true"] i{background:var(--flood)}
+.pk-card{position:relative;flex:1 0 auto;touch-action:none;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel-hi)}
+.pk-card.pk-set{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}   /* pk-set, never .set: that is a Settings row's own grid */
+.pk-side.p2 .pk-card.pk-set{border-color:var(--p2);box-shadow:inset 0 0 0 1px var(--p2)}
+.team.pk-pick{grid-template-columns:auto minmax(0,1fr);align-content:center;align-items:center;min-height:44px;padding:0;gap:4px 16px;border:0;background:transparent}
+.team.pk-pick:hover{border:0}
+.pk-pick .jw.big .jersey{width:calc(var(--pkj)*var(--pkk));height:calc(var(--pkj)*var(--pkk))}
+.pk-pick .ovr{right:-12px;bottom:-8px;font-size:20px}
+.pk-pick .jw.big{margin-bottom:8px}   /* room for the overall's badge under the shirt, so it never sits on the bars' names */
+.pk-pick .tid{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pk-pick .tname{font-size:calc(var(--pkn)*var(--pkk));white-space:nowrap;overflow-wrap:normal;overflow:hidden;text-overflow:ellipsis}   /* one line (fitNames steps a long one down; past 13px, the very longest end in an ellipsis rather than run under Edit) */
+.pk-card.made .tname,.pk-card.made .pk-rate,.pk-card.made .pk-league{margin-right:56px}   /* the name, its stars with Stronger Side, and the league line clear of Edit in the corner (the traits run under it, lower down) */
+.btn.pk-edit{position:absolute;top:6px;right:6px;min-width:44px}
+.pk-rate{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.pk-pick .rstars{--star:13px;margin-left:2px}
+.pk-league{font:700 13px/1.2 var(--body);color:var(--chalk-dim)}
+.pk-pick .gap{margin:0}
+.pk-pick .tstars{margin:0;font-size:12px;line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}   /* two lines at most: a Legend's six read in full to a screen reader */
+#s-teams[data-fit="2"] .pk-pick .tstars,#s-teams[data-fit="3"] .pk-pick .tstars{font-size:11px}
+#s-teams[data-fit="2"] .pk-pick .tid,#s-teams[data-fit="3"] .pk-pick .tid{gap:1px}
+#s-teams[data-fit="3"] .pk-card{gap:2px}
+#s-teams[data-fit="3"] .pk-pick .tstars{-webkit-line-clamp:1}
+#s-teams[data-dup] .pk-league.dup{display:none}   /* pickFit's last step: a line repeating the group's name (its button says it) */
+.team.pk-make{border:1.5px dashed var(--rule-hi);border-radius:8px;grid-template-columns:1fr;place-items:center;align-content:center;gap:6px;min-height:calc(88px*var(--pkk));color:var(--chalk-dim)}
+.pk-make .plus{width:44px;height:44px;border:2px solid currentColor;border-radius:50%;display:grid;place-items:center;font:800 28px/1 var(--display)}
+.pk-stats{display:grid;grid-template-columns:repeat(5,minmax(min-content,1fr));gap:8px}
+.pk-st{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pk-st .lbl{font-size:12px;letter-spacing:0;text-transform:none;white-space:nowrap}
+.pk-n{align-self:center;min-width:56px;text-align:center;font:700 13px/1.1 var(--body);color:var(--chalk-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pk-bar{height:8px;border-radius:4px;background:var(--rule-hi);overflow:hidden}
+.pk-bar i{display:block;height:100%;background:var(--chalk);transform-origin:left center;transform:scaleX(var(--v))}
+.pk-step{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}
+.pk-step .btn{min-height:44px}
+/* the lift's hint (pickHint, src/ui-menus.js): a controller's chip under the count, X: Buttons or X: Team, the hint chip's look in Title
+   Case. Previous and Next span both rows, so the row keeps its 44px, and give up padding, never their words, to the chip's width (568 wide).
+   Both wordings share one cell, the other hidden, so the chip is always the wider's width and Previous and Next never shift as X is pressed */
+.pk-step.hinted{row-gap:3px}
+.pk-step.hinted .btn{grid-row:1/3;padding-inline:8px}
+.pk-step.hinted [data-act="prev"]{grid-column:1}
+.pk-step.hinted [data-act="next"]{grid-column:3}
+.pk-step.hinted .pk-n{grid-column:2;grid-row:1;align-self:end}
+.chip.pk-hint{grid-column:2;grid-row:2;align-self:start;justify-self:center;min-width:0;height:18px;padding:0 6px;border-radius:9px;font:700 11px/1 var(--body);letter-spacing:0;text-transform:none;white-space:nowrap}
+.pk-hint>span{grid-area:1/1}
+.pk-hint>[aria-hidden="true"]{visibility:hidden}
+.pk-foot{display:flex;flex-direction:column;gap:8px}   /* the primary over Back; on a phone held sideways, Back | the primary (pickFit puts Back first there, for Tab) */
+.pk-foot .btn{white-space:nowrap;overflow:hidden}   /* one line: a long Pick steps down (pickFit) */
+/* a phone held sideways: Back and the primary share the bottom row in equal halves (Back on the left, first in the order too), so both sides
+   keep their room: a row of their own each does not fit at 320 tall */
+@media (max-height:440px){
+  .pk-foot{flex-direction:row}
+  .pk-foot .btn{flex:1 1 0;min-height:48px}
+  .pk-foot .btn.primary{font-size:22px}
+}
+@media (orientation:landscape) and (max-height:560px){
+  #s-teams{padding-block:calc(env(safe-area-inset-top,0px) + 8px) calc(env(safe-area-inset-bottom,0px) + 8px)}
+  .pk{gap:8px}
+  .pk-top h2.title{font-size:26px}
+  .pk-sides{gap:8px}
+  .pk-side{gap:6px;padding:8px}
+  .pk-v{font-size:36px}
+}
+/* the narrowest and shortest (667 and 568 wide, Safari's 320 tall): a smaller shirt and name, the bars closer, Favourite its star alone
+   (its name still read out) */
+@media (orientation:landscape) and (max-height:440px){
+  #s-teams{--pkj:76px;--pkn:30px}
+  .pk-foot .btn{min-height:44px}
+}
+/* Safari's bars (340 and 320 tall): the edges closer, the sides unframed (each card keeps its own), a smaller shirt and name, the bars closer */
+@media (orientation:landscape) and (max-height:350px){
+  #s-teams{padding-block:calc(env(safe-area-inset-top,0px) + 6px) calc(env(safe-area-inset-bottom,0px) + 6px)}
+  .pk{gap:6px}
+  .pk-foot{margin-top:4px}   /* far enough under Previous and Next that a controller's Down from them reaches Back */
+  .team.pk-make{min-height:60px}
+  .pk-side{padding:0;border:0;background:none;gap:4px}
+  .pk-card{padding:6px 10px;gap:4px}
+  #s-teams{--pkj:54px;--pkn:24px}
+  .pk-pick .ovr{font-size:15px;min-width:26px;bottom:-6px}
+  .pk-pick .jw.big{margin-bottom:6px}
+  .pk-pick .tid{gap:2px}
+  .pk-league{font-size:12px}
+  .pk-st{gap:2px}
+  .pk-st .lbl{font-size:11px}
+  .pk-bar{height:6px}
+}
+/* 568 wide: the V and the gaps narrower, so each side keeps its five bars' names */
+@media (max-width:620px){
+  .pk-who{letter-spacing:.08em}
+  .btn.pk-group{padding-inline:8px}
+  .pk-n{min-width:48px;font-size:12px}
+  #s-teams{padding-inline:max(12px,env(safe-area-inset-left,0px)) max(12px,env(safe-area-inset-right,0px))}
+  .pk-sides{gap:6px}
+  .pk-v{font-size:28px}
+  .pk-stats{gap:4px}
+  .pk-st .lbl{font-size:10.5px}
+}
+@media (max-width:760px){
+  .pk-st .lbl{font-size:11px}
+  .pk-fav span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .btn.pk-fav{padding-inline:12px}
+}
+/* where the screen scrolls after all (a computer's small window), a vertical drag on a card is the page's: only a swipe across is the card's */
+#s-teams.scrolls .pk-card{touch-action:pan-y}
+/* the ladder sheet: every group under its hemisphere and country, the current one lit; it scrolls inside itself */
+#m-ladder .card.ldr{width:min(760px,100%);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);padding:12px 14px;gap:8px}
+.ldr-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ldr-top h2.title{font-size:28px}
+.ldr-top .btn{width:auto;flex:none;min-height:44px;padding:8px 18px}
+.ldr-list{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;touch-action:pan-y;padding:2px}
+#m-ladder .ldr-h{margin:6px 0 0;font:700 13px/1.2 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--flood)}
+.ldr-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ldr-c{flex:0 0 112px;margin:0;font:700 14px/1.2 var(--body);color:var(--chalk)}
+.btn.ldr-g{width:auto;min-height:44px;padding:6px 14px}
+.btn.ldr-g[aria-pressed="true"]{border-color:var(--flood);background:var(--flood);color:var(--flood-ink)}
+/* the game's version, small at the foot of Settings (GAME_VERSION): on the last row's label line, at its right end, set as a label is (the
+   Camera's on the left), so it takes no row of its own and never sits on a button */
+.ver{margin:0;font:700 12px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim);pointer-events:none}
+.hp-settings.settings .set-cam,.hp-settings.settings .ver{grid-row:3;grid-column:4/-1}   /* the two share the Camera's cell, the version over its label line's right end */
+.hp-settings .ver{justify-self:end;align-self:start;white-space:nowrap}
 
 /* create team */
 .bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(325px,1fr));gap:12px}   /* 325: six 44px swatches, gaps, padding, border */
@@ -552,7 +648,7 @@ body.desk .desk-only{display:block}
 .cr-trait span{position:absolute;top:1px;right:3px;font-variant-numeric:tabular-nums}
 .cr-trait.off{align-items:flex-end;padding-bottom:4px;border-color:color-mix(in srgb,var(--k) 45%,var(--rule-hi));color:var(--chalk-dim);opacity:.8}   /* its skill's colour, faint: which skill earns it */
 .cr-trait.off span{font-size:10px;font-weight:700;line-height:1;color:var(--k)}
-/* Train: the Skills Mini Games' tiles, each its picture and name with the skill it trains under them; the open games in rows of four,
+/* Train: the Skill Games' tiles, each its picture and name with the skill it trains under them; the open games in rows of four,
    then Contact Games (U9 and Up) with the coach line and its three. On a phone held sideways the title and Back to Career stand on
    the left, as the Locker's do, and the games fill the right, so all ten fit 844x390 and 667x375 without a scroll. */
 .ct-list{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -624,10 +720,10 @@ body.desk .desk-only{display:block}
 }
 /* ===== import ===== */
 /* the Add Your Team card beside Create Team: a chain link drawn in CSS */
-.team.create .plus.link{border:0;border-radius:0;position:relative}
-.team.create .plus.link::before,.team.create .plus.link::after{content:"";position:absolute;width:24px;height:12px;border:3px solid currentColor;border-radius:7px;transform:rotate(-45deg)}
-.team.create .plus.link::before{left:3px;top:20px}
-.team.create .plus.link::after{left:15px;top:10px}
+.team.pk-make .plus.link{border:0;border-radius:0;position:relative}
+.team.pk-make .plus.link::before,.team.pk-make .plus.link::after{content:"";position:absolute;width:24px;height:12px;border:3px solid currentColor;border-radius:7px;transform:rotate(-45deg)}
+.team.pk-make .plus.link::before{left:3px;top:20px}
+.team.pk-make .plus.link::after{left:15px;top:10px}
 /* the import card scrolls on a short landscape phone, as full time does */
 #m-import{display:flex;align-items:safe center;justify-content:center;overflow:auto;touch-action:pan-y;padding:12px}
 #m-import .card{margin:auto;width:min(640px,100%);gap:12px;padding:16px}
@@ -687,17 +783,14 @@ body.desk .desk-only{display:block}
 .locked::after{content:"";display:inline-block;width:.7em;height:.9em;margin-left:.45em;vertical-align:-.08em;background:currentColor;
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 18'%3E%3Cpath d='M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8' fill='none' stroke='%23000' stroke-width='2.2'/%3E%3Crect x='.5' y='7.6' width='13' height='10' rx='2'/%3E%3C/svg%3E") center/contain no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 18'%3E%3Cpath d='M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8' fill='none' stroke='%23000' stroke-width='2.2'/%3E%3Crect x='.5' y='7.6' width='13' height='10' rx='2'/%3E%3C/svg%3E") center/contain no-repeat}
-.team.create.locked{position:relative}
-.team.create.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
+.team.pk-make.locked{position:relative}
+.team.pk-make.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
 #st-links.three #st-reset{grid-column:1/-1}   /* Privacy | Support, then Reset Kids Level across the row (in thirds it took three lines on a 667px phone) */
 #st-links.four #st-reset{grid-column:auto}   /* Reset Kids Level | Move Up to Easy in halves when both show */
 #st-links #st-easy{grid-column:1/-1}
 #st-links.four #st-easy{grid-column:auto}
 #b-grown{position:relative}
 #b-grown.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}   /* Move Up to Easy waiting in Grown-Ups */
-/* the Super Fan badge under the logo, in the eyebrow's place and size: the club's shirt and its name */
-.st-fan{display:flex;align-items:center;gap:8px;color:var(--chalk)}
-.st-fan .jersey{width:20px;height:20px;margin-block:-4px}
 /* the Unlock card and the Grown-Ups panel (#m-store): one column on a tall screen. On a phone held sideways, the heading with what is
    owned over the card's own buttons on the left, the offers on the right, so it fits 844x390 and 667x375 without a scroll; with
    nothing on offer (.solo) it is one narrower column */
@@ -747,8 +840,6 @@ body.desk .desk-only{display:block}
   #b-grown{white-space:nowrap}
 }
 /* ===== locker ===== */
-.lk-medal{display:block;width:22px;height:26px;flex:none}
-.lk-medal svg{display:block;width:100%;height:100%}
 .lk-home.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}
 /* a medal pip: bronze, silver or gold; filled once won */
 .lk-pip{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--pc);flex:none;opacity:.45}
@@ -969,12 +1060,10 @@ body.desk .desk-only{display:block}
 /* the club screen: National | Local and the lists as on the team screen, then the clubs, each its kit, name and rating */
 .team.cr-club{grid-template-columns:28px minmax(0,1fr) auto}
 .cr-rate{min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums}
-#cc-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}   /* four across at 844, three at 667: room for Guildfordians and Johannesburg beside the rating */
-#cc-grid .cr-club .tname{white-space:nowrap;overflow-wrap:normal}
 .cr-club .tid{display:flex;flex-direction:column;gap:3px;min-width:0}   /* a club's or a country's name with its stars under it (ratedStars), within the card's 44px */
 .cr-club .rstars{--star:12px}
 @media (orientation:landscape) and (max-height:560px){
-  #s-career-club .wrap,#s-career-look .wrap,#s-teams .wrap{gap:12px}
+  #s-career-look .wrap{gap:12px}
   #s-career-look h2.title{font-size:36px}   /* the club screen's title is the folded line's, as the team screen's (.fold-line h2.title) */
 }
 .cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
@@ -1016,49 +1105,133 @@ body.desk .desk-only{display:block}
   #s-career-draw .cb-row{min-height:20px;padding-block:1px}
   #s-career-draw .cb-tie.tbc{min-height:42px}
 }
-/* ===== home: five headlines (ui-menus.js) ===== */
-/* The wordmark on the left; My Team, Locker and Add Your Team along the top beside it; the chosen headline's buttons under them, big;
-   and the five headlines along the bottom in equal parts, the chosen one lit in the floodlight's colour. Fits 844x390 and 667x375
-   with no scroll in every state. */
-.home{max-width:960px;height:100%;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;
-  grid-template-areas:"mark top" "mark panel" "bar bar";gap:12px 28px;align-items:stretch}
-.home .mark{grid-area:mark;align-self:center;gap:12px}
-.home .word .line{margin-right:40px}   /* the posts stand out past the word's right edge: room for them in the column */
-.home .word{font-size:clamp(56px,9.4vw,124px)}
-.home .app-tools{margin:2px 0 0;justify-content:flex-start;gap:6px 10px;width:0;min-width:100%}   /* Install and Update wrap inside the wordmark's column: never widen it */
-.home .st-fan{width:0;min-width:100%}   /* nor the Super Fan badge: its club's name wraps under Super Fan, so My Team keeps its width */
-.home .st-fan span{min-width:0;text-wrap:balance}
-.home .app-action{min-height:44px}
-.home-top{grid-area:top;display:flex;align-items:stretch;justify-content:flex-end;gap:8px;min-width:0}
-.home-top .btn{width:auto;flex:none;min-height:52px;padding:6px 14px;position:relative}
-.home-top .lk-home{display:inline-flex;align-items:center;gap:8px}
-.home-top .my-home{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:5px 12px;text-align:left}
-.my-home .lbl{font-size:10px;line-height:1}
-.my-kits{display:flex;align-items:center;gap:12px;min-width:0;max-width:100%;font-size:19px}
-.my-side{display:inline-flex;align-items:center;gap:5px;min-width:0}
-.my-side .jersey{width:20px;height:20px}
-.my-side b{min-width:0;font:800 1em/1 var(--display);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hl-panels{grid-area:panel;min-height:0;display:flex;flex-direction:column;justify-content:safe center}   /* safe: a panel too tall for its row starts at the row's top, never pushed up under the top row */
-.hl-panel{display:flex;flex-direction:column;gap:10px;min-width:0}
-.hl-panel .btn.primary{min-height:72px;font-size:30px}
-.hl-panel.hp-game .btn.primary{min-height:128px;font-size:56px;letter-spacing:.04em}   /* Quick Match's one button, Play: bigger than any other panel's */
-/* My Team's club under Play: its shirt, name and stars, then last season's league and place and its record (PR #14's Your Team info,
-   myHome). Not a button: My Team at the top is the way in. Only where the club has figures. */
-.my-rec{display:flex;align-items:center;gap:6px 16px;min-width:0;padding:8px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
-.my-rec[hidden]{display:none}
-.my-rec-side{display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex:none;max-width:45%;min-width:0}
-.my-rec-side b{max-width:100%;font:800 20px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.my-rec-lines{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:13px;line-height:1.25;color:var(--chalk-dim)}
-.my-rec-lines span:first-child{color:var(--chalk);font-weight:700}
-.hp-career .resume-note,.hl-go .resume-note{margin-top:-4px}
+/* ===== home (ui-menus.js) ===== */
+/* The left column: the wordmark on one line, My Team's box under it taking most of the column (its shirt, name, stars and league line,
+   the games played as it and the last five results, Change | Add Your Team | Locker), and the Trophy Cabinet as a slim strip at its
+   foot. The right: five boxes, Continue across the top in the floodlight's yellow, then Match | Career and Skill Games | Settings in
+   equal halves. Match, Competitions, Skill Games and Settings open a step in the home's place, Back at its top left. Fits 844x390,
+   667x375, 844x340, 667x320 and 568x320 with no page scroll in every state. */
+.home{max-width:960px;height:100%;display:grid;grid-template-columns:minmax(0,37fr) minmax(0,61fr);grid-template-rows:minmax(0,1fr);gap:12px 16px}
+.home-side{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
+.home .mark{flex:none;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px 10px;min-width:0}
+.home .word{flex:none;flex-direction:row;align-items:flex-end;gap:.16em;font-size:58px;line-height:.8}
+.home .word .try{-webkit-text-stroke-width:1.6px}
+.home .word .line{padding-bottom:.15em;margin-right:.6em}
+.home .word .line::after{left:-2px;right:-.6em;height:.09em}
+.home .word .posts{right:-.6em;width:.42em;height:.86em;border-left-width:.06em;border-right-width:.06em}
+.home .word .posts::after{height:.06em}
+.home .app-tools{flex:0 1 auto;min-width:0;margin:0;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px;font-size:13px;line-height:1.1;text-align:right}   /* Offline Ready, Install Game and Updating beside the wordmark: they never take a line of their own */
+.home .app-action{min-height:44px;padding:4px 10px;font-size:13px}
+.home .app-tools:has(#offline-update:not([hidden])) #offline-status{display:none}   /* Offline Ready gives way to Updating while an update goes in */
+/* the wordmark keeps its size for each screen: Offline Ready (which an installed game always shows), or Updating in its place, sits in the
+   room beside it, on two lines where it needs them; only Install Game (the web, before it is installed) takes room from it */
+.home .mark:has(#app-tools:not([hidden]) #b-install:not([hidden])) .word{font-size:50px}
+/* My Team's box: the plain dark panel; a Super Fan of My Team's club gets the club's colours on it (#s-home.fan, below). A tier's marks
+   (the Super Fan badge, its rosette, its crest) go in the row over the name (#my-marks), so another tier adds its own with no change of
+   layout. */
+.my-box{--shirt:84px;--name:40px;--fm:38px;--fmf:22px;--dd:28px;--k:1;position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:space-between;gap:6px;padding:10px 12px;border:1.5px solid var(--rule-hi);border-radius:12px;background:rgba(16,27,20,.94);color:var(--chalk)}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}   /* read out, not seen */
+/* a tier's marks (the Super Fan badge, its rosette, its crest; a supporter tier's own, later) sit in a tab on the box's top edge: out of the
+   box's lines, so showing them never costs My Team a line, and another tier adds its own to the tab with no change of layout */
+.my-marks{position:absolute;top:-12px;left:10px;z-index:1;display:flex;align-items:center;gap:6px;height:22px;max-width:calc(100% - 20px);padding:0 9px 0 7px;border-radius:11px;background:var(--panel-hi);box-shadow:0 0 0 1.5px var(--rule-hi);color:var(--chalk);font:800 13px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.my-marks:not(:has(> :not([hidden]))){display:none}
+.my-box:has(> .my-marks > :not([hidden])){margin-top:7px;padding-top:13px}   /* room for the tab: above the box, clear of the wordmark, and inside it, clear of the shirt */
+.my-fan{display:inline-flex;align-items:center;gap:6px}
+.my-fan .fan-shield{display:block;width:16px;height:19px;flex:none;filter:drop-shadow(0 0 1px rgba(241,238,228,.45))}
+.my-fan img.fan-shield{object-fit:contain;filter:none}
+.my-marks .cup-trophy{display:block;width:18px;height:18px}
+.my-ros{display:block;flex:none}
+.my-head{display:flex;align-items:center;gap:12px;min-width:0}
+.my-shirt{flex:none;display:block}
+.my-shirt .jersey{width:calc(var(--shirt)*var(--k));height:calc(var(--shirt)*var(--k))}
+.my-id{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.my-name{margin:0;max-width:100%;font:900 calc(var(--name)*var(--k))/.9 var(--display);letter-spacing:.01em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.my-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0;max-width:100%}   /* the country beside the stars, or under them where the two do not fit (South Africa at 568 wide) */
+.my-line .rstars{--star:13px}
+.my-league{min-width:0;max-width:100%;font:700 13px/1.25 var(--body);color:var(--chalk-dim)}
+.my-league > span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* the league over its place: Regional 1 South Central, then 7th Last Season */
+.my-league > span:first-child{white-space:normal;text-wrap:balance}   /* a league too long for the column (the United Rugby Championship) takes two lines rather than lose its end; homeFit drops lines where the box has no room */
+.my-league > .sep{display:none}
+.my-league:empty{display:none}
+/* the games played as My Team: four figures over their words, then the last five results, the latest on the right */
+.my-rec{margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;text-align:center}
+.my-rec > div{display:flex;flex-direction:column-reverse;align-items:center;gap:1px;min-width:0}
+.my-rec dt{font:700 13px/1.1 var(--body);color:var(--chalk-dim)}
+.my-rec dd{margin:0;font:900 calc(var(--dd)*var(--k))/1 var(--display)}
+.my-form{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.fm{position:relative;display:grid;place-items:center;height:calc(var(--fm)*var(--k));border-radius:7px;font:900 calc(var(--fmf)*var(--k))/1 var(--display);color:var(--night)}
+.fm.w{background:var(--flood);color:var(--flood-ink)}
+.fm.d{background:var(--silver)}
+.fm.l{background:var(--alert)}
+.fm.none{border:1.5px dashed var(--rule-hi)}
+.my-nat{display:inline-flex;align-items:center;gap:5px;min-width:0;flex:0 1 auto;font:800 15px/1 var(--display);letter-spacing:.02em;text-transform:uppercase}
+.my-nat .jersey{width:18px;height:18px}
+.my-nat b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:inherit}
+.my-acts{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}
+.my-acts .btn{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;text-wrap:balance;position:relative}
+/* where the box cannot hold everything (a Trophy Cabinet, the Super Fan badge, Install and Updating, the smaller phones), homeFit steps it
+   down a level at a time until it fits: the league line to one line, the shirt, the name, the figures and the results smaller, then
+   the league line goes, then the country, and last (568x320 with Install, Updating and a Trophy Cabinet all showing) the stars */
+.my-box[data-fit]:not([data-fit="1"]){--k:.86}
+.my-box[data-fit]:is([data-fit="3"],[data-fit="4"],[data-fit="5"],[data-fit="6"]){--k:.74}   /* as specific as the rule above, and after it */
+.my-box[data-fit] .my-league > span:last-child{display:none}   /* one line: the league alone */
+.my-box[data-fit="4"] .my-league,.my-box[data-fit="5"] .my-league,.my-box[data-fit="6"] .my-league{display:none}
+.my-box[data-fit="5"] .my-nat,.my-box[data-fit="6"] .my-nat{display:none}
+.my-box[data-fit="6"] .my-line{display:none}
+/* the Trophy Cabinet: one line at the 44px floor, each kind won its trophy in its metal and the count */
+.btn.tc-strip{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:4px 12px;border-radius:10px;text-align:left}
+.tc-name{flex:none;font-size:14px}
+.tc-list{display:flex;align-items:center;justify-content:flex-end;gap:4px 10px;min-width:0;overflow:hidden}
+.tc-it{display:inline-flex;align-items:center;gap:4px;flex:none;font:800 16px/1 var(--display);letter-spacing:.02em;white-space:nowrap}
+.tc-it .cup-trophy{width:18px;height:18px}
+.tc-strip[data-fit="short"] .tc-w{display:none}   /* where the words do not fit: the trophies and their counts */
+/* the five boxes: Continue across, then halves; each a picture and a big word, Continue with what it picks up under it */
+.home-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr);gap:10px;min-height:0}
+.home-main .bx-go{grid-column:1/-1}
+.home-main .btn.bx:not(.bx-go){flex-direction:column;align-items:flex-start;justify-content:center;gap:8px}   /* the halves: the picture over the word, so the word has the box's width */
+.home-main .btn.bx:not(.bx-go):has(.bx-sub:not([hidden])){display:grid;grid-template-columns:auto minmax(0,1fr);align-content:center;align-items:center;gap:4px 10px}   /* a half with a note (Career, while Continue shows a championship): the picture beside its word, the note under both across the half's width, on two lines where it needs them */
+.home-main .btn.bx:not(.bx-go):has(.bx-sub:not([hidden])) .bx-text{display:contents}
+.home-main .btn.bx:not(.bx-go):has(.bx-sub:not([hidden])) .bx-sub{grid-column:1/-1}
+.btn.bx{display:flex;align-items:center;justify-content:flex-start;gap:14px;min-width:0;min-height:44px;height:100%;padding:10px 18px;border-radius:12px;background:rgba(23,39,29,.94);text-align:left;position:relative;overflow:hidden}
+.btn.bx > svg{width:30px;height:30px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bx-text{display:flex;flex-direction:column;gap:5px;min-width:0}
+.bx-name{max-width:100%;font:800 34px/1 var(--display);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bx-sub{font:700 14px/1.2 var(--body);color:var(--chalk-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Continue's line and the Career box's note (homeChunks): one line where it fits, else two, broken between its parts (Championship ·
+   then Round 3, then v Wimbledon) and never inside one; a part wider than the box alone ends in an ellipsis */
+.bx-sub:is(#cont-note,#career-note){display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal;text-wrap:balance}
+.bx-sub .nw{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.bx-sub .cup-trophy{width:14px;height:14px;margin:0 5px -2px 0}
+.btn.bx-go{border-color:var(--flood);background:var(--flood);color:var(--flood-ink)}
+.btn.bx-go > svg{width:40px;height:40px}
+.btn.bx-go .bx-name{font-size:44px}
+.btn.bx-go .bx-sub{font-size:16px;color:var(--flood-ink)}
+.btn.bx-go:hover{filter:brightness(1.06)}
+.btn.bx.locked::after{position:absolute;top:8px;right:10px;margin:0;width:11px;height:14px}
+.my-acts .btn.locked::after{margin-left:.3em}   /* beside the last word: Add Your Team on two lines, its lock beside Team */
+.btn.bx.note::after{content:"";position:absolute;top:8px;right:10px;width:10px;height:10px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}   /* Move Up to Easy waiting in Grown-Ups */
+/* a step: Back and its title along the top, its buttons under them, big */
+.home-step{grid-column:1/-1;display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
+.hs-head{flex:none;display:flex;align-items:center;gap:14px;min-width:0}
+.btn.hs-back{width:auto;flex:none;min-height:44px;padding:4px 14px}
+.hs-title{margin:0;min-width:0;font:900 30px/1 var(--display);letter-spacing:.01em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-head .app-tools{margin-left:auto;flex-direction:row;align-items:center;gap:6px 12px}   /* on a step: at its top right */
+.hs-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:safe center;gap:10px;min-width:0}
+.hp-match{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,1fr)}
+.hp-match .btn.bx{flex-direction:column;justify-content:center;align-items:center;gap:12px;text-align:center}
+.hp-match{grid-template-rows:minmax(0,260px);align-content:center}   /* big, centred, but not a wall of empty box on a tall screen */
+.hp-match .btn.bx > svg{width:64px;height:64px;stroke-width:1.6}
+.hp-match .bx-name{font-size:46px}
+.hs-panel .btn.primary{min-height:72px;font-size:30px}
 .hl-go{display:flex;flex-direction:column;gap:10px}
+.hl-go .resume-note{margin-top:-4px}
 .hc-new{display:flex;flex-direction:column;gap:8px}
 .hc-comps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .hc-comps.n8{grid-template-columns:repeat(4,minmax(0,1fr))}
 /* National's nine: four then five, each row in equal parts, so the United Rugby Championship, fourth, has a quarter, the room its
    Championship needs. Beside a trophy, a name takes the room left (wrapping between words) and the trophy goes over it where the two
    can't sit side by side, as can a lock (the free tier) under it; a long name's lock sits in the corner rather than take a line of its
-   own. Where even a quarter is narrow (568 wide, the panel scrolling in its row there anyway) the names step down to 12px. */
+   own. */
 .hc-comps.n9{grid-template-columns:repeat(20,minmax(0,1fr))}
 .hc-comps.n9 > .btn{grid-column:span 5}
 .hc-comps.n9 > .btn:nth-child(n+5){grid-column:span 4}
@@ -1067,9 +1240,9 @@ body.desk .desk-only{display:block}
 .hc-comps.n9 .hc-comp.long.locked::after{position:absolute;top:5px;right:6px;margin:0;width:10px;height:13px}
 .hc-comps.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hc-comps.n1{grid-template-columns:1fr}
-.btn.hc-comp{display:flex;align-items:center;justify-content:center;gap:6px;min-height:64px;padding:6px 8px;font-size:16px;line-height:1.1;text-align:center;text-wrap:balance}
-.hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:52px;font-size:14px}
-@media (max-width:620px){ .hc-comps.n9 .btn.hc-comp{padding:4px;font-size:12px} }   /* after the nine's 14px, which would otherwise win (the same weight, later) */
+.hc-comps:is(.n1,.n2,.n3) .btn.hc-comp{min-height:152px;font-size:22px}   /* a tier of one, two or three: big boxes, as the Match step's, not a strip with the step empty under it */
+.btn.hc-comp{display:flex;align-items:center;justify-content:center;gap:6px;min-height:72px;padding:6px 8px;font-size:17px;line-height:1.1;text-align:center;text-wrap:balance}
+.hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:60px;font-size:15px}
 .hc-comp .cup-trophy{width:16px;height:16px;flex:none}
 .hc-comp.locked::after{flex:none}   /* the lock keeps its size: the name wraps, never the lock */
 .hp-drills .drills{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}   /* PR #14's ten games in rows of four: seven and How to Play, then the three contact games and For Grown-Ups */
@@ -1082,44 +1255,25 @@ body.desk .desk-only{display:block}
 .hp-drills .pr-cg .pr-group{font-size:18px;white-space:nowrap}
 .hp-drills .pr-cg .pr-coach{font-size:13px;line-height:1.15}
 .hp-drills .pr-grown{grid-column:4}
-.hp-drills:has(#pr-grownups:not([hidden])){flex:1 1 auto;min-height:0}   /* For Grown-Ups: the panel takes the row and scrolls inside it, Back to Skills at its foot */
+.hp-drills:has(#pr-grownups:not([hidden])){justify-content:flex-start}   /* For Grown-Ups: the panel takes the step and scrolls inside it, Back to Skill Games at its foot */
 .hp-drills #pr-grownups{min-height:0;max-height:100%;overflow-y:auto;gap:8px;font-size:14px;line-height:1.3}
 .hp-drills #pr-grownups p,.hp-drills #pr-grownups h3{margin:0}
 .hp-drills #pr-grownups p.pr-line{color:var(--chalk);font-weight:700}
 /* Settings: Difficulty across, then Sound | Match Help, then Half Length | Camera, each label over its control. Where the store is live
-   Grown-Ups takes a third of Sound's row (Sound | Match Help | Grown-Ups): three rows, so the panel fits 844x390, 667x375 and 320px tall
-   with no scroll (a fourth row of its own does not fit 667x375 with the labels over their controls, nor 320px tall at all). Six columns,
-   so the halves and the thirds share their lines. */
-.hp-settings.settings{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 12px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:rgba(16,27,20,.72)}
+   Grown-Ups takes a third of Sound's row (Sound | Match Help | Grown-Ups). Six columns, so the halves and the thirds share their lines. */
+.hp-settings.settings{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));align-content:center;gap:12px 14px;padding:12px 14px;border:1.5px solid var(--rule);border-radius:10px;background:rgba(16,27,20,.72)}
 .hp-settings .set{grid-template-columns:1fr;gap:4px;grid-column:span 3}
 .hp-settings .set-diff{grid-column:1/-1}
+.hp-settings.settings{flex:0 1 auto;margin-block:auto}
+.hp-settings .seg button:focus-visible{outline-offset:-4px}   /* inside its segment, which clips anything outside it */
 .hp-settings.grown .set-sound,.hp-settings.grown .set-hints,.hp-settings #b-grown{grid-column:span 2}
 .hp-settings #b-grown{align-self:end;min-height:47px;padding-inline:8px;white-space:nowrap}   /* a segment's height (44px inside its edges), its foot on theirs */
-/* the bar: five headlines in equal parts, each a picture and its name; the chosen one lit, with a line along its top */
-.hl-bar{grid-area:bar;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1.5px solid var(--rule-hi);border-radius:10px;background:rgba(9,16,11,.92)}
-.btn.hl{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:5px 4px;border:0;border-radius:0;background:transparent;color:var(--chalk-dim);font:700 13px/1.1 var(--body);text-align:center}
-.btn.hl + .btn.hl{border-left:1.5px solid var(--rule)}
-.btn.hl:first-child{border-radius:8px 0 0 8px}
-.btn.hl:last-child{border-radius:0 8px 8px 0}
-.btn.hl svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.btn.hl[aria-selected="true"]{color:var(--flood);background:var(--panel-hi);box-shadow:inset 0 3px 0 var(--flood)}
-.btn.hl:hover{color:var(--chalk)}
-.btn.hl[aria-selected="true"]:hover{color:var(--flood)}
-.btn.hl:focus-visible,.hl-bar .btn.hl.padfocus{outline-offset:-4px}
-.btn.hl.locked::after{position:absolute;top:6px;right:8px;margin:0;width:10px;height:13px}
-.btn.hl.note::after{content:"";position:absolute;top:6px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}   /* Move Up to Easy waiting in Grown-Ups */
-.hl-name{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.im-home{white-space:nowrap}
-.lk-home.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}
-/* My Team on the team screen and the cards that are it: the club and the country side by side in the bar; "My Team" on the card */
-#t-mine:has(> .my-pair){gap:28px;flex-wrap:wrap}
-#t-mine .my-pair{display:inline-flex;align-items:center;gap:10px;min-width:0}
-#t-mine .tid{display:flex;flex-direction:column;gap:5px;min-width:0}   /* the picked side's name with its stars under it */
-#t-mine .rstars{--star:15px}
+.im-home{white-space:normal}
+/* "My Team" on the card that is it */
 .gap.mine{color:var(--flood)}
 .team.locked{position:relative}
 .team.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
-.team.locked:not(.create) .tname{margin-right:16px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it) */
+.team.locked:not(.pk-make) .tname{margin-right:16px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it) */
 .lk-leg.locked{position:relative}
 .lk-leg.locked::after{position:absolute;top:6px;left:6px;margin:0;width:11px;height:14px;color:var(--chalk)}   /* top left: the jersey's overall badge sits on its right */
 /* the Trophy Cabinet, its own screen now; a World Cup's Pools, a plain button; no disclosure triangle on any summary */
@@ -1129,75 +1283,95 @@ summary{list-style:none}
 summary::-webkit-details-marker{display:none}
 .cabinet summary,.season-details summary,.match-details summary{display:flex;align-items:center;min-height:44px;padding:6px 12px;margin:2px 0;border:1.5px solid var(--rule-hi);border-radius:6px;background:var(--panel-hi);width:max-content;max-width:100%}
 @media (orientation:landscape) and (max-height:560px){
-  .home{gap:8px 14px}
+  .home{gap:10px 14px}
   .home .resume-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}   /* one line under its button: a long one ends in an ellipsis */
-  .home .eyebrow{font-size:10px;letter-spacing:.12em}
-  .home .mark{gap:10px}
-  .hl-panel .btn.primary{min-height:64px;font-size:28px}
-  .hl-panel.hp-game .btn.primary{min-height:112px;font-size:48px}
+  .hs-panel .btn.primary{min-height:64px;font-size:28px}
 }
 @media (orientation:landscape) and (max-height:420px){
-  /* a phone held sideways: the top row 48px, the bar 52px, the panel's buttons between */
-  .home-top .btn{min-height:48px}
-  .btn.hl{min-height:50px}
+  /* a phone held sideways (844x390, 667x375) */
+  .home-main{gap:8px}
   .hp-drills .btn.drill{min-height:58px;font-size:13px}
   .hp-drills .dc-icon{width:24px;height:24px}
   .hp-drills .drills,.hp-drills .pr-low{gap:6px}
   .hp-drills .pr-games{gap:6px}
   .hp-drills .pr-cg .pr-group{font-size:16px}
   .hp-drills .pr-cg .pr-coach{font-size:12px}
-  .hp-settings.settings{gap:6px 10px;padding:8px 10px}   /* three rows, every target 44px */
+  .hp-settings.settings{gap:8px 12px;padding:10px 12px}
   .hp-settings .seg button{font-size:13px}
 }
+@media (orientation:landscape) and (max-height:420px) and (max-width:740px){
+  /* 667x375: the narrower column, as wide as 667x320's and with its shirt a little bigger, so My Team's words have as much room */
+  .home{grid-template-columns:minmax(0,42fr) minmax(0,56fr);gap:8px 12px}
+  .home .word{font-size:48px}
+  .home .mark:has(#app-tools:not([hidden]) #b-install:not([hidden])) .word{font-size:40px}
+  .my-box{--shirt:60px;--name:36px;--fm:34px;--fmf:20px}
+  .bx-name{font-size:30px}
+  .btn.bx-go .bx-name{font-size:40px}
+  .btn.bx{gap:12px;padding:8px 14px}
+  .my-acts .btn{font-size:13px;padding-inline:3px}
+}
 @media (max-width:599px) and (min-height:421px){
-  /* a narrow window: the wordmark over the rest, one column (a phone held sideways keeps two, below) */
-  .home{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"mark" "top" "panel" "bar"}
-  .home-top{justify-content:stretch}
+  /* a narrow window held upright: one column, the wordmark and My Team over the boxes (a phone held sideways keeps two, below) */
+  .home{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
   .hp-drills .drills,.hp-drills .pr-low{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hp-drills .pr-grown{grid-column:auto}
 }
 @media (orientation:landscape) and (max-height:340px){
-  /* Safari sideways, about 320px tall (568x320, 667x320): the top row and the bar 44px, the wordmark smaller, each drill its picture
-     beside its name; whatever still does not fit scrolls inside the panel's own row, between the top row and the bar, never under
-     them (the padding keeps a focus ring inside the scroll box). Every target stays 44px. */
-  .home{gap:6px 14px}
-  .home .word{font-size:48px}
-  .home .mark{gap:8px}
-  .home #home-tag{width:0;min-width:100%;text-wrap:balance}   /* Mobile Rugby · Sevens wraps under the wordmark rather than widen its column: My Team keeps its room */
-  .home .mark:has(#app-tools:not([hidden])) #home-tag{display:none}   /* and gives its lines to Install and Update when they show */
-  .home-top{gap:6px}
-  .home-top .btn,.home-top .my-home{min-height:44px;padding:4px 10px}
-  .btn.hl{min-height:44px;padding:3px 4px;gap:2px}
-  .btn.hl svg{width:18px;height:18px}
-  .hl-panels{overflow-y:auto;margin:-6px;padding:6px;scrollbar-width:none}
-  .hl-panel,.hl-go,.hc-new{gap:6px}
-  .hl-panel .btn.primary{min-height:56px;font-size:26px}
-  .hl-panel.hp-game .btn.primary{min-height:88px;font-size:40px}
+  /* Safari sideways (844x340, 667x320, 568x320): a smaller wordmark, shirt and figures, so My Team's box keeps every line; whatever a
+     step still cannot hold scrolls inside the step, under its Back, never the page (the padding keeps a focus ring inside the scroll
+     box). Every target stays 44px. */
+  .home{gap:6px 12px}
+  .home-side{gap:6px}
+  .home .word{font-size:42px}
+  .home .mark:has(#app-tools:not([hidden]) #b-install:not([hidden])) .word{font-size:38px}
+  .home .app-tools:has(#b-install:not([hidden])) #offline-status{display:none}   /* Offline Ready gives way to Install Game (and Updating), so My Team's box keeps its lines */
+  .my-box{gap:4px;padding:8px 10px}
+  .my-box{--shirt:62px;--name:32px;--fm:30px;--fmf:18px;--dd:24px}
+  .my-rec dt{font-size:12px}
+  .home-main{gap:6px}
+  .btn.bx{gap:10px;padding:6px 12px}
+  .btn.bx > svg{width:24px;height:24px}
+  .bx-name{font-size:26px}
+  .btn.bx-go > svg{width:32px;height:32px}
+  .btn.bx-go .bx-name{font-size:34px}
+  .btn.bx-go .bx-sub{font-size:14px}
+  .home-step{gap:6px}
+  .hs-panel{overflow-y:auto;margin:-6px;padding:6px;scrollbar-width:none}
+  .hs-panel,.hl-go,.hc-new{gap:6px}
+  .hs-panel .btn.primary{min-height:56px;font-size:26px}
   .hc-comps{gap:6px}
-  .btn.hc-comp,.hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:44px}
+  .btn.hc-comp,.hc-comps.n8 .btn.hc-comp,.hc-comps.n9 .btn.hc-comp{min-height:48px}
   .hp-drills .drills{gap:6px}
-  .hp-drills .btn.drill{min-height:44px;padding:3px 4px;gap:1px;font-size:12px;line-height:1.05}   /* PR #14's ten in rows of four: each picture small over its name, so the three rows and Contact Games' lines fit the row */
-  .hp-drills .dc-icon{width:18px;height:18px}
+  .hp-drills .btn.drill{min-height:48px;padding:3px 4px;gap:1px;font-size:12.5px;line-height:1.05}
+  .hp-drills .dc-icon{width:20px;height:20px}
   .hp-drills .pr-cg .pr-group{font-size:15px;line-height:1}
   .hp-drills .pr-cg .pr-coach{line-height:1.05}
   .hp-drills .drills,.hp-drills .pr-low,.hp-drills .pr-games{gap:4px}
-  .hp-settings.settings{gap:4px 10px;padding:3px 10px}   /* the three rows, each label over its control, with 4px to spare: Difficulty's segment keeps the full width, so the ring steps a row at a time */
+  .hp-settings.settings{gap:6px 10px;padding:6px 10px}
   .hp-settings .set{gap:2px}
-  .hp-settings .lbl{font-size:10px;line-height:1}
+  .hp-settings .lbl,.hp-settings .ver{font-size:11px;line-height:1}
 }
-@media (orientation:landscape) and (max-height:420px) and (min-height:341px) and (max-width:740px){
-  /* a smaller phone sideways (667x375): smaller pictures and tighter lines, so the three rows and Contact Games' two lines fit between the top row and the bar */
-  .hp-drills .btn.drill{min-height:52px;padding:4px 6px;gap:2px;line-height:1.05}
-  .hp-drills .dc-icon{width:20px;height:20px}
+@media (orientation:landscape) and (max-height:340px) and (max-width:700px){
+  /* 667x320 and 568x320 */
+  .my-acts .btn{font-size:13px;padding-inline:3px}
+  .home{grid-template-columns:minmax(0,42fr) minmax(0,56fr)}
+  .home .word{font-size:38px}
+  .home .mark:has(#app-tools:not([hidden]) #b-install:not([hidden])) .word{font-size:32px}
+  .my-box{--shirt:54px;--name:28px}
+  .bx-name{font-size:26px}
+  .btn.bx-go .bx-name{font-size:32px}
 }
 @media (orientation:landscape) and (max-width:619px){
-  /* a phone under 620px wide held sideways (568x320): the five names a little smaller, so Skills Mini Games fits its fifth whole */
-  .btn.hl{padding-inline:2px}
-  .hl-name{font-size:11.5px}
-}
-@media (max-width:760px){
-  /* a phone's width: Add Your Team on two lines, its lock beside Team, so My Team keeps the room Import Data left it */
-  .home-top .im-home{white-space:normal;max-width:calc(4.6em + 24px);padding-inline:12px;text-wrap:balance}
+  /* 568x320: the smallest phone held sideways: My Team's column a little wider, so Add Your Team keeps to two lines and a long league line
+     has a little more room */
+  .home{grid-template-columns:minmax(0,46fr) minmax(0,52fr)}
+  .home .word{font-size:34px}
+  .home .mark:has(#app-tools:not([hidden]) #b-install:not([hidden])) .word{font-size:28px}
+  .my-box{--shirt:48px;--name:26px}
+  .bx-name{font-size:24px}
+  .btn.bx{gap:8px;padding:6px 10px}
+  .my-acts{gap:6px}
+  .my-acts .btn{font-size:13px;padding-inline:4px}
 }
 @media (orientation:landscape) and (max-height:420px){
   /* a World Cup's Pools, swapped in for the bracket: a little tighter, so they and the Bracket button fit under the result card */
@@ -1209,15 +1383,22 @@ summary::-webkit-details-marker{display:none}
   #s-cup .cup-side{gap:6px}
 }
 /* ===== super fan ===== */
-/* A Super Fan's home (ui-store.js, storeThemeHome): the club's kit colours on the chosen headline, the panel's primary (Play) and My
-   Team's edge. The accent is lifted toward chalk where the kit is dark, so it reads on the dark home; a word on the kit's fill is chalk,
-   or the night's ink on a fill too light for chalk. Without a Super Fan unlock the home has no .fan and is as it was. */
-#s-home.fan .btn.hl[aria-selected="true"],#s-home.fan .btn.hl[aria-selected="true"]:hover{color:var(--fan-acc);box-shadow:inset 0 3px 0 var(--fan-acc)}
-#s-home.fan .hl-panel .btn.primary{border-color:var(--fan-edge);background:var(--fan-kit);color:var(--fan-ink);box-shadow:inset 0 0 0 1.5px var(--fan-edge)}
-#s-home.fan .home-top .my-home{border-color:var(--fan-acc);box-shadow:inset 0 0 0 1px var(--fan-acc)}
-/* the shield beside the club's name under the logo: plain, in the kit colours, or the club's own crest where it has given one */
-.st-fan .fan-shield{display:block;width:20px;height:24px;flex:none;margin-block:-6px;filter:drop-shadow(0 0 1px rgba(241,238,228,.45))}
-.st-fan img.fan-shield{object-fit:contain;filter:none}
+/* A Super Fan of My Team's club (ui-store.js, storeThemeHome): My Team's box takes the club's colours, its ground (the kit, darkened
+   where neither chalk nor the night's ink would read on it at 4.5:1) and its edge (the trim where it shows on the dark), every word on
+   it in the ink that reads. Continue stays the floodlight's yellow, the home's one primary, so the box is where the tier shows. Without
+   it the home has no .fan and is in the plain dark style. */
+#s-home.fan .my-box{background:var(--fan-ground);border-color:var(--fan-edge);box-shadow:inset 0 0 0 1.5px var(--fan-edge);color:var(--fan-gink)}
+#s-home.fan .my-box .my-league,#s-home.fan .my-box .my-rec dt{color:var(--fan-gink)}
+#s-home.fan .my-box .fm.none{border-color:var(--fan-gink)}
+#s-home.fan .my-box .rstars .off{fill:var(--fan-gink);fill-opacity:.4}
+#s-home.fan .my-box .rstars .on{fill:var(--fan-star)}   /* the floodlight's yellow where it shows on the ground (3:1), gink where not */
+#s-home.fan .my-box .fm.w{box-shadow:0 0 0 2px var(--fan-ringw)}   /* a result's chip ringed in gink where its fill is under 3:1 on the ground */
+#s-home.fan .my-box .fm.d{box-shadow:0 0 0 2px var(--fan-ringd)}
+#s-home.fan .my-box .fm.l{box-shadow:0 0 0 2px var(--fan-ringl)}
+#s-home.fan .my-shirt{margin:-4px;padding:4px;border-radius:10px;background:var(--panel)}   /* the shirt on the plain box's panel, so a kit reads on its own ground */
+/* the Super Fan tab: filled with the edge, the words in the ink that reads on it, the shield and the rosette outlined in that ink */
+#s-home.fan .my-marks{background:var(--fan-tab);box-shadow:none;color:var(--fan-tink)}
+#s-home.fan .my-marks :is(svg.fan-shield,.my-ros){filter:drop-shadow(0 0 .7px var(--fan-tink)) drop-shadow(0 0 .3px var(--fan-tink))}
 /* the gold Super Fan trophy: in the Locker's Medals, a tile a club before the feats (the trophy, Super Fan, the club, and Join the
    Supporters' Wall where the unlock is owned); in the Trophy Cabinet, its own kind, in gold */
 .lk-fanrow{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;min-width:0}

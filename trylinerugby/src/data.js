@@ -1,5 +1,9 @@
 'use strict';
 let practice = null;
+/* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
+   top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
+   The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
+const GAME_VERSION = '1.2';
 
 /* =========================================================
    Data
@@ -198,6 +202,17 @@ function poolKey(v) {
   return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? v : 'int';
 }
 const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
+/* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): North or South by country, then the country's lists. A list
+   is one country's, bar the United Rugby Championship, whose sides go by URC_HOME; Surrey and Counties are England's Local. Japan plays
+   in the North (the owner, 2026-11-11: "Looks Right"); Canada and the USA are the women's. A list's group takes its sides' competition
+   (LEAGUE_SHORT) where they all share one, else LIST_GROUP's name, else Clubs. Views only: the lists, their keys and every save are as
+   they were, and a side picked from a group still plays its whole list (Dublin in the URC). */
+const NATION_HEMI = { IRE:'north', FRA:'north', ENG:'north', SCO:'north', WAL:'north', ITA:'north', JPN:'north', CDN:'north', USA:'north', RSA:'south', NZL:'south', AUS:'south', ARG:'south', FIJ:'south' };
+const LIST_HOME = { eng:'ENG', en2:'ENG', fra:'FRA', sco:'SCO', rsa:'RSA', aus:'AUS', nzl:'NZL', jpn:'JPN', sur:'ENG', cty:'ENG' };
+const URC_HOME = { DUB:'IRE', LIM:'IRE', BEL:'IRE', GAL:'IRE', EDI:'SCO', GLA:'SCO', CDF:'WAL', SWA:'WAL', LLA:'WAL', NPT:'WAL', TRE:'ITA', PRM:'ITA' };
+const LIST_LOCAL = ['sur', 'cty'];
+const LEAGUE_SHORT = { 'English Premiership':'Premiership', 'English Championship':'Championship', 'Top 14':'Top 14', 'United Rugby Championship':'URC', 'Currie Cup':'Currie Cup', 'Super Rugby Pacific':'Super Rugby' };
+const LIST_GROUP = { sco:'Premiership', nzl:'Provinces' };   // sides with no league line: Scotland's are the Scottish Premiership, New Zealand's the provinces
 const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local · Surrey with it picked
 /* Men | Women | Minis on the team screen, for the match or championship being set up; Men | Women in Career. Only the name and the
    team's cat change ('England Women', 'Farnham Minis'): ratings, kit, code and the engine are the same. A women's or minis side
@@ -290,7 +305,6 @@ const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fm
 // GKTUNE
 const D2R = Math.PI/180, MPH = 0.44704;
 const HALF_SECONDS = [120, 240, 360];
-const GAME_VERSION = '1.1';                                 // shown on the home screen, after the tagline (src/boot.js)
 
 /* ---------- rule sets ----------
    A match plays one rule set (M.rules, chosen in newMatch). The same three are meant to hold wherever the game is played:

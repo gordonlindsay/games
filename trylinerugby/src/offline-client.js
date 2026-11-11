@@ -14,6 +14,7 @@ function offlineRender() {
   updating.hidden = !offlineApp.requested;
   status.hidden = !offlineApp.ready;
   bar.hidden = !offlineApp.home || (install.hidden && updating.hidden && status.hidden);
+  if (typeof homeFit === 'function') homeFit();             // beside the wordmark: My Team's box fitted again under it (src/ui-menus.js)
 }
 /* The page is now under a newer worker than the one that served it: it reloads into it from a quiet home, never anywhere else,
    whoever made the switch (this page, another window, or an older page's Update Game). Updating shows as it goes. */

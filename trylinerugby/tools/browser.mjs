@@ -35,15 +35,17 @@ async function open(w, h, touch) {
     if (r.error || x) throw Error('in the page: ' + (r.error ? r.error.message : (x.exception && x.exception.description) || x.text) + '\n  evaluating: ' + expr.slice(0, 160)); return r.result.result.value; };
   return { send, ev, close:async () => { ws.close(); await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`).catch(() => {}); } };
 }
-// a season under way on each headline that carries one, its note in the game's own mid-season format (Championship: Continue
-// Championship and the Trophy Cabinet), with the whole tools row: Offline Ready, Install Game and Updating. Shown, not saved, so the
-// next page opens on the save as it was. It returns what shows, so a fixture that stops matching the page fails rather than measures the plain home
-const SEASON = hl => `(() => { const $ = i => document.getElementById(i), on = e => !e.hidden && !e.closest('[hidden]') && e.getBoundingClientRect().height > 0;
-  for (const p of document.querySelectorAll('#hl-panels > .hl-panel')) p.hidden = p.id !== 'hp-${hl}';
+// a season under way, its line in the game's own mid-season format, on the five boxes (Continue's line, the Career box's note, the Trophy
+// Cabinet's strip) and on Competitions (Continue Championship and its note), with the whole tools row: Install Game and Updating, Offline
+// Ready giving way to Updating (re-pinned 2026-11-11: Updating takes its place, so the wordmark keeps its size). Shown, not saved, so the next page opens on the save as it was. It returns what does not show, so a fixture that stops matching the
+// page fails rather than measures the plain home
+const SEASON = view => `(() => { const T = window.__tryline, $ = i => document.getElementById(i), on = e => !e.hidden && !e.closest('[hidden]') && e.getBoundingClientRect().height > 0;
+  T.debug.goHome(); if ('${view}' === 'champ') T.home.open('champ');
   const n1 = $('champ-note'), n2 = $('career-note'); n1.textContent = 'Guildfordians · 2nd · Round 3 of 5'; n1.hidden = false; n2.textContent = 'Minis · Guildfordians · Round 3 of 5'; n2.hidden = false;
-  $('hc-go').hidden = false; $('hc-new').hidden = true; $('b-champ').textContent = 'Continue Championship'; $('b-cabinet').hidden = false; $('b-career').textContent = 'Continue Career';
+  $('hc-go').hidden = false; $('hc-new').hidden = true; $('b-champ').textContent = 'Continue Championship'; $('b-cabinet').hidden = false; $('cont-name').textContent = 'Continue'; $('cont-note').textContent = 'Championship · Round 3 v Guildfordians';
   for (const id of ['app-tools', 'offline-update', 'offline-status', 'b-install']) $(id).hidden = false;
-  return ['offline-status', 'b-install', 'offline-update', ...('${hl}' === 'champ' ? ['b-champ', 'champ-note', 'b-cabinet'] : ['b-career', 'career-note'])].filter(id => !on($(id))).join(); })()`;
+  T.home.fit();
+  return ['b-install', 'offline-update', ...('${view}' === 'champ' ? ['b-champ', 'champ-note'] : ['cont-note', 'career-note', 'b-cabinet'])].filter(id => !on($(id))).concat(on($('offline-status')) ? ['Offline Ready beside Updating'] : []).join(); })()`;
 const FIT = `(() => { const s = document.getElementById('s-home'); return JSON.stringify([s.scrollHeight, s.clientHeight]); })()`;
 try {
   for (const [w, h, touch] of [[844, 390, false], [844, 390, true], [667, 375, false], [667, 375, true]]) {
@@ -51,12 +53,12 @@ try {
     const [a0, a1] = JSON.parse(await pg.ev(FIT));
     ok(a0 <= a1, `${name}: a fresh home does not scroll (${a0} of ${a1})`);
     const mid = [];
-    for (const hl of ['champ', 'career']) {
-      const missing = await pg.ev(SEASON(hl));
-      ok(missing === '', `${name}: ${hl}: the fixture shows its note${hl === 'champ' ? ', the Trophy Cabinet' : ''}, Offline Ready, Install Game and Updating (missing: ${missing || 'none'})`);
+    for (const view of ['boxes', 'champ']) {
+      const missing = await pg.ev(SEASON(view));
+      ok(missing === '', `${name}: ${view === 'champ' ? 'Competitions' : 'the five boxes'}: the fixture shows ${view === 'champ' ? 'Continue Championship and its note' : 'Continue\'s line, the Career box\'s note and the Trophy Cabinet'}, Install Game and Updating in Offline Ready's place (missing: ${missing || 'none'})`);
       const [b0, b1] = JSON.parse(await pg.ev(FIT));
-      ok(b0 <= b1, `${name}: a ${hl === 'champ' ? 'championship' : 'career'} under way, its note${hl === 'champ' ? ', the Trophy Cabinet' : ''}, Offline Ready, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
-      mid.push(`${hl} ${b0} of ${b1}`);
+      ok(b0 <= b1, `${name}: a championship and a career under way, ${view === 'champ' ? 'on Competitions' : 'on the five boxes with the Trophy Cabinet'}, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
+      mid.push(`${view} ${b0} of ${b1}`);
     }
     console.log(`${name}: ${a0} of ${a1}, mid-season ${mid.join(', ')}`);
     await pg.close();
@@ -92,20 +94,22 @@ try {
     const PRE = `const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, H = T.home, S = D.settings(), $ = i => document.getElementById(i), by = id => X.ALL_TEAMS.find(t => t.id === id);`;
     const MEASURE = `(() => { const s = [...document.querySelectorAll('.screen')].find(e => !e.hidden), hit = (a, b) => a.left < b.right - .5 && b.left < a.right - .5 && a.top < b.bottom - .5 && b.top < a.bottom - .5;
       const stars = [...s.querySelectorAll('.rstars')].filter(e => e.getBoundingClientRect().width > 0), o = { n:stars.length, min:99, out:[], hit:[], side:Math.max(s.scrollWidth - s.clientWidth, document.documentElement.scrollWidth - innerWidth) };
-      for (const e of stars) { const r = e.getBoundingClientRect(), box = (e.closest('.team,.yours,.my-rec,.lk-leg') || s).getBoundingClientRect(), card = e.closest('.team,.lk-leg'), tile = card && card.classList.contains('lk-leg'); o.min = Math.min(o.min, r.height, r.width/5);
+      for (const e of stars) { const r = e.getBoundingClientRect(), box = (e.closest('.team,.yours,.my-box,.lk-leg') || s).getBoundingClientRect(), card = e.closest('.team,.lk-leg'), tile = card && card.classList.contains('lk-leg'); o.min = Math.min(o.min, r.height, r.width/5);
         if (r.left < box.left - .5 || r.right > box.right + .5 || r.right > innerWidth || (tile && (r.top < box.top - .5 || r.bottom > box.bottom + .5))) o.out.push(e.getAttribute('aria-label'));
         if (card) { const v = card.querySelector('.ovr,.cr-rate'), t = card.querySelector('.tname,.lk-nat'), y = card.querySelector('.lk-yr'); if (v && hit(v.getBoundingClientRect(), r)) o.hit.push('overall on stars: ' + t.textContent); if (hit(t.getBoundingClientRect(), r)) o.hit.push('name on stars: ' + t.textContent); if (y && hit(y.getBoundingClientRect(), r)) o.hit.push('year on stars: ' + t.textContent); } }
       return JSON.stringify(o); })()`;
     const SCREENS = [
-      ['the home (My Team\'s club under Play)', `S.myClub = 'NTH'; S.hl = 'game'; D.goHome();`, 1],
-      ['the International tab', `S.myClub = null; D.openTeams('quick'); X.tierPick(0);`, 12],
-      ['the Surrey tab', `X.tierPick(2); X.poolPick('sur');`, 12],
-      ['the Counties tab', `X.poolPick('cty');`, 7],
-      ['the England 2 tab', `X.tierPick(1); X.poolPick('en2');`, 13],
-      ['the picked-team bar', `X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[7]); X.tierPick(1); X.poolPick('eng'); X.fold(true);`, 11],   // the bar is in the controls, behind Change (Fold to One Line)
-      ['My Team\'s screen', `D.openTeams('my'); X.tierPick(2); X.poolPick('sur'); X.fold(true);`, 14],
-      ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 12],
-      ['the career club list, England 2', `document.querySelector('#cc-tier [data-tier="1"]').click(); document.querySelector('#cc-nat [data-pool="en2"]').click();`, 13],
+      ['the home (My Team\'s box)', `S.myClub = 'NTH'; D.goHome();`, 1],
+      // re-pinned for the side-by-side team screen (2026-11-11): one team a side, so a state draws two sets of stars (one in the one-side modes)
+      ['Quick Match, both sides', `S.myClub = null; S.pick = [null, null]; D.openTeams('quick');`, 2],
+      ['a nation on each side', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'nat.rsa'); at(1, 'nat.nzl');`, 2],
+      ['Surrey on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'sur'); at(1, 'sur'); P.step(1, 3);`, 2],
+      ['Counties on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'cty'); at(1, 'cty'); P.step(1, 2);`, 2],
+      ['England 2 on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'en2'); at(1, 'en2'); P.step(1, 5);`, 2],
+      ['a side picked, the Opponent on England', `const P = T.picker; S.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[7]); P.group(1, P.view(1).ladder.findIndex(g => g.key === 'eng') - P.view(1).gi);`, 2],
+      ['My Team\'s screen', `D.openTeams('my');`, 1],
+      ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 1],
+      ['the career club list, England 2', `const P = T.picker; P.group(0, P.view(0).ladder.findIndex(g => g.key === 'en2') - P.view(0).gi);`, 1],
       ['the transfer window', `const cr = C.create({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(cr); cr.phase = 'transfer'; cr.offers = ['GAL', 'BLM', 'JHB']; C.open();`, 4],
       ['the Locker\'s Legends', `C.set(null); const L = T.locker; window.__lkWas = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); L.open(3);`, w > 731 ? 14 : 0],   // every Legend won: its stars beside its year, inside its tile; none on a 667 phone, where a tile is too narrow for them (styles.css). Nine Golds (star:10 is no Gold): nine men's and the five women's, 14 (18 with ten women's, before 2026-11-09)
     ];
@@ -141,7 +145,8 @@ try {
     }
     await pg.ev(`(() => { ${PRE} $('im-back').click(); S.myTeam = 'FAR'; D.openTeams('quick'); })()`);
     for (const [g, pool] of [['men', 'int'], ['women', 'int'], ['minis', 'int']]) {   // main's Men | Women | Minis, against Farnham (main's 75: only nations are Stronger Sides): PR #14 had Men's | Women's and its tab numbers here
-      const bad = await pg.ev(`(() => { ${PRE} S.cat = '${g}'; S.pool = '${pool}'; D.renderTeams(); let n = 0, all = 0; for (const c of document.querySelectorAll('#t-grid .team')) { const a = c.querySelector('.gap'), v = c.querySelector('.ovr'); if (!a || !v) continue; all++; const r = a.getBoundingClientRect(), o = v.getBoundingClientRect(); if (r.top < o.bottom - .01 && r.left < o.right && o.left < r.right) n++; } return JSON.stringify([n, all]); })()`);
+      const bad = await pg.ev(`(() => { ${PRE} const P = T.picker; S.cat = '${g}'; S.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); let n = 0, all = 0;   // Farnham set, the Opponent on each nation in turn (the side-by-side screen, 2026-11-11)
+        for (const gr of P.view(1).ladder.filter(x => x.key.startsWith('nat.'))) { P.group(1, P.view(1).ladder.indexOf(gr) - P.view(1).gi); const c = document.querySelector('#t-side1 .pk-pick'), a = c && c.querySelector('.gap'), v = c && c.querySelector('.ovr'); if (!a || !v) continue; all++; const r = a.getBoundingClientRect(), o = v.getBoundingClientRect(); if (r.top < o.bottom - .01 && r.left < o.right && o.left < r.right) n++; } return JSON.stringify([n, all]); })()`);
       const [n, all] = JSON.parse(bad);
       ok(!n && all > 0, `${name}: side ${g} tab ${pool}: the overall's badge is clear of Stronger Side (${n} of ${all})`);
     }
@@ -151,7 +156,7 @@ try {
   const order = [await pg.ev(`document.activeElement.id`)];
   for (let i = 0; i < 2; i++) { await pg.send('Input.dispatchKeyEvent', { type:'keyDown', key:'Tab', code:'Tab', windowsVirtualKeyCode:9, modifiers:8 }); await pg.send('Input.dispatchKeyEvent', { type:'keyUp', key:'Tab', code:'Tab', windowsVirtualKeyCode:9, modifiers:8 }); order.push(await pg.ev(`document.activeElement.id`)); }
   console.log('Shift+Tab from the start: ' + order.join(', '));
-  ok(order.join() === 'b-quick,b-import,b-locker', 'Tab order follows the screen: back from Play goes along the top row, Add Your Team then Locker (main\'s home; PR #14 had Camera and Half Length there) (' + order.join(', ') + ')');
+  ok(order.join() === 'b-continue,b-locker,b-import', 'Tab order follows the screen: back from Continue goes into My Team\'s box, its row from the end, the Locker then Add Your Team (the home of 2026-11-11; main\'s went along its top row, PR #14 had Camera and Half Length there) (' + order.join(', ') + ')');
   await pg.close();
   // the two cues, rendered through the real bus: the loudest 50 ms, whole and above 300 Hz (roughly what a phone speaker plays). The numbers, not the ear
   const snd = await open(844, 390, false); await snd.send('Page.navigate', { url:site + '/sounds.html' }); await wait(1200);

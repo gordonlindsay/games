@@ -76,7 +76,7 @@ The owner's answers this follows (8 November 2026): **SignCheck Ltd** is the sel
 
 ## 6. Submit to the App Store
 
-- [ ] **Skills Mini Games wording** (the ten games from the Training Ground, 2026-11-09): a qualified rugby coach reads every tip after a run, every Watch How caption, the coach line ("Learn Real Tackling With a Club Coach. Not One to Try at Home.") and the For Grown-Ups panel against the sources in the game's README (Skills Mini Games, Sources, per game), and a legal review of the same words, before the first store release. Nothing in them has been checked by either yet.
+- [ ] **Skill Games wording** (the ten games from the Training Ground, 2026-11-09): a qualified rugby coach reads every tip after a run, every Watch How caption, the coach line ("Learn Real Tackling With a Club Coach. Not One to Try at Home.") and the For Grown-Ups panel against the sources in the game's README (Skill Games, Sources, per game), and a legal review of the same words, before the first store release. Nothing in them has been checked by either yet.
 - [ ] Release set to **Manually release this version**, so the owner picks the day.
 - [ ] Attach the in-app purchases to the version and add the review notes from APP_STORE.md, the version that matches the build (section 4): without Super Fan, `tryline.full` alone and no Import; with Super Fan, both products and the partner club's page as the link for Import. Submit for review. A first review often takes a day or two.
 - [ ] **At the App Store launch (owner, 2026-11-08): flip `STORE_WEB_TIER` to `'free'` once `STORE_LINKS.ios` is set.** An Android browser stays fully unlocked until `STORE_LINKS.android` is set (src/store.js), so Android visitors never meet a lock with no app to buy it in.
@@ -102,7 +102,7 @@ Answer in App Store Connect's Resolution Center: calmly, specifically, with what
 - **4.2 Minimum Functionality ("a repackaged website" or "not enough native functionality").** The arguments, all true of this app:
   - It is a **game**, not a website: it runs entirely from files inside the app and plays fully offline in aeroplane mode. Nothing is loaded from a website; the web version exists, but the app does not depend on it.
   - It uses the device natively: **StoreKit** in-app purchases with Restore Purchases, **haptics** through the Taptic Engine, **native storage** that survives the web view's storage being cleared, **native HTTP** for Import, the landscape lock and the safe areas (and game controllers, once tested in the app).
-  - It is a complete game with depth: open play with tackling, rucks, scrums, lineouts and goal kicks; a five-round championship; a career of club seasons, with transfers and call-ups; ten Skills Mini Games; a Kids level with its own easing; a team builder.
+  - It is a complete game with depth: open play with tackling, rucks, scrums, lineouts and goal kicks; a five-round championship; a career of club seasons, with transfers and call-ups; ten Skill Games; a Kids level with its own easing; a team builder.
   - Offer the reviewer a 30-second screen recording of a match, a drill and a purchase if asked.
   - What not to do: argue that other web-view apps were approved.
 - **2.5.2 (downloads or runs code it did not ship with).** The app must not use the service worker or update itself from the web (the native work turns both off in the app). If cited, confirm that every file is in the app bundle.

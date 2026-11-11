@@ -68,6 +68,7 @@ function navKey(r, e) {                                    // two player only: t
   if (act === 'm') { const d = KEYDIR[e.code]; navMove(s, d[0], d[1]); }
   else if (act === 'a') navPress(s);
   else if (act === 'b' || act === 'pause') navBack(s);
+  else if (act === 'c' && typeof pickShoulder === 'function') pickShoulder(s, 1);   // Sprint, a pad's shoulder on the keyboard: the team screen's next country
   if (e.preventDefault) e.preventDefault();
 }
 window.addEventListener('keydown', e => onKey(e, true));
@@ -118,8 +119,9 @@ function pollPads() {
       // on a menu or a card a rise navigates, and a release still reaches the slot: a button let go there can't stay held into play
       if (i === BMAP.big) { if (now && menu) navPress(seat); else btn(inp, 'a', bit, now); }
       else if (i === BMAP.small) { if (now && menu) { if (M && M.paused) resume(); else navBack(seat); } else btn(inp, 'b', bit, now); }
-      else if (isShoulder(i)) { if (!menu || !now) btn(inp, 'c', bit, now); }
+      else if (isShoulder(i)) { if (now && menu && typeof pickShoulder === 'function') pickShoulder(seat, i % 2 ? 1 : -1); if (!menu || !now) btn(inp, 'c', bit, now); }   // on the team screen a shoulder jumps a country: the left ones back, the right ones on
       else if (i === BMAP.start) { if (now) padStart(); }
+      else if (i === 2 || i === 3) { if (now && menu && typeof pickLift === 'function') pickLift(seat); }   // X or Y on the team screen: the ring off a card onto its side's buttons, and back
       else if (BMAP.dpad[i]) {
         const code = BMAP.dpad[i], d = KEYDIR[code];
         if (!now) { inp.keys.delete(code); inp.held.delete(code); }
@@ -231,31 +233,40 @@ function setFocus(el) {
   if (focusEl && focusEl !== el) focusEl.classList.remove('padfocus');
   focusEl = el || null;
   if (focusEl) { focusEl.classList.add('padfocus'); if (focusEl.scrollIntoView) focusEl.scrollIntoView({ block:'nearest' }); }
+  if (typeof pickHint === 'function') pickHint();          // the team screen's hint for the lift follows the ring (src/ui-menus.js)
 }
-const DEFAULT_FOCUS = { 's-home':() => $('b-quick'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
+const DEFAULT_FOCUS = { 's-home':() => $('b-continue'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
 function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
-function navSide(seat) {                                   // the one button a restricted seat may still press: Player 1's Change Team while Player 2 picks
-  if (seat === 0 && pickMode === 'two' && twoSel.picking === 1 && !$('s-teams').hidden && !$('t-yours').hidden) return $('t-ctl').hidden ? $('t-fold') : $('t-change');   // folded, his press opens the controls first, so the Change Team he presses next is on screen
+function navSide(seat) {                                   // the one button a restricted seat may still press: none since the team screen gave each seat its own side (2026-11-11)
   return null;
+}
+/* The nearest of cands from el in the direction (dx, dy): within 60 degrees of it, by the distance along it plus twice the sideways offset.
+   The ring's move, and the home's arrow keys (src/ui-menus.js). */
+function navNearest(cands, el, dx, dy) {
+  const r0 = el.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+  let best = null, bs = 1e9;
+  for (const c of cands) {
+    if (c === el) continue;
+    const r = c.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
+    const along = ex*dx + ey*dy, side = Math.abs(ex*dy - ey*dx);
+    if (along <= 0 || side > along*1.732) continue;
+    const s = along + 2*side;
+    if (s < bs) { bs = s; best = c; }
+  }
+  return best;
 }
 function navMove(seat, dx, dy) {                           // the nearest candidate within 60 degrees of the direction: the distance along it plus twice the sideways offset
   logNav('move', seat);
   if (!navOwner(seat)) return null;
   const layer = navLayer(); if (!layer) return null;
+  if (layer.id === 's-teams' && typeof pickNav === 'function' && pickNav(seat, dx, dy)) return focusEl;   // the team screen: a side's team and group (src/ui-menus.js)
   const cands = navCands(layer); if (!cands.length) return null;
   if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
   if (!dx && !dy) return focusEl;
-  const r0 = focusEl.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
-  let best = null, bs = 1e9;
-  for (const el of cands) {
-    if (el === focusEl) continue;
-    const r = el.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
-    const along = ex*dx + ey*dy, side = Math.abs(ex*dy - ey*dx);
-    if (along <= 0 || side > along*1.732) continue;
-    const s = along + 2*side;
-    if (s < bs) { bs = s; best = el; }
-  }
+  if (layer.id === 's-home' && typeof homeNavTo === 'function') { const to = homeNavTo(focusEl, dx, dy, cands); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the home's boxes (src/ui-menus.js)
+  const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
+  let best = navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);
   if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one
     const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
     if (sel && cands.includes(sel)) best = sel;
@@ -267,6 +278,7 @@ function navPress(seat) {
   logNav('press', seat);
   if (!navOwner(seat)) { const el = navSide(seat); if (el && el.click) { el.click(); return true; } return false; }
   const layer = navLayer(); if (!layer) return false;
+  if (layer.id === 's-teams' && typeof pickPress === 'function' && pickPress(seat)) return true;   // 2 Players: each seat sets its own side, then Kick Off
   if (!focusEl || !navCands(layer).includes(focusEl)) { navMove(seat, 0, 0); return false; }
   if (focusEl.click) focusEl.click();
   return true;
@@ -277,6 +289,7 @@ function navBack(seat) {
   logNav('back', seat);
   if (!navOwner(seat)) return false;
   const layer = navLayer(); if (!layer) return false;
+  if (layer.id === 's-teams' && typeof pickBack === 'function' && pickBack(seat)) return true;   // 2 Players: B frees the seat's own side first
   for (const el of layer.querySelectorAll('[data-back]')) if (!el.hidden && !(el.closest && el.closest('[hidden]'))) { if (el.click) el.click(); return true; }
   return false;
 }
