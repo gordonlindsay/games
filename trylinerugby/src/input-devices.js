@@ -234,11 +234,26 @@ function setFocus(el) {
   focusEl = el || null;
   if (focusEl) { focusEl.classList.add('padfocus'); if (focusEl.scrollIntoView) focusEl.scrollIntoView({ block:'nearest' }); }
 }
-const DEFAULT_FOCUS = { 's-home':() => $('b-quick'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
+const DEFAULT_FOCUS = { 's-home':() => $('b-continue'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
 function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
 function navSide(seat) {                                   // the one button a restricted seat may still press: none since the team screen gave each seat its own side (2026-11-11)
   return null;
+}
+/* The nearest of cands from el in the direction (dx, dy): within 60 degrees of it, by the distance along it plus twice the sideways offset.
+   The ring's move, and the home's arrow keys (src/ui-menus.js). */
+function navNearest(cands, el, dx, dy) {
+  const r0 = el.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+  let best = null, bs = 1e9;
+  for (const c of cands) {
+    if (c === el) continue;
+    const r = c.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
+    const along = ex*dx + ey*dy, side = Math.abs(ex*dy - ey*dx);
+    if (along <= 0 || side > along*1.732) continue;
+    const s = along + 2*side;
+    if (s < bs) { bs = s; best = c; }
+  }
+  return best;
 }
 function navMove(seat, dx, dy) {                           // the nearest candidate within 60 degrees of the direction: the distance along it plus twice the sideways offset
   logNav('move', seat);
@@ -248,17 +263,9 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   const cands = navCands(layer); if (!cands.length) return null;
   if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
   if (!dx && !dy) return focusEl;
-  const r0 = focusEl.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+  if (layer.id === 's-home' && typeof homeNavTo === 'function') { const to = homeNavTo(focusEl, dx, dy, cands); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the home's boxes (src/ui-menus.js)
   const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
-  let best = null, bs = 1e9;
-  for (const el of cands) {
-    if (el === focusEl || (skip && skip(el))) continue;
-    const r = el.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
-    const along = ex*dx + ey*dy, side = Math.abs(ex*dy - ey*dx);
-    if (along <= 0 || side > along*1.732) continue;
-    const s = along + 2*side;
-    if (s < bs) { bs = s; best = el; }
-  }
+  let best = navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);
   if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one
     const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
     if (sel && cands.includes(sel)) best = sel;

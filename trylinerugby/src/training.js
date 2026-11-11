@@ -1,5 +1,5 @@
 /* =========================================================
-   The games: Skills Mini Games, and the career's Train.
+   The games: Skill Games, and the career's Train.
    Tag Chase, Bouncy Egg, Pass Around the Circle, Cones, Tackling and Ball Back each run in a training space of their own: a practice field (drawn in
    render-drill.js) and the controls of a match with none of its flow. While practice.space is set, update() skips matchUpdate and the drill moves
    the men and the ball itself (M.phase reads 'drill', so nothing in the HUD or the hints takes it for open play). Kicking

@@ -89,10 +89,10 @@ function careerNote(cr) {
   const team = careerTeamNow(cr), f = careerAhead(cr);
   return 'Year ' + cr.year + ' · ' + team.name + ' · ' + (cr.phase === 'transfer' ? 'Transfer Window' : f ? f.label : careerResult(cr, careerOutcome(cr)));
 }
-function renderCareerHome() {                       // the home's Career: Continue Career with its note, or New Career
-  const b = $('b-career'), note = $('career-note');
-  if (!career) { b.textContent = 'New Career'; note.hidden = true; return; }
-  b.textContent = 'Continue Career'; homeNote(note, careerNote(career), careerTeamNow(career).name);
+function renderCareerHome() {                       // the home's Career box: Career, and its note while a career is under way and Continue shows something else
+  const note = $('career-note');
+  if (!career || (typeof homeUnder === 'function' && homeUnder() === 'career')) { note.hidden = true; return; }
+  homeNote(note, careerNote(career), careerTeamNow(career).name);
 }
 
 /* ---------- the new player, and his club ---------- */
@@ -258,7 +258,7 @@ function careerChips(keys) {
   const label = Object.fromEntries(careerSkills());
   return keys.map(k => `<span class="cr-chip" style="--k:${CAREER_COL[k] || 'var(--chalk)'}">${label[k] || k}</span>`).join('');
 }
-/* Train: the Skills Mini Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
+/* Train: the Skill Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
    of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three. The youngest never
    see the contact games (careerDrills), so for them there is no group and no coach line. */
 function renderCareerTrain() {

@@ -11,7 +11,7 @@ Grown-Ups panel). `node tools/store.mjs` checks them, and runs in `node tools/ch
 
 | Tier | Product id | What it unlocks | Price |
 |---|---|---|---|
-| Free | none | Quick Match, Skills Mini Games (all drills), Kids, Easy, Normal, How to Play, 2 Players (no home button since 2026-11-09), the Locker (its medals, balls, boots and Legends won), My Team | free |
+| Free | none | Quick Match, Skill Games (all drills), Kids, Easy, Normal, How to Play, 2 Players (no home button since 2026-11-09), the Locker (its medals, balls, boots and Legends won), My Team | free |
 | Full Game | `tryline.full` | Career, Championship and International modes, Create Team (and Edit), Hard, playing the Legends sides (`legends`) | £1.99 |
 | Super Fan of a partner club | `tryline.fan.<key>`, one per club (`tryline.fan.farnham` first) | Everything in the Full Game, Add Your Team (the import), the home in the club's kit colours with the Super Fan badge (a plain shield in those colours and the club's name), a gold Super Fan trophy for the club, the club offered first in Career and Championship, and the Supporters' Wall (below) | £3.99 |
 

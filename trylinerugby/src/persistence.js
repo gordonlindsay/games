@@ -25,10 +25,10 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-const HOME_HL = ['game', 'champ', 'career', 'drills', 'settings'];   // the home's five headlines, in the bar's order: Quick Match, Championship, Career, Skills Mini Games, Settings (the keys are the saves', kept from Game and Training Drills)
+const HOME_LAST = ['champ', 'career'];   // what Continue on the home picks up where both are under way: the one whose match started last (settings.last)
 const PICK_KEY = /^[A-Za-z0-9-]{1,24}$/, PICK_GROUP = /^[a-z0-9.-]{1,24}$/;   // a team's key (keyOf: a code, a made team's, a My League side's) and a ladder group's (pickLadder)
 const PICK_RECENT = 3, PICK_FAV = 12;   // Recent: a side's last three picks; Favourites: twelve at most, the oldest dropped
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, hl:'game', myClub:null, myNat:null, drillSeen:[], camPick:false, finished:0, pick:[null, null], recent:[[], []], fav:[] };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; finished: one-player matches played to full time, for the Your Ball sign under the clock (ui-match.js); kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); hl: the home's headline last chosen (HOME_HL, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, null for the default (myClubTeam, ui-menus.js); drillSeen: the games whose Watch How has played (drill-demo.js); camPick: the camera row has been used (cleanSettings)
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, last:null, myClub:null, myNat:null, drillSeen:[], camPick:false, finished:0, pick:[null, null], recent:[[], []], fav:[] };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; finished: one-player matches played to full time, for the Your Ball sign under the clock (ui-match.js); kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); last: what the home's Continue picks up where a championship and a career are both under way, the one played last (HOME_LAST, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, null for the default (myClubTeam, ui-menus.js); drillSeen: the games whose Watch How has played (drill-demo.js); camPick: the camera row has been used (cleanSettings)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
@@ -178,7 +178,7 @@ function cleanSettings(g) {
   if (typeof g.kids === 'boolean') settings.kids = g.kids;
   if (typeof g.kidsR === 'number' && Number.isFinite(g.kidsR) && g.kidsR >= 0 && g.kidsR <= 1) settings.kidsR = Math.round(g.kidsR*1000)/1000;   // a save from before the rating has none, and starts at 0
   if (Number.isInteger(g.kidsTop) && g.kidsTop >= 0 && g.kidsTop <= 99) settings.kidsTop = g.kidsTop;   // the run of big wins at the top of Kids (Move Up to Easy)
-  if (HOME_HL.includes(g.hl)) settings.hl = g.hl;   // the home's headline last chosen; a save from before it opens on Quick Match
+  if (HOME_LAST.includes(g.last)) settings.last = g.last;   // a championship or a career, whichever was played last, for the home's Continue; a save from before it has none (a championship first). A save's old hl (the headline last chosen) is dropped: the home opens on its five boxes
   if (typeof g.myClub === 'string' && /^[A-Za-z0-9-]{1,24}$/.test(g.myClub)) settings.myClub = g.myClub;   // My Team's club, by its key (a built-in club's code, a made or imported team's key, a My League side's); one no longer there reads as the default (myClubTeam)
   if (typeof g.myNat === 'string' && NATIONS.some(n => n.id === g.myNat)) settings.myNat = g.myNat;   // My Team's country; a save from before My Team has neither, and is the Super Fan's club or Farnham, and England
   if (Array.isArray(g.drillSeen)) settings.drillSeen = DRILL_IDS.filter(id => g.drillSeen.includes(id));   // only drills the game knows, each once; a save from before Watch How has none, so each plays once
@@ -191,6 +191,44 @@ function cleanSettings(g) {
   if (Array.isArray(g.pick) && g.pick.length === 2) settings.pick = g.pick.map(p => (p && typeof p === 'object' && !Array.isArray(p) && key(p.id) && TEAM_CATS.some(c => c.id === p.cat) && (p.g == null || (typeof p.g === 'string' && PICK_GROUP.test(p.g))) ? { id:p.id, cat:p.cat, g:p.g || null } : null));
   if (Array.isArray(g.recent) && g.recent.length === 2) settings.recent = g.recent.map(r => (Array.isArray(r) ? [...new Set(r.filter(key))].slice(0, PICK_RECENT) : []));
   if (Array.isArray(g.fav)) settings.fav = [...new Set(g.fav.filter(key))].slice(0, PICK_FAV);
+}
+/* The games played as My Team (the home's box, src/ui-menus.js). For each side that has been My Team, by its key ('c:' and a club's code or
+   key, 'm:' and a team you made's key, 'n:' and a nation's code): won, drawn and lost (played is their sum) and the last five results, oldest
+   first ('WWLDW'). Counted at full time in a match you play as My Team's club or its country (formMatch: Quick Match, Championship, a cup, a
+   career, any level), never AI v AI, the demo, a drill, a tool's match or Two Player, and nothing random is drawn for it. Twelve sides at
+   most, the one played as last first. A save from before it has none, so every side starts at nought. */
+const FORM_KEEP = 12, FORM_LAST = 5, FORM_MAX = 99999;
+const FORM_KEY = /^[cmn]:[A-Za-z0-9-]{1,24}$/;
+let formRec = [];
+function cleanForm(v) {
+  const out = [], n = x => (Number.isInteger(x) && x >= 0 && x <= FORM_MAX ? x : 0);
+  if (!Array.isArray(v)) return out;
+  for (const r of v.slice(0, 64)) {
+    if (!r || typeof r !== 'object' || Array.isArray(r) || typeof r.k !== 'string' || !FORM_KEY.test(r.k) || out.some(o => o.k === r.k)) continue;
+    const rec = { k:r.k, w:n(r.w), d:n(r.d), l:n(r.l), last:'' };
+    const last = typeof r.last === 'string' && /^[WDL]{1,5}$/.test(r.last) ? r.last : '';
+    if ([...'WDL'].every(x => last.split(x).length - 1 <= rec[x.toLowerCase()])) rec.last = last;   // never more of a result in the five than in the counts
+    out.push(rec);
+    if (out.length === FORM_KEEP) break;
+  }
+  return out;
+}
+const formKey = t => (isNation(t) ? 'n:' + t.id : (t.custom ? 'm:' : 'c:') + (t.key || t.id));
+function formOf(t) { const k = t ? formKey(t) : ''; return formRec.find(r => r.k === k) || { k, w:0, d:0, l:0, last:'' }; }
+/* Full time (finishMatch): the result counted for My Team's side, once a match. The side you play is the human one; its team is My Team's
+   club or country (myIs, src/ui-menus.js), in any category (Farnham Women is Farnham's). Returns 'W', 'D' or 'L', or null when nothing counts. */
+function formMatch() {
+  if (!M || M.formDone || !M.arcade || M.demo || M.auto || M.two || practice) return null;
+  const me = M.side.findIndex(s => s.human), t = me >= 0 ? M.nat[me] : null;
+  if (!t || typeof myIs !== 'function' || !myIs(t)) return null;
+  M.formDone = true;
+  const us = M.score[me], them = M.score[1 - me], res = us > them ? 'W' : us < them ? 'L' : 'D', k = formKey(t);
+  const r = formRec.find(x => x.k === k) || { k, w:0, d:0, l:0, last:'' }, key = res.toLowerCase();
+  r[key] = Math.min(FORM_MAX, r[key] + 1);
+  r.last = (r.last + res).slice(-FORM_LAST);
+  formRec = [r, ...formRec.filter(x => x !== r)].slice(0, FORM_KEEP);
+  save();
+  return res;
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -213,6 +251,7 @@ function restore(s) {
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
+  formRec = cleanForm(s.form);   // the games played as My Team; a save from before it has none, and starts at nought
   if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
   if (settings.myClub && typeof myClubFind === 'function' && !myClubFind(settings.myClub)) settings.myClub = null;   // a My Team since deleted, or its league removed: the default again
   retainCompletedSeason(champ);
@@ -229,7 +268,7 @@ function load() {
 /* The write itself, with the settings to keep: save()'s own, or a drill's snapshot (drill-demo.js: Watch How seen, written while save() stands down). */
 function saveWith(s) {
   if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
-  try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined })); } catch (e) { /* private mode, or full */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined, form:formRec.length ? formRec : undefined })); } catch (e) { /* private mode, or full */ }
 }
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship

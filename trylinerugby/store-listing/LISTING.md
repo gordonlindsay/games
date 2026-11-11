@@ -36,7 +36,7 @@ The owner's wording (29 characters), 9 November 2026: "play as and support your 
 
 <!-- copy:apple.promo -->
 ```text
-Play as your club. Support your club. For the love of the game. Free: Quick Match, every Skills Mini Game and the Kids level. Unlock Championship and Career.
+Play as your club. Support your club. For the love of the game. Free: Quick Match, every Skill Game and the Kids level. Unlock Championship and Career.
 ```
 
 Opens with the owner's line. 157 characters.
@@ -66,7 +66,7 @@ Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitc
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- Skills Mini Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
+- Skill Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
@@ -98,7 +98,7 @@ Tryline Rugby Sevens is rugby sevens for your phone. Seven a side on a full pitc
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- Skills Mini Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
+- Skill Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)
@@ -158,7 +158,7 @@ Tryline Rugby Sevens is rugby sevens for your phone and tablet. Seven a side on 
 
 Free to Play
 - Quick Match against the computer, on Kids, Easy or Normal
-- Skills Mini Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
+- Skill Games: ten short games, from Tag Chase and Bouncy Egg to Tackling and Kicking, each scored out of three stars
 - How to Play, with control hints you can switch off
 
 Full Game (a one-off unlock, no subscription)

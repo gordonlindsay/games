@@ -307,7 +307,7 @@ function artCell(p, s, pose, tier, mine) {                  // his picture at th
 }
 function artDraw(at, p, s, kk, sc, ang, pose, mine) {       // draws him where at says, and gives back the slot drawn, or null if nothing can be yet
   const want = kk*V.dpr > 46 && !M.demo ? 1 : 0, numbered = pose.mirror && artNumbered(ART.man.clips[pose.clip].shape, pose.deg);   // the dim demo keeps to the smaller sheets
-  const owed = (M.demo || !!practice) && !(s.artSlot && s.artSlot.key === s.artKey);   // the demo and the Skills Mini Games never show a hole or a code-drawn man: anyone with no picture to hold gets his now, past the budget
+  const owed = (M.demo || !!practice) && !(s.artSlot && s.artSlot.key === s.artKey);   // the demo and the Skill Games never show a hole or a code-drawn man: anyone with no picture to hold gets his now, past the budget
   let slot = artCell(p, s, pose, want, mine || owed), flip = pose.mirror && !numbered;
   if (!slot && s.artSlot && s.artSlot.key === s.artKey) { slot = s.artSlot; flip = s.artFlip; }   // tints spent: hold his last picture a frame
   if (!slot) return null;

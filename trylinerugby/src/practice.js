@@ -1,5 +1,5 @@
 /* =========================================================
-   Skills Mini Games: the drill picker (the home's Skills Mini Games headline), the ready and result card, and the rules every drill keeps.
+   Skill Games: the drill picker (the home's Skill Games step), the ready and result card, and the rules every drill keeps.
    No championship result, played count or tutorial memory is written here. The drills themselves are in training.js.
    practiceStart(id, { onDone, leaveLabel? }) runs a drill for a caller (the career): every way out of it (the card's Back to
    Career, or leaveLabel; Back or Escape on the card; Pause then Back to Career) restores the settings exactly as leaving does,
@@ -65,14 +65,14 @@ function practiceHandBack() {                              // a caller's drill e
   fn(res);
 }
 function practiceLeave() { if (practice && practice.opts) { practiceHandBack(); return; } practiceRestore(); exitMatch(); }
-function practiceChoose() {                                // Back to Skills: the home, on Skills Mini Games where every drill is picked, the drill just played in focus
+function practiceChoose() {                                // Back to Skills: the home, on Skill Games where every drill is picked, the drill just played in focus
   if (practice && practice.opts) { practiceHandBack(); return; }
   const id = practice && practice.id;
   practiceRestore();
   setTwo(false); startDemo();
   $('hud').hidden = $('controls').hidden = $('b-pause').hidden = true;
   practiceGroups();                                        // the contact group shown or hidden for this player, the grown-ups' panel shut
-  goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings, the headline included: it was picked on Skills Mini Games
+  goHome(id ? $('pr-' + id) : null);                       // a drill never writes the settings: back on the home's Skill Games step, where it was picked
 }
 /* The two sides on a drill's pitch play at these ability sums, whatever their clubs are rated this season: a drill's timing and its stars are the drill's, and don't move when a league's band does. */
 const DRILL_SUMS = [13, 8];
@@ -118,7 +118,7 @@ function practiceStart(id, opts, noDemo) {                 // noDemo: Watch How 
 }
 const practiceBackText = () => (practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Skills');   // the card's leave button and the pause card's
 function practiceLeaveLabel() {                            // Back to Skills on its own row, or beside Next Game; a caller's drill goes Back to Career unless it names its own
-  $('pr-eyebrow').textContent = practice.opts ? 'Training' : 'Skills Mini Games';   // the place it came from: the home's Skills Mini Games, or a caller's training (the career's Train)
+  $('pr-eyebrow').textContent = practice.opts ? 'Training' : 'Skill Games';   // the place it came from: the home's Skill Games, or a caller's training (the career's Train)
   $('pr-select').textContent = practiceBackText();
   $('pr-row').classList.toggle('one', !!$('pr-next').hidden);
 }

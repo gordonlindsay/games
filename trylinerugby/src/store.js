@@ -1,9 +1,9 @@
 /* =========================================================
    Store: the one-off unlocks, who has them, and the adapter to the app stores.
 
-   Free: Quick Match, Skills Mini Games, Kids, Easy and Normal, How to Play, Two Player (no home button), the Locker and My Team. Full Game
+   Free: Quick Match, Skill Games, Kids, Easy and Normal, How to Play, Two Player (no home button), the Locker and My Team. Full Game
    (tryline.full) adds Career, Championship and International modes, Create Team, Hard and playing the Legends sides (unlocked by Gold medals on every tier). Super Fan of a partner club (tryline.fan.<key>, one product a club) is the Full
-   Game and Add Your Team (the import), and marks the player as that club's Super Fan: the home in its kit colours with its shield and name,
+   Game and Add Your Team (the import), and marks the player as that club's Super Fan: My Team's box (when the club is My Team) in its colours with the Super Fan badge,
    a gold Super Fan trophy in the Locker and the Trophy Cabinet (src/locker.js), and the club offered first in Career and Championship.
    No subscriptions, no ads, no accounts, no server: a purchase is kept on this device in the save's own field (store), and Restore
    Purchases reads it back from the App Store or Google Play.
@@ -34,7 +34,7 @@ const STORE_FAN_HAS = [...STORE_FULL_HAS, 'import'];   // Super Fan: everything 
    commission). agreed turns true only once the club has confirmed that share in writing. The club's Super Fan offer is shown only
    with both, so it can never go out without its stated, agreed share. A club the game does not have yet is appended to CLUBS
    (data.js) first. crest is null, or the club's crest as an image inside the game (crests/<key>.png, .webp or .svg), set only once the
-   club has supplied it with its written permission: the Super Fan's shield on the home then shows it in place of the kit colours, and
+   club has supplied it with its written permission: the Super Fan's shield in My Team's box then shows it in place of the kit colours (once agreed is true too), and
    tools/build.mjs puts the file in the game's shell (offline, and in the app). tools/listing.mjs reads this list as plain data: keep it
    literals only. */
 const FAN_CLUBS = [
