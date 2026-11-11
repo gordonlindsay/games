@@ -4,7 +4,8 @@
    Everywhere, AI v AI and the demo included, so the game reads the same to watch as to play:
    - base: the flat term every catch carries, 0.015 + (5 - handling)*0.01 (catchBall), times this. Alone it is the clean catch
      dropped with nobody within 1.8m, the drop with no cause anyone can see. The terms that are earned sit on top of it unchanged:
-     a marked catch's 0.04, a long pass's LONG.knock, a kick's 0.05.
+     a marked catch's 0.04, a long pass's LONG.knock, a kick's 0.05. The halved base is under those catches too, so they drop
+     about a fifth less often (README.md: the earned terms kept, their counts down about a quarter).
    - intercept: the interception's term, 0.2 before. Your man under the ring, or an AI teammate, takes a CPU pass he runs into
      with no button pressed (pI, src/ball.js), and then dropped it about a quarter of the time.
    - hit: ARCADE.hit.jolt (a Big Hit spilling the ball 12 points more often) only when the tackler's side is a person's, as

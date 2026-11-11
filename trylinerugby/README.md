@@ -1532,7 +1532,11 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   recoiling from a Big Hit; a white impact ring on a Big Hit, with a 70ms hit-stop and a 3px shake when it is yours
   (no shake under reduced motion); the slide-off and the roll-away smoothed over at most 9 m/s, with a quarter turn;
   a wobble while tripped; the gold trail and two speed streaks on a sprint; and on-pitch tags (Big Hit, Ankle Tap,
-  Tripped, Fend, Offload, Loose Ball, Pressure On), at most two at a time, about 27 a match on Normal. Sounds: 'tackle' at the
+  Tripped, Fend, Offload, Loose Ball, Pressure On, Knock-On), at most two at a time. In the census (`tools/contact.mjs`:
+  120 bot matches on Normal, 4-minute halves, both sides' tags, the bot's Side Steps apart) that is about 52 a match: 38
+  under the census's bar of 40 (35.5 before the knock-ons, which leave more phases to tag), Pressure On 6.5 and Knock-On
+  7.8, each held by a ceiling of its own (12 and 10). Counted with the rest, Knock-On takes them to about 46, over the
+  bar; that is open for the owner (Catching and knock-ons). Sounds: 'tackle' at the
   bind, 'hit', 'whiff', 'trip', 'whoosh' when a sprint starts, 'tick' when the meter fills.
 
 **Measured** (`bot.mjs`, 4-minute halves, duels live, 12 seeds x 120 matches a cell; `census.mjs`-style census of 60
@@ -1782,7 +1786,9 @@ A catch (`catchBall`, src/match.js) draws one number against a chance that is a 
 - **The base**, 0.015 + 0.01 a handling point under 5 (3.5% at handling 3), on every catch. Alone it is the clean catch
   dropped with nobody of the other side within 1.8m, the drop with no cause anyone can see. Now **half of it**
   (`KNOCK.base` 0.5): 1.75% at handling 3.
-- **Marked**, a man of the other side within 1.8m: +0.04. **A long pass**: +`LONG.knock` 0.03. **A kick**: +0.05. Kept.
+- **Marked**, a man of the other side within 1.8m: +0.04. **A long pass**: +`LONG.knock` 0.03. **A kick**: +0.05. Kept,
+  but the halved base sits under each, so these catches knock on about a fifth less often (at handling 3 a marked catch
+  7.5% to 5.75%, a kick 8.5% to 6.75%, a long pass 6.5% to 4.75%; Measured, below).
 - **An interception**: +0.2 before, now **`KNOCK.intercept` 0.07**. Most are a pass your man ran into: the man under your
   ring takes one he is within 1.1m of 40% of the time and an AI teammate 18%, with no button pressed (src/ball.js, as
   before), and then dropped it about one time in four. Now about one in ten. The CPU's interceptions are the same rule.
@@ -1793,7 +1799,8 @@ a person's (`KNOCK.hit`), as its comment and the Big Hit line in Arcade always s
 carrier had it too. The
 other contact knock-ons, the jolt's tiers, a failed offload and pressure (always a Loose Ball, never a scrum), are as they
 were. A knock-on of any kind in a match you play now shows **Knock-On** over the man who dropped it (`KNOCK.tag`), as Loose Ball
-does (AI v AI and the demo show no tags, as ever); it draws nothing.
+does (AI v AI and the demo show no tags, as ever); it draws nothing. It is about 8 a match in the contact census, both
+sides together, under a ceiling of its own (Open for the owner: the tag stream, below).
 
 A catch draws one number whatever its chance, and a jolt one whatever its size, so only outcomes move: with KNOCK on and
 off the same seed draws the same number, and a catch falls the other way only when that number lies between the two chances
@@ -1822,12 +1829,28 @@ the spill is a Big Hit's knock-on that only the arcade 0.12 made, on your carrie
 
 AI v AI is 120 matches at 4-minute halves; the bot (the scripted average player, Quick Match's rules, 2-minute halves) 80
 a level; the casual adult (`PROFILE=casual`, Easy, 2-minute halves) 100. His 86% to 91% is mostly the 100's noise: over 400
-it is 90% to 91%, by 2.59 to 2.69 tries scored and 0.28 to 0.29 conceded. The bot on Hard wins 51% then 55% over 320. About a third fewer everywhere (35, 34, 35, 39
-and 37%), the unexplained cut by more than half (51 to 63%), the earned within 5% of where they were where you play. In AI v AI the
-earned count falls by 15% because a marked catch carries the base too: what each term is worth, in knock-ons a match
-across both sides (Normal, the bot), base 1.99 to 1.05, marked 0.70 to 0.69, long 0.04 to 0.04, kick 0.26 to 0.27,
-interception 1.75 to 0.59 (AI v AI: base 4.13 to 2.12, marked 2.12 to 2.09, interception 4.02 to 1.43). The earned terms
-hold within a few hundredths; only the base under them halves.
+it is 90% to 91%, by 2.59 to 2.69 tries scored and 0.28 to 0.29 conceded (SEED 31's 100 go 94% to 88%, the other way). The
+bot on Hard wins 51% then 55% over 320. About a third fewer everywhere (35, 34, 35, 39 and 37%). A second seed (SEED 31,
+the same matches a level) gives the same picture, quoted below where it differs.
+
+**The unexplained, one category at a time.** Together they fall by more than half (51 to 63%; SEED 31, 54 to 61%), but
+not each one by count. The chance of an unforced drop is exactly halved per catch, yet there are more catches to drop (yours
+on Normal, 56 to 61 a match), so your unforced knock-ons fall by 40 to 61% (Easy 61, Normal 40, Hard 44, the casual adult
+44, AI v AI 42 and 53% home and away; SEED 31, 39 to 52%): about 40 to 50% fewer, not always half. Interceptions knocked on fall by 49
+to 63% (SEED 31, 54 to 67%), and the CPU's Big Hit spill on you is gone. For the unforced count itself halved, `KNOCK.base`
+0.45 comes nearer (`KNOCK='{"base":0.45}' node tools/knock.mjs --balance`, SEED 7: yours 44 to 61% fewer, both sides 51 to
+58%; all knock-ons 36, 34, 36, 43 and 40% fewer). That is the owner's call; 0.5 stays.
+
+**The earned: the terms kept, the counts not.** The earned terms are unchanged, but the halved base sits under every
+catch, so a marked, kick or long-pass catch knocks on about a fifth less often (Catching, above), and those knock-ons fall
+by about a quarter in every mode: marked, long and kick together 23 to 25% (AI v AI, the bot on Normal and Hard, the casual
+adult; the bot on Easy 1%), and on SEED 31 17 to 26% in all five. The Earned row looks flat where you play only because more
+phases bring more tackles and offloads, whose knock-ons rise about 15% (Normal, Hard, the casual adult). On SEED 31 the
+earned count falls 13% on Easy, 8% on Normal, 5% on Hard, 7% for the casual adult and 17% in AI v AI (15% here). What each
+term is worth, in knock-ons a match across both sides (Normal, the bot): base 1.99 to 1.05, marked 0.70 to 0.69, long 0.04
+to 0.04, kick 0.26 to 0.27, interception 1.75 to 0.59 (AI v AI: base 4.13 to 2.12, marked 2.12 to 2.09, interception 4.02
+to 1.43). To keep the earned counts flat instead, the base could be halved only under a plain catch with nobody near (the
+unforced category itself) and left whole under marked, kick and long catches. That is on offer, the owner's call.
 
 **Open for the owner: the CPU's interceptions.** The interception's term is the catch's, so it applies to the CPU's
 interceptions of your passes too, and a CPU interception it would have dropped is now a clean one. Measured again on
@@ -1836,6 +1859,12 @@ go from 1.41 to 1.71 a match on Easy for the bot (+0.30), 2.63 to 3.05 on Normal
 to 2.81 for the casual adult on Easy (+0.64). That is more than the 0.3 a match the brief allowed on Normal and for the
 casual adult. Yours of the CPU's passes rise as well (Normal 4.60 to 5.02), and the matches are no harder: the casual adult
 wins 90% then 91% over the 400, the bot on Normal 94% then 95% over the 320. Left as it is, not tuned away; the choice is his.
+
+**Open for the owner: the tag stream.** The contact census (`tools/contact.mjs`: 120 bot matches on Normal, 4-minute
+halves, both sides' tags, the bot's Side Steps apart) holds the on-pitch tags under 40 a match: a few a match, not a
+stream. Knock-On is 7.8 a match there. Counted with the rest (37.7, where KNOCK off gives 35.5) it makes 45.5, over the
+bar. The bar is left at 40 for the rest, and Knock-On is held by a ceiling of its own, at most 10 a match, as Pressure On
+is (at most 12; it is 6.5). Raising the bar, or showing Knock-On less often (only on your side's, say), is his call.
 
 **Kids.** The 7 to 8 year old (`node tools/kidbots.mjs settle eight`, 16 runs of 150 from r 0, settled from match 61, SEED 7)
 settles at 0.988 ± 0.001 where he settled at 0.984 ± 0.002, both at the ceiling, winning 91 ± 1% by 3.21 ± 0.06 tries

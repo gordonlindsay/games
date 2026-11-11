@@ -973,7 +973,7 @@ begin('census');
       } else nearSet.clear();
     }
     m++;
-    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); if (k !== 'tag_Side Step' && k !== 'tag_Pressure On' && k !== 'tag_Knock-On') tagsN += v; if (k === 'tag_Fend') fendTags += v; if (k === 'tag_Pressure On') pressTags += v; if (k === 'tag_Knock-On') knockTags += v; }   // Pressure On (2026-11-09) is counted apart too: at most once a possession by construction, and bounded below   // the bot's bang-bang swerve fires Side Steps a thumb never would (about 37 a match), so they are counted apart   // Knock-On (2026-11-11) apart as well: one a knock-on by construction, checked below
+    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); if (k !== 'tag_Side Step' && k !== 'tag_Pressure On' && k !== 'tag_Knock-On') tagsN += v; if (k === 'tag_Fend') fendTags += v; if (k === 'tag_Pressure On') pressTags += v; if (k === 'tag_Knock-On') knockTags += v; }   // Pressure On (2026-11-09) is counted apart too: at most once a possession by construction, and bounded below   // the bot's bang-bang swerve fires Side Steps a thumb never would (about 37 a match), so they are counted apart   // Knock-On (2026-11-11) apart as well, with its own ceiling below, as Pressure On has: with the rest it is over their bar, which is the owner's to move
     knocks += M().stats.knocks;
   }
   ok(runover/m < 2, `run-overs ${(runover/m).toFixed(2)} a match (under 2)`);
@@ -985,8 +985,12 @@ begin('census');
   ok(duelInBind === 0, 'no duel ever starts during a bind');
   const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up', 'Knock-On']);   // Pressure On added on purpose (2026-11-09, PRESSURE): the warning that the ball may be knocked loose, not a breakdown word; Maul, Use It and Held Up the maul's, on purpose (src/maul.js): a CPU maul in these headless matches is driven in the world and tagged; Knock-On the knock-ons' (src/knock.js, 2026-11-11), over the man who dropped it
   ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the fourteen (${[...tagKinds].join(', ')})`);
-  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step, Pressure On and Knock-On ${(tagsN/m).toFixed(1)})`);
+  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step, Pressure On and Knock-On ${(tagsN/m).toFixed(1)}; with Knock-On ${((tagsN + knockTags)/m).toFixed(1)}, over the 40 and open for the owner)`);
+  // Knock-On's own ceiling, as Pressure On has one: counted with the rest it takes them over their bar (on reseed 1, 37.7 + 7.8 = 45.5 a match
+  // against 40, where KNOCK off gives 35.5), and raising that bar is the owner's call (README.md, Catching and knock-ons), so the bar stays as it
+  // was for the rest and this one is held on its own: at most 10 a match for both sides together, under the 12.1 knock-ons KNOCK off gives here
   ok(knocks > 0 && knockTags === knocks, `Knock-On over every knock-on, once (${knockTags} for ${knocks}, ${(knocks/m).toFixed(1)} a match)`);
+  ok(knockTags/m > 0 && knockTags/m <= 10, `Knock-On a few times a match, for both sides together (${(knockTags/m).toFixed(1)}, at most 10)`);
   ok(pressTags/m > 0 && pressTags/m <= 12, `Pressure On a few times a match, for both sides together (${(pressTags/m).toFixed(1)})`);
   ok(!/Not Releasing|Off Your Feet|Not Rolling Away|High Tackle|Sin Bin|Yellow Card|'Steal'|jackal/.test(script), 'the game has no steal, no new penalty and no sin bin');
 }
