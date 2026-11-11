@@ -12,6 +12,7 @@
   "duels.js",
   "arcade.js",
   "edge.js",
+  "knock.js",
   "stamina.js",
   "ball.js",
   "movement.js",

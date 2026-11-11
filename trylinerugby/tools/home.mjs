@@ -22,7 +22,8 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 
 // 0. Nothing the home does moves a match: AI v AI, a tool's match (the balance tools' kind: the bot against the computer), an arcade
 //    Quick Match, a championship match and the demo, seeded, against the build before the headlines (2e4829d). Run first.
-const BASE = '1fxxh0u pegg82 1efh8t2 1r7ihok gabcx7';   // re-pinned at the merge of pressure and the maul into wt/pr14int (2026-11-09), which together move AI v AI again on purpose; with PRESSURE='{"on":false}' MAUL='{"on":false}' this build gives 0b1293c's pin exactly, 1ux7bcz 1gqps57 1pw26gc lm4vs4 q2h33q; with MAUL off alone, pressure's, 1h04hlg 1phgpz9 1ke5vq7 7j2vuk 56loel; with PRESSURE off alone, the maul's, pqq94q 5nbfte pz8xha npkm5g 197j3jh. Pressure's note: re-pinned at pressure (PRESSURE, src/contact.js, 2026-11-09), which changes AI v AI and every match on purpose (the count, the spill, the egg's hops, a knock-on's beat); with PRESSURE='{"on":false}' this build gives the pin before it exactly, 1ux7bcz 1gqps57 1pw26gc lm4vs4 q2h33q. The maul's note: re-pinned at the maul (src/maul.js, 2026-11-09, as reviewed: never in the carrier's own in-goal or with a man from in front of the ball, a ringed tackler let go of a maul in the world, no Tackle into one once called): the CPU calls mauls in AI v AI, the tool's match, the arcade Quick Match, the championship match and the demo, so all five moved; with MAUL='{"on":false}' this build gives the pin before it exactly, 1ux7bcz 1gqps57 1pw26gc lm4vs4 q2h33q. Before that: re-pinned at the real order (src/ratings.js, CLUB_RATED, 2026-11-09): Farnham v Haslemere, the three Farnham matches, 61 v 46 (were 75 v 64); with CLUB_RATED=band this build gives the pin before it exactly, 1ux7bcz 6jcst0 jv4xeq 437myk q2h33q (AI v AI and the demo did not move). Before that: re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere, the three Farnham matches' other side, is 64 (13), was 67 (14); with CLUB_RATED=off this build gives the pin before it exactly, 1ux7bcz 10kl4wv 1nh2ksp jmrs3q q2h33q. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 12rapqh 14qny5b 1dars3e 5k7me2 1amrgpj. Before that: pinned from 2e4829d (GAME=<its index.html> HOME_PRINT=1); this build gives the same
+const BASE = '183xhzi 1jp0mme p4313q 319h47 yvtiy8';   // re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
+const BEFORE_KNOCK = '1fxxh0u pegg82 1efh8t2 1r7ihok gabcx7';   // re-pinned at the merge of pressure and the maul into wt/pr14int (2026-11-09), which together move AI v AI again on purpose; with PRESSURE='{"on":false}' MAUL='{"on":false}' this build gives 0b1293c's pin exactly, 1ux7bcz 1gqps57 1pw26gc lm4vs4 q2h33q; with MAUL off alone, pressure's, 1h04hlg 1phgpz9 1ke5vq7 7j2vuk 56loel; with PRESSURE off alone, the maul's, pqq94q 5nbfte pz8xha npkm5g 197j3jh. Pressure's note: re-pinned at pressure (PRESSURE, src/contact.js, 2026-11-09), which changes AI v AI and every match on purpose (the count, the spill, the egg's hops, a knock-on's beat); with PRESSURE='{"on":false}' this build gives the pin before it exactly, 1ux7bcz 1gqps57 1pw26gc lm4vs4 q2h33q. The maul's note: re-pinned at the maul (src/maul.js, 2026-11-09, as reviewed: never in the carrier's own in-goal or with a man from in front of the ball, a ringed tackler let go of a maul in the world, no Tackle into one once called): the CPU calls mauls in AI v AI, the tool's match, the arcade Quick Match, the championship match and the demo, so all five moved; with MAUL='{"on":false}' this build gives the pin before it exactly, 1ux7bcz 1gqps57 1pw26gc lm4vs4 q2h33q. Before that: re-pinned at the real order (src/ratings.js, CLUB_RATED, 2026-11-09): Farnham v Haslemere, the three Farnham matches, 61 v 46 (were 75 v 64); with CLUB_RATED=band this build gives the pin before it exactly, 1ux7bcz 6jcst0 jv4xeq 437myk q2h33q (AI v AI and the demo did not move). Before that: re-pinned at PR #14's club table (src/ratings.js, CLUB_RATED): Haslemere, the three Farnham matches' other side, is 64 (13), was 67 (14); with CLUB_RATED=off this build gives the pin before it exactly, 1ux7bcz 10kl4wv 1nh2ksp jmrs3q q2h33q. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 12rapqh 14qny5b 1dars3e 5k7me2 1amrgpj. Before that: pinned from 2e4829d (GAME=<its index.html> HOME_PRINT=1); this build gives the same
 function fingerprint() {
   const out = [];
   reseed(31);
@@ -43,6 +44,7 @@ function fingerprint() {
   return out.map(fnv).join(' ');
 }
 {
+  if (T.knock && !process.env.HOME_PRINT) { T.knock.KNOCK.on = false; const off = fingerprint(); T.knock.KNOCK.on = true; ok(off === BEFORE_KNOCK, `with the knock-ons off (KNOCK, src/knock.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
   const now = fingerprint();
   if (process.env.HOME_PRINT) { console.log(now); process.exit(0); }
   ok(now === BASE, `AI v AI, a tool's match, an arcade Quick Match, a championship match and the demo play exactly as before the headlines (seeded fingerprint ${now}, pinned ${BASE})`);
@@ -92,7 +94,7 @@ const fresh = () => {                                       // a new game on the
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
   ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skill Games: every game in its picture (${drills.join(', ')}), How to Play, then the contact games and For Grown-Ups, in rows of four`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.3<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.4<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
     && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css),
     `Settings: ${sets.join(', ')}; Difficulty across, Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help; the game's version at its foot`);
   const text = s => s.replace(/<[^>]+>/g, '').trim();
@@ -986,7 +988,8 @@ async function browserChecks() {
     //     from Fold to One Line, behaviour by behaviour: at every phone size, Safari's bars included, every state (Pick Your Team, Pick
     //     Opponent on a club and on a nation with its traits, Women, 2 Players, My Team, each Championship with its primary, the World Cup,
     //     the tour and the career's club screen) fits with nothing cut, off the side or scrolled, both sides and the V wholly in view, the
-    //     primary in view, every control 44px; the ladder sheet open over it stays on the screen. The keyboard and a controller follow it:
+    //     primary in view, every control 44px; the Filter open over it (its ladder as columns, 2026-11-11) stays on the screen, its every
+    //     control 44px. The keyboard and a controller follow it:
     //     the arrows and a controller's d-pad on the side, Enter and A setting it and moving on, Tab and the ring reaching everything.
     //     A move slides by opacity and transform only, and not at all with reduced motion. tools/picker.mjs checks every side of every group.
     for (const [w, h] of [[844, 390], [667, 375], [844, 340], [667, 320], [568, 320]]) {
@@ -1012,7 +1015,7 @@ async function browserChecks() {
         'the career\'s club screen':[`C.set(null); C.newOpen(); C.clubOpen(); ${at(0, 'cel.ire')}`, 'Pick Dublin'],
       };
       const MEASURE = `(() => { const s = document.getElementById('s-teams'), box = e => e.getBoundingClientRect(), vis = e => !!e && !e.closest('[hidden]') && box(e).width > 0, P = window.__tryline.picker;
-        const name = e => e.id || e.className || e.textContent.trim().slice(0, 16), sheet = document.getElementById('m-ladder');
+        const name = e => e.id || e.className || e.textContent.trim().slice(0, 16), sheet = document.getElementById('m-filter');
         const off = [...s.querySelectorAll('*'), ...sheet.querySelectorAll('*')].filter(vis).filter(e => box(e).right > innerWidth + 0.5 || box(e).left < -0.5).map(name);
         const cut = [...s.querySelectorAll('.pk-who, .pk-where span, .pk-group, .tname, .pk-league, .pk-st .lbl, .pk-n, .pk-step .btn, .pk-foot .btn')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).textOverflow !== 'ellipsis').map(name);
         const small = [...s.querySelectorAll('button'), ...sheet.querySelectorAll('button')].filter(vis).filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(name);
@@ -1025,16 +1028,16 @@ async function browserChecks() {
         for (const opened of [false, true]) {
           await page.evaluate(`(() => { const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, P = T.picker, $ = i => document.getElementById(i), S = D.settings();
             T.cups.set(null); X.setChamp(null); D.setTwo(false); S.myClub = null; S.cat = 'men'; S.pick = [null, null]; D.goHome();   // each state from the save's own: My Team Farnham and England, Men
-            ${js} ${opened ? 'P.sheet(0);' : ''} })()`);
+            ${js} ${opened ? "P.filter(0, '', { dev:'touch' });" : ''} })()`);
           await page.waitForTimeout(260);
           const m = await page.evaluate(MEASURE);
-          const name = `${kind}: ${where}${opened ? ', its ladder sheet open' : ''}`;
-          ok(!m.off.length && m.side <= 0 && m.page <= 0 && m.scroll <= 0 && m.card, `${name}: nothing off the side, the page never scrolls, the sheet (open) on the screen (${json({ off:m.off, side:m.side, page:m.page, scroll:m.scroll, card:m.card })})`);
+          const name = `${kind}: ${where}${opened ? ', its Filter open' : ''}`;
+          ok(!m.off.length && m.side <= 0 && m.page <= 0 && m.scroll <= 0 && m.card, `${name}: nothing off the side, the page never scrolls, the Filter (open) on the screen (${json({ off:m.off, side:m.side, page:m.page, scroll:m.scroll, card:m.card })})`);
           ok(!m.cut.length && !m.small.length, `${name}: nothing cut, every control 44px (${json({ cut:m.cut, small:m.small })})`);
           ok(m.goIn && (primary instanceof RegExp ? primary.test(m.go) : m.go === primary), `${name}: the primary in view, 44px, saying what it does (${m.go})`);
           if (!opened) ok(m.whole, `${name}: ${where.startsWith('Pick') || where.startsWith('Player') ? 'both sides and the V' : 'its side'} wholly in view`);
           if (!opened) lines.push(`${where}: ${m.go}`);
-          await page.evaluate(() => window.__tryline.picker.sheetClose(null));
+          await page.evaluate(() => window.__tryline.picker.filterShut());
         }
       }
       console.log(`${kind}: ${lines.length} states fit`);

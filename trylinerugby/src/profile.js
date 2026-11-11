@@ -318,7 +318,7 @@ function profileNav(cands, el, dx, dy) {
 }
 for (const id of ['s-setup', 's-profile']) $(id).addEventListener('keydown', profileKeys);
 /* The setup's Club is the team screen, which leaves Escape to the browser for one player (input-devices.js): there Escape is its Back,
-   to Gender, as on the setup's other steps. Never past a card over it (the group's sheet takes Escape first, and closes; the grown-up
+   to Gender, as on the setup's other steps. Never past a card over it (the team screen's Filter takes Escape first, and closes; the grown-up
    check; the store), nor while a name is typed. */
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || e.defaultPrevented || !profileRun || pickMode !== 'setup' || $('s-teams').hidden || navLayer() !== $('s-teams')) return;
