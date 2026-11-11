@@ -57,7 +57,7 @@ const titled = s => s.split(/[\s·]+/).filter(Boolean).every((w, i) => (i && sma
 const memory = {};
 globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; } };
 const saved = () => JSON.parse(memory['tryline.v1']);
-const MORE = ['s-cup', 's-cabinet', 's-career-new', 's-career-club', 's-career', 's-locker'];   // screens the stand-in DOM does not list: showScreen hides and shows them too
+const MORE = ['s-cup', 's-cabinet', 's-career-new', 's-career-club', 's-career', 's-locker', 's-profile'];   // screens the stand-in DOM does not list: showScreen hides and shows them too
 { const qsa = document.querySelectorAll; document.querySelectorAll = sel => (sel === '.screen' ? qsa(sel).concat(MORE.map(id => $(id))) : qsa(sel)); for (const id of MORE) $(id).hidden = true; }
 const shown = () => ['s-home', 's-teams', 's-hub', 's-help', 's-join', 's-build', ...MORE].find(id => !$(id).hidden);
 for (const id of ['b-set', 'b-continue', 'b-cabinet', 'b-my', 'my-form', 'my-nat', 'b-grown']) {   // the stand-in DOM keeps no attributes: these few remember theirs, for the words read out
@@ -159,7 +159,7 @@ const fresh = () => {                                       // a new game on the
   $('b-help').click(); ok(shown() === 's-help', 'How to Play opens its screen'); $('h-back').click(); ok(shown() === 's-home' && H.step() === 'drills', 'and comes back to Skill Games');
   D.goHome();
   $('b-locker').click(); ok(shown() === 's-locker', 'the Locker, in My Team\'s box, opens'); $('lk-back').click(); ok(shown() === 's-home', 'and comes back');
-  $('b-my').click(); ok(shown() === 's-teams' && D.pickMode() === 'my', 'Change opens My Team\'s picker'); $('t-back').click(); ok(shown() === 's-home' && H.step() === null, 'and comes back');
+  $('b-my').click(); ok(shown() === 's-profile', 'Change opens My Profile (src/profile.js, tools/profile.mjs)'); $('pf-team').click(); ok(shown() === 's-teams' && D.pickMode() === 'my', 'and My Team\'s picker one press on'); $('t-back').click(); ok(shown() === 's-profile', 'its Back comes back there'); $('pf-back').click(); ok(shown() === 's-home' && H.step() === null, 'and Back to Menu to the boxes');
   $('b-career').click(); ok(shown() === 's-career-new', 'Career with none under way: New Player'); D.goHome();
   $('b-set').click();
   const seg = k => [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === k);
@@ -195,7 +195,7 @@ const fresh = () => {                                       // a new game on the
   $('b-import').click(); ok(!$('m-store').hidden && S.ui().feature === 'import' && $('m-import').hidden && $('st-title').textContent === 'Add Your Team', 'Add Your Team opens the Unlock card, named Add Your Team'); S.close();
   $('b-quick').click(); ok($('m-store').hidden && shown() === 's-teams', 'Quick Match is free'); D.goHome();
   $('b-continue').click(); ok($('m-store').hidden && shown() === 's-teams', 'Play is free'); D.goHome();
-  $('b-my').click(); ok($('m-store').hidden && shown() === 's-teams' && D.pickMode() === 'my', 'My Team is free'); D.goHome();
+  $('b-my').click(); $('pf-team').click(); ok($('m-store').hidden && shown() === 's-teams' && D.pickMode() === 'my', 'My Team is free (My Profile, then its picker)'); D.goHome();
   $('b-locker').click(); ok($('m-store').hidden && shown() === 's-locker', 'the Locker is free'); D.goHome();
   $('pr-cones').click(); ok($('m-store').hidden && T.drills.state(), 'a drill is free'); T.practice.choose();
   X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); D.goHome();
@@ -333,7 +333,7 @@ const fresh = () => {                                       // a new game on the
   fresh();
   ok(H.myClub() === X.CLUBS[0] && H.myNat(null).id === 'ENG' && D.settings().myClub === null && D.settings().myNat === null, 'a new game: Farnham and England');
   ok($('my-name').textContent === 'Farnham' && /--kit:#1a1a1a/.test($('my-shirt').innerHTML) && /England/.test($('my-nat').innerHTML) && /--kit:/.test($('my-nat').innerHTML) && $('b-my').getAttribute('aria-label') === 'Change My Team: Farnham, England', 'the home\'s My Team: the club\'s shirt and name, the country\'s, Change read out with both');
-  $('b-my').click();
+  $('b-my').click(); $('pf-team').click();   // My Profile, then My Team's picker on it (src/profile.js)
   const P6 = T.picker, v6 = () => P6.view(0), to6 = (n, key) => { P6.group(n, P6.view(n).ladder.findIndex(g => g.key === key) - P6.view(n).gi); return P6.view(n); }, mineTag = n => /<span class="gap mine">My Team<\/span>/.test($('t-side' + n).innerHTML);
   ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && P6.one() && v6().group.key === 'sur' && v6().ladder.some(g => g.key === 'nat.eng') && v6().ladder.some(g => g.key === 'fra') && $('t-go').textContent === 'Done', 'My Team: Pick Your Club on its group, the whole ladder to look anywhere, Done while the club is it');
   ok(v6().team.id === 'FAR' && mineTag(0) && v6().ladder.find(g => g.key === 'mine.made').teams.some(t => t.act === 'create') && v6().ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'Farnham marked My Team, Create Team and Add Your Team in Mine');
@@ -342,7 +342,7 @@ const fresh = () => {                                       // a new game on the
   ok(v6().ladder.filter(g => g.key.startsWith('nat.')).length === 12 && !v6().ladder.some(g => g.teams.some(t => t.legend)), 'the countries: the category\'s twelve, no Legend');
   to6(0, 'nat.wal'); P6.go();
   ok(D.settings().myNat === 'WAL' && D.settings().myClub === 'BTH' && mineTag(0) && $('t-go').textContent === 'Done', 'a nation picked: the country, marked, the club kept');
-  P6.go(); ok(shown() === 's-home' && H.step() === null, 'Done: home');
+  P6.go(); ok(shown() === 's-profile', 'Done: back to My Profile, where it was opened'); $('pf-back').click(); ok(shown() === 's-home' && H.step() === null, 'and Back to Menu: home');
   X.catPick('women'); H.myPick(X.natList('women').find(t => t.id === 'CDN')); X.catPick('men');
   ok(D.settings().myNat === 'CDN' && H.myNat('men') === null && H.myNat('women').id === 'CDN' && H.myNat(null).id === 'CDN', 'Canada, from the women\'s twelve: no side on the men\'s list, Canada still on the home');
   H.myPick(X.natList('men').find(t => t.id === 'WAL'));

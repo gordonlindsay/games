@@ -538,6 +538,11 @@ let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
+/* The profile (src/profile.js): the age group, the gender and the player's look, asked once on a new game's first launch and changed from My
+   Team's Change. { age:'mini'|'junior'|'adult'|null, gender:'male'|'female'|'na'|null, look:{ g, skin, hair, style, b }|null }, each checked
+   as a save loads (cleanProfile); saved as profile only once something is set, so a save from before it is as it was, and loads as one with
+   none. No name, nothing else. profileFirst: this launch found no save at all (load), the one time the setup may run. */
+let profile = { age:null, gender:null, look:null }, profileFirst = false;
 let storeBought = [];   // the app's purchases, product ids in the order bought (src/store.js); saved as store:{ owned } only once there is one, so a web save is as it was
 const SEASON_LIMIT = 10;
 /* The Trophy Cabinet (champHistory) holds completed league seasons, as it always has, and finished cups beside them as
@@ -757,6 +762,7 @@ function restore(s) {
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
   if ('form' in s) formRec = cleanForm(s.form);   // the games played as My Team; a save from before it has none, and a new game starts at nought (formRec's [])
+  if ('profile' in s) profile = typeof cleanProfile === 'function' ? cleanProfile(s.profile) : profile;   // the age group, gender and look (src/profile.js); a save from before it has none
   if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
   if (settings.myClub && typeof myClubFind === 'function' && !myClubFind(settings.myClub)) settings.myClub = null;   // a My Team since deleted, or its league removed: the default again
   retainCompletedSeason(champ);
@@ -766,6 +772,7 @@ function restore(s) {
 function load() {
   try {
     const raw = localStorage.getItem(STORE);
+    profileFirst = !raw;                                     // no save at all: a first launch (storage that throws is not one: nothing could be kept)
     if (raw) restore(JSON.parse(raw));
   } catch (e) { /* missing, blocked, or not JSON: keep a fresh game */ }
   settings.duels = true;
@@ -773,7 +780,7 @@ function load() {
 /* The write itself, with the settings to keep: save()'s own, or a drill's snapshot (drill-demo.js: Watch How seen, written while save() stands down). */
 function saveWith(s) {
   if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
-  try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined, form:formRec.length ? formRec : undefined })); } catch (e) { /* private mode, or full */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined, form:formRec.length ? formRec : undefined, profile:typeof profileSaved === 'function' ? profileSaved() : undefined })); } catch (e) { /* private mode, or full */ }
 }
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
@@ -7335,7 +7342,8 @@ function duelLabels(c) {
    Player looks, for the behind views only: height, build, skin, hair, a head style and a body (g: 0 male, 1 female, on the same rig in the same kit). Worked out from the team and shirt number with
    a local generator, so the same player looks the same every run, the match's random stream is never touched and nothing is added to
    M.players or a save. Skin is never tied to a team or a country. The team's side picks the bodies (teamSide): a men's squad is all male, a women's squad all
-   female, a mixed squad about half and half. A squad entry with a look (the career player) overrides it.
+   female, a mixed squad about half and half. A squad entry with a look (the career player) overrides it, and so does your profile's look
+   on the one man of your side who wears it (M.you, set by startMatch from profileYou: src/profile.js), its body already the side's.
    ========================================================= */
 const LOOK_SKIN = ['#f1d0b4', '#e2b593', '#c69c7c', '#a8764f', '#7f5337', '#553522'];
 const LOOK_HAIR = ['#17120e', '#2a1d16', '#4c2f1b', '#7d4f25', '#c29a55', '#a33f1f'];
@@ -7391,7 +7399,8 @@ function lookOf(p) {
   const entry = Array.isArray(nat.squad) ? nat.squad.find(e => e && e.n === p.n) : null;
   const own = cleanLook(entry && entry.look);
   if (own.g && own.style == null) seeded.style = (teamHash + p.n*5) % 8;   // a saved female look with no style of its own: the same eight it always walked, so it keeps its hair
-  look = { ...seeded, ...own };
+  const you = M.you && M.you.team === p.team && M.you.n === p.n && !M.career ? M.you.look : null;   // your player: your face, skin, hair and build, the side's body
+  look = { ...seeded, ...own, ...(you || {}) };
   LOOKS.set(p, look);
   return look;
 }
@@ -7414,6 +7423,7 @@ const artReady = () => ART.state === 'ready';
 function artInstall(man, pages) {                           // a parsed players.json and its decoded pages: [{ w, h, data }]
   ART.gen++; ART.man = man; ART.pages = pages; ART.ids = ART_CLIPS.reduce((o, c, i) => { o[c] = i; return o; }, {});
   ART.parts = man.parts; ART.state = 'ready'; artClear();
+  if (typeof profileArtIn === 'function') profileArtIn();   // your player's picture, waiting for the art on the home and My Profile (src/profile.js)
 }
 function artOff() { ART.state = 'off'; ART.man = null; ART.pages = []; artClear(); }
 function artBadPage(data) {                                 // a browser that alters pixels it hands back would tint garbage: the ids must come back whole
@@ -9847,7 +9857,7 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   if (!dx && !dy) return focusEl;
   if (layer.id === 's-home' && typeof homeNavTo === 'function') { const to = homeNavTo(focusEl, dx, dy, cands); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the home's boxes (src/ui-menus.js)
   const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
-  let best = navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);
+  let best = layer.id === 's-setup' || layer.id === 's-profile' ? profileNav(cands, focusEl, dx, dy) : navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);   // the profile's screens: the nearest that way, or anywhere on that side (src/profile.js)
   if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one
     const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
     if (sel && cands.includes(sel)) best = sel;
@@ -9949,6 +9959,7 @@ function startMatch(u, c, isChamp, o) {
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
   newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
+  M.you = !pair && typeof profileYou === 'function' ? profileYou() : null;   // your profile's look on one man of your side, the fly-half (src/profile.js): drawing only, made after the match so nothing in it moves
   if (!pair && (M.champ || M.cup) && settings.last !== 'champ') { settings.last = 'champ'; save(); }   // the home's Continue picks up the one played last (ui-menus.js); a career's own cup match is the career's (careerArm)
   mode = 'match';
   showScreen(null);
@@ -10578,6 +10589,7 @@ function homeStepOf(el) {                                    // the step a butto
 /* The home: on the five boxes, or, for focus inside a step (a drill just played, How to Play), on that step with the focus there. */
 function goHome(focus) {
   if (typeof nativePutBack === 'function') nativePutBack();   // the app: a save Preferences gave back late goes in first (native.js)
+  if (typeof profileRun !== 'undefined') profileRun = null;   // a first launch's setup under way ends with nothing set (src/profile.js): the home is for a game that is set up, the app's late copy of a save included
   navOnly = null;
   homeStep = homeStepOf(focus);
   renderHome();
@@ -10772,6 +10784,7 @@ function myHome() {
   const c = myClubTeam(), n = myNatTeam(null), f = formOf(c), g = formOf(n), played = r => r.w + r.d + r.l;
   const figs = r => ['Played ' + played(r), 'Won ' + r.w, 'Drawn ' + r.d, 'Lost ' + r.l].join(', ');
   $('my-shirt').innerHTML = jersey(c);
+  if (typeof profileHomePic === 'function') profileHomePic(c);   // your player in My Team's kit in the shirt's place, once there is a look and the art is in (src/profile.js)
   $('my-name').textContent = listName(c);
   $('my-stars').innerHTML = ratedStars(c);
   $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
@@ -10822,7 +10835,7 @@ function homeFit() {
     if (list.scrollWidth > list.clientWidth + 0.5) strip.dataset.fit = 'short';
   }
 }
-$('b-my').addEventListener('click', () => { ac(); openTeams('my'); });
+$('b-my').addEventListener('click', () => { ac(); profileOpen(); });   // My Profile (src/profile.js): the age group, gender and look, and My Team's picker, its old job, one press on
 
 /* Competitions (Match's second step): Continue first while a championship or a cup is saved (its hub then has New Championship or Start
    Fresh); otherwise International | National | Local, the team screen's tier names, and that tier's competitions: the nation's championship
@@ -11047,7 +11060,7 @@ const pickSide = () => ({ g:null, k:null, gi:0, i:0, set:false, touched:false })
 let pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null, made:null, lifter:null };
 let pickView = [null, null];                               // each side as drawn: { ladder, gi, i, group, team }
 const pickOne = () => pickMode !== 'quick' && pickMode !== 'two';   // Championship, Career, My Team and the cups: one side, centred
-const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : settings.cat);
+const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : pickMode === 'setup' && typeof profileSetupCat === 'function' ? profileSetupCat() : settings.cat);   // the setup's Club: the category its answers give (src/profile.js)
 /* Championship's World Cup or Home Nations Tour, chosen on the home: its title, its list, its side and its primary (src/ui-cups.js);
    null for a league or the nation's championship, and for every other mode. */
 const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
@@ -11069,6 +11082,7 @@ function pickLadderOf(s, left) {
   }
   if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));
   if (pickMode === 'my') return pickLadder(cat, { nations:true, clubs:true, mine:'all', fav:true, fits:t => !t.legend });
+  if (pickMode === 'setup') return pickLadder(cat, { clubs:true, mine:'all', fav:true, fits:t => !isNation(t) && !t.legend });   // the first launch's Club (src/profile.js): My Team's ladder, clubs only; the country comes with the club
   const all = pickLadder(cat, { nations:true, legends:true, clubs:true, mine:'all', fav:true, recent:s });
   if (s === 0) return all.map(g => { if (g.hemi === 'fav' || g.hemi === 'recent') return g; const i = g.teams.findIndex(t => !t.act && !isNation(t) && myIs(t)); return i > 0 ? { ...g, teams:[g.teams[i], ...g.teams.slice(0, i), ...g.teams.slice(i + 1)] } : g; });
   if (pickMode !== 'quick' || !left || left.act) return all;
@@ -11093,6 +11107,7 @@ function pickOpen(s) {
   }
   if (pickMode === 'champ') { const view = teamsView(), d = view ? view.pick : teamDefault(); if (d) at(d, d.custom ? 'mine.made' : null); return; }
   if (pickMode === 'my') { const c = myClubTeam(); at(c, c.custom ? 'mine.made' : null); st.list = myPool(); return; }
+  if (pickMode === 'setup') { const c = profileSetupClub(); at(c, c.custom ? 'mine.made' : null); if (c === myClubTeam()) st.list = myPool(); return; }
   if (pickMode === 'career' && careerDraft) { at(careerDraft.club, careerDraft.club.custom ? 'mine.made' : null); st.list = careerDraft.league; }
 }
 /* Play on the home (Continue with nothing under way): Your Team is My Team's club, set; the Opponent the last one picked (unless it is My
@@ -11218,7 +11233,7 @@ function pickGo() {
   const v = pickView[pick.on], t = v && v.team; if (!t) return;
   if (t.act) { pickAct(pick.on, t.act); return; }
   if (pickOne()) {
-    if (pickMode === 'my' && myIs(t)) { goHome($('b-my')); return; }
+    if (pickMode === 'my' && myIs(t)) { myDone(); return; }
     pickSet(0); return;
   }
   if (pickReady()) { pickKickOff(); return; }
@@ -11271,6 +11286,7 @@ function pickWho(s) {                                      // the side's own nam
   if (pickMode === 'quick') return s ? 'Opponent' : 'Your Team';
   if (view) return view.comp === 'tour' ? 'Host' : 'Your Nation';
   if (pickMode === 'my') return t && !t.act && isNation(t) ? 'My Country' : 'My Club';
+  if (pickMode === 'setup') return 'Your Club';
   if (pickMode === 'career') return 'Your Club';
   return 'Your Team';
 }
@@ -11283,6 +11299,7 @@ function pickTag(s, t) {                                   // Stronger Side (the
   if (t.act) return '';
   if (pickMode === 'quick' && s === 1 && pickView[0] && !pickView[0].team.act && outmatched(pickView[0].team, t)) return '<span class="gap">Stronger Side</span>';
   if (pickMode === 'career') return careerDraft && careerSame(t, careerDraft.club) ? '<span class="gap mine">Your Club</span>' : '';
+  if (pickMode === 'setup') return profileRun && profileRun.club && careerSame(t, profileRun.club) ? '<span class="gap mine">Your Club</span>' : '';   // picked, and come back to
   const tour = teamsView() && teamsView().comp === 'tour';   // the tour's hosts are never the player's own side
   if (s === 0 && !tour && myIs(t)) return '<span class="gap mine">My Team</span>';   // Your Team's (or Player 1's, or the one side's): never the Opponent's
   return '';
@@ -11339,11 +11356,15 @@ function renderTeams() {
   pickBuild();
   const one = pickOne(), view = teamsView(), quick = pickMode === 'quick', pair = pickMode === 'two', cat = pickCat();
   const eb = $('t-eyebrow');
+  const setup = pickMode === 'setup';
   eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : pickMode === 'my' ? 'My Team' : pickMode === 'career' ? 'New Player' : view ? view.name : 'Championship';
+  if (setup) eb.innerHTML = profileDots(2);                  // the setup's place, as on its other steps (src/profile.js)
   eb.classList.remove('p1'); eb.classList.remove('p2');
   const t0 = pickView[0] && pickView[0].team;
-  $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' ? 'Pick Your Club' : 'Pick Your Team';
-  $('t-cat').hidden = pickMode === 'career';                 // Men | Women is New Player's
+  $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' || setup ? 'Pick Your Club' : 'Pick Your Team';
+  $('t-cat').hidden = pickMode === 'career' || setup;        // Men | Women is New Player's; the setup's category comes from its answers
+  $('t-sback').hidden = $('t-skip').hidden = !setup; $('t-back').hidden = setup;   // the setup's Back and Skip along the top, as on its other steps (src/profile.js)
+  $('s-teams').classList.toggle('pk-setup', setup);
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.setAttribute('aria-pressed', String(b.dataset.cat === settings.cat));
   $('t-sides').classList.toggle('one', one);
   $('t-v').hidden = one; $('t-side1').hidden = one;
@@ -11487,8 +11508,16 @@ $('t-go').addEventListener('click', () => { ac(); pickGo(); });
 $('t-back').addEventListener('click', () => {
   if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; }
   if (pickMode === 'career') { renderCareerNew(); careerShow('s-career-new'); return; }
-  goHome(pickMode === 'my' ? $('b-my') : pickFrom);           // back to the button that opened it (Quick Match, Play, a competition)
+  if (pickMode === 'my') { myDone(); return; }
+  goHome(pickFrom);                                          // back to the button that opened it (Quick Match, Play, a competition)
 });
+/* My Team's picker done with (Done, or Back): back to My Profile where it was opened from there (Change, src/profile.js), else home. */
+function myDone() {
+  if (pickFrom && pickFrom.id === 'pf-team' && typeof profileOpen === 'function') { profileOpen(pickFrom); return; }
+  goHome($('b-my'));
+}
+$('t-sback').addEventListener('click', () => profileStep(1));   // the setup's Club: Back to Gender, Skip to Your Look (src/profile.js)
+$('t-skip').addEventListener('click', () => profileSkip());
 /* A swipe across a card: left for the next team, right for the one before; up for the next group, down for the one before. A long press on
    Previous or Next jumps a country. */
 $('t-sides').addEventListener('pointerdown', e => {
@@ -11666,6 +11695,7 @@ function pickTeam(t) {
   if (!t) return;
   if (t.legend && !storeGate('legends', () => pickTeam(t))) return;   // a Legends side is played with the Full Game (src/store.js); unlocked on any tier
   if (pickMode === 'my') { myPick(t); return; }
+  if (pickMode === 'setup') { const v = pickView[0]; profileClubPick(t, v && v.team === t ? v.group : null); return; }
   if (pickMode === 'career') { const v = pickView[0]; careerClubPick(t, v && v.team === t ? v.group.list : null); return; }
   if (pickMode === 'champ') {
     const view = teamsView();
@@ -15785,6 +15815,317 @@ const DEMO_PILOT = {
   },
 };
 /* =========================================================
+   The profile: who is playing (the owner, 2026-11-11: "Profile setup for a new user? Allows them to create the avatar, gender
+   (male/female/na), club and set age group (mini, junior, adult)"). Three answers and a look, kept on this device only, in the save's
+   own profile field (cleanProfile): the age group, the gender and the player's look. The club is My Team's, as ever (settings.myClub
+   and myNat). No name and nothing else is asked.
+
+   First launch only (profileFirst: no save at all, never a save that exists, the demo, the tools or the app's copy of a save put back):
+   a short setup before the home, one step a screen, each with Skip and Back (Not Now on the first, which leaves it), and Done at the
+   end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, Mine and Favourites, clubs
+   only) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it ends, so a step skipped, or
+   the whole setup left with Not Now, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
+   Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
+
+   What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the Men | Women | Minis switch, the level
+   and My Team stay changeable as ever without rewriting the age group or the gender.
+   - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
+     Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
+     MIXED_THROUGH), otherwise Men. Leaving the Kids level from here asks the grown-up check first, as the Difficulty row does.
+   - Club: My Team's club, and My Team's country from the club's where the ladder knows it (an England club, England), else as it was.
+   - Gender: Career's New Player starts on Men or Women by it (Not Say follows the category), on the profile's look.
+   - The look: build, skin, hair colour and hair style; the body by the gender, or picked on Your Look for Not Say. It stands in My
+     Team's box on the home in My Team's kit (profileHomePic), and in every match you play, Quick Match, Championship and the cups,
+     one man of your side wears it (profileYou: the fly-half, No. 5). A career keeps its own player. Never AI v AI, the demo, Two
+     Player or a tool's match. Drawing only (lookOf, src/looks.js): no random number and nothing in a match moves for it. His face,
+     skin and hair always; his body follows the side, so a men's side never draws a female body nor a women's side a male one, bar
+     the mixed Minis, where it is his own.
+   ========================================================= */
+const PROFILE_AGES = [{ id:'mini', name:'Mini', line:'Up to ' + MIXED_THROUGH, k:'#5fd38a', h:0.66 }, { id:'junior', name:'Junior', line:(MIXED_THROUGH + 1) + ' to 17', k:'#5fb8ff', h:0.83 }, { id:'adult', name:'Adult', line:'18 and Over', k:'#ff9f43', h:1 }];   // the Mini band is the mixed one (MIXED_THROUGH, data.js), so the two never part
+const PROFILE_GENDERS = [{ id:'male', name:'Male', k:'#4fd1c5' }, { id:'female', name:'Female', k:'#ff8466' }, { id:'na', name:'Not Say', k:'#c58cff' }];   // colours of their own, none an age group's, so no card seems to belong with one on the step before
+const PROFILE_BODIES = ['Male', 'Female'];                 // Your Look's Body row, for Not Say (or no gender): look.g 0 or 1
+const PROFILE_NUM = 5;                                      // the shirt that wears your look in a match: the fly-half, at the heart of the play (traits.js names the sevens shirts)
+const PROFILE_STEPS = [{ id:'age', title:'Age Group' }, { id:'gender', title:'Gender' }, { id:'club', title:'Pick Your Club' }, { id:'look', title:'Your Look' }];
+const profileKnows = (list, v) => list.some(o => o.id === v);
+/* A look as the profile keeps it: careerLook's (src/career.js) fields and checks, the body by the gender (Not Say, or none: its own,
+   Male unless it says Female). */
+function profileLookClean(l, gender) {
+  const c = l && typeof l === 'object' && !Array.isArray(l) ? cleanLook(l) : {};
+  const g = gender === 'female' ? 1 : gender === 'male' ? 0 : c.g === 1 ? 1 : 0;
+  return { ...careerLook(l, g ? 'women' : 'men'), g };
+}
+/* The save's profile field, read back: each answer one the game knows or null, the look checked; anything else dropped. */
+function cleanProfile(p) {
+  const out = { age:null, gender:null, look:null };
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return out;
+  if (profileKnows(PROFILE_AGES, p.age)) out.age = p.age;
+  if (profileKnows(PROFILE_GENDERS, p.gender)) out.gender = p.gender;
+  if (p.look && typeof p.look === 'object' && !Array.isArray(p.look)) out.look = profileLookClean(p.look, out.gender);
+  return out;
+}
+const profileSaved = () => (profile.age || profile.gender || profile.look ? { age:profile.age, gender:profile.gender, look:profile.look ? { ...profile.look } : null } : undefined);   // saved only once something is set
+/* The category an answer gives: Minis for a Mini (mixed, whoever plays), else Women for Female and Men for Male and Not Say; null with
+   neither known. */
+function profileCat(age, gender) {
+  if (age === 'mini') return 'minis';
+  if (gender === 'female') return 'women';
+  return age || gender ? 'men' : null;
+}
+const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
+/* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
+   Difficulty row's own rule); a cancelled check sets nothing. */
+function profileSet(age, gender, o) {
+  const lvl = o && o.level === false ? null : profileLevel(age), cat = profileCat(age, gender);
+  const go = () => {
+    if (lvl != null) kidsSegSet(lvl);
+    if (cat) settings.cat = cat;
+    profile.age = age; profile.gender = gender;
+    if (profile.look) profile.look = profileLookClean(profile.look, gender);   // the body follows a gender given
+    save();
+    if (o && o.then) o.then(true);
+  };
+  if (lvl != null && lvl !== 0 && kidsLevel()) parentGate(go, () => { if (o && o.then) o.then(false); });
+  else go();
+}
+/* The club's country, where the ladder knows it: its group's (pickHome), else its list's. null for a team you made, My League's sides and
+   anything else, which leave My Team's country as it was. */
+function profileNatOf(t, group) {
+  if (!t || t.custom || isNation(t)) return null;
+  const at = group && group.home && NATIONS.some(n => n.id === group.home) ? group.home : null;
+  if (at) return at;
+  const l = TEAM_LISTS.find(x => x.tier > 0 && x.teams.includes(t)), id = l ? pickHome(l.key, t) : null;
+  return id && NATIONS.some(n => n.id === id) ? id : null;
+}
+/* Career's New Player starts here: Men or Women by the gender (Not Say follows the category: Women only where it is Women), on the
+   profile's look with the career's body. */
+/* A look to start from where there is none: the default, on the gender's body, a Long Bob on a female one (it reads as hers from the front,
+   where Short would not). */
+function profileLookStart(gender) { const g = gender === 'female' ? 1 : 0; return { ...CAREER_LOOK, g, style:g ? 11 : CAREER_LOOK.style }; }
+function profileCareerCat() {
+  const g = profile.gender;
+  return g === 'female' || (g === 'na' && settings.cat === 'women') ? 'women' : 'men';
+}
+function profileCareerLook(cat) { return { ...(profile.look ? careerLook(profile.look, cat) : CAREER_LOOK), g:cat === 'women' ? 1 : 0 }; }
+
+/* ---------- your player in a match ---------- */
+/* startMatch asks this once the match is made (src/ui-match.js): the man of your side who wears your look, or null. A match you play
+   against the computer only (never Two Player, AI v AI, the demo, a drill or a tool's match, which never come through startMatch with a
+   human side), and never a career's, whose side brings its own player (its squad). His face, skin and hair are yours; the body is the
+   side's: 0 on a men's side, 1 on a women's, yours on a mixed one (Minis). Read by lookOf (src/looks.js) only, so it is drawing and
+   nothing else. */
+function profileYou() {
+  if (!M || !profile.look || M.two || M.auto || M.demo || practice) return null;
+  const t = M.side.findIndex(s => s.human), nat = t >= 0 ? M.nat[t] : null;
+  if (!nat || Array.isArray(nat.squad)) return null;
+  const side = teamSide(nat), L = profile.look;
+  return { team:t, n:PROFILE_NUM, look:{ skin:L.skin, hair:L.hair, style:L.style, b:L.b, g:side === 'mixed' ? L.g : side === 1 ? 1 : 0 } };
+}
+
+/* ---------- the pictures ---------- */
+/* A figure for a card, in the card's colour: a player at an age group's height, or the two hair styles for the genders (Not Say: both). */
+function profileFigure(x, s, hair) {
+  const hairs = { short:'M-7 -54 Q-6 -62 0 -62 Q6 -62 7 -54 Q3 -57 0 -57 Q-3 -57 -7 -54Z', tail:'M-7 -54 Q-6 -62 0 -62 Q6 -62 7 -54 Q3 -57 0 -57 Q-3 -57 -7 -54Z M5 -58 Q15 -56 12 -42 Q10 -49 6 -51Z' };
+  return `<g transform="translate(${x} 64) scale(${s})"><circle cx="0" cy="-52" r="7"/><path d="${hairs[hair]}"/><path d="M-10 -42 Q0 -45 10 -42 L18 -33 L13 -28 L9 -32 L9 -19 L-9 -19 L-9 -32 L-13 -28 L-18 -33Z"/><path d="M-9 -20 H9 L10 -11 H2 L0 -14 L-2 -11 H-10Z"/><path d="M-8 -12 h5 v11 h-5z M3 -12 h5 v11 h-5z"/></g>`;
+}
+function profilePic(kind, o) {
+  const body = kind === 'age' ? profileFigure(24, o.h, 'short') : o.id === 'na' ? profileFigure(14, 0.78, 'short') + profileFigure(35, 0.78, 'tail') : profileFigure(24, 1, o.id === 'female' ? 'tail' : 'short');
+  return `<svg viewBox="0 0 48 66" aria-hidden="true">${body}</svg>`;
+}
+/* Your player standing in kit t (the art's picture, artPreview), into canvas cv; false while the art is not in, or with no look. */
+function profileDraw(cv, t, look) {
+  if (!cv || !look || !t || typeof artPreview !== 'function' || typeof cv.getContext !== 'function') return false;
+  try { return !!artPreview(cv, t, look); } catch (e) { return false; }
+}
+/* My Team's box on the home (myHome, src/ui-menus.js): your player in My Team's kit in place of its shirt, once there is a look and the
+   art is in; the shirt as before otherwise. */
+function profileHomePic(c) {
+  const sh = $('my-shirt'), ready = !!profile.look && typeof artReady === 'function' && artReady();
+  let drawn = false;
+  if (ready) {                                             // the picture in the shirt's own tile, so it reads on any kit as the shirt does
+    sh.innerHTML = '<canvas class="my-pic" width="68" height="148" aria-hidden="true"></canvas>';   // the art's standing player, cropped close (the preview's 126x158 holds him in 37 to 88 across and 27 to 157 down, a High Ponytail a little higher)
+    drawn = profileDraw(sh.querySelector ? sh.querySelector('canvas') : null, c, profile.look);
+    if (!drawn) sh.innerHTML = jersey(c);
+  }
+  sh.classList.toggle('me', drawn);
+  return drawn;
+}
+/* The art came in (artInstall, src/render-art.js): the pictures waiting for it. */
+function profileArtIn() {
+  if (!profile.look) return;
+  if (!$('s-home').hidden && typeof myHome === 'function') myHome();
+  if (!$('s-profile').hidden) profileRender();
+}
+
+/* ---------- the setup, on a first launch ---------- */
+let profileRun = null;                                     // the setup under way: its step (PROFILE_STEPS) and the answers so far, none set until it ends
+const profileAuto = () => {                                // a person's first launch: a real page (not the tools' stand-in DOM, which has no body) that no automation drives (navigator.webdriver: Playwright)
+  try { return !!(document.body && !(typeof navigator !== 'undefined' && navigator.webdriver)); } catch (e) { return false; }
+};
+/* boot.js asks this as the game starts: the setup, only with no save at all and only for a person. */
+function profileBoot() { if (profileFirst && profileAuto()) profileSetupOpen(); }
+function profileSetupOpen() {
+  profileRun = { step:0, age:null, gender:null, club:null, nat:null, lookDraft:null };
+  profileStep(0);
+}
+const profileSetupCat = () => (profileRun ? profileCat(profileRun.age, profileRun.gender) || settings.cat : settings.cat);   // the team screen's category while it is the setup's Club
+const profileSetupClub = () => (profileRun && profileRun.club) || myClubTeam();
+function profileStep(i, focus) {
+  const R = profileRun; if (!R) return;
+  R.step = clamp(i, 0, PROFILE_STEPS.length - 1);
+  const st = PROFILE_STEPS[R.step];
+  if (st.id === 'club') { openTeams('setup'); return; }
+  if (st.id === 'look') {
+    if (!R.lookDraft) R.lookDraft = profileLookStart(R.gender);
+    careerLookOpen('setup');
+    return;
+  }
+  const opts = st.id === 'age' ? PROFILE_AGES : PROFILE_GENDERS, now = R[st.id];
+  $('su-step').innerHTML = profileDots(R.step);
+  $('su-title').textContent = st.title;
+  $('su-back').textContent = R.step ? 'Back' : 'Not Now';
+  $('su-opts').innerHTML = opts.map(o => `<button class="btn su-opt" data-v="${o.id}" aria-pressed="${o.id === now}" style="--k:${o.k}"><span class="su-pic">${profilePic(st.id, o)}</span><span class="su-word">${esc(o.name)}</span>${o.line ? `<span class="su-line">${esc(o.line)}</span>` : ''}</button>`).join('');
+  for (const b of $('su-opts').querySelectorAll('[data-v]')) b.addEventListener('click', () => profileAnswer(b.dataset.v));
+  showScreen('s-setup'); $('s-setup').scrollTop = 0;
+  profileFocus($('s-setup'), focus || DEFAULT_FOCUS['s-setup']());
+}
+/* Where the setup is: a short bar a step, the steps done dimmer, this one bright, the rest faint; read out as 2 of 4. A picture, not the
+   words of a lesson (the game's own rule for what a child reads: tools/training.mjs). */
+function profileDots(i) {
+  return `<span class="su-dots" role="img" aria-label="${i + 1} of ${PROFILE_STEPS.length}">${PROFILE_STEPS.map((_, k) => `<i class="${k < i ? 'done' : k === i ? 'on' : ''}"></i>`).join('')}</span>`;
+}
+/* A screen of the profile's shown: the keyboard's focus on its first choice where the keyboard was used last (a controller's ring too, where
+   it was the controller), else on the screen itself, so the arrow keys work from the start and nothing looks chosen for a finger. */
+function profileFocus(scr, to) {
+  const dev = typeof lastDev !== 'undefined' ? lastDev : 'touch';
+  if (to && dev !== 'touch' && typeof to.focus === 'function') { to.focus({ preventScroll:true }); if (dev === 'pad') setFocus(to); return; }
+  if (scr && typeof scr.focus === 'function') scr.focus({ preventScroll:true });
+}
+DEFAULT_FOCUS['s-setup'] = () => ($('su-opts').querySelector && ($('su-opts').querySelector('[aria-pressed="true"]') || $('su-opts').querySelector('[data-v]'))) || $('su-skip');
+function profileAnswer(v) {
+  const R = profileRun; if (!R) return;
+  const st = PROFILE_STEPS[R.step];
+  if (st.id === 'age' && profileKnows(PROFILE_AGES, v)) R.age = v;
+  else if (st.id === 'gender' && profileKnows(PROFILE_GENDERS, v)) { if (R.lookDraft && R.gender !== v) R.lookDraft = profileLookClean(R.lookDraft, v); R.gender = v; }
+  else return;
+  profileStep(R.step + 1);
+}
+function profileSkip() {                                   // this step left unanswered: what it would set stays as it was
+  const R = profileRun; if (!R) return;
+  const st = PROFILE_STEPS[R.step];
+  if (st.id === 'look') { profileSetupEnd(false); return; }
+  if (st.id === 'club') { R.club = null; R.nat = null; }
+  else R[st.id] = null;
+  profileStep(R.step + 1);
+}
+function profileBack() {                                   // the step before, its answer kept; Not Now on the first leaves the setup, nothing set
+  const R = profileRun; if (!R) return;
+  if (!R.step) { profileRun = null; save(); goHome(); return; }
+  profileStep(R.step - 1, null);
+}
+/* The setup's Club (the team screen, pickMode 'setup'): the club picked, its country with it where the ladder knows it, then Your Look. */
+function profileClubPick(t, group) {
+  const R = profileRun; if (!R || !t || t.act) return;
+  R.club = t; R.nat = profileNatOf(t, group);
+  profileStep(3);
+}
+/* Done (withLook) or Skip on Your Look: every answer given is set, then the home. */
+function profileSetupEnd(withLook) {
+  const R = profileRun; if (!R) return;
+  profileRun = null;
+  if (R.club) { settings.myClub = keyOf(R.club); if (R.nat) settings.myNat = R.nat; }
+  profile.look = withLook && R.lookDraft ? profileLookClean(R.lookDraft, R.gender) : null;
+  if (R.age || R.gender) profileSet(R.age, R.gender, { then:() => goHome() });
+  else { profile.age = profile.gender = null; save(); goHome(); }
+}
+$('su-back').addEventListener('click', profileBack);
+$('su-skip').addEventListener('click', profileSkip);
+
+/* ---------- My Profile: the same answers, changed one at a time ---------- */
+let profileLook = null;                                    // the look Your Look is editing from My Profile, kept as each pick is made
+const profileLookDraft = () => (profileRun ? profileRun.lookDraft : profileLook);   // Your Look's look, in its setup and profile modes (src/ui-career.js)
+const profileLookClub = () => (profileRun ? profileSetupClub() : myClubTeam());
+const profileLookGender = () => (profileRun ? profileRun.gender : profile.gender);
+/* A pick on Your Look (src/ui-career.js): on My Profile it is kept at once, as Settings' rows are. */
+function profileLookPicked() {
+  if (profileRun || !profileLook) return;
+  profile.look = profileLookClean(profileLook, profile.gender);
+  save();
+}
+function profileOpen(focus) {
+  profileRun = null;
+  profileRender();
+  showScreen('s-profile'); $('s-profile').scrollTop = 0;
+  profileFocus($('s-profile'), focus && !focus.hidden ? focus : DEFAULT_FOCUS['s-profile']());
+}
+DEFAULT_FOCUS['s-profile'] = () => ($('pf-age').querySelector && $('pf-age').querySelector('[aria-pressed="true"]')) || $('pf-back');
+function profileRender() {
+  const c = myClubTeam(), n = myNatTeam(null), seg = (id, list, now) => {
+    const el = $(id);
+    if (!el.dataset.built) { el.dataset.built = '1'; el.innerHTML = list.map(o => `<button data-v="${o.id}">${o.line ? `<b>${esc(o.name)}</b><span>${esc(o.line)}</span>` : esc(o.name)}</button>`).join(''); for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.addEventListener('click', () => (id === 'pf-age' ? profileAge(b.dataset.v) : profileGender(b.dataset.v))); }
+    for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.setAttribute('aria-pressed', String(b.dataset.v === now));
+  };
+  seg('pf-age', PROFILE_AGES, profile.age);
+  seg('pf-gender', PROFILE_GENDERS, profile.gender);
+  $('pf-club').innerHTML = `${jersey(c)}<span class="pf-names"><b>${esc(listName(c))}</b><span>${esc(listName(n))}</span></span>`;
+  $('pf-team').setAttribute('aria-label', 'Change My Team: ' + listName(c) + ', ' + listName(n));
+  const drawn = profileDraw($('pf-cv'), c, profile.look);
+  $('pf-cv').hidden = !drawn; $('pf-shirt').hidden = drawn;
+  if (!drawn) $('pf-shirt').innerHTML = jersey(c, 'big');
+  $('pf-look').textContent = profile.look ? 'Change Look' : 'Make Your Look';
+  if (!drawn && profile.look && typeof ART !== 'undefined' && ART.state === 'idle' && typeof artLoad === 'function') artLoad();   // the picture once the art is in (profileArtIn)
+}
+function profileAge(v) {
+  if (!profileKnows(PROFILE_AGES, v)) return;
+  profileSet(v, profile.gender, { then:() => { profileRender(); renderHome(); } });
+}
+function profileGender(v) {
+  if (!profileKnows(PROFILE_GENDERS, v)) return;
+  profileSet(profile.age, v, { level:false, then:() => { profileRender(); renderHome(); } });   // the gender moves the category, never the level
+}
+$('pf-back').addEventListener('click', () => goHome($('b-my')));
+$('pf-team').addEventListener('click', () => openTeams('my', null, { from:$('pf-team') }));   // My Team's picker, its old job: the club, then the country; back here after
+$('pf-look').addEventListener('click', () => {
+  profileLook = profile.look ? profileLookClean(profile.look, profile.gender) : profileLookStart(profile.gender);
+  careerLookOpen('profile');
+});
+
+/* The arrow keys on the setup and My Profile move the focus to the nearest button that way, as a controller's ring does (navNearest);
+   Escape is the screen's Back. Your Look's own, in its setup and profile modes, the same. */
+function profileKeys(e) {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || (e.target && e.target.tagName === 'INPUT')) return;
+  if (typeof kidsGate !== 'undefined' && kidsGate) return;   // the grown-up check takes every key while it is open (kids.js)
+  const layer = e.currentTarget;
+  if (e.key === 'Escape') {
+    const back = [...(layer.querySelectorAll ? layer.querySelectorAll('[data-back]') : [])].find(b => !b.hidden && !(b.closest && b.closest('[hidden]')));
+    if (back) { if (e.preventDefault) e.preventDefault(); back.click(); }
+    return;
+  }
+  const d = { ArrowUp:[0, -1], ArrowDown:[0, 1], ArrowLeft:[-1, 0], ArrowRight:[1, 0] }[e.key];
+  if (!d) return;
+  const cands = navCands(layer), at = document.activeElement;
+  let to = cands.includes(at) ? profileNav(cands, at, d[0], d[1]) : (DEFAULT_FOCUS[layer.id] && DEFAULT_FOCUS[layer.id]()) || cands[0];
+  if (e.preventDefault) e.preventDefault();
+  if (to && typeof to.focus === 'function') { to.focus(); if (focusEl) setFocus(to); }
+}
+/* The nearest button that way (navNearest); failing one, the nearest anywhere on that side, so Up from the middle card still reaches the
+   top row's Back or Skip. The keys and a controller's ring alike (navMove asks it on these screens, src/input-devices.js). */
+function profileNav(cands, el, dx, dy) {
+  const best = navNearest(cands, el, dx, dy);
+  if (best) return best;
+  const r0 = el.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+  let near = null, nd = 1e9;
+  for (const c of cands) {
+    if (c === el) continue;
+    const r = c.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
+    if (ex*dx + ey*dy <= 8) continue;
+    const dd = Math.hypot(ex, ey);
+    if (dd < nd) { nd = dd; near = c; }
+  }
+  return near;
+}
+for (const id of ['s-setup', 's-profile']) $(id).addEventListener('keydown', profileKeys);
+$('s-career-look').addEventListener('keydown', e => { if (lookFor !== 'career') profileKeys(e); });   // New Player's own Your Look keeps Tab, as ever
+/* =========================================================
    Career screens: the new player and his club, the hub, training, the table, and the screen between phases (a season's or a
    cup's end, the call-up, the transfer window). The rules are in src/career.js; nothing here draws a random number except
    through it.
@@ -15883,7 +16224,8 @@ function renderCareerHome() {
 const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom === !b.custom;
 function careerNewOpen() {
   const home = myPool() || 'sur', pool = poolTier(home) > 0 ? home : 'sur';
-  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false, look:{ ...CAREER_LOOK } };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked; Whole Team first and picked: Pro Mode is the harder way; the default look, changed with Change Look
+  const cat = typeof profileCareerCat === 'function' ? profileCareerCat() : 'men';   // the profile's gender (src/profile.js): Women for Female, Not Say following the category; Men otherwise, as ever
+  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat, proMode:false, look:typeof profileCareerLook === 'function' ? profileCareerLook(cat) : { ...CAREER_LOOK } };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked unless the profile says Women; Whole Team first and picked: Pro Mode is the harder way; the profile's look (else the default) on the career's body, changed with Change Look
   $('cn-name').value = '';
   renderCareerNew(); careerShow('s-career-new');
 }
@@ -15928,30 +16270,55 @@ $('cn-look-go').addEventListener('click', () => careerLookOpen());
    rendered art, artPreview; his shirt with his number stands in while the art is not in, or if it never comes), and the pickers: Build
    (Small | Medium | Big, the art's three bodies), Skin and Hair Colour (six swatches each) and Hair Style (all twelve, for either body).
    Male or Female is not here: it is New Player's Team, Men | Women, one control. A pick changes the picture at once, and Back to New
-   Player keeps it; Start Career saves it with the career (careerLook validates it). */
+   Player keeps it; Start Career saves it with the career (careerLook validates it).
+   The profile (src/profile.js) uses the same screen for its look (lookFor): 'setup', the first launch's last step, with Back and Skip
+   along the top and Done, and 'profile', from My Profile, with Back to Profile, each pick kept at once. There the body is the gender's,
+   or, for Not Say and no gender, a Body row (Male | Female) under Build. New Player's own ('career') is as it was. */
+let lookFor = 'career';
+const lookDraft = () => (lookFor === 'career' ? careerDraft && careerDraft.look : typeof profileLookDraft === 'function' ? profileLookDraft() : null);
+const lookClub = () => (lookFor === 'career' ? careerDraft.club : profileLookClub());
+const lookBody = () => lookFor !== 'career' && !['male', 'female'].includes(profileLookGender());   // the Body row: Not Say, or no gender given
+function lookHead() {                                // the screen's words and buttons for whose look it is
+  const pro = lookFor !== 'career', setup = lookFor === 'setup', eb = document.querySelector ? document.querySelector('#s-career-look .eyebrow') : null;
+  if (eb) { if (setup) eb.innerHTML = profileDots(3); else eb.textContent = pro ? 'My Profile' : 'New Player'; }
+  $('ck-back').hidden = setup; $('ck-back').textContent = pro ? 'Back to Profile' : 'Back to New Player';
+  $('ck-pback').hidden = $('ck-skip').hidden = $('ck-done').hidden = !setup;
+  $('ck-body-f').hidden = !lookBody();
+  $('s-career-look').classList.toggle('ck-pro', pro); $('s-career-look').classList.toggle('ck-setup', setup);
+}
 const CAREER_SKIN_NAMES = ['Skin 1', 'Skin 2', 'Skin 3', 'Skin 4', 'Skin 5', 'Skin 6'];   // lightest to darkest; a swatch's name, for a screen reader
 const CAREER_HAIR_NAMES = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red'];
-function careerLookOpen() {
-  renderCareerLook(); careerShow('s-career-look');
+function careerLookOpen(mode) {
+  lookFor = mode === 'setup' || mode === 'profile' ? mode : 'career';
+  lookHead(); renderCareerLook(); careerShow('s-career-look');
   const art = ART.state === 'idle' ? artLoad() : ART.state === 'loading' ? ART.promise : null;   // the real sprite when it can be had
-  if (art && art.then) art.then(() => { if (careerDraft && !$('s-career-look').hidden) careerLookShow(); });
+  if (art && art.then) art.then(() => { if (lookDraft() && !$('s-career-look').hidden) careerLookShow(); });
+  if (lookFor !== 'career') profileFocus($('s-career-look'), $('ck-build').querySelector && $('ck-build').querySelector('[aria-pressed="true"]'));   // the arrow keys and Escape from the start (src/profile.js)
 }
-function careerLookSet(key, v) { careerDraft.look[key] = v; renderCareerLook(); }
+function careerLookSet(key, v) { const L = lookDraft(); if (!L) return; L[key] = v; renderCareerLook(); if (lookFor === 'profile' && typeof profileLookPicked === 'function') profileLookPicked(); }
 function careerLookShow() {                          // the picture: the art when it is in, his shirt when not
-  const d = careerDraft, cv = $('ck-pic'), drawn = artPreview(cv, d.club, d.look);
+  const L = lookDraft(), club = lookClub(), cv = $('ck-pic'), drawn = artPreview(cv, club, L);
   cv.hidden = !drawn; $('ck-shirt').hidden = drawn;
-  if (!drawn) $('ck-shirt').innerHTML = careerShirt(d.club, d.num, 'big');
+  if (!drawn) $('ck-shirt').innerHTML = careerShirt(club, lookFor === 'career' ? careerDraft.num : PROFILE_NUM, 'big');
 }
 function renderCareerLook() {                        // the picks change in place, so a controller's ring stays on the button it pressed
-  const L = careerDraft.look, press = (id, on) => [...$(id).children].forEach((b, i) => b.setAttribute('aria-pressed', String(on(i))));
+  const L = lookDraft(), press = (id, on) => [...$(id).children].forEach((b, i) => b.setAttribute('aria-pressed', String(on(i))));
   press('ck-build', i => CAREER_BUILDS[i] === L.b); press('ck-skin', i => i === L.skin); press('ck-hair', i => i === L.hair); press('ck-style', i => i === L.style);
+  if (lookFor !== 'career') press('ck-body', i => i === (L.g === 1 ? 1 : 0));
   careerLookShow();
 }
 $('ck-skin').innerHTML = LOOK_SKIN.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_SKIN_NAMES[i]}"></button>`).join('');
 $('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_HAIR_NAMES[i]}"></button>`).join('');
-for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
+$('ck-body').innerHTML = PROFILE_BODIES.map(n => `<button>${n}</button>`).join('');   // the profile's Body row (Not Say): built here, as the swatches are
+for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i], ['ck-body', 'g', i => i]])
   [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
-$('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
+$('ck-back').addEventListener('click', () => {
+  if (lookFor === 'profile') { lookFor = 'career'; profileOpen($('pf-look')); return; }   // My Profile's: the picks already kept
+  renderCareerNew(); careerShow('s-career-new');
+});
+$('ck-pback').addEventListener('click', () => profileStep(2));          // the setup's: back to its Club, the look kept for coming back
+$('ck-skip').addEventListener('click', () => profileSetupEnd(false));   // the setup ends with no look
+$('ck-done').addEventListener('click', () => profileSetupEnd(true));    // the setup ends with this look
 /* The club: the team screen in its Career mode (openTeams('career'), src/ui-menus.js), one side, centred: the ladder's clubs only (no nation,
    no Legend), Made Teams and My League, the Super Fan's club first in its group, opening on his club. Pick takes it, with the group's list
    as its league (Dublin plays the URC), and goes back to New Player; a team you made keeps the league it had. No category there: Men |
@@ -16892,12 +17259,15 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), sheetShut:pickSheetShut, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
+  profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
+    first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
+    profileOpen, render:profileRender, age:profileAge, gender:profileGender, homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },
   GAME_VERSION,
   get M() { return M; } };
 
 function start(data) {
   load();
-  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data || 'cup' in data || 'locker' in data || 'form' in data)) restore(data);
+  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data || 'cup' in data || 'locker' in data || 'profile' in data || 'form' in data)) restore(data);
   resize(); setDesk();
   setTimeout(artLoad, 0);                                   // in every case: the demo behind the menu uses them, whatever camera is saved. In the background: an empty pitch or the code-drawn men until they are in, or if they never come
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) { fitNames(); pickFit(); } if (!$('s-cup').hidden) cupFit($('s-cup')); homeFit(); });
@@ -16905,12 +17275,13 @@ function start(data) {
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
   startDemo();
   goHome();
+  if (!(data && Object.keys(data).length)) profileBoot();   // a first launch (no save at all): the profile's setup over the home (src/profile.js). Never with a save, the hot reload's included
   try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => homeFit()); } catch (e) { /* no font loading API */ }   // My Team's names fitted again in the game's own typeface
   offlineStart();
   ratingsBoot();
   restStick();
   requestAnimationFrame(frame);
 }
-try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, cup, cupTurn, store:{ owned:storeBought }, locker:lockerSaved(), form:formRec })); } catch (e) { /* not in a viewer */ }
+try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, cup, cupTurn, store:{ owned:storeBought }, locker:lockerSaved(), profile:profileSaved(), form:formRec })); } catch (e) { /* not in a viewer */ }
 nativeBoot(() => { if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {}); });   // a browser starts at once; the app first puts back a save the web view lost (native.js)
 })();

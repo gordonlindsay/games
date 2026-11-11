@@ -142,7 +142,7 @@
             <li><b>Driving:</b> a low, strong body shape with the hips lower than the shoulders, and timing the push.</li>
             <li><b>Ball Back:</b> a safe two-handed hold, falling without an arm out to stop the fall, and getting the ball back to the team.</li>
           </ul>
-          <p>Contact starts at under-9 with the tackle only. Under-9s have no scrums and pass the ball on when tackled, so Driving and the placing in Ball Back go further than under-9s play. Real contact skills need a club coach and planned, supervised sessions. The Kids level and Minis hide Contact Games, and only a grown-up can leave the Kids level. The game never asks for an age.</p>
+          <p>Contact starts at under-9 with the tackle only. Under-9s have no scrums and pass the ball on when tackled, so Driving and the placing in Ball Back go further than under-9s play. Real contact skills need a club coach and planned, supervised sessions. The Kids level and Minis hide Contact Games, and only a grown-up can leave the Kids level. The game asks only an age group (Mini, Junior or Adult), to set its level, and keeps it on this device.</p>
           <p><b>Head knocks:</b> if anyone may have a concussion, they stop playing straight away and see a doctor or call NHS 111 within a day. No sport for at least 24 hours, and no match for at least 21 days, with a phased return in between.</p>
           <p class="pr-line">Coaching Tips Written Independently, in Line With Rugby Governing Body Guidance. Not Endorsed by Any Rugby Body. Not a Substitute for a Qualified Coach.</p>
           <button class="btn" id="pr-grown-back" data-back>Back to Skill Games</button>
@@ -162,8 +162,8 @@
 </section>
 <section class="screen" id="s-teams" hidden>
   <div class="pk">
-    <div class="pk-top"><div class="pk-name"><p class="eyebrow" id="t-eyebrow">Quick Match</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
-      <div class="seg cat" id="t-cat" aria-label="Men, Women or Minis"></div></div>
+    <div class="pk-top"><button class="btn pk-sback" id="t-sback" data-back hidden>Back</button><div class="pk-name"><p class="eyebrow" id="t-eyebrow">Quick Match</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
+      <div class="seg cat" id="t-cat" aria-label="Men, Women or Minis"></div><button class="btn pk-skip" id="t-skip" hidden>Skip</button></div>
     <div class="pk-sides" id="t-sides">
       <div class="pk-side" id="t-side0" data-side="0" role="group"></div>
       <div class="pk-v" id="t-v" aria-hidden="true">V</div>
@@ -255,6 +255,30 @@
   </div>
 </section>
 
+<section class="screen" id="s-setup" tabindex="-1" aria-labelledby="su-step su-title" hidden>
+  <div class="su">
+    <div class="su-head"><button class="btn su-back" id="su-back" data-back>Not Now</button><div class="su-name"><p class="eyebrow" id="su-step"></p><h2 class="title" id="su-title">Age Group</h2></div><button class="btn su-skip" id="su-skip">Skip</button></div>
+    <div class="su-opts" id="su-opts" role="group" aria-labelledby="su-title"></div>
+  </div>
+</section>
+
+<section class="screen" id="s-profile" tabindex="-1" aria-labelledby="pf-title" hidden>
+  <div class="pf">
+    <div class="su-head pf-head"><button class="btn su-back" id="pf-back" data-back>Back to Menu</button><div class="su-name"><h2 class="title" id="pf-title">My Profile</h2></div></div>
+    <div class="pf-body">
+      <div class="pf-me">
+        <div class="cr-lookpic pf-pic"><canvas id="pf-cv" width="126" height="158" aria-hidden="true" hidden></canvas><span id="pf-shirt"></span></div>
+        <button class="btn" id="pf-look">Change Look</button>
+      </div>
+      <div class="pf-rows">
+        <div class="field"><span class="lbl" id="pf-age-l">Age Group</span><div class="seg pf-age" id="pf-age" role="group" aria-labelledby="pf-age-l"></div></div>
+        <div class="field"><span class="lbl" id="pf-gender-l">Gender</span><div class="seg" id="pf-gender" role="group" aria-labelledby="pf-gender-l"></div></div>
+        <div class="field"><span class="lbl">My Team</span><div class="pf-team"><span class="pf-club" id="pf-club"></span><button class="btn" id="pf-team">Change</button></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="screen" id="s-career-new" hidden>
   <div class="wrap">
     <div class="head"><div><p class="eyebrow">Career</p><h2 class="title">New Player</h2></div><button class="btn cr-headback" id="cn-back" data-back>Back to Menu</button></div>
@@ -274,13 +298,14 @@
   </div>
 </section>
 
-<section class="screen" id="s-career-look" hidden>
+<section class="screen" id="s-career-look" tabindex="-1" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow">New Player</p><h2 class="title">Your Look</h2></div></div>
+    <div class="head ck-head"><button class="btn ck-pback" id="ck-pback" data-back hidden>Back</button><div><p class="eyebrow">New Player</p><h2 class="title">Your Look</h2></div><button class="btn ck-skip" id="ck-skip" hidden>Skip</button></div>
     <div class="cr-lookgrid">
       <div class="cr-lookcol">
         <div class="cr-lookpic"><canvas id="ck-pic" width="126" height="158" aria-hidden="true" hidden></canvas><span id="ck-shirt"></span></div>
         <div class="field"><span class="lbl">Build</span><div class="seg" id="ck-build"><button>Small</button><button>Medium</button><button>Big</button></div></div>
+        <div class="field ck-body-f" id="ck-body-f" hidden><span class="lbl">Body</span><div class="seg" id="ck-body" role="group" aria-label="Body"></div></div>
       </div>
       <div class="cr-lookcol">
         <div class="field"><span class="lbl">Skin</span><div class="swatches cr-sw" id="ck-skin"></div></div>
@@ -289,6 +314,7 @@
       <div class="cr-lookcol">
         <div class="field"><span class="lbl">Hair Style</span><div class="seg cr-styles" id="ck-style"><button>Short</button><button>Shaved</button><button>Big Hair</button><button>Scrum Cap</button><button>Headband</button><button>Bun</button><button>Ponytail</button><button>Plait</button><button>Long Plait</button><button>Bunches</button><button>High Ponytail</button><button>Long Bob</button></div></div>
         <button class="btn" id="ck-back" data-back>Back to New Player</button>
+        <button class="btn primary" id="ck-done" hidden>Done</button>
       </div>
     </div>
   </div>

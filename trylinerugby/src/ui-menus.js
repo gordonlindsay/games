@@ -215,6 +215,7 @@ function homeStepOf(el) {                                    // the step a butto
 /* The home: on the five boxes, or, for focus inside a step (a drill just played, How to Play), on that step with the focus there. */
 function goHome(focus) {
   if (typeof nativePutBack === 'function') nativePutBack();   // the app: a save Preferences gave back late goes in first (native.js)
+  if (typeof profileRun !== 'undefined') profileRun = null;   // a first launch's setup under way ends with nothing set (src/profile.js): the home is for a game that is set up, the app's late copy of a save included
   navOnly = null;
   homeStep = homeStepOf(focus);
   renderHome();
@@ -409,6 +410,7 @@ function myHome() {
   const c = myClubTeam(), n = myNatTeam(null), f = formOf(c), g = formOf(n), played = r => r.w + r.d + r.l;
   const figs = r => ['Played ' + played(r), 'Won ' + r.w, 'Drawn ' + r.d, 'Lost ' + r.l].join(', ');
   $('my-shirt').innerHTML = jersey(c);
+  if (typeof profileHomePic === 'function') profileHomePic(c);   // your player in My Team's kit in the shirt's place, once there is a look and the art is in (src/profile.js)
   $('my-name').textContent = listName(c);
   $('my-stars').innerHTML = ratedStars(c);
   $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
@@ -459,7 +461,7 @@ function homeFit() {
     if (list.scrollWidth > list.clientWidth + 0.5) strip.dataset.fit = 'short';
   }
 }
-$('b-my').addEventListener('click', () => { ac(); openTeams('my'); });
+$('b-my').addEventListener('click', () => { ac(); profileOpen(); });   // My Profile (src/profile.js): the age group, gender and look, and My Team's picker, its old job, one press on
 
 /* Competitions (Match's second step): Continue first while a championship or a cup is saved (its hub then has New Championship or Start
    Fresh); otherwise International | National | Local, the team screen's tier names, and that tier's competitions: the nation's championship
@@ -684,7 +686,7 @@ const pickSide = () => ({ g:null, k:null, gi:0, i:0, set:false, touched:false })
 let pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null, made:null, lifter:null };
 let pickView = [null, null];                               // each side as drawn: { ladder, gi, i, group, team }
 const pickOne = () => pickMode !== 'quick' && pickMode !== 'two';   // Championship, Career, My Team and the cups: one side, centred
-const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : settings.cat);
+const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : pickMode === 'setup' && typeof profileSetupCat === 'function' ? profileSetupCat() : settings.cat);   // the setup's Club: the category its answers give (src/profile.js)
 /* Championship's World Cup or Home Nations Tour, chosen on the home: its title, its list, its side and its primary (src/ui-cups.js);
    null for a league or the nation's championship, and for every other mode. */
 const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
@@ -706,6 +708,7 @@ function pickLadderOf(s, left) {
   }
   if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));
   if (pickMode === 'my') return pickLadder(cat, { nations:true, clubs:true, mine:'all', fav:true, fits:t => !t.legend });
+  if (pickMode === 'setup') return pickLadder(cat, { clubs:true, mine:'all', fav:true, fits:t => !isNation(t) && !t.legend });   // the first launch's Club (src/profile.js): My Team's ladder, clubs only; the country comes with the club
   const all = pickLadder(cat, { nations:true, legends:true, clubs:true, mine:'all', fav:true, recent:s });
   if (s === 0) return all.map(g => { if (g.hemi === 'fav' || g.hemi === 'recent') return g; const i = g.teams.findIndex(t => !t.act && !isNation(t) && myIs(t)); return i > 0 ? { ...g, teams:[g.teams[i], ...g.teams.slice(0, i), ...g.teams.slice(i + 1)] } : g; });
   if (pickMode !== 'quick' || !left || left.act) return all;
@@ -730,6 +733,7 @@ function pickOpen(s) {
   }
   if (pickMode === 'champ') { const view = teamsView(), d = view ? view.pick : teamDefault(); if (d) at(d, d.custom ? 'mine.made' : null); return; }
   if (pickMode === 'my') { const c = myClubTeam(); at(c, c.custom ? 'mine.made' : null); st.list = myPool(); return; }
+  if (pickMode === 'setup') { const c = profileSetupClub(); at(c, c.custom ? 'mine.made' : null); if (c === myClubTeam()) st.list = myPool(); return; }
   if (pickMode === 'career' && careerDraft) { at(careerDraft.club, careerDraft.club.custom ? 'mine.made' : null); st.list = careerDraft.league; }
 }
 /* Play on the home (Continue with nothing under way): Your Team is My Team's club, set; the Opponent the last one picked (unless it is My
@@ -855,7 +859,7 @@ function pickGo() {
   const v = pickView[pick.on], t = v && v.team; if (!t) return;
   if (t.act) { pickAct(pick.on, t.act); return; }
   if (pickOne()) {
-    if (pickMode === 'my' && myIs(t)) { goHome($('b-my')); return; }
+    if (pickMode === 'my' && myIs(t)) { myDone(); return; }
     pickSet(0); return;
   }
   if (pickReady()) { pickKickOff(); return; }
@@ -908,6 +912,7 @@ function pickWho(s) {                                      // the side's own nam
   if (pickMode === 'quick') return s ? 'Opponent' : 'Your Team';
   if (view) return view.comp === 'tour' ? 'Host' : 'Your Nation';
   if (pickMode === 'my') return t && !t.act && isNation(t) ? 'My Country' : 'My Club';
+  if (pickMode === 'setup') return 'Your Club';
   if (pickMode === 'career') return 'Your Club';
   return 'Your Team';
 }
@@ -920,6 +925,7 @@ function pickTag(s, t) {                                   // Stronger Side (the
   if (t.act) return '';
   if (pickMode === 'quick' && s === 1 && pickView[0] && !pickView[0].team.act && outmatched(pickView[0].team, t)) return '<span class="gap">Stronger Side</span>';
   if (pickMode === 'career') return careerDraft && careerSame(t, careerDraft.club) ? '<span class="gap mine">Your Club</span>' : '';
+  if (pickMode === 'setup') return profileRun && profileRun.club && careerSame(t, profileRun.club) ? '<span class="gap mine">Your Club</span>' : '';   // picked, and come back to
   const tour = teamsView() && teamsView().comp === 'tour';   // the tour's hosts are never the player's own side
   if (s === 0 && !tour && myIs(t)) return '<span class="gap mine">My Team</span>';   // Your Team's (or Player 1's, or the one side's): never the Opponent's
   return '';
@@ -976,11 +982,15 @@ function renderTeams() {
   pickBuild();
   const one = pickOne(), view = teamsView(), quick = pickMode === 'quick', pair = pickMode === 'two', cat = pickCat();
   const eb = $('t-eyebrow');
+  const setup = pickMode === 'setup';
   eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : pickMode === 'my' ? 'My Team' : pickMode === 'career' ? 'New Player' : view ? view.name : 'Championship';
+  if (setup) eb.innerHTML = profileDots(2);                  // the setup's place, as on its other steps (src/profile.js)
   eb.classList.remove('p1'); eb.classList.remove('p2');
   const t0 = pickView[0] && pickView[0].team;
-  $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' ? 'Pick Your Club' : 'Pick Your Team';
-  $('t-cat').hidden = pickMode === 'career';                 // Men | Women is New Player's
+  $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' || setup ? 'Pick Your Club' : 'Pick Your Team';
+  $('t-cat').hidden = pickMode === 'career' || setup;        // Men | Women is New Player's; the setup's category comes from its answers
+  $('t-sback').hidden = $('t-skip').hidden = !setup; $('t-back').hidden = setup;   // the setup's Back and Skip along the top, as on its other steps (src/profile.js)
+  $('s-teams').classList.toggle('pk-setup', setup);
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.setAttribute('aria-pressed', String(b.dataset.cat === settings.cat));
   $('t-sides').classList.toggle('one', one);
   $('t-v').hidden = one; $('t-side1').hidden = one;
@@ -1124,8 +1134,16 @@ $('t-go').addEventListener('click', () => { ac(); pickGo(); });
 $('t-back').addEventListener('click', () => {
   if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; }
   if (pickMode === 'career') { renderCareerNew(); careerShow('s-career-new'); return; }
-  goHome(pickMode === 'my' ? $('b-my') : pickFrom);           // back to the button that opened it (Quick Match, Play, a competition)
+  if (pickMode === 'my') { myDone(); return; }
+  goHome(pickFrom);                                          // back to the button that opened it (Quick Match, Play, a competition)
 });
+/* My Team's picker done with (Done, or Back): back to My Profile where it was opened from there (Change, src/profile.js), else home. */
+function myDone() {
+  if (pickFrom && pickFrom.id === 'pf-team' && typeof profileOpen === 'function') { profileOpen(pickFrom); return; }
+  goHome($('b-my'));
+}
+$('t-sback').addEventListener('click', () => profileStep(1));   // the setup's Club: Back to Gender, Skip to Your Look (src/profile.js)
+$('t-skip').addEventListener('click', () => profileSkip());
 /* A swipe across a card: left for the next team, right for the one before; up for the next group, down for the one before. A long press on
    Previous or Next jumps a country. */
 $('t-sides').addEventListener('pointerdown', e => {
@@ -1303,6 +1321,7 @@ function pickTeam(t) {
   if (!t) return;
   if (t.legend && !storeGate('legends', () => pickTeam(t))) return;   // a Legends side is played with the Full Game (src/store.js); unlocked on any tier
   if (pickMode === 'my') { myPick(t); return; }
+  if (pickMode === 'setup') { const v = pickView[0]; profileClubPick(t, v && v.team === t ? v.group : null); return; }
   if (pickMode === 'career') { const v = pickView[0]; careerClubPick(t, v && v.team === t ? v.group.list : null); return; }
   if (pickMode === 'champ') {
     const view = teamsView();

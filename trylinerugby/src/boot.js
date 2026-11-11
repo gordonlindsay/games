@@ -141,12 +141,15 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), sheetShut:pickSheetShut, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
+  profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
+    first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
+    profileOpen, render:profileRender, age:profileAge, gender:profileGender, homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },
   GAME_VERSION,
   get M() { return M; } };
 
 function start(data) {
   load();
-  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data || 'cup' in data || 'locker' in data || 'form' in data)) restore(data);
+  if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data || 'cup' in data || 'locker' in data || 'profile' in data || 'form' in data)) restore(data);
   resize(); setDesk();
   setTimeout(artLoad, 0);                                   // in every case: the demo behind the menu uses them, whatever camera is saved. In the background: an empty pitch or the code-drawn men until they are in, or if they never come
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) { fitNames(); pickFit(); } if (!$('s-cup').hidden) cupFit($('s-cup')); homeFit(); });
@@ -154,11 +157,12 @@ function start(data) {
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
   startDemo();
   goHome();
+  if (!(data && Object.keys(data).length)) profileBoot();   // a first launch (no save at all): the profile's setup over the home (src/profile.js). Never with a save, the hot reload's included
   try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => homeFit()); } catch (e) { /* no font loading API */ }   // My Team's names fitted again in the game's own typeface
   offlineStart();
   ratingsBoot();
   restStick();
   requestAnimationFrame(frame);
 }
-try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, cup, cupTurn, store:{ owned:storeBought }, locker:lockerSaved(), form:formRec })); } catch (e) { /* not in a viewer */ }
+try { window.claude?.hot?.snapshot?.(() => ({ champ, settings, custom, champHistory, seasonSerial, career, importLeague, cup, cupTurn, store:{ owned:storeBought }, locker:lockerSaved(), profile:profileSaved(), form:formRec })); } catch (e) { /* not in a viewer */ }
 nativeBoot(() => { if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {}); });   // a browser starts at once; the app first puts back a save the web view lost (native.js)

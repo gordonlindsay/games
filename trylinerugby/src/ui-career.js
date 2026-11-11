@@ -97,7 +97,8 @@ function renderCareerHome() {
 const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom === !b.custom;
 function careerNewOpen() {
   const home = myPool() || 'sur', pool = poolTier(home) > 0 ? home : 'sur';
-  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat:'men', proMode:false, look:{ ...CAREER_LOOK } };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked; Whole Team first and picked: Pro Mode is the harder way; the default look, changed with Change Look
+  const cat = typeof profileCareerCat === 'function' ? profileCareerCat() : 'men';   // the profile's gender (src/profile.js): Women for Female, Not Say following the category; Men otherwise, as ever
+  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat, proMode:false, look:typeof profileCareerLook === 'function' ? profileCareerLook(cat) : { ...CAREER_LOOK } };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked unless the profile says Women; Whole Team first and picked: Pro Mode is the harder way; the profile's look (else the default) on the career's body, changed with Change Look
   $('cn-name').value = '';
   renderCareerNew(); careerShow('s-career-new');
 }
@@ -142,30 +143,55 @@ $('cn-look-go').addEventListener('click', () => careerLookOpen());
    rendered art, artPreview; his shirt with his number stands in while the art is not in, or if it never comes), and the pickers: Build
    (Small | Medium | Big, the art's three bodies), Skin and Hair Colour (six swatches each) and Hair Style (all twelve, for either body).
    Male or Female is not here: it is New Player's Team, Men | Women, one control. A pick changes the picture at once, and Back to New
-   Player keeps it; Start Career saves it with the career (careerLook validates it). */
+   Player keeps it; Start Career saves it with the career (careerLook validates it).
+   The profile (src/profile.js) uses the same screen for its look (lookFor): 'setup', the first launch's last step, with Back and Skip
+   along the top and Done, and 'profile', from My Profile, with Back to Profile, each pick kept at once. There the body is the gender's,
+   or, for Not Say and no gender, a Body row (Male | Female) under Build. New Player's own ('career') is as it was. */
+let lookFor = 'career';
+const lookDraft = () => (lookFor === 'career' ? careerDraft && careerDraft.look : typeof profileLookDraft === 'function' ? profileLookDraft() : null);
+const lookClub = () => (lookFor === 'career' ? careerDraft.club : profileLookClub());
+const lookBody = () => lookFor !== 'career' && !['male', 'female'].includes(profileLookGender());   // the Body row: Not Say, or no gender given
+function lookHead() {                                // the screen's words and buttons for whose look it is
+  const pro = lookFor !== 'career', setup = lookFor === 'setup', eb = document.querySelector ? document.querySelector('#s-career-look .eyebrow') : null;
+  if (eb) { if (setup) eb.innerHTML = profileDots(3); else eb.textContent = pro ? 'My Profile' : 'New Player'; }
+  $('ck-back').hidden = setup; $('ck-back').textContent = pro ? 'Back to Profile' : 'Back to New Player';
+  $('ck-pback').hidden = $('ck-skip').hidden = $('ck-done').hidden = !setup;
+  $('ck-body-f').hidden = !lookBody();
+  $('s-career-look').classList.toggle('ck-pro', pro); $('s-career-look').classList.toggle('ck-setup', setup);
+}
 const CAREER_SKIN_NAMES = ['Skin 1', 'Skin 2', 'Skin 3', 'Skin 4', 'Skin 5', 'Skin 6'];   // lightest to darkest; a swatch's name, for a screen reader
 const CAREER_HAIR_NAMES = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red'];
-function careerLookOpen() {
-  renderCareerLook(); careerShow('s-career-look');
+function careerLookOpen(mode) {
+  lookFor = mode === 'setup' || mode === 'profile' ? mode : 'career';
+  lookHead(); renderCareerLook(); careerShow('s-career-look');
   const art = ART.state === 'idle' ? artLoad() : ART.state === 'loading' ? ART.promise : null;   // the real sprite when it can be had
-  if (art && art.then) art.then(() => { if (careerDraft && !$('s-career-look').hidden) careerLookShow(); });
+  if (art && art.then) art.then(() => { if (lookDraft() && !$('s-career-look').hidden) careerLookShow(); });
+  if (lookFor !== 'career') profileFocus($('s-career-look'), $('ck-build').querySelector && $('ck-build').querySelector('[aria-pressed="true"]'));   // the arrow keys and Escape from the start (src/profile.js)
 }
-function careerLookSet(key, v) { careerDraft.look[key] = v; renderCareerLook(); }
+function careerLookSet(key, v) { const L = lookDraft(); if (!L) return; L[key] = v; renderCareerLook(); if (lookFor === 'profile' && typeof profileLookPicked === 'function') profileLookPicked(); }
 function careerLookShow() {                          // the picture: the art when it is in, his shirt when not
-  const d = careerDraft, cv = $('ck-pic'), drawn = artPreview(cv, d.club, d.look);
+  const L = lookDraft(), club = lookClub(), cv = $('ck-pic'), drawn = artPreview(cv, club, L);
   cv.hidden = !drawn; $('ck-shirt').hidden = drawn;
-  if (!drawn) $('ck-shirt').innerHTML = careerShirt(d.club, d.num, 'big');
+  if (!drawn) $('ck-shirt').innerHTML = careerShirt(club, lookFor === 'career' ? careerDraft.num : PROFILE_NUM, 'big');
 }
 function renderCareerLook() {                        // the picks change in place, so a controller's ring stays on the button it pressed
-  const L = careerDraft.look, press = (id, on) => [...$(id).children].forEach((b, i) => b.setAttribute('aria-pressed', String(on(i))));
+  const L = lookDraft(), press = (id, on) => [...$(id).children].forEach((b, i) => b.setAttribute('aria-pressed', String(on(i))));
   press('ck-build', i => CAREER_BUILDS[i] === L.b); press('ck-skin', i => i === L.skin); press('ck-hair', i => i === L.hair); press('ck-style', i => i === L.style);
+  if (lookFor !== 'career') press('ck-body', i => i === (L.g === 1 ? 1 : 0));
   careerLookShow();
 }
 $('ck-skin').innerHTML = LOOK_SKIN.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_SKIN_NAMES[i]}"></button>`).join('');
 $('ck-hair').innerHTML = LOOK_HAIR.map((h, i) => `<button class="sw" style="--k:${h}" aria-label="${CAREER_HAIR_NAMES[i]}"></button>`).join('');
-for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i]])
+$('ck-body').innerHTML = PROFILE_BODIES.map(n => `<button>${n}</button>`).join('');   // the profile's Body row (Not Say): built here, as the swatches are
+for (const [id, key, of] of [['ck-build', 'b', i => CAREER_BUILDS[i]], ['ck-skin', 'skin', i => i], ['ck-hair', 'hair', i => i], ['ck-style', 'style', i => i], ['ck-body', 'g', i => i]])
   [...$(id).children].forEach((b, i) => b.addEventListener('click', () => careerLookSet(key, of(i))));
-$('ck-back').addEventListener('click', () => { renderCareerNew(); careerShow('s-career-new'); });
+$('ck-back').addEventListener('click', () => {
+  if (lookFor === 'profile') { lookFor = 'career'; profileOpen($('pf-look')); return; }   // My Profile's: the picks already kept
+  renderCareerNew(); careerShow('s-career-new');
+});
+$('ck-pback').addEventListener('click', () => profileStep(2));          // the setup's: back to its Club, the look kept for coming back
+$('ck-skip').addEventListener('click', () => profileSetupEnd(false));   // the setup ends with no look
+$('ck-done').addEventListener('click', () => profileSetupEnd(true));    // the setup ends with this look
 /* The club: the team screen in its Career mode (openTeams('career'), src/ui-menus.js), one side, centred: the ladder's clubs only (no nation,
    no Legend), Made Teams and My League, the Super Fan's club first in its group, opening on his club. Pick takes it, with the group's list
    as its league (Dublin plays the URC), and goes back to New Player; a team you made keeps the league it had. No category there: Men |

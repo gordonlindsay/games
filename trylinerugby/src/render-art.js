@@ -17,6 +17,7 @@ const artReady = () => ART.state === 'ready';
 function artInstall(man, pages) {                           // a parsed players.json and its decoded pages: [{ w, h, data }]
   ART.gen++; ART.man = man; ART.pages = pages; ART.ids = ART_CLIPS.reduce((o, c, i) => { o[c] = i; return o; }, {});
   ART.parts = man.parts; ART.state = 'ready'; artClear();
+  if (typeof profileArtIn === 'function') profileArtIn();   // your player's picture, waiting for the art on the home and My Profile (src/profile.js)
 }
 function artOff() { ART.state = 'off'; ART.man = null; ART.pages = []; artClear(); }
 function artBadPage(data) {                                 // a browser that alters pixels it hands back would tint garbage: the ids must come back whole
