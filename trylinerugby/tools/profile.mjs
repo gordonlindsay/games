@@ -273,7 +273,8 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
 // 6c. The team screen (the owner: "don't include on the team selection page the filter for age"): once the profile decides the category (a
 //     Mini, or a Junior or an Adult with a gender) Men | Women | Minis is hidden and the teams follow the profile as the screen opens; with
 //     an answer missing the switch stays, the category as it was. 2 Players keeps the switch (two people share the device); Career and the
-//     setup hide it as ever. A side remembered in a category the profile no longer plays falls back as a category changed does.
+//     setup hide it as ever. A side remembered in a category the profile no longer plays falls back as a category changed does. My Team with
+//     no switch lists every country (Canada on Men, Argentina on Women); the tour's primary names the category, as the World Cup's does.
 {
   const cases = [[null, null, null], ['adult', null, null], ['junior', null, null], [null, 'female', null], [null, 'na', null], ['mini', null, 'minis'], ['mini', 'female', 'minis'], ['junior', 'male', 'men'], ['junior', 'female', 'women'], ['adult', 'female', 'women'], ['adult', 'na', 'men']];
   const bad = [];
@@ -301,6 +302,20 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   fresh(); F.set({ age:'adult', gender:'female', look:null }); st.pick = [{ id:'CDN', cat:'women', g:'nat.cdn' }, { id:'BTH', cat:'women', g:'eng' }];
   D.openTeams('quick'); ok(st.cat === 'women' && P.view(0).team.id === 'CDN' && P.state().sides[0].set && P.state().sides[1].set, 'the same picks with the profile Women: both set again, as before');
   fresh(); D.openTeams('quick'); ok(!$('t-cat').hidden && st.cat === 'men', 'no profile (a save from before it, or the setup skipped): the switch as ever');
+  // My Team with no switch: every country, the two the category has not got among them (the review, 2026-11-11: with the switch gone a Male,
+  // Not Say or Mini profile could no longer reach Canada or the USA, a Female one Argentina or Japan); with the switch, the category's own
+  const nats = () => P.view(0).ladder.filter(g => g.key.startsWith('nat.')).map(g => g.teams[0].id);
+  const myNats = (age, gender) => { fresh(); F.set({ age, gender, look:null }); D.openTeams('my'); return { hidden:$('t-cat').hidden, ids:nats() }; };
+  const mm = myNats('adult', 'male'), mf = myNats('adult', 'female'), mn = myNats('mini', null), mna = myNats('junior', 'na'), m0 = myNats(null, null);
+  ok([mm, mf, mn, mna].every(m => m.hidden && m.ids.length === 14) && ['CDN', 'USA'].every(id => mm.ids.includes(id) && mn.ids.includes(id) && mna.ids.includes(id)) && ['ARG', 'JPN'].every(id => mf.ids.includes(id)), `My Team with no switch: all fourteen countries, Canada and the USA for a Male, a Not Say and a Mini, Argentina and Japan for a Female (${[mm, mf, mn, mna].map(m => m.ids.length).join(', ')})`);
+  ok(!m0.hidden && m0.ids.length === 12 && !m0.ids.includes('CDN'), `with an answer missing, the switch and the category's twelve, as ever (${m0.ids.length})`);
+  fresh(); F.set({ age:'adult', gender:'male', look:null }); D.openTeams('my'); D.pickTeam(X.NATIONS.find(n => n.id === 'CDN')); D.pickTeam(club('BTH'));
+  ok(st.myNat === 'CDN' && T.home.myClub().id === 'BTH' && P.view(0).team.id === 'CDN' && $('t-go').textContent === 'Done' && $('t-title').textContent === 'Pick Your Country' && st.cat === 'men', `an Adult and Male picks Canada as My Team's country, then Bath: on to Canada, Done (${st.myNat}, ${P.view(0).team.name}, ${$('t-go').textContent})`);
+  D.goHome(); D.openTeams('quick'); ok(st.cat === 'men' && !P.view(0).ladder.some(g => g.key === 'nat.cdn'), 'and Quick Match still plays Men, its ladder the men\'s twelve (Canada is a country, not a side, there)');
+  // the Home Nations Tour names the category on its primary, as the World Cup's Play as does: no switch says it any more
+  const tour = (age, gender) => { fresh(); F.set({ age, gender, look:null }); H.champPick('tour'); return $('t-go').textContent; };
+  const tours = [tour('adult', 'male'), tour('adult', 'female'), tour('mini', null)];
+  ok(json(tours) === json(['Tour New Zealand', 'Tour New Zealand Women', 'Tour New Zealand Minis']), `the tour's primary: Tour New Zealand, Tour New Zealand Women, Tour New Zealand Minis (${tours.join(' | ')})`);
   D.goHome();
 }
 
@@ -513,6 +528,51 @@ async function browserChecks() {
             return { missing:all.filter(b => !seen.has(b)).map(nm), path };
           });
           ok(!pad.missing.length && json(pad.path) === json(['set-age:mini', 'sound:On', 'half:2 Min', 'none']), `${kind}: a controller's ring reaches every button of Settings, Age Group and Gender among them, and Down goes a row at a time (${json(pad)})`);
+          // Left and Right stay in their row, on the web and in the app (Grown-Ups on Sound's row), nothing past either end (the review, 2026-11-11:
+          // Grown-Ups' Right went to Gender's Not Say, Match Help's On and Off to the Camera row, Kids' Left to Back)
+          const lr = await p5.evaluate(() => {
+            const T = window.__tryline, S = T.store, $ = id => document.getElementById(id), p = $('hp-settings'), r = el => el.getBoundingClientRect(), out = {};
+            const nm = el => !el ? 'none' : el.closest('.seg') ? (el.closest('.seg').dataset.key || el.closest('.seg').id) + ':' + (el.dataset.v || el.textContent.trim()) : el.id;
+            for (const app of [false, true]) {
+              S.setNative(app); S.setStarted(app); S.setBought([]); T.debug.goHome(); T.home.open('settings');
+              const all = [...p.querySelectorAll('button')].filter(b => !b.hidden && !b.closest('[hidden]') && r(b).width > 0), odd = [], ends = {};
+              for (const el of all) for (const dx of [1, -1]) { T.home.ring(el); const to = T.navMove(0, dx, 0); if (to && Math.abs(r(to).bottom - r(el).bottom) > 8) odd.push(nm(el) + (dx > 0 ? ' R ' : ' L ') + nm(to)); }
+              for (const [k, sel, dx] of [['kidsL', '[data-key="diff"] button', -1], ['adultR', '#set-age [data-v="adult"]', 1], ['naR', '#set-gender [data-v="na"]', 1], ['offR', '[data-key="sound"] button:last-child', 1], ['hintsOnL', '[data-key="hints"] button', -1], ['hintsOffR', '[data-key="hints"] button:last-child', 1], ['grownR', '#b-grown', 1], ['grownL', '#b-grown', -1]]) {
+                const el = p.querySelector(sel); if (!el || el.closest('[hidden]')) continue; T.home.ring(el); ends[k] = nm(T.navMove(0, dx, 0));
+              }
+              out[app ? 'app' : 'web'] = { odd, ends };
+            }
+            S.setNative(false); S.setStarted(false); T.home.ring(null); T.debug.goHome(); T.home.open('settings');
+            return out;
+          });
+          ok(!lr.web.odd.length && !lr.app.odd.length && json(lr.web.ends) === json({ kidsL:'none', adultR:'set-gender:male', naR:'none', offR:'hints:On', hintsOnL:'sound:Off', hintsOffR:'none' }) && json(lr.app.ends) === json({ kidsL:'none', adultR:'set-gender:male', naR:'none', offR:'hints:On', hintsOnL:'sound:Off', hintsOffR:'b-grown', grownR:'none', grownL:'hints:Off' }),
+            `${kind}: a controller's Left and Right stay in their row, Grown-Ups on Sound's, nothing past either end (${json(lr)})`);
+          await p5.evaluate(() => document.querySelector('#hp-settings [data-key="hints"] button:last-child').focus()); await p5.keyboard.press('ArrowRight'); const kr = [await name()];
+          await p5.keyboard.press('ArrowLeft'); kr.push(await name()); await p5.evaluate(() => document.querySelector('#hp-settings [data-key="diff"] button').focus()); await p5.keyboard.press('ArrowLeft'); kr.push(await name());
+          ok(json(kr) === json(['hints:Off', 'hints:On', 'diff:Kids']), `${kind}: the arrow keys the same: Right from Match Help's Off stays, Left goes to its On, Left from Kids stays (${kr.join(' ')})`);
+          // a controller's ring is the one outline in Settings (a Mini on the Kids level, as a child with a pad has it); the grown-up check from Age
+          // Group puts the ring back on the button that asked, cancelled or answered
+          const one = await p5.evaluate(() => {
+            const T = window.__tryline, $ = id => document.getElementById(id), out = {};
+            const nm = el => !el ? 'none' : el.closest('.seg') ? (el.closest('.seg').dataset.key || el.closest('.seg').id) + ':' + (el.dataset.v || el.textContent.trim()) : el.id;
+            const line = el => { const c = getComputedStyle(el); return c.outlineStyle === 'none' || parseFloat(c.outlineWidth) === 0 ? 'none' : c.outlineStyle; };
+            T.profile.set({ age:'mini', gender:'male', look:null }); T.kids.segSet(0); T.debug.goHome(); T.debug.setDev('pad'); T.home.ring(null);
+            T.navMove(0, 0, 0); T.home.ring($('b-set')); T.navPress(0); T.navMove(0, 0, 1); T.navMove(0, 0, 1);
+            const a = document.activeElement, f = T.debug.focus();
+            out.rings = { active:nm(a), activeLine:a === f ? 'same' : line(a), ring:nm(f), ringLine:line(f) };
+            T.home.ring($('set-age').querySelector('[data-v="junior"]')); T.navPress(0); out.ask = [!$('m-gate').hidden, nm(T.debug.focus())];
+            T.navBack(0); out.cancel = [!$('m-gate').hidden, nm(T.debug.focus()), T.profile.get().age];
+            T.navPress(0); const g = T.kids.gate(); out.again = !!g; for (const d of g ? g.answer : []) $('pg-k' + d).click(); if (!$('m-gate').hidden) $('pg-cancel').click(); out.pass = [!$('m-gate').hidden, nm(T.debug.focus()), T.profile.get().age, line(T.debug.focus())];
+            T.debug.setDev('kb'); T.home.ring(null); T.profile.set({ age:null, gender:null, look:null }); T.kids.segSet(2); T.debug.goHome();
+            return out;
+          });
+          ok(one.rings.ring === 'sound:On' && one.rings.ringLine === 'solid' && (one.rings.activeLine === 'none' || one.rings.activeLine === 'same'), `${kind}: a controller on the Kids level: the ring the one outline, none on the button the DOM focus was left on (${json(one.rings)})`);
+          // Tab after a controller: the keyboard takes over, the ring goes, and the focus is drawn again (Settings hides a second outline only while a ring shows)
+          await p5.evaluate(() => { const T = window.__tryline; T.debug.goHome(); T.home.open('settings'); T.debug.setDev('pad'); T.home.ring(null); T.navMove(0, 0, 0); T.navMove(0, 0, 1); });
+          await p5.keyboard.press('Tab');
+          const tabbed = await p5.evaluate(() => { const T = window.__tryline, a = document.activeElement, c = getComputedStyle(a); const r = { ring:T.debug.focus() ? 'on' : 'none', dev:T.debug.lastDev(), at:a.textContent.trim(), line:c.outlineStyle }; T.debug.setDev('kb'); return r; });
+          ok(json(tabbed) === json({ ring:'none', dev:'kb', at:'Easy', line:'solid' }), `${kind}: Tab after a controller in Settings: the ring gone, the keyboard's focus on Easy drawn (${json(tabbed)})`);
+          ok(json(one.ask) === json([true, 'pg-k1']) && json(one.cancel) === json([false, 'set-age:junior', 'mini']) && one.again && json(one.pass) === json([false, 'set-age:junior', 'junior', 'solid']), `${kind}: A on Junior asks a grown-up; B shuts the check with the ring back on Junior, still Mini; answered, the ring on Junior and Junior set (${json([one.ask, one.cancel, one.pass])})`);
         }
         ok(!err5.length, `${kind}: no page errors in Settings or on the team screen (${err5.slice(0, 2).join(' | ')})`);
         await ctx5.close();
@@ -553,6 +613,31 @@ async function browserChecks() {
         await ctx4.close();
       }
       await ctx.close();
+    }
+    // Settings at every landscape height from 320 to 400, not only the five sizes: at 568, 667, 812, 844 and 874 wide, on the web and in the app
+    // (Grown-Ups), no page scroll, nothing scrolled inside the panel, every row inside it and every target 44px. The review (2026-11-11) found
+    // 341 to 360 tall overflowing (Safari on the 852x393 and 874x402 phones, about 852x343 and 874x352) and 320 to 333 above 700 wide (an
+    // 812x375 phone, about 812x325): neither is a named size.
+    {
+      const ctx6 = await browser.newContext({ viewport:{ width:844, height:390 }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
+      const p6 = await ctx6.newPage(); await p6.addInitScript(() => localStorage.setItem('tryline.v1', '{"settings":{"played":3},"profile":{"age":"adult","gender":"female","look":null}}'));
+      await p6.goto(base + 'index.html', { waitUntil:'load' }); await p6.evaluate(() => document.fonts.ready);
+      const bad = [];
+      for (const app of [false, true]) for (const w of [568, 667, 812, 844, 874]) {
+        await p6.evaluate(app => { const T = window.__tryline, S = T.store; S.setNative(app); S.setStarted(app); S.setBought([]); T.debug.goHome(); T.home.open('settings'); }, app);
+        for (let h = 320; h <= 400; h++) {
+          await p6.setViewportSize({ width:w, height:h });
+          const m = await p6.evaluate(() => new Promise(done => requestAnimationFrame(() => {
+            const $ = id => document.getElementById(id), p = $('hp-settings'), home = $('s-home'), r = el => el.getBoundingClientRect(), pr = r(p), cs = getComputedStyle(p), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && r(el).width > 0;
+            const sets = [...p.querySelectorAll('.set')].filter(vis), top = Math.min(...sets.map(x => r(x).top)), bottom = Math.max(...sets.map(x => r(x).bottom));
+            done({ page:home.scrollHeight - home.clientHeight, inner:p.scrollHeight - p.clientHeight, top:+(top - pr.top - parseFloat(cs.borderTopWidth)).toFixed(1), bottom:+(pr.bottom - parseFloat(cs.borderBottomWidth) - bottom).toFixed(1), off:+(innerHeight - pr.bottom).toFixed(1),
+              small:[...p.querySelectorAll('button')].filter(vis).filter(b => r(b).height < 43.5 || r(b).width < 43.5).length, grown:vis($('b-grown')) });
+          })));
+          if (m.page > 0 || m.inner > 0 || m.top < 0 || m.bottom < 0 || m.off < 0 || m.small || m.grown !== app) bad.push(`${app ? 'app' : 'web'} ${w}x${h} ${json(m)}`);
+        }
+      }
+      ok(!bad.length, `Settings whole at every height from 320 to 400, 568 to 874 wide, the web and the app: no scroll, every row inside its panel, every target 44px (${bad.slice(0, 4).join('; ') || '810 sizes'})`);
+      await ctx6.close();
     }
   } finally { await browser.close(); server.close(); }
 }

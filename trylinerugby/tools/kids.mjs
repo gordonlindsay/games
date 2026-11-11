@@ -479,6 +479,13 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   K.close(false); D.setDev('touch'); K.parentGate(pass, cancel);
   ok(focused === 1 && D.focus() === null, 'opened by touch or the keyboard: the DOM focus on 1, for Tab and the screen reader');
   K.close(false); delete $('pg-k1').focus;
+  // opened by a controller's ring on a button (Settings' Junior, the Difficulty row's Easy): shut either way, the ring goes back on it, with
+  // no DOM focus (the review, 2026-11-11: it went back to Kids, the DOM focus left where Settings opened)
+  { const asker = $('b-set'), own = Object.prototype.hasOwnProperty.call(asker, 'focus'), was = asker.focus; let f2 = 0; asker.focus = () => f2++; D.setDev('pad');
+    T.home.ring(asker); K.parentGate(pass, cancel); const open = D.focus(); K.close(false); const shut = D.focus();
+    T.home.ring(asker); K.parentGate(pass, cancel); K.close(true); const passedTo = D.focus();
+    ok(open === $('pg-k1') && shut === asker && passedTo === asker && f2 === 0, `opened from a controller's ring: cancelled or answered, the ring back on the button that asked, no DOM focus (${[open && open.id, shut && shut.id, passedTo && passedTo.id, f2].join(', ')})`);
+    T.home.ring(null); D.setDev('touch'); if (own) asker.focus = was; else delete asker.focus; }
   const page = [{ id:'rotate', inert:false }, { id:'controls', inert:false }, $('m-gate')];   // the body's children, as parentGate walks them
   document.body = { children:page };
   K.parentGate(pass, cancel);
