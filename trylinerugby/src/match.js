@@ -273,14 +273,16 @@ function setCarrier(p) {
 }
 function catchBall(p, kind) {
   const n = M.career ? careerNatOf(p) : M.nat[p.team], f = M.ball.f;   // a career match: your player's own handling
-  let k = 0.015 + (5-n.handling)*0.01 + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? 0.2 : 0);
-  if (pressure(p) < 1.8) k += 0.04;
-  if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
+  const base = (0.015 + (5-n.handling)*0.01)*knockLv('base'), marked = pressure(p) < 1.8, long = kind === 'pass' && !!f && !!f.long;   // the base: the drop with no cause to see, halved (KNOCK, src/knock.js)
+  let k = base + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? knockLv('intercept') : 0);   // an interception your man ran into: KNOCK.intercept, 0.2 before
+  if (marked) k += 0.04;
+  if (long) k += LONG.knock;                               // a floater is a little harder to take
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
   if (M.career) k *= careerLifeHands(p, kind, f);          // a career match: Team Spirit, on a pass to or from your player
-  const r = rnd();
-  if (r < traitHands(p, k)) { knockOn(p); return; }        // Safe Hands: hardly ever
+  const r = rnd(), pk = traitHands(p, k);                  // one draw whatever the chance (tools/knock.mjs)
+  if (globalThis.__knockSpy) globalThis.__knockSpy('catch', p, { kind, base, marked, long, k, pk, r });   // the tools sort every catch by its cause
+  if (r < pk) { knockOn(p); return; }                      // Safe Hands: hardly ever
   setCarrier(p); sfx('catch');
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
@@ -289,6 +291,8 @@ function catchBall(p, kind) {
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
+  if (globalThis.__knockSpy) globalThis.__knockSpy('knock', p, { why:why || 'catch' });   // whose, and how
+  if (knockLv('tag')) tag('Knock-On', p.x, p.y);           // over the man who dropped it, as Loose Ball is (KNOCK, src/knock.js)
   placeBall(p.x, p.y);
   sfx('fumble');
   if (knockBeat(p)) return;                                // PRESSURE: it hops for a beat before the whistle (src/contact.js)

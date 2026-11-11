@@ -25,6 +25,7 @@ const jobs = [
   ['pressure', ['tools/pressure.mjs']],                     // pressure, the spill and the egg's bounce; PRESSURE off pinned to b706c3e
   ['maul', ['tools/maul.mjs']],                             // the maul: the trigger and its gates, the CPU's call, each result, the wheel, the world's maul, two player, the cards, MAUL off as before (its browser part runs where Playwright is installed)
   ['edge', ['tools/edge.mjs']],                             // Easy's edge: who has it, each lever's size, the Line Break, On Fire's Easy numbers, EDGE off as 90353c3
+  ['knock', ['tools/knock.mjs']],                           // the knock-ons: each lever's size, the Big Hit's spill yours only, the Knock-On tag, one draw a catch, KNOCK off as 20cbcaf
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces', 'browser']) jobs.push([name, [`tools/${name}.mjs`]]);

@@ -4,7 +4,7 @@ import { readGameSource } from './source.mjs';
 // timer running out, the Tackle press rule, the Sprint meter (hold to sprint, the floor, the refill, the ease-out charged
 // to the meter so taps buy nothing, the dim state and the press agreeing), the CPU's meter and policy on every level,
 // offloads (the label and the press picking one receiver), Switch (the ring, the press and the pulse picking one man),
-// the ball jolted loose, trips, fends, a census of 60 bot
+// the ball jolted loose, trips, fends, a census of 120 bot
 // matches, that duels and goal kicks draw no new random number, the ring through a ruck (on the man who will pick the
 // ball up, the stick placing him, Pass Kick and Tackle dead), the words, the three-button layout and a render smoke
 // test. Exits 1 on any failure. Seed-proof: every staged bind that must end in a ruck runs with the jolt switched off.
@@ -929,15 +929,18 @@ begin('fend');
 }
 done('18 fend');
 
-// 19. a census of 60 seeded Normal bot matches: run-overs, ruck ball hit at once, turnover ball hit at once, the last tackler, no steals, no new penalty words, no duel in a bind
+// 19. a census of 120 seeded Normal bot matches: run-overs, ruck ball hit at once, turnover ball hit at once, the last tackler, no steals, no new penalty words, no duel in a bind
 begin('census');
 {
   // reseed 1, not 9032: ruck ball within 0.5s is about 7.6% whatever the ratings and moves half a point with the reseed (these six: 8.1% at
   // 9032, 7.5% at 1, 7.2 to 8.0% at 2, 3 and 4), and 9032 sat on the 8% bar; 1 is the nearest of the five to their mean, not the lowest
+  // 120 matches since the knock-ons (2026-11-11, src/knock.js): ruck ball within 0.5s had drifted up to sit just under its 9% bar at 60
+  // (8.7% at 20cbcaf on reseed 1; 8.7, 8.8 and 8.9% on reseeds 1 to 3 there), and the knock-ons' different phases moved reseed 1's 60 to
+  // 9.05% while the three pooled fell (8.4% with them, 8.8% without). 120 on reseed 1: 8.80% with them, 8.73% without
   reseed(1);
-  let m = 0, runover = 0, rk = 0, rk05 = 0, tov = 0, tov1 = 0, early = 0, badLabel = 0, jack = 0, duelInBind = 0, tagsN = 0, fendTags = 0, pressTags = 0;
+  let m = 0, runover = 0, rk = 0, rk05 = 0, tov = 0, tov1 = 0, early = 0, badLabel = 0, jack = 0, duelInBind = 0, tagsN = 0, fendTags = 0, pressTags = 0, knockTags = 0, knocks = 0;
   const tagKinds = new Set(), setLabels = new Set();
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 120; i++) {
     fresh(1, { a:i % 6, b:(i + 1 + (i % 5)) % 6, duels:'live' });
     let n = 0, wasSet = null, rel = null; const nearSet = new Set();
     while (!M().over && n++ < 60000) {
@@ -970,7 +973,8 @@ begin('census');
       } else nearSet.clear();
     }
     m++;
-    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); if (k !== 'tag_Side Step' && k !== 'tag_Pressure On') tagsN += v; if (k === 'tag_Fend') fendTags += v; if (k === 'tag_Pressure On') pressTags += v; }   // Pressure On (2026-11-09) is counted apart too: at most once a possession by construction, and bounded below   // the bot's bang-bang swerve fires Side Steps a thumb never would (about 37 a match), so they are counted apart
+    for (const [k, v] of Object.entries(M().stats)) if (k.startsWith('tag_')) { tagKinds.add(k.slice(4)); if (k !== 'tag_Side Step' && k !== 'tag_Pressure On' && k !== 'tag_Knock-On') tagsN += v; if (k === 'tag_Fend') fendTags += v; if (k === 'tag_Pressure On') pressTags += v; if (k === 'tag_Knock-On') knockTags += v; }   // Pressure On (2026-11-09) is counted apart too: at most once a possession by construction, and bounded below   // the bot's bang-bang swerve fires Side Steps a thumb never would (about 37 a match), so they are counted apart   // Knock-On (2026-11-11) apart as well: one a knock-on by construction, checked below
+    knocks += M().stats.knocks;
   }
   ok(runover/m < 2, `run-overs ${(runover/m).toFixed(2)} a match (under 2)`);
   ok(rk05/rk < 0.09, `ruck ball tackled within 0.5s ${(100*rk05/rk).toFixed(1)}% (under 9%)`);   // 8% until PASS_FLIGHT. Eight batches of this census pooled: 7.7% at the old ball pace (7.3 to 8.0), 8.1% now (7.3 to 9.0). A rise of 0.4, left as it is: a ruck ball is picked up, not caught, so the moment after a catch doesn't reach it
@@ -979,9 +983,10 @@ begin('census');
   ok(jack === 0, 'no ruck ever has a jackal, a Steal prompt or a press window');
   ok(badLabel === 0 && ![...setLabels].some(l => /Releasing|Off Your Feet|Rolling Away|High Tackle|Sin Bin|Yellow/.test(l)), `every penalty is a plain Penalty: no new reasons (${[...setLabels].filter(l => /Penalty/.test(l)).join(', ')})`);
   ok(duelInBind === 0, 'no duel ever starts during a bind');
-  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up']);   // Pressure On added on purpose (2026-11-09, PRESSURE): the warning that the ball may be knocked loose, not a breakdown word; the last three the maul's, on purpose (src/maul.js): a CPU maul in these headless matches is driven in the world and tagged
-  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the thirteen (${[...tagKinds].join(', ')})`);
-  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step and Pressure On ${(tagsN/m).toFixed(1)})`);
+  const allowed = new Set(['Fend', 'Big Hit', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up', 'Knock-On']);   // Pressure On added on purpose (2026-11-09, PRESSURE): the warning that the ball may be knocked loose, not a breakdown word; Maul, Use It and Held Up the maul's, on purpose (src/maul.js): a CPU maul in these headless matches is driven in the world and tagged; Knock-On the knock-ons' (src/knock.js, 2026-11-11), over the man who dropped it
+  ok([...tagKinds].every(t => allowed.has(t)), `every tag is one of the fourteen (${[...tagKinds].join(', ')})`);
+  ok(fendTags/m >= 1 && fendTags/m <= 15 && tagsN/m < 40, `tags are a few a match, not a stream (Fend ${(fendTags/m).toFixed(1)}, all but Side Step, Pressure On and Knock-On ${(tagsN/m).toFixed(1)})`);
+  ok(knocks > 0 && knockTags === knocks, `Knock-On over every knock-on, once (${knockTags} for ${knocks}, ${(knocks/m).toFixed(1)} a match)`);
   ok(pressTags/m > 0 && pressTags/m <= 12, `Pressure On a few times a match, for both sides together (${(pressTags/m).toFixed(1)})`);
   ok(!/Not Releasing|Off Your Feet|Not Rolling Away|High Tackle|Sin Bin|Yellow Card|'Steal'|jackal/.test(script), 'the game has no steal, no new penalty and no sin bin');
 }
@@ -1009,7 +1014,7 @@ begin('words');
   const title = s => s.split(' ').every((w, i) => (i > 0 && SMALL.has(w)) || /^[A-Z0-9][A-Za-z0-9:'-]*$/.test(w));
   const labels = ['Pass', 'Offload', 'Tackle', 'Switch', 'Kick', 'Drop Goal', 'Push', 'Jump', 'Skip', 'Dummy', 'Block', 'Sprint', 'Maul'];
   const tags = [...script.matchAll(/tag\('([^']+)'/g)].map(m => m[1]);
-  const fixedTags = ['Fend', 'Big Hit', 'Stopped', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up'];   // Pressure On: PRESSURE (2026-11-09); the last three: the maul's, on purpose (src/maul.js)
+  const fixedTags = ['Fend', 'Big Hit', 'Stopped', 'Ankle Tap', 'Tripped', 'Offload', 'Loose Ball', 'Side Step', 'Dummy', 'Not Fooled', 'Pressure On', 'Maul', 'Use It', 'Held Up', 'Knock-On'];   // Pressure On: PRESSURE (2026-11-09); Maul, Use It and Held Up: the maul's, on purpose (src/maul.js); Knock-On: the knock-ons' (src/knock.js, 2026-11-11)
   ok(tags.length >= 9 && tags.every(t => fixedTags.includes(t)), `every tag in the code is on the list (${[...new Set(tags)].join(', ')})`);
   ok([...labels, ...fixedTags].every(title), 'labels and tags are Title Case');
   ok(![...labels, ...fixedTags].some(s => /[←→↑↓⇐⇒➜»›]/.test(s)) && !/[←→]/.test(script.replace(/\/\/.*$/gm, '')), 'no arrow glyph in a label, a tag or the code');

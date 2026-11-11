@@ -44,17 +44,25 @@ function pins() {
   easy.push(String(rndCalls() - r1));
   return { same:same.map(fnv).join(' '), easy:easy.map(fnv).join(' ') };
 }
+/* The knock-ons (KNOCK, src/knock.js, 2026-11-11) act everywhere, so they move SAME and EASY both. The edge's own proof runs with them
+   off (20cbcaf exactly, so BASE and ON stand as the edge pinned them); WITH_KNOCK is the game as it ships, both on. */
+const KN = T.knock && T.knock.KNOCK;
+const WITH_KNOCK = { same:'1sans4x ishkxt 6s5dj3 b3clyy 1vdlusf 1kqx1dl 1r9icc0', easy:'18hjlb7 3aqbkz 11w1g1f' };   // re-pin only from a change to the edge or the knock-ons, on purpose
 if (process.argv.includes('--pins')) {
-  if (E) E.EDGE.on = false;
+  if (E) E.EDGE.on = false; if (KN) KN.on = false;
   const p = pins(); console.log(`same:'${p.same}', easy:'${p.easy}'`); process.exit(0);
 }
 begin('0 EDGE off is 90353c3');
 {
+  if (KN) KN.on = false;
   E.EDGE.on = false; const off = pins(); E.EDGE.on = true; const on = pins();
-  ok(off.same === BASE.same && off.easy === BASE.easy, `EDGE off: every match plays as 90353c3, with the same draws (${off.same} / ${off.easy}, pinned ${BASE.same} / ${BASE.easy})`);
+  if (KN) KN.on = true;
+  ok(off.same === BASE.same && off.easy === BASE.easy, `EDGE off (and the knock-ons): every match plays as 90353c3, with the same draws (${off.same} / ${off.easy}, pinned ${BASE.same} / ${BASE.easy})`);
   ok(on.same === BASE.same, `EDGE on: AI v AI, the demo, a tool's balance match on Easy, Normal and Hard arcade matches and Two Player on Easy do not move at all (${on.same})`);
   ok(on.easy.split(' ').slice(0, 2).every((h, i) => h !== BASE.easy.split(' ')[i]), `EDGE on moves the Easy Quick Match and the Kids match, on purpose (${on.easy})`);
   ok(on.easy === ON, `and plays them as pinned with the edge (${on.easy}, pinned ${ON})`);
+  const both = pins();
+  ok(both.same === WITH_KNOCK.same && both.easy === WITH_KNOCK.easy, `with the knock-ons too, as the game ships (${both.same} / ${both.easy}, pinned ${WITH_KNOCK.same} / ${WITH_KNOCK.easy})`);
 }
 done('0 EDGE off is 90353c3');
 

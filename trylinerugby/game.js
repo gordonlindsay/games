@@ -1337,14 +1337,16 @@ function setCarrier(p) {
 }
 function catchBall(p, kind) {
   const n = M.career ? careerNatOf(p) : M.nat[p.team], f = M.ball.f;   // a career match: your player's own handling
-  let k = 0.015 + (5-n.handling)*0.01 + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? 0.2 : 0);
-  if (pressure(p) < 1.8) k += 0.04;
-  if (kind === 'pass' && f && f.long) k += LONG.knock;   // a floater is a little harder to take
+  const base = (0.015 + (5-n.handling)*0.01)*knockLv('base'), marked = pressure(p) < 1.8, long = kind === 'pass' && !!f && !!f.long;   // the base: the drop with no cause to see, halved (KNOCK, src/knock.js)
+  let k = base + (kind === 'kick' ? 0.05 : 0) + (kind === 'intercept' ? knockLv('intercept') : 0);   // an interception your man ran into: KNOCK.intercept, 0.2 before
+  if (marked) k += 0.04;
+  if (long) k += LONG.knock;                               // a floater is a little harder to take
   if (onFire(p.team)) k *= ARCADE.fire.hands;            // On Fire: surer hands
   if (M.kids && isHuman(p.team)) k *= KIDS.hands;         // Kids: your side hardly ever knocks on
   if (M.career) k *= careerLifeHands(p, kind, f);          // a career match: Team Spirit, on a pass to or from your player
-  const r = rnd();
-  if (r < traitHands(p, k)) { knockOn(p); return; }        // Safe Hands: hardly ever
+  const r = rnd(), pk = traitHands(p, k);                  // one draw whatever the chance (tools/knock.mjs)
+  if (globalThis.__knockSpy) globalThis.__knockSpy('catch', p, { kind, base, marked, long, k, pk, r });   // the tools sort every catch by its cause
+  if (r < pk) { knockOn(p); return; }                      // Safe Hands: hardly ever
   setCarrier(p); sfx('catch');
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
@@ -1353,6 +1355,8 @@ function catchBall(p, kind) {
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
+  if (globalThis.__knockSpy) globalThis.__knockSpy('knock', p, { why:why || 'catch' });   // whose, and how
+  if (knockLv('tag')) tag('Knock-On', p.x, p.y);           // over the man who dropped it, as Loose Ball is (KNOCK, src/knock.js)
   placeBall(p.x, p.y);
   sfx('fumble');
   if (knockBeat(p)) return;                                // PRESSURE: it hops for a beat before the whistle (src/contact.js)
@@ -1741,9 +1745,11 @@ function resolveContact(k) {                               // the end of the bin
       else if (ringed(c) && !RM && interactive()) M.shake = M.shakeT = ARCADE.hit.hitShake;
     } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); } }
   }
-  const jolt0 = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0), jolt = jolt0 + traitJolt(q);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more, and so does a Crunch
+  const spill = tier === 'dom' && M.arcade && (!knockLv('hit') || isHuman(q.team)) ? ARCADE.hit.jolt : 0;   // your arcade Big Hit spills it more: yours only (KNOCK.hit, src/knock.js; in Two Player both are yours)
+  const jolt0 = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + spill, jolt = jolt0 + traitJolt(q);   // the ball jolted loose in the tackle; a Crunch spills it more too
   if (practice && practiceTackle(c, q)) return;            // a drill takes a made tackle before the ball can jolt loose
   const rj = rnd(), kj = M.kids && isHuman(c.team) ? KIDS.jolt : 1;   // Kids: your carrier keeps hold of it
+  if (globalThis.__knockSpy) globalThis.__knockSpy('jolt', c, { tier, q, spill, jolt0, jolt, kj, rj });   // the tools sort a jolt by its tier and the Big Hit's spill
   if (rj < jolt*kj) {
     st('jolts'); if (rj >= jolt0*kj) traitCall(q, 'crunch', c.x, c.y);   // a jolt his Crunch made
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;
@@ -3666,6 +3672,26 @@ function edgeBroke(c) {
 }
 const edgeLag = c => !!(M.lb && M.lb.c === c && M.lb.fired && M.dclock - M.lb.at < EDGE.lag);   // the CPU's cover has not reacted yet
 const edgeHold = (p, a) => ({ x:p.x + p.vx*0.5, y:p.y + p.vy*0.5, s:hyp(p.vx, p.vy), a });   // he runs on the line he was running, at the pace he had
+/* ---------- knock-ons (2026-11-11) ----------
+   The owner: "Reduce the knock ons a bit. Happening too randomly." He chose Cut the Unexplained: about a third fewer, the drops
+   with no visible cause cut, the earned ones kept. Measured before (bot v CPU as played, Normal, 2-minute halves), 7.2 a match.
+   Everywhere, AI v AI and the demo included, so the game reads the same to watch as to play:
+   - base: the flat term every catch carries, 0.015 + (5 - handling)*0.01 (catchBall), times this. Alone it is the clean catch
+     dropped with nobody within 1.8m, the drop with no cause anyone can see. The terms that are earned sit on top of it unchanged:
+     a marked catch's 0.04, a long pass's LONG.knock, a kick's 0.05.
+   - intercept: the interception's term, 0.2 before. Your man under the ring, or an AI teammate, takes a CPU pass he runs into
+     with no button pressed (pI, src/ball.js), and then dropped it about a quarter of the time.
+   - hit: ARCADE.hit.jolt (a Big Hit spilling the ball 12 points more often) only when the tackler's side is a person's, as
+     README.md and its comment always said; it had been added to the CPU's Big Hit on you too. Two Player keeps it for both; AI
+     v AI has no arcade.
+   - tag: Knock-On over the man who dropped it, as Loose Ball is (tag, src/contact.js). Drawing only.
+   Every lever reads knockLv and none draws a random number: catchBall still draws one whatever its chance, the jolt one whatever
+   its size. KNOCK.on false gives 20cbcaf's values, so the game plays exactly as 20cbcaf, draw for draw (KNOCK='{"on":false}' in
+   the harness, the proof behind every re-pin since). Measured: README.md, Catching. */
+const KNOCK = { on:true, base:0.5, intercept:0.07, hit:true, tag:true };
+// KNOCK_TUNE
+const KNOCK_OFF = { base:1, intercept:0.2, hit:false, tag:false };   // 20cbcaf's
+const knockLv = k => (KNOCK.on ? KNOCK : KNOCK_OFF)[k];
 /* ---------- stamina ----------
    The fifth ability (staminaOf in data.js reads it, 3 when a team has none). Only a match you play feels it: the same M.arcade as
    On Fire, which only startMatch sets, so AI v AI, the demo, practice and the balance tools read every side as they always have.
@@ -17276,6 +17302,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   sound:{ SOUND, NAMES:SOUND_NAMES, SND, FILES:SOUND_FILES, SYNTH:SOUND_SYNTH, SAMPLE, takes:soundTakes, load:sndLoad, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
   clarity:{ MATCH_PACE, matchPace, HALF_SECONDS, fmtClock, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
+  knock:{ KNOCK, KNOCK_OFF, lv:knockLv, catchBall, knockOn, commitTackle, resolveContact, updateBallAir, resolvePass, pressure, tag, isHuman, ARCADE },   // src/knock.js: the knock-on levers and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), sheetShut:pickSheetShut, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
