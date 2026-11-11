@@ -1387,6 +1387,28 @@ begin('arrow');
     const h2 = placed(2); steps(9); s = seen(); ok(h2.c.t < CI && s.arrow === 0 && s.line === 0, `Hard: none in the cut-in either (t ${h2.c.t.toFixed(2)})`);
     run(() => M().phase !== 'cut', 2000, () => kickBot(h2.c));
   }
+  // the keyboard and the pad's d-pad steer through keyX as the stick does: a fresh press shows the arrow on Hard, and its release starts the same 0.6s and fade
+  {
+    const { g, c } = placed(2); until(c, CI + 0.4);
+    const press = (code, secs) => { inp.keys.add(code); steps(Math.round(secs/STEP)); };
+    let s = seen(); ok(g.aim === 0 && s.arrow === 0 && s.line === 0, 'Hard, before a key: no arrow, the aim on the posts');
+    press('KeyD', 0.3); s = seen();
+    ok(g.aim > 0 && near(s.arrow, 0.85) && near(s.line, 0.7), `Hard, D held 0.3s after the cut-in: the aim moved right and the arrow and line show (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow.toFixed(2)})`);
+    inp.keys.delete('KeyD'); const t0 = c.t; until(c, t0 + 0.5); s = seen();
+    ok(near(s.arrow, 0.85), `Hard, 0.5s after D is let go: still shown (${s.arrow.toFixed(2)})`);
+    until(c, t0 + 0.95); s = seen(); ok(s.arrow === 0 && s.line === 0, 'Hard, 0.95s after D is let go: gone');
+    const a1 = g.aim; press('PadLeft', 0.3); s = seen();
+    ok(g.aim < a1 && near(s.arrow, 0.85) && near(s.line, 0.7), `Hard, the pad's d-pad left for 0.3s: the aim moved left and the arrow and line show (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow.toFixed(2)})`);
+    inp.keys.delete('PadLeft'); const t1 = c.t; until(c, t1 + 0.95); s = seen(); ok(s.arrow === 0 && s.line === 0, 'Hard, 0.95s after the d-pad is let go: gone');
+    run(() => M().phase !== 'cut', 2000, () => kickBot(c));
+  }
+  {
+    fresh(2, 3); M().wind = { a:Math.PI/2, mph:15 }; inp.keys.add('KeyD'); const g = stage(0, SPOTS[4][1], 'penalty'), c = M().cut;
+    const into = inp.held.has('KeyD'); until(c, CI + 1); const s = seen();
+    ok(into && g.aim === 0 && s.arrow === 0 && s.line === 0, `Hard, D held into the cut-in: it neither steers nor shows the arrow (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow})`);
+    inp.keys.delete('KeyD'); inp.held.delete('KeyD');
+    run(() => M().phase !== 'cut', 2000, () => kickBot(c));
+  }
   {
     const { g, c } = placed(0); until(c, CI + 5); const s = seen();
     ok(g.aid === 'path' && near(s.arrow, 0.85), `Easy, 5s in: the arrow and its path as today (${s.arrow.toFixed(2)})`);

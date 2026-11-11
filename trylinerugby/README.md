@@ -1118,7 +1118,7 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     0.80 / 0.88: the scoring lever) and an AI interceptor `cpuIntercept` at the passer's level, as the CPU does against a human.
     **AI v AI and the menu demo are now fair:** team 0 used to keep the human terms there because `team === 1` was the test for
     the CPU. `sim.mjs` is re-baselined below.
-  - Checked by `tools/twoplayer.mjs` (708 asserts on seeds 1, 2 and 11, a paired mirrored-bot symmetry run with the set pieces
+  - Checked by `tools/twoplayer.mjs` (713 asserts on seeds 1, 2 and 11, a paired mirrored-bot symmetry run with the set pieces
     contested and the chooser's hand driven through the real key and stick paths, a lock sweep under `--lock`, and the full gate
     under `--sym 400`); every one-player tool's output is byte-identical to `main` (3f11088) on the spec's golden set, `sim.mjs`
     alone moving, by the fairness change.
@@ -2175,7 +2175,7 @@ a charger.
       from the inside shoulder; Easy with two men still in front chases with the near one and keeps a sweeper;
       Normal commits both of the last two while a man behind chases; a retiring last man does not come up; a set
       line of seven keeps exactly one sweeper.
-  - **`node tools/goalkicks.mjs [--rates N]`:** about 690 asserts (692 at SEED 11; one line counts its retries). It checks:
+  - **`node tools/goalkicks.mjs [--rates N]`:** about 700 asserts (699 at SEED 11; one line counts its retries). It checks:
     - the closed-form flight against a 1ms integration, the judge's fixtures, and the mirror for the CPU's end;
     - that band-centre strikes score, the band is honest at its edges, over hooks left and under fades right;
     - the wind's drift, headwind and tailwind, and that the Easy aid's preset aim scores in any wind; the first kick ever
@@ -2234,11 +2234,13 @@ a charger.
       3.15s and gone at 4s, back while steering, held 0.5s after, fading at 0.75s, gone at 1s; Power after 3s showing
       nothing and a release under 12% back in Aim still hidden; a pause showing it afresh; Power and the run-up inside
       3s at 0.6 as before and the strike's fade as before; Hard with nothing for 6s at rest and in the cut-in, shown
-      while steering either way and gone 0.95s after; Easy and Kids at 5s as before; the CPU's chalk arrow on Hard as
-      before; a drop on Normal shown at 1s and gone at 3.5s, on Hard none at rest and shown while steering as you hold;
-      steering drawing what resting draws and a drawn frame nothing; and the pulse inside the show with motion on.
+      while steering either way and gone 0.95s after; the keyboard's D and the pad's d-pad the same on Hard (the aim
+      moved and the arrow shown after 0.3s held, gone 0.95s after the release), a key held into the cut-in neither
+      steering nor showing it; Easy and Kids at 5s as before; the CPU's chalk arrow on Hard as before; a drop on
+      Normal shown at 1s and gone at 3.5s, on Hard none at rest and shown while steering as you hold; steering drawing
+      what resting draws and a drawn frame nothing; and the pulse inside the show with motion on.
   - **`node tools/sim.mjs`:** AI v AI matches, with no duels, both sides' goal-kick rates and the CPU's drop goals.
-  - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 708 asserts over the input layer, the sides, the roles, the join screen
+  - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 713 asserts over the input layer, the sides, the roles, the join screen
     and the match head to head, green on seeds 1, 2 and 11 in about 37s. `--sym N` plays N pairs at 4-minute halves (400 by
     default) and adds the away-side, AI v AI and handicap runs (about 12 minutes); `--lock` runs the lock sweep (about 40s). The
     default symmetry sample is 100 pairs at 2-minute halves. It checks:
