@@ -222,7 +222,7 @@ function navLayer() {                                      // the top layer: the
 }
 function navCands(layer) {
   const out = [];
-  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary, .app-action')) {
+  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary, .app-action, .fl-r')) {   // .fl-r: the team screen's Filter's rows (src/ui-menus.js)
     if (el.disabled || el.hidden || el.getAttribute('aria-disabled') === 'true' || (el.closest && el.closest('[hidden]'))) continue;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
     out.push(el);
@@ -265,6 +265,7 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
   if (!dx && !dy) return focusEl;
   if (layer.id === 's-home' && typeof homeNavTo === 'function') { const to = homeNavTo(focusEl, dx, dy, cands); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the home's boxes (src/ui-menus.js)
+  if (layer.id === 'm-filter' && typeof pickFilterNav === 'function') { const to = pickFilterNav(focusEl, dx, dy); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the team screen's Filter: its rows and columns, the field passed over (src/ui-menus.js)
   const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
   let best = layer.id === 's-setup' || layer.id === 's-profile' ? profileNav(cands, focusEl, dx, dy) : navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);   // the profile's screens: the nearest that way, or anywhere on that side (src/profile.js)
   if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one

@@ -152,8 +152,8 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   const swipe = (s, dx, dy) => { const t = el(s, 'pick'); $('t-sides').fire('pointerdown', { pointerId:7, target:t, clientX:300, clientY:200 }); $('t-sides').fire('pointermove', { pointerId:7, target:t, clientX:300 + dx, clientY:200 + dy }); $('t-sides').fire('pointerup', { pointerId:7, target:t }); };
   swipe(0, -60, 8); ok(view(0).i === 1, 'a swipe left: the next team');
   swipe(0, 60, -6); ok(view(0).i === 0, 'a swipe right: the one before');
-  swipe(0, 4, -70); ok(view(0).group.key === 'cty', 'a swipe up: the next group');
-  swipe(0, 2, 70); ok(view(0).group.key === 'sur', 'a swipe down: the one before');
+  swipe(0, 4, 70); ok(view(0).group.key === 'cty', 'a swipe down: the next group (the owner\'s Next Group Down)');
+  swipe(0, 2, -70); ok(view(0).group.key === 'sur', 'a swipe up: the one before');
   swipe(0, 30, 28); ok(view(0).group.key === 'sur' && view(0).i === 0, 'a short or slanting drag: nothing');
   swipe(1, -60, 0); P.click({ target:el(1, 'pick') });
   ok(!P.state().sides[1].set, 'the click a swipe ends with sets nothing');
@@ -290,7 +290,12 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(key('ArrowDown') && view(0).group.key === 'cty', 'Down: the next group');
   ok(key('PageDown') && view(0).group.key === 'nat.sco', 'Page Down: the next country');
   ok(key('PageUp') && view(0).group.key === 'nat.eng', 'Page Up: back a country');
-  ok(!key('a'), 'any other key is the browser\'s');
+  ok(key('a') && P.filterState().open && P.filterState().s === 0 && P.filterState().q === 'a', 'a letter: the Filter, for the active side, with it typed');
+  P.filterShut(); P.set(0);
+  ok(key('7') && P.filterState().open && P.filterState().s === 1 && P.filterState().q === '7', 'a digit too, and for the side being set (the Opponent, once Your Team is)');
+  P.filterShut();
+  ok(!key('Tab') && !key(' ') && !key('F5') && !P.filterState().open, 'Tab, Space and every other key are the browser\'s');
+  ok(!P.key({ key:'b', ctrlKey:true, preventDefault() {} }) && !P.filterState().open, 'and a letter with Ctrl or Cmd (a shortcut) is too');
 }
 
 // 7b. The review's fixes (2026-11-11), without a browser: the Opponent follows Your Team from Favourites and Recent to its rivals, and never
@@ -354,13 +359,163 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   D.setDev('touch'); fresh();
 }
 
+// 7d. The Filter (the owner, 2026-11-11: "Filter pops up with nested team list and search. Have a search icon."; the columns approved,
+//     "Nice that works"), without a browser: its columns against each side's own ladder in every category and mode (Area, Country, League,
+//     Teams; Mine's League column, Favourites and Recent straight to Teams, Championship's League and Teams, the clubs only for Career and
+//     the setup), the side's path marked as it opens, a row filling the columns after it, every gate a pick goes through, the search (its
+//     folding, matching and order, each team once, No Teams Found), a pick, Close, the steps the keys and the d-pad take, and the icon
+//     (Search Teams, Search Clubs, none on a fixed list). The keys, a controller, a finger, the fit and the phone's keyboard: the browser part
+{
+  const NAT = id => X.NATIONS.find(n => n.id === id).name;
+  const fs0 = () => P.filterState(), cols = () => fs0().cols, col = c => cols()[c];
+  const heads = () => cols().map(c => c.head).join(' | '), marks = () => cols().map(c => c.kind === 'team' ? (c.cur >= 0 ? X.listName(c.rows[c.cur]) : '-') : c.rows[c.sel].name).join(' > ');
+  const tname = t => (t.act ? '+' + t.name : X.listName(t));
+  // the tree as the ladder says it should be, worked out here from the groups alone, and the Filter's own
+  const want = L => [...new Set(L.map(g => g.hemi || 'comp'))].map(h => {
+    const gs = L.filter(g => (g.hemi || 'comp') === h);
+    if (h === 'fav' || h === 'recent') return `${P.PICK_HEMI[h]} ${gs[0].teams.length}`;
+    if (h === 'mine') return `Mine ${gs.length} [${gs.map(g => `${g.name} ${g.teams.length}`).join(', ')}]`;
+    const homes = [...new Set(gs.map(g => g.home))];
+    return `${P.PICK_HEMI[h]} ${homes.length} [${homes.map(c => { const cg = gs.filter(g => g.home === c); return `${NAT(c)} ${cg.length} (${cg.map(g => `${g.name} ${g.teams.length}`).join(', ')})`; }).join(', ')}]`;
+  });
+  const have = L => { const root = P.filterRoot(L), leaf = n => `${n.name} ${L[n.gi].teams.length}`;
+    if (root.kids[0].kind === 'league') return [root.kids.map(leaf).join(', ')];
+    return root.kids.map(a => !a.kids ? leaf(a) : a.kids[0].kind === 'league' ? `${a.name} ${a.kids.length} [${a.kids.map(leaf).join(', ')}]` : `${a.name} ${a.kids.length} [${a.kids.map(c => `${c.name} ${c.kids.length} (${c.kids.map(leaf).join(', ')})`).join(', ')}]`); };
+  const wantOf = L => (L.some(g => !g.hemi) ? [L.map(g => `${g.name} ${g.teams.length}`).join(', ')] : want(L));   // Championship: its groups are the League column
+  fresh(); golds(10); st.fav = ['BTH', 'DUB']; st.recent = [['CDF', 'EAL'], ['FRA']];
+  X.custom().push(X.cleanTeam({ name:'Herons', key:'myhe' }, 0));
+  const cases = [];
+  for (const cat of ['men', 'women', 'minis']) { st.cat = cat; D.openTeams('quick'); cases.push([`Quick Match ${cat}, Your Team`, view(0).ladder], [`Quick Match ${cat}, the Opponent`, view(1).ladder]); }
+  st.cat = 'men'; D.openJoin(); D.openTeams('two'); cases.push(['2 Players, Player 1', view(0).ladder], ['2 Players, Player 2', view(1).ladder]); D.setTwo(false);
+  D.openTeams('my'); cases.push(['My Team', view(0).ladder]);
+  for (const c of ['eng', 'int', 'sur', 'cel']) { D.openTeams('champ', c); cases.push(['Championship ' + c, view(0).ladder]); }
+  C.newOpen(); C.clubOpen(); cases.push(['Career', view(0).ladder]);
+  for (const [what, L] of cases) {
+    const w = wantOf(L), h = have(L);
+    ok(json(w) === json(h), `${what}: the Filter's tree is the ladder's (${h.join(' | ').slice(0, 160)})`);
+  }
+  // Quick Match, Your Team on Farnham: its path marked as it opens, the columns and their counts
+  fresh(); st.fav = ['BTH', 'DUB']; st.recent = [['CDF', 'EAL'], []]; D.openTeams('quick');
+  ok(P.filter(0, '', { dev:'touch' }) && fs0().open && !$('m-filter').hidden && fs0().s === 0, 'the group\'s button (or the icon) opens the Filter for the side');
+  ok(heads() === 'Area | Country | League | Surrey' && marks() === 'North > England > Surrey > Farnham', `Area, Country, League and Teams headed by its group, the side's own path marked: ${marks()} (${heads()})`);
+  ok(json(col(0).rows.map(n => n.name)) === json(['North', 'South', 'Mine', 'Favourites', 'Recent']) && json(col(1).rows.map(n => n.name)) === json(['Ireland', 'France', 'England', 'Scotland', 'Wales', 'Italy', 'Japan']) && json(col(2).rows.map(n => n.name)) === json(['National', 'Premiership', 'Championship', 'Surrey', 'Counties']), 'the areas, the North\'s countries in ladder order, England\'s leagues: National, Premiership, Championship, Surrey, Counties');
+  const box = () => $('fl-cols').innerHTML;
+  ok(/aria-current="true"[^>]*aria-label="North, 7 Countries"><b>North<\/b><span class="fl-n" aria-hidden="true">7<\/span>/.test(box()) && /aria-label="England, 5 Leagues"/.test(box()) && /aria-label="Surrey, 12 Teams"/.test(box()) && /aria-label="Mine, 2 Leagues"/.test(box()) && /aria-label="Favourites, 2 Teams"/.test(box()), 'each row its count (North 7, England 5, Surrey 12, Mine 2, Favourites 2), read out with what it counts');
+  ok(/<p class="fl-h" id="fl-h3">Surrey<\/p>/.test(box()) && /data-col="3" data-i="0" aria-current="true"[^>]*><span class="jw[^"]*"><span class="jersey[^>]*><\/span><\/span><span class="fl-nm"><b>Farnham<\/b><span class="gap mine">My Team<\/span><\/span><span class="fl-st"><svg class="rstars"/.test(box()), 'the Teams column: shirt, name, My Team where the card says it, stars; Farnham marked');
+  ok(!/Stronger Side/.test(box()) && /<p class="fl-h" id="fl-h0">Area<\/p>/.test(box()), 'Title Case headings, and no Stronger Side tag');
+  P.filterSel(0, 1);
+  ok(marks() === 'South > South Africa > National > -' && col(3).rows[0].id === 'RSA', `a row of Area: its first country, that country's first league, filled (${marks()})`);
+  P.filterSel(1, 2); ok(marks() === 'South > Australia > National > -', 'a country: its first league');
+  P.filterSel(2, 1); ok(heads() === 'Area | Country | League | Clubs' && col(3).rows.map(tname).join() === view(0).ladder.find(g => g.key === 'aus').teams.map(tname).join(), 'a league: its teams, in the ladder\'s order, under its name');
+  P.filterSel(1, 2); ok(marks() === 'South > Australia > Clubs > -', 'the row already chosen, pressed again: the columns after it kept as they are');
+  P.filterSel(0, 2);
+  ok(heads() === 'Area | League | Made Teams' && json(col(1).rows.map(n => n.name)) === json(['Made Teams', 'My League']) && col(2).rows.map(tname).join() === '+Create Team', `Mine: no country; its League column, Made Teams and My League (${heads()})`);
+  P.filterSel(1, 1); ok(heads() === 'Area | League | My League' && col(2).rows.map(tname).join() === '+Add Your Team', 'My League: Add Your Team, as the card offers it');
+  P.filterSel(0, 3); ok(heads() === 'Area | Favourites' && col(1).rows.map(tname).join() === 'Bath,Dublin', 'Favourites: straight to the teams starred');
+  P.filterSel(0, 4); ok(heads() === 'Area | Recent' && col(1).rows.map(tname).join() === 'Cardiff,Ealing', 'Recent: straight to that side\'s last picks');
+  // the side's path on arrival, wherever it is
+  P.filterShut(); P.group(0, view(0).ladder.findIndex(g => g.key === 'recent') - view(0).gi); P.step(0, 1); P.filter(0, '', { dev:'touch' });
+  ok(marks() === 'Recent > Ealing', `Your Team on Recent's Ealing: Recent, Ealing marked (${marks()})`);
+  P.filterShut(); P.group(0, view(0).ladder.findIndex(g => g.key === 'mine.league') - view(0).gi); P.filter(0, '', { dev:'touch' });
+  ok(marks() === 'Mine > My League > Add Your Team' && col(2).rows[0].act === 'import', `on Add Your Team: Mine, My League, it marked (${marks()})`);
+  P.filterShut(); D.openTeams('quick'); P.filter(1, '', { dev:'touch' });
+  ok(marks() === 'North > England > Surrey > Wimbledon' && !col(3).rows.some(t => t.id === 'FAR'), 'the Opponent\'s: Wimbledon marked, and Your Team\'s Farnham nowhere in it (Pick Opponent\'s lock)');
+  ok(!P.filterSearch(view(1).ladder, 'farn').length && P.filterSearch(view(0).ladder, 'farn')[0].t.id === 'FAR', 'nor found by its search');
+  P.filterShut();
+  // Championship: a League column (its competition, Made Teams) and Teams; Career and the setup: the clubs only, Search Clubs
+  D.openTeams('champ', 'eng'); P.filter(0, '', { dev:'touch' });
+  ok(heads() === 'League | England' && json(col(0).rows.map(n => n.name)) === json(['England', 'Made Teams']) && marks() === 'England > Bath' && col(1).rows.map(tname).join() === X.ENGLAND.map(t => t.name).join(), `Championship: League (England, Made Teams) and its Teams, My Team's Bath... marked where it is (${marks()})`);
+  P.filterSel(0, 1); ok(col(1).rows.map(tname).join() === '+Create Team,+Add Your Team', 'its Made Teams: Create Team and Add Your Team (none made yet)');
+  ok(P.findWord() === 'Teams' && $('fl-q').placeholder === 'Search Teams', 'Search Teams');
+  P.filterShut(); C.newOpen(); C.clubOpen(); P.filter(0, '', { dev:'touch' });
+  ok(P.findWord() === 'Clubs' && $('fl-q').placeholder === 'Search Clubs' && $('t-find').hidden === false, 'Career\'s Change Club: Search Clubs');
+  const walked = [], walk = c => { const k = col(c); if (k.kind === 'team') { walked.push(...k.rows); return; } for (let i = 0; i < k.rows.length; i++) { P.filterSel(c, i); walk(c + 1); } };
+  walk(0);
+  ok(walked.length > 100 && walked.every(t => !t.act && !t.legend && !X.isNation(t)) && !P.filterSearch(view(0).ladder, 'eng').some(h => X.isNation(h.t)), `every column of Career's: clubs only, no nation, Legend, Create Team or Add Your Team (${walked.length} rows), and its search the same`);
+  P.filterType('zzq'); ok(/<p class="fl-none">No Clubs Found<\/p>/.test($('fl-res').innerHTML), 'no match: No Clubs Found');
+  P.filterShut(); C.set(null);
+  T.profile.open(); T.profile.answer('adult'); T.profile.answer('male');
+  ok(D.pickMode() === 'setup' && P.filter(0, '', { dev:'touch' }) && P.findWord() === 'Clubs' && cols().every(k => k.kind !== 'team' || k.rows.every(t => t.act || !X.isNation(t))), 'the setup\'s Club: Search Clubs, the clubs only');
+  P.filterShut(); D.goHome();
+  // fixed lists: no Filter, no icon, no group button
+  for (const c of ['world', 'tour']) { D.openTeams('champ', c); ok(!P.filterable(view(0)) && !P.filter(0, '', { dev:'touch' }) && !fs0().open && $('t-find').hidden && !P.panel(0).includes('data-act="sheet"'), `the ${c === 'world' ? 'World Cup' : 'tour'}: a fixed list, no Filter, no icon, no group button`); }
+  D.openTeams('quick'); ok(!$('t-find').hidden && P.findWord() === 'Teams', 'Quick Match: the icon, Search Teams');
+  // the search: folded, matched and ordered, each team once
+  fresh(); st.fav = ['BTH']; st.recent = [['BTH'], []]; D.openTeams('quick'); P.filter(0, 'ba', { dev:'touch' });
+  const L0 = view(0).ladder, hits = q => P.filterSearch(L0, q), ids = q => hits(q).map(h => h.t.id);
+  ok($('fl-cols').hidden && !$('fl-res').hidden && fs0().hits.length === hits('ba').length && /data-r="0"[^>]*><span class="jw[^"]*"><span class="jersey[^>]*><\/span><\/span><span class="fl-nm"><b>Bayonne<\/b><small>North · France · Top 14<\/small><\/span><span class="fl-st"><svg class="rstars"/.test($('fl-res').innerHTML), 'typing swaps the columns for one list: shirt, name, its path (North · France · Top 14), stars');
+  ok(ids('ba').slice(0, 2).join() === 'BAY,BTH' && hits('ba').every((h, k, a) => !k || a[k - 1].r <= h.r) && hits('ba').filter(h => h.r === 0).length === 2, `"ba": the names that start with it first, in ladder order (Bayonne, Bath), then those holding it (${hits('ba').map(h => X.listName(h.t)).join(', ')})`);
+  ok(ids('north').slice(0, 2).join() === 'NTH,LNO' && hits('north')[1].r === 1, `"north": Northampton (starts), then London North (a word starts) (${hits('north').slice(0, 4).map(h => X.listName(h.t)).join(', ')})`);
+  ok(ids('BÁTH').join() === 'BTH' && ids('  bath ').join() === 'BTH' && ids('mOntÀuBan').join() === 'MTB', 'case and accents folded: BÁTH, mOntÀuBan');
+  const prem = hits('Premiership');
+  ok(prem.length === 20 && prem.slice(0, 10).every(h => h.path === 'North · England · Premiership') && prem.slice(10).every(h => h.path === 'North · Scotland · Premiership') && prem.every(h => h.r === 3), 'a group\'s name: "Premiership" lists both Premierships\' clubs, England\'s then Scotland\'s');
+  const eng = hits('eng');
+  ok(eng[0].t.id === 'ENG' && eng[0].r === 0 && eng.slice(1).every(h => h.r >= 3) && eng.some(h => h.t.id === 'FAR') && eng.findIndex(h => h.t.id === 'BTH') < eng.findIndex(h => h.t.id === 'FAR'), 'a country\'s name: "eng" has England, then England\'s clubs in ladder order');
+  ok(hits('bath').length === 1 && hits('bath')[0].path === 'North · England · Premiership', 'each team once: Bath, starred and recent too, under its own group');
+  X.custom().push(X.cleanTeam({ name:'Béziers', key:'mybz' }, 0)); D.renderTeams();
+  ok(P.filterSearch(view(0).ladder, 'bez').map(h => h.path).join() === 'Mine · Made Teams', 'a team made with an accent found without it (Béziers for "bez"), under Mine · Made Teams');
+  ok(!hits('create').length && !hits('add your').length, 'Create Team and Add Your Team are not teams to find');
+  P.filterType('zzq'); ok(!fs0().hits.length && /<p class="fl-none">No Teams Found<\/p>/.test($('fl-res').innerHTML) && $('fl-said').textContent === 'No Teams Found', 'nothing: No Teams Found, said to a screen reader too');
+  P.filterType('bath'); ok($('fl-said').textContent === '1 Team', 'one: 1 Team');
+  P.filterType(''); ok(!$('fl-cols').hidden && $('fl-res').hidden && marks() === 'North > England > Surrey > Farnham', 'cleared: the columns again, as they were');
+  P.filterShut(); X.custom().length = 0;
+  // a pick: the side moved and set, on to the next side, the Filter shut; Close leaves it be
+  fresh(); D.openTeams('quick'); P.filter(0, '', { dev:'touch' });
+  P.filterSel(0, 1); P.filterSel(1, 1); P.filterSel(2, 1); const pickT = col(3).rows[2]; P.filterTap(3, 2);
+  ok(!fs0().open && $('m-filter').hidden && shown(0) === pickT && P.state().sides[0].set && P.state().on === 1 && $('t-title').textContent === 'Pick Opponent', `a team picked: Your Team ${X.listName(pickT)}, set, on to Pick Opponent, the Filter shut`);
+  P.filter(1, 'cardiff', { dev:'touch' }); P.filterPick(fs0().hits[0].gi, fs0().hits[0].i);
+  ok(shown(1).id === 'CDF' && P.state().sides[1].set && P.ready() && P.primary() === 'Kick Off', 'a match picked: the Opponent Cardiff, set; Kick Off');
+  P.filter(0, '', { dev:'touch' }); P.filterSel(0, 0); P.filterSel(1, 0); const was = [view(0).gi, view(0).i, P.state().sides[0].set];
+  P.filterClose(); ok(!fs0().open && json([view(0).gi, view(0).i, P.state().sides[0].set]) === json(was) && P.ready(), 'Close: the side as it was, still set');
+  // each gate a pick goes through
+  fresh(); golds(10); S.setTier('free'); S.setBought([]); D.openTeams('quick');
+  P.filter(0, 'england 2003', { dev:'touch' }); const leg = fs0().hits[0];
+  ok(leg.t.id === 'L03' && leg.path === 'North · England · National', 'a Legend found, under its nation\'s National');
+  P.filterPick(leg.gi, leg.i);
+  ok(S.ui().mode === 'unlock' && S.ui().feature === 'legends' && shown(0).id === 'L03' && !P.state().sides[0].set && !fs0().open, 'a Legend picked without the Full Game: the Unlock card (storeGate), the side on it, not set');
+  T.store.close();
+  P.filter(0, '', { dev:'touch' }); P.filterSel(0, 2); P.filterTap(2, 0);
+  ok(S.ui().mode === 'unlock' && S.ui().feature === 'create', 'Create Team on the free tier: the Unlock card');
+  T.store.close(); P.filter(0, '', { dev:'touch' }); P.filterSel(0, 2); P.filterSel(1, 1); P.filterTap(2, 0);
+  ok(S.ui().mode === 'unlock' && S.ui().feature === 'import', 'Add Your Team: its Unlock card too');
+  T.store.close(); S.setTier(null); golds(0);
+  D.openTeams('quick'); P.filter(0, '', { dev:'touch' }); P.filterSel(0, 2); P.filterTap(2, 0);
+  ok(!$('s-build').hidden && !fs0().open, 'with the Full Game: Create Team opens the builder');
+  T.sidesOf.saveBuilder();
+  ok(shown(0).custom && P.state().sides[0].set && P.state().on === 1, 'and the team made is Your Team, set, the Opponent next, as from the card');
+  for (let i = 0; i < 3; i++) X.custom().push(X.cleanTeam({ name:'Made ' + i, key:'mym' + i }, i + 1));
+  D.renderTeams(); P.filter(0, '', { dev:'touch' }); P.filterSel(0, 2);
+  ok(col(2).rows.length === 4 && !col(2).rows.some(t => t.act), 'four made (MAX_CUSTOM): no Create Team in the Filter either');
+  P.filterShut(); X.custom().length = 0;
+  D.openTeams('quick'); P.filter(0, '', { dev:'touch' }); P.filterSel(0, 2); P.filterSel(1, 1); P.filterTap(2, 0);
+  ok(!$('m-import').hidden && !fs0().open, 'Add Your Team opens the import card');
+  $('m-import').hidden = true;
+  // one side: Championship plays as the team picked, Career takes the club
+  fresh(); D.openTeams('champ', 'eng'); P.filter(0, 'leicester', { dev:'touch' }); P.filterPick(fs0().hits[0].gi, fs0().hits[0].i);
+  ok(X.champ() && X.champ().teams[0].id === 'LEI', 'Championship: a team picked there plays it, as Play as does');
+  X.setChamp(null); C.newOpen(); C.clubOpen(); P.filter(0, 'limerick', { dev:'touch' }); P.filterPick(fs0().hits[0].gi, fs0().hits[0].i);
+  ok(C.draft().club.id === 'LIM' && C.draft().league === 'cel', 'Career: a club picked there is his, its group\'s whole list its league (the URC)');
+  C.set(null); D.goHome();
+  // the steps the keys and the d-pad take (the browser checks them on real rows)
+  fresh(); D.openTeams('quick'); P.filter(0, '', { dev:'touch' });
+  const row = (c, i) => ({ dataset:{ col:String(c), i:String(i) } }), TOP = { top:1 };
+  ok(P.filterStep(row(2, 3), 0, 1, TOP) !== undefined && fs0().path.join() === '0,2,4' && col(3).head === 'Counties', 'Down in League: Counties chosen, its teams filled');
+  ok(P.filterStep(row(0, 0), 0, -1, TOP) === TOP && P.filterStep(row(3, 0), 0, -1, TOP) === TOP, 'Up from a column\'s first row: to the top (the field, or Close for a controller)');
+  ok(P.filterStep(row(0, 4), 0, 1, TOP) === null && P.filterStep(row(0, 0), -1, 0, TOP) === null && P.filterStep(row(3, 0), 1, 0, TOP) === null, 'no further at the ends: nothing');
+  P.filterStep(row(1, 2), 0, 1, TOP); ok(fs0().path.join() === '0,3,0' && col(3).head === 'National', 'Down in Country: Scotland, on its first league');
+  P.filterShut();
+  fresh();
+}
+
 // 8. Nothing drawn at random; GAME_VERSION
 {
   fresh();
   const before = rndCalls();
   for (const m of ['quick', 'two', 'my']) { D.openTeams(m); for (let k = 0; k < 40; k++) { P.group(0, 1); P.step(0, 1); if (m !== 'my') P.step(1, 1); } }
   for (const c of ['eng', 'int', 'world', 'tour']) D.openTeams('champ', c);
-  ok(rndCalls() === before, `the team screen draws no random number (${rndCalls() - before})`);
+  D.openTeams('quick'); for (const s of [0, 1]) { P.filter(s, '', { dev:'touch' }); for (let k = 0; k < 5; k++) { P.filterSel(0, k); P.filterSel(1, 0); } for (const q of ['b', 'ba', 'Premiership', 'zz', '']) P.filterType(q); P.filterClose(); }
+  P.filter(0, 'bath', { dev:'touch' }); P.filterPick(P.filterState().hits[0].gi, P.filterState().hits[0].i);
+  ok(rndCalls() === before, `the team screen and its Filter draw no random number (${rndCalls() - before})`);
   ok(T.GAME_VERSION === '1.3' && $('ver').textContent === 'Version 1.3', 'GAME_VERSION is 1.3 (1.2 the side-by-side picker, 1.3 the profile), on window.__tryline and at the foot of Settings');
   const src = readGameSource();
   ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.3';") && /<p class="ver" id="ver">Version 1\.3<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
@@ -461,15 +616,47 @@ async function browserChecks() {
             for (const c of ['eng', 'int', 'cel', 'my', 'world', 'tour']) { T.debug.openTeams('champ', c); for (let i = 0; i < P.view(0).group.teams.length; i++) { check(`champ ${c} ${i}`); n++; P.step(0, 1); } }
             T.debug.openTeams('my'); for (let g = 0; g < P.view(0).ladder.length; g++) { check(`my ${P.view(0).group.key}`); n++; P.group(0, 1); }
             T.career.newOpen(); T.career.clubOpen(); for (let g = 0; g < P.view(0).ladder.length; g++) { check(`career ${P.view(0).group.key}`); n++; P.group(0, 1); }
-            T.debug.openTeams('quick'); P.sheet(0);
-            const sheet = $('m-ladder'), card = sheet.querySelector('.card'), r = card.getBoundingClientRect();
-            if (r.top < -0.5 || r.bottom > innerHeight + 0.5) bad.push('the ladder sheet out of view');
-            if ([...sheet.querySelectorAll('button')].some(b => b.getBoundingClientRect().height < 43.5)) bad.push('a sheet button under 44px');
-            const list = $('ldr-list'); if (list.scrollHeight > list.clientHeight && getComputedStyle(list).overflowY !== 'auto') bad.push('the sheet does not scroll itself');
-            P.sheetClose(null);
+            // the Filter in the same states: every row of every column of each side's and each mode's, its marks on arrival for every group
+            // a side can be on, and the matches; the card in view, no page scroll, no label cut, every target 44px, the stars whole
+            const fl = $('m-filter'), flCheck = what => {
+              document.getAnimations().forEach(a => a.finish());
+              const c = $('fl-card').getBoundingClientRect();
+              if (c.top < -0.5 || c.bottom > innerHeight + 0.5 || c.left < -0.5 || c.right > innerWidth + 0.5) bad.push(`${what}: the Filter out of view`);
+              if (document.documentElement.scrollHeight > innerHeight + 0.5 || document.documentElement.scrollWidth > innerWidth + 0.5) bad.push(`${what}: the page scrolls`);
+              for (const e of fl.querySelectorAll('.fl-r b, .fl-h, .fl-nm small')) if (e.getClientRects().length && e.scrollWidth > e.clientWidth + 0.5) bad.push(`${what}: ${e.textContent} cut`);
+              for (const b of fl.querySelectorAll('button, .fl-field')) { const r = b.getBoundingClientRect(); if (r.width && (r.height < 43.5 || r.width < 43.5)) bad.push(`${what}: ${b.textContent.trim() || b.className} under 44px`); }
+              for (const st of fl.querySelectorAll('.fl-t .rstars')) { const a = st.getBoundingClientRect(), row = st.closest('.fl-r').getBoundingClientRect(); if (a.right > row.right + 0.5 || a.left < row.left - 0.5 || a.bottom > row.bottom + 0.5) bad.push(`${what}: stars cut`); }
+              for (const l of fl.querySelectorAll('.fl-list, .fl-res')) if (l.getClientRects().length && l.scrollHeight > l.clientHeight + 0.5 && getComputedStyle(l).overflowY !== 'auto') bad.push(`${what}: a column that does not scroll itself`);
+            };
+            const flWalk = (what, c) => { const col = P.filterState().cols[c]; if (col.kind === 'team') { flCheck(what); n++; return; } for (let i = 0; i < col.rows.length; i++) { P.filterSel(c, i); flWalk(what + ' ' + col.rows[i].name, c + 1); } };
+            const arrive = what => {                         // as it opens: each column's mark in its view, the side's team marked with its stars whole
+              flCheck(what); n++;
+              for (const m of fl.querySelectorAll('#fl-cols [aria-current="true"]')) { const r = m.getBoundingClientRect(), l = m.parentNode.getBoundingClientRect(); if (r.top < l.top - 0.5 || r.bottom > l.bottom + 0.5) bad.push(`${what}: ${m.textContent} marked out of its column's view`); }
+              const cols = P.filterState().cols, last = cols[cols.length - 1];
+              if (last.cur < 0 || !fl.querySelector(`#fl-cols [data-col="${cols.length - 1}"][data-i="${last.cur}"][aria-current="true"]`)) bad.push(`${what}: the side's team not marked`);
+            };
+            for (const cat of ['men', 'women']) {
+              T.debug.settings().cat = cat; T.debug.openTeams('quick');
+              for (const side of [0, 1]) { P.filter(side, '', { dev:'touch' }); flWalk(`Filter ${cat} ${side}`, 0); P.filterShut(); }
+              for (let g = 0; g < P.view(0).ladder.length; g++) { P.step(0, P.view(0).group.teams.length - 1); P.filter(0, '', { dev:'touch' }); arrive(`Filter on ${cat} ${P.view(0).group.key}`); P.filterShut(); P.group(0, 1); }
+            }
+            T.debug.settings().cat = 'men';
+            for (const c of ['eng', 'int', 'cel']) { T.debug.openTeams('champ', c); P.filter(0, '', { dev:'touch' }); flWalk('Filter champ ' + c, 0); P.filterShut(); }
+            T.debug.openTeams('my'); P.filter(0, '', { dev:'touch' }); flWalk('Filter my', 0); P.filterShut();
+            T.career.newOpen(); T.career.clubOpen(); P.filter(0, '', { dev:'touch' }); flWalk('Filter career', 0); P.filterShut();
+            T.debug.openTeams('quick'); for (const q of ['ba', 'a', 'Premiership', 'zzq', 'new zealand 19']) { P.filter(0, q, { dev:'touch' }); flCheck('search ' + q); n++; P.filterShut(); }
+            // the icon in the top bar: in every mode beside the title and the rest, nothing on anything, nothing off the side
+            for (const m of ['quick', 'two', 'my', 'career', 'setup', 'champ']) {
+              if (m === 'career') { T.career.set(null); T.career.newOpen(); T.career.clubOpen(); } else if (m === 'setup') { T.profile.open(); T.profile.answer('adult'); T.profile.answer('male'); } else if (m === 'champ') T.debug.openTeams('champ', 'eng'); else if (m === 'two') { T.debug.openJoin(); T.debug.openTeams('two'); } else T.debug.openTeams(m);
+              const kids = [...document.querySelector('#s-teams .pk-top').children].filter(e => !e.hidden && e.getBoundingClientRect().width), rs = kids.map(e => e.getBoundingClientRect()), nm = document.querySelector('#s-teams .pk-name');
+              for (let i = 1; i < rs.length; i++) if (rs[i].left < rs[i - 1].right - 0.5) bad.push(`top bar ${m}: ${kids[i].id || kids[i].className} on ${kids[i - 1].id || kids[i - 1].className}`);
+              if (nm.scrollWidth > nm.clientWidth + 1 || rs.some(r => r.right > innerWidth + 0.5)) bad.push(`top bar ${m}: the title or a button cut`);
+              if (!kids.includes($('t-find'))) bad.push(`top bar ${m}: no search icon`);
+            }
+            T.debug.setTwo(false); T.debug.goHome();
             return { bad, n };
           });
-          ok(fit.bad.length === 0 && fit.n > 440, `${at}: every state fits with no scroll, both sides, the V, the primary and Back in view, every target 44px or more, no name or bar label cut (${fit.n} states${fit.bad.length ? ': ' + fit.bad.slice(0, 6).join('; ') : ''})`);
+          ok(fit.bad.length === 0 && fit.n > 700, `${at}: every state fits with no scroll, both sides, the V, the primary and Back in view, every target 44px or more, no name or bar label cut; the Filter in every state of every mode (each column's every row, its marks on arrival for every group, the matches) in view with no page scroll, no label cut, every target 44px, the stars whole; the icon in the top bar of every mode, on nothing (${fit.n} states${fit.bad.length ? ': ' + fit.bad.slice(0, 6).join('; ') : ''})`);
           // the keyboard: the arrows on the side with the focus, Page Down a country, Tab to the next control, Enter sets and moves on
           await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
           await page.focus('#t-side0 .pk-pick');
@@ -529,18 +716,37 @@ async function browserChecks() {
           await drag(-90, 4);
           k = await page.evaluate(() => ({ i:window.__tryline.picker.view(0).i, set:window.__tryline.picker.state().sides[0].set, sh:document.getElementById('s-teams').scrollTop }));
           ok(k.i === 1 && !k.set && k.sh === 0, `${at}: a finger's swipe left: the next team, nothing set, nothing scrolled (${json(k)})`);
-          await drag(4, -80);
+          await drag(4, 80);
           k = await page.evaluate(() => window.__tryline.picker.view(0).group.key);
-          ok(k === 'cty', `${at}: a swipe up the card: the next group (${k})`);
+          ok(k === 'cty', `${at}: a swipe down the card: the next group, Next Group Down (${k})`);
+          await drag(-3, -80);
+          k = await page.evaluate(() => window.__tryline.picker.view(0).group.key);
+          ok(k === 'sur', `${at}: and up it: the one before (${k})`);
+          await drag(4, 80);
           await page.tap('#t-side0 [data-act="next"]');
           k = await page.evaluate(() => window.__tryline.picker.view(0).i);
           ok(k === 1, `${at}: Next tapped (${k})`);
+          const flNow = () => page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, side:window.__tryline.picker.filterState().s, field:document.activeElement === document.getElementById('fl-q'), marks:[...document.querySelectorAll('#fl-cols [aria-current="true"]')].map(e => e.querySelector('b').textContent).join(' > ') }));
+          await page.tap('#t-find');
+          k = await flNow();
+          ok(k.open && k.side === 0 && !k.field && k.marks === 'North > England > Counties > Wandsworth', `${at}: a finger on the search icon: the Filter for the side being set, on its path, the field not focused, so no keyboard comes up (${json(k)})`);
+          await page.tap('#fl-q');
+          k = await flNow();
+          ok(k.open && k.field, `${at}: a tap on the field: it takes the focus (the keyboard's, on a phone) (${json(k)})`);
+          await page.tap('#fl-close'); await page.waitForTimeout(100);
+          k = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, g:window.__tryline.picker.view(0).group.key, i:window.__tryline.picker.view(0).i, inert:[...document.body.children].filter(e => e.inert).length }));
+          ok(!k.open && k.g === 'cty' && k.i === 1 && !k.inert, `${at}: Close: the side as it was, nothing left inert (${json(k)})`);
+          await page.tap('#t-side1 [data-act="sheet"]');
+          k = await flNow();
+          ok(k.open && k.side === 1 && !k.field, `${at}: the Opponent's group button: the Filter for the Opponent (${json(k)})`);
+          await page.tap('#fl-close');
           await page.tap('#t-side0 [data-act="sheet"]');
-          k = await page.evaluate(() => !document.getElementById('m-ladder').hidden && document.querySelectorAll('#ldr-list .ldr-g').length);
-          ok(k > 25, `${at}: the group's button opens the ladder sheet, every group in it (${k})`);
-          await page.tap('#ldr-list [data-g="0"]');
-          k = await page.evaluate(() => ({ g:window.__tryline.picker.view(0).group.key, open:!document.getElementById('m-ladder').hidden }));
-          ok(k.g === 'nat.ire' && !k.open, `${at}: a group tapped there: on it, the sheet closed (${json(k)})`);
+          for (const [c, i] of [[0, 0], [1, 0], [2, 0]]) { await page.tap(`#fl-cols [data-col="${c}"][data-i="${i}"]`); }
+          k = await flNow();
+          ok(k.open && k.marks === 'North > Ireland > National', `${at}: a finger through the columns: North, Ireland, National, each filling the next (${json(k)})`);
+          await page.tap('#fl-cols [data-col="3"][data-i="0"]'); await page.waitForTimeout(100);
+          k = await page.evaluate(() => ({ g:window.__tryline.picker.view(0).group.key, i:window.__tryline.picker.view(0).i, set:window.__tryline.picker.state().sides[0].set, open:!document.getElementById('m-filter').hidden }));
+          ok(k.g === 'nat.ire' && k.i === 0 && k.set && !k.open, `${at}: a team tapped there: Your Team on it and set, the Filter shut (${json(k)})`);
           // the long press on Next: a country
           const nb = await page.evaluate(() => { const r = document.querySelector('#t-side0 [data-act="next"]').getBoundingClientRect(); return { x:r.left + r.width/2, y:r.top + r.height/2 }; });
           await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[nb] });
@@ -661,34 +867,83 @@ async function browserChecks() {
           });
           ok(json(k.seq) === json(['none', 'none', '0 X: Buttons', '0 X: Team', '0 X: Buttons', '0 X: Buttons', '1 X: Buttons', '1 X: Team', '1 X: Team', '1 X: Buttons', 'none', '1 X: Buttons', '1 X: Buttons', 'none', '0 X: Buttons', '0 X: Team', 'none']), `${at}: the lift's hint: none on touch or a key; with a pad X: Buttons on the side the ring drives and X: Team once X lifts it (the same press back), on the Opponent's once A moves on, the active side's from the bottom row; a key or a finger hides it, a mouse leaves it; one side alone too; none in 2 Players (${k.seq.join(', ')})`);
           ok(k.bad.length === 0 && k.shift.length === 0, `${at}: the hint fits wherever it shows: on nothing (a button's ring included), no word cut, the row its buttons' 44px, no scroll, Title Case; and Previous and Next keep their width whichever it says (${[...k.bad.slice(0, 6), ...k.shift].join('; ')})`);
-          // 2 Players: Escape with the ladder sheet open closes the sheet, and nothing more
+          // 2 Players: each seat's group button opens the Filter for its side; Escape clears its text, then closes it, and nothing more
           k = await page.evaluate(async () => {
             const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), out = [];
+            const esc = () => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', code:'Escape', bubbles:true, cancelable:true }));
             for (const set of [false, true]) {
               D.settings().pick = [null, null]; D.openJoin(); D.openTeams('two'); if (set) P.press(0);
-              P.sheet(1); document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', code:'Escape', bubbles:true, cancelable:true }));
-              out.push({ sheet:!$('m-ladder').hidden, teams:!$('s-teams').hidden, set0:P.state().sides[0].set });
+              $('t-side1').querySelector('[data-act="sheet"]').click(); const side = P.filterState().s;
+              P.filterType('ba'); esc(); const kept = !$('m-filter').hidden && P.filterState().q === '' && !$('fl-cols').hidden;
+              esc();
+              out.push({ side, kept, filter:!$('m-filter').hidden, teams:!$('s-teams').hidden, set0:P.state().sides[0].set });
             }
+            D.openTeams('two'); $('t-side0').querySelector('[data-act="sheet"]').click(); out.push(P.filterState().s); P.filterClose();
             D.setTwo(false); D.goHome();
             return out;
           });
-          ok(!k[0].sheet && k[0].teams && !k[1].sheet && k[1].teams && k[1].set0, `${at}: 2 Players, Escape on the open sheet closes it and nothing else: still on the team screen, Player 1's side still set (${json(k)})`);
-          // the sheet keeps the keyboard in it: Tab stays inside, the arrows step its groups, Enter picks one; another screen shuts it
+          ok(k[0].side === 1 && k[2] === 0 && k[0].kept && k[1].kept && !k[0].filter && k[0].teams && !k[1].filter && k[1].teams && k[1].set0, `${at}: 2 Players: each seat's group button opens the Filter for its side; Escape clears the text, then closes it and nothing else: still on the team screen, Player 1's side still set (${json(k)})`);
+          // the Filter keeps the keyboard in it: Enter on the group's button opens it with the field focused; Tab stays inside; the arrows walk
+          // its columns (Up and Down choosing as they go, Left and Right between columns, Home and End), Enter on a row opens it, Enter on a
+          // team picks it and the focus moves on as from the card; a letter on the screen opens it typed; Escape clears, then closes; another
+          // screen shuts it
           await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); T.picker.set(0); T.picker.set(1); });
           await page.waitForTimeout(450);                     // past the click a swipe ends with
           await page.focus('#t-side0 [data-act="sheet"]'); await page.keyboard.press('Enter');
-          const inside = [], within = () => page.evaluate(() => { const a = document.activeElement; return !a || a === document.body || !!a.closest('#m-ladder'); });   // the browser's own stop past the page's last control counts as in
+          k = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, id:document.activeElement.id }));
+          ok(k.open && k.id === 'fl-q', `${at}: Enter on the group's button: the Filter, the field focused (${json(k)})`);
+          const inside = [], within = () => page.evaluate(() => { const a = document.activeElement; return !a || a === document.body || !!a.closest('#m-filter'); });   // the browser's own stop past the page's last control counts as in
           for (let t = 0; t < 40; t++) { await page.keyboard.press('Tab'); inside.push(await within()); }
           for (let t = 0; t < 4; t++) { await page.keyboard.press('Shift+Tab'); inside.push(await within()); }
-          k = await page.evaluate(() => { const a = document.activeElement; return { open:!document.getElementById('m-ladder').hidden, match:!!(window.__tryline.M && !window.__tryline.M.demo) }; });
-          ok(inside.every(Boolean) && k.open && !k.match && inside.length === 44, `${at}: Tab and Shift+Tab never leave the open sheet, so nothing behind it can be pressed (${inside.filter(x => !x).length} outside)`);
-          await page.focus('#ldr-list [data-g="0"]'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp');
-          k = await page.evaluate(() => document.activeElement.dataset.g);
-          await page.keyboard.press('Enter');
-          const k4 = await page.evaluate(() => ({ open:!document.getElementById('m-ladder').hidden, g:window.__tryline.picker.view(0).gi, inert:[...document.body.children].filter(e => e.inert).length }));
-          ok(k === '1' && !k4.open && k4.g === 1 && k4.inert === 0, `${at}: the arrows step through the sheet's groups (Down, Down, Up: the second), Enter takes it and the page is live again (${k} ${json(k4)})`);
-          k = await page.evaluate(() => { const T = window.__tryline; T.picker.sheet(0); T.debug.goHome(); return { open:!document.getElementById('m-ladder').hidden, inert:[...document.body.children].filter(e => e.inert).length }; });
-          ok(!k.open && k.inert === 0, `${at}: another screen shown shuts the sheet, and leaves nothing inert (${json(k)})`);
+          k = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, match:!!(window.__tryline.M && !window.__tryline.M.demo) }));
+          ok(inside.every(Boolean) && k.open && !k.match && inside.length === 44, `${at}: Tab and Shift+Tab never leave the open Filter, so nothing behind it can be pressed (${inside.filter(x => !x).length} outside)`);
+          const at2 = () => page.evaluate(() => { const a = document.activeElement, P = window.__tryline.picker, c = P.filterState().cols; return a.id || (a.dataset.col != null ? `${a.dataset.col}:${a.dataset.i} ${a.querySelector('b').textContent}|${c[c.length - 1].head}` : a.dataset.r != null ? 'r' + a.dataset.r + ' ' + a.querySelector('b').textContent : a.tagName); });
+          const seq = [];
+          await page.focus('#fl-q');
+          for (const key of ['ArrowDown', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End', 'ArrowRight', 'ArrowDown']) { await page.keyboard.press(key); seq.push(await at2()); }
+          ok(json(seq) === json(['3:0 Farnham|Surrey', '2:3 Surrey|Surrey', '2:4 Counties|Counties', '2:3 Surrey|Surrey', '2:0 National|National', '2:4 Counties|Counties', '3:0 Effingham|Counties', '3:1 Wandsworth|Counties']), `${at}: the keys: Down from the field to the side's team, Left to its league, Down and Up choosing (the Teams column following), Home and End, Right into the Teams (${json(seq)})`);
+          await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); const a0 = await at2(); await page.keyboard.press('Enter'); const a1 = await at2(); await page.keyboard.press('ArrowUp'); const a2 = await at2(); await page.keyboard.press('ArrowUp'); const a3 = await at2();
+          ok(a0 === '0:0 North|Counties' && a1 === '1:2 England|Counties' && a2 === '1:1 France|National' && a3 === '1:0 Ireland|National', `${at}: Enter on a row opens it, into the next column on its mark; Up from there chooses as it goes (${a0}, ${a1}, ${a2}, ${a3})`);
+          await page.keyboard.press('ArrowUp'); const a4 = await at2();
+          await page.keyboard.press('ArrowDown'); const a5 = await at2();
+          for (const key of ['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowDown']) await page.keyboard.press(key);
+          const a6 = await at2(); await page.keyboard.press('Enter');
+          k = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, g:window.__tryline.picker.view(0).group.key, i:window.__tryline.picker.view(0).i, set:window.__tryline.picker.state().sides[0].set, focus:document.activeElement.id, inert:[...document.body.children].filter(e => e.inert).length }));
+          ok(a4 === 'fl-q' && a5 === '3:0 Ireland|National' && a6 === '3:1 Limerick|URC' && !k.open && k.g === 'cel.ire' && k.i === 1 && k.set && k.focus === 't-go' && k.inert === 0, `${at}: Up from a column's top: the field, Down from it the Teams column; Enter on a team (Limerick) picks it, the Filter shut, the side set and the focus on to Kick Off as from the card (${a4} ${a5} ${a6} ${json(k)})`);
+          await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
+          await page.focus('#t-side0 .pk-pick'); await page.keyboard.press('b');
+          k = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, q:document.getElementById('fl-q').value, focus:document.activeElement.id }));
+          await page.keyboard.type('a');
+          const typed = await page.evaluate(() => ({ q:document.getElementById('fl-q').value, first:(document.querySelector('#fl-res [data-r="0"] b') || {}).textContent }));
+          await page.keyboard.press('ArrowDown'); const r0 = await at2(); await page.keyboard.press('ArrowDown'); const r1 = await at2(); await page.keyboard.press('t'); const typed2 = await page.evaluate(() => ({ q:document.getElementById('fl-q').value, focus:document.activeElement.id }));
+          ok(k.open && k.q === 'b' && k.focus === 'fl-q' && typed.q === 'ba' && typed.first === 'Bayonne' && r0 === 'r0 Bayonne' && r1 === 'r1 Bath' && typed2.q === 'bat' && typed2.focus === 'fl-q', `${at}: a letter on the screen opens the Filter with it typed, once; typing goes on in the field, Down walks the matches, and a letter from a match goes back to the field (${json([k, typed, r0, r1, typed2])})`);
+          await page.keyboard.press('Escape');
+          const e1 = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, q:document.getElementById('fl-q').value, cols:!document.getElementById('fl-cols').hidden, focus:document.activeElement.id }));
+          await page.keyboard.press('Escape');
+          const e2 = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, focus:document.activeElement.id, i:window.__tryline.picker.view(0).i, g:window.__tryline.picker.view(0).group.key }));
+          ok(e1.open && e1.q === '' && e1.cols && e1.focus === 'fl-q' && !e2.open && e2.focus === 't-find' && e2.g === 'sur' && e2.i === 0, `${at}: Escape clears the text (the columns back), then closes, the side as it was and the focus back on the icon (${json([e1, e2])})`);
+          k = await page.evaluate(() => { const T = window.__tryline; T.picker.filter(0, '', { dev:'touch' }); T.debug.goHome(); return { open:!document.getElementById('m-filter').hidden, inert:[...document.body.children].filter(e => e.inert).length }; });
+          ok(!k.open && k.inert === 0, `${at}: another screen shown shuts the Filter, and leaves nothing inert (${json(k)})`);
+          // a controller in the Filter: A on the group's button opens it on the side's mark; the d-pad walks it as the keys do, passing over
+          // the field to Close; A opens a row or picks a team, the ring moving on as from the card; B closes it, the ring back on the button
+          k = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), f = () => D.focus(), out = [];
+            const id = el => !el ? 'none' : el.dataset.col != null ? `${el.dataset.col}:${el.dataset.i}` : el.closest && el.closest('.pk-side') ? el.closest('.pk-side').id + ' ' + el.dataset.act : el.id;
+            D.settings().pick = [null, null]; D.openTeams('quick'); T.home.ring(null);
+            T.navMove(0, 0, 0); P.lift(0); out.push(id(f()));               // the group's button
+            T.navPress(0); out.push(!$('m-filter').hidden ? 'open' : 'shut', id(f()), document.activeElement === $('fl-q') ? 'field' : 'not the field');
+            T.navMove(0, -1, 0); out.push(id(f())); T.navMove(0, 0, 1); out.push(id(f()), P.filterState().cols[3].head);
+            for (let n = 0; n < 5; n++) T.navMove(0, 0, -1); out.push(id(f()));   // up the League column, past its top: Close (the field passed over)
+            T.navMove(0, 0, 1); out.push(id(f()));
+            T.navMove(0, -1, 0); T.navMove(0, -1, 0); T.navMove(0, -1, 0); out.push(id(f()));   // Left to the areas
+            T.navMove(0, 0, 1); T.navPress(0); out.push(id(f()));               // South, A: into its countries
+            T.navMove(0, 1, 0); T.navMove(0, 1, 0); out.push(id(f())); T.navPress(0);
+            out.push(!$('m-filter').hidden ? 'open' : 'shut', P.view(0).team.id, P.state().sides[0].set, id(f()));
+            P.filter(1, '', { dev:'pad' }); out.push(id(f())); T.navBack(0); out.push(!$('m-filter').hidden ? 'open' : 'shut', id(f()));
+            T.home.ring(null); D.goHome();
+            return out;
+          });
+          ok(json(k) === json(['t-side0 sheet', 'open', '3:0', 'not the field', '2:3', '2:4', 'Counties', 'fl-close', '3:0', '0:0', '1:0', '3:0', 'shut', 'RSA', true, 't-side1 pick', '3:0', 'shut', 't-side1 sheet']), `${at}: a controller: A on the group's button opens the Filter on Your Team's mark (the field untouched); the d-pad: Left to its league, Down choosing Counties, Up past the top to Close, Down back in, Left to the areas; A on South opens it into its countries, A on a team picks it (South Africa, set) and the ring moves on to the Opponent; B closes, the ring back on the group's button (${json(k)})`);
           // a card over the screen (the Unlock card): the keys and a controller's shoulder leave the teams behind it alone
           k = await page.evaluate(() => {
             const T = window.__tryline, P = T.picker, D = T.debug, S = T.store, $ = id => document.getElementById(id);
@@ -739,13 +994,53 @@ async function browserChecks() {
             return out;
           });
           ok(k.gap === 'Stronger Side' && k.gapClear && k.long === 'MMMMMMMMMMMMMMMM' && k.nameClear && (k.px >= 16 || (k.fit === '3' && k.px >= 13)), `${at}: a stronger made team as the Opponent: Stronger Side clear of Edit; a sixteen-letter name clear of it (an ellipsis at the very last), 16px or more unless the shirt is already at its smallest, and never under 13px (${json(k)})`);
+          // the Filter's own motion: it comes in by opacity and transform, quickly
+          k = await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); document.getAnimations().forEach(a => a.finish()); T.picker.filter(0, '', { dev:'touch' }); const a = document.getAnimations(); const out = a.map(x => ({ d:x.effect.getTiming().duration, props:[...new Set(x.effect.getKeyframes().flatMap(f => Object.keys(f).filter(p => !['offset', 'easing', 'composite', 'computedOffset'].includes(p))))].join() })); T.picker.filterShut(); T.debug.goHome(); return out; });
+          ok(k.length === 1 && k[0].d <= 250 && /^(opacity|transform)(,(opacity|transform))?$/.test(k[0].props), `${at}: the Filter comes in by opacity and transform, 250ms or less (${json(k)})`);
+          // the phone's keyboard (a visualViewport stood in for it): with the field focused, the Filter takes what the keyboard leaves, the
+          // field and two matches or more above it, wherever the page has scrolled; a window resize under it fits nothing again until it shuts
+          if (at === '844x390' || at === '667x375') {
+            k = await page.evaluate(() => {
+              const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), out = [], scr = $('s-teams');
+              D.settings().pick = [null, null]; D.openTeams('quick'); const base = scr.dataset.fit;
+              P.filter(0, 'a', { dev:'touch' }); document.getAnimations().forEach(a => a.finish());
+              for (const [left, top] of [[175, 0], [150, 0], [140, 0], [160, 40]]) {
+                const vv = new EventTarget(); Object.assign(vv, { width:innerWidth, height:left, offsetTop:top, offsetLeft:0, scale:1 });
+                Object.defineProperty(window, 'visualViewport', { value:vv, configurable:true });
+                $('fl-q').blur(); $('fl-q').focus(); vv.dispatchEvent(new Event('resize'));
+                const rows = [...document.querySelectorAll('#fl-res .fl-r')].filter(r => { const b = r.getBoundingClientRect(); return b.top >= top - 0.5 && b.bottom <= top + left + 0.5; }).length, f = $('fl-q').getBoundingClientRect();
+                out.push({ left, top, kb:$('m-filter').classList.contains('kb'), rows, field:f.top >= top - 0.5 && f.bottom <= top + left + 0.5 });
+              }
+              scr.dataset.fit = '3'; window.dispatchEvent(new Event('resize')); const held = scr.dataset.fit;
+              $('fl-q').blur(); const off = $('m-filter').classList.contains('kb');
+              P.filterClose(); const after = scr.dataset.fit;
+              delete window.visualViewport; D.goHome();
+              return { out, held, off, base, after };
+            });
+            ok(k.out.every(o => o.kb && o.rows >= 2 && o.field), `${at}: with the field focused and the phone's keyboard up (what it leaves: 175, 150 and 140px; 160px with the page scrolled 40 down), the Filter fits in it, the field and two matches or more above the keyboard (${json(k.out)})`);
+            ok(k.held === '3' && !k.off && k.after === k.base, `${at}: a window resize under the open Filter fits nothing again (data-fit kept at ${k.held}); the field let go, the card back to its own size; the Filter shut, the screen fitted (${k.base} to ${k.after})`);
+          }
         } else {
-          const k = await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); T.picker.step(0, 1); T.picker.group(1, 1); return document.getAnimations().length; });
-          ok(k === 0, `${at} with reduced motion: no slide at all (${k})`);
+          const k = await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); T.picker.step(0, 1); T.picker.group(1, 1); T.picker.filter(0, 'ba', { dev:'touch' }); T.picker.filterType(''); T.picker.filterSel(0, 1); const n = document.getAnimations().length; T.picker.filterShut(); return n; });
+          ok(k === 0, `${at} with reduced motion: no slide at all, and the Filter comes in with none (${k})`);
         }
         ok(errors.length === 0, `${at}${reduce ? ' (reduced motion)' : ''}: no page error (${errors.join('; ')})`);
         await ctx.close();
       }
+    }
+    // a computer (a mouse, no touch): a click on the icon opens the Filter with the field focused, to type at once
+    {
+      const ctx = await browser.newContext({ viewport:{ width:844, height:390 } });
+      await ctx.addInitScript(s => { try { localStorage.setItem('tryline.v1', s); } catch (e) { /* none */ } }, JSON.stringify(SAVE));
+      const page = await ctx.newPage();
+      await page.goto(base); await page.waitForFunction(() => window.__tryline && !document.getElementById('s-home').hidden);
+      await page.evaluate(() => window.__tryline.debug.openTeams('quick'));
+      await page.click('#t-find');
+      let k = await page.evaluate(() => ({ desk:document.body.classList.contains('desk'), open:!document.getElementById('m-filter').hidden, focus:document.activeElement.id }));
+      await page.keyboard.type('glouc'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+      const k2 = await page.evaluate(() => ({ team:window.__tryline.picker.view(0).team.id, set:window.__tryline.picker.state().sides[0].set, open:!document.getElementById('m-filter').hidden }));
+      ok(k.desk && k.open && k.focus === 'fl-q' && k2.team === 'GLO' && k2.set && !k2.open, `a computer: a click on the icon opens the Filter with the field focused; typed "glouc", Enter to the match and Enter again picks Gloucester (${json([k, k2])})`);
+      await ctx.close();
     }
   } finally { await browser.close(); server.close(); }
 }
