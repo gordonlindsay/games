@@ -302,6 +302,7 @@ const KICK = {
   reach:2.4, block:1.0, lat:0.9, rushAcc:6, rushMul:[0.84,1.0,1.10], rushR:15, shoulder:4, cpuReact:0.30,
   cpuSig:[0.072,0.060,0.056], cpuAim:[0.9,0.15], cpuAimSd:0.6,
   wind:{ mix:[[0.30,0,3],[0.45,4,11],[0.25,11,18]], gust:0.18, swing:10, max:22, calm:2 },
+  show:{ normal:3, steer:0.6, fade:0.3 },   // your arrow on Normal and Hard (arrowShow): Normal shows it `normal` seconds from the aim being yours, Hard never at rest; steering shows it on both until `steer` seconds after the stick stops; each then fades over `fade`
 };
 const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fmax:2.4, near:0.3, fadeZ:2, fadeW:2, figH:0.6 };   // a charger fades in from fadeZ to fadeZ + fadeW metres in front of the lens, and no charger stands taller than figH of the screen
 // GKTUNE
@@ -1165,8 +1166,7 @@ function newMatch(u, c, opts) {
     charging:false, charge:0, holdN:0,                 // the kick charge: B held with the ball
     pass:null,                                         // a Pass press in hand: { mode:'tap'|'hold', to, t } so a hold can charge and an early tap is not dropped
     level:opts.levels ? opts.levels[t] : di,           // this player's Difficulty (the one level in one player)
-    duel:{ half:[0, 0], lastKind:null, fails:0, first:true },   // two player: this owner's quota, his last kind, his failures in a row and his first-duel aid
-    kickFirst:true }));                                // two player: this player's first goal kick of the match gets the path
+    duel:{ half:[0, 0], lastKind:null, fails:0, first:true } }));   // two player: this owner's quota, his last kind, his failures in a row and his first-duel aid
   for (const t of [0, 1]) if (!humans[t] && humans[1 - t] && opts.levels) M.side[t].level = M.side[1 - t].level;
   M.role = [0, 1].map(t => (humans[t] ? 'human' : 'cpu'));
   { const m = M; for (const k of ['ctrl', 'ctrlPrev', 'ctrlT', 'charging', 'charge', 'holdN', 'pass']) Object.defineProperty(m, k, { get:() => m.side[0][k], set:v => { m.side[0][k] = v; }, enumerable:false, configurable:true }); }   // side 0's fields on M, for the tools and the console
@@ -2161,6 +2161,7 @@ function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry a
     mClear:0, lo:0, hi:0, w:0, ctr:0, fill:1, aid:'line', watch:false, cpu:null, inp:null,   // inp: the kicker's input slot, for a human's kick
     stage:'aim', st:0, aim:0, m:0, pt:0, drain:0, mRel:null, L:null, X:null, res:null, ok:false, grade:null, curl:0,
     tStrike:0, judged:false, skipped:false, t:0, cam:null, pathKey:null, pathPts:null, bot:null,
+    aimT:CUT_IN, steerT:-1e9,                              // the cut times the aim became yours and the stick last steered it, for arrowShow (src/render-goals.js)
     rush:null, out:null, outQ:null, started:false, tRel:0, hitT:0, tauStop:0 };   // drop goals: the chargers, and how one ended
   return bandOf(g);
 }
@@ -2168,7 +2169,7 @@ function makeGoal(team, wx, wy, kind, kicker) {
   const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
   if (!isHuman(team) || proRun(kicker)) g.cpu = cpuKickInputs(g);   // Pro Mode: a teammate's drop goal is the CPU's kick
   else {
-    g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !tutSeen(kind === 'drop' ? 'drop' : 'goal'))) ? 'path' : 'line';   // the first kick ever (the tutorial's goal or drop moment unseen) gets the Easy aids; in two player each player's first kick of the match does
+    g.aid = levelOf(team) === 0 ? 'path' : 'line';        // Easy (Kids too): the wind-corrected aim and the flight path. Normal and Hard start on the posts with the line, the first kick ever too (until 2026-11-11 it had the Easy aids)
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
   }
   return g;
@@ -2322,10 +2323,8 @@ function updateGoalCut(c, dt) {
     if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
-function strikeNow(c) {                                    // the boot meets the ball. In two player a player's first strike of the match ends his first-kick aid (one player's is the tutorial's memory, marked at the cut-in)
+function strikeNow(c) {                                    // the boot meets the ball
   const g = c.g; g.stage = 'flight'; g.tStrike = c.t; sfx('strike'); buzz(25);
-  if (g.watch || !isHuman(g.team)) return;
-  if (M.two) sideOf(g.team).kickFirst = false;
 }
 function watchStep(c, dt) {                                // the CPU's kick: settle, run-up, flight; Skip jumps to the verdict
   const g = c.g, t = c.t;
@@ -2344,6 +2343,7 @@ function steerAim(g, dt, inp) {
   const jx = inp.jx, kx = inp.keyX();                      // the d-pad aims at the keyboard's rate too
   const rate = jx ? k.aimRate*Math.sign(jx)*Math.pow(Math.abs(jx), 1.6) : k.keyRate*kx;
   if (!rate) return;
+  g.steerT = g.t;                                          // steering shows the arrow on Normal and Hard (arrowShow), at the limit too
   const lim = 85*D2R;
   g.aim = clamp(clamp(g.aim + rate*D2R*dt, -k.aimMax*D2R, k.aimMax*D2R), -lim - g.beta, lim - g.beta);
 }
@@ -2351,8 +2351,8 @@ function backToAim(g) { g.stage = 'aim'; g.mRel = g.m; g.drain = 0.2; g.pt = 0; 
 function verdict(c, hold) { const g = c.g; scoreGoal(g); c.skipAt = c.t + 0.25; finishCut(() => g.type === 'drop' ? applyDrop(c) : settleGoal(g), hold); }
 function goalResume(c) {                                   // back to Aim with the meter empty; a fresh press is needed. A drop goes back to Wait, with the chargers where the cut began
   const g = c.g;
-  if (g.type === 'drop') { if (!g.out && (g.stage === 'hold' || g.stage === 'wait')) { g.stage = 'wait'; g.m = 0; g.pt = 0; g.started = true; c.t = CUT_IN; } }
-  else if (!g.watch && (g.stage === 'aim' || g.stage === 'power')) { g.stage = 'aim'; g.m = 0; g.pt = 0; g.drain = 0; g.mRel = null; }
+  if (g.type === 'drop') { if (!g.out && (g.stage === 'hold' || g.stage === 'wait')) { g.stage = 'wait'; g.m = 0; g.pt = 0; g.started = true; c.t = CUT_IN; g.aimT = CUT_IN; g.steerT = -1e9; } }
+  else if (!g.watch && (g.stage === 'aim' || g.stage === 'power')) { g.stage = 'aim'; g.m = 0; g.pt = 0; g.drain = 0; g.mRel = null; g.aimT = Math.max(CUT_IN, c.t); g.steerT = -1e9; }   // the aim is yours again: Normal's arrow shows afresh
   c.armA = false;
   for (const inp of humanSlots()) { inp.aDown = inp.bDown = false; inp.reanchor(); inp.held = new Set(); }
 }
@@ -7093,6 +7093,14 @@ function kickView(g, cam, tf, bx, by, bh) {
   v.sy = gy + v.tilt + v.Z*(pb.sy - gy);
   return v;
 }
+/* Your arrow's visibility, 0 to 1, by level lv (0 Easy and Kids, 1 Normal, 2 Hard), tAim seconds since the aim became yours and
+   tSteer seconds since the stick last steered it. Easy always; Normal for KICK.show.normal seconds, Hard never at rest; steering
+   shows it on both until KICK.show.steer seconds after it stops; each fades over KICK.show.fade. Opacity only, so reduced motion keeps it. */
+function arrowShow(lv, tAim, tSteer) {
+  if (!lv) return 1;
+  const k = KICK.show, held = (hold, s) => (s <= hold ? 1 : s >= hold + k.fade ? 0 : 1 - (s - hold)/k.fade);
+  return Math.max(lv === 1 ? held(k.normal, tAim) : 0, held(k.steer, tSteer));
+}
 const ARROW = new Array(14).fill(0);
 function arrowLen(g, psi) { const fx = Math.cos(psi); return Math.max(2, Math.min(14, (108 - g.x)/Math.max(0.2, fx) - 0.6)); }
 function drawArrow(cam, g, aim, alpha, chalk) {
@@ -7105,12 +7113,12 @@ function drawArrow(cam, g, aim, alpha, chalk) {
   if (groundPoly(cam, ARROW, 0.02, chalk ? 'rgba(241,238,228,.8)' : C.ctrl)) { ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5; ctx.stroke(); }
   ctx.globalAlpha = a0;
 }
-function drawAimLine(cam, g, aim) {                           // Normal and Hard: the bearing run on to the goal line, with a tick across it
+function drawAimLine(cam, g, aim, show) {                     // Normal and Hard: the bearing run on to the goal line, with a tick across it, shown as the arrow is (arrowShow)
   const psi = g.beta + aim, fx = Math.cos(psi), fy = Math.sin(psi), nx = -fy, ny = fx;
   if (fx < 0.05) return;
   const sEnd = (110 - g.x)/fx, s0 = 0.6 + arrowLen(g, psi) + 0.3;
   const a0 = ctx.globalAlpha;
-  ctx.globalAlpha = a0*0.7; ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.globalAlpha = a0*0.7*show; ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.beginPath();
   for (let s = s0; s < sEnd; s += 1.2) { const e = Math.min(s + 0.6, sEnd); groundSeg(cam, g.x + fx*s, g.y + fy*s, g.x + fx*e, g.y + fy*e, 0.01); }
   groundSeg(cam, g.x + fx*sEnd - nx*0.5, g.y + fy*sEnd - ny*0.5, g.x + fx*sEnd + nx*0.5, g.y + fy*sEnd + ny*0.5, 0.01);
   ctx.stroke(); ctx.globalAlpha = a0;
@@ -7202,14 +7210,14 @@ function drawKick(c, g0) {
     for (const x of [0, 120]) groundLine(cam, x, 0, x, 70, false);
     groundLine(cam, g.x - 0.25, g.y, g.x + 0.25, g.y, false); groundLine(cam, g.x, g.y - 0.25, g.x, g.y + 0.25, false);   // the kick mark
   }
-  // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's
-  const struck = tf >= -k.hitStop;
-  let arrowA = g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6;
+  // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's. Yours on Normal and Hard shows as arrowShow says, through every stage to the strike
+  const struck = tf >= -k.hitStop, show = g.watch ? 1 : arrowShow(g.di, t - g.aimT, t - g.steerT);
+  let arrowA = (g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6)*show;
   if (struck) arrowA *= Math.max(0, 1 - (tf + k.hitStop)/0.3);
   if (arrowA > 0.01) {
     if (!g.watch && !struck) {
       if (g.aid === 'path') drawPath(cam, g, g.stage === 'aim' || g.stage === 'wait' ? g.ctr : g.m, g.aim);   // the live meter from Power on, so the run-up shows the kick that was struck
-      else drawAimLine(cam, g, g.aim);
+      else drawAimLine(cam, g, g.aim, show);
     }
     drawArrow(cam, g, aimShown, arrowA, g.watch);
   }
@@ -17548,7 +17556,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, PASS_FLIGHT, SUPPORT, openShoulder, shoulderPoint, holdShoulder, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
-    dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
+    dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene, arrowShow },
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
   ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },

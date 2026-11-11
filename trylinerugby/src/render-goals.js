@@ -123,6 +123,14 @@ function kickView(g, cam, tf, bx, by, bh) {
   v.sy = gy + v.tilt + v.Z*(pb.sy - gy);
   return v;
 }
+/* Your arrow's visibility, 0 to 1, by level lv (0 Easy and Kids, 1 Normal, 2 Hard), tAim seconds since the aim became yours and
+   tSteer seconds since the stick last steered it. Easy always; Normal for KICK.show.normal seconds, Hard never at rest; steering
+   shows it on both until KICK.show.steer seconds after it stops; each fades over KICK.show.fade. Opacity only, so reduced motion keeps it. */
+function arrowShow(lv, tAim, tSteer) {
+  if (!lv) return 1;
+  const k = KICK.show, held = (hold, s) => (s <= hold ? 1 : s >= hold + k.fade ? 0 : 1 - (s - hold)/k.fade);
+  return Math.max(lv === 1 ? held(k.normal, tAim) : 0, held(k.steer, tSteer));
+}
 const ARROW = new Array(14).fill(0);
 function arrowLen(g, psi) { const fx = Math.cos(psi); return Math.max(2, Math.min(14, (108 - g.x)/Math.max(0.2, fx) - 0.6)); }
 function drawArrow(cam, g, aim, alpha, chalk) {
@@ -135,12 +143,12 @@ function drawArrow(cam, g, aim, alpha, chalk) {
   if (groundPoly(cam, ARROW, 0.02, chalk ? 'rgba(241,238,228,.8)' : C.ctrl)) { ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5; ctx.stroke(); }
   ctx.globalAlpha = a0;
 }
-function drawAimLine(cam, g, aim) {                           // Normal and Hard: the bearing run on to the goal line, with a tick across it
+function drawAimLine(cam, g, aim, show) {                     // Normal and Hard: the bearing run on to the goal line, with a tick across it, shown as the arrow is (arrowShow)
   const psi = g.beta + aim, fx = Math.cos(psi), fy = Math.sin(psi), nx = -fy, ny = fx;
   if (fx < 0.05) return;
   const sEnd = (110 - g.x)/fx, s0 = 0.6 + arrowLen(g, psi) + 0.3;
   const a0 = ctx.globalAlpha;
-  ctx.globalAlpha = a0*0.7; ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.globalAlpha = a0*0.7*show; ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.beginPath();
   for (let s = s0; s < sEnd; s += 1.2) { const e = Math.min(s + 0.6, sEnd); groundSeg(cam, g.x + fx*s, g.y + fy*s, g.x + fx*e, g.y + fy*e, 0.01); }
   groundSeg(cam, g.x + fx*sEnd - nx*0.5, g.y + fy*sEnd - ny*0.5, g.x + fx*sEnd + nx*0.5, g.y + fy*sEnd + ny*0.5, 0.01);
   ctx.stroke(); ctx.globalAlpha = a0;
@@ -232,14 +240,14 @@ function drawKick(c, g0) {
     for (const x of [0, 120]) groundLine(cam, x, 0, x, 70, false);
     groundLine(cam, g.x - 0.25, g.y, g.x + 0.25, g.y, false); groundLine(cam, g.x, g.y - 0.25, g.x, g.y + 0.25, false);   // the kick mark
   }
-  // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's
-  const struck = tf >= -k.hitStop;
-  let arrowA = g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6;
+  // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's. Yours on Normal and Hard shows as arrowShow says, through every stage to the strike
+  const struck = tf >= -k.hitStop, show = g.watch ? 1 : arrowShow(g.di, t - g.aimT, t - g.steerT);
+  let arrowA = (g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6)*show;
   if (struck) arrowA *= Math.max(0, 1 - (tf + k.hitStop)/0.3);
   if (arrowA > 0.01) {
     if (!g.watch && !struck) {
       if (g.aid === 'path') drawPath(cam, g, g.stage === 'aim' || g.stage === 'wait' ? g.ctr : g.m, g.aim);   // the live meter from Power on, so the run-up shows the kick that was struck
-      else drawAimLine(cam, g, g.aim);
+      else drawAimLine(cam, g, g.aim, show);
     }
     drawArrow(cam, g, aimShown, arrowA, g.watch);
   }

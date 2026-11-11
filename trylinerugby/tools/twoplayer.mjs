@@ -1075,17 +1075,30 @@ begin('handicap');
     const e0 = winOf(kind, 0, [0, 0]), e1 = winOf(kind, 1, [0, 0]), h0 = winOf(kind, 0, [2, 2]), h1 = winOf(kind, 1, [2, 2]);
     ok(near(e0.wid, e1.wid, 1e-9) && near(h0.wid, h1.wid, 1e-9) && near(e0.lock - e0.win[0], e1.lock - e1.win[0], 1e-9), `${kind}: Easy v Easy and Hard v Hard give identical windows and leads on both sides`);
   }
-  // goal aids: Easy, or each player's first kick of the match
+  // goal aids by each player's own level (2026-11-11): Easy the path with the arrow preset into the wind, Normal and Hard the line from the posts, the first
+  // kick of the match too (until then each player's first kick had the path, kept in M.side[t].kickFirst, now gone). The arrow shows by the kicker's level
   pairL([0, 2]);
-  ok(K.makeGoal(0, 88, 35, 'penalty', null).aid === 'path' && K.makeGoal(1, 32, 35, 'penalty', null).aid === 'path', 'Easy v Hard: Player 1 gets the path (Easy); Player 2 gets it once, his first kick');
-  S.side(1).kickFirst = false;
-  ok(K.makeGoal(1, 32, 35, 'penalty', null).aid === 'line' && K.makeGoal(0, 88, 35, 'penalty', null).aid === 'path', 'after it, Player 2 gets the line; Player 1 keeps the path on Easy');
+  { const gE = K.makeGoal(0, 88, 35, 'penalty', null), gH = K.makeGoal(1, 32, 35, 'penalty', null);
+    ok(gE.aid === 'path' && gE.di === 0 && gH.aid === 'line' && gH.aim === 0 && gH.di === 2, 'Easy v Hard: Player 1 gets the path (Easy); Player 2 the line from the posts on his first kick of the match'); }
+  ok(!('kickFirst' in S.side(0)) && !('kickFirst' in S.side(1)), 'no per-player first-kick flag is kept');
+  D.goalKick(1, 21, 35, 'conversion'); { let n = 0; while (M().phase === 'cut' && n++ < 600) { bot(1); T.update(STEP); } }
+  ok(K.makeGoal(1, 32, 35, 'penalty', null).aid === 'line' && K.makeGoal(0, 88, 35, 'penalty', null).aid === 'path', 'after his kick, Player 2 still gets the line; Player 1 keeps the path on Easy');
   pairL([1, 1]); D.goalKick(1, 21, 35, 'conversion');
-  ok(M().cut.g.aid === 'path' && S.side(1).kickFirst, 'a Normal player\'s first kick of the match has the path');
+  ok(M().cut.g.aid === 'line' && M().cut.g.aim === 0, 'a Normal player\'s first kick of the match starts on the posts with the line');
   { let n = 0; while (M().phase === 'cut' && n++ < 600) { bot(1); T.update(STEP); } }
-  ok(!S.side(1).kickFirst && S.side(0).kickFirst, 'the strike clears his own kickFirst only');
   D.goalKick(1, 21, 35, 'conversion'); ok(M().cut.g.aid === 'line', 'his second kick has the line');
   { let n = 0; while (M().phase === 'cut' && n++ < 600) { bot(1); T.update(STEP); } }
+  { const AS = K.arrowShow, CI = D.CUT_IN, show = g => AS(g.di, M().cut.t - g.aimT, M().cut.t - g.steerT), until = t => { let n = 0; while (M().cut.t < t - 1e-9 && n++ < 900) T.update(STEP); };
+    pairL([1, 2]); D.goalKick(0, 99, 35, 'conversion'); let g = M().cut.g; until(CI + 1);
+    ok(g.di === 1 && show(g) === 1, 'Normal v Hard: Player 1\'s arrow on Normal shows 1s into his aim');
+    until(CI + 4); ok(show(g) === 0, 'and is gone 4s in'); { let n = 0; while (M().phase === 'cut' && n++ < 900) { bot(0); T.update(STEP); } }
+    D.goalKick(1, 21, 35, 'conversion'); g = M().cut.g; until(CI + 1);
+    ok(g.di === 2 && show(g) === 0, 'Player 2\'s on Hard does not, 1s in');
+    for (let i = 0; i < 12; i++) { inputs[0].jx = 1; T.update(STEP); } inputs[0].jx = 0;
+    ok(g.aim === 0 && show(g) === 0, 'Player 1\'s stick moving through Player 2\'s kick neither steers it nor shows his arrow');
+    for (let i = 0; i < 12; i++) { inputs[1].jx = 0.5; T.update(STEP); } inputs[1].jx = 0;
+    ok(g.aim !== 0 && show(g) === 1, 'Player 2 steering his own: it shows');
+    { let n = 0; while (M().phase === 'cut' && n++ < 900) { bot(1); T.update(STEP); } } }
   // the meter refills at each player's own rate
   pairL([0, 2], { duels:'off' }); M().spr[0].m = 0; M().spr[1].m = 0; K.stageDrop({ x:60, y:35 }, [], 0); steps(60);
   ok(near(M().spr[0].m, 1/C.SPRINT.refill[0], 1e-6) && near(M().spr[1].m, 1/C.SPRINT.refill[2], 1e-6), `a second's refill: Easy ${M().spr[0].m.toFixed(3)} v Hard ${M().spr[1].m.toFixed(3)}`);
