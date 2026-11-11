@@ -509,7 +509,7 @@ for (const make of [false, true]) {
   ok(!/Import Club|Import Data|Import Works/.test(block + src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'one name for the flow, the home\'s and the team screen\'s alike: Add Your Team, never Import Club or Import Data');
   for (const l of labels) ok(title(l) && (src + block).includes(l), `"${l}" is a Title Case label in use`);
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
-  ok(html.includes('id="m-ladder"') && menus.includes("{ key:'mine.league', list:IMPORT_POOL, hemi:'mine', name:'My League', teams:[...(importLeague ? importLeague.teams : []), ...(all && importShown() ? [PICK_ADD] : [])] }"), 'Mine carries My League after Made Teams: its sides once there is one, and Add Your Team');
+  ok(html.includes('id="m-filter"') && menus.includes("{ key:'mine.league', list:IMPORT_POOL, hemi:'mine', name:'My League', teams:[...(importLeague ? importLeague.teams : []), ...(all && importShown() ? [PICK_ADD] : [])] }"), 'Mine carries My League after Made Teams: its sides once there is one, and Add Your Team');
   ok(/typeof parentGate === 'function'\) parentGate\(go, cancel\)/.test(src), 'Import goes through parentGate(go, cancel) when the kids check is there');
   ok(Object.values(I.MSG).every(m => m.length <= 45 && /\.$/.test(m)), 'each message is one short plain sentence');
 }

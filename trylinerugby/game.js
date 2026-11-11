@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.3';
+const GAME_VERSION = '1.4';
 
 /* =========================================================
    Data
@@ -9840,7 +9840,7 @@ function navLayer() {                                      // the top layer: the
 }
 function navCands(layer) {
   const out = [];
-  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary, .app-action')) {
+  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary, .app-action, .fl-r')) {   // .fl-r: the team screen's Filter's rows (src/ui-menus.js)
     if (el.disabled || el.hidden || el.getAttribute('aria-disabled') === 'true' || (el.closest && el.closest('[hidden]'))) continue;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
     out.push(el);
@@ -9883,6 +9883,7 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
   if (!dx && !dy) return focusEl;
   if (layer.id === 's-home' && typeof homeNavTo === 'function') { const to = homeNavTo(focusEl, dx, dy, cands); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the home's boxes (src/ui-menus.js)
+  if (layer.id === 'm-filter' && typeof pickFilterNav === 'function') { const to = pickFilterNav(focusEl, dx, dy); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the team screen's Filter: its rows and columns, the field passed over (src/ui-menus.js)
   const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
   let best = layer.id === 's-setup' || layer.id === 's-profile' ? profileNav(cands, focusEl, dx, dy) : navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);   // the profile's screens: the nearest that way, or anywhere on that side (src/profile.js)
   if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one
@@ -9905,8 +9906,9 @@ function navBack(seat) {
   if (demoOn()) { demoSkip(); return true; }
   if (practice && (practice.done || practice.ready)) { practiceChoose(); return true; }
   logNav('back', seat);
-  if (!navOwner(seat)) return false;
-  const layer = navLayer(); if (!layer) return false;
+  const layer = navLayer();
+  if (!navOwner(seat) && !(layer && layer.id === 'm-filter')) return false;   // the team screen's Filter: either seat's B closes it, though only its side's seat drives it (src/ui-menus.js)
+  if (!layer) return false;
   if (layer.id === 's-teams' && typeof pickBack === 'function' && pickBack(seat)) return true;   // 2 Players: B frees the seat's own side first
   for (const el of layer.querySelectorAll('[data-back]')) if (!el.hidden && !(el.closest && el.closest('[hidden]'))) { if (el.click) el.click(); return true; }
   return false;
@@ -9932,7 +9934,7 @@ const playing = () => mode === 'match' && M && !M.demo;
 function showScreen(id) {
   if (typeof offlineScreen === 'function') offlineScreen(id);
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
-  if (typeof pickSheetShut === 'function') pickSheetShut();   // the team screen's ladder sheet never outlives it (src/ui-menus.js)
+  if (typeof pickFilterShut === 'function') pickFilterShut();   // the team screen's Filter never outlives it (src/ui-menus.js)
   setFocus(null);
   if (id === 's-teams') fitNames();
   if (id === 's-cup' && typeof cupFit === 'function') cupFit($('s-cup'));   // the cup hub's long names, once it has a size (src/ui-cups.js)
@@ -10996,8 +10998,9 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
    Opponent on the right, a big V between them (Championship, Career, My Team and the cups show one side, centred). Each side shows one
    team: its shirt with its overall, its name and stars, five bars, the league it plays in. Left and Right change the team within its group;
    Up and Down step through every group in order, ONE LADDER (his answer, the same day: "like EA FC"), the hemisphere and the country above
-   it; a shoulder button, Page Up or Page Down, or a long press on Previous or Next jumps a whole country. The top of the ladder is North |
-   South | Mine | Favourites | Recent; Men | Women | Minis stays the top switch. Each wraps.
+   it (a swipe down a card for the next group: the owner's "Next Group Down"); a shoulder button, Page Up or Page Down, or a long press on
+   Previous or Next jumps a whole country. The top of the ladder is North | South | Mine | Favourites | Recent; Men | Women | Minis stays the
+   top switch. Each wraps. The search icon and each side's group button open the Filter: the ladder as columns, and a search (below).
    The ladder (pickLadder) is a view of the lists, never new data: TEAM_LISTS cut by country (LIST_HOME, URC_HOME in src/data.js) and by
    league where a list holds two (South Africa's URC and Currie Cup), each group named for its competition, the nations in the category's
    own order with their Legends, then Mine (Made Teams with Create Team, My League with Add Your Team), the teams starred and each side's
@@ -11084,8 +11087,9 @@ function pickHomeLine(t, cat) {
    and whether it has been moved (an Opponent not yet moved follows Your Team to its rivals). on: the side the primary, the title and the
    keys act on. opener: the side that opened Create Team or Add Your Team, which shows what it made. */
 const pickSide = () => ({ g:null, k:null, gi:0, i:0, set:false, touched:false });
-let pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null, made:null, lifter:null };
+let pick = { sides:[pickSide(), pickSide()], on:0, opener:0, made:null, lifter:null };
 let pickView = [null, null];                               // each side as drawn: { ladder, gi, i, group, team }
+const FL = { open:false, s:0, path:[], q:'', from:null, cols:[], hits:[], refit:false, vv:null, only:null };   // the Filter (below): open or not, its side, the path its columns show, the text, what opened it ('find' or 'sheet'), the window resized under it, the one seat it answers (2 Players)
 const pickOne = () => pickMode !== 'quick' && pickMode !== 'two';   // Championship, Career, My Team and the cups: one side, centred
 const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : pickMode === 'setup' && typeof profileSetupCat === 'function' ? profileSetupCat() : settings.cat);   // the setup's Club: the category its answers give (src/profile.js)
 /* Championship's World Cup or Home Nations Tour, chosen on the home: its title, its list, its side and its primary (src/ui-cups.js);
@@ -11210,10 +11214,10 @@ function pickStep(s, d) {                                   // Left and Right: t
   const n = v.group.teams.length;
   if (n > 1) pickTo(s, v.gi, (v.i + d + n) % n, d > 0 ? 'next' : 'prev');
 }
-function pickGroupStep(s, d) {                             // Up and Down: the next group on the ladder, round again at its ends
+function pickGroupStep(s, d, how) {                        // Up and Down: the next group on the ladder, round again at its ends (how: where the card slides in from, a swipe's own)
   const v = pickView[s]; if (!v) return;
   const n = v.ladder.length;
-  if (n > 1 && !v.group.fixed) pickTo(s, (v.gi + d + n) % n, 0, d > 0 ? 'down' : 'up');
+  if (n > 1 && !v.group.fixed) pickTo(s, (v.gi + d + n) % n, 0, how || (d > 0 ? 'down' : 'up'));
 }
 /* A whole country: the first group of the next one (or of this one's start, going back, then the one before). Mine, Favourites and Recent
    each count as one. */
@@ -11361,7 +11365,7 @@ function pickEl(s, act) { const p = $('t-side' + s); return (p && p.querySelecto
    on show, to play as or change), 'my' (My Team: the club, then the country) or 'career' (Career's club: New Player's Change Club). */
 let pickFrom = null;                                       // the home's button that opened the team screen, where Back goes (Quick Match, Play, a competition)
 function openTeams(m, comp, o) {
-  pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null, made:null, lifter:null }; pickView = [null, null];
+  pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, made:null, lifter:null }; pickView = [null, null];
   pickFrom = (o && o.from) || null;
   if (m === 'champ') {
     const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
@@ -11390,6 +11394,7 @@ function renderTeams() {
   const t0 = pickView[0] && pickView[0].team;
   $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' || setup ? 'Pick Your Club' : 'Pick Your Team';
   $('t-cat').hidden = pickMode === 'career' || setup;        // Men | Women is New Player's; the setup's category comes from its answers
+  $('t-find').hidden = !pickFilterable(pickView[pick.on]); $('t-find').setAttribute('aria-label', 'Search ' + pickFindWord());   // the Filter's icon, for the side being set: none on a fixed list (the World Cup, the tour)
   $('t-sback').hidden = $('t-skip').hidden = !setup; $('t-back').hidden = setup;   // the setup's Back and Skip along the top, as on its other steps (src/profile.js)
   $('s-teams').classList.toggle('pk-setup', setup);
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.setAttribute('aria-pressed', String(b.dataset.cat === settings.cat));
@@ -11405,13 +11410,13 @@ function renderTeams() {
   const go = $('t-go'), label = pickPrimary();
   go.textContent = label; go.hidden = !label;
   $('t-back').textContent = pair ? 'Back to Players' : pickMode === 'career' ? 'Back to New Player' : pickMode === 'my' && pickFrom && pickFrom.id === 'pf-team' ? 'Back to Profile' : 'Back to Menu';   // My Team's picker from My Profile goes back there (myDone)
-  navOnly = null;                                            // 2 Players: each seat drives its own side (pickNav)
+  navOnly = FL.open && FL.only != null ? FL.only : null;     // 2 Players: each seat drives its own side (pickNav); the open Filter, its side's seat
   storeTeamsRender();                                        // locks on Create Team, Edit, Add Your Team and the Legends (src/ui-store.js)
   if ($('s-teams').hidden) fitNames(); else pickFit();
   const live = el => !!el && !el.disabled;
   if (ring) { const el = [ring.act, 'sheet', 'fav', 'pick'].map(a => pickEl(ring.s, a)).find(live); if (el) setFocus(el); }   // a ring off the card stays off it
   if (typed) { const el = [typed.act, 'pick'].map(a => pickEl(typed.s, a)).find(live); if (el && el.focus) el.focus({ preventScroll:true }); }
-  if (pick.sheet != null && !$('m-ladder').hidden) pickSheetDraw();
+  if (FL.open) pickFilterDraw(0);
   pickHint();                                                // the lift's hint, on the side as drawn again
 }
 /* A move seen: the card slides in from where the team came from (Next from the right, Down from below), opacity and transform only, and
@@ -11459,52 +11464,322 @@ function pickFit() {
   if (over()) { scr.dataset.dup = '1'; fitNames(); pickTraits(); }   // the last step: a league line that only says its group's name again (Made Teams under Made Teams) goes
   scr.classList.toggle('scrolls', scr.scrollHeight > scr.clientHeight + 1);   // styles.css: a card's own vertical swipe only where the page cannot scroll
 }
+/* The window resized (boot.js): the screen fitted again, but never under the open Filter, where a phone's keyboard is what resizes some
+   browsers' windows; it is fitted once the Filter shuts (pickFilterShut). */
+function pickResize() {
+  if ($('s-teams').hidden) return;
+  if (FL.open) { FL.refit = true; return; }
+  fitNames(); pickFit();
+}
 
-/* ---------- the ladder sheet: every group, under its hemisphere and country, for a finger ----------
-   A modal while it is open: everything else is inert (as the grown-up check makes it, src/kids.js), so Tab stays in it and nothing behind
-   it can be pressed; the arrows move between its groups; Escape (or Back) closes it once. */
-let pickInert = [];                                          // what the open sheet made inert, to give back as it shuts (kept apart from pick, which a new screen replaces)
-function pickSheet(s) {
-  const v = pickView[s]; if (!v || v.ladder.length < 2 || v.group.fixed) return;
-  pickSheetShut();
-  pick.sheet = s; pick.on = s;
-  pickSheetDraw();
-  const m = $('m-ladder'), body = document.body;
+/* ---------- the Filter: the side's ladder as columns, and a search ----------
+   The owner, 2026-11-11: "set up a search bar for club selection and show the hierarchy starting at the top", then "Filter pops up with
+   nested team list and search. Have a search icon." A modal over the screen for one side, opened by the search icon in the top bar (the
+   side being set), by a side's group button (that side) or by a letter or a digit typed on the screen (one player). Along its top a Search
+   field and Close; under them the side's own ladder as columns: Area (North, South, Mine, Favourites, Recent, each with a count), Country,
+   League and the group's Teams. It is built from pickView[s].ladder, pickLadderOf's, so the Filter obeys every rule the card does (Pick
+   Opponent's lock, Career's clubs, storeFirst, Create Team under MAX_CUSTOM). Mine has no country: its League column is Made Teams and My
+   League. Favourites and Recent go straight to their Teams; Championship (its competition and Made Teams) is a League column and Teams.
+   The side's own path is marked as it opens, each column scrolled to its mark; a row of Area, Country or League takes its column's place
+   and fills the columns after it, each on its first; a team is picked for the side as a tap on its card picks it (pickSet, every gate
+   included), and the focus moves on as it does from the card. Typing swaps the columns for one list of matches. While it is open
+   everything else is inert, as the grown-up check makes it (src/kids.js). The World Cup and the tour are fixed lists: no Filter. */
+let pickInert = [];                                          // what the open Filter made inert, to give back as it shuts (kept apart from pick, which a new screen replaces)
+const FL_HEAD = { area:'Area', country:'Country', league:'League' };
+const FL_NOUN = { country:['Country', 'Countries'], league:['League', 'Leagues'], team:['Team', 'Teams'] };
+const pickFilterable = v => !!v && v.ladder.length > 1 && !v.group.fixed;
+const pickFindWord = () => (pickMode === 'career' || pickMode === 'setup' ? 'Clubs' : 'Teams');   // the clubs only (Career's Change Club, the setup's Club): Search Clubs
+const flSaved = g => g.hemi === 'fav' || g.hemi === 'recent';
+/* The tree: Area, then Country, then League, each league one group of the ladder (gi). Favourites and Recent are one group each, straight
+   to their teams; Championship's groups (no area) are the League column itself. */
+function filterRoot(L) {
+  const league = gi => ({ kind:'league', name:L[gi].name, gi });
+  if (L.some(g => !g.hemi)) return { kids:L.map((g, gi) => league(gi)) };
+  const areas = [];
+  L.forEach((g, gi) => {
+    let a = areas.find(x => x.hemi === g.hemi);
+    if (!a) areas.push(a = flSaved(g) ? { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi], gi } : { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi] || g.name, kids:[] });
+    if (!a.kids) return;
+    if (!g.home) { a.kids.push(league(gi)); return; }        // Mine: Made Teams, My League
+    let c = a.kids.find(x => x.home === g.home);
+    if (!c) a.kids.push(c = { kind:'country', home:g.home, name:natName(g.home), kids:[] });
+    c.kids.push(league(gi));
+  });
+  return { kids:areas };
+}
+function filterPathTo(node, gi, at = []) {                  // the rows that lead to a group: the side's own path, as the Filter opens
+  if (!node.kids) return node.gi === gi ? at : null;
+  for (let i = 0; i < node.kids.length; i++) { const p = filterPathTo(node.kids[i], gi, [...at, i]); if (p) return p; }
+  return null;
+}
+/* The columns the path shows: each level's rows and the one chosen, then the Teams of the group it ends on (headed by its name), the
+   side's own team marked where it is that group. */
+function filterCols() {
+  const v = pickView[FL.s]; if (!v) return [];
+  const L = v.ladder, cols = [];
+  let node = filterRoot(L);
+  for (let c = 0; node.kids; c++) {
+    const rows = node.kids, sel = clamp(FL.path[c] | 0, 0, rows.length - 1);
+    FL.path[c] = sel;
+    cols.push({ kind:rows[0].kind, head:FL_HEAD[rows[0].kind], rows, sel });
+    node = rows[sel];
+  }
+  FL.path.length = cols.length;
+  const g = L[node.gi];
+  cols.push({ kind:'team', head:g.name, gi:node.gi, rows:g.teams, sel:-1, cur:node.gi === v.gi ? v.i : -1 });
+  return cols;
+}
+const flCount = (L, n) => (n.kids ? n.kids.length : L[n.gi].teams.length);
+function flRowHtml(L, c, n, i, on) {
+  const k = flCount(L, n), w = FL_NOUN[n.kids ? n.kids[0].kind : 'team'][k === 1 ? 0 : 1];
+  return `<button class="fl-r" data-col="${c}" data-i="${i}"${on ? ' aria-current="true"' : ''} tabindex="${on ? 0 : -1}" aria-label="${esc(n.name)}, ${k} ${w}"><b>${esc(n.name)}</b><span class="fl-n" aria-hidden="true">${k}</span></button>`;
+}
+function flTeamHtml(s, t, attrs, path) {                    // a team's row: its shirt, its name (and where it lives, in the matches), My Team where the card says it, its stars
+  if (t.act) return `<button class="fl-r fl-t" ${attrs} data-make="${t.act}"><span class="fl-plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="fl-nm"><b>${esc(t.name)}</b></span></button>`;
+  const tag = pickTag(s, t), mine = tag.includes('gap mine') ? tag : '';   // My Team, or Your Club: never Stronger Side, which is the card's to say
+  return `<button class="fl-r fl-t" ${attrs}${t.legend ? ' data-legend="1"' : ''}>${jersey(t)}<span class="fl-nm"><b>${esc(listName(t))}</b>${path ? `<small>${esc(path)}</small>` : ''}${mine}</span><span class="fl-st">${ratedStars(t)}</span></button>`;   // the tag under the name, so the name keeps the row's width
+}
+function flLocks(box) {                                      // the padlocks the card would show: Create Team, Add Your Team, the Legends (src/ui-store.js)
+  if (typeof storeMark !== 'function' || !box.querySelectorAll) return;
+  for (const b of box.querySelectorAll('[data-make="create"]')) storeMark(b, 'create');
+  for (const b of box.querySelectorAll('[data-make="import"]')) storeMark(b, 'import');
+  for (const b of box.querySelectorAll('[data-legend]')) storeMark(b, 'legends');
+}
+const flCentre = (l, row) => { if (l) l.scrollTop = !row || row.offsetTop + row.offsetHeight <= l.clientHeight ? 0 : Math.max(0, row.offsetTop - (l.clientHeight - row.offsetHeight)/2); };   // a column scrolled to show its mark: from its top where the mark is in view there, else with the mark in the middle
+/* The Filter drawn: the matches while there is text, else the columns. from: the first column whose rows changed; those before it keep
+   their scroll, the rest show their mark. */
+function pickFilterDraw(from = 0) {
+  const v = pickView[FL.s], box = $('fl-cols'), res = $('fl-res'), q = $('fl-q'), word = pickFindWord(); if (!v) return;
+  q.placeholder = 'Search ' + word; q.setAttribute('aria-label', 'Search ' + word);
+  $('m-filter').setAttribute('aria-label', pickWho(FL.s));
+  const find = !!FL.q.trim();
+  box.hidden = find; res.hidden = !find;
+  if (find) {
+    FL.hits = filterSearch(v.ladder, FL.q);
+    res.innerHTML = FL.hits.length ? FL.hits.map((h, r) => flTeamHtml(FL.s, h.t, `data-r="${r}" tabindex="${r ? -1 : 0}"`, h.path)).join('') : `<p class="fl-none">No ${word} Found</p>`;
+    res.scrollTop = 0;
+    $('fl-said').textContent = FL.hits.length ? `${FL.hits.length} ${FL.hits.length === 1 ? word.slice(0, -1) : word}` : `No ${word} Found`;
+    flLocks(res);
+    return;
+  }
+  FL.hits = []; $('fl-said').textContent = '';
+  const was = box.querySelectorAll ? [...box.querySelectorAll('.fl-list')].map(l => l.scrollTop) : [];
+  FL.cols = filterCols();
+  box.dataset.n = String(FL.cols.length); box.dataset.first = FL.cols[0] ? FL.cols[0].kind : '';   // the columns' widths (styles.css): Championship's League column wider than an Area
+  const colHtml = (col, c) => {
+    const rows = col.kind === 'team'
+      ? col.rows.map((t, i) => flTeamHtml(FL.s, t, `data-col="${c}" data-i="${i}"${i === col.cur ? ' aria-current="true"' : ''} tabindex="${i === Math.max(0, col.cur) ? 0 : -1}"`)).join('')
+      : col.rows.map((n, i) => flRowHtml(v.ladder, c, n, i, i === col.sel)).join('');
+    return `<div class="fl-col" role="group" aria-labelledby="fl-h${c}"><p class="fl-h" id="fl-h${c}">${esc(col.head)}</p><div class="fl-list">${rows}</div></div>`;
+  };
+  /* A row chosen (from > 0): the columns before it stay as they are, so the row pressed keeps the focus (a click, a tap, a screen
+     reader's double tap) and a screen reader its place; only the chosen column's mark moves, and the columns after it are drawn anew. */
+  const kept = from > 0 && box.children && box.insertAdjacentHTML ? [...box.children] : [];
+  if (kept.length >= from && kept.length && kept.slice(0, from).every(k => k.classList && k.classList.contains('fl-col'))) {
+    for (const k of kept.slice(from)) k.remove();
+    const col = FL.cols[from - 1];
+    [...kept[from - 1].querySelectorAll('.fl-r')].forEach((r, i) => { const on = i === col.sel; if (on) r.setAttribute('aria-current', 'true'); else r.removeAttribute('aria-current'); r.tabIndex = on ? 0 : -1; });
+    box.insertAdjacentHTML('beforeend', FL.cols.slice(from).map((col, k) => colHtml(col, from + k)).join(''));
+  } else box.innerHTML = FL.cols.map(colHtml).join('');
+  flLocks(box);
+  if (box.querySelectorAll) [...box.querySelectorAll('.fl-list')].forEach((l, c) => { if (c < from) { if (!kept.length && was[c] != null) l.scrollTop = was[c]; } else flCentre(l, l.querySelector('[aria-current="true"]')); });
+}
+/* The search: team names, folded for accents and case, and the names of countries and groups (Premiership lists both Premierships' clubs),
+   a group's competition by its full name as well (United Rugby Championship, where the group says URC). Names that start with the text
+   first, then those with a word that does, then those that hold it, then the clubs of a country or group whose name matches in the same
+   three steps; ladder order within each. Each team once, under its own group (Favourites and Recent only repeat it). */
+const flFold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+function flPath(g) {                                         // North · England · Premiership; Mine · Made Teams; Favourites; a competition's tier and name
+  const parts = g.hemi ? [PICK_HEMI[g.hemi], g.home ? natName(g.home) : null, flSaved(g) ? null : g.name] : [g.ctx, g.name];
+  return parts.filter((p, i, a) => p && p !== a[i - 1]).join(' · ');
+}
+const flLeague = g => { const l = g.teams[0] && g.teams[0].league; return l && g.teams.every(t => t.league === l) ? l : ''; };   // the competition a group's clubs all play in, by its full name: a group called URC found as United Rugby Championship too
+function filterSearch(L, q) {
+  const f = flFold(q); if (!f) return [];
+  const rank = text => { const n = flFold(text); return n.startsWith(f) ? 0 : n.split(/[\s'-]+/).some(w => w.startsWith(f)) ? 1 : n.includes(f) ? 2 : -1; };
+  const seen = new Set(), hits = [], order = L.map((g, gi) => gi).sort((a, b) => flSaved(L[a]) - flSaved(L[b]));   // a team's own group first
+  for (const gi of order) {
+    const g = L[gi], by = flSaved(g) ? [] : [g.name, g.home ? natName(g.home) : '', flLeague(g)].filter(Boolean).map(rank).filter(r => r >= 0), there = by.length ? 3 + Math.min(...by) : -1;
+    g.teams.forEach((t, i) => {
+      const k = pickKey(t); if (t.act || seen.has(k)) return;
+      const own = rank(listName(t)), r = own >= 0 ? own : there;
+      if (r < 0) return;
+      seen.add(k); hits.push({ t, gi, i, r, n:hits.length, path:flPath(g) });
+    });
+  }
+  return hits.sort((a, b) => a.r - b.r || a.n - b.n);
+}
+/* Open: for side s, with q typed (a letter on the screen) or none. how.dev is how it was asked for: 'pad' (a controller's A: the ring on
+   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger: the field never
+   takes the focus, so the phone's keyboard comes up only on a tap there). how.from: 'find' (the icon) or 'sheet' (the group's button),
+   where Close puts the focus back. */
+function pickFilter(s, q, how) {
+  const v = pickView[s], m = $('m-filter'), o = how || {};
+  if ($('s-teams').hidden || !pickFilterable(v)) return false;
+  pickFilterShut();
+  FL.open = true; FL.s = s; FL.q = String(q || ''); FL.from = o.from || 'sheet'; FL.refit = false;
+  FL.path = filterPathTo(filterRoot(v.ladder), v.gi) || [];
+  if (two.on && !pickOne()) { FL.only = s; navOnly = s; }      // 2 Players: only the seat whose side it is drives it, as each drives only his own card (B is either's: navBack)
+  const f = $('fl-q'), card = $('fl-card'), body = document.body;
+  f.value = FL.q;
   if (body && body.children) for (const el of body.children) if (el !== m && el.id !== 'rotate' && !el.inert) { el.inert = true; pickInert.push(el); }   // Turn Your Phone Sideways stays live, as it does for the grown-up check
   m.hidden = false;
-  const el = $('ldr-list').querySelector && $('ldr-list').querySelector('[aria-pressed="true"]');
-  if (el) { if (focusEl) setFocus(el); if (el.focus) el.focus({ preventScroll:true }); if (el.scrollIntoView) el.scrollIntoView({ block:'center' }); }
+  pickFilterDraw(0);
+  if (o.dev !== 'pad' && focusEl) setFocus(null);
+  if (o.dev === 'kb' || o.dev === 'desk') { if (f.focus) f.focus({ preventScroll:true }); if (f.setSelectionRange) f.setSelectionRange(f.value.length, f.value.length); }
+  else { if (card.focus) card.focus({ preventScroll:true }); if (o.dev === 'pad') setFocus(DEFAULT_FOCUS['m-filter']()); }
+  if (motionOn() && typeof card.animate === 'function') card.animate([{ opacity:0, transform:'translateY(8px)' }, { opacity:1, transform:'none' }], { duration:160, easing:'cubic-bezier(.2,.7,.2,1)' });
+  return true;
 }
-function pickSheetDraw() {
-  const s = pick.sheet, v = pickView[s]; if (!v) return;
-  $('ldr-title').textContent = pickWho(s);
-  let html = '', hemi = null, place = null;
-  v.ladder.forEach((g, gi) => {
-    if (g.hemi !== hemi) { if (place != null) html += '</div>'; hemi = g.hemi; place = null; html += `<h3 class="ldr-h">${esc(PICK_HEMI[g.hemi] || g.name)}</h3>`; }
-    const here = g.home ? natName(g.home) + (g.local ? ' · Local' : '') : '';
-    if (here !== place) { if (place != null) html += '</div>'; place = here; html += `<div class="ldr-row">${here ? `<p class="ldr-c">${esc(here)}</p>` : ''}`; }
-    html += `<button class="btn ldr-g" data-g="${gi}" aria-pressed="${gi === v.gi}">${esc(g.name)}</button>`;
-  });
-  if (place != null) html += '</div>';
-  $('ldr-list').innerHTML = html;
+/* A double tap never goes through the Filter. A tap that opens it, picks a team in it or closes it puts something else under the finger at
+   once, so for a moment (FL_TAP.gap) the next press is eaten whole, down to its click: the second tap of a double tap (a child's, or one tap
+   read twice) would otherwise land on whatever is beneath, Kick Off, the Opponent's Next, Minis, the Unlock card, the hub's Play, Your Look
+   or the field (and the phone's keyboard). On the document, before anything else hears it, so it covers the screen that comes next too.
+   Only a press near the first (FL_TAP.near px), as a double tap's second is: one aimed somewhere else is meant. A pointer's click only
+   (detail above 0): a key's, a controller's A and a screen reader's are never doubled. */
+const FL_TAP = { gap:400, near:48, until:0, eat:0, x:0, y:0 };
+function flTapGuard(e) { if (e && e.detail > 0) { FL_TAP.until = performance.now() + FL_TAP.gap; FL_TAP.x = +e.clientX || 0; FL_TAP.y = +e.clientY || 0; } }
+function flTapEat(e) {
+  const now = performance.now();
+  if (e.type === 'pointerdown') FL_TAP.eat = now < FL_TAP.until && Math.hypot((+e.clientX || 0) - FL_TAP.x, (+e.clientY || 0) - FL_TAP.y) <= FL_TAP.near ? now + 1000 : 0;   // a press that starts in the gap, by the first, is eaten to its end (at most a second)
+  if (!(now < FL_TAP.eat) || (e.type === 'click' && !(e.detail > 0))) return;
+  if (e.type === 'click') FL_TAP.eat = 0;
+  if (e.cancelable && e.preventDefault) e.preventDefault();   // the touch's end: no click and no focus follow it; the mouse's down: no focus
+  if (e.stopPropagation) e.stopPropagation();
 }
-function pickSheetShut() {                                  // the sheet put away, nothing else: also whenever another screen is shown (showScreen)
-  if ($('m-ladder').hidden && !pickInert.length) return;
-  pick.sheet = null; $('m-ladder').hidden = true;
+for (const t of ['pointerdown', 'mousedown', 'touchend', 'mouseup', 'click']) document.addEventListener(t, flTapEat, { capture:true, passive:false });
+let pickPointer = '';                                        // the last pointer down on the team screen: 'mouse' (a computer), 'touch' or 'pen'
+const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad' : e && e.detail === 0 && document.activeElement === el ? 'kb' : ((e && e.pointerType) || pickPointer) === 'mouse' ? 'desk' : 'touch');   // how the Filter was asked for (pickFilter)
+const flHas = el => !!el && typeof el.closest === 'function' && !!el.closest('#m-filter');
+function pickFilterShut() {                                  // the Filter put away, nothing else: also whenever another screen is shown (showScreen)
+  const m = $('m-filter');
+  if (!FL.open && m.hidden && !pickInert.length) return;
+  FL.open = false; m.hidden = true; m.classList.remove('kb');
+  if (FL.only != null) { if (navOnly === FL.only) navOnly = null; FL.only = null; }   // 2 Players: both seats on their own cards again
+  filterVv(false);
   for (const el of pickInert) el.inert = false;
   pickInert = [];
+  const f = $('fl-q'); if (document.activeElement === f && f.blur) f.blur();
+  if (focusEl && flHas(focusEl)) setFocus(null);
+  if (FL.refit) { FL.refit = false; pickResize(); }          // the window resized while it was open (a phone's keyboard, on some browsers): the screen fitted now
 }
-function pickSheetClose(gi) {
-  const s = pick.sheet; if (s == null) return;
-  pickSheetShut();
-  if (gi != null && pickView[s] && gi !== pickView[s].gi) pickTo(s, gi, 0, null);
-  const el = pickEl(s, 'sheet');
-  if (el) { if (focusEl) setFocus(el); if (el.focus) el.focus({ preventScroll:true }); }
+function pickFilterBack(el, ring, typed) {                   // the ring or the focus back on the team screen, where it is still the top layer (not under an Unlock card or the builder)
+  if (!el || $('s-teams').hidden || navLayer() !== $('s-teams')) return;
+  if (ring) setFocus(el);
+  if (typed && el.focus) el.focus({ preventScroll:true });
 }
-$('m-ladder').hidden = true;                                 // shut until a group's button opens it
-$('ldr-list').addEventListener('click', e => { const b = e.target && e.target.closest ? e.target.closest('[data-g]') : null; if (b) pickSheetClose(+b.dataset.g); });
-$('ldr-back').addEventListener('click', () => pickSheetClose(null));
-DEFAULT_FOCUS['m-ladder'] = () => ($('ldr-list').querySelector && $('ldr-list').querySelector('[aria-pressed="true"]')) || $('ldr-back');
+function pickFilterClose() {                                 // Close (B, Escape): the side as it was, the focus back where the Filter was opened from
+  if (!FL.open) return;
+  const ring = flHas(focusEl), typed = flHas(document.activeElement), s = FL.s, from = FL.from;
+  pickFilterShut();
+  pickFilterBack(from === 'find' && !$('t-find').hidden ? $('t-find') : pickEl(s, 'sheet') || pickEl(s, 'pick'), ring, typed);
+}
+/* A team picked here: the side moved to it and set, as a tap on its card sets it (pickSet: an entry opens its card, a Legend asks for
+   the Full Game), then the focus or the ring moves on as from the card: Your Team, the Opponent, Kick Off. */
+function pickFilterPick(gi, i) {
+  const s = FL.s, v = pickView[s], g = v && v.ladder[gi]; if (!g || !g.teams[i]) return;
+  const ring = flHas(focusEl), typed = flHas(document.activeElement);
+  pickFilterShut();
+  if (gi !== v.gi || i !== v.i) pickTo(s, gi, i, null);
+  if (typed) { const c = pickEl(s, 'pick'); if (c && c.focus) c.focus({ preventScroll:true }); }   // the keys' focus on the side's card first, as a pick on the card has it: what opens next (the Unlock card, the grown-up check) gives it back there
+  const was = pick.on, done = pickSet(s);
+  if (!done || pickOne()) { pickFilterBack(pickEl(s, 'pick'), ring, typed); return; }
+  pickFilterBack(pickReady() ? $('t-go') : pick.on !== s || was !== pick.on ? pickEl(pick.on, 'pick') : pickEl(s, 'pick'), ring, typed);
+}
+function filterSel(c, i) {                                   // a row of Area, Country or League chosen: the columns after it filled, each on its first (the one already chosen keeps them as they are)
+  const col = FL.cols[c]; if (!FL.open || !col || col.kind === 'team' || i < 0 || i >= col.rows.length) return;
+  if (FL.path[c] !== i) { FL.path[c] = i; FL.path.length = c + 1; }
+  pickFilterDraw(c + 1);
+}
+function pickFilterTap(c, i) {                               // a row pressed: a team picked, any other row chosen
+  const col = FL.cols[c]; if (!FL.open || !col) return;
+  if (col.kind === 'team') pickFilterPick(col.gi, i); else filterSel(c, i);
+}
+function pickFilterType(q) {                                 // the text: the matches, or, cleared, the columns as they were
+  FL.q = String(q || '');
+  const f = $('fl-q'); if (f.value !== FL.q) f.value = FL.q;
+  if (FL.open) pickFilterDraw(0);
+}
+const flRow = (c, i) => { const b = $('fl-cols'); return (b.querySelector && b.querySelector(`[data-col="${c}"][data-i="${i}"]`)) || null; };
+const flHit = r => { const b = $('fl-res'); return (b.querySelector && b.querySelector(`[data-r="${r}"]`)) || null; };
+const flAt = c => { const col = FL.cols[c]; return col ? flRow(c, col.kind === 'team' ? Math.max(0, col.cur) : col.sel) : null; };   // a column's mark (the Teams column's: the side's team, else its first)
+const flFirst = () => (FL.q.trim() ? flHit(0) : flAt(FL.cols.length - 1));   // the way in: the first match, or the Teams column's mark
+/* One step of the keys or the d-pad from el: Up and Down within a column (choosing as it goes, so the columns after it follow), Left and
+   Right between columns (onto each one's mark), Up from a column's first row to top (the field for the keys; Close for a controller, which
+   passes over the field), Down from the top into the rows. null: nowhere to go. */
+function filterStep(el, dx, dy, top) {
+  const d = el && el.dataset; if (!d) return null;
+  if (d.r != null) { if (dx || !dy) return null; const r = +d.r + dy; return r < 0 ? top : flHit(Math.min(r, FL.hits.length - 1)); }
+  if (d.col == null) return dy > 0 ? flFirst() : null;
+  const c = +d.col, i = +d.i, col = FL.cols[c]; if (!col) return null;
+  if (dy) {
+    const j = i + dy;
+    if (j < 0) return top;
+    if (j >= col.rows.length) return null;
+    if (col.kind !== 'team') filterSel(c, j);
+    return flRow(c, j);
+  }
+  return dx > 0 ? flAt(c + 1) : c > 0 ? flAt(c - 1) : null;
+}
+const pickFilterNav = (el, dx, dy) => (FL.open ? filterStep(el, dx, dy, $('fl-close')) : undefined);   // a controller's d-pad (navMove, src/input-devices.js)
+function flShow(el) {                                        // a row brought into its column's view, no further than it needs
+  const l = el && el.parentNode; if (!l || typeof l.scrollTop !== 'number' || typeof el.offsetTop !== 'number') return;
+  if (el.offsetTop < l.scrollTop) l.scrollTop = el.offsetTop;
+  else if (el.offsetTop + el.offsetHeight > l.scrollTop + l.clientHeight) l.scrollTop = el.offsetTop + el.offsetHeight - l.clientHeight;
+}
+function flFocus(el) { if (!el) return; if (el.focus) el.focus({ preventScroll:true }); if (el !== $('fl-q')) flShow(el); }
+/* The phone's keyboard: while the field has the focus, the card takes what the keyboard leaves of the screen (visualViewport), so two
+   matches or more stay above it. Nothing else is fitted again for it: pickResize waits for the Filter to shut. */
+function pickFilterKb() {
+  const m = $('m-filter'), vv = FL.vv, h = vv ? vv.height : 0;
+  const on = FL.open && !!vv && document.activeElement === $('fl-q') && h > 0 && h < innerHeight - 40;
+  m.classList.toggle('kb', on);
+  if (on && m.style && m.style.setProperty) { m.style.setProperty('--vvh', Math.round(h) + 'px'); m.style.setProperty('--vvt', Math.round(vv.offsetTop || 0) + 'px'); }
+  return on;
+}
+function filterVv(on) {
+  if (FL.vv) { FL.vv.removeEventListener('resize', pickFilterKb); FL.vv.removeEventListener('scroll', pickFilterKb); FL.vv = null; }
+  const vv = window.visualViewport;
+  if (on && vv && vv.addEventListener) { FL.vv = vv; vv.addEventListener('resize', pickFilterKb); vv.addEventListener('scroll', pickFilterKb); }
+  pickFilterKb();
+}
+$('m-filter').hidden = true;                                 // shut until the icon, a group's button or a letter opens it
+$('fl-close').addEventListener('click', e => { flTapGuard(e); pickFilterClose(); });
+$('fl-q').addEventListener('input', () => pickFilterType($('fl-q').value));
+$('fl-q').addEventListener('focus', () => filterVv(true));
+$('fl-q').addEventListener('blur', () => filterVv(false));
+$('m-filter').addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('.fl-r') : null; if (!b || !b.dataset) return;
+  if (b.dataset.r != null) { const h = FL.hits[+b.dataset.r]; if (h) { flTapGuard(e); pickFilterPick(h.gi, h.i); } return; }
+  const c = +b.dataset.col, col = FL.cols[c]; if (!col) return;
+  const ring = focusEl === b, typed = e.detail === 0 && document.activeElement === b;
+  if (col.kind === 'team') flTapGuard(e);
+  pickFilterTap(c, +b.dataset.i);
+  if (col.kind !== 'team' && (ring || typed)) { const el = flAt(c + 1); if (ring) setFocus(el); if (typed) flFocus(el); }   // A or Enter opens it: on into the next column
+});
+$('m-filter').addEventListener('focusin', e => {             // one row a column takes Tab's stop: the one last focused there
+  const b = e.target; if (!b || !b.classList || !b.classList.contains('fl-r') || !b.parentNode) return;
+  for (const r of b.parentNode.children) r.tabIndex = r === b ? 0 : -1;
+});
+/* The Filter's keys (one player; in 2 Players the seat whose side it is drives its ring through navKey, as each drives his own card): the
+   arrows as filterStep, Home and End to a column's ends, Enter on a row presses it (opens it, or picks the team), Down or Enter from the
+   field goes in, a letter or a digit goes to the field from anywhere, and Escape clears the text, then closes. */
+document.addEventListener('keydown', e => {
+  if (!FL.open) return;
+  const k = e.key, a = document.activeElement, f = $('fl-q'), stop = () => { if (e.stopPropagation) e.stopPropagation(); if (e.preventDefault) e.preventDefault(); };
+  if (k === 'Escape') { stop(); if (FL.q) { pickFilterType(''); if (!two.on) flFocus(f); } else pickFilterClose(); return; }
+  if (two.on || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (a === f) { if (k === 'ArrowDown' || k === 'Enter') { stop(); flFocus(flFirst()); } return; }   // the rest is the field's own: the text, its caret, Home and End
+  if ((typeof k === 'string' && k.length === 1 && k !== ' ') || k === 'Backspace') { stop(); flFocus(f); pickFilterType(k === 'Backspace' ? FL.q.slice(0, -1) : FL.q + k); return; }
+  const dir = { ArrowUp:[0, -1], ArrowDown:[0, 1], ArrowLeft:[-1, 0], ArrowRight:[1, 0] }[k];
+  if (dir) { stop(); flFocus(filterStep(a, dir[0], dir[1], f)); return; }
+  if ((k === 'Home' || k === 'End') && a && a.classList && a.classList.contains('fl-r') && a.parentNode) {
+    stop();
+    const rows = [...a.parentNode.children], j = k === 'Home' ? 0 : rows.length - 1, d = rows[j].dataset;
+    if (d.col != null && FL.cols[+d.col] && FL.cols[+d.col].kind !== 'team') { filterSel(+d.col, j); flFocus(flRow(+d.col, j)); } else flFocus(rows[j]);
+  }
+});
+DEFAULT_FOCUS['m-filter'] = () => flFirst() || $('fl-close');   // a controller's first press: the side's own mark
 
 /* ---------- input: touch and the mouse, the keyboard, a controller ---------- */
 let pickSwiped = 0, pickHold = null;
@@ -11520,7 +11795,7 @@ function pickClick(e) {
   if (e.detail !== 0 && performance.now() - pickSwiped < 400) return;   // the click a swipe or a long press ends with (a controller's A or a key's is never one)
   const s = at.s, wasTyped = document.activeElement === b, wasRing = focusEl === b;
   if (at.act === 'prev' || at.act === 'next') pickStep(s, at.act === 'next' ? 1 : -1);
-  else if (at.act === 'sheet') pickSheet(s);
+  else if (at.act === 'sheet') { if (pickFilter(s, '', { dev:pickFilterHow(e, b), from:'sheet' })) flTapGuard(e); }
   else if (at.act === 'fav') pickFav(s);
   else if (at.act === 'edit') { const t = pickView[s].team; pick.opener = s; if (t && t.custom) openBuilder(t); }
   else if (at.act === 'pick') {
@@ -11532,6 +11807,7 @@ function pickClick(e) {
 }
 for (const s of [0, 1]) $('t-side' + s).addEventListener('click', pickClick);
 $('t-go').addEventListener('click', () => { ac(); pickGo(); });
+$('t-find').addEventListener('click', e => { if (pickFilter(pick.on, '', { dev:pickFilterHow(e, $('t-find')), from:'find' })) flTapGuard(e); });   // the search icon: the Filter for the side being set
 $('t-back').addEventListener('click', () => {
   if (pickMode === 'two') { navOnly = null; renderJoin(); showScreen('s-join'); return; }
   if (pickMode === 'career') { renderCareerNew(); careerShow('s-career-new'); return; }
@@ -11545,8 +11821,9 @@ function myDone() {
 }
 $('t-sback').addEventListener('click', () => profileStep(1));   // the setup's Club: Back to Gender, Skip to Your Look (src/profile.js)
 $('t-skip').addEventListener('click', () => profileSkip());
-/* A swipe across a card: left for the next team, right for the one before; up for the next group, down for the one before. A long press on
-   Previous or Next jumps a country. */
+/* A swipe across a card: left for the next team, right for the one before; down it for the next group (the owner: "Swipe down for drill
+   down", "Next Group Down"), the card coming in from above with the finger, up it for the one before. A long press on Previous or Next jumps
+   a country. */
 $('t-sides').addEventListener('pointerdown', e => {
   const b = pickHit(e), at = b && pickAt(b);
   if (!at) return;
@@ -11562,18 +11839,24 @@ $('t-sides').addEventListener('pointermove', e => {
   const dx = e.clientX - h.x, dy = e.clientY - h.y, ax = Math.abs(dx), ay = Math.abs(dy);
   const scr = $('s-teams'), scrolls = scr.scrollHeight > scr.clientHeight + 1;
   if (ax >= PICK.swipe && ax > ay*PICK.ratio) { pickHold = null; pickSwiped = performance.now(); pickStep(h.s, dx < 0 ? 1 : -1); }
-  else if (!scrolls && ay >= PICK.swipe && ay > ax*PICK.ratio) { pickHold = null; pickSwiped = performance.now(); pickGroupStep(h.s, dy < 0 ? 1 : -1); }
+  else if (!scrolls && ay >= PICK.swipe && ay > ax*PICK.ratio) { pickHold = null; pickSwiped = performance.now(); pickGroupStep(h.s, dy > 0 ? 1 : -1, dy > 0 ? 'up' : 'down'); }
 });
 const pickLetGo = e => { const h = pickHold; if (h && h.id === e.pointerId) { if (h.timer) clearTimeout(h.timer); if (h.fired) pickSwiped = performance.now(); pickHold = null; } };   // a long press let go: the click it ends with is not a step as well
 for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('t-sides').addEventListener(ev, pickLetGo);
 /* The keyboard, one player (2 Players' halves come through navKey): the arrows act on the side the focus is in (or the active side when
-   nothing is focused), Page Up and Page Down jump a country; Tab and Enter are the browser's own. */
+   nothing is focused), Page Up and Page Down jump a country; a letter or a digit opens the Filter with it typed, for the side the focus
+   is in, else the side being set; Tab and Enter are the browser's own. */
 function pickKeyDown(e) {
   if ($('s-teams').hidden || two.on || navLayer() !== $('s-teams') || (e.target && e.target.tagName === 'INPUT')) return false;
   const a = document.activeElement, at = pickAt(a), free = !a || a === document.body || a === $('s-teams');
+  const k = e.key;
+  if (typeof k === 'string' && k.length === 1 && /[\p{L}\p{N}]/u.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (!pickFilter(at ? at.s : pick.on, k, { dev:'kb', from:'find' })) return false;
+    if (e.preventDefault) e.preventDefault();               // the letter is in the field already: not typed twice
+    return true;
+  }
   const s = at ? at.s : free ? pick.on : null;
   if (s == null) return false;
-  const k = e.key;
   if (k === 'ArrowLeft' || k === 'ArrowRight') pickStep(s, k === 'ArrowRight' ? 1 : -1);
   else if (k === 'ArrowUp' || k === 'ArrowDown') pickGroupStep(s, k === 'ArrowDown' ? 1 : -1);
   else if (k === 'PageUp' || k === 'PageDown') pickCountry(s, k === 'PageDown' ? 1 : -1);
@@ -11582,21 +11865,10 @@ function pickKeyDown(e) {
   return true;
 }
 document.addEventListener('keydown', pickKeyDown);
-/* The sheet's own keys: Escape closes it, and only it (2 Players' Escape would go on to free a side or leave the screen: navBack); the
-   arrows step through its groups, round again, Home and End to its ends. */
-document.addEventListener('keydown', e => {
-  if ($('m-ladder').hidden) return;
-  if (e.key === 'Escape') { if (e.stopPropagation) e.stopPropagation(); if (e.preventDefault) e.preventDefault(); pickSheetClose(null); return; }
-  const gs = [...$('ldr-list').querySelectorAll('.ldr-g')], i = gs.indexOf(document.activeElement), n = gs.length;
-  const j = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? (i < 0 ? n - 1 : (i - 1 + n) % n) : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
-  if (j < 0 || !n) return;
-  if (e.preventDefault) e.preventDefault();
-  gs[j].focus({ preventScroll:true }); if (gs[j].scrollIntoView) gs[j].scrollIntoView({ block:'nearest' });
-});
 /* A controller (and 2 Players' keys): navMove, navPress and navBack ask here first on the team screen (src/input-devices.js).
    On a card the d-pad drives that side: Left and Right a team, Up and Down a group, a shoulder a country; A sets it and moves on (Your
    Team, the Opponent, then Kick Off; one side: the screen's own action). X or Y lifts the ring off the card onto that side's buttons, and
-   from there it moves as on every screen, the cards passed over, so Men | Women | Minis, the group's sheet, Favourite, Edit, Previous and
+   from there it moves as on every screen, the cards passed over, so Men | Women | Minis, the group's button (the Filter), Favourite, Edit, Previous and
    Next, the primary and Back are all in reach; X or Y again puts it back on the card. B is Back, as everywhere.
    2 Players: each seat drives its own side wherever the ring is, A sets it (then Kick Off once both are), B frees it (then Back); a seat's
    X or Y lifts the ring onto his side's buttons, and that seat's d-pad and A then work the ring, until his X or Y again. */
@@ -11638,7 +11910,7 @@ function pickBack(seat) {
   pick.sides[s].set = false; pick.on = s; renderTeams();
   return true;
 }
-function pickShoulder(seat, d) {                           // a shoulder button, or 2 Players' Sprint: a whole country (never under a card or the sheet)
+function pickShoulder(seat, d) {                           // a shoulder button, or 2 Players' Sprint: a whole country (never under a card or the Filter)
   if ($('s-teams').hidden || navLayer() !== $('s-teams')) return false;
   const at = focusEl && pickAt(focusEl);
   const s = two.on && !pickOne() ? (seat === 1 ? 1 : 0) : at ? at.s : pick.on;
@@ -11681,7 +11953,7 @@ function pickHint() {
   for (const w of chip.children) { if (w.textContent === h.text) w.removeAttribute('aria-hidden'); else w.setAttribute('aria-hidden', 'true'); }
   return h;
 }
-$('s-teams').addEventListener('pointerdown', e => { if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
+$('s-teams').addEventListener('pointerdown', e => { pickPointer = e.pointerType || ''; if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
 /* Men | Women | Minis: the sides follow to the category's own (England to England Women); one it has not got (Canada on Men) is the
    next one there, and no longer set. */
 $('t-cat').innerHTML = TEAM_CATS.map(c => `<button data-cat="${c.id}">${esc(c.name)}</button>`).join('');
@@ -16161,7 +16433,7 @@ function profileNav(cands, el, dx, dy) {
 }
 for (const id of ['s-setup', 's-profile']) $(id).addEventListener('keydown', profileKeys);
 /* The setup's Club is the team screen, which leaves Escape to the browser for one player (input-devices.js): there Escape is its Back,
-   to Gender, as on the setup's other steps. Never past a card over it (the group's sheet takes Escape first, and closes; the grown-up
+   to Gender, as on the setup's other steps. Never past a card over it (the team screen's Filter takes Escape first, and closes; the grown-up
    check; the store), nor while a name is typed. */
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || e.defaultPrevented || !profileRun || pickMode !== 'setup' || $('s-teams').hidden || navLayer() !== $('s-teams')) return;
@@ -17305,7 +17577,8 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
   knock:{ KNOCK, KNOCK_OFF, lv:knockLv, catchBall, knockOn, commitTackle, resolveContact, updateBallAir, resolvePass, pressure, tag, isHuman, ARCADE },   // src/knock.js: the knock-on levers and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
-  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), sheetShut:pickSheetShut, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
+  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
+    filter:pickFilter, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
     first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
     profileOpen, render:profileRender, age:profileAge, gender:profileGender, homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },
@@ -17317,7 +17590,7 @@ function start(data) {
   if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data || 'store' in data || 'cup' in data || 'locker' in data || 'profile' in data || 'form' in data)) restore(data);
   resize(); setDesk();
   setTimeout(artLoad, 0);                                   // in every case: the demo behind the menu uses them, whatever camera is saved. In the background: an empty pitch or the code-drawn men until they are in, or if they never come
-  window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) { fitNames(); pickFit(); } if (!$('s-cup').hidden) cupFit($('s-cup')); homeFit(); });
+  window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); pickResize(); if (!$('s-cup').hidden) cupFit($('s-cup')); homeFit(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
   startDemo();

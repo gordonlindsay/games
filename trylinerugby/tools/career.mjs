@@ -835,9 +835,11 @@ C.setCups(false);                                    // no cups unless a section
   ok(PK.view(0).group.key === 'fra' && PK.view(0).team.id === 'TLS', 'Change Club again opens on Toulouse, in the Top 14');
   PK.step(0, 1); ok(PK.primary() === 'Pick ' + PK.view(0).team.name && PK.view(0).team === X.FRANCE[1], 'the primary follows the club shown');
   { const n = PK.view(0).ladder.length, g0 = PK.view(0).gi; for (let k = 0; k < n; k++) PK.group(0, 1); ok(PK.view(0).gi === g0, `Down through all ${n} groups comes round again`); }
-  PK.sheet(0);
-  ok(!$('m-ladder').hidden && !/>National</.test($('ldr-list').innerHTML) && />Top 14</.test($('ldr-list').innerHTML) && />Surrey</.test($('ldr-list').innerHTML), 'the ladder sheet: the clubs\' groups only');
-  PK.sheetClose(null);
+  PK.filter(0, '', { dev:'touch' });
+  { const leagues = [], teams = [], F = PK.filterState(), walk = c => { const col = F.cols[c]; if (col.kind === 'team') { teams.push(...col.rows); return; } for (let i = 0; i < col.rows.length; i++) { PK.filterSel(c, i); if (F.cols[c + 1].kind === 'team') leagues.push(F.cols[c + 1].head); walk(c + 1); } };
+    walk(0);
+    ok(!$('m-filter').hidden && PK.findWord() === 'Clubs' && !leagues.includes('National') && leagues.includes('Top 14') && leagues.includes('Surrey') && teams.every(t => !t.legend && !t.act && !X.isNation(t)), 'the Filter (Search Clubs): the clubs\' groups only, no National, no nation or Legend'); }
+  PK.filterClose();
   // the URC's sides go by country, but a side picked from any of them plays the whole URC, as the career always did
   at('cel.ire'); ok(PK.view(0).group.name === 'URC' && PK.view(0).team.id === 'DUB', 'Ireland\'s URC: Dublin first');
   $('t-go').click();

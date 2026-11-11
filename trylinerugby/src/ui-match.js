@@ -9,7 +9,7 @@ const playing = () => mode === 'match' && M && !M.demo;
 function showScreen(id) {
   if (typeof offlineScreen === 'function') offlineScreen(id);
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
-  if (typeof pickSheetShut === 'function') pickSheetShut();   // the team screen's ladder sheet never outlives it (src/ui-menus.js)
+  if (typeof pickFilterShut === 'function') pickFilterShut();   // the team screen's Filter never outlives it (src/ui-menus.js)
   setFocus(null);
   if (id === 's-teams') fitNames();
   if (id === 's-cup' && typeof cupFit === 'function') cupFit($('s-cup'));   // the cup hub's long names, once it has a size (src/ui-cups.js)

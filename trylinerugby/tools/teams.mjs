@@ -788,8 +788,9 @@ function settle(pick) {
   const html = readGameSource(), menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
   // re-pinned for the side-by-side screen (2026-11-11): Men | Women | Minis beside the title, the two sides with the V between, the one primary
   // and Back; the ladder in its own sheet, behind each side's group button
-  // and, since the profile (2026-11-11), the first launch's Back and Skip either side, hidden in every mode but its Club step (src/profile.js)
-  ok(html.includes('<div class="pk-top"><button class="btn pk-sback" id="t-sback" data-back hidden>Back</button><div class="pk-name"><p class="eyebrow" id="t-eyebrow">Quick Match</p><h2 class="title" id="t-title">Pick Your Team</h2></div>\n      <div class="seg cat" id="t-cat" aria-label="Men, Women or Minis"></div><button class="btn pk-skip" id="t-skip" hidden>Skip</button></div>') && html.includes('<div class="pk-side" id="t-side0" data-side="0" role="group"></div>\n      <div class="pk-v" id="t-v" aria-hidden="true">V</div>\n      <div class="pk-side" id="t-side1" data-side="1" role="group"></div>') && html.includes('<div class="pk-foot"><button class="btn" id="t-back" data-back>Back to Menu</button><button class="btn primary" id="t-go"></button></div>') && html.includes('<div class="modal" id="m-ladder" hidden role="dialog" aria-modal="true" aria-labelledby="ldr-title">'), 'Men | Women | Minis beside the title, Your Team V the Opponent, one primary and Back; the ladder in its sheet');
+  // and, since the profile (2026-11-11), the first launch's Back and Skip either side, hidden in every mode but its Club step (src/profile.js);
+  // and since the Filter (2026-11-11), its search icon before Men | Women | Minis, and the Filter in the sheet's place, a labelled dialog
+  ok(html.includes('<div class="pk-top"><button class="btn pk-sback" id="t-sback" data-back hidden>Back</button><div class="pk-name"><p class="eyebrow" id="t-eyebrow">Quick Match</p><h2 class="title" id="t-title">Pick Your Team</h2></div>\n      <button class="btn pk-find" id="t-find" aria-label="Search Teams" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button><div class="seg cat" id="t-cat" aria-label="Men, Women or Minis"></div><button class="btn pk-skip" id="t-skip" hidden>Skip</button></div>') && html.includes('<div class="pk-side" id="t-side0" data-side="0" role="group"></div>\n      <div class="pk-v" id="t-v" aria-hidden="true">V</div>\n      <div class="pk-side" id="t-side1" data-side="1" role="group"></div>') && html.includes('<div class="pk-foot"><button class="btn" id="t-back" data-back>Back to Menu</button><button class="btn primary" id="t-go"></button></div>') && html.includes('<div class="modal" id="m-filter" hidden role="dialog" aria-modal="true" aria-label="Your Team">') && !html.includes('m-ladder'), 'Men | Women | Minis beside the title, the search icon before it, Your Team V the Opponent, one primary and Back; the ladder in the Filter, a dialog');
   ok(!html.includes('data-key="pool"'), 'the old five-list control has gone');
   const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
   // re-pinned for the side-by-side screen: each side's Previous and Next in equal halves (the count between); taller, the primary on its own
@@ -953,13 +954,17 @@ function settle(pick) {
   D.openTeams('quick');
   ok(v(0).group.key === 'sur' && v(0).team.id === 'FAR' && !P.state().sides[0].set && v(1).team.id === 'WIM' && !P.state().sides[1].set && $('t-title').textContent === 'Pick Your Team', 'Quick Match arrives: Your Team on Farnham (offered, not set), the Opponent on Wimbledon, Pick Your Team');
   ok(/<span class="pk-who">Your Team<\/span><span class="pk-ctx"><span><span>North<\/span> <span>England<\/span> <span>Local<\/span><\/span><\/span>/.test(head(0)) && /<span class="pk-who">Opponent<\/span>/.test(head(1)) && /<button class="btn pk-group" data-act="sheet" aria-haspopup="dialog">Surrey<\/button>/.test(head(0)), 'each side\'s head: who it is, where on the ladder, and its group as a button');
-  P.sheet(0);
-  ok(!$('m-ladder').hidden && $('ldr-title').textContent === 'Your Team' && /data-g="\d+" aria-pressed="true">Surrey</.test($('ldr-list').innerHTML), 'the group\'s button opens the ladder sheet, the side\'s name over it, its group lit');
-  ok(($('ldr-list').innerHTML.match(/class="btn ldr-g"/g) || []).length === v(0).ladder.length && ['North', 'South', 'Mine'].every(h => $('ldr-list').innerHTML.includes(`<h3 class="ldr-h">${h}</h3>`)) && /<p class="ldr-c">England · Local<\/p>/.test($('ldr-list').innerHTML), 'the sheet lists every group, under its hemisphere and its country (Local apart)');
-  P.sheetClose(v(0).ladder.findIndex(g => g.key === 'fra'));
-  ok($('m-ladder').hidden && v(0).group.key === 'fra' && v(0).i === 0, 'a group picked there: the side on its first team, the sheet shut');
-  P.sheet(0); P.sheetClose(null);
-  ok($('m-ladder').hidden && v(0).group.key === 'fra', 'Back shuts it with nothing changed');
+  { const F = () => P.filterState(), groupsIn = () => { const out = [], L = v(0).ladder, walk = n => { if (!n.kids) out.push(n.gi); else n.kids.forEach(walk); }; walk(P.filterRoot(L)); return out; };
+    const fm = $('m-filter'), fa = {}; fm.setAttribute = (k, val) => { fa[k] = String(val); }; fm.getAttribute = k => (k in fa ? fa[k] : null);   // the stub keeps what the game sets, so the dialog's name is read as it runs
+    P.filter(1, '', { dev:'touch' }); const opp = fm.getAttribute('aria-label'); P.filterShut();
+    P.filter(0, '', { dev:'touch' });
+    ok(F().open && !$('m-filter').hidden && F().s === 0 && fm.getAttribute('aria-label') === 'Your Team' && opp === 'Opponent' && F().cols.map(c => c.kind === 'team' ? c.head : c.rows[c.sel].name).join(' > ') === 'North > England > Surrey > Surrey', `the group's button opens the Filter for the side, named for it (${fm.getAttribute('aria-label')}; ${opp} for the Opponent's), on its path: North, England, Surrey`);
+    ok(JSON.stringify(groupsIn()) === JSON.stringify(v(0).ladder.map((g, gi) => gi)) && ['North', 'South', 'Mine'].every(h => F().cols[0].rows.some(n => n.name === h)) && F().cols[2].rows.map(n => n.name).join() === 'National,Premiership,Championship,Surrey,Counties', 'every group of the ladder is in it once, under its area and its country (England\'s Local among its leagues)');
+    const fra = F().cols[1].rows.findIndex(n => n.name === 'France'); P.filterSel(1, fra); P.filterSel(2, 1); P.filterTap(3, 0);
+    ok($('m-filter').hidden && v(0).group.key === 'fra' && v(0).i === 0 && P.state().sides[0].set, 'a team picked there (France\'s Top 14, its first): the side on it and set, the Filter shut');
+    P.step(0, 0); P.state().sides[0].set = false; D.renderTeams(); P.filter(0, '', { dev:'touch' }); P.filterSel(0, 1); P.filterClose();
+    ok($('m-filter').hidden && v(0).group.key === 'fra' && !P.state().sides[0].set, 'Close shuts it with nothing changed');
+  }
   to(0, 'sur');
   ok(v(1).group.key === 'sur' && v(1).team.id === 'WIM', 'the Opponent, not yet moved, follows Your Team: Wimbledon again for Farnham');
   to(0, 'en2');
@@ -1008,9 +1013,9 @@ function settle(pick) {
   ok(P.one() && $('t-eyebrow').textContent === 'Championship' && v(0).group.name === 'United Rugby Championship' && P.where(v(0).group) === 'National' && v(0).group.teams.length === 12, 'a league from the home: one side, Championship over the title, the competition its group (United Rugby Championship, all twelve)');
   X.catPick('women');
   ok($('t-go').textContent === 'Play as ' + v(0).team.name + ' Women', 'Men | Women | Minis there too: Play as names the category');
-  P.sheet(0);
-  ok(($('ldr-list').innerHTML.match(/class="btn ldr-g"/g) || []).length === 2 && />United Rugby Championship</.test($('ldr-list').innerHTML) && />Made Teams</.test($('ldr-list').innerHTML), 'its sheet: the competition and Made Teams');
-  P.sheetClose(null); X.catPick('men'); D.goHome(); H.champPick('int');
+  P.filter(0, '', { dev:'touch' });
+  ok(P.filterState().cols.length === 2 && P.filterState().cols[0].rows.map(n => n.name).join() === 'United Rugby Championship,Made Teams' && /<p class="fl-h" id="fl-h1">United Rugby Championship<\/p>/.test($('fl-cols').innerHTML), 'its Filter: a League column, the competition and Made Teams, and the competition\'s Teams');
+  P.filterClose(); X.catPick('men'); D.goHome(); H.champPick('int');
   ok(v(0).group.name === 'International' && $('t-go').textContent === 'Play as England', 'the nation\'s championship: International, Play as England');
   D.goHome(); H.champPick('world');
   ok($('t-eyebrow').textContent === 'World Cup' && v(0).group.fixed && v(0).group.name === 'World Cup', 'the World Cup: its own list, fixed');
@@ -1060,7 +1065,7 @@ function settle(pick) {
   X.restore({ settings:{ pool:'int', cat:'men' } }); D.goHome();
   // labels: Title Case, no arrow glyphs or disclosure triangles, minimal prose; 44px; the motion
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8'), body = readGameSource(), css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  ok(/<div class="modal" id="m-ladder" hidden role="dialog" aria-modal="true" aria-labelledby="ldr-title">/.test(body) && menus.includes('data-act="sheet" aria-haspopup="dialog"'), 'the group\'s button says what it opens (aria-haspopup), and the sheet is a labelled dialog');
+  ok(/<div class="modal" id="m-filter" hidden role="dialog" aria-modal="true" aria-label="Your Team">/.test(body) && menus.includes('data-act="sheet" aria-haspopup="dialog"') && /id="t-find" aria-label="Search Teams" aria-haspopup="dialog"/.test(body) && menus.includes("$('m-filter').setAttribute('aria-label', pickWho(FL.s));"), 'the group\'s button and the search icon say what they open (aria-haspopup), and the Filter is a dialog named for its side');
   const screen = menus.slice(menus.indexOf('/* ---------- The team screen: Your Team v Opponent'), menus.indexOf('function myPick'));
   ok(!/[←-↙⇐-⇙▲-◿—]/.test(screen + body.slice(body.indexOf('id="s-teams"'), body.indexOf('id="s-build"'))) && !/summary|details/.test(body.slice(body.indexOf('id="s-teams"'), body.indexOf('id="s-build"'))), 'no arrow, triangle or em dash, and no disclosure summary');
   ok(/const motionOn = \(\) => \{ try \{ return !matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches;/.test(menus) && /if \(!how \|\| !motionOn\(\)\) return;/.test(menus) && /el\.animate\(\[\{ opacity:0, transform:from \}, \{ opacity:1, transform:'none' \}\], \{ duration:PICK\.ms,/.test(menus) && /PICK = \{ ms:200,/.test(menus), 'the motion is opacity and transform only, 200ms, and none with reduced motion');
