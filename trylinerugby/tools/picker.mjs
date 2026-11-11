@@ -452,6 +452,9 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   const eng = hits('eng');
   ok(eng[0].t.id === 'ENG' && eng[0].r === 0 && eng.slice(1).every(h => h.r >= 3) && eng.some(h => h.t.id === 'FAR') && eng.findIndex(h => h.t.id === 'BTH') < eng.findIndex(h => h.t.id === 'FAR'), 'a country\'s name: "eng" has England, then England\'s clubs in ladder order');
   ok(hits('bath').length === 1 && hits('bath')[0].path === 'North · England · Premiership', 'each team once: Bath, starred and recent too, under its own group');
+  const urc = hits('united');
+  ok(urc.length === X.CELTIC.length + 4 && urc.every(h => h.r === 3 && / · URC$/.test(h.path)) && ['DUB', 'CDF', 'EDI', 'TRE'].every(id => urc.some(h => h.t.id === id)) && json(ids('United Rugby Championship')) === json(ids('united')), `a group called by its competition's short name found by its full one: "united" lists the URC's clubs, South Africa's four too, each under its URC (${urc.length})`);
+  ok(ids('english').slice(0, 10).join() === view(0).ladder.find(g => g.key === 'eng').teams.map(t => t.id).join() && ids('english').length === 23, 'and "english": the English Premiership\'s clubs, then the English Championship\'s');
   X.custom().push(X.cleanTeam({ name:'Béziers', key:'mybz' }, 0)); D.renderTeams();
   ok(P.filterSearch(view(0).ladder, 'bez').map(h => h.path).join() === 'Mine · Made Teams', 'a team made with an accent found without it (Béziers for "bez"), under Mine · Made Teams');
   ok(!hits('create').length && !hits('add your').length, 'Create Team and Add Your Team are not teams to find');
@@ -459,6 +462,13 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   P.filterType('bath'); ok($('fl-said').textContent === '1 Team', 'one: 1 Team');
   P.filterType(''); ok(!$('fl-cols').hidden && $('fl-res').hidden && marks() === 'North > England > Surrey > Farnham', 'cleared: the columns again, as they were');
   P.filterShut(); X.custom().length = 0;
+  // the dialog named for its side; 2 Players: only that side's seat drives it while it is open (navOnly), both again once it shuts
+  { const fm = $('m-filter'), fa = {}; fm.setAttribute = (k, val) => { fa[k] = String(val); }; fm.getAttribute = k => (k in fa ? fa[k] : null);
+    fresh(); D.openTeams('quick'); P.filter(0, '', { dev:'touch' }); const a0 = fm.getAttribute('aria-label'); P.filterShut(); P.filter(1, '', { dev:'touch' }); const a1 = fm.getAttribute('aria-label'); P.filterShut();
+    D.openJoin(); D.openTeams('two'); P.filter(1, '', { dev:'touch' }); const a2 = fm.getAttribute('aria-label'), only = D.navOnly(); D.renderTeams(); const kept = D.navOnly(); P.filterClose(); const after = D.navOnly();
+    P.filter(0, '', { dev:'touch' }); const only0 = D.navOnly(); P.filterShut(); D.setTwo(false); D.goHome();
+    ok(a0 === 'Your Team' && a1 === 'Opponent' && a2 === 'Player 2', `the Filter is a dialog named for its side: ${a0}, ${a1}, ${a2} in 2 Players`);
+    ok(only === 1 && kept === 1 && after === null && only0 === 0, `2 Players: Player 2's Filter answers Player 2's seat only (navOnly ${only}, ${kept} through a redraw), both seats again once it closes (${after}); Player 1's his (${only0})`); }
   // a pick: the side moved and set, on to the next side, the Filter shut; Close leaves it be
   fresh(); D.openTeams('quick'); P.filter(0, '', { dev:'touch' });
   P.filterSel(0, 1); P.filterSel(1, 1); P.filterSel(2, 1); const pickT = col(3).rows[2]; P.filterTap(3, 2);
@@ -504,6 +514,12 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(P.filterStep(row(0, 4), 0, 1, TOP) === null && P.filterStep(row(0, 0), -1, 0, TOP) === null && P.filterStep(row(3, 0), 1, 0, TOP) === null, 'no further at the ends: nothing');
   P.filterStep(row(1, 2), 0, 1, TOP); ok(fs0().path.join() === '0,3,0' && col(3).head === 'National', 'Down in Country: Scotland, on its first league');
   P.filterShut();
+  // the field's resting edge reads as a field: 3:1 or more against the card and its own ground (WCAG 1.4.11), the chalk ring when focused
+  { const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8'), tok = n => (css.match(new RegExp(`--${n}:(#[0-9a-f]{6})`)) || [])[1];
+    const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)/255).map(v => (v <= 0.03928 ? v/12.92 : ((v + 0.055)/1.055) ** 2.4)); return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]; };
+    const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
+    const edge = (css.match(/\.fl-field\{[^}]*border:1\.5px solid var\(--([a-z-]+)\)/) || [])[1], e = tok(edge), r1 = ratio(e, tok('panel')), r2 = ratio(e, tok('night'));
+    ok(edge === 'rule-in' && r1 >= 3 && r2 >= 3 && /\.fl-field:focus-within\{border-color:var\(--chalk\)/.test(css), `the Search field's edge at rest: ${edge} ${e}, ${r1.toFixed(2)}:1 on the card and ${r2.toFixed(2)}:1 on its ground; the chalk when focused`); }
   fresh();
 }
 
@@ -727,24 +743,26 @@ async function browserChecks() {
           k = await page.evaluate(() => window.__tryline.picker.view(0).i);
           ok(k === 1, `${at}: Next tapped (${k})`);
           const flNow = () => page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, side:window.__tryline.picker.filterState().s, field:document.activeElement === document.getElementById('fl-q'), marks:[...document.querySelectorAll('#fl-cols [aria-current="true"]')].map(e => e.querySelector('b').textContent).join(' > ') }));
-          await page.tap('#t-find');
+          const gap = () => page.waitForTimeout(450);          // past the double tap's guard (FL_TAP): a tap that opens or shuts the Filter eats a second by it for 400ms
+          await page.tap('#t-find'); await gap();
           k = await flNow();
           ok(k.open && k.side === 0 && !k.field && k.marks === 'North > England > Counties > Wandsworth', `${at}: a finger on the search icon: the Filter for the side being set, on its path, the field not focused, so no keyboard comes up (${json(k)})`);
           await page.tap('#fl-q');
           k = await flNow();
           ok(k.open && k.field, `${at}: a tap on the field: it takes the focus (the keyboard's, on a phone) (${json(k)})`);
-          await page.tap('#fl-close'); await page.waitForTimeout(100);
+          await page.tap('#fl-close'); await gap();
           k = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, g:window.__tryline.picker.view(0).group.key, i:window.__tryline.picker.view(0).i, inert:[...document.body.children].filter(e => e.inert).length }));
           ok(!k.open && k.g === 'cty' && k.i === 1 && !k.inert, `${at}: Close: the side as it was, nothing left inert (${json(k)})`);
-          await page.tap('#t-side1 [data-act="sheet"]');
+          await page.tap('#t-side1 [data-act="sheet"]'); await gap();
           k = await flNow();
           ok(k.open && k.side === 1 && !k.field, `${at}: the Opponent's group button: the Filter for the Opponent (${json(k)})`);
-          await page.tap('#fl-close');
-          await page.tap('#t-side0 [data-act="sheet"]');
-          for (const [c, i] of [[0, 0], [1, 0], [2, 0]]) { await page.tap(`#fl-cols [data-col="${c}"][data-i="${i}"]`); }
+          await page.tap('#fl-close'); await gap();
+          await page.tap('#t-side0 [data-act="sheet"]'); await gap();
+          const tapped = [];
+          for (const [c, i] of [[0, 0], [1, 0], [2, 0]]) { await page.tap(`#fl-cols [data-col="${c}"][data-i="${i}"]`); tapped.push(await page.evaluate(() => { const a = document.activeElement; return a && a.dataset.col != null ? a.dataset.col + ':' + a.dataset.i + ' ' + a.querySelector('b').textContent + (a.isConnected ? '' : ' (gone)') : a && (a.id || a.tagName); })); }
           k = await flNow();
-          ok(k.open && k.marks === 'North > Ireland > National', `${at}: a finger through the columns: North, Ireland, National, each filling the next (${json(k)})`);
-          await page.tap('#fl-cols [data-col="3"][data-i="0"]'); await page.waitForTimeout(100);
+          ok(k.open && k.marks === 'North > Ireland > National' && json(tapped) === json(['0:0 North', '1:0 Ireland', '2:0 National']), `${at}: a finger through the columns: North, Ireland, National, each filling the next, and the row tapped keeps the focus (it is not drawn again under the finger) (${json(k)} ${json(tapped)})`);
+          await page.tap('#fl-cols [data-col="3"][data-i="0"]'); await gap();
           k = await page.evaluate(() => ({ g:window.__tryline.picker.view(0).group.key, i:window.__tryline.picker.view(0).i, set:window.__tryline.picker.state().sides[0].set, open:!document.getElementById('m-filter').hidden }));
           ok(k.g === 'nat.ire' && k.i === 0 && k.set && !k.open, `${at}: a team tapped there: Your Team on it and set, the Filter shut (${json(k)})`);
           // the long press on Next: a country
@@ -758,6 +776,32 @@ async function browserChecks() {
           // motion: opacity and transform only, 250ms or less
           k = await page.evaluate(() => { const T = window.__tryline; T.picker.group(0, 1); const a = document.getAnimations(); return a.map(x => ({ d:x.effect.getTiming().duration, props:[...new Set(x.effect.getKeyframes().flatMap(f => Object.keys(f).filter(p => !['offset', 'easing', 'composite', 'computedOffset'].includes(p))))].join() })); });
           ok(k.length >= 1 && k.every(a => a.d <= 250 && /^(opacity|transform)(,(opacity|transform))?$/.test(a.props)), `${at}: a move slides in, opacity and transform only, 250ms or less (${json(k)})`);
+          // a double tap never goes through the Filter (a child's, or one tap read twice): a tap that opens it, picks a team in it or closes it
+          // eats a second by it for a moment, so nothing under the finger is pressed; one aimed elsewhere at once still counts
+          await page.evaluate(() => { const T = window.__tryline, P = T.picker; T.debug.settings().pick = [null, null]; T.debug.settings().cat = 'men'; T.debug.openTeams('quick'); P.set(0); P.set(1); });
+          await gap();
+          const mid = sel => page.evaluate(q => { const r = document.querySelector(q).getBoundingClientRect(); return [r.left + r.width/2, r.top + r.height/2]; }, sel);
+          const dbl = async ([x, y]) => { await page.touchscreen.tap(x, y); await page.waitForTimeout(120); await page.touchscreen.tap(x, y); await gap(); };
+          const dnow = () => page.evaluate(() => { const T = window.__tryline, P = T.picker; return { screen:([...document.querySelectorAll('.screen')].find(e => !e.hidden) || { id:'none' }).id, open:!document.getElementById('m-filter').hidden, cat:T.debug.settings().cat, t1:P.view(1).team.id, set1:P.state().sides[1].set, field:document.activeElement === document.getElementById('fl-q') }; });
+          await dbl(await mid('#t-find')); const d0 = await dnow();             // the icon: the second tap on the field under it
+          await dbl(await mid('#fl-close')); const d1 = await dnow();           // Close: Minis under it
+          await page.tap('#t-find'); await gap();
+          const low = await page.evaluate(() => { const rows = [...document.querySelectorAll('#fl-cols .fl-t')].filter(b => { const r = b.getBoundingClientRect(), l = b.parentNode.getBoundingClientRect(); return r.top >= l.top - 0.5 && r.bottom <= l.bottom + 0.5; }), b = rows[rows.length - 1], r = b.getBoundingClientRect(), c = window.__tryline.picker.filterState().cols; return { at:[r.left + r.width/2, r.top + r.height/2], id:c[c.length - 1].rows[+b.dataset.i].id }; });
+          await dbl(low.at); const d2 = await dnow();                            // the lowest team in view: Kick Off or the Opponent's Next under it
+          await page.tap('#t-find'); await page.waitForTimeout(150); await page.tap('#fl-close'); await gap(); const d3 = await dnow();   // Close at once, far from the icon
+          ok(d0.open && !d0.field && !d1.open && d1.cat === 'men' && d2.screen === 's-teams' && !d2.open && d2.t1 === low.id && d2.set1 && !d3.open, `${at}: a double tap never goes through the Filter: on the icon, the field under it not focused (no keyboard); on Close, Minis under it not chosen; on a team, it picked and set, Kick Off or Next under it not pressed; Close tapped at once after the icon still closes (${json([d0, d1, low.id, d2, d3])})`);
+          if (at === '844x390') {
+            await page.evaluate(() => { window.__tryline.debug.openTeams('champ', 'eng'); }); await gap();
+            await page.tap('#t-find'); await gap();
+            await dbl(await mid('#fl-cols [data-col="1"][data-i="3"]'));
+            const c0 = await page.evaluate(() => ({ screen:([...document.querySelectorAll('.screen')].find(e => !e.hidden) || { id:'none' }).id, team:window.__tryline.teams.champ() && window.__tryline.teams.champ().teams[0].id }));
+            await page.evaluate(() => { const T = window.__tryline; T.teams.setChamp(null); T.debug.goHome(); T.career.set(null); T.career.newOpen(); T.career.clubOpen(); }); await gap();
+            await page.tap('#t-find'); await gap();
+            await dbl(await mid('#fl-cols [data-col="3"][data-i="1"]'));
+            const c1 = await page.evaluate(() => ({ screen:([...document.querySelectorAll('.screen')].find(e => !e.hidden) || { id:'none' }).id, focus:document.activeElement.tagName }));
+            await page.evaluate(() => { const T = window.__tryline; T.career.set(null); T.debug.goHome(); });
+            ok(c0.screen === 's-hub' && c0.team === 'GLO' && c1.screen === 's-career-new' && c1.focus !== 'INPUT', `${at}: and onto the next screen: Championship's Gloucester double tapped, the hub shown and its first match not kicked off; Career's club double tapped, New Player shown and its name field not focused (${json([c0, c1])})`);
+          }
           // a controller's reach (the review, 2026-11-11): from the first press, the d-pad's four ways and X or Y (the lift) reach every button
           // on the screen and every card, in Quick Match, Championship (a made team with its Edit), the World Cup, the career's club screen,
           // My Team, and 2 Players for each seat (his own card driven, the rest by the lifted ring)
@@ -944,6 +988,20 @@ async function browserChecks() {
             return out;
           });
           ok(json(k) === json(['t-side0 sheet', 'open', '3:0', 'not the field', '2:3', '2:4', 'Counties', 'fl-close', '3:0', '0:0', '1:0', '3:0', 'shut', 'RSA', true, 't-side1 pick', '3:0', 'shut', 't-side1 sheet']), `${at}: a controller: A on the group's button opens the Filter on Your Team's mark (the field untouched); the d-pad: Left to its league, Down choosing Counties, Up past the top to Close, Down back in, Left to the areas; A on South opens it into its countries, A on a team picks it (South Africa, set) and the ring moves on to the Opponent; B closes, the ring back on the group's button (${json(k)})`);
+          // 2 Players: the Filter answers only the seat whose side it is, as each seat drives only his own card; B is either seat's
+          if (at === '844x390') {
+            k = await page.evaluate(() => {
+              const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), f = () => { const e = D.focus(); return e && e.dataset.col != null ? e.dataset.col + ':' + e.dataset.i : e ? e.id : 'none'; }, out = [];
+              D.settings().pick = [null, null]; D.openJoin(); D.openTeams('two'); T.home.ring(null);
+              P.filter(1, '', { dev:'pad' }); out.push($('m-filter').getAttribute('aria-label'), f());
+              T.navMove(0, -1, 0); out.push(f()); T.navPress(0); out.push(!$('m-filter').hidden ? 'open' : 'shut', P.state().sides[1].set);   // Player 1: nothing
+              T.navMove(1, -1, 0); out.push(f());                                                                                            // Player 2: Left to the league
+              T.navBack(0); out.push(!$('m-filter').hidden ? 'open' : 'shut', D.navOnly());                                                  // Player 1's B closes it
+              T.home.ring(null); D.setTwo(false); D.goHome();
+              return out;
+            });
+            ok(k[0] === 'Player 2' && /^3:/.test(k[1]) && k[2] === k[1] && k[3] === 'open' && k[4] === false && /^2:/.test(k[5]) && k[6] === 'shut' && k[7] === null, `${at}: 2 Players: Player 2's Filter (named for him) answers his seat only: Player 1's d-pad and A do nothing in it, Player 2's Left moves the ring; either seat's B closes it, both seats free again (${json(k)})`);
+          }
           // a card over the screen (the Unlock card): the keys and a controller's shoulder leave the teams behind it alone
           k = await page.evaluate(() => {
             const T = window.__tryline, P = T.picker, D = T.debug, S = T.store, $ = id => document.getElementById(id);
@@ -1004,12 +1062,13 @@ async function browserChecks() {
               const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), out = [], scr = $('s-teams');
               D.settings().pick = [null, null]; D.openTeams('quick'); const base = scr.dataset.fit;
               P.filter(0, 'a', { dev:'touch' }); document.getAnimations().forEach(a => a.finish());
-              for (const [left, top] of [[175, 0], [150, 0], [140, 0], [160, 40]]) {
+              for (const [left, top] of [[175, 0], [150, 0], [140, 0], [132, 0], [128, 0], [160, 40]]) {
                 const vv = new EventTarget(); Object.assign(vv, { width:innerWidth, height:left, offsetTop:top, offsetLeft:0, scale:1 });
                 Object.defineProperty(window, 'visualViewport', { value:vv, configurable:true });
                 $('fl-q').blur(); $('fl-q').focus(); vv.dispatchEvent(new Event('resize'));
-                const rows = [...document.querySelectorAll('#fl-res .fl-r')].filter(r => { const b = r.getBoundingClientRect(); return b.top >= top - 0.5 && b.bottom <= top + left + 0.5; }).length, f = $('fl-q').getBoundingClientRect();
-                out.push({ left, top, kb:$('m-filter').classList.contains('kb'), rows, field:f.top >= top - 0.5 && f.bottom <= top + left + 0.5 });
+                const inView = b => b.top >= top - 0.5 && b.bottom <= top + left + 0.5, all = [...document.querySelectorAll('#fl-res .fl-r')];
+                const rows = all.filter(r => inView(r.getBoundingClientRect())).length, read = all.filter(r => [...r.querySelectorAll('.fl-nm, .fl-st')].every(e => inView(e.getBoundingClientRect()))).length, f = $('fl-q').getBoundingClientRect();
+                out.push({ left, top, kb:$('m-filter').classList.contains('kb'), rows, read, field:f.top >= top - 0.5 && f.bottom <= top + left + 0.5 });
               }
               scr.dataset.fit = '3'; window.dispatchEvent(new Event('resize')); const held = scr.dataset.fit;
               $('fl-q').blur(); const off = $('m-filter').classList.contains('kb');
@@ -1017,7 +1076,7 @@ async function browserChecks() {
               delete window.visualViewport; D.goHome();
               return { out, held, off, base, after };
             });
-            ok(k.out.every(o => o.kb && o.rows >= 2 && o.field), `${at}: with the field focused and the phone's keyboard up (what it leaves: 175, 150 and 140px; 160px with the page scrolled 40 down), the Filter fits in it, the field and two matches or more above the keyboard (${json(k.out)})`);
+            ok(k.out.every(o => o.kb && o.field && o.read >= 2 && (o.left < 132 || o.rows >= 2)), `${at}: with the field focused and the phone's keyboard up (what it leaves: 175, 150, 140 and 132px; 160px with the page scrolled 40 down), the Filter fits in it, the field and two whole matches or more above the keyboard; at 128px (a landscape iPhone with QuickType and the form bar) the second's name, path and stars still wholly above it (${json(k.out)})`);
             ok(k.held === '3' && !k.off && k.after === k.base, `${at}: a window resize under the open Filter fits nothing again (data-fit kept at ${k.held}); the field let go, the card back to its own size; the Filter shut, the screen fitted (${k.base} to ${k.after})`);
           }
         } else {
@@ -1040,6 +1099,26 @@ async function browserChecks() {
       await page.keyboard.type('glouc'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
       const k2 = await page.evaluate(() => ({ team:window.__tryline.picker.view(0).team.id, set:window.__tryline.picker.state().sides[0].set, open:!document.getElementById('m-filter').hidden }));
       ok(k.desk && k.open && k.focus === 'fl-q' && k2.team === 'GLO' && k2.set && !k2.open, `a computer: a click on the icon opens the Filter with the field focused; typed "glouc", Enter to the match and Enter again picks Gloucester (${json([k, k2])})`);
+      // a click on a row of Area or Country keeps the focus on it (the columns before it are not drawn again), so Tab and the arrows go on
+      // from there, as they do for Enter
+      const foc = () => page.evaluate(() => { const a = document.activeElement; return a && a.dataset.col != null ? `${a.dataset.col}:${a.dataset.i} ${a.querySelector('b').textContent}` : a ? a.id || a.tagName : null; });
+      await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
+      await page.waitForTimeout(450);                         // a person's next click on the icon: never inside the double click's 400ms
+      await page.click('#t-find'); await page.waitForTimeout(450);
+      await page.click('#fl-cols [data-col="0"][data-i="1"]'); const m0 = await foc();
+      await page.click('#fl-cols [data-col="1"][data-i="1"]'); const m1 = await foc();
+      await page.keyboard.press('ArrowDown'); const m2 = await foc();
+      ok(m0 === '0:1 South' && m1 === '1:1 New Zealand' && m2 === '1:2 Australia', `a computer: a click on South keeps the focus on South, one on New Zealand on it, and Down goes on from there (${m0}, ${m1}, ${m2})`);
+      await page.keyboard.press('Escape');
+      // a gated team picked from the Filter by the keys (a Legend without the Full Game): the Unlock card, and Escape on it puts the focus
+      // back on Your Team's card, as a pick on the card does
+      await page.evaluate(() => { const T = window.__tryline, L = T.locker; T.store.setTier('free'); T.store.setBought([]); L.set(L.fresh()); L.FEATS.filter(f => f.id !== 'star').slice(0, 10).forEach(f => { L.state().n[f.id] = 10; }); T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
+      await page.focus('#t-side0 .pk-pick'); await page.keyboard.type('england 2003'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      const g0 = await page.evaluate(() => ({ store:!document.getElementById('m-store').hidden, team:window.__tryline.picker.view(0).team.id }));
+      await page.keyboard.press('Escape');
+      const g1 = await page.evaluate(() => { const a = document.activeElement, s = a && a.closest && a.closest('.pk-side'); return { store:!document.getElementById('m-store').hidden, focus:s ? s.id + ' ' + a.dataset.act : a && (a.id || a.tagName) }; });
+      await page.evaluate(() => { const T = window.__tryline; T.store.setTier(null); T.locker.set(T.locker.fresh()); T.debug.goHome(); });
+      ok(g0.store && g0.team === 'L03' && !g1.store && g1.focus === 't-side0 pick', `a computer: England 2003 picked from the Filter by the keys without the Full Game: the Unlock card; Escape and the focus is on Your Team's card, as from the card (${json([g0, g1])})`);
       await ctx.close();
     }
   } finally { await browser.close(); server.close(); }

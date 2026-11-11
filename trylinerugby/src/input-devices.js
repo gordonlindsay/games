@@ -288,8 +288,9 @@ function navBack(seat) {
   if (demoOn()) { demoSkip(); return true; }
   if (practice && (practice.done || practice.ready)) { practiceChoose(); return true; }
   logNav('back', seat);
-  if (!navOwner(seat)) return false;
-  const layer = navLayer(); if (!layer) return false;
+  const layer = navLayer();
+  if (!navOwner(seat) && !(layer && layer.id === 'm-filter')) return false;   // the team screen's Filter: either seat's B closes it, though only its side's seat drives it (src/ui-menus.js)
+  if (!layer) return false;
   if (layer.id === 's-teams' && typeof pickBack === 'function' && pickBack(seat)) return true;   // 2 Players: B frees the seat's own side first
   for (const el of layer.querySelectorAll('[data-back]')) if (!el.hidden && !(el.closest && el.closest('[hidden]'))) { if (el.click) el.click(); return true; }
   return false;

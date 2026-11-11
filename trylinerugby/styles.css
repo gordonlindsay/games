@@ -6,6 +6,7 @@
   --panel-hi:#17271d;
   --rule:#243629;
   --rule-hi:#3a5242;
+  --rule-in:#5f7a66;      /* a text field's resting edge: 3.7:1 on the panel, so the field reads as one (WCAG 1.4.11) */
   --chalk:#f1eee4;        /* line-marking white */
   --chalk-dim:#a7b4a9;
   --flood:#ffcf3d;        /* sodium floodlight: controlled player + primary action */
@@ -250,7 +251,7 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 #m-filter{padding:12px max(12px,var(--sar)) 12px max(12px,var(--sal))}
 #m-filter .card.fl{width:min(780px,100%);height:calc(100vh - 24px);height:calc(100dvh - 24px);padding:10px 12px;gap:8px;outline:none}
 .fl-top{flex:none;display:flex;align-items:center;gap:8px}
-.fl-field{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 4px 0 12px;border:1.5px solid var(--rule-hi);border-radius:10px;background:var(--night);color:var(--chalk-dim);cursor:text}
+.fl-field{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 4px 0 12px;border:1.5px solid var(--rule-in);border-radius:10px;background:var(--night);color:var(--chalk-dim);cursor:text}
 .fl-field:focus-within{border-color:var(--chalk);box-shadow:0 0 0 1.5px var(--chalk)}
 .fl-q{flex:1 1 auto;min-width:0;height:41px;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:var(--chalk);font:400 16px/1.2 var(--body);outline:none;-webkit-appearance:none;appearance:none;-webkit-user-select:text;user-select:text}
 .fl-q::placeholder{color:var(--chalk-dim);opacity:1}
@@ -306,10 +307,12 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
   .fl-h{padding-inline:6px}
   .fl-n{font-size:13px}
 }
-/* the phone's keyboard up: the card in what it leaves, the headings gone, so two matches or more stay in view above it */
-#m-filter.kb{place-items:start center;padding-top:calc(var(--vvt,0px) + 2px);padding-bottom:0}
-#m-filter.kb .card.fl{height:calc(var(--vvh,100vh) - 4px);padding:2px 8px;gap:2px}
+/* the phone's keyboard up: the card in exactly what it leaves, with nothing round its rows (no edge, padding, gap or headings), so the field
+   and two whole matches fit in 132px: a landscape iPhone with QuickType and the form bar leaves about 130 to 137 */
+#m-filter.kb{place-items:start center;padding-top:var(--vvt,0px);padding-bottom:0}
+#m-filter.kb .card.fl{height:var(--vvh,100vh);padding:0 8px;gap:0;border-width:0 1.5px;border-radius:0}
 #m-filter.kb .fl-h{display:none}
+#m-filter.kb .fl-cols,#m-filter.kb .fl-res{border-top:0}
 #m-filter.kb .fl-res .fl-r{min-height:44px;padding-block:2px}
 /* the game's version, small at the foot of Settings (GAME_VERSION): on the last row's label line, at its right end, set as a label is (the
    Camera's on the left), so it takes no row of its own and never sits on a button */
