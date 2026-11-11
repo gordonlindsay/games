@@ -491,7 +491,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(K.get() === null && shown() === 's-home' && D.settings().hl === 'champ' && !$('hc-new').hidden && $('hc-go').hidden && K.history().length === 1, 'New Championship: the cup put away once, the home\'s Championship with its competitions');
   // the Home Nations Tour, in turn
   D.settings().cat = 'men'; H.champPick('tour');
-  ok($('t-title').textContent === 'Pick the Host' && $('t-go').textContent === 'Tour New Zealand' && !$('t-go').hidden && PK.one() && /Your Side · Home Nations/.test($('t-side0').innerHTML), 'Home Nations Tour: your side is the Home Nations, Tour New Zealand first');
+  ok($('t-title').textContent === 'Pick the Host' && $('t-go').textContent === 'Tour New Zealand' && !$('t-go').hidden && PK.one() && /<span>Your Side<\/span> <span>Home Nations<\/span>/.test($('t-side0').innerHTML) && PK.where(PK.view(0).group) === 'Your Side · Home Nations', 'Home Nations Tour: your side is the Home Nations, Tour New Zealand first');
   ok(pv().group.teams.map(t => t.id).join() === 'NZL,RSA,AUS' && pv().team.id === 'NZL', 'the three hosts, the one in turn first');
   $('t-go').click();
   c = K.get();

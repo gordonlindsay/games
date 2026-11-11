@@ -475,6 +475,28 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   X.restore({ custom:[] });
 }
 
+// 8b. Add Your Team from My Team's own screen (openTeams('my')): the club is offered, never made My Team's behind the offer (Make This My
+//     Team | Not Now, as from every other screen); Not Now leaves My Team as it was, and the screen shows the club that came in, not the
+//     league's first side; Make This My Team makes it the club, saved
+for (const make of [false, true]) {
+  native(true); reset(); I.setGate(go => go());
+  X.restore({ custom:[], champ:null }); I.setLeague(null); D.settings().myClub = null; X.save();
+  pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
+  D.openTeams('my'); PK.group(0, pv().ladder.findIndex(g => g.key === 'mine.league') - pv().gi);
+  ok(pv().team.act === 'import' && PK.primary() === 'Add Your Team', 'My Team: Add Your Team in Mine\'s My League');
+  PK.go(); $('im-url').value = PIT + '/teams/3100/league-table'; I.go();
+  for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+  ok(I.state().step === 'preview' && $('im-go').textContent === 'Save Club', 'its preview: Save Club');
+  I.go();
+  ok(I.state().step === 'mine' && !$('m-import').hidden && !$('im-mine').hidden && D.settings().myClub == null && saved().settings.myClub == null, `Save Club from My Team still asks Make This My Team | Not Now, My Team untouched until then, in memory and in the save (${I.state().step}, ${D.settings().myClub})`);
+  $(make ? 'im-make' : 'im-not').click();
+  const club = X.custom().find(t => t.name === 'Bracknell RFC');
+  ok($('m-import').hidden && pv().team === club && pv().group.key === 'mine.made', `${make ? 'Make This My Team' : 'Not Now'}: the card closes on the club that came in, not the league's first side (${pv().team.name})`);
+  if (make) ok(D.settings().myClub === club.key && saved().settings.myClub === club.key && PK.primary() === 'Done', 'Make This My Team: the club is My Team\'s, saved, and the screen says Done');
+  else ok(D.settings().myClub == null && saved().settings.myClub == null && PK.primary() === 'Pick Bracknell RFC', 'Not Now: My Team as it was, in memory and in the save; the club is there to pick');
+  I.setGate(null); native(false); I.setLeague(null); X.restore({ custom:[] }); D.goHome();
+}
+
 // 9. copy: Title Case labels, no em dash, no arrow, and the gate is the kids contract
 {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');

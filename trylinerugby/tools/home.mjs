@@ -834,21 +834,32 @@ async function browserChecks() {
       await page.keyboard.press('Enter'); club.push(await page.evaluate(() => [document.getElementById('s-career-new').hidden ? 'teams' : 'new player', window.__tryline.career.draft().club.id, window.__tryline.career.draft().league].join(' ')));
       await page.evaluate(() => { const T = window.__tryline; T.home.ring(null); T.career.set(null); T.debug.goHome(); });
       ok(json(club) === json(['cty', 'en2', 'new player EAL en2']), `${kind}: the career's club screen too: Down to Counties, Up to England's Championship, Enter picks Ealing, of England 2 (${json(club)})`);
-      // a controller: the first press on Your Team's card; the d-pad drives it; from Kick Off the ring reaches everything on the screen
+      // a controller: the first press on Your Team's card; the d-pad drives it; X or Y lifts the ring onto the side's buttons, and from the
+      // first press the ring reaches every button on the screen, in Quick Match, Championship (Play as among them), the career's club screen
+      // and My Team (re-pinned 2026-11-11: the search starts at the first press and goes on from the cards too)
       const pad = await page.evaluate(() => {
-        const T = window.__tryline, D = T.debug, X = T.teams, P = T.picker, $ = i => document.getElementById(i), f = () => T.debug.focus(), id = el => el && (el.closest && el.closest('.pk-side') ? el.closest('.pk-side').id + ' ' + el.dataset.act : el.id || el.textContent.trim());
-        const reach = () => { const s = $('s-teams'), seen = new Set(), todo = [f()]; while (todo.length) { const el = todo.pop(); if (!el || seen.has(el) || el.dataset.act === 'pick') { if (el) seen.add(el); continue; } seen.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); todo.push(T.navMove(0, dx, dy)); } }
-          const all = [...s.querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0 && !b.disabled); T.home.ring(null); return all.filter(b => !seen.has(b)).map(id); };
+        const T = window.__tryline, D = T.debug, P = T.picker, $ = i => document.getElementById(i), f = () => T.debug.focus();
+        const id = el => !el ? 'none' : el.closest && el.closest('.pk-side') ? el.closest('.pk-side').id + ' ' + el.dataset.act : el.dataset && el.dataset.cat ? 'cat ' + el.dataset.cat : el.id || el.textContent.trim();
+        const find = k => (k === 'none' ? null : k.startsWith('cat ') ? document.querySelector(`#t-cat [data-cat="${k.slice(4)}"]`) : k.startsWith('t-side') ? $(k.split(' ')[0]).querySelector(`[data-act="${k.split(' ')[1]}"]`) : $(k));
+        const reach = () => {                                  // every state of the ring from the first press: the d-pad's four ways and the lift, from every button and card
+          const start = id(T.navMove(0, 0, 0)), seen = new Set([start]), todo = [start];
+          while (todo.length) { const k = todo.shift(); for (const a of ['l', 'r', 'u', 'd', 'y']) { T.home.ring(find(k)); if (a === 'y') P.lift(0); else T.navMove(0, a === 'r' ? 1 : a === 'l' ? -1 : 0, a === 'd' ? 1 : a === 'u' ? -1 : 0); const n = id(f()); if (!seen.has(n)) { seen.add(n); todo.push(n); } } }
+          const all = [...$('s-teams').querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0 && !b.disabled).map(id); T.home.ring(null);
+          return start + ' ' + JSON.stringify(all.filter(k => !seen.has(k)));
+        };
         const out = [];
         D.settings().pick = [null, null]; D.openTeams('quick'); T.home.ring(null);
         out.push(id(T.navMove(0, 0, 0)));
         T.navMove(0, 0, 1); out.push(P.view(0).group.key, id(f()));
-        T.home.ring($('t-go')); out.push(JSON.stringify(reach()));
-        D.openTeams('champ', 'sur'); T.home.ring(null); out.push(id(T.navMove(0, 0, 0)));   // Surrey, My Team's list: its card, Play as Farnham under it
+        P.lift(0); out.push(id(f())); P.lift(0); out.push(id(f()));
+        D.openTeams('quick'); T.home.ring(null); out.push(reach());
+        D.openTeams('champ', 'sur'); T.home.ring(null); out.push(reach());   // Surrey, My Team's list: its card first, Play as Farnham in reach
+        T.career.set(null); T.career.newOpen(); T.career.clubOpen(); T.home.ring(null); out.push(reach());
+        D.openTeams('my'); T.home.ring(null); out.push(reach());
         T.home.ring(null); D.goHome();
         return out;
       });
-      ok(json(pad) === json(['t-side0 pick', 'cty', 't-side0 pick', '[]', 't-side0 pick']), `${kind}: a controller: the first press on Your Team's card, Down its next group with the ring kept on it, the ring from Kick Off reaching every button, Championship's first press on its card (${json(pad)})`);
+      ok(json(pad) === json(['t-side0 pick', 'cty', 't-side0 pick', 't-side0 sheet', 't-side0 pick', 't-side0 pick []', 't-side0 pick []', 't-side0 pick []', 't-side0 pick []']), `${kind}: a controller: the first press on Your Team's card, Down its next group with the ring kept on it, Y onto its group's button and back; from the first press the ring reaches every button in Quick Match, Championship, the career's club screen and My Team (${json(pad)})`);
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }

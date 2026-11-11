@@ -293,6 +293,47 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(!key('a'), 'any other key is the browser\'s');
 }
 
+// 7b. The review's fixes (2026-11-11), without a browser: the Opponent follows Your Team from Favourites and Recent to its rivals, and never
+//     onto Create Team alone; the category the sides were picked in comes back; a Legend kept from before a purchase was taken back is
+//     neither set again nor played; 2 Players' one title
+{
+  fresh(); st.recent = [['CDF', 'FAR'], []]; st.fav = ['GUI'];
+  D.openTeams('quick'); P.group(0, view(0).ladder.findIndex(g => g.key === 'recent') - view(0).gi);
+  ok(shown(0).id === 'CDF' && view(1).group.key === 'cel.wal' && shown(1).league === shown(0).league && shown(1).id !== 'CDF', `Your Team on Recent's Cardiff: the Opponent on Cardiff's own group, its rivals first (${view(1).group.key}, ${shown(1).id})`);
+  D.openTeams('quick'); P.group(0, view(0).ladder.findIndex(g => g.key === 'fav') - view(0).gi);
+  ok(shown(0).id === 'GUI' && view(1).group.key === 'sur' && shown(1).id !== 'GUI', `and on Favourites' Guildford: Surrey, Guildford's own (${view(1).group.key}, ${shown(1).id})`);
+  fresh(); D.openTeams('quick'); P.group(0, view(0).ladder.findIndex(g => g.key === 'mine.made') - view(0).gi); P.go(); T.sidesOf.saveBuilder();
+  ok(shown(0).custom && P.state().sides[0].set && !shown(1).act && view(1).group.key === 'sur' && P.primary() === 'Pick ' + X.listName(shown(1)), `the first team made from Your Team's side: the Opponent on a real side, never Create Team (${view(1).group.key}, ${P.primary()})`);
+  // the category
+  fresh(); st.cat = 'men'; st.pick = [{ id:'ENG', cat:'women', g:'nat.eng' }, { id:'FRA', cat:'women', g:'nat.fra' }];
+  D.openTeams('quick');
+  ok(st.cat === 'women' && shown(0) === X.natList('women').find(t => t.id === 'ENG') && shown(1) === X.natList('women').find(t => t.id === 'FRA') && P.ready(), 'Quick Match reopens in the category its sides were picked in (Women), wherever Men | Women | Minis was left since');
+  st.cat = 'men'; D.openTeams('champ', 'eng');
+  ok(st.cat === 'men', 'Championship keeps its own');
+  st.pick = [{ id:'ENG', cat:'women', g:'nat.eng' }, { id:'FRA', cat:'minis', g:'nat.fra' }]; D.openTeams('quick');
+  ok(st.cat === 'men', 'sides kept in two categories: the category as it is');
+  // a Legend, the Full Game taken back
+  fresh(); golds(10); S.setTier(null);
+  D.openTeams('quick'); P.group(0, view(0).ladder.findIndex(g => g.key === 'nat.eng') - view(0).gi); P.step(0, 1);
+  ok(shown(0).id === 'L03', 'England 2003 after England');
+  P.set(0); P.group(1, view(1).ladder.findIndex(g => g.key === 'nat.eng') - view(1).gi); P.set(1); P.go(); D.exitMatch();
+  ok(json(st.pick.map(p => p.id)) === json(['L03', 'ENG']), 'played with the Full Game, and kept');
+  S.setTier('free'); S.setBought([]);
+  D.openTeams('quick');
+  ok(shown(0).id === 'L03' && !P.state().sides[0].set && P.state().sides[1].set && !P.ready() && P.primary() === 'Pick England 2003', `the Full Game taken back: the Legend still shown where it was, but not set, so no Kick Off (${P.primary()})`);
+  P.go();
+  ok(S.ui().mode === 'unlock' && S.ui().feature === 'legends' && !(T.M && !T.M.demo && T.M.nat[0].id === 'L03'), 'and its Pick opens the Unlock card, never the match');
+  T.store.close(); P.state().sides[0].set = true; D.renderTeams();
+  ok(P.ready() && P.kickOff() === false && S.ui().mode === 'unlock' && !(T.M && !T.M.demo && T.M.nat[0].id === 'L03'), 'Kick Off itself, both sides set, still asks for the Full Game first');
+  T.store.close(); S.setTier(null); golds(0);
+  // 2 Players: one title
+  fresh(); D.openJoin(); D.openTeams('two');
+  ok($('t-title').textContent === 'Pick Teams', '2 Players: Pick Teams');
+  P.press(0); ok($('t-title').textContent === 'Pick Teams' && P.state().sides[0].set, 'and still, whoever moved last');
+  P.press(1); ok($('t-title').textContent === 'Pick Teams' && P.primary() === 'Kick Off', 'both set: Kick Off under the same title');
+  D.setTwo(false); D.goHome(); fresh();
+}
+
 // 8. Nothing drawn at random; GAME_VERSION
 {
   fresh();
@@ -361,6 +402,24 @@ async function browserChecks() {
               const out = parts.filter(p => !vis(p)).map(p => p.id); if (out.length) bad.push(`${what}: out of view ${out.join(' ')}`);
               const s = small(); if (s.length) bad.push(`${what}: under 44px ${s.join(', ')}`);
               const o = over(); if (o.length) bad.push(`${what}: cut ${o.join(', ')}`);
+              const l = laps(); if (l.length) bad.push(`${what}: overlapping ${l.join(', ')}`);
+            };
+            // overlaps: Stronger Side (or any tag) and the name under Edit; the overall's badge on the bars or their names; traits cut
+            // mid-word (their box overflowing); a context line starting with its dot (the dot not clipped off at a line's start)
+            const hit = (a, b, m = 0.5) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return Math.min(x.right, y.right) - Math.max(x.left, y.left) > m && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > m; };
+            const text = el => { const r = document.createRange(); r.selectNodeContents(el); return r; };
+            const textHit = (el, b) => { const x = text(el).getBoundingClientRect(), y = b.getBoundingClientRect(); return x.width > 0 && Math.min(x.right, y.right) - Math.max(x.left, y.left) > 0.5 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 0.5; };
+            const laps = () => {
+              const out = [];
+              for (const side of scr.querySelectorAll('.pk-side:not([hidden])')) {
+                const edit = side.querySelector('.pk-edit'), ovr = side.querySelector('.pk-pick .ovr'), stats = side.querySelector('.pk-stats');
+                if (edit) for (const el of side.querySelectorAll('.tname,.pk-rate .gap,.pk-league,.tstars')) if (textHit(el, edit)) out.push(side.id + ' ' + el.className + ' under Edit');
+                if (ovr && stats) for (const el of stats.querySelectorAll('.lbl,.pk-bar')) if (hit(ovr, el)) { out.push(side.id + ' the overall on the bars'); break; }
+                for (const el of side.querySelectorAll('.tstars')) if (el.scrollHeight > el.clientHeight + 0.5) out.push(side.id + ' traits cut');
+                const ctx = side.querySelector('.pk-ctx'), parts = ctx ? [...ctx.querySelectorAll(':scope > span > span')] : [];
+                let top = null; for (const p of parts) { const r = p.getBoundingClientRect(); if (top == null || Math.abs(r.top - top) > 2) { if (r.left > ctx.getBoundingClientRect().left - 2 && top != null) out.push(side.id + ' a line starting with its dot'); top = r.top; } }
+              }
+              return out;
             };
             let n = 0;
             // the longest of everything: every Legend (six traits at most), a made team's longest name, a My League side, Favourites and Recent
@@ -410,10 +469,12 @@ async function browserChecks() {
           k = await page.evaluate(() => ({ id:document.activeElement.id, text:document.activeElement.textContent }));
           ok(k.id === 't-go' && k.text === 'Kick Off', `${at}: Enter again: the focus on Kick Off (${json(k)})`);
           await page.keyboard.press('Shift+Tab');
+          const k1 = await page.evaluate(() => document.activeElement.id);
+          await page.keyboard.press('Shift+Tab');
           k = await page.evaluate(() => ({ side:document.activeElement.closest('.pk-side') && document.activeElement.closest('.pk-side').id, act:document.activeElement.dataset.act }));
           await page.keyboard.press('Tab'); await page.keyboard.press('Tab');
           const k2 = await page.evaluate(() => document.activeElement.id);
-          ok(k.side === 't-side1' && k2 === 't-back', `${at}: Tab moves through the sides and the buttons: back from Kick Off into the Opponent's side, on to Back (${json(k)} ${k2})`);
+          ok(k1 === 't-back' && k.side === 't-side1' && k2 === 't-go', `${at}: Tab follows the screen: back from Kick Off is Back (on its left), then the Opponent's side, and on again through Back to Kick Off (${k1} ${json(k)} ${k2})`);
           // a controller: the ring on a card drives it, A moves on, a shoulder a country, B Back
           k = await page.evaluate(() => {
             const T = window.__tryline, P = T.picker; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); T.home.ring(null);
@@ -428,7 +489,7 @@ async function browserChecks() {
             out.lb = P.view(0).group.key;
             T.navPress(0); out.a1 = P.state().sides[0].set && T.debug.focus() && (T.debug.focus().closest('.pk-side') || {}).id;
             T.navPress(0); out.a2 = T.debug.focus() && T.debug.focus().id;
-            T.navMove(0, 0, -1); out.up = T.debug.focus() && (T.debug.focus().dataset.act || T.debug.focus().id);
+            T.navMove(0, 0, -1); out.up = T.debug.focus() && (T.debug.focus().dataset.act || T.debug.focus().dataset.cat || T.debug.focus().id);
             T.navBack(0); out.back = !document.getElementById('s-home').hidden;
             return out;
           });
@@ -470,6 +531,138 @@ async function browserChecks() {
           // motion: opacity and transform only, 250ms or less
           k = await page.evaluate(() => { const T = window.__tryline; T.picker.group(0, 1); const a = document.getAnimations(); return a.map(x => ({ d:x.effect.getTiming().duration, props:[...new Set(x.effect.getKeyframes().flatMap(f => Object.keys(f).filter(p => !['offset', 'easing', 'composite', 'computedOffset'].includes(p))))].join() })); });
           ok(k.length >= 1 && k.every(a => a.d <= 250 && /^(opacity|transform)(,(opacity|transform))?$/.test(a.props)), `${at}: a move slides in, opacity and transform only, 250ms or less (${json(k)})`);
+          // a controller's reach (the review, 2026-11-11): from the first press, the d-pad's four ways and X or Y (the lift) reach every button
+          // on the screen and every card, in Quick Match, Championship (a made team with its Edit), the World Cup, the career's club screen,
+          // My Team, and 2 Players for each seat (his own card driven, the rest by the lifted ring)
+          k = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), out = [];
+            const key = el => !el ? 'none' : el.closest('.pk-side') ? el.closest('.pk-side').id + ':' + el.dataset.act : el.dataset.cat ? 'cat:' + el.dataset.cat : el.id;
+            const find = k => (k === 'none' ? null : k.startsWith('cat:') ? document.querySelector(`#t-cat [data-cat="${k.slice(4)}"]`) : k.includes(':') ? $(k.split(':')[0]).querySelector(`[data-act="${k.split(':')[1]}"]`) : $(k));
+            T.teams.custom().length = 0; T.teams.custom().push(T.teams.cleanTeam({ name:'Herons', key:'myhe' }, 0));
+            for (const [mode, seat] of [['quick', 0], ['champ', 0], ['world', 0], ['career', 0], ['my', 0], ['two', 0], ['two', 1]]) {
+              D.settings().pick = [null, null]; D.setTwo(false);
+              if (mode === 'two') { D.openJoin(); D.openTeams('two'); }
+              else if (mode === 'champ') { D.openTeams('champ', 'sur'); P.group(0, 1); }
+              else if (mode === 'world') D.openTeams('champ', 'world');
+              else if (mode === 'career') { T.career.set(null); T.career.newOpen(); T.career.clubOpen(); }
+              else D.openTeams(mode);
+              T.home.ring(null);
+              const first = mode === 'two' ? 'none' : key(T.navMove(seat, 0, 0)), seen = new Set([first]), todo = [first];
+              while (todo.length) {
+                const at = todo.shift();
+                for (const a of ['l', 'r', 'u', 'd', 'y']) {
+                  T.home.ring(find(at)); P.state().lifter = at !== 'none' && !at.endsWith(':pick') ? seat : null;
+                  if (a === 'y') P.lift(seat); else T.navMove(seat, a === 'r' ? 1 : a === 'l' ? -1 : 0, a === 'd' ? 1 : a === 'u' ? -1 : 0);
+                  const nk = key(D.focus()); if (!seen.has(nk)) { seen.add(nk); todo.push(nk); }
+                }
+              }
+              const all = [...$('s-teams').querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0 && !b.disabled).map(key);
+              const missing = all.filter(x => !seen.has(x) && !(mode === 'two' && x === `t-side${seat}:pick`) && !(mode === 'two' && x === `t-side${1 - seat}:pick`));
+              out.push(`${mode}${mode === 'two' ? seat : ''} ${first} ${all.length} ${JSON.stringify(missing)}`);
+            }
+            T.home.ring(null); D.setTwo(false); T.teams.custom().length = 0; D.goHome();
+            return out;
+          });
+          ok(k.every(x => x.endsWith(' []')) && k[0].startsWith('quick t-side0:pick') && k.slice(1, 5).every(x => / t-side0:pick /.test(x)), `${at}: from the first press a controller reaches every button, in every mode, and in 2 Players for each seat (${k.join('; ')})`);
+          k = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), f = () => D.focus(), out = {};
+            D.settings().pick = [null, null]; D.openTeams('quick'); T.home.ring(null);
+            T.navMove(0, 0, 0); P.lift(0); out.lift = f() && f().dataset.act;                       // Y: the group's button
+            T.navMove(0, 0, -1); out.up = f() && f().dataset.cat;                                     // Up: Men | Women | Minis, on the one chosen
+            T.navMove(0, 1, 0); T.navPress(0); out.cat = D.settings().cat;                             // Right to Women, A presses it
+            D.settings().cat = 'men'; D.openTeams('quick'); T.home.ring(null); T.navMove(0, 0, 0); P.lift(0);
+            T.navMove(0, 0, 1); out.down = f() && (f().dataset.act || f().id);                         // Down passes over the card to the buttons under it
+            T.home.ring(document.querySelector('#t-side0 [data-act="next"]'));
+            const g = P.view(0).group.key; T.navPress(0); out.moved = P.view(0).group.key === g && P.view(0).i === 1 && f() && f().dataset.act;   // A on Next steps the team, the ring kept on Next
+            P.lift(0); out.back = f() && f().dataset.act;                                            // Y again: back on the card
+            T.navMove(0, 1, 0); out.drive = P.view(0).i;                                               // where the d-pad drives it again
+            // the bottom row: Back | Kick Off on a phone held sideways, in that order for Tab too, and Left from Kick Off is Back
+            D.settings().pick = [null, null]; D.openTeams('quick'); P.set(0); P.set(1); T.home.ring($('t-go'));
+            T.navMove(0, -1, 0); out.left = f() && f().id; T.navMove(0, 1, 0); out.right = f() && f().id;
+            out.order = [...$('t-go').parentNode.children].map(b => b.id).join();
+            T.home.ring(null); D.goHome();
+            return out;
+          });
+          ok(k.lift === 'sheet' && k.up === 'men' && k.cat === 'women' && /^(prev|next|t-back|t-go)$/.test(k.down) && k.moved === 'next' && k.back === 'pick' && k.drive === 2, `${at}: Y lifts the ring onto the group's button, Up reaches Men | Women | Minis (Men, chosen) and A on Women presses it, Down passes over the card to the buttons under it, A on Next steps the team, Y puts the ring back on the card to drive it (${json(k)})`);
+          ok(k.left === 't-back' && k.right === 't-go' && k.order === 't-back,t-go', `${at}: the bottom row Back | Kick Off: Left from Kick Off is Back, Right back again, and Back first for Tab (${json(k)})`);
+          // 2 Players: Escape with the ladder sheet open closes the sheet, and nothing more
+          k = await page.evaluate(async () => {
+            const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), out = [];
+            for (const set of [false, true]) {
+              D.settings().pick = [null, null]; D.openJoin(); D.openTeams('two'); if (set) P.press(0);
+              P.sheet(1); document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', code:'Escape', bubbles:true, cancelable:true }));
+              out.push({ sheet:!$('m-ladder').hidden, teams:!$('s-teams').hidden, set0:P.state().sides[0].set });
+            }
+            D.setTwo(false); D.goHome();
+            return out;
+          });
+          ok(!k[0].sheet && k[0].teams && !k[1].sheet && k[1].teams && k[1].set0, `${at}: 2 Players, Escape on the open sheet closes it and nothing else: still on the team screen, Player 1's side still set (${json(k)})`);
+          // the sheet keeps the keyboard in it: Tab stays inside, the arrows step its groups, Enter picks one; another screen shuts it
+          await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); T.picker.set(0); T.picker.set(1); });
+          await page.waitForTimeout(450);                     // past the click a swipe ends with
+          await page.focus('#t-side0 [data-act="sheet"]'); await page.keyboard.press('Enter');
+          const inside = [], within = () => page.evaluate(() => { const a = document.activeElement; return !a || a === document.body || !!a.closest('#m-ladder'); });   // the browser's own stop past the page's last control counts as in
+          for (let t = 0; t < 40; t++) { await page.keyboard.press('Tab'); inside.push(await within()); }
+          for (let t = 0; t < 4; t++) { await page.keyboard.press('Shift+Tab'); inside.push(await within()); }
+          k = await page.evaluate(() => { const a = document.activeElement; return { open:!document.getElementById('m-ladder').hidden, match:!!(window.__tryline.M && !window.__tryline.M.demo) }; });
+          ok(inside.every(Boolean) && k.open && !k.match && inside.length === 44, `${at}: Tab and Shift+Tab never leave the open sheet, so nothing behind it can be pressed (${inside.filter(x => !x).length} outside)`);
+          await page.focus('#ldr-list [data-g="0"]'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp');
+          k = await page.evaluate(() => document.activeElement.dataset.g);
+          await page.keyboard.press('Enter');
+          const k4 = await page.evaluate(() => ({ open:!document.getElementById('m-ladder').hidden, g:window.__tryline.picker.view(0).gi, inert:[...document.body.children].filter(e => e.inert).length }));
+          ok(k === '1' && !k4.open && k4.g === 1 && k4.inert === 0, `${at}: the arrows step through the sheet's groups (Down, Down, Up: the second), Enter takes it and the page is live again (${k} ${json(k4)})`);
+          k = await page.evaluate(() => { const T = window.__tryline; T.picker.sheet(0); T.debug.goHome(); return { open:!document.getElementById('m-ladder').hidden, inert:[...document.body.children].filter(e => e.inert).length }; });
+          ok(!k.open && k.inert === 0, `${at}: another screen shown shuts the sheet, and leaves nothing inert (${json(k)})`);
+          // a card over the screen (the Unlock card): the keys and a controller's shoulder leave the teams behind it alone
+          k = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, D = T.debug, S = T.store, $ = id => document.getElementById(id);
+            T.locker.set(T.locker.fresh()); T.locker.FEATS.filter(f => f.id !== 'star').slice(0, 10).forEach(f => { T.locker.state().n[f.id] = 10; });
+            S.setTier('free'); S.setBought([]);
+            D.settings().pick = [null, null]; D.openTeams('quick'); P.group(0, P.view(0).ladder.findIndex(g => g.key === 'nat.eng') - P.view(0).gi); P.step(0, 1);
+            const was = P.view(0).team.id; P.set(0);
+            const open = !$('m-store').hidden;
+            for (const key of ['ArrowRight', 'ArrowDown', 'PageDown']) document.body.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles:true, cancelable:true }));
+            const afterKeys = P.view(0).team.id, g = P.view(0).group.key;
+            P.shoulder(0, 1);
+            const out = { was, open, afterKeys, afterPad:P.view(0).group.key, g };
+            T.store.close(); S.setTier(null); T.locker.set(T.locker.fresh()); D.goHome();
+            return out;
+          });
+          ok(k.was === 'L03' && k.open && k.afterKeys === 'L03' && k.afterPad === k.g, `${at}: with the Unlock card over England 2003, the arrows, Page Down and a shoulder leave the side as it was (${json(k)})`);
+          // the whole card: a swipe from the bars, and a tap on them, as on the shirt
+          await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
+          const bars = await page.evaluate(() => { const r = document.querySelector('#t-side0 .pk-stats').getBoundingClientRect(); return { x:r.left + r.width/2, y:r.top + r.height/2 }; });
+          await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[bars] });
+          for (let st = 1; st <= 6; st++) await cdp.send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{ x:bars.x - 90*st/6, y:bars.y + 3 }] });
+          await cdp.send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
+          await page.waitForTimeout(450);
+          k = await page.evaluate(() => ({ i:window.__tryline.picker.view(0).i, set:window.__tryline.picker.state().sides[0].set }));
+          await page.tap('#t-side0 .pk-stats');
+          const k3 = await page.evaluate(() => window.__tryline.picker.state().sides[0].set);
+          ok(k.i === 1 && !k.set && k3, `${at}: a swipe from the bars changes the team, and a tap on them sets it, as anywhere on the card (${json(k)} ${k3})`);
+          // the keyboard's focus is never dropped by a button switched off under it (Next on a group of one)
+          await page.evaluate(() => { const T = window.__tryline, P = T.picker; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); P.group(0, P.view(0).ladder.findIndex(g => g.key === 'nat.ire') - P.view(0).gi + 1); });
+          await page.focus('#t-side0 [data-act="next"]'); await page.keyboard.press('ArrowUp');
+          k = await page.evaluate(() => ({ g:window.__tryline.picker.view(0).group.key, act:document.activeElement.dataset.act || document.activeElement.tagName }));
+          ok(k.g === 'nat.ire' && k.act === 'pick', `${at}: Up from Next into Ireland's National (one side, Next off): the focus moves to the card, never lost (${json(k)})`);
+          // a made team as the Opponent, stronger: Stronger Side clear of Edit; a long made name clear of it too, and not under 16px where the shirt can step down
+          k = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), out = {};
+            T.teams.custom().length = 0;
+            T.teams.custom().push(T.teams.cleanTeam({ name:'Zed Town', key:'myzed', pace:5, power:5, handling:5, kicking:5, stamina:5 }, 0), T.teams.cleanTeam({ name:'MMMMMMMMMMMMMMMM', key:'mymmm', pace:1, power:1, handling:1, kicking:1, stamina:1 }, 1));
+            D.settings().pick = [null, null]; D.openTeams('quick');
+            P.group(0, P.view(0).ladder.findIndex(g => g.key === 'cty') - P.view(0).gi); while (P.view(0).i < P.view(0).group.teams.length - 1) P.step(0, 1);
+            P.group(1, P.view(1).ladder.findIndex(g => g.key === 'mine.made') - P.view(1).gi);
+            const side = $('t-side1'), edit = side.querySelector('.pk-edit'), gap = side.querySelector('.gap');
+            const r = el => { const g = document.createRange(); g.selectNodeContents(el); return g.getBoundingClientRect(); };
+            out.gap = gap ? gap.textContent : null; out.gapClear = gap ? r(gap).right <= edit.getBoundingClientRect().left + 0.5 || r(gap).top >= edit.getBoundingClientRect().bottom - 0.5 : null;
+            P.step(1, 1); const name = side.querySelector('.tname'), e2 = side.querySelector('.pk-edit'), cs = getComputedStyle(name);
+            out.long = name.textContent; out.nameClear = name.getBoundingClientRect().right <= e2.getBoundingClientRect().left + 0.5 && (name.scrollWidth <= name.clientWidth + 0.5 || (cs.textOverflow === 'ellipsis' && cs.overflowX === 'hidden'));
+            out.px = parseFloat(cs.fontSize); out.fit = $('s-teams').dataset.fit;
+            T.teams.custom().length = 0; D.goHome();
+            return out;
+          });
+          ok(k.gap === 'Stronger Side' && k.gapClear && k.long === 'MMMMMMMMMMMMMMMM' && k.nameClear && (k.px >= 16 || (k.fit === '3' && k.px >= 13)), `${at}: a stronger made team as the Opponent: Stronger Side clear of Edit; a sixteen-letter name clear of it (an ellipsis at the very last), 16px or more unless the shirt is already at its smallest, and never under 13px (${json(k)})`);
         } else {
           const k = await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); T.picker.step(0, 1); T.picker.group(1, 1); return document.getAnimations().length; });
           ok(k === 0, `${at} with reduced motion: no slide at all (${k})`);

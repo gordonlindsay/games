@@ -121,6 +121,7 @@ function pollPads() {
       else if (i === BMAP.small) { if (now && menu) { if (M && M.paused) resume(); else navBack(seat); } else btn(inp, 'b', bit, now); }
       else if (isShoulder(i)) { if (now && menu && typeof pickShoulder === 'function') pickShoulder(seat, i % 2 ? 1 : -1); if (!menu || !now) btn(inp, 'c', bit, now); }   // on the team screen a shoulder jumps a country: the left ones back, the right ones on
       else if (i === BMAP.start) { if (now) padStart(); }
+      else if (i === 2 || i === 3) { if (now && menu && typeof pickLift === 'function') pickLift(seat); }   // X or Y on the team screen: the ring off a card onto its side's buttons, and back
       else if (BMAP.dpad[i]) {
         const code = BMAP.dpad[i], d = KEYDIR[code];
         if (!now) { inp.keys.delete(code); inp.held.delete(code); }
@@ -248,9 +249,10 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
   if (!dx && !dy) return focusEl;
   const r0 = focusEl.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+  const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
   let best = null, bs = 1e9;
   for (const el of cands) {
-    if (el === focusEl) continue;
+    if (el === focusEl || (skip && skip(el))) continue;
     const r = el.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
     const along = ex*dx + ey*dy, side = Math.abs(ex*dy - ey*dx);
     if (along <= 0 || side > along*1.732) continue;

@@ -123,6 +123,12 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .pk-head{display:flex;align-items:center;gap:8px;min-height:44px}
 .pk-where{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 13px/1.1 var(--body);color:var(--chalk-dim)}
 .pk-who{font:700 12px/1.1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--chalk)}
+/* the context line, North · England · Local: each part whole, a dot before each; where it wraps, the dot that would start a line sits in the
+   clipped margin, so no line starts or ends with one */
+.pk-ctx{display:block;overflow:hidden}
+.pk-ctx>span{display:flex;flex-wrap:wrap;margin-left:-.9em}
+.pk-ctx>span>span{white-space:nowrap}
+.pk-ctx>span>span::before{content:"\00b7";display:inline-block;width:.9em;text-align:center}
 .pk-side.pk-set .pk-who,.pk-side.p1 .pk-who{color:var(--flood)}
 .pk-side.p2 .pk-who{color:var(--p2)}
 .btn.pk-group,.btn.pk-fav,.btn.pk-edit{width:auto;flex:none;min-height:44px;padding:6px 12px}
@@ -135,13 +141,14 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 .pk-card{position:relative;flex:1 0 auto;touch-action:none;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel-hi)}
 .pk-card.pk-set{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}   /* pk-set, never .set: that is a Settings row's own grid */
 .pk-side.p2 .pk-card.pk-set{border-color:var(--p2);box-shadow:inset 0 0 0 1px var(--p2)}
-.team.pk-pick{grid-template-columns:auto minmax(0,1fr);align-content:center;align-items:center;padding:0;gap:4px 16px;border:0;background:transparent}
+.team.pk-pick{grid-template-columns:auto minmax(0,1fr);align-content:center;align-items:center;min-height:44px;padding:0;gap:4px 16px;border:0;background:transparent}
 .team.pk-pick:hover{border:0}
 .pk-pick .jw.big .jersey{width:calc(var(--pkj)*var(--pkk));height:calc(var(--pkj)*var(--pkk))}
 .pk-pick .ovr{right:-12px;bottom:-8px;font-size:20px}
+.pk-pick .jw.big{margin-bottom:8px}   /* room for the overall's badge under the shirt, so it never sits on the bars' names */
 .pk-pick .tid{display:flex;flex-direction:column;gap:4px;min-width:0}
-.pk-pick .tname{font-size:calc(var(--pkn)*var(--pkk));white-space:nowrap;overflow-wrap:normal}   /* one line (fitNames steps a long one down) */
-.pk-card.made .tname{margin-right:56px}   /* clear of Edit in the corner */
+.pk-pick .tname{font-size:calc(var(--pkn)*var(--pkk));white-space:nowrap;overflow-wrap:normal;overflow:hidden;text-overflow:ellipsis}   /* one line (fitNames steps a long one down; past 13px, the very longest end in an ellipsis rather than run under Edit) */
+.pk-card.made .tname,.pk-card.made .pk-rate,.pk-card.made .pk-league{margin-right:56px}   /* the name, its stars with Stronger Side, and the league line clear of Edit in the corner (the traits run under it, lower down) */
 .btn.pk-edit{position:absolute;top:6px;right:6px;min-width:44px}
 .pk-rate{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
 .pk-pick .rstars{--star:13px;margin-left:2px}
@@ -152,6 +159,7 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 #s-teams[data-fit="2"] .pk-pick .tid,#s-teams[data-fit="3"] .pk-pick .tid{gap:1px}
 #s-teams[data-fit="3"] .pk-card{gap:2px}
 #s-teams[data-fit="3"] .pk-pick .tstars{-webkit-line-clamp:1}
+#s-teams[data-dup] .pk-league.dup{display:none}   /* pickFit's last step: a line repeating the group's name (its button says it) */
 .team.pk-make{border:1.5px dashed var(--rule-hi);border-radius:8px;grid-template-columns:1fr;place-items:center;align-content:center;gap:6px;min-height:calc(88px*var(--pkk));color:var(--chalk-dim)}
 .pk-make .plus{width:44px;height:44px;border:2px solid currentColor;border-radius:50%;display:grid;place-items:center;font:800 28px/1 var(--display)}
 .pk-stats{display:grid;grid-template-columns:repeat(5,minmax(min-content,1fr));gap:8px}
@@ -162,12 +170,12 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 .pk-bar i{display:block;height:100%;background:var(--chalk);transform-origin:left center;transform:scaleX(var(--v))}
 .pk-step{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}
 .pk-step .btn{min-height:44px}
-.pk-foot{display:flex;flex-direction:column;gap:8px}
+.pk-foot{display:flex;flex-direction:column;gap:8px}   /* the primary over Back; on a phone held sideways, Back | the primary (pickFit puts Back first there, for Tab) */
 .pk-foot .btn{white-space:nowrap;overflow:hidden}   /* one line: a long Pick steps down (pickFit) */
-/* a phone held sideways: the primary and Back share the bottom row in equal halves (Back on the left, as a controller's B is), so both sides
-   keep their room */
+/* a phone held sideways: Back and the primary share the bottom row in equal halves (Back on the left, first in the order too), so both sides
+   keep their room: a row of their own each does not fit at 320 tall */
 @media (max-height:440px){
-  .pk-foot{flex-direction:row-reverse}
+  .pk-foot{flex-direction:row}
   .pk-foot .btn{flex:1 1 0;min-height:48px}
   .pk-foot .btn.primary{font-size:22px}
 }
@@ -195,6 +203,7 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
   .pk-card{padding:6px 10px;gap:4px}
   #s-teams{--pkj:54px;--pkn:24px}
   .pk-pick .ovr{font-size:15px;min-width:26px;bottom:-6px}
+  .pk-pick .jw.big{margin-bottom:6px}
   .pk-pick .tid{gap:2px}
   .pk-league{font-size:12px}
   .pk-st{gap:2px}
@@ -230,9 +239,11 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 .ldr-c{flex:0 0 112px;margin:0;font:700 14px/1.2 var(--body);color:var(--chalk)}
 .btn.ldr-g{width:auto;min-height:44px;padding:6px 14px}
 .btn.ldr-g[aria-pressed="true"]{border-color:var(--flood);background:var(--flood);color:var(--flood-ink)}
-/* the game's version, small on Settings' bottom edge (GAME_VERSION): it takes no row of its own */
-.hp-settings{position:relative}
-.ver{position:absolute;right:14px;bottom:0;transform:translateY(50%);margin:0;padding:0 6px;border-radius:4px;background:var(--night);font:700 11px/1.4 var(--body);letter-spacing:.06em;color:var(--chalk-dim);pointer-events:none}
+/* the game's version, small at the foot of Settings (GAME_VERSION): on the last row's label line, at its right end, set as a label is (the
+   Camera's on the left), so it takes no row of its own and never sits on a button */
+.ver{margin:0;font:700 12px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim);pointer-events:none}
+.hp-settings.settings .set-cam,.hp-settings.settings .ver{grid-row:3;grid-column:4/-1}   /* the two share the Camera's cell, the version over its label line's right end */
+.hp-settings .ver{justify-self:end;align-self:start;white-space:nowrap}
 
 /* create team */
 .bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(325px,1fr));gap:12px}   /* 325: six 44px swatches, gaps, padding, border */
@@ -1250,7 +1261,7 @@ summary::-webkit-details-marker{display:none}
   .hp-drills .drills,.hp-drills .pr-low,.hp-drills .pr-games{gap:4px}
   .hp-settings.settings{gap:4px 10px;padding:3px 10px}   /* the three rows, each label over its control, with 4px to spare: Difficulty's segment keeps the full width, so the ring steps a row at a time */
   .hp-settings .set{gap:2px}
-  .hp-settings .lbl{font-size:10px;line-height:1}
+  .hp-settings .lbl,.hp-settings .ver{font-size:10px;line-height:1}
 }
 @media (orientation:landscape) and (max-height:420px) and (min-height:341px) and (max-width:740px){
   /* a smaller phone sideways (667x375): smaller pictures and tighter lines, so the three rows and Contact Games' two lines fit between the top row and the bar */

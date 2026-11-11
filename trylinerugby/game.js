@@ -9529,6 +9529,7 @@ function pollPads() {
       else if (i === BMAP.small) { if (now && menu) { if (M && M.paused) resume(); else navBack(seat); } else btn(inp, 'b', bit, now); }
       else if (isShoulder(i)) { if (now && menu && typeof pickShoulder === 'function') pickShoulder(seat, i % 2 ? 1 : -1); if (!menu || !now) btn(inp, 'c', bit, now); }   // on the team screen a shoulder jumps a country: the left ones back, the right ones on
       else if (i === BMAP.start) { if (now) padStart(); }
+      else if (i === 2 || i === 3) { if (now && menu && typeof pickLift === 'function') pickLift(seat); }   // X or Y on the team screen: the ring off a card onto its side's buttons, and back
       else if (BMAP.dpad[i]) {
         const code = BMAP.dpad[i], d = KEYDIR[code];
         if (!now) { inp.keys.delete(code); inp.held.delete(code); }
@@ -9656,9 +9657,10 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
   if (!dx && !dy) return focusEl;
   const r0 = focusEl.getBoundingClientRect(), cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+  const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
   let best = null, bs = 1e9;
   for (const el of cands) {
-    if (el === focusEl) continue;
+    if (el === focusEl || (skip && skip(el))) continue;
     const r = el.getBoundingClientRect(), ex = r.left + r.width/2 - cx, ey = r.top + r.height/2 - cy;
     const along = ex*dx + ey*dy, side = Math.abs(ex*dy - ey*dx);
     if (along <= 0 || side > along*1.732) continue;
@@ -9712,6 +9714,7 @@ const playing = () => mode === 'match' && M && !M.demo;
 function showScreen(id) {
   if (typeof offlineScreen === 'function') offlineScreen(id);
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+  if (typeof pickSheetShut === 'function') pickSheetShut();   // the team screen's ladder sheet never outlives it (src/ui-menus.js)
   setFocus(null);
   if (id === 's-teams') fitNames();
   if (id === 's-cup' && typeof cupFit === 'function') cupFit($('s-cup'));   // the cup hub's long names, once it has a size (src/ui-cups.js)
@@ -10667,7 +10670,7 @@ function pickHomeLine(t, cat) {
    and whether it has been moved (an Opponent not yet moved follows Your Team to its rivals). on: the side the primary, the title and the
    keys act on. opener: the side that opened Create Team or Add Your Team, which shows what it made. */
 const pickSide = () => ({ g:null, k:null, gi:0, i:0, set:false, touched:false });
-let pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null };
+let pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null, made:null, lifter:null };
 let pickView = [null, null];                               // each side as drawn: { ladder, gi, i, group, team }
 const pickOne = () => pickMode !== 'quick' && pickMode !== 'two';   // Championship, Career, My Team and the cups: one side, centred
 const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : settings.cat);
@@ -10709,8 +10712,8 @@ function pickOpen(s) {
   const st = pick.sides[s] = pickSide(), cat = pickCat();
   const at = (team, list) => { if (!team) return; st.k = keyOf(team); st.g = list || null; };
   if (!pickOne()) {
-    const p = settings.pick[s];
-    if (p && pickFind(p.id, cat)) { st.k = p.id; st.g = p.g; st.set = pickMode === 'quick'; st.touched = true; return; }   // 2 Players: each player sets his own again (A), as at a rematch's Change Teams
+    const p = settings.pick[s], t = p && pickFind(p.id, cat);
+    if (t) { st.k = p.id; st.g = p.g; st.set = pickMode === 'quick' && (!t.legend || storeHas('legends')); st.touched = true; return; }   // 2 Players: each player sets his own again (A), as at a rematch's Change Teams; a Legend is set again only while the Full Game is had (a purchase taken back leaves it shown, locked)
     if (s === 0) { const c = myClubTeam(); at(c, c.custom ? 'mine.made' : null); st.list = myPool(); }
     return;
   }
@@ -10739,11 +10742,17 @@ function pickResolve(st, ladder) {
    side in Player 1's group as the screen opens, and from then on Player 2's own (a mirror match is still a press away). */
 function pickFollow(st, ladder, lv) {
   if (st.touched || !lv) return;
-  const lg = lv.group;
-  let gi = ladder.findIndex(g => g.key === lg.key);
-  if (pickMode === 'quick' && gi < 0 && lg.key.startsWith('nat.')) for (let n = 1; n <= ladder.length && gi < 0; n++) { const g = lv.ladder[(lv.gi + n) % lv.ladder.length]; if (g.key.startsWith('nat.')) gi = ladder.findIndex(x => x.key === g.key); }
+  const saved = g => g.hemi === 'fav' || g.hemi === 'recent', real = g => g.teams.some(t => !t.act), lk = pickKey(lv.team);
+  let lg = lv.group;
+  if (saved(lg)) lg = lv.ladder.find(g => !saved(g) && g.teams.some(t => pickKey(t) === lk)) || lg;   // Your Team from Favourites or Recent: its own group, so its rivals still come first
+  let gi = ladder.findIndex(g => g.key === lg.key && real(g));   // a group left with only Create Team (your one made team) is passed over
+  if (pickMode === 'quick' && gi < 0 && lg.key.startsWith('nat.')) { const li = lv.ladder.indexOf(lg); for (let n = 1; n <= lv.ladder.length && gi < 0; n++) { const g = lv.ladder[(li + n) % lv.ladder.length]; if (g.key.startsWith('nat.')) gi = ladder.findIndex(x => x.key === g.key && real(x)); } }
+  if (gi < 0) { const c = keyOf(myClubTeam()); gi = ladder.findIndex(g => !saved(g) && g.teams.some(t => !t.act && keyOf(t) === c)); }   // then My Team's club's group (Surrey)
+  if (gi < 0) gi = ladder.findIndex(g => !saved(g) && real(g));
   if (gi < 0) gi = 0;
-  const g = ladder[gi], i = pickMode === 'two' && g.key === lg.key ? (lv.i + 1) % g.teams.length : 0;
+  const g = ladder[gi], j = g.teams.findIndex(t => pickKey(t) === lk);
+  let i = pickMode === 'two' && j >= 0 ? (j + 1) % g.teams.length : 0;
+  if (g.teams[i].act) i = Math.max(0, g.teams.findIndex(t => !t.act));
   st.g = g.key; st.k = pickKey(g.teams[i]); st.gi = gi; st.i = i; st.set = false;
   if (pickMode === 'two') st.touched = true;                 // Player 2's side is his own from the start: it never moves while Player 1 looks
 }
@@ -10805,7 +10814,7 @@ function pickSet(s) {
   renderTeams();
   return true;
 }
-function pickAct(s, act) { pick.opener = s; pick.on = s; if (act === 'create') openBuilder(null); else if (typeof importOpen === 'function') importOpen(); }
+function pickAct(s, act) { pick.opener = s; pick.on = s; pick.made = null; if (act === 'create') openBuilder(null); else if (typeof importOpen === 'function') importOpen(); }
 /* The one primary: Kick Off once both sides are set; before that Pick and the side's team (Your Team first); on an entry, the entry. One
    side: Play as Farnham (Championship, the World Cup), Tour Scotland, Pick Bath (Career), and on My Team, Pick or Done. */
 function pickPrimary() {
@@ -10837,6 +10846,7 @@ function pickGo() {
 function pickKickOff() {
   if (!pickReady()) return false;
   const [a, b] = [pickView[0].team, pickView[1].team], cat = settings.cat;
+  if ((a.legend || b.legend) && !storeGate('legends', pickKickOff)) return false;   // a Legend kept from before a purchase was taken back: the Unlock card, never the match
   for (const s of [0, 1]) {
     const k = keyOf(pickView[s].team);
     settings.pick[s] = { id:k, cat, g:pickView[s].group.key };
@@ -10855,18 +10865,20 @@ function pickFav(s) {                                      // Favourite: the tea
   save(); renderTeams();
 }
 /* A team made on Create Team, or a club added on Add Your Team, from the team screen: on the side that asked for it, in Made Teams. Made
-   while picking Your Team (or Player 1's), it is the one played as, and the Opponent is next, as it always was; on My Team, it is the club. */
+   while picking Your Team (or Player 1's), it is the one played as, and the Opponent is next, as it always was. On My Team the builder's
+   Save makes it the club (and saves); a club imported there is offered as ever (Make This My Team | Not Now, src/import.js). */
 function pickMade(t) {
   const s = pickOne() ? 0 : pick.opener, st = pick.sides[s];
-  st.g = 'mine.made'; st.k = keyOf(t); st.touched = true; st.set = false; pick.on = s;
-  if (pickMode === 'my') settings.myClub = t.key;
-  else if (!pickOne() && s === 0) { st.set = true; pick.on = 1; }
+  st.g = 'mine.made'; st.k = keyOf(t); st.touched = true; st.set = false; pick.on = s; pick.made = s;
+  if (!pickOne() && s === 0) { st.set = true; pick.on = 1; }
 }
 /* A league added on Add Your Team from the team screen: its sides in view. Championship's competition becomes My League, as it did; else
    the side that asked shows My League (the Opponent, when Your Team has just been set to the club that came with it). */
 function pickLeague() {
+  const made = pick.made; pick.made = null;
   if (pickMode === 'champ') { settings.pool = IMPORT_POOL; pick.sides[0] = pickSide(); return; }
   const s = !pickOne() && pick.opener === 0 && pick.sides[0].set ? 1 : pickOne() ? 0 : pick.opener, st = pick.sides[s];
+  if (made === s) return;                                   // that side shows the club that came with the league (My Team's Add Your Team): it stays on it
   st.g = 'mine.league'; st.k = importLeague && importLeague.teams[0] ? keyOf(importLeague.teams[0]) : null; st.gi = 0; st.i = 0; st.touched = true; st.set = false; pick.on = s;
 }
 
@@ -10904,14 +10916,16 @@ function pickPanel(s) {
   if (!real) card = `<button class="team pk-pick pk-make" data-act="pick" data-make="${t.act}"><span class="plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="tname">${esc(t.name)}</span></button>`;
   else {
     const stars = teamTraitNames(t), line = pickHomeLine(t, cat);
-    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}</span>${line ? `<span class="pk-league">${esc(line)}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${stars.join(', ')}">${stars.map(n => `<b>${n}</b>`).join(' · ')}</span>` : ''}</span></button>`
+    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}</span>${line ? `<span class="pk-league${line === g.name ? ' dup' : ''}">${esc(line)}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
       + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k); return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`; }).join('')}</span>${edit}`;
   }
   const one = v.group.teams.length > 1 ? '' : ' disabled';
-  return `<div class="pk-head"><p class="pk-where"><span class="pk-who">${pickWho(s)}</span>${where ? `<span>${esc(where)}</span>` : ''}</p>${group}${fav}</div>`
+  const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map(w => `<span>${esc(w)}</span>`).join(' ')}</span></span>` : '';   // North · England · Local: it breaks between parts, never after a dot
+  return `<div class="pk-head"><p class="pk-where"><span class="pk-who">${pickWho(s)}</span>${ctx}</p>${group}${fav}</div>`
     + `<div class="pk-card${st.set ? ' pk-set' : ''}${edit ? ' made' : ''}">${card}</div>`
     + `<div class="pk-step"><button class="btn" data-act="prev"${one}>Previous</button>${count}<button class="btn" data-act="next"${one}>Next</button></div>`;   // Previous and Next in equal halves, the count between
 }
+const pickTraitsHtml = names => names.map(n => `<b>${esc(n)}</b>`).join(' · ');
 /* The keyboard's focus and a controller's ring are on a side's control as it is drawn again: the same control after (Previous stays on
    Previous), so moving through teams never drops them. */
 const pickAt = el => { const side = el && typeof el.closest === 'function' && el.closest('.pk-side'); return side && el.dataset ? { s:+side.dataset.side, act:el.dataset.act } : null; };
@@ -10920,12 +10934,13 @@ function pickEl(s, act) { const p = $('t-side' + s); return (p && p.querySelecto
    'champ' (a competition chosen on the home: comp is 'int' for the nation's championship, 'world', 'tour', or a league's list key; My Team
    on show, to play as or change), 'my' (My Team: the club, then the country) or 'career' (Career's club: New Player's Change Club). */
 function openTeams(m, comp) {
-  pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null }; pickView = [null, null];
+  pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, sheet:null, made:null, lifter:null }; pickView = [null, null];
   if (m === 'champ') {
     const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
     if (typeof cupCompSet === 'function') cupCompSet(cupId);   // the World Cup or the Home Nations Tour have their own sides (src/ui-cups.js)
     settings.pool = cupId !== 'league' ? 'int' : poolKey(k) === k ? k : 'sur';
   } else if (m !== 'career') settings.pool = myPool() || 'sur';
+  if (!pickOne()) { const cats = settings.pick.filter(Boolean).map(p => p.cat); if (cats.length && cats.every(c => c === cats[0]) && TEAM_CATS.some(c => c.id === cats[0])) settings.cat = cats[0]; }   // Quick Match and 2 Players reopen in the category their sides were picked in (Championship may have moved it)
   pickOpen(0); if (!pickOne()) pickOpen(1);
   if (m === 'two') twoSel.picking = 0;
   renderTeams(); showScreen('s-teams'); $('s-teams').scrollTop = 0;
@@ -10937,9 +10952,9 @@ function renderTeams() {
   const one = pickOne(), view = teamsView(), quick = pickMode === 'quick', pair = pickMode === 'two', cat = pickCat();
   const eb = $('t-eyebrow');
   eb.textContent = quick ? 'Quick Match' : pair ? '2 Players' : pickMode === 'my' ? 'My Team' : pickMode === 'career' ? 'New Player' : view ? view.name : 'Championship';
-  eb.classList.toggle('p1', pair && pick.on === 0); eb.classList.toggle('p2', pair && pick.on === 1);
+  eb.classList.remove('p1'); eb.classList.remove('p2');
   const t0 = pickView[0] && pickView[0].team;
-  $('t-title').textContent = view ? view.title : pair ? 'Player ' + (pick.on + 1) + ' Team' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' ? 'Pick Your Club' : 'Pick Your Team';
+  $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' ? 'Pick Your Club' : 'Pick Your Team';
   $('t-cat').hidden = pickMode === 'career';                 // Men | Women is New Player's
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.setAttribute('aria-pressed', String(b.dataset.cat === settings.cat));
   $('t-sides').classList.toggle('one', one);
@@ -10957,8 +10972,9 @@ function renderTeams() {
   navOnly = null;                                            // 2 Players: each seat drives its own side (pickNav)
   storeTeamsRender();                                        // locks on Create Team, Edit, Add Your Team and the Legends (src/ui-store.js)
   if ($('s-teams').hidden) fitNames(); else pickFit();
-  if (ring) { const el = pickEl(ring.s, ring.act) || pickEl(ring.s, 'pick'); if (el) setFocus(el); }
-  if (typed) { const el = pickEl(typed.s, typed.act) || pickEl(typed.s, 'pick'); if (el && el.focus) el.focus({ preventScroll:true }); }
+  const live = el => !!el && !el.disabled;
+  if (ring) { const el = [ring.act, 'sheet', 'fav', 'pick'].map(a => pickEl(ring.s, a)).find(live); if (el) setFocus(el); }   // a ring off the card stays off it
+  if (typed) { const el = [typed.act, 'pick'].map(a => pickEl(typed.s, a)).find(live); if (el && el.focus) el.focus({ preventScroll:true }); }
   if (pick.sheet != null && !$('m-ladder').hidden) pickSheetDraw();
 }
 /* A move seen: the card slides in from where the team came from (Next from the right, Down from below), opacity and transform only, and
@@ -10975,27 +10991,50 @@ function fitNames() {
   for (const el of $('s-teams').querySelectorAll('.tname')) {
     el.style.fontSize = '';
     let px = parseFloat(getComputedStyle(el).fontSize) || 24;
-    while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px -= 1; el.style.fontSize = px + 'px'; }
+    while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px = Math.max(13, px - 1); el.style.fontSize = px + 'px'; }   // never under 13px
   }
 }
-/* The screen never scrolls on a phone held sideways: where a long name or a Legend's six traits would make it, the shirt and the name step
-   down together (data-fit 1 to 3, styles.css) until it fits. A swipe on a card takes its own direction only where the screen does not
-   scroll after all (touch-action), so it never fights the page's own. */
+/* A side's star traits, whole names only: two lines at most (one at data-fit 3), the last ones dropped where they would not fit, never one
+   cut mid-word. A screen reader hears them all (its label). */
+function pickTraits() {
+  for (const el of $('s-teams').querySelectorAll('.pk-pick .tstars')) {
+    const all = (el.dataset.names || '').split('|').filter(Boolean); if (!all.length) continue;
+    el.innerHTML = pickTraitsHtml(all);
+    for (let k = all.length - 1; k >= 1 && el.scrollHeight > el.clientHeight + 0.5; k--) el.innerHTML = pickTraitsHtml(all.slice(0, k));
+  }
+}
+const PICK_NAME_MIN = 16;                                    // a name steps the shirt down (data-fit) before it goes under this
+/* The screen never scrolls on a phone held sideways: where a long name or a Legend's six traits would make it, or a long name would go under
+   16px, the shirt and the name step down together (data-fit 1 to 3, styles.css) until it fits. A swipe on a card takes its own direction
+   only where the screen does not scroll after all (touch-action), so it never fights the page's own. The bottom row: on a phone held
+   sideways Back and the primary share it in halves, Back on the left, so Back comes first for Tab too; taller, the primary has its own row
+   over Back. */
 function pickFit() {
   const scr = $('s-teams'); if (!scr || scr.hidden || !scr.querySelectorAll || !scr.dataset) return;
-  const go = $('t-go');
+  const go = $('t-go'), back = $('t-back'), foot = go.parentNode;
+  let short = false; try { short = matchMedia('(max-height:440px)').matches; } catch (e) { /* none */ }
+  if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);   // the order on screen is the order for Tab
   go.style.fontSize = '';
   for (let px = parseFloat(getComputedStyle(go).fontSize) || 22; go.scrollWidth > go.clientWidth + 0.5 && px > 14; ) { px -= 1; go.style.fontSize = px + 'px'; }   // Pick Wolverhampton on one line
-  for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); if (!(scr.scrollHeight > scr.clientHeight + 0.5)) break; }
+  const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
+  delete scr.dataset.dup;
+  for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); pickTraits(); if (!over() && !small()) break; }
+  if (over()) { scr.dataset.dup = '1'; fitNames(); pickTraits(); }   // the last step: a league line that only says its group's name again (Made Teams under Made Teams) goes
   scr.classList.toggle('scrolls', scr.scrollHeight > scr.clientHeight + 1);   // styles.css: a card's own vertical swipe only where the page cannot scroll
 }
 
-/* ---------- the ladder sheet: every group, under its hemisphere and country, for a finger ---------- */
+/* ---------- the ladder sheet: every group, under its hemisphere and country, for a finger ----------
+   A modal while it is open: everything else is inert (as the grown-up check makes it, src/kids.js), so Tab stays in it and nothing behind
+   it can be pressed; the arrows move between its groups; Escape (or Back) closes it once. */
+let pickInert = [];                                          // what the open sheet made inert, to give back as it shuts (kept apart from pick, which a new screen replaces)
 function pickSheet(s) {
   const v = pickView[s]; if (!v || v.ladder.length < 2 || v.group.fixed) return;
+  pickSheetShut();
   pick.sheet = s; pick.on = s;
   pickSheetDraw();
-  $('m-ladder').hidden = false;
+  const m = $('m-ladder'), body = document.body;
+  if (body && body.children) for (const el of body.children) if (el !== m && el.id !== 'rotate' && !el.inert) { el.inert = true; pickInert.push(el); }   // Turn Your Phone Sideways stays live, as it does for the grown-up check
+  m.hidden = false;
   const el = $('ldr-list').querySelector && $('ldr-list').querySelector('[aria-pressed="true"]');
   if (el) { if (focusEl) setFocus(el); if (el.focus) el.focus({ preventScroll:true }); if (el.scrollIntoView) el.scrollIntoView({ block:'center' }); }
 }
@@ -11012,9 +11051,15 @@ function pickSheetDraw() {
   if (place != null) html += '</div>';
   $('ldr-list').innerHTML = html;
 }
+function pickSheetShut() {                                  // the sheet put away, nothing else: also whenever another screen is shown (showScreen)
+  if ($('m-ladder').hidden && !pickInert.length) return;
+  pick.sheet = null; $('m-ladder').hidden = true;
+  for (const el of pickInert) el.inert = false;
+  pickInert = [];
+}
 function pickSheetClose(gi) {
   const s = pick.sheet; if (s == null) return;
-  pick.sheet = null; $('m-ladder').hidden = true;
+  pickSheetShut();
   if (gi != null && pickView[s] && gi !== pickView[s].gi) pickTo(s, gi, 0, null);
   const el = pickEl(s, 'sheet');
   if (el) { if (focusEl) setFocus(el); if (el.focus) el.focus({ preventScroll:true }); }
@@ -11026,10 +11071,16 @@ DEFAULT_FOCUS['m-ladder'] = () => ($('ldr-list').querySelector && $('ldr-list').
 
 /* ---------- input: touch and the mouse, the keyboard, a controller ---------- */
 let pickSwiped = 0, pickHold = null;
+const pickHit = e => {                                       // the control a tap or a press is on: anywhere on a card bar Edit is its team (the shirt, the name, the bars)
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return null;
+  const b = t.closest('[data-act]'); if (b) return b;
+  const card = t.closest('.pk-card');
+  return card && card.querySelector ? card.querySelector('[data-act="pick"]') : null;
+};
 function pickClick(e) {
-  const b = e.target && e.target.closest ? e.target.closest('[data-act]') : null; if (!b) return;
+  const b = pickHit(e); if (!b) return;
   const at = pickAt(b); if (!at) return;
-  if (performance.now() - pickSwiped < 400) return;          // the click a swipe or a long press ends with
+  if (e.detail !== 0 && performance.now() - pickSwiped < 400) return;   // the click a swipe or a long press ends with (a controller's A or a key's is never one)
   const s = at.s, wasTyped = document.activeElement === b, wasRing = focusEl === b;
   if (at.act === 'prev' || at.act === 'next') pickStep(s, at.act === 'next' ? 1 : -1);
   else if (at.act === 'sheet') pickSheet(s);
@@ -11052,7 +11103,7 @@ $('t-back').addEventListener('click', () => {
 /* A swipe across a card: left for the next team, right for the one before; up for the next group, down for the one before. A long press on
    Previous or Next jumps a country. */
 $('t-sides').addEventListener('pointerdown', e => {
-  const b = e.target && e.target.closest ? e.target.closest('[data-act]') : null, at = b && pickAt(b);
+  const b = pickHit(e), at = b && pickAt(b);
   if (!at) return;
   if (at.act === 'pick') pickHold = { id:e.pointerId, s:at.s, x:e.clientX, y:e.clientY, swipe:true };
   else if (at.act === 'prev' || at.act === 'next') {
@@ -11073,7 +11124,7 @@ for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('t-sides').ad
 /* The keyboard, one player (2 Players' halves come through navKey): the arrows act on the side the focus is in (or the active side when
    nothing is focused), Page Up and Page Down jump a country; Tab and Enter are the browser's own. */
 function pickKeyDown(e) {
-  if ($('s-teams').hidden || two.on || !$('m-ladder').hidden || (e.target && e.target.tagName === 'INPUT')) return false;
+  if ($('s-teams').hidden || two.on || navLayer() !== $('s-teams') || (e.target && e.target.tagName === 'INPUT')) return false;
   const a = document.activeElement, at = pickAt(a), free = !a || a === document.body || a === $('s-teams');
   const s = at ? at.s : free ? pick.on : null;
   if (s == null) return false;
@@ -11086,12 +11137,42 @@ function pickKeyDown(e) {
   return true;
 }
 document.addEventListener('keydown', pickKeyDown);
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('m-ladder').hidden) pickSheetClose(null); });
-/* A controller (and 2 Players' keys): navMove, navPress and navBack ask here first on the team screen (src/input-devices.js). One player:
-   the d-pad drives the side whose card the ring is on, and A on a card sets it and moves on; anywhere else the ring moves as on every
-   screen. 2 Players: each seat drives its own side wherever the ring is; A sets it (then Kick Off once both are), B frees it (then Back). */
+/* The sheet's own keys: Escape closes it, and only it (2 Players' Escape would go on to free a side or leave the screen: navBack); the
+   arrows step through its groups, round again, Home and End to its ends. */
+document.addEventListener('keydown', e => {
+  if ($('m-ladder').hidden) return;
+  if (e.key === 'Escape') { if (e.stopPropagation) e.stopPropagation(); if (e.preventDefault) e.preventDefault(); pickSheetClose(null); return; }
+  const gs = [...$('ldr-list').querySelectorAll('.ldr-g')], i = gs.indexOf(document.activeElement), n = gs.length;
+  const j = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? (i < 0 ? n - 1 : (i - 1 + n) % n) : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
+  if (j < 0 || !n) return;
+  if (e.preventDefault) e.preventDefault();
+  gs[j].focus({ preventScroll:true }); if (gs[j].scrollIntoView) gs[j].scrollIntoView({ block:'nearest' });
+});
+/* A controller (and 2 Players' keys): navMove, navPress and navBack ask here first on the team screen (src/input-devices.js).
+   On a card the d-pad drives that side: Left and Right a team, Up and Down a group, a shoulder a country; A sets it and moves on (Your
+   Team, the Opponent, then Kick Off; one side: the screen's own action). X or Y lifts the ring off the card onto that side's buttons, and
+   from there it moves as on every screen, the cards passed over, so Men | Women | Minis, the group's sheet, Favourite, Edit, Previous and
+   Next, the primary and Back are all in reach; X or Y again puts it back on the card. B is Back, as everywhere.
+   2 Players: each seat drives its own side wherever the ring is, A sets it (then Kick Off once both are), B frees it (then Back); a seat's
+   X or Y lifts the ring onto his side's buttons, and that seat's d-pad and A then work the ring, until his X or Y again. */
+const pickCard = el => !!el && !!el.dataset && el.dataset.act === 'pick' && !!pickAt(el);
+function pickLifted(seat) {                                  // the ring is on one of the screen's buttons, not a card (2 Players: and this seat lifted it)
+  if (!focusEl || pickCard(focusEl) || $('s-teams').hidden || navLayer() !== $('s-teams') || !navCands($('s-teams')).includes(focusEl)) return false;
+  return !(two.on && !pickOne()) || seat === pick.lifter;
+}
+const pickSkip = el => pickCard(el);                         // a lifted ring passes over the cards (navMove), so it reaches the buttons above and below them
 function pickNav(seat, dx, dy) {
   if ($('s-teams').hidden || (!dx && !dy)) return false;
+  if (pickLifted(seat)) {
+    const go = $('t-go'), back = $('t-back');
+    if (dx && (focusEl === go || focusEl === back)) {        // the bottom row's halves: Left and Right along it, before anything above
+      const o = focusEl === go ? back : go, a = focusEl.getBoundingClientRect(), b = o.getBoundingClientRect();
+      if (!o.hidden && b.width && Math.abs(a.top - b.top) < 4 && (b.left - a.left)*dx > 0) { setFocus(o); return true; }
+    }
+    const cat = $('t-cat'), chosen = !cat.hidden && cat.querySelector && cat.querySelector('[aria-pressed="true"]');
+    if (dy < 0 && !dx && chosen && focusEl.closest && focusEl.closest('.pk-head')) { setFocus(chosen); return true; }   // Up from either side's head: Men | Women | Minis, on the one chosen
+    return false;                                            // the ring moves as on every screen (navMove)
+  }
   let s = null;
   if (two.on && !pickOne()) s = seat === 1 ? 1 : 0;
   else { const at = focusEl && pickAt(focusEl); if (at && at.act === 'pick') s = at.s; }
@@ -11100,7 +11181,7 @@ function pickNav(seat, dx, dy) {
   return true;
 }
 function pickPress(seat) {
-  if ($('s-teams').hidden || !two.on || pickOne()) return false;
+  if ($('s-teams').hidden || !two.on || pickOne() || pickLifted(seat)) return false;   // a lifted ring: A presses what it is on (navPress)
   const s = seat === 1 ? 1 : 0;
   if (!pick.sides[s].set) { pick.on = s; pickSet(s); } else if (pickReady()) pickKickOff();
   return true;
@@ -11112,11 +11193,22 @@ function pickBack(seat) {
   pick.sides[s].set = false; pick.on = s; renderTeams();
   return true;
 }
-function pickShoulder(seat, d) {                           // a shoulder button, or 2 Players' Sprint: a whole country
-  if ($('s-teams').hidden || !$('m-ladder').hidden) return false;
+function pickShoulder(seat, d) {                           // a shoulder button, or 2 Players' Sprint: a whole country (never under a card or the sheet)
+  if ($('s-teams').hidden || navLayer() !== $('s-teams')) return false;
   const at = focusEl && pickAt(focusEl);
   const s = two.on && !pickOne() ? (seat === 1 ? 1 : 0) : at ? at.s : pick.on;
   pickCountry(s, d);
+  return true;
+}
+/* X or Y: the ring off the card onto its side's first button (the group's, else Favourite, Previous or Next, else the primary), or back onto
+   the card from wherever it is (the side it is on; from the top or the bottom row, the active side's). 2 Players: the seat's own side. */
+function pickLift(seat) {
+  if ($('s-teams').hidden || navLayer() !== $('s-teams')) return false;
+  const pair = two.on && !pickOne(), at = focusEl && pickAt(focusEl), s = pair ? (seat === 1 ? 1 : 0) : at ? at.s : pick.on;
+  if (pickLifted(seat)) { pick.lifter = null; setFocus(pair ? null : pickEl(s, 'pick')); return true; }   // 2 Players: back to driving his own side, no ring
+  const el = ['sheet', 'fav', 'prev', 'next'].map(a => pickEl(s, a)).find(e => e && !e.disabled) || $('t-go');
+  pick.lifter = pair ? s : null;
+  setFocus(el);
   return true;
 }
 /* A controller's first press: the active side's card. */
@@ -11255,8 +11347,10 @@ function buildBuilder() {
       custom[i] = cleanTeam({ ...t, key:editing.key }, i);
       twoSel.teams = twoSel.teams.map(o => (o && keyOf(o) === editing.key ? custom[i] : o));   // a Rematch plays it as it now is
     } else {
-      custom.push(cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length));
-      pickMade(custom[custom.length - 1]);                   // on the side that asked: played as, made while picking Your Team; My Team's club, made on My Team
+      const made = cleanTeam({ ...t, key:'my' + Date.now().toString(36) }, custom.length);
+      custom.push(made);
+      pickMade(made);                                        // on the side that asked: played as, made while picking Your Team
+      if (pickMode === 'my') settings.myClub = made.key;     // made on My Team: it is the club (saved just below)
     }
     save(); renderTeams(); showScreen('s-teams');
   });
@@ -13032,7 +13126,8 @@ function storeTeamsRender() {
   for (const b of scr.querySelectorAll('[data-make="create"], [data-act="edit"]')) storeMark(b, 'create');
   for (const b of scr.querySelectorAll('[data-make="import"]')) storeMark(b, 'import');
   for (const b of scr.querySelectorAll('[data-legend]')) storeMark(b, 'legends');   // unlocked by Gold medals on any tier, played with the Full Game
-  const v = pickView[pick.on], t = v && v.team, f = !t ? null : t.act === 'create' ? 'create' : t.act === 'import' ? 'import' : t.legend ? 'legends' : null, go = $('t-go');
+  const v = pickView[pick.on], ready = typeof pickReady === 'function' && pickReady(), t = ready ? [pickView[0].team, pickView[1].team].find(x => x.legend) : v && v.team;   // Kick Off: locked while either side is a Legend and the Full Game is not had
+  const f = !t ? null : t.act === 'create' ? 'create' : t.act === 'import' ? 'import' : t.legend ? 'legends' : null, go = $('t-go');
   if (f) storeMark(go, f);
   else if (go.classList.contains('locked')) { go.classList.remove('locked'); if (typeof go.removeAttribute === 'function') go.removeAttribute('aria-describedby'); }
 }
@@ -16359,7 +16454,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   clarity:{ MATCH_PACE, matchPace, HALF_SECONDS, fmtClock, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
-  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
+  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, sheet:pickSheet, sheetClose:pickSheetClose, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, first:() => DEFAULT_FOCUS['s-teams'](), sheetShut:pickSheetShut, key:pickKeyDown, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   GAME_VERSION,
   get M() { return M; } };
 

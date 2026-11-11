@@ -613,11 +613,11 @@ begin('join');
   const P = T.picker;
   $('m-pause').hidden = $('m-pen').hidden = true;            // the cards the sections above left showing on the stub page: a seat's press goes to the top layer, and on the team screen that is the screen
   D.settings().pick = [null, null]; D.openTeams('two');
-  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === '2 Players' && $('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Player 1 Team', 'Player 1 first: Player 1 Team, the eyebrow in his colour');
+  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === '2 Players' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Teams' && $('t-side0').classList.contains('p1') && $('t-side1').classList.contains('p2'), 'Player 1 first: Pick Teams, each side in its player\'s colour (one title, whoever moved last)');
   ok(!P.state().sides[0].set && !P.state().sides[1].set && /^Pick /.test($('t-go').textContent) && $('t-back').textContent === 'Back to Players' && D.navOnly() == null && D.navOwner(0) && D.navOwner(1) && D.navOwner(null), 'nothing set, the primary picks for Player 1, Back to Players, and each seat (or the mouse) acts on its own side');
   D.pickTeam(X.NATIONS[0]);
-  ok(P.state().sides[0].set && P.view(0).team === X.NATIONS[0] && sel.picking === 1 && $('t-title').textContent === 'Player 2 Team' && $('t-eyebrow').classList.contains('p2') && !M().two, 'Player 1 picked England: Player 2 Team, in his colour; nothing has started');
-  D.navLog.length = 0; ok(T.navPress(0) === true && !M().two && P.state().sides[0].set && T.navBack(0) === true && !P.state().sides[0].set && $('t-title').textContent === 'Player 1 Team', 'Player 1\'s A again waits for Player 2; his B frees his side: back to Player 1 Team');
+  ok(P.state().sides[0].set && P.view(0).team === X.NATIONS[0] && sel.picking === 1 && $('t-title').textContent === 'Pick Teams' && !M().two, 'Player 1 picked England: on to Player 2 (still Pick Teams); nothing has started');
+  D.navLog.length = 0; ok(T.navPress(0) === true && !M().two && P.state().sides[0].set && T.navBack(0) === true && !P.state().sides[0].set && $('t-title').textContent === 'Pick Teams', 'Player 1\'s A again waits for Player 2; his B frees his side');
   D.pickTeam(X.NATIONS[0]); ok(sel.picking === 1 && P.state().sides[0].set, 'he picks again and Player 2 is on');
   { const p2 = P.view(1).team; T.navMove(0, 0, 1);
     ok(P.view(1).team === p2 && P.view(0).group.key !== 'nat.eng' && !P.state().sides[0].set, 'seat 0\'s d-pad moves only Player 1\'s side (and frees it), never Player 2\'s'); }
@@ -913,7 +913,7 @@ begin('full time');
   ok(M().nat[0].id === 'FAR' && M().nat[1].id === 'FA2' && $('br-tries').textContent === 'Player 2 Wins · Tries 0 – 0' && $('br-n0').textContent === 'FAR' && $('br-n1').textContent === 'FA2', 'Farnham v Farnham: Player 2 Wins, with the two codes');
   // Change Teams: back to Player 1's pick, the series and the seats kept
   $('m-break').hidden = true; D.setMode('menu'); D.openTeams('two');
-  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-title').textContent === 'Player 1 Team' && !T.picker.state().sides[0].set && !T.picker.state().sides[1].set && D.series().w[0] === 1 && D.series().w[1] === 2 && D.two().on, 'Change Teams goes back to Player 1\'s pick, each side shown as it was for its player to set again, the series and the seats kept');
+  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-title').textContent === 'Pick Teams' && !T.picker.state().sides[0].set && !T.picker.state().sides[1].set && D.series().w[0] === 1 && D.series().w[1] === 2 && D.two().on, 'Change Teams goes back to Player 1\'s pick, each side shown as it was for its player to set again, the series and the seats kept');
   D.pickTeam(X.NATIONS[2]); D.pickTeam(X.CLUBS[1]); T.picker.go(); M().headless = true;
   ok(M().two && M().nat[0].id === 'IRE' && M().nat[1].id === 'HAS' && S.levelOf(0) === 0 && S.levelOf(1) === 2, 'Player 1 picks Ireland, Player 2 Haslemere, and the match starts at the same levels');
   M().score = [12, 0]; D.showBreak('full'); ok($('br-series').textContent === 'Series 2 – 2 · 2 Draws', 'and the series runs on');

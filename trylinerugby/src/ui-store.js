@@ -109,7 +109,8 @@ function storeTeamsRender() {
   for (const b of scr.querySelectorAll('[data-make="create"], [data-act="edit"]')) storeMark(b, 'create');
   for (const b of scr.querySelectorAll('[data-make="import"]')) storeMark(b, 'import');
   for (const b of scr.querySelectorAll('[data-legend]')) storeMark(b, 'legends');   // unlocked by Gold medals on any tier, played with the Full Game
-  const v = pickView[pick.on], t = v && v.team, f = !t ? null : t.act === 'create' ? 'create' : t.act === 'import' ? 'import' : t.legend ? 'legends' : null, go = $('t-go');
+  const v = pickView[pick.on], ready = typeof pickReady === 'function' && pickReady(), t = ready ? [pickView[0].team, pickView[1].team].find(x => x.legend) : v && v.team;   // Kick Off: locked while either side is a Legend and the Full Game is not had
+  const f = !t ? null : t.act === 'create' ? 'create' : t.act === 'import' ? 'import' : t.legend ? 'legends' : null, go = $('t-go');
   if (f) storeMark(go, f);
   else if (go.classList.contains('locked')) { go.classList.remove('locked'); if (typeof go.removeAttribute === 'function') go.removeAttribute('aria-describedby'); }
 }
