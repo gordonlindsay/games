@@ -1102,6 +1102,29 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     pause, penalty or half-time card) is released on the slot, so Sprint or a d-pad run can't carry on by itself after it.
     `body.desk` follows the pointer or the pads connected right now, so a phone that had a pad goes back to its own layout
     when it is unplugged.
+  - **A finger the page lost** (2026-11-11, the owner: "the joystick got jammed/stuck on a recent test game for some reason
+    and we had to quit"). The game records nothing, so it was reproduced in Chromium with real touches on 1.3 and 1.4 alike.
+    The stick and each of Pass, Kick and Sprint belong to one finger until its own lift or cancel, and only that used to let
+    go: a lift the page never heard (an interruption that drops the touch's end, a capture lost with the thumb then lifted on
+    the pitch) left the run held with no thumb on the glass and every new thumb on the zone ignored, until a blur, the phone
+    upright or Quit. Now a held finger also lets go on its own lift anywhere on the page (the window hears it first), when the
+    zone loses its capture and can't take it back, and when the page is hidden or `pagehide` (as a blur already did: a
+    home-screen app may send no blur). And a new finger takes over at once when the old one is plainly gone: the new press has
+    the old finger's id, or the stick or the button no longer holds the old finger's capture, or a touchstart's list of the
+    fingers on the glass is all new ones. A finger still on the glass is none of these, so a second finger never takes the
+    stick or a button from a live one (a palm on the zone is ignored, as before), and a stale Kick is let go as cancelled,
+    never fired. Nothing here draws a random number.
+  - **A card under a second finger** (the same day). A browser makes a click from a tap only when no other finger is on the
+    glass, and every card and Pause act on a click, so with a thumb on the stick or on Sprint a tap on the tutorial card's
+    Next, Skip or Play, on Pause, Resume, the penalty card, Second Half or Continue did nothing until every other finger
+    lifted. The tutorial card holds the match still, and on a new phone the first scrum, lineout, maul, duel and kick each
+    bring one up mid-run: that looked like a jammed stick and game. Now a finger lifted on a button in play (the cards, Pause,
+    the hints card's tick, Watch How's Skip) clicks it whatever else is down, inside the button and near where it went down;
+    preventDefault on the touch's end stops the browser's own click, and where Chromium makes that end uncancelable (another
+    finger in the touch has moved) the lift clicks only beside another finger, when the browser makes none. A mouse, the keys
+    and a controller click as before. Under a duel's or a goal kick's card the stick's knob stays at the centre under a moving
+    thumb: that is the duel's re-centring (a held run must not read as a step), not a stuck stick. `node tools/stick.mjs`
+    checks every case.
   - **Sides.** `M.side[t]` holds whether a human plays team t, its seat, the man under its ring, its level, its kick charge and
     its Pass press. `isHuman`, `inputOf`, `ctrlOf`, `setCtrl`, `levelOf` read it; `ringed(p)` is the man under a human's
     ring. `newMatch(u, c, { humans:[a, b], levels:[l0, l1] })` seats any mix: `[true, false]` is one player, `[false, true]`

@@ -136,7 +136,9 @@ $('pz-quit').addEventListener('click', () => {
   if (confirmSoon()) return;
   if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Skill Games, or Back to Career for a caller (which hears it as a quit)
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+function pageHidden() { releaseAll(); pause(); }           // an app switch, the Home swipe, a call or the lock: nothing held can stick, as on a blur (an iPhone may never send the thumb's lift, and a home-screen app may send no blur)
+document.addEventListener('visibilitychange', () => { if (document.hidden) pageHidden(); });
+window.addEventListener('pagehide', pageHidden);
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
 function phoneUpright() { pause(); releaseTouch(); }        // the cover pauses the match; the stick and the buttons let go too, so nothing is left held when the phone comes back
 function onOrientation() { if (uprightPhone.matches) phoneUpright(); }
