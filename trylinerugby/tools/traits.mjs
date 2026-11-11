@@ -384,12 +384,13 @@ function pin() {
 
 // 9. the screens: the team cards' line, and the career hub's chips
 {
-  D.openTeams('quick'); D.settings().pool = 0; D.renderTeams();
-  const html = $('t-grid').innerHTML;
-  ok(/<span class="tstars" aria-label="Star Traits: Burst, Crunch, Hand-Off"><b>Burst<\/b> · <b>Crunch<\/b> · <b>Hand-Off<\/b><\/span>/.test(html), 'France\'s card names its three stars under the ability rows (Pace 5, Power 5 on the XV rankings)');
-  { const cards = html.split('<button class="team"').slice(1), bare = cards.filter(c => !c.includes('class="tstars"')).map(c => (c.match(/class="tname">([^<]*)</) || [])[1]).sort();
+  // re-pinned for the side-by-side team screen (2026-11-11): one nation a side, each National group's in turn (pickLadder)
+  D.openTeams('quick');
+  const PK = T.picker, cardOf = id => { const L = PK.view(0).ladder, g = L.findIndex(x => x.key === 'nat.' + id.toLowerCase()); PK.group(0, g - PK.view(0).gi); return $('t-side0').innerHTML; };
+  ok(/<span class="tstars" aria-label="Star Traits: Burst, Crunch, Hand-Off"><b>Burst<\/b> · <b>Crunch<\/b> · <b>Hand-Off<\/b><\/span>/.test(cardOf('FRA')), 'France\'s card names its three stars under its league line, by its bars (Pace 5, Power 5 on the XV rankings)');
+  { const cards = X.natList('men').map(n => cardOf(n.id)), bare = cards.filter(c => !c.includes('class="tstars"')).map(c => (c.match(/class="tname">([^<]*)</) || [])[1]).sort();
     ok(cards.length === 12 && bare.join() === 'Italy,Wales', `every nation with a 5 has a line; Italy and Wales, with none, have none (${cards.length} cards; no line: ${bare.join(', ')})`); }
-  ok(/aria-label="Overall 93">93<\/span>/.test(html), 'the overall badge is as it was');
+  ok(/aria-label="Overall 93">93<\/span>/.test(cardOf('RSA')), 'the overall badge is as it was');
   const cr = T.career.create({ name:'Sam', pos:'F', num:2, club:X.CLUBS[0] });
   Object.assign(cr.skills, { pace:81, power:84, handling:62, kicking:45, stamina:91 });
   T.career.set(cr); T.career.render();

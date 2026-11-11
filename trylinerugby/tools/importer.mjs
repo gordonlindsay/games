@@ -5,6 +5,7 @@ import fs from 'node:fs';
 process.env.SEED ??= '23';
 const { T, rndCalls } = await import('./harness.mjs');
 const I = T.importer, X = T.teams, D = T.debug, $ = id => document.getElementById(id);
+const PK = T.picker, pv = () => PK.view(0);   // the team screen, side by side since 2026-11-11 (Championship: one side, centred)
 let passed = 0;
 const ok = (test, message) => { if (!test) throw Error(message); passed++; };
 const fx = f => fs.readFileSync(new URL('./fixtures/import/' + f + '.html', import.meta.url), 'utf8');
@@ -251,9 +252,9 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   for (const id of ['im-url', 'im-go', 'im-back', 'im-paste', 'im-make']) $(id).focus = () => { focused = id; };
   pages[LG] = html200('pitchero-league');
   D.openTeams('champ');
-  ok($('t-grid').innerHTML.includes('id="t-import"') && $('t-grid').innerHTML.includes('<span class="tname">Add Your Team</span>') && !$('t-grid').innerHTML.includes('Import Club') && $('t-league').hidden, 'the team screen has an Add Your Team card beside Create Team (the home\'s name for the same card), and no My League yet');
-  X.poolPick(I.POOL);
-  ok(D.settings().pool === 'sur' && X.teamPool() === 'sur', 'My League cannot be picked before there is one');
+  { const made = pv().ladder.find(g => g.key === 'mine.made'); ok(made && made.teams.some(t => t.act === 'create') && made.teams.some(t => t.act === 'import' && t.name === 'Add Your Team') && !PK.panel(0).includes('Import Club') && pv().group.name === 'Surrey', 'the team screen has Add Your Team beside Create Team in Made Teams (the home\'s name for the same card), and no My League yet'); }
+  D.openTeams('champ', I.POOL);
+  ok(X.teamPool() === 'sur' && pv().group.name === 'Surrey', 'My League cannot be played before there is one: Surrey shows');
   I.open();
   ok(I.state().step === 'link' && $('im-title').textContent === 'Paste Your Link' && !$('im-field').hidden && $('im-go').textContent === 'Import', 'in the app the card asks for the link');
   ok(focused === 'im-url' && I.focusEl(true) === $('im-go'), 'focus goes into the card, on the link field; a controller\'s ring starts on Import');
@@ -281,13 +282,11 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
     `Save Club adds it through cleanTeam, at the level its page names, Regional 1, spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
   ok(!$('m-import').hidden && I.state().step === 'mine' && $('im-title').textContent === 'Bracknell RFC' && !$('im-mine').hidden && $('im-row').hidden && $('im-go').hidden && !$('im-jersey').hidden && focused === 'im-make', 'then the card offers Make This My Team | Not Now, in the club\'s shirt, focus on Make This My Team');
-  X.fold(true);                                            // the team screen under the card with its controls opened
   $('im-not').click();
   ok(D.settings().myClub == null, 'Not Now leaves My Team as it was');
-  ok($('m-import').hidden && D.settings().pool === I.POOL && X.teamPool() === 'my' && X.poolTier('my') === 2 && !$('t-league').hidden && $('t-tier').hidden, 'the card closes on My League (Local\'s, beside Surrey), Championship\'s list now that its competition is chosen on the home');
-  { const sum = $('t-sum').innerHTML.replace(/<[^>]+>/g, '');
-    ok(!X.opened() && $('t-ctl').hidden && sum === 'Men · Local · My League', `and folded, as a list picked folds: ${sum}`); }
-  ok($('t-grid').innerHTML.includes('Sevenoaks') && $('t-grid').innerHTML.includes('Bracknell RFC'), 'My League lists the league and your teams');
+  ok($('m-import').hidden && D.settings().pool === I.POOL && X.teamPool() === 'my' && X.poolTier('my') === 2 && pv().group.name === 'My League' && PK.where(pv().group) === 'Local', 'the card closes on My League (Local\'s), Championship\'s competition now, as it is chosen on the home');
+  ok(pv().team.name === 'Sevenoaks' && !PK.state().sides[0].set && PK.primary() === 'Play as Sevenoaks', `and on its first side, offered: ${PK.primary()}`);
+  ok(pv().ladder[0].teams.some(t => t.name === 'Sevenoaks') && pv().ladder.find(g => g.key === 'mine.made').teams.some(t => t.name === 'Bracknell RFC'), 'My League lists the league, Made Teams your teams');
   const sv = saved();
   ok(sv.importLeague.teams.length === 5 && sv.custom.some(t => t.name === 'Bracknell RFC'), 'both are in the browser save');
   const lead = I.league().teams[0], foot = I.league().teams[4];
@@ -373,7 +372,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   focused = ''; I.alt();
   ok(I.league() === null && saved().importLeague === null && D.settings().pool === 'sur' && $('im-alt').hidden && focused === 'im-url', 'then the league goes, from the save too, the list back to Surrey, and focus is not left on a hidden button');
   $('im-back').click();
-  ok($('t-league').hidden, 'and so does My League');
+  ok(pv().ladder[0].name === 'Surrey' && X.teamPool() === 'sur' && !pv().ladder.some(g => g.name === 'My League'), 'and so does My League: the competition is Surrey again');
   I.setGate(null); native(false);
 }
 
@@ -437,8 +436,8 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   X.restore({ custom:[mine] });
   for (const [n, fromLeague] of [[12, 5], [5, 5], [3, 3], [1, 1]]) {
     I.setLeague(I.clean(mk(n)));
-    D.openTeams('champ'); D.settings().pool = I.POOL; D.renderTeams();
-    ok(!$('t-league').hidden && $('t-grid').innerHTML.includes('Ash Vale') && I.league().teams.length === n && $('t-grid').innerHTML.includes('Bracknell RFC'), `My League (${n}) lists the league and your club`);
+    D.openTeams('champ', I.POOL);
+    ok(pv().ladder[0].name === 'My League' && pv().ladder[0].teams.some(t => t.name === 'Ash Vale') && I.league().teams.length === n && pv().ladder.find(g => g.key === 'mine.made').teams.some(t => t.name === 'Bracknell RFC'), `My League (${n}) lists the league and your club`);
     D.pickTeam(X.custom()[0]);
     const c = X.champ(), others = c.teams.slice(1);
     ok(c.teams.length === 6 && c.teams[c.user].name === 'Bracknell RFC', `a ${n}-team league plays a six-team championship with your club in it`);
@@ -447,19 +446,20 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
     X.setChamp(null);
   }
   I.setLeague(I.clean(mk(6)));
-  D.openTeams('champ'); D.settings().pool = I.POOL; D.renderTeams();
+  D.openTeams('champ', I.POOL);
   D.pickTeam(I.league().teams[2]);
   ok(X.champ().teams[0].name === 'Cedar Park' && !X.champ().teams.slice(1).some(t => t.name === 'Cedar Park'), 'playing as a league side leaves it out of the others');
   X.setChamp(null);
   const r0 = rndCalls(); D.renderTeams(); X.save(); I.render();
   ok(rndCalls() === r0, 'showing My League and saving it draw no simulation RNG');
-  I.setLeague(null); D.renderTeams();
-  ok($('t-league').hidden, 'no league, no My League');
+  I.setLeague(null); D.openTeams('quick');
+  const league = () => pv().ladder.find(g => g.key === 'mine.league'), made = () => pv().ladder.find(g => g.key === 'mine.made');
+  ok(league() && league().teams.every(t => t.act === 'import'), 'no league, no My League side: only Add Your Team');
   const full = Array.from({ length:4 }, (_, i) => ({ key:'f' + i, name:'Full ' + i }));
   X.restore({ custom:full }); D.renderTeams();
-  ok(!$('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four teams made and no league, Add Your Team goes with Create Team');
+  ok(!league() && !made().teams.some(t => t.act), 'with four teams made and no league, Add Your Team goes with Create Team');
   I.setLeague(I.clean(mk(3))); D.renderTeams();
-  ok($('t-grid').innerHTML.includes('t-import') && !$('t-grid').innerHTML.includes('t-create'), 'with four made and a league saved, Add Your Team stays: the way to refresh or remove it');
+  ok(league().teams.some(t => t.act === 'import') && league().teams.length === 4 && !made().teams.some(t => t.act), 'with four made and a league saved, Add Your Team stays: the way to refresh or remove it');
   native(true); reset(); I.setGate(go => go());
   pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
   I.open(); $('im-url').value = PIT + '/teams/3100/league-table'; I.go();
@@ -487,7 +487,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(!/Import Club|Import Data|Import Works/.test(block + src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'one name for the flow, the home\'s and the team screen\'s alike: Add Your Team, never Import Club or Import Data');
   for (const l of labels) ok(title(l) && (src + block).includes(l), `"${l}" is a Title Case label in use`);
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
-  ok(html.includes('<div class="seg" id="t-loc" hidden></div>') && menus.includes("btn('data-pool=\"my\" id=\"t-league\"', 'My League', ' hidden')"), 'Local\'s list carries My League after Surrey, hidden until there is one');
+  ok(html.includes('id="m-ladder"') && menus.includes("{ key:'mine.league', list:IMPORT_POOL, hemi:'mine', name:'My League', teams:[...(importLeague ? importLeague.teams : []), ...(all && importShown() ? [PICK_ADD] : [])] }"), 'Mine carries My League after Made Teams: its sides once there is one, and Add Your Team');
   ok(/typeof parentGate === 'function'\) parentGate\(go, cancel\)/.test(src), 'Import goes through parentGate(go, cancel) when the kids check is there');
   ok(Object.values(I.MSG).every(m => m.length <= 45 && /\.$/.test(m)), 'each message is one short plain sentence');
 }

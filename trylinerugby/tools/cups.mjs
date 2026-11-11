@@ -249,7 +249,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(done.filter(Boolean).length === 1 && done[when] === true && json(locker) === '["triple"]', `cupTripleAfter: true once, in round ${when + 1}, and the Locker hears 'triple' once`);
   // the real path: a Championship as England, through the team screen, its matches through full time
   X.setChamp(null); K.set(null);
-  D.openTeams('champ'); X.poolPick('int'); D.pickTeam(nat('ENG'));
+  D.openTeams('champ', 'int'); D.pickTeam(nat('ENG'));
   const ch = X.champ(); locker.length = 0;
   ok(ch && ch.teams[ch.user].id === 'ENG' && ch.teams.length === 6, 'a Championship as England is the Six Nations');
   for (let r = 0; r < 5; r++) {
@@ -438,16 +438,17 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   const H = T.home;
   K.set(null); X.setChamp(null); K.setHistory([]); K.setTurn(0); D.settings().cat = 'men';
   H.setTier(2); H.select('champ'); H.champPick('sur');
-  ok(K.comp() === 'league' && $('t-tier').hidden && $('t-nat').hidden && $('t-loc').hidden && X.teamPool() === 'sur' && $('t-title').textContent === 'Pick Your Team' && /Create Team/.test($('t-grid').innerHTML), 'a league picked on the home (Local · Surrey): the team screen with its sides, and no lists to wander off to');
+  const PK = T.picker, pv = () => PK.view(0);   // the team screen, side by side since 2026-11-11: one side, centred, in Championship
+  ok(K.comp() === 'league' && PK.one() && pv().ladder.map(g => g.key).join() === 'comp,mine.made' && pv().group.name === 'Surrey' && X.teamPool() === 'sur' && $('t-title').textContent === 'Pick Your Team' && pv().ladder[1].teams.some(t => t.act === 'create'), 'a league picked on the home (Local · Surrey): the team screen with its sides, then Made Teams with Create Team, and no other list to wander off to');
   D.goHome(); H.setTier(0); H.champ();
   ok(/data-comp="int"><span>Championship<\/span><\/button><button class="btn hc-comp" id="hc-world" data-comp="world"><span>World Cup<\/span><\/button><button class="btn hc-comp" id="hc-tour" data-comp="tour"><span>Home Nations Tour<\/span><\/button>/.test($('hc-comps').innerHTML), 'International: Championship | World Cup | Home Nations Tour');
   D.openTeams('quick');
-  ok(!$('t-tier').hidden, 'Quick Match keeps the lists');
+  ok(!PK.one() && pv().ladder.length > 20, 'Quick Match keeps the whole ladder');
   H.champPick('world');
-  ok($('t-title').textContent === 'Pick Your Nation' && $('t-tier').hidden && $('t-nat').hidden && $('t-loc').hidden && !/Create Team|Import/.test($('t-grid').innerHTML), 'World Cup: Pick Your Nation, no lists, no Create Team or Import');
-  ok((($('t-grid').innerHTML.match(/class="team/g)) || []).length === 12 && /South Africa/.test($('t-grid').innerHTML), 'the twelve nations');
+  ok($('t-title').textContent === 'Pick Your Nation' && pv().ladder.length === 1 && pv().group.fixed && !pv().group.teams.some(t => t.act) && !/data-act="sheet"/.test($('t-side0').innerHTML), 'World Cup: Pick Your Nation, a fixed list, no ladder, no Create Team or Add Your Team');
+  ok(pv().group.teams.length === 12 && pv().group.teams.some(t => t.id === 'RSA'), 'the twelve nations');
   D.settings().cat = 'women'; D.renderTeams();
-  ok(/Canada/.test($('t-grid').innerHTML) && !/Argentina/.test($('t-grid').innerHTML), 'the women\'s twelve on Women');
+  ok(pv().group.teams.some(t => t.id === 'CDN') && !pv().group.teams.some(t => t.id === 'ARG'), 'the women\'s twelve on Women');
   D.pickTeam(nat('CDN', 'women'));
   let c = K.get();
   ok(c && c.id === 'world' && c.cat === 'women' && c.teams[c.user].name === 'Canada Women' && shown() === 's-cup', 'picking Canada starts a women\'s World Cup and opens the cup hub');
@@ -490,20 +491,20 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   ok(K.get() === null && shown() === 's-home' && D.settings().hl === 'champ' && !$('hc-new').hidden && $('hc-go').hidden && K.history().length === 1, 'New Championship: the cup put away once, the home\'s Championship with its competitions');
   // the Home Nations Tour, in turn
   D.settings().cat = 'men'; H.champPick('tour');
-  ok($('t-title').textContent === 'Pick the Host' && $('t-default').textContent === 'Tour New Zealand' && !$('t-default').hidden && !$('t-yours').hidden && $('t-change').hidden && /Home Nations/.test($('t-mine').innerHTML), 'Home Nations Tour: your side is the Home Nations, Tour New Zealand first');
-  ok(/New Zealand[\s\S]*South Africa[\s\S]*Australia/.test($('t-grid').innerHTML) && (($('t-grid').innerHTML.match(/class="team/g)) || []).length === 3, 'the three hosts, the one in turn first');
-  $('t-default').click();
+  ok($('t-title').textContent === 'Pick the Host' && $('t-go').textContent === 'Tour New Zealand' && !$('t-go').hidden && PK.one() && /Your Side · Home Nations/.test($('t-side0').innerHTML), 'Home Nations Tour: your side is the Home Nations, Tour New Zealand first');
+  ok(pv().group.teams.map(t => t.id).join() === 'NZL,RSA,AUS' && pv().team.id === 'NZL', 'the three hosts, the one in turn first');
+  $('t-go').click();
   c = K.get();
   ok(c && c.id === 'tour' && c.teams[1].id === 'NZL' && c.user === 0 && K.turn() === 1 && $('cup-eyebrow').textContent === 'Tour of New Zealand' && $('cup-title').textContent === 'Test 1 of 3', 'a tour of New Zealand, Test 1 of 3');
   $('cup-reset').click(); $('cup-reset').click();
   ok(K.get() === null && shown() === 's-home' && K.history().length === 1, 'Start Fresh, two taps: the tour gone, nothing unfinished in the cabinet');
   H.champPick('tour');
-  ok($('t-default').textContent === 'Tour South Africa', 'next time the host in turn is South Africa');
+  ok($('t-go').textContent === 'Tour South Africa', 'next time the host in turn is South Africa');
   D.pickTeam(nat('AUS'));
   ok(K.get().teams[1].id === 'AUS' && K.turn() === 3, 'or pick the host: Australia, and New Zealand is next');
   K.set(null);
   H.champPick('eng');
-  ok(K.comp() === 'league' && X.teamPool() === 'eng' && $('t-tier').hidden && $('t-eyebrow').textContent === 'Championship' && $('t-sum').innerHTML.replace(/<[^>]+>/g, '') === 'Men · National · England', 'after a cup, a league from the home is a league again: England\'s sides (re-pinned for Fold to One Line: the list on the line, Men · National · England, under a plain Championship)');
+  ok(K.comp() === 'league' && X.teamPool() === 'eng' && PK.one() && $('t-eyebrow').textContent === 'Championship' && pv().group.name === 'England' && PK.where(pv().group) === 'National' && pv().group.teams.every(t => X.ENGLAND.includes(t)), 'after a cup, a league from the home is a league again: England\'s sides (re-pinned for the side-by-side screen: National over England, under a plain Championship)');
   // the European Cup offer after a league won with a side from a European league
   const finish = (c, place) => {   // every game won by the higher-ranked side, the user ranked place
     const order = [1, 2, 3, 4, 5]; order.splice(place - 1, 0, c.user);
@@ -512,26 +513,26 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
     c.round = 5;
   };
   K.setHistory([]);
-  X.poolPick('eng'); D.pickTeam(X.ENGLAND[0]);
+  D.openTeams('champ', 'eng'); D.pickTeam(X.ENGLAND[0]);
   finish(X.champ(), 1); D.renderHub();
   ok(/id="hub-euro"[^>]*>[\s\S]*Play European Cup/.test($('hub-next').innerHTML) && /id="hub-later"[^>]*>Not Now/.test($('hub-next').innerHTML), 'Bath win their league: Play European Cup, or Not Now');
   $('hub-later').click();
   ok(/id="hub-new"/.test($('hub-next').innerHTML) && X.champ().round === 5, 'Not Now: the final table and New Championship, as before');
   D.goHome(); X.setChamp(null);
-  D.openTeams('champ'); X.poolPick('eng'); D.pickTeam(X.ENGLAND[0]); finish(X.champ(), 1); D.renderHub();
+  D.openTeams('champ', 'eng'); D.pickTeam(X.ENGLAND[0]); finish(X.champ(), 1); D.renderHub();
   const ch = X.champ();
   $('hub-euro').click();
   c = K.get();
   ok(X.champ() === null && K.history().filter(e => e.id === ch.id).length === 1 && K.history().at(-1).id === ch.id, 'Play European Cup: the league season in the cabinet, once');
   ok(c && c.id === 'euro' && c.teams[c.user].id === 'BTH' && !c.teams.some((t, i) => i !== c.user && listKey(t) === 'eng') && shown() === 's-cup' && $('cup-title').textContent === 'Semi-Final', 'then the European Cup as Bath, against the other three leagues\' winners');
   K.set(null);
-  D.openTeams('champ'); X.poolPick('eng'); D.pickTeam(X.ENGLAND[0]); finish(X.champ(), 2); D.renderHub();
+  D.openTeams('champ', 'eng'); D.pickTeam(X.ENGLAND[0]); finish(X.champ(), 2); D.renderHub();
   ok(!/hub-euro/.test($('hub-next').innerHTML), 'second place: no offer');
-  X.setChamp(null); D.openTeams('champ'); X.poolPick('sur'); D.pickTeam(X.CLUBS[0]); finish(X.champ(), 1); D.renderHub();
+  X.setChamp(null); D.openTeams('champ', 'sur'); D.pickTeam(X.CLUBS[0]); finish(X.champ(), 1); D.renderHub();
   ok(!/hub-euro/.test($('hub-next').innerHTML), 'Farnham win Surrey: no offer, Surrey is not a European league');
-  X.setChamp(null); D.openTeams('champ'); X.poolPick('aus'); D.pickTeam(X.AUSTRALIA[0]); finish(X.champ(), 1); D.renderHub();
+  X.setChamp(null); D.openTeams('champ', 'aus'); D.pickTeam(X.AUSTRALIA[0]); finish(X.champ(), 1); D.renderHub();
   ok(!/hub-euro/.test($('hub-next').innerHTML), 'nor Australia');
-  X.setChamp(null); D.settings().cat = 'women'; D.openTeams('champ'); X.poolPick('rsa'); D.pickTeam(X.SOUTH_AFRICA[0]); finish(X.champ(), 1); D.renderHub(); $('hub-euro').click();
+  X.setChamp(null); D.settings().cat = 'women'; D.openTeams('champ', 'rsa'); D.pickTeam(X.SOUTH_AFRICA[0]); finish(X.champ(), 1); D.renderHub(); $('hub-euro').click();
   c = K.get();
   ok(c.cat === 'women' && c.teams.every(t => / Women$/.test(t.name)), 'a women\'s league winner\'s European Cup is a women\'s');
   K.set(null); X.setChamp(null); D.settings().cat = 'men';
@@ -712,7 +713,7 @@ async function browserChecks() {
         T.home.setTier(1); D.settings().hl = 'champ'; D.goHome(); await window.__frames();   // National: each country's league
         const lg = document.querySelector('#hc-eng .cup-trophy');
         out.push(['league button', !!lg && mask(lg) === K.trophyMask('euro') && lg.getAttribute('aria-label') === 'European Cup' && on(lg)]);
-        D.openTeams('champ'); X.poolPick('eng'); D.pickTeam(X.ENGLAND[0]);
+        D.openTeams('champ', 'eng'); D.pickTeam(X.ENGLAND[0]);
         const c = X.champ(); c.results = c.fixtures.map(rd => rd.map(([h, a]) => ({ h, a, hs:h === c.user ? 30 : 10, as:a === c.user ? 30 : 10, ht:4, at:1 }))); c.round = 5; D.renderHub(); await window.__frames();
         const of = document.querySelector('#hub-euro .cup-trophy');
         out.push(['offer', !!of && mask(of) === K.trophyMask('euro')]);

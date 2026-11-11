@@ -99,10 +99,14 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 
 // 6. the cards and the builder
 {
+  // re-pinned for the side-by-side team screen (2026-11-11): one team a side, its five bars, each of every side in the group in turn
   D.openTeams('champ');
-  const html = $('t-grid').innerHTML, cards = (html.match(/<button class="team[^"]*" data-i=/g) || []).length + 1;   // the team cards (data-i), plus one for the Create Team card the old count included; Add Your Team is not a team card
-  ok((html.match(/<span>Stamina<\/span>/g) || []).length === cards - 1 && (html.match(/class="pips"/g) || []).length === 5*(cards - 1), `every team card shows five ability rows (${cards - 1} cards)`);
-  ok(/<span>Kicking<\/span><span class="pips"[^>]*>.*?<\/span><span>Stamina<\/span><span class="pips" aria-label="3 of 5">/.test(html), 'Stamina is the last row, Farnham at 3');
+  const PK = T.picker, side = () => $('t-side0').innerHTML, n = PK.view(0).group.teams.length;
+  const farnham = side();
+  let five = 0;
+  for (let i = 0; i < n; i++) { const h = side(); if ((h.match(/class="pk-st"/g) || []).length === 5 && /<span class="lbl">Pace<\/span>.*<span class="lbl">Power<\/span>.*<span class="lbl">Handling<\/span>.*<span class="lbl">Kicking<\/span>.*<span class="lbl">Stamina<\/span>/.test(h)) five++; PK.step(0, 1); }
+  ok(five === n && n === 12, `every side shows five ability bars, Stamina among them (${five} of ${n} sides)`);
+  ok(new RegExp(`<span class="lbl">Kicking</span>.*?<span class="lbl">Stamina</span><span class="pk-bar" role="img" aria-label="Stamina ${X.CLUBS[0].stamina} of 5">`).test(farnham) && farnham.includes('>Farnham<') && X.CLUBS[0].stamina === 2, `Stamina is the last bar, Farnham at its own (${X.CLUBS[0].stamina}, as rated from its table; the old card check matched any side at 3)`);
   S.openBuilder(null);
   ok(S.draft().stamina === 1 && KEYS.every(k => S.draft()[k] === 1), 'a new team starts at 1 in all five');
   ok($('bd-left').textContent === 'Points Left 12' && /aria-label="1 of 5"/.test($('bd-p-stamina').innerHTML), `the builder has a Stamina row and 12 points (${$('bd-left').textContent})`);

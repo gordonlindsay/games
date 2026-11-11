@@ -98,14 +98,16 @@ try {
       return JSON.stringify(o); })()`;
     const SCREENS = [
       ['the home (My Team\'s club under Play)', `S.myClub = 'NTH'; S.hl = 'game'; D.goHome();`, 1],
-      ['the International tab', `S.myClub = null; D.openTeams('quick'); X.tierPick(0);`, 12],
-      ['the Surrey tab', `X.tierPick(2); X.poolPick('sur');`, 12],
-      ['the Counties tab', `X.poolPick('cty');`, 7],
-      ['the England 2 tab', `X.tierPick(1); X.poolPick('en2');`, 13],
-      ['the picked-team bar', `X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[7]); X.tierPick(1); X.poolPick('eng'); X.fold(true);`, 11],   // the bar is in the controls, behind Change (Fold to One Line)
-      ['My Team\'s screen', `D.openTeams('my'); X.tierPick(2); X.poolPick('sur'); X.fold(true);`, 14],
-      ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 12],
-      ['the career club list, England 2', `document.querySelector('#cc-tier [data-tier="1"]').click(); document.querySelector('#cc-nat [data-pool="en2"]').click();`, 13],
+      // re-pinned for the side-by-side team screen (2026-11-11): one team a side, so a state draws two sets of stars (one in the one-side modes)
+      ['Quick Match, both sides', `S.myClub = null; S.pick = [null, null]; D.openTeams('quick');`, 2],
+      ['a nation on each side', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'nat.rsa'); at(1, 'nat.nzl');`, 2],
+      ['Surrey on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'sur'); at(1, 'sur'); P.step(1, 3);`, 2],
+      ['Counties on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'cty'); at(1, 'cty'); P.step(1, 2);`, 2],
+      ['England 2 on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'en2'); at(1, 'en2'); P.step(1, 5);`, 2],
+      ['a side picked, the Opponent on England', `const P = T.picker; S.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[7]); P.group(1, P.view(1).ladder.findIndex(g => g.key === 'eng') - P.view(1).gi);`, 2],
+      ['My Team\'s screen', `D.openTeams('my');`, 1],
+      ['the career club list', `C.set(null); C.newOpen(); C.clubOpen();`, 1],
+      ['the career club list, England 2', `const P = T.picker; P.group(0, P.view(0).ladder.findIndex(g => g.key === 'en2') - P.view(0).gi);`, 1],
       ['the transfer window', `const cr = C.create({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0], cat:'women' }); C.set(cr); cr.phase = 'transfer'; cr.offers = ['GAL', 'BLM', 'JHB']; C.open();`, 4],
       ['the Locker\'s Legends', `C.set(null); const L = T.locker; window.__lkWas = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); L.open(3);`, w > 731 ? 14 : 0],   // every Legend won: its stars beside its year, inside its tile; none on a 667 phone, where a tile is too narrow for them (styles.css). Nine Golds (star:10 is no Gold): nine men's and the five women's, 14 (18 with ten women's, before 2026-11-09)
     ];
@@ -141,7 +143,8 @@ try {
     }
     await pg.ev(`(() => { ${PRE} $('im-back').click(); S.myTeam = 'FAR'; D.openTeams('quick'); })()`);
     for (const [g, pool] of [['men', 'int'], ['women', 'int'], ['minis', 'int']]) {   // main's Men | Women | Minis, against Farnham (main's 75: only nations are Stronger Sides): PR #14 had Men's | Women's and its tab numbers here
-      const bad = await pg.ev(`(() => { ${PRE} S.cat = '${g}'; S.pool = '${pool}'; D.renderTeams(); let n = 0, all = 0; for (const c of document.querySelectorAll('#t-grid .team')) { const a = c.querySelector('.gap'), v = c.querySelector('.ovr'); if (!a || !v) continue; all++; const r = a.getBoundingClientRect(), o = v.getBoundingClientRect(); if (r.top < o.bottom - .01 && r.left < o.right && o.left < r.right) n++; } return JSON.stringify([n, all]); })()`);
+      const bad = await pg.ev(`(() => { ${PRE} const P = T.picker; S.cat = '${g}'; S.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); let n = 0, all = 0;   // Farnham set, the Opponent on each nation in turn (the side-by-side screen, 2026-11-11)
+        for (const gr of P.view(1).ladder.filter(x => x.key.startsWith('nat.'))) { P.group(1, P.view(1).ladder.indexOf(gr) - P.view(1).gi); const c = document.querySelector('#t-side1 .pk-pick'), a = c && c.querySelector('.gap'), v = c && c.querySelector('.ovr'); if (!a || !v) continue; all++; const r = a.getBoundingClientRect(), o = v.getBoundingClientRect(); if (r.top < o.bottom - .01 && r.left < o.right && o.left < r.right) n++; } return JSON.stringify([n, all]); })()`);
       const [n, all] = JSON.parse(bad);
       ok(!n && all > 0, `${name}: side ${g} tab ${pool}: the overall's badge is clear of Stronger Side (${n} of ${all})`);
     }

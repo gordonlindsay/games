@@ -71,8 +71,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
   .seg button{padding:0 4px;white-space:nowrap}
 }
 
-/* team select */
-.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+/* team cards: the team screen's (pickPanel), the career's clubs, offers and call-up */
 .team{appearance:none;text-align:left;min-width:0;align-content:start;padding:12px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);cursor:pointer;display:grid;grid-template-columns:48px 1fr;align-items:center;gap:10px 12px}
 .team:hover{border-color:var(--chalk-dim)}
 .team[aria-disabled="true"]{opacity:.32;pointer-events:none}
@@ -98,67 +97,142 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .tstars{grid-column:1/-1;min-width:0;margin-top:-2px;font:700 12px/1.3 var(--body);color:var(--chalk-dim);text-wrap:balance}
 .tstars b{font-weight:700;color:var(--chalk);white-space:nowrap}
 .tstars::before{content:"";display:inline-block;width:11px;height:11px;margin:0 5px -1px 0;background:var(--flood);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
-/* Safari sideways with its bars (320px tall): the card's rows closer, so a nation's whole card (Stronger Side and two lines of traits)
-   is in view under the folded line */
-@media (orientation:landscape) and (max-height:330px){
-  #t-grid .team{row-gap:6px}
-  #t-grid .team .jw{margin-bottom:4px}   /* the overall's badge, 8px under the shirt, still clear of the row under it */
-  #t-grid .stats{row-gap:2px}
-}
-
-/* Fold to One Line (the team screen and the career's club screen, foldMove in src/ui-menus.js): the eyebrow over a smaller title, where the
-   list is (Men · National · Australia) with your side under it on Pick Opponent (v Farnham), and Change (Done while open), one row of
-   48px; the controls open under it. The summary takes the room left and wraps, never the title or the button. Championship's primary
-   (Play as Farnham, Tour Scotland) is on the line too: a row of its own under it where the screen is tall, and beside Change on a phone
-   held sideways (below), so the first row of cards is in view there as well */
-.fold-line{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-height:48px}
-.fold-name{display:flex;flex-direction:column;gap:4px;flex:none;min-width:0}
-.fold-name .eyebrow,.fold-line h2.title{white-space:nowrap}
-.fold-line h2.title{font-size:30px;line-height:.9}
-.fold-sum{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 15px/1.2 var(--body);color:var(--chalk-dim);text-wrap:balance}
-.fold-sum b{font-weight:700;color:var(--chalk)}
-.fold-sum span span{display:inline-block;max-width:100%}   /* each part whole: a long summary wraps at a dot, and inside a part only where the part alone is wider than the room (the United Rugby Championship beside Play as at 568 wide) */
-.btn.fold-go{width:auto;flex:none;min-height:44px;min-width:88px;padding:8px 16px}
-.fold-line > .primary{flex:1 0 100%}
-@media (orientation:landscape) and (max-height:560px){
-  .fold-line{flex-wrap:nowrap}
-  .fold-line > .primary{flex:0 1 auto;width:auto;max-width:30%;min-height:44px;padding:4px 12px;font-size:16px;line-height:1;letter-spacing:.03em;text-wrap:balance}
-}
-@media (orientation:landscape) and (max-height:560px) and (max-width:620px){
-  /* 568 wide: a little closer and the title a little smaller, so beside Play as the summary keeps three lines at most, International and
-     Championship each whole on one */
-  .fold-line{gap:8px}
-  .fold-line h2.title{font-size:26px}
-  .fold-line > .primary{max-width:128px;padding-inline:8px;font-size:15px}
-}
-.fold-ctl{display:flex;flex-direction:column;gap:12px}
-/* Men | Women | Minis beside the tiers (over them where the row is short); International | National | Local, then National's leagues
-   or Local's lists, each row in equal parts. A long league name takes two lines rather than push the row wider than the screen. */
-.fold-top{display:flex;flex-wrap:wrap;gap:8px}
-.fold-top > .seg{flex:1.4 1 330px}
-.fold-top > .cat{flex:1 1 228px}
-@media (orientation:landscape) and (max-height:560px){ .fold-top > .seg{flex-basis:290px} .fold-top > .cat{flex-basis:200px} }   /* one row at 568 wide too, so the opened controls stay on a 320px screen */
-.pools{display:flex;flex-direction:column;gap:8px}
-.pools .seg button{min-height:44px;padding:4px 6px;font-size:14px;line-height:1.1;white-space:normal;text-wrap:balance}
-/* National's nine leagues (England 2 is PR #14's), five then four at every width, each row in equal parts (twenty columns: a span of
-   four, then of five): the United Rugby Championship takes two lines, and its Championship needs a fifth of the row. The career's club
-   screen does the same (#cc-nat) */
-#t-nat,#cc-nat{grid-auto-flow:row;grid-template-columns:repeat(20,minmax(0,1fr))}
-#t-nat button,#cc-nat button{grid-column:span 4;padding:4px 3px}
-#t-nat button:nth-child(n+6),#cc-nat button:nth-child(n+6){grid-column:span 5;border-top:1.5px solid var(--rule-hi)}
-#t-nat button:nth-child(6),#cc-nat button:nth-child(6){border-left:0}
 .yours{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid var(--flood);border-radius:8px;background:var(--panel)}
 .yours .btn{width:auto;flex:none}
-/* in the opened controls the bar is compact, your side being on the line already (v Farnham) */
-.fold-ctl .yours{padding:6px 12px}
-.fold-ctl .yours .btn{min-height:44px;padding:8px 16px}
-.fold-ctl #t-mine{font-size:26px}
-.fold-ctl #t-mine .rstars{--star:12px}
-.tcard{min-width:0;display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel)}
-.tcard .team{flex:1;border:0;background:transparent}
-.tcard .btn{width:auto;min-height:44px;margin:0 12px 12px}
-.team.create{border-style:dashed;grid-template-columns:1fr;place-items:center;align-content:center;gap:8px;min-height:150px;color:var(--chalk-dim)}
-.team.create .plus{width:44px;height:44px;border:2px solid currentColor;border-radius:50%;display:grid;place-items:center;font:800 28px/1 var(--display)}
+/* The team screen (pickPanel, src/ui-menus.js; the owner, 2026-11-11: "a side-by-side picker in the style of EA FC's kick-off screen"):
+   the title and Men | Women | Minis along the top, Your Team and the Opponent side by side with a big V between (one side, centred, in
+   Championship, Career, My Team and the cups), then the one primary and Back. Each side: who it is and where on the ladder (North ·
+   England) beside its group's button (the ladder sheet) and Favourite; its team, the shirt and overall, the name, stars, league line and
+   tag beside five bars and the count; Previous | Next in equal halves. The whole screen fits without scrolling at 844x390, 667x375,
+   Safari's 844x340 and 667x320, and 568x320; every target is 44px or more. */
+#s-teams{display:flex;flex-direction:column;--pkj:96px;--pkn:36px;--pkk:1}   /* the shirt's and the name's size, stepped down together (--pkk) where a long name or traits line would make the screen scroll: pickFit */
+#s-teams[data-fit="1"]{--pkk:.88}
+#s-teams[data-fit="2"]{--pkk:.78}
+#s-teams[data-fit="3"]{--pkk:.68}
+.pk{flex:1 0 auto;width:100%;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.pk-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.pk-name{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pk-name .eyebrow,.pk-name h2.title{white-space:nowrap}
+.pk-top h2.title{font-size:30px;line-height:.9}
+.pk-top .cat{flex:0 1 300px}
+.pk-sides{flex:1 0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
+.pk-sides.one{grid-template-columns:minmax(0,600px);justify-content:center}
+.pk-v{align-self:center;font:900 48px/1 var(--display);color:var(--chalk-dim)}
+.pk-side{min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px;border:1.5px solid var(--rule);border-radius:10px;background:var(--panel)}
+.pk-side.on{border-color:var(--rule-hi)}
+.pk-head{display:flex;align-items:center;gap:8px;min-height:44px}
+.pk-where{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 13px/1.1 var(--body);color:var(--chalk-dim)}
+.pk-who{font:700 12px/1.1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--chalk)}
+.pk-side.pk-set .pk-who,.pk-side.p1 .pk-who{color:var(--flood)}
+.pk-side.p2 .pk-who{color:var(--p2)}
+.btn.pk-group,.btn.pk-fav,.btn.pk-edit{width:auto;flex:none;min-height:44px;padding:6px 12px}
+.btn.pk-group{flex:0 1 auto;min-width:0;max-width:48%;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align:right}
+.btn.pk-fav{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;padding-inline:10px}
+.pk-fav i{width:16px;height:16px;flex:none;background:var(--chalk-dim);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.pk-fav[aria-pressed="true"]{border-color:var(--flood)}
+.pk-fav[aria-pressed="true"] i{background:var(--flood)}
+.pk-card{position:relative;flex:1 0 auto;touch-action:none;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:10px 12px;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel-hi)}
+.pk-card.pk-set{border-color:var(--flood);box-shadow:inset 0 0 0 1px var(--flood)}   /* pk-set, never .set: that is a Settings row's own grid */
+.pk-side.p2 .pk-card.pk-set{border-color:var(--p2);box-shadow:inset 0 0 0 1px var(--p2)}
+.team.pk-pick{grid-template-columns:auto minmax(0,1fr);align-content:center;align-items:center;padding:0;gap:4px 16px;border:0;background:transparent}
+.team.pk-pick:hover{border:0}
+.pk-pick .jw.big .jersey{width:calc(var(--pkj)*var(--pkk));height:calc(var(--pkj)*var(--pkk))}
+.pk-pick .ovr{right:-12px;bottom:-8px;font-size:20px}
+.pk-pick .tid{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pk-pick .tname{font-size:calc(var(--pkn)*var(--pkk));white-space:nowrap;overflow-wrap:normal}   /* one line (fitNames steps a long one down) */
+.pk-card.made .tname{margin-right:56px}   /* clear of Edit in the corner */
+.btn.pk-edit{position:absolute;top:6px;right:6px;min-width:44px}
+.pk-rate{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.pk-pick .rstars{--star:13px;margin-left:2px}
+.pk-league{font:700 13px/1.2 var(--body);color:var(--chalk-dim)}
+.pk-pick .gap{margin:0}
+.pk-pick .tstars{margin:0;font-size:12px;line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}   /* two lines at most: a Legend's six read in full to a screen reader */
+#s-teams[data-fit="2"] .pk-pick .tstars,#s-teams[data-fit="3"] .pk-pick .tstars{font-size:11px}
+#s-teams[data-fit="2"] .pk-pick .tid,#s-teams[data-fit="3"] .pk-pick .tid{gap:1px}
+#s-teams[data-fit="3"] .pk-card{gap:2px}
+#s-teams[data-fit="3"] .pk-pick .tstars{-webkit-line-clamp:1}
+.team.pk-make{border:1.5px dashed var(--rule-hi);border-radius:8px;grid-template-columns:1fr;place-items:center;align-content:center;gap:6px;min-height:calc(88px*var(--pkk));color:var(--chalk-dim)}
+.pk-make .plus{width:44px;height:44px;border:2px solid currentColor;border-radius:50%;display:grid;place-items:center;font:800 28px/1 var(--display)}
+.pk-stats{display:grid;grid-template-columns:repeat(5,minmax(min-content,1fr));gap:8px}
+.pk-st{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pk-st .lbl{font-size:12px;letter-spacing:0;text-transform:none;white-space:nowrap}
+.pk-n{align-self:center;min-width:56px;text-align:center;font:700 13px/1.1 var(--body);color:var(--chalk-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pk-bar{height:8px;border-radius:4px;background:var(--rule-hi);overflow:hidden}
+.pk-bar i{display:block;height:100%;background:var(--chalk);transform-origin:left center;transform:scaleX(var(--v))}
+.pk-step{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}
+.pk-step .btn{min-height:44px}
+.pk-foot{display:flex;flex-direction:column;gap:8px}
+.pk-foot .btn{white-space:nowrap;overflow:hidden}   /* one line: a long Pick steps down (pickFit) */
+/* a phone held sideways: the primary and Back share the bottom row in equal halves (Back on the left, as a controller's B is), so both sides
+   keep their room */
+@media (max-height:440px){
+  .pk-foot{flex-direction:row-reverse}
+  .pk-foot .btn{flex:1 1 0;min-height:48px}
+  .pk-foot .btn.primary{font-size:22px}
+}
+@media (orientation:landscape) and (max-height:560px){
+  #s-teams{padding-block:calc(env(safe-area-inset-top,0px) + 8px) calc(env(safe-area-inset-bottom,0px) + 8px)}
+  .pk{gap:8px}
+  .pk-top h2.title{font-size:26px}
+  .pk-sides{gap:8px}
+  .pk-side{gap:6px;padding:8px}
+  .pk-v{font-size:36px}
+}
+/* the narrowest and shortest (667 and 568 wide, Safari's 320 tall): a smaller shirt and name, the bars closer, Favourite its star alone
+   (its name still read out) */
+@media (orientation:landscape) and (max-height:440px){
+  #s-teams{--pkj:76px;--pkn:30px}
+  .pk-foot .btn{min-height:44px}
+}
+/* Safari's bars (340 and 320 tall): the edges closer, the sides unframed (each card keeps its own), a smaller shirt and name, the bars closer */
+@media (orientation:landscape) and (max-height:350px){
+  #s-teams{padding-block:calc(env(safe-area-inset-top,0px) + 6px) calc(env(safe-area-inset-bottom,0px) + 6px)}
+  .pk{gap:6px}
+  .pk-foot{margin-top:4px}   /* far enough under Previous and Next that a controller's Down from them reaches Back */
+  .team.pk-make{min-height:60px}
+  .pk-side{padding:0;border:0;background:none;gap:4px}
+  .pk-card{padding:6px 10px;gap:4px}
+  #s-teams{--pkj:54px;--pkn:24px}
+  .pk-pick .ovr{font-size:15px;min-width:26px;bottom:-6px}
+  .pk-pick .tid{gap:2px}
+  .pk-league{font-size:12px}
+  .pk-st{gap:2px}
+  .pk-st .lbl{font-size:11px}
+  .pk-bar{height:6px}
+}
+/* 568 wide: the V and the gaps narrower, so each side keeps its five bars' names */
+@media (max-width:620px){
+  .pk-who{letter-spacing:.08em}
+  .btn.pk-group{padding-inline:8px}
+  .pk-n{min-width:48px;font-size:12px}
+  #s-teams{padding-inline:max(12px,env(safe-area-inset-left,0px)) max(12px,env(safe-area-inset-right,0px))}
+  .pk-sides{gap:6px}
+  .pk-v{font-size:28px}
+  .pk-stats{gap:4px}
+  .pk-st .lbl{font-size:10.5px}
+}
+@media (max-width:760px){
+  .pk-st .lbl{font-size:11px}
+  .pk-fav span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .btn.pk-fav{padding-inline:12px}
+}
+/* where the screen scrolls after all (a computer's small window), a vertical drag on a card is the page's: only a swipe across is the card's */
+#s-teams.scrolls .pk-card{touch-action:pan-y}
+/* the ladder sheet: every group under its hemisphere and country, the current one lit; it scrolls inside itself */
+#m-ladder .card.ldr{width:min(760px,100%);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);padding:12px 14px;gap:8px}
+.ldr-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ldr-top h2.title{font-size:28px}
+.ldr-top .btn{width:auto;flex:none;min-height:44px;padding:8px 18px}
+.ldr-list{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;touch-action:pan-y;padding:2px}
+#m-ladder .ldr-h{margin:6px 0 0;font:700 13px/1.2 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--flood)}
+.ldr-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ldr-c{flex:0 0 112px;margin:0;font:700 14px/1.2 var(--body);color:var(--chalk)}
+.btn.ldr-g{width:auto;min-height:44px;padding:6px 14px}
+.btn.ldr-g[aria-pressed="true"]{border-color:var(--flood);background:var(--flood);color:var(--flood-ink)}
+/* the game's version, small on Settings' bottom edge (GAME_VERSION): it takes no row of its own */
+.hp-settings{position:relative}
+.ver{position:absolute;right:14px;bottom:0;transform:translateY(50%);margin:0;padding:0 6px;border-radius:4px;background:var(--night);font:700 11px/1.4 var(--body);letter-spacing:.06em;color:var(--chalk-dim);pointer-events:none}
 
 /* create team */
 .bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(325px,1fr));gap:12px}   /* 325: six 44px swatches, gaps, padding, border */
@@ -624,10 +698,10 @@ body.desk .desk-only{display:block}
 }
 /* ===== import ===== */
 /* the Add Your Team card beside Create Team: a chain link drawn in CSS */
-.team.create .plus.link{border:0;border-radius:0;position:relative}
-.team.create .plus.link::before,.team.create .plus.link::after{content:"";position:absolute;width:24px;height:12px;border:3px solid currentColor;border-radius:7px;transform:rotate(-45deg)}
-.team.create .plus.link::before{left:3px;top:20px}
-.team.create .plus.link::after{left:15px;top:10px}
+.team.pk-make .plus.link{border:0;border-radius:0;position:relative}
+.team.pk-make .plus.link::before,.team.pk-make .plus.link::after{content:"";position:absolute;width:24px;height:12px;border:3px solid currentColor;border-radius:7px;transform:rotate(-45deg)}
+.team.pk-make .plus.link::before{left:3px;top:20px}
+.team.pk-make .plus.link::after{left:15px;top:10px}
 /* the import card scrolls on a short landscape phone, as full time does */
 #m-import{display:flex;align-items:safe center;justify-content:center;overflow:auto;touch-action:pan-y;padding:12px}
 #m-import .card{margin:auto;width:min(640px,100%);gap:12px;padding:16px}
@@ -687,8 +761,8 @@ body.desk .desk-only{display:block}
 .locked::after{content:"";display:inline-block;width:.7em;height:.9em;margin-left:.45em;vertical-align:-.08em;background:currentColor;
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 18'%3E%3Cpath d='M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8' fill='none' stroke='%23000' stroke-width='2.2'/%3E%3Crect x='.5' y='7.6' width='13' height='10' rx='2'/%3E%3C/svg%3E") center/contain no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 18'%3E%3Cpath d='M3.6 8.2V5.4a3.4 3.4 0 0 1 6.8 0v2.8' fill='none' stroke='%23000' stroke-width='2.2'/%3E%3Crect x='.5' y='7.6' width='13' height='10' rx='2'/%3E%3C/svg%3E") center/contain no-repeat}
-.team.create.locked{position:relative}
-.team.create.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
+.team.pk-make.locked{position:relative}
+.team.pk-make.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
 #st-links.three #st-reset{grid-column:1/-1}   /* Privacy | Support, then Reset Kids Level across the row (in thirds it took three lines on a 667px phone) */
 #st-links.four #st-reset{grid-column:auto}   /* Reset Kids Level | Move Up to Easy in halves when both show */
 #st-links #st-easy{grid-column:1/-1}
@@ -969,12 +1043,10 @@ body.desk .desk-only{display:block}
 /* the club screen: National | Local and the lists as on the team screen, then the clubs, each its kit, name and rating */
 .team.cr-club{grid-template-columns:28px minmax(0,1fr) auto}
 .cr-rate{min-width:30px;padding:3px 4px;border-radius:5px;background:var(--chalk);color:var(--night);font:900 16px/1 var(--display);text-align:center;font-variant-numeric:tabular-nums}
-#cc-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}   /* four across at 844, three at 667: room for Guildfordians and Johannesburg beside the rating */
-#cc-grid .cr-club .tname{white-space:nowrap;overflow-wrap:normal}
 .cr-club .tid{display:flex;flex-direction:column;gap:3px;min-width:0}   /* a club's or a country's name with its stars under it (ratedStars), within the card's 44px */
 .cr-club .rstars{--star:12px}
 @media (orientation:landscape) and (max-height:560px){
-  #s-career-club .wrap,#s-career-look .wrap,#s-teams .wrap{gap:12px}
+  #s-career-look .wrap{gap:12px}
   #s-career-look h2.title{font-size:36px}   /* the club screen's title is the folded line's, as the team screen's (.fold-line h2.title) */
 }
 .cr-nations .team.cr-club{grid-template-columns:28px minmax(0,1fr)}
@@ -1110,15 +1182,11 @@ body.desk .desk-only{display:block}
 .hl-name{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .im-home{white-space:nowrap}
 .lk-home.note::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--flood);box-shadow:0 0 0 2px var(--night)}
-/* My Team on the team screen and the cards that are it: the club and the country side by side in the bar; "My Team" on the card */
-#t-mine:has(> .my-pair){gap:28px;flex-wrap:wrap}
-#t-mine .my-pair{display:inline-flex;align-items:center;gap:10px;min-width:0}
-#t-mine .tid{display:flex;flex-direction:column;gap:5px;min-width:0}   /* the picked side's name with its stars under it */
-#t-mine .rstars{--star:15px}
+/* "My Team" on the card that is it */
 .gap.mine{color:var(--flood)}
 .team.locked{position:relative}
 .team.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
-.team.locked:not(.create) .tname{margin-right:16px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it) */
+.team.locked:not(.pk-make) .tname{margin-right:16px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it) */
 .lk-leg.locked{position:relative}
 .lk-leg.locked::after{position:absolute;top:6px;left:6px;margin:0;width:11px;height:14px;color:var(--chalk)}   /* top left: the jersey's overall badge sits on its right */
 /* the Trophy Cabinet, its own screen now; a World Cup's Pools, a plain button; no disclosure triangle on any summary */

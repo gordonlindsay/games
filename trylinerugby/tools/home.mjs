@@ -81,9 +81,9 @@ const fresh = () => {                                       // a new game on the
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
   ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skills Mini Games: every game as a big button with its picture (${drills.length}), seven and How to Play in rows of four, then Contact Games and For Grown-Ups (re-pinned for PR #14's ten games: it was eight drills and How to Play, three rows of three)`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<\/div>\s*<\/div>\s*<nav/.test(home)
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.2<\/p>\s*<\/div>\s*<\/div>\s*<nav/.test(home)
     && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css),
-    `Settings: ${sets.join(', ')}; Difficulty across, Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help (re-pinned for the Camera row: Grown-Ups was last, beside Half Length)`);
+    `Settings: ${sets.join(', ')}; Difficulty across, Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help (re-pinned for the Camera row: Grown-Ups was last, beside Half Length); the game's version at its foot (GAME_VERSION, 2026-11-11)`);
   ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my" aria-label="My Team"><span class="lbl">My Team<\/span><span class="my-kits" id="my-kits"><\/span><\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(home), 'the top row: My Team (its kits and names), Locker, Add Your Team');
   ok(/<header class="mark">\s*<h1 class="word"[\s\S]*?<\/h1>\s*<p class="eyebrow" id="home-tag">Mobile Rugby&nbsp;· Sevens<\/p>[\s\S]*?<div class="app-tools" id="app-tools" hidden>[\s\S]*?id="b-install" hidden>Install Game<\/button>\s*<span id="offline-update" role="status" hidden>Updating<\/span>\s*<\/div>\s*<\/header>/.test(home), 'the logo stays, with Install Game as a small app action and Updating as a status under it');
   const text = s => s.replace(/<[^>]+>/g, '').trim();
@@ -182,28 +182,28 @@ const fresh = () => {                                       // a new game on the
   ok(/id="hc-cel" data-comp="cel"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>United Rugby Championship<\/span>/.test($('hc-comps').innerHTML) && /class="btn hc-comp long" id="hc-cel"/.test($('hc-comps').innerHTML) && ($('hc-comps').innerHTML.match(/ long"/g) || []).length === 1, 'the United Rugby Championship by its name, with the European Cup\'s trophy, the one long name (its lock goes in the corner)');
   ok(!$('hc-new').hidden && $('hc-go').hidden && $('b-cabinet').hidden, 'nothing saved: the competitions, and no Trophy Cabinet before a season is finished');
   // each competition's team screen: only its sides
-  const grid = () => $('t-grid').innerHTML, cards = () => (grid().match(/class="team[ "]/g) || []).length - (grid().match(/class="team create/g) || []).length;
-  const sum = () => $('t-sum').innerHTML.replace(/<[^>]+>/g, '');   // re-pinned for Fold to One Line: the list is on the folded line (Men · National · France), under a plain Championship
+  // re-pinned for the side-by-side team screen (2026-11-11): one side, centred, the competition its first group (its tier over its name), then Made Teams
+  const P = T.picker, comp = () => P.view(0).ladder[0], cards = () => comp().teams.length, panel = () => $('t-side0').innerHTML;
   for (const l of X.TEAM_LISTS.filter(l => l.tier > 0)) {
     H.champPick(l.key);
-    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && $('t-tier').hidden && $('t-nat').hidden && $('t-loc').hidden && cards() === l.teams.length && l.teams.every(t => grid().includes('>' + X.listName(t) + '<')) && $('t-eyebrow').textContent === 'Championship' && sum() === 'Men · ' + X.TEAM_TIERS[l.tier] + ' · ' + l.name && !X.opened(), `${l.name}: its ${l.teams.length} sides only, no lists to wander off to, folded on Men · ${X.TEAM_TIERS[l.tier]} · ${l.name}`);
+    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && P.one() && P.view(0).ladder.map(g => g.key).join() === 'comp,mine.made' && cards() === l.teams.length && l.teams.every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === l.name && P.where(comp()) === X.TEAM_TIERS[l.tier], `${l.name}: its ${l.teams.length} sides only, one side, no other list to wander off to, ${X.TEAM_TIERS[l.tier]} over ${l.name}`);
     D.goHome();
   }
   H.champPick('int');
-  ok(X.teamPool() === 'int' && cards() === 12 && X.natList('men').every(t => grid().includes('>' + X.listName(t) + '<')) && $('t-eyebrow').textContent === 'Championship' && sum() === 'Men · International' && $('t-default').textContent === 'Play as England', 'International Championship: the twelve, England (My Team\'s country) picked for you on Play as England');
-  $('t-default').click();
+  ok(X.teamPool() === 'int' && cards() === 12 && X.natList('men').every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === 'International' && P.view(0).team.id === 'ENG' && $('t-go').textContent === 'Play as England', 'International Championship: the twelve, England (My Team\'s country) on show, Play as England');
+  $('t-go').click();
   ok(X.champ() && X.champ().teams[X.champ().user].id === 'ENG' && X.champ().teams.every(t => X.SIX_NATIONS.includes(t.id)) && shown() === 's-hub', 'and Play as England starts the Six Nations');
   X.setChamp(null); D.goHome();
   H.champPick('int'); D.pickTeam(X.natList('men')[0]);
   ok(X.champ().teams[X.champ().user].id === 'RSA' && !X.champ().teams.some(t => X.SIX_NATIONS.includes(t.id)), 'or change it there: South Africa plays the other six');
   X.setChamp(null); D.goHome();
   H.champPick('world');
-  ok(K.comp() === 'world' && $('t-title').textContent === 'Pick Your Nation' && $('t-eyebrow').textContent === 'World Cup' && cards() === 12 && $('t-default').textContent === 'Play as England' && !$('t-default').hidden && !/Create Team|Add Your Team/.test(grid()), 'World Cup: the twelve, England picked for you');
-  $('t-default').click();
+  ok(K.comp() === 'world' && $('t-title').textContent === 'Pick Your Nation' && $('t-eyebrow').textContent === 'World Cup' && cards() === 12 && $('t-go').textContent === 'Play as England' && !$('t-go').hidden && !comp().teams.some(t => t.act), 'World Cup: the twelve, England on show');
+  $('t-go').click();
   ok(K.get() && K.get().id === 'world' && K.get().teams[K.get().user].id === 'ENG' && shown() === 's-cup', 'Play as England starts England\'s World Cup');
   K.set(null); D.goHome();
   H.champPick('tour');
-  ok(K.comp() === 'tour' && $('t-title').textContent === 'Pick the Host' && cards() === 3 && /Tour /.test($('t-default').textContent) && !/My Team/.test(grid()), 'Home Nations Tour: the three hosts, the one in turn on the primary, nothing marked My Team');
+  ok(K.comp() === 'tour' && $('t-title').textContent === 'Pick the Host' && cards() === 3 && /Tour /.test($('t-go').textContent) && !/My Team/.test(panel()), 'Home Nations Tour: the three hosts, the one in turn on the primary, nothing marked My Team');
   D.goHome();
   // a saved championship or cup: Continue first
   X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); D.goHome();
@@ -224,7 +224,7 @@ const fresh = () => {                                       // a new game on the
   // My League: Local, with an import
   I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id })) }); D.goHome(); H.setTier(2); H.champ();
   ok(comps(2) === 'sur,cty,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey and Counties');
-  H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship' && sum() === 'Men · Local · My League', 'My League\'s team screen, Men · Local · My League on the line');
+  H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship' && comp().name === 'My League' && P.where(comp()) === 'Local', 'My League\'s team screen, Local over My League');
   // the European Cup is still reached by winning a European league
   fresh(); H.champPick('eng'); D.pickTeam(X.ENGLAND[0]);
   const c = X.champ(), order = [c.user, 1, 2, 3, 4, 5].filter((v, i, a) => a.indexOf(v) === i), rk = i => order.indexOf(i);
@@ -241,14 +241,15 @@ const fresh = () => {                                       // a new game on the
   ok(H.myClub() === X.CLUBS[0] && H.myNat(null).id === 'ENG' && D.settings().myClub === null && D.settings().myNat === null, 'a new game: Farnham and England');
   ok(/Farnham/.test($('my-kits').innerHTML) && /England/.test($('my-kits').innerHTML) && /--kit:/.test($('my-kits').innerHTML), 'the home\'s My Team: both kits and names, on one button');
   $('b-my').click();
-  ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && X.teamPool() === 'sur' && !$('t-tier').hidden && !$('t-yours').hidden && $('t-change').hidden && $('t-default').hidden, 'My Team: Pick Your Club on its list, the tiers to look anywhere, the bar showing both');
-  ok(/data-i="0" aria-pressed="true">/.test($('t-grid').innerHTML) && /class="team picked"/.test($('t-grid').innerHTML) && /Create Team/.test($('t-grid').innerHTML) && /<span class="tname">Add Your Team<\/span>/.test($('t-grid').innerHTML), 'Farnham marked, the cards to pick from, Create Team and Add Your Team among them');
-  X.tierPick(1); X.poolPick('eng'); H.myPick(X.ENGLAND[0]);
-  ok(D.settings().myClub === 'BTH' && saved().settings.myClub === 'BTH' && shown() === 's-teams' && /Bath/.test($('t-mine').innerHTML), 'a club picked: Bath, saved, the screen stays');
-  X.tierPick(0);
-  ok($('t-title').textContent === 'Pick Your Country' && (($('t-grid').innerHTML.match(/class="team[ "]/g) || []).length === 12) && !/Create Team|Add Your Team/.test($('t-grid').innerHTML), 'International: Pick Your Country, the category\'s twelve and nothing else');
-  H.myPick(X.natList('men').find(t => t.id === 'WAL'));
-  ok(D.settings().myNat === 'WAL' && D.settings().myClub === 'BTH' && /Wales/.test($('t-mine').innerHTML), 'a nation picked: the country, the club kept');
+  // re-pinned for the side-by-side team screen (2026-11-11): My Team is one side, the club first and then the country, Done while it is
+  const P6 = T.picker, v6 = () => P6.view(0), to6 = (n, key) => { P6.group(n, P6.view(n).ladder.findIndex(g => g.key === key) - P6.view(n).gi); return P6.view(n); }, mineTag = n => /<span class="gap mine">My Team<\/span>/.test($('t-side' + n).innerHTML);
+  ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && P6.one() && v6().group.key === 'sur' && v6().ladder.some(g => g.key === 'nat.eng') && v6().ladder.some(g => g.key === 'fra') && $('t-go').textContent === 'Done', 'My Team: Pick Your Club on its group, the whole ladder to look anywhere, Done while the club is it');
+  ok(v6().team.id === 'FAR' && mineTag(0) && v6().ladder.find(g => g.key === 'mine.made').teams.some(t => t.act === 'create') && v6().ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'Farnham marked My Team, Create Team and Add Your Team in Mine');
+  to6(0, 'eng'); P6.go();
+  ok(D.settings().myClub === 'BTH' && saved().settings.myClub === 'BTH' && shown() === 's-teams' && $('t-title').textContent === 'Pick Your Country' && v6().team.id === 'ENG', 'a club picked: Bath, saved, the screen stays and moves on to the country');
+  ok(v6().ladder.filter(g => g.key.startsWith('nat.')).length === 12 && !v6().ladder.some(g => g.teams.some(t => t.legend)), 'the countries: the category\'s twelve, no Legend');
+  to6(0, 'nat.wal'); P6.go();
+  ok(D.settings().myNat === 'WAL' && D.settings().myClub === 'BTH' && mineTag(0) && $('t-go').textContent === 'Done', 'a nation picked: the country, marked, the club kept');
   X.catPick('women'); H.myPick(X.natList('women').find(t => t.id === 'CDN')); X.catPick('men');
   ok(D.settings().myNat === 'CDN' && H.myNat('men') === null && H.myNat('women').id === 'CDN' && H.myNat(null).id === 'CDN', 'Canada, from the women\'s twelve: no side on the men\'s list, Canada still on the home');
   H.myPick(X.natList('men').find(t => t.id === 'WAL'));
@@ -275,43 +276,43 @@ const fresh = () => {                                       // a new game on the
   const demo = T.M;
   $('b-quick').click();
   const first = () => $('t-grid').innerHTML.split('data-i="1"')[0];
-  ok(T.M === demo && T.M.demo && $('t-title').textContent === 'Pick Your Team' && $('t-yours').hidden && $('t-default').hidden && X.teamPool() === 'eng', 'Quick Match: Pick Your Team on My Team\'s list, nothing in the bar, no Play as, nothing started');
-  ok(/>Bath</.test(first()) && /<span class="gap mine">My Team<\/span>/.test(first()) && ($('t-grid').innerHTML.match(/gap mine/g) || []).length === 1 && !/picked/.test(first()), 'Bath first, marked My Team, not picked');
-  X.tierPick(0);
-  ok(/>Wales</.test(first()) && /My Team/.test(first()) && !/picked/.test(first()), 'International: Wales first, marked My Team');
-  X.tierPick(2);
-  ok(/>Farnham</.test(first()) && !/My Team/.test($('t-grid').innerHTML), 'a list without it: as it was, unmarked');
+  ok(T.M === demo && T.M.demo && $('t-title').textContent === 'Pick Your Team' && !P6.state().sides[0].set && $('t-go').textContent === 'Pick Bath' && v6().group.key === 'eng', 'Quick Match: Pick Your Team on My Team\'s group, nothing set, Pick (never Play as), nothing started');
+  ok(v6().group.teams[0].id === 'BTH' && v6().team.id === 'BTH' && mineTag(0) && !mineTag(1) && !P6.state().sides[0].set, 'Bath first, marked My Team, not picked');
+  to6(0, 'nat.wal');
+  ok(v6().team.id === 'WAL' && mineTag(0) && !P6.state().sides[0].set, 'International: Wales, its National group, marked My Team');
+  to6(0, 'sur');
+  ok(v6().group.teams.map(t => t.id).join() === X.CLUBS.map(t => t.id).join() && !mineTag(0), 'a group without it: as it was, unmarked');
   D.pickTeam(X.CLUBS[2]);
-  ok(D.quickPick && false || $('t-title').textContent === 'Pick Opponent' && /Guildford/.test($('t-mine').innerHTML) && T.M === demo, 'another side picked: his; now the opponent');
-  X.tierPick(1); X.poolPick('eng');
-  ok(/>Bath</.test(first()) === true && !/My Team/.test($('t-grid').innerHTML), 'the opponents\' list: in its own order, nothing marked');
+  ok($('t-title').textContent === 'Pick Opponent' && P6.state().sides[0].set && v6().team.id === 'GUI' && T.M === demo, 'another side picked: his; now the opponent');
+  to6(1, 'eng');
+  ok(P6.view(1).group.teams.map(t => t.id).join() === X.ENGLAND.map(t => t.id).join() && !mineTag(1), 'the opponents\' groups: in their own order, nothing marked');
   // Pick Opponent puts the picked side's own league rivals first (the real order, 2026-11-09): Farnham's first opponent is Wimbledon, a fair derby
   {
     const list = () => T.yourTeam.teamList(), ids = () => list().map(t => t.id), sur = X.CLUBS.map(t => t.id);
-    $('t-change').click(); X.tierPick(2); X.poolPick('sur'); D.pickTeam(X.CLUBS[0]);
-    const opp = list().find(t => t.id !== 'FAR');
-    ok($('t-title').textContent === 'Pick Opponent' && ids()[0] === 'FAR' && opp.id === 'WIM' && opp.league === X.CLUBS[0].league && X.overallOf(X.CLUBS[0]) - X.overallOf(opp) <= 3, `Farnham picked: the first opponent is Wimbledon, his own league's (${ids().slice(0, 3).join(' ')}, ${X.overallOf(X.CLUBS[0])} v ${X.overallOf(opp)})`);
-    ok(ids().length === sur.length && [...ids()].sort().join() === [...sur].sort().join() && ids().filter(id => id !== 'WIM').join() === sur.filter(id => id !== 'WIM').join(), 'only the order changes: the same sides, the rest in the list\'s own order');
-    X.poolPick('cty'); const c = ids();
-    ok(c.join() === X.COUNTIES.map(t => t.id).join(), `a list without a rival of his: in its own order (${c.slice(0, 3).join(' ')})`);
-    $('t-change').click(); X.poolPick('sur'); D.pickTeam(X.CLUBS.find(t => t.id === 'GDN'));
-    ok(ids().join() === sur.join(), 'a side with no rival on its list leaves the list as it is (Guildfordians on Surrey)');
+    D.settings().pick = [null, null]; D.openTeams('quick'); to6(0, 'sur'); D.pickTeam(X.CLUBS[0]);
+    const opp = P6.view(1).team;
+    ok($('t-title').textContent === 'Pick Opponent' && ids()[0] === 'WIM' && !ids().includes('FAR') && opp.id === 'WIM' && opp.league === X.CLUBS[0].league && X.overallOf(X.CLUBS[0]) - X.overallOf(opp) <= 3, `Farnham picked: the Opponent opens on Wimbledon, his own league's, and never shows Farnham (${ids().slice(0, 3).join(' ')}, ${X.overallOf(X.CLUBS[0])} v ${X.overallOf(opp)})`);
+    ok(ids().length === sur.length - 1 && [...ids()].sort().join() === sur.filter(id => id !== 'FAR').sort().join() && ids().filter(id => id !== 'WIM').join() === sur.filter(id => id !== 'WIM' && id !== 'FAR').join(), 'only the order changes: the same sides bar his own, the rest in the list\'s own order');
+    to6(1, 'cty'); const c = ids();
+    ok(c.join() === X.COUNTIES.map(t => t.id).join(), `a group without a rival of his: in its own order (${c.slice(0, 3).join(' ')})`);
+    D.settings().pick = [null, null]; D.openTeams('quick'); to6(0, 'sur'); D.pickTeam(X.CLUBS.find(t => t.id === 'GDN'));
+    ok(ids().join() === sur.filter(id => id !== 'GDN').join(), 'a side with no rival in its group leaves the group as it is (Guildfordians on Surrey)');
   }
   // 2 Players (off the home; its own entry, openJoin): Player 1's list only
-  D.openJoin(); D.openTeams('two');
-  ok(/>Bath</.test(first()) && /My Team/.test(first()) && D.twoSel().picking === 0 && !D.twoSel().teams[1], '2 Players: Bath first in Player 1\'s list, marked');
+  D.settings().pick = [null, null]; D.openJoin(); D.openTeams('two');
+  ok(v6().group.teams[0].id === 'BTH' && v6().team.id === 'BTH' && mineTag(0) && D.twoSel().picking === 0 && !P6.state().sides[1].set, '2 Players: Bath first in Player 1\'s group, marked');
   D.pickTeam(X.CLUBS[0]);
-  ok(D.twoSel().picking === 1 && !/My Team/.test($('t-grid').innerHTML), 'Player 2\'s: nothing marked');
+  ok(D.twoSel().picking === 1 && !mineTag(1), 'Player 2\'s: nothing marked');
   D.setTwo(false); D.goHome();
   // Championship: picked for you, and changed there
   H.champPick('eng');
-  ok($('t-default').textContent === 'Play as Bath' && !$('t-default').hidden && /My Team/.test($('t-grid').innerHTML), 'Championship · England: Play as Bath, the card marked');
+  ok($('t-go').textContent === 'Play as Bath' && !$('t-go').hidden && mineTag(0), 'Championship · England: Play as Bath, the card marked');
   D.pickTeam(X.ENGLAND[1]);
   ok(X.champ() && X.champ().teams[X.champ().user].id === X.ENGLAND[1].id, 'or another club starts it instead');
   X.setChamp(null); D.goHome();
-  H.champPick('fra'); ok($('t-default').hidden, 'a league without My Team\'s club: nothing picked for you');
+  H.champPick('fra'); ok($('t-go').textContent === 'Play as Toulouse' && v6().i === 0 && !mineTag(0), 'a league without My Team\'s club: its first side on show, nothing marked');
   D.goHome(); D.settings().cat = 'women'; H.champPick('int');
-  ok($('t-default').textContent === 'Play as Wales Women', 'International on Women: Play as Wales Women');
+  ok($('t-go').textContent === 'Play as Wales Women', 'International on Women: Play as Wales Women');
   D.settings().cat = 'men'; D.goHome();
   // a new Career: his club picked for you, Change Club to change it
   C.set(null); H.select('career'); $('b-career').click();
@@ -378,24 +379,25 @@ const fresh = () => {                                       // a new game on the
   fresh();
   L.set(L.clean({ n:{ hat:10, sharp:10 } }));
   ok(L.legends('men').length === 2 && S.has('legends'), 'two Golds: two Legends of each list unlocked; the web as shipped plays them');
-  D.openTeams('quick'); X.tierPick(0);
-  const leg = L.legends('men')[0];
-  ok(/data-legend="1"/.test($('t-grid').innerHTML) && !$('t-grid').innerHTML.includes('locked'), 'they join International, with no lock on the web as shipped');
+  // re-pinned for the side-by-side team screen (2026-11-11): a Legend sits after its nation, in the nation's National group
+  const P8 = T.picker, leg = L.legends('men')[0], toLeg = () => { D.settings().pick = [null, null]; D.openTeams('quick'); P8.group(0, P8.view(0).ladder.findIndex(g => g.teams.includes(leg)) - P8.view(0).gi); while (P8.view(0).team !== leg) P8.step(0, 1); };
+  toLeg();
+  ok(/data-legend="1"/.test($('t-side0').innerHTML) && P8.view(0).group.key === 'nat.nzl' && !$('t-go').classList.contains('locked'), 'they join their nation (New Zealand 1987 after New Zealand), with no lock on the web as shipped');
   S.setTier('free');
   ok(!S.has('legends') && L.legends('men').length === 2, 'free: still unlocked, not playable');
   D.renderTeams();
-  D.pickTeam(leg);
-  ok(!$('m-store').hidden && S.ui().feature === 'legends' && $('st-title').textContent === 'Legends' && D.quickPick === undefined || (!$('m-store').hidden && S.ui().feature === 'legends'), 'picking one opens the Unlock card for Legends');
-  ok(shown() === 's-teams' && $('t-title').textContent === 'Pick Your Team', 'and nothing is picked');
+  P8.go();
+  ok(!$('m-store').hidden && S.ui().feature === 'legends' && $('st-title').textContent === 'Legends', 'picking one opens the Unlock card for Legends');
+  ok(shown() === 's-teams' && $('t-title').textContent === 'Pick Your Team' && !P8.state().sides[0].set, 'and nothing is picked');
   S.close();
-  ok(/function storeTeamsRender\(\)[\s\S]*?for \(const b of \$\('t-grid'\)\.querySelectorAll\('\[data-legend\]'\)\) storeMark\(b, 'legends'\);/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')), 'its card carries the lock (storeMark)');
+  ok(/function storeTeamsRender\(\)[\s\S]*?for \(const b of scr\.querySelectorAll\('\[data-legend\]'\)\) storeMark\(b, 'legends'\);[\s\S]*?t\.legend \? 'legends'/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')) && $('t-go').classList.contains('locked'), 'its card carries the lock (storeMark), and so does the primary while it shows (Pick New Zealand 1987)');
   ok(/for \(const el of body\.querySelectorAll\('\[data-legend\]'\)\) storeMark\(el, 'legends'\);/.test(fs.readFileSync(new URL('../src/ui-locker.js', import.meta.url), 'utf8')) && /data-legend="1" role="group"/.test(fs.readFileSync(new URL('../src/ui-locker.js', import.meta.url), 'utf8')), 'and so does its tile in the Locker\'s Legends');
   S.setTier(null); S.setNative(true); S.setStarted(true);
   ok(!S.has('legends'), 'the app with nothing bought: locked');
   S.setBought(['tryline.full']);
   ok(S.has('legends'), 'with the Full Game: played');
-  D.openTeams('quick'); X.tierPick(0); D.pickTeam(leg);
-  ok($('m-store').hidden && $('t-title').textContent === 'Pick Opponent' && /New Zealand 1987/.test($('t-mine').innerHTML), 'picked: played as');
+  toLeg(); D.pickTeam(leg);
+  ok($('m-store').hidden && $('t-title').textContent === 'Pick Opponent' && P8.state().sides[0].set && P8.view(0).team === leg, 'picked: played as');
   ok(json(S.offers('legends').map(o => o.id)) === json([]) && S.offers(null).every(o => o.id !== 'tryline.legends'), 'nothing extra to buy: the Full Game is the one unlock');
   S.setBought([]);
   ok(S.offers('legends').map(o => o.id).join() === 'tryline.full', 'the Unlock card offers the Full Game, nothing else');
@@ -567,10 +569,14 @@ async function browserChecks() {
         const lockOf = el => { const c = getComputedStyle(el, '::after'), r = el.getBoundingClientRect(), l = r.left + el.clientLeft + parseFloat(c.left), t = r.top + el.clientTop + parseFloat(c.top); return { left:l, top:t, right:l + parseFloat(c.width), bottom:t + parseFloat(c.height) }; };
         const hit = (a, b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;   // 2px clear
         const saved = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); S.setTier('free');
-        for (const cat of ['men', 'women']) {
-          st.cat = cat; T.debug.openTeams('quick'); X.tierPick(0);
-          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-          for (const b of document.querySelectorAll('#t-grid .team[data-legend]')) {
+        for (const cat of ['men', 'women']) {   // the side-by-side team screen (2026-11-11): each Legend on Your Team's side in turn, after its nation
+          st.cat = cat; st.pick = [null, null]; T.debug.openTeams('quick');
+          const P = T.picker, legs = P.view(0).ladder.flatMap((g, gi) => g.teams.map((t, i) => [gi, i, t])).filter(x => x[2].legend);
+          for (const [gi, i] of legs) {
+            P.group(0, gi - P.view(0).gi); P.step(0, i - P.view(0).i);
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const b = document.querySelector('#t-side0 .pk-pick[data-legend]');
+            if (!b) { out.over.push('no card ' + gi); continue; }
             out.cards++;
             const lock = lockOf(b), range = document.createRange(); range.selectNodeContents(b.querySelector('.tname'));
             if (!b.classList.contains('locked') || [...range.getClientRects()].some(q => hit(q, lock))) out.over.push('card ' + b.querySelector('.tname').textContent);
@@ -745,114 +751,104 @@ async function browserChecks() {
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }
-    // 11. The team screen folds to one line (the owner, 2026-11-09, from Safari sideways: "i can't see half the screen once i'm in to
-    //     specific clubs"): at every phone size, Safari's bars included, the folded line fits with nothing cut or off the side and the first
-    //     row of cards is wholly in view, on Pick Your Team and Pick Opponent (International's nations, the tallest cards, included), in every
-    //     Championship with its primary (Play as, Tour) on the line beside Change, and in the career's club screen, whose title is the team
-    //     screen's size; opened, nothing goes off the side or under the bottom edge and every control is 44px. The keyboard and a controller
-    //     follow it: Change onto the current tier, a league onto the first card, a side picked or Change Team onto the first card.
-    //     The fold moves by opacity and transform only, and not at all with reduced motion.
+    // 11. The team screen, side by side (the owner, 2026-11-11: "a side-by-side picker in the style of EA FC's kick-off screen"), re-pinned
+    //     from Fold to One Line, behaviour by behaviour: at every phone size, Safari's bars included, every state (Pick Your Team, Pick
+    //     Opponent on a club and on a nation with its traits, Women, 2 Players, My Team, each Championship with its primary, the World Cup,
+    //     the tour and the career's club screen) fits with nothing cut, off the side or scrolled, both sides and the V wholly in view, the
+    //     primary in view, every control 44px; the ladder sheet open over it stays on the screen. The keyboard and a controller follow it:
+    //     the arrows and a controller's d-pad on the side, Enter and A setting it and moving on, Tab and the ring reaching everything.
+    //     A move slides by opacity and transform only, and not at all with reduced motion. tools/picker.mjs checks every side of every group.
     for (const [w, h] of [[844, 390], [667, 375], [844, 340], [667, 320], [568, 320]]) {
       const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
       const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
       await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
       const kind = `${w}x${h}`;
+      const at = (n, key) => `P.group(${n}, P.view(${n}).ladder.findIndex(g => g.key === '${key}') - P.view(${n}).gi);`;
       const STATES = {
-        'Pick Your Team':`D.openTeams('quick');`,
-        'Pick Opponent':`D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); X.fold(true); X.tierPick(1); X.poolPick('aus');`,
-        'Pick Opponent on the United Rugby Championship, Women':`D.openTeams('quick'); D.pickTeam(X.CLUBS[7]); X.fold(true); X.catPick('women'); X.tierPick(1); X.poolPick('cel');`,
-        'Player 2 Team':`D.openJoin(); D.openTeams('two'); D.pickTeam(X.NATIONS[3]); X.fold(true); X.tierPick(1); X.poolPick('cel');`,
-        'My Team on International':`D.setTwo(false); D.openTeams('my'); X.fold(true); X.tierPick(0);`,
-        'Pick Opponent on International':`D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); X.fold(true); X.tierPick(0);`,
-        'Championship, a league':`T.home.champPick('cel');`,
-        'Championship, Surrey, Play as Farnham':`T.home.champPick('sur');`,
-        'Championship, International, Play as England':`T.home.champPick('int');`,
-        'Championship, the United Rugby Championship, Play as Dublin Women':`S.myClub = 'DUB'; S.cat = 'women'; T.home.champPick('cel');`,
-        'the World Cup, Play as England':`T.home.champPick('world');`,
-        'the Home Nations Tour':`T.home.champPick('tour');`,
-        'the career\'s club screen':`C.set(null); C.newOpen(); C.clubOpen(); C.tierPick(1); C.poolPick('cel');`,
+        'Pick Your Team':[`D.openTeams('quick');`, 'Pick Farnham'],
+        'Pick Opponent on Australia':[`D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); ${at(1, 'aus')}`, 'Pick Sydney'],
+        'Pick Opponent on the URC, Women':[`D.openTeams('quick'); D.pickTeam(X.CLUBS[7]); X.catPick('women'); ${at(1, 'cel.ire')}`, 'Pick Dublin Women'],
+        'Player 2 Team on the URC':[`D.openJoin(); D.openTeams('two'); D.pickTeam(X.NATIONS[3]); ${at(1, 'cel.ita')}`, 'Pick Treviso'],
+        'My Team on a country':[`D.setTwo(false); D.openTeams('my'); ${at(0, 'nat.eng')}`, 'Done'],
+        'Pick Opponent on a nation, its traits':[`D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); ${at(1, 'nat.fra')}`, 'Pick France'],
+        'Championship, a league':[`T.home.champPick('cel');`, 'Play as Dublin'],
+        'Championship, Surrey, Play as Farnham':[`T.home.champPick('sur');`, 'Play as Farnham'],
+        'Championship, International, Play as England':[`T.home.champPick('int');`, 'Play as England'],
+        'Championship, the United Rugby Championship, Play as Dublin Women':[`S.myClub = 'DUB'; S.cat = 'women'; T.home.champPick('cel');`, 'Play as Dublin Women'],
+        'the World Cup, Play as England':[`T.home.champPick('world');`, 'Play as England'],
+        'the Home Nations Tour':[`T.home.champPick('tour');`, /^Tour /],
+        'the career\'s club screen':[`C.set(null); C.newOpen(); C.clubOpen(); ${at(0, 'cel.ire')}`, 'Pick Dublin'],
       };
-      const PRIMARY = /Play as|Tour/;                        // the states whose line carries Championship's primary
-      const MEASURE = `(() => { const s = [...document.querySelectorAll('.screen')].find(e => !e.hidden), box = e => e.getBoundingClientRect(), vis = e => !!e && !e.closest('[hidden]') && box(e).width > 0;
-        const line = s.querySelector('.fold-line'), lb = box(line), name = e => e.id || e.className || e.textContent.trim().slice(0, 16);
-        const off = [...s.querySelectorAll('*')].filter(vis).filter(e => box(e).right > innerWidth + 0.5 || box(e).left < -0.5).map(name);
-        const cut = [...line.querySelectorAll('*'), ...s.querySelectorAll('.fold-ctl button')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1 || box(e).right > lb.right + 0.5).map(name);
-        const small = [...s.querySelectorAll('.fold-line button, .fold-ctl button')].filter(vis).filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(name);
-        const cards = [...s.querySelectorAll('.team')].filter(vis), top = cards.length ? box(cards[0]).top : 0, row = cards.filter(c => Math.abs(box(c).top - top) < 2);
-        const sum = s.querySelector('.fold-sum'), sw = box(sum).width, words = [...sum.querySelectorAll('span span')].filter(e => box(e).width > 0);
-        // a part on more than one line is broken unless it is wider on one line than the whole summary (the United Rugby Championship
-        // beside Play as at 568 wide, which then wraps between its words, never past the edge: cut, above)
-        const broken = words.filter(e => { if (box(e).height <= parseFloat(getComputedStyle(e).lineHeight) * 1.5) return false; e.style.whiteSpace = 'nowrap'; const wide = e.scrollWidth > sw + 0.5; e.style.whiteSpace = ''; return !wide; }).map(e => e.textContent);
-        const def = s.querySelector('#t-default'), db = vis(def) ? box(def) : null, ctl = s.querySelector('.fold-ctl');
-        return { open:!ctl.hidden, line:Math.round(lb.height), first:Math.round(Math.max(...row.map(c => box(c).bottom))), n:row.length, H:innerHeight, off, cut, small, broken,
-          primary:db ? (db.top >= lb.top - 0.5 && db.bottom <= lb.bottom + 0.5 && db.height >= 43.5 ? 'on the line' : 'off the line') : null, ctlBottom:ctl.hidden ? 0 : Math.round(box(ctl).bottom),
-          side:Math.max(s.scrollWidth - s.clientWidth, document.documentElement.scrollWidth - innerWidth), sum:sum.textContent, page:document.documentElement.scrollHeight - innerHeight }; })()`;
+      const MEASURE = `(() => { const s = document.getElementById('s-teams'), box = e => e.getBoundingClientRect(), vis = e => !!e && !e.closest('[hidden]') && box(e).width > 0, P = window.__tryline.picker;
+        const name = e => e.id || e.className || e.textContent.trim().slice(0, 16), sheet = document.getElementById('m-ladder');
+        const off = [...s.querySelectorAll('*'), ...sheet.querySelectorAll('*')].filter(vis).filter(e => box(e).right > innerWidth + 0.5 || box(e).left < -0.5).map(name);
+        const cut = [...s.querySelectorAll('.pk-who, .pk-where span, .pk-group, .tname, .pk-league, .pk-st .lbl, .pk-n, .pk-step .btn, .pk-foot .btn')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).textOverflow !== 'ellipsis').map(name);
+        const small = [...s.querySelectorAll('button'), ...sheet.querySelectorAll('button')].filter(vis).filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(name);
+        const parts = [document.getElementById('t-side0'), ...(P.one() ? [] : [document.getElementById('t-side1'), document.getElementById('t-v')])];
+        const whole = parts.every(e => vis(e) && box(e).top >= -0.5 && box(e).bottom <= innerHeight + 0.5), go = document.getElementById('t-go'), gb = box(go), card = sheet.hidden ? null : box(sheet.querySelector('.card'));
+        return { sheet:!sheet.hidden, off, cut, small, whole, go:go.textContent, goIn:gb.top >= -0.5 && gb.bottom <= innerHeight + 0.5 && gb.height >= 43.5, card:card ? card.top >= -0.5 && card.bottom <= innerHeight + 0.5 : true,
+          side:Math.max(s.scrollWidth - s.clientWidth, document.documentElement.scrollWidth - innerWidth), scroll:s.scrollHeight - s.clientHeight, page:document.documentElement.scrollHeight - innerHeight }; })()`;
       const lines = [];
-      for (const [where, js] of Object.entries(STATES)) {
+      for (const [where, [js, primary]] of Object.entries(STATES)) {
         for (const opened of [false, true]) {
-          await page.evaluate(`(() => { const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, $ = i => document.getElementById(i), S = D.settings();
-            T.cups.set(null); X.setChamp(null); D.setTwo(false); S.myClub = null; S.cat = 'men'; D.goHome();   // each state from the save's own: My Team Farnham and England, Men
-            ${js} ${opened ? `(document.getElementById('t-fold').offsetParent ? X.fold(true) : C.clubFold(true));` : ''} })()`);
+          await page.evaluate(`(() => { const T = window.__tryline, D = T.debug, X = T.teams, C = T.career, P = T.picker, $ = i => document.getElementById(i), S = D.settings();
+            T.cups.set(null); X.setChamp(null); D.setTwo(false); S.myClub = null; S.cat = 'men'; S.pick = [null, null]; D.goHome();   // each state from the save's own: My Team Farnham and England, Men
+            ${js} ${opened ? 'P.sheet(0);' : ''} })()`);
           await page.waitForTimeout(260);
           const m = await page.evaluate(MEASURE);
-          const name = `${kind}: ${where}${opened ? ', opened' : ''}`;
-          ok(m.open === opened && !m.off.length && m.side <= 0 && m.page <= 0 && m.ctlBottom <= m.H + 0.5, `${name}: nothing off the side or (opened) under the bottom edge, the page never scrolls (${json({ off:m.off, side:m.side, page:m.page, ctl:m.ctlBottom })})`);
-          ok(!m.cut.length && !m.small.length && !m.broken.length, `${name}: nothing on the line or in the controls cut, every control 44px, each part of the summary whole (${json({ cut:m.cut, small:m.small, broken:m.broken })})`);
-          ok(m.primary === (PRIMARY.test(where) ? 'on the line' : null), `${name}: Championship's primary on the line beside Change, 44px, and only where it has one (${m.primary})`);
-          if (!opened) ok(m.line <= 64 && m.n >= 2 && m.first <= m.H + 0.5, `${name}: one line (${m.line}px) and the first row of cards wholly in view (${m.first} of ${m.H}, ${m.n} cards)`);
-          if (!opened) lines.push(`${where} ${m.line}px, first row to ${m.first}`);
+          const name = `${kind}: ${where}${opened ? ', its ladder sheet open' : ''}`;
+          ok(!m.off.length && m.side <= 0 && m.page <= 0 && m.scroll <= 0 && m.card, `${name}: nothing off the side, the page never scrolls, the sheet (open) on the screen (${json({ off:m.off, side:m.side, page:m.page, scroll:m.scroll, card:m.card })})`);
+          ok(!m.cut.length && !m.small.length, `${name}: nothing cut, every control 44px (${json({ cut:m.cut, small:m.small })})`);
+          ok(m.goIn && (primary instanceof RegExp ? primary.test(m.go) : m.go === primary), `${name}: the primary in view, 44px, saying what it does (${m.go})`);
+          if (!opened) ok(m.whole, `${name}: ${where.startsWith('Pick') || where.startsWith('Player') ? 'both sides and the V' : 'its side'} wholly in view`);
+          if (!opened) lines.push(`${where}: ${m.go}`);
+          await page.evaluate(() => window.__tryline.picker.sheetClose(null));
         }
       }
-      console.log(`${kind} folded: ${lines.join('; ')}`);
-      const titles = await page.evaluate(() => ['s-teams', 's-career-club'].map(id => getComputedStyle(document.querySelector(`#${id} .fold-line h2.title`)).fontSize));
-      ok(titles[0] === titles[1] && parseFloat(titles[0]) <= 30, `${kind}: the club screen's folded title is the team screen's size, smaller than a screen's own title (${titles.join(', ')})`);
-      // the keyboard: Change opens onto the current tier; National keeps them open; a league folds onto the first card that can be picked
+      console.log(`${kind}: ${lines.length} states fit`);
+      const titles = await page.evaluate(() => { const T = window.__tryline, f = () => getComputedStyle(document.querySelector('#s-teams .pk-top h2.title')).fontSize; T.debug.openTeams('quick'); const a = f(); T.career.set(null); T.career.newOpen(); T.career.clubOpen(); const b = f(); T.debug.goHome(); return [a, b]; });
+      ok(titles[0] === titles[1] && parseFloat(titles[0]) <= 30, `${kind}: the club screen is the team screen, its title the same size, smaller than a screen's own title (${titles.join(', ')})`);
+      // the keyboard: the arrows on the focused side, Page Down a country, Enter sets it and moves on, Shift+Tab back
       const keys = [];
-      const at = () => page.evaluate(() => { const a = document.activeElement; return a ? (a.id || (a.dataset.tier != null ? 'tier ' + a.dataset.tier : a.dataset.pool ? 'pool ' + a.dataset.pool : a.dataset.i != null ? 'card ' + a.dataset.i : a.tagName)) : null; });
-      await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); T.debug.pickTeam(T.teams.CLUBS[0]); });
-      await page.focus('#t-fold'); await page.keyboard.press('Enter'); keys.push(await at());
-      await page.focus('#t-tier [data-tier="1"]'); await page.keyboard.press('Enter'); keys.push(await at(), await page.evaluate(() => window.__tryline.teams.opened()));
-      await page.focus('#t-nat [data-pool="aus"]'); await page.keyboard.press('Enter'); keys.push(await at(), await page.evaluate(() => window.__tryline.teams.opened()));
-      await page.keyboard.press('Shift+Tab'); keys.push(await at());
-      ok(json(keys) === json(['tier 2', 'tier 1', true, 'card 0', false, 't-fold']), `${kind}: the keyboard: Change onto Local (the tier on show), National keeps them open, Australia folds onto the first card, and back from it is Change (${json(keys)})`);
-      // a side picked from the opened controls, and Change Team, fold onto the first card too (Farnham, his own, can't be his opponent)
-      const sides = [];
-      await page.evaluate(() => { const T = window.__tryline; T.debug.openTeams('quick'); T.teams.fold(true); });
-      await page.focus('#t-grid .team[data-i="0"]'); await page.keyboard.press('Enter'); sides.push(await page.evaluate(() => document.getElementById('t-title').textContent), await at(), await page.evaluate(() => window.__tryline.teams.opened()));
-      await page.evaluate(() => window.__tryline.teams.fold(true));
-      await page.focus('#t-change'); await page.keyboard.press('Enter'); sides.push(await page.evaluate(() => document.getElementById('t-title').textContent), await at(), await page.evaluate(() => window.__tryline.teams.opened()));
-      sides.push(await page.evaluate(() => { const T = window.__tryline, $ = i => document.getElementById(i); T.home.ring(null); T.debug.pickTeam(T.teams.CLUBS[0]); T.teams.fold(true); T.home.ring($('t-change')); T.navPress(0); const f = T.debug.focus(); T.home.ring(null); return f && f.dataset.i; }));
-      ok(json(sides) === json(['Pick Opponent', 'card 1', false, 'Pick Your Team', 'card 0', false, '0']), `${kind}: Player 1's side picked from the opened controls folds onto the first opponent he can play, Change Team back onto the first card, the keyboard's and a controller's ring alike (${json(sides)})`);
-      const club = [];   // the career's club screen the same way
+      const focusAt = () => page.evaluate(() => { const a = document.activeElement, side = a && a.closest && a.closest('.pk-side'); return a ? (side ? side.id + ' ' + a.dataset.act : a.id || a.tagName) : null; });
+      await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
+      await page.focus('#t-side0 .pk-pick'); await page.keyboard.press('ArrowLeft'); keys.push(await page.evaluate(() => window.__tryline.picker.view(0).team.id), await focusAt());
+      await page.keyboard.press('PageDown'); keys.push(await page.evaluate(() => window.__tryline.picker.view(0).group.key));
+      await page.keyboard.press('Enter'); keys.push(await focusAt());
+      await page.keyboard.press('Shift+Tab'); keys.push(await focusAt());
+      ok(json(keys) === json(['WIM', 't-side0 pick', 'nat.sco', 't-side1 pick', 't-side1 fav']), `${kind}: the keyboard: Left on Your Team (Wimbledon, from Farnham, round the end), Page Down a country (Scotland), Enter sets it onto the Opponent's card, and back from it is the Opponent's Favourite (${json(keys)})`);
+      // a side picked, and a team made, move on as a card would; the ring the same
+      const sides = await page.evaluate(() => {
+        const T = window.__tryline, P = T.picker, $ = i => document.getElementById(i), out = [];
+        T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); T.home.ring(null);
+        T.home.ring(document.querySelector('#t-side0 .pk-pick')); T.navPress(0); const f = T.debug.focus(); out.push($('t-title').textContent, f && f.closest('.pk-side').id);
+        T.navPress(0); out.push(T.debug.focus() && T.debug.focus().id);
+        T.home.ring(null); T.debug.goHome(); return out;
+      });
+      ok(json(sides) === json(['Pick Opponent', 't-side1', 't-go']), `${kind}: A on Your Team sets it and the ring moves on to the Opponent, then to Kick Off (${json(sides)})`);
+      const club = [];   // the career's club screen the same way: the arrows through its groups, Enter picks
       await page.evaluate(() => { const C = window.__tryline.career; C.set(null); C.newOpen(); C.clubOpen(); });
-      await page.focus('#cc-fold'); await page.keyboard.press('Enter'); club.push(await at());
-      await page.focus('#cc-tier [data-tier="1"]'); await page.keyboard.press('Enter'); club.push(await at(), await page.evaluate(() => window.__tryline.career.clubOpened()));
-      await page.focus('#cc-nat [data-pool="cel"]'); await page.keyboard.press('Enter'); club.push(await at(), await page.evaluate(() => window.__tryline.career.clubOpened()));
-      await page.evaluate(() => { const T = window.__tryline; T.home.ring(null); T.home.ring(document.getElementById('cc-fold')); T.navPress(0); });
-      club.push(await page.evaluate(() => { const f = window.__tryline.debug.focus(); return f && f.dataset.tier; }));
-      await page.evaluate(() => { const T = window.__tryline; T.home.ring(document.querySelector('#cc-nat [data-pool="eng"]')); T.navPress(0); });
-      club.push(await page.evaluate(() => { const f = window.__tryline.debug.focus(); return f && f.dataset.i; }));
+      await page.focus('#t-side0 .pk-pick'); await page.keyboard.press('ArrowDown'); club.push(await page.evaluate(() => window.__tryline.picker.view(0).group.key));
+      await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp'); club.push(await page.evaluate(() => window.__tryline.picker.view(0).group.key));
+      await page.keyboard.press('Enter'); club.push(await page.evaluate(() => [document.getElementById('s-career-new').hidden ? 'teams' : 'new player', window.__tryline.career.draft().club.id, window.__tryline.career.draft().league].join(' ')));
       await page.evaluate(() => { const T = window.__tryline; T.home.ring(null); T.career.set(null); T.debug.goHome(); });
-      ok(json(club) === json(['tier 2', 'tier 1', true, 'card 0', false, '1', '0']), `${kind}: the career's club screen too: Change onto Local, National open, a league onto the first club; a controller's ring the same (${json(club)})`);
-      // a controller: the first press on the first card that can be picked, Change onto the tier, a league onto the first card; folded, the ring
-      // reaches Change, every card and Back; opened, every control too
+      ok(json(club) === json(['cty', 'en2', 'new player EAL en2']), `${kind}: the career's club screen too: Down to Counties, Up to England's Championship, Enter picks Ealing, of England 2 (${json(club)})`);
+      // a controller: the first press on Your Team's card; the d-pad drives it; from Kick Off the ring reaches everything on the screen
       const pad = await page.evaluate(() => {
-        const T = window.__tryline, D = T.debug, X = T.teams, $ = i => document.getElementById(i), f = () => T.debug.focus(), id = el => el && (el.id || (el.dataset.tier != null ? 'tier ' + el.dataset.tier : el.dataset.pool ? 'pool ' + el.dataset.pool : el.dataset.i != null ? 'card ' + el.dataset.i : el.textContent.trim()));
-        const reach = () => { const s = $('s-teams'), seen = new Set(), todo = [T.navMove(0, 0, 0)]; while (todo.length) { const el = todo.pop(); if (!el || seen.has(el)) continue; seen.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); todo.push(T.navMove(0, dx, dy)); } }
-          const all = [...s.querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0 && b.getAttribute('aria-disabled') !== 'true'); T.home.ring(null); return all.filter(b => !seen.has(b)).map(id); };
+        const T = window.__tryline, D = T.debug, X = T.teams, P = T.picker, $ = i => document.getElementById(i), f = () => T.debug.focus(), id = el => el && (el.closest && el.closest('.pk-side') ? el.closest('.pk-side').id + ' ' + el.dataset.act : el.id || el.textContent.trim());
+        const reach = () => { const s = $('s-teams'), seen = new Set(), todo = [f()]; while (todo.length) { const el = todo.pop(); if (!el || seen.has(el) || el.dataset.act === 'pick') { if (el) seen.add(el); continue; } seen.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); todo.push(T.navMove(0, dx, dy)); } }
+          const all = [...s.querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0 && !b.disabled); T.home.ring(null); return all.filter(b => !seen.has(b)).map(id); };
         const out = [];
-        D.openTeams('quick'); D.pickTeam(X.CLUBS[0]); T.home.ring(null);
-        out.push(id(T.navMove(0, 0, 0)));                    // Farnham, picked, can't be: Wimbledon, his derby, first
-        T.home.ring($('t-fold')); T.navPress(0); out.push(id(f()), X.opened());
-        out.push(JSON.stringify(reach()));
-        T.home.ring($('t-tier').querySelector('[data-tier="1"]')); T.navPress(0); T.home.ring($('t-nat').querySelector('[data-pool="cel"]')); T.navPress(0); out.push(id(f()), X.opened());
-        out.push(JSON.stringify(reach()));
-        D.openTeams('champ', 'sur'); T.home.ring(null); out.push(id(T.navMove(0, 0, 0)));   // Surrey, My Team's list: Play as Farnham
+        D.settings().pick = [null, null]; D.openTeams('quick'); T.home.ring(null);
+        out.push(id(T.navMove(0, 0, 0)));
+        T.navMove(0, 0, 1); out.push(P.view(0).group.key, id(f()));
+        T.home.ring($('t-go')); out.push(JSON.stringify(reach()));
+        D.openTeams('champ', 'sur'); T.home.ring(null); out.push(id(T.navMove(0, 0, 0)));   // Surrey, My Team's list: its card, Play as Farnham under it
         T.home.ring(null); D.goHome();
         return out;
       });
-      ok(json(pad) === json(['card 1', 'tier 2', true, '[]', 'card 0', false, '[]', 't-default']), `${kind}: a controller: the first press on the first card that can be picked, Change onto the tier, a league onto the first card, the ring reaching everything folded or open, Championship's first press on Play as (${json(pad)})`);
+      ok(json(pad) === json(['t-side0 pick', 'cty', 't-side0 pick', '[]', 't-side0 pick']), `${kind}: a controller: the first press on Your Team's card, Down its next group with the ring kept on it, the ring from Kick Off reaching every button, Championship's first press on its card (${json(pad)})`);
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }
@@ -863,16 +859,16 @@ async function browserChecks() {
       await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
       await page.goto(base + 'index.html', { waitUntil:'load' });
       const m = await page.evaluate(() => {
-        const T = window.__tryline, X = T.teams, $ = i => document.getElementById(i), mine = () => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#s-teams'));
+        const T = window.__tryline, P = T.picker, mine = () => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#s-teams'));
         T.debug.openTeams('quick'); mine().forEach(a => a.finish());
-        $('t-fold').click(); const open = mine();
+        P.step(0, 1); const open = mine();
         const props = open.flatMap(a => a.effect.getKeyframes().flatMap(k => Object.keys(k).filter(p => !['offset', 'computedOffset', 'easing', 'composite'].includes(p))));
         const ms = open.map(a => a.effect.getTiming().duration);
-        open.forEach(a => a.finish()); X.tierPick(0); const shut = mine();
+        open.forEach(a => a.finish()); P.group(1, 1); const shut = mine();
         T.debug.goHome();
         return { open:open.length, shut:shut.length, props:[...new Set(props)], ms:Math.max(0, ...ms) };
       });
-      ok(reduced ? m.open === 0 && m.shut === 0 : m.open === 2 && m.shut === 1 && json(m.props.sort()) === json(['opacity', 'transform']) && m.ms > 0 && m.ms <= 250, `${reduced ? 'reduced motion: the fold does not move' : 'the fold moves the cards and fades the controls in, by transform and opacity only, in a quarter of a second at most'} (${json(m)})`);
+      ok(reduced ? m.open === 0 && m.shut === 0 : m.open === 1 && m.shut === 1 && json(m.props.sort()) === json(['opacity', 'transform']) && m.ms > 0 && m.ms <= 250, `${reduced ? 'reduced motion: a move does not slide' : 'a move slides its card in, by transform and opacity only, in a quarter of a second at most'} (${json(m)})`);
       await ctx.close();
     }
   } finally { await browser.close(); server.close(); }

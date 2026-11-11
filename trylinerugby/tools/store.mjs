@@ -7,6 +7,8 @@
 const { T, fire } = await import('./harness.mjs');
 import fs from 'node:fs';
 const S = T.store, K = T.kids, X = T.teams, D = T.debug, C = T.career, I = T.importer, $ = id => document.getElementById(id);
+const PK = T.picker;   // the team screen, side by side since 2026-11-11
+const addOnTeams = () => { const g = PK.ladder('men', { mine:'all' }).find(x => x.key === 'mine.league'); return !!g && g.teams.some(t => t.act === 'import'); };   // Add Your Team in Mine's My League
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } if (process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };
 const tick = async (n = 6) => { for (let i = 0; i < n; i++) await new Promise(r => setTimeout(r, 0)); };
@@ -83,7 +85,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // index.html: every new element starts hidden, so the page is as it was before a line of script runs
   ok(/<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>/.test(html) && /<p class="eyebrow st-fan" id="st-fan" hidden><\/p>/.test(html) && /<div class="modal" id="m-store" hidden>/.test(html) && /<span id="st-locked" hidden>Locked<\/span>/.test(html), 'Grown-Ups, the badge, the card and the Locked note start hidden');
   // the home: storeRender changes nothing while the store is not live
-  const els = ['b-champ', 'b-career', 'b-grown', 'st-fan', 'home-tag', 'hp-settings', 't-create', 't-import', 'hl-champ', 'hl-career', 'hl-settings', 'b-import'].map($);
+  const els = ['b-champ', 'b-career', 'b-grown', 'st-fan', 'home-tag', 'hp-settings', 't-go', 'hl-champ', 'hl-career', 'hl-settings', 'b-import'].map($);   // the team screen's primary carries its entry's lock (Create Team, Add Your Team) since the side-by-side screen
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
   const look = () => JSON.stringify([...els, ...seg.children].map(e => [e.hidden, e.classList.contains('locked'), e.classList.contains('grown'), e.classList.contains('note')]));
   $('b-grown').hidden = true; $('st-fan').hidden = true;
@@ -106,7 +108,9 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   I.open();
   ok($('m-store').hidden && !$('m-import').hidden && I.state().step === 'web', 'Add Your Team opens its card, which says it works in the app');
   $('im-back').click(); D.goHome();
-  ok(I.card().includes('t-import'), 'and the Add Your Team card is on the team screen as before');
+  D.openTeams('quick');
+  ok(I.shown() && PK.view(0).ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'and Add Your Team is on the team screen as before (Mine\'s My League)');
+  D.goHome();
   // the save: byte for byte what it was, with no store field while nothing is bought
   X.save();
   ok(Object.keys(saved()).join() === 'settings,champ,custom,champHistory,seasonSerial,career,importLeague', `a web save has the same fields as before (${Object.keys(saved()).join(', ')})`);
@@ -217,7 +221,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(PAID.every(f => !S.has(f)) && !S.has('import') && S.has('quick'), 'the free tier, and nothing more');
   ok(S.offers('champ').map(o => o.id).join() === 'tryline.full', 'while Farnham has not agreed its share in writing only the Full Game is on sale');
   ok(!S.offers(null).some(o => o.kind === 'fan') && !S.offers('import').length, 'no Super Fan offer anywhere');
-  ok(!S.offered('import') && I.card() === '', 'and Add Your Team, which only Super Fan unlocks, is not on the team screen');
+  ok(!S.offered('import') && !addOnTeams(), 'and Add Your Team, which only Super Fan unlocks, is not on the team screen');
   S.open({ mode:'unlock', feature:'champ' });
   ok(!/tryline\.fan|Super Fan|Supports/.test($('st-offers').innerHTML), 'the card shows no Super Fan offer and no share line');
   S.close();
@@ -231,7 +235,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(!/(?:%|\bshare)\s+of\s+(?:each|every)\s+Super Fan unlock/i.test(src + ui + read('store/README.md') + read('README.md')), 'nowhere is the share stated as of every unlock (the price)');
   for (const bad of [0, -5, 101, NaN, '20', Infinity]) { FARNHAM.share = bad; ok(!S.offers(null).some(o => o.kind === 'fan'), `a share of ${String(bad)} is not a share: no offer`); }
   FARNHAM.share = 50;
-  ok(S.offered('import') && I.card().includes('t-import'), 'Add Your Team is on the team screen once a Super Fan club is on sale');
+  ok(S.offered('import') && addOnTeams(), 'Add Your Team is on the team screen once a Super Fan club is on sale');
   S.open({ mode:'unlock', feature:'champ' });
   ok(/data-buy="tryline\.full"/.test($('st-offers').innerHTML) && /data-buy="tryline\.fan\.farnham"/.test($('st-offers').innerHTML) && $('st-offers').innerHTML.includes('Supports Farnham RUFC: 50' + SHARE_WORDS), 'the card: Full Game, Super Fan · Farnham RUFC and its share');
   ok($('st-offers').innerHTML.replace(/\u00a0/g, ' ').includes('Full Game · Add Your Team · Super Fan Badge') && $('st-offers').innerHTML.includes('Super\u00a0Fan\u00a0Badge') && $('st-offers').innerHTML.includes('Add\u00a0Your\u00a0Team') && !/Club Badge/.test(ui.replace('Super Fan Badge', '')), 'the Super Fan perks: Full Game, Add Your Team and the Super Fan Badge (the shirt and name, never a crest)');
@@ -240,8 +244,11 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // locks
   D.goHome();
   ok(['b-champ', 'b-career'].every(id => $(id).classList.contains('locked')) && !$('b-grown').hidden, 'Championship and Career locked, Grown-Ups on the home');
-  S.teamsRender();
-  ok($('t-create').classList.contains('locked') && $('t-import').classList.contains('locked'), 'Create Team and Add Your Team locked');
+  D.openTeams('quick'); PK.group(0, PK.view(0).ladder.findIndex(g => g.key === 'mine.made') - PK.view(0).gi);
+  const madeLock = PK.view(0).team.act === 'create' && $('t-go').classList.contains('locked') && $('t-go').textContent === 'Create Team';
+  PK.group(0, 1);
+  ok(madeLock && PK.view(0).team.act === 'import' && $('t-go').classList.contains('locked') && $('t-go').textContent === 'Add Your Team', 'Create Team and Add Your Team locked');
+  D.goHome();
   T.stamina.openBuilder(null);
   ok(!$('m-store').hidden && S.ui().feature === 'create' && $('s-build').hidden && !$('s-home').hidden, 'Create Team opens the Unlock card, not the builder');
   S.close();
@@ -453,7 +460,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   S.open({ mode:'grown' });
   ok($('st-title').textContent === 'Purchases' && $('st-have').innerHTML.includes('Super Fan · Farnham RUFC') && $('st-offers').innerHTML === '' && !$('st-links').hidden && $('st-back').textContent === 'Back to Menu', 'the Grown-Ups panel: what is owned, Privacy | Support, Restore Purchases | Back to Menu');
   S.close();
-  ok(I.card().includes('t-import'), 'Add Your Team is on the team screen');
+  ok(addOnTeams(), 'Add Your Team is on the team screen');
   I.open();
   ok($('m-store').hidden && !$('m-import').hidden, 'and opens the import');
   $('im-back').click();
@@ -462,20 +469,20 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   S.grant(['tryline.fan.guildford']);
   ok(S.fan().key === 'guildford', 'the latest Super Fan unlock is the club shown');
   C.set(null); C.newOpen(); C.clubOpen();
-  const cn = $('cc-grid').innerHTML;
-  ok(cn.indexOf('Guildford') > 0 && cn.indexOf('Guildford') < cn.indexOf('Farnham') && /--kit:#1a1e4f/.test($('cn-mine').innerHTML) && C.draft().club.id === 'GUI', 'Career\'s new player: Guildford picked, and first on its list');
+  const cn = PK.view(0).group.teams.map(t => t.id);
+  ok(cn[0] === 'GUI' && cn.indexOf('GUI') < cn.indexOf('FAR') && PK.view(0).team.id === 'GUI' && /--kit:#1a1e4f/.test($('cn-mine').innerHTML) && C.draft().club.id === 'GUI', 'Career\'s new player: Guildford picked, and first on its list');
   X.setChamp(null); D.goHome(); T.home.champPick(T.home.myPool());
-  ok(T.home.myClub().id === 'GUI' && D.settings().pool === 'sur' && X.teamPool() === 'sur' && $('t-default').textContent === 'Play as Guildford' && !$('t-default').hidden, 'My Team, unset, is the Super Fan\'s club: Championship on its list (Local · Surrey) with Play as Guildford');
-  ok(/data-i="0"[^>]*>[\s\S]*?Guildford/.test($('t-grid').innerHTML.split('data-i="1"')[0]), 'Guildford is the first card');
+  ok(T.home.myClub().id === 'GUI' && D.settings().pool === 'sur' && X.teamPool() === 'sur' && $('t-go').textContent === 'Play as Guildford' && !$('t-go').hidden, 'My Team, unset, is the Super Fan\'s club: Championship on its list (Local · Surrey) with Play as Guildford');
+  ok(PK.view(0).ladder[0].teams[0].id === 'GUI' && PK.view(0).i === 0, 'Guildford is the first side');
   S.FAN_CLUBS.push({ key:'toulouse', name:'Toulouse', product:'tryline.fan.toulouse', share:50, agreed:true, team:'TLS' });
   S.grant(['tryline.fan.toulouse']);
   ok(S.homePool() === 'fra', 'a club in another list opens that list (National · France)');
   X.setChamp(null); D.goHome(); T.home.champPick(T.home.myPool());
-  ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && $('t-eyebrow').textContent === 'Championship' && $('t-sum').innerHTML.replace(/<[^>]+>/g, '') === 'Men · National · France' && !$('t-default').hidden && $('t-default').textContent === 'Play as Toulouse', 'and France\'s league (National, on the folded line) has Play as Toulouse');
-  X.poolPick('eng');
-  ok($('t-default').hidden, 'Play as Toulouse only shows on its own list');
+  ok(X.teamPool() === 'fra' && X.poolTier('fra') === 1 && $('t-eyebrow').textContent === 'Championship' && PK.where(PK.view(0).group) === 'National' && PK.view(0).group.name === 'France' && !$('t-go').hidden && $('t-go').textContent === 'Play as Toulouse', 'and France\'s league (National · France) has Play as Toulouse');
+  D.openTeams('champ', 'eng');
+  ok($('t-go').textContent === 'Play as Bath' && PK.view(0).team.id === 'BTH', 'Toulouse is offered only on its own list: England opens on its first side');
   C.set(null); C.newOpen(); C.clubOpen();
-  ok(C.draft().club.id === 'TLS' && C.draft().league === 'fra' && !$('cc-nat').hidden && /data-i="0"[^>]*>[\s\S]*?Toulouse/.test($('cc-grid').innerHTML.split('data-i="1"')[0]), 'Career\'s new player starts at Toulouse, and its club screen opens on National · France with Toulouse first');
+  ok(C.draft().club.id === 'TLS' && C.draft().league === 'fra' && PK.view(0).group.key === 'fra' && PK.view(0).group.teams[0].id === 'TLS' && PK.view(0).team.id === 'TLS', 'Career\'s new player starts at Toulouse, and its club screen opens on France\'s Top 14 with Toulouse first');
   D.goHome();
   ok(S.first([X.CLUBS[0], X.FRANCE[1], X.FRANCE[0]]).map(t => t.id).join() === 'TLS,FAR,BOR', 'storeFirst moves the club to the front and keeps the rest in order');
   ok(S.first([{ ...X.FRANCE[0], custom:true }, X.CLUBS[0]])[0].custom, 'a team made by the player is never taken for the club');
@@ -486,8 +493,8 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   // careerClubs: the Super Fan's club first on the new player screen
   S.setBought(['tryline.fan.guildford']);
   const careerSrc = read('src/ui-career.js');
-  ok(/const careerClubList = k => storeFirst\(\[\.\.\.careerPoolTeams\(k\), \.\.\.custom\]\)/.test(careerSrc) && /careerDraft = \{ club:myClubTeam\(\), league:pool/.test(careerSrc) && /const myClubTeam = \(\) => myClubFind\(settings\.myClub\) \|\| storeHomeTeam\(\);/.test(menus), 'Career\'s club lists put the Super Fan\'s club first, and a new player starts with My Team\'s club (the Super Fan\'s until one is picked)');
-  ok(/if \(inChamp\) teamList = storeFirst\(teamList\)/.test(menus), 'and so does Championship\'s team screen');
+  ok(menus.includes("if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));") && /careerDraft = \{ club:myClubTeam\(\), league:pool/.test(careerSrc) && /const myClubTeam = \(\) => myClubFind\(settings\.myClub\) \|\| storeHomeTeam\(\);/.test(menus), 'Career\'s club groups put the Super Fan\'s club first, and a new player starts with My Team\'s club (the Super Fan\'s until one is picked)');
+  ok(menus.includes("teams:storeFirst(teams) }"), 'and so does Championship\'s team screen');
   S.setBought([]); D.goHome();
   ok($('st-fan').hidden && !$('home-tag').hidden, 'no Super Fan: the tagline is back');
 }

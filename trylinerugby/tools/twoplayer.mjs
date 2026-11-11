@@ -608,28 +608,33 @@ begin('join');
   X.restore({ settings:{ twoDiff:[3, 'x'] } }); ok(D.settings().twoDiff[0] === 2 && D.settings().twoDiff[1] === 0, 'a bad pair is ignored');
   X.restore({ settings:{ twoDiff:[1] } }); ok(D.settings().twoDiff.length === 2 && D.settings().twoDiff[0] === 2, 'so is a short one');
   D.settings().twoDiff = [1, 1];
-  // the team flow: Player 1 first
-  D.openTeams('two');
-  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === '2 Players' && $('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Player 1 Team', 'Player 1 picks first: Player 1 Team, the eyebrow in his colour');
-  ok($('t-yours').hidden && $('t-default').hidden && $('t-back').textContent === 'Back to Players' && D.navOnly() === 0 && D.navOwner(0) && !D.navOwner(1) && D.navOwner(null), 'no team in the bar yet, the Play as Farnham button is off, Back to Players, and only seat 0 (or the mouse) acts');
+  // the team flow (re-pinned for the side-by-side team screen, 2026-11-11): Player 1 and Player 2 side by side, each seat driving its own
+  // side, A setting it and B freeing it, Kick Off once both are set
+  const P = T.picker;
+  $('m-pause').hidden = $('m-pen').hidden = true;            // the cards the sections above left showing on the stub page: a seat's press goes to the top layer, and on the team screen that is the screen
+  D.settings().pick = [null, null]; D.openTeams('two');
+  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-eyebrow').textContent === '2 Players' && $('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Player 1 Team', 'Player 1 first: Player 1 Team, the eyebrow in his colour');
+  ok(!P.state().sides[0].set && !P.state().sides[1].set && /^Pick /.test($('t-go').textContent) && $('t-back').textContent === 'Back to Players' && D.navOnly() == null && D.navOwner(0) && D.navOwner(1) && D.navOwner(null), 'nothing set, the primary picks for Player 1, Back to Players, and each seat (or the mouse) acts on its own side');
   D.pickTeam(X.NATIONS[0]);
-  ok(sel.teams[0] === X.NATIONS[0] && sel.picking === 1 && $('t-title').textContent === 'Player 2 Team' && $('t-eyebrow').classList.contains('p2') && !$('t-yours').hidden && D.navOnly() === 1 && !M().two, 'Player 1 picked England: Player 2 Team, England in the bar with Change Team, only seat 1 acts; nothing has started');
-  D.navLog.length = 0; ok(T.navPress(0) === true && sel.picking === 1 && !$('t-ctl').hidden && T.navPress(0) === true && sel.picking === 0 && $('t-title').textContent === 'Player 1 Team' && D.navOnly() === 0, 'Player 1\'s own big action while Player 2 picks opens the folded controls, so the Change Team he presses next is on screen: back to Player 1 Team');
-  D.pickTeam(X.NATIONS[0]); ok(sel.picking === 1 && D.navOnly() === 1, 'he picks again and Player 2 is on');
-  ok(T.navPress(0) === true && sel.picking === 1 && T.navPress(0) === true && sel.picking === 0, 'a pad\'s bottom button from seat 0 presses it too (the same navPress, the controls opened first)'); D.pickTeam(X.NATIONS[0]);
-  ok(T.navMove(0, 1, 0) === null && sel.picking === 1, 'but seat 0 can\'t move the ring on Player 2\'s grid');
-  D.pickTeam(X.NATIONS[1]);
-  ok(M().two && !M().headless && M().nat[0] === X.NATIONS[0] && M().nat[1] === X.NATIONS[1] && S.isHuman(0) && S.isHuman(1) && S.levelOf(0) === 0 && S.levelOf(1) === 2 && M().duels === 'live', 'Player 2\'s pick starts the match: England v France, Easy v Hard, both human, duels live');
+  ok(P.state().sides[0].set && P.view(0).team === X.NATIONS[0] && sel.picking === 1 && $('t-title').textContent === 'Player 2 Team' && $('t-eyebrow').classList.contains('p2') && !M().two, 'Player 1 picked England: Player 2 Team, in his colour; nothing has started');
+  D.navLog.length = 0; ok(T.navPress(0) === true && !M().two && P.state().sides[0].set && T.navBack(0) === true && !P.state().sides[0].set && $('t-title').textContent === 'Player 1 Team', 'Player 1\'s A again waits for Player 2; his B frees his side: back to Player 1 Team');
+  D.pickTeam(X.NATIONS[0]); ok(sel.picking === 1 && P.state().sides[0].set, 'he picks again and Player 2 is on');
+  { const p2 = P.view(1).team; T.navMove(0, 0, 1);
+    ok(P.view(1).team === p2 && P.view(0).group.key !== 'nat.eng' && !P.state().sides[0].set, 'seat 0\'s d-pad moves only Player 1\'s side (and frees it), never Player 2\'s'); }
+  T.navMove(0, 0, -1); T.navPress(0); D.pickTeam(X.NATIONS[1]);
+  ok(P.ready() && P.view(0).team === X.NATIONS[0] && P.view(1).team === X.NATIONS[1] && $('t-go').textContent === 'Kick Off' && !M().two, 'Player 1 back on England, set; Player 2 picks France: Kick Off, nothing started yet');
+  T.navPress(1);
+  ok(M().two && !M().headless && M().nat[0] === X.NATIONS[0] && M().nat[1] === X.NATIONS[1] && S.isHuman(0) && S.isHuman(1) && S.levelOf(0) === 0 && S.levelOf(1) === 2 && M().duels === 'live', 'a seat\'s A on Kick Off starts the match: England v France, Easy v Hard, both human, duels live');
   ok($('controls').hidden && !$('hud').hidden && !$('b-pause').hidden && !$('h-t0').hidden && !$('h-t1').hidden && D.navOnly() == null && D.two().on, 'the touch controls are off, the HUD with its seat tags and the pause button on, the seats model on through the match');
   D.exitMatch();
   ok(!D.two().on && D.navOnly() == null && M().demo, 'leaving the match switches the seats model off and the menu demo back on');
   // a mirror match is allowed
-  D.openJoin(); D.openTeams('two'); D.pickTeam(X.CLUBS[0]); D.pickTeam(X.CLUBS[0]);
+  D.openJoin(); D.openTeams('two'); D.pickTeam(X.CLUBS[0]); D.pickTeam(X.CLUBS[0]); P.go();
   ok(M().two && M().nat[0].id === 'FAR' && M().nat[1].id === 'FA2', 'both players can pick Farnham: FAR v FA2');
   D.exitMatch();
   // one player's team screen is as it was
-  D.openTeams('quick');
-  ok($('t-eyebrow').textContent === 'Quick Match' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Your Team' && $('t-yours').hidden && $('t-default').hidden && $('t-back').textContent === 'Back to Menu' && D.navOnly() == null, 'Quick Match: Pick Your Team, nothing picked for him (My Team only offered first), Back to Menu, nobody restricted');
+  D.settings().pick = [null, null]; D.openTeams('quick');
+  ok($('t-eyebrow').textContent === 'Quick Match' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Your Team' && !P.state().sides[0].set && $('t-go').textContent === 'Pick Farnham' && $('t-back').textContent === 'Back to Menu' && D.navOnly() == null, 'Quick Match: Pick Your Team, nothing picked for him (My Team only offered first), Back to Menu, nobody restricted');
   fresh({ headless:false }); $('h-t0').hidden = $('h-t1').hidden = false; D.startMatch(0, 1, false); ok($('h-t0').hidden && $('h-t1').hidden && !$('controls').hidden, 'a one-player match: no seat tags on the scorebug, the touch controls on'); D.exitMatch();
   D.goHome(); menu();
   // Difficulty is saved by keyboard half: swapped Easy/Hard, then a fresh visit puts the halves back in order and each half keeps its own level
@@ -908,8 +913,8 @@ begin('full time');
   ok(M().nat[0].id === 'FAR' && M().nat[1].id === 'FA2' && $('br-tries').textContent === 'Player 2 Wins · Tries 0 – 0' && $('br-n0').textContent === 'FAR' && $('br-n1').textContent === 'FA2', 'Farnham v Farnham: Player 2 Wins, with the two codes');
   // Change Teams: back to Player 1's pick, the series and the seats kept
   $('m-break').hidden = true; D.setMode('menu'); D.openTeams('two');
-  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-title').textContent === 'Player 1 Team' && D.series().w[0] === 1 && D.series().w[1] === 2 && D.two().on, 'Change Teams goes back to Player 1\'s pick, the series and the seats kept');
-  D.pickTeam(X.NATIONS[2]); D.pickTeam(X.CLUBS[1]); M().headless = true;
+  ok(D.pickMode() === 'two' && sel.picking === 0 && $('t-title').textContent === 'Player 1 Team' && !T.picker.state().sides[0].set && !T.picker.state().sides[1].set && D.series().w[0] === 1 && D.series().w[1] === 2 && D.two().on, 'Change Teams goes back to Player 1\'s pick, each side shown as it was for its player to set again, the series and the seats kept');
+  D.pickTeam(X.NATIONS[2]); D.pickTeam(X.CLUBS[1]); T.picker.go(); M().headless = true;
   ok(M().two && M().nat[0].id === 'IRE' && M().nat[1].id === 'HAS' && S.levelOf(0) === 0 && S.levelOf(1) === 2, 'Player 1 picks Ireland, Player 2 Haslemere, and the match starts at the same levels');
   M().score = [12, 0]; D.showBreak('full'); ok($('br-series').textContent === 'Series 2 – 2 · 2 Draws', 'and the series runs on');
   $('m-break').hidden = true; D.exitMatch();

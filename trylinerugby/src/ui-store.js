@@ -102,11 +102,16 @@ function storeShield(t, c) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
   return `<svg class="fan-shield" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 1.6l9.8 3.5v7.5c0 6.7-4.1 11.3-9.8 13.6C6.3 23.9 2.2 19.3 2.2 12.6V5.1z" fill="${k}" stroke="${tr}" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
 }
-function storeTeamsRender() {              // the team screen's part, from renderTeams: Create Team, each Edit, Add Your Team, a Legends side
-  storeMark($('t-create'), 'create');
-  for (const b of $('t-grid').querySelectorAll('[data-edit]')) storeMark(b, 'create');
-  storeMark($('t-import'), 'import');
-  for (const b of $('t-grid').querySelectorAll('[data-legend]')) storeMark(b, 'legends');   // unlocked by Gold medals on any tier, played with the Full Game
+/* The team screen's part, from renderTeams: Create Team, Edit, Add Your Team and a Legends side, each on its card and on the primary while
+   it is the side on show (Create Team, Add Your Team, Pick England 2003). */
+function storeTeamsRender() {
+  const scr = $('s-teams');
+  for (const b of scr.querySelectorAll('[data-make="create"], [data-act="edit"]')) storeMark(b, 'create');
+  for (const b of scr.querySelectorAll('[data-make="import"]')) storeMark(b, 'import');
+  for (const b of scr.querySelectorAll('[data-legend]')) storeMark(b, 'legends');   // unlocked by Gold medals on any tier, played with the Full Game
+  const v = pickView[pick.on], t = v && v.team, f = !t ? null : t.act === 'create' ? 'create' : t.act === 'import' ? 'import' : t.legend ? 'legends' : null, go = $('t-go');
+  if (f) storeMark(go, f);
+  else if (go.classList.contains('locked')) { go.classList.remove('locked'); if (typeof go.removeAttribute === 'function') go.removeAttribute('aria-describedby'); }
 }
 function storeJoinRender() {               // Two Player's Hard, from renderJoin (a saved Hard was played as Normal by storeRender)
   for (const s of [0, 1]) { const b = $('j-diff' + s).children[2]; if (b) storeMark(b, 'hard'); }

@@ -135,6 +135,7 @@
         <button class="btn" id="b-grown" hidden>Grown-Ups</button>
         <div class="set set-half"><span class="lbl">Half Length</span><div class="seg" data-key="half"><button>2 Min</button><button>4 Min</button><button>6 Min</button></div></div>
         <div class="set set-cam" id="set-cam"><span class="lbl">Camera</span><div class="seg" data-key="cam"><button>Top</button><button>Low</button><button>Mid</button><button>High</button></div></div>
+        <p class="ver" id="ver">Version 1.2</p>
       </div>
     </div>
     <nav class="hl-bar" id="hl-bar" role="tablist" aria-label="Menu">
@@ -148,18 +149,23 @@
 </section>
 
 <section class="screen" id="s-teams" hidden>
-  <div class="wrap">
-    <div class="fold-line"><div class="fold-name"><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
-      <p class="fold-sum"><span id="t-sum"></span> <b id="t-vs" hidden></b></p><button class="btn fold-go" id="t-fold" aria-expanded="false" aria-controls="t-ctl">Change</button>
-      <button class="btn primary" id="t-default" hidden></button></div>
-    <div class="fold-ctl" id="t-ctl" hidden>
-      <div class="pools"><div class="fold-top"><div class="seg cat" id="t-cat"></div><div class="seg" id="t-tier"></div></div><div class="seg" id="t-nat" hidden></div><div class="seg" id="t-loc" hidden></div></div>
-      <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
+  <div class="pk">
+    <div class="pk-top"><div class="pk-name"><p class="eyebrow" id="t-eyebrow">Quick Match</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
+      <div class="seg cat" id="t-cat" aria-label="Men, Women or Minis"></div></div>
+    <div class="pk-sides" id="t-sides">
+      <div class="pk-side" id="t-side0" data-side="0" role="group"></div>
+      <div class="pk-v" id="t-v" aria-hidden="true">V</div>
+      <div class="pk-side" id="t-side1" data-side="1" role="group"></div>
     </div>
-    <div class="teams" id="t-grid"></div>
-    <button class="btn" id="t-back" data-back>Back to Menu</button>
+    <div class="pk-foot"><button class="btn primary" id="t-go"></button><button class="btn" id="t-back" data-back>Back to Menu</button></div>
   </div>
 </section>
+<div class="modal" id="m-ladder" hidden role="dialog" aria-modal="true" aria-labelledby="ldr-title">
+  <div class="card ldr">
+    <div class="ldr-top"><h2 class="title" id="ldr-title">Your Team</h2><button class="btn" id="ldr-back" data-back>Back</button></div>
+    <div class="ldr-list" id="ldr-list"></div>
+  </div>
+</div>
 
 <section class="screen" id="s-build" hidden>
   <div class="wrap">
@@ -253,18 +259,6 @@
         <button class="btn primary" id="cn-go">Start Career</button>
       </div>
     </div>
-  </div>
-</section>
-
-<section class="screen" id="s-career-club" hidden>
-  <div class="wrap">
-    <div class="fold-line"><div class="fold-name"><p class="eyebrow">New Player</p><h2 class="title">Pick Your Club</h2></div>
-      <p class="fold-sum"><span id="cc-sum"></span></p><button class="btn fold-go" id="cc-fold" aria-expanded="false" aria-controls="cc-ctl">Change</button></div>
-    <div class="fold-ctl" id="cc-ctl" hidden>
-      <div class="pools"><div class="seg" id="cc-tier"></div><div class="seg" id="cc-nat" hidden></div><div class="seg" id="cc-loc" hidden></div></div>
-    </div>
-    <div class="cr-clubs" id="cc-grid"></div>
-    <button class="btn" id="cc-back" data-back>Back to New Player</button>
   </div>
 </section>
 

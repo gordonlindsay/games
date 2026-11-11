@@ -26,7 +26,9 @@ const COACH_LINE = {
   sprint: 'Hold Sprint for a burst',
 };
 const HOME_HL = ['game', 'champ', 'career', 'drills', 'settings'];   // the home's five headlines, in the bar's order: Quick Match, Championship, Career, Skills Mini Games, Settings (the keys are the saves', kept from Game and Training Drills)
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, hl:'game', myClub:null, myNat:null, drillSeen:[], camPick:false, finished:0 };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; finished: one-player matches played to full time, for the Your Ball sign under the clock (ui-match.js); kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); hl: the home's headline last chosen (HOME_HL, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, null for the default (myClubTeam, ui-menus.js); drillSeen: the games whose Watch How has played (drill-demo.js); camPick: the camera row has been used (cleanSettings)
+const PICK_KEY = /^[A-Za-z0-9-]{1,24}$/, PICK_GROUP = /^[a-z0-9.-]{1,24}$/;   // a team's key (keyOf: a code, a made team's, a My League side's) and a ladder group's (pickLadder)
+const PICK_RECENT = 3, PICK_FAV = 12;   // Recent: a side's last three picks; Favourites: twelve at most, the oldest dropped
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, hl:'game', myClub:null, myNat:null, drillSeen:[], camPick:false, finished:0, pick:[null, null], recent:[[], []], fav:[] };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; finished: one-player matches played to full time, for the Your Ball sign under the clock (ui-match.js); kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); hl: the home's headline last chosen (HOME_HL, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, null for the default (myClubTeam, ui-menus.js); drillSeen: the games whose Watch How has played (drill-demo.js); camPick: the camera row has been used (cleanSettings)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
@@ -182,6 +184,13 @@ function cleanSettings(g) {
   if (Array.isArray(g.drillSeen)) settings.drillSeen = DRILL_IDS.filter(id => g.drillSeen.includes(id));   // only drills the game knows, each once; a save from before Watch How has none, so each plays once
   if (typeof g.camPick === 'boolean') settings.camPick = g.camPick;
   if (g.cam === 1 || g.cam === 2 || g.cam === 3 || (g.cam === 0 && g.camPick === true)) settings.cam = g.cam;   // a save with no cam starts on the default, Mid (render-behind.js). So does a Top nobody chose: one build wrote cam 0 into every save as its default, so a 0 counts only with camPick, set by the camera row
+  /* The team screen (src/ui-menus.js): each side's last pick (its team's key, its category and the ladder group it was in), each side's
+     last three picks (Recent) and the teams starred (Favourites, newest first). Keys only, each checked as myClub is; a key no longer
+     there (a team deleted, a league removed) is skipped where the screen reads it (pickFind). A save from before them has none. */
+  const key = v => typeof v === 'string' && PICK_KEY.test(v);
+  if (Array.isArray(g.pick) && g.pick.length === 2) settings.pick = g.pick.map(p => (p && typeof p === 'object' && !Array.isArray(p) && key(p.id) && TEAM_CATS.some(c => c.id === p.cat) && (p.g == null || (typeof p.g === 'string' && PICK_GROUP.test(p.g))) ? { id:p.id, cat:p.cat, g:p.g || null } : null));
+  if (Array.isArray(g.recent) && g.recent.length === 2) settings.recent = g.recent.map(r => (Array.isArray(r) ? [...new Set(r.filter(key))].slice(0, PICK_RECENT) : []));
+  if (Array.isArray(g.fav)) settings.fav = [...new Set(g.fav.filter(key))].slice(0, PICK_FAV);
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;

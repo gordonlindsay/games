@@ -526,30 +526,31 @@ function champAt4(userWins) {
   ok(![src, css].some(s => /[\u2014\u2190-\u21ff]/.test(s)), 'no em dash and no arrow in the Locker\'s code or styles');
 }
 
-// 12. the team screen: the Legends unlocked so far join International, after the nations; nowhere else, and never as an opponent
+// 12. the team screen: the Legends unlocked so far join their nation's National group, after it (re-pinned for the side-by-side screen,
+//     2026-11-11: "Legends sit with their nation"); nowhere else, and never as an opponent in a championship
 {
   fresh();
-  D.openTeams('quick'); D.settings().pool = 0; D.renderTeams();
-  ok(!/New Zealand 1987/.test($('t-grid').innerHTML), 'no Gold: no Legends on International');
-  L.state().n.hat = 10; L.state().n.drop = 10; D.renderTeams(); const g = $('t-grid').innerHTML;
-  const lastNat = X.natList('men').at(-1).name;   // International is the category's twelve in ranking order (natList): the Legends follow the last
-  ok(/New Zealand 1987/.test(g) && /Australia 1991/.test(g) && !/South Africa 1995/.test(g) && !/Women/.test(g) && g.indexOf(lastNat) < g.indexOf('New Zealand 1987'), 'two Golds, Men: two men\'s Legends, after the nations');
-  D.settings().cat = 'women'; D.renderTeams(); const gw = $('t-grid').innerHTML;
+  const P = T.picker, nat = (cat, id) => P.ladder(cat, { nations:true, legends:true, clubs:true, mine:'all' }).find(g => g.key === 'nat.' + id.toLowerCase());
+  const legendsIn = cat => P.ladder(cat, { nations:true, legends:true, clubs:true, mine:'all' }).flatMap(g => g.teams.filter(t => t.legend).map(t => g.key + ':' + X.listName(t)));
+  D.openTeams('quick');
+  ok(legendsIn('men').length === 0 && legendsIn('women').length === 0, 'no Gold: no Legends on the ladder');
+  L.state().n.hat = 10; L.state().n.drop = 10; D.renderTeams();
+  ok(nat('men', 'NZL').teams.map(t => t.name).join() === 'New Zealand,New Zealand 1987' && nat('men', 'AUS').teams.map(t => t.name).join() === 'Australia,Australia 1991' && !legendsIn('men').some(x => /1995/.test(x)) && !legendsIn('men').some(x => /Women/.test(x)), 'two Golds, Men: two men\'s Legends, each after its nation (New Zealand 1987 after New Zealand, Australia 1991 after Australia)');
   // re-pinned 2026-11-09: the second women's side is New Zealand 1998 now (England 1994 on 84e61b1, one of the five dropped)
-  ok(/>USA 1991</.test(gw) && />New Zealand 1998</.test(gw) && !/>England 2014</.test(gw) && !/>England 1994</.test(gw) && !/New Zealand 1987/.test(gw) && gw.indexOf('>' + X.natList('women').at(-1).name.replace(/ Women$/, '') + '<') < gw.indexOf('>USA 1991<'), 'two Golds, Women: two women\'s Legends (USA 1991, New Zealand 1998), after the women\'s twelve (cards show the plain name, as the nations\' do)');
+  D.settings().cat = 'women'; D.renderTeams();
+  ok(json(legendsIn('women')) === json(['nat.usa:USA 1991', 'nat.nzl:New Zealand 1998']) && !legendsIn('women').some(x => /2014|1994|1987/.test(x)) && nat('women', 'USA').teams[0] === X.natList('women').find(t => t.id === 'USA'), 'two Golds, Women: two women\'s Legends (USA 1991, New Zealand 1998), each after its nation (cards show the plain name, as the nations\' do)');
   D.settings().cat = 'men';
-  D.settings().pool = 1; D.renderTeams(); ok(!/1987/.test($('t-grid').innerHTML), 'not on any other list');
-  D.openTeams('champ'); D.settings().pool = 0; D.renderTeams(); D.pickTeam(L.LEGENDS[0]);
+  ok(legendsIn('men').every(x => x.startsWith('nat.')) && !P.ladder('men', { clubs:true, mine:'all' }).some(g => g.teams.some(t => t.legend)), 'not in any other group');
+  D.openTeams('champ', 'int'); D.pickTeam(L.LEGENDS[0]);
   const c = X.champ();
   ok(c.teams[0].id === 'L87' && c.teams.slice(1).every(t => X.NATIONS.some(n => n.id === t.id)), 'a Legend picked for a championship plays it; its five opponents are nations');
   X.save(); X.load(); ok(X.champ().teams[0].id === 'L87' && X.champ().teams[0].name === 'New Zealand 1987', 'a saved championship keeps the Legend\'s code (cleanSide)');
   X.setChamp(null); X.save();
-  // seven Golds on International: seven men's Legends after the men's twelve, and on Women the five, never a sixth
-  golds(7); D.openTeams('quick'); D.settings().pool = 0;
-  const legs = () => [...$('t-grid').innerHTML.matchAll(/<button class="team[^"]*" data-i="\d+" data-legend="1"[\s\S]*?<span class="tname">([^<]*)</g)].map(r => r[1]);
-  D.settings().cat = 'men'; D.renderTeams(); const m7 = legs();
-  D.settings().cat = 'women'; D.renderTeams(); const w7 = legs();
-  ok(json(m7) === json(MEN_IDS.slice(0, 7).map(id => L.LEGENDS.find(t => t.id === id).name)) && json(w7) === json(['USA 1991', 'New Zealand 1998', 'England 2014', 'New Zealand 2017', 'England 2025']) && !/undefined/.test($('t-grid').innerHTML), `seven Golds: seven men's Legends on Men, the five women's on Women (${m7.length}, ${w7.length})`);
+  // seven Golds: seven men's Legends after their nations on Men, and on Women the five, never a sixth
+  golds(7); D.openTeams('quick');
+  const legs = cat => P.ladder(cat, { nations:true, legends:true }).flatMap(g => g.teams.filter(t => t.legend).map(t => X.listName(t)));
+  const m7 = legs('men'), w7 = legs('women'), byDate = l => [...l].sort((a, b) => +a.slice(-4) - +b.slice(-4));
+  ok(json(byDate(m7)) === json(MEN_IDS.slice(0, 7).map(id => L.LEGENDS.find(t => t.id === id).name)) && json(byDate(w7)) === json(['USA 1991', 'New Zealand 1998', 'England 2014', 'New Zealand 2017', 'England 2025']) && !/undefined/.test($('t-side0').innerHTML), `seven Golds: seven men's Legends on Men, the five women's on Women (${m7.length}, ${w7.length})`);
   D.settings().cat = 'men'; fresh();
 }
 
