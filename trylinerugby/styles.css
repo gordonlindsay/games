@@ -1517,7 +1517,7 @@ summary::-webkit-details-marker{display:none}
 @media (max-width:700px){.ctl-kk.alt{display:none}}   /* the arrows: W A S D only, where the row would wrap */
 @media (max-width:700px){.ctl-j{min-height:24px;padding:2px 7px;font-size:13px}.ctl-js.x{left:calc(var(--s)*158px + 4px)}}   /* up to 700 wide: Pass's five jobs and Kick's clear the stick's */
 @media (max-width:420px){#s-help .scoring{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* The profile (src/profile.js). The first launch's setup, a step a screen: Back (Not Now on the first step) at the top left, Skip at the
+/* The profile (src/profile.js). The first launch's setup, a step a screen: Back (none on the first step, its slot kept) at the top left, Skip at the
    top right, the step's name as the title with a bar a step over it; Age Group and Gender as three big cards, each a picture on its own
    colour, a big word and, for an age group, its ages; Club the team screen (.pk-setup) and Your Look New Player's builder (.ck-setup), with
    the same Back and Skip along the top. My Profile: Back to Menu and its title, your player on the left with Change Look, the age group,
@@ -1527,6 +1527,7 @@ summary::-webkit-details-marker{display:none}
 .su,.pf{flex:1 0 auto;width:100%;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:14px;min-height:0}
 .su-head{flex:none;display:flex;align-items:center;gap:14px;min-width:0;min-height:44px}
 .btn.su-back,.btn.su-skip,.btn.pk-sback,.btn.pk-skip,.btn.ck-pback,.btn.ck-skip{width:auto;flex:none;min-height:44px;min-width:88px;padding:4px 16px}
+.btn.su-back:disabled{visibility:hidden}   /* the first step's: nothing before it, its slot kept so the title stands where it does on every step */
 .su-name{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
 .su-name h2.title{font-size:34px;line-height:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .su-dots{display:flex;gap:6px;height:14px;align-items:center}   /* where the setup is: a bar a step */
@@ -1546,6 +1547,7 @@ summary::-webkit-details-marker{display:none}
 .pf-pic canvas{display:block;width:auto;height:100%;max-height:158px}
 .pf-pic .jersey{width:96px;height:96px}
 .pf-rows{display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}
+.pf-rows .seg{background:var(--panel)}   /* a solid backing, as the setup's cards and My Team's row have, so the live pitch behind never runs through the words */
 .pf-age button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;line-height:1.1}
 .pf-age button b{font-weight:800}
 .pf-age button span{font-size:13px;font-weight:700}

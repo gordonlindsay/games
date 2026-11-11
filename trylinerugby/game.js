@@ -10795,7 +10795,7 @@ function myHome() {
   const nat = $('my-nat');
   nat.innerHTML = `${jersey(n, 'mini')}<b aria-hidden="true">${esc(listName(n))}</b><span class="sr">${esc('My Country: ' + listName(n) + (played(g) ? ', ' + figs(g) : ''))}</span>`;   // read out with its own record (a span takes no aria-label)
   nat.setAttribute('title', listName(n) + (played(g) ? ': ' + figs(g) : ''));
-  $('b-my').setAttribute('aria-label', 'Change My Team: ' + listName(c) + ', ' + listName(n));
+  $('b-my').setAttribute('aria-label', 'Change My Profile: ' + listName(c) + ', ' + listName(n));   // it opens My Profile (src/profile.js), whose own Change is My Team's
   homeFit();
 }
 /* The Trophy Cabinet's strip: each kind won, its trophy in its metal and the count (2 Titles · 1 Cup), the Super Fan's rosette; shown once a
@@ -11377,7 +11377,7 @@ function renderTeams() {
   }
   const go = $('t-go'), label = pickPrimary();
   go.textContent = label; go.hidden = !label;
-  $('t-back').textContent = pair ? 'Back to Players' : pickMode === 'career' ? 'Back to New Player' : 'Back to Menu';
+  $('t-back').textContent = pair ? 'Back to Players' : pickMode === 'career' ? 'Back to New Player' : pickMode === 'my' && pickFrom && pickFrom.id === 'pf-team' ? 'Back to Profile' : 'Back to Menu';   // My Team's picker from My Profile goes back there (myDone)
   navOnly = null;                                            // 2 Players: each seat drives its own side (pickNav)
   storeTeamsRender();                                        // locks on Create Team, Edit, Add Your Team and the Legends (src/ui-store.js)
   if ($('s-teams').hidden) fitNames(); else pickFit();
@@ -15821,17 +15821,19 @@ const DEMO_PILOT = {
    and myNat). No name and nothing else is asked.
 
    First launch only (profileFirst: no save at all, never a save that exists, the demo, the tools or the app's copy of a save put back):
-   a short setup before the home, one step a screen, each with Skip and Back (Not Now on the first, which leaves it), and Done at the
-   end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, Mine and Favourites, clubs
-   only) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it ends, so a step skipped, or
-   the whole setup left with Not Now, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
+   a short setup before the home, one step a screen, each with Skip and Back (none on the first, which has nothing before it), and Done
+   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, Mine and Favourites,
+   clubs only) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it ends, so a step skipped,
+   or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
    Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
 
    What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the Men | Women | Minis switch, the level
    and My Team stay changeable as ever without rewriting the age group or the gender.
    - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
      Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
-     MIXED_THROUGH), otherwise Men. Leaving the Kids level from here asks the grown-up check first, as the Difficulty row does.
+     MIXED_THROUGH), otherwise Men. An answer left blank keeps the side as it is (profileCat): a gender alone never moves a side off
+     Minis, an age group alone never moves one between Men and Women. Leaving the Kids level from here asks the grown-up check first,
+     as the Difficulty row does. A row already chosen, pressed again on My Profile, sets nothing again.
    - Club: My Team's club, and My Team's country from the club's where the ladder knows it (an England club, England), else as it was.
    - Gender: Career's New Player starts on Men or Women by it (Not Say follows the category), on the profile's look.
    - The look: build, skin, hair colour and hair style; the body by the gender, or picked on Your Look for Not Say. It stands in My
@@ -15865,17 +15867,22 @@ function cleanProfile(p) {
 }
 const profileSaved = () => (profile.age || profile.gender || profile.look ? { age:profile.age, gender:profile.gender, look:profile.look ? { ...profile.look } : null } : undefined);   // saved only once something is set
 /* The category an answer gives: Minis for a Mini (mixed, whoever plays), else Women for Female and Men for Male and Not Say; null with
-   neither known. */
-function profileCat(age, gender) {
+   neither known. An answer missing keeps the side the player is on (cur, settings.cat), so a category picked is never overwritten by a
+   question left blank: with no age group, Minis stays Minis (they are mixed, so a gender alone never moves a side off them, nor brings
+   Contact Games back); with no gender, a Junior or an Adult keeps Men or Women, and only Minis moves (to Men). A first launch starts on
+   Men, so there a step skipped plays Men, as the table in README's Profile says. */
+function profileCat(age, gender, cur) {
   if (age === 'mini') return 'minis';
-  if (gender === 'female') return 'women';
-  return age || gender ? 'men' : null;
+  if (!age && !gender) return null;
+  if (!age && cur === 'minis') return 'minis';
+  if (gender) return gender === 'female' ? 'women' : 'men';
+  return cur === 'women' ? 'women' : 'men';
 }
 const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
 /* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
    Difficulty row's own rule); a cancelled check sets nothing. */
 function profileSet(age, gender, o) {
-  const lvl = o && o.level === false ? null : profileLevel(age), cat = profileCat(age, gender);
+  const lvl = o && o.level === false ? null : profileLevel(age), cat = profileCat(age, gender, settings.cat);
   const go = () => {
     if (lvl != null) kidsSegSet(lvl);
     if (cat) settings.cat = cat;
@@ -15964,16 +15971,16 @@ const profileAuto = () => {                                // a person's first l
 /* boot.js asks this as the game starts: the setup, only with no save at all and only for a person. */
 function profileBoot() { if (profileFirst && profileAuto()) profileSetupOpen(); }
 function profileSetupOpen() {
-  profileRun = { step:0, age:null, gender:null, club:null, nat:null, lookDraft:null };
+  profileRun = { step:0, age:null, gender:null, club:null, nat:null, lookDraft:null, lookBegun:false };
   profileStep(0);
 }
-const profileSetupCat = () => (profileRun ? profileCat(profileRun.age, profileRun.gender) || settings.cat : settings.cat);   // the team screen's category while it is the setup's Club
+const profileSetupCat = () => (profileRun ? profileCat(profileRun.age, profileRun.gender, settings.cat) || settings.cat : settings.cat);   // the team screen's category while it is the setup's Club
 const profileSetupClub = () => (profileRun && profileRun.club) || myClubTeam();
 function profileStep(i, focus) {
   const R = profileRun; if (!R) return;
   R.step = clamp(i, 0, PROFILE_STEPS.length - 1);
   const st = PROFILE_STEPS[R.step];
-  if (st.id === 'club') { openTeams('setup'); return; }
+  if (st.id === 'club') { openTeams('setup'); profileFocus(null, pickEl(0, 'pick')); return; }   // from the keyboard on the card, so the arrow keys step the clubs and Enter picks (the team screen's own keys)
   if (st.id === 'look') {
     if (!R.lookDraft) R.lookDraft = profileLookStart(R.gender);
     careerLookOpen('setup');
@@ -15982,7 +15989,7 @@ function profileStep(i, focus) {
   const opts = st.id === 'age' ? PROFILE_AGES : PROFILE_GENDERS, now = R[st.id];
   $('su-step').innerHTML = profileDots(R.step);
   $('su-title').textContent = st.title;
-  $('su-back').textContent = R.step ? 'Back' : 'Not Now';
+  $('su-back').disabled = !R.step;                       // nothing before the first step: its slot kept empty (the title stands where it does on every step), and Skip the one way on
   $('su-opts').innerHTML = opts.map(o => `<button class="btn su-opt" data-v="${o.id}" aria-pressed="${o.id === now}" style="--k:${o.k}"><span class="su-pic">${profilePic(st.id, o)}</span><span class="su-word">${esc(o.name)}</span>${o.line ? `<span class="su-line">${esc(o.line)}</span>` : ''}</button>`).join('');
   for (const b of $('su-opts').querySelectorAll('[data-v]')) b.addEventListener('click', () => profileAnswer(b.dataset.v));
   showScreen('s-setup'); $('s-setup').scrollTop = 0;
@@ -16012,14 +16019,13 @@ function profileAnswer(v) {
 function profileSkip() {                                   // this step left unanswered: what it would set stays as it was
   const R = profileRun; if (!R) return;
   const st = PROFILE_STEPS[R.step];
-  if (st.id === 'look') { profileSetupEnd(false); return; }
+  if (st.id === 'look') { profileSetupEnd(!!R.lookBegun); return; }   // a look begun is never thrown away (Skip is not shown once it is: profileLookPicked)
   if (st.id === 'club') { R.club = null; R.nat = null; }
   else R[st.id] = null;
   profileStep(R.step + 1);
 }
-function profileBack() {                                   // the step before, its answer kept; Not Now on the first leaves the setup, nothing set
-  const R = profileRun; if (!R) return;
-  if (!R.step) { profileRun = null; save(); goHome(); return; }
+function profileBack() {                                   // the step before, its answer kept; none before the first
+  const R = profileRun; if (!R || !R.step) return;
   profileStep(R.step - 1, null);
 }
 /* The setup's Club (the team screen, pickMode 'setup'): the club picked, its country with it where the ladder knows it, then Your Look. */
@@ -16045,9 +16051,12 @@ let profileLook = null;                                    // the look Your Look
 const profileLookDraft = () => (profileRun ? profileRun.lookDraft : profileLook);   // Your Look's look, in its setup and profile modes (src/ui-career.js)
 const profileLookClub = () => (profileRun ? profileSetupClub() : myClubTeam());
 const profileLookGender = () => (profileRun ? profileRun.gender : profile.gender);
-/* A pick on Your Look (src/ui-career.js): on My Profile it is kept at once, as Settings' rows are. */
+/* A pick on Your Look (src/ui-career.js): on My Profile it is kept at once, as Settings' rows are. In the setup the look is begun, so
+   Skip goes from the top and Done (or Back) is the way on: a child who has picked a hair style and then taps Skip keeps it. */
+const profileLookBegun = () => !!(profileRun && profileRun.lookBegun);
 function profileLookPicked() {
-  if (profileRun || !profileLook) return;
+  if (profileRun) { profileRun.lookBegun = true; $('ck-skip').hidden = true; return; }
+  if (!profileLook) return;
   profile.look = profileLookClean(profileLook, profile.gender);
   save();
 }
@@ -16075,11 +16084,11 @@ function profileRender() {
   if (!drawn && profile.look && typeof ART !== 'undefined' && ART.state === 'idle' && typeof artLoad === 'function') artLoad();   // the picture once the art is in (profileArtIn)
 }
 function profileAge(v) {
-  if (!profileKnows(PROFILE_AGES, v)) return;
+  if (!profileKnows(PROFILE_AGES, v) || v === profile.age) return;   // the row already chosen: nothing set again (a level or side moved since stays as it is)
   profileSet(v, profile.gender, { then:() => { profileRender(); renderHome(); } });
 }
 function profileGender(v) {
-  if (!profileKnows(PROFILE_GENDERS, v)) return;
+  if (!profileKnows(PROFILE_GENDERS, v) || v === profile.gender) return;
   profileSet(profile.age, v, { level:false, then:() => { profileRender(); renderHome(); } });   // the gender moves the category, never the level
 }
 $('pf-back').addEventListener('click', () => goHome($('b-my')));
@@ -16124,6 +16133,15 @@ function profileNav(cands, el, dx, dy) {
   return near;
 }
 for (const id of ['s-setup', 's-profile']) $(id).addEventListener('keydown', profileKeys);
+/* The setup's Club is the team screen, which leaves Escape to the browser for one player (input-devices.js): there Escape is its Back,
+   to Gender, as on the setup's other steps. Never past a card over it (the group's sheet takes Escape first, and closes; the grown-up
+   check; the store), nor while a name is typed. */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.defaultPrevented || !profileRun || pickMode !== 'setup' || $('s-teams').hidden || navLayer() !== $('s-teams')) return;
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || (e.target && e.target.tagName === 'INPUT')) return;
+  if (e.preventDefault) e.preventDefault();
+  $('t-sback').click();
+});
 $('s-career-look').addEventListener('keydown', e => { if (lookFor !== 'career') profileKeys(e); });   // New Player's own Your Look keeps Tab, as ever
 /* =========================================================
    Career screens: the new player and his club, the hub, training, the table, and the screen between phases (a season's or a
@@ -16283,6 +16301,7 @@ function lookHead() {                                // the screen's words and b
   if (eb) { if (setup) eb.innerHTML = profileDots(3); else eb.textContent = pro ? 'My Profile' : 'New Player'; }
   $('ck-back').hidden = setup; $('ck-back').textContent = pro ? 'Back to Profile' : 'Back to New Player';
   $('ck-pback').hidden = $('ck-skip').hidden = $('ck-done').hidden = !setup;
+  if (setup && typeof profileLookBegun === 'function' && profileLookBegun()) $('ck-skip').hidden = true;   // a look begun: Done or Back, never Skip (src/profile.js)
   $('ck-body-f').hidden = !lookBody();
   $('s-career-look').classList.toggle('ck-pro', pro); $('s-career-look').classList.toggle('ck-setup', setup);
 }
@@ -16295,7 +16314,7 @@ function careerLookOpen(mode) {
   if (art && art.then) art.then(() => { if (lookDraft() && !$('s-career-look').hidden) careerLookShow(); });
   if (lookFor !== 'career') profileFocus($('s-career-look'), $('ck-build').querySelector && $('ck-build').querySelector('[aria-pressed="true"]'));   // the arrow keys and Escape from the start (src/profile.js)
 }
-function careerLookSet(key, v) { const L = lookDraft(); if (!L) return; L[key] = v; renderCareerLook(); if (lookFor === 'profile' && typeof profileLookPicked === 'function') profileLookPicked(); }
+function careerLookSet(key, v) { const L = lookDraft(); if (!L) return; L[key] = v; renderCareerLook(); if (lookFor !== 'career' && typeof profileLookPicked === 'function') profileLookPicked(); }
 function careerLookShow() {                          // the picture: the art when it is in, his shirt when not
   const L = lookDraft(), club = lookClub(), cv = $('ck-pic'), drawn = artPreview(cv, club, L);
   cv.hidden = !drawn; $('ck-shirt').hidden = drawn;
@@ -16317,7 +16336,7 @@ $('ck-back').addEventListener('click', () => {
   renderCareerNew(); careerShow('s-career-new');
 });
 $('ck-pback').addEventListener('click', () => profileStep(2));          // the setup's: back to its Club, the look kept for coming back
-$('ck-skip').addEventListener('click', () => profileSetupEnd(false));   // the setup ends with no look
+$('ck-skip').addEventListener('click', () => profileSkip());           // the setup ends with no look (shown only while nothing has been picked)
 $('ck-done').addEventListener('click', () => profileSetupEnd(true));    // the setup ends with this look
 /* The club: the team screen in its Career mode (openTeams('career'), src/ui-menus.js), one side, centred: the ladder's clubs only (no nation,
    no Legend), Made Teams and My League, the Super Fan's club first in its group, opening on his club. Pick takes it, with the group's list

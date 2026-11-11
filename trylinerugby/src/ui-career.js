@@ -156,6 +156,7 @@ function lookHead() {                                // the screen's words and b
   if (eb) { if (setup) eb.innerHTML = profileDots(3); else eb.textContent = pro ? 'My Profile' : 'New Player'; }
   $('ck-back').hidden = setup; $('ck-back').textContent = pro ? 'Back to Profile' : 'Back to New Player';
   $('ck-pback').hidden = $('ck-skip').hidden = $('ck-done').hidden = !setup;
+  if (setup && typeof profileLookBegun === 'function' && profileLookBegun()) $('ck-skip').hidden = true;   // a look begun: Done or Back, never Skip (src/profile.js)
   $('ck-body-f').hidden = !lookBody();
   $('s-career-look').classList.toggle('ck-pro', pro); $('s-career-look').classList.toggle('ck-setup', setup);
 }
@@ -168,7 +169,7 @@ function careerLookOpen(mode) {
   if (art && art.then) art.then(() => { if (lookDraft() && !$('s-career-look').hidden) careerLookShow(); });
   if (lookFor !== 'career') profileFocus($('s-career-look'), $('ck-build').querySelector && $('ck-build').querySelector('[aria-pressed="true"]'));   // the arrow keys and Escape from the start (src/profile.js)
 }
-function careerLookSet(key, v) { const L = lookDraft(); if (!L) return; L[key] = v; renderCareerLook(); if (lookFor === 'profile' && typeof profileLookPicked === 'function') profileLookPicked(); }
+function careerLookSet(key, v) { const L = lookDraft(); if (!L) return; L[key] = v; renderCareerLook(); if (lookFor !== 'career' && typeof profileLookPicked === 'function') profileLookPicked(); }
 function careerLookShow() {                          // the picture: the art when it is in, his shirt when not
   const L = lookDraft(), club = lookClub(), cv = $('ck-pic'), drawn = artPreview(cv, club, L);
   cv.hidden = !drawn; $('ck-shirt').hidden = drawn;
@@ -190,7 +191,7 @@ $('ck-back').addEventListener('click', () => {
   renderCareerNew(); careerShow('s-career-new');
 });
 $('ck-pback').addEventListener('click', () => profileStep(2));          // the setup's: back to its Club, the look kept for coming back
-$('ck-skip').addEventListener('click', () => profileSetupEnd(false));   // the setup ends with no look
+$('ck-skip').addEventListener('click', () => profileSkip());           // the setup ends with no look (shown only while nothing has been picked)
 $('ck-done').addEventListener('click', () => profileSetupEnd(true));    // the setup ends with this look
 /* The club: the team screen in its Career mode (openTeams('career'), src/ui-menus.js), one side, centred: the ladder's clubs only (no nation,
    no Legend), Made Teams and My League, the Super Fan's club first in its group, opening on his club. Pick takes it, with the group's list

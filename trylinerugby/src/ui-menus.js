@@ -421,7 +421,7 @@ function myHome() {
   const nat = $('my-nat');
   nat.innerHTML = `${jersey(n, 'mini')}<b aria-hidden="true">${esc(listName(n))}</b><span class="sr">${esc('My Country: ' + listName(n) + (played(g) ? ', ' + figs(g) : ''))}</span>`;   // read out with its own record (a span takes no aria-label)
   nat.setAttribute('title', listName(n) + (played(g) ? ': ' + figs(g) : ''));
-  $('b-my').setAttribute('aria-label', 'Change My Team: ' + listName(c) + ', ' + listName(n));
+  $('b-my').setAttribute('aria-label', 'Change My Profile: ' + listName(c) + ', ' + listName(n));   // it opens My Profile (src/profile.js), whose own Change is My Team's
   homeFit();
 }
 /* The Trophy Cabinet's strip: each kind won, its trophy in its metal and the count (2 Titles · 1 Cup), the Super Fan's rosette; shown once a
@@ -1003,7 +1003,7 @@ function renderTeams() {
   }
   const go = $('t-go'), label = pickPrimary();
   go.textContent = label; go.hidden = !label;
-  $('t-back').textContent = pair ? 'Back to Players' : pickMode === 'career' ? 'Back to New Player' : 'Back to Menu';
+  $('t-back').textContent = pair ? 'Back to Players' : pickMode === 'career' ? 'Back to New Player' : pickMode === 'my' && pickFrom && pickFrom.id === 'pf-team' ? 'Back to Profile' : 'Back to Menu';   // My Team's picker from My Profile goes back there (myDone)
   navOnly = null;                                            // 2 Players: each seat drives its own side (pickNav)
   storeTeamsRender();                                        // locks on Create Team, Edit, Add Your Team and the Legends (src/ui-store.js)
   if ($('s-teams').hidden) fitNames(); else pickFit();

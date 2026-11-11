@@ -332,7 +332,7 @@ const fresh = () => {                                       // a new game on the
 {
   fresh();
   ok(H.myClub() === X.CLUBS[0] && H.myNat(null).id === 'ENG' && D.settings().myClub === null && D.settings().myNat === null, 'a new game: Farnham and England');
-  ok($('my-name').textContent === 'Farnham' && /--kit:#1a1a1a/.test($('my-shirt').innerHTML) && /England/.test($('my-nat').innerHTML) && /--kit:/.test($('my-nat').innerHTML) && $('b-my').getAttribute('aria-label') === 'Change My Team: Farnham, England', 'the home\'s My Team: the club\'s shirt and name, the country\'s, Change read out with both');
+  ok($('my-name').textContent === 'Farnham' && /--kit:#1a1a1a/.test($('my-shirt').innerHTML) && /England/.test($('my-nat').innerHTML) && /--kit:/.test($('my-nat').innerHTML) && $('b-my').getAttribute('aria-label') === 'Change My Profile: Farnham, England', 'the home\'s My Team: the club\'s shirt and name, the country\'s, Change read out with both, for where it goes (My Profile)');
   $('b-my').click(); $('pf-team').click();   // My Profile, then My Team's picker on it (src/profile.js)
   const P6 = T.picker, v6 = () => P6.view(0), to6 = (n, key) => { P6.group(n, P6.view(n).ladder.findIndex(g => g.key === key) - P6.view(n).gi); return P6.view(n); }, mineTag = n => /<span class="gap mine">My Team<\/span>/.test($('t-side' + n).innerHTML);
   ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && P6.one() && v6().group.key === 'sur' && v6().ladder.some(g => g.key === 'nat.eng') && v6().ladder.some(g => g.key === 'fra') && $('t-go').textContent === 'Done', 'My Team: Pick Your Club on its group, the whole ladder to look anywhere, Done while the club is it');

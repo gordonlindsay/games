@@ -1,4 +1,4 @@
-// The profile (README, Profile): the first launch's setup (Age Group, Gender, Club, Your Look, each with Skip and Back, Not Now on the first,
+// The profile (README, Profile): the first launch's setup (Age Group, Gender, Club, Your Look, each with Skip and Back, none on the first,
 // Done at the end) only with no save at all; what each answer sets (the level, the category, My Team's club and country, Career's New
 // Player); nothing locked after; My Team's Change opening My Profile, the old picker one press on; the save's profile field (bad values,
 // old saves); your player in My Team's box, in New Career and on one man of your side (the fly-half) in Quick Match, Championship and a
@@ -105,11 +105,12 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
 // 3. The steps: Age Group, Gender, Club (the team screen in its one-side mode), Your Look; each with Skip and Back, Not Now on the first.
 {
   fresh(); F.open();
-  ok(shown() === 's-setup' && F.run().step === 0 && $('su-title').textContent === 'Age Group' && /aria-label="1 of 4"/.test($('su-step').innerHTML) && ($('su-step').innerHTML.match(/<i /g) || []).length === 4 && $('su-back').textContent === 'Not Now', 'it opens on Age Group, its place a bar a step (1 of 4, read out), with Not Now');
+  ok(shown() === 's-setup' && F.run().step === 0 && $('su-title').textContent === 'Age Group' && /aria-label="1 of 4"/.test($('su-step').innerHTML) && ($('su-step').innerHTML.match(/<i /g) || []).length === 4 && $('su-back').disabled === true, 'it opens on Age Group, its place a bar a step (1 of 4, read out), with no Back: nothing is before it (its slot kept empty, no Not Now beside Skip)');
+  $('su-back').click(); F.back(); ok(F.run() && F.run().step === 0 && shown() === 's-setup', 'and Back there does nothing: the setup stays on Age Group');
   ok(/data-v="mini"[\s\S]*Mini[\s\S]*Up to 11[\s\S]*data-v="junior"[\s\S]*Junior[\s\S]*12 to 17[\s\S]*data-v="adult"[\s\S]*Adult[\s\S]*18 and Over/.test($('su-opts').innerHTML), 'Mini (Up to 11) | Junior (12 to 17) | Adult (18 and Over), in that order');
   ok(F.AGES[0].line === 'Up to ' + T.sidesOf.MIXED_THROUGH && F.AGES[1].line.startsWith(T.sidesOf.MIXED_THROUGH + 1 + ' '), 'the Mini band ends where the mixed game does (MIXED_THROUGH), and Junior starts after it');
   ok((($('su-opts').innerHTML.match(/<svg /g)) || []).length === 3 && (($('su-opts').innerHTML.match(/style="--k:#[0-9a-f]{6}"/g)) || []).length === 3 && new Set(F.AGES.map(a => a.k)).size === 3, 'each card a picture on its own colour');
-  $('su-skip').click(); ok(F.run().step === 1 && F.run().age === null && $('su-title').textContent === 'Gender' && $('su-back').textContent === 'Back', 'Skip: on to Gender, no age group');
+  $('su-skip').click(); ok(F.run().step === 1 && F.run().age === null && $('su-title').textContent === 'Gender' && $('su-back').disabled === false, 'Skip: on to Gender, no age group, Back there');
   ok(/data-v="male"[\s\S]*Male[\s\S]*data-v="female"[\s\S]*Female[\s\S]*data-v="na"[\s\S]*Not Say/.test($('su-opts').innerHTML) && !/su-line/.test($('su-opts').innerHTML), 'Gender: Male | Female | Not Say');
   $('su-back').click(); ok(F.run().step === 0 && $('su-title').textContent === 'Age Group', 'Back: Age Group again');
   F.answer('junior'); ok(F.run().step === 1 && F.run().age === 'junior' && st.diff === 1 && !st.kids, 'an age group picked moves on, and sets nothing yet');
@@ -132,13 +133,17 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   ok(st.cat === 'men' && st.diff === 1 && st.myClub === null && json(F.get()) === json(NONE), 'nothing is set before the end');
   $('ck-done').click();
   ok(shown() === 's-home' && F.run() === null && st.cat === 'women' && st.diff === 1 && !st.kids && st.myClub === 'BTH' && st.myNat === 'ENG' && json(F.get()) === json({ age:'adult', gender:'female', look:{ g:1, skin:4, hair:1, style:10, b:1 } }) && json(saved().profile) === json(F.get()), 'Done: Adult (Normal), Female (Women), Bath and England, the look, saved; the home');
-  // Skip on Your Look: everything else set, no look; Not Now: nothing at all
-  fresh(); F.open(); F.answer('junior'); F.answer('male'); $('t-skip').click(); $('ck-skip').click();
+  // Skip on Your Look: everything else set, no look; but only until a pick is made, after which Skip goes and a look begun is kept
+  fresh(); F.open(); F.answer('junior'); F.answer('male'); $('t-skip').click();
+  ok(!$('ck-skip').hidden && !$('ck-done').hidden, 'Your Look, nothing picked yet: Skip and Done');
+  $('ck-skip').click();
   ok(shown() === 's-home' && json(F.get()) === json({ age:'junior', gender:'male', look:null }) && st.diff === 0 && !st.kids && st.cat === 'men' && st.myClub === null, 'Skip on Your Look: Junior and Male set, no look, My Team as it was');
-  fresh(); for (const k in memory) delete memory[k]; F.open(); $('su-back').click();
-  ok(shown() === 's-home' && F.run() === null && json(F.get()) === json(NONE) && st.diff === 1 && st.cat === 'men' && !!memory['tryline.v1'] && !('profile' in saved()), 'Not Now: the home, nothing set (Normal, Men, Farnham), and a save, so the setup does not come back');
-  fresh(); F.open(); for (let i = 0; i < 2; i++) $('su-skip').click(); $('t-skip').click(); $('ck-skip').click();
-  ok(json(F.get()) === json(NONE) && st.diff === 1 && st.cat === 'men' && !st.kids && st.myClub === null && st.myNat === null, 'Skip on every step keeps the game\'s own defaults (Normal, Men, Farnham, England)');
+  fresh(); F.open(); F.answer('mini'); F.answer('female'); $('t-skip').click(); T.sidesOf.careerLookSet('hair', 4);
+  ok($('ck-skip').hidden && !$('ck-done').hidden && !$('ck-pback').hidden, 'a pick made on Your Look: Skip goes, Back and Done stay');
+  $('ck-pback').click(); $('t-skip').click(); ok($('ck-skip').hidden, 'and stays gone coming back to it');
+  F.skip(); ok(shown() === 's-home' && F.get().look && F.get().look.hair === 4, 'a look begun is kept even by a skip that comes another way (the look a child built is never thrown away)');
+  fresh(); for (const k in memory) delete memory[k]; F.open(); for (let i = 0; i < 2; i++) $('su-skip').click(); $('t-skip').click(); $('ck-skip').click();
+  ok(shown() === 's-home' && F.run() === null && json(F.get()) === json(NONE) && st.diff === 1 && st.cat === 'men' && !st.kids && st.myClub === null && st.myNat === null && !!memory['tryline.v1'] && !('profile' in saved()), 'Skip on every step keeps the game\'s own defaults (Normal, Men, Farnham, England) and saves, so the setup does not come back');
   // Not Say: the Body row on Your Look, the body its own
   fresh(); F.open(); F.answer('adult'); F.answer('na'); $('t-skip').click();
   ok(!$('ck-body-f').hidden && F.lookDraft().g === 0, 'Not Say: a Body row on Your Look, Male to start');
@@ -161,7 +166,13 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
     if (cat !== want[age][g] || json(got) !== json(lv[age])) bad.push(`${age}/${g}: ${cat} ${json(got)}`);
   }
   ok(!bad.length, `Mini: the Kids level and Minis whoever plays; Junior: Easy; Adult: Normal; Men for Male and Not Say, Women for Female; with no age group the gender alone, Normal kept (${bad.join('; ') || '16 pairs'})`);
-  ok(F.level('adult') === 2 && F.level('junior') === 1 && F.level('mini') === 0 && F.level(null) === null && F.cat(null, null) === null, 'the Difficulty row\'s buttons: Kids, Easy, Normal; nothing for nothing');
+  ok(F.level('adult') === 2 && F.level('junior') === 1 && F.level('mini') === 0 && F.level(null) === null && F.cat(null, null, 'women') === null, 'the Difficulty row\'s buttons: Kids, Easy, Normal; nothing for nothing');
+  // an answer left blank keeps the side as it is: a gender alone never moves a side off Minis, an age group alone never between Men and Women
+  const keep = [['adult', null, 'women', 'women'], ['junior', null, 'women', 'women'], ['adult', null, 'men', 'men'], ['adult', null, 'minis', 'men'], ['junior', null, 'minis', 'men'],
+    [null, 'na', 'minis', 'minis'], [null, 'male', 'minis', 'minis'], [null, 'female', 'minis', 'minis'], [null, 'male', 'women', 'men'], [null, 'female', 'men', 'women'], [null, 'na', 'men', 'men'],
+    ['adult', 'female', 'minis', 'women'], ['junior', 'na', 'women', 'men'], ['mini', null, 'women', 'minis']];
+  const wrong = keep.filter(([a, g, cur, want]) => F.cat(a, g, cur) !== want).map(([a, g, cur, want]) => `${a}/${g} on ${cur}: ${F.cat(a, g, cur)}, not ${want}`);
+  ok(!wrong.length, `a blank answer keeps the side: Junior or Adult alone keep Men or Women (Minis to Men), a gender alone keeps Minis, both given the table (${wrong.join('; ') || keep.length + ' cases'})`);
   const nat = id => { const t = club(id); return F.natOf(t, null); };
   ok(nat('BTH') === 'ENG' && nat('TLS') === 'FRA' && nat('DUB') === 'IRE' && nat('EDI') === 'SCO' && nat('CDF') === 'WAL' && nat('TRE') === 'ITA' && nat('AYR') === 'SCO' && nat('FAR') === 'ENG' && nat('EAL') === 'ENG' && nat('CPT') === 'RSA' && nat('AKL') === 'NZL', 'a club\'s country from the ladder: Bath England, Toulouse France, the URC\'s by their own (Dublin Ireland, Edinburgh Scotland, Cardiff Wales, Treviso Italy), Ayr Scotland, Farnham and Ealing England, Cape Town South Africa, Auckland New Zealand');
   ok(F.natOf({ key:'my0', custom:true, name:'X' }, null) === null && F.natOf(X.NATIONS[0], null) === null, 'none for a team you made or a nation');
@@ -171,6 +182,7 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
 {
   fresh(); F.open(); F.answer('mini'); F.answer('female'); $('t-skip').click(); $('ck-skip').click();
   ok(st.kids && st.diff === 0 && st.cat === 'minis', 'Mini, Female: the Kids level and Minis');
+  ok(T.drills.barred('tackle') && T.drills.barred('scrum') && T.drills.barred('back') && !T.drills.barred('tag'), 'so Mini hides Contact Games (Tackling, Driving, Ball Back), as the App Store note and README now say');
   X.catPick('women'); ok(st.cat === 'women' && F.get().age === 'mini' && F.get().gender === 'female', 'Women picked on the team screen afterwards: the category moves, the profile does not');
   T.kids.segSet(2); X.save(); ok(st.diff === 1 && !st.kids && F.get().age === 'mini' && saved().profile.age === 'mini', 'the Difficulty row moved to Normal: the level moves, the age group stays');
   H.myPick(club('BTH')); ok(st.myClub === 'BTH' && F.get().age === 'mini', 'My Team changed: the profile as it was');
@@ -180,15 +192,17 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
 //    the grown-up check); My Team's Change one press on, coming back here.
 {
   fresh(); X.restore({ settings:{ myClub:'BTH', myNat:'WAL' } });
+  H.render(); ok($('b-my').getAttribute('aria-label') === 'Change My Profile: Bath, Wales', `the home's Change is read out for where it goes, My Profile (${$('b-my').getAttribute('aria-label')})`);
   $('b-my').click();
   ok(shown() === 's-profile' && /Bath/.test($('pf-club').innerHTML) && /Wales/.test($('pf-club').innerHTML) && $('pf-team').getAttribute('aria-label') === 'Change My Team: Bath, Wales', 'Change in My Team\'s box: My Profile, with My Team on it, for a player who never saw the setup');
   ok($('pf-look').textContent === 'Make Your Look' && !$('pf-shirt').hidden, 'no look yet: the club\'s shirt, and Make Your Look');
   $('pf-team').click(); ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-title').textContent === 'Pick Your Club', 'My Team\'s Change: its picker, one press on (its old job)');
+  ok($('t-back').textContent === 'Back to Profile', `its Back names where it goes: Back to Profile (${$('t-back').textContent})`);
   ok($('t-go').textContent === 'Done', 'on My Team\'s club its primary is Done');
   P.step(0, 1); const next = X.listName(P.view(0).team); P.go(); ok(shown() === 's-teams' && $('t-title').textContent === 'Pick Your Country' && st.myClub !== 'BTH', `Pick ${next}: the country next, as ever`);
   P.go(); ok(shown() === 's-profile', 'Done: back to My Profile');
   $('pf-team').click(); $('t-back').click(); ok(shown() === 's-profile', 'and Back to it too');
-  D.openTeams('my'); $('t-back').click(); ok(shown() === 's-home', 'opened any other way, My Team\'s picker goes home as before');
+  D.openTeams('my'); ok($('t-back').textContent === 'Back to Menu', 'opened any other way, My Team\'s picker says Back to Menu'); $('t-back').click(); ok(shown() === 's-home', 'and goes home as before');
   $('b-my').click(); F.age('adult'); ok(F.get().age === 'adult' && st.diff === 1 && !st.kids && st.cat === 'men' && saved().profile.age === 'adult', 'Adult on My Profile: Normal and Men, saved');
   F.gender('female'); ok(F.get().gender === 'female' && st.cat === 'women' && st.diff === 1, 'Female: Women, the level left alone');
   F.age('mini'); ok(st.kids && st.diff === 0 && st.cat === 'minis', 'Mini: the Kids level and Minis');
@@ -203,6 +217,23 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   F.gender('na'); $('pf-look').click(); ok(!$('ck-body-f').hidden && F.lookDraft().g === 0, 'Not Say: the Body row, the body as it was');
   T.sidesOf.careerLookSet('g', 1); ok(F.get().look.g === 1, 'and its own body picked there');
   $('ck-back').click(); $('pf-back').click(); ok(shown() === 's-home', 'Back to Menu');
+  // a player who has picked a side, filling in one question with the other blank: the side is kept (the review's cases, 2026-11-11)
+  const once = (set, tap) => { fresh(); Object.assign(st, set); X.save(); $('b-my').click(); tap(); return { cat:st.cat, diff:st.diff, kids:st.kids, gate:!$('m-gate').hidden, barred:T.drills.barred('tackle') }; };
+  const w = once({ cat:'women', diff:1 }, () => F.age('adult'));
+  ok(w.cat === 'women' && w.diff === 1 && !w.gate, `Women, then Adult with no gender: still Women, Normal (${json(w)})`);
+  const wj = once({ cat:'women', diff:2 }, () => F.age('junior'));
+  ok(wj.cat === 'women' && wj.diff === 0, `Women on Hard, then Junior with no gender: still Women, Easy (${json(wj)})`);
+  const mn = once({ cat:'minis', kids:false, diff:1 }, () => F.gender('na')), mm = once({ cat:'minis', kids:false, diff:1 }, () => F.gender('male')), mf = once({ cat:'minis', kids:false, diff:1 }, () => F.gender('female'));
+  ok(mn.cat === 'minis' && mm.cat === 'minis' && mf.cat === 'minis' && mn.barred && mm.barred && mf.barred, `Minis, then a gender with no age group: still Minis (Not Say mixed by default, Male and Female too), Contact Games still hidden (${json([mn, mm, mf])})`);
+  const ma = once({ cat:'minis', kids:false, diff:1 }, () => F.age('adult'));
+  ok(ma.cat === 'men' && !ma.barred, `Minis, then Adult: Men, the age group says so (${json(ma)})`);
+  const mw = once({ cat:'men', diff:1 }, () => F.gender('female'));
+  ok(mw.cat === 'women' && mw.diff === 1, 'Men, then Female with no age group: Women, the level left alone');
+  // the row already chosen, pressed again: nothing set again
+  fresh(); $('b-my').click(); F.age('adult'); F.gender('male'); T.kids.segSet(3); X.catPick('women'); F.age('adult'); F.gender('male');
+  ok(st.diff === 2 && st.cat === 'women' && F.get().age === 'adult' && F.get().gender === 'male', `Adult and Male pressed again after Hard and Women were picked: Hard and Women kept (${st.diff}, ${st.cat})`);
+  F.age('junior'); ok(st.diff === 0 && st.cat === 'men', 'a different age group is set as ever: Junior, Easy, and Men for Male');
+  $('pf-back').click();
 }
 
 // 7. Your player: in My Team's box (the art, where it is in: the browser part below), in Career's New Player, and on one man of your side in
@@ -253,9 +284,11 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   ok(!/[←-⇿⟵-⟿]/.test(setup + src) && !/—/.test(setup + src), 'no arrow glyph and no em dash on the setup or My Profile, or in the code');
   ok(!/step \d of \d/i.test(setup) && !/'Step ' \+/.test(src), 'no "Step 1 of 4" in words: the game\'s rule for what a child reads (a game, not a lesson: tools/training.mjs), so a bar a step');
   ok(!/<input/.test(setup) && !/name|email|birth/i.test(setup.replace(/class="[^"]*"|id="[^"]*"/g, '')), 'nothing to type: no name, no birthday, nothing personal');
-  ok(/The game asks only an age group \(Mini, Junior or Adult\), to set its level, and keeps it on this device\./.test(html) && !/never asks for an age/.test(html), 'For Grown-Ups says what it asks and that it stays on the device');
+  ok(/The game asks an age group \(Mini, Junior or Adult\) and a gender, each one skippable, to set its level and side, and keeps them on this device\. Mini turns on the Kids level and Minis\./.test(html) && !/asks only an age group/.test(html) && !/never asks for an age/.test(html), 'For Grown-Ups says what it asks (an age group and a gender), that each can be skipped, what Mini turns on, and that it stays on the device');
   const md = fs.readFileSync(new URL('../PRIVACY.md', import.meta.url), 'utf8'), store = fs.readFileSync(new URL('../store-listing/APP_STORE.md', import.meta.url), 'utf8'), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   ok(/age group/i.test(md) && /gender/i.test(md) && /look/i.test(md) && /age group/i.test(store) && /gender/i.test(store) && /## Profile/.test(readme) && /node tools\/profile\.mjs/.test(readme), 'PRIVACY.md and the App Store notes say an age group, a gender and a look are kept on the device; README has its section');
+  const says = t => /Mini turns on the Kids level and Minis, which hide Contact Games, and only the grown-up check leaves the Kids level/.test(t) && !/nothing is shut off/i.test(t) && !/Not Now are on every step/.test(t) && /Skip on every step/.test(t);
+  ok(says(store) && says(readme), 'the App Review note and README say what Mini shuts off (Contact Games, left only past the grown-up check), and Skip, not Not Now, on every step (section 5 pins the behaviour: T.drills.barred)');
   const checks = fs.readFileSync(new URL('./check.mjs', import.meta.url), 'utf8'), howto = fs.readFileSync(new URL('./CHECKS.md', import.meta.url), 'utf8');
   ok(/'profile'/.test(checks) && /tools\/profile\.mjs/.test(howto), 'in the default gate and in CHECKS.md');
 }
@@ -304,8 +337,9 @@ async function browserChecks() {
       // the first launch, step by step, measured at each; then Done, and the home with your player in My Team's box
       const flow = await page.evaluate(async () => {
         const T = window.__tryline, $ = id => document.getElementById(id), out = [];
-        out.push(['boot', window.__measure(), T.profile.run() && T.profile.run().step]);
-        $('su-skip').click(); out.push(['gender', window.__measure()]);
+        const backIs = () => [$('su-back').textContent.trim(), getComputedStyle($('su-back')).visibility];
+        out.push(['boot', window.__measure(), T.profile.run() && T.profile.run().step, backIs()]);
+        $('su-skip').click(); out.push(['gender', window.__measure(), backIs()]);
         $('su-back').click(); document.querySelector('#su-opts [data-v="adult"]').click();
         document.querySelector('#su-opts [data-v="na"]').click(); out.push(['club', window.__measure(), T.debug.pickMode()]);
         $('t-go').click(); await (T.behind.ART.promise || Promise.resolve()); T.profile.lookOpen('setup'); out.push(['look', window.__measure(), !$('ck-body-f').hidden]);
@@ -319,6 +353,7 @@ async function browserChecks() {
       });
       const bad = flow.filter(([, m]) => m.scroll > 0 || m.wide > 0 || m.small.length || m.off.length || m.cut.length);
       ok(flow[0][1].id === 's-setup' && flow[0][2] === 0, `${kind}: a person's first launch opens the setup on Age Group`);
+      ok(flow[0][3][1] === 'hidden' && json(flow[1][2]) === json(['Back', 'visible']), `${kind}: no Back on the first step (its slot kept), Back on the second (${json([flow[0][3], flow[1][2]])})`);
       ok(!bad.length && flow.length === 7, `${kind}: Age Group, Gender, Club, Your Look, the home after and My Profile each fit with no scroll, nothing off the screen or cut short, every target 44px (${bad.map(([k, m]) => k + ' ' + json(m)).join('; ') || flow.length + ' screens'})`);
       ok(flow[2][2] === 'setup' && flow[3][2] === true, `${kind}: Club is the team screen's setup mode, and Not Say gives Your Look its Body row`);
       const home = flow[4][2];
@@ -341,10 +376,19 @@ async function browserChecks() {
         await p4.keyboard.press('Enter'); const k3 = await p4.evaluate(() => [window.__tryline.profile.run().age, window.__tryline.profile.run().step]);
         await p4.keyboard.press('Escape'); const k4 = await p4.evaluate(() => window.__tryline.profile.run().step);
         await p4.keyboard.press('ArrowUp'); const k5 = await p4.evaluate(() => document.activeElement && document.activeElement.id);
-        ok(k1 === 'mini' && k2 === 'junior' && json(k3) === json(['junior', 1]) && k4 === 0 && /^su-(back|skip)$/.test(k5), `${kind}: the arrow keys from the start (Mini, then Junior), Enter picks it and moves on, Escape is Back, Up reaches the top row (${json([k1, k2, k3, k4, k5])})`);
+        ok(k1 === 'mini' && k2 === 'junior' && json(k3) === json(['junior', 1]) && k4 === 0 && k5 === 'su-skip', `${kind}: the arrow keys from the start (Mini, then Junior), Enter picks it and moves on, Escape is Back, Up reaches Skip (no Back on the first step) (${json([k1, k2, k3, k4, k5])})`);
+        // the Club from the keyboard: the focus on the card, the arrows step the clubs, Enter picks; Escape is Back there too (the team screen has none of its own)
+        const at = () => p4.evaluate(() => { const T = window.__tryline, a = document.activeElement, r = T.profile.run(); return { screen:[...document.querySelectorAll('.screen')].find(x => !x.hidden).id, step:r && r.step, act:a && a.dataset ? a.dataset.act || a.dataset.v || a.id : null, club:T.picker.view(0) && T.picker.view(0).team && T.picker.view(0).team.name }; });
+        await p4.keyboard.press('ArrowDown'); await p4.keyboard.press('Enter'); await p4.keyboard.press('Enter'); const c1 = await at();
+        await p4.keyboard.press('ArrowRight'); const c2 = await at();
+        await p4.keyboard.press('Escape'); const c3 = await at();
+        await p4.keyboard.press('Enter'); const c4 = await at(); await p4.keyboard.press('Enter'); const c5 = await at();
+        await p4.keyboard.press('Escape'); const c6 = await at();
+        ok(c1.screen === 's-teams' && c1.step === 2 && c1.act === 'pick' && c2.act === 'pick' && c2.club !== c1.club && c3.screen === 's-setup' && c3.step === 1 && c4.step === 2 && c4.act === 'pick' && c5.screen === 's-career-look' && c5.step === 3 && c6.screen === 's-teams' && c6.step === 2,
+          `${kind}: the Club from the keyboard: the card focused, Right the next club, Escape back to Gender, Enter on to the Club and Enter picks; Escape on Your Look back to the Club (${json([c1, c2, c3, c4, c5, c6])})`);
         const reach = await p4.evaluate(() => {
           const T = window.__tryline, $ = id => document.getElementById(id), res = {};
-          const walk = () => { const s = [...document.querySelectorAll('.screen')].find(x => !x.hidden), all = [...s.querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0), seen = new Set(), todo = [T.navMove(0, 0, 0)];
+          const walk = () => { const s = [...document.querySelectorAll('.screen')].find(x => !x.hidden), all = [...s.querySelectorAll('button')].filter(b => !b.disabled && !b.closest('[hidden]') && b.getBoundingClientRect().width > 0), seen = new Set(), todo = [T.navMove(0, 0, 0)];
             while (todo.length) { const el = todo.pop(); if (!el || seen.has(el)) continue; seen.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); todo.push(T.navMove(0, dx, dy)); } }
             T.home.ring(null); return all.filter(b => !seen.has(b)).map(b => b.id || b.textContent.trim()); };
           T.profile.step(0); res.age = walk(); T.profile.step(1); res.gender = walk();
