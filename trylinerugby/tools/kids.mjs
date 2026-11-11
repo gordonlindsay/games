@@ -633,7 +633,11 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // EDGE='{"on":false}' node tools/kids.mjs gives the pin before it exactly, to1ovz lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv,
   // as GAME=<90353c3>/index.html KIDS_PRINT=1 does. Re-pinned again the same day for the review (a won Get Past is the carry's Line
   // Break, its window widens ahead; the first match moved, 1wazr74 before), with the same proof: EDGE off still gives to1ovz
-  const PIN = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
+  // Re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose: every match here moves but Two Player's
+  // half, which holds no catch or jolt that falls the other way. Proof, checked below: with KNOCK off this build gives BEFORE_KNOCK,
+  // the pin before them, exactly, as 20cbcaf does
+  const PIN = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
+  const BEFORE_KNOCK = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
   const pin = () => {
     const out = [];
     s.played = 99; s.kidsR = 0;
@@ -653,7 +657,10 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
     K.segSet(1); s.half = keep.half; s.played = keep.played; s.kidsR = keep.kidsR;
     return out.map(fnv).join(' ');
   };
-  { const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now); ok(now === PIN, `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${PIN})`); }
+  // KNOCK off runs first: the second match (Quick Match on Normal) reads something the first run leaves behind, so a run's pin is the
+  // run's own: the first one in a process gives BEFORE_KNOCK with KNOCK off, as the build before did; PIN is a second run's, KNOCK on
+  { if (T.knock) { T.knock.KNOCK.on = false; const off = pin(); T.knock.KNOCK.on = true; ok(off === BEFORE_KNOCK, `with the knock-ons off (KNOCK, src/knock.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+    const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now); ok(now === (T.knock ? PIN : BEFORE_KNOCK), `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${PIN})`); }
 
   // how long: the chosen half times the Kids pace, in simulated seconds, which is the chosen half in real time
   const pace = Y.MATCH_PACE.kids;

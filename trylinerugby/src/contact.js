@@ -159,9 +159,11 @@ function resolveContact(k) {                               // the end of the bin
       else if (ringed(c) && !RM && interactive()) M.shake = M.shakeT = ARCADE.hit.hitShake;
     } else if (ringed(q)) { tag('Big Hit', c.x, c.y); hitStop(70); } }
   }
-  const jolt0 = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + (tier === 'dom' && M.arcade ? ARCADE.hit.jolt : 0), jolt = jolt0 + traitJolt(q);   // the ball jolted loose in the tackle; an arcade Big Hit spills it more, and so does a Crunch
+  const spill = tier === 'dom' && M.arcade && (!knockLv('hit') || isHuman(q.team)) ? ARCADE.hit.jolt : 0;   // your arcade Big Hit spills it more: yours only (KNOCK.hit, src/knock.js; in Two Player both are yours)
+  const jolt0 = (CONTACT.jolt[tier] || 0)*(1 + (3 - M.nat[c.team].handling)*0.15) + spill, jolt = jolt0 + traitJolt(q);   // the ball jolted loose in the tackle; a Crunch spills it more too
   if (practice && practiceTackle(c, q)) return;            // a drill takes a made tackle before the ball can jolt loose
   const rj = rnd(), kj = M.kids && isHuman(c.team) ? KIDS.jolt : 1;   // Kids: your carrier keeps hold of it
+  if (globalThis.__knockSpy) globalThis.__knockSpy('jolt', c, { tier, q, spill, jolt0, jolt, kj, rj });   // the tools sort a jolt by its tier and the Big Hit's spill
   if (rj < jolt*kj) {
     st('jolts'); if (rj >= jolt0*kj) traitCall(q, 'crunch', c.x, c.y);   // a jolt his Crunch made
     c.down = 1.0; q.down = 0.6; q.tcd = 1.0;

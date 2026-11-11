@@ -27,7 +27,8 @@ if (process.argv.includes('--balance')) { await balance(); process.exit(0); }
 // 0. AI v AI, the demo and a tool's match with star sides play exactly as at 30e13e2, the commit before traits (run first, so nothing
 //    below can move them). The same seeded runs on that build's bundle gave BASE. If another change moves AI v AI on purpose,
 //    re-pin from that change's bundle without src/traits.js (tools/career.mjs pins the same kind of thing for sides with no star).
-const BASE = '3tgax5 1h1bhwf 15rrose 1b2asjm';   // re-pinned at the merge of pressure and the maul into wt/pr14int (2026-11-09), which together move AI v AI again on purpose; with PRESSURE='{"on":false}' MAUL='{"on":false}' this build gives 0b1293c's pin exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm; with MAUL off alone, pressure's, 6lf49d 1lj92ih 5pak35 h1zd4p; with PRESSURE off alone, the maul's, 4h557g 58fkyu f1m7h 15018yi. Pressure's note: re-pinned at pressure (PRESSURE, src/contact.js, 2026-11-09), which changes AI v AI and every match on purpose (the count, the spill, the egg's hops, a knock-on's beat); with PRESSURE='{"on":false}' this build gives the pin before it exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm. The maul's note: re-pinned at the maul (src/maul.js, 2026-11-09, as reviewed: never in the carrier's own in-goal or with a man from in front of the ball, a ringed tackler let go of a maul in the world, no Tackle into one once called): the CPU calls mauls in AI v AI, the demo and a tool's match, so all four moved; with MAUL='{"on":false}' this build gives the pin before it exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 6igeb3 tagplu lxxgtn 14mjifb
+const BASE = '1yrixxt 10pslx9 1ncbbu6 7vc81x';   // re-pinned for the knock-ons (2026-11-11, src/knock.js), which move AI v AI on purpose; with KNOCK='{"on":false}' this build gives BEFORE_KNOCK, 20cbcaf's pin (checked below)
+const BEFORE_KNOCK = '3tgax5 1h1bhwf 15rrose 1b2asjm';   // re-pinned at the merge of pressure and the maul into wt/pr14int (2026-11-09), which together move AI v AI again on purpose; with PRESSURE='{"on":false}' MAUL='{"on":false}' this build gives 0b1293c's pin exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm; with MAUL off alone, pressure's, 6lf49d 1lj92ih 5pak35 h1zd4p; with PRESSURE off alone, the maul's, 4h557g 58fkyu f1m7h 15018yi. Pressure's note: re-pinned at pressure (PRESSURE, src/contact.js, 2026-11-09), which changes AI v AI and every match on purpose (the count, the spill, the egg's hops, a knock-on's beat); with PRESSURE='{"on":false}' this build gives the pin before it exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm. The maul's note: re-pinned at the maul (src/maul.js, 2026-11-09, as reviewed: never in the carrier's own in-goal or with a man from in front of the ball, a ringed tackler let go of a maul in the world, no Tackle into one once called): the CPU calls mauls in AI v AI, the demo and a tool's match, so all four moved; with MAUL='{"on":false}' this build gives the pin before it exactly, 4318of 1hlbjrh 8b7zl6 6cc5jm. Before that: re-pinned at the PR #14 merge for its calmer passing (PASS_FLIGHT: the ball hangs longer and a catcher gets a moment): with PASS_FLIGHT='{"match":1,"kids":1,"grace":[0,0,0],"graceKids":0}' this build gives the old pin exactly, 6igeb3 tagplu lxxgtn 14mjifb
 function pin() {
   const out = [];
   for (const [a, b, i] of [['FRA', 'IRE', 0], ['PRE', 'SCO', 1]]) {
@@ -42,7 +43,8 @@ function pin() {
   { let n = 0; while (!T.M.over && n < 200000) { bot(0); T.update(STEP); n++; } out.push(json([T.M.score, T.M.tries, T.M.stats, n])); }
   return out.map(fnv).join(' ');
 }
-{ const now = pin(); ok(now === BASE, `AI v AI, the demo and a tool's match with star sides play as at 30e13e2 (seeded fingerprint ${now}, pinned ${BASE})`); }
+{ const now = pin(); ok(now === BASE, `AI v AI, the demo and a tool's match with star sides play as at 30e13e2 (seeded fingerprint ${now}, pinned ${BASE})`);
+  if (T.knock) { T.knock.KNOCK.on = false; const off = pin(); T.knock.KNOCK.on = true; ok(off === BEFORE_KNOCK, `and with the knock-ons off (KNOCK, src/knock.js), as 20cbcaf: the pin before them (${off}, pinned ${BEFORE_KNOCK})`); } }
 
 // 1. the table
 {
@@ -245,10 +247,13 @@ function pin() {
   ok(json(ankleE) === json(ankle0E) && ankleE.every(o => !o.call && !/Hand-Off/.test(o.tags)), `a broken ankle tap on a Hand-Off carrier: no Hand-Off, no Fend, and he stumbles or is tripped as ever (${ankle.broken} broken: ${ankle.trips} tripped, ${ankle.stumbles - ankle.trips} stumbled, ${ankle.fends} Fends; the same ${ankle0.broken}, ${ankle0.trips}, ${ankle0.stumbles - ankle0.trips} and ${ankle0.fends} without him)`);
   ok(ankle.trips > 0 && ankle.stumbles > ankle.trips && ankleE.some(o => /Tripped/.test(o.tags)), 'and the ringed tackler still sees Tripped');
 
-  // Safe Hands: the catch and the offload. Each a fresh match, so every call-out counted is shown
+  // Safe Hands: the catch and the offload. Each a fresh match, so every call-out counted is shown. 3000 catches since the knock-ons
+  // (2026-11-11, src/knock.js) halved the base under every catch: this hard one knocks on 11.75% of the time where it was 14.5%, so
+  // 1500 left the count only just over its bar of a tenth; the bar is the same share of twice as many
+  const CATCH_N = 3000;
   const catchEach = (has, arcade, kind = 'kick') => {
     const out = [];
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < CATCH_N; i++) {
       play(even({ handling:1 }), even(), { arcade }); const M = T.M, p = M.players[3];
       give(p, ...(has ? ['safe'] : []));
       M.phase = 'play'; M.ball.state = 'air'; M.ball.f = { kind, team:1 };
@@ -260,10 +265,10 @@ function pin() {
   };
   const catches = (has, arcade) => catchEach(has, arcade).filter(o => o.knock).length;
   const c0E = catchEach(false, true), c1E = catchEach(true, true), k0 = c0E.filter(o => o.knock).length, k1 = c1E.filter(o => o.knock).length;
-  ok(k0 > 150 && k1 <= Math.ceil(k0*R.TRAIT.safe.hands*1.5), `Safe Hands: knock-ons at a hard catch near zero (${k0} to ${k1} of 1500)`);
+  ok(k0 > CATCH_N/10 && k1 <= Math.ceil(k0*R.TRAIT.safe.hands*1.5), `Safe Hands: knock-ons at a hard catch near zero (${k0} to ${k1} of ${CATCH_N})`);
   {
     const bad = c1E.filter((o, i) => (o.call > 0) !== (c0E[i].knock && !o.knock)).length, called = c1E.filter(o => o.call > 0).length;
-    ok(bad === 0 && called === k0 - k1 && c1E.every(o => o.shown === o.call), `Safe Hands calls only a catch he saved: ${called} of his ${1500 - k1} catches, the ones the same draw knocked on without him (${bad} wrong)`);
+    ok(bad === 0 && called === k0 - k1 && c1E.every(o => o.shown === o.call), `Safe Hands calls only a catch he saved: ${called} of his ${CATCH_N - k1} catches, the ones the same draw knocked on without him (${bad} wrong)`);
     const easy = catchEach(true, true, 'pass');
     ok(easy.filter(o => o.call > 0).length < easy.filter(o => !o.knock).length*0.2, `an easier catch (a pass under pressure) is seldom one he saved: ${easy.filter(o => o.call > 0).length} of ${easy.filter(o => !o.knock).length}`);
   }

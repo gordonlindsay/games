@@ -83,7 +83,7 @@ Not Say is mixed wherever the game is (Minis, through `MIXED_THROUGH`), otherwis
 Matches you play are arcade; AI v AI, the demo, practice and the balance tools are not, so their numbers are unchanged.
 
 - **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds (on Easy, your side against the CPU: two good moments, a Line Break one of them, for 15 seconds; Easy, below): 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length.
-- **Big Hit.** Your dominant tackle now takes the full banner, a 180ms freeze and a harder shake, and spills the ball 12% more often. Taking one shakes the screen too.
+- **Big Hit.** Your dominant tackle now takes the full banner, a 180ms freeze and a harder shake, and spills the ball 12 points more often (21% of the time at average hands, where any Big Hit spills it 9%). Taking one shakes the screen too, and that is all: the CPU's Big Hit on yours spills it no more than a Big Hit in any other match (until 2026-11-11 it did, against this line: `KNOCK.hit`, Catching and knock-ons). In Two Player both sides are yours.
 - **Golden Try.** Quick Match and Two Player level at full time go to sudden-death extra time, half a half long. Any score wins it; a try needs no conversion. Still level at its hooter, the draw stands. A championship keeps its draws; a cup's knockout or Test has the Golden Try too, and is never left level (Silverware).
 
 Tuning lives in `ARCADE` in `src/arcade.js`; `node tools/arcade.mjs` checks it.
@@ -526,6 +526,8 @@ AI v AI at all three levels (asked to play Kids or not), the demo, the harness's
 
 **Since the edge on Easy** (2026-11-10, Easy above). Kids is Easy underneath, so it has the edge too: the Line Break (called and heard, no hold), On Fire after two good moments for 15 seconds, and the stronger carrier. The ceiling is still at most Easy at the same half for each child by margin, and for the 6 year old 4 points under it by matches won, as before the edge; the 7 to 8 year old now settles at the ceiling (0.984), winning 89% by 3.1 tries where he won 82% by 2.2. Bringing him back nearer 81% would take a ceiling harder than the new Easy for the 6 year old; the owner chose to keep the edge in Kids (2026-11-10), so children win more and Move Up to Easy comes sooner.
 
+**Since the knock-ons** (2026-11-11, Catching and knock-ons). The levers act in Kids too, `KIDS.hands` still on top for your side. The 7 to 8 year old settles at 0.988 where he settled at 0.984, both at the ceiling, winning 91% by 3.21 tries against 89% by 3.07, and Move Up to Easy comes up in 8 of his 16 runs (median match 78) against 4 (97). The ceiling is still at most Easy at the same half for each child by margin, and for the 6 year old 1 point under it by matches won where it was 4.
+
 **Two Player** keeps Easy | Normal | Hard per player. Kids there would need its own per-player store, per-side levers and a rule for a close-up the other player chooses; Two Player is for computers, so it is left as it is.
 
 **The grown-up check.** `parentGate(onPass, onCancel)` opens `#m-gate`: "Ask a Grown-Up", a multiplication written in words (a teen times six to nine with a three-figure answer: 22 questions, 102 to 171), and ten figure keys with Delete | Cancel (two rows of five on a screen under 560px). Only the right answer calls `onPass`; a wrong one asks a new question, and a second wrong one in a row rests the keys ("Wait", the keys dimmed and a bar running down) for 10s, then 20s, 40s and 60s at most until a right answer. The rest outlives the card, so shutting it and opening it again does not skip it; in the app it outlives the game too (the rest's end and the count of rests are kept under `tryline.gate` and read back at start), so closing the app does not skip it either. Tapping 9 and 0 in turn, which passed the first cut in about 100 taps, now never passes, and a thousand random guesses take about eight hours of rests. Touch, the keyboard (figures, Backspace, Escape, Tab inside the card: the rest of the page is inert) and a controller (the card is the nav layer; Back is Cancel) all reach it. Opened by touch or the keyboard, the DOM focus starts on 1; opened from a controller, the chalk ring does and there is no DOM focus, so only one key is outlined. The card sits over every other card and under Turn Your Phone Sideways (`#rotate`, raised to z-index 40 so it covers the practice card as well). Where the game reaches outside itself:
@@ -841,6 +843,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/passing.js`, `src/contact.js`, `src/movement.js` | Passing, tackling, sprint, team movement and match update |
 | `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
 | `src/maul.js`, `src/render-maul.js` | The maul: the call, the close-up's drive, the maul driven in the world with nobody in it, and its close-up's drawing |
+| `src/knock.js` | The knock-on levers (`KNOCK`, read through `knockLv`): the unforced base, the interception's term, the Big Hit's spill yours only, the Knock-On tag |
 | `src/championship.js` | Fixtures, results, standings and title race |
 | `src/cups.js`, `src/ui-cups.js` | Silverware: the European Cup, World Cup, Home Nations Tour and Triple Crown, their screens and the Trophy Cabinet's kinds |
 | `src/render-*.js` | Pitch, players, close-up scenes and match drawing; `render-behind.js` is the optional behind views |
@@ -1456,7 +1459,11 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   Half the failures are held (an ordinary ruck); the rest are 55% Knock-On, 45% Loose Ball. The CPU tries one in
   0.10 x (0.6 + 0.2 x (handling - 3)) of its Soft and Wrap binds, never from a Big Hit (about 2 a match; it was 0.30
   and 5.7 a match, and that rate cost a player who never sprints about a point on Normal and four on Hard).
-- **The ball jolted loose:** 9% of Big Hits, 2% of Wraps, 1% of Softs, x(1 + 0.15 a handling point under 3). 55%
+- **The ball jolted loose:** 9% of Big Hits, 2% of Wraps, 1% of Softs, x(1 + 0.15 a handling point under 3), and in a
+  match you play 12 points more for your Big Hit (`ARCADE.hit.jolt`), never the CPU's on yours (`KNOCK.hit`, 2026-11-11:
+  before, the CPU's had it too). Measured with the bot on Normal (80 matches, Catching and knock-ons has every level),
+  yours / the CPU's a match before then after: knock-ons from the spill alone 0.50 / 0.21, 0 / 0.29; from the tiers
+  0.57 / 0.30, 0.64 / 0.30; failed offloads 0.60 / 0.05, 0.71 / 0.05; balls jolted loose in all 1.94 / 0.93, 1.13 / 0.95. 55%
   Knock-On (a scrum to the tacklers), 45% **Loose Ball**: it pops 2–5 m/s back towards the carrier's own line, for
   anyone. Those are the rates at no pressure; pressure adds to them (below). The Loose Ball hops as an egg, and the
   Knock-On hops for 0.8s before its whistle (The egg, below).
@@ -1525,7 +1532,11 @@ Arrays are by level (Easy, Normal, Hard). New engine code reads the two-player s
   recoiling from a Big Hit; a white impact ring on a Big Hit, with a 70ms hit-stop and a 3px shake when it is yours
   (no shake under reduced motion); the slide-off and the roll-away smoothed over at most 9 m/s, with a quarter turn;
   a wobble while tripped; the gold trail and two speed streaks on a sprint; and on-pitch tags (Big Hit, Ankle Tap,
-  Tripped, Fend, Offload, Loose Ball, Pressure On), at most two at a time, about 27 a match on Normal. Sounds: 'tackle' at the
+  Tripped, Fend, Offload, Loose Ball, Pressure On, Knock-On), at most two at a time. In the census (`tools/contact.mjs`:
+  120 bot matches on Normal, 4-minute halves, both sides' tags, the bot's Side Steps apart) that is about 52 a match: 38
+  under the census's bar of 40 (35.5 before the knock-ons, which leave more phases to tag), Pressure On 6.5 and Knock-On
+  7.8, each held by a ceiling of its own (12 and 10). Counted with the rest, Knock-On takes them to about 46, over the
+  bar; that is open for the owner (Catching and knock-ons). Sounds: 'tackle' at the
   bind, 'hit', 'whiff', 'trip', 'whoosh' when a sprint starts, 'tick' when the meter fills.
 
 **Measured** (`bot.mjs`, 4-minute halves, duels live, 12 seeds x 120 matches a cell; `census.mjs`-style census of 60
@@ -1762,6 +1773,113 @@ A long pass stays off the lever: it hangs already, and with the lever on top the
   moving), the Block lane, a census guard over 12 bot matches a level with the thumb holding its direction, and the
   open shoulder (the spot, the slide, the mirror, and the white, tinted and gold rings).
 
+### Catching and knock-ons
+
+The owner, 2026-11-11: "Reduce the knock ons a bit. Happening too randomly." He chose **Cut the Unexplained**: about a
+third fewer, the drops with no visible cause cut, the earned ones kept. Every lever is in `KNOCK` (`src/knock.js`), read
+through `knockLv`, and acts everywhere (AI v AI, the demo, Two Player, the drills), so the game reads the same to watch as
+to play. `KNOCK='{"on":false}' node tools/sim.mjs` plays exactly as 20cbcaf, the build before, draw for draw;
+`KNOCK='{"base":0.6}' node tools/bot.mjs` tries other values.
+
+A catch (`catchBall`, src/match.js) draws one number against a chance that is a sum of terms, then its multipliers:
+
+- **The base**, 0.015 + 0.01 a handling point under 5 (3.5% at handling 3), on every catch. Alone it is the clean catch
+  dropped with nobody of the other side within 1.8m, the drop with no cause anyone can see. Now **half of it**
+  (`KNOCK.base` 0.5): 1.75% at handling 3.
+- **Marked**, a man of the other side within 1.8m: +0.04. **A long pass**: +`LONG.knock` 0.03. **A kick**: +0.05. Kept,
+  but the halved base sits under each, so these catches knock on about a fifth less often (at handling 3 a marked catch
+  7.5% to 5.75%, a kick 8.5% to 6.75%, a long pass 6.5% to 4.75%; Measured, below).
+- **An interception**: +0.2 before, now **`KNOCK.intercept` 0.07**. Most are a pass your man ran into: the man under your
+  ring takes one he is within 1.1m of 40% of the time and an AI teammate 18%, with no button pressed (src/ball.js, as
+  before), and then dropped it about one time in four. Now about one in ten. The CPU's interceptions are the same rule.
+- Then, as before: On Fire x0.5, Kids `KIDS.hands` (your side), a career's Team Spirit, Safe Hands x0.1.
+
+In the tackle (Contact), the arcade Big Hit's 0.12 (`ARCADE.hit.jolt`) now spills the ball only when the tackler's side is
+a person's (`KNOCK.hit`), as its comment and the Big Hit line in Arcade always said; until now the CPU's Big Hit on your
+carrier had it too. The
+other contact knock-ons, the jolt's tiers, a failed offload and pressure (always a Loose Ball, never a scrum), are as they
+were. A knock-on of any kind in a match you play now shows **Knock-On** over the man who dropped it (`KNOCK.tag`), as Loose Ball
+does (AI v AI and the demo show no tags, as ever); it draws nothing. It is about 8 a match in the contact census, both
+sides together, under a ceiling of its own (Open for the owner: the tag stream, below).
+
+A catch draws one number whatever its chance, and a jolt one whatever its size, so only outcomes move: with KNOCK on and
+off the same seed draws the same number, and a catch falls the other way only when that number lies between the two chances
+(`tools/knock.mjs`).
+
+**Measured** (`node tools/knock.mjs --balance`, SEED 7, the same seeded matches with KNOCK off then on). Knock-ons a match,
+yours / the CPU's (AI v AI: home / away), before then after. Unforced is a clean catch dropped with nobody within 1.8m;
+the spill is a Big Hit's knock-on that only the arcade 0.12 made, on your carrier the CPU's (gone) and on the CPU's yours.
+
+| Source | AI v AI, Normal | Bot, Easy | Bot, Normal | Bot, Hard | Casual adult, Easy |
+|---|---|---|---|---|---|
+| Unforced catch | 1.08 / 1.12, 0.63 / 0.53 | 1.01 / 0.35, 0.39 / 0.21 | 0.84 / 0.40, 0.50 / 0.15 | 1.09 / 0.61, 0.61 / 0.19 | 1.35 / 0.41, 0.76 / 0.10 |
+| Marked catch | 1.43 / 1.32, 0.98 / 0.97 | 0.26 / 0.17, 0.38 / 0.09 | 0.45 / 0.35, 0.33 / 0.23 | 0.44 / 0.39, 0.39 / 0.23 | 0.71 / 0.35, 0.61 / 0.22 |
+| Long pass | 0.15 / 0.27, 0.17 / 0.21 | 0 / 0.10, 0 / 0.05 | 0 / 0.03, 0 / 0.05 | 0 / 0.10, 0 / 0.07 | 0 / 0.10, 0 / 0.05 |
+| Kick catch | 0.25 / 0.19, 0.23 / 0.15 | 0.35 / 0.09, 0.30 / 0.14 | 0.38 / 0.10, 0.29 / 0.10 | 0.25 / 0.15, 0.23 / 0.11 | 0.44 / 0.15, 0.31 / 0.15 |
+| Interception | 2.35 / 2.52, 1.01 / 1.28 | 0.86 / 0.35, 0.36 / 0.23 | 1.54 / 0.72, 0.61 / 0.30 | 1.74 / 0.91, 0.64 / 0.38 | 1.16 / 0.80, 0.58 / 0.17 |
+| Big Hit: the spill | 0 / 0, 0 / 0 | 0.33 / 0.19, 0 / 0.14 | 0.50 / 0.21, 0 / 0.29 | 0.59 / 0.34, 0 / 0.44 | 0.51 / 0.24, 0 / 0.31 |
+| Big Hit, Wrap, Soft | 0.79 / 0.69, 0.77 / 0.84 | 0.34 / 0.26, 0.35 / 0.25 | 0.57 / 0.30, 0.64 / 0.30 | 0.49 / 0.40, 0.58 / 0.38 | 0.44 / 0.38, 0.53 / 0.34 |
+| Failed offload | 0.19 / 0.24, 0.17 / 0.20 | 0.45 / 0.06, 0.47 / 0.07 | 0.60 / 0.05, 0.71 / 0.05 | 0.50 / 0.07, 0.57 / 0.10 | 0.40 / 0.06, 0.53 / 0.05 |
+| **All** | **12.60, 8.15** | **5.17, 3.42** | **7.01, 4.54** | **8.06, 4.90** | **7.50, 4.71** |
+| Yours / the CPU's | 6.24 / 6.36, 3.96 / 4.19 | 3.60 / 1.57, 2.25 / 1.18 | 4.86 / 2.15, 3.08 / 1.46 | 5.09 / 2.98, 3.01 / 1.89 | 5.01 / 2.49, 3.32 / 1.39 |
+| Unexplained (unforced, interception, the spill on you) | 7.07, 3.45 | 2.90, 1.19 | 4.01, 1.56 | 4.93, 1.81 | 4.23, 1.61 |
+| Earned (the rest) | 5.53, 4.71 | 2.28, 2.24 | 3.01, 2.97 | 3.13, 3.08 | 3.27, 3.10 |
+| Clean interceptions: yours of their passes / theirs of yours | 7.61 / 7.62, 9.16 / 8.97 | 3.25 / 1.35, 3.00 / 1.75 | 4.58 / 2.54, 5.03 / 3.09 | 5.50 / 3.08, 5.63 / 4.10 | 3.94 / 2.04, 4.46 / 2.62 |
+| Won (yours; AI v AI the home side's) | 45%, 46% | 100%, 100% | 95%, 95% | 46%, 54% | 86%, 91% |
+
+AI v AI is 120 matches at 4-minute halves; the bot (the scripted average player, Quick Match's rules, 2-minute halves) 80
+a level; the casual adult (`PROFILE=casual`, Easy, 2-minute halves) 100. His 86% to 91% is mostly the 100's noise: over 400
+it is 90% to 91%, by 2.59 to 2.69 tries scored and 0.28 to 0.29 conceded (SEED 31's 100 go 94% to 88%, the other way). The
+bot on Hard wins 51% then 55% over 320. About a third fewer everywhere (35, 34, 35, 39 and 37%). A second seed (SEED 31,
+the same matches a level) gives the same picture, quoted below where it differs.
+
+**The unexplained, one category at a time.** Together they fall by more than half (51 to 63%; SEED 31, 54 to 61%), but
+not each one by count. The chance of an unforced drop is exactly halved per catch, yet there are more catches to drop (yours
+on Normal, 56 to 61 a match), so your unforced knock-ons fall by 40 to 61% (Easy 61, Normal 40, Hard 44, the casual adult
+44, AI v AI 42 and 53% home and away; SEED 31, 39 to 52%): about 40 to 50% fewer, not always half. Interceptions knocked on fall by 49
+to 63% (SEED 31, 54 to 67%), and the CPU's Big Hit spill on you is gone. For the unforced count itself halved, `KNOCK.base`
+0.45 comes nearer (`KNOCK='{"base":0.45}' node tools/knock.mjs --balance`, SEED 7: yours 44 to 61% fewer, both sides 51 to
+58%; all knock-ons 36, 34, 36, 43 and 40% fewer). That is the owner's call; 0.5 stays.
+
+**The earned: the terms kept, the counts not.** The earned terms are unchanged, but the halved base sits under every
+catch, so a marked, kick or long-pass catch knocks on about a fifth less often (Catching, above), and those knock-ons fall
+by about a quarter in every mode: marked, long and kick together 23 to 25% (AI v AI, the bot on Normal and Hard, the casual
+adult; the bot on Easy 1%), and on SEED 31 17 to 26% in all five. The Earned row looks flat where you play only because more
+phases bring more tackles and offloads, whose knock-ons rise about 15% (Normal, Hard, the casual adult). On SEED 31 the
+earned count falls 13% on Easy, 8% on Normal, 5% on Hard, 7% for the casual adult and 17% in AI v AI (15% here). What each
+term is worth, in knock-ons a match across both sides (Normal, the bot): base 1.99 to 1.05, marked 0.70 to 0.69, long 0.04
+to 0.04, kick 0.26 to 0.27, interception 1.75 to 0.59 (AI v AI: base 4.13 to 2.12, marked 2.12 to 2.09, interception 4.02
+to 1.43). To keep the earned counts flat instead, the base could be halved only under a plain catch with nobody near (the
+unforced category itself) and left whole under marked, kick and long catches. That is on offer, the owner's call.
+
+**Open for the owner: the CPU's interceptions.** The interception's term is the catch's, so it applies to the CPU's
+interceptions of your passes too, and a CPU interception it would have dropped is now a clean one. Measured again on
+larger samples (320 matches a level for the bot, 400 for the casual adult), the CPU's clean interceptions of your passes
+go from 1.41 to 1.71 a match on Easy for the bot (+0.30), 2.63 to 3.05 on Normal (+0.42), 3.31 to 4.11 on Hard, and 2.17
+to 2.81 for the casual adult on Easy (+0.64). That is more than the 0.3 a match the brief allowed on Normal and for the
+casual adult. Yours of the CPU's passes rise as well (Normal 4.60 to 5.02), and the matches are no harder: the casual adult
+wins 90% then 91% over the 400, the bot on Normal 94% then 95% over the 320. Left as it is, not tuned away; the choice is his.
+
+**Open for the owner: the tag stream.** The contact census (`tools/contact.mjs`: 120 bot matches on Normal, 4-minute
+halves, both sides' tags, the bot's Side Steps apart) holds the on-pitch tags under 40 a match: a few a match, not a
+stream. Knock-On is 7.8 a match there. Counted with the rest (37.7, where KNOCK off gives 35.5) it makes 45.5, over the
+bar. The bar is left at 40 for the rest, and Knock-On is held by a ceiling of its own, at most 10 a match, as Pressure On
+is (at most 12; it is 6.5). Raising the bar, or showing Knock-On less often (only on your side's, say), is his call.
+
+**Kids.** The 7 to 8 year old (`node tools/kidbots.mjs settle eight`, 16 runs of 150 from r 0, settled from match 61, SEED 7)
+settles at 0.988 ± 0.001 where he settled at 0.984 ± 0.002, both at the ceiling, winning 91 ± 1% by 3.21 ± 0.06 tries
+against 89 ± 1% by 3.07 ± 0.06; Move Up to Easy comes up in 8 of his 16 runs (median match 78) against 4 (97). Kids is
+still at most Easy: each child at the ceiling (`at 1`, 90 simulated seconds a half) against Easy at the same half
+(`HALF=90 at easy`), 200 matches each, before then after:
+
+| Child | Ceiling, before | Easy, before | Ceiling, after | Easy, after |
+|---|---|---|---|---|
+| 6 year old | 69% by 1.62 | 73% by 1.61 | 73% by 1.87 | 74% by 1.80 |
+| 7 to 8 year old | 90% by 3.02 | 86% by 2.35 | 92% by 3.31 | 89% by 2.67 |
+| Sharp 10 year old | 100% by 5.77 | 100% by 5.39 | 100% by 5.93 | 100% by 5.67 |
+
+By margin the ceiling is at least as easy as Easy for every child, before and after.
+
 ### Side Step and Dummy
 
 Every lever is in `MOVES` (`MOVES='{"step":{"push":4}}' node tools/bot.mjs`). `gestureStep` runs once a step for each human
@@ -1981,6 +2099,9 @@ a charger.
     set) over `JOBS` processes, reporting wins, tries, Line Breaks, broken tackles, Fends, On Fire, Side Steps and Dummies (Easy).
   - **`node tools/edge.mjs`:** the edge on Easy (2026-11-10), in the default gate: who has it, each lever's size, the Line
     Break and its call, On Fire's Easy numbers and the meter, EDGE off drawing exactly as 90353c3 (Easy).
+  - **`node tools/knock.mjs`:** the knock-ons (2026-11-11), in the default gate: each lever's size, the Big Hit's spill
+    yours only (yours, the CPU's, Two Player, AI v AI), the Knock-On tag, one draw a catch whatever its chance, KNOCK off
+    drawing exactly as 20cbcaf. `--balance` measures the tables in Catching and knock-ons.
   - **`node tools/pressure.mjs`:** pressure, the spill and the egg (2026-11-09), in the default gate: the count's rises
     and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
     and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the
@@ -2031,7 +2152,7 @@ a charger.
       odds forced to 1 (a man ahead in the lane, 4m of space, letting go inside 2.5m), and the staged 14m / 8m chase;
       staged breakaways (4m back is caught with Sprint, 8m is gone);
     - offloads (one receiver for the label, the press and the ring, whatever the stick says), the ball jolted loose,
-      Tripped, fends; a census of 60 bot matches (run-overs, ruck ball hit at once, turnover ball hit at once, the
+      Tripped, fends; a census of 120 bot matches (run-overs, ruck ball hit at once, turnover ball hit at once, the
       last tackler, no steals, no new penalty words, the tag list and count);
     - the words, the three-button layout at 667x375, 932x430 and 932x430 with insets (the fan unchanged), the stick
       zone and the resting stick under a notch and a home indicator, a near miss within 12px of a circle, the short
