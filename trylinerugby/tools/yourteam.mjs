@@ -100,7 +100,7 @@ pending('2. a save\'s pool number (main keeps list keys, poolKey)', async () => 
 });
 
 // 3. the two lines under the logo, and the panel
-pending('3. PR #14\'s Your Team panel (its stars and last-season record are main\'s line under Play: tools/home.mjs 6b)', async () => {
+pending('3. PR #14\'s Your Team panel (its stars and league line are in main\'s My Team box, its last-season record the games played as My Team: tools/home.mjs 6b and 6c)', async () => {
   const c = C.create({ pos:'B', num:4, club:X.CLUBS[3] }); C.set(c);
   X.renderHome();
   ok($('home-club').textContent !== 'Play as Aldershot · Support Aldershot', 'the first line no longer follows a career');
@@ -251,7 +251,7 @@ pending('6. a new career on your team (main\'s career picks My Team\'s club alre
 });
 
 // 7. what a phone needs: no layout here, so these pin the rules the browser check measured
-pending('7. PR #14\'s panel\'s phone rules (main\'s line under Play: tools/browser.mjs)', async () => {
+pending('7. PR #14\'s panel\'s phone rules (main\'s My Team box: tools/browser.mjs, tools/home.mjs)', async () => {
   const at = id => body.indexOf('id="' + id + '"');
   // New Player's rules are the career builder's now (2026-11-09): main's New Player with Your Look as its second step (tools/career.mjs measures both)
   ok(at('cn-cat') < at('cn-name') && at('cn-go') > at('cn-num') && at('cn-look-go') < at('cn-go') && at('ck-style') > at('cn-go'), 'New Player: Team (Men | Women, the one control) on the left, Start Career after every picker, Your Look a screen of its own');

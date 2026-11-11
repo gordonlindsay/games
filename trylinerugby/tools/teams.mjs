@@ -192,7 +192,7 @@ function playOut() {
   const html = readGameSource();
   const quick = html.indexOf('id="b-quick"'), champBtn = html.indexOf('id="b-champ"');
   ok(quick > 0 && champBtn > quick, 'Quick Match comes before Championship');
-  ok(/<button class="btn primary" id="b-quick" autofocus>Play<\/button>/.test(html) && /<span class="hl-name">Quick Match<\/span>/.test(html), 'Quick Match\'s Play is the primary button and takes focus');
+  ok(/<button class="btn bx bx-go" id="b-continue" autofocus>[\s\S]*?<span class="bx-name" id="cont-name">Play<\/span><span class="bx-sub" id="cont-note">Quick Match<\/span>/.test(html) && /<button class="btn bx" id="b-quick">[\s\S]*?<span class="bx-name">Quick Match<\/span>/.test(html), 'Continue (Play, a Quick Match, while nothing is under way) is the primary and takes focus; Quick Match is Match\'s first box');
   ok(!html.includes('data-key="duels"'), 'the Duels switch is gone');
   ok(html.includes("duels:'live'"), 'a match you play passes live duels');
   ok(!/<dt[^>]*>Saving<\/dt>/.test(html) && /<button class="btn warn" id="hub-reset">Start Fresh<\/button>/.test(html), 'Start Fresh is the table\'s own button (re-pinned 2026-11-09: How to Play\'s Saving entry, which explained it, went with the prose)');

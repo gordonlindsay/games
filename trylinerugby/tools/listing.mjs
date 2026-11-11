@@ -12,7 +12,7 @@
 // of 9 November 2026 (the subtitle and the Full Game's descriptions) and every place that repeats it in step; the Supporters' Wall on
 // superfan.html (its steps, adults only, a list only for an agreed club), in PRIVACY.md and the launch checklist (removal takes a name
 // off the page, and its earlier versions stay readable in the public repository's history, said plainly), and a crest only with
-// the club's written permission; the Skills Mini Games counted as src/practice.js has them; the screenshots are all there at their
+// the club's written permission; the Skill Games counted as src/practice.js has them; the screenshots are all there at their
 // exact sizes with no alpha channel.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -361,7 +361,7 @@ for (const f of fs.readdirSync(at('src')).filter(f => f.endsWith('.js'))) {
   if (fc && fc.clubs) ok(fc.clubs.every(c => c.crest === null || (/^crests\/[a-z0-9-]{1,32}\.(?:png|webp|svg)$/.test(c.crest) && fs.existsSync(at(c.crest)))), 'every crest in FAN_CLUBS is null, or a file of the game\'s own that is there');
 }
 
-// 8d. the Skills Mini Games counted as the game has them (PRACTICE_DRILLS, src/practice.js): the three descriptions, the reviewer's note
+// 8d. the Skill Games (the Skills Mini Games until 2026-11-11) counted as the game has them (PRACTICE_DRILLS, src/practice.js): the three descriptions, the reviewer's note
 // in the launch checklist and the support page's Free row (they said eight drills for a while after PR #14 brought ten)
 {
   const p = fs.existsSync(at('src/practice.js')) ? read('src/practice.js') : '', m = p.match(/const PRACTICE_DRILLS\s*=\s*\[([\s\S]*?)\n\];/);
@@ -371,10 +371,10 @@ for (const f of fs.readdirSync(at('src')).filter(f => f.endsWith('.js'))) {
     const blocks = LISTING_DOCS.filter(f => fs.existsSync(at(f))).flatMap(f => copyBlocks(read(f)).map(b => ({ ...b, file:f })));
     for (const k of ['apple.description', 'apple.description.fan', 'google.full']) {
       const t = (blocks.find(b => b.key === k) || { text:'' }).text;
-      ok(t.includes(`- Skills Mini Games: ${word} short games,`), `${k} counts the Skills Mini Games as the game has them: ${word}`);
+      ok(t.includes(`- Skill Games: ${word} short games,`) && !/Skills Mini Game/.test(t), `${k} counts the Skill Games as the game has them, by the game's own name: ${word}`);
     }
-    ok(read('store-listing/LAUNCH_CHECKLIST.md').includes(`; ${word} Skills Mini Games;`), `the launch checklist's note to the reviewer counts ${word} Skills Mini Games`);
-    ok(read('support.html').includes(`Skills Mini Games (all ${word})`), `support.html's Free row counts all ${word} Skills Mini Games`);
+    ok(read('store-listing/LAUNCH_CHECKLIST.md').includes(`; ${word} Skill Games;`), `the launch checklist's note to the reviewer counts ${word} Skill Games`);
+    ok(read('support.html').includes(`Skill Games (all ${word})`) && !/Skills Mini Game/.test(read('support.html')), `support.html's Free row counts all ${word} Skill Games`);
   }
 }
 

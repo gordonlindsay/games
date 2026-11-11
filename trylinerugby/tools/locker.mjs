@@ -333,7 +333,7 @@ function champAt4(userWins) {
   P.leave();
 }
 
-// 8b. Star Pupil over the Skills Mini Games (the skills builder, at the PR #14 merge): Bronze and Silver are any 1 and any 3 games at
+// 8b. Star Pupil over the Skill Games (the skills builder, at the PR #14 merge): Bronze and Silver are any 1 and any 3 games at
 //     three stars; Gold is every game the player can see, all ten, or the seven at the Kids level or with Minis picked (the three
 //     contact games hidden, practiceBarred), and a Gold once won is kept, so moving up to all ten never takes it away
 {
@@ -350,7 +350,7 @@ function champAt4(userWins) {
   for (const id of OPEN.slice(0, 6)) three(id);
   ok(L.count('star') === 6 && L.tier('star') === 2 && L.next('star') === 7 && writes === 6 && !L.state().pupil, `the Kids level: six of its seven games is Silver, 6/7, each saved as its game is left (${L.count('star')}/${L.next('star')}, ${writes} writes)`);
   three(OPEN[6]);
-  ok(L.tier('star') === 3 && L.next('star') === null && L.count('star') === 7 && L.state().pupil === true && saved().locker.pupil === true && json(saved().locker.drills) === json(OPEN), 'the seventh is Gold, saved as kept (pupil), the seven games in the Skills Mini Games\' order');
+  ok(L.tier('star') === 3 && L.next('star') === null && L.count('star') === 7 && L.state().pupil === true && saved().locker.pupil === true && json(saved().locker.drills) === json(OPEN), 'the seventh is Gold, saved as kept (pupil), the seven games in the Skill Games\' order');
   at(false, 'men');
   ok(L.tier('star') === 3 && L.golds() === 1 && L.legends('men').length === 1 && L.legends('women').length === 1, 'moved up to Normal, the Gold stays, and so do the Legends it unlocked');
   ok(L.count('star') === 7 && L.next('star') === null, 'its count is the games starred, 7, with nothing left to reach');
@@ -521,7 +521,7 @@ function champAt4(userWins) {
     D.exitMatch();
   }
   fresh();
-  ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my"[^>]*>[\s\S]*?<\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(html), 'the home button reads Locker, at the top beside My Team and Add Your Team (the home\'s headlines, ui-menus.js)');
+  ok(/<div class="my-acts" id="my-acts">\s*<button class="btn" id="b-my">Change<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<button class="btn lk-home" id="b-locker">Locker<\/button>\s*<\/div>/.test(html), 'the home button reads Locker, in My Team\'s box beside Change and Add Your Team (the home, ui-menus.js)');
   ok(/id="lk-back" data-back>Back to Menu</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Menu is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
   ok(![src, css].some(s => /[\u2014\u2190-\u21ff]/.test(s)), 'no em dash and no arrow in the Locker\'s code or styles');
 }
@@ -690,28 +690,30 @@ async function browserChecks() {
       const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
       await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
-      // the home: desk or not, the app or the web (Grown-Ups, Add Your Team), and a championship and a career under way, on every
-      // headline: the Locker sits in the top row beside My Team, on screen, at least 44px, touching no other button, and the home fits
+      // the home: desk or not, the app or the web (Grown-Ups, Add Your Team), and a championship and a career under way, on the five boxes
+      // and each step: the Locker sits in My Team's box with Change and Add Your Team, on screen, at least 44px, touching no other button, and
+      // the home fits; the five boxes balanced (Continue across, Match | Career and Skill Games | Settings in equal halves, level)
       const rows = await page.evaluate(() => {
-        const T = window.__tryline, X = T.teams, out = [];
-        const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && box(el).width > 0;
-        for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) for (const hl of T.home.HL) {
+        const T = window.__tryline, X = T.teams, out = [], $ = id => document.getElementById(id);
+        const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
+        for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) for (const step of [null, 'match', 'champ', 'drills', 'settings']) {
           T.store.setNative(app); T.store.setStarted(app); if (app) T.store.setBought(['tryline.full']);
           if (busy) { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); } else { X.setChamp(null); T.career.set(null); }
-          document.body.classList.toggle('desk', desk); T.debug.settings().hl = hl; T.debug.goHome();
-          const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk), top = box(document.getElementById('home-top'));
+          document.body.classList.toggle('desk', desk); T.debug.goHome(); if (step) T.home.open(step);
+          const s = $('s-home'), lk = $('b-locker'), r = box(lk), my = box($('my-box')), acts = box($('my-acts'));
           const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b));
           const overlap = others.some(b => { const q = box(b); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; });
-          const bar = [...document.querySelectorAll('#hl-bar .hl')].map(box), panel = box(document.getElementById('hp-' + hl));
-          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : '') + '+' + hl, fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth, lk:vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0 && r.top >= top.top - 1 && r.bottom <= top.bottom + 1, overlap,
-            rows:bar.length === 5 && bar.every(q => Math.abs(q.width - bar[0].width) < 1.5 && Math.abs(q.top - bar[0].top) < 1 && q.height >= 44) && (hl !== 'game' || Math.abs(box(document.getElementById('b-quick')).width - panel.width) < 1) });
+          const pair = (a, b) => { const p = box($(a)), q = box($(b)); return Math.abs(p.width - q.width) < 1.5 && Math.abs(p.top - q.top) < 1 && Math.abs(p.height - q.height) < 1.5 && p.height >= 44; };
+          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : '') + '+' + (step || 'boxes'), fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth,
+            lk:step ? !vis(lk) : vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0 && r.top >= my.top && r.bottom <= my.bottom && r.top >= acts.top - 0.5 && r.bottom <= acts.bottom + 0.5, overlap,
+            rows:step ? true : pair('b-match', 'b-career') && pair('b-drills', 'b-set') && Math.abs(box($('b-continue')).left - box($('b-match')).left) < 1 && Math.abs(box($('b-continue')).right - box($('b-career')).right) < 1 });
         }
-        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.settings().hl = 'game'; T.debug.goHome();
+        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.goHome();
         return out;
       });
-      ok(rows.length === 40 && rows.every(r => r.fits), `${w}x${h}: the home fits without a scroll in every state, on every headline (${rows.filter(r => !r.fits).map(r => r.state).join(', ') || 'all forty'})`);
-      ok(rows.every(r => r.lk && !r.overlap), `${w}x${h}: Locker is in the top row, on screen, at least 44px, touching no other button, in every state (${rows.filter(r => !r.lk || r.overlap).map(r => r.state).join(', ') || 'all'})`);
-      ok(rows.every(r => r.rows), `${w}x${h}: the five headlines are equal and level, 44px at least, and Quick Match's Play takes its row, in every state (${rows.filter(r => !r.rows).map(r => r.state).join(', ') || 'all'})`);
+      ok(rows.length === 40 && rows.every(r => r.fits), `${w}x${h}: the home fits without a scroll in every state, on the boxes and every step (${rows.filter(r => !r.fits).map(r => r.state).join(', ') || 'all forty'})`);
+      ok(rows.every(r => r.lk && !r.overlap), `${w}x${h}: Locker is in My Team's box with Change and Add Your Team, on screen, at least 44px, touching no other button, in every state, and put away with the box on a step (${rows.filter(r => !r.lk || r.overlap).map(r => r.state).join(', ') || 'all'})`);
+      ok(rows.every(r => r.rows), `${w}x${h}: the five boxes balanced, Continue across the top, Match | Career and Skill Games | Settings equal and level, 44px at least, in every state (${rows.filter(r => !r.rows).map(r => r.state).join(', ') || 'all'})`);
       // the Locker: each tab with nothing, some and everything earned
       const tabs = await page.evaluate(() => {
         const L = window.__tryline.locker, out = [];
@@ -773,11 +775,11 @@ async function browserChecks() {
         for (let i = 0; i < 50 && (i < 1 || S.ui().busy); i++) await new Promise(r => setTimeout(r, 10));   // the restore answers
         out.grown.push(grown('Restore Purchases, Reset Kids Level | Move Up to Easy')); S.close(); S.setBackend(null); Object.assign(st, was);
         // the Trophy Cabinet: the trophy first
-        T.debug.settings().hl = 'champ'; T.debug.goHome(); document.getElementById('b-cabinet').click();
+        T.debug.goHome(); document.getElementById('b-cabinet').click();
         const first = document.querySelector('#home-history > *'), cup = first && first.querySelector('.lk-cup');
         out.cab = { shown:!document.getElementById('s-cabinet').hidden, first:!!first && first.classList.contains('fan-entry') && /Farnham RUFC/.test(first.textContent), cup:!!cup && box(cup).width >= 30, gold:!!first && getComputedStyle(first.querySelector('.cup-kind')).color === 'rgb(220, 171, 66)' };
         document.getElementById('cab-back').click();
-        S.setNative(false); S.setStarted(false); S.setBought([]); L.set(L.fresh()); T.debug.settings().hl = 'game'; T.debug.goHome();
+        S.setNative(false); S.setStarted(false); S.setBought([]); L.set(L.fresh()); T.debug.goHome();
         return out;
       });
       ok(fan.tabs.length === 3 && fan.tabs.every(r => r.fits && r.tile && r.onScreen), `${w}x${h}: a Super Fan's Medals tab, the trophy first, fits without a scroll, nothing, some or everything earned (${json(fan.tabs.map(r => [r.fits, r.tile, r.onScreen]))})`);
@@ -902,7 +904,7 @@ async function browserChecks() {
         for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) {
           T.store.setNative(app); T.store.setStarted(app); if (app) T.store.setBought(['tryline.full']);
           if (busy) { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); } else { X.setChamp(null); T.career.set(null); }
-          document.body.classList.toggle('desk', desk); T.debug.settings().hl = 'champ'; T.debug.goHome();
+          document.body.classList.toggle('desk', desk); T.debug.goHome();
           const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk);
           const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b));
           const overlap = others.some(b => { const q = box(b); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; });
@@ -910,7 +912,7 @@ async function browserChecks() {
           out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : ''), cab:vis(document.getElementById('b-cabinet')), grow:withIt - without, scroll:withIt - s.clientHeight,
             lk:vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0, overlap });
         }
-        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.settings().hl = 'game'; T.debug.goHome();
+        X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.goHome();
         return out;
       });
       ok(cab.length === 8 && cab.every(r => r.cab && r.grow <= 0 && r.scroll <= 0), `${w}x${h}: with a Trophy Cabinet the Locker adds no height and the home does not scroll, in every state (${json(cab.map(r => [r.state, r.grow, r.scroll]))})`);

@@ -26,7 +26,7 @@ ok(P.state().switched && T.sides.ctrlOf(0) !== P.state().initialCtrl, 'real Swit
 for (let i = 0; i < 4000 && !P.state().done; i++) tick();
 ok(P.state().done && P.state().won && P.state().stars === 1 && RD.lost === 'Try' && $('pr-feedback').textContent === '1 Round', 'a try in round two ends the run at 1 Round, one star');
 D.resume(); ok(T.M.paused, 'result cannot resume via pause shortcut');
-key('Escape'); ok(!P.state() && !$('s-home').hidden, 'Escape returns from result to drill selection (the home\'s Skills Mini Games)');
+key('Escape'); ok(!P.state() && !$('s-home').hidden, 'Escape returns from result to drill selection (the home\'s Skill Games)');
 ok(JSON.stringify(D.settings()) === original, 'selection restores all settings');
 start('pass');
 const carrier = T.M.ball.carrier, mark = T.drills.gapMark(carrier);

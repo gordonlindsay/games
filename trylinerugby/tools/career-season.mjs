@@ -202,7 +202,7 @@ function turn(run) {
       if (!moved || L.dilemma(cr) || $('cr-play').hidden) bad(`answering "${d.q}" with ${o.name} did not do what it says`);
     } else if (!cup && !$('cr-dilemma').hidden) bad('a dilemma card with no dilemma');
     // a visit to the menu and back now and then: Back to Menu, then Continue Career
-    if (cr.totals.matches % 7 === 3) { $('cr-back').click(); if (shown() !== 's-home' || $('b-career').textContent !== 'Continue Career') bad('Back to Menu'); $('b-career').click(); if (shown() !== 's-career') bad('Continue Career from the menu'); }
+    if (cr.totals.matches % 7 === 3) { $('cr-back').click(); if (shown() !== 's-home' || $('cont-name').textContent !== 'Continue' || !/^Career · /.test($('cont-note').textContent)) bad('Back to Menu'); $('b-career').click(); if (shown() !== 's-career') bad('the Career box from the menu'); }
     train(run, spec.stars);
     const plan = spec.plan(run.cr, f);
     match(run, f, plan);
@@ -438,7 +438,9 @@ ok(A.bars.spirit.lo <= 10 && B.bars.spirit.hi > 50 && B.bars.spirit.lo >= 10, `T
   X.save(); C.set(null); K.set(null); X.restore(JSON.parse(memory['tryline.v1']));
   ok(C.get() && C.get().cup && C.get().cup.id === 'world' && K.get() && K.get().id === 'world' && C.get().cup.teams[C.get().cup.user].id === 'ENG' && K.get().teams[K.get().user].id === 'FRA', 'both saved, both read back, each its own');
   X.renderHome();
-  ok($('b-career').textContent === 'Continue Career' && /^Year 4 · .*England.*Pool [ABCD]$/.test($('career-note').innerHTML) && $('b-champ').textContent === 'Continue Championship' && /World Cup.*Pool [ABCD]/.test($('champ-note').innerHTML) && /France/.test($('champ-note').innerHTML), `the menu: Continue Career and Continue Championship, each with its own note (${$('career-note').innerHTML.replace(/<[^>]+>/g, '')} / ${$('champ-note').innerHTML.replace(/<[^>]+>/g, '')})`);
+  ok(/^Career · Pool [ABCD] v /.test($('cont-note').textContent) && $('career-note').hidden && $('b-champ').textContent === 'Continue Championship' && /World Cup.*Pool [ABCD]/.test($('champ-note').innerHTML) && /France/.test($('champ-note').innerHTML), `the menu: Continue on the career (played last) with its line, and Competitions' Continue Championship with its own note (${$('cont-note').textContent} / ${$('champ-note').innerHTML.replace(/<[^>]+>/g, '')})`);
+  T.debug.settings().last = 'champ'; X.renderHome();
+  ok(/^World Cup · Pool [ABCD] v /.test($('cont-note').textContent) && !$('career-note').hidden && /^Year 4 · .*England.*Pool [ABCD]$/.test($('career-note').innerHTML), `the World Cup played last: Continue on it, and the Career box's own note (${$('cont-note').textContent} / ${$('career-note').innerHTML.replace(/<[^>]+>/g, '')})`);
   K.set(null); C.set(null); X.save();
 }
 

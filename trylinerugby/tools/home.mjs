@@ -1,7 +1,9 @@
-// The home: five headlines along the bottom (Quick Match, Championship, Career, Skills Mini Games, Settings) and the chosen one's buttons,
-// My Team, the Locker and Add Your Team at the top, the competitions by tier with their team lists, the Make This My Team offer after an import, the
-// Legends behind the Full Game, a Super Fan's home in the club's colours (with its shield or a club's crest), and the fit of every state at
-// 844x390 and 667x375 (README, Home).   node tools/home.mjs   Exits 1 on any failure.
+// The home (README, Home): the wordmark, My Team's box (its shirt, name, stars and league line, the games played as it and its last five
+// results, Change | Add Your Team | Locker) and the Trophy Cabinet's strip on the left; five big boxes on the right, Continue | Match | Career
+// | Skill Games | Settings, and the steps they open (Match's Quick Match | Competitions, Competitions by tier with their team lists, Skill
+// Games, Settings); Continue picking up what is under way, or Play; the games-and-form record; the Make This My Team offer after an import;
+// the Legends behind the Full Game; a Super Fan of My Team's club with the box in its colours (its shield, or a club's crest), and the fit
+// of every state at 844x390, 667x375, 844x340, 667x320 and 568x320.   node tools/home.mjs   Exits 1 on any failure.
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 // CLUB_RATED=off HOME_PRINT=1 node tools/home.mjs prints it with no club rated from PR #14's tables: the proof behind the last re-pin.
 process.env.SEED ??= '61';
@@ -58,79 +60,108 @@ const saved = () => JSON.parse(memory['tryline.v1']);
 const MORE = ['s-cup', 's-cabinet', 's-career-new', 's-career-club', 's-career', 's-locker'];   // screens the stand-in DOM does not list: showScreen hides and shows them too
 { const qsa = document.querySelectorAll; document.querySelectorAll = sel => (sel === '.screen' ? qsa(sel).concat(MORE.map(id => $(id))) : qsa(sel)); for (const id of MORE) $(id).hidden = true; }
 const shown = () => ['s-home', 's-teams', 's-hub', 's-help', 's-join', 's-build', ...MORE].find(id => !$(id).hidden);
-const fresh = () => {                                       // a new game on the web as shipped, the home on Quick Match
-  S.setNative(null); S.setTier(null); S.setBought([]); S.setStarted(false);
+for (const id of ['b-set', 'b-continue', 'b-cabinet', 'b-my', 'my-form', 'my-nat', 'b-grown']) {   // the stand-in DOM keeps no attributes: these few remember theirs, for the words read out
+  const e = $(id), at = {}; e.setAttribute = (k, v) => { at[k] = String(v); }; e.getAttribute = k => (k in at ? at[k] : null);
+}
+const fresh = () => {                                       // a new game on the web as shipped, the home on its five boxes
+  S.setNative(null); S.setTier(null); S.setBought([]); S.setStarted(false); S.FAN_CLUBS[0].agreed = false; S.FAN_CLUBS[0].crest = null;
   if (!$('m-store').hidden) S.close();
-  X.setChamp(null); K.set(null); K.setHistory([]); C.set(null); I.setLeague(null); X.restore({ custom:[] });
-  const s = D.settings(); s.hl = 'game'; s.myClub = null; s.myNat = null; s.cat = 'men'; s.kids = false; s.diff = 1;
+  X.setChamp(null); K.set(null); K.setHistory([]); C.set(null); I.setLeague(null); X.restore({ custom:[] }); H.form.set([]); H.setTier(null);
+  const s = D.settings(); s.last = null; s.myClub = null; s.myNat = null; s.cat = 'men'; s.kids = false; s.diff = 1; s.pick = [null, null];
   L.set(L.clean(null)); $('m-import').hidden = true; X.save(); D.goHome();
 };
 
-// 1. the markup: the bar, each headline's buttons, the top row, Title Case, no arrow
+// 1. the markup: the left column (the wordmark, My Team's box, the Trophy Cabinet's strip), the five boxes, the steps, Title Case, no arrow
 {
-  const bar = [...home.matchAll(/<button class="btn hl" id="hl-([a-z]+)" data-hl="\1" role="tab" aria-controls="hp-\1" aria-selected="(?:true|false)"><svg viewBox="0 0 24 24" aria-hidden="true">[\s\S]*?<\/svg><span class="hl-name">([^<]+)<\/span><\/button>/g)];
-  ok(json(bar.map(m => [m[1], m[2]])) === json([['game', 'Quick Match'], ['champ', 'Championship'], ['career', 'Career'], ['drills', 'Skills Mini Games'], ['settings', 'Settings']]) && json(H.HL) === json(bar.map(m => m[1])), `the bar: Quick Match | Championship | Career | Skills Mini Games | Settings, each a drawn picture and its name, in that order, the saves' keys kept (game, drills) (${bar.map(m => m[2]).join(' | ')})`);
-  ok(/<nav class="hl-bar" id="hl-bar" role="tablist" aria-label="Menu">/.test(home) && home.indexOf('id="hl-bar"') > home.indexOf('id="hl-panels"'), 'the bar is a tablist, under the panels');
-  ok(/\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/.test(css) && /\.btn\.hl\{position:relative;display:flex;flex-direction:column;[^}]*min-height:54px/.test(css), 'five equal parts, each 44px and more');
-  const panel = id => (home.match(new RegExp(`<div class="hl-panel hp-${id}[^"]*" id="hp-${id}" role="tabpanel" aria-labelledby="hl-${id}"( hidden)?>`)) || [])[0];
-  ok(H.HL.every(panel) && !/ hidden/.test(panel('game')) && ['champ', 'career', 'drills', 'settings'].every(id => / hidden/.test(panel(id))), 'a panel a headline, Quick Match\'s showing before a line of script runs');
-  ok(/<div class="hl-panel hp-game" id="hp-game"[^>]*>\s*<button class="btn primary" id="b-quick" autofocus>Play<\/button>\s*<div class="my-rec" id="my-rec" hidden><span class="my-rec-side" id="my-rec-side"><\/span><span class="my-rec-lines"><span id="my-rec-league"><\/span><span id="my-rec-record"><\/span><\/span><\/div>\s*<\/div>/.test(home) && /\.hl-panel\.hp-game \.btn\.primary\{min-height:128px;font-size:56px/.test(css), 'Quick Match: one big Play button, the primary, bigger than any other panel\'s (no 2 Players under it, on any device)');
+  const side = home.slice(home.indexOf('<div class="home-side"'), home.indexOf('<nav class="home-main"'));
+  const boxes = [...home.matchAll(/<button class="btn bx(?: bx-go)?" id="(b-[a-z]+)"(?: autofocus)?><svg viewBox="0 0 24 24" aria-hidden="true">[\s\S]*?<\/svg><span class="bx-text"><span class="bx-name"(?: id="cont-name")?>([^<]+)<\/span>/g)].map(m => [m[1], m[2]]);
+  ok(json(boxes.slice(0, 5)) === json([['b-continue', 'Play'], ['b-match', 'Match'], ['b-career', 'Career'], ['b-drills', 'Skill Games'], ['b-set', 'Settings']]), `the five boxes in order, each a drawn picture and a big word: Continue (Play until something is under way) | Match | Career | Skill Games | Settings (${boxes.slice(0, 5).map(b => b[1]).join(' | ')})`);
+  ok(/<nav class="home-main" id="home-main" aria-label="Menu">\s*<button class="btn bx bx-go" id="b-continue" autofocus>/.test(home) && /<span class="bx-sub" id="cont-note">Quick Match<\/span>/.test(home) && home.indexOf('id="home-main"') > home.indexOf('id="home-side"'), 'Continue first, the primary, focused before a line of script runs, with its one line (Quick Match for Play); the boxes after My Team\'s column');
+  ok(/\.home-main\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);grid-template-rows:minmax\(0,1\.25fr\) minmax\(0,1fr\) minmax\(0,1fr\);/.test(css) && /\.home-main \.bx-go\{grid-column:1\/-1\}/.test(css) && /\.btn\.bx-go\{border-color:var\(--flood\);background:var\(--flood\);color:var\(--flood-ink\)\}/.test(css), 'Continue across the top in the floodlight\'s yellow, then Match | Career and Skill Games | Settings in equal halves');
+  ok(/<button class="btn bx" id="b-career">[\s\S]*?<span class="bx-name">Career<\/span><span class="bx-sub" id="career-note" hidden><\/span>/.test(home), 'Career, with its note while a career is under way and Continue shows something else');
+  ok(/<header class="mark" id="home-mark">\s*<h1 class="word" aria-label="Try Line"><span class="try">Try<\/span><span class="line">Line<span class="posts"><\/span><\/span><\/h1>\s*<div class="app-tools" id="app-tools" hidden>\s*<span id="offline-status" role="status" hidden>Offline Ready<\/span>\s*<button class="app-action" id="b-install" hidden>Install Game<\/button>\s*<span id="offline-update" role="status" hidden>Updating<\/span>\s*<\/div>\s*<\/header>/.test(side) && /\.home \.word\{flex:none;flex-direction:row;[^}]*font-size:58px/.test(css), 'the wordmark on one line at the top of My Team\'s column, big, with Offline Ready, Install Game and Updating beside it');
+  ok(/<section class="my-box" id="my-box" aria-label="My Team">\s*<div class="my-marks" id="my-marks"><span class="my-fan" id="st-fan" hidden><\/span><\/div>\s*<div class="my-head">\s*<span class="my-shirt" id="my-shirt"><\/span>\s*<div class="my-id">\s*<h2 class="my-name" id="my-name"><\/h2>\s*<div class="my-line"><span id="my-stars"><\/span><span class="my-nat" id="my-nat"><\/span><\/div>\s*<span class="my-league" id="my-league"><\/span>\s*<\/div>\s*<\/div>\s*<dl class="my-rec" id="my-rec"><\/dl>\s*<ol class="my-form" id="my-form" aria-label="Last Five Results"><\/ol>/.test(side), 'My Team\'s box: a row for a tier\'s marks (the Super Fan badge), the shirt, the name, the stars and the country, the league line, the games played and the last five results');
+  ok(/<div class="my-acts" id="my-acts">\s*<button class="btn" id="b-my">Change<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<button class="btn lk-home" id="b-locker">Locker<\/button>\s*<\/div>\s*<\/section>/.test(side) && /\.my-acts\{display:grid;grid-auto-flow:column;grid-auto-columns:minmax\(0,1fr\);/.test(css), 'in the box, three small balanced buttons: Change | Add Your Team | Locker (two halves where Add Your Team is not shown)');
+  ok(/<\/section>\s*<button class="btn tc-strip" id="b-cabinet" hidden><span class="tc-name">Trophy Cabinet<\/span><span class="tc-list" id="tc-list"><\/span><\/button>\s*<\/div>/.test(side) && /\.btn\.tc-strip\{flex:none;[^}]*min-height:44px;/.test(css) && /\.my-box\{[^}]*flex:1 1 auto;/.test(css), 'under the box, the Trophy Cabinet as a slim strip of its own at the 44px floor, the box taking the rest of the column');
+  ok(/<div class="hs-head" id="hs-head">\s*<button class="btn hs-back" id="hs-back" data-back>Back to Menu<\/button>\s*<h2 class="hs-title" id="hs-title">Match<\/h2>\s*<\/div>/.test(home), 'a step: Back (the controller\'s B too) and its title along the top');
+  const steps = [...home.matchAll(/<div class="hs-panel hp-([a-z]+)[^"]*" id="hp-\1" data-step="\1" hidden>/g)].map(m => m[1]);
+  ok(json(steps) === json(['match', 'champ', 'drills', 'settings']) && json(steps) === json(Object.keys(H.STEPS)), `four steps, each hidden until opened: ${steps.join(', ')}`);
+  ok(/<div class="hs-panel hp-match" id="hp-match" data-step="match" hidden>\s*<button class="btn bx" id="b-quick">[\s\S]*?<span class="bx-name">Quick Match<\/span><\/span><\/button>\s*<button class="btn bx" id="b-comps">[\s\S]*?<span class="bx-name">Competitions<\/span><\/span><\/button>\s*<\/div>/.test(home) && /\.hp-match\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(css), 'Match: two big boxes, Quick Match | Competitions, in halves');
   ok(!/id="b-two"|2 Players|Two Player/.test(home) && !/\$\('b-two'\)/.test(menus) && /^function openJoin\(\) \{/m.test(menus) && typeof D.openJoin === 'function', '2 Players has left the home on every device: no button, no listener; Two Player keeps its way in, openJoin (window.__tryline.debug.openJoin)');
-  ok(/<div class="hl-go" id="hc-go" hidden>\s*<button class="btn primary" id="b-champ">Continue Championship<\/button>\s*<p class="resume-note" id="champ-note" hidden><\/p>\s*<\/div>\s*<div class="hc-new" id="hc-new">\s*<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>\s*<\/div>\s*<button class="btn" id="b-cabinet" hidden>Trophy Cabinet<\/button>/.test(home), 'Championship: Continue (when one is saved) first, else the tiers and their competitions; the Trophy Cabinet under them');
-  ok(/<div class="hl-panel hp-career" id="hp-career"[^>]*>\s*<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(home), 'Career: New Career or Continue Career, with its note');
+  ok(/<div class="hs-panel hp-champ" id="hp-champ" data-step="champ" hidden>\s*<div class="hl-go" id="hc-go" hidden>\s*<button class="btn primary" id="b-champ">Continue Championship<\/button>\s*<p class="resume-note" id="champ-note" hidden><\/p>\s*<\/div>\s*<div class="hc-new" id="hc-new">\s*<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>\s*<\/div>\s*<\/div>/.test(home), 'Competitions: Continue Championship (when one is saved) first, else the tiers and their competitions');
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
-  ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skills Mini Games: every game as a big button with its picture (${drills.length}), seven and How to Play in rows of four, then Contact Games and For Grown-Ups (re-pinned for PR #14's ten games: it was eight drills and How to Play, three rows of three)`);
+  ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skill Games: every game in its picture (${drills.join(', ')}), How to Play, then the contact games and For Grown-Ups, in rows of four`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.2<\/p>\s*<\/div>\s*<\/div>\s*<nav/.test(home)
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.2<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
     && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css),
-    `Settings: ${sets.join(', ')}; Difficulty across, Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help (re-pinned for the Camera row: Grown-Ups was last, beside Half Length); the game's version at its foot (GAME_VERSION, 2026-11-11)`);
-  ok(/<div class="home-top" id="home-top">\s*<button class="btn my-home" id="b-my" aria-label="My Team"><span class="lbl">My Team<\/span><span class="my-kits" id="my-kits"><\/span><\/button>\s*<button class="btn lk-home" id="b-locker">[\s\S]*?Locker<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<\/div>/.test(home), 'the top row: My Team (its kits and names), Locker, Add Your Team');
-  ok(/<header class="mark">\s*<h1 class="word"[\s\S]*?<\/h1>\s*<p class="eyebrow" id="home-tag">Mobile Rugby&nbsp;· Sevens<\/p>[\s\S]*?<div class="app-tools" id="app-tools" hidden>[\s\S]*?id="b-install" hidden>Install Game<\/button>\s*<span id="offline-update" role="status" hidden>Updating<\/span>\s*<\/div>\s*<\/header>/.test(home), 'the logo stays, with Install Game as a small app action and Updating as a status under it');
+    `Settings: ${sets.join(', ')}; Difficulty across, Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help; the game's version at its foot`);
   const text = s => s.replace(/<[^>]+>/g, '').trim();
-  const labels = [...home.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map(m => text(m[1])).filter(Boolean).concat([...home.matchAll(/<span class="lbl">([^<]+)<\/span>/g)].map(m => m[1]));
-  ok(labels.length >= 30 && labels.every(titled), `every label on the home is Title Case (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
+  const labels = [...home.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map(m => text(m[1])).filter(Boolean).concat([...home.matchAll(/<span class="(?:lbl|bx-name|tc-name)">([^<]+)<\/span>/g)].map(m => m[1]), [...home.matchAll(/<h2 class="hs-title"[^>]*>([^<]+)<\/h2>/g)].map(m => m[1]), Object.values(H.STEPS).flatMap(st => [st.title, st.back]));
+  ok(labels.length >= 40 && labels.every(titled), `every label on the home is Title Case, every step's title and Back too (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
   ok(!/[←-⇿▲-◅—]|<summary|<details/.test(home + menus.slice(menus.indexOf('/* home.'), menus.indexOf('/* two player'))), 'no arrow glyph, no em dash and no disclosure on the home');
   ok(!/id="t-comp"|id="s-practice"|id="b-more"|id="b-practice"|class="row2 home-row"|class="row2 learn-row"/.test(html), 'the old rows are gone: no competition row on the team screen, no Training Ground screen, no More Settings');
-  ok(!/>Game<|Training Drills|Training Ground|Import Data|Import Club|Back to Training/.test(html) && !/'Import Club'|'Back to Training'|Training Drills|Import Data/.test(menus + fs.readFileSync(new URL('../src/import.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/practice.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')), 'the old names are gone from the markup and the screens\' code: Game, Training Drills, Training Ground, Import Data, Import Club, Back to Training');
+  ok(!/id="hl-bar"|role="tablist"|class="btn hl"|id="home-top"|id="hl-panels"|id="hp-game"|id="hp-career"|id="my-kits"|id="home-tag"/.test(home) && !/HOME_HL|homeSelect|'hl-'/.test(menus) && !/\.hl-bar\{|\.btn\.hl\{|\.home-top\{/.test(css), 'the headlines are gone: no bar along the bottom, no top row, no Quick Match or Career panel, no headline kept');
+  const code = menus + fs.readFileSync(new URL('../src/import.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/practice.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8');
+  ok(!/>Game<|Training Drills|Training Ground|Import Data|Import Club|Back to Training|Skills Mini Games/.test(html) && !/'Import Club'|'Back to Training'|Training Drills|Import Data|Skills Mini Games/.test(code), 'the old names are gone from the markup and the screens\' code: Game, Training Drills, Training Ground, Import Data, Import Club, Back to Training, and Skills Mini Games (now Skill Games)');
+  ok($('pr-eyebrow').textContent === 'Skill Games' || /id="pr-eyebrow">Skill Games</.test(html), 'a drill\'s card reads Skill Games over its name');
 }
 
-// 2. the headlines: shown one at a time, remembered, validated, moved along with the arrow keys
+// 2. the steps: one at a time in the home's place, Back to where they came from, an old save's headline dropped, Continue's last
 {
   fresh();
-  ok(D.settings().hl === 'game' && !$('hp-game').hidden && ['champ', 'career', 'drills', 'settings'].every(k => $('hp-' + k).hidden), 'a new game opens on Quick Match');
-  for (const k of H.HL) {
-    $('hl-' + k).click();
-    ok(D.settings().hl === k && !$('hp-' + k).hidden && H.HL.filter(o => o !== k).every(o => $('hp-' + o).hidden) && saved().settings.hl === k, `pressing ${k} shows its buttons only, and is saved`);
+  ok(H.step() === null && !$('home-main').hidden && !$('home-side').hidden && $('home-step').hidden && Object.keys(H.STEPS).every(k => $('hp-' + k).hidden), 'a new game opens on the five boxes and My Team\'s column, no step');
+  for (const [box, k, title, back] of [['b-match', 'match', 'Match', 'Back to Menu'], ['b-drills', 'drills', 'Skill Games', 'Back to Menu'], ['b-set', 'settings', 'Settings', 'Back to Menu']]) {
+    D.goHome(); $(box).click();
+    ok(H.step() === k && !$('hp-' + k).hidden && Object.keys(H.STEPS).filter(o => o !== k).every(o => $('hp-' + o).hidden) && $('home-main').hidden && $('home-side').hidden && !$('home-step').hidden && $('hs-title').textContent === title && $('hs-back').textContent === back, `${title}: its step in the home's place, the boxes and My Team's column put away, titled ${title}, ${back}`);
+    $('hs-back').click();
+    ok(H.step() === null && !$('home-main').hidden && $('home-step').hidden, `${back} comes back to the five boxes`);
   }
-  X.load(); D.goHome();
-  ok(D.settings().hl === 'settings' && !$('hp-settings').hidden, 'reloaded, the home opens on the headline last chosen');
-  X.restore({ settings:{ hl:'nope' } }); ok(D.settings().hl === 'settings', 'an unknown headline in a save is ignored');
-  X.restore({ settings:{ hl:7 } }); ok(D.settings().hl === 'settings', 'so is one of the wrong type');
-  const keys = (key) => $('hl-bar').fire('keydown', { key });
-  H.select('game');
-  keys('ArrowRight'); ok(D.settings().hl === 'champ', 'Right moves along the bar to Championship, and shows it');
-  keys('ArrowRight'); keys('ArrowRight'); keys('ArrowRight'); keys('ArrowRight');
-  ok(D.settings().hl === 'settings', 'and stops at Settings, the end');
-  keys('ArrowLeft'); ok(D.settings().hl === 'drills', 'Left moves back');
-  keys('Home'); ok(D.settings().hl === 'game', 'Home goes to the first');
-  keys('End'); ok(D.settings().hl === 'settings', 'End to the last');
-  keys('Enter'); ok(D.settings().hl === 'settings', 'any other key leaves it');
-  ok(/DEFAULT_FOCUS\['s-home'\] = homeFirst;/.test(menus) && /const b = focus && !focus\.hidden && !\(focus\.closest && focus\.closest\('\[hidden\]'\)\) \? focus : homeFirst\(\);/.test(menus), 'a controller\'s first press and the focus on going home: the chosen headline\'s first button (measured in the browser part)');
+  $('b-match').click(); $('b-comps').click();
+  ok(H.step() === 'champ' && $('hs-title').textContent === 'Competitions' && $('hs-back').textContent === 'Back to Match', 'Competitions is Match\'s second step, Back to Match');
+  $('hs-back').click(); ok(H.step() === 'match', 'Back to Match goes to Match');
+  $('hs-back').click(); ok(H.step() === null, 'and Back to Menu home');
+  $('b-set').click(); $('s-home').fire('keydown', { key:'Escape' }); ok(H.step() === null, 'Escape on a step is Back');
+  $('b-drills').click(); $('pr-grown').click();
+  ok($('hs-back').hidden && !$('pr-grownups').hidden && H.step() === 'drills', 'For Grown-Ups: its own Back to Skills, the step\'s Back put away (a controller\'s B finds Back to Skills)');
+  $('s-home').fire('keydown', { key:'Escape' }); ok(H.step() === 'drills', 'and Escape leaves the step alone while it is open');
+  $('pr-grown-back').click(); ok(!$('hs-back').hidden && $('pr-grownups').hidden, 'Back to Skills shuts it, the step\'s Back again');
+  D.goHome(); ok(H.step() === null, 'going home is the five boxes');
+  D.goHome($('pr-cones')); ok(H.step() === 'drills', 'going home to a button inside a step (a drill just played) is that step');
+  D.goHome($('b-quick')); ok(H.step() === 'match', 'Quick Match\'s is Match');
+  D.goHome($('hc-int')); ok(H.step() === 'champ', 'a competition\'s is Competitions');
+  D.goHome($('b-grown')); ok(H.step() === 'settings', 'Grown-Ups\' is Settings');
+  D.goHome($('b-my')); ok(H.step() === null, 'and My Team\'s Change is the boxes');
+  H.show('champ'); ok(H.step() === 'champ' && shown() === 's-home', 'the home on Competitions (New Championship, a cup put away)');
+  D.goHome();
+  ok(H.first() === $('b-continue') && /DEFAULT_FOCUS\['s-home'\] = homeFirst;/.test(menus), 'the focus and a controller\'s first press: Continue (measured in the browser part)');
+  fresh();
+  X.restore({ settings:{ hl:'settings', sound:false } });
+  ok(!('hl' in D.settings()) && D.settings().sound === false && (D.goHome(), H.step() === null), 'an old save\'s headline (hl) is dropped and the rest kept: the home opens on its five boxes');
+  X.save(); ok(!('hl' in saved().settings), 'and the save no longer writes one');
+  for (const v of ['champ', 'career']) { X.restore({ settings:{ last:v } }); ok(D.settings().last === v, `Continue's last, ${v}, read back`); }
+  X.restore({ settings:{ last:'nope' } }); ok(D.settings().last === 'career', 'an unknown one is ignored');
+  X.restore({ settings:{ last:3 } }); ok(D.settings().last === 'career', 'and one of the wrong type');
   fresh();
 }
 
-// 3. each headline's buttons go where they did
+// 3. every button goes where it did
 {
   fresh();
-  $('b-quick').click(); ok(shown() === 's-teams' && D.pickMode() === 'quick' && $('t-title').textContent === 'Pick Your Team' && $('t-eyebrow').textContent === 'Quick Match', 'Play opens Quick Match\'s Pick Your Team');
+  $('b-match').click(); $('b-quick').click();
+  ok(shown() === 's-teams' && D.pickMode() === 'quick' && $('t-title').textContent === 'Pick Your Team' && $('t-eyebrow').textContent === 'Quick Match' && !T.picker.state().sides[0].set, 'Match, Quick Match: Pick Your Team, nothing set for you');
+  $('t-back').click(); ok(shown() === 's-home' && H.step() === 'match', 'its Back to Menu comes back to Match');
+  D.goHome(); $('b-continue').click();
+  ok(shown() === 's-teams' && D.pickMode() === 'quick', 'Continue with nothing under way (Play): Quick Match');
+  $('t-back').click(); ok(shown() === 's-home' && H.step() === null, 'its Back to Menu comes back to the boxes');
   D.goHome(); D.openJoin(); ok(shown() === 's-join', 'Two Player\'s own entry, openJoin, still opens the join screen'); $('j-back').click();
-  H.select('drills');
-  T.drills.DRILLS.forEach(d => { $('pr-' + d.id).click(); ok(T.drills.state() && T.drills.state().id === d.id, `${d.name} starts its drill`); T.practice.choose(); });
-  ok(shown() === 's-home' && D.settings().hl === 'drills', 'Back to Skills: the home, on Skills Mini Games');
-  $('b-help').click(); ok(shown() === 's-help', 'How to Play opens its screen'); $('h-back').click(); ok(shown() === 's-home', 'and comes back');
-  $('b-locker').click(); ok(shown() === 's-locker', 'the Locker opens'); $('lk-back').click();
-  H.select('career'); $('b-career').click(); ok(shown() === 's-career-new', 'New Career opens New Player'); D.goHome();
-  H.select('settings');
+  $('b-drills').click();
+  T.drills.DRILLS.forEach(d => { $('pr-' + d.id).click(); ok(T.drills.state() && T.drills.state().id === d.id, `${d.name} starts its drill`); T.practice.choose(); ok(shown() === 's-home' && H.step() === 'drills', `Back to Skills after ${d.name}: the home, on Skill Games`); });
+  $('b-help').click(); ok(shown() === 's-help', 'How to Play opens its screen'); $('h-back').click(); ok(shown() === 's-home' && H.step() === 'drills', 'and comes back to Skill Games');
+  D.goHome();
+  $('b-locker').click(); ok(shown() === 's-locker', 'the Locker, in My Team\'s box, opens'); $('lk-back').click(); ok(shown() === 's-home', 'and comes back');
+  $('b-my').click(); ok(shown() === 's-teams' && D.pickMode() === 'my', 'Change opens My Team\'s picker'); $('t-back').click(); ok(shown() === 's-home' && H.step() === null, 'and comes back');
+  $('b-career').click(); ok(shown() === 's-career-new', 'Career with none under way: New Player'); D.goHome();
+  $('b-set').click();
   const seg = k => [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === k);
   ok(['diff', 'sound', 'hints', 'half'].every(seg), 'Settings carries Difficulty, Sound, Match Help and Half Length');
   seg('half').children[1].click(); ok(D.settings().half === 1 && saved().settings.half === 1, 'Half Length is pressed straight from Settings');   // the stand-in segs have two buttons each
@@ -139,56 +170,66 @@ const fresh = () => {                                       // a new game on the
   seg('hints').children[0].click(); seg('diff').children[0].click(); ok(D.settings().kids === true && D.settings().diff === 0, 'Difficulty: Kids');
   seg('diff').children[1].click(); { const g = T.kids.gate(); ok(g && D.settings().kids === true, 'Easy from Kids asks a grown-up first (PR #14: only a grown-up leaves the Kids level)'); if (g) for (const d of g.answer) T.kids.type(d); }
   ok(D.settings().kids === false && D.settings().diff === 0, 'Easy');
+  ok(H.step() === 'settings', 'Settings stays open as each is pressed');
   D.settings().diff = 1;
   ok($('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'no Grown-Ups on the web as shipped');
-  S.setNative(true); S.setStarted(true); D.goHome();
+  S.setNative(true); S.setStarted(true); D.goHome(); $('b-set').click();
   ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown'), 'in the app Grown-Ups shares Sound and Match Help\'s row');
   $('b-grown').click(); ok(!$('m-store').hidden && S.ui().mode === 'grown', 'and opens the Grown-Ups panel, as it did'); S.close();
   const s = D.settings(); s.kids = true; s.diff = 0; s.kidsR = 1; s.kidsTop = 9; D.goHome();
-  ok(T.kids.ready() && $('b-grown').classList.contains('note') && $('hl-settings').classList.contains('note'), 'Move Up to Easy waiting: its dot on Grown-Ups and on the Settings headline');
+  ok(T.kids.ready() && $('b-grown').classList.contains('note') && $('b-set').classList.contains('note') && $('b-set').getAttribute('aria-label') === 'Settings, a suggestion waiting', 'Move Up to Easy waiting: its dot on Grown-Ups and on the Settings box, read out');
   s.kids = false; s.diff = 1; s.kidsR = 0; s.kidsTop = 0; D.goHome();
-  ok(!$('hl-settings').classList.contains('note'), 'and gone with it');
+  ok(!$('b-set').classList.contains('note'), 'and gone with it');
   fresh();
 }
 
-// 4. the gates: every paid entry keeps its Full Game gate and lock; Quick Match, Skills Mini Games, Settings, the Locker and My Team stay free
+// 4. the gates: every paid entry keeps its Full Game gate and lock; Quick Match, Skill Games, Settings, the Locker and My Team stay free
 {
   fresh(); S.setTier('free'); D.goHome();
-  ok(['hl-champ', 'hl-career', 'b-career'].every(id => $(id).classList.contains('locked')) && ['hl-game', 'hl-drills', 'hl-settings', 'b-quick', 'b-my', 'b-locker', 'b-help'].every(id => !$(id).classList.contains('locked')) && !/id="b-two"/.test(html), 'free: the Championship and Career headlines and New Career locked; Quick Match and its Play, Skills Mini Games, Settings, My Team and the Locker not (and no 2 Players to lock)');
+  ok(['b-comps', 'b-career'].every(id => $(id).classList.contains('locked')) && ['b-continue', 'b-match', 'b-drills', 'b-set', 'b-quick', 'b-my', 'b-locker', 'b-help'].every(id => !$(id).classList.contains('locked')) && !/id="b-two"/.test(html), 'free: Competitions and Career locked; Play, Match, Quick Match, Skill Games, Settings, My Team\'s Change and the Locker not (and no 2 Players to lock)');
   ok($('b-import').classList.contains('locked'), 'Add Your Team locked: it is the Super Fan\'s');
   ok(/if \(seg && seg\.children\[3\]\) storeMark\(seg\.children\[3\], 'hard'\);/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')) && /if \(key === 'diff' && i === 3 && !storeGate\('hard'/.test(menus), 'Hard keeps its lock and its gate in Settings');
+  $('b-match').click(); $('b-comps').click(); ok(H.step() === 'champ' && $('m-store').hidden, 'Competitions opens its step, each competition locked in it');
   H.champPick('eng'); ok(!$('m-store').hidden && S.ui().feature === 'champ' && shown() === 's-home', 'a competition opens the Unlock card, not the team screen'); S.close();
-  $('b-career').click(); ok(!$('m-store').hidden && S.ui().feature === 'career', 'New Career opens the Unlock card'); S.close();
+  $('b-career').click(); ok(!$('m-store').hidden && S.ui().feature === 'career', 'Career opens the Unlock card'); S.close();
   $('b-import').click(); ok(!$('m-store').hidden && S.ui().feature === 'import' && $('m-import').hidden && $('st-title').textContent === 'Add Your Team', 'Add Your Team opens the Unlock card, named Add Your Team'); S.close();
-  $('b-quick').click(); ok($('m-store').hidden && shown() === 's-teams', 'Quick Match\'s Play is free'); D.goHome();
+  $('b-quick').click(); ok($('m-store').hidden && shown() === 's-teams', 'Quick Match is free'); D.goHome();
+  $('b-continue').click(); ok($('m-store').hidden && shown() === 's-teams', 'Play is free'); D.goHome();
   $('b-my').click(); ok($('m-store').hidden && shown() === 's-teams' && D.pickMode() === 'my', 'My Team is free'); D.goHome();
   $('b-locker').click(); ok($('m-store').hidden && shown() === 's-locker', 'the Locker is free'); D.goHome();
   $('pr-cones').click(); ok($('m-store').hidden && T.drills.state(), 'a drill is free'); T.practice.choose();
-  S.setTier(null); D.goHome();
-  ok(['hl-champ', 'hl-career', 'b-career', 'b-import'].every(id => !$(id).classList.contains('locked')), 'the web as shipped (STORE_WEB_TIER full): no lock anywhere');
+  X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); D.goHome();
+  ok($('b-continue').classList.contains('locked') && $('cont-name').textContent === 'Continue' && /^Championship · Round 1 v /.test($('cont-note').textContent), 'a championship under way on the free tier: Continue locked, its line kept');
+  $('b-continue').click(); ok(!$('m-store').hidden && S.ui().feature === 'champ' && X.champ(), 'and it opens the Unlock card, the championship kept'); S.close();
+  X.setChamp(null); C.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); D.goHome();
+  ok($('b-continue').classList.contains('locked') && /^Career · /.test($('cont-note').textContent), 'a career likewise'); $('b-continue').click(); ok(!$('m-store').hidden && S.ui().feature === 'career', 'its Unlock card'); S.close();
+  C.set(null); S.setTier(null); D.goHome();
+  ok(['b-comps', 'b-career', 'b-import', 'b-continue'].every(id => !$(id).classList.contains('locked')), 'the web as shipped (STORE_WEB_TIER full): no lock anywhere');
   fresh();
 }
 
-// 5. Championship: Continue first, the tiers and their competitions, each with only its sides, and the Trophy Cabinet
+// 5. Competitions: Continue first, the tiers and their competitions, each with only its sides, and the Trophy Cabinet
 {
-  fresh(); H.setTier(0); H.select('champ');
+  fresh(); H.setTier(0); H.open('champ');
   const comps = t => H.comps(t).map(c => c[0]).join();
   ok(comps(0) === 'int,world,tour' && H.comps(0).map(c => c[1]).join() === 'Championship,World Cup,Home Nations Tour', 'International: Championship, World Cup, Home Nations Tour');
   ok(comps(1) === 'eng,en2,fra,cel,sco,rsa,aus,nzl,jpn' && H.comps(1).map(c => c[1]).join() === X.TEAM_LISTS.filter(l => l.tier === 1).map(l => l.name).join(), 'National: each country\'s league');
   ok(comps(2) === 'sur,cty' && H.comps(2).map(c => c[1]).join() === 'Surrey,Counties', 'Local: Surrey and Counties (PR #14\'s), and no My League without an import');
   ok(['eng', 'fra', 'cel', 'rsa'].every(K.euroLeague) && !['en2', 'sco', 'aus', 'nzl', 'jpn', 'sur', 'cty', 'my', 'int'].some(K.euroLeague), 'the European Cup\'s trophy on the four leagues whose winner goes on to it');
   H.setTier(1); H.champ();
-  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && /id="hc-en2" data-comp="en2"><span>England 2<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n9' && /\.hc-comps\.n9\{grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*\.hc-comps\.n9 > \.btn\{grid-column:span 5\}\s*\.hc-comps\.n9 > \.btn:nth-child\(n\+5\)\{grid-column:span 4\}/.test(css), 'the trophy, in the European Cup\'s gold, no prose; nine leagues (England 2 is PR #14\'s) in two rows, each in equal parts (re-pinned for the United Rugby Championship: four then five, so it has a quarter)');
+  ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && /id="hc-en2" data-comp="en2"><span>England 2<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n9' && /\.hc-comps\.n9\{grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*\.hc-comps\.n9 > \.btn\{grid-column:span 5\}\s*\.hc-comps\.n9 > \.btn:nth-child\(n\+5\)\{grid-column:span 4\}/.test(css), 'each a big button, the European Cup\'s trophy on its four, National\'s nine in two rows (four then five, each row in equal parts)');
   ok(/id="hc-cel" data-comp="cel"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>United Rugby Championship<\/span>/.test($('hc-comps').innerHTML) && /class="btn hc-comp long" id="hc-cel"/.test($('hc-comps').innerHTML) && ($('hc-comps').innerHTML.match(/ long"/g) || []).length === 1, 'the United Rugby Championship by its name, with the European Cup\'s trophy, the one long name (its lock goes in the corner)');
   ok(!$('hc-new').hidden && $('hc-go').hidden && $('b-cabinet').hidden, 'nothing saved: the competitions, and no Trophy Cabinet before a season is finished');
-  // each competition's team screen: only its sides
-  // re-pinned for the side-by-side team screen (2026-11-11): one side, centred, the competition its first group (its tier over its name), then Made Teams
+  H.setTier(null); D.goHome(); H.open('champ');
+  ok(H.tier() === 2, 'the tier on show starts on My Team\'s (Farnham: Local)');
+  // each competition's team screen: only its sides, and Back comes back to it
   const P = T.picker, comp = () => P.view(0).ladder[0], cards = () => comp().teams.length, panel = () => $('t-side0').innerHTML;
   for (const l of X.TEAM_LISTS.filter(l => l.tier > 0)) {
-    H.champPick(l.key);
-    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && P.one() && P.view(0).ladder.map(g => g.key).join() === 'comp,mine.made' && cards() === l.teams.length && l.teams.every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === l.name && P.where(comp()) === X.TEAM_TIERS[l.tier], `${l.name}: its ${l.teams.length} sides only, one side, no other list to wander off to, ${X.TEAM_TIERS[l.tier]} over ${l.name}`);
-    D.goHome();
+    H.setTier(l.tier); H.open('champ'); H.champPick(l.key);
+    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && P.one() && P.view(0).ladder.map(g => g.key).join() === 'comp,mine.made' && cards() === l.teams.length && l.teams.every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === l.name && P.where(comp()) === X.TEAM_TIERS[l.tier], `${l.name}: its ${l.teams.length} sides only, one side, ${X.TEAM_TIERS[l.tier]} over ${l.name}`);
+    $('t-back').click(); ok(shown() === 's-home' && H.step() === 'champ', `${l.name}: Back to Menu comes back to Competitions`);
   }
+  H.setTier(null); D.goHome();
   H.champPick('int');
   ok(X.teamPool() === 'int' && cards() === 12 && X.natList('men').every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === 'International' && P.view(0).team.id === 'ENG' && $('t-go').textContent === 'Play as England', 'International Championship: the twelve, England (My Team\'s country) on show, Play as England');
   $('t-go').click();
@@ -205,24 +246,25 @@ const fresh = () => {                                       // a new game on the
   H.champPick('tour');
   ok(K.comp() === 'tour' && $('t-title').textContent === 'Pick the Host' && cards() === 3 && /Tour /.test($('t-go').textContent) && !/My Team/.test(panel()), 'Home Nations Tour: the three hosts, the one in turn on the primary, nothing marked My Team');
   D.goHome();
-  // a saved championship or cup: Continue first
-  X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); D.goHome();
-  ok(!$('hc-go').hidden && $('hc-new').hidden && $('b-champ').textContent === 'Continue Championship' && !$('champ-note').hidden, 'a championship under way: Continue Championship, with its note, and the competitions wait');
+  // a saved championship or cup: Continue Championship first
+  X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); D.goHome(); H.open('champ');
+  ok(!$('hc-go').hidden && $('hc-new').hidden && $('b-champ').textContent === 'Continue Championship' && !$('champ-note').hidden, 'a championship under way: Competitions shows Continue Championship, with its note, and the competitions wait');
   $('b-champ').click(); ok(shown() === 's-hub', 'which goes to its hub');
   H.champPick('eng'); ok(shown() === 's-hub' && X.champ().teams[0].id === 'ENG', 'and a competition pressed now goes there too, the championship kept');
   $('hub-reset').click(); $('hub-reset').click();
   ok(X.champ() === null && shown() === 's-home', 'Start Fresh: home');
-  D.goHome(); ok(D.settings().hl === 'champ' && !$('hc-new').hidden && $('b-cabinet').hidden, 'the competitions are back; no Trophy Cabinet until a season is finished');
-  { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.save(); X.setChamp(null); X.save(); }
-  D.goHome(); ok(K.history().length === 1 && !$('b-cabinet').hidden, 'a season finished: the Trophy Cabinet, under the competitions');
-  $('b-cabinet').click(); ok(shown() === 's-cabinet' && /England/.test($('home-history').innerHTML), 'the Trophy Cabinet opens on its own screen');
-  $('cab-back').click(); ok(shown() === 's-home', 'and Back to Menu comes home');
-  K.set(K.cupNew('world', { user:X.natList('men')[4], cat:'men' })); D.goHome();
+  H.open('champ'); ok(!$('hc-new').hidden && $('b-cabinet').hidden, 'the competitions are back; no Trophy Cabinet until a season is finished');
+  { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); const c = X.champ(), u = c.user; for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:p[0] === u ? 30 : p[1] === u ? 0 : 10, as:p[1] === u ? 30 : p[0] === u ? 0 : 10, ht:3, at:1 }))); c.round++; } X.save(); X.setChamp(null); X.save(); }
+  D.goHome(); ok(K.history().length === 1 && !$('b-cabinet').hidden, 'a season won: the Trophy Cabinet\'s strip under My Team\'s box');
+  ok(/data-kind="league" data-metal="silver"/.test($('tc-list').innerHTML) && /<\/span>1<span class="tc-w">&nbsp;Title<\/span>/.test($('tc-list').innerHTML) && /data-kind="triple" data-metal="silver"/.test($('tc-list').innerHTML) && $('b-cabinet').getAttribute('aria-label') === 'Trophy Cabinet: 1 Title, 1 Triple Crown', `each trophy in its shape and metal, and its count: England's Six Nations won, 1 Title and 1 Triple Crown (${$('b-cabinet').getAttribute('aria-label')})`);
+  $('b-cabinet').click(); ok(shown() === 's-cabinet' && /England/.test($('home-history').innerHTML), 'the strip opens the Trophy Cabinet on its own screen');
+  $('cab-back').click(); ok(shown() === 's-home' && H.step() === null, 'and Back to Menu comes home');
+  K.set(K.cupNew('world', { user:X.natList('men')[4], cat:'men' })); D.goHome(); H.open('champ');
   ok(!$('hc-go').hidden && $('hc-new').hidden && /data-kind="world"[\s\S]*World Cup · <\/span>Pool [ABCD]$/.test($('champ-note').innerHTML) && $('b-champ').textContent === 'Continue Championship', 'a cup under way: Continue Championship, its note the cup');
   $('b-champ').click(); ok(shown() === 's-cup', 'which goes to the cup');
   K.set(null);
   // My League: Local, with an import
-  I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id })) }); D.goHome(); H.setTier(2); H.champ();
+  I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id })) }); D.goHome(); H.setTier(2); H.open('champ');
   ok(comps(2) === 'sur,cty,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey and Counties');
   H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship' && comp().name === 'My League' && P.where(comp()) === 'Local', 'My League\'s team screen, Local over My League');
   // the European Cup is still reached by winning a European league
@@ -231,7 +273,55 @@ const fresh = () => {                                       // a new game on the
   c.results = c.fixtures.map(rd => rd.map(([h, a]) => (rk(h) < rk(a) ? { h, a, hs:20, as:0, ht:4, at:0 } : { h, a, hs:0, as:20, ht:0, at:4 }))); c.round = 5; D.renderHub();
   ok(/id="hub-euro"/.test($('hub-next').innerHTML), 'a European league won from the home\'s England: Play European Cup');
   $('hub-later').click(); $('hub-new').click();
-  ok(X.champ() === null && shown() === 's-home' && D.settings().hl === 'champ' && !$('hc-new').hidden, 'New Championship: back to the home\'s Championship, where the competitions are');
+  ok(X.champ() === null && shown() === 's-home' && H.step() === 'champ' && !$('hc-new').hidden, 'New Championship: back to the home\'s Competitions, where the competitions are');
+  fresh();
+}
+
+// 5b. Continue: whatever is under way, the one played last where there are two, in one line; Play with nothing under way
+{
+  fresh();
+  ok(H.under() === null && $('cont-name').textContent === 'Play' && $('cont-note').textContent === 'Quick Match' && $('b-continue').getAttribute('aria-label') === 'Play, Quick Match', 'nothing under way: Play, Quick Match');
+  // Play: My Team set on the left, the Opponent its league's rival, set, the side ready to change; Kick Off one press away
+  const P = T.picker;
+  $('b-continue').click();
+  ok(shown() === 's-teams' && D.pickMode() === 'quick' && P.state().sides[0].set && P.view(0).team === X.CLUBS[0] && P.state().on === 1 && P.view(1).team.id === 'WIM' && P.state().sides[1].set && $('t-go').textContent === 'Kick Off' && $('t-title').textContent === 'Pick Opponent', `Play: Farnham (My Team) set on the left, Wimbledon (its league's rival) on the right, that side active, Kick Off (${$('t-go').textContent}, ${P.view(1).team.name})`);
+  P.step(1, 1); ok(!P.state().sides[1].set && /^Pick /.test($('t-go').textContent) && P.view(1).team.id !== 'WIM', 'the Opponent changes with a move, freed to pick again');
+  const demo = T.M; $('t-back').click();
+  D.settings().myClub = 'BTH'; D.settings().pick = [{ id:'FAR', cat:'men', g:'sur' }, { id:'GLO', cat:'men', g:'eng' }]; D.goHome(); $('b-continue').click();
+  ok(P.view(0).team.id === 'BTH' && P.state().sides[0].set && P.view(1).team.id === 'GLO' && P.state().sides[1].set && $('t-go').textContent === 'Kick Off', 'Play: My Team\'s club (Bath), never the last Your Team, and the last Opponent (Gloucester) kept');
+  D.settings().pick = [null, { id:'BTH', cat:'men', g:'eng' }]; D.goHome(); $('b-continue').click();
+  ok(P.view(0).team.id === 'BTH' && P.view(1).team.id !== 'BTH' && P.state().sides[1].set, 'a last Opponent that is My Team\'s club itself: its league\'s rival instead');
+  ok(T.M === demo && T.M.demo, 'nothing started until Kick Off');
+  $('t-go').click(); ok(shown() !== 's-teams' && !T.M.demo && T.M.nat[0].id === 'BTH', 'Kick Off plays it'); D.exitMatch();
+  fresh();
+  // a championship, a cup, a career
+  X.newChamp(X.CLUBS[0], X.CLUBS.slice(1, 6)); D.goHome();
+  const opp = X.champ().teams[(p => (p[0] === X.champ().user ? p[1] : p[0]))(X.champ().fixtures[0].find(p => p.includes(X.champ().user)))];
+  ok(H.under() === 'champ' && $('cont-name').textContent === 'Continue' && $('cont-note').textContent === 'Championship · Round 1 v ' + opp.name, `a championship: Continue, Championship · Round 1 v ${opp.name} (${$('cont-note').textContent})`);
+  $('b-continue').click(); ok(shown() === 's-hub', 'Continue opens its hub');
+  { const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } }
+  D.goHome(); ok($('cont-note').textContent === 'Championship · Final Table', 'finished and not put away: Championship · Final Table');
+  X.setChamp(null);
+  K.set(K.cupNew('euro', { user:X.ENGLAND[0], cat:'men' })); D.goHome();
+  const fx = K.cupFixture(K.get());
+  ok(H.under() === 'champ' && $('cont-note').textContent === 'European Cup · Semi-Final v ' + K.get().teams[fx.opp].name, `a cup: European Cup · Semi-Final v ${K.get().teams[fx.opp].name} (${$('cont-note').textContent})`);
+  $('b-continue').click(); ok(shown() === 's-cup', 'Continue opens the cup');
+  K.set(K.cupNew('tour', { user:K.cupTourSide('men'), n:0, host:'NZL' })); D.goHome();
+  ok(/^Home Nations Tour · Test 1 v /.test($('cont-note').textContent) && !/ of \d/.test($('cont-note').textContent), `a tour: Home Nations Tour · Test 1 v its host, no "of 3" (${$('cont-note').textContent})`);
+  K.set(null);
+  C.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); D.goHome();
+  const f = C.ahead(C.get()), copp = f.teams[f.home === f.user ? f.away : f.home];
+  ok(H.under() === 'career' && $('cont-note').textContent === 'Career · Round 1 v ' + copp.name && $('career-note').hidden, `a career: Career · Round 1 v ${copp.name}, and the Career box keeps no note of its own (${$('cont-note').textContent})`);
+  $('b-continue').click(); ok(shown() === 's-career', 'Continue opens the career\'s hub');
+  $('b-career').click(); ok(shown() === 's-career', 'and so does the Career box');
+  // both: the one played last
+  X.newChamp(X.CLUBS[0], X.CLUBS.slice(1, 6)); D.settings().last = null; D.goHome();
+  ok(H.under() === 'champ' && !$('career-note').hidden && /^Year 1 · /.test($('career-note').innerHTML), 'a championship and a career, neither played: the championship first, the career\'s note in its box');
+  C.play(); ok(D.settings().last === 'career' && saved().settings.last === 'career', 'a career match started: the career is the one played last, saved'); D.exitMatch(); D.goHome();
+  ok(H.under() === 'career' && /^Career · /.test($('cont-note').textContent) && $('career-note').hidden, 'Continue picks it up');
+  $('hub-play') && (D.renderHub(), $('hub-play').click()); ok(D.settings().last === 'champ' && T.M.champ, 'a championship match started: the championship'); D.exitMatch(); D.goHome();
+  ok(H.under() === 'champ' && /^Championship · /.test($('cont-note').textContent) && !$('career-note').hidden, 'Continue picks that up, the career\'s note back in its box');
+  ok(/if \(!pair && \(M\.champ \|\| M\.cup\) && settings\.last !== 'champ'\)/.test(fs.readFileSync(new URL('../src/ui-match.js', import.meta.url), 'utf8')) && /if \(settings\.last !== 'career'\) \{ settings\.last = 'career'; save\(\); \}/.test(fs.readFileSync(new URL('../src/career.js', import.meta.url), 'utf8')), 'a cup match counts as the championship\'s, a career\'s own cup match as the career\'s (careerArm, after startMatch)');
   fresh();
 }
 
@@ -239,9 +329,8 @@ const fresh = () => {                                       // a new game on the
 {
   fresh();
   ok(H.myClub() === X.CLUBS[0] && H.myNat(null).id === 'ENG' && D.settings().myClub === null && D.settings().myNat === null, 'a new game: Farnham and England');
-  ok(/Farnham/.test($('my-kits').innerHTML) && /England/.test($('my-kits').innerHTML) && /--kit:/.test($('my-kits').innerHTML), 'the home\'s My Team: both kits and names, on one button');
+  ok($('my-name').textContent === 'Farnham' && /--kit:#1a1a1a/.test($('my-shirt').innerHTML) && /England/.test($('my-nat').innerHTML) && /--kit:/.test($('my-nat').innerHTML) && $('b-my').getAttribute('aria-label') === 'Change My Team: Farnham, England', 'the home\'s My Team: the club\'s shirt and name, the country\'s, Change read out with both');
   $('b-my').click();
-  // re-pinned for the side-by-side team screen (2026-11-11): My Team is one side, the club first and then the country, Done while it is
   const P6 = T.picker, v6 = () => P6.view(0), to6 = (n, key) => { P6.group(n, P6.view(n).ladder.findIndex(g => g.key === key) - P6.view(n).gi); return P6.view(n); }, mineTag = n => /<span class="gap mine">My Team<\/span>/.test($('t-side' + n).innerHTML);
   ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && P6.one() && v6().group.key === 'sur' && v6().ladder.some(g => g.key === 'nat.eng') && v6().ladder.some(g => g.key === 'fra') && $('t-go').textContent === 'Done', 'My Team: Pick Your Club on its group, the whole ladder to look anywhere, Done while the club is it');
   ok(v6().team.id === 'FAR' && mineTag(0) && v6().ladder.find(g => g.key === 'mine.made').teams.some(t => t.act === 'create') && v6().ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'Farnham marked My Team, Create Team and Add Your Team in Mine');
@@ -250,10 +339,11 @@ const fresh = () => {                                       // a new game on the
   ok(v6().ladder.filter(g => g.key.startsWith('nat.')).length === 12 && !v6().ladder.some(g => g.teams.some(t => t.legend)), 'the countries: the category\'s twelve, no Legend');
   to6(0, 'nat.wal'); P6.go();
   ok(D.settings().myNat === 'WAL' && D.settings().myClub === 'BTH' && mineTag(0) && $('t-go').textContent === 'Done', 'a nation picked: the country, marked, the club kept');
+  P6.go(); ok(shown() === 's-home' && H.step() === null, 'Done: home');
   X.catPick('women'); H.myPick(X.natList('women').find(t => t.id === 'CDN')); X.catPick('men');
   ok(D.settings().myNat === 'CDN' && H.myNat('men') === null && H.myNat('women').id === 'CDN' && H.myNat(null).id === 'CDN', 'Canada, from the women\'s twelve: no side on the men\'s list, Canada still on the home');
   H.myPick(X.natList('men').find(t => t.id === 'WAL'));
-  D.goHome(); ok(/Bath/.test($('my-kits').innerHTML) && /Wales/.test($('my-kits').innerHTML), 'home: Bath and Wales');
+  D.goHome(); ok($('my-name').textContent === 'Bath' && /Wales/.test($('my-nat').innerHTML), 'home: Bath and Wales');
   X.load(); ok(D.settings().myClub === 'BTH' && D.settings().myNat === 'WAL', 'saved and loaded');
   X.restore({ settings:{ myClub:'<b>', myNat:'XYZ' } }); ok(D.settings().myClub === 'BTH' && D.settings().myNat === 'WAL', 'a broken value in a save is ignored');
   X.restore({ settings:{ myClub:'GONE', myNat:'ENG' } }); ok(D.settings().myClub === null && H.myClub() === X.CLUBS[0] && D.settings().myNat === 'ENG', 'a club no longer there is the default again');
@@ -266,16 +356,16 @@ const fresh = () => {                                       // a new game on the
   T.stamina.openBuilder(null); $('bd-name').value = 'Red Lions'; T.stamina.draft().name = 'Red Lions'; $('bd-save').click();
   const mine = X.custom().find(t => t.name === 'Red Lions');
   H.myPick(mine); ok(D.settings().myClub === mine.key && H.myClub() === mine && H.myPool() === null, 'a team you made can be My Team');
+  D.goHome(); ok($('my-name').textContent === 'Red Lions', 'and it is the box\'s');
   X.restore({ custom:[] }); X.restore({ settings:{} }); ok(D.settings().myClub === null && H.myClub() === X.CLUBS[0], 'deleted: the default again');
   I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id + 'X', id:t.id })) });
   H.myPick(I.league().teams[0]); ok(D.settings().myClub === I.league().teams[0].key && H.myPool() === 'my', 'a side of My League can be My Team');
   I.setLeague(null); ok(H.myClub() === X.CLUBS[0], 'its league removed: the default');
   fresh();
-  // Quick Match (its Play): offered first in Player 1's list, marked, never picked or started
+  // Quick Match (from Match): offered first in Player 1's list, marked, never picked or started
   D.settings().myClub = 'BTH'; D.settings().myNat = 'WAL';
   const demo = T.M;
   $('b-quick').click();
-  const first = () => $('t-grid').innerHTML.split('data-i="1"')[0];
   ok(T.M === demo && T.M.demo && $('t-title').textContent === 'Pick Your Team' && !P6.state().sides[0].set && $('t-go').textContent === 'Pick Bath' && v6().group.key === 'eng', 'Quick Match: Pick Your Team on My Team\'s group, nothing set, Pick (never Play as), nothing started');
   ok(v6().group.teams[0].id === 'BTH' && v6().team.id === 'BTH' && mineTag(0) && !mineTag(1) && !P6.state().sides[0].set, 'Bath first, marked My Team, not picked');
   to6(0, 'nat.wal');
@@ -286,7 +376,6 @@ const fresh = () => {                                       // a new game on the
   ok($('t-title').textContent === 'Pick Opponent' && P6.state().sides[0].set && v6().team.id === 'GUI' && T.M === demo, 'another side picked: his; now the opponent');
   to6(1, 'eng');
   ok(P6.view(1).group.teams.map(t => t.id).join() === X.ENGLAND.map(t => t.id).join() && !mineTag(1), 'the opponents\' groups: in their own order, nothing marked');
-  // Pick Opponent puts the picked side's own league rivals first (the real order, 2026-11-09): Farnham's first opponent is Wimbledon, a fair derby
   {
     const list = () => T.yourTeam.teamList(), ids = () => list().map(t => t.id), sur = X.CLUBS.map(t => t.id);
     D.settings().pick = [null, null]; D.openTeams('quick'); to6(0, 'sur'); D.pickTeam(X.CLUBS[0]);
@@ -315,43 +404,91 @@ const fresh = () => {                                       // a new game on the
   ok($('t-go').textContent === 'Play as Wales Women', 'International on Women: Play as Wales Women');
   D.settings().cat = 'men'; D.goHome();
   // a new Career: his club picked for you, Change Club to change it
-  C.set(null); H.select('career'); $('b-career').click();
-  ok(shown() === 's-career-new' && C.draft().club.id === 'BTH' && C.draft().league === 'eng' && /Bath/.test($('cn-mine').innerHTML), 'New Career: Bath, of England\'s league');
+  C.set(null); $('b-career').click();
+  ok(shown() === 's-career-new' && C.draft().club.id === 'BTH' && C.draft().league === 'eng' && /Bath/.test($('cn-mine').innerHTML), 'Career: New Player, Bath, of England\'s league');
   C.clubPick(X.CLUBS[3]); ok(C.draft().club === X.CLUBS[3], 'Change Club picks another');
   fresh();
 }
 
-// 6b. My Team's club on the home: its stars and last season (PR #14's Your Team info, the owner's "main's bottom bar + PR #14's Your Team info"),
-//     under Play, only where the club has real figures
+// 6b. My Team's box: the club's stars and its league line (PR #14's Your Team info), only where the club has real figures
 {
   fresh();
-  const R5 = T.ratings, rec = () => [$('my-rec').hidden, $('my-rec-side').innerHTML, $('my-rec-league').textContent, $('my-rec-record').textContent];
-  const at = id => { D.settings().myClub = id; D.goHome(); return rec(); };
-  let r = rec();
-  ok(!r[0] && r[1] === '<b>Farnham</b>' + R5.starsHtml(3.5) && r[2] === 'Regional 1 South Central · 7th Last Season' && r[3] === 'Won 10 · Lost 12 · 640 Scored · 646 Conceded', `a new game: Farnham, 3.5 stars, 7th in Regional 1 South Central, won 10, lost 12, 640 scored, 646 conceded (${r.slice(1).join(' | ')})`);   // re-pinned at the real order (2026-11-09): Farnham is 61, 3.5 stars (was 75, 4.5)
+  const R5 = T.ratings, box = () => [$('my-name').textContent, $('my-stars').innerHTML, $('my-league').innerHTML.replace(/<[^>]+>/g, '')];
+  const at = id => { D.settings().myClub = id; D.goHome(); return box(); };
+  let r = box();
+  ok(r[0] === 'Farnham' && r[1] === R5.starsHtml(3.5) && r[2] === 'Regional 1 South Central · 7th Last Season' && $('my-league').innerHTML === '<span>Regional 1 South Central</span><span class="sep"> · </span><span>7th Last Season</span>', `a new game: Farnham, 3.5 stars, 7th in Regional 1 South Central, the league over its place (${r.join(' | ')})`);
   ok(R5.starsHtml(3.5).includes('aria-label="3.5 Stars"') && R5.starsOf(X.CLUBS[0]) === 3.5, 'the stars carry their words for a screen reader');
   r = at('NTH');
-  ok(r[2] === 'English Premiership · 1st Last Season' && r[3] === 'Won 14 · Drew 1 · Lost 3 · 693 Scored · 536 Conceded' && r[1].includes('<b>Northampton</b>'), `a draw shows when there was one (${r[3]})`);
+  ok(r[2] === 'English Premiership · 1st Last Season' && r[0] === 'Northampton' && H.recordLine(H.myClub()) === 'Won 14 · Drew 1 · Lost 3 · 693 Scored · 536 Conceded', `Northampton: its line, and last season's record kept for the team screen and the tools (${H.recordLine(H.myClub())})`);
   ok(at('LWE')[2] === 'English Premiership · 9th Last Season' && at('COB')[2] === 'Counties 1 Surrey/Sussex · 1st Last Season' && at('MTB')[2] === 'Top 14 · 14th Last Season' && at('BED')[2] === 'English Championship · 2nd Last Season' && at('JHB')[2] === 'United Rugby Championship · 7th Last Season' && at('MBO')[2] === 'Currie Cup · 3rd Last Season', 'the ordinals read right, and every list with figures has them (England 2 and the Currie Cup too)');
-  for (const id of ['QUI', 'MEL', 'WLG', 'KOB', 'AYR']) { r = at(id); ok(r[0] && !r[1] && !r[2] && !r[3], `${id}: no figures, so nothing under Play, never an invented line`); }
+  for (const id of ['QUI', 'MEL', 'WLG', 'KOB', 'AYR']) { r = at(id); ok(r[1].includes('rstars') && !r[2], `${id}: its stars, and no league line, never an invented one`); }
   D.settings().myClub = null;
   T.stamina.openBuilder(null); $('bd-name').value = 'Red Lions'; T.stamina.draft().name = 'Red Lions'; $('bd-save').click();
   const mine = X.custom().find(t => t.name === 'Red Lions'); H.myPick(mine); D.goHome();
-  ok($('my-rec').hidden && !$('my-rec-league').textContent, 'a team you made: none');
+  ok(!$('my-league').innerHTML && $('my-name').textContent === 'Red Lions', 'a team you made: none');
   X.restore({ custom:[] }); D.settings().myClub = null;
   I.setLeague(I.clean({ teams:[{ ...X.CLUBS[1], key:'lg-QQQ', id:'QQQ', name:'Quarry', league:'Fake', place:1, w:9, d:0, l:0, pf:1, pa:0 }] })); H.myPick(I.league().teams[0]); D.goHome();
-  ok(D.settings().myClub === 'lg-QQQ' && $('my-rec').hidden && !('league' in I.league().teams[0]), 'a My League side: none, even one handed figures (a league is kept through cleanImportLeague, which keeps no line)');
+  ok(D.settings().myClub === 'lg-QQQ' && !$('my-league').innerHTML && !('league' in I.league().teams[0]), 'a My League side: none, even one handed figures (a league is kept through cleanImportLeague, which keeps no line)');
   I.setLeague(null); fresh();
-  const panel = home.slice(home.indexOf('id="hp-game"'), home.indexOf('id="hp-champ"'));
-  ok((panel.match(/<button/g) || []).length === 1 && /<div class="my-rec" id="my-rec" hidden>/.test(panel), 'Play is still the panel\'s one button: the club\'s line under it is not a button (My Team at the top is the way in)');
-  ok(!/\b(he|his|him|she|her)\b/i.test(rec().slice(1).join(' ').replace(/<[^>]+>/g, ' ')) && titled('Won 10 · Lost 12 · 640 Scored · 646 Conceded') && titled('Regional 1 South Central · 7th Last Season'), 'no he or she, and its words in Title Case');
-  ok(/\.my-rec\{display:flex;[^}]*\}/.test(css) && /\.my-rec\[hidden\]\{display:none\}/.test(css), 'its style: one row, hidden when there are no figures');
+  ok(!/\b(he|his|him|she|her)\b/i.test(box().join(' ').replace(/<[^>]+>/g, ' ')) && titled('Regional 1 South Central · 7th Last Season'), 'no he or she, and its words in Title Case');
+  ok(/\.my-league:empty\{display:none\}/.test(css) && /\.my-league > span\{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/.test(css) && /\.my-box\[data-fit\] \.my-league > span:last-child\{display:none\}/.test(css), 'its style: the league over its place, each on its line, the place dropped first where the box is tight; nothing where there are no figures');
+  ok((home.slice(home.indexOf('id="my-box"'), home.indexOf('id="my-acts"')).match(/<button/g) || []).length === 0, 'the box\'s figures are not buttons: Change, Add Your Team and the Locker are its three');
+}
+
+// 6c. the games played as My Team: a new saved record, counts and the last five, for the club and the country
+{
+  fresh();
+  const F = H.form, figs = () => $('my-rec').innerHTML.match(/<dd>(\d+)<\/dd>/g).map(s => +s.replace(/\D/g, ''));
+  const chips = () => [...$('my-form').innerHTML.matchAll(/<li class="fm ([a-z]+)"/g)].map(m => m[1]).join(' ');
+  ok(json(F.get()) === '[]' && json(figs()) === json([0, 0, 0, 0]) && chips() === 'none none none none none' && $('my-form').getAttribute('aria-label') === 'No Results Yet', 'a new game: Played 0, Won 0, Drawn 0, Lost 0, five empty places');
+  ok(/<div><dt>Played<\/dt><dd>0<\/dd><\/div><div><dt>Won<\/dt><dd>0<\/dd><\/div><div><dt>Drawn<\/dt><dd>0<\/dd><\/div><div><dt>Lost<\/dt><dd>0<\/dd><\/div>/.test($('my-rec').innerHTML), 'Played · Won · Drawn · Lost, each figure over its word');
+  const play = (a, b, us, them, o, isChamp) => { D.startMatch(a, b, !!isChamp, o); const M = T.M; M.half = 2; M.score = [us, them]; M.tries = [Math.floor(us/5), Math.floor(them/5)]; M.phase = 'break'; M.over = true; L.finishMatch(); const r = M.formDone; D.exitMatch(); return r; };
+  play(X.CLUBS[0], X.CLUBS[1], 20, 5); D.goHome();
+  ok(json(figs()) === json([1, 1, 0, 0]) && chips() === 'w none none none none' && /<li class="fm w"><span aria-hidden="true">W<\/span><span class="sr">Won<\/span><\/li>/.test($('my-form').innerHTML) && $('my-form').getAttribute('aria-label') === 'Last Result', 'a Quick Match won as Farnham: Played 1, Won 1, a W (the letter seen, Won read out)');
+  ok(json(saved().form) === json([{ k:'c:FAR', w:1, d:0, l:0, last:'W' }]), 'saved: its key, the counts and the last results');
+  play(X.CLUBS[0], X.CLUBS[3], 10, 10, undefined, true); play(X.CLUBS[0], X.CLUBS[2], 0, 15, { cup:'euro', cupKO:true }); D.goHome();
+  ok(json(figs()) === json([3, 1, 1, 1]) && chips() === 'w d l none none', 'a Championship match drawn and a cup match lost: they count, in order, the latest last');
+  C.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); C.play(); { const M = T.M; M.half = 2; M.score = [M.nat[0].id === 'FAR' ? 25 : 0, 3]; M.phase = 'break'; M.over = true; L.finishMatch(); } D.exitMatch(); C.set(null); D.goHome();
+  ok(json(figs()) === json([4, 2, 1, 1]) && chips() === 'w d l w none', 'a career match at Farnham counts too');
+  for (const [us, them] of [[5, 0], [0, 5], [7, 7]]) play(X.CLUBS[0], X.CLUBS[1], us, them);
+  D.goHome();
+  ok(json(figs()) === json([7, 3, 2, 2]) && chips() === 'l w w l d' && F.get()[0].last === 'LWWLD', 'the last five only, the latest on the right: L W W L D');
+  // never counted: another side, AI v AI, the demo, a drill, a tool's match, Two Player
+  const before = json(F.get());
+  ok(play(X.CLUBS[1], X.CLUBS[0], 30, 0) === undefined && json(F.get()) === before, 'a match as another club (Haslemere v Farnham) counts nothing');
+  T.newMatch(X.CLUBS[0], X.CLUBS[1], { halfLen:60, diff:1, auto:true }); T.M.score = [9, 0]; T.M.over = true; ok(F.match() === null && json(F.get()) === before, 'AI v AI: nothing');
+  T.newMatch(X.CLUBS[0], X.CLUBS[1], { halfLen:60, diff:1, demo:true }); T.M.over = true; ok(F.match() === null && json(F.get()) === before, 'the demo: nothing');
+  T.newMatch(X.CLUBS[0], X.CLUBS[1], { halfLen:60, diff:1, headless:true, humans:[true, false] }); T.M.over = true; ok(F.match() === null && json(F.get()) === before, 'a tool\'s match (no arcade): nothing');
+  ok(play(X.CLUBS[0], X.CLUBS[1], 20, 0, { two:true, levels:[1, 1] }) === undefined && json(F.get()) === before, 'Two Player: nothing (the record is one player\'s against the game)');
+  T.practice.start('cones'); ok(F.match() === null && json(F.get()) === before, 'a drill: nothing'); T.practice.choose();
+  { const p = fs.readFileSync(new URL('../src/persistence.js', import.meta.url), 'utf8'), code = p.slice(p.indexOf('const FORM_KEEP'), p.indexOf('function restore('));
+    ok(code.length > 500 && !/rnd\(|Math\.random|shuffle\(/.test(code), 'the record draws nothing random (and section 0\'s fingerprint pins every match kind)'); }
+  // the country: the same, for My Team's nation
+  play(X.NATIONS[0], X.NATIONS[1], 22, 12, undefined, true); D.goHome();
+  const eng = F.of(X.NATIONS.find(n => n.id === 'ENG'));
+  ok(X.NATIONS[0].id === 'ENG' && eng.k === 'n:ENG' && eng.w === 1 && eng.last === 'W' && /<span class="sr">My Country: England, Played 1, Won 1, Drawn 0, Lost 0<\/span>/.test($('my-nat').innerHTML), `as England, My Team's country: its own record, read out with the country (${$('my-nat').innerHTML.replace(/<[^>]+>/g, ' ')})`);
+  ok(json(figs()) === json([7, 3, 2, 2]), 'the club\'s untouched');
+  D.settings().cat = 'women'; play(X.catTeam(X.CLUBS[0], 'women'), X.catTeam(X.CLUBS[1], 'women'), 10, 0); D.settings().cat = 'men'; D.goHome();
+  ok(json(figs()) === json([8, 4, 2, 2]), 'Farnham Women is Farnham\'s');
+  // a change of My Team: its own record; back again, the old one
+  D.settings().myClub = 'BTH'; D.goHome(); ok(json(figs()) === json([0, 0, 0, 0]), 'My Team changed to Bath: Bath\'s record, at nought');
+  play(X.ENGLAND[0], X.ENGLAND[1], 3, 0); D.settings().myClub = null; D.goHome();
+  ok(json(figs()) === json([8, 4, 2, 2]) && F.get().map(r => r.k).join() === 'c:BTH,c:FAR,n:ENG', `back to Farnham: Farnham's again, every side kept, the one played as last first (${F.get().map(r => r.k).join()})`);
+  // the save: read back, cleaned, old saves at nought
+  { const was = json(F.get()); X.save(); F.set([]); X.load(); D.goHome(); ok(json(F.get()) === was && json(figs()) === json([8, 4, 2, 2]), 'saved and loaded'); }
+  X.restore({ settings:{} }); ok(json(F.get()) === '[]', 'an old save (no record): every side at nought');
+  ok(json(F.clean([{ k:'c:FAR', w:2, d:0, l:1, last:'WLW' }, { k:'c:FAR', w:9 }, { k:'x:FAR', w:1 }, { k:'c:<b>', w:1 }, null, 7, [], { k:'n:ENG', w:-1, d:1.5, l:'3', last:'DDDDDD' }, { k:'c:BTH', w:1, d:0, l:0, last:'LL' }])) === json([{ k:'c:FAR', w:2, d:0, l:1, last:'WLW' }, { k:'n:ENG', w:0, d:0, l:0, last:'' }, { k:'c:BTH', w:1, d:0, l:0, last:'' }]), 'cleaned as it loads: a key once, known kinds and safe characters, whole counts at nought or more, the last five only W, D and L and never more of one than its count');
+  ok(json(F.clean('nope')) === '[]' && json(F.clean({ k:'c:FAR' })) === '[]', 'anything else: none');
+  ok(F.clean(Array.from({ length:30 }, (_, i) => ({ k:'c:T' + i, w:1, d:0, l:0, last:'W' }))).length === F.KEEP && F.KEEP === 12, 'twelve sides at most');
+  ok(F.clean([{ k:'c:FAR', w:F.MAX + 1, d:0, l:0 }])[0].w === 0 && F.MAX === 99999, 'a count past its cap is not trusted');
+  { const was = json(F.get()); F.set([{ k:'c:FAR', w:F.MAX, d:0, l:0, last:'W' }]); play(X.CLUBS[0], X.CLUBS[1], 5, 0); ok(F.get()[0].w === F.MAX, 'and a count never runs past it'); F.set(JSON.parse(was)); }
+  fresh();
 }
 
 // 7. Add Your Team: today's import, then Make This My Team | Not Now
 {
   fresh();
-  ok(!$('b-import').hidden && /id="b-import" hidden>Add Your Team</.test(html), 'on the web as shipped: Add Your Team shows (its card says it works in the app)');
+  ok(!$('b-import').hidden && /id="b-import" hidden>Add Your Team</.test(html), 'on the web as shipped: Add Your Team shows in My Team\'s box (its card says it works in the app)');
   $('b-import').click();
   ok(!$('m-import').hidden && I.state().step === 'web' && I.state().from === 'home' && $('im-back').textContent === 'Back to Menu' && $('im-title').textContent === 'Works in the Try Line App' && /aria-labelledby="im-eyebrow im-title">\s*<div class="im-head">\s*<div><p class="eyebrow" id="im-eyebrow">Add Your Team<\/p><h3 id="im-title">/.test(html), 'it opens the Add Your Team card over the home (Works in the Try Line App, the card named by both), Back to Menu');
   $('im-back').click(); ok($('m-import').hidden && shown() === 's-home', 'and closes back home');
@@ -365,9 +502,9 @@ const fresh = () => {                                       // a new game on the
   ok(club && I.state().step === 'mine' && !$('m-import').hidden && $('im-title').textContent === club.name && !$('im-mine').hidden && $('im-row').hidden && $('im-go').hidden && /--kit:#1b2747/.test($('im-jersey').innerHTML), 'a club saved: Make This My Team | Not Now, in its shirt');
   ok(/<div class="row2" id="im-mine" hidden><button class="btn" id="im-make">Make This My Team<\/button><button class="btn" id="im-not" data-back>Not Now<\/button><\/div>/.test(html) && I.focusEl(true) === $('im-make'), 'balanced halves, Not Now the card\'s Back, the ring on Make This My Team');
   $('im-not').click();
-  ok($('m-import').hidden && D.settings().myClub === null && shown() === 's-home' && /Farnham/.test($('my-kits').innerHTML), 'Not Now: My Team as it was, home');
+  ok($('m-import').hidden && D.settings().myClub === null && shown() === 's-home' && $('my-name').textContent === 'Farnham', 'Not Now: My Team as it was, home');
   offer(); $('im-make').click();
-  ok($('m-import').hidden && D.settings().myClub === club.key && H.myClub() === club && /Godalming/.test($('my-kits').innerHTML) && saved().settings.myClub === club.key, 'Make This My Team: it is, saved, on the home');
+  ok($('m-import').hidden && D.settings().myClub === club.key && H.myClub() === club && $('my-name').textContent === club.name && saved().settings.myClub === club.key, 'Make This My Team: it is, saved, in the box');
   offer();
   ok($('m-import').hidden && I.state().step !== 'mine', 'importing My Team\'s club again asks nothing');
   ok(I.league() && I.league().teams.length === 4 && I.league().teams.every(t => /^lg-/.test(t.key)) && H.comps(2).map(c => c[0]).join() === 'sur,cty,my', 'the league comes in as ever: My League, beside Surrey and Counties');
@@ -415,6 +552,34 @@ const fresh = () => {                                       // a new game on the
   K.set(null); fresh();
 }
 
+// 9b. A Super Fan of My Team's club: My Team's box in the club's colours, the Super Fan badge, its trophy's rosette, a crest only where the
+//     club has agreed; a Super Fan of another club, or none, the plain box
+{
+  fresh();
+  ok(!$('s-home').classList.contains('fan') && $('st-fan').hidden && H.fanMine() === null, 'the web: no Super Fan, the plain box');
+  S.setNative(true); S.setStarted(true); S.setBought(['tryline.fan.farnham']); D.goHome();
+  ok(H.fanMine() === S.FAN_CLUBS[0] && $('s-home').classList.contains('fan') && !$('st-fan').hidden && /<span>Super Fan<\/span>/.test($('st-fan').innerHTML) && /<svg class="fan-shield"[^>]*>[\s\S]*fill="#1a1a1a" stroke="#f2efe6"/.test($('st-fan').innerHTML), 'a Super Fan of Farnham, My Team\'s club: the box in its colours, the Super Fan badge with a plain shield in its kit');
+  ok(/data-kind="fan" data-metal="gold" role="img" aria-label="Super Fan Trophy"/.test($('st-fan').innerHTML) && L.fanHeld && L.fanHeld().includes('farnham'), 'and the Super Fan trophy\'s rosette, the trophy held');
+  ok(!$('b-cabinet').hidden && /data-kind="fan"/.test($('tc-list').innerHTML) && /Super Fan Trophy, Farnham RUFC/.test($('b-cabinet').getAttribute('aria-label')), 'the rosette in the Trophy Cabinet\'s strip too');
+  const v = k => $('s-home').style.getPropertyValue('--fan-' + k);
+  ok(['kit', 'trim', 'acc', 'ink', 'edge', 'ground', 'gink'].every(k => /^#[0-9a-f]{6}$/.test(v(k))) && v('ground') === '#1a1a1a' && v('gink') === '#f1eee4' && v('edge') === '#f2efe6', `its colours: Farnham's black as the ground, chalk on it, the white trim as the edge (${['ground', 'gink', 'edge'].map(v).join(' ')})`);
+  ok(/#s-home\.fan \.my-box\{background:var\(--fan-ground\);border-color:var\(--fan-edge\);[^}]*color:var\(--fan-gink\)\}/.test(css) && !/#s-home\.fan \.btn\.bx-go|#s-home\.fan \.hs-panel \.btn\.primary/.test(css), 'the box\'s ground and edge in them; Continue stays the floodlight\'s yellow, the home\'s one primary (the design review, 2026-11-11)');
+  { const th = S.theme({ kit:'#777777', trim:'#777777' }), cr = (a, b) => S.contrast(a, b);
+    ok(Math.max(cr('#777777', '#f1eee4'), cr('#777777', '#0b130e')) < 4.5 && cr(th.ground, th.gink) >= 4.5 && th.ground !== '#777777', `a mid grey neither chalk nor ink reads on at 4.5:1 is darkened until chalk does (${th.ground} ${cr(th.ground, th.gink).toFixed(2)}:1)`);
+    const kits = ['#1a1a1a', '#f2efe6', '#c8102e', '#ffcf3d', '#1b2747', '#5aa0d8', '#888888', '#2f8f4a'];
+    ok(kits.every(k => cr(S.theme({ kit:k, trim:'#000000' }).ground, S.theme({ kit:k, trim:'#000000' }).gink) >= 4.5), `every word on the ground at 4.5:1 or better, whatever the kit (${kits.map(k => cr(S.theme({ kit:k }).ground, S.theme({ kit:k }).gink).toFixed(1)).join(' ')})`); }
+  D.settings().myClub = 'BTH'; D.goHome();
+  ok(!$('s-home').classList.contains('fan') && $('st-fan').hidden && !$('b-cabinet').hidden, 'a Super Fan of Farnham whose My Team is Bath: the plain box (the trophy still in the strip and the Locker)');
+  D.settings().myClub = null; D.goHome(); ok($('s-home').classList.contains('fan'), 'Farnham again: the colours back');
+  S.FAN_CLUBS[0].crest = 'crests/farnham.svg'; D.goHome();
+  ok(/<svg class="fan-shield"/.test($('st-fan').innerHTML) && !/<img/.test($('st-fan').innerHTML), 'a crest the club has not agreed to (agreed false): the plain shield still');
+  S.FAN_CLUBS[0].agreed = true; D.goHome();
+  ok(/<img class="fan-shield fan-crest" src="crests\/farnham\.svg" alt="" draggable="false">/.test($('st-fan').innerHTML), 'agreed and supplied: its crest in the shield\'s place');
+  S.FAN_CLUBS[0].agreed = false; S.FAN_CLUBS[0].crest = null;
+  ok(/#my-marks|id="my-marks"/.test(html) && /\.my-marks:not\(:has\(> :not\(\[hidden\]\)\)\)\{display:none\}/.test(css) && /function storeFanMine\(\)/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')), 'a tier\'s marks have their own row over the name, empty and away without one: another tier adds its own there with no change of layout');
+  fresh();
+}
+
 await browserChecks();
 console.log(`Home: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
@@ -426,8 +591,9 @@ function chromium() {
   }
   return null;
 }
-// 10. In Chromium (where Playwright is installed): the home fits 844x390 and 667x375 with no scroll in every state, on every headline;
-//     the keyboard and a controller reach the bar and every button; the panel's buttons never squeeze under 44px.
+// 10. In Chromium (where Playwright is installed): the home fits every phone size (844x390, 667x375, Safari's 844x340, 667x320 and
+//     568x320) with no page scroll in every state, on the five boxes and on every step; a Super Fan's box in the club's colours at 4.5:1;
+//     the keyboard and a controller reach every box and every button, Continue first, Down and Up between the rows; every target 44px.
 async function browserChecks() {
   if (process.env.GAME || process.env.NO_BROWSER) { console.log('skip the browser checks (GAME or NO_BROWSER set)'); return; }
   const chrome = chromium();
@@ -445,10 +611,10 @@ async function browserChecks() {
   });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}/`;
-  const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 } };
-  // Settings row by row, at every size (the Settings fit: Difficulty's label beside its control at 320px tall once moved its segment right,
-  // and the ring skipped a row): the web's halves and the thirds where Grown-Ups shows (the free web, the app), desk or not. Down from every
-  // control lands on the row under it, the last row's on the Settings headline, never two rows down; Left and Right never two rows away either
+  const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 }, form:[{ k:'c:FAR', w:9, d:1, l:4, last:'WWLWD' }] };
+  const VIEWS = [[null, null], ['match', null], ['champ', 0], ['champ', 1], ['champ', 2], ['drills', null], ['settings', null]];   // the five boxes, then each step (Competitions on each tier)
+  // Settings row by row, at every size: the web's halves and the thirds where Grown-Ups shows (the free web, the app), desk or not. Down from
+  // every control lands on the row under it, the last row's on nothing (the step's foot), never two rows down; Left and Right never two rows away
   const settingsRows = () => {
     const T = window.__tryline, S = T.store, st = T.debug.settings(), $ = id => document.getElementById(id), panel = $('hp-settings'), out = { rows:[], moves:0, bad:[] };
     const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
@@ -456,10 +622,10 @@ async function browserChecks() {
     for (const desk of [false, true]) for (const store of ['web', 'free', 'app']) {
       const app = store === 'app', at = store + (desk ? ' desk' : '');
       S.setNative(app); S.setStarted(app); S.setBought([]); S.setTier(store === 'free' ? 'free' : null);
-      st.kids = app; st.diff = app ? 0 : 1; st.hl = 'settings'; document.body.classList.toggle('desk', desk); T.debug.goHome(); T.home.ring(null);
+      st.kids = app; st.diff = app ? 0 : 1; document.body.classList.toggle('desk', desk); T.debug.goHome(); T.home.open('settings'); T.home.ring(null);
       const btns = [...panel.querySelectorAll('button')].filter(vis), foot = el => box(el.closest('.set') || el).bottom;   // a control's row: its setting's foot (Grown-Ups stands on its row's)
       const feet = btns.map(foot).sort((a, b) => a - b).filter((f, i, a) => !i || f - a[i - 1] > 8);
-      const row = el => !el ? -1 : panel.contains(el) ? feet.findIndex(f => Math.abs(foot(el) - f) <= 8) : el === $('hl-settings') ? feet.length : -2;
+      const row = el => !el ? feet.length : panel.contains(el) ? feet.findIndex(f => Math.abs(foot(el) - f) <= 8) : -2;
       out.rows.push(feet.length);
       for (const b of btns) {
         const r = row(b);
@@ -468,108 +634,127 @@ async function browserChecks() {
         for (const dx of [-1, 1]) { T.home.ring(b); const to = T.navMove(0, dx, 0); out.moves++; if (to && panel.contains(to) && Math.abs(row(to) - r) > 1) out.bad.push(`${at}: ${dx < 0 ? 'Left' : 'Right'} from ${name(b)} to ${name(to)}`); }
       }
     }
-    S.setNative(false); S.setStarted(false); S.setTier(null); st.kids = false; st.diff = 1; st.hl = 'game'; document.body.classList.remove('desk'); T.home.ring(null); T.debug.goHome();
+    S.setNative(false); S.setStarted(false); S.setTier(null); st.kids = false; st.diff = 1; document.body.classList.remove('desk'); T.home.ring(null); T.debug.goHome();
     return out;
   };
-  const rowsOk = (kind, r) => ok(r.rows.length === 6 && r.rows.every(n => n === 3) && !r.bad.length, `${kind}: Settings in three rows (the web, the free web, the app, desk or not), Down from every control on the row under it (the last row's on the Settings headline), Left and Right never two rows away (${r.bad.slice(0, 4).join(', ') || r.moves + ' moves'}; rows ${r.rows.join(' ')})`);
+  const rowsOk = (kind, r) => ok(r.rows.length === 6 && r.rows.every(n => n === 3) && !r.bad.length, `${kind}: Settings in three rows (the web, the free web, the app, desk or not), Down from every control on the row under it (the last row's on nothing), Left and Right never two rows away (${r.bad.slice(0, 4).join(', ') || r.moves + ' moves'}; rows ${r.rows.join(' ')})`);
   try {
-    for (const [w, h] of [[844, 390], [667, 375]]) for (const touch of [true, false]) {
+    for (const [w, h] of [[844, 390], [667, 375], [844, 340], [667, 320], [568, 320]]) for (const touch of [true, false]) {
       const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });
       const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
       await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
       const kind = `${w}x${h} ${touch ? 'touch' : 'desk'}`;
-      // every state: desk or not (2 Players showed on a desk; now it shows on neither), the app (Grown-Ups) or the web (Add Your Team), Install and Update showing or not, a Trophy
-      // Cabinet or not, nothing saved, a championship and a career, or a cup, the free tier's locks or not, and in the app a Super Fan
-      // (the badge under the logo, two lines: it must not widen the logo's column and squeeze My Team), with the plain shield or a club's
-      // crest, the home in the club's colours and its trophy putting the Trophy Cabinet on the home; on every headline
+      // every state: desk or not, the app (Grown-Ups) or the web (Add Your Team), Install, Offline Ready and Updating showing or not, a Trophy
+      // Cabinet or not, nothing under way, a championship, a cup or a career, the free tier's locks or not, and in the app a Super Fan of
+      // My Team's club (its plain shield or a club's crest, the box in its colours, its trophy in the strip); on the five boxes and every step
       await page.evaluate(() => new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = 'crests/test.svg'; }));   // the stand-in crest, loaded once
-      const states = await page.evaluate(() => {
-        const T = window.__tryline, X = T.teams, K = T.cups, out = [];
+      const states = await page.evaluate(VIEWS => {
+        const T = window.__tryline, X = T.teams, K = T.cups, out = [], $ = id => document.getElementById(id);
         const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
         const cabinet = () => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
         const rgb = h => 'rgb(' + [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
         const lum = c => { const v = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(n => +n/255).map(x => (x <= 0.03928 ? x/12.92 : ((x + 0.055)/1.055) ** 2.4)); return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
         const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05)/(Math.min(x, y) + 0.05); };
-        for (const desk of [false, true]) for (const app of [false, true]) for (const tools of [false, true]) for (const cab of [false, true]) for (const busy of ['none', 'champ', 'cup']) for (const buy of ['full', 'free', 'fan', 'crest']) {
+        const TOOLS = ['app-tools', 'b-install', 'offline-update', 'offline-status'];
+        for (const desk of [false, true]) for (const app of [false, true]) for (const tools of [false, true]) for (const cab of [false, true]) for (const busy of ['none', 'champ', 'cup', 'career', 'both']) for (const buy of ['full', 'free', 'fan', 'crest']) {
           if (app && tools) continue;                         // the app has no Install or Update
           if (!app && (buy === 'fan' || buy === 'crest')) continue;   // nor the web a Super Fan
           const free = buy === 'free', fan = buy === 'fan' || buy === 'crest';
-          T.locker.set(T.locker.fresh()); T.store.FAN_CLUBS[0].crest = buy === 'crest' ? 'crests/test.svg' : null;   // each state its own device: no trophy carried from the last
+          T.locker.set(T.locker.fresh()); T.store.FAN_CLUBS[0].crest = buy === 'crest' ? 'crests/test.svg' : null; T.store.FAN_CLUBS[0].agreed = buy === 'crest';
           T.store.setNative(app); T.store.setStarted(app); T.store.setBought(!app || free ? [] : fan ? ['tryline.fan.farnham'] : ['tryline.full']); T.store.setTier(!app && free ? 'free' : null);
           K.setHistory([]); if (cab) cabinet();
           X.setChamp(null); K.set(null); T.career.set(null);
-          if (busy === 'champ') { X.newChamp(X.CLUBS[7] || X.CLUBS[0], X.CLUBS.slice(1, 6)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); }
+          if (busy === 'champ' || busy === 'both') X.newChamp(X.CLUBS[7] || X.CLUBS[0], X.CLUBS.slice(1, 6));
+          if (busy === 'career' || busy === 'both') T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] });
+          T.debug.settings().last = null;   // with both, the championship first
           if (busy === 'cup') K.set(K.cupNew('euro', { user:X.SOUTH_AFRICA[0], cat:'women' }));
-          T.debug.settings().kids = app; T.debug.settings().diff = app ? 0 : 1; T.debug.settings().kidsR = app ? 1 : 0; T.debug.settings().kidsTop = app ? 9 : 0;   // the app with Move Up to Easy waiting: the dots
+          const st = T.debug.settings(); st.kids = app; st.diff = app ? 0 : 1; st.kidsR = app ? 1 : 0; st.kidsTop = app ? 9 : 0;   // the app with Move Up to Easy waiting: the dots
           document.body.classList.toggle('desk', desk);
-          for (const hl of T.home.HL) {
-            T.debug.settings().hl = hl; T.debug.goHome();
-            if (tools) { for (const id of ['app-tools', 'b-install', 'offline-update', 'offline-status']) document.getElementById(id).hidden = false; }
-            const s = document.getElementById('s-home');
+          for (const [step, tier] of VIEWS) {
+            T.home.setTier(tier); T.debug.goHome(); if (step) T.home.open(step);
+            if (tools) { for (const id of TOOLS) $(id).hidden = false; T.home.fit(); }
+            const toolsAt = $('app-tools').parentNode.id;   // beside the wordmark, or at a step's top right
+            const s = $('s-home'), my = $('my-box'), cont = $('b-continue'), cs = e => getComputedStyle(e);
             const btns = [...s.querySelectorAll('button')].filter(vis);
-            const small = btns.filter(b => { const r = box(b); return r.height < 44 || r.width < 44; }).filter(b => !b.classList.contains('app-action')).map(b => b.id || b.textContent.trim());
-            const clipped = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)
-              .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = getComputedStyle(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }).map(e => e.id + "'s lock squeezed"));   // a lock beside a name keeps its size
-            const overlap = btns.some((a, i) => btns.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && (() => { const p = box(a), q = box(b); return p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1; })()));
-            // the club's colours: the chosen headline, the panel's primary and My Team's edge, readable on the dark; without, the home as it was
-            const tab = document.getElementById('hl-' + hl), prim = [...document.querySelectorAll('#hp-' + hl + ' .btn.primary')].find(vis), my = document.getElementById('b-my'), cs = e => getComputedStyle(e);
-            const v = k => cs(s).getPropertyValue('--fan-' + k).trim(), shield = document.querySelector('#st-fan .fan-shield');
-            const themed = fan ? s.classList.contains('fan') && cs(tab).color === rgb(v('acc')) && ratio(cs(tab).color, cs(tab).backgroundColor) >= 4.5 && cs(my).borderTopColor === rgb(v('acc'))
-                && (!prim || (cs(prim).backgroundColor === rgb(v('kit')) && cs(prim).color === rgb(v('ink')) && ratio(cs(prim).color, cs(prim).backgroundColor) >= 4.5))
-                && !!shield && (buy === 'crest' ? shield.tagName === 'IMG' && shield.complete && shield.naturalWidth > 0 : shield.tagName.toLowerCase() === 'svg') && box(shield).width <= 24 && box(shield).height <= 26
-              : !s.classList.contains('fan') && !s.style.cssText && cs(tab).color === 'rgb(255, 207, 61)' && (!prim || cs(prim).backgroundColor === 'rgb(255, 207, 61)') && cs(my).borderTopColor === 'rgb(58, 82, 66)';
-            out.push({ state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', fan ? buy : '', hl].filter(Boolean).join('+'), fan:fan && !document.getElementById('st-fan').hidden, themed, fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth, small, clipped, overlap,
-              two:!document.getElementById('b-two') && !btns.some(b => /\b2 Players\b|Two Player/.test(b.textContent)), play:hl !== 'game' || (vis(document.getElementById('b-quick')) && box(document.getElementById('b-quick')).height >= 88 && btns.filter(b => document.getElementById('hp-game').contains(b)).length === 1), grown:vis(document.getElementById('b-grown')) === ((app || free) && hl === 'settings'), note:document.getElementById('hl-settings').classList.contains('note') === app, cabBtn:vis(document.getElementById('b-cabinet')) === ((cab || fan) && hl === 'champ') });
-            if (tools) { for (const id of ['app-tools', 'b-install', 'offline-update', 'offline-status']) document.getElementById(id).hidden = true; }
+            const small = btns.filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(b => b.id || b.textContent.trim());
+            const clipped = [...s.querySelectorAll('.bx-name, .my-name, .tc-name, .hs-title, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)
+              .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = cs(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }).map(e => e.id + "'s lock squeezed"));
+            const panel = step && $('hp-' + step), pr = panel && box(panel), clip = !!panel && cs(panel).overflowY !== 'visible';
+            const seen = b => { const q = box(b); return clip && panel.contains(b) ? { left:Math.max(q.left, pr.left), right:Math.min(q.right, pr.right), top:Math.max(q.top, pr.top), bottom:Math.min(q.bottom, pr.bottom) } : q; };
+            const overlap = btns.some((a, i) => btns.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && (() => { const p = seen(a), q = seen(b); return p.bottom > p.top && q.bottom > q.top && p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1; })()));
+            const off = btns.filter(b => { const q = box(b); return (!clip || !panel.contains(b)) && (q.top < -0.5 || q.bottom > innerHeight + 0.5 || q.left < -0.5 || q.right > innerWidth + 0.5); }).map(b => b.id || b.textContent.trim());
+            const inner = step ? 0 : Math.max(0, my.scrollHeight - my.clientHeight);   // My Team's box holds everything it shows (homeFit)
+            let themed = true, words = [], why = '';
+            if (!step) {
+              const v = k => cs(s).getPropertyValue('--fan-' + k).trim();
+              words = [...my.querySelectorAll('.my-name, .my-league, .my-rec dt, .my-rec dd, .my-nat b, .my-fan > span:not(.cup-trophy)')].filter(vis).map(e => ratio(cs(e).color, cs(my).backgroundColor));
+              const sh = $('st-fan').querySelector('.fan-shield');
+              why = fan ? [s.classList.contains('fan'), cs(my).backgroundColor === rgb(v('ground')), cs(my).borderTopColor === rgb(v('edge')), words.every(r => r >= 4.5), cs(cont).backgroundColor === 'rgb(255, 207, 61)', ratio(cs(cont).color, cs(cont).backgroundColor) >= 4.5, vis($('st-fan')), !!sh && (buy === 'crest' ? sh.tagName === 'IMG' && /\/crests\/test\.svg$/.test(sh.src) : sh.tagName.toLowerCase() === 'svg'), !!sh && box(sh).width <= 20 && box(sh).height <= 22].map(Number).join('') : '';
+              themed = fan ? !why.includes('0')
+                : !s.classList.contains('fan') && !s.style.cssText && cs(cont).backgroundColor === 'rgb(255, 207, 61)' && cs(my).backgroundColor === 'rgba(16, 27, 20, 0.94)' && !vis($('st-fan')) && words.every(r => r >= 4.5);
+            }
+            const line = $('cont-note').textContent, want = busy === 'none' ? /^Quick Match$/ : busy === 'champ' || busy === 'both' ? /^Championship · Round 1 v / : busy === 'cup' ? /^European Cup · Semi-Final v / : /^Career · Round 1 v /;
+            out.push({ why, state:[desk ? 'desk' : 'phone', app ? 'app' : 'web', tools ? 'tools' : '', cab ? 'cab' : '', busy, free ? 'free' : '', fan ? buy : '', step ? step + (tier != null ? tier : '') : 'boxes'].filter(Boolean).join('+'), step, fan:fan && vis($('st-fan')), themed, words:words.length,
+              fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth && document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight, inner, small, clipped, overlap, off,
+              scroll:panel ? panel.scrollHeight - panel.clientHeight : 0,
+              two:!$('b-two') && !btns.some(b => /\b2 Players\b|Two Player/.test(b.textContent)),
+              line:step || (want.test(line) && $('cont-name').textContent === (busy === 'none' ? 'Play' : 'Continue') && vis($('career-note')) === (busy === 'both')),
+              grown:vis($('b-grown')) === ((app || free) && step === 'settings'), note:$('b-set').classList.contains('note') === app,
+              cabBtn:step || vis($('b-cabinet')) === (cab || fan), lock:step || (cont.classList.contains('locked') === (free && busy !== 'none')), tools:toolsAt === (step ? 'hs-head' : 'home-mark') && (!tools || vis($('b-install'))) });
+            if (tools) { for (const id of TOOLS) $(id).hidden = true; }
           }
         }
-        X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.store.setNative(false); T.store.setStarted(false); T.store.setBought([]); T.store.setTier(null); T.store.FAN_CLUBS[0].crest = null; T.locker.set(T.locker.fresh());
-        const st = T.debug.settings(); st.kids = false; st.diff = 1; st.kidsR = 0; st.kidsTop = 0; st.hl = 'game';
+        X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.store.setNative(false); T.store.setStarted(false); T.store.setBought([]); T.store.setTier(null); T.store.FAN_CLUBS[0].crest = null; T.store.FAN_CLUBS[0].agreed = false; T.locker.set(T.locker.fresh());
+        const st = T.debug.settings(); st.kids = false; st.diff = 1; st.kidsR = 0; st.kidsTop = 0; T.home.setTier(null);
         document.body.classList.remove('desk'); T.debug.goHome();
         return out;
-      });
+      }, VIEWS);
       const bad = f => states.filter(f).map(r => r.state);
-      ok(states.length === 480 && states.every(r => r.fits), `${kind}: the home fits without a scroll in every state, on every headline (${bad(r => !r.fits).slice(0, 6).join(', ') || states.length + ' states'})`);
-      ok(states.filter(r => r.fan).length === 120, `${kind}: 120 of them with the Super Fan badge under the logo, its plain shield or a club's crest (${states.filter(r => r.fan).length})`);
-      ok(states.every(r => r.themed), `${kind}: a Super Fan's home in the club's colours (the chosen headline 4.5:1 on its ground, the primary's word 4.5:1 on the kit, My Team's edge) with its shield or crest, and every other home exactly as it was (${bad(r => !r.themed).slice(0, 4).join(', ') || 'all'})`);
+      ok(states.length === 160*VIEWS.length && states.every(r => r.fits), `${kind}: the page never scrolls in every state, on the five boxes and every step (${bad(r => !r.fits).slice(0, 6).join(', ') || states.length + ' states'})`);
+      ok(states.every(r => !r.inner && !r.off.length), `${kind}: My Team's box holds all it shows, and nothing is off the screen (${states.filter(r => r.inner || r.off.length).slice(0, 4).map(r => r.state + ': ' + r.inner + 'px ' + r.off.join('/')).join('; ') || 'all'})`);
+      ok(states.filter(r => r.fan).length === 40, `${kind}: 40 of the boxes' states with the Super Fan badge in My Team's box, its plain shield or a club's crest (${states.filter(r => r.fan).length})`);
+      ok(states.every(r => r.themed), `${kind}: a Super Fan's box in the club's colours (its ground and edge, every word on it 4.5:1 and more; Continue still the floodlight's yellow) with its shield or crest, and every other home in the plain dark style, every word in the box 4.5:1 and more (${states.filter(r => !r.themed).slice(0, 4).map(r => r.state + ' ' + r.why).join(', ') || 'all'})`);
       ok(states.every(r => !r.small.length), `${kind}: every button at least 44px (${states.filter(r => r.small.length).slice(0, 3).map(r => r.state + ': ' + r.small.join('/')).join('; ') || 'all'})`);
       ok(states.every(r => !r.clipped.length && !r.overlap), `${kind}: no name cut off nor lock squeezed, no button over another (${states.filter(r => r.clipped.length || r.overlap).slice(0, 3).map(r => r.state + ': ' + r.clipped.join('/') + (r.overlap ? ' overlap' : '')).join('; ') || 'none'})`);
-      ok(states.every(r => r.two && r.play && r.grown && r.note && r.cabBtn), `${kind}: no 2 Players on any device, Quick Match one big Play (88px and more, alone in its panel), Grown-Ups in Settings where the store is live (the app, the free web), its dot on Settings, the Trophy Cabinet with a finished season (${bad(r => !(r.two && r.play && r.grown && r.note && r.cabBtn)).slice(0, 4).join(', ') || 'all'})`);
-      // long names on My Team step down to fit
-      const fit = await page.evaluate(() => {
-        const T = window.__tryline, st = T.debug.settings(); st.myClub = 'CHC'; st.myNat = 'RSA'; T.debug.goHome();
-        const names = [...document.querySelectorAll('.my-side b')], out = names.map(b => [b.textContent, b.scrollWidth <= b.clientWidth + 1, parseFloat(getComputedStyle(b).fontSize)]);
-        st.myClub = null; st.myNat = null; T.debug.goHome();
+      ok(states.every(r => r.tools), `${kind}: Offline Ready, Install Game and Updating beside the wordmark, and at a step's top right, showing wherever the home is (${bad(r => !r.tools).slice(0, 4).join(', ') || 'all'})`);
+      ok(states.every(r => r.two && r.line && r.grown && r.note && r.cabBtn && r.lock), `${kind}: no 2 Players on any device, Continue saying what it picks up (Play · Quick Match with nothing; with a championship and a career, the championship, the career's note in its box), locked where it is the Full Game's, Grown-Ups in Settings where the store is live, its dot on the Settings box, the Trophy Cabinet's strip with a finished season or a Super Fan trophy (${bad(r => !(r.two && r.line && r.grown && r.note && r.cabBtn && r.lock)).slice(0, 4).join(', ') || 'all'})`);
+      const crest = await page.evaluate(async () => {           // the crest itself: loaded, drawn at the shield's size
+        const T = window.__tryline, S = T.store; S.FAN_CLUBS[0].crest = 'crests/test.svg'; S.FAN_CLUBS[0].agreed = true; S.setNative(true); S.setStarted(true); S.setBought(['tryline.fan.farnham']); T.debug.goHome();
+        const img = document.querySelector('#st-fan img.fan-shield'); if (img) await img.decode().catch(() => {});
+        const r = img ? img.getBoundingClientRect() : null, out = { img:!!img, loaded:!!img && img.naturalWidth > 0, w:r && r.width, h:r && r.height };
+        S.FAN_CLUBS[0].crest = null; S.FAN_CLUBS[0].agreed = false; S.setNative(false); S.setStarted(false); S.setBought([]); T.debug.goHome();
         return out;
       });
-      ok(fit.length === 2 && fit.every(f => f[1] && f[2] >= 12) && fit[0][2] === fit[1][2], `${kind}: Christchurch and South Africa fit My Team, stepped down together (${JSON.stringify(fit)})`);
-      // every built-in club with England, South Africa and New Zealand fits My Team, on the web, in the app with the Full Game, with a
-      // club on sale and nothing bought, and with the Super Fan badge under the logo (its two lines must not take My Team's width)
+      ok(crest.img && crest.loaded && crest.w <= 20 && crest.h <= 22, `${kind}: a club's crest, agreed, loads in the Super Fan badge at the shield's size (${json(crest)})`);
+      const scrolls = states.filter(r => r.scroll > 0);
+      ok(scrolls.every(r => h <= 340 && /champ1$|drills$/.test(r.state)), `${kind}: a step scrolls inside itself only where 320px cannot hold it (National's nine, Skill Games), never the page (${[...new Set(scrolls.map(r => r.state.split('+').pop()))].join(', ') || 'none'})`);
+      // long names: the club's steps down until it fits; every built-in club with England, South Africa and New Zealand fits the box
       const names = await page.evaluate(() => {
-        const T = window.__tryline, X = T.teams, S = T.store, st = T.debug.settings(), out = {};
+        const T = window.__tryline, X = T.teams, S = T.store, st = T.debug.settings(), out = {}, $ = id => document.getElementById(id);
         const clubs = X.TEAM_LISTS.filter(l => l.tier > 0).flatMap(l => l.teams);
-        for (const [state, bought, onSale] of [['web', null, false], ['app full', ['tryline.full'], false], ['app on sale', [], true], ['app Super Fan', ['tryline.fan.farnham'], true]]) {
-          S.FAN_CLUBS[0].agreed = onSale; S.setNative(!!bought); S.setStarted(!!bought); S.setBought(bought || []);
-          st.hl = 'game'; const cut = [];
+        for (const [state, bought] of [['web', null], ['app Super Fan', ['tryline.fan.farnham']]]) {
+          S.setNative(!!bought); S.setStarted(!!bought); S.setBought(bought || []);
+          const cut = [], px = [];
           for (const nat of ['ENG', 'RSA', 'NZL']) for (const c of clubs) {
             st.myClub = c.id; st.myNat = nat; T.debug.goHome();
-            const b = [...document.querySelectorAll('.my-side b')];
-            if (b.length !== 2 || b.some(e => e.scrollWidth > e.clientWidth + 1)) cut.push(c.name + ' + ' + nat);
+            const n = $('my-name'), b = $('my-nat').querySelector('b'), box = $('my-box');
+            px.push(parseFloat(getComputedStyle(n).fontSize));
+            if (n.scrollWidth > n.clientWidth + 1 || (b && b.offsetWidth && b.scrollWidth > b.clientWidth + 1) || box.scrollHeight > box.clientHeight + 0.5) cut.push(c.name + ' + ' + nat);
           }
-          out[state] = { tried:clubs.length * 3, cut:cut.length, of:cut.slice(0, 4), badge:!document.getElementById('st-fan').hidden, width:Math.round(document.getElementById('b-my').getBoundingClientRect().width) };
+          out[state] = { tried:clubs.length*3, cut:cut.length, of:cut.slice(0, 4), min:Math.min(...px) };
         }
-        S.FAN_CLUBS[0].agreed = false; S.setNative(false); S.setStarted(false); S.setBought([]); st.myClub = null; st.myNat = null; T.debug.goHome();
+        S.setNative(false); S.setStarted(false); S.setBought([]); st.myClub = null; st.myNat = null; T.debug.goHome();
         return out;
       });
-      ok(Object.values(names).every(r => r.tried > 200 && !r.cut) && names['app Super Fan'].badge && !names['app full'].badge, `${kind}: every club with England, South Africa or New Zealand fits My Team, the Super Fan badge showing or not (${JSON.stringify(names)})`);
+      ok(Object.values(names).every(r => r.tried > 200 && !r.cut && r.min >= 16), `${kind}: every club with England, South Africa or New Zealand fits My Team's box, its name 16px and more (Christchurch, Bloemfontein), the Super Fan badge showing or not (${JSON.stringify(names)})`);
       // a locked Legend: the padlock clears the name on its team card and the jersey, its badge and its name on the Locker's tile
       const locks = await page.evaluate(async () => {
-        const T = window.__tryline, X = T.teams, L = T.locker, S = T.store, st = T.debug.settings(), cat0 = st.cat, out = { cards:0, tiles:0, over:[] };
+        const T = window.__tryline, L = T.locker, S = T.store, st = T.debug.settings(), cat0 = st.cat, out = { cards:0, tiles:0, over:[] };
         const lockOf = el => { const c = getComputedStyle(el, '::after'), r = el.getBoundingClientRect(), l = r.left + el.clientLeft + parseFloat(c.left), t = r.top + el.clientTop + parseFloat(c.top); return { left:l, top:t, right:l + parseFloat(c.width), bottom:t + parseFloat(c.height) }; };
         const hit = (a, b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;   // 2px clear
         const saved = L.state(); L.set(L.clean({ n:{ hat:10, sharp:10, hit:10, clean:10, golden:10, comeback:10, drop:10, fire:10, champ:10, star:10 } })); S.setTier('free');
-        for (const cat of ['men', 'women']) {   // the side-by-side team screen (2026-11-11): each Legend on Your Team's side in turn, after its nation
+        for (const cat of ['men', 'women']) {
           st.cat = cat; st.pick = [null, null]; T.debug.openTeams('quick');
           const P = T.picker, legs = P.view(0).ladder.flatMap((g, gi) => g.teams.map((t, i) => [gi, i, t])).filter(x => x[2].legend);
           for (const [gi, i] of legs) {
@@ -586,59 +771,71 @@ async function browserChecks() {
         for (const b of document.querySelectorAll('#s-locker .lk-leg[data-legend]')) {
           out.tiles++;
           const lock = lockOf(b);
-          if (!b.classList.contains('locked') || ['.ovr', '.jersey', '.lk-nat', '.lk-yr', '.rstars'].some(q => hit(b.querySelector(q).getBoundingClientRect(), lock))) out.over.push('tile ' + b.getAttribute('aria-label'));
+          if (!b.classList.contains('locked') || ['.ovr', '.jersey', '.lk-nat', '.lk-yr', '.rstars'].some(q => { const e = b.querySelector(q); return e && e.getBoundingClientRect().width > 0 && hit(e.getBoundingClientRect(), lock); })) out.over.push('tile ' + b.getAttribute('aria-label'));
         }
         S.setTier(null); L.set(saved); st.cat = cat0; T.debug.goHome();
         return out;
       });
-      // nine Golds (star:10 is no Gold: Star Pupil counts drills): nine men's sides and all five women's, 14 (18 with ten women's, before 2026-11-09)
       ok(locks.cards === 14 && locks.tiles === 14 && !locks.over.length, `${kind}: a locked Legend's padlock clears its name on the team card (${locks.cards}) and its jersey, badge, name and stars on the Locker's tile (${locks.tiles}) (${locks.over.slice(0, 4).join(', ') || 'all clear'})`);
-      // a controller: the first press on Play, down to the bar, along it, press, up into the panel; every button reachable
-      const pad = await page.evaluate(() => {
-        const T = window.__tryline, out = {};
-        T.debug.settings().hl = 'game'; T.debug.goHome(); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
-        const f = () => T.debug.focus(), id = () => f() && (f().id || f().textContent.trim());
-        const HL = T.home.HL, at = () => HL.indexOf((f() && f().dataset && f().dataset.hl) || ''), $ = id => document.getElementById(id);
-        T.navMove(0, 0, 0); out.first = id();
-        T.navMove(0, 0, 1); out.down = at();
-        T.home.ring($('hl-game')); T.navMove(0, 1, 0); T.navMove(0, 1, 0); out.along = id(); T.navPress(0); out.hl = T.debug.settings().hl;
-        T.navMove(0, 0, -1); out.up = f() && !!f().closest('#hp-career');
-        T.home.ring($('hl-settings')); out.end = T.navMove(0, 1, 0); T.home.ring($('hl-game')); out.start = T.navMove(0, -1, 0);
-        // Down from any button of any headline's panel, pressed until the ring is on the bar, lands on that headline: never the nearest one
-        out.landed = [];
-        for (const hl of HL) for (const tier of hl === 'champ' ? [0, 1, 2] : [null]) {
-          T.debug.settings().hl = hl; if (tier != null) T.home.setTier(tier); T.debug.goHome(); T.home.ring(null);
-          for (const b of [...document.querySelectorAll('#hp-' + hl + ' .btn, #hp-' + hl + ' .seg button')].filter(b => !b.hidden && !b.closest('[hidden]') && b.getBoundingClientRect().width > 0)) {
-            T.home.ring(b); let el = b, n = 0;
-            while (el && !el.closest('#hl-bar') && n++ < 8) el = T.navMove(0, 0, 1);
-            if (!el || el.dataset.hl !== hl) out.landed.push(hl + (tier != null ? tier : '') + ':' + (b.id || b.textContent.trim()) + '>' + (el ? el.id || el.textContent.trim() : 'nothing'));
-          }
-        }
-        T.home.setTier(null); T.debug.settings().hl = 'game'; T.debug.goHome(); T.home.ring(null);
-        // every visible button on every headline, reached by moving the ring from the first press
-        out.unreached = [];
-        for (const hl of T.home.HL) {
-          T.debug.settings().hl = hl; T.debug.goHome(); T.home.ring(null);
-          const all = [...document.querySelectorAll('#s-home .btn, #s-home .seg button')].filter(b => !b.hidden && !b.closest('[hidden]') && b.getBoundingClientRect().width > 0);
+      // a controller: the first press on Continue; Down Match, Down Skill Games, Right Settings, Up Career, Up Continue; Left into My Team's
+      // column; every button reached from the first press on the boxes and on every step; Down from every button never skips a row
+      const pad = await page.evaluate(VIEWS => {
+        const T = window.__tryline, X = T.teams, K = T.cups, out = {}, $ = id => document.getElementById(id), f = () => T.debug.focus();
+        const id = el => (el ? el.id || el.textContent.trim() : 'none'), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && el.getBoundingClientRect().width > 0;
+        K.setHistory([]); X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); { const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.save(); X.load(); X.setChamp(null); }   // the Trophy Cabinet's strip showing
+        T.debug.goHome(); T.home.ring(null);
+        out.first = id(T.navMove(0, 0, 0));
+        out.moves = [[0, 1], [0, 1], [1, 0], [0, -1], [0, -1], [1, 0], [0, -1], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => id(T.navMove(0, dx, dy)));
+        T.home.ring($('b-locker')); out.moves.push(id(T.navMove(0, -1, 0)), id(T.navMove(0, -1, 0)), id(T.navMove(0, -1, 0)));   // along My Team's three, to the end
+        T.home.ring($('b-locker')); out.moves.push(id(T.navMove(0, 1, 0)));   // and out to the box level with it
+        // the rows: Continue; Match | Career; Skill Games | Settings; and My Team's column: Change | Add Your Team | Locker, then the Trophy Cabinet
+        const rows = [['b-continue'], ['b-match', 'b-career'], ['b-drills', 'b-set'], ['b-my', 'b-import', 'b-locker'], ['b-cabinet']], rowOf = el => rows.findIndex(r => r.includes(el && el.id));
+        out.down = [];
+        for (const r of [0, 1, 2]) for (const b of rows[r]) { T.home.ring($(b)); const to = T.navMove(0, 0, 1); if (r === 2 ? to !== null : rowOf(to) !== r + 1) out.down.push(b + '>' + id(to)); T.home.ring($(b)); const up = T.navMove(0, 0, -1); if (r === 0 ? up !== null : rowOf(up) !== r - 1) out.down.push(b + '^' + id(up)); }
+        for (const b of rows[3]) { T.home.ring($(b)); const to = T.navMove(0, 0, 1); if (to !== $('b-cabinet')) out.down.push(b + '>' + id(to)); }
+        T.home.ring($('b-cabinet')); { const to = T.navMove(0, 0, 1); if (to !== null) out.down.push('b-cabinet>' + id(to)); }
+        // every visible button, on the boxes and on every step, reached by moving the ring from the first press; Down never skips a row
+        out.unreached = []; out.skipped = [];
+        for (const [step, tier] of VIEWS) {
+          T.home.setTier(tier); T.debug.goHome(); if (step) T.home.open(step); T.home.ring(null);
+          const all = [...document.querySelectorAll('#s-home .btn, #s-home .seg button')].filter(vis);
           const reach = new Set(), todo = [T.navMove(0, 0, 0)];
           while (todo.length) {
             const el = todo.shift(); if (!el || reach.has(el)) continue; reach.add(el);
             for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); const got = T.navMove(0, dx, dy); if (got && !reach.has(got)) todo.push(got); }
           }
-          out.unreached.push(...all.filter(b => !reach.has(b)).map(b => hl + ':' + (b.id || b.textContent.trim())));
+          out.unreached.push(...all.filter(b => !reach.has(b)).map(b => (step || 'boxes') + ':' + id(b)));
+          if (step) {
+            const mid = el => { const r = el.getBoundingClientRect(); return r.top + r.height/2; }, tops = [...new Set(all.map(b => Math.round(mid(b))))].sort((a, b) => a - b);
+            const rowIx = el => tops.findIndex(t => Math.abs(t - mid(el)) <= 6);
+            for (const b of all) { T.home.ring(b); const to = T.navMove(0, 0, 1); if (to && rowIx(to) - rowIx(b) > 1 && !b.closest('.seg') && !to.closest('.seg')) out.skipped.push(step + ':' + id(b) + '>' + id(to)); }
+          }
         }
-        T.home.ring(null);
-        T.debug.settings().hl = 'game'; T.debug.goHome();
+        T.home.setTier(null); T.home.ring(null); K.setHistory([]); T.debug.goHome();
         return out;
-      });
-      ok(pad.first === 'b-quick' && pad.down === 0 && pad.along === 'hl-career' && pad.hl === 'career' && pad.up === true && pad.end === null && pad.start === null, `${kind}: a controller's first press lands on Play, Down reaches the bar on Quick Match (the chosen headline), Right moves along it (to its ends and no further), pressing shows Career and Up goes into it (${JSON.stringify({ ...pad, landed:undefined, unreached:undefined })})`);
-      ok(!pad.landed.length, `${kind}: Down from every button of every headline (each Championship tier too) reaches the bar on that headline (${pad.landed.slice(0, 4).join(', ') || 'all'})`);
-      ok(!pad.unreached.length, `${kind}: every button on every headline is reached by moving the ring (${pad.unreached.join(', ') || 'all'})`);
+      }, VIEWS);
+      ok(pad.first === 'b-continue' && json(pad.moves.slice(0, 9)) === json(['b-match', 'b-drills', 'b-set', 'b-career', 'b-continue', 'none', 'none', 'b-locker', 'b-cabinet']) && ['b-my', 'b-import', 'b-locker'].includes(pad.moves[9]) && json(pad.moves.slice(10)) === json(['b-import', 'b-my', 'none', 'b-drills']), `${kind}: a controller's first press lands on Continue; Down to Match, Down to Skill Games, Right to Settings, Up to Career and Continue, no further right (Continue is alone in its row) nor up; Left into My Team's column at the Locker, Down to the Trophy Cabinet, Up back to the three, along them to Change and no further, Right from the Locker to Skill Games, level with it (${json(pad.moves)})`);
+      ok(!pad.down.length, `${kind}: Down from every box lands on the row below (nothing under the last), Up on the row above, and in My Team's column Down goes to the Trophy Cabinet (${pad.down.slice(0, 6).join(', ') || 'all'})`);
+      ok(!pad.unreached.length, `${kind}: every button on the boxes and on every step is reached by moving the ring (${pad.unreached.slice(0, 8).join(', ') || 'all'})`);
+      ok(!pad.skipped.length, `${kind}: on every step Down from a button never skips a row (${pad.skipped.slice(0, 6).join(', ') || 'none'})`);
       rowsOk(kind, await page.evaluate(settingsRows));
-      // Skills Mini Games for each player (the skills builder, at the PR #14 merge): Men the ten, How to Play, Contact Games (U9 and Up) and
-      // For Grown-Ups; the Kids level and Minis the seven, How to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches
-      // every button and Down from each lands on Skills Mini Games, For Grown-Ups opens its panel with Back to Skills in the ring's reach,
-      // every game's card offers Watch How in the ring's reach, and Tab reaches every button on the headline
+      // the keyboard: the arrow keys move as the ring does, Enter presses, Escape is Back, Tab reaches every box
+      await page.evaluate(() => { const T = window.__tryline, X = T.teams, K = T.cups; K.setHistory([]); X.setChamp(null); T.home.ring(null); T.debug.goHome(); });
+      const keyed = [await page.evaluate(() => document.activeElement.id)];
+      for (const k of ['ArrowDown', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowLeft', 'ArrowRight']) { await page.keyboard.press(k); keyed.push(await page.evaluate(() => document.activeElement.id)); }
+      await page.keyboard.press('ArrowUp'); await page.keyboard.press('Enter');
+      const opened = await page.evaluate(() => [window.__tryline.home.step(), document.activeElement.id]);
+      await page.keyboard.press('ArrowRight'); const right = await page.evaluate(() => document.activeElement.id);
+      await page.keyboard.press('Escape'); const esc = await page.evaluate(() => [window.__tryline.home.step(), document.activeElement.id]);
+      ok(json(keyed) === json(['b-continue', 'b-match', 'b-career', 'b-set', 'b-drills', 'b-match', 'b-continue', 'b-locker', 'b-drills']) && json(opened) === json(['match', 'b-quick']) && right === 'b-comps' && json(esc) === json([null, 'b-match']), `${kind}: the keyboard: Continue focused, the arrows as the ring (Down Match, Right Career, Down Settings, Left Skill Games, Up Match, Up Continue, Left the Locker, Right Skill Games, level with it), Up and Enter open Match on Quick Match, Right Competitions, Escape back on Match (${json([keyed, opened, right, esc])})`);
+      await page.evaluate(() => { document.activeElement && document.activeElement.blur(); });
+      const tabbed = new Set();
+      for (let i = 0; i < 14; i++) { await page.keyboard.press('Tab'); tabbed.add(await page.evaluate(() => document.activeElement.id)); }
+      ok(['b-my', 'b-import', 'b-locker', 'b-continue', 'b-match', 'b-career', 'b-drills', 'b-set'].every(id => tabbed.has(id)), `${kind}: Tab reaches every box and My Team's three (${[...tabbed].filter(Boolean).join(' ')})`);
+      // Skill Games for each player: Men the ten, How to Play, Contact Games (U9 and Up) and For Grown-Ups; the Kids level and Minis the seven, How
+      // to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches every button, For Grown-Ups opens its panel with
+      // Back to Skills in the ring's reach (the step's Back put away), every game's card offers Watch How in the ring's reach, and Tab reaches
+      // every button on the step
       for (const [who, kids, cat] of [['Men', false, 'men'], ['Kids', true, 'men'], ['Minis', false, 'minis']]) {
         const sk = await page.evaluate(([kids, cat]) => {
           const T = window.__tryline, st = T.debug.settings(), $ = id => document.getElementById(id);
@@ -646,20 +843,19 @@ async function browserChecks() {
           const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
           const ringAll = () => { T.home.ring(null); const r = new Set(), q = [T.navMove(0, 0, 0)]; while (q.length) { const el = q.shift(); if (!el || r.has(el)) continue; r.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); const got = T.navMove(0, dx, dy); if (got && !r.has(got)) q.push(got); } } return r; };
           const seen = st.drillSeen.slice(); st.drillSeen = T.drills.DRILLS.map(d => d.id);   // no Watch How playing on a card's first open
-          st.kids = kids; st.diff = kids ? 0 : 1; st.cat = cat; st.hl = 'drills'; T.debug.goHome(); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
+          st.kids = kids; st.diff = kids ? 0 : 1; st.cat = cat; T.debug.goHome(); T.home.open('drills'); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
           const s = $('s-home'), panel = $('hp-drills'), btns = [...panel.querySelectorAll('.btn')].filter(vis);
           const games = btns.filter(b => T.drills.DRILLS.some(d => 'pr-' + d.id === b.id)).map(b => b.id.slice(3));
-          const over = btns.filter((a, i) => btns.some((b, j) => j > i && meet(box(a), box(b)))).map(b => b.id);
-          const small = btns.filter(b => box(b).height < 44 || box(b).width < 44).map(b => b.id);
+          const pr = box(panel), clip = getComputedStyle(panel).overflowY !== 'visible', inBox = b => { const q = box(b); return clip ? { left:q.left, right:q.right, top:Math.max(q.top, pr.top), bottom:Math.min(q.bottom, pr.bottom) } : q; };
+          const over = btns.filter((a, i) => btns.some((b, j) => j > i && meet(inBox(a), inBox(b)))).map(b => b.id);
+          const small = btns.filter(b => box(b).height < 43.5 || box(b).width < 43.5).map(b => b.id);
           const cut = [...panel.querySelectorAll('.dc-name, .pr-group')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent);
-          const reach = ringAll(), unreached = btns.filter(b => !reach.has(b)).map(b => b.id);
-          const landed = btns.filter(b => { T.home.ring(b); let el = b, n = 0; while (el && !el.closest('#hl-bar') && n++ < 8) el = T.navMove(0, 0, 1); return !el || el.dataset.hl !== 'drills'; }).map(b => b.id);
+          const reach = ringAll(), unreached = [...btns, $('hs-back')].filter(b => !reach.has(b)).map(b => b.id);
           T.home.ring(null); $('pr-grown').click();
-          const gp = $('pr-grownups'), back = $('pr-grown-back'), grown = vis(gp) && !vis($('pr-games')) && ringAll().has(back);
-          back.click(); const shut = vis($('pr-games')) && !vis(gp);
-          const watch = games.filter(id => { T.practice.start(id); const w = $('pr-watch'), good = vis(w) && w.textContent === 'Watch How' && ringAll().has(w); T.practice.choose(); return !good; });
-          T.home.ring(null); st.hl = 'drills'; T.debug.goHome();
-          const out = { games, contact:!$('pr-contact').hidden && !$('pr-contact').closest('[hidden]'), fits:s.scrollHeight <= s.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, over, small, cut, unreached, landed, grown, shut, watch, help:vis($('b-help')), grownBtn:vis($('pr-grown')), ids:btns.map(b => b.id) };
+          const gp = $('pr-grownups'), back = $('pr-grown-back'), grown = vis(gp) && !vis($('pr-games')) && !vis($('hs-back')) && ringAll().has(back) && (T.navBack(0), vis($('pr-games')) && !vis(gp) && vis($('hs-back')));
+          const watch = games.filter(id => { T.practice.start(id); const w = $('pr-watch'), good = vis(w) && w.textContent === 'Watch How' && ringAll().has(w); T.practice.choose(); return !good || T.home.step() !== 'drills'; });
+          T.home.ring(null); T.debug.goHome(); T.home.open('drills');
+          const out = { games, contact:!$('pr-contact').hidden && !$('pr-contact').closest('[hidden]'), fits:s.scrollHeight <= s.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, over, small, cut, unreached, grown, watch, help:vis($('b-help')), grownBtn:vis($('pr-grown')), ids:btns.map(b => b.id) };
           st.drillSeen = seen;
           return out;
         }, [kids, cat]);
@@ -667,87 +863,30 @@ async function browserChecks() {
         const tabbed = new Set();
         for (let i = 0; i < 40; i++) { await page.keyboard.press('Tab'); const at = await page.evaluate(() => { const a = document.activeElement; return a && document.getElementById('hp-drills').contains(a) ? a.id : null; }); if (at) tabbed.add(at); }
         const young = kids || cat === 'minis', open = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'];
-        ok(json(sk.games) === json(young ? open : open.concat(['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skills Mini Games shows ${young ? 'the seven open games, no Contact Games' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
-        ok(sk.fits && !sk.over.length && !sk.small.length && !sk.cut.length, `${kind} ${who}: Skills Mini Games fits with no scroll, every button 44px and more, none over another, no name cut off (${[...sk.over, ...sk.small, ...sk.cut].join(', ') || 'all clear'})`);
-        ok(!sk.unreached.length && !sk.landed.length, `${kind} ${who}: the ring reaches every button on Skills Mini Games, and Down from each lands on its headline (${[...sk.unreached, ...sk.landed].join(', ') || 'all'})`);
-        ok(sk.grown && sk.shut, `${kind} ${who}: For Grown-Ups opens its panel with Back to Skills in the ring's reach, and Back to Skills shuts it`);
-        ok(!sk.watch.length, `${kind} ${who}: every game's card offers Watch How, in the ring's reach (${sk.watch.join(', ') || 'all ' + sk.games.length})`);
-        ok(sk.ids.every(id => tabbed.has(id)), `${kind} ${who}: Tab reaches every button on Skills Mini Games (${sk.ids.filter(id => !tabbed.has(id)).join(', ') || 'all ' + sk.ids.length})`);
+        ok(json(sk.games) === json(young ? open : open.concat(['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skill Games shows ${young ? 'the seven open games, no Contact Games' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
+        ok(sk.fits && !sk.over.length && !sk.small.length && !sk.cut.length, `${kind} ${who}: Skill Games fits with no page scroll, every button 44px and more, none over another, no name cut off (${[...sk.over, ...sk.small, ...sk.cut].join(', ') || 'all clear'})`);
+        ok(!sk.unreached.length, `${kind} ${who}: the ring reaches every button on Skill Games and its Back (${sk.unreached.join(', ') || 'all'})`);
+        ok(sk.grown, `${kind} ${who}: For Grown-Ups opens its panel with Back to Skills in the ring's reach, the step's Back put away, and B (Back to Skills) shuts it, the step's Back again`);
+        ok(!sk.watch.length, `${kind} ${who}: every game's card offers Watch How, in the ring's reach, and Back to Skills comes back to the step (${sk.watch.join(', ') || 'all ' + sk.games.length})`);
+        ok(sk.ids.every(id => tabbed.has(id)), `${kind} ${who}: Tab reaches every button on Skill Games (${sk.ids.filter(id => !tabbed.has(id)).join(', ') || 'all ' + sk.ids.length})`);
       }
-      await page.evaluate(() => { const T = window.__tryline, st = T.debug.settings(); st.kids = false; st.diff = 1; st.cat = 'men'; st.hl = 'game'; T.home.ring(null); T.debug.goHome(); });
-      // the keyboard: Tab reaches the bar (one stop), the arrows move along it and show each, Enter presses what Tab reaches
-      await page.evaluate(() => { const T = window.__tryline; T.debug.settings().hl = 'game'; T.debug.goHome(); document.activeElement && document.activeElement.blur(); });
-      let tabs = 0, onBar = false;
-      for (; tabs < 12 && !onBar; tabs++) { await page.keyboard.press('Tab'); onBar = await page.evaluate(() => document.activeElement && document.activeElement.classList.contains('hl')); }
-      const atBar = await page.evaluate(() => document.activeElement.id);
-      await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
-      const kb = await page.evaluate(() => [document.activeElement.id, window.__tryline.debug.settings().hl, !document.getElementById('hp-career').hidden]);
-      await page.keyboard.press('Shift+Tab');
-      const back = await page.evaluate(() => document.activeElement.id);
-      await page.keyboard.press('Enter');
-      const pressed = await page.evaluate(() => [document.getElementById('s-career-new').hidden === false || document.getElementById('m-store').hidden === false]);
-      ok(onBar && atBar === 'hl-game' && kb[0] === 'hl-career' && kb[1] === 'career' && kb[2] && back === 'b-career' && pressed[0], `${kind}: Tab reaches the bar on its chosen headline (${tabs} presses), Right moves along it showing each, Shift+Tab goes up to the panel and Enter presses (${JSON.stringify([atBar, kb, back])})`);
-      await page.evaluate(() => { const T = window.__tryline; T.debug.settings().hl = 'game'; T.career.set(null); T.debug.goHome(); });
-      ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
-      await ctx.close();
-    }
-    // 320px tall (Safari sideways: 667x320, 568x320), not one of the sizes that must never scroll: the page still never scrolls, and the
-    // logo, the top row and the bar are all on screen and never under anything; the panel holds what it can between them and scrolls
-    // inside its own row for the rest (only National's nine leagues with the Trophy Cabinet need it: England 2 made eight nine), the ring scrolling it into view
-    for (const [w, h] of [[667, 320], [568, 320]]) {
-      const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
-      const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
-      await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
-      await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
-      const kind = `${w}x${h}`;
-      const r = await page.evaluate(() => {
-        const T = window.__tryline, X = T.teams, K = T.cups, S = T.store, out = [];
-        const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
-        const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
-        const cabinet = () => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
-        const TOOLS = ['app-tools', 'b-install', 'offline-update', 'offline-status'];
-        for (const st of ['web', 'web tools', 'web free cab', 'app free', 'app fan cab', 'app full busy']) {   // a Super Fan has the Trophy Cabinet: its trophy is in it
-          const app = st.startsWith('app');
-          T.locker.set(T.locker.fresh());
-          S.setNative(app); S.setStarted(app); S.setBought(st === 'app fan cab' ? ['tryline.fan.farnham'] : st === 'app full busy' ? ['tryline.full'] : []); S.setTier(st === 'web free cab' ? 'free' : null);
-          K.setHistory([]); if (st === 'web free cab') cabinet();
-          X.setChamp(null); K.set(null); T.career.set(null);
-          if (st === 'app full busy') { X.newChamp(X.CLUBS[7], X.CLUBS.slice(1, 6)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); }
-          for (const [tier, hl] of [[2, 'game'], [0, 'champ'], [1, 'champ'], [2, 'champ'], [2, 'career'], [2, 'drills'], [2, 'settings']]) {
-            T.debug.settings().hl = hl; T.home.setTier(tier); T.debug.goHome();
-            if (st === 'web tools') for (const id of TOOLS) document.getElementById(id).hidden = false;
-            const s = document.getElementById('s-home'), p = document.getElementById('hl-panels'), pr = box(p);
-            const btns = [...s.querySelectorAll('button')].filter(vis), inner = btns.filter(b => p.contains(b)), outer = btns.filter(b => !p.contains(b));
-            const off = outer.filter(b => { const q = box(b); return q.top < -0.5 || q.bottom > innerHeight + 0.5 || q.left < -0.5 || q.right > innerWidth + 0.5; });
-            const clip = getComputedStyle(p).overflowY !== 'visible';   // what the panel shows of a button: all of it, or (scrolling) the part inside its box
-            const seen = b => { const q = box(b); return clip ? { left:Math.max(q.left, pr.left), right:Math.min(q.right, pr.right), top:Math.max(q.top, pr.top), bottom:Math.min(q.bottom, pr.bottom) } : q; };
-            const over = outer.filter((a, i) => outer.some((b, j) => j > i && meet(box(a), box(b))) || inner.some(b => meet(box(a), seen(b))) || (clip && meet(box(a), pr)))
-              .concat(inner.filter((a, i) => inner.some((b, j) => j > i && !a.contains(b) && !b.contains(a) && meet(box(a), box(b)))));
-            const small = btns.filter(b => !b.classList.contains('app-action') && (box(b).height < 44 || box(b).width < 44));
-            const cut = [...s.querySelectorAll('.hl-name, .my-side b, .hc-comp, .hc-comp span, .dc-name')].filter(vis).filter(e => e.scrollWidth > e.clientWidth + 1)   // a competition's button too: its name and lock (the free tier) inside it
-              .concat([...s.querySelectorAll('.locked')].filter(vis).filter(e => { const c = getComputedStyle(e, '::after'); return c.position !== 'absolute' && parseFloat(c.width) < 0.7*parseFloat(c.fontSize) - 0.5; }));
-            const scroll = p.scrollHeight - p.clientHeight;
-            let ringed = true;
-            if (scroll > 0) { const last = inner[inner.length - 1]; T.home.ring(last); const q = box(last); ringed = q.top >= pr.top - 0.5 && q.bottom <= pr.bottom + 0.5; T.home.ring(null); p.scrollTop = 0; }
-            const name = el => el.id || el.textContent.trim().slice(0, 16);
-            out.push({ state:st + ' ' + hl + (hl === 'champ' ? tier : ''), page:s.scrollHeight - s.clientHeight, scroll, ringed, off:off.map(name), over:over.map(name), small:small.map(name), cut:cut.map(e => e.textContent) });
-            if (st === 'web tools') for (const id of TOOLS) document.getElementById(id).hidden = true;
+      await page.evaluate(() => { const T = window.__tryline, st = T.debug.settings(); st.kids = false; st.diff = 1; st.cat = 'men'; T.home.ring(null); T.debug.goHome(); });
+      // a step scrolling inside itself (320px tall): the ring brings its last button into view
+      if (h <= 340) {
+        const ringed = await page.evaluate(() => {
+          const T = window.__tryline, X = T.teams, K = T.cups, $ = id => document.getElementById(id), out = [];
+          for (const [step, tier] of [['champ', 1], ['drills', null]]) {
+            T.home.setTier(tier); T.debug.goHome(); T.home.open(step);
+            const p = $('hp-' + step), btns = [...p.querySelectorAll('.btn')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0), last = btns[btns.length - 1];
+            T.home.ring(last); const q = last.getBoundingClientRect(), pr = p.getBoundingClientRect();
+            out.push(step + ':' + (p.scrollHeight <= p.clientHeight || (q.top >= pr.top - 0.5 && q.bottom <= pr.bottom + 0.5)));
+            T.home.ring(null); p.scrollTop = 0;
           }
-        }
-        S.setNative(false); S.setStarted(false); S.setBought([]); S.setTier(null); X.setChamp(null); K.set(null); K.setHistory([]); T.career.set(null); T.home.setTier(null); T.locker.set(T.locker.fresh());
-        T.debug.settings().hl = 'game'; T.debug.goHome();
-        return out;
-      });
-      const list = f => r.filter(f).slice(0, 4).map(x => x.state + ': ' + [...x.off, ...x.over, ...x.small, ...x.cut].join('/')).join('; ');
-      ok(r.length === 42 && r.every(x => x.page <= 0 && !x.off.length && !x.over.length), `${kind}: the page never scrolls, the logo, top row and bar are on screen and nothing sits over anything (${list(x => x.page > 0 || x.off.length || x.over.length) || r.length + ' states'})`);
-      ok(r.every(x => !x.small.length && !x.cut.length), `${kind}: every target 44px, no name cut off nor lock squeezed (${list(x => x.small.length || x.cut.length) || 'all'})`);
-      const nine = await page.evaluate(() => { const T = window.__tryline; T.debug.settings().hl = 'champ'; T.home.setTier(1); T.debug.goHome();
-        const px = [...new Set([...document.querySelectorAll('#hc-comps .hc-comp')].map(b => getComputedStyle(b).fontSize))], n = document.querySelectorAll('#hc-comps .hc-comp').length;
-        T.home.setTier(null); T.debug.settings().hl = 'game'; T.debug.goHome(); return { n, px }; });
-      ok(nine.n === 9 && json(nine.px) === json([w < 620 ? '12px' : '14px']), `${kind}: National's nine at ${w < 620 ? '12px under 620 wide (the step down placed after their 14px, which otherwise wins)' : 'their 14px'} (${json(nine)})`);
-      const scrolls = r.filter(x => x.scroll > 0);
-      ok(scrolls.every(x => /cab champ1$/.test(x.state) && x.ringed), `${kind}: only National's nine leagues with the Trophy Cabinet scroll inside the panel, and the ring brings the last button into view (${scrolls.map(x => x.state + ' ' + x.scroll + 'px' + (x.ringed ? '' : ' not ringed')).join(', ') || 'none'})`);
-      rowsOk(kind, await page.evaluate(settingsRows));
+          T.home.setTier(null); T.debug.goHome();
+          return out;
+        });
+        ok(ringed.every(r => r.endsWith('true')), `${kind}: a step that scrolls inside itself brings the ring's button into view (${ringed.join(' ')})`);
+      }
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }

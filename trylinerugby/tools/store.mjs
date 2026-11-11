@@ -83,14 +83,14 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(S.fan() === null && FEATURES.every(f => S.has(f)), 'purchases are the app\'s: the web never reads them');
   S.setBought([]);
   // index.html: every new element starts hidden, so the page is as it was before a line of script runs
-  ok(/<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>/.test(html) && /<p class="eyebrow st-fan" id="st-fan" hidden><\/p>/.test(html) && /<div class="modal" id="m-store" hidden>/.test(html) && /<span id="st-locked" hidden>Locked<\/span>/.test(html), 'Grown-Ups, the badge, the card and the Locked note start hidden');
+  ok(/<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>/.test(html) && /<span class="my-fan" id="st-fan" hidden><\/span>/.test(html) && /<div class="modal" id="m-store" hidden>/.test(html) && /<span id="st-locked" hidden>Locked<\/span>/.test(html), 'Grown-Ups, the badge, the card and the Locked note start hidden');
   // the home: storeRender changes nothing while the store is not live
-  const els = ['b-champ', 'b-career', 'b-grown', 'st-fan', 'home-tag', 'hp-settings', 't-go', 'hl-champ', 'hl-career', 'hl-settings', 'b-import'].map($);   // the team screen's primary carries its entry's lock (Create Team, Add Your Team) since the side-by-side screen
+  const els = ['b-champ', 'b-career', 'b-grown', 'st-fan', 'my-box', 'hp-settings', 't-go', 'b-comps', 'b-set', 'b-import'].map($);   // the team screen's primary carries its entry's lock (Create Team, Add Your Team) since the side-by-side screen
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
   const look = () => JSON.stringify([...els, ...seg.children].map(e => [e.hidden, e.classList.contains('locked'), e.classList.contains('grown'), e.classList.contains('note')]));
   $('b-grown').hidden = true; $('st-fan').hidden = true;
   const before = look();
-  const spied = els.filter(e => !/^hl-/.test(e.id)), sets = [], keep = spied.map(e => e.setAttribute);   // the headlines' aria-selected is the home's own, every render
+  const spied = els, sets = [], keep = spied.map(e => e.setAttribute);
   spied.forEach((e, i) => { e.setAttribute = (...a) => { sets.push([e.id, ...a]); return keep[i].apply(e, a); }; });
   D.goHome(); S.render(); S.teamsRender();
   ok(look() === before && !sets.length, `rendering the home and the team screen touches no control: no lock, no Grown-Ups, no badge, no dot (${JSON.stringify(sets)})`);
@@ -139,7 +139,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
 {
   reset(); S.setTier('free');
   ok(S.live() && !S.native(), 'the free web is live, and not the app');
-  ok(['quick', 'drills', 'kids', 'easy', 'normal', 'help', 'two'].every(f => S.has(f)), 'Quick Match, Skills Mini Games, Kids, Easy, Normal, How to Play and Two Player are free');
+  ok(['quick', 'drills', 'kids', 'easy', 'normal', 'help', 'two'].every(f => S.has(f)), 'Quick Match, Skill Games, Kids, Easy, Normal, How to Play and Two Player are free');
   ok(PAID.every(f => !S.has(f)) && !S.has('import'), 'Championship, Career, Create Team, Hard and Import are locked');
   // an Android browser, while there is no Google Play page (iPhone first): no lock with no app to get, everything as before
   android();
@@ -160,9 +160,9 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const c0 = JSON.stringify(X.champ()), cr0 = JSON.stringify(C.get());
   D.goHome();
   ok($('b-champ').classList.contains('locked') && $('b-champ').textContent === 'Continue Championship' && !$('champ-note').hidden, 'Continue Championship keeps its label and its note, with a lock');
-  ok($('b-career').classList.contains('locked') && $('b-career').textContent === 'Continue Career', 'Continue Career likewise');
+  ok($('b-career').classList.contains('locked') && $('b-continue').classList.contains('locked') && /^Championship · /.test($('cont-note').textContent), 'the Career box likewise, and Continue (a championship and a career under way), its line kept');
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
-  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('hl-champ').classList.contains('locked') && $('hl-career').classList.contains('locked') && !$('hl-game').classList.contains('locked') && !$('hl-drills').classList.contains('locked') && !$('hl-settings').classList.contains('locked'), 'Grown-Ups in Settings beside Sound and Match Help; the Championship and Career headlines carry the lock, Quick Match, Skills Mini Games and Settings none');
+  ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('b-comps').classList.contains('locked') && $('b-career').classList.contains('locked') && !$('b-match').classList.contains('locked') && !$('b-quick').classList.contains('locked') && !$('b-drills').classList.contains('locked') && !$('b-set').classList.contains('locked'), 'Grown-Ups in Settings beside Sound and Match Help; Competitions and the Career box carry the lock, Match, Quick Match, Skill Games and Settings none');
   $('b-champ').click();
   ok(!$('m-store').hidden && S.ui().mode === 'unlock' && S.ui().feature === 'champ' && $('s-hub').hidden && !$('s-home').hidden, 'Championship opens the Unlock card, not the hub');
   ok($('st-eyebrow').textContent === 'Unlock' && $('st-title').textContent === 'Championship', 'Unlock · Championship');
@@ -175,7 +175,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   X.save();
   ok(JSON.stringify(saved().champ) === c0 && JSON.stringify(saved().career) === cr0, 'and in the save');
   S.setTier(null); D.goHome();
-  ok(!$('b-champ').classList.contains('locked') && !$('b-career').classList.contains('locked') && !$('hl-champ').classList.contains('locked') && $('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'back on the full tier the locks and Grown-Ups go');
+  ok(!$('b-champ').classList.contains('locked') && !$('b-career').classList.contains('locked') && !$('b-comps').classList.contains('locked') && !$('b-continue').classList.contains('locked') && $('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'back on the full tier the locks and Grown-Ups go');
   $('b-champ').click();
   ok($('m-store').hidden && !$('s-hub').hidden, 'and Continue Championship goes to the hub');
   D.goHome();
@@ -455,7 +455,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   app(); FARNHAM.agreed = true; S.setBought(['tryline.fan.farnham']);
   ok(FEATURES.every(f => S.has(f)) && JSON.stringify(S.fan()) === '{"key":"farnham","name":"Farnham RUFC"}', 'Super Fan: everything in the Full Game, and Import; storeFan names the club');
   D.goHome();
-  ok(!$('st-fan').hidden && $('st-fan').innerHTML.includes('Super Fan · Farnham RUFC') && /<svg class="fan-shield"[^>]*>[^]*fill="#1a1a1a" stroke="#f2efe6"/.test($('st-fan').innerHTML) && !/<img/.test($('st-fan').innerHTML) && $('home-tag').hidden, 'the home\'s badge: a plain shield in Farnham\'s kit colours and the club\'s name, in the tagline\'s place');
+  ok(!$('st-fan').hidden && $('st-fan').innerHTML.includes('<span>Super Fan</span>') && /<svg class="fan-shield"[^>]*>[^]*fill="#1a1a1a" stroke="#f2efe6"/.test($('st-fan').innerHTML) && !/<img/.test($('st-fan').innerHTML) && $('my-name').textContent === 'Farnham', 'the badge in My Team\'s box (Farnham, the Super Fan\'s club, My Team by default): a plain shield in Farnham\'s kit colours, Super Fan, over the club\'s name');
   ok(S.offers(null).length === 0, 'nothing more to sell');
   S.open({ mode:'grown' });
   ok($('st-title').textContent === 'Purchases' && $('st-have').innerHTML.includes('Super Fan · Farnham RUFC') && $('st-offers').innerHTML === '' && !$('st-links').hidden && $('st-back').textContent === 'Back to Menu', 'the Grown-Ups panel: what is owned, Privacy | Support, Restore Purchases | Back to Menu');
@@ -496,7 +496,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(menus.includes("if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));") && /careerDraft = \{ club:myClubTeam\(\), league:pool/.test(careerSrc) && /const myClubTeam = \(\) => myClubFind\(settings\.myClub\) \|\| storeHomeTeam\(\);/.test(menus), 'Career\'s club groups put the Super Fan\'s club first, and a new player starts with My Team\'s club (the Super Fan\'s until one is picked)');
   ok(menus.includes("teams:storeFirst(teams) }"), 'and so does Championship\'s team screen');
   S.setBought([]); D.goHome();
-  ok($('st-fan').hidden && !$('home-tag').hidden, 'no Super Fan: the tagline is back');
+  ok($('st-fan').hidden && !$('s-home').classList.contains('fan'), 'no Super Fan: no badge, the plain box');
 }
 
 // 9. leaving the game: Privacy and Support, only through the grown-up check
@@ -594,12 +594,11 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const cabinet = () => { CU.renderCabinet('home-history'); return $('home-history').innerHTML; };
   for (const tier of [null, 'free']) {
     reset(); fresh(); CU.setHistory([]); X.setChamp(null); S.setTier(tier); FARNHAM.agreed = true; S.setBought(['tryline.fan.farnham']);
-    D.settings().hl = 'champ'; D.goHome(); X.save();
+    D.goHome(); X.save();
     ok(!L.fanClubs().length && !L.fanAward() && !('locker' in saved()) && !L.isNew() && L.fanHtml() === '' && L.fanCabinet() === '' && $('b-cabinet').hidden && !/fan-entry/.test(cabinet()),
       `the web (${tier || 'full'}): no trophy though the save holds a Super Fan unlock (purchases are the app's), no locker field, no Super Fan row and no Trophy Cabinet`);
     ok(!$('s-home').classList.contains('fan') && $('st-fan').hidden && S.fanOwned().length === 0, `the web (${tier || 'full'}): the home is as it was, no club colours and no badge`);
   }
-  D.settings().hl = 'game';
   // in the app: the Full Game earns nothing; a Super Fan earns its club's trophy once
   app(); fresh(); FARNHAM.agreed = true; CU.setHistory([]); X.setChamp(null);
   S.open({ mode:'unlock', feature:'champ' }); S.buyAsk('tryline.full'); pass(); await tick();
@@ -618,15 +617,15 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(saved().locker.fanSeen === 1 && !L.isNew() && !$('b-locker').classList.contains('note'), 'seen once the Locker opens: the dot goes');
   ok(L.golds() === 0 && /Gold 0/.test($('lk-tally').innerHTML) && L.FEATS.every(f => L.tier(f.id) === 0), 'never a medal: the tally and the Legends\' Golds are as they were');
   // the Trophy Cabinet: its own kind, first, gold, never counted as a league or a cup
-  D.settings().hl = 'champ'; D.goHome();
-  ok(!$('b-cabinet').hidden, 'the Trophy Cabinet is on the home with a Super Fan trophy alone');
+  D.goHome();
+  ok(!$('b-cabinet').hidden && /data-kind="fan" data-metal="gold"/.test($('tc-list').innerHTML), 'the Trophy Cabinet\'s strip is on the home with a Super Fan trophy alone, its rosette in it');
   let cab = cabinet();
   ok(/^<article class="season-entry fan-entry"><p class="eyebrow"><span class="cup-kind" data-kind="fan" data-metal="gold" data-won>Super Fan<\/span><\/p><h3><svg class="lk-cup"[^]*?<\/svg><span>Farnham RUFC<\/span><\/h3><\/article><p class="stat-note">/.test(cab), 'the Trophy Cabinet: the trophy first, its own kind (Super Fan, in gold), the club\'s name and no more');
   X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); { const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } } X.save(); X.setChamp(null);
   cab = cabinet(); const h = CU.savedHonours(), tally = (cab.match(/<p class="cabinet-tally">[^]*?<\/p>/) || [''])[0];
   ok(h.seasons === 1 && h.cups === 0 && h.euro + h.world + h.tour === 0 && !/fan|Super Fan/.test(tally) && (cab.match(/fan-entry/g) || []).length === 1, `never counted as a league or a cup win: the tally is the season's alone (${tally.replace(/<[^>]+>/g, '')})`);
   ok(T.cups.trophyMetal('fan') === 'gold' && /\[data-metal="gold"\]\{--kc:var\(--gold\)/.test(css), 'its kind\'s colour is gold, from the one map of metals (TROPHY_METAL, src/cups.js)');
-  CU.setHistory([]); X.save(); D.settings().hl = 'game'; D.goHome();
+  CU.setHistory([]); X.save(); D.goHome();
   // Restore Purchases, a new phone or the app put back: the trophy comes back with the unlock, once
   app(); fresh(); owns = ['tryline.fan.farnham'];
   S.open({ mode:'grown' }); S.restoreAsk(); pass(); await tick();
@@ -669,23 +668,26 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const L = T.locker, contrast = S.contrast;
   app(); L.set(L.fresh()); S.setBought(['tryline.fan.farnham']); D.goHome();
   const th = S.theme(X.CLUBS[0]);
-  ok($('s-home').classList.contains('fan') && ['kit', 'trim', 'acc', 'ink', 'edge'].every(k => $('s-home').style.getPropertyValue('--fan-' + k) === th[k]), 'a Super Fan\'s home takes the club\'s colours (#s-home.fan, its five colours)');
-  ok(th.kit === '#1a1a1a' && th.trim === '#f2efe6' && th.acc === '#f2efe6' && th.ink === '#f1eee4' && th.edge === '#f2efe6', `Farnham's black and white: the white trim the accent and the edge, chalk on the black fill (${JSON.stringify(th)})`);
+  ok($('s-home').classList.contains('fan') && ['kit', 'trim', 'acc', 'ink', 'edge', 'ground', 'gink'].every(k => $('s-home').style.getPropertyValue('--fan-' + k) === th[k]), 'a Super Fan of My Team\'s club: the home takes the club\'s colours (#s-home.fan, its seven colours)');
+  ok(th.kit === '#1a1a1a' && th.trim === '#f2efe6' && th.acc === '#f2efe6' && th.ink === '#f1eee4' && th.edge === '#f2efe6' && th.ground === '#1a1a1a' && th.gink === '#f1eee4', `Farnham's black and white: the white trim the accent and the edge, the black the box's ground with chalk on it (${JSON.stringify(th)})`);
   const bad = [];
   for (const t of X.ALL_TEAMS) {
     const v = S.theme(t), panel = '#17271d', night = '#0b130e', chalk = '#f1eee4';
     if (contrast(v.acc, panel) < 4.5 || contrast(v.acc, night) < 4.5) bad.push(t.id + ' accent ' + v.acc);
     if (contrast(v.ink, v.kit) < 3.9 || (contrast(chalk, v.kit) >= 4.5 && v.ink !== chalk)) bad.push(t.id + ' ink ' + v.ink + ' on ' + v.kit);
     if (contrast(v.edge, night) < 3) bad.push(t.id + ' edge ' + v.edge);
+    if (contrast(v.gink, v.ground) < 4.5) bad.push(t.id + ' box ' + v.gink + ' on ' + v.ground);
   }
-  ok(!bad.length && X.ALL_TEAMS.length > 50, `every side's colours read on the dark: the accent 4.5:1 on the panel and the night, the fill's word chalk wherever chalk reads (4.5:1), and the edge 3:1 (${bad.slice(0, 4).join(', ') || X.ALL_TEAMS.length + ' sides'})`);
-  ok(/#s-home\.fan \.btn\.hl\[aria-selected="true"\][^{]*\{color:var\(--fan-acc\);box-shadow:inset 0 3px 0 var\(--fan-acc\)\}/.test(css) && /#s-home\.fan \.hl-panel \.btn\.primary\{border-color:var\(--fan-edge\);background:var\(--fan-kit\);color:var\(--fan-ink\)/.test(css) && /#s-home\.fan \.home-top \.my-home\{border-color:var\(--fan-acc\)/.test(css),
-    'the accent on the chosen headline, the kit on the panel\'s primary (Play), and My Team\'s edge');
+  ok(!bad.length && X.ALL_TEAMS.length > 50, `every side's colours read on the dark: the accent 4.5:1 on the panel and the night, the fill's word chalk wherever chalk reads (4.5:1), the edge 3:1, and every word on My Team's box 4.5:1 on its ground (${bad.slice(0, 4).join(', ') || X.ALL_TEAMS.length + ' sides'})`);
+  ok(/#s-home\.fan \.my-box\{background:var\(--fan-ground\);border-color:var\(--fan-edge\);[^}]*color:var\(--fan-gink\)\}/.test(css) && !/#s-home\.fan \.btn\.bx-go/.test(css),
+    'My Team\'s box on the club\'s ground with its edge, every word in the ink that reads; Continue stays the floodlight\'s yellow');
   S.setBought(['tryline.full']); D.goHome();
   ok(!$('s-home').classList.contains('fan') && $('st-fan').hidden, 'without a Super Fan unlock: no club colours, no shield');
   // the crest: a file of the game's own, only where the club has given it
-  S.setBought(['tryline.fan.farnham']); FARNHAM.crest = 'crests/farnham.png'; D.goHome();
-  ok(/<img class="fan-shield fan-crest" src="crests\/farnham\.png" alt="" draggable="false"><span>Super Fan · Farnham RUFC<\/span>/.test($('st-fan').innerHTML) && !/<svg/.test($('st-fan').innerHTML), 'a crest given with the club\'s written permission: the shield shows it, the name beside it');
+  S.setBought(['tryline.fan.farnham']); FARNHAM.crest = 'crests/farnham.png'; FARNHAM.agreed = false; D.goHome();
+  ok(/<svg class="fan-shield"/.test($('st-fan').innerHTML) && !/<img/.test($('st-fan').innerHTML), 'a crest in FAN_CLUBS while the club has not agreed: the plain shield');
+  FARNHAM.agreed = true; D.goHome();
+  ok(/<img class="fan-shield fan-crest" src="crests\/farnham\.png" alt="" draggable="false"><span>Super Fan<\/span>/.test($('st-fan').innerHTML) && !/<svg/.test($('st-fan').innerHTML), 'a crest given with the club\'s agreement and written permission: the shield shows it, Super Fan beside it');
   for (const c of ['https://example.com/crest.png', '//example.com/c.png', '../crest.png', 'crests/../x.png', 'crests/a b.png', 'crests/c.gif', 'crests/C.PNG', 'data:image/png;base64,AA', 'javascript:alert(1)', 'icons/icon-192.png', 7]) {
     FARNHAM.crest = c; ok(S.crest(FARNHAM) === null, `a crest ${JSON.stringify(c)} is not one: the plain shield`);
   }

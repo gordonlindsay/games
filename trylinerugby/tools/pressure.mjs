@@ -24,7 +24,7 @@ const hyp = Math.hypot, dirOf = t => t === 0 ? 1 : -1;
 //    changed. OFF comes from b706c3e's own bundle (GAME=<b706c3e>/index.html node tools/pressure.mjs --pins), EGG from 0b1293c's (below).
 const OFF = '1r5245s 7ga17c lz72hy 19t3owf 8h6xzj szztk';
 const OFF_MAUL = '1cnqco8 xnabgl acm9q0 19t3owf 8h6xzj 1pmg6gd';   // the merge of the maul into wt/pr14int (2026-11-09): GAME=<wt/maul c4980b8>/index.html node tools/pressure.mjs --pins gives it, third line
-const EGG = '1vrs907';   // re-pinned at the merge into wt/pr14int (2026-11-09): Bouncy Egg is the Skills Mini Games fixes' now (wt/eggcircle: two in three throws bounce, keep 0.66 to 0.8), so b706c3e's 1wwghxa is gone; GAME=<0b1293c, the build before this merge>/index.html node tools/pressure.mjs --pins gives 1vrs907 exactly, and so does this build with PRESSURE on or off
+const EGG = '1vrs907';   // re-pinned at the merge into wt/pr14int (2026-11-09): Bouncy Egg is the Skill Games fixes' now (wt/eggcircle: two in three throws bounce, keep 0.66 to 0.8), so b706c3e's 1wwghxa is gone; GAME=<0b1293c, the build before this merge>/index.html node tools/pressure.mjs --pins gives 1vrs907 exactly, and so does this build with PRESSURE on or off
 const minis = () => { const t = { ...X.CLUBS[2], id:'MNI', cat:'minis' }; return t; };
 function offPins() {
   const out = [], r0 = rndCalls();

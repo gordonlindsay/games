@@ -302,7 +302,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   // the browser save: the field, partial restores, old saves
   K.set(null); K.setTurn(0); X.setChamp(null); X.save();
   const before = Object.keys(saved());
-  ok(!('cup' in saved()) && !('cupTurn' in saved()) && before.filter(k => k !== 'locker').join() === 'settings,champ,custom,champHistory,seasonSerial,career,importLeague',   // the Locker's field is there once a medal counted (src/locker.js)
+  ok(!('cup' in saved()) && !('cupTurn' in saved()) && before.filter(k => k !== 'locker' && k !== 'form').join() === 'settings,champ,custom,champHistory,seasonSerial,career,importLeague',   // the Locker's field is there once a medal counted (src/locker.js), the games played as My Team once one did (form, src/persistence.js)
      `no cup, no field: a save has the fields it had (${before.join(', ')})`);
   K.set(e); K.setTurn(2); X.save();
   ok(json(saved().cup) === json(e) && saved().cupTurn === 2, 'a cup under way is saved, and the tour count');
@@ -375,7 +375,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   {
     const srcs = ['src/ui-career.js', 'src/ui-menus.js', 'src/ui-cups.js'].map(f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8')).join('\n');
     const marks = [...srcs.matchAll(/class="(cup-trophy|cr-cup|cup-kind|ck|cup-win)(\$\{[^}]*\})?"([^>]*)>/g)];
-    ok(marks.length >= 8 && marks.every(m => /^ data-kind="(\$\{[^}]+\}|euro|league|world|tour|triple)"/.test(m[3])) && marks.some(m => m[1] === 'cup-win'), `every trophy written anywhere carries its kind first, so its shape follows it (${marks.length} places)`);
+    ok(marks.length >= 8 && marks.every(m => /^ data-kind="(\$\{[^}]+\}|euro|league|world|tour|triple|fan)"/.test(m[3])) && marks.some(m => m[1] === 'cup-win'), `every trophy written anywhere carries its kind first, so its shape follows it (${marks.length} places, the home's Trophy Cabinet strip and its Super Fan rosette among them)`);
   }
   const kindMark = (css.match(/\.cup-kind::before\{([^}]*)\}/) || [])[1] || '';
   ok(/border-radius:50%/.test(kindMark) && !/clip-path/.test(kindMark) && !/\.ck::before\{/.test(css) && /\.ck\[data-won\]\{color:var\(--kc\)\}/.test(css) && !/\.ck\{[^}]*color:/.test(css),
@@ -437,7 +437,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
 {
   const H = T.home;
   K.set(null); X.setChamp(null); K.setHistory([]); K.setTurn(0); D.settings().cat = 'men';
-  H.setTier(2); H.select('champ'); H.champPick('sur');
+  H.setTier(2); H.open('champ'); H.champPick('sur');
   const PK = T.picker, pv = () => PK.view(0);   // the team screen, side by side since 2026-11-11: one side, centred, in Championship
   ok(K.comp() === 'league' && PK.one() && pv().ladder.map(g => g.key).join() === 'comp,mine.made' && pv().group.name === 'Surrey' && X.teamPool() === 'sur' && $('t-title').textContent === 'Pick Your Team' && pv().ladder[1].teams.some(t => t.act === 'create'), 'a league picked on the home (Local · Surrey): the team screen with its sides, then Made Teams with Create Team, and no other list to wander off to');
   D.goHome(); H.setTier(0); H.champ();
@@ -488,7 +488,7 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   D.goHome();
   ok($('b-champ').textContent === 'Final Result' && / · Winners$/.test(noteText()), `home: Final Result (${noteText()})`);
   $('b-champ').click(); $('cup-new').click();
-  ok(K.get() === null && shown() === 's-home' && D.settings().hl === 'champ' && !$('hc-new').hidden && $('hc-go').hidden && K.history().length === 1, 'New Championship: the cup put away once, the home\'s Championship with its competitions');
+  ok(K.get() === null && shown() === 's-home' && T.home.step() === 'champ' && !$('hc-new').hidden && $('hc-go').hidden && K.history().length === 1, 'New Championship: the cup put away once, the home\'s Competitions with its competitions');
   // the Home Nations Tour, in turn
   D.settings().cat = 'men'; H.champPick('tour');
   ok($('t-title').textContent === 'Pick the Host' && $('t-go').textContent === 'Tour New Zealand' && !$('t-go').hidden && PK.one() && /<span>Your Side<\/span> <span>Home Nations<\/span>/.test($('t-side0').innerHTML) && PK.where(PK.view(0).group) === 'Your Side · Home Nations', 'Home Nations Tour: your side is the Home Nations, Tour New Zealand first');
@@ -569,14 +569,14 @@ const listKey = t => X.TEAM_LISTS.find(l => l.tier === 1 && l.teams.some(s => s.
   const marks = [];
   for (const id of ['euro', 'world', 'tour']) {
     const c = K.cupNew(id, { user:id === 'tour' ? K.cupTourSide('men') : id === 'euro' ? X.ENGLAND[0] : nat('NZL') });
-    K.set(c); D.settings().hl = 'champ'; D.goHome();
+    K.set(c); D.goHome(); T.home.open('champ');
     const note = $('champ-note').innerHTML;
     for (let n = 0; n < 12 && !K.cupDone(c); n++) win(c);
     const card = K.winHtml(c, 'cc', 'New Championship');
     marks.push([id, note.startsWith(`<span class="cup-trophy" data-kind="${id}" data-metal="${K.trophyMetal(id)}" aria-hidden="true"></span>`),
       K.cupDone(c) && new RegExp(`<div class="cup-win mine" data-kind="${id}" data-metal="${K.trophyMetal(id)}">\\s*<span class="cup-trophy" data-kind="${id}" data-metal="${K.trophyMetal(id)}" aria-hidden="true"></span>`).test(card)]);
   }
-  K.set(null); K.setHistory([]); D.settings().hl = 'game'; D.goHome();
+  K.set(null); K.setHistory([]); D.goHome();
   ok(marks.every(([, note, card]) => note && card), `the home's note and the winner's card each draw the cup's own trophy, by its kind, in its metal, hidden from a screen reader as before (${json(marks)})`);
 }
 
@@ -679,7 +679,7 @@ async function browserChecks() {
         K.retain(play(K.cupNew('world', { user:nat('NZL') }), true));
         K.retain(play(K.cupNew('tour', { user:K.cupTourSide('men') }), true));
         K.retain(play(K.cupNew('world', { user:nat('SCO') }), false));
-        T.debug.settings().hl = 'champ'; T.debug.goHome(); document.getElementById('b-cabinet').click(); await window.__frames();
+        T.debug.goHome(); document.getElementById('b-cabinet').click(); await window.__frames();
         const s = document.getElementById('s-cabinet'), panel = document.getElementById('home-history'), pb = panel.getBoundingClientRect();
         const tags = [...s.querySelectorAll('.cup-kind, .ck')].map(e => { const b = getComputedStyle(e, '::before'), r = e.getBoundingClientRect(); return { cls:e.className, kind:e.dataset.kind, won:e.hasAttribute('data-won'), mask:b.webkitMaskImage, mask2:b.maskImage, content:b.content, round:b.borderRadius, h:r.height, top:r.top, right:r.right, left:r.left, metal:e.dataset.metal }; });
         const kinds = new Set(tags.filter(t => t.won).map(t => t.kind));
@@ -701,7 +701,7 @@ async function browserChecks() {
         const nat = id => X.natList('men').find(t => t.id === id);
         for (const id of ['euro', 'world', 'tour']) {
           const c = K.cupNew(id, { user:id === 'tour' ? K.cupTourSide('men') : id === 'euro' ? X.ENGLAND[0] : nat('NZL') });
-          K.set(c); D.settings().hl = 'champ'; D.goHome(); await window.__frames();
+          K.set(c); D.goHome(); T.home.open('champ'); await window.__frames();
           const n = document.querySelector('#champ-note .cup-trophy');
           out.push([id + ' note', mask(n) === K.trophyMask(id) && n.dataset.metal === K.trophyMetal(id) && on(n)]);
           for (let k = 0; k < 12 && !K.cupDone(c); k++) { const f = K.cupFixture(c); if (!f) break; const home = f.home === c.user; K.cupRecord(c, home ? { score:[30, 10], tries:[4, 1] } : { score:[10, 30], tries:[1, 4] }); }
@@ -710,14 +710,14 @@ async function browserChecks() {
           out.push([id + ' winner', !!cw && mask(cw) === K.trophyMask(id) && cw.dataset.metal === K.trophyMetal(id) && on(cw)]);
           K.set(null); K.setHistory([]);
         }
-        T.home.setTier(1); D.settings().hl = 'champ'; D.goHome(); await window.__frames();   // National: each country's league
+        T.home.setTier(1); D.goHome(); T.home.open('champ'); await window.__frames();   // National: each country's league
         const lg = document.querySelector('#hc-eng .cup-trophy');
         out.push(['league button', !!lg && mask(lg) === K.trophyMask('euro') && lg.getAttribute('aria-label') === 'European Cup' && on(lg)]);
         D.openTeams('champ', 'eng'); D.pickTeam(X.ENGLAND[0]);
         const c = X.champ(); c.results = c.fixtures.map(rd => rd.map(([h, a]) => ({ h, a, hs:h === c.user ? 30 : 10, as:a === c.user ? 30 : 10, ht:4, at:1 }))); c.round = 5; D.renderHub(); await window.__frames();
         const of = document.querySelector('#hub-euro .cup-trophy');
         out.push(['offer', !!of && mask(of) === K.trophyMask('euro')]);
-        X.setChamp(null); K.setHistory([]); D.settings().hl = 'game'; D.goHome();
+        X.setChamp(null); K.setHistory([]); D.goHome();
         return out;
       });
       ok(cups.length === 8 && cups.every(([, good]) => good), `${w}x${h}: each cup's own trophy in its shape and metal: the home's note, the winner's card, the leagues' European Cup and Play European Cup (${cups.filter(c => !c[1]).map(c => c[0]).join(', ') || 'all eight'})`);

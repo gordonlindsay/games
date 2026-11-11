@@ -476,7 +476,7 @@ C.setCups(false);                                    // no cups unless a section
   C.set(null);
 }
 
-// 4b. Train is the Skills Mini Games (the skills builder, at the PR #14 merge): the ten in the home's order, each game's skill from its own
+// 4b. Train is the Skill Games (the skills builder, at the PR #14 merge): the ten in the home's order, each game's skill from its own
 //     result (the circle's from its role), a real session through each game's card and Back to Career, Energy for each, the contact
 //     games and their group never for the youngest (the Kids level, or Minis), and the dilemmas' training options alongside
 {
@@ -485,7 +485,7 @@ C.setCups(false);                                    // no cups unless a section
   const ALL = T.drills.DRILLS.map(d => d.id), OPEN = T.drills.DRILLS.filter(d => !d.contact).map(d => d.id), CONTACT = ALL.filter(id => !OPEN.includes(id));
   S.drillSeen = ALL.slice();                                // no Watch How on a first open: it plays before the card and records nothing
   const cr = C.create({ pos:'B', num:9, club:X.CLUBS[0] }); C.set(cr); at(false, 'men');
-  ok(json(C.drills(cr).map(d => d.id)) === json(ALL) && C.drills(cr).every(d => d.name === T.drills.DRILLS.find(x => x.id === d.id).name), `Train lists the ten Skills Mini Games, in the home's order, by their names (${C.drills(cr).map(d => d.id)})`);
+  ok(json(C.drills(cr).map(d => d.id)) === json(ALL) && C.drills(cr).every(d => d.name === T.drills.DRILLS.find(x => x.id === d.id).name), `Train lists the ten Skill Games, in the home's order, by their names (${C.drills(cr).map(d => d.id)})`);
   ok(C.drills(cr).every(d => d.contact === CONTACT.includes(d.id)), 'and knows which are the contact games');
   // each game's skill: the chips on Train are what the game's own result hands the career (the circle's two, by role)
   ok(C.drills(cr).every(d => (d.id === 'circle' ? json(d.skills) === '["stamina","handling"]' : d.skills.length === 1 && d.skills[0] === C.DRILL_SKILL[d.id])), 'each game shows the skill it trains, the circle both');
@@ -517,7 +517,7 @@ C.setCups(false);                                    // no cups unless a section
   at(false, 'women'); C.renderTrain();
   { const ct = $('ct-list').innerHTML, g = ct.indexOf('Contact Games (U9 and Up)');
     ok(g > 0 && ct.includes(T.drills.COACH) && OPEN.every(id => ct.indexOf(`data-drill="${id}"`) < g) && CONTACT.every(id => ct.indexOf(`data-drill="${id}"`) > g), 'Women: the open games, then Contact Games (U9 and Up) with the coach line over its three'); }
-  { const ct = $('ct-list').innerHTML; ok(ALL.every(id => ct.includes(`data-drill="${id}"`) && ct.includes(T.drills.icons[id])), 'each game on Train carries its Skills Mini Games picture'); }
+  { const ct = $('ct-list').innerHTML; ok(ALL.every(id => ct.includes(`data-drill="${id}"`) && ct.includes(T.drills.icons[id])), 'each game on Train carries its Skill Games picture'); }
   // the dilemmas and the bars: a dilemma's training option and a session both move him, once each, in the same round
   at(false, 'men');
   { const c2 = C.create({ pos:'F', num:2, club:X.CLUBS[1] }); C.set(c2); c2.life.energy = 80;
@@ -790,19 +790,21 @@ C.setCups(false);                                    // no cups unless a section
   const words = ['Transfer Window', 'Continue', 'Called Up', 'Pick Your Country', 'Winners', 'Knocked Out', 'Series Won', 'Series Lost', 'Transfers', 'Stay', 'Start New Career', 'Change Club', 'Pick Your Club', 'Back to New Player', 'European Cup', 'World Cup', 'Home Nations Tour', 'Triple Crown'];
   ok(words.every(titled) && words.every(w => src.includes(w)), 'and the ones the screens write: Transfer Window, Called Up, Stay, Winners, Series Won and the rest');
   ok(!/Hall of Fame|to Go Up|One More Season|CAREER_STAGES|CAREER_COUNTIES|CAREER_CUT/.test(src), 'no stages left: no Hall of Fame, no "to Go Up", no counties');
-  const panel = (src.match(/<div class="hl-panel hp-career" id="hp-career"[^>]*>([\s\S]*?)<\/div>/) || [])[1] || '';
-  ok(/<button class="btn primary" id="b-career">New Career<\/button>\s*<p class="resume-note" id="career-note" hidden><\/p>/.test(panel) && /<button class="btn hl" id="hl-career" data-hl="career"[^>]*>[\s\S]*?<span class="hl-name">Career<\/span><\/button>/.test(src), 'Career is a headline on the home\'s bar: its panel is New Career (or Continue Career) with its note under it');
-  ok(/\.hl-panel \.btn\.primary\{min-height:72px;/.test(src) && /\.hl-bar\{grid-area:bar;display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/.test(src), 'the button big, the headlines in five equal parts');
+  ok(/<button class="btn bx" id="b-career"><svg viewBox="0 0 24 24" aria-hidden="true">[\s\S]*?<\/svg><span class="bx-text"><span class="bx-name">Career<\/span><span class="bx-sub" id="career-note" hidden><\/span><\/span><\/button>/.test(src) && /\$\('b-career'\)\.addEventListener\('click', \(\) => \{ ac\(\); careerOpen\(\); \}\);/.test(src), 'Career is one of the home\'s five boxes, its picture and its word, its note under it; pressed, it opens the career (New Player, or the hub of one under way)');
+  ok(/\.btn\.bx\{display:flex;[^}]*height:100%;/.test(src) && /\.home-main\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);/.test(src), 'the box big, in a half of its row (Match | Career)');
   ok(!/[←-↙⇐-⇙]/.test(career), 'no arrow glyph on the career screens');
   for (const id of SCREENS) ok(new RegExp(`id="${id}"[\\s\\S]*?data-back>Back to (Menu|Career|New Player)<`).test(html), `${id} has a Back button`);
   ok(/id="cr-play">Play Match</.test(career) && /<div class="row2" id="cr-trow"><button class="btn" id="cr-train">Train<\/button><button class="btn" id="cr-table">Table<\/button><\/div>/.test(career), 'the hub: Play Match on its own, Train and Table as equal halves');
   ok(/<div class="row2"><button class="btn" id="ce-back" data-back>Back to Menu<\/button><button class="btn warn" id="ce-new">Start New Career<\/button><\/div>/.test(career), 'between phases: Back to Menu and Start New Career as equal halves, as the hub\'s Back to Menu and Start Fresh');
   // home
-  C.set(null); C.renderHome();
-  ok($('b-career').textContent === 'New Career' && $('career-note').hidden, 'home: New Career, with no note before a career starts');
+  C.set(null); X.setChamp(null); C.renderHome();
+  ok($('career-note').hidden, 'home: the Career box with no note before a career starts');
   const cr = C.create({ name:'Isla', pos:'B', num:7, club:{ id:'XSS', name:'<img src=x>', kit:'#123456', trim:'#abcdef', custom:true, pace:3, power:3, handling:3, kicking:3 } });
   C.set(cr); X.renderHome();
-  ok($('b-career').textContent === 'Continue Career' && !$('career-note').hidden && $('career-note').innerHTML === 'Year 1 · <span class="rn-name">&lt;img src=x&gt; · </span>Round 1 of 5', 'with one: Continue Career, the year, the club (escaped, in a span a phone held sideways leaves out) and the round');
+  ok($('career-note').hidden && /^Career · Round 1 v /.test($('cont-note').textContent), 'with one and nothing else under way: Continue says it (Career · Round 1 v ...), so the box keeps no note of its own');
+  T.debug.settings().last = 'champ'; X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); X.renderHome();
+  ok(!$('career-note').hidden && $('career-note').innerHTML === 'Year 1 · <span class="rn-name">&lt;img src=x&gt; · </span>Round 1 of 5', 'with a championship on Continue: the Career box\'s note, the year, the club (escaped, in a span a phone held sideways leaves out) and the round');
+  X.setChamp(null);
   // the new player screen, and his club
   C.set(null); C.newOpen();
   const d = C.draft();
