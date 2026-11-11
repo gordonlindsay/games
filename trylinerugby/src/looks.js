@@ -2,7 +2,8 @@
    Player looks, for the behind views only: height, build, skin, hair, a head style and a body (g: 0 male, 1 female, on the same rig in the same kit). Worked out from the team and shirt number with
    a local generator, so the same player looks the same every run, the match's random stream is never touched and nothing is added to
    M.players or a save. Skin is never tied to a team or a country. The team's side picks the bodies (teamSide): a men's squad is all male, a women's squad all
-   female, a mixed squad about half and half. A squad entry with a look (the career player) overrides it.
+   female, a mixed squad about half and half. A squad entry with a look (the career player) overrides it, and so does your profile's look
+   on the one man of your side who wears it (M.you, set by startMatch from profileYou: src/profile.js), its body already the side's.
    ========================================================= */
 const LOOK_SKIN = ['#f1d0b4', '#e2b593', '#c69c7c', '#a8764f', '#7f5337', '#553522'];
 const LOOK_HAIR = ['#17120e', '#2a1d16', '#4c2f1b', '#7d4f25', '#c29a55', '#a33f1f'];
@@ -58,7 +59,8 @@ function lookOf(p) {
   const entry = Array.isArray(nat.squad) ? nat.squad.find(e => e && e.n === p.n) : null;
   const own = cleanLook(entry && entry.look);
   if (own.g && own.style == null) seeded.style = (teamHash + p.n*5) % 8;   // a saved female look with no style of its own: the same eight it always walked, so it keeps its hair
-  look = { ...seeded, ...own };
+  const you = M.you && M.you.team === p.team && M.you.n === p.n && !M.career ? M.you.look : null;   // your player: your face, skin, hair and build, the side's body
+  look = { ...seeded, ...own, ...(you || {}) };
   LOOKS.set(p, look);
   return look;
 }

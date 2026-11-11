@@ -21,6 +21,7 @@ const jobs = [
   ['career-season', ['tools/career-season.mjs']],           // scripted careers end to end with the real cups, old saves, every phase's screens
   ['home', ['tools/home.mjs']],                             // the home's headlines, My Team, the competitions by tier, the Legends' gate (its browser part runs where Playwright is installed)
   ['picker', ['tools/picker.mjs']],                         // the team screen side by side: the ladder, Left Right Up Down and a country, the swipe, the lock, the picks kept, each one-side mode, GAME_VERSION (its browser part runs where Playwright is installed)
+  ['profile', ['tools/profile.mjs']],                       // the profile: the first launch's setup (age group, gender, club, look), My Profile, the save field, your player in the box, New Career and every match you play, no draw moved (its browser part runs where Playwright is installed)
   ['pressure', ['tools/pressure.mjs']],                     // pressure, the spill and the egg's bounce; PRESSURE off pinned to b706c3e
   ['maul', ['tools/maul.mjs']],                             // the maul: the trigger and its gates, the CPU's call, each result, the wheel, the world's maul, two player, the cards, MAUL off as before (its browser part runs where Playwright is installed)
   ['edge', ['tools/edge.mjs']],                             // Easy's edge: who has it, each lever's size, the Line Break, On Fire's Easy numbers, EDGE off as 90353c3

@@ -266,7 +266,7 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   if (!dx && !dy) return focusEl;
   if (layer.id === 's-home' && typeof homeNavTo === 'function') { const to = homeNavTo(focusEl, dx, dy, cands); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the home's boxes (src/ui-menus.js)
   const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
-  let best = navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);
+  let best = layer.id === 's-setup' || layer.id === 's-profile' ? profileNav(cands, focusEl, dx, dy) : navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);   // the profile's screens: the nearest that way, or anywhere on that side (src/profile.js)
   if (best && typeof best.closest === 'function' && best.getAttribute('role') === 'tab') {   // into a tablist from outside it (the home's bar): on its chosen tab, as Tab lands, never the nearest one
     const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
     if (sel && cands.includes(sel)) best = sel;

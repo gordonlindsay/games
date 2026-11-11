@@ -33,6 +33,11 @@ let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
+/* The profile (src/profile.js): the age group, the gender and the player's look, asked once on a new game's first launch and changed from My
+   Team's Change. { age:'mini'|'junior'|'adult'|null, gender:'male'|'female'|'na'|null, look:{ g, skin, hair, style, b }|null }, each checked
+   as a save loads (cleanProfile); saved as profile only once something is set, so a save from before it is as it was, and loads as one with
+   none. No name, nothing else. profileFirst: this launch found no save at all (load), the one time the setup may run. */
+let profile = { age:null, gender:null, look:null }, profileFirst = false;
 let storeBought = [];   // the app's purchases, product ids in the order bought (src/store.js); saved as store:{ owned } only once there is one, so a web save is as it was
 const SEASON_LIMIT = 10;
 /* The Trophy Cabinet (champHistory) holds completed league seasons, as it always has, and finished cups beside them as
@@ -252,6 +257,7 @@ function restore(s) {
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
   if ('form' in s) formRec = cleanForm(s.form);   // the games played as My Team; a save from before it has none, and a new game starts at nought (formRec's [])
+  if ('profile' in s) profile = typeof cleanProfile === 'function' ? cleanProfile(s.profile) : profile;   // the age group, gender and look (src/profile.js); a save from before it has none
   if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
   if (settings.myClub && typeof myClubFind === 'function' && !myClubFind(settings.myClub)) settings.myClub = null;   // a My Team since deleted, or its league removed: the default again
   retainCompletedSeason(champ);
@@ -261,6 +267,7 @@ function restore(s) {
 function load() {
   try {
     const raw = localStorage.getItem(STORE);
+    profileFirst = !raw;                                     // no save at all: a first launch (storage that throws is not one: nothing could be kept)
     if (raw) restore(JSON.parse(raw));
   } catch (e) { /* missing, blocked, or not JSON: keep a fresh game */ }
   settings.duels = true;
@@ -268,7 +275,7 @@ function load() {
 /* The write itself, with the settings to keep: save()'s own, or a drill's snapshot (drill-demo.js: Watch How seen, written while save() stands down). */
 function saveWith(s) {
   if (typeof nativeMirror === 'function') nativeMirror();   // the Try Line app copies this save into Preferences once it is written (native.js)
-  try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined, form:formRec.length ? formRec : undefined })); } catch (e) { /* private mode, or full */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague, cup:cup || undefined, cupTurn:cupTurn || undefined, store:storeBought.length ? { owned:storeBought } : undefined, locker:typeof lockerSaved === 'function' ? lockerSaved() : undefined, form:formRec.length ? formRec : undefined, profile:typeof profileSaved === 'function' ? profileSaved() : undefined })); } catch (e) { /* private mode, or full */ }
 }
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship

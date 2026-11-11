@@ -2,11 +2,11 @@
 
 Tryline Rugby Sevens is made to be safe for children. It collects nothing about you or your child. Nobody, including us, receives your name, your email, where you are or how you play from the game. The one thing that can reach us is an email a grown-up chooses to send (see Supporters' Wall).
 
-Last updated 9 November 2026. This covers the app from the App Store, the Android app once it is on Google Play, and the game on the web.
+Last updated 11 November 2026. This covers the app from the App Store, the Android app once it is on Google Play, and the game on the web.
 
 ## What the game keeps
 
-Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player, your player's look and whether the career is Men or Women), any league you import and the unlocks you have bought are saved on this device: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. The game never sends any of it anywhere, and we never receive it. On an iPhone, like any app's storage, it is part of the phone's own backup (iCloud, or a computer) if you use one, so it moves to a new iPhone with the rest. Deleting the app, or clearing the browser's data for the game's site, removes it from the device.
+Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player, your player's look and whether the career is Men or Women), your profile (the age group, Mini, Junior or Adult, and the gender, Male, Female or Not Say, if you give them when the game first starts or later, the look of your player and your club), any league you import and the unlocks you have bought are saved on this device: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. The game never sends any of it anywhere, and we never receive it. On an iPhone, like any app's storage, it is part of the phone's own backup (iCloud, or a computer) if you use one, so it moves to a new iPhone with the rest. Deleting the app, or clearing the browser's data for the game's site, removes it from the device.
 
 ## What the game does not do
 

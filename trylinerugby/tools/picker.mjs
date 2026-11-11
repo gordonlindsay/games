@@ -361,9 +361,9 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   for (const m of ['quick', 'two', 'my']) { D.openTeams(m); for (let k = 0; k < 40; k++) { P.group(0, 1); P.step(0, 1); if (m !== 'my') P.step(1, 1); } }
   for (const c of ['eng', 'int', 'world', 'tour']) D.openTeams('champ', c);
   ok(rndCalls() === before, `the team screen draws no random number (${rndCalls() - before})`);
-  ok(T.GAME_VERSION === '1.2' && $('ver').textContent === 'Version 1.2', 'GAME_VERSION is 1.2, on window.__tryline and at the foot of Settings');
+  ok(T.GAME_VERSION === '1.3' && $('ver').textContent === 'Version 1.3', 'GAME_VERSION is 1.3 (1.2 the side-by-side picker, 1.3 the profile), on window.__tryline and at the foot of Settings');
   const src = readGameSource();
-  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.2';") && /<p class="ver" id="ver">Version 1\.2<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
+  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.3';") && /<p class="ver" id="ver">Version 1\.3<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
   ok(!/id="home-tag"|\$\('home-tag'\)/.test(src), 'and no home tagline for it: PR #17\'s v1.1 line went with the tidied home, so nothing writes to an element that is not there');
   ok(!/[←-⇿⟵-⟿]/.test(src.slice(src.indexOf('<section class="screen" id="s-teams"'), src.indexOf('<section class="screen" id="s-build"'))), 'no arrow glyph on the team screen');
   fresh();
