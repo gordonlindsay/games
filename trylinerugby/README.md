@@ -1066,8 +1066,8 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     Player 1 on the left (the other way round after Swap Players).
   - **Close-ups head to head.** Scrums are a pack a side (the shove bar in each player's colour, Early and Good Hit as a tag in
     his colour over his own pack, an Easy pack's shove +0.10), lineouts a jumper a side (the throwing side's reach +0.10 instead
-    of one player's +0.06, an Easy jumper's +0.06), goal kicks and drop goals by whoever kicks, from his own slot, each player's
-    first kick of the match getting the path aid. A seat tag sits over each pack, each jumper, the two men in a duel and the
+    of one player's +0.06, an Easy jumper's +0.06), goal kicks and drop goals by whoever kicks, from his own slot, with his
+    own level's aim and arrow (until 2026-11-11 each player's first kick of the match got the path aid). A seat tag sits over each pack, each jumper, the two men in a duel and the
     kicker. Each close-up's bottom bar names each player's cue in his colour with his own key: "Player 1 · F · Push", "Player 2 ·
     / · Jump", "Player 2 · Hold / · Kick" (the goal kick is the Pass key), "Player 1 · G · Drop Goal", and in a duel both roles
     (below). Every other player's slot is latched through a close-up he doesn't own and reads live the moment it hands back.
@@ -1118,7 +1118,7 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     0.80 / 0.88: the scoring lever) and an AI interceptor `cpuIntercept` at the passer's level, as the CPU does against a human.
     **AI v AI and the menu demo are now fair:** team 0 used to keep the human terms there because `team === 1` was the test for
     the CPU. `sim.mjs` is re-baselined below.
-  - Checked by `tools/twoplayer.mjs` (708 asserts on seeds 1, 2 and 11, a paired mirrored-bot symmetry run with the set pieces
+  - Checked by `tools/twoplayer.mjs` (713 asserts on seeds 1, 2 and 11, a paired mirrored-bot symmetry run with the set pieces
     contested and the chooser's hand driven through the real key and stick paths, a lock sweep under `--lock`, and the full gate
     under `--sym 400`); every one-player tool's output is byte-identical to `main` (3f11088) on the spec's golden set, `sim.mjs`
     alone moving, by the fairness change.
@@ -1221,8 +1221,8 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     either player can skip; the world and the clock are frozen and nothing is judged. The chosen rule: it shows while
     that seat's Hints are On (Hints Off is one switch for both), and the moment is remembered either way, per device,
     in `settings.tut`, so the old `duelSeen` and `kickSeen` flags are gone: the first-duel window aid (+0.08s) now
-    comes once per duel kind and the first-kick path aid once for a goal kick and once for a drop, keyed off the same
-    memory. Nothing replays them: Replay Tutorial, which only forgot them (a press showed nothing until each close-up's
+    comes once per duel kind, keyed off the same memory (the first-kick path aid for a goal kick and a drop did too,
+    until 2026-11-11, when Normal and Hard stopped getting it). Nothing replays them: Replay Tutorial, which only forgot them (a press showed nothing until each close-up's
     next first time), left How to Play on 2026-11-09, and `tutReset` stays for the tools. A drop goal's thumb
     still down carries over Play as at the press; one lifted under the card needs a fresh press.
 - **Phone landscape** (2026-10-30). The fan, Sprint-as-hold and the resting stick at 96, H−118 with no inset stay as
@@ -1248,7 +1248,8 @@ The ladder would have gone backwards at County, so that is what moved, and only 
 - **A first-match coach** (2026-10-30). Coach Tips starts On. The first time Pass, Tackle, an offload (Pass pulsing in a
   Soft or a Wrap), Sprint or a side-step window comes up, one short line shows on the banner and play carries on. Each
   line once per device, one at a time, kept in `settings.tips` inside `tryline.v1`. Headless, auto and demo matches stay
-  quiet. The first duel and the first goal kick keep the tutorial card, the hints card and the first-kick path. With
+  quiet. The first duel and the first goal kick keep the tutorial card and the hints card (the first-kick path went on
+  2026-11-11). With
   Hints off and no card up, the first duel also gets "Wait for gold, then go". The home row turns Coach Tips off.
 - **Support on the open shoulder** (2026-10-31). One runner is held on the open shoulder, still behind the ball. The
   open shoulder is the side the nearest defender up on the carrier is not standing on; with him head-on, it is the side
@@ -1924,11 +1925,20 @@ A conversion or a penalty goal cuts to a still, floodlit shot from behind the ki
 centre-screen. Every kick at goal is a drop kick, as sevens law requires. The camera never moves; only the arrow does.
 
 - **Aim.** The stick steers a gold arrow on the grass (18°/s at full tilt, clamped to ±30° of the posts' centre). On
-  Normal and Hard a dotted chalk line runs on from the arrow to the goal line and ends in a tick, so you can see which
-  upright you are pointing at; the arrow starts on the posts' centre and allowing for the wind is the skill. On Easy,
-  and on your first kick ever, the arrow starts on the wind-corrected line and the aid is the real flight path, 16
-  dots ending in a gold dot where the ball would cross, or a chalk cross where it would land short. While you hold,
-  the path follows the live meter: you watch it fall short, clear the bar, then hook left.
+  Normal and Hard the arrow starts on the posts' centre on every kick, your first ever included, and allowing for the
+  wind is the skill (until 2026-11-11 the first kick ever had the Easy aids). A dotted chalk line runs on from the
+  arrow to the goal line and ends in a tick, so you can see which upright you are pointing at. Normal shows the arrow
+  and its line for 3 seconds from the end of the cut-in (match time: about 3.4 real seconds at the match's pace), then
+  fades them over 0.3s; Hard never shows them at rest. On both, steering shows them, and they fade out from 0.6s after
+  the stick stops (the owner, 2026-11-11: "Normal and hard difficulty shouldn't have the kick aligned with the wind. It
+  should just be aiming at the posts and then the player has to adjust. For normal difficulty, you get a few seconds
+  maybe of the arrow. Hard, you don't get any", and Arrow While Steering for how you know the aim). The numbers are
+  `KICK.show` and one helper, `arrowShow(level, since the aim was yours, since the stick last moved it)`, reads them.
+  Holding Kick shows nothing new, so Power is no way to peek; a pause resumes with Normal's 3 seconds afresh; a drop
+  goal is the same, on the chargers' clock. On Easy (Kids too) the arrow starts on the wind-corrected line, always
+  shows, and the aid is the real flight path, 16 dots ending in a gold dot where the ball would cross, or a chalk
+  cross where it would land short. While you hold, the path follows the live meter: you watch it fall short, clear
+  the bar, then hook left.
 - **Power.** Hold **Kick**. The meter beside the ball fills in about a second, chalk below the band, gold inside it,
   coral above. Let go in the gold. Under the band the ball is slower, flies lower and fades right; over it hooks
   left. The band is derived from the flight for this spot, kicker and wind, so it moves up, narrows and fills faster
@@ -1971,8 +1981,8 @@ centre-screen. Every kick at goal is a drop kick, as sevens law requires. The ca
   until 2m in front of the lens, fades in over the next 2m, never stands taller than 0.6 of the screen, and one who
   stops the kick lands on the side he came from. The label is
   decided at the press. A Drop Goal press opens the close-up on the 0.20s step whatever moves in the meantime, and
-  reads Drop Goal throughout; a Kick press stays a kick. Your first strike at goal, placed or dropped, ends the
-  first-kick aids. No kick's hand-back is a turnover: a charged-down drop regathered by either side, a rebound off
+  reads Drop Goal throughout; a Kick press stays a kick. The aim and the arrow follow the placed kick's rules above.
+  No kick's hand-back is a turnover: a charged-down drop regathered by either side, a rebound off
   the post or a short drop gathered by the defence are kicked balls, as a punt is. The CPU drops only when the
   charging rule says its strike would get away (`cpuDropOffer`, the test the label used to share), judged on the clock its strike keeps (the world projected through his 0.25s wind-up, then a
   strike with your players given 0.30s to react), winds up for 0.25s in the open (a tackle then is a normal
@@ -2103,7 +2113,8 @@ a charger.
     Break and its call, On Fire's Easy numbers and the meter, EDGE off drawing exactly as 90353c3 (Easy).
   - **`node tools/knock.mjs`:** the knock-ons (2026-11-11), in the default gate: each lever's size, the Big Hit's spill
     yours only (yours, the CPU's, Two Player, AI v AI), the Knock-On tag, one draw a catch whatever its chance, KNOCK off
-    drawing exactly as 20cbcaf. `--balance` measures the tables in Catching and knock-ons.
+    drawing exactly as 20cbcaf (its Two Player match re-pinned on 2026-11-11, when each player's first kick of the
+    match lost its Easy path: f83a6f3 with only that change gives the new pin). `--balance` measures the tables in Catching and knock-ons.
   - **`node tools/pressure.mjs`:** pressure, the spill and the egg (2026-11-09), in the default gate: the count's rises
     and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
     and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the
@@ -2164,10 +2175,12 @@ a charger.
       from the inside shoulder; Easy with two men still in front chases with the near one and keeps a sweeper;
       Normal commits both of the last two while a man behind chases; a retiring last man does not come up; a set
       line of seven keeps exactly one sweeper.
-  - **`node tools/goalkicks.mjs [--rates N]`:** about 640 asserts (642 at SEED 11; one line counts its retries). It checks:
+  - **`node tools/goalkicks.mjs [--rates N]`:** about 700 asserts (699 at SEED 11; one line counts its retries). It checks:
     - the closed-form flight against a 1ms integration, the judge's fixtures, and the mirror for the CPU's end;
     - that band-centre strikes score, the band is honest at its edges, over hooks left and under fades right;
-    - the wind's drift, headwind and tailwind, and that the Easy aid's preset aim scores in any wind;
+    - the wind's drift, headwind and tailwind, and that the Easy aid's preset aim scores in any wind; the first kick ever
+      on Normal and Hard starts on the posts with the line, its band at aim 0 and its random draws those of any kick, and
+      Easy and Kids keep the path;
     - the live close-up end to end in a headless user match, the input guards (a finger already down, a release under
       12%, a cancelled touch, pause and resume), and that no random number is drawn between the release and the verdict;
     - the CPU's watch cut, that Skip gives the same result as watching, the instant path under the menu demo's flags for
@@ -2179,7 +2192,8 @@ a charger.
     - the wind's range, the half-time turn, the labels and the penalty card;
     - a render smoke test: every spot, every difficulty's aid, both teams and every stage at four phone sizes, and once
       under reduced motion, with no non-finite number reaching the canvas (arguments, dash arrays and property sets)
-      and the posts, ball, meter and chip where the spec puts them;
+      and the posts, ball, meter and chip where the spec puts them; early in the aim your arrow is drawn on Easy and
+      Normal and not on Hard, the line on Normal only, and the CPU's chalk arrow on every watched kick;
     - the drawn woodwork: 0.5s after a contact the ball is between the uprights and beyond the line on screen exactly
       when the kick scores, and a miss is back in play; the held ball sits at the kicker's hip and does not jump at
       the drop; the flight zoom moves under 0.08 a frame on an in-front conversion; and the verdict banner is clear of
@@ -2202,8 +2216,9 @@ a charger.
       forward; with the stick let go he dives at the braking kicker during the hold and misses), and a chaser 5m behind
       out of the set and the cut alike (the `shoulder` lever); the CPU's offer on its strike's clock (your man standing 5m off is offered and charges
       it down by sprinting; 3m, or 8m sprinting, is not), with nothing random drawn; no hand-back is a turnover and a
-      tactical kick's charge-down leaves the defender where he stood; and the first drop on a device gets the path aid, its
-      cut-in marking the tutorial's drop moment seen;
+      tactical kick's charge-down leaves the defender where he stood; and the first drop on a device starts on the posts
+      with the line on Normal and Hard (Easy the path and the preset aim), its cut-in marking the tutorial's drop moment
+      seen;
     - one step count and the lens (groups 36–38): the press opens the cut on `holdSteps()` and the label projects
       exactly the steps before it, bit for bit, at holds of 0.20, 0.205, 0.22 and 0.25s; a charger 10m behind (staged
       with the radius widened) and one beside the kicker are drawn in depth order over him, none until 2m in front of
@@ -2212,9 +2227,20 @@ a charger.
     - the thumb (group 39): a Drop Goal label still gives a drop if the stick is let go on the press frame or during
       the hold, a chaser who closes into the shoulder radius as the kicker brakes stays out of the cut (the cut judges
       the chargers behind him that the label saw), and a drop charged down from behind bounces away from the man
-      who blocked it.
+      who blocked it;
+    - the arrow (group 40): `arrowShow` level by level at and around each edge (Easy always; Normal to 3s then a 0.3s
+      fade; Hard never at rest; steering on both until 0.6s after, then the fade; the larger of the two), and the
+      drawn arrow and line through the real input path, read off the canvas calls: Normal at 1s, 2.95s, fading at
+      3.15s and gone at 4s, back while steering, held 0.5s after, fading at 0.75s, gone at 1s; Power after 3s showing
+      nothing and a release under 12% back in Aim still hidden; a pause showing it afresh; Power and the run-up inside
+      3s at 0.6 as before and the strike's fade as before; Hard with nothing for 6s at rest and in the cut-in, shown
+      while steering either way and gone 0.95s after; the keyboard's D and the pad's d-pad the same on Hard (the aim
+      moved and the arrow shown after 0.3s held, gone 0.95s after the release), a key held into the cut-in neither
+      steering nor showing it; Easy and Kids at 5s as before; the CPU's chalk arrow on Hard as before; a drop on
+      Normal shown at 1s and gone at 3.5s, on Hard none at rest and shown while steering as you hold; steering drawing
+      what resting draws and a drawn frame nothing; and the pulse inside the show with motion on.
   - **`node tools/sim.mjs`:** AI v AI matches, with no duels, both sides' goal-kick rates and the CPU's drop goals.
-  - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 708 asserts over the input layer, the sides, the roles, the join screen
+  - **`node tools/twoplayer.mjs [--sym N] [--lock]`:** 713 asserts over the input layer, the sides, the roles, the join screen
     and the match head to head, green on seeds 1, 2 and 11 in about 37s. `--sym N` plays N pairs at 4-minute halves (400 by
     default) and adds the away-side, AI v AI and handicap runs (about 12 minutes); `--lock` runs the lock sweep (about 40s). The
     default symmetry sample is 100 pairs at 2-minute halves. It checks:
@@ -2265,7 +2291,9 @@ a charger.
     - the tutorial hold: Player 2's first Key Pass held under his card, Player 1 pushing away from the runner during it and
       holding through Play, read as a rush on keys and on a pad alike (and as without the card): only the owner's stick is
       re-centred by the hold, so the chooser's pad is never latched;
-    - the handicap: an Easy player against a Hard one gets his own windows, lock lead, path aid, refill, shove and reach, the
+    - the handicap: an Easy player against a Hard one gets his own windows, lock lead, path aid (the Hard player the line
+      from the posts, his first kick too, and his own arrow: Normal's shown 1s in and gone at 4s, Hard's hidden until he
+      steers it, the other player's stick moving neither), refill, shove and reach, the
       AI tacklers at his own rate and interceptors at the passer's level, per-owner quotas (two each a half, never the same kind
       twice running, the bonus shared), the first-duel and two-fails aids per owner (one player's are the tutorial's
       per-device memory), and `M.di` forced to 2 changing nothing a player faces;
@@ -2354,7 +2382,7 @@ a charger.
   - **`node tools/tutorial.mjs`:** 76 asserts over the first-time tutorial (SEED 2 unless set): the first Get Past's card at the
     cut, the hold (10s of frames: nothing moves, no clock, no random draw, a flick not judged, the stick re-centred), a press
     for Next and one for Play, then the slow run-in; every other moment once (Next, Skip and Play by button and by a tap
-    anywhere, the scrum held before Crouch then played out, the goal kick's card and path aid then the kick from Aim, the
+    anywhere, the scrum held before Crouch then played out, the goal kick's card with the line on Normal (Easy's first with the path) then the kick from Aim, the
     drop's thumb still down carrying over Play and one lifted needing a fresh press); the words on every device and for each
     seat, Title Case, no arrows, every key a `{code}` token drawn as a keycap by `tutHtml` (Player 2's / and . as `<kbd>` in
     the sentence; with the keycaps read as a word, no card on any device or seat names a key as bare punctuation or a lone
@@ -2681,8 +2709,8 @@ of cues, no Pass in a tackle), the second the same bot never touching Sprint, th
   `duelOther` every step from the cut-in through `inp.sideX()` (fresh keys, an unlatched stick); `c.lock`, `c.locked`,
   `c.taken`, `c.changes`, `c.stepped`, `c.tkAt`, `c.lean`, `c.dummyPress` and `c.reachT` exist only there, so one player's
   duels are the objects they always were. The other two-player-only constants are `TWO.tackle`, `SCRUM_LEVEL` and
-  `LINE_LEVEL`; `M.side[t].duel` carries each owner's quota, last kind, failures and first-duel flag, `M.side[t].kickFirst`
-  his first kick; one player's first-time aids key off `settings.tut`, the tutorial's per-device memory. `globalThis.__sfxSpy` and `debug.navLog` are hooks for the tools, like `__ctxSpy`. The byte-identity
+  `LINE_LEVEL`; `M.side[t].duel` carries each owner's quota, last kind, failures and first-duel flag (`M.side[t].kickFirst`, his
+  first kick's path, went on 2026-11-11 with the path itself on Normal and Hard); one player's first-time aids key off `settings.tut`, the tutorial's per-device memory. `globalThis.__sfxSpy` and `debug.navLog` are hooks for the tools, like `__ctxSpy`. The byte-identity
   proof (the spec's golden set run against the 3f11088 archive, `golden.sh` / `check.sh`) lives in the repo's `.claude/specs/
   scratch/golden/`, not in `tools/`, because its outputs are 2 MB of fixed runs.
 - **Hints and the tutorial** live in the UI block after `updateHud`: `hintFor(seat)` is pure (the match in, the words out

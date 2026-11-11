@@ -257,7 +257,7 @@ function coachCut() {                                     // a duel or a place k
   const g = c.kind === 'goal' ? c.g : null;
   if (g && g.type !== 'drop' && !g.watch && isHuman(g.team) && !tipSeen('kick')) {
     const s = seatOfTeam(g.team);
-    if (M.tut || g.aid === 'path' || tutSeen('goal') || (s != null && hintsOn(s))) { coachMark('kick'); return null; }   // the first-kick path, the card, or a kick this device has already had
+    if (M.tut || g.aid === 'path' || tutSeen('goal') || (s != null && hintsOn(s))) { coachMark('kick'); return null; }   // Easy's path, the card, or a kick this device has already had
     if (c.t >= CUT_IN && (g.stage === 'aim' || g.stage === 'power')) return 'kick';
   }
   return null;

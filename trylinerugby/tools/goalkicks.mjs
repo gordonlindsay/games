@@ -50,6 +50,21 @@ const CPU      = [[100,100,100],[56,63,66],[37,44,45],[76,81,84],[57,65,68],[48,
 const CPU_SPEC = [[100,100,100],[55,63,67],[37,42,44],[76,83,84],[55,65,67],[47,53,57],[39,47,49],[55,62,64],[45,52,55]];
 const PIN_N = 12000;   // kicks behind each pinned cell
 T.debug.settings().tut = T.debug.TUT_IDS.slice();   // the aids follow the difficulty (every tutorial moment seen, as the harness sets); the first-kick onboarding is checked on its own
+// your arrow and its aim line as the close-up draws them, read off the canvas calls: the gold arrow's alpha, the CPU's chalk one's and the line's, each the
+// largest this frame and 0 when not drawn. drawArrow sets globalAlpha then fills in gold (or chalk); drawAimLine sets globalAlpha, the chalk line colour, width 2, then begins its path
+const GOLD = T.behind.C.ctrl, CHALK = 'rgba(241,238,228,.8)', LINE = T.behind.C.line;
+const arrowEye = () => {
+  const o = { arrow:0, chalk:0, line:0 }; let p1 = null, p2 = null, p3 = null;
+  o.spy = (k, a) => {
+    const v = a[0];
+    if (p1 && p1[0] === 'globalAlpha' && k === 'fillStyle') { if (v === GOLD) o.arrow = Math.max(o.arrow, p1[1]); if (v === CHALK) o.chalk = Math.max(o.chalk, p1[1]); }
+    if (k === 'beginPath' && p1 && p1[0] === 'lineWidth' && p1[1] === 2 && p2 && p2[0] === 'strokeStyle' && p2[1] === LINE && p3 && p3[0] === 'globalAlpha') o.line = Math.max(o.line, p3[1]);
+    p3 = p2; p2 = p1; p1 = [k, v];
+  };
+  o.reset = () => { o.arrow = o.chalk = o.line = 0; p1 = p2 = p3 = null; };
+  return o;
+};
+const seen = () => { const e = arrowEye(), n0 = rndCalls(); globalThis.__ctxSpy = e.spy; T.debug.drawCut(); globalThis.__ctxSpy = null; return { arrow:e.arrow, chalk:e.chalk, line:e.line, draws:rndCalls() - n0 }; };
 
 // 1. the closed form agrees with a 1ms Euler integration
 begin('closed form');
@@ -161,12 +176,30 @@ for (const [name, s, kind] of SPOTS) {
   ok(n >= 196, `${name}: aim = aimFor(g, ctr) at m = ctr scores at least 98% across match winds (${n/2}%)`);
 }
 {
-  T.debug.settings().tut = T.debug.TUT_IDS.filter(id => id !== 'goal'); fresh(1); const g = K.makeGoal(0, 88, 35, 'penalty', null);
-  ok(g.aid === 'path' && g.aim !== 0, 'the first kick ever (the tutorial\'s goal moment unseen) gets the Easy path on Normal');
-  T.debug.tutMark('goal'); fresh(1); const g2 = K.makeGoal(0, 88, 35, 'penalty', null);
-  ok(g2.aid === 'line' && g2.aim === 0, 'after it, Normal starts on the posts with the line');
-  fresh(0); const g3 = K.makeGoal(0, 88, 35, 'penalty', null);
-  ok(g3.aid === 'path', 'Easy always draws the path');
+  // 2026-11-11 (the owner: "Normal and hard difficulty shouldn't have the kick aligned with the wind. It should just be aiming at the posts"): the first kick
+  // ever no longer hands Normal or Hard the Easy aids. Each kick is made twice at one seed, its tutorial moment unseen and then seen, in a 15 mph crosswind
+  const S = T.debug.settings(), spot = { x:110 - Math.sqrt(900 - 225), y:20 };
+  const make = (di, seen, kind = 'penalty') => {
+    S.tut = seen ? T.debug.TUT_IDS.slice() : T.debug.TUT_IDS.filter(id => id !== 'goal');
+    fresh(di); M().wind = { a:Math.PI/2, mph:15 }; reseed(4242); const n0 = rndCalls();
+    const g = K.makeGoal(0, spot.x, spot.y, kind, null); return { g, n:rndCalls() - n0 };
+  };
+  for (const [di, name] of [[1, 'Normal'], [2, 'Hard']]) {
+    const a = make(di, false), b = make(di, true);
+    ok(a.g.aid === 'line' && a.g.aim === 0, `the first kick ever (the tutorial's goal moment unseen) on ${name} starts on the posts with the line (${a.g.aid}, aim ${a.g.aim})`);
+    ok(b.g.aid === 'line' && b.g.aim === 0, `and every kick after it on ${name} the same (${b.g.aid}, aim ${b.g.aim})`);
+    ok(a.g.ctr === b.g.ctr && a.g.lo === b.g.lo && a.g.hi === b.g.hi && a.g.mClear === b.g.mClear, `${name}: the first kick's band is the band at aim 0, as every other kick's (${a.g.lo.toFixed(3)}-${a.g.hi.toFixed(3)})`);
+    ok(a.n === b.n && a.n > 0 && JSON.stringify(a.g.W) === JSON.stringify(b.g.W), `${name}: the first kick draws the same random numbers as any other (${a.n} and ${b.n}) and gets the same wind`);
+  }
+  for (const seen of [false, true]) {
+    const e = make(0, seen), ideal = K.aimFor(e.g, e.g.ctr);
+    ok(e.g.aid === 'path' && e.g.aim !== 0 && Math.abs(e.g.aim - ideal) < 1e-12, `Easy ${seen ? 'after the first kick' : 'on the first kick ever'}: the path, the arrow preset into the wind (aim ${(e.g.aim/D2R).toFixed(2)}deg)`);
+  }
+  S.tut = T.debug.TUT_IDS.slice(); reseed(+process.env.SEED);   // back to this run's own sequence
+  fresh(0, 3, { kids:true }); const gk = K.makeGoal(0, spot.x, spot.y, 'penalty', null);
+  ok(M().kids && gk.aid === 'path' && gk.di === 0, 'Kids keeps the path');
+  fresh(1, 3, { headless:false }); const gc = stage(1, { x:88, y:35 }, 'penalty');
+  ok(gc.watch && gc.aid === 'line' && gc.cpu, 'the CPU\'s kick is unchanged: watched, with its own inputs');
 }
 done('8 easy aid');
 
@@ -397,7 +430,8 @@ begin('render');
   const bad = new Map(), sets = new Map();
   const mark = k => bad.set(k, (bad.get(k) || 0) + 1);
   const walk = (k, v) => { if (typeof v === 'number') { if (!Number.isFinite(v)) mark(k); } else if (typeof v === 'string') { if (/NaN|Infinity/.test(v)) mark(k); } else if (Array.isArray(v)) for (const x of v) walk(k, x); };
-  globalThis.__ctxSpy = (k, a) => { if (a.length === 1 && typeof k === 'string' && /^(font|lineWidth|fillStyle|strokeStyle|globalAlpha)$/.test(k)) sets.set(k, (sets.get(k) || 0) + 1); for (const v of a) walk(k, v); };
+  const eye = arrowEye(), rest = { arrow:[0, 0, 0], line:[0, 0, 0], chalk:0 };   // your arrow and its line on the aim frame, by level, and the CPU's chalk arrow
+  globalThis.__ctxSpy = (k, a) => { eye.spy(k, a); if (a.length === 1 && typeof k === 'string' && /^(font|lineWidth|fillStyle|strokeStyle|globalAlpha)$/.test(k)) sets.set(k, (sets.get(k) || 0) + 1); for (const v of a) walk(k, v); };
   const draw = () => { const n = [...bad.values()].reduce((x, y) => x + y, 0); T.debug.drawCut(); return [...bad.values()].reduce((x, y) => x + y, 0) - n; };
   let frames = 0, layoutFails = 0, pathRun = 0, pathStale = 0; const aid = { path:0, line:0 };
   const flight = (g, c) => {                                                       // mid-flight, then after the verdict
@@ -420,7 +454,8 @@ begin('render');
         const ly = K.layoutOf(c);
         const okL = ly.gapPx >= 38 && ly.ballY >= 0.78*H && ly.ballY <= 0.82*H && ly.topsY >= Math.max(44, 0.125*H) && ly.meter.x >= 0.52*W && clear(ly.meter, A) && clear(ly.meter, B) && ly.chip.x + ly.chip.w < W/2 - 100 && clear(ly.chip, pause);
         if (!okL) { layoutFails++; console.log('  layout', W + 'x' + H, name, 'team', team, JSON.stringify(ly)); }
-        steps(20); frames += draw() === 0 ? 1 : 0;                                   // aim, or the CPU's settle
+        steps(20); eye.reset(); frames += draw() === 0 ? 1 : 0;                      // aim, or the CPU's settle
+        if (team) rest.chalk += eye.chalk > 0 ? 1 : 0; else { rest.arrow[di] += eye.arrow > 0 ? 1 : 0; rest.line[di] += eye.line > 0 ? 1 : 0; }
         if (!team) { g.stage = 'power'; g.m = 0.5; g.pt = 0.5*g.fill; frames += draw() === 0 ? 1 : 0; }
         if (!team) {                                                           // the run-up, with the aid at the released power
           g.stage = 'runup'; g.st = 0.2; g.m = g.hi + 0.1; K.strikeGoal(g, g.m, 0.02); frames += draw() === 0 ? 1 : 0;
@@ -443,6 +478,8 @@ begin('render');
   ok(bad.size === 0, `no non-finite number reaches the canvas (${[...bad.entries()].map(([k, v]) => k + ' x' + v).join(', ')})`);
   ok(sets.get('font') > 0 && sets.get('lineWidth') > 0 && sets.get('globalAlpha') > 0, `the spy sees property sets (font x${sets.get('font')}, lineWidth x${sets.get('lineWidth')}, globalAlpha x${sets.get('globalAlpha')})`);
   ok(aid.path === 4*SPOTS.length && aid.line === 8*SPOTS.length, `the Easy path and the Normal/Hard line are both drawn (${aid.path} path, ${aid.line} line kicks)`);
+  ok(rest.arrow.join() === [4*SPOTS.length, 4*SPOTS.length, 0].join() && rest.line.join() === [0, 4*SPOTS.length, 0].join(), `0.11s into the aim, your arrow is drawn on Easy and Normal and not on Hard, the line on Normal only (arrows ${rest.arrow.join('/')}, lines ${rest.line.join('/')} E/N/H)`);
+  ok(rest.chalk === 4*SPOTS.length, `the CPU's chalk arrow is drawn on every watched kick (${rest.chalk})`);
   ok(layoutFails === 0, `the framing holds at every size and spot (${layoutFails} failures)`);
   ok(pathRun > 0 && pathStale === 0, `in the run-up the Easy path is drawn at the released power, not the band centre (${pathStale} of ${pathRun} stale)`);
   console.log(`  ${frames} frames drawn clean`);
@@ -1121,16 +1158,32 @@ begin('hand-back possession');
 }
 done('34 hand-back possession');
 
-// 35. the first drop goal on this device gets the first-kick aids, and its cut-in marks the tutorial's drop moment seen
+// 35. the first drop goal on this device: on Normal and Hard it starts on the posts with the line, as every drop after it (until 2026-11-11 it had the
+// Easy aids); Easy keeps the path and the preset aim; its cut-in marks the tutorial's drop moment seen
 begin('first drop aids');
 {
+  const atCut = (spot, di) => {                            // the drop's aim and aid as its close-up opens, before the stick has touched it; then dropBot plays it out
+    freshD(di); K.stageDrop(spot, []); M().wind = { a:Math.PI/2, mph:15 };
+    inp.bPressed = true; inp.bDown = true;
+    if (!run(() => M().phase === 'cut', 30)) { inp.bDown = false; return null; }
+    const cut = M().cut, g = cut.g, a = { aid:g.aid, aim:g.aim, g };
+    run(() => g.out || g.stage === 'flight', 3000, () => dropBot(cut)); inp.bDown = false; settle();
+    return a;
+  };
+  for (const [di, name] of [[1, 'Normal'], [2, 'Hard']]) {
+    T.debug.settings().tut = T.debug.TUT_IDS.filter(id => id !== 'drop');
+    const a = atCut({ x:90, y:30 }, di);
+    ok(a && a.aid === 'line' && a.aim === 0, `the first drop ever on ${name} starts on the posts with the line (${a && a.aid}, aim ${a && a.aim})`);
+    ok(T.debug.tutSeen('drop'), `the drop's cut-in marks the drop moment seen (${JSON.stringify(T.debug.settings().tut)})`);
+    const b = atCut({ x:90, y:30 }, di);
+    ok(b && b.aid === 'line' && b.aim === 0, `and the next drop on ${name} the same (${b && b.aid})`);
+  }
+  T.debug.settings().tut = T.debug.TUT_IDS.filter(id => id !== 'drop');
+  const e = atCut({ x:90, y:30 }, 0);
+  ok(e && e.aid === 'path' && e.aim !== 0 && Math.abs(e.aim - K.aimFor(e.g, e.g.ctr)) < 1e-12, `Easy's first drop: the path, the arrow preset into the wind (${e && e.aid}, ${e && (e.aim/D2R).toFixed(2)}deg)`);
   T.debug.settings().tut = T.debug.TUT_IDS.filter(id => id !== 'drop');
   const r = tryDrop({ x:90, y:35 }, 1, []);
-  ok(r.off && r.g.aid === 'path', `the first drop ever gets the Easy aids on Normal (${r.g.aid})`);
-  ok(T.debug.tutSeen('drop'), `the drop's cut-in marks the drop moment seen (${JSON.stringify(T.debug.settings().tut)})`);
-  settle();
-  const r2 = tryDrop({ x:90, y:35 }, 1, []);
-  ok(r2.g.aid === 'line', `and the next drop on Normal has the line (${r2.g.aid})`);
+  ok(r.off && r.g.aid === 'line', `a whole first-time drop on Normal through dropBot plays with the line (${r.g.aid})`);
   settle();
   T.debug.settings().tut = T.debug.TUT_IDS.slice();
 }
@@ -1265,6 +1318,139 @@ begin('the thumb');
   ok(found && found.state === 'loose' && found.away > 0, found ? `charged down from ${found.gap.toFixed(1)}m behind at ${found.w} m/s: the ball comes off his hands away from him (${found.away.toFixed(1)})` : `no charge-down from behind in ${tried} staged drops`);
 }
 done('39 the thumb');
+
+// 40. the arrow on Normal and Hard (2026-11-11, the owner: "For normal difficulty, you get a few seconds maybe of the arrow. Hard, you don't get any",
+// and for how you know the aim without it, "Arrow While Steering"). arrowShow is one helper from the level, the time since the aim became yours
+// and the time since the stick last steered it; the close-up draws your arrow and its line at that, through the real input path
+begin('arrow');
+{
+  const AS = K.arrowShow, SH = KICK.show, near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
+  ok(SH.normal === 3 && SH.steer === 0.6 && SH.fade === 0.3, `the table: Normal ${SH.normal}s, after steering ${SH.steer}s, fades over ${SH.fade}s`);
+  // the helper
+  const never = 1e9;
+  ok([0, 1, 2.9, 3, 3.3, 10, 100].every(t => AS(0, t, never) === 1 && AS(0, t, 0) === 1), 'Easy (Kids too, level 0): always shown, at rest and steering');
+  ok([-0.2, 0, 1, 2, 2.99, 3].every(t => AS(1, t, never) === 1), 'Normal: shown from the aim being yours to 3s');
+  ok(near(AS(1, 3.15, never), 0.5) && AS(1, 3.075, never) > AS(1, 3.225, never) && AS(1, 3.3, never) === 0 && AS(1, 4, never) === 0 && AS(1, 100, never) === 0, `Normal: fades out over 0.3s after 3s, gone from 3.3s (${AS(1, 3.15, never).toFixed(2)} at 3.15s)`);
+  ok([-0.2, 0, 1, 2, 3, 5, 100].every(t => AS(2, t, never) === 0), 'Hard: never shown at rest, from the first frame');
+  for (const [lv, name] of [[1, 'Normal'], [2, 'Hard']]) {
+    ok([0, 0.3, 0.6].every(s => AS(lv, 10, s) === 1), `${name}: shown while steering and for 0.6s after it stops`);
+    ok(near(AS(lv, 10, 0.75), 0.5) && AS(lv, 10, 0.9) === 0 && AS(lv, 10, 2) === 0, `${name}: then fades out over 0.3s, gone 0.9s after the stick stops (${AS(lv, 10, 0.75).toFixed(2)} at 0.75s)`);
+  }
+  ok(near(AS(1, 3.15, 0.75), 0.5) && near(AS(1, 3.1, 0.75), AS(1, 3.1, never)) && near(AS(1, 3.2, 0.7), AS(1, 10, 0.7)) && AS(1, 1, 5) === 1 && AS(1, 10, 0.2) === 1, 'Normal: the larger of its first 3s and the steering');
+  // through the real input path, drawn. Reduced motion takes the pulse out, so the gold arrow reads 0.85 of its show while you aim and 0.6 after; the line 0.7
+  T.debug.view(844, 390); T.debug.setRM(true);
+  const steer = (c, secs, jx = 0.5) => { const n = Math.round(secs/STEP); for (let i = 0; i < n; i++) { inp.jx = jx; T.update(STEP); } inp.jx = 0; };
+  const until = (c, t) => { while (c.t < t - 1e-9) T.update(STEP); };
+  const placed = (di, opts) => { fresh(di, 3, opts); M().wind = { a:Math.PI/2, mph:15 }; const g = stage(0, SPOTS[4][1], 'penalty'); return { g, c:M().cut }; };
+  const CI = T.debug.CUT_IN || 0.22;
+  {
+    const { g, c } = placed(1);
+    until(c, CI + 1); let s = seen();
+    ok(g.stage === 'aim' && g.aim === 0 && near(s.arrow, 0.85) && near(s.line, 0.7), `Normal, 1s into the aim: the arrow on the posts and its line (arrow ${s.arrow.toFixed(2)}, line ${s.line.toFixed(2)})`);
+    until(c, CI + 2.95); s = seen(); ok(near(s.arrow, 0.85) && near(s.line, 0.7), `Normal, 2.95s: still shown (${s.arrow.toFixed(2)})`);
+    until(c, CI + 3.15); s = seen(); ok(s.arrow > 0.2 && s.arrow < 0.65 && s.line > 0.15 && s.line < 0.55, `Normal, 3.15s: fading (arrow ${s.arrow.toFixed(2)}, line ${s.line.toFixed(2)})`);
+    until(c, CI + 4); s = seen(); ok(s.arrow === 0 && s.line === 0 && s.draws === 0, `Normal, 4s: no arrow and no line (arrow ${s.arrow}, line ${s.line}), and drawing draws no random number`);
+    const a0 = g.aim; steer(c, 0.3); s = seen();
+    ok(g.aim > a0 && near(s.arrow, 0.85) && near(s.line, 0.7), `Normal, steering: the arrow and line are back (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow.toFixed(2)})`);
+    const t0 = c.t; until(c, t0 + 0.5); s = seen(); ok(near(s.arrow, 0.85), `Normal, 0.5s after the stick stops: still shown (${s.arrow.toFixed(2)})`);
+    until(c, t0 + 0.75); s = seen(); ok(s.arrow > 0.2 && s.arrow < 0.65, `Normal, 0.75s after: fading (${s.arrow.toFixed(2)})`);
+    until(c, t0 + 1); s = seen(); ok(s.arrow === 0 && s.line === 0, 'Normal, 1s after: gone');
+    inp.aPressed = inp.aDown = true; T.update(STEP); steps(4); s = seen();
+    ok(g.stage === 'power' && s.arrow === 0 && s.line === 0, `Normal, holding Kick after 3s: Power shows no arrow (${g.stage}, ${s.arrow})`);
+    inp.aDown = false; T.update(STEP); s = seen();
+    ok(g.stage === 'aim' && !g.L && s.arrow === 0, `and a release under 12% goes back to Aim with the arrow still hidden: Power is no way to peek (${g.stage}, m ${g.mRel.toFixed(2)})`);
+    M().paused = true; T.debug.resume(); T.update(STEP); s = seen();
+    ok(near(s.arrow, 0.85) && near(s.line, 0.7), `Normal, after a pause: the aim is yours again and the arrow shows afresh (${s.arrow.toFixed(2)})`);
+  }
+  {
+    const { g, c } = placed(1); until(c, CI + 0.5);
+    inp.aPressed = inp.aDown = true; T.update(STEP); steps(25); let s = seen();
+    ok(g.stage === 'power' && near(s.arrow, 0.6) && near(s.line, 0.7), `Normal, Power inside 3s: the arrow at 0.6 as today (${s.arrow.toFixed(2)})`);
+    inp.aDown = false; T.update(STEP); s = seen(); ok(g.stage === 'runup' && near(s.arrow, 0.6), `the run-up as today (${s.arrow.toFixed(2)})`);
+    run(() => g.stage === 'flight', 60); c.t = g.tStrike + 0.2; s = seen(); ok(s.arrow > 0 && s.arrow < 0.6 && s.line === 0, `the strike: the arrow fading as today, the line gone (${s.arrow.toFixed(2)})`);
+    c.t = g.tStrike + KICK.hitStop + 0.3; s = seen(); ok(s.arrow === 0, 'gone 0.3s after the strike');
+    run(() => M().phase !== 'cut', 900);
+  }
+  {
+    const { g, c } = placed(2); let worst = 0, n = 0, lines = 0, draws = 0;
+    while (c.t < CI + 6) { T.update(STEP); if (++n % 6 === 0) { const s = seen(); worst = Math.max(worst, s.arrow); lines += s.line > 0 ? 1 : 0; draws += s.draws; } }
+    ok(g.aim === 0 && worst === 0 && lines === 0 && draws === 0, `Hard: 6s at rest, ${Math.floor(n/6)} frames drawn, no arrow and no line (worst ${worst}), the aim on the posts`);
+    steer(c, 0.25, -0.6); let s = seen();
+    ok(g.aim < 0 && near(s.arrow, 0.85) && near(s.line, 0.7), `Hard, steering: the arrow and line show (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow.toFixed(2)})`);
+    steer(c, 1.0, 1); s = seen(); ok(g.aim > 0 && near(s.arrow, 0.85), `Hard, steering on for a second: shown throughout (${s.arrow.toFixed(2)})`);
+    const t0 = c.t; until(c, t0 + 0.5); s = seen(); ok(near(s.arrow, 0.85), 'Hard, 0.5s after the stick stops: still shown');
+    until(c, t0 + 0.75); s = seen(); ok(s.arrow > 0.2 && s.arrow < 0.65, `Hard, 0.75s after: fading (${s.arrow.toFixed(2)})`);
+    until(c, t0 + 0.95); s = seen(); ok(s.arrow === 0 && s.line === 0, 'Hard, 0.95s after: gone');
+    inp.aPressed = inp.aDown = true; T.update(STEP); steps(30); inp.aDown = false; T.update(STEP); s = seen();
+    ok(g.stage === 'runup' && s.arrow === 0, `Hard: Power and the run-up show none (${g.stage}, ${s.arrow})`);
+    run(() => M().phase !== 'cut', 900);
+    const h2 = placed(2); steps(9); s = seen(); ok(h2.c.t < CI && s.arrow === 0 && s.line === 0, `Hard: none in the cut-in either (t ${h2.c.t.toFixed(2)})`);
+    run(() => M().phase !== 'cut', 2000, () => kickBot(h2.c));
+  }
+  // the keyboard and the pad's d-pad steer through keyX as the stick does: a fresh press shows the arrow on Hard, and its release starts the same 0.6s and fade
+  {
+    const { g, c } = placed(2); until(c, CI + 0.4);
+    const press = (code, secs) => { inp.keys.add(code); steps(Math.round(secs/STEP)); };
+    let s = seen(); ok(g.aim === 0 && s.arrow === 0 && s.line === 0, 'Hard, before a key: no arrow, the aim on the posts');
+    press('KeyD', 0.3); s = seen();
+    ok(g.aim > 0 && near(s.arrow, 0.85) && near(s.line, 0.7), `Hard, D held 0.3s after the cut-in: the aim moved right and the arrow and line show (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow.toFixed(2)})`);
+    inp.keys.delete('KeyD'); const t0 = c.t; until(c, t0 + 0.5); s = seen();
+    ok(near(s.arrow, 0.85), `Hard, 0.5s after D is let go: still shown (${s.arrow.toFixed(2)})`);
+    until(c, t0 + 0.95); s = seen(); ok(s.arrow === 0 && s.line === 0, 'Hard, 0.95s after D is let go: gone');
+    const a1 = g.aim; press('PadLeft', 0.3); s = seen();
+    ok(g.aim < a1 && near(s.arrow, 0.85) && near(s.line, 0.7), `Hard, the pad's d-pad left for 0.3s: the aim moved left and the arrow and line show (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow.toFixed(2)})`);
+    inp.keys.delete('PadLeft'); const t1 = c.t; until(c, t1 + 0.95); s = seen(); ok(s.arrow === 0 && s.line === 0, 'Hard, 0.95s after the d-pad is let go: gone');
+    run(() => M().phase !== 'cut', 2000, () => kickBot(c));
+  }
+  {
+    fresh(2, 3); M().wind = { a:Math.PI/2, mph:15 }; inp.keys.add('KeyD'); const g = stage(0, SPOTS[4][1], 'penalty'), c = M().cut;
+    const into = inp.held.has('KeyD'); until(c, CI + 1); const s = seen();
+    ok(into && g.aim === 0 && s.arrow === 0 && s.line === 0, `Hard, D held into the cut-in: it neither steers nor shows the arrow (aim ${(g.aim/D2R).toFixed(2)}deg, arrow ${s.arrow})`);
+    inp.keys.delete('KeyD'); inp.held.delete('KeyD');
+    run(() => M().phase !== 'cut', 2000, () => kickBot(c));
+  }
+  {
+    const { g, c } = placed(0); until(c, CI + 5); const s = seen();
+    ok(g.aid === 'path' && near(s.arrow, 0.85), `Easy, 5s in: the arrow and its path as today (${s.arrow.toFixed(2)})`);
+    run(() => M().phase !== 'cut', 2000, () => kickBot(c));
+    fresh(0, 3, { kids:true }); const gk = stage(0, SPOTS[4][1], 'penalty'), ck = M().cut; until(ck, CI + 5);
+    const sk = seen(); ok(M().kids && gk.aid === 'path' && near(sk.arrow, 0.85), `Kids, 5s in: the same (${sk.arrow.toFixed(2)})`);
+    run(() => M().phase !== 'cut', 2000, () => kickBot(ck, { aim:gk.aim }));   // Kids sets the aim: the bot takes it as it is
+  }
+  {
+    fresh(2, 3, { headless:false }); const g = stage(1, { x:88, y:35 }, 'penalty'), c = M().cut; until(c, CI + 0.6); const s = seen();
+    ok(g.watch && near(s.chalk, 0.6) && s.arrow === 0, `a CPU kick on Hard: its chalk arrow as today (${s.chalk.toFixed(2)})`);
+    run(() => M().phase !== 'cut', 2000);
+  }
+  // drop goals the same: on the chargers' clock from the end of the cut-in, steered while you hold or wait
+  const drop = di => { freshD(di); const c = K.stageDrop({ x:84, y:30 }, [{ x:104, y:20 }]); inp.bDown = false; K.startDropCut(c); return { g:M().cut.g, c:M().cut }; };
+  {
+    const { g, c } = drop(1); until(c, CI + 1); let s = seen();
+    ok(g.stage === 'wait' && near(s.arrow, 0.85) && near(s.line, 0.7), `a drop on Normal, 1s in: shown (${g.stage}, ${s.arrow.toFixed(2)})`);
+    until(c, CI + 3.5); s = seen(); ok(s.arrow === 0, `a drop on Normal, 3.5s in: gone (${s.arrow})`);
+    run(() => g.out || g.stage === 'flight', 3000, () => dropBot(c)); inp.bDown = false; settle();
+  }
+  {
+    const { g, c } = drop(2); until(c, CI + 0.4); let s = seen();
+    ok(s.arrow === 0 && s.line === 0, `a drop on Hard at rest: none (${g.stage})`);
+    inp.bPressed = inp.bDown = true; T.update(STEP); steer(c, 0.2, 0.7); s = seen();
+    ok(g.stage === 'hold' && g.aim > 0 && near(s.arrow, 0.85) && near(s.line, 0.7), `a drop on Hard, steering as you hold: shown (aim ${(g.aim/D2R).toFixed(2)}deg, ${s.arrow.toFixed(2)})`);
+    steps(Math.round(0.95/STEP)); s = seen(); ok(g.stage === 'hold' && s.arrow === 0, `and gone 0.95s after the stick stops, the thumb still down (${g.stage})`);
+    inp.bDown = false; run(() => g.out || g.stage === 'flight', 3000); settle();
+  }
+  // the draws: steering draws what resting draws, and drawing draws nothing; the stick and the screen change only what you see
+  {
+    const { c } = placed(2); until(c, CI + 0.2);
+    let n0 = rndCalls(); steer(c, 0.5, 0.8); const dSteer = rndCalls() - n0;
+    n0 = rndCalls(); steps(30); const dRest = rndCalls() - n0;
+    const s1 = seen(); steer(c, 0.1, -0.3); const s2 = seen();
+    ok(dSteer === dRest && s1.draws === 0 && s2.draws === 0, `Hard: half a second's steering draws what half a second at rest does (${dSteer} and ${dRest}), and a frame drawn either way none`);
+    run(() => M().phase !== 'cut', 2000, () => kickBot(c));
+  }
+  T.debug.setRM(false);
+  { const { c } = placed(1); until(c, CI + 1); const s = seen(); ok(s.arrow >= 0.7 - 1e-9 && s.arrow <= 1 + 1e-9, `with motion on, the arrow pulses inside its show as today (${s.arrow.toFixed(2)})`); run(() => M().phase !== 'cut', 2000, () => kickBot(c)); }
+}
+done('40 arrow');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

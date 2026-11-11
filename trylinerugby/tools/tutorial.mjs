@@ -70,13 +70,16 @@ begin('every moment');
   $('m-tut').click(); ok(D.tut() && D.tut().step === 1, 'a tap anywhere on the card is Next'); $('m-tut').click(); ok(D.tut() == null, 'and then Play');
   runUntil(() => M().phase === 'play', 4000);
   fresh(); D.goalKick(0, 88, 35, 'penalty');
-  ok(D.tut() && D.tut().id === 'goal' && $('tu-title').textContent === 'Goal Kick' && M().cut.g.aid === 'path', 'the first goal kick: the card, and the first-kick path aid');
+  ok(D.tut() && D.tut().id === 'goal' && $('tu-title').textContent === 'Goal Kick' && M().cut.g.aid === 'line' && M().cut.g.aim === 0, 'the first goal kick on Normal: the card, and the arrow on the posts with the line (2026-11-11: the first kick no longer gets the Easy path)');
   { const c = M().cut; runUntil(() => c.t >= D.CUT_IN, 30); for (let i = 0; i < 30; i++) { inputs[0].aPressed = true; T.update(STEP); if (D.tut() == null) break; } ok(c.g.stage === 'aim' && c.g.m === 0 && D.tut() == null && c.t < D.CUT_IN + STEP, 'two presses through the hold are Next and Play; neither starts the meter'); }
   { const c = M().cut; T.update(STEP); runUntil(() => { kickBot(c, { aim:0 }); return c.g.stage === 'flight'; }, 900); ok(c.g.stage === 'flight', 'then the kick is taken from Aim (a frame after Play, as a thumb lifts: a press on the very frame the thumb is first read is a finger already down)'); runUntil(() => M().phase !== 'cut', 900); }
-  fresh(); D.goalKick(0, 88, 35, 'penalty'); ok(D.tut() == null && M().cut.g.aid === 'line', 'the second kick: no card, the line (the aid was the first time\'s)'); runUntil(() => { const c = M().cut; if (!c) return true; kickBot(c, { aim:0 }); return false; }, 1200);
+  fresh(); D.goalKick(0, 88, 35, 'penalty'); ok(D.tut() == null && M().cut.g.aid === 'line' && M().cut.g.aim === 0, 'the second kick: no card, and the line as the first had'); runUntil(() => { const c = M().cut; if (!c) return true; kickBot(c, { aim:0 }); return false; }, 1200);
+  settings().tut = settings().tut.filter(id => id !== 'goal'); fresh({ diff:0 }); D.goalKick(0, 88, 35, 'penalty');
+  ok(D.tut() && D.tut().id === 'goal' && M().cut.g.aid === 'path', 'on Easy the first goal kick has the card and the path, as every Easy kick has');
+  $('tu-skip').click(); runUntil(() => { const c = M().cut; if (!c) return true; kickBot(c); return false; }, 1200);
   // a drop goal from the real B hold: the thumb still down carries over Play; lifted during the card, a fresh press is needed
   const drop = () => { fresh(); K.stageDrop({ x:92, y:35 }, [{ x:104, y:35 }], 0); const c = S.ctrlOf(0); c.hold = 1; let n = 0; while (K.kickLabel(0) !== 'Drop Goal' && n++ < 60) T.update(STEP); inputs[0].bPressed = true; inputs[0].bDown = true; runUntil(() => M().phase === 'cut', 40); return M().cut; };
-  { const c = drop(); ok(c && c.g.type === 'drop' && D.tut() && D.tut().id === 'drop' && $('tu-title').textContent === 'Drop Goal' && c.g.aid === 'path', 'the first drop goal: the card and the path');
+  { const c = drop(); ok(c && c.g.type === 'drop' && D.tut() && D.tut().id === 'drop' && $('tu-title').textContent === 'Drop Goal' && c.g.aid === 'line' && c.g.aim === 0, 'the first drop goal on Normal: the card, and the arrow on the posts with the line');
     runUntil(() => c.t >= D.CUT_IN, 30); for (let i = 0; i < 30; i++) T.update(STEP); ok(c.g.m === 0 && c.t < D.CUT_IN + STEP, 'the meter does not fill under the card');
     $('tu-skip').click(); T.update(STEP); ok(D.tut() == null && c.g.stage === 'hold' && c.g.started, 'Play with the thumb still down: the hold runs on');
     for (let i = 0; i < 20; i++) T.update(STEP); ok(c.g.m > 0, 'and the meter fills'); inputs[0].bDown = false; runUntil(() => M().phase !== 'cut', 900); }
@@ -263,11 +266,11 @@ begin('coach');
   settings().tut = settings().tut.filter(id => id !== 'goal'); settings().tips = settings().tips.filter(id => id !== 'kick');
   settings().hints = true; D.coachClear();
   fresh(); D.goalKick(0, 88, 35, 'penalty');
-  ok(D.tut() && D.tut().id === 'goal' && M().cut.g.aid === 'path', 'the first kick still has the card and the path');
+  ok(D.tut() && D.tut().id === 'goal' && M().cut.g.aid === 'line', 'the first kick still has the card (on Normal, with the line)');
   D.coachTick();
   ok(!settings().tips.includes('kick') && D.coachLast() == null, 'under the card the coach stays quiet');
   $('tu-skip').click(); D.coachTick();
-  ok(settings().tips.includes('kick') && M().cut.g.aid === 'path' && D.coachLast() == null, 'after Play the path still owns the kick: the line is remembered, not said');
+  ok(settings().tips.includes('kick') && M().cut.g.aid === 'line' && D.coachLast() == null, 'after Play the card has covered the kick: the coach line is remembered, not said');
   settings().coach = true; settings().hints = true; settings().tips = D.COACH_IDS.slice(); settings().tut = D.TUT_IDS.slice(); D.setTwo(false);
 }
 done('E coach');
