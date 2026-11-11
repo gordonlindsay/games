@@ -208,8 +208,8 @@ function kidsGateLoad() {
 }
 function parentGate(onPass, onCancel) {
   if (kidsGate) kidsGateClose(false);                      // one check at a time: an older one is cancelled
-  const pad = lastDev === 'pad', act = document.activeElement || null;
-  kidsGate = { onPass, onCancel, typed:'', back:act, inert:[] };
+  const pad = lastDev === 'pad', act = document.activeElement || null, ring = pad && focusEl ? focusEl : null;
+  kidsGate = { onPass, onCancel, typed:'', back:ring || act, ring:!!ring, inert:[] };   // where it goes back to: a controller's ring on the button that asked (Settings' Junior, say), else the DOM focus
   kidsAsk(); kidsGateShow(false);
   const m = $('m-gate'), body = document.body;
   if (pad && act && act.blur) act.blur();                  // a controller works by the chalk ring, and the DOM focus would draw a second outline on another key
@@ -223,10 +223,13 @@ function kidsGateClose(passed) {
   kidsGate = null;
   $('m-gate').hidden = true; setFocus(null);
   for (const el of g.inert) el.inert = false;
-  if (g.back && g.back.focus && !(g.back.closest && g.back.closest('[hidden]'))) g.back.focus();
+  const shown = !!g.back && !(g.back.closest && g.back.closest('[hidden]'));
+  if (g.ring && shown) setFocus(g.back);                   // a controller's ring back where it was, with no DOM focus (one outline)
+  else if (shown && g.back.focus) g.back.focus();
   if (passed) { kidsGateMiss = 0; kidsGateRests = 0; kidsGateKeep(); }
   const fn = passed ? g.onPass : g.onCancel;
   if (typeof fn === 'function') fn();
+  if (g.ring && focusEl === g.back && typeof navLayer === 'function') { const l = navLayer(); if (l && l.contains && !l.contains(g.back)) setFocus(null); }   // what the check let through opened a card or a screen: the ring is that one's to place
 }
 function kidsGateType(d) {
   const g = kidsGate; if (!g || kidsGateRest) return;      // resting keys do nothing

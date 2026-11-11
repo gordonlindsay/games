@@ -550,6 +550,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(!/donat|charit|good cause/i.test(src + ui + block + read('store/README.md').replace(/never[^.]*(donation|charity)[^.]*\./gi, '')), 'never called a donation or charity (Apple 3.2.2): it says what the club gets');
   ok(!/—/.test(src + ui + block + read('store/README.md')) && !/[←-↙⇐-⇙]/.test(src + ui + block), 'no em dash or arrow');
   ok(/\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css) && /\.hp-settings #b-grown\{align-self:end;min-height:47px;/.test(css), 'Grown-Ups shares Sound and Match Help\'s row in Settings, in equal thirds, a segment\'s height (44px inside its edges) (re-pinned for the Camera row: it was Half Length\'s, in halves)');
+  ok(/<div class="set set-gender">[\s\S]*?<\/div><\/div>\s*<div class="set set-sound">[\s\S]*?<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(html) && /\.hp-settings\.settings \.set-cam,\.hp-settings\.settings \.ver\{grid-row:4;/.test(css), 'with Age Group | Gender under Difficulty (src/profile.js), Grown-Ups stays on Sound and Match Help\'s row, now the third, and Half Length | Camera the fourth (its fit at every size: tools/profile.mjs and tools/home.mjs)');
 }
 
 // 12. the contracts with the other builders

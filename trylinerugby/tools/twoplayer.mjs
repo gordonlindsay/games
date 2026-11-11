@@ -633,6 +633,14 @@ begin('join');
   D.openJoin(); D.openTeams('two'); D.pickTeam(X.CLUBS[0]); D.pickTeam(X.CLUBS[0]); P.go();
   ok(M().two && M().nat[0].id === 'FAR' && M().nat[1].id === 'FA2', 'both players can pick Farnham: FAR v FA2');
   D.exitMatch();
+  // Men | Women | Minis stays on 2 Players with a profile that decides the category (Settings' Age Group | Gender, src/profile.js): two
+  // people share the device and the profile is one of them's, so the switch picks, and what it picks is played
+  T.profile.set({ age:'adult', gender:'male', look:null }); D.settings().cat = 'women'; D.settings().pick = [null, null];   // no sides remembered, whose own category would be the one it reopens in
+  D.openJoin(); D.openTeams('two');
+  ok(!$('t-cat').hidden && D.settings().cat === 'women', '2 Players with a profile that decides the category (Adult, Male): Men | Women | Minis still there, Women kept');
+  X.catPick('minis'); D.pickTeam(X.CLUBS[0]); D.pickTeam(X.CLUBS[1]); P.go();
+  ok(M().two && M().nat.every(n => n.cat === 'minis') && T.profile.get().gender === 'male', 'and the category picked on it is played (Minis), the profile untouched');
+  D.exitMatch(); T.profile.set({ age:null, gender:null, look:null }); X.catPick('men');
   // one player's team screen is as it was
   D.settings().pick = [null, null]; D.openTeams('quick');
   ok($('t-eyebrow').textContent === 'Quick Match' && !$('t-eyebrow').classList.contains('p1') && !$('t-eyebrow').classList.contains('p2') && $('t-title').textContent === 'Pick Your Team' && !P.state().sides[0].set && $('t-go').textContent === 'Pick Farnham' && $('t-back').textContent === 'Back to Menu' && D.navOnly() == null, 'Quick Match: Pick Your Team, nothing picked for him (My Team only offered first), Back to Menu, nobody restricted');

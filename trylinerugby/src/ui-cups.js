@@ -34,7 +34,7 @@ function cupTeamsView() {
   if (champComp !== 'tour') return null;
   const cat = settings.cat, hosts = CUPS.tour.hosts, at = cupTurn % hosts.length;
   const list = [0, 1, 2].map(i => cupNation(hosts[(at + i) % hosts.length], cat)).filter(Boolean);
-  return { comp:'tour', name:CUPS.tour.name, title:'Pick the Host', list, yours:cupTourSide(cat), pick:list[0], primary:'Tour ' + listName(list[0]),
+  return { comp:'tour', name:CUPS.tour.name, title:'Pick the Host', list, yours:cupTourSide(cat), pick:list[0], primary:'Tour ' + list[0].name,
     start:t => { if (!hosts.includes(t.id)) return; cupTurn = hosts.indexOf(t.id) + 1; cupBegin('tour', { user:cupTourSide(cat), cat, host:t.id }); } };
 }
 function cupBegin(id, opts) {
