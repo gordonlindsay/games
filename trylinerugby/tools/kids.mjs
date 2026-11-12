@@ -43,6 +43,15 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(!K.gate() && !s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === false, 'a right answer takes it off and saves');
   seg.children[0].click(); ok(!K.gate() && s.kids, 'going on to Kids needs no check'); K.segSet(1);
   ok(/if \(key === 'diff' && kidsLevel\(\) && i !== 0\) \{ parentGate\(/.test(fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8')), 'every button but Kids goes through the check, and only while on Kids');
+  // Settings' Age Group under Difficulty (src/profile.js) leaves the Kids level only past the same check; a gender never moves the level
+  const F = T.profile; F.set({ age:null, gender:null, look:null }); K.segSet(1); T.home.open('settings');
+  F.age('mini'); ok(!K.gate() && s.kids && s.diff === 0, 'Settings\' Mini: on to Kids, no check (as Kids itself)');
+  F.age('adult'); ok(K.gate() && s.kids && F.get().age === 'mini', 'Settings\' Adult from the Kids level: the grown-up check first, the level and the age group not moved');
+  K.close(false); ok(!K.gate() && s.kids && s.diff === 0 && F.get().age === 'mini' && JSON.parse(memory['tryline.v1']).settings.kids === true, 'cancelled: still Kids, still Mini, in the save too');
+  F.gender('male'); ok(!K.gate() && s.kids && F.get().gender === 'male', 'a gender asks nothing and leaves the Kids level on');
+  F.age('junior'); { const g = K.gate(); for (const d of g.answer) K.type(d); }
+  ok(!K.gate() && !s.kids && s.diff === 0 && F.get().age === 'junior', 'answered: Junior, Easy with the Kids level off');
+  F.set({ age:null, gender:null, look:null }); K.segSet(1); s.cat = 'men'; D.goHome();
 }
 
 // 2. the save: a round trip, an old save, a partial and a bad one
@@ -470,6 +479,13 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   K.close(false); D.setDev('touch'); K.parentGate(pass, cancel);
   ok(focused === 1 && D.focus() === null, 'opened by touch or the keyboard: the DOM focus on 1, for Tab and the screen reader');
   K.close(false); delete $('pg-k1').focus;
+  // opened by a controller's ring on a button (Settings' Junior, the Difficulty row's Easy): shut either way, the ring goes back on it, with
+  // no DOM focus (the review, 2026-11-11: it went back to Kids, the DOM focus left where Settings opened)
+  { const asker = $('b-set'), own = Object.prototype.hasOwnProperty.call(asker, 'focus'), was = asker.focus; let f2 = 0; asker.focus = () => f2++; D.setDev('pad');
+    T.home.ring(asker); K.parentGate(pass, cancel); const open = D.focus(); K.close(false); const shut = D.focus();
+    T.home.ring(asker); K.parentGate(pass, cancel); K.close(true); const passedTo = D.focus();
+    ok(open === $('pg-k1') && shut === asker && passedTo === asker && f2 === 0, `opened from a controller's ring: cancelled or answered, the ring back on the button that asked, no DOM focus (${[open && open.id, shut && shut.id, passedTo && passedTo.id, f2].join(', ')})`);
+    T.home.ring(null); D.setDev('touch'); if (own) asker.focus = was; else delete asker.focus; }
   const page = [{ id:'rotate', inert:false }, { id:'controls', inert:false }, $('m-gate')];   // the body's children, as parentGate walks them
   document.body = { children:page };
   K.parentGate(pass, cancel);

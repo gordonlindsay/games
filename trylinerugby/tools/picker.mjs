@@ -532,9 +532,9 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   D.openTeams('quick'); for (const s of [0, 1]) { P.filter(s, '', { dev:'touch' }); for (let k = 0; k < 5; k++) { P.filterSel(0, k); P.filterSel(1, 0); } for (const q of ['b', 'ba', 'Premiership', 'zz', '']) P.filterType(q); P.filterClose(); }
   P.filter(0, 'bath', { dev:'touch' }); P.filterPick(P.filterState().hits[0].gi, P.filterState().hits[0].i);
   ok(rndCalls() === before, `the team screen and its Filter draw no random number (${rndCalls() - before})`);
-  ok(T.GAME_VERSION === '1.4' && $('ver').textContent === 'Version 1.4', 'GAME_VERSION is 1.4 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons), on window.__tryline and at the foot of Settings');
+  ok(T.GAME_VERSION === '1.5' && $('ver').textContent === 'Version 1.5', 'GAME_VERSION is 1.5 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick), on window.__tryline and at the foot of Settings');
   const src = readGameSource();
-  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.4';") && /<p class="ver" id="ver">Version 1\.4<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
+  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.5';") && /<p class="ver" id="ver">Version 1\.5<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
   ok(!/id="home-tag"|\$\('home-tag'\)/.test(src), 'and no home tagline for it: PR #17\'s v1.1 line went with the tidied home, so nothing writes to an element that is not there');
   ok(!/[←-⇿⟵-⟿]/.test(src.slice(src.indexOf('<section class="screen" id="s-teams"'), src.indexOf('<section class="screen" id="s-build"'))), 'no arrow glyph on the team screen');
   fresh();
@@ -810,7 +810,8 @@ async function browserChecks() {
             const key = el => !el ? 'none' : el.closest('.pk-side') ? el.closest('.pk-side').id + ':' + el.dataset.act : el.dataset.cat ? 'cat:' + el.dataset.cat : el.id;
             const find = k => (k === 'none' ? null : k.startsWith('cat:') ? document.querySelector(`#t-cat [data-cat="${k.slice(4)}"]`) : k.includes(':') ? $(k.split(':')[0]).querySelector(`[data-act="${k.split(':')[1]}"]`) : $(k));
             T.teams.custom().length = 0; T.teams.custom().push(T.teams.cleanTeam({ name:'Herons', key:'myhe' }, 0));
-            for (const [mode, seat] of [['quick', 0], ['champ', 0], ['world', 0], ['career', 0], ['my', 0], ['two', 0], ['two', 1]]) {
+            for (const [run, seat] of [['quick', 0], ['champ', 0], ['world', 0], ['career', 0], ['my', 0], ['two', 0], ['two', 1], ['quick+p', 0], ['champ+p', 0], ['my+p', 0], ['two+p', 1]]) {   // +p: with a profile that decides the category (Adult, Female): no Men | Women | Minis but in 2 Players
+              const mode = run.replace('+p', ''); T.profile.set(run.endsWith('+p') ? { age:'adult', gender:'female', look:null } : { age:null, gender:null, look:null });
               D.settings().pick = [null, null]; D.setTwo(false);
               if (mode === 'two') { D.openJoin(); D.openTeams('two'); }
               else if (mode === 'champ') { D.openTeams('champ', 'sur'); P.group(0, 1); }
@@ -829,12 +830,29 @@ async function browserChecks() {
               }
               const all = [...$('s-teams').querySelectorAll('button')].filter(b => !b.closest('[hidden]') && b.getBoundingClientRect().width > 0 && !b.disabled).map(key);
               const missing = all.filter(x => !seen.has(x) && !(mode === 'two' && x === `t-side${seat}:pick`) && !(mode === 'two' && x === `t-side${1 - seat}:pick`));
-              out.push(`${mode}${mode === 'two' ? seat : ''} ${first} ${all.length} ${JSON.stringify(missing)}`);
+              out.push(`${run}${mode === 'two' ? seat : ''} ${first} ${all.length} ${JSON.stringify(missing)}${run.endsWith('+p') ? (all.some(x => x.startsWith('cat:')) === (mode === 'two') ? '' : ' cat?') : ''}`);
             }
-            T.home.ring(null); D.setTwo(false); T.teams.custom().length = 0; D.goHome();
+            T.profile.set({ age:null, gender:null, look:null }); D.settings().cat = 'men'; T.home.ring(null); D.setTwo(false); T.teams.custom().length = 0; D.goHome();
             return out;
           });
-          ok(k.every(x => x.endsWith(' []')) && k[0].startsWith('quick t-side0:pick') && k.slice(1, 5).every(x => / t-side0:pick /.test(x)), `${at}: from the first press a controller reaches every button, in every mode, and in 2 Players for each seat (${k.join('; ')})`);
+          ok(k.every(x => x.endsWith(' []')) && k[0].startsWith('quick t-side0:pick') && k.slice(1, 5).every(x => / t-side0:pick /.test(x)) && k.length === 11, `${at}: from the first press a controller reaches every button, in every mode, and in 2 Players for each seat; with a profile that decides the category too, Men | Women | Minis gone but from 2 Players (${k.join('; ')})`);
+          // with a profile that decides the category (Settings' Age Group | Gender) the switch is gone from the top bar: Up from a side's head
+          // reaches the search icon, its one control, in Quick Match, Championship and My Team; 2 Players keeps Up to the switch
+          k = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), f = () => D.focus(), out = [];
+            T.profile.set({ age:'adult', gender:'female', look:null });
+            for (const mode of ['quick', 'champ', 'my', 'two']) {
+              D.settings().pick = [null, null]; D.setTwo(false);
+              if (mode === 'two') D.openJoin();
+              if (mode === 'champ') D.openTeams('champ', 'int'); else D.openTeams(mode);
+              T.home.ring(null); T.navMove(0, 0, 0); P.lift(0); T.navMove(0, 0, -1);
+              const top = $('t-sides').getBoundingClientRect().top, bar = document.querySelector('.pk-top').getBoundingClientRect(), find = $('t-find').getBoundingClientRect();
+              out.push([mode, f() && (f().dataset.cat || f().id), $('t-cat').hidden, D.settings().cat, Math.round(bar.right - find.right), find.bottom <= top]);
+            }
+            T.profile.set({ age:null, gender:null, look:null }); D.settings().cat = 'men'; T.home.ring(null); D.setTwo(false); D.goHome();
+            return out;
+          });
+          ok(json(k.map(x => x.slice(0, 4))) === json([['quick', 't-find', true, 'women'], ['champ', 't-find', true, 'women'], ['my', 't-find', true, 'women'], ['two', 'women', false, 'women']]) && k.slice(0, 3).every(x => x[4] === 0 && x[5]), `${at}: the profile deciding (Adult, Female): no Men | Women | Minis, Women played, the search icon at the top bar's right end and Up from a side's head on it; 2 Players keeps the switch, Up on Women (${json(k)})`);
           k = await page.evaluate(() => {
             const T = window.__tryline, P = T.picker, D = T.debug, $ = id => document.getElementById(id), f = () => D.focus(), out = {};
             D.settings().pick = [null, null]; D.openTeams('quick'); T.home.ring(null);

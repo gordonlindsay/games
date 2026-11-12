@@ -127,8 +127,12 @@ const KN = K ? K.KNOCK : {}, K0 = { ...KN }, setK = o => Object.assign(KN, K0, o
 /* 0. KNOCK off is 20cbcaf, draw for draw: AI v AI, the demo, a tool's balance match (the bot, no arcade), the bot's arcade Quick
    Match on Easy, Normal and Hard, a Kids match at its ceiling and Two Player, with their random draws. KNOCK on moves every one
    of them, on purpose: the levers act everywhere (the demo over its first 150 seconds). BASE: GAME=<20cbcaf>/index.html node tools/knock.mjs --pins */
-const BASE = 'gfkiiv af2q5q 1682150 xc3q2t 1sgvx41 3whr8x vurlvh i0ho1o 4dor6m';   // GAME=<20cbcaf>/index.html node tools/knock.mjs --pins (2026-11-11), and this build with KNOCK off
-const ON = '3mv681 e4k4jm n80rro 1oy4gdg ksahst ot75uq ndxogl wdn3mx oavuie';   // the same with the levers as README.md gives them (2026-11-11): re-pin only from a change to the knock-ons, on purpose
+// Re-pinned 2026-11-11 for the goal-kick arrow: Two Player (the eighth) and the draw count (the ninth) moved, because each player's first goal kick of the
+// match no longer has the Easy path on Normal, so the bot driving it aims as at any line kick (one more draw from the seeded stream) and the match goes
+// its own way. Proof: f83a6f3 (KNOCK as now) with only `kickFirst:true` made `kickFirst:false` in newMatch gives exactly these two strings, off and on;
+// f83a6f3 unchanged gives the old ones (i0ho1o 4dor6m off, wdn3mx oavuie on). The first seven, 20cbcaf's own, did not move
+const BASE = 'gfkiiv af2q5q 1682150 xc3q2t 1sgvx41 3whr8x vurlvh q1vu5w 1jtotnc';   // GAME=<20cbcaf>/index.html node tools/knock.mjs --pins (2026-11-11), and this build with KNOCK off; Two Player and the count as above
+const ON = '3mv681 e4k4jm n80rro 1oy4gdg ksahst ot75uq ndxogl 12zkbzw iwauru';   // the same with the levers as README.md gives them (2026-11-11): re-pin only from a change to the knock-ons, on purpose (or as above)
 const play = (seed, a, b, o, two) => { reseed(seed); T.newMatch(a, b, { halfLen:60, headless:true, humans:two ? [true, true] : [true, false], ...o }); let n = 0; while (!M().over && n < 200000) { bot(0); if (two) bot(1); T.update(STEP); n++; } return json([M().score, M().tries, M().stats, n]); };
 function pins() {
   const out = [], r0 = rndCalls();
@@ -150,7 +154,7 @@ if (run && !args.length) {
 begin('0 KNOCK off is 20cbcaf');
 {
   setK({ on:false }); const off = pins(); reset(); const on = pins();
-  ok(off === BASE, `KNOCK off: AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as 20cbcaf, with the same draws (${off}, pinned ${BASE})`);
+  ok(off === BASE, `KNOCK off: AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as 20cbcaf (Two Player without its first-kick path since 2026-11-11), with the same draws (${off}, pinned ${BASE})`);
   ok(on.split(' ').slice(0, 8).every((h, i) => h !== BASE.split(' ')[i]), `KNOCK on moves every one of them, on purpose: the levers act everywhere (${on})`);
   ok(on === ON, `and plays them as pinned with the levers (${on}, pinned ${ON})`);
 }

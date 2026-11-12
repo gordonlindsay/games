@@ -101,8 +101,7 @@ function newMatch(u, c, opts) {
     charging:false, charge:0, holdN:0,                 // the kick charge: B held with the ball
     pass:null,                                         // a Pass press in hand: { mode:'tap'|'hold', to, t } so a hold can charge and an early tap is not dropped
     level:opts.levels ? opts.levels[t] : di,           // this player's Difficulty (the one level in one player)
-    duel:{ half:[0, 0], lastKind:null, fails:0, first:true },   // two player: this owner's quota, his last kind, his failures in a row and his first-duel aid
-    kickFirst:true }));                                // two player: this player's first goal kick of the match gets the path
+    duel:{ half:[0, 0], lastKind:null, fails:0, first:true } }));   // two player: this owner's quota, his last kind, his failures in a row and his first-duel aid
   for (const t of [0, 1]) if (!humans[t] && humans[1 - t] && opts.levels) M.side[t].level = M.side[1 - t].level;
   M.role = [0, 1].map(t => (humans[t] ? 'human' : 'cpu'));
   { const m = M; for (const k of ['ctrl', 'ctrlPrev', 'ctrlT', 'charging', 'charge', 'holdN', 'pass']) Object.defineProperty(m, k, { get:() => m.side[0][k], set:v => { m.side[0][k] = v; }, enumerable:false, configurable:true }); }   // side 0's fields on M, for the tools and the console

@@ -94,9 +94,10 @@ const fresh = () => {                                       // a new game on the
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
   ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skill Games: every game in its picture (${drills.join(', ')}), How to Play, then the contact games and For Grown-Ups, in rows of four`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.4<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
-    && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css),
-    `Settings: ${sets.join(', ')}; Difficulty across, Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help; the game's version at its foot`);
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="diff">[\s\S]*?<\/div><\/div>\s*<div class="set set-age"><span class="lbl" id="set-age-l">Age Group<\/span><div class="seg" id="set-age" role="group" aria-labelledby="set-age-l"><\/div><\/div>\s*<div class="set set-gender"><span class="lbl" id="set-gender-l">Gender<\/span><div class="seg" id="set-gender" role="group" aria-labelledby="set-gender-l"><\/div><\/div>\s*<div class="set set-sound">/.test(home) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.5<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
+    && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css)
+    && /\.hp-settings\.settings \.set-cam,\.hp-settings\.settings \.ver\{grid-row:4;grid-column:4\/-1\}/.test(css),
+    `Settings: ${sets.join(', ')}; Difficulty across, Age Group | Gender (the profile's, src/profile.js), Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help; the game's version at its foot, on the fourth row's label line`);
   const text = s => s.replace(/<[^>]+>/g, '').trim();
   const labels = [...home.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map(m => text(m[1])).filter(Boolean).concat([...home.matchAll(/<span class="(?:lbl|bx-name|tc-name)">([^<]+)<\/span>/g)].map(m => m[1]), [...home.matchAll(/<h2 class="hs-title"[^>]*>([^<]+)<\/h2>/g)].map(m => m[1]), Object.values(H.STEPS).flatMap(st => [st.title, st.back]));
   ok(labels.length >= 40 && labels.every(titled), `every label on the home is Title Case, every step's title and Back too (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
@@ -625,11 +626,12 @@ async function browserChecks() {
   const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'], coach:false, played:5 }, form:[{ k:'c:FAR', w:9, d:1, l:4, last:'WWLWD' }] };
   const VIEWS = [[null, null], ['match', null], ['champ', 0], ['champ', 1], ['champ', 2], ['drills', null], ['settings', null]];   // the five boxes, then each step (Competitions on each tier)
   // Settings row by row, at every size: the web's halves and the thirds where Grown-Ups shows (the free web, the app), desk or not. Down from
-  // every control lands on the row under it, the last row's on nothing (the step's foot), never two rows down; Left and Right never two rows away
+  // every control lands on the row under it, the last row's on nothing (the step's foot), never two rows down (Age Group's thirds over Sound's
+  // halves sent Junior to Half Length before the row rule, homeNavPick); Up on the row over it, the first row's on Back; Left and Right never two rows away
   const settingsRows = () => {
     const T = window.__tryline, S = T.store, st = T.debug.settings(), $ = id => document.getElementById(id), panel = $('hp-settings'), out = { rows:[], moves:0, bad:[] };
     const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
-    const name = el => !el ? 'nothing' : el.id || (el.closest('.seg') ? el.closest('.seg').dataset.key + ':' : '') + el.textContent.trim();
+    const name = el => !el ? 'nothing' : el.id || (el.closest('.seg') ? (el.closest('.seg').dataset.key || el.closest('.seg').id) + ':' : '') + el.textContent.trim();
     for (const desk of [false, true]) for (const store of ['web', 'free', 'app']) {
       const app = store === 'app', at = store + (desk ? ' desk' : '');
       S.setNative(app); S.setStarted(app); S.setBought([]); S.setTier(store === 'free' ? 'free' : null);
@@ -642,13 +644,15 @@ async function browserChecks() {
         const r = row(b);
         T.home.ring(b); const down = T.navMove(0, 0, 1); out.moves++;
         if (row(down) !== r + 1) out.bad.push(`${at}: Down from ${name(b)} to ${name(down)}`);
+        T.home.ring(b); const up = T.navMove(0, 0, -1); out.moves++;
+        if (r ? row(up) !== r - 1 : up !== $('hs-back')) out.bad.push(`${at}: Up from ${name(b)} to ${name(up)}`);
         for (const dx of [-1, 1]) { T.home.ring(b); const to = T.navMove(0, dx, 0); out.moves++; if (to && panel.contains(to) && Math.abs(row(to) - r) > 1) out.bad.push(`${at}: ${dx < 0 ? 'Left' : 'Right'} from ${name(b)} to ${name(to)}`); }
       }
     }
     S.setNative(false); S.setStarted(false); S.setTier(null); st.kids = false; st.diff = 1; document.body.classList.remove('desk'); T.home.ring(null); T.debug.goHome();
     return out;
   };
-  const rowsOk = (kind, r) => ok(r.rows.length === 6 && r.rows.every(n => n === 3) && !r.bad.length, `${kind}: Settings in three rows (the web, the free web, the app, desk or not), Down from every control on the row under it (the last row's on nothing), Left and Right never two rows away (${r.bad.slice(0, 4).join(', ') || r.moves + ' moves'}; rows ${r.rows.join(' ')})`);
+  const rowsOk = (kind, r) => ok(r.rows.length === 6 && r.rows.every(n => n === 4) && !r.bad.length, `${kind}: Settings in four rows (the web, the free web, the app, desk or not), Down from every control on the row under it (the last row's on nothing) and Up on the row over it (the first row's on Back), Age Group's thirds over Sound's halves included, Left and Right never two rows away (${r.bad.slice(0, 4).join(', ') || r.moves + ' moves'}; rows ${r.rows.join(' ')})`);
   try {
     for (const [w, h] of [[844, 390], [667, 375], [844, 340], [667, 320], [568, 320]]) for (const touch of [true, false]) {
       const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });

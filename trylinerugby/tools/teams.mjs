@@ -784,6 +784,19 @@ function settle(pick) {
   const demoIds = new Set();   // the home screen's demo (exitMatch starts it): a men's match, so never Canada or the USA
   for (let i = 0; i < 400; i++) { D.exitMatch(); demoIds.add(T.M.nat[0].id); demoIds.add(T.M.nat[1].id); }
   ok(T.M.demo && !demoIds.has('CDN') && !demoIds.has('USA') && X.natList('men').some(t => demoIds.has(t.id)) && X.CLUBS.some(t => demoIds.has(t.id)), `the demo is a men's match: nations and clubs, never Canada or the USA (${demoIds.size} sides in 400 demos)`);
+  // a profile that decides the category (Settings' Age Group | Gender, src/profile.js) plays it with no switch on the screen: the names and
+  // the cat as the switch would give them; 2 Players keeps its switch, and its category
+  const F11 = T.profile;
+  F11.set({ age:'adult', gender:'female', look:null }); s.cat = 'men'; X.setChamp(null); D.openTeams('champ');
+  ok($('t-cat').hidden && s.cat === 'women' && $('t-go').textContent === 'Play as Farnham Women', `a profile of Adult and Female: Championship with no Men | Women | Minis, Play as Farnham Women (${$('t-go').textContent})`);
+  $('t-go').click(); ok(X.champ() && X.champ().teams[X.champ().user].name === 'Farnham Women' && X.champ().teams.every(t => t.cat === 'women'), 'and the women\'s championship it names'); X.setChamp(null);
+  F11.set({ age:'mini', gender:'male', look:null }); s.pick = [null, null]; D.openTeams('quick'); D.pickTeam(far); D.pickTeam(has); P11.go();
+  ok(T.M.nat[0].name === 'Farnham Minis' && T.M.nat.every(n => n.cat === 'minis'), 'a Mini: a minis Quick Match, whatever the switch said before'); D.exitMatch();
+  s.pick = [null, null]; D.openJoin(); D.openTeams('two'); X.catPick('women');
+  ok(!$('t-cat').hidden && s.cat === 'women', '2 Players with the same profile: the switch there, and Women picked on it');
+  D.pickTeam(X.NATIONS[0]); D.pickTeam(X.NATIONS[1]); P11.go();
+  ok(T.M.two && T.M.nat.every(n => n.cat === 'women'), 'and played'); D.setTwo(false); D.exitMatch();
+  F11.set({ age:null, gender:null, look:null }); X.catPick('men'); D.goHome();
   // the screen: labels, controls and no arrows
   const html = readGameSource(), menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
   // re-pinned for the side-by-side screen (2026-11-11): Men | Women | Minis beside the title, the two sides with the V between, the one primary

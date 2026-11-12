@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.4';
+const GAME_VERSION = '1.5';
 
 /* =========================================================
    Data
@@ -302,6 +302,7 @@ const KICK = {
   reach:2.4, block:1.0, lat:0.9, rushAcc:6, rushMul:[0.84,1.0,1.10], rushR:15, shoulder:4, cpuReact:0.30,
   cpuSig:[0.072,0.060,0.056], cpuAim:[0.9,0.15], cpuAimSd:0.6,
   wind:{ mix:[[0.30,0,3],[0.45,4,11],[0.25,11,18]], gust:0.18, swing:10, max:22, calm:2 },
+  show:{ normal:3, steer:0.6, fade:0.3 },   // your arrow on Normal and Hard (arrowShow): Normal shows it `normal` seconds from the aim being yours, Hard never at rest; steering shows it on both until `steer` seconds after the stick stops; each then fades over `fade`
 };
 const CAM = { b0:8, bK:0.2, h:2.2, ballY:0.80, topY:0.15, topPx:58, Fmin:0.8, Fmax:2.4, near:0.3, fadeZ:2, fadeW:2, figH:0.6 };   // a charger fades in from fadeZ to fadeZ + fadeW metres in front of the lens, and no charger stands taller than figH of the screen
 // GKTUNE
@@ -1165,8 +1166,7 @@ function newMatch(u, c, opts) {
     charging:false, charge:0, holdN:0,                 // the kick charge: B held with the ball
     pass:null,                                         // a Pass press in hand: { mode:'tap'|'hold', to, t } so a hold can charge and an early tap is not dropped
     level:opts.levels ? opts.levels[t] : di,           // this player's Difficulty (the one level in one player)
-    duel:{ half:[0, 0], lastKind:null, fails:0, first:true },   // two player: this owner's quota, his last kind, his failures in a row and his first-duel aid
-    kickFirst:true }));                                // two player: this player's first goal kick of the match gets the path
+    duel:{ half:[0, 0], lastKind:null, fails:0, first:true } }));   // two player: this owner's quota, his last kind, his failures in a row and his first-duel aid
   for (const t of [0, 1]) if (!humans[t] && humans[1 - t] && opts.levels) M.side[t].level = M.side[1 - t].level;
   M.role = [0, 1].map(t => (humans[t] ? 'human' : 'cpu'));
   { const m = M; for (const k of ['ctrl', 'ctrlPrev', 'ctrlT', 'charging', 'charge', 'holdN', 'pass']) Object.defineProperty(m, k, { get:() => m.side[0][k], set:v => { m.side[0][k] = v; }, enumerable:false, configurable:true }); }   // side 0's fields on M, for the tools and the console
@@ -2161,6 +2161,7 @@ function goalOf(team, wx, wy, kind, kicker, W) {          // a kick's geometry a
     mClear:0, lo:0, hi:0, w:0, ctr:0, fill:1, aid:'line', watch:false, cpu:null, inp:null,   // inp: the kicker's input slot, for a human's kick
     stage:'aim', st:0, aim:0, m:0, pt:0, drain:0, mRel:null, L:null, X:null, res:null, ok:false, grade:null, curl:0,
     tStrike:0, judged:false, skipped:false, t:0, cam:null, pathKey:null, pathPts:null, bot:null,
+    aimT:CUT_IN, steerT:-1e9,                              // the cut times the aim became yours and the stick last steered it, for arrowShow (src/render-goals.js)
     rush:null, out:null, outQ:null, started:false, tRel:0, hitT:0, tauStop:0 };   // drop goals: the chargers, and how one ended
   return bandOf(g);
 }
@@ -2168,7 +2169,7 @@ function makeGoal(team, wx, wy, kind, kicker) {
   const g = goalOf(team, wx, wy, kind, kicker, kickWind(team));
   if (!isHuman(team) || proRun(kicker)) g.cpu = cpuKickInputs(g);   // Pro Mode: a teammate's drop goal is the CPU's kick
   else {
-    g.aid = (levelOf(team) === 0 || (M.two ? sideOf(team).kickFirst : !tutSeen(kind === 'drop' ? 'drop' : 'goal'))) ? 'path' : 'line';   // the first kick ever (the tutorial's goal or drop moment unseen) gets the Easy aids; in two player each player's first kick of the match does
+    g.aid = levelOf(team) === 0 ? 'path' : 'line';        // Easy (Kids too): the wind-corrected aim and the flight path. Normal and Hard start on the posts with the line, the first kick ever too (until 2026-11-11 it had the Easy aids)
     if (g.aid === 'path') { g.aim = aimFor(g, g.ctr); bandOf(g, g.aim); g.aim = aimFor(g, g.ctr); }   // a wide kick aimed off is a longer kick
   }
   return g;
@@ -2322,10 +2323,8 @@ function updateGoalCut(c, dt) {
     if ((g.st += dt) >= KICK.runup) strikeNow(c);
   } else if (g.stage === 'flight' && !g.judged && t - g.tStrike - KICK.hitStop >= g.X.t) verdict(c, 1.5);
 }
-function strikeNow(c) {                                    // the boot meets the ball. In two player a player's first strike of the match ends his first-kick aid (one player's is the tutorial's memory, marked at the cut-in)
+function strikeNow(c) {                                    // the boot meets the ball
   const g = c.g; g.stage = 'flight'; g.tStrike = c.t; sfx('strike'); buzz(25);
-  if (g.watch || !isHuman(g.team)) return;
-  if (M.two) sideOf(g.team).kickFirst = false;
 }
 function watchStep(c, dt) {                                // the CPU's kick: settle, run-up, flight; Skip jumps to the verdict
   const g = c.g, t = c.t;
@@ -2344,6 +2343,7 @@ function steerAim(g, dt, inp) {
   const jx = inp.jx, kx = inp.keyX();                      // the d-pad aims at the keyboard's rate too
   const rate = jx ? k.aimRate*Math.sign(jx)*Math.pow(Math.abs(jx), 1.6) : k.keyRate*kx;
   if (!rate) return;
+  g.steerT = g.t;                                          // steering shows the arrow on Normal and Hard (arrowShow), at the limit too
   const lim = 85*D2R;
   g.aim = clamp(clamp(g.aim + rate*D2R*dt, -k.aimMax*D2R, k.aimMax*D2R), -lim - g.beta, lim - g.beta);
 }
@@ -2351,8 +2351,8 @@ function backToAim(g) { g.stage = 'aim'; g.mRel = g.m; g.drain = 0.2; g.pt = 0; 
 function verdict(c, hold) { const g = c.g; scoreGoal(g); c.skipAt = c.t + 0.25; finishCut(() => g.type === 'drop' ? applyDrop(c) : settleGoal(g), hold); }
 function goalResume(c) {                                   // back to Aim with the meter empty; a fresh press is needed. A drop goes back to Wait, with the chargers where the cut began
   const g = c.g;
-  if (g.type === 'drop') { if (!g.out && (g.stage === 'hold' || g.stage === 'wait')) { g.stage = 'wait'; g.m = 0; g.pt = 0; g.started = true; c.t = CUT_IN; } }
-  else if (!g.watch && (g.stage === 'aim' || g.stage === 'power')) { g.stage = 'aim'; g.m = 0; g.pt = 0; g.drain = 0; g.mRel = null; }
+  if (g.type === 'drop') { if (!g.out && (g.stage === 'hold' || g.stage === 'wait')) { g.stage = 'wait'; g.m = 0; g.pt = 0; g.started = true; c.t = CUT_IN; g.aimT = CUT_IN; g.steerT = -1e9; } }
+  else if (!g.watch && (g.stage === 'aim' || g.stage === 'power')) { g.stage = 'aim'; g.m = 0; g.pt = 0; g.drain = 0; g.mRel = null; g.aimT = Math.max(CUT_IN, c.t); g.steerT = -1e9; }   // the aim is yours again: Normal's arrow shows afresh
   c.armA = false;
   for (const inp of humanSlots()) { inp.aDown = inp.bDown = false; inp.reanchor(); inp.held = new Set(); }
 }
@@ -7093,6 +7093,14 @@ function kickView(g, cam, tf, bx, by, bh) {
   v.sy = gy + v.tilt + v.Z*(pb.sy - gy);
   return v;
 }
+/* Your arrow's visibility, 0 to 1, by level lv (0 Easy and Kids, 1 Normal, 2 Hard), tAim seconds since the aim became yours and
+   tSteer seconds since the stick last steered it. Easy always; Normal for KICK.show.normal seconds, Hard never at rest; steering
+   shows it on both until KICK.show.steer seconds after it stops; each fades over KICK.show.fade. Opacity only, so reduced motion keeps it. */
+function arrowShow(lv, tAim, tSteer) {
+  if (!lv) return 1;
+  const k = KICK.show, held = (hold, s) => (s <= hold ? 1 : s >= hold + k.fade ? 0 : 1 - (s - hold)/k.fade);
+  return Math.max(lv === 1 ? held(k.normal, tAim) : 0, held(k.steer, tSteer));
+}
 const ARROW = new Array(14).fill(0);
 function arrowLen(g, psi) { const fx = Math.cos(psi); return Math.max(2, Math.min(14, (108 - g.x)/Math.max(0.2, fx) - 0.6)); }
 function drawArrow(cam, g, aim, alpha, chalk) {
@@ -7105,12 +7113,12 @@ function drawArrow(cam, g, aim, alpha, chalk) {
   if (groundPoly(cam, ARROW, 0.02, chalk ? 'rgba(241,238,228,.8)' : C.ctrl)) { ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5; ctx.stroke(); }
   ctx.globalAlpha = a0;
 }
-function drawAimLine(cam, g, aim) {                           // Normal and Hard: the bearing run on to the goal line, with a tick across it
+function drawAimLine(cam, g, aim, show) {                     // Normal and Hard: the bearing run on to the goal line, with a tick across it, shown as the arrow is (arrowShow)
   const psi = g.beta + aim, fx = Math.cos(psi), fy = Math.sin(psi), nx = -fy, ny = fx;
   if (fx < 0.05) return;
   const sEnd = (110 - g.x)/fx, s0 = 0.6 + arrowLen(g, psi) + 0.3;
   const a0 = ctx.globalAlpha;
-  ctx.globalAlpha = a0*0.7; ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.globalAlpha = a0*0.7*show; ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.beginPath();
   for (let s = s0; s < sEnd; s += 1.2) { const e = Math.min(s + 0.6, sEnd); groundSeg(cam, g.x + fx*s, g.y + fy*s, g.x + fx*e, g.y + fy*e, 0.01); }
   groundSeg(cam, g.x + fx*sEnd - nx*0.5, g.y + fy*sEnd - ny*0.5, g.x + fx*sEnd + nx*0.5, g.y + fy*sEnd + ny*0.5, 0.01);
   ctx.stroke(); ctx.globalAlpha = a0;
@@ -7202,14 +7210,14 @@ function drawKick(c, g0) {
     for (const x of [0, 120]) groundLine(cam, x, 0, x, 70, false);
     groundLine(cam, g.x - 0.25, g.y, g.x + 0.25, g.y, false); groundLine(cam, g.x, g.y - 0.25, g.x, g.y + 0.25, false);   // the kick mark
   }
-  // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's
-  const struck = tf >= -k.hitStop;
-  let arrowA = g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6;
+  // the aim aid, then the arrow: gold is the one you steer, chalk the CPU's. Yours on Normal and Hard shows as arrowShow says, through every stage to the strike
+  const struck = tf >= -k.hitStop, show = g.watch ? 1 : arrowShow(g.di, t - g.aimT, t - g.steerT);
+  let arrowA = (g.watch ? 0.6 : live ? (RM ? 0.85 : 0.85 + 0.15*Math.sin(t*2*Math.PI*1.6)) : 0.6)*show;
   if (struck) arrowA *= Math.max(0, 1 - (tf + k.hitStop)/0.3);
   if (arrowA > 0.01) {
     if (!g.watch && !struck) {
       if (g.aid === 'path') drawPath(cam, g, g.stage === 'aim' || g.stage === 'wait' ? g.ctr : g.m, g.aim);   // the live meter from Power on, so the run-up shows the kick that was struck
-      else drawAimLine(cam, g, g.aim);
+      else drawAimLine(cam, g, g.aim, show);
     }
     drawArrow(cam, g, aimShown, arrowA, g.watch);
   }
@@ -9467,7 +9475,7 @@ function makeInput(seat) {
       return kx || (!this.latch && Math.abs(this.jx) >= 0.5 ? Math.sign(this.jx) : 0);
     },
   };
-  if (seat === 0) Object.assign(inp, { stickId:null, ox:0, oy:0, px:0, py:0 });   // the touch stick feeds seat 0 only
+  if (seat === 0) Object.assign(inp, { stickId:null, ox:0, oy:0, px:0, py:0, stickType:'', stickAt:0, stickTid:null, stickNo:null, retook:false });   // the touch stick feeds seat 0 only; who holds it (src/input-touch.js, a finger the page lost)
   return inp;
 }
 const inputs = [makeInput(0), makeInput(1)];
@@ -9514,15 +9522,45 @@ function placeStick(x, y) {
   if (pl) { const top = y - 102, ins = safeInsets(); pl.style.left = clamp(x - 82, Math.max(8, ins.l), window.innerWidth/2 - 172) + 'px'; pl.style.top = (top < platesFloor() ? y + 72 : top) + 'px'; }
 }
 function restStick() { const p = stickRest(window.innerWidth, window.innerHeight, safeInsets()); placeStick(p.x, p.y); }
+/* ---------- a finger the page lost (2026-11-11)
+   The stick and each action belong to one finger until its own lift or cancel. A lift the page never heard used to leave that finger
+   holding on for good: the run carried on with no thumb on the glass, every new thumb on the zone was ignored, a Sprint stayed held,
+   until a blur, the phone upright or Quit (the owner: "the joystick got jammed/stuck on a recent test game for some reason and we had to
+   quit"). An iPhone can drop a touch's end in an interruption (a call, the Home swipe, Control Centre), and a lost capture sends the lift
+   wherever the thumb is. So a held finger now also lets go:
+   - on its own lift or cancel anywhere on the page: the window hears it first (below);
+   - when the zone loses its capture and can't take it back (lostpointercapture);
+   - when the page is hidden, as a blur already did (src/ui-menus.js);
+   - at any new press, anywhere, when the stick or the button no longer holds its finger's capture (the browser saw it end), or the new
+     press has the old finger's own id: the new finger, if it pressed that stick or button, takes over at once;
+   - at every touchstart, touchend and touchcancel, when the touch's own list of the fingers on the glass doesn't have it (below), and
+     when that list is empty nothing touch holds stays held.
+   A finger still on the glass is none of these, so a second finger never takes a stick or a button from a live one: a palm on the zone
+   is ignored, as before. A stale press is let go as cancelled, never fired as a kick. */
+let touchGen = 0;                                          // touchstarts heard so far: a hold made since the last one belongs to the next (a touch's pointerdown comes before its touchstart, in the same task)
+const touchy = type => type !== 'mouse' && type !== 'pen'; // a hold the glass's count speaks for (a test's events carry no type)
+const TOUCH_NEAR = 24;                                     // a pointerdown and its own touch share one spot (0px apart in Chromium); two fingertips never land this close
+function fingerGone(el, id, e) {                           // at a new press, is el's finger (the zone's, or a button's) plainly off the glass?
+  if (e.pointerId === id) return true;                     // one pointer can't go down twice: the old one ended unheard
+  try { return typeof el.hasPointerCapture === 'function' && !el.hasPointerCapture(id); } catch (err) { return false; }   // the browser saw it end and let the capture go
+}
+const tidOf = e => (e && e.tid != null ? e.tid : null);   // the touch identifier a hold carries over from a finger turned away (a real event has none: its touchstart names it)
+const fingerOf = e => ({ pointerId:e.pointerId, pointerType:e.pointerType, clientX:e.clientX, clientY:e.clientY, gen:touchGen, tid:tidOf(e) });   // a press turned away, kept in case its own touchstart shows the holder gone
+const freed = { by:null, keys:new Set() };                // the buttons the latest press let go of, stale, before it reached its own target
+function grabStick(e) {                                    // a finger takes the stick: the ring under it, the pointer captured by the zone
+  input.stickId = e.pointerId; input.stickType = e.pointerType || ''; input.stickAt = touchGen; input.stickTid = tidOf(e); input.stickNo = null; input.retook = false;
+  input.ox = input.px = e.clientX; input.oy = input.py = e.clientY; input.latPeak = null;
+  try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  placeStick(e.clientX, e.clientY); stick.classList.add('on');
+}
 zone.addEventListener('pointerdown', e => {
   if (demoOn()) return;                                    // Watch How: the pilot has the stick
   if (M && M.cut && ((M.cut.duel && M.cut.after) || (M.cut.kind === 'goal' && (M.cut.after || M.cut.g.watch)))) input.aPressed = true;   // tap to skip the verdict, or a CPU kick
   setDev('touch');
-  if (input.stickId !== null) return;
+  if (input.stickId !== null && fingerGone(zone, input.stickId, e)) endStick({ pointerId:input.stickId });   // the old thumb is off the glass: this one takes over
+  if (input.stickId !== null) { input.stickNo = fingerOf(e); return; }   // a second finger on the zone, the first still down: ignored
   e.preventDefault();
-  input.stickId = e.pointerId; input.ox = input.px = e.clientX; input.oy = input.py = e.clientY; input.latPeak = null;
-  try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-  placeStick(e.clientX, e.clientY); stick.classList.add('on');
+  grabStick(e);
   ac();
 });
 function notePeak(samples) {                               // the largest sideways deflection in this move, from the origin as it was. The run still follows the last sample
@@ -9555,11 +9593,17 @@ zone.addEventListener('pointermove', onStickMove);
 zone.addEventListener('pointerrawupdate', onStickMove);   // Chromium delivers this a frame ahead of pointermove. Where it doesn't exist, nothing calls it
 const endStick = e => {
   if (!e || e.pointerId !== input.stickId) return;
-  input.stickId = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null;   // a lifted thumb clears the gesture history
+  input.stickId = null; input.stickTid = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null; input.retook = false;   // a lifted thumb clears the gesture history
   knob.style.transform = ''; stick.classList.remove('on'); restStick();
 };
 zone.addEventListener('pointerup', endStick);
 zone.addEventListener('pointercancel', endStick);
+zone.addEventListener('lostpointercapture', e => {         // the capture gone with the thumb still down (Chromium never does it to the zone; another browser may): take it back once, else let go, since its lift could land anywhere
+  if (e.pointerId !== input.stickId) return;
+  let kept = false;
+  if (!input.retook) { input.retook = true; try { zone.setPointerCapture(e.pointerId); kept = zone.hasPointerCapture(e.pointerId); } catch (err) { /* the pointer is gone */ } }
+  if (!kept) endStick(e);
+});
 const ACTS = [['btnA', 'a'], ['btnB', 'b'], ['btnC', 'c']];
 const HIT_SLOP = 12;                                       // a miss in the 17px gap between B and Sprint lands within this of one circle
 function nearestAct(x, y) {                                // the button whose circle, grown by HIT_SLOP, contains the point and whose centre is nearest. Hidden or unlaid-out buttons are not there
@@ -9576,16 +9620,19 @@ function nearestAct(x, y) {                                // the button whose c
 }
 function beginAct(el, key, e) {
   if (demoOn()) return;
-  if (el._held) return; // one finger owns an action until its own release or cancellation
+  if (el._held && e && e.pointerId != null && fingerGone(el, el._pointerId, e)) endAct(el, key, false, { pointerId:el._pointerId });   // its old finger is off the glass: let go (the frame sees this press, never a release) and this one takes it
+  if (el._held) { if (e && e.pointerId != null) el._no = fingerOf(e); return; } // one finger owns an action until its own release or cancellation
   if (e && e.preventDefault) e.preventDefault();
   try { if (e && e.pointerId != null) el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-  el._held = true; el._pointerId = e && e.pointerId != null ? e.pointerId : null; el.classList.add('press');
+  el._held = true; el._pointerId = e && e.pointerId != null ? e.pointerId : null; el._type = (e && e.pointerType) || ''; el._at = touchGen; el._no = null; el.classList.add('press');
+  el._tid = tidOf(e); el._x = e ? +e.clientX || 0 : 0; el._y = e ? +e.clientY || 0 : 0;   // where it went down: its touch is named by that (the glass's own list, below)
   setDev('touch'); btn(input, key, 2, true);
+  if (e && freed.by === e.pointerId && freed.keys.delete(key)) input[key + 'Cancel'] = false;   // this press let go of the button's stale hold on its way here: a fresh press, never a cancel
   ac();
 }
 function endAct(el, key, cancel, e) {
   if (!el._held || (el._pointerId != null && (!e || e.pointerId !== el._pointerId))) return;
-  el._held = false; el._pointerId = null; el.classList.remove('press'); btn(input, key, 2, false);
+  el._held = false; el._pointerId = null; el._tid = null; el.classList.remove('press'); btn(input, key, 2, false);
   if (cancel && !input[key + 'Down']) input[key + 'Cancel'] = true; // cancel this action only when no other source still holds it
 }
 function bindAct(el, key) {
@@ -9603,10 +9650,83 @@ cv.addEventListener('pointerdown', e => {                 // a tap in the gap fa
 const endActs = (cancel, e) => { for (const [id, key] of ACTS) endAct($(id), key, cancel, e); };
 cv.addEventListener('pointerup', e => endActs(false, e));    // capture sends the release to the button; if it could not, the pitch still lets go
 cv.addEventListener('pointercancel', e => endActs(true, e));
-function releaseTouch() {                                  // the phone turned, or the stick has to come up: the ring goes home and no button stays pressed
-  input.stickId = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null;
+for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, e => {   // a lift or cancel anywhere on the page: the window hears it before the zone or a button could miss it (their capture gone)
+  endStick(e); endActs(type === 'pointercancel', e);
+  if (input.stickNo && input.stickNo.pointerId === e.pointerId) input.stickNo = null;   // a finger turned away and lifted is no longer waiting
+  for (const [id] of ACTS) { const el = $(id); if (el._no && el._no.pointerId === e.pointerId) el._no = null; }
+}, true);
+window.addEventListener('pointerdown', e => {              // any new press, before its own target hears it: a hold whose capture the browser has let go of saw its finger end, so it lets go, a button as cancelled (a stale Kick is never a kick). A press on that same stick or button then takes it fresh
+  freed.by = e.pointerId; freed.keys.clear();
+  if (input.stickId !== null && fingerGone(zone, input.stickId, e)) endStick({ pointerId:input.stickId });
+  for (const [id, key] of ACTS) {
+    const el = $(id);
+    if (!el._held || el._pointerId == null || !fingerGone(el, el._pointerId, e)) continue;
+    const was = input[key + 'Cancel'];
+    endAct(el, key, true, { pointerId:el._pointerId });
+    if (!was && input[key + 'Cancel']) freed.keys.add(key);
+  }
+}, true);
+/* The glass's own list. Each touch event lists the fingers on the glass (e.touches), whatever the page heard before, so every touchstart,
+   touchend and touchcancel checks each touch hold against it: a hold whose finger isn't listed lets go, a button as cancelled (a stale
+   Kick is never a kick), and with no finger listed nothing touch holds stays held. A finger that this touchstart's own press turned away
+   from that stick or button takes its place. A pointer's id need not be its touch's identifier (in Chromium it is not), so a hold is named
+   by where it went down: a touch's pointerdown and its touchstart share one spot (0px apart in Chromium), two fingertips never land within
+   TOUCH_NEAR of each other, and the touchstart that comes with a press (after its pointerdown, in the same task) names it. A browser that
+   sent the touchstart first has the hold named at the next touch event, by where its finger is then. A hold still unnamed (no touch heard
+   at its spot) lets go only when the list is empty, or at a touchstart whose fingers are all new. A mouse's or a pen's hold is not the
+   glass's to judge, nor are the keys or a pad. */
+function nameHolds(all) {                                  // each unnamed touch hold, and each finger turned away, takes the identifier of the touch at its spot
+  const named = new Set(), want = [];
+  const note = (type, tid, x, y, put) => { if (!touchy(type)) return; if (tid != null) named.add(tid); else want.push({ x, y, put, done:false }); };
+  if (input.stickId !== null) note(input.stickType, input.stickTid, input.px, input.py, t => { input.stickTid = t; });
+  const sn = input.stickNo; if (sn) note(sn.pointerType, sn.tid, sn.clientX, sn.clientY, t => { sn.tid = t; });
+  for (const [id] of ACTS) {
+    const el = $(id), n = el._no;
+    if (el._held) note(el._type, el._tid, el._x, el._y, t => { el._tid = t; });
+    if (n) note(n.pointerType, n.tid, n.clientX, n.clientY, t => { n.tid = t; });
+  }
+  if (!want.length) return;
+  const pairs = [];
+  for (const w of want) for (const t of all) { const d = hyp(t.clientX - w.x, t.clientY - w.y); if (!named.has(t.identifier) && d <= TOUCH_NEAR) pairs.push({ w, t, d }); }
+  pairs.sort((a, b) => a.d - b.d);                         // the nearest first: two fingers landing in one touchstart each get their own
+  for (const { w, t } of pairs) if (!w.done && !named.has(t.identifier)) { w.done = true; named.add(t.identifier); w.put(t.identifier); }
+}
+const GONE = {};                                           // a hold's touch that ended unheard: never on the glass again
+function onGlass(e, start, end) {
+  const all = Array.from(e.touches || []), fresh = start ? Array.from(e.changedTouches || []) : [];
+  const done = end ? new Set(Array.from(e.changedTouches || []).map(t => t.identifier)) : null;   // the fingers this touchend says lifted
+  if (start) {                                             // a browser may give an ended touch's identifier to the next finger: a hold older than this touch whose identifier just started again lost its finger unheard
+    const born = new Set(fresh.map(t => t.identifier)), reborn = (tid, at) => tid != null && tid !== GONE && at !== touchGen && born.has(tid);
+    if (input.stickId !== null && reborn(input.stickTid, input.stickAt)) input.stickTid = GONE;
+    for (const [id] of ACTS) { const el = $(id); if (el._held && reborn(el._tid, el._at)) el._tid = GONE; }
+  }
+  nameHolds(all);
+  const on = new Set(all.map(t => t.identifier));
+  const allNew = start && fresh.length > 0 && all.length <= fresh.length;   // no finger from before on the glass
+  const off = (tid, at) => (tid != null ? !on.has(tid) : !all.length || (allNew && at !== touchGen));   // named: not listed. Unnamed: the glass empty, or all new and the hold older than this touch
+  const mine = no => (start && no && touchy(no.pointerType) && no.gen === touchGen && (no.tid == null || on.has(no.tid)) ? no : null);   // a finger this touch's own press turned away, on the glass
+  if (input.stickId !== null && touchy(input.stickType) && off(input.stickTid, input.stickAt)) {
+    const no = mine(input.stickNo);
+    endStick({ pointerId:input.stickId });
+    if (no) grabStick(no);
+  }
+  for (const [id, key] of ACTS) {
+    const el = $(id);
+    if (!el._held || !touchy(el._type) || !off(el._tid, el._at)) continue;
+    const no = mine(el._no), lift = !!done && el._tid != null && done.has(el._tid);   // its own finger's end heard: a lift, whatever order the browser sent it in, so Kick kicks
+    endAct(el, key, !no && !lift, { pointerId:el._pointerId });
+    if (no) beginAct(el, key, no);
+  }
+  const lifted = no => !!no && (!all.length || (no.tid != null && !on.has(no.tid)));   // a finger turned away and off the glass is no longer waiting
+  if (lifted(input.stickNo)) input.stickNo = null;
+  for (const [id] of ACTS) { const el = $(id); if (lifted(el._no)) el._no = null; }
+  if (start) touchGen++;
+}
+for (const type of ['touchstart', 'touchend', 'touchcancel']) window.addEventListener(type, e => onGlass(e, type === 'touchstart', type === 'touchend'), { capture:true, passive:true });
+function releaseTouch() {                                  // the phone turned, the page hidden, or the stick has to come up: the ring goes home and no button stays pressed
+  input.stickId = null; input.stickTid = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null; input.stickNo = null; input.retook = false;
   knob.style.transform = ''; stick.classList.remove('on'); restStick();
-  for (const [id, key] of ACTS) { const el = $(id); el._held = false; el._pointerId = null; el.classList.remove('press'); }
+  for (const [id, key] of ACTS) { const el = $(id); el._held = false; el._pointerId = null; el._tid = null; el._no = null; el.classList.remove('press'); }
   for (const inp of inputs) {
     inp.jx = inp.jy = 0; inp.latPeak = null; inp.gest = null;
     inp.src.a = inp.src.b = inp.src.c = 0;
@@ -9616,6 +9736,55 @@ function releaseTouch() {                                  // the phone turned, 
   }
 }
 
+/* ---------- a card's button under a second finger (2026-11-11)
+   A browser makes a click from a tap only when no other finger is on the glass, and every card and the Pause button act on a click. So
+   with a thumb on the stick, or on Sprint, a tap on the tutorial card's Next, Skip or Play, on Pause or Resume, on the penalty card, on
+   Second Half or Continue did nothing until every other finger lifted. The tutorial card holds the match still, and on a new phone the
+   first scrum, lineout, maul, duel and kick each bring one up mid-run, so the stick and the game looked jammed. Now a finger lifted on a
+   button in play clicks it whatever else is down: inside the button (a tap's slop) and near where it went down (a scroll is no tap).
+   preventDefault on the touch's end stops the browser's own click, so a tap acts once. Chromium makes a touch's end uncancelable once
+   another finger in the same touches has moved (the thumb steering): then the lift clicks only if another finger was down during it,
+   when the browser makes no click of its own. A browser's click that comes anyway, before the next touch and at the tap, is eaten. The
+   tutorial card's tap anywhere is the card's own click. A mouse, the keys and a controller click as before; a menu outside play is
+   untouched. */
+const TAP = { layers:'#m-tut, #m-pen, #m-break, #m-pause, #m-practice, #b-pause, .hc, #demo-skip', slop:12, move:16, near:48, gap:500, from:new Map(), eat:false, x:0, y:0, at:0 };
+function tapTarget(start) {                                // what a touch begun on start clicks when it lifts: a shown, enabled button in play, or the tutorial card itself
+  const layer = start && typeof start.closest === 'function' ? start.closest(TAP.layers) : null;
+  if (!layer || layer.closest('[hidden]')) return null;
+  const b = start.closest('button');
+  if (b && layer.contains(b)) return b.disabled || b.closest('[hidden]') ? null : b;
+  return layer.id === 'm-tut' ? layer : null;
+}
+function tapLift(e) {                                      // a touch's end: the touch that began on a target and lifted on it clicks it
+  const el = tapTarget(e.target), r = el ? el.getBoundingClientRect() : null;
+  let hit = null, many = false;
+  for (const t of e.changedTouches || []) {
+    const s = TAP.from.get(t.identifier); TAP.from.delete(t.identifier);
+    if (!r || !s || hit) continue;
+    const inside = t.clientX >= r.left - TAP.slop && t.clientX <= r.right + TAP.slop && t.clientY >= r.top - TAP.slop && t.clientY <= r.bottom + TAP.slop;
+    if (inside && hyp(t.clientX - s.x, t.clientY - s.y) <= TAP.move) { hit = t; many = s.many; }
+  }
+  if (!hit || e.defaultPrevented) return;
+  if (e.cancelable === false) { if (!many) return; }       // the browser's own click can't be stopped: only a tap it won't click, one made beside another finger
+  else if (e.preventDefault) e.preventDefault();
+  el.click();
+  TAP.eat = true; TAP.x = hit.clientX; TAP.y = hit.clientY; TAP.at = performance.now();
+}
+document.addEventListener('touchstart', e => {             // where each touch began, and whether another finger was down beside it (then the browser makes no click of it)
+  TAP.eat = false;
+  const fresh = e.changedTouches || [], many = (e.touches ? e.touches.length : fresh.length) > 1;
+  if (fresh.length) for (const s of TAP.from.values()) s.many = true;
+  for (const t of fresh) TAP.from.set(t.identifier, { x:t.clientX, y:t.clientY, many });
+}, { capture:true, passive:true });
+document.addEventListener('touchcancel', e => { for (const t of e.changedTouches || []) TAP.from.delete(t.identifier); }, { capture:true, passive:true });
+document.addEventListener('touchend', tapLift, { passive:false });
+document.addEventListener('click', e => {                  // the browser's own click from a tap already clicked: eaten once, if it comes before the next touch, at the tap, within the gap
+  if (!TAP.eat || !e.isTrusted || !(e.detail > 0)) return;
+  TAP.eat = false;
+  if (performance.now() - TAP.at > TAP.gap || hyp((+e.clientX || 0) - TAP.x, (+e.clientY || 0) - TAP.y) > TAP.near) return;
+  if (e.preventDefault) e.preventDefault();
+  e.stopImmediatePropagation();
+}, true);
 /* ---------- keyboard ----------
    By e.code, so the physical positions hold on any layout. One player (and the lone keyboard seat in two player) has the
    solo map; two seats on one keyboard take a half each: Player 1 on W A S D with F G H, Player 2 on the arrows with / . ,
@@ -10376,7 +10545,7 @@ function coachCut() {                                     // a duel or a place k
   const g = c.kind === 'goal' ? c.g : null;
   if (g && g.type !== 'drop' && !g.watch && isHuman(g.team) && !tipSeen('kick')) {
     const s = seatOfTeam(g.team);
-    if (M.tut || g.aid === 'path' || tutSeen('goal') || (s != null && hintsOn(s))) { coachMark('kick'); return null; }   // the first-kick path, the card, or a kick this device has already had
+    if (M.tut || g.aid === 'path' || tutSeen('goal') || (s != null && hintsOn(s))) { coachMark('kick'); return null; }   // Easy's path, the card, or a kick this device has already had
     if (c.t >= CUT_IN && (g.stage === 'aim' || g.stage === 'power')) return 'kick';
   }
   return null;
@@ -10539,7 +10708,9 @@ $('pz-quit').addEventListener('click', () => {
   if (confirmSoon()) return;
   if (practice) practiceChoose(); else exitMatch();       // a drill: Back to Skill Games, or Back to Career for a caller (which hears it as a quit)
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+function pageHidden() { releaseAll(); pause(); }           // an app switch, the Home swipe, a call or the lock: nothing held can stick, as on a blur (an iPhone may never send the thumb's lift, and a home-screen app may send no blur)
+document.addEventListener('visibilitychange', () => { if (document.hidden) pageHidden(); });
+window.addEventListener('pagehide', pageHidden);
 const uprightPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
 function phoneUpright() { pause(); releaseTouch(); }        // the cover pauses the match; the stick and the buttons let go too, so nothing is left held when the phone comes back
 function onOrientation() { if (uprightPhone.matches) phoneUpright(); }
@@ -10571,6 +10742,7 @@ function renderHome() {
     const val = key === 'diff' ? kidsSegIndex() : BOOL[key] ? ((key === 'hints' ? settings.hints || settings.coach : settings[key]) ? 0 : 1) : settings[key];   // Difficulty is Kids | Easy | Normal | Hard (kids.js)
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === val)));
   }
+  if (typeof profileSettings === 'function') profileSettings();   // Age Group | Gender under Difficulty: the profile's answers (src/profile.js)
   myHome();
   homeCabinet();
   champHome();
@@ -10662,7 +10834,9 @@ $('pr-grown-back').addEventListener('click', () => { $('hs-back').hidden = false
    with it (its buttons, or the Trophy Cabinet), never down the boxes' own column, and Right from the end of a row in My Team's column goes
    to the box level with it, or back to the box Left came from (homeNavLeft), so Left then Right is where it started; Up and Down in My
    Team's column stay in it; Continue has nothing to its right. On a step, Down from Back lands on the step's first row (Competitions'
-   tiers, which sit to its right), and Up from that row goes back to Back. */
+   tiers, which sit to its right), and Up from that row goes back to Back; in Settings Up and Down go a row at a time, to the button
+   nearest across (Difficulty, Age Group | Gender, Sound | Match Help, Half Length | Camera), the last row's Down to nothing, and Left and
+   Right stay in their row, nothing past either end. */
 let homeNavLeft = null;                                      // the last Left from a box into My Team's column: { at:the button it landed on, box:the box it left }
 function homeNavTo(from, dx, dy, cands) {
   if (!from || $('s-home').hidden) return undefined;
@@ -10679,6 +10853,16 @@ function homeNavPick(from, dx, dy, cands) {
       return row[0] || null;
     }
     if (from !== back && !dx && dy < 0 && inside.includes(from) && r(from).top - top < 4 && cands.includes(back)) return back;   // Up from the step's first row: Back
+    if (homeStep === 'settings' && dx && !dy && inside.includes(from)) {   // Settings: Left and Right along the row only (Match Help's Off once went to the Camera, Grown-Ups' Right to Gender), nothing past its end
+      const f0 = r(from).bottom, x0 = mid(from, 'x'), row = inside.filter(el => el !== from && Math.abs(r(el).bottom - f0) <= 8 && (mid(el, 'x') - x0)*dx > 4);   // a row by its foot, as Up and Down read it
+      return row.sort((a, b) => Math.abs(mid(a, 'x') - x0) - Math.abs(mid(b, 'x') - x0))[0] || null;
+    }
+    if (homeStep === 'settings' && !dx && dy && inside.includes(from)) {   // Settings: Up and Down a row at a time, on its button nearest across (Age Group's thirds over Sound's halves would otherwise send Junior two rows down)
+      const foot = el => r(el).bottom, f0 = foot(from), way = inside.filter(el => (foot(el) - f0)*dy > 8);   // a row by its foot: Grown-Ups stands on Sound's
+      if (!way.length) return null;                                       // the last row: nothing under it
+      const near = way.reduce((a, el) => (Math.abs(foot(el) - f0) < Math.abs(foot(a) - f0) ? el : a));
+      return way.filter(el => Math.abs(foot(el) - foot(near)) <= 8).sort((a, b) => Math.abs(mid(a, 'x') - mid(from, 'x')) - Math.abs(mid(b, 'x') - mid(from, 'x')))[0];
+    }
     return undefined;
   }
   if (from === $('b-continue') && !dy && dx > 0) return null;          // Continue is alone in its row: nothing to its right
@@ -10706,6 +10890,7 @@ function homeNavPick(from, dx, dy, cands) {
 /* The arrow keys on the home move the focus to the nearest button that way, as a controller's ring moves (navNearest, src/input-devices.js):
    Down from Continue to Match, from Match to Skill Games, Right from Match to Career. Escape on a step is Back. */
 $('s-home').addEventListener('keydown', e => {
+  if (e.key === 'Tab' && focusEl && lastDev === 'pad' && !e.altKey && !e.ctrlKey && !e.metaKey) { setFocus(null); setDev('kb'); }   // Tab after a controller: the keyboard's, and its focus the one outline again (Settings hides any other while a ring shows)
   if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
   if (e.key === 'Escape' && homeStep && !$('hs-back').hidden) { if (e.preventDefault) e.preventDefault(); homeBack(); return; }
   const d = { ArrowUp:[0, -1], ArrowDown:[0, 1], ArrowLeft:[-1, 0], ArrowRight:[1, 0] }[e.key];
@@ -11020,9 +11205,10 @@ const pickSlug = v => String(v).toLowerCase().replace(/[^a-z0-9]+/g, '-').replac
 const pickHome = (list, t) => (list === 'cel' ? URC_HOME[t.id] : LIST_HOME[list]) || null;   // a club's country
 /* The countries with something to show, in the category's own table order, then any with clubs only (Japan, for the women). One with
    neither (Argentina for the women, Canada and the USA for the men) has no group and is not shown. */
-function pickCountries(cat) {
+function pickCountries(cat, every) {
   const ranked = natList(cat).map(t => t.id), more = [];
   for (const l of TEAM_LISTS) if (l.tier) for (const t of l.teams) { const h = pickHome(l.key, t); if (h && !ranked.includes(h) && !more.includes(h)) more.push(h); }
+  if (every) for (const n of NATIONS) if (!ranked.includes(n.id) && !more.includes(n.id)) more.push(n.id);   // My Team with no switch: every country (pickLadder's every)
   return [...ranked, ...more];
 }
 /* A country's club groups, in TEAM_LISTS order (so Local's Surrey and Counties come last): each list's sides from that country, cut by
@@ -11051,14 +11237,16 @@ function pickFind(k, cat) {
   return custom.find(t => t.key === k) || (importLeague && importLeague.teams.find(t => keyOf(t) === k)) || natList(cat).find(t => t.id === k)
     || (typeof lockerLegends === 'function' && lockerLegends(cat).find(t => t.id === k)) || TEAM_LISTS.filter(l => l.tier > 0).map(l => l.teams.find(t => t.id === k)).find(Boolean) || null;
 }
-/* The ladder, top to bottom. o: nations (each country's National group, its nation then, with legends, its Legends), clubs, mine ('all':
-   Made Teams with Create Team and My League with Add Your Team, so both stay in reach; 'teams': their sides only), fav, recent (a side's
-   index), fits (what this screen can pick). Empty groups are left out. */
+/* The ladder, top to bottom. o: nations (each country's National group, its nation then, with legends, its Legends), every (every one of
+   the fourteen countries, the category's twelve and the two it has not got: My Team once the profile decides the category, as there is no
+   switch to reach Canada and the USA on Men or Minis, or Argentina and Japan on Women), clubs, mine ('all': Made Teams with Create Team and
+   My League with Add Your Team, so both stay in reach; 'teams': their sides only), fav, recent (a side's index), fits (what this screen can
+   pick). Empty groups are left out. */
 function pickLadder(cat, o) {
   const out = [], fits = o.fits || (() => true);
-  for (const hemi of ['north', 'south']) for (const home of pickCountries(cat)) {
+  for (const hemi of ['north', 'south']) for (const home of pickCountries(cat, o.nations && o.every)) {
     if (NATION_HEMI[home] !== hemi) continue;
-    const nat = o.nations && natList(cat).find(t => t.id === home);
+    const nat = o.nations && (natList(cat).find(t => t.id === home) || (o.every ? catSide(NATIONS.find(t => t.id === home), cat) : null));
     if (nat) out.push({ key:'nat.' + home.toLowerCase(), list:'int', hemi, home, name:'National', teams:[nat, ...(o.legends ? pickLegends(home, cat) : [])] });
     if (o.clubs) for (const g of pickClubGroups(home)) out.push({ ...g, hemi });
   }
@@ -11092,6 +11280,10 @@ let pickView = [null, null];                               // each side as drawn
 const FL = { open:false, s:0, path:[], q:'', from:null, cols:[], hits:[], refit:false, vv:null, only:null };   // the Filter (below): open or not, its side, the path its columns show, the text, what opened it ('find' or 'sheet'), the window resized under it, the one seat it answers (2 Players)
 const pickOne = () => pickMode !== 'quick' && pickMode !== 'two';   // Championship, Career, My Team and the cups: one side, centred
 const pickCat = () => (pickMode === 'career' && careerDraft ? careerDraft.cat : pickMode === 'setup' && typeof profileSetupCat === 'function' ? profileSetupCat() : settings.cat);   // the setup's Club: the category its answers give (src/profile.js)
+/* Men | Women | Minis is the profile's once it decides the category (profileDecides: a Mini, or a Junior or an Adult with a gender; changed in
+   Settings or My Profile): Quick Match, Championship and My Team play it, with no switch on the screen. 2 Players keeps the switch (two people
+   share the device, and the profile is one of them's); Career and the setup have their own category, as ever. null: the switch as it was. */
+const pickCatFixed = () => (pickMode === 'two' || pickMode === 'career' || pickMode === 'setup' || typeof profileDecides !== 'function' ? null : profileDecides());
 /* Championship's World Cup or Home Nations Tour, chosen on the home: its title, its list, its side and its primary (src/ui-cups.js);
    null for a league or the nation's championship, and for every other mode. */
 const teamsView = () => (pickMode === 'champ' && typeof cupTeamsView === 'function' ? cupTeamsView() : null);
@@ -11112,7 +11304,7 @@ function pickLadderOf(s, left) {
     return [{ key:'comp', list:pool, hemi:null, name:champListName(pool), ctx:TEAM_TIERS[poolTier(pool)], teams:storeFirst(teams) }, ...(made.length ? [{ key:'mine.made', list:null, hemi:'mine', name:'Made Teams', teams:made }] : [])];
   }
   if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));
-  if (pickMode === 'my') return pickLadder(cat, { nations:true, clubs:true, mine:'all', fav:true, fits:t => !t.legend });
+  if (pickMode === 'my') return pickLadder(cat, { nations:true, every:!!pickCatFixed(), clubs:true, mine:'all', fav:true, fits:t => !t.legend });   // with no switch, every country: My Team's is where you are from, whatever the category plays
   if (pickMode === 'setup') return pickLadder(cat, { clubs:true, mine:'all', fav:true, fits:t => !isNation(t) && !t.legend });   // the first launch's Club (src/profile.js): My Team's ladder, clubs only; the country comes with the club
   const all = pickLadder(cat, { nations:true, legends:true, clubs:true, mine:'all', fav:true, recent:s });
   if (s === 0) return all.map(g => { if (g.hemi === 'fav' || g.hemi === 'recent') return g; const i = g.teams.findIndex(t => !t.act && !isNation(t) && myIs(t)); return i > 0 ? { ...g, teams:[g.teams[i], ...g.teams.slice(0, i), ...g.teams.slice(i + 1)] } : g; });
@@ -11244,13 +11436,15 @@ function pickSet(s) {
 }
 function pickAct(s, act) { pick.opener = s; pick.on = s; pick.made = null; if (act === 'create') openBuilder(null); else if (typeof importOpen === 'function') importOpen(); }
 /* The one primary: Kick Off once both sides are set; before that Pick and the side's team (Your Team first); on an entry, the entry. One
-   side: Play as Farnham (Championship, the World Cup), Tour Scotland, Pick Bath (Career), and on My Team, Pick or Done. */
+   side: Play as Farnham (Championship, the World Cup), Tour Scotland, Pick Bath (Career), and on My Team, Pick or Done. Play as and Tour
+   name the category as the side's own name does (Play as England Minis, Tour New Zealand Women; Men has no word): with the profile deciding
+   it there is no Men | Women | Minis on the screen to say so. */
 function pickPrimary() {
   const view = teamsView(), cat = pickCat(), v = pickView[pick.on], t = v && v.team;
   if (t && t.act) return t.name;
   if (pickOne()) {
     if (!t) return '';
-    if (view) return view.comp === 'tour' ? 'Tour ' + listName(t) : 'Play as ' + (catTeam(t, cat) || t).name;
+    if (view) return view.comp === 'tour' ? 'Tour ' + t.name : 'Play as ' + (catTeam(t, cat) || t).name;
     if (pickMode === 'champ') return 'Play as ' + (catTeam(t, cat) || t).name;
     if (pickMode === 'my' && myIs(t)) return 'Done';
     return 'Pick ' + listName(t);
@@ -11373,6 +11567,7 @@ function openTeams(m, comp, o) {
     settings.pool = cupId !== 'league' ? 'int' : poolKey(k) === k ? k : 'sur';
   } else if (m !== 'career') settings.pool = myPool() || 'sur';
   if (!pickOne()) { const cats = settings.pick.filter(Boolean).map(p => p.cat); if (cats.length && cats.every(c => c === cats[0]) && TEAM_CATS.some(c => c.id === cats[0])) settings.cat = cats[0]; }   // Quick Match and 2 Players reopen in the category their sides were picked in (Championship may have moved it)
+  const decided = pickCatFixed(); if (decided) settings.cat = decided;   // a profile that decides the category: the teams follow it, and a side remembered in another falls back as a category changed does (pickOpen)
   pickOpen(0); if (!pickOne()) pickOpen(1);
   const play = m === 'quick' && !!(o && o.play);
   if (play) pickPlay();
@@ -11393,7 +11588,7 @@ function renderTeams() {
   eb.classList.remove('p1'); eb.classList.remove('p2');
   const t0 = pickView[0] && pickView[0].team;
   $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' || setup ? 'Pick Your Club' : 'Pick Your Team';
-  $('t-cat').hidden = pickMode === 'career' || setup;        // Men | Women is New Player's; the setup's category comes from its answers
+  $('t-cat').hidden = pickMode === 'career' || setup || !!pickCatFixed();   // Men | Women is New Player's; the setup's category comes from its answers; a profile that decides it, in Settings
   $('t-find').hidden = !pickFilterable(pickView[pick.on]); $('t-find').setAttribute('aria-label', 'Search ' + pickFindWord());   // the Filter's icon, for the side being set: none on a fixed list (the World Cup, the tour)
   $('t-sback').hidden = $('t-skip').hidden = !setup; $('t-back').hidden = setup;   // the setup's Back and Skip along the top, as on its other steps (src/profile.js)
   $('s-teams').classList.toggle('pk-setup', setup);
@@ -11886,8 +12081,8 @@ function pickNav(seat, dx, dy) {
       const o = focusEl === go ? back : go, a = focusEl.getBoundingClientRect(), b = o.getBoundingClientRect();
       if (!o.hidden && b.width && Math.abs(a.top - b.top) < 4 && (b.left - a.left)*dx > 0) { setFocus(o); return true; }
     }
-    const cat = $('t-cat'), chosen = !cat.hidden && cat.querySelector && cat.querySelector('[aria-pressed="true"]');
-    if (dy < 0 && !dx && chosen && focusEl.closest && focusEl.closest('.pk-head')) { setFocus(chosen); return true; }   // Up from either side's head: Men | Women | Minis, on the one chosen
+    const cat = $('t-cat'), chosen = !cat.hidden && cat.querySelector && cat.querySelector('[aria-pressed="true"]'), up = chosen || (pickCatFixed() && !$('t-find').hidden ? $('t-find') : null);
+    if (dy < 0 && !dx && up && focusEl.closest && focusEl.closest('.pk-head')) { setFocus(up); return true; }   // Up from either side's head: Men | Women | Minis, on the one chosen; with no switch (the profile decides the category), the search icon, the top bar's one control
     return false;                                            // the ring moves as on every screen (navMove)
   }
   let s = null;
@@ -12017,7 +12212,7 @@ function pickTeam(t) {
 function myPick(t) {
   if (isNation(t)) settings.myNat = t.id; else settings.myClub = keyOf(t);
   save();
-  if (!isNation(t)) { const st = pick.sides[0], n = myNatTeam(settings.cat); if (n) { st.g = 'nat.' + n.id.toLowerCase(); st.k = n.id; } }
+  if (!isNation(t)) { const st = pick.sides[0], n = myNatTeam(settings.cat) || (pickCatFixed() ? myNatTeam(null) : null); if (n) { st.g = 'nat.' + n.id.toLowerCase(); st.k = n.id; } }   // on to the country: with no switch, one the category has not got too (every country is listed)
   renderTeams();
 }
 
@@ -12286,7 +12481,7 @@ function cupTeamsView() {
   if (champComp !== 'tour') return null;
   const cat = settings.cat, hosts = CUPS.tour.hosts, at = cupTurn % hosts.length;
   const list = [0, 1, 2].map(i => cupNation(hosts[(at + i) % hosts.length], cat)).filter(Boolean);
-  return { comp:'tour', name:CUPS.tour.name, title:'Pick the Host', list, yours:cupTourSide(cat), pick:list[0], primary:'Tour ' + listName(list[0]),
+  return { comp:'tour', name:CUPS.tour.name, title:'Pick the Host', list, yours:cupTourSide(cat), pick:list[0], primary:'Tour ' + list[0].name,
     start:t => { if (!hosts.includes(t.id)) return; cupTurn = hosts.indexOf(t.id) + 1; cupBegin('tour', { user:cupTourSide(cat), cat, host:t.id }); } };
 }
 function cupBegin(id, opts) {
@@ -13711,8 +13906,8 @@ function kidsGateLoad() {
 }
 function parentGate(onPass, onCancel) {
   if (kidsGate) kidsGateClose(false);                      // one check at a time: an older one is cancelled
-  const pad = lastDev === 'pad', act = document.activeElement || null;
-  kidsGate = { onPass, onCancel, typed:'', back:act, inert:[] };
+  const pad = lastDev === 'pad', act = document.activeElement || null, ring = pad && focusEl ? focusEl : null;
+  kidsGate = { onPass, onCancel, typed:'', back:ring || act, ring:!!ring, inert:[] };   // where it goes back to: a controller's ring on the button that asked (Settings' Junior, say), else the DOM focus
   kidsAsk(); kidsGateShow(false);
   const m = $('m-gate'), body = document.body;
   if (pad && act && act.blur) act.blur();                  // a controller works by the chalk ring, and the DOM focus would draw a second outline on another key
@@ -13726,10 +13921,13 @@ function kidsGateClose(passed) {
   kidsGate = null;
   $('m-gate').hidden = true; setFocus(null);
   for (const el of g.inert) el.inert = false;
-  if (g.back && g.back.focus && !(g.back.closest && g.back.closest('[hidden]'))) g.back.focus();
+  const shown = !!g.back && !(g.back.closest && g.back.closest('[hidden]'));
+  if (g.ring && shown) setFocus(g.back);                   // a controller's ring back where it was, with no DOM focus (one outline)
+  else if (shown && g.back.focus) g.back.focus();
   if (passed) { kidsGateMiss = 0; kidsGateRests = 0; kidsGateKeep(); }
   const fn = passed ? g.onPass : g.onCancel;
   if (typeof fn === 'function') fn();
+  if (g.ring && focusEl === g.back && typeof navLayer === 'function') { const l = navLayer(); if (l && l.contains && !l.contains(g.back)) setFocus(null); }   // what the check let through opened a card or a screen: the ring is that one's to place
 }
 function kidsGateType(d) {
   const g = kidsGate; if (!g || kidsGateRest) return;      // resting keys do nothing
@@ -16126,8 +16324,10 @@ const DEMO_PILOT = {
    or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
    Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
 
-   What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the Men | Women | Minis switch, the level
-   and My Team stay changeable as ever without rewriting the age group or the gender.
+   What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the level and My Team stay changeable as
+   ever without rewriting the age group or the gender. The two answers are changed in Settings too, under Difficulty (profileSettings,
+   the owner, 2026-11-11: "once gender / age section chosen, have them in settings to change - don't include on the team selection page
+   the filter for age"); once they decide the category (profileDecides) the team screen has no Men | Women | Minis but on 2 Players.
    - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
      Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
      MIXED_THROUGH), otherwise Men. An answer left blank keeps the side as it is (profileCat): a gender alone never moves a side off
@@ -16177,6 +16377,10 @@ function profileCat(age, gender, cur) {
   if (gender) return gender === 'female' ? 'women' : 'men';
   return cur === 'women' ? 'women' : 'men';
 }
+/* The category the profile decides, or null while it decides none: Minis for a Mini, else Men or Women by the gender (Not Say Men), once
+   both are given. With an answer missing (a setup skipped, a save from before the profile) the team screen keeps Men | Women | Minis and
+   the category picked there (pickCatFixed, src/ui-menus.js). */
+function profileDecides() { return profile.age === 'mini' || (profile.age && profile.gender) ? profileCat(profile.age, profile.gender, settings.cat) : null; }
 const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
 /* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
    Difficulty row's own rule); a cancelled check sets nothing. */
@@ -16367,13 +16571,9 @@ function profileOpen(focus) {
 }
 DEFAULT_FOCUS['s-profile'] = () => ($('pf-age').querySelector && $('pf-age').querySelector('[aria-pressed="true"]')) || $('pf-back');
 function profileRender() {
-  const c = myClubTeam(), n = myNatTeam(null), seg = (id, list, now) => {
-    const el = $(id);
-    if (!el.dataset.built) { el.dataset.built = '1'; el.innerHTML = list.map(o => `<button data-v="${o.id}">${o.line ? `<b>${esc(o.name)}</b><span>${esc(o.line)}</span>` : esc(o.name)}</button>`).join(''); for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.addEventListener('click', () => (id === 'pf-age' ? profileAge(b.dataset.v) : profileGender(b.dataset.v))); }
-    for (const b of el.querySelectorAll ? el.querySelectorAll('[data-v]') : []) b.setAttribute('aria-pressed', String(b.dataset.v === now));
-  };
-  seg('pf-age', PROFILE_AGES, profile.age);
-  seg('pf-gender', PROFILE_GENDERS, profile.gender);
+  const c = myClubTeam(), n = myNatTeam(null);
+  profileSeg('pf-age', PROFILE_AGES, profile.age, true);
+  profileSeg('pf-gender', PROFILE_GENDERS, profile.gender, false);
   $('pf-club').innerHTML = `${jersey(c)}<span class="pf-names"><b>${esc(listName(c))}</b><span>${esc(listName(n))}</span></span>`;
   $('pf-team').setAttribute('aria-label', 'Change My Team: ' + listName(c) + ', ' + listName(n));
   const drawn = profileDraw($('pf-cv'), c, profile.look);
@@ -16382,13 +16582,35 @@ function profileRender() {
   $('pf-look').textContent = profile.look ? 'Change Look' : 'Make Your Look';
   if (!drawn && profile.look && typeof ART !== 'undefined' && ART.state === 'idle' && typeof artLoad === 'function') artLoad();   // the picture once the art is in (profileArtIn)
 }
+/* An age group's or a gender's row, built once and pressed as the profile stands (none where it has no answer): My Profile's, each age
+   group with its ages (lines), and Settings', the names alone as its other rows are. A press is profileAge's or profileGender's wherever
+   the row is, so the two screens set the same things and show the same answers. */
+function profileSeg(id, list, now, lines) {
+  const el = $(id), all = () => (el.querySelectorAll ? [...el.querySelectorAll('[data-v]')] : []);
+  if (!el.dataset.built) {
+    el.dataset.built = '1';
+    el.innerHTML = list.map(o => `<button data-v="${o.id}">${lines && o.line ? `<b>${esc(o.name)}</b><span>${esc(o.line)}</span>` : esc(o.name)}</button>`).join('');
+    for (const b of all()) b.addEventListener('click', () => (list === PROFILE_AGES ? profileAge(b.dataset.v) : profileGender(b.dataset.v)));
+  }
+  for (const b of all()) b.setAttribute('aria-pressed', String(b.dataset.v === now));
+}
+/* Settings' Age Group | Gender, under Difficulty (the home's Settings step: renderHome draws it). */
+function profileSettings() {
+  profileSeg('set-age', PROFILE_AGES, profile.age, false);
+  profileSeg('set-gender', PROFILE_GENDERS, profile.gender, false);
+}
+/* An answer set from My Profile or Settings: whichever shows, drawn again, and the home with it (the Difficulty row, Settings' rows). */
+function profileShown() {
+  if (!$('s-profile').hidden) profileRender();
+  renderHome();
+}
 function profileAge(v) {
   if (!profileKnows(PROFILE_AGES, v) || v === profile.age) return;   // the row already chosen: nothing set again (a level or side moved since stays as it is)
-  profileSet(v, profile.gender, { then:() => { profileRender(); renderHome(); } });
+  profileSet(v, profile.gender, { then:profileShown });
 }
 function profileGender(v) {
   if (!profileKnows(PROFILE_GENDERS, v) || v === profile.gender) return;
-  profileSet(profile.age, v, { level:false, then:() => { profileRender(); renderHome(); } });   // the gender moves the category, never the level
+  profileSet(profile.age, v, { level:false, then:profileShown });   // the gender moves the category, never the level
 }
 $('pf-back').addEventListener('click', () => goHome($('b-my')));
 $('pf-team').addEventListener('click', () => openTeams('my', null, { from:$('pf-team') }));   // My Team's picker, its old job: the club, then the country; back here after
@@ -17548,7 +17770,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, PASS_FLIGHT, SUPPORT, openShoulder, shoulderPoint, holdShoulder, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
-    dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
+    dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene, arrowShow },
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
   ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },
@@ -17581,7 +17803,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     filter:pickFilter, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
     first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
-    profileOpen, render:profileRender, age:profileAge, gender:profileGender, homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },
+    profileOpen, render:profileRender, age:profileAge, gender:profileGender, settings:profileSettings, decides:profileDecides, catFixed:() => pickCatFixed(), homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },
   GAME_VERSION,
   get M() { return M; } };
 
