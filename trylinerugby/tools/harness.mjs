@@ -78,7 +78,10 @@ const MODALS = ['m-pen', 'm-break', 'm-pause', 'm-tut', 'm-practice'], SCREENS =
 const SEGS = [...html.matchAll(/<div class="seg" data-key="([a-z]+)"[^>]*>([\s\S]*?)<\/div>/g)].map((m, n) => { const seg = el('seg-' + m[1] + '-' + n); seg.dataset.key = m[1]; seg.children = [...m[2].matchAll(/<button\b/g)].map((_, i) => el('seg-' + m[1] + '-' + n + '-' + i)); if (seg.children.length < 2) seg.children = [el('seg-' + m[1] + '-' + n + '-0'), el('seg-' + m[1] + '-' + n + '-1')]; return seg; });
 export const segOf = (key, nth = 0) => SEGS.filter(s => s.dataset.key === key)[nth];
 for (const s of [0, 1]) { const seg = els['pz-h' + s] = el('pz-h' + s); seg.children = [el('pz-h' + s + '-0'), el('pz-h' + s + '-1')]; }   // the pause card's Hints rows have their On and Off buttons, so the game wires them and a test can press one
-globalThis.document = { getElementById: id => (els[id] ||= el(id)), querySelectorAll: sel => (sel === '.modal' ? MODALS : sel === '.screen' ? SCREENS : []).map(id => (els[id] ||= el(id))).concat(sel === '.seg[data-key]' ? SEGS : []), addEventListener: noop, createElement: () => el(''), createTextNode: () => ({}), hidden: false };
+// document listeners are kept and never fired on their own, as the window's below: fireDoc('visibilitychange') or fireDoc('touchend', ev) drives them from a test
+const docListeners = {};
+export const fireDoc = (type, ev) => { for (const fn of docListeners[type] || []) fn(ev || {}); };
+globalThis.document = { getElementById: id => (els[id] ||= el(id)), querySelectorAll: sel => (sel === '.modal' ? MODALS : sel === '.screen' ? SCREENS : []).map(id => (els[id] ||= el(id))).concat(sel === '.seg[data-key]' ? SEGS : []), addEventListener: (type, fn) => { (docListeners[type] ||= []).push(fn); }, createElement: () => el(''), createTextNode: () => ({}), hidden: false };
 globalThis.window = globalThis;
 globalThis.innerWidth = 844; globalThis.innerHeight = 390; globalThis.devicePixelRatio = 2;
 // window listeners are kept and never fired on their own: fire('gamepadconnected', { gamepad }) or fire('blur') drives them from a test
