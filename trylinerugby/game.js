@@ -9661,7 +9661,7 @@ window.addEventListener('pointerdown', e => {              // any new press, bef
 /* The glass's own list. Each touch event lists the fingers on the glass (e.touches), whatever the page heard before, so every touchstart,
    touchend and touchcancel checks each touch hold against it: a hold whose finger isn't listed lets go, a button as cancelled (a stale
    Kick is never a kick), and with no finger listed nothing touch holds stays held. A finger that this touchstart's own press turned away
-   from that stick or button takes its place. A pointer's id is not its touch's identifier (in WebKit or in Chromium), so a hold is named
+   from that stick or button takes its place. A pointer's id need not be its touch's identifier (in Chromium it is not), so a hold is named
    by where it went down: a touch's pointerdown and its touchstart share one spot (0px apart in Chromium), two fingertips never land within
    TOUCH_NEAR of each other, and the touchstart that comes with a press (after its pointerdown, in the same task) names it. A browser that
    sent the touchstart first has the hold named at the next touch event, by where its finger is then. A hold still unnamed (no touch heard
@@ -9683,8 +9683,15 @@ function nameHolds(all) {                                  // each unnamed touch
   pairs.sort((a, b) => a.d - b.d);                         // the nearest first: two fingers landing in one touchstart each get their own
   for (const { w, t } of pairs) if (!w.done && !named.has(t.identifier)) { w.done = true; named.add(t.identifier); w.put(t.identifier); }
 }
-function onGlass(e, start) {
+const GONE = {};                                           // a hold's touch that ended unheard: never on the glass again
+function onGlass(e, start, end) {
   const all = Array.from(e.touches || []), fresh = start ? Array.from(e.changedTouches || []) : [];
+  const done = end ? new Set(Array.from(e.changedTouches || []).map(t => t.identifier)) : null;   // the fingers this touchend says lifted
+  if (start) {                                             // a browser may give an ended touch's identifier to the next finger: a hold older than this touch whose identifier just started again lost its finger unheard
+    const born = new Set(fresh.map(t => t.identifier)), reborn = (tid, at) => tid != null && tid !== GONE && at !== touchGen && born.has(tid);
+    if (input.stickId !== null && reborn(input.stickTid, input.stickAt)) input.stickTid = GONE;
+    for (const [id] of ACTS) { const el = $(id); if (el._held && reborn(el._tid, el._at)) el._tid = GONE; }
+  }
   nameHolds(all);
   const on = new Set(all.map(t => t.identifier));
   const allNew = start && fresh.length > 0 && all.length <= fresh.length;   // no finger from before on the glass
@@ -9698,8 +9705,8 @@ function onGlass(e, start) {
   for (const [id, key] of ACTS) {
     const el = $(id);
     if (!el._held || !touchy(el._type) || !off(el._tid, el._at)) continue;
-    const no = mine(el._no);
-    endAct(el, key, !no, { pointerId:el._pointerId });
+    const no = mine(el._no), lift = !!done && el._tid != null && done.has(el._tid);   // its own finger's end heard: a lift, whatever order the browser sent it in, so Kick kicks
+    endAct(el, key, !no && !lift, { pointerId:el._pointerId });
     if (no) beginAct(el, key, no);
   }
   const lifted = no => !!no && (!all.length || (no.tid != null && !on.has(no.tid)));   // a finger turned away and off the glass is no longer waiting
@@ -9707,7 +9714,7 @@ function onGlass(e, start) {
   for (const [id] of ACTS) { const el = $(id); if (lifted(el._no)) el._no = null; }
   if (start) touchGen++;
 }
-for (const type of ['touchstart', 'touchend', 'touchcancel']) window.addEventListener(type, e => onGlass(e, type === 'touchstart'), { capture:true, passive:true });
+for (const type of ['touchstart', 'touchend', 'touchcancel']) window.addEventListener(type, e => onGlass(e, type === 'touchstart', type === 'touchend'), { capture:true, passive:true });
 function releaseTouch() {                                  // the phone turned, the page hidden, or the stick has to come up: the ring goes home and no button stays pressed
   input.stickId = null; input.stickTid = null; input.jx = input.jy = 0; input.gest = null; input.latPeak = null; input.stickNo = null; input.retook = false;
   knob.style.transform = ''; stick.classList.remove('on'); restStick();

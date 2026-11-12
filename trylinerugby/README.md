@@ -1117,7 +1117,7 @@ The ladder would have gone backwards at County, so that is what moved, and only 
     touchstart's own press turned away from it taking its place; with no finger listed, nothing touch holds is held. So the
     release no longer hangs on which event WebKit drops: the pointerup, the capture or the touch's end each does it alone,
     and a dead thumb's run stops at the next touch of any finger, with Sprint held or the browser still claiming its capture.
-    A pointer's id is not its touch's identifier (not in WebKit, and in Chromium a thumb's pointer id can be Sprint's touch
+    A pointer's id need not be its touch's identifier (in Chromium a thumb's pointer id can be Sprint's touch
     identifier), so each hold is named with its touch by where it went down: the touchstart that comes with its pointerdown
     (after it, in the same task) has a touch at that spot (0px apart in Chromium; two fingertips never land within 24px), and
     a browser that sent the touchstart first has the hold named at the next touch event, by where its finger is then. A hold

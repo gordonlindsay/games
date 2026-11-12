@@ -250,8 +250,13 @@ begin('the glass has the last word');
   run(); touchEnd([lose(70)]);
   ok(!held() && I.bDown && $('btnB')._held && m.side[0].charging, 'the thumb\'s: the stick lets go, Kick still charging');
   run(); touchEnd([lose(72)]);
-  ok(!I.bDown && !$('btnB')._held && I.bCancel, 'the last finger\'s: no finger on the glass, so Kick lets go, as cancelled');
-  run(3); ok(m.stats.kicks === kicks && !m.side[0].charging, 'and no kick is fired');
+  ok(!I.bDown && !$('btnB')._held && !I.bCancel, 'the last finger\'s own end heard: a lift, so Kick lets go as a release, whatever came first');
+  run(3); ok(m.stats.kicks === kicks + 1 && !m.side[0].charging, 'and the kick is struck');
+  { const m2 = fresh(), c2 = T.sides.ctrlOf(0); m2.ball.state = 'held'; m2.ball.carrier = c2;
+    down('btnB', 84, 640, 330); down('cv', 85, 450, 120); run(5); const k2 = m2.stats.kicks;
+    stale(84); up(85);
+    ok(!I.bDown && !$('btnB')._held && I.bCancel, 'Kick\'s finger gone from the list without its own end heard: cancelled');
+    run(3); ok(m2.stats.kicks === k2 && !m2.side[0].charging, 'and no kick is fired'); }
   fresh(); down('zone', 73); move(73, 230, 290); down('btnC', 74, 700, 300); down('btnA', 75, 760, 250);
   touchEnd([lose(73), lose(74), lose(75)], 'touchcancel');
   ok(!held() && !I.cDown && !I.aDown && !$('btnA')._held && !$('btnC')._held, 'a touchcancel with no finger left: the stick, Sprint and Pass all let go');
@@ -264,6 +269,20 @@ begin('the glass has the last word');
   down('cv', 80, 450, 120); up(80);
   ok(I.cDown && $('btnC')._pointerId === 79, 'a mouse\'s hold is not the glass\'s to judge: a touch\'s end with no finger left leaves it');
   fire('pointerup', P(79, 700, 300, { pointerType:'mouse' })); $('btnC').fire('pointerup', P(79, 700, 300, { pointerType:'mouse' })); ok(!I.cDown, 'its own lift lets go');
+}
+done();
+
+// 9b. A browser may give an ended touch's identifier to the next finger: a hold whose finger ended unheard is not kept alive by it
+begin('a reused touch identifier');
+{
+  fresh(); down('zone', 86); move(86, 230, 290); const tid = I.stickTid;
+  ok(I.stickId === 86 && I.jx === 1 && tid != null, 'the thumb holds the stick, named by its touch');
+  stale(86); const keep = nextTouch; nextTouch = tid; down('zone', 87, 140, 290); nextTouch = keep;
+  ok(I.stickId === 87 && I.jx === 0, 'a new thumb landing with the dead touch\'s identifier takes the stick');
+  move(87, 70, 290); ok(I.jx === -1, 'and steers'); up(87); ok(!held(), 'and lets go on its lift');
+  fresh(); down('btnC', 88, 700, 300); const t2 = $('btnC')._tid; down('zone', 89); move(89, 230, 290);
+  stale(88); const keep2 = nextTouch; nextTouch = t2; down('btnA', 90, 760, 250); nextTouch = keep2;
+  ok(!I.cDown && !$('btnC')._held && I.stickId === 89 && I.aDown, 'a stale Sprint whose identifier comes back on Pass lets go; the live stick and the new Pass are kept');
 }
 done();
 
@@ -572,7 +591,7 @@ async function browserChecks() {
       B(!s.cDown && s.stickId !== null && s.jx > 0.5 && s.bDown, `Sprint's touch ends, its pointerup unheard: Sprint lets go; the stick and Kick, whose touches it lists, stay (cDown ${s.cDown}, jx ${s.jx}, bDown ${s.bDown})`);
       await F.up(1); await wait(60); s = await F.state(); B(s.stickId === null && s.jx === 0 && s.bDown, `the thumb's: the stick lets go, Kick stays (stick ${s.stickId}, bDown ${s.bDown})`);
       const c0 = s.bCancels; await F.up(3); await wait(100); s = await F.state();
-      B(!s.bDown && s.bCancels === c0 + 1, `Kick's, the glass now empty: nothing held, Kick let go as cancelled (bDown ${s.bDown}, cancels ${s.bCancels - c0})`);
+      B(!s.bDown && s.bCancels === c0, `Kick's own touch ends, its pointerup unheard: nothing held, and Kick let go as a lift, not cancelled, whatever order the browser sends (bDown ${s.bDown}, cancels ${s.bCancels - c0})`);
       await F.ev(() => { window.__lose = null; });
       await F.down(4, 260, 300); await F.move(4, 190, 300); await wait(80); s = await F.state(); B(s.stickId !== null && s.jx < -0.5, `a new thumb takes the stick and steers (jx ${s.jx})`);
       await F.up(4); await wait(60);
