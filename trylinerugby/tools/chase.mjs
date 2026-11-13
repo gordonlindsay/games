@@ -1,5 +1,6 @@
 // The kick chase (src/chase.js; README.md, Kicking and the chase): the gate (an open-play kick by either side, never a restart, a
-// drop goal or a charge-down), the chasers (the kicking side's men onside at the kick, the human's ringed chaser among them), the
+// drop goal or a charge-down), the chasers (the kicking side's men onside at the kick, the human's ringed man among them only when
+// he is onside), the
 // pace and its easing and end, the catching side's late start for the men the computer runs and never for a person's own input,
 // no new draw, CHASE off playing exactly as b4a25d5, the build before, draw for draw, and the measured win-back rates in bands.
 // node tools/chase.mjs              (SEED=29 unless set; VERBOSE=1 lists every check)
@@ -359,6 +360,18 @@ begin('3 the chasers');
       if (r && r.chase === SECS && M().ball.f.onside.has(r)) ringed++;
     }
     ok(ringed === n, `your ringed man, onside, chases at the pace too (${ringed} of ${n})`); }
+  // and offside, he does not: the ring jumps to your man nearest where it comes down wherever he stands, and a man in front of the
+  // kicker is offside (after a person's chip in play, about a third of the time): his own pace, no trail, his onside teammates chasing
+  { let off = 0, n = 0;
+    for (let s = 0; s < 10; s++) {
+      let q = null;
+      stage('chip', 0, 650 + s, { match:{ humans:[true, false], auto:false }, before:(m, c) => { q = m.players.find(p => p.team === 0 && p !== c); q.x = c.x + 4; q.y = c.y; for (const p of m.players) if (p.team === 0 && p !== c && p !== q) p.x = c.x - 15; } });
+      const m = M(), f = m.ball.f;
+      if (!f || f.kind !== 'kick') continue;               // charged down: no kick to chase
+      const r = T.sides.ctrlOf(0), mates = m.players.filter(p => p.team === 0 && p !== r && f.onside.has(p)); n++;
+      if (r === q && !f.onside.has(r) && r.chase === 0 && CH.mul(r) === 1 && mates.length > 0 && mates.every(p => p.chase === SECS)) off++;
+    }
+    ok(n >= 8 && off === n, `your ringed man in front of the kicker, offside, does not: his own pace and no trail, his onside teammates chasing (${off} of ${n})`); }
 }
 done('3 the chasers');
 
@@ -404,7 +417,7 @@ done('4 the pace');
 
 begin('5 the catching side');
 {
-  // AI v AI: for 0.3s after the kick the catching side's men run on as they were (edgeHold); then the two nearest go for it
+  // AI v AI: for CHASE.react (0.2s) after the kick the catching side's men run on as they were (edgeHold); then the two nearest go for it
   let held = 0, heldN = 0, freed = 0;
   for (let s = 0; s < 10; s++) {
     const team = s % 2; stage('chip', team, 900 + s);

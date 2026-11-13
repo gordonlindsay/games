@@ -1945,10 +1945,13 @@ not a walkover. It is `src/chase.js`, every lever in `CHASE` and read through `c
   either side, in every match: AI v AI, the demo, Two Player, a career, Kids and Minis (it is speed, not contact). Not a
   restart (the kick-off and the 22 drop-out), a drop goal or a charge-down (the ball never gets away), and never in a drill.
 - **The chasers.** The kicking side's men onside at the kick (`f.onside`: level with or behind the kicker, by kickBall's
-  half-metre), the kicker himself and your ringed man among them. Each carries his seconds left (`p.chase`), read in
-  `maxSpeed` with the other factors, so nothing snaps his velocity as `setBoost` would; under a Sprint the bigger of the two
-  applies, never both. It ends the step the other side takes the ball (a catch, a gather, its pass) or the ball is dead (touch,
-  a knock-on, a try, the half), and runs on to its 1.5s while his own side has it. A chaser shows the gold trail a burst shows.
+  half-metre), the kicker himself among them, and your ringed man when he is onside. At your kick the ring jumps to your man
+  nearest where it comes down (`kickBall`, as before) wherever he stands: in 30 of the kick-chaser's matches on Normal that
+  man was in front of the kicker, offside, after 139 of his 372 chips (37%), and ran at his own pace with no trail. Each
+  carries his seconds left (`p.chase`), read in `maxSpeed` with the other factors, so nothing snaps his velocity as
+  `setBoost` would; under a Sprint the bigger of the two applies, never both. It ends the step the other side takes the ball
+  (a catch, a gather, its pass) or the ball is dead (touch, a knock-on, a try, the half), and runs on to its 1.5s while his
+  own side has it. A chaser shows the gold trail a burst shows.
 - **The catching side.** Its men the computer runs start `react` late: for 0.2s after the kick (12 steps, the kick's own the
   first) each runs on as he was running (`edgeHold`, the Easy cover's lag) instead of going for where it comes down or into
   his kick shape. Your own input is never late: the ring still jumps at the kick to your man nearest where it comes down
@@ -2025,6 +2028,21 @@ noise (± 3 on Easy, ± 5 on Normal). **Open for the owner: the chip-spammer.** 
 two in three and scores a try or more a match more on Easy (1.3), 0.6 more on Normal, where he wins 67% of matches against
 45%. Noticeable for everyone; for him close to a walkover on Easy (98%, where he already won 87%) and a strong tactic on
 Normal. React 0 (pace alone) gives him 57% there.
+
+A second seed gives the same picture (SEED 11, CHASE off then on): the staged chip 5% to 15% (400 kicks), and on Normal
+(60 matches each) the casual adult's chips 28% to 58%, the kick-chaser's 36% to 66%, his wins 55% to 72% and his tries 1.02
+to 2.13 a match. **Long kicks** miss their aim of a little more where the computer fields them, anywhere in the band (staged
+0% to 0% on both seeds, and at pace 1.10 and react 0.4, its top; AI v AI 2% to 0%): a long kick hangs longer than the chase
+lasts (doKick's 0.8s plus its length over 28: 2.2s at 40m, 2.9s at 60m), and the catching side's sweeper is under it either
+way. The CPU's long kicks against a person come back a little more often (on Normal, the casual adult's matches then the
+kick-chaser's: 4% to 14% and 0% to 18% at SEED 7, 0% to 15% and 6% to 9% at SEED 11), but on 19 to 34 kicks a run, so
+loosely. **The owner chooses**: these numbers as they are, or `react:0` (pace alone, below his band: one line in `CHASE`,
+with this section and src/chase.js's comment following). `tools/chase.mjs` bands the staged chip only (section 7); a
+person's chips get a band once the owner sets their target.
+
+**Open for the owner: your man after your own chip.** The ring jumps to your man nearest where it comes down, and 37% of the
+time (above) he is in front of the kicker and does not chase. Making him always chase would be a change of behaviour, and a
+re-pin.
 
 ### Side Step and Dummy
 

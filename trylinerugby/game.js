@@ -3706,8 +3706,10 @@ const knockLv = k => (KNOCK.on ? KNOCK : KNOCK_OFF)[k];
    - Who: every open-play kick (kickBall's kind 'kick': a chip, a long kick, a clearance, a territory kick), by either side, in every
      match, AI v AI, the demo, Two Player, Kids and Minis included (it is speed, not contact). Not a restart (the kick-off and the 22
      drop-out are kind 'restart'), a drop goal (kind 'g3d') or a charge-down (doKick stops before kickBall), and never in a drill.
-   - The chasers: the kicking side's men onside at the kick (f.onside, level with or behind the kicker; the kicker himself and the
-     human's ringed chaser included) run `pace` times their top speed for `secs` from the kick, easing back to 1 over the last third.
+   - The chasers: the kicking side's men onside at the kick (f.onside, level with or behind the kicker; the kicker himself among them,
+     and the human's ringed man only when he is onside: at the kick the ring jumps to his man nearest the landing spot wherever he
+     stands, and after a person's chip that man is in front of the kicker about a third of the time, so he runs at his own pace with
+     no trail) run `pace` times their top speed for `secs` from the kick, easing back to 1 over the last third.
      p.chase is his seconds left, read in maxSpeed with the other factors and under Sprint (the bigger of the two applies, never
      both), so nothing snaps his velocity as setBoost does. It ends early once the kicking side loses the ball (the other side holds
      it or passes it) or the ball is dead (any stoppage, a try, half time). Drawn as a boost is, the gold trail behind him.

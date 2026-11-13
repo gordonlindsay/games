@@ -654,7 +654,8 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // the pin before them, exactly, as 20cbcaf does
   // Re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose: the matches where the CPU
   // kicks move (its men chase quicker, the bot's side starts late). Proof, checked below: with CHASE off this build gives BEFORE_CHASE,
-  // b4a25d5's pin, exactly (a second run, as PIN is); with KNOCK off too, the first run still gives BEFORE_KNOCK
+  // b4a25d5's pin, exactly (the second run in the process, as b4a25d5's PIN was; PIN is now the third); with KNOCK off too, the first
+  // run still gives BEFORE_KNOCK
   const PIN = '7wl1n0 kq1d2 1c0yntb m9j9pa 1klviba 1db7d9g fs1jc3 1j6lmbf';
   const BEFORE_CHASE = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
   const BEFORE_KNOCK = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
@@ -678,7 +679,8 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
     return out.map(fnv).join(' ');
   };
   // KNOCK off runs first: the second match (Quick Match on Normal) reads something the first run leaves behind, so a run's pin is the
-  // run's own: the first one in a process gives BEFORE_KNOCK with KNOCK off, as the build before did; PIN is a second run's, KNOCK on
+  // run's own: the first one in a process gives BEFORE_KNOCK with KNOCK off, as the build before did; BEFORE_CHASE is the second run's,
+  // CHASE off, and PIN the third's, both with KNOCK on
   { const CS = T.chase && T.chase.CHASE, CS0 = !!(CS && CS.on);   // the kick chase (src/chase.js), off with the knock-ons (20cbcaf predates both), then as it was (CHASE= in the harness)
     if (T.knock) { T.knock.KNOCK.on = false; if (CS) CS.on = false; const off = pin(); T.knock.KNOCK.on = true; if (CS) CS.on = CS0; ok(off === BEFORE_KNOCK, `with the knock-ons and the kick chase off (KNOCK, src/knock.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
     if (CS) { CS.on = false; const off = pin(); CS.on = CS0; ok(off === BEFORE_CHASE, `with the kick chase off (CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CHASE})`); }
