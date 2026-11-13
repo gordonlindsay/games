@@ -133,6 +133,10 @@ const KN = K ? K.KNOCK : {}, K0 = { ...KN }, setK = o => Object.assign(KN, K0, o
 // f83a6f3 unchanged gives the old ones (i0ho1o 4dor6m off, wdn3mx oavuie on). The first seven, 20cbcaf's own, did not move
 const BASE = 'gfkiiv af2q5q 1682150 xc3q2t 1sgvx41 3whr8x vurlvh q1vu5w 1jtotnc';   // GAME=<20cbcaf>/index.html node tools/knock.mjs --pins (2026-11-11), and this build with KNOCK off; Two Player and the count as above
 const ON = '3mv681 e4k4jm n80rro 1oy4gdg ksahst ot75uq ndxogl 12zkbzw iwauru';   // the same with the levers as README.md gives them (2026-11-11): re-pin only from a change to the knock-ons, on purpose (or as above)
+// The kick chase (src/chase.js, 2026-11-13) is off in BASE's and ON's runs (b4a25d5 exactly, so they stand as the knock-ons pinned them); SHIPS
+// is the game as it ships, both on: re-pin only from a change to the knock-ons or the chase, on purpose
+const SHIPS = 'ygp62r e4k4jm n80rro 1r95jtz ksahst ot75uq ndxogl 12zkbzw q2oqho';
+const CS = T.chase && T.chase.CHASE, CS0 = !!(CS && CS.on);
 const play = (seed, a, b, o, two) => { reseed(seed); T.newMatch(a, b, { halfLen:60, headless:true, humans:two ? [true, true] : [true, false], ...o }); let n = 0; while (!M().over && n < 200000) { bot(0); if (two) bot(1); T.update(STEP); n++; } return json([M().score, M().tries, M().stats, n]); };
 function pins() {
   const out = [], r0 = rndCalls();
@@ -149,14 +153,17 @@ function pins() {
   out.push(String(rndCalls() - r0));
   return out.map(fnv).join(' ');
 }
-if (run && args[0] === '--pins') { if (K) K.KNOCK.on = false; console.log(pins()); process.exit(0); }
+if (run && args[0] === '--pins') { if (K) K.KNOCK.on = false; if (CS) CS.on = false; console.log(pins()); process.exit(0); }
 if (run && !args.length) {
 begin('0 KNOCK off is 20cbcaf');
 {
+  if (CS) CS.on = false;
   setK({ on:false }); const off = pins(); reset(); const on = pins();
-  ok(off === BASE, `KNOCK off: AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as 20cbcaf (Two Player without its first-kick path since 2026-11-11), with the same draws (${off}, pinned ${BASE})`);
+  if (CS) CS.on = CS0; const ships = pins();
+  ok(off === BASE, `KNOCK off (and the kick chase): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as 20cbcaf (Two Player without its first-kick path since 2026-11-11), with the same draws (${off}, pinned ${BASE})`);
   ok(on.split(' ').slice(0, 8).every((h, i) => h !== BASE.split(' ')[i]), `KNOCK on moves every one of them, on purpose: the levers act everywhere (${on})`);
   ok(on === ON, `and plays them as pinned with the levers (${on}, pinned ${ON})`);
+  ok(!CS || ships === SHIPS, `with the kick chase too, as the game ships (${ships}, pinned ${SHIPS})`);
 }
 done('0 KNOCK off is 20cbcaf');
 

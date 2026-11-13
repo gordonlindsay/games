@@ -208,6 +208,7 @@ function matchTargets() {
     : slots;
   const lineX = mode === 'set' ? fx + dA*(SETGAP[M.set.kind] || 5) : null;
   assignMarks(T, D, pts, dA, fx, fy, lineX, mode, sweep);
+  if (mode === 'kick' && chaseLate(att)) for (const p of P) if (p.team === att && free(p)) T.set(p, edgeHold(p, 16));   // the kick chase: caught out, the catching side's men the computer runs keep running as they were for CHASE.react (src/chase.js)
   for (const p of P) if (p.bite > 0 && p.biteTo && T.has(p)) { const r = p.biteTo; T.set(p, { x:r.x + r.vx*0.3, y:r.y + r.vy*0.3, s:maxSpeed(p), a:15, pursue:true }); }   // a sold Dummy: he runs at the man the pass was shown to
   return T;
 }
@@ -560,6 +561,7 @@ function matchUpdate(dt) {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
   } else if (M.phase === 'goal') updateGoal(dt);
+  chaseTick(dt);                                           // the kick chase's clock and its early end (src/chase.js)
   pressTick(dt);                                           // PRESSURE's resets and marks, and a knocked-on ball's beat (src/contact.js)
   if (M.duelPending) startPendingDuel();
 }

@@ -166,6 +166,7 @@ function kickBall(team, x0, y0, x1, y1, T, H, kind) {
   M.phase = 'play';
   clearCharge();
   for (const t of [0, 1]) if (isHuman(t)) { const q = nearestFree(t, x1, y1); if (q) setCtrl(t, q); }
+  if (kind === 'kick') chaseStart(team, onside);           // an open-play kick: its onside men chase it, the other side is caught out (src/chase.js)
 }
 function chargeDown(c) {                                   // a tactical kick's roll: a defender on top of the kicker gets a 30% charge-down
   let q = null, bd = 1.7;
