@@ -1941,21 +1941,31 @@ plays exactly as b4a25d5, the build before, draw for draw.
 
 - **The call.** Whenever the ring of a side a person plays goes to a new carrier for any reason but that person's own pass, a word
   over him, following him for 0.9s on a dark plate edged in his side's colour: **Picked Up** (your side gathers a loose ball it did
-  not win from the other: its own spill, its own dropped pass, or any kick, since a kick is anyone's), **Intercepted**,
-  **Turnover** (a ruck won, or a loose ball gathered from the other side, a pressure spill among them) and **Offload** (in Pro Mode,
-  a teammate the computer runs offloads in the tackle and your player takes it; that offload used to be silent). It stands over his
-  pointer, or under his ring where the banner would cover it, and it rises 6px (it holds still under reduced motion). It is never
-  dropped by the two-tag cap for a plain tag while it lasts. His ring flashes for 0.4s, a ring going out and fading (none under
-  reduced motion), and the **Gather** sound plays, a synth recipe (the catch's slap, then two notes going up a fifth apart, made to
-  carry on a phone speaker): no recording was reused. When the ball comes from the other side, an 80ms hold with no shake, never
-  for Kids or Minis. Only where the ring is on him: in Pro Mode a teammate who wins the ball gets no call, and nothing at all for
-  the CPU, whose banner is its call. None of it in AI v AI, the demo or a drill. Kicks caught on the full, a ruck's own ball, a
-  scrum or a lineout and a pass that goes to the wrong man of yours are not called: the ring follows the ball there as it always did.
-- **The banners.** Intercepted and Turnover in the winning side's colour, as Line Break already was. On Fire waits for the banner of
-  the moment that lit it: a turnover or an interception's 0.9s, a Big Hit's 1.3s, a Try's 1.7s, then On Fire, instead of replacing
-  it in the same step (and not at all if the fire has gone out by then). A Line Break still lights it with its word over it at once.
-  A Line Break is not called within a second of a turnover or an interception on the same carrier: that moment's call is the
-  turnover's. Once the second is up he gets it if he is still clear, carried over On Fire's banner if that is showing.
+  not win from the other: its own spill, its own dropped pass, or any kick, a kick-off and a drop-out among them, since a kick is
+  anyone's), **Intercepted**, **Turnover** (a ruck won, or a loose ball gathered from the other side, a pressure spill among them)
+  and **Offload** (in Pro Mode, a teammate the computer runs offloads in the tackle and your player takes it; that offload used to be
+  silent). Where the side's colour would not show on the plate (under 3:1, ten sides of the 26, Scotland's navy at 1.4:1 among
+  them) it is lightened towards chalk until it does, keeping its hue; in Two Player the plate is edged in the seat's gold or pink, as
+  that player's ring and seat mark are. It stands over his pointer, under his ring where the banner would sit on it or between it and
+  him, or beside him where both are taken. That is chosen once, on its first frame, against the banner's laid-out box (not the box
+  its pop is still growing), so it never jumps. In Two Player it never sits on the other player's man, and beside him it goes on the
+  side away from that man. While he is off the frame its clock waits for him, for up to a second, so the call is there when the
+  camera finds him. It rises 6px (it holds still under reduced motion) and is never dropped by the two-tag cap for a plain tag while
+  it lasts. His ring flashes for 0.4s, a ring going out and fading (none under reduced motion), and the **Gather** sound plays, a
+  synth recipe (the catch's slap, then two notes going up a fifth apart, made to carry on a phone speaker): no recording was reused.
+  When the ball comes from the other side, an 80ms hold with no shake, never for Kids or Minis. Only where the ring is on him: in
+  Pro Mode a teammate who wins the ball gets no call, and nothing at all for the CPU, whose banner is its call. None of it in AI v
+  AI, the demo or a drill. Kicks caught on the full, a ruck's own ball, a scrum or a lineout and a pass that goes to the wrong man of
+  yours are not called: the ring follows the ball there as it always did. A kick-off or a drop-out gathered off the bounce by the
+  side receiving it is no longer a Turnover (banner, count or heat point), as a tactical kick and a goal kick already were not.
+- **The banners.** Intercepted and Turnover in the winning side's colour, as Line Break already was, lightened as the call's is. On
+  Fire waits for the banner of the moment that lit it: a turnover or an interception's 0.9s, a Big Hit's 1.3s, a Try's 1.7s, then On
+  Fire, instead of replacing it in the same step (and not at all if the fire has gone out by then). It also waits for any banner said
+  while it waits, and for open play: a try's On Fire shows once the conversion's close-up is over and the kick-off is taken, not
+  0.2s before the close-up wipes it. The crowd's roar and the buzz go with its banner, whenever that shows. A Line Break still
+  lights it with its word over it at once. A Line Break is not called within a second of a turnover or an interception on the same
+  carrier: that moment's call is the turnover's. Once the second is up he gets it if he is still clear, carried over On Fire's
+  banner if that is showing.
 - **No interception out of the passer's hands.** Interceptions stay automatic at the same odds (`pI`, src/ball.js), but nobody rolls
   for one until the ball is **1.5m** from where it left the passer's hands. That is further than the 1.1m an interceptor reaches, so
   a man standing at the passer's hands can never take it, and past the swing of his arms: about the first 0.1s of a flat pass's
@@ -1965,29 +1975,36 @@ plays exactly as b4a25d5, the build before, draw for draw.
   cannot intercept, take a missed pass or pick up a loose ball, and the AI no longer sends him after a loose ball. Offside is open
   play's law: a man more than 0.5m (the kick's margin) in front of the teammate who last played the ball as it was played, the
   passer, the kicker or the tackled man who spilled it, until he has been back behind that line. The other side is never offside.
+  At your own kick the ring goes to the nearest man who may play its bounce, the kicker or a man behind him, not to a man in front
+  of the kicker who would run over the bouncing ball and not be allowed it.
 
 **Measured** (`node tools/calls.mjs --balance`, SEED 7, the same seeded matches with CALLS off then on). A match, yours / the
 CPU's (AI v AI: home / away), before then after:
 
 | | AI v AI, Normal | Bot, Easy | Bot, Normal | Bot, Hard | Casual adult, Easy |
 |---|---|---|---|---|---|
-| Interceptions | 10.17 / 10.25, 9.00 / 9.09 | 3.36 / 1.98, 3.31 / 1.79 | 5.64 / 3.39, 5.16 / 3.06 | 6.26 / 4.47, 6.63 / 3.69 | 5.04 / 2.79, 4.38 / 2.47 |
-| **Both sides** | **20.42, 18.09** | **5.34, 5.10** | **9.03, 8.22** | **10.74, 10.31** | **7.83, 6.85** |
-| Clean (not knocked on) | 9.16 / 8.97, 8.13 / 8.16 | 3.00 / 1.75, 3.08 / 1.65 | 5.03 / 3.09, 4.64 / 2.83 | 5.63 / 4.10, 5.90 / 3.23 | 4.46 / 2.62, 3.96 / 2.22 |
+| Interceptions | 10.17 / 10.25, 9.00 / 9.09 | 3.36 / 1.98, 3.31 / 1.79 | 5.64 / 3.39, 5.16 / 3.06 | 6.26 / 4.47, 6.63 / 3.69 | 5.04 / 2.79, 4.64 / 2.65 |
+| **Both sides** | **20.42, 18.09** | **5.34, 5.10** | **9.03, 8.22** | **10.74, 10.31** | **7.83, 7.29** |
+| Clean (not knocked on) | 9.16 / 8.97, 8.13 / 8.16 | 3.00 / 1.75, 3.08 / 1.65 | 5.03 / 3.09, 4.64 / 2.83 | 5.63 / 4.10, 5.90 / 3.23 | 4.46 / 2.62, 4.24 / 2.40 |
 | Inside 1.5m of the release | 3.77 / 3.48, 0 | 1.09 / 0.91, 0 | 1.91 / 1.68, 0 | 2.36 / 2.38, 0 | 1.99 / 1.36, 0 |
 | By a man retiring | 0.54 / 0.55, 0 | 0.21 / 0.10, 0 | 0.35 / 0.23, 0 | 0.42 / 0.17, 0 | 0.27 / 0.24, 0 |
-| Turnovers, both sides | 14.05, 13.21 | 5.28, 4.46 | 6.67, 6.54 | 7.21, 6.95 | 6.67, 6.78 |
-| Your calls: Picked Up, Intercepted, Turnover | | 0.49, 3.08, 2.27 | 1.11, 4.64, 2.67 | 1.26, 5.90, 2.04 | 1.28, 3.96, 3.15 |
-| Won (yours; AI v AI the home side's) | 46%, 45% | 100%, 100% | 95%, 90% | 54%, 50% | 91%, 89% |
+| Turnovers, both sides | 14.05, 13.21 | 5.28, 4.46 | 6.67, 6.54 | 7.21, 6.95 | 6.67, 6.64 |
+| Your calls: Picked Up, Intercepted, Turnover | | 0.49, 3.08, 2.27 | 1.11, 4.64, 2.67 | 1.26, 5.90, 2.04 | 1.20, 4.24, 3.12 |
+| Won (yours; AI v AI the home side's) | 46%, 45% | 100%, 100% | 95%, 90% | 54%, 50% | 91%, 87% |
 
 AI v AI is 120 matches at 4-minute halves; the bot (Quick Match's rules, 2-minute halves) 80 a level; the casual adult
-(`PROFILE=casual`, Easy) 100. Interceptions fall by 4 to 13% (both sides), not by the third that came out of the hands: most of
+(`PROFILE=casual`, Easy) 100. The casual adult's column was measured again after the review fixes (his rare chips now ring a man
+who may play the bounce); the others did not move. Interceptions fall by 4 to 13% (both sides), not by the third that came out of the hands: most of
 those men still had their roll a step or two later, once the ball was 1.5m out and still within their reach. The ones taken from
 the hands and by a man retiring are gone. The bot's 95% to 90% on Normal is mostly the 80's noise: over 320 it is 95% to 93%
 (± 1), interceptions 8.84 to 8.00 a match, yours 5.51 to 5.00 and the CPU's 3.34 to 3.00; the casual adult over 400 wins 91%
-then 91%, interceptions 8.33 to 7.15. Fewer interceptions both ways cost a side that intercepts more than it is intercepted
+then 92% (± 1), interceptions 8.33 to 7.11. Fewer interceptions both ways cost a side that intercepts more than it is intercepted
 a little, which is you. The man under your ring met a loose ball he may not pick up (retiring or offside) once in 240 matches
-(the bot on Easy and on Normal and the casual adult, 80 each). Offload is 0 here: the bot and the casual adult play Whole Team, where
+(the bot on Easy and on Normal and the casual adult, 80 each), but the bot never kicks in open play and the casual adult only
+chips now and then. Your own kicks, staged 150
+times at each of two lengths in bot matches (SEED 7): before the ring went to a man who may play the bounce, it went to a man in
+front of the kicker 43 times in 150 at each length, and he reached the ball and could not have it 6 times in 300; now 0 and 0, with
+the ball kept 19 and 13 times in 150 (19 and 12 before). Offload is 0 here: the bot and the casual adult play Whole Team, where
 the offload is yours to press. The calls are 6 to 9 a match where you play (2-minute halves), about two a minute of play, counted
 apart from the tags (`call_*`, not `tag_*`), so the contact census's tag stream is as it was.
 

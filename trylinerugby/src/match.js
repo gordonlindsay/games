@@ -311,6 +311,6 @@ function pickUp(p) {
   const turn = p.team !== b.last && !b.kickInfo;
   setCarrier(p); sfx('catch');
   if (turn) { M.stats.turnovers++; say('Turnover', 'small', callCol(p.team)); heat(p.team, 'turnover'); callWon(p); }
-  possCall(p, turn ? 'Turnover' : 'Picked Up', turn);       // the ring's man has it: say how (src/calls.js). A kick is anyone's, so a kick gathered is Picked Up
+  possCall(p, turn ? 'Turnover' : 'Picked Up', turn);       // the ring's man has it: say how (src/calls.js). A kick is anyone's, a kick-off and a drop-out among them, so a kick gathered is Picked Up
 }
 

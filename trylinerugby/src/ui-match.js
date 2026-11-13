@@ -20,7 +20,7 @@ function say(text, size, team, grade, low) {
   if (!M || M.demo || M.headless) return;
   sayNote(text, size, team);                                // On Fire waits for this one if it was lit in this step (src/calls.js)
   const el = $('banner');
-  const k = team != null ? showCol(team) : 'var(--flood)';
+  const k = team != null ? bannerInk(text, team) : 'var(--flood)';   // Intercepted and Turnover lightened where the side's colour would not show on the plate (src/calls.js)
   el.innerHTML = '';
   el.classList.toggle('cut', !!M.cut);
   el.classList.toggle('lo', !!low);                       // a goal verdict sits under the crossbar while the ball is up at the posts

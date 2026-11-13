@@ -20,7 +20,7 @@ function heat(t, why, grade) {                               // grade: a word ov
   F.heat = Math.min(need, F.heat + ((edgeOn(t) && EDGE.fire.pts || ARCADE.fire.pts)[why] || 0));   // on Easy your side's moments are EDGE.fire.pts
   if (F.heat < need) return;
   F.heat = 0; F.t = fireSecs(t)*staminaLasts(t); st('fire' + t);   // longer or shorter by the side's Stamina (src/stamina.js); on Easy yours burns EDGE.fire.secs
-  fireSay(t, grade); sfx('roar'); buzz(50, t);                 // its banner after the banner of the moment that lit it, if one was said this step (src/calls.js)
+  if (!fireSay(t, grade)) { sfx('roar'); buzz(50, t); }       // its banner after the banner of the moment that lit it, if one was said this step, and its roar with its banner (src/calls.js)
 }
 function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }
 function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }

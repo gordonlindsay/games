@@ -105,7 +105,7 @@ function render(dt) {
   }
   drawCalls(dt, t => {                                     // a possession call stands over his pointer, or hangs under his ring (src/calls.js)
     const [wx, wy] = t.p ? drawPos(t.p) : [t.x, t.y], [x, y] = toS(wx, wy);
-    return x < 0 || x > V.W || y < 0 || y > V.H ? null : { x, top:y - r*2.4 - 5, foot:y + r*1.75 + 6 };
+    return x < 0 || x > V.W || y < 0 || y > V.H ? null : { x, top:y - r*2.4 - (M.two ? 18 : 5), foot:y + (M.two ? r*2.1 + 13 : r*1.75 + 6), half:r*1.55 + (M.two ? 5 : 0) };   // Two Player: over his seat mark, under his cue, outside his Sprint arc
   });
   const g = ctx.createRadialGradient(V.W/2, V.H/2, Math.min(V.W, V.H)*0.35, V.W/2, V.H/2, Math.max(V.W, V.H)*0.75);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');

@@ -2,8 +2,9 @@
 // (your side's own loose ball Picked Up, an interception, a ruck turnover, a pressure turnover, a silent offload in Pro Mode), the
 // banners in the winner's colour, On Fire waiting for its moment's banner, the Line Break held after a turnover, the call's place in the
 // two-tag cap, no interception out of the passer's hands, nobody down, retiring or offside intercepting, taking a missed pass or picking
-// up a loose ball, Kids and Minis without the beat, AI v AI and the demo silent, reduced motion without the flash, and CALLS off playing
-// exactly as b4a25d5, the build before, draw for draw.
+// up a loose ball, Kids and Minis without the beat, AI v AI and the demo silent, reduced motion without the flash, where the call stands
+// (chosen once, never jumping, never on the other player's man, waiting for a man off the frame), your own kick's ring on a man who may
+// play it, every side's colour readable on the plate, and CALLS off playing exactly as b4a25d5, the build before, draw for draw.
 // node tools/calls.mjs              (SEED=23 unless set; VERBOSE=1 lists every check; SHOTS=<dir> moves the screenshots; NO_BROWSER=1 skips them)
 // node tools/calls.mjs --pins       prints this build's fingerprints with CALLS off; GAME=<b4a25d5>/index.html node tools/calls.mjs --pins pinned BASE
 // node tools/calls.mjs --balance [ai|bot|casual|all]   README.md's before-and-after interception tables: seeded matches with CALLS off and
@@ -150,8 +151,8 @@ done();
 
 begin('1 the table');
 {
-  ok(json(CC) === json({ on:true, call:true, life:0.9, flash:0.4, beat:80, colour:true, fire:true, lbGap:1.0, release:1.5, fit:true }), `CALLS as README.md gives it (${json(CC)})`);
-  ok(json(CL.CALLS_OFF) === json({ call:false, life:0, flash:0, beat:0, colour:false, fire:false, lbGap:0, release:0, fit:false }), 'off, every lever reads b4a25d5\'s value: nothing');
+  ok(json(CC) === json({ on:true, call:true, life:0.9, hold:1.0, flash:0.4, beat:80, colour:true, fire:true, lbGap:1.0, release:1.5, fit:true, kicks:true }), `CALLS as README.md gives it (${json(CC)})`);
+  ok(json(CL.CALLS_OFF) === json({ call:false, life:0, hold:0, flash:0, beat:0, colour:false, fire:false, lbGap:0, release:0, fit:false, kicks:false }), 'off, every lever reads b4a25d5\'s value: nothing');
   const keys = Object.keys(CL.CALLS_OFF);
   ok(keys.every(k => CL.lv(k) === CC[k]), 'callsLv reads the table while it is on');
   setC({ on:false }); ok(keys.every(k => CL.lv(k) === CL.CALLS_OFF[k]), 'and b4a25d5\'s values while it is off, whatever the table says'); resetC();
@@ -160,7 +161,7 @@ begin('1 the table');
   const game = fs.readFileSync(new URL('../game.js', import.meta.url), 'utf8'), bare = game.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
   const reads = new Set([...bare.matchAll(/callsLv\('([a-zA-Z]+)'\)/g)].map(m => m[1]));
   ok(keys.every(k => reads.has(k)) && [...reads].every(k => keys.includes(k)), `every lever is read through callsLv (${[...reads].sort().join(', ')})`);
-  ok(!/CALLS\.(?:call|life|flash|beat|colour|fire|lbGap|release|fit)\b/.test(bare), 'and never straight from the table');
+  ok(!/CALLS\.(?:call|life|hold|flash|beat|colour|fire|lbGap|release|fit|kicks)\b/.test(bare), 'and never straight from the table');
   ok(fs.readFileSync(new URL('./harness.mjs', import.meta.url), 'utf8').includes("js.replace('// CALLS_TUNE'"), 'the harness takes CALLS=');
   const man = JSON.parse(fs.readFileSync(new URL('../src/manifest.json', import.meta.url), 'utf8'));
   ok(man.indexOf('calls.js') > man.indexOf('knock.js') && man.indexOf('calls.js') < man.indexOf('ball.js'), 'src/calls.js is in the bundle, after the knock-ons and before the ball');
@@ -188,7 +189,7 @@ begin('2 each path: its call, its colour, its sound');
   let r0 = rndCalls(); CL.updateLoose(STEP);
   let c = calls()[0];
   ok(m.ball.carrier === p && ctrl(0) === p, 'your own loose ball: your man nearest it gathers it, and the ring goes to him');
-  ok(c && c.text === 'Picked Up' && c.p === p && c.k === X.showCol(0) && m.tags.length === 1, `called over him: ${c && c.text}, in your colour (${c && c.k})`);
+  ok(c && c.text === 'Picked Up' && c.p === p && c.k === CL.callInk(0) && m.tags.length === 1, `called over him: ${c && c.text}, in your colour (${c && c.k})`);
   ok(heard.join() === 'catch,gather', `the catch, then the Gather sound (${heard.join(', ')})`);
   ok(m.flash && m.flash.p === p && m.flash.t === 0, 'his ring flashes');
   ok(m.stop === 0 && !said.length, 'no beat and no banner: the ball was yours already');
@@ -197,32 +198,47 @@ begin('2 each path: its call, its colour, its sound');
   m = scene(); const k = m.players[5]; k.x = 50; k.y = 30; loose(m, 50.2, 30, 1, { kick:true });
   CL.updateLoose(STEP); c = calls()[0];
   ok(m.ball.carrier === k && c && c.text === 'Picked Up' && m.stop === 0 && !said.length, 'the CPU\'s kick, bounced and gathered: Picked Up, no beat, no Turnover (a kick is anyone\'s)');
+  // a kick-off and a drop-out are kicks too: the CPU's, bounced and gathered by yours, is Picked Up with no beat, and no Turnover
+  const restart = (kind, on = true) => {
+    if (!on) setC({ on:false });
+    const m = scene(), g = m.players[5]; g.x = 47; g.y = 35;
+    CL.kickBall(1, 60, 35, 47.3, 35, 2.2, 11, 'restart');
+    Object.assign(m.ball, { state:'loose', f:null, x:47.3, y:35, z:0, vx:0, vy:0, vz:0 });   // down off its bounce, as updateBallAir leaves it
+    said.length = 0; heard.length = 0; CL.updateLoose(STEP);
+    const r = { m, g, c:calls()[0], said:said.join(), heard:heard.join() };
+    if (!on) resetC();
+    return r;
+  };
+  let R = restart();
+  ok(R.m.ball.carrier === R.g && R.c && R.c.text === 'Picked Up' && R.m.stop === 0 && !R.said && !R.m.stats.turnovers && R.heard === 'catch,gather', `the CPU's kick-off off the bounce, gathered by yours: Picked Up, no beat, no Turnover banner or count (${R.c && R.c.text}, ${R.heard})`);
+  R = restart('restart', false);
+  ok(R.m.ball.carrier === R.g && !R.c && R.said === 'Turnover' && R.m.stats.turnovers === 1, 'CALLS off: a Turnover, as b4a25d5 counted it');
   // Intercepted
   m = scene(); const q = m.players[5], f = { kind:'pass', team:1, x0:66, y0:35, x1:56, y1:35, t:0.2, T:0.6, H:0.5, z0:1.1, z1:1.1, rolled:new Set(), onside:null, target:m.players[9], sure:false, boost:null, long:false };
   q.x = 62; q.y = 35;
   const seed = seedFor(() => { scene(); Object.assign(M().ball, { state:'air', f:{ ...f, rolled:new Set() }, x:62.2, y:35, z:1 }); Object.assign(M().players[5], { x:62, y:35 }); CL.catchBall(M().players[5], 'intercept'); return M().ball.carrier === M().players[5]; });
   m = M(); c = calls()[0];
   ok(seed != null && m.stats.intercepts === 1 && ctrl(0) === m.players[5], `your man intercepts the CPU's pass and the ring has him (seed ${seed})`);
-  ok(said.join() === 'Intercepted' && bannerCol() === X.showCol(0), `Intercepted in your colour (${said.join()}, ${bannerCol()}; it was the yellow for either side)`);
-  ok(c && c.text === 'Intercepted' && c.p === m.players[5] && c.k === X.showCol(0), 'called over him');
+  ok(said.join() === 'Intercepted' && bannerCol() === CL.callInk(0), `Intercepted in your colour (${said.join()}, ${bannerCol()}; it was the yellow for either side)`);
+  ok(c && c.text === 'Intercepted' && c.p === m.players[5] && c.k === CL.callInk(0), 'called over him');
   ok(heard.includes('gather') && m.flash && near(m.stop, CC.beat/1000) && !(m.shake > 0), `the Gather sound, the flash and a ${CC.beat}ms beat with no shake: the ball came your way`);
   // the CPU intercepting yours: its banner in its colour is all
   seedFor(() => { scene(); Object.assign(M().ball, { state:'air', f:{ ...f, team:0, rolled:new Set(), target:M().players[2] }, x:62.2, y:35, z:1 }); Object.assign(M().players[9], { x:62, y:35 }); CL.catchBall(M().players[9], 'intercept'); return M().ball.carrier === M().players[9]; });
   m = M();
-  ok(said.join() === 'Intercepted' && bannerCol() === X.showCol(1) && !calls().length && !heard.includes('gather') && !m.flash && m.stop === 0, `the CPU intercepts yours: Intercepted in its colour (${bannerCol()}), and no call, sound, flash or beat`);
+  ok(said.join() === 'Intercepted' && bannerCol() === CL.callInk(1) && !calls().length && !heard.includes('gather') && !m.flash && m.stop === 0, `the CPU intercepts yours: Intercepted in its colour (${bannerCol()}), and no call, sound, flash or beat`);
   // a ruck turnover: your side wins the CPU's ruck
   const ruck = (att, o = {}) => seedFor(() => { const m = scene(o); m.players[3].x = 61; m.players[3].y = 36; m.players[10].x = 59; m.players[10].y = 34; m.phase = 'play'; CL.resolveRuck({ team:att, x:60, y:35, dom:true, domP:0.4 }); return M().ball.carrier && M().ball.carrier.team !== att; });
   ok(ruck(1) != null, 'your side turns over the CPU\'s ruck');
   m = M(); c = calls()[0];
-  ok(said.join() === 'Turnover' && bannerCol() === X.showCol(0), `Turnover in your colour (${bannerCol()})`);
-  ok(c && c.text === 'Turnover' && c.p === m.ball.carrier && ctrl(0) === c.p && c.k === X.showCol(0), 'called over the man the ring goes to');
+  ok(said.join() === 'Turnover' && bannerCol() === CL.callInk(0), `Turnover in your colour (${bannerCol()})`);
+  ok(c && c.text === 'Turnover' && c.p === m.ball.carrier && ctrl(0) === c.p && c.k === CL.callInk(0), 'called over the man the ring goes to');
   ok(heard.includes('gather') && m.flash && near(m.stop, CC.beat/1000), 'the Gather sound, the flash and the beat');
   ruck(0);
-  ok(said.join() === 'Turnover' && bannerCol() === X.showCol(1) && !calls().length && M().stop === 0, `the CPU turns over yours: Turnover in its colour (${bannerCol()}), nothing else`);
+  ok(said.join() === 'Turnover' && bannerCol() === CL.callInk(1) && !calls().length && M().stop === 0, `the CPU turns over yours: Turnover in its colour (${bannerCol()}), nothing else`);
   // a pressure turnover: the CPU's carrier spills under pressure and your man gathers the egg
   m = scene(); const g = m.players[6]; g.x = 70; g.y = 40; const b = loose(m, 70.2, 40, 1); T.press.eggStart(b, 1, true, 7); b.egg.rolling = true; b.z = 0;
   r0 = rndCalls(); CL.updateLoose(STEP); c = calls()[0];
-  ok(m.ball.carrier === g && said.join() === 'Turnover' && bannerCol() === X.showCol(0) && (m.stats.pressTurn || 0) === 1, 'the CPU\'s pressure spill gathered by yours: Turnover in your colour, and the surge');
+  ok(m.ball.carrier === g && said.join() === 'Turnover' && bannerCol() === CL.callInk(0) && (m.stats.pressTurn || 0) === 1, 'the CPU\'s pressure spill gathered by yours: Turnover in your colour, and the surge');
   ok(c && c.text === 'Turnover' && c.p === g && heard.includes('gather') && m.flash && near(m.stop, CC.beat/1000) && rndCalls() === r0, 'called over him, heard, the flash and the beat, and no random number');
 }
 done();
@@ -252,7 +268,7 @@ begin('2b the silent offload in Pro Mode');
   let S = want(true);
   let c = calls()[0];
   ok(S && T.careerPro && S.m.careerPro && S.f.call === 'Offload' && S.r === S.me && S.m.ball.carrier === S.me, 'Pro Mode: a teammate the computer runs offloads to your player, who takes it');
-  ok(c && c.text === 'Offload' && c.p === S.me && c.k === X.showCol(0) && calls().length === 1, 'called over your player: Offload, in your colour');
+  ok(c && c.text === 'Offload' && c.p === S.me && c.k === CL.callInk(0) && calls().length === 1, 'called over your player: Offload, in your colour');
   ok(heard.includes('gather') && S.m.flash && S.m.stop === 0 && !said.length, 'the Gather sound and the flash; no beat and no banner (it never left your side)');
   ok(!S.m.tags.some(t => !t.call && t.text === 'Offload'), 'and no tag over the teammate who threw it: the call is over the man the ring is on');
   T.debug.exitMatch(); T.career.set(null);
@@ -269,14 +285,23 @@ begin('3 On Fire after its moment');
 {
   // a turnover lights On Fire: Turnover shows, On Fire follows when its 0.9s are up, instead of replacing it in the same step
   const lit = () => { const m = scene({ arcade:true }); m.fire[0].heat = T.arcade.ARCADE.fire.need - 1; const g = m.players[6]; g.x = 70; g.y = 40; loose(m, 70.2, 40, 1); CL.updateLoose(STEP); return m; };
+  const roars = () => heard.filter(k => k === 'roar').length;
   let m = lit();
   ok(T.arcade.onFire(0) && said.join() === 'Turnover' && m.fireQ && m.fireQ.t === 0 && m.fireQ.at === m.stepN + Math.round(0.9/STEP), `lit by a turnover: Turnover is said, and On Fire waits ${Math.round(0.9/STEP)} steps (${said.join(', ')})`);
+  ok(!roars(), 'and its roar waits with it: none as it is lit');
   m.stepN += Math.round(0.9/STEP) - 1; CL.callsTick();
-  ok(said.join() === 'Turnover', 'not yet, a step before');
+  ok(said.join() === 'Turnover' && !roars(), 'not yet, a step before');
   m.stepN++; CL.callsTick();
   ok(said.join() === 'Turnover,On Fire' && /big fire/.test(lastMsg().className) && bannerCol() === X.showCol(0) && !m.fireQ, `then On Fire, after it (${said.join(', ')})`);
+  m.stepN++; CL.callsTick();
+  ok(roars() === 1, 'its roar with its banner (the step after, once nothing in its own step sent it on)');
   setC({ on:false }); m = lit();
-  ok(said.join() === 'Turnover,On Fire' && !m.fireQ, 'CALLS off: On Fire replaces Turnover in the same step, as b4a25d5 did'); resetC();
+  ok(said.join() === 'Turnover,On Fire' && !m.fireQ && roars() === 1, 'CALLS off: On Fire replaces Turnover in the same step, roaring as it is lit, as b4a25d5 did'); resetC();
+  // another banner while it waits holds it for that one's time too; and it waits for open play
+  m = lit(); CL.say('Dropped', 'small'); ok(m.fireQ.at === m.stepN + Math.round(0.9/STEP), 'a banner said while it waits: it waits that one\'s time too');
+  m.stepN = m.fireQ.at; m.phase = 'set'; m.set = { kind:'scrum', t:1 }; CL.callsTick(); ok(m.fireQ && said.join() === 'Turnover,Dropped', 'and while a set piece is on, it waits for play');
+  m.phase = 'play'; m.set = null; m.cut = { kind:'duel' }; CL.callsTick(); ok(m.fireQ, 'and under a close-up'); m.cut = null;
+  CL.callsTick(); ok(!m.fireQ && said.join() === 'Turnover,Dropped,On Fire', 'then shows in open play');
   // an interception lights it: the same
   m = scene({ arcade:true }); m.fire[0].heat = T.arcade.ARCADE.fire.need - 1;
   seedFor(() => { const m = scene({ arcade:true }); m.fire[0].heat = T.arcade.ARCADE.fire.need - 1; Object.assign(m.ball, { state:'air', f:{ kind:'pass', team:1, x0:66, y0:35, x1:56, y1:35, t:0.2, T:0.6, H:0.5, z0:1.1, z1:1.1, rolled:new Set(), onside:null, target:m.players[9], sure:false, long:false }, x:62.2, y:35, z:1 }); Object.assign(m.players[5], { x:62, y:35 }); CL.catchBall(m.players[5], 'intercept'); return M().ball.carrier === m.players[5]; });
@@ -290,6 +315,36 @@ begin('3 On Fire after its moment');
   m = scene({ arcade:true }); m.fire[0].heat = T.arcade.ARCADE.fire.need - 1;
   CL.heat(0, 'try'); CL.say('Try', 'big', 0);
   ok(m.fireQ && m.fireQ.at === m.stepN + Math.round(1.7/STEP), 'a try: after the Try banner\'s 1.7s');
+  // a real try that lights it: the Try banner, the conversion's close-up, the kick-off; On Fire shows once play is on again, and
+  // stands its 1.3s with nothing clearing it (it used to show 0.22s before the conversion's close-up wiped it)
+  const tryFire = on => {
+    if (!on) setC({ on:false });
+    settings.tut = D.TUT_IDS.slice(); settings.tips = D.COACH_IDS.slice();
+    const m = scene({ arcade:true }); m.fire[0].heat = T.arcade.ARCADE.fire.need - 2;
+    const el = document.getElementById('banner'); let html = '', blank = 0;
+    Object.defineProperty(el, 'innerHTML', { configurable:true, get:() => html, set:v => { html = String(v); if (!html) blank++; } });
+    const p = m.players[3]; p.x = 111; p.y = 35; CL.scoreTry(p);
+    const r = { lit:said.join(), roar0:roars(), shown:null, cleared:false, cuts:0 };
+    const fires = () => said.filter(w => w === 'On Fire').length, f0 = fires();
+    for (let n = 0; n < 9000 && r.shown == null && !M().over; n++) {
+      bot(0); T.update(STEP); if (M().cut) r.cuts++;
+      if (fires() > f0) r.shown = { n, phase:M().phase, cut:!!M().cut, set:M().set && M().set.kind, said:said.length, blank, roar:roars() };
+    }
+    if (r.shown) {
+      for (let i = 0; i < Math.round(1.3/STEP); i++) { bot(0); T.update(STEP); if (M().cut) r.cleared = true; }
+      r.cleared = r.cleared || blank - r.shown.blank !== said.length - r.shown.said;   // say() blanks the banner before writing it: any other blank is clearBanner
+      r.after = said.slice(r.shown.said); r.roar = roars();
+    }
+    delete el.innerHTML; if (!on) resetC();
+    return r;
+  };
+  let F = tryFire(true);
+  ok(F.lit === 'On Fire,Try' && F.roar0 === 1, `a try lights it: On Fire, then Try over it in the same step, and only the try's own roar (${F.lit}, ${F.roar0})`);
+  ok(F.shown && F.cuts > 0 && F.shown.phase === 'play' && !F.shown.cut, `On Fire shows once the conversion's close-up is over and play is on again (${F.shown ? F.shown.n + ' steps on, ' + F.shown.phase : 'never'}, ${F.cuts} close-up steps before it)`);
+  ok(F.shown && !F.cleared && !F.after.length, `and stands its 1.3s: no close-up, no clearing, no banner over it (${F.after ? F.after.join() || 'none' : '?'})`);
+  ok(F.shown && F.roar === F.roar0 + 1, 'its roar with it');
+  F = tryFire(false);
+  ok(F.lit === 'On Fire,Try' && F.roar0 === 2 && !F.shown, 'CALLS off: Try replaces On Fire in the same step and it is never seen, as b4a25d5 did');
   // a Line Break's word over it still shows at once
   m = scene({ arcade:true, diff:0 }); m.fire[0].heat = E.fireNeed(0) - 1; CL.say('Line Break', 'small', 0); made.length = 0; CL.heat(0, 'line', 'Line Break');
   const grade = made.find(e => e.className === 'grade');
@@ -465,7 +520,7 @@ begin('9 AI v AI, the demo, a drill');
   // Two Player: both sides are people's, each called in its own colour, and every change of side is a beat
   const m = scene({ humans:[true, true] }), g = m.players[12]; g.x = 40; g.y = 30; loose(m, 39.8, 30, 0); CL.updateLoose(STEP);
   const c = calls()[0];
-  ok(c && c.p === g && c.k === X.showCol(1) && bannerCol() === X.showCol(1) && near(m.stop, CC.beat/1000), 'Two Player: the away side\'s turnover is called over its man in its colour, with the beat');
+  ok(c && c.p === g && c.k === T.behind.ringCol(1) && c.k === '#ff5fd2' && bannerCol() === CL.callInk(1) && near(m.stop, CC.beat/1000), 'Two Player: the away side\'s turnover is called over its man, its plate in Player 2\'s pink as his ring and seat mark are, its banner in its side\'s colour, with the beat');
   // a drill has none: possCall stays out of practice
   T.practice.start('pass'); const P = M(); const dp = P.players.find(p => p.team === 0);
   ok(CL.possCall(dp, 'Picked Up', true) === false && !P.tags.some(t => t.call), 'a drill: no call');
@@ -518,6 +573,102 @@ begin('11 the words');
 }
 done();
 
+begin('12 where the call stands');
+{
+  D.view(844, 390);
+  const el = document.getElementById('banner'), msg = { offsetLeft:302, offsetTop:0, offsetWidth:240, offsetHeight:40 };
+  const banner = on => { el.firstElementChild = on ? msg : null; el.rect = on ? { left:0, top:117, right:844, bottom:157, width:844, height:40 } : null; };
+  const m = scene(), p = m.players[4]; T.sides.setCtrl(0, p);
+  const call = () => ({ text:'Intercepted', x:0, y:0, t:0, k:'#fff', call:true, p, n:m.stepN });
+  const drawn = (at, n = 1, dt = 1/60) => { const ys = []; globalThis.__ctxSpy = (k, a) => { if (k === 'fillText' && a[0] === 'INTERCEPTED') ys.push([a[1], a[2]]); }; for (let i = 0; i < n; i++) CL.drawCalls(dt, at); delete globalThis.__ctxSpy; return ys; };
+  // the banner (laid out at 117 to 157, 302 to 542) over the man's pointer: the call goes under his ring at once, and stays there
+  banner(true); m.tags = [call()];
+  let pt = { x:420, top:150, foot:205, half:14 }, ys = drawn(() => pt);
+  ok(m.tags[0].place === 'under' && ys.length === 1 && ys[0][1] > pt.foot, `the banner over his pointer: under his ring from the first frame (${m.tags[0].place}, y ${ys[0] && ys[0][1].toFixed(0)})`);
+  pt = { x:700, top:150, foot:205, half:14 }; ys = drawn(() => pt);
+  ok(m.tags[0].place === 'under' && ys[0][1] > pt.foot, 'and stays there when he runs clear of it: chosen once, it never jumps');
+  m.tags = [call()]; pt = { x:420, top:230, foot:290, half:14 }; ys = drawn(() => pt);
+  ok(m.tags[0].place === 'over' && ys[0][1] < pt.top, 'clear of the banner: over his pointer, as before');
+  m.tags = [call()]; pt = { x:420, top:186, foot:240, half:14 }; ys = drawn(() => pt);
+  ok(m.tags[0].place === 'under', `the plate over him would touch the banner's laid-out box (not the box its pop is still growing): under (${m.tags[0].place})`);
+  banner(false); m.tags = [call()]; ys = drawn(() => pt);
+  ok(m.tags[0].place === 'over', 'no banner: over');
+  m.tags = [call()]; ys = drawn(() => ({ x:700, top:230, foot:290, half:14 }));
+  ok(m.tags[0].place === 'over' && ys[0][0] < 700, `by the buttons: still over him, kept inside the tags' box as a tag is (x ${ys[0] && ys[0][0].toFixed(0)})`);
+  // over a whole life the call moves only with him and its 6px rise
+  banner(true); m.tags = [call()]; let x = 420; ys = drawn(() => ({ x:(x += 1.5), top:150, foot:205, half:14 }), Math.round(CC.life*60) - 1);
+  const jump = Math.max(...ys.slice(1).map((v, i) => Math.abs(v[1] - ys[i][1])));
+  ok(ys.length >= 50 && jump < 1, `drawn a whole life with the banner up and him running across it: no jump (${ys.length} frames, the most it moved in a frame ${jump.toFixed(2)}px)`);
+  // off the frame: its clock waits for him (CALLS.hold), so it is there when the camera finds him
+  banner(false); m.tags = [call()];
+  drawn(() => null, 30); ok(m.tags[0].t === 0 && near(m.tags[0].hid, 0.5, 1e-6), 'off the frame for half a second: its clock waits');
+  ys = drawn(() => ({ x:400, top:230, foot:290, half:14 }));
+  ok(ys.length === 1 && m.tags[0].t > 0 && m.tags[0].t < 0.05, 'and it is drawn, fresh, when he comes into the frame');
+  m.tags = [call()]; drawn(() => null, 90); ok(m.tags[0].t > 0.45 && m.tags[0].t < 0.55, `not for ever: past ${CC.hold}s off the frame its clock runs again (${m.tags[0].t.toFixed(2)}s)`);
+  ok(CL.lv('hold') === CC.hold, 'CALLS.hold');
+  // Two Player: never on the other person's man; beside him, away from that man, where over and under are both taken
+  const two = scene({ humans:[true, true] }), me = two.players[4], other = two.players[11];
+  T.sides.setCtrl(0, me); T.sides.setCtrl(1, other);
+  const where = { [me.n + ':' + me.team]:{ x:420, top:150, foot:220, half:20 }, [other.n + ':' + other.team]:{ x:430, top:225, foot:300, half:20 } };
+  const at2 = t => where[t.p.n + ':' + t.p.team];
+  banner(true); two.tags = [{ ...call(), p:me, k:T.behind.ringCol(0) }]; ys = drawn(at2);
+  ok(two.tags[0].place === 'left' && ys[0][0] < 420 - 20, `Two Player: the banner over him and the other person's man under him: beside him, on the side away from that man (${two.tags[0].place})`);
+  where[other.n + ':' + other.team] = { x:640, top:225, foot:300, half:20 }; two.tags = [{ ...call(), p:me, k:T.behind.ringCol(0) }]; drawn(at2);
+  ok(two.tags[0].place === 'under', 'the other man well clear: under, as on your own');
+  banner(false); where[other.n + ':' + other.team] = { x:420, top:60, foot:140, half:20 }; two.tags = [{ ...call(), p:me, k:T.behind.ringCol(0) }]; drawn(at2);
+  ok(two.tags[0].place === 'under', 'the other man just above him: under, never on him');
+  banner(false); D.view(844, 390);
+}
+done();
+
+begin('13 your own kick: the ring on a man who may play it');
+{
+  // the kicker kicks from x 40 to x 56; one teammate stands 15m in front of him by where it lands (offside for it), another a metre behind him
+  const kick = on => {
+    if (!on) setC({ on:false });
+    const m = scene(), k = m.players[2], ahead = m.players[4], back = m.players[5];
+    T.sides.setCtrl(0, k); k.x = 40; k.y = 35; ahead.x = 55; ahead.y = 36; back.x = 39; back.y = 40;
+    for (const p of m.players) if (p.team === 0 && p !== k && p !== ahead && p !== back) { p.x = 20; p.y = 5 + p.n*8; }
+    CL.kickBall(0, 40, 35, 56, 36, 1.5, 8, 'kick');
+    const r = { ring:ctrl(0), k, ahead, back, offAhead:CL.offsideMan(ahead), their:ctrl(1) };
+    if (!on) resetC();
+    return r;
+  };
+  let r = kick(true);
+  ok(r.offAhead && r.ring !== r.ahead && CL.canPlay(r.ring), `your own kick: the ring goes to the nearest man who may play its bounce (${r.ring === r.k ? 'the kicker' : 'the man behind him'}), not the man in front of the kicker by where it lands, who may not`);
+  ok(r.ring === r.k || r.ring === r.back, 'one level with or behind the kicker');
+  r = kick(false);
+  ok(r.ring === r.ahead, 'CALLS off: the nearest man to where it lands, offside or not, as b4a25d5 did');
+  // nobody onside to be had: as before
+  const m = scene(); T.sides.setCtrl(0, m.players[2]); for (const p of m.players) if (p.team === 0) { p.x = 70; p.y = 35 + p.n; } m.players[2].x = 40;
+  m.players[2].down = 1; CL.kickBall(0, 40, 35, 72, 36, 1.5, 8, 'kick');
+  ok(ctrl(0) && ctrl(0).team === 0 && !CL.canPlay(ctrl(0)), 'with no man who may play it, the nearest one, as before');
+  // the CPU's kick: your ring goes to your man nearest the landing, as before (nobody of yours is offside for it)
+  const n = scene(); n.players[4].x = 60; n.players[4].y = 35; CL.kickBall(1, 80, 35, 61, 35, 1.5, 8, 'kick');
+  ok(ctrl(0) === n.players[4], 'the CPU\'s kick: your nearest man, as ever');
+}
+done();
+
+begin('14 the colour on the plate');
+{
+  const all = [...X.NATIONS, ...X.CLUBS], low = [], kept = [];
+  for (const t of all) {
+    T.newMatch(t, all.find(o => o !== t && o.cat === t.cat) || all[0], { halfLen:60, headless:true, humans:[true, false] });
+    for (const s of [0, 1]) {
+      const ink = CL.callInk(s), show = X.showCol(s), r = CL.contrastOf(ink, CL.CALL_PLATE);
+      if (r < 3) low.push(`${M().nat[s].id} ${ink} ${r.toFixed(2)}`);
+      if (CL.contrastOf(show, CL.CALL_PLATE) >= 3 ? ink !== show : ink === show) kept.push(M().nat[s].id);
+    }
+  }
+  ok(!low.length, `every side's call and banner stand out on the dark plate, 3:1 or more (${all.length} sides, both kits: ${low.join(', ') || 'none under'})`);
+  ok(!kept.length, `its own shown colour where that does, lightened only where it does not (${kept.join(', ') || 'every side'})`);
+  const m = scene({ a:X.NATIONS.find(n => n.id === 'SCO'), b:X.NATIONS.find(n => n.id === 'ENG') }), ink = CL.callInk(0), show = X.showCol(0);
+  ok(CL.contrastOf(ink, CL.CALL_PLATE) >= 3 && CL.contrastOf(ink, CL.CALL_PLATE) < 3.6, `lightened just enough to read (${m.nat[0].id}: ${show} ${CL.contrastOf(show, CL.CALL_PLATE).toFixed(2)} to ${ink} ${CL.contrastOf(ink, CL.CALL_PLATE).toFixed(2)})`);
+  ok(CL.bannerInk('Turnover', 0) === ink && CL.bannerInk('Intercepted', 0) === ink && CL.bannerInk('Line Break', 0) === show, 'the Intercepted and Turnover banners in it; other banners as they were');
+  setC({ on:false }); ok(CL.bannerInk('Turnover', 0) === show, 'CALLS off: the side\'s shown colour, as b4a25d5 drew it (and the banner itself the old yellow)'); resetC();
+}
+done();
+
 await browserChecks();
 console.log(`Calls: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;
@@ -529,7 +680,7 @@ function chromium() {
   }
   return null;
 }
-/* 12. In Chromium, a real match at 844x390 and 667x375 on the camera a new player starts on (Mid) and on Top: each call staged where the
+/* 15. In Chromium, a real match at 844x390 and 667x375 on the camera a new player starts on (Mid) and on Top: each call staged where the
       ball is, with the game's own frames drawing it. The call drawn over his pointer, the flash, no page error; SHOTS=<dir> keeps a
       picture of each (calls-<call>-<width>-<camera>.png) */
 async function browserChecks() {
@@ -549,11 +700,12 @@ async function browserChecks() {
   await new Promise(r => server.listen(+process.env.PORT || 0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}/`, wait = ms => new Promise(r => setTimeout(r, ms));
   const B = (cond, msg) => ok(cond, 'browser: ' + msg);
-  group = '12 browser';
+  group = '15 browser';
   try {
     for (const [W, H] of [[844, 390], [667, 375]]) for (const cam of [1, 0]) {
       if (cam === 0 && W !== 844) continue;                // Top once, at the larger size
-      for (const kind of ['picked-up', 'intercepted', 'turnover', 'turnover-pressure', 'offload']) {
+      const kinds = ['picked-up', 'intercepted', 'turnover', 'turnover-pressure', 'offload', 'cpu-intercept'].concat(cam ? [] : ['turnover-two']);   // Two Player plays on Top only (behindOn)
+      for (const kind of kinds.filter(k => !process.env.CALLS_ONLY || process.env.CALLS_ONLY.split(',').includes(k))) {   // CALLS_ONLY=turnover,offload: those alone
         const ctx = await browser.newContext({ viewport:{ width:W, height:H }, deviceScaleFactor:2, isMobile:true, hasTouch:true, serviceWorkers:'block' });
         const page = await ctx.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
         await page.goto(base + 'index.html', { waitUntil:'load' });
@@ -561,11 +713,19 @@ async function browserChecks() {
         const started = await page.evaluate(({ kind, cam }) => {
           const T = window.__tryline, D = T.debug, S = D.settings(), X = T.teams;
           S.tut = D.TUT_IDS.slice(); S.tips = D.COACH_IDS.slice(); S.hints = false; S.cam = cam; S.camPick = true; S.played = 99; S.diff = 1; S.kids = false; S.finished = 99;
+          const nat = id => X.NATIONS.find(n => n.id === id);
           if (kind === 'offload') { const cr = T.career.create({ pos:'B', num:5, club:X.CLUBS[0], proMode:true }); T.career.set(cr); T.career.play(); }
+          else if (kind === 'cpu-intercept') D.startMatch(nat('ENG'), nat('SCO'), false);   // a dark kit (Scotland's navy, 1.4:1 on the plate): its banner lightened to read
+          else if (kind === 'turnover-two') D.startMatch(nat('ENG'), nat('FRA'), false, { two:true, levels:[1, 1] });
           else D.startMatch(X.CLUBS[0], X.CLUBS[1], false);
-          const drawn = window.__drawn = [];
+          const drawn = window.__drawn = [], at = window.__at = [];
           const ft = CanvasRenderingContext2D.prototype.fillText;
-          CanvasRenderingContext2D.prototype.fillText = function (t, ...a) { drawn.push(String(t)); return ft.call(this, t, ...a); };
+          const manY = () => {                                // the screen y his body is drawn at (drawPos, src/render-pitch.js): the call's offset from it is what must not jump
+            const c = T.M.tags.find(q => q.call), p = c && c.p; if (!p) return null;
+            const f = p.drawFrom, u = f && f.t > 0 ? Math.min(1, Math.max(0, f.t/f.T)) : 0;
+            return T.behind.toS(p.x + (u ? (f.x - p.x)*u : 0), p.y + (u ? (f.y - p.y)*u : 0))[1];
+          };
+          CanvasRenderingContext2D.prototype.fillText = function (t, x, y, ...a) { drawn.push(String(t)); at.push([String(t), x, y, String(this.strokeStyle), manY()]); return ft.call(this, t, x, y, ...a); };
           return !!T.M;
         }, { kind, cam });
         for (let i = 0; i < 120; i++) { if (await page.evaluate(() => { const M = window.__tryline.M; return M.phase === 'play' && !M.cut && !M.tut && !M.paused && M.clock > 3; })) break; await wait(50); }
@@ -596,6 +756,16 @@ async function browserChecks() {
               mine.x = bx + 0.6; mine.y = by + 1; theirs.x = bx - 0.6; theirs.y = by - 1;
               CL.resolveRuck({ team:1, x:bx, y:by, dom:true, domP:0.4 });
               okNow = !!(b.carrier && b.carrier.team === 0);
+            } else if (kind === 'cpu-intercept') {               // the CPU intercepts your pass: its banner in its colour, and no call for anyone
+              theirs.x = bx; theirs.y = by; mine.x = bx - 5; mine.y = by;
+              Object.assign(b, { state:'air', carrier:null, x:bx - 0.2, y:by, z:1.1, off:null, f:{ kind:'pass', team:0, x0:bx - 5, y0:by, x1:bx + 8, y1:by, t:0.2, T:0.8, H:0.5, z0:1.1, z1:1.1, rolled:new Set(), onside:null, target:M.players[2], sure:false, long:false } });
+              CL.catchBall(theirs, 'intercept');
+              okNow = b.carrier === theirs;
+            } else if (kind === 'turnover-two') {                // Player 2 wins Player 1's ruck, with Player 1's ringed man right by it (the review's case)
+              const p1 = M.players.find(p => p.team === 0 && p !== mine);
+              mine.x = bx - 0.6; mine.y = by - 1; theirs.x = bx + 0.6; theirs.y = by + 1.2; p1.x = bx + 0.3; p1.y = by + 2.2; T.sides.setCtrl(0, p1);
+              CL.resolveRuck({ team:0, x:bx, y:by, dom:true, domP:0.4 });
+              okNow = !!(b.carrier && b.carrier.team === 1);
             } else {
               const c = M.players.find(p => p.team === 0 && p !== mine); c.x = bx; c.y = by; c.fx = 1; c.fy = 0; theirs.x = bx + 1; theirs.y = by;
               c.x = bx + 4; c.y = by - 3; theirs.x = bx + 5; mine.x = bx; mine.y = by;
@@ -609,18 +779,37 @@ async function browserChecks() {
             }
           }
           K.base = k0.base; K.intercept = k0.intercept; R.pen = pen;
-          const call = M.tags.find(t => t.call);
-          window.__drawn.length = 0;
-          return { okNow, tries, call:call ? call.text : null, ring:T.sides.ctrlOf(0) === b.carrier, flash:!!M.flash, stop:M.stop };
+          const call = M.tags.find(t => t.call), side = kind === 'turnover-two' ? 1 : 0;
+          window.__drawn.length = 0; window.__at.length = 0;
+          const k = document.querySelector('#banner .msg'), ink = k ? k.style.getPropertyValue('--k') : null;
+          return { okNow, tries, call:call ? call.text : null, k:call ? call.k : null, ring:T.sides.ctrlOf(side) === b.carrier, flash:!!M.flash, stop:M.stop, ink, want:CL.callInk(kind === 'cpu-intercept' ? 1 : side), ringCol:T.behind.ringCol(side), show1:T.teams.showCol(1) };
         }, kind);
         await wait(260);
-        const drawn = await page.evaluate(() => window.__drawn.slice());
-        const word = { 'picked-up':'PICKED UP', intercepted:'INTERCEPTED', turnover:'TURNOVER', 'turnover-pressure':'TURNOVER', offload:'OFFLOAD' }[kind];
-        const label = `${kind} at ${W}x${H} on ${cam ? 'Mid' : 'Top'}`;
-        B(r.okNow && r.ring && r.flash && r.call && r.call.toUpperCase() === word, `${label}: staged in a real match (${r.tries} ${r.tries === 1 ? 'try' : 'tries'}), the ring on the new carrier, the call ${r.call}, the flash`);
-        B(drawn.includes(word), `${label}: the game's own frames draw it (${drawn.filter(t => t === word).length} frames)`);
-        B(!errors.length, `${label}: no page errors (${errors.join('; ')})`);
         if (shots) await page.screenshot({ path:path.join(shots, `calls-${kind}-${W}-${cam ? 'mid' : 'top'}.png`) });
+        const two = kind === 'turnover-two' ? await page.evaluate(() => {   // where the call stands against Player 1's ring and seat mark, a frame in
+          const T = window.__tryline, M = T.M, t = M.tags.find(q => q.call), p1 = T.sides.ctrlOf(0), [cx, cy] = T.behind.toS(p1.x, p1.y), s = T.behind.toS(p1.x + 1, p1.y)[0] - cx, r = Math.max(8, 0.95*s);
+          const last = window.__at.filter(a => a[0] === 'TURNOVER').pop(), w = last ? document.getElementById('cv').getContext('2d').measureText('TURNOVER').width + 22 : 0;
+          if (!t || !last) return null;
+          const plate = { left:last[1] - w/2, right:last[1] + w/2, top:last[2] - 14, bottom:last[2] + 12 }, man = { left:cx - r*1.55 - 5, right:cx + r*1.55 + 5, top:cy - r*2.4 - 16, bottom:cy + r*1.55 + 5 };
+          const hit = plate.left < man.right && plate.right > man.left && plate.top < man.bottom && plate.bottom > man.top;
+          return { place:t.place, hit, edge:last[3], plate, man };
+        }) : null;
+        await wait(900);
+        const drawn = await page.evaluate(() => window.__drawn.slice()), at = await page.evaluate(() => window.__at.slice());
+        const word = { 'picked-up':'PICKED UP', intercepted:'INTERCEPTED', turnover:'TURNOVER', 'turnover-pressure':'TURNOVER', offload:'OFFLOAD', 'cpu-intercept':null, 'turnover-two':'TURNOVER' }[kind];
+        const label = `${kind} at ${W}x${H} on ${cam ? 'Mid' : 'Top'}`;
+        if (kind === 'cpu-intercept') {
+          B(r.okNow && !r.call && r.ink === r.want && r.ink !== r.show1, `${label}: the CPU's interception, no call; its banner in Scotland's navy lightened to read (${r.ink}, 3:1 on the plate)`);
+        } else {
+          const ys = at.filter(a => a[0] === word && a[3].toLowerCase() === String(r.k).toLowerCase() && a[4] != null).map(a => a[2] - a[4]), jump = ys.length > 1 ? Math.max(...ys.slice(1).map((y, i) => Math.abs(y - ys[i]))) : 0;
+          B(r.okNow && r.ring && r.flash && r.call && r.call.toUpperCase() === word, `${label}: staged in a real match (${r.tries} ${r.tries === 1 ? 'try' : 'tries'}), the ring on the new carrier, the call ${r.call}, the flash`);
+          B(drawn.includes(word), `${label}: the game's own frames draw it (${drawn.filter(t => t === word).length} frames)`);
+          if (process.env.VERBOSE) console.log(label, at.filter(a => a[0] === word).map(a => a[2].toFixed(1) + '/' + (a[4] == null ? '-' : a[4].toFixed(1))).join(' '));
+          B(ys.length > 20 && jump < 12, `${label}: it goes with him for its life and never jumps: its place against his body moves at most ${jump.toFixed(1)}px a frame (${ys.length} frames; from over him to under him is 60px or more, and the jump it once made was 115px)`);
+          if (/^(intercepted|turnover)$/.test(kind)) B(r.ink === r.want && r.k === r.want, `${label}: the banner and the call's plate in your colour on the plate (${r.ink})`);
+          if (two) B(r.k === r.ringCol && /ff5fd2/i.test(r.k) && two.edge.toLowerCase() === r.k.toLowerCase() && !two.hit, `${label}: Two Player, Player 2's call edged in his pink, ${two.place} him, clear of Player 1's ring and seat mark (${JSON.stringify(two.plate)} v ${JSON.stringify(two.man)})`);
+        }
+        B(!errors.length, `${label}: no page errors (${errors.join('; ')})`);
         await ctx.close();
       }
     }

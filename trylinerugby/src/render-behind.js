@@ -430,7 +430,7 @@ function bvCallAt(cam, t, plain) {                          // where a possessio
   const star = plain && M.career && p === M.careerP ? Math.max(8, 0.34*q.k) : 0, carry = plain && M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === p;
   const S = bvStack(q.sy - ((p ? lookOf(p).h : 1.8) + 0.2)*q.k, { pointer:true, carry, star, floor:plain && Math.abs(q.sx - V.W/2) < 130 ? BV_STACK_HUD : 0 });
   const top = star ? S.star - star : carry ? S.carry - BV_CARRY.tail - BV_CARRY.h : S.pointer - 8;
-  return { x:q.sx, top:top - BV_CARRY.gap, foot:q.sy + Math.max(6, BV_RING*1.55*q.k)*bvFlat(cam, q.z) + 8 };   // over the stack, or under his ring on the grass
+  return { x:q.sx, top:top - BV_CARRY.gap, foot:q.sy + Math.max(6, BV_RING*1.55*q.k)*bvFlat(cam, q.z) + 8, half:Math.max(6, BV_RING*1.55*q.k) };   // over the stack, or under his ring on the grass
 }
 function bvEdgeMarks(cam, plain) {                          // the ball or its carrier off the frame, and your player. Not at a set piece: the game is about to cut to it, and it has its own banner
   if (!plain) return;
