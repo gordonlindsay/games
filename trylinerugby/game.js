@@ -1221,7 +1221,7 @@ function seek(p, tx, ty, speed, acc, dt, pursue) {
 function placeBall(x, y) {
   const b = M.ball;
   b.state = 'dead'; b.carrier = null; b.f = null; b.x = x; b.y = y; b.z = 0; b.vx = b.vy = b.vz = 0;
-  eggOff(b);
+  eggOff(b); if (b.off) b.off = null;                      // nobody is offside at a dead ball (CALLS, src/calls.js)
 }
 function playFrom(team, x, y, kind) {                      // the mark the ball is played from: a ruck 1.6m behind, a scrum 1.2, a lineout 1.5 and out to the side
   const d = dirOf(team);
@@ -1324,7 +1324,7 @@ function releaseTo(team, x, y, kind, who) {
 function setCarrier(p) {
   const b = M.ball;
   if (M.poss !== p.team) M.phaseCount = 0;
-  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b);
+  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b); if (b.off) b.off = null;   // a new phase: nobody is offside from the last (CALLS)
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
@@ -1351,7 +1351,8 @@ function catchBall(p, kind) {
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
   if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? KIDS.grace : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit (Kids: its rating's, kidsTune)
-  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
+  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small', callCol(p.team)); heat(p.team, 'turnover'); callWon(p); possCall(p, 'Intercepted', true); }   // in the winner's colour, and called over him (src/calls.js)
+  else if (kind === 'pass' && f && f.call) possCall(p, f.call, false);   // an offload a teammate the computer runs made to the ring's man: Offload
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
@@ -1374,7 +1375,8 @@ function pickUp(p) {
   }
   const turn = p.team !== b.last && !b.kickInfo;
   setCarrier(p); sfx('catch');
-  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); heat(p.team, 'turnover'); }
+  if (turn) { M.stats.turnovers++; say('Turnover', 'small', callCol(p.team)); heat(p.team, 'turnover'); callWon(p); }
+  possCall(p, turn ? 'Turnover' : 'Picked Up', turn);       // the ring's man has it: say how (src/calls.js). A kick is anyone's, so a kick gathered is Picked Up
 }
 
 /* ---------- passing and kicking ---------- */
@@ -1527,6 +1529,7 @@ function doPass(from, to, o) {
   b.state = 'air'; b.carrier = null; b.last = from.team;
   b.f = { kind:'pass', team:from.team, x0:b.x, y0:b.y, x1:tx, y1:ty, t:0, T, H, z0:1.1, z1:1.1, rolled:new Set(o.skip || []), onside:null, target:to,
     sure:!!o.sure, boost:o.boost || null, long:!!o.long };
+  offMark(from.team, from.x);                              // his men in front of him are offside for this pass (CALLS, src/calls.js)
   from.hold = 0; from.quick = false;
   M.stats.passes++;
   if (M.career) careerLifePass(from, to);                  // a career match: a pass to or from your player, for Team Spirit
@@ -1542,6 +1545,7 @@ function kickBall(team, x0, y0, x1, y1, T, H, kind) {
   b.f = { kind, team, x0, y0, x1, y1, t:0, T, H, z0:0.4, z1:0, rolled:new Set(), onside, target:null };
   b.x = x0; b.y = y0; b.z = 0.4;
   b.kickInfo = kind === 'kick' ? { team, ownHalf:(x0-60)*d < 0 } : null;
+  offMark(team, x0, M.players.filter(p => p.team === team && !onside.has(p)));   // the men the kick leaves offside stay so for its bounce, until they are back behind it (CALLS)
   M.phase = 'play';
   clearCharge();
   for (const t of [0, 1]) if (isHuman(t)) { const q = nearestFree(t, x1, y1); if (q) setCtrl(t, q); }
@@ -1597,7 +1601,12 @@ const countTk = (team, made) => { const tk = M.stats.tk; tk.att[team]++; if (mad
 const cpuEdge = (q, c, arr) => (!isHuman(q.team) && isHuman(c.team)) ? arr[levelOf(c.team)] : 0;   // a CPU edge over a human, by the level that human plays
 const slide = (p, x, y, T, spin) => { T = Math.max(T, hyp(x - p.x, y - p.y)/9); p.drawFrom = { x:p.x, y:p.y, t:T, T, spin:spin || 0 }; p.x = x; p.y = y; };   // a teleport in the logic, smoothed in the drawing at no more than 9 m/s
 const matchMild = () => !!(M && (M.kids || catOf(M.nat[0]) === 'minis'));   // a Kids match, or a Minis one (Men | Women | Minis: every side of a match is one category)
-function tag(text, x, y) { if (M.auto) return; st('tag_' + text); M.tags.push({ text, x, y, t:0 }); while (M.tags.length > 2) M.tags.shift(); }
+function tag(text, x, y, o) {                              // o: a possession call's extras (src/calls.js): k its side's colour, call, p the man it follows
+  if (M.auto) return;
+  if (!(o && o.call)) st('tag_' + text);                  // a possession call is counted as a call (call_*, src/calls.js), not as a tag
+  M.tags.push(o ? { text, x, y, t:0, ...o } : { text, x, y, t:0 });
+  while (M.tags.length > 2) { const i = M.tags.findIndex(t => !callFresh(t)); M.tags.splice(i < 0 ? 0 : i, 1); }   // at most two: the oldest goes, but a call in its time never makes way for a tag (src/calls.js)
+}
 function impact(x, y) { M.fx.push({ x, y, t:0 }); }
 function hitStop(ms, shake) { if (!interactive()) return; M.stop = ms/1000; if (!RM && shake !== 0) M.shake = M.shakeT = shake || 0.12; }   // shake: its length, which also sets its size; 0 holds the world with no shake (a Line Break, src/edge.js)
 function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI defender's reach), 'contact' (your ringed man's automatic tackle), 'dive' (a Tackle press), 'ankle' (a dive from behind)
@@ -1684,6 +1693,7 @@ function looseInContact(c, spill) {                        // the ball comes loo
   tag('Loose Ball', c.x, c.y); sfx('fumble');
   b.state = 'loose'; b.carrier = null; b.f = null; b.last = c.team; b.kickInfo = null;
   b.x = c.x - d*0.4; b.y = c.y; b.z = 0.6; b.vx = -d*(2 + rnd()*3); b.vy = (rnd() - 0.5)*4; b.vz = 1.5;
+  offMark(c.team, c.x);                                    // he played it last: his men in front of him are offside for it (CALLS, src/calls.js)
   c.hold = 0;
   if (pressLive()) eggStart(b, c.team, !!spill);           // it hops like Bouncy Egg's ball
 }
@@ -1698,7 +1708,11 @@ function offload(k, user) {                                // user: the carrier'
   releaseBind(k);
   c.down = 0.9; q.down = 0.6; q.tcd = 1.0; if (q2) q2.tcd = 0.4;
   const ro = rnd();
-  if (ro < pOk) { st('offloads'); st('off' + c.team); if (!traitOffloaded(c, ro, p0) && ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) }); return true; }   // Safe Hands says so when it saved the offload
+  if (ro < pOk) {
+    st('offloads'); st('off' + c.team); if (!traitOffloaded(c, ro, p0) && ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) });   // Safe Hands says so when it saved the offload
+    if (!user && callsLv('call') && isHuman(c.team) && M.ball.f) M.ball.f.call = 'Offload';   // a teammate the computer runs (Pro Mode): the man the ring is on hears it when he takes it (src/calls.js)
+    return true;
+  }
   st('offFail');
   if (rnd() < CONTACT.off.hold) { st('offHeld'); c.down = 0; q.down = 0; q.tcd = 0; tackle(c, q, { tier:k.tier, q2 }); return true; }   // he couldn't get it away: an ordinary ruck
   if (rnd() < CONTACT.off.knock) { st('offKnock'); knockOn(c, 'offload'); } else { st('offLoose'); looseInContact(c); }
@@ -1822,8 +1836,9 @@ function resolveRuck(s) {                                  // the ruck is automa
   if (rnd() < RUCK.pen) { restart('ruckPenalty', rnd() < 0.55 ? def : att, s.x, s.y); return; }
   const pT = s.dom ? s.domP : RUCK.flatBase + (powerOf(def) - powerOf(att))*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
-    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
+    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small', callCol(def)); heat(def, 'turnover');
     releaseTo(def, s.x, s.y, 'turnover');
+    if (M.ball.carrier) { callWon(M.ball.carrier); possCall(M.ball.carrier, 'Turnover', true); }   // called over the man the ring goes to (src/calls.js)
     if (s.tier) wrongFoot(def, s.x, s.y);
     if (s.dom) surge(def, LINE_SPEED);                     // Line Speed for the side that made the Big Hit
     return;
@@ -1928,7 +1943,7 @@ function eggLead(b) {                                      // where the chase ru
 }
 function eggChaser(t, S) {                                 // the CPU sprints its nearest man at a hopping ball, 2.5 to 12m off, with no draw; he keeps it while he is still the nearest
   const L = eggLead(M.ball); let best = null, bd = 1e9;
-  for (const p of M.players) if (p.team === t && onFeet(p) && !(p.offside > 0)) { const dd = dist(p, L); if (dd < bd) { bd = dd; best = p; } }
+  for (const p of M.players) if (p.team === t && onFeet(p) && !(p.offside > 0) && !(callsLv('fit') && offsideMan(p))) { const dd = dist(p, L); if (dd < bd) { bd = dd; best = p; } }   // never a man who may not play it (src/calls.js)
   if (!best) return null;
   if (S.p) return S.p === best && bd > 1 ? best : null;
   return bd >= SPRINT.cpu.min && bd <= SPRINT.cpu.max ? best : null;
@@ -3575,7 +3590,7 @@ function heat(t, why, grade) {                               // grade: a word ov
   F.heat = Math.min(need, F.heat + ((edgeOn(t) && EDGE.fire.pts || ARCADE.fire.pts)[why] || 0));   // on Easy your side's moments are EDGE.fire.pts
   if (F.heat < need) return;
   F.heat = 0; F.t = fireSecs(t)*staminaLasts(t); st('fire' + t);   // longer or shorter by the side's Stamina (src/stamina.js); on Easy yours burns EDGE.fire.secs
-  say('On Fire', 'big fire', t, grade); sfx('roar'); buzz(50, t);
+  fireSay(t, grade); sfx('roar'); buzz(50, t);                 // its banner after the banner of the moment that lit it, if one was said this step (src/calls.js)
 }
 function fireOut(t) { if (M && M.arcade) { M.fire[t].t = 0; M.fire[t].heat = 0; } }
 function fireTick(dt) { if (M.arcade) for (const F of M.fire) if (F.t > 0) F.t = Math.max(0, F.t - dt); }
@@ -3605,7 +3620,9 @@ function goldenScored() { if (M.golden) M.hooter = true; }   // any score in ext
      metres for every metre ahead, so the deep cover man still counts while he is placed to come across; where one was earlier in the
      same carry; none within brk.clear metres of him at all; running forward at brk.fwd m/s or more, brk.line metres or more out.
      Once a carry (a new carrier, or the same man's next catch, starts another): Line Break is called (the small banner in your
-     colour, as Turnover is, so the run stays in sight), a whoosh and the crowd, a heat point towards On Fire, and a brk.stop ms
+     colour, as Turnover and Intercepted are since the possession calls, so the run stays in sight; not within CALLS.lbGap seconds
+     of a turnover or an interception on the same carrier, whose call that moment is, and carried over On Fire's banner while it
+     shows: src/calls.js), a whoosh and the crowd, a heat point towards On Fire, and a brk.stop ms
      hit-stop with no shake, shorter than a Big Hit's 180 (never for Kids or Minis: matchMild). If the point lights On Fire, the On
      Fire banner carries Line Break over it, so the call is still seen. A Get Past close-up won the right way already says Line Break
      with its cheer (settle, src/duels.js), so that is the carry's Line Break (edgeBroke): its heat point and the cover's lag, never a
@@ -3651,9 +3668,11 @@ function edgeLine(c) {
     near = Math.min(near, dist(q, c));
   }
   if (!L.had || near < K.clear || c.vx*d < K.fwd || (oppLine(c.team) - c.x)*d < K.line) return false;   // away from the man he beat, and running on
+  if (callLate(c)) return false;                           // he has just won it: Turnover or Intercepted is this moment's call, and the Line Break waits (src/calls.js)
   L.fired = true; L.at = M.dclock;
   st('lineBreak' + c.team);
-  say('Line Break', 'small', c.team); sfx('whoosh'); sfx('cheer'); buzz(30, c.team);
+  if (!fireFold(c.team, 'Line Break')) say('Line Break', 'small', c.team);   // On Fire's banner up already: the call goes over it (src/calls.js)
+  sfx('whoosh'); sfx('cheer'); buzz(30, c.team);
   if (!matchMild()) hitStop(K.stop, 0);                    // the youngest: the call and the sound, no slow-motion
   heat(c.team, 'line', 'Line Break');                      // lighting On Fire, its banner carries the call
   return true;
@@ -3693,6 +3712,124 @@ const KNOCK = { on:true, base:0.5, intercept:0.07, hit:true, tag:true };
 // KNOCK_TUNE
 const KNOCK_OFF = { base:1, intercept:0.2, hit:false, tag:false };   // 20cbcaf's
 const knockLv = k => (KNOCK.on ? KNOCK : KNOCK_OFF)[k];
+/* ---------- possession calls and the interception rules (2026-11-13) ----------
+   The owner: "There's sometimes a glitch where the ball is passed, the tackle is made by CPU and suddenly the ball is with my
+   player on a breakaway - or did I miss the switch?" It was his own pass, the CPU tackled his receiver, the ball popped loose and
+   his support man had it running free. No wrong-team bug: when your side gathered a loose ball the ring jumped to the new man with
+   no call, no sound and no beat, and the only cue was a 0.7s Loose Ball tag over the tackled man. He chose Interceptions Stay
+   Automatic, Clearly Called:
+   - The call. Whenever the ring of a side a person plays goes to a new carrier for any reason but that person's own pass, a word over
+     him in his side's colour, following him for `life` seconds: Picked Up (your side gathers a loose ball it did not win from the
+     other: its own spill, its own dropped pass, any kick), Intercepted, Turnover (a ruck, or a loose ball gathered from the other
+     side, a pressure spill among them), Offload (a teammate the computer runs offloads in the tackle and the ring's man takes it:
+     Pro Mode's teammates; the CPU's are the CPU's). It is the newest tag and keeps its place under the two-tag cap (tag, src/contact.js).
+     A flash on his ring for `flash` seconds, a ring going out and fading (none under reduced motion), and the Gather sound (a synth
+     recipe in src/sound.js: the catch's slap and two notes going up). When the ball changes side to a person's side, a `beat` ms
+     hold with no shake (hitStop), never for Kids or Minis (matchMild). None of it in AI v AI, the demo or a drill, and nothing for
+     the CPU: when the CPU wins the ball from you, its banner in its colour is the call.
+   - The banners. Intercepted and Turnover in the winning side's colour (`colour`; both were yellow for either side). On Fire waits
+     for the banner of the moment that lit it (`fire`): heat() lights it in the step Turnover, Intercepted, Big Hit or Try is said,
+     and its banner now follows that one when that one has had its time, instead of replacing it. A Line Break lights it with its
+     word over it, as before. A Line Break is not called within `lbGap` seconds of a turnover or an interception on the same carrier
+     (src/edge.js); once that is over it is called if he is still clear, carried over On Fire's banner if that is showing.
+   - The interceptions stay automatic, at the same odds (pI, src/ball.js). A pass is never intercepted until the ball is `release`
+     metres from where it left the passer's hands: a man at the passer's hands is then out of the 1.1m an interceptor reaches, so
+     nobody takes it out of his hands, and the ball is past the swing of his arms (about the first 0.1s of a flat pass's flight).
+     Measured at b4a25d5 (AI v AI), about a third of all interceptions were inside 1.5m of the release. And a man who cannot
+     play the ball does not (`fit`): down (as before), retiring from a ruck or a maul (p.offside), or offside, cannot intercept,
+     take a missed pass or pick up a loose ball, and the AI does not send him after a loose ball. Offside is open play's law: a
+     man in front of the teammate who last played the ball (the passer's release, the kicker, the tackled man who spilled it) by
+     more than 0.5m (the kick's margin) as it was played, until he is back behind that line. The other side is never offside.
+   Every lever is read through callsLv and none draws a random number, so CALLS off gives b4a25d5's values and the game plays exactly
+   as b4a25d5, draw for draw (CALLS='{"on":false}' in the harness: the proof behind every re-pin since). Measured: README.md,
+   Possession calls. */
+const CALLS = { on:true, call:true, life:0.9, flash:0.4, beat:80, colour:true, fire:true, lbGap:1.0, release:1.5, fit:true };
+// CALLS_TUNE
+const CALLS_OFF = { call:false, life:0, flash:0, beat:0, colour:false, fire:false, lbGap:0, release:0, fit:false };   // b4a25d5's
+const callsLv = k => (CALLS.on ? CALLS : CALLS_OFF)[k];
+const callCol = t => (callsLv('colour') ? t : null);       // a banner's side: its colour, or the old yellow
+const OFF_MARGIN = 0.5;                                    // metres in front of the line before a man is offside: the kick's onside margin (kickBall)
+
+/* ---------- who can play the ball ---------- */
+function offMark(team, x, men) {                            // the ball played by `team` from x: who of its men is offside for this phase (men: those in front, or null to work them out)
+  if (!callsLv('fit')) return;
+  const d = dirOf(team), set = new Set();
+  for (const p of M.players) if (p.team === team && (men ? men.includes(p) : (p.x - x)*d > OFF_MARGIN)) set.add(p);
+  M.ball.off = set.size ? { team, x, men:set } : null;
+}
+function offsideMan(q) {                                    // in front of the line of the teammate who last played it, as it was played, and not back behind it since
+  const o = M.ball.off;
+  return !!(o && q.team === o.team && o.men.has(q) && (q.x - o.x)*dirOf(o.team) > 0);
+}
+function offTick() {                                       // a man who gets back behind the line is onside for the rest of the phase
+  const o = M.ball.off;
+  if (!o) return;
+  const d = dirOf(o.team);
+  for (const p of o.men) if ((p.x - o.x)*d <= 0) o.men.delete(p);
+  if (!o.men.size) M.ball.off = null;
+}
+function canPlay(q) {                                       // may this man intercept, take a missed pass or pick up a loose ball
+  if (q.down > 0) return false;
+  return !callsLv('fit') || (!(q.offside > 0) && !offsideMan(q));
+}
+const releaseOk = f => !(callsLv('release') > 0) || hyp(M.ball.x - f.x0, M.ball.y - f.y0) >= callsLv('release');   // the pass is out of his hands
+
+/* ---------- the call ---------- */
+function callWon(p) { if (callsLv('lbGap') > 0) M.won = { p, at:M.dclock }; }   // a turnover or an interception: the Line Break waits on this carrier
+const callLate = c => !!(callsLv('lbGap') > 0 && M.won && M.won.p === c && M.dclock - M.won.at < callsLv('lbGap'));
+function possCall(p, word, turned) {                        // p has the ball, by `word`; turned: it came from the other side
+  if (!callsLv('call') || !p || practice || M.auto || M.demo) return false;
+  const t = p.team;
+  if (!isHuman(t) || ctrlOf(t) !== p || M.ball.state !== 'held' || M.ball.carrier !== p) return false;   // only where the ring is on him: the CPU's carrier, and Pro Mode's teammates, get none
+  tag(word, p.x, p.y, { k:showCol(t), call:true, p, n:M.stepN }); st('call_' + word.replace(' ', '') + t);
+  if (callsLv('flash') > 0) M.flash = { p, t, at:0 };
+  sfx('gather');
+  if (turned && callsLv('beat') > 0 && !matchMild()) hitStop(callsLv('beat'), 0);   // the youngest: no hold
+  return true;
+}
+const callFresh = t => !!(t.call && M.stepN - (t.n || 0) < (callsLv('life') || 0.9)/STEP);   // a call still in its time: the drawing ends it, and with no drawing (a headless match) its steps do
+function callFlash(dt, ring) {                              // the flash on his ring, once a frame: ring(p, grow 0..1, colour) draws it in the view's own terms
+  const F = M.flash;
+  if (!F) return;
+  F.at += dt;
+  const L = callsLv('flash');
+  if (!(L > 0) || F.at >= L || !isHuman(F.t) || ctrlOf(F.t) !== F.p) { M.flash = null; return; }
+  if (RM) return;                                          // reduced motion: no flash
+  const u = F.at/L, a0 = ctx.globalAlpha;
+  ctx.globalAlpha = a0*(1 - u);
+  ring(F.p, u, ringCol(F.t));
+  ctx.globalAlpha = a0;
+}
+
+/* ---------- On Fire after its moment's banner ---------- */
+const bannerLife = size => (size === 'big' ? 1.7 : size === 'coach' ? 1.6 : size === 'small' ? 0.9 : 1.3);   // match seconds a banner shows (say's timer, over the pace)
+function fireSay(t, grade) {                                 // heat()'s banner. A word over it (a Line Break's) shows at once, as ever
+  if (callsLv('fire') && !grade && M.said && M.said.n === M.stepN) { M.fireQ = { t, grade, at:M.stepN + Math.round(M.said.life/STEP) }; return; }
+  say('On Fire', 'big fire', t, grade);
+  if (callsLv('fire')) M.fireSaid = { n:M.stepN, t, grade };
+}
+function sayNote(text, size, team) {                         // say()'s note: a banner said in the step On Fire was lit sends On Fire after it
+  if (!callsLv('fire')) return;
+  const F = M.fireSaid, life = bannerLife(size);
+  if (text === 'On Fire') M.fireUp = { n:M.stepN, t:team };
+  else if (F && F.n === M.stepN) { M.fireSaid = null; M.fireUp = null; M.fireQ = { t:F.t, grade:F.grade, at:M.stepN + Math.round(life/STEP) }; }
+  M.said = { n:M.stepN, life };
+}
+function fireShowing(t) {                                    // side t's On Fire banner is up, or waiting its turn
+  if (!callsLv('fire')) return null;
+  if (M.fireQ && M.fireQ.t === t) return 'queued';
+  return M.fireUp && M.fireUp.t === t && M.stepN - M.fireUp.n < Math.round(bannerLife('big fire')/STEP) ? 'up' : null;
+}
+function fireFold(t, grade) {                                // side t's On Fire banner is up: say it again with this word over it, rather than replacing it. True when it did
+  if (fireShowing(t) !== 'up') return false;
+  say('On Fire', 'big fire', t, grade);
+  return true;
+}
+function callsTick() {                                       // once a step (matchUpdate), close-ups included
+  const Q = M.fireQ;
+  if (Q && M.stepN >= Q.at) { M.fireQ = null; if (onFire(Q.t)) { say('On Fire', 'big fire', Q.t, Q.grade); M.fireSaid = { n:M.stepN, t:Q.t, grade:Q.grade }; } }   // and only while it still burns; a banner later in this step sends it on again
+  if (M.ball.off) offTick();
+}
 /* ---------- stamina ----------
    The fifth ability (staminaOf in data.js reads it, 3 when a team has none). Only a match you play feels it: the same M.arcade as
    On Fire, which only startMatch sets, so AI v AI, the demo, practice and the balance tools read every side as they always have.
@@ -3731,9 +3868,11 @@ function updateBallAir(dt) {
   b.z = f.z0 + (f.z1-f.z0)*u + 4*f.H*u*(1-u);
   b.vx = (f.x1-f.x0)/f.T; b.vy = (f.y1-f.y0)/f.T;
   if (f.kind === 'pass') {
+    const out = releaseOk(f);                              // out of the passer's hands: CALLS.release metres from where he let it go (src/calls.js)
     if (!f.sure) for (const q of M.players) {
       if (q.team === f.team || q.down > 0 || f.rolled.has(q)) continue;
       if (f.long && u > 0.18 && u < 0.82) continue;          // the loop is over the men in between; the contest is at the passer and the receiver
+      if (!out || !canPlay(q)) continue;                     // nobody takes it from his hands, and a man retiring or offside never does; each keeps his roll for later in the flight
       if (hyp(q.x-b.x, q.y-b.y) < 1.1 && b.z < 2.3) {
         f.rolled.add(q);
         const pI = ringed(q) ? 0.4 : (cpuSide(q.team) ? diffOf(q.team).cpuIntercept : M.two ? DIFF[levelOf(f.team)].cpuIntercept : 0.18);   // an AI interceptor in two player reads at the passer's level, as the CPU does against a human
@@ -3783,7 +3922,7 @@ function resolvePass() {
   }
   if (tgt && tgt.down <= 0 && hyp(tgt.x-b.x, tgt.y-b.y) < 2.4) { catchBall(tgt, 'pass'); return; }
   let best = null, bd = 1.8;
-  if (!f.sure) for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
+  if (!f.sure) for (const q of M.players) { if (!canPlay(q) || (q.team !== f.team && !releaseOk(f))) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }   // a missed pass: not to a man down, retiring or offside (src/calls.js)
   if (best) { catchBall(best, best.team === f.team ? 'pass' : 'intercept'); return; }
   b.state = 'loose'; b.vx = (f.x1-f.x0)/f.T*0.25; b.vy = (f.y1-f.y0)/f.T*0.25; b.vz = 1.5; b.z = 0.9; b.f = null;
   say('Dropped', 'small'); sfx('fumble');
@@ -3842,7 +3981,7 @@ function updateLoose(dt) {
   }
   if (b.z < (b.egg ? PRESSURE.egg.reach : 1.0)) {          // an egg on the hop is gathered only once it is down by the knees
     let best = null, bd = 1.1;
-    for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
+    for (const q of M.players) { if (!canPlay(q)) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }   // never a man down, retiring or offside (src/calls.js)
     if (best) { const E = b.egg; pickUp(best); if (E) pressGather(best, E); }
   }
 }
@@ -3982,8 +4121,9 @@ function matchTargets() {
   const dA = dirOf(att);
   let A = P.filter(p => p.team === att && free(p)), D = P.filter(p => p.team !== att && free(p));
   if (mode === 'kick') {
+    const may = b.state === 'loose' && callsLv('fit') ? canPlay : null;   // a loose ball: only men who may play it go for it (src/calls.js)
     for (const side of [A, D]) {
-      const s = side.slice().sort((p,q) => hyp(p.x-fx, p.y-fy) - hyp(q.x-fx, q.y-fy));
+      const s = (may ? side.filter(may) : side.slice()).sort((p,q) => hyp(p.x-fx, p.y-fy) - hyp(q.x-fx, q.y-fy));
       for (const p of s.slice(0,2)) T.set(p, { x:fx, y:fy, s:maxSpeed(p), a:16 });
     }
     A = A.filter(p => !T.has(p)); D = D.filter(p => !T.has(p));
@@ -4252,7 +4392,7 @@ function gestureStep(t, dt) {                              // one human side's o
     }
     if (s*L - lo >= KS.rise) {
       G.armed = false;                                     // the flick is spent whether or not it acts: outside a tackler's reach it is steering
-      if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, { x:jx, y:jy }, s); G.tagged = M.tags[M.tags.length - 1] || null; G.tagAt = G.t; }
+      if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, { x:jx, y:jy }, s); G.tagged = M.tags.length && !M.tags[M.tags.length - 1].call ? M.tags[M.tags.length - 1] : null; G.tagAt = G.t; }   // its Side Step tag; never a possession call (src/calls.js)
     }
   }
   // the Dummy: a held run, a quick pull back, and the push on
@@ -4383,6 +4523,7 @@ function update(dt) {
 function matchUpdate(dt) {
   if (!M || M.phase === 'break' || M.phase === 'menu' || M.paused || M.over) return;
   M.stepN++;                                               // every step, close-ups included: gestureStep reads it to see a gap in a man's carry
+  callsTick();                                             // On Fire after its moment's banner, and the offside men back onside (src/calls.js)
   if (M.phase === 'cut') { updateCut(dt); return; }
   const b = M.ball;
   if (M.surge && (M.surge.t -= dt) <= 0) M.surge = null;
@@ -6417,6 +6558,7 @@ function drawTags(dt, r) {                                 // on-pitch tags: cha
   ctx.font = `800 16px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,14,10,.85)'; ctx.fillStyle = '#f1eee4';
   for (const t of M.tags) {
+    if (t.call) continue;                                          // a possession call is drawn on its own, over the men's marks (drawCalls)
     const u = clamp(t.t/0.7, 0, 1), a = t.t > 0.45 ? clamp(1 - (t.t - 0.45)/0.25, 0, 1) : 1;
     let [x, y] = toS(t.x, t.y);
     const edge = tagBox();                                          // insets 0: 76 / 60 / W-200, as before. A right inset walks the clamp in with the buttons
@@ -6425,7 +6567,39 @@ function drawTags(dt, r) {                                 // on-pitch tags: cha
     t.t += dt;
   }
   ctx.globalAlpha = 1;
-  M.tags = M.tags.filter(t => t.t < 0.7);
+  M.tags = M.tags.filter(t => t.t < (t.call ? callsLv('life') || 0.9 : 0.7));
+}
+/* The possession call (src/calls.js): a dark plate edged in the winning side's colour with its word in chalk, standing over the new
+   carrier's pointer and going with him. It rises 6px over its life (it holds still under reduced motion) and fades over its last
+   quarter second. Where the banner (Turnover, Intercepted) would cover it, it stands under his ring instead. at(t): { x, top, foot },
+   the screen x, the y the plate stands on over him and the y it hangs from under him, or null while he is off the screen. */
+function bannerBox() {                                     // the banner's box while one shows (the page lays it out over the canvas), or null
+  const el = document.getElementById('banner'), m = el && el.firstElementChild;
+  if (!m || typeof m.getBoundingClientRect !== 'function') return null;
+  const r = m.getBoundingClientRect();
+  return r && r.width > 0 ? r : null;
+}
+function drawCalls(dt, at) {
+  if (!M.tags.length) return;
+  const L = callsLv('life') || 0.9, edge = tagBox();
+  let on = false, ban;
+  for (const t of M.tags) {
+    if (!t.call) continue;
+    t.t += dt;
+    const pt = at(t);
+    if (!pt) continue;
+    if (!on) { on = true; ban = bannerBox(); ctx.save(); ctx.font = `800 17px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; }
+    const u = clamp(t.t/L, 0, 1), a = clamp((L - t.t)/0.25, 0, 1), text = t.text.toUpperCase(), lift = RM ? 0 : 6*u;
+    const m = ctx.measureText(text), w = ((m && m.width) || text.length*8.5) + 22, h = 26;
+    const x = clamp(pt.x, Math.max(edge.left, w/2 + 6), V.W - Math.max(edge.right, w/2 + 6));
+    let y = Math.max(edge.top + h/2, pt.top - h/2 - lift);
+    if (ban && x + w/2 > ban.left - 6 && x - w/2 < ban.right + 6 && y + h/2 > ban.top - 6 && y - h/2 < ban.bottom + 6) y = Math.min(V.H - h/2 - 4, pt.foot + h/2 - lift);   // under the banner: under him instead
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(8,14,10,.9)'; rrect(x - w/2, y - h/2, w, h, 5); ctx.fill();
+    ctx.strokeStyle = t.k || C.line; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#f1eee4'; ctx.fillText(text, x, y + 1);
+  }
+  if (on) ctx.restore();
 }
 function drawBall(r) {
   const b = M.ball, s = V.s;
@@ -8187,6 +8361,14 @@ function bvOverheads(cam, ctrls, plain) {                   // plain: a match yo
     if (no) bvNoSign(x, S.no, no - 3, Math.min(1, 4*(1 - (M.dclock - N.at)/PRO.noT)));
   }
 }
+function bvCallAt(cam, t, plain) {                          // where a possession call stands in a behind view: over his stack (bvOverheads), as high as it reaches
+  const p = t.p, [wx, wy] = p ? drawPos(p) : [t.x, t.y], q = pr(cam, wx, wy, 0);
+  if (!q || q.sx < 0 || q.sx > V.W || q.sy < 0 || q.sy > V.H) return null;
+  const star = plain && M.career && p === M.careerP ? Math.max(8, 0.34*q.k) : 0, carry = plain && M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === p;
+  const S = bvStack(q.sy - ((p ? lookOf(p).h : 1.8) + 0.2)*q.k, { pointer:true, carry, star, floor:plain && Math.abs(q.sx - V.W/2) < 130 ? BV_STACK_HUD : 0 });
+  const top = star ? S.star - star : carry ? S.carry - BV_CARRY.tail - BV_CARRY.h : S.pointer - 8;
+  return { x:q.sx, top:top - BV_CARRY.gap, foot:q.sy + Math.max(6, BV_RING*1.55*q.k)*bvFlat(cam, q.z) + 8 };   // over the stack, or under his ring on the grass
+}
 function bvEdgeMarks(cam, plain) {                          // the ball or its carrier off the frame, and your player. Not at a set piece: the game is about to cut to it, and it has its own banner
   if (!plain) return;
   const b = M.ball;
@@ -8226,6 +8408,7 @@ function renderBehind(dt) {
   BV.edges.length = 0;
   if (plain && M.phase === 'play' && b.state === 'loose') bvLooseMark(cam, b);
   for (const t of [0, 1]) if (ctrls[t]) groundRing(cam, ctrls[t].x, ctrls[t].y, BV_RING*1.55, ringCol(t), 2.5);
+  if (!drill) callFlash(dt, (p, u, col) => { const [wx, wy] = drawPos(p); groundRing(cam, wx, wy, BV_RING*(1.55 + 0.9*u), col, 3); });   // a possession call's flash on his ring (src/calls.js)
   if (plain && M.career && M.careerPro) bvProCall(cam);      // on the grass with the ring, under the men
   bvPrepareMen(cam);
   if (artReady()) artPrepare(cam);
@@ -8283,6 +8466,7 @@ function renderBehind(dt) {
   if (drill) { if (dd && dd.after) dd.after(cam, dt); dvBall(cam); } else if (BV.fade >= 1) bvBall(cam);
   drawTags(dt, 0.95*cam.F/cam.back);                         // its clocks must run; its impact ring stays a circle on the screen in this slice
   bvOverheads(cam, ctrls, plain);                            // the pointer, the ball's marker and the star, stacked over a man's head
+  drawCalls(dt, t => bvCallAt(cam, t, plain));                // a possession call over that stack (src/calls.js)
   bvEdgeMarks(cam, plain);
   if (M.cut) drawCut();
   if (drill) drillDrawScreen();                              // a drill's own close-up or corner picture
@@ -8788,6 +8972,7 @@ function render(dt) {
     ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(cx, cy, r*1.55, 0, 7); ctx.stroke();
   }
+  callFlash(dt, (p, u, col) => { const [fx, fy] = toS(...drawPos(p)); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(fx, fy, r*(1.55 + 0.9*u), 0, 7); ctx.stroke(); });   // a possession call's flash: his ring going out and fading (src/calls.js)
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
   if (M.career && !M.cut) careerMark(r);                   // a career match: your player's ring and the star on his back, or an arrow to him
@@ -8858,6 +9043,10 @@ function render(dt) {
     if (off) { ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fill(); }
     else { ctx.beginPath(); ctx.moveTo(cx-6, cy-r*2.4); ctx.lineTo(cx+6, cy-r*2.4); ctx.lineTo(cx, cy-r*1.75); ctx.closePath(); ctx.fill(); }
   }
+  drawCalls(dt, t => {                                     // a possession call stands over his pointer, or hangs under his ring (src/calls.js)
+    const [wx, wy] = t.p ? drawPos(t.p) : [t.x, t.y], [x, y] = toS(wx, wy);
+    return x < 0 || x > V.W || y < 0 || y > V.H ? null : { x, top:y - r*2.4 - 5, foot:y + r*1.75 + 6 };
+  });
   const g = ctx.createRadialGradient(V.W/2, V.H/2, Math.min(V.W, V.H)*0.35, V.W/2, V.H/2, Math.max(V.W, V.H)*0.75);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, V.W, V.H);
@@ -8923,11 +9112,11 @@ const SOUND = {
   trim:0.62,                                                 // takes back the make-up gain a compressor adds by itself. Every level below sits under this
   ceiling:[0.62, 0.89],                                      // the curve after it: straight up to the first, bending so nothing passes the second
   maxNodes:120, maxVoices:14, reserve:24,                    // live nodes the voices may hold (the bus's six are not counted), and room kept for the largest recipe
-  level:{ whistle:1, long:1, horn:0.55, kick:1.2, strike:1.2, post:1.25, pass:2, catch:0.9, fumble:0.45, bounce:1, tackle:0.72, hit:1.35, whiff:1.25, trip:1.5, whoosh:0.6, tick:6.5, tap:1.7, roar:0.6, cheer:0.55, groan:0.58 },   // one number a sound: what the ears ask for goes here
+  level:{ whistle:1, long:1, horn:0.55, kick:1.2, strike:1.2, post:1.25, pass:2, catch:0.9, fumble:0.45, bounce:1, tackle:0.72, hit:1.35, whiff:1.25, trip:1.5, whoosh:0.6, tick:6.5, tap:1.7, gather:1.6, roar:0.6, cheer:0.55, groan:0.58 },   // one number a sound: what the ears ask for goes here
   wakeTries:3, wakeGap:0.4, pendAge:0.25,                    // taps a stuck context gets before it is rebuilt (iOS can leave one stuck), their spacing, and how stale a held sound may be
   bed:{ peak:1, fadeIn:1.6, fadeOut:0.35 },
   // the fewest seconds between two of the same sound: past this they only pile up. Unlisted: 0.03
-  gap:{ roar:0.9, cheer:0.6, groan:0.6, long:0.5, horn:0.5, whistle:0.12, post:0.1, tick:0.05, tap:0.04, catch:0.05, bounce:0.05, pass:0.04 },
+  gap:{ roar:0.9, cheer:0.6, groan:0.6, long:0.5, horn:0.5, whistle:0.12, post:0.1, tick:0.05, tap:0.04, catch:0.05, bounce:0.05, pass:0.04, gather:0.25 },
   // which sound gives way when there are too many: the lowest first, then the oldest. A voice is never cut for a lesser one
   rank:{ whistle:3, long:3, horn:3, roar:2, cheer:2, groan:2, strike:2, post:2, hit:2, kick:2, tackle:2 },
   // a recording each time: how far its speed may move either way (pitch with it). Unlisted: 0.04
@@ -8939,10 +9128,10 @@ const SOUND = {
 const SOUND_NAMES = {
   whistle:'Pea Whistle', long:'Long Whistle', horn:'Horn', kick:'Kick', strike:'Goal Strike', post:'Post Clang',
   pass:'Pass', catch:'Catch', fumble:'Fumble', bounce:'Ball Bounce', tackle:'Tackle', hit:'Big Hit', whiff:'Whiff', trip:'Trip', whoosh:'Whoosh',
-  tick:'Tick', tap:'Menu Tap', roar:'Crowd Roar', cheer:'Cheer', groan:'Groan',
+  tick:'Tick', tap:'Menu Tap', gather:'Gather', roar:'Crowd Roar', cheer:'Cheer', groan:'Groan',
 };
-// Always their recipes: no CC0 referee's whistle or stadium hooter could be found, and Trip, Tick and Menu Tap are cues made to carry on a phone speaker
-const SOUND_SYNTH = ['whistle', 'long', 'horn', 'trip', 'tick', 'tap'];
+// Always their recipes: no CC0 referee's whistle or stadium hooter could be found, and Trip, Tick, Menu Tap and Gather are cues made to carry on a phone speaker
+const SOUND_SYNTH = ['whistle', 'long', 'horn', 'trip', 'tick', 'tap', 'gather'];
 // The recordings, by key: [file in assets/sounds, seconds of sound in it, and for the crowd's loop the seconds of margin either side of it], a take each.
 // Written by tools/sound-make.py
 // sound-make: files from here
@@ -9213,6 +9402,13 @@ const SND = {
   tap(V) {                                                   // a round soft press: the menus
     sndTone(V, { f:sndVary(760, 0.03), to:560, dur:0.05, peak:0.075, att:0.002 });
     sndBurst(V, { white:true, f:2400, q:1, dur:0.008, peak:0.018, att:0.001 });
+  },
+  gather(V) {                                                // the ring's man has the ball by a call (src/calls.js): the catch's slap, then two bright notes going up, a fifth apart, that a phone speaker carries
+    const f = sndVary(660, 0.04);
+    sndPat(V, 0, sndVary(280, 0.08), 0.16);
+    sndTone(V, { type:'triangle', f, at:0.03, dur:0.08, peak:0.09, att:0.003 });
+    sndTone(V, { type:'triangle', f:f*1.5, at:0.1, dur:0.16, peak:0.085, att:0.003 });
+    sndTone(V, { f:f*3, at:0.1, dur:0.07, peak:0.02, att:0.002 });
   },
   roar(V) {
     sndCrowd(V, { peak:0.9, wobble:[3.4, 0.14], curve:[[0, 0], [0.18, 0.42], [0.52, 1], [1.25, 0.86], [2.1, 0.46], [3.4, 0.012]],
@@ -10112,6 +10308,7 @@ function showScreen(id) {
 function clearBanner() { clearTimeout(bannerTimer); const el = document.getElementById('banner'); if (el) el.innerHTML = ''; }
 function say(text, size, team, grade, low) {
   if (!M || M.demo || M.headless) return;
+  sayNote(text, size, team);                                // On Fire waits for this one if it was lit in this step (src/calls.js)
   const el = $('banner');
   const k = team != null ? showCol(team) : 'var(--flood)';
   el.innerHTML = '';
@@ -17798,6 +17995,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   clarity:{ MATCH_PACE, matchPace, HALF_SECONDS, fmtClock, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
   knock:{ KNOCK, KNOCK_OFF, lv:knockLv, catchBall, knockOn, commitTackle, resolveContact, updateBallAir, resolvePass, pressure, tag, isHuman, ARCADE },   // src/knock.js: the knock-on levers and the paths they touch
+  calls:{ CALLS, CALLS_OFF, lv:callsLv, possCall, callWon, callLate, canPlay, offsideMan, offMark, releaseOk, fireSay, fireShowing, fireFold, bannerLife, callsTick, callFlash, drawCalls, catchBall, pickUp, updateBallAir, updateLoose, resolvePass, resolveRuck, offload, looseInContact, doPass, kickBall, tag, heat, edgeLine, matchTargets, say, render, matchMild, setRM:v => { RM = !!v; }, rm:() => RM },   // src/calls.js: the possession calls, the interception rules and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
     filter:pickFilter, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)

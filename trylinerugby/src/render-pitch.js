@@ -136,6 +136,7 @@ function drawTags(dt, r) {                                 // on-pitch tags: cha
   ctx.font = `800 16px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,14,10,.85)'; ctx.fillStyle = '#f1eee4';
   for (const t of M.tags) {
+    if (t.call) continue;                                          // a possession call is drawn on its own, over the men's marks (drawCalls)
     const u = clamp(t.t/0.7, 0, 1), a = t.t > 0.45 ? clamp(1 - (t.t - 0.45)/0.25, 0, 1) : 1;
     let [x, y] = toS(t.x, t.y);
     const edge = tagBox();                                          // insets 0: 76 / 60 / W-200, as before. A right inset walks the clamp in with the buttons
@@ -144,7 +145,39 @@ function drawTags(dt, r) {                                 // on-pitch tags: cha
     t.t += dt;
   }
   ctx.globalAlpha = 1;
-  M.tags = M.tags.filter(t => t.t < 0.7);
+  M.tags = M.tags.filter(t => t.t < (t.call ? callsLv('life') || 0.9 : 0.7));
+}
+/* The possession call (src/calls.js): a dark plate edged in the winning side's colour with its word in chalk, standing over the new
+   carrier's pointer and going with him. It rises 6px over its life (it holds still under reduced motion) and fades over its last
+   quarter second. Where the banner (Turnover, Intercepted) would cover it, it stands under his ring instead. at(t): { x, top, foot },
+   the screen x, the y the plate stands on over him and the y it hangs from under him, or null while he is off the screen. */
+function bannerBox() {                                     // the banner's box while one shows (the page lays it out over the canvas), or null
+  const el = document.getElementById('banner'), m = el && el.firstElementChild;
+  if (!m || typeof m.getBoundingClientRect !== 'function') return null;
+  const r = m.getBoundingClientRect();
+  return r && r.width > 0 ? r : null;
+}
+function drawCalls(dt, at) {
+  if (!M.tags.length) return;
+  const L = callsLv('life') || 0.9, edge = tagBox();
+  let on = false, ban;
+  for (const t of M.tags) {
+    if (!t.call) continue;
+    t.t += dt;
+    const pt = at(t);
+    if (!pt) continue;
+    if (!on) { on = true; ban = bannerBox(); ctx.save(); ctx.font = `800 17px 'Big Shoulders Display', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; }
+    const u = clamp(t.t/L, 0, 1), a = clamp((L - t.t)/0.25, 0, 1), text = t.text.toUpperCase(), lift = RM ? 0 : 6*u;
+    const m = ctx.measureText(text), w = ((m && m.width) || text.length*8.5) + 22, h = 26;
+    const x = clamp(pt.x, Math.max(edge.left, w/2 + 6), V.W - Math.max(edge.right, w/2 + 6));
+    let y = Math.max(edge.top + h/2, pt.top - h/2 - lift);
+    if (ban && x + w/2 > ban.left - 6 && x - w/2 < ban.right + 6 && y + h/2 > ban.top - 6 && y - h/2 < ban.bottom + 6) y = Math.min(V.H - h/2 - 4, pt.foot + h/2 - lift);   // under the banner: under him instead
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(8,14,10,.9)'; rrect(x - w/2, y - h/2, w, h, 5); ctx.fill();
+    ctx.strokeStyle = t.k || C.line; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#f1eee4'; ctx.fillText(text, x, y + 1);
+  }
+  if (on) ctx.restore();
 }
 function drawBall(r) {
   const b = M.ball, s = V.s;

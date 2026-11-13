@@ -32,6 +32,7 @@ function render(dt) {
     ctx.strokeStyle = ringCol(t); ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(cx, cy, r*1.55, 0, 7); ctx.stroke();
   }
+  callFlash(dt, (p, u, col) => { const [fx, fy] = toS(...drawPos(p)); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(fx, fy, r*(1.55 + 0.9*u), 0, 7); ctx.stroke(); });   // a possession call's flash: his ring going out and fading (src/calls.js)
   const order = M.players.slice().sort((a, c) => toS(a.x, a.y)[1] - toS(c.x, c.y)[1]);
   for (const p of order) drawPlayer(p, r);
   if (M.career && !M.cut) careerMark(r);                   // a career match: your player's ring and the star on his back, or an arrow to him
@@ -102,6 +103,10 @@ function render(dt) {
     if (off) { ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fill(); }
     else { ctx.beginPath(); ctx.moveTo(cx-6, cy-r*2.4); ctx.lineTo(cx+6, cy-r*2.4); ctx.lineTo(cx, cy-r*1.75); ctx.closePath(); ctx.fill(); }
   }
+  drawCalls(dt, t => {                                     // a possession call stands over his pointer, or hangs under his ring (src/calls.js)
+    const [wx, wy] = t.p ? drawPos(t.p) : [t.x, t.y], [x, y] = toS(wx, wy);
+    return x < 0 || x > V.W || y < 0 || y > V.H ? null : { x, top:y - r*2.4 - 5, foot:y + r*1.75 + 6 };
+  });
   const g = ctx.createRadialGradient(V.W/2, V.H/2, Math.min(V.W, V.H)*0.35, V.W/2, V.H/2, Math.max(V.W, V.H)*0.75);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.42)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, V.W, V.H);

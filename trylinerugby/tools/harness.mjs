@@ -38,6 +38,9 @@ if (process.env.EDGE) js = js.replace('// EDGE_TUNE', `{ const deep = (a, b) => 
 // KNOCK='{"on":false}' turns the knock-on levers off (src/knock.js: the game plays exactly as 20cbcaf, the build before them, draw for draw:
 // the proof behind every re-pin since); KNOCK='{"base":0.6}' tries other levers. Deep-merged, as the contact levers below
 if (process.env.KNOCK) js = js.replace('// KNOCK_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(KNOCK, ${process.env.KNOCK}); }`);
+// CALLS='{"on":false}' turns the possession calls and the interception rules off (src/calls.js: the game plays exactly as b4a25d5, the
+// build before them, draw for draw: the proof behind every re-pin since); CALLS='{"release":1.0}' tries other levers. Deep-merged, as above
+if (process.env.CALLS) js = js.replace('// CALLS_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(CALLS, ${process.env.CALLS}); }`);
 // CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' PRESSURE='{"on":false}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion, Tackle duel trigger and pressure levers
 {
   const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL', 'PRESSURE'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');

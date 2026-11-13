@@ -11,7 +11,12 @@ const countTk = (team, made) => { const tk = M.stats.tk; tk.att[team]++; if (mad
 const cpuEdge = (q, c, arr) => (!isHuman(q.team) && isHuman(c.team)) ? arr[levelOf(c.team)] : 0;   // a CPU edge over a human, by the level that human plays
 const slide = (p, x, y, T, spin) => { T = Math.max(T, hyp(x - p.x, y - p.y)/9); p.drawFrom = { x:p.x, y:p.y, t:T, T, spin:spin || 0 }; p.x = x; p.y = y; };   // a teleport in the logic, smoothed in the drawing at no more than 9 m/s
 const matchMild = () => !!(M && (M.kids || catOf(M.nat[0]) === 'minis'));   // a Kids match, or a Minis one (Men | Women | Minis: every side of a match is one category)
-function tag(text, x, y) { if (M.auto) return; st('tag_' + text); M.tags.push({ text, x, y, t:0 }); while (M.tags.length > 2) M.tags.shift(); }
+function tag(text, x, y, o) {                              // o: a possession call's extras (src/calls.js): k its side's colour, call, p the man it follows
+  if (M.auto) return;
+  if (!(o && o.call)) st('tag_' + text);                  // a possession call is counted as a call (call_*, src/calls.js), not as a tag
+  M.tags.push(o ? { text, x, y, t:0, ...o } : { text, x, y, t:0 });
+  while (M.tags.length > 2) { const i = M.tags.findIndex(t => !callFresh(t)); M.tags.splice(i < 0 ? 0 : i, 1); }   // at most two: the oldest goes, but a call in its time never makes way for a tag (src/calls.js)
+}
 function impact(x, y) { M.fx.push({ x, y, t:0 }); }
 function hitStop(ms, shake) { if (!interactive()) return; M.stop = ms/1000; if (!RM && shake !== 0) M.shake = M.shakeT = shake || 0.12; }   // shake: its length, which also sets its size; 0 holds the world with no shake (a Line Break, src/edge.js)
 function commitTackle(q, c, mode) {                        // mode: 'ai' (an AI defender's reach), 'contact' (your ringed man's automatic tackle), 'dive' (a Tackle press), 'ankle' (a dive from behind)
@@ -98,6 +103,7 @@ function looseInContact(c, spill) {                        // the ball comes loo
   tag('Loose Ball', c.x, c.y); sfx('fumble');
   b.state = 'loose'; b.carrier = null; b.f = null; b.last = c.team; b.kickInfo = null;
   b.x = c.x - d*0.4; b.y = c.y; b.z = 0.6; b.vx = -d*(2 + rnd()*3); b.vy = (rnd() - 0.5)*4; b.vz = 1.5;
+  offMark(c.team, c.x);                                    // he played it last: his men in front of him are offside for it (CALLS, src/calls.js)
   c.hold = 0;
   if (pressLive()) eggStart(b, c.team, !!spill);           // it hops like Bouncy Egg's ball
 }
@@ -112,7 +118,11 @@ function offload(k, user) {                                // user: the carrier'
   releaseBind(k);
   c.down = 0.9; q.down = 0.6; q.tcd = 1.0; if (q2) q2.tcd = 0.4;
   const ro = rnd();
-  if (ro < pOk) { st('offloads'); st('off' + c.team); if (!traitOffloaded(c, ro, p0) && ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) }); return true; }   // Safe Hands says so when it saved the offload
+  if (ro < pOk) {
+    st('offloads'); st('off' + c.team); if (!traitOffloaded(c, ro, p0) && ringed(c)) tag('Offload', c.x, c.y); doPass(c, r, { skip:[q, q2].filter(Boolean) });   // Safe Hands says so when it saved the offload
+    if (!user && callsLv('call') && isHuman(c.team) && M.ball.f) M.ball.f.call = 'Offload';   // a teammate the computer runs (Pro Mode): the man the ring is on hears it when he takes it (src/calls.js)
+    return true;
+  }
   st('offFail');
   if (rnd() < CONTACT.off.hold) { st('offHeld'); c.down = 0; q.down = 0; q.tcd = 0; tackle(c, q, { tier:k.tier, q2 }); return true; }   // he couldn't get it away: an ordinary ruck
   if (rnd() < CONTACT.off.knock) { st('offKnock'); knockOn(c, 'offload'); } else { st('offLoose'); looseInContact(c); }
@@ -236,8 +246,9 @@ function resolveRuck(s) {                                  // the ruck is automa
   if (rnd() < RUCK.pen) { restart('ruckPenalty', rnd() < 0.55 ? def : att, s.x, s.y); return; }
   const pT = s.dom ? s.domP : RUCK.flatBase + (powerOf(def) - powerOf(att))*0.02 + (cpuSide(def) ? diffOf(def).turnover : -diffOf(def).turnover);   // the level's turnover edge for a CPU defence, against a human one
   if (rnd() < clamp(pT, 0.03, s.dom ? 0.40 : 0.18)) {
-    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small'); heat(def, 'turnover');
+    M.stats.turnovers++; st('toRuck'); say('Turnover', 'small', callCol(def)); heat(def, 'turnover');
     releaseTo(def, s.x, s.y, 'turnover');
+    if (M.ball.carrier) { callWon(M.ball.carrier); possCall(M.ball.carrier, 'Turnover', true); }   // called over the man the ring goes to (src/calls.js)
     if (s.tier) wrongFoot(def, s.x, s.y);
     if (s.dom) surge(def, LINE_SPEED);                     // Line Speed for the side that made the Big Hit
     return;
@@ -342,7 +353,7 @@ function eggLead(b) {                                      // where the chase ru
 }
 function eggChaser(t, S) {                                 // the CPU sprints its nearest man at a hopping ball, 2.5 to 12m off, with no draw; he keeps it while he is still the nearest
   const L = eggLead(M.ball); let best = null, bd = 1e9;
-  for (const p of M.players) if (p.team === t && onFeet(p) && !(p.offside > 0)) { const dd = dist(p, L); if (dd < bd) { bd = dd; best = p; } }
+  for (const p of M.players) if (p.team === t && onFeet(p) && !(p.offside > 0) && !(callsLv('fit') && offsideMan(p))) { const dd = dist(p, L); if (dd < bd) { bd = dd; best = p; } }   // never a man who may not play it (src/calls.js)
   if (!best) return null;
   if (S.p) return S.p === best && bd > 1 ? best : null;
   return bd >= SPRINT.cpu.min && bd <= SPRINT.cpu.max ? best : null;

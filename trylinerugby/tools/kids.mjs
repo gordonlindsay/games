@@ -652,7 +652,11 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // Re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose: every match here moves but Two Player's
   // half, which holds no catch or jolt that falls the other way. Proof, checked below: with KNOCK off this build gives BEFORE_KNOCK,
   // the pin before them, exactly, as 20cbcaf does
-  const PIN = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
+  // Re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose: nobody
+  // intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags. Proof,
+  // checked below: with CALLS off this build gives BEFORE_CALLS, the pin before them, exactly, as b4a25d5 does (a second run, as PIN was)
+  const PIN = 'ytai0c 1vfa9il 17vh7h5 1h583yb 1owh0p7 1db7d9g 19781ts 1afo373';
+  const BEFORE_CALLS = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
   const BEFORE_KNOCK = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
   const pin = () => {
     const out = [];
@@ -675,7 +679,10 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   };
   // KNOCK off runs first: the second match (Quick Match on Normal) reads something the first run leaves behind, so a run's pin is the
   // run's own: the first one in a process gives BEFORE_KNOCK with KNOCK off, as the build before did; PIN is a second run's, KNOCK on
-  { if (T.knock) { T.knock.KNOCK.on = false; const off = pin(); T.knock.KNOCK.on = true; ok(off === BEFORE_KNOCK, `with the knock-ons off (KNOCK, src/knock.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+  // The calls off run second, as PIN did before them (BEFORE_CALLS), and PIN with them on is a third run's
+  { const CL = T.calls && T.calls.CALLS;                 // the knock-ons' proof runs with the calls off too: 20cbcaf had neither
+    if (T.knock) { T.knock.KNOCK.on = false; if (CL) CL.on = false; const off = pin(); T.knock.KNOCK.on = true; if (CL) CL.on = true; ok(off === BEFORE_KNOCK, `with the knock-ons off (KNOCK, src/knock.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+    if (CL) { CL.on = false; const off = pin(); CL.on = true; ok(off === BEFORE_CALLS, `with the possession calls off (CALLS, src/calls.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS})`); }
     const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now); ok(now === (T.knock ? PIN : BEFORE_KNOCK), `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${PIN})`); }
 
   // how long: the chosen half times the Kids pace, in simulated seconds, which is the chosen half in real time

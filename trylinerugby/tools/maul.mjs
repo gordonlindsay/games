@@ -486,7 +486,7 @@ done('8 cards');
 begin('off');
 {
   const child = env => spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--pins'], { env:{ ...process.env, ...env }, encoding:'utf8', maxBuffer:8 << 20 });
-  const K = { KNOCK:'{"on":false}' };   // the knock-ons (src/knock.js, 2026-11-11) off in all three: 20cbcaf exactly, so the maul's own proof stands as it was pinned
+  const K = { KNOCK:'{"on":false}', CALLS:'{"on":false}' };   // the knock-ons (src/knock.js, 2026-11-11) and the possession calls (src/calls.js, 2026-11-13) off in all three: 20cbcaf exactly, so the maul's own proof stands as it was pinned
   const off = child({ ...K, MAUL:'{"on":false}', PRESSURE:'{"on":false}' }), alone = child({ ...K, MAUL:'{"on":false}' }), on = child(K);
   const a = (off.stdout || '').trim(), m = (alone.stdout || '').trim(), b = (on.stdout || '').trim();
   ok(off.status === 0 && a === BASE_OFF, `MAUL and PRESSURE off: AI v AI, a tool's match, a played Quick Match, a Hard match and the demo play exactly as at b706c3e (${a}, pinned ${BASE_OFF})${off.stderr ? ' ' + off.stderr.slice(0, 300) : ''}`);

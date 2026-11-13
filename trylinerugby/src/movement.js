@@ -133,8 +133,9 @@ function matchTargets() {
   const dA = dirOf(att);
   let A = P.filter(p => p.team === att && free(p)), D = P.filter(p => p.team !== att && free(p));
   if (mode === 'kick') {
+    const may = b.state === 'loose' && callsLv('fit') ? canPlay : null;   // a loose ball: only men who may play it go for it (src/calls.js)
     for (const side of [A, D]) {
-      const s = side.slice().sort((p,q) => hyp(p.x-fx, p.y-fy) - hyp(q.x-fx, q.y-fy));
+      const s = (may ? side.filter(may) : side.slice()).sort((p,q) => hyp(p.x-fx, p.y-fy) - hyp(q.x-fx, q.y-fy));
       for (const p of s.slice(0,2)) T.set(p, { x:fx, y:fy, s:maxSpeed(p), a:16 });
     }
     A = A.filter(p => !T.has(p)); D = D.filter(p => !T.has(p));
@@ -403,7 +404,7 @@ function gestureStep(t, dt) {                              // one human side's o
     }
     if (s*L - lo >= KS.rise) {
       G.armed = false;                                     // the flick is spent whether or not it acts: outside a tackler's reach it is steering
-      if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, { x:jx, y:jy }, s); G.tagged = M.tags[M.tags.length - 1] || null; G.tagAt = G.t; }
+      if (c.side <= -0.9 && c.hold >= KS.since && pressure(c) < KS.range) { sideStep(c, { x:jx, y:jy }, s); G.tagged = M.tags.length && !M.tags[M.tags.length - 1].call ? M.tags[M.tags.length - 1] : null; G.tagAt = G.t; }   // its Side Step tag; never a possession call (src/calls.js)
     }
   }
   // the Dummy: a held run, a quick pull back, and the push on
@@ -534,6 +535,7 @@ function update(dt) {
 function matchUpdate(dt) {
   if (!M || M.phase === 'break' || M.phase === 'menu' || M.paused || M.over) return;
   M.stepN++;                                               // every step, close-ups included: gestureStep reads it to see a gap in a man's carry
+  callsTick();                                             // On Fire after its moment's banner, and the offside men back onside (src/calls.js)
   if (M.phase === 'cut') { updateCut(dt); return; }
   const b = M.ball;
   if (M.surge && (M.surge.t -= dt) <= 0) M.surge = null;

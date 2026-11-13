@@ -18,6 +18,7 @@ function showScreen(id) {
 function clearBanner() { clearTimeout(bannerTimer); const el = document.getElementById('banner'); if (el) el.innerHTML = ''; }
 function say(text, size, team, grade, low) {
   if (!M || M.demo || M.headless) return;
+  sayNote(text, size, team);                                // On Fire waits for this one if it was lit in this step (src/calls.js)
   const el = $('banner');
   const k = team != null ? showCol(team) : 'var(--flood)';
   el.innerHTML = '';

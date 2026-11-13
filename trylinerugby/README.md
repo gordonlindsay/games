@@ -90,7 +90,7 @@ Two consequences the owner may want to change (2026-11-11 review): **Not Say dec
 
 Matches you play are arcade; AI v AI, the demo, practice and the balance tools are not, so their numbers are unchanged.
 
-- **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds (on Easy, your side against the CPU: two good moments, a Line Break one of them, for 15 seconds; Easy, below): 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length.
+- **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds (on Easy, your side against the CPU: two good moments, a Line Break one of them, for 15 seconds; Easy, below): 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length. Its banner waits for the banner of the moment that lit it (Turnover, Intercepted, a Big Hit, a Try) and follows it once that one has had its time, instead of replacing it (Possession calls, 2026-11-13); lit by a Line Break it shows at once, with Line Break over it.
 - **Big Hit.** Your dominant tackle now takes the full banner, a 180ms freeze and a harder shake, and spills the ball 12 points more often (21% of the time at average hands, where any Big Hit spills it 9%). Taking one shakes the screen too, and that is all: the CPU's Big Hit on yours spills it no more than a Big Hit in any other match (until 2026-11-11 it did, against this line: `KNOCK.hit`, Catching and knock-ons). In Two Player both sides are yours.
 - **Golden Try.** Quick Match and Two Player level at full time go to sudden-death extra time, half a half long. Any score wins it; a try needs no conversion. Still level at its hooter, the draw stands. A championship keeps its draws; a cup's knockout or Test has the Golden Try too, and is never left level (Silverware).
 
@@ -373,7 +373,7 @@ The owner plays on Easy (2026-11-10): "Provide more of an edge", then, choosing 
 
 **Who has it.** A side a person plays against the CPU on Easy: Quick Match, Championship, Career (in Pro Mode, his own player only, never a teammate the computer runs) and Kids, which is Easy underneath. Never Two Player, AI v AI, the demo, the drills, Normal or Hard, and never a tool's balance match: `edgeOn` reads `M.arcade`, which only `startMatch` asks for. One table, `EDGE` in `src/edge.js`, with an on switch; `EDGE='{"on":false}'` in the harness plays exactly as 90353c3, draw for draw.
 
-- **Line Break.** Your carrier gets past the last man in front of him: no standing defender ahead of him inside a window 15m across beside him (the lane the CPU's Sprint calls a clean break by) that widens a metre for every metre ahead, so the deep cover man, 15m ahead and 16m across, is still in front of him while he is placed to come across; where one was earlier in the same carry; none within 3m of him at all; running forward at 2.5 m/s or more, 5m or more out. Once a carry: **Line Break** is called (the small banner in your colour, so the run stays in sight), a whoosh and the crowd, a point towards On Fire, and a 110ms hold with no shake (a Big Hit's is 180ms). If that point lights On Fire, the On Fire banner carries Line Break over it, so the call is still seen. A Get Past close-up won the right way already says Line Break with its cheer, so that is the carry's Line Break: its point and the cover's lag, and no second call when play hands back. Kids and Minis get the call, the sound and the point, and no hold. For 0.3 seconds after it the CPU's cover runs on as it was running before it reacts.
+- **Line Break.** Your carrier gets past the last man in front of him: no standing defender ahead of him inside a window 15m across beside him (the lane the CPU's Sprint calls a clean break by) that widens a metre for every metre ahead, so the deep cover man, 15m ahead and 16m across, is still in front of him while he is placed to come across; where one was earlier in the same carry; none within 3m of him at all; running forward at 2.5 m/s or more, 5m or more out. Once a carry: **Line Break** is called (the small banner in your colour, so the run stays in sight), a whoosh and the crowd, a point towards On Fire, and a 110ms hold with no shake (a Big Hit's is 180ms). If that point lights On Fire, the On Fire banner carries Line Break over it, so the call is still seen; so does an On Fire banner already showing (Possession calls, 2026-11-13). Not within a second of a turnover or an interception on the same carrier: that moment's call is Turnover or Intercepted, and the Line Break is called once the second is up if he is still clear. A Get Past close-up won the right way already says Line Break with its cheer, so that is the carry's Line Break: its point and the cover's lag, and no second call when play hands back. Kids and Minis get the call, the sound and the point, and no hold. For 0.3 seconds after it the CPU's cover runs on as it was running before it reacts.
 - **On Fire sooner and longer.** Your side lights after two good moments unanswered, a try, a Line Break, a Big Hit and a turnover won one each, and burns 15 match seconds instead of 12 (each by Stamina). Every other side keeps three points, a try two, and 12 seconds. With a try worth two on Easy as well (need 2 and 15 seconds on the old points), the casual adult below went On Fire 4.4 times a match, since every try lit it, and the call stopped being one.
 - **A stronger carrier**, against the CPU only (its own carriers are as they were):
 
@@ -560,7 +560,7 @@ AI v AI at all three levels (asked to play Kids or not), the demo, the harness's
 `node tools/kids.mjs` checks the setting, the save (a round trip, old saves on each level, partial and bad ones), each lever on in Kids and off on Easy and in AI v AI, the ring staying on a bound tackler, the rating (the scale's start and ceiling lever by lever, the straight line between them, bounds, the update rule and its step sizes, each step the same size anywhere on the scale, a child who loses every other match going back to the start and one who wins big climbing to the top, its save, old saves, and who moves it: Quick Match, Championship and Career at full time, never a match quit early, Easy, two player, AI v AI, the demo or a drill), the check's pass and cancel paths, its three-figure answers, its rests (two keys in turn and random taps), the controller's focus, its place over the other cards, and the half (section 14: a Kids half at each length is the chosen half times the Kids pace in simulated seconds and the chosen half in real time, the Golden Try half of it, in Quick Match, Championship and a Whole Team career; the scorebug's real clock, 0:00 to 2:00 each half and holding at the hooter; a whole Kids half through the real frame loop taking 2:00 of real time while the clock runs; and every other match, Easy, Normal and Hard at each length, Two Player, My Player on Kids, AI v AI, the demo and a drill, keeping its half and its clock, with a seeded fingerprint pinned to 909fe3a). `node tools/kidbots.mjs` is the calibration above: tens of minutes long, so not part of `check.mjs`.
 ## Sound
 
-Fifteen of the game's twenty sounds, and the crowd bed under a match, are real recordings: 36 files in `assets/sounds` (AAC in .m4a, mono, 355 KB in all), every one CC0 from OpenGameArt and Kenney. [assets/sounds/LICENCES.md](assets/sounds/LICENCES.md) lists each file's sources, authors, the day they were fetched and what was done to them. Pea Whistle, Long Whistle and Horn are still synthesised (no CC0 referee's whistle or stadium hooter could be found, and Freesound refused the requests), and so are Trip, Tick and Menu Tap, cues made to carry on a phone speaker.
+Fifteen of the game's twenty-one sounds, and the crowd bed under a match, are real recordings: 36 files in `assets/sounds` (AAC in .m4a, mono, 355 KB in all), every one CC0 from OpenGameArt and Kenney. [assets/sounds/LICENCES.md](assets/sounds/LICENCES.md) lists each file's sources, authors, the day they were fetched and what was done to them. Pea Whistle, Long Whistle and Horn are still synthesised (no CC0 referee's whistle or stadium hooter could be found, and Freesound refused the requests), and so are Trip, Tick, Menu Tap and Gather (the possession call's: the catch's slap and two notes going up, a fifth apart), cues made to carry on a phone speaker.
 
 - **Loading.** After the first tap each file is fetched and decoded once, one at a time in the background, and kept. Until a sound's recording is in, or when it cannot be had (offline on a first visit, a failed fetch or decode), its recipe in `src/sound.js` plays instead, and a later tap asks again. Headless runs, Sound Off and a page with no audio fetch nothing. The files precache with the shell and the app carries them.
 - **Playing.** `sfx(key)` plays a random take, a little faster or slower and louder or softer (`Math.random`, never `rnd()`), through the same voice, gap, rank, node cap and bus as before. The crowd bed is a 14 second loop with no audible seam, started from a random place, and it swells under a roar or a cheer.
@@ -853,6 +853,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
 | `src/maul.js`, `src/render-maul.js` | The maul: the call, the close-up's drive, the maul driven in the world with nobody in it, and its close-up's drawing |
 | `src/knock.js` | The knock-on levers (`KNOCK`, read through `knockLv`): the unforced base, the interception's term, the Big Hit's spill yours only, the Knock-On tag |
+| `src/calls.js` | The possession calls and the interception rules (`CALLS`, read through `callsLv`): the call over the new carrier, its flash, sound and beat, On Fire after its moment's banner, the Line Break held after a turnover, nobody intercepting out of the passer's hands, nobody down, retiring or offside playing the ball |
 | `src/championship.js` | Fixtures, results, standings and title race |
 | `src/cups.js`, `src/ui-cups.js` | Silverware: the European Cup, World Cup, Home Nations Tour and Triple Crown, their screens and the Trophy Cabinet's kinds |
 | `src/render-*.js` | Pitch, players, close-up scenes and match drawing; `render-behind.js` is the optional behind views |
@@ -1838,6 +1839,7 @@ A catch (`catchBall`, src/match.js) draws one number against a chance that is a 
 - **An interception**: +0.2 before, now **`KNOCK.intercept` 0.07**. Most are a pass your man ran into: the man under your
   ring takes one he is within 1.1m of 40% of the time and an AI teammate 18%, with no button pressed (src/ball.js, as
   before), and then dropped it about one time in four. Now about one in ten. The CPU's interceptions are the same rule.
+  Since 2026-11-13 never out of the passer's hands, and never by a man down, retiring or offside (Possession calls).
 - Then, as before: On Fire x0.5, Kids `KIDS.hands` (your side), a career's Team Spirit, Safe Hands x0.1.
 
 In the tackle (Contact), the arcade Big Hit's 0.12 (`ARCADE.hit.jolt`) now spills the ball only when the tackler's side is
@@ -1925,6 +1927,69 @@ still at most Easy: each child at the ceiling (`at 1`, 90 simulated seconds a ha
 | Sharp 10 year old | 100% by 5.77 | 100% by 5.39 | 100% by 5.93 | 100% by 5.67 |
 
 By margin the ceiling is at least as easy as Easy for every child, before and after.
+
+### Possession calls
+
+The owner, 2026-11-13: "There's sometimes a glitch where the ball is passed, the tackle is made by CPU and suddenly the ball is
+with my player on a breakaway - or did I miss the switch?" It was his own pass, the CPU tackled his receiver, the ball popped loose
+and his support man had it running free. Nothing went to the wrong side: when your side gathered a loose ball the ring jumped to the
+new man with no call, no sound and no beat, and the only cue was a 0.7s Loose Ball tag over the tackled man, which the two-tag cap
+could push off. Intercepted and Turnover were small yellow banners for either side, On Fire replaced them in the same step, and a
+Line Break (Easy) up to a second later replaced them too. He chose **Interceptions Stay Automatic, Clearly Called**. Every lever is
+in `CALLS` (`src/calls.js`), read through `callsLv`; none draws a random number, so `CALLS='{"on":false}' node tools/sim.mjs`
+plays exactly as b4a25d5, the build before, draw for draw.
+
+- **The call.** Whenever the ring of a side a person plays goes to a new carrier for any reason but that person's own pass, a word
+  over him, following him for 0.9s on a dark plate edged in his side's colour: **Picked Up** (your side gathers a loose ball it did
+  not win from the other: its own spill, its own dropped pass, or any kick, since a kick is anyone's), **Intercepted**,
+  **Turnover** (a ruck won, or a loose ball gathered from the other side, a pressure spill among them) and **Offload** (in Pro Mode,
+  a teammate the computer runs offloads in the tackle and your player takes it; that offload used to be silent). It stands over his
+  pointer, or under his ring where the banner would cover it, and it rises 6px (it holds still under reduced motion). It is never
+  dropped by the two-tag cap for a plain tag while it lasts. His ring flashes for 0.4s, a ring going out and fading (none under
+  reduced motion), and the **Gather** sound plays, a synth recipe (the catch's slap, then two notes going up a fifth apart, made to
+  carry on a phone speaker): no recording was reused. When the ball comes from the other side, an 80ms hold with no shake, never
+  for Kids or Minis. Only where the ring is on him: in Pro Mode a teammate who wins the ball gets no call, and nothing at all for
+  the CPU, whose banner is its call. None of it in AI v AI, the demo or a drill. Kicks caught on the full, a ruck's own ball, a
+  scrum or a lineout and a pass that goes to the wrong man of yours are not called: the ring follows the ball there as it always did.
+- **The banners.** Intercepted and Turnover in the winning side's colour, as Line Break already was. On Fire waits for the banner of
+  the moment that lit it: a turnover or an interception's 0.9s, a Big Hit's 1.3s, a Try's 1.7s, then On Fire, instead of replacing
+  it in the same step (and not at all if the fire has gone out by then). A Line Break still lights it with its word over it at once.
+  A Line Break is not called within a second of a turnover or an interception on the same carrier: that moment's call is the
+  turnover's. Once the second is up he gets it if he is still clear, carried over On Fire's banner if that is showing.
+- **No interception out of the passer's hands.** Interceptions stay automatic at the same odds (`pI`, src/ball.js), but nobody rolls
+  for one until the ball is **1.5m** from where it left the passer's hands. That is further than the 1.1m an interceptor reaches, so
+  a man standing at the passer's hands can never take it, and past the swing of his arms: about the first 0.1s of a flat pass's
+  flight. A long pass is the same at its start, and a missed pass that comes down inside 1.5m of the hands is dropped, not taken.
+  At b4a25d5 about a third of all interceptions were inside 1.5m of the release (AI v AI 7.3 of 20.4 a match).
+- **Nobody who may not play the ball does.** A man down (as before), retiring from a ruck or a maul (`p.offside`), or offside
+  cannot intercept, take a missed pass or pick up a loose ball, and the AI no longer sends him after a loose ball. Offside is open
+  play's law: a man more than 0.5m (the kick's margin) in front of the teammate who last played the ball as it was played, the
+  passer, the kicker or the tackled man who spilled it, until he has been back behind that line. The other side is never offside.
+
+**Measured** (`node tools/calls.mjs --balance`, SEED 7, the same seeded matches with CALLS off then on). A match, yours / the
+CPU's (AI v AI: home / away), before then after:
+
+| | AI v AI, Normal | Bot, Easy | Bot, Normal | Bot, Hard | Casual adult, Easy |
+|---|---|---|---|---|---|
+| Interceptions | 10.17 / 10.25, 9.00 / 9.09 | 3.36 / 1.98, 3.31 / 1.79 | 5.64 / 3.39, 5.16 / 3.06 | 6.26 / 4.47, 6.63 / 3.69 | 5.04 / 2.79, 4.38 / 2.47 |
+| **Both sides** | **20.42, 18.09** | **5.34, 5.10** | **9.03, 8.22** | **10.74, 10.31** | **7.83, 6.85** |
+| Clean (not knocked on) | 9.16 / 8.97, 8.13 / 8.16 | 3.00 / 1.75, 3.08 / 1.65 | 5.03 / 3.09, 4.64 / 2.83 | 5.63 / 4.10, 5.90 / 3.23 | 4.46 / 2.62, 3.96 / 2.22 |
+| Inside 1.5m of the release | 3.77 / 3.48, 0 | 1.09 / 0.91, 0 | 1.91 / 1.68, 0 | 2.36 / 2.38, 0 | 1.99 / 1.36, 0 |
+| By a man retiring | 0.54 / 0.55, 0 | 0.21 / 0.10, 0 | 0.35 / 0.23, 0 | 0.42 / 0.17, 0 | 0.27 / 0.24, 0 |
+| Turnovers, both sides | 14.05, 13.21 | 5.28, 4.46 | 6.67, 6.54 | 7.21, 6.95 | 6.67, 6.78 |
+| Your calls: Picked Up, Intercepted, Turnover | | 0.49, 3.08, 2.27 | 1.11, 4.64, 2.67 | 1.26, 5.90, 2.04 | 1.28, 3.96, 3.15 |
+| Won (yours; AI v AI the home side's) | 46%, 45% | 100%, 100% | 95%, 90% | 54%, 50% | 91%, 89% |
+
+AI v AI is 120 matches at 4-minute halves; the bot (Quick Match's rules, 2-minute halves) 80 a level; the casual adult
+(`PROFILE=casual`, Easy) 100. Interceptions fall by 4 to 13% (both sides), not by the third that came out of the hands: most of
+those men still had their roll a step or two later, once the ball was 1.5m out and still within their reach. The ones taken from
+the hands and by a man retiring are gone. The bot's 95% to 90% on Normal is mostly the 80's noise: over 320 it is 95% to 93%
+(± 1), interceptions 8.84 to 8.00 a match, yours 5.51 to 5.00 and the CPU's 3.34 to 3.00; the casual adult over 400 wins 91%
+then 91%, interceptions 8.33 to 7.15. Fewer interceptions both ways cost a side that intercepts more than it is intercepted
+a little, which is you. The man under your ring met a loose ball he may not pick up (retiring or offside) once in 240 matches
+(the bot on Easy and on Normal and the casual adult, 80 each). Offload is 0 here: the bot and the casual adult play Whole Team, where
+the offload is yours to press. The calls are 6 to 9 a match where you play (2-minute halves), about two a minute of play, counted
+apart from the tags (`call_*`, not `tag_*`), so the contact census's tag stream is as it was.
 
 ### Side Step and Dummy
 
@@ -2158,6 +2223,11 @@ a charger.
     yours only (yours, the CPU's, Two Player, AI v AI), the Knock-On tag, one draw a catch whatever its chance, KNOCK off
     drawing exactly as 20cbcaf (its Two Player match re-pinned on 2026-11-11, when each player's first kick of the
     match lost its Easy path: f83a6f3 with only that change gives the new pin). `--balance` measures the tables in Catching and knock-ons.
+  - **`node tools/calls.mjs`:** the possession calls and the interception rules (2026-11-13), in the default gate: each
+    path's call, colour and sound, On Fire after its moment, the Line Break held, the call in the tag cap, no interception
+    out of the hands, nobody down, retiring or offside playing the ball, Kids and Minis without the beat, AI v AI and the
+    demo silent, reduced motion, CALLS off drawing exactly as b4a25d5, and screenshots of each call in Chromium. `--balance`
+    measures the tables in Possession calls.
   - **`node tools/pressure.mjs`:** pressure, the spill and the egg (2026-11-09), in the default gate: the count's rises
     and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
     and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the
