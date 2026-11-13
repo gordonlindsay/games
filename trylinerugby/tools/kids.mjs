@@ -653,10 +653,11 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // half, which holds no catch or jolt that falls the other way. Proof, checked below: with KNOCK off this build gives BEFORE_KNOCK,
   // the pin before them, exactly, as 20cbcaf does
   // Re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose: the matches where the CPU
-  // kicks move (its men chase quicker, the bot's side starts late). Proof, checked below: with CHASE off this build gives BEFORE_CHASE,
+  // kicks move (its men chase quicker). Proof, checked below: with CHASE off this build gives BEFORE_CHASE,
   // b4a25d5's pin, exactly (the second run in the process, as b4a25d5's PIN was; PIN is now the third); with KNOCK off too, the first
-  // run still gives BEFORE_KNOCK
-  const PIN = '7wl1n0 kq1d2 1c0yntb m9j9pa 1klviba 1db7d9g fs1jc3 1j6lmbf';
+  // run still gives BEFORE_KNOCK. Re-pinned again the same day for the chase's react 0 (pace alone, the owner's choice: the bot's side no
+  // longer starts late); CHASE='{"react":0.2}' gives 98e11c8's 7wl1n0 kq1d2 1c0yntb m9j9pa 1klviba 1db7d9g fs1jc3 1j6lmbf
+  const PIN = '7wl1n0 kq1d2 1c0yntb 1cco652 1klviba 1db7d9g fs1jc3 1j6lmbf';
   const BEFORE_CHASE = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
   const BEFORE_KNOCK = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
   const pin = () => {

@@ -48,7 +48,7 @@ function pins() {
    off (20cbcaf exactly, so BASE and ON stand as the edge pinned them); WITH_KNOCK is the game as it ships, both on. */
 const KN = T.knock && T.knock.KNOCK, CS = T.chase && T.chase.CHASE, CS0 = !!(CS && CS.on);   // the kick chase (src/chase.js, 2026-11-13) is off with the knock-ons in the edge's proof, and in WITH_KNOCK: b4a25d5 exactly
 const WITH_KNOCK = { same:'1sans4x ishkxt 6s5dj3 b3clyy 1vdlusf 1kqx1dl 1r9icc0', easy:'18hjlb7 3aqbkz 11w1g1f' };   // the knock-ons on, the chase off: re-pin only from a change to the edge or the knock-ons, on purpose
-const SHIPS = { same:'1sans4x ishkxt 6s5dj3 ievgu1 1vdlusf 1kqx1dl d5aae', easy:'10a08ta 3aqbkz iw62m6' };   // the game as it ships, the knock-ons and the kick chase on (2026-11-13): re-pin only from a change to the edge, the knock-ons or the chase, on purpose
+const SHIPS = { same:'1sans4x ishkxt 6s5dj3 34tecb 1vdlusf 1kqx1dl 16d6tkt', easy:'8j1x8w 3aqbkz 1r5myg1' };   // the game as it ships, the knock-ons and the kick chase on (2026-11-13; at its react 0, pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 1sans4x ishkxt 6s5dj3 ievgu1 1vdlusf 1kqx1dl d5aae / 10a08ta 3aqbkz iw62m6): re-pin only from a change to the edge, the knock-ons or the chase, on purpose
 if (process.argv.includes('--pins')) {
   if (E) E.EDGE.on = false; if (KN) KN.on = false; if (CS) CS.on = false;
   const p = pins(); console.log(`same:'${p.same}', easy:'${p.easy}'`); process.exit(0);

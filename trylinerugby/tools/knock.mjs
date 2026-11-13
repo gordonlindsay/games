@@ -134,8 +134,9 @@ const KN = K ? K.KNOCK : {}, K0 = { ...KN }, setK = o => Object.assign(KN, K0, o
 const BASE = 'gfkiiv af2q5q 1682150 xc3q2t 1sgvx41 3whr8x vurlvh q1vu5w 1jtotnc';   // GAME=<20cbcaf>/index.html node tools/knock.mjs --pins (2026-11-11), and this build with KNOCK off; Two Player and the count as above
 const ON = '3mv681 e4k4jm n80rro 1oy4gdg ksahst ot75uq ndxogl 12zkbzw iwauru';   // the same with the levers as README.md gives them (2026-11-11): re-pin only from a change to the knock-ons, on purpose (or as above)
 // The kick chase (src/chase.js, 2026-11-13) is off in BASE's and ON's runs (b4a25d5 exactly, so they stand as the knock-ons pinned them); SHIPS
-// is the game as it ships, both on: re-pin only from a change to the knock-ons or the chase, on purpose
-const SHIPS = 'ygp62r e4k4jm n80rro 1r95jtz ksahst ot75uq ndxogl 12zkbzw q2oqho';
+// is the game as it ships, both on (the chase at react 0, pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's
+// ygp62r e4k4jm n80rro 1r95jtz ksahst ot75uq ndxogl 12zkbzw q2oqho): re-pin only from a change to the knock-ons or the chase, on purpose
+const SHIPS = 'hyh38d e4k4jm n80rro 11vmsp2 ksahst ot75uq ndxogl 12zkbzw u972v';
 const CS = T.chase && T.chase.CHASE, CS0 = !!(CS && CS.on);
 const play = (seed, a, b, o, two) => { reseed(seed); T.newMatch(a, b, { halfLen:60, headless:true, humans:two ? [true, true] : [true, false], ...o }); let n = 0; while (!M().over && n < 200000) { bot(0); if (two) bot(1); T.update(STEP); n++; } return json([M().score, M().tries, M().stats, n]); };
 function pins() {

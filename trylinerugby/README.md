@@ -853,7 +853,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
 | `src/maul.js`, `src/render-maul.js` | The maul: the call, the close-up's drive, the maul driven in the world with nobody in it, and its close-up's drawing |
 | `src/knock.js` | The knock-on levers (`KNOCK`, read through `knockLv`): the unforced base, the interception's term, the Big Hit's spill yours only, the Knock-On tag |
-| `src/chase.js` | The kick chase (`CHASE`, read through `chaseLv`): an open-play kick's onside chasers quicker for 1.5s, the catching side's men the computer runs a moment late |
+| `src/chase.js` | The kick chase (`CHASE`, read through `chaseLv`): an open-play kick's onside chasers quicker for 1.5s, the catching side reacting at once (pace alone, the owner's choice; its late start kept, idle at react 0) |
 | `src/championship.js` | Fixtures, results, standings and title race |
 | `src/cups.js`, `src/ui-cups.js` | Silverware: the European Cup, World Cup, Home Nations Tour and Triple Crown, their screens and the Trophy Cabinet's kinds |
 | `src/render-*.js` | Pitch, players, close-up scenes and match drawing; `render-behind.js` is the optional behind views |
@@ -1930,16 +1930,18 @@ By margin the ceiling is at least as easy as Easy for every child, before and af
 ### Kicking and the chase
 
 The owner, 2026-11-13: "When kicking and chasing down the ball as an attacker, they should have a boost as they have caught
-the defender by surprise." He chose **every kicking side** (the CPU's kicks too) and **small**: the chasers about 8% quicker
-for 1.5 seconds, the catching side 0.3 seconds late, tuned by how often the kicking side wins the ball back, noticeable and
-not a walkover. It is `src/chase.js`, every lever in `CHASE` and read through `chaseLv`:
+the defender by surprise." He chose **every kicking side** (the CPU's kicks too) and **small**, tuned by how often the kicking
+side wins the ball back, noticeable and not a walkover. **His decision for 1.6** (13 November 2026), asked which chase ships
+once he had seen that react 0.2 let a chip-spammer win 67% of his matches on Normal (45% before) and 98% on Easy: "Pace Alone
+(Recommended): Chasers 8% quicker for 1.5s, and defenders react normally. Chips won back about 11 to 16 points more, so no
+chip-spam walkover." So the chase is its pace alone. It is `src/chase.js`, every lever in `CHASE` and read through `chaseLv`:
 
 | Lever | Value | What it does |
 |---|---|---|
 | `on` | true | `CHASE='{"on":false}' node tools/sim.mjs` plays exactly as b4a25d5, the build before, draw for draw |
 | `pace` | 1.08 | the chasers' top speed, times this |
 | `secs` | 1.5 | for this long from the kick, easing back to 1 over the last third (the last 0.5s) |
-| `react` | 0.2 | how late the catching side's men the computer runs start (the owner's 0.3, tuned inside his band: below) |
+| `react` | 0 | how late the catching side's men the computer runs start: 0, at once, as before the chase (the owner's Pace Alone) |
 
 - **Which kicks.** Every open-play kick (`kickBall`'s kind `kick`: a chip, a long kick, a clearance, a territory kick), by
   either side, in every match: AI v AI, the demo, Two Player, a career, Kids and Minis (it is speed, not contact). Not a
@@ -1952,47 +1954,42 @@ not a walkover. It is `src/chase.js`, every lever in `CHASE` and read through `c
   `setBoost` would; under a Sprint the bigger of the two applies, never both. It ends the step the other side takes the ball
   (a catch, a gather, its pass) or the ball is dead (touch, a knock-on, a try, the half), and runs on to its 1.5s while his
   own side has it. A chaser shows the gold trail a burst shows.
-- **The catching side.** Its men the computer runs start `react` late: for 0.2s after the kick (12 steps, the kick's own the
-  first) each runs on as he was running (`edgeHold`, the Easy cover's lag) instead of going for where it comes down or into
-  his kick shape. Your own input is never late: the ring still jumps at the kick to your man nearest where it comes down
-  (`kickBall`, as before) and your stick drives him from the next step.
+- **The catching side.** It reacts at once, as before the chase: `react` is 0, the owner's Pace Alone. The late start is kept
+  and tunable (`CHASE='{"react":0.2}'`): above 0 its men the computer runs carry on as they were running (`edgeHold`, the
+  Easy cover's lag) for that long after the kick instead of going for where it comes down or into their kick shape, and your
+  own input is never late (the ring still jumps at the kick to your man nearest where it comes down, `kickBall`, and your
+  stick drives him from the next step). At 0 it is idle: a build with its one line cut (`CHASE_LATE=off` in the harness)
+  plays exactly as the game ships, draw for draw, and at 0.2 that build plays as 0 does (`tools/chase.mjs`, section 0).
 - **No new draw.** Nothing in it draws a number, so CHASE off is b4a25d5 exactly (`tools/chase.mjs`, and the proof behind
-  every fingerprint re-pinned for it, each kept as `BEFORE_CHASE`). `CHASE='{"react":0.3}'` tries other levers.
+  every fingerprint re-pinned for it, each kept as `BEFORE_CHASE`). `CHASE='{"react":0.2}'` tries other levers.
+
+**Rejected: react 0.2**, as 98e11c8 had it (the floor of the owner's first band, 0.2 to 0.4; SEED 7, CHASE off then on): the
+staged chip 8% to 17%, on Normal the casual adult's chips 31% to 72% and the kick-chaser's 36% to 65% with his wins 45% to
+67%, on Easy his wins 87% to 98% (as react 0 gives on those 100 matches: below); the late start, not the pace, won a person's
+chips back (he chips over a defence rushing him, and its nearest men ran on the wrong way), 20 to 41 points more where the
+aim was 10 to 15.
 
 **Kids and Minis** play the same rule. The Kids chase (`kidsChase`, a child who lets go of the stick has his ringed man run
 for the ball at 0.80 of his pace) needs nothing: it reads `maxSpeed`, so on his own side's kick he chases at 0.80 x 1.08, and
-on the CPU's he goes at once, as before (a human's input is never late, and the let-go chase is his). Measured (`node
-tools/kidbots.mjs at 1 200`, SEED 7, and `HALF=90 ... at easy 200`), each child at the Kids ceiling and then on Easy at the
-same half, CHASE off then on: the 6 year old 73% by 1.87 to 78% by 2.37 (on Easy 74% by 1.80 to 78% by 2.40), the 7 to 8
-year old 92% by 3.31 to 94% by 3.73 (on Easy 88 to 89% by 2.7 either way), the sharp 10 year old 99 to 100% by 5.93 (5.7).
-The children chip now and then, and win more of them back. By margin the ceiling stays at least as easy as Easy for the 7 to
-8 and 10 year olds; for the 6 year old the two now tie inside their noise (2.37 against 2.40, ± 0.2).
+on the CPU's he goes at once, as before. Measured (`node tools/kidbots.mjs at 1 200`, and `HALF=90 ... at easy 200`), each
+child at the Kids ceiling and then on Easy at the same half, CHASE off then on, his wins and his try margin a match:
 
-**Tuned inside the owner's band** (pace 1.06 to 1.10, react 0.2 to 0.4). His numbers win back the staged chip and chase
-11 points more often, in the aim of about +10 to 15, but a person's chips against the CPU 29 to 39 points more often. The
-late start does it: a person chips over a defence rushing him, and its nearest men run on the wrong way. React is at 0.2, the
-band's floor, which trims a person's chips a little (+27 against +29 on Easy for the casual adult, +25 against +32 for the
-kick-chaser) and the kick-chaser's extra tries on Easy from 1.9 a match to 1.3. Pace stays his 1.08: at react 0.2, 1.06 and
-1.10 measured within noise of it. **The aim on a person's chips is out of the band's reach** (Normal, pace 1.08, the casual
-adult's chips and the kick-chaser's, before 31% and 36%):
+| 200 matches each | Ceiling, SEED 7 | Easy, SEED 7 | Ceiling, SEED 11 | Easy, SEED 11 |
+|---|---|---|---|---|
+| 6 year old | 73% by 1.87 to 79% by 2.15 | 74% by 1.80 to 77% by 2.01 | 75% by 1.86 to 73% by 2.06 | 75% by 2.02 to 81% by 2.23 |
+| 7 to 8 year old | 92% by 3.31 to 94% by 3.62 | 89% by 2.67 to 84% by 2.54 | 91% by 3.26 to 90% by 3.15 | 90% by 2.78 to 88% by 2.83 |
+| Sharp 10 year old | 100% by 5.93 to 100% by 5.92 | 100% by 5.67 to 100% by 5.59 | 100% by 5.90 to 100% by 6.00 | 100% by 5.61 to 99% by 5.64 |
 
-| React | Casual adult's chips won back | Kick-chaser's chips | Kick-chaser won |
-|---|---|---|---|
-| Off (b4a25d5) | 31% | 36% | 45% |
-| 0 (pace alone) | 47% | 49% | 57% |
-| 0.1 | 60% | 56% | 72% |
-| 0.2 (as it ships) | 72% | 65% | 67% |
-| 0.3 (the owner's) | 70% | 73% | 70% |
+The children chip now and then, and win a few more of them back; each margin moves by a third of a try or less, about its
+noise (± 0.2 a line). By margin the ceiling stays at least as easy as Easy for the 7 to 8 and 10 year olds on both seeds; for
+the 6 year old the two tie inside their noise, as they did before the chase (2.15 against 2.01 at SEED 7, 2.06 against 2.23
+at SEED 11).
 
-Pace alone (react 0) is the aim, +11 to 16 points; any late start, 0.1 included, wins a person's chips back 20 to 41 points
-more often. Below the band is the owner's call, not taken here.
-
-**Measured** (`node tools/chase.mjs --balance`, SEED 7, the same seeds with CHASE off, as b4a25d5, then on). Every open-play
-kick is watched from outside the game: a chip is under 20m, a clearance 20m or more from inside the kicker's own 22, a long
-kick any other. It is **won back** when the kicking side holds it next (caught in the air, or gathered off the ground, or
-grounded for a try), **lost** when the other side does, and **run back** when that side then carries it 10m or more past where
-it was aimed to come down. A try counts **after** (the kicking side's) or **against** (the other side's) within 20 match
-seconds of the latest kick.
+**Measured** at react 0 (`node tools/chase.mjs --balance`, SEED 7 and SEED 11, the same seeds with CHASE off, as b4a25d5,
+then on). Every open-play kick is watched from outside the game: a chip is under 20m, a clearance 20m or more from inside the
+kicker's own 22, a long kick any other. It is **won back** when the kicking side holds it next (caught in the air, or gathered
+off the ground, or grounded for a try), **lost** when the other side does, and **run back** when that side then carries it
+10m or more past where it was aimed to come down.
 
 The staged kicks are two even sides (3 in every ability), AI v AI on Normal, 240 seeds a side, both sides kicking: a chip
 (11 to 15m, as a person's are) over the last man by a kicker through the line, with the sweeper 8 to 12m ahead and the
@@ -2000,45 +1997,65 @@ beaten men turning; a long kick (aiKick's territory kick) from the kicker's own 
 game's own defence. A person's chips are the casual adult's (`PROFILE=casual`, his occasional tap of Kick) and the
 kick-chaser's (the casual adult tapping it ten times as often), against the CPU as played, 2-minute halves.
 
-| Won back, before then after | Chips | Long kicks | Clearances |
+| Won back, before then after (kicks) | Chips | Long kicks | Clearances |
 |---|---|---|---|
-| Staged (480 each) | 8% to 17% (home 11 to 20, away 6 to 13) | 0% to 0% | 0% to 0% |
-| AI v AI, Normal, 4-minute halves (120 matches) | none kicked | 2% to 0% (53, 49) | 0% to 2% (401, 426) |
-| Casual adult, Easy (100) | 46% to 73% (195, 181) | 0% to 0% (19, 15) | 1% to 4% (88, 85) |
-| Kick-chaser, Easy (100) | 46% to 71% (1450, 1617) | 0% to 3% (28, 29) | 0% to 0% (120, 102) |
-| Casual adult, Normal (100) | 31% to 72% (147, 163) | 4% to 14% (24, 28) | 1% to 1% (110, 92) |
-| Kick-chaser, Normal (60) | 36% to 65% (732, 722) | 0% to 18% (34, 28) | 1% to 6% (93, 53) |
+| Staged, SEED 7 (480 each) | 8% to 20% (home 11 to 24, away 6 to 16) | 0% to 0% | 0% to 0% |
+| Staged, SEED 11 (480 each) | 5% to 17% (home 4 to 15, away 6 to 19) | 0% to 0% | 0% to 0% |
+| AI v AI, Normal, 4-minute halves, SEED 7 (120 matches) | none kicked | 2% to 0% (53, 48) | 0% to 0% (401, 413) |
+| AI v AI, Normal, 4-minute halves, SEED 11 (120) | none kicked | 0% to 0% (48, 48) | 0% to 0% (410, 438) |
+| Casual adult, Easy, SEED 7 (100) | 46% to 55% (195, 182) | 0% to 0% (19, 19) | 1% to 2% (88, 83) |
+| Casual adult, Easy, SEED 11 (100) | 44% to 52% (227, 190) | 0% to 0% (17, 16) | 0% to 1% (99, 97) |
+| Kick-chaser, Easy, SEED 7 (100) | 46% to 56% (1450, 1599) | 0% to 3% (28, 38) | 0% to 2% (120, 129) |
+| Kick-chaser, Easy, SEED 11 (100) | 47% to 58% (1459, 1509) | 0% to 0% (29, 29) | 2% to 2% (132, 117) |
+| Casual adult, Normal, SEED 7 (100) | 31% to 47% (147, 161) | 4% to 7% (24, 30) | 1% to 2% (110, 103) |
+| Casual adult, Normal, SEED 11 (100) | 31% to 47% (159, 165) | 6% to 4% (35, 26) | 2% to 1% (89, 104) |
+| Kick-chaser, Normal, SEED 7 (100) | 36% to 48% (1221, 1271) | 2% to 6% (57, 52) | 1% to 2% (152, 123) |
+| Kick-chaser, Normal, SEED 11 (100) | 36% to 48% (1174, 1246) | 6% to 5% (49, 55) | 1% to 5% (149, 132) |
 
 A chip won back is caught in the air nine times in ten, before and after. Of the chips the other side took, the share run
-back 10m or more falls with them (the kick-chaser on Easy, 9% of all his chips to 5%; on Normal, 17% to 9%). The CPU's own
-kicks hardly come back either way (1% to 3% against the casual adult on Easy, 1% to 4% on Normal, 1% to 10% against the
-kick-chaser on Normal): it never chips, and its long kicks and clearances land on a man or in touch.
+back 10m or more falls with them (the kick-chaser at SEED 7, 9% of all his chips to 7% on Easy, 16% to 13% on Normal). The
+CPU's own kicks hardly come back either way (0% to 5% a run): it never chips, and its long kicks and clearances land on a man
+or in touch.
 
-| Matches, before then after | Won | Tries | Tries within 20s of a kick, after / against |
+| Matches, before then after | Won, SEED 7 | Won, SEED 11 | Tries, SEED 7 | Tries, SEED 11 |
+|---|---|---|---|---|
+| AI v AI (home's share) | 46% to 47% | 47% to 39% | 0.68-0.47 to 0.65-0.55 | 0.59-0.60 to 0.49-0.59 |
+| Casual adult, Easy | 91% to 92% | 99% to 89% | 2.71-0.29 to 2.70-0.23 | 2.88-0.28 to 2.61-0.31 |
+| Kick-chaser, Easy | 87% to 98% | 91% to 95% | 2.64-0.44 to 3.26-0.25 | 2.93-0.31 to 3.40-0.31 |
+| Casual adult, Normal | 47% to 50% | 50% to 56% | 0.97-0.82 to 1.07-0.93 | 1.13-0.94 to 1.22-0.83 |
+| Kick-chaser, Normal | 44% to 57% | 54% to 59% | 1.14-0.96 to 1.37-0.81 | 1.04-0.83 to 1.33-0.88 |
+
+The rows whose change was near its noise (± 3 to 5 at 100 matches) again on wider samples, the first 100 matches the same:
+
+| Wider, before then after | Matches | Won | Chips won back |
 |---|---|---|---|
-| AI v AI (home's share) | 46% to 45% | 0.68-0.47 to 0.66-0.50 | 5 / 3 to 0 / 0, all 120 matches |
-| Casual adult, Easy | 91% to 92% | 2.71-0.29 to 2.83-0.28 | 63 / 11 to 77 / 10 |
-| Kick-chaser, Easy | 87% to 98% | 2.64-0.44 to 3.98-0.22 | 239 / 15 to 371 / 11 |
-| Casual adult, Normal | 47% to 53% | 0.97-0.82 to 1.23-0.98 | 16 / 6 to 35 / 9 |
-| Kick-chaser, Normal | 45% to 67% | 1.23-1.08 to 1.85-0.85 | 68 / 18 to 109 / 13 |
+| Kick-chaser, Easy, SEED 7 | 300 | 90% to 95% | 47% to 57% (4379, 4697) |
+| Kick-chaser, Easy, SEED 11 | 300 | 90% to 94% | 46% to 58% (4395, 4569) |
+| Kick-chaser, Normal, SEED 7 | 300 | 44% to 58% | 37% to 48% (3500, 3731) |
+| Casual adult, Easy, SEED 11 | 300 | 95% to 93% | 47% to 55% (629, 568) |
+| AI v AI, Normal, SEED 11 (home's share) | 360 | 45% to 40% | none kicked |
 
-AI v AI plays as it did (its kicks are long, and the catching side fields them either way). For a player who kicks now and
-then, it is a chip that comes back much more often and not a different match: the casual adult's results move inside their
-noise (± 3 on Easy, ± 5 on Normal). **Open for the owner: the chip-spammer.** A player who chips at every chance wins back
-two in three and scores a try or more a match more on Easy (1.3), 0.6 more on Normal, where he wins 67% of matches against
-45%. Noticeable for everyone; for him close to a walkover on Easy (98%, where he already won 87%) and a strong tactic on
-Normal. React 0 (pace alone) gives him 57% there.
+**Against the owner's aim.** A person's chips come back 8 to 12 points more often over the wider samples (the casual adult
++11 on Normal over 400 matches, below, and +8 on Easy over 300; the kick-chaser +10 to +12 over 300 on either level; over 100
+matches, +8 to +16), where the aim is about +10 to 15 and the owner was shown 11 to 16; the staged chip +12 on both seeds.
+For a player who kicks now and then it is a chip that comes back more often and not a different match: the casual adult's
+results move inside their noise (SEED 11's 99% to 89% on Easy is 95% to 93% over 300). On Easy the chip-spammer wins 4 or 5
+points more over 300 matches (90% to 95%, 90% to 94%: SEED 7's 87% to 98% over its first 100 was mostly noise), and scores
+0.4 to 0.55 tries a match more. AI v AI plays as it did inside its noise (its kicks are long, and the catching side fields
+them either way): SEED 11's home share, 47% to 39% over 120 (± 5) and 45% to 40% over 360 (± 3), against 46% to 47% at
+SEED 7. **For the owner: the chip-spammer on Normal** still gains more than the aim's "within about 10 points": 44% to 58%
+over 300 matches at SEED 7, 54% to 59% over 100 at SEED 11, against 45% to 67% at react 0.2. His chips come back +11 to +12
+there, in the aim; it is the tries they lead to (1.05 to 1.38 a match at SEED 7, over 300) that tip his matches. Pace and
+secs are the owner's (1.08 and 1.5) and stay as he set them.
 
-A second seed gives the same picture (SEED 11, CHASE off then on): the staged chip 5% to 15% (400 kicks), and on Normal
-(60 matches each) the casual adult's chips 28% to 58%, the kick-chaser's 36% to 66%, his wins 55% to 72% and his tries 1.02
-to 2.13 a match. **Long kicks** miss their aim of a little more where the computer fields them, anywhere in the band (staged
-0% to 0% on both seeds, and at pace 1.10 and react 0.4, its top; AI v AI 2% to 0%): a long kick hangs longer than the chase
-lasts (doKick's 0.8s plus its length over 28: 2.2s at 40m, 2.9s at 60m), and the catching side's sweeper is under it either
-way. The CPU's long kicks against a person come back a little more often (on Normal, the casual adult's matches then the
-kick-chaser's: 4% to 14% and 0% to 18% at SEED 7, 0% to 15% and 6% to 9% at SEED 11), but on 19 to 34 kicks a run, so
-loosely. **The owner chooses**: these numbers as they are, or `react:0` (pace alone, below his band: one line in `CHASE`,
-with this section and src/chase.js's comment following). `tools/chase.mjs` bands the staged chip only (section 7); a
-person's chips get a band once the owner sets their target.
+**The band.** `node tools/chase.mjs --balance band` holds a person's chips to the owner's aim from here on: the casual adult
+on Normal, 400 matches at SEED 7, CHASE off then on, must win back more of his chips and at most 20 points more. It measures
+37% to 48% (+11.1 points, on 641 and 659 chips). `tools/chase.mjs` bands the staged chip in the gate too (section 7).
+
+**Long kicks** miss their aim of a little more where the computer fields them (staged 0% to 0% on both seeds; AI v AI 2% to
+0% and 0% to 0%, 0% to 1% over 360): a long kick hangs longer than the chase lasts (doKick's 0.8s plus its length over 28:
+2.2s at 40m, 2.9s at 60m), and the catching side's sweeper is under it either way. In a person's matches they come back a few
+points more or less either way (0% to 7% a run, on 16 to 57 kicks), so loosely.
 
 **Open for the owner: your man after your own chip.** The ring jumps to your man nearest where it comes down, and 37% of the
 time (above) he is in front of the kicker and does not chase. Making him always chase would be a change of behaviour, and a
@@ -2277,9 +2294,10 @@ a charger.
     drawing exactly as 20cbcaf (its Two Player match re-pinned on 2026-11-11, when each player's first kick of the
     match lost its Easy path: f83a6f3 with only that change gives the new pin). `--balance` measures the tables in Catching and knock-ons.
   - **`node tools/chase.mjs`:** the kick chase (2026-11-13), in the default gate: the gate (open-play kicks by either side,
-    never a restart, a drop goal or a charge-down), the onside chasers, the pace and its easing and end, the catching side's
-    men the computer runs late and never your own input, no new draw, CHASE off drawing exactly as b4a25d5, the staged
-    win-back rates in bands. `--balance` measures the tables in Kicking and the chase.
+    never a restart, a drop goal or a charge-down), the onside chasers, the pace and its easing and end, the catching side
+    at once as it ships (a build without the late start plays the same, draw for draw) and late only when tuned, never your
+    own input, no new draw, CHASE off drawing exactly as b4a25d5, the staged win-back rates in bands. `--balance` measures
+    the tables in Kicking and the chase; `--balance band` checks a person's chips against the owner's aim.
   - **`node tools/pressure.mjs`:** pressure, the spill and the egg (2026-11-09), in the default gate: the count's rises
     and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
     and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the

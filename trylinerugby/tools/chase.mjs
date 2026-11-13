@@ -1,15 +1,19 @@
 // The kick chase (src/chase.js; README.md, Kicking and the chase): the gate (an open-play kick by either side, never a restart, a
 // drop goal or a charge-down), the chasers (the kicking side's men onside at the kick, the human's ringed man among them only when
-// he is onside), the
-// pace and its easing and end, the catching side's late start for the men the computer runs and never for a person's own input,
-// no new draw, CHASE off playing exactly as b4a25d5, the build before, draw for draw, and the measured win-back rates in bands.
+// he is onside), the pace and its easing and end, the catching side's late start (as it ships, react 0, pace alone: idle, and a build
+// without it plays the same; kept and tunable, for the men the computer runs and never for a person's own input), no new draw, CHASE
+// off playing exactly as b4a25d5, the build before, draw for draw, and the measured win-back rates in bands.
 // node tools/chase.mjs              (SEED=29 unless set; VERBOSE=1 lists every check)
 // node tools/chase.mjs --pins       prints this build's fingerprints with CHASE off; GAME=<b4a25d5>/index.html node tools/chase.mjs --pins pinned BASE
+// node tools/chase.mjs --pins on    the same with the chase as it ships (CHASE='{"react":0.2}' tries a lever; CHASE_LATE=off cuts the late start)
 // node tools/chase.mjs --balance [staged|ai|casual|chaser|all]   README.md's before-and-after tables: staged kicks from set spots, AI
 //                                   v AI, the casual adult and the kick-chaser on Easy, each kick sorted by its kind and how it ended,
 //                                   CHASE off then on (minutes; never in check.mjs; JOBS, CH_STAGED, CH_AI, CH_CASUAL, CH_CHASER for
 //                                   the counts, CH_DIFF=1 for the casual adult and the kick-chaser on Normal; CHASE='{"pace":1.1}' measures
 //                                   other levers as after)
+// node tools/chase.mjs --balance band   the owner's target as a check: the casual adult's chips on Normal won back more often, and by at
+//                                   most 20 points, CHASE off then on (CH_BAND matches, 400 unless set; SEED 7 unless set; minutes, so
+//                                   never in check.mjs; exits 1 outside the band)
 process.env.SEED ??= process.argv.includes('--balance') ? '7' : '29';   // the balance tables: tools/bot.mjs's PROFILE seed
 import { spawn } from 'node:child_process';
 import os from 'node:os';
@@ -232,6 +236,17 @@ async function balance() {
     results(row.label, B, A, row.sides);
   }
 }
+/* the owner's target as a check (2026-11-13: pace alone, a person's chips won back about 11 to 16 points more, no walkover). The casual
+   adult (tools/bot.mjs's PROFILE=casual) against the CPU on Normal as played, CH_BAND seeded matches (400 unless set, at least 300 of his
+   chips a run), CHASE off then on: his chips must be won back more often with the chase, and by at most 20 points more */
+async function band() {
+  const n = +process.env.CH_BAND || 400, spec = { kind:'casual', diff:1, half:120 }, chips = L => sums(L.flatMap(m => m.kicks).filter(k => k.team === 0 && k.kind === 'chip'));
+  const B = chips(await fan(spec, n, OFF)), A = chips(await fan(spec, n, {}));
+  const b = 100*B.won/B.n, a = 100*A.won/A.n, gain = a - b, good = B.n >= 300 && A.n >= 300 && gain > 0 && gain <= 20;
+  console.log(`${good ? 'ok  ' : 'FAIL'} band: the casual adult's chips on Normal, ${n} seeded matches (SEED ${process.env.SEED}), CHASE off then on: won back ${b.toFixed(1)}% to ${a.toFixed(1)}% (${B.won} of ${B.n}, ${A.won} of ${A.n}; at least 300 a run), ${gain < 0 ? '' : '+'}${gain.toFixed(1)} points (the band: above 0, at most 20)`);
+  return good;
+}
+if (run && args[0] === '--balance' && args[1] === 'band') process.exit(await band() ? 0 : 1);
 if (run && args[0] === '--balance') { await balance(); process.exit(0); }
 if (!run) { /* imported: the watch and the staging only */ }
 
@@ -242,7 +257,8 @@ const CT = CH ? CH.CHASE : {}, C0 = { ...CT }, setC = o => Object.assign(CT, C0,
    Match on Easy, Normal and Hard, a Kids match at its ceiling and Two Player, with their random draws. The harness's bot never
    kicks, so a match it plays moves only where the CPU kicks. BASE: GAME=<b4a25d5>/index.html node tools/chase.mjs --pins */
 const BASE = 'd0efoc 1fq8pyd as6lyd 1cc96uv hcpa8a 8r239s 1sd5i3k 15ar9nd pwk786';   // GAME=<b4a25d5>/index.html node tools/chase.mjs --pins (2026-11-13), and this build with CHASE off
-const ON = '1707leb fsophx 7ww4dr 1cc96uv j9umex 1c7w2p5 1sd5i3k 15ar9nd b35tqu';     // the same with the chase as README.md gives it (2026-11-13): re-pin only from a change to the chase, on purpose
+const ON = '8iyx7a pemluk 1ah3zah 1cc96uv 1phqv xgmaru 1sd5i3k 15ar9nd l3cni7';       // the same with the chase as it ships, pace alone (react 0, the owner's choice, 2026-11-13): re-pin only from a change to the chase, on purpose
+const ON_REACT = '1707leb fsophx 7ww4dr 1cc96uv j9umex 1c7w2p5 1sd5i3k 15ar9nd b35tqu';   // CHASE='{"react":0.2}': 98e11c8's ON, the late start it shipped with, the proof that the path is kept and still tunable
 const play = (seed, a, b, o, two) => { reseed(seed); T.newMatch(a, b, { halfLen:120, headless:true, humans:two ? [true, true] : [true, false], ...o }); let n = 0; while (!M().over && n < 200000) { bot(0); if (two) bot(1); T.update(STEP); n++; } return json([M().score, M().tries, M().stats, n]); };
 function pins() {
   const out = [], r0 = rndCalls();
@@ -259,21 +275,33 @@ function pins() {
   out.push(String(rndCalls() - r0));
   return out.map(fnv).join(' ');
 }
-if (run && args[0] === '--pins') { if (CH) CH.CHASE.on = false; console.log(pins()); process.exit(0); }
+if (run && args[0] === '--pins') { if (CH && args[1] !== 'on') CH.CHASE.on = false; console.log(pins()); process.exit(0); }
 if (run && !args.length) {
 begin('0 CHASE off is b4a25d5');
 {
-  setC({ on:false }); const off = pins(); reset(); const on = pins();
+  // the late start at react 0 is a no-op: a build with its line cut (CHASE_LATE=off in the harness) as the chase ships, and at react 0.2;
+  // each a --pins on run of its own, beside the three here (a pins run reads nothing the run before it leaves: --pins on gives ON too)
+  const child = env => new Promise(good => {
+    const p = spawn(process.execPath, [self, '--pins', 'on'], { env:{ ...process.env, ...env }, stdio:['ignore', 'pipe', 'pipe'] });
+    let s = '', e = ''; p.stdout.on('data', d => { s += d; }); p.stderr.on('data', d => { e += d; });
+    p.on('close', code => good(code ? 'failed: ' + e.trim().split('\n').pop() : s.trim()));
+  });
+  const cut = Promise.all([child({ CHASE_LATE:'off' }), child({ CHASE_LATE:'off', CHASE:'{"react":0.2}' })]);
+  setC({ on:false }); const off = pins(); reset(); const on = pins(); setC({ react:0.2 }); const react = pins(); reset();
   ok(off === BASE, `CHASE off: AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as b4a25d5, with the same draws (${off}, pinned ${BASE})`);
   const moved = on.split(' ').filter((h, i) => h !== BASE.split(' ')[i]).length;
   ok(on.split(' ')[0] !== BASE.split(' ')[0] && on.split(' ')[1] !== BASE.split(' ')[1] && moved >= 4, `CHASE on moves AI v AI, the demo and the matches where a kick fell (${moved} of 9 moved: ${on})`);
-  ok(on === ON, `and plays them as pinned with the chase (${on}, pinned ${ON})`);
+  ok(on === ON, `and plays them as pinned with the chase as it ships, pace alone (${on}, pinned ${ON})`);
+  const [cut0, cut2] = await cut;
+  ok(CT.react === 0 && cut0 === on, `react 0: a build without the catching side's late start (CHASE_LATE=off, matchTargets' chaseLate line cut) plays all nine exactly as the chase ships, with the same draws (${cut0})`);
+  ok(react === ON_REACT, `the late start is kept and tunable: CHASE.react 0.2 plays them as 98e11c8 shipped it (${react}, pinned ${ON_REACT})`);
+  ok(cut2 === on && cut2 !== react, `and cut from that build it plays as react 0 (${cut2}): the line is the whole of the late start, live at 0.2 and idle at 0`);
 }
 done('0 CHASE off is b4a25d5');
 
 begin('1 the table');
 {
-  ok(CT.on === true && CT.pace === 1.08 && CT.secs === 1.5 && CT.react === 0.2 && Object.keys(CT).length === 4, `CHASE: on, pace 1.08, secs 1.5, react 0.2 (${json(CT)})`);
+  ok(CT.on === true && CT.pace === 1.08 && CT.secs === 1.5 && CT.react === 0 && Object.keys(CT).length === 4, `CHASE: on, pace 1.08, secs 1.5, react 0: pace alone, the owner's choice (${json(CT)})`);
   ok(json(CH.CHASE_OFF) === json({ pace:1, secs:0, react:0 }), `off, every lever reads b4a25d5's: no chase (${json(CH.CHASE_OFF)})`);
   ok(['pace', 'secs', 'react'].every(k => CH.lv(k) === CT[k]), 'chaseLv reads the table while it is on');
   setC({ on:false }); ok(['pace', 'secs', 'react'].every(k => CH.lv(k) === CH.CHASE_OFF[k]), 'and b4a25d5\'s values while it is off, whatever the table says'); reset();
@@ -288,7 +316,8 @@ begin('1 the table');
 done('1 the table');
 
 // a staged kick's first steps: the kick, then n steps, calling f(step) after each (the watch is not needed)
-const SECS = CT.secs, PACE = CT.pace, STEPS = Math.round(SECS/STEP), LATE = Math.round(CT.react/STEP);
+const SECS = CT.secs, PACE = CT.pace, STEPS = Math.round(SECS/STEP);
+const REACT = 0.2, LATE = Math.round(REACT/STEP);           // the late start as it stays tunable (98e11c8's react), tried in section 5 with CHASE.react set to it
 function steps(n, f) { for (let i = 1; i <= n; i++) { T.update(STEP); if (f && f(i) === false) return i; } return n; }
 
 begin('2 the gate');
@@ -417,7 +446,23 @@ done('4 the pace');
 
 begin('5 the catching side');
 {
-  // AI v AI: for CHASE.react (0.2s) after the kick the catching side's men run on as they were (edgeHold); then the two nearest go for it
+  // as it ships (react 0, pace alone): nobody is late. Neither side at the kick or at any step of the chase, and the catching side's two
+  // nearest go for where it comes down from the first step after it (section 0: a build without the late start plays the same)
+  { let never = 0, first = 0;
+    for (let s = 0; s < 10; s++) {
+      const team = s % 2; stage('chip', team, 900 + s);
+      const m = M(), f = m.ball.f; let late = CH.late(0) || CH.late(1);
+      steps(STEPS, i => {
+        if (CH.late(0) || CH.late(1)) late = true;
+        if (i === 1) { const tg = CH.computeTargets(), them = m.players.filter(p => p.team !== team && p.down <= 0 && !p.bind); if (them.filter(p => { const t = tg.get(p); return t && t.x === f.x1 && t.y === f.y1; }).length === 2) first++; }
+      });
+      if (!late) never++;
+    }
+    ok(CT.react === 0 && never === 10, `as it ships (react 0) neither side is ever late: at the kick and every step of its ${SECS}s (${never} of 10)`);
+    ok(first === 10, `the catching side's two nearest go for where it comes down from the first step after the kick (${first} of 10)`); }
+  // the late start, kept and tunable: at CHASE.react 0.2 (98e11c8's) for that long after the kick the catching side's men the computer
+  // runs on as they were (edgeHold); then the two nearest go for it
+  setC({ react:REACT });
   let held = 0, heldN = 0, freed = 0;
   for (let s = 0; s < 10; s++) {
     const team = s % 2; stage('chip', team, 900 + s);
@@ -429,14 +474,16 @@ begin('5 the catching side');
       else if (i === LATE) { const two = them.filter(p => { const t = tg.get(p); return t && t.x === f.x1 && t.y === f.y1; }); if (!CH.late(1 - team) && two.length === 2) freed++; }
     });
   }
-  ok(held === heldN && heldN === 10*(LATE - 1), `the catching side's men run on as they were for ${CT.react}s after the kick (${held} of ${heldN} steps; the kick's own makes ${LATE})`);
+  ok(held === heldN && heldN === 10*(LATE - 1), `the catching side's men run on as they were for ${REACT}s after the kick (${held} of ${heldN} steps; the kick's own makes ${LATE})`);
   ok(freed === 10, 'then its two nearest go for where it comes down, as before');
   ok(!CH.late(0) || !CH.late(1), 'and the kicking side is never late');
-  // your man under the ring is never late: the ring jumps to your man nearest where it comes down, and the stick drives him from the next step
-  { let same = 0, mates = 0;
+  reset();
+  // your man under the ring is never late: the ring jumps to your man nearest where it comes down, and the stick drives him from the next
+  // step. At react 0.2 his teammates the computer runs are late; as it ships (react 0) he runs as with no chase all the same
+  const yours = react => { let same = 0, mates = 0;
     for (let s = 0; s < 8; s++) {
       const path = on => {
-        if (!on) setC({ on:false });
+        setC(on ? { react } : { on:false });
         stage('chip', 1, 1000 + s, { match:{ humans:[true, false], auto:false } });
         const r = T.sides.ctrlOf(0), f = M().ball.f, inp = T.input, out = [], others = [];
         for (let i = 0; i < LATE; i++) {
@@ -450,13 +497,16 @@ begin('5 the catching side');
       if (a.r === b.r) same++;
       if (a.o !== b.o) mates++;
     }
+    return { same, mates }; };
+  { const { same, mates } = yours(REACT);
     ok(same === 8, `your ringed man runs for it from the next step, exactly as with no chase (${same} of 8)`);
     ok(mates === 8, `while his teammates the computer runs are late (${mates} of 8)`); }
-  // Kids: the child's let-go chase (kidsChase) goes at once too
-  { let same = 0;
+  { const { same } = yours(0); ok(same === 8, `and as it ships, react 0: his run over those ${LATE} steps exactly as with no chase (${same} of 8)`); }
+  // Kids: the child's let-go chase (kidsChase) goes at once too, at react 0.2 and as it ships
+  for (const react of [REACT, 0]) { let same = 0;
     for (let s = 0; s < 6; s++) {
       const path = on => {
-        if (!on) setC({ on:false });
+        setC(on ? { react } : { on:false });
         stage('chip', 1, 1100 + s, { match:{ humans:[true, false], auto:false, diff:0, kids:true, kidsR:0.5 } });
         const r = T.sides.ctrlOf(0), out = [];
         steps(LATE, () => { out.push([r.x, r.y]); });
@@ -464,7 +514,7 @@ begin('5 the catching side');
       };
       if (path(true) === path(false)) same++;
     }
-    ok(same === 6, `Kids: the child who lets go of the stick still chases at once (kidsChase), as before (${same} of 6)`); }
+    ok(same === 6, `Kids: the child who lets go of the stick still chases at once (kidsChase), as before, at react ${react} (${same} of 6)`); }
 }
 done('5 the catching side');
 
@@ -511,6 +561,10 @@ begin('9 the words and the files');
   const fs = await import('node:fs'), read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
   const readme = read('README.md');
   ok(/^### Kicking and the chase$/m.test(readme) && readme.includes('`CHASE`') && readme.includes('CHASE=\'{"on":false}\''), 'README: Kicking and the chase, with the table and CHASE off');
+  const sec = (readme.split(/^### Kicking and the chase$/m)[1] || '').split(/^### /m)[0];
+  const row = k => ((sec.match(new RegExp('^\\| `' + k + '` \\| ([^|]+) \\|', 'm')) || [])[1] || '').trim();
+  ok(row('on') === String(CT.on) && ['pace', 'secs', 'react'].every(k => row(k) !== '' && +row(k) === CT[k]), `README's table gives CHASE as it ships (on ${row('on')}, pace ${row('pace')}, secs ${row('secs')}, react ${row('react')})`);
+  ok(/node tools\/chase\.mjs --balance band/.test(readme) && /node tools\/chase\.mjs --balance band/.test(read('tools/CHECKS.md')), 'README and CHECKS.md say what --balance band checks');
   ok(/\['chase', \['tools\/chase\.mjs'\]\]/.test(read('tools/check.mjs')) && /tools\/chase\.mjs/.test(read('tools/CHECKS.md')), 'in the default gate, and in CHECKS.md');
   ok(/"knock\.js",\s*"chase\.js",/.test(read('src/manifest.json')), 'src/chase.js is built after src/knock.js');
   ok(/CHASE_TUNE/.test(read('tools/harness.mjs')), 'the harness\'s CHASE marker');

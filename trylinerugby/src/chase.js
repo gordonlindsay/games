@@ -1,11 +1,13 @@
 /* ---------- the kick chase (2026-11-13) ----------
    The owner: "When kicking and chasing down the ball as an attacker, they should have a boost as they have caught the defender by
-   surprise." He chose every kicking side (the CPU's kicks too) and small: chasers about 8% quicker for 1.5 seconds, the catching
-   side 0.3 seconds late, tuned by how often the kicking side wins the ball back, noticeable and not a walkover. Tuned inside his
-   band (pace 1.06 to 1.10, react 0.2 to 0.4): react 0.2, its floor, because the late start is what wins a person's chip back
-   (he chips over a defence rushing him, and its nearest men run on the wrong way): +29 to +39 points at 0.3 against an aim of
-   +10 to 15, a little less at 0.2 (the kick-chaser on Easy +25 where he was +32); pace stays his 1.08, which alone is +11 to 16.
-   The aim on a person's chips is below the band, the owner's call (README.md, Kicking and the chase).
+   surprise." He chose every kicking side (the CPU's kicks too) and small, tuned by how often the kicking side wins the ball back,
+   noticeable and not a walkover. Asked on 13 November 2026 which chase ships in 1.6, he chose "Pace Alone (Recommended): Chasers 8%
+   quicker for 1.5s, and defenders react normally. Chips won back about 11 to 16 points more, so no chip-spam walkover." So react is
+   0 and the chase is its pace alone: the chasers 1.08 times their top speed for 1.5s, the catching side reacting at once, as before.
+   Rejected: react 0.2 (98e11c8, the floor of his first band, 0.2 to 0.4), where a chip-spammer on Normal won back two chips in three
+   and won 67% of his matches (45% before): the late start, not the pace, wins a person's chip back (he chips over a defence rushing
+   him, and its nearest men run on the wrong way). Its code is kept, idle at 0 and tunable (CHASE='{"react":0.2}' in the harness), and
+   tools/chase.mjs proves a build without it plays react 0 exactly, draw for draw.
    - Who: every open-play kick (kickBall's kind 'kick': a chip, a long kick, a clearance, a territory kick), by either side, in every
      match, AI v AI, the demo, Two Player, Kids and Minis included (it is speed, not contact). Not a restart (the kick-off and the 22
      drop-out are kind 'restart'), a drop goal (kind 'g3d') or a charge-down (doKick stops before kickBall), and never in a drill.
@@ -16,14 +18,15 @@
      p.chase is his seconds left, read in maxSpeed with the other factors and under Sprint (the bigger of the two applies, never
      both), so nothing snaps his velocity as setBoost does. It ends early once the kicking side loses the ball (the other side holds
      it or passes it) or the ball is dead (any stoppage, a try, half time). Drawn as a boost is, the gold trail behind him.
-   - The catching side: its men the computer runs react `react` seconds late. For that long after the kick they run on as they were
-     running (edgeHold, the Easy cover's lag) instead of going to the landing spot or into their support shape (matchTargets). A
-     human's own input is never delayed: the ring still jumps to his man nearest the landing spot at the kick (kickBall), his stick
-     drives that man at once, and a Kids child's let-go chase (kidsChase) runs for the ball as before.
+   - The catching side: as it ships (react 0) its men react at once, as before the chase. Tuned above 0, its men the computer runs react
+     `react` seconds late: for that long after the kick they run on as they were running (edgeHold, the Easy cover's lag) instead of
+     going to the landing spot or into their support shape (matchTargets). A human's own input is never delayed: the ring still jumps
+     to his man nearest the landing spot at the kick (kickBall), his stick drives that man at once, and a Kids child's let-go chase
+     (kidsChase) runs for the ball as before.
    Every lever reads chaseLv and none draws a random number, so with CHASE.on false (CHASE='{"on":false}' in the harness) the game
    plays exactly as b4a25d5, the build before it, draw for draw: the proof behind every re-pin since. Measured: README.md, Kicking and
-   the chase (tools/chase.mjs --balance). */
-const CHASE = { on:true, pace:1.08, secs:1.5, react:0.2 };
+   the chase (tools/chase.mjs --balance; --balance band checks a person's chips against the owner's aim). */
+const CHASE = { on:true, pace:1.08, secs:1.5, react:0 };
 // CHASE_TUNE
 const CHASE_OFF = { pace:1, secs:0, react:0 };             // b4a25d5's: no chase
 const chaseLv = k => (CHASE.on ? CHASE : CHASE_OFF)[k];
@@ -38,7 +41,7 @@ function chaseMul(p) {                                     // his pace now: `pac
   const ease = chaseLv('secs')/3;
   return 1 + (chaseLv('pace') - 1)*Math.min(1, p.chase/ease);
 }
-const chaseLate = t => !!(M.chase && M.chase.team !== t && M.chase.t < chaseLv('react') - 1e-9);   // side t has not reacted to the other side's kick yet (12 steps of 0.2s, the kick's own the first)
+const chaseLate = t => !!(M.chase && M.chase.team !== t && M.chase.t < chaseLv('react') - 1e-9);   // side t has not reacted to the other side's kick yet: never at react 0, as it ships (at 0.2, 12 steps, the kick's own the first)
 function chaseTick(dt) {                                   // once a step in a match, after the ball (matchUpdate): the chase's clock, and its early end
   const C = M.chase;
   if (!C) return;

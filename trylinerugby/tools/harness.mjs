@@ -40,6 +40,9 @@ if (process.env.EDGE) js = js.replace('// EDGE_TUNE', `{ const deep = (a, b) => 
 // CHASE='{"on":false}' turns the kick chase off (src/chase.js: the game plays exactly as b4a25d5, the build before it, draw for draw: the
 // proof behind every re-pin since); CHASE='{"pace":1.1,"react":0.3}' tries other levers. Deep-merged, as the contact levers below
 if (process.env.CHASE) js = js.replace('// CHASE_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(CHASE, ${process.env.CHASE}); }`);
+// CHASE_LATE=off builds the game without the catching side's late start (matchTargets' chaseLate line, src/movement.js): at react 0, as
+// the chase ships, the game plays exactly as this build, draw for draw (tools/chase.mjs section 0, the proof that the path is a no-op there)
+if (process.env.CHASE_LATE === 'off') { const cut = js.replace(/\n  if \(mode === 'kick' && chaseLate\(att\)\)[^\n]*/, ''); if (cut === js) throw new Error('CHASE_LATE=off: the late-start line is not in the build'); js = cut; }
 if (process.env.KNOCK) js = js.replace('// KNOCK_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(KNOCK, ${process.env.KNOCK}); }`);
 // CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' PRESSURE='{"on":false}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion, Tackle duel trigger and pressure levers
 {
