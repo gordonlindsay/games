@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.6';
+const GAME_VERSION = '1.6.1';
 
 /* =========================================================
    Data
@@ -10411,6 +10411,15 @@ const deskQuery = (() => { try { return matchMedia('(hover: hover) and (pointer:
 function setDesk() { const b = document.body; if (b) b.classList.toggle('desk', PADS.size > 0 || !!(deskQuery && deskQuery.matches)); }   // a computer, or a controller connected right now: a phone that had a pad goes back to its own layout when it is unplugged
 const isDesk = () => !!(document.body && document.body.classList.contains('desk'));
 if (deskQuery) { if (deskQuery.addEventListener) deskQuery.addEventListener('change', setDesk); else if (deskQuery.addListener) deskQuery.addListener(setDesk); }
+/* A phone's or a tablet's own keyboard never comes up by itself, only for a tap on a text field (the owner, 2026-11-14, on his iPhone:
+   "Take out the keyboard when selecting teams unless I press keyboard as it smothers the screen"). lastPress is the last press anywhere:
+   a pointerdown's own pointerType ('mouse', 'touch' or 'pen'), or 'key' for a key pressed outside a text field (a phone's own keyboard
+   only ever types into one). A click's pointerType is never asked: iOS gives a finger's tap a click whose pointerType is "mouse", or none. */
+let lastPress = '';
+document.addEventListener('pointerdown', e => { lastPress = (e && e.pointerType) || ''; }, true);
+document.addEventListener('keydown', e => { const t = e && e.target; if (!(t && (/^(INPUT|TEXTAREA)$/.test(t.tagName || '') || t.isContentEditable))) lastPress = 'key'; }, true);
+const touchFirst = () => { try { return typeof matchMedia === 'function' && !!(matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches); } catch (e) { return false; } };   // the primary pointer a finger, or one that cannot hover: a phone or a tablet (an iPad with a trackpad too), never a computer
+const fieldMayFocus = () => lastPress === 'key' || (!touchFirst() && lastPress !== 'touch' && lastPress !== 'pen');   // a text field may take the focus by itself: after a key, or on a computer whose last press was not a finger's or a pen's
 
 /* =========================================================
    UI
@@ -12126,9 +12135,9 @@ function filterSearch(L, q) {
   return hits.sort((a, b) => a.r - b.r || a.n - b.n);
 }
 /* Open: for side s, with q typed (a letter on the screen) or none. how.dev is how it was asked for: 'pad' (a controller's A: the ring on
-   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger: the field never
-   takes the focus, so the phone's keyboard comes up only on a tap there). how.from: 'find' (the icon) or 'sheet' (the group's button),
-   where Close puts the focus back. */
+   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger, and anything
+   else on a phone or a tablet: the field never takes the focus, so the phone's keyboard comes up only on a tap there; pickFilterHow).
+   how.from: 'find' (the icon) or 'sheet' (the group's button), where Close puts the focus back. */
 function pickFilter(s, q, how) {
   const v = pickView[s], m = $('m-filter'), o = how || {};
   if ($('s-teams').hidden || !pickFilterable(v)) return false;
@@ -12164,8 +12173,14 @@ function flTapEat(e) {
   if (e.stopPropagation) e.stopPropagation();
 }
 for (const t of ['pointerdown', 'mousedown', 'touchend', 'mouseup', 'click']) document.addEventListener(t, flTapEat, { capture:true, passive:false });
-let pickPointer = '';                                        // the last pointer down on the team screen: 'mouse' (a computer), 'touch' or 'pen'
-const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad' : e && e.detail === 0 && document.activeElement === el ? 'kb' : ((e && e.pointerType) || pickPointer) === 'mouse' ? 'desk' : 'touch');   // how the Filter was asked for (pickFilter)
+/* How the Filter was asked for (pickFilter): 'pad', a controller's A (the ring on the button); 'kb', Enter or Space on the focused button
+   (a click with no detail), on a phone or a tablet only where a key was the last press; 'desk', a computer's mouse (the last press a mouse's,
+   on a computer: touchFirst); else 'touch', a finger. The last pointerdown decides (lastPress, src/input-devices.js), never the click's own
+   pointerType: iOS gives a finger's tap a click whose pointerType is "mouse", which read as a computer's, put the focus in the field and
+   brought the phone's keyboard up over the screen (the owner on 1.6, 2026-11-14). */
+const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad'
+  : e && e.detail === 0 && document.activeElement === el && (lastPress === 'key' || !touchFirst()) ? 'kb'
+  : (lastPress || (e && e.pointerType) || '') === 'mouse' && !touchFirst() ? 'desk' : 'touch');
 const flHas = el => !!el && typeof el.closest === 'function' && !!el.closest('#m-filter');
 function pickFilterShut() {                                  // the Filter put away, nothing else: also whenever another screen is shown (showScreen)
   const m = $('m-filter');
@@ -12469,7 +12484,7 @@ function pickHint() {
   for (const w of chip.children) { if (w.textContent === h.text) w.removeAttribute('aria-hidden'); else w.setAttribute('aria-hidden', 'true'); }
   return h;
 }
-$('s-teams').addEventListener('pointerdown', e => { pickPointer = e.pointerType || ''; if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
+$('s-teams').addEventListener('pointerdown', e => { if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
 /* Men | Women | Minis: the sides follow to the category's own (England to England Women); one it has not got (Canada on Men) is the
    next one there, and no longer set. */
 $('t-cat').innerHTML = TEAM_CATS.map(c => `<button data-cat="${c.id}">${esc(c.name)}</button>`).join('');
@@ -13877,8 +13892,8 @@ $('b-import').addEventListener('click', () => { ac(); importOpen(); });
    check is up, so the two never stack. from: 'home' (the home's button) or 'teams' (the team screen's card), where it closes to. */
 let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0, from:'teams', club:null, sides:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
-const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
-/* The control a step starts on: the link field (on a touch screen Import, so no keyboard springs up over the card),
+const importTouch = () => !fieldMayFocus();                 // a phone or a tablet, or a finger last on a computer's touch screen, unless a key was the last press (src/input-devices.js)
+/* The control a step starts on: the link field (where importTouch, Import, so no keyboard springs up over the card),
    the primary in the preview, Back while it imports and on the web. button: a button only, for a controller's ring. */
 function importFocusEl(button) {
   const s = importUi.step;
@@ -14576,7 +14591,7 @@ function storeWallStep(step) {
   storeWallCheck();
   setFocus(null);
   if (lastDev === 'pad') return;            // a controller starts on DEFAULT_FOCUS with its first press
-  const el = step === 'age' ? $('wl-yes') : typeof importTouch === 'function' && importTouch() ? null : $('wl-input');   // on a touch screen no keyboard springs up over the card until the field is tapped
+  const el = step === 'age' ? $('wl-yes') : fieldMayFocus() ? $('wl-input') : null;   // on a phone or a tablet no keyboard springs up over the card until the field is tapped (src/input-devices.js)
   if (el && el.focus) el.focus();
 }
 function storeWallCheck() { $('wl-go').disabled = !storeWallMail(storeWallUi && storeWallUi.club, $('wl-input').value); }   // Continue once a name is there
@@ -18123,7 +18138,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   calls:{ CALLS, CALLS_OFF, lv:callsLv, possCall, callWon, callLate, canPlay, offsideMan, offMark, releaseOk, kickRing, callInk, bannerInk, contrastOf, CALL_PLATE, fireSay, fireShowing, fireFold, fireOpen, bannerLife, callsTick, callFlash, drawCalls, callPlace, callSpot, bannerBox, catchBall, pickUp, updateBallAir, updateLoose, resolvePass, resolveRuck, offload, looseInContact, doPass, kickBall, tag, heat, edgeLine, matchTargets, say, render, matchMild, scoreTry, restartKick, settleGoal, setRM:v => { RM = !!v; }, rm:() => RM },   // src/calls.js: the possession calls, the interception rules and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
   picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
-    filter:pickFilter, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
+    filter:pickFilter, filterHow:pickFilterHow, lastPress:() => lastPress, touchFirst, fieldMayFocus, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
     first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
     profileOpen, render:profileRender, age:profileAge, gender:profileGender, settings:profileSettings, decides:profileDecides, catFixed:() => pickCatFixed(), homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },

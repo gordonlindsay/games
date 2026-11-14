@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 process.env.SEED ??= '41';
-const { T, rndCalls } = await import('./harness.mjs');
+const { T, rndCalls, fireDoc } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const P = T.picker, D = T.debug, X = T.teams, H = T.home, C = T.career, L = T.locker, S = T.store, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -514,6 +514,45 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(P.filterStep(row(0, 4), 0, 1, TOP) === null && P.filterStep(row(0, 0), -1, 0, TOP) === null && P.filterStep(row(3, 0), 1, 0, TOP) === null, 'no further at the ends: nothing');
   P.filterStep(row(1, 2), 0, 1, TOP); ok(fs0().path.join() === '0,3,0' && col(3).head === 'National', 'Down in Country: Scotland, on its first league');
   P.filterShut();
+  // how it was asked for (pickFilterHow), the owner on 1.6 on his iPhone (2026-11-14): "Take out the keyboard when selecting teams unless
+  // I press keyboard as it smothers the screen". The field takes the focus by itself only for a key, or a computer's mouse; the last
+  // pointerdown decides, never the click's own pointerType, which iOS gives a finger's tap as "mouse" (or none) and which read as a computer's;
+  // and a phone or a tablet (a coarse pointer, or none that hovers) is a finger's whatever its pointerdown says, unless a key was pressed
+  {
+    const mm = globalThis.matchMedia, icon = $('t-find'), f = $('fl-q'), had = f.focus;
+    let field = false; f.focus = () => { field = true; };
+    const media = (...on) => { globalThis.matchMedia = q => ({ matches:on.includes(q), addEventListener() {}, addListener() {} }); };
+    const open = (press, click, o = {}) => {   // a press (a pointerdown's type, or 'key' on the icon), then the icon's click; what pickFilterHow read, and whether the field took the focus
+      P.filterShut(); D.openTeams('quick'); field = false;
+      if (press === 'key') fireDoc('keydown', { key:'Enter', target:icon }); else if (press != null) fireDoc('pointerdown', { pointerType:press });
+      if (o.active) document.activeElement = icon;
+      if (o.ring) T.home.ring(icon);
+      const ev = { detail:o.detail ?? 1, clientX:0, clientY:0 }; if (click !== undefined) ev.pointerType = click;
+      const how = P.filterHow(ev, icon); icon.fire('click', ev);
+      delete document.activeElement;
+      return `${how} ${fs0().open ? 'open' : 'shut'} ${field ? 'field' : 'no field'}`;
+    };
+    media();   // a computer: a fine pointer that hovers
+    const desk = [open('mouse', 'mouse'), open('touch', 'mouse'), open('touch', ''), open('touch'), open('pen', 'mouse'), open('mouse', 'mouse', { detail:0, active:true }), open('key', undefined, { detail:0, active:true })];
+    ok(json(desk) === json(['desk open field', 'touch open no field', 'touch open no field', 'touch open no field', 'touch open no field', 'kb open field', 'kb open field']), `a computer: a mouse's click on the icon puts the focus in the field, as before; a finger's tap on its touch screen (its click's pointerType "mouse", "" or none, as iOS sends) or a pen's never does; Enter or Space on the focused icon does (${json(desk)})`);
+    media('(pointer: coarse)', '(hover: none)');   // a phone
+    const phone = [open('touch', 'mouse'), open('touch', ''), open('touch'), open('touch', 'touch'), open('mouse', 'mouse'), open('touch', 'mouse', { detail:0, active:true }), open('key', undefined, { detail:0, active:true })];
+    ok(json(phone) === json(['touch open no field', 'touch open no field', 'touch open no field', 'touch open no field', 'touch open no field', 'touch open no field', 'kb open field']), `a phone: a tap on the icon (its click's pointerType "mouse", "", none or "touch") never puts the focus in the field, so no keyboard comes up; nor a mouse's press (an iPad's trackpad), nor a click with no detail after a finger; a key on the focused icon (a tablet's keyboard) does (${json(phone)})`);
+    media('(hover: none)');   // no hover alone
+    const hover = [open('mouse', 'mouse'), open('key', undefined, { detail:0, active:true })];
+    media('(pointer: coarse)');   // a coarse pointer alone
+    const coarse = [open('mouse', 'mouse'), open('key', undefined, { detail:0, active:true })];
+    ok(json([hover, coarse]) === json([['touch open no field', 'kb open field'], ['touch open no field', 'kb open field']]), `a pointer that cannot hover, or a coarse one, is a phone's or a tablet's: a mouse's press there leaves the field be, a key still focuses it (${json([hover, coarse])})`);
+    fireDoc('pointerdown', { pointerType:'touch' }); fireDoc('keydown', { key:'a', target:{ tagName:'INPUT' } });
+    const typedIn = P.lastPress(); fireDoc('keydown', { key:'Tab', target:icon }); const tabbed = P.lastPress();
+    ok(typedIn === 'touch' && tabbed === 'key', `a key typed into a text field is not a key's press (a phone's own keyboard types only into one); one anywhere else is (${typedIn}, ${tabbed})`);
+    const pad = open('touch', 'mouse', { ring:true }); T.home.ring(null);
+    ok(pad === 'pad open no field', `a controller's A on the icon: the ring in the Filter, the field left be (${pad})`);
+    media('(pointer: coarse)', '(hover: none)'); fireDoc('pointerdown', { pointerType:'touch' });
+    const letter = P.filter(0, 'b', { dev:'kb', from:'find' }) && field;
+    ok(letter, 'a letter typed on the team screen (a key, on any device): the Filter with it in the field, focused');
+    P.filterShut(); f.focus = had; globalThis.matchMedia = mm; fireDoc('pointerdown', { pointerType:'mouse' });
+  }
   // the field's resting edge reads as a field: 3:1 or more against the card and its own ground (WCAG 1.4.11), the chalk ring when focused
   { const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8'), tok = n => (css.match(new RegExp(`--${n}:(#[0-9a-f]{6})`)) || [])[1];
     const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)/255).map(v => (v <= 0.03928 ? v/12.92 : ((v + 0.055)/1.055) ** 2.4)); return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]; };
@@ -532,9 +571,9 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   D.openTeams('quick'); for (const s of [0, 1]) { P.filter(s, '', { dev:'touch' }); for (let k = 0; k < 5; k++) { P.filterSel(0, k); P.filterSel(1, 0); } for (const q of ['b', 'ba', 'Premiership', 'zz', '']) P.filterType(q); P.filterClose(); }
   P.filter(0, 'bath', { dev:'touch' }); P.filterPick(P.filterState().hits[0].gi, P.filterState().hits[0].i);
   ok(rndCalls() === before, `the team screen and its Filter draw no random number (${rndCalls() - before})`);
-  ok(T.GAME_VERSION === '1.6' && $('ver').textContent === 'Version 1.6', 'GAME_VERSION is 1.6 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase), on window.__tryline and at the foot of Settings');
+  ok(T.GAME_VERSION === '1.6.1' && $('ver').textContent === 'Version 1.6.1', 'GAME_VERSION is 1.6.1 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase, 1.6.1 no phone keyboard by itself on the team screen), on window.__tryline and at the foot of Settings');
   const src = readGameSource();
-  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.6';") && /<p class="ver" id="ver">Version 1\.6<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
+  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.6.1';") && /<p class="ver" id="ver">Version 1\.6\.1<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
   ok(!/id="home-tag"|\$\('home-tag'\)/.test(src), 'and no home tagline for it: PR #17\'s v1.1 line went with the tidied home, so nothing writes to an element that is not there');
   ok(!/[←-⇿⟵-⟿]/.test(src.slice(src.indexOf('<section class="screen" id="s-teams"'), src.indexOf('<section class="screen" id="s-build"'))), 'no arrow glyph on the team screen');
   fresh();
@@ -1105,6 +1144,51 @@ async function browserChecks() {
         await ctx.close();
       }
     }
+    // a phone (hasTouch and isMobile: a coarse pointer that cannot hover), the owner on 1.6 on his iPhone (2026-11-14): "Take out the keyboard
+    // when selecting teams unless I press keyboard as it smothers the screen". Neither the icon nor either group button puts the focus in the
+    // field, whether tapped, tapped as iOS reports it (a touch pointerdown, then a click whose pointerType is "mouse", "" or a plain
+    // MouseEvent's none), or clicked with a mouse (an iPad's trackpad); a tap on the field does, and a key (a tablet's keyboard) still does
+    {
+      const ctx = await browser.newContext({ viewport:{ width:844, height:390 }, hasTouch:true, isMobile:true });
+      await ctx.addInitScript(s => { try { localStorage.setItem('tryline.v1', s); } catch (e) { /* none */ } }, JSON.stringify(SAVE));
+      const page = await ctx.newPage();
+      const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.goto(base); await page.waitForFunction(() => window.__tryline && !document.getElementById('s-home').hidden);
+      const now = () => page.evaluate(() => { const P = window.__tryline.picker; return `${document.getElementById('m-filter').hidden ? 'shut' : 'open'} ${document.activeElement === document.getElementById('fl-q') ? 'field' : 'no field'} (${P.lastPress()})`; });
+      const reset = async () => { await page.evaluate(() => { const T = window.__tryline; T.picker.filterShut(); T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); document.activeElement.blur(); }); await page.waitForTimeout(450); };   // past the double tap's guard (FL_TAP)
+      const mid = sel => page.evaluate(q => { const r = document.querySelector(q).getBoundingClientRect(); return [r.left + r.width/2, r.top + r.height/2]; }, sel);
+      const ios = (sel, type) => page.evaluate(([q, t]) => {   // iOS's tap: a touch pointerdown and pointerup, then a click that says "mouse", "" or nothing
+        const b = document.querySelector(q), r = b.getBoundingClientRect(), at = { bubbles:true, composed:true, cancelable:true, clientX:r.left + r.width/2, clientY:r.top + r.height/2, isPrimary:true, pointerId:7 };
+        b.dispatchEvent(new PointerEvent('pointerdown', { ...at, pointerType:'touch' })); b.dispatchEvent(new PointerEvent('pointerup', { ...at, pointerType:'touch' }));
+        b.dispatchEvent(t === null ? new MouseEvent('click', { ...at, detail:1 }) : new PointerEvent('click', { ...at, detail:1, pointerType:t }));
+      }, [sel, type]);
+      const media = await page.evaluate(() => [matchMedia('(pointer: coarse)').matches, matchMedia('(hover: none)').matches, window.__tryline.picker.touchFirst()]);
+      const seen = [];
+      for (const sel of ['#t-find', '#t-side0 [data-act="sheet"]', '#t-side1 [data-act="sheet"]']) {
+        for (const how of ['a tap', 'iOS "mouse"', 'iOS ""', 'iOS none', 'a trackpad']) {
+          await reset();
+          if (how === 'a tap') await page.tap(sel);
+          else if (how === 'a trackpad') { const [x, y] = await mid(sel); await page.mouse.click(x, y); }
+          else await ios(sel, how === 'iOS none' ? null : how === 'iOS ""' ? '' : 'mouse');
+          seen.push(`${sel} ${how}: ${await now()}`);
+        }
+      }
+      const bad = seen.filter(t => !/: open no field \((touch|mouse)\)$/.test(t));
+      ok(media.every(Boolean) && seen.length === 15 && !bad.length && seen.some(t => / a trackpad: .*\(mouse\)$/.test(t)), `a phone (coarse, no hover: ${json(media)}): the icon and each side's group button open the Filter with the field never focused, so no keyboard comes up by itself, tapped, tapped as iOS reports it (its click's pointerType "mouse", "" or none) or clicked with a trackpad (${bad.length ? bad.join('; ') : seen.length + ' ways'})`);
+      await reset(); await page.tap('#t-find'); await page.waitForTimeout(450); await page.tap('#fl-q');
+      const tapField = await now();
+      ok(/^open field/.test(tapField), `a phone: a tap on the Search field gives it the focus, and the phone its keyboard (${tapField})`);
+      const keyed = [];
+      for (const sel of ['#t-find', '#t-side0 [data-act="sheet"]']) { await reset(); await page.focus(sel); await page.keyboard.press('Enter'); keyed.push(`${sel} Enter: ${await now()}`); }
+      await reset(); await page.focus('#t-find'); await page.keyboard.press(' '); keyed.push(`#t-find Space: ${await now()}`);
+      await reset(); await page.keyboard.press('b'); keyed.push(`a letter: ${await now()} ${await page.evaluate(() => document.getElementById('fl-q').value)}`);
+      ok(keyed.every(t => /: open field \(key\)/.test(t)) && /b$/.test(keyed[3]), `a phone or a tablet with a keyboard: Enter or Space on the icon or the group button, or a letter typed, opens the Filter with the field focused, as on a computer (${keyed.join('; ')})`);
+      await reset(); await page.tap('#t-find'); await page.waitForTimeout(450); await page.tap('#fl-close'); await page.waitForTimeout(450);
+      const closed = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, field:document.activeElement === document.getElementById('fl-q'), at:document.activeElement.id || document.activeElement.tagName }));
+      ok(!closed.open && !closed.field, `a phone: Close tapped puts the focus in no field (${json(closed)})`);
+      ok(errors.length === 0, `a phone: no page error (${errors.join('; ')})`);
+      await ctx.close();
+    }
     // a computer (a mouse, no touch): a click on the icon opens the Filter with the field focused, to type at once
     {
       const ctx = await browser.newContext({ viewport:{ width:844, height:390 } });
@@ -1117,6 +1201,17 @@ async function browserChecks() {
       await page.keyboard.type('glouc'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
       const k2 = await page.evaluate(() => ({ team:window.__tryline.picker.view(0).team.id, set:window.__tryline.picker.state().sides[0].set, open:!document.getElementById('m-filter').hidden }));
       ok(k.desk && k.open && k.focus === 'fl-q' && k2.team === 'GLO' && k2.set && !k2.open, `a computer: a click on the icon opens the Filter with the field focused; typed "glouc", Enter to the match and Enter again picks Gloucester (${json([k, k2])})`);
+      // the group's button with a mouse focuses it too; a finger's tap on a computer's touch screen does not (the last pointerdown a touch's,
+      // whatever its click's pointerType says, as iOS's "mouse")
+      await page.evaluate(() => { const T = window.__tryline; T.picker.filterShut(); T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); }); await page.waitForTimeout(450);
+      await page.click('#t-side1 [data-act="sheet"]');
+      const dk = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, side:window.__tryline.picker.filterState().s, focus:document.activeElement.id }));
+      await page.evaluate(() => { const T = window.__tryline; T.picker.filterShut(); T.debug.openTeams('quick'); document.activeElement.blur(); }); await page.waitForTimeout(450);
+      await page.evaluate(() => { const b = document.getElementById('t-find'), r = b.getBoundingClientRect(), at = { bubbles:true, composed:true, cancelable:true, clientX:r.left + r.width/2, clientY:r.top + r.height/2, isPrimary:true, pointerId:7 };
+        b.dispatchEvent(new PointerEvent('pointerdown', { ...at, pointerType:'touch' })); b.dispatchEvent(new PointerEvent('pointerup', { ...at, pointerType:'touch' })); b.dispatchEvent(new PointerEvent('click', { ...at, detail:1, pointerType:'mouse' })); });
+      const dt = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, field:document.activeElement === document.getElementById('fl-q') }));
+      await page.evaluate(() => window.__tryline.picker.filterShut()); await page.waitForTimeout(450);
+      ok(dk.open && dk.side === 1 && dk.focus === 'fl-q' && dt.open && !dt.field, `a computer: a mouse's click on the Opponent's group button opens his Filter with the field focused; a finger's tap on the icon (a touch screen's, its click saying "mouse") leaves the field be (${json([dk, dt])})`);
       // a click on a row of Area or Country keeps the focus on it (the columns before it are not drawn again), so Tab and the arrows go on
       // from there, as they do for Enter
       const foc = () => page.evaluate(() => { const a = document.activeElement; return a && a.dataset.col != null ? `${a.dataset.col}:${a.dataset.i} ${a.querySelector('b').textContent}` : a ? a.id || a.tagName : null; });

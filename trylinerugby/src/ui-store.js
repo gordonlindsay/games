@@ -298,7 +298,7 @@ function storeWallStep(step) {
   storeWallCheck();
   setFocus(null);
   if (lastDev === 'pad') return;            // a controller starts on DEFAULT_FOCUS with its first press
-  const el = step === 'age' ? $('wl-yes') : typeof importTouch === 'function' && importTouch() ? null : $('wl-input');   // on a touch screen no keyboard springs up over the card until the field is tapped
+  const el = step === 'age' ? $('wl-yes') : fieldMayFocus() ? $('wl-input') : null;   // on a phone or a tablet no keyboard springs up over the card until the field is tapped (src/input-devices.js)
   if (el && el.focus) el.focus();
 }
 function storeWallCheck() { $('wl-go').disabled = !storeWallMail(storeWallUi && storeWallUi.club, $('wl-input').value); }   // Continue once a name is there
