@@ -1096,15 +1096,20 @@ const drillPass = {
    Easy, Normal, Hard), and each lever named in keep and pull goes that share of the way from the mode's own value to the one there.
    Keep: the tagger goes later and closer (trigger), so a change of direction has to come sooner after they go; and they lean after you
    harder (track) and read your drift sooner (read), so going before they do is no way round it. Pull: the carrier runs a touch
-   quicker (pace) and steps away harder as you close (step), and a hip is in reach only closer in (reach). Each is a matter of timing:
-   a quick reaction still wins every rep on Hard (tools/tagchase.mjs --balance). The youngest (the Kids level, or Minis) play every rep
-   at level 0, the game as it was, and so does Watch How. Nothing here draws a random number. */
+   quicker (pace) and steps away harder as you close (step), and a hip is in reach only closer in (reach). On a ramped rep the carrier
+   starts a set distance off the middle (lane), on the side drawn, and weaves towards the middle first, so either side is the same rep
+   mirrored and the lane drawn decides nothing (the review: the weave set off one way whatever the lane, so a carrier on one side came
+   into you and on the other went away, and one near the middle came straight at you; away from the middle on both sides, a run
+   straight at them with Pull Tag hammered won every Pull). Each is a matter of timing. On Hard's last Keep a change of direction must
+   come by 0.2 s after they go: a reaction that quick, or reading the gap and going as they close to 7 or 8 m, which keeps the tags on
+   every rep at every level (tools/tagchase.mjs). The youngest (the Kids level, or Minis) play every rep at level 0, the game as it
+   was, and so does Watch How. Nothing here draws a new random number. */
 const DRILL_TAG = { reps:6, box:[44, 27, 76, 43], cam:[60, 35], zoom:1.3, show:1.1, limit:8, stars:[2, 4, 6],
   keep:{ at:[46, 35], them:[63, 35], line:74, jog:0.25, shadow:0.85, chase:0.6, acc:12, trigger:13, lungeV:0.35, lungeT:1.5, rest:0.5, reach:1.25, grab:0.04, read:0.7, track:2 },
   pull:{ at:[52, 35], them:[74, 35], lane:4, line:46, pace:0.68, acc:9, weave:1.4, reach:1.9, close:0.45, front:0.7, whiff:0.45, dodge:5, step:2.6 },
-  ramp:{ rep:[0, 0.5, 0.7, 0.8, 0.9, 1], diff:[0.4, 0.9, 1],
+  ramp:{ rep:[0, 0.5, 0.7, 0.8, 0.9, 1], diff:[0.4, 0.9, 1], lane:3,
     keep:{ trigger:6.5, track:5, read:0.3 },
-    pull:{ pace:0.73, step:3.4, reach:1.4 } } };
+    pull:{ pace:0.73, step:3.4, reach:1.6 } } };
 const TAG_WHY = { Pulled:'Change Direction as They Go', Bumped:'Tag Has No Contact. No Bumps.', Past:'Reach a Hip, Then Pull' };
 const tagMode = T => (T.rep % 2 ? 'keep' : 'pull');        // rep 1 keeps, rep 2 pulls, and so on
 const tagLevel = rep => (practiceYoung() || (practice && practice.demo) ? 0 : DRILL_TAG.ramp.rep[rep - 1]*DRILL_TAG.ramp.diff[settings.diff]);   // 0 to 1: how far up the ramp this rep plays
@@ -1123,8 +1128,9 @@ function tagRep(K) {
     drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (rnd() - 0.5)*2, -1, 0);
     drillHold(me);
   } else {
-    const Q = K.pull;
-    drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (rnd() - 0.5)*2*Q.lane, -1, 0);
+    const Q = K.pull, u = rnd() - 0.5;
+    drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (T.lv ? (u < 0 ? -1 : 1)*K.ramp.lane : u*2*Q.lane), -1, 0);   // the same draw: at level 0 anywhere in the lane, as it was
+    T.wv = T.lv && u >= 0 ? -1 : 1;                       // the way the weave sets off: on a ramped rep towards the middle, either side alike; at level 0 the one way it always did
     drillHold(them);
   }
   inputOf(0).aPressed = false;
@@ -1181,7 +1187,7 @@ const drillChase = {
     } else {
       const Q = T.Q;
       drillHold(them);
-      let vy = Math.sin(T.t*1.7)*Q.weave;                  // down the pitch with a weave, and one step away as you close in
+      let vy = T.wv*Math.sin(T.t*1.7)*Q.weave;             // down the pitch with a weave, and one step away as you close in
       if (!T.dodged && dist(me, them) < Q.dodge && me.x < them.x) { T.dodged = true; T.step = me.y >= them.y ? -1 : 1; T.stepT = 0.5; }
       if (T.stepT > 0) { T.stepT -= dt; vy += T.step*Q.step; }
       steer(them, -v*Q.pace, vy, Q.acc, dt);
