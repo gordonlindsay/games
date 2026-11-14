@@ -3,7 +3,7 @@
 // cup's knockouts. node tools/cups.mjs   Exits 1 on any failure.
 // GAME=/path/to/index.html CUPS_PRINT=1 node tools/cups.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 process.env.SEED ??= '41';
-const { T, reseed, bot } = await import('./harness.mjs');
+const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 const fs = await import('node:fs');
 const X = T.teams, D = T.debug, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -15,7 +15,12 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 // 0. Nothing moves outside a cup: AI v AI, a Quick Match you play (arcade, with a level finish into the Golden Try), a championship
 //    match (a league keeps its draw) and the demo, seeded, against the build before the cups (ed37be5). Run first, so nothing
 //    earlier in this file can move them.
-const BASE = '1mhz589 wcn6wg 7d9t9f 13pm2gf 137ioi3';   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
+/* BASE re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"):
+   Farnham 58 and Haslemere 43, a step down, so the matches they play here move; the simulated pair and the demo do not. With LOCAL off
+   (1.6) and with the rerating off (8089294) this build gives BEFORE_LOCAL, 1.6's pin, exactly, and the older pins below hold with LOCAL
+   off as they did (each checked first, in a child: rerateProofs). */
+const BASE = '1mhz589 1eeqzm9 1tswp5k t3hhtc 137ioi3';
+const BEFORE_LOCAL = '1mhz589 wcn6wg 7d9t9f 13pm2gf 137ioi3';   // 1.6 (b9fa00d), LOCAL off, and 8089294   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = 'lngm86 r11vtt 7d9t9f 13pm2gf 137ioi3';   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '1c3imom t6ab7n zhonr6 i1wj0v b5g5ir';   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 1s0b74m t6ab7n 1o5f4ys i1wj0v b5g5ir)
 const BEFORE_CALLS_CHASE = 'jjejgk t6ab7n 1s2ftw6 i1wj0v b5g5ir';   // b4a25d5's pin, the calls and the chase both off: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -45,14 +50,16 @@ function fingerprint() {
 {
   const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off with the knock-ons (20cbcaf predates all three), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
-  if (T.knock && !process.env.CUPS_PRINT) { T.knock.KNOCK.on = false; feats(false, false); const off = fingerprint(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
-  if ((CL || CS) && !process.env.CUPS_PRINT) { feats(false, false); const off = fingerprint(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
-  if (CL && CS && !process.env.CUPS_PRINT) { feats(true, false); const calls = fingerprint(); feats(false, true); const chase = fingerprint(); feats(CL0, CS0);
+  if (T.knock && !LOCAL_ON && !process.env.CUPS_PRINT) { T.knock.KNOCK.on = false; feats(false, false); const off = fingerprint(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+  if ((CL || CS) && !LOCAL_ON && !process.env.CUPS_PRINT) { feats(false, false); const off = fingerprint(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
+  if (CL && CS && !LOCAL_ON && !process.env.CUPS_PRINT) { feats(true, false); const calls = fingerprint(); feats(false, true); const chase = fingerprint(); feats(CL0, CS0);
     ok(calls === WITH_CALLS, `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
     ok(chase === WITH_CHASE, `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`); }
   const now = fingerprint();
-  if (process.env.CUPS_PRINT) { console.log(now); process.exit(0); }
-  ok(now === BASE, `AI v AI, a Quick Match (its Golden Try included), a championship match and the demo play exactly as before the cups (seeded fingerprint ${now}, pinned ${BASE})`);
+  if (process.env.CUPS_PRINT || LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
+  if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BEFORE_LOCAL, ok);
+  const pin = RERATE ? BASE : BEFORE_LOCAL;
+  ok(now === pin, `AI v AI, a Quick Match (its Golden Try included), a championship match and the demo play exactly as before the cups (seeded fingerprint ${now}, pinned ${pin})`);
 }
 
 const K = T.cups;

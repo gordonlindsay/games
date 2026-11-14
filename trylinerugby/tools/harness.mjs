@@ -24,12 +24,19 @@ export const CLUB_BAND = {
   EFF:64, WAN:61, EGH:61, MER:61, MIT:61, FEL:61,
 };
 {
-  const v = process.env.CLUB_RATED, wipe = 'for (const k in CLUB_RATED) delete CLUB_RATED[k];';
+  const v = process.env.CLUB_RATED, wipe = 'for (const k in CLUB_RATED) delete CLUB_RATED[k];' + (js.includes('const LOCAL_RATED = {};') ? ' for (const k in LOCAL_RATED) delete LOCAL_RATED[k];' : '');   // the county clubs' ratings (LOCAL) too
   if (v) js = js.replace('// CLUB_TUNE', v === 'off' ? wipe : v === 'band' ? wipe + ' Object.assign(CLUB_RATED, ' + JSON.stringify(CLUB_BAND) + ');' : 'Object.assign(CLUB_RATED, ' + v + ');');
 }
 // NEW_LISTS=off leaves PR #14's England 2 and Counties off the team lists (ALL_TEAMS as before them: the menu demo draws from it), the
 // other half of that proof
 if (process.env.NEW_LISTS === 'off') js = js.replace(/\n  \{ key:'en2'[^\n]*/, '').replace(/\n  \{ key:'cty'[^\n]*/, '');
+// LOCAL='{"on":false}' builds the game without the county clubs (src/data.js, src/clubs-local.js: the game is exactly 1.6, b9fa00d, draw for draw
+// and screen for screen: the proof behind every re-pin since, each kept at its pin as BEFORE_LOCAL). Deep-merged, as the levers below. It acts
+// as the game loads, so a proof runs a spawned copy (offRun). LOCAL='{"view":false}' keeps the county clubs and puts Aldershot back in
+// Surrey's draws, as 7c864c2 had it (listPlays, src/data.js): the proof behind the review's re-pins (BEFORE_VIEW), offRun(url, { LOCAL:... })
+// LOCAL='{"rerate":false}' keeps the county clubs and puts back 8089294's ratings (National League 61 with Regional 1's top, Farnham 61),
+// before the owner's rerating of 14 Nov 2026 (src/ratings.js, LOCAL_RERATE): the proof behind the rerating's re-pins (BEFORE_RERATE)
+if (process.env.LOCAL) { const cut = js.replace('// LOCAL_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(LOCAL, ${process.env.LOCAL}); }`); if (cut === js && !process.env.GAME) throw new Error('LOCAL: no LOCAL_TUNE in the build'); js = cut; }
 // MAUL='{"on":false}' turns the maul off (the build before it exactly: b706c3e on its branch; on wt/pr14int the pressure merge, and with PRESSURE='{"on":false}' as well 0b1293c: the proof behind every re-pin since); MAUL='{"cpu":{"base":0.1}}' tries other levers. Deep-merged, as the contact levers below
 if (process.env.MAUL) js = js.replace('// MAUL_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(MAUL, ${process.env.MAUL}); }`);
 // EDGE='{"on":false}' turns the edge off (src/edge.js: Easy against the CPU plays exactly as 90353c3, the build before it, draw for draw: the
@@ -57,6 +64,16 @@ if (process.env.CHASE_LATE === 'off') { const cut = js.replace(/\n  if \(mode ==
 let seedState = null;
 const mulberry = () => { seedState = seedState + 0x6D2B79F5 | 0; let t = Math.imul(seedState ^ seedState >>> 15, 1 | seedState); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 if (process.env.SEED) { seedState = +process.env.SEED >>> 0; Math.random = mulberry; }   // swapped in before the game captures Math.random
+/* A tool run again with the county clubs off (LOCAL='{"on":false}': 1.6), as LOCAL_CHILD: the child runs the checks of 1.6's world (the older
+   pins' chain, which it alone can check: LOCAL acts as the game loads), prints its pin as its last line and exits. Every re-pin LOCAL moved
+   checks its 1.6 pin (BEFORE_LOCAL) this way first. { last, fails }: that line, and any FAIL lines the child printed. */
+export async function offRun(fileUrl, env = {}) {
+  const { spawnSync } = await import('node:child_process'), { fileURLToPath } = await import('node:url');
+  const out = spawnSync(process.execPath, [fileURLToPath(fileUrl)], { env:{ ...process.env, LOCAL:'{"on":false}', LOCAL_CHILD:'1', ...env }, encoding:'utf8', maxBuffer:64*1024*1024 });
+  const lines = ((out.stdout || '') + (out.stderr || '')).trim().split('\n').filter(Boolean);
+  return { last:(out.stdout || '').trim().split('\n').filter(Boolean).pop() || '', fails:lines.filter(l => /^FAIL|Error/.test(l)), status:out.status };
+}
+export const LOCAL_CHILD = !!process.env.LOCAL_CHILD;
 export function reseed(s) { if (seedState == null) throw new Error('reseed needs SEED'); seedState = s >>> 0; }
 let rndN = 0;                                     // every Math.random the game draws is counted, so a test can prove a stretch draws none
 { const base = Math.random; Math.random = () => { rndN++; return base(); }; }
@@ -107,6 +124,19 @@ globalThis.matchMedia = () => ({ matches: false, addEventListener: noop, addList
 new Function(js)();
 
 export const T = window.__tryline;
+/* The owner's rerating (LOCAL rerate, 14 Nov 2026: Regional 1 and every level under it a step down) moved every pin a Local club plays in.
+   LOCAL_ON and RERATE say which world a run is in. rerateProofs(url, before, ok): a re-pinned tool's proofs, each in a child (offRun),
+   both giving its pin from before, `before`: LOCAL off (1.6, b9fa00d, every older pin in its chain checked there too), and the rerating
+   off (8089294, the county clubs at their first ratings). A tool whose 8089294 pin is not 1.6's passes it as `was`. */
+export const LOCAL_ON = !!(T.local && T.local.LOCAL.on), RERATE = LOCAL_ON && !!T.local.LOCAL.rerate;
+export async function rerateProofs(fileUrl, before, ok, was = before) {
+  const tell = r => (r.fails.length ? '; ' + r.fails.join('; ') : '');
+  const off = await offRun(fileUrl);
+  ok(!off.fails.length && off.last === before, `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${before}${tell(off)})`);
+  if (!RERATE) return;
+  const r = await offRun(fileUrl, { LOCAL:'{"rerate":false}' });
+  ok(!r.fails.length && r.last === was, `with the rerating off (LOCAL rerate), as 8089294 (${r.last}, pinned ${was}${tell(r)})`);
+}
 export const camStart = T.debug.settings().cam;   // the camera this boot opened on, before the line below
 T.debug.settings().cam = 0;                       // the tools write the stick in world directions, so they play on Top unless they ask for a behind view (camera.mjs does, with its own turn)
 if (T.debug.TUT_IDS) T.debug.settings().tut = T.debug.TUT_IDS.slice(); else T.debug.settings().duelSeen = T.debug.settings().kickSeen = true;   // the tools play as a player who has had the tutorial: no moment pauses, no first-time aid (tutorial.mjs empties it where it tests them); a GAME= snapshot from before the tutorial gets its old flags set the same way

@@ -2,8 +2,8 @@
 // Done at the end) only with no save at all; what each answer sets (the level, the category, My Team's club and country, Career's New
 // Player); nothing locked after; My Team's Change opening My Profile, the old picker one press on; the save's profile field (bad values,
 // old saves); your player in My Team's box, in New Career and on one man of your side (the fly-half) in Quick Match, Championship and a
-// cup, never in a career's, AI v AI, the demo, Two Player or a tool's match; the body rule; and no random draw and no fingerprint moved by
-// any of it. Its last part needs Playwright and Chromium (as tools/home.mjs's does) and is skipped, saying so, where they are missing: the
+// cup, never in a career's, AI v AI, the demo, Two Player or a tool's match; the body rule; the Skill Games each age group sees, by every
+// route (5b); and no random draw and no fingerprint moved by any of it. Its last part needs Playwright and Chromium (as tools/home.mjs's does) and is skipped, saying so, where they are missing: the
 // setup and My Profile at 844x390, 667x375, 844x340, 667x320 and 568x320 with no scroll, every target 44px, Title Case, no arrow glyph,
 // the first launch for a person and never with a save, the keyboard and a controller, and the box on the home with your player in it.
 // node tools/profile.mjs   Exits 1 on any failure.
@@ -119,7 +119,7 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   ok(shown() === 's-teams' && D.pickMode() === 'setup' && F.run().step === 2 && /aria-label="3 of 4"/.test($('t-eyebrow').innerHTML) && $('t-title').textContent === 'Pick Your Club', 'Club: the team screen, 3 of 4, Pick Your Club');
   ok($('t-cat').hidden && !$('t-sback').hidden && !$('t-skip').hidden && $('t-back').hidden && P.one() && $('t-go').textContent === 'Pick Farnham', 'its Back and Skip along the top in place of Men | Women | Minis, one side, Pick Farnham');
   const lad = P.view(0).ladder;
-  ok(lad.some(g => g.key === 'sur') && lad.some(g => g.key === 'fra') && lad.some(g => g.key === 'mine.made') && !lad.some(g => g.teams.some(t => !t.act && (X.isNation(t) || t.legend))), 'the whole ladder of clubs, Mine (Made Teams, My League) and no nation or Legend: the country comes with the club');
+  ok(lad.some(g => g.key === 'sur') && lad.some(g => g.key === 'fra') && lad.some(g => g.key === 'mine.made') && !lad.some(g => g.teams.some(t => !t.act && (X.isNation(t) || t.legend))), 'the whole ladder of clubs, My Clubs (Made Teams, My League) and no nation or Legend: the country comes with the club');
   ok(P.view(0).team.name === 'Farnham Women' || X.listName(P.view(0).team) === 'Farnham', 'named for the category the answers give (Women)');
   $('t-sback').click(); ok(shown() === 's-setup' && F.run().step === 1 && /data-v="female" aria-pressed="true"/.test($('su-opts').innerHTML), 'Back: Gender, Female kept');
   F.answer('female'); $('t-skip').click();
@@ -188,8 +188,96 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   H.myPick(club('BTH')); ok(st.myClub === 'BTH' && F.get().age === 'mini', 'My Team changed: the profile as it was');
 }
 
-// 6. My Profile: Change in My Team's box opens it for every player; the age group and gender changed there (the Kids level left only past
-//    the grown-up check); My Team's Change one press on, coming back here.
+// 5b. Skill Games by age group (the owner, 2026-11-14: "Remove the contact mini games for mini players. Same for scrums until adult", the
+//     scrums "Driving Game Only"): a Mini has no Contact Games at any level and on any side, a Junior Tackling and Ball Back with no Driving,
+//     an Adult or no age group all three, and the Kids level and Minis bar all three as ever, whatever the age group. One rule
+//     (practiceBarred) by every route in: the Skill Games screen, its cards, practiceStart, Next Game, Try Again, the career's Train and its
+//     drills, a save put back. Mini plays the tag forms as the youngest do. The layout at every size is tools/home.mjs's (Skill Games for each
+//     player).
+{
+  const PR = T.practice, DR = T.drills, OPEN = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'], ALL = OPEN.concat(['tackle', 'scrum', 'back']), JUNIOR = OPEN.concat(['tackle', 'back']);
+  const games = () => DR.DRILLS.filter(d => !DR.barred(d.id)).map(d => d.id);
+  const screen = () => ({ group:!$('pr-contact').hidden, n2:$('pr-contact').classList.contains('n2'), cards:['tackle', 'scrum', 'back'].filter(id => !$('pr-' + id).hidden) });
+  const LEVELS = [['Kids', 0], ['Easy', 1], ['Normal', 2], ['Hard', 3]], CATS = ['men', 'women', 'minis'];
+  const seenWas = st.drillSeen.slice(), lockerWas = T.locker.state(), saveWas = memory['tryline.v1'];
+  const as = (age, seg, cat) => { fresh(); F.set({ age, gender:null, look:null }); T.kids.segSet(seg); st.cat = cat; st.drillSeen = DR.DRILLS.map(d => d.id); PR.leave(); D.goHome(); H.open('drills'); };   // every Watch How seen, so a card opens on its ready card
+  // each age group's list, at every level and on every side
+  const want = (age, seg, cat) => (seg === 0 || cat === 'minis' || age === 'mini' ? OPEN : age === 'junior' ? JUNIOR : ALL);
+  const bad = [];
+  for (const age of ['mini', 'junior', 'adult', null]) for (const [lv, seg] of LEVELS) for (const cat of CATS) {
+    as(age, seg, cat); const w = want(age, seg, cat), s = screen();
+    const shown = w === OPEN ? !s.group && !s.n2 && !s.cards.length : w === JUNIOR ? s.group && s.n2 && json(s.cards) === '["tackle","back"]' : s.group && !s.n2 && s.cards.length === 3;
+    if (json(games()) !== json(w) || !shown) bad.push(`${age}/${lv}/${cat}: ${games().join(',')} ${json(s)}`);
+  }
+  ok(!bad.length, `each age group's games at every level and on every side: Mini the seven open games, no Contact Games; Junior the nine, Tackling and Ball Back in the group, no Driving card; Adult and no age group all ten; the Kids level and Minis the seven whatever the age group (${bad.slice(0, 4).join('; ') || '48 cases'})`);
+  as(null, 2, 'men'); ok(json(games()) === json(ALL) && !DR.barred('scrum'), 'no age group counts as Adult: all ten, Driving with them');
+  // the cause, pinned: a Mini who left the Kids level (past the grown-up check before 1.7, past Leave Minis? since), then played Men on
+  // 2 Players' switch, used to see all three
+  fresh(); F.age('mini'); T.kids.segSet(2);
+  X.catPick('men'); D.goHome(); H.open('drills');
+  ok(F.get().age === 'mini' && !st.kids && st.cat === 'men' && ['tackle', 'scrum', 'back'].every(id => DR.barred(id)) && !screen().group, `a Mini on Normal playing Men (the Kids level left, Men on 2 Players' switch): still no Contact Games (${json([st.diff, st.kids, st.cat, games()])})`);
+  // every route in, for a Junior and a Mini, on Normal and Men, so only the age group bars them
+  for (const [age, barred] of [['junior', ['scrum']], ['mini', ['tackle', 'scrum', 'back']]]) {
+    as(age, 2, 'men');
+    for (const id of barred) {
+      PR.start(id); ok(!PR.state(), `${age}: practiceStart('${id}') opens nothing`);
+      $('pr-' + id).click(); ok(!PR.state(), `${age}: ${id}'s card, pressed anyway, opens nothing`);
+      PR.start(id, { onDone() {} }); ok(!PR.state(), `${age}: a caller's practiceStart('${id}') opens nothing`);
+    }
+    PR.start('tag'); const seen = []; for (let i = 0; i < 30; i++) { $('pr-next').click(); seen.push(PR.state().id); }
+    const may = age === 'junior' ? JUNIOR : OPEN;
+    ok(seen.every(id => !barred.includes(id)) && may.every(id => seen.includes(id)), `${age}: Next Game goes round every game it may play and never ${barred.join(', ')} (${[...new Set(seen)].join()})`);
+    PR.leave();
+  }
+  as('junior', 2, 'men'); PR.start('tackle'); $('pr-next').click(); ok(PR.state() && PR.state().id === 'back', 'Junior: Next Game from Tackling is Ball Back, Driving passed over'); PR.leave();
+  // Try Again on a drill the player may no longer play starts nothing (Driving played as an Adult, the profile then a Junior's)
+  as('adult', 2, 'men'); PR.start('scrum'); $('pr-retry').click(); PR.finish(false, 'x', 0); const ran = PR.state();
+  F.set({ age:'junior', gender:null, look:null }); $('pr-retry').click();
+  ok(ran && ran.done && PR.state() === ran && !ran.ready, 'Try Again on Driving once the profile is a Junior\'s: no new run starts');
+  $('pr-next').click(); ok(PR.state() && PR.state().id === 'back', 'and Next Game from it is Ball Back'); PR.leave();
+  // the career: Train lists what the player may play, and nothing else opens
+  for (const [age, list] of [['junior', JUNIOR], ['mini', OPEN], ['adult', ALL]]) {
+    as(age, 2, 'men');
+    const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); C.set(cr);
+    C.renderTrain(); const ct = $('ct-list').innerHTML, g = ct.indexOf('Contact Games (U9 and Up)');
+    const listed = ALL.filter(id => ct.includes(`data-drill="${id}"`)), hard = list.filter(id => !OPEN.includes(id));
+    ok(json(C.drills(cr).map(d => d.id)) === json(list) && json(listed) === json(list) && (hard.length ? g > 0 && hard.every(id => ct.indexOf(`data-drill="${id}"`) > g) : g < 0 && !/pr-coach/.test(ct)), `${age}: the career's Train lists ${list.length} games${hard.length ? ', ' + hard.join(', ') + ' under Contact Games' : ', no Contact Games'} (${listed.join(',')})`);
+    for (const id of ALL.filter(id => !list.includes(id))) { cr.trained = false; ok(C.train(id) === false && !PR.state(), `${age}: the career's Train never opens ${id}`); }
+    if (age !== 'mini') { cr.trained = false; ok(C.train('tackle') === true && PR.state() && PR.state().id === 'tackle', `${age}: Tackling opens from the career`); PR.leave(); }
+    C.set(null);
+  }
+  // the tag forms: a Mini plays Defend a Breakaway and Create a Gap as the youngest do, at any level; a Junior tackles
+  as('mini', 3, 'men'); PR.start('defend');
+  ok(PR.state().tagOnly && $('pr-objective').textContent === 'Get Across and Pull the Tag' && /Pull Tag/.test($('pr-feedback').textContent) && !/Tackle/.test($('pr-feedback').textContent) && $('pr-coach').hidden, 'Mini on Hard, playing Men: Defend a Breakaway asks for a tag, not a tackle, no coach line'); PR.leave();
+  PR.start('pass'); ok(PR.state().tagOnly, 'and Create a Gap is tag'); PR.leave();
+  as('junior', 2, 'men'); PR.start('defend'); ok(!PR.state().tagOnly && $('pr-objective').textContent === 'Get Across and Stop the Runner' && !$('pr-coach').hidden, 'Junior: Defend a Breakaway is a tackle, with the coach line, as for an Adult'); PR.leave();
+  // the Locker's Star Pupil counts the games the player can see
+  for (const [age, n] of [['adult', 10], [null, 10], ['junior', 9], ['mini', 7]]) { as(age, 2, 'men'); ok(T.locker.tiers('star')[2] === n, `Star Pupil's Gold for ${age || 'no age group'}: three stars in all ${n} (${T.locker.tiers('star')[2]})`); }
+  // Settings' Age Group: the Skill Games screen follows at once, without leaving Settings
+  as('adult', 2, 'men'); H.open('settings');
+  F.age('junior'); const sj = screen(); F.age('adult'); const sa = screen(); F.age('mini'); const sm = screen();
+  // a Mini leaving Mini is asked Leave Minis? (gate, 1.7): nothing moves while it is up, Keep Minis keeps the seven, and Change lands on
+  // the Junior's list at once, still in Settings, with no grown-up check
+  F.age('junior'); const asked = !!T.kids.minis.open() && !T.kids.gate(), sw = screen(), aw = F.get().age;
+  T.kids.minis.close(false); const sq = screen(), aq = F.get().age;
+  F.age('junior'); T.kids.minis.close(true); const sk = screen();
+  ok(H.step() === 'settings' && json(sj) === json({ group:true, n2:true, cards:['tackle', 'back'] }) && json(sa) === json({ group:true, n2:false, cards:['tackle', 'scrum', 'back'] }) && !sm.group && !sm.cards.length && json(sk) === json(sj) && F.get().age === 'junior' && !T.kids.minis.open() && !T.kids.gate(),
+    `Settings' Age Group redraws Skill Games as it is tapped: Junior two, Adult three, Mini none, Junior again (through Leave Minis?'s Change) two (${json([sj, sa, sm, sk])})`);
+  ok(asked && aw === 'mini' && aq === 'mini' && json(sw) === json(sm) && json(sq) === json(sm), `a Mini tapping Junior in Settings is asked Leave Minis?, no grown-up check, and nothing moves while it is up or on Keep Minis: still none (${json([asked, aw, aq, sw, sq])})`);
+  // a save put back: an Adult's Driving starred and its Watch How seen, loaded with a Junior's profile
+  fresh(); memory['tryline.v1'] = json({ settings:{ diff:2, cat:'men', drillSeen:['scrum'] }, profile:{ age:'junior' }, locker:{ n:{}, drills:['scrum', 'tackle'] } }); X.load(); D.goHome(); H.open('drills');
+  PR.start('scrum');
+  ok(F.get().age === 'junior' && !PR.state() && $('pr-scrum').hidden && T.locker.tiers('star')[2] === 9, 'a save with Driving starred and seen, put back with a Junior\'s profile: no Driving card, it opens by no route, and Star Pupil counts nine');
+  fresh(); st.drillSeen = seenWas; T.locker.set(lockerWas); memory['tryline.v1'] = saveWas;
+  // said where a grown-up and the next builder look: README's Profile and Skill Games, in the owner's words, and For Grown-Ups
+  const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8'), sec = h => readme.slice(readme.indexOf('\n## ' + h + '\n'), readme.indexOf('\n## ', readme.indexOf('\n## ' + h + '\n') + 4));
+  const quote = /the owner, 2026-11-14: "Remove the contact mini games for mini players\. Same for scrums until adult"; asked which scrums: "Driving Game Only"/;
+  ok(quote.test(sec('Profile')) && quote.test(sec('Skill Games')) && /practiceBarred/.test(sec('Skill Games')) && /\| Junior \| Tackling and Ball Back; no Driving \|/.test(sec('Profile')), 'README\'s Profile and Skill Games give the rule in the owner\'s words, with the date');
+  ok(/Mini hides Contact Games at any level, and Driving waits for Adult\./.test(readGameSource()), 'For Grown-Ups says it: Mini hides Contact Games at any level, and Driving waits for Adult');
+}
+
+// 6. My Profile: Change in My Team's box opens it for every player; the age group and gender changed there (no grown-up check: a Mini
+//    leaving Mini is asked Leave Minis? first, the owner, 2026-11-14); My Team's Change one press on, coming back here.
 {
   fresh(); X.restore({ settings:{ myClub:'BTH', myNat:'WAL' } });
   H.render(); ok($('b-my').getAttribute('aria-label') === 'Change My Profile: Bath, Wales', `the home's Change is read out for where it goes, My Profile (${$('b-my').getAttribute('aria-label')})`);
@@ -206,10 +294,12 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   $('b-my').click(); F.age('adult'); ok(F.get().age === 'adult' && st.diff === 1 && !st.kids && st.cat === 'men' && saved().profile.age === 'adult', 'Adult on My Profile: Normal and Men, saved');
   F.gender('female'); ok(F.get().gender === 'female' && st.cat === 'women' && st.diff === 1, 'Female: Women, the level left alone');
   F.age('mini'); ok(st.kids && st.diff === 0 && st.cat === 'minis', 'Mini: the Kids level and Minis');
-  F.age('junior'); ok(!$('m-gate').hidden && st.kids && F.get().age === 'mini', 'Junior from the Kids level: the grown-up check first, nothing changed yet');
-  T.kids.close(false); ok($('m-gate').hidden && st.kids && F.get().age === 'mini' && st.cat === 'minis', 'cancelled: still the Kids level, still Mini');
-  F.age('junior'); const q = T.kids.gate(); if (q) for (const d of q.answer) T.kids.type(d);
-  ok($('m-gate').hidden && !st.kids && st.diff === 0 && F.get().age === 'junior' && st.cat === 'women', 'answered: Junior, Easy with the Kids level off, Women');
+  F.age('junior'); ok($('m-gate').hidden && !!T.kids.minis.open() && st.kids && F.get().age === 'mini', 'Junior from Mini: Leave Minis? first, never the grown-up check, nothing changed yet');
+  $('mn-keep').click(); ok(!T.kids.minis.open() && st.kids && F.get().age === 'mini' && st.cat === 'minis' && shown() === 's-profile', 'Keep Minis: still the Kids level, still Mini, My Profile open');
+  F.age('junior'); $('mn-go').click();
+  ok($('m-gate').hidden && !T.kids.minis.open() && !st.kids && st.diff === 0 && F.get().age === 'junior' && st.cat === 'women', 'Change: Junior, Easy with the Kids level off, Women');
+  { const sg = () => json([!$('pr-contact').hidden, ['tackle', 'scrum', 'back'].filter(id => !$('pr-' + id).hidden)]);   // Skill Games as the home now draws it
+    ok(sg() === json([true, ['tackle', 'back']]) && T.drills.barred('scrum') && !T.drills.barred('tackle'), `and Skill Games is a Junior's at once, before anything else is opened: Tackling and Ball Back, no Driving (${sg()})`); }
   $('pf-look').click(); ok(shown() === 's-career-look' && F.lookFor() === 'profile' && $('ck-back').textContent === 'Back to Profile' && $('ck-pback').hidden && $('ck-done').hidden && $('ck-body-f').hidden, 'Make Your Look: Your Look, with Back to Profile');
   T.sidesOf.careerLookSet('hair', 5); ok(F.get().look && F.get().look.hair === 5 && F.get().look.g === 1 && saved().profile.look.hair === 5, 'a pick there is kept at once, on her body');
   $('ck-back').click(); ok(shown() === 's-profile' && $('pf-look').textContent === 'Change Look', 'Back to Profile; Change Look now');
@@ -238,8 +328,8 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
 
 // 6b. Settings' Age Group | Gender, under Difficulty (the owner, 2026-11-11: "once gender / age section chosen, have them in settings to
 //     change"): the profile's answers, none pressed with none; a tap does what My Profile's does (profileAge, profileGender: the same
-//     functions, wired to both rows by profileSeg): the level and the category, the grown-up check on leaving the Kids level and a cancelled
-//     one changing nothing, the Difficulty row moved at once, Difficulty moved later never rewriting the profile. Pressed in the browser part.
+//     functions, wired to both rows by profileSeg): the level and the category, no grown-up check (a Mini leaving Mini is asked Leave
+//     Minis?, and Keep Minis changes nothing), the Difficulty row moved at once, Difficulty moved later never rewriting the profile. Pressed in the browser part.
 {
   fresh(); H.open('settings');
   ok(H.step() === 'settings' && /^<button data-v="mini">Mini<\/button><button data-v="junior">Junior<\/button><button data-v="adult">Adult<\/button>$/.test($('set-age').innerHTML) && /^<button data-v="male">Male<\/button><button data-v="female">Female<\/button><button data-v="na">Not Say<\/button>$/.test($('set-gender').innerHTML), 'Settings: Age Group (Mini | Junior | Adult) and Gender (Male | Female | Not Say), the names alone, as its other rows');
@@ -258,14 +348,17 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   fresh(); H.open('settings'); F.age('adult'); F.gender('female'); T.kids.segSet(3); F.gender('male');
   ok(st.diff === 2 && st.cat === 'men' && F.get().gender === 'male', 'a gender tapped moves the category only, never the level (Hard kept)');
   T.kids.segSet(0); H.render(); ok(F.get().age === 'adult' && st.kids, 'Difficulty moved afterwards (Kids) never rewrites the profile: still Adult');
-  // the grown-up check on leaving the Kids level, from Settings as from the Difficulty row and My Profile
-  fresh(); H.open('settings'); F.age('mini'); ok(st.kids && st.diff === 0 && st.cat === 'minis' && $('m-gate').hidden, 'Mini from Normal: the Kids level and Minis, no check (going on to Kids needs none)');
-  F.age('adult'); ok(!$('m-gate').hidden && st.kids && st.cat === 'minis' && F.get().age === 'mini', 'Adult from the Kids level: the grown-up check first, nothing changed yet');
-  T.kids.close(false); ok($('m-gate').hidden && st.kids && st.diff === 0 && st.cat === 'minis' && F.get().age === 'mini' && H.step() === 'settings' && saved().profile.age === 'mini', 'cancelled: still Mini, still the Kids level and Minis, in the save too, Settings open');
-  F.gender('female'); ok($('m-gate').hidden && st.kids && st.cat === 'minis' && F.get().gender === 'female', 'a gender tapped on the Kids level asks nothing and keeps Minis (mixed)');
-  F.age('junior'); { const q = T.kids.gate(); if (q) for (const d of q.answer) T.kids.type(d); }
-  ok($('m-gate').hidden && !st.kids && st.diff === 0 && st.cat === 'women' && F.get().age === 'junior' && H.step() === 'settings', 'answered: Junior, Easy with the Kids level off, Women (Female)');
-  F.age('junior'); ok(!T.kids.gate() && F.get().age === 'junior', 'the age group already chosen, pressed again: nothing set again');
+  // no grown-up check on an age group (the owner, 2026-11-14); a Mini leaving Mini is asked Leave Minis?, from Settings as from My Profile
+  const MN = T.kids.minis;
+  fresh(); H.open('settings'); F.age('mini'); ok(st.kids && st.diff === 0 && st.cat === 'minis' && $('m-gate').hidden && !MN.open(), 'Mini from Normal: the Kids level and Minis, nothing asked');
+  F.age('adult'); ok($('m-gate').hidden && !!MN.open() && st.kids && st.cat === 'minis' && F.get().age === 'mini', 'Adult from Mini: Leave Minis? first, never the grown-up check, nothing changed yet');
+  $('mn-keep').click(); ok(!MN.open() && st.kids && st.diff === 0 && st.cat === 'minis' && F.get().age === 'mini' && H.step() === 'settings' && saved().profile.age === 'mini', 'Keep Minis: still Mini, still the Kids level and Minis, in the save too, Settings open');
+  F.gender('female'); ok($('m-gate').hidden && !MN.open() && st.kids && st.cat === 'minis' && F.get().gender === 'female', 'a gender tapped by a Mini asks nothing and keeps Minis (mixed)');
+  F.age('junior'); $('mn-go').click();
+  ok($('m-gate').hidden && !MN.open() && !st.kids && st.diff === 0 && st.cat === 'women' && F.get().age === 'junior' && H.step() === 'settings', 'Change: Junior, Easy with the Kids level off, Women (Female)');
+  F.age('junior'); ok(!T.kids.gate() && !MN.open() && F.get().age === 'junior', 'the age group already chosen, pressed again: nothing set again');
+  F.age('adult'); ok(!T.kids.gate() && !MN.open() && F.get().age === 'adult' && st.diff === 1, 'Junior to Adult: at once, nothing asked');
+  T.kids.segSet(0); F.age('junior'); ok(!T.kids.gate() && !MN.open() && !st.kids && st.diff === 0 && F.get().age === 'junior', 'an Adult on the Kids level picking Junior: off Kids at once, nothing asked (not a Mini)');
   // My Profile and Settings: one profile, so each shows what the other set (drawn and pressed: the browser part)
   $('b-my').click(); F.gender('na'); H.open('settings'); ok(F.get().gender === 'na' && st.cat === 'men' && H.step() === 'settings', 'Not Say on My Profile, then Settings: the same profile (Junior, Not Say), Men');
 }
@@ -370,8 +463,8 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   ok(/The game asks an age group \(Mini, Junior or Adult\) and a gender, each one skippable, to set its level and side, and keeps them on this device\. Mini turns on the Kids level and Minis\./.test(html) && !/asks only an age group/.test(html) && !/never asks for an age/.test(html), 'For Grown-Ups says what it asks (an age group and a gender), that each can be skipped, what Mini turns on, and that it stays on the device');
   const md = fs.readFileSync(new URL('../PRIVACY.md', import.meta.url), 'utf8'), store = fs.readFileSync(new URL('../store-listing/APP_STORE.md', import.meta.url), 'utf8'), readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   ok(/age group/i.test(md) && /gender/i.test(md) && /look/i.test(md) && /age group/i.test(store) && /gender/i.test(store) && /## Profile/.test(readme) && /node tools\/profile\.mjs/.test(readme), 'PRIVACY.md and the App Store notes say an age group, a gender and a look are kept on the device; README has its section');
-  const says = t => /Mini turns on the Kids level and Minis, which hide Contact Games, and only the grown-up check leaves the Kids level/.test(t) && !/nothing is shut off/i.test(t) && !/Not Now are on every step/.test(t) && /Skip on every step/.test(t);
-  ok(says(store) && says(readme), 'the App Review note and README say what Mini shuts off (Contact Games, left only past the grown-up check), and Skip, not Not Now, on every step (section 5 pins the behaviour: T.drills.barred)');
+  const says = t => /Mini turns on the Kids level and Minis, which hide Contact Games\. Leaving them asks no grown-up check \(the owner, 2026-11-14: "remove the calculation for anybody - the game isn't violent so i am ok with switching back"\); a Mini is asked Leave Minis\? first/.test(t) && !/only the grown-up check leaves the Kids level/.test(t) && !/nothing is shut off/i.test(t) && !/Not Now are on every step/.test(t) && /Skip on every step/.test(t);
+  ok(says(store) && says(readme), 'the App Review note and README say what Mini shuts off (Contact Games), that leaving it asks no grown-up check but a Mini is asked Leave Minis? first, and Skip, not Not Now, on every step (section 5 pins the behaviour: T.drills.barred)');
   const checks = fs.readFileSync(new URL('./check.mjs', import.meta.url), 'utf8'), howto = fs.readFileSync(new URL('./CHECKS.md', import.meta.url), 'utf8');
   ok(/'profile'/.test(checks) && /tools\/profile\.mjs/.test(howto), 'in the default gate and in CHECKS.md');
 }
@@ -450,7 +543,7 @@ async function browserChecks() {
       ok(withSave === 's-home' && bot[0] === 's-home' && bot[1] === true, `${kind}: with a save, or under automation (the tools), the home as ever (${withSave}, ${json(bot)})`);
       ok(!errors.length, `${kind}: no page errors (${errors.slice(0, 2).join(' | ')})`);
       // Settings' Age Group | Gender pressed for real (sections 6b and 6c): the profile's answers drawn, none pressed with none; each tap's
-      // level on the Difficulty row at once; the grown-up check and its cancel; My Profile in step both ways; the step whole at this size on
+      // level on the Difficulty row at once; Leave Minis? (no grown-up check) and its Keep Minis; My Profile in step both ways; the step whole at this size on
       // the web and in the app (Grown-Ups), reduced motion or not; the team screen without Men | Women | Minis once the profile decides it
       {
         const ctx5 = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });
@@ -461,7 +554,7 @@ async function browserChecks() {
           const T = window.__tryline, $ = id => document.getElementById(id), r = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && r(el).width > 0;
           const on = sel => [...document.querySelectorAll(sel + ' button')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.v || b.textContent.trim()).join() || 'none';
           const p = $('hp-settings'), home = $('s-home'), btns = [...p.querySelectorAll('button')].filter(vis);
-          return { age:on('#set-age'), gender:on('#set-gender'), diff:on('#hp-settings [data-key="diff"]'), cat:T.debug.settings().cat, gate:!$('m-gate').hidden, step:T.home.step(),
+          return { age:on('#set-age'), gender:on('#set-gender'), diff:on('#hp-settings [data-key="diff"]'), cat:T.debug.settings().cat, gate:!$('m-gate').hidden, minis:!$('m-minis').hidden, step:T.home.step(),
             page:home.scrollHeight - home.clientHeight, wide:document.documentElement.scrollWidth - innerWidth, inner:p.scrollHeight - p.clientHeight, n:btns.length,
             rows:[...p.querySelectorAll('.set')].filter(vis).filter(x => r(x).top < r(p).top - 0.5 || r(x).bottom > r(p).bottom + 0.5 || r(x).bottom > innerHeight + 0.5).map(x => x.className),
             small:btns.filter(b => r(b).height < 43.5 || r(b).width < 43.5).map(b => b.textContent.trim()),
@@ -475,8 +568,12 @@ async function browserChecks() {
           for (const app of [false, true]) { S.setNative(app); S.setStarted(app); S.setBought([]); T.debug.goHome(); T.home.open('settings'); out[app ? 'app' : 'web'] = window.__set(); }
           S.setNative(false); S.setStarted(false); T.debug.goHome(); T.home.open('settings');
           tap('set-age', 'mini'); out.mini = window.__set();
-          tap('set-age', 'junior'); out.ask = window.__set(); $('pg-cancel').click(); out.cancel = window.__set();
-          tap('set-age', 'junior'); for (const d of T.kids.gate().answer) $('pg-k' + d).click(); out.junior = window.__set();
+          tap('set-age', 'junior'); out.ask = window.__set();
+          { const r = el => el.getBoundingClientRect(), g = r($('mn-go')), k = r($('mn-keep')), c = r($('m-minis').querySelector('.card'));
+            out.card = { halves:Math.abs(g.width - k.width) < 1 && Math.abs(g.top - k.top) < 1 && g.left < k.left, h:Math.min(g.height, k.height), inside:c.top >= 0 && c.left >= 0 && c.bottom <= innerHeight && c.right <= innerWidth }; }
+          $('mn-go').click(); out.soon = window.__set();   // the tap that opened it, read twice (CONFIRM.gap): nothing
+          $('mn-keep').click(); out.cancel = window.__set();
+          tap('set-age', 'junior'); T.debug.CONFIRM.at = 0; $('mn-go').click(); out.junior = window.__set();
           tap('set-gender', 'female'); out.female = window.__set();
           tap('set-age', 'adult'); out.adult = window.__set();
           tap('set-gender', 'na'); out.na = window.__set();
@@ -499,7 +596,8 @@ async function browserChecks() {
         const fits = ['none', 'web', 'app', 'mini', 'ask', 'cancel', 'junior', 'adult', 'na', 'back'].filter(k => fitBad(run[k]));
         ok(!fits.length && run.app.grown && run.app.n === 22, `${kind}: Settings whole with its four rows, the web and the app (Grown-Ups a third of Sound's row): no page scroll, nothing scrolled inside the step, every row inside its panel and the screen, every target 44px, nothing cut (${fits.map(k => k + ' ' + json(run[k])).join('; ') || 'every state'})`);
         ok(st5('mini') === 'mini none Kids minis' && !run.mini.gate && run.mini.step === 'settings', `${kind}: Mini: the Difficulty row on Kids at once, Minis (${st5('mini')})`);
-        ok(run.ask.gate && st5('ask') === 'mini none Kids minis' && !run.cancel.gate && st5('cancel') === 'mini none Kids minis' && run.cancel.step === 'settings', `${kind}: Junior from the Kids level: the grown-up check, nothing moved; Cancel: still Mini and Kids, Settings open (${st5('ask')}, ${st5('cancel')})`);
+        ok(run.ask.minis && !run.ask.gate && st5('ask') === 'mini none Kids minis' && run.soon.minis && st5('soon') === 'mini none Kids minis' && !run.cancel.minis && !run.cancel.gate && st5('cancel') === 'mini none Kids minis' && run.cancel.step === 'settings', `${kind}: Junior from Mini: Leave Minis?, never the grown-up check, nothing moved, a double tap not reaching Change; Keep Minis: still Mini and Kids, Settings open (${st5('ask')}, ${st5('soon')}, ${st5('cancel')})`);
+        ok(run.card.halves && run.card.h >= 44 && run.card.inside, `${kind}: Leave Minis?: Change then Keep Minis in equal halves, 44px or more, the card on the screen (${json(run.card)})`);
         ok(st5('junior') === 'junior none Easy men' && st5('female') === 'junior female Easy women' && st5('adult') === 'adult female Normal women' && st5('na') === 'adult na Normal men', `${kind}: answered, Junior and Easy; Female, Women, the level kept; Adult, Normal; Not Say, Men (${['junior', 'female', 'adult', 'na'].map(st5).join('; ')})`);
         ok(json(run.profile) === json(['adult', 'na']) && run.back.gender === 'female' && run.back.cat === 'women', `${kind}: My Profile shows what Settings set (Adult, Not Say), and Settings what My Profile set (Female, Women) (${json(run.profile)}, ${run.back.gender})`);
         ok(run.quick.cat === 'none' && run.quick.played === 'women' && run.champ.cat === 'none' && run.quick.right === 0 && run.quick.clear && run.champ.right === 0 && !run.quick.scroll && !run.quick.wide && !run.champ.scroll, `${kind}: the team screen as an Adult and Female: no Men | Women | Minis in Quick Match or Championship, Women played, the search icon at the top bar's right end, clear of the title, no scroll (${json([run.quick, run.champ])})`);
@@ -550,8 +648,8 @@ async function browserChecks() {
           await p5.evaluate(() => document.querySelector('#hp-settings [data-key="hints"] button:last-child').focus()); await p5.keyboard.press('ArrowRight'); const kr = [await name()];
           await p5.keyboard.press('ArrowLeft'); kr.push(await name()); await p5.evaluate(() => document.querySelector('#hp-settings [data-key="diff"] button').focus()); await p5.keyboard.press('ArrowLeft'); kr.push(await name());
           ok(json(kr) === json(['hints:Off', 'hints:On', 'diff:Kids']), `${kind}: the arrow keys the same: Right from Match Help's Off stays, Left goes to its On, Left from Kids stays (${kr.join(' ')})`);
-          // a controller's ring is the one outline in Settings (a Mini on the Kids level, as a child with a pad has it); the grown-up check from Age
-          // Group puts the ring back on the button that asked, cancelled or answered
+          // a controller's ring is the one outline in Settings (a Mini on the Kids level, as a child with a pad has it); Leave Minis? from Age
+          // Group starts the ring on Keep Minis and puts it back on the button that asked, kept or changed
           const one = await p5.evaluate(() => {
             const T = window.__tryline, $ = id => document.getElementById(id), out = {};
             const nm = el => !el ? 'none' : el.closest('.seg') ? (el.closest('.seg').dataset.key || el.closest('.seg').id) + ':' + (el.dataset.v || el.textContent.trim()) : el.id;
@@ -560,9 +658,10 @@ async function browserChecks() {
             T.navMove(0, 0, 0); T.home.ring($('b-set')); T.navPress(0); T.navMove(0, 0, 1); T.navMove(0, 0, 1);
             const a = document.activeElement, f = T.debug.focus();
             out.rings = { active:nm(a), activeLine:a === f ? 'same' : line(a), ring:nm(f), ringLine:line(f) };
-            T.home.ring($('set-age').querySelector('[data-v="junior"]')); T.navPress(0); out.ask = [!$('m-gate').hidden, nm(T.debug.focus())];
-            T.navBack(0); out.cancel = [!$('m-gate').hidden, nm(T.debug.focus()), T.profile.get().age];
-            T.navPress(0); const g = T.kids.gate(); out.again = !!g; for (const d of g ? g.answer : []) $('pg-k' + d).click(); if (!$('m-gate').hidden) $('pg-cancel').click(); out.pass = [!$('m-gate').hidden, nm(T.debug.focus()), T.profile.get().age, line(T.debug.focus())];
+            T.home.ring($('set-age').querySelector('[data-v="junior"]')); T.navPress(0); out.ask = [!$('m-minis').hidden, nm(T.debug.focus()), !$('m-gate').hidden];
+            T.navBack(0); out.cancel = [!$('m-minis').hidden, nm(T.debug.focus()), T.profile.get().age];
+            T.navPress(0); out.again = !$('m-minis').hidden; T.navMove(0, -1, 0); out.left = nm(T.debug.focus()); T.debug.CONFIRM.at = 0; T.navPress(0);
+            if (!$('m-minis').hidden) $('mn-keep').click(); out.pass = [!$('m-minis').hidden, nm(T.debug.focus()), T.profile.get().age, line(T.debug.focus())];
             T.debug.setDev('kb'); T.home.ring(null); T.profile.set({ age:null, gender:null, look:null }); T.kids.segSet(2); T.debug.goHome();
             return out;
           });
@@ -572,7 +671,7 @@ async function browserChecks() {
           await p5.keyboard.press('Tab');
           const tabbed = await p5.evaluate(() => { const T = window.__tryline, a = document.activeElement, c = getComputedStyle(a); const r = { ring:T.debug.focus() ? 'on' : 'none', dev:T.debug.lastDev(), at:a.textContent.trim(), line:c.outlineStyle }; T.debug.setDev('kb'); return r; });
           ok(json(tabbed) === json({ ring:'none', dev:'kb', at:'Easy', line:'solid' }), `${kind}: Tab after a controller in Settings: the ring gone, the keyboard's focus on Easy drawn (${json(tabbed)})`);
-          ok(json(one.ask) === json([true, 'pg-k1']) && json(one.cancel) === json([false, 'set-age:junior', 'mini']) && one.again && json(one.pass) === json([false, 'set-age:junior', 'junior', 'solid']), `${kind}: A on Junior asks a grown-up; B shuts the check with the ring back on Junior, still Mini; answered, the ring on Junior and Junior set (${json([one.ask, one.cancel, one.pass])})`);
+          ok(json(one.ask) === json([true, 'mn-keep', false]) && json(one.cancel) === json([false, 'set-age:junior', 'mini']) && one.again && one.left === 'mn-go' && json(one.pass) === json([false, 'set-age:junior', 'junior', 'solid']), `${kind}: A on Junior asks Leave Minis?, the ring on Keep Minis, no grown-up check; B is Keep Minis, the ring back on Junior, still Mini; Left to Change and A: the ring on Junior and Junior set (${json([one.ask, one.cancel, one.left, one.pass])})`);
         }
         ok(!err5.length, `${kind}: no page errors in Settings or on the team screen (${err5.slice(0, 2).join(' | ')})`);
         await ctx5.close();

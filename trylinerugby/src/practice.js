@@ -6,7 +6,7 @@
    shows the home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
    Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
-const PRACTICE_DRILLS = [                                   // tag and handling first; contact marks the games under Contact Games (U9 and Up), which the Kids level and a career's Minis never reach
+const PRACTICE_DRILLS = [                                   // tag and handling first; contact marks the games under Contact Games (U9 and Up), which the youngest never reach (practiceBarred), and adult the one an Adult's only
   { id:'tag', name:'Tag Chase', objective:'Keep Your Tags, Pull Theirs', limit:70 },
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
@@ -15,14 +15,20 @@ const PRACTICE_DRILLS = [                                   // tag and handling 
   { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Aim the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
   { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Press Switch, run across and Tackle. Sprint closes the gap.', tagCue:'Press Switch, run across and Pull Tag. Sprint closes the gap.', limit:18 },
   { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90, contact:true },
-  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true },
+  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true, adult:true },   // adult: an Adult's only (practiceBarred)
   { id:'back', name:'Ball Back', objective:'Hands, Landing, Ball Back', limit:60, contact:true },
 ];
 const PRACTICE_COACH = 'Learn Real Tackling With a Club Coach. Not One to Try at Home.';
-const practiceYoung = () => kidsLevel() || settings.cat === 'minis';   // the youngest: the Kids level, or Minis picked on the team screen (Men | Women | Minis), in free play as much as on the career's own list
-function practiceBarred(id) {                              // the one rule, for every route in: no contact game for the youngest
+/* The youngest: the Kids level, Minis picked on the team screen (Men | Women | Minis), or the profile's Mini age group whatever the level
+   and the side (src/profile.js), in free play as much as on the career's own list. */
+const practiceYoung = () => kidsLevel() || settings.cat === 'minis' || profile.age === 'mini';
+/* The one rule, for every route in (the owner, 2026-11-14: "Remove the contact mini games for mini players. Same for scrums until adult",
+   the scrums "Driving Game Only"): no contact game for the youngest, and Driving for an Adult only, so a Junior plays Tackling and Ball
+   Back without it. No age group counts as Adult. */
+function practiceBarred(id) {
   const d = PRACTICE_DRILLS.find(x => x.id === id);
-  return !!(d && d.contact && practiceYoung());
+  if (!d || !d.contact) return false;
+  return practiceYoung() || (!!d.adult && (profile.age === 'mini' || profile.age === 'junior'));
 }
 function practiceNextId(id) {                              // Next Game: the next one this player may play
   const n = PRACTICE_DRILLS.length, i = PRACTICE_DRILLS.findIndex(d => d.id === id);
@@ -30,7 +36,10 @@ function practiceNextId(id) {                              // Next Game: the nex
   return id;
 }
 function practiceGroups() {                                // the picker as this player sees it, the grown-ups' panel shut
-  $('pr-contact').hidden = practiceYoung();
+  const open = PRACTICE_DRILLS.filter(d => d.contact && !practiceBarred(d.id));
+  for (const d of PRACTICE_DRILLS) if (d.contact) $('pr-' + d.id).hidden = !open.includes(d);   // a barred card is gone, not greyed: a Junior's Driving
+  $('pr-contact').hidden = !open.length;                   // no contact game left (the youngest): no group and no coach line
+  $('pr-contact').classList.toggle('n2', open.length === 2);   // a Junior's two in equal halves of the three's places (styles.css)
   $('pr-games').hidden = false; $('pr-grownups').hidden = true;
 }
 function practiceInstructions(id) {

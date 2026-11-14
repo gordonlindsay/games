@@ -3,7 +3,7 @@
 // node tools/importer.mjs
 import fs from 'node:fs';
 process.env.SEED ??= '23';
-const { T, rndCalls } = await import('./harness.mjs');
+const { T, rndCalls, RERATE, fireDoc } = await import('./harness.mjs');
 const I = T.importer, X = T.teams, D = T.debug, $ = id => document.getElementById(id);
 const PK = T.picker, pv = () => PK.view(0);   // the team screen, side by side since 2026-11-11 (Championship: one side, centred)
 let passed = 0;
@@ -261,6 +261,17 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   const mm = globalThis.matchMedia; globalThis.matchMedia = q => ({ matches:q === '(pointer: coarse)' });
   focused = ''; I.open();
   ok(focused === 'im-go', 'on a touch screen focus goes to Import, so no keyboard springs up over the card');
+  // the same rule as the team screen's Filter (src/input-devices.js, fieldMayFocus; the owner, 2026-11-14: "Take out the keyboard when
+  // selecting teams unless I press keyboard as it smothers the screen"): a pointer that cannot hover is a phone's or a tablet's too; a finger
+  // last on a computer's touch screen leaves the field be; a key pressed last (a tablet's keyboard) puts the focus in it
+  const opened = [];
+  for (const [what, on, press] of [['no hover', ['(hover: none)'], ['pointerdown', { pointerType:'mouse' }]], ['a finger on a computer', [], ['pointerdown', { pointerType:'touch' }]], ['a pen on a computer', [], ['pointerdown', { pointerType:'pen' }]],
+    ['a key on a phone', ['(pointer: coarse)', '(hover: none)'], ['keydown', { key:'Enter', target:$('b-import') }]], ['a key typed into a field on a phone', ['(pointer: coarse)', '(hover: none)'], ['keydown', { key:'a', target:{ tagName:'INPUT' } }]], ['a mouse on a computer', [], ['pointerdown', { pointerType:'mouse' }]]]) {
+    globalThis.matchMedia = q => ({ matches:on.includes(q), addEventListener() {}, addListener() {} });
+    if (what === 'a key typed into a field on a phone') fireDoc('pointerdown', { pointerType:'touch' });
+    fireDoc(...press); focused = ''; I.open(); opened.push(`${what}: ${focused}`);
+  }
+  ok(JSON.stringify(opened) === JSON.stringify(['no hover: im-go', 'a finger on a computer: im-go', 'a pen on a computer: im-go', 'a key on a phone: im-url', 'a key typed into a field on a phone: im-go', 'a mouse on a computer: im-url']), `the link field takes the focus by itself on a computer and after a key, never on a phone or a tablet nor after a finger (${JSON.stringify(opened)})`);
   globalThis.matchMedia = mm; I.open();
   $('im-url').value = 'file:///etc/passwd'; I.go();
   ok(!$('im-err').hidden && $('im-err').textContent === I.MSG.url && calls.length === 0, 'a bad link says so and fetches nothing');
@@ -277,7 +288,7 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok($('im-league').innerHTML.includes('My League · 5 Teams') && ($('im-league').innerHTML.match(/class="jersey/g) || []).length === 5, 'and the league\'s shirts and size');
   ok($('im-cols').hidden && $('im-go').textContent === 'Save Club' && $('im-alt').textContent === 'Change Link' && !$('im-alt').classList.contains('warn') && focused === 'im-go', 'page colours need no picking; Save Club, focused, then Change Link beside Back');
   I.go();
-  const club = X.custom().find(t => t.name === 'Bracknell RFC'), NA = I.ABILITIES.length, TOP = 12;   // the page names Regional 1: re-pinned at the real order (2026-11-09), when TEAM_LEVELS came onto the clubs' ladder, to Farnham's 61, 12 points (was PR #14's 58, 11). It is I.top() again, as PR #14 had it: the best Local club is Regional 1's Farnham
+  const club = X.custom().find(t => t.name === 'Bracknell RFC'), NA = I.ABILITIES.length, TOP = RERATE ? 11 : 12;   // the page names Regional 1 (with the owner's rerating, LOCAL, 14 Nov 2026, a step down: Farnham's 58, 11 points): re-pinned at the real order (2026-11-09), when TEAM_LEVELS came onto the clubs' ladder, to Farnham's 61, 12 points (was PR #14's 58, 11). It is I.top() again, as PR #14 had it: the best Local club is Regional 1's Farnham
   ok(club && club.custom && club.kit === '#399913' && club.trim === '#e4c200' && X.rateOf(club) === TOP && club.level === 'r1' && I.ABILITIES.every(([k]) => club[k] === 2 || club[k] === 3) && club.pace === 3,
     `Save Club adds it through cleanTeam, at the level its page names, Regional 1, spent evenly over every ability (${I.ABILITIES.map(([k]) => k + ' ' + club[k]).join(', ')})`);
   ok(I.league().teams.length === 5 && names(I.league().teams) === 'Sevenoaks,Tunbridge Wells,London Scottish,Wimbledon,Farnham', 'and keeps the league\'s other five, names fitted');
@@ -299,13 +310,13 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
     ok(I.levelFrom(['National League 2 West']) === 'r1' && I.levelFrom(['National League 1']) === 'r1' && lv('r1').overall <= Math.min(...X.ENGLAND_TWO.map(X.overallOf)) && lv('nat').name === 'Championship' && lv('nat').overall === Math.max(...X.ENGLAND_TWO.map(X.overallOf)), `a National League page (England's third and fourth tiers) is Regional 1, ${lv('r1').overall}, under every England 2 side; the Championship, England 2, is ${lv('nat').overall}`);
     ok(I.levelFrom(['Counties 4 Kent']) === 'c5' && I.levelFrom(['Counties 2 Essex']) === 'c3', 'a league between two levels takes the one under it');
     ok(I.levelFrom(['Friendlies', 'Bracknell RFC', 'Under 12s Championship', '', null]) === null, 'and a page that names none gives none');
-    ok(I.level({}, null).id === 'r1' && lv('r1').overall === 61 && I.top() === 12, 'nothing known: level with the best Local club (Farnham, 61: Regional 1, as PR #14 had it with its Farnham at 58; main\'s band had him at 75, National Champions)');   // re-pinned at the real order
+    ok(I.level({}, null).id === 'r1' && lv('r1').overall === (RERATE ? 58 : 61) && I.top() === TOP, 'nothing known: level with the best Local club (Farnham, 61, or 58 with the rerating: Regional 1, as PR #14 had it with its Farnham at 58; main\'s band had him at 75, National Champions)');   // re-pinned at the real order
     ok(I.level({ level:'c3' }, null).id === 'c3' && I.level({ level:'c3' }, 'top').id === 'top', 'a page preset is used until you choose');
     const data = { league:['Ash Vale', 'Birch Lane', 'Cedar Park', 'Damson Hill', 'Elm Bridge', 'Fir Tree'].map(name => ({ name })), teams:[] };
     const at = id => I.sides(data, id).map(X.overallOf);
-    ok(at('r1')[0] === 61 && at('r1')[5] === 46 && JSON.stringify(at('r1')) === JSON.stringify(I.sides(data).map(X.overallOf)), `a league at Regional 1 runs 61 to 46, and with no level it is the default's, level with the best Local club (${at('r1')})`);   // re-pinned at the real order: 61 to 46 (was 58 to 43), and the default is Regional 1 (was National Champions)
-    ok(at('c5').join() === '43,43,43,40,40,40' && at('top')[0] === 72 && at('top')[5] === 58 && at('champ')[0] === 75 && JSON.stringify(at('euro')) === JSON.stringify(at('champ')), `the league follows the level chosen, and a level that has gone (European Champions) is National Champions (${at('c5')} / ${at('top')} / ${at('euro')})`);   // re-pinned at the real order: Counties 5 is 43 (was 40), its foot one an ability less; European Champions (90) went with Bordeaux's 90
-    ok(I.sides({ teams:data.league, league:[] }, 'c5').every(t => X.overallOf(t) === 43), 'and fixture opponents stay inside it at the floor');
+    ok(at('r1')[0] === (RERATE ? 58 : 61) && at('r1')[5] === (RERATE ? 43 : 46) && JSON.stringify(at('r1')) === JSON.stringify(I.sides(data).map(X.overallOf)), `a league at Regional 1 runs ${RERATE ? '58 to 43' : '61 to 46'}, and with no level it is the default's, level with the best Local club (${at('r1')})`);   // re-pinned at the real order: 61 to 46 (was 58 to 43), and the default is Regional 1 (was National Champions)
+    ok(at('c5').join() === (RERATE ? '40,40,40,40,40,40' : '43,43,43,40,40,40') && at('top')[0] === 72 && at('top')[5] === 58 && at('champ')[0] === 75 && JSON.stringify(at('euro')) === JSON.stringify(at('champ')), `the league follows the level chosen, and a level that has gone (European Champions) is National Champions (${at('c5')} / ${at('top')} / ${at('euro')})`);   // re-pinned at the real order: Counties 5 is 43 (was 40), its foot one an ability less; European Champions (90) went with Bordeaux's 90
+    ok(I.sides({ teams:data.league, league:[] }, 'c5').every(t => X.overallOf(t) === (RERATE ? 40 : 43)), 'and fixture opponents stay inside it at the floor (with the rerating, Counties 5 is the scale\'s own floor, 40: a table runs level)');
   }
   const ids = [...I.league().teams, ...X.custom()].map(t => t.id);
   ok(new Set(ids).size === ids.length && !ids.some(id => X.ALL_TEAMS.some(t => t.id === id)), `codes are unique and clear of the built-in sides (${ids.join(' ')})`);
@@ -483,7 +494,7 @@ for (const make of [false, true]) {
   X.restore({ custom:[], champ:null }); I.setLeague(null); D.settings().myClub = null; X.save();
   pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
   D.openTeams('my'); PK.group(0, pv().ladder.findIndex(g => g.key === 'mine.league') - pv().gi);
-  ok(pv().team.act === 'import' && PK.primary() === 'Add Your Team', 'My Team: Add Your Team in Mine\'s My League');
+  ok(pv().team.act === 'import' && PK.primary() === 'Add Your Team', 'My Team: Add Your Team in My Clubs\' My League');
   PK.go(); $('im-url').value = PIT + '/teams/3100/league-table'; I.go();
   for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
   ok(I.state().step === 'preview' && $('im-go').textContent === 'Save Club', 'its preview: Save Club');
@@ -509,7 +520,7 @@ for (const make of [false, true]) {
   ok(!/Import Club|Import Data|Import Works/.test(block + src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'one name for the flow, the home\'s and the team screen\'s alike: Add Your Team, never Import Club or Import Data');
   for (const l of labels) ok(title(l) && (src + block).includes(l), `"${l}" is a Title Case label in use`);
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
-  ok(html.includes('id="m-filter"') && menus.includes("{ key:'mine.league', list:IMPORT_POOL, hemi:'mine', name:'My League', teams:[...(importLeague ? importLeague.teams : []), ...(all && importShown() ? [PICK_ADD] : [])] }"), 'Mine carries My League after Made Teams: its sides once there is one, and Add Your Team');
+  ok(html.includes('id="m-filter"') && menus.includes("{ key:'mine.league', list:IMPORT_POOL, hemi:'mine', name:'My League', teams:[...(importLeague ? importLeague.teams : []), ...(all && importShown() ? [PICK_ADD] : [])] }"), 'My Clubs carries My League after Made Teams: its sides once there is one, and Add Your Team');
   ok(/typeof parentGate === 'function'\) parentGate\(go, cancel\)/.test(src), 'Import goes through parentGate(go, cancel) when the kids check is there');
   ok(Object.values(I.MSG).every(m => m.length <= 45 && /\.$/.test(m)), 'each message is one short plain sentence');
 }

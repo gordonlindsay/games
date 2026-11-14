@@ -2,7 +2,7 @@
 // Call for Ball, Team Spirit's pull on who gets the ball, set pieces, the screens, and Pro Mode matches played to full time.
 // node tools/career-pro.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
-const { T, reseed, bot, duelBot, kickBot, dropBot, scrumBot, lineBot } = await import('./harness.mjs');
+const { T, reseed, bot, duelBot, kickBot, dropBot, scrumBot, lineBot, offRun, LOCAL_CHILD } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const C = T.career, P = T.careerPro, X = T.teams, D = T.debug, K = T.contact, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -25,7 +25,21 @@ const ready = () => { settings.played = 99; settings.diff = 1; settings.kids = f
 // TEAM re-pinned at club seasons (2026-11-08): a career's first year at Farnham and Aldershot is their Local league at full strength,
 // no longer the Minis one off every ability. With the Minis' sides put back (team(true): the same draw, one off every ability) this
 // build gives the pin from before Pro Mode, TEAM_MINIS, exactly.
-const NON_CAREER = '1mhz589 p83t0p 9cdfje', TEAM = '1hxdxvq ph2mjq', TEAM_MINIS = 'hvadws 1g5gdgq';   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
+// TEAM and TEAM_MINIS re-pinned for the county clubs (LOCAL, 2026-11-14): Farnham's league year draws five from every Surrey club, not its
+// twelve, the same draws over a longer list (NON_CAREER, with no career, does not move). With LOCAL='{"on":false}' this build gives
+// BEFORE_LOCAL, 1.6's pins, exactly, and the older pins below hold in that build as they did (both checked first, in a child: offRun).
+// TEAM and TEAM_MINIS re-pinned again the same day, at the review of 7c864c2: Aldershot, shown under Hampshire, plays in Hampshire's draws
+// only (listPlays, src/data.js), so Farnham's year draws its five from Surrey's 34, not 35. With LOCAL='{"view":false}' (Aldershot in
+// Surrey's draws, as 7c864c2) this build gives BEFORE_VIEW, 7c864c2's pins, exactly (checked first, in a child: offRun).
+// NON_CAREER and TEAM re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they
+// are"): Farnham 58 and Haslemere 43, a step down, so the matches they play move (TEAM_MINIS, its sides as saved, does not). With
+// LOCAL='{"rerate":false}' this build gives BEFORE_RERATE, 8089294's pins, exactly (checked first, in a child: offRun), and with the
+// county clubs off, 1.6's (BEFORE_LOCAL) as before.
+const NON_CAREER = '1mhz589 d8ah04 173l2tk', TEAM = '1ei1d0o 1lhkmym', TEAM_MINIS = 'dn49dr 1pc2tid';
+const BEFORE_RERATE = ['1mhz589 p83t0p 9cdfje', 'arjzuq s968gv', 'dn49dr 1pc2tid'];   // NON_CAREER, TEAM and TEAM_MINIS at 8089294, the county clubs on at their first ratings
+const NON_CAREER_16 = '1mhz589 p83t0p 9cdfje';   // NON_CAREER at 1.6 (b9fa00d), LOCAL off, and at 8089294
+const BEFORE_VIEW = ['15ju7bh s968gv', '16j8s6g 1pc2tid'];   // TEAM and TEAM_MINIS at 7c864c2, Aldershot in Surrey's draws too
+const BEFORE_LOCAL = ['1hxdxvq ph2mjq', 'hvadws 1g5gdgq'];   // TEAM and TEAM_MINIS at 1.6 (b9fa00d), LOCAL off, as 1.6 pinned them (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = ['lngm86 urw4hw 9cdfje', '1hxdxvq zio2hq', 'hvadws 1d1dk4o'];   // NON_CAREER, TEAM and TEAM_MINIS with the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = ['1c3imom u9u1l2 5y5h4', 'mqtz4o i85cjs', '1kc6705 zbgbtg'];   // NON_CAREER, TEAM and TEAM_MINIS with the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 1s0b74m u9u1l2 1vlxyhf and 1hv6xf2 1plls34; TEAM_MINIS, no kick falling in it, unmoved)
 const BEFORE_CALLS_CHASE = ['jjejgk u9u1l2 1y5pqrt', 'rmhxlb pmc5bk', '1kc6705 zbgbtg'];   // NON_CAREER, TEAM and TEAM_MINIS, b4a25d5's pin, the calls and the chase both off: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -64,7 +78,10 @@ function teamMatch(seed, o, minis) {
   return out;
 }
 const team = minis => [teamMatch(301, { pos:'B', num:5, club:0 }, minis), teamMatch(302, { pos:'F', num:2, club:3 }, minis)].map(fnv).join(' ');
-{ const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off with the knock-ons (20cbcaf predates all three), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
+const LOCAL_ON = !!(T.local && T.local.LOCAL.on), RERATE = LOCAL_ON && !!T.local.LOCAL.rerate;
+const PIN = !LOCAL_ON ? [NON_CAREER_16, ...BEFORE_LOCAL] : !RERATE ? BEFORE_RERATE : [NON_CAREER, TEAM, TEAM_MINIS];   // the pins of the world this run is in (LOCAL off, the rerating off, or as the game ships)
+// the county clubs: the older pins are 1.6's world, so they are checked where LOCAL is off (the child)
+if (!LOCAL_ON) { const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off with the knock-ons (20cbcaf predates all three), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
   if (T.knock) { T.knock.KNOCK.on = false; feats(false, false); const off = [nonCareer(), team(), team(true)]; T.knock.KNOCK.on = true; feats(CL0, CS0); ok(json(off) === json(BEFORE_KNOCK), `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off.join(' / ')}, pinned ${BEFORE_KNOCK.join(' / ')})`); }
   if (CL || CS) { feats(false, false); const off = [nonCareer(), team(), team(true)]; feats(CL0, CS0); ok(json(off) === json(BEFORE_CALLS_CHASE), `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off.join(' / ')}, pinned ${BEFORE_CALLS_CHASE.join(' / ')})`); }
@@ -72,9 +89,16 @@ const team = minis => [teamMatch(301, { pos:'B', num:5, club:0 }, minis), teamMa
     ok(json(calls) === json(WITH_CALLS), `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls.join(' / ')}, pinned ${WITH_CALLS.join(' / ')})`);
     ok(json(chase) === json(WITH_CHASE), `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase.join(' / ')}, pinned ${WITH_CHASE.join(' / ')})`); } }
 { const a = nonCareer(), b = team(), m = team(true);
-  ok(a === NON_CAREER, `non-career matches play exactly as before Pro Mode (seeded fingerprint ${a}, pinned ${NON_CAREER})`);
-  ok(b === TEAM, `a Whole Team career match plays as pinned (seeded fingerprint ${b}, pinned ${TEAM})`);
-  ok(m === TEAM_MINIS, `and, with the Minis' sides it was pinned on, exactly as before Pro Mode (${m}, pinned ${TEAM_MINIS})`); }
+  if (LOCAL_CHILD) { console.log([a, b, m].join(' / ')); process.exit(failed ? 1 : 0); }   // the LOCAL off child (offRun): 1.6's pins, the older ones checked above
+  if (LOCAL_ON) { const off = await offRun(new URL(import.meta.url)), want = [NON_CAREER_16, ...BEFORE_LOCAL].join(' / ');
+    ok(!off.fails.length && off.last === want, `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${want}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
+  if (RERATE) { const r = await offRun(new URL(import.meta.url), { LOCAL:'{"rerate":false}' }), want = BEFORE_RERATE.join(' / ');
+    ok(!r.fails.length && r.last === want, `with the rerating off (LOCAL rerate), as 8089294 (${r.last}, pinned ${want}${r.fails.length ? '; ' + r.fails.join('; ') : ''})`); }
+  if (LOCAL_ON && T.local.LOCAL.view) { const v = await offRun(new URL(import.meta.url), { LOCAL:'{"view":false,"rerate":false}' }), want = [NON_CAREER_16, ...BEFORE_VIEW].join(' / ');   // 7c864c2 predates the rerating
+    ok(!v.fails.length && v.last === want, `with Aldershot in Surrey's draws too (LOCAL view off), as 7c864c2 (${v.last}, pinned ${want}${v.fails.length ? '; ' + v.fails.join('; ') : ''})`); }
+  ok(a === PIN[0], `non-career matches play exactly as before Pro Mode (seeded fingerprint ${a}, pinned ${PIN[0]})`);
+  ok(b === PIN[1], `a Whole Team career match plays as pinned (seeded fingerprint ${b}, pinned ${PIN[1]})`);
+  ok(m === PIN[2], `and, with the Minis' sides it was pinned on, exactly as before Pro Mode (${m}, pinned ${PIN[2]})`); }
 
 // The scripted Pro Mode player. The harness's bot with the ball and in defence (its Switch press does nothing here); its close-up
 // bots in his duels, his goal kicks and, for a forward, the scrums and lineouts. While a teammate has the ball he runs a support
@@ -362,7 +386,11 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
 
 // 8. set pieces, goal kicks and close-ups
 {
+  /* Each set piece seeded on its own (2026-11-14): unseeded, its draws follow whatever ran before, and the rerating (Farnham 58) moved the
+     career's opponent draw, so a Pro back's auto-played scrum drew the 3.5% scrum penalty (autoScrum), to the other side, who kicked for touch:
+     the scrum played for the team, no close-up, but a lineout still under way at 3s. Seeded, each kind's draw is the same whatever runs before it. */
   const setPiece = (o, kind) => {
+    reseed(kind === 'scrum' ? 81 : 82);
     const s = stage(o); const M = T.M;
     M.ball.carrier = null; M.ball.state = 'dead';
     (kind === 'scrum' ? T.scrum : T.lineout)(0, 60, 30, 'Test');
@@ -440,7 +468,7 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
 
 // 11. and still, with Pro Mode played, nothing else moved
 { const a = nonCareer(), b = team(), m = team(true);
-  ok(a === NON_CAREER && b === TEAM && m === TEAM_MINIS, `after Pro Mode matches, other matches and Whole Team careers still play exactly as before (${a} / ${b} / ${m})`); }
+  ok(json([a, b, m]) === json(PIN), `after Pro Mode matches, other matches and Whole Team careers still play exactly as before (${a} / ${b} / ${m})`); }
 
 console.log(`Career Pro: ${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

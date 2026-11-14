@@ -6,7 +6,7 @@
 
    First launch only (profileFirst: no save at all, never a save that exists, the demo, the tools or the app's copy of a save put back):
    a short setup before the home, one step a screen, each with Skip and Back (none on the first, which has nothing before it), and Done
-   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, Mine and Favourites,
+   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, My Clubs and Favourites,
    clubs only) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it ends, so a step skipped,
    or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
    Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
@@ -18,8 +18,8 @@
    - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
      Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
      MIXED_THROUGH), otherwise Men. An answer left blank keeps the side as it is (profileCat): a gender alone never moves a side off
-     Minis, an age group alone never moves one between Men and Women. Leaving the Kids level from here asks the grown-up check first,
-     as the Difficulty row does. A row already chosen, pressed again on My Profile, sets nothing again.
+     Minis, an age group alone never moves one between Men and Women. Leaving the Kids level from here asks no grown-up check (2026-11-14);
+     a Mini leaving Mini is asked Leave Minis? first, as on the Difficulty row (minisAsk, kids.js). A row already chosen, pressed again on My Profile, sets nothing again.
    - Club: My Team's club, and My Team's country from the club's where the ladder knows it (an England club, England), else as it was.
    - Gender: Career's New Player starts on Men or Women by it (Not Say follows the category), on the profile's look.
    - The look: build, skin, hair colour and hair style; the body by the gender, or picked on Your Look for Not Say. It stands in My
@@ -69,8 +69,8 @@ function profileCat(age, gender, cur) {
    the category picked there (pickCatFixed, src/ui-menus.js). */
 function profileDecides() { return profile.age === 'mini' || (profile.age && profile.gender) ? profileCat(profile.age, profile.gender, settings.cat) : null; }
 const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
-/* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
-   Difficulty row's own rule); a cancelled check sets nothing. */
+/* An age group and a gender given: the level and the category they set, then then(). It switches at once, with no grown-up check (the
+   owner, 2026-11-14: kids.js); only a Mini leaving Mini is asked Leave Minis? first (minisAsk), and Keep Minis sets nothing. */
 function profileSet(age, gender, o) {
   const lvl = o && o.level === false ? null : profileLevel(age), cat = profileCat(age, gender, settings.cat);
   const go = () => {
@@ -81,7 +81,7 @@ function profileSet(age, gender, o) {
     save();
     if (o && o.then) o.then(true);
   };
-  if (lvl != null && lvl !== 0 && kidsLevel()) parentGate(go, () => { if (o && o.then) o.then(false); });
+  if (minisOn() && age !== 'mini') minisAsk(go, () => { if (o && o.then) o.then(false); });
   else go();
 }
 /* The club's country, where the ladder knows it: its group's (pickHome), else its list's. null for a team you made, My League's sides and

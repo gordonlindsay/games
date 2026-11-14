@@ -17,7 +17,7 @@ import os from 'node:os';
 import { spawn, execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 const X = T.teams, D = T.debug, CL = T.calls, E = T.edge, STEP = T.STEP, M = () => T.M;
 const args = process.argv.slice(2);
 let passed = 0, failed = 0, group = '';
@@ -145,15 +145,23 @@ function pins() {
 if (run && args[0] === '--pins') { if (CL) CL.CALLS.on = false; if (CS) CS.on = false; console.log(pins()); process.exit(0); }
 if (!run) { /* imported */ }
 
+/* The owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Farnham and Wimbledon, a
+   step down, play three of these matches, so the pins below move with it (R_). With LOCAL off (1.6) and with the rerating off (8089294)
+   this build gives the pins as they were exactly (each in a child: rerateProofs). */
+const R_BASE = '7v2oz 1up177z rpz32y jn1hak 1nn3ygy 1645i86 1rrksv3 1v5mrfn tdeptr', R_ON = 'tm442c 1jf7qng gy0tge e2nt7f nplown 1a1o3mj 16vj9il 16e7lhf a4gdxz';
+const R_SHIPS = 'j2z3up 1jf7qng gy0tge e2nt7f 1ad2kpp 1a1o3mj 16vj9il 16e7lhf 1s0250p';
 begin('0 CALLS off is b4a25d5');
 {
   if (CS) CS.on = false;                                  // the calls' own proof with the kick chase off: b4a25d5 with both off, wt/calls' pins with the calls alone
   setC({ on:false }); const off = pins(); resetC(); const on = pins();
   if (CS) CS.on = CS0; const ships = pins();
-  ok(off === BASE, `CALLS off (and the kick chase): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as b4a25d5, with the same draws (${off}, pinned ${BASE})`);
-  ok(on.split(' ').slice(0, 8).every((h, i) => h !== BASE.split(' ')[i]), `CALLS on moves every one of them, on purpose: the interception rules act everywhere (${on})`);
-  ok(on === ON, `and plays them as pinned, the kick chase off, as wt/calls (a032b3a) (${on}, pinned ${ON})`);
-  ok(ships === SHIPS, `and with the kick chase too, as the game ships at 1.6 (${ships}, pinned ${SHIPS})`);
+  if (LOCAL_CHILD) { console.log([off, on, ships].join(' / ')); process.exit(0); }   // the LOCAL children (rerateProofs): their pins, checked against these
+  if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), [BASE, ON, SHIPS].join(' / '), ok);
+  const [b, o, sh] = RERATE ? [R_BASE, R_ON, R_SHIPS] : [BASE, ON, SHIPS];
+  ok(off === b, `CALLS off (and the kick chase): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as b4a25d5${RERATE ? ' with the rerating' : ''}, with the same draws (${off}, pinned ${b})`);
+  ok(on.split(' ').slice(0, 8).every((h, i) => h !== off.split(' ')[i]), `CALLS on moves every one of them, on purpose: the interception rules act everywhere (${on})`);
+  ok(on === o, `and plays them as pinned, the kick chase off, as wt/calls (a032b3a) (${on}, pinned ${o})`);
+  ok(ships === sh, `and with the kick chase too, as the game ships at 1.6 (${ships}, pinned ${sh})`);
 }
 done();
 

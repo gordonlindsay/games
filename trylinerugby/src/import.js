@@ -8,7 +8,7 @@
      links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
      User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
      browser on another site could not read its pages anyway.
-   - Add Your Team: the team screen's entry (Mine's My League) and the home's button, their card (#m-import), and the My League group.
+   - Add Your Team: the team screen's entry (My Clubs' My League) and the home's button, their card (#m-import), and the My League group.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -686,10 +686,11 @@ async function importFetch(url, opts = {}) {
    fall between the two by name. With nothing chosen and nothing known the level is the best Local club's (importTop), so a league you add sits with the Local list, under the professional lists.
    Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
    by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
-const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham (and Quins), at 61: Regional 1
+const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham (and Quins), at 61: Regional 1 (58 with LOCAL, still Regional 1)
 /* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them, and so does National
    League (England's third and fourth tiers, between Regional 1 and the Championship): Regional 1, 61, level with England 2's foot and under
-   its winners, so no import listed under Local is above an England 2 side. Null when the words say nothing. */
+   its winners, so no import listed under Local is above an England 2 side (with LOCAL a step down, 58, as every level from Regional 1 down:
+   src/ratings.js). Null when the words say nothing. */
 const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b|\bnational league\b/, 'r1'], [/\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
 function importLevelFrom(texts) {
   for (const t of texts) { const s = String(t || '').toLowerCase().slice(0, 300), hit = IMPORT_LEVEL_WORDS.find(([re]) => re.test(s)); if (hit) return hit[1]; }
@@ -759,15 +760,26 @@ function cleanImportLeague(v, moved) {
   return teams.length ? { teams } : null;
 }
 /* A save's league sides recoded by cleanImportLeague (moved: old key to new code), followed everywhere the save holds them, in one pass
-   once the career, the championship and the league are all read back: My Team, the career's club and season, and the championship. By
-   the key the save has, so a side's new key that was another's old one moves nothing twice. Left as they were, the career's club would
-   keep a code a built-in club has now and be taken for that club, off My League (Merton into Counties, Bedford Athletic into England 2). */
+   once the whole save is read back (restore calls it last): My Team, the career's club and season, the championship, a cup, the Favourites,
+   the Recent, each side's last pick and the games played as the side. By the key the save has, so a side's new key that was another's old
+   one moves nothing twice. Left as they were, the career's club would keep a code a built-in club has now and be taken for that club, off
+   My League (Merton into Counties, Bedford Athletic into England 2), and the rest would point at nothing: with the county clubs (LOCAL,
+   1.7) most of the codes a league was given are a county club's now (Rams, Clifton), so a favourite, a pick and a record would all go. */
 function importRecode(moved) {
   if (!moved || !moved.size) return;
   const fix = t => { const id = t && t.key && moved.get(t.key); if (id) { t.id = id; t.key = 'lg-' + id; } };
-  if (moved.has(settings.myClub)) settings.myClub = 'lg-' + moved.get(settings.myClub);
+  const key = k => (moved.has(k) ? 'lg-' + moved.get(k) : k);
+  if (moved.has(settings.myClub)) settings.myClub = key(settings.myClub);
   if (career) { fix(career.club); if (career.season) career.season.teams.forEach(fix); }
   if (champ) champ.teams.forEach(fix);
+  if (cup) cup.teams.forEach(fix);
+  settings.fav = [...new Set(settings.fav.map(key))];
+  settings.recent = settings.recent.map(r => [...new Set(r.map(key))]);
+  settings.pick = settings.pick.map(p => (p && moved.has(p.id) ? { ...p, id:key(p.id) } : p));
+  /* the games played as a side (formKey: c:lg-CODE): each record by its old key; one the save had for the new key already (a side since
+     gone) gives way to the side that has it now */
+  const was = formRec.map(r => r.k), now = was.map(k => (k.startsWith('c:') ? 'c:' + key(k.slice(2)) : k));
+  formRec = formRec.map((r, i) => ({ ...r, k:now[i] })).filter((r, i) => now[i] === was[i] ? !now.some((k, j) => j !== i && k === r.k && now[j] !== was[j]) : true);
 }
 /* One of your teams with the club's name, or null. */
 const importMine = data => { if (!data || !data.club) return null; const k = importKey(importShort(data.club.name)); return custom.find(t => importKey(t.name) === k) || null; };
@@ -801,7 +813,7 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-/* Add Your Team on the team screen (an entry of Mine's My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
+/* Add Your Team on the team screen (an entry of My Clubs' My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
    team, and kept with four made while a league is saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is
    on sale (storeOffered). */
 const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
@@ -820,8 +832,8 @@ $('b-import').addEventListener('click', () => { ac(); importOpen(); });
    check is up, so the two never stack. from: 'home' (the home's button) or 'teams' (the team screen's card), where it closes to. */
 let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0, from:'teams', club:null, sides:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
-const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
-/* The control a step starts on: the link field (on a touch screen Import, so no keyboard springs up over the card),
+const importTouch = () => !fieldMayFocus();                 // a phone or a tablet, or a finger last on a computer's touch screen, unless a key was the last press (src/input-devices.js)
+/* The control a step starts on: the link field (where importTouch, Import, so no keyboard springs up over the card),
    the primary in the preview, Back while it imports and on the web. button: a button only, for a controller's ring. */
 function importFocusEl(button) {
   const s = importUi.step;

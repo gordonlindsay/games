@@ -67,8 +67,8 @@ const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
 /* Which skill a game trains (Train lists the Skill Games, in their order). A game's own result wins when it names one:
    Pass Around the Circle trains Stamina as the Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact)
-   are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
-   from match tackles and the dilemmas (Tackle Drills, Gym Session). */
+   are hidden for the youngest (practiceBarred), so the Kids level, Minis and a Mini have no game that trains Power: their Power comes
+   from match tackles and the dilemmas (Tackle Drills, Gym Session). A Junior trains it at Tackling, Driving being an Adult's only. */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
 const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Gap', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
@@ -132,7 +132,7 @@ const careerNation = (id, cat) => { const l = careerNations(cat); return l.find(
 const careerClubs = () => NATIONAL.flat();           // where an offer comes from: every national league, Scotland's included
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
 const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
-const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+const careerListOf = t => (careerBuiltIn(t) ? (LOCAL_VIEW[t.id] && TEAM_LISTS.find(l => l.key === LOCAL_VIEW[t.id])) || TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list (or the county it is shown under: Aldershot, Hampshire), or null for one you made or imported
 /* A built-in club as its list rates it now. A save keeps the abilities its club had when it was saved, and a re-rating (the real order,
    2026-11-09: Farnham 75 to 61) would leave a career's club at the old ones while every league it draws is at the new. So a loaded
    career's club takes its list's abilities (cleanCareer); a team you made or a My League side keeps its own, and a season in progress
@@ -145,8 +145,9 @@ function careerRated(club) {
 /* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
    Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
+  key = localKey(key);                               // a career saved on Counties plays Surrey's now (LOCAL)
   const own = careerListOf(club);
-  if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && l.teams.some(o => o.id === club.id)) ? key : own.key;
+  if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && listPlays(l).some(o => o.id === club.id)) ? key : own.key;   // a list the club plays on (LOCAL: an Aldershot career saved on Surrey is Hampshire's)
   return key === IMPORT_POOL || TEAM_LISTS.some(l => l.key === key && l.tier > 0) ? key : 'sur';
 }
 function careerLeague(cr) {                          // his club's league now: My League only while a league is saved
@@ -167,7 +168,7 @@ function careerDraw(cr, where) {                     // five sides; the random d
   const key = careerLeague(cr), mine = cr.club;
   if (key === IMPORT_POOL) return importOthers(mine).map(careerSide);   // My League: its sides, topped up with Local clubs (src/import.js)
   const same = t => t.id === mine.id || t.name === mine.name || (typeof importSame === 'function' && importSame(t.name, mine.name));   // an imported Farnham RFC is Farnham, as the import's own league draw has it
-  const list = (TEAM_LISTS.find(l => l.key === key) || TEAM_LISTS.find(l => l.key === 'sur')).teams;
+  const list = listPlays(TEAM_LISTS.find(l => l.key === key) || TEAM_LISTS.find(l => l.key === 'sur'));   // the list's own sides (LOCAL: Surrey's without Aldershot)
   return shuffle(list.filter(t => !same(t))).slice(0, 5).map(careerSide);
 }
 /* A season (his club's league, or his country's six): the championship's shape, with the weakest opponent first and the
@@ -325,7 +326,7 @@ function careerRepair(cr) {
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
+function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest and no Driving for a Junior (practiceBarred)
   return PRACTICE_DRILLS.filter(d => d.id in CAREER_DRILL_SKILL && !practiceBarred(d.id))
     .map(d => ({ id:d.id, name:d.name || CAREER_DRILL_NAME[d.id], contact:!!d.contact, skills:d.id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[d.id]] }));
 }

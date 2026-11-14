@@ -3,7 +3,7 @@
 // county phase of a Local club's career year (src/career.js). The research is docs/grassroots-competitions.md.
 // node tools/county.mjs   Exits 1 on any failure.
 process.env.SEED ??= '53';
-const { T, reseed, rndCalls } = await import('./harness.mjs');
+const { T, reseed, rndCalls, offRun, LOCAL_CHILD } = await import('./harness.mjs');
 const C = T.career, X = T.teams, D = T.debug, K = T.cups, P = T.comp, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
@@ -46,9 +46,15 @@ const tie = (c, win) => { const f = K.cupFixture(c), home = f.home === c.user, u
   const r0 = rndCalls(), far = K.cupNew('county', { user:club('FAR'), cat:'men', year:1 });
   ok(rndCalls() > r0, 'the draw is made in cupNew');
   ok(far && far.id === 'county' && far.name === 'Surrey Cup' && far.user === 0 && far.teams.length === 8 && far.teams[0].id === 'FAR', 'cupNew(\'county\'): Farnham in the Surrey Cup, first of eight');
-  ok(new Set(far.teams.map(t => t.id)).size === 8 && far.teams.slice(1).every(t => [...X.CLUBS, ...X.COUNTIES].some(k => k.id === t.id)), 'seven other Local clubs (Surrey\'s and Counties\'), none twice');
   const lv = far.teams.slice(1).map(t => P.levelOf(t)).sort((a, b) => a - b);
-  ok(lv.join() === '5,6,6,7,7,7,9', `the seven nearest Farnham's level (${lv})`);
+  if (LOCAL_CHILD) { console.log(lv.join()); process.exit(failed ? 1 : 0); }   // the LOCAL off child (offRun): 1.6's draw
+  /* Re-pinned for the county clubs (LOCAL, 2026-11-14): Farnham's seven are Surrey's own now, National League clubs among them, the same
+     draws over a longer list. With LOCAL='{"on":false}' this build gives BEFORE_LOCAL, 1.6's pin, exactly (checked first, in a child). */
+  const BEFORE_LOCAL = '5,6,6,7,7,7,9';
+  if (X.TEAM_LISTS.some(l => l.county)) { const off = await offRun(new URL(import.meta.url)); ok(!off.fails.length && off.last === BEFORE_LOCAL, `with the county clubs off (LOCAL), Farnham's seven as 1.6 drew them (${off.last}, pinned ${BEFORE_LOCAL}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
+  const surrey = X.TEAM_LISTS.find(l => l.key === 'sur').teams;
+  ok(new Set(far.teams.map(t => t.id)).size === 8 && far.teams.slice(1).every(t => surrey.some(k => k.id === t.id) && P.CLUB_COUNTY[t.id] === 'SUR'), 'seven other Local clubs, every one Surrey\'s own (LOCAL: a county cup draws its own county first), none twice');
+  ok(lv.join() === '4,5,5,5,6,6,6', `the seven nearest Farnham's level (${lv})`);
   ok(far.fixtures.length === 1 && far.fixtures[0].length === 4 && new Set(far.fixtures[0].flat()).size === 8, 'four Quarter-Final ties, each side once');
   const f = K.cupFixture(far);
   ok(f && f.label === 'Quarter-Final' && f.ko === true && K.cupLabel(far) === 'Quarter-Final', 'his first match: a Quarter-Final knockout');
@@ -129,7 +135,7 @@ const tie = (c, win) => { const f = K.cupFixture(c), home = f.home === c.user, u
   C.renderEnd(); ok($('ce-title').textContent === 'Quarter-Finalists', `the screen: ${$('ce-title').textContent}`);
   C.advance(); ok(has.trophies.length === 0 && has.phase === 'transfer', 'nothing banked, on to the window');
   const mer = C.create({ pos:'B', num:5, club:X.COUNTIES.find(t => t.id === 'MER'), league:'cty' }); C.set(mer); finish(mer, 6);
-  ok(C.league(mer) === 'cty' && C.outcome(mer).next.phase === 'county', 'Merton, on the Counties list: its county cup too');
+  ok(C.league(mer) === (X.TEAM_LISTS.some(l => l.county) ? 'sur' : 'cty') && C.outcome(mer).next.phase === 'county', 'Merton, picked on the Counties list: Surrey\'s now (LOCAL: a saved Counties is Surrey), its county cup too');
   C.advance(); ok(mer.cup && mer.cup.name === 'Surrey Bowl' && mer.cup.teams.slice(1).every(t => P.levelOf(t) >= 9), `Merton: the Surrey Bowl, against clubs near its level (${mer.cup.teams.slice(1).map(t => t.id)})`);
   const bath = C.create({ pos:'B', num:7, club:X.ENGLAND[0] }); C.set(bath); finish(bath, 3);
   ok(C.outcome(bath).next.phase !== 'county', 'Bath, a professional club: no county cup');

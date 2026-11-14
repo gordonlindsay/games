@@ -176,7 +176,7 @@ function renderHome() {
   champHome();
   homeContinue();
   renderCareerHome();
-  practiceGroups();                                         // Skill Games: the contact games hidden for the youngest, the grown-ups' panel shut (practice.js)
+  practiceGroups();                                         // Skill Games: the contact games hidden for the youngest and Driving for a Junior, the grown-ups' panel shut (practice.js)
   lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
   if (typeof importHome === 'function') importHome();      // Add Your Team in My Team's box, where the team screen's Add Your Team card would show (src/import.js)
   homeStepDraw();
@@ -333,7 +333,7 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
     if (key === 'diff' && i === 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
-    if (key === 'diff' && kidsLevel() && i !== 0) { parentGate(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // only a grown-up takes the game off the Kids level; a cancelled check leaves it as it was
+    if (key === 'diff' && kidsLevel() && i !== 0 && minisOn()) { minisAsk(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // a Mini taking the game off the Kids level is asked Leave Minis? first, and Keep Minis leaves it as it was; anyone else switches at once, with no grown-up check (the owner, 2026-11-14: kids.js)
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'cam') { settings.camPick = true; if (M && M.cut) $('pz-cam-note').hidden = false; if (!(M && M.paused) && !$('s-home').hidden) BV.peekUntil = performance.now() + BV_DEMO_PEEK; }   // on the home, the demo behind it shows the height just picked for a moment (PR #14); the pause card's row changes the match itself   // a real choice, so a Top chosen here survives a reload (cleanSettings); a close-up has its own camera, so the pause card says so
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
@@ -408,17 +408,23 @@ function myPool() {                                       // the list My Team's 
   const t = myClubTeam();
   if (t.custom) return null;
   if (importLeague && importLeague.teams.includes(t)) return IMPORT_POOL;
-  const l = TEAM_LISTS.find(x => x.tier > 0 && x.teams.includes(t));
+  const l = listHomeOf(t);
   return l ? l.key : 'sur';
+}
+/* A built-in club's own list: the first it is on, or the county it is shown under (LOCAL_VIEW: Aldershot is Hampshire's). null for none. */
+function listHomeOf(t) {
+  const v = t && LOCAL_VIEW[t.id] && TEAM_LISTS.find(x => x.key === LOCAL_VIEW[t.id] && x.teams.includes(t));
+  return v || TEAM_LISTS.find(x => x.tier > 0 && x.teams.includes(t)) || null;
 }
 const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat || 'ENG') : keyOf(t) === keyOf(myClubTeam()) && !t.custom === !myClubTeam().custom);
 /* My Team's club, last season (PR #14's Your Team info): its league and place, as its list has them. Real figures from the club's list, so
    only a built-in club with a line has one; a nation, a team you made or imported, a My League side and a club with no figures (Quins, New
    Zealand, Japan, Scotland) show none, never an invented one. myRecordLine is the rest of PR #14's line (won, lost, scored, conceded):
    since 2026-11-11 the game shows it nowhere (the home's box shows the games you have played as the club instead), and only the tools
-   read it (tools/home.mjs 6b), kept so the figures stay checked against the club's list. */
+   read it (tools/home.mjs 6b), kept so the figures stay checked against the club's list. A club whose league published no table (most of
+   Counties 1, LOCAL) has its place only, and no record line. */
 const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
-const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+const myRecordLine = t => (t && t.league && t.w != null ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
 const FORM_WORD = { W:'Won', D:'Drawn', L:'Lost' };
 /* My Team's box: the club's shirt, name, stars and league line; the games you have played as it (formOf, src/persistence.js) and its last
    five results, the latest on the right of them; the country's shirt and name; Change | Add Your Team | Locker. */
@@ -476,6 +482,15 @@ function homeFit() {
     const list = $('tc-list');
     if (list.scrollWidth > list.clientWidth + 0.5) strip.dataset.fit = 'short';
   }
+  /* Continue's line and the Career box's note: each part whole within their two lines. A county club's name can be wider than the Career
+     box's half at 568 wide (v Old Wimbledonian), so the note steps down a pixel at a time, to 11px at the least, until it holds; a line that
+     already fits keeps its size. With LOCAL off, as 1.6. */
+  if (LOCAL.on) for (const note of [$('cont-note'), $('career-note')]) {
+    if (!note || note.hidden || !note.style || !note.querySelectorAll) continue;
+    note.style.fontSize = '';
+    const tight = () => [...note.querySelectorAll('.nw')].some(cut) || note.scrollHeight > note.clientHeight + 1;
+    for (let n = parseFloat(getComputedStyle(note).fontSize) || 14; tight() && n > 11; ) { n -= 1; note.style.fontSize = n + 'px'; }
+  }
 }
 $('b-my').addEventListener('click', () => { ac(); profileOpen(); });   // My Profile (src/profile.js): the age group, gender and look, and My Team's picker, its old job, one press on
 
@@ -486,7 +501,16 @@ $('b-my').addEventListener('click', () => { ac(); profileOpen(); });   // My Pro
 let homeTier = null;                                       // the tier on show, while the game runs: first the one My Team's club is on
 const champComps = tier => (tier === 0 ? [['int', 'Championship'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']]
   : tier === 1 ? TEAM_LISTS.filter(l => l.tier === 1).map(l => [l.key, l.name])
+  : LOCAL.on ? [[myCounty(), TEAM_LISTS.find(l => l.key === myCounty()).name], ['county', 'Other County'], ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]
   : [...TEAM_LISTS.filter(l => l.tier === 2).map(l => [l.key, l.name]), ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
+/* LOCAL (the owner, 14 Nov 2026, Build): Local's competitions are your county, Other County and My League. Your county is the one My Team's
+   club is shown under (Aldershot: Hampshire); Surrey for a club with none (a nation's, a professional side, one you made or imported).
+   Other County is the team screen on every county, the Filter open on County | Teams: a club picked plays its own county's championship. */
+function myCounty() {
+  const t = myClubTeam(), l = t && !t.custom && !isNation(t) ? listHomeOf(t) : null;
+  return l && l.tier === 2 && l.county ? l.key : 'sur';
+}
+let champCounty = false;                                   // Championship's Other County: the team screen on the county ladder
 $('hc-tier').innerHTML = TEAM_TIERS.map((n, i) => `<button data-tier="${i}">${n}</button>`).join('');   // plain words (data.js)
 for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => { homeTier = +b.dataset.tier; champHome(); });
 function champHome() {
@@ -514,14 +538,16 @@ function champHome() {
     box.dataset.key = key;
     box.className = 'hc-comps n' + comps.length;
     box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp${n.length > 20 ? ' long' : ''}" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
-    for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
+    for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', e => champPick(b.dataset.comp, e)); storeMark(b, 'champ'); }
   }
 }
-function champPick(k) {
+function champPick(k, e) {
   ac();
   if (!storeGate('champ', () => champPick(k))) return;     // locked: the Unlock card
   if (cup || champ) { $('b-champ').click(); return; }      // one is saved: its own hub (the home shows Continue then)
+  const how = k === 'county' && typeof pickFilterHow === 'function' ? pickFilterHow(e, $('hc-county')) : null;
   openTeams('champ', k, { from:$('hc-' + k) });             // Back comes back to it
+  if (k === 'county') pickFilter(0, '', { dev:how, from:'sheet' });   // Other County: the Filter open on County | Teams, your county marked
 }
 $('b-champ').addEventListener('click', () => {
   ac();
@@ -612,11 +638,12 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
    team: its shirt with its overall, its name and stars, five bars, the league it plays in. Left and Right change the team within its group;
    Up and Down step through every group in order, ONE LADDER (his answer, the same day: "like EA FC"), the hemisphere and the country above
    it (a swipe down a card for the next group: the owner's "Next Group Down"); a shoulder button, Page Up or Page Down, or a long press on
-   Previous or Next jumps a whole country. The top of the ladder is North | South | Mine | Favourites | Recent; Men | Women | Minis stays the
-   top switch. Each wraps. The search icon and each side's group button open the Filter: the ladder as columns, and a search (below).
+   Previous or Next jumps a whole country. The top of the ladder is Northern Hemisphere | Southern Hemisphere | My Clubs | Favourites |
+   Recent (PICK_HEMI, below); Men | Women | Minis stays the top switch. Each wraps. The search icon and each side's group button open the
+   Filter: the ladder as columns, and a search (below).
    The ladder (pickLadder) is a view of the lists, never new data: TEAM_LISTS cut by country (LIST_HOME, URC_HOME in src/data.js) and by
    league where a list holds two (South Africa's URC and Currie Cup), each group named for its competition, the nations in the category's
-   own order with their Legends, then Mine (Made Teams with Create Team, My League with Add Your Team), the teams starred and each side's
+   own order with their Legends, then My Clubs (Made Teams with Create Team, My League with Add Your Team), the teams starred and each side's
    last three picks. A side picked from a group plays as its list always has: a championship from Dublin is the URC's.
    A side is set (Pick Farnham, a tap on its card, a controller's A) and Kick Off starts the match once both are; moving a side sets it free
    again. Pick Opponent never shows your own side, and opens on its league's rivals (Wimbledon for Farnham) until the opponent is moved.
@@ -624,8 +651,27 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
    so the screen reopens where each side was. Nothing here draws a random number (tools/importer.mjs counts them). */
 let teamList = [];                                         // the active side's group: its teams, for the tools
 const PICK = { ms:200, swipe:36, ratio:1.4, hold:500 };      // one quick move (opacity and transform, none with reduced motion); a swipe's distance and how much straighter than across it must be; a long press
-const PICK_HEMI = { north:'North', south:'South', mine:'Mine', fav:'Favourites', recent:'Recent' };
-const PICK_MAKE = { act:'create', name:'Create Team' }, PICK_ADD = { act:'import', name:'Add Your Team' };   // Mine's two ways in, an entry each, gated as ever (storeGate)
+/* The areas, the top of the ladder, by their keys (a group's hemi: 'north', 'south', 'mine', 'fav', 'recent'), which is all a save holds (a
+   group's key, never its area's name). Their names (the owner, 2026-11-14: "Change Northern hemisphere / Southern hemisphere / My clubs.
+   Shorten to 'hemi' if needed for mobile UI"): Northern Hemisphere, Southern Hemisphere, My Clubs, then Favourites and Recent as they were.
+   The short form, Northern Hemi and Southern Hemi (PICK_HEMI_SHORT), is the full name's start, so it is drawn as the full name with its end
+   in a span (pickHemiHtml) that the CSS leaves out where the full name does not fit (styles.css, .hx), decided per place and measured in
+   Chromium at 844x390, 667x375, 844x340, 667x320 and 568x320 (tools/picker.mjs):
+   - a card's context line over its group button: Northern Hemi where two sides share the screen (the full name is cut at 844x390 on
+     England's Championship, where the line has 118px), the full name where a card has the screen to itself (329px and up, one line at
+     every size). The area leads the line only where the whole line then fits on one line; where it would not (a long county's two-line
+     button beside it, or 568x320), it is left off that card's line (pickFit, .off), so the line reads England and never wraps for the
+     area's sake, both cards' heads level. With LOCAL the line has no Local (the group's button names the county): Northern Hemi · England
+     on the opening screen at every size but 568x320. It is still read out: drawn at no size, not removed;
+   - the Filter's Area column: the full name where the column holds Hemisphere on a line (two lines in the 44px row, as the League
+     column's United Rugby Championship: 844 wide), Northern Hemi where it does not (667 and 568 wide); no form is one line there;
+   - a search match's path (Northern Hemisphere · France · Top 14): the full name at every size, one line with room to spare.
+   A screen reader hears the full name everywhere: the Filter's rows are labelled with it, and on a card the end (.hx) and an area left off
+   are drawn at no size rather than removed. Its text, everywhere (pickWhere, flPath, a row's name), is the full name. */
+const PICK_HEMI = { north:'Northern Hemisphere', south:'Southern Hemisphere', mine:'My Clubs', fav:'Favourites', recent:'Recent' };
+const PICK_HEMI_SHORT = { north:'Northern Hemi', south:'Southern Hemi' };
+const pickHemiHtml = h => { const n = PICK_HEMI[h] || '', s = PICK_HEMI_SHORT[h]; return s && n.startsWith(s) && n.length > s.length ? `${esc(s)}<span class="hx">${esc(n.slice(s.length))}</span>` : esc(n); };
+const PICK_MAKE = { act:'create', name:'Create Team' }, PICK_ADD = { act:'import', name:'Add Your Team' };   // My Clubs' two ways in, an entry each, gated as ever (storeGate)
 const pickKey = t => (!t ? '' : t.act ? '+' + t.act : keyOf(t));
 const motionOn = () => { try { return !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 const natName = id => (NATIONS.find(n => n.id === id) || { name:String(id) }).name;
@@ -641,18 +687,22 @@ function pickCountries(cat, every) {
 }
 /* A country's club groups, in TEAM_LISTS order (so Local's Surrey and Counties come last): each list's sides from that country, cut by
    league where every side has one and they differ (South Africa), named for the competition they all share, else LIST_GROUP's name, else
-   Clubs; Local's lists keep their own names. */
+   Clubs; Local's lists keep their own names. LOCAL: Surrey, then every other county A to Z, each named by its label, Counties hidden (its
+   sides are Surrey's), a club under the county LOCAL_VIEW gives it (Aldershot, Hampshire), each county in its pyramid's order (pickLevel). */
+const pickLevel = t => (t.league ? compOwnLevel(t) || 99 : 5.5);   // a club's level for a county's order; one with no line (Quins, rated with Farnham) after Regional 1
+const pickLocalOrder = ts => ts.map((t, i) => ({ t, i })).sort((a, b) => pickLevel(a.t) - pickLevel(b.t) || (a.t.place || 0) - (b.t.place || 0) || a.i - b.i).map(x => x.t);
 function pickClubGroups(home) {
   const out = [];
   for (const l of TEAM_LISTS) {
-    if (!l.tier) continue;
-    const teams = l.teams.filter(t => pickHome(l.key, t) === home);
+    if (!l.tier || l.hide) continue;
+    let teams = l.teams.filter(t => pickHome(l.key, t) === home && (!LOCAL_VIEW[t.id] || LOCAL_VIEW[t.id] === l.key));
+    if (l.county) teams = pickLocalOrder(teams);
     if (!teams.length) continue;
     const local = LIST_LOCAL.includes(l.key), leagues = [...new Set(teams.map(t => t.league || ''))], split = !local && leagues.length > 1 && !leagues.includes('');
     for (const lg of split ? leagues : ['']) {
       const ts = split ? teams.filter(t => t.league === lg) : teams;
       const name = local ? l.name : ts.every(t => t.league && t.league === ts[0].league) ? LEAGUE_SHORT[ts[0].league] || ts[0].league : LIST_GROUP[l.key] || 'Clubs';
-      out.push({ key:[l.key, ...(l.key === 'cel' ? [home.toLowerCase()] : []), ...(split ? [pickSlug(name)] : [])].join('.'), list:l.key, home, local, name, teams:ts });
+      out.push({ key:[l.key, ...(l.key === 'cel' ? [home.toLowerCase()] : []), ...(split ? [pickSlug(name)] : [])].join('.'), list:l.key, home, local, name, ...(l.county ? { county:l.county, wraps:!!l.wraps } : {}), teams:ts });
     }
   }
   return out;
@@ -725,11 +775,14 @@ function pickLadderOf(s, left) {
   if (pickMode === 'champ') {
     const view = teamsView();
     if (view) return [{ key:'cup.' + view.comp, list:null, hemi:null, name:view.name, ctx:view.yours ? 'Your Side · ' + listName(view.yours) : 'International', fixed:true, teams:view.list.slice() }];   // a tour: the Home Nations against the host picked here
+    if (champCounty) return pickClubGroups('ENG').filter(g => g.local).map(g => ({ ...g, hemi:null, ctx:'Local', teams:storeFirst(g.teams) }));   // Other County: every county, Up and Down or the Filter's County column to choose
     const pool = teamPool();
     let teams = poolTeams(pool).slice();
     if (pool === 'int' && typeof lockerLegends === 'function') teams.splice(natList(cat).length, 0, ...lockerLegends(cat));
+    const own = listOf(pool), county = own && own.county ? { county:own.county, wraps:!!own.wraps } : {};   // a county's (LOCAL): in its pyramid's order, and its group button may take two lines
+    if (own && own.county) teams = pickLocalOrder(teams);
     const made = [...custom, ...(custom.length < MAX_CUSTOM ? [PICK_MAKE] : []), ...(importShown() ? [PICK_ADD] : [])];
-    return [{ key:'comp', list:pool, hemi:null, name:champListName(pool), ctx:TEAM_TIERS[poolTier(pool)], teams:storeFirst(teams) }, ...(made.length ? [{ key:'mine.made', list:null, hemi:'mine', name:'Made Teams', teams:made }] : [])];
+    return [{ key:'comp', list:pool, hemi:null, name:champListName(pool), ctx:TEAM_TIERS[poolTier(pool)], ...county, teams:storeFirst(teams) }, ...(made.length ? [{ key:'mine.made', list:null, hemi:'mine', name:'Made Teams', teams:made }] : [])];
   }
   if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));
   if (pickMode === 'my') return pickLadder(cat, { nations:true, every:!!pickCatFixed(), clubs:true, mine:'all', fav:true, fits:t => !t.legend });   // with no switch, every country: My Team's is where you are from, whatever the category plays
@@ -786,8 +839,9 @@ function pickResolve(st, ladder) {
   return { ladder, gi, i, group:g, team:g.teams[i] };
 }
 /* The Opponent, until it is moved, follows Your Team: Your Team's group, its first side there (its league's rivals come first: Wimbledon
-   for Farnham), or, where that group has nothing left (a nation and no Legend), the next country's National group. 2 Players: the next
-   side in Player 1's group as the screen opens, and from then on Player 2's own (a mirror match is still a press away). */
+   for Farnham; in a county with none, the side nearest its level), or, where that group has nothing left (a nation and no Legend), the
+   next country's National group. 2 Players: the next side in Player 1's group as the screen opens, and from then on Player 2's own (a
+   mirror match is still a press away). */
 function pickFollow(st, ladder, lv) {
   if (st.touched || !lv) return;
   const saved = g => g.hemi === 'fav' || g.hemi === 'recent', real = g => g.teams.some(t => !t.act), lk = pickKey(lv.team);
@@ -801,6 +855,15 @@ function pickFollow(st, ladder, lv) {
   const g = ladder[gi], j = g.teams.findIndex(t => pickKey(t) === lk);
   let i = pickMode === 'two' && j >= 0 ? (j + 1) % g.teams.length : 0;
   if (g.teams[i].act) i = Math.max(0, g.teams.findIndex(t => !t.act));
+  /* A county (LOCAL) with no rival of Your Team's league in it (Aldershot, Counties 3, alone in Hampshire): the side nearest its level, then
+     its overall, not the county's strongest (Havant, National League). With a rival there, its rivals still come first. */
+  const me = lv.team;
+  if (pickMode === 'quick' && g.county && me && !me.act && !isNation(me) && !(me.league && g.teams[i].league === me.league)) {
+    const lvl = pickLevel(me), ov = overallOf(me), far = t => [Math.abs(pickLevel(t) - lvl), Math.abs(overallOf(t) - ov)];
+    let best = -1, bf = null;
+    g.teams.forEach((t, k) => { if (t.act) return; const f = far(t); if (!bf || f[0] < bf[0] || (f[0] === bf[0] && f[1] < bf[1])) { best = k; bf = f; } });
+    if (best >= 0) i = best;
+  }
   st.g = g.key; st.k = pickKey(g.teams[i]); st.gi = gi; st.i = i; st.set = false;
   if (pickMode === 'two') st.touched = true;                 // Player 2's side is his own from the start: it never moves while Player 1 looks
 }
@@ -839,8 +902,8 @@ function pickGroupStep(s, d, how) {                        // Up and Down: the n
   const n = v.ladder.length;
   if (n > 1 && !v.group.fixed) pickTo(s, (v.gi + d + n) % n, 0, how || (d > 0 ? 'down' : 'up'));
 }
-/* A whole country: the first group of the next one (or of this one's start, going back, then the one before). Mine, Favourites and Recent
-   each count as one. */
+/* A whole country: the first group of the next one (or of this one's start, going back, then the one before). My Clubs, Favourites and
+   Recent each count as one. */
 const pickPlace = g => g.hemi + '.' + (g.home || '');
 function pickCountry(s, d) {
   const v = pickView[s]; if (!v || v.ladder.length < 2 || v.group.fixed) return;
@@ -943,9 +1006,9 @@ function pickWho(s) {                                      // the side's own nam
   if (pickMode === 'career') return 'Your Club';
   return 'Your Team';
 }
-function pickWhere(g) {                                    // North · England, North · England · Local, Mine; a competition's tier
+function pickWhere(g) {                                    // Northern Hemisphere · England, My Clubs (Northern Hemisphere · England · Local with LOCAL off); a competition's tier
   if (g.ctx) return g.ctx;
-  if (g.home) return [PICK_HEMI[g.hemi], natName(g.home), ...(g.local ? ['Local'] : [])].join(' · ');
+  if (g.home) return [PICK_HEMI[g.hemi], natName(g.home), ...(g.local && !LOCAL.on ? ['Local'] : [])].join(' · ');   // LOCAL: the group button names the county
   return g.hemi === 'mine' ? PICK_HEMI.mine : '';
 }
 function pickTag(s, t) {                                   // Stronger Side (the Opponent, as ever) or My Team (where it is offered or picked)
@@ -960,7 +1023,8 @@ function pickTag(s, t) {                                   // Stronger Side (the
 function pickPanel(s) {
   const v = pickView[s], g = v.group, t = v.team, st = pick.sides[s], cat = pickCat();
   const where = pickWhere(g), many = v.ladder.length > 1 && !g.fixed;
-  const group = many ? `<button class="btn pk-group" data-act="sheet" aria-haspopup="dialog">${esc(g.name)}</button>` : `<span class="pk-group fixed">${esc(g.name)}</span>`;
+  const two = g.county ? ' two' : '';                         // a county's name may take two lines (Notts Lincs & Derbyshire), never cut
+  const group = many ? `<button class="btn pk-group${two}" data-act="sheet" aria-haspopup="dialog">${esc(g.name)}</button>` : `<span class="pk-group fixed${two}">${esc(g.name)}</span>`;
   const real = !t.act, fav = real ? `<button class="btn pk-fav" data-act="fav" aria-pressed="${settings.fav.includes(keyOf(t))}" aria-label="Favourite"><i aria-hidden="true"></i><span>Favourite</span></button>` : '';
   const edit = real && t.custom ? `<button class="btn pk-edit" data-act="edit">Edit</button>` : '';   // a team you made: Edit, in the card's corner
   const count = `<span class="pk-n">${v.i + 1} of ${g.teams.length}</span>`;
@@ -972,7 +1036,7 @@ function pickPanel(s) {
       + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k); return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`; }).join('')}</span>${edit}`;
   }
   const one = v.group.teams.length > 1 ? '' : ' disabled';
-  const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map(w => `<span>${esc(w)}</span>`).join(' ')}</span></span>` : '';   // North · England · Local: it breaks between parts, never after a dot
+  const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot
   return `<div class="pk-head"><p class="pk-where"><span class="pk-who">${pickWho(s)}</span>${ctx}</p>${group}${fav}</div>`
     + `<div class="pk-card${st.set ? ' pk-set' : ''}${edit ? ' made' : ''}">${card}</div>`
     + `<div class="pk-step"><button class="btn" data-act="prev"${one}>Previous</button>${count}<button class="btn" data-act="next"${one}>Next</button></div>`;   // Previous and Next in equal halves, the count between
@@ -989,8 +1053,9 @@ let pickFrom = null;                                       // the home's button 
 function openTeams(m, comp, o) {
   pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, made:null, lifter:null }; pickView = [null, null];
   pickFrom = (o && o.from) || null;
+  champCounty = m === 'champ' && comp === 'county';         // Other County (LOCAL): every county on the ladder, your county first in view
   if (m === 'champ') {
-    const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
+    const k = (champCounty ? myCounty() : comp) || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
     if (typeof cupCompSet === 'function') cupCompSet(cupId);   // the World Cup or the Home Nations Tour have their own sides (src/ui-cups.js)
     settings.pool = cupId !== 'league' ? 'int' : poolKey(k) === k ? k : 'sur';
   } else if (m !== 'career') settings.pool = myPool() || 'sur';
@@ -1081,6 +1146,12 @@ function pickFit() {
   if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);   // the order on screen is the order for Tab
   go.style.fontSize = '';
   for (let px = parseFloat(getComputedStyle(go).fontSize) || 22; go.scrollWidth > go.clientWidth + 0.5 && px > 14; ) { px -= 1; go.style.fontSize = px + 'px'; }   // Pick Wolverhampton on one line
+  for (const a of scr.querySelectorAll('.pk-ctx .pk-area')) {   // the area leads a card's line only where the whole line fits on one line (PICK_HEMI); else it is left off (.off), its country saying where
+    a.classList.remove('off');
+    const box = a.parentNode, parts = [...box.children]; if (!box.getClientRects().length) continue;
+    const r = box.getBoundingClientRect(), top = parts[0].getBoundingClientRect().top;
+    a.classList.toggle('off', parts.some(p => { const q = p.getBoundingClientRect(); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }));
+  }
   const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
   delete scr.dataset.dup;
   for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); pickTraits(); if (!over() && !small()) break; }
@@ -1099,10 +1170,11 @@ function pickResize() {
    The owner, 2026-11-11: "set up a search bar for club selection and show the hierarchy starting at the top", then "Filter pops up with
    nested team list and search. Have a search icon." A modal over the screen for one side, opened by the search icon in the top bar (the
    side being set), by a side's group button (that side) or by a letter or a digit typed on the screen (one player). Along its top a Search
-   field and Close; under them the side's own ladder as columns: Area (North, South, Mine, Favourites, Recent, each with a count), Country,
-   League and the group's Teams. It is built from pickView[s].ladder, pickLadderOf's, so the Filter obeys every rule the card does (Pick
-   Opponent's lock, Career's clubs, storeFirst, Create Team under MAX_CUSTOM). Mine has no country: its League column is Made Teams and My
-   League. Favourites and Recent go straight to their Teams; Championship (its competition and Made Teams) is a League column and Teams.
+   field and Close; under them the side's own ladder as columns: Area (Northern Hemisphere, Southern Hemisphere, My Clubs, Favourites,
+   Recent, each with a count; Northern Hemi and Southern Hemi where the column is narrow: PICK_HEMI), Country, League and the group's
+   Teams. It is built from pickView[s].ladder, pickLadderOf's, so the Filter obeys every rule the card does (Pick Opponent's lock, Career's
+   clubs, storeFirst, Create Team under MAX_CUSTOM). My Clubs has no country: its League column is Made Teams and My League. Favourites
+   and Recent go straight to their Teams; Championship (its competition and Made Teams) is a League column and Teams.
    The side's own path is marked as it opens, each column scrolled to its mark; a row of Area, Country or League takes its column's place
    and fills the columns after it, each on its first; a team is picked for the side as a tap on its card picks it (pickSet, every gate
    included), and the focus moves on as it does from the card. Typing swaps the columns for one list of matches. While it is open
@@ -1123,7 +1195,7 @@ function filterRoot(L) {
     let a = areas.find(x => x.hemi === g.hemi);
     if (!a) areas.push(a = flSaved(g) ? { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi], gi } : { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi] || g.name, kids:[] });
     if (!a.kids) return;
-    if (!g.home) { a.kids.push(league(gi)); return; }        // Mine: Made Teams, My League
+    if (!g.home) { a.kids.push(league(gi)); return; }        // My Clubs: Made Teams, My League
     let c = a.kids.find(x => x.home === g.home);
     if (!c) a.kids.push(c = { kind:'country', home:g.home, name:natName(g.home), kids:[] });
     c.kids.push(league(gi));
@@ -1144,18 +1216,19 @@ function filterCols() {
   for (let c = 0; node.kids; c++) {
     const rows = node.kids, sel = clamp(FL.path[c] | 0, 0, rows.length - 1);
     FL.path[c] = sel;
-    cols.push({ kind:rows[0].kind, head:FL_HEAD[rows[0].kind], rows, sel });
+    cols.push({ kind:rows[0].kind, head:champCounty && rows[0].kind === 'league' ? 'County' : FL_HEAD[rows[0].kind], rows, sel });   // Other County's first column is County
     node = rows[sel];
   }
   FL.path.length = cols.length;
   const g = L[node.gi];
-  cols.push({ kind:'team', head:g.name, gi:node.gi, rows:g.teams, sel:-1, cur:node.gi === v.gi ? v.i : -1 });
+  cols.push({ kind:'team', head:g.name, wraps:!!g.wraps, gi:node.gi, rows:g.teams, sel:-1, cur:node.gi === v.gi ? v.i : -1 });
   return cols;
 }
 const flCount = (L, n) => (n.kids ? n.kids.length : L[n.gi].teams.length);
 function flRowHtml(L, c, n, i, on) {
   const k = flCount(L, n), w = FL_NOUN[n.kids ? n.kids[0].kind : 'team'][k === 1 ? 0 : 1];
-  return `<button class="fl-r" data-col="${c}" data-i="${i}"${on ? ' aria-current="true"' : ''} tabindex="${on ? 0 : -1}" aria-label="${esc(n.name)}, ${k} ${w}"><b>${esc(n.name)}</b><span class="fl-n" aria-hidden="true">${k}</span></button>`;
+  const nm = n.kind === 'area' && n.name === PICK_HEMI[n.hemi] ? pickHemiHtml(n.hemi) : esc(n.name);   // an area: Northern Hemi where the column is narrow (styles.css); its label, the full name
+  return `<button class="fl-r" data-col="${c}" data-i="${i}"${on ? ' aria-current="true"' : ''} tabindex="${on ? 0 : -1}" aria-label="${esc(n.name)}, ${k} ${w}"><b>${nm}</b><span class="fl-n" aria-hidden="true">${k}</span></button>`;
 }
 function flTeamHtml(s, t, attrs, path) {                    // a team's row: its shirt, its name (and where it lives, in the matches), My Team where the card says it, its stars
   if (t.act) return `<button class="fl-r fl-t" ${attrs} data-make="${t.act}"><span class="fl-plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="fl-nm"><b>${esc(t.name)}</b></span></button>`;
@@ -1178,10 +1251,11 @@ function pickFilterDraw(from = 0) {
   const find = !!FL.q.trim();
   box.hidden = find; res.hidden = !find;
   if (find) {
-    FL.hits = filterSearch(v.ladder, FL.q);
-    res.innerHTML = FL.hits.length ? FL.hits.map((h, r) => flTeamHtml(FL.s, h.t, `data-r="${r}" tabindex="${r ? -1 : 0}"`, h.path)).join('') : `<p class="fl-none">No ${word} Found</p>`;
+    const all = filterSearch(v.ladder, FL.q);
+    FL.hits = all.slice(0, FL_CAP);                            // LOCAL: at most FL_CAP drawn (a letter matches hundreds of clubs), the count of all said under them
+    res.innerHTML = FL.hits.length ? FL.hits.map((h, r) => flTeamHtml(FL.s, h.t, `data-r="${r}" tabindex="${r ? -1 : 0}"`, h.path)).join('') + (all.length > FL.hits.length ? `<p class="fl-none fl-more">${FL.hits.length} of ${all.length} ${word}</p>` : '') : `<p class="fl-none">No ${word} Found</p>`;
     res.scrollTop = 0;
-    $('fl-said').textContent = FL.hits.length ? `${FL.hits.length} ${FL.hits.length === 1 ? word.slice(0, -1) : word}` : `No ${word} Found`;
+    $('fl-said').textContent = all.length > FL.hits.length ? `${FL.hits.length} of ${all.length} ${word}` : FL.hits.length ? `${FL.hits.length} ${FL.hits.length === 1 ? word.slice(0, -1) : word}` : `No ${word} Found`;   // cut at FL_CAP: what the line under them says
     flLocks(res);
     return;
   }
@@ -1193,7 +1267,7 @@ function pickFilterDraw(from = 0) {
     const rows = col.kind === 'team'
       ? col.rows.map((t, i) => flTeamHtml(FL.s, t, `data-col="${c}" data-i="${i}"${i === col.cur ? ' aria-current="true"' : ''} tabindex="${i === Math.max(0, col.cur) ? 0 : -1}"`)).join('')
       : col.rows.map((n, i) => flRowHtml(v.ladder, c, n, i, i === col.sel)).join('');
-    return `<div class="fl-col" role="group" aria-labelledby="fl-h${c}"><p class="fl-h" id="fl-h${c}">${esc(col.head)}</p><div class="fl-list">${rows}</div></div>`;
+    return `<div class="fl-col" role="group" aria-labelledby="fl-h${c}"><p class="fl-h${col.wraps ? ' two' : ''}" id="fl-h${c}">${esc(col.head)}</p><div class="fl-list">${rows}</div></div>`;
   };
   /* A row chosen (from > 0): the columns before it stay as they are, so the row pressed keeps the focus (a click, a tap, a screen
      reader's double tap) and a screen reader its place; only the chosen column's mark moves, and the columns after it are drawn anew. */
@@ -1208,24 +1282,29 @@ function pickFilterDraw(from = 0) {
   if (box.querySelectorAll) [...box.querySelectorAll('.fl-list')].forEach((l, c) => { if (c < from) { if (!kept.length && was[c] != null) l.scrollTop = was[c]; } else flCentre(l, l.querySelector('[aria-current="true"]')); });
 }
 /* The search: team names, folded for accents and case, and the names of countries and groups (Premiership lists both Premierships' clubs),
-   a group's competition by its full name as well (United Rugby Championship, where the group says URC). Names that start with the text
+   a group's competition by its full name as well (United Rugby Championship, where the group says URC), and with LOCAL a county by its
+   full name (Buckinghamshire, where the group says Bucks), each club's own league, and a club's full name where its card's is cut
+   (Weston-super-Mare, Saracens Amateurs). Names that start with the text
    first, then those with a word that does, then those that hold it, then the clubs of a country or group whose name matches in the same
    three steps; ladder order within each. Each team once, under its own group (Favourites and Recent only repeat it). */
 const flFold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-function flPath(g) {                                         // North · England · Premiership; Mine · Made Teams; Favourites; a competition's tier and name
+function flPath(g) {                                         // Northern Hemisphere · England · Premiership; My Clubs · Made Teams; Favourites; a competition's tier and name
   const parts = g.hemi ? [PICK_HEMI[g.hemi], g.home ? natName(g.home) : null, flSaved(g) ? null : g.name] : [g.ctx, g.name];
   return parts.filter((p, i, a) => p && p !== a[i - 1]).join(' · ');
 }
 const flLeague = g => { const l = g.teams[0] && g.teams[0].league; return l && g.teams.every(t => t.league === l) ? l : ''; };   // the competition a group's clubs all play in, by its full name: a group called URC found as United Rugby Championship too
+const FL_CAP = LOCAL.on ? 200 : Infinity;                    // the matches drawn at most: above 1.6's worst, so LOCAL off draws every one as before
 function filterSearch(L, q) {
   const f = flFold(q); if (!f) return [];
   const rank = text => { const n = flFold(text); return n.startsWith(f) ? 0 : n.split(/[\s'-]+/).some(w => w.startsWith(f)) ? 1 : n.includes(f) ? 2 : -1; };
   const seen = new Set(), hits = [], order = L.map((g, gi) => gi).sort((a, b) => flSaved(L[a]) - flSaved(L[b]));   // a team's own group first
   for (const gi of order) {
-    const g = L[gi], by = flSaved(g) ? [] : [g.name, g.home ? natName(g.home) : '', flLeague(g)].filter(Boolean).map(rank).filter(r => r >= 0), there = by.length ? 3 + Math.min(...by) : -1;
+    const g = L[gi], by = flSaved(g) ? [] : [g.name, g.county || '', g.home ? natName(g.home) : '', flLeague(g)].filter(Boolean).map(rank).filter(r => r >= 0), there = by.length ? 3 + Math.min(...by) : -1;
     g.teams.forEach((t, i) => {
       const k = pickKey(t); if (t.act || seen.has(k)) return;
-      const own = rank(listName(t)), r = own >= 0 ? own : there;
+      const line = LOCAL.on && !flSaved(g) && t.league ? rank(t.league) : -1;   // LOCAL: a club's own league too (Regional 2 Thames), at its group's step
+      const nm = rank(listName(t)), fu = t.full ? rank(t.full) : -1, own = nm >= 0 && fu >= 0 ? Math.min(nm, fu) : Math.max(nm, fu);   // LOCAL: a club's full name too, where its card's is cut (Weston-super-Mare)
+      const r = own >= 0 ? own : there >= 0 && line >= 0 ? Math.min(there, 3 + line) : there >= 0 ? there : line >= 0 ? 3 + line : -1;
       if (r < 0) return;
       seen.add(k); hits.push({ t, gi, i, r, n:hits.length, path:flPath(g) });
     });
@@ -1233,9 +1312,9 @@ function filterSearch(L, q) {
   return hits.sort((a, b) => a.r - b.r || a.n - b.n);
 }
 /* Open: for side s, with q typed (a letter on the screen) or none. how.dev is how it was asked for: 'pad' (a controller's A: the ring on
-   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger: the field never
-   takes the focus, so the phone's keyboard comes up only on a tap there). how.from: 'find' (the icon) or 'sheet' (the group's button),
-   where Close puts the focus back. */
+   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger, and anything
+   else on a phone or a tablet: the field never takes the focus, so the phone's keyboard comes up only on a tap there; pickFilterHow).
+   how.from: 'find' (the icon) or 'sheet' (the group's button), where Close puts the focus back. */
 function pickFilter(s, q, how) {
   const v = pickView[s], m = $('m-filter'), o = how || {};
   if ($('s-teams').hidden || !pickFilterable(v)) return false;
@@ -1271,8 +1350,14 @@ function flTapEat(e) {
   if (e.stopPropagation) e.stopPropagation();
 }
 for (const t of ['pointerdown', 'mousedown', 'touchend', 'mouseup', 'click']) document.addEventListener(t, flTapEat, { capture:true, passive:false });
-let pickPointer = '';                                        // the last pointer down on the team screen: 'mouse' (a computer), 'touch' or 'pen'
-const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad' : e && e.detail === 0 && document.activeElement === el ? 'kb' : ((e && e.pointerType) || pickPointer) === 'mouse' ? 'desk' : 'touch');   // how the Filter was asked for (pickFilter)
+/* How the Filter was asked for (pickFilter): 'pad', a controller's A (the ring on the button); 'kb', Enter or Space on the focused button
+   (a click with no detail), on a phone or a tablet only where a key was the last press; 'desk', a computer's mouse (the last press a mouse's,
+   on a computer: touchFirst); else 'touch', a finger. The last pointerdown decides (lastPress, src/input-devices.js), never the click's own
+   pointerType: iOS gives a finger's tap a click whose pointerType is "mouse", which read as a computer's, put the focus in the field and
+   brought the phone's keyboard up over the screen (the owner on 1.6, 2026-11-14). */
+const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad'
+  : e && e.detail === 0 && document.activeElement === el && (lastPress === 'key' || !touchFirst()) ? 'kb'
+  : (lastPress || (e && e.pointerType) || '') === 'mouse' && !touchFirst() ? 'desk' : 'touch');
 const flHas = el => !!el && typeof el.closest === 'function' && !!el.closest('#m-filter');
 function pickFilterShut() {                                  // the Filter put away, nothing else: also whenever another screen is shown (showScreen)
   const m = $('m-filter');
@@ -1576,7 +1661,7 @@ function pickHint() {
   for (const w of chip.children) { if (w.textContent === h.text) w.removeAttribute('aria-hidden'); else w.setAttribute('aria-hidden', 'true'); }
   return h;
 }
-$('s-teams').addEventListener('pointerdown', e => { pickPointer = e.pointerType || ''; if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
+$('s-teams').addEventListener('pointerdown', e => { if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
 /* Men | Women | Minis: the sides follow to the category's own (England to England Women); one it has not got (Canada on Men) is the
    next one there, and no longer set. */
 $('t-cat').innerHTML = TEAM_CATS.map(c => `<button data-cat="${c.id}">${esc(c.name)}</button>`).join('');
@@ -1592,7 +1677,7 @@ const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier
 function poolTeams(k) {                                   // International is the category's twelve (natList); a list that does not exist is International
   if (k === IMPORT_POOL) return importTeams();
   const l = listOf(k) || TEAM_LISTS[0];
-  return l.key === 'int' ? natList(settings.cat) : l.teams;
+  return l.key === 'int' ? natList(settings.cat) : listPlays(l);   // a county's own (LOCAL: Surrey's championship never has Aldershot, shown under Hampshire)
 }
 /* The side on show when Championship opens: My Team (the club, if the league has it or it is one you made; the country on International and
    in the World Cup), or a tour's host in turn. null where nothing is offered: Quick Match, 2 Players, My Team. */
@@ -1622,7 +1707,7 @@ function pickTeam(t) {
   if (pickMode === 'champ') {
     const view = teamsView();
     if (view) { view.start(t); return; }                   // a World Cup as that nation, or a tour to that host (src/ui-cups.js)
-    const pool = teamPool(), cat = settings.cat, me = catTeam(t, cat);
+    const pool = champCounty && pickView[0] && pickView[0].group.list ? pickView[0].group.list : teamPool(), cat = settings.cat, me = catTeam(t, cat);   // Other County: the county the club was picked from
     if (!me) return;
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
     newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;

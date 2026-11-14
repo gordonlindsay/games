@@ -7,7 +7,7 @@
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 // CLUB_RATED=off HOME_PRINT=1 node tools/home.mjs prints it with no club rated from PR #14's tables: the proof behind the last re-pin.
 process.env.SEED ??= '61';
-const { T, reseed, bot } = await import('./harness.mjs');
+const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -23,6 +23,10 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 // 0. Nothing the home does moves a match: AI v AI, a tool's match (the balance tools' kind: the bot against the computer), an arcade
 //    Quick Match, a championship match and the demo, seeded, against the build before the headlines (2e4829d). Run first.
 const BASE = '1us0pm8 7yj4mb 42zhl6 bs1ooc 1tf14do';   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
+/* BASE re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"):
+   Farnham and Haslemere, a step down, play three of these matches, so it moves to R_BASE. With LOCAL off (1.6) and with the rerating off
+   (8089294) this build gives BASE exactly, LOCAL off the chain below too (each in a child: rerateProofs). */
+const R_BASE = '1us0pm8 1utlxki 18tlkfu 1skpr8k 1tf14do';
 const WITH_CALLS = 'j0wk2h 7yj4mb 42zhl6 bs1ooc 1tf14do';   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '183xhzi 1jp0mme p4313q 1nkecxo yvtiy8';   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 183xhzi 1jp0mme p4313q x92eko yvtiy8)
 const BEFORE_CALLS_CHASE = '183xhzi 1jp0mme p4313q 319h47 yvtiy8';   // b4a25d5's pin, the calls and the chase both off: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -49,14 +53,16 @@ function fingerprint() {
 {
   const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off with the knock-ons (20cbcaf predates all three), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
-  if (T.knock && !process.env.HOME_PRINT) { T.knock.KNOCK.on = false; feats(false, false); const off = fingerprint(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
-  if ((CL || CS) && !process.env.HOME_PRINT) { feats(false, false); const off = fingerprint(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
-  if (CL && CS && !process.env.HOME_PRINT) { feats(true, false); const calls = fingerprint(); feats(false, true); const chase = fingerprint(); feats(CL0, CS0);
+  if (T.knock && !LOCAL_ON && !process.env.HOME_PRINT) { T.knock.KNOCK.on = false; feats(false, false); const off = fingerprint(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+  if ((CL || CS) && !LOCAL_ON && !process.env.HOME_PRINT) { feats(false, false); const off = fingerprint(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
+  if (CL && CS && !LOCAL_ON && !process.env.HOME_PRINT) { feats(true, false); const calls = fingerprint(); feats(false, true); const chase = fingerprint(); feats(CL0, CS0);
     ok(calls === WITH_CALLS, `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
     ok(chase === WITH_CHASE, `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`); }
   const now = fingerprint();
-  if (process.env.HOME_PRINT) { console.log(now); process.exit(0); }
-  ok(now === BASE, `AI v AI, a tool's match, an arcade Quick Match, a championship match and the demo play exactly as before the headlines (seeded fingerprint ${now}, pinned ${BASE})`);
+  if (process.env.HOME_PRINT || LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
+  if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BASE, ok);
+  const pin = RERATE ? R_BASE : BASE;
+  ok(now === pin, `AI v AI, a tool's match, an arcade Quick Match, a championship match and the demo play exactly as before the headlines (seeded fingerprint ${now}, pinned ${pin})`);
 }
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -103,7 +109,7 @@ const fresh = () => {                                       // a new game on the
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
   ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skill Games: every game in its picture (${drills.join(', ')}), How to Play, then the contact games and For Grown-Ups, in rows of four`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="diff">[\s\S]*?<\/div><\/div>\s*<div class="set set-age"><span class="lbl" id="set-age-l">Age Group<\/span><div class="seg" id="set-age" role="group" aria-labelledby="set-age-l"><\/div><\/div>\s*<div class="set set-gender"><span class="lbl" id="set-gender-l">Gender<\/span><div class="seg" id="set-gender" role="group" aria-labelledby="set-gender-l"><\/div><\/div>\s*<div class="set set-sound">/.test(home) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.6<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="diff">[\s\S]*?<\/div><\/div>\s*<div class="set set-age"><span class="lbl" id="set-age-l">Age Group<\/span><div class="seg" id="set-age" role="group" aria-labelledby="set-age-l"><\/div><\/div>\s*<div class="set set-gender"><span class="lbl" id="set-gender-l">Gender<\/span><div class="seg" id="set-gender" role="group" aria-labelledby="set-gender-l"><\/div><\/div>\s*<div class="set set-sound">/.test(home) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.7<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
     && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css)
     && /\.hp-settings\.settings \.set-cam,\.hp-settings\.settings \.ver\{grid-row:4;grid-column:4\/-1\}/.test(css),
     `Settings: ${sets.join(', ')}; Difficulty across, Age Group | Gender (the profile's, src/profile.js), Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help; the game's version at its foot, on the fourth row's label line`);
@@ -180,7 +186,11 @@ const fresh = () => {                                       // a new game on the
   seg('half').children[0].click(); seg('sound').children[1].click(); ok(D.settings().sound === false, 'Sound');
   seg('sound').children[0].click(); seg('hints').children[1].click(); ok(D.settings().hints === false && D.settings().coach === false, 'Match Help, the hints and the coach together');
   seg('hints').children[0].click(); seg('diff').children[0].click(); ok(D.settings().kids === true && D.settings().diff === 0, 'Difficulty: Kids');
-  seg('diff').children[1].click(); { const g = T.kids.gate(); ok(g && D.settings().kids === true, 'Easy from Kids asks a grown-up first (PR #14: only a grown-up leaves the Kids level)'); if (g) for (const d of g.answer) T.kids.type(d); }
+  { const was = T.profile.get().age; T.profile.get().age = 'mini';
+    seg('diff').children[1].click(); ok(!T.kids.gate() && !!T.kids.minis.open() && D.settings().kids === true, 'Easy from Kids for a Mini: Leave Minis? first, never the grown-up check (the owner, 2026-11-14)');
+    $('mn-keep').click(); ok(!T.kids.minis.open() && D.settings().kids === true, 'Keep Minis: still Kids');
+    T.profile.get().age = was === 'mini' ? null : was; }
+  seg('diff').children[1].click(); ok(!T.kids.gate() && !T.kids.minis.open(), 'Easy from Kids for anyone else: at once, nothing asked (the owner, 2026-11-14: "remove the calculation for anybody")');
   ok(D.settings().kids === false && D.settings().diff === 0, 'Easy');
   ok(H.step() === 'settings', 'Settings stays open as each is pressed');
   D.settings().diff = 1;
@@ -226,7 +236,8 @@ const fresh = () => {                                       // a new game on the
   const comps = t => H.comps(t).map(c => c[0]).join();
   ok(comps(0) === 'int,world,tour' && H.comps(0).map(c => c[1]).join() === 'Championship,World Cup,Home Nations Tour', 'International: Championship, World Cup, Home Nations Tour');
   ok(comps(1) === 'eng,en2,fra,cel,sco,rsa,aus,nzl,jpn' && H.comps(1).map(c => c[1]).join() === X.TEAM_LISTS.filter(l => l.tier === 1).map(l => l.name).join(), 'National: each country\'s league');
-  ok(comps(2) === 'sur,cty' && H.comps(2).map(c => c[1]).join() === 'Surrey,Counties', 'Local: Surrey and Counties (PR #14\'s), and no My League without an import');
+  // re-pinned for the county clubs (LOCAL, the owner's layout, 14 Nov: Build): your county | Other County | My League (tools/local.mjs has the rest)
+  ok(comps(2) === 'sur,county' && H.comps(2).map(c => c[1]).join() === 'Surrey,Other County', 'Local: My Team\'s county (Farnham: Surrey) and Other County, and no My League without an import');
   ok(['eng', 'fra', 'cel', 'rsa'].every(K.euroLeague) && !['en2', 'sco', 'aus', 'nzl', 'jpn', 'sur', 'cty', 'my', 'int'].some(K.euroLeague), 'the European Cup\'s trophy on the four leagues whose winner goes on to it');
   H.setTier(1); H.champ();
   ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && /id="hc-en2" data-comp="en2"><span>England 2<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n9' && /\.hc-comps\.n9\{grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*\.hc-comps\.n9 > \.btn\{grid-column:span 5\}\s*\.hc-comps\.n9 > \.btn:nth-child\(n\+5\)\{grid-column:span 4\}/.test(css), 'each a big button, the European Cup\'s trophy on its four, National\'s nine in two rows (four then five, each row in equal parts)');
@@ -236,11 +247,14 @@ const fresh = () => {                                       // a new game on the
   ok(H.tier() === 2, 'the tier on show starts on My Team\'s (Farnham: Local)');
   // each competition's team screen: only its sides, and Back comes back to it
   const P = T.picker, comp = () => P.view(0).ladder[0], cards = () => comp().teams.length, panel = () => $('t-side0').innerHTML;
-  for (const l of X.TEAM_LISTS.filter(l => l.tier > 0)) {
+  const plays = l => (T.local ? T.local.listPlays(l) : l.teams);   // a list's own sides (LOCAL: Surrey's without Aldershot, shown under Hampshire)
+  for (const l of X.TEAM_LISTS.filter(l => l.tier > 0 && l.key !== 'cty')) {   // Counties (a saved key) is Surrey's now: below
     H.setTier(l.tier); H.open('champ'); H.champPick(l.key);
-    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && P.one() && P.view(0).ladder.map(g => g.key).join() === 'comp,mine.made' && cards() === l.teams.length && l.teams.every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === l.name && P.where(comp()) === X.TEAM_TIERS[l.tier], `${l.name}: its ${l.teams.length} sides only, one side, ${X.TEAM_TIERS[l.tier]} over ${l.name}`);
+    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && P.one() && P.view(0).ladder.map(g => g.key).join() === 'comp,mine.made' && cards() === plays(l).length && plays(l).every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === l.name && P.where(comp()) === X.TEAM_TIERS[l.tier], `${l.name}: its ${plays(l).length} sides only, one side, ${X.TEAM_TIERS[l.tier]} over ${l.name}`);
     $('t-back').click(); ok(shown() === 's-home' && H.step() === 'champ', `${l.name}: Back to Menu comes back to Competitions`);
   }
+  H.setTier(2); H.open('champ'); H.champPick('cty');
+  ok(X.teamPool() === 'sur' && comp().name === 'Surrey' && X.COUNTIES.every(t => comp().teams.includes(t)), 'a Counties championship (a saved key) opens Surrey\'s, which has its sides'); D.goHome();
   H.setTier(null); D.goHome();
   H.champPick('int');
   ok(X.teamPool() === 'int' && cards() === 12 && X.natList('men').every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === 'International' && P.view(0).team.id === 'ENG' && $('t-go').textContent === 'Play as England', 'International Championship: the twelve, England (My Team\'s country) on show, Play as England');
@@ -277,7 +291,7 @@ const fresh = () => {                                       // a new game on the
   K.set(null);
   // My League: Local, with an import
   I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id })) }); D.goHome(); H.setTier(2); H.open('champ');
-  ok(comps(2) === 'sur,cty,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey and Counties');
+  ok(comps(2) === 'sur,county,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey and Other County');
   H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship' && comp().name === 'My League' && P.where(comp()) === 'Local', 'My League\'s team screen, Local over My League');
   // the European Cup is still reached by winning a European league
   fresh(); H.champPick('eng'); D.pickTeam(X.ENGLAND[0]);
@@ -296,8 +310,8 @@ const fresh = () => {                                       // a new game on the
   // Play: My Team set on the left, the Opponent its league's rival, set, the side ready to change; Kick Off one press away
   const P = T.picker;
   $('b-continue').click();
-  ok(shown() === 's-teams' && D.pickMode() === 'quick' && P.state().sides[0].set && P.view(0).team === X.CLUBS[0] && P.state().on === 1 && P.view(1).team.id === 'WIM' && P.state().sides[1].set && $('t-go').textContent === 'Kick Off' && $('t-title').textContent === 'Pick Opponent', `Play: Farnham (My Team) set on the left, Wimbledon (its league's rival) on the right, that side active, Kick Off (${$('t-go').textContent}, ${P.view(1).team.name})`);
-  P.step(1, 1); ok(!P.state().sides[1].set && /^Pick /.test($('t-go').textContent) && P.view(1).team.id !== 'WIM', 'the Opponent changes with a move, freed to pick again');
+  ok(shown() === 's-teams' && D.pickMode() === 'quick' && P.state().sides[0].set && P.view(0).team === X.CLUBS[0] && P.state().on === 1 && P.view(1).team.id === 'OAE' && P.state().sides[1].set && $('t-go').textContent === 'Kick Off' && $('t-title').textContent === 'Pick Opponent', `Play: Farnham (My Team) set on the left, Old Alleynians (its league's first rival in Surrey's order, LOCAL) on the right, that side active, Kick Off (${$('t-go').textContent}, ${P.view(1).team.name})`);
+  P.step(1, 1); ok(!P.state().sides[1].set && /^Pick /.test($('t-go').textContent) && P.view(1).team.id !== 'OAE', 'the Opponent changes with a move, freed to pick again');
   const demo = T.M; $('t-back').click();
   D.settings().myClub = 'BTH'; D.settings().pick = [{ id:'FAR', cat:'men', g:'sur' }, { id:'GLO', cat:'men', g:'eng' }]; D.goHome(); $('b-continue').click();
   ok(P.view(0).team.id === 'BTH' && P.state().sides[0].set && P.view(1).team.id === 'GLO' && P.state().sides[1].set && $('t-go').textContent === 'Kick Off', 'Play: My Team\'s club (Bath), never the last Your Team, and the last Opponent (Gloucester) kept');
@@ -348,7 +362,7 @@ const fresh = () => {                                       // a new game on the
   $('b-my').click(); $('pf-team').click();   // My Profile, then My Team's picker on it (src/profile.js)
   const P6 = T.picker, v6 = () => P6.view(0), to6 = (n, key) => { P6.group(n, P6.view(n).ladder.findIndex(g => g.key === key) - P6.view(n).gi); return P6.view(n); }, mineTag = n => /<span class="gap mine">My Team<\/span>/.test($('t-side' + n).innerHTML);
   ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && P6.one() && v6().group.key === 'sur' && v6().ladder.some(g => g.key === 'nat.eng') && v6().ladder.some(g => g.key === 'fra') && $('t-go').textContent === 'Done', 'My Team: Pick Your Club on its group, the whole ladder to look anywhere, Done while the club is it');
-  ok(v6().team.id === 'FAR' && mineTag(0) && v6().ladder.find(g => g.key === 'mine.made').teams.some(t => t.act === 'create') && v6().ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'Farnham marked My Team, Create Team and Add Your Team in Mine');
+  ok(v6().team.id === 'FAR' && mineTag(0) && v6().ladder.find(g => g.key === 'mine.made').teams.some(t => t.act === 'create') && v6().ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'Farnham marked My Team, Create Team and Add Your Team in My Clubs');
   to6(0, 'eng'); P6.go();
   ok(D.settings().myClub === 'BTH' && saved().settings.myClub === 'BTH' && shown() === 's-teams' && $('t-title').textContent === 'Pick Your Country' && v6().team.id === 'ENG', 'a club picked: Bath, saved, the screen stays and moves on to the country');
   ok(v6().ladder.filter(g => g.key.startsWith('nat.')).length === 12 && !v6().ladder.some(g => g.teams.some(t => t.legend)), 'the countries: the category\'s twelve, no Legend');
@@ -386,21 +400,23 @@ const fresh = () => {                                       // a new game on the
   to6(0, 'nat.wal');
   ok(v6().team.id === 'WAL' && mineTag(0) && !P6.state().sides[0].set, 'International: Wales, its National group, marked My Team');
   to6(0, 'sur');
-  ok(v6().group.teams.map(t => t.id).join() === X.CLUBS.map(t => t.id).join() && !mineTag(0), 'a group without it: as it was, unmarked');
+  const SURG = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'sur').teams.filter(t => t.id !== 'ALD')).map(t => t.id);   // Surrey's group as it shows (LOCAL): every Surrey club, its pyramid's order
+  ok(v6().group.teams.map(t => t.id).join() === SURG.join() && !mineTag(0), 'a group without it: as it was, unmarked');
   D.pickTeam(X.CLUBS[2]);
   ok($('t-title').textContent === 'Pick Opponent' && P6.state().sides[0].set && v6().team.id === 'GUI' && T.M === demo, 'another side picked: his; now the opponent');
   to6(1, 'eng');
   ok(P6.view(1).group.teams.map(t => t.id).join() === X.ENGLAND.map(t => t.id).join() && !mineTag(1), 'the opponents\' groups: in their own order, nothing marked');
   {
-    const list = () => T.yourTeam.teamList(), ids = () => list().map(t => t.id), sur = X.CLUBS.map(t => t.id);
+    const list = () => T.yourTeam.teamList(), ids = () => list().map(t => t.id), sur = SURG;
     D.settings().pick = [null, null]; D.openTeams('quick'); to6(0, 'sur'); D.pickTeam(X.CLUBS[0]);
     const opp = P6.view(1).team;
-    ok($('t-title').textContent === 'Pick Opponent' && ids()[0] === 'WIM' && !ids().includes('FAR') && opp.id === 'WIM' && opp.league === X.CLUBS[0].league && X.overallOf(X.CLUBS[0]) - X.overallOf(opp) <= 3, `Farnham picked: the Opponent opens on Wimbledon, his own league's, and never shows Farnham (${ids().slice(0, 3).join(' ')}, ${X.overallOf(X.CLUBS[0])} v ${X.overallOf(opp)})`);
-    ok(ids().length === sur.length - 1 && [...ids()].sort().join() === sur.filter(id => id !== 'FAR').sort().join() && ids().filter(id => id !== 'WIM').join() === sur.filter(id => id !== 'WIM' && id !== 'FAR').join(), 'only the order changes: the same sides bar his own, the rest in the list\'s own order');
-    to6(1, 'cty'); const c = ids();
-    ok(c.join() === X.COUNTIES.map(t => t.id).join(), `a group without a rival of his: in its own order (${c.slice(0, 3).join(' ')})`);
-    D.settings().pick = [null, null]; D.openTeams('quick'); to6(0, 'sur'); D.pickTeam(X.CLUBS.find(t => t.id === 'GDN'));
-    ok(ids().join() === sur.filter(id => id !== 'GDN').join(), 'a side with no rival in its group leaves the group as it is (Guildfordians on Surrey)');
+    const rivals = ['OAE', 'WIM', 'CAE'];   // Regional 1 South Central's other Surrey clubs, in Surrey's order (LOCAL): Old Alleynians 4th, Wimbledon 9th, Camberley 12th
+    ok($('t-title').textContent === 'Pick Opponent' && ids().slice(0, 3).join() === rivals.join() && !ids().includes('FAR') && opp.id === 'OAE' && opp.league === X.CLUBS[0].league && X.overallOf(X.CLUBS[0]) - X.overallOf(opp) <= 3, `Farnham picked: the Opponent opens on his own league's (Old Alleynians), and never shows Farnham (${ids().slice(0, 3).join(' ')}, ${X.overallOf(X.CLUBS[0])} v ${X.overallOf(opp)})`);
+    ok(ids().length === sur.length - 1 && [...ids()].sort().join() === sur.filter(id => id !== 'FAR').sort().join() && ids().filter(id => !rivals.includes(id)).join() === sur.filter(id => !rivals.includes(id) && id !== 'FAR').join(), 'only the order changes: the same sides bar his own, the rest in the list\'s own order');
+    to6(1, 'cum'); const c = ids();
+    ok(c.join() === T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'cum').teams).map(t => t.id).join(), `a group without a rival of his: in its own order (Cumbria: ${c.slice(0, 3).join(' ')})`);
+    D.settings().pick = [null, null]; D.openTeams('quick'); to6(0, 'sur'); D.pickTeam(X.ALL_TEAMS.find(t => t.id === 'RPA'));   // LOCAL: Guildfordians has Counties 5 Surrey's sides beside it now; Rosslyn Park is Surrey's one National League 1 club
+    ok(ids().join() === sur.filter(id => id !== 'RPA').join(), 'a side with no rival in its group leaves the group as it is (Rosslyn Park on Surrey)');
   }
   // 2 Players (off the home; its own entry, openJoin): Player 1's list only
   D.settings().pick = [null, null]; D.openJoin(); D.openTeams('two');
@@ -431,8 +447,9 @@ const fresh = () => {                                       // a new game on the
   const R5 = T.ratings, box = () => [$('my-name').textContent, $('my-stars').innerHTML, $('my-league').innerHTML.replace(/<[^>]+>/g, '')];
   const at = id => { D.settings().myClub = id; D.goHome(); return box(); };
   let r = box();
-  ok(r[0] === 'Farnham' && r[1] === R5.starsHtml(3.5) && r[2] === 'Regional 1 South Central · 7th Last Season' && $('my-league').innerHTML === '<span>Regional 1 South Central</span><span class="sep"> · </span><span>7th Last Season</span>', `a new game: Farnham, 3.5 stars, 7th in Regional 1 South Central, the league over its place (${r.join(' | ')})`);
-  ok(R5.starsHtml(3.5).includes('aria-label="3.5 Stars"') && R5.starsOf(X.CLUBS[0]) === 3.5, 'the stars carry their words for a screen reader');
+  const FS = RERATE ? 3 : 3.5;   // Farnham's stars: 58 with the owner's rerating, 61 without
+  ok(r[0] === 'Farnham' && r[1] === R5.starsHtml(FS) && r[2] === 'Regional 1 South Central · 7th Last Season' && $('my-league').innerHTML === '<span>Regional 1 South Central</span><span class="sep"> · </span><span>7th Last Season</span>', `a new game: Farnham, ${FS} stars, 7th in Regional 1 South Central, the league over its place (${r.join(' | ')})`);
+  ok(R5.starsHtml(FS).includes(`aria-label="${FS} Stars"`) && R5.starsOf(X.CLUBS[0]) === FS, 'the stars carry their words for a screen reader');
   r = at('NTH');
   ok(r[2] === 'English Premiership · 1st Last Season' && r[0] === 'Northampton' && H.recordLine(H.myClub()) === 'Won 14 · Drew 1 · Lost 3 · 693 Scored · 536 Conceded', `Northampton: its line, and last season's record kept for the team screen and the tools (${H.recordLine(H.myClub())})`);
   ok(at('LWE')[2] === 'English Premiership · 9th Last Season' && at('COB')[2] === 'Counties 1 Surrey/Sussex · 1st Last Season' && at('MTB')[2] === 'Top 14 · 14th Last Season' && at('BED')[2] === 'English Championship · 2nd Last Season' && at('JHB')[2] === 'United Rugby Championship · 7th Last Season' && at('MBO')[2] === 'Currie Cup · 3rd Last Season', 'the ordinals read right, and every list with figures has them (England 2 and the Currie Cup too)');
@@ -528,7 +545,7 @@ const fresh = () => {                                       // a new game on the
   ok($('m-import').hidden && D.settings().myClub === club.key && H.myClub() === club && $('my-name').textContent === club.name && saved().settings.myClub === club.key, 'Make This My Team: it is, saved, in the box');
   offer();
   ok($('m-import').hidden && I.state().step !== 'mine', 'importing My Team\'s club again asks nothing');
-  ok(I.league() && I.league().teams.length === 4 && I.league().teams.every(t => /^lg-/.test(t.key)) && H.comps(2).map(c => c[0]).join() === 'sur,cty,my', 'the league comes in as ever: My League, beside Surrey and Counties');
+  ok(I.league() && I.league().teams.length === 4 && I.league().teams.every(t => /^lg-/.test(t.key)) && H.comps(2).map(c => c[0]).join() === 'sur,county,my', 'the league comes in as ever: My League, beside Surrey and Other County');
   fresh();
 }
 
@@ -939,17 +956,20 @@ async function browserChecks() {
       const tabbed = new Set();
       for (let i = 0; i < 14; i++) { await page.keyboard.press('Tab'); tabbed.add(await page.evaluate(() => document.activeElement.id)); }
       ok(['b-my', 'b-import', 'b-locker', 'b-continue', 'b-match', 'b-career', 'b-drills', 'b-set'].every(id => tabbed.has(id)), `${kind}: Tab reaches every box and My Team's three (${[...tabbed].filter(Boolean).join(' ')})`);
-      // Skill Games for each player: Men the ten, How to Play, Contact Games (U9 and Up) and For Grown-Ups; the Kids level and Minis the seven, How
+      // Skill Games for each player: Men the ten, How to Play, Contact Games (U9 and Up) and For Grown-Ups; the Kids level, Minis and a Mini (the
+      // profile's age group, on Normal and Men) the seven, How to Play and For Grown-Ups; a Junior the nine, Tackling and Ball Back in equal halves
+      // of the contact three's places, For Grown-Ups still under How to Play (the owner, 2026-11-14: "Same for scrums until adult"). The seven, How
       // to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches every button, For Grown-Ups opens its panel with
       // Back to Skill Games in the ring's reach (the step's Back put away), every game's card offers Watch How in the ring's reach, and Tab reaches
       // every button on the step
-      for (const [who, kids, cat] of [['Men', false, 'men'], ['Kids', true, 'men'], ['Minis', false, 'minis']]) {
-        const sk = await page.evaluate(([kids, cat]) => {
+      for (const [who, kids, cat, age] of [['Men', false, 'men', null], ['Kids', true, 'men', null], ['Minis', false, 'minis', null], ['Junior', false, 'men', 'junior'], ['Mini', false, 'men', 'mini']]) {
+        const sk = await page.evaluate(([kids, cat, age]) => {
           const T = window.__tryline, st = T.debug.settings(), $ = id => document.getElementById(id);
           const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
           const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
           const ringAll = () => { T.home.ring(null); const r = new Set(), q = [T.navMove(0, 0, 0)]; while (q.length) { const el = q.shift(); if (!el || r.has(el)) continue; r.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); const got = T.navMove(0, dx, dy); if (got && !r.has(got)) q.push(got); } } return r; };
           const seen = st.drillSeen.slice(); st.drillSeen = T.drills.DRILLS.map(d => d.id);   // no Watch How playing on a card's first open
+          const was = T.profile.get(); T.profile.set({ age, gender:null, look:null });
           st.kids = kids; st.diff = kids ? 0 : 1; st.cat = cat; T.debug.goHome(); T.home.open('drills'); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
           const s = $('s-home'), panel = $('hp-drills'), btns = [...panel.querySelectorAll('.btn')].filter(vis);
           const games = btns.filter(b => T.drills.DRILLS.some(d => 'pr-' + d.id === b.id)).map(b => b.id.slice(3));
@@ -962,15 +982,20 @@ async function browserChecks() {
           const gp = $('pr-grownups'), back = $('pr-grown-back'), grown = vis(gp) && !vis($('pr-games')) && !vis($('hs-back')) && ringAll().has(back) && (T.navBack(0), vis($('pr-games')) && !vis(gp) && vis($('hs-back')));
           const watch = games.filter(id => { T.practice.start(id); const w = $('pr-watch'), good = vis(w) && w.textContent === 'Watch How' && ringAll().has(w); T.practice.choose(); return !good || T.home.step() !== 'drills'; });
           T.home.ring(null); T.debug.goHome(); T.home.open('drills');
-          const out = { games, contact:!$('pr-contact').hidden && !$('pr-contact').closest('[hidden]'), fits:s.scrollHeight <= s.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, over, small, cut, unreached, grown, watch, help:vis($('b-help')), grownBtn:vis($('pr-grown')), ids:btns.map(b => b.id) };
-          st.drillSeen = seen;
+          const e = id => { const q = box($(id)); return { l:q.left, r:q.right, t:q.top, w:q.width }; }, near = (a, b) => Math.abs(a - b) < 1;
+          const lined = !vis($('pr-tackle')) || (({ tackle:a, back:b, scrum:c, pass:p, kick:k, defend:d, 'b-help':h, 'pr-grown':g }) => vis($('pr-scrum'))
+            ? near(a.l, p.l) && near(a.r, p.r) && near(c.l, k.l) && near(c.r, k.r) && near(b.l, d.l) && near(b.r, d.r) && near(g.l, h.l) && near(g.r, h.r)
+            : near(a.t, b.t) && near(a.w, b.w) && near(a.l, p.l) && near(b.r, d.r) && near(g.l, h.l) && near(g.r, h.r) && near(g.t, a.t))(Object.fromEntries(['tackle', 'back', 'scrum', 'pass', 'kick', 'defend'].map(id => [id, vis($('pr-' + id)) ? e('pr-' + id) : null]).concat([['b-help', e('b-help')], ['pr-grown', e('pr-grown')]])));
+          const out = { games, contact:!$('pr-contact').hidden && !$('pr-contact').closest('[hidden]'), fits:s.scrollHeight <= s.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, over, small, cut, unreached, grown, watch, help:vis($('b-help')), grownBtn:vis($('pr-grown')), ids:btns.map(b => b.id), lined };
+          st.drillSeen = seen; T.profile.set(was);
           return out;
-        }, [kids, cat]);
+        }, [kids, cat, age]);
         await page.evaluate(() => { document.activeElement && document.activeElement.blur(); });
         const tabbed = new Set();
         for (let i = 0; i < 40; i++) { await page.keyboard.press('Tab'); const at = await page.evaluate(() => { const a = document.activeElement; return a && document.getElementById('hp-drills').contains(a) ? a.id : null; }); if (at) tabbed.add(at); }
-        const young = kids || cat === 'minis', open = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'];
-        ok(json(sk.games) === json(young ? open : open.concat(['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skill Games shows ${young ? 'the seven open games, no Contact Games' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
+        const young = kids || cat === 'minis' || age === 'mini', open = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'], junior = !young && age === 'junior';
+        ok(json(sk.games) === json(young ? open : open.concat(junior ? ['tackle', 'back'] : ['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skill Games shows ${young ? 'the seven open games, no Contact Games' : junior ? 'the nine, Tackling and Ball Back under Contact Games (U9 and Up), no Driving' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
+        ok(sk.lined, `${kind} ${who}: the contact row keeps the lines of the rows above: ${junior ? 'Tackling and Ball Back in equal halves from Create a Gap\'s left edge to Defend a Breakaway\'s right, For Grown-Ups beside them under How to Play, no gap where Driving was' : 'the three under Create a Gap, Kicking and Defend a Breakaway, For Grown-Ups under How to Play'}`);
         ok(sk.fits && !sk.over.length && !sk.small.length && !sk.cut.length, `${kind} ${who}: Skill Games fits with no page scroll, every button 44px and more, none over another, no name cut off (${[...sk.over, ...sk.small, ...sk.cut].join(', ') || 'all clear'})`);
         ok(!sk.unreached.length, `${kind} ${who}: the ring reaches every button on Skill Games and its Back (${sk.unreached.join(', ') || 'all'})`);
         ok(sk.grown, `${kind} ${who}: For Grown-Ups opens its panel with Back to Skill Games in the ring's reach, the step's Back put away, and B (Back to Skill Games) shuts it, the step's Back again`);
@@ -1064,7 +1089,7 @@ async function browserChecks() {
       await page.keyboard.press('PageDown'); keys.push(await page.evaluate(() => window.__tryline.picker.view(0).group.key));
       await page.keyboard.press('Enter'); keys.push(await focusAt());
       await page.keyboard.press('Shift+Tab'); keys.push(await focusAt());
-      ok(json(keys) === json(['WIM', 't-side0 pick', 'nat.sco', 't-side1 pick', 't-side1 fav']), `${kind}: the keyboard: Left on Your Team (Wimbledon, from Farnham, round the end), Page Down a country (Scotland), Enter sets it onto the Opponent's card, and back from it is the Opponent's Favourite (${json(keys)})`);
+      ok(json(keys) === json(['FEL', 't-side0 pick', 'nat.sco', 't-side1 pick', 't-side1 fav']), `${kind}: the keyboard: Left on Your Team (Feltham, Surrey's last in its pyramid's order with LOCAL, from Farnham, round the end), Page Down a country (Scotland), Enter sets it onto the Opponent's card, and back from it is the Opponent's Favourite (${json(keys)})`);
       // a side picked, and a team made, move on as a card would; the ring the same
       const sides = await page.evaluate(() => {
         const T = window.__tryline, P = T.picker, $ = i => document.getElementById(i), out = [];
@@ -1080,7 +1105,7 @@ async function browserChecks() {
       await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp'); club.push(await page.evaluate(() => window.__tryline.picker.view(0).group.key));
       await page.keyboard.press('Enter'); club.push(await page.evaluate(() => [document.getElementById('s-career-new').hidden ? 'teams' : 'new player', window.__tryline.career.draft().club.id, window.__tryline.career.draft().league].join(' ')));
       await page.evaluate(() => { const T = window.__tryline; T.home.ring(null); T.career.set(null); T.debug.goHome(); });
-      ok(json(club) === json(['cty', 'en2', 'new player EAL en2']), `${kind}: the career's club screen too: Down to Counties, Up to England's Championship, Enter picks Ealing, of England 2 (${json(club)})`);
+      ok(json(club) === json(['brk', 'en2', 'new player EAL en2']), `${kind}: the career's club screen too: Down to Berkshire (the county after Surrey, LOCAL), Up to England's Championship, Enter picks Ealing, of England 2 (${json(club)})`);
       // a controller: the first press on Your Team's card; the d-pad drives it; X or Y lifts the ring onto the side's buttons, and from the
       // first press the ring reaches every button on the screen, in Quick Match, Championship (Play as among them), the career's club screen
       // and My Team (re-pinned 2026-11-11: the search starts at the first press and goes on from the cards too)
@@ -1106,7 +1131,7 @@ async function browserChecks() {
         T.home.ring(null); D.goHome();
         return out;
       });
-      ok(json(pad) === json(['t-side0 pick', 'cty', 't-side0 pick', 't-side0 sheet', 't-side0 pick', 't-side0 pick []', 't-side0 pick []', 't-side0 pick []', 't-side0 pick []']), `${kind}: a controller: the first press on Your Team's card, Down its next group with the ring kept on it, Y onto its group's button and back; from the first press the ring reaches every button in Quick Match, Championship, the career's club screen and My Team (${json(pad)})`);
+      ok(json(pad) === json(['t-side0 pick', 'brk', 't-side0 pick', 't-side0 sheet', 't-side0 pick', 't-side0 pick []', 't-side0 pick []', 't-side0 pick []', 't-side0 pick []']), `${kind}: a controller: the first press on Your Team's card, Down its next group with the ring kept on it, Y onto its group's button and back; from the first press the ring reaches every button in Quick Match, Championship, the career's club screen and My Team (${json(pad)})`);
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }

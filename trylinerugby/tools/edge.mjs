@@ -5,7 +5,7 @@
 // node tools/edge.mjs           (SEED=17 unless set; VERBOSE=1 lists every check)
 // node tools/edge.mjs --pins    prints this build's fingerprints with EDGE off; GAME=<90353c3>/index.html node tools/edge.mjs --pins pinned BASE
 process.env.SEED ??= '17';
-const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 const { LB, PROFILES, casualStep } = await import('./bot.mjs');   // the casual adult, and the Line Break rule bot.mjs watches from outside
 const X = T.teams, D = T.debug, E = T.edge, C = T.career, STEP = T.STEP, M = () => T.M, $ = id => document.getElementById(id);
 let passed = 0, failed = 0, group = '';
@@ -57,12 +57,30 @@ const WITH_KNOCK = { same:'1sans4x ishkxt 6s5dj3 b3clyy 1vdlusf 1kqx1dl 1r9icc0'
 const WITH_CALLS = { same:'1ru8ljp g0q4ru 1wmj5sn c1ybz5 fqhmon h0aw10 frfp5z', easy:'1x1rx2c 1id9kca 16by8my' };
 const WITH_CHASE = { same:'1sans4x ishkxt 6s5dj3 34tecb 1vdlusf 1kqx1dl 16d6tkt', easy:'8j1x8w 3aqbkz 1r5myg1' };
 const SHIPS = { same:'1ru8ljp g0q4ru 1wmj5sn 1kps42k fqhmon h0aw10 1332o5j', easy:'1x1rx2c 1id9kca 16by8my' };
+/* The owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Farnham, Haslemere and
+   Wimbledon, a step down, play three of these matches, so every pin above moves with it. In that world the chain is checked in children:
+   with LOCAL off (1.6) and with the rerating off (8089294) this build gives BASE, ON and SHIPS exactly, and LOCAL off every pin above as it
+   did (rerateProofs). Here the edge's own claims are checked again (EDGE on leaves SAME where EDGE off has it, and moves EASY) and the
+   world's own pins are R_BASE, R_ON and R_SHIPS. */
+const R_BASE = { same:'1hzoeux ishkxt w5sz4v a3ytt3 1a6etmy xsjv6d 16fylst', easy:'lwmcb9 h2wwgi 15evn0w' }, R_ON = 'omto7e wjfo1c 1pas51w';
+const R_SHIPS = { same:'1ru8ljp g0q4ru q4pz7f 1kps42k fqhmon tf69zl u8h0sf', easy:'1x1rx2c wjfo1c 1ubzdoa' };
+const line = (off, on, ships) => [off.same, off.easy, on.easy, ships.same, ships.easy].join(' / ');
 if (process.argv.includes('--pins')) {
   if (E) E.EDGE.on = false; if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
   const p = pins(); console.log(`same:'${p.same}', easy:'${p.easy}'`); process.exit(0);
 }
 begin('0 EDGE off is 90353c3');
-{
+if (LOCAL_ON) {
+  if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
+  E.EDGE.on = false; const off = pins(); E.EDGE.on = true; const on = pins();
+  if (KN) KN.on = true; if (CL) CL.on = CL0; if (CS) CS.on = CS0; const ships = pins();
+  if (LOCAL_CHILD) { console.log(line(off, on, ships)); process.exit(failed ? 1 : 0); }   // the rerating off child (rerateProofs): 8089294's pins
+  await rerateProofs(new URL(import.meta.url), line(BASE, { easy:ON }, SHIPS), ok);
+  const b = RERATE ? [R_BASE, R_ON, R_SHIPS] : [BASE, ON, SHIPS];
+  ok(off.same === b[0].same && off.easy === b[0].easy && on.same === off.same, `EDGE off (and the knock-ons, the possession calls and the kick chase), and EDGE on leaves AI v AI, the demo, a tool's balance match on Easy, Normal and Hard arcade matches and Two Player on Easy where it has them (${off.same} / ${off.easy}, pinned ${b[0].same} / ${b[0].easy})`);
+  ok(on.easy.split(' ').slice(0, 2).every((h, i) => h !== off.easy.split(' ')[i]) && on.easy === b[1], `EDGE on moves the Easy Quick Match and the Kids match, on purpose, as pinned (${on.easy}, pinned ${b[1]})`);
+  ok(ships.same === b[2].same && ships.easy === b[2].easy, `and with the knock-ons, the possession calls and the kick chase, as the game ships (${ships.same} / ${ships.easy}, pinned ${b[2].same} / ${b[2].easy})`);
+} else {
   if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
   E.EDGE.on = false; const off = pins(); E.EDGE.on = true; const on = pins();
   if (KN) KN.on = true;
@@ -78,6 +96,7 @@ begin('0 EDGE off is 90353c3');
   ok(calls.same === WITH_CALLS.same && calls.easy === WITH_CALLS.easy, `and with the possession calls, the kick chase off, as wt/calls (a032b3a) (${calls.same} / ${calls.easy}, pinned ${WITH_CALLS.same} / ${WITH_CALLS.easy})`);
   ok(chase.same === WITH_CHASE.same && chase.easy === WITH_CHASE.easy, `and with the kick chase, the possession calls off, as wt/chase (fc90ec0) (${chase.same} / ${chase.easy}, pinned ${WITH_CHASE.same} / ${WITH_CHASE.easy})`);
   ok(ships.same === SHIPS.same && ships.easy === SHIPS.easy, `and with the possession calls and the kick chase both, as the game ships (${ships.same} / ${ships.easy}, pinned ${SHIPS.same} / ${SHIPS.easy})`);
+  if (LOCAL_CHILD) { console.log(line(off, on, ships)); process.exit(failed ? 1 : 0); }   // the LOCAL off child (rerateProofs): 1.6's pins, the chain checked above
 }
 done('0 EDGE off is 90353c3');
 

@@ -114,7 +114,12 @@ for (const [id, role, name, react, plan, spam] of SLOW) {
   if (row.spam) { ok(row.best.mean > row.spam.mean, name + ': the habit beats spamming the right button (' + showMean(row.best) + ' to ' + showMean(row.spam) + ')'); ok(planned >= row.spam.mean, name + ': and so does a slow child playing it (' + planned.toFixed(2) + ' to ' + showMean(row.spam) + ')'); }
 }
 console.log('Slow child, stars at 0.4/0.6/0.8 s lag, 20 runs. ' + slowRows.join('; '));
-ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase: following the cue at 0.8 s beats a blind wiggle (' + showMean(slowAt['Tag Chase']['r0.8']) + ' to ' + showMean(slowAt['Tag Chase'].spam) + ')');
+// Tag Chase's reps get harder as they go for everyone but the youngest (DRILL_TAG.ramp, tools/tagchase.mjs): from Easy up, a 0.8 s dodge
+// is too late after the first rep or two, by design. These two pinned the old flat game, a child's, so they run where a child plays it now,
+// at the Kids level, which tools/tagchase.mjs proves is that game step for step
+const youngest = fn => { const S = D.settings(), was = { diff:S.diff, kids:S.kids }; S.diff = 0; S.kids = true; try { return fn(); } finally { S.diff = was.diff; S.kids = was.kids; } };
+{ const [r, spam] = youngest(() => [stars('tag', null, lagOut(() => SLOW[0][3](0.8), 0.8), 20), stars('tag', null, SLOW[0][5], 20)]);
+  ok(r.mean > spam.mean, 'Tag Chase at the Kids level: following the cue at 0.8 s beats a blind wiggle (' + showMean(r) + ' to ' + showMean(spam) + ')'); }
 
 /* ---------- each cheap route the review found, and the slow play it beat ---------- */
 { // Circle, Passer: a tap 0.4 s late clears the first round, and spam does not
@@ -146,7 +151,7 @@ ok(slowAt['Tag Chase']['r0.8'].mean > slowAt['Tag Chase'].spam.mean, 'Tag Chase:
   const kept = make => { let k = 0, n = 0; stars('tag', null, make, 20, st => { k += st.tag.kept; n += 3; }); return k/n; };
   const wiggle = kept(() => { let t = 0, y = 0; return st => { const G = st.tag; if (G.stage !== 'play') { stick(0, 0); return; } if (G.rep % 2 === 1) { if (t-- <= 0) { t = 12; y = Math.random()*2 - 1; } stick(1, y); } else stick(0, 0); }; });
   ok(wiggle <= 0.3, 'Tag Chase: running forward with a random stick keeps few tags (' + Math.round(wiggle*100) + '%)');
-  for (const l of [0.5, 0.6, 0.8]) { const r = kept(() => tagBot(l)); ok(r >= 0.9, 'Tag Chase: a dodge ' + l + ' s after they go still keeps the tags (' + Math.round(r*100) + '%)'); } }
+  for (const l of [0.5, 0.6, 0.8]) { const r = youngest(() => kept(() => tagBot(l))); ok(r >= 0.9, 'Tag Chase at the Kids level: a dodge ' + l + ' s after they go still keeps the tags (' + Math.round(r*100) + '%)'); } }
 
 /* ---------- the single habit each game names beats the same player without it ---------- */
 { const moved = stars('egg', null, () => eggChase(0.2)), waited = stars('egg', null, eggWaits);
@@ -688,7 +693,7 @@ P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the gr
   ok(!/try it|you try\b/i.test(demoSrc.replace(/\/\/.*$/gm, '')), 'Watch How never invites trying it');
   const panel = html.slice(html.indexOf('id="pr-grownups"'), html.indexOf('id="pr-grown-back"'));
   ok(/no scrums/.test(panel) && /Driving and the placing in Ball Back go further than under-9s play/.test(panel), 'the panel says plainly where Contact Games go beyond under-9');
-  ok(/only a grown-up can leave the Kids level/.test(panel) && /The Kids level and Minis hide Contact Games/.test(panel), 'and how the youngest are kept out');
+  ok(/a Mini is asked to be sure before leaving Minis/.test(panel) && !/only a grown-up can leave the Kids level/.test(panel) && /The Kids level and Minis hide Contact Games/.test(panel), 'and how the youngest are kept out');
 }
 { // Watch How: the last word and the coach line
   for (const id of CONTACT) { D.settings().drillSeen = []; H.reseed(11); P.start(id); ok(!$('demo-coach').hidden && html.includes('<em id="demo-coach" hidden>' + X.COACH + '</em>'), id + ': Watch How shows the coach line, since a first open plays before any card'); let last = '', n = 0; while (P.state() && P.state().demo && n++ < 20000) { last = $('demo-step').textContent; T.update(STEP); } ok(last === 'Now Play It', id + ': it ends on Now Play It (' + last + ')'); P.leave(); }

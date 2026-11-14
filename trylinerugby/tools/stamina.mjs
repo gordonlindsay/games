@@ -8,6 +8,7 @@ const { T, reseed } = await import('./harness.mjs');
 const S = T.stamina, X = T.teams, C = T.contact, A = T.arcade, D = T.debug, STEP = T.STEP, $ = id => document.getElementById(id);
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else failed++; if (!cond || process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };   // VERBOSE=1 prints the passes too
+const json = JSON.stringify;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const KEYS = ['pace', 'power', 'handling', 'kicking', 'stamina'];
 const sum = t => KEYS.reduce((a, k) => a + t[k], 0);
@@ -101,12 +102,16 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 {
   // re-pinned for the side-by-side team screen (2026-11-11): one team a side, its five bars, each of every side in the group in turn
   D.openTeams('champ');
-  const PK = T.picker, side = () => $('t-side0').innerHTML, n = PK.view(0).group.teams.length;
+  const PK = T.picker, side = () => $('t-side0').innerHTML, grp = PK.view(0).group, n = grp.teams.length;
   const farnham = side();
   let five = 0;
   for (let i = 0; i < n; i++) { const h = side(); if ((h.match(/class="pk-st"/g) || []).length === 5 && /<span class="lbl">Pace<\/span>.*<span class="lbl">Power<\/span>.*<span class="lbl">Handling<\/span>.*<span class="lbl">Kicking<\/span>.*<span class="lbl">Stamina<\/span>/.test(h)) five++; PK.step(0, 1); }
-  ok(five === n && n === 12, `every side shows five ability bars, Stamina among them (${five} of ${n} sides)`);
-  ok(new RegExp(`<span class="lbl">Kicking</span>.*?<span class="lbl">Stamina</span><span class="pk-bar" role="img" aria-label="Stamina ${X.CLUBS[0].stamina} of 5">`).test(farnham) && farnham.includes('>Farnham<') && X.CLUBS[0].stamina === 2, `Stamina is the last bar, Farnham at its own (${X.CLUBS[0].stamina}, as rated from its table; the old card check matched any side at 3)`);
+  const want = T.local && T.local.LOCAL.on ? [34, 'RPA', 'FEL'] : [12, 'FAR', 'WIM'], got = [n, grp.teams[0].id, grp.teams[n - 1].id];   // Surrey's championship: every Surrey club with LOCAL (Aldershot, shown under Hampshire, plays there), Rosslyn Park first, Feltham last; its twelve without
+  ok(five === n && json(got) === json(want), `every side shows five ability bars, Stamina among them (${five} of ${n} sides: Surrey's, ${got.slice(1).join(' to ')}, pinned ${want.join(', ')})`);
+  // LOCAL (the owner, 14 Nov 2026: Regional 1 and every level under it a step down): Farnham 58, so its Stamina 1, and Regional 1's level
+  // 58, 6 points and 3 stars, Counties 1's 49 and 3, as PR #14 had them (05886e6); LOCAL off, the real order's 61 and 52, as 1.6 pinned them
+  const L7 = !!(T.local && T.local.LOCAL.on && T.local.LOCAL.rerate), FAR_ST = L7 ? 1 : 2, R1 = L7 ? [58, 6, '3 Stars'] : [61, 7, '3.5 Stars'];
+  ok(new RegExp(`<span class="lbl">Kicking</span>.*?<span class="lbl">Stamina</span><span class="pk-bar" role="img" aria-label="Stamina ${X.CLUBS[0].stamina} of 5">`).test(farnham) && farnham.includes('>Farnham<') && X.CLUBS[0].stamina === FAR_ST, `Stamina is the last bar, Farnham at its own (${X.CLUBS[0].stamina}, pinned ${FAR_ST}, as rated from its table; the old card check matched any side at 3)`);
   S.openBuilder(null);
   ok(S.draft().stamina === 1 && KEYS.every(k => S.draft()[k] === 1), 'a new team starts at 1 in all five');
   ok($('bd-left').textContent === 'Points Left 12' && /aria-label="1 of 5"/.test($('bd-p-stamina').innerHTML), `the builder has a Stamina row and 12 points (${$('bd-left').textContent})`);
@@ -120,15 +125,15 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   S.builderLevel('r1');
   ok(S.draft().level === 'r1' && !S.levelChoosing() && $('bd-levels').hidden && !$('bd-form').hidden && !$('bd-save').hidden, 'choosing one opens the rest');
   // re-pinned at the real order (2026-11-09): Regional 1 is Farnham's 61, 7 points and 3.5 stars (was 58, 6 and 3)
-  ok($('bd-left').textContent === 'Points Left 0' && $('bd-level-name').textContent === 'Regional 1 · 3.5 Stars' && X.overallOf(S.draft()) === 61, `the level sets the ability: Regional 1's 7 points are shared out, and it is already its own 61 and 3.5 stars (${$('bd-left').textContent}, ${$('bd-level-name').textContent}, ${X.overallOf(S.draft())})`);
+  ok($('bd-left').textContent === 'Points Left 0' && $('bd-level-name').textContent === 'Regional 1 · ' + R1[2] && X.overallOf(S.draft()) === R1[0], `the level sets the ability: Regional 1's ${R1[1]} points are shared out, and it is already its own ${R1[0]} and ${R1[2].toLowerCase()} (${$('bd-left').textContent}, ${$('bd-level-name').textContent}, ${X.overallOf(S.draft())})`);
   ok($('bd-level-note').textContent === 'Your points are shared out. Take one off an ability to add it to another.', `and says so (${$('bd-level-note').textContent})`);
   S.draft().pace--; S.renderBuilder();
-  ok($('bd-left').textContent === 'Points Left 1' && $('bd-level-note').textContent === 'Spend 1 more point to reach 3.5 Stars.', `a point taken off and not put back says why the shirt reads under the level (${$('bd-level-note').textContent})`);
-  Object.assign(S.draft(), { pace:4, power:2, handling:2, kicking:2, stamina:2 }); S.renderBuilder();
+  ok($('bd-left').textContent === 'Points Left 1' && $('bd-level-note').textContent === `Spend 1 more point to reach ${R1[2]}.`, `a point taken off and not put back says why the shirt reads under the level (${$('bd-level-note').textContent})`);
+  Object.assign(S.draft(), { pace:4, power:2, handling:2, kicking:2, stamina:L7 ? 1 : 2 }); S.renderBuilder();
   ok($('bd-left').textContent === 'Points Left 0', 'spending them all');
   S.builderLevel('c1');   // re-pinned at the real order: Counties 1 is 52, 4 points (was 49, 3), so Power keeps its 2 and Stamina comes down with Handling and Kicking
-  ok(KEYS.map(k => S.draft()[k]).join('') === '42111' && $('bd-left').textContent === 'Points Left 0' && !$('bd-level-note').hidden, `lowering the level cuts from the last in line (${KEYS.map(k => S.draft()[k]).join('')})`);
-  ok($('bd-level-note').textContent === 'Counties 1 has 4 points, so Handling, Kicking and Stamina came down.', `and says so (${$('bd-level-note').textContent})`);
+  ok(KEYS.map(k => S.draft()[k]).join('') === (L7 ? '41111' : '42111') && $('bd-left').textContent === 'Points Left 0' && !$('bd-level-note').hidden, `lowering the level cuts from the last in line (${KEYS.map(k => S.draft()[k]).join('')})`);
+  ok($('bd-level-note').textContent === (L7 ? 'Counties 1 has 3 points, so Power, Handling and Kicking came down.' : 'Counties 1 has 4 points, so Handling, Kicking and Stamina came down.'), `and says so (${$('bd-level-note').textContent})`);
   S.builderLevel('champ');   // re-pinned at the real order: PR #14's European Champions (90) went with Bordeaux's 90, so the top level is National Champions (75)
   ok($('bd-left').textContent === 'Points Left 0' && S.draft().pace >= 4 && X.overallOf(S.draft()) === 75, `raising it shares out the new points on from what is there: a level's team is its level (${KEYS.map(k => S.draft()[k]).join('')})`);
   Object.assign(S.draft(), { pace:5, power:5, handling:3, kicking:2, stamina:2 }); S.renderBuilder();

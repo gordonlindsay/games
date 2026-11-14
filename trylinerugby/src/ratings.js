@@ -23,8 +23,13 @@ const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text altern
    Championship 64 (England 2, the English Championship, with a winning record), Top Flight 72 (its best bar the champions) and National Champions 75.
    An imported National League page (England's third and fourth tiers) is Regional 1 (src/import.js). PR #14's European Champions (90, its
    Bordeaux) has gone with Bordeaux's 90: no club is above a nation, and a save holding it reads as National Champions (LEVEL_WAS).
-   The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget. */
-const TEAM_LEVELS = [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61], ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
+   The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget.
+   LOCAL (src/data.js; the owner, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Regional 1 and every
+   level under it one step down the scale, as the clubs are (CLUB_RATED below): Counties 5 40, Counties 3 43, Counties 1 49, Regional 2 52,
+   Regional 1 58 (Farnham). 40 is the scale's floor (a sum of 5, every ability 1), so Counties 5 takes it, with no points to spend. */
+const LOCAL_RERATE = LOCAL.on && LOCAL.rerate;   // LOCAL='{"rerate":false}' (tools/harness.mjs): 8089294's ratings, the proof behind the rerating's re-pins
+const TEAM_LEVELS = [...(LOCAL_RERATE ? [['c5', 'Counties 5', 40], ['c3', 'Counties 3', 43], ['c1', 'Counties 1', 49], ['r2', 'Regional 2', 52], ['r1', 'Regional 1', 58]]
+  : [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61]]), ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
   .map(([id, name, overall]) => ({ id, name, overall, stars:starsOfOverall(overall), budget:sumOfOverall(overall) - ABILITIES.length }));
 const LEVEL_WAS = { euro:'champ' };   // a level that has gone, as a save may still hold it
 const levelById = id => TEAM_LEVELS.find(l => l.id === id) || TEAM_LEVELS.find(l => l.id === LEVEL_WAS[id]) || null;
@@ -59,6 +64,8 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
      the 64 and 61 written in its list, so no Scottish side is above an England 2 side.
    - Local and Counties: PR #14's ladder a step up, so Farnham (Regional 1, 7th) is 61 and nothing local is above England 2: Regional 1
      61 to 58, Regional 2 55 to 52, Counties 1 52 to 49, Counties 3 46, Counties 5 43. Quins (no figures) stays level with Farnham, as main had it.
+     With LOCAL (the county clubs, src/data.js) every one of them is a step lower (LOCAL_STEPPED, below), so National League 1 and 2 sit above
+     Regional 1: the owner, 14 Nov 2026, "rerate the lower clubs - farnham shouldnt be as high as they are". LOCAL off, the table here, as 1.6.
    A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. Sides not here keep the abilities written in their
    list: the nations (natList), New Zealand and Japan. TEAM_LEVELS is on the same ladder. */
 const CLUB_RATED = {
@@ -73,8 +80,31 @@ const CLUB_RATED = {
   FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,                                    // Local: Regional 1 down to Counties 5
   EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,                                                                                    // Counties: Counties 3 46, Counties 5 43
 };
+/* LOCAL: the game's own Local and Counties sides one step down the scale (every step under 64 is 3), each league's place rule kept, so the
+   new clubs' ladder (LOCAL_BAND) gives the game's own seven exactly as before: Regional 1 58 to 55 (Farnham 58, Wimbledon 55), Regional 2
+   52 to 49 (Ironsides 52, Guildford 49), Counties 1 49 to 46 (Cobham and Weybridge 49, Old Ruts 46), Counties 3 43, Counties 5 40, the
+   scale's floor (a sum of 5: every ability 1). Quins stays level with Farnham, 58. Before CLUB_TUNE, so CLUB_RATED=off and =band act as ever. */
+const LOCAL_STEPPED = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:40, EFF:43, WAN:40, EGH:40, MER:40, MIT:40, FEL:40 };
+if (LOCAL_RERATE) Object.assign(CLUB_RATED, LOCAL_STEPPED);
+/* The new Local clubs (LOCAL, src/data.js) are rated from their league and place by the rule the game's own clubs already follow, which the
+   seven of them with a line from Regional 1 to Counties 1 give exactly (Farnham 7th of 12 58, Wimbledon 9th 55, Ironsides 6th of 12 52,
+   Guildford 10th 49, Cobham and Weybridge 1st and 2nd of 11 49, Old Ruts 7th 46: LOCAL_STEPPED): the top of its league's band in the top
+   seven twelfths of its table (place <= round(7n/12), n its clubs, second XVs counted), else the band's foot. National League 1 and 2 are
+   "just above Regional 1 and below England 2" (the owner, 14 Nov 2026). The one overall scale has no step between 61 and 64 (an ability sum
+   of 12 is 61 and 13 is 64: overallOf, sumOfOverall), so, asked, he had the clubs under them come down a step instead ("rerate the lower
+   clubs - farnham shouldnt be as high as they are", 14 Nov): National League 1 61, National League 2 61 or 58 by the same rule, Regional 1
+   58 or 55, Regional 2 52 or 49, Counties 1 49 or 46. Every nation stays above every club, and no Local side is above an England 2 side
+   (61, its foot, is National League's top). LOCAL_RATED is filled before CLUB_TUNE, so CLUB_RATED=off clears it too. */
+const LOCAL_BAND = LOCAL_RERATE ? [[/^National League 1\b/, [61, 61]], [/^National League 2\b/, [61, 58]], [/^Regional 1\b/, [58, 55]], [/^Regional 2\b/, [52, 49]], [/^Counties 1\b/, [49, 46]]]
+  : [[/^National League [12]\b/, [61, 61]], [/^Regional 1\b/, [61, 58]], [/^Regional 2\b/, [55, 52]], [/^Counties 1\b/, [52, 49]]];   // rerate off: 8089294's
+function localRated(t) {                           // a club's overall from its league and place, or null for a league with no band here
+  const b = t && t.league && LOCAL_BAND.find(([re]) => re.test(t.league)), n = b && LOCAL_DATA.sizes[t.league];
+  return b && n && Number.isInteger(t.place) ? (t.place <= Math.round(7*n/12) ? b[1][0] : b[1][1]) : null;
+}
+const LOCAL_RATED = {};
+for (const t of LOCAL_NEW) LOCAL_RATED[t.id] = localRated(t);
 // CLUB_TUNE
-for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));
+for (const t of ALL_TEAMS) { const ov = CLUB_RATED[t.id] ?? LOCAL_RATED[t.id]; if (ov != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(ov))); }
 
 /* ---------- ratings.json ---------- */
 let ratingsNow = RATINGS_BUNDLED, ratingsWaiting = null;   // waiting: checked and fetched, not yet used, so no pick under way changes under anyone
