@@ -6,7 +6,7 @@
 // (chosen once, never jumping, never on the other player's man, waiting for a man off the frame), your own kick's ring on a man who may
 // play it, every side's colour readable on the plate, and CALLS off playing exactly as b4a25d5, the build before, draw for draw.
 // node tools/calls.mjs              (SEED=23 unless set; VERBOSE=1 lists every check; SHOTS=<dir> moves the screenshots; NO_BROWSER=1 skips them)
-// node tools/calls.mjs --pins       prints this build's fingerprints with CALLS off; GAME=<b4a25d5>/index.html node tools/calls.mjs --pins pinned BASE
+// node tools/calls.mjs --pins       prints this build's fingerprints with CALLS (and CHASE) off; GAME=<b4a25d5>/index.html node tools/calls.mjs --pins pinned BASE
 // node tools/calls.mjs --balance [ai|bot|casual|all]   README.md's before-and-after interception tables: seeded matches with CALLS off and
 //                                   on (minutes; never in check.mjs; JOBS, CL_AI, CL_BOT, CL_CASUAL for the matches, CL_DIFFS='1' for one level)
 process.env.SEED ??= process.argv.includes('--balance') ? '7' : '23';
@@ -120,7 +120,12 @@ const KN = T.knock && T.knock.KNOCK;
    Easy, Normal and Hard, a Kids match at its ceiling and Two Player, with their random draws. CALLS on moves every one: the interception
    rules act everywhere, and the calls count their tags. BASE: GAME=<b4a25d5>/index.html node tools/calls.mjs --pins */
 const BASE = '7v2oz 1up177z 1luwyz1 jn1hak 1nn3ygy 1645i86 1obpoq6 rpe3ql rey759';   // GAME=<b4a25d5>/index.html node tools/calls.mjs --pins (2026-11-13), and this build with CALLS off
-const ON = 'tm442c 1jf7qng 1isduw e2nt7f nplown 1a1o3mj 8kx00t 1eocqcd 13sy72b';   // the same with CALLS as README.md gives it (2026-11-13): re-pin only from a change to the calls or the interception rules, on purpose
+const ON = 'tm442c 1jf7qng 1isduw e2nt7f nplown 1a1o3mj 8kx00t 1eocqcd 13sy72b';   // the same with CALLS as README.md gives it (2026-11-13), the kick chase off: wt/calls' pins (a032b3a); re-pin only from a change to the calls or the interception rules, on purpose
+// The kick chase (CHASE, src/chase.js, 2026-11-13, merged at 1.6) acts on every open-play kick: BASE and ON are run with it off (BASE b4a25d5
+// exactly, ON the calls alone as wt/calls pinned them), and SHIPS is the game as it ships at 1.6, both on (2026-11-14): re-pin only from a
+// change to the calls, the interception rules or the chase, on purpose
+const CS = T.chase && T.chase.CHASE, CS0 = !!(CS && CS.on);
+const SHIPS = 'j2z3up 1jf7qng 1isduw e2nt7f 1ad2kpp 1a1o3mj 8kx00t 1eocqcd 1su0y3m';
 const play = (seed, a, b, o, two) => { reseed(seed); T.newMatch(a, b, { halfLen:60, headless:true, humans:two ? [true, true] : [true, false], ...o }); let n = 0; while (!M().over && n < 200000) { bot(0); if (two) bot(1); T.update(STEP); n++; } return json([M().score, M().tries, M().stats, n]); };
 function pins() {
   const out = [], r0 = rndCalls();
@@ -137,15 +142,18 @@ function pins() {
   out.push(String(rndCalls() - r0));
   return out.map(fnv).join(' ');
 }
-if (run && args[0] === '--pins') { if (CL) CL.CALLS.on = false; console.log(pins()); process.exit(0); }
+if (run && args[0] === '--pins') { if (CL) CL.CALLS.on = false; if (CS) CS.on = false; console.log(pins()); process.exit(0); }
 if (!run) { /* imported */ }
 
 begin('0 CALLS off is b4a25d5');
 {
+  if (CS) CS.on = false;                                  // the calls' own proof with the kick chase off: b4a25d5 with both off, wt/calls' pins with the calls alone
   setC({ on:false }); const off = pins(); resetC(); const on = pins();
-  ok(off === BASE, `CALLS off: AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as b4a25d5, with the same draws (${off}, pinned ${BASE})`);
+  if (CS) CS.on = CS0; const ships = pins();
+  ok(off === BASE, `CALLS off (and the kick chase): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as b4a25d5, with the same draws (${off}, pinned ${BASE})`);
   ok(on.split(' ').slice(0, 8).every((h, i) => h !== BASE.split(' ')[i]), `CALLS on moves every one of them, on purpose: the interception rules act everywhere (${on})`);
-  ok(on === ON, `and plays them as pinned (${on}, pinned ${ON})`);
+  ok(on === ON, `and plays them as pinned, the kick chase off, as wt/calls (a032b3a) (${on}, pinned ${ON})`);
+  ok(ships === SHIPS, `and with the kick chase too, as the game ships at 1.6 (${ships}, pinned ${SHIPS})`);
 }
 done();
 

@@ -123,6 +123,7 @@ function maxSpeed(p) {
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
+  if (p.chase > 0) f *= chaseMul(p);                        // chasing his side's kick (src/chase.js)
   if (onFire(p.team)) f *= ARCADE.fire.speed;
   if (edgeCarry(p)) f *= EDGE.pace;                          // Easy: your carrier, a little quicker with the ball (src/edge.js)
   f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it

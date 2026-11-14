@@ -1188,6 +1188,7 @@ function maxSpeed(p) {
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
+  if (p.chase > 0) f *= chaseMul(p);                        // chasing his side's kick (src/chase.js)
   if (onFire(p.team)) f *= ARCADE.fire.speed;
   if (edgeCarry(p)) f *= EDGE.pace;                          // Easy: your carrier, a little quicker with the ball (src/edge.js)
   f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it
@@ -1549,6 +1550,7 @@ function kickBall(team, x0, y0, x1, y1, T, H, kind) {
   M.phase = 'play';
   clearCharge();
   for (const t of [0, 1]) if (isHuman(t)) { const q = (t === team && kickRing(t, x1, y1)) || nearestFree(t, x1, y1); if (q) setCtrl(t, q); }   // the kicker's side: a man who may play the bounce (CALLS, src/calls.js)
+  if (kind === 'kick') chaseStart(team, onside);           // an open-play kick: its onside men chase it, the other side is caught out (src/chase.js)
 }
 function chargeDown(c) {                                   // a tactical kick's roll: a defender on top of the kicker gets a 30% charge-down
   let q = null, bd = 1.7;
@@ -3861,6 +3863,60 @@ function callsTick() {                                       // once a step (mat
   if (Q && M.stepN >= Q.at && fireOpen()) { M.fireQ = null; if (onFire(Q.t)) { say('On Fire', 'big fire', Q.t, Q.grade); M.fireSaid = { n:M.stepN, t:Q.t, grade:Q.grade, loud:true }; } }   // and only while it still burns; a banner later in this step sends it on again
   if (M.ball.off) offTick();
 }
+/* ---------- the kick chase (2026-11-13) ----------
+   The owner: "When kicking and chasing down the ball as an attacker, they should have a boost as they have caught the defender by
+   surprise." He chose every kicking side (the CPU's kicks too) and small, tuned by how often the kicking side wins the ball back,
+   noticeable and not a walkover. Asked on 13 November 2026 which chase ships in 1.6, he chose "Pace Alone (Recommended): Chasers 8%
+   quicker for 1.5s, and defenders react normally. Chips won back about 11 to 16 points more, so no chip-spam walkover." So react is
+   0 and the chase is its pace alone: the chasers 1.08 times their top speed for 1.5s, the catching side reacting at once, as before.
+   Rejected: react 0.2 (98e11c8, the floor of his first band, 0.2 to 0.4), where a chip-spammer on Normal won back two chips in three
+   and won 67% of his matches (45% before): the late start, not the pace, wins a person's chip back (he chips over a defence rushing
+   him, and its nearest men run on the wrong way). Its code is kept, idle at 0 and tunable (CHASE='{"react":0.2}' in the harness), and
+   tools/chase.mjs proves a build without it plays react 0 exactly, draw for draw.
+   - Who: every open-play kick (kickBall's kind 'kick': a chip, a long kick, a clearance, a territory kick), by either side, in every
+     match, AI v AI, the demo, Two Player, Kids and Minis included (it is speed, not contact). Not a restart (the kick-off and the 22
+     drop-out are kind 'restart'), a drop goal (kind 'g3d') or a charge-down (doKick stops before kickBall), and never in a drill.
+   - The chasers: the kicking side's men onside at the kick (f.onside, level with or behind the kicker; the kicker himself among them,
+     and the human's ringed man only when he is onside: at the kick the ring jumps to his man nearest the landing spot wherever he
+     stands, and after a person's chip that man is in front of the kicker about a third of the time, so he runs at his own pace with
+     no trail) run `pace` times their top speed for `secs` from the kick, easing back to 1 over the last third.
+     p.chase is his seconds left, read in maxSpeed with the other factors and under Sprint (the bigger of the two applies, never
+     both), so nothing snaps his velocity as setBoost does. It ends early once the kicking side loses the ball (the other side holds
+     it or passes it) or the ball is dead (any stoppage, a try, half time). Drawn as a boost is, the gold trail behind him.
+   - The catching side: as it ships (react 0) its men react at once, as before the chase. Tuned above 0, its men the computer runs react
+     `react` seconds late: for that long after the kick they run on as they were running (edgeHold, the Easy cover's lag) instead of
+     going to the landing spot or into their support shape (matchTargets). A human's own input is never delayed: the ring still jumps
+     to his man nearest the landing spot at the kick (kickBall), his stick drives that man at once, and a Kids child's let-go chase
+     (kidsChase) runs for the ball as before.
+   Every lever reads chaseLv and none draws a random number, so with CHASE.on false (CHASE='{"on":false}' in the harness) the game
+   plays exactly as b4a25d5, the build before it, draw for draw: the proof behind every re-pin since. Measured: README.md, Kicking and
+   the chase (tools/chase.mjs --balance; --balance band checks a person's chips against the owner's aim). */
+const CHASE = { on:true, pace:1.08, secs:1.5, react:0 };
+// CHASE_TUNE
+const CHASE_OFF = { pace:1, secs:0, react:0 };             // b4a25d5's: no chase
+const chaseLv = k => (CHASE.on ? CHASE : CHASE_OFF)[k];
+function chaseStart(team, onside) {                        // kickBall, an open-play kick: its onside men chase, the other side is caught out
+  const secs = chaseLv('secs');
+  if (!(secs > 0) || practice) return;
+  M.chase = { team, t:0 };
+  for (const p of M.players) p.chase = p.team === team && onside.has(p) ? secs : 0;
+}
+function chaseMul(p) {                                     // his pace now: `pace` until the last third of the chase, then back to 1 by its end
+  if (!(p.chase > 0) || !M.chase) return 1;
+  const ease = chaseLv('secs')/3;
+  return 1 + (chaseLv('pace') - 1)*Math.min(1, p.chase/ease);
+}
+const chaseLate = t => !!(M.chase && M.chase.team !== t && M.chase.t < chaseLv('react') - 1e-9);   // side t has not reacted to the other side's kick yet: never at react 0, as it ships (at 0.2, 12 steps, the kick's own the first)
+function chaseTick(dt) {                                   // once a step in a match, after the ball (matchUpdate): the chase's clock, and its early end
+  const C = M.chase;
+  if (!C) return;
+  const b = M.ball, dead = (M.phase !== 'play' && M.phase !== 'cut') || b.state === 'dead';
+  const lost = (b.state === 'held' && b.carrier && b.carrier.team !== C.team) || (b.state === 'air' && b.f && b.f.kind === 'pass' && b.f.team !== C.team);
+  C.t += dt;
+  const over = dead || lost || C.t >= chaseLv('secs') - 1e-9;   // 90 steps of 1.5s, then nobody is left chasing
+  for (const p of M.players) if (p.chase > 0) p.chase = over ? 0 : p.chase - dt;
+  if (over) M.chase = null;
+}
 /* ---------- stamina ----------
    The fifth ability (staminaOf in data.js reads it, 3 when a team has none). Only a match you play feels it: the same M.arcade as
    On Fire, which only startMatch sets, so AI v AI, the demo, practice and the balance tools read every side as they always have.
@@ -4228,6 +4284,7 @@ function matchTargets() {
     : slots;
   const lineX = mode === 'set' ? fx + dA*(SETGAP[M.set.kind] || 5) : null;
   assignMarks(T, D, pts, dA, fx, fy, lineX, mode, sweep);
+  if (mode === 'kick' && chaseLate(att)) for (const p of P) if (p.team === att && free(p)) T.set(p, edgeHold(p, 16));   // the kick chase: caught out, the catching side's men the computer runs keep running as they were for CHASE.react (src/chase.js)
   for (const p of P) if (p.bite > 0 && p.biteTo && T.has(p)) { const r = p.biteTo; T.set(p, { x:r.x + r.vx*0.3, y:r.y + r.vy*0.3, s:maxSpeed(p), a:15, pursue:true }); }   // a sold Dummy: he runs at the man the pass was shown to
   return T;
 }
@@ -4581,6 +4638,7 @@ function matchUpdate(dt) {
     M.set.t -= dt;
     if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
   } else if (M.phase === 'goal') updateGoal(dt);
+  chaseTick(dt);                                           // the kick chase's clock and its early end (src/chase.js)
   pressTick(dt);                                           // PRESSURE's resets and marks, and a knocked-on ball's beat (src/contact.js)
   if (M.duelPending) startPendingDuel();
 }
@@ -6543,9 +6601,9 @@ function drawPlayer(p, r) {
     ctx.fillStyle = `rgba(255,110,30,${(0.30 + 0.12*Math.sin(M.rt*2*Math.PI*3)).toFixed(3)})`;
     ellipse(sx, sy, r*1.55, r*1.3); ctx.fill();
   }
-  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || fire || (M.surge && M.surge.team === p.team)) && sp > (fire ? 1.5 : 3)) {
+  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || p.chase > 0 || fire || (M.surge && M.surge.team === p.team)) && sp > (fire ? 1.5 : 3)) {
     const tx = -p.vx/sp, ty = -p.vy/sp;
-    ctx.fillStyle = fire ? 'rgba(255,110,30,.6)' : (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';   // On Fire burns orange
+    ctx.fillStyle = fire ? 'rgba(255,110,30,.6)' : (p.boost > 0 || spr > 0 || p.chase > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';   // On Fire burns orange; a burst, a sprint and the kick chase (src/chase.js) gold
     for (const kk of [1.1, 2.0]) { ellipse(sx + tx*r*kk, sy + ty*r*kk, r*(1 - kk*0.22), r*(0.85 - kk*0.2)); ctx.fill(); }
     if (spr > 0) {                                           // a sprint: two speed streaks behind him
       ctx.strokeStyle = `rgba(244,241,232,${(0.55*spr).toFixed(3)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
@@ -8215,9 +8273,9 @@ function drawManBehind(cam, p, ctrl) {
     ctx.fillStyle = `rgba(255,110,30,${(0.30 + 0.12*Math.sin(M.rt*2*Math.PI*3)).toFixed(3)})`;
     ellipse(at.sx, at.sy, R*0.9, R*0.9*flat); ctx.fill();
   }
-  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || fire || (M.surge && M.surge.team === p.team)) && sp > (fire ? 1.5 : 3)) {
+  if (p.down <= 0 && !k && (p.boost > 0 || spr > 0 || p.chase > 0 || fire || (M.surge && M.surge.team === p.team)) && sp > (fire ? 1.5 : 3)) {
     const tx = -p.vx/sp, ty = -p.vy/sp;                      // the trail and streaks, as points on the ground behind him
-    ctx.fillStyle = fire ? 'rgba(255,110,30,.6)' : (p.boost > 0 || spr > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';
+    ctx.fillStyle = fire ? 'rgba(255,110,30,.6)' : (p.boost > 0 || spr > 0 || p.chase > 0) ? 'rgba(255,207,61,.35)' : 'rgba(244,241,232,.18)';   // the kick chase (src/chase.js) gold, as a burst
     for (const kk2 of [1.1, 2.0]) { const q = pr(cam, s.wx + tx*0.95*kk2, s.wy + ty*0.95*kk2, 0); if (q) { ellipse(q.sx, q.sy, q.k*0.6*(1 - kk2*0.22), q.k*0.6*(1 - kk2*0.22)*flat); ctx.fill(); } }
     if (spr > 0) {
       ctx.strokeStyle = `rgba(244,241,232,${(0.55*spr).toFixed(3)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
@@ -18052,6 +18110,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   sound:{ SOUND, NAMES:SOUND_NAMES, SND, FILES:SOUND_FILES, SYNTH:SOUND_SYNTH, SAMPLE, takes:soundTakes, load:sndLoad, ac, sfx, play:soundPlay, frame:() => soundFrame(matchBedWanted()), wanted:matchBedWanted, bedSync, bedOn:() => !!BED, live:soundLive, voices:() => VOICES, hidden:soundHidden, shown:soundShown, unlock:soundUnlock, off:soundOff, quiet:soundQuiet, ctx:() => AC },
   clarity:{ MATCH_PACE, matchPace, HALF_SECONDS, fmtClock, paceKeep, renderPaced, PACE_KEEP, BALL_STATUS, STATUS_MATCHES, statusOf, statusWanted, statusSync, careerCaption, CAREER_CAP, careerCol, careerEdgeCol, bvStack, BV_CARRY, BV_TAG, BV_LOOSE, edgeTag, edgeTagAt, say, finishMatch },
   edge:{ EDGE, on:edgeOn, man:edgeMan, carry:edgeCarry, line:edgeLine, broke:edgeBroke, lag:edgeLag, hold:edgeHold, fireNeed, fireSecs, heat, onFire, maxSpeed, tackleChance, dummyPass, matchTargets, matchMild },   // src/edge.js
+  chase:{ CHASE, CHASE_OFF, lv:chaseLv, start:chaseStart, mul:chaseMul, late:chaseLate, tick:chaseTick, maxSpeed, matchTargets, computeTargets, kickBall, doKick, aiKick, setCarrier, placeBall, restart, edgeHold },   // src/chase.js: the kick chase and the paths tools/chase.mjs stages it through
   knock:{ KNOCK, KNOCK_OFF, lv:knockLv, catchBall, knockOn, commitTackle, resolveContact, updateBallAir, resolvePass, pressure, tag, isHuman, ARCADE },   // src/knock.js: the knock-on levers and the paths they touch
   calls:{ CALLS, CALLS_OFF, lv:callsLv, possCall, callWon, callLate, canPlay, offsideMan, offMark, releaseOk, kickRing, callInk, bannerInk, contrastOf, CALL_PLATE, fireSay, fireShowing, fireFold, fireOpen, bannerLife, callsTick, callFlash, drawCalls, callPlace, callSpot, bannerBox, catchBall, pickUp, updateBallAir, updateLoose, resolvePass, resolveRuck, offload, looseInContact, doPass, kickBall, tag, heat, edgeLine, matchTargets, say, render, matchMild, scoreTry, restartKick, settleGoal, setRM:v => { RM = !!v; }, rm:() => RM },   // src/calls.js: the possession calls, the interception rules and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
