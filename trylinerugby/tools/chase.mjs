@@ -634,7 +634,7 @@ begin('9 the words and the files');
   // gets it all), so this reads the line. It waits there, not in the write's callback, so nothing after it in the file runs (bot.mjs's
   // own matches would print after the JSON)
   const waits = f => /await new Promise\(done => process\.stdout\.write\((json|JSON\.stringify)\(out\), done\)\); process\.exit\(0\);/.test(read(f)) && !/stdout\.write\((json|JSON\.stringify)\(out\)\);\s*process\.exit/.test(read(f));
-  ok(['tools/chase.mjs', 'tools/knock.mjs', 'tools/bot.mjs'].every(waits), 'a balance job in chase.mjs, knock.mjs and bot.mjs exits only once its answer is written');
+  ok(['tools/chase.mjs', 'tools/knock.mjs', 'tools/bot.mjs', 'tools/calls.mjs'].every(waits), 'a balance job in chase.mjs, knock.mjs, bot.mjs and calls.mjs (merged with it at 1.6) exits only once its answer is written');
 }
 done('9 the words and the files');
 

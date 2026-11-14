@@ -61,7 +61,7 @@ async function oneMatch(o, seed) {
 if (run && args[0] === '--job') {
   const o = JSON.parse(args[1]), out = [];
   for (let i = o.lo; i < o.hi; i++) out.push(await oneMatch(o, +process.env.SEED*100000 + i));
-  process.stdout.write(json(out)); process.exit(0);
+  await new Promise(done => process.stdout.write(json(out), done)); process.exit(0);   // exit once it is written: an exit straight after can cut the answer short
 }
 function fan(spec, n, env) {                               // matches 0..n-1 over JOBS processes, in order, with env on top (CALLS off, say)
   const jobs = +process.env.JOBS || Math.min(8, os.cpus().length), per = Math.ceil(n/jobs), parts = [];
