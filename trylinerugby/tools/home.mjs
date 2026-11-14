@@ -103,7 +103,7 @@ const fresh = () => {                                       // a new game on the
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
   ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skill Games: every game in its picture (${drills.join(', ')}), How to Play, then the contact games and For Grown-Ups, in rows of four`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="diff">[\s\S]*?<\/div><\/div>\s*<div class="set set-age"><span class="lbl" id="set-age-l">Age Group<\/span><div class="seg" id="set-age" role="group" aria-labelledby="set-age-l"><\/div><\/div>\s*<div class="set set-gender"><span class="lbl" id="set-gender-l">Gender<\/span><div class="seg" id="set-gender" role="group" aria-labelledby="set-gender-l"><\/div><\/div>\s*<div class="set set-sound">/.test(home) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.6<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="diff">[\s\S]*?<\/div><\/div>\s*<div class="set set-age"><span class="lbl" id="set-age-l">Age Group<\/span><div class="seg" id="set-age" role="group" aria-labelledby="set-age-l"><\/div><\/div>\s*<div class="set set-gender"><span class="lbl" id="set-gender-l">Gender<\/span><div class="seg" id="set-gender" role="group" aria-labelledby="set-gender-l"><\/div><\/div>\s*<div class="set set-sound">/.test(home) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.7<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
     && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css)
     && /\.hp-settings\.settings \.set-cam,\.hp-settings\.settings \.ver\{grid-row:4;grid-column:4\/-1\}/.test(css),
     `Settings: ${sets.join(', ')}; Difficulty across, Age Group | Gender (the profile's, src/profile.js), Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help; the game's version at its foot, on the fourth row's label line`);
@@ -226,7 +226,7 @@ const fresh = () => {                                       // a new game on the
   const comps = t => H.comps(t).map(c => c[0]).join();
   ok(comps(0) === 'int,world,tour' && H.comps(0).map(c => c[1]).join() === 'Championship,World Cup,Home Nations Tour', 'International: Championship, World Cup, Home Nations Tour');
   ok(comps(1) === 'eng,en2,fra,cel,sco,rsa,aus,nzl,jpn' && H.comps(1).map(c => c[1]).join() === X.TEAM_LISTS.filter(l => l.tier === 1).map(l => l.name).join(), 'National: each country\'s league');
-  ok(comps(2) === 'sur,cty' && H.comps(2).map(c => c[1]).join() === 'Surrey,Counties', 'Local: Surrey and Counties (PR #14\'s), and no My League without an import');
+  ok(comps(2) === 'sur,cty,nor,mid,eas,sea,sow' && H.comps(2).map(c => c[1]).join() === 'Surrey,Counties,Northern,Midlands,Eastern,South East,South West', 'Local: Surrey and Counties (PR #14\'s), then the five regions (2026-11-14), and no My League without an import');
   ok(['eng', 'fra', 'cel', 'rsa'].every(K.euroLeague) && !['en2', 'sco', 'aus', 'nzl', 'jpn', 'sur', 'cty', 'my', 'int'].some(K.euroLeague), 'the European Cup\'s trophy on the four leagues whose winner goes on to it');
   H.setTier(1); H.champ();
   ok(/id="hc-eng" data-comp="eng"><span class="cup-trophy" data-kind="euro" data-metal="gold" role="img" aria-label="European Cup"><\/span><span>England<\/span>/.test($('hc-comps').innerHTML) && /id="hc-sco" data-comp="sco"><span>Scotland<\/span>/.test($('hc-comps').innerHTML) && /id="hc-en2" data-comp="en2"><span>England 2<\/span>/.test($('hc-comps').innerHTML) && $('hc-comps').className === 'hc-comps n9' && /\.hc-comps\.n9\{grid-template-columns:repeat\(20,minmax\(0,1fr\)\)\}\s*\.hc-comps\.n9 > \.btn\{grid-column:span 5\}\s*\.hc-comps\.n9 > \.btn:nth-child\(n\+5\)\{grid-column:span 4\}/.test(css), 'each a big button, the European Cup\'s trophy on its four, National\'s nine in two rows (four then five, each row in equal parts)');
@@ -277,7 +277,7 @@ const fresh = () => {                                       // a new game on the
   K.set(null);
   // My League: Local, with an import
   I.setLeague({ teams:X.CLUBS.slice(1, 6).map(t => ({ ...t, key:'lg-' + t.id })) }); D.goHome(); H.setTier(2); H.open('champ');
-  ok(comps(2) === 'sur,cty,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League beside Surrey and Counties');
+  ok(comps(2) === 'sur,cty,nor,mid,eas,sea,sow,my' && /id="hc-my" data-comp="my"><span>My League<\/span>/.test($('hc-comps').innerHTML), 'with an import, My League after Surrey, Counties and the regions');
   H.champPick('my'); ok(X.teamPool() === 'my' && $('t-eyebrow').textContent === 'Championship' && comp().name === 'My League' && P.where(comp()) === 'Local', 'My League\'s team screen, Local over My League');
   // the European Cup is still reached by winning a European league
   fresh(); H.champPick('eng'); D.pickTeam(X.ENGLAND[0]);
@@ -528,7 +528,7 @@ const fresh = () => {                                       // a new game on the
   ok($('m-import').hidden && D.settings().myClub === club.key && H.myClub() === club && $('my-name').textContent === club.name && saved().settings.myClub === club.key, 'Make This My Team: it is, saved, in the box');
   offer();
   ok($('m-import').hidden && I.state().step !== 'mine', 'importing My Team\'s club again asks nothing');
-  ok(I.league() && I.league().teams.length === 4 && I.league().teams.every(t => /^lg-/.test(t.key)) && H.comps(2).map(c => c[0]).join() === 'sur,cty,my', 'the league comes in as ever: My League, beside Surrey and Counties');
+  ok(I.league() && I.league().teams.length === 4 && I.league().teams.every(t => /^lg-/.test(t.key)) && H.comps(2).map(c => c[0]).join() === 'sur,cty,nor,mid,eas,sea,sow,my', 'the league comes in as ever: My League, after Surrey, Counties and the regions');
   fresh();
 }
 
@@ -840,7 +840,7 @@ async function browserChecks() {
         T.home.setTier(null); T.debug.goHome();
         return out;
       });
-      ok(comps.every(c => +c.split(':')[1] <= 3 && +c.split(':')[2] >= 140), `${kind}: International's three and Local's two or three as big boxes, 140px and more (${comps.join(' ')})`);
+      ok(+comps[0].split(':')[1] === 3 && +comps[0].split(':')[2] >= 140 && +comps[1].split(':')[1] === 7 && +comps[1].split(':')[2] >= 44, `${kind}: International's three as big boxes, 140px and more; Local's seven (Surrey, Counties and the five regions, 2026-11-14) four to a row, 44px and more (${comps.join(' ')})`);
       ok(longest.names.length === 3 && !longest.bad.length, `${kind}: Continue's line and the Career box's note keep every part whole within two lines for the longest names in the game (${longest.names.join(', ')}; ${longest.bad.slice(0, 3).join('; ') || 'none cut'})`);
       // a locked Legend: the padlock clears the name on its team card and the jersey, its badge and its name on the Locker's tile
       const locks = await page.evaluate(async () => {

@@ -117,6 +117,8 @@ function cleanSide(t) {
   if (t.key) team.key = String(t.key).slice(0, 24);
   if (HEX.test(t.alt)) team.alt = t.alt;
   if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
+  if (!t.hoops && (t.pat === 'band' || t.pat === 'halves')) team.pat = t.pat;   // a chest band or halves, and a third colour (kitPat, kitThird in src/data.js, written out here: this file is read on its own by the season tools): only on a side that has them, so every other save is as it was
+  if (typeof t.third === 'string' && HEX.test(t.third)) team.third = t.third;
   if (t.cat != null && catOf(t) === t.cat) team.cat = t.cat;   // Men | Women | Minis, kept as it was started; a side saved before it has none and is men's
   for (const [k] of ABILITIES) team[k] = clamp(Math.round(abilityOf(t, k) || 1), 1, 5);   // a side saved before Stamina gets 3
   return team;

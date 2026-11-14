@@ -37,7 +37,7 @@ function say(text, size, team, grade, low) {
 
 function startDemo() {   // a men's match: every side but the women's-only nations (Canada and the USA), in the order the demo always drew from
   soundQuiet();                                            // every way out of a match or a drill comes through here
-  const men = natList('men'), all = ALL_TEAMS.filter(t => !isNation(t) || men.includes(t)), a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
+  const men = natList('men'), all = DEMO_TEAMS.filter(t => !isNation(t) || men.includes(t)), a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
   newMatch(all[a], all[b], { halfLen:1e9, diff:1, auto:true, demo:true });
   mode = 'menu';
   $('hud').hidden = true; $('controls').hidden = true; $('b-pause').hidden = true;

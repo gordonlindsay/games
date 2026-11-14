@@ -417,8 +417,8 @@ const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat ||
    Zealand, Japan, Scotland) show none, never an invented one. myRecordLine is the rest of PR #14's line (won, lost, scored, conceded):
    since 2026-11-11 the game shows it nowhere (the home's box shows the games you have played as the club instead), and only the tools
    read it (tools/home.mjs 6b), kept so the figures stay checked against the club's list. */
-const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
-const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+const myLeagueLine = t => (t && t.league ? t.league + (t.place ? ' · ' + ordinal(t.place) + ' Last Season' : t.county ? ' · ' + t.county : '') : '');   // a region's club has a league and no table: its county in the place's stead, never an invented place
+const myRecordLine = t => (t && t.league && t.place ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
 const FORM_WORD = { W:'Won', D:'Drawn', L:'Lost' };
 /* My Team's box: the club's shirt, name, stars and league line; the games you have played as it (formOf, src/persistence.js) and its last
    five results, the latest on the right of them; the country's shirt and name; Change | Add Your Team | Locker. */
@@ -429,7 +429,7 @@ function myHome() {
   if (typeof profileHomePic === 'function') profileHomePic(c);   // your player in My Team's kit in the shirt's place, once there is a look and the art is in (src/profile.js)
   $('my-name').textContent = listName(c);
   $('my-stars').innerHTML = ratedStars(c);
-  $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
+  $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span>` + (c.place || c.county ? `<span class="sep"> · </span><span>${esc(c.place ? ordinal(c.place) + ' Last Season' : c.county)}</span>` : '') : '';   // myLeagueLine, the league over its place
   $('my-rec').innerHTML = [['Played', played(f)], ['Won', f.w], ['Drawn', f.d], ['Lost', f.l]].map(([w, v]) => `<div><dt>${w}</dt><dd>${v}</dd></div>`).join('');
   const last = f.last.split('');
   $('my-form').innerHTML = last.map(x => `<li class="fm ${x.toLowerCase()}"><span aria-hidden="true">${x}</span><span class="sr">${FORM_WORD[x]}</span></li>`).join('') + '<li class="fm none" aria-hidden="true"></li>'.repeat(FORM_LAST - last.length);   // the letter seen, the word read out
@@ -597,7 +597,8 @@ const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', 
 const keyOf = t => t.key || t.id;
 function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
-  return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
+  const pat = kitPat(t), th = kitThird(t);                  // a chest band or halves, and a third colour (src/data.js): a side with neither is the markup it always was
+  return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}${pat ? ' ' + pat : ''}${th ? ' c3' : ''}" style="--kit:${k};--trim:${tr}${th ? ';--third:' + th : ''}"></span></span>`;
 }
 /* A side's stars, from its overall on the one scale (starsOf, src/ratings.js): drawn beside its overall's badge wherever a team is picked or
    listed (the team screen's sides, My Team, the career's transfer offers and call-up). Named ratedStars, not teamStars: that is the star
@@ -690,7 +691,7 @@ function pickLadder(cat, o) {
 }
 /* Where a team lives: its group and country for the card's league line (Clubs · Japan, National · England), whichever group shows it. */
 function pickHomeLine(t, cat) {
-  if (t.league) return t.league;
+  if (t.league) return t.county ? t.league + ' · ' + t.county : t.league;   // a region's club: its county after its league
   if (t.custom) return 'Made Teams';
   if (importLeague && importLeague.teams.includes(t)) return 'My League';
   const home = isNation(t) || t.legend ? (t.legend ? NATIONS.find(n => n.name === t.nation) || {} : t).id : null;

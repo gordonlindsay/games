@@ -37,17 +37,21 @@ function colorDist(a,b) { const x = hexRgb(a), y = hexRgb(b); return hyp(x[0]-y[
 /* A team's colour for marks on the dark scoreboard and plates: the shirt, or the trim if the shirt is near black, or chalk. */
 function showCol(team) { const k = M.kit[team]; return colorDist(k.fill, '#0f1a12') >= 60 ? k.fill : colorDist(k.trim, '#0f1a12') >= 60 ? k.trim : '#f1eee4'; }
 
-/* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. */
+/* A side's shirt in a match. pat and third are only there for a side that has them (kitPat, kitThird: src/data.js), so every other
+   side's is the three fields it always was. */
+function kitLook(fill, trim, hoops, pat, third) { const k = { fill, trim, hoops }; if (pat) k.pat = pat; if (third) k.third = third; return k; }
+/* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. Its own shirt and
+   the swap keep its pattern and third colour; a change kit, white and black are plain. */
 function awayKit(n0, n1) {
-  const h = !!n1.hoops;
-  const opts = [[n1.kit, n1.trim, h], [n1.alt, n1.altTrim, false], [n1.trim, n1.kit, h], ['#f2efe6', n1.kit, false], ['#1c1c1c', n1.kit, false]].filter(o => o[0] && o[1]);
+  const h = !!n1.hoops, p = kitPat(n1), th = kitThird(n1);
+  const opts = [[n1.kit, n1.trim, h, p, th], [n1.alt, n1.altTrim, false], [n1.trim, n1.kit, h, p, th], ['#f2efe6', n1.kit, false], ['#1c1c1c', n1.kit, false]].filter(o => o[0] && o[1]);
   let best = opts[0], bd = -1;
   for (const o of opts) {
     const d = colorDist(n0.kit, o[0]);
-    if (d >= 140) return { fill:o[0], trim:o[1], hoops:o[2] };
+    if (d >= 140) return kitLook(...o);
     if (d > bd) { bd = d; best = o; }
   }
-  return { fill:best[0], trim:best[1], hoops:best[2] };
+  return kitLook(...best);
 }
 const teamOf = t => typeof t === 'number' ? NATIONS[t] : t;
 function newMatch(u, c, opts) {
@@ -61,7 +65,7 @@ function newMatch(u, c, opts) {
   earlyDiff = null;
   if (ease) { const d = DIFF[di], o = { ...d }; for (const k in EARLY.nudge) o[k] = d[k] + EARLY.nudge[k]; earlyDiff = o; }
   M = {
-    nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:!!n0.hoops }, awayKit(n0, n1)],
+    nat:[n0,n1], kit:[kitLook(n0.kit, n0.trim, !!n0.hoops, kitPat(n0), kitThird(n0)), awayKit(n0, n1)],
     players:[], ball:{ x:60, y:35, z:0, vx:0, vy:0, vz:0, state:'dead', carrier:null, f:null, last:0, kickInfo:null },
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,

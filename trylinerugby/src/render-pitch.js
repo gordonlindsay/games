@@ -117,7 +117,9 @@ function drawPlayer(p, r) {
     ctx.fillStyle = kit.trim;
     ctx.beginPath(); ctx.arc(lean*r, -r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(lean*r, r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = kit.fill; ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = kit.fill; ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92); ctx.fill();
+    if (kit.pat === 'halves') { ctx.fillStyle = kit.trim; ctx.beginPath(); ctx.ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92, 0, 0, Math.PI); ctx.fill(); ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92); }   // halves: one shoulder's side in the trim, then the outline round both
+    ctx.stroke();
     ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*0.1 + lean*r*1.4, 0, r*0.4, 0, 7); ctx.fill();
   }
   ctx.restore();

@@ -365,7 +365,12 @@ function figFB(sx, sy, k, team, o) {
   ctx.fillStyle = kit.shirt;
   ctx.beginPath(); ctx.moveTo(-0.2*k, -hip + 0.02*k); ctx.lineTo(0.2*k, -hip + 0.02*k); ctx.lineTo(0.28*k, -shY); ctx.lineTo(-0.28*k, -shY); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = kit.trim; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.06*k);
-  if (kit.hoops) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; ctx.fillRect(-hw, y, hw*2, 0.07*k); }
+  if (kit.hoops) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; if (kit.third) ctx.fillStyle = t < 0.5 ? kit.third : kit.trim; ctx.fillRect(-hw, y, hw*2, 0.07*k); }   // a third colour is the upper of the two
+  else if (kit.pat === 'band') {                          // one broad chest band, edged in the third colour
+    const y = -shY + (shY - hip)*0.34, bh = 0.17*k, hw = 0.27*k - 0.08*(0.34*k + bh*k/(shY - hip)) - 0.004*k;   // as wide as the torso at the band's foot, where it is narrowest, so it never passes the outline
+    ctx.fillRect(-hw, y, hw*2, bh);
+    if (kit.third) { ctx.fillStyle = kit.third; ctx.fillRect(-hw, y, hw*2, 0.035*k); ctx.fillRect(-hw, y + bh - 0.035*k, hw*2, 0.035*k); }
+  } else if (kit.pat === 'halves') { ctx.beginPath(); ctx.moveTo(0, -hip + 0.02*k); ctx.lineTo(0.2*k, -hip + 0.02*k); ctx.lineTo(0.265*k, -shY + 0.08*k); ctx.lineTo(0, -shY + 0.08*k); ctx.closePath(); ctx.fill(); }   // one half in the trim, under the collar
   ctx.fillStyle = kit.shorts; rrect(-0.21*k, -hip - 0.02*k, 0.42*k, 0.16*k, 0.05*k); ctx.fill();
   if (o.back && o.num) {
     ctx.fillStyle = luma(kit.shirt) > 0.6 ? '#1b2233' : '#f1eee4';

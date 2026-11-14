@@ -29,6 +29,7 @@ const jobs = [
   ['calls', ['tools/calls.mjs']],                           // the possession calls and the interception rules: each call, colour and sound, On Fire after its moment, the Line Break held, no interception out of the hands, nobody down, retiring or offside playing the ball, CALLS off as b4a25d5 (its browser part runs where Playwright is installed)
   ['chase', ['tools/chase.mjs']],                           // the kick chase: the gate, the onside chasers, the pace and its end, the catching side late but never your own input, no new draw, CHASE off as b4a25d5, the win-back rates
   ['stick', ['tools/stick.mjs']],                           // the touch stick and the buttons never stay stuck, and a card's button works under a second finger (its browser part runs where Playwright is installed)
+  ['regions', ['tools/regions.mjs']],                       // the five regions of clubs and the shirts past Plain and Hoops: the lists, each club's league, county, rating and kit, the demo's sides as they were, a shirt in a match, a save and the menus, the county cup
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces', 'browser']) jobs.push([name, [`tools/${name}.mjs`]]);
