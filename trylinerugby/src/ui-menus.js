@@ -633,13 +633,14 @@ const PICK = { ms:200, swipe:36, ratio:1.4, hold:500 };      // one quick move (
    Chromium at 844x390, 667x375, 844x340, 667x320 and 568x320 (tools/picker.mjs):
    - a card's context line over its group button: Northern Hemi where two sides share the screen (the full name is cut at 844x390 on
      England's Championship, where the line has 118px), the full name where a card has the screen to itself (329px and up, one line at
-     every size). The line breaks only between its parts, as it did; the rare area too wide for a line of its own (Northern Hemi on
-     England's Championship at 568x320, 89px in 80) is left off that line, its country under it saying where (pickFit);
+     every size). The area leads the line only where the whole line then fits on one line; where it would not (Northern Hemi · England ·
+     Local is 201px, Surrey's line 157 at 844x390), it is left off that card's line (pickFit, .off), so the line reads England · Local and
+     never wraps for the area's sake, the card's head as it was before the rename. It is still read out: drawn at no size, not removed;
    - the Filter's Area column: the full name where the column holds Hemisphere on a line (two lines in the 44px row, as the League
      column's United Rugby Championship: 844 wide), Northern Hemi where it does not (667 and 568 wide); no form is one line there;
    - a search match's path (Northern Hemisphere · France · Top 14): the full name at every size, one line with room to spare.
-   A screen reader hears the full name wherever a row is labelled (the Filter's). Its text, everywhere (pickWhere, flPath, a row's name), is
-   the full name. */
+   A screen reader hears the full name everywhere: the Filter's rows are labelled with it, and on a card the end (.hx) and an area left off
+   are drawn at no size rather than removed. Its text, everywhere (pickWhere, flPath, a row's name), is the full name. */
 const PICK_HEMI = { north:'Northern Hemisphere', south:'Southern Hemisphere', mine:'My Clubs', fav:'Favourites', recent:'Recent' };
 const PICK_HEMI_SHORT = { north:'Northern Hemi', south:'Southern Hemi' };
 const pickHemiHtml = h => { const n = PICK_HEMI[h] || '', s = PICK_HEMI_SHORT[h]; return s && n.startsWith(s) && n.length > s.length ? `${esc(s)}<span class="hx">${esc(n.slice(s.length))}</span>` : esc(n); };
@@ -1099,10 +1100,11 @@ function pickFit() {
   if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);   // the order on screen is the order for Tab
   go.style.fontSize = '';
   for (let px = parseFloat(getComputedStyle(go).fontSize) || 22; go.scrollWidth > go.clientWidth + 0.5 && px > 14; ) { px -= 1; go.style.fontSize = px + 'px'; }   // Pick Wolverhampton on one line
-  for (const a of scr.querySelectorAll('.pk-ctx .pk-area')) {   // an area too wide for a line of its own (Northern Hemi in 80px: England's Championship at 568x320) is left off its card's line, never cut; its country says where
-    a.hidden = false;
-    const line = a.parentNode.getBoundingClientRect().width;
-    a.hidden = line > 0 && a.getBoundingClientRect().width > line + 0.5;
+  for (const a of scr.querySelectorAll('.pk-ctx .pk-area')) {   // the area leads a card's line only where the whole line fits on one line (PICK_HEMI); else it is left off (.off), its country saying where
+    a.classList.remove('off');
+    const box = a.parentNode, parts = [...box.children]; if (!box.getClientRects().length) continue;
+    const r = box.getBoundingClientRect(), top = parts[0].getBoundingClientRect().top;
+    a.classList.toggle('off', parts.some(p => { const q = p.getBoundingClientRect(); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }));
   }
   const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
   delete scr.dataset.dup;

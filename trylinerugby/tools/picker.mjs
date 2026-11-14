@@ -543,7 +543,7 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   P.group(0, view(0).ladder.findIndex(x => x.key === 'mine.made') - view(0).gi);
   ok(P.panel(0).includes('<span class="pk-ctx"><span><span class="pk-area">My Clubs</span></span></span>'), 'My Clubs whole: it has no short form');
   const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  ok(css.includes('.pk-ctx .hx{display:none}\n.pk-sides.one .pk-ctx .hx{display:inline}') && /@container \(max-width:124px\)\{\s*\.fl-r \.hx\{display:none\}\s*\}/.test(css), 'the CSS: Northern Hemi on a card where two sides share the screen, the full name where it has one; in the Filter\'s Area column, Northern Hemi under 124px');
+  ok(css.includes('.pk-ctx .hx{font-size:0}\n.pk-sides.one .pk-ctx .hx{font-size:inherit}\n.pk-ctx .pk-area.off{font-size:0}') && !/\.pk-ctx[^{]*\{[^}]*(display:none|visibility:hidden)/.test(css) && /@container \(max-width:124px\)\{\s*\.fl-r \.hx\{display:none\}\s*\}/.test(css), 'the CSS: Northern Hemi on a card where two sides share the screen, the full name where it has one, an area left off (.off) at no size; on a card drawn at no size, never display:none, so a screen reader still hears the full name; in the Filter\'s Area column, Northern Hemi under 124px');
   D.openTeams('quick'); P.filter(0, '', { dev:'touch' });
   const areas = P.filterState().cols[0].rows, box = $('fl-cols').innerHTML;
   ok(json(areas.map(n => n.name)) === json(['Northern Hemisphere', 'Southern Hemisphere', 'My Clubs']) && areas.every(n => box.includes(`aria-label="${n.name}, `)), 'the Filter\'s areas named in full, and labelled in full for a screen reader whatever the column shows');
@@ -714,27 +714,41 @@ async function browserChecks() {
           });
           ok(fit.bad.length === 0 && fit.n > 700, `${at}: every state fits with no scroll, both sides, the V, the primary and Back in view, every target 44px or more, no name or bar label cut; the Filter in every state of every mode (each column's every row, its marks on arrival for every group, the matches) in view with no page scroll, no label cut, every target 44px, the stars whole; the icon in the top bar of every mode, on nothing (${fit.n} states${fit.bad.length ? ': ' + fit.bad.slice(0, 6).join('; ') : ''})`);
           // the areas' names at this size, each place's form as measured (the owner, 2026-11-14; PICK_HEMI): a card where two sides share
-          // the screen, Northern Hemi, its line breaking only between parts (two lines at most, the head its 44px), nothing cut, the area
-          // left off only where it is wider than a line of its own; a card on its own, the full name, one line; the Filter's Area column,
-          // the full name where Hemisphere fits a line (844 wide), else Northern Hemi, in a 44px row, never cut; a match's path, the full
-          // name on one line
+          // the screen, Northern Hemi where its whole line fits on one line, else the area left off (.off: England · Local on the opening
+          // screen), and only there; every card's line one line, so the head keeps its 44px and both sides' names stay level (the brief's
+          // copy only: no layout change), nothing cut; a card on its own, the full name, one line; the area's text always the full name,
+          // the short form's end and an area left off drawn at no size for a screen reader; the Filter's Area column, the full name where
+          // Hemisphere fits a line (844 wide), else Northern Hemi, in a 44px row, never cut; a match's path, the full name on one line
           const wide = w >= 844, names = await page.evaluate(() => {
-            const T = window.__tryline, P = T.picker, $ = id => document.getElementById(id), out = { two:{}, one:{}, bad:[], off:[], lines:0, n:0 };
+            const T = window.__tryline, P = T.picker, $ = id => document.getElementById(id), out = { two:{}, one:{}, bad:[], off:[], lines:0, n:0, level:0 };
             const seen = el => el.innerText.replace(/\s+/g, ' ').trim();
+            const shown = el => { const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let t = '', x; while ((x = w.nextNode())) if (parseFloat(getComputedStyle(x.parentNode).fontSize) > 0) t += x.textContent; return t.replace(/\s+/g, ' ').trim(); };
+            const lineOf = c => { const cr = c.getBoundingClientRect(), parts = [...c.querySelectorAll(':scope > span > span')].filter(p => p.getBoundingClientRect().width > 0);
+              return { lines:new Set(parts.map(p => Math.round(p.getBoundingClientRect().top))).size, cut:parts.some(p => p.getBoundingClientRect().right > cr.right + 0.5 || p.getBoundingClientRect().left < cr.left - 13) }; };
             const card = (mode, rec) => {
+              const whos = [];
               for (const side of document.querySelectorAll('#s-teams .pk-side:not([hidden])')) {
                 const c = side.querySelector('.pk-ctx'); if (!c) continue;
                 out.n++;
-                const a = c.querySelector('.pk-area'), parts = [...c.querySelectorAll(':scope > span > span')].filter(p => !p.hidden), cr = c.getBoundingClientRect();
-                const tops = new Set(parts.map(p => Math.round(p.getBoundingClientRect().top))), hd = side.querySelector('.pk-head').getBoundingClientRect().height;
-                if (a && !a.hidden) rec[seen(a)] = 1;
-                if (a && a.hidden) { out.off.push(`${P.view(+side.dataset.side).group.key} ${side.id}`); if (a.getBoundingClientRect().width === 0 && seen(c).split(' ')[0] === 'Northern') out.bad.push('left off yet shown'); }
-                if (parts.some(p => p.getBoundingClientRect().right > cr.right + 0.5 || p.getBoundingClientRect().left < cr.left - 13)) out.bad.push(`${mode} ${side.id} ${seen(c)}: cut`);
-                if (tops.size > 2 || Math.abs(hd - 44) > 0.5) out.bad.push(`${mode} ${side.id} ${seen(c)}: ${tops.size} lines, head ${hd}`);
-                if (mode === 'one' && tops.size > 1) out.bad.push(`one ${seen(c)}: ${tops.size} lines`);
-                out.lines = Math.max(out.lines, tops.size);
+                const a = c.querySelector('.pk-area'), off = !!(a && a.classList.contains('off')), l = lineOf(c), hd = side.querySelector('.pk-head').getBoundingClientRect().height;
+                whos.push(side.querySelector('.pk-who').getBoundingClientRect().top - side.getBoundingClientRect().top);
+                if (a && a.textContent !== P.PICK_HEMI[P.view(+side.dataset.side).group.hemi]) out.bad.push(`${side.id} the area's text ${a.textContent}`);
+                if (a && !off) rec[shown(a)] = 1;
+                if (off) {
+                  out.off.push(`${P.view(+side.dataset.side).group.key} ${side.id} ${shown(c)}`);
+                  if (a.getBoundingClientRect().width > 0 || shown(a)) out.bad.push(`${side.id} left off yet drawn`);
+                  a.classList.remove('off'); const w2 = lineOf(c); a.classList.add('off');
+                  if (w2.lines < 2 && !w2.cut) out.bad.push(`${mode} ${side.id} ${shown(c)}: left off though it fits`);
+                }
+                if (l.cut) out.bad.push(`${mode} ${side.id} ${shown(c)}: cut`);
+                if (l.lines > 1 || Math.abs(hd - 44) > 0.5) out.bad.push(`${mode} ${side.id} ${shown(c)}: ${l.lines} lines, head ${hd}`);
+                out.lines = Math.max(out.lines, l.lines);
               }
+              if (whos.length === 2) { out.level++; if (Math.abs(whos[0] - whos[1]) > 0.5) out.bad.push(`${mode} the sides' names ${Math.abs(whos[0] - whos[1]).toFixed(1)}px apart`); }
             };
+            T.debug.settings().cat = 'men'; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick');
+            const line = c => [...c.querySelectorAll(':scope > span > span')].map(shown).filter(Boolean).join(' · ');
+            out.open = [line($('t-side0').querySelector('.pk-ctx')), line($('t-side1').querySelector('.pk-ctx'))];
             for (const cat of ['men', 'women']) {
               T.debug.settings().cat = cat; T.debug.openTeams('quick');
               const G = P.view(0).ladder.length;
@@ -752,9 +766,15 @@ async function browserChecks() {
             return out;
           });
           const areaWant = wide ? ['Northern Hemisphere', 'Southern Hemisphere', 'My Clubs'] : ['Northern Hemi', 'Southern Hemi', 'My Clubs'];
-          ok(json(Object.keys(names.two).sort()) === json(['My Clubs', 'Northern Hemi', 'Southern Hemi']) && json(Object.keys(names.one).sort()) === json(['My Clubs', 'Northern Hemisphere', 'Southern Hemisphere']) && !names.bad.length && names.lines <= 2 && (at === '568x320' ? names.off.length > 0 && names.off.every(o => o.startsWith('en2 ')) : !names.off.length), `${at}: a card's area: Northern Hemi and Southern Hemi where two sides share the screen, the full name on one line where a card has it alone, My Clubs whole; never cut, two lines at most in the 44px head${at === '568x320' ? ', the area left off only on England\'s Championship (89px in 80)' : ''} (${names.n} lines; ${json(Object.keys(names.two))} ${json(Object.keys(names.one))}${names.off.length ? '; off ' + names.off.length + ' ' + names.off[0] : ''}${names.bad.length ? '; ' + names.bad.slice(0, 3).join('; ') : ''})`);
+          ok(json(Object.keys(names.two).sort()) === json(['My Clubs', 'Northern Hemi', 'Southern Hemi']) && json(Object.keys(names.one).sort()) === json(['My Clubs', 'Northern Hemisphere', 'Southern Hemisphere']) && !names.bad.length && names.lines === 1 && names.level > 50 && names.off.length > 0 && json(names.open) === json(['England · Local', 'England · Local']), `${at}: a card's area: Northern Hemi and Southern Hemi where two sides share the screen and the whole line fits on one line, else left off (the opening screen England · Local on both cards), and only then; the full name on one line where a card has it alone, My Clubs whole; every line one line in the 44px head, both sides' names level, never cut, the area's text the full name (${names.n} lines, ${names.level} pairs; ${json(Object.keys(names.two))} ${json(Object.keys(names.one))}; opening ${json(names.open)}; off ${names.off.length}${names.off.length ? ' ' + names.off[0] : ''}${names.bad.length ? '; ' + names.bad.slice(0, 3).join('; ') : ''})`);
           ok(json(names.area.slice(0, 3).map(a => a.name)) === json(areaWant) && names.area.slice(0, 3).every((a, k) => a.label.startsWith(['Northern Hemisphere, ', 'Southern Hemisphere, ', 'My Clubs, '][k])) && names.area.every(a => a.row === 44 && !a.cut), `${at}: the Filter's Area column: ${areaWant.join(', ')}, labelled in full, every row 44px and nothing cut (${json(names.area.map(a => `${a.name} ${a.row}`))})`);
           ok(names.path.text === 'Northern Hemisphere · France · Top 14' && !names.path.cut && names.path.lines === 1, `${at}: a match's path: the full name, on one line, not cut (${json(names.path)})`);
+          // a screen reader hears the full name on a card: Northern Hemi's end and an area left off are drawn at no size, not removed
+          await page.evaluate(() => { const T = window.__tryline; T.debug.settings().cat = 'men'; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
+          const heard = [await page.locator('#t-side0 .pk-where').ariaSnapshot()];
+          await page.evaluate(() => { const P = window.__tryline.picker; P.group(0, P.view(0).ladder.findIndex(x => x.key === 'cel.ire') - P.view(0).gi); });
+          heard.push(await page.locator('#t-side0 .pk-where').ariaSnapshot(), await page.evaluate(() => [...document.querySelectorAll('#t-side0 .pk-ctx > span > span')].filter(p => p.getBoundingClientRect().width > 0).map(p => p.innerText).join(' · ')));
+          ok(heard[0].includes('Your Team · Northern Hemisphere · England · Local') && heard[1].includes('Your Team · Northern Hemisphere · Ireland') && /^Northern Hemi(sphere)? · Ireland$/.test(heard[2]), `${at}: a screen reader hears the full name on a card, where it shows as Northern Hemi and where the area is left off (${json(heard)})`);
           // the keyboard: the arrows on the side with the focus, Page Down a country, Tab to the next control, Enter sets and moves on
           await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
           await page.focus('#t-side0 .pk-pick');
