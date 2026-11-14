@@ -48,13 +48,17 @@ function pins() {
    off (20cbcaf exactly, so BASE and ON stand as the edge pinned them); WITH_KNOCK is the game as it ships, both on. */
 const KN = T.knock && T.knock.KNOCK;
 const WITH_KNOCK = { same:'1sans4x ishkxt 6s5dj3 b3clyy 1vdlusf 1kqx1dl 1r9icc0', easy:'18hjlb7 3aqbkz 11w1g1f' };   // re-pin only from a change to the edge or the knock-ons, on purpose
+/* The possession calls and the interception rules (CALLS, src/calls.js, 2026-11-13) act everywhere too. Every run above is with them off
+   (b4a25d5 exactly, so BASE, ON and WITH_KNOCK stand as pinned); WITH_CALLS is the game as it ships, all three on */
+const CL = T.calls && T.calls.CALLS;
+const WITH_CALLS = { same:'1ru8ljp g0q4ru 1wmj5sn c1ybz5 fqhmon h0aw10 frfp5z', easy:'1x1rx2c 1id9kca 16by8my' };   // re-pin only from a change to the edge, the knock-ons or the calls, on purpose
 if (process.argv.includes('--pins')) {
-  if (E) E.EDGE.on = false; if (KN) KN.on = false;
+  if (E) E.EDGE.on = false; if (KN) KN.on = false; if (CL) CL.on = false;
   const p = pins(); console.log(`same:'${p.same}', easy:'${p.easy}'`); process.exit(0);
 }
 begin('0 EDGE off is 90353c3');
 {
-  if (KN) KN.on = false;
+  if (KN) KN.on = false; if (CL) CL.on = false;
   E.EDGE.on = false; const off = pins(); E.EDGE.on = true; const on = pins();
   if (KN) KN.on = true;
   ok(off.same === BASE.same && off.easy === BASE.easy, `EDGE off (and the knock-ons): every match plays as 90353c3, with the same draws (${off.same} / ${off.easy}, pinned ${BASE.same} / ${BASE.easy})`);
@@ -62,7 +66,10 @@ begin('0 EDGE off is 90353c3');
   ok(on.easy.split(' ').slice(0, 2).every((h, i) => h !== BASE.easy.split(' ')[i]), `EDGE on moves the Easy Quick Match and the Kids match, on purpose (${on.easy})`);
   ok(on.easy === ON, `and plays them as pinned with the edge (${on.easy}, pinned ${ON})`);
   const both = pins();
-  ok(both.same === WITH_KNOCK.same && both.easy === WITH_KNOCK.easy, `with the knock-ons too, as the game ships (${both.same} / ${both.easy}, pinned ${WITH_KNOCK.same} / ${WITH_KNOCK.easy})`);
+  ok(both.same === WITH_KNOCK.same && both.easy === WITH_KNOCK.easy, `with the knock-ons too, as the game shipped at b4a25d5 (${both.same} / ${both.easy}, pinned ${WITH_KNOCK.same} / ${WITH_KNOCK.easy})`);
+  if (CL) CL.on = true;
+  const all = pins();
+  ok(all.same === WITH_CALLS.same && all.easy === WITH_CALLS.easy, `and with the possession calls, as the game ships (${all.same} / ${all.easy}, pinned ${WITH_CALLS.same} / ${WITH_CALLS.easy})`);
 }
 done('0 EDGE off is 90353c3');
 

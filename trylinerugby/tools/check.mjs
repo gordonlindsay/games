@@ -26,6 +26,7 @@ const jobs = [
   ['maul', ['tools/maul.mjs']],                             // the maul: the trigger and its gates, the CPU's call, each result, the wheel, the world's maul, two player, the cards, MAUL off as before (its browser part runs where Playwright is installed)
   ['edge', ['tools/edge.mjs']],                             // Easy's edge: who has it, each lever's size, the Line Break, On Fire's Easy numbers, EDGE off as 90353c3
   ['knock', ['tools/knock.mjs']],                           // the knock-ons: each lever's size, the Big Hit's spill yours only, the Knock-On tag, one draw a catch, KNOCK off as 20cbcaf
+  ['calls', ['tools/calls.mjs']],                           // the possession calls and the interception rules: each call, colour and sound, On Fire after its moment, the Line Break held, no interception out of the hands, nobody down, retiring or offside playing the ball, CALLS off as b4a25d5 (its browser part runs where Playwright is installed)
   ['stick', ['tools/stick.mjs']],                           // the touch stick and the buttons never stay stuck, and a card's button works under a second finger (its browser part runs where Playwright is installed)
 ];
 if (flags.has('--full')) {

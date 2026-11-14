@@ -424,6 +424,14 @@ function bvOverheads(cam, ctrls, plain) {                   // plain: a match yo
     if (no) bvNoSign(x, S.no, no - 3, Math.min(1, 4*(1 - (M.dclock - N.at)/PRO.noT)));
   }
 }
+function bvCallAt(cam, t, plain) {                          // where a possession call stands in a behind view: over his stack (bvOverheads), as high as it reaches
+  const p = t.p, [wx, wy] = p ? drawPos(p) : [t.x, t.y], q = pr(cam, wx, wy, 0);
+  if (!q || q.sx < 0 || q.sx > V.W || q.sy < 0 || q.sy > V.H) return null;
+  const star = plain && M.career && p === M.careerP ? Math.max(8, 0.34*q.k) : 0, carry = plain && M.phase === 'play' && M.ball.state === 'held' && M.ball.carrier === p;
+  const S = bvStack(q.sy - ((p ? lookOf(p).h : 1.8) + 0.2)*q.k, { pointer:true, carry, star, floor:plain && Math.abs(q.sx - V.W/2) < 130 ? BV_STACK_HUD : 0 });
+  const top = star ? S.star - star : carry ? S.carry - BV_CARRY.tail - BV_CARRY.h : S.pointer - 8;
+  return { x:q.sx, top:top - BV_CARRY.gap, foot:q.sy + Math.max(6, BV_RING*1.55*q.k)*bvFlat(cam, q.z) + 8, half:Math.max(6, BV_RING*1.55*q.k) };   // over the stack, or under his ring on the grass
+}
 function bvEdgeMarks(cam, plain) {                          // the ball or its carrier off the frame, and your player. Not at a set piece: the game is about to cut to it, and it has its own banner
   if (!plain) return;
   const b = M.ball;
@@ -463,6 +471,7 @@ function renderBehind(dt) {
   BV.edges.length = 0;
   if (plain && M.phase === 'play' && b.state === 'loose') bvLooseMark(cam, b);
   for (const t of [0, 1]) if (ctrls[t]) groundRing(cam, ctrls[t].x, ctrls[t].y, BV_RING*1.55, ringCol(t), 2.5);
+  if (!drill) callFlash(dt, (p, u, col) => { const [wx, wy] = drawPos(p); groundRing(cam, wx, wy, BV_RING*(1.55 + 0.9*u), col, 3); });   // a possession call's flash on his ring (src/calls.js)
   if (plain && M.career && M.careerPro) bvProCall(cam);      // on the grass with the ring, under the men
   bvPrepareMen(cam);
   if (artReady()) artPrepare(cam);
@@ -520,6 +529,7 @@ function renderBehind(dt) {
   if (drill) { if (dd && dd.after) dd.after(cam, dt); dvBall(cam); } else if (BV.fade >= 1) bvBall(cam);
   drawTags(dt, 0.95*cam.F/cam.back);                         // its clocks must run; its impact ring stays a circle on the screen in this slice
   bvOverheads(cam, ctrls, plain);                            // the pointer, the ball's marker and the star, stacked over a man's head
+  drawCalls(dt, t => bvCallAt(cam, t, plain));                // a possession call over that stack (src/calls.js)
   bvEdgeMarks(cam, plain);
   if (M.cut) drawCut();
   if (drill) drillDrawScreen();                              // a drill's own close-up or corner picture

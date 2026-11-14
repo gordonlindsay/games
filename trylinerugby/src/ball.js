@@ -9,9 +9,11 @@ function updateBallAir(dt) {
   b.z = f.z0 + (f.z1-f.z0)*u + 4*f.H*u*(1-u);
   b.vx = (f.x1-f.x0)/f.T; b.vy = (f.y1-f.y0)/f.T;
   if (f.kind === 'pass') {
+    const out = releaseOk(f);                              // out of the passer's hands: CALLS.release metres from where he let it go (src/calls.js)
     if (!f.sure) for (const q of M.players) {
       if (q.team === f.team || q.down > 0 || f.rolled.has(q)) continue;
       if (f.long && u > 0.18 && u < 0.82) continue;          // the loop is over the men in between; the contest is at the passer and the receiver
+      if (!out || !canPlay(q)) continue;                     // nobody takes it from his hands, and a man retiring or offside never does; each keeps his roll for later in the flight
       if (hyp(q.x-b.x, q.y-b.y) < 1.1 && b.z < 2.3) {
         f.rolled.add(q);
         const pI = ringed(q) ? 0.4 : (cpuSide(q.team) ? diffOf(q.team).cpuIntercept : M.two ? DIFF[levelOf(f.team)].cpuIntercept : 0.18);   // an AI interceptor in two player reads at the passer's level, as the CPU does against a human
@@ -61,7 +63,7 @@ function resolvePass() {
   }
   if (tgt && tgt.down <= 0 && hyp(tgt.x-b.x, tgt.y-b.y) < 2.4) { catchBall(tgt, 'pass'); return; }
   let best = null, bd = 1.8;
-  if (!f.sure) for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
+  if (!f.sure) for (const q of M.players) { if (!canPlay(q) || (q.team !== f.team && !releaseOk(f))) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }   // a missed pass: not to a man down, retiring or offside (src/calls.js)
   if (best) { catchBall(best, best.team === f.team ? 'pass' : 'intercept'); return; }
   b.state = 'loose'; b.vx = (f.x1-f.x0)/f.T*0.25; b.vy = (f.y1-f.y0)/f.T*0.25; b.vz = 1.5; b.z = 0.9; b.f = null;
   say('Dropped', 'small'); sfx('fumble');
@@ -120,7 +122,7 @@ function updateLoose(dt) {
   }
   if (b.z < (b.egg ? PRESSURE.egg.reach : 1.0)) {          // an egg on the hop is gathered only once it is down by the knees
     let best = null, bd = 1.1;
-    for (const q of M.players) { if (q.down > 0) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }
+    for (const q of M.players) { if (!canPlay(q)) continue; const dd = hyp(q.x-b.x, q.y-b.y); if (dd < bd) { bd = dd; best = q; } }   // never a man down, retiring or offside (src/calls.js)
     if (best) { const E = b.egg; pickUp(best); if (E) pressGather(best, E); }
   }
 }

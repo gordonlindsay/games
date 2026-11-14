@@ -148,6 +148,7 @@ function doPass(from, to, o) {
   b.state = 'air'; b.carrier = null; b.last = from.team;
   b.f = { kind:'pass', team:from.team, x0:b.x, y0:b.y, x1:tx, y1:ty, t:0, T, H, z0:1.1, z1:1.1, rolled:new Set(o.skip || []), onside:null, target:to,
     sure:!!o.sure, boost:o.boost || null, long:!!o.long };
+  offMark(from.team, from.x);                              // his men in front of him are offside for this pass (CALLS, src/calls.js)
   from.hold = 0; from.quick = false;
   M.stats.passes++;
   if (M.career) careerLifePass(from, to);                  // a career match: a pass to or from your player, for Team Spirit
@@ -162,10 +163,11 @@ function kickBall(team, x0, y0, x1, y1, T, H, kind) {
   b.state = 'air'; b.carrier = null; b.last = team;
   b.f = { kind, team, x0, y0, x1, y1, t:0, T, H, z0:0.4, z1:0, rolled:new Set(), onside, target:null };
   b.x = x0; b.y = y0; b.z = 0.4;
-  b.kickInfo = kind === 'kick' ? { team, ownHalf:(x0-60)*d < 0 } : null;
+  b.kickInfo = kind === 'kick' ? { team, ownHalf:(x0-60)*d < 0 } : kind === 'restart' && callsLv('kicks') ? { team, ownHalf:false } : null;   // a kick-off or a drop-out is a kick too: gathered, it is no turnover (CALLS, src/calls.js)
+  offMark(team, x0, M.players.filter(p => p.team === team && !onside.has(p)));   // the men the kick leaves offside stay so for its bounce, until they are back behind it (CALLS)
   M.phase = 'play';
   clearCharge();
-  for (const t of [0, 1]) if (isHuman(t)) { const q = nearestFree(t, x1, y1); if (q) setCtrl(t, q); }
+  for (const t of [0, 1]) if (isHuman(t)) { const q = (t === team && kickRing(t, x1, y1)) || nearestFree(t, x1, y1); if (q) setCtrl(t, q); }   // the kicker's side: a man who may play the bounce (CALLS, src/calls.js)
 }
 function chargeDown(c) {                                   // a tactical kick's roll: a defender on top of the kicker gets a 30% charge-down
   let q = null, bd = 1.7;

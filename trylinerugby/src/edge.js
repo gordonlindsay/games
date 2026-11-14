@@ -11,7 +11,9 @@
      metres for every metre ahead, so the deep cover man still counts while he is placed to come across; where one was earlier in the
      same carry; none within brk.clear metres of him at all; running forward at brk.fwd m/s or more, brk.line metres or more out.
      Once a carry (a new carrier, or the same man's next catch, starts another): Line Break is called (the small banner in your
-     colour, as Turnover is, so the run stays in sight), a whoosh and the crowd, a heat point towards On Fire, and a brk.stop ms
+     colour, as Turnover and Intercepted are since the possession calls, so the run stays in sight; not within CALLS.lbGap seconds
+     of a turnover or an interception on the same carrier, whose call that moment is, and carried over On Fire's banner while it
+     shows: src/calls.js), a whoosh and the crowd, a heat point towards On Fire, and a brk.stop ms
      hit-stop with no shake, shorter than a Big Hit's 180 (never for Kids or Minis: matchMild). If the point lights On Fire, the On
      Fire banner carries Line Break over it, so the call is still seen. A Get Past close-up won the right way already says Line Break
      with its cheer (settle, src/duels.js), so that is the carry's Line Break (edgeBroke): its heat point and the cover's lag, never a
@@ -57,9 +59,11 @@ function edgeLine(c) {
     near = Math.min(near, dist(q, c));
   }
   if (!L.had || near < K.clear || c.vx*d < K.fwd || (oppLine(c.team) - c.x)*d < K.line) return false;   // away from the man he beat, and running on
+  if (callLate(c)) return false;                           // he has just won it: Turnover or Intercepted is this moment's call, and the Line Break waits (src/calls.js)
   L.fired = true; L.at = M.dclock;
   st('lineBreak' + c.team);
-  say('Line Break', 'small', c.team); sfx('whoosh'); sfx('cheer'); buzz(30, c.team);
+  if (!fireFold(c.team, 'Line Break')) say('Line Break', 'small', c.team);   // On Fire's banner up already: the call goes over it (src/calls.js)
+  sfx('whoosh'); sfx('cheer'); buzz(30, c.team);
   if (!matchMild()) hitStop(K.stop, 0);                    // the youngest: the call and the sound, no slow-motion
   heat(c.team, 'line', 'Line Break');                      // lighting On Fire, its banner carries the call
   return true;
