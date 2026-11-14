@@ -37,7 +37,7 @@ const PERSON = { 'Staffordshire Owen Cup':'named for a person' };   // a cup nam
 const FOOT = 12;                                                  // the foot of the game's county tables (COUNTY_CUPS)
 const MIN_LIST = 6;                                               // a championship is your side and five from the list
 const hex = /^#[0-9a-f]{6}$/;
-const DESIGNS = ['plain', 'hoops', 'halves', 'quarters', 'stripes', 'sash', 'band'];   // a kit's design and third colour (the owner's research, 14 Nov 2026), kept for 1.8: 1.7 draws plain or hoops only
+const DESIGNS = ['plain', 'hoops', 'halves', 'quarters', 'stripes', 'sash', 'band'];   // a kit's design and third colour (the owner's research, 14 Nov 2026), drawn since 1.8 (src/kit-design.js)
 const WORDS = /^(?:he|his|him|she|her|man|men|guy|lad)$/i;        // a code is on the scoreboard: never a gendered word (tools/sides.mjs keeps them out of what the game shows)
 const ABIL = ['pace', 'power', 'handling', 'kicking', 'stamina'];
 // how a club plays (its flavour, TEAM_FLAVOUR): the game's own, not the club's. 3 in each, one up and one down, from the code
@@ -96,7 +96,7 @@ for (const c of counties) {
     if (!hex.test(x.kit) || !hex.test(x.trim)) fail(`${tag}: kit ${x.kit} ${x.trim}`);
     if (typeof x.hoops !== 'boolean' || !['confirmed', 'reported', 'guess'].includes(x.kitConfidence)) fail(`${tag}: hoops or kitConfidence`);
     if (x.kitFree != null && (!['hoops', 'trim'].includes(x.kitFree) || x.kitConfidence === 'guess')) fail(`${tag}: kitFree ${x.kitFree} (hoops or trim, on a sourced kit)`);   // a sourced kit's part that is a free choice (Pitchero gives no pattern, the owner's research no trim)
-    if (x.design != null && (!DESIGNS.includes(x.design) || x.kitConfidence === 'guess' || x.hoops !== (x.design === 'hoops'))) fail(`${tag}: design ${x.design} (one of ${DESIGNS.join(', ')}, on a sourced kit, hooped exactly when it is hoops: 1.7 draws any other plain)`);
+    if (x.design != null && (!DESIGNS.includes(x.design) || x.kitConfidence === 'guess' || x.hoops !== (x.design === 'hoops'))) fail(`${tag}: design ${x.design} (one of ${DESIGNS.join(', ')}, on a sourced kit, hooped exactly when it is hoops, so an older build and KITS off draw any other plain)`);
     if (x.third != null && (!hex.test(x.third) || x.design == null)) fail(`${tag}: third ${x.third} (a hex colour, with a design)`);
     if (x.existingId) {
       if (x.design != null || x.third != null) fail(`${tag}: a design or third on the game's own club (data.js has its kit)`);
@@ -156,8 +156,9 @@ let out = `/* =========================================================
      has the source of each). Kits within a county are told apart at a glance; sourced kits that look alike stay as sourced, bar a
      Pitchero kit (it gives colours, never a pattern), whose hoops or trim, marked a free choice, tells it from the club it looked like.
      78 kits are the owner's research (14 Nov 2026); where it gave no second colour the trim is marked a free choice.
-   - designs: a club's design (plain, hoops, halves, quarters, stripes, sash, band) and third colour from the owner's research, kept for
-     1.8, which will draw them. Nothing reads them yet: 1.7 draws a club plain or hooped (hoops on its line), whatever its design.
+   - designs: a club's design (plain, hoops, halves, quarters, stripes, sash, band) and third colour from the owner's research, drawn
+     since 1.8: data.js puts each on its club (src/kit-design.js draws it). A hooped one is hoops on its line too, so KITS off draws a
+     club plain or hooped, as 1.7 did, whatever its design. Plain takes no third: a plain club's third is kept here and not drawn.
    - The game's own clubs (Farnham and the rest of Surrey's, Aldershot) are not here: data.js has them. shared: the game's clubs a county
      also lists (Aldershot, in Surrey's list since PR #14, shown under Hampshire).
    - cups: the county's own cups by level ({ name, to }, as COUNTY_CUPS), only what is sourced; null for the plain County Cup table.
@@ -178,7 +179,7 @@ for (const c of ordered) {
 }
 out += `    ],
     kits:{ ${(data.gameKitChanges || []).map(g => `${g.id}:{ kit:${q(g.to.kit)}, trim:${q(g.to.trim)}, hoops:${!!g.to.hoops} }`).join(', ')} },   // the game's own kits a decision changes (Merton: plain, its hoops never sourced)
-    designs:{   // for 1.8, read by nothing yet: each club's design and third colour as the owner's research gives them
+    designs:{   // each club's design and third colour as the owner's research gives them: data.js puts them on the clubs (1.8)
 ${ordered.flatMap(c => c.clubs.filter(x => !x.existingId && x.design != null)).map(x => `      ${x.id}:{ design:${q(x.design)}${x.third ? `, third:${q(x.third)}` : ''} },\n`).join('')}    },
   };
 }

@@ -9,6 +9,7 @@ vm.runInContext(`const NATIONS = Array.from({length:6},(_,i)=>({id:'AA'+String.f
 const run = s => vm.runInContext(s, context);
 const data = fs.readFileSync(new URL('data.js', root), 'utf8');
 run(data.match(/^const staminaOf .*\nconst abilityOf .*$/m)[0]);   // data.js's ability readers, which cleanTeam and cleanSide call
+run('const KITS = { on:true };\n' + fs.readFileSync(new URL('kit-design.js', root), 'utf8'));   // the kit designs (1.8): cleanTeam and cleanSide keep a side's design and third colour through kitClean
 run('const TEAM_LISTS=[];\n' + data.match(/^const POOL_OLD [\s\S]*?\n}$/m)[0] + '\n' + data.match(/^const TEAM_CATS .*\nconst catOf .*$/m)[0]);   // and its list keys and categories, which cleanSettings and cleanSide read
 let checks=0;
 const ok=(expr,msg)=>{assert.ok(run(expr),msg);checks++;};

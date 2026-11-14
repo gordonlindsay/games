@@ -624,9 +624,9 @@ const BRK = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'brk').teams
   D.openTeams('quick'); for (const s of [0, 1]) { P.filter(s, '', { dev:'touch' }); for (let k = 0; k < 5; k++) { P.filterSel(0, k); P.filterSel(1, 0); } for (const q of ['b', 'ba', 'Premiership', 'zz', '']) P.filterType(q); P.filterClose(); }
   P.filter(0, 'bath', { dev:'touch' }); P.filterPick(P.filterState().hits[0].gi, P.filterState().hits[0].i);
   ok(rndCalls() === before, `the team screen and its Filter draw no random number (${rndCalls() - before})`);
-  ok(T.GAME_VERSION === '1.7' && $('ver').textContent === 'Version 1.7', 'GAME_VERSION is 1.7 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase, 1.7 the county clubs, with 1.6.1\'s five changes folded in, never released on their own), on window.__tryline and at the foot of Settings');
+  ok(T.GAME_VERSION === '1.8' && $('ver').textContent === 'Version 1.8', 'GAME_VERSION is 1.8 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase, 1.7 the county clubs, with 1.6.1\'s five changes folded in, never released on their own, 1.8 the kit designs and a third colour), on window.__tryline and at the foot of Settings');
   const src = readGameSource();
-  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.7';") && /<p class="ver" id="ver">Version 1\.7<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
+  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.8';") && /<p class="ver" id="ver">Version 1\.8<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
   ok(!/id="home-tag"|\$\('home-tag'\)/.test(src), 'and no home tagline for it: PR #17\'s v1.1 line went with the tidied home, so nothing writes to an element that is not there');
   ok(!/[←-⇿⟵-⟿]/.test(src.slice(src.indexOf('<section class="screen" id="s-teams"'), src.indexOf('<section class="screen" id="s-build"'))), 'no arrow glyph on the team screen');
   fresh();

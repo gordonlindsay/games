@@ -12,7 +12,7 @@ const ART_CLIPS = ['idle', 'carryidle', 'run', 'sprint', 'carry', 'pass', 'sides
 const ART_STEP_T = 0.36;                                    // the Side Step's six pictures play over this long. The move itself is unchanged: its push has already landed
 const ART_STEP = new WeakMap();                             // who stepped, when and which way across the pitch: render-only, off the player object
 const artStepped = (p, side) => { ART_STEP.set(p, { at:M.rt, s:side }); };
-const ART = { state:'idle', gen:0, man:null, pages:[], classes:{}, map:new Map(), sheets:0, tick:0, next:1, epoch:0, baked:0, bakeMs:0, scratch:null, sg:null, img:null, luts:new Map(), last:null, promise:null };
+const ART = { state:'idle', gen:0, man:null, pages:[], classes:{}, map:new Map(), sheets:0, tick:0, next:1, epoch:0, baked:0, bakeMs:0, scratch:null, sg:null, img:null, luts:new Map(), frames:new WeakMap(), dmaps:new Map(), last:null, promise:null };
 const artReady = () => ART.state === 'ready';
 function artInstall(man, pages) {                           // a parsed players.json and its decoded pages: [{ w, h, data }]
   ART.gen++; ART.man = man; ART.pages = pages; ART.ids = ART_CLIPS.reduce((o, c, i) => { o[c] = i; return o; }, {});
@@ -60,7 +60,7 @@ function artLoad(base = 'assets/players/') {                // once: over the ne
   })();
 }
 function artClear() {                                       // every picture is forgotten; the sheets are kept for the next match
-  ART.map.clear(); ART.tick = 0; ART.next = 1; ART.epoch++; ART.luts.clear(); ART.last = null;
+  ART.map.clear(); ART.tick = 0; ART.next = 1; ART.epoch++; ART.luts.clear(); ART.dmaps.clear(); ART.last = null;
   for (const k in ART.classes) { const c = ART.classes[k]; c.free = 0; for (const slot of c.slots) slot.key = -1; }
 }
 function artTrim() {                                        // back on the menus: the demo needs one sheet a shape at the smaller tier, so the rest of a match's go. They are remade if the next match wants them
@@ -111,21 +111,30 @@ function artPaletteOf(kit, look) {
   const skin = LOOK_SKIN[look.skin], hair = artHairOf(look, kit, skin);
   const grassy = c => colorDist(c, C.grassA) < 60 || colorDist(c, C.grassB) < 60, cap = grassy(kit.trim) ? '#f1eee4' : kit.trim;
   // the collar and cuffs sit between shirt and skin: if the trim is as dark as the skin, they lift, so the arm never melts into the shirt
-  const trim = colorDist(kit.trim, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : kit.trim;
+  let trim = colorDist(kit.trim, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : kit.trim;
   // a lock is a plait, a bunch or a tail: hair on hair, a step darker, or lighter when the hair is too dark to go darker, so it shows against the head it falls over
   const lock = luma(hair) < 0.16 ? artMix(hair, '#8a6548', 0.24) : artMix(hair, '#17120e', 0.3);
-  const table = { shirt:kit.shirt, hoop:kit.hoops ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:kit.boots || '#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d', lock };
+  const design = kit.design || (kit.hoops ? 'hoops' : 'plain');
+  if (kit.third && KIT_TRIM_HALF[design]) trim = colorDist(kit.third, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : kit.third;   // the trim is half the shirt: collar, cuffs and sock tops take the third, as the icon's collar does
+  const table = { shirt:kit.shirt, hoop:design === 'hoops' ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:kit.boots || '#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d', lock };
   const out = [null];
   for (const name of ART.parts) out.push(artLut(table[name]));
+  // a design past plain and two-colour hoops (src/kit-design.js) is painted per pixel at bake (artDesignFrame): its three colours' tables ride on the palette
+  out.design = design === 'plain' || (design === 'hoops' && !kit.third) ? null : design;
+  out.dl = [artLut(kit.shirt), artLut(kit.trim), artLut(kit.third || kit.trim)];
+  out.third = kit.third || null;
   return out;
 }
-function artBlit(g, r, luts, T, dx, dy, W) {                 // one crop of the atlas, tinted, drawn at dx, dy in metres
+function artBlit(g, r, luts, T, dx, dy, W, F) {              // one crop of the atlas, tinted, drawn at dx, dy in metres. F: a design's frame (artDesignFrame), for the body only
   const page = ART.pages[r[0]], d = page.data, w = r[3], h = r[4], out = ART.img.data, pw = page.w*4;
   for (let y = 0; y < h; y++) {
     let i = (r[2] + y)*pw + r[1]*4, j = y*W*4;
     for (let x = 0; x < w; x++, i += 4, j += 4) {
       const cov = d[i + 2];
-      if (cov) { const L = luts[d[i + 1] >> 4], s = d[i]*3; out[j] = L[s]; out[j + 1] = L[s + 1]; out[j + 2] = L[s + 2]; out[j + 3] = cov; }
+      if (cov) {
+        const id = d[i + 1] >> 4, L = F && id <= 2 ? luts.dl[F.map[y*w + x]] : luts[id], s = d[i]*3;
+        out[j] = L[s]; out[j + 1] = L[s + 1]; out[j + 2] = L[s + 2]; out[j + 3] = cov;
+      }
       else out[j + 3] = 0;
     }
   }
@@ -134,6 +143,66 @@ function artBlit(g, r, luts, T, dx, dy, W) {                 // one crop of the 
   ART.sg.putImageData(ART.img, 0, 0, 0, 0, w + 1, h + 1);
   const q = T/ART.man.px;
   g.drawImage(ART.scratch, 0, 0, w, h, dx*T, dy*T, w*q, h*q);
+}
+/* ---------- kit designs (1.8, src/kit-design.js) ----------
+   The atlas has one shirt part and three baked hoops; nothing in it says where a man's left half or his chest is. So each picture
+   finds his torso from what it does carry: the three hoops are rings at known heights (z 1.065, 1.195, 1.325), so their spread
+   up the picture gives the scale and the height of every shirt pixel, and leaning or lying they lean and lie with him; the number's
+   point is the middle of his back, and the head's point, less the offset an idle man shows at that facing, gives which way is up.
+   Done once an atlas row and mirror (ART.frames). Which of the three colours each pixel takes is then a map of the picture, one a row,
+   mirror, design and whether there is a third (ART.dmaps, kept for the match: every man of a side shares it, whatever his look), so a
+   bake reads a byte a pixel, and a steady frame pays nothing, as every baked picture is cached. */
+const ART_HOOP_Z = [1.325, 1.195, 1.065];
+function artAxisOf(body, deg) {                             // how far the head's point sits right of the number's on an idle man at this facing, px
+  const idle = body.idle, i = deg > 180 ? 360 - deg : deg, d = [0, 45, 90, 135, 180].indexOf(i), r = idle[(d < 0 ? 0 : d)*2];
+  return (r[8] - r[10])*(deg > 180 ? -1 : 1);
+}
+function artDesignFrame(r, deg, mirror, body, design, third) {
+  let got = ART.frames.get(r);
+  if (!got) ART.frames.set(r, got = []);
+  const G = got[mirror ? 1 : 0] || (got[mirror ? 1 : 0] = artDesignGeom(r, deg, mirror, body));
+  const key = (mirror ? 1 : 0) + design + (third ? 3 : 2);
+  let maps = ART.dmaps.get(r);
+  if (!maps) ART.dmaps.set(r, maps = {});
+  if (!maps[key]) {
+    const rim = G.side && KIT_ASYM[design] && design !== 'sash' ? 2*G.A : 0;   // halves and quarters side on: a strip of the far half at chest and back (A: the half depth, px)
+    const F = { ...G, design, third, rim }, w = r[3], h = r[4], m = maps[key] = new Uint8Array(w*h), page = ART.pages[r[0]], d = page.data, pw = page.w*4;
+    for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2] && (d[i + 1] >> 4) <= 2) m[y*w + x] = artDesignAt(F, x, y);   // the shirt's pixels alone
+  }
+  return { map:maps[key] };
+}
+function artDesignGeom(r, deg, mirror, body) {
+  const page = ART.pages[r[0]], d = page.data, w = r[3], h = r[4], pw = page.w*4, px = ART.man.px;
+  const fx = r[5], fy = r[6], A = artAxisOf(body, deg);
+  const back = deg < 90 || deg > 270, side = deg === 90 || deg === 270;
+  let ux = r[8] - r[10] - A, uy = r[9] - r[11]; const um = Math.hypot(ux, uy) || 1; ux /= um; uy /= um;
+  if (uy > 0.2 && Math.abs(ux) < 0.5) { ux = 0; uy = -1; }   // a head below the number (a man on the floor, end on): trust the picture's own up
+  const sx = fx + r[10] + (back || side ? 0 : 1.8*A), sy = fy + r[11];
+  // the hoops' heights along his up, three clusters, the middle one the chest
+  const al = [];
+  for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2] > 140 && (d[i + 1] >> 4) === 2) al.push((x + 0.5 - sx)*ux + (y + 0.5 - sy)*uy);
+  let sc = 0.9*px, zc = 1.21, fit = false;
+  if (al.length > 12) {
+    al.sort((a, b) => a - b);
+    let c = [al[Math.floor(al.length*0.9)], al[Math.floor(al.length*0.5)], al[Math.floor(al.length*0.1)]];
+    for (let it = 0; it < 8; it++) {
+      const s3 = [0, 0, 0], n3 = [0, 0, 0];
+      for (const a of al) { let k = 0, b = Math.abs(a - c[0]); for (let j = 1; j < 3; j++) { const e = Math.abs(a - c[j]); if (e < b) { b = e; k = j; } } s3[k] += a; n3[k]++; }
+      c = c.map((v, j) => (n3[j] ? s3[j]/n3[j] : v));
+    }
+    const s2 = (c[0] - c[2])/(ART_HOOP_Z[0] - ART_HOOP_Z[2]);
+    if (s2 > 0.3*px && s2 < 1.25*px) { sc = s2; zc = ART_HOOP_Z[1] - c[1]/sc; fit = true; }
+  }
+  // which side of the picture is his left: behind him it is the picture's left, in front of him its right; a mirrored bake swaps them
+  const flip = mirror ? -1 : 1, lside = (back ? -1 : 1)*flip, near = deg === 90 ? -1 : 1;   // side on: the art faces right, so it shows his right side
+  return { sx, sy, ux, uy, sc, zc, px, lside, side, near:near*flip, fit, A };
+}
+function artDesignAt(F, x, y) {                            // which of the shirt, trim and third this pixel of the picture takes
+  const dx = x + 0.5 - F.sx, dy = y + 0.5 - F.sy, along = dx*F.ux + dy*F.uy, lat = (dx*-F.uy + dy*F.ux)/F.px;
+  const z = F.zc + along/F.sc;
+  let xb = F.side ? F.near*0.2 : Math.max(-0.26, Math.min(0.26, F.lside*lat));
+  if (F.rim) { const t = lat*F.px/F.rim; if (t < 0.18 || t > 0.8) xb = -xb; }
+  return kitPaint(F.design, z, xb, lat, F.third);
 }
 function artClass(shape, tier) {                            // the slots for one shape at one tier
   const id = shape + tier;
@@ -171,16 +240,17 @@ function artPreview(cv, t, look) {
   if (!artReady() || !t) return false;
   artScratch();
   const man = ART.man, pose = artSprite('idle', 0, 3, false, look), r = pose.row, q = 1/man.px, T = man.px, g = cv.getContext('2d');
-  const kit = { shirt:t.kit, trim:t.trim, hoops:!!t.hoops, shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
+  const kit = { shirt:t.kit, trim:t.trim, hoops:kitDesignOf(t) === 'hoops', design:kitDesignOf(t), third:kitThirdOf(t), shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
+  const F = luts.design ? artDesignFrame(r, pose.deg, false, artBody(look), luts.design, luts.third) : null;   // the club's design (src/kit-design.js)
   const style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
   g.clearRect(0, 0, cv.width, cv.height);
   g.save(); g.translate(cv.width/2, cv.height - 6); g.scale(look.b/man.builds[pose.build], 1);
-  artBlit(g, r, luts, T, -r[5]*q, -r[6]*q, 256);
+  artBlit(g, r, luts, T, -r[5]*q, -r[6]*q, 256, F);
   if (hk) artBlit(g, hk, luts, T, (r[8] - hk[5])*q, (r[9] - hk[6])*q, 256);
   g.restore();
   return true;
 }
-function artBake(p, s, key, r, clip, deg, tier, mirror) {   // one picture for one man
+function artBake(p, s, key, r, clip, deg, tier, mirror, dir = 0) {   // one picture for one man
   const started = performance.now();
   bvArmFonts();
   const man = ART.man, c = artClass(man.clips[clip].shape, tier), slot = artSlot(c), g = slot.g, T = c.T, S = c.S, q = 1/man.px;
@@ -195,9 +265,10 @@ function artBake(p, s, key, r, clip, deg, tier, mirror) {   // one picture for o
   sh.addColorStop(0, 'rgba(6,14,8,.5)'); sh.addColorStop(0.55, 'rgba(6,14,8,.3)'); sh.addColorStop(1, 'rgba(6,14,8,0)');
   g.fillStyle = sh; g.beginPath(); g.arc(0, 0, wide*T, 0, 7); g.fill(); g.restore();
   if (mirror) g.scale(-1, 1);
-  const luts = artPalette(p);
-  artBlit(g, r, luts, T, -r[5]*q, -r[6]*q, 256);
-  const look = lookOf(p), style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
+  const luts = artPalette(p), look = lookOf(p);
+  const F = luts.design ? artDesignFrame(r, man.clips[clip].dirs[dir], mirror, artBody(look), luts.design, luts.third) : null;   // a design's frame: his body as this picture holds it
+  artBlit(g, r, luts, T, -r[5]*q, -r[6]*q, 256, F);
+  const style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
   if (hk) artBlit(g, hk, luts, T, (r[8] - hk[5])*q, (r[9] - hk[6])*q, 256);
   if (mirror) g.scale(-1, 1);
   if (artNumbered(c.shape, deg)) {                           // the number, drawn in type so a mirrored man keeps it readable
@@ -206,7 +277,7 @@ function artBake(p, s, key, r, clip, deg, tier, mirror) {   // one picture for o
     g.fillStyle = luma(kit.shirt) > 0.6 ? '#1b2233' : '#f1eee4';
     g.font = `900 ${Math.round(0.31*T)}px 'Big Shoulders Display', Impact, sans-serif`;
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    if (kit.hoops) { g.strokeStyle = kit.shirt; g.lineWidth = 0.08*T; g.lineJoin = 'round'; g.strokeText(String(p.n), 0, 0); }
+    if (kit.hoops || kitPainted(kit)) { g.strokeStyle = kit.shirt; g.lineWidth = 0.08*T; g.lineJoin = 'round'; g.strokeText(String(p.n), 0, 0); }
     g.fillText(String(p.n), 0, 0);
     g.restore();
   }
@@ -270,8 +341,10 @@ function artPose(cam, p, s, k, tackler, carrier, sp, spr) { // the clip and fram
   return artSprite(clip, frame, d8, flip, lookOf(p));
 }
 const ART_OUT = { clip:'', frame:0, deg:0, dir:0, mirror:false, row:null, build:null };
+const artBody = look => { const b = artBuild(look.b); return ART.man.sprites[b + (look.g ? '.f' : '.m')] || ART.man.sprites[b + '.m']; };   // his build's rows, a woman's where the art has them
+const artAsym = p => !!(M.kit[p.team] && KIT_ASYM[M.kit[p.team].design]);   // his side's design differs left to right: read off the match's kit, no object made a frame
 function artSprite(clip, frame, d8, flip, look) {           // the atlas row for a facing, mirrored where the art allows
-  const man = ART.man, c = man.clips[clip], b = artBuild(look.b), body = man.sprites[b + (look.g ? '.f' : '.m')] || man.sprites[b + '.m'], rows = body[clip], out = ART_OUT;
+  const man = ART.man, c = man.clips[clip], b = artBuild(look.b), body = artBody(look), rows = body[clip], out = ART_OUT;
   let d = d8, mirror = false;
   if (c.dirs.length === 8) { if (flip) { d = (8 - d8) % 8; mirror = true; } }
   else if (d > 4) { d = 8 - d; mirror = true; }
@@ -294,20 +367,20 @@ function artPrepare(cam) {                                  // once a frame: not
 }
 function artCell(p, s, pose, tier, mine) {                  // his picture at this tier, or null when this frame's tints are spent. The man you run always gets his
   // the back views carry a number in type, so a mirrored one is baked mirrored; the rest are flipped when drawn
-  const numbered = pose.mirror && artNumbered(ART.man.clips[pose.clip].shape, pose.deg);
+  const numbered = pose.mirror && (artNumbered(ART.man.clips[pose.clip].shape, pose.deg) || artAsym(p));   // and a design that differs left to right (halves, quarters, sash) is baked mirrored too
   if (s.aid == null || s.aEpoch !== ART.epoch) { s.aid = ART.next++; s.aEpoch = ART.epoch; }
   const base = s.aid*16384 + ((ART.ids[pose.clip]*64 + pose.dir*8 + pose.frame)*2 + (numbered ? 1 : 0))*2, key = base + tier;
   let slot = ART.map.get(key);
   if (!slot) {
     if (BV.bakes >= ART_BAKES && !mine) { slot = ART.map.get(base + 1 - tier); if (slot) slot.t = ART.tick; return slot || null; }   // the same picture at the other size is better than an old one
     BV.bakes++;
-    slot = artBake(p, s, key, pose.row, pose.clip, pose.deg, tier, numbered);
+    slot = artBake(p, s, key, pose.row, pose.clip, pose.deg, tier, numbered, pose.dir);
   }
   slot.t = ART.tick;
   return slot;
 }
 function artDraw(at, p, s, kk, sc, ang, pose, mine) {       // draws him where at says, and gives back the slot drawn, or null if nothing can be yet
-  const want = kk*V.dpr > 46 && !M.demo ? 1 : 0, numbered = pose.mirror && artNumbered(ART.man.clips[pose.clip].shape, pose.deg);   // the dim demo keeps to the smaller sheets
+  const want = kk*V.dpr > 46 && !M.demo ? 1 : 0, numbered = pose.mirror && (artNumbered(ART.man.clips[pose.clip].shape, pose.deg) || artAsym(p));   // the dim demo keeps to the smaller sheets
   const owed = (M.demo || !!practice) && !(s.artSlot && s.artSlot.key === s.artKey);   // the demo and the Skill Games never show a hole or a code-drawn man: anyone with no picture to hold gets his now, past the budget
   let slot = artCell(p, s, pose, want, mine || owed), flip = pose.mirror && !numbered;
   if (!slot && s.artSlot && s.artSlot.key === s.artKey) { slot = s.artSlot; flip = s.artFlip; }   // tints spent: hold his last picture a frame

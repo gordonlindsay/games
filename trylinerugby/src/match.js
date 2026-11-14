@@ -37,17 +37,24 @@ function colorDist(a,b) { const x = hexRgb(a), y = hexRgb(b); return hyp(x[0]-y[
 /* A team's colour for marks on the dark scoreboard and plates: the shirt, or the trim if the shirt is near black, or chalk. */
 function showCol(team) { const k = M.kit[team]; return colorDist(k.fill, '#0f1a12') >= 60 ? k.fill : colorDist(k.trim, '#0f1a12') >= 60 ? k.trim : '#f1eee4'; }
 
-/* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. */
+/* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. The shirt colours
+   decide, as ever (the tests pin it); a split shirt (halves, quarters, 1.8) also clashes when each of its two colours has a near match in
+   the other side's shirt and trim, since half of it is the trim. Hoops, stripes, sash and band read as their shirt colour, as hoops always
+   have. The kit kept carries its design and third; a change kit, white or black is plain. With KITS off every design is plain or hoops,
+   so this is 1.7's rule exactly. */
+const KIT_SPLIT = { halves:true, quarters:true };
+function kitApart(a, b) { const h = (p, q) => Math.max(...p.map(x => Math.min(...q.map(y => colorDist(x, y))))); return Math.max(h(a, b), h(b, a)); }
 function awayKit(n0, n1) {
-  const h = !!n1.hoops;
-  const opts = [[n1.kit, n1.trim, h], [n1.alt, n1.altTrim, false], [n1.trim, n1.kit, h], ['#f2efe6', n1.kit, false], ['#1c1c1c', n1.kit, false]].filter(o => o[0] && o[1]);
+  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1);
+  const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], [n1.trim, n1.kit, d1, t1], ['#f2efe6', n1.kit, 'plain', null], ['#1c1c1c', n1.kit, 'plain', null]].filter(o => o[0] && o[1]);
+  const apart = o => { const d = colorDist(n0.kit, o[0]); return KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? Math.min(d, kitApart(KIT_SPLIT[d0] ? [n0.kit, n0.trim] : [n0.kit], KIT_SPLIT[o[2]] ? [o[0], o[1]] : [o[0]])) : d; };
   let best = opts[0], bd = -1;
   for (const o of opts) {
-    const d = colorDist(n0.kit, o[0]);
-    if (d >= 140) return { fill:o[0], trim:o[1], hoops:o[2] };
+    const d = apart(o);
+    if (d >= 140) { best = o; break; }
     if (d > bd) { bd = d; best = o; }
   }
-  return { fill:best[0], trim:best[1], hoops:best[2] };
+  return { fill:best[0], trim:best[1], hoops:best[2] === 'hoops', design:best[2], third:best[3] };
 }
 const teamOf = t => typeof t === 'number' ? NATIONS[t] : t;
 function newMatch(u, c, opts) {
@@ -61,7 +68,7 @@ function newMatch(u, c, opts) {
   earlyDiff = null;
   if (ease) { const d = DIFF[di], o = { ...d }; for (const k in EARLY.nudge) o[k] = d[k] + EARLY.nudge[k]; earlyDiff = o; }
   M = {
-    nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:!!n0.hoops }, awayKit(n0, n1)],
+    nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:kitDesignOf(n0) === 'hoops', design:kitDesignOf(n0), third:kitThirdOf(n0) }, awayKit(n0, n1)],
     players:[], ball:{ x:60, y:35, z:0, vx:0, vy:0, vz:0, state:'dead', carrier:null, f:null, last:0, kickInfo:null },
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,

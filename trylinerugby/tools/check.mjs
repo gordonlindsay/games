@@ -29,6 +29,7 @@ const jobs = [
   ['calls', ['tools/calls.mjs']],                           // the possession calls and the interception rules: each call, colour and sound, On Fire after its moment, the Line Break held, no interception out of the hands, nobody down, retiring or offside playing the ball, CALLS off as b4a25d5 (its browser part runs where Playwright is installed)
   ['chase', ['tools/chase.mjs']],                           // the kick chase: the gate, the onside chasers, the pace and its end, the catching side late but never your own input, no new draw, CHASE off as b4a25d5, the win-back rates
   ['stick', ['tools/stick.mjs']],                           // the touch stick and the buttons never stay stuck, and a card's button works under a second finger (its browser part runs where Playwright is installed)
+  ['kits', ['tools/kits.mjs']],                           // kit designs and a third colour: the data, kitPaint, the icons, the close-ups, the clash rule, the saves, no draw, the Top camera plain, KITS off as 02b9700 (its browser part, the sprite bake and Create Team's rows, runs where Playwright is installed)
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces', 'browser']) jobs.push([name, [`tools/${name}.mjs`]]);

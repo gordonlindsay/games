@@ -888,7 +888,7 @@ async function importRun(href, token, opts) {
   const c = data.club, mine = importMine(data);
   u.data = data; u.pick = !!c && !c.kit && !mine;
   u.level = importLevel(data, mine && mine.level).id;   // preset: your own team's level on a re-import, else what the page says, else the Local list's best
-  u.draft = mine ? { kit:mine.kit, trim:mine.trim, hoops:mine.hoops } : c ? { kit:c.kit || '#2050b0', trim:c.trim || importContrast(c.kit || '#2050b0'), hoops:false } : null;
+  u.draft = mine ? { kit:mine.kit, trim:mine.trim, hoops:mine.hoops, design:mine.design, third:mine.third } : c ? { kit:c.kit || '#2050b0', trim:c.trim || importContrast(c.kit || '#2050b0'), hoops:false } : null;
   u.step = 'preview'; importRender(); importFocus();
 }
 function importCommit() {
