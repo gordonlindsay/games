@@ -182,7 +182,7 @@ const COUNTIES = [
    off the ladder and the home: a saved 'cty' is Surrey (localKey). Aldershot, on Surrey's list since PR #14, is shared into Hampshire's and
    shown there (LOCAL_VIEW). Merton plays in plain black with its gold trim (its hoops were never sourced; Camberley's are). Keys never
    change, lists only grow. LOCAL='{"on":false}' (tools/harness.mjs) is 1.6, draw for draw and screen for screen. */
-const LOCAL = { on:true };
+const LOCAL = { on:true, view:true };   // view: a club shown under another county plays there only (listPlays); LOCAL='{"view":false}' is 7c864c2, Aldershot in Surrey's draws too
 // LOCAL_TUNE
 const LOCAL_DATA = LOCAL.on ? localCounties() : { sizes:{}, counties:[], kits:{} };   // a function declaration in src/clubs-local.js, after this file, hoisted
 const LOCAL_NEW = new Set(LOCAL_DATA.counties.flatMap(c => c.clubs));   // the new clubs, rated by their league and place (localRated, src/ratings.js)
@@ -215,6 +215,11 @@ for (const c of LOCAL_DATA.counties) {    // every other county, A to Z
   for (const t of shared) LOCAL_VIEW[t.id] = c.key;
   TEAM_LISTS.push({ key:c.key, tier:2, name:c.label, county:c.county, wraps:c.wraps, teams:[...c.clubs, ...shared] });
 }
+/* The sides a list plays: its own, less a club LOCAL_VIEW shows under another county (Aldershot is on Surrey's list for the saves, and plays in
+   Hampshire's championship and career leagues, never Surrey's: both reviews of 7c864c2 found it drawn in Surrey's while every screen showed it
+   under Hampshire). Every list's own teams with LOCAL off, as 1.6. */
+for (const l of TEAM_LISTS) { const own = l.teams.filter(t => !LOCAL_VIEW[t.id] || LOCAL_VIEW[t.id] === l.key); if (own.length < l.teams.length) l.plays = own; }
+const listPlays = l => (LOCAL.view && l.plays) || l.teams;
 const POOLS = TEAM_LISTS.map(l => l.teams);   // every built-in list
 const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's transfer offers come from these
 /* Saves from before the hierarchy hold an index into the old five lists and My League (International, Local, France, Australia,

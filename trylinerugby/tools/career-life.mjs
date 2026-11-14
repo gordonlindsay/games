@@ -29,7 +29,12 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    and `rest` and `restMinis` are a Farnham career match, whose season draws five from every Surrey club. With LOCAL='{"on":false}'
 //    this build gives BEFORE_LOCAL, 1.6's pins, exactly, and the older pins below hold in that build as they did (both checked first, in a
 //    child: offRun).
-const BASE = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'61kk8v', restMinis:'1ohszc7' };
+//    Re-pinned again the same day, at the review of 7c864c2: Aldershot, shown under Hampshire, plays in Hampshire's draws only (listPlays,
+//    src/data.js), so the Farnham career's year draws its five from Surrey's 34, not 35 (`rest`; `restMinis`' seed plays the same match
+//    either way). With LOCAL='{"view":false}' (Aldershot in Surrey's draws, as 7c864c2) this build gives BEFORE_VIEW, 7c864c2's pins,
+//    exactly (checked first, in a child: offRun).
+const BASE = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'18fh7rm', restMinis:'1ohszc7' };
+const BEFORE_VIEW = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'61kk8v', restMinis:'1ohszc7' };   // 7c864c2, Aldershot in Surrey's draws too
 const BEFORE_LOCAL = { others:'1mhz589 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // 1.6 (b9fa00d), LOCAL off, as 1.6 pinned it (2026-11-14): 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = { others:'lngm86 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = { others:'1c3imom 5wudse 1afiv9y ze72xt 83k82g', rest:'1yqiwtq', restMinis:'1g5fgqr' };   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's others 1s0b74m 1vu3xwr y86qkm ze72xt 83k82g)
@@ -82,6 +87,8 @@ const LOCAL_ON = !!(T.local && T.local.LOCAL.on);   // the county clubs: the old
   if (LOCAL_CHILD) { const o = three(); console.log(say(o)); process.exit(failed ? 1 : 0); }   // the LOCAL off child (offRun): 1.6's pins, the older ones checked above
   if (LOCAL_ON) { const off = await offRun(new URL(import.meta.url));
     ok(!off.fails.length && off.last === say(BEFORE_LOCAL), `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${say(BEFORE_LOCAL)}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
+  if (LOCAL_ON && T.local.LOCAL.view) { const v = await offRun(new URL(import.meta.url), { LOCAL:'{"view":false}' });
+    ok(!v.fails.length && v.last === say(BEFORE_VIEW), `with Aldershot in Surrey's draws too (LOCAL view off), as 7c864c2 (${v.last}, pinned ${say(BEFORE_VIEW)}${v.fails.length ? '; ' + v.fails.join('; ') : ''})`); }
   const now = others();
   ok(now === BASE.others, `AI v AI, a Quick Match, a championship match, the demo and a drill play exactly as before the bars (${now}, pinned ${BASE.others})`);
 }

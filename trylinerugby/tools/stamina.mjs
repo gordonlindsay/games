@@ -8,6 +8,7 @@ const { T, reseed } = await import('./harness.mjs');
 const S = T.stamina, X = T.teams, C = T.contact, A = T.arcade, D = T.debug, STEP = T.STEP, $ = id => document.getElementById(id);
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else failed++; if (!cond || process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };   // VERBOSE=1 prints the passes too
+const json = JSON.stringify;
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const KEYS = ['pace', 'power', 'handling', 'kicking', 'stamina'];
 const sum = t => KEYS.reduce((a, k) => a + t[k], 0);
@@ -101,11 +102,12 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 {
   // re-pinned for the side-by-side team screen (2026-11-11): one team a side, its five bars, each of every side in the group in turn
   D.openTeams('champ');
-  const PK = T.picker, side = () => $('t-side0').innerHTML, n = PK.view(0).group.teams.length;
+  const PK = T.picker, side = () => $('t-side0').innerHTML, grp = PK.view(0).group, n = grp.teams.length;
   const farnham = side();
   let five = 0;
   for (let i = 0; i < n; i++) { const h = side(); if ((h.match(/class="pk-st"/g) || []).length === 5 && /<span class="lbl">Pace<\/span>.*<span class="lbl">Power<\/span>.*<span class="lbl">Handling<\/span>.*<span class="lbl">Kicking<\/span>.*<span class="lbl">Stamina<\/span>/.test(h)) five++; PK.step(0, 1); }
-  ok(five === n && n === T.teams.TEAM_LISTS.find(l => l.key === 'sur').teams.length, `every side shows five ability bars, Stamina among them (${five} of ${n} sides: Surrey's, every Surrey club with LOCAL)`);
+  const want = T.local && T.local.LOCAL.on ? [34, 'RPA', 'FEL'] : [12, 'FAR', 'WIM'], got = [n, grp.teams[0].id, grp.teams[n - 1].id];   // Surrey's championship: every Surrey club with LOCAL (Aldershot, shown under Hampshire, plays there), Rosslyn Park first, Feltham last; its twelve without
+  ok(five === n && json(got) === json(want), `every side shows five ability bars, Stamina among them (${five} of ${n} sides: Surrey's, ${got.slice(1).join(' to ')}, pinned ${want.join(', ')})`);
   ok(new RegExp(`<span class="lbl">Kicking</span>.*?<span class="lbl">Stamina</span><span class="pk-bar" role="img" aria-label="Stamina ${X.CLUBS[0].stamina} of 5">`).test(farnham) && farnham.includes('>Farnham<') && X.CLUBS[0].stamina === 2, `Stamina is the last bar, Farnham at its own (${X.CLUBS[0].stamina}, as rated from its table; the old card check matched any side at 3)`);
   S.openBuilder(null);
   ok(S.draft().stamina === 1 && KEYS.every(k => S.draft()[k] === 1), 'a new team starts at 1 in all five');

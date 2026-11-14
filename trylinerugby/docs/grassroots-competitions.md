@@ -88,7 +88,8 @@ sourced them by level (`docs/clubs-local.json`, each county's `cups` and their s
 - A club whose level is under every cup its county's table reaches plays the plain table's cup for its level (a Durham Counties 1 club:
   the County Trophy), never an invented one. Surrey's and Hampshire's tables are the game's own, as they were.
 - A county cup draws its own county's clubs first, nearest the club's level, topped up from other counties nearest its level where its
-  county has too few (Berkshire has six others); a made club draws from every county.
+  county has too few (Berkshire has six others); a made club draws from every county, at the level of the club nearest its rating
+  from Regional 1 down (National League's clubs, at 61 too, are left out of that match, so a made club at 61 or above is Regional 1's).
 
 | County | Researched (levels) | In the game |
 |---|---|---|

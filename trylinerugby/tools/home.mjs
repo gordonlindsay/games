@@ -237,9 +237,10 @@ const fresh = () => {                                       // a new game on the
   ok(H.tier() === 2, 'the tier on show starts on My Team\'s (Farnham: Local)');
   // each competition's team screen: only its sides, and Back comes back to it
   const P = T.picker, comp = () => P.view(0).ladder[0], cards = () => comp().teams.length, panel = () => $('t-side0').innerHTML;
+  const plays = l => (T.local ? T.local.listPlays(l) : l.teams);   // a list's own sides (LOCAL: Surrey's without Aldershot, shown under Hampshire)
   for (const l of X.TEAM_LISTS.filter(l => l.tier > 0 && l.key !== 'cty')) {   // Counties (a saved key) is Surrey's now: below
     H.setTier(l.tier); H.open('champ'); H.champPick(l.key);
-    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && P.one() && P.view(0).ladder.map(g => g.key).join() === 'comp,mine.made' && cards() === l.teams.length && l.teams.every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === l.name && P.where(comp()) === X.TEAM_TIERS[l.tier], `${l.name}: its ${l.teams.length} sides only, one side, ${X.TEAM_TIERS[l.tier]} over ${l.name}`);
+    ok(shown() === 's-teams' && D.pickMode() === 'champ' && K.comp() === 'league' && X.teamPool() === l.key && P.one() && P.view(0).ladder.map(g => g.key).join() === 'comp,mine.made' && cards() === plays(l).length && plays(l).every(t => comp().teams.includes(t)) && $('t-eyebrow').textContent === 'Championship' && comp().name === l.name && P.where(comp()) === X.TEAM_TIERS[l.tier], `${l.name}: its ${plays(l).length} sides only, one side, ${X.TEAM_TIERS[l.tier]} over ${l.name}`);
     $('t-back').click(); ok(shown() === 's-home' && H.step() === 'champ', `${l.name}: Back to Menu comes back to Competitions`);
   }
   H.setTier(2); H.open('champ'); H.champPick('cty');

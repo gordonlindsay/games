@@ -252,13 +252,15 @@ function restore(s) {
   }
   if ('champ' in s) champ = s.champ == null ? null : cleanChamp(s.champ);
   if ('career' in s) career = s.career == null || typeof cleanCareer !== 'function' ? null : cleanCareer(s.career);
-  if ('importLeague' in s) { const moved = new Map(); importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague, moved); if (typeof importRecode === 'function') importRecode(moved); }   // after the career and the championship: a recoded league side is followed into both, and by My Team
+  const moved = new Map();                                 // league sides recoded as the league is read (importRecode, once the rest is read too)
+  if ('importLeague' in s) importLeague = s.importLeague == null ? null : cleanImportLeague(s.importLeague, moved);
   if ('store' in s) storeBought = typeof cleanStore === 'function' ? cleanStore(s.store) : [];
   if ('locker' in s) locker = typeof cleanLocker === 'function' ? cleanLocker(s.locker) : locker;   // medals, the ball and boots picked (src/locker.js); a save from before it has none
   if ('cup' in s) cup = s.cup == null || typeof cleanCup !== 'function' ? null : cleanCup(s.cup);   // a save from before the cups has none
   if ('form' in s) formRec = cleanForm(s.form);   // the games played as My Team; a save from before it has none, and a new game starts at nought (formRec's [])
   if ('profile' in s) profile = typeof cleanProfile === 'function' ? cleanProfile(s.profile) : profile;   // the age group, gender and look (src/profile.js); a save from before it has none
   if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
+  if (typeof importRecode === 'function') importRecode(moved);   // after everything that holds a side: a recoded league side is followed into the career, the championship, a cup, My Team, the picks and its record
   if (settings.myClub && typeof myClubFind === 'function' && !myClubFind(settings.myClub)) settings.myClub = null;   // a My Team since deleted, or its league removed: the default again
   retainCompletedSeason(champ);
   if (typeof cupRetain === 'function') cupRetain(cup);

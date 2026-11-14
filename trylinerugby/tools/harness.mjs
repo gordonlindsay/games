@@ -32,7 +32,8 @@ export const CLUB_BAND = {
 if (process.env.NEW_LISTS === 'off') js = js.replace(/\n  \{ key:'en2'[^\n]*/, '').replace(/\n  \{ key:'cty'[^\n]*/, '');
 // LOCAL='{"on":false}' builds the game without the county clubs (src/data.js, src/clubs-local.js: the game is exactly 1.6, b9fa00d, draw for draw
 // and screen for screen: the proof behind every re-pin since, each kept at its pin as BEFORE_LOCAL). Deep-merged, as the levers below. It acts
-// as the game loads, so a proof runs a spawned copy (offRun)
+// as the game loads, so a proof runs a spawned copy (offRun). LOCAL='{"view":false}' keeps the county clubs and puts Aldershot back in
+// Surrey's draws, as 7c864c2 had it (listPlays, src/data.js): the proof behind the review's re-pins (BEFORE_VIEW), offRun(url, { LOCAL:... })
 if (process.env.LOCAL) { const cut = js.replace('// LOCAL_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(LOCAL, ${process.env.LOCAL}); }`); if (cut === js && !process.env.GAME) throw new Error('LOCAL: no LOCAL_TUNE in the build'); js = cut; }
 // MAUL='{"on":false}' turns the maul off (the build before it exactly: b706c3e on its branch; on wt/pr14int the pressure merge, and with PRESSURE='{"on":false}' as well 0b1293c: the proof behind every re-pin since); MAUL='{"cpu":{"base":0.1}}' tries other levers. Deep-merged, as the contact levers below
 if (process.env.MAUL) js = js.replace('// MAUL_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; deep(MAUL, ${process.env.MAUL}); }`);

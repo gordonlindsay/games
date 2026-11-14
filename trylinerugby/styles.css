@@ -135,7 +135,8 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .btn.pk-group,.btn.pk-fav,.btn.pk-edit{width:auto;flex:none;min-height:44px;padding:6px 12px}
 .btn.pk-group{flex:0 1 auto;min-width:0;max-width:48%;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn.pk-group.two{white-space:normal;text-wrap:balance;line-height:1.05;padding-block:4px}   /* a county (LOCAL) takes two lines where it needs them (Notts Lincs & Derbyshire, Eastern Counties at 667), never cut */
-#s-teams:is([data-fit="1"],[data-fit="2"],[data-fit="3"]) .pk-head:has(.pk-group.two) :is(.pk-where,.pk-who){gap:0;line-height:1}   /* and once the screen is tight (568 wide: Your Team and North · England two lines each beside it), its line above closer set */
+.pk-head:has(.pk-group.two) .pk-where{min-width:min-content}   /* and beside it Your Team stays one line, the button giving way instead, so the head keeps its 44px and both sides' cards start level */
+.pk-head:has(.pk-group.two) .pk-who{white-space:nowrap}
 span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align:right}
 .btn.pk-fav{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;padding-inline:10px}
 .pk-fav i{width:16px;height:16px;flex:none;background:var(--chalk-dim);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}

@@ -8,7 +8,7 @@
      A side with none plays the plain county table.
    - A county runs its cups by level: the club enters the first whose `to` its level is within. Plain names, never a sponsor's.
    ========================================================= */
-const COMP_LEAGUES = [[/^National League 1\b/, 3], [/^National League 2\b/, 4], [/^Regional 1/, 5], [/^Regional 2/, 6], [/^Counties 1/, 7], [/^Counties 2/, 8], [/^Counties 3/, 9], [/^Counties 4/, 10], [/^Counties 5/, 11]];
+const COMP_LEAGUES = [...(LOCAL.on ? [[/^National League 1\b/, 3], [/^National League 2\b/, 4]] : []), [/^Regional 1/, 5], [/^Regional 2/, 6], [/^Counties 1/, 7], [/^Counties 2/, 8], [/^Counties 3/, 9], [/^Counties 4/, 10], [/^Counties 5/, 11]];
 const CLUB_LEVEL = { QUI:11 };   // Quins, the amateur club: Counties 5 Surrey by the club's own 2025-26 fixtures (Wikipedia says Counties 4)
 const CLUB_COUNTY = { FAR:'SUR', WIM:'SUR', GUI:'SUR', IRO:'SUR', COB:'SUR', WEY:'SUR', ORU:'SUR', HAS:'SUR', KIN:'SUR', GDN:'SUR', QUI:'SUR',
   EFF:'SUR', WAN:'SUR', EGH:'SUR', MER:'SUR', MIT:'SUR', FEL:'SUR', ALD:'HAM' };
@@ -41,7 +41,9 @@ function compLevelOf(t) {
   if (!t) return null;
   const own = compOwnLevel(t); if (own) return own;
   const ov = overallOf(t);                           // a made side: the level of the Local club nearest its overall, the higher on a tie
-  const near = compLocal().slice().sort((a, b) => Math.abs(overallOf(a) - ov) - Math.abs(overallOf(b) - ov) || compOwnLevel(a) - compOwnLevel(b))[0];
+  /* Regional 1 down, as 1.6 matched it: National League's clubs (LOCAL, levels 3 and 4) are at 61 too, Regional 1's top, and a made side at
+     61 or above is a Regional 1 side for its county cup, never one drawn against National League clubs from across England. */
+  const near = compLocal().filter(o => compOwnLevel(o) >= 5).sort((a, b) => Math.abs(overallOf(a) - ov) - Math.abs(overallOf(b) - ov) || compOwnLevel(a) - compOwnLevel(b))[0];
   return compOwnLevel(near);
 }
 const compCountyOf = t => (t && !t.custom && CLUB_COUNTY[t.id]) || null;

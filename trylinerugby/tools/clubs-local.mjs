@@ -109,6 +109,7 @@ for (const c of counties) {
     if (ids.has(x.id)) fail(`${tag}: id ${x.id} twice (${ids.get(x.id)})`);
     ids.set(x.id, x.name);
     if (!x.name || x.name.length > 16 || x.name !== x.name.trim()) fail(`${tag}: name over 16 or untrimmed`);
+    if (x.fullName != null && (typeof x.fullName !== 'string' || !x.fullName || x.fullName !== x.fullName.trim() || x.fullName.length > 40)) fail(`${tag}: full name '${x.fullName}'`);   // written as full: where it differs, for the search (a card's name cut to 16)
     for (const [gid, gname] of GAME) if (importSame(x.name, gname)) fail(`${tag}: the same name to the game as its ${gid} ${gname}`);
     for (const o of names) if (importSame(x.name, o)) fail(`${tag}: the same name to the game as ${o}`);
     names.push(x.name);
@@ -130,7 +131,7 @@ if (errors.length) { console.error(errors.map(e => 'clubs-local: ' + e).join('\n
 /* ---------- write ---------- */
 const q = s => "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\u00ad/g, '\\u00ad') + "'";
 const clubLine = x => {
-  const f = flavour(x.id), parts = [`id:${q(x.id)}`, `name:${q(x.name)}`, `kit:${q(x.kit)}`, `trim:${q(x.trim)}`, ...(x.hoops ? ['hoops:true'] : []),
+  const f = flavour(x.id), parts = [`id:${q(x.id)}`, `name:${q(x.name)}`, ...(x.fullName && x.fullName !== x.name ? [`full:${q(x.fullName)}`] : []), `kit:${q(x.kit)}`, `trim:${q(x.trim)}`, ...(x.hoops ? ['hoops:true'] : []),
     ...ABIL.map((k, i) => `${k}:${f[i]}`), `league:${q(x.league)}`, `place:${x.place}`,
     ...(x.w != null ? ['w', 'd', 'l', 'pf', 'pa'].map(k => `${k}:${x[k]}`) : [])];
   return `{ ${parts.join(', ')} },${x.kitConfidence === 'guess' ? '   // colours a free choice' : ''}`;
@@ -143,7 +144,8 @@ let out = `/* =========================================================
    Every club in England's 2025-26 National League 1 and 2, Regional 1, Regional 2 and Counties 1, first XVs only, by its county (its RFU
    constituent body), Jersey and Guernsey Raiders under Hampshire and Douglas under Cheshire. Surrey first, then A to Z.
    - A club is written as data.js writes one: its kit and trim, how it plays (3 in each ability, one up and one down from its code: the
-     game's own, not the club's), and its 2025-26 line. A place with no W-D-L is a league with no published table: its place only.
+     game's own, not the club's), and its 2025-26 line. A place with no W-D-L is a league with no published table: its place only. full:
+     its own name where the card's differs (cut to 16, or told apart), which the search finds as well.
    - Its rating comes from its league and place (localRated, src/ratings.js), never from the abilities here.
    - A kit marked a free choice is a guess; every other is the club's own colours as the research found them (docs/clubs-local.json
      has the source of each). Kits within a county are told apart at a glance; sourced kits that look alike stay as sourced.

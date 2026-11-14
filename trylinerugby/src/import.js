@@ -759,15 +759,26 @@ function cleanImportLeague(v, moved) {
   return teams.length ? { teams } : null;
 }
 /* A save's league sides recoded by cleanImportLeague (moved: old key to new code), followed everywhere the save holds them, in one pass
-   once the career, the championship and the league are all read back: My Team, the career's club and season, and the championship. By
-   the key the save has, so a side's new key that was another's old one moves nothing twice. Left as they were, the career's club would
-   keep a code a built-in club has now and be taken for that club, off My League (Merton into Counties, Bedford Athletic into England 2). */
+   once the whole save is read back (restore calls it last): My Team, the career's club and season, the championship, a cup, the Favourites,
+   the Recent, each side's last pick and the games played as the side. By the key the save has, so a side's new key that was another's old
+   one moves nothing twice. Left as they were, the career's club would keep a code a built-in club has now and be taken for that club, off
+   My League (Merton into Counties, Bedford Athletic into England 2), and the rest would point at nothing: with the county clubs (LOCAL,
+   1.7) most of the codes a league was given are a county club's now (Rams, Clifton), so a favourite, a pick and a record would all go. */
 function importRecode(moved) {
   if (!moved || !moved.size) return;
   const fix = t => { const id = t && t.key && moved.get(t.key); if (id) { t.id = id; t.key = 'lg-' + id; } };
-  if (moved.has(settings.myClub)) settings.myClub = 'lg-' + moved.get(settings.myClub);
+  const key = k => (moved.has(k) ? 'lg-' + moved.get(k) : k);
+  if (moved.has(settings.myClub)) settings.myClub = key(settings.myClub);
   if (career) { fix(career.club); if (career.season) career.season.teams.forEach(fix); }
   if (champ) champ.teams.forEach(fix);
+  if (cup) cup.teams.forEach(fix);
+  settings.fav = [...new Set(settings.fav.map(key))];
+  settings.recent = settings.recent.map(r => [...new Set(r.map(key))]);
+  settings.pick = settings.pick.map(p => (p && moved.has(p.id) ? { ...p, id:key(p.id) } : p));
+  /* the games played as a side (formKey: c:lg-CODE): each record by its old key; one the save had for the new key already (a side since
+     gone) gives way to the side that has it now */
+  const was = formRec.map(r => r.k), now = was.map(k => (k.startsWith('c:') ? 'c:' + key(k.slice(2)) : k));
+  formRec = formRec.map((r, i) => ({ ...r, k:now[i] })).filter((r, i) => now[i] === was[i] ? !now.some((k, j) => j !== i && k === r.k && now[j] !== was[j]) : true);
 }
 /* One of your teams with the club's name, or null. */
 const importMine = data => { if (!data || !data.club) return null; const k = importKey(importShort(data.club.name)); return custom.find(t => importKey(t.name) === k) || null; };

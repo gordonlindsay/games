@@ -31,7 +31,7 @@ function dataPrint() {
   const side = t => [t.id, t.name, t.kit, t.trim, !!t.hoops, t.pace, t.power, t.handling, t.kicking, t.stamina, t.league, t.place, t.w, t.d, t.l, t.pf, t.pa];
   out.push(json(X.ALL_TEAMS.map(side)));
   out.push(json(X.TEAM_LISTS.map(l => [l.key, l.tier, l.name, l.teams.map(t => t.id)])));
-  out.push(json([P.LIST_HOME, P.LIST_LOCAL, Q.COUNTY_CUPS, Q.COUNTY_CUP_NAMES, Q.CLUB_COUNTY, Q.COMP_LEAGUES.map(([re, n]) => [String(re), n]).filter(([, n]) => n >= 5)]));
+  out.push(json([P.LIST_HOME, P.LIST_LOCAL, Q.COUNTY_CUPS, Q.COUNTY_CUP_NAMES, Q.CLUB_COUNTY, Q.COMP_LEAGUES.map(([re, n]) => [String(re), n])]));
   const local = [...new Set(X.TEAM_LISTS.filter(l => l.tier === 2).flatMap(l => l.teams))];
   out.push(json(local.map(t => [t.id, Q.levelOf(t), Q.cupFor(t).name])));
   for (const cat of ['men', 'women']) out.push(json(P.ladder(cat, { nations:true, legends:true, clubs:true, mine:'all', fav:true, recent:0 }).map(g => [g.key, g.name, P.where(g), g.teams.map(t => t.id || t.act)])));
@@ -127,6 +127,9 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const made = { id:'ZZZ', name:'My Town', custom:true, kit:'#123456', trim:'#ffffff', pace:3, power:3, handling:3, kicking:3, stamina:3 };
   const mr = Q.rivals(made);
   ok(mr.length === 7 && new Set(mr.map(t => Q.CLUB_COUNTY[t.id])).size > 1, `a made side has no county and draws from every county (${[...new Set(mr.map(t => Q.CLUB_COUNTY[t.id]))]})`);
+  const at = ov => ({ ...made, ...R.abilitiesFor({}, R.sumOfOverall(ov)) }), lvAt = ov => Q.levelOf(at(ov));
+  ok([61, 64, 72, 75].every(ov => lvAt(ov) === 5) && lvAt(55) === 6 && lvAt(46) === 9 && lvAt(43) === 11, `a made side is matched from Regional 1 down, as 1.6 matched it: at 61 and above a Regional 1 side, never National League's, though its clubs are 61 too (${[43, 46, 52, 55, 61, 64, 72, 75].map(ov => ov + ' L' + lvAt(ov)).join(', ')})`);
+  ok([61, 72].every(ov => { reseed(ov); const r = Q.rivals(at(ov)); return r.length === 7 && r.every(t => Q.ownLevel(t) === 5); }) && Q.cupFor(at(72)).name === 'County Cup', 'so its county cup draws Regional 1 clubs, and it plays the County Cup');
   reseed(6);
   const cup = K.cupNew('county', { user:by('TWE'), cat:'men', year:1 });
   ok(cup && cup.name === 'Kent Cup' && cup.teams.length === 8 && cup.teams.slice(1).every(t => Q.CLUB_COUNTY[t.id] === 'KEN'), 'the Kent Cup, as a career\'s county phase plays it: eight Kent sides');
@@ -162,10 +165,28 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const thames = hit('Regional 2 Thames'), want = X.ALL_TEAMS.filter(t => t.league === 'Regional 2 Thames');
   ok(thames.length === want.length && want.every(t => thames.some(h => h.t === t)), `a club's own league: Regional 2 Thames finds its ${want.length} clubs, across their counties`);
   ok(hit('Farnham')[0].t.id === 'FAR' && hit('Farnham')[0].r === 0, 'a club\'s name still comes first');
+  const fulls = research.counties.flatMap(c => c.clubs).filter(r => !r.existingId && r.fullName && r.fullName !== r.name), withFull = NEW.filter(t => t.full);
+  ok(withFull.length === fulls.length && fulls.every(r => X.ALL_TEAMS.find(t => t.id === r.id).full === r.fullName) && !X.ALL_TEAMS.some(t => t.full && !NEW.includes(t)), `a club's full name is with it where its card's differs, as researched (${withFull.length})`);
+  const missed = withFull.filter(t => !hit(t.full).some(h => h.t === t && h.r === 0)).map(t => t.full);
+  ok(!missed.length, `every one found by its full name, at the first step (${missed.join(', ') || withFull.length + ' clubs'})`);
+  const byFull = { 'Weston-super-Mare':'WSM', 'Saracens Amateurs':'SAA', 'Liverpool St Helens':'LSH', 'Betteshanger':'DBE', 'Worcester Wanderers':'WWA', 'Devonport Services':'DSE', 'Nottingham University':'NUI', 'Chosen Hill Former':'CHF', 'Nuneaton Old Edwardians':'NOE', 'Old Rishworthians':'ORS', 'Old Wimbledonians':'OWI' };
+  const lost = Object.entries(byFull).filter(([q, id]) => !hit(q).length || hit(q)[0].t.id !== id).map(([q]) => q);
+  ok(!lost.length && hit('St Helens').some(h => h.t.id === 'LSH'), `a club cut on its card found by its own name: Weston-super-Mare, Saracens Amateurs, Betteshanger and the rest (${lost.join(', ') || 'all'})`);
   ok(LO.FL_CAP === 200 && hit('a').length > 200, `a letter matches more than ${LO.FL_CAP} (${hit('a').length})`);
   P.filter(0, 'a', { dev:'touch' });
   ok(P.filterState().hits.length === 200 && new RegExp(`<p class="fl-none fl-more">200 of ${hit('a').length} Teams</p>`).test($('fl-res').innerHTML) && ($('fl-res').innerHTML.match(/ data-r="/g) || []).length === 200, `so 200 are drawn, and the count of all said under them (200 of ${hit('a').length} Teams)`);
+  ok($('fl-said').textContent === `200 of ${hit('a').length} Teams`, `and a screen reader hears the same count (${$('fl-said').textContent})`);
+  P.filter(0, 'Tunb', { dev:'touch' }); ok($('fl-said').textContent === '1 Team', 'a search under the cap says its count alone (1 Team)');
   P.filterClose();
+  // Quick Match's Opponent, untouched: Your Team's league rival first; in a county with none, the side nearest its level, then its overall
+  const opp = id => { s.myClub = id; s.pick = [null, null]; D.goHome(); D.openTeams('quick'); return [P.view(0).team, P.view(1).team, P.view(1).group.key]; };
+  const [far, farOpp] = opp('FAR'), [ald, aldOpp, aldG] = opp('ALD');
+  ok(farOpp.league === far.league && farOpp !== far, `Farnham: a league rival first (${farOpp.name}, ${farOpp.league})`);
+  ok(aldG === 'ham' && aldOpp.league === 'Counties 1 Hampshire' && X.overallOf(aldOpp) === 49, `Aldershot (Counties 3, none in Hampshire): Counties 1's foot, the nearest (${aldOpp.name} ${X.overallOf(aldOpp)}), not Hampshire's strongest`);
+  const wide = [];
+  for (const t of [...new Set(counties.flatMap(l => P.clubGroups('ENG').find(g => g.list === l.key).teams))]) { const [me, op] = opp(t.id); if (Math.abs(X.overallOf(me) - X.overallOf(op)) >= 9) wide.push(`${me.name} ${X.overallOf(me)} v ${op.name} ${X.overallOf(op)}`); }
+  ok(!wide.length, `no county club's Opponent opens 9 or more from it (${wide.slice(0, 4).join('; ') || 'none'})`);
+  s.myClub = null; s.pick = [null, null]; D.goHome();
 }
 
 // 5. The home's Local tier: your county | Other County | My League; Other County on the Filter's County | Teams
@@ -187,8 +208,16 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   ok(c && c.teams.length === 6 && c.teams[c.user].id === first.id && c.teams.every(t => list('ken').teams.some(o => o.id === t.id)), `a Kent club picked (${first.name}): Kent's championship, its five others Kent's (${c && c.teams.map(t => t.id)})`);
   X.setChamp(null); D.goHome();
   H.champPick('sur');
-  ok(!LO.champCounty() && P.view(0).ladder[0].key === 'comp' && P.view(0).ladder[0].list === 'sur' && P.view(0).ladder[0].teams.length === SUR.length, 'your county: its own championship, every club on its list');
+  const shown = P.clubGroups('ENG').find(g => g.key === 'sur').teams;
+  ok(!LO.champCounty() && P.view(0).ladder[0].key === 'comp' && P.view(0).ladder[0].list === 'sur' && P.view(0).ladder[0].teams.length === shown.length && shown.every(t => P.view(0).ladder[0].teams.includes(t)), `your county: its own championship, every club the ladder shows under it (${shown.length})`);
+  ok(!P.view(0).ladder[0].teams.some(t => t.id === 'ALD') && X.poolTeams('sur').length === SUR.length - 1 && !X.poolTeams('sur').some(t => t.id === 'ALD') && X.poolTeams('ham').some(t => t.id === 'ALD'), 'Aldershot, on Surrey\'s list for the saves, plays in Hampshire\'s championship only: never on Surrey\'s team screen nor in its draw');
   D.goHome();
+  const by = id => X.ALL_TEAMS.find(t => t.id === id), drawn = new Set();
+  for (let n = 0; n < 40; n++) { reseed(100 + n); X.setChamp(null); H.champPick('sur'); D.pickTeam(by('FAR')); const c = X.champ(); if (c) c.teams.forEach(t => drawn.add(t.id)); D.goHome(); const cr = C.create({ pos:'B', num:5, club:by('FAR'), league:'sur' }); cr.season.teams.forEach(t => drawn.add(t.id)); }
+  ok(!drawn.has('ALD') && drawn.size > 20, `forty Surrey championships and Farnham career years: never Aldershot (${drawn.size} clubs drawn)`);
+  const ald = C.create({ pos:'B', num:5, club:by('ALD'), league:'sur' });
+  ok(ald.league === 'ham' && C.clean(JSON.parse(json(ald))).league === 'ham' && C.clean({ ...JSON.parse(json(ald)), league:'sur' }).league === 'ham' && ald.season.teams.slice(1).every(t => Q.CLUB_COUNTY[t.id] === 'HAM'), 'an Aldershot career, a 1.6 one saved on Surrey too: Hampshire\'s league');
+  X.setChamp(null); D.goHome();
 }
 
 // 6. Saves with the new keys, and a My League side on a code a county club has taken
@@ -207,7 +236,26 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const got = I.league().teams[0];
   ok(got.id !== 'TWE' && got.key === 'lg-' + got.id && s.myClub === got.key && H.myClub() === got && !X.ALL_TEAMS.some(t => t.id === got.id), `a saved league side coded TWE is recoded (${got.id}), and is still My Team`);
   ok(!X.ALL_TEAMS.some(t => t.id === 'SEV' || t.id === 'TUN') && X.ALL_TEAMS.some(t => t.id === 'SEO' && t.name === 'Sevenoaks'), 'the importer\'s own Sevenoaks and Tunbridge Wells codes (SEV, TUN) are no county club\'s: Sevenoaks is SEO');
-  X.restore({ importLeague:null, settings:{ myClub:null } });
+  // ...and everything else the save holds for a recoded side follows it: a 1.6 league with Rams (RAM) and Clifton (CLI), codes that are
+  // Rams' and Clifton's now, its favourites, recents, picks, the games played as it and a county cup under way as it
+  const lg = (id, name) => ({ ...side, key:'lg-' + id, id, name });
+  reseed(9); X.setChamp(null);
+  const cupSave = JSON.parse(json(K.cupNew('county', { user:lg('RAM', 'Rams Old Boys'), cat:'men', year:1 })));
+  X.restore({ settings:{ myClub:'lg-RAM', fav:['lg-RAM', 'lg-CLI', 'FAR'], recent:[['lg-CLI'], ['lg-RAM', 'TWE']], pick:[{ id:'lg-RAM', g:'mine.league', cat:'men' }, { id:'FAR', g:'sur', cat:'men' }] },
+    importLeague:{ teams:[lg('RAM', 'Rams Old Boys'), lg('CLI', 'Clifton Town'), lg('XQZ', 'Xqz Park')] }, cup:cupSave,
+    form:[{ k:'c:lg-RAM', w:5, d:0, l:2, last:'WWLWW' }, { k:'c:FAR', w:1, d:0, l:0, last:'W' }] });
+  const [ram, cli, xqz] = I.league().teams;
+  ok(ram.id !== 'RAM' && cli.id !== 'CLI' && xqz.key === 'lg-XQZ' && s.myClub === ram.key && H.myClub() === ram, `a 1.6 league's Rams and Clifton recoded (${ram.id}, ${cli.id}), Rams still My Team`);
+  ok(json(s.fav) === json([ram.key, cli.key, 'FAR']) && json(s.recent) === json([[cli.key], [ram.key, 'TWE']]) && s.pick[0].id === ram.key && s.pick[0].g === 'mine.league' && s.pick[1].id === 'FAR', `its favourites, recents and picks follow it (${s.fav.join()}; ${json(s.recent)}; ${s.pick.map(p => p && p.id).join()})`);
+  const fav = P.ladder('men', { nations:true, clubs:true, mine:'all', fav:true, recent:0 }).find(g => g.hemi === 'fav');
+  ok(fav && fav.teams.includes(ram) && fav.teams.includes(cli), 'so the Favourites group still has both');
+  ok(H.form.of(ram).w === 5 && H.form.of(ram).last === 'WWLWW' && H.form.get().length === 2 && H.form.of(X.ALL_TEAMS.find(t => t.id === 'FAR')).w === 1 && !H.form.get().some(r => r.k === 'c:lg-RAM'), `the games played as it follow it (${json(H.form.of(ram))})`);
+  const cu = K.get();
+  ok(cu && cu.teams[cu.user].key === ram.key && cu.teams[cu.user].id === ram.id, `a county cup under way as it, its side with it (${cu && cu.teams[cu.user].key})`);
+  X.restore({ settings:{ myClub:'lg-RAM' }, importLeague:{ teams:[lg('RAM', 'Rams Old Boys')] }, form:[{ k:'c:lg-RAM', w:2, d:0, l:0, last:'WW' }, { k:'c:lg-' + ram.id, w:9, d:0, l:9, last:'' }] });
+  ok(json(H.form.get().map(r => [r.k, r.w])) === json([['c:' + ram.key, 2]]), 'a record the save had under the new code already (a side since gone) gives way to the side that has the code now');
+  K.set(null); H.form.set([]);
+  X.restore({ importLeague:null, settings:{ myClub:null, fav:[], recent:[[], []], pick:[null, null] } });
 }
 
 // 7. A place-only club: no record line, its league and place everywhere a line is shown
@@ -279,6 +327,18 @@ async function browserChecks() {
           P.group(0, gi(g.key) - P.view(0).gi);
           for (let i = 0; i < g.teams.length; i++) { if (T.local.LOCAL_NEW.has(P.view(0).team) || i === 0) { card(`${g.key} ${P.view(0).team.name}`); cards++; } P.step(0, 1); }
         }
+        // the heads: a county's button may take two lines, and beside it Your Team stays one line, the head 44px, so both sides' cards
+        // start level, whatever the other side shows (layout, so offsetTop and offsetHeight: a card sliding in does not move them)
+        const heads = [];
+        for (const [a, b] of [['nld', null], ['eco', null], ['nbl', null], ['nmi', null], ['nld', 'eng'], ['eco', 'eng'], ['nbl', 'eng'], ['eng', 'nld'], ['sur', 'eng'], ['nld', 'nbl']]) {
+          P.group(0, gi(a) - P.view(0).gi);
+          if (b) { const L1 = P.view(1).ladder; P.group(1, L1.findIndex(g => g.key === b) - P.view(1).gi); }
+          const m = [0, 1].map(s => { const side = $('t-side' + s), who = side.querySelector('.pk-who'); return { who:who.offsetHeight, line:parseFloat(getComputedStyle(who).lineHeight), head:side.querySelector('.pk-head').offsetHeight, top:side.querySelector('.pk-card').offsetTop }; });
+          const what = `${a}|${b || P.view(1).group.key}`;
+          if (m.some(x => x.who > x.line * 1.5)) heads.push(`${what}: a side's label on two lines`);
+          if (m.some(x => x.head > 45) || m[0].top !== m[1].top) heads.push(`${what}: heads ${m[0].head} and ${m[1].head}, cards at ${m[0].top} and ${m[1].top}`);
+        }
+        bad.push(...heads.map(h => 'Head ' + h));
         // the Filter: England's League column and each county's Teams, every row and head whole and 44px
         const fl = what => {
           const m = $('m-filter');
@@ -306,7 +366,8 @@ async function browserChecks() {
         return { bad, cards, two, three, oc };
       });
       ok(!errors.length, `${at}: no page errors (${errors.join('; ')})`);
-      ok(r.cards >= 452 && !r.bad.filter(b => !/Filter|search|Competitions|Other County/.test(b)).length, `${at}: every new club's card once (${r.cards}), each county's button, nothing cut, under 44px or scrolled (${r.bad.filter(b => !/Filter|search|Competitions|Other County/.test(b)).slice(0, 4).join('; ')})`);
+      ok(!r.bad.filter(b => /^Head /.test(b)).length, `${at}: a county's two-line button leaves Your Team one line and the head 44px, both cards level beside the Premiership or another county (${r.bad.filter(b => /^Head /.test(b)).slice(0, 4).join('; ')})`);
+      ok(r.cards >= 452 && !r.bad.filter(b => !/^Head |Filter|search|Competitions|Other County/.test(b)).length, `${at}: every new club's card once (${r.cards}), each county's button, nothing cut, under 44px or scrolled (${r.bad.filter(b => !/^Head |Filter|search|Competitions|Other County/.test(b)).slice(0, 4).join('; ')})`);
       ok(!r.bad.filter(b => /Filter|search/.test(b)).length, `${at}: the Filter's every county, its Teams heads, the search's count line whole (${r.bad.filter(b => /Filter|search/.test(b)).slice(0, 4).join('; ')})`);
       ok(r.two === 'Surrey|Other County' && r.three === 'Surrey|Other County|My League' && r.oc === 'County|Surrey' && !r.bad.filter(b => /Competitions|Other County/.test(b)).length, `${at}: Local's competitions (${r.two}; ${r.three}) and Other County's Filter (${r.oc}) whole (${r.bad.filter(b => /Competitions|Other County/.test(b)).slice(0, 4).join('; ')})`);
       await ctx.close();

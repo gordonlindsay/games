@@ -484,8 +484,8 @@ function homeFit() {
   }
   /* Continue's line and the Career box's note: each part whole within their two lines. A county club's name can be wider than the Career
      box's half at 568 wide (v Old Wimbledonian), so the note steps down a pixel at a time, to 11px at the least, until it holds; a line that
-     already fits keeps its size. */
-  for (const note of [$('cont-note'), $('career-note')]) {
+     already fits keeps its size. With LOCAL off, as 1.6. */
+  if (LOCAL.on) for (const note of [$('cont-note'), $('career-note')]) {
     if (!note || note.hidden || !note.style || !note.querySelectorAll) continue;
     note.style.fontSize = '';
     const tight = () => [...note.querySelectorAll('.nw')].some(cut) || note.scrollHeight > note.clientHeight + 1;
@@ -819,8 +819,9 @@ function pickResolve(st, ladder) {
   return { ladder, gi, i, group:g, team:g.teams[i] };
 }
 /* The Opponent, until it is moved, follows Your Team: Your Team's group, its first side there (its league's rivals come first: Wimbledon
-   for Farnham), or, where that group has nothing left (a nation and no Legend), the next country's National group. 2 Players: the next
-   side in Player 1's group as the screen opens, and from then on Player 2's own (a mirror match is still a press away). */
+   for Farnham; in a county with none, the side nearest its level), or, where that group has nothing left (a nation and no Legend), the
+   next country's National group. 2 Players: the next side in Player 1's group as the screen opens, and from then on Player 2's own (a
+   mirror match is still a press away). */
 function pickFollow(st, ladder, lv) {
   if (st.touched || !lv) return;
   const saved = g => g.hemi === 'fav' || g.hemi === 'recent', real = g => g.teams.some(t => !t.act), lk = pickKey(lv.team);
@@ -834,6 +835,15 @@ function pickFollow(st, ladder, lv) {
   const g = ladder[gi], j = g.teams.findIndex(t => pickKey(t) === lk);
   let i = pickMode === 'two' && j >= 0 ? (j + 1) % g.teams.length : 0;
   if (g.teams[i].act) i = Math.max(0, g.teams.findIndex(t => !t.act));
+  /* A county (LOCAL) with no rival of Your Team's league in it (Aldershot, Counties 3, alone in Hampshire): the side nearest its level, then
+     its overall, not the county's strongest (Havant, National League). With a rival there, its rivals still come first. */
+  const me = lv.team;
+  if (pickMode === 'quick' && g.county && me && !me.act && !isNation(me) && !(me.league && g.teams[i].league === me.league)) {
+    const lvl = pickLevel(me), ov = overallOf(me), far = t => [Math.abs(pickLevel(t) - lvl), Math.abs(overallOf(t) - ov)];
+    let best = -1, bf = null;
+    g.teams.forEach((t, k) => { if (t.act) return; const f = far(t); if (!bf || f[0] < bf[0] || (f[0] === bf[0] && f[1] < bf[1])) { best = k; bf = f; } });
+    if (best >= 0) i = best;
+  }
   st.g = g.key; st.k = pickKey(g.teams[i]); st.gi = gi; st.i = i; st.set = false;
   if (pickMode === 'two') st.touched = true;                 // Player 2's side is his own from the start: it never moves while Player 1 looks
 }
@@ -1217,7 +1227,7 @@ function pickFilterDraw(from = 0) {
     FL.hits = all.slice(0, FL_CAP);                            // LOCAL: at most FL_CAP drawn (a letter matches hundreds of clubs), the count of all said under them
     res.innerHTML = FL.hits.length ? FL.hits.map((h, r) => flTeamHtml(FL.s, h.t, `data-r="${r}" tabindex="${r ? -1 : 0}"`, h.path)).join('') + (all.length > FL.hits.length ? `<p class="fl-none fl-more">${FL.hits.length} of ${all.length} ${word}</p>` : '') : `<p class="fl-none">No ${word} Found</p>`;
     res.scrollTop = 0;
-    $('fl-said').textContent = FL.hits.length ? `${FL.hits.length} ${FL.hits.length === 1 ? word.slice(0, -1) : word}` : `No ${word} Found`;
+    $('fl-said').textContent = all.length > FL.hits.length ? `${FL.hits.length} of ${all.length} ${word}` : FL.hits.length ? `${FL.hits.length} ${FL.hits.length === 1 ? word.slice(0, -1) : word}` : `No ${word} Found`;   // cut at FL_CAP: what the line under them says
     flLocks(res);
     return;
   }
@@ -1245,7 +1255,8 @@ function pickFilterDraw(from = 0) {
 }
 /* The search: team names, folded for accents and case, and the names of countries and groups (Premiership lists both Premierships' clubs),
    a group's competition by its full name as well (United Rugby Championship, where the group says URC), and with LOCAL a county by its
-   full name (Buckinghamshire, where the group says Bucks) and each club's own league. Names that start with the text
+   full name (Buckinghamshire, where the group says Bucks), each club's own league, and a club's full name where its card's is cut
+   (Weston-super-Mare, Saracens Amateurs). Names that start with the text
    first, then those with a word that does, then those that hold it, then the clubs of a country or group whose name matches in the same
    three steps; ladder order within each. Each team once, under its own group (Favourites and Recent only repeat it). */
 const flFold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1264,7 +1275,8 @@ function filterSearch(L, q) {
     g.teams.forEach((t, i) => {
       const k = pickKey(t); if (t.act || seen.has(k)) return;
       const line = LOCAL.on && !flSaved(g) && t.league ? rank(t.league) : -1;   // LOCAL: a club's own league too (Regional 2 Thames), at its group's step
-      const own = rank(listName(t)), r = own >= 0 ? own : there >= 0 && line >= 0 ? Math.min(there, 3 + line) : there >= 0 ? there : line >= 0 ? 3 + line : -1;
+      const nm = rank(listName(t)), fu = t.full ? rank(t.full) : -1, own = nm >= 0 && fu >= 0 ? Math.min(nm, fu) : Math.max(nm, fu);   // LOCAL: a club's full name too, where its card's is cut (Weston-super-Mare)
+      const r = own >= 0 ? own : there >= 0 && line >= 0 ? Math.min(there, 3 + line) : there >= 0 ? there : line >= 0 ? 3 + line : -1;
       if (r < 0) return;
       seen.add(k); hits.push({ t, gi, i, r, n:hits.length, path:flPath(g) });
     });
@@ -1631,7 +1643,7 @@ const poolTier = k => (k === IMPORT_POOL ? 2 : (listOf(k) || TEAM_LISTS[0]).tier
 function poolTeams(k) {                                   // International is the category's twelve (natList); a list that does not exist is International
   if (k === IMPORT_POOL) return importTeams();
   const l = listOf(k) || TEAM_LISTS[0];
-  return l.key === 'int' ? natList(settings.cat) : l.teams;
+  return l.key === 'int' ? natList(settings.cat) : listPlays(l);   // a county's own (LOCAL: Surrey's championship never has Aldershot, shown under Hampshire)
 }
 /* The side on show when Championship opens: My Team (the club, if the league has it or it is one you made; the country on International and
    in the World Cup), or a tour's host in turn. null where nothing is offered: Quick Match, 2 Players, My Team. */

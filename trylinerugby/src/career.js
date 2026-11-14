@@ -147,7 +147,7 @@ function careerRated(club) {
 function careerLeagueKey(key, club) {
   key = localKey(key);                               // a career saved on Counties plays Surrey's now (LOCAL)
   const own = careerListOf(club);
-  if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && l.teams.some(o => o.id === club.id)) ? key : own.key;
+  if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && listPlays(l).some(o => o.id === club.id)) ? key : own.key;   // a list the club plays on (LOCAL: an Aldershot career saved on Surrey is Hampshire's)
   return key === IMPORT_POOL || TEAM_LISTS.some(l => l.key === key && l.tier > 0) ? key : 'sur';
 }
 function careerLeague(cr) {                          // his club's league now: My League only while a league is saved
@@ -168,7 +168,7 @@ function careerDraw(cr, where) {                     // five sides; the random d
   const key = careerLeague(cr), mine = cr.club;
   if (key === IMPORT_POOL) return importOthers(mine).map(careerSide);   // My League: its sides, topped up with Local clubs (src/import.js)
   const same = t => t.id === mine.id || t.name === mine.name || (typeof importSame === 'function' && importSame(t.name, mine.name));   // an imported Farnham RFC is Farnham, as the import's own league draw has it
-  const list = (TEAM_LISTS.find(l => l.key === key) || TEAM_LISTS.find(l => l.key === 'sur')).teams;
+  const list = listPlays(TEAM_LISTS.find(l => l.key === key) || TEAM_LISTS.find(l => l.key === 'sur'));   // the list's own sides (LOCAL: Surrey's without Aldershot)
   return shuffle(list.filter(t => !same(t))).slice(0, 5).map(careerSide);
 }
 /* A season (his club's league, or his country's six): the championship's shape, with the weakest opponent first and the
