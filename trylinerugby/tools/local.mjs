@@ -80,7 +80,7 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const src = fs.readFileSync(path.join(root, 'src/clubs-local.js'), 'utf8'), guess = all.filter(r => !r.existingId && r.kitConfidence === 'guess');
   ok(guess.every(r => new RegExp(`id:'${r.id}'[^\\n]*// colours a free choice`).test(src)) && (src.match(/colours a free choice/g) || []).length === guess.length, `the ${guess.length} guessed kits say so where they are written (// colours a free choice), and no other`);
   const free = all.filter(r => r.kitFree);
-  ok(free.length === 19 && free.every(r => r.kitConfidence !== 'guess' && new RegExp(`id:'${r.id}'[^\\n]*// ${r.kitFree} a free choice`).test(src) && r.sources.some(l => l.startsWith(`Kit: ${r.kitFree} a free choice`))) && (src.match(/(hoops|trim) a free choice/g) || []).length === free.length, `the ${free.length} Pitchero kits told apart by a free hoops or trim (Pitchero gives no pattern) say so where they are written and in their sources`);
+  ok(free.length === 30 && free.every(r => r.kitConfidence !== 'guess' && new RegExp(`id:'${r.id}'[^\\n]*// ${r.kitFree} a free choice`).test(src) && r.sources.some(l => l.startsWith(`Kit: ${r.kitFree} a free choice`))) && (src.match(/(hoops|trim) a free choice/g) || []).length === free.length, `the ${free.length} kits with a free hoops or trim say so where they are written and in their sources: 21 Pitchero kits told apart (Pitchero gives no pattern), 2 of them moved off an owner's kit, and 9 owner's kits with no second colour (${free.filter(r => r.kitFree === 'hoops').length} hoops, ${free.filter(r => r.kitFree === 'trim').length} trims)`);
   // and no Pitchero kit (colours from the club's own site, never a pattern) looks the same as another kit in its county, as the game shows it:
   // shirts and readable trims within 60 of each other (colorDist) and the same hoops, the research's own rule
   const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), cd = (a, b) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
@@ -88,6 +88,27 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const ptKit = new Set(all.filter(r => r.sources.some(l => /^Kit: Pattern: .*Pitchero gives no pattern/.test(l))).map(r => r.id)), clash = [];
   for (const l of counties) { const ts = [...new Set(l.teams)]; ts.forEach((a, i) => ts.slice(i + 1).forEach(b => { if ((ptKit.has(a.id) || ptKit.has(b.id)) && alike(a, b)) clash.push(a.name + '/' + b.name); })); }
   ok(ptKit.size === 103 && !clash.length, `none of the ${ptKit.size} Pitchero kits looks the same as another kit in its county (${clash.join(', ') || 'none'})`);
+  // The owner's research (14 Nov 2026): 78 of the 84 guesses are sourced now (reported), the other 6 (Gateshead, Portsmouth, Syston, Ledbury, Spalding,
+  // Old Crossleyans) still guesses. No guess and no free choice looks the same as another kit in its county; where two sourced kits do, both stay,
+  // and the pairs that take in an owner's kit are the decided entry's, no more and no fewer.
+  const ownerKit = all.filter(r => r.sources.some(l => l.startsWith("Kit: the owner's research (14 Nov 2026)")));
+  ok(ownerKit.length === 78 && ownerKit.every(r => r.kitConfidence === 'reported' && r.design) && guess.map(r => r.id).sort().join() === 'GAT,LED,OCR,POT,SPL,SYS'
+    && ['confirmed', 'reported', 'guess'].map(k => all.filter(r => !r.existingId && r.kitConfidence === k).length).join() === '70,376,6',
+    `the owner's research: 78 kits reported, each with its design; 6 still guesses (${guess.map(r => r.id).join()}); confirmed, reported, guess ${['confirmed', 'reported', 'guess'].map(k => all.filter(r => !r.existingId && r.kitConfidence === k).length).join(', ')} of the 452 new`);
+  const movable = new Set([...ptKit, ...guess.map(r => r.id), ...free.map(r => r.id)]), clash2 = [], kept = [];
+  const OWNER = new Set(ownerKit.map(r => r.id));
+  for (const l of counties) { const ts = [...new Set(l.teams)]; ts.forEach((a, i) => ts.slice(i + 1).forEach(b => { if (!alike(a, b)) return;
+    if ((movable.has(a.id) && !OWNER.has(a.id)) || (movable.has(b.id) && !OWNER.has(b.id)) || (free.some(r => r.id === a.id && OWNER.has(a.id)) || free.some(r => r.id === b.id && OWNER.has(b.id)))) clash2.push(a.name + '/' + b.name);
+    else if (OWNER.has(a.id) || OWNER.has(b.id)) kept.push([a.id, b.id].sort().join('/')); })); }
+  const keptWant = (research.decided.find(x => x.topic === "Kits from the owner's research") || {}).lookAlikesKept || [];
+  ok(!clash2.length && kept.sort().join() === [...keptWant].sort().join(), `no guess or free choice looks the same as another kit in its county (${clash2.join(', ') || 'none'}); the ${kept.length} sourced pairs with an owner's kit that look alike stay, as decided (${kept.join(' ')})`);
+  // design and third (1.8) carried into src/clubs-local.js as designs, as the research has them, and read by nothing in the game yet
+  const designs = LO.LOCAL_DATA.designs || {}, withDesign = all.filter(r => r.design != null);
+  ok(withDesign.length === 78 && Object.keys(designs).length === 78 && withDesign.every(r => json(designs[r.id]) === json(r.third ? { design:r.design, third:r.third } : { design:r.design }))
+    && withDesign.every(r => r.hoops === (r.design === 'hoops')) && withDesign.filter(r => r.third).length === 33,
+    `design and third carried to src/clubs-local.js's designs (78, ${withDesign.filter(r => r.third).length} with a third); hooped exactly where the design is hoops (${['halves', 'band'].map(k => withDesign.filter(r => r.design === k).map(r => r.id).join(' ')).join(', ')} drawn plain until 1.8)`);
+  const readers = fs.readdirSync(path.join(root, 'src')).filter(f => f.endsWith('.js') && f !== 'clubs-local.js' && /\bdesigns\b|\.third\b|\.design\b/.test(fs.readFileSync(path.join(root, 'src', f), 'utf8')));
+  ok(!readers.length && NEW.every(t => !('design' in t) && !('third' in t)), `nothing in the game reads a design or third yet, and no club carries one (${readers.join() || 'none'})`);
   const placeOnly = all.filter(r => !r.existingId && r.w == null);
   ok(placeOnly.map(r => r.id).sort().join() === 'BAU,BEE,CRW,DBE,HWA,MEI,MRL,NOV,NUI,RYT' && placeOnly.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.place === r.place && !('w' in t) && !('pf' in t); }), `a club with no line it can be given has its place only, nothing invented: the 10 of the three tables short of fixtures that played fewer games or are ranked off their place (${placeOnly.map(r => r.id).join()})`);
   const pt = all.filter(r => !r.existingId && r.sources.some(l => /^Line: .*on Pitchero/.test(l)));
