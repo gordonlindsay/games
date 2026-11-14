@@ -2,8 +2,8 @@
 // Done at the end) only with no save at all; what each answer sets (the level, the category, My Team's club and country, Career's New
 // Player); nothing locked after; My Team's Change opening My Profile, the old picker one press on; the save's profile field (bad values,
 // old saves); your player in My Team's box, in New Career and on one man of your side (the fly-half) in Quick Match, Championship and a
-// cup, never in a career's, AI v AI, the demo, Two Player or a tool's match; the body rule; and no random draw and no fingerprint moved by
-// any of it. Its last part needs Playwright and Chromium (as tools/home.mjs's does) and is skipped, saying so, where they are missing: the
+// cup, never in a career's, AI v AI, the demo, Two Player or a tool's match; the body rule; the Skill Games each age group sees, by every
+// route (5b); and no random draw and no fingerprint moved by any of it. Its last part needs Playwright and Chromium (as tools/home.mjs's does) and is skipped, saying so, where they are missing: the
 // setup and My Profile at 844x390, 667x375, 844x340, 667x320 and 568x320 with no scroll, every target 44px, Title Case, no arrow glyph,
 // the first launch for a person and never with a save, the keyboard and a controller, and the box on the home with your player in it.
 // node tools/profile.mjs   Exits 1 on any failure.
@@ -186,6 +186,88 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   X.catPick('women'); ok(st.cat === 'women' && F.get().age === 'mini' && F.get().gender === 'female', 'Women picked on the team screen afterwards: the category moves, the profile does not');
   T.kids.segSet(2); X.save(); ok(st.diff === 1 && !st.kids && F.get().age === 'mini' && saved().profile.age === 'mini', 'the Difficulty row moved to Normal: the level moves, the age group stays');
   H.myPick(club('BTH')); ok(st.myClub === 'BTH' && F.get().age === 'mini', 'My Team changed: the profile as it was');
+}
+
+// 5b. Skill Games by age group (the owner, 2026-11-14: "Remove the contact mini games for mini players. Same for scrums until adult", the
+//     scrums "Driving Game Only"): a Mini has no Contact Games at any level and on any side, a Junior Tackling and Ball Back with no Driving,
+//     an Adult or no age group all three, and the Kids level and Minis bar all three as ever, whatever the age group. One rule
+//     (practiceBarred) by every route in: the Skill Games screen, its cards, practiceStart, Next Game, Try Again, the career's Train and its
+//     drills, a save put back. Mini plays the tag forms as the youngest do. The layout at every size is tools/home.mjs's (Skill Games for each
+//     player).
+{
+  const PR = T.practice, DR = T.drills, OPEN = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'], ALL = OPEN.concat(['tackle', 'scrum', 'back']), JUNIOR = OPEN.concat(['tackle', 'back']);
+  const games = () => DR.DRILLS.filter(d => !DR.barred(d.id)).map(d => d.id);
+  const screen = () => ({ group:!$('pr-contact').hidden, n2:$('pr-contact').classList.contains('n2'), cards:['tackle', 'scrum', 'back'].filter(id => !$('pr-' + id).hidden) });
+  const LEVELS = [['Kids', 0], ['Easy', 1], ['Normal', 2], ['Hard', 3]], CATS = ['men', 'women', 'minis'];
+  const seenWas = st.drillSeen.slice(), lockerWas = T.locker.state(), saveWas = memory['tryline.v1'];
+  const as = (age, seg, cat) => { fresh(); F.set({ age, gender:null, look:null }); T.kids.segSet(seg); st.cat = cat; st.drillSeen = DR.DRILLS.map(d => d.id); PR.leave(); D.goHome(); H.open('drills'); };   // every Watch How seen, so a card opens on its ready card
+  // each age group's list, at every level and on every side
+  const want = (age, seg, cat) => (seg === 0 || cat === 'minis' || age === 'mini' ? OPEN : age === 'junior' ? JUNIOR : ALL);
+  const bad = [];
+  for (const age of ['mini', 'junior', 'adult', null]) for (const [lv, seg] of LEVELS) for (const cat of CATS) {
+    as(age, seg, cat); const w = want(age, seg, cat), s = screen();
+    const shown = w === OPEN ? !s.group && !s.n2 && !s.cards.length : w === JUNIOR ? s.group && s.n2 && json(s.cards) === '["tackle","back"]' : s.group && !s.n2 && s.cards.length === 3;
+    if (json(games()) !== json(w) || !shown) bad.push(`${age}/${lv}/${cat}: ${games().join(',')} ${json(s)}`);
+  }
+  ok(!bad.length, `each age group's games at every level and on every side: Mini the seven open games, no Contact Games; Junior the nine, Tackling and Ball Back in the group, no Driving card; Adult and no age group all ten; the Kids level and Minis the seven whatever the age group (${bad.slice(0, 4).join('; ') || '48 cases'})`);
+  as(null, 2, 'men'); ok(json(games()) === json(ALL) && !DR.barred('scrum'), 'no age group counts as Adult: all ten, Driving with them');
+  // the cause, pinned: a Mini who left the Kids level past the grown-up check, then played Men on 2 Players' switch, used to see all three
+  fresh(); F.age('mini'); T.kids.segSet(2); const q0 = T.kids.gate(); if (q0) for (const d of q0.answer) T.kids.type(d);
+  X.catPick('men'); D.goHome(); H.open('drills');
+  ok(F.get().age === 'mini' && !st.kids && st.cat === 'men' && ['tackle', 'scrum', 'back'].every(id => DR.barred(id)) && !screen().group, `a Mini on Normal playing Men (the Kids level left past the check, Men on 2 Players' switch): still no Contact Games (${json([st.diff, st.kids, st.cat, games()])})`);
+  // every route in, for a Junior and a Mini, on Normal and Men, so only the age group bars them
+  for (const [age, barred] of [['junior', ['scrum']], ['mini', ['tackle', 'scrum', 'back']]]) {
+    as(age, 2, 'men');
+    for (const id of barred) {
+      PR.start(id); ok(!PR.state(), `${age}: practiceStart('${id}') opens nothing`);
+      $('pr-' + id).click(); ok(!PR.state(), `${age}: ${id}'s card, pressed anyway, opens nothing`);
+      PR.start(id, { onDone() {} }); ok(!PR.state(), `${age}: a caller's practiceStart('${id}') opens nothing`);
+    }
+    PR.start('tag'); const seen = []; for (let i = 0; i < 30; i++) { $('pr-next').click(); seen.push(PR.state().id); }
+    const may = age === 'junior' ? JUNIOR : OPEN;
+    ok(seen.every(id => !barred.includes(id)) && may.every(id => seen.includes(id)), `${age}: Next Game goes round every game it may play and never ${barred.join(', ')} (${[...new Set(seen)].join()})`);
+    PR.leave();
+  }
+  as('junior', 2, 'men'); PR.start('tackle'); $('pr-next').click(); ok(PR.state() && PR.state().id === 'back', 'Junior: Next Game from Tackling is Ball Back, Driving passed over'); PR.leave();
+  // Try Again on a drill the player may no longer play starts nothing (Driving played as an Adult, the profile then a Junior's)
+  as('adult', 2, 'men'); PR.start('scrum'); $('pr-retry').click(); PR.finish(false, 'x', 0); const ran = PR.state();
+  F.set({ age:'junior', gender:null, look:null }); $('pr-retry').click();
+  ok(ran && ran.done && PR.state() === ran && !ran.ready, 'Try Again on Driving once the profile is a Junior\'s: no new run starts');
+  $('pr-next').click(); ok(PR.state() && PR.state().id === 'back', 'and Next Game from it is Ball Back'); PR.leave();
+  // the career: Train lists what the player may play, and nothing else opens
+  for (const [age, list] of [['junior', JUNIOR], ['mini', OPEN], ['adult', ALL]]) {
+    as(age, 2, 'men');
+    const cr = C.create({ pos:'B', num:6, club:{ id:'TST', name:'Testers', kit:'#123456', trim:'#abcdef', pace:4, power:3, handling:4, kicking:3, stamina:3 } }); C.set(cr);
+    C.renderTrain(); const ct = $('ct-list').innerHTML, g = ct.indexOf('Contact Games (U9 and Up)');
+    const listed = ALL.filter(id => ct.includes(`data-drill="${id}"`)), hard = list.filter(id => !OPEN.includes(id));
+    ok(json(C.drills(cr).map(d => d.id)) === json(list) && json(listed) === json(list) && (hard.length ? g > 0 && hard.every(id => ct.indexOf(`data-drill="${id}"`) > g) : g < 0 && !/pr-coach/.test(ct)), `${age}: the career's Train lists ${list.length} games${hard.length ? ', ' + hard.join(', ') + ' under Contact Games' : ', no Contact Games'} (${listed.join(',')})`);
+    for (const id of ALL.filter(id => !list.includes(id))) { cr.trained = false; ok(C.train(id) === false && !PR.state(), `${age}: the career's Train never opens ${id}`); }
+    if (age !== 'mini') { cr.trained = false; ok(C.train('tackle') === true && PR.state() && PR.state().id === 'tackle', `${age}: Tackling opens from the career`); PR.leave(); }
+    C.set(null);
+  }
+  // the tag forms: a Mini plays Defend a Breakaway and Create a Gap as the youngest do, at any level; a Junior tackles
+  as('mini', 3, 'men'); PR.start('defend');
+  ok(PR.state().tagOnly && $('pr-objective').textContent === 'Get Across and Pull the Tag' && /Pull Tag/.test($('pr-feedback').textContent) && !/Tackle/.test($('pr-feedback').textContent) && $('pr-coach').hidden, 'Mini on Hard, playing Men: Defend a Breakaway asks for a tag, not a tackle, no coach line'); PR.leave();
+  PR.start('pass'); ok(PR.state().tagOnly, 'and Create a Gap is tag'); PR.leave();
+  as('junior', 2, 'men'); PR.start('defend'); ok(!PR.state().tagOnly && $('pr-objective').textContent === 'Get Across and Stop the Runner' && !$('pr-coach').hidden, 'Junior: Defend a Breakaway is a tackle, with the coach line, as for an Adult'); PR.leave();
+  // the Locker's Star Pupil counts the games the player can see
+  for (const [age, n] of [['adult', 10], [null, 10], ['junior', 9], ['mini', 7]]) { as(age, 2, 'men'); ok(T.locker.tiers('star')[2] === n, `Star Pupil's Gold for ${age || 'no age group'}: three stars in all ${n} (${T.locker.tiers('star')[2]})`); }
+  // Settings' Age Group: the Skill Games screen follows at once, without leaving Settings
+  as('adult', 2, 'men'); H.open('settings');
+  F.age('junior'); const sj = screen(); F.age('adult'); const sa = screen(); F.age('mini'); const sm = screen();
+  F.age('junior'); const q1 = T.kids.gate(); if (q1) for (const d of q1.answer) T.kids.type(d); const sk = screen();
+  ok(H.step() === 'settings' && json(sj) === json({ group:true, n2:true, cards:['tackle', 'back'] }) && json(sa) === json({ group:true, n2:false, cards:['tackle', 'scrum', 'back'] }) && !sm.group && !sm.cards.length && json(sk) === json(sj) && F.get().age === 'junior',
+    `Settings' Age Group redraws Skill Games as it is tapped: Junior two, Adult three, Mini none, Junior again (past the grown-up check) two (${json([sj, sa, sm, sk])})`);
+  // a save put back: an Adult's Driving starred and its Watch How seen, loaded with a Junior's profile
+  fresh(); memory['tryline.v1'] = json({ settings:{ diff:2, cat:'men', drillSeen:['scrum'] }, profile:{ age:'junior' }, locker:{ n:{}, drills:['scrum', 'tackle'] } }); X.load(); D.goHome(); H.open('drills');
+  PR.start('scrum');
+  ok(F.get().age === 'junior' && !PR.state() && $('pr-scrum').hidden && T.locker.tiers('star')[2] === 9, 'a save with Driving starred and seen, put back with a Junior\'s profile: no Driving card, it opens by no route, and Star Pupil counts nine');
+  fresh(); st.drillSeen = seenWas; T.locker.set(lockerWas); memory['tryline.v1'] = saveWas;
+  // said where a grown-up and the next builder look: README's Profile and Skill Games, in the owner's words, and For Grown-Ups
+  const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8'), sec = h => readme.slice(readme.indexOf('\n## ' + h + '\n'), readme.indexOf('\n## ', readme.indexOf('\n## ' + h + '\n') + 4));
+  const quote = /the owner, 2026-11-14: "Remove the contact mini games for mini players\. Same for scrums until adult"; asked which scrums: "Driving Game Only"/;
+  ok(quote.test(sec('Profile')) && quote.test(sec('Skill Games')) && /practiceBarred/.test(sec('Skill Games')) && /\| Junior \| Tackling and Ball Back; no Driving \|/.test(sec('Profile')), 'README\'s Profile and Skill Games give the rule in the owner\'s words, with the date');
+  ok(/Mini hides Contact Games at any level, and Driving waits for Adult\./.test(readGameSource()), 'For Grown-Ups says it: Mini hides Contact Games at any level, and Driving waits for Adult');
 }
 
 // 6. My Profile: Change in My Team's box opens it for every player; the age group and gender changed there (the Kids level left only past

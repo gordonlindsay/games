@@ -5395,8 +5395,8 @@ const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
 /* Which skill a game trains (Train lists the Skill Games, in their order). A game's own result wins when it names one:
    Pass Around the Circle trains Stamina as the Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact)
-   are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
-   from match tackles and the dilemmas (Tackle Drills, Gym Session). */
+   are hidden for the youngest (practiceBarred), so the Kids level, Minis and a Mini have no game that trains Power: their Power comes
+   from match tackles and the dilemmas (Tackle Drills, Gym Session). A Junior trains it at Tackling, Driving being an Adult's only. */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
 const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Gap', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
@@ -5653,7 +5653,7 @@ function careerRepair(cr) {
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
+function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest and no Driving for a Junior (practiceBarred)
   return PRACTICE_DRILLS.filter(d => d.id in CAREER_DRILL_SKILL && !practiceBarred(d.id))
     .map(d => ({ id:d.id, name:d.name || CAREER_DRILL_NAME[d.id], contact:!!d.contact, skills:d.id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[d.id]] }));
 }
@@ -6158,8 +6158,8 @@ function traitMarks(r) {
      headless match (only a match you play reaches finishMatch with M.arcade). Two Player counts Player 1's side (side 0).
    - Bronze, Silver and Gold are a feat done 1, 3 and 10 times (LOCKER_TIERS). Star Pupil counts the Skill Games, each
      once, at three stars: Bronze and Silver are any 1 and any 3 of them, and its Gold is every game the player can see
-     (lockerPupilGames: all ten, or the seven a Kids level or Minis player sees, since practiceBarred hides the three contact
-     games from them). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
+     (lockerPupilGames: all ten, the nine a Junior sees, or the seven the youngest see, since practiceBarred hides Driving from
+     a Junior and the three contact games from the youngest). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
      PR #14, on the live game's eight drills (LOCKER_PUPIL_MAIN). The events (lockerEvent)
      count once a call, and once a match for one medal: 'champ' (Champions; the Championship's own league win calls it here),
      'euro', 'world', 'tour' and 'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
@@ -6278,7 +6278,7 @@ const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOC
 let locker = lockerFresh();
 let lockerDirty = false;                                     // a drill's three stars, waiting to be saved once the drill is over
 const lockerFeat = id => LOCKER_FEATS.find(f => f.id === id);
-/* Star Pupil. Its games are the ones this player can see now: all ten, or seven at the Kids level or with Minis picked (practiceBarred,
+/* Star Pupil. Its games are the ones this player can see now: all ten, nine for a Junior, or seven for the youngest (practiceBarred,
    src/practice.js, the same rule the Skill Games, Next Game and the career's Train keep), never more than ten. Bronze and Silver
    are any 1 and any 3 games at three stars; Gold is three stars in every one of them, and is kept once won (locker.pupil), so a Gold won
    on the seven stays when the player moves up to all ten. Its count is the games starred, and on the way to Gold the games starred of
@@ -11069,7 +11069,7 @@ function renderHome() {
   champHome();
   homeContinue();
   renderCareerHome();
-  practiceGroups();                                         // Skill Games: the contact games hidden for the youngest, the grown-ups' panel shut (practice.js)
+  practiceGroups();                                         // Skill Games: the contact games hidden for the youngest and Driving for a Junior, the grown-ups' panel shut (practice.js)
   lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
   if (typeof importHome === 'function') importHome();      // Add Your Team in My Team's box, where the team screen's Add Your Team card would show (src/import.js)
   homeStepDraw();
@@ -14716,7 +14716,7 @@ const DRILL_EGG = { throws:12, lives:3, reach:1.15, lo:0.35, hi:2.4, wind:[1.0, 
 /* bounce: after the first three, a throw is a Bounce Pass this often, else a Flat Pass or a High Ball, the surprise. Never three the same in a row caps
    it: about two in three bounce (0.63 measured over many seeded throws). The gold ring is a help, not the game: the youngest see it on every
    throw, Easy and Normal on the first three, Hard never; Watch How always. eggRing is the one gate, and draws no random number. */
-const eggRingAll = () => practiceYoung() && settings.diff < 2;   // the Kids level or Minis, and not on Hard: the ring every throw
+const eggRingAll = () => practiceYoung() && settings.diff < 2;   // the youngest (the Kids level, Minis or a Mini), and not on Hard: the ring every throw
 const eggRing = E => !!practice && (!!practice.demo || (settings.diff < 2 && (eggRingAll() || E.n <= DRILL_EGG.first.length)));
 function eggStage(E, stage) { E.stage = stage; E.t = 0; }
 function eggReady(E) {                                     // the ball back in the thrower's hands and the wind-up begins, a little shorter each throw
@@ -16023,7 +16023,7 @@ function drillStarsHtml(n) { let s = ''; for (let i = 0; i < 3; i++) s += `<i cl
    shows the home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
    Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
-const PRACTICE_DRILLS = [                                   // tag and handling first; contact marks the games under Contact Games (U9 and Up), which the Kids level and a career's Minis never reach
+const PRACTICE_DRILLS = [                                   // tag and handling first; contact marks the games under Contact Games (U9 and Up), which the youngest never reach (practiceBarred), and adult the one an Adult's only
   { id:'tag', name:'Tag Chase', objective:'Keep Your Tags, Pull Theirs', limit:70 },
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
@@ -16032,14 +16032,20 @@ const PRACTICE_DRILLS = [                                   // tag and handling 
   { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Aim the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
   { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Press Switch, run across and Tackle. Sprint closes the gap.', tagCue:'Press Switch, run across and Pull Tag. Sprint closes the gap.', limit:18 },
   { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90, contact:true },
-  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true },
+  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true, adult:true },   // adult: an Adult's only (practiceBarred)
   { id:'back', name:'Ball Back', objective:'Hands, Landing, Ball Back', limit:60, contact:true },
 ];
 const PRACTICE_COACH = 'Learn Real Tackling With a Club Coach. Not One to Try at Home.';
-const practiceYoung = () => kidsLevel() || settings.cat === 'minis';   // the youngest: the Kids level, or Minis picked on the team screen (Men | Women | Minis), in free play as much as on the career's own list
-function practiceBarred(id) {                              // the one rule, for every route in: no contact game for the youngest
+/* The youngest: the Kids level, Minis picked on the team screen (Men | Women | Minis), or the profile's Mini age group whatever the level
+   and the side (src/profile.js), in free play as much as on the career's own list. */
+const practiceYoung = () => kidsLevel() || settings.cat === 'minis' || profile.age === 'mini';
+/* The one rule, for every route in (the owner, 2026-11-14: "Remove the contact mini games for mini players. Same for scrums until adult",
+   the scrums "Driving Game Only"): no contact game for the youngest, and Driving for an Adult only, so a Junior plays Tackling and Ball
+   Back without it. No age group counts as Adult. */
+function practiceBarred(id) {
   const d = PRACTICE_DRILLS.find(x => x.id === id);
-  return !!(d && d.contact && practiceYoung());
+  if (!d || !d.contact) return false;
+  return practiceYoung() || (!!d.adult && (profile.age === 'mini' || profile.age === 'junior'));
 }
 function practiceNextId(id) {                              // Next Game: the next one this player may play
   const n = PRACTICE_DRILLS.length, i = PRACTICE_DRILLS.findIndex(d => d.id === id);
@@ -16047,7 +16053,10 @@ function practiceNextId(id) {                              // Next Game: the nex
   return id;
 }
 function practiceGroups() {                                // the picker as this player sees it, the grown-ups' panel shut
-  $('pr-contact').hidden = practiceYoung();
+  const open = PRACTICE_DRILLS.filter(d => d.contact && !practiceBarred(d.id));
+  for (const d of PRACTICE_DRILLS) if (d.contact) $('pr-' + d.id).hidden = !open.includes(d);   // a barred card is gone, not greyed: a Junior's Driving
+  $('pr-contact').hidden = !open.length;                   // no contact game left (the youngest): no group and no coach line
+  $('pr-contact').classList.toggle('n2', open.length === 2);   // a Junior's two in equal halves of the three's places (styles.css)
   $('pr-games').hidden = false; $('pr-grownups').hidden = true;
 }
 function practiceInstructions(id) {
@@ -17270,8 +17279,8 @@ function careerChips(keys) {
   return keys.map(k => `<span class="cr-chip" style="--k:${CAREER_COL[k] || 'var(--chalk)'}">${label[k] || k}</span>`).join('');
 }
 /* Train: the Skill Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
-   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three. The youngest never
-   see the contact games (careerDrills), so for them there is no group and no coach line. */
+   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three, two for a Junior (no
+   Driving). The youngest never see the contact games (careerDrills), so for them there is no group and no coach line. */
 function renderCareerTrain() {
   const list = careerDrills(career), hard = list.filter(d => d.contact);
   const tiles = ds => `<div class="cr-drills">${ds.map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="dc-icon" aria-hidden="true">${drillIconSvg(d.id)}</span><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('')}</div>`;

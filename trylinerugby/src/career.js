@@ -67,8 +67,8 @@ const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
 /* Which skill a game trains (Train lists the Skill Games, in their order). A game's own result wins when it names one:
    Pass Around the Circle trains Stamina as the Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact)
-   are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
-   from match tackles and the dilemmas (Tackle Drills, Gym Session). */
+   are hidden for the youngest (practiceBarred), so the Kids level, Minis and a Mini have no game that trains Power: their Power comes
+   from match tackles and the dilemmas (Tackle Drills, Gym Session). A Junior trains it at Tackling, Driving being an Adult's only. */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
 const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Gap', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
@@ -325,7 +325,7 @@ function careerRepair(cr) {
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
+function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest and no Driving for a Junior (practiceBarred)
   return PRACTICE_DRILLS.filter(d => d.id in CAREER_DRILL_SKILL && !practiceBarred(d.id))
     .map(d => ({ id:d.id, name:d.name || CAREER_DRILL_NAME[d.id], contact:!!d.contact, skills:d.id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[d.id]] }));
 }

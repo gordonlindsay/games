@@ -7,8 +7,8 @@
      headless match (only a match you play reaches finishMatch with M.arcade). Two Player counts Player 1's side (side 0).
    - Bronze, Silver and Gold are a feat done 1, 3 and 10 times (LOCKER_TIERS). Star Pupil counts the Skill Games, each
      once, at three stars: Bronze and Silver are any 1 and any 3 of them, and its Gold is every game the player can see
-     (lockerPupilGames: all ten, or the seven a Kids level or Minis player sees, since practiceBarred hides the three contact
-     games from them). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
+     (lockerPupilGames: all ten, the nine a Junior sees, or the seven the youngest see, since practiceBarred hides Driving from
+     a Junior and the three contact games from the youngest). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
      PR #14, on the live game's eight drills (LOCKER_PUPIL_MAIN). The events (lockerEvent)
      count once a call, and once a match for one medal: 'champ' (Champions; the Championship's own league win calls it here),
      'euro', 'world', 'tour' and 'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
@@ -127,7 +127,7 @@ const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOC
 let locker = lockerFresh();
 let lockerDirty = false;                                     // a drill's three stars, waiting to be saved once the drill is over
 const lockerFeat = id => LOCKER_FEATS.find(f => f.id === id);
-/* Star Pupil. Its games are the ones this player can see now: all ten, or seven at the Kids level or with Minis picked (practiceBarred,
+/* Star Pupil. Its games are the ones this player can see now: all ten, nine for a Junior, or seven for the youngest (practiceBarred,
    src/practice.js, the same rule the Skill Games, Next Game and the career's Train keep), never more than ten. Bronze and Silver
    are any 1 and any 3 games at three stars; Gold is three stars in every one of them, and is kept once won (locker.pupil), so a Gold won
    on the seven stays when the player moves up to all ten. Its count is the games starred, and on the way to Gold the games starred of
