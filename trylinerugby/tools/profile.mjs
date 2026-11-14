@@ -119,7 +119,7 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   ok(shown() === 's-teams' && D.pickMode() === 'setup' && F.run().step === 2 && /aria-label="3 of 4"/.test($('t-eyebrow').innerHTML) && $('t-title').textContent === 'Pick Your Club', 'Club: the team screen, 3 of 4, Pick Your Club');
   ok($('t-cat').hidden && !$('t-sback').hidden && !$('t-skip').hidden && $('t-back').hidden && P.one() && $('t-go').textContent === 'Pick Farnham', 'its Back and Skip along the top in place of Men | Women | Minis, one side, Pick Farnham');
   const lad = P.view(0).ladder;
-  ok(lad.some(g => g.key === 'sur') && lad.some(g => g.key === 'fra') && lad.some(g => g.key === 'mine.made') && !lad.some(g => g.teams.some(t => !t.act && (X.isNation(t) || t.legend))), 'the whole ladder of clubs, Mine (Made Teams, My League) and no nation or Legend: the country comes with the club');
+  ok(lad.some(g => g.key === 'sur') && lad.some(g => g.key === 'fra') && lad.some(g => g.key === 'mine.made') && !lad.some(g => g.teams.some(t => !t.act && (X.isNation(t) || t.legend))), 'the whole ladder of clubs, My Clubs (Made Teams, My League) and no nation or Legend: the country comes with the club');
   ok(P.view(0).team.name === 'Farnham Women' || X.listName(P.view(0).team) === 'Farnham', 'named for the category the answers give (Women)');
   $('t-sback').click(); ok(shown() === 's-setup' && F.run().step === 1 && /data-v="female" aria-pressed="true"/.test($('su-opts').innerHTML), 'Back: Gender, Female kept');
   F.answer('female'); $('t-skip').click();

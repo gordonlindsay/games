@@ -1,10 +1,11 @@
-// The team screen (README, Teams: The Team Screen): Your Team v the Opponent side by side, one team a side, the ladder (North | South |
-// Mine | Favourites | Recent, each country's National and its lists' groups, Men | Women | Minis on top), Left and Right through a group,
-// Up and Down through the ladder, a whole country at a time, each round again; the swipe; Pick Opponent's lock and its rivals first; the
-// picks kept (each side's last, its Recent, the Favourites) through a save and from saves before them; each one-side mode (Championship,
-// Career, My Team, the World Cup and the Home Nations Tour); GAME_VERSION. Its last part needs Playwright and Chromium (as
-// tools/home.mjs's does) and is skipped, saying so, where they are missing: the screen at 844x390, 667x375, 844x340, 667x320 and 568x320
-// with no scroll and every target 44px or more, the keyboard, a controller and the lift's hint, a finger's swipe, and reduced motion.
+// The team screen (README, Teams: The Team Screen): Your Team v the Opponent side by side, one team a side, the ladder (Northern Hemisphere |
+// Southern Hemisphere | My Clubs | Favourites | Recent, each country's National and its lists' groups, Men | Women | Minis on top), Left and
+// Right through a group, Up and Down through the ladder, a whole country at a time, each round again; the swipe; Pick Opponent's lock and
+// its rivals first; the picks kept (each side's last, its Recent, the Favourites) through a save and from saves before them; each one-side
+// mode (Championship, Career, My Team, the World Cup and the Home Nations Tour); the areas' names and their short forms; GAME_VERSION. Its
+// last part needs Playwright and Chromium (as tools/home.mjs's does) and is skipped, saying so, where they are missing: the screen at
+// 844x390, 667x375, 844x340, 667x320 and 568x320 with no scroll and every target 44px or more, each place's form of the areas' names, the
+// keyboard, a controller and the lift's hint, a finger's swipe, and reduced motion.
 // node tools/picker.mjs
 import fs from 'node:fs';
 import http from 'node:http';
@@ -32,24 +33,25 @@ const view = s => P.view(s);
 const shown = s => view(s).team;
 const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, recent:0 };
 
-// 1. The ladder, from the real data: each category's countries in its own table's order, North then South, each country's National group
-//    (the nation, then its Legends) and its lists' groups, named for their competitions, Local's last; then Mine. Japan is in the North.
+// 1. The ladder, from the real data: each category's countries in its own table's order, the Northern Hemisphere then the Southern, each
+//    country's National group (the nation, then its Legends) and its lists' groups, named for their competitions, Local's last; then My
+//    Clubs. Japan is in the Northern Hemisphere.
 {
   fresh();
-  const MEN = ['North · Ireland: National 1', 'North · Ireland: URC 4', 'North · France: National 1', 'North · France: Top 14 14',
-    'North · England: National 1', 'North · England: Premiership 10', 'North · England: Championship 13', 'North · England · Local: Surrey 12', 'North · England · Local: Counties 7',
-    'North · Scotland: National 1', 'North · Scotland: URC 2', 'North · Scotland: Premiership 10', 'North · Wales: National 1', 'North · Wales: URC 4',
-    'North · Italy: National 1', 'North · Italy: URC 2', 'North · Japan: National 1', 'North · Japan: Clubs 7',
-    'South · South Africa: National 1', 'South · South Africa: URC 4', 'South · South Africa: Currie Cup 3', 'South · New Zealand: National 1', 'South · New Zealand: Provinces 6',
-    'South · Australia: National 1', 'South · Australia: Clubs 6', 'South · Argentina: National 1', 'South · Fiji: National 1',
-    'Mine: Made Teams 1', 'Mine: My League 1'];
-  ok(json(rungs('men', ALL)) === json(MEN), `Men: North in the men's table order (Ireland, France, England, Scotland, Wales, Italy, Japan), then South (South Africa, New Zealand, Australia, Argentina, Fiji), each country's National then its groups, England's Local last, then Mine (${rungs('men', ALL).join(' | ')})`);
-  const WOMEN = ['North · England: National 1', 'North · England: Premiership 10', 'North · England: Championship 13', 'North · England · Local: Surrey 12', 'North · England · Local: Counties 7',
-    'North · Canada: National 1', 'North · France: National 1', 'North · France: Top 14 14', 'North · Ireland: National 1', 'North · Ireland: URC 4', 'North · USA: National 1',
-    'North · Italy: National 1', 'North · Italy: URC 2', 'North · Scotland: National 1', 'North · Scotland: URC 2', 'North · Scotland: Premiership 10', 'North · Wales: National 1', 'North · Wales: URC 4',
-    'North · Japan: Clubs 7', 'South · New Zealand: National 1', 'South · New Zealand: Provinces 6', 'South · Australia: National 1', 'South · Australia: Clubs 6',
-    'South · South Africa: National 1', 'South · South Africa: URC 4', 'South · South Africa: Currie Cup 3', 'South · Fiji: National 1', 'Mine: Made Teams 1', 'Mine: My League 1'];
-  ok(json(rungs('women', ALL)) === json(WOMEN), `Women: the women's twelve in their table's order, Canada and the USA National only, Japan its clubs only (last in the North), Argentina not shown (${rungs('women', ALL).join(' | ')})`);
+  const MEN = ['Northern Hemisphere · Ireland: National 1', 'Northern Hemisphere · Ireland: URC 4', 'Northern Hemisphere · France: National 1', 'Northern Hemisphere · France: Top 14 14',
+    'Northern Hemisphere · England: National 1', 'Northern Hemisphere · England: Premiership 10', 'Northern Hemisphere · England: Championship 13', 'Northern Hemisphere · England · Local: Surrey 12', 'Northern Hemisphere · England · Local: Counties 7',
+    'Northern Hemisphere · Scotland: National 1', 'Northern Hemisphere · Scotland: URC 2', 'Northern Hemisphere · Scotland: Premiership 10', 'Northern Hemisphere · Wales: National 1', 'Northern Hemisphere · Wales: URC 4',
+    'Northern Hemisphere · Italy: National 1', 'Northern Hemisphere · Italy: URC 2', 'Northern Hemisphere · Japan: National 1', 'Northern Hemisphere · Japan: Clubs 7',
+    'Southern Hemisphere · South Africa: National 1', 'Southern Hemisphere · South Africa: URC 4', 'Southern Hemisphere · South Africa: Currie Cup 3', 'Southern Hemisphere · New Zealand: National 1', 'Southern Hemisphere · New Zealand: Provinces 6',
+    'Southern Hemisphere · Australia: National 1', 'Southern Hemisphere · Australia: Clubs 6', 'Southern Hemisphere · Argentina: National 1', 'Southern Hemisphere · Fiji: National 1',
+    'My Clubs: Made Teams 1', 'My Clubs: My League 1'];
+  ok(json(rungs('men', ALL)) === json(MEN), `Men: the Northern Hemisphere in the men's table order (Ireland, France, England, Scotland, Wales, Italy, Japan), then the Southern (South Africa, New Zealand, Australia, Argentina, Fiji), each country's National then its groups, England's Local last, then My Clubs (${rungs('men', ALL).join(' | ')})`);
+  const WOMEN = ['Northern Hemisphere · England: National 1', 'Northern Hemisphere · England: Premiership 10', 'Northern Hemisphere · England: Championship 13', 'Northern Hemisphere · England · Local: Surrey 12', 'Northern Hemisphere · England · Local: Counties 7',
+    'Northern Hemisphere · Canada: National 1', 'Northern Hemisphere · France: National 1', 'Northern Hemisphere · France: Top 14 14', 'Northern Hemisphere · Ireland: National 1', 'Northern Hemisphere · Ireland: URC 4', 'Northern Hemisphere · USA: National 1',
+    'Northern Hemisphere · Italy: National 1', 'Northern Hemisphere · Italy: URC 2', 'Northern Hemisphere · Scotland: National 1', 'Northern Hemisphere · Scotland: URC 2', 'Northern Hemisphere · Scotland: Premiership 10', 'Northern Hemisphere · Wales: National 1', 'Northern Hemisphere · Wales: URC 4',
+    'Northern Hemisphere · Japan: Clubs 7', 'Southern Hemisphere · New Zealand: National 1', 'Southern Hemisphere · New Zealand: Provinces 6', 'Southern Hemisphere · Australia: National 1', 'Southern Hemisphere · Australia: Clubs 6',
+    'Southern Hemisphere · South Africa: National 1', 'Southern Hemisphere · South Africa: URC 4', 'Southern Hemisphere · South Africa: Currie Cup 3', 'Southern Hemisphere · Fiji: National 1', 'My Clubs: Made Teams 1', 'My Clubs: My League 1'];
+  ok(json(rungs('women', ALL)) === json(WOMEN), `Women: the women's twelve in their table's order, Canada and the USA National only, Japan its clubs only (last in the Northern Hemisphere), Argentina not shown (${rungs('women', ALL).join(' | ')})`);
   ok(json(rungs('minis', ALL)) === json(MEN), 'Minis: the men\'s ladder');
   const minis = P.ladder('minis', ALL), women = P.ladder('women', ALL);
   ok(minis.filter(g => g.key.startsWith('nat.')).every(g => g.teams[0].name.endsWith(' Minis') && g.teams[0] === X.natList('minis').find(n => n.id === g.home)) && women.filter(g => g.key.startsWith('nat.')).every(g => g.teams[0] === X.natList('women').find(n => n.id === g.home)), 'each National group is the category\'s own nation (England Minis, England Women)');
@@ -62,7 +64,7 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(P.LEAGUE_SHORT['English Premiership'] === 'Premiership' && P.LEAGUE_SHORT['United Rugby Championship'] === 'URC' && P.LIST_GROUP.sco === 'Premiership' && P.LIST_GROUP.nzl === 'Provinces' && g('aus').name === 'Clubs' && g('jpn').name === 'Clubs', 'group names from the data: the competition every side shares, else the list\'s (Scotland\'s Premiership, New Zealand\'s Provinces), else Clubs (Australia\'s two with no league, Japan)');
   const clubs = new Set(P.ladder('men', ALL).filter(x => x.list && x.list !== 'int' && x.hemi !== 'mine').flatMap(x => x.teams));
   ok(clubs.size === X.ALL_TEAMS.filter(t => !X.isNation(t)).length && X.ALL_TEAMS.filter(t => !X.isNation(t)).every(t => clubs.has(t)), `every built-in club on the ladder (${clubs.size}), Guildfordians once a team (in Surrey and Counties)`);
-  ok(Object.keys(P.HEMI).length === 14 && P.HEMI.JPN === 'north' && P.HEMI.ARG === 'south' && P.HEMI.CDN === 'north', 'each of the fourteen nations has its hemisphere; Japan is North');
+  ok(Object.keys(P.HEMI).length === 14 && P.HEMI.JPN === 'north' && P.HEMI.ARG === 'south' && P.HEMI.CDN === 'north', 'each of the fourteen nations has its hemisphere; Japan is in the Northern Hemisphere');
   ok(P.homeLine(by('TOK'), 'men') === 'Clubs · Japan' && P.homeLine(by('BTH'), 'men') === 'English Premiership' && P.homeLine(X.natList('men')[0], 'men') === 'National · South Africa' && P.homeLine(by('AYR'), 'men') === 'Premiership · Scotland', 'the card\'s league line: the side\'s own league, else its group and country');
   // the Legends, behind the Gold medals, after their nation
   golds(10);
@@ -72,11 +74,11 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(lg('minis') === lg('men'), 'Minis show the men\'s Legends, as before');
   golds(0);
   ok(lg('men') === '', 'no Gold, no Legend');
-  // Mine: the teams you made and My League, with their ways in, gated as ever
+  // My Clubs: the teams you made and My League, with their ways in, gated as ever
   X.custom().push(X.cleanTeam({ name:'Herons', key:'myhe' }, 0));
   T.importer.setLeague({ teams:[{ key:'lg-BRN', id:'BRN', name:'Bourne', kit:'#112233', trim:'#445566', pace:3, power:3, handling:3, kicking:3, stamina:3 }] });
   const mine = P.ladder('men', ALL).filter(x => x.hemi === 'mine');
-  ok(mine.map(names).join(' | ') === 'Herons,+Create Team | Bourne,+Add Your Team', `Mine: Made Teams (Herons, Create Team) and My League (Bourne, Add Your Team) (${mine.map(names).join(' | ')})`);
+  ok(mine.map(names).join(' | ') === 'Herons,+Create Team | Bourne,+Add Your Team', `My Clubs: Made Teams (Herons, Create Team) and My League (Bourne, Add Your Team) (${mine.map(names).join(' | ')})`);
   for (let i = 0; i < 3; i++) X.custom().push(X.cleanTeam({ name:'Made ' + i, key:'mym' + i }, i + 1));
   ok(!P.ladder('men', ALL).find(x => x.key === 'mine.made').teams.some(t => t.act), 'four made: no Create Team');
   fresh();
@@ -101,9 +103,9 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   ok(view(0).group.key === 'nat.ire', 'the ladder\'s top: Ireland');
   const seen = [];
   for (let k = 0; k < 14; k++) { seen.push(view(0).group.key); P.country(0, 1); }
-  ok(json(seen) === json(['nat.ire', 'nat.fra', 'nat.eng', 'nat.sco', 'nat.wal', 'nat.ita', 'nat.jpn', 'nat.rsa', 'nat.nzl', 'nat.aus', 'nat.arg', 'nat.fij', 'mine.made', 'nat.ire']), `a country at a time: each country's first group, Mine as one, round again (${seen.join(' ')})`);
+  ok(json(seen) === json(['nat.ire', 'nat.fra', 'nat.eng', 'nat.sco', 'nat.wal', 'nat.ita', 'nat.jpn', 'nat.rsa', 'nat.nzl', 'nat.aus', 'nat.arg', 'nat.fij', 'mine.made', 'nat.ire']), `a country at a time: each country's first group, My Clubs as one, round again (${seen.join(' ')})`);
   P.group(0, -view(0).gi); P.country(0, -1);
-  ok(view(0).group.key === 'mine.made', 'back a country from the top: Mine, at the foot (it wraps)');
+  ok(view(0).group.key === 'mine.made', 'back a country from the top: My Clubs, at the foot (it wraps)');
   P.country(0, -1); ok(view(0).group.key === 'nat.fij', 'and back again: Fiji');
   P.group(0, view(0).ladder.findIndex(g => g.key === 'en2') - view(0).gi); P.country(0, -1);
   ok(view(0).group.key === 'nat.fra', 'back a country from inside one (England\'s Championship): France');
@@ -213,11 +215,11 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   fresh();
 }
 
-// 5. Mine: Create Team and Add Your Team on the side that asked, gated as ever; Edit
+// 5. My Clubs: Create Team and Add Your Team on the side that asked, gated as ever; Edit
 {
   fresh(); D.openTeams('quick');
   P.group(0, view(0).ladder.findIndex(g => g.key === 'mine.made') - view(0).gi);
-  ok(shown(0).act === 'create' && P.primary() === 'Create Team' && P.panel(0).includes('data-make="create"'), 'Mine\'s Made Teams: Create Team, on the card and the primary');
+  ok(shown(0).act === 'create' && P.primary() === 'Create Team' && P.panel(0).includes('data-make="create"'), 'My Clubs\' Made Teams: Create Team, on the card and the primary');
   S.setTier('free'); S.setBought([]);
   P.go(); ok(S.ui().mode === 'unlock' && S.ui().feature === 'create', 'locked on the free tier: the Unlock card');
   T.store.close(); S.setTier(null);
@@ -361,7 +363,7 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
 
 // 7d. The Filter (the owner, 2026-11-11: "Filter pops up with nested team list and search. Have a search icon."; the columns approved,
 //     "Nice that works"), without a browser: its columns against each side's own ladder in every category and mode (Area, Country, League,
-//     Teams; Mine's League column, Favourites and Recent straight to Teams, Championship's League and Teams, the clubs only for Career and
+//     Teams; My Clubs' League column, Favourites and Recent straight to Teams, Championship's League and Teams, the clubs only for Career and
 //     the setup), the side's path marked as it opens, a row filling the columns after it, every gate a pick goes through, the search (its
 //     folding, matching and order, each team once, No Teams Found), a pick, Close, the steps the keys and the d-pad take, and the icon
 //     (Search Teams, Search Clubs, none on a fixed list). The keys, a controller, a finger, the fit and the phone's keyboard: the browser part
@@ -374,7 +376,7 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   const want = L => [...new Set(L.map(g => g.hemi || 'comp'))].map(h => {
     const gs = L.filter(g => (g.hemi || 'comp') === h);
     if (h === 'fav' || h === 'recent') return `${P.PICK_HEMI[h]} ${gs[0].teams.length}`;
-    if (h === 'mine') return `Mine ${gs.length} [${gs.map(g => `${g.name} ${g.teams.length}`).join(', ')}]`;
+    if (h === 'mine') return `My Clubs ${gs.length} [${gs.map(g => `${g.name} ${g.teams.length}`).join(', ')}]`;
     const homes = [...new Set(gs.map(g => g.home))];
     return `${P.PICK_HEMI[h]} ${homes.length} [${homes.map(c => { const cg = gs.filter(g => g.home === c); return `${NAT(c)} ${cg.length} (${cg.map(g => `${g.name} ${g.teams.length}`).join(', ')})`; }).join(', ')}]`;
   });
@@ -397,19 +399,19 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   // Quick Match, Your Team on Farnham: its path marked as it opens, the columns and their counts
   fresh(); st.fav = ['BTH', 'DUB']; st.recent = [['CDF', 'EAL'], []]; D.openTeams('quick');
   ok(P.filter(0, '', { dev:'touch' }) && fs0().open && !$('m-filter').hidden && fs0().s === 0, 'the group\'s button (or the icon) opens the Filter for the side');
-  ok(heads() === 'Area | Country | League | Surrey' && marks() === 'North > England > Surrey > Farnham', `Area, Country, League and Teams headed by its group, the side's own path marked: ${marks()} (${heads()})`);
-  ok(json(col(0).rows.map(n => n.name)) === json(['North', 'South', 'Mine', 'Favourites', 'Recent']) && json(col(1).rows.map(n => n.name)) === json(['Ireland', 'France', 'England', 'Scotland', 'Wales', 'Italy', 'Japan']) && json(col(2).rows.map(n => n.name)) === json(['National', 'Premiership', 'Championship', 'Surrey', 'Counties']), 'the areas, the North\'s countries in ladder order, England\'s leagues: National, Premiership, Championship, Surrey, Counties');
+  ok(heads() === 'Area | Country | League | Surrey' && marks() === 'Northern Hemisphere > England > Surrey > Farnham', `Area, Country, League and Teams headed by its group, the side's own path marked: ${marks()} (${heads()})`);
+  ok(json(col(0).rows.map(n => n.name)) === json(['Northern Hemisphere', 'Southern Hemisphere', 'My Clubs', 'Favourites', 'Recent']) && json(col(1).rows.map(n => n.name)) === json(['Ireland', 'France', 'England', 'Scotland', 'Wales', 'Italy', 'Japan']) && json(col(2).rows.map(n => n.name)) === json(['National', 'Premiership', 'Championship', 'Surrey', 'Counties']), 'the areas, the Northern Hemisphere\'s countries in ladder order, England\'s leagues: National, Premiership, Championship, Surrey, Counties');
   const box = () => $('fl-cols').innerHTML;
-  ok(/aria-current="true"[^>]*aria-label="North, 7 Countries"><b>North<\/b><span class="fl-n" aria-hidden="true">7<\/span>/.test(box()) && /aria-label="England, 5 Leagues"/.test(box()) && /aria-label="Surrey, 12 Teams"/.test(box()) && /aria-label="Mine, 2 Leagues"/.test(box()) && /aria-label="Favourites, 2 Teams"/.test(box()), 'each row its count (North 7, England 5, Surrey 12, Mine 2, Favourites 2), read out with what it counts');
+  ok(/aria-current="true"[^>]*aria-label="Northern Hemisphere, 7 Countries"><b>Northern Hemi<span class="hx">sphere<\/span><\/b><span class="fl-n" aria-hidden="true">7<\/span>/.test(box()) && /aria-label="Southern Hemisphere, 5 Countries"><b>Southern Hemi<span class="hx">sphere<\/span><\/b>/.test(box()) && /aria-label="England, 5 Leagues"/.test(box()) && /aria-label="Surrey, 12 Teams"/.test(box()) && /aria-label="My Clubs, 2 Leagues"><b>My Clubs<\/b>/.test(box()) && /aria-label="Favourites, 2 Teams"/.test(box()), 'each row its count (Northern Hemisphere 7, England 5, Surrey 12, My Clubs 2, Favourites 2), read out with what it counts, the full name; a hemisphere drawn as Northern Hemi with its end apart, for the narrow column (styles.css)');
   ok(/<p class="fl-h" id="fl-h3">Surrey<\/p>/.test(box()) && /data-col="3" data-i="0" aria-current="true"[^>]*><span class="jw[^"]*"><span class="jersey[^>]*><\/span><\/span><span class="fl-nm"><b>Farnham<\/b><span class="gap mine">My Team<\/span><\/span><span class="fl-st"><svg class="rstars"/.test(box()), 'the Teams column: shirt, name, My Team where the card says it, stars; Farnham marked');
   ok(!/Stronger Side/.test(box()) && /<p class="fl-h" id="fl-h0">Area<\/p>/.test(box()), 'Title Case headings, and no Stronger Side tag');
   P.filterSel(0, 1);
-  ok(marks() === 'South > South Africa > National > -' && col(3).rows[0].id === 'RSA', `a row of Area: its first country, that country's first league, filled (${marks()})`);
-  P.filterSel(1, 2); ok(marks() === 'South > Australia > National > -', 'a country: its first league');
+  ok(marks() === 'Southern Hemisphere > South Africa > National > -' && col(3).rows[0].id === 'RSA', `a row of Area: its first country, that country's first league, filled (${marks()})`);
+  P.filterSel(1, 2); ok(marks() === 'Southern Hemisphere > Australia > National > -', 'a country: its first league');
   P.filterSel(2, 1); ok(heads() === 'Area | Country | League | Clubs' && col(3).rows.map(tname).join() === view(0).ladder.find(g => g.key === 'aus').teams.map(tname).join(), 'a league: its teams, in the ladder\'s order, under its name');
-  P.filterSel(1, 2); ok(marks() === 'South > Australia > Clubs > -', 'the row already chosen, pressed again: the columns after it kept as they are');
+  P.filterSel(1, 2); ok(marks() === 'Southern Hemisphere > Australia > Clubs > -', 'the row already chosen, pressed again: the columns after it kept as they are');
   P.filterSel(0, 2);
-  ok(heads() === 'Area | League | Made Teams' && json(col(1).rows.map(n => n.name)) === json(['Made Teams', 'My League']) && col(2).rows.map(tname).join() === '+Create Team', `Mine: no country; its League column, Made Teams and My League (${heads()})`);
+  ok(heads() === 'Area | League | Made Teams' && json(col(1).rows.map(n => n.name)) === json(['Made Teams', 'My League']) && col(2).rows.map(tname).join() === '+Create Team', `My Clubs: no country; its League column, Made Teams and My League (${heads()})`);
   P.filterSel(1, 1); ok(heads() === 'Area | League | My League' && col(2).rows.map(tname).join() === '+Add Your Team', 'My League: Add Your Team, as the card offers it');
   P.filterSel(0, 3); ok(heads() === 'Area | Favourites' && col(1).rows.map(tname).join() === 'Bath,Dublin', 'Favourites: straight to the teams starred');
   P.filterSel(0, 4); ok(heads() === 'Area | Recent' && col(1).rows.map(tname).join() === 'Cardiff,Ealing', 'Recent: straight to that side\'s last picks');
@@ -417,9 +419,9 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   P.filterShut(); P.group(0, view(0).ladder.findIndex(g => g.key === 'recent') - view(0).gi); P.step(0, 1); P.filter(0, '', { dev:'touch' });
   ok(marks() === 'Recent > Ealing', `Your Team on Recent's Ealing: Recent, Ealing marked (${marks()})`);
   P.filterShut(); P.group(0, view(0).ladder.findIndex(g => g.key === 'mine.league') - view(0).gi); P.filter(0, '', { dev:'touch' });
-  ok(marks() === 'Mine > My League > Add Your Team' && col(2).rows[0].act === 'import', `on Add Your Team: Mine, My League, it marked (${marks()})`);
+  ok(marks() === 'My Clubs > My League > Add Your Team' && col(2).rows[0].act === 'import', `on Add Your Team: My Clubs, My League, it marked (${marks()})`);
   P.filterShut(); D.openTeams('quick'); P.filter(1, '', { dev:'touch' });
-  ok(marks() === 'North > England > Surrey > Wimbledon' && !col(3).rows.some(t => t.id === 'FAR'), 'the Opponent\'s: Wimbledon marked, and Your Team\'s Farnham nowhere in it (Pick Opponent\'s lock)');
+  ok(marks() === 'Northern Hemisphere > England > Surrey > Wimbledon' && !col(3).rows.some(t => t.id === 'FAR'), 'the Opponent\'s: Wimbledon marked, and Your Team\'s Farnham nowhere in it (Pick Opponent\'s lock)');
   ok(!P.filterSearch(view(1).ladder, 'farn').length && P.filterSearch(view(0).ladder, 'farn')[0].t.id === 'FAR', 'nor found by its search');
   P.filterShut();
   // Championship: a League column (its competition, Made Teams) and Teams; Career and the setup: the clubs only, Search Clubs
@@ -443,24 +445,28 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   // the search: folded, matched and ordered, each team once
   fresh(); st.fav = ['BTH']; st.recent = [['BTH'], []]; D.openTeams('quick'); P.filter(0, 'ba', { dev:'touch' });
   const L0 = view(0).ladder, hits = q => P.filterSearch(L0, q), ids = q => hits(q).map(h => h.t.id);
-  ok($('fl-cols').hidden && !$('fl-res').hidden && fs0().hits.length === hits('ba').length && /data-r="0"[^>]*><span class="jw[^"]*"><span class="jersey[^>]*><\/span><\/span><span class="fl-nm"><b>Bayonne<\/b><small>North · France · Top 14<\/small><\/span><span class="fl-st"><svg class="rstars"/.test($('fl-res').innerHTML), 'typing swaps the columns for one list: shirt, name, its path (North · France · Top 14), stars');
+  ok($('fl-cols').hidden && !$('fl-res').hidden && fs0().hits.length === hits('ba').length && /data-r="0"[^>]*><span class="jw[^"]*"><span class="jersey[^>]*><\/span><\/span><span class="fl-nm"><b>Bayonne<\/b><small>Northern Hemisphere · France · Top 14<\/small><\/span><span class="fl-st"><svg class="rstars"/.test($('fl-res').innerHTML), 'typing swaps the columns for one list: shirt, name, its path (Northern Hemisphere · France · Top 14, the area\'s full name), stars');
   ok(ids('ba').slice(0, 2).join() === 'BAY,BTH' && hits('ba').every((h, k, a) => !k || a[k - 1].r <= h.r) && hits('ba').filter(h => h.r === 0).length === 2, `"ba": the names that start with it first, in ladder order (Bayonne, Bath), then those holding it (${hits('ba').map(h => X.listName(h.t)).join(', ')})`);
   ok(ids('north').slice(0, 2).join() === 'NTH,LNO' && hits('north')[1].r === 1, `"north": Northampton (starts), then London North (a word starts) (${hits('north').slice(0, 4).map(h => X.listName(h.t)).join(', ')})`);
+  // an area's name is not searched, as it was not before the areas were renamed (2026-11-14): "north" finds teams by their own names only,
+  // "mine" nothing, and so with the new names
+  const own = q => hits(q).every(h => h.r < 3 && X.listName(h.t).toLowerCase().includes(q));
+  ok(own('north') && !hits('mine').length && own('northern') && own('southern') && !hits('hemisphere').length && !hits('hemi').length && !hits('my clubs').length, `an area's name finds nothing of its own: "north" and "northern", "southern" only the teams named so, "mine", "hemisphere", "hemi" and "my clubs" nothing (${['north', 'northern', 'southern', 'mine', 'hemisphere', 'my clubs'].map(q => q + ' ' + hits(q).length).join(', ')})`);
   ok(ids('BÁTH').join() === 'BTH' && ids('  bath ').join() === 'BTH' && ids('mOntÀuBan').join() === 'MTB', 'case and accents folded: BÁTH, mOntÀuBan');
   const prem = hits('Premiership');
-  ok(prem.length === 20 && prem.slice(0, 10).every(h => h.path === 'North · England · Premiership') && prem.slice(10).every(h => h.path === 'North · Scotland · Premiership') && prem.every(h => h.r === 3), 'a group\'s name: "Premiership" lists both Premierships\' clubs, England\'s then Scotland\'s');
+  ok(prem.length === 20 && prem.slice(0, 10).every(h => h.path === 'Northern Hemisphere · England · Premiership') && prem.slice(10).every(h => h.path === 'Northern Hemisphere · Scotland · Premiership') && prem.every(h => h.r === 3), 'a group\'s name: "Premiership" lists both Premierships\' clubs, England\'s then Scotland\'s');
   const eng = hits('eng');
   ok(eng[0].t.id === 'ENG' && eng[0].r === 0 && eng.slice(1).every(h => h.r >= 3) && eng.some(h => h.t.id === 'FAR') && eng.findIndex(h => h.t.id === 'BTH') < eng.findIndex(h => h.t.id === 'FAR'), 'a country\'s name: "eng" has England, then England\'s clubs in ladder order');
-  ok(hits('bath').length === 1 && hits('bath')[0].path === 'North · England · Premiership', 'each team once: Bath, starred and recent too, under its own group');
+  ok(hits('bath').length === 1 && hits('bath')[0].path === 'Northern Hemisphere · England · Premiership', 'each team once: Bath, starred and recent too, under its own group');
   const urc = hits('united');
   ok(urc.length === X.CELTIC.length + 4 && urc.every(h => h.r === 3 && / · URC$/.test(h.path)) && ['DUB', 'CDF', 'EDI', 'TRE'].every(id => urc.some(h => h.t.id === id)) && json(ids('United Rugby Championship')) === json(ids('united')), `a group called by its competition's short name found by its full one: "united" lists the URC's clubs, South Africa's four too, each under its URC (${urc.length})`);
   ok(ids('english').slice(0, 10).join() === view(0).ladder.find(g => g.key === 'eng').teams.map(t => t.id).join() && ids('english').length === 23, 'and "english": the English Premiership\'s clubs, then the English Championship\'s');
   X.custom().push(X.cleanTeam({ name:'Béziers', key:'mybz' }, 0)); D.renderTeams();
-  ok(P.filterSearch(view(0).ladder, 'bez').map(h => h.path).join() === 'Mine · Made Teams', 'a team made with an accent found without it (Béziers for "bez"), under Mine · Made Teams');
+  ok(P.filterSearch(view(0).ladder, 'bez').map(h => h.path).join() === 'My Clubs · Made Teams', 'a team made with an accent found without it (Béziers for "bez"), under My Clubs · Made Teams');
   ok(!hits('create').length && !hits('add your').length, 'Create Team and Add Your Team are not teams to find');
   P.filterType('zzq'); ok(!fs0().hits.length && /<p class="fl-none">No Teams Found<\/p>/.test($('fl-res').innerHTML) && $('fl-said').textContent === 'No Teams Found', 'nothing: No Teams Found, said to a screen reader too');
   P.filterType('bath'); ok($('fl-said').textContent === '1 Team', 'one: 1 Team');
-  P.filterType(''); ok(!$('fl-cols').hidden && $('fl-res').hidden && marks() === 'North > England > Surrey > Farnham', 'cleared: the columns again, as they were');
+  P.filterType(''); ok(!$('fl-cols').hidden && $('fl-res').hidden && marks() === 'Northern Hemisphere > England > Surrey > Farnham', 'cleared: the columns again, as they were');
   P.filterShut(); X.custom().length = 0;
   // the dialog named for its side; 2 Players: only that side's seat drives it while it is open (navOnly), both again once it shuts
   { const fm = $('m-filter'), fa = {}; fm.setAttribute = (k, val) => { fa[k] = String(val); }; fm.getAttribute = k => (k in fa ? fa[k] : null);
@@ -480,7 +486,7 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
   // each gate a pick goes through
   fresh(); golds(10); S.setTier('free'); S.setBought([]); D.openTeams('quick');
   P.filter(0, 'england 2003', { dev:'touch' }); const leg = fs0().hits[0];
-  ok(leg.t.id === 'L03' && leg.path === 'North · England · National', 'a Legend found, under its nation\'s National');
+  ok(leg.t.id === 'L03' && leg.path === 'Northern Hemisphere · England · National', 'a Legend found, under its nation\'s National');
   P.filterPick(leg.gi, leg.i);
   ok(S.ui().mode === 'unlock' && S.ui().feature === 'legends' && shown(0).id === 'L03' && !P.state().sides[0].set && !fs0().open, 'a Legend picked without the Full Game: the Unlock card (storeGate), the side on it, not set');
   T.store.close();
@@ -521,6 +527,40 @@ const ALL = { nations:true, legends:true, clubs:true, mine:'all', fav:true, rece
     const edge = (css.match(/\.fl-field\{[^}]*border:1\.5px solid var\(--([a-z-]+)\)/) || [])[1], e = tok(edge), r1 = ratio(e, tok('panel')), r2 = ratio(e, tok('night'));
     ok(edge === 'rule-in' && r1 >= 3 && r2 >= 3 && /\.fl-field:focus-within\{border-color:var\(--chalk\)/.test(css), `the Search field's edge at rest: ${edge} ${e}, ${r1.toFixed(2)}:1 on the card and ${r2.toFixed(2)}:1 on its ground; the chalk when focused`); }
   fresh();
+}
+
+// 7e. The areas' names (the owner, 2026-11-14: "Change Northern hemisphere / Southern hemisphere / My clubs. Shorten to 'hemi' if needed
+//     for mobile UI"), without a browser: the names, the short forms as the full names' starts, the text every place carries (the full
+//     name), the markup the CSS shortens, and a save holding keys, never names. Section 9 measures each place's form at the five sizes.
+{
+  fresh(); D.openTeams('quick');
+  ok(json(P.PICK_HEMI) === json({ north:'Northern Hemisphere', south:'Southern Hemisphere', mine:'My Clubs', fav:'Favourites', recent:'Recent' }), `the areas: Northern Hemisphere, Southern Hemisphere, My Clubs, Favourites, Recent (${json(P.PICK_HEMI)})`);
+  ok(json(P.PICK_HEMI_SHORT) === json({ north:'Northern Hemi', south:'Southern Hemi' }) && Object.entries(P.PICK_HEMI_SHORT).every(([k, v]) => P.PICK_HEMI[k].startsWith(v) && P.PICK_HEMI[k] !== v), 'the short forms, Northern Hemi and Southern Hemi, each its full name\'s start (so the CSS shortens by leaving the end out)');
+  const g = key => view(0).ladder.find(x => x.key === key);
+  ok(P.where(g('sur')) === 'Northern Hemisphere · England · Local' && P.where(g('nat.nzl')) === 'Southern Hemisphere · New Zealand' && P.where(g('mine.made')) === 'My Clubs' && P.where(g('mine.league')) === 'My Clubs', `a card's context line, as text: the full name (${P.where(g('sur'))}; ${P.where(g('nat.nzl'))}; ${P.where(g('mine.made'))})`);
+  const head = P.panel(0);
+  ok(head.includes('<span class="pk-ctx"><span><span class="pk-area">Northern Hemi<span class="hx">sphere</span></span> <span>England</span> <span>Local</span></span></span>'), 'on the card, the area drawn as Northern Hemi with its end apart (.hx), the country and Local after it');
+  P.group(0, view(0).ladder.findIndex(x => x.key === 'mine.made') - view(0).gi);
+  ok(P.panel(0).includes('<span class="pk-ctx"><span><span class="pk-area">My Clubs</span></span></span>'), 'My Clubs whole: it has no short form');
+  const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  ok(css.includes('.pk-ctx .hx{display:none}\n.pk-sides.one .pk-ctx .hx{display:inline}') && /@container \(max-width:124px\)\{\s*\.fl-r \.hx\{display:none\}\s*\}/.test(css), 'the CSS: Northern Hemi on a card where two sides share the screen, the full name where it has one; in the Filter\'s Area column, Northern Hemi under 124px');
+  D.openTeams('quick'); P.filter(0, '', { dev:'touch' });
+  const areas = P.filterState().cols[0].rows, box = $('fl-cols').innerHTML;
+  ok(json(areas.map(n => n.name)) === json(['Northern Hemisphere', 'Southern Hemisphere', 'My Clubs']) && areas.every(n => box.includes(`aria-label="${n.name}, `)), 'the Filter\'s areas named in full, and labelled in full for a screen reader whatever the column shows');
+  P.filterType('bath'); ok(P.filterState().hits[0].path === 'Northern Hemisphere · England · Premiership' && $('fl-res').innerHTML.includes('<small>Northern Hemisphere · England · Premiership</small>'), 'a match\'s path: the full name');
+  P.filterShut();
+  // a save holds keys: the groups' and the teams', never an area's name, old or new, and one made before the rename opens where it was
+  fresh(); D.openTeams('quick');
+  X.custom().push(X.cleanTeam({ name:'Herons', key:'myhe' }, 0)); D.openTeams('quick');
+  P.group(0, view(0).ladder.findIndex(x => x.key === 'mine.made') - view(0).gi); P.set(0);
+  P.group(1, view(1).ladder.findIndex(x => x.key === 'nat.nzl') - view(1).gi); P.fav(1); P.set(1);
+  P.go(); D.exitMatch();
+  const raw = memory['tryline.v1'], w = saved().settings;
+  ok(json(w.pick) === json([{ id:'myhe', cat:'men', g:'mine.made' }, { id:'NZL', cat:'men', g:'nat.nzl' }]) && !/Hemi|My Clubs|"(North|South|Mine)"/.test(raw), `a save holds keys only (mine.made, nat.nzl), no area's name (${json(w.pick)})`);
+  X.restore({ settings:{ cat:'men', pick:[{ id:'myhe', cat:'men', g:'mine.made' }, { id:'NZL', cat:'men', g:'nat.nzl' }], recent:[['myhe'], ['NZL']], fav:['NZL'] } });
+  D.openTeams('quick');
+  ok(view(0).group.key === 'mine.made' && shown(0).key === 'myhe' && view(1).group.key === 'nat.nzl' && shown(1).id === 'NZL' && P.state().sides[0].set && P.state().sides[1].set && P.where(view(0).group) === 'My Clubs' && P.where(view(1).group) === 'Southern Hemisphere · New Zealand', 'a save from before the rename opens on the same groups, now named My Clubs and Southern Hemisphere');
+  X.custom().length = 0; fresh();
 }
 
 // 8. Nothing drawn at random; GAME_VERSION
@@ -673,6 +713,48 @@ async function browserChecks() {
             return { bad, n };
           });
           ok(fit.bad.length === 0 && fit.n > 700, `${at}: every state fits with no scroll, both sides, the V, the primary and Back in view, every target 44px or more, no name or bar label cut; the Filter in every state of every mode (each column's every row, its marks on arrival for every group, the matches) in view with no page scroll, no label cut, every target 44px, the stars whole; the icon in the top bar of every mode, on nothing (${fit.n} states${fit.bad.length ? ': ' + fit.bad.slice(0, 6).join('; ') : ''})`);
+          // the areas' names at this size, each place's form as measured (the owner, 2026-11-14; PICK_HEMI): a card where two sides share
+          // the screen, Northern Hemi, its line breaking only between parts (two lines at most, the head its 44px), nothing cut, the area
+          // left off only where it is wider than a line of its own; a card on its own, the full name, one line; the Filter's Area column,
+          // the full name where Hemisphere fits a line (844 wide), else Northern Hemi, in a 44px row, never cut; a match's path, the full
+          // name on one line
+          const wide = w >= 844, names = await page.evaluate(() => {
+            const T = window.__tryline, P = T.picker, $ = id => document.getElementById(id), out = { two:{}, one:{}, bad:[], off:[], lines:0, n:0 };
+            const seen = el => el.innerText.replace(/\s+/g, ' ').trim();
+            const card = (mode, rec) => {
+              for (const side of document.querySelectorAll('#s-teams .pk-side:not([hidden])')) {
+                const c = side.querySelector('.pk-ctx'); if (!c) continue;
+                out.n++;
+                const a = c.querySelector('.pk-area'), parts = [...c.querySelectorAll(':scope > span > span')].filter(p => !p.hidden), cr = c.getBoundingClientRect();
+                const tops = new Set(parts.map(p => Math.round(p.getBoundingClientRect().top))), hd = side.querySelector('.pk-head').getBoundingClientRect().height;
+                if (a && !a.hidden) rec[seen(a)] = 1;
+                if (a && a.hidden) { out.off.push(`${P.view(+side.dataset.side).group.key} ${side.id}`); if (a.getBoundingClientRect().width === 0 && seen(c).split(' ')[0] === 'Northern') out.bad.push('left off yet shown'); }
+                if (parts.some(p => p.getBoundingClientRect().right > cr.right + 0.5 || p.getBoundingClientRect().left < cr.left - 13)) out.bad.push(`${mode} ${side.id} ${seen(c)}: cut`);
+                if (tops.size > 2 || Math.abs(hd - 44) > 0.5) out.bad.push(`${mode} ${side.id} ${seen(c)}: ${tops.size} lines, head ${hd}`);
+                if (mode === 'one' && tops.size > 1) out.bad.push(`one ${seen(c)}: ${tops.size} lines`);
+                out.lines = Math.max(out.lines, tops.size);
+              }
+            };
+            for (const cat of ['men', 'women']) {
+              T.debug.settings().cat = cat; T.debug.openTeams('quick');
+              const G = P.view(0).ladder.length;
+              for (let g = 0; g < G; g++) { for (let i = 0; i < Math.min(3, P.view(0).group.teams.length); i++) { card('two', out.two); P.step(0, 1); P.step(1, 1); } P.group(0, 1); P.group(1, 1); }
+            }
+            T.debug.settings().cat = 'men';
+            T.debug.openTeams('my'); for (let g = 0; g < P.view(0).ladder.length; g++) { card('one', out.one); P.group(0, 1); }
+            T.career.newOpen(); T.career.clubOpen(); for (let g = 0; g < P.view(0).ladder.length; g++) { card('one', out.one); P.group(0, 1); }
+            T.debug.openTeams('quick'); P.filter(0, '', { dev:'touch' }); document.getAnimations().forEach(a => a.finish());
+            out.area = [...document.querySelectorAll('#fl-cols .fl-col:first-child .fl-r')].map(r => { const b = r.querySelector('b'); return { name:seen(b), label:r.getAttribute('aria-label'), row:Math.round(r.getBoundingClientRect().height), cut:b.scrollWidth > b.clientWidth + 0.5 || b.scrollHeight > b.clientHeight + 0.5 }; });
+            P.filterShut(); P.filter(0, 'bayonne', { dev:'touch' }); document.getAnimations().forEach(a => a.finish());
+            const sm = document.querySelector('#fl-res .fl-nm small');
+            out.path = { text:seen(sm), cut:sm.scrollWidth > sm.clientWidth + 0.5, lines:Math.round(sm.getBoundingClientRect().height / parseFloat(getComputedStyle(sm).lineHeight)) };
+            P.filterShut(); T.debug.goHome();
+            return out;
+          });
+          const areaWant = wide ? ['Northern Hemisphere', 'Southern Hemisphere', 'My Clubs'] : ['Northern Hemi', 'Southern Hemi', 'My Clubs'];
+          ok(json(Object.keys(names.two).sort()) === json(['My Clubs', 'Northern Hemi', 'Southern Hemi']) && json(Object.keys(names.one).sort()) === json(['My Clubs', 'Northern Hemisphere', 'Southern Hemisphere']) && !names.bad.length && names.lines <= 2 && (at === '568x320' ? names.off.length > 0 && names.off.every(o => o.startsWith('en2 ')) : !names.off.length), `${at}: a card's area: Northern Hemi and Southern Hemi where two sides share the screen, the full name on one line where a card has it alone, My Clubs whole; never cut, two lines at most in the 44px head${at === '568x320' ? ', the area left off only on England\'s Championship (89px in 80)' : ''} (${names.n} lines; ${json(Object.keys(names.two))} ${json(Object.keys(names.one))}${names.off.length ? '; off ' + names.off.length + ' ' + names.off[0] : ''}${names.bad.length ? '; ' + names.bad.slice(0, 3).join('; ') : ''})`);
+          ok(json(names.area.slice(0, 3).map(a => a.name)) === json(areaWant) && names.area.slice(0, 3).every((a, k) => a.label.startsWith(['Northern Hemisphere, ', 'Southern Hemisphere, ', 'My Clubs, '][k])) && names.area.every(a => a.row === 44 && !a.cut), `${at}: the Filter's Area column: ${areaWant.join(', ')}, labelled in full, every row 44px and nothing cut (${json(names.area.map(a => `${a.name} ${a.row}`))})`);
+          ok(names.path.text === 'Northern Hemisphere · France · Top 14' && !names.path.cut && names.path.lines === 1, `${at}: a match's path: the full name, on one line, not cut (${json(names.path)})`);
           // the keyboard: the arrows on the side with the focus, Page Down a country, Tab to the next control, Enter sets and moves on
           await page.evaluate(() => { const T = window.__tryline; T.debug.settings().pick = [null, null]; T.debug.openTeams('quick'); });
           await page.focus('#t-side0 .pk-pick');
@@ -746,7 +828,7 @@ async function browserChecks() {
           const gap = () => page.waitForTimeout(450);          // past the double tap's guard (FL_TAP): a tap that opens or shuts the Filter eats a second by it for 400ms
           await page.tap('#t-find'); await gap();
           k = await flNow();
-          ok(k.open && k.side === 0 && !k.field && k.marks === 'North > England > Counties > Wandsworth', `${at}: a finger on the search icon: the Filter for the side being set, on its path, the field not focused, so no keyboard comes up (${json(k)})`);
+          ok(k.open && k.side === 0 && !k.field && k.marks === 'Northern Hemisphere > England > Counties > Wandsworth', `${at}: a finger on the search icon: the Filter for the side being set, on its path, the field not focused, so no keyboard comes up (${json(k)})`);
           await page.tap('#fl-q');
           k = await flNow();
           ok(k.open && k.field, `${at}: a tap on the field: it takes the focus (the keyboard's, on a phone) (${json(k)})`);
@@ -761,7 +843,7 @@ async function browserChecks() {
           const tapped = [];
           for (const [c, i] of [[0, 0], [1, 0], [2, 0]]) { await page.tap(`#fl-cols [data-col="${c}"][data-i="${i}"]`); tapped.push(await page.evaluate(() => { const a = document.activeElement; return a && a.dataset.col != null ? a.dataset.col + ':' + a.dataset.i + ' ' + a.querySelector('b').textContent + (a.isConnected ? '' : ' (gone)') : a && (a.id || a.tagName); })); }
           k = await flNow();
-          ok(k.open && k.marks === 'North > Ireland > National' && json(tapped) === json(['0:0 North', '1:0 Ireland', '2:0 National']), `${at}: a finger through the columns: North, Ireland, National, each filling the next, and the row tapped keeps the focus (it is not drawn again under the finger) (${json(k)} ${json(tapped)})`);
+          ok(k.open && k.marks === 'Northern Hemisphere > Ireland > National' && json(tapped) === json(['0:0 Northern Hemisphere', '1:0 Ireland', '2:0 National']), `${at}: a finger through the columns: Northern Hemisphere, Ireland, National, each filling the next, and the row tapped keeps the focus (it is not drawn again under the finger) (${json(k)} ${json(tapped)})`);
           await page.tap('#fl-cols [data-col="3"][data-i="0"]'); await gap();
           k = await page.evaluate(() => ({ g:window.__tryline.picker.view(0).group.key, i:window.__tryline.picker.view(0).i, set:window.__tryline.picker.state().sides[0].set, open:!document.getElementById('m-filter').hidden }));
           ok(k.g === 'nat.ire' && k.i === 0 && k.set && !k.open, `${at}: a team tapped there: Your Team on it and set, the Filter shut (${json(k)})`);
@@ -965,7 +1047,7 @@ async function browserChecks() {
           for (const key of ['ArrowDown', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End', 'ArrowRight', 'ArrowDown']) { await page.keyboard.press(key); seq.push(await at2()); }
           ok(json(seq) === json(['3:0 Farnham|Surrey', '2:3 Surrey|Surrey', '2:4 Counties|Counties', '2:3 Surrey|Surrey', '2:0 National|National', '2:4 Counties|Counties', '3:0 Effingham|Counties', '3:1 Wandsworth|Counties']), `${at}: the keys: Down from the field to the side's team, Left to its league, Down and Up choosing (the Teams column following), Home and End, Right into the Teams (${json(seq)})`);
           await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); const a0 = await at2(); await page.keyboard.press('Enter'); const a1 = await at2(); await page.keyboard.press('ArrowUp'); const a2 = await at2(); await page.keyboard.press('ArrowUp'); const a3 = await at2();
-          ok(a0 === '0:0 North|Counties' && a1 === '1:2 England|Counties' && a2 === '1:1 France|National' && a3 === '1:0 Ireland|National', `${at}: Enter on a row opens it, into the next column on its mark; Up from there chooses as it goes (${a0}, ${a1}, ${a2}, ${a3})`);
+          ok(a0 === '0:0 Northern Hemisphere|Counties' && a1 === '1:2 England|Counties' && a2 === '1:1 France|National' && a3 === '1:0 Ireland|National', `${at}: Enter on a row opens it, into the next column on its mark; Up from there chooses as it goes (${a0}, ${a1}, ${a2}, ${a3})`);
           await page.keyboard.press('ArrowUp'); const a4 = await at2();
           await page.keyboard.press('ArrowDown'); const a5 = await at2();
           for (const key of ['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowDown']) await page.keyboard.press(key);
@@ -998,7 +1080,7 @@ async function browserChecks() {
             for (let n = 0; n < 5; n++) T.navMove(0, 0, -1); out.push(id(f()));   // up the League column, past its top: Close (the field passed over)
             T.navMove(0, 0, 1); out.push(id(f()));
             T.navMove(0, -1, 0); T.navMove(0, -1, 0); T.navMove(0, -1, 0); out.push(id(f()));   // Left to the areas
-            T.navMove(0, 0, 1); T.navPress(0); out.push(id(f()));               // South, A: into its countries
+            T.navMove(0, 0, 1); T.navPress(0); out.push(id(f()));               // Southern Hemisphere, A: into its countries
             T.navMove(0, 1, 0); T.navMove(0, 1, 0); out.push(id(f())); T.navPress(0);
             out.push(!$('m-filter').hidden ? 'open' : 'shut', P.view(0).team.id, P.state().sides[0].set, id(f()));
             P.filter(1, '', { dev:'pad' }); out.push(id(f())); T.navBack(0); out.push(!$('m-filter').hidden ? 'open' : 'shut', id(f()));
@@ -1126,7 +1208,7 @@ async function browserChecks() {
       await page.click('#fl-cols [data-col="0"][data-i="1"]'); const m0 = await foc();
       await page.click('#fl-cols [data-col="1"][data-i="1"]'); const m1 = await foc();
       await page.keyboard.press('ArrowDown'); const m2 = await foc();
-      ok(m0 === '0:1 South' && m1 === '1:1 New Zealand' && m2 === '1:2 Australia', `a computer: a click on South keeps the focus on South, one on New Zealand on it, and Down goes on from there (${m0}, ${m1}, ${m2})`);
+      ok(m0 === '0:1 Southern Hemisphere' && m1 === '1:1 New Zealand' && m2 === '1:2 Australia', `a computer: a click on Southern Hemisphere keeps the focus on it, one on New Zealand on it, and Down goes on from there (${m0}, ${m1}, ${m2})`);
       await page.keyboard.press('Escape');
       // a gated team picked from the Filter by the keys (a Legend without the Full Game): the Unlock card, and Escape on it puts the focus
       // back on Your Team's card, as a pick on the card does

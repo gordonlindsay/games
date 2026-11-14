@@ -124,12 +124,15 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .pk-head{display:flex;align-items:center;gap:8px;min-height:44px}
 .pk-where{flex:1 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:2px;font:700 13px/1.1 var(--body);color:var(--chalk-dim)}
 .pk-who{font:700 12px/1.1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--chalk)}
-/* the context line, North · England · Local: each part whole, a dot before each; where it wraps, the dot that would start a line sits in the
-   clipped margin, so no line starts or ends with one */
+/* the context line, Northern Hemi · England · Local: each part whole, a dot before each; where it wraps, the dot that would start a line sits
+   in the clipped margin, so no line starts or ends with one. The area is Northern Hemi (its end, .hx, left out) where two sides share the
+   screen, Northern Hemisphere where a card has it to itself (PICK_HEMI, src/ui-menus.js) */
 .pk-ctx{display:block;overflow:hidden}
 .pk-ctx>span{display:flex;flex-wrap:wrap;margin-left:-.9em}
 .pk-ctx>span>span{white-space:nowrap}
 .pk-ctx>span>span::before{content:"\00b7";display:inline-block;width:.9em;text-align:center}
+.pk-ctx .hx{display:none}
+.pk-sides.one .pk-ctx .hx{display:inline}
 .pk-side.pk-set .pk-who,.pk-side.p1 .pk-who{color:var(--flood)}
 .pk-side.p2 .pk-who{color:var(--p2)}
 .btn.pk-group,.btn.pk-fav,.btn.pk-edit{width:auto;flex:none;min-height:44px;padding:6px 12px}
@@ -290,6 +293,11 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 .fl-res .fl-r{min-height:48px}
 .fl-none{margin:0;padding:14px 10px;font:700 15px/1.2 var(--body);color:var(--chalk-dim)}
 .fl-said{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}   /* the number of matches, for a screen reader */
+/* an Area column too narrow for Hemisphere on a line of its own (under 124px: 667 and 568 wide; 137px at 844): Northern Hemi, the full
+   name's end (.hx) left out (PICK_HEMI, src/ui-menus.js). Either form takes two lines in the row's 44px, as United Rugby Championship does */
+@container (max-width:124px){
+  .fl-r .hx{display:none}
+}
 /* a narrow Teams column (568 wide, or the last of four at 667): the stars under the name, so neither is cut */
 @container (max-width:250px){
   .fl-t{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;row-gap:2px;padding-block:5px}

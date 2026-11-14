@@ -8,7 +8,7 @@ const { T, fire } = await import('./harness.mjs');
 import fs from 'node:fs';
 const S = T.store, K = T.kids, X = T.teams, D = T.debug, C = T.career, I = T.importer, $ = id => document.getElementById(id);
 const PK = T.picker;   // the team screen, side by side since 2026-11-11
-const addOnTeams = () => { const g = PK.ladder('men', { mine:'all' }).find(x => x.key === 'mine.league'); return !!g && g.teams.some(t => t.act === 'import'); };   // Add Your Team in Mine's My League
+const addOnTeams = () => { const g = PK.ladder('men', { mine:'all' }).find(x => x.key === 'mine.league'); return !!g && g.teams.some(t => t.act === 'import'); };   // Add Your Team in My Clubs' My League
 let failed = 0, passed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } if (process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };
 const tick = async (n = 6) => { for (let i = 0; i < n; i++) await new Promise(r => setTimeout(r, 0)); };
@@ -109,7 +109,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok($('m-store').hidden && !$('m-import').hidden && I.state().step === 'web', 'Add Your Team opens its card, which says it works in the app');
   $('im-back').click(); D.goHome();
   D.openTeams('quick');
-  ok(I.shown() && PK.view(0).ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'and Add Your Team is on the team screen as before (Mine\'s My League)');
+  ok(I.shown() && PK.view(0).ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'and Add Your Team is on the team screen as before (My Clubs\' My League)');
   D.goHome();
   // the save: byte for byte what it was, with no store field while nothing is bought
   X.save();
