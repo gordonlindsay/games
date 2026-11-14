@@ -2148,7 +2148,9 @@ over 300) that tip his matches. Pace and secs are the owner's (1.08 and 1.5) and
 
 **The band.** `node tools/chase.mjs --balance band` holds a person's chips to the owner's aim from here on: the casual adult
 on Normal, 400 matches at SEED 7, CHASE off then on, must win back more of his chips and at most 20 points more. It measures
-37% to 48% (+11.1 points, on 641 and 659 chips). `tools/chase.mjs` bands the staged chip in the gate too (section 7).
+37% to 48% (+11.1 points, on 641 and 659 chips). At 1.6, with the possession calls merged in (the same 400 matches, the calls
+on in both runs, 2026-11-14), it measures 38.7% to 47.1% (+8.5 points, on 631 and 660 chips): inside the band, a little under
+the aim of about +10 to 15. `tools/chase.mjs` bands the staged chip in the gate too (section 7).
 
 **Long kicks** miss their aim of a little more where the computer fields them (staged 0% to 0% on both seeds; AI v AI 2% to
 0% and 0% to 0%, 0% to 1% over 360): a long kick hangs longer than the chase lasts (doKick's 0.8s plus its length over 28:
