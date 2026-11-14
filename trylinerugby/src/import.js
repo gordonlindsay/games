@@ -820,8 +820,8 @@ $('b-import').addEventListener('click', () => { ac(); importOpen(); });
    check is up, so the two never stack. from: 'home' (the home's button) or 'teams' (the team screen's card), where it closes to. */
 let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0, from:'teams', club:null, sides:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
-const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
-/* The control a step starts on: the link field (on a touch screen Import, so no keyboard springs up over the card),
+const importTouch = () => !fieldMayFocus();                 // a phone or a tablet, or a finger last on a computer's touch screen, unless a key was the last press (src/input-devices.js)
+/* The control a step starts on: the link field (where importTouch, Import, so no keyboard springs up over the card),
    the primary in the preview, Back while it imports and on the web. button: a button only, for a controller's ring. */
 function importFocusEl(button) {
   const s = importUi.step;

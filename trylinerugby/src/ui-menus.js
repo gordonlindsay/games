@@ -1233,9 +1233,9 @@ function filterSearch(L, q) {
   return hits.sort((a, b) => a.r - b.r || a.n - b.n);
 }
 /* Open: for side s, with q typed (a letter on the screen) or none. how.dev is how it was asked for: 'pad' (a controller's A: the ring on
-   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger: the field never
-   takes the focus, so the phone's keyboard comes up only on a tap there). how.from: 'find' (the icon) or 'sheet' (the group's button),
-   where Close puts the focus back. */
+   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger, and anything
+   else on a phone or a tablet: the field never takes the focus, so the phone's keyboard comes up only on a tap there; pickFilterHow).
+   how.from: 'find' (the icon) or 'sheet' (the group's button), where Close puts the focus back. */
 function pickFilter(s, q, how) {
   const v = pickView[s], m = $('m-filter'), o = how || {};
   if ($('s-teams').hidden || !pickFilterable(v)) return false;
@@ -1271,8 +1271,14 @@ function flTapEat(e) {
   if (e.stopPropagation) e.stopPropagation();
 }
 for (const t of ['pointerdown', 'mousedown', 'touchend', 'mouseup', 'click']) document.addEventListener(t, flTapEat, { capture:true, passive:false });
-let pickPointer = '';                                        // the last pointer down on the team screen: 'mouse' (a computer), 'touch' or 'pen'
-const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad' : e && e.detail === 0 && document.activeElement === el ? 'kb' : ((e && e.pointerType) || pickPointer) === 'mouse' ? 'desk' : 'touch');   // how the Filter was asked for (pickFilter)
+/* How the Filter was asked for (pickFilter): 'pad', a controller's A (the ring on the button); 'kb', Enter or Space on the focused button
+   (a click with no detail), on a phone or a tablet only where a key was the last press; 'desk', a computer's mouse (the last press a mouse's,
+   on a computer: touchFirst); else 'touch', a finger. The last pointerdown decides (lastPress, src/input-devices.js), never the click's own
+   pointerType: iOS gives a finger's tap a click whose pointerType is "mouse", which read as a computer's, put the focus in the field and
+   brought the phone's keyboard up over the screen (the owner on 1.6, 2026-11-14). */
+const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad'
+  : e && e.detail === 0 && document.activeElement === el && (lastPress === 'key' || !touchFirst()) ? 'kb'
+  : (lastPress || (e && e.pointerType) || '') === 'mouse' && !touchFirst() ? 'desk' : 'touch');
 const flHas = el => !!el && typeof el.closest === 'function' && !!el.closest('#m-filter');
 function pickFilterShut() {                                  // the Filter put away, nothing else: also whenever another screen is shown (showScreen)
   const m = $('m-filter');
@@ -1576,7 +1582,7 @@ function pickHint() {
   for (const w of chip.children) { if (w.textContent === h.text) w.removeAttribute('aria-hidden'); else w.setAttribute('aria-hidden', 'true'); }
   return h;
 }
-$('s-teams').addEventListener('pointerdown', e => { pickPointer = e.pointerType || ''; if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
+$('s-teams').addEventListener('pointerdown', e => { if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
 /* Men | Women | Minis: the sides follow to the category's own (England to England Women); one it has not got (Canada on Men) is the
    next one there, and no longer set. */
 $('t-cat').innerHTML = TEAM_CATS.map(c => `<button data-cat="${c.id}">${esc(c.name)}</button>`).join('');

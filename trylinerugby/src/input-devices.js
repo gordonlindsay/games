@@ -304,4 +304,13 @@ const deskQuery = (() => { try { return matchMedia('(hover: hover) and (pointer:
 function setDesk() { const b = document.body; if (b) b.classList.toggle('desk', PADS.size > 0 || !!(deskQuery && deskQuery.matches)); }   // a computer, or a controller connected right now: a phone that had a pad goes back to its own layout when it is unplugged
 const isDesk = () => !!(document.body && document.body.classList.contains('desk'));
 if (deskQuery) { if (deskQuery.addEventListener) deskQuery.addEventListener('change', setDesk); else if (deskQuery.addListener) deskQuery.addListener(setDesk); }
+/* A phone's or a tablet's own keyboard never comes up by itself, only for a tap on a text field (the owner, 2026-11-14, on his iPhone:
+   "Take out the keyboard when selecting teams unless I press keyboard as it smothers the screen"). lastPress is the last press anywhere:
+   a pointerdown's own pointerType ('mouse', 'touch' or 'pen'), or 'key' for a key pressed outside a text field (a phone's own keyboard
+   only ever types into one). A click's pointerType is never asked: iOS gives a finger's tap a click whose pointerType is "mouse", or none. */
+let lastPress = '';
+document.addEventListener('pointerdown', e => { lastPress = (e && e.pointerType) || ''; }, true);
+document.addEventListener('keydown', e => { const t = e && e.target; if (!(t && (/^(INPUT|TEXTAREA)$/.test(t.tagName || '') || t.isContentEditable))) lastPress = 'key'; }, true);
+const touchFirst = () => { try { return typeof matchMedia === 'function' && !!(matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches); } catch (e) { return false; } };   // the primary pointer a finger, or one that cannot hover: a phone or a tablet (an iPad with a trackpad too), never a computer
+const fieldMayFocus = () => lastPress === 'key' || (!touchFirst() && lastPress !== 'touch' && lastPress !== 'pen');   // a text field may take the focus by itself: after a key, or on a computer whose last press was not a finger's or a pen's
 

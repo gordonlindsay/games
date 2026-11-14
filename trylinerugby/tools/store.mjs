@@ -4,7 +4,7 @@
 // the home in the club's colours and the crest only as a file of the game's own, and the Supporters' Wall (an owned club only, the
 // grown-up check, 18 or over, the email built exactly, no name kept).
 // node tools/store.mjs   Exits 1 on any failure.
-const { T, fire } = await import('./harness.mjs');
+const { T, fire, fireDoc } = await import('./harness.mjs');
 import fs from 'node:fs';
 const S = T.store, K = T.kids, X = T.teams, D = T.debug, C = T.career, I = T.importer, $ = id => document.getElementById(id);
 const PK = T.picker;   // the team screen, side by side since 2026-11-11
@@ -765,6 +765,17 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok($('m-wall').hidden && $('wl-input').value === '' && !opened.length && !nameKept(), 'Cancel likewise');
   S.wallAsk('farnham'); pass(); $('wl-yes').click(); type('  Jo\n\tB  '); $('wl-input').fire('keydown', { key:'Enter' });
   ok(opened.length === 1 && new URL(opened[0][0]).searchParams.get('body').startsWith('Name: Jo B\r\nClub: Farnham RUFC'), 'Enter sends it on too; the name on one line, its spaces and breaks made plain');
+  // the name's field takes the focus by itself only where no phone's keyboard springs up over the card (src/input-devices.js, fieldMayFocus;
+  // the owner, 2026-11-14: "Take out the keyboard when selecting teams unless I press keyboard as it smothers the screen"): a computer, or
+  // after a key; never on a phone or a tablet, nor after a finger on a computer's touch screen
+  { const mm = globalThis.matchMedia, f = $('wl-input'), had = f.focus, seen = []; let got = false; f.focus = () => { got = true; };
+    for (const [what, on, press] of [['a computer\'s mouse', [], ['pointerdown', { pointerType:'mouse' }]], ['a finger on a computer', [], ['pointerdown', { pointerType:'touch' }]], ['a phone\'s tap', ['(pointer: coarse)', '(hover: none)'], ['pointerdown', { pointerType:'touch' }]],
+      ['a key on a phone', ['(pointer: coarse)', '(hover: none)'], ['keydown', { key:'Enter', target:$('wl-yes') }]]]) {
+      globalThis.matchMedia = q => ({ matches:on.includes(q), addEventListener() {}, addListener() {} });
+      S.wallAsk('farnham'); pass(); fireDoc(...press); got = false; $('wl-yes').click(); seen.push(`${what}: ${got ? 'field' : 'no field'}`); S.wallClose();
+    }
+    globalThis.matchMedia = mm; f.focus = had; fireDoc('pointerdown', { pointerType:'mouse' });
+    ok(json(seen) === json(['a computer\'s mouse: field', 'a finger on a computer: no field', 'a phone\'s tap: no field', 'a key on a phone: field']), `Yes, I'm 18 or Over: the name's field focused on a computer and after a key, never on a phone nor after a finger (${json(seen)})`); }
   // the name: one line, 40 characters at most, two at least
   ok(S.wallName('x'.repeat(60)).length === 40 && S.wallMail(FARNHAM, 'x') === null && S.wallMail(FARNHAM, '') === null && S.wallMail(null, NAME) === null && S.wallMail(FARNHAM, NAME) === MAIL, 'a name is two to forty characters, for a club');
   ok(/maxlength="40"/.test(html.slice(html.indexOf('id="wl-input"') - 40, html.indexOf('id="wl-input"') + 200)), 'the field takes forty');

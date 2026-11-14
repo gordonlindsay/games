@@ -3,7 +3,7 @@
 // node tools/importer.mjs
 import fs from 'node:fs';
 process.env.SEED ??= '23';
-const { T, rndCalls } = await import('./harness.mjs');
+const { T, rndCalls, fireDoc } = await import('./harness.mjs');
 const I = T.importer, X = T.teams, D = T.debug, $ = id => document.getElementById(id);
 const PK = T.picker, pv = () => PK.view(0);   // the team screen, side by side since 2026-11-11 (Championship: one side, centred)
 let passed = 0;
@@ -261,6 +261,17 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   const mm = globalThis.matchMedia; globalThis.matchMedia = q => ({ matches:q === '(pointer: coarse)' });
   focused = ''; I.open();
   ok(focused === 'im-go', 'on a touch screen focus goes to Import, so no keyboard springs up over the card');
+  // the same rule as the team screen's Filter (src/input-devices.js, fieldMayFocus; the owner, 2026-11-14: "Take out the keyboard when
+  // selecting teams unless I press keyboard as it smothers the screen"): a pointer that cannot hover is a phone's or a tablet's too; a finger
+  // last on a computer's touch screen leaves the field be; a key pressed last (a tablet's keyboard) puts the focus in it
+  const opened = [];
+  for (const [what, on, press] of [['no hover', ['(hover: none)'], ['pointerdown', { pointerType:'mouse' }]], ['a finger on a computer', [], ['pointerdown', { pointerType:'touch' }]], ['a pen on a computer', [], ['pointerdown', { pointerType:'pen' }]],
+    ['a key on a phone', ['(pointer: coarse)', '(hover: none)'], ['keydown', { key:'Enter', target:$('b-import') }]], ['a key typed into a field on a phone', ['(pointer: coarse)', '(hover: none)'], ['keydown', { key:'a', target:{ tagName:'INPUT' } }]], ['a mouse on a computer', [], ['pointerdown', { pointerType:'mouse' }]]]) {
+    globalThis.matchMedia = q => ({ matches:on.includes(q), addEventListener() {}, addListener() {} });
+    if (what === 'a key typed into a field on a phone') fireDoc('pointerdown', { pointerType:'touch' });
+    fireDoc(...press); focused = ''; I.open(); opened.push(`${what}: ${focused}`);
+  }
+  ok(JSON.stringify(opened) === JSON.stringify(['no hover: im-go', 'a finger on a computer: im-go', 'a pen on a computer: im-go', 'a key on a phone: im-url', 'a key typed into a field on a phone: im-go', 'a mouse on a computer: im-url']), `the link field takes the focus by itself on a computer and after a key, never on a phone or a tablet nor after a finger (${JSON.stringify(opened)})`);
   globalThis.matchMedia = mm; I.open();
   $('im-url').value = 'file:///etc/passwd'; I.go();
   ok(!$('im-err').hidden && $('im-err').textContent === I.MSG.url && calls.length === 0, 'a bad link says so and fetches nothing');
