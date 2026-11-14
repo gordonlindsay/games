@@ -3,7 +3,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.6';
+const GAME_VERSION = '1.7';
 
 /* =========================================================
    Data
@@ -174,6 +174,113 @@ const COUNTIES = [
   { id:'MIT', name:'Mitcham',    kit:'#2050b0', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:3, stamina:3, league:'Counties 5 Surrey', place:7, w:4, d:0, l:10, pf:180, pa:281 },   // colours a free choice
   { id:'FEL', name:'Feltham',    kit:'#1b2747', trim:'#6fb7e6', pace:3, power:3, handling:3, kicking:2, stamina:2, league:'Counties 5 Surrey', place:10, w:1, d:0, l:13, pf:230, pa:409 },
 ];
+/* England's community clubs by region, from the owner's kit research sheet (rugby-kit-research.xlsx, checked 14 November 2026): 78 of its
+   84 clubs, the 2025-26 leagues and the codes as the sheet has them. Five lists so each has a championship's six and more: Northern,
+   Midlands, Eastern, South East, South West (short names: the group's button holds ten letters beside the ladder's line on a small
+   phone), each in the sheet's order (county, then club). A side's county is the sheet's (the RFU
+   constituent body: Eastern Counties, North Midlands, Notts Lincs & Derbyshire), shown under its league.
+   - Held back, no playing colours established: Gateshead (GAT), Portsmouth (POT), Syston (SYS), Ledbury (LED), Spalding (SPL) and
+     Old Crossleyans (OCR). Their codes are kept free for them.
+   - Kits: Plain or Hoops as ever, and two more patterns (kitPat): a chest band and halves, with a third colour where the club has one
+     (kitThird: the first of the sheet's extra colours). The sheet's evidence is beside each side: nothing after it is Pattern supported;
+     "pattern unconfirmed" is Colours supported, a plain shirt until a photo says otherwise; "provisional" is indirect, old or a variant.
+     Where no second colour is known the collar is a shade of the shirt, never an invented white. Drybrook's black runs inside its white
+     band on the real shirt and edges it here (one rule for every band).
+   - No table for any of them: a league and no place, so the league line shows the county in the place's stead and no record. Rated by
+     league alone, the lower figure of its level's band (CLUB_RATED), so none is above a side with a real table at its level. The
+     abilities written here are a flavour only, made up as the Local clubs' are.
+   - Sixteen names are shortened, as Local's are (Old Ruts, Wandsworth): fourteen letters or so is what the home's Career note holds on a
+     small phone (Round 5 v ..., tools/home.mjs). The sheet's name first: Gillingham Anchorians Anchorians, North Ribblesdale North Ribb, Stewarts & Lloyds S&L, Oadby Wyggestonians Oadby Wyggs, Old Halesonians Old Hales, Old Coventrians Old Covs, Stratford-upon-Avon Stratford, Stanford-le-Hope Stanford, Hemel Hempstead Hemel, Old Wimbledonians Old Wimbs, Reeds Weybridge Reeds, Pirates Amateurs Pirates Ams, Royal Wootton Bassett RW Bassett, Stow-on-the-Wold Stow, North Petherton N Petherton, Weston-super-Mare Weston.
+     The owner's to rename.
+   Append only, never reorder. */
+const ENG_NORTH = [
+  { id:'BOW', name:'Bowdon', kit:'#7a1f2b', trim:'#f2efe6', hoops:true, third:'#1c1c1c', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 1 North West', county:'Cheshire' },
+  { id:'WIL', name:'Wilmslow', kit:'#6fb7e6', trim:'#7a1f2b', hoops:true, third:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', county:'Cheshire' },
+  { id:'AMB', name:'Ambleside', kit:'#1c1c1c', trim:'#d8a823', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Cumbria', county:'Cumbria' },   // provisional
+  { id:'HPA', name:'Hawcoat Park', kit:'#7a1f2b', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Cumbria', county:'Cumbria' },   // pattern unconfirmed
+  { id:'WIG', name:'Wigton', kit:'#0f7a3c', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 North', county:'Cumbria' },   // pattern unconfirmed
+  { id:'COS', name:'Consett', kit:'#1c1c1c', trim:'#f2a900', hoops:true, third:'#c8102e', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 North', county:'Durham' },
+  { id:'RYT', name:'Ryton', kit:'#2050b0', trim:'#14326d', pace:3, power:3, handling:4, kicking:2, stamina:2, league:'Counties 1 Durham & Northumberland', county:'Durham' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'ASU', name:'Aspull', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 ADM Lancashire & Cheshire', county:'Lancashire' },
+  { id:'ROC', name:'Rochdale', kit:'#6e1433', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 1 North West', county:'Lancashire' },
+  { id:'TAL', name:'Tarleton', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, third:'#d8a823', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', county:'Lancashire' },
+  { id:'NRI', name:'North Ribb', kit:'#2a5fb8', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:2, stamina:3, league:'Regional 2 North West', county:'Yorkshire' },
+  { id:'WEN', name:'Wensleydale', kit:'#1c1c1c', trim:'#d8a823', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Yorkshire', county:'Yorkshire' },   // pattern unconfirmed
+];
+const ENG_MIDLANDS = [
+  { id:'DAV', name:'Daventry', kit:'#1c1c1c', trim:'#4a4e55', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Midlands East', county:'East Midlands' },   // no second colour known: a self-coloured collar
+  { id:'PET', name:'Peterborough', kit:'#c8102e', trim:'#b8bcc4', hoops:true, third:'#d8a823', pace:3, power:4, handling:2, kicking:2, stamina:3, league:'Regional 2 Midlands East', county:'East Midlands' },
+  { id:'SLL', name:'S&L', kit:'#1c1c1c', trim:'#4a4e55', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Midlands East (South)', county:'East Midlands' },   // no second colour known: a self-coloured collar
+  { id:'OWY', name:'Oadby Wyggs', kit:'#1c1c1c', trim:'#f2efe6', third:'#d8a823', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands East', county:'Leicestershire' },   // pattern unconfirmed
+  { id:'VIP', name:'Vipers', kit:'#0f7a3c', trim:'#d8a823', third:'#1c1c1c', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', county:'Leicestershire' },   // provisional
+  { id:'BRY', name:'Bromyard', kit:'#0f7a3c', trim:'#d8a823', pat:'band', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', county:'North Midlands' },
+  { id:'DRT', name:'Droitwich', kit:'#d8a823', trim:'#1c1c1c', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', county:'North Midlands' },
+  { id:'EVE', name:'Evesham', kit:'#7a1f2b', trim:'#1b2747', hoops:true, third:'#f2a900', pace:3, power:4, handling:2, kicking:2, stamina:3, league:'Counties 1 Midlands West (South)', county:'North Midlands' },   // provisional
+  { id:'MAV', name:'Malvern', kit:'#7a1f2b', trim:'#6fb7e6', third:'#d8a823', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 Midlands West', county:'North Midlands' },
+  { id:'MOA', name:'Moseley Oak', kit:'#c8102e', trim:'#f2efe6', hoops:true, third:'#2a5fb8', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 Midlands West', county:'North Midlands' },
+  { id:'OHA', name:'Old Hales', kit:'#2050b0', trim:'#f2a900', pat:'band', third:'#e03a1e', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands West', county:'North Midlands' },
+  { id:'OSA', name:'Old Saltleians', kit:'#c8102e', trim:'#f5c400', hoops:true, third:'#1b2747', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands North', county:'North Midlands' },
+  { id:'VES', name:'Veseyans', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Midlands West (North)', county:'North Midlands' },
+  { id:'DRO', name:'Dronfield', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands North', county:'Notts Lincs & Derbyshire' },   // provisional
+  { id:'PAV', name:'Paviors', kit:'#0f7a3c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands North', county:'Notts Lincs & Derbyshire' },   // pattern unconfirmed
+  { id:'STA', name:'Stamford', kit:'#5b2a86', trim:'#1c1c1c', third:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands East', county:'Notts Lincs & Derbyshire' },   // pattern unconfirmed
+  { id:'WBR', name:'West Bridgford', kit:'#1c1c1c', trim:'#d8a823', hoops:true, third:'#c8102e', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 Midlands North', county:'Notts Lincs & Derbyshire' },
+  { id:'ALC', name:'Alcester', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', county:'Warwickshire' },   // pattern unconfirmed
+  { id:'KEI', name:'Kenilworth', kit:'#2a5fb8', trim:'#f5c400', pace:3, power:3, handling:2, kicking:2, stamina:4, league:'Regional 2 Midlands West', county:'Warwickshire' },   // provisional
+  { id:'OCV', name:'Old Covs', kit:'#1c1c1c', trim:'#c8102e', third:'#d8a823', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 Midlands East', county:'Warwickshire' },   // pattern unconfirmed
+  { id:'SAV', name:'Stratford', kit:'#1c1c1c', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:2, stamina:2, league:'Regional 2 Midlands West', county:'Warwickshire' },   // pattern unconfirmed
+];
+const ENG_EAST = [
+  { id:'IYM', name:'Ipswich YM', kit:'#6e1433', trim:'#440c20', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'NEM', name:'Newmarket', kit:'#1c1c1c', trim:'#109a52', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // provisional
+  { id:'NOI', name:'Norwich', kit:'#0f7a3c', trim:'#7a1f2b', hoops:true, third:'#d8a823', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 Anglia', county:'Eastern Counties' },
+  { id:'SWL', name:'Saffron Walden', kit:'#0f7a3c', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // pattern unconfirmed
+  { id:'WNO', name:'West Norfolk', kit:'#b8bcc4', trim:'#1b2747', third:'#7a1f2b', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // provisional
+  { id:'WYM', name:'Wymondham', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Anglia', county:'Eastern Counties' },   // pattern unconfirmed
+  { id:'CHG', name:'Chingford', kit:'#2a5fb8', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Essex', county:'Essex' },   // pattern unconfirmed
+  { id:'SHO', name:'Stanford', kit:'#c8102e', trim:'#1c1c1c', third:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Essex', county:'Essex' },   // provisional
+  { id:'WAT', name:'Wanstead', kit:'#2a5fb8', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:2, stamina:3, league:'Regional 2 Anglia', county:'Essex' },   // provisional
+  { id:'WOO', name:'Woodford', kit:'#b9a3e0', trim:'#f2efe6', third:'#1c1c1c', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Anglia', county:'Essex' },   // pattern unconfirmed
+  { id:'HHE', name:'Hemel', kit:'#2050b0', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Hertfordshire', county:'Hertfordshire' },   // pattern unconfirmed
+];
+const ENG_SOUTH_EAST = [
+  { id:'HWY', name:'High Wycombe', kit:'#1c1c1c', trim:'#0f7a3c', hoops:true, third:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Southern North', county:'Buckinghamshire' },
+  { id:'OLN', name:'Olney', kit:'#d02670', trim:'#b0b4ba', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands East', county:'Buckinghamshire' },   // pattern unconfirmed
+  { id:'JES', name:'Jersey', kit:'#c8102e', trim:'#7c0a1d', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 1 South Central', county:'Hampshire' },   // no second colour known: a self-coloured collar
+  { id:'TOT', name:'Tottonians', kit:'#0f7a3c', trim:'#1c1c1c', third:'#f2efe6', pace:2, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South Central', county:'Hampshire' },   // provisional
+  { id:'WIN', name:'Winchester', kit:'#1c1c1c', trim:'#f2a900', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 South Central', county:'Hampshire' },   // pattern unconfirmed
+  { id:'ASH', name:'Ashford', kit:'#d8a823', trim:'#c8102e', hoops:true, third:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', county:'Kent' },
+  { id:'BRM', name:'Bromley', kit:'#f2a900', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South East', county:'Kent' },
+  { id:'GAN', name:'Anchorians', kit:'#5b2a86', trim:'#1c1c1c', hoops:true, third:'#f2efe6', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Kent', county:'Kent' },
+  { id:'OCO', name:'Old Colfeians', kit:'#1b2747', trim:'#d8a823', third:'#7a1f2b', pace:3, power:2, handling:3, kicking:2, stamina:4, league:'Regional 2 South East', county:'Kent' },   // pattern unconfirmed
+  { id:'PHU', name:'Park House', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', county:'Kent' },
+  { id:'GRS', name:'Grasshoppers', kit:'#0f7a3c', trim:'#d8a823', third:'#1c1c1c', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 Thames', county:'Middlesex' },   // pattern unconfirmed
+  { id:'HAC', name:'HAC', kit:'#1b2747', trim:'#7a1f2b', pat:'halves', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Anglia', county:'Middlesex' },   // pattern unconfirmed
+  { id:'WIT', name:'Witney', kit:'#1c1c1c', trim:'#2a5fb8', pat:'band', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Severn', county:'Oxfordshire' },
+  { id:'ORI', name:'Old Reigatian', kit:'#0f7a3c', trim:'#2a5fb8', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 South East', county:'Surrey' },   // pattern unconfirmed
+  { id:'OTI', name:'Old Tiffinians', kit:'#7a4fc0', trim:'#f2efe6', hoops:true, third:'#1b2747', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 South Central', county:'Surrey' },
+  { id:'OWI', name:'Old Wimbs', kit:'#0f5a32', trim:'#7a1f2b', hoops:true, third:'#d8a823', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Surrey/Sussex', county:'Surrey' },
+  { id:'RWE', name:'Reeds', kit:'#1b2747', trim:'#6fb7e6', hoops:true, third:'#c8102e', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 South Central', county:'Surrey' },
+  { id:'TRT', name:'Trinity', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', county:'Surrey' },
+];
+const ENG_SOUTH_WEST = [
+  { id:'PAM', name:'Pirates Ams', kit:'#1c1c1c', trim:'#c8102e', hoops:true, third:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South West', county:'Cornwall' },
+  { id:'CRE', name:'Crediton', kit:'#1c1c1c', trim:'#f2a900', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 South West', county:'Devon' },
+  { id:'PAI', name:'Paignton', kit:'#c8102e', trim:'#7c0a1d', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Western West', county:'Devon' },   // provisional; no second colour known: a self-coloured collar
+  { id:'SID', name:'Sidmouth', kit:'#0f7a3c', trim:'#094c25', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 South West', county:'Devon' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'TOP', name:'Topsham', kit:'#1b2747', trim:'#6fb7e6', hoops:true, third:'#2050b0', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 1 South West', county:'Devon' },
+  { id:'MAL', name:'Marlborough', kit:'#1c1c1c', trim:'#f2a900', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 1 South West', county:'Dorset & Wilts' },   // pattern unconfirmed
+  { id:'MEK', name:'Melksham', kit:'#1b2747', trim:'#6fb7e6', hoops:true, pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Southern South', county:'Dorset & Wilts' },
+  { id:'RWB', name:'RW Bassett', kit:'#1c1c1c', trim:'#4a4e55', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 1 South West', county:'Dorset & Wilts' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'SWI', name:'Swindon', kit:'#1b2747', trim:'#f2a900', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Southern South', county:'Dorset & Wilts' },   // pattern unconfirmed
+  { id:'WIB', name:'Wimborne', kit:'#1c1c1c', trim:'#f2efe6', third:'#0f7a3c', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South Central', county:'Dorset & Wilts' },
+  { id:'CHT', name:'Cheltenham', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Severn', county:'Gloucestershire' },   // pattern unconfirmed
+  { id:'DRY', name:'Drybrook', kit:'#0f7a3c', trim:'#f2efe6', pat:'band', third:'#1c1c1c', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 1 Midlands', county:'Gloucestershire' },
+  { id:'LOG', name:'Longlevens', kit:'#c8102e', trim:'#7c0a1d', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Severn', county:'Gloucestershire' },   // no second colour known: a self-coloured collar
+  { id:'SWO', name:'Stow', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands West', county:'Gloucestershire' },
+  { id:'NPE', name:'N Petherton', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 South West', county:'Somerset' },   // pattern unconfirmed
+  { id:'WSM', name:'Weston', kit:'#2050b0', trim:'#f2efe6', hoops:true, third:'#0f7a3c', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 South West', county:'Somerset' },   // provisional
+];
 /* The team screen: International | National | Local, then a list. Every list offers at least six sides, since a championship is
    your side and five from the list on screen. settings.pool holds a list's key; 'my' is My League (src/import.js), under Local while
    a league is saved. Keys never change: the save keeps them. */
@@ -191,6 +298,11 @@ const TEAM_LISTS = [
   { key:'jpn', tier:1, name:'Japan',            teams:JAPAN },
   { key:'sur', tier:2, name:'Surrey',           teams:CLUBS },
   { key:'cty', tier:2, name:'Counties',         teams:COUNTIES },      // PR #14's foot of the game; Guildfordians is Surrey's own object
+  { key:'nor', tier:2, name:'Northern',         teams:ENG_NORTH },     // the regions (LIST_REGIONS): England's community clubs from the kit research sheet, after every list that was
+  { key:'mid', tier:2, name:'Midlands',         teams:ENG_MIDLANDS },
+  { key:'eas', tier:2, name:'Eastern',          teams:ENG_EAST },
+  { key:'sea', tier:2, name:'South East',       teams:ENG_SOUTH_EAST },
+  { key:'sow', tier:2, name:'South West',       teams:ENG_SOUTH_WEST },
 ];
 const POOLS = TEAM_LISTS.map(l => l.teams);   // every built-in list
 const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's transfer offers come from these
@@ -202,15 +314,25 @@ function poolKey(v) {
   return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? v : 'int';
 }
 const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
+/* The regions' lists, and the sides the demo behind the menus draws from: every list but the regions', as it was before them, so each
+   seeded demo in the tools is the one it was (the demo picks by position in this list: src/ui-match.js). */
+const LIST_REGIONS = ['nor', 'mid', 'eas', 'sea', 'sow'];
+const DEMO_TEAMS = [...new Set(TEAM_LISTS.filter(l => !LIST_REGIONS.includes(l.key)).flatMap(l => l.teams))];
+/* A shirt's pattern past Plain and Hoops, and its third colour. hoops:true is Hoops, as it always was; pat is 'band' (one broad chest
+   band in the trim) or 'halves' (left and right, shirt and trim); third edges a band, is the middle hoop, and the cuffs of any shirt.
+   Read through these two everywhere, so a side with neither is drawn exactly as before. */
+const KIT_PATS = ['band', 'halves'];
+const kitPat = t => (t && !t.hoops && KIT_PATS.includes(t.pat) ? t.pat : null);
+const kitThird = t => (t && typeof t.third === 'string' && /^#[0-9a-f]{6}$/i.test(t.third) ? t.third : null);
 /* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): North or South by country, then the country's lists. A list
    is one country's, bar the United Rugby Championship, whose sides go by URC_HOME; Surrey and Counties are England's Local. Japan plays
    in the North (the owner, 2026-11-11: "Looks Right"); Canada and the USA are the women's. A list's group takes its sides' competition
    (LEAGUE_SHORT) where they all share one, else LIST_GROUP's name, else Clubs. Views only: the lists, their keys and every save are as
    they were, and a side picked from a group still plays its whole list (Dublin in the URC). */
 const NATION_HEMI = { IRE:'north', FRA:'north', ENG:'north', SCO:'north', WAL:'north', ITA:'north', JPN:'north', CDN:'north', USA:'north', RSA:'south', NZL:'south', AUS:'south', ARG:'south', FIJ:'south' };
-const LIST_HOME = { eng:'ENG', en2:'ENG', fra:'FRA', sco:'SCO', rsa:'RSA', aus:'AUS', nzl:'NZL', jpn:'JPN', sur:'ENG', cty:'ENG' };
+const LIST_HOME = { eng:'ENG', en2:'ENG', fra:'FRA', sco:'SCO', rsa:'RSA', aus:'AUS', nzl:'NZL', jpn:'JPN', sur:'ENG', cty:'ENG', nor:'ENG', mid:'ENG', eas:'ENG', sea:'ENG', sow:'ENG' };
 const URC_HOME = { DUB:'IRE', LIM:'IRE', BEL:'IRE', GAL:'IRE', EDI:'SCO', GLA:'SCO', CDF:'WAL', SWA:'WAL', LLA:'WAL', NPT:'WAL', TRE:'ITA', PRM:'ITA' };
-const LIST_LOCAL = ['sur', 'cty'];
+const LIST_LOCAL = ['sur', 'cty', 'nor', 'mid', 'eas', 'sea', 'sow'];
 const LEAGUE_SHORT = { 'English Premiership':'Premiership', 'English Championship':'Championship', 'Top 14':'Top 14', 'United Rugby Championship':'URC', 'Currie Cup':'Currie Cup', 'Super Rugby Pacific':'Super Rugby' };
 const LIST_GROUP = { sco:'Premiership', nzl:'Provinces' };   // sides with no league line: Scotland's are the Scottish Premiership, New Zealand's the provinces
 const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local · Surrey with it picked

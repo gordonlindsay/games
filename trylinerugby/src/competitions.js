@@ -11,7 +11,8 @@
 const COMP_LEAGUES = [[/^Regional 1/, 5], [/^Regional 2/, 6], [/^Counties 1/, 7], [/^Counties 2/, 8], [/^Counties 3/, 9], [/^Counties 4/, 10], [/^Counties 5/, 11]];
 const CLUB_LEVEL = { QUI:11 };   // Quins, the amateur club: Counties 5 Surrey by the club's own 2025-26 fixtures (Wikipedia says Counties 4)
 const CLUB_COUNTY = { FAR:'SUR', WIM:'SUR', GUI:'SUR', IRO:'SUR', COB:'SUR', WEY:'SUR', ORU:'SUR', HAS:'SUR', KIN:'SUR', GDN:'SUR', QUI:'SUR',
-  EFF:'SUR', WAN:'SUR', EGH:'SUR', MER:'SUR', MIT:'SUR', FEL:'SUR', ALD:'HAM' };
+  EFF:'SUR', WAN:'SUR', EGH:'SUR', MER:'SUR', MIT:'SUR', FEL:'SUR', ALD:'HAM',
+  ORI:'SUR', OTI:'SUR', OWI:'SUR', RWE:'SUR', TRT:'SUR', JES:'HAM', TOT:'HAM', WIN:'HAM' };   // the South East list's Surrey and Hampshire clubs, by the sheet's county. Every other region's club plays the plain county table
 const COUNTY_CUPS = {
   SUR:[{ name:'Surrey Cup', to:5 }, { name:'Surrey Trophy', to:8 }, { name:'Surrey Shield', to:10 }, { name:'Surrey Bowl', to:12 }],
   HAM:[{ name:'Hampshire Cup', to:7 }, { name:'Hampshire Bowl', to:9 }, { name:'Hampshire Plate', to:12 }],
@@ -19,10 +20,13 @@ const COUNTY_CUPS = {
 };
 const COUNTY_CUP_NAMES = Object.values(COUNTY_CUPS).flat().map(c => c.name);   // every name a saved cup may carry
 const compLocal = () => [...new Set([...CLUBS, ...COUNTIES])];   // the grassroots sides: Local's Surrey and Counties lists
+/* A region's club (Northern to South West, src/data.js) has its level from its league as they do, and draws its county cup from its
+   own region's list. Surrey's and Counties' cups draw from compLocal as they always have, so no draw made before the regions moves. */
+const compRegion = t => (t && !t.custom && TEAM_LISTS.find(l => LIST_REGIONS.includes(l.key) && l.teams.some(o => o.id === t.id))) || null;
 /* A built-in club's own level: its league's, else CLUB_LEVEL's; null for anything else. */
 function compOwnLevel(t) {
   if (!t || t.custom) return null;
-  const own = compLocal().find(o => o.id === t.id), league = own && own.league, hit = league && COMP_LEAGUES.find(([re]) => re.test(league));
+  const reg = compRegion(t), own = compLocal().find(o => o.id === t.id) || (reg && reg.teams.find(o => o.id === t.id)), league = own && own.league, hit = league && COMP_LEAGUES.find(([re]) => re.test(league));
   return hit ? hit[1] : CLUB_LEVEL[t.id] || null;
 }
 function compLevelOf(t) {
@@ -41,5 +45,6 @@ function compCupFor(t) {
    cups engine's cupNew calls it, so the draw is never in a render or a save. */
 function compCupRivals(t, n = 7) {
   const level = compLevelOf(t), same = o => o.id === t.id || o.name === t.name || (typeof importSame === 'function' && importSame(o.name, t.name));
-  return shuffle(compLocal().filter(o => !same(o))).sort((a, b) => Math.abs(compOwnLevel(a) - level) - Math.abs(compOwnLevel(b) - level)).slice(0, n);
+  const reg = compRegion(t);
+  return shuffle((reg ? reg.teams : compLocal()).filter(o => !same(o))).sort((a, b) => Math.abs(compOwnLevel(a) - level) - Math.abs(compOwnLevel(b) - level)).slice(0, n);
 }

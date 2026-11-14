@@ -4,7 +4,7 @@ const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
 let SKIN = '#c69c7c', HAIR = '#2a1d16';   // let: paintMan sets them for one man
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
-function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
+function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, pat:k.pat || null, third:k.third || null, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
 function seg(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 function cutGeom() { const W = V.W, H = V.H; return { W, H, horizon:H*0.38, ground:H*0.83, sc:H*0.15 }; }
@@ -53,7 +53,11 @@ function fig(x, gy, sc, kit0, o) {
   ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
   ctx.fillStyle = kit.shirt; rrect(-0.2*sc, -0.64*sc, 0.4*sc, 0.68*sc, 0.12*sc); ctx.fill(); ctx.stroke();
   ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.07*sc);
-  if (kit0.hoops) { ctx.fillRect(-0.19*sc, -0.34*sc, 0.38*sc, 0.07*sc); ctx.fillRect(-0.19*sc, -0.18*sc, 0.38*sc, 0.07*sc); }
+  if (kit0.hoops) { if (kit0.third) ctx.fillStyle = tone(kit0.third); ctx.fillRect(-0.19*sc, -0.34*sc, 0.38*sc, 0.07*sc); ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.18*sc, 0.38*sc, 0.07*sc); }   // a third colour is the middle hoop
+  else if (kit0.pat === 'band') {                         // one broad chest band, edged in the third colour
+    ctx.fillRect(-0.19*sc, -0.38*sc, 0.38*sc, 0.17*sc);
+    if (kit0.third) { ctx.fillStyle = tone(kit0.third); ctx.fillRect(-0.19*sc, -0.38*sc, 0.38*sc, 0.035*sc); ctx.fillRect(-0.19*sc, -0.245*sc, 0.38*sc, 0.035*sc); }
+  } else if (kit0.pat === 'halves') ctx.fillRect(0, -0.42*sc, 0.19*sc, 0.44*sc);   // side on, the far half shows as the front of the shirt, under the collar
   ctx.fillStyle = kit.shorts; rrect(-0.21*sc, -0.06*sc, 0.42*sc, 0.16*sc, 0.05*sc); ctx.fill();
   ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0.04*sc, -0.78*sc, 0.13*sc, 0, 7); ctx.fill();
   ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0.02*sc, -0.81*sc, 0.135*sc, Math.PI*0.85, Math.PI*2.05); ctx.fill();

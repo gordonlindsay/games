@@ -835,7 +835,7 @@ C.setCups(false);                                    // no cups unless a section
   { const badges = []; for (let i = 0; i < X.CLUBS.length; i++) { badges.push(new RegExp(`aria-label="Overall ${X.overallOf(PK.view(0).team)}">${X.overallOf(PK.view(0).team)}<`).test($('t-side0').innerHTML) && PK.view(0).team === X.CLUBS[i]); PK.step(0, 1); }
     ok(badges.every(Boolean), 'each club with its rating, Surrey\'s twelve in their order'); }
   ok(PK.view(0).ladder.every(g => !g.key.startsWith('nat.') && g.teams.every(t => !t.legend && !t.act && !X.isNation(t))), 'clubs only: no National group, no Legend, no Create Team or Add Your Team');
-  ok(json(PK.view(0).ladder.filter(g => g.home === 'ENG').map(g => g.name)) === json(['Premiership', 'Championship', 'Surrey', 'Counties']), 'England\'s Premiership first, then its Championship, then Local');
+  ok(json(PK.view(0).ladder.filter(g => g.home === 'ENG').map(g => g.name)) === json(['Premiership', 'Championship', 'Surrey', 'Counties', 'Northern', 'Midlands', 'Eastern', 'South East', 'South West']), 'England\'s Premiership first, then its Championship, then Local, the five regions last');
   at('fra'); ok(PK.view(0).group.name === 'Top 14' && X.FRANCE.every((t, i) => PK.view(0).group.teams[i] === t), 'France: the Top 14');
   ok(PK.primary() === 'Pick Toulouse', 'Pick Toulouse');
   $('t-go').click();

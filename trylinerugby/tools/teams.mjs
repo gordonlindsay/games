@@ -21,7 +21,7 @@ const clubs = [...X.CLUBS, ...X.NATIONAL.flat()];   // every side that is not a 
   ok(X.NATIONS.map(t => t.id).join() === 'ENG,FRA,IRE,ITA,SCO,WAL,NZL,RSA,AUS,ARG,FIJ,JPN,CDN,USA', 'then New Zealand, South Africa, Australia, Argentina, Fiji and Japan, then Canada and the USA: fourteen');
   ok(X.CLUBS[0].id === 'FAR', 'Farnham comes first in Local');
   ok(X.CLUBS.length >= 6, `Local has enough clubs for a championship (${X.CLUBS.length})`);
-  ok(X.POOLS.length === 12 && X.POOLS.every((p, i) => p === X.TEAM_LISTS[i].teams), 'POOLS is every built-in list, in the team screen\'s order');   // re-pinned for PR #14's England 2 and Counties: 12 lists
+  ok(X.POOLS.length === 17 && X.POOLS.every((p, i) => p === X.TEAM_LISTS[i].teams), 'POOLS is every built-in list, in the team screen\'s order');   // re-pinned for PR #14's England 2 and Counties: 12 lists; and for the five regions (2026-11-14): 17
   ok(X.POOLS.every(p => p.length >= 6), `every list has enough sides for a championship (${X.POOLS.map(p => p.length).join(' ')})`);
   ok(X.FRANCE.length === 14, `France is the Top 14 (${X.FRANCE.length})`);
   // re-pinned for PR #14's Counties: Guildfordians is Surrey's own object in Counties too, so ALL_TEAMS holds every list's sides once each
@@ -524,9 +524,9 @@ function settle(pick) {
   const R = ['pace', 'power', 'handling', 'kicking', 'stamina'], total = t => R.reduce((a, k) => a + t[k], 0);
   ok(X.TEAM_TIERS.join() === 'International,National,Local', 'three tiers: International, National, Local');
   // re-pinned for PR #14's lists: England 2 under National, after England; Counties under Local, after Surrey
-  ok(L.map(l => l.key + ':' + l.tier).join() === 'int:0,eng:1,en2:1,fra:1,cel:1,sco:1,rsa:1,aus:1,nzl:1,jpn:1,sur:2,cty:2', 'International is one list; National is England, England 2, France, the United Rugby Championship (key cel), Scotland, South Africa, Australia, New Zealand and Japan; Local is Surrey and Counties');
+  ok(L.map(l => l.key + ':' + l.tier).join() === 'int:0,eng:1,en2:1,fra:1,cel:1,sco:1,rsa:1,aus:1,nzl:1,jpn:1,sur:2,cty:2,nor:2,mid:2,eas:2,sea:2,sow:2', 'International is one list; National is England, England 2, France, the United Rugby Championship (key cel), Scotland, South Africa, Australia, New Zealand and Japan; Local is Surrey and Counties, then the five regions (2026-11-14)');
   // re-pinned for the owner's 9 Nov exception: Celtic and Italy is the United Rugby Championship, its real name, its key still 'cel'
-  ok(L.map(l => l.name).join() === 'International,England,England 2,France,United Rugby Championship,Scotland,South Africa,Australia,New Zealand,Japan,Surrey,Counties' && L.find(l => l.key === 'cel').name === 'United Rugby Championship' && L.find(l => l.key === 'cel').teams === X.CELTIC, 'each list is named by its country or county, never a competition, bar the United Rugby Championship (the owner\'s exception, 9 Nov), still keyed cel');
+  ok(L.map(l => l.name).join() === 'International,England,England 2,France,United Rugby Championship,Scotland,South Africa,Australia,New Zealand,Japan,Surrey,Counties,Northern,Midlands,Eastern,South East,South West' && L.find(l => l.key === 'cel').name === 'United Rugby Championship' && L.find(l => l.key === 'cel').teams === X.CELTIC, 'each list is named by its country, county or region, never a competition, bar the United Rugby Championship (the owner\'s exception, 9 Nov), still keyed cel');
   ok(L.every(l => l.teams.length >= 6), `every list offers at least six sides (${L.map(l => l.key + ' ' + l.teams.length).join(', ')})`);
   // re-pinned at the official tables: NATIONS is fourteen (Canada and the USA appended); each category's International is twelve
   ok([X.NATIONS, X.ENGLAND, X.ENGLAND_TWO, X.FRANCE, X.CELTIC, X.SCOTLAND, X.SOUTH_AFRICA, X.AUSTRALIA, X.NEW_ZEALAND, X.JAPAN, X.CLUBS, X.COUNTIES].map(l => l.length).join() === '14,10,13,14,12,10,7,6,6,7,12,7' && ['men', 'women', 'minis'].every(c => X.natList(c).length === 12), 'International 12 a category (14 nations in all), England 10, England 2 13, France 14, the United Rugby Championship 12, Scotland 10, South Africa 7, Australia 6, New Zealand 6, Japan 7, Surrey 12, Counties 7');
@@ -833,6 +833,12 @@ function settle(pick) {
     AYR:61, CUR:61, GOL:61, MYR:61, KEL:61, GIF:58, HAW:58, MLR:58, ANN:58, SEL:58,
     FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,
     EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,
+    // the five regions (2026-11-14, the kit research sheet's clubs): a league and no table, so the lower figure of its level's band: Regional 1 58, Regional 2 52, Counties 1 49
+    BOW:58, WIL:49, AMB:49, HPA:49, WIG:52, COS:52, RYT:49, ASU:49, ROC:58, TAL:49, NRI:52, WEN:49,
+    DAV:52, PET:52, SLL:49, OWY:52, VIP:49, BRY:49, DRT:49, EVE:49, MAV:52, MOA:52, OHA:52, OSA:52, VES:49, DRO:52, PAV:52, STA:52, WBR:52, ALC:49, KEI:52, OCV:52, SAV:52,
+    IYM:49, NEM:49, NOI:52, SWL:49, WNO:49, WYM:52, CHG:49, SHO:49, WAT:52, WOO:52, HHE:49,
+    HWY:49, OLN:52, JES:58, TOT:52, WIN:52, ASH:49, BRM:52, GAN:49, OCO:52, PHU:49, GRS:52, HAC:52, WIT:52, ORI:52, OTI:52, OWI:49, RWE:52, TRT:49,
+    PAM:52, CRE:52, PAI:49, SID:58, TOP:58, MAL:58, MEK:49, RWB:58, SWI:49, WIB:52, CHT:52, DRY:58, LOG:52, SWO:52, NPE:52, WSM:52,
   };
   const sorted = o => JSON.stringify(Object.entries(o).sort());
   ok(sorted(R5.CLUB_RATED) === sorted(TABLE), 'the clubs\' table is the one pinned here');
@@ -864,7 +870,9 @@ function settle(pick) {
   ok(line(by('BTH')) === 'English Premiership,2,13,0,5,646,424' && line(by('LNO')) === 'English Premiership,5,10,0,8,628,449' && line(by('LWE')) === 'English Premiership,9,6,0,12,448,589' && line(by('NCL')) === 'English Premiership,10,2,0,16,325,860' && line(by('PRM')) === 'United Rugby Championship,16,2,0,16,312,587', 'main\'s codes carry PR #14\'s figures: Bath (its BAT), London North (LON), London West (HAR), Newcastle (NEW), Parma (PMA)');
   ok(line(by('EAL')) === 'English Championship,1,26,0,0,1125,435' && line(by('CAM')) === 'English Championship,14,0,1,25,447,1190' && line(by('GDN')) === 'Counties 5 Surrey,4,7,0,7,422,313' && line(by('KIM')) === 'Currie Cup,1,6,0,1,271,143' && line(by('BRI')) === 'Super Rugby Pacific,5,8,0,6,364,386', 'Ealing, Cambridge, Guildfordians, Kimberley and Brisbane');
   ok([...X.NATIONS, ...X.SCOTLAND, ...X.NEW_ZEALAND, ...X.JAPAN, by('QUI'), by('MEL'), by('ADL')].every(t => !('league' in t)), 'none on the nations, Scotland, New Zealand, Japan, Quins, Melbourne or Adelaide: no figures, and none invented');
-  ok(all.filter(t => t.league).every(t => Number.isInteger(t.place) && t.place >= 1 && ['w', 'd', 'l', 'pf', 'pa'].every(k => Number.isInteger(t[k]) && t[k] >= 0)), 'every line is whole numbers');
+  const region = t => X.LIST_REGIONS.some(k => X.TEAM_LISTS.find(l => l.key === k).teams.includes(t));   // a region's club has a league and no table (2026-11-14): its own checks are tools/regions.mjs
+  ok(all.filter(t => t.league && !region(t)).every(t => Number.isInteger(t.place) && t.place >= 1 && ['w', 'd', 'l', 'pf', 'pa'].every(k => Number.isInteger(t[k]) && t[k] >= 0)), 'every line is whole numbers');
+  ok(all.filter(region).length === 78 && all.filter(region).every(t => t.league && t.county && ['place', 'w', 'd', 'l', 'pf', 'pa'].every(k => !(k in t))), 'a region\'s club: its league and its county, and no place or record, none invented');
   X.newChamp(by('FAR'), X.CLUBS.slice(1, 6));
   ok(X.cleanChamp(JSON.parse(JSON.stringify(X.champ()))).teams.every(t => !('league' in t) && !('pf' in t)) && !('league' in X.cleanSide(by('NTH'))) && !('league' in X.cleanTeam({ ...by('FAR'), key:'my1' }, 0)), 'a saved championship, side or team keeps no league line');
   X.setChamp(null);
@@ -880,7 +888,7 @@ function settle(pick) {
   const P12 = T.picker, v12 = n => P12.view(n), to12 = (n, key) => { P12.group(n, v12(n).ladder.findIndex(g => g.key === key) - v12(n).gi); return v12(n); };
   X.setChamp(null); s.pick = [null, null]; D.openTeams('quick');
   const engGroups = v12(0).ladder.filter(g => g.home === 'ENG').map(g => g.key + ':' + g.name).join();
-  ok(engGroups === 'nat.eng:National,eng:Premiership,en2:Championship,sur:Surrey,cty:Counties' && ['fra', 'cel.ire', 'sco', 'rsa.urc', 'aus', 'nzl', 'jpn'].every(k => v12(0).ladder.some(g => g.key === k)), `the national leagues each a group of their country's, England's Championship after its Premiership, Local's Surrey then Counties (${engGroups})`);
+  ok(engGroups === 'nat.eng:National,eng:Premiership,en2:Championship,sur:Surrey,cty:Counties,nor:Northern,mid:Midlands,eas:Eastern,sea:South East,sow:South West' && ['fra', 'cel.ire', 'sco', 'rsa.urc', 'aus', 'nzl', 'jpn'].every(k => v12(0).ladder.some(g => g.key === k)), `the national leagues each a group of their country's, England's Championship after its Premiership, Local's Surrey then Counties, then the five regions (${engGroups})`);
   to12(0, 'en2');
   ok(v12(0).group.name === 'Championship' && v12(0).group.teams.map(t => t.id).join() === X.ENGLAND_TWO.map(t => t.id).join() && !v12(0).group.teams.some(t => t.id === 'BTH'), 'England 2 shows its thirteen, as England\'s Championship');
   to12(0, 'cty');
@@ -972,7 +980,7 @@ function settle(pick) {
     P.filter(1, '', { dev:'touch' }); const opp = fm.getAttribute('aria-label'); P.filterShut();
     P.filter(0, '', { dev:'touch' });
     ok(F().open && !$('m-filter').hidden && F().s === 0 && fm.getAttribute('aria-label') === 'Your Team' && opp === 'Opponent' && F().cols.map(c => c.kind === 'team' ? c.head : c.rows[c.sel].name).join(' > ') === 'North > England > Surrey > Surrey', `the group's button opens the Filter for the side, named for it (${fm.getAttribute('aria-label')}; ${opp} for the Opponent's), on its path: North, England, Surrey`);
-    ok(JSON.stringify(groupsIn()) === JSON.stringify(v(0).ladder.map((g, gi) => gi)) && ['North', 'South', 'Mine'].every(h => F().cols[0].rows.some(n => n.name === h)) && F().cols[2].rows.map(n => n.name).join() === 'National,Premiership,Championship,Surrey,Counties', 'every group of the ladder is in it once, under its area and its country (England\'s Local among its leagues)');
+    ok(JSON.stringify(groupsIn()) === JSON.stringify(v(0).ladder.map((g, gi) => gi)) && ['North', 'South', 'Mine'].every(h => F().cols[0].rows.some(n => n.name === h)) && F().cols[2].rows.map(n => n.name).join() === 'National,Premiership,Championship,Surrey,Counties,Northern,Midlands,Eastern,South East,South West', 'every group of the ladder is in it once, under its area and its country (England\'s Local among its leagues)');
     const fra = F().cols[1].rows.findIndex(n => n.name === 'France'); P.filterSel(1, fra); P.filterSel(2, 1); P.filterTap(3, 0);
     ok($('m-filter').hidden && v(0).group.key === 'fra' && v(0).i === 0 && P.state().sides[0].set, 'a team picked there (France\'s Top 14, its first): the side on it and set, the Filter shut');
     P.step(0, 0); P.state().sides[0].set = false; D.renderTeams(); P.filter(0, '', { dev:'touch' }); P.filterSel(0, 1); P.filterClose();

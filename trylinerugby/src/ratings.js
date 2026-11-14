@@ -59,6 +59,9 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
      the 64 and 61 written in its list, so no Scottish side is above an England 2 side.
    - Local and Counties: PR #14's ladder a step up, so Farnham (Regional 1, 7th) is 61 and nothing local is above England 2: Regional 1
      61 to 58, Regional 2 55 to 52, Counties 1 52 to 49, Counties 3 46, Counties 5 43. Quins (no figures) stays level with Farnham, as main had it.
+   - The regions (Northern to South West, the kit research sheet's clubs): a league and no table, so each is the lower figure of its
+     level's band, Regional 1 58, Regional 2 52, Counties 1 49: never above a side at its level with a real table (Farnham 61, Ironsides 55,
+     Cobham 52). The owner's to lift once a table is in.
    A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. Sides not here keep the abilities written in their
    list: the nations (natList), New Zealand and Japan. TEAM_LEVELS is on the same ladder. */
 const CLUB_RATED = {
@@ -72,6 +75,12 @@ const CLUB_RATED = {
   AYR:61, CUR:61, GOL:61, MYR:61, KEL:61, GIF:58, HAW:58, MLR:58, ANN:58, SEL:58,                                                    // Scotland: the Premiership's top five 61
   FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,                                    // Local: Regional 1 down to Counties 5
   EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,                                                                                    // Counties: Counties 3 46, Counties 5 43
+  // the regions (src/data.js): no table, so by league alone at the lower figure of its level's band: Regional 1 58, Regional 2 52, Counties 1 49
+  BOW:58, WIL:49, AMB:49, HPA:49, WIG:52, COS:52, RYT:49, ASU:49, ROC:58, TAL:49, NRI:52, WEN:49,   // Northern
+  DAV:52, PET:52, SLL:49, OWY:52, VIP:49, BRY:49, DRT:49, EVE:49, MAV:52, MOA:52, OHA:52, OSA:52, VES:49, DRO:52, PAV:52, STA:52, WBR:52, ALC:49, KEI:52, OCV:52, SAV:52,   // Midlands
+  IYM:49, NEM:49, NOI:52, SWL:49, WNO:49, WYM:52, CHG:49, SHO:49, WAT:52, WOO:52, HHE:49,   // Eastern
+  HWY:49, OLN:52, JES:58, TOT:52, WIN:52, ASH:49, BRM:52, GAN:49, OCO:52, PHU:49, GRS:52, HAC:52, WIT:52, ORI:52, OTI:52, OWI:49, RWE:52, TRT:49,   // South East
+  PAM:52, CRE:52, PAI:49, SID:58, TOP:58, MAL:58, MEK:49, RWB:58, SWI:49, WIB:52, CHT:52, DRY:58, LOG:52, SWO:52, NPE:52, WSM:52,   // South West
 };
 // CLUB_TUNE
 for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));

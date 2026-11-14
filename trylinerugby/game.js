@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.6';
+const GAME_VERSION = '1.7';
 
 /* =========================================================
    Data
@@ -176,6 +176,113 @@ const COUNTIES = [
   { id:'MIT', name:'Mitcham',    kit:'#2050b0', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:3, stamina:3, league:'Counties 5 Surrey', place:7, w:4, d:0, l:10, pf:180, pa:281 },   // colours a free choice
   { id:'FEL', name:'Feltham',    kit:'#1b2747', trim:'#6fb7e6', pace:3, power:3, handling:3, kicking:2, stamina:2, league:'Counties 5 Surrey', place:10, w:1, d:0, l:13, pf:230, pa:409 },
 ];
+/* England's community clubs by region, from the owner's kit research sheet (rugby-kit-research.xlsx, checked 14 November 2026): 78 of its
+   84 clubs, the 2025-26 leagues and the codes as the sheet has them. Five lists so each has a championship's six and more: Northern,
+   Midlands, Eastern, South East, South West (short names: the group's button holds ten letters beside the ladder's line on a small
+   phone), each in the sheet's order (county, then club). A side's county is the sheet's (the RFU
+   constituent body: Eastern Counties, North Midlands, Notts Lincs & Derbyshire), shown under its league.
+   - Held back, no playing colours established: Gateshead (GAT), Portsmouth (POT), Syston (SYS), Ledbury (LED), Spalding (SPL) and
+     Old Crossleyans (OCR). Their codes are kept free for them.
+   - Kits: Plain or Hoops as ever, and two more patterns (kitPat): a chest band and halves, with a third colour where the club has one
+     (kitThird: the first of the sheet's extra colours). The sheet's evidence is beside each side: nothing after it is Pattern supported;
+     "pattern unconfirmed" is Colours supported, a plain shirt until a photo says otherwise; "provisional" is indirect, old or a variant.
+     Where no second colour is known the collar is a shade of the shirt, never an invented white. Drybrook's black runs inside its white
+     band on the real shirt and edges it here (one rule for every band).
+   - No table for any of them: a league and no place, so the league line shows the county in the place's stead and no record. Rated by
+     league alone, the lower figure of its level's band (CLUB_RATED), so none is above a side with a real table at its level. The
+     abilities written here are a flavour only, made up as the Local clubs' are.
+   - Sixteen names are shortened, as Local's are (Old Ruts, Wandsworth): fourteen letters or so is what the home's Career note holds on a
+     small phone (Round 5 v ..., tools/home.mjs). The sheet's name first: Gillingham Anchorians Anchorians, North Ribblesdale North Ribb, Stewarts & Lloyds S&L, Oadby Wyggestonians Oadby Wyggs, Old Halesonians Old Hales, Old Coventrians Old Covs, Stratford-upon-Avon Stratford, Stanford-le-Hope Stanford, Hemel Hempstead Hemel, Old Wimbledonians Old Wimbs, Reeds Weybridge Reeds, Pirates Amateurs Pirates Ams, Royal Wootton Bassett RW Bassett, Stow-on-the-Wold Stow, North Petherton N Petherton, Weston-super-Mare Weston.
+     The owner's to rename.
+   Append only, never reorder. */
+const ENG_NORTH = [
+  { id:'BOW', name:'Bowdon', kit:'#7a1f2b', trim:'#f2efe6', hoops:true, third:'#1c1c1c', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 1 North West', county:'Cheshire' },
+  { id:'WIL', name:'Wilmslow', kit:'#6fb7e6', trim:'#7a1f2b', hoops:true, third:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', county:'Cheshire' },
+  { id:'AMB', name:'Ambleside', kit:'#1c1c1c', trim:'#d8a823', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Cumbria', county:'Cumbria' },   // provisional
+  { id:'HPA', name:'Hawcoat Park', kit:'#7a1f2b', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Cumbria', county:'Cumbria' },   // pattern unconfirmed
+  { id:'WIG', name:'Wigton', kit:'#0f7a3c', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 North', county:'Cumbria' },   // pattern unconfirmed
+  { id:'COS', name:'Consett', kit:'#1c1c1c', trim:'#f2a900', hoops:true, third:'#c8102e', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 North', county:'Durham' },
+  { id:'RYT', name:'Ryton', kit:'#2050b0', trim:'#14326d', pace:3, power:3, handling:4, kicking:2, stamina:2, league:'Counties 1 Durham & Northumberland', county:'Durham' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'ASU', name:'Aspull', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 ADM Lancashire & Cheshire', county:'Lancashire' },
+  { id:'ROC', name:'Rochdale', kit:'#6e1433', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 1 North West', county:'Lancashire' },
+  { id:'TAL', name:'Tarleton', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, third:'#d8a823', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', county:'Lancashire' },
+  { id:'NRI', name:'North Ribb', kit:'#2a5fb8', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:2, stamina:3, league:'Regional 2 North West', county:'Yorkshire' },
+  { id:'WEN', name:'Wensleydale', kit:'#1c1c1c', trim:'#d8a823', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Yorkshire', county:'Yorkshire' },   // pattern unconfirmed
+];
+const ENG_MIDLANDS = [
+  { id:'DAV', name:'Daventry', kit:'#1c1c1c', trim:'#4a4e55', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Midlands East', county:'East Midlands' },   // no second colour known: a self-coloured collar
+  { id:'PET', name:'Peterborough', kit:'#c8102e', trim:'#b8bcc4', hoops:true, third:'#d8a823', pace:3, power:4, handling:2, kicking:2, stamina:3, league:'Regional 2 Midlands East', county:'East Midlands' },
+  { id:'SLL', name:'S&L', kit:'#1c1c1c', trim:'#4a4e55', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Midlands East (South)', county:'East Midlands' },   // no second colour known: a self-coloured collar
+  { id:'OWY', name:'Oadby Wyggs', kit:'#1c1c1c', trim:'#f2efe6', third:'#d8a823', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands East', county:'Leicestershire' },   // pattern unconfirmed
+  { id:'VIP', name:'Vipers', kit:'#0f7a3c', trim:'#d8a823', third:'#1c1c1c', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', county:'Leicestershire' },   // provisional
+  { id:'BRY', name:'Bromyard', kit:'#0f7a3c', trim:'#d8a823', pat:'band', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', county:'North Midlands' },
+  { id:'DRT', name:'Droitwich', kit:'#d8a823', trim:'#1c1c1c', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', county:'North Midlands' },
+  { id:'EVE', name:'Evesham', kit:'#7a1f2b', trim:'#1b2747', hoops:true, third:'#f2a900', pace:3, power:4, handling:2, kicking:2, stamina:3, league:'Counties 1 Midlands West (South)', county:'North Midlands' },   // provisional
+  { id:'MAV', name:'Malvern', kit:'#7a1f2b', trim:'#6fb7e6', third:'#d8a823', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 Midlands West', county:'North Midlands' },
+  { id:'MOA', name:'Moseley Oak', kit:'#c8102e', trim:'#f2efe6', hoops:true, third:'#2a5fb8', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 Midlands West', county:'North Midlands' },
+  { id:'OHA', name:'Old Hales', kit:'#2050b0', trim:'#f2a900', pat:'band', third:'#e03a1e', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands West', county:'North Midlands' },
+  { id:'OSA', name:'Old Saltleians', kit:'#c8102e', trim:'#f5c400', hoops:true, third:'#1b2747', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands North', county:'North Midlands' },
+  { id:'VES', name:'Veseyans', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Midlands West (North)', county:'North Midlands' },
+  { id:'DRO', name:'Dronfield', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands North', county:'Notts Lincs & Derbyshire' },   // provisional
+  { id:'PAV', name:'Paviors', kit:'#0f7a3c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands North', county:'Notts Lincs & Derbyshire' },   // pattern unconfirmed
+  { id:'STA', name:'Stamford', kit:'#5b2a86', trim:'#1c1c1c', third:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands East', county:'Notts Lincs & Derbyshire' },   // pattern unconfirmed
+  { id:'WBR', name:'West Bridgford', kit:'#1c1c1c', trim:'#d8a823', hoops:true, third:'#c8102e', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 Midlands North', county:'Notts Lincs & Derbyshire' },
+  { id:'ALC', name:'Alcester', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', county:'Warwickshire' },   // pattern unconfirmed
+  { id:'KEI', name:'Kenilworth', kit:'#2a5fb8', trim:'#f5c400', pace:3, power:3, handling:2, kicking:2, stamina:4, league:'Regional 2 Midlands West', county:'Warwickshire' },   // provisional
+  { id:'OCV', name:'Old Covs', kit:'#1c1c1c', trim:'#c8102e', third:'#d8a823', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 Midlands East', county:'Warwickshire' },   // pattern unconfirmed
+  { id:'SAV', name:'Stratford', kit:'#1c1c1c', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:2, stamina:2, league:'Regional 2 Midlands West', county:'Warwickshire' },   // pattern unconfirmed
+];
+const ENG_EAST = [
+  { id:'IYM', name:'Ipswich YM', kit:'#6e1433', trim:'#440c20', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'NEM', name:'Newmarket', kit:'#1c1c1c', trim:'#109a52', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // provisional
+  { id:'NOI', name:'Norwich', kit:'#0f7a3c', trim:'#7a1f2b', hoops:true, third:'#d8a823', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 Anglia', county:'Eastern Counties' },
+  { id:'SWL', name:'Saffron Walden', kit:'#0f7a3c', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // pattern unconfirmed
+  { id:'WNO', name:'West Norfolk', kit:'#b8bcc4', trim:'#1b2747', third:'#7a1f2b', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Eastern Counties', county:'Eastern Counties' },   // provisional
+  { id:'WYM', name:'Wymondham', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Anglia', county:'Eastern Counties' },   // pattern unconfirmed
+  { id:'CHG', name:'Chingford', kit:'#2a5fb8', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Essex', county:'Essex' },   // pattern unconfirmed
+  { id:'SHO', name:'Stanford', kit:'#c8102e', trim:'#1c1c1c', third:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Essex', county:'Essex' },   // provisional
+  { id:'WAT', name:'Wanstead', kit:'#2a5fb8', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:2, stamina:3, league:'Regional 2 Anglia', county:'Essex' },   // provisional
+  { id:'WOO', name:'Woodford', kit:'#b9a3e0', trim:'#f2efe6', third:'#1c1c1c', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Anglia', county:'Essex' },   // pattern unconfirmed
+  { id:'HHE', name:'Hemel', kit:'#2050b0', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Hertfordshire', county:'Hertfordshire' },   // pattern unconfirmed
+];
+const ENG_SOUTH_EAST = [
+  { id:'HWY', name:'High Wycombe', kit:'#1c1c1c', trim:'#0f7a3c', hoops:true, third:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Southern North', county:'Buckinghamshire' },
+  { id:'OLN', name:'Olney', kit:'#d02670', trim:'#b0b4ba', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands East', county:'Buckinghamshire' },   // pattern unconfirmed
+  { id:'JES', name:'Jersey', kit:'#c8102e', trim:'#7c0a1d', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 1 South Central', county:'Hampshire' },   // no second colour known: a self-coloured collar
+  { id:'TOT', name:'Tottonians', kit:'#0f7a3c', trim:'#1c1c1c', third:'#f2efe6', pace:2, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South Central', county:'Hampshire' },   // provisional
+  { id:'WIN', name:'Winchester', kit:'#1c1c1c', trim:'#f2a900', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 South Central', county:'Hampshire' },   // pattern unconfirmed
+  { id:'ASH', name:'Ashford', kit:'#d8a823', trim:'#c8102e', hoops:true, third:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', county:'Kent' },
+  { id:'BRM', name:'Bromley', kit:'#f2a900', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South East', county:'Kent' },
+  { id:'GAN', name:'Anchorians', kit:'#5b2a86', trim:'#1c1c1c', hoops:true, third:'#f2efe6', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Kent', county:'Kent' },
+  { id:'OCO', name:'Old Colfeians', kit:'#1b2747', trim:'#d8a823', third:'#7a1f2b', pace:3, power:2, handling:3, kicking:2, stamina:4, league:'Regional 2 South East', county:'Kent' },   // pattern unconfirmed
+  { id:'PHU', name:'Park House', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', county:'Kent' },
+  { id:'GRS', name:'Grasshoppers', kit:'#0f7a3c', trim:'#d8a823', third:'#1c1c1c', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 Thames', county:'Middlesex' },   // pattern unconfirmed
+  { id:'HAC', name:'HAC', kit:'#1b2747', trim:'#7a1f2b', pat:'halves', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Anglia', county:'Middlesex' },   // pattern unconfirmed
+  { id:'WIT', name:'Witney', kit:'#1c1c1c', trim:'#2a5fb8', pat:'band', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Severn', county:'Oxfordshire' },
+  { id:'ORI', name:'Old Reigatian', kit:'#0f7a3c', trim:'#2a5fb8', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 2 South East', county:'Surrey' },   // pattern unconfirmed
+  { id:'OTI', name:'Old Tiffinians', kit:'#7a4fc0', trim:'#f2efe6', hoops:true, third:'#1b2747', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 South Central', county:'Surrey' },
+  { id:'OWI', name:'Old Wimbs', kit:'#0f5a32', trim:'#7a1f2b', hoops:true, third:'#d8a823', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Surrey/Sussex', county:'Surrey' },
+  { id:'RWE', name:'Reeds', kit:'#1b2747', trim:'#6fb7e6', hoops:true, third:'#c8102e', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 South Central', county:'Surrey' },
+  { id:'TRT', name:'Trinity', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', county:'Surrey' },
+];
+const ENG_SOUTH_WEST = [
+  { id:'PAM', name:'Pirates Ams', kit:'#1c1c1c', trim:'#c8102e', hoops:true, third:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South West', county:'Cornwall' },
+  { id:'CRE', name:'Crediton', kit:'#1c1c1c', trim:'#f2a900', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 South West', county:'Devon' },
+  { id:'PAI', name:'Paignton', kit:'#c8102e', trim:'#7c0a1d', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Western West', county:'Devon' },   // provisional; no second colour known: a self-coloured collar
+  { id:'SID', name:'Sidmouth', kit:'#0f7a3c', trim:'#094c25', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 South West', county:'Devon' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'TOP', name:'Topsham', kit:'#1b2747', trim:'#6fb7e6', hoops:true, third:'#2050b0', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 1 South West', county:'Devon' },
+  { id:'MAL', name:'Marlborough', kit:'#1c1c1c', trim:'#f2a900', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Regional 1 South West', county:'Dorset & Wilts' },   // pattern unconfirmed
+  { id:'MEK', name:'Melksham', kit:'#1b2747', trim:'#6fb7e6', hoops:true, pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Southern South', county:'Dorset & Wilts' },
+  { id:'RWB', name:'RW Bassett', kit:'#1c1c1c', trim:'#4a4e55', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 1 South West', county:'Dorset & Wilts' },   // pattern unconfirmed; no second colour known: a self-coloured collar
+  { id:'SWI', name:'Swindon', kit:'#1b2747', trim:'#f2a900', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Southern South', county:'Dorset & Wilts' },   // pattern unconfirmed
+  { id:'WIB', name:'Wimborne', kit:'#1c1c1c', trim:'#f2efe6', third:'#0f7a3c', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South Central', county:'Dorset & Wilts' },
+  { id:'CHT', name:'Cheltenham', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Severn', county:'Gloucestershire' },   // pattern unconfirmed
+  { id:'DRY', name:'Drybrook', kit:'#0f7a3c', trim:'#f2efe6', pat:'band', third:'#1c1c1c', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 1 Midlands', county:'Gloucestershire' },
+  { id:'LOG', name:'Longlevens', kit:'#c8102e', trim:'#7c0a1d', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Severn', county:'Gloucestershire' },   // no second colour known: a self-coloured collar
+  { id:'SWO', name:'Stow', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands West', county:'Gloucestershire' },
+  { id:'NPE', name:'N Petherton', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 South West', county:'Somerset' },   // pattern unconfirmed
+  { id:'WSM', name:'Weston', kit:'#2050b0', trim:'#f2efe6', hoops:true, third:'#0f7a3c', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 South West', county:'Somerset' },   // provisional
+];
 /* The team screen: International | National | Local, then a list. Every list offers at least six sides, since a championship is
    your side and five from the list on screen. settings.pool holds a list's key; 'my' is My League (src/import.js), under Local while
    a league is saved. Keys never change: the save keeps them. */
@@ -193,6 +300,11 @@ const TEAM_LISTS = [
   { key:'jpn', tier:1, name:'Japan',            teams:JAPAN },
   { key:'sur', tier:2, name:'Surrey',           teams:CLUBS },
   { key:'cty', tier:2, name:'Counties',         teams:COUNTIES },      // PR #14's foot of the game; Guildfordians is Surrey's own object
+  { key:'nor', tier:2, name:'Northern',         teams:ENG_NORTH },     // the regions (LIST_REGIONS): England's community clubs from the kit research sheet, after every list that was
+  { key:'mid', tier:2, name:'Midlands',         teams:ENG_MIDLANDS },
+  { key:'eas', tier:2, name:'Eastern',          teams:ENG_EAST },
+  { key:'sea', tier:2, name:'South East',       teams:ENG_SOUTH_EAST },
+  { key:'sow', tier:2, name:'South West',       teams:ENG_SOUTH_WEST },
 ];
 const POOLS = TEAM_LISTS.map(l => l.teams);   // every built-in list
 const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's transfer offers come from these
@@ -204,15 +316,25 @@ function poolKey(v) {
   return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? v : 'int';
 }
 const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
+/* The regions' lists, and the sides the demo behind the menus draws from: every list but the regions', as it was before them, so each
+   seeded demo in the tools is the one it was (the demo picks by position in this list: src/ui-match.js). */
+const LIST_REGIONS = ['nor', 'mid', 'eas', 'sea', 'sow'];
+const DEMO_TEAMS = [...new Set(TEAM_LISTS.filter(l => !LIST_REGIONS.includes(l.key)).flatMap(l => l.teams))];
+/* A shirt's pattern past Plain and Hoops, and its third colour. hoops:true is Hoops, as it always was; pat is 'band' (one broad chest
+   band in the trim) or 'halves' (left and right, shirt and trim); third edges a band, is the middle hoop, and the cuffs of any shirt.
+   Read through these two everywhere, so a side with neither is drawn exactly as before. */
+const KIT_PATS = ['band', 'halves'];
+const kitPat = t => (t && !t.hoops && KIT_PATS.includes(t.pat) ? t.pat : null);
+const kitThird = t => (t && typeof t.third === 'string' && /^#[0-9a-f]{6}$/i.test(t.third) ? t.third : null);
 /* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): North or South by country, then the country's lists. A list
    is one country's, bar the United Rugby Championship, whose sides go by URC_HOME; Surrey and Counties are England's Local. Japan plays
    in the North (the owner, 2026-11-11: "Looks Right"); Canada and the USA are the women's. A list's group takes its sides' competition
    (LEAGUE_SHORT) where they all share one, else LIST_GROUP's name, else Clubs. Views only: the lists, their keys and every save are as
    they were, and a side picked from a group still plays its whole list (Dublin in the URC). */
 const NATION_HEMI = { IRE:'north', FRA:'north', ENG:'north', SCO:'north', WAL:'north', ITA:'north', JPN:'north', CDN:'north', USA:'north', RSA:'south', NZL:'south', AUS:'south', ARG:'south', FIJ:'south' };
-const LIST_HOME = { eng:'ENG', en2:'ENG', fra:'FRA', sco:'SCO', rsa:'RSA', aus:'AUS', nzl:'NZL', jpn:'JPN', sur:'ENG', cty:'ENG' };
+const LIST_HOME = { eng:'ENG', en2:'ENG', fra:'FRA', sco:'SCO', rsa:'RSA', aus:'AUS', nzl:'NZL', jpn:'JPN', sur:'ENG', cty:'ENG', nor:'ENG', mid:'ENG', eas:'ENG', sea:'ENG', sow:'ENG' };
 const URC_HOME = { DUB:'IRE', LIM:'IRE', BEL:'IRE', GAL:'IRE', EDI:'SCO', GLA:'SCO', CDF:'WAL', SWA:'WAL', LLA:'WAL', NPT:'WAL', TRE:'ITA', PRM:'ITA' };
-const LIST_LOCAL = ['sur', 'cty'];
+const LIST_LOCAL = ['sur', 'cty', 'nor', 'mid', 'eas', 'sea', 'sow'];
 const LEAGUE_SHORT = { 'English Premiership':'Premiership', 'English Championship':'Championship', 'Top 14':'Top 14', 'United Rugby Championship':'URC', 'Currie Cup':'Currie Cup', 'Super Rugby Pacific':'Super Rugby' };
 const LIST_GROUP = { sco:'Premiership', nzl:'Provinces' };   // sides with no league line: Scotland's are the Scottish Premiership, New Zealand's the provinces
 const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local · Surrey with it picked
@@ -439,6 +561,9 @@ const TEAM_FLAVOUR = new Map(ALL_TEAMS.map(t => [t.id, Object.fromEntries(ABILIT
      the 64 and 61 written in its list, so no Scottish side is above an England 2 side.
    - Local and Counties: PR #14's ladder a step up, so Farnham (Regional 1, 7th) is 61 and nothing local is above England 2: Regional 1
      61 to 58, Regional 2 55 to 52, Counties 1 52 to 49, Counties 3 46, Counties 5 43. Quins (no figures) stays level with Farnham, as main had it.
+   - The regions (Northern to South West, the kit research sheet's clubs): a league and no table, so each is the lower figure of its
+     level's band, Regional 1 58, Regional 2 52, Counties 1 49: never above a side at its level with a real table (Farnham 61, Ironsides 55,
+     Cobham 52). The owner's to lift once a table is in.
    A rating is a whole overall; abilitiesFor turns it into abilities from the side's flavour. Sides not here keep the abilities written in their
    list: the nations (natList), New Zealand and Japan. TEAM_LEVELS is on the same ladder. */
 const CLUB_RATED = {
@@ -452,6 +577,12 @@ const CLUB_RATED = {
   AYR:61, CUR:61, GOL:61, MYR:61, KEL:61, GIF:58, HAW:58, MLR:58, ANN:58, SEL:58,                                                    // Scotland: the Premiership's top five 61
   FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,                                    // Local: Regional 1 down to Counties 5
   EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,                                                                                    // Counties: Counties 3 46, Counties 5 43
+  // the regions (src/data.js): no table, so by league alone at the lower figure of its level's band: Regional 1 58, Regional 2 52, Counties 1 49
+  BOW:58, WIL:49, AMB:49, HPA:49, WIG:52, COS:52, RYT:49, ASU:49, ROC:58, TAL:49, NRI:52, WEN:49,   // Northern
+  DAV:52, PET:52, SLL:49, OWY:52, VIP:49, BRY:49, DRT:49, EVE:49, MAV:52, MOA:52, OHA:52, OSA:52, VES:49, DRO:52, PAV:52, STA:52, WBR:52, ALC:49, KEI:52, OCV:52, SAV:52,   // Midlands
+  IYM:49, NEM:49, NOI:52, SWL:49, WNO:49, WYM:52, CHG:49, SHO:49, WAT:52, WOO:52, HHE:49,   // Eastern
+  HWY:49, OLN:52, JES:58, TOT:52, WIN:52, ASH:49, BRM:52, GAN:49, OCO:52, PHU:49, GRS:52, HAC:52, WIT:52, ORI:52, OTI:52, OWI:49, RWE:52, TRT:49,   // South East
+  PAM:52, CRE:52, PAI:49, SID:58, TOP:58, MAL:58, MEK:49, RWB:58, SWI:49, WIB:52, CHT:52, DRY:58, LOG:52, SWO:52, NPE:52, WSM:52,   // South West
 };
 // CLUB_TUNE
 for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));
@@ -623,6 +754,8 @@ function cleanSide(t) {
   if (t.key) team.key = String(t.key).slice(0, 24);
   if (HEX.test(t.alt)) team.alt = t.alt;
   if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
+  if (!t.hoops && (t.pat === 'band' || t.pat === 'halves')) team.pat = t.pat;   // a chest band or halves, and a third colour (kitPat, kitThird in src/data.js, written out here: this file is read on its own by the season tools): only on a side that has them, so every other save is as it was
+  if (typeof t.third === 'string' && HEX.test(t.third)) team.third = t.third;
   if (t.cat != null && catOf(t) === t.cat) team.cat = t.cat;   // Men | Women | Minis, kept as it was started; a side saved before it has none and is men's
   for (const [k] of ABILITIES) team[k] = clamp(Math.round(abilityOf(t, k) || 1), 1, 5);   // a side saved before Stamina gets 3
   return team;
@@ -1102,17 +1235,21 @@ function colorDist(a,b) { const x = hexRgb(a), y = hexRgb(b); return hyp(x[0]-y[
 /* A team's colour for marks on the dark scoreboard and plates: the shirt, or the trim if the shirt is near black, or chalk. */
 function showCol(team) { const k = M.kit[team]; return colorDist(k.fill, '#0f1a12') >= 60 ? k.fill : colorDist(k.trim, '#0f1a12') >= 60 ? k.trim : '#f1eee4'; }
 
-/* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. */
+/* A side's shirt in a match. pat and third are only there for a side that has them (kitPat, kitThird: src/data.js), so every other
+   side's is the three fields it always was. */
+function kitLook(fill, trim, hoops, pat, third) { const k = { fill, trim, hoops }; if (pat) k.pat = pat; if (third) k.third = third; return k; }
+/* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. Its own shirt and
+   the swap keep its pattern and third colour; a change kit, white and black are plain. */
 function awayKit(n0, n1) {
-  const h = !!n1.hoops;
-  const opts = [[n1.kit, n1.trim, h], [n1.alt, n1.altTrim, false], [n1.trim, n1.kit, h], ['#f2efe6', n1.kit, false], ['#1c1c1c', n1.kit, false]].filter(o => o[0] && o[1]);
+  const h = !!n1.hoops, p = kitPat(n1), th = kitThird(n1);
+  const opts = [[n1.kit, n1.trim, h, p, th], [n1.alt, n1.altTrim, false], [n1.trim, n1.kit, h, p, th], ['#f2efe6', n1.kit, false], ['#1c1c1c', n1.kit, false]].filter(o => o[0] && o[1]);
   let best = opts[0], bd = -1;
   for (const o of opts) {
     const d = colorDist(n0.kit, o[0]);
-    if (d >= 140) return { fill:o[0], trim:o[1], hoops:o[2] };
+    if (d >= 140) return kitLook(...o);
     if (d > bd) { bd = d; best = o; }
   }
-  return { fill:best[0], trim:best[1], hoops:best[2] };
+  return kitLook(...best);
 }
 const teamOf = t => typeof t === 'number' ? NATIONS[t] : t;
 function newMatch(u, c, opts) {
@@ -1126,7 +1263,7 @@ function newMatch(u, c, opts) {
   earlyDiff = null;
   if (ease) { const d = DIFF[di], o = { ...d }; for (const k in EARLY.nudge) o[k] = d[k] + EARLY.nudge[k]; earlyDiff = o; }
   M = {
-    nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:!!n0.hoops }, awayKit(n0, n1)],
+    nat:[n0,n1], kit:[kitLook(n0.kit, n0.trim, !!n0.hoops, kitPat(n0), kitThird(n0)), awayKit(n0, n1)],
     players:[], ball:{ x:60, y:35, z:0, vx:0, vy:0, vz:0, state:'dead', carrier:null, f:null, last:0, kickInfo:null },
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
@@ -4935,7 +5072,8 @@ function savedHonours() {
 const COMP_LEAGUES = [[/^Regional 1/, 5], [/^Regional 2/, 6], [/^Counties 1/, 7], [/^Counties 2/, 8], [/^Counties 3/, 9], [/^Counties 4/, 10], [/^Counties 5/, 11]];
 const CLUB_LEVEL = { QUI:11 };   // Quins, the amateur club: Counties 5 Surrey by the club's own 2025-26 fixtures (Wikipedia says Counties 4)
 const CLUB_COUNTY = { FAR:'SUR', WIM:'SUR', GUI:'SUR', IRO:'SUR', COB:'SUR', WEY:'SUR', ORU:'SUR', HAS:'SUR', KIN:'SUR', GDN:'SUR', QUI:'SUR',
-  EFF:'SUR', WAN:'SUR', EGH:'SUR', MER:'SUR', MIT:'SUR', FEL:'SUR', ALD:'HAM' };
+  EFF:'SUR', WAN:'SUR', EGH:'SUR', MER:'SUR', MIT:'SUR', FEL:'SUR', ALD:'HAM',
+  ORI:'SUR', OTI:'SUR', OWI:'SUR', RWE:'SUR', TRT:'SUR', JES:'HAM', TOT:'HAM', WIN:'HAM' };   // the South East list's Surrey and Hampshire clubs, by the sheet's county. Every other region's club plays the plain county table
 const COUNTY_CUPS = {
   SUR:[{ name:'Surrey Cup', to:5 }, { name:'Surrey Trophy', to:8 }, { name:'Surrey Shield', to:10 }, { name:'Surrey Bowl', to:12 }],
   HAM:[{ name:'Hampshire Cup', to:7 }, { name:'Hampshire Bowl', to:9 }, { name:'Hampshire Plate', to:12 }],
@@ -4943,10 +5081,13 @@ const COUNTY_CUPS = {
 };
 const COUNTY_CUP_NAMES = Object.values(COUNTY_CUPS).flat().map(c => c.name);   // every name a saved cup may carry
 const compLocal = () => [...new Set([...CLUBS, ...COUNTIES])];   // the grassroots sides: Local's Surrey and Counties lists
+/* A region's club (Northern to South West, src/data.js) has its level from its league as they do, and draws its county cup from its
+   own region's list. Surrey's and Counties' cups draw from compLocal as they always have, so no draw made before the regions moves. */
+const compRegion = t => (t && !t.custom && TEAM_LISTS.find(l => LIST_REGIONS.includes(l.key) && l.teams.some(o => o.id === t.id))) || null;
 /* A built-in club's own level: its league's, else CLUB_LEVEL's; null for anything else. */
 function compOwnLevel(t) {
   if (!t || t.custom) return null;
-  const own = compLocal().find(o => o.id === t.id), league = own && own.league, hit = league && COMP_LEAGUES.find(([re]) => re.test(league));
+  const reg = compRegion(t), own = compLocal().find(o => o.id === t.id) || (reg && reg.teams.find(o => o.id === t.id)), league = own && own.league, hit = league && COMP_LEAGUES.find(([re]) => re.test(league));
   return hit ? hit[1] : CLUB_LEVEL[t.id] || null;
 }
 function compLevelOf(t) {
@@ -4965,7 +5106,8 @@ function compCupFor(t) {
    cups engine's cupNew calls it, so the draw is never in a render or a save. */
 function compCupRivals(t, n = 7) {
   const level = compLevelOf(t), same = o => o.id === t.id || o.name === t.name || (typeof importSame === 'function' && importSame(o.name, t.name));
-  return shuffle(compLocal().filter(o => !same(o))).sort((a, b) => Math.abs(compOwnLevel(a) - level) - Math.abs(compOwnLevel(b) - level)).slice(0, n);
+  const reg = compRegion(t);
+  return shuffle((reg ? reg.teams : compLocal()).filter(o => !same(o))).sort((a, b) => Math.abs(compOwnLevel(a) - level) - Math.abs(compOwnLevel(b) - level)).slice(0, n);
 }
 /* =========================================================
    Silverware: the European Cup, the World Cup, the Home Nations Tour and the Triple Crown (README, Silverware).
@@ -5334,7 +5476,7 @@ function cleanCupEntry(e) {
    - A year (career.year, from 1) runs in phases (career.phase, in CAREER_PHASES order), each one skipped unless he has earned it:
      'league'   his club's league: his club and five drawn from its list, a season of the championship's shape (six sides, five
                 rounds, three games a round, the championship's points). Only his game is played; the other two are simMatch's.
-     'county'   his county's cup, every year he is at a Local club (a Local list: Surrey or Counties): eight sides in the cup its county runs for its
+     'county'   his county's cup, every year he is at a Local club (a Local list: Surrey, Counties or a region): eight sides in the cup its county runs for its
                 level, the Surrey Cup down to the Surrey Bowl (src/competitions.js). A professional club has none.
      'cup'      the European Cup, when he has just won a European league (CAREER_EURO: England, France, the United Rugby Championship, South Africa).
      'intl'     the international window, when his overall is at or above CAREER_CALL.bar at the end of the league (or the cup):
@@ -5535,7 +5677,7 @@ function careerStart(o) {                            // Start Career on the new 
 /* ---------- the next match, and the end of a phase ---------- */
 const careerCupUser = cup => (Number.isInteger(cup && cup.user) ? cup.user : 0);   // his side's index in the cup's teams
 const careerCupKind = cr => (cr.phase === 'county' ? 'county' : cr.phase === 'cup' ? 'euro' : cr.phase === 'tour' ? 'tour' : 'world');
-const careerCountyOn = cr => TEAM_LISTS.some(l => l.key === careerLeague(cr) && l.tier === 2);   // a Local club's year (Surrey or Counties) has its county cup
+const careerCountyOn = cr => TEAM_LISTS.some(l => l.key === careerLeague(cr) && l.tier === 2);   // a Local club's year (Surrey, Counties or a region) has its county cup
 /* His next match in the phase: { teams, home, away, user, label, ko }, or null when the phase is over (or there is no match: the
    transfer window). ko: a cup's knockout or Test (cupFixture's), which cannot end level; a season's match never is. Reads the season
    or the cup, draws nothing. */
@@ -6632,7 +6774,9 @@ function drawPlayer(p, r) {
     ctx.fillStyle = kit.trim;
     ctx.beginPath(); ctx.arc(lean*r, -r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(lean*r, r*0.86, r*0.3, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = kit.fill; ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = kit.fill; ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92); ctx.fill();
+    if (kit.pat === 'halves') { ctx.fillStyle = kit.trim; ctx.beginPath(); ctx.ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92, 0, 0, Math.PI); ctx.fill(); ellipse(lean*r*0.5, 0, r*0.62*(1 + Math.abs(lean)), r*0.92); }   // halves: one shoulder's side in the trim, then the outline round both
+    ctx.stroke();
     ctx.fillStyle = C.head; ctx.beginPath(); ctx.arc(r*0.1 + lean*r*1.4, 0, r*0.4, 0, 7); ctx.fill();
   }
   ctx.restore();
@@ -6752,7 +6896,7 @@ const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
 let SKIN = '#c69c7c', HAIR = '#2a1d16';   // let: paintMan sets them for one man
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
-function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
+function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, pat:k.pat || null, third:k.third || null, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
 function seg(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 function cutGeom() { const W = V.W, H = V.H; return { W, H, horizon:H*0.38, ground:H*0.83, sc:H*0.15 }; }
@@ -6801,7 +6945,11 @@ function fig(x, gy, sc, kit0, o) {
   ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
   ctx.fillStyle = kit.shirt; rrect(-0.2*sc, -0.64*sc, 0.4*sc, 0.68*sc, 0.12*sc); ctx.fill(); ctx.stroke();
   ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.07*sc);
-  if (kit0.hoops) { ctx.fillRect(-0.19*sc, -0.34*sc, 0.38*sc, 0.07*sc); ctx.fillRect(-0.19*sc, -0.18*sc, 0.38*sc, 0.07*sc); }
+  if (kit0.hoops) { if (kit0.third) ctx.fillStyle = tone(kit0.third); ctx.fillRect(-0.19*sc, -0.34*sc, 0.38*sc, 0.07*sc); ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.18*sc, 0.38*sc, 0.07*sc); }   // a third colour is the middle hoop
+  else if (kit0.pat === 'band') {                         // one broad chest band, edged in the third colour
+    ctx.fillRect(-0.19*sc, -0.38*sc, 0.38*sc, 0.17*sc);
+    if (kit0.third) { ctx.fillStyle = tone(kit0.third); ctx.fillRect(-0.19*sc, -0.38*sc, 0.38*sc, 0.035*sc); ctx.fillRect(-0.19*sc, -0.245*sc, 0.38*sc, 0.035*sc); }
+  } else if (kit0.pat === 'halves') ctx.fillRect(0, -0.42*sc, 0.19*sc, 0.44*sc);   // side on, the far half shows as the front of the shirt, under the collar
   ctx.fillStyle = kit.shorts; rrect(-0.21*sc, -0.06*sc, 0.42*sc, 0.16*sc, 0.05*sc); ctx.fill();
   ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0.04*sc, -0.78*sc, 0.13*sc, 0, 7); ctx.fill();
   ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0.02*sc, -0.81*sc, 0.135*sc, Math.PI*0.85, Math.PI*2.05); ctx.fill();
@@ -7633,7 +7781,12 @@ function figFB(sx, sy, k, team, o) {
   ctx.fillStyle = kit.shirt;
   ctx.beginPath(); ctx.moveTo(-0.2*k, -hip + 0.02*k); ctx.lineTo(0.2*k, -hip + 0.02*k); ctx.lineTo(0.28*k, -shY); ctx.lineTo(-0.28*k, -shY); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = kit.trim; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.06*k);
-  if (kit.hoops) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; ctx.fillRect(-hw, y, hw*2, 0.07*k); }
+  if (kit.hoops) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; if (kit.third) ctx.fillStyle = t < 0.5 ? kit.third : kit.trim; ctx.fillRect(-hw, y, hw*2, 0.07*k); }   // a third colour is the upper of the two
+  else if (kit.pat === 'band') {                          // one broad chest band, edged in the third colour
+    const y = -shY + (shY - hip)*0.34, bh = 0.17*k, hw = 0.27*k - 0.08*(0.34*k + bh*k/(shY - hip)) - 0.004*k;   // as wide as the torso at the band's foot, where it is narrowest, so it never passes the outline
+    ctx.fillRect(-hw, y, hw*2, bh);
+    if (kit.third) { ctx.fillStyle = kit.third; ctx.fillRect(-hw, y, hw*2, 0.035*k); ctx.fillRect(-hw, y + bh - 0.035*k, hw*2, 0.035*k); }
+  } else if (kit.pat === 'halves') { ctx.beginPath(); ctx.moveTo(0, -hip + 0.02*k); ctx.lineTo(0.2*k, -hip + 0.02*k); ctx.lineTo(0.265*k, -shY + 0.08*k); ctx.lineTo(0, -shY + 0.08*k); ctx.closePath(); ctx.fill(); }   // one half in the trim, under the collar
   ctx.fillStyle = kit.shorts; rrect(-0.21*k, -hip - 0.02*k, 0.42*k, 0.16*k, 0.05*k); ctx.fill();
   if (o.back && o.num) {
     ctx.fillStyle = luma(kit.shirt) > 0.6 ? '#1b2233' : '#f1eee4';
@@ -7850,7 +8003,10 @@ function artPaletteOf(kit, look) {
   const skin = LOOK_SKIN[look.skin], hair = artHairOf(look, kit, skin);
   const grassy = c => colorDist(c, C.grassA) < 60 || colorDist(c, C.grassB) < 60, cap = grassy(kit.trim) ? '#f1eee4' : kit.trim;
   // the collar and cuffs sit between shirt and skin: if the trim is as dark as the skin, they lift, so the arm never melts into the shirt
-  const trim = colorDist(kit.trim, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : kit.trim;
+  // a hooped side's third colour is its collar and cuffs here: the atlas has one hoop region, so that is where a third colour can go.
+  // A chest band and halves have no region of their own (tools/blender): those shirts are the shirt and its trim in these views
+  const edge = kit.hoops && kit.third ? kit.third : kit.trim;
+  const trim = colorDist(edge, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : edge;
   // a lock is a plait, a bunch or a tail: hair on hair, a step darker, or lighter when the hair is too dark to go darker, so it shows against the head it falls over
   const lock = luma(hair) < 0.16 ? artMix(hair, '#8a6548', 0.24) : artMix(hair, '#17120e', 0.3);
   const table = { shirt:kit.shirt, hoop:kit.hoops ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:kit.boots || '#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d', lock };
@@ -7910,7 +8066,7 @@ function artPreview(cv, t, look) {
   if (!artReady() || !t) return false;
   artScratch();
   const man = ART.man, pose = artSprite('idle', 0, 3, false, look), r = pose.row, q = 1/man.px, T = man.px, g = cv.getContext('2d');
-  const kit = { shirt:t.kit, trim:t.trim, hoops:!!t.hoops, shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
+  const kit = { shirt:t.kit, trim:t.trim, hoops:!!t.hoops, third:kitThird(t), shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
   const style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
   g.clearRect(0, 0, cv.width, cv.height);
   g.save(); g.translate(cv.width/2, cv.height - 6); g.scale(look.b/man.builds[pose.build], 1);
@@ -10451,7 +10607,7 @@ function say(text, size, team, grade, low) {
 
 function startDemo() {   // a men's match: every side but the women's-only nations (Canada and the USA), in the order the demo always drew from
   soundQuiet();                                            // every way out of a match or a drill comes through here
-  const men = natList('men'), all = ALL_TEAMS.filter(t => !isNation(t) || men.includes(t)), a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
+  const men = natList('men'), all = DEMO_TEAMS.filter(t => !isNation(t) || men.includes(t)), a = Math.floor(rnd()*all.length); let b = Math.floor(rnd()*(all.length-1)); if (b >= a) b++;
   newMatch(all[a], all[b], { halfLen:1e9, diff:1, auto:true, demo:true });
   mode = 'menu';
   $('hud').hidden = true; $('controls').hidden = true; $('b-pause').hidden = true;
@@ -11310,8 +11466,8 @@ const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat ||
    Zealand, Japan, Scotland) show none, never an invented one. myRecordLine is the rest of PR #14's line (won, lost, scored, conceded):
    since 2026-11-11 the game shows it nowhere (the home's box shows the games you have played as the club instead), and only the tools
    read it (tools/home.mjs 6b), kept so the figures stay checked against the club's list. */
-const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
-const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+const myLeagueLine = t => (t && t.league ? t.league + (t.place ? ' · ' + ordinal(t.place) + ' Last Season' : t.county ? ' · ' + t.county : '') : '');   // a region's club has a league and no table: its county in the place's stead, never an invented place
+const myRecordLine = t => (t && t.league && t.place ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
 const FORM_WORD = { W:'Won', D:'Drawn', L:'Lost' };
 /* My Team's box: the club's shirt, name, stars and league line; the games you have played as it (formOf, src/persistence.js) and its last
    five results, the latest on the right of them; the country's shirt and name; Change | Add Your Team | Locker. */
@@ -11322,7 +11478,7 @@ function myHome() {
   if (typeof profileHomePic === 'function') profileHomePic(c);   // your player in My Team's kit in the shirt's place, once there is a look and the art is in (src/profile.js)
   $('my-name').textContent = listName(c);
   $('my-stars').innerHTML = ratedStars(c);
-  $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
+  $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span>` + (c.place || c.county ? `<span class="sep"> · </span><span>${esc(c.place ? ordinal(c.place) + ' Last Season' : c.county)}</span>` : '') : '';   // myLeagueLine, the league over its place
   $('my-rec').innerHTML = [['Played', played(f)], ['Won', f.w], ['Drawn', f.d], ['Lost', f.l]].map(([w, v]) => `<div><dt>${w}</dt><dd>${v}</dd></div>`).join('');
   const last = f.last.split('');
   $('my-form').innerHTML = last.map(x => `<li class="fm ${x.toLowerCase()}"><span aria-hidden="true">${x}</span><span class="sr">${FORM_WORD[x]}</span></li>`).join('') + '<li class="fm none" aria-hidden="true"></li>'.repeat(FORM_LAST - last.length);   // the letter seen, the word read out
@@ -11490,7 +11646,8 @@ const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', 
 const keyOf = t => t.key || t.id;
 function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
-  return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
+  const pat = kitPat(t), th = kitThird(t);                  // a chest band or halves, and a third colour (src/data.js): a side with neither is the markup it always was
+  return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}${pat ? ' ' + pat : ''}${th ? ' c3' : ''}" style="--kit:${k};--trim:${tr}${th ? ';--third:' + th : ''}"></span></span>`;
 }
 /* A side's stars, from its overall on the one scale (starsOf, src/ratings.js): drawn beside its overall's badge wherever a team is picked or
    listed (the team screen's sides, My Team, the career's transfer offers and call-up). Named ratedStars, not teamStars: that is the star
@@ -11583,7 +11740,7 @@ function pickLadder(cat, o) {
 }
 /* Where a team lives: its group and country for the card's league line (Clubs · Japan, National · England), whichever group shows it. */
 function pickHomeLine(t, cat) {
-  if (t.league) return t.league;
+  if (t.league) return t.county ? t.league + ' · ' + t.county : t.league;   // a region's club: its county after its league
   if (t.custom) return 'Made Teams';
   if (importLeague && importLeague.teams.includes(t)) return 'My League';
   const home = isNation(t) || t.legend ? (t.legend ? NATIONS.find(n => n.name === t.nation) || {} : t).id : null;
@@ -18095,9 +18252,9 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
   ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },
-  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, catPick, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
+  teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, ENG_NORTH, ENG_MIDLANDS, ENG_EAST, ENG_SOUTH_EAST, ENG_SOUTH_WEST, LIST_REGIONS, DEMO_TEAMS, KIT_PATS, kitPat, kitThird, kitLook, jersey, myLeagueLine, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, catPick, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
-  comp:{ COMP_LEAGUES, CLUB_LEVEL, CLUB_COUNTY, COUNTY_CUPS, COUNTY_CUP_NAMES, levelOf:compLevelOf, countyOf:compCountyOf, cupFor:compCupFor, rivals:compCupRivals },
+  comp:{ COMP_LEAGUES, CLUB_LEVEL, CLUB_COUNTY, COUNTY_CUPS, COUNTY_CUP_NAMES, levelOf:compLevelOf, countyOf:compCountyOf, cupFor:compCupFor, rivals:compCupRivals, region:compRegion },
   cups:{ CUPS, cupTitle, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },
   press:{ PRESSURE, pressJolt, pressTackle, pressTick, pressReset, knockOn, knockBeat, eggStart, eggLead, eggChaser, hopMove, hopBounce, updateLoose, pickUp, surge },   // pressure, the spill and the egg's hop (src/contact.js, src/ball.js)
