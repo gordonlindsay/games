@@ -2031,18 +2031,21 @@ chip-spam walkover." So the chase is its pace alone. It is `src/chase.js`, every
   either side, in every match: AI v AI, the demo, Two Player, a career, Kids and Minis (it is speed, not contact). Not a
   restart (the kick-off and the 22 drop-out), a drop goal or a charge-down (the ball never gets away), and never in a drill.
 - **The chasers.** The kicking side's men onside at the kick (`f.onside`: level with or behind the kicker, by kickBall's
-  half-metre), the kicker himself among them, and your ringed man when he is onside. At your kick the ring jumps to your man
-  nearest where it comes down (`kickBall`, as before) wherever he stands: in 30 of the kick-chaser's matches on Normal that
-  man was in front of the kicker, offside, after 139 of his 372 chips (37%), and ran at his own pace with no trail. Each
-  carries his seconds left (`p.chase`), read in `maxSpeed` with the other factors, so nothing snaps his velocity as
+  half-metre), the kicker himself among them, and your ringed man with them. At your own kick the ring goes to the nearest
+  man who may play its bounce (`kickRing`, Possession calls), the kicker or a man behind him, so he is always onside and
+  always chasing: the kick-chaser's first 100 chips on Normal, played (9 seeded matches, SEED 29, `tools/chase.mjs` section
+  3), put the ring on an onside chaser 100 times in 100. On wt/chase, before the calls were merged with it (or with CALLS
+  off), the ring jumped to your man nearest where it came down wherever he stood: in 30 of the kick-chaser's matches on
+  Normal that man was in front of the kicker, offside, after 139 of his 372 chips (37%; 43 of those 100 with CALLS off),
+  and ran at his own pace with no trail. Each carries his seconds left (`p.chase`), read in `maxSpeed` with the other factors, so nothing snaps his velocity as
   `setBoost` would; under a Sprint the bigger of the two applies, never both. It ends the step the other side takes the ball
   (a catch, a gather, its pass) or the ball is dead (touch, a knock-on, a try, the half), and runs on to its 1.5s while his
   own side has it. A chaser shows the gold trail a burst shows.
 - **The catching side.** It reacts at once, as before the chase: `react` is 0, the owner's Pace Alone. The late start is kept
   and tunable (`CHASE='{"react":0.2}'`): above 0 its men the computer runs carry on as they were running (`edgeHold`, the
   Easy cover's lag) for that long after the kick instead of going for where it comes down or into their kick shape, and your
-  own input is never late (the ring still jumps at the kick to your man nearest where it comes down, `kickBall`, and your
-  stick drives him from the next step). At 0 it is idle: a build with its one line cut (`CHASE_LATE=off` in the harness)
+  own input is never late (the ring still goes at the kick to your man nearest where it comes down who may play it,
+  `kickBall`, and your stick drives him from the next step). At 0 it is idle: a build with its one line cut (`CHASE_LATE=off` in the harness)
   plays exactly as the game ships, draw for draw, and at 0.2 that build plays as 0 does (`tools/chase.mjs`, section 0).
 - **No new draw.** Nothing in it draws a number, so CHASE off, with the possession calls off too, is b4a25d5 exactly
   (`tools/chase.mjs`, and the proof behind every fingerprint re-pinned for the two, each kept as `BEFORE_CALLS_CHASE` or as
@@ -2151,9 +2154,12 @@ on Normal, 400 matches at SEED 7, CHASE off then on, must win back more of his c
 2.2s at 40m, 2.9s at 60m), and the catching side's sweeper is under it either way. In a person's matches they come back a few
 points more or less either way (0% to 7% a run, on 16 to 57 kicks), so loosely.
 
-**Open for the owner: your man after your own chip.** The ring jumps to your man nearest where it comes down, and 37% of the
-time (above) he is in front of the kicker and does not chase. Making him always chase would be a change of behaviour, and a
-re-pin.
+**Closed at 1.6: your man after your own chip.** On wt/chase this was open for the owner: the ring jumped to your man nearest
+where it came down, 37% of the time he was in front of the kicker and did not chase, and making him always chase would have been
+a change of behaviour and a re-pin. The possession calls made that change for their own reason (a man in front of the kicker
+may not play the bounce, so the ring goes to one who may: `kickRing`), and it settles this too: the ringed man is now always
+onside, so always a chaser, after 100 of a person's chips in 100 (The chasers, above). No chase lever moved; the re-pin is the
+1.6 merge's.
 
 ### Side Step and Dummy
 

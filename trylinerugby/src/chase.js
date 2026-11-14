@@ -12,16 +12,18 @@
      match, AI v AI, the demo, Two Player, Kids and Minis included (it is speed, not contact). Not a restart (the kick-off and the 22
      drop-out are kind 'restart'), a drop goal (kind 'g3d') or a charge-down (doKick stops before kickBall), and never in a drill.
    - The chasers: the kicking side's men onside at the kick (f.onside, level with or behind the kicker; the kicker himself among them,
-     and the human's ringed man only when he is onside: at the kick the ring jumps to his man nearest the landing spot wherever he
-     stands, and after a person's chip that man is in front of the kicker about a third of the time, so he runs at his own pace with
-     no trail) run `pace` times their top speed for `secs` from the kick, easing back to 1 over the last third.
+     and the human's ringed man with them: since 1.6 the possession calls (src/calls.js, kickRing) put the ring after a person's own
+     kick on the nearest man who may play its bounce, the kicker or a man behind him, so he is always onside and always chasing, 100
+     of a person's chips in 100 played in tools/chase.mjs; before them, as with CALLS off, the ring jumped to his man nearest the
+     landing spot wherever he stood, in front of the kicker about a third of the time, at his own pace with no trail) run `pace`
+     times their top speed for `secs` from the kick, easing back to 1 over the last third.
      p.chase is his seconds left, read in maxSpeed with the other factors and under Sprint (the bigger of the two applies, never
      both), so nothing snaps his velocity as setBoost does. It ends early once the kicking side loses the ball (the other side holds
      it or passes it) or the ball is dead (any stoppage, a try, half time). Drawn as a boost is, the gold trail behind him.
    - The catching side: as it ships (react 0) its men react at once, as before the chase. Tuned above 0, its men the computer runs react
      `react` seconds late: for that long after the kick they run on as they were running (edgeHold, the Easy cover's lag) instead of
-     going to the landing spot or into their support shape (matchTargets). A human's own input is never delayed: the ring still jumps
-     to his man nearest the landing spot at the kick (kickBall), his stick drives that man at once, and a Kids child's let-go chase
+     going to the landing spot or into their support shape (matchTargets). A human's own input is never delayed: the ring still goes
+     at the kick to his man nearest the landing spot who may play it (kickBall), his stick drives that man at once, and a Kids child's let-go chase
      (kidsChase) runs for the ball as before.
    Every lever reads chaseLv and none draws a random number, so with CHASE.on false (CHASE='{"on":false}' in the harness) the game
    plays exactly as b4a25d5, the build before it, draw for draw: the proof behind every re-pin since. Measured: README.md, Kicking and

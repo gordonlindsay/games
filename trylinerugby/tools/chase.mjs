@@ -1,6 +1,6 @@
 // The kick chase (src/chase.js; README.md, Kicking and the chase): the gate (an open-play kick by either side, never a restart, a
-// drop goal or a charge-down), the chasers (the kicking side's men onside at the kick, the human's ringed man among them only when
-// he is onside), the pace and its easing and end, the catching side's late start (as it ships, react 0, pace alone: idle, and a build
+// drop goal or a charge-down), the chasers (the kicking side's men onside at the kick, the human's ringed man always among them
+// since 1.6, when the possession calls' kickRing put the ring after his own kick on a man who may play its bounce), the pace and its easing and end, the catching side's late start (as it ships, react 0, pace alone: idle, and a build
 // without it plays the same; kept and tunable, for the men the computer runs and never for a person's own input), no new draw, CHASE
 // off playing exactly as b4a25d5, the build before, draw for draw, and the measured win-back rates in bands.
 // node tools/chase.mjs              (SEED=29 unless set; VERBOSE=1 lists every check)
@@ -169,7 +169,8 @@ async function oneMatch(o, seed) {
   return res;
 }
 // the kick-chaser: the casual adult (tools/bot.mjs) who chips ten times as often. He chases his own chip as the casual adult chases any
-// kick: the ring jumps to his man nearest where it will come down (kickBall), and after his 0.3s or so he runs that man at it
+// kick: the ring goes to his man nearest where it will come down who may play its bounce (kickBall; kickRing, src/calls.js, since 1.6:
+// the kicker or a man behind him, so a chaser), and after his 0.3s or so he runs that man at it
 export const CHASER = P => ({ ...P, name:'kick-chaser', chip:0.005 });
 const self = fileURLToPath(import.meta.url), run = !!process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (run && args[0] === '--job') {
@@ -424,6 +425,37 @@ begin('3 the chasers');
       if (r && r !== q && f.onside.has(r) && r.chase === SECS && CH.mul(r) > 1 && !f.onside.has(q) && q.chase === 0 && CH.mul(q) === 1) good++;
     }
     ok(!CLS || (n >= 8 && good === n), `with the possession calls on, the ring goes to a man who may play the bounce, onside and chasing, and the man in front of the kicker is left at his own pace (${good} of ${n})`); }
+  // A person's own kicks in play (1.6): the kick-chaser against the CPU on Normal, Quick Match's rules, 2-minute halves, his first 100
+  // kicks over seeded matches, and at each the man the ring is on once kickBall has put it. With the calls on, as the game ships, he
+  // is onside and chasing every time; with them off (the chase alone, as wt/chase had it) the ring jumped to a man in front of the
+  // kicker about a third of the time or more, who did not chase. This closed README.md's open item, your man after your own chip
+  if (CLS) {
+    const { PROFILES, casualStep } = await import('./bot.mjs'), P = CHASER(PROFILES.casual);
+    const own = on => {
+      CLS.on = on; const rows = []; let matches = 0;
+      for (let seed = 1; rows.length < 100 && seed < 200; seed++) {
+        matches++; reseed(seed);
+        const i = seed % 30, a = i % 6, b = (a + 1 + (i % 5)) % 6;
+        T.newMatch(a, b, { halfLen:120, diff:1, headless:true, duels:'live', arcade:true });
+        const S = { wobT:0, defT:0, lag:0 }; let seen = null, n = 0;
+        while (!M().over && n < 400000 && rows.length < 100) {
+          casualStep(P, S); T.update(STEP); n++;
+          const bl = M().ball, f = bl.f;
+          if (bl.state !== 'air' || !f || f.kind !== 'kick' || f === seen) continue;
+          seen = f;
+          if (f.team !== 0) continue;
+          const r = T.sides.ctrlOf(0);
+          rows.push({ onside:f.onside.has(r), chase:r.chase > 0, front:(r.x - f.x0)*dirOf(0) > 0.5 });
+        }
+        for (const inp of T.inputs) { inp.jx = inp.jy = 0; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; inp.flick = 0; }
+      }
+      CLS.on = CLS0;
+      return { rows, matches };
+    };
+    const on = own(true), off = own(false), front = off.rows.filter(r => r.front).length;
+    ok(on.rows.length === 100 && on.rows.every(r => r.onside && r.chase && !r.front), `a person's own kicks in play, the calls on: the man the ring is on onside and chasing after ${on.rows.filter(r => r.onside && r.chase).length} of his first ${on.rows.length} (the kick-chaser on Normal, ${on.matches} seeded matches), never in front of the kicker`);
+    ok(off.rows.length === 100 && front > 0 && off.rows.every(r => r.front ? !r.onside && !r.chase : r.onside && r.chase), `and the calls off, as the chase alone had it: in front of the kicker, offside and not chasing, after ${front} of 100, onside and chasing after the rest`);
+  }
 }
 done('3 the chasers');
 
