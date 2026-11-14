@@ -283,8 +283,8 @@ function careerChips(keys) {
   return keys.map(k => `<span class="cr-chip" style="--k:${CAREER_COL[k] || 'var(--chalk)'}">${label[k] || k}</span>`).join('');
 }
 /* Train: the Skill Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
-   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three. The youngest never
-   see the contact games (careerDrills), so for them there is no group and no coach line. */
+   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three, two for a Junior (no
+   Driving). The youngest never see the contact games (careerDrills), so for them there is no group and no coach line. */
 function renderCareerTrain() {
   const list = careerDrills(career), hard = list.filter(d => d.contact);
   const tiles = ds => `<div class="cr-drills">${ds.map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="dc-icon" aria-hidden="true">${drillIconSvg(d.id)}</span><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('')}</div>`;

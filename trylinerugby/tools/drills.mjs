@@ -104,12 +104,14 @@ P.leave();
   ok(three === 0, 'Bouncy Egg: never three the same in a row (' + three + ')');
   P.leave();
 }
-{ // the gold ring is a help, not the game: the youngest see it on every throw, Easy and Normal on the first three, Hard never, Minis on Hard included.
-  // eggRing is the one gate, read by the drawing (render-drill.js); the ring's place (E.aim) is still worked out on every throw
-  const S = D.settings(), was = { kids:S.kids, diff:S.diff, cat:S.cat }, put = (k, v) => { if (v === undefined) delete S[k]; else S[k] = v; };
+{ // the gold ring is a help, not the game: the Kids level and Minis see it on every throw, Easy and Normal on the first three, Hard never, Minis on Hard included.
+  // eggRing is the one gate, read by the drawing (render-drill.js); the ring's place (E.aim) is still worked out on every throw. A Mini's age group
+  // (2026-11-14) bars the contact games and leaves this help as the level and the side have it: a Mini moved to Easy or Normal on Men gets the three
+  const S = D.settings(), was = { kids:S.kids, diff:S.diff, cat:S.cat }, put = (k, v) => { if (v === undefined) delete S[k]; else S[k] = v; }, who = T.profile.get();
   const RING = 'The gold ring shows where the ball comes down. Run to meet it and catch it.', WATCH = 'Watch the ball in. Run to meet it and catch it.';
-  for (const [name, kids, diff, cat, upTo] of [['the Kids level', true, 0, 'men', 99], ['Minis on Easy', false, 0, 'minis', 99], ['Minis on Normal', false, 1, 'minis', 99], ['Easy', false, 0, 'men', 3], ['Normal', false, 1, 'men', 3], ['Hard', false, 2, 'men', 0], ['Minis on Hard', false, 2, 'minis', 0]]) {
-    S.kids = kids; S.diff = diff; S.cat = cat;
+  for (const [name, kids, diff, cat, upTo, age = null] of [['the Kids level', true, 0, 'men', 99], ['Minis on Easy', false, 0, 'minis', 99], ['Minis on Normal', false, 1, 'minis', 99], ['Easy', false, 0, 'men', 3], ['Normal', false, 1, 'men', 3], ['Hard', false, 2, 'men', 0], ['Minis on Hard', false, 2, 'minis', 0],
+    ['a Mini on the Kids level', true, 0, 'men', 99, 'mini'], ['a Mini on Easy and Men', false, 0, 'men', 3, 'mini'], ['a Mini on Normal and Women', false, 1, 'women', 3, 'mini'], ['a Mini on Hard', false, 2, 'men', 0, 'mini'], ['a Junior on Easy', false, 0, 'men', 3, 'junior']]) {
+    S.kids = kids; S.diff = diff; S.cat = cat; T.profile.set({ age, gender:null, look:null });
     H.reseed(55); begin('egg'); const st = P.state(), E = st.egg, b = T.M.ball, ring = [], aim = []; st.limit = 1e9;   // all twelve throws, hearts topped up
     const cue = $('pr-cue').textContent;
     play(() => { E.lives = 3; if (E.stage === 'fly') { ring[E.n] = X.eggRing(E); aim[E.n] = !!E.aim; E.me.x = b.x < 62 ? 72.9 : 51.1; E.me.y = b.y < 35 ? 45.9 : 24.1; } });
@@ -120,6 +122,7 @@ P.leave();
     P.leave();
   }
   for (const k of ['kids', 'diff', 'cat']) put(k, was[k]);
+  T.profile.set(who);
   ok(/E\.stage === 'fly' && E\.aim && eggRing\(E\)/.test(fs.readFileSync(new URL('../src/render-drill.js', import.meta.url), 'utf8')) && !/rnd\(/.test(training.slice(training.indexOf('const eggRingAll'), training.indexOf('function eggStage'))), 'Bouncy Egg: the ring is drawn only where eggRing says, and the gate draws no random number');
 }
 

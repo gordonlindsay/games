@@ -1319,6 +1319,11 @@ body.desk .desk-only{display:block}
 .hp-drills .pr-cg .pr-group{font-size:18px;white-space:nowrap}
 .hp-drills .pr-cg .pr-coach{font-size:13px;line-height:1.15}
 .hp-drills .pr-grown{grid-column:4}
+/* A Junior's Contact Games: Tackling and Ball Back, no Driving (practiceBarred), in equal halves of the three's places, For Grown-Ups still
+   in the fourth. Eight columns, each of the four's a pair, so every edge stays on the rows above. */
+.hp-drills .pr-low:has(#pr-contact.n2:not([hidden])){grid-template-columns:repeat(8,minmax(0,1fr))}
+.hp-drills #pr-contact.n2 .btn.drill{grid-column:span 3}
+.hp-drills .pr-low:has(#pr-contact.n2:not([hidden])) .pr-grown{grid-column:7/span 2}
 .hp-drills:has(#pr-grownups:not([hidden])){justify-content:flex-start}   /* For Grown-Ups: the panel takes the step and scrolls inside it, Back to Skill Games at its foot */
 .hp-drills #pr-grownups{min-height:0;max-height:100%;overflow-y:auto;gap:8px;font-size:14px;line-height:1.3}
 .hp-drills #pr-grownups p,.hp-drills #pr-grownups h3{margin:0}
@@ -1380,8 +1385,8 @@ summary::-webkit-details-marker{display:none}
 @media (max-width:599px) and (min-height:421px){
   /* a narrow window held upright: one column, the wordmark and My Team over the boxes (a phone held sideways keeps two, below) */
   .home{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
-  .hp-drills .drills,.hp-drills .pr-low{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .hp-drills .pr-grown{grid-column:auto}
+  .hp-drills .drills,.hp-drills .pr-low,.hp-drills .pr-low:has(#pr-contact.n2:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hp-drills .pr-grown,.hp-drills #pr-contact.n2 .btn.drill,.hp-drills .pr-low:has(#pr-contact.n2:not([hidden])) .pr-grown{grid-column:auto}   /* a Junior's two a row of halves, For Grown-Ups under them */
 }
 @media (orientation:landscape) and (max-height:374px){
   /* Settings' four rows under 375px tall (844x340 and Safari on the 852x393 and 874x402 phones, about 343 and 352): closer together, each
