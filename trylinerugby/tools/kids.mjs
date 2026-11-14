@@ -35,22 +35,46 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
   seg.children[0].click();
   ok(s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === true, 'pressing Kids on the home row sets it and saves');
+  // no grown-up check on switching (the owner, 2026-11-14: "remove the calculation for anybody - the game isn't violent so i am ok with
+  // switching back"): Easy from Kids switches at once for anyone but a Mini, who is asked Leave Minis? first ("for minis flag that it's
+  // different and that they should stay as is unless they're sure")
+  const F = T.profile, MN = K.minis, saved = () => JSON.parse(memory['tryline.v1']).settings;
+  const change = () => $('mn-go').click();   // Change (the harness sets CONFIRM.gap to 0: the double-tap gap is checked below)
+  F.set({ age:null, gender:null, look:null });
   seg.children[1].click();
-  ok(K.gate() && s.kids && !$('m-gate').hidden, 'pressing Easy asks the grown-up check first, and the level has not moved');
-  K.close(false);
-  ok(!K.gate() && s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === true, 'a cancelled check leaves it on Kids, in the save too');
-  seg.children[1].click(); { const g = K.gate(); for (const d of g.answer) K.type(d); }
-  ok(!K.gate() && !s.kids && s.diff === 0 && JSON.parse(memory['tryline.v1']).settings.kids === false, 'a right answer takes it off and saves');
-  seg.children[0].click(); ok(!K.gate() && s.kids, 'going on to Kids needs no check'); K.segSet(1);
-  ok(/if \(key === 'diff' && kidsLevel\(\) && i !== 0\) \{ parentGate\(/.test(fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8')), 'every button but Kids goes through the check, and only while on Kids');
-  // Settings' Age Group under Difficulty (src/profile.js) leaves the Kids level only past the same check; a gender never moves the level
-  const F = T.profile; F.set({ age:null, gender:null, look:null }); K.segSet(1); T.home.open('settings');
-  F.age('mini'); ok(!K.gate() && s.kids && s.diff === 0, 'Settings\' Mini: on to Kids, no check (as Kids itself)');
-  F.age('adult'); ok(K.gate() && s.kids && F.get().age === 'mini', 'Settings\' Adult from the Kids level: the grown-up check first, the level and the age group not moved');
-  K.close(false); ok(!K.gate() && s.kids && s.diff === 0 && F.get().age === 'mini' && JSON.parse(memory['tryline.v1']).settings.kids === true, 'cancelled: still Kids, still Mini, in the save too');
-  F.gender('male'); ok(!K.gate() && s.kids && F.get().gender === 'male', 'a gender asks nothing and leaves the Kids level on');
-  F.age('junior'); { const g = K.gate(); for (const d of g.answer) K.type(d); }
-  ok(!K.gate() && !s.kids && s.diff === 0 && F.get().age === 'junior', 'answered: Junior, Easy with the Kids level off');
+  ok(!K.gate() && !MN.open() && $('m-gate').hidden && $('m-minis').hidden && !s.kids && s.diff === 0 && saved().kids === false, 'no age group: pressing Easy on Kids switches at once and saves, with no check and no confirm');
+  for (const age of ['junior', 'adult']) {
+    seg.children[0].click(); F.set({ age, gender:null, look:null });
+    seg.children[2].click();
+    ok(!K.gate() && !MN.open() && !s.kids && s.diff === 1 && saved().kids === false, `${age}: Normal from Kids switches at once, nothing asked`);
+  }
+  seg.children[0].click(); ok(!K.gate() && !MN.open() && s.kids, 'going on to Kids needs nothing either');
+  F.set({ age:'mini', gender:null, look:null });
+  D.CONFIRM.gap = 500; seg.children[1].click();
+  ok(!K.gate() && !!MN.open() && !$('m-minis').hidden && $('m-gate').hidden && s.kids && s.diff === 0, 'a Mini pressing Easy: Leave Minis? first, never the grown-up check, the level not moved');
+  $('mn-go').click(); ok(!!MN.open() && s.kids, 'Change pressed in the tap that opened it (a double tap) does nothing'); D.CONFIRM.gap = 0;
+  $('mn-keep').click();
+  ok(!MN.open() && $('m-minis').hidden && s.kids && s.diff === 0 && saved().kids === true && F.get().age === 'mini', 'Keep Minis: still Kids, still Mini, in the save too');
+  seg.children[1].click(); fire('keydown', { key:'Escape' });
+  ok(!MN.open() && s.kids && s.diff === 0, 'Escape is Keep Minis');
+  seg.children[1].click(); change();
+  ok(!MN.open() && !s.kids && s.diff === 0 && saved().kids === false, 'Change: Easy at once, and saved');
+  seg.children[0].click(); ok(!MN.open() && s.kids, 'a Mini going on to Kids is asked nothing');
+  K.segSet(1);
+  const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
+  ok(/if \(key === 'diff' && kidsLevel\(\) && i !== 0 && minisOn\(\)\) \{ minisAsk\(/.test(menus) && !/parentGate\(/.test(menus), 'the Difficulty row asks only a Mini, by Leave Minis?, and never the grown-up check');
+  // Settings' Age Group under Difficulty (src/profile.js): the same rule; a gender never moves the level and asks nothing
+  F.set({ age:null, gender:null, look:null }); K.segSet(1); T.home.open('settings');
+  F.age('mini'); ok(!K.gate() && !MN.open() && s.kids && s.diff === 0, 'Settings\' Mini: on to Kids, nothing asked (as Kids itself)');
+  F.age('adult'); ok(!K.gate() && !!MN.open() && s.kids && F.get().age === 'mini', 'Settings\' Adult from Mini: Leave Minis? first, the level and the age group not moved');
+  $('mn-keep').click(); ok(!MN.open() && s.kids && s.diff === 0 && F.get().age === 'mini' && saved().kids === true, 'Keep Minis: still Kids, still Mini, in the save too');
+  F.gender('male'); ok(!K.gate() && !MN.open() && s.kids && F.get().gender === 'male', 'a gender asks nothing and leaves the Kids level on');
+  F.age('junior'); change();
+  ok(!K.gate() && !MN.open() && !s.kids && s.diff === 0 && F.get().age === 'junior', 'Change: Junior, Easy with the Kids level off');
+  F.age('adult'); ok(!K.gate() && !MN.open() && !s.kids && s.diff === 1 && F.get().age === 'adult', 'Junior to Adult: at once, nothing asked');
+  K.segSet(0); F.age('junior'); ok(!K.gate() && !MN.open() && !s.kids && s.diff === 0 && F.get().age === 'junior', 'an Adult on the Kids level picking Junior: off Kids at once, nothing asked (not a Mini)');
+  const prof = fs.readFileSync(new URL('../src/profile.js', import.meta.url), 'utf8');
+  ok(/if \(minisOn\(\) && age !== 'mini'\) minisAsk\(go, /.test(prof) && !/parentGate\(/.test(prof), 'an age group asks only a Mini leaving Mini, and never the grown-up check');
   F.set({ age:null, gender:null, look:null }); K.segSet(1); s.cat = 'men'; D.goHome();
 }
 
@@ -492,6 +516,48 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   ok(!page[0].inert && page[1].inert && !$('m-gate').inert, 'open, the page under it is inert, all but Turn Your Phone Sideways, which covers it on an upright phone');
   K.close(false);
   ok(!page[1].inert, 'shut, the page is live again');
+  delete document.body;
+}
+
+// 11b. Leave Minis? (minisAsk, src/kids.js): the owner, 2026-11-14, "for minis flag that it's different and that they should stay as is
+// unless they're sure". The question, one line, Change | Keep Minis in halves; Keep Minis by touch, Escape and a controller's Back; the
+// focus on Keep Minis; the page under it inert; the ring back on the button that asked
+{
+  const MN = K.minis; let went = 0, kept = 0; const go = () => went++, keep = () => kept++;
+  const card = html.slice(html.indexOf('<div class="modal" id="m-minis"'), html.indexOf('<div class="modal" id="m-wall"'));
+  ok(/<h3 id="mn-q">Leave Minis\?<\/h3>/.test(card) && /<p class="mn-line" id="mn-line">Minis is tag rugby, with no tackles or contact games\.<\/p>/.test(card), 'the question, Leave Minis?, and the one line on what Minis is');
+  ok(/<div class="row2"><button class="btn" id="mn-go">Change<\/button><button class="btn" id="mn-keep" data-back>Keep Minis<\/button><\/div>/.test(card), 'Change then Keep Minis, two plain buttons in equal halves, Keep Minis its Back');
+  ok(card.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).join(' ') === 'Leave Minis? Minis is tag rugby, with no tackles or contact games. Change Keep Minis', 'no other words on it: no eyebrow, no prose');
+  ok(!/—/.test(card) && !/[←-↙]/.test(card) && /aria-modal="true"/.test(card) && /aria-labelledby="mn-q"/.test(card) && /aria-describedby="mn-line"/.test(card), 'no em dashes or arrows; a modal read out by its question and line');
+  const css = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8'), z = sel => +css.match(new RegExp(sel.replace(/[#.]/g, '\\$&') + '\\{[^}]*z-index:(\\d+)'))[1];
+  ok(z('.modal') < z('#m-minis') && z('#m-minis') < z('#m-gate'), 'over every card, under the grown-up check');
+  ok(/#m-minis \.row2 \.btn\{min-height:48px/.test(css) && /#m-minis \.row2 \.btn\{min-height:44px\}/.test(css), 'its buttons 48px tall, 44px on a short landscape phone');
+  MN.ask(go, keep);
+  ok(!!MN.open() && !$('m-minis').hidden && D.navLayer() === $('m-minis'), 'open: the card is the nav layer');
+  $('mn-keep').click(); ok(kept === 1 && went === 0 && !MN.open() && $('m-minis').hidden, 'Keep Minis: onKeep, and the card shuts');
+  MN.ask(go, keep); $('mn-go').click(); ok(went === 1 && kept === 1 && !MN.open(), 'Change: onGo, and the card shuts');
+  MN.ask(go, keep); fire('keydown', { key:'Escape' }); ok(kept === 2 && !MN.open(), 'Escape is Keep Minis');
+  $('m-minis').querySelectorAll = sel => (sel.includes('[data-back]') ? [$('mn-keep')] : []);   // the stand-in holds no children: Keep Minis is its Back, as in index.html
+  MN.ask(go, keep); T.navBack(0); ok(kept === 3 && !MN.open(), 'a controller\'s Back (and Android\'s) is Keep Minis');
+  MN.ask(go, keep); MN.ask(go, keep); ok(kept === 4 && !!MN.open(), 'a second one keeps the first as it was'); MN.close(false); kept--;
+  let gf = 0, kf = 0; $('mn-go').focus = () => gf++; $('mn-keep').focus = () => kf++;
+  D.setDev('pad'); MN.ask(go, keep);
+  ok(kf === 0 && D.focus() === $('mn-keep'), 'opened from a controller: the ring on Keep Minis, and no DOM focus');
+  fire('keydown', { key:'ArrowLeft' }); ok(gf === 1 && D.focus() === $('mn-go'), 'Left: the ring and the focus on Change');
+  fire('keydown', { key:'ArrowRight' }); ok(kf === 1 && D.focus() === $('mn-keep'), 'Right: back on Keep Minis');
+  MN.close(false); D.setDev('touch'); kf = 0; MN.ask(go, keep);
+  ok(kf === 1 && D.focus() === null, 'opened by touch or the keyboard: the DOM focus on Keep Minis, for Tab, Enter and the screen reader');
+  MN.close(false); delete $('mn-go').focus; delete $('mn-keep').focus;
+  { const asker = $('b-set'), own = Object.prototype.hasOwnProperty.call(asker, 'focus'), was = asker.focus; let f2 = 0; asker.focus = () => f2++; D.setDev('pad');
+    T.home.ring(asker); MN.ask(go, keep); const open = D.focus(); MN.close(false); const shut = D.focus();
+    T.home.ring(asker); MN.ask(go, keep); MN.close(true); const changed = D.focus();
+    ok(open === $('mn-keep') && shut === asker && changed === asker && f2 === 0, `opened from a controller's ring: kept or changed, the ring back on the button that asked, no DOM focus (${[open && open.id, shut && shut.id, changed && changed.id, f2].join(', ')})`);
+    T.home.ring(null); D.setDev('touch'); if (own) asker.focus = was; else delete asker.focus; }
+  const page = [{ id:'rotate', inert:false }, { id:'controls', inert:false }, $('m-minis')];
+  document.body = { children:page };
+  MN.ask(go, keep);
+  ok(!page[0].inert && page[1].inert && !$('m-minis').inert, 'open, the page under it is inert, all but Turn Your Phone Sideways');
+  MN.close(false); ok(!page[1].inert, 'shut, the page is live again');
   delete document.body;
 }
 

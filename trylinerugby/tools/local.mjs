@@ -1,7 +1,7 @@
 // The county clubs (LOCAL, src/data.js and src/clubs-local.js, 2026-11-14): every club of England's 2025-26 National League 1 and 2,
 // Regional 1, Regional 2 and Counties 1, by county. The research and its generator, every club once, codes and names, six a list,
 // the ratings in their bands and in table order, the county cups and their rivals, the ladder and the Filter, the search, the home's Local
-// tier and Other County, the saves with the new keys, the place-only lines, and the build with LOCAL off as 1.6. Its browser part (every new
+// tier and Other County, the saves with the new keys, the place-only lines, and the build with LOCAL off as 1.6.1. Its browser part (every new
 // club's card, the Filter, the Competitions tier and Other County at five sizes) runs where Playwright is installed.
 // node tools/local.mjs   Exits 1 on any failure.
 process.env.LOCAL ??= '{"on":true}';
@@ -23,8 +23,8 @@ const memory = {};
 globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memory[k] = v; } };
 const s = D.settings();
 
-/* 0. With LOCAL off the build is 1.6: every list, side, rating, kit and line, the ladder and its names, the search, the home's tiers, the
-      county cups and the demo's draw, fingerprinted the same way from b9fa00d (GAME=<its index.html> LOCAL_CHILD=1 node tools/local.mjs).
+/* 0. With LOCAL off the build is 1.6.1 (1.6 with the areas renamed: below): every list, side, rating, kit and line, the ladder and its names, the search, the home's tiers, the
+      county cups and the demo's draw, fingerprinted the same way from 56c38c1 (GAME=<its index.html> LOCAL_CHILD=1 node tools/local.mjs).
       Checked first, in a child (offRun). */
 function dataPrint() {
   const out = [];
@@ -42,10 +42,15 @@ function dataPrint() {
   out.push(json([T.M.demo, T.M.nat.map(t => t.id), T.M.score, T.M.ball.x.toFixed(5)]));
   return out.map(fnv).join(' ');
 }
-const BEFORE_LOCAL = '13ekg89 1qw9wvi q29ftc fu9h2l 154r8uo i9vggm 15ccodg t0f9pk kzpnpt';   // b9fa00d (1.6), from its own index.html
+// Re-pinned at the 1.6.1 merge (56c38c1, folded into 1.7): with LOCAL off this build is 1.6.1, not 1.6. 1.6.1 renamed the areas (North, South,
+// Mine to Northern Hemisphere, Southern Hemisphere, My Clubs), which moved the ladders' lines and the search's paths (the 5th to 7th) and
+// nothing else. The chain: 56c38c1's own index.html gives BEFORE_LOCAL (GAME=<its index.html> LOCAL_CHILD=1 node tools/local.mjs), and with
+// its PICK_HEMI put back to North, South, Mine it gives BEFORE_161, b9fa00d's (1.6) pin, exactly.
+const BEFORE_161 = '13ekg89 1qw9wvi q29ftc fu9h2l 154r8uo i9vggm 15ccodg t0f9pk kzpnpt';   // b9fa00d (1.6), from its own index.html
+const BEFORE_LOCAL = '13ekg89 1qw9wvi q29ftc fu9h2l 1ja44q7 lgqmbb 1g4d2wv t0f9pk kzpnpt';   // 56c38c1 (1.6.1, never released: in 1.7), from its own index.html
 if (LOCAL_CHILD) { console.log(dataPrint()); process.exit(0); }
 { const off = await offRun(new URL(import.meta.url));
-  ok(!off.fails.length && off.last === BEFORE_LOCAL, `with LOCAL off the build is 1.6 (b9fa00d): every list, side and line, the ladder, the search, the home's tiers, the county cups and the demo's draw (${off.last}, pinned ${BEFORE_LOCAL})`); }
+  ok(!off.fails.length && off.last === BEFORE_LOCAL, `with LOCAL off the build is 1.6.1 (56c38c1; 1.6, b9fa00d, but for the areas' names, ${BEFORE_161}): every list, side and line, the ladder, the search, the home's tiers, the county cups and the demo's draw (${off.last}, pinned ${BEFORE_LOCAL})`); }
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const research = JSON.parse(fs.readFileSync(path.join(root, 'docs/clubs-local.json'), 'utf8'));
@@ -163,11 +168,11 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const sur = eng.find(g => g.key === 'sur'), ham = eng.find(g => g.key === 'ham');
   ok(sur.teams.length === 34 && !sur.teams.some(t => t.id === 'ALD') && ham.teams.some(t => t.id === 'ALD') && SUR.some(t => t.id === 'ALD') && list('ham').teams.some(t => t.id === 'ALD'), 'Aldershot is on Surrey\'s list and Hampshire\'s, and shown under Hampshire only; Surrey shows its 34');
   ok(X.COUNTIES.every(t => sur.teams.includes(t)) && !eng.some(g => g.key === 'cty') && X.poolKey('cty') === 'sur', 'Counties\' sides are Surrey\'s; its list is off the ladder and a saved Counties is Surrey');
-  ok(eng.filter(g => g.local).every(g => P.where({ ...g, hemi:'north' }) === 'North · England' && g.county), 'the line above the group\'s button: North · England, no Local');
+  ok(eng.filter(g => g.local).every(g => P.where({ ...g, hemi:'north' }) === 'Northern Hemisphere · England' && g.county), 'the line above the group\'s button: Northern Hemisphere · England (Northern Hemi where two sides share the screen), no Local');
   const lvl = LO.pickLevel;
   ok(eng.filter(g => g.local).every(g => g.teams.every((t, i) => i === 0 || lvl(t) > lvl(g.teams[i - 1]) || (lvl(t) === lvl(g.teams[i - 1]) && (t.place || 0) >= (g.teams[i - 1].place || 0)))), 'each county in its pyramid\'s order: level, then place (Quins, with no line, after Regional 1)');
   D.openTeams('quick');
-  ok(P.view(0).group.key === 'sur' && /<button class="btn pk-group two" data-act="sheet" aria-haspopup="dialog">Surrey<\/button>/.test(P.panel(0)) && /<span>North<\/span> <span>England<\/span><\/span>/.test(P.panel(0)), 'the card: Surrey on its group\'s button (two lines allowed), North · England above it');
+  ok(P.view(0).group.key === 'sur' && /<button class="btn pk-group two" data-act="sheet" aria-haspopup="dialog">Surrey<\/button>/.test(P.panel(0)) && /<span class="pk-area">Northern Hemi<span class="hx">sphere<\/span><\/span> <span>England<\/span><\/span>/.test(P.panel(0)), 'the card: Surrey on its group\'s button (two lines allowed), Northern Hemisphere · England above it (the area\'s end apart, for Northern Hemi)');
   P.filter(0, '', { dev:'touch' });
   const F = P.filterState();
   ok(F.cols.map(c => c.head).slice(0, 3).join() === 'Area,Country,League' && F.cols[2].rows.map(n => n.name).join() === ['National', 'Premiership', 'Championship', 'Surrey', ...counties.slice(1).map(l => l.name)].join(), 'the Filter\'s England: National, Premiership, Championship, Surrey, then every other county A to Z');
@@ -177,9 +182,9 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   // the search: a club with its path, a county by its full name, a club's own league, at most FL_CAP drawn
   const L = P.view(0).ladder, hit = q => P.filterSearch(L, q);
   const tun = hit('Tunb');
-  ok(tun.length === 1 && tun[0].t.id === 'TWE' && tun[0].path === 'North · England · Kent', `Tunbridge Wells, with its path (${tun.map(h => h.path)})`);
+  ok(tun.length === 1 && tun[0].t.id === 'TWE' && tun[0].path === 'Northern Hemisphere · England · Kent', `Tunbridge Wells, with its path (${tun.map(h => h.path)})`);
   const bucks = hit('Buckinghamshire');
-  ok(bucks.length === list('bkm').teams.length && bucks.every(h => h.path === 'North · England · Bucks'), `a county by its full name: Buckinghamshire finds Bucks' clubs (${bucks.length})`);
+  ok(bucks.length === list('bkm').teams.length && bucks.every(h => h.path === 'Northern Hemisphere · England · Bucks'), `a county by its full name: Buckinghamshire finds Bucks' clubs (${bucks.length})`);
   const thames = hit('Regional 2 Thames'), want = X.ALL_TEAMS.filter(t => t.league === 'Regional 2 Thames');
   ok(thames.length === want.length && want.every(t => thames.some(h => h.t === t)), `a club's own league: Regional 2 Thames finds its ${want.length} clubs, across their counties`);
   ok(hit('Farnham')[0].t.id === 'FAR' && hit('Farnham')[0].r === 0, 'a club\'s name still comes first');
@@ -236,6 +241,24 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const ald = C.create({ pos:'B', num:5, club:by('ALD'), league:'sur' });
   ok(ald.league === 'ham' && C.clean(JSON.parse(json(ald))).league === 'ham' && C.clean({ ...JSON.parse(json(ald)), league:'sur' }).league === 'ham' && ald.season.teams.slice(1).every(t => Q.CLUB_COUNTY[t.id] === 'HAM'), 'an Aldershot career, a 1.6 one saved on Surrey too: Hampshire\'s league');
   X.setChamp(null); D.goHome();
+}
+
+// 5b. 1.6.1's changes, folded into 1.7, with a county club as My Team: a Mini (Tunbridge Wells, Kent) sees Kent on the Competitions' Local
+//     tier; leaving Minis is Leave Minis? (no grown-up check), Keep Minis changes nothing, Change the age group and the level only, the
+//     club, its county and its tier as they were (tools/profile.mjs checks the Skill Games by age group)
+{
+  const F = T.profile, saveWas = memory['tryline.v1'];
+  X.restore({ settings:{ myClub:'TWE', myNat:'ENG' } }); F.age('mini');
+  ok(F.get().age === 'mini' && s.kids && s.cat === 'minis' && H.myClub().id === 'TWE' && H.comps(2)[0].join() === 'ken,Kent', `a Mini with Tunbridge Wells as My Team: the Kids level, Minis, and Kent on the Local tier (${json(H.comps(2))})`);
+  F.age('junior');
+  ok(!!T.kids.minis.open() && !T.kids.gate() && F.get().age === 'mini' && H.myClub().id === 'TWE', 'Junior from Mini: Leave Minis? first, never the grown-up check, nothing changed yet');
+  T.kids.minis.close(false);
+  ok(!T.kids.minis.open() && F.get().age === 'mini' && s.kids && H.myClub().id === 'TWE' && H.comps(2)[0].join() === 'ken,Kent', 'Keep Minis: still a Mini, Tunbridge Wells, Kent');
+  F.age('junior'); T.kids.minis.close(true);
+  ok(!T.kids.minis.open() && F.get().age === 'junior' && !s.kids && H.myClub().id === 'TWE' && s.myNat === 'ENG' && H.comps(2)[0].join() === 'ken,Kent', `Change: a Junior, the Kids level off, still Tunbridge Wells and Kent's tier (${json(H.comps(2))})`);
+  D.openTeams('quick');
+  ok(P.view(0).group.key === 'ken' && P.view(0).team.id === 'TWE' && P.where(P.view(0).group) === 'Northern Hemisphere · England', `Quick Match: My Team's club in Kent, the line Northern Hemisphere · England (${P.where(P.view(0).group)})`);
+  D.goHome(); F.age('adult'); X.restore({ settings:{} }); memory['tryline.v1'] = saveWas;
 }
 
 // 6. Saves with the new keys, and a My League side on a code a county club has taken

@@ -625,22 +625,22 @@ function settle(pick) {
   ok(X.NATIONS.slice(6).every(t => /^#[0-9a-f]{6}$/i.test(t.alt) && /^#[0-9a-f]{6}$/i.test(t.altTrim)), 'each new nation has a change kit, as the six do');
 
   // the hierarchy on screen: the side-by-side team screen's ladder (re-pinned 2026-11-11, the owner: "a side-by-side picker in the style
-  // of EA FC's kick-off screen"; Up and Down one ladder of groups, North | South | Mine; tools/picker.mjs checks it whole)
+  // of EA FC's kick-off screen"; Up and Down one ladder of groups, Northern Hemisphere | Southern Hemisphere | My Clubs; tools/picker.mjs checks it whole)
   const PK = T.picker, pv = n => PK.view(n), at = (n, key) => { PK.group(n, pv(n).ladder.findIndex(g => g.key === key) - pv(n).gi); return pv(n); };
   const grp = (n, key) => pv(n).ladder.find(g => g.key === key), ids = l => l.map(t => t.id).join();
   X.setChamp(null); s.pick = [null, null]; D.openTeams('quick');
-  ok(X.teamPool() === 'sur' && pv(0).group.key === 'sur' && pv(0).team.id === 'FAR' && PK.where(pv(0).group) === 'North · England' && grp(0, 'mine.league').teams.every(t => t.act), 'Quick Match opens Your Team on Local · Surrey (North · England: LOCAL leaves the county to the group\'s button); no My League side without an import');
+  ok(X.teamPool() === 'sur' && pv(0).group.key === 'sur' && pv(0).team.id === 'FAR' && PK.where(pv(0).group) === 'Northern Hemisphere · England' && grp(0, 'mine.league').teams.every(t => t.act), 'Quick Match opens Your Team on Local · Surrey (Northern Hemisphere · England: LOCAL leaves the county to the group\'s button); no My League side without an import');
   { const g = grp(0, 'sur').teams, lv = T.local.pickLevel;   // LOCAL: every Surrey club bar Aldershot (shown under Hampshire), in its pyramid's order, My Team's Farnham first
     ok(g.length === SUR.length - 1 && SUR.filter(t => t.id !== 'ALD').every(t => g.includes(t)) && g[0].id === 'FAR' && g.slice(1).every((t, i) => i === 0 || lv(t) > lv(g[i]) || (lv(t) === lv(g[i]) && (t.place || 0) >= (g[i].place || 0))), `Surrey lists every Surrey club, in their pyramid's order, Farnham first as My Team (${ids(g.slice(0, 8))}...)`); }
   PK.group(0, -1); PK.group(0, -1);
   ok(pv(0).group.key === 'eng' && pv(0).group.name === 'Premiership' && ids(pv(0).group.teams) === ids(X.ENGLAND) && !pv(0).group.teams.some(t => t.id === 'FAR'), 'up from Surrey: England\'s Championship, then its Premiership, its own sides');
   at(0, 'jpn');
-  ok(pv(0).group.name === 'Clubs' && ids(pv(0).group.teams) === ids(X.JAPAN) && PK.where(pv(0).group) === 'North · Japan', 'a list shows its own sides (Japan\'s clubs, in the North)');
+  ok(pv(0).group.name === 'Clubs' && ids(pv(0).group.teams) === ids(X.JAPAN) && PK.where(pv(0).group) === 'Northern Hemisphere · Japan', 'a list shows its own sides (Japan\'s clubs, in the Northern Hemisphere)');
   at(0, 'sco');
   ok(pv(0).group.name === 'Premiership' && ids(pv(0).group.teams) === ids(X.SCOTLAND) && ids(grp(0, 'cel.sco').teams) === 'EDI,GLA' && grp(0, 'cel.sco').name === 'URC', 'Scotland\'s Premiership shows its clubs; the pro sides stay in the URC, Scotland\'s two (Edinburgh, Glasgow)');
   const nats = cat => pv(0).ladder.filter(g => g.key.startsWith('nat.')).map(g => g.teams[0]), byTable = (l, cat) => { const o = X.natList(cat).map(t => t.id); return l.every((t, i) => i === 0 || o.indexOf(t.id) > o.indexOf(l[i - 1].id) || PK.HEMI[t.id] !== PK.HEMI[l[i - 1].id]); };
   at(0, 'nat.eng');
-  ok(nats('men').length === 12 && X.natList('men').every(t => nats('men').includes(t)) && byTable(nats('men'), 'men') && !nats('men').some(t => ['CDN', 'USA'].includes(t.id)) && /My Team/.test($('t-side0').innerHTML), 'International: the men\'s twelve, each its own National group, in table order North then South (Your Team\'s England marked My Team)');
+  ok(nats('men').length === 12 && X.natList('men').every(t => nats('men').includes(t)) && byTable(nats('men'), 'men') && !nats('men').some(t => ['CDN', 'USA'].includes(t.id)) && /My Team/.test($('t-side0').innerHTML), 'International: the men\'s twelve, each its own National group, in table order, the Northern Hemisphere then the Southern (Your Team\'s England marked My Team)');
   at(0, 'nat.rsa');
   ok(X.poolTeams('int') === X.natList('men') && /aria-label="Overall 93">93</.test($('t-side0').innerHTML), 'Men: the nations are natList(\'men\'), South Africa at 93');
   X.catPick('women');
@@ -823,7 +823,7 @@ function settle(pick) {
   ok(X.TEAM_LISTS.filter(l => l.tier === 1).length === 9 && css.includes('.pk-step{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}') && css.includes('.pk-foot{display:flex;flex-direction:column;gap:8px}') && /@media \(max-height:440px\)\{\s*\.pk-foot\{flex-direction:row\}\s*\.pk-foot \.btn\{flex:1 1 0;/.test(css) && menus.includes("if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);"), 'Previous and Next in equal halves, the count between; the primary over Back, or on a phone held sideways Back | the primary in equal halves, in that order for Tab');
   const small = new Set(['a', 'an', 'the', 'and', 'or', 'of', 'on', 'to', 'in', 'for', 'as', 'at', 'by']);
   const titled = t => t.split(' ').every((w, i) => (i && (small.has(w) || w === '&')) || /^[A-Z0-9]/.test(w));   // a number stands as it is (England 2); & joins as and does (Dorset & Wilts)
-  const labels = [...X.TEAM_TIERS, ...X.TEAM_LISTS.map(l => l.name), ...X.TEAM_CATS.map(c => c.name), 'My League', ...new Set(T.picker.ladder('men', { nations:true, legends:true, clubs:true, mine:'all' }).map(g => g.name)), ...Object.values(T.picker.PICK_HEMI), 'Previous', 'Next', 'Favourite', 'Edit', 'Kick Off', 'Create Team', 'Add Your Team', 'Your Team', 'Opponent', 'Your Club', 'My Club', 'My Country', 'Your Nation', 'Host', 'Done', 'Back'];
+  const labels = [...X.TEAM_TIERS, ...X.TEAM_LISTS.map(l => l.name), ...X.TEAM_CATS.map(c => c.name), 'My League', ...new Set(T.picker.ladder('men', { nations:true, legends:true, clubs:true, mine:'all' }).map(g => g.name)), ...Object.values(T.picker.PICK_HEMI), ...Object.values(T.picker.PICK_HEMI_SHORT), 'Previous', 'Next', 'Favourite', 'Edit', 'Kick Off', 'Create Team', 'Add Your Team', 'Your Team', 'Opponent', 'Your Club', 'My Club', 'My Country', 'Your Nation', 'Host', 'Done', 'Back'];
   ok(labels.every(titled), `every label is Title Case (${labels.filter(l => !titled(l)).join(', ') || labels.length + ' labels'})`);
   ok(!/[←-↙⇐-⇙—]/.test(labels.join(' ') + menus.slice(menus.indexOf('/* ---------- The team screen: Your Team v Opponent'), menus.indexOf('function myPick'))), 'no arrow or em dash');
 }
@@ -899,9 +899,9 @@ function settle(pick) {
   ok(engGroups === ['nat.eng:National,eng:Premiership,en2:Championship,sur:Surrey', ...COUNTY_LISTS.map(l => l.key + ':' + l.name)].join() && ['fra', 'cel.ire', 'sco', 'rsa.urc', 'aus', 'nzl', 'jpn'].every(k => v12(0).ladder.some(g => g.key === k)), `the national leagues each a group of their country's, England's Championship after its Premiership, Local's Surrey then Counties (${engGroups})`);
   to12(0, 'en2');
   ok(v12(0).group.name === 'Championship' && v12(0).group.teams.map(t => t.id).join() === X.ENGLAND_TWO.map(t => t.id).join() && !v12(0).group.teams.some(t => t.id === 'BTH'), 'England 2 shows its thirteen, as England\'s Championship');
-  // re-pinned for the county clubs (LOCAL): Counties is off the ladder, its seven in Surrey's group, North · England (the group's button names the county)
+  // re-pinned for the county clubs (LOCAL): Counties is off the ladder, its seven in Surrey's group, Northern Hemisphere · England (the group's button names the county)
   to12(0, 'sur');
-  ok(!v12(0).ladder.some(g => g.key === 'cty') && X.COUNTIES.every(t => v12(0).group.teams.includes(t)) && v12(0).group.local && P12.where(v12(0).group) === 'North · England' && X.poolTier('cty') === 2, 'Counties\' seven show in Surrey, under Local');
+  ok(!v12(0).ladder.some(g => g.key === 'cty') && X.COUNTIES.every(t => v12(0).group.teams.includes(t)) && v12(0).group.local && P12.where(v12(0).group) === 'Northern Hemisphere · England' && X.poolTier('cty') === 2, 'Counties\' seven show in Surrey, under Local');
   ok(X.poolKey('en2') === 'en2' && X.poolKey('cty') === 'sur', 'the save keeps England 2\'s key, and a saved Counties is Surrey');
   // the stars beside every overall badge: each side's name with its stars under it, its words for a screen reader
   const stars = t => R5.starsHtml(R5.starsOf(t));
@@ -988,13 +988,13 @@ function settle(pick) {
   // re-pinned for the county clubs (LOCAL): the Opponent opens on Old Alleynians, Farnham's league's first in Surrey's pyramid order (4th of 12;
   // Wimbledon 9th); the head's line drops Local (the group's button names the county, and may take two lines)
   ok(v(0).group.key === 'sur' && v(0).team.id === 'FAR' && !P.state().sides[0].set && v(1).team.id === 'OAE' && !P.state().sides[1].set && $('t-title').textContent === 'Pick Your Team', 'Quick Match arrives: Your Team on Farnham (offered, not set), the Opponent on Old Alleynians, Pick Your Team');
-  ok(/<span class="pk-who">Your Team<\/span><span class="pk-ctx"><span><span>North<\/span> <span>England<\/span><\/span><\/span>/.test(head(0)) && /<span class="pk-who">Opponent<\/span>/.test(head(1)) && /<button class="btn pk-group two" data-act="sheet" aria-haspopup="dialog">Surrey<\/button>/.test(head(0)), 'each side\'s head: who it is, where on the ladder, and its group as a button');
+  ok(/<span class="pk-who">Your Team<\/span><span class="pk-ctx"><span><span class="pk-area">Northern Hemi<span class="hx">sphere<\/span><\/span> <span>England<\/span><\/span><\/span>/.test(head(0)) && /<span class="pk-who">Opponent<\/span>/.test(head(1)) && /<button class="btn pk-group two" data-act="sheet" aria-haspopup="dialog">Surrey<\/button>/.test(head(0)), 'each side\'s head: who it is, where on the ladder, and its group as a button');
   { const F = () => P.filterState(), groupsIn = () => { const out = [], L = v(0).ladder, walk = n => { if (!n.kids) out.push(n.gi); else n.kids.forEach(walk); }; walk(P.filterRoot(L)); return out; };
     const fm = $('m-filter'), fa = {}; fm.setAttribute = (k, val) => { fa[k] = String(val); }; fm.getAttribute = k => (k in fa ? fa[k] : null);   // the stub keeps what the game sets, so the dialog's name is read as it runs
     P.filter(1, '', { dev:'touch' }); const opp = fm.getAttribute('aria-label'); P.filterShut();
     P.filter(0, '', { dev:'touch' });
-    ok(F().open && !$('m-filter').hidden && F().s === 0 && fm.getAttribute('aria-label') === 'Your Team' && opp === 'Opponent' && F().cols.map(c => c.kind === 'team' ? c.head : c.rows[c.sel].name).join(' > ') === 'North > England > Surrey > Surrey', `the group's button opens the Filter for the side, named for it (${fm.getAttribute('aria-label')}; ${opp} for the Opponent's), on its path: North, England, Surrey`);
-    ok(JSON.stringify(groupsIn()) === JSON.stringify(v(0).ladder.map((g, gi) => gi)) && ['North', 'South', 'Mine'].every(h => F().cols[0].rows.some(n => n.name === h)) && F().cols[2].rows.map(n => n.name).join() === ['National,Premiership,Championship,Surrey', ...COUNTY_LISTS.map(l => l.name)].join(), 'every group of the ladder is in it once, under its area and its country (England\'s Local among its leagues: Surrey, then every other county)');
+    ok(F().open && !$('m-filter').hidden && F().s === 0 && fm.getAttribute('aria-label') === 'Your Team' && opp === 'Opponent' && F().cols.map(c => c.kind === 'team' ? c.head : c.rows[c.sel].name).join(' > ') === 'Northern Hemisphere > England > Surrey > Surrey', `the group's button opens the Filter for the side, named for it (${fm.getAttribute('aria-label')}; ${opp} for the Opponent's), on its path: Northern Hemisphere, England, Surrey`);
+    ok(JSON.stringify(groupsIn()) === JSON.stringify(v(0).ladder.map((g, gi) => gi)) && ['Northern Hemisphere', 'Southern Hemisphere', 'My Clubs'].every(h => F().cols[0].rows.some(n => n.name === h)) && F().cols[2].rows.map(n => n.name).join() === ['National,Premiership,Championship,Surrey', ...COUNTY_LISTS.map(l => l.name)].join(), 'every group of the ladder is in it once, under its area and its country (England\'s Local among its leagues: Surrey, then every other county)');
     const fra = F().cols[1].rows.findIndex(n => n.name === 'France'); P.filterSel(1, fra); P.filterSel(2, 1); P.filterTap(3, 0);
     ok($('m-filter').hidden && v(0).group.key === 'fra' && v(0).i === 0 && P.state().sides[0].set, 'a team picked there (France\'s Top 14, its first): the side on it and set, the Filter shut');
     P.step(0, 0); P.state().sides[0].set = false; D.renderTeams(); P.filter(0, '', { dev:'touch' }); P.filterSel(0, 1); P.filterClose();
@@ -1019,7 +1019,7 @@ function settle(pick) {
   X.catPick('women');
   ok($('t-go').textContent === 'Pick Old Alleynians Women' && /<span class="tname">Farnham<\/span>/.test($('t-side0').innerHTML) && P.state().sides[0].set, 'on Women the primary says Old Alleynians Women, Your Team still Farnham, still set');
   X.catPick('men'); to(1, 'aus');
-  ok(P.where(v(1).group) === 'South · Australia' && v(1).group.name === 'Clubs' && $('t-go').textContent === 'Pick Sydney' && P.state().sides[0].set, `the owner's example: the Opponent on Australia's clubs, Your Team still Farnham (${P.where(v(1).group)}, ${$('t-go').textContent})`);
+  ok(P.where(v(1).group) === 'Southern Hemisphere · Australia' && v(1).group.name === 'Clubs' && $('t-go').textContent === 'Pick Sydney' && P.state().sides[0].set, `the owner's example: the Opponent on Australia's clubs, Your Team still Farnham (${P.where(v(1).group)}, ${$('t-go').textContent})`);
   P.step(0, 1);
   ok(!P.state().sides[0].set && $('t-title').textContent === 'Pick Your Team' && $('t-go').textContent === 'Pick ' + v(0).team.name, 'moving Your Team frees it: back to Pick Your Team');
   { const had = X.custom().length;                          // a team made on Create Team is his side as a card would be: Pick Opponent
@@ -1061,7 +1061,7 @@ function settle(pick) {
   { const side = (id, name) => ({ key:'lg-' + id, id, name, kit:'#1b2747', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:3, stamina:3 });
     X.restore({ importLeague:{ teams:[side('XAA', 'Ash'), side('XBB', 'Birch'), side('XCC', 'Cedar'), side('XDD', 'Dene'), side('XEE', 'Elm'), side('XFF', 'Fir')] } });
     s.pick = [null, null]; D.openTeams('quick'); to(0, 'mine.league');
-    ok(v(0).team.name === 'Ash' && v(0).group.teams.filter(t => !t.act).length === 6 && P.where(v(0).group) === 'Mine', `My League in Mine, its six: Ash first (${P.where(v(0).group)})`);
+    ok(v(0).team.name === 'Ash' && v(0).group.teams.filter(t => !t.act).length === 6 && P.where(v(0).group) === 'My Clubs', `My League in My Clubs, its six: Ash first (${P.where(v(0).group)})`);
     ok(/<span class="pk-league dup">My League<\/span>/.test($('t-side0').innerHTML), 'a My League side\'s line says My League (marked as its group\'s name again, the line pickFit drops last of all)');
     X.restore({ importLeague:null }); D.goHome(); }
   // focus: a press on a side's card moves the keyboard's focus and a controller's ring on (Your Team, the Opponent, Kick Off); a side drawn

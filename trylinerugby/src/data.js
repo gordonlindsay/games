@@ -230,7 +230,7 @@ function poolKey(v) {
   return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? localKey(v) : 'int';
 }
 const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
-/* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): North or South by country, then the country's lists. A list
+/* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): the Northern or Southern Hemisphere by country, then the country's lists. A list
    is one country's, bar the United Rugby Championship, whose sides go by URC_HOME; Surrey and Counties are England's Local. Japan plays
    in the North (the owner, 2026-11-11: "Looks Right"); Canada and the USA are the women's. A list's group takes its sides' competition
    (LEAGUE_SHORT) where they all share one, else LIST_GROUP's name, else Clubs. Views only: the lists, their keys and every save are as

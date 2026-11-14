@@ -232,7 +232,7 @@ function poolKey(v) {
   return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? localKey(v) : 'int';
 }
 const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
-/* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): North or South by country, then the country's lists. A list
+/* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): the Northern or Southern Hemisphere by country, then the country's lists. A list
    is one country's, bar the United Rugby Championship, whose sides go by URC_HOME; Surrey and Counties are England's Local. Japan plays
    in the North (the owner, 2026-11-11: "Looks Right"); Canada and the USA are the women's. A list's group takes its sides' competition
    (LEAGUE_SHORT) where they all share one, else LIST_GROUP's name, else Clubs. Views only: the lists, their keys and every save are as
@@ -6053,8 +6053,8 @@ const CAREER_BASE = 35;
 const CAREER_TRAIN = [1, 3, 5, 8];                   // skill points for 0, 1, 2 and 3 stars
 /* Which skill a game trains (Train lists the Skill Games, in their order). A game's own result wins when it names one:
    Pass Around the Circle trains Stamina as the Runner and Handling as the Passer. The contact games (PRACTICE_DRILLS' contact)
-   are hidden for the youngest (practiceBarred), so the Kids level and Minis have no game that trains Power: their Power comes
-   from match tackles and the dilemmas (Tackle Drills, Gym Session). */
+   are hidden for the youngest (practiceBarred), so the Kids level, Minis and a Mini have no game that trains Power: their Power comes
+   from match tackles and the dilemmas (Tackle Drills, Gym Session). A Junior trains it at Tackling, Driving being an Adult's only. */
 const CAREER_DRILL_SKILL = { tag:'pace', egg:'handling', pass:'handling', circle:'handling', tackle:'power', scrum:'power', back:'handling', cones:'pace', defend:'pace', kick:'kicking' };
 const CAREER_DRILL_NAME = { tag:'Tag Chase', egg:'Bouncy Egg', pass:'Create a Gap', circle:'Pass Around the Circle', tackle:'Tackling', scrum:'Driving', back:'Ball Back', cones:'Cones', defend:'Defend a Breakaway', kick:'Kicking' };   // only if a drill has no name of its own
 /* A match's deeds by your player: each try a point of Pace and one of Handling, each tackle a point of Power, each goal
@@ -6312,7 +6312,7 @@ function careerRepair(cr) {
 function careerEnd() { if (practice) return; career = null; careerLast = null; save(); }   // Start New Career, or Start Fresh
 
 /* ---------- training ---------- */
-function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest (practiceBarred: the Kids level, or Minis)
+function careerDrills(cr) {                          // the games that exist right now, in the Skill Games' order; no contact game for the youngest and no Driving for a Junior (practiceBarred)
   return PRACTICE_DRILLS.filter(d => d.id in CAREER_DRILL_SKILL && !practiceBarred(d.id))
     .map(d => ({ id:d.id, name:d.name || CAREER_DRILL_NAME[d.id], contact:!!d.contact, skills:d.id === 'circle' ? ['stamina', 'handling'] : [CAREER_DRILL_SKILL[d.id]] }));
 }
@@ -6817,8 +6817,8 @@ function traitMarks(r) {
      headless match (only a match you play reaches finishMatch with M.arcade). Two Player counts Player 1's side (side 0).
    - Bronze, Silver and Gold are a feat done 1, 3 and 10 times (LOCKER_TIERS). Star Pupil counts the Skill Games, each
      once, at three stars: Bronze and Silver are any 1 and any 3 of them, and its Gold is every game the player can see
-     (lockerPupilGames: all ten, or the seven a Kids level or Minis player sees, since practiceBarred hides the three contact
-     games from them). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
+     (lockerPupilGames: all ten, the nine a Junior sees, or the seven the youngest see, since practiceBarred hides Driving from
+     a Junior and the three contact games from the youngest). A Gold once won is kept (pupil), so going back to all ten never takes it away, and so is a Gold won before
      PR #14, on the live game's eight drills (LOCKER_PUPIL_MAIN). The events (lockerEvent)
      count once a call, and once a match for one medal: 'champ' (Champions; the Championship's own league win calls it here),
      'euro', 'world', 'tour' and 'triple' (Silverware), 'callup' (Call-Up). 'transfer' has no medal yet and counts nothing.
@@ -6937,7 +6937,7 @@ const lockerFresh = () => ({ n:{}, drills:[], ball:LOCKER_BALLS[0].id, boots:LOC
 let locker = lockerFresh();
 let lockerDirty = false;                                     // a drill's three stars, waiting to be saved once the drill is over
 const lockerFeat = id => LOCKER_FEATS.find(f => f.id === id);
-/* Star Pupil. Its games are the ones this player can see now: all ten, or seven at the Kids level or with Minis picked (practiceBarred,
+/* Star Pupil. Its games are the ones this player can see now: all ten, nine for a Junior, or seven for the youngest (practiceBarred,
    src/practice.js, the same rule the Skill Games, Next Game and the career's Train keep), never more than ten. Bronze and Silver
    are any 1 and any 3 games at three stars; Gold is three stars in every one of them, and is kept once won (locker.pupil), so a Gold won
    on the seven stays when the player moves up to all ten. Its count is the games starred, and on the way to Gold the games starred of
@@ -10981,6 +10981,7 @@ const navLog = [];                                         // the tools read who
 const logNav = (fn, seat) => { navLog.push([fn, seat, navOwner(seat)]); if (navLog.length > 40) navLog.shift(); };
 function navLayer() {                                      // the top layer: the pause card over anything (it can sit over the penalty card), then an open card, then the visible screen
   const pg = $('m-gate'); if (pg && !pg.hidden) return pg;   // the grown-up check (kids.js) sits over everything, another card included
+  const mn = $('m-minis'); if (mn && !mn.hidden) return mn;   // then Leave Minis? (kids.js), over any card it was asked from
   const pz = $('m-pause'); if (pz && !pz.hidden) return pz;
   for (const m of document.querySelectorAll('.modal')) if (!m.hidden) return m;
   for (const s of document.querySelectorAll('.screen')) if (!s.hidden) return s;
@@ -11070,6 +11071,15 @@ const deskQuery = (() => { try { return matchMedia('(hover: hover) and (pointer:
 function setDesk() { const b = document.body; if (b) b.classList.toggle('desk', PADS.size > 0 || !!(deskQuery && deskQuery.matches)); }   // a computer, or a controller connected right now: a phone that had a pad goes back to its own layout when it is unplugged
 const isDesk = () => !!(document.body && document.body.classList.contains('desk'));
 if (deskQuery) { if (deskQuery.addEventListener) deskQuery.addEventListener('change', setDesk); else if (deskQuery.addListener) deskQuery.addListener(setDesk); }
+/* A phone's or a tablet's own keyboard never comes up by itself, only for a tap on a text field (the owner, 2026-11-14, on his iPhone:
+   "Take out the keyboard when selecting teams unless I press keyboard as it smothers the screen"). lastPress is the last press anywhere:
+   a pointerdown's own pointerType ('mouse', 'touch' or 'pen'), or 'key' for a key pressed outside a text field (a phone's own keyboard
+   only ever types into one). A click's pointerType is never asked: iOS gives a finger's tap a click whose pointerType is "mouse", or none. */
+let lastPress = '';
+document.addEventListener('pointerdown', e => { lastPress = (e && e.pointerType) || ''; }, true);
+document.addEventListener('keydown', e => { const t = e && e.target; if (!(t && (/^(INPUT|TEXTAREA)$/.test(t.tagName || '') || t.isContentEditable))) lastPress = 'key'; }, true);
+const touchFirst = () => { try { return typeof matchMedia === 'function' && !!(matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches); } catch (e) { return false; } };   // the primary pointer a finger, or one that cannot hover: a phone or a tablet (an iPad with a trackpad too), never a computer
+const fieldMayFocus = () => lastPress === 'key' || (!touchFirst() && lastPress !== 'touch' && lastPress !== 'pen');   // a text field may take the focus by itself: after a key, or on a computer whose last press was not a finger's or a pen's
 
 /* =========================================================
    UI
@@ -11728,7 +11738,7 @@ function renderHome() {
   champHome();
   homeContinue();
   renderCareerHome();
-  practiceGroups();                                         // Skill Games: the contact games hidden for the youngest, the grown-ups' panel shut (practice.js)
+  practiceGroups();                                         // Skill Games: the contact games hidden for the youngest and Driving for a Junior, the grown-ups' panel shut (practice.js)
   lockerHome();                                             // a dot on Locker while a new medal waits (src/ui-locker.js)
   if (typeof importHome === 'function') importHome();      // Add Your Team in My Team's box, where the team screen's Add Your Team card would show (src/import.js)
   homeStepDraw();
@@ -11885,7 +11895,7 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
     if (key === 'diff' && i === 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
-    if (key === 'diff' && kidsLevel() && i !== 0) { parentGate(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // only a grown-up takes the game off the Kids level; a cancelled check leaves it as it was
+    if (key === 'diff' && kidsLevel() && i !== 0 && minisOn()) { minisAsk(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // a Mini taking the game off the Kids level is asked Leave Minis? first, and Keep Minis leaves it as it was; anyone else switches at once, with no grown-up check (the owner, 2026-11-14: kids.js)
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'cam') { settings.camPick = true; if (M && M.cut) $('pz-cam-note').hidden = false; if (!(M && M.paused) && !$('s-home').hidden) BV.peekUntil = performance.now() + BV_DEMO_PEEK; }   // on the home, the demo behind it shows the height just picked for a moment (PR #14); the pause card's row changes the match itself   // a real choice, so a Top chosen here survives a reload (cleanSettings); a close-up has its own camera, so the pause card says so
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
@@ -12190,11 +12200,12 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
    team: its shirt with its overall, its name and stars, five bars, the league it plays in. Left and Right change the team within its group;
    Up and Down step through every group in order, ONE LADDER (his answer, the same day: "like EA FC"), the hemisphere and the country above
    it (a swipe down a card for the next group: the owner's "Next Group Down"); a shoulder button, Page Up or Page Down, or a long press on
-   Previous or Next jumps a whole country. The top of the ladder is North | South | Mine | Favourites | Recent; Men | Women | Minis stays the
-   top switch. Each wraps. The search icon and each side's group button open the Filter: the ladder as columns, and a search (below).
+   Previous or Next jumps a whole country. The top of the ladder is Northern Hemisphere | Southern Hemisphere | My Clubs | Favourites |
+   Recent (PICK_HEMI, below); Men | Women | Minis stays the top switch. Each wraps. The search icon and each side's group button open the
+   Filter: the ladder as columns, and a search (below).
    The ladder (pickLadder) is a view of the lists, never new data: TEAM_LISTS cut by country (LIST_HOME, URC_HOME in src/data.js) and by
    league where a list holds two (South Africa's URC and Currie Cup), each group named for its competition, the nations in the category's
-   own order with their Legends, then Mine (Made Teams with Create Team, My League with Add Your Team), the teams starred and each side's
+   own order with their Legends, then My Clubs (Made Teams with Create Team, My League with Add Your Team), the teams starred and each side's
    last three picks. A side picked from a group plays as its list always has: a championship from Dublin is the URC's.
    A side is set (Pick Farnham, a tap on its card, a controller's A) and Kick Off starts the match once both are; moving a side sets it free
    again. Pick Opponent never shows your own side, and opens on its league's rivals (Wimbledon for Farnham) until the opponent is moved.
@@ -12202,8 +12213,27 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
    so the screen reopens where each side was. Nothing here draws a random number (tools/importer.mjs counts them). */
 let teamList = [];                                         // the active side's group: its teams, for the tools
 const PICK = { ms:200, swipe:36, ratio:1.4, hold:500 };      // one quick move (opacity and transform, none with reduced motion); a swipe's distance and how much straighter than across it must be; a long press
-const PICK_HEMI = { north:'North', south:'South', mine:'Mine', fav:'Favourites', recent:'Recent' };
-const PICK_MAKE = { act:'create', name:'Create Team' }, PICK_ADD = { act:'import', name:'Add Your Team' };   // Mine's two ways in, an entry each, gated as ever (storeGate)
+/* The areas, the top of the ladder, by their keys (a group's hemi: 'north', 'south', 'mine', 'fav', 'recent'), which is all a save holds (a
+   group's key, never its area's name). Their names (the owner, 2026-11-14: "Change Northern hemisphere / Southern hemisphere / My clubs.
+   Shorten to 'hemi' if needed for mobile UI"): Northern Hemisphere, Southern Hemisphere, My Clubs, then Favourites and Recent as they were.
+   The short form, Northern Hemi and Southern Hemi (PICK_HEMI_SHORT), is the full name's start, so it is drawn as the full name with its end
+   in a span (pickHemiHtml) that the CSS leaves out where the full name does not fit (styles.css, .hx), decided per place and measured in
+   Chromium at 844x390, 667x375, 844x340, 667x320 and 568x320 (tools/picker.mjs):
+   - a card's context line over its group button: Northern Hemi where two sides share the screen (the full name is cut at 844x390 on
+     England's Championship, where the line has 118px), the full name where a card has the screen to itself (329px and up, one line at
+     every size). The area leads the line only where the whole line then fits on one line; where it would not (a long county's two-line
+     button beside it, or 568x320), it is left off that card's line (pickFit, .off), so the line reads England and never wraps for the
+     area's sake, both cards' heads level. With LOCAL the line has no Local (the group's button names the county): Northern Hemi · England
+     on the opening screen at every size but 568x320. It is still read out: drawn at no size, not removed;
+   - the Filter's Area column: the full name where the column holds Hemisphere on a line (two lines in the 44px row, as the League
+     column's United Rugby Championship: 844 wide), Northern Hemi where it does not (667 and 568 wide); no form is one line there;
+   - a search match's path (Northern Hemisphere · France · Top 14): the full name at every size, one line with room to spare.
+   A screen reader hears the full name everywhere: the Filter's rows are labelled with it, and on a card the end (.hx) and an area left off
+   are drawn at no size rather than removed. Its text, everywhere (pickWhere, flPath, a row's name), is the full name. */
+const PICK_HEMI = { north:'Northern Hemisphere', south:'Southern Hemisphere', mine:'My Clubs', fav:'Favourites', recent:'Recent' };
+const PICK_HEMI_SHORT = { north:'Northern Hemi', south:'Southern Hemi' };
+const pickHemiHtml = h => { const n = PICK_HEMI[h] || '', s = PICK_HEMI_SHORT[h]; return s && n.startsWith(s) && n.length > s.length ? `${esc(s)}<span class="hx">${esc(n.slice(s.length))}</span>` : esc(n); };
+const PICK_MAKE = { act:'create', name:'Create Team' }, PICK_ADD = { act:'import', name:'Add Your Team' };   // My Clubs' two ways in, an entry each, gated as ever (storeGate)
 const pickKey = t => (!t ? '' : t.act ? '+' + t.act : keyOf(t));
 const motionOn = () => { try { return !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 const natName = id => (NATIONS.find(n => n.id === id) || { name:String(id) }).name;
@@ -12434,8 +12464,8 @@ function pickGroupStep(s, d, how) {                        // Up and Down: the n
   const n = v.ladder.length;
   if (n > 1 && !v.group.fixed) pickTo(s, (v.gi + d + n) % n, 0, how || (d > 0 ? 'down' : 'up'));
 }
-/* A whole country: the first group of the next one (or of this one's start, going back, then the one before). Mine, Favourites and Recent
-   each count as one. */
+/* A whole country: the first group of the next one (or of this one's start, going back, then the one before). My Clubs, Favourites and
+   Recent each count as one. */
 const pickPlace = g => g.hemi + '.' + (g.home || '');
 function pickCountry(s, d) {
   const v = pickView[s]; if (!v || v.ladder.length < 2 || v.group.fixed) return;
@@ -12538,7 +12568,7 @@ function pickWho(s) {                                      // the side's own nam
   if (pickMode === 'career') return 'Your Club';
   return 'Your Team';
 }
-function pickWhere(g) {                                    // North · England, North · England · Local (North · England with LOCAL on), Mine; a competition's tier
+function pickWhere(g) {                                    // Northern Hemisphere · England, My Clubs (Northern Hemisphere · England · Local with LOCAL off); a competition's tier
   if (g.ctx) return g.ctx;
   if (g.home) return [PICK_HEMI[g.hemi], natName(g.home), ...(g.local && !LOCAL.on ? ['Local'] : [])].join(' · ');   // LOCAL: the group button names the county
   return g.hemi === 'mine' ? PICK_HEMI.mine : '';
@@ -12568,7 +12598,7 @@ function pickPanel(s) {
       + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k); return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`; }).join('')}</span>${edit}`;
   }
   const one = v.group.teams.length > 1 ? '' : ' disabled';
-  const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map(w => `<span>${esc(w)}</span>`).join(' ')}</span></span>` : '';   // North · England · Local: it breaks between parts, never after a dot
+  const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot
   return `<div class="pk-head"><p class="pk-where"><span class="pk-who">${pickWho(s)}</span>${ctx}</p>${group}${fav}</div>`
     + `<div class="pk-card${st.set ? ' pk-set' : ''}${edit ? ' made' : ''}">${card}</div>`
     + `<div class="pk-step"><button class="btn" data-act="prev"${one}>Previous</button>${count}<button class="btn" data-act="next"${one}>Next</button></div>`;   // Previous and Next in equal halves, the count between
@@ -12678,6 +12708,12 @@ function pickFit() {
   if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);   // the order on screen is the order for Tab
   go.style.fontSize = '';
   for (let px = parseFloat(getComputedStyle(go).fontSize) || 22; go.scrollWidth > go.clientWidth + 0.5 && px > 14; ) { px -= 1; go.style.fontSize = px + 'px'; }   // Pick Wolverhampton on one line
+  for (const a of scr.querySelectorAll('.pk-ctx .pk-area')) {   // the area leads a card's line only where the whole line fits on one line (PICK_HEMI); else it is left off (.off), its country saying where
+    a.classList.remove('off');
+    const box = a.parentNode, parts = [...box.children]; if (!box.getClientRects().length) continue;
+    const r = box.getBoundingClientRect(), top = parts[0].getBoundingClientRect().top;
+    a.classList.toggle('off', parts.some(p => { const q = p.getBoundingClientRect(); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }));
+  }
   const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
   delete scr.dataset.dup;
   for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); pickTraits(); if (!over() && !small()) break; }
@@ -12696,10 +12732,11 @@ function pickResize() {
    The owner, 2026-11-11: "set up a search bar for club selection and show the hierarchy starting at the top", then "Filter pops up with
    nested team list and search. Have a search icon." A modal over the screen for one side, opened by the search icon in the top bar (the
    side being set), by a side's group button (that side) or by a letter or a digit typed on the screen (one player). Along its top a Search
-   field and Close; under them the side's own ladder as columns: Area (North, South, Mine, Favourites, Recent, each with a count), Country,
-   League and the group's Teams. It is built from pickView[s].ladder, pickLadderOf's, so the Filter obeys every rule the card does (Pick
-   Opponent's lock, Career's clubs, storeFirst, Create Team under MAX_CUSTOM). Mine has no country: its League column is Made Teams and My
-   League. Favourites and Recent go straight to their Teams; Championship (its competition and Made Teams) is a League column and Teams.
+   field and Close; under them the side's own ladder as columns: Area (Northern Hemisphere, Southern Hemisphere, My Clubs, Favourites,
+   Recent, each with a count; Northern Hemi and Southern Hemi where the column is narrow: PICK_HEMI), Country, League and the group's
+   Teams. It is built from pickView[s].ladder, pickLadderOf's, so the Filter obeys every rule the card does (Pick Opponent's lock, Career's
+   clubs, storeFirst, Create Team under MAX_CUSTOM). My Clubs has no country: its League column is Made Teams and My League. Favourites
+   and Recent go straight to their Teams; Championship (its competition and Made Teams) is a League column and Teams.
    The side's own path is marked as it opens, each column scrolled to its mark; a row of Area, Country or League takes its column's place
    and fills the columns after it, each on its first; a team is picked for the side as a tap on its card picks it (pickSet, every gate
    included), and the focus moves on as it does from the card. Typing swaps the columns for one list of matches. While it is open
@@ -12720,7 +12757,7 @@ function filterRoot(L) {
     let a = areas.find(x => x.hemi === g.hemi);
     if (!a) areas.push(a = flSaved(g) ? { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi], gi } : { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi] || g.name, kids:[] });
     if (!a.kids) return;
-    if (!g.home) { a.kids.push(league(gi)); return; }        // Mine: Made Teams, My League
+    if (!g.home) { a.kids.push(league(gi)); return; }        // My Clubs: Made Teams, My League
     let c = a.kids.find(x => x.home === g.home);
     if (!c) a.kids.push(c = { kind:'country', home:g.home, name:natName(g.home), kids:[] });
     c.kids.push(league(gi));
@@ -12752,7 +12789,8 @@ function filterCols() {
 const flCount = (L, n) => (n.kids ? n.kids.length : L[n.gi].teams.length);
 function flRowHtml(L, c, n, i, on) {
   const k = flCount(L, n), w = FL_NOUN[n.kids ? n.kids[0].kind : 'team'][k === 1 ? 0 : 1];
-  return `<button class="fl-r" data-col="${c}" data-i="${i}"${on ? ' aria-current="true"' : ''} tabindex="${on ? 0 : -1}" aria-label="${esc(n.name)}, ${k} ${w}"><b>${esc(n.name)}</b><span class="fl-n" aria-hidden="true">${k}</span></button>`;
+  const nm = n.kind === 'area' && n.name === PICK_HEMI[n.hemi] ? pickHemiHtml(n.hemi) : esc(n.name);   // an area: Northern Hemi where the column is narrow (styles.css); its label, the full name
+  return `<button class="fl-r" data-col="${c}" data-i="${i}"${on ? ' aria-current="true"' : ''} tabindex="${on ? 0 : -1}" aria-label="${esc(n.name)}, ${k} ${w}"><b>${nm}</b><span class="fl-n" aria-hidden="true">${k}</span></button>`;
 }
 function flTeamHtml(s, t, attrs, path) {                    // a team's row: its shirt, its name (and where it lives, in the matches), My Team where the card says it, its stars
   if (t.act) return `<button class="fl-r fl-t" ${attrs} data-make="${t.act}"><span class="fl-plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="fl-nm"><b>${esc(t.name)}</b></span></button>`;
@@ -12812,7 +12850,7 @@ function pickFilterDraw(from = 0) {
    first, then those with a word that does, then those that hold it, then the clubs of a country or group whose name matches in the same
    three steps; ladder order within each. Each team once, under its own group (Favourites and Recent only repeat it). */
 const flFold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-function flPath(g) {                                         // North · England · Premiership; Mine · Made Teams; Favourites; a competition's tier and name
+function flPath(g) {                                         // Northern Hemisphere · England · Premiership; My Clubs · Made Teams; Favourites; a competition's tier and name
   const parts = g.hemi ? [PICK_HEMI[g.hemi], g.home ? natName(g.home) : null, flSaved(g) ? null : g.name] : [g.ctx, g.name];
   return parts.filter((p, i, a) => p && p !== a[i - 1]).join(' · ');
 }
@@ -12836,9 +12874,9 @@ function filterSearch(L, q) {
   return hits.sort((a, b) => a.r - b.r || a.n - b.n);
 }
 /* Open: for side s, with q typed (a letter on the screen) or none. how.dev is how it was asked for: 'pad' (a controller's A: the ring on
-   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger: the field never
-   takes the focus, so the phone's keyboard comes up only on a tap there). how.from: 'find' (the icon) or 'sheet' (the group's button),
-   where Close puts the focus back. */
+   the side's mark), 'kb' (a key: the focus in the field), 'desk' (a computer's mouse: the field too), 'touch' (a finger, and anything
+   else on a phone or a tablet: the field never takes the focus, so the phone's keyboard comes up only on a tap there; pickFilterHow).
+   how.from: 'find' (the icon) or 'sheet' (the group's button), where Close puts the focus back. */
 function pickFilter(s, q, how) {
   const v = pickView[s], m = $('m-filter'), o = how || {};
   if ($('s-teams').hidden || !pickFilterable(v)) return false;
@@ -12874,8 +12912,14 @@ function flTapEat(e) {
   if (e.stopPropagation) e.stopPropagation();
 }
 for (const t of ['pointerdown', 'mousedown', 'touchend', 'mouseup', 'click']) document.addEventListener(t, flTapEat, { capture:true, passive:false });
-let pickPointer = '';                                        // the last pointer down on the team screen: 'mouse' (a computer), 'touch' or 'pen'
-const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad' : e && e.detail === 0 && document.activeElement === el ? 'kb' : ((e && e.pointerType) || pickPointer) === 'mouse' ? 'desk' : 'touch');   // how the Filter was asked for (pickFilter)
+/* How the Filter was asked for (pickFilter): 'pad', a controller's A (the ring on the button); 'kb', Enter or Space on the focused button
+   (a click with no detail), on a phone or a tablet only where a key was the last press; 'desk', a computer's mouse (the last press a mouse's,
+   on a computer: touchFirst); else 'touch', a finger. The last pointerdown decides (lastPress, src/input-devices.js), never the click's own
+   pointerType: iOS gives a finger's tap a click whose pointerType is "mouse", which read as a computer's, put the focus in the field and
+   brought the phone's keyboard up over the screen (the owner on 1.6, 2026-11-14). */
+const pickFilterHow = (e, el) => (focusEl && focusEl === el ? 'pad'
+  : e && e.detail === 0 && document.activeElement === el && (lastPress === 'key' || !touchFirst()) ? 'kb'
+  : (lastPress || (e && e.pointerType) || '') === 'mouse' && !touchFirst() ? 'desk' : 'touch');
 const flHas = el => !!el && typeof el.closest === 'function' && !!el.closest('#m-filter');
 function pickFilterShut() {                                  // the Filter put away, nothing else: also whenever another screen is shown (showScreen)
   const m = $('m-filter');
@@ -13179,7 +13223,7 @@ function pickHint() {
   for (const w of chip.children) { if (w.textContent === h.text) w.removeAttribute('aria-hidden'); else w.setAttribute('aria-hidden', 'true'); }
   return h;
 }
-$('s-teams').addEventListener('pointerdown', e => { pickPointer = e.pointerType || ''; if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
+$('s-teams').addEventListener('pointerdown', e => { if (!two.on && (e.pointerType === 'touch' || e.pointerType === 'pen')) setDev('touch'); }, true);   // one player: a finger on the screen is the last device, as one in play is (a mouse leaves it be; 2 Players as it was)
 /* Men | Women | Minis: the sides follow to the category's own (England to England Women); one it has not got (Canada on Men) is the
    next one there, and no longer set. */
 $('t-cat').innerHTML = TEAM_CATS.map(c => `<button data-cat="${c.id}">${esc(c.name)}</button>`).join('');
@@ -13775,7 +13819,7 @@ function cupEntryHtml(e, i, tag) {
      links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
      User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
      browser on another site could not read its pages anyway.
-   - Add Your Team: the team screen's entry (Mine's My League) and the home's button, their card (#m-import), and the My League group.
+   - Add Your Team: the team screen's entry (My Clubs' My League) and the home's button, their card (#m-import), and the My League group.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -14580,7 +14624,7 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-/* Add Your Team on the team screen (an entry of Mine's My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
+/* Add Your Team on the team screen (an entry of My Clubs' My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
    team, and kept with four made while a league is saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is
    on sale (storeOffered). */
 const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
@@ -14599,8 +14643,8 @@ $('b-import').addEventListener('click', () => { ac(); importOpen(); });
    check is up, so the two never stack. from: 'home' (the home's button) or 'teams' (the team screen's card), where it closes to. */
 let importUi = { step:'link', data:null, draft:null, pick:false, err:'', armed:false, token:0, from:'teams', club:null, sides:0 };
 const importCanPaste = () => typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
-const importTouch = () => typeof matchMedia === 'function' && !!matchMedia('(pointer: coarse)').matches;
-/* The control a step starts on: the link field (on a touch screen Import, so no keyboard springs up over the card),
+const importTouch = () => !fieldMayFocus();                 // a phone or a tablet, or a finger last on a computer's touch screen, unless a key was the last press (src/input-devices.js)
+/* The control a step starts on: the link field (where importTouch, Import, so no keyboard springs up over the card),
    the primary in the preview, Back while it imports and on the web. button: a button only, for a controller's ring. */
 function importFocusEl(button) {
   const s = importUi.step;
@@ -14740,8 +14784,9 @@ $('im-paste').addEventListener('click', async () => {
   try { const t = await navigator.clipboard.readText(); if (t) { $('im-url').value = t.trim().slice(0, 2048); importUi.err = ''; importRender(); } } catch (e) { /* refused or empty */ }
 });
 /* =========================================================
-   Kids: a level below Easy for 6 to 10 year olds, and the
-   grown-up check in front of anything that leaves the game.
+   Kids: a level below Easy for 6 to 10 year olds, the grown-up
+   check in front of anything that costs money or leaves the
+   game, and Leave Minis? for a Mini leaving Minis.
    ========================================================= */
 /* How the level is stored: settings.kids, a flag layered on Easy (settings.diff stays 0). Every lever table in the engine (DIFF,
    KICK's fill and band, SPRINT, CONTACT.contact, the duel windows, COVER, MOVES.dummy.bite) is an array by level 0..2, and the save
@@ -14998,6 +15043,58 @@ window.addEventListener('keydown', e => {                  // while the check is
   else return;
   if (e.preventDefault) e.preventDefault();
 }, true);
+
+/* ---------- Leave Minis? ----------
+   The owner, 2026-11-14: "remove the calculation for anybody - the game isn't violent so i am ok with switching back", and the same
+   day: "for minis flag that it's different and that they should stay as is unless they're sure". So the grown-up check above stands in
+   front of money and the ways out of the game alone (a purchase, Restore Purchases, Get the App, Privacy and Support, the Supporters'
+   Wall, Add Your Team, installing the web version), and switching the game itself happens at once for everyone: the Difficulty row off
+   Kids, an age group (Settings and My Profile), and Grown-Ups' Move Up to Easy and Reset Kids Level.
+   A Mini (profile.age 'mini') is asked first, by minisAsk(onGo, onKeep), when leaving Mini for another age group or taking the game off
+   the Kids level: Leave Minis?, one line on what Minis is, and Change | Keep Minis in equal halves. Change switches at once (onGo);
+   Keep Minis leaves everything as it was (onKeep). Nobody else is asked anything. Touch, the keyboard (Tab inside the card, the arrows
+   between the two, Escape is Keep Minis: the rest of the page is inert while it is open) and a controller (the card is the nav layer,
+   Back is Keep Minis) all reach it, and the focus starts on Keep Minis. A double tap that opened it never goes on to Change
+   (CONFIRM.gap, ui-menus.js). */
+const minisOn = () => !!profile && profile.age === 'mini';
+let minisCard = null;                                      // the open card: { onGo, onKeep, back, ring, inert }
+function minisAsk(onGo, onKeep) {
+  if (minisCard) minisClose(false);                        // one at a time: an older one is kept as it was
+  const pad = lastDev === 'pad', act = document.activeElement || null, ring = pad && focusEl ? focusEl : null;
+  minisCard = { onGo, onKeep, back:ring || act, ring:!!ring, inert:[] };   // where it goes back to, as the grown-up check's
+  const m = $('m-minis'), body = document.body;
+  if (pad && act && act.blur) act.blur();                  // a controller works by the chalk ring: one outline
+  if (body && body.children) for (const el of body.children) if (el !== m && el.id !== 'rotate' && !el.inert) { el.inert = true; minisCard.inert.push(el); }   // Turn Your Phone Sideways stays live, as for the grown-up check
+  m.hidden = false;
+  confirmArm();                                            // the tap that opened it, read twice, only opens it
+  if (pad) setFocus($('mn-keep'));
+  else { setFocus(null); const k = $('mn-keep'); if (k && k.focus) k.focus(); }
+}
+function minisClose(go) {
+  const g = minisCard; if (!g) return;
+  minisCard = null;
+  $('m-minis').hidden = true; setFocus(null);
+  for (const el of g.inert) el.inert = false;
+  const shown = !!g.back && !(g.back.closest && g.back.closest('[hidden]'));
+  if (g.ring && shown) setFocus(g.back);
+  else if (shown && g.back.focus) g.back.focus();
+  const fn = go ? g.onGo : g.onKeep;
+  if (typeof fn === 'function') fn();
+  if (g.ring && focusEl === g.back && typeof navLayer === 'function') { const l = navLayer(); if (l && l.contains && !l.contains(g.back)) setFocus(null); }   // what Change led to opened a card or a screen: the ring is that one's to place
+}
+$('mn-go').addEventListener('click', () => { if (minisCard && !confirmSoon()) minisClose(true); });
+$('mn-keep').addEventListener('click', () => minisClose(false));
+$('m-minis').hidden = true;                                // closed until asked for (the test harness's stand-in elements start open)
+DEFAULT_FOCUS['m-minis'] = () => $('mn-keep');
+window.addEventListener('keydown', e => {                  // while the card is open no key reaches the game: Escape is Keep Minis, the arrows go between the two, and Tab, Enter and Space keep the browser's own meaning on its buttons
+  if (!minisCard) return;
+  if (e.stopPropagation) e.stopPropagation();
+  const k = e.key, to = { ArrowLeft:'mn-go', ArrowUp:'mn-go', ArrowRight:'mn-keep', ArrowDown:'mn-keep' }[k];
+  if (k === 'Escape') minisClose(false);
+  else if (to) { const b = $(to); if (b && b.focus) b.focus(); if (focusEl) setFocus(b); }
+  else return;
+  if (e.preventDefault) e.preventDefault();
+}, true);
 /* =========================================================
    Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge in My Team's box,
    and the links that leave the game. The rules are in src/store.js.
@@ -15005,7 +15102,7 @@ window.addEventListener('keydown', e => {                  // while the check is
      side the Locker has unlocked) keeps its place and its label, with a small
      lock (.locked), and opens the Unlock card instead. A championship or career under way keeps its note: it is saved, only locked.
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
-     first. The card hides while the check is up, as the import card does, so the two never stack.
+     first; Reset Kids Level and Move Up to Easy, switches of the game's own, do not (the owner, 2026-11-14). The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
    - A Super Fan of My Team's club gets My Team's box in the club's colours (storeThemeHome) with the Super Fan badge, its shield (or its
      crest where the club has agreed and given one with its written permission) and the trophy's rosette. Without it the box is plain.
@@ -15298,7 +15395,7 @@ function storeWallStep(step) {
   storeWallCheck();
   setFocus(null);
   if (lastDev === 'pad') return;            // a controller starts on DEFAULT_FOCUS with its first press
-  const el = step === 'age' ? $('wl-yes') : typeof importTouch === 'function' && importTouch() ? null : $('wl-input');   // on a touch screen no keyboard springs up over the card until the field is tapped
+  const el = step === 'age' ? $('wl-yes') : fieldMayFocus() ? $('wl-input') : null;   // on a phone or a tablet no keyboard springs up over the card until the field is tapped (src/input-devices.js)
   if (el && el.focus) el.focus();
 }
 function storeWallCheck() { $('wl-go').disabled = !storeWallMail(storeWallUi && storeWallUi.club, $('wl-input').value); }   // Continue once a name is there
@@ -15329,11 +15426,22 @@ $('b-grown').addEventListener('click', () => storeOpen({ mode:'grown' }));
 $('st-back').addEventListener('click', storeClose);
 $('st-restore').addEventListener('click', storeRestoreAsk);
 $('st-privacy').addEventListener('click', () => storeLeave(STORE_LINKS.privacy));
-/* Reset Kids Level, behind the grown-up check like everything else here: the hidden Kids rating back to 0, saved, and said. */
-function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }); }
+/* Reset Kids Level: the hidden Kids rating back to 0, saved, and said, at once. A switch of the game's own, so no grown-up check (the
+   owner, 2026-11-14: kids.js); the check here stands in front of money and the links out alone. */
+function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }
 $('st-reset').addEventListener('click', storeKidsReset);
-/* Move Up to Easy, behind the grown-up check: the Difficulty row moves from Kids to Easy; the Kids rating is kept for a sibling. */
-function storeKidsEasy() { if (!kidsReady() || storeUi.busy) return; storeAsk(() => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); }); }
+/* Move Up to Easy: the Difficulty row moves from Kids to Easy at once, as the row itself does (no grown-up check: the owner, 2026-11-14,
+   kids.js); the Kids rating is kept for a sibling. A Mini is asked Leave Minis? first, over the card as the check was (the card hides,
+   and comes back either way); Keep Minis moves nothing. */
+function storeKidsEasy() {
+  if (!kidsReady() || storeUi.busy) return;
+  const go = () => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); };
+  if (!minisOn()) { go(); return; }
+  $('m-store').hidden = true;
+  const token = storeUi.token;
+  minisAsk(() => { if (token !== storeUi.token) return; $('m-store').hidden = false; go(); },
+    () => { if (token !== storeUi.token) return; $('m-store').hidden = false; storeCardFocus(); });
+}
 $('st-easy').addEventListener('click', storeKidsEasy);
 $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support));
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
@@ -15436,9 +15544,9 @@ const DRILL_EGG = { throws:12, lives:3, reach:1.15, lo:0.35, hi:2.4, wind:[1.0, 
   first:['bounce', 'flat', 'high'], names:{ bounce:'Bounce Pass', flat:'Flat Pass', high:'High Ball' }, lines:{ bounce:'Catch it on any hop.', flat:'Run to meet it before it lands.', high:'Get under it. Watch the ball in.' },
   named:7, flatTop:1.8, meet:1.5, points:[1, 2], pop:[4.6, 7.0], hopOut:[2.2, 4.7], keep:[0.66, 0.8], turn:[0.45, 1.3], slow:0.72, stop:1.15, roll:3.5, still:0.4, stars:[8, 14, 20], bounce:0.9 };
 /* bounce: after the first three, a throw is a Bounce Pass this often, else a Flat Pass or a High Ball, the surprise. Never three the same in a row caps
-   it: about two in three bounce (0.63 measured over many seeded throws). The gold ring is a help, not the game: the youngest see it on every
-   throw, Easy and Normal on the first three, Hard never; Watch How always. eggRing is the one gate, and draws no random number. */
-const eggRingAll = () => practiceYoung() && settings.diff < 2;   // the Kids level or Minis, and not on Hard: the ring every throw
+   it: about two in three bounce (0.63 measured over many seeded throws). The gold ring is a help, not the game: the Kids level and Minis see it
+   on every throw, Easy and Normal on the first three, Hard never; Watch How always. eggRing is the one gate, and draws no random number. */
+const eggRingAll = () => (kidsLevel() || settings.cat === 'minis') && settings.diff < 2;   // the Kids level or Minis, and not on Hard: the ring every throw. Not practiceYoung: a Mini's age group bars contact games, it does not change this help
 const eggRing = E => !!practice && (!!practice.demo || (settings.diff < 2 && (eggRingAll() || E.n <= DRILL_EGG.first.length)));
 function eggStage(E, stage) { E.stage = stage; E.t = 0; }
 function eggReady(E) {                                     // the ball back in the thrower's hands and the wind-up begins, a little shorter each throw
@@ -16443,22 +16551,49 @@ const drillPass = {
    Everyone wears two tags, one on each hip. The reps take turns. Keep: you carry the ball for the line and a
    tagger stays in front of you, wherever you run, until you are close. Then they go for you, in a straight line: change direction
    as they go and they run past. Keep on the line you were on and they have you, wide or straight. Pull: a carrier runs for your line. Get to a hip, and tap
-   Pull Tag: from the front you can't reach a hip, and a bump is No Contact and the rep is gone. Stars by reps won. */
+   Pull Tag: from the front you can't reach a hip, and a bump is No Contact and the rep is gone. Stars by reps won.
+   The reps get harder as they go (ramp, the owner, 14 Nov 2026: "Tag chase game is a bit too easy"). A rep's level is its share of
+   the climb (rep: the first is the game as it always was, the last the whole climb) times how steep the Difficulty makes it (diff:
+   Easy, Normal, Hard), and each lever named in keep and pull goes that share of the way from the mode's own value to the one there.
+   Keep: the tagger goes later and closer (trigger), so a change of direction has to come sooner after they go; and they lean after you
+   harder (track) and read your drift sooner (read), so going before they do is no way round it. Pull: the carrier runs a touch
+   quicker (pace) and steps away harder as you close (step), and a hip is in reach only closer in (reach). On a ramped rep the carrier
+   starts a set distance off the middle (lane), on the side drawn, and weaves towards the middle first, so either side is the same rep
+   mirrored and the lane drawn decides nothing (the review: the weave set off one way whatever the lane, so a carrier on one side came
+   into you and on the other went away, and one near the middle came straight at you; away from the middle on both sides, a run
+   straight at them with Pull Tag hammered won every Pull). Each is a matter of timing. On Hard's last Keep a change of direction must
+   come by 0.2 s after they go: a reaction that quick, or reading the gap and going as they close to 7 or 8 m, which keeps the tags on
+   every rep at every level (tools/tagchase.mjs). The youngest (the Kids level, or Minis) play every rep at level 0, the game as it
+   was, and so does Watch How; a Mini's age group on another level and side plays that level's ramp, as with Bouncy Egg's ring. Nothing here draws a new random number. */
 const DRILL_TAG = { reps:6, box:[44, 27, 76, 43], cam:[60, 35], zoom:1.3, show:1.1, limit:8, stars:[2, 4, 6],
   keep:{ at:[46, 35], them:[63, 35], line:74, jog:0.25, shadow:0.85, chase:0.6, acc:12, trigger:13, lungeV:0.35, lungeT:1.5, rest:0.5, reach:1.25, grab:0.04, read:0.7, track:2 },
-  pull:{ at:[52, 35], them:[74, 35], lane:4, line:46, pace:0.68, acc:9, weave:1.4, reach:1.9, close:0.45, front:0.7, whiff:0.45, dodge:5, step:2.6 } };
+  pull:{ at:[52, 35], them:[74, 35], lane:4, line:46, pace:0.68, acc:9, weave:1.4, reach:1.9, close:0.45, front:0.7, whiff:0.45, dodge:5, step:2.6 },
+  ramp:{ rep:[0, 0.5, 0.7, 0.8, 0.9, 1], diff:[0.4, 0.9, 1], lane:3,
+    keep:{ trigger:6.5, track:5, read:0.3 },
+    pull:{ pace:0.73, step:3.4, reach:1.6 } } };
 const TAG_WHY = { Pulled:'Change Direction as They Go', Bumped:'Tag Has No Contact. No Bumps.', Past:'Reach a Hip, Then Pull' };
 const tagMode = T => (T.rep % 2 ? 'keep' : 'pull');        // rep 1 keeps, rep 2 pulls, and so on
+/* 0 to 1: how far up the ramp this rep plays. The youngest here are the Kids level and Minis, as for Bouncy Egg's ring (eggRingAll), not
+   practiceYoung: a Mini's age group bars the contact games, and leaves the level a game is played at to the Difficulty row. */
+const tagLevel = rep => (kidsLevel() || settings.cat === 'minis' || (practice && practice.demo) ? 0 : DRILL_TAG.ramp.rep[rep - 1]*DRILL_TAG.ramp.diff[settings.diff]);
+function tagLevers(mode, lv) {                             // a rep's levers: at level 0 the mode's own (the very same object, so the game as it was), else each ramped one that share of the way to its top
+  const base = DRILL_TAG[mode], top = DRILL_TAG.ramp[mode];
+  if (!lv) return base;
+  const Q = { ...base }; for (const k of Object.keys(top)) Q[k] = drillLerp(base[k], top[k], lv);
+  return Q;
+}
 function tagRep(K) {
   const T = practice.tag, me = T.me, them = T.them;
   T.rep++; T.stage = 'play'; T.t = 0; T.grab = 0; T.whiff = 0; T.lunge = null; T.rest = 0; T.dodged = false; T.stepT = 0; T.lost = null; T.lat = 0;
+  T.lv = tagLevel(T.rep); T.Q = tagLevers(tagMode(T), T.lv);   // the rep's level and levers, set as it starts
   if (tagMode(T) === 'keep') {
     const Q = K.keep;
     drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (rnd() - 0.5)*2, -1, 0);
     drillHold(me);
   } else {
-    const Q = K.pull;
-    drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (rnd() - 0.5)*2*Q.lane, -1, 0);
+    const Q = K.pull, u = rnd() - 0.5;
+    drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (T.lv ? (u < 0 ? -1 : 1)*K.ramp.lane : u*2*Q.lane), -1, 0);   // the same draw: at level 0 anywhere in the lane, as it was
+    T.wv = T.lv && u >= 0 ? -1 : 1;                       // the way the weave sets off: on a ramped rep towards the middle, either side alike; at level 0 the one way it always did
     drillHold(them);
   }
   inputOf(0).aPressed = false;
@@ -16469,7 +16604,7 @@ function tagOver(T, won, word, why) {                      // the rep's verdict,
   drillTag(word, T.me.x, T.me.y);
 }
 function tagCanPull(T) {                                   // in reach of a hip: at the carrier's side or behind them, never in front, and not so close you bump
-  const K = DRILL_TAG.pull, me = T.me, c = T.them, dx = me.x - c.x, dy = me.y - c.y, d = hyp(dx, dy), sp = hyp(c.vx, c.vy) || 1;
+  const K = tagMode(T) === 'pull' && T.Q ? T.Q : DRILL_TAG.pull, me = T.me, c = T.them, dx = me.x - c.x, dy = me.y - c.y, d = hyp(dx, dy), sp = hyp(c.vx, c.vy) || 1;
   return d <= K.reach && d >= K.close && (c.vx*dx + c.vy*dy)/(sp*(d || 1)) < K.front;
 }
 function tagEnd(T) { const stars = drillStarsOf(T.won, DRILL_TAG.stars); practiceFinish(stars > 0, T.won + ' of ' + DRILL_TAG.reps, stars); }
@@ -16492,7 +16627,7 @@ const drillChase = {
     drillRun(me, dt, K.box, false);
     const v = maxSpeed(me);
     if (tagMode(T) === 'keep') {
-      const Q = K.keep;
+      const Q = T.Q;                                       // this rep's levers (tagLevers): DRILL_TAG.keep itself for the youngest and on the first rep
       drillHold(me);
       const gap = dist(me, them);
       if (T.lunge) {                                       // they have gone for you, in a straight line to where you were heading: change direction now and they go past
@@ -16513,9 +16648,9 @@ const drillChase = {
       if (T.grab >= Q.grab) { st('tagLost'); T.lost = 'me'; tagOver(T, false, 'Pulled', TAG_WHY.Pulled); return; }
       if (me.x >= Q.line) { tagOver(T, true, 'Kept', ''); return; }
     } else {
-      const Q = K.pull;
+      const Q = T.Q;
       drillHold(them);
-      let vy = Math.sin(T.t*1.7)*Q.weave;                  // down the pitch with a weave, and one step away as you close in
+      let vy = T.wv*Math.sin(T.t*1.7)*Q.weave;             // down the pitch with a weave, and one step away as you close in
       if (!T.dodged && dist(me, them) < Q.dodge && me.x < them.x) { T.dodged = true; T.step = me.y >= them.y ? -1 : 1; T.stepT = 0.5; }
       if (T.stepT > 0) { T.stepT -= dt; vy += T.step*Q.step; }
       steer(them, -v*Q.pace, vy, Q.acc, dt);
@@ -16745,7 +16880,7 @@ function drillStarsHtml(n) { let s = ''; for (let i = 0; i < 3; i++) s += `<i cl
    shows the home screen, then calls onDone({ id, stars, success, skill, role? }) once. It reports the best finished run of the visit, so
    Try Again never costs what was won; a visit with no finished run reports quit: true and 0 stars.
    ========================================================= */
-const PRACTICE_DRILLS = [                                   // tag and handling first; contact marks the games under Contact Games (U9 and Up), which the Kids level and a career's Minis never reach
+const PRACTICE_DRILLS = [                                   // tag and handling first; contact marks the games under Contact Games (U9 and Up), which the youngest never reach (practiceBarred), and adult the one an Adult's only
   { id:'tag', name:'Tag Chase', objective:'Keep Your Tags, Pull Theirs', limit:70 },
   { id:'egg', name:'Bouncy Egg', objective:'Catch the Ball', limit:75 },
   { id:'circle', name:'Pass Around the Circle', objective:'Beat the Ball Home', limit:110, roles:true },
@@ -16754,14 +16889,20 @@ const PRACTICE_DRILLS = [                                   // tag and handling 
   { id:'kick', name:'Kicking', objective:'Five Goal Kicks', cue:'Aim the arrow with your run controls. Hold Kick and let go in the gold band.', limit:150, kids:true },
   { id:'defend', name:'Defend a Breakaway', objective:'Get Across and Stop the Runner', tagObjective:'Get Across and Pull the Tag', tackles:true, cue:'Press Switch, run across and Tackle. Sprint closes the gap.', tagCue:'Press Switch, run across and Pull Tag. Sprint closes the gap.', limit:18 },
   { id:'tackle', name:'Tackling', objective:'Set, Aim, Tackle, Squeeze', limit:90, contact:true },
-  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true },
+  { id:'scrum', name:'Driving', objective:'Win the Drive', limit:60, contact:true, kids:true, adult:true },   // adult: an Adult's only (practiceBarred)
   { id:'back', name:'Ball Back', objective:'Hands, Landing, Ball Back', limit:60, contact:true },
 ];
 const PRACTICE_COACH = 'Learn Real Tackling With a Club Coach. Not One to Try at Home.';
-const practiceYoung = () => kidsLevel() || settings.cat === 'minis';   // the youngest: the Kids level, or Minis picked on the team screen (Men | Women | Minis), in free play as much as on the career's own list
-function practiceBarred(id) {                              // the one rule, for every route in: no contact game for the youngest
+/* The youngest: the Kids level, Minis picked on the team screen (Men | Women | Minis), or the profile's Mini age group whatever the level
+   and the side (src/profile.js), in free play as much as on the career's own list. */
+const practiceYoung = () => kidsLevel() || settings.cat === 'minis' || profile.age === 'mini';
+/* The one rule, for every route in (the owner, 2026-11-14: "Remove the contact mini games for mini players. Same for scrums until adult",
+   the scrums "Driving Game Only"): no contact game for the youngest, and Driving for an Adult only, so a Junior plays Tackling and Ball
+   Back without it. No age group counts as Adult. */
+function practiceBarred(id) {
   const d = PRACTICE_DRILLS.find(x => x.id === id);
-  return !!(d && d.contact && practiceYoung());
+  if (!d || !d.contact) return false;
+  return practiceYoung() || (!!d.adult && (profile.age === 'mini' || profile.age === 'junior'));
 }
 function practiceNextId(id) {                              // Next Game: the next one this player may play
   const n = PRACTICE_DRILLS.length, i = PRACTICE_DRILLS.findIndex(d => d.id === id);
@@ -16769,7 +16910,10 @@ function practiceNextId(id) {                              // Next Game: the nex
   return id;
 }
 function practiceGroups() {                                // the picker as this player sees it, the grown-ups' panel shut
-  $('pr-contact').hidden = practiceYoung();
+  const open = PRACTICE_DRILLS.filter(d => d.contact && !practiceBarred(d.id));
+  for (const d of PRACTICE_DRILLS) if (d.contact) $('pr-' + d.id).hidden = !open.includes(d);   // a barred card is gone, not greyed: a Junior's Driving
+  $('pr-contact').hidden = !open.length;                   // no contact game left (the youngest): no group and no coach line
+  $('pr-contact').classList.toggle('n2', open.length === 2);   // a Junior's two in equal halves of the three's places (styles.css)
   $('pr-games').hidden = false; $('pr-grownups').hidden = true;
 }
 function practiceInstructions(id) {
@@ -17362,7 +17506,7 @@ const DEMO_PILOT = {
 
    First launch only (profileFirst: no save at all, never a save that exists, the demo, the tools or the app's copy of a save put back):
    a short setup before the home, one step a screen, each with Skip and Back (none on the first, which has nothing before it), and Done
-   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, Mine and Favourites,
+   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, My Clubs and Favourites,
    clubs only) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it ends, so a step skipped,
    or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
    Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
@@ -17374,8 +17518,8 @@ const DEMO_PILOT = {
    - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
      Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
      MIXED_THROUGH), otherwise Men. An answer left blank keeps the side as it is (profileCat): a gender alone never moves a side off
-     Minis, an age group alone never moves one between Men and Women. Leaving the Kids level from here asks the grown-up check first,
-     as the Difficulty row does. A row already chosen, pressed again on My Profile, sets nothing again.
+     Minis, an age group alone never moves one between Men and Women. Leaving the Kids level from here asks no grown-up check (2026-11-14);
+     a Mini leaving Mini is asked Leave Minis? first, as on the Difficulty row (minisAsk, kids.js). A row already chosen, pressed again on My Profile, sets nothing again.
    - Club: My Team's club, and My Team's country from the club's where the ladder knows it (an England club, England), else as it was.
    - Gender: Career's New Player starts on Men or Women by it (Not Say follows the category), on the profile's look.
    - The look: build, skin, hair colour and hair style; the body by the gender, or picked on Your Look for Not Say. It stands in My
@@ -17425,8 +17569,8 @@ function profileCat(age, gender, cur) {
    the category picked there (pickCatFixed, src/ui-menus.js). */
 function profileDecides() { return profile.age === 'mini' || (profile.age && profile.gender) ? profileCat(profile.age, profile.gender, settings.cat) : null; }
 const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
-/* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
-   Difficulty row's own rule); a cancelled check sets nothing. */
+/* An age group and a gender given: the level and the category they set, then then(). It switches at once, with no grown-up check (the
+   owner, 2026-11-14: kids.js); only a Mini leaving Mini is asked Leave Minis? first (minisAsk), and Keep Minis sets nothing. */
 function profileSet(age, gender, o) {
   const lvl = o && o.level === false ? null : profileLevel(age), cat = profileCat(age, gender, settings.cat);
   const go = () => {
@@ -17437,7 +17581,7 @@ function profileSet(age, gender, o) {
     save();
     if (o && o.then) o.then(true);
   };
-  if (lvl != null && lvl !== 0 && kidsLevel()) parentGate(go, () => { if (o && o.then) o.then(false); });
+  if (minisOn() && age !== 'mini') minisAsk(go, () => { if (o && o.then) o.then(false); });
   else go();
 }
 /* The club's country, where the ladder knows it: its group's (pickHome), else its list's. null for a team you made, My League's sides and
@@ -17992,8 +18136,8 @@ function careerChips(keys) {
   return keys.map(k => `<span class="cr-chip" style="--k:${CAREER_COL[k] || 'var(--chalk)'}">${label[k] || k}</span>`).join('');
 }
 /* Train: the Skill Games as the home shows them, each its picture and name with the skill it trains: the open games in rows
-   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three. The youngest never
-   see the contact games (careerDrills), so for them there is no group and no coach line. */
+   of four, then Contact Games (U9 and Up) with the coach line (PRACTICE_COACH, src/practice.js) and its three, two for a Junior (no
+   Driving). The youngest never see the contact games (careerDrills), so for them there is no group and no coach line. */
 function renderCareerTrain() {
   const list = careerDrills(career), hard = list.filter(d => d.contact);
   const tiles = ds => `<div class="cr-drills">${ds.map(d => `<button class="btn cr-drill" data-drill="${d.id}"><span class="dc-icon" aria-hidden="true">${drillIconSvg(d.id)}</span><span class="nm">${esc(d.name).replace(/\S*-\S*/g, w => `<span class="nw">${w}</span>`)}</span><span class="cr-chips">${careerChips(d.skills)}</span></button>`).join('')}</div>`;
@@ -18460,7 +18604,7 @@ function nativeBuzz(ms) {
 
 /* ---------- Android's Back ---------- */
 /* The App plugin's backButton (iOS has none). In play it is Escape: Pause, then Resume from the pause card. Otherwise it is the
-   Back of the top card or screen (navBack: the grown-up check's Cancel, Back to Menu, a drill card's choice). On the home
+   Back of the top card or screen (navBack: the grown-up check's Cancel, Leave Minis?'s Keep Minis, Back to Menu, a drill card's choice). On the home
    menu the app goes to the background, as the home button would, rather than closing. */
 function nativeBack() {
   const gate = $('m-gate'), pz = $('m-pause');
@@ -18830,8 +18974,8 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   careerLife:{ LIFE:CAREER_LIFE, KEYS:CAREER_LIFE_KEYS, COL:CAREER_LIFE_COL, DILEMMAS:CAREER_DILEMMAS, PLANS:CAREER_DILEMMA_PLANS, fresh:careerLifeNew, clean:careerLifeClean, spirit:careerSpirit, morale:careerMorale, energy:careerEnergy, tired:careerLifeTired, plan:careerDilemmaPlan, dilemma:careerDilemma, key:careerDilemmaKey, choose:careerLifeChoose, pick:careerLifePick, train:careerLifeTrain, round:careerLifeRound, arm:careerLifeArm, hands:careerLifeHands, pass:careerLifePass, support:careerLifeSupport, chip:careerLifeChip, barsHtml:careerLifeBarsHtml, dilemmaHtml:careerDilemmaHtml, render:careerLifeRender, hash:careerLifeHash },
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },
   importer:{ levelFrom:importLevelFrom, level:importLevel, top:importTop, levelStep:importLevelStep, url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, shown:importShown, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
-  drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, ROUNDS:DRILL_ROUNDS, GAP:DRILL_GAP, DEFEND:DRILL_DEFEND, gapMark, gapRestage, defendRestage, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, eggRing, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
-  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, ROUNDS:DRILL_ROUNDS, GAP:DRILL_GAP, DEFEND:DRILL_DEFEND, gapMark, gapRestage, defendRestage, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, tagLevel, tagLevers, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, eggRing, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
+  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, minis:{ ask:minisAsk, open:() => minisCard, close:minisClose, on:minisOn }, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, fanOwned:storeFanOwned, crest:storeCrest, shield:storeShield, theme:storeTheme, contrast:storeContrast, wallName:storeWallName, wallMail:storeWallMail, wallAsk:storeWallAsk, wallStep:storeWallStep, wallGo:storeWallGo, wallClose:storeWallClose, wall:() => storeWallUi, MAIL:STORE_MAIL, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak, fanAward:lockerFanAward, fanDrop:lockerFanDrop, fanHeld:lockerFanHeld, fanClubs:lockerFanClubs, fanHtml:lockerFanHtml, fanCabinet:lockerFanCabinet, cup:lockerCup },
@@ -18845,8 +18989,8 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   knock:{ KNOCK, KNOCK_OFF, lv:knockLv, catchBall, knockOn, commitTackle, resolveContact, updateBallAir, resolvePass, pressure, tag, isHuman, ARCADE },   // src/knock.js: the knock-on levers and the paths they touch
   calls:{ CALLS, CALLS_OFF, lv:callsLv, possCall, callWon, callLate, canPlay, offsideMan, offMark, releaseOk, kickRing, callInk, bannerInk, contrastOf, CALL_PLATE, fireSay, fireShowing, fireFold, fireOpen, bannerLife, callsTick, callFlash, drawCalls, callPlace, callSpot, bannerBox, catchBall, pickUp, updateBallAir, updateLoose, resolvePass, resolveRuck, offload, looseInContact, doPass, kickBall, tag, heat, edgeLine, matchTargets, say, render, matchMild, scoreTry, restartKick, settleGoal, setRM:v => { RM = !!v; }, rm:() => RM },   // src/calls.js: the possession calls, the interception rules and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
-  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
-    filter:pickFilter, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
+  picker:{ PICK, PICK_HEMI, PICK_HEMI_SHORT, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
+    filter:pickFilter, filterHow:pickFilterHow, lastPress:() => lastPress, touchFirst, fieldMayFocus, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
     first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
     profileOpen, render:profileRender, age:profileAge, gender:profileGender, settings:profileSettings, decides:profileDecides, catFixed:() => pickCatFixed(), homePic:profileHomePic, draw:profileDraw, artIn:profileArtIn, lookFor:() => lookFor, lookDraft, lookOpen:careerLookOpen, lookSet:careerLookSet },

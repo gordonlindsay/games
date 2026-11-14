@@ -186,7 +186,11 @@ const fresh = () => {                                       // a new game on the
   seg('half').children[0].click(); seg('sound').children[1].click(); ok(D.settings().sound === false, 'Sound');
   seg('sound').children[0].click(); seg('hints').children[1].click(); ok(D.settings().hints === false && D.settings().coach === false, 'Match Help, the hints and the coach together');
   seg('hints').children[0].click(); seg('diff').children[0].click(); ok(D.settings().kids === true && D.settings().diff === 0, 'Difficulty: Kids');
-  seg('diff').children[1].click(); { const g = T.kids.gate(); ok(g && D.settings().kids === true, 'Easy from Kids asks a grown-up first (PR #14: only a grown-up leaves the Kids level)'); if (g) for (const d of g.answer) T.kids.type(d); }
+  { const was = T.profile.get().age; T.profile.get().age = 'mini';
+    seg('diff').children[1].click(); ok(!T.kids.gate() && !!T.kids.minis.open() && D.settings().kids === true, 'Easy from Kids for a Mini: Leave Minis? first, never the grown-up check (the owner, 2026-11-14)');
+    $('mn-keep').click(); ok(!T.kids.minis.open() && D.settings().kids === true, 'Keep Minis: still Kids');
+    T.profile.get().age = was === 'mini' ? null : was; }
+  seg('diff').children[1].click(); ok(!T.kids.gate() && !T.kids.minis.open(), 'Easy from Kids for anyone else: at once, nothing asked (the owner, 2026-11-14: "remove the calculation for anybody")');
   ok(D.settings().kids === false && D.settings().diff === 0, 'Easy');
   ok(H.step() === 'settings', 'Settings stays open as each is pressed');
   D.settings().diff = 1;
@@ -358,7 +362,7 @@ const fresh = () => {                                       // a new game on the
   $('b-my').click(); $('pf-team').click();   // My Profile, then My Team's picker on it (src/profile.js)
   const P6 = T.picker, v6 = () => P6.view(0), to6 = (n, key) => { P6.group(n, P6.view(n).ladder.findIndex(g => g.key === key) - P6.view(n).gi); return P6.view(n); }, mineTag = n => /<span class="gap mine">My Team<\/span>/.test($('t-side' + n).innerHTML);
   ok(shown() === 's-teams' && D.pickMode() === 'my' && $('t-eyebrow').textContent === 'My Team' && $('t-title').textContent === 'Pick Your Club' && P6.one() && v6().group.key === 'sur' && v6().ladder.some(g => g.key === 'nat.eng') && v6().ladder.some(g => g.key === 'fra') && $('t-go').textContent === 'Done', 'My Team: Pick Your Club on its group, the whole ladder to look anywhere, Done while the club is it');
-  ok(v6().team.id === 'FAR' && mineTag(0) && v6().ladder.find(g => g.key === 'mine.made').teams.some(t => t.act === 'create') && v6().ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'Farnham marked My Team, Create Team and Add Your Team in Mine');
+  ok(v6().team.id === 'FAR' && mineTag(0) && v6().ladder.find(g => g.key === 'mine.made').teams.some(t => t.act === 'create') && v6().ladder.find(g => g.key === 'mine.league').teams.some(t => t.act === 'import'), 'Farnham marked My Team, Create Team and Add Your Team in My Clubs');
   to6(0, 'eng'); P6.go();
   ok(D.settings().myClub === 'BTH' && saved().settings.myClub === 'BTH' && shown() === 's-teams' && $('t-title').textContent === 'Pick Your Country' && v6().team.id === 'ENG', 'a club picked: Bath, saved, the screen stays and moves on to the country');
   ok(v6().ladder.filter(g => g.key.startsWith('nat.')).length === 12 && !v6().ladder.some(g => g.teams.some(t => t.legend)), 'the countries: the category\'s twelve, no Legend');
@@ -952,17 +956,20 @@ async function browserChecks() {
       const tabbed = new Set();
       for (let i = 0; i < 14; i++) { await page.keyboard.press('Tab'); tabbed.add(await page.evaluate(() => document.activeElement.id)); }
       ok(['b-my', 'b-import', 'b-locker', 'b-continue', 'b-match', 'b-career', 'b-drills', 'b-set'].every(id => tabbed.has(id)), `${kind}: Tab reaches every box and My Team's three (${[...tabbed].filter(Boolean).join(' ')})`);
-      // Skill Games for each player: Men the ten, How to Play, Contact Games (U9 and Up) and For Grown-Ups; the Kids level and Minis the seven, How
+      // Skill Games for each player: Men the ten, How to Play, Contact Games (U9 and Up) and For Grown-Ups; the Kids level, Minis and a Mini (the
+      // profile's age group, on Normal and Men) the seven, How to Play and For Grown-Ups; a Junior the nine, Tackling and Ball Back in equal halves
+      // of the contact three's places, For Grown-Ups still under How to Play (the owner, 2026-11-14: "Same for scrums until adult"). The seven, How
       // to Play and For Grown-Ups. Each fits with nothing over anything, the ring reaches every button, For Grown-Ups opens its panel with
       // Back to Skill Games in the ring's reach (the step's Back put away), every game's card offers Watch How in the ring's reach, and Tab reaches
       // every button on the step
-      for (const [who, kids, cat] of [['Men', false, 'men'], ['Kids', true, 'men'], ['Minis', false, 'minis']]) {
-        const sk = await page.evaluate(([kids, cat]) => {
+      for (const [who, kids, cat, age] of [['Men', false, 'men', null], ['Kids', true, 'men', null], ['Minis', false, 'minis', null], ['Junior', false, 'men', 'junior'], ['Mini', false, 'men', 'mini']]) {
+        const sk = await page.evaluate(([kids, cat, age]) => {
           const T = window.__tryline, st = T.debug.settings(), $ = id => document.getElementById(id);
           const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
           const meet = (p, q) => p.left < q.right - 1 && p.right > q.left + 1 && p.top < q.bottom - 1 && p.bottom > q.top + 1;
           const ringAll = () => { T.home.ring(null); const r = new Set(), q = [T.navMove(0, 0, 0)]; while (q.length) { const el = q.shift(); if (!el || r.has(el)) continue; r.add(el); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { T.home.ring(el); const got = T.navMove(0, dx, dy); if (got && !r.has(got)) q.push(got); } } return r; };
           const seen = st.drillSeen.slice(); st.drillSeen = T.drills.DRILLS.map(d => d.id);   // no Watch How playing on a card's first open
+          const was = T.profile.get(); T.profile.set({ age, gender:null, look:null });
           st.kids = kids; st.diff = kids ? 0 : 1; st.cat = cat; T.debug.goHome(); T.home.open('drills'); T.debug.focus() && T.debug.focus().classList.remove('padfocus');
           const s = $('s-home'), panel = $('hp-drills'), btns = [...panel.querySelectorAll('.btn')].filter(vis);
           const games = btns.filter(b => T.drills.DRILLS.some(d => 'pr-' + d.id === b.id)).map(b => b.id.slice(3));
@@ -975,15 +982,20 @@ async function browserChecks() {
           const gp = $('pr-grownups'), back = $('pr-grown-back'), grown = vis(gp) && !vis($('pr-games')) && !vis($('hs-back')) && ringAll().has(back) && (T.navBack(0), vis($('pr-games')) && !vis(gp) && vis($('hs-back')));
           const watch = games.filter(id => { T.practice.start(id); const w = $('pr-watch'), good = vis(w) && w.textContent === 'Watch How' && ringAll().has(w); T.practice.choose(); return !good || T.home.step() !== 'drills'; });
           T.home.ring(null); T.debug.goHome(); T.home.open('drills');
-          const out = { games, contact:!$('pr-contact').hidden && !$('pr-contact').closest('[hidden]'), fits:s.scrollHeight <= s.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, over, small, cut, unreached, grown, watch, help:vis($('b-help')), grownBtn:vis($('pr-grown')), ids:btns.map(b => b.id) };
-          st.drillSeen = seen;
+          const e = id => { const q = box($(id)); return { l:q.left, r:q.right, t:q.top, w:q.width }; }, near = (a, b) => Math.abs(a - b) < 1;
+          const lined = !vis($('pr-tackle')) || (({ tackle:a, back:b, scrum:c, pass:p, kick:k, defend:d, 'b-help':h, 'pr-grown':g }) => vis($('pr-scrum'))
+            ? near(a.l, p.l) && near(a.r, p.r) && near(c.l, k.l) && near(c.r, k.r) && near(b.l, d.l) && near(b.r, d.r) && near(g.l, h.l) && near(g.r, h.r)
+            : near(a.t, b.t) && near(a.w, b.w) && near(a.l, p.l) && near(b.r, d.r) && near(g.l, h.l) && near(g.r, h.r) && near(g.t, a.t))(Object.fromEntries(['tackle', 'back', 'scrum', 'pass', 'kick', 'defend'].map(id => [id, vis($('pr-' + id)) ? e('pr-' + id) : null]).concat([['b-help', e('b-help')], ['pr-grown', e('pr-grown')]])));
+          const out = { games, contact:!$('pr-contact').hidden && !$('pr-contact').closest('[hidden]'), fits:s.scrollHeight <= s.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth, over, small, cut, unreached, grown, watch, help:vis($('b-help')), grownBtn:vis($('pr-grown')), ids:btns.map(b => b.id), lined };
+          st.drillSeen = seen; T.profile.set(was);
           return out;
-        }, [kids, cat]);
+        }, [kids, cat, age]);
         await page.evaluate(() => { document.activeElement && document.activeElement.blur(); });
         const tabbed = new Set();
         for (let i = 0; i < 40; i++) { await page.keyboard.press('Tab'); const at = await page.evaluate(() => { const a = document.activeElement; return a && document.getElementById('hp-drills').contains(a) ? a.id : null; }); if (at) tabbed.add(at); }
-        const young = kids || cat === 'minis', open = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'];
-        ok(json(sk.games) === json(young ? open : open.concat(['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skill Games shows ${young ? 'the seven open games, no Contact Games' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
+        const young = kids || cat === 'minis' || age === 'mini', open = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'], junior = !young && age === 'junior';
+        ok(json(sk.games) === json(young ? open : open.concat(junior ? ['tackle', 'back'] : ['tackle', 'scrum', 'back'])) && sk.contact === !young && sk.help && sk.grownBtn, `${kind} ${who}: Skill Games shows ${young ? 'the seven open games, no Contact Games' : junior ? 'the nine, Tackling and Ball Back under Contact Games (U9 and Up), no Driving' : 'the ten, the contact three under Contact Games (U9 and Up)'}, How to Play and For Grown-Ups (${sk.games.join(', ')})`);
+        ok(sk.lined, `${kind} ${who}: the contact row keeps the lines of the rows above: ${junior ? 'Tackling and Ball Back in equal halves from Create a Gap\'s left edge to Defend a Breakaway\'s right, For Grown-Ups beside them under How to Play, no gap where Driving was' : 'the three under Create a Gap, Kicking and Defend a Breakaway, For Grown-Ups under How to Play'}`);
         ok(sk.fits && !sk.over.length && !sk.small.length && !sk.cut.length, `${kind} ${who}: Skill Games fits with no page scroll, every button 44px and more, none over another, no name cut off (${[...sk.over, ...sk.small, ...sk.cut].join(', ') || 'all clear'})`);
         ok(!sk.unreached.length, `${kind} ${who}: the ring reaches every button on Skill Games and its Back (${sk.unreached.join(', ') || 'all'})`);
         ok(sk.grown, `${kind} ${who}: For Grown-Ups opens its panel with Back to Skill Games in the ring's reach, the step's Back put away, and B (Back to Skill Games) shuts it, the step's Back again`);
