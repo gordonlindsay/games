@@ -494,7 +494,7 @@ for (const make of [false, true]) {
   X.restore({ custom:[], champ:null }); I.setLeague(null); D.settings().myClub = null; X.save();
   pages[PIT + '/teams/3100/league-table'] = html200('pitchero-league');
   D.openTeams('my'); PK.group(0, pv().ladder.findIndex(g => g.key === 'mine.league') - pv().gi);
-  ok(pv().team.act === 'import' && PK.primary() === 'Add Your Team', 'My Team: Add Your Team in Mine\'s My League');
+  ok(pv().team.act === 'import' && PK.primary() === 'Add Your Team', 'My Team: Add Your Team in My Clubs\' My League');
   PK.go(); $('im-url').value = PIT + '/teams/3100/league-table'; I.go();
   for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
   ok(I.state().step === 'preview' && $('im-go').textContent === 'Save Club', 'its preview: Save Club');
@@ -520,7 +520,7 @@ for (const make of [false, true]) {
   ok(!/Import Club|Import Data|Import Works/.test(block + src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'one name for the flow, the home\'s and the team screen\'s alike: Add Your Team, never Import Club or Import Data');
   for (const l of labels) ok(title(l) && (src + block).includes(l), `"${l}" is a Title Case label in use`);
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
-  ok(html.includes('id="m-filter"') && menus.includes("{ key:'mine.league', list:IMPORT_POOL, hemi:'mine', name:'My League', teams:[...(importLeague ? importLeague.teams : []), ...(all && importShown() ? [PICK_ADD] : [])] }"), 'Mine carries My League after Made Teams: its sides once there is one, and Add Your Team');
+  ok(html.includes('id="m-filter"') && menus.includes("{ key:'mine.league', list:IMPORT_POOL, hemi:'mine', name:'My League', teams:[...(importLeague ? importLeague.teams : []), ...(all && importShown() ? [PICK_ADD] : [])] }"), 'My Clubs carries My League after Made Teams: its sides once there is one, and Add Your Team');
   ok(/typeof parentGate === 'function'\) parentGate\(go, cancel\)/.test(src), 'Import goes through parentGate(go, cancel) when the kids check is there');
   ok(Object.values(I.MSG).every(m => m.length <= 45 && /\.$/.test(m)), 'each message is one short plain sentence');
 }

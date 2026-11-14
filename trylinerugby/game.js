@@ -204,7 +204,7 @@ function poolKey(v) {
   return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? v : 'int';
 }
 const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
-/* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): North or South by country, then the country's lists. A list
+/* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): the Northern or Southern Hemisphere by country, then the country's lists. A list
    is one country's, bar the United Rugby Championship, whose sides go by URC_HOME; Surrey and Counties are England's Local. Japan plays
    in the North (the owner, 2026-11-11: "Looks Right"); Canada and the USA are the women's. A list's group takes its sides' competition
    (LEAGUE_SHORT) where they all share one, else LIST_GROUP's name, else Clubs. Views only: the lists, their keys and every save are as
@@ -11515,11 +11515,12 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
    team: its shirt with its overall, its name and stars, five bars, the league it plays in. Left and Right change the team within its group;
    Up and Down step through every group in order, ONE LADDER (his answer, the same day: "like EA FC"), the hemisphere and the country above
    it (a swipe down a card for the next group: the owner's "Next Group Down"); a shoulder button, Page Up or Page Down, or a long press on
-   Previous or Next jumps a whole country. The top of the ladder is North | South | Mine | Favourites | Recent; Men | Women | Minis stays the
-   top switch. Each wraps. The search icon and each side's group button open the Filter: the ladder as columns, and a search (below).
+   Previous or Next jumps a whole country. The top of the ladder is Northern Hemisphere | Southern Hemisphere | My Clubs | Favourites |
+   Recent (PICK_HEMI, below); Men | Women | Minis stays the top switch. Each wraps. The search icon and each side's group button open the
+   Filter: the ladder as columns, and a search (below).
    The ladder (pickLadder) is a view of the lists, never new data: TEAM_LISTS cut by country (LIST_HOME, URC_HOME in src/data.js) and by
    league where a list holds two (South Africa's URC and Currie Cup), each group named for its competition, the nations in the category's
-   own order with their Legends, then Mine (Made Teams with Create Team, My League with Add Your Team), the teams starred and each side's
+   own order with their Legends, then My Clubs (Made Teams with Create Team, My League with Add Your Team), the teams starred and each side's
    last three picks. A side picked from a group plays as its list always has: a championship from Dublin is the URC's.
    A side is set (Pick Farnham, a tap on its card, a controller's A) and Kick Off starts the match once both are; moving a side sets it free
    again. Pick Opponent never shows your own side, and opens on its league's rivals (Wimbledon for Farnham) until the opponent is moved.
@@ -11527,8 +11528,26 @@ function pips(v) { let s = ''; for (let i = 1; i <= 5; i++) s += `<i class="${i 
    so the screen reopens where each side was. Nothing here draws a random number (tools/importer.mjs counts them). */
 let teamList = [];                                         // the active side's group: its teams, for the tools
 const PICK = { ms:200, swipe:36, ratio:1.4, hold:500 };      // one quick move (opacity and transform, none with reduced motion); a swipe's distance and how much straighter than across it must be; a long press
-const PICK_HEMI = { north:'North', south:'South', mine:'Mine', fav:'Favourites', recent:'Recent' };
-const PICK_MAKE = { act:'create', name:'Create Team' }, PICK_ADD = { act:'import', name:'Add Your Team' };   // Mine's two ways in, an entry each, gated as ever (storeGate)
+/* The areas, the top of the ladder, by their keys (a group's hemi: 'north', 'south', 'mine', 'fav', 'recent'), which is all a save holds (a
+   group's key, never its area's name). Their names (the owner, 2026-11-14: "Change Northern hemisphere / Southern hemisphere / My clubs.
+   Shorten to 'hemi' if needed for mobile UI"): Northern Hemisphere, Southern Hemisphere, My Clubs, then Favourites and Recent as they were.
+   The short form, Northern Hemi and Southern Hemi (PICK_HEMI_SHORT), is the full name's start, so it is drawn as the full name with its end
+   in a span (pickHemiHtml) that the CSS leaves out where the full name does not fit (styles.css, .hx), decided per place and measured in
+   Chromium at 844x390, 667x375, 844x340, 667x320 and 568x320 (tools/picker.mjs):
+   - a card's context line over its group button: Northern Hemi where two sides share the screen (the full name is cut at 844x390 on
+     England's Championship, where the line has 118px), the full name where a card has the screen to itself (329px and up, one line at
+     every size). The area leads the line only where the whole line then fits on one line; where it would not (Northern Hemi · England ·
+     Local is 201px, Surrey's line 157 at 844x390), it is left off that card's line (pickFit, .off), so the line reads England · Local and
+     never wraps for the area's sake, the card's head as it was before the rename. It is still read out: drawn at no size, not removed;
+   - the Filter's Area column: the full name where the column holds Hemisphere on a line (two lines in the 44px row, as the League
+     column's United Rugby Championship: 844 wide), Northern Hemi where it does not (667 and 568 wide); no form is one line there;
+   - a search match's path (Northern Hemisphere · France · Top 14): the full name at every size, one line with room to spare.
+   A screen reader hears the full name everywhere: the Filter's rows are labelled with it, and on a card the end (.hx) and an area left off
+   are drawn at no size rather than removed. Its text, everywhere (pickWhere, flPath, a row's name), is the full name. */
+const PICK_HEMI = { north:'Northern Hemisphere', south:'Southern Hemisphere', mine:'My Clubs', fav:'Favourites', recent:'Recent' };
+const PICK_HEMI_SHORT = { north:'Northern Hemi', south:'Southern Hemi' };
+const pickHemiHtml = h => { const n = PICK_HEMI[h] || '', s = PICK_HEMI_SHORT[h]; return s && n.startsWith(s) && n.length > s.length ? `${esc(s)}<span class="hx">${esc(n.slice(s.length))}</span>` : esc(n); };
+const PICK_MAKE = { act:'create', name:'Create Team' }, PICK_ADD = { act:'import', name:'Add Your Team' };   // My Clubs' two ways in, an entry each, gated as ever (storeGate)
 const pickKey = t => (!t ? '' : t.act ? '+' + t.act : keyOf(t));
 const motionOn = () => { try { return !matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 const natName = id => (NATIONS.find(n => n.id === id) || { name:String(id) }).name;
@@ -11742,8 +11761,8 @@ function pickGroupStep(s, d, how) {                        // Up and Down: the n
   const n = v.ladder.length;
   if (n > 1 && !v.group.fixed) pickTo(s, (v.gi + d + n) % n, 0, how || (d > 0 ? 'down' : 'up'));
 }
-/* A whole country: the first group of the next one (or of this one's start, going back, then the one before). Mine, Favourites and Recent
-   each count as one. */
+/* A whole country: the first group of the next one (or of this one's start, going back, then the one before). My Clubs, Favourites and
+   Recent each count as one. */
 const pickPlace = g => g.hemi + '.' + (g.home || '');
 function pickCountry(s, d) {
   const v = pickView[s]; if (!v || v.ladder.length < 2 || v.group.fixed) return;
@@ -11846,7 +11865,7 @@ function pickWho(s) {                                      // the side's own nam
   if (pickMode === 'career') return 'Your Club';
   return 'Your Team';
 }
-function pickWhere(g) {                                    // North · England, North · England · Local, Mine; a competition's tier
+function pickWhere(g) {                                    // Northern Hemisphere · England (· Local), My Clubs; a competition's tier
   if (g.ctx) return g.ctx;
   if (g.home) return [PICK_HEMI[g.hemi], natName(g.home), ...(g.local ? ['Local'] : [])].join(' · ');
   return g.hemi === 'mine' ? PICK_HEMI.mine : '';
@@ -11875,7 +11894,7 @@ function pickPanel(s) {
       + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k); return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`; }).join('')}</span>${edit}`;
   }
   const one = v.group.teams.length > 1 ? '' : ' disabled';
-  const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map(w => `<span>${esc(w)}</span>`).join(' ')}</span></span>` : '';   // North · England · Local: it breaks between parts, never after a dot
+  const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot
   return `<div class="pk-head"><p class="pk-where"><span class="pk-who">${pickWho(s)}</span>${ctx}</p>${group}${fav}</div>`
     + `<div class="pk-card${st.set ? ' pk-set' : ''}${edit ? ' made' : ''}">${card}</div>`
     + `<div class="pk-step"><button class="btn" data-act="prev"${one}>Previous</button>${count}<button class="btn" data-act="next"${one}>Next</button></div>`;   // Previous and Next in equal halves, the count between
@@ -11984,6 +12003,12 @@ function pickFit() {
   if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);   // the order on screen is the order for Tab
   go.style.fontSize = '';
   for (let px = parseFloat(getComputedStyle(go).fontSize) || 22; go.scrollWidth > go.clientWidth + 0.5 && px > 14; ) { px -= 1; go.style.fontSize = px + 'px'; }   // Pick Wolverhampton on one line
+  for (const a of scr.querySelectorAll('.pk-ctx .pk-area')) {   // the area leads a card's line only where the whole line fits on one line (PICK_HEMI); else it is left off (.off), its country saying where
+    a.classList.remove('off');
+    const box = a.parentNode, parts = [...box.children]; if (!box.getClientRects().length) continue;
+    const r = box.getBoundingClientRect(), top = parts[0].getBoundingClientRect().top;
+    a.classList.toggle('off', parts.some(p => { const q = p.getBoundingClientRect(); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }));
+  }
   const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
   delete scr.dataset.dup;
   for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); pickTraits(); if (!over() && !small()) break; }
@@ -12002,10 +12027,11 @@ function pickResize() {
    The owner, 2026-11-11: "set up a search bar for club selection and show the hierarchy starting at the top", then "Filter pops up with
    nested team list and search. Have a search icon." A modal over the screen for one side, opened by the search icon in the top bar (the
    side being set), by a side's group button (that side) or by a letter or a digit typed on the screen (one player). Along its top a Search
-   field and Close; under them the side's own ladder as columns: Area (North, South, Mine, Favourites, Recent, each with a count), Country,
-   League and the group's Teams. It is built from pickView[s].ladder, pickLadderOf's, so the Filter obeys every rule the card does (Pick
-   Opponent's lock, Career's clubs, storeFirst, Create Team under MAX_CUSTOM). Mine has no country: its League column is Made Teams and My
-   League. Favourites and Recent go straight to their Teams; Championship (its competition and Made Teams) is a League column and Teams.
+   field and Close; under them the side's own ladder as columns: Area (Northern Hemisphere, Southern Hemisphere, My Clubs, Favourites,
+   Recent, each with a count; Northern Hemi and Southern Hemi where the column is narrow: PICK_HEMI), Country, League and the group's
+   Teams. It is built from pickView[s].ladder, pickLadderOf's, so the Filter obeys every rule the card does (Pick Opponent's lock, Career's
+   clubs, storeFirst, Create Team under MAX_CUSTOM). My Clubs has no country: its League column is Made Teams and My League. Favourites
+   and Recent go straight to their Teams; Championship (its competition and Made Teams) is a League column and Teams.
    The side's own path is marked as it opens, each column scrolled to its mark; a row of Area, Country or League takes its column's place
    and fills the columns after it, each on its first; a team is picked for the side as a tap on its card picks it (pickSet, every gate
    included), and the focus moves on as it does from the card. Typing swaps the columns for one list of matches. While it is open
@@ -12026,7 +12052,7 @@ function filterRoot(L) {
     let a = areas.find(x => x.hemi === g.hemi);
     if (!a) areas.push(a = flSaved(g) ? { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi], gi } : { kind:'area', hemi:g.hemi, name:PICK_HEMI[g.hemi] || g.name, kids:[] });
     if (!a.kids) return;
-    if (!g.home) { a.kids.push(league(gi)); return; }        // Mine: Made Teams, My League
+    if (!g.home) { a.kids.push(league(gi)); return; }        // My Clubs: Made Teams, My League
     let c = a.kids.find(x => x.home === g.home);
     if (!c) a.kids.push(c = { kind:'country', home:g.home, name:natName(g.home), kids:[] });
     c.kids.push(league(gi));
@@ -12058,7 +12084,8 @@ function filterCols() {
 const flCount = (L, n) => (n.kids ? n.kids.length : L[n.gi].teams.length);
 function flRowHtml(L, c, n, i, on) {
   const k = flCount(L, n), w = FL_NOUN[n.kids ? n.kids[0].kind : 'team'][k === 1 ? 0 : 1];
-  return `<button class="fl-r" data-col="${c}" data-i="${i}"${on ? ' aria-current="true"' : ''} tabindex="${on ? 0 : -1}" aria-label="${esc(n.name)}, ${k} ${w}"><b>${esc(n.name)}</b><span class="fl-n" aria-hidden="true">${k}</span></button>`;
+  const nm = n.kind === 'area' && n.name === PICK_HEMI[n.hemi] ? pickHemiHtml(n.hemi) : esc(n.name);   // an area: Northern Hemi where the column is narrow (styles.css); its label, the full name
+  return `<button class="fl-r" data-col="${c}" data-i="${i}"${on ? ' aria-current="true"' : ''} tabindex="${on ? 0 : -1}" aria-label="${esc(n.name)}, ${k} ${w}"><b>${nm}</b><span class="fl-n" aria-hidden="true">${k}</span></button>`;
 }
 function flTeamHtml(s, t, attrs, path) {                    // a team's row: its shirt, its name (and where it lives, in the matches), My Team where the card says it, its stars
   if (t.act) return `<button class="fl-r fl-t" ${attrs} data-make="${t.act}"><span class="fl-plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="fl-nm"><b>${esc(t.name)}</b></span></button>`;
@@ -12115,7 +12142,7 @@ function pickFilterDraw(from = 0) {
    first, then those with a word that does, then those that hold it, then the clubs of a country or group whose name matches in the same
    three steps; ladder order within each. Each team once, under its own group (Favourites and Recent only repeat it). */
 const flFold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-function flPath(g) {                                         // North · England · Premiership; Mine · Made Teams; Favourites; a competition's tier and name
+function flPath(g) {                                         // Northern Hemisphere · England · Premiership; My Clubs · Made Teams; Favourites; a competition's tier and name
   const parts = g.hemi ? [PICK_HEMI[g.hemi], g.home ? natName(g.home) : null, flSaved(g) ? null : g.name] : [g.ctx, g.name];
   return parts.filter((p, i, a) => p && p !== a[i - 1]).join(' · ');
 }
@@ -13081,7 +13108,7 @@ function cupEntryHtml(e, i, tag) {
      links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
      User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
      browser on another site could not read its pages anyway.
-   - Add Your Team: the team screen's entry (Mine's My League) and the home's button, their card (#m-import), and the My League group.
+   - Add Your Team: the team screen's entry (My Clubs' My League) and the home's button, their card (#m-import), and the My League group.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -13874,7 +13901,7 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-/* Add Your Team on the team screen (an entry of Mine's My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
+/* Add Your Team on the team screen (an entry of My Clubs' My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
    team, and kept with four made while a league is saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is
    on sale (storeOffered). */
 const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
@@ -16756,7 +16783,7 @@ const DEMO_PILOT = {
 
    First launch only (profileFirst: no save at all, never a save that exists, the demo, the tools or the app's copy of a save put back):
    a short setup before the home, one step a screen, each with Skip and Back (none on the first, which has nothing before it), and Done
-   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, Mine and Favourites,
+   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, My Clubs and Favourites,
    clubs only) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it ends, so a step skipped,
    or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
    Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
@@ -18238,7 +18265,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   knock:{ KNOCK, KNOCK_OFF, lv:knockLv, catchBall, knockOn, commitTackle, resolveContact, updateBallAir, resolvePass, pressure, tag, isHuman, ARCADE },   // src/knock.js: the knock-on levers and the paths they touch
   calls:{ CALLS, CALLS_OFF, lv:callsLv, possCall, callWon, callLate, canPlay, offsideMan, offMark, releaseOk, kickRing, callInk, bannerInk, contrastOf, CALL_PLATE, fireSay, fireShowing, fireFold, fireOpen, bannerLife, callsTick, callFlash, drawCalls, callPlace, callSpot, bannerBox, catchBall, pickUp, updateBallAir, updateLoose, resolvePass, resolveRuck, offload, looseInContact, doPass, kickBall, tag, heat, edgeLine, matchTargets, say, render, matchMild, scoreTry, restartKick, settleGoal, setRM:v => { RM = !!v; }, rm:() => RM },   // src/calls.js: the possession calls, the interception rules and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
-  picker:{ PICK, PICK_HEMI, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
+  picker:{ PICK, PICK_HEMI, PICK_HEMI_SHORT, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
     filter:pickFilter, filterHow:pickFilterHow, lastPress:() => lastPress, touchFirst, fieldMayFocus, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
     first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,

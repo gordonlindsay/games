@@ -8,7 +8,7 @@
      links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
      User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
      browser on another site could not read its pages anyway.
-   - Add Your Team: the team screen's entry (Mine's My League) and the home's button, their card (#m-import), and the My League group.
+   - Add Your Team: the team screen's entry (My Clubs' My League) and the home's button, their card (#m-import), and the My League group.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -801,7 +801,7 @@ function importOthers(t) {
   if (five.length < 5) five.push(...shuffle(CLUBS.filter(o => !same(o) && !five.some(f => importKey(f.name) === importKey(o.name)))).slice(0, 5 - five.length));
   return five;
 }
-/* Add Your Team on the team screen (an entry of Mine's My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
+/* Add Your Team on the team screen (an entry of My Clubs' My League, pickLadder in src/ui-menus.js) and on the home: while there is room for a
    team, and kept with four made while a league is saved, as the way to refresh it or remove it. In the app it waits until a Super Fan club is
    on sale (storeOffered). */
 const importShown = () => (custom.length < MAX_CUSTOM || !!importLeague) && storeOffered('import');
