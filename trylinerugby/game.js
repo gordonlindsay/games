@@ -15801,22 +15801,49 @@ const drillPass = {
    Everyone wears two tags, one on each hip. The reps take turns. Keep: you carry the ball for the line and a
    tagger stays in front of you, wherever you run, until you are close. Then they go for you, in a straight line: change direction
    as they go and they run past. Keep on the line you were on and they have you, wide or straight. Pull: a carrier runs for your line. Get to a hip, and tap
-   Pull Tag: from the front you can't reach a hip, and a bump is No Contact and the rep is gone. Stars by reps won. */
+   Pull Tag: from the front you can't reach a hip, and a bump is No Contact and the rep is gone. Stars by reps won.
+   The reps get harder as they go (ramp, the owner, 14 Nov 2026: "Tag chase game is a bit too easy"). A rep's level is its share of
+   the climb (rep: the first is the game as it always was, the last the whole climb) times how steep the Difficulty makes it (diff:
+   Easy, Normal, Hard), and each lever named in keep and pull goes that share of the way from the mode's own value to the one there.
+   Keep: the tagger goes later and closer (trigger), so a change of direction has to come sooner after they go; and they lean after you
+   harder (track) and read your drift sooner (read), so going before they do is no way round it. Pull: the carrier runs a touch
+   quicker (pace) and steps away harder as you close (step), and a hip is in reach only closer in (reach). On a ramped rep the carrier
+   starts a set distance off the middle (lane), on the side drawn, and weaves towards the middle first, so either side is the same rep
+   mirrored and the lane drawn decides nothing (the review: the weave set off one way whatever the lane, so a carrier on one side came
+   into you and on the other went away, and one near the middle came straight at you; away from the middle on both sides, a run
+   straight at them with Pull Tag hammered won every Pull). Each is a matter of timing. On Hard's last Keep a change of direction must
+   come by 0.2 s after they go: a reaction that quick, or reading the gap and going as they close to 7 or 8 m, which keeps the tags on
+   every rep at every level (tools/tagchase.mjs). The youngest (the Kids level, or Minis) play every rep at level 0, the game as it
+   was, and so does Watch How; a Mini's age group on another level and side plays that level's ramp, as with Bouncy Egg's ring. Nothing here draws a new random number. */
 const DRILL_TAG = { reps:6, box:[44, 27, 76, 43], cam:[60, 35], zoom:1.3, show:1.1, limit:8, stars:[2, 4, 6],
   keep:{ at:[46, 35], them:[63, 35], line:74, jog:0.25, shadow:0.85, chase:0.6, acc:12, trigger:13, lungeV:0.35, lungeT:1.5, rest:0.5, reach:1.25, grab:0.04, read:0.7, track:2 },
-  pull:{ at:[52, 35], them:[74, 35], lane:4, line:46, pace:0.68, acc:9, weave:1.4, reach:1.9, close:0.45, front:0.7, whiff:0.45, dodge:5, step:2.6 } };
+  pull:{ at:[52, 35], them:[74, 35], lane:4, line:46, pace:0.68, acc:9, weave:1.4, reach:1.9, close:0.45, front:0.7, whiff:0.45, dodge:5, step:2.6 },
+  ramp:{ rep:[0, 0.5, 0.7, 0.8, 0.9, 1], diff:[0.4, 0.9, 1], lane:3,
+    keep:{ trigger:6.5, track:5, read:0.3 },
+    pull:{ pace:0.73, step:3.4, reach:1.6 } } };
 const TAG_WHY = { Pulled:'Change Direction as They Go', Bumped:'Tag Has No Contact. No Bumps.', Past:'Reach a Hip, Then Pull' };
 const tagMode = T => (T.rep % 2 ? 'keep' : 'pull');        // rep 1 keeps, rep 2 pulls, and so on
+/* 0 to 1: how far up the ramp this rep plays. The youngest here are the Kids level and Minis, as for Bouncy Egg's ring (eggRingAll), not
+   practiceYoung: a Mini's age group bars the contact games, and leaves the level a game is played at to the Difficulty row. */
+const tagLevel = rep => (kidsLevel() || settings.cat === 'minis' || (practice && practice.demo) ? 0 : DRILL_TAG.ramp.rep[rep - 1]*DRILL_TAG.ramp.diff[settings.diff]);
+function tagLevers(mode, lv) {                             // a rep's levers: at level 0 the mode's own (the very same object, so the game as it was), else each ramped one that share of the way to its top
+  const base = DRILL_TAG[mode], top = DRILL_TAG.ramp[mode];
+  if (!lv) return base;
+  const Q = { ...base }; for (const k of Object.keys(top)) Q[k] = drillLerp(base[k], top[k], lv);
+  return Q;
+}
 function tagRep(K) {
   const T = practice.tag, me = T.me, them = T.them;
   T.rep++; T.stage = 'play'; T.t = 0; T.grab = 0; T.whiff = 0; T.lunge = null; T.rest = 0; T.dodged = false; T.stepT = 0; T.lost = null; T.lat = 0;
+  T.lv = tagLevel(T.rep); T.Q = tagLevers(tagMode(T), T.lv);   // the rep's level and levers, set as it starts
   if (tagMode(T) === 'keep') {
     const Q = K.keep;
     drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (rnd() - 0.5)*2, -1, 0);
     drillHold(me);
   } else {
-    const Q = K.pull;
-    drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (rnd() - 0.5)*2*Q.lane, -1, 0);
+    const Q = K.pull, u = rnd() - 0.5;
+    drillPlace(me, Q.at[0], Q.at[1], 1, 0); drillPlace(them, Q.them[0], Q.them[1] + (T.lv ? (u < 0 ? -1 : 1)*K.ramp.lane : u*2*Q.lane), -1, 0);   // the same draw: at level 0 anywhere in the lane, as it was
+    T.wv = T.lv && u >= 0 ? -1 : 1;                       // the way the weave sets off: on a ramped rep towards the middle, either side alike; at level 0 the one way it always did
     drillHold(them);
   }
   inputOf(0).aPressed = false;
@@ -15827,7 +15854,7 @@ function tagOver(T, won, word, why) {                      // the rep's verdict,
   drillTag(word, T.me.x, T.me.y);
 }
 function tagCanPull(T) {                                   // in reach of a hip: at the carrier's side or behind them, never in front, and not so close you bump
-  const K = DRILL_TAG.pull, me = T.me, c = T.them, dx = me.x - c.x, dy = me.y - c.y, d = hyp(dx, dy), sp = hyp(c.vx, c.vy) || 1;
+  const K = tagMode(T) === 'pull' && T.Q ? T.Q : DRILL_TAG.pull, me = T.me, c = T.them, dx = me.x - c.x, dy = me.y - c.y, d = hyp(dx, dy), sp = hyp(c.vx, c.vy) || 1;
   return d <= K.reach && d >= K.close && (c.vx*dx + c.vy*dy)/(sp*(d || 1)) < K.front;
 }
 function tagEnd(T) { const stars = drillStarsOf(T.won, DRILL_TAG.stars); practiceFinish(stars > 0, T.won + ' of ' + DRILL_TAG.reps, stars); }
@@ -15850,7 +15877,7 @@ const drillChase = {
     drillRun(me, dt, K.box, false);
     const v = maxSpeed(me);
     if (tagMode(T) === 'keep') {
-      const Q = K.keep;
+      const Q = T.Q;                                       // this rep's levers (tagLevers): DRILL_TAG.keep itself for the youngest and on the first rep
       drillHold(me);
       const gap = dist(me, them);
       if (T.lunge) {                                       // they have gone for you, in a straight line to where you were heading: change direction now and they go past
@@ -15871,9 +15898,9 @@ const drillChase = {
       if (T.grab >= Q.grab) { st('tagLost'); T.lost = 'me'; tagOver(T, false, 'Pulled', TAG_WHY.Pulled); return; }
       if (me.x >= Q.line) { tagOver(T, true, 'Kept', ''); return; }
     } else {
-      const Q = K.pull;
+      const Q = T.Q;
       drillHold(them);
-      let vy = Math.sin(T.t*1.7)*Q.weave;                  // down the pitch with a weave, and one step away as you close in
+      let vy = T.wv*Math.sin(T.t*1.7)*Q.weave;             // down the pitch with a weave, and one step away as you close in
       if (!T.dodged && dist(me, them) < Q.dodge && me.x < them.x) { T.dodged = true; T.step = me.y >= them.y ? -1 : 1; T.stepT = 0.5; }
       if (T.stepT > 0) { T.stepT -= dt; vy += T.step*Q.step; }
       steer(them, -v*Q.pace, vy, Q.acc, dt);
@@ -18196,7 +18223,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   careerLife:{ LIFE:CAREER_LIFE, KEYS:CAREER_LIFE_KEYS, COL:CAREER_LIFE_COL, DILEMMAS:CAREER_DILEMMAS, PLANS:CAREER_DILEMMA_PLANS, fresh:careerLifeNew, clean:careerLifeClean, spirit:careerSpirit, morale:careerMorale, energy:careerEnergy, tired:careerLifeTired, plan:careerDilemmaPlan, dilemma:careerDilemma, key:careerDilemmaKey, choose:careerLifeChoose, pick:careerLifePick, train:careerLifeTrain, round:careerLifeRound, arm:careerLifeArm, hands:careerLifeHands, pass:careerLifePass, support:careerLifeSupport, chip:careerLifeChip, barsHtml:careerLifeBarsHtml, dilemmaHtml:careerDilemmaHtml, render:careerLifeRender, hash:careerLifeHash },
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },
   importer:{ levelFrom:importLevelFrom, level:importLevel, top:importTop, levelStep:importLevelStep, url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, shown:importShown, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
-  drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, ROUNDS:DRILL_ROUNDS, GAP:DRILL_GAP, DEFEND:DRILL_DEFEND, gapMark, gapRestage, defendRestage, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, eggRing, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
+  drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, ROUNDS:DRILL_ROUNDS, GAP:DRILL_GAP, DEFEND:DRILL_DEFEND, gapMark, gapRestage, defendRestage, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, tagLevel, tagLevers, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, eggRing, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, minis:{ ask:minisAsk, open:() => minisCard, close:minisClose, on:minisOn }, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, fanOwned:storeFanOwned, crest:storeCrest, shield:storeShield, theme:storeTheme, contrast:storeContrast, wallName:storeWallName, wallMail:storeWallMail, wallAsk:storeWallAsk, wallStep:storeWallStep, wallGo:storeWallGo, wallClose:storeWallClose, wall:() => storeWallUi, MAIL:STORE_MAIL, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
