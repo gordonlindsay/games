@@ -435,7 +435,7 @@
     "WWA",
     "YAR"
    ],
-   "decision": "103 guessed kits are now the club's own Pitchero colours (reported), and 168 clubs with no line have one from a complete 2025-26 Pitchero table (rank equal to place, full games). In the three tables short of unplayed fixtures (Counties 1 Kent, Midlands East (North), Durham & Northumberland) the 24 clubs that played the full games and are ranked at their place have their line too; the other 10 stay place only. Pitchero gives no pattern, so where a Pitchero kit looked the same as another club's in its county its hoops (6) or its trim (13) is a free choice, marked kitFree and said in its sources; 28 more pairs already differed only by a Pitchero kit's hoops, the earlier guess's, which stand as that free choice. Cobham keeps the game's line (PA 412; Pitchero 411)."
+   "decision": "103 guessed kits are now the club's own Pitchero colours (reported), and 168 clubs with no line have one from a complete 2025-26 Pitchero table (rank equal to place, full games). In the three tables short of unplayed fixtures (Counties 1 Kent, Midlands East (North), Durham & Northumberland) the 24 clubs that played the full games and are ranked at their place have their line too; the other 10 stay place only. Pitchero gives no pattern, so where a Pitchero kit looked the same as another club's in its county its hoops (7) or its trim (12) is a free choice, marked kitFree and said in its sources; 28 more pairs already differed only by a Pitchero kit's hoops, the earlier guess's, which stand as that free choice. Cobham keeps the game's line (PA 412; Pitchero 411)."
   }
  ],
  "gameKitChanges": [
@@ -12778,7 +12778,7 @@
      "county": "Surrey",
      "code": "SUR",
      "kit": "#1c1c1c",
-     "trim": "#2050b0",
+     "trim": "#f2efe6",
      "hoops": false,
      "kitConfidence": "reported",
      "league": "Counties 1 Surrey/Sussex",
@@ -12799,7 +12799,7 @@
       "Kit: Pattern: plain is the earlier guess's, a free choice (Pitchero gives no pattern). Identity: league",
       "Kit confidence: reported: the club's Pitchero site colours (a website theme, not a stated kit)",
       "County: Surrey Rugby Football Union article, 'Affiliated clubs' list ('Old Caterhamians'); ground Caterham School, Caterham, Surrey",
-      "Kit: trim a free choice (the orchestrator, 14 Nov 2026; the owner can overrule): with Pitchero's trim the kit was #1c1c1c/#e3b449, which looked the same as the game's Merton's in Surrey, and Pitchero gives no pattern to tell them apart, so the shirt stays Pitchero's and the trim is #2050b0, which reads against it"
+      "Kit: trim a free choice (the orchestrator, 14 Nov 2026; the owner can overrule): with Pitchero's trim the kit was #1c1c1c/#e3b449, which looked the same as the game's Merton's in Surrey, and Pitchero gives no pattern to tell them apart, so the shirt stays Pitchero's and the trim is #f2efe6, which reads against it"
      ],
      "kitFree": "trim"
     },
@@ -14752,7 +14752,7 @@
      "county": "Yorkshire",
      "code": "YKS",
      "kit": "#000245",
-     "trim": "#2050b0",
+     "trim": "#e8731c",
      "hoops": false,
      "kitConfidence": "reported",
      "league": "Counties 1 Yorkshire",
@@ -14773,7 +14773,7 @@
       "Kit: Pattern: plain is the earlier guess's, a free choice (Pitchero gives no pattern). Identity: table-row: own row in the 2025/26 Counties 1 Yorkshire table, rank 3 = dataset place, 14-0-8",
       "Kit confidence: reported: the club's Pitchero site colours (a website theme, not a stated kit)",
       "County: Wikipedia, Yorkshire Rugby Football Union, 'Affiliated club sides' list (the union's 94 member clubs) names Goole; ground Westfield Banks, Goole, East Riding of Yorkshire",
-      "Kit: trim a free choice (the orchestrator, 14 Nov 2026; the owner can overrule): with Pitchero's trim the kit was #000245/#f2b01e, which looked the same as Guisborough's in Yorkshire, and Pitchero gives no pattern to tell them apart, so the shirt stays Pitchero's and the trim is #2050b0, which reads against it"
+      "Kit: trim a free choice (the orchestrator, 14 Nov 2026; the owner can overrule): with Pitchero's trim the kit was #000245/#f2b01e, which looked the same as Guisborough's in Yorkshire, and Pitchero gives no pattern to tell them apart, so the shirt stays Pitchero's and the trim is #e8731c, which reads against it"
      ],
      "kitFree": "trim"
     },

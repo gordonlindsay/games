@@ -77,7 +77,7 @@ function localCounties() {
         { id:'RWE', name:'Reeds Weybridge', kit:'#1b2747', trim:'#e8731c', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 South Central', place:11, w:4, d:0, l:18, pf:384, pa:838 },   // colours a free choice
         { id:'ORI', name:'Old Reigatian', kit:'#f2efe6', trim:'#2050b0', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 South East', place:12, w:1, d:0, l:21, pf:369, pa:1015 },   // colours a free choice
         { id:'TRT', name:'Trinity', kit:'#c8102e', trim:'#f2b01e', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:3, w:11, d:1, l:8, pf:594, pa:611 },   // colours a free choice
-        { id:'OCA', name:'Old Caterhamians', kit:'#1c1c1c', trim:'#2050b0', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:9, w:8, d:1, l:11, pf:519, pa:620 },   // trim a free choice
+        { id:'OCA', name:'Old Caterhamians', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:9, w:8, d:1, l:11, pf:519, pa:620 },   // trim a free choice
         { id:'OWI', name:'Old Wimbledonian', full:'Old Wimbledonians', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Surrey/Sussex', place:10, w:1, d:0, l:19, pf:376, pa:831 },   // colours a free choice
         { id:'KOL', name:'KCS Old Boys', kit:'#000099', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Surrey/Sussex', place:11, w:3, d:0, l:17, pf:339, pa:794 },
       ] },
@@ -558,7 +558,7 @@ function localCounties() {
         { id:'DPH', name:'Donc. Phoenix', full:'Doncaster Phoenix', kit:'#1b2747', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 North East', place:12, w:0, d:0, l:22, pf:232, pa:1148 },
         { id:'WDE', name:'Wath-upon-Dearne', kit:'#1b2747', trim:'#7c1431', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:1, w:20, d:0, l:2, pf:920, pa:314 },
         { id:'DIN', name:'Dinnington', kit:'#082ac2', trim:'#f2b01e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:2, w:20, d:0, l:2, pf:971, pa:510 },
-        { id:'GOO', name:'Goole', kit:'#000245', trim:'#2050b0', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:3, w:14, d:0, l:8, pf:785, pa:568 },   // trim a free choice
+        { id:'GOO', name:'Goole', kit:'#000245', trim:'#e8731c', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:3, w:14, d:0, l:8, pf:785, pa:568 },   // trim a free choice
         { id:'YAR', name:'Yarnbury', kit:'#f2efe6', trim:'#1b2747', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:4, w:13, d:0, l:9, pf:841, pa:569 },
         { id:'WLE', name:'West Leeds', kit:'#1b2747', trim:'#f2b01e', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:5, w:11, d:0, l:11, pf:697, pa:627 },
         { id:'KEG', name:'Keighley', kit:'#c70000', trim:'#0f5a32', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Yorkshire', place:6, w:12, d:0, l:10, pf:624, pa:497 },
