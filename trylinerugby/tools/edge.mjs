@@ -45,24 +45,39 @@ function pins() {
   return { same:same.map(fnv).join(' '), easy:easy.map(fnv).join(' ') };
 }
 /* The knock-ons (KNOCK, src/knock.js, 2026-11-11) act everywhere, so they move SAME and EASY both. The edge's own proof runs with them
-   off (20cbcaf exactly, so BASE and ON stand as the edge pinned them); WITH_KNOCK is the game as it ships, both on. */
-const KN = T.knock && T.knock.KNOCK;
-const WITH_KNOCK = { same:'1sans4x ishkxt 6s5dj3 b3clyy 1vdlusf 1kqx1dl 1r9icc0', easy:'18hjlb7 3aqbkz 11w1g1f' };   // re-pin only from a change to the edge or the knock-ons, on purpose
+   off (20cbcaf exactly, so BASE and ON stand as the edge pinned them); WITH_KNOCK is both on, as the game shipped at b4a25d5. */
+const KN = T.knock && T.knock.KNOCK, CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);
+const WITH_KNOCK = { same:'1sans4x ishkxt 6s5dj3 b3clyy 1vdlusf 1kqx1dl 1r9icc0', easy:'18hjlb7 3aqbkz 11w1g1f' };   // the knock-ons on, the calls and the chase off, as b4a25d5 shipped: re-pin only from a change to the edge or the knock-ons, on purpose
+/* The possession calls and the interception rules (CALLS, src/calls.js, 2026-11-13) and the kick chase (CHASE, src/chase.js, 2026-11-13) act
+   everywhere too. Every run above is with both off (b4a25d5 exactly, so BASE, ON and WITH_KNOCK stand as pinned). WITH_CALLS is the knock-ons
+   and the calls on with the chase off (wt/calls' pin, a032b3a); WITH_CHASE the knock-ons and the chase on with the calls off (wt/chase's pin,
+   fc90ec0; at its react 0, pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 1sans4x ishkxt 6s5dj3 ievgu1 1vdlusf
+   1kqx1dl d5aae / 10a08ta 3aqbkz iw62m6); SHIPS the game as it ships at 1.6, all four on (2026-11-14). Re-pin only from a change to the
+   edge, the knock-ons, the calls or the chase, on purpose */
+const WITH_CALLS = { same:'1ru8ljp g0q4ru 1wmj5sn c1ybz5 fqhmon h0aw10 frfp5z', easy:'1x1rx2c 1id9kca 16by8my' };
+const WITH_CHASE = { same:'1sans4x ishkxt 6s5dj3 34tecb 1vdlusf 1kqx1dl 16d6tkt', easy:'8j1x8w 3aqbkz 1r5myg1' };
+const SHIPS = { same:'1ru8ljp g0q4ru 1wmj5sn 1kps42k fqhmon h0aw10 1332o5j', easy:'1x1rx2c 1id9kca 16by8my' };
 if (process.argv.includes('--pins')) {
-  if (E) E.EDGE.on = false; if (KN) KN.on = false;
+  if (E) E.EDGE.on = false; if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
   const p = pins(); console.log(`same:'${p.same}', easy:'${p.easy}'`); process.exit(0);
 }
 begin('0 EDGE off is 90353c3');
 {
-  if (KN) KN.on = false;
+  if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
   E.EDGE.on = false; const off = pins(); E.EDGE.on = true; const on = pins();
   if (KN) KN.on = true;
-  ok(off.same === BASE.same && off.easy === BASE.easy, `EDGE off (and the knock-ons): every match plays as 90353c3, with the same draws (${off.same} / ${off.easy}, pinned ${BASE.same} / ${BASE.easy})`);
+  ok(off.same === BASE.same && off.easy === BASE.easy, `EDGE off (and the knock-ons, the possession calls and the kick chase): every match plays as 90353c3, with the same draws (${off.same} / ${off.easy}, pinned ${BASE.same} / ${BASE.easy})`);
   ok(on.same === BASE.same, `EDGE on: AI v AI, the demo, a tool's balance match on Easy, Normal and Hard arcade matches and Two Player on Easy do not move at all (${on.same})`);
   ok(on.easy.split(' ').slice(0, 2).every((h, i) => h !== BASE.easy.split(' ')[i]), `EDGE on moves the Easy Quick Match and the Kids match, on purpose (${on.easy})`);
   ok(on.easy === ON, `and plays them as pinned with the edge (${on.easy}, pinned ${ON})`);
   const both = pins();
-  ok(both.same === WITH_KNOCK.same && both.easy === WITH_KNOCK.easy, `with the knock-ons too, as the game ships (${both.same} / ${both.easy}, pinned ${WITH_KNOCK.same} / ${WITH_KNOCK.easy})`);
+  ok(both.same === WITH_KNOCK.same && both.easy === WITH_KNOCK.easy, `with the knock-ons too, the possession calls and the kick chase off as b4a25d5 (${both.same} / ${both.easy}, pinned ${WITH_KNOCK.same} / ${WITH_KNOCK.easy})`);
+  if (CL) CL.on = true; const calls = pins();
+  if (CL) CL.on = false; if (CS) CS.on = true; const chase = pins();
+  if (CL) CL.on = CL0; if (CS) CS.on = CS0; const ships = pins();
+  ok(calls.same === WITH_CALLS.same && calls.easy === WITH_CALLS.easy, `and with the possession calls, the kick chase off, as wt/calls (a032b3a) (${calls.same} / ${calls.easy}, pinned ${WITH_CALLS.same} / ${WITH_CALLS.easy})`);
+  ok(chase.same === WITH_CHASE.same && chase.easy === WITH_CHASE.easy, `and with the kick chase, the possession calls off, as wt/chase (fc90ec0) (${chase.same} / ${chase.easy}, pinned ${WITH_CHASE.same} / ${WITH_CHASE.easy})`);
+  ok(ships.same === SHIPS.same && ships.easy === SHIPS.easy, `and with the possession calls and the kick chase both, as the game ships (${ships.same} / ${ships.easy}, pinned ${SHIPS.same} / ${SHIPS.easy})`);
 }
 done('0 EDGE off is 90353c3');
 

@@ -123,6 +123,7 @@ function maxSpeed(p) {
   let f = 1;
   if (p.boost > 0) f *= 1 + ((p.boostMul || 1) - 1)*Math.min(1, p.boost/0.6);
   if (M.surge && M.surge.team === p.team) f *= 1.08;
+  if (p.chase > 0) f *= chaseMul(p);                        // chasing his side's kick (src/chase.js)
   if (onFire(p.team)) f *= ARCADE.fire.speed;
   if (edgeCarry(p)) f *= EDGE.pace;                          // Easy: your carrier, a little quicker with the ball (src/edge.js)
   f *= traitPace(p, staminaPace(p.team));                   // tired legs late in a half (1 outside matches you play); an Engine feels less of it
@@ -156,7 +157,7 @@ function seek(p, tx, ty, speed, acc, dt, pursue) {
 function placeBall(x, y) {
   const b = M.ball;
   b.state = 'dead'; b.carrier = null; b.f = null; b.x = x; b.y = y; b.z = 0; b.vx = b.vy = b.vz = 0;
-  eggOff(b);
+  eggOff(b); if (b.off) b.off = null;                      // nobody is offside at a dead ball (CALLS, src/calls.js)
 }
 function playFrom(team, x, y, kind) {                      // the mark the ball is played from: a ruck 1.6m behind, a scrum 1.2, a lineout 1.5 and out to the side
   const d = dirOf(team);
@@ -259,7 +260,7 @@ function releaseTo(team, x, y, kind, who) {
 function setCarrier(p) {
   const b = M.ball;
   if (M.poss !== p.team) M.phaseCount = 0;
-  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b);
+  b.state = 'held'; b.carrier = p; b.f = null; b.last = p.team; b.kickInfo = null; eggOff(b); if (b.off) b.off = null;   // a new phase: nobody is offside from the last (CALLS)
   p.hold = 0; p.think = 0.1; p.quick = false; p.drop = null;
   if (M.proCall) M.proCall = null;                         // Pro Mode: a call lasts one possession, his own catch and the caller's next one included (career-pro.js)
   M.poss = p.team;
@@ -286,7 +287,8 @@ function catchBall(p, kind) {
   traitCaught(p, r, k);
   p.fromKick = kind === 'kick';
   if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? KIDS.grace : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit (Kids: its rating's, kidsTune)
-  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
+  if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small', callCol(p.team)); heat(p.team, 'turnover'); callWon(p); possCall(p, 'Intercepted', true); }   // in the winner's colour, and called over him (src/calls.js)
+  else if (kind === 'pass' && f && f.call) possCall(p, f.call, false);   // an offload a teammate the computer runs made to the ring's man: Offload
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
   M.stats.knocks++; st('ko_' + (why || 'catch'));
@@ -309,6 +311,7 @@ function pickUp(p) {
   }
   const turn = p.team !== b.last && !b.kickInfo;
   setCarrier(p); sfx('catch');
-  if (turn) { M.stats.turnovers++; say('Turnover', 'small'); heat(p.team, 'turnover'); }
+  if (turn) { M.stats.turnovers++; say('Turnover', 'small', callCol(p.team)); heat(p.team, 'turnover'); callWon(p); }
+  possCall(p, turn ? 'Turnover' : 'Picked Up', turn);       // the ring's man has it: say how (src/calls.js). A kick is anyone's, a kick-off and a drop-out among them, so a kick gathered is Picked Up
 }
 

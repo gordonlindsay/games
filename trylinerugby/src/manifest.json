@@ -13,6 +13,8 @@
   "arcade.js",
   "edge.js",
   "knock.js",
+  "calls.js",
+  "chase.js",
   "stamina.js",
   "ball.js",
   "movement.js",

@@ -90,7 +90,7 @@ Two consequences the owner may want to change (2026-11-11 review): **Not Say dec
 
 Matches you play are arcade; AI v AI, the demo, practice and the balance tools are not, so their numbers are unchanged.
 
-- **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds (on Easy, your side against the CPU: two good moments, a Line Break one of them, for 15 seconds; Easy, below): 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length.
+- **On Fire.** A Big Hit or a turnover won is worth a point, a try two; three unanswered lights the side for 12 seconds (on Easy, your side against the CPU: two good moments, a Line Break one of them, for 15 seconds; Easy, below): 6% quicker and half the handling errors, an orange glow and trail, and a banner. Any good moment by the other side, a broken tackle included, resets the run, and conceding a try puts the fire out. The meter beside each team code on the scorebug fills towards it. Both sides can catch fire; about two a match at the middle length. Its banner waits for the banner of the moment that lit it (Turnover, Intercepted, a Big Hit, a Try) and follows it once that one has had its time, instead of replacing it (Possession calls, 2026-11-13); lit by a Line Break it shows at once, with Line Break over it.
 - **Big Hit.** Your dominant tackle now takes the full banner, a 180ms freeze and a harder shake, and spills the ball 12 points more often (21% of the time at average hands, where any Big Hit spills it 9%). Taking one shakes the screen too, and that is all: the CPU's Big Hit on yours spills it no more than a Big Hit in any other match (until 2026-11-11 it did, against this line: `KNOCK.hit`, Catching and knock-ons). In Two Player both sides are yours.
 - **Golden Try.** Quick Match and Two Player level at full time go to sudden-death extra time, half a half long. Any score wins it; a try needs no conversion. Still level at its hooter, the draw stands. A championship keeps its draws; a cup's knockout or Test has the Golden Try too, and is never left level (Silverware).
 
@@ -373,7 +373,7 @@ The owner plays on Easy (2026-11-10): "Provide more of an edge", then, choosing 
 
 **Who has it.** A side a person plays against the CPU on Easy: Quick Match, Championship, Career (in Pro Mode, his own player only, never a teammate the computer runs) and Kids, which is Easy underneath. Never Two Player, AI v AI, the demo, the drills, Normal or Hard, and never a tool's balance match: `edgeOn` reads `M.arcade`, which only `startMatch` asks for. One table, `EDGE` in `src/edge.js`, with an on switch; `EDGE='{"on":false}'` in the harness plays exactly as 90353c3, draw for draw.
 
-- **Line Break.** Your carrier gets past the last man in front of him: no standing defender ahead of him inside a window 15m across beside him (the lane the CPU's Sprint calls a clean break by) that widens a metre for every metre ahead, so the deep cover man, 15m ahead and 16m across, is still in front of him while he is placed to come across; where one was earlier in the same carry; none within 3m of him at all; running forward at 2.5 m/s or more, 5m or more out. Once a carry: **Line Break** is called (the small banner in your colour, so the run stays in sight), a whoosh and the crowd, a point towards On Fire, and a 110ms hold with no shake (a Big Hit's is 180ms). If that point lights On Fire, the On Fire banner carries Line Break over it, so the call is still seen. A Get Past close-up won the right way already says Line Break with its cheer, so that is the carry's Line Break: its point and the cover's lag, and no second call when play hands back. Kids and Minis get the call, the sound and the point, and no hold. For 0.3 seconds after it the CPU's cover runs on as it was running before it reacts.
+- **Line Break.** Your carrier gets past the last man in front of him: no standing defender ahead of him inside a window 15m across beside him (the lane the CPU's Sprint calls a clean break by) that widens a metre for every metre ahead, so the deep cover man, 15m ahead and 16m across, is still in front of him while he is placed to come across; where one was earlier in the same carry; none within 3m of him at all; running forward at 2.5 m/s or more, 5m or more out. Once a carry: **Line Break** is called (the small banner in your colour, so the run stays in sight), a whoosh and the crowd, a point towards On Fire, and a 110ms hold with no shake (a Big Hit's is 180ms). If that point lights On Fire, the On Fire banner carries Line Break over it, so the call is still seen; so does an On Fire banner already showing (Possession calls, 2026-11-13). Not within a second of a turnover or an interception on the same carrier: that moment's call is Turnover or Intercepted, and the Line Break is called once the second is up if he is still clear. A Get Past close-up won the right way already says Line Break with its cheer, so that is the carry's Line Break: its point and the cover's lag, and no second call when play hands back. Kids and Minis get the call, the sound and the point, and no hold. For 0.3 seconds after it the CPU's cover runs on as it was running before it reacts.
 - **On Fire sooner and longer.** Your side lights after two good moments unanswered, a try, a Line Break, a Big Hit and a turnover won one each, and burns 15 match seconds instead of 12 (each by Stamina). Every other side keeps three points, a try two, and 12 seconds. With a try worth two on Easy as well (need 2 and 15 seconds on the old points), the casual adult below went On Fire 4.4 times a match, since every try lit it, and the call stopped being one.
 - **A stronger carrier**, against the CPU only (its own carriers are as they were):
 
@@ -560,7 +560,7 @@ AI v AI at all three levels (asked to play Kids or not), the demo, the harness's
 `node tools/kids.mjs` checks the setting, the save (a round trip, old saves on each level, partial and bad ones), each lever on in Kids and off on Easy and in AI v AI, the ring staying on a bound tackler, the rating (the scale's start and ceiling lever by lever, the straight line between them, bounds, the update rule and its step sizes, each step the same size anywhere on the scale, a child who loses every other match going back to the start and one who wins big climbing to the top, its save, old saves, and who moves it: Quick Match, Championship and Career at full time, never a match quit early, Easy, two player, AI v AI, the demo or a drill), the check's pass and cancel paths, its three-figure answers, its rests (two keys in turn and random taps), the controller's focus, its place over the other cards, and the half (section 14: a Kids half at each length is the chosen half times the Kids pace in simulated seconds and the chosen half in real time, the Golden Try half of it, in Quick Match, Championship and a Whole Team career; the scorebug's real clock, 0:00 to 2:00 each half and holding at the hooter; a whole Kids half through the real frame loop taking 2:00 of real time while the clock runs; and every other match, Easy, Normal and Hard at each length, Two Player, My Player on Kids, AI v AI, the demo and a drill, keeping its half and its clock, with a seeded fingerprint pinned to 909fe3a). `node tools/kidbots.mjs` is the calibration above: tens of minutes long, so not part of `check.mjs`.
 ## Sound
 
-Fifteen of the game's twenty sounds, and the crowd bed under a match, are real recordings: 36 files in `assets/sounds` (AAC in .m4a, mono, 355 KB in all), every one CC0 from OpenGameArt and Kenney. [assets/sounds/LICENCES.md](assets/sounds/LICENCES.md) lists each file's sources, authors, the day they were fetched and what was done to them. Pea Whistle, Long Whistle and Horn are still synthesised (no CC0 referee's whistle or stadium hooter could be found, and Freesound refused the requests), and so are Trip, Tick and Menu Tap, cues made to carry on a phone speaker.
+Fifteen of the game's twenty-one sounds, and the crowd bed under a match, are real recordings: 36 files in `assets/sounds` (AAC in .m4a, mono, 355 KB in all), every one CC0 from OpenGameArt and Kenney. [assets/sounds/LICENCES.md](assets/sounds/LICENCES.md) lists each file's sources, authors, the day they were fetched and what was done to them. Pea Whistle, Long Whistle and Horn are still synthesised (no CC0 referee's whistle or stadium hooter could be found, and Freesound refused the requests), and so are Trip, Tick, Menu Tap and Gather (the possession call's: the catch's slap and two notes going up, a fifth apart), cues made to carry on a phone speaker.
 
 - **Loading.** After the first tap each file is fetched and decoded once, one at a time in the background, and kept. Until a sound's recording is in, or when it cannot be had (offline on a first visit, a failed fetch or decode), its recipe in `src/sound.js` plays instead, and a later tap asks again. Headless runs, Sound Off and a page with no audio fetch nothing. The files precache with the shell and the app carries them.
 - **Playing.** `sfx(key)` plays a random take, a little faster or slower and louder or softer (`Math.random`, never `rnd()`), through the same voice, gap, rank, node cap and bus as before. The crowd bed is a 14 second loop with no audible seam, started from a random place, and it swells under a roar or a cheer.
@@ -853,6 +853,8 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |
 | `src/maul.js`, `src/render-maul.js` | The maul: the call, the close-up's drive, the maul driven in the world with nobody in it, and its close-up's drawing |
 | `src/knock.js` | The knock-on levers (`KNOCK`, read through `knockLv`): the unforced base, the interception's term, the Big Hit's spill yours only, the Knock-On tag |
+| `src/calls.js` | The possession calls and the interception rules (`CALLS`, read through `callsLv`): the call over the new carrier, its flash, sound and beat, On Fire after its moment's banner, the Line Break held after a turnover, nobody intercepting out of the passer's hands, nobody down, retiring or offside playing the ball |
+| `src/chase.js` | The kick chase (`CHASE`, read through `chaseLv`): an open-play kick's onside chasers quicker for 1.5s, the catching side reacting at once (pace alone, the owner's choice; its late start kept, idle at react 0) |
 | `src/championship.js` | Fixtures, results, standings and title race |
 | `src/cups.js`, `src/ui-cups.js` | Silverware: the European Cup, World Cup, Home Nations Tour and Triple Crown, their screens and the Trophy Cabinet's kinds |
 | `src/render-*.js` | Pitch, players, close-up scenes and match drawing; `render-behind.js` is the optional behind views |
@@ -972,6 +974,7 @@ The ladder would have gone backwards at County, so that is what moved, and only 
 - **A profile for new players; GAME_VERSION 1.3** (2026-11-11). The owner: "Profile setup for a new user? Allows them to create the avatar, gender (male/female/na), club and set age group (mini, junior, adult)". A first launch runs four steps (Age Group, Gender, Club, Your Look); everyone else reaches the same profile from My Team's Change. See Profile.
 - **The Filter and fewer knock-ons; GAME_VERSION 1.4** (2026-11-11). The owner: "set up a search bar for club selection and show the hierarchy starting at the top. Swipe down for drill down", then "Filter pops up with nested team list and search. Have a search icon"; shown a mock-up, he chose the columns ("Nice that works") and Next Group Down for a downward swipe. And: "Reduce the knock ons a bit. Happening too randomly", choosing Cut the Unexplained. See Teams: The team screen, and Catching and knock-ons.
 - **Age Group and Gender in Settings, goal kicks on Normal and Hard, and the stuck stick; GAME_VERSION 1.5** (2026-11-12). The owner: "once gender / age section chosen, have them in settings to change - don't include on the team selection page the filter for age" (shown a mock-up, Build); "Normal and hard difficulty shouldn't have the kick aligned with the wind... For normal difficulty, you get a few seconds maybe of the arrow. Hard, you don't get any" (Build, with Arrow While Steering); and "the joystick got jammed/stuck", twice in iPhone Safari, the stick stuck at full deflection and the player running on. See Profile, goal kicks, and A finger the page lost.
+- **Possession calls and the kick chase; GAME_VERSION 1.6** (2026-11-14). The owner: "There's sometimes a glitch where the ball is passed, the tackle is made by CPU and suddenly the ball is with my player on a breakaway - or did I miss the switch?", choosing Interceptions Stay Automatic, Clearly Called; and "When kicking and chasing down the ball as an attacker, they should have a boost as they have caught the defender by surprise", choosing Pace Alone. Every change of ball where you play is called (Picked Up, Intercepted, Turnover, Offload) in the winning side's colour, with a ring flash, the Gather sound and an 80ms beat (no beat for Kids or Minis); On Fire waits behind the moment that lit it, and a Line Break a second after a turnover; nobody intercepts within 1.5m of the passer's hands, and a man down, retiring or offside cannot intercept, take a missed pass or pick up a loose ball; after your own kick the ring goes to a man who may play the bounce. On every open-play kick the kicking side's onside chasers run 8% quicker for 1.5s, and your ringed man is now always one of them. See Possession calls, and Kicking and the chase.
 - **Saving** (2026-10-14): half length, difficulty, sound, Hints (and each player's Hints in two player, by keyboard
   half like each player's Difficulty), the tutorial moments this device has seen, Coach Tips and the coach lines already
   heard, up to four teams you make, and the championship are kept in this browser (`localStorage`, key `tryline.v1`).
@@ -1838,6 +1841,7 @@ A catch (`catchBall`, src/match.js) draws one number against a chance that is a 
 - **An interception**: +0.2 before, now **`KNOCK.intercept` 0.07**. Most are a pass your man ran into: the man under your
   ring takes one he is within 1.1m of 40% of the time and an AI teammate 18%, with no button pressed (src/ball.js, as
   before), and then dropped it about one time in four. Now about one in ten. The CPU's interceptions are the same rule.
+  Since 2026-11-13 never out of the passer's hands, and never by a man down, retiring or offside (Possession calls).
 - Then, as before: On Fire x0.5, Kids `KIDS.hands` (your side), a career's Team Spirit, Safe Hands x0.1.
 
 In the tackle (Contact), the arcade Big Hit's 0.12 (`ARCADE.hit.jolt`) now spills the ball only when the tackler's side is
@@ -1925,6 +1929,243 @@ still at most Easy: each child at the ceiling (`at 1`, 90 simulated seconds a ha
 | Sharp 10 year old | 100% by 5.77 | 100% by 5.39 | 100% by 5.93 | 100% by 5.67 |
 
 By margin the ceiling is at least as easy as Easy for every child, before and after.
+
+### Possession calls
+
+The owner, 2026-11-13: "There's sometimes a glitch where the ball is passed, the tackle is made by CPU and suddenly the ball is
+with my player on a breakaway - or did I miss the switch?" It was his own pass, the CPU tackled his receiver, the ball popped loose
+and his support man had it running free. Nothing went to the wrong side: when your side gathered a loose ball the ring jumped to the
+new man with no call, no sound and no beat, and the only cue was a 0.7s Loose Ball tag over the tackled man, which the two-tag cap
+could push off. Intercepted and Turnover were small yellow banners for either side, On Fire replaced them in the same step, and a
+Line Break (Easy) up to a second later replaced them too. He chose **Interceptions Stay Automatic, Clearly Called**. Every lever is
+in `CALLS` (`src/calls.js`), read through `callsLv`; none draws a random number, so `CALLS='{"on":false}' CHASE='{"on":false}'
+node tools/sim.mjs` plays exactly as b4a25d5, the build before, draw for draw (the kick chase, merged with the calls for 1.6, is
+the other half of that: with the calls off alone the game plays as the chase does on its own).
+
+- **The call.** Whenever the ring of a side a person plays goes to a new carrier for any reason but that person's own pass, a word
+  over him, following him for 0.9s on a dark plate edged in his side's colour: **Picked Up** (your side gathers a loose ball it did
+  not win from the other: its own spill, its own dropped pass, or any kick, a kick-off and a drop-out among them, since a kick is
+  anyone's), **Intercepted**, **Turnover** (a ruck won, or a loose ball gathered from the other side, a pressure spill among them)
+  and **Offload** (in Pro Mode, a teammate the computer runs offloads in the tackle and your player takes it; that offload used to be
+  silent). Where the side's colour would not show on the plate (under 3:1, ten sides of the 26, Scotland's navy at 1.4:1 among
+  them) it is lightened towards chalk until it does, keeping its hue; in Two Player the plate is edged in the seat's gold or pink, as
+  that player's ring and seat mark are. It stands over his pointer, under his ring where the banner would sit on it or between it and
+  him, or beside him where both are taken. That is chosen once, on its first frame, against the banner's laid-out box (not the box
+  its pop is still growing), so it never jumps. In Two Player it never sits on the other player's man, and beside him it goes on the
+  side away from that man. A place counts as clear only if the plate stays clear all the way up its rise; where none is (the banner
+  over him and the other player's man under him), it takes the one least on that man, then least on his own, then least under the
+  banner, never falling back onto that man (1.6's review: it once fell back to under him). While he is off the frame its clock
+  waits for him, for up to a second, so the call is there when the camera finds him. It rises 6px (it holds still under reduced
+  motion) and is never dropped by the two-tag cap for a plain tag while it lasts. His ring flashes for 0.4s, a ring going out and
+  fading (none under reduced motion), and the **Gather** sound plays, a synth recipe (the catch's slap, then two notes going up a
+  fifth apart, made to carry on a phone speaker): no recording was reused.
+  When the ball comes from the other side, an 80ms hold with no shake, never for Kids or Minis. Only where the ring is on him: in
+  Pro Mode a teammate who wins the ball gets no call, and nothing at all for the CPU, whose banner is its call. None of it in AI v
+  AI, the demo or a drill. Kicks caught on the full, a ruck's own ball, a scrum or a lineout and a pass that goes to the wrong man of
+  yours are not called: the ring follows the ball there as it always did. A kick-off or a drop-out gathered off the bounce by the
+  side receiving it is no longer a Turnover (banner, count or heat point), as a tactical kick and a goal kick already were not.
+- **The banners.** Intercepted and Turnover in the winning side's colour, as Line Break already was, lightened as the call's is. On
+  Fire waits for the banner of the moment that lit it: a turnover or an interception's 0.9s, a Big Hit's 1.3s, a Try's 1.7s, then On
+  Fire, instead of replacing it in the same step (and not at all if the fire has gone out by then). It also waits for any banner said
+  while it waits, and for open play: a try's On Fire shows once the conversion's close-up is over and the kick-off is taken, not
+  0.2s before the close-up wipes it. The crowd's roar and the buzz go with its banner, whenever that shows. A Line Break still
+  lights it with its word over it at once. A Line Break is not called within a second of a turnover or an interception on the same
+  carrier: that moment's call is the turnover's. Once the second is up he gets it if he is still clear, carried over On Fire's
+  banner if that is showing.
+- **No interception out of the passer's hands.** Interceptions stay automatic at the same odds (`pI`, src/ball.js), but nobody rolls
+  for one until the ball is **1.5m** from where it left the passer's hands. That is further than the 1.1m an interceptor reaches, so
+  a man standing at the passer's hands can never take it, and past the swing of his arms: about the first 0.1s of a flat pass's
+  flight. A long pass is the same at its start, and a missed pass that comes down inside 1.5m of the hands is dropped, not taken.
+  At b4a25d5 about a third of all interceptions were inside 1.5m of the release (AI v AI 7.3 of 20.4 a match).
+- **Nobody who may not play the ball does.** A man down (as before), retiring from a ruck or a maul (`p.offside`), or offside
+  cannot intercept, take a missed pass or pick up a loose ball, and the AI no longer sends him after a loose ball. Offside is open
+  play's law: a man more than 0.5m (the kick's margin) in front of the teammate who last played the ball as it was played, the
+  passer, the kicker or the tackled man who spilled it, until he has been back behind that line. The other side is never offside.
+  At your own kick the ring goes to the nearest man who may play its bounce, the kicker or a man behind him, not to a man in front
+  of the kicker who would run over the bouncing ball and not be allowed it.
+
+**Measured** on wt/calls, before the kick chase was merged with it for 1.6 (`node tools/calls.mjs --balance`, SEED 7, the same
+seeded matches with CALLS off then on). A match, yours / the
+CPU's (AI v AI: home / away), before then after:
+
+| | AI v AI, Normal | Bot, Easy | Bot, Normal | Bot, Hard | Casual adult, Easy |
+|---|---|---|---|---|---|
+| Interceptions | 10.17 / 10.25, 9.00 / 9.09 | 3.36 / 1.98, 3.31 / 1.79 | 5.64 / 3.39, 5.16 / 3.06 | 6.26 / 4.47, 6.63 / 3.69 | 5.04 / 2.79, 4.64 / 2.65 |
+| **Both sides** | **20.42, 18.09** | **5.34, 5.10** | **9.03, 8.22** | **10.74, 10.31** | **7.83, 7.29** |
+| Clean (not knocked on) | 9.16 / 8.97, 8.13 / 8.16 | 3.00 / 1.75, 3.08 / 1.65 | 5.03 / 3.09, 4.64 / 2.83 | 5.63 / 4.10, 5.90 / 3.23 | 4.46 / 2.62, 4.24 / 2.40 |
+| Inside 1.5m of the release | 3.77 / 3.48, 0 | 1.09 / 0.91, 0 | 1.91 / 1.68, 0 | 2.36 / 2.38, 0 | 1.99 / 1.36, 0 |
+| By a man retiring | 0.54 / 0.55, 0 | 0.21 / 0.10, 0 | 0.35 / 0.23, 0 | 0.42 / 0.17, 0 | 0.27 / 0.24, 0 |
+| Turnovers, both sides | 14.05, 13.21 | 5.28, 4.46 | 6.67, 6.54 | 7.21, 6.95 | 6.67, 6.64 |
+| Your calls: Picked Up, Intercepted, Turnover | | 0.49, 3.08, 2.27 | 1.11, 4.64, 2.67 | 1.26, 5.90, 2.04 | 1.20, 4.24, 3.12 |
+| Won (yours; AI v AI the home side's) | 46%, 45% | 100%, 100% | 95%, 90% | 54%, 50% | 91%, 87% |
+
+AI v AI is 120 matches at 4-minute halves; the bot (Quick Match's rules, 2-minute halves) 80 a level; the casual adult
+(`PROFILE=casual`, Easy) 100. The casual adult's column was measured again after the review fixes (his rare chips now ring a man
+who may play the bounce); the others did not move. Interceptions fall by 4 to 13% (both sides), not by the third that came out of the hands: most of
+those men still had their roll a step or two later, once the ball was 1.5m out and still within their reach. The ones taken from
+the hands and by a man retiring are gone. The bot's 95% to 90% on Normal is mostly the 80's noise: over 320 it is 95% to 93%
+(± 1), interceptions 8.84 to 8.00 a match, yours 5.51 to 5.00 and the CPU's 3.34 to 3.00; the casual adult over 400 wins 91%
+then 92% (± 1), interceptions 8.33 to 7.11. Fewer interceptions both ways cost a side that intercepts more than it is intercepted
+a little, which is you. The man under your ring met a loose ball he may not pick up (retiring or offside) once in 240 matches
+(the bot on Easy and on Normal and the casual adult, 80 each), but the bot never kicks in open play and the casual adult only
+chips now and then. Your own kicks, staged 150
+times at each of two lengths in bot matches (SEED 7): before the ring went to a man who may play the bounce, it went to a man in
+front of the kicker 43 times in 150 at each length, and he reached the ball and could not have it 6 times in 300; now 0 and 0, with
+the ball kept 19 and 13 times in 150 (19 and 12 before). Offload is 0 here: the bot and the casual adult play Whole Team, where
+the offload is yours to press. The calls are 6 to 9 a match where you play (2-minute halves), about two a minute of play, counted
+apart from the tags (`call_*`, not `tag_*`), so the contact census's tag stream is as it was.
+
+### Kicking and the chase
+
+The owner, 2026-11-13: "When kicking and chasing down the ball as an attacker, they should have a boost as they have caught
+the defender by surprise." He chose **every kicking side** (the CPU's kicks too) and **small**, tuned by how often the kicking
+side wins the ball back, noticeable and not a walkover. **His decision for 1.6** (13 November 2026), asked which chase ships
+once he had seen that react 0.2 let a chip-spammer win 67% of his matches on Normal (45% before) and 98% on Easy: "Pace Alone
+(Recommended): Chasers 8% quicker for 1.5s, and defenders react normally. Chips won back about 11 to 16 points more, so no
+chip-spam walkover." So the chase is its pace alone. It is `src/chase.js`, every lever in `CHASE` and read through `chaseLv`:
+
+| Lever | Value | What it does |
+|---|---|---|
+| `on` | true | `CHASE='{"on":false}' CALLS='{"on":false}' node tools/sim.mjs` plays exactly as b4a25d5, the build before, draw for draw |
+| `pace` | 1.08 | the chasers' top speed, times this |
+| `secs` | 1.5 | for this long from the kick, easing back to 1 over the last third (the last 0.5s) |
+| `react` | 0 | how late the catching side's men the computer runs start: 0, at once, as before the chase (the owner's Pace Alone) |
+
+- **Which kicks.** Every open-play kick (`kickBall`'s kind `kick`: a chip, a long kick, a clearance, a territory kick), by
+  either side, in every match: AI v AI, the demo, Two Player, a career, Kids and Minis (it is speed, not contact). Not a
+  restart (the kick-off and the 22 drop-out), a drop goal or a charge-down (the ball never gets away), and never in a drill.
+- **The chasers.** The kicking side's men onside at the kick (`f.onside`: level with or behind the kicker, by kickBall's
+  half-metre), the kicker himself among them, and your ringed man with them. At your own kick the ring goes to the nearest
+  man who may play its bounce (`kickRing`, Possession calls), the kicker or a man behind him, so he is always onside and
+  always chasing: the kick-chaser's first 100 chips on Normal, played (9 seeded matches, SEED 29, `tools/chase.mjs` section
+  3), put the ring on an onside chaser 100 times in 100. On wt/chase, before the calls were merged with it (or with CALLS
+  off), the ring jumped to your man nearest where it came down wherever he stood: in 30 of the kick-chaser's matches on
+  Normal that man was in front of the kicker, offside, after 139 of his 372 chips (37%; 43 of those 100 with CALLS off),
+  and ran at his own pace with no trail. Each carries his seconds left (`p.chase`), read in `maxSpeed` with the other factors, so nothing snaps his velocity as
+  `setBoost` would; under a Sprint the bigger of the two applies, never both. It ends the step the other side takes the ball
+  (a catch, a gather, its pass) or the ball is dead (touch, a knock-on, a try, the half), and runs on to its 1.5s while his
+  own side has it. A chaser shows the gold trail a burst shows.
+- **The catching side.** It reacts at once, as before the chase: `react` is 0, the owner's Pace Alone. The late start is kept
+  and tunable (`CHASE='{"react":0.2}'`): above 0 its men the computer runs carry on as they were running (`edgeHold`, the
+  Easy cover's lag) for that long after the kick instead of going for where it comes down or into their kick shape, and your
+  own input is never late (the ring still goes at the kick to your man nearest where it comes down who may play it,
+  `kickBall`, and your stick drives him from the next step). At 0 it is idle: a build with its one line cut (`CHASE_LATE=off` in the harness)
+  plays exactly as the game ships, draw for draw, and at 0.2 that build plays as 0 does (`tools/chase.mjs`, section 0).
+- **No new draw.** Nothing in it draws a number, so CHASE off, with the possession calls off too, is b4a25d5 exactly
+  (`tools/chase.mjs`, and the proof behind every fingerprint re-pinned for the two, each kept as `BEFORE_CALLS_CHASE` or as
+  its tool names it); CHASE off alone plays as the calls do on their own (`WITH_CALLS`). `CHASE='{"react":0.2}'` tries other
+  levers.
+
+**Rejected: react 0.2**, as 98e11c8 had it (the floor of the owner's first band, 0.2 to 0.4; SEED 7, CHASE off then on): the
+staged chip 8% to 17%, on Normal the casual adult's chips 31% to 72% and the kick-chaser's 36% to 65% with his wins 45% to
+67%, on Easy his wins 87% to 98% (as react 0 gives on those 100 matches: below); the late start, not the pace, won a person's
+chips back (he chips over a defence rushing him, and its nearest men ran on the wrong way), 20 to 41 points more where the
+aim was 10 to 15.
+
+**Kids and Minis** play the same rule. The Kids chase (`kidsChase`, a child who lets go of the stick has his ringed man run
+for the ball at 0.80 of his pace) needs nothing: it reads `maxSpeed`, so on his own side's kick he chases at 0.80 x 1.08, and
+on the CPU's he goes at once, as before. Measured (`node tools/kidbots.mjs at 1 200`, and `HALF=90 ... at easy 200`), each
+child at the Kids ceiling and then on Easy at the same half, CHASE off then on, his wins and his try margin a match:
+
+| 200 matches each | Ceiling, SEED 7 | Easy, SEED 7 | Ceiling, SEED 11 | Easy, SEED 11 |
+|---|---|---|---|---|
+| 6 year old | 73% by 1.87 to 79% by 2.15 | 74% by 1.80 to 77% by 2.01 | 75% by 1.86 to 73% by 2.06 | 75% by 2.02 to 81% by 2.23 |
+| 7 to 8 year old | 92% by 3.31 to 94% by 3.62 | 89% by 2.67 to 84% by 2.54 | 91% by 3.26 to 90% by 3.15 | 90% by 2.78 to 88% by 2.83 |
+| Sharp 10 year old | 100% by 5.93 to 100% by 5.92 | 100% by 5.67 to 100% by 5.59 | 100% by 5.90 to 100% by 6.00 | 100% by 5.61 to 99% by 5.64 |
+
+The children chip now and then, and win a few more of them back; each margin moves by a third of a try or less, about its
+noise (± 0.2 a line). By margin the ceiling stays at least as easy as Easy for the 7 to 8 and 10 year olds on both seeds; for
+the 6 year old the two tie inside their noise, as they did before the chase (2.15 against 2.01 at SEED 7, 2.06 against 2.23
+at SEED 11).
+
+**Measured** at react 0 on wt/chase, before the possession calls were merged with it for 1.6 (`node tools/chase.mjs
+--balance`, SEED 7 and SEED 11, the same seeds with CHASE off, as b4a25d5, then on). Every open-play kick is watched from outside the game: a chip is under 20m, a clearance 20m or more from inside the
+kicker's own 22, a long kick any other. It is **won back** when the kicking side holds it next (caught in the air, or gathered
+off the ground, or grounded for a try), **lost** when the other side does, and **run back** when that side then carries it
+10m or more past where it was aimed to come down.
+
+The staged kicks are two even sides (3 in every ability), AI v AI on Normal, 240 seeds a side, both sides kicking: a chip
+(11 to 15m, as a person's are) over the last man by a kicker through the line, with the sweeper 8 to 12m ahead and the
+beaten men turning; a long kick (aiKick's territory kick) from the kicker's own 40 and a clearance from 12m out, both into the
+game's own defence. A person's chips are the casual adult's (`PROFILE=casual`, his occasional tap of Kick) and the
+kick-chaser's (the casual adult tapping it ten times as often), against the CPU as played, 2-minute halves.
+
+| Won back, before then after (kicks) | Chips | Long kicks | Clearances |
+|---|---|---|---|
+| Staged, SEED 7 (480 each) | 8% to 20% (home 11 to 24, away 6 to 16) | 0% to 0% | 0% to 0% |
+| Staged, SEED 11 (480 each) | 5% to 17% (home 4 to 15, away 6 to 19) | 0% to 0% | 0% to 0% |
+| AI v AI, Normal, 4-minute halves, SEED 7 (120 matches) | none kicked | 2% to 0% (53, 48) | 0% to 0% (401, 413) |
+| AI v AI, Normal, 4-minute halves, SEED 11 (120) | none kicked | 0% to 0% (48, 48) | 0% to 0% (410, 438) |
+| Casual adult, Easy, SEED 7 (100) | 46% to 55% (195, 182) | 0% to 0% (19, 19) | 1% to 2% (88, 83) |
+| Casual adult, Easy, SEED 11 (100) | 44% to 52% (227, 190) | 0% to 0% (17, 16) | 0% to 1% (99, 97) |
+| Kick-chaser, Easy, SEED 7 (100) | 46% to 56% (1450, 1599) | 0% to 3% (28, 38) | 0% to 2% (120, 129) |
+| Kick-chaser, Easy, SEED 11 (100) | 47% to 58% (1459, 1509) | 0% to 0% (29, 29) | 2% to 2% (132, 117) |
+| Casual adult, Normal, SEED 7 (100) | 31% to 47% (147, 161) | 4% to 7% (24, 30) | 1% to 2% (110, 103) |
+| Casual adult, Normal, SEED 11 (100) | 31% to 47% (159, 165) | 6% to 4% (35, 26) | 2% to 1% (89, 104) |
+| Kick-chaser, Normal, SEED 7 (100) | 36% to 48% (1221, 1271) | 2% to 6% (57, 52) | 1% to 2% (152, 123) |
+| Kick-chaser, Normal, SEED 11 (100) | 36% to 48% (1174, 1246) | 6% to 5% (49, 55) | 1% to 5% (149, 132) |
+
+A chip won back is caught in the air nine times in ten, before and after. Of the chips the other side took, the share run
+back 10m or more falls with them (the kick-chaser at SEED 7, 9% of all his chips to 7% on Easy, 16% to 13% on Normal). The
+CPU's own kicks hardly come back either way (0% to 5% a run): it never chips, and its long kicks and clearances land on a man
+or in touch.
+
+| Matches, before then after | Won, SEED 7 | Won, SEED 11 | Tries, SEED 7 | Tries, SEED 11 |
+|---|---|---|---|---|
+| AI v AI (home's share) | 46% to 47% | 47% to 39% | 0.68-0.47 to 0.65-0.55 | 0.59-0.60 to 0.49-0.59 |
+| Casual adult, Easy | 91% to 92% | 99% to 89% | 2.71-0.29 to 2.70-0.23 | 2.88-0.28 to 2.61-0.31 |
+| Kick-chaser, Easy | 87% to 98% | 91% to 95% | 2.64-0.44 to 3.26-0.25 | 2.93-0.31 to 3.40-0.31 |
+| Casual adult, Normal | 47% to 50% | 50% to 56% | 0.97-0.82 to 1.07-0.93 | 1.13-0.94 to 1.22-0.83 |
+| Kick-chaser, Normal | 44% to 57% | 54% to 59% | 1.14-0.96 to 1.37-0.81 | 1.04-0.83 to 1.33-0.88 |
+
+The rows whose change was near its noise (± 3 to 5 at 100 matches) again on wider samples, the first 100 matches the same,
+and the two Normal rows at a third seed, SEED 23 (the independent check's, 2026-11-14):
+
+| Wider, before then after | Matches | Won | Chips won back |
+|---|---|---|---|
+| Kick-chaser, Easy, SEED 7 | 300 | 90% to 95% | 47% to 57% (4379, 4697) |
+| Kick-chaser, Easy, SEED 11 | 300 | 90% to 94% | 46% to 58% (4395, 4569) |
+| Kick-chaser, Normal, SEED 7 | 300 | 44% to 58% | 37% to 48% (3500, 3731) |
+| Kick-chaser, Normal, SEED 23 | 300 | 40% to 59% | 37% to 48% (3384, 3565) |
+| Casual adult, Normal, SEED 23 | 300 | 49% to 48% | 41% to 48% (500, 507) |
+| Casual adult, Easy, SEED 11 | 300 | 95% to 93% | 47% to 55% (629, 568) |
+| AI v AI, Normal, SEED 11 (home's share) | 360 | 45% to 40% | none kicked |
+
+**Against the owner's aim.** A person's chips come back 7 to 12 points more often over the wider samples (the casual adult
++11 on Normal over 400 matches at SEED 7, below, +7 on Normal over 300 at SEED 23 and +8 on Easy over 300; the kick-chaser +10
+to +12 in all four of his 300-match rows; over 100 matches, +8 to +16), where the aim is about +10 to 15 and the owner was
+shown 11 to 16: the casual adult at SEED 23 (41% to 48%, ± 3 on the gain) falls a little short of both. The staged chip +12
+on both seeds.
+For a player who kicks now and then it is a chip that comes back more often and not a different match: the casual adult's
+results move inside their noise (SEED 11's 99% to 89% on Easy is 95% to 93% over 300). On Easy the chip-spammer wins 4 or 5
+points more over 300 matches (90% to 95%, 90% to 94%: SEED 7's 87% to 98% over its first 100 was mostly noise), and scores
+0.4 to 0.55 tries a match more. AI v AI plays as it did inside its noise (its kicks are long, and the catching side fields
+them either way): SEED 11's home share, 47% to 39% over 120 (± 5) and 45% to 40% over 360 (± 3), against 46% to 47% at
+SEED 7. **For the owner: the chip-spammer on Normal** still gains more than the aim's "within about 10 points": 44% to 58%
+over 300 matches at SEED 7, 54% to 59% over 100 at SEED 11 and 40% to 59% over 300 at SEED 23 (+19), against 45% to 67% at
+react 0.2 (SEED 7, 100 matches). On SEED 23's first 60 he goes 35% to 62% as it ships and 35% to 63% at react 0.2: as many
+matches won as the rejected late start, by less (a mean score of 8.9-6.3 against 13.2-6.9). His chips come back +11
+to +12 there, in the aim; it is the tries they lead to (1.05 to 1.38 a match at SEED 7 and 0.98 to 1.26 at SEED 23,
+over 300) that tip his matches. Pace and secs are the owner's (1.08 and 1.5) and stay as he set them; a smaller pace
+(1.06, say) or a shorter chase would be his call.
+
+**The band.** `node tools/chase.mjs --balance band` holds a person's chips to the owner's aim from here on: the casual adult
+on Normal, 400 matches at SEED 7, CHASE off then on, must win back more of his chips and at most 20 points more. It measures
+37% to 48% (+11.1 points, on 641 and 659 chips). At 1.6, with the possession calls merged in (the same 400 matches, the calls
+on in both runs, 2026-11-14), it measures 38.7% to 47.1% (+8.5 points, on 631 and 660 chips): inside the band, a little under
+the aim of about +10 to 15. `tools/chase.mjs` bands the staged chip in the gate too (section 7).
+
+**Long kicks** miss their aim of a little more where the computer fields them (staged 0% to 0% on both seeds; AI v AI 2% to
+0% and 0% to 0%, 0% to 1% over 360): a long kick hangs longer than the chase lasts (doKick's 0.8s plus its length over 28:
+2.2s at 40m, 2.9s at 60m), and the catching side's sweeper is under it either way. In a person's matches they come back a few
+points more or less either way (0% to 7% a run, on 16 to 57 kicks), so loosely.
+
+**Closed at 1.6: your man after your own chip.** On wt/chase this was open for the owner: the ring jumped to your man nearest
+where it came down, 37% of the time he was in front of the kicker and did not chase, and making him always chase would have been
+a change of behaviour and a re-pin. The possession calls made that change for their own reason (a man in front of the kicker
+may not play the bounce, so the ring goes to one who may: `kickRing`), and it settles this too: the ringed man is now always
+onside, so always a chaser, after 100 of a person's chips in 100 (The chasers, above). No chase lever moved; the re-pin is the
+1.6 merge's.
 
 ### Side Step and Dummy
 
@@ -2158,6 +2399,17 @@ a charger.
     yours only (yours, the CPU's, Two Player, AI v AI), the Knock-On tag, one draw a catch whatever its chance, KNOCK off
     drawing exactly as 20cbcaf (its Two Player match re-pinned on 2026-11-11, when each player's first kick of the
     match lost its Easy path: f83a6f3 with only that change gives the new pin). `--balance` measures the tables in Catching and knock-ons.
+  - **`node tools/calls.mjs`:** the possession calls and the interception rules (2026-11-13), in the default gate: each
+    path's call, colour and sound, On Fire after its moment, the Line Break held, the call in the tag cap, no interception
+    out of the hands, nobody down, retiring or offside playing the ball, Kids and Minis without the beat, AI v AI and the
+    demo silent, reduced motion, CALLS off (with the kick chase off) drawing exactly as b4a25d5, both on as the game ships,
+    and screenshots of each call in Chromium. `--balance` measures the tables in Possession calls.
+  - **`node tools/chase.mjs`:** the kick chase (2026-11-13), in the default gate: the gate (open-play kicks by either side,
+    never a restart, a drop goal or a charge-down), the onside chasers, the pace and its easing and end, the catching side
+    at once as it ships (a build without the late start plays the same, draw for draw) and late only when tuned, never your
+    own input, no new draw, CHASE off (with the possession calls off) drawing exactly as b4a25d5, both on as the game ships,
+    the staged win-back rates in bands. `--balance` measures
+    the tables in Kicking and the chase; `--balance band` checks a person's chips against the owner's aim.
   - **`node tools/pressure.mjs`:** pressure, the spill and the egg (2026-11-09), in the default gate: the count's rises
     and resets, the jolt's scaling and cap (measured at counts either side of the line), Pressure On once a possession
     and for either side, a pressure spill always a live Loose Ball, the surge to the side that gathers it from the

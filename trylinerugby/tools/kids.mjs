@@ -652,7 +652,20 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // Re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose: every match here moves but Two Player's
   // half, which holds no catch or jolt that falls the other way. Proof, checked below: with KNOCK off this build gives BEFORE_KNOCK,
   // the pin before them, exactly, as 20cbcaf does
-  const PIN = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
+  // Re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose: nobody
+  // intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags: WITH_CALLS,
+  // wt/calls' pin (a032b3a), the calls on and the chase off
+  // Re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose: the matches where the CPU
+  // kicks move (its men chase quicker). Re-pinned again the same day for the chase's react 0 (pace alone, the owner's choice: the bot's
+  // side no longer starts late; CHASE='{"react":0.2}' gives 98e11c8's 7wl1n0 kq1d2 1c0yntb m9j9pa 1klviba 1db7d9g fs1jc3 1j6lmbf):
+  // WITH_CHASE, wt/chase's pin (fc90ec0), the chase on and the calls off
+  // Re-pinned at 1.6 (2026-11-14) for the two together, as the game ships: PIN. Proof, checked below: with CALLS and CHASE off this build
+  // gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE; and with
+  // KNOCK off too, BEFORE_KNOCK
+  const PIN = 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
+  const WITH_CALLS = 'ytai0c 1vfa9il 17vh7h5 1h583yb 1owh0p7 1db7d9g 19781ts 1afo373';
+  const WITH_CHASE = '7wl1n0 kq1d2 1c0yntb 1cco652 1klviba 1db7d9g fs1jc3 1j6lmbf';
+  const BEFORE_CALLS_CHASE = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
   const BEFORE_KNOCK = 't8m7xo lweptp tgj82n 10tfouu zna1hi 1db7d9g jgl3kf d9ntpv';
   const pin = () => {
     const out = [];
@@ -674,9 +687,19 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
     return out.map(fnv).join(' ');
   };
   // KNOCK off runs first: the second match (Quick Match on Normal) reads something the first run leaves behind, so a run's pin is the
-  // run's own: the first one in a process gives BEFORE_KNOCK with KNOCK off, as the build before did; PIN is a second run's, KNOCK on
-  { if (T.knock) { T.knock.KNOCK.on = false; const off = pin(); T.knock.KNOCK.on = true; ok(off === BEFORE_KNOCK, `with the knock-ons off (KNOCK, src/knock.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
-    const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now); ok(now === (T.knock ? PIN : BEFORE_KNOCK), `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${PIN})`); }
+  // run's own: the first one in a process gives BEFORE_KNOCK with KNOCK off, as the build before did. The order is kept: the first run
+  // KNOCK, CALLS and CHASE off (BEFORE_KNOCK), the second CALLS and CHASE off (BEFORE_CALLS_CHASE, as b4a25d5's PIN was a second run's),
+  // then the calls alone (WITH_CALLS), the chase alone (WITH_CHASE) and both (PIN), all with KNOCK on. From the second run on a run's pin
+  // is the same whatever ran before it (each measured second to fifth, 2026-11-14); only the first differs
+  { const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js), then as they were (CALLS= and CHASE= in the harness)
+    const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
+    if (T.knock) { T.knock.KNOCK.on = false; feats(false, false); const off = pin(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+    if (CL || CS) { feats(false, false); const off = pin(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
+    if (CL && CS) { feats(true, false); const calls = pin(); feats(false, true); const chase = pin(); feats(CL0, CS0);
+      ok(calls === WITH_CALLS, `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
+      ok(chase === WITH_CHASE, `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`); }
+    const want = CL && CS ? PIN : CL ? WITH_CALLS : CS ? WITH_CHASE : T.knock ? BEFORE_CALLS_CHASE : BEFORE_KNOCK;   // a build with fewer of them (GAME=<an older build>): its own pin
+    const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now); ok(now === want, `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${want})`); }
 
   // how long: the chosen half times the Kids pace, in simulated seconds, which is the chosen half in real time
   const pace = Y.MATCH_PACE.kids;

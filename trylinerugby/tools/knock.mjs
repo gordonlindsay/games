@@ -74,7 +74,7 @@ const self = fileURLToPath(import.meta.url), run = !!process.argv[1] && pathToFi
 if (run && args[0] === '--job') {
   const o = JSON.parse(args[1]), out = [];
   for (let i = o.lo; i < o.hi; i++) out.push(await oneMatch(o, +process.env.SEED*100000 + i));
-  process.stdout.write(json(out)); process.exit(0);
+  await new Promise(done => process.stdout.write(json(out), done)); process.exit(0);   // exit once it is written: an exit straight after can cut the answer short
 }
 function fan(spec, n, env) {                               // matches 0..n-1 over JOBS processes, in order, with env on top (KNOCK off, say)
   const jobs = +process.env.JOBS || Math.min(8, os.cpus().length), per = Math.ceil(n/jobs), parts = [];
@@ -133,6 +133,15 @@ const KN = K ? K.KNOCK : {}, K0 = { ...KN }, setK = o => Object.assign(KN, K0, o
 // f83a6f3 unchanged gives the old ones (i0ho1o 4dor6m off, wdn3mx oavuie on). The first seven, 20cbcaf's own, did not move
 const BASE = 'gfkiiv af2q5q 1682150 xc3q2t 1sgvx41 3whr8x vurlvh q1vu5w 1jtotnc';   // GAME=<20cbcaf>/index.html node tools/knock.mjs --pins (2026-11-11), and this build with KNOCK off; Two Player and the count as above
 const ON = '3mv681 e4k4jm n80rro 1oy4gdg ksahst ot75uq ndxogl 12zkbzw iwauru';   // the same with the levers as README.md gives them (2026-11-11): re-pin only from a change to the knock-ons, on purpose (or as above)
+// The possession calls and the interception rules (CALLS, src/calls.js, 2026-11-13) and the kick chase (CHASE, src/chase.js, 2026-11-13) act
+// everywhere as well: BASE and ON are run with both off (b4a25d5 exactly, so both stand as pinned). WITH_CALLS is the calls on and the chase off
+// (wt/calls' pin, a032b3a), WITH_CHASE the chase on and the calls off (wt/chase's pin, fc90ec0; at react 0, pace alone, the owner's choice:
+// CHASE='{"react":0.2}' gives 98e11c8's ygp62r e4k4jm n80rro 1r95jtz ksahst ot75uq ndxogl 12zkbzw q2oqho), and SHIPS the game as it ships at 1.6,
+// all three on (2026-11-14): re-pin only from a change to the knock-ons, the calls or the chase, on purpose
+const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);
+const WITH_CALLS = '1pqg3nt 1wm0mw 1tw5iwo 7arb53 2b8eir 1r6tbn6 9wyvcv 4xlqsh 1lpp4ec';
+const WITH_CHASE = 'hyh38d e4k4jm n80rro 11vmsp2 ksahst ot75uq ndxogl 12zkbzw u972v';
+const SHIPS = '1pqg3nt 1mxxcjd 1tw5iwo 7arb53 2b8eir 1r6tbn6 9wyvcv 4xlqsh 1lfso7c';
 const play = (seed, a, b, o, two) => { reseed(seed); T.newMatch(a, b, { halfLen:60, headless:true, humans:two ? [true, true] : [true, false], ...o }); let n = 0; while (!M().over && n < 200000) { bot(0); if (two) bot(1); T.update(STEP); n++; } return json([M().score, M().tries, M().stats, n]); };
 function pins() {
   const out = [], r0 = rndCalls();
@@ -149,14 +158,20 @@ function pins() {
   out.push(String(rndCalls() - r0));
   return out.map(fnv).join(' ');
 }
-if (run && args[0] === '--pins') { if (K) K.KNOCK.on = false; console.log(pins()); process.exit(0); }
+if (run && args[0] === '--pins') { if (K) K.KNOCK.on = false; if (CL) CL.on = false; if (CS) CS.on = false; console.log(pins()); process.exit(0); }
 if (run && !args.length) {
 begin('0 KNOCK off is 20cbcaf');
 {
+  const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
+  feats(false, false);
   setK({ on:false }); const off = pins(); reset(); const on = pins();
-  ok(off === BASE, `KNOCK off: AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as 20cbcaf (Two Player without its first-kick path since 2026-11-11), with the same draws (${off}, pinned ${BASE})`);
+  feats(true, false); const calls = pins(); feats(false, true); const chase = pins(); feats(CL0, CS0); const ships = pins();
+  ok(off === BASE, `KNOCK off (and the possession calls and the kick chase): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as 20cbcaf (Two Player without its first-kick path since 2026-11-11), with the same draws (${off}, pinned ${BASE})`);
   ok(on.split(' ').slice(0, 8).every((h, i) => h !== BASE.split(' ')[i]), `KNOCK on moves every one of them, on purpose: the levers act everywhere (${on})`);
   ok(on === ON, `and plays them as pinned with the levers (${on}, pinned ${ON})`);
+  ok(calls === WITH_CALLS, `with the possession calls too, the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
+  ok(chase === WITH_CHASE, `with the kick chase too, the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`);
+  ok(ships === SHIPS, `with the possession calls and the kick chase both, as the game ships (${ships}, pinned ${SHIPS})`);
 }
 done('0 KNOCK off is 20cbcaf');
 

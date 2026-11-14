@@ -231,11 +231,14 @@ ok(JSON.parse(store.get(STORE)).seasonSerial === 4, 'the save is back in the web
   D.startMatch(X.NATIONS[0], X.NATIONS[1], false);
   const taps = calls('Haptics', 'impact').length;
   vibes.length = 0;
+  const step = () => { T.M.stepN++; T.calls.callsTick(); };      // On Fire's roar and buzz go with its banner, a step after it is said (src/calls.js)
   for (let i = 0; i < 3; i++) T.arcade.heat(0, 'hit');            // three Big Hits light On Fire: buzz(50)
+  step();
   ok(T.arcade.onFire(0) && calls('Haptics', 'impact').length === taps + 1 && calls('Haptics', 'impact').at(-1)[2].style === 'HEAVY' && vibes.length === 0, 'On Fire in a match: one heavy tap, and no navigator.vibrate');
   T.arcade.fireOut(0);
   const h = Plugins.Haptics; delete Plugins.Haptics;
   for (let i = 0; i < 3; i++) T.arcade.heat(0, 'hit');
+  step();
   ok(vibes.length === 1 && vibes[0] === 50, 'an app without Haptics vibrates as the web does');
   Plugins.Haptics = h; T.arcade.fireOut(0);
 }

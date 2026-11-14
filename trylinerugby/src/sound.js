@@ -17,11 +17,11 @@ const SOUND = {
   trim:0.62,                                                 // takes back the make-up gain a compressor adds by itself. Every level below sits under this
   ceiling:[0.62, 0.89],                                      // the curve after it: straight up to the first, bending so nothing passes the second
   maxNodes:120, maxVoices:14, reserve:24,                    // live nodes the voices may hold (the bus's six are not counted), and room kept for the largest recipe
-  level:{ whistle:1, long:1, horn:0.55, kick:1.2, strike:1.2, post:1.25, pass:2, catch:0.9, fumble:0.45, bounce:1, tackle:0.72, hit:1.35, whiff:1.25, trip:1.5, whoosh:0.6, tick:6.5, tap:1.7, roar:0.6, cheer:0.55, groan:0.58 },   // one number a sound: what the ears ask for goes here
+  level:{ whistle:1, long:1, horn:0.55, kick:1.2, strike:1.2, post:1.25, pass:2, catch:0.9, fumble:0.45, bounce:1, tackle:0.72, hit:1.35, whiff:1.25, trip:1.5, whoosh:0.6, tick:6.5, tap:1.7, gather:1.6, roar:0.6, cheer:0.55, groan:0.58 },   // one number a sound: what the ears ask for goes here
   wakeTries:3, wakeGap:0.4, pendAge:0.25,                    // taps a stuck context gets before it is rebuilt (iOS can leave one stuck), their spacing, and how stale a held sound may be
   bed:{ peak:1, fadeIn:1.6, fadeOut:0.35 },
   // the fewest seconds between two of the same sound: past this they only pile up. Unlisted: 0.03
-  gap:{ roar:0.9, cheer:0.6, groan:0.6, long:0.5, horn:0.5, whistle:0.12, post:0.1, tick:0.05, tap:0.04, catch:0.05, bounce:0.05, pass:0.04 },
+  gap:{ roar:0.9, cheer:0.6, groan:0.6, long:0.5, horn:0.5, whistle:0.12, post:0.1, tick:0.05, tap:0.04, catch:0.05, bounce:0.05, pass:0.04, gather:0.25 },
   // which sound gives way when there are too many: the lowest first, then the oldest. A voice is never cut for a lesser one
   rank:{ whistle:3, long:3, horn:3, roar:2, cheer:2, groan:2, strike:2, post:2, hit:2, kick:2, tackle:2 },
   // a recording each time: how far its speed may move either way (pitch with it). Unlisted: 0.04
@@ -33,10 +33,10 @@ const SOUND = {
 const SOUND_NAMES = {
   whistle:'Pea Whistle', long:'Long Whistle', horn:'Horn', kick:'Kick', strike:'Goal Strike', post:'Post Clang',
   pass:'Pass', catch:'Catch', fumble:'Fumble', bounce:'Ball Bounce', tackle:'Tackle', hit:'Big Hit', whiff:'Whiff', trip:'Trip', whoosh:'Whoosh',
-  tick:'Tick', tap:'Menu Tap', roar:'Crowd Roar', cheer:'Cheer', groan:'Groan',
+  tick:'Tick', tap:'Menu Tap', gather:'Gather', roar:'Crowd Roar', cheer:'Cheer', groan:'Groan',
 };
-// Always their recipes: no CC0 referee's whistle or stadium hooter could be found, and Trip, Tick and Menu Tap are cues made to carry on a phone speaker
-const SOUND_SYNTH = ['whistle', 'long', 'horn', 'trip', 'tick', 'tap'];
+// Always their recipes: no CC0 referee's whistle or stadium hooter could be found, and Trip, Tick, Menu Tap and Gather are cues made to carry on a phone speaker
+const SOUND_SYNTH = ['whistle', 'long', 'horn', 'trip', 'tick', 'tap', 'gather'];
 // The recordings, by key: [file in assets/sounds, seconds of sound in it, and for the crowd's loop the seconds of margin either side of it], a take each.
 // Written by tools/sound-make.py
 // sound-make: files from here
@@ -307,6 +307,13 @@ const SND = {
   tap(V) {                                                   // a round soft press: the menus
     sndTone(V, { f:sndVary(760, 0.03), to:560, dur:0.05, peak:0.075, att:0.002 });
     sndBurst(V, { white:true, f:2400, q:1, dur:0.008, peak:0.018, att:0.001 });
+  },
+  gather(V) {                                                // the ring's man has the ball by a call (src/calls.js): the catch's slap, then two bright notes going up, a fifth apart, that a phone speaker carries
+    const f = sndVary(660, 0.04);
+    sndPat(V, 0, sndVary(280, 0.08), 0.16);
+    sndTone(V, { type:'triangle', f, at:0.03, dur:0.08, peak:0.09, att:0.003 });
+    sndTone(V, { type:'triangle', f:f*1.5, at:0.1, dur:0.16, peak:0.085, att:0.003 });
+    sndTone(V, { f:f*3, at:0.1, dur:0.07, peak:0.02, att:0.002 });
   },
   roar(V) {
     sndCrowd(V, { peak:0.9, wobble:[3.4, 0.14], curve:[[0, 0], [0.18, 0.42], [0.52, 1], [1.25, 0.86], [2.1, 0.46], [3.4, 0.012]],

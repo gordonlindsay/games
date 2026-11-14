@@ -106,6 +106,10 @@ function match(run, f, plan) {
       if (M.phase === 'menu' && !$('m-pen').hidden) { ($('p-goal').disabled ? $('p-tap') : $('p-goal')).click(); continue; }   // a penalty: the card's choice
       if (M.golden) golden = true;
       if (M.phase === 'play' && M.hooter && M.half === 2 && !done[2] && plan.want) { done[2] = true; steer(plan.want); continue; }
+      // the hooter went in the step a try was scored, so play never resumes before full time (the try, its conversion, then the kick-off
+      // ends the half): the script's hand there, only when the result is not already the one it needs (2026-11-13: the interception rules
+      // moved the seeded matches, and B's first Test met it)
+      if (M.phase === 'set' && M.hooter && M.half === 2 && !done[2] && plan.want && !(plan.want === 'win' ? lead() > 0 : plan.want === 'loss' ? lead() < 0 : lead() === 0)) { done[2] = true; steer(plan.want); continue; }
       if (M.half === 3 && M.hooter && !done[3]) {    // the Golden Try's end: a score (the next dead ball ends it) or its hooter. The script's result, a try clear
         done[3] = true;
         const w = plan.golden || 'win', me = w === 'win' ? 0 : 1;

@@ -482,11 +482,11 @@ begin('cards');
 done('8 cards');
 
 // 9. MAUL off draws exactly as the build before it (with PRESSURE off too, b706c3e; alone, the pressure merge on wt/pr14int); on, it moves AI v AI on purpose.
-//    The knock-ons (KNOCK, src/knock.js) are off in each run: KNOCK off is 20cbcaf, draw for draw, so these pins are the ones the maul was pinned with
+//    The knock-ons (KNOCK, src/knock.js), the possession calls (CALLS, src/calls.js) and the kick chase (CHASE, src/chase.js) are off in each run: all three off is 20cbcaf, draw for draw, so these pins are the ones the maul was pinned with
 begin('off');
 {
   const child = env => spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--pins'], { env:{ ...process.env, ...env }, encoding:'utf8', maxBuffer:8 << 20 });
-  const K = { KNOCK:'{"on":false}' };   // the knock-ons (src/knock.js, 2026-11-11) off in all three: 20cbcaf exactly, so the maul's own proof stands as it was pinned
+  const K = { KNOCK:'{"on":false}', CALLS:'{"on":false}', CHASE:'{"on":false}' };   // the knock-ons (src/knock.js, 2026-11-11), the possession calls (src/calls.js, 2026-11-13) and the kick chase (src/chase.js, 2026-11-13) off in all three: 20cbcaf exactly, so the maul's own proof stands as it was pinned
   const off = child({ ...K, MAUL:'{"on":false}', PRESSURE:'{"on":false}' }), alone = child({ ...K, MAUL:'{"on":false}' }), on = child(K);
   const a = (off.stdout || '').trim(), m = (alone.stdout || '').trim(), b = (on.stdout || '').trim();
   ok(off.status === 0 && a === BASE_OFF, `MAUL and PRESSURE off: AI v AI, a tool's match, a played Quick Match, a Hard match and the demo play exactly as at b706c3e (${a}, pinned ${BASE_OFF})${off.stderr ? ' ' + off.stderr.slice(0, 300) : ''}`);

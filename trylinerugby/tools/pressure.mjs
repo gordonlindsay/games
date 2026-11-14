@@ -49,8 +49,10 @@ function eggPin() {                                        // twelve throws of B
 }
 const MA = T.maul && T.maul.MAUL;                         // the maul (src/maul.js), merged after pressure on wt/pr14int (2026-11-09)
 const KN = T.knock && T.knock.KNOCK;                      // the knock-ons (src/knock.js, 2026-11-11): off in the runs here, where they are 20cbcaf exactly, so these pins stand as pressure's
+const CL = T.calls && T.calls.CALLS, CL0 = !!(CL && CL.on);   // the possession calls and the interception rules (src/calls.js, 2026-11-13): off with them, b4a25d5 exactly
+const CS = T.chase && T.chase.CHASE, CS0 = !!(CS && CS.on);   // the kick chase (src/chase.js, 2026-11-13): off with them, b4a25d5 exactly, for the same reason
 if (process.argv.includes('--pins')) {                     // PRESSURE and the maul off; Bouncy Egg; PRESSURE alone off (on a build with no PRESSURE, the build as it is)
-  if (KN) KN.on = false;
+  if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
   if (P) P.PRESSURE.on = false; if (MA) MA.on = false;
   const off = offPins();
   if (MA) MA.on = true;
@@ -60,7 +62,7 @@ if (process.argv.includes('--pins')) {                     // PRESSURE and the m
 }
 begin('off is b706c3e');
 {
-  if (KN) KN.on = false;
+  if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
   P.PRESSURE.on = false; if (MA) MA.on = false; const now = offPins(); if (MA) MA.on = true; P.PRESSURE.on = true;
   ok(now === OFF, `PRESSURE off, and the maul (merged after it) off: AI v AI, the demo, a tool's match, a Kids match and a Minis match play as b706c3e, with the same draws (${now}, pinned ${OFF})`);
   if (MA) { P.PRESSURE.on = false; const alone = offPins(); P.PRESSURE.on = true;
@@ -69,7 +71,7 @@ begin('off is b706c3e');
   ok(on !== OFF, `PRESSURE on moves them, on purpose (${on})`);
   const e1 = eggPin(); P.PRESSURE.on = false; const e0 = eggPin(); P.PRESSURE.on = true;
   ok(e1 === EGG && e0 === EGG, `Bouncy Egg's hops and draws are the build before pressure's, PRESSURE on or off (${e1}, ${e0}, pinned ${EGG})`);
-  if (KN) KN.on = true;
+  if (KN) KN.on = true; if (CL) CL.on = CL0; if (CS) CS.on = CS0;
 }
 done('0 off is b706c3e');
 
