@@ -1,6 +1,7 @@
 /* =========================================================
-   Kids: a level below Easy for 6 to 10 year olds, and the
-   grown-up check in front of anything that leaves the game.
+   Kids: a level below Easy for 6 to 10 year olds, the grown-up
+   check in front of anything that costs money or leaves the
+   game, and Leave Minis? for a Mini leaving Minis.
    ========================================================= */
 /* How the level is stored: settings.kids, a flag layered on Easy (settings.diff stays 0). Every lever table in the engine (DIFF,
    KICK's fill and band, SPRINT, CONTACT.contact, the duel windows, COVER, MOVES.dummy.bite) is an array by level 0..2, and the save
@@ -254,6 +255,58 @@ window.addEventListener('keydown', e => {                  // while the check is
   if (/^[0-9]$/.test(k)) kidsGateType(k);
   else if (k === 'Backspace' || k === 'Delete') kidsGateDelete();
   else if (k === 'Escape') kidsGateClose(false);
+  else return;
+  if (e.preventDefault) e.preventDefault();
+}, true);
+
+/* ---------- Leave Minis? ----------
+   The owner, 2026-11-14: "remove the calculation for anybody - the game isn't violent so i am ok with switching back", and the same
+   day: "for minis flag that it's different and that they should stay as is unless they're sure". So the grown-up check above stands in
+   front of money and the ways out of the game alone (a purchase, Restore Purchases, Get the App, Privacy and Support, the Supporters'
+   Wall, Add Your Team, installing the web version), and switching the game itself happens at once for everyone: the Difficulty row off
+   Kids, an age group (Settings and My Profile), and Grown-Ups' Move Up to Easy and Reset Kids Level.
+   A Mini (profile.age 'mini') is asked first, by minisAsk(onGo, onKeep), when leaving Mini for another age group or taking the game off
+   the Kids level: Leave Minis?, one line on what Minis is, and Change | Keep Minis in equal halves. Change switches at once (onGo);
+   Keep Minis leaves everything as it was (onKeep). Nobody else is asked anything. Touch, the keyboard (Tab inside the card, the arrows
+   between the two, Escape is Keep Minis: the rest of the page is inert while it is open) and a controller (the card is the nav layer,
+   Back is Keep Minis) all reach it, and the focus starts on Keep Minis. A double tap that opened it never goes on to Change
+   (CONFIRM.gap, ui-menus.js). */
+const minisOn = () => !!profile && profile.age === 'mini';
+let minisCard = null;                                      // the open card: { onGo, onKeep, back, ring, inert }
+function minisAsk(onGo, onKeep) {
+  if (minisCard) minisClose(false);                        // one at a time: an older one is kept as it was
+  const pad = lastDev === 'pad', act = document.activeElement || null, ring = pad && focusEl ? focusEl : null;
+  minisCard = { onGo, onKeep, back:ring || act, ring:!!ring, inert:[] };   // where it goes back to, as the grown-up check's
+  const m = $('m-minis'), body = document.body;
+  if (pad && act && act.blur) act.blur();                  // a controller works by the chalk ring: one outline
+  if (body && body.children) for (const el of body.children) if (el !== m && el.id !== 'rotate' && !el.inert) { el.inert = true; minisCard.inert.push(el); }   // Turn Your Phone Sideways stays live, as for the grown-up check
+  m.hidden = false;
+  confirmArm();                                            // the tap that opened it, read twice, only opens it
+  if (pad) setFocus($('mn-keep'));
+  else { setFocus(null); const k = $('mn-keep'); if (k && k.focus) k.focus(); }
+}
+function minisClose(go) {
+  const g = minisCard; if (!g) return;
+  minisCard = null;
+  $('m-minis').hidden = true; setFocus(null);
+  for (const el of g.inert) el.inert = false;
+  const shown = !!g.back && !(g.back.closest && g.back.closest('[hidden]'));
+  if (g.ring && shown) setFocus(g.back);
+  else if (shown && g.back.focus) g.back.focus();
+  const fn = go ? g.onGo : g.onKeep;
+  if (typeof fn === 'function') fn();
+  if (g.ring && focusEl === g.back && typeof navLayer === 'function') { const l = navLayer(); if (l && l.contains && !l.contains(g.back)) setFocus(null); }   // what Change led to opened a card or a screen: the ring is that one's to place
+}
+$('mn-go').addEventListener('click', () => { if (minisCard && !confirmSoon()) minisClose(true); });
+$('mn-keep').addEventListener('click', () => minisClose(false));
+$('m-minis').hidden = true;                                // closed until asked for (the test harness's stand-in elements start open)
+DEFAULT_FOCUS['m-minis'] = () => $('mn-keep');
+window.addEventListener('keydown', e => {                  // while the card is open no key reaches the game: Escape is Keep Minis, the arrows go between the two, and Tab, Enter and Space keep the browser's own meaning on its buttons
+  if (!minisCard) return;
+  if (e.stopPropagation) e.stopPropagation();
+  const k = e.key, to = { ArrowLeft:'mn-go', ArrowUp:'mn-go', ArrowRight:'mn-keep', ArrowDown:'mn-keep' }[k];
+  if (k === 'Escape') minisClose(false);
+  else if (to) { const b = $(to); if (b && b.focus) b.focus(); if (focusEl) setFocus(b); }
   else return;
   if (e.preventDefault) e.preventDefault();
 }, true);

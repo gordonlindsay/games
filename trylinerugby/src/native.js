@@ -150,7 +150,7 @@ function nativeBuzz(ms) {
 
 /* ---------- Android's Back ---------- */
 /* The App plugin's backButton (iOS has none). In play it is Escape: Pause, then Resume from the pause card. Otherwise it is the
-   Back of the top card or screen (navBack: the grown-up check's Cancel, Back to Menu, a drill card's choice). On the home
+   Back of the top card or screen (navBack: the grown-up check's Cancel, Leave Minis?'s Keep Minis, Back to Menu, a drill card's choice). On the home
    menu the app goes to the background, as the home button would, rather than closing. */
 function nativeBack() {
   const gate = $('m-gate'), pz = $('m-pause');

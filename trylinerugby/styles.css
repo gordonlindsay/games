@@ -842,6 +842,16 @@ body.desk .desk-only{display:block}
   #m-gate .card{gap:10px;padding:14px 16px}
   .pg-keys .btn{min-height:48px}
 }
+/* Leave Minis? (kids.js minisAsk): the question, the one line, then Change | Keep Minis in equal halves; over every card but the grown-up check */
+#m-minis{z-index:37}
+#m-minis .card{width:min(460px,100%);gap:12px;padding:18px}
+.mn-line{margin:0;font:700 17px/1.3 var(--body);text-wrap:balance}
+#m-minis .row2 .btn{min-height:48px;padding-inline:10px;line-height:1.1}
+#m-minis:has(.padfocus) .btn:focus-visible:not(.padfocus){outline:none}   /* a controller's ring is the one outline */
+@media (orientation:landscape) and (max-height:420px){
+  #m-minis .card{gap:10px;padding:14px 16px}
+  #m-minis .row2 .btn{min-height:44px}
+}
 /* ===== store ===== */
 /* a locked control keeps its label, with a small lock after it (ui-store.js storeMark), drawn as a mask in the control's own colour */
 .locked::after{content:"";display:inline-block;width:.7em;height:.9em;margin-left:.45em;vertical-align:-.08em;background:currentColor;

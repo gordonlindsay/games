@@ -688,7 +688,7 @@ P.choose(); ok(!$('pr-contact').hidden, 'at other levels the picker shows the gr
   ok(!/try it|you try\b/i.test(demoSrc.replace(/\/\/.*$/gm, '')), 'Watch How never invites trying it');
   const panel = html.slice(html.indexOf('id="pr-grownups"'), html.indexOf('id="pr-grown-back"'));
   ok(/no scrums/.test(panel) && /Driving and the placing in Ball Back go further than under-9s play/.test(panel), 'the panel says plainly where Contact Games go beyond under-9');
-  ok(/only a grown-up can leave the Kids level/.test(panel) && /The Kids level and Minis hide Contact Games/.test(panel), 'and how the youngest are kept out');
+  ok(/a Mini is asked to be sure before leaving Minis/.test(panel) && !/only a grown-up can leave the Kids level/.test(panel) && /The Kids level and Minis hide Contact Games/.test(panel), 'and how the youngest are kept out');
 }
 { // Watch How: the last word and the coach line
   for (const id of CONTACT) { D.settings().drillSeen = []; H.reseed(11); P.start(id); ok(!$('demo-coach').hidden && html.includes('<em id="demo-coach" hidden>' + X.COACH + '</em>'), id + ': Watch How shows the coach line, since a first open plays before any card'); let last = '', n = 0; while (P.state() && P.state().demo && n++ < 20000) { last = $('demo-step').textContent; T.update(STEP); } ok(last === 'Now Play It', id + ': it ends on Now Play It (' + last + ')'); P.leave(); }
