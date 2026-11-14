@@ -5,7 +5,7 @@
      side the Locker has unlocked) keeps its place and its label, with a small
      lock (.locked), and opens the Unlock card instead. A championship or career under way keeps its note: it is saved, only locked.
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
-     first. The card hides while the check is up, as the import card does, so the two never stack.
+     first; Reset Kids Level and Move Up to Easy, switches of the game's own, do not (the owner, 2026-11-14). The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
    - A Super Fan of My Team's club gets My Team's box in the club's colours (storeThemeHome) with the Super Fan badge, its shield (or its
      crest where the club has agreed and given one with its written permission) and the trophy's rosette. Without it the box is plain.
@@ -329,11 +329,22 @@ $('b-grown').addEventListener('click', () => storeOpen({ mode:'grown' }));
 $('st-back').addEventListener('click', storeClose);
 $('st-restore').addEventListener('click', storeRestoreAsk);
 $('st-privacy').addEventListener('click', () => storeLeave(STORE_LINKS.privacy));
-/* Reset Kids Level, behind the grown-up check like everything else here: the hidden Kids rating back to 0, saved, and said. */
-function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }); }
+/* Reset Kids Level: the hidden Kids rating back to 0, saved, and said, at once. A switch of the game's own, so no grown-up check (the
+   owner, 2026-11-14: kids.js); the check here stands in front of money and the links out alone. */
+function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }
 $('st-reset').addEventListener('click', storeKidsReset);
-/* Move Up to Easy, behind the grown-up check: the Difficulty row moves from Kids to Easy; the Kids rating is kept for a sibling. */
-function storeKidsEasy() { if (!kidsReady() || storeUi.busy) return; storeAsk(() => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); }); }
+/* Move Up to Easy: the Difficulty row moves from Kids to Easy at once, as the row itself does (no grown-up check: the owner, 2026-11-14,
+   kids.js); the Kids rating is kept for a sibling. A Mini is asked Leave Minis? first, over the card as the check was (the card hides,
+   and comes back either way); Keep Minis moves nothing. */
+function storeKidsEasy() {
+  if (!kidsReady() || storeUi.busy) return;
+  const go = () => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); };
+  if (!minisOn()) { go(); return; }
+  $('m-store').hidden = true;
+  const token = storeUi.token;
+  minisAsk(() => { if (token !== storeUi.token) return; $('m-store').hidden = false; go(); },
+    () => { if (token !== storeUi.token) return; $('m-store').hidden = false; storeCardFocus(); });
+}
 $('st-easy').addEventListener('click', storeKidsEasy);
 $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support));
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)

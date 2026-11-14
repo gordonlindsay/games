@@ -215,6 +215,7 @@ const navLog = [];                                         // the tools read who
 const logNav = (fn, seat) => { navLog.push([fn, seat, navOwner(seat)]); if (navLog.length > 40) navLog.shift(); };
 function navLayer() {                                      // the top layer: the pause card over anything (it can sit over the penalty card), then an open card, then the visible screen
   const pg = $('m-gate'); if (pg && !pg.hidden) return pg;   // the grown-up check (kids.js) sits over everything, another card included
+  const mn = $('m-minis'); if (mn && !mn.hidden) return mn;   // then Leave Minis? (kids.js), over any card it was asked from
   const pz = $('m-pause'); if (pz && !pz.hidden) return pz;
   for (const m of document.querySelectorAll('.modal')) if (!m.hidden) return m;
   for (const s of document.querySelectorAll('.screen')) if (!s.hidden) return s;

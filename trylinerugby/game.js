@@ -10322,6 +10322,7 @@ const navLog = [];                                         // the tools read who
 const logNav = (fn, seat) => { navLog.push([fn, seat, navOwner(seat)]); if (navLog.length > 40) navLog.shift(); };
 function navLayer() {                                      // the top layer: the pause card over anything (it can sit over the penalty card), then an open card, then the visible screen
   const pg = $('m-gate'); if (pg && !pg.hidden) return pg;   // the grown-up check (kids.js) sits over everything, another card included
+  const mn = $('m-minis'); if (mn && !mn.hidden) return mn;   // then Leave Minis? (kids.js), over any card it was asked from
   const pz = $('m-pause'); if (pz && !pz.hidden) return pz;
   for (const m of document.querySelectorAll('.modal')) if (!m.hidden) return m;
   for (const s of document.querySelectorAll('.screen')) if (!s.hidden) return s;
@@ -11226,7 +11227,7 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
     if (key === 'diff' && i === 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
-    if (key === 'diff' && kidsLevel() && i !== 0) { parentGate(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // only a grown-up takes the game off the Kids level; a cancelled check leaves it as it was
+    if (key === 'diff' && kidsLevel() && i !== 0 && minisOn()) { minisAsk(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // a Mini taking the game off the Kids level is asked Leave Minis? first, and Keep Minis leaves it as it was; anyone else switches at once, with no grown-up check (the owner, 2026-11-14: kids.js)
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'cam') { settings.camPick = true; if (M && M.cut) $('pz-cam-note').hidden = false; if (!(M && M.paused) && !$('s-home').hidden) BV.peekUntil = performance.now() + BV_DEMO_PEEK; }   // on the home, the demo behind it shows the height just picked for a moment (PR #14); the pause card's row changes the match itself   // a real choice, so a Top chosen here survives a reload (cleanSettings); a close-up has its own camera, so the pause card says so
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
@@ -14018,8 +14019,9 @@ $('im-paste').addEventListener('click', async () => {
   try { const t = await navigator.clipboard.readText(); if (t) { $('im-url').value = t.trim().slice(0, 2048); importUi.err = ''; importRender(); } } catch (e) { /* refused or empty */ }
 });
 /* =========================================================
-   Kids: a level below Easy for 6 to 10 year olds, and the
-   grown-up check in front of anything that leaves the game.
+   Kids: a level below Easy for 6 to 10 year olds, the grown-up
+   check in front of anything that costs money or leaves the
+   game, and Leave Minis? for a Mini leaving Minis.
    ========================================================= */
 /* How the level is stored: settings.kids, a flag layered on Easy (settings.diff stays 0). Every lever table in the engine (DIFF,
    KICK's fill and band, SPRINT, CONTACT.contact, the duel windows, COVER, MOVES.dummy.bite) is an array by level 0..2, and the save
@@ -14276,6 +14278,58 @@ window.addEventListener('keydown', e => {                  // while the check is
   else return;
   if (e.preventDefault) e.preventDefault();
 }, true);
+
+/* ---------- Leave Minis? ----------
+   The owner, 2026-11-14: "remove the calculation for anybody - the game isn't violent so i am ok with switching back", and the same
+   day: "for minis flag that it's different and that they should stay as is unless they're sure". So the grown-up check above stands in
+   front of money and the ways out of the game alone (a purchase, Restore Purchases, Get the App, Privacy and Support, the Supporters'
+   Wall, Add Your Team, installing the web version), and switching the game itself happens at once for everyone: the Difficulty row off
+   Kids, an age group (Settings and My Profile), and Grown-Ups' Move Up to Easy and Reset Kids Level.
+   A Mini (profile.age 'mini') is asked first, by minisAsk(onGo, onKeep), when leaving Mini for another age group or taking the game off
+   the Kids level: Leave Minis?, one line on what Minis is, and Change | Keep Minis in equal halves. Change switches at once (onGo);
+   Keep Minis leaves everything as it was (onKeep). Nobody else is asked anything. Touch, the keyboard (Tab inside the card, the arrows
+   between the two, Escape is Keep Minis: the rest of the page is inert while it is open) and a controller (the card is the nav layer,
+   Back is Keep Minis) all reach it, and the focus starts on Keep Minis. A double tap that opened it never goes on to Change
+   (CONFIRM.gap, ui-menus.js). */
+const minisOn = () => !!profile && profile.age === 'mini';
+let minisCard = null;                                      // the open card: { onGo, onKeep, back, ring, inert }
+function minisAsk(onGo, onKeep) {
+  if (minisCard) minisClose(false);                        // one at a time: an older one is kept as it was
+  const pad = lastDev === 'pad', act = document.activeElement || null, ring = pad && focusEl ? focusEl : null;
+  minisCard = { onGo, onKeep, back:ring || act, ring:!!ring, inert:[] };   // where it goes back to, as the grown-up check's
+  const m = $('m-minis'), body = document.body;
+  if (pad && act && act.blur) act.blur();                  // a controller works by the chalk ring: one outline
+  if (body && body.children) for (const el of body.children) if (el !== m && el.id !== 'rotate' && !el.inert) { el.inert = true; minisCard.inert.push(el); }   // Turn Your Phone Sideways stays live, as for the grown-up check
+  m.hidden = false;
+  confirmArm();                                            // the tap that opened it, read twice, only opens it
+  if (pad) setFocus($('mn-keep'));
+  else { setFocus(null); const k = $('mn-keep'); if (k && k.focus) k.focus(); }
+}
+function minisClose(go) {
+  const g = minisCard; if (!g) return;
+  minisCard = null;
+  $('m-minis').hidden = true; setFocus(null);
+  for (const el of g.inert) el.inert = false;
+  const shown = !!g.back && !(g.back.closest && g.back.closest('[hidden]'));
+  if (g.ring && shown) setFocus(g.back);
+  else if (shown && g.back.focus) g.back.focus();
+  const fn = go ? g.onGo : g.onKeep;
+  if (typeof fn === 'function') fn();
+  if (g.ring && focusEl === g.back && typeof navLayer === 'function') { const l = navLayer(); if (l && l.contains && !l.contains(g.back)) setFocus(null); }   // what Change led to opened a card or a screen: the ring is that one's to place
+}
+$('mn-go').addEventListener('click', () => { if (minisCard && !confirmSoon()) minisClose(true); });
+$('mn-keep').addEventListener('click', () => minisClose(false));
+$('m-minis').hidden = true;                                // closed until asked for (the test harness's stand-in elements start open)
+DEFAULT_FOCUS['m-minis'] = () => $('mn-keep');
+window.addEventListener('keydown', e => {                  // while the card is open no key reaches the game: Escape is Keep Minis, the arrows go between the two, and Tab, Enter and Space keep the browser's own meaning on its buttons
+  if (!minisCard) return;
+  if (e.stopPropagation) e.stopPropagation();
+  const k = e.key, to = { ArrowLeft:'mn-go', ArrowUp:'mn-go', ArrowRight:'mn-keep', ArrowDown:'mn-keep' }[k];
+  if (k === 'Escape') minisClose(false);
+  else if (to) { const b = $(to); if (b && b.focus) b.focus(); if (focusEl) setFocus(b); }
+  else return;
+  if (e.preventDefault) e.preventDefault();
+}, true);
 /* =========================================================
    Store screens: the locks, the Unlock card and the Grown-Ups panel (one card, #m-store), the Super Fan badge in My Team's box,
    and the links that leave the game. The rules are in src/store.js.
@@ -14283,7 +14337,7 @@ window.addEventListener('keydown', e => {                  // while the check is
      side the Locker has unlocked) keeps its place and its label, with a small
      lock (.locked), and opens the Unlock card instead. A championship or career under way keeps its note: it is saved, only locked.
    - Every purchase, Restore Purchases, Get the App, Privacy and Support goes through the grown-up check (parentGate, src/kids.js)
-     first. The card hides while the check is up, as the import card does, so the two never stack.
+     first; Reset Kids Level and Move Up to Easy, switches of the game's own, do not (the owner, 2026-11-14). The card hides while the check is up, as the import card does, so the two never stack.
    - On the web while STORE_WEB_TIER is 'full' (storeLive false) none of it shows and no control changes.
    - A Super Fan of My Team's club gets My Team's box in the club's colours (storeThemeHome) with the Super Fan badge, its shield (or its
      crest where the club has agreed and given one with its written permission) and the trophy's rosette. Without it the box is plain.
@@ -14607,11 +14661,22 @@ $('b-grown').addEventListener('click', () => storeOpen({ mode:'grown' }));
 $('st-back').addEventListener('click', storeClose);
 $('st-restore').addEventListener('click', storeRestoreAsk);
 $('st-privacy').addEventListener('click', () => storeLeave(STORE_LINKS.privacy));
-/* Reset Kids Level, behind the grown-up check like everything else here: the hidden Kids rating back to 0, saved, and said. */
-function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; storeAsk(() => { settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }); }
+/* Reset Kids Level: the hidden Kids rating back to 0, saved, and said, at once. A switch of the game's own, so no grown-up check (the
+   owner, 2026-11-14: kids.js); the check here stands in front of money and the links out alone. */
+function storeKidsReset() { if (!(settings.kidsR > 0) || storeUi.busy) return; settings.kidsR = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.kids; storeCardRender(); storeRender(); storeCardFocus(); }
 $('st-reset').addEventListener('click', storeKidsReset);
-/* Move Up to Easy, behind the grown-up check: the Difficulty row moves from Kids to Easy; the Kids rating is kept for a sibling. */
-function storeKidsEasy() { if (!kidsReady() || storeUi.busy) return; storeAsk(() => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); }); }
+/* Move Up to Easy: the Difficulty row moves from Kids to Easy at once, as the row itself does (no grown-up check: the owner, 2026-11-14,
+   kids.js); the Kids rating is kept for a sibling. A Mini is asked Leave Minis? first, over the card as the check was (the card hides,
+   and comes back either way); Keep Minis moves nothing. */
+function storeKidsEasy() {
+  if (!kidsReady() || storeUi.busy) return;
+  const go = () => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); };
+  if (!minisOn()) { go(); return; }
+  $('m-store').hidden = true;
+  const token = storeUi.token;
+  minisAsk(() => { if (token !== storeUi.token) return; $('m-store').hidden = false; go(); },
+    () => { if (token !== storeUi.token) return; $('m-store').hidden = false; storeCardFocus(); });
+}
 $('st-easy').addEventListener('click', storeKidsEasy);
 $('st-support').addEventListener('click', () => storeLeave(STORE_LINKS.support));
 window.addEventListener('keydown', e => {  // Escape closes the card (the grown-up check, over it, takes Escape first and stops it here)
@@ -16652,8 +16717,8 @@ const DEMO_PILOT = {
    - Mini: the Kids level (as the Kids button does) and Minis, the mixed side. Junior: Easy, the Kids level off. Adult: Normal, off.
      Junior and Adult play Men for Male and Not Say, Women for Female. Not Say is mixed wherever the game is (Minis, through
      MIXED_THROUGH), otherwise Men. An answer left blank keeps the side as it is (profileCat): a gender alone never moves a side off
-     Minis, an age group alone never moves one between Men and Women. Leaving the Kids level from here asks the grown-up check first,
-     as the Difficulty row does. A row already chosen, pressed again on My Profile, sets nothing again.
+     Minis, an age group alone never moves one between Men and Women. Leaving the Kids level from here asks no grown-up check (2026-11-14);
+     a Mini leaving Mini is asked Leave Minis? first, as on the Difficulty row (minisAsk, kids.js). A row already chosen, pressed again on My Profile, sets nothing again.
    - Club: My Team's club, and My Team's country from the club's where the ladder knows it (an England club, England), else as it was.
    - Gender: Career's New Player starts on Men or Women by it (Not Say follows the category), on the profile's look.
    - The look: build, skin, hair colour and hair style; the body by the gender, or picked on Your Look for Not Say. It stands in My
@@ -16703,8 +16768,8 @@ function profileCat(age, gender, cur) {
    the category picked there (pickCatFixed, src/ui-menus.js). */
 function profileDecides() { return profile.age === 'mini' || (profile.age && profile.gender) ? profileCat(profile.age, profile.gender, settings.cat) : null; }
 const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age === 'adult' ? 2 : null);   // the Difficulty row's button: Kids | Easy | Normal (kidsSegSet, kids.js)
-/* An age group and a gender given: the level and the category they set, then then(). Leaving the Kids level asks a grown-up first (the
-   Difficulty row's own rule); a cancelled check sets nothing. */
+/* An age group and a gender given: the level and the category they set, then then(). It switches at once, with no grown-up check (the
+   owner, 2026-11-14: kids.js); only a Mini leaving Mini is asked Leave Minis? first (minisAsk), and Keep Minis sets nothing. */
 function profileSet(age, gender, o) {
   const lvl = o && o.level === false ? null : profileLevel(age), cat = profileCat(age, gender, settings.cat);
   const go = () => {
@@ -16715,7 +16780,7 @@ function profileSet(age, gender, o) {
     save();
     if (o && o.then) o.then(true);
   };
-  if (lvl != null && lvl !== 0 && kidsLevel()) parentGate(go, () => { if (o && o.then) o.then(false); });
+  if (minisOn() && age !== 'mini') minisAsk(go, () => { if (o && o.then) o.then(false); });
   else go();
 }
 /* The club's country, where the ladder knows it: its group's (pickHome), else its list's. null for a team you made, My League's sides and
@@ -17738,7 +17803,7 @@ function nativeBuzz(ms) {
 
 /* ---------- Android's Back ---------- */
 /* The App plugin's backButton (iOS has none). In play it is Escape: Pause, then Resume from the pause card. Otherwise it is the
-   Back of the top card or screen (navBack: the grown-up check's Cancel, Back to Menu, a drill card's choice). On the home
+   Back of the top card or screen (navBack: the grown-up check's Cancel, Leave Minis?'s Keep Minis, Back to Menu, a drill card's choice). On the home
    menu the app goes to the background, as the home button would, rather than closing. */
 function nativeBack() {
   const gate = $('m-gate'), pz = $('m-pause');
@@ -18108,7 +18173,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },
   importer:{ levelFrom:importLevelFrom, level:importLevel, top:importTop, levelStep:importLevelStep, url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, shown:importShown, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, ROUNDS:DRILL_ROUNDS, GAP:DRILL_GAP, DEFEND:DRILL_DEFEND, gapMark, gapRestage, defendRestage, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, eggRing, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
-  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
+  kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, minis:{ ask:minisAsk, open:() => minisCard, close:minisClose, on:minisOn }, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
   store:{ has:storeHas, fan:storeFan, fanClub:storeFanClub, gate:storeGate, live:storeLive, native:storeNative, tier:storeTier, setNative:v => { storeNativeHook = v; }, setTier:v => { storeTierHook = v; }, setBackend:b => { storeUse = b; }, backend:storeBackend, stub:storeStub, api:storeApi, plugin:storePlugin, valid:storeValid, offers:storeOffers, offered:storeOffered, grant:storeGrant, clean:cleanStore, bought:() => storeBought, setBought:v => { storeBought = v; }, prices:() => storePrices, setPrices:v => { storePrices = v; }, setAsked:v => { storeAsked = !!v; }, unpriced:storeUnpriced, revoke:storeRevoke, keep:storeKeep, why:storeWhy, start:storeStart, started:() => storeStarted, setStarted:v => { storeStarted = v; }, first:storeFirst, homeTeam:storeHomeTeam, homePool:storeHomePool, teamOf:storeTeamOf, shareLine:storeShareLine, ids:storeIds, render:storeRender, teamsRender:storeTeamsRender, mark:storeMark, refresh:storeRefresh, open:storeOpen, close:storeClose, ui:() => storeUi, cardRender:storeCardRender, buyAsk:storeBuyAsk, buy:storeBuy, restoreAsk:storeRestoreAsk, restore:storeRestore, leave:storeLeave, openUrl:storeOpenUrl, appLink:storeAppLink, fanOwned:storeFanOwned, crest:storeCrest, shield:storeShield, theme:storeTheme, contrast:storeContrast, wallName:storeWallName, wallMail:storeWallMail, wallAsk:storeWallAsk, wallStep:storeWallStep, wallGo:storeWallGo, wallClose:storeWallClose, wall:() => storeWallUi, MAIL:STORE_MAIL, FAN_CLUBS, FULL:STORE_FULL, FULL_HAS:STORE_FULL_HAS, FAN_HAS:STORE_FAN_HAS, LINKS:STORE_LINKS, WEB_TIER:STORE_WEB_TIER, MSG:STORE_MSG, NAMES:STORE_NAMES, LINE:STORE_LINE },
   locker:{ heard:lockerHeard, FEATS:LOCKER_FEATS, TIERS:LOCKER_TIERS, MEDALS:LOCKER_MEDALS, EVENTS:LOCKER_EVENTS, BALLS:LOCKER_BALLS, BOOTS:LOCKER_BOOTS, RAINBOW:LOCKER_RAINBOW, LEGENDS, state:() => locker, set:v => { locker = v; }, fresh:lockerFresh, clean:cleanLocker, saved:lockerSaved, tier:lockerTier, tiers:lockerTiers, count:lockerCount, next:lockerNext, golds:lockerGolds, has:lockerHas, source:lockerSource, legends:lockerLegends, event:lockerEvent, match:lockerMatch, drill:lockerDrill, flush:lockerFlush, dirty:() => lockerDirty, tally:lockerTally, half:lockerHalf, counts:lockerCounts, side:lockerSide, news:lockerNews, isNew:lockerNew, seen:lockerSeen, markSeen:lockerMarkSeen, pick:lockerPick, ball:lockerBall, boots:lockerBoots, ballFill:lockerBallFill, feet:lockerFeet, open:lockerOpen, render:renderLocker, setTab:lockerSetTab, tab:() => lockerTab, home:lockerHome, card:lockerCard, swatch:lockerSwatch, kit:kitOf, finishMatch, showBreak, fanAward:lockerFanAward, fanDrop:lockerFanDrop, fanHeld:lockerFanHeld, fanClubs:lockerFanClubs, fanHtml:lockerFanHtml, fanCabinet:lockerFanCabinet, cup:lockerCup },

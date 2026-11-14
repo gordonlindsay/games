@@ -180,7 +180,11 @@ const fresh = () => {                                       // a new game on the
   seg('half').children[0].click(); seg('sound').children[1].click(); ok(D.settings().sound === false, 'Sound');
   seg('sound').children[0].click(); seg('hints').children[1].click(); ok(D.settings().hints === false && D.settings().coach === false, 'Match Help, the hints and the coach together');
   seg('hints').children[0].click(); seg('diff').children[0].click(); ok(D.settings().kids === true && D.settings().diff === 0, 'Difficulty: Kids');
-  seg('diff').children[1].click(); { const g = T.kids.gate(); ok(g && D.settings().kids === true, 'Easy from Kids asks a grown-up first (PR #14: only a grown-up leaves the Kids level)'); if (g) for (const d of g.answer) T.kids.type(d); }
+  { const was = T.profile.get().age; T.profile.get().age = 'mini';
+    seg('diff').children[1].click(); ok(!T.kids.gate() && !!T.kids.minis.open() && D.settings().kids === true, 'Easy from Kids for a Mini: Leave Minis? first, never the grown-up check (the owner, 2026-11-14)');
+    $('mn-keep').click(); ok(!T.kids.minis.open() && D.settings().kids === true, 'Keep Minis: still Kids');
+    T.profile.get().age = was === 'mini' ? null : was; }
+  seg('diff').children[1].click(); ok(!T.kids.gate() && !T.kids.minis.open(), 'Easy from Kids for anyone else: at once, nothing asked (the owner, 2026-11-14: "remove the calculation for anybody")');
   ok(D.settings().kids === false && D.settings().diff === 0, 'Easy');
   ok(H.step() === 'settings', 'Settings stays open as each is pressed');
   D.settings().diff = 1;
