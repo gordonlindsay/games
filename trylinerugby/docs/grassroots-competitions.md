@@ -75,6 +75,52 @@ Every county sorts its clubs differently, so a county's cup comes from its own t
 - **Plates.** Kent sends first-round losers to a Plate, and the women's cups do the same ([RFU briefing](https://dwrugby.co.uk/wp-content/uploads/Womens-season-briefing-2025_26.pdf)). This guarantees a small club at least two cup matches.
 - **History.** The Surrey Cup dates from 1890 and the Kent Cup from 1891. Old cups give small clubs a sense of history.
 
+### County cups in the game (1.7)
+
+With every county's clubs in the game (Local by county, 2026-11-14: README, Teams), each county plays its own cups where the research
+sourced them by level (`docs/clubs-local.json`, each county's `cups` and their sources), as `src/clubs-local.js` writes them and
+`src/competitions.js` reads them. A club enters the first cup whose last level (`to`) its own level is within. The rules:
+
+- Only what is sourced: a cup with both ends of its levels, or the last cup to start at a sourced level running to the foot (12).
+  Names alone, or two cups starting at the same level (Yorkshire's Shield and Trophy), are not enough: the county plays the plain table.
+- Plain names only, as `tools/county.mjs` holds them: Somerset's and Dorset & Wilts' Senior Vase (the RFU's own national cup's name)
+  and Staffordshire's Owen Cup (a person's name) are left out.
+- A club whose level is under every cup its county's table reaches plays the plain table's cup for its level (a Durham Counties 1 club:
+  the County Trophy), never an invented one. Surrey's and Hampshire's tables are the game's own, as they were.
+- A county cup draws its own county's clubs first, nearest the club's level, topped up from other counties nearest its level where its
+  county has too few (Berkshire has six others); a made club draws from every county.
+
+| County | Researched (levels) | In the game |
+|---|---|---|
+| Surrey | Surrey Cup 5 to 5; Surrey Trophy 6 to 8; Surrey Shield 9 to 10; Surrey Bowl 11 to 12 | Surrey Cup to 5, Trophy to 8, Shield to 10, Bowl to 12 (the game's own, as it was) |
+| Berkshire | Berkshire Cup ? to ?; Berkshire Plate ? to ? | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Buckinghamshire | none found | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Cheshire | Cheshire Cup 4 to 5; Cheshire Vase 6 to 7; Cheshire Bowl 8 to 8; Cheshire Plate 9 to 9 | Cheshire Cup to 5, Cheshire Vase to 7, Cheshire Bowl to 8, Cheshire Plate to 9; under that, the plain table |
+| Cornwall | Cornwall Cup 6 to 8; Cornwall Clubs Cup 9 to 10 | Cornwall Cup to 8, Cornwall Clubs Cup to 10; under that, the plain table |
+| Cumbria | Cumbria Cup 5 to 7; Cumbria League Cup 8 to 8 | Cumbria Cup to 7, Cumbria League Cup to 8; under that, the plain table |
+| Devon | Devon Senior Cup 5 to 5; Devon Shield 6 to 6; Devon Intermediate Cup 7 to 8; Devon Junior Cup 9 to 10 | Devon Senior Cup to 5, Devon Shield to 6, Devon Intermediate Cup to 8, Devon Junior Cup to 10; under that, the plain table |
+| Dorset & Wilts | Dorset & Wilts Senior Cup ? to ?; Dorset & Wilts Senior Vase ? to ?; Dorset & Wilts Senior Plate ? to ? | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Durham | Durham Senior Cup 3 to 5; Durham Intermediate Cup ? to ?; Durham Junior Cup ? to ?; Durham Plate ? to ? | Durham Senior Cup to 5; under that, the plain table |
+| East Midlands | East Midlands Cup 5 to 7 | East Midlands Cup to 7; under that, the plain table |
+| Eastern Counties | none found | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Essex | Essex Senior Cup ? to ?; Essex Intermediate Cup ? to ?; Essex Senior Shield ? to ? | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Gloucestershire | none found | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Hampshire | Hampshire Cup 6 to 7; Hampshire Bowl 8 to 9; Hampshire Plate 9 to 11 | Hampshire Cup to 7, Bowl to 9, Plate to 12 (the game's own, as it was) |
+| Hertfordshire | Hertfordshire Presidents' Cup 6 to 6; Hertfordshire Presidents' Tankard 7 to 8; Hertfordshire Presidents' Trophy 9 to 10 | Hertfordshire Presidents' Cup to 6, Hertfordshire Presidents' Tankard to 8, Hertfordshire Presidents' Trophy to 10; under that, the plain table |
+| Kent | Kent Cup 5 to 6; Kent Shield 7 to 8; Kent Vase 9 to 10 | Kent Cup to 6, Kent Shield to 8, Kent Vase to 10; under that, the plain table |
+| Lancashire | Lancashire Cup ? to ?; Lancashire Trophy ? to ?; Lancashire Plate ? to ?; Lancashire Bowl ? to ? | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Leicestershire | Leicestershire County Cup 5 to 7; Leicestershire Bowl 8 to ? | Leicestershire County Cup to 7, Leicestershire Bowl to 12 |
+| Middlesex | Middlesex Senior Cup 6 to 7; Middlesex Bowl 6 to 9; Middlesex Vase 9 to 10 | Middlesex Senior Cup to 7, Middlesex Bowl to 9, Middlesex Vase to 10; under that, the plain table |
+| North Midlands | North Midlands Cup 5 to 6; North Midlands Shield 7 to 8; North Midlands Vase 9 to 10 | North Midlands Cup to 6, North Midlands Shield to 8, North Midlands Vase to 10; under that, the plain table |
+| Northumberland | Northumberland Senior Cup 4 to 6; Northumberland Senior Plate 7 to 9 | Northumberland Senior Cup to 6, Northumberland Senior Plate to 9; under that, the plain table |
+| Notts Lincs & Derbyshire | Notts, Lincs & Derbyshire Senior Cup ? to ?; Notts, Lincs & Derbyshire Senior Shield ? to ?; Notts, Lincs & Derbyshire Senior Plate ? to ?; Notts, Lincs & Derbyshire Senior Vase ? to ? | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Oxfordshire | Oxfordshire County Cup 6 to 7; Oxfordshire County Shield ? to ? | Oxfordshire County Cup to 7; under that, the plain table |
+| Somerset | Somerset Senior Cup 4 to 7; Somerset Senior Vase 7 to 9 | Somerset Senior Cup to 7; under that, the plain table |
+| Staffordshire | Staffordshire Senior Cup 5 to 7; Staffordshire Intermediate Cup 7 to 8; Staffordshire Owen Cup 8 to 10 | Staffordshire Senior Cup to 7, Staffordshire Intermediate Cup to 8; under that, the plain table |
+| Sussex | Sussex Bob Rogers Cup ? to ?; Sussex Bowl ? to ?; Sussex Plate ? to ?; Sussex Salver ? to ?; Sussex Vase ? to ? | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Warwickshire | Warwickshire Cup ? to ?; Warwickshire Shield ? to ?; Warwickshire Vase ? to ? | The plain table (County Cup to 5, Trophy to 8, Shield to 10, Bowl to 12) |
+| Yorkshire | Yorkshire Cup 4 to 6; Yorkshire Shield 7 to ?; Yorkshire Trophy 7 to ?; Yorkshire Vase ? to ? | Yorkshire Cup to 6; under that, the plain table |
+
 ### Drawn cup ties
 
 The rule varies. [Dorset & Wilts 2025-26](https://dwrugby.co.uk/wp-content/uploads/Cup-Regs-25.6.pdf) (**Confirmed** for that county) uses 10 minutes each way of extra time, then most tries, then most goals from tries, then the away side. [Lancashire](https://lancashirerugby.rfu.club/Media/LancashireCB/Lancashire%20Cups/Adult%20Lancashire%20Cups%20Rules.pdf) (**Reported**) allows joint winners in its final. I couldn't read the RFU's own cup regulations.
@@ -173,7 +219,7 @@ Sources: [Regional 1 South Central](https://en.wikipedia.org/wiki/Regional_1_Sou
 - **County cups in a Local club's year.** After its league, a Local club plays the cup its county runs for its level: Surrey Cup, Trophy, Shield or Bowl, or Hampshire's for Aldershot. Eight sides, Quarter-Finals to a Final. It's the cups engine's `county` kind (`src/cups.js`), so its screens, Golden Try, save and trophy come from the same code as the European Cup's. The data is `src/competitions.js`.
 - **Levels come from each club's league.** Main's data now carries every Local club's 2025-26 league, on two lists (Surrey and Counties, 18 clubs). Quins have none, so their level is written down as 11: the club's own 2025-26 fixtures are in Counties 5 Surrey, though Wikipedia says Counties 4. Counties are written down for every club.
 - **No Plates yet.** A first-round loser goes out. A Plate would mean a second bracket in the cups engine.
-- **Rivals come from the Local list.** Aldershot's Hampshire cup draws Surrey clubs, because the game has no other Hampshire clubs.
+- **Rivals come from the club's own county** (1.7). Every county's clubs are in the game now, so a county cup draws your county's first: Aldershot's Hampshire Bowl draws Hampshire's (before 1.7 it drew Surrey clubs, the game having no other Hampshire clubs).
 - **Plain cup names.** A made club plays "County Cup", "County Bowl" and so on.
 - **Not ported.** An earlier branch (`docs/grassroots-competitions`, commit `abce6b0`) also had Minis tag festivals, Juniors without scrums, a Club stage and training by stage. Main's career replaced stages with club seasons and has no Minis, so those weren't carried over.
 

@@ -408,17 +408,23 @@ function myPool() {                                       // the list My Team's 
   const t = myClubTeam();
   if (t.custom) return null;
   if (importLeague && importLeague.teams.includes(t)) return IMPORT_POOL;
-  const l = TEAM_LISTS.find(x => x.tier > 0 && x.teams.includes(t));
+  const l = listHomeOf(t);
   return l ? l.key : 'sur';
+}
+/* A built-in club's own list: the first it is on, or the county it is shown under (LOCAL_VIEW: Aldershot is Hampshire's). null for none. */
+function listHomeOf(t) {
+  const v = t && LOCAL_VIEW[t.id] && TEAM_LISTS.find(x => x.key === LOCAL_VIEW[t.id] && x.teams.includes(t));
+  return v || TEAM_LISTS.find(x => x.tier > 0 && x.teams.includes(t)) || null;
 }
 const myIs = t => !!t && (isNation(t) ? !t.legend && t.id === (settings.myNat || 'ENG') : keyOf(t) === keyOf(myClubTeam()) && !t.custom === !myClubTeam().custom);
 /* My Team's club, last season (PR #14's Your Team info): its league and place, as its list has them. Real figures from the club's list, so
    only a built-in club with a line has one; a nation, a team you made or imported, a My League side and a club with no figures (Quins, New
    Zealand, Japan, Scotland) show none, never an invented one. myRecordLine is the rest of PR #14's line (won, lost, scored, conceded):
    since 2026-11-11 the game shows it nowhere (the home's box shows the games you have played as the club instead), and only the tools
-   read it (tools/home.mjs 6b), kept so the figures stay checked against the club's list. */
+   read it (tools/home.mjs 6b), kept so the figures stay checked against the club's list. A club whose league published no table (most of
+   Counties 1, LOCAL) has its place only, and no record line. */
 const myLeagueLine = t => (t && t.league ? t.league + ' · ' + ordinal(t.place) + ' Last Season' : '');
-const myRecordLine = t => (t && t.league ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
+const myRecordLine = t => (t && t.league && t.w != null ? ['Won ' + t.w, ...(t.d ? ['Drew ' + t.d] : []), 'Lost ' + t.l, t.pf + ' Scored', t.pa + ' Conceded'].join(' · ') : '');
 const FORM_WORD = { W:'Won', D:'Drawn', L:'Lost' };
 /* My Team's box: the club's shirt, name, stars and league line; the games you have played as it (formOf, src/persistence.js) and its last
    five results, the latest on the right of them; the country's shirt and name; Change | Add Your Team | Locker. */
@@ -476,6 +482,15 @@ function homeFit() {
     const list = $('tc-list');
     if (list.scrollWidth > list.clientWidth + 0.5) strip.dataset.fit = 'short';
   }
+  /* Continue's line and the Career box's note: each part whole within their two lines. A county club's name can be wider than the Career
+     box's half at 568 wide (v Old Wimbledonian), so the note steps down a pixel at a time, to 11px at the least, until it holds; a line that
+     already fits keeps its size. */
+  for (const note of [$('cont-note'), $('career-note')]) {
+    if (!note || note.hidden || !note.style || !note.querySelectorAll) continue;
+    note.style.fontSize = '';
+    const tight = () => [...note.querySelectorAll('.nw')].some(cut) || note.scrollHeight > note.clientHeight + 1;
+    for (let n = parseFloat(getComputedStyle(note).fontSize) || 14; tight() && n > 11; ) { n -= 1; note.style.fontSize = n + 'px'; }
+  }
 }
 $('b-my').addEventListener('click', () => { ac(); profileOpen(); });   // My Profile (src/profile.js): the age group, gender and look, and My Team's picker, its old job, one press on
 
@@ -486,7 +501,16 @@ $('b-my').addEventListener('click', () => { ac(); profileOpen(); });   // My Pro
 let homeTier = null;                                       // the tier on show, while the game runs: first the one My Team's club is on
 const champComps = tier => (tier === 0 ? [['int', 'Championship'], ['world', 'World Cup'], ['tour', 'Home Nations Tour']]
   : tier === 1 ? TEAM_LISTS.filter(l => l.tier === 1).map(l => [l.key, l.name])
+  : LOCAL.on ? [[myCounty(), TEAM_LISTS.find(l => l.key === myCounty()).name], ['county', 'Other County'], ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]
   : [...TEAM_LISTS.filter(l => l.tier === 2).map(l => [l.key, l.name]), ...(importLeague ? [[IMPORT_POOL, 'My League']] : [])]);
+/* LOCAL (the owner, 14 Nov 2026, Build): Local's competitions are your county, Other County and My League. Your county is the one My Team's
+   club is shown under (Aldershot: Hampshire); Surrey for a club with none (a nation's, a professional side, one you made or imported).
+   Other County is the team screen on every county, the Filter open on County | Teams: a club picked plays its own county's championship. */
+function myCounty() {
+  const t = myClubTeam(), l = t && !t.custom && !isNation(t) ? listHomeOf(t) : null;
+  return l && l.tier === 2 && l.county ? l.key : 'sur';
+}
+let champCounty = false;                                   // Championship's Other County: the team screen on the county ladder
 $('hc-tier').innerHTML = TEAM_TIERS.map((n, i) => `<button data-tier="${i}">${n}</button>`).join('');   // plain words (data.js)
 for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.addEventListener('click', () => { homeTier = +b.dataset.tier; champHome(); });
 function champHome() {
@@ -514,14 +538,16 @@ function champHome() {
     box.dataset.key = key;
     box.className = 'hc-comps n' + comps.length;
     box.innerHTML = comps.map(([k, n]) => `<button class="btn hc-comp${n.length > 20 ? ' long' : ''}" id="hc-${k}" data-comp="${k}">${typeof cupEuroLeague === 'function' && cupEuroLeague(k) ? `<span class="cup-trophy" data-kind="euro" data-metal="${trophyMetal('euro')}" role="img" aria-label="European Cup"></span>` : ''}<span>${esc(n)}</span></button>`).join('');
-    for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', () => champPick(b.dataset.comp)); storeMark(b, 'champ'); }
+    for (const b of box.querySelectorAll('[data-comp]')) { b.addEventListener('click', e => champPick(b.dataset.comp, e)); storeMark(b, 'champ'); }
   }
 }
-function champPick(k) {
+function champPick(k, e) {
   ac();
   if (!storeGate('champ', () => champPick(k))) return;     // locked: the Unlock card
   if (cup || champ) { $('b-champ').click(); return; }      // one is saved: its own hub (the home shows Continue then)
+  const how = k === 'county' && typeof pickFilterHow === 'function' ? pickFilterHow(e, $('hc-county')) : null;
   openTeams('champ', k, { from:$('hc-' + k) });             // Back comes back to it
+  if (k === 'county') pickFilter(0, '', { dev:how, from:'sheet' });   // Other County: the Filter open on County | Teams, your county marked
 }
 $('b-champ').addEventListener('click', () => {
   ac();
@@ -641,18 +667,22 @@ function pickCountries(cat, every) {
 }
 /* A country's club groups, in TEAM_LISTS order (so Local's Surrey and Counties come last): each list's sides from that country, cut by
    league where every side has one and they differ (South Africa), named for the competition they all share, else LIST_GROUP's name, else
-   Clubs; Local's lists keep their own names. */
+   Clubs; Local's lists keep their own names. LOCAL: Surrey, then every other county A to Z, each named by its label, Counties hidden (its
+   sides are Surrey's), a club under the county LOCAL_VIEW gives it (Aldershot, Hampshire), each county in its pyramid's order (pickLevel). */
+const pickLevel = t => (t.league ? compOwnLevel(t) || 99 : 5.5);   // a club's level for a county's order; one with no line (Quins, rated with Farnham) after Regional 1
+const pickLocalOrder = ts => ts.map((t, i) => ({ t, i })).sort((a, b) => pickLevel(a.t) - pickLevel(b.t) || (a.t.place || 0) - (b.t.place || 0) || a.i - b.i).map(x => x.t);
 function pickClubGroups(home) {
   const out = [];
   for (const l of TEAM_LISTS) {
-    if (!l.tier) continue;
-    const teams = l.teams.filter(t => pickHome(l.key, t) === home);
+    if (!l.tier || l.hide) continue;
+    let teams = l.teams.filter(t => pickHome(l.key, t) === home && (!LOCAL_VIEW[t.id] || LOCAL_VIEW[t.id] === l.key));
+    if (l.county) teams = pickLocalOrder(teams);
     if (!teams.length) continue;
     const local = LIST_LOCAL.includes(l.key), leagues = [...new Set(teams.map(t => t.league || ''))], split = !local && leagues.length > 1 && !leagues.includes('');
     for (const lg of split ? leagues : ['']) {
       const ts = split ? teams.filter(t => t.league === lg) : teams;
       const name = local ? l.name : ts.every(t => t.league && t.league === ts[0].league) ? LEAGUE_SHORT[ts[0].league] || ts[0].league : LIST_GROUP[l.key] || 'Clubs';
-      out.push({ key:[l.key, ...(l.key === 'cel' ? [home.toLowerCase()] : []), ...(split ? [pickSlug(name)] : [])].join('.'), list:l.key, home, local, name, teams:ts });
+      out.push({ key:[l.key, ...(l.key === 'cel' ? [home.toLowerCase()] : []), ...(split ? [pickSlug(name)] : [])].join('.'), list:l.key, home, local, name, ...(l.county ? { county:l.county, wraps:!!l.wraps } : {}), teams:ts });
     }
   }
   return out;
@@ -725,11 +755,14 @@ function pickLadderOf(s, left) {
   if (pickMode === 'champ') {
     const view = teamsView();
     if (view) return [{ key:'cup.' + view.comp, list:null, hemi:null, name:view.name, ctx:view.yours ? 'Your Side · ' + listName(view.yours) : 'International', fixed:true, teams:view.list.slice() }];   // a tour: the Home Nations against the host picked here
+    if (champCounty) return pickClubGroups('ENG').filter(g => g.local).map(g => ({ ...g, hemi:null, ctx:'Local', teams:storeFirst(g.teams) }));   // Other County: every county, Up and Down or the Filter's County column to choose
     const pool = teamPool();
     let teams = poolTeams(pool).slice();
     if (pool === 'int' && typeof lockerLegends === 'function') teams.splice(natList(cat).length, 0, ...lockerLegends(cat));
+    const own = listOf(pool), county = own && own.county ? { county:own.county, wraps:!!own.wraps } : {};   // a county's (LOCAL): in its pyramid's order, and its group button may take two lines
+    if (own && own.county) teams = pickLocalOrder(teams);
     const made = [...custom, ...(custom.length < MAX_CUSTOM ? [PICK_MAKE] : []), ...(importShown() ? [PICK_ADD] : [])];
-    return [{ key:'comp', list:pool, hemi:null, name:champListName(pool), ctx:TEAM_TIERS[poolTier(pool)], teams:storeFirst(teams) }, ...(made.length ? [{ key:'mine.made', list:null, hemi:'mine', name:'Made Teams', teams:made }] : [])];
+    return [{ key:'comp', list:pool, hemi:null, name:champListName(pool), ctx:TEAM_TIERS[poolTier(pool)], ...county, teams:storeFirst(teams) }, ...(made.length ? [{ key:'mine.made', list:null, hemi:'mine', name:'Made Teams', teams:made }] : [])];
   }
   if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));
   if (pickMode === 'my') return pickLadder(cat, { nations:true, every:!!pickCatFixed(), clubs:true, mine:'all', fav:true, fits:t => !t.legend });   // with no switch, every country: My Team's is where you are from, whatever the category plays
@@ -943,9 +976,9 @@ function pickWho(s) {                                      // the side's own nam
   if (pickMode === 'career') return 'Your Club';
   return 'Your Team';
 }
-function pickWhere(g) {                                    // North · England, North · England · Local, Mine; a competition's tier
+function pickWhere(g) {                                    // North · England, North · England · Local (North · England with LOCAL on), Mine; a competition's tier
   if (g.ctx) return g.ctx;
-  if (g.home) return [PICK_HEMI[g.hemi], natName(g.home), ...(g.local ? ['Local'] : [])].join(' · ');
+  if (g.home) return [PICK_HEMI[g.hemi], natName(g.home), ...(g.local && !LOCAL.on ? ['Local'] : [])].join(' · ');   // LOCAL: the group button names the county
   return g.hemi === 'mine' ? PICK_HEMI.mine : '';
 }
 function pickTag(s, t) {                                   // Stronger Side (the Opponent, as ever) or My Team (where it is offered or picked)
@@ -960,7 +993,8 @@ function pickTag(s, t) {                                   // Stronger Side (the
 function pickPanel(s) {
   const v = pickView[s], g = v.group, t = v.team, st = pick.sides[s], cat = pickCat();
   const where = pickWhere(g), many = v.ladder.length > 1 && !g.fixed;
-  const group = many ? `<button class="btn pk-group" data-act="sheet" aria-haspopup="dialog">${esc(g.name)}</button>` : `<span class="pk-group fixed">${esc(g.name)}</span>`;
+  const two = g.county ? ' two' : '';                         // a county's name may take two lines (Notts Lincs & Derbyshire), never cut
+  const group = many ? `<button class="btn pk-group${two}" data-act="sheet" aria-haspopup="dialog">${esc(g.name)}</button>` : `<span class="pk-group fixed${two}">${esc(g.name)}</span>`;
   const real = !t.act, fav = real ? `<button class="btn pk-fav" data-act="fav" aria-pressed="${settings.fav.includes(keyOf(t))}" aria-label="Favourite"><i aria-hidden="true"></i><span>Favourite</span></button>` : '';
   const edit = real && t.custom ? `<button class="btn pk-edit" data-act="edit">Edit</button>` : '';   // a team you made: Edit, in the card's corner
   const count = `<span class="pk-n">${v.i + 1} of ${g.teams.length}</span>`;
@@ -989,8 +1023,9 @@ let pickFrom = null;                                       // the home's button 
 function openTeams(m, comp, o) {
   pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, made:null, lifter:null }; pickView = [null, null];
   pickFrom = (o && o.from) || null;
+  champCounty = m === 'champ' && comp === 'county';         // Other County (LOCAL): every county on the ladder, your county first in view
   if (m === 'champ') {
-    const k = comp || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
+    const k = (champCounty ? myCounty() : comp) || myPool() || 'sur', cupId = k === 'world' || k === 'tour' ? k : 'league';
     if (typeof cupCompSet === 'function') cupCompSet(cupId);   // the World Cup or the Home Nations Tour have their own sides (src/ui-cups.js)
     settings.pool = cupId !== 'league' ? 'int' : poolKey(k) === k ? k : 'sur';
   } else if (m !== 'career') settings.pool = myPool() || 'sur';
@@ -1144,12 +1179,12 @@ function filterCols() {
   for (let c = 0; node.kids; c++) {
     const rows = node.kids, sel = clamp(FL.path[c] | 0, 0, rows.length - 1);
     FL.path[c] = sel;
-    cols.push({ kind:rows[0].kind, head:FL_HEAD[rows[0].kind], rows, sel });
+    cols.push({ kind:rows[0].kind, head:champCounty && rows[0].kind === 'league' ? 'County' : FL_HEAD[rows[0].kind], rows, sel });   // Other County's first column is County
     node = rows[sel];
   }
   FL.path.length = cols.length;
   const g = L[node.gi];
-  cols.push({ kind:'team', head:g.name, gi:node.gi, rows:g.teams, sel:-1, cur:node.gi === v.gi ? v.i : -1 });
+  cols.push({ kind:'team', head:g.name, wraps:!!g.wraps, gi:node.gi, rows:g.teams, sel:-1, cur:node.gi === v.gi ? v.i : -1 });
   return cols;
 }
 const flCount = (L, n) => (n.kids ? n.kids.length : L[n.gi].teams.length);
@@ -1178,8 +1213,9 @@ function pickFilterDraw(from = 0) {
   const find = !!FL.q.trim();
   box.hidden = find; res.hidden = !find;
   if (find) {
-    FL.hits = filterSearch(v.ladder, FL.q);
-    res.innerHTML = FL.hits.length ? FL.hits.map((h, r) => flTeamHtml(FL.s, h.t, `data-r="${r}" tabindex="${r ? -1 : 0}"`, h.path)).join('') : `<p class="fl-none">No ${word} Found</p>`;
+    const all = filterSearch(v.ladder, FL.q);
+    FL.hits = all.slice(0, FL_CAP);                            // LOCAL: at most FL_CAP drawn (a letter matches hundreds of clubs), the count of all said under them
+    res.innerHTML = FL.hits.length ? FL.hits.map((h, r) => flTeamHtml(FL.s, h.t, `data-r="${r}" tabindex="${r ? -1 : 0}"`, h.path)).join('') + (all.length > FL.hits.length ? `<p class="fl-none fl-more">${FL.hits.length} of ${all.length} ${word}</p>` : '') : `<p class="fl-none">No ${word} Found</p>`;
     res.scrollTop = 0;
     $('fl-said').textContent = FL.hits.length ? `${FL.hits.length} ${FL.hits.length === 1 ? word.slice(0, -1) : word}` : `No ${word} Found`;
     flLocks(res);
@@ -1193,7 +1229,7 @@ function pickFilterDraw(from = 0) {
     const rows = col.kind === 'team'
       ? col.rows.map((t, i) => flTeamHtml(FL.s, t, `data-col="${c}" data-i="${i}"${i === col.cur ? ' aria-current="true"' : ''} tabindex="${i === Math.max(0, col.cur) ? 0 : -1}"`)).join('')
       : col.rows.map((n, i) => flRowHtml(v.ladder, c, n, i, i === col.sel)).join('');
-    return `<div class="fl-col" role="group" aria-labelledby="fl-h${c}"><p class="fl-h" id="fl-h${c}">${esc(col.head)}</p><div class="fl-list">${rows}</div></div>`;
+    return `<div class="fl-col" role="group" aria-labelledby="fl-h${c}"><p class="fl-h${col.wraps ? ' two' : ''}" id="fl-h${c}">${esc(col.head)}</p><div class="fl-list">${rows}</div></div>`;
   };
   /* A row chosen (from > 0): the columns before it stay as they are, so the row pressed keeps the focus (a click, a tap, a screen
      reader's double tap) and a screen reader its place; only the chosen column's mark moves, and the columns after it are drawn anew. */
@@ -1208,7 +1244,8 @@ function pickFilterDraw(from = 0) {
   if (box.querySelectorAll) [...box.querySelectorAll('.fl-list')].forEach((l, c) => { if (c < from) { if (!kept.length && was[c] != null) l.scrollTop = was[c]; } else flCentre(l, l.querySelector('[aria-current="true"]')); });
 }
 /* The search: team names, folded for accents and case, and the names of countries and groups (Premiership lists both Premierships' clubs),
-   a group's competition by its full name as well (United Rugby Championship, where the group says URC). Names that start with the text
+   a group's competition by its full name as well (United Rugby Championship, where the group says URC), and with LOCAL a county by its
+   full name (Buckinghamshire, where the group says Bucks) and each club's own league. Names that start with the text
    first, then those with a word that does, then those that hold it, then the clubs of a country or group whose name matches in the same
    three steps; ladder order within each. Each team once, under its own group (Favourites and Recent only repeat it). */
 const flFold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1217,15 +1254,17 @@ function flPath(g) {                                         // North · England
   return parts.filter((p, i, a) => p && p !== a[i - 1]).join(' · ');
 }
 const flLeague = g => { const l = g.teams[0] && g.teams[0].league; return l && g.teams.every(t => t.league === l) ? l : ''; };   // the competition a group's clubs all play in, by its full name: a group called URC found as United Rugby Championship too
+const FL_CAP = LOCAL.on ? 200 : Infinity;                    // the matches drawn at most: above 1.6's worst, so LOCAL off draws every one as before
 function filterSearch(L, q) {
   const f = flFold(q); if (!f) return [];
   const rank = text => { const n = flFold(text); return n.startsWith(f) ? 0 : n.split(/[\s'-]+/).some(w => w.startsWith(f)) ? 1 : n.includes(f) ? 2 : -1; };
   const seen = new Set(), hits = [], order = L.map((g, gi) => gi).sort((a, b) => flSaved(L[a]) - flSaved(L[b]));   // a team's own group first
   for (const gi of order) {
-    const g = L[gi], by = flSaved(g) ? [] : [g.name, g.home ? natName(g.home) : '', flLeague(g)].filter(Boolean).map(rank).filter(r => r >= 0), there = by.length ? 3 + Math.min(...by) : -1;
+    const g = L[gi], by = flSaved(g) ? [] : [g.name, g.county || '', g.home ? natName(g.home) : '', flLeague(g)].filter(Boolean).map(rank).filter(r => r >= 0), there = by.length ? 3 + Math.min(...by) : -1;
     g.teams.forEach((t, i) => {
       const k = pickKey(t); if (t.act || seen.has(k)) return;
-      const own = rank(listName(t)), r = own >= 0 ? own : there;
+      const line = LOCAL.on && !flSaved(g) && t.league ? rank(t.league) : -1;   // LOCAL: a club's own league too (Regional 2 Thames), at its group's step
+      const own = rank(listName(t)), r = own >= 0 ? own : there >= 0 && line >= 0 ? Math.min(there, 3 + line) : there >= 0 ? there : line >= 0 ? 3 + line : -1;
       if (r < 0) return;
       seen.add(k); hits.push({ t, gi, i, r, n:hits.length, path:flPath(g) });
     });
@@ -1622,7 +1661,7 @@ function pickTeam(t) {
   if (pickMode === 'champ') {
     const view = teamsView();
     if (view) { view.start(t); return; }                   // a World Cup as that nation, or a tour to that host (src/ui-cups.js)
-    const pool = teamPool(), cat = settings.cat, me = catTeam(t, cat);
+    const pool = champCounty && pickView[0] && pickView[0].group.list ? pickView[0].group.list : teamPool(), cat = settings.cat, me = catTeam(t, cat);   // Other County: the county the club was picked from
     if (!me) return;
     const others = pool === IMPORT_POOL ? importOthers(t) : shuffle(champFrom(pool, t, cat).filter(o => keyOf(o) !== keyOf(t)));
     newChamp(me, others.slice(0, 5).map(o => catTeam(o, cat))); renderHub(); showScreen('s-hub'); return;

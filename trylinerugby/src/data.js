@@ -3,7 +3,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.6';
+const GAME_VERSION = '1.7';
 
 /* =========================================================
    Data
@@ -174,6 +174,21 @@ const COUNTIES = [
   { id:'MIT', name:'Mitcham',    kit:'#2050b0', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:3, stamina:3, league:'Counties 5 Surrey', place:7, w:4, d:0, l:10, pf:180, pa:281 },   // colours a free choice
   { id:'FEL', name:'Feltham',    kit:'#1b2747', trim:'#6fb7e6', pace:3, power:3, handling:3, kicking:2, stamina:2, league:'Counties 5 Surrey', place:10, w:1, d:0, l:13, pf:230, pa:409 },
 ];
+/* Local clubs by county (the owner, 13 Nov 2026: "Other teams need adding in. I can only see Surrey. May need to filter though as lots could
+   be added"; every club in England's 2025-26 Regional 1, Regional 2 and Counties 1, by county, England only; 14 Nov: Build, with National
+   League 1 and 2 added, and Jersey, Guernsey Raiders and Douglas included). LOCAL.on reads src/clubs-local.js (written from
+   docs/clubs-local.json by tools/clubs-local.mjs): Surrey's list is every Surrey club, its own twelve, then Counties' sides, then the new ones;
+   every other county is a Local list of its own, A to Z after Surrey, named by its label (Bucks, Glos). Counties stays a list, for the saves,
+   off the ladder and the home: a saved 'cty' is Surrey (localKey). Aldershot, on Surrey's list since PR #14, is shared into Hampshire's and
+   shown there (LOCAL_VIEW). Merton plays in plain black with its gold trim (its hoops were never sourced; Camberley's are). Keys never
+   change, lists only grow. LOCAL='{"on":false}' (tools/harness.mjs) is 1.6, draw for draw and screen for screen. */
+const LOCAL = { on:true };
+// LOCAL_TUNE
+const LOCAL_DATA = LOCAL.on ? localCounties() : { sizes:{}, counties:[], kits:{} };   // a function declaration in src/clubs-local.js, after this file, hoisted
+const LOCAL_NEW = new Set(LOCAL_DATA.counties.flatMap(c => c.clubs));   // the new clubs, rated by their league and place (localRated, src/ratings.js)
+const LOCAL_SURREY = LOCAL.on ? [...CLUBS, ...COUNTIES.filter(t => !CLUBS.includes(t)), ...LOCAL_DATA.counties.filter(c => c.code === 'SUR').flatMap(c => c.clubs)] : CLUBS;
+for (const [id, k] of Object.entries(LOCAL_DATA.kits)) { const t = COUNTIES.find(o => o.id === id); if (t) { Object.assign(t, k); if (!k.hoops) delete t.hoops; } }
+const localKey = k => (LOCAL.on && k === 'cty' ? 'sur' : k);   // a saved Counties (a list key, a career's league) is Surrey now
 /* The team screen: International | National | Local, then a list. Every list offers at least six sides, since a championship is
    your side and five from the list on screen. settings.pool holds a list's key; 'my' is My League (src/import.js), under Local while
    a league is saved. Keys never change: the save keeps them. */
@@ -189,9 +204,17 @@ const TEAM_LISTS = [
   { key:'aus', tier:1, name:'Australia',        teams:AUSTRALIA },
   { key:'nzl', tier:1, name:'New Zealand',      teams:NEW_ZEALAND },
   { key:'jpn', tier:1, name:'Japan',            teams:JAPAN },
-  { key:'sur', tier:2, name:'Surrey',           teams:CLUBS },
+  { key:'sur', tier:2, name:'Surrey',           teams:LOCAL_SURREY },   // CLUBS; with LOCAL on, every Surrey club
   { key:'cty', tier:2, name:'Counties',         teams:COUNTIES },      // PR #14's foot of the game; Guildfordians is Surrey's own object
 ];
+const LOCAL_VIEW = {};                    // a club shown under another county than the first list it is on: Aldershot, on Surrey's, under Hampshire
+if (LOCAL.on) { const s = TEAM_LISTS.find(l => l.key === 'sur'); s.county = 'Surrey'; TEAM_LISTS.find(l => l.key === 'cty').hide = true; }
+for (const c of LOCAL_DATA.counties) {    // every other county, A to Z
+  if (c.code === 'SUR') continue;
+  const shared = c.shared.map(id => [...CLUBS, ...COUNTIES].find(t => t.id === id));
+  for (const t of shared) LOCAL_VIEW[t.id] = c.key;
+  TEAM_LISTS.push({ key:c.key, tier:2, name:c.label, county:c.county, wraps:c.wraps, teams:[...c.clubs, ...shared] });
+}
 const POOLS = TEAM_LISTS.map(l => l.teams);   // every built-in list
 const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // the national leagues: Career's transfer offers come from these
 /* Saves from before the hierarchy hold an index into the old five lists and My League (International, Local, France, Australia,
@@ -199,7 +222,7 @@ const NATIONAL = TEAM_LISTS.filter(l => l.tier === 1).map(l => l.teams);   // th
 const POOL_OLD = ['int', 'sur', 'fra', 'aus', 'rsa', 'my'];
 function poolKey(v) {
   if (Number.isInteger(v) && v >= 0 && v < POOL_OLD.length) return POOL_OLD[v];
-  return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? v : 'int';
+  return v === 'my' || TEAM_LISTS.some(l => l.key === v) ? localKey(v) : 'int';
 }
 const ALL_TEAMS = [...new Set(POOLS.flat())];   // every side once: Guildfordians is in Surrey and in Counties, one team
 /* Where the team screen's ladder puts each list (pickLadder, src/ui-menus.js): North or South by country, then the country's lists. A list
@@ -211,6 +234,7 @@ const NATION_HEMI = { IRE:'north', FRA:'north', ENG:'north', SCO:'north', WAL:'n
 const LIST_HOME = { eng:'ENG', en2:'ENG', fra:'FRA', sco:'SCO', rsa:'RSA', aus:'AUS', nzl:'NZL', jpn:'JPN', sur:'ENG', cty:'ENG' };
 const URC_HOME = { DUB:'IRE', LIM:'IRE', BEL:'IRE', GAL:'IRE', EDI:'SCO', GLA:'SCO', CDF:'WAL', SWA:'WAL', LLA:'WAL', NPT:'WAL', TRE:'ITA', PRM:'ITA' };
 const LIST_LOCAL = ['sur', 'cty'];
+for (const l of TEAM_LISTS) if (l.county && !LIST_LOCAL.includes(l.key)) { LIST_HOME[l.key] = 'ENG'; LIST_LOCAL.push(l.key); }   // LOCAL: each county, England's
 const LEAGUE_SHORT = { 'English Premiership':'Premiership', 'English Championship':'Championship', 'Top 14':'Top 14', 'United Rugby Championship':'URC', 'Currie Cup':'Currie Cup', 'Super Rugby Pacific':'Super Rugby' };
 const LIST_GROUP = { sco:'Premiership', nzl:'Provinces' };   // sides with no league line: Scotland's are the Scottish Premiership, New Zealand's the provinces
 const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local · Surrey with it picked

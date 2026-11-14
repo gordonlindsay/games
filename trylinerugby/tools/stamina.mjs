@@ -105,7 +105,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
   const farnham = side();
   let five = 0;
   for (let i = 0; i < n; i++) { const h = side(); if ((h.match(/class="pk-st"/g) || []).length === 5 && /<span class="lbl">Pace<\/span>.*<span class="lbl">Power<\/span>.*<span class="lbl">Handling<\/span>.*<span class="lbl">Kicking<\/span>.*<span class="lbl">Stamina<\/span>/.test(h)) five++; PK.step(0, 1); }
-  ok(five === n && n === 12, `every side shows five ability bars, Stamina among them (${five} of ${n} sides)`);
+  ok(five === n && n === T.teams.TEAM_LISTS.find(l => l.key === 'sur').teams.length, `every side shows five ability bars, Stamina among them (${five} of ${n} sides: Surrey's, every Surrey club with LOCAL)`);
   ok(new RegExp(`<span class="lbl">Kicking</span>.*?<span class="lbl">Stamina</span><span class="pk-bar" role="img" aria-label="Stamina ${X.CLUBS[0].stamina} of 5">`).test(farnham) && farnham.includes('>Farnham<') && X.CLUBS[0].stamina === 2, `Stamina is the last bar, Farnham at its own (${X.CLUBS[0].stamina}, as rated from its table; the old card check matched any side at 3)`);
   S.openBuilder(null);
   ok(S.draft().stamina === 1 && KEYS.every(k => S.draft()[k] === 1), 'a new team starts at 1 in all five');

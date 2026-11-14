@@ -3,7 +3,7 @@
 // node tools/career-life.mjs   Exits 1 on any failure.
 // GAME=/path/to/an/older/index.html node tools/career-life.mjs --pins   prints that build's fingerprints, to re-pin BASE below
 process.env.SEED ??= '41';
-const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, offRun, LOCAL_CHILD } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const C = T.career, X = T.teams, D = T.debug, L = T.careerLife, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -25,7 +25,12 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    Re-pinned again at club seasons (2026-11-08): `rest` is a career match at Farnham, and a career's first year is no longer the
 //    Minis, so its two sides play at full strength instead of one off every ability. With the Minis' sides put back (careerMatch's
 //    `minis`, the same draw with CAREER_CUT[0] on both) this build gives the pin from before the bars, `restMinis`, exactly.
-const BASE = { others:'1mhz589 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
+//    Re-pinned for the county clubs (LOCAL, 2026-11-14): the demo (fourth of others) draws its pair from ALL_TEAMS, which they enlarged,
+//    and `rest` and `restMinis` are a Farnham career match, whose season draws five from every Surrey club. With LOCAL='{"on":false}'
+//    this build gives BEFORE_LOCAL, 1.6's pins, exactly, and the older pins below hold in that build as they did (both checked first, in a
+//    child: offRun).
+const BASE = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'61kk8v', restMinis:'1ohszc7' };
+const BEFORE_LOCAL = { others:'1mhz589 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // 1.6 (b9fa00d), LOCAL off, as 1.6 pinned it (2026-11-14): 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = { others:'lngm86 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = { others:'1c3imom 5wudse 1afiv9y ze72xt 83k82g', rest:'1yqiwtq', restMinis:'1g5fgqr' };   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's others 1s0b74m 1vu3xwr y86qkm ze72xt 83k82g)
 const BEFORE_CALLS_CHASE = { others:'jjejgk kfafun 1du17vi ze72xt 83k82g', rest:'1yqiwtq', restMinis:'1g5fgqr' };   // b4a25d5's pin, the calls and the chase both off: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -61,8 +66,9 @@ function careerMatch(life, seed = 131, o = {}) {   // a career match through car
 }
 const REST = { energy:100, morale:50, spirit:50 };
 if (process.argv.includes('--pins')) { console.log(json({ others:others(), rest:careerMatch(REST) })); process.exit(0); }
+const LOCAL_ON = !!(T.local && T.local.LOCAL.on);   // the county clubs: the older pins are 1.6's world, so they are checked where LOCAL is off (the child)
 {
-  const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off, each alone, both off with the knock-ons (20cbcaf predates all three), then as they were (CALLS= and CHASE= in the harness)
+  const CL = !LOCAL_ON && T.calls && T.calls.CALLS, CS = !LOCAL_ON && T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off, each alone, both off with the knock-ons (20cbcaf predates all three), then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
   const three = () => ({ others:others(), rest:careerMatch(REST), restMinis:careerMatch(REST, 131, { minis:true }) });
   const say = o => `${o.others} / ${o.rest} / ${o.restMinis}`;
@@ -71,8 +77,11 @@ if (process.argv.includes('--pins')) { console.log(json({ others:others(), rest:
   if (CL && CS) { feats(true, false); const calls = three(); feats(false, true); const chase = three(); feats(CL0, CS0);
     ok(json(calls) === json(WITH_CALLS), `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${say(calls)}, pinned ${say(WITH_CALLS)})`);
     ok(json(chase) === json(WITH_CHASE), `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${say(chase)}, pinned ${say(WITH_CHASE)})`); }
-  if (T.knock) { T.knock.KNOCK.on = false; feats(false, false); const off = three(); T.knock.KNOCK.on = true; feats(CL0, CS0);
+  if (T.knock && !LOCAL_ON) { T.knock.KNOCK.on = false; feats(false, false); const off = three(); T.knock.KNOCK.on = true; feats(CL0, CS0);
     ok(json(off) === json(BEFORE_KNOCK), `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off.others} / ${off.rest} / ${off.restMinis}, pinned ${BEFORE_KNOCK.others} / ${BEFORE_KNOCK.rest} / ${BEFORE_KNOCK.restMinis})`); }
+  if (LOCAL_CHILD) { const o = three(); console.log(say(o)); process.exit(failed ? 1 : 0); }   // the LOCAL off child (offRun): 1.6's pins, the older ones checked above
+  if (LOCAL_ON) { const off = await offRun(new URL(import.meta.url));
+    ok(!off.fails.length && off.last === say(BEFORE_LOCAL), `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${say(BEFORE_LOCAL)}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
   const now = others();
   ok(now === BASE.others, `AI v AI, a Quick Match, a championship match, the demo and a drill play exactly as before the bars (${now}, pinned ${BASE.others})`);
 }

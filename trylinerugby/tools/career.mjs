@@ -144,7 +144,8 @@ C.setCups(false);                                    // no cups unless a section
   const FAR = X.CLUBS[0], cr = C.create({ pos:'B', num:4, club:FAR });
   ok(cr.league === 'sur' && C.league(cr) === 'sur' && same(C.teamFor(cr), FAR), 'Farnham: his club at full strength, in Local · Surrey');
   const opp = cr.season.teams.slice(1);
-  ok(opp.length === 5 && opp.every(t => same(t, X.CLUBS.find(k => k.id === t.id))) && !opp.some(t => t.id === 'FAR'), 'against five other Local clubs, at full strength');
+  const surrey = X.TEAM_LISTS.find(l => l.key === 'sur').teams;   // Surrey's list: its twelve, and with LOCAL every Surrey club
+  ok(opp.length === 5 && opp.every(t => same(t, surrey.find(k => k.id === t.id))) && !opp.some(t => t.id === 'FAR'), 'against five other Surrey clubs, at full strength');
   for (const [id, list, key] of [['BTH', X.ENGLAND, 'eng'], ['GLA', X.CELTIC, 'cel'], ['AYR', X.SCOTLAND, 'sco'], ['AKL', X.NEW_ZEALAND, 'nzl'], ['KOB', X.JAPAN, 'jpn'], ['TLS', X.FRANCE, 'fra'], ['ADL', X.AUSTRALIA, 'aus'], ['PRE', X.SOUTH_AFRICA, 'rsa']]) {
     const p = C.create({ pos:'B', num:5, club:list.find(t => t.id === id), league:'sur' }), five = p.season.teams.slice(1);
     ok(p.league === key && C.teamFor(p).id === id && five.length === 5 && five.every(t => list.some(a => a.id === t.id && same(t, a)) && t.id !== id), `${id}: a year in its own league (${key}), against five others from it, whatever list it says it was picked on`);
@@ -160,7 +161,7 @@ C.setCups(false);                                    // no cups unless a section
   const imp = C.create({ pos:'B', num:5, club:{ ...league.teams[0], custom:true, key:'my0' }, league:'my' });
   ok(imp.league === 'my' && C.league(imp) === 'my' && imp.season.teams.slice(1).every(t => /^Import [B-F]$/.test(t.name)), `an imported club on My League plays the rest of it (${imp.season.teams.slice(1).map(t => t.name).join(', ')})`);
   T.importer.setLeague(null);
-  ok(C.league(imp) === 'sur' && C.opponents(imp).every(t => X.CLUBS.some(k => k.id === t.id)), 'with the league removed, Local');
+  ok(C.league(imp) === 'sur' && C.opponents(imp).every(t => surrey.some(k => k.id === t.id)), 'with the league removed, Local (Surrey)');
   // International: his country's six in the category's twelve
   ok(C.teamFor({ ...cr, country:'WAL' }, 'intl').name === 'Wales' && ids(C.opponents({ ...cr, country:'WAL' }, 'intl')) === 'IRE,FRA,ENG,SCO,ITA', 'International: Wales against the other five of the Six Nations, in the table\'s order');
   ok(ids(C.opponents({ ...cr, country:'NZL' }, 'intl')) === 'RSA,AUS,ARG,FIJ,JPN', 'New Zealand against the other five of the second six');
@@ -690,7 +691,8 @@ C.setCups(false);                                    // no cups unless a section
     X.restore({ career:json2(p) }); const k = C.get();
     ok(abil(k.club) === abil(X.CLUBS[0]) && X.rateOf(k.club) === X.rateOf(X.CLUBS[0]) && X.overallOf(k.club) === 61 && k.club.name === 'Farnham' && k.club.kit === X.CLUBS[0].kit, `loads at Farnham as the list has him now (${X.overallOf(k.club)}, ${abil(k.club)})`);
     ok(json(k.season) === json(p.season) && X.overallOf(k.season.teams[0]) === 75, 'its season in progress kept as saved');
-    for (let y = 0; y < 3; y++) { C.newSeason(k); ok(X.rateOf(k.season.teams[0]) === X.rateOf(X.CLUBS[0]) && k.season.teams.slice(1).every(t => X.CLUBS.some(o => o.id === t.id && X.rateOf(o) === X.rateOf(t))), `and season ${k.seasons} plays him at 61 against Surrey as the list has it (${k.season.teams.map(t => t.id + ' ' + X.overallOf(t)).join(', ')})`); }
+    const surrey = X.TEAM_LISTS.find(l => l.key === 'sur').teams;
+    for (let y = 0; y < 3; y++) { C.newSeason(k); ok(X.rateOf(k.season.teams[0]) === X.rateOf(X.CLUBS[0]) && k.season.teams.slice(1).every(t => surrey.some(o => o.id === t.id && X.rateOf(o) === X.rateOf(t))), `and season ${k.seasons} plays him at 61 against Surrey as the list has it (${k.season.teams.map(t => t.id + ' ' + X.overallOf(t)).join(', ')})`); }
     const made = C.create({ name:'Sam', pos:'B', num:5, club:{ ...mainFar, custom:true } }); X.restore({ career:json2(made) });
     ok(abil(C.get().club) === abil(mainFar) && C.get().club.custom, 'a team you made with a built-in club\'s code keeps its own abilities');
     const lg = C.create({ name:'Sam', pos:'B', num:5, club:{ ...mainFar, key:'lg-FAR' } }); X.restore({ career:json2(lg) });
@@ -713,7 +715,7 @@ C.setCups(false);                                    // no cups unless a section
   for (const [stage, name] of [[0, 'Minis'], [1, 'Juniors'], [2, 'County']]) {
     X.restore({ career:was(stage) });
     const k = C.get();
-    ok(k && k.club.id === 'ALD' && k.league === 'sur' && k.phase === 'league' && k.year === 4 && k.season === null && k.country === null, `a ${name} career: a league year at its club, its Minis-style season dropped (year ${k && k.year})`);
+    ok(k && k.club.id === 'ALD' && k.league === 'ham' && k.phase === 'league' && k.year === 4 && k.season === null && k.country === null, `a ${name} career: a league year at its club (Aldershot's own list: Hampshire's, LOCAL), its Minis-style season dropped (year ${k && k.year})`);
     ok(json(k.skills) === json(skills) && json(k.totals) === json(totals) && json(k.life) === json(life) && k.name === 'Isla' && k.num === 7, 'its skills, totals, life and name kept');
     ok(json(k.history) === json([{ year:1, kind:'league', name:'Aldershot', place:1, w:5, d:0, l:0 }, { year:2, kind:'league', name:'Aldershot', place:4, w:2, d:0, l:3 }, { year:3, kind:'league', name:'Aldershot', place:2, w:3, d:1, l:1 }]), 'its history in the new shape');
     ok(json(k.trophies) === json([{ kind:'league', year:1, name:'Aldershot' }]), 'its titles are its first trophies');
@@ -779,7 +781,7 @@ C.setCups(false);                                    // no cups unless a section
   X.restore({ career:{ ...good, history:[{ stage:0, name:'Farnham', place:2, up:true, w:4, d:0, l:1 }, { stage:7 }, null, 'x', ...Array(60).fill({ year:3, kind:'league', name:'Farnham', place:4, w:2, d:0, l:3 })] } });
   ok(C.get().history.length === 40 && C.get().history.every(h => h.kind === 'league' && h.place === 4), 'history keeps the latest 40 good entries');
   X.restore({ career:{ ...good, country:'XYZ', league:'zzz' } });
-  ok(C.get().country === null && C.get().league === 'sur', 'an unknown country or league is put right');
+  ok(C.get().country === null && C.get().league === 'ham', 'an unknown country or league is put right (Aldershot\'s own list: Hampshire\'s, LOCAL)');
   // the save consumes no RNG and practice never writes it
   C.set(cr); X.save();
   const r0 = rndCalls(); X.save(); X.renderHome(); C.renderHome();
@@ -832,10 +834,12 @@ C.setCups(false);                                    // no cups unless a section
   const PK = T.picker, at = key => { PK.group(0, PK.view(0).ladder.findIndex(g => g.key === key) - PK.view(0).gi); return PK.view(0); }, to = id => { while (PK.view(0).team.id !== id) PK.step(0, 1); };
   C.clubOpen();
   ok(shown() === 's-teams' && D.pickMode() === 'career' && $('t-eyebrow').textContent === 'New Player' && $('t-title').textContent === 'Pick Your Club' && $('t-back').textContent === 'Back to New Player' && PK.one() && PK.view(0).group.key === 'sur' && PK.view(0).team.id === 'FAR' && /Your Club/.test($('t-side0').innerHTML) && !PK.view(0).ladder.some(g => g.key === 'mine.league'), 'Change Club: the team screen, New Player · Pick Your Club, on Farnham in Local · Surrey, marked Your Club; no My League without an import');
-  { const badges = []; for (let i = 0; i < X.CLUBS.length; i++) { badges.push(new RegExp(`aria-label="Overall ${X.overallOf(PK.view(0).team)}">${X.overallOf(PK.view(0).team)}<`).test($('t-side0').innerHTML) && PK.view(0).team === X.CLUBS[i]); PK.step(0, 1); }
-    ok(badges.every(Boolean), 'each club with its rating, Surrey\'s twelve in their order'); }
+  { const badges = [], g = PK.view(0).group, i0 = PK.view(0).i;   // LOCAL: Surrey is every Surrey club, in its pyramid's order (National League first), Farnham shown
+    ok(g.teams.length === X.TEAM_LISTS.find(l => l.key === 'sur').teams.filter(t => t.id !== 'ALD').length && g.teams[i0].id === 'FAR', `Surrey: every Surrey club bar Aldershot (Hampshire's), Farnham shown (${g.teams.length})`);
+    for (let i = 0; i < g.teams.length; i++) { badges.push(new RegExp(`aria-label="Overall ${X.overallOf(PK.view(0).team)}">${X.overallOf(PK.view(0).team)}<`).test($('t-side0').innerHTML) && PK.view(0).team === g.teams[(i0 + i) % g.teams.length]); PK.step(0, 1); }
+    ok(badges.every(Boolean), 'each club with its rating, Surrey\'s in their order'); }
   ok(PK.view(0).ladder.every(g => !g.key.startsWith('nat.') && g.teams.every(t => !t.legend && !t.act && !X.isNation(t))), 'clubs only: no National group, no Legend, no Create Team or Add Your Team');
-  ok(json(PK.view(0).ladder.filter(g => g.home === 'ENG').map(g => g.name)) === json(['Premiership', 'Championship', 'Surrey', 'Counties']), 'England\'s Premiership first, then its Championship, then Local');
+  ok(json(PK.view(0).ladder.filter(g => g.home === 'ENG').map(g => g.name)) === json(['Premiership', 'Championship', 'Surrey', ...X.TEAM_LISTS.filter(l => l.county && l.key !== 'sur').map(l => l.name)]), 'England\'s Premiership first, then its Championship, then Local: Surrey, then every other county A to Z (Counties\' sides are Surrey\'s)');
   at('fra'); ok(PK.view(0).group.name === 'Top 14' && X.FRANCE.every((t, i) => PK.view(0).group.teams[i] === t), 'France: the Top 14');
   ok(PK.primary() === 'Pick Toulouse', 'Pick Toulouse');
   $('t-go').click();
@@ -859,8 +863,11 @@ C.setCups(false);                                    // no cups unless a section
   ok(C.draft().club.id === 'EDI' && C.draft().league === 'cel', 'Edinburgh, from Scotland\'s URC: the URC too');
   C.clubOpen(); at('rsa.urc'); $('t-go').click();
   ok(C.draft().club.id === 'PRE' && C.draft().league === 'rsa', 'Pretoria, from South Africa\'s URC: South Africa\'s list, as its own');
-  C.clubOpen(); at('cty'); to('GDN'); $('t-go').click();
-  ok(C.draft().club.id === 'GDN' && C.draft().league === 'cty', 'Guildfordians from Counties plays Counties');
+  C.clubOpen(); ok(!PK.view(0).ladder.some(g => g.key === 'cty'), 'no Counties group: its sides are Surrey\'s');
+  at('ken'); to('TWE'); $('t-go').click();
+  ok(C.draft().club.id === 'TWE' && C.draft().league === 'ken', 'Tunbridge Wells from Kent plays Kent');
+  C.clubOpen(); at('ham'); to('ALD'); $('t-go').click();
+  ok(C.draft().club.id === 'ALD' && C.draft().league === 'ham', 'Aldershot, shown under Hampshire, plays Hampshire');
   C.clubOpen(); at('sur'); to('GDN'); $('t-go').click();
   ok(C.draft().club.id === 'GDN' && C.draft().league === 'sur', 'and from Surrey, Surrey');
   C.clubOpen(); PK.step(0, 1); $('t-back').click();

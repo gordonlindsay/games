@@ -73,8 +73,22 @@ const CLUB_RATED = {
   FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,                                    // Local: Regional 1 down to Counties 5
   EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,                                                                                    // Counties: Counties 3 46, Counties 5 43
 };
+/* The new Local clubs (LOCAL, src/data.js) are rated from their league and place by the rule the game's own clubs already follow, which the
+   seven of them with a line from Regional 1 to Counties 1 give exactly (Farnham 7th of 12 61, Wimbledon 9th 58, Ironsides 6th of 12 55,
+   Guildford 10th 52, Cobham and Weybridge 1st and 2nd of 11 52, Old Ruts 7th 49): the top of its league's band in the top seven twelfths of
+   its table (place <= round(7n/12), n its clubs, second XVs counted), else the band's foot. National League 1 and 2 are "just above Regional
+   1 and below England 2" (the owner, 14 Nov 2026), but the one overall scale has no step there: an ability sum of 12 is 61 and 13 is 64
+   (overallOf, sumOfOverall), so they are 61, Regional 1's top and England 2's foot, and no Local side is above an England 2 side. CLUB_RATED
+   is not touched: the game's own clubs keep theirs (Farnham 61). LOCAL_RATED is filled before CLUB_TUNE, so CLUB_RATED=off clears it too. */
+const LOCAL_BAND = [[/^National League [12]\b/, [61, 61]], [/^Regional 1\b/, [61, 58]], [/^Regional 2\b/, [55, 52]], [/^Counties 1\b/, [52, 49]]];
+function localRated(t) {                           // a club's overall from its league and place, or null for a league with no band here
+  const b = t && t.league && LOCAL_BAND.find(([re]) => re.test(t.league)), n = b && LOCAL_DATA.sizes[t.league];
+  return b && n && Number.isInteger(t.place) ? (t.place <= Math.round(7*n/12) ? b[1][0] : b[1][1]) : null;
+}
+const LOCAL_RATED = {};
+for (const t of LOCAL_NEW) LOCAL_RATED[t.id] = localRated(t);
 // CLUB_TUNE
-for (const t of ALL_TEAMS) if (CLUB_RATED[t.id] != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(CLUB_RATED[t.id])));
+for (const t of ALL_TEAMS) { const ov = CLUB_RATED[t.id] ?? LOCAL_RATED[t.id]; if (ov != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(ov))); }
 
 /* ---------- ratings.json ---------- */
 let ratingsNow = RATINGS_BUNDLED, ratingsWaiting = null;   // waiting: checked and fetched, not yet used, so no pick under way changes under anyone

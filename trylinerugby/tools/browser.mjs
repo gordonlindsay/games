@@ -104,7 +104,8 @@ try {
       ['Quick Match, both sides', `S.myClub = null; S.pick = [null, null]; D.openTeams('quick');`, 2],
       ['a nation on each side', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'nat.rsa'); at(1, 'nat.nzl');`, 2],
       ['Surrey on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'sur'); at(1, 'sur'); P.step(1, 3);`, 2],
-      ['Counties on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'cty'); at(1, 'cty'); P.step(1, 2);`, 2],
+      // re-pinned for the county clubs (LOCAL, 2026-11-14): Counties' sides are Surrey's, off the ladder; the longest county's name in its place (its group's button on two lines)
+      ['Notts Lincs & Derbyshire on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'nld'); at(1, 'nld'); P.step(1, 2);`, 2],
       ['England 2 on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'en2'); at(1, 'en2'); P.step(1, 5);`, 2],
       ['a side picked, the Opponent on England', `const P = T.picker; S.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[7]); P.group(1, P.view(1).ladder.findIndex(g => g.key === 'eng') - P.view(1).gi);`, 2],
       ['My Team\'s screen', `D.openTeams('my');`, 1],

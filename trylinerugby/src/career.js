@@ -132,7 +132,7 @@ const careerNation = (id, cat) => { const l = careerNations(cat); return l.find(
 const careerClubs = () => NATIONAL.flat();           // where an offer comes from: every national league, Scotland's included
 const careerClubById = id => careerClubs().find(t => t.id === id) || null;
 const careerBuiltIn = t => !!t && !t.custom && !String(t.key || '').startsWith('lg-');   // a list's own club: not one you made, nor a My League side (whose code a later list may share, as England 2's and Counties' did)
-const careerListOf = t => (careerBuiltIn(t) ? TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list, or null for one you made or imported
+const careerListOf = t => (careerBuiltIn(t) ? (LOCAL_VIEW[t.id] && TEAM_LISTS.find(l => l.key === LOCAL_VIEW[t.id])) || TEAM_LISTS.find(l => l.tier > 0 && l.teams.some(o => o.id === t.id)) || null : null);   // a built-in club's first list (or the county it is shown under: Aldershot, Hampshire), or null for one you made or imported
 /* A built-in club as its list rates it now. A save keeps the abilities its club had when it was saved, and a re-rating (the real order,
    2026-11-09: Farnham 75 to 61) would leave a career's club at the old ones while every league it draws is at the new. So a loaded
    career's club takes its list's abilities (cleanCareer); a team you made or a My League side keeps its own, and a season in progress
@@ -145,6 +145,7 @@ function careerRated(club) {
 /* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
    Surrey and Counties), else its first; a team you made, on a national league or My League as picked; anything else Local. */
 function careerLeagueKey(key, club) {
+  key = localKey(key);                               // a career saved on Counties plays Surrey's now (LOCAL)
   const own = careerListOf(club);
   if (own) return TEAM_LISTS.some(l => l.key === key && l.tier > 0 && l.teams.some(o => o.id === club.id)) ? key : own.key;
   return key === IMPORT_POOL || TEAM_LISTS.some(l => l.key === key && l.tier > 0) ? key : 'sur';
