@@ -41,8 +41,9 @@ function compLevelOf(t) {
   if (!t) return null;
   const own = compOwnLevel(t); if (own) return own;
   const ov = overallOf(t);                           // a made side: the level of the Local club nearest its overall, the higher on a tie
-  /* Regional 1 down, as 1.6 matched it: National League's clubs (LOCAL, levels 3 and 4) are at 61 too, Regional 1's top, and a made side at
-     61 or above is a Regional 1 side for its county cup, never one drawn against National League clubs from across England. */
+  /* Regional 1 down, as 1.6 matched it: a made side at Regional 1's top or above is a Regional 1 side for its county cup, never one drawn
+     against National League clubs (LOCAL, levels 3 and 4) from across England. With LOCAL every club from Regional 1 down is a step lower
+     (src/ratings.js), and so is every level a made side can take, so the match is the same one a step down: Regional 1 58, its top. */
   const near = compLocal().filter(o => compOwnLevel(o) >= 5).sort((a, b) => Math.abs(overallOf(a) - ov) - Math.abs(overallOf(b) - ov) || compOwnLevel(a) - compOwnLevel(b))[0];
   return compOwnLevel(near);
 }

@@ -10,7 +10,7 @@ process.env.SEED ??= process.argv.includes('--balance') ? '7' : '19';   // the b
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 const STEP = T.STEP, M = () => T.M, X = T.teams, K = T.knock, $ = id => document.getElementById(id);
 const args = process.argv.slice(2);
 let passed = 0, failed = 0, group = '';
@@ -160,8 +160,24 @@ function pins() {
 }
 if (run && args[0] === '--pins') { if (K) K.KNOCK.on = false; if (CL) CL.on = false; if (CS) CS.on = false; console.log(pins()); process.exit(0); }
 if (run && !args.length) {
+/* The owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Local clubs a step down
+   play several of these matches, so BASE, ON and SHIPS move to R_BASE, R_ON and R_SHIPS. With LOCAL off (1.6) and with the rerating off
+   (8089294) this build gives BASE, ON and SHIPS exactly, and LOCAL off the whole chain as before (each in a child: rerateProofs). */
+const R_BASE = 'gfkiiv af2q5q rj1jts xc3q2t 1sgvx41 3whr8x 1en25jn 1qes7af 1xat9ht', R_ON = '3mv681 e4k4jm tf5qza 1oy4gdg ksahst ot75uq 1hd7vrl 1xu8bt5 1mw31sj';
+const R_SHIPS = '1pqg3nt 1mxxcjd otz3w8 7arb53 2b8eir 1r6tbn6 pohjwb j1esqw txdx7p';
 begin('0 KNOCK off is 20cbcaf');
-{
+if (LOCAL_ON) {
+  const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
+  feats(false, false);
+  setK({ on:false }); const off = pins(); reset(); const on = pins();
+  feats(CL0, CS0); const ships = pins();
+  if (LOCAL_CHILD) { console.log([off, on, ships].join(' / ')); process.exit(failed ? 1 : 0); }   // the rerating off child (rerateProofs): 8089294's pins
+  await rerateProofs(new URL(import.meta.url), [BASE, ON, SHIPS].join(' / '), ok);
+  const [b, o, sh] = RERATE ? [R_BASE, R_ON, R_SHIPS] : [BASE, ON, SHIPS];
+  ok(off === b, `KNOCK off (and the possession calls and the kick chase): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player, with the same draws (${off}, pinned ${b})`);
+  ok(on.split(' ').slice(0, 8).every((h, i) => h !== off.split(' ')[i]) && on === o, `KNOCK on moves every one of them, on purpose, and plays them as pinned with the levers (${on}, pinned ${o})`);
+  ok(ships === sh, `with the possession calls and the kick chase both, as the game ships (${ships}, pinned ${sh})`);
+} else {
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
   feats(false, false);
   setK({ on:false }); const off = pins(); reset(); const on = pins();
@@ -172,6 +188,7 @@ begin('0 KNOCK off is 20cbcaf');
   ok(calls === WITH_CALLS, `with the possession calls too, the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
   ok(chase === WITH_CHASE, `with the kick chase too, the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`);
   ok(ships === SHIPS, `with the possession calls and the kick chase both, as the game ships (${ships}, pinned ${SHIPS})`);
+  if (LOCAL_CHILD) { console.log([off, on, ships].join(' / ')); process.exit(failed ? 1 : 0); }   // the LOCAL off child (rerateProofs): 1.6's pins, the chain checked above
 }
 done('0 KNOCK off is 20cbcaf');
 

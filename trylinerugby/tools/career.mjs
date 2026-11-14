@@ -11,7 +11,7 @@ import http from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, offRun, LOCAL_CHILD } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const C = T.career, X = T.teams, D = T.debug, L = T.careerLife, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -24,7 +24,12 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 //    (bc8fabf): two AI v AI matches, an arcade match you play and a plain one, both played by the harness's bot. Run first,
 //    so nothing earlier in this file can move them. If another change moves non-career play on purpose, re-pin it from
 //    that change's bundle without the career sources.
-const BASE = '1mhz589 p83t0p 9cdfje';   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
+/* BASE re-pinned for the county clubs' rerating (LOCAL, the owner, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as
+   they are"): Farnham 58 and Haslemere 43, a step down, so the two matches they play here move; the simulated pair does not. With
+   LOCAL='{"on":false}' this build gives BEFORE_LOCAL, 1.6's pin, exactly, and the older pins below hold in that build as they did (both
+   checked first, in a child: offRun). */
+const BASE = '1mhz589 d8ah04 173l2tk';
+const BEFORE_LOCAL = '1mhz589 p83t0p 9cdfje';   // 1.6 (b9fa00d), LOCAL off   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = 'lngm86 urw4hw 9cdfje';   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '1c3imom u9u1l2 5y5h4';   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 1s0b74m u9u1l2 1vlxyhf)
 const BEFORE_CALLS_CHASE = 'jjejgk u9u1l2 1y5pqrt';   // b4a25d5's pin, the calls and the chase both off: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -42,14 +47,22 @@ function fingerprint() {
   }
   return out.map(fnv).join(' ');
 }
-{ const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off with the knock-ons (20cbcaf predates all three), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
+const LOCAL_ON = !!(T.local && T.local.LOCAL.on), RERATE = LOCAL_ON && !!T.local.LOCAL.rerate;   // the county clubs: the older pins are 1.6's world, so they are checked where LOCAL is off (the child); RERATE, the owner's rerating (with it off, 8089294's ratings: 1.6's pin here)
+if (!LOCAL_ON) { const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off with the knock-ons (20cbcaf predates all three), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
   if (T.knock) { T.knock.KNOCK.on = false; feats(false, false); const off = fingerprint(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
   if (CL || CS) { feats(false, false); const off = fingerprint(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
   if (CL && CS) { feats(true, false); const calls = fingerprint(); feats(false, true); const chase = fingerprint(); feats(CL0, CS0);
     ok(calls === WITH_CALLS, `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
     ok(chase === WITH_CHASE, `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`); }
-  const now = fingerprint(); ok(now === BASE, `non-career matches play exactly as they did before the career (seeded fingerprint ${now}, pinned ${BASE})`); }
+}
+{ const now = fingerprint();
+  if (LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL off child (offRun): 1.6's pin, the older ones checked above
+  if (LOCAL_ON) { const off = await offRun(new URL(import.meta.url));
+    ok(!off.fails.length && off.last === BEFORE_LOCAL, `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${BEFORE_LOCAL}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
+  if (RERATE) { const was = await offRun(new URL(import.meta.url), { LOCAL:'{"rerate":false}' });   // 8089294's ratings, the county clubs on: its pin, which was 1.6's
+    ok(!was.fails.length && was.last === BEFORE_LOCAL, `with the rerating off (LOCAL rerate), as 8089294 (${was.last}, pinned ${BEFORE_LOCAL}${was.fails.length ? '; ' + was.fails.join('; ') : ''})`); }
+  ok(now === (RERATE ? BASE : BEFORE_LOCAL), `non-career matches play exactly as they did before the career (seeded fingerprint ${now}, pinned ${RERATE ? BASE : BEFORE_LOCAL})`); }
 
 // the browser save, counted
 const memory = {}; let writes = 0;
@@ -611,7 +624,14 @@ C.setCups(false);                                    // no cups unless a section
   ok(C.sprintDrain(me) < 1 && C.sprintDrain(mate) === 1, 'and his sprint lasts longer');
   for (const k of keys) cr.skills[k] = 1;
   M.careerNat = C.natFor(team, cr.skills);
-  ok(C.fade(me) < 1 && C.sprintDrain(me) > 1 && T.contact.maxSpeed(me) < T.contact.maxSpeed(mate), 'and a weak one is slower and tires sooner');
+  if (team.stamina > 1) ok(C.fade(me) < 1 && C.sprintDrain(me) > 1 && T.contact.maxSpeed(me) < T.contact.maxSpeed(mate), 'and a weak one is slower and tires sooner');
+  else {   // LOCAL: Farnham is 58 now, its Stamina 1, the floor, so a weak player cannot tire sooner than his side; checked on a side at 3 too
+    const late = [C.fade(me), C.sprintDrain(me)]; M.clock = 0; const fast = [T.contact.maxSpeed(me), T.contact.maxSpeed(mate)]; M.clock = M.halfLen;   // speed at the half's start: late on, his side tires at Stamina 1 and he does not (fade 1)
+    ok(team.stamina === 1 && M.careerNat.stamina === 1 && late[0] === 1 && late[1] === 1 && M.careerNat.pace < team.pace && fast[0] < fast[1], `and a weak one is slower, and at his side's Stamina floor, 1, tires as it does (fade ${late[0]}, drain ${late[1]}, speed ${fast.join(' v ')})`);
+    team.stamina = 3; M.careerNat = C.natFor(team, cr.skills);
+    ok(C.fade(me) < 1 && C.sprintDrain(me) > 1 && T.contact.maxSpeed(me) < T.contact.maxSpeed(mate), 'and on a side at Stamina 3 a weak one is slower and tires sooner');
+    team.stamina = 1; M.careerNat = C.natFor(team, cr.skills);
+  }
   M.clock = 0;
   // the ring at every kick-off
   T.sides.setCtrl(0, mate);
@@ -634,7 +654,7 @@ C.setCups(false);                                    // no cups unless a section
   ok(!T.M.career && C.natOf(p6) === T.M.nat[0] && C.fade(p6) === 1 && C.sprintDrain(p6) === 1, 'outside a career match every hook gives the team\'s own value');
   T.arcade.scoreTry(p6);
   ok(T.M.careerDeeds === undefined, 'and counts no deeds');
-  ok(fingerprint() === BASE, 'with a career under way, non-career matches still play exactly as before');
+  ok(fingerprint() === (RERATE ? BASE : BEFORE_LOCAL), 'with a career under way, non-career matches still play exactly as before');
   C.set(null);
 }
 
@@ -683,13 +703,14 @@ C.setCups(false);                                    // no cups unless a section
   C.set(cr); finish(cr, 1); C.advance(); X.save(); C.set(null); X.load();
   ok(json(C.get()) === json(cr) && C.get().phase === 'transfer' && C.get().offers.length >= 2 && C.get().trophies.length === 1, 'a transfer window, its offers and the trophies too');
   // a career saved on the live game before the real order (2026-11-09): main's Farnham as written, 75 (17), loads at Farnham as the list has
-  // him now, 61 (12), and so does every season after the one in progress, which keeps its sides as saved, as a championship does
+  // him now, 61 (12; 58, 11, with LOCAL: the owner's rerating, 14 Nov 2026), and so does every season after the one in progress, which keeps
+  // its sides as saved, as a championship does
   {
     const abil = t => ['pace', 'power', 'handling', 'kicking', 'stamina'].map(k => t[k]).join();
     const mainFar = { ...json2(X.CLUBS[0]), pace:4, power:3, handling:4, kicking:3, stamina:3 }, p = C.create({ name:'Sam', pos:'B', num:5, club:mainFar });
     ok(X.overallOf(p.club) === 75 && X.overallOf(p.season.teams[0]) === 75, 'a main-era Farnham career, as the live game saved it (75)');
     X.restore({ career:json2(p) }); const k = C.get();
-    ok(abil(k.club) === abil(X.CLUBS[0]) && X.rateOf(k.club) === X.rateOf(X.CLUBS[0]) && X.overallOf(k.club) === 61 && k.club.name === 'Farnham' && k.club.kit === X.CLUBS[0].kit, `loads at Farnham as the list has him now (${X.overallOf(k.club)}, ${abil(k.club)})`);
+    ok(abil(k.club) === abil(X.CLUBS[0]) && X.rateOf(k.club) === X.rateOf(X.CLUBS[0]) && X.overallOf(k.club) === (RERATE ? 58 : 61) && k.club.name === 'Farnham' && k.club.kit === X.CLUBS[0].kit, `loads at Farnham as the list has him now (${X.overallOf(k.club)}, ${abil(k.club)})`);
     ok(json(k.season) === json(p.season) && X.overallOf(k.season.teams[0]) === 75, 'its season in progress kept as saved');
     const surrey = X.TEAM_LISTS.find(l => l.key === 'sur').teams;
     for (let y = 0; y < 3; y++) { C.newSeason(k); ok(X.rateOf(k.season.teams[0]) === X.rateOf(X.CLUBS[0]) && k.season.teams.slice(1).every(t => surrey.some(o => o.id === t.id && X.rateOf(o) === X.rateOf(t))), `and season ${k.seasons} plays him at 61 against Surrey as the list has it (${k.season.teams.map(t => t.id + ' ' + X.overallOf(t)).join(', ')})`); }

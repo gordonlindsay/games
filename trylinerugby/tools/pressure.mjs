@@ -8,7 +8,7 @@
 // node tools/pressure.mjs --pins              prints this build's fingerprints with PRESSURE and the maul off, Bouncy Egg's, and PRESSURE off alone
 // GAME=<b706c3e>/index.html node tools/pressure.mjs --pins   gives the same on b706c3e: how OFF below was pinned (EGG on 0b1293c and OFF_MAUL on wt/maul, the same way)
 process.env.SEED ??= '11';
-const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const STEP = T.STEP, M = () => T.M, X = T.teams, C = T.contact, P = T.press, $ = id => document.getElementById(id);
 let passed = 0, failed = 0, group = '';
@@ -25,6 +25,10 @@ const hyp = Math.hypot, dirOf = t => t === 0 ? 1 : -1;
 const OFF = '1r5245s 7ga17c lz72hy 19t3owf 8h6xzj szztk';
 const OFF_MAUL = '1cnqco8 xnabgl acm9q0 19t3owf 8h6xzj 1pmg6gd';   // the merge of the maul into wt/pr14int (2026-11-09): GAME=<wt/maul c4980b8>/index.html node tools/pressure.mjs --pins gives it, third line
 const EGG = '1vrs907';   // re-pinned at the merge into wt/pr14int (2026-11-09): Bouncy Egg is the Skill Games fixes' now (wt/eggcircle: two in three throws bounce, keep 0.66 to 0.8), so b706c3e's 1wwghxa is gone; GAME=<0b1293c, the build before this merge>/index.html node tools/pressure.mjs --pins gives 1vrs907 exactly, and so does this build with PRESSURE on or off
+/* With the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are") Farnham, Guildford,
+   Aldershot and Weybridge, a step down, play the tool's match and the Minis match here, so OFF and OFF_MAUL move to OFF_R and OFF_MAUL_R.
+   With LOCAL off (1.6) and with the rerating off (8089294) this build gives OFF and OFF_MAUL exactly (each in a child: rerateProofs). */
+const OFF_R = '1r5245s 7ga17c lz72hy 19t3owf 1yqo08e 1ih80pe', OFF_MAUL_R = '1cnqco8 xnabgl acm9q0 19t3owf 1yqo08e sdcqzo';
 const minis = () => { const t = { ...X.CLUBS[2], id:'MNI', cat:'minis' }; return t; };
 function offPins() {
   const out = [], r0 = rndCalls();
@@ -63,12 +67,16 @@ if (process.argv.includes('--pins')) {                     // PRESSURE and the m
 begin('off is b706c3e');
 {
   if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
+  const [pOff, pMaul] = RERATE ? [OFF_R, OFF_MAUL_R] : [OFF, OFF_MAUL];
   P.PRESSURE.on = false; if (MA) MA.on = false; const now = offPins(); if (MA) MA.on = true; P.PRESSURE.on = true;
-  ok(now === OFF, `PRESSURE off, and the maul (merged after it) off: AI v AI, the demo, a tool's match, a Kids match and a Minis match play as b706c3e, with the same draws (${now}, pinned ${OFF})`);
-  if (MA) { P.PRESSURE.on = false; const alone = offPins(); P.PRESSURE.on = true;
-    ok(alone === OFF_MAUL, `PRESSURE off alone: they play exactly as the maul's own build, wt/maul c4980b8, the merge's other parent (${alone}, pinned ${OFF_MAUL})`); }
+  ok(now === pOff, `PRESSURE off, and the maul (merged after it) off: AI v AI, the demo, a tool's match, a Kids match and a Minis match play as b706c3e, with the same draws (${now}, pinned ${pOff}${RERATE ? ', b706c3e\'s with the rerating' : ''})`);
+  let alone = '';
+  if (MA) { P.PRESSURE.on = false; alone = offPins(); P.PRESSURE.on = true;
+    ok(alone === pMaul, `PRESSURE off alone: they play exactly as the maul's own build, wt/maul c4980b8, the merge's other parent (${alone}, pinned ${pMaul})`); }
+  if (LOCAL_CHILD) { console.log(now + ' / ' + alone); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
+  if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), OFF + ' / ' + OFF_MAUL, ok);
   const on = offPins();
-  ok(on !== OFF, `PRESSURE on moves them, on purpose (${on})`);
+  ok(on !== pOff, `PRESSURE on moves them, on purpose (${on})`);
   const e1 = eggPin(); P.PRESSURE.on = false; const e0 = eggPin(); P.PRESSURE.on = true;
   ok(e1 === EGG && e0 === EGG, `Bouncy Egg's hops and draws are the build before pressure's, PRESSURE on or off (${e1}, ${e0}, pinned ${EGG})`);
   if (KN) KN.on = true; if (CL) CL.on = CL0; if (CS) CS.on = CS0;

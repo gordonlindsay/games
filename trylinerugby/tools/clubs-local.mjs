@@ -94,6 +94,7 @@ for (const c of counties) {
     if (!(fig.every(v => v == null) || fig.every(v => Number.isInteger(v) && v >= 0))) fail(`${tag}: a part line`);
     if (!hex.test(x.kit) || !hex.test(x.trim)) fail(`${tag}: kit ${x.kit} ${x.trim}`);
     if (typeof x.hoops !== 'boolean' || !['confirmed', 'reported', 'guess'].includes(x.kitConfidence)) fail(`${tag}: hoops or kitConfidence`);
+    if (x.kitFree != null && (!['hoops', 'trim'].includes(x.kitFree) || x.kitConfidence === 'guess')) fail(`${tag}: kitFree ${x.kitFree} (hoops or trim, on a sourced kit)`);   // a sourced kit's part that is a free choice (Pitchero gives no pattern)
     if (x.existingId) {
       if (x.existingId !== x.id || !GAME.has(x.id)) fail(`${tag}: existingId ${x.existingId}`);
       else {
@@ -134,7 +135,7 @@ const clubLine = x => {
   const f = flavour(x.id), parts = [`id:${q(x.id)}`, `name:${q(x.name)}`, ...(x.fullName && x.fullName !== x.name ? [`full:${q(x.fullName)}`] : []), `kit:${q(x.kit)}`, `trim:${q(x.trim)}`, ...(x.hoops ? ['hoops:true'] : []),
     ...ABIL.map((k, i) => `${k}:${f[i]}`), `league:${q(x.league)}`, `place:${x.place}`,
     ...(x.w != null ? ['w', 'd', 'l', 'pf', 'pa'].map(k => `${k}:${x[k]}`) : [])];
-  return `{ ${parts.join(', ')} },${x.kitConfidence === 'guess' ? '   // colours a free choice' : ''}`;
+  return `{ ${parts.join(', ')} },${x.kitConfidence === 'guess' ? '   // colours a free choice' : x.kitFree ? `   // ${x.kitFree} a free choice` : ''}`;
 };
 const cupText = cups => (cups ? '[' + cups.map(x => `{ name:${q(x.name)}, to:${x.to} }`).join(', ') + ']' : 'null');
 const ordered = [...counties.filter(c => c.code === 'SUR'), ...counties.filter(c => c.code !== 'SUR').sort((a, b) => a.county.localeCompare(b.county, 'en'))];
@@ -148,7 +149,8 @@ let out = `/* =========================================================
      its own name where the card's differs (cut to 16, or told apart), which the search finds as well.
    - Its rating comes from its league and place (localRated, src/ratings.js), never from the abilities here.
    - A kit marked a free choice is a guess; every other is the club's own colours as the research found them (docs/clubs-local.json
-     has the source of each). Kits within a county are told apart at a glance; sourced kits that look alike stay as sourced.
+     has the source of each). Kits within a county are told apart at a glance; sourced kits that look alike stay as sourced, bar a
+     Pitchero kit (it gives colours, never a pattern), whose hoops or trim, marked a free choice, tells it from the club it looked like.
    - The game's own clubs (Farnham and the rest of Surrey's, Aldershot) are not here: data.js has them. shared: the game's clubs a county
      also lists (Aldershot, in Surrey's list since PR #14, shown under Hampshire).
    - cups: the county's own cups by level ({ name, to }, as COUNTY_CUPS), only what is sourced; null for the plain County Cup table.

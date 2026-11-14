@@ -182,7 +182,7 @@ const COUNTIES = [
    off the ladder and the home: a saved 'cty' is Surrey (localKey). Aldershot, on Surrey's list since PR #14, is shared into Hampshire's and
    shown there (LOCAL_VIEW). Merton plays in plain black with its gold trim (its hoops were never sourced; Camberley's are). Keys never
    change, lists only grow. LOCAL='{"on":false}' (tools/harness.mjs) is 1.6, draw for draw and screen for screen. */
-const LOCAL = { on:true, view:true };   // view: a club shown under another county plays there only (listPlays); LOCAL='{"view":false}' is 7c864c2, Aldershot in Surrey's draws too
+const LOCAL = { on:true, view:true, rerate:true };   // view: a club shown under another county plays there only (listPlays); LOCAL='{"view":false}' is 7c864c2, Aldershot in Surrey's draws too. rerate: Regional 1 and every level under it a step down (src/ratings.js; the owner, 14 Nov 2026); LOCAL='{"rerate":false}' is 8089294's ratings
 // LOCAL_TUNE
 const LOCAL_DATA = LOCAL.on ? localCounties() : { sizes:{}, counties:[], kits:{} };   // a function declaration in src/clubs-local.js, after this file, hoisted
 const LOCAL_NEW = new Set(LOCAL_DATA.counties.flatMap(c => c.clubs));   // the new clubs, rated by their league and place (localRated, src/ratings.js)

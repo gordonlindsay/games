@@ -33,7 +33,11 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    src/data.js), so the Farnham career's year draws its five from Surrey's 34, not 35 (`rest`; `restMinis`' seed plays the same match
 //    either way). With LOCAL='{"view":false}' (Aldershot in Surrey's draws, as 7c864c2) this build gives BEFORE_VIEW, 7c864c2's pins,
 //    exactly (checked first, in a child: offRun).
-const BASE = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'18fh7rm', restMinis:'1ohszc7' };
+//    Re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Farnham
+//    and Haslemere, a step down, play these matches, so BASE moves to R_BASE. With LOCAL='{"rerate":false}' this build gives BASE,
+//    8089294's pins, exactly; BEFORE_VIEW and BEFORE_LOCAL hold as before (each checked first, in a child: offRun).
+const R_BASE = { others:'1mhz589 t0jws2 uiv3l7 1ko39dv 83k82g', rest:'zwuioj', restMinis:'1ohszc7' };   // restMinis does not move
+const BASE = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'18fh7rm', restMinis:'1ohszc7' };   // 8089294, the county clubs at their first ratings
 const BEFORE_VIEW = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'61kk8v', restMinis:'1ohszc7' };   // 7c864c2, Aldershot in Surrey's draws too
 const BEFORE_LOCAL = { others:'1mhz589 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // 1.6 (b9fa00d), LOCAL off, as 1.6 pinned it (2026-11-14): 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = { others:'lngm86 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
@@ -71,7 +75,7 @@ function careerMatch(life, seed = 131, o = {}) {   // a career match through car
 }
 const REST = { energy:100, morale:50, spirit:50 };
 if (process.argv.includes('--pins')) { console.log(json({ others:others(), rest:careerMatch(REST) })); process.exit(0); }
-const LOCAL_ON = !!(T.local && T.local.LOCAL.on);   // the county clubs: the older pins are 1.6's world, so they are checked where LOCAL is off (the child)
+const LOCAL_ON = !!(T.local && T.local.LOCAL.on), RERATE = LOCAL_ON && !!T.local.LOCAL.rerate, PIN = RERATE ? R_BASE : BASE;   // the county clubs: the older pins are 1.6's world, so they are checked where LOCAL is off (the child)
 {
   const CL = !LOCAL_ON && T.calls && T.calls.CALLS, CS = !LOCAL_ON && T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off, each alone, both off with the knock-ons (20cbcaf predates all three), then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
@@ -87,10 +91,12 @@ const LOCAL_ON = !!(T.local && T.local.LOCAL.on);   // the county clubs: the old
   if (LOCAL_CHILD) { const o = three(); console.log(say(o)); process.exit(failed ? 1 : 0); }   // the LOCAL off child (offRun): 1.6's pins, the older ones checked above
   if (LOCAL_ON) { const off = await offRun(new URL(import.meta.url));
     ok(!off.fails.length && off.last === say(BEFORE_LOCAL), `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${say(BEFORE_LOCAL)}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
-  if (LOCAL_ON && T.local.LOCAL.view) { const v = await offRun(new URL(import.meta.url), { LOCAL:'{"view":false}' });
+  if (RERATE) { const r = await offRun(new URL(import.meta.url), { LOCAL:'{"rerate":false}' });
+    ok(!r.fails.length && r.last === say(BASE), `with the rerating off (LOCAL rerate), as 8089294 (${r.last}, pinned ${say(BASE)}${r.fails.length ? '; ' + r.fails.join('; ') : ''})`); }
+  if (LOCAL_ON && T.local.LOCAL.view) { const v = await offRun(new URL(import.meta.url), { LOCAL:'{"view":false,"rerate":false}' });   // 7c864c2 predates the rerating
     ok(!v.fails.length && v.last === say(BEFORE_VIEW), `with Aldershot in Surrey's draws too (LOCAL view off), as 7c864c2 (${v.last}, pinned ${say(BEFORE_VIEW)}${v.fails.length ? '; ' + v.fails.join('; ') : ''})`); }
   const now = others();
-  ok(now === BASE.others, `AI v AI, a Quick Match, a championship match, the demo and a drill play exactly as before the bars (${now}, pinned ${BASE.others})`);
+  ok(now === PIN.others, `AI v AI, a Quick Match, a championship match, the demo and a drill play exactly as before the bars (${now}, pinned ${PIN.others})`);
 }
 
 // the browser save, counted; the career screens join the harness's list so showScreen toggles them
@@ -441,16 +447,16 @@ const withId = (cr, id) => { cr.season.id = id; return cr; };
 // 8. at rest the bars are nothing: a career match plays exactly as before them; anything else is live
 {
   const rest = careerMatch(REST);
-  ok(rest === BASE.rest, `a career match at Energy 100, Morale 50, Team Spirit 50 plays as pinned (${rest}, pinned ${BASE.rest})`);
+  ok(rest === PIN.rest, `a career match at Energy 100, Morale 50, Team Spirit 50 plays as pinned (${rest}, pinned ${PIN.rest})`);
   const restMinis = careerMatch(REST, 131, { minis:true });
-  ok(restMinis === BASE.restMinis, `and, with the Minis' sides it was pinned on, exactly as a career match did before the bars (${restMinis}, pinned ${BASE.restMinis})`);
+  ok(restMinis === PIN.restMinis, `and, with the Minis' sides it was pinned on, exactly as a career match did before the bars (${restMinis}, pinned ${PIN.restMinis})`);
   ok(careerMatch(REST, 131, { noLife:true }) === rest && careerMatch({ ...REST, energy:60 }) === rest, 'the same with no bars at all, and with Energy at 60');
   ok(careerMatch({ ...REST, spirit:90 }) !== rest && careerMatch({ ...REST, morale:90 }) !== rest && careerMatch({ ...REST, energy:10 }) !== rest, 'Team Spirit, Morale and Energy each change a match once away from rest');
   // With no Pro Mode in the build, M.careerPro set by hand plays like any career match: none of this file's Team Spirit acts there.
   // Once career-pro.js is in, M.careerPro is Pro Mode itself and the match is a different one, so this proves nothing; section 7
   // already shows careerLifeHands and careerLifeSupport stand aside under M.careerPro.
   if (!T.careerPro) ok(careerMatch({ ...REST, spirit:90 }, 131, { pro:true }) === rest, 'Pro Mode with this file alone: Team Spirit moves nothing here (the Pro Mode builder owns it there)');
-  ok(others() === BASE.others, 'and after career matches with every bar, everything else still plays as before');
+  ok(others() === PIN.others, 'and after career matches with every bar, everything else still plays as before');
 }
 
 // 9. Team Spirit, measured: the bot playing the whole team passes to him more with the team behind him

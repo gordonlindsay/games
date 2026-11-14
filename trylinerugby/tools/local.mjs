@@ -74,8 +74,19 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   ok(NEW.every(t => /^#[0-9a-f]{6}$/.test(t.kit) && /^#[0-9a-f]{6}$/.test(t.trim)), 'every kit and trim a hex colour');
   const src = fs.readFileSync(path.join(root, 'src/clubs-local.js'), 'utf8'), guess = all.filter(r => !r.existingId && r.kitConfidence === 'guess');
   ok(guess.every(r => new RegExp(`id:'${r.id}'[^\\n]*// colours a free choice`).test(src)) && (src.match(/colours a free choice/g) || []).length === guess.length, `the ${guess.length} guessed kits say so where they are written (// colours a free choice), and no other`);
+  const free = all.filter(r => r.kitFree);
+  ok(free.length === 19 && free.every(r => r.kitConfidence !== 'guess' && new RegExp(`id:'${r.id}'[^\\n]*// ${r.kitFree} a free choice`).test(src) && r.sources.some(l => l.startsWith(`Kit: ${r.kitFree} a free choice`))) && (src.match(/(hoops|trim) a free choice/g) || []).length === free.length, `the ${free.length} Pitchero kits told apart by a free hoops or trim (Pitchero gives no pattern) say so where they are written and in their sources`);
+  // and no Pitchero kit (colours from the club's own site, never a pattern) looks the same as another kit in its county, as the game shows it:
+  // shirts and readable trims within 60 of each other (colorDist) and the same hoops, the research's own rule
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), cd = (a, b) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
+  const trimOf = t => (cd(t.kit, t.trim) >= 60 ? t.trim : null), alike = (a, b) => cd(a.kit, b.kit) < 60 && !!a.hoops === !!b.hoops && (trimOf(a) === null ? trimOf(b) === null : trimOf(b) !== null && cd(trimOf(a), trimOf(b)) < 60);
+  const ptKit = new Set(all.filter(r => r.sources.some(l => /^Kit: Pattern: .*Pitchero gives no pattern/.test(l))).map(r => r.id)), clash = [];
+  for (const l of counties) { const ts = [...new Set(l.teams)]; ts.forEach((a, i) => ts.slice(i + 1).forEach(b => { if ((ptKit.has(a.id) || ptKit.has(b.id)) && alike(a, b)) clash.push(a.name + '/' + b.name); })); }
+  ok(ptKit.size === 103 && !clash.length, `none of the ${ptKit.size} Pitchero kits looks the same as another kit in its county (${clash.join(', ') || 'none'})`);
   const placeOnly = all.filter(r => !r.existingId && r.w == null);
-  ok(placeOnly.length === 202 && placeOnly.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.place === r.place && !('w' in t) && !('pf' in t); }), `a club whose league published no table has its place only, nothing invented (${placeOnly.length})`);
+  ok(placeOnly.map(r => r.id).sort().join() === 'BAU,BEE,CRW,DBE,HWA,MEI,MRL,NOV,NUI,RYT' && placeOnly.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.place === r.place && !('w' in t) && !('pf' in t); }), `a club with no line it can be given has its place only, nothing invented: the 10 of the three tables short of fixtures that played fewer games or are ranked off their place (${placeOnly.map(r => r.id).join()})`);
+  const pt = all.filter(r => !r.existingId && r.sources.some(l => /^Line: .*on Pitchero/.test(l)));
+  ok(pt.length === 192 && pt.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.w + t.d + t.l > 0 && t.pf > 0; }), `a line from Pitchero's 2025-26 tables for the clubs with none on Wikipedia: 168 from complete tables and 24 from the three short of fixtures (${pt.length})`);
   ok(NEW.filter(t => /^National League/.test(t.league)).length === 56 && ['JES', 'GRA'].every(id => list('ham').teams.some(t => t.id === id)) && list('chs').teams.some(t => t.id === 'DOU'), 'National League 1 and 2 added (55, and Guernsey Raiders the 56th); Jersey and Guernsey Raiders under Hampshire, Douglas under Cheshire (the owner, 14 Nov)');
   ok(X.TEAM_LISTS.filter(l => l.tier === 2).every(l => l.teams.length >= 6) && counties.every(l => P.clubGroups('ENG').find(g => g.list === l.key).teams.length >= 6), `six at least in every county, as it shows and as it plays (${counties.map(l => l.key + ' ' + l.teams.length).join(', ')})`);
   const mer = X.COUNTIES.find(t => t.id === 'MER');
@@ -85,13 +96,19 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   ok(counties.every(l => { const b = l.name.replace(/­/g, ''); return l.wraps ? b.split(' ').every(w => w.length <= 16) : b.length <= 16; }), 'every label one line of 16 at most, or two of 16 each');
 }
 
-// 2. Ratings: the rule the game's own clubs follow, every new club in its band and its table's order; the ladder's ends hold
+// 2. Ratings: the rule the game's own clubs follow, every new club in its band and its table's order; the ladder's ends hold. The owner,
+//    14 Nov: "rerate the lower clubs - farnham shouldnt be as high as they are": National League 1 61, National League 2 61 or 58, and
+//    Regional 1 and every level under it a step down (Farnham 61 to 58), the game's own clubs with them
 {
-  const ov = X.overallOf, BAND = { 3:[61, 61], 4:[61, 61], 5:[58, 61], 6:[52, 55], 7:[49, 52] }, lv = t => Q.ownLevel(t);
+  const ov = X.overallOf, BAND = { 3:[61, 61], 4:[58, 61], 5:[55, 58], 6:[49, 52], 7:[46, 49] }, lv = t => Q.ownLevel(t);
   const own = ['FAR', 'WIM', 'IRO', 'GUI', 'COB', 'WEY', 'ORU'].map(id => X.ALL_TEAMS.find(t => t.id === id));
-  ok(own.every(t => LO.localRated(t) === R.CLUB_RATED[t.id]) && R.CLUB_RATED.FAR === 61 && ov(own[0]) === 61, `localRated gives the game's own seven exactly (${own.map(t => t.id + ' ' + LO.localRated(t)).join(', ')}); their ratings never move (Farnham 61)`);
+  ok(own.every(t => LO.localRated(t) === R.CLUB_RATED[t.id] && ov(t) === R.CLUB_RATED[t.id]) && own.map(t => ov(t)).join() === '58,55,52,49,49,49,46', `localRated gives the game's own seven exactly, each a step under 1.6 (${own.map(t => t.id + ' ' + LO.localRated(t)).join(', ')}): Farnham 58`);
+  const step = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:40, EFF:43, WAN:40, EGH:40, MER:40, MIT:40, FEL:40 }, moved = Object.entries(step).filter(([id, v]) => ov(X.ALL_TEAMS.find(t => t.id === id)) !== v || R.CLUB_RATED[id] !== v).map(([id]) => id);
+  ok(!moved.length && R.CLUB_RATED.QUI === R.CLUB_RATED.FAR, `every one of the game's Local and Counties sides a step down: Regional 1 58 and 55, Regional 2 52 and 49, Counties 1 49 and 46, Counties 3 43, Counties 5 40, Quins level with Farnham (${moved.join() || 'all 18'})`);
   const off = NEW.filter(t => ov(t) !== LO.LOCAL_RATED[t.id] || ov(t) < BAND[lv(t)][0] || ov(t) > BAND[lv(t)][1]).map(t => t.id);
-  ok(!off.length, `every new club at its rating, in its band: National League 61, Regional 1 58 to 61, Regional 2 52 to 55, Counties 1 49 to 52 (${off.join() || NEW.length + ' clubs'})`);
+  ok(!off.length, `every new club at its rating, in its band: National League 1 61, National League 2 58 to 61, Regional 1 55 to 58, Regional 2 49 to 52, Counties 1 46 to 49 (${off.join() || NEW.length + ' clubs'})`);
+  const nl = lg => NEW.filter(t => new RegExp('^National League ' + lg + '\\b').test(t.league)).map(ov);
+  ok(nl(1).length === 14 && nl(1).every(v => v === 61) && nl(2).length === 42 && nl(2).some(v => v === 61) && nl(2).some(v => v === 58) && Math.max(...NEW.filter(t => lv(t) === 5).map(ov)) === 58, `National League 1 all 61, National League 2 61 or 58 by place, above Regional 1's top, 58 (${[...new Set(nl(2))].join(' or ')})`);
   const top = t => t.place <= Math.round(7*LO.LOCAL_DATA.sizes[t.league]/12);
   ok(NEW.every(t => ov(t) === (top(t) ? BAND[lv(t)][1] : BAND[lv(t)][0])), 'the top of its band in the top seven twelfths of its table, else the foot');
   const wrong = [];
@@ -102,8 +119,9 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   ok(!between.length && R.sumOfOverall(62) === R.sumOfOverall(61) && R.sumOfOverall(63) === R.sumOfOverall(64), `the overall scale has no step between Regional 1's top (61) and England 2's (64): National League is 61 (${[...new Set(sums)].join(' ')})`);
   const nat = Math.min(...X.NATIONS.map(ov)), club = Math.max(...X.ALL_TEAMS.filter(t => !X.isNation(t)).map(ov)), e2 = Math.min(...X.ENGLAND_TWO.map(ov));
   const local = [...new Set(X.TEAM_LISTS.filter(l => l.tier === 2).flatMap(l => l.teams))];
-  ok(nat > club && Math.max(...local.map(ov)) <= e2 && Math.max(...local.map(ov)) === 61 && Math.min(...local.map(ov)) === 43, `every nation above every club (${nat} v ${club}); no Local side above an England 2 side (${Math.max(...local.map(ov))} v ${e2}); Local 43 to 61`);
-  ok(R.TEAM_LEVELS.map(l => l.overall).join() === '43,46,52,55,61,64,72,75', 'the levels a made team can take are as they were (Regional 1 61, the best built-in side of its league)');
+  ok(nat > club && Math.max(...local.map(ov)) <= e2 && Math.max(...local.map(ov)) === 61 && Math.min(...local.map(ov)) === 40, `every nation above every club (${nat} v ${club}); no Local side above an England 2 side (${Math.max(...local.map(ov))} v ${e2}); Local 40 to 61`);
+  ok(sums[0] === 40 && R.sumOfOverall(40) === 5 && ov(R.abilitiesFor({ pace:4, power:2 }, R.sumOfOverall(40))) === 40 && Math.min(...sums) === 40, `the scale goes low enough: Counties 5's 40 is its floor, a sum of 5 (every ability 1), whatever the side's flavour (${sums.slice(0, 4).join(' ')})`);
+  ok(R.TEAM_LEVELS.map(l => l.overall).join() === '40,43,49,52,58,64,72,75' && R.TEAM_LEVELS[0].budget === 0 && R.TEAM_LEVELS[0].stars === 1, 'the levels a made team can take a step down from Regional 1, each still the best built-in side of its league (Regional 1 58, Farnham; Counties 5 40, no points to spend, 1 star)');
 }
 
 // 3. County cups: every club's county and cup, sourced tables or the plain one, a level under them, rivals from its own county first
@@ -128,8 +146,8 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const mr = Q.rivals(made);
   ok(mr.length === 7 && new Set(mr.map(t => Q.CLUB_COUNTY[t.id])).size > 1, `a made side has no county and draws from every county (${[...new Set(mr.map(t => Q.CLUB_COUNTY[t.id]))]})`);
   const at = ov => ({ ...made, ...R.abilitiesFor({}, R.sumOfOverall(ov)) }), lvAt = ov => Q.levelOf(at(ov));
-  ok([61, 64, 72, 75].every(ov => lvAt(ov) === 5) && lvAt(55) === 6 && lvAt(46) === 9 && lvAt(43) === 11, `a made side is matched from Regional 1 down, as 1.6 matched it: at 61 and above a Regional 1 side, never National League's, though its clubs are 61 too (${[43, 46, 52, 55, 61, 64, 72, 75].map(ov => ov + ' L' + lvAt(ov)).join(', ')})`);
-  ok([61, 72].every(ov => { reseed(ov); const r = Q.rivals(at(ov)); return r.length === 7 && r.every(t => Q.ownLevel(t) === 5); }) && Q.cupFor(at(72)).name === 'County Cup', 'so its county cup draws Regional 1 clubs, and it plays the County Cup');
+  ok([58, 61, 64, 72, 75].every(ov => lvAt(ov) === 5) && lvAt(52) === 6 && lvAt(43) === 9 && lvAt(40) === 11, `a made side is matched from Regional 1 down, as 1.6 matched it a step up: at 58 and above a Regional 1 side, never National League's, though its clubs are 58 and 61 (${[40, 43, 49, 52, 58, 61, 64, 72, 75].map(ov => ov + ' L' + lvAt(ov)).join(', ')})`);
+  ok([58, 61, 72].every(ov => { reseed(ov); const r = Q.rivals(at(ov)); return r.length === 7 && r.every(t => Q.ownLevel(t) === 5); }) && Q.cupFor(at(72)).name === 'County Cup', 'so its county cup draws Regional 1 clubs, and it plays the County Cup');
   reseed(6);
   const cup = K.cupNew('county', { user:by('TWE'), cat:'men', year:1 });
   ok(cup && cup.name === 'Kent Cup' && cup.teams.length === 8 && cup.teams.slice(1).every(t => Q.CLUB_COUNTY[t.id] === 'KEN'), 'the Kent Cup, as a career\'s county phase plays it: eight Kent sides');
@@ -182,7 +200,7 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const opp = id => { s.myClub = id; s.pick = [null, null]; D.goHome(); D.openTeams('quick'); return [P.view(0).team, P.view(1).team, P.view(1).group.key]; };
   const [far, farOpp] = opp('FAR'), [ald, aldOpp, aldG] = opp('ALD');
   ok(farOpp.league === far.league && farOpp !== far, `Farnham: a league rival first (${farOpp.name}, ${farOpp.league})`);
-  ok(aldG === 'ham' && aldOpp.league === 'Counties 1 Hampshire' && X.overallOf(aldOpp) === 49, `Aldershot (Counties 3, none in Hampshire): Counties 1's foot, the nearest (${aldOpp.name} ${X.overallOf(aldOpp)}), not Hampshire's strongest`);
+  ok(aldG === 'ham' && aldOpp.league === 'Counties 1 Hampshire' && X.overallOf(aldOpp) === 46, `Aldershot (Counties 3, none in Hampshire): Counties 1's foot, the nearest (${aldOpp.name} ${X.overallOf(aldOpp)}), not Hampshire's strongest`);
   const wide = [];
   for (const t of [...new Set(counties.flatMap(l => P.clubGroups('ENG').find(g => g.list === l.key).teams))]) { const [me, op] = opp(t.id); if (Math.abs(X.overallOf(me) - X.overallOf(op)) >= 9) wide.push(`${me.name} ${X.overallOf(me)} v ${op.name} ${X.overallOf(op)}`); }
   ok(!wide.length, `no county club's Opponent opens 9 or more from it (${wide.slice(0, 4).join('; ') || 'none'})`);
@@ -258,12 +276,14 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   X.restore({ importLeague:null, settings:{ myClub:null, fav:[], recent:[[], []], pick:[null, null] } });
 }
 
-// 7. A place-only club: no record line, its league and place everywhere a line is shown
+// 7. A place-only club: no record line, its league and place everywhere a line is shown (Teddington was one until the Pitchero pass)
 {
-  const t = X.ALL_TEAMS.find(o => o.id === 'TED');
-  ok(!('w' in t) && H.recordLine(t) === '' && H.leagueLine(t) === 'Regional 2 Thames · 7th Last Season', `Teddington: its league and place (${H.leagueLine(t)}), no record line`);
-  s.myClub = 'TED'; D.goHome(); H.render();
-  ok(!/undefined|NaN/.test($('my-league').innerHTML + $('my-rec').innerHTML) && /Regional 2 Thames/.test($('my-league').innerHTML), 'My Team\'s box at a place-only club: its line, nothing undefined');
+  const t = X.ALL_TEAMS.find(o => o.id === 'NOV');
+  ok(!('w' in t) && H.recordLine(t) === '' && H.leagueLine(t) === 'Counties 1 Durham & Northumberland · 1st Last Season', `Novocastrians: its league and place (${H.leagueLine(t)}), no record line`);
+  s.myClub = 'NOV'; D.goHome(); H.render();
+  ok(!/undefined|NaN/.test($('my-league').innerHTML + $('my-rec').innerHTML) && /Counties 1 Durham/.test($('my-league').innerHTML), 'My Team\'s box at a place-only club: its line, nothing undefined');
+  const ted = X.ALL_TEAMS.find(o => o.id === 'TED');
+  ok(H.recordLine(ted) === 'Won 10 · Lost 12 · 694 Scored · 702 Conceded', `Teddington, place only in 1.7's first build, has its Pitchero line (${H.recordLine(ted)})`);
   s.myClub = null;
   const lg = X.ALL_TEAMS.find(o => o.id === 'FAR');
   ok(H.recordLine(lg) === 'Won 10 · Lost 12 · 640 Scored · 646 Conceded', 'a club with a table keeps its record line');

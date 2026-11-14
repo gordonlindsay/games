@@ -4,7 +4,8 @@ import { readGameSource } from './source.mjs';
 // Exits 1 on any failure.
 // node tools/teams.mjs
 import fs from 'fs';
-import { T } from './harness.mjs';
+import { T, RERATE } from './harness.mjs';
+const RR = RERATE;   // the owner's rerating (LOCAL, 14 Nov 2026: Regional 1 and every level under it a step down, src/ratings.js): the Local and Counties values below in that world, 1.6's without it
 
 const X = T.teams, STEP = T.STEP;
 let failed = 0, passed = 0;
@@ -90,7 +91,7 @@ const SUR = X.TEAM_LISTS.find(l => l.key === 'sur').teams, COUNTY_LISTS = X.TEAM
       const c = X.cleanTeam({ ...full, level:l.id }, 0), back = X.cleanTeam(JSON.parse(JSON.stringify(c)), 0);
       ok(c.level === l.id && total(c) === 5 + l.budget && X.overallOf(c) === l.overall && JSON.stringify(back) === JSON.stringify(c), `${l.name}: held to ${l.budget} points, ${l.overall} overall, and reloading loses nothing (${K.map(k => c[k]).join('')})`);
     }
-    const c3 = X.cleanTeam({ name:'Cubs', level:'c5', pace:3, power:1, handling:1, kicking:1, stamina:1 }, 0);   // re-pinned at the real order: Counties 5 (43) has the 1 point Counties 3 had (it is 46, 2 points, now)
+    const c3 = X.cleanTeam({ name:'Cubs', level:RR ? 'c3' : 'c5', pace:3, power:1, handling:1, kicking:1, stamina:1 }, 0);   // with the rerating Counties 5 is the floor (40, nothing to spend) and Counties 3 has its 1 point   // re-pinned at the real order: Counties 5 (43) has the 1 point Counties 3 had (it is 46, 2 points, now)
     ok(c3.pace === 2 && total(c3) === 6, 'the cut falls from the last in line, as it always has');
     const euro = X.cleanTeam({ ...full, level:'euro' }, 0), champ = R5.TEAM_LEVELS.find(l => l.id === 'champ');
     ok(!R5.TEAM_LEVELS.some(l => l.id === 'euro' || l.overall > 75) && R5.teamLevelOf({ level:'euro' }) === champ && euro.level === 'champ' && total(euro) === 5 + champ.budget && X.overallOf(euro) === 75, 'PR #14\'s European Champions (90) has gone with Bordeaux\'s 90: no level above National Champions (75), and a team saved at it reads and saves as National Champions');
@@ -435,14 +436,15 @@ function settle(pick) {
   const far = X.CLUBS[0], has = X.CLUBS[1], fra = X.NATIONS[1], eng = X.NATIONS[0];
   const ita = X.ENGLAND_TWO[0];   // re-pinned when the nations were rated on the XV hierarchy: England (18 in the four, was 16) is now a Stronger Side than Farnham (14); Italy (15) was the nation that is not. Re-pinned at the real order: Farnham is 10 in the four (61), so every nation is a Stronger Side, and Ealing, England 2's best (64, 11), is the side above him that is not
   ok(!X.outmatched(far, has) && !X.outmatched(far, ita) && X.outmatched(far, fra) && X.outmatched(far, eng) && X.overallOf(ita) > X.overallOf(far), 'France and England are stronger sides than Farnham; Ealing and Haslemere are not');
-  ok(X.rateOf(fra) === 21 && X.rateOf(far) === 12 && X.rateOf(has) === 7, `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);   // re-pinned at the official men's table: France 23 to 21. Re-pinned at PR #14's club table: Haslemere, 9th in Counties 3, is 64 (13), was 14. Re-pinned at the real order: Farnham 61 (12), was 75 (17); Haslemere 46 (7)
+  ok(X.rateOf(fra) === 21 && X.rateOf(far) === (RR ? 11 : 12) && X.rateOf(has) === (RR ? 6 : 7), `rating totals France ${X.rateOf(fra)} Farnham ${X.rateOf(far)} Haslemere ${X.rateOf(has)}`);   // re-pinned at the official men's table: France 23 to 21. Re-pinned at PR #14's club table: Haslemere, 9th in Counties 3, is 64 (13), was 14. Re-pinned at the real order: Farnham 61 (12), was 75 (17); Haslemere 46 (7)
   // Stronger Side leaves Stamina out, so it marks the pairs it did before Stamina: within a pool, as the hub shows them
   const by = id => X.ALL_TEAMS.find(t => t.id === id), marks = (u, t) => X.outmatched(by(u), by(t));
   // re-pinned when the leagues were rated on their XV tables: Adelaide is now two points off Sydney and Canberra, so Taranaki v Hamilton and Llanelli v Dublin stand in
   // re-pinned at the official men's table: England (17 in the four) is two off Wales (15), so Ireland (18) stands in
   // re-pinned at PR #14's club table: Ironsides (72, Regional 2) is now two off Quins in the four, so Kingston (64, Counties 3) stands in
   // re-pinned at the real order: Ironsides (55) is three off Quins (61) in the four, so Wimbledon (58, two off) is the pair that is not marked
-  ok(marks('HAS', 'FAR') && marks('KIN', 'QUI') && !marks('WIM', 'QUI') && marks('TAR', 'HMN') && marks('LLA', 'DUB') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'IRE') && marks('PGN', 'TLS'),
+  // with the rerating: Wimbledon (55) is three off Quins (58) in the four, so Guildfordians and Old Ruts (two off) are the pair that is not marked
+  ok(marks('HAS', 'FAR') && marks('KIN', 'QUI') && (RR ? !marks('GDN', 'ORU') && marks('WIM', 'QUI') : !marks('WIM', 'QUI')) && marks('TAR', 'HMN') && marks('LLA', 'DUB') && marks('KIM', 'PRE') && marks('MBO', 'CPT') && marks('WAL', 'IRE') && marks('PGN', 'TLS'),
     'a side three points stronger in Pace, Power, Handling and Kicking is marked, whatever the Stamina');
   ok(!marks('HAS', 'WIM') && X.rateOf(by('WIM')) - X.rateOf(by('HAS')) >= 3 && !marks('MTB', 'CLE'), 'two points apart in the four and Stamina on top is not a Stronger Side');   // re-pinned at the real order: Guildfordians (43) is three off Wimbledon (58) in the four, so Haslemere (46, two off, four in all) stands in
   ok(X.outmatched(X.cleanTeam({ name: 'Cubs', pace: 1, power: 1, handling: 2, kicking: 2 }, 0), far) && X.outmatched({ ...X.NATIONS[5], stamina: undefined }, { ...X.NATIONS[2], stamina: undefined }), 'an old weak team and a championship side saved before Stamina are marked as before');   // re-pinned with the line above: Wales v Ireland, not England   // re-pinned at the real order: Farnham is 10 in the four, so the Cubs are 6 (they were 8 against his 14)
@@ -473,7 +475,7 @@ function settle(pick) {
   X.newChamp(far, five);
   const ch = X.champ();
   const opps = ch.fixtures.map(rd => { const p = rd.find(x => x[0] === ch.user || x[1] === ch.user); return p[0] === ch.user ? p[1] : p[0]; });
-  ok(opps.map(i => X.rateOf(ch.teams[i])).join() === '7,7,9,9,12' && opps.map(i => ch.teams[i].id).join() === 'HAS,ALD,GUI,WEY,QUI', `weakest first (${opps.map(i => ch.teams[i].id + ' ' + X.rateOf(ch.teams[i])).join(', ')})`);   // re-pinned at PR #14's club table: Haslemere and Aldershot (Counties 3) 13, Guildford and Weybridge 15, Quins (no figures) 17; was 14,16,16,16,17. Re-pinned at the real order: 7 (46), 9 (52) and Quins level with Farnham, 12 (61)
+  ok(opps.map(i => X.rateOf(ch.teams[i])).join() === (RR ? '6,6,8,8,11' : '7,7,9,9,12') && opps.map(i => ch.teams[i].id).join() === 'HAS,ALD,GUI,WEY,QUI', `weakest first (${opps.map(i => ch.teams[i].id + ' ' + X.rateOf(ch.teams[i])).join(', ')})`);   // re-pinned at PR #14's club table: Haslemere and Aldershot (Counties 3) 13, Guildford and Weybridge 15, Quins (no figures) 17; was 14,16,16,16,17. Re-pinned at the real order: 7 (46), 9 (52) and Quins level with Farnham, 12 (61)
   ok(ch.teams.map(t => t.id).join() === 'FAR,QUI,HAS,GUI,ALD,WEY', 'the draw stays in the order it was given');
 
   const weak = X.cleanTeam({ name: 'Cubs', pace: 1, power: 1, handling: 1, kicking: 1 }, 0);
@@ -607,9 +609,9 @@ function settle(pick) {
   ok(X.ENGLAND_TWO.every(t => total(t) === (t.w > t.l ? 13 : 12)) && Math.max(...e2) < lo(tops) && Math.min(...e2) >= hi(X.SCOTLAND), `England 2: 64 with a winning record, 61 without (PR #14's own), under every top-flight side and none under Scotland's best`);
   ok(tops.filter(t => total(t) === 17).map(t => t.id).join() === 'NTH,TLS,DUB,HMN,WLG,SAI,KOB', 'only a national champion reaches 75 where there are figures (Northampton, Toulouse, Dublin); New Zealand and Japan, with none, keep main\'s');
   // Local from its table, PR #14's ladder a step up: Farnham 61 (the owner's 61 to 64), Quins (no figures) level with him, as main had them
-  ok(X.CLUBS.map(total).join() === '12,7,9,7,9,12,9,6,10,7,8,11' && X.overallOf(X.CLUBS[0]) === 61 && total(X.CLUBS[0]) === hi(X.CLUBS) && total(X.CLUBS[5]) === total(X.CLUBS[0]), `Local from its table: Farnham 61, the top of Local, Quins level with him (${X.CLUBS.map(t => t.id + ' ' + total(t)).join(', ')})`);
-  ok(hi(local) <= Math.min(...e2) && hi(local) < lo(tops) && local.filter(t => total(t) === Math.min(...e2)).map(t => t.id).join() === 'FAR,QUI', `no Local or Counties side above any England 2 side: Farnham and Quins level with England 2's foot (61), every other one under it (${hi(local)} v ${Math.min(...e2)})`);
-  ok(X.COUNTIES.every(t => total(t) === (/Counties 3/.test(t.league) ? 7 : 6)) && Math.min(...all.map(total)) === 6, 'Counties: Counties 3 at 46, Counties 5 at 43, the foot of the ladder, and nothing under it');
+  ok(X.CLUBS.map(total).join() === (RR ? '11,6,8,6,8,11,8,5,9,6,7,10' : '12,7,9,7,9,12,9,6,10,7,8,11') && X.overallOf(X.CLUBS[0]) === (RR ? 58 : 61) && total(X.CLUBS[0]) === hi(X.CLUBS) && total(X.CLUBS[5]) === total(X.CLUBS[0]), `Local from its table: Farnham 61, the top of Local, Quins level with him (${X.CLUBS.map(t => t.id + ' ' + total(t)).join(', ')})`);
+  ok(hi(local) <= Math.min(...e2) && hi(local) < lo(tops) && local.filter(t => total(t) === hi(local)).map(t => t.id).join() === 'FAR,QUI' && hi(local) === Math.min(...e2) - (RR ? 1 : 0), `no Local or Counties side above any England 2 side: Farnham and Quins ${RR ? 'a step under' : 'level with'} England 2's foot (61), every other one under them (${hi(local)} v ${Math.min(...e2)})`);
+  ok(X.COUNTIES.every(t => total(t) === (/Counties 3/.test(t.league) ? 7 : 6) - (RR ? 1 : 0)) && Math.min(...all.map(total)) === (RR ? 5 : 6), `Counties: Counties 3 at ${RR ? 43 : 46}, Counties 5 at ${RR ? 40 : 43}, the foot of the ladder, and nothing under it`);
   ok(avg(X.SCOTLAND) < avg(others) && X.SCOTLAND.every(t => total(t) <= 5 + X.BUDGET) && X.SCOTLAND.every((t, i) => i === 0 || total(t) <= total(X.SCOTLAND[i - 1])) && total(X.SCOTLAND[0]) > total(X.SCOTLAND[9]), `Scotland's amateur sides rate a little below the professional leagues (${avg(X.SCOTLAND).toFixed(1)} v ${avg(others).toFixed(1)}), the table's leaders highest`);
   ok(X.AUSTRALIA.map(t => t.id).join() === 'SYD,BRI,CAN,PTH,MEL,ADL' && X.SOUTH_AFRICA.length === 7 && X.FRANCE.length === 14, 'Australia, South Africa and France as they were (append only: saved careers name their sides)');
   // the owner's trademark rule: a city or a region, never a club's registered name or nickname (Quins in Local is the one exception)
@@ -844,6 +846,8 @@ function settle(pick) {
     FAR:61, QUI:61, WIM:58, IRO:55, GUI:52, COB:52, WEY:52, ORU:49, KIN:46, HAS:46, ALD:46, GDN:43,
     EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,
   };
+  // the owner's rerating: the game's Local and Counties sides a step down (src/ratings.js, LOCAL_STEPPED)
+  if (RR) Object.assign(TABLE, { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:40, EFF:43, WAN:40, EGH:40, MER:40, MIT:40, FEL:40 });
   const sorted = o => JSON.stringify(Object.entries(o).sort());
   ok(sorted(R5.CLUB_RATED) === sorted(TABLE), 'the clubs\' table is the one pinned here');
   const wrong = Object.entries(TABLE).filter(([id, ov]) => !by(id) || X.overallOf(by(id)) !== ov).map(([id, ov]) => `${id} ${by(id) && X.overallOf(by(id))} not ${ov}`);
@@ -852,10 +856,10 @@ function settle(pick) {
   ok(own.filter(t => t.league).every(t => t.id in TABLE) && own.filter(t => t.league).length === Object.keys(TABLE).length - 14 && [...NEW].every(t => !(t.id in TABLE) && t.league), 'every side with a league line is rated from it (and with none: Melbourne, Adelaide and Dunedin by their place, Scotland\'s ten by their table\'s order, Quins level with Farnham); the county clubs by their own rule');
   const unrated = own.filter(t => !(t.id in TABLE)).map(t => t.id);
   ok(unrated.join() === [...X.NATIONS, ...X.NEW_ZEALAND, ...X.JAPAN].filter(t => t.id !== 'DUN').map(t => t.id).sort((a, b) => unrated.indexOf(a) - unrated.indexOf(b)).join() && unrated.length === 14 + 5 + 7, `and only the nations, New Zealand and Japan keep the ratings written in their lists (${unrated.length})`);   // re-pinned at the real order: Scotland and Quins are on the table now
-  ok(X.overallOf(by('BOR')) === 70 && Math.max(...all.filter(t => !X.isNation(t)).map(X.overallOf)) === 75 && Math.min(...X.NATIONS.map(X.overallOf)) === 78 && Math.min(...all.map(X.overallOf)) === 43, 'the ladder: clubs 43 to 75, every nation above (78 and up), and no Bordeaux at 90 (70, by its table)');
+  ok(X.overallOf(by('BOR')) === 70 && Math.max(...all.filter(t => !X.isNation(t)).map(X.overallOf)) === 75 && Math.min(...X.NATIONS.map(X.overallOf)) === 78 && Math.min(...all.map(X.overallOf)) === (RR ? 40 : 43), 'the ladder: clubs ' + (RR ? 40 : 43) + ' to 75, every nation above (78 and up), and no Bordeaux at 90 (70, by its table)');
   { const tier = l => l.map(t => X.overallOf(t)), lists = { tops:X.NATIONAL.filter(l => l !== X.SCOTLAND && l !== X.ENGLAND_TWO).flat(), e2:X.ENGLAND_TWO, sco:X.SCOTLAND, local:[...X.CLUBS, ...X.COUNTIES] }, r = {};
     for (const [k, l] of Object.entries(lists)) r[k] = [Math.min(...tier(l)), Math.max(...tier(l))];
-    ok(JSON.stringify(r) === '{"tops":[67,75],"e2":[61,64],"sco":[58,61],"local":[43,61]}' && Math.min(...X.NATIONS.map(X.overallOf)) > r.tops[1] && r.tops[0] > r.e2[1] && r.e2[0] >= r.local[1] && r.e2[0] >= r.sco[1], `the real order, each tier's range: nations 78 and up, top flights 67 to 75, England 2 61 to 64, Scotland 58 to 61, Local and Counties 43 to 61 (${JSON.stringify(r)})`); }
+    ok(JSON.stringify(r) === (RR ? '{"tops":[67,75],"e2":[61,64],"sco":[58,61],"local":[40,58]}' : '{"tops":[67,75],"e2":[61,64],"sco":[58,61],"local":[43,61]}') && Math.min(...X.NATIONS.map(X.overallOf)) > r.tops[1] && r.tops[0] > r.e2[1] && r.e2[0] >= r.local[1] && r.e2[0] >= r.sco[1], `the real order, each tier's range: nations 78 and up, top flights 67 to 75, England 2 61 to 64, Scotland 58 to 61, Local and Counties 43 to 61 (${JSON.stringify(r)})`); }
   // the proof behind every data-driven re-pin: CLUB_RATED=off rates no club from its table, so every list is main's as written
   { const { spawnSync } = await import('node:child_process');
     const code = `const { T } = await import(${JSON.stringify(new URL('./harness.mjs', import.meta.url).href)}); console.log(JSON.stringify(Object.fromEntries(T.teams.ALL_TEAMS.map(t => [t.id, ${JSON.stringify(K)}.map(k => t[k]).join('')]))));`;
@@ -909,7 +913,7 @@ function settle(pick) {
     else { to12(0, k); for (const t of v12(0).group.teams) { got.push(badged(v12(0).team) && list.includes(v12(0).team)); P12.step(0, 1); } }
     ok(got.length === list.length && got.every(Boolean), `${k}: every side's stars beside its overall's badge, under its name`);
   }
-  ok(R5.starsOf(by('FAR')) === 3.5 && R5.starsOf(by('HAS')) === 2 && R5.starsOf(by('BTH')) === 4 && R5.starsOf(by('RSA')) === 5 && stars(by('FAR')).includes('aria-label="3.5 Stars"'), 'on the one scale: Farnham 3.5 stars, Haslemere 2, Bath 4, South Africa 5, each with its words');   // re-pinned at the real order: Farnham 61 (was 75, 4.5), Haslemere 46 (was 64, 3.5)
+  ok(R5.starsOf(by('FAR')) === (RR ? 3 : 3.5) && R5.starsOf(by('HAS')) === 2 && R5.starsOf(by('BTH')) === 4 && R5.starsOf(by('RSA')) === 5 && stars(by('FAR')).includes(RR ? 'aria-label="3 Stars"' : 'aria-label="3.5 Stars"'), 'on the one scale: Farnham ' + (RR ? 3 : 3.5) + ' stars, Haslemere 2, Bath 4, South Africa 5, each with its words');   // re-pinned at the real order: Farnham 61 (was 75, 4.5), Haslemere 46 (was 64, 3.5)
   s.pick = [null, null]; D.openTeams('quick'); D.pickTeam(X.CLUBS[0]);
   ok(P12.state().sides[0].set && $('t-side0').innerHTML.includes('<span class="tname">Farnham</span><span class="pk-rate">' + stars(X.CLUBS[0])), 'Quick Match\'s picked side shows its stars');
   X.catPick('women'); P12.step(0, 1); P12.step(0, -1);

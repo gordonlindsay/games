@@ -7,7 +7,7 @@
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 // CLUB_RATED=off HOME_PRINT=1 node tools/home.mjs prints it with no club rated from PR #14's tables: the proof behind the last re-pin.
 process.env.SEED ??= '61';
-const { T, reseed, bot } = await import('./harness.mjs');
+const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -23,6 +23,10 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
 // 0. Nothing the home does moves a match: AI v AI, a tool's match (the balance tools' kind: the bot against the computer), an arcade
 //    Quick Match, a championship match and the demo, seeded, against the build before the headlines (2e4829d). Run first.
 const BASE = '1us0pm8 7yj4mb 42zhl6 bs1ooc 1tf14do';   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
+/* BASE re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"):
+   Farnham and Haslemere, a step down, play three of these matches, so it moves to R_BASE. With LOCAL off (1.6) and with the rerating off
+   (8089294) this build gives BASE exactly, LOCAL off the chain below too (each in a child: rerateProofs). */
+const R_BASE = '1us0pm8 1utlxki 18tlkfu 1skpr8k 1tf14do';
 const WITH_CALLS = 'j0wk2h 7yj4mb 42zhl6 bs1ooc 1tf14do';   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '183xhzi 1jp0mme p4313q 1nkecxo yvtiy8';   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 183xhzi 1jp0mme p4313q x92eko yvtiy8)
 const BEFORE_CALLS_CHASE = '183xhzi 1jp0mme p4313q 319h47 yvtiy8';   // b4a25d5's pin, the calls and the chase both off: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -49,14 +53,16 @@ function fingerprint() {
 {
   const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js): both off with the knock-ons (20cbcaf predates all three), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
-  if (T.knock && !process.env.HOME_PRINT) { T.knock.KNOCK.on = false; feats(false, false); const off = fingerprint(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
-  if ((CL || CS) && !process.env.HOME_PRINT) { feats(false, false); const off = fingerprint(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
-  if (CL && CS && !process.env.HOME_PRINT) { feats(true, false); const calls = fingerprint(); feats(false, true); const chase = fingerprint(); feats(CL0, CS0);
+  if (T.knock && !LOCAL_ON && !process.env.HOME_PRINT) { T.knock.KNOCK.on = false; feats(false, false); const off = fingerprint(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+  if ((CL || CS) && !LOCAL_ON && !process.env.HOME_PRINT) { feats(false, false); const off = fingerprint(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
+  if (CL && CS && !LOCAL_ON && !process.env.HOME_PRINT) { feats(true, false); const calls = fingerprint(); feats(false, true); const chase = fingerprint(); feats(CL0, CS0);
     ok(calls === WITH_CALLS, `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
     ok(chase === WITH_CHASE, `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`); }
   const now = fingerprint();
-  if (process.env.HOME_PRINT) { console.log(now); process.exit(0); }
-  ok(now === BASE, `AI v AI, a tool's match, an arcade Quick Match, a championship match and the demo play exactly as before the headlines (seeded fingerprint ${now}, pinned ${BASE})`);
+  if (process.env.HOME_PRINT || LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
+  if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BASE, ok);
+  const pin = RERATE ? R_BASE : BASE;
+  ok(now === pin, `AI v AI, a tool's match, an arcade Quick Match, a championship match and the demo play exactly as before the headlines (seeded fingerprint ${now}, pinned ${pin})`);
 }
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -437,8 +443,9 @@ const fresh = () => {                                       // a new game on the
   const R5 = T.ratings, box = () => [$('my-name').textContent, $('my-stars').innerHTML, $('my-league').innerHTML.replace(/<[^>]+>/g, '')];
   const at = id => { D.settings().myClub = id; D.goHome(); return box(); };
   let r = box();
-  ok(r[0] === 'Farnham' && r[1] === R5.starsHtml(3.5) && r[2] === 'Regional 1 South Central · 7th Last Season' && $('my-league').innerHTML === '<span>Regional 1 South Central</span><span class="sep"> · </span><span>7th Last Season</span>', `a new game: Farnham, 3.5 stars, 7th in Regional 1 South Central, the league over its place (${r.join(' | ')})`);
-  ok(R5.starsHtml(3.5).includes('aria-label="3.5 Stars"') && R5.starsOf(X.CLUBS[0]) === 3.5, 'the stars carry their words for a screen reader');
+  const FS = RERATE ? 3 : 3.5;   // Farnham's stars: 58 with the owner's rerating, 61 without
+  ok(r[0] === 'Farnham' && r[1] === R5.starsHtml(FS) && r[2] === 'Regional 1 South Central · 7th Last Season' && $('my-league').innerHTML === '<span>Regional 1 South Central</span><span class="sep"> · </span><span>7th Last Season</span>', `a new game: Farnham, ${FS} stars, 7th in Regional 1 South Central, the league over its place (${r.join(' | ')})`);
+  ok(R5.starsHtml(FS).includes(`aria-label="${FS} Stars"`) && R5.starsOf(X.CLUBS[0]) === FS, 'the stars carry their words for a screen reader');
   r = at('NTH');
   ok(r[2] === 'English Premiership · 1st Last Season' && r[0] === 'Northampton' && H.recordLine(H.myClub()) === 'Won 14 · Drew 1 · Lost 3 · 693 Scored · 536 Conceded', `Northampton: its line, and last season's record kept for the team screen and the tools (${H.recordLine(H.myClub())})`);
   ok(at('LWE')[2] === 'English Premiership · 9th Last Season' && at('COB')[2] === 'Counties 1 Surrey/Sussex · 1st Last Season' && at('MTB')[2] === 'Top 14 · 14th Last Season' && at('BED')[2] === 'English Championship · 2nd Last Season' && at('JHB')[2] === 'United Rugby Championship · 7th Last Season' && at('MBO')[2] === 'Currie Cup · 3rd Last Season', 'the ordinals read right, and every list with figures has them (England 2 and the Currie Cup too)');

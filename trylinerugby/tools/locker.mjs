@@ -13,7 +13,7 @@
 // node tools/locker.mjs            (SEED=37 unless set; VERBOSE=1 lists every check)
 // node tools/locker.mjs --pins     prints this build's fingerprints; GAME=<d6192ad>/index.html node tools/locker.mjs --pins re-pins BASE
 process.env.SEED ??= '37';
-const { T, reseed, rndCalls, bot, kickBot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, kickBot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 import fs from 'node:fs';
 import path from 'node:path';
@@ -57,6 +57,10 @@ function dropper() {
 // Re-pinned at the merge with the team hierarchy and XV rankings (ed37be5): the nations were re-rated and leagues added, which moves
 // AI v AI, the balance tool's match and the drill; ed37be5's own bundle (GAME=…, before the Locker) gives exactly these.
 const BASE = '1wrndtb 1bjwyb7 128o11d pzuc8b 1dl94g2 1supghy myd41f';   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below). The run order matters and is kept: BEFORE_KNOCK is the first run in the process and BEFORE_CALLS_CHASE the second, as they were at b4a25d5; WITH_CALLS, WITH_CHASE and BASE are the third, fourth and fifth. A played Quick Match reads what the runs before it leave, so a first or second run's pin differs from a later one's, and from the third run on a run's pin is the same whatever ran before it (each of the three measured third, fourth and fifth, 2026-11-14: the values below and these)
+/* BASE re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"):
+   Farnham and Haslemere, a step down, play two of these matches, so it moves to R_BASE. With LOCAL off (1.6) and with the rerating off
+   (8089294) this build gives BASE exactly, LOCAL off the chain below too (each in a child: rerateProofs). */
+const R_BASE = '1wrndtb 1bjwyb7 128o11d cuegvj xhs9wt 1supghy 1aorlxi';
 const WITH_CALLS = '1xa81wd 1bjwyb7 ob14gy zxhids 10orex2 1supghy j9mm9i';   // the calls on and the chase off, wt/calls' pin (a032b3a), a third or later run's: re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '16b03c4 1ncbbu6 umf357 1qui2ii 1pe3v50 1supghy 16dozrz';   // the chase on and the calls off, wt/chase's pin (fc90ec0), a third or later run's: re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's kw40od 1ncbbu6 umf357 118bwkd 1pe3v50 1supghy 2aq8cr, as a third run)
 const BEFORE_CALLS_CHASE = '1en9k3t 1ncbbu6 umf357 1myi7ax 1nvpf7p 1supghy 4ytog3';   // b4a25d5's pin, the calls and the chase both off, the second run in the process, as BASE was at b4a25d5: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -82,12 +86,17 @@ function pins() {
 if (process.argv.includes('--pins')) { console.log(pins()); process.exit(0); }
 { const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js), in BASE's order above: all three off with the knock-ons (20cbcaf predates them), both off, each alone, then as they were (CALLS= and CHASE= in the harness)
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
-  if (T.knock) { T.knock.KNOCK.on = false; feats(false, false); const off = pins(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
-  if (CL || CS) { feats(false, false); const off = pins(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
-  if (CL && CS) { feats(true, false); const calls = pins(); feats(false, true); const chase = pins(); feats(CL0, CS0);
+  if (LOCAL_ON) { pins(); pins(); }   // the chain is checked in the LOCAL off child; these two runs stand in for its first, so the pin below is a later run's, as it is there
+  if (T.knock && !LOCAL_ON) { T.knock.KNOCK.on = false; feats(false, false); const off = pins(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+  if ((CL || CS) && !LOCAL_ON) { feats(false, false); const off = pins(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
+  if (CL && CS && !LOCAL_ON) { feats(true, false); const calls = pins(); feats(false, true); const chase = pins(); feats(CL0, CS0);
     ok(calls === WITH_CALLS, `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
     ok(chase === WITH_CHASE, `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`); } }
-{ const now = pins(); ok(now === BASE, `AI v AI, the demo, a balance tool's match, a tool's match, a played Quick Match and a drill play as at d6192ad, with the same random draws (seeded fingerprint ${now}, pinned ${BASE})`); }
+{ const now = pins();
+  if (LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
+  if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BASE, ok);
+  const pin = RERATE ? R_BASE : BASE;
+  ok(now === pin, `AI v AI, the demo, a balance tool's match, a tool's match, a played Quick Match and a drill play as at d6192ad, with the same random draws (seeded fingerprint ${now}, pinned ${pin})`); }
 
 const L = T.locker, C = T.career, P = T.practice;
 // the browser save, counted; the Locker's screen joins the harness's list so showScreen toggles it

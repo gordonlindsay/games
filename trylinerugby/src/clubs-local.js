@@ -1,5 +1,5 @@
 /* =========================================================
-   Local clubs by county: written by tools/clubs-local.mjs from docs/clubs-local.json, the research (version 3, 2026-11-14).
+   Local clubs by county: written by tools/clubs-local.mjs from docs/clubs-local.json, the research (version 4, 2026-11-14).
    Never edited by hand: change the research and run node tools/clubs-local.mjs (its --check is in tools/local.mjs).
    Every club in England's 2025-26 National League 1 and 2, Regional 1, Regional 2 and Counties 1, first XVs only, by its county (its RFU
    constituent body), Jersey and Guernsey Raiders under Hampshire and Douglas under Cheshire. Surrey first, then A to Z.
@@ -8,7 +8,8 @@
      its own name where the card's differs (cut to 16, or told apart), which the search finds as well.
    - Its rating comes from its league and place (localRated, src/ratings.js), never from the abilities here.
    - A kit marked a free choice is a guess; every other is the club's own colours as the research found them (docs/clubs-local.json
-     has the source of each). Kits within a county are told apart at a glance; sourced kits that look alike stay as sourced.
+     has the source of each). Kits within a county are told apart at a glance; sourced kits that look alike stay as sourced, bar a
+     Pitchero kit (it gives colours, never a pattern), whose hoops or trim, marked a free choice, tells it from the club it looked like.
    - The game's own clubs (Farnham and the rest of Surrey's, Aldershot) are not here: data.js has them. shared: the game's clubs a county
      also lists (Aldershot, in Surrey's list since PR #14, shown under Hampshire).
    - cups: the county's own cups by level ({ name, to }, as COUNTY_CUPS), only what is sourced; null for the plain County Cup table.
@@ -70,34 +71,34 @@ function localCounties() {
         { id:'CAE', name:'Camberley', kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 1 South Central', place:12, w:3, d:1, l:18, pf:531, pa:1060 },
         { id:'OTI', name:'Old Tiffinians', kit:'#c8102e', trim:'#1b2747', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 South Central', place:4, w:13, d:1, l:8, pf:876, pa:555 },   // colours a free choice
         { id:'SEP', name:'Sutton & Epsom', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 South East', place:7, w:9, d:0, l:13, pf:652, pa:594 },
-        { id:'TED', name:'Teddington', kit:'#e8731c', trim:'#1b2747', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 Thames', place:7 },   // colours a free choice
+        { id:'TED', name:'Teddington', kit:'#051a6d', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 Thames', place:7, w:10, d:0, l:12, pf:694, pa:702 },   // trim a free choice
         { id:'CHO', name:'Chobham', kit:'#1b2747', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 South Central', place:9, w:7, d:0, l:15, pf:536, pa:723 },
-        { id:'LIW', name:'Wild Geese', full:'London Irish Wild Geese', kit:'#0f5a32', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Thames', place:10 },
+        { id:'LIW', name:'Wild Geese', full:'London Irish Wild Geese', kit:'#0f5a32', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Thames', place:10, w:7, d:0, l:15, pf:566, pa:691 },
         { id:'RWE', name:'Reeds Weybridge', kit:'#1b2747', trim:'#e8731c', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 South Central', place:11, w:4, d:0, l:18, pf:384, pa:838 },   // colours a free choice
         { id:'ORI', name:'Old Reigatian', kit:'#f2efe6', trim:'#2050b0', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 South East', place:12, w:1, d:0, l:21, pf:369, pa:1015 },   // colours a free choice
-        { id:'TRT', name:'Trinity', kit:'#c8102e', trim:'#f2b01e', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:3 },   // colours a free choice
-        { id:'OCA', name:'Old Caterhamians', kit:'#7c1431', trim:'#109a52', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:9 },   // colours a free choice
-        { id:'OWI', name:'Old Wimbledonian', full:'Old Wimbledonians', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Surrey/Sussex', place:10 },   // colours a free choice
-        { id:'KOL', name:'KCS Old Boys', kit:'#000099', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Surrey/Sussex', place:11 },
+        { id:'TRT', name:'Trinity', kit:'#c8102e', trim:'#f2b01e', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:3, w:11, d:1, l:8, pf:594, pa:611 },   // colours a free choice
+        { id:'OCA', name:'Old Caterhamians', kit:'#1c1c1c', trim:'#2050b0', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:9, w:8, d:1, l:11, pf:519, pa:620 },   // trim a free choice
+        { id:'OWI', name:'Old Wimbledonian', full:'Old Wimbledonians', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Surrey/Sussex', place:10, w:1, d:0, l:19, pf:376, pa:831 },   // colours a free choice
+        { id:'KOL', name:'KCS Old Boys', kit:'#000099', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Surrey/Sussex', place:11, w:3, d:0, l:17, pf:339, pa:794 },
       ] },
       { county:'Berkshire', label:'Berkshire', code:'BRK', key:'brk', wraps:false, shared:[], cups:null, clubs:[
         { id:'RAM', name:'Rams', kit:'#000099', trim:'#7c1431', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'National League 1', place:7, w:13, d:0, l:13, pf:780, pa:798 },
         { id:'BRC', name:'Bracknell', kit:'#109a52', trim:'#f2b01e', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 1 South Central', place:6, w:11, d:0, l:11, pf:562, pa:596 },
         { id:'MAI', name:'Maidenhead', kit:'#c2187a', trim:'#5b2a86', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 1 South Central', place:10, w:5, d:1, l:16, pf:521, pa:888 },
-        { id:'NBU', name:'Newbury Blues', kit:'#1b2747', trim:'#6fb7e6', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 Severn', place:5, w:12, d:1, l:9, pf:654, pa:809 },   // colours a free choice
-        { id:'WIO', name:'Windsor', kit:'#f2efe6', trim:'#1b2747', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Thames', place:11 },   // colours a free choice
-        { id:'REA', name:'Reading', kit:'#0b610b', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Southern North', place:5 },
-        { id:'RAB', name:'Reading Abbey', kit:'#109a52', trim:'#2050b0', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern North', place:6 },
+        { id:'NBU', name:'Newbury Blues', kit:'#002a89', trim:'#2050b0', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 Severn', place:5, w:12, d:1, l:9, pf:654, pa:809 },
+        { id:'WIO', name:'Windsor', kit:'#148133', trim:'#ff9803', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Thames', place:11, w:6, d:0, l:16, pf:488, pa:895 },
+        { id:'REA', name:'Reading', kit:'#0b610b', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Southern North', place:5, w:13, d:0, l:9, pf:591, pa:567 },
+        { id:'RAB', name:'Reading Abbey', kit:'#109a52', trim:'#2050b0', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern North', place:6, w:11, d:0, l:11, pf:549, pa:596 },
       ] },
       { county:'Buckinghamshire', label:'Bucks', code:'BKM', key:'bkm', wraps:false, shared:[], cups:null, clubs:[
         { id:'ACH', name:'Amersham', full:'Amersham & Chiltern', kit:'#7c1431', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 1 South East', place:10, w:7, d:0, l:15, pf:514, pa:648 },
-        { id:'BEA', name:'Beaconsfield', kit:'#109a52', trim:'#f2b01e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Thames', place:2 },
-        { id:'AYL', name:'Aylesbury', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 Thames', place:5 },   // colours a free choice
-        { id:'MAO', name:'Marlow', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 Thames', place:6 },
+        { id:'BEA', name:'Beaconsfield', kit:'#109a52', trim:'#f2b01e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Thames', place:2, w:18, d:0, l:4, pf:849, pa:537 },
+        { id:'AYL', name:'Aylesbury', kit:'#d418a2', trim:'#010101', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 Thames', place:5, w:11, d:1, l:10, pf:670, pa:697 },
+        { id:'MAO', name:'Marlow', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 Thames', place:6, w:11, d:0, l:11, pf:641, pa:603 },
         { id:'OLN', name:'Olney', kit:'#f2b01e', trim:'#1c1c1c', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 Midlands East', place:9, w:7, d:0, l:15, pf:582, pa:753 },   // colours a free choice
-        { id:'BUC', name:'Buckingham', kit:'#109a52', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Southern North', place:2 },
-        { id:'HWY', name:'High Wycombe', kit:'#1b2747', trim:'#6fb7e6', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern North', place:4 },   // colours a free choice
-        { id:'BLE', name:'Bletchley', kit:'#7c1431', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Southern North', place:10 },
+        { id:'BUC', name:'Buckingham', kit:'#109a52', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Southern North', place:2, w:15, d:0, l:7, pf:736, pa:491 },
+        { id:'HWY', name:'High Wycombe', kit:'#1b2747', trim:'#6fb7e6', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern North', place:4, w:14, d:0, l:8, pf:616, pa:472 },   // colours a free choice
+        { id:'BLE', name:'Bletchley', kit:'#7c1431', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Southern North', place:10, w:8, d:0, l:14, pf:411, pa:740 },
       ] },
       { county:'Cheshire', label:'Cheshire', code:'CHS', key:'chs', wraps:false, shared:[], cups:[{ name:'Cheshire Cup', to:5 }, { name:'Cheshire Vase', to:7 }, { name:'Cheshire Bowl', to:8 }, { name:'Cheshire Plate', to:9 }], clubs:[
         { id:'SAE', name:'Sale FC Cheshire', full:'Sale FC', kit:'#000099', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'National League 1', place:5, w:17, d:0, l:9, pf:826, pa:590 },
@@ -114,9 +115,9 @@ function localCounties() {
         { id:'BPR', name:'Birkenhead Park', kit:'#c8102e', trim:'#1b2747', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 North West', place:8, w:9, d:0, l:13, pf:559, pa:605 },
         { id:'NOW', name:'Northwich', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 North West', place:10, w:9, d:0, l:13, pf:568, pa:604 },
         { id:'AKE', name:'Altrincham', full:'Altrincham Kersal', kit:'#f2efe6', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 North West', place:12, w:2, d:0, l:20, pf:432, pa:842 },
-        { id:'WIL', name:'Wilmslow', kit:'#6fb7e6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:1 },   // colours a free choice
-        { id:'CNA', name:'Crewe & Nantwich', kit:'#2050b0', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (North)', place:2 },   // colours a free choice
-        { id:'NBR', name:'New Brighton', kit:'#1b2747', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:6 },
+        { id:'WIL', name:'Wilmslow', kit:'#6fb7e6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:1, w:20, d:0, l:2, pf:915, pa:410 },   // colours a free choice
+        { id:'CNA', name:'Crewe & Nantwich', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (North)', place:2, w:18, d:0, l:4, pf:868, pa:390 },   // hoops a free choice
+        { id:'NBR', name:'New Brighton', kit:'#1b2747', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:6, w:7, d:1, l:14, pf:563, pa:893 },
       ] },
       { county:'Cornwall', label:'Cornwall', code:'CON', key:'con', wraps:false, shared:[], cups:[{ name:'Cornwall Cup', to:8 }, { name:'Cornwall Clubs Cup', to:10 }], clubs:[
         { id:'CAB', name:'Camborne', kit:'#f2efe6', trim:'#a4123f', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'National League 2 West', place:1, w:22, d:0, l:4, pf:1106, pa:658 },
@@ -133,22 +134,22 @@ function localCounties() {
       { county:'Cumbria', label:'Cumbria', code:'CUM', key:'cum', wraps:false, shared:[], cups:[{ name:'Cumbria Cup', to:7 }, { name:'Cumbria League Cup', to:8 }], clubs:[
         { id:'KED', name:'Kendal', kit:'#1c1c1c', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 1 North East', place:8, w:8, d:1, l:13, pf:559, pa:532 },
         { id:'PEN', name:'Penrith', kit:'#0f5a32', trim:'#f2efe6', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 1 North East', place:11, w:6, d:0, l:16, pf:495, pa:950 },
-        { id:'KEW', name:'Keswick', kit:'#0f5a32', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 2 North', place:4, w:12, d:0, l:10, pf:622, pa:511 },   // colours a free choice
+        { id:'KEW', name:'Keswick', kit:'#332dd7', trim:'#02500f', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 2 North', place:4, w:12, d:0, l:10, pf:622, pa:511 },
         { id:'UED', name:'Upper Eden', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 North', place:6, w:11, d:0, l:11, pf:615, pa:530 },
         { id:'ASP', name:'Aspatria', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 North', place:11, w:6, d:1, l:15, pf:419, pa:683 },
         { id:'WIG', name:'Wigton', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 North', place:12, w:1, d:0, l:21, pf:335, pa:1031 },   // colours a free choice
-        { id:'KLO', name:'Kirkby Lonsdale', kit:'#1c1c1c', trim:'#c8102e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:1 },
-        { id:'HPA', name:'Hawcoat Park', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:2 },   // colours a free choice
-        { id:'CAR', name:'Carlisle', kit:'#4169e1', trim:'#c8102e', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Cumbria', place:3 },
-        { id:'COE', name:'Cockermouth', kit:'#5b2a86', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:4 },   // colours a free choice
-        { id:'WHT', name:'Whitehaven', kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Cumbria', place:5 },
-        { id:'SBE', name:'St Benedict\'s', kit:'#f2b01e', trim:'#109a52', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Cumbria', place:6 },   // colours a free choice
-        { id:'EGR', name:'Egremont', kit:'#1b2747', trim:'#6fb7e6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Cumbria', place:7 },   // colours a free choice
-        { id:'WOK', name:'Workington', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Cumbria', place:8 },
-        { id:'AMB', name:'Ambleside', kit:'#6fb7e6', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:9 },   // colours a free choice
-        { id:'WIE', name:'Windermere', kit:'#1f8a8a', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Cumbria', place:10 },   // colours a free choice
-        { id:'CRI', name:'Creighton', kit:'#e87722', trim:'#1b2747', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Cumbria', place:11 },   // colours a free choice
-        { id:'MIO', name:'Millom', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:14 },   // colours a free choice
+        { id:'KLO', name:'Kirkby Lonsdale', kit:'#1c1c1c', trim:'#c8102e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:1, w:17, d:0, l:2, pf:677, pa:267 },
+        { id:'HPA', name:'Hawcoat Park', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:2, w:16, d:2, l:1, pf:633, pa:188 },   // colours a free choice
+        { id:'CAR', name:'Carlisle', kit:'#4169e1', trim:'#c8102e', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Cumbria', place:3, w:15, d:0, l:4, pf:767, pa:244 },
+        { id:'COE', name:'Cockermouth', kit:'#1c1c1c', trim:'#fac903', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:4, w:14, d:0, l:5, pf:463, pa:361 },
+        { id:'WHT', name:'Whitehaven', kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Cumbria', place:5, w:13, d:0, l:6, pf:560, pa:313 },
+        { id:'SBE', name:'St Benedict\'s', kit:'#4db224', trim:'#fce105', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Cumbria', place:6, w:11, d:0, l:8, pf:443, pa:376 },
+        { id:'EGR', name:'Egremont', kit:'#1c1c1c', trim:'#109a52', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Cumbria', place:7, w:9, d:3, l:7, pf:558, pa:410 },   // trim a free choice
+        { id:'WOK', name:'Workington', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Cumbria', place:8, w:7, d:1, l:11, pf:438, pa:617 },
+        { id:'AMB', name:'Ambleside', kit:'#6fb7e6', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:9, w:6, d:0, l:13, pf:294, pa:609 },   // colours a free choice
+        { id:'WIE', name:'Windermere', kit:'#1c1c1c', trim:'#6fb7e6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Cumbria', place:10, w:5, d:0, l:14, pf:374, pa:736 },   // trim a free choice
+        { id:'CRI', name:'Creighton', kit:'#1b2747', trim:'#c8102e', hoops:true, pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Cumbria', place:11, w:3, d:0, l:16, pf:309, pa:739 },   // hoops a free choice
+        { id:'MIO', name:'Millom', kit:'#2131e8', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Cumbria', place:14, w:5, d:0, l:14, pf:319, pa:479 },
       ] },
       { county:'Devon', label:'Devon', code:'DEV', key:'dev', wraps:false, shared:[], cups:[{ name:'Devon Senior Cup', to:5 }, { name:'Devon Shield', to:6 }, { name:'Devon Intermediate Cup', to:8 }, { name:'Devon Junior Cup', to:10 }], clubs:[
         { id:'PAL', name:'Plymouth Albion', kit:'#f2efe6', trim:'#006600', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'National League 1', place:3, w:20, d:0, l:6, pf:1000, pa:549 },
@@ -158,13 +159,13 @@ function localCounties() {
         { id:'TOP', name:'Topsham', kit:'#c8102e', trim:'#f2b01e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 1 South West', place:2, w:16, d:2, l:4, pf:713, pa:501 },   // colours a free choice
         { id:'BRX', name:'Brixham', kit:'#f2efe6', trim:'#1c1c1c', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 South West', place:3, w:15, d:0, l:7, pf:808, pa:515 },
         { id:'EXM', name:'Exmouth', kit:'#660099', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 1 South West', place:4, w:12, d:1, l:9, pf:711, pa:466 },
-        { id:'SID', name:'Sidmouth', kit:'#109a52', trim:'#1b2747', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 1 South West', place:9, w:8, d:0, l:14, pf:550, pa:705 },   // colours a free choice
+        { id:'SID', name:'Sidmouth', kit:'#109a52', trim:'#7c1431', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 1 South West', place:9, w:8, d:0, l:14, pf:550, pa:705 },   // colours a free choice
         { id:'TIV', name:'Tiverton', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 South West', place:2, w:18, d:0, l:4, pf:822, pa:463 },
         { id:'OKE', name:'Okehampton', kit:'#7c1431', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 South West', place:4, w:14, d:0, l:8, pf:629, pa:478 },
         { id:'CRE', name:'Crediton', kit:'#f2b01e', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 2 South West', place:5, w:12, d:0, l:10, pf:623, pa:616 },   // colours a free choice
-        { id:'IVY', name:'Ivybridge', kit:'#109a52', trim:'#7c1431', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 South West', place:6, w:11, d:1, l:10, pf:606, pa:628 },   // colours a free choice
+        { id:'IVY', name:'Ivybridge', kit:'#399439', trim:'#1c1c1c', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 South West', place:6, w:11, d:1, l:10, pf:606, pa:628 },
         { id:'TEI', name:'Teignmouth', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 South West', place:10, w:7, d:0, l:15, pf:493, pa:785 },
-        { id:'CUL', name:'Cullompton', kit:'#f2efe6', trim:'#c8102e', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 South West', place:11, w:4, d:0, l:18, pf:439, pa:785 },   // colours a free choice
+        { id:'CUL', name:'Cullompton', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 South West', place:11, w:4, d:0, l:18, pf:439, pa:785 },   // hoops a free choice
         { id:'PAI', name:'Paignton', kit:'#c8102e', trim:'#6fb7e6', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Western West', place:2, w:16, d:0, l:6, pf:838, pa:602 },   // colours a free choice
         { id:'TAT', name:'Torquay Athletic', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Western West', place:4, w:12, d:1, l:9, pf:650, pa:533 },
         { id:'KIG', name:'Kingsbridge', kit:'#2050b0', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Western West', place:8, w:10, d:0, l:12, pf:535, pa:599 },
@@ -175,68 +176,68 @@ function localCounties() {
         { id:'RWB', name:'Wootton Bassett', full:'Royal Wootton Bassett', kit:'#2050b0', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 1 South West', place:6, w:11, d:2, l:9, pf:689, pa:641 },   // colours a free choice
         { id:'MAL', name:'Marlborough', kit:'#f2b01e', trim:'#1b2747', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 1 South West', place:11, w:3, d:1, l:18, pf:420, pa:894 },   // colours a free choice
         { id:'BON', name:'Bournemouth', kit:'#1c1c1c', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 South Central', place:1, w:21, d:1, l:0, pf:888, pa:367 },
-        { id:'TRO', name:'Trowbridge', kit:'#5b2a86', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Severn', place:1, w:20, d:0, l:2, pf:980, pa:347 },   // colours a free choice
+        { id:'TRO', name:'Trowbridge', kit:'#002575', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Severn', place:1, w:20, d:0, l:2, pf:980, pa:347 },
         { id:'CHP', name:'Chippenham', kit:'#f2efe6', trim:'#1c1c1c', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 Severn', place:2, w:18, d:1, l:3, pf:1004, pa:454 },
         { id:'WIB', name:'Wimborne', kit:'#7c1431', trim:'#f2b01e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 South Central', place:3, w:16, d:0, l:6, pf:788, pa:465 },   // colours a free choice
         { id:'NDO', name:'North Dorset', kit:'#109a52', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 Severn', place:10, w:5, d:1, l:16, pf:424, pa:709 },
-        { id:'SHR', name:'Sherborne', kit:'#1c1c1c', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern South', place:1 },
-        { id:'DEI', name:'Devizes', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Southern South', place:3 },
-        { id:'SAS', name:'Salisbury', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Southern South', place:5 },
-        { id:'SWR', name:'Swanage Wareham', full:'Swanage & Wareham', kit:'#7c1431', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern South', place:6 },   // colours a free choice
-        { id:'MEK', name:'Melksham', kit:'#1b2747', trim:'#c8102e', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Southern South', place:7 },   // colours a free choice
-        { id:'COH', name:'Corsham', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Southern South', place:8 },
-        { id:'SWI', name:'Swindon', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Southern South', place:11 },   // colours a free choice
+        { id:'SHR', name:'Sherborne', kit:'#1c1c1c', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern South', place:1, w:20, d:0, l:2, pf:918, pa:264 },
+        { id:'DEI', name:'Devizes', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Southern South', place:3, w:15, d:1, l:6, pf:857, pa:441 },
+        { id:'SAS', name:'Salisbury', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Southern South', place:5, w:13, d:2, l:7, pf:691, pa:452 },
+        { id:'SWR', name:'Swanage Wareham', full:'Swanage & Wareham', kit:'#7c1431', trim:'#1c1c1c', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern South', place:6, w:13, d:0, l:9, pf:622, pa:373 },
+        { id:'MEK', name:'Melksham', kit:'#1b2747', trim:'#c8102e', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Southern South', place:7, w:10, d:1, l:11, pf:618, pa:590 },   // colours a free choice
+        { id:'COH', name:'Corsham', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Southern South', place:8, w:7, d:2, l:13, pf:473, pa:647 },
+        { id:'SWI', name:'Swindon', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Southern South', place:11, w:3, d:0, l:19, pf:433, pa:977 },   // colours a free choice
       ] },
       { county:'Durham', label:'Durham', code:'DHM', key:'dhm', wraps:false, shared:[], cups:[{ name:'Durham Senior Cup', to:5 }], clubs:[
         { id:'DMP', name:'Mowden Park', full:'Darlington Mowden Park', kit:'#1d3a8f', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'National League 2 North', place:5, w:15, d:1, l:10, pf:878, pa:877 },
         { id:'BIL', name:'Billingham', kit:'#f2efe6', trim:'#109a52', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'National League 2 North', place:10, w:10, d:0, l:16, pf:604, pa:905 },
         { id:'BLY', name:'Blaydon', kit:'#c8102e', trim:'#1c1c1c', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 1 North East', place:5, w:10, d:1, l:11, pf:605, pa:558 },
         { id:'COS', name:'Consett', kit:'#7c1431', trim:'#f2b01e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 North', place:2, w:14, d:0, l:8, pf:781, pa:629 },   // colours a free choice
-        { id:'SUN', name:'Sunderland', kit:'#c8102e', trim:'#f2b01e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 North', place:5, w:12, d:0, l:10, pf:542, pa:473 },   // colours a free choice
+        { id:'SUN', name:'Sunderland', kit:'#ed0000', trim:'#f2b01e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 North', place:5, w:12, d:0, l:10, pf:542, pa:473 },
         { id:'WHR', name:'West Hartlepool', kit:'#109a52', trim:'#c8102e', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 North', place:7, w:10, d:1, l:11, pf:676, pa:660 },
         { id:'DCI', name:'Durham City', kit:'#1b2747', trim:'#f2b01e', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 North', place:9, w:9, d:0, l:13, pf:595, pa:557 },
         { id:'RYT', name:'Ryton', kit:'#e8761e', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Durham & Northumberland', place:2 },   // colours a free choice
-        { id:'STC', name:'Stockton', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Durham & Northumberland', place:3 },
-        { id:'PHO', name:'Peterlee Horden', full:'Peterlee & Horden', kit:'#7c1431', trim:'#6fb7e6', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Durham & Northumberland', place:5 },
-        { id:'DUI', name:'Durham Uni', full:'Durham University', kit:'#663366', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Durham & Northumberland', place:6 },
-        { id:'GAT', name:'Gateshead', kit:'#f2b01e', trim:'#c8102e', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Durham & Northumberland', place:7 },   // colours a free choice
-        { id:'DAL', name:'Darlington', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Durham & Northumberland', place:8 },
+        { id:'STC', name:'Stockton', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Durham & Northumberland', place:3, w:16, d:0, l:6, pf:833, pa:536 },
+        { id:'PHO', name:'Peterlee Horden', full:'Peterlee & Horden', kit:'#7c1431', trim:'#6fb7e6', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Durham & Northumberland', place:5, w:12, d:1, l:9, pf:818, pa:621 },
+        { id:'DUI', name:'Durham Uni', full:'Durham University', kit:'#663366', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Durham & Northumberland', place:6, w:11, d:0, l:11, pf:699, pa:595 },
+        { id:'GAT', name:'Gateshead', kit:'#f2b01e', trim:'#c8102e', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Durham & Northumberland', place:7, w:10, d:0, l:12, pf:562, pa:582 },   // colours a free choice
+        { id:'DAL', name:'Darlington', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Durham & Northumberland', place:8, w:8, d:0, l:14, pf:531, pa:694 },
         { id:'BAU', name:'Bishop Auckland', kit:'#1b2747', trim:'#6fb7e6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Durham & Northumberland', place:10 },
-        { id:'HAE', name:'Hartlepool', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Durham & Northumberland', place:11 },
+        { id:'HAE', name:'Hartlepool', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Durham & Northumberland', place:11, w:6, d:0, l:16, pf:459, pa:881 },
       ] },
       { county:'East Midlands', label:'East Midlands', code:'EMD', key:'emd', wraps:false, shared:[], cups:[{ name:'East Midlands Cup', to:7 }], clubs:[
         { id:'OUN', name:'Oundle', kit:'#1c1c1c', trim:'#c8102e', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'National League 2 East', place:2, w:20, d:2, l:4, pf:940, pa:713 },
         { id:'ONO', name:'ONs', full:'Old Northamptonians', kit:'#c8102e', trim:'#1b2747', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 1 South East', place:8, w:7, d:0, l:15, pf:640, pa:648 },
-        { id:'NOS', name:'Old Scouts', full:'Northampton Old Scouts', kit:'#109a52', trim:'#f2b01e', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands East', place:1, w:19, d:0, l:3, pf:880, pa:446 },   // colours a free choice
+        { id:'NOS', name:'Old Scouts', full:'Northampton Old Scouts', kit:'#060144', trim:'#ff0000', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands East', place:1, w:19, d:0, l:3, pf:880, pa:446 },
         { id:'BAL', name:'Bedford Athletic', kit:'#f2efe6', trim:'#c8102e', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 Midlands East', place:4, w:16, d:0, l:6, pf:789, pa:550 },
         { id:'PET', name:'Peterborough', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Midlands East', place:5, w:12, d:2, l:8, pf:805, pa:571 },   // colours a free choice
-        { id:'KET', name:'Kettering', kit:'#2050b0', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands East', place:7, w:10, d:0, l:12, pf:575, pa:537 },   // colours a free choice
+        { id:'KET', name:'Kettering', kit:'#1f437a', trim:'#1c68b3', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands East', place:7, w:10, d:0, l:12, pf:575, pa:537 },
         { id:'DAV', name:'Daventry', kit:'#5a2d82', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 Midlands East', place:11, w:4, d:1, l:17, pf:414, pa:819 },   // colours a free choice
-        { id:'WEL', name:'Wellingborough', kit:'#c8102e', trim:'#f2efe6', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands East', place:12, w:2, d:0, l:20, pf:350, pa:1032 },   // colours a free choice
-        { id:'TOW', name:'Towcestrians', kit:'#7c1431', trim:'#f2b01e', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands East (South)', place:3 },
-        { id:'BUG', name:'Bugbrooke', kit:'#f2b01e', trim:'#0f5a32', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', place:6 },
-        { id:'LBU', name:'Long Buckby', kit:'#109a52', trim:'#1b2747', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:8 },
-        { id:'SLL', name:'S&L Corby', full:'Stewarts & Lloyds', kit:'#f2efe6', trim:'#1c1c1c', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', place:10 },   // colours a free choice
-        { id:'BIG', name:'Biggleswade', kit:'#1b2747', trim:'#c8102e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Midlands East (South)', place:11 },
-        { id:'DUS', name:'Dunstablians', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:12 },
+        { id:'WEL', name:'Wellingborough', kit:'#f71818', trim:'#d13a3a', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands East', place:12, w:2, d:0, l:20, pf:350, pa:1032 },
+        { id:'TOW', name:'Towcestrians', kit:'#7c1431', trim:'#f2b01e', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands East (South)', place:3, w:18, d:0, l:4, pf:747, pa:392 },
+        { id:'BUG', name:'Bugbrooke', kit:'#f2b01e', trim:'#0f5a32', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', place:6, w:11, d:0, l:11, pf:589, pa:662 },
+        { id:'LBU', name:'Long Buckby', kit:'#109a52', trim:'#1b2747', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:8, w:7, d:0, l:15, pf:528, pa:721 },
+        { id:'SLL', name:'S&L Corby', full:'Stewarts & Lloyds', kit:'#f2efe6', trim:'#1c1c1c', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', place:10, w:9, d:0, l:13, pf:453, pa:759 },   // colours a free choice
+        { id:'BIG', name:'Biggleswade', kit:'#1b2747', trim:'#c8102e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Midlands East (South)', place:11, w:6, d:0, l:16, pf:388, pa:700 },
+        { id:'DUS', name:'Dunstablians', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:12, w:0, d:0, l:22, pf:302, pa:874 },
       ] },
       { county:'Eastern Counties', label:'Eastern Counties', code:'ECO', key:'eco', wraps:true, shared:[], cups:null, clubs:[
         { id:'BSE', name:'Bury St Edmunds', kit:'#006600', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'National League 2 East', place:1, w:20, d:1, l:5, pf:1128, pa:659 },
         { id:'COC', name:'Colchester', kit:'#1c1c1c', trim:'#c8102e', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 1 South East', place:1, w:21, d:0, l:1, pf:909, pa:461 },
-        { id:'SUD', name:'Sudbury', kit:'#1b2747', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 1 South East', place:5, w:10, d:0, l:12, pf:691, pa:677 },   // colours a free choice
+        { id:'SUD', name:'Sudbury', kit:'#0b0474', trim:'#c8102e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 1 South East', place:5, w:10, d:0, l:12, pf:691, pa:677 },
         { id:'NWA', name:'North Walsham', kit:'#1c1c1c', trim:'#006600', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 1 South East', place:6, w:11, d:1, l:10, pf:563, pa:619 },
         { id:'SHL', name:'Shelford', kit:'#a42957', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 1 South East', place:12, w:6, d:1, l:15, pf:508, pa:803 },
-        { id:'WYM', name:'Wymondham', kit:'#f2b01e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 Anglia', place:4, w:14, d:0, l:8, pf:743, pa:542 },   // colours a free choice
+        { id:'WYM', name:'Wymondham', kit:'#f2b01e', trim:'#c8102e', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 Anglia', place:4, w:14, d:0, l:8, pf:743, pa:542 },   // colours a free choice
         { id:'NOI', name:'Norwich', kit:'#7c1431', trim:'#f2b01e', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 Anglia', place:11, w:6, d:0, l:16, pf:513, pa:934 },   // colours a free choice
-        { id:'HOL', name:'Holt', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Anglia', place:12, w:0, d:0, l:22, pf:322, pa:1066 },   // colours a free choice
-        { id:'STW', name:'Stowmarket', kit:'#2050b0', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:2 },   // colours a free choice
-        { id:'SWL', name:'Saffron Walden', kit:'#f2efe6', trim:'#1b2747', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:3 },   // colours a free choice
-        { id:'SOU', name:'Southwold', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:4 },   // colours a free choice
-        { id:'WNO', name:'West Norfolk', kit:'#5b2a86', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Eastern Counties', place:5 },   // colours a free choice
-        { id:'IPS', name:'Ipswich', kit:'#1b2747', trim:'#6fb7e6', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:7 },   // colours a free choice
-        { id:'NEM', name:'Newmarket', kit:'#c8102e', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Eastern Counties', place:8 },   // colours a free choice
-        { id:'ELY', name:'Ely', kit:'#f2b01e', trim:'#c8102e', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:10 },   // colours a free choice
-        { id:'IYM', name:'Ipswich YM', kit:'#7c1431', trim:'#6fb7e6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Eastern Counties', place:11 },   // colours a free choice
+        { id:'HOL', name:'Holt', kit:'#333333', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Anglia', place:12, w:0, d:0, l:22, pf:322, pa:1066 },
+        { id:'STW', name:'Stowmarket', kit:'#000037', trim:'#c8102e', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:2, w:15, d:0, l:7, pf:806, pa:560 },
+        { id:'SWL', name:'Saffron Walden', kit:'#f2efe6', trim:'#1b2747', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:3, w:14, d:1, l:7, pf:829, pa:502 },   // colours a free choice
+        { id:'SOU', name:'Southwold', kit:'#000100', trim:'#f2b01e', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:4, w:14, d:0, l:8, pf:725, pa:465 },
+        { id:'WNO', name:'West Norfolk', kit:'#5b2a86', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Eastern Counties', place:5, w:14, d:1, l:7, pf:539, pa:441 },   // colours a free choice
+        { id:'IPS', name:'Ipswich', kit:'#f2b01e', trim:'#040301', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:7, w:11, d:0, l:11, pf:674, pa:689 },
+        { id:'NEM', name:'Newmarket', kit:'#c8102e', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Eastern Counties', place:8, w:11, d:0, l:11, pf:669, pa:513 },   // colours a free choice
+        { id:'ELY', name:'Ely', kit:'#1c1c1c', trim:'#e8731c', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Eastern Counties', place:10, w:5, d:0, l:17, pf:610, pa:924 },
+        { id:'IYM', name:'Ipswich YM', kit:'#7c1431', trim:'#6fb7e6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Eastern Counties', place:11, w:6, d:0, l:16, pf:296, pa:872 },   // colours a free choice
       ] },
       { county:'Essex', label:'Essex', code:'ESS', key:'ess', wraps:false, shared:[], cups:null, clubs:[
         { id:'SSA', name:'Southend Saxons', kit:'#663300', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 1 South East', place:4, w:12, d:0, l:10, pf:666, pa:762 },
@@ -245,20 +246,20 @@ function localCounties() {
         { id:'BRE', name:'Brentwood', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 Anglia', place:3, w:16, d:1, l:5, pf:891, pa:454 },
         { id:'WAT', name:'Wanstead', kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Anglia', place:5, w:11, d:0, l:11, pf:614, pa:673 },   // colours a free choice
         { id:'HAL', name:'Harlow', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Anglia', place:6, w:10, d:0, l:12, pf:595, pa:678 },
-        { id:'RHU', name:'Rochford Hundred', kit:'#2050b0', trim:'#f2b01e', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 Anglia', place:7, w:9, d:2, l:11, pf:582, pa:653 },   // colours a free choice
+        { id:'RHU', name:'Rochford Hundred', kit:'#1c1c1c', trim:'#ff0400', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 Anglia', place:7, w:9, d:2, l:11, pf:582, pa:653 },
         { id:'WOO', name:'Woodford', kit:'#5b2a86', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 2 Anglia', place:8, w:9, d:1, l:12, pf:629, pa:711 },   // colours a free choice
         { id:'CHL', name:'Chelmsford', kit:'#f2efe6', trim:'#1b2747', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Anglia', place:9, w:8, d:0, l:14, pf:555, pa:689 },
-        { id:'BRR', name:'Braintree', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Anglia', place:10, w:7, d:0, l:15, pf:603, pa:702 },   // colours a free choice
-        { id:'THU', name:'Thurrock', kit:'#7c1431', trim:'#6fb7e6', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Essex', place:1 },   // colours a free choice
-        { id:'EUC', name:'Upper Clapton', full:'Epping Upper Clapton', kit:'#c8102e', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Essex', place:2 },   // colours a free choice
-        { id:'RGP', name:'Romford', full:'Romford & Gidea Park', kit:'#5b2a86', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Essex', place:3 },   // colours a free choice
-        { id:'MLD', name:'Maldon', kit:'#004c99', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Essex', place:4 },
-        { id:'CAP', name:'Campion', kit:'#109a52', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Essex', place:5 },   // colours a free choice
-        { id:'ELO', name:'East London', kit:'#1b2747', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Essex', place:6 },   // colours a free choice
-        { id:'BIE', name:'Billericay', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Essex', place:7 },
-        { id:'CHG', name:'Chingford', kit:'#e8701a', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Essex', place:8 },   // colours a free choice
-        { id:'SHO', name:'Stanford-le-Hope', kit:'#f2efe6', trim:'#109a52', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Essex', place:9 },   // colours a free choice
-        { id:'UPM', name:'Upminster', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Essex', place:10 },   // colours a free choice
+        { id:'BRR', name:'Braintree', kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Anglia', place:10, w:7, d:0, l:15, pf:603, pa:702 },
+        { id:'THU', name:'Thurrock', kit:'#1c1c1c', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Essex', place:1, w:17, d:0, l:1, pf:798, pa:217 },
+        { id:'EUC', name:'Upper Clapton', full:'Epping Upper Clapton', kit:'#ff3718', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Essex', place:2, w:15, d:1, l:2, pf:584, pa:396 },
+        { id:'RGP', name:'Romford', full:'Romford & Gidea Park', kit:'#1c1c1c', trim:'#4c097d', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Essex', place:3, w:14, d:0, l:4, pf:664, pa:407 },
+        { id:'MLD', name:'Maldon', kit:'#004c99', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Essex', place:4, w:8, d:0, l:10, pf:489, pa:566 },
+        { id:'CAP', name:'Campion', kit:'#1c1c1c', trim:'#bd0503', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Essex', place:5, w:8, d:0, l:10, pf:522, pa:508 },
+        { id:'ELO', name:'East London', kit:'#7c1431', trim:'#100438', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Essex', place:6, w:8, d:0, l:10, pf:493, pa:564 },
+        { id:'BIE', name:'Billericay', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Essex', place:7, w:7, d:0, l:11, pf:448, pa:638 },
+        { id:'CHG', name:'Chingford', kit:'#e8701a', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Essex', place:8, w:4, d:0, l:14, pf:408, pa:581 },   // colours a free choice
+        { id:'SHO', name:'Stanford-le-Hope', kit:'#f2efe6', trim:'#109a52', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Essex', place:9, w:4, d:0, l:14, pf:301, pa:639 },   // colours a free choice
+        { id:'UPM', name:'Upminster', kit:'#0035ab', trim:'#ffea2e', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Essex', place:10, w:4, d:1, l:13, pf:300, pa:491 },
       ] },
       { county:'Gloucestershire', label:'Glos', code:'GLS', key:'gls', wraps:false, shared:[], cups:null, clubs:[
         { id:'DCR', name:'Dings Crusaders', kit:'#2050b0', trim:'#1c1c1c', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'National League 1', place:10, w:9, d:0, l:17, pf:719, pa:942 },
@@ -270,13 +271,13 @@ function localCounties() {
         { id:'MAT', name:'Matson', kit:'#732b43', trim:'#b01e73', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 1 South West', place:12, w:4, d:0, l:18, pf:341, pa:685 },
         { id:'SWO', name:'Stow-on-the-Wold', kit:'#2050b0', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Midlands West', place:2, w:16, d:0, l:6, pf:574, pa:462 },   // colours a free choice
         { id:'CLV', name:'Cleve', kit:'#7c1431', trim:'#f2efe6', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 Severn', place:3, w:18, d:0, l:4, pf:1109, pa:418 },
-        { id:'OCE', name:'Old Centralians', kit:'#e8731c', trim:'#1c1c1c', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Severn', place:6, w:11, d:1, l:10, pf:665, pa:712 },   // colours a free choice
-        { id:'THO', name:'Thornbury', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Severn', place:7, w:11, d:0, l:11, pf:774, pa:673 },   // colours a free choice
+        { id:'OCE', name:'Old Centralians', kit:'#181887', trim:'#ffd60a', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Severn', place:6, w:11, d:1, l:10, pf:665, pa:712 },
+        { id:'THO', name:'Thornbury', kit:'#1c1c1c', trim:'#ffdd00', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Severn', place:7, w:11, d:0, l:11, pf:774, pa:673 },
         { id:'LOG', name:'Longlevens', kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Severn', place:8, w:10, d:0, l:12, pf:698, pa:723 },   // colours a free choice
         { id:'CHT', name:'Cheltenham', kit:'#6fb7e6', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Severn', place:12, w:0, d:1, l:21, pf:276, pa:1166 },   // colours a free choice
-        { id:'OBI', name:'Old Bristolians', kit:'#7c1431', trim:'#f2b01e', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Western North', place:5 },
-        { id:'GLE', name:'Gordon League', kit:'#f2efe6', trim:'#c8102e', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Western North', place:9 },
-        { id:'CHF', name:'Chosen Hill FP', full:'Chosen Hill Former Pupils', kit:'#0f5a32', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Western North', place:12 },
+        { id:'OBI', name:'Old Bristolians', kit:'#7c1431', trim:'#f2b01e', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Western North', place:5, w:11, d:0, l:11, pf:675, pa:650 },
+        { id:'GLE', name:'Gordon League', kit:'#f2efe6', trim:'#c8102e', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Western North', place:9, w:8, d:1, l:13, pf:518, pa:626 },
+        { id:'CHF', name:'Chosen Hill FP', full:'Chosen Hill Former Pupils', kit:'#0f5a32', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Western North', place:12, w:2, d:1, l:19, pf:377, pa:790 },
       ] },
       { county:'Hampshire', label:'Hampshire', code:'HAM', key:'ham', wraps:false, shared:['ALD'], cups:[{ name:'Hampshire Cup', to:7 }, { name:'Hampshire Bowl', to:9 }, { name:'Hampshire Plate', to:11 }], clubs:[
         { id:'HAV', name:'Havant', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'National League 2 East', place:8, w:11, d:1, l:14, pf:840, pa:960 },
@@ -285,14 +286,14 @@ function localCounties() {
         { id:'WIN', name:'Winchester', kit:'#109a52', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South Central', place:2, w:19, d:0, l:3, pf:823, pa:361 },   // colours a free choice
         { id:'PEE', name:'Petersfield', kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 South Central', place:5, w:12, d:1, l:9, pf:566, pa:526 },
         { id:'TOT', name:'Tottonians', kit:'#f2efe6', trim:'#109a52', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 South Central', place:6, w:11, d:1, l:10, pf:653, pa:497 },   // colours a free choice
-        { id:'ERI', name:'Ellingham', full:'Ellingham & Ringwood', kit:'#6fb7e6', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 South Central', place:12, w:1, d:0, l:21, pf:276, pa:970 },   // colours a free choice
-        { id:'POT', name:'Portsmouth', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Hampshire', place:2 },   // colours a free choice
-        { id:'BAI', name:'Basingstoke', kit:'#2554af', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Hampshire', place:3 },
-        { id:'ANO', name:'Andover', kit:'#c8102e', trim:'#6fb7e6', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Hampshire', place:4 },   // colours a free choice
-        { id:'SSH', name:'Sandown Shanklin', full:'Sandown & Shanklin', kit:'#f2b01e', trim:'#1b2747', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Hampshire', place:5 },   // colours a free choice
-        { id:'MIL', name:'Millbrook', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Hampshire', place:9 },   // colours a free choice
-        { id:'GFA', name:'Gosport Fareham', full:'Gosport & Fareham', kit:'#1b2747', trim:'#c8102e', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Hampshire', place:10 },   // colours a free choice
-        { id:'EAT', name:'Eastleigh', kit:'#7c1431', trim:'#f2b01e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Hampshire', place:12 },   // colours a free choice
+        { id:'ERI', name:'Ellingham', full:'Ellingham & Ringwood', kit:'#001969', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 South Central', place:12, w:1, d:0, l:21, pf:276, pa:970 },
+        { id:'POT', name:'Portsmouth', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Hampshire', place:2, w:17, d:0, l:5, pf:589, pa:544 },   // colours a free choice
+        { id:'BAI', name:'Basingstoke', kit:'#2554af', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Hampshire', place:3, w:14, d:1, l:7, pf:802, pa:472 },
+        { id:'ANO', name:'Andover', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Hampshire', place:4, w:13, d:0, l:9, pf:680, pa:465 },
+        { id:'SSH', name:'Sandown Shanklin', full:'Sandown & Shanklin', kit:'#080658', trim:'#af0000', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Hampshire', place:5, w:12, d:0, l:10, pf:601, pa:643 },
+        { id:'MIL', name:'Millbrook', kit:'#1ec14c', trim:'#fe0303', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Hampshire', place:9, w:10, d:0, l:12, pf:525, pa:655 },
+        { id:'GFA', name:'Gosport Fareham', full:'Gosport & Fareham', kit:'#2e3594', trim:'#ffc505', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Hampshire', place:10, w:9, d:0, l:13, pf:569, pa:707 },   // hoops a free choice
+        { id:'EAT', name:'Eastleigh', kit:'#1c1c1c', trim:'#f1f521', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Hampshire', place:12, w:2, d:0, l:20, pf:244, pa:1030 },
       ] },
       { county:'Hertfordshire', label:'Hertfordshire', code:'HRT', key:'hrt', wraps:false, shared:[], cups:[{ name:'Hertfordshire Presidents\' Cup', to:6 }, { name:'Hertfordshire Presidents\' Tankard', to:8 }, { name:'Hertfordshire Presidents\' Trophy', to:10 }], clubs:[
         { id:'BST', name:'Stortford', full:'Bishop\'s Stortford', kit:'#2050b0', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'National League 1', place:6, w:13, d:0, l:13, pf:781, pa:836 },
@@ -300,12 +301,12 @@ function localCounties() {
         { id:'LGC', name:'Letchworth', full:'Letchworth Garden City', kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 1 South East', place:2, w:17, d:1, l:4, pf:874, pa:554 },
         { id:'TRN', name:'Tring', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 South East', place:3, w:14, d:2, l:6, pf:743, pa:629 },
         { id:'HFD', name:'Hertford', kit:'#2050b0', trim:'#1c1c1c', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 1 South East', place:7, w:8, d:1, l:13, pf:651, pa:775 },
-        { id:'HAP', name:'Harpenden', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 Thames', place:8 },   // colours a free choice
-        { id:'CHH', name:'Cheshunt', kit:'#109a52', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Hertfordshire', place:1 },   // colours a free choice
-        { id:'HIT', name:'Hitchin', kit:'#7c1431', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Hertfordshire', place:3 },
-        { id:'HHE', name:'Hemel Hempstead', kit:'#6fb7e6', trim:'#c8102e', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Hertfordshire', place:6 },   // colours a free choice
-        { id:'FUL', name:'Fullerians', kit:'#1c1c1c', trim:'#109a52', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Hertfordshire', place:8 },
-        { id:'WEW', name:'Welwyn', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Hertfordshire', place:10 },
+        { id:'HAP', name:'Harpenden', kit:'#1c1c1c', trim:'#ff0000', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 Thames', place:8, w:10, d:0, l:12, pf:653, pa:674 },
+        { id:'CHH', name:'Cheshunt', kit:'#58ad33', trim:'#7c1431', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Hertfordshire', place:1, w:18, d:0, l:0, pf:782, pa:291 },
+        { id:'HIT', name:'Hitchin', kit:'#7c1431', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Hertfordshire', place:3, w:9, d:0, l:9, pf:653, pa:485 },
+        { id:'HHE', name:'Hemel Hempstead', kit:'#6fb7e6', trim:'#1b2747', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Hertfordshire', place:6, w:7, d:0, l:11, pf:465, pa:485 },   // colours a free choice
+        { id:'FUL', name:'Fullerians', kit:'#1c1c1c', trim:'#109a52', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Hertfordshire', place:8, w:6, d:0, l:12, pf:409, pa:540 },
+        { id:'WEW', name:'Welwyn', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Hertfordshire', place:10, w:4, d:0, l:14, pf:331, pa:604 },
       ] },
       { county:'Kent', label:'Kent', code:'KEN', key:'ken', wraps:false, shared:[], cups:[{ name:'Kent Cup', to:6 }, { name:'Kent Shield', to:8 }, { name:'Kent Vase', to:10 }], clubs:[
         { id:'BLA', name:'Blackheath', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'National League 1', place:2, w:21, d:0, l:5, pf:911, pa:530 },
@@ -313,23 +314,23 @@ function localCounties() {
         { id:'CAT', name:'Canterbury', kit:'#f2b01e', trim:'#1c1c1c', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'National League 2 East', place:5, w:16, d:0, l:10, pf:851, pa:644 },
         { id:'WPA', name:'Westcombe Park', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'National League 2 East', place:7, w:12, d:0, l:14, pf:851, pa:751 },
         { id:'SEO', name:'Sevenoaks', kit:'#1b2747', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'National League 2 East', place:13, w:8, d:0, l:18, pf:743, pa:900 },
-        { id:'TWE', name:'Tunbridge Wells', kit:'#2050b0', trim:'#f2efe6', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 1 South Central', place:3, w:14, d:1, l:7, pf:749, pa:512 },   // colours a free choice
-        { id:'MED', name:'Medway', kit:'#c8102e', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 1 South East', place:11, w:7, d:0, l:15, pf:525, pa:702 },   // colours a free choice
-        { id:'SIC', name:'Sidcup', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 South East', place:1, w:19, d:0, l:3, pf:767, pa:377 },   // colours a free choice
-        { id:'GRV', name:'Gravesend', kit:'#c8102e', trim:'#6fb7e6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 South East', place:3, w:14, d:1, l:7, pf:689, pa:505 },   // colours a free choice
-        { id:'OCO', name:'Old Colfeians', kit:'#1b2747', trim:'#c8102e', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 South East', place:5, w:12, d:1, l:9, pf:709, pa:615 },   // colours a free choice
+        { id:'TWE', name:'Tunbridge Wells', kit:'#1b2747', trim:'#f2b01e', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 1 South Central', place:3, w:14, d:1, l:7, pf:749, pa:512 },
+        { id:'MED', name:'Medway', kit:'#1b2747', trim:'#c8102e', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 1 South East', place:11, w:7, d:0, l:15, pf:525, pa:702 },
+        { id:'SIC', name:'Sidcup', kit:'#7c1431', trim:'#1b2747', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 South East', place:1, w:19, d:0, l:3, pf:767, pa:377 },
+        { id:'GRV', name:'Gravesend', kit:'#030001', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 South East', place:3, w:14, d:1, l:7, pf:689, pa:505 },
+        { id:'OCO', name:'Old Colfeians', kit:'#1b2747', trim:'#109a52', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 South East', place:5, w:12, d:1, l:9, pf:709, pa:615 },   // colours a free choice
         { id:'BEC', name:'Beckenham', kit:'#0000cd', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 South East', place:8, w:10, d:0, l:12, pf:666, pa:545 },
         { id:'BRM', name:'Bromley', kit:'#5b2a86', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 South East', place:9, w:8, d:0, l:14, pf:628, pa:756 },   // colours a free choice
-        { id:'DAR', name:'Dartfordians', kit:'#7c1431', trim:'#f2b01e', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 South East', place:11, w:6, d:0, l:16, pf:594, pa:846 },   // colours a free choice
-        { id:'OEL', name:'Old Elthamians', kit:'#2050b0', trim:'#f2b01e', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Kent', place:1 },   // colours a free choice
-        { id:'DBE', name:'Deal & Bettes', full:'Deal & Betteshanger', kit:'#f2b01e', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', place:2 },   // colours a free choice
-        { id:'ASH', name:'Ashford', kit:'#0b5a3c', trim:'#6fb7e6', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', place:5 },   // colours a free choice
-        { id:'DOV', name:'Dover', kit:'#f2efe6', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Kent', place:6 },   // colours a free choice
-        { id:'BEE', name:'Beccehamian', kit:'#7c1431', trim:'#1c1c1c', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Kent', place:8 },   // colours a free choice
-        { id:'GAN', name:'Anchorians', full:'Gillingham Anchorians', kit:'#1b2747', trim:'#109a52', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Kent', place:9 },   // colours a free choice
-        { id:'PHU', name:'Park House', kit:'#c8102e', trim:'#e8731c', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', place:10 },   // colours a free choice
-        { id:'CRA', name:'Cranbrook', kit:'#6fb7e6', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Kent', place:11 },   // colours a free choice
-        { id:'CPA', name:'Charlton Park', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Kent', place:12 },
+        { id:'DAR', name:'Dartfordians', kit:'#7c1431', trim:'#d79c02', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 South East', place:11, w:6, d:0, l:16, pf:594, pa:846 },
+        { id:'OEL', name:'Old Elthamians', kit:'#316195', trim:'#f2b01e', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Kent', place:1, w:21, d:0, l:1, pf:1032, pa:335 },
+        { id:'DBE', name:'Deal & Bettes', full:'Deal & Betteshanger', kit:'#1c1c1c', trim:'#e8731c', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', place:2 },   // trim a free choice
+        { id:'ASH', name:'Ashford', kit:'#0b5a3c', trim:'#e8731c', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', place:5, w:13, d:0, l:9, pf:684, pa:546 },   // colours a free choice
+        { id:'DOV', name:'Dover', kit:'#1b2747', trim:'#3cb5e1', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Kent', place:6, w:11, d:0, l:11, pf:537, pa:536 },
+        { id:'BEE', name:'Beccehamian', kit:'#790301', trim:'#1c1c1c', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Kent', place:8 },   // hoops a free choice
+        { id:'GAN', name:'Anchorians', full:'Gillingham Anchorians', kit:'#1b2747', trim:'#2050b0', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Kent', place:9, w:6, d:0, l:16, pf:404, pa:792 },   // colours a free choice
+        { id:'PHU', name:'Park House', kit:'#c8102e', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Kent', place:10, w:5, d:0, l:17, pf:424, pa:737 },   // colours a free choice
+        { id:'CRA', name:'Cranbrook', kit:'#7c1431', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Kent', place:11, w:5, d:1, l:16, pf:415, pa:686 },
+        { id:'CPA', name:'Charlton Park', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Kent', place:12, w:3, d:1, l:18, pf:295, pa:761 },
       ] },
       { county:'Lancashire', label:'Lancashire', code:'LAN', key:'lan', wraps:false, shared:[], cups:null, clubs:[
         { id:'SPA', name:'Sedgley Park', kit:'#f2b01e', trim:'#7c1431', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'National League 1', place:13, w:8, d:0, l:18, pf:547, pa:923 },
@@ -340,20 +341,20 @@ function localCounties() {
         { id:'ROC', name:'Rochdale', kit:'#1c1c1c', trim:'#6fb7e6', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 1 North West', place:8, w:8, d:1, l:13, pf:583, pa:796 },   // colours a free choice
         { id:'MCR', name:'Manchester', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 1 North West', place:9, w:8, d:1, l:13, pf:616, pa:754 },
         { id:'VLU', name:'Vale of Lune', kit:'#f2efe6', trim:'#c8102e', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 North West', place:2, w:16, d:0, l:6, pf:668, pa:432 },
-        { id:'WID', name:'Widnes', kit:'#1b2747', trim:'#109a52', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 North West', place:4, w:13, d:0, l:9, pf:581, pa:603 },   // colours a free choice
+        { id:'WID', name:'Widnes', kit:'#c8102e', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 North West', place:4, w:13, d:0, l:9, pf:581, pa:603 },
         { id:'BUA', name:'Burnage', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 North West', place:6, w:11, d:0, l:11, pf:595, pa:606 },
         { id:'WAE', name:'Waterloo', kit:'#0f5a32', trim:'#c8102e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 North West', place:9, w:8, d:0, l:14, pf:535, pa:651 },
         { id:'WPS', name:'West Park', full:'West Park St Helens', kit:'#006600', trim:'#f2b01e', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 North West', place:11, w:8, d:0, l:14, pf:457, pa:757 },
-        { id:'WAI', name:'Warrington', kit:'#f2b01e', trim:'#2050b0', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 ADM Lancashire & Cheshire', place:2 },   // colours a free choice
-        { id:'ALW', name:'Aldwinians', kit:'#c8102e', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:3 },
-        { id:'ECC', name:'Eccles', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:4 },
-        { id:'DTH', name:'Didsbury Toc H', kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:5 },
-        { id:'BPK', name:'Broughton Park', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:7 },
-        { id:'TAL', name:'Tarleton', kit:'#7c1431', trim:'#f2efe6', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:8 },   // colours a free choice
-        { id:'WIA', name:'Wigan', kit:'#1c1c1c', trim:'#2050b0', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:9 },   // colours a free choice
-        { id:'LSH', name:'Liverpool St H', full:'Liverpool St Helens', kit:'#1b2747', trim:'#c8102e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:10 },
-        { id:'ASU', name:'Aspull', kit:'#2050b0', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:11 },   // colours a free choice
-        { id:'TMV', name:'Trafford MV', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:12 },
+        { id:'WAI', name:'Warrington', kit:'#c8102e', trim:'#078f10', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 ADM Lancashire & Cheshire', place:2, w:19, d:0, l:3, pf:1110, pa:350 },
+        { id:'ALW', name:'Aldwinians', kit:'#c8102e', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:3, w:16, d:0, l:6, pf:668, pa:449 },
+        { id:'ECC', name:'Eccles', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:4, w:14, d:0, l:8, pf:872, pa:558 },
+        { id:'DTH', name:'Didsbury Toc H', kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:5, w:16, d:0, l:6, pf:613, pa:472 },
+        { id:'BPK', name:'Broughton Park', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:7, w:7, d:0, l:15, pf:563, pa:740 },
+        { id:'TAL', name:'Tarleton', kit:'#7c1431', trim:'#f2efe6', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:8, w:9, d:0, l:13, pf:508, pa:728 },   // colours a free choice
+        { id:'WIA', name:'Wigan', kit:'#1c1c1c', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:9, w:6, d:1, l:15, pf:439, pa:676 },
+        { id:'LSH', name:'Liverpool St H', full:'Liverpool St Helens', kit:'#1b2747', trim:'#c8102e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:10, w:6, d:0, l:16, pf:494, pa:713 },
+        { id:'ASU', name:'Aspull', kit:'#2050b0', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 ADM Lancashire & Cheshire', place:11, w:6, d:1, l:15, pf:439, pa:654 },   // colours a free choice
+        { id:'TMV', name:'Trafford MV', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 ADM Lancashire & Cheshire', place:12, w:3, d:3, l:16, pf:486, pa:1027 },
       ] },
       { county:'Leicestershire', label:'Leicestershire', code:'LCS', key:'lcs', wraps:false, shared:[], cups:[{ name:'Leicestershire County Cup', to:7 }, { name:'Leicestershire Bowl', to:12 }], clubs:[
         { id:'LLI', name:'Leicester Lions', kit:'#7044a3', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'National League 1', place:14, w:2, d:0, l:24, pf:599, pa:1239 },
@@ -363,34 +364,34 @@ function localCounties() {
         { id:'LUT', name:'Lutterworth', kit:'#c8102e', trim:'#f2efe6', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 1 Midlands', place:9, w:10, d:0, l:12, pf:651, pa:704 },
         { id:'MHA', name:'Harborough', full:'Market Harborough', kit:'#1c1c1c', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands East', place:2, w:18, d:1, l:3, pf:951, pa:285 },
         { id:'OWY', name:'Oadby Wyggs', full:'Oadby Wyggestonians', kit:'#7c1431', trim:'#f2b01e', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 Midlands East', place:8, w:7, d:1, l:14, pf:527, pa:712 },   // colours a free choice
-        { id:'BEG', name:'Belgrave', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands North', place:12, w:4, d:0, l:18, pf:415, pa:904 },   // colours a free choice
-        { id:'LFO', name:'Leicester Forest', kit:'#0f5a32', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:5 },   // colours a free choice
-        { id:'VIP', name:'Vipers', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:7 },   // colours a free choice
-        { id:'MBS', name:'Market Bosworth', kit:'#0033cc', trim:'#f5c400', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', place:9 },
-        { id:'ASB', name:'Ashby', kit:'#f2b01e', trim:'#c8102e', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (North)', place:12 },   // colours a free choice
+        { id:'BEG', name:'Belgrave', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands North', place:12, w:4, d:0, l:18, pf:415, pa:904 },
+        { id:'LFO', name:'Leicester Forest', kit:'#2050b0', trim:'#1b2747', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:5, w:11, d:0, l:11, pf:611, pa:657 },
+        { id:'VIP', name:'Vipers', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (South)', place:7, w:10, d:0, l:12, pf:553, pa:494 },   // colours a free choice
+        { id:'MBS', name:'Market Bosworth', kit:'#0033cc', trim:'#f5c400', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Midlands East (South)', place:9, w:8, d:0, l:14, pf:464, pa:588 },
+        { id:'ASB', name:'Ashby', kit:'#7c1431', trim:'#3084ce', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (North)', place:12, w:3, d:0, l:19, pf:320, pa:1001 },
       ] },
       { county:'Middlesex', label:'Middlesex', code:'MDX', key:'mdx', wraps:false, shared:[], cups:[{ name:'Middlesex Senior Cup', to:7 }, { name:'Middlesex Bowl', to:9 }, { name:'Middlesex Vase', to:10 }], clubs:[
         { id:'LWL', name:'London Welsh', kit:'#c8102e', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:3, stamina:2, league:'National League 2 East', place:9, w:10, d:0, l:16, pf:705, pa:866 },
         { id:'LSL', name:'Scottish Lions', full:'London Scottish Lions', kit:'#1b2747', trim:'#c8102e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 1 South Central', place:2, w:18, d:0, l:4, pf:775, pa:502 },
         { id:'CST', name:'CS Stags 1863', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 1 South Central', place:5, w:12, d:1, l:9, pf:721, pa:495 },
         { id:'HFU', name:'Hammersmith', full:'Hammersmith & Fulham', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 1 South Central', place:11, w:3, d:0, l:19, pf:497, pa:822 },
-        { id:'BUN', name:'Brunel', full:'Brunel University', kit:'#2050b0', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Thames', place:1 },
+        { id:'BUN', name:'Brunel', full:'Brunel University', kit:'#2050b0', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Thames', place:1, w:21, d:0, l:1, pf:1092, pa:487 },
         { id:'HAC', name:'HAC', kit:'#1b2747', trim:'#6fb7e6', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 Anglia', place:2, w:20, d:0, l:2, pf:902, pa:400 },   // colours a free choice
-        { id:'OPR', name:'Old Priorians', kit:'#7c1431', trim:'#109a52', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Thames', place:3 },   // colours a free choice
-        { id:'BPA', name:'Belsize Park', kit:'#800080', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 Thames', place:4 },
-        { id:'TWI', name:'Twickenham', kit:'#1c1c1c', trim:'#109a52', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 South Central', place:8, w:10, d:0, l:12, pf:679, pa:665 },   // colours a free choice
-        { id:'GRS', name:'Grasshoppers', kit:'#109a52', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Thames', place:9 },   // colours a free choice
-        { id:'ETR', name:'Ealing 1871', full:'Ealing Trailfinders 1871', kit:'#006666', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Middlesex', place:1 },
-        { id:'FIC', name:'Finchley', kit:'#f2efe6', trim:'#c8102e', hoops:true, pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Middlesex', place:2 },
-        { id:'OHB', name:'Old Haberdashers', kit:'#1b2747', trim:'#c2185b', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:3 },
-        { id:'HAT', name:'Hampstead', kit:'#7c1431', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Middlesex', place:4 },
-        { id:'CHW', name:'Chiswick', kit:'#7c1431', trim:'#6fb7e6', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:5 },
-        { id:'LCO', name:'London Cornish', kit:'#1c1c1c', trim:'#2050b0', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Surrey/Sussex', place:6 },   // colours a free choice
-        { id:'OST', name:'Old Streetonians', kit:'#c8102e', trim:'#1b2747', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Middlesex', place:6 },
-        { id:'RUI', name:'Ruislip', kit:'#7c1431', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Middlesex', place:7 },
-        { id:'WAP', name:'Wasps', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:8 },
-        { id:'UOB', name:'UCS Old Boys', kit:'#f2efe6', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Middlesex', place:9 },
-        { id:'SAA', name:'Saracens Amateur', full:'Saracens Amateurs', kit:'#1c1c1c', trim:'#c8102e', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:10 },
+        { id:'OPR', name:'Old Priorians', kit:'#0f5a32', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 Thames', place:3, w:15, d:0, l:7, pf:856, pa:625 },
+        { id:'BPA', name:'Belsize Park', kit:'#800080', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 2 Thames', place:4, w:14, d:0, l:8, pf:776, pa:550 },
+        { id:'TWI', name:'Twickenham', kit:'#fa0505', trim:'#030303', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 South Central', place:8, w:10, d:0, l:12, pf:679, pa:665 },
+        { id:'GRS', name:'Grasshoppers', kit:'#109a52', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Thames', place:9, w:8, d:1, l:13, pf:621, pa:884 },   // colours a free choice
+        { id:'ETR', name:'Ealing 1871', full:'Ealing Trailfinders 1871', kit:'#006666', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Middlesex', place:1, w:17, d:0, l:1, pf:669, pa:194 },
+        { id:'FIC', name:'Finchley', kit:'#f2efe6', trim:'#c8102e', hoops:true, pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Middlesex', place:2, w:15, d:0, l:3, pf:743, pa:252 },
+        { id:'OHB', name:'Old Haberdashers', kit:'#1b2747', trim:'#c2185b', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:3, w:13, d:0, l:5, pf:552, pa:385 },
+        { id:'HAT', name:'Hampstead', kit:'#7c1431', trim:'#f2b01e', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Middlesex', place:4, w:12, d:0, l:6, pf:647, pa:369 },
+        { id:'CHW', name:'Chiswick', kit:'#7c1431', trim:'#6fb7e6', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:5, w:9, d:1, l:8, pf:580, pa:454 },
+        { id:'LCO', name:'London Cornish', kit:'#1c1c1c', trim:'#fad905', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Surrey/Sussex', place:6, w:9, d:0, l:11, pf:603, pa:636 },
+        { id:'OST', name:'Old Streetonians', kit:'#c8102e', trim:'#1b2747', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Middlesex', place:6, w:8, d:1, l:9, pf:517, pa:540 },
+        { id:'RUI', name:'Ruislip', kit:'#7c1431', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Counties 1 Middlesex', place:7, w:6, d:1, l:11, pf:453, pa:513 },
+        { id:'WAP', name:'Wasps', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:8, w:4, d:0, l:14, pf:341, pa:883 },
+        { id:'UOB', name:'UCS Old Boys', kit:'#f2efe6', trim:'#c8102e', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Middlesex', place:9, w:3, d:1, l:14, pf:268, pa:745 },
+        { id:'SAA', name:'Saracens Amateur', full:'Saracens Amateurs', kit:'#1c1c1c', trim:'#c8102e', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Middlesex', place:10, w:1, d:0, l:17, pf:169, pa:604 },
       ] },
       { county:'North Midlands', label:'North Midlands', code:'NMD', key:'nmd', wraps:false, shared:[], cups:[{ name:'North Midlands Cup', to:6 }, { name:'North Midlands Shield', to:8 }, { name:'North Midlands Vase', to:10 }], clubs:[
         { id:'BMO', name:'Moseley', full:'Birmingham Moseley', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'National League 1', place:11, w:8, d:1, l:17, pf:660, pa:757 },
@@ -399,27 +400,27 @@ function localCounties() {
         { id:'NSA', name:'Newport (Salop)', kit:'#7c1431', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 1 Midlands', place:2, w:16, d:0, l:6, pf:858, pa:474 },
         { id:'STU', name:'Stourbridge', kit:'#000080', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 Midlands', place:3, w:15, d:1, l:6, pf:725, pa:495 },
         { id:'BRO', name:'Bromsgrove', kit:'#f2efe6', trim:'#c8102e', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 1 Midlands', place:5, w:13, d:0, l:9, pf:874, pa:595 },
-        { id:'BRD', name:'Bridgnorth', kit:'#1c1c1c', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 1 Midlands', place:7, w:12, d:1, l:9, pf:669, pa:517 },   // colours a free choice
+        { id:'BRD', name:'Bridgnorth', kit:'#1c1c1c', trim:'#0f5a32', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 1 Midlands', place:7, w:12, d:1, l:9, pf:669, pa:517 },
         { id:'DKI', name:'Dudley K', full:'Dudley Kingswinford', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 1 Midlands', place:11, w:2, d:1, l:19, pf:378, pa:892 },
-        { id:'MOA', name:'Moseley Oak', kit:'#1c1c1c', trim:'#6fb7e6', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands West', place:1, w:20, d:0, l:2, pf:826, pa:298 },   // colours a free choice
+        { id:'MOA', name:'Moseley Oak', kit:'#1c1c1c', trim:'#f2efe6', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands West', place:1, w:20, d:0, l:2, pf:826, pa:298 },   // colours a free choice
         { id:'HEE', name:'Hereford', kit:'#c8102e', trim:'#1c1c1c', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 Midlands West', place:4, w:11, d:0, l:11, pf:496, pa:481 },
-        { id:'EDW', name:'Edwardians', kit:'#1b2747', trim:'#109a52', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands West', place:6, w:9, d:1, l:12, pf:528, pa:567 },   // colours a free choice
-        { id:'LUD', name:'Ludlow', kit:'#c8102e', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands West', place:7, w:11, d:0, l:11, pf:442, pa:492 },   // colours a free choice
+        { id:'EDW', name:'Edwardians', kit:'#1b2747', trim:'#f0dc1e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands West', place:6, w:9, d:1, l:12, pf:528, pa:567 },
+        { id:'LUD', name:'Ludlow', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands West', place:7, w:11, d:0, l:11, pf:442, pa:492 },
         { id:'MAV', name:'Malvern', kit:'#1c1c1c', trim:'#2050b0', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 Midlands West', place:9, w:10, d:0, l:12, pf:515, pa:576 },   // colours a free choice
         { id:'OSA', name:'Old Saltleians', kit:'#f2b01e', trim:'#1c1c1c', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 Midlands North', place:10, w:8, d:0, l:14, pf:466, pa:719 },   // colours a free choice
         { id:'OHA', name:'Old Halesonians', kit:'#109a52', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Midlands West', place:12, w:3, d:0, l:19, pf:436, pa:763 },   // colours a free choice
-        { id:'WHI', name:'Whitchurch', kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (North)', place:1 },
-        { id:'WWA', name:'Worcester Wdrs', full:'Worcester Wanderers', kit:'#1b2747', trim:'#f2b01e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands West (South)', place:1 },
-        { id:'CAH', name:'Camp Hill', kit:'#7c1431', trim:'#6fb7e6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands West (South)', place:3 },
-        { id:'SHW', name:'Shrewsbury', kit:'#f2b01e', trim:'#c8102e', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands West (North)', place:3 },   // colours a free choice
-        { id:'LED', name:'Ledbury', kit:'#e8731c', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (South)', place:4 },   // colours a free choice
-        { id:'EVE', name:'Evesham', kit:'#6fb7e6', trim:'#c8102e', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Midlands West (South)', place:5 },   // colours a free choice
-        { id:'VES', name:'Veseyans', kit:'#e8731c', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (North)', place:5 },   // colours a free choice
-        { id:'BRY', name:'Bromyard', kit:'#0f5a32', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Midlands West (South)', place:6 },   // colours a free choice
-        { id:'AOE', name:'Aston OE', full:'Aston Old Edwardians', kit:'#f2efe6', trim:'#109a52', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Midlands West (North)', place:9 },   // colours a free choice
-        { id:'KCA', name:'Kidderminster', full:'Kidderminster Carolians', kit:'#1c1c1c', trim:'#5b2a86', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', place:11 },   // colours a free choice
-        { id:'THR', name:'Telford Hornets', kit:'#1c1c1c', trim:'#e8731c', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (North)', place:11 },   // colours a free choice
-        { id:'DRT', name:'Droitwich', kit:'#2050b0', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', place:12 },   // colours a free choice
+        { id:'WHI', name:'Whitchurch', kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (North)', place:1, w:20, d:0, l:2, pf:1054, pa:295 },
+        { id:'WWA', name:'Worcester Wdrs', full:'Worcester Wanderers', kit:'#1b2747', trim:'#f2b01e', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands West (South)', place:1, w:22, d:0, l:0, pf:1110, pa:303 },
+        { id:'CAH', name:'Camp Hill', kit:'#7c1431', trim:'#6fb7e6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands West (South)', place:3, w:14, d:1, l:7, pf:701, pa:518 },
+        { id:'SHW', name:'Shrewsbury', kit:'#1b2747', trim:'#6fb7e6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands West (North)', place:3, w:17, d:0, l:5, pf:960, pa:434 },
+        { id:'LED', name:'Ledbury', kit:'#e8731c', trim:'#1c1c1c', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (South)', place:4, w:13, d:0, l:9, pf:744, pa:471 },   // colours a free choice
+        { id:'EVE', name:'Evesham', kit:'#6fb7e6', trim:'#c8102e', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Midlands West (South)', place:5, w:12, d:1, l:9, pf:606, pa:557 },   // colours a free choice
+        { id:'VES', name:'Veseyans', kit:'#e8731c', trim:'#f2efe6', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands West (North)', place:5, w:13, d:0, l:9, pf:776, pa:622 },   // colours a free choice
+        { id:'BRY', name:'Bromyard', kit:'#0f5a32', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Midlands West (South)', place:6, w:12, d:1, l:9, pf:566, pa:576 },   // colours a free choice
+        { id:'AOE', name:'Aston OE', full:'Aston Old Edwardians', kit:'#c8102e', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Midlands West (North)', place:9, w:7, d:2, l:13, pf:446, pa:671 },   // trim a free choice
+        { id:'KCA', name:'Kidderminster', full:'Kidderminster Carolians', kit:'#1c1c1c', trim:'#109a52', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', place:11, w:4, d:0, l:18, pf:398, pa:1097 },   // trim a free choice
+        { id:'THR', name:'Telford Hornets', kit:'#1c1c1c', trim:'#e8731c', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (North)', place:11, w:1, d:1, l:20, pf:210, pa:1048 },   // trim a free choice
+        { id:'DRT', name:'Droitwich', kit:'#2050b0', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', place:12, w:1, d:0, l:21, pf:302, pa:879 },   // colours a free choice
       ] },
       { county:'Northumberland', label:'Northumber\u00adland', code:'NBL', key:'nbl', wraps:true, shared:[], cups:[{ name:'Northumberland Senior Cup', to:6 }, { name:'Northumberland Senior Plate', to:9 }], clubs:[
         { id:'TYN', name:'Tynedale', kit:'#2050b0', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'National League 2 North', place:2, w:21, d:0, l:5, pf:941, pa:509 },
@@ -429,59 +430,59 @@ function localCounties() {
         { id:'MOP', name:'Morpeth', kit:'#1b2747', trim:'#c8102e', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 North', place:8, w:11, d:1, l:10, pf:592, pa:566 },
         { id:'NOV', name:'Novocastrians', kit:'#f2efe6', trim:'#1c1c1c', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Durham & Northumberland', place:1 },
         { id:'MEI', name:'Medicals', kit:'#7c1431', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Durham & Northumberland', place:4 },
-        { id:'POE', name:'Ponteland', kit:'#7c1431', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Durham & Northumberland', place:9 },
+        { id:'POE', name:'Ponteland', kit:'#7c1431', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Durham & Northumberland', place:9, w:7, d:0, l:15, pf:615, pa:711 },
       ] },
       { county:'Notts Lincs & Derbyshire', label:'Notts Lincs & Derbyshire', code:'NLD', key:'nld', wraps:true, shared:[], cups:null, clubs:[
         { id:'SCU', name:'Scunthorpe', kit:'#006666', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'National League 2 North', place:13, w:5, d:0, l:21, pf:622, pa:1097 },
         { id:'LEA', name:'Long Eaton', kit:'#2f6fd6', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 1 North West', place:11, w:4, d:0, l:18, pf:521, pa:815 },
         { id:'DER', name:'Derby', kit:'#f2b01e', trim:'#1c1c1c', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 North West', place:12, w:1, d:1, l:20, pf:429, pa:867 },
         { id:'DRO', name:'Dronfield', kit:'#1b2747', trim:'#c8102e', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 Midlands North', place:1, w:20, d:0, l:2, pf:807, pa:302 },   // colours a free choice
-        { id:'WBR', name:'West Bridgford', kit:'#1c1c1c', trim:'#f2b01e', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Midlands North', place:2, w:18, d:0, l:4, pf:926, pa:479 },   // colours a free choice
+        { id:'WBR', name:'West Bridgford', kit:'#1c1c1c', trim:'#6fb7e6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 Midlands North', place:2, w:18, d:0, l:4, pf:926, pa:479 },   // colours a free choice
         { id:'MEB', name:'Melbourne Derbys', full:'Melbourne', kit:'#109a52', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 2 Midlands North', place:4, w:14, d:0, l:8, pf:683, pa:511 },
-        { id:'STA', name:'Stamford', kit:'#1c1c1c', trim:'#6fb7e6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands East', place:6, w:11, d:2, l:9, pf:565, pa:606 },   // colours a free choice
-        { id:'ILE', name:'Ilkeston', kit:'#2050b0', trim:'#f2b01e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands North', place:7, w:9, d:0, l:13, pf:546, pa:693 },   // colours a free choice
-        { id:'MAK', name:'Matlock', kit:'#7c1431', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Midlands North', place:8, w:9, d:0, l:13, pf:517, pa:593 },   // colours a free choice
+        { id:'STA', name:'Stamford', kit:'#1c1c1c', trim:'#109a52', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands East', place:6, w:11, d:2, l:9, pf:565, pa:606 },   // colours a free choice
+        { id:'ILE', name:'Ilkeston', kit:'#2050b0', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 Midlands North', place:7, w:9, d:0, l:13, pf:546, pa:693 },
+        { id:'MAK', name:'Matlock', kit:'#002a89', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Midlands North', place:8, w:9, d:0, l:13, pf:517, pa:593 },
         { id:'PAV', name:'Paviors', kit:'#4b2a7a', trim:'#f2efe6', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 Midlands North', place:9, w:8, d:0, l:14, pf:590, pa:677 },   // colours a free choice
-        { id:'NEA', name:'Newark', kit:'#f2efe6', trim:'#1b2747', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Midlands North', place:11, w:7, d:0, l:15, pf:460, pa:613 },   // colours a free choice
+        { id:'NEA', name:'Newark', kit:'#1b2747', trim:'#9e860c', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Midlands North', place:11, w:7, d:0, l:15, pf:460, pa:613 },
         { id:'NUI', name:'Nottingham Uni', full:'Nottingham University', kit:'#065434', trim:'#deb408', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands East (North)', place:1 },
         { id:'MRL', name:'Market Rasen', full:'Market Rasen & Louth', kit:'#109a52', trim:'#c8102e', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands East (North)', place:2 },
-        { id:'BOE', name:'Bourne', kit:'#1b2747', trim:'#109a52', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Midlands East (North)', place:4 },   // colours a free choice
-        { id:'SPL', name:'Spalding', kit:'#7c1431', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands East (North)', place:5 },   // colours a free choice
-        { id:'SOT', name:'Southwell', kit:'#c8102e', trim:'#1b2747', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Midlands East (North)', place:6 },
-        { id:'LIN', name:'Lincoln', kit:'#c8102e', trim:'#109a52', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Midlands East (North)', place:7 },
-        { id:'MES', name:'Mellish', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Midlands East (North)', place:8 },   // colours a free choice
-        { id:'KEO', name:'Keyworth', kit:'#2050b0', trim:'#6fb7e6', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Midlands East (North)', place:9 },   // colours a free choice
-        { id:'KEE', name:'Kesteven', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (North)', place:10 },
-        { id:'NMO', name:'Notts Moderns', full:'Nottingham Moderns', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Midlands East (North)', place:11 },
+        { id:'BOE', name:'Bourne', kit:'#080361', trim:'#f2b01e', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Midlands East (North)', place:4, w:17, d:0, l:5, pf:662, pa:368 },
+        { id:'SPL', name:'Spalding', kit:'#7c1431', trim:'#f2b01e', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands East (North)', place:5, w:12, d:1, l:9, pf:548, pa:446 },   // colours a free choice
+        { id:'SOT', name:'Southwell', kit:'#c8102e', trim:'#1b2747', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Midlands East (North)', place:6, w:11, d:1, l:10, pf:584, pa:640 },
+        { id:'LIN', name:'Lincoln', kit:'#c8102e', trim:'#109a52', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Midlands East (North)', place:7, w:10, d:0, l:12, pf:620, pa:751 },
+        { id:'MES', name:'Mellish', kit:'#0b8a0d', trim:'#000001', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Midlands East (North)', place:8, w:6, d:1, l:15, pf:568, pa:702 },
+        { id:'KEO', name:'Keyworth', kit:'#1c1c1c', trim:'#ffd000', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Midlands East (North)', place:9, w:7, d:1, l:14, pf:542, pa:804 },
+        { id:'KEE', name:'Kesteven', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Counties 1 Midlands East (North)', place:10, w:6, d:1, l:15, pf:418, pa:770 },
+        { id:'NMO', name:'Notts Moderns', full:'Nottingham Moderns', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Midlands East (North)', place:11, w:4, d:0, l:18, pf:373, pa:801 },
       ] },
       { county:'Oxfordshire', label:'Oxfordshire', code:'OXF', key:'oxf', wraps:false, shared:[], cups:[{ name:'Oxfordshire County Cup', to:7 }], clubs:[
         { id:'HHA', name:'Henley Hawks', kit:'#f2b01e', trim:'#1b2747', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'National League 2 East', place:12, w:9, d:2, l:15, pf:693, pa:665 },
         { id:'OQU', name:'Oxford Quins', kit:'#c8102e', trim:'#6fb7e6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'National League 2 East', place:14, w:2, d:0, l:24, pf:505, pa:1462 },
         { id:'BAB', name:'Banbury', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 1 Midlands', place:8, w:12, d:0, l:10, pf:726, pa:501 },
         { id:'WIT', name:'Witney', kit:'#0f5a32', trim:'#f2b01e', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 Severn', place:9, w:6, d:0, l:16, pf:611, pa:879 },   // colours a free choice
-        { id:'BIC', name:'Bicester', kit:'#f2efe6', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Southern North', place:8 },
-        { id:'OXO', name:'Oxford', kit:'#109a52', trim:'#1c1c1c', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Southern North', place:9 },
-        { id:'WAG', name:'Wallingford', kit:'#c8102e', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Southern North', place:11 },   // colours a free choice
-        { id:'GAB', name:'Gosford', full:'Gosford All Blacks', kit:'#1c1c1c', trim:'#f2b01e', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Southern North', place:12 },   // colours a free choice
+        { id:'BIC', name:'Bicester', kit:'#f2efe6', trim:'#1c1c1c', pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Southern North', place:8, w:10, d:0, l:12, pf:478, pa:533 },
+        { id:'OXO', name:'Oxford', kit:'#109a52', trim:'#1c1c1c', hoops:true, pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Southern North', place:9, w:9, d:0, l:13, pf:515, pa:564 },
+        { id:'WAG', name:'Wallingford', kit:'#1c1c1c', trim:'#faca0a', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Southern North', place:11, w:7, d:0, l:15, pf:442, pa:709 },
+        { id:'GAB', name:'Gosford', full:'Gosford All Blacks', kit:'#1c1c1c', trim:'#0f5a32', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Southern North', place:12, w:0, d:0, l:22, pf:261, pa:772 },
       ] },
       { county:'Somerset', label:'Somerset', code:'SOM', key:'som', wraps:false, shared:[], cups:[{ name:'Somerset Senior Cup', to:7 }], clubs:[
         { id:'TTI', name:'Taunton Titans', kit:'#1c1c1c', trim:'#9e1b32', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'National League 2 West', place:4, w:14, d:0, l:12, pf:894, pa:795 },
         { id:'HOR', name:'Hornets', kit:'#1c1c1c', trim:'#ffcc00', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'National League 2 West', place:6, w:14, d:0, l:12, pf:759, pa:756 },
         { id:'ORE', name:'Old Redcliffians', kit:'#c8102e', trim:'#1c1c1c', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'National League 2 West', place:8, w:12, d:0, l:14, pf:775, pa:778 },
-        { id:'CVA', name:'Chew Valley', kit:'#6fb7e6', trim:'#1b2747', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 South West', place:10, w:7, d:0, l:15, pf:474, pa:741 },   // colours a free choice
+        { id:'CVA', name:'Chew Valley', kit:'#0c8318', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 South West', place:10, w:7, d:0, l:15, pf:474, pa:741 },
         { id:'WSM', name:'Weston-s-Mare', full:'Weston-super-Mare', kit:'#2050b0', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Regional 2 South West', place:1, w:22, d:0, l:0, pf:1030, pa:358 },   // colours a free choice
-        { id:'KEH', name:'Keynsham', kit:'#f2b01e', trim:'#1c1c1c', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 Severn', place:4, w:13, d:0, l:9, pf:677, pa:521 },   // colours a free choice
+        { id:'KEH', name:'Keynsham', kit:'#1c1c1c', trim:'#ffd100', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Regional 2 Severn', place:4, w:13, d:0, l:9, pf:677, pa:521 },   // hoops a free choice
         { id:'WIS', name:'Winscombe', kit:'#1c1c1c', trim:'#f2efe6', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 South West', place:7, w:11, d:1, l:10, pf:615, pa:569 },
         { id:'NPE', name:'North Petherton', kit:'#1b2747', trim:'#6fb7e6', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 South West', place:9, w:8, d:0, l:14, pf:540, pa:638 },   // colours a free choice
-        { id:'WEI', name:'Wellington Som', full:'Wellington', kit:'#4b2a7b', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 South West', place:12, w:0, d:0, l:22, pf:219, pa:1002 },   // colours a free choice
-        { id:'NBA', name:'Nailsea', full:'Nailsea & Backwell', kit:'#1c1c1c', trim:'#2050b0', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Western North', place:1 },
+        { id:'WEI', name:'Wellington Som', full:'Wellington', kit:'#c8102e', trim:'#6fb7e6', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 South West', place:12, w:0, d:0, l:22, pf:219, pa:1002 },   // trim a free choice
+        { id:'NBA', name:'Nailsea', full:'Nailsea & Backwell', kit:'#1c1c1c', trim:'#2050b0', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Western North', place:1, w:19, d:0, l:3, pf:727, pa:428 },
         { id:'WIV', name:'Wiveliscombe', kit:'#1b2747', trim:'#c8102e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Western West', place:1, w:18, d:0, l:4, pf:735, pa:450 },
-        { id:'WAC', name:'Walcot', kit:'#2050b0', trim:'#1c1c1c', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern South', place:2 },
-        { id:'MNR', name:'Midsomer Norton', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Western North', place:3 },
-        { id:'FRO', name:'Frome', kit:'#c8102e', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Southern South', place:4 },
-        { id:'CHA', name:'Chard', kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Western North', place:6 },
-        { id:'GOR', name:'Gordano', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Western North', place:8 },
-        { id:'BAO', name:'Bridgwater', full:'Bridgwater & Albion', kit:'#c8102e', trim:'#f2b01e', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Western North', place:10 },
+        { id:'WAC', name:'Walcot', kit:'#2050b0', trim:'#1c1c1c', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Southern South', place:2, w:17, d:0, l:5, pf:682, pa:543 },
+        { id:'MNR', name:'Midsomer Norton', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Western North', place:3, w:15, d:0, l:7, pf:901, pa:625 },
+        { id:'FRO', name:'Frome', kit:'#c8102e', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Southern South', place:4, w:15, d:0, l:7, pf:743, pa:493 },
+        { id:'CHA', name:'Chard', kit:'#1c1c1c', trim:'#f2b01e', hoops:true, pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Counties 1 Western North', place:6, w:10, d:1, l:11, pf:529, pa:627 },
+        { id:'GOR', name:'Gordano', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Western North', place:8, w:10, d:1, l:11, pf:440, pa:590 },
+        { id:'BAO', name:'Bridgwater', full:'Bridgwater & Albion', kit:'#c8102e', trim:'#f2b01e', hoops:true, pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Western North', place:10, w:6, d:1, l:15, pf:567, pa:764 },
       ] },
       { county:'Staffordshire', label:'Staffordshire', code:'STS', key:'sts', wraps:false, shared:[], cups:[{ name:'Staffordshire Senior Cup', to:7 }, { name:'Staffordshire Intermediate Cup', to:8 }], clubs:[
         { id:'BUR', name:'Burton', kit:'#f2efe6', trim:'#1c1c1c', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 1 North West', place:4, w:12, d:1, l:9, pf:617, pa:655 },
@@ -489,39 +490,39 @@ function localCounties() {
         { id:'LIC', name:'Lichfield', kit:'#005500', trim:'#1b2747', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 1 Midlands', place:6, w:12, d:1, l:9, pf:654, pa:572 },
         { id:'WAS', name:'Walsall', kit:'#c8102e', trim:'#f2efe6', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Regional 2 Midlands North', place:3, w:16, d:0, l:6, pf:739, pa:507 },
         { id:'STR', name:'Stoke-on-Trent', kit:'#6fb7e6', trim:'#1b2747', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands North', place:5, w:10, d:0, l:12, pf:557, pa:649 },
-        { id:'BUT', name:'Burntwood', kit:'#c8102e', trim:'#109a52', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Midlands West (North)', place:7 },
-        { id:'NST', name:'Newcastle Staffs', full:'Newcastle (Staffs)', kit:'#7c1431', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Midlands West (North)', place:8 },
-        { id:'TAM', name:'Tamworth', kit:'#1c1c1c', trim:'#7c1431', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands West (North)', place:12 },
+        { id:'BUT', name:'Burntwood', kit:'#c8102e', trim:'#109a52', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Midlands West (North)', place:7, w:11, d:0, l:11, pf:553, pa:464 },
+        { id:'NST', name:'Newcastle Staffs', full:'Newcastle (Staffs)', kit:'#7c1431', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Midlands West (North)', place:8, w:9, d:0, l:13, pf:497, pa:670 },
+        { id:'TAM', name:'Tamworth', kit:'#1c1c1c', trim:'#7c1431', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands West (North)', place:12, w:1, d:1, l:20, pf:279, pa:1166 },
       ] },
       { county:'Sussex', label:'Sussex', code:'SSX', key:'ssx', wraps:false, shared:[], cups:null, clubs:[
         { id:'WRA', name:'Worthing Raiders', kit:'#2050b0', trim:'#f2b01e', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 1 South Central', place:8, w:10, d:0, l:12, pf:596, pa:644 },
         { id:'BRG', name:'Brighton', kit:'#2050b0', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 South East', place:2, w:18, d:0, l:4, pf:817, pa:567 },
-        { id:'HOS', name:'Horsham', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 South East', place:4, w:13, d:2, l:7, pf:770, pa:620 },   // colours a free choice
-        { id:'BOG', name:'Bognor', kit:'#5a2d82', trim:'#109a52', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Hampshire', place:1 },
-        { id:'HWA', name:'Heathfield', full:'Heathfield & Waldron', kit:'#109a52', trim:'#1c1c1c', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Kent', place:3 },   // colours a free choice
-        { id:'HOV', name:'Hove', kit:'#109a52', trim:'#7c1431', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Surrey/Sussex', place:4 },   // colours a free choice
-        { id:'EAS', name:'Eastbourne', kit:'#2050b0', trim:'#6fb7e6', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Surrey/Sussex', place:5 },   // colours a free choice
-        { id:'CHR', name:'Chichester', kit:'#2050b0', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Hampshire', place:6 },
-        { id:'CRW', name:'Crowborough', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Kent', place:7 },   // colours a free choice
-        { id:'HHT', name:'Haywards Heath', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:8 },
+        { id:'HOS', name:'Horsham', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 2 South East', place:4, w:13, d:2, l:7, pf:770, pa:620 },
+        { id:'BOG', name:'Bognor', kit:'#5a2d82', trim:'#109a52', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Hampshire', place:1, w:16, d:1, l:5, pf:930, pa:533 },
+        { id:'HWA', name:'Heathfield', full:'Heathfield & Waldron', kit:'#132e1d', trim:'#109a52', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Counties 1 Kent', place:3 },
+        { id:'HOV', name:'Hove', kit:'#a21f4b', trim:'#3098d5', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Surrey/Sussex', place:4, w:11, d:1, l:8, pf:644, pa:499 },
+        { id:'EAS', name:'Eastbourne', kit:'#0604b3', trim:'#f2b01e', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Surrey/Sussex', place:5, w:10, d:0, l:10, pf:657, pa:546 },
+        { id:'CHR', name:'Chichester', kit:'#2050b0', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:2, kicking:3, stamina:4, league:'Counties 1 Hampshire', place:6, w:10, d:0, l:12, pf:746, pa:605 },
+        { id:'CRW', name:'Crowborough', kit:'#1c1c1c', trim:'#8a0808', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Kent', place:7 },
+        { id:'HHT', name:'Haywards Heath', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Surrey/Sussex', place:8, w:8, d:0, l:12, pf:536, pa:563 },
       ] },
       { county:'Warwickshire', label:'Warwickshire', code:'WAR', key:'war', wraps:false, shared:[], cups:null, clubs:[
         { id:'NUN', name:'Nuneaton', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Regional 1 Midlands', place:12, w:0, d:1, l:21, pf:234, pa:1411 },
         { id:'BRT', name:'Broadstreet', kit:'#003300', trim:'#c8102e', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands East', place:3, w:17, d:1, l:4, pf:830, pa:422 },
-        { id:'SIL', name:'Silhillians', kit:'#7c1431', trim:'#f2efe6', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Midlands West', place:5, w:12, d:0, l:10, pf:549, pa:491 },   // colours a free choice
-        { id:'SCL', name:'Sutton Coldfield', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands North', place:6, w:9, d:0, l:13, pf:593, pa:652 },   // colours a free choice
+        { id:'SIL', name:'Silhillians', kit:'#7c1431', trim:'#1b2747', pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Midlands West', place:5, w:12, d:0, l:10, pf:549, pa:491 },
+        { id:'SCL', name:'Sutton Coldfield', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 Midlands North', place:6, w:9, d:0, l:13, pf:593, pa:652 },
         { id:'KEI', name:'Kenilworth', kit:'#f2b01e', trim:'#1b2747', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Regional 2 Midlands West', place:8, w:9, d:1, l:12, pf:533, pa:579 },   // colours a free choice
         { id:'OCV', name:'Old Coventrians', kit:'#1b2747', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 Midlands East', place:10, w:5, d:0, l:17, pf:430, pa:965 },   // colours a free choice
         { id:'SST', name:'Shipston', full:'Shipston-on-Stour', kit:'#1c1c1c', trim:'#ffe303', pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 Midlands West', place:10, w:8, d:1, l:13, pf:505, pa:586 },
         { id:'SAV', name:'Stratford', full:'Stratford-upon-Avon', kit:'#6fb7e6', trim:'#f2efe6', pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Regional 2 Midlands West', place:11, w:7, d:1, l:14, pf:375, pa:574 },   // colours a free choice
-        { id:'ALC', name:'Alcester', kit:'#c8102e', trim:'#f2efe6', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Midlands West (South)', place:2 },   // colours a free choice
-        { id:'NAV', name:'Newbold-on-Avon', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Midlands East (South)', place:2 },
-        { id:'NOE', name:'Nuneaton Old Eds', full:'Nuneaton Old Edwardians', kit:'#5b2a86', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands East (South)', place:4 },   // colours a free choice
-        { id:'SPR', name:'Spartans', kit:'#109a52', trim:'#1c1c1c', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Midlands West (North)', place:4 },   // colours a free choice
-        { id:'EAR', name:'Earlsdon', kit:'#f2efe6', trim:'#c8102e', pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands West (South)', place:7 },   // colours a free choice
-        { id:'LEM', name:'Leamington', kit:'#1c1c1c', trim:'#6fb7e6', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Midlands West (South)', place:8 },   // colours a free choice
-        { id:'MPA', name:'Manor Park', kit:'#c8102e', trim:'#1c1c1c', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', place:9 },
-        { id:'OLE', name:'Leamingtonians', full:'Old Leamingtonians', kit:'#f2b01e', trim:'#2050b0', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Midlands West (South)', place:10 },
+        { id:'ALC', name:'Alcester', kit:'#c8102e', trim:'#f2b01e', pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Counties 1 Midlands West (South)', place:2, w:16, d:1, l:5, pf:688, pa:476 },   // colours a free choice
+        { id:'NAV', name:'Newbold-on-Avon', kit:'#c8102e', trim:'#1c1c1c', hoops:true, pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Counties 1 Midlands East (South)', place:2, w:18, d:0, l:4, pf:860, pa:337 },
+        { id:'NOE', name:'Nuneaton Old Eds', full:'Nuneaton Old Edwardians', kit:'#c8102e', trim:'#f2efe6', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Midlands East (South)', place:4, w:14, d:0, l:8, pf:606, pa:527 },
+        { id:'SPR', name:'Spartans', kit:'#1c1c1c', trim:'#7c1431', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Midlands West (North)', place:4, w:16, d:0, l:6, pf:638, pa:434 },
+        { id:'EAR', name:'Earlsdon', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:4, handling:3, kicking:3, stamina:2, league:'Counties 1 Midlands West (South)', place:7, w:11, d:0, l:11, pf:540, pa:546 },   // hoops a free choice
+        { id:'LEM', name:'Leamington', kit:'#5b2a86', trim:'#c8102e', hoops:true, pace:3, power:3, handling:3, kicking:4, stamina:2, league:'Counties 1 Midlands West (South)', place:8, w:9, d:0, l:13, pf:623, pa:625 },
+        { id:'MPA', name:'Manor Park', kit:'#c8102e', trim:'#1c1c1c', pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Counties 1 Midlands West (South)', place:9, w:9, d:0, l:13, pf:591, pa:638 },
+        { id:'OLE', name:'Leamingtonians', full:'Old Leamingtonians', kit:'#f2b01e', trim:'#2050b0', hoops:true, pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Midlands West (South)', place:10, w:6, d:2, l:14, pf:504, pa:687 },
       ] },
       { county:'Yorkshire', label:'Yorkshire', code:'YKS', key:'yks', wraps:false, shared:[], cups:[{ name:'Yorkshire Cup', to:6 }], clubs:[
         { id:'RTI', name:'Rotherham Titans', kit:'#af003d', trim:'#6fb7e6', hoops:true, pace:3, power:4, handling:3, kicking:2, stamina:3, league:'National League 1', place:1, w:22, d:0, l:4, pf:1052, pa:515 },
@@ -542,32 +543,32 @@ function localCounties() {
         { id:'YOR', name:'York', kit:'#109a52', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:3, stamina:2, league:'Regional 1 North East', place:10, w:8, d:0, l:14, pf:455, pa:616 },
         { id:'CLC', name:'Cleckheaton', kit:'#f2efe6', trim:'#c8102e', hoops:true, pace:3, power:3, handling:2, kicking:4, stamina:3, league:'Regional 1 North East', place:12, w:2, d:0, l:20, pf:348, pa:1007 },
         { id:'NRI', name:'N. Ribblesdale', full:'North Ribblesdale', kit:'#6fb7e6', trim:'#1b2747', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 North West', place:1, w:18, d:0, l:4, pf:779, pa:368 },   // colours a free choice
-        { id:'SCA', name:'Scarborough', kit:'#7c1431', trim:'#1b2747', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 North East', place:1 },
-        { id:'POC', name:'Pocklington', kit:'#1c1c1c', trim:'#6fb7e6', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 North East', place:2 },   // colours a free choice
-        { id:'OBR', name:'Old Brodleians', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 North East', place:3 },
-        { id:'MOR', name:'Morley', kit:'#7c1431', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 North East', place:4 },
-        { id:'SEB', name:'Selby', kit:'#c8102e', trim:'#109a52', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 North East', place:5 },
-        { id:'MOO', name:'Moortown', kit:'#4b2a7b', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 North East', place:6 },   // colours a free choice
-        { id:'MNO', name:'Malton & Norton', kit:'#1c1c1c', trim:'#c8102e', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 North East', place:7 },
-        { id:'BSA', name:'Bradford Salem', kit:'#f2efe6', trim:'#109a52', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 North East', place:8 },   // colours a free choice
-        { id:'PON', name:'Pontefract', kit:'#2050b0', trim:'#f2b01e', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 North East', place:9 },   // colours a free choice
+        { id:'SCA', name:'Scarborough', kit:'#7c1431', trim:'#1b2747', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Regional 2 North East', place:1, w:19, d:0, l:3, pf:758, pa:363 },
+        { id:'POC', name:'Pocklington', kit:'#013a71', trim:'#f2efe6', hoops:true, pace:2, power:4, handling:3, kicking:3, stamina:3, league:'Regional 2 North East', place:2, w:17, d:0, l:5, pf:707, pa:403 },
+        { id:'OBR', name:'Old Brodleians', kit:'#1c1c1c', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:3, kicking:2, stamina:3, league:'Regional 2 North East', place:3, w:14, d:1, l:7, pf:622, pa:546 },
+        { id:'MOR', name:'Morley', kit:'#7c1431', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Regional 2 North East', place:4, w:12, d:1, l:9, pf:641, pa:501 },
+        { id:'SEB', name:'Selby', kit:'#c8102e', trim:'#109a52', hoops:true, pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Regional 2 North East', place:5, w:11, d:1, l:10, pf:626, pa:518 },
+        { id:'MOO', name:'Moortown', kit:'#a1183f', trim:'#0f5a32', hoops:true, pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 North East', place:6, w:11, d:0, l:11, pf:522, pa:563 },
+        { id:'MNO', name:'Malton & Norton', kit:'#1c1c1c', trim:'#c8102e', pace:2, power:3, handling:4, kicking:3, stamina:3, league:'Regional 2 North East', place:7, w:10, d:1, l:11, pf:513, pa:482 },
+        { id:'BSA', name:'Bradford Salem', kit:'#1b2747', trim:'#6fb7e6', pace:3, power:2, handling:4, kicking:3, stamina:3, league:'Regional 2 North East', place:8, w:10, d:0, l:12, pf:519, pa:538 },   // trim a free choice
+        { id:'PON', name:'Pontefract', kit:'#1b2747', trim:'#109a52', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Regional 2 North East', place:9, w:10, d:0, l:12, pf:550, pa:539 },   // trim a free choice
         { id:'GUS', name:'Guisborough', kit:'#1c1c1c', trim:'#f2b01e', pace:3, power:4, handling:3, kicking:2, stamina:3, league:'Regional 2 North', place:10, w:10, d:2, l:10, pf:487, pa:579 },
-        { id:'WET', name:'Wetherby', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 North East', place:10 },
-        { id:'OCR', name:'Old Crossleyans', kit:'#e8762c', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 North East', place:11 },   // colours a free choice
-        { id:'DPH', name:'Donc. Phoenix', full:'Doncaster Phoenix', kit:'#1b2747', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 North East', place:12 },
-        { id:'WDE', name:'Wath-upon-Dearne', kit:'#1b2747', trim:'#7c1431', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:1 },
-        { id:'DIN', name:'Dinnington', kit:'#2050b0', trim:'#6fb7e6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:2 },   // colours a free choice
-        { id:'GOO', name:'Goole', kit:'#c8102e', trim:'#f2b01e', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:3 },   // colours a free choice
-        { id:'YAR', name:'Yarnbury', kit:'#f2efe6', trim:'#1b2747', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:4 },
-        { id:'WLE', name:'West Leeds', kit:'#7c1431', trim:'#109a52', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:5 },   // colours a free choice
-        { id:'KEG', name:'Keighley', kit:'#6fb7e6', trim:'#7c1431', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Yorkshire', place:6 },   // colours a free choice
-        { id:'WEN', name:'Wensleydale', kit:'#f2efe6', trim:'#2050b0', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Yorkshire', place:7 },   // colours a free choice
-        { id:'ORS', name:'Old Rishworthian', full:'Old Rishworthians', kit:'#7c1431', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:8 },
-        { id:'HPT', name:'Pythons', full:'Harrogate Pythons', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Yorkshire', place:9 },
-        { id:'HUE', name:'Hullensians', kit:'#e8762c', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Yorkshire', place:10 },   // colours a free choice
-        { id:'BEV', name:'Beverley', kit:'#006600', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:11 },
-        { id:'ACK', name:'Acklam', kit:'#109a52', trim:'#f2b01e', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Durham & Northumberland', place:12 },   // colours a free choice
-        { id:'LEO', name:'Leodiensian', kit:'#1b2747', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Yorkshire', place:12 },
+        { id:'WET', name:'Wetherby', kit:'#c8102e', trim:'#f2efe6', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Regional 2 North East', place:10, w:8, d:0, l:14, pf:551, pa:565 },
+        { id:'OCR', name:'Old Crossleyans', kit:'#e8762c', trim:'#1c1c1c', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Regional 2 North East', place:11, w:8, d:0, l:14, pf:498, pa:573 },   // colours a free choice
+        { id:'DPH', name:'Donc. Phoenix', full:'Doncaster Phoenix', kit:'#1b2747', trim:'#f2efe6', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Regional 2 North East', place:12, w:0, d:0, l:22, pf:232, pa:1148 },
+        { id:'WDE', name:'Wath-upon-Dearne', kit:'#1b2747', trim:'#7c1431', pace:2, power:3, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:1, w:20, d:0, l:2, pf:920, pa:314 },
+        { id:'DIN', name:'Dinnington', kit:'#082ac2', trim:'#f2b01e', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:2, w:20, d:0, l:2, pf:971, pa:510 },
+        { id:'GOO', name:'Goole', kit:'#000245', trim:'#2050b0', pace:4, power:3, handling:2, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:3, w:14, d:0, l:8, pf:785, pa:568 },   // trim a free choice
+        { id:'YAR', name:'Yarnbury', kit:'#f2efe6', trim:'#1b2747', pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:4, w:13, d:0, l:9, pf:841, pa:569 },
+        { id:'WLE', name:'West Leeds', kit:'#1b2747', trim:'#f2b01e', hoops:true, pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:5, w:11, d:0, l:11, pf:697, pa:627 },
+        { id:'KEG', name:'Keighley', kit:'#c70000', trim:'#0f5a32', pace:3, power:2, handling:3, kicking:3, stamina:4, league:'Counties 1 Yorkshire', place:6, w:12, d:0, l:10, pf:624, pa:497 },
+        { id:'WEN', name:'Wensleydale', kit:'#f2efe6', trim:'#109a52', pace:2, power:3, handling:3, kicking:3, stamina:4, league:'Counties 1 Yorkshire', place:7, w:9, d:1, l:12, pf:548, pa:668 },   // colours a free choice
+        { id:'ORS', name:'Old Rishworthian', full:'Old Rishworthians', kit:'#7c1431', trim:'#f2efe6', pace:3, power:2, handling:3, kicking:4, stamina:3, league:'Counties 1 Yorkshire', place:8, w:9, d:1, l:12, pf:537, pa:751 },
+        { id:'HPT', name:'Pythons', full:'Harrogate Pythons', kit:'#1c1c1c', trim:'#c8102e', hoops:true, pace:3, power:3, handling:4, kicking:2, stamina:3, league:'Counties 1 Yorkshire', place:9, w:9, d:0, l:13, pf:596, pa:671 },
+        { id:'HUE', name:'Hullensians', kit:'#e80d49', trim:'#1c1c1c', hoops:true, pace:3, power:3, handling:3, kicking:2, stamina:4, league:'Counties 1 Yorkshire', place:10, w:6, d:0, l:16, pf:557, pa:938 },
+        { id:'BEV', name:'Beverley', kit:'#006600', trim:'#f2efe6', hoops:true, pace:4, power:2, handling:3, kicking:3, stamina:3, league:'Counties 1 Yorkshire', place:11, w:7, d:0, l:15, pf:464, pa:874 },
+        { id:'ACK', name:'Acklam', kit:'#1c4d0a', trim:'#010500', pace:3, power:4, handling:2, kicking:3, stamina:3, league:'Counties 1 Durham & Northumberland', place:12, w:0, d:0, l:22, pf:207, pa:1355 },
+        { id:'LEO', name:'Leodiensian', kit:'#1b2747', trim:'#f2b01e', pace:4, power:3, handling:3, kicking:3, stamina:2, league:'Counties 1 Yorkshire', place:12, w:1, d:0, l:21, pf:381, pa:934 },
       ] },
     ],
     kits:{ MER:{ kit:'#1c1c1c', trim:'#f2b01e', hoops:false } },   // the game's own kits a decision changes (Merton: plain, its hoops never sourced)

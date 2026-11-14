@@ -3,7 +3,7 @@
 // The rating's scale, its update rule, its bounds, its save and its gating are section 13; tools/kidbots.mjs calibrates it with scripted children.
 // node tools/kids.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
-const { T, reseed, fire, kickBot, dropBot, bot } = await import('./harness.mjs');
+const { T, reseed, fire, kickBot, dropBot, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 const K = T.kids, D = T.debug, X = T.teams, C = T.contact, KK = T.kick, STEP = T.STEP, inp = T.input;
@@ -662,7 +662,11 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // Re-pinned at 1.6 (2026-11-14) for the two together, as the game ships: PIN. Proof, checked below: with CALLS and CHASE off this build
   // gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE; and with
   // KNOCK off too, BEFORE_KNOCK
-  const PIN = 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
+  // Re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Farnham
+  // 58 and Haslemere 43, a step down, so the matches they play here move. With LOCAL off (1.6) and with the rerating off (8089294) this
+  // build gives BEFORE_LOCAL, 1.6's PIN, exactly, and the chain below holds with LOCAL off as it did (each in a child: rerateProofs)
+  const PIN = RERATE ? '1ckfie8 17jlh1u 7dpem6 1ojvcyi 1mx45p0 o24dg5 19781ts 1afo373' : 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
+  const BEFORE_LOCAL = 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CALLS = 'ytai0c 1vfa9il 17vh7h5 1h583yb 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CHASE = '7wl1n0 kq1d2 1c0yntb 1cco652 1klviba 1db7d9g fs1jc3 1j6lmbf';
   const BEFORE_CALLS_CHASE = '7wl1n0 kq1d2 1c0yntb hmthmd 1klviba 1db7d9g fs1jc3 1j6lmbf';
@@ -693,13 +697,17 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // is the same whatever ran before it (each measured second to fifth, 2026-11-14); only the first differs
   { const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CHASE, CL0 = !!(CL && CL.on), CS0 = !!(CS && CS.on);   // the possession calls (src/calls.js) and the kick chase (src/chase.js), then as they were (CALLS= and CHASE= in the harness)
     const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
-    if (T.knock) { T.knock.KNOCK.on = false; feats(false, false); const off = pin(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
-    if (CL || CS) { feats(false, false); const off = pin(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
-    if (CL && CS) { feats(true, false); const calls = pin(); feats(false, true); const chase = pin(); feats(CL0, CS0);
+    if (LOCAL_ON) pin();   // the chain is checked in the LOCAL off child; this run stands in for its first, so the pin below is a later run's, as it is there
+    if (T.knock && !LOCAL_ON) { T.knock.KNOCK.on = false; feats(false, false); const off = pin(); T.knock.KNOCK.on = true; feats(CL0, CS0); ok(off === BEFORE_KNOCK, `with the knock-ons, the possession calls and the kick chase off (KNOCK, src/knock.js; CALLS, src/calls.js; CHASE, src/chase.js), as 20cbcaf (${off}, pinned ${BEFORE_KNOCK})`); }
+    if ((CL || CS) && !LOCAL_ON) { feats(false, false); const off = pin(); feats(CL0, CS0); ok(off === BEFORE_CALLS_CHASE, `with the possession calls and the kick chase off (CALLS, src/calls.js; CHASE, src/chase.js), as b4a25d5 (${off}, pinned ${BEFORE_CALLS_CHASE})`); }
+    if (CL && CS && !LOCAL_ON) { feats(true, false); const calls = pin(); feats(false, true); const chase = pin(); feats(CL0, CS0);
       ok(calls === WITH_CALLS, `with the possession calls on and the kick chase off, as wt/calls (a032b3a) (${calls}, pinned ${WITH_CALLS})`);
       ok(chase === WITH_CHASE, `with the kick chase on and the possession calls off, as wt/chase (fc90ec0) (${chase}, pinned ${WITH_CHASE})`); }
     const want = CL && CS ? PIN : CL ? WITH_CALLS : CS ? WITH_CHASE : T.knock ? BEFORE_CALLS_CHASE : BEFORE_KNOCK;   // a build with fewer of them (GAME=<an older build>): its own pin
-    const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now); ok(now === want, `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${want})`); }
+    const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now);
+    if (LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
+    if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BEFORE_LOCAL, ok);
+    ok(now === want, `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${want})`); }
 
   // how long: the chosen half times the Kids pace, in simulated seconds, which is the chosen half in real time
   const pace = Y.MATCH_PACE.kids;

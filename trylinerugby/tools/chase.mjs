@@ -18,7 +18,7 @@ process.env.SEED ??= process.argv.includes('--balance') ? '7' : '29';   // the b
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const { T, reseed, rndCalls, bot } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
 const STEP = T.STEP, M = () => T.M, X = T.teams, CH = T.chase;
 const args = process.argv.slice(2);
 let passed = 0, failed = 0, group = '';
@@ -283,6 +283,11 @@ function pins() {
 }
 if (run && args[0] === '--pins') { if (CH && args[1] !== 'on' && args[1] !== 'ships') CH.CHASE.on = false; if (CLS && args[1] !== 'ships') CLS.on = false; console.log(pins()); process.exit(0); }
 if (run && !args.length) {
+/* The owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Farnham and Wimbledon, a
+   step down, play three of these matches, so the pins below move with it (R_). With LOCAL off (1.6) and with the rerating off (8089294)
+   this build gives the pins as they were exactly (each in a child: rerateProofs). */
+const R_BASE = 'd0efoc 1fq8pyd 1j02me5 1cc96uv hcpa8a 8r239s 8v7e62 1yjp1u0 1t4l7sj', R_ON = '8iyx7a pemluk 1j02me5 1cc96uv 1phqv xgmaru 8v7e62 1yjp1u0 9ajr81';
+const R_ON_REACT = '1707leb fsophx 1j02me5 1cc96uv j9umex 1c7w2p5 8v7e62 1yjp1u0 1m2h5h5', R_SHIPS = '1iku6ik gn95mi 16eizcc ha15tj 1si6ekf 12lzpp8 g4716q pqi14u 4rfqdz';
 begin('0 CHASE off is b4a25d5');
 {
   // the late start at react 0 is a no-op: a build with its line cut (CHASE_LATE=off in the harness) as the chase ships, and at react 0.2;
@@ -292,18 +297,21 @@ begin('0 CHASE off is b4a25d5');
     let s = '', e = ''; p.stdout.on('data', d => { s += d; }); p.stderr.on('data', d => { e += d; });
     p.on('close', code => good(code ? 'failed: ' + e.trim().split('\n').pop() : s.trim()));
   });
-  const cut = Promise.all([child({ CHASE_LATE:'off' }), child({ CHASE_LATE:'off', CHASE:'{"react":0.2}' }), child({ CHASE_LATE:'off' }, 'ships')]);
+  const cut = LOCAL_CHILD ? null : Promise.all([child({ CHASE_LATE:'off' }), child({ CHASE_LATE:'off', CHASE:'{"react":0.2}' }), child({ CHASE_LATE:'off' }, 'ships')]);
   if (CLS) CLS.on = false;                                // the chase's own proof with the possession calls off: b4a25d5 with both off, wt/chase's pins with the chase alone
   setC({ on:false }); const off = pins(); reset(); const on = pins(); setC({ react:0.2 }); const react = pins(); reset();
   if (CLS) CLS.on = CLS0; const ships = pins();
-  ok(off === BASE, `CHASE off (and the possession calls): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as b4a25d5, with the same draws (${off}, pinned ${BASE})`);
-  const moved = on.split(' ').filter((h, i) => h !== BASE.split(' ')[i]).length;
-  ok(on.split(' ')[0] !== BASE.split(' ')[0] && on.split(' ')[1] !== BASE.split(' ')[1] && moved >= 4, `CHASE on moves AI v AI, the demo and the matches where a kick fell (${moved} of 9 moved: ${on})`);
-  ok(on === ON, `and plays them as pinned with the chase as it ships, pace alone, the possession calls off, as wt/chase (fc90ec0) (${on}, pinned ${ON})`);
-  ok(ships === SHIPS, `and with the possession calls too, as the game ships at 1.6 (${ships}, pinned ${SHIPS})`);
+  if (LOCAL_CHILD) { console.log([off, on, react, ships].join(' / ')); process.exit(0); }   // the LOCAL children (rerateProofs): their pins, checked against these
+  if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), [BASE, ON, ON_REACT, SHIPS].join(' / '), ok);
+  const [b, o, rc, sh] = RERATE ? [R_BASE, R_ON, R_ON_REACT, R_SHIPS] : [BASE, ON, ON_REACT, SHIPS];
+  ok(off === b, `CHASE off (and the possession calls): AI v AI, the demo, a tool's match, Easy, Normal and Hard as played, Kids at its ceiling and Two Player play as b4a25d5${RERATE ? ' with the rerating' : ''}, with the same draws (${off}, pinned ${b})`);
+  const moved = on.split(' ').filter((h, i) => h !== off.split(' ')[i]).length;
+  ok(on.split(' ')[0] !== off.split(' ')[0] && on.split(' ')[1] !== off.split(' ')[1] && moved >= 4, `CHASE on moves AI v AI, the demo and the matches where a kick fell (${moved} of 9 moved: ${on})`);
+  ok(on === o, `and plays them as pinned with the chase as it ships, pace alone, the possession calls off, as wt/chase (fc90ec0) (${on}, pinned ${o})`);
+  ok(ships === sh, `and with the possession calls too, as the game ships at 1.6 (${ships}, pinned ${sh})`);
   const [cut0, cut2, cut3] = await cut;
   ok(CT.react === 0 && cut0 === on, `react 0: a build without the catching side's late start (CHASE_LATE=off, matchTargets' chaseLate line cut) plays all nine exactly as the chase ships, with the same draws (${cut0})`);
-  ok(react === ON_REACT, `the late start is kept and tunable: CHASE.react 0.2 plays them as 98e11c8 shipped it (${react}, pinned ${ON_REACT})`);
+  ok(react === rc, `the late start is kept and tunable: CHASE.react 0.2 plays them as 98e11c8 shipped it (${react}, pinned ${rc})`);
   ok(cut2 === on && cut2 !== react, `and cut from that build it plays as react 0 (${cut2}): the line is the whole of the late start, live at 0.2 and idle at 0`);
   ok(cut3 === ships, `and with the possession calls on, that build plays all nine as the game ships at 1.6 (${cut3})`);
 }
