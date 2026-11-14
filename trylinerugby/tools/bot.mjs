@@ -142,7 +142,7 @@ export function profileMatch(who, diff, half, seed, arc) {
 }
 
 const self = fileURLToPath(import.meta.url), run = !!process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;   // run, not imported (an analysis can import the casual adult)
-if (run && args[0] === '--job') { const o = JSON.parse(args[1]); const out = []; for (let i = o.lo; i < o.hi; i++) out.push(profileMatch(o.who, o.diff, o.half, +process.env.SEED*100000 + i, o.arcade)); process.stdout.write(JSON.stringify(out)); process.exit(0); }
+if (run && args[0] === '--job') { const o = JSON.parse(args[1]); const out = []; for (let i = o.lo; i < o.hi; i++) out.push(profileMatch(o.who, o.diff, o.half, +process.env.SEED*100000 + i, o.arcade)); await new Promise(done => process.stdout.write(JSON.stringify(out), done)); process.exit(0); }   // exit once it is written: an exit straight after can cut the answer short
 function fan(jobs, n, spec) {                              // the matches 0..n-1 over `jobs` processes, in order
   const per = Math.ceil(n/jobs), parts = [];
   for (let lo = 0; lo < n; lo += per) parts.push(spec(lo, Math.min(n, lo + per)));

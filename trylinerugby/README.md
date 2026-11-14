@@ -2025,28 +2025,36 @@ or in touch.
 | Casual adult, Normal | 47% to 50% | 50% to 56% | 0.97-0.82 to 1.07-0.93 | 1.13-0.94 to 1.22-0.83 |
 | Kick-chaser, Normal | 44% to 57% | 54% to 59% | 1.14-0.96 to 1.37-0.81 | 1.04-0.83 to 1.33-0.88 |
 
-The rows whose change was near its noise (± 3 to 5 at 100 matches) again on wider samples, the first 100 matches the same:
+The rows whose change was near its noise (± 3 to 5 at 100 matches) again on wider samples, the first 100 matches the same,
+and the two Normal rows at a third seed, SEED 23 (the independent check's, 2026-11-14):
 
 | Wider, before then after | Matches | Won | Chips won back |
 |---|---|---|---|
 | Kick-chaser, Easy, SEED 7 | 300 | 90% to 95% | 47% to 57% (4379, 4697) |
 | Kick-chaser, Easy, SEED 11 | 300 | 90% to 94% | 46% to 58% (4395, 4569) |
 | Kick-chaser, Normal, SEED 7 | 300 | 44% to 58% | 37% to 48% (3500, 3731) |
+| Kick-chaser, Normal, SEED 23 | 300 | 40% to 59% | 37% to 48% (3384, 3565) |
+| Casual adult, Normal, SEED 23 | 300 | 49% to 48% | 41% to 48% (500, 507) |
 | Casual adult, Easy, SEED 11 | 300 | 95% to 93% | 47% to 55% (629, 568) |
 | AI v AI, Normal, SEED 11 (home's share) | 360 | 45% to 40% | none kicked |
 
-**Against the owner's aim.** A person's chips come back 8 to 12 points more often over the wider samples (the casual adult
-+11 on Normal over 400 matches, below, and +8 on Easy over 300; the kick-chaser +10 to +12 over 300 on either level; over 100
-matches, +8 to +16), where the aim is about +10 to 15 and the owner was shown 11 to 16; the staged chip +12 on both seeds.
+**Against the owner's aim.** A person's chips come back 7 to 12 points more often over the wider samples (the casual adult
++11 on Normal over 400 matches at SEED 7, below, +7 on Normal over 300 at SEED 23 and +8 on Easy over 300; the kick-chaser +10
+to +12 in all four of his 300-match rows; over 100 matches, +8 to +16), where the aim is about +10 to 15 and the owner was
+shown 11 to 16: the casual adult at SEED 23 (41% to 48%, ± 3 on the gain) falls a little short of both. The staged chip +12
+on both seeds.
 For a player who kicks now and then it is a chip that comes back more often and not a different match: the casual adult's
 results move inside their noise (SEED 11's 99% to 89% on Easy is 95% to 93% over 300). On Easy the chip-spammer wins 4 or 5
 points more over 300 matches (90% to 95%, 90% to 94%: SEED 7's 87% to 98% over its first 100 was mostly noise), and scores
 0.4 to 0.55 tries a match more. AI v AI plays as it did inside its noise (its kicks are long, and the catching side fields
 them either way): SEED 11's home share, 47% to 39% over 120 (± 5) and 45% to 40% over 360 (± 3), against 46% to 47% at
 SEED 7. **For the owner: the chip-spammer on Normal** still gains more than the aim's "within about 10 points": 44% to 58%
-over 300 matches at SEED 7, 54% to 59% over 100 at SEED 11, against 45% to 67% at react 0.2. His chips come back +11 to +12
-there, in the aim; it is the tries they lead to (1.05 to 1.38 a match at SEED 7, over 300) that tip his matches. Pace and
-secs are the owner's (1.08 and 1.5) and stay as he set them.
+over 300 matches at SEED 7, 54% to 59% over 100 at SEED 11 and 40% to 59% over 300 at SEED 23 (+19), against 45% to 67% at
+react 0.2 (SEED 7, 100 matches). On SEED 23's first 60 he goes 35% to 62% as it ships and 35% to 63% at react 0.2: as many
+matches won as the rejected late start, by less (a mean score of 8.9-6.3 against 13.2-6.9). His chips come back +11
+to +12 there, in the aim; it is the tries they lead to (1.05 to 1.38 a match at SEED 7 and 0.98 to 1.26 at SEED 23,
+over 300) that tip his matches. Pace and secs are the owner's (1.08 and 1.5) and stay as he set them; a smaller pace
+(1.06, say) or a shorter chase would be his call.
 
 **The band.** `node tools/chase.mjs --balance band` holds a person's chips to the owner's aim from here on: the casual adult
 on Normal, 400 matches at SEED 7, CHASE off then on, must win back more of his chips and at most 20 points more. It measures

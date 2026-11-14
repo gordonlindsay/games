@@ -175,7 +175,7 @@ const self = fileURLToPath(import.meta.url), run = !!process.argv[1] && pathToFi
 if (run && args[0] === '--job') {
   const o = JSON.parse(args[1]), out = [];
   for (let i = o.lo; i < o.hi; i++) out.push(await oneMatch(o, +process.env.SEED*100000 + i));
-  process.stdout.write(json(out)); process.exit(0);
+  await new Promise(done => process.stdout.write(json(out), done)); process.exit(0);   // exit once it is written: an exit straight after can cut the answer short
 }
 function fan(spec, n, env) {                               // matches 0..n-1 over JOBS processes, in order, with env on top (CHASE off, say)
   const jobs = +process.env.JOBS || Math.min(8, os.cpus().length), per = Math.ceil(n/jobs), parts = [];
@@ -569,6 +569,12 @@ begin('9 the words and the files');
   ok(/"knock\.js",\s*"chase\.js",/.test(read('src/manifest.json')), 'src/chase.js is built after src/knock.js');
   ok(/CHASE_TUNE/.test(read('tools/harness.mjs')), 'the harness\'s CHASE marker');
   ok(!(read('src/chase.js') + read('tools/chase.mjs')).includes(String.fromCharCode(0x2014)), 'no em dashes');
+  // a balance job (--job) exits only once its answer is written: an exit straight after the write cut it short (2026-11-14: a 100-match
+  // job's JSON broken at 146 KB, so the run threw, and a job's through a shell pipe at 64 KB). The cut is a race (a reader quick enough
+  // gets it all), so this reads the line. It waits there, not in the write's callback, so nothing after it in the file runs (bot.mjs's
+  // own matches would print after the JSON)
+  const waits = f => /await new Promise\(done => process\.stdout\.write\((json|JSON\.stringify)\(out\), done\)\); process\.exit\(0\);/.test(read(f)) && !/stdout\.write\((json|JSON\.stringify)\(out\)\);\s*process\.exit/.test(read(f));
+  ok(['tools/chase.mjs', 'tools/knock.mjs', 'tools/bot.mjs'].every(waits), 'a balance job in chase.mjs, knock.mjs and bot.mjs exits only once its answer is written');
 }
 done('9 the words and the files');
 
