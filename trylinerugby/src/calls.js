@@ -34,9 +34,10 @@
      man in front of the teammate who last played the ball (the passer's release, the kicker, the tackled man who spilled it) by
      more than 0.5m (the kick's margin) as it was played, until he is back behind that line. The other side is never offside. At a
      person's own kick the ring goes to the nearest man who may play its bounce (kickRing), not to one in front of the kicker.
-   Every lever is read through callsLv and none draws a random number, so CALLS off gives b4a25d5's values and the game plays exactly
-   as b4a25d5, draw for draw (CALLS='{"on":false}' in the harness: the proof behind every re-pin since). Measured: README.md,
-   Possession calls. */
+   Every lever is read through callsLv and none draws a random number, so CALLS off gives b4a25d5's values. With CALLS and the kick
+   chase (CHASE, src/chase.js) both off the game plays exactly as b4a25d5, draw for draw (CALLS='{"on":false}' CHASE='{"on":false}'
+   in the harness: the proof behind every re-pin since); CALLS off alone plays as wt/chase (fc90ec0), the chase on its own.
+   Measured: README.md, Possession calls. */
 const CALLS = { on:true, call:true, life:0.9, hold:1.0, flash:0.4, beat:80, colour:true, fire:true, lbGap:1.0, release:1.5, fit:true, kicks:true };
 // CALLS_TUNE
 const CALLS_OFF = { call:false, life:0, hold:0, flash:0, beat:0, colour:false, fire:false, lbGap:0, release:0, fit:false, kicks:false };   // b4a25d5's

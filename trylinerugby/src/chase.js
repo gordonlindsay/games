@@ -25,9 +25,10 @@
      going to the landing spot or into their support shape (matchTargets). A human's own input is never delayed: the ring still goes
      at the kick to his man nearest the landing spot who may play it (kickBall), his stick drives that man at once, and a Kids child's let-go chase
      (kidsChase) runs for the ball as before.
-   Every lever reads chaseLv and none draws a random number, so with CHASE.on false (CHASE='{"on":false}' in the harness) the game
-   plays exactly as b4a25d5, the build before it, draw for draw: the proof behind every re-pin since. Measured: README.md, Kicking and
-   the chase (tools/chase.mjs --balance; --balance band checks a person's chips against the owner's aim). */
+   Every lever reads chaseLv and none draws a random number, so with CHASE.on false and the possession calls off too
+   (CHASE='{"on":false}' CALLS='{"on":false}' in the harness) the game plays exactly as b4a25d5, the build before it, draw for draw:
+   the proof behind every re-pin since. CHASE off alone plays as wt/calls (a032b3a), the calls on their own. Measured: README.md,
+   Kicking and the chase (tools/chase.mjs --balance; --balance band checks a person's chips against the owner's aim). */
 const CHASE = { on:true, pace:1.08, secs:1.5, react:0 };
 // CHASE_TUNE
 const CHASE_OFF = { pace:1, secs:0, react:0 };             // b4a25d5's: no chase

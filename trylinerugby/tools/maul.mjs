@@ -482,7 +482,7 @@ begin('cards');
 done('8 cards');
 
 // 9. MAUL off draws exactly as the build before it (with PRESSURE off too, b706c3e; alone, the pressure merge on wt/pr14int); on, it moves AI v AI on purpose.
-//    The knock-ons (KNOCK, src/knock.js) and the kick chase (CHASE, src/chase.js) are off in each run: both off is 20cbcaf, draw for draw, so these pins are the ones the maul was pinned with
+//    The knock-ons (KNOCK, src/knock.js), the possession calls (CALLS, src/calls.js) and the kick chase (CHASE, src/chase.js) are off in each run: all three off is 20cbcaf, draw for draw, so these pins are the ones the maul was pinned with
 begin('off');
 {
   const child = env => spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--pins'], { env:{ ...process.env, ...env }, encoding:'utf8', maxBuffer:8 << 20 });

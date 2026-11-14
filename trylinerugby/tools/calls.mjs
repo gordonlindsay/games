@@ -187,6 +187,7 @@ const scene = (o = {}) => {
 };
 const loose = (m, x, y, last, o = {}) => { const b = m.ball; Object.assign(b, { state:'loose', carrier:null, f:null, x, y, z:0, vx:0, vy:0, vz:0, last, kickInfo:o.kick ? { team:last, ownHalf:false } : null, egg:null, tumble:null }); if (b.off) b.off = null; return b; };
 const ctrl = t => T.sides.ctrlOf(t);
+const CAMS = ['Top', 'Low', 'Mid', 'High'];                // settings.cam's order (src/render-behind.js); a new player starts on Mid (2)
 const seedFor = (f, from = 100) => { for (let s = from; s < from + 400; s++) { reseed(s); if (f()) return s; } return null; };   // a seed under which a staged roll comes out as the check needs
 
 begin('2 each path: its call, its colour, its sound');
@@ -553,13 +554,13 @@ begin('10 reduced motion');
   ok(still.length === 2 && still[0] === still[1], `reduced motion: the call holds still (${still.join(', ')})`);
   ok(moving.length === 2 && moving[1] < moving[0], `otherwise it rises a little (${moving.map(v => v.toFixed(1)).join(', ')})`);
   CL.setRM(false);
-  // a whole frame on Top and on Mid draws the call and the flash with no error
-  for (const cam of [0, 1]) {
+  // a whole frame on every camera (settings.cam: 0 Top, 1 Low, 2 Mid, the one a new player starts on, 3 High) draws the call and the flash with no error
+  for (const cam of [0, 1, 2, 3]) {
     settings.cam = cam; const m2 = scene(); const q = m2.players[4]; q.x = 60; q.y = 35; loose(m2, 60.2, 35, 0); CL.updateLoose(STEP); m2.cam.x = 60; m2.cam.y = 35;
     let texts = []; globalThis.__ctxSpy = (k, a) => { if (k === 'fillText') texts.push(a[0]); };
     let err = null; try { D.render(1/60); D.render(1/60); } catch (e) { err = e; }
     delete globalThis.__ctxSpy;
-    ok(!err && texts.includes('PICKED UP'), `${cam ? 'Mid' : 'Top'}: a frame draws the call (${err ? err.message : texts.filter(t => t === 'PICKED UP').length + ' times'})`);
+    ok(!err && texts.includes('PICKED UP'), `${CAMS[cam]}: a frame draws the call (${err ? err.message : texts.filter(t => t === 'PICKED UP').length + ' times'})`);
   }
   settings.cam = 0;
 }
@@ -625,6 +626,25 @@ begin('12 where the call stands');
   ok(two.tags[0].place === 'under', 'the other man well clear: under, as on your own');
   banner(false); where[other.n + ':' + other.team] = { x:420, top:60, foot:140, half:20 }; two.tags = [{ ...call(), p:me, k:T.behind.ringCol(0) }]; drawn(at2);
   ok(two.tags[0].place === 'under', 'the other man just above him: under, never on him');
+  // never on that man in any frame of its life, its rise included: each plate as drawCalls draws it (its rounded rect), a whole life long,
+  // against his marks (at()'s box in Two Player: seat mark, ring and cue) and against the banner's laid-out box
+  const plates = (at, n) => { const out = []; globalThis.__ctxSpy = (k, a) => { if (k === 'roundRect' && a[3] === 26) out.push({ left:a[0], top:a[1], right:a[0] + a[2], bottom:a[1] + a[3] }); }; for (let i = 0; i < n; i++) CL.drawCalls(1/60, at); delete globalThis.__ctxSpy; return out; };
+  const on = (ps, o, pad = 0) => Math.max(0, ...ps.map(p => Math.max(0, Math.min(p.right, o.right + pad) - Math.max(p.left, o.left - pad))*Math.max(0, Math.min(p.bottom, o.bottom + pad) - Math.max(p.top, o.top - pad))));
+  const box = o => ({ left:o.x - o.half, right:o.x + o.half, top:o.top, bottom:o.foot }), BAN = { left:302, top:117, right:542, bottom:157 };
+  const life = Math.round(CC.life*60) - 1, r1 = 10.29, seat = (x, y) => ({ x, top:y - r1*2.4 - 18, foot:y + r1*2.1 + 13, half:r1*1.55 + 5 });   // render-match.js's at() in Two Player
+  // the review's case, as the real match staged it on Top at 844x390 when the check failed: the banner over Player 2's man and Player 1's
+  // man a metre under him, so no place is clear. It once fell back to under, onto Player 1's man (his cue and the foot of his ring)
+  banner(true); where[me.n + ':' + me.team] = seat(455, 174.3); where[other.n + ':' + other.team] = seat(451.75, 185.1);
+  two.tags = [{ ...call(), p:me, k:T.behind.ringCol(0) }]; let ps = plates(at2, life);
+  const him1 = box(where[other.n + ':' + other.team]);
+  ok(two.tags[0].place !== 'under' && ps.length === life && on(ps, him1) === 0 && on(ps, BAN, 6) > 0, `nothing clear (the banner over him, the other person's man under him): never under onto that man, and on him in no frame of its life, its rise included; it is the banner's box that gives (${two.tags[0].place}, ${ps.length} frames, on him ${on(ps, him1).toFixed(0)} px2)`);
+  // its rise: over him clear where it starts (3px of air above it, past the 2px pad) and on the other man by the top of its 6px rise
+  banner(false); where[me.n + ':' + me.team] = { x:420, top:200, foot:270, half:20 }; where[other.n + ':' + other.team] = { x:430, top:90, foot:171, half:20 };
+  const him2 = box(where[other.n + ':' + other.team]);
+  two.tags = [{ ...call(), p:me, k:T.behind.ringCol(0) }]; ps = plates(at2, life);
+  ok(two.tags[0].place === 'under' && ps.length === life && on(ps, him2) === 0, `the other man just above where the plate over him would start: clear there but on him by the top of its rise, so under (${two.tags[0].place}, on him ${on(ps, him2).toFixed(0)} px2)`);
+  CL.setRM(true); two.tags = [{ ...call(), p:me, k:T.behind.ringCol(0) }]; ps = plates(at2, life); CL.setRM(false);
+  ok(two.tags[0].place === 'over' && on(ps, him2) === 0, `under reduced motion it holds still, so over him is clear and is taken (${two.tags[0].place})`);
   banner(false); D.view(844, 390);
 }
 done();
@@ -688,9 +708,9 @@ function chromium() {
   }
   return null;
 }
-/* 15. In Chromium, a real match at 844x390 and 667x375 on the camera a new player starts on (Mid) and on Top: each call staged where the
-      ball is, with the game's own frames drawing it. The call drawn over his pointer, the flash, no page error; SHOTS=<dir> keeps a
-      picture of each (calls-<call>-<width>-<camera>.png) */
+/* 15. In Chromium, a real match at 844x390 and 667x375 on the camera a new player starts on (Mid), and at 844x390 on Low and on Top:
+      each call staged where the ball is, with the game's own frames drawing it. The call drawn over his pointer, the flash, no page
+      error; SHOTS=<dir> keeps a picture of each (calls-<call>-<width>-<camera>.png: mid, low or top) */
 async function browserChecks() {
   if (process.env.GAME || process.env.NO_BROWSER) { console.log('skip the browser checks (GAME or NO_BROWSER set)'); return; }
   const chrome = chromium();
@@ -710,8 +730,8 @@ async function browserChecks() {
   const B = (cond, msg) => ok(cond, 'browser: ' + msg);
   group = '15 browser';
   try {
-    for (const [W, H] of [[844, 390], [667, 375]]) for (const cam of [1, 0]) {
-      if (cam === 0 && W !== 844) continue;                // Top once, at the larger size
+    for (const [W, H] of [[844, 390], [667, 375]]) for (const cam of [2, 1, 0]) {   // settings.cam: 2 Mid, 1 Low, 0 Top
+      if (cam !== 2 && W !== 844) continue;                // Low and Top once, at the larger size
       const kinds = ['picked-up', 'intercepted', 'turnover', 'turnover-pressure', 'offload', 'cpu-intercept'].concat(cam ? [] : ['turnover-two']);   // Two Player plays on Top only (behindOn)
       for (const kind of kinds.filter(k => !process.env.CALLS_ONLY || process.env.CALLS_ONLY.split(',').includes(k))) {   // CALLS_ONLY=turnover,offload: those alone
         const ctx = await browser.newContext({ viewport:{ width:W, height:H }, deviceScaleFactor:2, isMobile:true, hasTouch:true, serviceWorkers:'block' });
@@ -793,7 +813,7 @@ async function browserChecks() {
           return { okNow, tries, call:call ? call.text : null, k:call ? call.k : null, ring:T.sides.ctrlOf(side) === b.carrier, flash:!!M.flash, stop:M.stop, ink, want:CL.callInk(kind === 'cpu-intercept' ? 1 : side), ringCol:T.behind.ringCol(side), show1:T.teams.showCol(1) };
         }, kind);
         await wait(260);
-        if (shots) await page.screenshot({ path:path.join(shots, `calls-${kind}-${W}-${cam ? 'mid' : 'top'}.png`) });
+        if (shots) await page.screenshot({ path:path.join(shots, `calls-${kind}-${W}-${CAMS[cam].toLowerCase()}.png`) });
         const two = kind === 'turnover-two' ? await page.evaluate(() => {   // where the call stands against Player 1's ring and seat mark, a frame in
           const T = window.__tryline, M = T.M, t = M.tags.find(q => q.call), p1 = T.sides.ctrlOf(0), [cx, cy] = T.behind.toS(p1.x, p1.y), s = T.behind.toS(p1.x + 1, p1.y)[0] - cx, r = Math.max(8, 0.95*s);
           const last = window.__at.filter(a => a[0] === 'TURNOVER').pop(), w = last ? document.getElementById('cv').getContext('2d').measureText('TURNOVER').width + 22 : 0;
@@ -805,7 +825,7 @@ async function browserChecks() {
         await wait(900);
         const drawn = await page.evaluate(() => window.__drawn.slice()), at = await page.evaluate(() => window.__at.slice());
         const word = { 'picked-up':'PICKED UP', intercepted:'INTERCEPTED', turnover:'TURNOVER', 'turnover-pressure':'TURNOVER', offload:'OFFLOAD', 'cpu-intercept':null, 'turnover-two':'TURNOVER' }[kind];
-        const label = `${kind} at ${W}x${H} on ${cam ? 'Mid' : 'Top'}`;
+        const label = `${kind} at ${W}x${H} on ${CAMS[cam]}`;
         if (kind === 'cpu-intercept') {
           B(r.okNow && !r.call && r.ink === r.want && r.ink !== r.show1, `${label}: the CPU's interception, no call; its banner in Scotland's navy lightened to read (${r.ink}, 3:1 on the plate)`);
         } else {
@@ -815,7 +835,7 @@ async function browserChecks() {
           if (process.env.VERBOSE) console.log(label, at.filter(a => a[0] === word).map(a => a[2].toFixed(1) + '/' + (a[4] == null ? '-' : a[4].toFixed(1))).join(' '));
           B(ys.length > 20 && jump < 12, `${label}: it goes with him for its life and never jumps: its place against his body moves at most ${jump.toFixed(1)}px a frame (${ys.length} frames; from over him to under him is 60px or more, and the jump it once made was 115px)`);
           if (/^(intercepted|turnover)$/.test(kind)) B(r.ink === r.want && r.k === r.want, `${label}: the banner and the call's plate in your colour on the plate (${r.ink})`);
-          if (two) B(r.k === r.ringCol && /ff5fd2/i.test(r.k) && two.edge.toLowerCase() === r.k.toLowerCase() && !two.hit, `${label}: Two Player, Player 2's call edged in his pink, ${two.place} him, clear of Player 1's ring and seat mark (${JSON.stringify(two.plate)} v ${JSON.stringify(two.man)})`);
+          if (two) B(r.k === r.ringCol && /ff5fd2/i.test(r.k) && two.edge.toLowerCase() === r.k.toLowerCase() && !two.hit, `${label}: Two Player, Player 2's call edged in his pink, ${/^(left|right)$/.test(two.place) ? 'beside him, on his ' + two.place : two.place + ' him'}, clear of Player 1's ring and seat mark (${JSON.stringify(two.plate)} v ${JSON.stringify(two.man)})`);
         }
         B(!errors.length, `${label}: no page errors (${errors.join('; ')})`);
         await ctx.close();

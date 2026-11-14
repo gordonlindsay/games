@@ -1952,10 +1952,13 @@ the other half of that: with the calls off alone the game plays as the chase doe
   that player's ring and seat mark are. It stands over his pointer, under his ring where the banner would sit on it or between it and
   him, or beside him where both are taken. That is chosen once, on its first frame, against the banner's laid-out box (not the box
   its pop is still growing), so it never jumps. In Two Player it never sits on the other player's man, and beside him it goes on the
-  side away from that man. While he is off the frame its clock waits for him, for up to a second, so the call is there when the
-  camera finds him. It rises 6px (it holds still under reduced motion) and is never dropped by the two-tag cap for a plain tag while
-  it lasts. His ring flashes for 0.4s, a ring going out and fading (none under reduced motion), and the **Gather** sound plays, a
-  synth recipe (the catch's slap, then two notes going up a fifth apart, made to carry on a phone speaker): no recording was reused.
+  side away from that man. A place counts as clear only if the plate stays clear all the way up its rise; where none is (the banner
+  over him and the other player's man under him), it takes the one least on that man, then least on his own, then least under the
+  banner, never falling back onto that man (1.6's review: it once fell back to under him). While he is off the frame its clock
+  waits for him, for up to a second, so the call is there when the camera finds him. It rises 6px (it holds still under reduced
+  motion) and is never dropped by the two-tag cap for a plain tag while it lasts. His ring flashes for 0.4s, a ring going out and
+  fading (none under reduced motion), and the **Gather** sound plays, a synth recipe (the catch's slap, then two notes going up a
+  fifth apart, made to carry on a phone speaker): no recording was reused.
   When the ball comes from the other side, an 80ms hold with no shake, never for Kids or Minis. Only where the ring is on him: in
   Pro Mode a teammate who wins the ball gets no call, and nothing at all for the CPU, whose banner is its call. None of it in AI v
   AI, the demo or a drill. Kicks caught on the full, a ruck's own ball, a scrum or a lineout and a pass that goes to the wrong man of
