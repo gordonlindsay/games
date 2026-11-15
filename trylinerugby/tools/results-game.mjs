@@ -120,11 +120,14 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
     'a boost of 3':['clubs', 'FAR', { ...far(), boost:3 }], 'a boost the reason does not give':['clubs', 'FAR', { ...far(), boost:2 }], 'an unknown reason':['clubs', 'FAR', { ...far(), why:'great' }], 'a reason off the prototype':['clubs', 'FAR', { ...far(), why:'toString' }], 'a loss boosted':['clubs', 'WIM', { ...f().clubs.WIM, boost:1, why:'win' }],
     'a big win by 4':['clubs', 'FAR', { ...far(), why:'big', boost:2 }], 'higher placed by 15':['men', 'ENG', { ...eng(), why:'higher' }], 'a draw boosted':['clubs', 'NTH', { ...f().clubs.NTH, boost:1, why:'win' }], 'a walkover boosted':['clubs', 'FAR', { ...far(), wo:true }], 'a walkover flag that is not true':['clubs', 'FAR', { ...far(), wo:1 }],
     'from on the match day':['clubs', 'FAR', { ...far(), from:'2026-11-14' }], 'until past seven days':['clubs', 'FAR', { ...far(), until:'2026-11-22', next:undefined }], 'until before from':['clubs', 'FAR', { ...far(), until:'2026-11-14' }], 'until on the next fixture':['clubs', 'FAR', { ...far(), until:'2026-11-21', next:'2026-11-21' }], 'next before the match':['clubs', 'FAR', { ...far(), next:'2026-11-13' }], 'no until':['clubs', 'FAR', { ...far(), until:undefined }],
+    'a win by 15 given +1':['clubs', 'FAR', { ...far(), f:49 }], 'higher over a side placed lower':['clubs', 'FAR', { ...far(), why:'higher', boost:2 }], 'higher with no places':['clubs', 'FAR', (e => { delete e.prePos; delete e.oppPos; return { ...e, why:'higher', boost:2 }; })(far())],
+    'a win over a side placed higher given +1':['clubs', 'FAR', { ...far(), oppPos:4 }], 'a Test win over a higher ranking given +1':['women', 'ENG', { ...f().women.ENG, why:'win', boost:1 }],
+    'a draw\'s window over the next fixture':['clubs', 'NTH', { ...f().clubs.NTH, next:'2026-11-03' }], 'a draw\'s until before from':['clubs', 'NTH', { ...f().clubs.NTH, until:'2026-10-31' }],
   };
   for (const [name, [kind, id, e]] of Object.entries(drop)) {
     const v = f(); if (id === '__proto__') Object.defineProperty(v[kind], id, { value:e, enumerable:true, configurable:true }); else v[kind][id] = e;
     const out = R.clean(v, NOW, null), kept = out && (kind === 'clubs' ? ['FAR', 'WIM', 'OAE', 'NTH'] : kind === 'men' ? ['ENG', 'JPN'] : ['ENG']).filter(k => k !== id || (k === id && !['FAR', 'WIM', 'NTH', 'ENG'].includes(id)));
-    ok(out && !Object.prototype.hasOwnProperty.call(out[kind], id) && kept.every(k => out[kind][k]) && Object.keys(out.clubs).length + Object.keys(out.men).length + Object.keys(out.women).length === 7 - (['FAR', 'WIM', 'NTH'].includes(id) && kind === 'clubs' || (id === 'ENG' && kind === 'men') ? 1 : 0), `dropped alone: ${name}`);
+    ok(out && !Object.prototype.hasOwnProperty.call(out[kind], id) && kept.every(k => out[kind][k]) && Object.keys(out.clubs).length + Object.keys(out.men).length + Object.keys(out.women).length === 7 - (['FAR', 'WIM', 'NTH'].includes(id) && kind === 'clubs' || (id === 'ENG' && kind !== 'clubs') ? 1 : 0), `dropped alone: ${name}`);
   }
   // what the job may write that the game takes
   const wo = R.clean({ ...f(), clubs:{ FAR:{ ...far(), wo:true, boost:0, why:'none' } } }, NOW, null);
@@ -134,6 +137,23 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   const deduct = R.clean({ ...f(), clubs:{ FAR:{ ...far(), pts:-5 } } }, NOW, null);
   ok(deduct && deduct.clubs.FAR.pts === -5, 'a points deduction below zero is a real table line');
   ok(R.clean({ ...f(), extra:{ any:1 }, clubs:{ FAR:{ ...far(), later:'a newer field' } } }, NOW, null).clubs.FAR.later === undefined, 'an unknown key, at the top or in an entry, is ignored and never kept');
+}
+
+// 1b. the two sides agree: the job's own validator (tools/results/lib.mjs) passes the game's fixture, and the game takes the repository's real
+// results.json, written by the job, whole, entry for entry, with Farnham's real line as the job wrote it
+{
+  const L = await import('./results/lib.mjs'), G = (await import('./results/teams.mjs')).gameTeams();
+  const probs = L.validate(FILE(), G.ids);
+  ok(probs.length === 0, `the game's fixture passes the job's validator (${probs.slice(0, 3).join('; ')})`);
+  const REAL = fileURLToPath(new URL('../results.json', import.meta.url));
+  if (fs.existsSync(REAL)) {
+    const raw = JSON.parse(fs.readFileSync(REAL, 'utf8')), gen = Date.parse(raw.generated);
+    ok(L.validate(raw, G.ids).length === 0, 'the real results.json passes the job\'s validator');
+    const got = R.clean(raw, gen + 864e5, null), lost = got ? ['clubs', 'men', 'women'].flatMap(k => Object.keys(raw[k]).filter(id => !got[k][id]).map(id => k + ' ' + id)) : ['the whole file'];
+    ok(got && lost.length === 0, `the game takes the real results.json whole: ${got ? ['clubs', 'men', 'women'].map(k => Object.keys(got[k]).length).join(' + ') : 0} entries (${lost.slice(0, 5).join(', ')})`);
+    const far = got && got.clubs.FAR, w = raw.clubs.FAR;
+    ok(!w || (far && json(far) === json(Object.fromEntries(Object.entries(w).filter(([k]) => !['why', 'src'].includes(k))))), 'the real Farnham entry kept field for field, less why and src');
+  } else ok(true, 'no real results.json in the repository');
 }
 
 // 2. the UK date, and the Form's window across the clocks changing (BST to GMT on 25 Oct 2026, GMT to BST on 29 Mar 2026)
@@ -269,7 +289,8 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   const head = h => h.slice(0, h.indexOf('<span class="tname">'));   // the shirt and its overall badge, before the name
   const rate = h => h.slice(h.indexOf('<span class="pk-rate">'), h.indexOf('<span class="gap mine">'));
   ok(head(c0) === head(before[0]) && rate(c0).length > 30 && rate(c0) === rate(before[0]), 'the shirt, its overall and the stars are the side as it is (58, 3 stars), as without a file');
-  const unform = h => h.replace(/<span class="gap form[^]*?<\/span><\/span>/, '').replace(/<em class="pk-(up|down)" aria-hidden="true">[^<]*<\/em>/g, '').replace(/<b class="pk-real[^>]*><\/b>/g, '').replace(/aria-label="(\w+) (\d) of 5, Form (plus|minus) 1"><i style="--v:[\d.]+">/g, (m, l, v, s) => `aria-label="${l} ${s === 'plus' ? v - 1 : +v + 1} of 5"><i style="--v:${((s === 'plus' ? v - 1 : +v + 1)/5).toFixed(2)}">`);
+  const unform = h => h.replace(/<span class="gap form[^]*?<\/span><\/span>/g, '').replace(/<span class="pk-lt">([^<]*)<\/span>/g, '$1').replace(/<em class="pk-(up|down)" aria-hidden="true">[^<]*<\/em>/g, '').replace(/<b class="pk-real[^>]*><\/b>/g, '').replace(/aria-label="(\w+) (\d) of 5, Form (plus|minus) 1"><i style="--v:[\d.]+">/g, (m, l, v, s) => `aria-label="${l} ${s === 'plus' ? v - 1 : +v + 1} of 5"><i style="--v:${((s === 'plus' ? v - 1 : +v + 1)/5).toFixed(2)}">`);
+  ok(/<span class="pk-league"><span class="gap form up pk-lf">[^]*?<\/span><\/span><span class="pk-lt">Regional 1 South Central<\/span><\/span>/.test(c0), 'the league line holds a copy of the chip for pickFit\'s last Form step (hidden until then: the browser part sees one chip a card)');
   ok(unform(c0) === before[0] && unform(c1).replace(/--v:[\d.]+/g, '') === before[1].replace(/--v:[\d.]+/g, ''), 'take the chip and the marks away and both cards are exactly as without a file');
   S.pick = [{ id:'FAR', cat:'women', g:null }, { id:'WIM', cat:'women', g:null }]; S.cat = 'women'; D.openTeams('quick'); ok(/Farnham/.test($('t-side0').innerHTML) && !/gap form/.test($('t-side0').innerHTML + $('t-side1').innerHTML), 'Farnham Women\'s and Wimbledon Women\'s cards: no Form'); S.cat = 'men';
   S.pick = [{ id:'FAR', cat:'men', g:null }, { id:'WIM', cat:'men', g:null }];
@@ -393,6 +414,10 @@ async function browserChecks() {
         const joined = () => $('my-box').classList.contains('real') && ['2', '3'].includes($('my-box').dataset.fit);   // the place first and whole, the league's end the part that may go
         const home = () => ({ fit:$('my-box').dataset.fit || '0', scroll:scroll(), over:over(), cut:[...document.querySelectorAll('.rr-line, .my-league > span, .my-nat b')].filter(e => !(joined() && e === $('my-league').firstElementChild)).filter(cut).map(e => e.textContent), joined:joined(), placeWhole:!cut($('my-league').lastElementChild) && vis($('my-league').lastElementChild) && box($('my-league').lastElementChild).right <= box($('my-league')).right + 0.5, small:small($('home')), line:vis($('my-real')) ? $('my-real').querySelector('.rr-line').textContent : null, sub:vis($('my-sub')), chip:!!$('my-real').querySelector('.gap.form') && vis($('my-real').querySelector('.gap.form')), place:vis($('my-league').lastElementChild) ? $('my-league').lastElementChild.innerText.trim() : null });
         out.home = home();
+        { const long = JSON.parse(JSON.stringify(file)); Object.assign(long.clubs.FAR, { opp:null, oppName:'United Services, Portsmouth' });   // a long opponent: the line steps down before its end goes
+          T.real.set(long, '2026-11-17'); T.debug.goHome(); T.home.fit(); const rr = $('my-real').querySelector('.rr-line');
+          out.long = { cut:cut(rr), px:parseFloat(getComputedStyle(rr).fontSize), was:parseFloat(getComputedStyle($('my-real').querySelector('.rr-out')).fontSize) };
+          T.real.set(file, '2026-11-17'); T.debug.goHome(); T.home.fit(); }
         // the box's extras: a Trophy Cabinet, Install and Updating, a Super Fan's colours
         const cabinet = () => { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } X.setChamp(c); X.save(); X.load(); X.setChamp(null); };
         cabinet(); $('app-tools').hidden = false; $('b-install').hidden = false; $('offline-update').hidden = false; T.debug.goHome(); T.home.fit();
@@ -405,8 +430,15 @@ async function browserChecks() {
         // the cards: Farnham v Wimbledon
         st.pick = [{ id:'FAR', cat:'men', g:null }, { id:'WIM', cat:'men', g:null }]; T.debug.openTeams('quick');
         const sides = [0, 1].map(s => $('t-side' + s)), at = (s, sel) => box(sides[s].querySelector(sel));
-        out.card = { scroll:scroll(), names:at(0, '.tname').top - at(1, '.tname').top, bars:at(0, '.pk-stats').top - at(1, '.pk-stats').top, chips:sides.map(s => !!s.querySelector('.gap.form') && vis(s.querySelector('.gap.form'))), small:small($('s-teams')).filter(n => n), wrap:at(0, '.gap.form').top - at(0, '.pk-rate').top,
+        out.card = { scroll:scroll(), names:at(0, '.tname').top - at(1, '.tname').top, bars:at(0, '.pk-stats').top - at(1, '.pk-stats').top, chips:sides.map(s => [...s.querySelectorAll('.gap.form')].filter(vis).length === 1), small:small($('s-teams')).filter(n => n),
           clip:[...document.querySelectorAll('#s-teams .pk-st .lbl, #s-teams .tname')].filter(cut).map(e => e.textContent) };
+        // nations with star traits, Stronger Side and Form (the fixture's England +2 and Japan -1): pickFit's Form steps keep the screen whole
+        const P = T.picker, grp = (n, key) => P.group(n, P.view(n).ladder.findIndex(g => g.key === key) - P.view(n).gi), scr = $('s-teams');
+        const nations = what => ({ what, scroll:scr.scrollHeight - scr.clientHeight, step:scr.dataset.form || '0', chips:sides.map(s => [...s.querySelectorAll('.gap.form')].filter(vis).map(e => e.firstElementChild.textContent)),
+          traits:sides.map(s => vis(s.querySelector('.tstars'))), clip:[...scr.querySelectorAll('.tname, .pk-league, .pk-rate, .pk-st .lbl')].filter(vis).filter(cut).map(e => e.textContent), small:small(scr).filter(n => n),
+          out:['t-side0', 't-side1', 't-go', 't-back'].filter(id => { const r = box($(id)); return r.top < -0.5 || r.bottom > innerHeight + 0.5; }) });
+        T.debug.openTeams('quick'); grp(0, 'nat.eng'); grp(1, 'nat.jpn'); out.nations = [nations('England v Japan')];
+        T.debug.openTeams('quick'); T.debug.pickTeam(X.CLUBS[0]); grp(1, 'nat.eng'); out.nations.push(nations('Pick Opponent on England'));
         // the hub
         X.newChamp(X.ALL_TEAMS.find(t => t.id === 'FAR'), ['WIM', 'OAE', 'BRC', 'TWE', 'QUI'].map(id => X.ALL_TEAMS.find(t => t.id === id)));
         T.debug.renderHub(); T.debug.goHome(); document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== 's-hub'; }); T.debug.renderHub();
@@ -418,11 +450,13 @@ async function browserChecks() {
         ok(!s.scroll && !s.over && !s.cut.length && !s.small.length, `${kind} ${name}: no page scroll, nothing over the box or cut short, every button 44px (fit level ${s.fit}${s.cut.length ? ', cut: ' + s.cut.join(' | ') : ''}${s.small.length ? ', small: ' + s.small.join(', ') : ''})`);
         ok(s.line === 'Won 38-34 v Old Alleynians' && s.chip, `${kind} ${name}: the result line whole with its Form chip (${s.line})`);
       }
+      ok(!m.long.cut || m.long.px <= 14, `${kind}: a long opponent steps the result line down (to ${m.long.px}px) and is cut only at 14px (${m.long.cut ? 'cut' : 'whole'})`);
       ok(m.home.fit === '0' && m.home.sub && m.home.place === '5th · 16 Pts', `${kind}: the plain home needs no fit level, Your Games and 5th · 16 Pts showing (level ${m.home.fit}, ${m.home.place})`);
       for (const [name, s] of [['with more in the box', m.busy], ['a Super Fan\'s box', m.fan]]) ok(s.fit === '0' || (!s.sub && (s.fit === '1' ? s.place === '5th · 16 Pts' : ['2', '3'].includes(s.fit) ? s.joined && s.placeWhole && s.place === '5th' : true)), `${kind} ${name}: Your Games goes first, then the place and the league share a line, the place first and whole (level ${s.fit}, ${s.place})`);
       ok(m.fanOn, `${kind}: the Super Fan's box was drawn in its colours (${m.fanColours.join(' on ')})`);
       ok(!m.card.scroll && Math.abs(m.card.names) <= 1 && Math.abs(m.card.bars) <= 1 && m.card.chips.every(Boolean) && !m.card.clip.length, `${kind} cards: no page scroll, both names and both bars level (${m.card.names.toFixed(1)}, ${m.card.bars.toFixed(1)}), Form on both, nothing cut (${m.card.clip.join(' | ')})`);
       ok(!m.card.small.length, `${kind} cards: every button 44px (${m.card.small.join(', ')})`);
+      for (const n of m.nations) ok(!n.scroll && !n.out.length && !n.clip.length && !n.small.length && n.traits[1] && (n.traits[0] || /^Pick/.test(n.what)) && n.chips.every(c => c.length === 1), `${kind} ${n.what}: traits, Stronger Side and Form with no scroll, each card's one Form chip shown, nothing cut (Form step ${n.step}, ${json(n.chips)}${n.scroll ? ', scrolls ' + n.scroll : ''}${n.clip.length ? ', cut: ' + n.clip.join(' | ') : ''}${n.out.length ? ', out of view: ' + n.out.join(' ') : ''})`);
       ok(!m.hub.scroll && json(m.hub.chips.map(c => c.replace(/\s+/g, ' ').trim())) === json(['Form +1Form plus 1', 'Form −1Form minus 1']) && !m.hub.small.length, `${kind} hub: no page scroll, Farnham Form +1 and Wimbledon Form −1 (${json(m.hub.chips)})`);
       if ((kind === '844x390' || kind === '667x375')) {   // the screenshots, from a fresh page: no Trophy Cabinet or championship left by the checks above
         const out = shots || '/tmp/claude-0/-home-user/a86fd4cd-a20a-5749-8977-916237a3df3f/scratchpad/shots';

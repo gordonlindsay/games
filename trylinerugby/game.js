@@ -1409,10 +1409,11 @@ function resultsEntry(e, kind, day) {
   if (why[0] && (wo || e.res !== why[0])) return null;   // win, big and higher a win, loss a loss, draw a draw; none any result (a walkover, or a window with no room)
   if (wo && e.why !== 'none') return null;
   if (e.why === 'big' && e.f - e.a < 15) return null;
-  if (e.why === 'higher' && e.f - e.a >= 15) return null;
-  if (!realIso(e.from) || !realIso(e.until) || e.from !== realAdd(e.date, 1) || e.until > realAdd(e.date, 7)) return null;   // from the day after the match, at most 7 days, never longer
-  if (e.boost && e.until < e.from) return null;
-  if (has('next') && (!realIso(e.next) || e.next <= e.date || (e.boost && e.until >= e.next))) return null;   // a boost ends before the next fixture
+  if ((e.why === 'higher' || e.why === 'win') && e.f - e.a >= 15) return null;   // a win by 15 or more is big
+  const above = out.oppPos < out.prePos || out.oppRank < out.rank;   // the opponent placed higher before the match (false when either place is unknown)
+  if ((e.why === 'higher' && !above) || (e.why === 'win' && above)) return null;   // higher only over a side placed higher, and a win over one is never just a win
+  if (!realIso(e.from) || !realIso(e.until) || e.from !== realAdd(e.date, 1) || e.until < e.from || e.until > realAdd(e.date, 7)) return null;   // from the day after the match, at most 7 days, never longer
+  if (has('next') && (!realIso(e.next) || e.next <= e.date || (e.why !== 'none' && e.until >= e.next))) return null;   // a window ends before the next fixture (none: no room, and no boost)
   Object.assign(out, { boost:e.boost, from:e.from, until:e.until });
   if (has('next')) out.next = e.next;
   return out;
@@ -12559,6 +12560,8 @@ function homeFit() {
   for (let lvl = 1; lvl <= 6 && over(lvl - 1); lvl++) box.dataset.fit = String(lvl);
   let px = parseFloat(getComputedStyle(name).fontSize) || 30;
   while (name.scrollWidth > name.clientWidth + 0.5 && px > 16) { px -= 1; name.style.fontSize = px + 'px'; }
+  const rr = box.querySelector('.rr-line');   // real results: a long opponent (v United Services, Portsmouth) steps the result line down, to 14px at the least, before its end goes
+  if (rr && rr.style) { rr.style.fontSize = ''; for (let n = parseFloat(getComputedStyle(rr).fontSize) || 20; cut(rr) && n > 14; ) { n -= 1; rr.style.fontSize = n + 'px'; } }
   if (!strip.hidden) {
     delete strip.dataset.fit;
     const list = $('tc-list');
@@ -13134,7 +13137,7 @@ function pickTag(s, t) {                                   // Stronger Side (the
 /* The championship hub's next fixture: a side's name, with this week's Form under it when its next match will have one (the saved side
    as it is kept, which is what startMatch boosts). Without one, the name exactly as before. */
 const realHub = t => { const d = realDelta(t); return d ? `<span class="fx-nm"><span>${esc(t.name)}</span>${realChip(d)}</span>` : `<span>${esc(t.name)}</span>`; };
-const realChip = d => (d ? `<span class="gap form ${d > 0 ? 'up' : 'down'}"><span aria-hidden="true">${esc(realForm(d))}</span><span class="sr">${esc(realFormSaid(d))}</span></span>` : '');
+const realChip = (d, at = '') => (d ? `<span class="gap form ${d > 0 ? 'up' : 'down'}${at}"><span aria-hidden="true">${esc(realForm(d))}</span><span class="sr">${esc(realFormSaid(d))}</span></span>` : '');
 function realCard(t, cat) {
   const side = !t || t.act ? null : cat ? catTeam(t, cat) : t, d = side ? realDelta(side) : 0;
   return { d, side:d ? realSide(side) : null };
@@ -13152,7 +13155,7 @@ function pickPanel(s) {
   if (!real) card = `<button class="team pk-pick pk-make" data-act="pick" data-make="${t.act}"><span class="plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="tname">${esc(t.name)}</span></button>`;
   else {
     const stars = teamTraitNames(t), re = t.league ? realNews(t, 'men') : null, line = re && re.league ? re.league : pickHomeLine(t, cat), rc = realCard(t, cat);   // a club's league this season from results.json while its result is fresh: clubs have moved
-    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}${realChip(rc.d)}</span>${line ? `<span class="pk-league${line === g.name ? ' dup' : ''}">${esc(line)}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
+    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}${realChip(rc.d)}</span>${line ? `<span class="pk-league${line === g.name && !rc.d ? ' dup' : ''}">${rc.d ? realChip(rc.d, ' pk-lf') + `<span class="pk-lt">${esc(line)}</span>` : esc(line)}</span>` : rc.d ? `<span class="pk-league pk-lfo">${realChip(rc.d, ' pk-lf')}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
       + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round(b - a);
           if (!dv) return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`;
           const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${Math.abs(dv)}</em>`;   // the week's point, beside the name: +1 or −1
@@ -13286,6 +13289,8 @@ function pickFit() {
   const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
   delete scr.dataset.dup;
   for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); pickTraits(); if (!over() && !small()) break; }
+  delete scr.dataset.form;   // real results (src/results.js): a Form chip that would scroll the screen first goes compact, then moves to the start of the league line (pk-lf), so a card with traits, Stronger Side and Form keeps one line for each
+  for (const f of ['1', '2']) { if (!over() || !scr.querySelector('.pk-rate > .gap.form')) break; scr.dataset.form = f; fitNames(); pickTraits(); }
   if (over()) { scr.dataset.dup = '1'; fitNames(); pickTraits(); }   // the last step: a league line that only says its group's name again (Made Teams under Made Teams) goes
   scr.classList.toggle('scrolls', scr.scrollHeight > scr.clientHeight + 1);   // styles.css: a card's own vertical swipe only where the page cannot scroll
   for (const g of groups) {                                   // last, once the screen has its size and no scroll bar: the chevron kept only where the name keeps its room too: else it is left off (Championship at 568), the name never cut, Your Team on one line, the head 44px

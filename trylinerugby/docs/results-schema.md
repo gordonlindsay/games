@@ -84,11 +84,11 @@ Everything shown goes through `esc()`.
 - The counting match is the side's latest first XV league or cup match with a result (a Test for a nation). Friendlies never count. A postponed or cancelled fixture is neither a result nor a `next`.
 - Nothing stacks: one entry per side, the latest match.
 
-So the checks are: `why` is one of the six; `win` and `big` and `higher` need `res: "W"`; `loss` needs `L`; `draw` needs `D`; `boost` is 1 for `win`, 2 for `big` and `higher`, -1 for `loss`, 0 for `draw` and `none`; `big` needs `f - a >= 15`; `higher` needs `f - a < 15`.
+So the checks are: `why` is one of the six; `win` and `big` and `higher` need `res: "W"`; `loss` needs `L`; `draw` needs `D`; `boost` is 1 for `win`, 2 for `big` and `higher`, -1 for `loss`, 0 for `draw` and `none`; `big` needs `f - a >= 15`; `win` and `higher` need `f - a < 15`; `higher` needs both places (or both ranks) and the opponent's the higher, and a `win` is never over a side placed higher; `until` is at least `from`, and before `next` unless `why` is `none`. The job's `validate()` and the game's `resultsEntry` (`src/results.js`) both hold every one of these, and `tools/results-game.mjs` checks that the game's fixture passes the job's validator and that the game takes the real file whole.
 
 ## When the game applies it (for the game's builder)
 
-- The boost applies on a device date `d` (the device's local date) when `from <= d <= until`. After `until` it is gone, even offline: the job never extends a window, and the game must not either.
+- The boost applies on a day `d` when `from <= d <= until`, where `d` is the UK date (Europe/London, worked out by the BST rule) at the device's clock, so every device and the tools agree; for a player in the UK it is the local date. After `until` it is gone, even offline: the job never extends a window, and the game must not either.
 - Not at the Kids level and not to Minis or Women club sides (the result line still shows on the home). Women's nations take the `women` table.
 - The job writes the side's latest result whatever its age. How long the result line stays on the home is the game's choice (DESIGN.md recommends 30 days after `date`).
 

@@ -83,10 +83,11 @@ function resultsEntry(e, kind, day) {
   if (why[0] && (wo || e.res !== why[0])) return null;   // win, big and higher a win, loss a loss, draw a draw; none any result (a walkover, or a window with no room)
   if (wo && e.why !== 'none') return null;
   if (e.why === 'big' && e.f - e.a < 15) return null;
-  if (e.why === 'higher' && e.f - e.a >= 15) return null;
-  if (!realIso(e.from) || !realIso(e.until) || e.from !== realAdd(e.date, 1) || e.until > realAdd(e.date, 7)) return null;   // from the day after the match, at most 7 days, never longer
-  if (e.boost && e.until < e.from) return null;
-  if (has('next') && (!realIso(e.next) || e.next <= e.date || (e.boost && e.until >= e.next))) return null;   // a boost ends before the next fixture
+  if ((e.why === 'higher' || e.why === 'win') && e.f - e.a >= 15) return null;   // a win by 15 or more is big
+  const above = out.oppPos < out.prePos || out.oppRank < out.rank;   // the opponent placed higher before the match (false when either place is unknown)
+  if ((e.why === 'higher' && !above) || (e.why === 'win' && above)) return null;   // higher only over a side placed higher, and a win over one is never just a win
+  if (!realIso(e.from) || !realIso(e.until) || e.from !== realAdd(e.date, 1) || e.until < e.from || e.until > realAdd(e.date, 7)) return null;   // from the day after the match, at most 7 days, never longer
+  if (has('next') && (!realIso(e.next) || e.next <= e.date || (e.why !== 'none' && e.until >= e.next))) return null;   // a window ends before the next fixture (none: no room, and no boost)
   Object.assign(out, { boost:e.boost, from:e.from, until:e.until });
   if (has('next')) out.next = e.next;
   return out;

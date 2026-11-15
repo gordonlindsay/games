@@ -14,6 +14,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { resultsServe } from './results-serve.mjs';
 const X = T.teams, D = T.debug, H = T.home, S = T.store, L = T.locker, I = T.importer, C = T.career, K = T.cups, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } if (process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };
@@ -653,6 +654,7 @@ async function browserChecks() {
   const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.woff2':'font/woff2', '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json' };
   const CREST = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28"><path d="M12 1l11 4v8c0 7-5 12-11 14C6 25 1 20 1 13V5z" fill="#c8102e"/><path d="M6 9h12v3H6z" fill="#fff"/></svg>';   // a stand-in crest, served by this test only
   const server = http.createServer((req, res) => {
+    if (resultsServe(req.url, res)) return;   // the week's results.json: 404 unless RESULTS_FILE (tools/results-serve.mjs)
     if (new URL(req.url, 'http://x').pathname === '/crests/test.svg') { res.writeHead(200, { 'content-type':'image/svg+xml' }); res.end(CREST); return; }
     const file = path.resolve(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
     if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }

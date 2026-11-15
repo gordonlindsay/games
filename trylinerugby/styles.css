@@ -1838,3 +1838,15 @@ summary::-webkit-details-marker{display:none}
    a Team and Add Your Team keep their centred plus. */
 .pk-card:has(> .pk-stats){justify-content:space-between}
 .team.pk-pick:not(.pk-make){align-items:start}
+/* pickFit's Form steps (real results), only where the screen would otherwise scroll: 1, the card's chip compact, as tall as the stars' line;
+   2, the chip at the start of the league line instead, so Stronger Side or My Team and Form never take a line of their own. The league
+   line's copy is hidden otherwise, so it is never read out twice. */
+.pk-league .gap.form.pk-lf,.pk-league.pk-lfo{display:none}
+#s-teams[data-form] .pk-pick .gap.form{padding:0 4px;border-width:1px;font-size:11px;line-height:11px;letter-spacing:.04em}
+#s-teams[data-form="2"] .pk-rate > .gap.form{display:none}
+#s-teams[data-form="2"] .pk-league .gap.form.pk-lf{display:inline-block;margin-right:6px;vertical-align:1px}
+#s-teams[data-form="2"] .pk-league.pk-lfo{display:block}
+#s-teams[data-form="2"] .tid:has(> .tstars) > .pk-league:has(> .pk-lf){display:flex;align-items:center;white-space:nowrap}   /* a card with traits keeps the chip and the line to one line, the line's end the part that may go */
+#s-teams[data-form="2"] .tid:has(> .tstars) > .pk-league > .pk-lf{flex:none}
+#s-teams[data-form="2"] .tid:has(> .tstars) > .pk-league > .pk-lt{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
