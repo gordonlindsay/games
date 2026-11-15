@@ -30,6 +30,7 @@ const jobs = [
   ['chase', ['tools/chase.mjs']],                           // the kick chase: the gate, the onside chasers, the pace and its end, the catching side late but never your own input, no new draw, CHASE off as b4a25d5, the win-back rates
   ['stick', ['tools/stick.mjs']],                           // the touch stick and the buttons never stay stuck, and a card's button works under a second finger (its browser part runs where Playwright is installed)
   ['kits', ['tools/kits.mjs']],                           // kit designs and a third colour: the data, kitPaint, the icons, the close-ups, the clash rule, the saves, no draw, the Top camera plain, KITS off as 02b9700 (its browser part, the sprite bake and Create Team's rows, runs where Playwright is installed)
+  ['results', ['tools/results.mjs']],                       // real results, the weekly job's side: the parsers against saved pages, the owner's boost rules and window, the validator, the refusals, robots.txt, the mapping against the game, results.json, the PR-only workflow (no network)
 ];
 if (flags.has('--full')) {
   for (const name of ['contact', 'duels', 'goalkicks', 'moves', 'passing', 'teams', 'setpieces', 'browser']) jobs.push([name, [`tools/${name}.mjs`]]);
