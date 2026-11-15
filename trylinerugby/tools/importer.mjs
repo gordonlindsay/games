@@ -1,5 +1,6 @@
 // Import: every parser path on the fixtures in tools/fixtures/import, link checking, the safeguarding filter, the
-// native fetch path (a stubbed window.Capacitor), the web message, the save, old saves and the My League list.
+// native fetch path (a stubbed window.Capacitor), the web's import service (a stubbed fetch) and the cleaning of its
+// answer, the message with nothing to fetch with, the save, old saves and the My League list.
 // node tools/importer.mjs
 import fs from 'node:fs';
 process.env.SEED ??= '23';
@@ -225,22 +226,114 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   ok(!r11.ok && r11.error === 'cancelled' && calls.length === 1, 'cancelled in the pause between pages, no further request is made');
 }
 
-// 5. the web build never fetches, and says so
+// 5. with nothing to fetch with (here no page address: a page not loaded over http or https), nothing is fetched, and the card says so
 {
   native(false); reset();
   let webFetches = 0;
+  const nodeFetch = globalThis.fetch;
   globalThis.fetch = () => { webFetches++; return Promise.reject(Error('no')); };
   globalThis.XMLHttpRequest = function () { webFetches++; };
   const r = await I.fetch(PIT);
-  ok(!r.ok && r.error === 'web' && webFetches === 0, 'the web build does not fetch');
+  ok(!r.ok && r.error === 'web' && webFetches === 0, 'with nothing to fetch with, nothing is fetched');
   globalThis.Capacitor = { isNativePlatform:() => false, Plugins:{ CapacitorHttp:{ get:() => { webFetches++; } } } };
-  ok((await I.fetch(PIT)).error === 'web' && webFetches === 0, 'nor does Capacitor on the web');
+  ok((await I.fetch(PIT)).error === 'web' && webFetches === 0, 'nor through Capacitor when the page is not in the app');
+  globalThis.fetch = nodeFetch;
   native(false);
   I.open();
   ok(!$('m-import').hidden && I.state().step === 'web' && $('im-title').textContent === 'Works in the Try Line App', 'the card says Add Your Team works in the app');
   ok(!$('im-line').hidden && $('im-field').hidden && $('im-go').hidden && $('im-alt').hidden, 'one plain line, no link field, no Import, one balanced Back button');
   $('im-back').click();
   ok($('m-import').hidden, 'Back to Teams closes it');
+}
+
+// 5b. on the web: the link goes once, in a POST's body, to the import service, never to the page's site, and what comes back is
+//     cleaned again before it is shown or saved (importClean)
+{
+  native(false); reset();
+  const nodeFetch = globalThis.fetch, nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const posts = []; let answer = null, aborted = 0;
+  globalThis.fetch = async (url, init) => {
+    posts.push({ url, init });
+    if (init && init.signal) init.signal.addEventListener('abort', () => { aborted++; });
+    if (answer instanceof Error) throw answer;
+    if (answer === 'hang') return new Promise(() => {});
+    return { ok:true, status:200, text:async () => (typeof answer === 'string' ? answer : JSON.stringify(answer)) };
+  };
+  globalThis.location = { protocol:'https:' };
+  ok(I.http() === I.WEB, 'a page loaded over https fetches through the import service');
+  const LG = PIT + '/teams/3100/league-table', served = I.parse(fx('pitchero-league'), LG);
+  answer = { ok:true, data:served, requests:2 };
+  const r = await I.fetch(' ' + LG + '?utm_source=whatsapp#table');
+  ok(r.ok && r.requests === 1 && posts.length === 1 && calls.length === 0, `one request, to the service, and none to the page's site (${posts.length}, ${calls.length})`);
+  const p = posts[0].init;
+  ok(posts[0].url === I.SERVICE && I.SERVICE === 'https://tryline-import.vercel.app/api/import' && p.method === 'POST' && p.body === LG && JSON.stringify(p.headers) === '{"Content-Type":"text/plain"}' && p.credentials === 'omit' && p.referrerPolicy === 'no-referrer' && p.cache === 'no-store' && p.signal,
+    'the cleaned link in a text/plain POST body to the service (never in its address), no cookies, no Referer, and a way to abort it');
+  ok(JSON.stringify(r.data) === JSON.stringify(served), 'a clean answer comes through as the game itself would have read the page');
+  // a hostile answer: nothing but names, colours and table numbers survives, each through the game's own checks
+  const PEOPLE = ['J Smith', 'Sophie Taylor', 'Jamie Testplayer', 'alex@example.com', '07700 900123', 'Coach: Robin', 'www.example.com', 'Mr Brown'];
+  answer = { ok:true, requests:3, page:'<html><body>Jamie Testplayer</body></html>', link:LG, headers:{ 'set-cookie':'x' }, data:{
+    source:'<script>alert(1)</script>', extra:'x', players:[{ name:'Jamie Testplayer' }], __proto__:{ polluted:true },
+    club:{ name:'Jamie Testplayer', kit:'javascript:alert(1)', trim:'#zzzzzz', email:'coach@example.com', photo:'kid.jpg' },
+    teams:[...PEOPLE.map(name => ({ name })), { name:'<script>alert(1)</script>' }, { name:'<img src=x onerror=alert(1)>' }, { name:'Hornets RFC', kit:'#FF0000', trim:'url(javascript:x)', photo:'x.jpg' }, 'Farnham', null, [1, 2], { name:{ toString:null } }, { name:'x'.repeat(600) }],
+    league:[...PEOPLE.map(name => ({ name, won:1, lost:0, points:4 })), { name:'Ash Grove', played:'3', won:2, drawn:0, lost:1, points:99999, kit:'red', trim:'rgb(0,0,300)', own:'yes', email:'a@b.c', avatar:'x.png' },
+      ...Array.from({ length:500 }, (_, i) => ({ name:'Side ' + String.fromCharCode(65 + i % 26) + String.fromCharCode(65 + Math.floor(i / 26) % 26) + 'ville', played:i, won:1, lost:0, points:1e9, kit:'#12345', trim:'#123456' }))],
+    label:'<img src=x onerror=alert(1)>', level:'__proto__' } };
+  const h = await I.fetch(LG), text = JSON.stringify(h.data).toLowerCase();
+  ok(h.ok && Object.keys(h.data).join() === 'source,club,teams,league' && h.data.source === 'generic' && h.data.club === null, `only the four fields, an unknown source as generic, and no club from a person's name (${Object.keys(h.data)})`);
+  for (const bad of ['smith', 'taylor', 'testplayer', '@', '07700', 'robin', 'www.', 'brown', 'script', 'onerror', 'javascript', 'url(', '.jpg', '.png', 'polluted', 'cookie', 'html', 'xxxxxxxxxx']) ok(!text.includes(bad), `"${bad}" never reaches the game from the service`);
+  ok(h.data.teams.map(t => t.name).join() === 'Hornets RFC' && h.data.teams[0].kit === '#ff0000' && h.data.teams[0].trim === null, `the real side is kept, its colours checked; a script, a bare string and a list are not sides (${JSON.stringify(h.data.teams)})`);
+  ok(h.data.league.length === 24 && h.data.league[0].name === 'Ash Grove' && h.data.league[0].played === 3 && h.data.league[0].points === null && h.data.league[0].kit === null && !h.data.league[0].own, `at most ${24} rows, numbers through importNum, colours through importHex, own only when true (${JSON.stringify(h.data.league[0])})`);
+  ok(h.data.league.every(x => Object.keys(x).every(k => ['name', 'played', 'won', 'drawn', 'lost', 'points', 'kit', 'trim', 'own'].includes(k)) && [x.kit, x.trim].every(c => c === null || /^#[0-9a-f]{6}$/.test(c)) && ['played', 'won', 'drawn', 'lost', 'points'].every(k => x[k] === null || (Number.isInteger(x[k]) && Math.abs(x[k]) <= 9999))), 'every row: known keys, colours #rrggbb or none, numbers whole and in range');
+  ok(!('label' in h.data) && !('level' in h.data) && !({}).polluted, 'no label that is not a label, no level that is not a level, and nothing polluted');
+  answer = { ok:true, requests:1, data:{ source:'pitchero', club:{ name:'Bracknell RFC', kit:'#399913', trim:'#e4c200' }, teams:[], league:[], label:'U10s', level:'r2' } };
+  const lv = await I.fetch(LG);
+  ok(lv.data.label === 'U10s' && lv.data.level === 'r2' && lv.data.source === 'pitchero' && lv.data.club.kit === '#399913', 'a real label and level id are kept');
+  for (const [bad, want, what] of [[{ ok:false, error:'busy' }, 'busy', 'busy'], [{ ok:false, error:'timeout' }, 'timeout', 'a timeout'], [{ ok:false, error:'empty' }, 'empty', 'an empty page'], [{ ok:false, error:'<b>pwned</b>' }, 'net', 'an unknown error'],
+    ['not json', 'net', 'an answer that is not JSON'], ['x'.repeat(300000), 'net', 'an answer far too long'], [{ ok:true, data:null }, 'net', 'no data'], [{ ok:true, data:[1, 2] }, 'net', 'data that is a list'], [Error('Failed to fetch'), 'net', 'a refused request (CORS, or no network)']]) {
+    answer = bad;
+    const x = await I.fetch(LG);
+    ok(!x.ok && x.error === want && (I.MSG[x.error] || want === 'net'), `${what} is ${want}`);
+  }
+  ok(I.MSG.busy === 'Too many imports. Try again in a minute.' && I.MSG.offline && I.MSG.offline.length <= 45, 'busy and offline have their own words');
+  answer = 'hang'; aborted = 0;
+  const t0 = Date.now(), slow = await I.fetch(LG, { timeout:30 });
+  ok(!slow.ok && slow.error === 'timeout' && aborted === 1 && Date.now() - t0 < 2000, 'a service that never answers times out, its request aborted');
+  let stop = false; aborted = 0;
+  setTimeout(() => { stop = true; }, 20);
+  const t1 = Date.now(), back = await I.fetch(LG, { cancelled:() => stop });
+  ok(!back.ok && back.error === 'cancelled' && aborted === 1 && Date.now() - t1 < 1000, 'Back while it imports aborts the request at once');
+  Object.defineProperty(globalThis, 'navigator', { value:{ onLine:false }, configurable:true, writable:true });
+  const before = posts.length, off = await I.fetch(LG);
+  ok(!off.ok && off.error === 'offline' && posts.length === before, 'offline: says so, and sends nothing');
+  if (nav) Object.defineProperty(globalThis, 'navigator', nav); else delete globalThis.navigator;
+  // the card on the web: the grown-up check first, as in the app, then Importing, the preview and Save
+  X.restore({ custom:[], champ:null }); I.setLeague(null);
+  let gate = null; I.setGate((go, cancel) => { gate = { go, cancel }; });
+  I.open();
+  ok(I.state().step === 'link' && $('im-title').textContent === 'Paste Your Link' && !$('im-field').hidden && $('im-line').hidden && $('im-go').textContent === 'Import', 'on the web the card asks for the link');
+  answer = { ok:true, data:served, requests:2 }; posts.length = 0;
+  $('im-url').value = LG; I.go();
+  ok(gate && $('m-import').hidden && posts.length === 0, 'Import asks the grown-up check first, nothing sent');
+  gate.go();
+  ok(I.state().step === 'busy' && $('im-go').textContent === 'Importing', 'Importing while it waits');
+  for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+  ok(I.state().step === 'preview' && $('im-title').textContent === 'Bracknell RFC' && $('im-go').textContent === 'Save Club' && $('im-league').innerHTML.includes('My League · 5 Teams') && posts.length === 1, 'then the preview, as in the app');
+  I.go();
+  ok(X.custom().some(t => t.name === 'Bracknell RFC') && I.league().teams.length === 5 && !JSON.stringify(saved()).includes('pitchero.com'), 'Save Club keeps the club and its league, and not the link');
+  $('im-not').click();
+  answer = { ok:false, error:'busy' };
+  I.open(); $('im-url').value = LG; I.go(); gate.go();
+  for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+  ok(I.state().step === 'link' && $('im-err').textContent === I.MSG.busy && !$('im-err').hidden, 'busy says so, back on the link');
+  $('im-back').click();
+  delete globalThis.fetch;
+  ok(I.http() === null, 'a browser with no fetch has nothing to fetch with');
+  I.open();
+  ok(I.state().step === 'web' && $('im-title').textContent === 'Works in the Try Line App', 'and the card falls back to Works in the Try Line App');
+  $('im-back').click();
+  I.setGate(null); X.restore({ custom:[], champ:null }); I.setLeague(null);
+  globalThis.fetch = nodeFetch; delete globalThis.location;
+  ok(I.http() === null, 'with the page address gone again, the rest of this suite runs as before');
 }
 
 // 6. the card in the app: grown-up check, preview, save

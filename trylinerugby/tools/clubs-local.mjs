@@ -22,8 +22,8 @@ const gameSrc = Object.fromEntries(gameFiles.map(f => [f, fs.readFileSync(path.j
 const GAME = new Map();                                          // code: name, every side a list, a cup or the nations hold
 for (const src of Object.values(gameSrc)) for (const m of src.matchAll(/\{ id:'([A-Z0-9]{3})', name:'((?:[^'\\]|\\.)*)'/g)) GAME.set(m[1], m[2].replace(/\\'/g, "'"));
 if (!GAME.has('FAR') || !GAME.has('ENG') || !GAME.has('HNS')) fail('could not read the game\'s codes from src/ (FAR, ENG and HNS expected)');
-// importSame exactly as the game has it (src/import.js), so two names the game would take for one club are caught here
-const imp = gameSrc['import.js'], line = re => { const m = imp.match(re); if (!m) fail('src/import.js: ' + re + ' not found'); return m ? m[0] : ''; };
+// importSame exactly as the game has it (src/import-core.js), so two names the game would take for one club are caught here
+const imp = gameSrc['import-core.js'], line = re => { const m = imp.match(re); if (!m) fail('src/import-core.js: ' + re + ' not found'); return m ? m[0] : ''; };
 const importSame = new Function(`${line(/^const IMPORT_SUFFIX = .*;$/m)}\n${line(/^const IMPORT_LABEL = .*;$/m)}\n${line(/^const importKey = .*;$/m)}\n`
   + `${line(/^function importBase\(s\) \{[\s\S]*?\n\}$/m)}\n${line(/^const importSame = .*;$/m)}\nreturn importSame;`)();
 

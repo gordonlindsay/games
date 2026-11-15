@@ -1,0 +1,7 @@
+{
+  "name": "tryline-import",
+  "private": true,
+  "description": "Tryline Rugby's import service: reads a pasted club or tournament link for the web build's Add Your Team.",
+  "type": "commonjs",
+  "engines": { "node": "22.x" }
+}
