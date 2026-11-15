@@ -363,15 +363,20 @@ function figFB(sx, sy, k, team, o) {
   // torso
   ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
   ctx.fillStyle = kit.shirt;
-  ctx.beginPath(); ctx.moveTo(-0.2*k, -hip + 0.02*k); ctx.lineTo(0.2*k, -hip + 0.02*k); ctx.lineTo(0.28*k, -shY); ctx.lineTo(-0.28*k, -shY); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = kit.trim; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.06*k);
-  if (kit.hoops) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; ctx.fillRect(-hw, y, hw*2, 0.07*k); }
+  ctx.beginPath(); ctx.moveTo(-0.2*k, -hip + 0.02*k); ctx.lineTo(0.2*k, -hip + 0.02*k); ctx.lineTo(0.28*k, -shY); ctx.lineTo(-0.28*k, -shY); ctx.closePath(); ctx.fill();
+  if (kitPainted(kit)) {                                     // a design (src/kit-design.js), front or back on. Behind him his left is the picture's left
+    const lx = o.back ? -1 : 1;
+    ctx.save(); ctx.clip(); kitPaintBox(ctx, kit, -0.28*k, 0.28*k, -shY, -hip + 0.02*k, (x, y) => ({ z:0.95 + (-hip - y)/(shY - hip)*0.49, xb:lx*x/k, u:x/k })); ctx.restore();
+  }
+  ctx.stroke();
+  ctx.fillStyle = KIT_TRIM_HALF[kit.design] && kit.third ? kit.third : kit.trim; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.06*k);   // the collar: the third where the trim is half the shirt, as the icon's
+  if (kit.hoops && !kitPainted(kit)) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; ctx.fillRect(-hw, y, hw*2, 0.07*k); }
   ctx.fillStyle = kit.shorts; rrect(-0.21*k, -hip - 0.02*k, 0.42*k, 0.16*k, 0.05*k); ctx.fill();
   if (o.back && o.num) {
     ctx.fillStyle = luma(kit.shirt) > 0.6 ? '#1b2233' : '#f1eee4';
     ctx.font = `900 ${Math.max(8, Math.round(0.3*k))}px 'Big Shoulders Display', Impact, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if (kit.hoops) { ctx.save(); ctx.strokeStyle = kit.shirt; ctx.lineWidth = 0.08*k; ctx.lineJoin = 'round'; ctx.strokeText(String(o.num), 0, -(hip + shY)/2); ctx.restore(); }
+    if (kit.hoops || kitPainted(kit)) { ctx.save(); ctx.strokeStyle = kit.shirt; ctx.lineWidth = 0.08*k; ctx.lineJoin = 'round'; ctx.strokeText(String(o.num), 0, -(hip + shY)/2); ctx.restore(); }
     ctx.fillText(String(o.num), 0, -(hip + shY)/2);
   }
   // arms
@@ -379,7 +384,7 @@ function figFB(sx, sy, k, team, o) {
   const arms = ARM[o.arms] || ARM.run, swing = Math.sin(st)*0.08;
   for (const [i, [ax, ay]] of arms.entries()) {
     const ex = ax*k, ey = (ay + (i ? swing : -swing))*k*(1 - 0.3*cr), s0 = (i ? 0.26 : -0.26)*k;
-    ctx.strokeStyle = kit.shirt; ctx.lineWidth = 0.12*k; seg(s0, -shY + 0.05*k, (s0 + ex)/2, (-shY + ey)/2);
+    ctx.strokeStyle = kitPainted(kit) ? kitSleeve(kit, (o.back ? -1 : 1)*Math.sign(s0)*0.25) : kit.shirt; ctx.lineWidth = 0.12*k; seg(s0, -shY + 0.05*k, (s0 + ex)/2, (-shY + ey)/2);   // each sleeve its own shoulder's colour
     ctx.strokeStyle = SKIN; ctx.lineWidth = 0.1*k; seg((s0 + ex)/2, (-shY + ey)/2, ex, ey);
   }
   // head

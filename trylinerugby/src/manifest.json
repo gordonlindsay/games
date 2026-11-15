@@ -1,6 +1,7 @@
 [
   "data.js",
   "clubs-local.js",
+  "kit-design.js",
   "ratings.js",
   "persistence.js",
   "store.js",

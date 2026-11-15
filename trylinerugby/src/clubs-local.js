@@ -11,8 +11,9 @@
      has the source of each). Kits within a county are told apart at a glance; sourced kits that look alike stay as sourced, bar a
      Pitchero kit (it gives colours, never a pattern), whose hoops or trim, marked a free choice, tells it from the club it looked like.
      78 kits are the owner's research (14 Nov 2026); where it gave no second colour the trim is marked a free choice.
-   - designs: a club's design (plain, hoops, halves, quarters, stripes, sash, band) and third colour from the owner's research, kept for
-     1.8, which will draw them. Nothing reads them yet: 1.7 draws a club plain or hooped (hoops on its line), whatever its design.
+   - designs: a club's design (plain, hoops, halves, quarters, stripes, sash, band) and third colour from the owner's research, drawn
+     since 1.8: data.js puts each on its club (src/kit-design.js draws it). A hooped one is hoops on its line too, so KITS off draws a
+     club plain or hooped, as 1.7 did, whatever its design. Plain takes no third: a plain club's third is kept here and not drawn.
    - The game's own clubs (Farnham and the rest of Surrey's, Aldershot) are not here: data.js has them. shared: the game's clubs a county
      also lists (Aldershot, in Surrey's list since PR #14, shown under Hampshire).
    - cups: the county's own cups by level ({ name, to }, as COUNTY_CUPS), only what is sourced; null for the plain County Cup table.
@@ -575,7 +576,7 @@ function localCounties() {
       ] },
     ],
     kits:{ MER:{ kit:'#1c1c1c', trim:'#f2b01e', hoops:false } },   // the game's own kits a decision changes (Merton: plain, its hoops never sourced)
-    designs:{   // for 1.8, read by nothing yet: each club's design and third colour as the owner's research gives them
+    designs:{   // each club's design and third colour as the owner's research gives them: data.js puts them on the clubs (1.8)
       OTI:{ design:'hoops', third:'#1b2747' },
       RWE:{ design:'hoops', third:'#c8102e' },
       ORI:{ design:'plain' },

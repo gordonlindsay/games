@@ -80,6 +80,7 @@ function cleanTeam(t, i) {
   const name = String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 16) || 'My Team';
   const team = { key:String(t.key || 'my' + i).slice(0, 24), id:codeFor(t.id, name), name, custom:true,
     kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
+  kitClean(t, team);                                         // design and third (1.8, src/kit-design.js): a 1.7 save reads as Plain or Hoops, as it was
   // spent in ABILITIES order, so an overspent team loses from the last; a team without Stamina (saved before it, or an import) has its 3
   // set aside first, so a cut falls on the other four. A team saved before Stamina spent at most 10, so nothing of it is cut.
   // The budget is the team's own level's; a team with no level (saved before levels) keeps BUDGET, and is cut as it always was.
@@ -112,6 +113,11 @@ function cleanSide(t) {
   if (!name) return null;
   const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W91: src/locker.js), and so does one dropped since (W94)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
+  // a side's design and third colour (src/kit-design.js), kept with it. A club's side saved before 1.8 has neither: it takes its club's,
+  // where its shirt and trim are still the club's, so a championship, cup or career under way shows the club as everywhere else
+  const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  const club = !t.custom && !('design' in t) && !('third' in t) && typeof ALL_TEAMS !== 'undefined' ? ALL_TEAMS.find(c => c.id === id && ('design' in c || 'third' in c) && same(c.kit, team.kit) && same(c.trim, team.trim)) : null;
+  kitClean(club ? { ...t, design:club.design, third:club.third } : t, team);
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;
   if (t.key) team.key = String(t.key).slice(0, 24);

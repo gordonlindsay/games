@@ -621,9 +621,12 @@ for (const s of [0, 1]) {
 /* team select */
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 const keyOf = t => t.key || t.id;
+/* A side's shirt icon. Its design and third colour (1.8, src/kit-design.js) as the background, the collar and shoulder flash to suit
+   (kitAccent, kitFlash); Plain and two-colour Hoops as 1.7 drew them, and KITS off is 1.7's markup exactly. */
 function jersey(t, cls) {
-  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6';
-  return `<span class="jw ${cls || ''}"><span class="jersey${t.hoops ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
+  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', d = kitDesignOf(t), th = kitThirdOf(t);
+  if (!KITS.on || (d === 'plain' || d === 'hoops') && !th) return `<span class="jw ${cls || ''}"><span class="jersey${d === 'hoops' ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
+  return `<span class="jw ${cls || ''}"><span class="jersey d-${d}" style="--kit:${k};--trim:${tr}${th ? ';--third:' + th : ''};--acc:${kitAccent(t)};--flash:${kitFlash(t)};background:${kitCss(t)}"></span></span>`;
 }
 /* A side's stars, from its overall on the one scale (starsOf, src/ratings.js): drawn beside its overall's badge wherever a team is picked or
    listed (the team screen's sides, My Team, the career's transfer offers and call-up). Named ratedStars, not teamStars: that is the star
@@ -1778,7 +1781,12 @@ function buildBuilder() {
     if (d < 0 && draft[k] <= 1) return;
     draft[k] += d; renderBuilder();
   });
-  [...$('bd-pat').children].forEach((b, i) => b.addEventListener('click', () => { draft.hoops = i === 1; renderBuilder(); }));
+  // Design (1.8): seven shirts in the draft's own colours, the chosen one named on the label's line; Third Colour under Trim, None first.
+  // KITS off offers Plain and Hoops alone, as 1.7's Pattern did, and no Third Colour (src/kit-design.js)
+  $('bd-design').innerHTML = KIT_DESIGNS.map(d => `<button data-design="${d}" aria-label="${KIT_DESIGN_NAMES[d]}"></button>`).join('');
+  for (const b of $('bd-design').children) b.addEventListener('click', () => { draft.design = b.dataset.design; draft.hoops = draft.design === 'hoops'; renderBuilder(); });
+  $('bd-third').innerHTML = `<button class="sw none" data-c="">None</button>` + sw();   // named by what it says, so a voice can tap it; the row's label names the group
+  for (const b of $('bd-third').querySelectorAll('.sw')) b.addEventListener('click', () => { if (b.dataset.c) draft.third = b.dataset.c; else delete draft.third; renderBuilder(); });
   $('bd-name').addEventListener('input', () => {
     draft.name = $('bd-name').value;
     if (!codeTouched) $('bd-code').value = autoCode(draft.name.trim() || 'My Team', editing && editing.key);
@@ -1828,7 +1836,23 @@ function openBuilder(t) {
 function renderBuilder() {
   $('bd-title').textContent = draft.name.trim() || 'My Team';
   $('bd-jersey').innerHTML = jersey(draft);
-  [...$('bd-pat').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === (draft.hoops ? 1 : 0))));
+  const dsg = kitDesignOf(draft);
+  if (draft.third && (draft.third === draft.kit || draft.third === draft.trim)) delete draft.third;   // a third colour is never the shirt's or the trim's: changing either onto it clears it
+  let shown = 0;
+  for (const b of $('bd-design').children) {
+    const d = b.dataset.design; b.setAttribute('aria-pressed', String(d === dsg));
+    b.hidden = !(KITS.on || d === 'plain' || d === 'hoops'); shown += !b.hidden;   // KITS off: Plain and Hoops alone, as 1.7's Pattern
+    b.innerHTML = jersey({ kit:draft.kit, trim:draft.trim, third:d === 'plain' ? undefined : draft.third, design:d, hoops:d === 'hoops' });
+  }
+  $('bd-design').style.setProperty('--n', shown);           // the strip in as many equal places as it shows: seven, or two halves with KITS off
+  $('bd-dname').textContent = KIT_DESIGN_NAMES[dsg];
+  $('bd-third-f').hidden = !KITS.on || dsg === 'plain';     // Plain takes no third colour
+  let gone = 0;
+  for (const b of $('bd-third').querySelectorAll('.sw')) {
+    const c = b.dataset.c, out = !!c && (c === draft.kit || c === draft.trim); b.hidden = out; gone += out;
+    b.setAttribute('aria-pressed', String(c ? c === draft.third : !draft.third));
+  }
+  for (const b of $('bd-third').querySelectorAll('.none')) b.classList.toggle('two', gone === 2);   // None takes two places when both are left out: two full rows of six, as Shirt and Trim
   for (const [id, key] of [['bd-kit', 'kit'], ['bd-trim', 'trim']])
     for (const b of $(id).querySelectorAll('.sw')) b.setAttribute('aria-pressed', String(b.dataset.c === draft[key]));
   const lv = teamLevelOf(draft), left = teamBudget(draft) - spent(draft);

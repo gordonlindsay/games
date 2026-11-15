@@ -102,13 +102,24 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
     else if (OWNER.has(a.id) || OWNER.has(b.id)) kept.push([a.id, b.id].sort().join('/')); })); }
   const keptWant = (research.decided.find(x => x.topic === "Kits from the owner's research") || {}).lookAlikesKept || [];
   ok(!clash2.length && kept.sort().join() === [...keptWant].sort().join(), `no guess or free choice looks the same as another kit in its county (${clash2.join(', ') || 'none'}); the ${kept.length} sourced pairs with an owner's kit that look alike stay, as decided (${kept.join(' ')})`);
-  // design and third (1.8) carried into src/clubs-local.js as designs, as the research has them, and read by nothing in the game yet
+  // design and third carried into src/clubs-local.js as designs, as the research has them, and (1.8) onto each club by data.js, the one place
   const designs = LO.LOCAL_DATA.designs || {}, withDesign = all.filter(r => r.design != null);
   ok(withDesign.length === 78 && Object.keys(designs).length === 78 && withDesign.every(r => json(designs[r.id]) === json(r.third ? { design:r.design, third:r.third } : { design:r.design }))
     && withDesign.every(r => r.hoops === (r.design === 'hoops')) && withDesign.filter(r => r.third).length === 33,
-    `design and third carried to src/clubs-local.js's designs (78, ${withDesign.filter(r => r.third).length} with a third); hooped exactly where the design is hoops (${['halves', 'band'].map(k => withDesign.filter(r => r.design === k).map(r => r.id).join(' ')).join(', ')} drawn plain until 1.8)`);
-  const readers = fs.readdirSync(path.join(root, 'src')).filter(f => f.endsWith('.js') && f !== 'clubs-local.js' && /\bdesigns\b|\.third\b|\.design\b/.test(fs.readFileSync(path.join(root, 'src', f), 'utf8')));
-  ok(!readers.length && NEW.every(t => !('design' in t) && !('third' in t)), `nothing in the game reads a design or third yet, and no club carries one (${readers.join() || 'none'})`);
+    `design and third carried to src/clubs-local.js's designs (78, ${withDesign.filter(r => r.third).length} with a third); hooped exactly where the design is hoops (${['halves', 'band'].map(k => withDesign.filter(r => r.design === k).map(r => r.id).join(' ')).join(', ')}: halves and chest band, drawn since 1.8)`);
+  // 1.8 reads them (the owner, 14 Nov: Build): the designs map is read in one place, data.js, which puts each club's design and third on it
+  // exactly as the research gives them; no other club, nation or game club carries either; and the game draws what they say (kitDesignOf,
+  // kitThirdOf, src/kit-design.js: Plain shows no third, so the 12 plain clubs' thirds stay in the data, undrawn)
+  {
+    const srcOf = f => fs.readFileSync(path.join(root, 'src', f), 'utf8'), KD = T.kits;
+    const readers = fs.readdirSync(path.join(root, 'src')).filter(f => f.endsWith('.js') && f !== 'clubs-local.js' && /\.designs\b/.test(srcOf(f)));
+    const carried = NEW.filter(t => designs[t.id]), wrong = NEW.filter(t => designs[t.id] ? t.design !== designs[t.id].design || (t.third ?? null) !== (designs[t.id].third ?? null) : 'design' in t || 'third' in t);
+    const others = X.ALL_TEAMS.filter(t => !LO.LOCAL_NEW.has(t) && ('design' in t || 'third' in t));
+    const drawn = carried.filter(t => KD.designOf(t) !== designs[t.id].design || KD.thirdOf(t) !== (designs[t.id].design === 'plain' ? null : designs[t.id].third ?? null));
+    ok(readers.join() === 'data.js' && /LOCAL_DATA\.designs/.test(srcOf('data.js')) && carried.length === 78 && !wrong.length && !others.length && !drawn.length
+      && carried.filter(t => KD.thirdOf(t)).length === 21 && carried.filter(t => t.design === 'plain' && t.third).length === 12,
+      `the game reads them (1.8): the designs map in data.js alone (${readers.join() || 'none'}), the 78 clubs carry exactly their design and third and nothing else does (${wrong.map(t => t.id).join() || 'none'}; ${others.map(t => t.id).join() || 'none'}), each drawn as it says (${drawn.map(t => t.id).join() || 'all'}): 21 thirds shown (19 hoops, 2 chest bands), the 12 on Plain kept in the data and not drawn`);
+  }
   const placeOnly = all.filter(r => !r.existingId && r.w == null);
   ok(placeOnly.map(r => r.id).sort().join() === 'BAU,BEE,CRW,DBE,HWA,MEI,MRL,NOV,NUI,RYT' && placeOnly.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.place === r.place && !('w' in t) && !('pf' in t); }), `a club with no line it can be given has its place only, nothing invented: the 10 of the three tables short of fixtures that played fewer games or are ranked off their place (${placeOnly.map(r => r.id).join()})`);
   const pt = all.filter(r => !r.existingId && r.sources.some(l => /^Line: .*on Pitchero/.test(l)));

@@ -3,7 +3,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.7';
+const GAME_VERSION = '1.8';
 
 /* =========================================================
    Data
@@ -188,6 +188,14 @@ const LOCAL_DATA = LOCAL.on ? localCounties() : { sizes:{}, counties:[], kits:{}
 const LOCAL_NEW = new Set(LOCAL_DATA.counties.flatMap(c => c.clubs));   // the new clubs, rated by their league and place (localRated, src/ratings.js)
 const LOCAL_SURREY = LOCAL.on ? [...CLUBS, ...COUNTIES.filter(t => !CLUBS.includes(t)), ...LOCAL_DATA.counties.filter(c => c.code === 'SUR').flatMap(c => c.clubs)] : CLUBS;
 for (const [id, k] of Object.entries(LOCAL_DATA.kits)) { const t = COUNTIES.find(o => o.id === id); if (t) { Object.assign(t, k); if (!k.hoops) delete t.hoops; } }
+/* Kit designs and a third colour (1.8, src/kit-design.js; the owner, 14 Nov 2026: "Quad sections are ok and add a third colour too for
+   completeness"). KITS.on draws a club's design and third colour everywhere its kit shows but the Top camera; KITS='{"on":false}'
+   (tools/harness.mjs) draws every side plain or hooped exactly as 1.7. The one place the county clubs take theirs: the owner's research,
+   as src/clubs-local.js's designs carries it, onto each club, exactly as given (a hooped one is already hoops:true on its line). The
+   game's own clubs and the nations keep what they have. */
+const KITS = { on:true };
+// KITS_TUNE
+if (KITS.on) { const at = new Map([...LOCAL_NEW].map(t => [t.id, t])); for (const [id, d] of Object.entries(LOCAL_DATA.designs || {})) if (at.has(id)) Object.assign(at.get(id), d); }
 const localKey = k => (LOCAL.on && k === 'cty' ? 'sur' : k);   // a saved Counties (a list key, a career's league) is Surrey now
 /* The team screen: International | National | Local, then a list. Every list offers at least six sides, since a championship is
    your side and five from the list on screen. settings.pool holds a list's key; 'my' is My League (src/import.js), under Local while
