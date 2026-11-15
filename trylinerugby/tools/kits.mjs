@@ -88,19 +88,21 @@ const H = Object.values(T).find(v => v && typeof v.custom === 'function' && type
 const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = true; } };   // the switch is read as each kit is drawn, so a proof can turn it in place (the data's wiring is the child's, above)
 
 // 1. The data: the 78 county clubs carry exactly the owner's research (tools/local.mjs holds it club by club); nothing else has a design
+//    Re-pinned 15 Nov 2026 (1.9.2): the owner's four kits of that day (Spalding, Old Crossleyans, Ledbury, Portsmouth) are plain, so 82 carry a design
 {
   const D8 = T.local.LOCAL_DATA.designs, got = NEW.filter(t => 'design' in t || 'third' in t);
-  ok(got.length === 78 && got.every(t => D8[t.id] && t.design === D8[t.id].design && (t.third ?? null) === (D8[t.id].third ?? null)) && X.ALL_TEAMS.filter(t => !T.local.LOCAL_NEW.has(t) && ('design' in t || 'third' in t)).length === 0,
-    'the 78 county clubs carry their design and third as the research has them, and no game club or nation carries one');
+  ok(got.length === 82 && got.filter(t => ['SPL', 'OCR', 'LED', 'POT'].includes(t.id)).every(t => t.design === 'plain') && got.every(t => D8[t.id] && t.design === D8[t.id].design && (t.third ?? null) === (D8[t.id].third ?? null)) && X.ALL_TEAMS.filter(t => !T.local.LOCAL_NEW.has(t) && ('design' in t || 'third' in t)).length === 0,
+    'the 82 county clubs (the owner\'s research\'s 78 and the four of 15 Nov 2026, each plain) carry their design and third as the research has them, and no game club or nation carries one');
   const hac = team('HAC'), hwy = team('HWY'), oha = team('OHA'), wib = team('WIB');
   ok(K.designOf(hac) === 'halves' && K.designOf(team('BRY')) === 'band' && K.designOf(oha) === 'band' && K.thirdOf(oha) === '#c8102e' && K.designOf(hwy) === 'hoops' && hwy.hoops === true && K.thirdOf(hwy) === '#f2efe6'
     && K.designOf(wib) === 'plain' && wib.third === '#109a52' && K.thirdOf(wib) === null && K.edgeOf(wib) === wib.third && K.designOf(team('FAR')) === 'hoops' && K.thirdOf(team('FAR')) === null && K.edgeOf(team('FAR')) === null && K.designOf(team('ARG')) === 'hoops' && K.designOf(team('ENG')) === 'plain' && K.edgeOf(team('ENG')) === null,
     'HAC halves, Bromyard and Old Halesonians chest bands (the latter edged in red), High Wycombe hoops with white; Wimborne plain, its third kept and drawn as its collar and cuffs\' edge (kitEdgeOf), never as a design\'s third (kitThirdOf null, so the clash rule is as it was); Farnham and Argentina hooped as ever');
   // the owner, 15 Nov 2026 ("Show It as a Collar Trim"): the 12 plain clubs with a third in the research, each drawn with its edge
-  const PLAIN3 = ['WIB', 'WNO', 'WOO', 'SHO', 'TOT', 'OCO', 'OWY', 'VIP', 'GRS', 'MAV', 'STA', 'OCV'], edged = X.ALL_TEAMS.filter(t => K.edgeOf(t));
+  // Re-pinned 15 Nov 2026 (1.9.2): Portsmouth's white third (the owner's answer that day) makes it the 13th, exactly that one added
+  const PLAIN3 = ['WIB', 'WNO', 'WOO', 'SHO', 'TOT', 'OCO', 'OWY', 'VIP', 'GRS', 'MAV', 'STA', 'OCV', 'POT'], edged = X.ALL_TEAMS.filter(t => K.edgeOf(t));
   ok(json(edged.map(t => t.id).sort()) === json([...PLAIN3].sort()) && PLAIN3.map(team).every(t => t && K.designOf(t) === 'plain' && K.thirdOf(t) === null && K.edgeOf(t) === t.third && t.third !== t.kit && t.third !== t.trim)
-    && json(PLAIN3.map(id => team(id).name)) === json(['Wimborne', 'West Norfolk', 'Woodford', 'Stanford-le-Hope', 'Tottonians', 'Old Colfeians', 'Oadby Wyggs', 'Vipers', 'Grasshoppers', 'Malvern', 'Stamford', 'Old Coventrians']),
-    `the 12 plain clubs with a third, and no other side, have an edge (${edged.map(t => t.id).join(' ')})`);
+    && json(PLAIN3.map(id => team(id).name)) === json(['Wimborne', 'West Norfolk', 'Woodford', 'Stanford-le-Hope', 'Tottonians', 'Old Colfeians', 'Oadby Wyggs', 'Vipers', 'Grasshoppers', 'Malvern', 'Stamford', 'Old Coventrians', 'Portsmouth']) && team('POT').third === '#f2efe6',
+    `the 13 plain clubs with a third (Portsmouth's white the 13th), and no other side, have an edge (${edged.map(t => t.id).join(' ')})`);
   ok(offDo(() => X.ALL_TEAMS.every(t => K.edgeOf(t) === null)) && offDo(() => K.edgeOf({ kit:'#111111', trim:'#222222', third:'#333333' }) === null), 'KITS off: no side has an edge');
   const mal = team('MAV'), side = X.cleanSide(JSON.parse(json(mal))), moved = X.cleanSide({ ...JSON.parse(json(mal)), kit:'#2050b0' });
   ok(K.edgeOf({ kit:'#111111', trim:'#222222', third:'#333333' }) === '#333333' && K.edgeOf({ kit:'#111111', trim:'#222222', design:'plain', hoops:true, third:'#333333' }) === '#333333'
