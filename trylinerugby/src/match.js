@@ -230,7 +230,7 @@ function kickoff(team) {
   placeBall(60, 35);
   M.phaseCount = 0; M.poss = team;
   startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => restartKick(team, 60, 35, 'kickoff') });
-  if (!M.two && outmatched(M.nat[0], M.nat[1])) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless
+  if (!M.two && outmatched(realBase(M.nat[0]), realBase(M.nat[1]))) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless; the sides as they are, as the card said it, never this week's Form (src/results.js)
   if (M.career) careerKickoff();                           // a career match: the ring starts on your player
 }
 function dropOut(team) {

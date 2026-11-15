@@ -221,6 +221,7 @@ function goHome(focus) {
   if (typeof profileRun !== 'undefined') profileRun = null;   // a first launch's setup under way ends with nothing set (src/profile.js): the home is for a game that is set up, the app's late copy of a save included
   navOnly = null;
   homeStep = homeStepOf(focus);
+  resultsSync();                                             // a results file that came during a pick or a match is used from here (src/results.js)
   renderHome();
   showScreen('s-home');
   homeFit();
@@ -428,6 +429,26 @@ const myRecordLine = t => (t && t.league && t.w != null ? ['Won ' + t.w, ...(t.d
 const FORM_WORD = { W:'Won', D:'Drawn', L:'Lost' };
 /* My Team's box: the club's shirt, name, stars and league line; the games you have played as it (formOf, src/persistence.js) and its last
    five results, the latest on the right of them; the country's shirt and name; Change | Add Your Team | Locker. */
+/* The club's latest first team result (src/results.js), in the last five's place: one line with the outcome a coloured word (Won 38-34
+   v Old Alleynians), then its date with this week's Form beside it; Home or Away and the Form's last day in its title and read out. The
+   Form shows only where the player's matches would have it: the club's Men side, never at the Kids level. Your Games then heads the
+   games played in the game, so the club's real record and yours are never read as one. No result: the box exactly as it was. */
+function myReal(c, e) {
+  const box = $('my-real'), cat = settings.cat || 'men', d = e && cat === 'men' ? realDelta(c) : 0;
+  $('my-box').classList.toggle('real', !!e);
+  box.hidden = $('my-sub').hidden = !e;
+  if (!e) { box.innerHTML = ''; box.title = ''; return; }
+  const o = e.res, opp = realOpp(e), until = d ? ' until ' + realDay(e.until) : '', where = e.ha === 'h' ? 'Home' : e.ha === 'a' ? 'Away' : 'Neutral';
+  box.innerHTML = `<span aria-hidden="true" class="rr-shown"><b class="rr-line"><span class="rr-out ${o.toLowerCase()}">${REAL_WORD[o]}</span> ${esc(realScore(e))} <span class="rr-v">v</span> ${esc(opp)}</b>`
+    + `<span class="rr-sub"><span class="rr-when">${esc(realDay(e.date))}</span>${d ? `<span class="gap form ${d > 0 ? 'up' : 'down'}">${esc(realForm(d))}</span>` : ''}</span></span>`
+    + `<span class="sr">${esc('Last Result: ' + realLine(e) + ', ' + where + ', ' + realDay(e.date) + (d ? '. ' + realFormSaid(d) + until : ''))}</span>`;
+  box.title = where + ' · ' + e.comp + (d ? ' · ' + realForm(d) + until : '');
+}
+/* My Country's last Test, in its title and read out only (there is no room for a line of its own): the women's table on Women. */
+function myNatReal(n) {
+  const cat = settings.cat || 'men', e = realNews(n, cat), t = cat === 'men' || cat === 'women' ? natList(cat).find(x => x.id === n.id) : null, d = e && t ? realDelta(t) : 0;
+  return e ? { text:'Last Test: ' + realLine(e) + (d ? ', ' + realForm(d) : ''), said:'Last Test: ' + realLine(e) + (d ? ', ' + realFormSaid(d) : '') } : null;
+}
 function myHome() {
   const c = myClubTeam(), n = myNatTeam(null), f = formOf(c), g = formOf(n), played = r => r.w + r.d + r.l;
   const figs = r => ['Played ' + played(r), 'Won ' + r.w, 'Drawn ' + r.d, 'Lost ' + r.l].join(', ');
@@ -435,14 +456,17 @@ function myHome() {
   if (typeof profileHomePic === 'function') profileHomePic(c);   // your player in My Team's kit in the shirt's place, once there is a look and the art is in (src/profile.js)
   $('my-name').textContent = listName(c);
   $('my-stars').innerHTML = ratedStars(c);
-  $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
+  const re = realNews(c, 'men');   // the club's result and this season's place from results.json while the result is fresh; last season's line otherwise
+  $('my-league').innerHTML = re && re.league ? `<span>${esc(re.league)}</span><span class="sep"> · </span><span>${esc(ordinal(re.pos))}${re.pts != null ? `<span class="pts">${esc(' · ' + re.pts + ' Pts')}</span>` : ''}</span>`
+    : c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
+  myReal(c, re);
   $('my-rec').innerHTML = [['Played', played(f)], ['Won', f.w], ['Drawn', f.d], ['Lost', f.l]].map(([w, v]) => `<div><dt>${w}</dt><dd>${v}</dd></div>`).join('');
   const last = f.last.split('');
   $('my-form').innerHTML = last.map(x => `<li class="fm ${x.toLowerCase()}"><span aria-hidden="true">${x}</span><span class="sr">${FORM_WORD[x]}</span></li>`).join('') + '<li class="fm none" aria-hidden="true"></li>'.repeat(FORM_LAST - last.length);   // the letter seen, the word read out
   $('my-form').setAttribute('aria-label', last.length ? 'Last ' + (last.length === 1 ? 'Result' : last.length + ' Results') : 'No Results Yet');
-  const nat = $('my-nat');
-  nat.innerHTML = `${jersey(n, 'mini')}<b aria-hidden="true">${esc(listName(n))}</b><span class="sr">${esc('My Country: ' + listName(n) + (played(g) ? ', ' + figs(g) : ''))}</span>`;   // read out with its own record (a span takes no aria-label)
-  nat.setAttribute('title', listName(n) + (played(g) ? ': ' + figs(g) : ''));
+  const nat = $('my-nat'), nr = myNatReal(n);
+  nat.innerHTML = `${jersey(n, 'mini')}<b aria-hidden="true">${esc(listName(n))}</b><span class="sr">${esc('My Country: ' + listName(n) + (played(g) ? ', ' + figs(g) : '') + (nr ? '. ' + nr.said : ''))}</span>`;   // read out with its own record (a span takes no aria-label)
+  nat.setAttribute('title', listName(n) + (played(g) ? ': ' + figs(g) : '') + (nr ? (played(g) ? '. ' : ': ') + nr.text : ''));
   $('b-my').setAttribute('aria-label', 'Change My Profile: ' + listName(c) + ', ' + listName(n));   // it opens My Profile (src/profile.js), whose own Change is My Team's
   homeFit();
 }
@@ -477,6 +501,8 @@ function homeFit() {
   for (let lvl = 1; lvl <= 6 && over(lvl - 1); lvl++) box.dataset.fit = String(lvl);
   let px = parseFloat(getComputedStyle(name).fontSize) || 30;
   while (name.scrollWidth > name.clientWidth + 0.5 && px > 16) { px -= 1; name.style.fontSize = px + 'px'; }
+  const rr = box.querySelector('.rr-line');   // real results: a long opponent (v United Services, Portsmouth) steps the result line down, to 13px (the floor) at the least, before its end goes
+  if (rr && rr.style) { rr.style.fontSize = ''; for (let n = parseFloat(getComputedStyle(rr).fontSize) || 20; cut(rr) && n > 13; ) { n -= 1; rr.style.fontSize = n + 'px'; } }
   if (!strip.hidden) {
     delete strip.dataset.fit;
     const list = $('tc-list');
@@ -1046,6 +1072,17 @@ function pickTag(s, t) {                                   // Stronger Side (the
   if (s === 0 && !tour && myIs(t)) return '<span class="gap mine">My Team</span>';   // Your Team's (or Player 1's, or the one side's): never the Opponent's
   return '';
 }
+/* This week's Form on a side's card (src/results.js): a chip after My Team or Stronger Side, and on each bar the point gained in yellow or
+   lost in coral, its number beside the ability's name (+1.5 shows as +1 on one bar and +0.5 on another, as realSide plays it). The side as the category plays it (a club's Women or Minis side has none). The
+   overall, the stars, the star traits and Stronger Side stay on the side as it is. */
+/* The championship hub's next fixture: a side's name, with this week's Form under it when its next match will have one (the saved side
+   as it is kept, which is what startMatch boosts). Without one, the name exactly as before. */
+const realHub = t => { const d = realDelta(t); return d ? `<span class="fx-nm"><span>${esc(t.name)}</span>${realChip(d)}</span>` : `<span>${esc(t.name)}</span>`; };
+const realChip = (d, at = '') => (d ? `<span class="gap form ${d > 0 ? 'up' : 'down'}${at}"><span aria-hidden="true">${esc(realForm(d))}</span><span class="sr">${esc(realFormSaid(d))}</span></span>` : '');
+function realCard(t, cat) {
+  const side = !t || t.act ? null : cat ? catTeam(t, cat) : t, d = side ? realDelta(side) : 0;
+  return { d, side:d ? realSide(side) : null };
+}
 function pickPanel(s) {
   const v = pickView[s], g = v.group, t = v.team, st = pick.sides[s], cat = pickCat();
   const where = pickWhere(g), many = v.ladder.length > 1 && !g.fixed;
@@ -1058,9 +1095,12 @@ function pickPanel(s) {
   let card;
   if (!real) card = `<button class="team pk-pick pk-make" data-act="pick" data-make="${t.act}"><span class="plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="tname">${esc(t.name)}</span></button>`;
   else {
-    const stars = teamTraitNames(t), line = pickHomeLine(t, cat);
-    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}</span>${line ? `<span class="pk-league${line === g.name ? ' dup' : ''}">${esc(line)}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
-      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k); return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`; }).join('')}</span>${edit}`;
+    const stars = teamTraitNames(t), re = t.league ? realNews(t, 'men') : null, line = re && re.league ? re.league : pickHomeLine(t, cat), rc = realCard(t, cat);   // a club's league this season from results.json while its result is fresh: clubs have moved
+    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}${realChip(rc.d)}</span>${line ? `<span class="pk-league${line === g.name && !rc.d ? ' dup' : ''}">${rc.d ? realChip(rc.d, ' pk-lf') + `<span class="pk-lt">${esc(line)}</span>` : esc(line)}</span>` : rc.d ? `<span class="pk-league pk-lfo">${realChip(rc.d, ' pk-lf')}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
+      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round((b - a)*10)/10, pip = v => String(Math.round(v*10)/10);   // the real change, to a tenth: +1.5 is +1 on one ability and +0.5 on the next (realSide)
+          if (!dv) return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`;
+          const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${pip(Math.abs(dv))}</em>`;   // the week's point, beside the name: +1, +0.5 or −1
+          return `<span class="pk-st"><span class="lbl">${l}${mark}</span><span class="pk-bar" role="img" aria-label="${l} ${pip(b)} of 5, ${realFormSaid(dv)}"><i style="--v:${(Math.min(a, b)/5).toFixed(2)}"></i><b class="pk-real ${up ? 'up' : 'down'}" style="--a:${(Math.min(a, b)/5).toFixed(2)};--w:${(Math.abs(b - a)/5).toFixed(2)}"></b></span></span>`; }).join('')}</span>${edit}`;
   }
   card = card.replace(/^(<button class="team pk-pick[^]*?<\/button>)/, m => `<div class="pk-row">${pickChev('prev', one)}${m}${pickChev('next', one)}</div>`);   // the chevrons either side of the shirt and name; the bars under them keep the card's full width
   const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot
@@ -1078,6 +1118,7 @@ function pickEl(s, act) { const p = $('t-side' + s); return (p && p.querySelecto
    on show, to play as or change), 'my' (My Team: the club, then the country) or 'career' (Career's club: New Player's Change Club). */
 let pickFrom = null;                                       // the home's button that opened the team screen, where Back goes (Quick Match, Play, a competition)
 function openTeams(m, comp, o) {
+  resultsSync();                                             // a results file that came while the home was not showing (src/results.js)
   pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, made:null, lifter:null }; pickView = [null, null];
   pickFrom = (o && o.from) || null;
   champCounty = m === 'champ' && comp === 'county';         // Other County (LOCAL): every county on the ladder, your county first in view
@@ -1189,6 +1230,8 @@ function pickFit() {
   const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
   delete scr.dataset.dup;
   for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); pickTraits(); if (!over() && !small()) break; }
+  delete scr.dataset.form;   // real results (src/results.js): a Form chip that would scroll the screen first goes compact, then moves to the start of the league line (pk-lf), so a card with traits, Stronger Side and Form keeps one line for each
+  for (const f of ['1', '2']) { if (!over() || !scr.querySelector('.pk-rate > .gap.form')) break; scr.dataset.form = f; fitNames(); pickTraits(); }
   if (over()) { scr.dataset.dup = '1'; fitNames(); pickTraits(); }   // the last step: a league line that only says its group's name again (Made Teams under Made Teams) goes
   scr.classList.toggle('scrolls', scr.scrollHeight > scr.clientHeight + 1);   // styles.css: a card's own vertical swipe only where the page cannot scroll
   for (const g of groups) {                                   // last, once the screen has its size and no scroll bar: the chevron kept only where the name keeps its room too: else it is left off (Championship at 568), the name never cut, Your Team on one line, the head 44px
@@ -1977,9 +2020,9 @@ function renderHub() {
     $('hub-next').innerHTML = `
       <div class="stack">
         <div class="fixture">
-          <span class="fx-team">${jersey(T[h])}<span>${esc(T[h].name)}</span></span>
+          <span class="fx-team">${jersey(T[h])}${realHub(T[h])}</span>
           <span class="fx-v">V</span>
-          <span class="fx-team r"><span>${esc(T[a].name)}</span>${jersey(T[a])}</span>
+          <span class="fx-team r">${realHub(T[a])}${jersey(T[a])}</span>
           ${stake ? `<p class="stake">${stake}</p>` : ''}
         </div>
         ${outmatched(T[c.user], foe) ? '<p class="eyebrow">Stronger Side</p>' : ''}

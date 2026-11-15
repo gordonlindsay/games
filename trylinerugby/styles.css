@@ -1332,11 +1332,12 @@ body.desk .desk-only{display:block}
 .my-box[data-fit="5"] .my-nat,.my-box[data-fit="6"] .my-nat{display:none}
 .my-box[data-fit="6"] .my-line{display:none}
 /* the Trophy Cabinet: one line at the 44px floor, each kind won its trophy in its metal and the count */
-.btn.tc-strip{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:4px 12px;border-radius:10px;text-align:left}
-.tc-name{flex:none;font-size:14px}
+.btn.tc-strip{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 10px;border-radius:10px;text-align:left}   /* slim (the owner, 15 Nov 2026: "Squeeze the Games Row"): no padding over the 44px floor, a notch smaller type */
+.home-side:has(> .tc-strip:not([hidden])){gap:4px}   /* and the strip close under the box */
+.tc-name{flex:none;font-size:13px}
 .tc-list{display:flex;align-items:center;justify-content:flex-end;gap:4px 10px;min-width:0;overflow:hidden}
-.tc-it{display:inline-flex;align-items:center;gap:4px;flex:none;font:800 16px/1 var(--display);letter-spacing:.02em;white-space:nowrap}
-.tc-it .cup-trophy{width:18px;height:18px}
+.tc-it{display:inline-flex;align-items:center;gap:4px;flex:none;font:800 15px/1 var(--display);letter-spacing:.02em;white-space:nowrap}
+.tc-it .cup-trophy{width:16px;height:16px}
 .tc-strip[data-fit="short"] .tc-w{display:none}   /* where the words do not fit: the trophies and their counts */
 /* the five boxes: Continue across, then halves; each a picture and a big word, Continue with what it picks up under it */
 .home-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr);gap:10px;min-height:0}
@@ -1789,3 +1790,79 @@ summary::-webkit-details-marker{display:none}
   #s-career-look .cr-lookpic{flex:1;padding:0}
   .pf-body{grid-template-columns:minmax(120px,150px) minmax(0,1fr)}
 }
+/* Real results (src/results.js): the club's latest first team result on My Team's box in the last five's place, Your Games over the games
+   played in the game, and this week's Form as a chip (the box, a side's card, the hub's fixture) and on a card's bars. The outcome is a
+   coloured word, never a filled block: the box's one yellow fill stays Play's. */
+.my-real{display:flex;flex-direction:column;min-width:0}
+.my-real[hidden],.my-sub[hidden]{display:none}
+.rr-shown{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rr-line{min-width:0;font:800 calc(20px*var(--k))/1 var(--display);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-out.w{color:var(--flood)}
+.rr-out.d{color:var(--silver)}
+.rr-out.l{color:var(--alert)}
+.rr-v{text-transform:none}   /* v, as the hub and the card write it, never a capital V */
+.rr-sub{display:flex;align-items:center;gap:10px;min-width:0}
+.rr-when{font:700 13px/1.1 var(--body);color:var(--chalk-dim);white-space:nowrap}
+.my-sub{margin:0;font:800 11px/1.1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim)}
+/* Your Games beside Played, Won, Drawn and Lost, on one line under a hairline (the owner, 15 Nov 2026: "Squeeze the Games Row"): the
+   label on two short lines (Your over Games), so the four keep their room at every size. The box is a grid with a result showing, so the
+   label and the four share a row; everything else spans it, in the box's order */
+.my-box.real{display:grid;grid-template-columns:min-content minmax(0,1fr);align-content:space-between;column-gap:0}   /* the label's column as narrow as Games, so the four always have their room; nothing else sizes the columns */
+.my-box.real > :not(.my-sub,.my-rec){grid-column:1/-1}
+.my-box.real > .my-sub,.my-box.real > .my-rec{border-top:1px solid var(--rule-hi);padding-top:5px}
+.my-box.real > .my-sub{align-self:stretch;display:flex;align-items:center;padding-right:10px}
+.my-box.real .my-rec dd{font-size:calc(20px*var(--k))}   /* the four a size under the box without a result: the result line is the box's big figure now */
+.my-box.real .my-rec dt{font-size:12px}
+.my-box.real[data-fit]{row-gap:3px}
+.my-box.real[data-fit] .my-id{gap:3px}
+.my-box.real[data-fit] :is(.my-sub,.my-rec){padding-top:3px}
+/* the last levels with a result (a long league over its place, a Trophy Cabinet, at 320 high): every line set tight before the country,
+   and last the stars, give way */
+.my-box.real:is([data-fit="4"],[data-fit="5"],[data-fit="6"]){row-gap:2px;padding-bottom:5px}
+.my-box.real:is([data-fit="4"],[data-fit="5"],[data-fit="6"]) .my-id{gap:2px}
+.my-box.real:is([data-fit="4"],[data-fit="5"],[data-fit="6"]) .my-league{line-height:1.05}
+.my-box.real:is([data-fit="4"],[data-fit="5"],[data-fit="6"]) .rr-shown{gap:2px}
+.my-box.real:is([data-fit="4"],[data-fit="5"],[data-fit="6"]) .my-real .gap.form{padding:1px 4px}
+.my-box.real:is([data-fit="4"],[data-fit="5"],[data-fit="6"]) :is(.my-sub,.my-rec){padding-top:2px}
+.my-box.real:is([data-fit="4"],[data-fit="5"],[data-fit="6"]) .my-rec dt{line-height:1}
+.my-box.real .my-form{display:none}   /* the result in the last five's place */
+.gap.form{position:relative;grid-column:auto;display:inline-block;flex:none;margin:0;padding:3px 6px;border:1.5px solid currentColor;border-radius:6px;font:800 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.gap.form.up{color:var(--flood)}
+.gap.form.down{color:var(--alert)}
+.my-real .gap.form{padding:2px 5px;font-size:11px}   /* as tall as the date beside it */
+/* homeFit with a result showing (the owner, 15 Nov 2026): the league always over its place (5th · 16 Pts), never cut and never joined to
+   it (two lines where a long one needs them), and Your Games always shown. The box only gets smaller (the shirt, the name, the result and
+   the figures); at the last two levels the country, then the stars, give way, as on any box */
+.my-box.real[data-fit] .my-league{display:block}
+.my-box.real[data-fit] .my-league > span:last-child{display:block}
+#s-home.fan .my-box :is(.rr-out,.rr-when,.my-sub,.gap.form){color:var(--fan-gink)}   /* a Super Fan's box in the club's colours: the word says Won or Lost, the ink reads on any ground */
+#s-home.fan .my-box .my-sub::after{background:var(--fan-gink);opacity:.4}
+/* The card: the week's point on the bar, yellow for a point gained, coral hatched for one lost, and +1 or −1 after the ability's name */
+.pk-bar{position:relative}
+.pk-real{position:absolute;top:0;bottom:0;left:calc(var(--a)*100%);width:calc(var(--w)*100%)}
+.pk-real.up{background:var(--flood)}
+.pk-real.down{background:repeating-linear-gradient(135deg,var(--alert) 0 3px,transparent 3px 6px)}
+.pk-st .lbl em{margin-left:4px;font-style:normal;font-weight:800}
+.pk-up{color:var(--flood)}
+.pk-down{color:var(--alert)}
+.fx-nm{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.fx-team.r .fx-nm{align-items:flex-end}
+.fx-team .fx-nm .gap.form{overflow-wrap:normal}
+@media (orientation:landscape) and (max-width:619px){ .pk-st .lbl em{display:none} }   /* 568 wide: the bars' own +1 goes (the card's Form chip says it), so Kicking and Stamina keep apart */
+/* A side's card holds its name block at the top and its bars at the foot, so a Form chip that wraps under the stars (My Team and Form +2)
+   never puts its name and bars out of line with the other card's; Stronger Side and a Legend's traits drifted the same way before. Make
+   a Team and Add Your Team keep their centred plus. */
+.pk-card:has(> .pk-stats){justify-content:space-between}
+.team.pk-pick:not(.pk-make){align-items:start}
+/* pickFit's Form steps (real results), only where the screen would otherwise scroll: 1, the card's chip compact, as tall as the stars' line;
+   2, the chip at the start of the league line instead, so Stronger Side or My Team and Form never take a line of their own (approved by
+   the owner, 15 Nov 2026: "Keep It"). The league line's copy is hidden otherwise, so it is never read out twice. */
+.pk-league .gap.form.pk-lf,.pk-league.pk-lfo{display:none}
+#s-teams[data-form] .pk-pick .gap.form{padding:0 4px;border-width:1px;font-size:11px;line-height:11px;letter-spacing:.04em}
+#s-teams[data-form="2"] .pk-rate > .gap.form{display:none}
+#s-teams[data-form="2"] .pk-league .gap.form.pk-lf{display:inline-block;margin-right:6px;vertical-align:1px}
+#s-teams[data-form="2"] .pk-league.pk-lfo{display:block}
+#s-teams[data-form="2"] .tid:has(> .tstars) > .pk-league:has(> .pk-lf){display:flex;align-items:center;white-space:nowrap}   /* a card with traits keeps the chip and the line to one line, the line's end the part that may go */
+#s-teams[data-form="2"] .tid:has(> .tstars) > .pk-league > .pk-lf{flex:none}
+#s-teams[data-form="2"] .tid:has(> .tstars) > .pk-league > .pk-lt{min-width:0;overflow:hidden;text-overflow:ellipsis}
+

@@ -13,6 +13,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { resultsServe } from './results-serve.mjs';
 process.env.SEED ??= '41';
 const { T, rndCalls, fireDoc } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
@@ -653,9 +654,9 @@ const BRK = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'brk').teams
   D.openTeams('quick'); for (const s of [0, 1]) { P.filter(s, '', { dev:'touch' }); for (let k = 0; k < 5; k++) { P.filterSel(0, k); P.filterSel(1, 0); } for (const q of ['b', 'ba', 'Premiership', 'zz', '']) P.filterType(q); P.filterClose(); }
   P.filter(0, 'bath', { dev:'touch' }); P.filterPick(P.filterState().hits[0].gi, P.filterState().hits[0].i);
   ok(rndCalls() === before, `the team screen and its Filter draw no random number (${rndCalls() - before})`);
-  ok(T.GAME_VERSION === '1.8.2' && $('ver').textContent === 'Version 1.8.2', 'GAME_VERSION is 1.8.2 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase, 1.7 the county clubs, with 1.6.1\'s five changes folded in, never released on their own, 1.8 the kit designs and a third colour, 1.8.1 the team screen\'s arrows and the away kit\'s tie, 1.8.2 Add Your Team on the web), on window.__tryline and at the foot of Settings');
+  ok(T.GAME_VERSION === '1.9' && $('ver').textContent === 'Version 1.9', 'GAME_VERSION is 1.9 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase, 1.7 the county clubs, with 1.6.1\'s five changes folded in, never released on their own, 1.8 the kit designs and a third colour, 1.8.1 the team screen\'s arrows and the away kit\'s tie, 1.8.2 Add Your Team on the web, 1.9 real results), on window.__tryline and at the foot of Settings');
   const src = readGameSource();
-  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.8.2';") && /<p class="ver" id="ver">Version 1\.8\.2<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
+  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.9';") && /<p class="ver" id="ver">Version 1\.9<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
   ok(!/id="home-tag"|\$\('home-tag'\)/.test(src), 'and no home tagline for it: PR #17\'s v1.1 line went with the tidied home, so nothing writes to an element that is not there');
   ok(!/[←-⇿⟵-⟿]/.test(src.slice(src.indexOf('<section class="screen" id="s-teams"'), src.indexOf('<section class="screen" id="s-build"'))), 'no arrow glyph on the team screen');
   fresh();
@@ -697,6 +698,7 @@ async function browserChecks() {
   const dir = fileURLToPath(new URL('../', import.meta.url));
   const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.woff2':'font/woff2', '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json', '.json':'application/json' };
   const server = http.createServer((req, res) => {
+    if (resultsServe(req.url, res)) return;   // the week's results.json: 404 unless RESULTS_FILE (tools/results-serve.mjs)
     const file = path.resolve(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
     if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'content-type':TYPES[path.extname(file)] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);

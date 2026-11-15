@@ -1,0 +1,59 @@
+User-agent: *
+Crawl-delay: 5
+Disallow: /webmaster/
+Disallow: /proclubadmin/
+Disallow: /divisionadmin/
+Disallow: /division-admin/
+Disallow: /competitionadmin/
+Disallow: /oscar/
+Disallow: /v5clubs/
+Disallow: /_subdomains/
+Disallow: /_services/
+Disallow: /ct/
+Disallow: /sports/activity-feed
+
+User-agent: Mediapartners-Google
+Allow: /
+
+# These bots did not respect the Crawl-delay directive and so have been disallowed
+User-agent: magpie-crawler
+Disallow: /
+
+User-agent: SEOkicks-Robot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: MauiBot
+Disallow: /
+
+User-agent: bl.uk_lddc_bot
+Disallow: /
+
+User-agent: bl.uk_ldfc_bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: SeekportBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: barkrowler
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Bytedance
+Disallow: /

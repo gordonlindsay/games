@@ -1,0 +1,5364 @@
+{
+ "generated": "2026-11-15",
+ "version": 1,
+ "season": "2026-27",
+ "about": "Written by tools/results/discover.mjs; read by tools/results/update.mjs. leagues: where each league is read. clubs: each game club's league this season and its name in that league's table, its Pitchero folder and 1st XV team id where a site is tied to it, how sure, and where that came from. unmapped: the clubs no source places, which get no entry.",
+ "leagues": {
+  "Championship": {
+   "src": "wikipedia",
+   "wiki": "2026–27_Champ_Rugby",
+   "teams": 14
+  },
+  "Counties 1 Cumbria": {
+   "src": "pitchero",
+   "tableId": 192786,
+   "teams": 8,
+   "via": [
+    {
+     "folder": "carlislerugby",
+     "team": 72797
+    }
+   ],
+   "sites": {
+    "Aspatria": {
+     "folder": "aspatria",
+     "team": 28536
+    },
+    "Carlisle": {
+     "folder": "carlislerugby",
+     "team": 72797
+    },
+    "Cockermouth": {
+     "folder": "cockermouthrfu",
+     "team": 82181
+    },
+    "Egremont": {
+     "folder": "egremont",
+     "team": 62995
+    },
+    "St Benedicts": {
+     "folder": "stbenedicts",
+     "team": 12854
+    },
+    "Whitehaven": {
+     "folder": "whitehavenrufc",
+     "team": 29268
+    }
+   }
+  },
+  "Counties 1 Eastern Counties": {
+   "src": "pitchero",
+   "tableId": 190883,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "colchesterrfc",
+     "team": 111699
+    },
+    {
+     "folder": "holtrugbyfootballclub",
+     "team": 168230
+    }
+   ],
+   "sites": {
+    "Colchester II": {
+     "folder": "colchesterrfc",
+     "team": 111699
+    },
+    "Holt": {
+     "folder": "holtrugbyfootballclub",
+     "team": 168230
+    },
+    "Saffron Walden": {
+     "folder": "saffronwalden",
+     "team": 2300
+    }
+   }
+  },
+  "Counties 1 Essex": {
+   "src": "pitchero",
+   "tableId": 190884,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "romfordgideapark",
+     "team": 9658
+    }
+   ],
+   "sites": {
+    "Campion": {
+     "folder": "campionrfc",
+     "team": 52897
+    },
+    "Chingford": {
+     "folder": "chingford",
+     "team": 64811
+    },
+    "Romford & Gidea Park": {
+     "folder": "romfordgideapark",
+     "team": 9658
+    }
+   }
+  },
+  "Counties 1 Hampshire": {
+   "src": "pitchero",
+   "tableId": 190885,
+   "teams": 13,
+   "via": [
+    {
+     "folder": "chichester",
+     "team": 20760
+    },
+    {
+     "folder": "sandownshanklinhurricanes",
+     "team": 15053
+    }
+   ],
+   "sites": {
+    "Chichester": {
+     "folder": "chichester",
+     "team": 20760
+    },
+    "Sandown & Shanklin": {
+     "folder": "sandownshanklinhurricanes",
+     "team": 15053
+    }
+   }
+  },
+  "Counties 1 Herts": {
+   "src": "pitchero",
+   "tableId": 190886,
+   "teams": 10,
+   "via": [
+    {
+     "folder": "fullerians",
+     "team": 45116
+    }
+   ],
+   "sites": {
+    "Fullerians": {
+     "folder": "fullerians",
+     "team": 45116
+    },
+    "Welwyn": {
+     "folder": "welwynrfc",
+     "team": 26605
+    }
+   }
+  },
+  "Counties 1 Kent": {
+   "src": "pitchero",
+   "tableId": 190887,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "crowborough",
+     "team": 122885
+    }
+   ],
+   "sites": {
+    "Beccehamian": {
+     "folder": "beccehamianrfc",
+     "team": 16052
+    },
+    "Crowborough": {
+     "folder": "crowborough",
+     "team": 122885
+    }
+   }
+  },
+  "Counties 1 Lancashire & Cheshire": {
+   "src": "pitchero",
+   "tableId": 190955,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "wiganrufc",
+     "team": 9384
+    }
+   ],
+   "sites": {
+    "Altrincham Kersal": {
+     "folder": "altrinchamkersalrfc",
+     "team": 24488
+    },
+    "Wigan": {
+     "folder": "wiganrufc",
+     "team": 9384
+    }
+   }
+  },
+  "Counties 1 Middx": {
+   "src": "pitchero",
+   "tableId": 190888,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "oldstreetonians",
+     "team": 59341
+    }
+   ],
+   "sites": {
+    "Old Haberdashers": {
+     "folder": "oldhaberdashersrfc",
+     "team": 134366
+    },
+    "Old Streetonians": {
+     "folder": "oldstreetonians",
+     "team": 59341
+    }
+   }
+  },
+  "Counties 1 Midlands East (North)": {
+   "src": "pitchero",
+   "tableId": 190931,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "keyworthrugbyfootballclub",
+     "team": 26171
+    },
+    {
+     "folder": "southwell",
+     "team": 4243
+    }
+   ],
+   "sites": {
+    "Belgrave": {
+     "folder": "belgrave",
+     "team": 7128
+    },
+    "Bourne": {
+     "folder": "bournerufc",
+     "team": 11425
+    },
+    "Keyworth": {
+     "folder": "keyworthrugbyfootballclub",
+     "team": 26171
+    },
+    "Southwell": {
+     "folder": "southwell",
+     "team": 4243
+    },
+    "Spalding": {
+     "folder": "spaldingrfc",
+     "team": 11715
+    }
+   }
+  },
+  "Counties 1 Midlands East (South)": {
+   "src": "pitchero",
+   "tableId": 190932,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "leicesterforest",
+     "team": 6283
+    },
+    {
+     "folder": "marketbosworthrugby",
+     "team": 288807
+    },
+    {
+     "folder": "nuneatonoldedwardians",
+     "team": 63420
+    }
+   ],
+   "sites": {
+    "Leicester Forest": {
+     "folder": "leicesterforest",
+     "team": 6283
+    },
+    "Market Bosworth": {
+     "folder": "marketbosworthrugby",
+     "team": 288807
+    },
+    "Nuneaton Old Edwardians": {
+     "folder": "nuneatonoldedwardians",
+     "team": 63420
+    },
+    "Towcestrians": {
+     "folder": "towcestriansrfc",
+     "team": 34750
+    }
+   }
+  },
+  "Counties 1 Midlands West (North)": {
+   "src": "pitchero",
+   "tableId": 190933,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "newcastlestaffsrufc",
+     "team": 96331
+    },
+    {
+     "folder": "oldhalesonians",
+     "team": 43390
+    }
+   ],
+   "sites": {
+    "Aston Old Edwardians": {
+     "folder": "astonoldedwardians",
+     "team": 17720
+    },
+    "Newcastle (Staffs)": {
+     "folder": "newcastlestaffsrufc",
+     "team": 96331
+    },
+    "Old Halesonians": {
+     "folder": "oldhalesonians",
+     "team": 43390
+    }
+   }
+  },
+  "Counties 1 Midlands West (South)": {
+   "src": "pitchero",
+   "tableId": 190934,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "oldleamingtonians",
+     "team": 2642
+    }
+   ],
+   "sites": {
+    "Camp Hill": {
+     "folder": "camphillrfc",
+     "team": 24307
+    },
+    "Earlsdon": {
+     "folder": "earlsdonrfc",
+     "team": 284832
+    },
+    "Manor Park": {
+     "folder": "manorpark",
+     "team": 21300
+    },
+    "Old Leamingtonians": {
+     "folder": "oldleamingtonians",
+     "team": 2642
+    }
+   }
+  },
+  "Counties 1 North East": {
+   "src": "pitchero",
+   "tableId": 190957,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "hartlepoolrfc",
+     "team": 5154
+    },
+    {
+     "folder": "ponteland",
+     "team": 71770
+    }
+   ],
+   "sites": {
+    "Darlington": {
+     "folder": "darlingtonrfc",
+     "team": 14267
+    },
+    "Hartlepool": {
+     "folder": "hartlepoolrfc",
+     "team": 5154
+    },
+    "Ponteland": {
+     "folder": "ponteland",
+     "team": 71770
+    },
+    "Stockton": {
+     "folder": "stockton",
+     "team": 9446
+    }
+   }
+  },
+  "Counties 1 Southern North": {
+   "src": "pitchero",
+   "tableId": 190974,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "windsorrugbyclub",
+     "team": 269581
+    }
+   ],
+   "sites": {
+    "Buckingham": {
+     "folder": "buckingham",
+     "team": 14256
+    },
+    "Windsor": {
+     "folder": "windsorrugbyclub",
+     "team": 269581
+    }
+   }
+  },
+  "Counties 1 Southern South": {
+   "src": "pitchero",
+   "tableId": 190975,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "chippenham",
+     "team": 4468
+    }
+   ],
+   "sites": {
+    "Chippenham II": {
+     "folder": "chippenham",
+     "team": 4468
+    },
+    "Swanage & Wareham": {
+     "folder": "swanagewareham",
+     "team": 35691
+    }
+   }
+  },
+  "Counties 1 Surrey/Sussex": {
+   "src": "pitchero",
+   "tableId": 190889,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "eastbournerugbyclub",
+     "team": 76786
+    },
+    {
+     "folder": "londoncornishrfc",
+     "team": 27535
+    },
+    {
+     "folder": "oldcaterhamiansrfc",
+     "team": 343
+    }
+   ],
+   "sites": {
+    "Eastbourne": {
+     "folder": "eastbournerugbyclub",
+     "team": 76786
+    },
+    "Hove": {
+     "folder": "hoverugbyfootballclub",
+     "team": 156174
+    },
+    "London Cornish": {
+     "folder": "londoncornishrfc",
+     "team": 27535
+    },
+    "Old Caterhamians": {
+     "folder": "oldcaterhamiansrfc",
+     "team": 343
+    },
+    "Old Wimbledonians": {
+     "folder": "oldwimbledoniansrfc",
+     "team": 193380
+    },
+    "Reeds Weybridge": {
+     "folder": "reedsweybridgerfc",
+     "team": 196497
+    }
+   }
+  },
+  "Counties 1 Western North": {
+   "src": "pitchero",
+   "tableId": 190976,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "gordano",
+     "team": 2692
+    },
+    {
+     "folder": "oldbristolians",
+     "team": 15782
+    }
+   ],
+   "sites": {
+    "Chard": {
+     "folder": "chardrfc",
+     "team": 81862
+    },
+    "Gordano": {
+     "folder": "gordano",
+     "team": 2692
+    },
+    "Old Bristolians": {
+     "folder": "oldbristolians",
+     "team": 15782
+    },
+    "Wellington": {
+     "folder": "wellington",
+     "team": 30522
+    }
+   }
+  },
+  "Counties 1 Western West": {
+   "src": "pitchero",
+   "tableId": 190977,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "saltash",
+     "team": 21311
+    }
+   ],
+   "sites": {
+    "Cullompton": {
+     "folder": "cullompton",
+     "team": 26393
+    },
+    "Saltash": {
+     "folder": "saltash",
+     "team": 21311
+    }
+   }
+  },
+  "Counties 1 Yorkshire": {
+   "src": "pitchero",
+   "tableId": 190958,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "oldrishworthians",
+     "team": 531
+    }
+   ],
+   "sites": {
+    "Doncaster Phoenix": {
+     "folder": "doncasterphoenix",
+     "team": 13555
+    },
+    "Old Rishworthian": {
+     "folder": "oldrishworthians",
+     "team": 531
+    },
+    "West Leeds": {
+     "folder": "westleedsrufc",
+     "team": 69072
+    },
+    "Yarnbury": {
+     "folder": "yarnbury",
+     "team": 1604
+    }
+   }
+  },
+  "Counties 2 Berks/Bucks & Oxon East": {
+   "src": "pitchero",
+   "tableId": 190978,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "bletchleyrugbyclub",
+     "team": 105144
+    }
+   ],
+   "sites": {
+    "Bletchley": {
+     "folder": "bletchleyrugbyclub",
+     "team": 105144
+    }
+   }
+  },
+  "Counties 2 Berks/Bucks & Oxon West": {
+   "src": "pitchero",
+   "tableId": 190979,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "gosfordallblacks",
+     "team": 404
+    }
+   ],
+   "sites": {
+    "Gosford All Blacks": {
+     "folder": "gosfordallblacks",
+     "team": 404
+    },
+    "Wallingford": {
+     "folder": "wallingfordrugbyclub",
+     "team": 114747
+    }
+   }
+  },
+  "Counties 2 Cumbria": {
+   "src": "pitchero",
+   "tableId": 191149,
+   "teams": 8,
+   "via": [
+    {
+     "folder": "workington",
+     "team": 11918
+    }
+   ],
+   "sites": {
+    "Ambleside": {
+     "folder": "amblesiderufc",
+     "team": 128957
+    },
+    "Creighton": {
+     "folder": "creighton",
+     "team": 54308
+    },
+    "Millom": {
+     "folder": "mrufc",
+     "team": 100181
+    },
+    "Windermere": {
+     "folder": "windermere",
+     "team": 17640
+    },
+    "Workington": {
+     "folder": "workington",
+     "team": 11918
+    }
+   }
+  },
+  "Counties 2 Gloucestershire": {
+   "src": "pitchero",
+   "tableId": 190984,
+   "teams": 11,
+   "via": [
+    {
+     "folder": "chosenhillformerpupils",
+     "team": 11462
+    }
+   ],
+   "sites": {
+    "Chosen Hill Former Pupils": {
+     "folder": "chosenhillformerpupils",
+     "team": 11462
+    }
+   }
+  },
+  "Counties 2 Hampshire": {
+   "src": "pitchero",
+   "tableId": 190892,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "gosportandfareham",
+     "team": 32811
+    }
+   ],
+   "sites": {
+    "Gosport & Fareham": {
+     "folder": "gosportandfareham",
+     "team": 32811
+    }
+   }
+  },
+  "Counties 2 Midlands East (South)": {
+   "src": "pitchero",
+   "tableId": 190936,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "peterboroughlionsrfc",
+     "team": 14259
+    }
+   ],
+   "sites": {
+    "Peterborough Lions": {
+     "folder": "peterboroughlionsrfc",
+     "team": 14259
+    }
+   }
+  },
+  "Counties 2 Midlands West (East)": {
+   "src": "pitchero",
+   "tableId": 190937,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "tamworth",
+     "team": 14868
+    }
+   ],
+   "sites": {
+    "Tamworth": {
+     "folder": "tamworth",
+     "team": 14868
+    }
+   }
+  },
+  "Counties 2 Surrey": {
+   "src": "pitchero",
+   "tableId": 192123,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "kcsoldboysrfc",
+     "team": 1331
+    }
+   ],
+   "sites": {
+    "KCS Old Boys": {
+     "folder": "kcsoldboysrfc",
+     "team": 1331
+    }
+   }
+  },
+  "National League 1": {
+   "src": "wikipedia",
+   "wiki": "2026–27_National_League_1",
+   "teams": 14
+  },
+  "National League 2 East": {
+   "src": "wikipedia",
+   "wiki": "2026–27_National_League_2_East",
+   "teams": 14
+  },
+  "National League 2 North": {
+   "src": "wikipedia",
+   "wiki": "2026–27_National_League_2_North",
+   "teams": 14
+  },
+  "National League 2 West": {
+   "src": "wikipedia",
+   "wiki": "2026–27_National_League_2_West",
+   "teams": 14
+  },
+  "Premiership": {
+   "src": "wikipedia",
+   "wiki": "2026–27_Premiership_Rugby",
+   "teams": 10
+  },
+  "Regional 1 Midlands": {
+   "src": "pitchero",
+   "tableId": 190950,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "broadstreetrfc3",
+     "team": 233286
+    },
+    {
+     "folder": "burton",
+     "team": 12251
+    },
+    {
+     "folder": "lutterworthrfc",
+     "team": 26089
+    },
+    {
+     "folder": "oxfordquinsrfc",
+     "team": 265145
+    }
+   ],
+   "sites": {
+    "Banbury": {
+     "folder": "banbury",
+     "team": 2422
+    },
+    "Broadstreet": {
+     "folder": "broadstreetrfc3",
+     "team": 233286
+    },
+    "Burton": {
+     "folder": "burton",
+     "team": 12251
+    },
+    "Lutterworth": {
+     "folder": "lutterworthrfc",
+     "team": 26089
+    },
+    "Oxford Harlequins": {
+     "folder": "oxfordquinsrfc",
+     "team": 265145
+    }
+   }
+  },
+  "Regional 1 North East": {
+   "src": "pitchero",
+   "tableId": 190967,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "driffieldrufc",
+     "team": 295195
+    },
+    {
+     "folder": "ilkleyrugbyclub",
+     "team": 295630
+    },
+    {
+     "folder": "northribblesdale",
+     "team": 23075
+    }
+   ],
+   "sites": {
+    "Alnwick": {
+     "folder": "alnwick",
+     "team": 16037
+    },
+    "Driffield": {
+     "folder": "driffieldrufc",
+     "team": 295195
+    },
+    "Ilkley": {
+     "folder": "ilkleyrugbyclub",
+     "team": 295630
+    },
+    "Middlesbrough": {
+     "folder": "middlesbroughrufcminisjuniors",
+     "team": 30210
+    },
+    "North Ribblesdale": {
+     "folder": "northribblesdale",
+     "team": 23075
+    }
+   }
+  },
+  "Regional 1 North West": {
+   "src": "pitchero",
+   "tableId": 190968,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "leek",
+     "team": 2069
+    },
+    {
+     "folder": "stockport",
+     "team": 1235
+    },
+    {
+     "folder": "wirral",
+     "team": 16027
+    }
+   ],
+   "sites": {
+    "Blackburn": {
+     "folder": "blackburn",
+     "team": 6814
+    },
+    "Leek": {
+     "folder": "leek",
+     "team": 2069
+    },
+    "Stockport": {
+     "folder": "stockport",
+     "team": 1235
+    },
+    "Wirral": {
+     "folder": "wirral",
+     "team": 16027
+    }
+   }
+  },
+  "Regional 1 South Central": {
+   "src": "pitchero",
+   "tableId": 190924,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "bracknell",
+     "team": 3100
+    },
+    {
+     "folder": "farnham",
+     "team": 37851
+    },
+    {
+     "folder": "londonscottishlions",
+     "team": 266920
+    }
+   ],
+   "sites": {
+    "Bracknell": {
+     "folder": "bracknell",
+     "team": 3100
+    },
+    "Farnham": {
+     "folder": "farnham",
+     "team": 37851
+    },
+    "London Scottish Lions": {
+     "folder": "londonscottishlions",
+     "team": 266920
+    }
+   }
+  },
+  "Regional 1 South East": {
+   "src": "pitchero",
+   "tableId": 190925,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "sidcuprfc",
+     "team": 36419
+    }
+   ],
+   "sites": {
+    "Old Northamptonians": {
+     "folder": "oldnorthamptonians",
+     "team": 2982
+    },
+    "Sidcup": {
+     "folder": "sidcuprfc",
+     "team": 36419
+    },
+    "Sudbury": {
+     "folder": "sudburyrfc",
+     "team": 94517
+    }
+   }
+  },
+  "Regional 1 South West": {
+   "src": "pitchero",
+   "tableId": 191021,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "staustell",
+     "team": 1673
+    },
+    {
+     "folder": "topsham",
+     "team": 31479
+    }
+   ],
+   "sites": {
+    "Chew Valley": {
+     "folder": "chewvalley",
+     "team": 12811
+    },
+    "Newent": {
+     "folder": "newentrfc",
+     "team": 28602
+    },
+    "St Austell": {
+     "folder": "staustell",
+     "team": 1673
+    },
+    "Topsham": {
+     "folder": "topsham",
+     "team": 31479
+    },
+    "Weston-super-Mare": {
+     "folder": "westonsupermare",
+     "team": 436
+    }
+   }
+  },
+  "Regional 2 Anglia": {
+   "src": "pitchero",
+   "tableId": 190926,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "cheshuntrugbyclub",
+     "team": 65504
+    },
+    {
+     "folder": "finchley",
+     "team": 595
+    }
+   ],
+   "sites": {
+    "Cheshunt": {
+     "folder": "cheshuntrugbyclub",
+     "team": 65504
+    },
+    "Finchley": {
+     "folder": "finchley",
+     "team": 595
+    }
+   }
+  },
+  "Regional 2 Midlands East": {
+   "src": "pitchero",
+   "tableId": 190951,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "olneyrfc",
+     "team": 156898
+    }
+   ],
+   "sites": {
+    "Olney": {
+     "folder": "olneyrfc",
+     "team": 156898
+    }
+   }
+  },
+  "Regional 2 Midlands North": {
+   "src": "pitchero",
+   "tableId": 190952,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "longeaton",
+     "team": 69794
+    },
+    {
+     "folder": "suttoncoldfield",
+     "team": 54877
+    }
+   ],
+   "sites": {
+    "Ilkeston": {
+     "folder": "ilkeston",
+     "team": 1576
+    },
+    "Long Eaton": {
+     "folder": "longeaton",
+     "team": 69794
+    },
+    "Matlock": {
+     "folder": "matlock",
+     "team": 9812
+    },
+    "Sutton Coldfield": {
+     "folder": "suttoncoldfield",
+     "team": 54877
+    }
+   }
+  },
+  "Regional 2 Midlands West": {
+   "src": "pitchero",
+   "tableId": 190953,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "silhillians",
+     "team": 6186
+    }
+   ],
+   "sites": {
+    "Silhillians": {
+     "folder": "silhillians",
+     "team": 6186
+    }
+   }
+  },
+  "Regional 2 North": {
+   "src": "pitchero",
+   "tableId": 190969,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "consett",
+     "team": 28999
+    },
+    {
+     "folder": "guisborough",
+     "team": 27584
+    },
+    {
+     "folder": "penrithrufc",
+     "team": 19354
+    }
+   ],
+   "sites": {
+    "Consett": {
+     "folder": "consett",
+     "team": 28999
+    },
+    "Durham City": {
+     "folder": "durhamcityrugbyfootballclub",
+     "team": 29288
+    },
+    "Guisborough": {
+     "folder": "guisborough",
+     "team": 27584
+    },
+    "Novocastrians": {
+     "folder": "novocastrians",
+     "team": 6738
+    },
+    "Penrith": {
+     "folder": "penrithrufc",
+     "team": 19354
+    }
+   }
+  },
+  "Regional 2 North East": {
+   "src": "pitchero",
+   "tableId": 190970,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "oldbrodleiansfirstxv",
+     "team": 2307
+    },
+    {
+     "folder": "selby",
+     "team": 2267
+    }
+   ],
+   "sites": {
+    "Bradford Salem": {
+     "folder": "bradfordsalem",
+     "team": 4254
+    },
+    "Moortown": {
+     "folder": "moortownrufc",
+     "team": 20785
+    },
+    "Morley": {
+     "folder": "morleyrfc",
+     "team": 5937
+    },
+    "Old Brodleians": {
+     "folder": "oldbrodleiansfirstxv",
+     "team": 2307
+    },
+    "Selby": {
+     "folder": "selby",
+     "team": 2267
+    }
+   }
+  },
+  "Regional 2 North West": {
+   "src": "pitchero",
+   "tableId": 190971,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "manchester",
+     "team": 11558
+    },
+    {
+     "folder": "northwich",
+     "team": 2185
+    }
+   ],
+   "sites": {
+    "Manchester": {
+     "folder": "manchester",
+     "team": 11558
+    },
+    "Northwich": {
+     "folder": "northwich",
+     "team": 2185
+    }
+   }
+  },
+  "Regional 2 Severn": {
+   "src": "pitchero",
+   "tableId": 191020,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "newburyrfc",
+     "team": 42243
+    }
+   ],
+   "sites": {
+    "Chippenham": {
+     "folder": "chippenham",
+     "team": 4463
+    },
+    "Newbury Blues": {
+     "folder": "newburyrfc",
+     "team": 42243
+    },
+    "Old Centralians": {
+     "folder": "oldcents",
+     "team": 13879
+    },
+    "Thornbury": {
+     "folder": "thornburyrfc",
+     "team": 40451
+    }
+   }
+  },
+  "Regional 2 South Central": {
+   "src": "pitchero",
+   "tableId": 190927,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "oldtiffiniansrfc",
+     "team": 153029
+    },
+    {
+     "folder": "petersfield",
+     "team": 28789
+    },
+    {
+     "folder": "twickenhamrfc",
+     "team": 84648
+    }
+   ],
+   "sites": {
+    "Old Tiffinians": {
+     "folder": "oldtiffiniansrfc",
+     "team": 153029
+    },
+    "Petersfield": {
+     "folder": "petersfield",
+     "team": 28789
+    },
+    "Twickenham": {
+     "folder": "twickenhamrfc",
+     "team": 84648
+    },
+    "Weybridge Vandals": {
+     "folder": "weybridgevandalsrfc",
+     "team": 14182
+    }
+   }
+  },
+  "Regional 2 South East": {
+   "src": "pitchero",
+   "tableId": 190928,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "horshamrugbyclub",
+     "team": 29388
+    },
+    {
+     "folder": "oldelthamians",
+     "team": 13217
+    }
+   ],
+   "sites": {
+    "Hammersmith & Fulham": {
+     "folder": "hammersmithandfulhamrfc",
+     "team": 281574
+    },
+    "Horsham": {
+     "folder": "horshamrugbyclub",
+     "team": 29388
+    },
+    "Old Elthamians": {
+     "folder": "oldelthamians",
+     "team": 13217
+    }
+   }
+  },
+  "Regional 2 South West": {
+   "src": "pitchero",
+   "tableId": 190990,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "wadebridgecamels",
+     "team": 27457
+    }
+   ],
+   "sites": {
+    "Ivybridge": {
+     "folder": "ivybridge",
+     "team": 3409
+    },
+    "Wadebridge Camels": {
+     "folder": "wadebridgecamels",
+     "team": 27457
+    }
+   }
+  },
+  "Regional 2 Thames": {
+   "src": "pitchero",
+   "tableId": 190929,
+   "teams": 12,
+   "via": [
+    {
+     "folder": "harpendenrugbyclub",
+     "team": 241069
+    },
+    {
+     "folder": "oldpriorians",
+     "team": 185999
+    },
+    {
+     "folder": "teddingtonrfc",
+     "team": 58765
+    }
+   ],
+   "sites": {
+    "Harpenden": {
+     "folder": "harpendenrugbyclub",
+     "team": 241069
+    },
+    "Old Priorians": {
+     "folder": "oldpriorians",
+     "team": 185999
+    },
+    "Teddington": {
+     "folder": "teddingtonrfc",
+     "team": 58765
+    }
+   }
+  }
+ },
+ "clubs": {
+  "ACH": {
+   "name": "Amersham",
+   "league": "Regional 2 Thames",
+   "team": "Amersham & Chiltern",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Amersham & Chiltern\""
+  },
+  "AKE": {
+   "name": "Altrincham",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Altrincham Kersal",
+   "was": "Regional 2 North West",
+   "folder": "altrinchamkersalrfc",
+   "team1": 24488,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Altrincham Kersal\""
+  },
+  "ALC": {
+   "name": "Alcester",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Alcester",
+   "was": "Counties 1 Midlands West (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Alcester\""
+  },
+  "ALN": {
+   "name": "Alnwick",
+   "league": "Regional 1 North East",
+   "team": "Alnwick",
+   "was": "Regional 1 North East",
+   "folder": "alnwick",
+   "team1": 16037,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Alnwick\""
+  },
+  "ALW": {
+   "name": "Aldwinians",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Aldwinians",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Aldwinians\""
+  },
+  "AMB": {
+   "name": "Ambleside",
+   "league": "Counties 2 Cumbria",
+   "team": "Ambleside",
+   "was": "Counties 1 Cumbria",
+   "folder": "amblesiderufc",
+   "team1": 128957,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Cumbria table (id 191149): row \"Ambleside\""
+  },
+  "AMP": {
+   "name": "Ampthill",
+   "league": "Championship",
+   "team": "Ampthill",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Ampthill\""
+  },
+  "ANO": {
+   "name": "Andover",
+   "league": "Counties 1 Hampshire",
+   "team": "Andover",
+   "was": "Counties 1 Hampshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Hampshire table (id 190885): row \"Andover\""
+  },
+  "ANS": {
+   "name": "Anselmians",
+   "league": "Regional 1 North West",
+   "team": "Anselmians",
+   "was": "Regional 1 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Anselmians\""
+  },
+  "AOE": {
+   "name": "Aston OE",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Aston Old Edwardians",
+   "was": "Counties 1 Midlands West (North)",
+   "folder": "astonoldedwardians",
+   "team1": 17720,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Aston Old Edwardians\""
+  },
+  "ASH": {
+   "name": "Ashford",
+   "league": "Counties 1 Kent",
+   "team": "Ashford",
+   "was": "Counties 1 Kent",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Ashford\""
+  },
+  "ASP": {
+   "name": "Aspatria",
+   "league": "Counties 1 Cumbria",
+   "team": "Aspatria",
+   "was": "Regional 2 North",
+   "folder": "aspatria",
+   "team1": 28536,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"Aspatria\""
+  },
+  "AYL": {
+   "name": "Aylesbury",
+   "league": "Regional 2 Thames",
+   "team": "Aylesbury Men I",
+   "was": "Regional 2 Thames",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Aylesbury Men I\""
+  },
+  "BAB": {
+   "name": "Banbury",
+   "league": "Regional 1 Midlands",
+   "team": "Banbury",
+   "was": "Regional 1 Midlands",
+   "folder": "banbury",
+   "team1": 2422,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Banbury\""
+  },
+  "BAI": {
+   "name": "Basingstoke",
+   "league": "Counties 1 Hampshire",
+   "team": "Basingstoke",
+   "was": "Counties 1 Hampshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Hampshire table (id 190885): row \"Basingstoke\""
+  },
+  "BAL": {
+   "name": "Bedford Athletic",
+   "league": "Regional 2 Midlands East",
+   "team": "Bedford Athletic",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Bedford Athletic\""
+  },
+  "BAN": {
+   "name": "Barnes",
+   "league": "National League 2 East",
+   "team": "Barnes",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Barnes\""
+  },
+  "BAS": {
+   "name": "Barnstaple",
+   "league": "National League 2 West",
+   "team": "Barnstaple",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Barnstaple\""
+  },
+  "BAU": {
+   "name": "Bishop Auckland",
+   "league": "Counties 1 North East",
+   "team": "Bishop Auckland",
+   "was": "Counties 1 Durham & Northumberland",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Bishop Auckland\""
+  },
+  "BEA": {
+   "name": "Beaconsfield",
+   "league": "Regional 2 Thames",
+   "team": "Beaconsfield",
+   "was": "Regional 2 Thames",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Beaconsfield\""
+  },
+  "BEC": {
+   "name": "Beckenham",
+   "league": "Regional 2 South East",
+   "team": "Beckenham",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Beckenham\""
+  },
+  "BED": {
+   "name": "Bedford",
+   "league": "Championship",
+   "team": "Bedford Blues",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Bedford Blues\""
+  },
+  "BEE": {
+   "name": "Beccehamian",
+   "league": "Counties 1 Kent",
+   "team": "Beccehamian",
+   "was": "Counties 1 Kent",
+   "folder": "beccehamianrfc",
+   "team1": 16052,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Beccehamian\""
+  },
+  "BEG": {
+   "name": "Belgrave",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Belgrave",
+   "was": "Regional 2 Midlands North",
+   "folder": "belgrave",
+   "team1": 7128,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Belgrave\""
+  },
+  "BIC": {
+   "name": "Bicester",
+   "league": "Counties 1 Southern North",
+   "team": "Bicester",
+   "was": "Counties 1 Southern North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern North table (id 190974): row \"Bicester\""
+  },
+  "BIE": {
+   "name": "Billericay",
+   "league": "Counties 1 Essex",
+   "team": "Billericay",
+   "was": "Counties 1 Essex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"Billericay\""
+  },
+  "BIG": {
+   "name": "Biggleswade",
+   "league": "Counties 1 Herts",
+   "team": "Biggleswade",
+   "was": "Counties 1 Midlands East (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Herts table (id 190886): row \"Biggleswade\""
+  },
+  "BIL": {
+   "name": "Billingham",
+   "league": "National League 2 North",
+   "team": "Billingham",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Billingham\""
+  },
+  "BLA": {
+   "name": "Blackheath",
+   "league": "Championship",
+   "team": "Blackheath",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Blackheath\""
+  },
+  "BLC": {
+   "name": "Blackburn",
+   "league": "Regional 1 North West",
+   "team": "Blackburn",
+   "was": "Regional 1 North West",
+   "folder": "blackburn",
+   "team1": 6814,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Blackburn\""
+  },
+  "BLE": {
+   "name": "Bletchley",
+   "league": "Counties 2 Berks/Bucks & Oxon East",
+   "team": "Bletchley",
+   "was": "Counties 1 Southern North",
+   "folder": "bletchleyrugbyclub",
+   "team1": 105144,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 2 Berks/Bucks & Oxon East table (id 190978): row \"Bletchley\", its own 1st XV page bletchleyrugbyclub/105144"
+  },
+  "BLY": {
+   "name": "Blaydon",
+   "league": "Regional 1 North East",
+   "team": "Blaydon",
+   "was": "Regional 1 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Blaydon\""
+  },
+  "BMO": {
+   "name": "Moseley",
+   "league": "National League 1",
+   "team": "Birmingham Moseley",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Birmingham Moseley\""
+  },
+  "BOE": {
+   "name": "Bourne",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Bourne",
+   "was": "Counties 1 Midlands East (North)",
+   "folder": "bournerufc",
+   "team1": 11425,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Bourne\""
+  },
+  "BOG": {
+   "name": "Bognor",
+   "league": "Regional 2 South Central",
+   "team": "Bognor",
+   "was": "Counties 1 Hampshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Bognor\""
+  },
+  "BON": {
+   "name": "Bournemouth",
+   "league": "Regional 1 South Central",
+   "team": "Bournemouth",
+   "was": "Regional 2 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Bournemouth\""
+  },
+  "BOU": {
+   "name": "Bournville",
+   "league": "National League 2 West",
+   "team": "Bournville",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Bournville\""
+  },
+  "BOW": {
+   "name": "Bowdon",
+   "league": "Regional 1 North West",
+   "team": "Bowdon",
+   "was": "Regional 1 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Bowdon\""
+  },
+  "BPA": {
+   "name": "Belsize Park",
+   "league": "Regional 2 Thames",
+   "team": "Belsize Park",
+   "was": "Regional 2 Thames",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Belsize Park\""
+  },
+  "BPK": {
+   "name": "Broughton Park",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Broughton Park",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Broughton Park\""
+  },
+  "BPR": {
+   "name": "Birkenhead Park",
+   "league": "Regional 2 North West",
+   "team": "Birkenhead Park",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Birkenhead Park\""
+  },
+  "BRC": {
+   "name": "Bracknell",
+   "league": "Regional 1 South Central",
+   "team": "Bracknell",
+   "was": "Regional 1 South Central",
+   "folder": "bracknell",
+   "team1": 3100,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Bracknell\", its own 1st XV page bracknell/3100"
+  },
+  "BRD": {
+   "name": "Bridgnorth",
+   "league": "Regional 1 Midlands",
+   "team": "Bridgnorth",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Bridgnorth\""
+  },
+  "BRE": {
+   "name": "Brentwood",
+   "league": "Regional 2 Anglia",
+   "team": "Brentwood",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Brentwood\""
+  },
+  "BRG": {
+   "name": "Brighton",
+   "league": "Regional 2 South East",
+   "team": "Brighton",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Brighton\""
+  },
+  "BRM": {
+   "name": "Bromley",
+   "league": "Regional 2 South East",
+   "team": "Bromley",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Bromley\""
+  },
+  "BRO": {
+   "name": "Bromsgrove",
+   "league": "Regional 1 Midlands",
+   "team": "Bromsgrove",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Bromsgrove\""
+  },
+  "BRR": {
+   "name": "Braintree",
+   "league": "Regional 2 Anglia",
+   "team": "Braintree",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Braintree\""
+  },
+  "BRS": {
+   "name": "Bristol",
+   "league": "Premiership",
+   "team": "Bristol Bears",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Bristol Bears\""
+  },
+  "BRT": {
+   "name": "Broadstreet",
+   "league": "Regional 1 Midlands",
+   "team": "Broadstreet",
+   "was": "Regional 2 Midlands East",
+   "folder": "broadstreetrfc3",
+   "team1": 233286,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Broadstreet\", its own 1st XV page broadstreetrfc3/233286"
+  },
+  "BRX": {
+   "name": "Brixham",
+   "league": "Regional 1 South West",
+   "team": "Brixham",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Brixham\""
+  },
+  "BRY": {
+   "name": "Bromyard",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Bromyard",
+   "was": "Counties 1 Midlands West (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Bromyard\""
+  },
+  "BSA": {
+   "name": "Bradford Salem",
+   "league": "Regional 2 North East",
+   "team": "Bradford Salem",
+   "was": "Regional 2 North East",
+   "folder": "bradfordsalem",
+   "team1": 4254,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Bradford Salem\""
+  },
+  "BSE": {
+   "name": "Bury St Edmunds",
+   "league": "National League 1",
+   "team": "Bury St Edmunds",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Bury St Edmunds\""
+  },
+  "BST": {
+   "name": "Stortford",
+   "league": "National League 1",
+   "team": "Bishop's Stortford",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Bishop's Stortford\""
+  },
+  "BTH": {
+   "name": "Bath",
+   "league": "Premiership",
+   "team": "Bath",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Bath\""
+  },
+  "BUA": {
+   "name": "Burnage",
+   "league": "Regional 2 North West",
+   "team": "Burnage",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Burnage\""
+  },
+  "BUC": {
+   "name": "Buckingham",
+   "league": "Counties 1 Southern North",
+   "team": "Buckingham",
+   "was": "Counties 1 Southern North",
+   "folder": "buckingham",
+   "team1": 14256,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern North table (id 190974): row \"Buckingham\""
+  },
+  "BUG": {
+   "name": "Bugbrooke",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Bugbrooke",
+   "was": "Counties 1 Midlands East (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Bugbrooke\""
+  },
+  "BUN": {
+   "name": "Brunel",
+   "league": "Regional 1 South Central",
+   "team": "Brunel University",
+   "was": "Regional 2 Thames",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Brunel University\""
+  },
+  "BUR": {
+   "name": "Burton",
+   "league": "Regional 1 Midlands",
+   "team": "Burton",
+   "was": "Regional 1 North West",
+   "folder": "burton",
+   "team1": 12251,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Burton\", its own 1st XV page burton/12251"
+  },
+  "BUT": {
+   "name": "Burntwood",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Burntwood",
+   "was": "Counties 1 Midlands West (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Burntwood\""
+  },
+  "CAB": {
+   "name": "Camborne",
+   "league": "National League 1",
+   "team": "Camborne",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Camborne\""
+  },
+  "CAE": {
+   "name": "Camberley",
+   "league": "Regional 2 South Central",
+   "team": "Camberley",
+   "was": "Regional 1 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Camberley\""
+  },
+  "CAH": {
+   "name": "Camp Hill",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Camp Hill",
+   "was": "Counties 1 Midlands West (South)",
+   "folder": "camphillrfc",
+   "team1": 24307,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Camp Hill\""
+  },
+  "CAL": {
+   "name": "Caldy",
+   "league": "Championship",
+   "team": "Caldy",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Caldy\""
+  },
+  "CAM": {
+   "name": "Cambridge",
+   "league": "National League 1",
+   "team": "Cambridge",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Cambridge\""
+  },
+  "CAP": {
+   "name": "Campion",
+   "league": "Counties 1 Essex",
+   "team": "Campion",
+   "was": "Counties 1 Essex",
+   "folder": "campionrfc",
+   "team1": 52897,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"Campion\""
+  },
+  "CAR": {
+   "name": "Carlisle",
+   "league": "Counties 1 Cumbria",
+   "team": "Carlisle",
+   "was": "Counties 1 Cumbria",
+   "folder": "carlislerugby",
+   "team1": 72797,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"Carlisle\", its own 1st XV page carlislerugby/72797"
+  },
+  "CAT": {
+   "name": "Canterbury",
+   "league": "National League 2 East",
+   "team": "Canterbury",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Canterbury\""
+  },
+  "CHA": {
+   "name": "Chard",
+   "league": "Counties 1 Western North",
+   "team": "Chard",
+   "was": "Counties 1 Western North",
+   "folder": "chardrfc",
+   "team1": 81862,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western North table (id 190976): row \"Chard\""
+  },
+  "CHE": {
+   "name": "Chester",
+   "league": "National League 2 North",
+   "team": "Chester",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Chester\""
+  },
+  "CHF": {
+   "name": "Chosen Hill FP",
+   "league": "Counties 2 Gloucestershire",
+   "team": "Chosen Hill Former Pupils",
+   "was": "Counties 1 Western North",
+   "folder": "chosenhillformerpupils",
+   "team1": 11462,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 2 Gloucestershire table (id 190984): row \"Chosen Hill Former Pupils\", its own 1st XV page chosenhillformerpupils/11462"
+  },
+  "CHG": {
+   "name": "Chingford",
+   "league": "Counties 1 Essex",
+   "team": "Chingford",
+   "was": "Counties 1 Essex",
+   "folder": "chingford",
+   "team1": 64811,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"Chingford\""
+  },
+  "CHH": {
+   "name": "Cheshunt",
+   "league": "Regional 2 Anglia",
+   "team": "Cheshunt",
+   "was": "Counties 1 Hertfordshire",
+   "folder": "cheshuntrugbyclub",
+   "team1": 65504,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Cheshunt\", its own 1st XV page cheshuntrugbyclub/65504"
+  },
+  "CHL": {
+   "name": "Chelmsford",
+   "league": "Regional 2 Anglia",
+   "team": "Chelmsford",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Chelmsford\""
+  },
+  "CHN": {
+   "name": "Chinnor",
+   "league": "Championship",
+   "team": "Chinnor",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Chinnor\""
+  },
+  "CHO": {
+   "name": "Chobham",
+   "league": "Regional 2 South Central",
+   "team": "Chobham",
+   "was": "Regional 2 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Chobham\""
+  },
+  "CHP": {
+   "name": "Chippenham",
+   "league": "Regional 2 Severn",
+   "team": "Chippenham",
+   "was": "Regional 2 Severn",
+   "folder": "chippenham",
+   "team1": 4463,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Chippenham\""
+  },
+  "CHR": {
+   "name": "Chichester",
+   "league": "Counties 1 Hampshire",
+   "team": "Chichester",
+   "was": "Counties 1 Hampshire",
+   "folder": "chichester",
+   "team1": 20760,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Hampshire table (id 190885): row \"Chichester\", its own 1st XV page chichester/20760"
+  },
+  "CHT": {
+   "name": "Cheltenham",
+   "league": "Counties 1 Western North",
+   "team": "Cheltenham",
+   "was": "Regional 2 Severn",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western North table (id 190976): row \"Cheltenham\""
+  },
+  "CHW": {
+   "name": "Chiswick",
+   "league": "Counties 1 Middx",
+   "team": "Chiswick",
+   "was": "Counties 1 Middlesex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Middx table (id 190888): row \"Chiswick\""
+  },
+  "CIN": {
+   "name": "Cinderford",
+   "league": "National League 2 West",
+   "team": "Cinderford",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Cinderford\""
+  },
+  "CLC": {
+   "name": "Cleckheaton",
+   "league": "Regional 2 North East",
+   "team": "Cleckheaton",
+   "was": "Regional 1 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Cleckheaton\""
+  },
+  "CLI": {
+   "name": "Clifton",
+   "league": "National League 2 West",
+   "team": "Clifton",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Clifton\""
+  },
+  "CLV": {
+   "name": "Cleve",
+   "league": "Regional 2 Severn",
+   "team": "Cleve",
+   "was": "Regional 2 Severn",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Cleve\""
+  },
+  "CNA": {
+   "name": "Crewe & Nantwich",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Crewe & Nantwich",
+   "was": "Counties 1 Midlands West (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Crewe & Nantwich\""
+  },
+  "COB": {
+   "name": "Cobham",
+   "league": "Regional 2 South East",
+   "team": "Cobham",
+   "was": "Counties 1 Surrey/Sussex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Cobham\""
+  },
+  "COC": {
+   "name": "Colchester",
+   "league": "National League 2 East",
+   "team": "Colchester",
+   "was": "Regional 1 South East",
+   "folder": "colchesterrfc",
+   "team1": 111694,
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Colchester\""
+  },
+  "COE": {
+   "name": "Cockermouth",
+   "league": "Counties 1 Cumbria",
+   "team": "Cockermouth",
+   "was": "Counties 1 Cumbria",
+   "folder": "cockermouthrfu",
+   "team1": 82181,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"Cockermouth\""
+  },
+  "COH": {
+   "name": "Corsham",
+   "league": "Counties 1 Southern South",
+   "team": "Corsham",
+   "was": "Counties 1 Southern South",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"Corsham\""
+  },
+  "COS": {
+   "name": "Consett",
+   "league": "Regional 2 North",
+   "team": "Consett",
+   "was": "Regional 2 North",
+   "folder": "consett",
+   "team1": 28999,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Consett\", its own 1st XV page consett/28999"
+  },
+  "COV": {
+   "name": "Coventry",
+   "league": "Championship",
+   "team": "Coventry",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Coventry\""
+  },
+  "CRE": {
+   "name": "Crediton",
+   "league": "Regional 2 South West",
+   "team": "Crediton",
+   "was": "Regional 2 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Crediton\""
+  },
+  "CRI": {
+   "name": "Creighton",
+   "league": "Counties 2 Cumbria",
+   "team": "Creighton",
+   "was": "Counties 1 Cumbria",
+   "folder": "creighton",
+   "team1": 54308,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Cumbria table (id 191149): row \"Creighton\""
+  },
+  "CRW": {
+   "name": "Crowborough",
+   "league": "Counties 1 Kent",
+   "team": "Crowborough",
+   "was": "Counties 1 Kent",
+   "folder": "crowborough",
+   "team1": 122885,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Crowborough\", its own 1st XV page crowborough/122885"
+  },
+  "CST": {
+   "name": "CS Stags 1863",
+   "league": "Regional 1 South Central",
+   "team": "CS Stags 1863",
+   "was": "Regional 1 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"CS Stags 1863\""
+  },
+  "CUL": {
+   "name": "Cullompton",
+   "league": "Counties 1 Western West",
+   "team": "Cullompton",
+   "was": "Regional 2 South West",
+   "folder": "cullompton",
+   "team1": 26393,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"Cullompton\""
+  },
+  "CVA": {
+   "name": "Chew Valley",
+   "league": "Regional 1 South West",
+   "team": "Chew Valley",
+   "was": "Regional 1 South West",
+   "folder": "chewvalley",
+   "team1": 12811,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Chew Valley\""
+  },
+  "CWL": {
+   "name": "Cornwall",
+   "league": "Championship",
+   "team": "Cornish Pirates",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Cornish Pirates\""
+  },
+  "DAL": {
+   "name": "Darlington",
+   "league": "Counties 1 North East",
+   "team": "Darlington",
+   "was": "Counties 1 Durham & Northumberland",
+   "folder": "darlingtonrfc",
+   "team1": 14267,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Darlington\""
+  },
+  "DAR": {
+   "name": "Dartfordians",
+   "league": "Regional 2 South East",
+   "team": "Dartfordians",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Dartfordians\""
+  },
+  "DAV": {
+   "name": "Daventry",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Daventry",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Daventry\""
+  },
+  "DBE": {
+   "name": "Deal & Bettes",
+   "league": "Counties 1 Kent",
+   "team": "Deal & Betteshanger",
+   "was": "Counties 1 Kent",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Deal & Betteshanger\""
+  },
+  "DCI": {
+   "name": "Durham City",
+   "league": "Regional 2 North",
+   "team": "Durham City",
+   "was": "Regional 2 North",
+   "folder": "durhamcityrugbyfootballclub",
+   "team1": 29288,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Durham City\""
+  },
+  "DCR": {
+   "name": "Dings Crusaders",
+   "league": "National League 1",
+   "team": "Dings Crusaders",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Dings Crusaders\""
+  },
+  "DEI": {
+   "name": "Devizes",
+   "league": "Counties 1 Southern South",
+   "team": "Devizes",
+   "was": "Counties 1 Southern South",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"Devizes\""
+  },
+  "DER": {
+   "name": "Derby",
+   "league": "Regional 2 Midlands North",
+   "team": "Derby",
+   "was": "Regional 1 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Derby\""
+  },
+  "DIN": {
+   "name": "Dinnington",
+   "league": "Regional 2 North East",
+   "team": "Dinnington",
+   "was": "Counties 1 Yorkshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Dinnington\""
+  },
+  "DKI": {
+   "name": "Dudley K",
+   "league": "Regional 2 Midlands West",
+   "team": "Dudley Kingswinford",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Dudley Kingswinford\""
+  },
+  "DMP": {
+   "name": "Mowden Park",
+   "league": "National League 2 North",
+   "team": "Darlington Mowden Park",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Darlington Mowden Park\""
+  },
+  "DON": {
+   "name": "Doncaster",
+   "league": "Championship",
+   "team": "Doncaster Knights",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Doncaster Knights\""
+  },
+  "DOR": {
+   "name": "Dorking",
+   "league": "National League 2 East",
+   "team": "Dorking",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Dorking\""
+  },
+  "DOU": {
+   "name": "Douglas",
+   "league": "Regional 2 North West",
+   "team": "Douglas (I.O.M.)",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Douglas (I.O.M.)\""
+  },
+  "DOV": {
+   "name": "Dover",
+   "league": "Counties 1 Kent",
+   "team": "Dover",
+   "was": "Counties 1 Kent",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Dover\""
+  },
+  "DPH": {
+   "name": "Donc. Phoenix",
+   "league": "Counties 1 Yorkshire",
+   "team": "Doncaster Phoenix",
+   "was": "Regional 2 North East",
+   "folder": "doncasterphoenix",
+   "team1": 13555,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Doncaster Phoenix\""
+  },
+  "DRI": {
+   "name": "Driffield",
+   "league": "Regional 1 North East",
+   "team": "Driffield",
+   "was": "Regional 1 North East",
+   "folder": "driffieldrufc",
+   "team1": 295195,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Driffield\", its own 1st XV page driffieldrufc/295195"
+  },
+  "DRO": {
+   "name": "Dronfield",
+   "league": "Regional 1 North West",
+   "team": "Dronfield",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Dronfield\""
+  },
+  "DRT": {
+   "name": "Droitwich",
+   "league": "Counties 2 Midlands West (East)",
+   "team": "Droitwich",
+   "was": "Counties 1 Midlands West (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Midlands West (East) table (id 190937): row \"Droitwich\""
+  },
+  "DRY": {
+   "name": "Drybrook",
+   "league": "Regional 2 Midlands West",
+   "team": "Drybrook",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Drybrook\""
+  },
+  "DSE": {
+   "name": "Devonport Svcs",
+   "league": "National League 2 West",
+   "team": "Devonport Services",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Devonport Services\""
+  },
+  "DTH": {
+   "name": "Didsbury Toc H",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Didsbury Toc H",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Didsbury Toc H\""
+  },
+  "DUI": {
+   "name": "Durham Uni",
+   "league": "Counties 1 North East",
+   "team": "Durham University",
+   "was": "Counties 1 Durham & Northumberland",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Durham University\""
+  },
+  "DUS": {
+   "name": "Dunstablians",
+   "league": "Counties 2 Midlands East (South)",
+   "team": "Dunstablians",
+   "was": "Counties 1 Midlands East (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Midlands East (South) table (id 190936): row \"Dunstablians\""
+  },
+  "EAL": {
+   "name": "Ealing",
+   "league": "Championship",
+   "team": "Ealing Trailfinders",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Ealing Trailfinders\""
+  },
+  "EAR": {
+   "name": "Earlsdon",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Earlsdon",
+   "was": "Counties 1 Midlands West (South)",
+   "folder": "earlsdonrfc",
+   "team1": 284832,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Earlsdon\""
+  },
+  "EAS": {
+   "name": "Eastbourne",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Eastbourne",
+   "was": "Counties 1 Surrey/Sussex",
+   "folder": "eastbournerugbyclub",
+   "team1": 76786,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Eastbourne\", its own 1st XV page eastbournerugbyclub/76786"
+  },
+  "EAT": {
+   "name": "Eastleigh",
+   "league": "Counties 2 Hampshire",
+   "team": "Eastleigh",
+   "was": "Counties 1 Hampshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Hampshire table (id 190892): row \"Eastleigh\""
+  },
+  "ECC": {
+   "name": "Eccles",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Eccles",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Eccles\""
+  },
+  "EDW": {
+   "name": "Edwardians",
+   "league": "Regional 2 Midlands West",
+   "team": "Edwardians",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Edwardians\""
+  },
+  "EGR": {
+   "name": "Egremont",
+   "league": "Counties 1 Cumbria",
+   "team": "Egremont",
+   "was": "Counties 1 Cumbria",
+   "folder": "egremont",
+   "team1": 62995,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"Egremont\""
+  },
+  "ELO": {
+   "name": "East London",
+   "league": "Counties 1 Essex",
+   "team": "East London",
+   "was": "Counties 1 Essex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"East London\""
+  },
+  "EMA": {
+   "name": "Eton Manor",
+   "league": "Regional 1 South East",
+   "team": "Eton Manor",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Eton Manor\""
+  },
+  "ERI": {
+   "name": "Ellingham",
+   "league": "Counties 1 Hampshire",
+   "team": "Ellingham & Ringwood",
+   "was": "Regional 2 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Hampshire table (id 190885): row \"Ellingham & Ringwood\""
+  },
+  "ESH": {
+   "name": "Esher",
+   "league": "National League 2 East",
+   "team": "Esher",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Esher\""
+  },
+  "ETR": {
+   "name": "Ealing 1871",
+   "league": "Regional 2 Thames",
+   "team": "Ealing Trailfinders 1871",
+   "was": "Counties 1 Middlesex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Ealing Trailfinders 1871\""
+  },
+  "EUC": {
+   "name": "Upper Clapton",
+   "league": "Counties 1 Essex",
+   "team": "Epping Upper Clapton",
+   "was": "Counties 1 Essex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"Epping Upper Clapton\""
+  },
+  "EUN": {
+   "name": "Exeter Uni",
+   "league": "National League 2 West",
+   "team": "Exeter University",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Exeter University\""
+  },
+  "EVE": {
+   "name": "Evesham",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Evesham",
+   "was": "Counties 1 Midlands West (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Evesham\""
+  },
+  "EXE": {
+   "name": "Exeter",
+   "league": "Premiership",
+   "team": "Exeter Chiefs",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Exeter Chiefs\""
+  },
+  "EXM": {
+   "name": "Exmouth",
+   "league": "Regional 1 South West",
+   "team": "Exmouth",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Exmouth\""
+  },
+  "FAR": {
+   "name": "Farnham",
+   "league": "Regional 1 South Central",
+   "team": "Farnham",
+   "was": "Regional 1 South Central",
+   "folder": "farnham",
+   "team1": 37851,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Farnham\", its own 1st XV page farnham/37851"
+  },
+  "FIC": {
+   "name": "Finchley",
+   "league": "Regional 2 Anglia",
+   "team": "Finchley",
+   "was": "Counties 1 Middlesex",
+   "folder": "finchley",
+   "team1": 595,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Finchley\", its own 1st XV page finchley/595"
+  },
+  "FRO": {
+   "name": "Frome",
+   "league": "Counties 1 Southern South",
+   "team": "Frome",
+   "was": "Counties 1 Southern South",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"Frome\""
+  },
+  "FUL": {
+   "name": "Fullerians",
+   "league": "Counties 1 Herts",
+   "team": "Fullerians",
+   "was": "Counties 1 Hertfordshire",
+   "folder": "fullerians",
+   "team1": 45116,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Herts table (id 190886): row \"Fullerians\", its own 1st XV page fullerians/45116"
+  },
+  "FYL": {
+   "name": "Fylde",
+   "league": "National League 2 North",
+   "team": "Fylde",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Fylde\""
+  },
+  "GAB": {
+   "name": "Gosford",
+   "league": "Counties 2 Berks/Bucks & Oxon West",
+   "team": "Gosford All Blacks",
+   "was": "Counties 1 Southern North",
+   "folder": "gosfordallblacks",
+   "team1": 404,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 2 Berks/Bucks & Oxon West table (id 190979): row \"Gosford All Blacks\", its own 1st XV page gosfordallblacks/404"
+  },
+  "GAN": {
+   "name": "Anchorians",
+   "league": "Counties 1 Kent",
+   "team": "Gillingham Anchorians",
+   "was": "Counties 1 Kent",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Gillingham Anchorians\""
+  },
+  "GAT": {
+   "name": "Gateshead",
+   "league": "Counties 1 North East",
+   "team": "Gateshead",
+   "was": "Counties 1 Durham & Northumberland",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Gateshead\""
+  },
+  "GFA": {
+   "name": "Gosport Fareham",
+   "league": "Counties 2 Hampshire",
+   "team": "Gosport & Fareham",
+   "was": "Counties 1 Hampshire",
+   "folder": "gosportandfareham",
+   "team1": 32811,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 2 Hampshire table (id 190892): row \"Gosport & Fareham\", its own 1st XV page gosportandfareham/32811"
+  },
+  "GLE": {
+   "name": "Gordon League",
+   "league": "Counties 1 Western North",
+   "team": "Gordon League",
+   "was": "Counties 1 Western North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western North table (id 190976): row \"Gordon League\""
+  },
+  "GLO": {
+   "name": "Gloucester",
+   "league": "Premiership",
+   "team": "Gloucester",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Gloucester\""
+  },
+  "GOO": {
+   "name": "Goole",
+   "league": "Counties 1 Yorkshire",
+   "team": "Goole",
+   "was": "Counties 1 Yorkshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Goole\""
+  },
+  "GOR": {
+   "name": "Gordano",
+   "league": "Counties 1 Western North",
+   "team": "Gordano",
+   "was": "Counties 1 Western North",
+   "folder": "gordano",
+   "team1": 2692,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Western North table (id 190976): row \"Gordano\", its own 1st XV page gordano/2692"
+  },
+  "GRA": {
+   "name": "Guernsey Raiders",
+   "league": "National League 2 East",
+   "team": "Guernsey Raiders",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Guernsey Raiders\""
+  },
+  "GRS": {
+   "name": "Grasshoppers",
+   "league": "Regional 2 Thames",
+   "team": "Grasshoppers",
+   "was": "Regional 2 Thames",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Grasshoppers\""
+  },
+  "GRV": {
+   "name": "Gravesend",
+   "league": "Regional 2 South East",
+   "team": "Gravesend",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Gravesend\""
+  },
+  "GUI": {
+   "name": "Guildford",
+   "league": "Regional 2 South Central",
+   "team": "Guildford",
+   "was": "Regional 2 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Guildford\""
+  },
+  "GUS": {
+   "name": "Guisborough",
+   "league": "Regional 2 North",
+   "team": "Guisborough",
+   "was": "Regional 2 North",
+   "folder": "guisborough",
+   "team1": 27584,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Guisborough\", its own 1st XV page guisborough/27584"
+  },
+  "HAC": {
+   "name": "HAC",
+   "league": "Regional 2 Thames",
+   "team": "H.A.C.",
+   "was": "Regional 2 Anglia",
+   "confidence": "record",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"H.A.C.\", the name its 2025-26 row carried (place and W-D-L as the game has them)"
+  },
+  "HAE": {
+   "name": "Hartlepool",
+   "league": "Counties 1 North East",
+   "team": "Hartlepool",
+   "was": "Counties 1 Durham & Northumberland",
+   "folder": "hartlepoolrfc",
+   "team1": 5154,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Hartlepool\", its own 1st XV page hartlepoolrfc/5154"
+  },
+  "HAL": {
+   "name": "Harlow",
+   "league": "Regional 2 Anglia",
+   "team": "Harlow",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Harlow\""
+  },
+  "HAO": {
+   "name": "Harrogate",
+   "league": "National League 2 North",
+   "team": "Harrogate",
+   "was": "Regional 1 North East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Harrogate\""
+  },
+  "HAP": {
+   "name": "Harpenden",
+   "league": "Regional 2 Thames",
+   "team": "Harpenden",
+   "was": "Regional 2 Thames",
+   "folder": "harpendenrugbyclub",
+   "team1": 241069,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Harpenden\", its own 1st XV page harpendenrugbyclub/241069"
+  },
+  "HAT": {
+   "name": "Hampstead",
+   "league": "Counties 1 Middx",
+   "team": "Hampstead",
+   "was": "Counties 1 Middlesex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Middx table (id 190888): row \"Hampstead\""
+  },
+  "HAV": {
+   "name": "Havant",
+   "league": "National League 2 East",
+   "team": "Havant",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Havant\""
+  },
+  "HEA": {
+   "name": "Heath",
+   "league": "National League 2 North",
+   "team": "Heath",
+   "was": "Regional 1 North East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Heath\""
+  },
+  "HEE": {
+   "name": "Hereford",
+   "league": "Regional 2 Midlands West",
+   "team": "Hereford",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Hereford\""
+  },
+  "HFD": {
+   "name": "Hertford",
+   "league": "Regional 1 South East",
+   "team": "Hertford",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Hertford\""
+  },
+  "HFU": {
+   "name": "Hammersmith",
+   "league": "Regional 2 South East",
+   "team": "Hammersmith & Fulham",
+   "was": "Regional 1 South Central",
+   "folder": "hammersmithandfulhamrfc",
+   "team1": 281574,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Hammersmith & Fulham\""
+  },
+  "HHA": {
+   "name": "Henley Hawks",
+   "league": "National League 2 East",
+   "team": "Henley Hawks",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Henley Hawks\""
+  },
+  "HHE": {
+   "name": "Hemel Hempstead",
+   "league": "Counties 1 Herts",
+   "team": "Hemel Hempstead",
+   "was": "Counties 1 Hertfordshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Herts table (id 190886): row \"Hemel Hempstead\""
+  },
+  "HHT": {
+   "name": "Haywards Heath",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Haywards Heath",
+   "was": "Counties 1 Surrey/Sussex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Haywards Heath\""
+  },
+  "HIN": {
+   "name": "Hinckley",
+   "league": "National League 2 West",
+   "team": "Hinckley",
+   "was": "National League 2 West",
+   "folder": "hinckley",
+   "team1": 37288,
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Hinckley\""
+  },
+  "HIO": {
+   "name": "Hull Ionians",
+   "league": "National League 2 North",
+   "team": "Hull Ionians",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Hull Ionians\""
+  },
+  "HIT": {
+   "name": "Hitchin",
+   "league": "Counties 1 Herts",
+   "team": "Hitchin",
+   "was": "Counties 1 Hertfordshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Herts table (id 190886): row \"Hitchin\""
+  },
+  "HOL": {
+   "name": "Holt",
+   "league": "Counties 1 Eastern Counties",
+   "team": "Holt",
+   "was": "Regional 2 Anglia",
+   "folder": "holtrugbyfootballclub",
+   "team1": 168230,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"Holt\", its own 1st XV page holtrugbyfootballclub/168230"
+  },
+  "HOR": {
+   "name": "Hornets",
+   "league": "National League 2 West",
+   "team": "Hornets",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Hornets\""
+  },
+  "HOS": {
+   "name": "Horsham",
+   "league": "Regional 2 South East",
+   "team": "Horsham",
+   "was": "Regional 2 South East",
+   "folder": "horshamrugbyclub",
+   "team1": 29388,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Horsham\", its own 1st XV page horshamrugbyclub/29388"
+  },
+  "HOV": {
+   "name": "Hove",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Hove",
+   "was": "Counties 1 Surrey/Sussex",
+   "folder": "hoverugbyfootballclub",
+   "team1": 156174,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Hove\""
+  },
+  "HPA": {
+   "name": "Hawcoat Park",
+   "league": "Counties 1 Cumbria",
+   "team": "Hawcoat Park",
+   "was": "Counties 1 Cumbria",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"Hawcoat Park\""
+  },
+  "HPT": {
+   "name": "Pythons",
+   "league": "Counties 1 Yorkshire",
+   "team": "Harrogate Pythons",
+   "was": "Counties 1 Yorkshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Harrogate Pythons\""
+  },
+  "HPY": {
+   "name": "Hartpury",
+   "league": "Championship",
+   "team": "Hartpury",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Hartpury\""
+  },
+  "HUD": {
+   "name": "Huddersfield",
+   "league": "National League 2 North",
+   "team": "Huddersfield",
+   "was": "Regional 1 North West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Huddersfield\""
+  },
+  "HUE": {
+   "name": "Hullensians",
+   "league": "Counties 1 Yorkshire",
+   "team": "Hullensians",
+   "was": "Counties 1 Yorkshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Hullensians\""
+  },
+  "HUL": {
+   "name": "Hull",
+   "league": "Regional 1 North East",
+   "team": "Hull",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Hull\""
+  },
+  "HWA": {
+   "name": "Heathfield",
+   "league": "Counties 1 Kent",
+   "team": "Heathfield & Waldron",
+   "was": "Counties 1 Kent",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Heathfield & Waldron\""
+  },
+  "HWY": {
+   "name": "High Wycombe",
+   "league": "Counties 1 Southern North",
+   "team": "High Wycombe",
+   "was": "Counties 1 Southern North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern North table (id 190974): row \"High Wycombe\""
+  },
+  "ILE": {
+   "name": "Ilkeston",
+   "league": "Regional 2 Midlands North",
+   "team": "Ilkeston",
+   "was": "Regional 2 Midlands North",
+   "folder": "ilkeston",
+   "team1": 1576,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Ilkeston\""
+  },
+  "ILK": {
+   "name": "Ilkley",
+   "league": "Regional 1 North East",
+   "team": "Ilkley",
+   "was": "Regional 1 North East",
+   "folder": "ilkleyrugbyclub",
+   "team1": 295630,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Ilkley\", its own 1st XV page ilkleyrugbyclub/295630"
+  },
+  "IPS": {
+   "name": "Ipswich",
+   "league": "Counties 1 Eastern Counties",
+   "team": "Ipswich",
+   "was": "Counties 1 Eastern Counties",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"Ipswich\""
+  },
+  "IRO": {
+   "name": "Ironsides",
+   "league": "Regional 2 South East",
+   "team": "Battersea Ironsides",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Battersea Ironsides\""
+  },
+  "IVY": {
+   "name": "Ivybridge",
+   "league": "Regional 2 South West",
+   "team": "Ivybridge",
+   "was": "Regional 2 South West",
+   "folder": "ivybridge",
+   "team1": 3409,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Ivybridge\""
+  },
+  "JES": {
+   "name": "Jersey",
+   "league": "National League 2 East",
+   "team": "Jersey",
+   "was": "Regional 1 South Central",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Jersey\""
+  },
+  "KED": {
+   "name": "Kendal",
+   "league": "Regional 1 North West",
+   "team": "Kendal",
+   "was": "Regional 1 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Kendal\""
+  },
+  "KEG": {
+   "name": "Keighley",
+   "league": "Counties 1 Yorkshire",
+   "team": "Keighley",
+   "was": "Counties 1 Yorkshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Keighley\""
+  },
+  "KEH": {
+   "name": "Keynsham",
+   "league": "Regional 2 Severn",
+   "team": "Keynsham",
+   "was": "Regional 2 Severn",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Keynsham\""
+  },
+  "KEI": {
+   "name": "Kenilworth",
+   "league": "Regional 2 Midlands West",
+   "team": "Kenilworth",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Kenilworth\""
+  },
+  "KEO": {
+   "name": "Keyworth",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Keyworth",
+   "was": "Counties 1 Midlands East (North)",
+   "folder": "keyworthrugbyfootballclub",
+   "team1": 26171,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Keyworth\", its own 1st XV page keyworthrugbyfootballclub/26171"
+  },
+  "KET": {
+   "name": "Kettering",
+   "league": "Regional 2 Midlands East",
+   "team": "Kettering",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Kettering\""
+  },
+  "KEW": {
+   "name": "Keswick",
+   "league": "Regional 2 North",
+   "team": "Keswick",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Keswick\""
+  },
+  "KIG": {
+   "name": "Kingsbridge",
+   "league": "Counties 1 Western West",
+   "team": "Kingsbridge",
+   "was": "Counties 1 Western West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"Kingsbridge\""
+  },
+  "KLO": {
+   "name": "Kirkby Lonsdale",
+   "league": "Regional 2 North West",
+   "team": "Kirkby Lonsdale",
+   "was": "Counties 1 Cumbria",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Kirkby Lonsdale\""
+  },
+  "KOL": {
+   "name": "KCS Old Boys",
+   "league": "Counties 2 Surrey",
+   "team": "KCS Old Boys",
+   "was": "Counties 1 Surrey/Sussex",
+   "folder": "kcsoldboysrfc",
+   "team1": 1331,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 2 Surrey table (id 192123): row \"KCS Old Boys\", its own 1st XV page kcsoldboysrfc/1331"
+  },
+  "LAU": {
+   "name": "Launceston",
+   "league": "Regional 1 South West",
+   "team": "Launceston",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Launceston\""
+  },
+  "LBU": {
+   "name": "Long Buckby",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Long Buckby",
+   "was": "Counties 1 Midlands East (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Long Buckby\""
+  },
+  "LCO": {
+   "name": "London Cornish",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "London Cornish",
+   "was": "Counties 1 Surrey/Sussex",
+   "folder": "londoncornishrfc",
+   "team1": 27535,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"London Cornish\", its own 1st XV page londoncornishrfc/27535"
+  },
+  "LEA": {
+   "name": "Long Eaton",
+   "league": "Regional 2 Midlands North",
+   "team": "Long Eaton",
+   "was": "Regional 1 North West",
+   "folder": "longeaton",
+   "team1": 69794,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Long Eaton\", its own 1st XV page longeaton/69794"
+  },
+  "LED": {
+   "name": "Ledbury",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Ledbury",
+   "was": "Counties 1 Midlands West (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Ledbury\""
+  },
+  "LEE": {
+   "name": "Leek",
+   "league": "Regional 1 North West",
+   "team": "Leek",
+   "was": "Regional 1 North West",
+   "folder": "leek",
+   "team1": 2069,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Leek\", its own 1st XV page leek/2069"
+  },
+  "LEI": {
+   "name": "Leicester",
+   "league": "Premiership",
+   "team": "Leicester Tigers",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Leicester Tigers\""
+  },
+  "LEM": {
+   "name": "Leamington",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Leamington",
+   "was": "Counties 1 Midlands West (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Leamington\""
+  },
+  "LFO": {
+   "name": "Leicester Forest",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Leicester Forest",
+   "was": "Counties 1 Midlands East (South)",
+   "folder": "leicesterforest",
+   "team1": 6283,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Leicester Forest\", its own 1st XV page leicesterforest/6283"
+  },
+  "LGC": {
+   "name": "Letchworth",
+   "league": "Regional 1 South East",
+   "team": "Letchworth Garden City",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Letchworth Garden City\""
+  },
+  "LIC": {
+   "name": "Lichfield",
+   "league": "Regional 1 Midlands",
+   "team": "Lichfield",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Lichfield\""
+  },
+  "LIN": {
+   "name": "Lincoln",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Lincoln",
+   "was": "Counties 1 Midlands East (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Lincoln\""
+  },
+  "LIW": {
+   "name": "Wild Geese",
+   "league": "Regional 2 Thames",
+   "team": "London Irish Wild Geese",
+   "was": "Regional 2 Thames",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"London Irish Wild Geese\""
+  },
+  "LLI": {
+   "name": "Leicester Lions",
+   "league": "National League 2 East",
+   "team": "Leicester Lions",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Leicester Lions\""
+  },
+  "LNO": {
+   "name": "London North",
+   "league": "Premiership",
+   "team": "Saracens",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Saracens\""
+  },
+  "LOG": {
+   "name": "Longlevens",
+   "league": "Regional 2 Severn",
+   "team": "Longlevens",
+   "was": "Regional 2 Severn",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Longlevens\""
+  },
+  "LSH": {
+   "name": "Liverpool St H",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Liverpool St Helens",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Liverpool St Helens\""
+  },
+  "LSL": {
+   "name": "Scottish Lions",
+   "league": "Regional 1 South Central",
+   "team": "London Scottish Lions",
+   "was": "Regional 1 South Central",
+   "folder": "londonscottishlions",
+   "team1": 266920,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"London Scottish Lions\", its own 1st XV page londonscottishlions/266920"
+  },
+  "LST": {
+   "name": "Lboro Students",
+   "league": "National League 2 West",
+   "team": "Loughborough Students",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Loughborough Students\""
+  },
+  "LTY": {
+   "name": "Leeds Tykes",
+   "league": "National League 1",
+   "team": "Leeds Tykes",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Leeds Tykes\""
+  },
+  "LUC": {
+   "name": "Luctonians",
+   "league": "National League 2 West",
+   "team": "Luctonians",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Luctonians\""
+  },
+  "LUD": {
+   "name": "Ludlow",
+   "league": "Regional 2 Midlands West",
+   "team": "Ludlow",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Ludlow\""
+  },
+  "LUT": {
+   "name": "Lutterworth",
+   "league": "Regional 1 Midlands",
+   "team": "Lutterworth",
+   "was": "Regional 1 Midlands",
+   "folder": "lutterworthrfc",
+   "team1": 26089,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Lutterworth\", its own 1st XV page lutterworthrfc/26089"
+  },
+  "LWE": {
+   "name": "London West",
+   "league": "Premiership",
+   "team": "Harlequins",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Harlequins\""
+  },
+  "LWL": {
+   "name": "London Welsh",
+   "league": "National League 2 East",
+   "team": "London Welsh",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"London Welsh\""
+  },
+  "LYD": {
+   "name": "Lydney",
+   "league": "Regional 1 South West",
+   "team": "Lydney",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Lydney\""
+  },
+  "LYM": {
+   "name": "Lymm",
+   "league": "National League 2 West",
+   "team": "Lymm",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Lymm\""
+  },
+  "MAC": {
+   "name": "Macclesfield",
+   "league": "Regional 1 North West",
+   "team": "Macclesfield",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Macclesfield\""
+  },
+  "MAI": {
+   "name": "Maidenhead",
+   "league": "Regional 1 South Central",
+   "team": "Maidenhead",
+   "was": "Regional 1 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Maidenhead\""
+  },
+  "MAK": {
+   "name": "Matlock",
+   "league": "Regional 2 Midlands North",
+   "team": "Matlock",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Matlock\", its row's link to matlock (1st XV 9812, \"1st XV\")",
+   "folder": "matlock",
+   "team1": 9812
+  },
+  "MAL": {
+   "name": "Marlborough",
+   "league": "Regional 2 Severn",
+   "team": "Marlborough",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Marlborough\""
+  },
+  "MAO": {
+   "name": "Marlow",
+   "league": "Regional 2 Thames",
+   "team": "Marlow",
+   "was": "Regional 2 Thames",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Marlow\""
+  },
+  "MAT": {
+   "name": "Matson",
+   "league": "Regional 2 Severn",
+   "team": "Matson",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Matson\""
+  },
+  "MAV": {
+   "name": "Malvern",
+   "league": "Regional 2 Midlands West",
+   "team": "Malvern",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Malvern\""
+  },
+  "MBS": {
+   "name": "Market Bosworth",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Market Bosworth",
+   "was": "Counties 1 Midlands East (South)",
+   "folder": "marketbosworthrugby",
+   "team1": 288807,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Market Bosworth\", its own 1st XV page marketbosworthrugby/288807"
+  },
+  "MCR": {
+   "name": "Manchester",
+   "league": "Regional 2 North West",
+   "team": "Manchester",
+   "was": "Regional 1 North West",
+   "folder": "manchester",
+   "team1": 11558,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Manchester\", its own 1st XV page manchester/11558"
+  },
+  "MEB": {
+   "name": "Melbourne Derbys",
+   "league": "Regional 2 Midlands North",
+   "team": "Melbourne",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Melbourne\""
+  },
+  "MED": {
+   "name": "Medway",
+   "league": "Regional 2 South East",
+   "team": "Medway",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Medway\""
+  },
+  "MEI": {
+   "name": "Medicals",
+   "league": "Counties 1 North East",
+   "team": "Medicals",
+   "was": "Counties 1 Durham & Northumberland",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Medicals\""
+  },
+  "MEK": {
+   "name": "Melksham",
+   "league": "Counties 1 Southern South",
+   "team": "Melksham",
+   "was": "Counties 1 Southern South",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"Melksham\""
+  },
+  "MES": {
+   "name": "Mellish",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Mellish",
+   "was": "Counties 1 Midlands East (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Mellish\""
+  },
+  "MHA": {
+   "name": "Harborough",
+   "league": "Regional 2 Midlands East",
+   "team": "Market Harborough",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Market Harborough\""
+  },
+  "MID": {
+   "name": "Middlesbrough",
+   "league": "Regional 1 North East",
+   "team": "Middlesbrough",
+   "was": "Regional 1 North East",
+   "folder": "middlesbroughrufcminisjuniors",
+   "team1": 30210,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Middlesbrough\""
+  },
+  "MIL": {
+   "name": "Millbrook",
+   "league": "Counties 1 Hampshire",
+   "team": "Millbrook",
+   "was": "Counties 1 Hampshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Hampshire table (id 190885): row \"Millbrook\""
+  },
+  "MIO": {
+   "name": "Millom",
+   "league": "Counties 2 Cumbria",
+   "team": "Millom",
+   "was": "Counties 1 Cumbria",
+   "folder": "mrufc",
+   "team1": 100181,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Cumbria table (id 191149): row \"Millom\""
+  },
+  "MLD": {
+   "name": "Maldon",
+   "league": "Counties 1 Essex",
+   "team": "Maldon",
+   "was": "Counties 1 Essex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"Maldon\""
+  },
+  "MNO": {
+   "name": "Malton & Norton",
+   "league": "Regional 2 North East",
+   "team": "Malton and Norton",
+   "was": "Regional 2 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Malton and Norton\""
+  },
+  "MNR": {
+   "name": "Midsomer Norton",
+   "league": "Counties 1 Western North",
+   "team": "Midsomer Norton",
+   "was": "Counties 1 Western North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western North table (id 190976): row \"Midsomer Norton\""
+  },
+  "MOA": {
+   "name": "Moseley Oak",
+   "league": "Regional 1 Midlands",
+   "team": "Moseley Oak",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Moseley Oak\""
+  },
+  "MOO": {
+   "name": "Moortown",
+   "league": "Regional 2 North East",
+   "team": "Moortown",
+   "was": "Regional 2 North East",
+   "folder": "moortownrufc",
+   "team1": 20785,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Moortown\""
+  },
+  "MOP": {
+   "name": "Morpeth",
+   "league": "Regional 2 North",
+   "team": "Morpeth",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Morpeth\""
+  },
+  "MOR": {
+   "name": "Morley",
+   "league": "Regional 2 North East",
+   "team": "Morley",
+   "was": "Regional 2 North East",
+   "folder": "morleyrfc",
+   "team1": 5937,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Morley\""
+  },
+  "MPA": {
+   "name": "Manor Park",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Manor Park",
+   "was": "Counties 1 Midlands West (South)",
+   "folder": "manorpark",
+   "team1": 21300,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Manor Park\""
+  },
+  "MRL": {
+   "name": "Market Rasen",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Market Rasen & Louth",
+   "was": "Counties 1 Midlands East (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Market Rasen & Louth\""
+  },
+  "NAB": {
+   "name": "Newton Abbot",
+   "league": "Counties 1 Western West",
+   "team": "Newton Abbot",
+   "was": "Counties 1 Western West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"Newton Abbot\""
+  },
+  "NAV": {
+   "name": "Newbold-on-Avon",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Newbold on Avon",
+   "was": "Counties 1 Midlands East (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Newbold on Avon\""
+  },
+  "NBA": {
+   "name": "Nailsea",
+   "league": "Regional 2 South West",
+   "team": "Nailsea & Backwell",
+   "was": "Counties 1 Western North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Nailsea & Backwell\""
+  },
+  "NBR": {
+   "name": "New Brighton",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "New Brighton",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"New Brighton\""
+  },
+  "NBU": {
+   "name": "Newbury Blues",
+   "league": "Regional 2 Severn",
+   "team": "Newbury Blues",
+   "was": "Regional 2 Severn",
+   "folder": "newburyrfc",
+   "team1": 42243,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Newbury Blues\", its own 1st XV page newburyrfc/42243"
+  },
+  "NCL": {
+   "name": "Newcastle",
+   "league": "Premiership",
+   "team": "Newcastle Red Bulls",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Newcastle Red Bulls\""
+  },
+  "NDO": {
+   "name": "North Dorset",
+   "league": "Counties 1 Southern South",
+   "team": "North Dorset",
+   "was": "Regional 2 Severn",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"North Dorset\""
+  },
+  "NEA": {
+   "name": "Newark",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Newark",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Newark\""
+  },
+  "NEE": {
+   "name": "Newent",
+   "league": "Regional 1 South West",
+   "team": "Newent",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Newent\", its row's link to newentrfc (1st XV 28602, \"1st XV\")",
+   "folder": "newentrfc",
+   "team1": 28602
+  },
+  "NEM": {
+   "name": "Newmarket",
+   "league": "Counties 1 Eastern Counties",
+   "team": "Newmarket",
+   "was": "Counties 1 Eastern Counties",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"Newmarket\""
+  },
+  "NOE": {
+   "name": "Nuneaton Old Eds",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Nuneaton Old Edwardians",
+   "was": "Counties 1 Midlands East (South)",
+   "folder": "nuneatonoldedwardians",
+   "team1": 63420,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Nuneaton Old Edwardians\", its own 1st XV page nuneatonoldedwardians/63420"
+  },
+  "NOH": {
+   "name": "Northern",
+   "league": "Regional 1 North East",
+   "team": "Northern",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Northern\""
+  },
+  "NOI": {
+   "name": "Norwich",
+   "league": "Counties 1 Eastern Counties",
+   "team": "Norwich",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"Norwich\""
+  },
+  "NOS": {
+   "name": "Old Scouts",
+   "league": "Regional 1 South East",
+   "team": "Northampton Old Scouts",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Northampton Old Scouts\""
+  },
+  "NOT": {
+   "name": "Nottingham",
+   "league": "Championship",
+   "team": "Nottingham",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Nottingham\""
+  },
+  "NOV": {
+   "name": "Novocastrians",
+   "league": "Regional 2 North",
+   "team": "Novocastrians",
+   "was": "Counties 1 Durham & Northumberland",
+   "folder": "novocastrians",
+   "team1": 6738,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Novocastrians\""
+  },
+  "NOW": {
+   "name": "Northwich",
+   "league": "Regional 2 North West",
+   "team": "Northwich",
+   "was": "Regional 2 North West",
+   "folder": "northwich",
+   "team1": 2185,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Northwich\", its own 1st XV page northwich/2185"
+  },
+  "NPE": {
+   "name": "North Petherton",
+   "league": "Regional 2 South West",
+   "team": "North Petherton",
+   "was": "Regional 2 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"North Petherton\""
+  },
+  "NRI": {
+   "name": "N. Ribblesdale",
+   "league": "Regional 1 North East",
+   "team": "North Ribblesdale",
+   "was": "Regional 2 North West",
+   "folder": "northribblesdale",
+   "team1": 23075,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"North Ribblesdale\", its own 1st XV page northribblesdale/23075"
+  },
+  "NSA": {
+   "name": "Newport (Salop)",
+   "league": "Regional 1 Midlands",
+   "team": "Newport (Salop)",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Newport (Salop)\""
+  },
+  "NST": {
+   "name": "Newcastle Staffs",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Newcastle (Staffs)",
+   "was": "Counties 1 Midlands West (North)",
+   "folder": "newcastlestaffsrufc",
+   "team1": 96331,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Newcastle (Staffs)\", its own 1st XV page newcastlestaffsrufc/96331"
+  },
+  "NTH": {
+   "name": "Northampton",
+   "league": "Premiership",
+   "team": "Northampton Saints",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Northampton Saints\""
+  },
+  "NUI": {
+   "name": "Nottingham Uni",
+   "league": "Regional 2 Midlands North",
+   "team": "University of Nottingham XV",
+   "was": "Counties 1 Midlands East (North)",
+   "confidence": "alias",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"University of Nottingham XV\""
+  },
+  "NUN": {
+   "name": "Nuneaton",
+   "league": "Regional 2 Midlands East",
+   "team": "Nuneaton",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Nuneaton\""
+  },
+  "NWA": {
+   "name": "North Walsham",
+   "league": "Regional 1 South East",
+   "team": "North Walsham",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"North Walsham\""
+  },
+  "OAE": {
+   "name": "Old Alleynians",
+   "league": "Regional 1 South Central",
+   "team": "Old Alleynians",
+   "was": "Regional 1 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Old Alleynians\""
+  },
+  "OAL": {
+   "name": "Old Albanian",
+   "league": "National League 2 East",
+   "team": "Old Albanian",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Old Albanian\""
+  },
+  "OBI": {
+   "name": "Old Bristolians",
+   "league": "Counties 1 Western North",
+   "team": "Old Bristolians",
+   "was": "Counties 1 Western North",
+   "folder": "oldbristolians",
+   "team1": 15782,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Western North table (id 190976): row \"Old Bristolians\", its own 1st XV page oldbristolians/15782"
+  },
+  "OBR": {
+   "name": "Old Brodleians",
+   "league": "Regional 2 North East",
+   "team": "Old Brodleians",
+   "was": "Regional 2 North East",
+   "folder": "oldbrodleiansfirstxv",
+   "team1": 2307,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Old Brodleians\", its own 1st XV page oldbrodleiansfirstxv/2307"
+  },
+  "OCA": {
+   "name": "Old Caterhamians",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Old Caterhamians",
+   "was": "Counties 1 Surrey/Sussex",
+   "folder": "oldcaterhamiansrfc",
+   "team1": 343,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Old Caterhamians\", its own 1st XV page oldcaterhamiansrfc/343"
+  },
+  "OCE": {
+   "name": "Old Centralians",
+   "league": "Regional 2 Severn",
+   "team": "Old Centralians",
+   "was": "Regional 2 Severn",
+   "folder": "oldcents",
+   "team1": 13879,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Old Centralians\""
+  },
+  "OCO": {
+   "name": "Old Colfeians",
+   "league": "Regional 1 South East",
+   "team": "Old Colfeians",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Old Colfeians\""
+  },
+  "OCR": {
+   "name": "Old Crossleyans",
+   "league": "Counties 1 Yorkshire",
+   "team": "Old Crossleyans",
+   "was": "Regional 2 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Old Crossleyans\""
+  },
+  "OCV": {
+   "name": "Old Coventrians",
+   "league": "Regional 2 Midlands East",
+   "team": "Old Coventrians",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Old Coventrians\""
+  },
+  "OEL": {
+   "name": "Old Elthamians",
+   "league": "Regional 2 South East",
+   "team": "Old Elthamians",
+   "was": "Counties 1 Kent",
+   "folder": "oldelthamians",
+   "team1": 13217,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Old Elthamians\", its own 1st XV page oldelthamians/13217"
+  },
+  "OHA": {
+   "name": "Old Halesonians",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Old Halesonians",
+   "was": "Regional 2 Midlands West",
+   "folder": "oldhalesonians",
+   "team1": 43390,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Old Halesonians\", its own 1st XV page oldhalesonians/43390"
+  },
+  "OHB": {
+   "name": "Old Haberdashers",
+   "league": "Counties 1 Middx",
+   "team": "Old Haberdashers",
+   "was": "Counties 1 Middlesex",
+   "folder": "oldhaberdashersrfc",
+   "team1": 134366,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Middx table (id 190888): row \"Old Haberdashers\""
+  },
+  "OKE": {
+   "name": "Okehampton",
+   "league": "Regional 2 South West",
+   "team": "Okehampton",
+   "was": "Regional 2 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Okehampton\""
+  },
+  "OLE": {
+   "name": "Leamingtonians",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Old Leamingtonians",
+   "was": "Counties 1 Midlands West (South)",
+   "folder": "oldleamingtonians",
+   "team1": 2642,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Old Leamingtonians\", its own 1st XV page oldleamingtonians/2642"
+  },
+  "OLN": {
+   "name": "Olney",
+   "league": "Regional 2 Midlands East",
+   "team": "Olney",
+   "was": "Regional 2 Midlands East",
+   "folder": "olneyrfc",
+   "team1": 156898,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Olney\", its own 1st XV page olneyrfc/156898"
+  },
+  "ONO": {
+   "name": "ONs",
+   "league": "Regional 1 South East",
+   "team": "Old Northamptonians",
+   "was": "Regional 1 South East",
+   "folder": "oldnorthamptonians",
+   "team1": 2982,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Old Northamptonians\""
+  },
+  "OPR": {
+   "name": "Old Priorians",
+   "league": "Regional 2 Thames",
+   "team": "Old Priorians",
+   "was": "Regional 2 Thames",
+   "folder": "oldpriorians",
+   "team1": 185999,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Old Priorians\", its own 1st XV page oldpriorians/185999"
+  },
+  "OQU": {
+   "name": "Oxford Quins",
+   "league": "Regional 1 Midlands",
+   "team": "Oxford Harlequins",
+   "was": "National League 2 East",
+   "folder": "oxfordquinsrfc",
+   "team1": 265145,
+   "confidence": "record",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Oxford Harlequins\", the name its 2025-26 row carried (place and W-D-L as the game has them), its own 1st XV page oxfordquinsrfc/265145"
+  },
+  "ORE": {
+   "name": "Old Redcliffians",
+   "league": "National League 2 West",
+   "team": "Old Redcliffians",
+   "was": "National League 2 West",
+   "folder": "oldredcliffians",
+   "team1": 1154,
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Old Redcliffians\""
+  },
+  "ORI": {
+   "name": "Old Reigatian",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Old Reigatian",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Old Reigatian\""
+  },
+  "ORS": {
+   "name": "Old Rishworthian",
+   "league": "Counties 1 Yorkshire",
+   "team": "Old Rishworthian",
+   "was": "Counties 1 Yorkshire",
+   "folder": "oldrishworthians",
+   "team1": 531,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Old Rishworthian\", its own 1st XV page oldrishworthians/531"
+  },
+  "ORU": {
+   "name": "Old Ruts",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Old Rutlishians",
+   "was": "Counties 1 Surrey/Sussex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Old Rutlishians\""
+  },
+  "OSA": {
+   "name": "Old Saltleians",
+   "league": "Regional 2 Midlands East",
+   "team": "Old Saltleians",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Old Saltleians\""
+  },
+  "OST": {
+   "name": "Old Streetonians",
+   "league": "Counties 1 Middx",
+   "team": "Old Streetonians",
+   "was": "Counties 1 Middlesex",
+   "folder": "oldstreetonians",
+   "team1": 59341,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Middx table (id 190888): row \"Old Streetonians\", its own 1st XV page oldstreetonians/59341"
+  },
+  "OTI": {
+   "name": "Old Tiffinians",
+   "league": "Regional 2 South Central",
+   "team": "Old Tiffinians",
+   "was": "Regional 2 South Central",
+   "folder": "oldtiffiniansrfc",
+   "team1": 153029,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Old Tiffinians\", its own 1st XV page oldtiffiniansrfc/153029"
+  },
+  "OTL": {
+   "name": "Otley",
+   "league": "National League 2 North",
+   "team": "Otley",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Otley\""
+  },
+  "OUN": {
+   "name": "Oundle",
+   "league": "National League 2 East",
+   "team": "Oundle",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Oundle\""
+  },
+  "OWI": {
+   "name": "Old Wimbledonian",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Old Wimbledonians",
+   "was": "Counties 1 Surrey/Sussex",
+   "folder": "oldwimbledoniansrfc",
+   "team1": 193380,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Old Wimbledonians\""
+  },
+  "OWY": {
+   "name": "Oadby Wyggs",
+   "league": "Regional 2 Midlands East",
+   "team": "Oadby Wyggestonians",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Oadby Wyggestonians\""
+  },
+  "OXO": {
+   "name": "Oxford",
+   "league": "Counties 1 Southern North",
+   "team": "Oxford",
+   "was": "Counties 1 Southern North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern North table (id 190974): row \"Oxford\""
+  },
+  "PAI": {
+   "name": "Paignton",
+   "league": "Counties 1 Western West",
+   "team": "Paignton",
+   "was": "Counties 1 Western West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"Paignton\""
+  },
+  "PAL": {
+   "name": "Plymouth Albion",
+   "league": "National League 1",
+   "team": "Plymouth Albion",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Plymouth Albion\""
+  },
+  "PAV": {
+   "name": "Paviors",
+   "league": "Regional 2 Midlands North",
+   "team": "Paviors",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Paviors\""
+  },
+  "PEE": {
+   "name": "Petersfield",
+   "league": "Regional 2 South Central",
+   "team": "Petersfield",
+   "was": "Regional 2 South Central",
+   "folder": "petersfield",
+   "team1": 28789,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Petersfield\", its own 1st XV page petersfield/28789"
+  },
+  "PEN": {
+   "name": "Penrith",
+   "league": "Regional 2 North",
+   "team": "Penrith",
+   "was": "Regional 1 North East",
+   "folder": "penrithrufc",
+   "team1": 19354,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Penrith\", its own 1st XV page penrithrufc/19354"
+  },
+  "PET": {
+   "name": "Peterborough",
+   "league": "Regional 2 Midlands East",
+   "team": "Peterborough",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Peterborough\""
+  },
+  "PGR": {
+   "name": "Preston",
+   "league": "National League 2 North",
+   "team": "Preston Grasshoppers",
+   "was": "National League 2 North",
+   "folder": "prestongrasshoppersrfc",
+   "team1": 280889,
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Preston Grasshoppers\""
+  },
+  "PHO": {
+   "name": "Peterlee Horden",
+   "league": "Counties 1 North East",
+   "team": "Peterlee and Horden",
+   "was": "Counties 1 Durham & Northumberland",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Peterlee and Horden\""
+  },
+  "PHU": {
+   "name": "Park House",
+   "league": "Counties 1 Kent",
+   "team": "Park House",
+   "was": "Counties 1 Kent",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Kent table (id 190887): row \"Park House\""
+  },
+  "POC": {
+   "name": "Pocklington",
+   "league": "Regional 2 North East",
+   "team": "Pocklington",
+   "was": "Regional 2 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Pocklington\""
+  },
+  "POE": {
+   "name": "Ponteland",
+   "league": "Counties 1 North East",
+   "team": "Ponteland",
+   "was": "Counties 1 Durham & Northumberland",
+   "folder": "ponteland",
+   "team1": 71770,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Ponteland\", its own 1st XV page ponteland/71770"
+  },
+  "PON": {
+   "name": "Pontefract",
+   "league": "Regional 2 North East",
+   "team": "Pontefract",
+   "was": "Regional 2 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Pontefract\""
+  },
+  "POT": {
+   "name": "Portsmouth",
+   "league": "Counties 1 Hampshire",
+   "team": "Portsmouth",
+   "was": "Counties 1 Hampshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Hampshire table (id 190885): row \"Portsmouth\""
+  },
+  "PPA": {
+   "name": "Percy Park",
+   "league": "Regional 2 North",
+   "team": "Percy Park",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Percy Park\""
+  },
+  "RAB": {
+   "name": "Reading Abbey",
+   "league": "Counties 1 Southern North",
+   "team": "Reading Abbey",
+   "was": "Counties 1 Southern North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern North table (id 190974): row \"Reading Abbey\""
+  },
+  "RAM": {
+   "name": "Rams",
+   "league": "National League 1",
+   "team": "Rams",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Rams\""
+  },
+  "REA": {
+   "name": "Reading",
+   "league": "Counties 1 Southern North",
+   "team": "Reading",
+   "was": "Counties 1 Southern North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern North table (id 190974): row \"Reading\""
+  },
+  "RED": {
+   "name": "Redruth",
+   "league": "National League 2 West",
+   "team": "Redruth",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Redruth\""
+  },
+  "RGP": {
+   "name": "Romford",
+   "league": "Counties 1 Essex",
+   "team": "Romford & Gidea Park",
+   "was": "Counties 1 Essex",
+   "folder": "romfordgideapark",
+   "team1": 9658,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"Romford & Gidea Park\", its own 1st XV page romfordgideapark/9658"
+  },
+  "RHU": {
+   "name": "Rochford Hundred",
+   "league": "Regional 2 Anglia",
+   "team": "Rochford Hundred",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Rochford Hundred\""
+  },
+  "RIC": {
+   "name": "Richmond",
+   "league": "Championship",
+   "team": "Richmond",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Richmond\""
+  },
+  "ROC": {
+   "name": "Rochdale",
+   "league": "Regional 1 North West",
+   "team": "Rochdale",
+   "was": "Regional 1 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Rochdale\""
+  },
+  "ROS": {
+   "name": "Rossendale",
+   "league": "Regional 1 North West",
+   "team": "Rossendale",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Rossendale\""
+  },
+  "RPA": {
+   "name": "Rosslyn Park",
+   "league": "National League 1",
+   "team": "Rosslyn Park",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Rosslyn Park\""
+  },
+  "RTI": {
+   "name": "Rotherham Titans",
+   "league": "Championship",
+   "team": "Rotherham Titans",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Rotherham Titans\""
+  },
+  "RUI": {
+   "name": "Ruislip",
+   "league": "Counties 1 Middx",
+   "team": "Ruislip",
+   "was": "Counties 1 Middlesex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Middx table (id 190888): row \"Ruislip\""
+  },
+  "RWB": {
+   "name": "Wootton Bassett",
+   "league": "Regional 1 South West",
+   "team": "Royal Wootton Bassett",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Royal Wootton Bassett\""
+  },
+  "RWE": {
+   "name": "Reeds Weybridge",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Reeds Weybridge",
+   "was": "Regional 2 South Central",
+   "folder": "reedsweybridgerfc",
+   "team1": 196497,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Reeds Weybridge\""
+  },
+  "RYT": {
+   "name": "Ryton",
+   "league": "Regional 2 North",
+   "team": "Ryton",
+   "was": "Counties 1 Durham & Northumberland",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Ryton\""
+  },
+  "SAD": {
+   "name": "Sandbach",
+   "league": "Regional 2 North West",
+   "team": "Sandbach",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Sandbach\""
+  },
+  "SAE": {
+   "name": "Sale FC Cheshire",
+   "league": "National League 1",
+   "team": "Sale FC",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Sale FC\""
+  },
+  "SAL": {
+   "name": "Sale",
+   "league": "Premiership",
+   "team": "Sale Sharks",
+   "was": "Premiership",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Sale Sharks\""
+  },
+  "SAN": {
+   "name": "Sandal",
+   "league": "Regional 1 North East",
+   "team": "Sandal",
+   "was": "Regional 1 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Sandal\""
+  },
+  "SAS": {
+   "name": "Salisbury",
+   "league": "Counties 1 Southern South",
+   "team": "Salisbury",
+   "was": "Counties 1 Southern South",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"Salisbury\""
+  },
+  "SAT": {
+   "name": "Saltash",
+   "league": "Counties 1 Western West",
+   "team": "Saltash",
+   "was": "Counties 1 Western West",
+   "folder": "saltash",
+   "team1": 21311,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"Saltash\", its own 1st XV page saltash/21311"
+  },
+  "SAU": {
+   "name": "St Austell",
+   "league": "Regional 1 South West",
+   "team": "St Austell",
+   "was": "Regional 1 South West",
+   "folder": "staustell",
+   "team1": 1673,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"St Austell\", its own 1st XV page staustell/1673"
+  },
+  "SAV": {
+   "name": "Stratford",
+   "league": "Counties 1 Midlands West (South)",
+   "team": "Stratford Upon Avon",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (South) table (id 190934): row \"Stratford Upon Avon\""
+  },
+  "SBE": {
+   "name": "St Benedict's",
+   "league": "Counties 1 Cumbria",
+   "team": "St Benedicts",
+   "was": "Counties 1 Cumbria",
+   "folder": "stbenedicts",
+   "team1": 12854,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"St Benedicts\""
+  },
+  "SCA": {
+   "name": "Scarborough",
+   "league": "Regional 1 North East",
+   "team": "Scarborough",
+   "was": "Regional 2 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Scarborough\""
+  },
+  "SCL": {
+   "name": "Sutton Coldfield",
+   "league": "Regional 2 Midlands North",
+   "team": "Sutton Coldfield",
+   "was": "Regional 2 Midlands North",
+   "folder": "suttoncoldfield",
+   "team1": 54877,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Sutton Coldfield\", its own 1st XV page suttoncoldfield/54877"
+  },
+  "SCU": {
+   "name": "Scunthorpe",
+   "league": "Regional 1 North East",
+   "team": "Scunthorpe",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"Scunthorpe\""
+  },
+  "SEB": {
+   "name": "Selby",
+   "league": "Regional 2 North East",
+   "team": "Selby",
+   "was": "Regional 2 North East",
+   "folder": "selby",
+   "team1": 2267,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Selby\", its own 1st XV page selby/2267"
+  },
+  "SEO": {
+   "name": "Sevenoaks",
+   "league": "Regional 1 South Central",
+   "team": "Sevenoaks",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Sevenoaks\""
+  },
+  "SEP": {
+   "name": "Sutton & Epsom",
+   "league": "Regional 2 South East",
+   "team": "Sutton & Epsom",
+   "was": "Regional 2 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South East table (id 190928): row \"Sutton & Epsom\""
+  },
+  "SHF": {
+   "name": "Sheffield",
+   "league": "National League 1",
+   "team": "Sheffield",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Sheffield\""
+  },
+  "SHL": {
+   "name": "Shelford",
+   "league": "Regional 2 Midlands East",
+   "team": "Shelford",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Shelford\""
+  },
+  "SHO": {
+   "name": "Stanford-le-Hope",
+   "league": "Counties 1 Essex",
+   "team": "Stanford Le Hope",
+   "was": "Counties 1 Essex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Essex table (id 190884): row \"Stanford Le Hope\""
+  },
+  "SHR": {
+   "name": "Sherborne",
+   "league": "Regional 2 South West",
+   "team": "Sherborne",
+   "was": "Counties 1 Southern South",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Sherborne\""
+  },
+  "SHW": {
+   "name": "Shrewsbury",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Shrewsbury",
+   "was": "Counties 1 Midlands West (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Shrewsbury\""
+  },
+  "SIC": {
+   "name": "Sidcup",
+   "league": "Regional 1 South East",
+   "team": "Sidcup",
+   "was": "Regional 2 South East",
+   "folder": "sidcuprfc",
+   "team1": 36419,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Sidcup\", its own 1st XV page sidcuprfc/36419"
+  },
+  "SID": {
+   "name": "Sidmouth",
+   "league": "Regional 1 South West",
+   "team": "Sidmouth",
+   "was": "Regional 1 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Sidmouth\""
+  },
+  "SIL": {
+   "name": "Silhillians",
+   "league": "Regional 2 Midlands West",
+   "team": "Silhillians",
+   "was": "Regional 2 Midlands West",
+   "folder": "silhillians",
+   "team1": 6186,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Silhillians\", its own 1st XV page silhillians/6186"
+  },
+  "SIV": {
+   "name": "St Ives",
+   "league": "Counties 1 Western West",
+   "team": "St Ives (SW)",
+   "was": "Counties 1 Western West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"St Ives (SW)\""
+  },
+  "SLL": {
+   "name": "S&L Corby",
+   "league": "Counties 2 Midlands East (South)",
+   "team": "Stewarts & Lloyds",
+   "was": "Counties 1 Midlands East (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Midlands East (South) table (id 190936): row \"Stewarts & Lloyds\""
+  },
+  "SOT": {
+   "name": "Southwell",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Southwell",
+   "was": "Counties 1 Midlands East (North)",
+   "folder": "southwell",
+   "team1": 4243,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Southwell\", its own 1st XV page southwell/4243"
+  },
+  "SOU": {
+   "name": "Southwold",
+   "league": "Counties 1 Eastern Counties",
+   "team": "Southwold",
+   "was": "Counties 1 Eastern Counties",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"Southwold\""
+  },
+  "SPA": {
+   "name": "Sedgley Park",
+   "league": "National League 2 North",
+   "team": "Sedgley Park",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Sedgley Park\""
+  },
+  "SPL": {
+   "name": "Spalding",
+   "league": "Counties 1 Midlands East (North)",
+   "team": "Spalding",
+   "was": "Counties 1 Midlands East (North)",
+   "folder": "spaldingrfc",
+   "team1": 11715,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (North) table (id 190931): row \"Spalding\""
+  },
+  "SPR": {
+   "name": "Spartans",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Spartans (Midlands)",
+   "was": "Counties 1 Midlands West (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Spartans (Midlands)\""
+  },
+  "SSA": {
+   "name": "Southend Saxons",
+   "league": "Regional 1 South East",
+   "team": "Southend Saxons",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Southend Saxons\""
+  },
+  "SSH": {
+   "name": "Sandown Shanklin",
+   "league": "Counties 1 Hampshire",
+   "team": "Sandown & Shanklin",
+   "was": "Counties 1 Hampshire",
+   "folder": "sandownshanklinhurricanes",
+   "team1": 15053,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Hampshire table (id 190885): row \"Sandown & Shanklin\", its own 1st XV page sandownshanklinhurricanes/15053"
+  },
+  "SST": {
+   "name": "Shipston",
+   "league": "Regional 2 Midlands West",
+   "team": "Shipston on Stour",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Shipston on Stour\""
+  },
+  "STA": {
+   "name": "Stamford",
+   "league": "Regional 2 Midlands East",
+   "team": "Stamford",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands East table (id 190951): row \"Stamford\""
+  },
+  "STC": {
+   "name": "Stockton",
+   "league": "Counties 1 North East",
+   "team": "Stockton",
+   "was": "Counties 1 Durham & Northumberland",
+   "folder": "stockton",
+   "team1": 9446,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 North East table (id 190957): row \"Stockton\""
+  },
+  "STI": {
+   "name": "Sheffield Tigers",
+   "league": "National League 2 North",
+   "team": "Sheffield Tigers",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Sheffield Tigers\""
+  },
+  "STO": {
+   "name": "Stockport",
+   "league": "Regional 1 North West",
+   "team": "Stockport",
+   "was": "Regional 1 North West",
+   "folder": "stockport",
+   "team1": 1235,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Stockport\", its own 1st XV page stockport/1235"
+  },
+  "STR": {
+   "name": "Stoke-on-Trent",
+   "league": "Regional 2 Midlands North",
+   "team": "Stoke on Trent",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Stoke on Trent\""
+  },
+  "STU": {
+   "name": "Stourbridge",
+   "league": "Regional 1 Midlands",
+   "team": "Stourbridge",
+   "was": "Regional 1 Midlands",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Stourbridge\""
+  },
+  "STW": {
+   "name": "Stowmarket",
+   "league": "Counties 1 Eastern Counties",
+   "team": "Stowmarket",
+   "was": "Counties 1 Eastern Counties",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"Stowmarket\""
+  },
+  "SUD": {
+   "name": "Sudbury",
+   "league": "Regional 1 South East",
+   "team": "Sudbury",
+   "was": "Regional 1 South East",
+   "folder": "sudburyrfc",
+   "team1": 94517,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Sudbury\""
+  },
+  "SUN": {
+   "name": "Sunderland",
+   "league": "Regional 2 North",
+   "team": "Sunderland",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Sunderland\""
+  },
+  "SWL": {
+   "name": "Saffron Walden",
+   "league": "Counties 1 Eastern Counties",
+   "team": "Saffron Walden",
+   "was": "Counties 1 Eastern Counties",
+   "folder": "saffronwalden",
+   "team1": 2300,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"Saffron Walden\""
+  },
+  "SWO": {
+   "name": "Stow-on-the-Wold",
+   "league": "Regional 2 Midlands West",
+   "team": "Stow-on-the-Wold",
+   "was": "Regional 2 Midlands West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Stow-on-the-Wold\""
+  },
+  "SWR": {
+   "name": "Swanage Wareham",
+   "league": "Counties 1 Southern South",
+   "team": "Swanage & Wareham",
+   "was": "Counties 1 Southern South",
+   "folder": "swanagewareham",
+   "team1": 35691,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"Swanage & Wareham\""
+  },
+  "SYS": {
+   "name": "Syston",
+   "league": "Regional 1 Midlands",
+   "team": "Syston",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 Midlands table (id 190950): row \"Syston\""
+  },
+  "TAL": {
+   "name": "Tarleton",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Tarleton",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Tarleton\""
+  },
+  "TAM": {
+   "name": "Tamworth",
+   "league": "Counties 2 Midlands West (East)",
+   "team": "Tamworth",
+   "was": "Counties 1 Midlands West (North)",
+   "folder": "tamworth",
+   "team1": 14868,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 2 Midlands West (East) table (id 190937): row \"Tamworth\", its own 1st XV page tamworth/14868"
+  },
+  "TAT": {
+   "name": "Torquay Athletic",
+   "league": "Counties 1 Western West",
+   "team": "Torquay Athletic",
+   "was": "Counties 1 Western West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"Torquay Athletic\""
+  },
+  "TED": {
+   "name": "Teddington",
+   "league": "Regional 2 Thames",
+   "team": "Teddington",
+   "was": "Regional 2 Thames",
+   "folder": "teddingtonrfc",
+   "team1": 58765,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 Thames table (id 190929): row \"Teddington\", its own 1st XV page teddingtonrfc/58765"
+  },
+  "TEI": {
+   "name": "Teignmouth",
+   "league": "Regional 2 South West",
+   "team": "Teignmouth",
+   "was": "Regional 2 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Teignmouth\""
+  },
+  "THO": {
+   "name": "Thornbury",
+   "league": "Regional 2 Severn",
+   "team": "Thornbury",
+   "was": "Regional 2 Severn",
+   "folder": "thornburyrfc",
+   "team1": 40451,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Thornbury\""
+  },
+  "THU": {
+   "name": "Thurrock",
+   "league": "Regional 2 Anglia",
+   "team": "Thurrock",
+   "was": "Counties 1 Essex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Thurrock\""
+  },
+  "TIV": {
+   "name": "Tiverton",
+   "league": "Regional 2 South West",
+   "team": "Tiverton",
+   "was": "Regional 2 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Tiverton\""
+  },
+  "TJU": {
+   "name": "Tonbridge",
+   "league": "National League 1",
+   "team": "Tonbridge Juddians",
+   "was": "National League 1",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 1: its table's \"Tonbridge Juddians\""
+  },
+  "TOP": {
+   "name": "Topsham",
+   "league": "Regional 1 South West",
+   "team": "Topsham",
+   "was": "Regional 1 South West",
+   "folder": "topsham",
+   "team1": 31479,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Topsham\", its own 1st XV page topsham/31479"
+  },
+  "TOT": {
+   "name": "Tottonians",
+   "league": "Regional 2 South Central",
+   "team": "Tottonians",
+   "was": "Regional 2 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Tottonians\""
+  },
+  "TOW": {
+   "name": "Towcestrians",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Towcestrians",
+   "was": "Counties 1 Midlands East (South)",
+   "folder": "towcestriansrfc",
+   "team1": 34750,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Towcestrians\""
+  },
+  "TRN": {
+   "name": "Tring",
+   "league": "Regional 1 South East",
+   "team": "HUEL Tring",
+   "was": "Regional 1 South East",
+   "confidence": "record",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"HUEL Tring\", the name its 2025-26 row carried (place and W-D-L as the game has them)"
+  },
+  "TRO": {
+   "name": "Trowbridge",
+   "league": "Regional 1 South West",
+   "team": "Trowbridge",
+   "was": "Regional 2 Severn",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Trowbridge\""
+  },
+  "TRT": {
+   "name": "Trinity",
+   "league": "Counties 1 Surrey/Sussex",
+   "team": "Trinity",
+   "was": "Counties 1 Surrey/Sussex",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Surrey/Sussex table (id 190889): row \"Trinity\""
+  },
+  "TRU": {
+   "name": "Truro",
+   "league": "Counties 1 Western West",
+   "team": "Truro",
+   "was": "Counties 1 Western West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western West table (id 190977): row \"Truro\""
+  },
+  "TTI": {
+   "name": "Taunton Titans",
+   "league": "National League 2 West",
+   "team": "Taunton Titans",
+   "was": "National League 2 West",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 West: its table's \"Taunton Titans\""
+  },
+  "TWE": {
+   "name": "Tunbridge Wells",
+   "league": "Regional 1 South Central",
+   "team": "Tunbridge Wells",
+   "was": "Regional 1 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Tunbridge Wells\""
+  },
+  "TWI": {
+   "name": "Twickenham",
+   "league": "Regional 2 South Central",
+   "team": "Twickenham",
+   "was": "Regional 2 South Central",
+   "folder": "twickenhamrfc",
+   "team1": 84648,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Twickenham\", its own 1st XV page twickenhamrfc/84648"
+  },
+  "TYN": {
+   "name": "Tynedale",
+   "league": "National League 2 North",
+   "team": "Tynedale",
+   "was": "National League 2 North",
+   "folder": "tynedalerugbyfootballclub",
+   "team1": 154858,
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Tynedale\""
+  },
+  "UED": {
+   "name": "Upper Eden",
+   "league": "Regional 2 North",
+   "team": "Upper Eden",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"Upper Eden\""
+  },
+  "VES": {
+   "name": "Veseyans",
+   "league": "Counties 1 Midlands West (North)",
+   "team": "Veseyans",
+   "was": "Counties 1 Midlands West (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands West (North) table (id 190933): row \"Veseyans\""
+  },
+  "VIP": {
+   "name": "Vipers",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Vipers",
+   "was": "Counties 1 Midlands East (South)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Vipers\""
+  },
+  "VLU": {
+   "name": "Vale of Lune",
+   "league": "Regional 1 North West",
+   "team": "Vale of Lune",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Vale of Lune\""
+  },
+  "WAC": {
+   "name": "Walcot",
+   "league": "Counties 1 Southern South",
+   "team": "Walcot",
+   "was": "Counties 1 Southern South",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Southern South table (id 190975): row \"Walcot\""
+  },
+  "WAE": {
+   "name": "Waterloo",
+   "league": "Regional 2 North West",
+   "team": "Firwood Waterloo",
+   "was": "Regional 2 North West",
+   "confidence": "record",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Firwood Waterloo\", the name its 2025-26 row carried (place and W-D-L as the game has them)"
+  },
+  "WAG": {
+   "name": "Wallingford",
+   "league": "Counties 2 Berks/Bucks & Oxon West",
+   "team": "Wallingford",
+   "was": "Counties 1 Southern North",
+   "folder": "wallingfordrugbyclub",
+   "team1": 114747,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Berks/Bucks & Oxon West table (id 190979): row \"Wallingford\""
+  },
+  "WAI": {
+   "name": "Warrington",
+   "league": "Regional 2 North West",
+   "team": "Warrington",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Warrington\""
+  },
+  "WAP": {
+   "name": "Wasps",
+   "league": "Counties 1 Middx",
+   "team": "Wasps FC",
+   "was": "Counties 1 Middlesex",
+   "folder": "waspsfootballclub",
+   "team1": null,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Middx table (id 190888): row \"Wasps FC\""
+  },
+  "WAS": {
+   "name": "Walsall",
+   "league": "Regional 2 Midlands North",
+   "team": "Walsall",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Walsall\""
+  },
+  "WAT": {
+   "name": "Wanstead",
+   "league": "Regional 2 Anglia",
+   "team": "Wanstead",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Wanstead\""
+  },
+  "WBR": {
+   "name": "West Bridgford",
+   "league": "Regional 2 Midlands North",
+   "team": "West Bridgford",
+   "was": "Regional 2 Midlands North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"West Bridgford\""
+  },
+  "WCA": {
+   "name": "Wadebridge",
+   "league": "Regional 2 South West",
+   "team": "Wadebridge Camels",
+   "was": "Regional 2 South West",
+   "folder": "wadebridgecamels",
+   "team1": 27457,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Wadebridge Camels\", its own 1st XV page wadebridgecamels/27457"
+  },
+  "WDE": {
+   "name": "Wath-upon-Dearne",
+   "league": "Regional 2 North East",
+   "team": "Wath Upon Dearne",
+   "was": "Counties 1 Yorkshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Wath Upon Dearne\""
+  },
+  "WEI": {
+   "name": "Wellington Som",
+   "league": "Counties 1 Western North",
+   "team": "Wellington",
+   "was": "Regional 2 South West",
+   "folder": "wellington",
+   "team1": 30522,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Western North table (id 190976): row \"Wellington\""
+  },
+  "WEL": {
+   "name": "Wellingborough",
+   "league": "Counties 1 Midlands East (South)",
+   "team": "Wellingborough",
+   "was": "Regional 2 Midlands East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Midlands East (South) table (id 190932): row \"Wellingborough\""
+  },
+  "WEN": {
+   "name": "Wensleydale",
+   "league": "Counties 1 Yorkshire",
+   "team": "Wensleydale",
+   "was": "Counties 1 Yorkshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Wensleydale\""
+  },
+  "WES": {
+   "name": "Westcliff",
+   "league": "Regional 1 South East",
+   "team": "Westcliff",
+   "was": "Regional 1 South East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South East table (id 190925): row \"Westcliff\""
+  },
+  "WET": {
+   "name": "Wetherby",
+   "league": "Regional 2 North East",
+   "team": "Wetherby",
+   "was": "Regional 2 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North East table (id 190970): row \"Wetherby\""
+  },
+  "WEW": {
+   "name": "Welwyn",
+   "league": "Counties 1 Herts",
+   "team": "Welwyn",
+   "was": "Counties 1 Hertfordshire",
+   "folder": "welwynrfc",
+   "team1": 26605,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Herts table (id 190886): row \"Welwyn\""
+  },
+  "WEY": {
+   "name": "Weybridge",
+   "league": "Regional 2 South Central",
+   "team": "Weybridge Vandals",
+   "was": "Counties 1 Surrey/Sussex",
+   "folder": "weybridgevandalsrfc",
+   "team1": 14182,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Weybridge Vandals\""
+  },
+  "WHA": {
+   "name": "Wharfedale",
+   "league": "National League 2 North",
+   "team": "Wharfedale",
+   "was": "National League 2 North",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 North: its table's \"Wharfedale\""
+  },
+  "WHI": {
+   "name": "Whitchurch",
+   "league": "Regional 2 Midlands North",
+   "team": "Whitchurch",
+   "was": "Counties 1 Midlands West (North)",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"Whitchurch\""
+  },
+  "WHR": {
+   "name": "West Hartlepool",
+   "league": "Regional 2 North",
+   "team": "West Hartlepool",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North table (id 190969): row \"West Hartlepool\""
+  },
+  "WHT": {
+   "name": "Whitehaven",
+   "league": "Counties 1 Cumbria",
+   "team": "Whitehaven",
+   "was": "Counties 1 Cumbria",
+   "folder": "whitehavenrufc",
+   "team1": 29268,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"Whitehaven\""
+  },
+  "WIA": {
+   "name": "Wigan",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "Wigan",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "folder": "wiganrufc",
+   "team1": 9384,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"Wigan\", its own 1st XV page wiganrufc/9384"
+  },
+  "WIB": {
+   "name": "Wimborne",
+   "league": "Regional 2 South Central",
+   "team": "Wimborne",
+   "was": "Regional 2 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Wimborne\""
+  },
+  "WID": {
+   "name": "Widnes",
+   "league": "Regional 2 North West",
+   "team": "Widnes",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Widnes\""
+  },
+  "WIE": {
+   "name": "Windermere",
+   "league": "Counties 2 Cumbria",
+   "team": "Windermere",
+   "was": "Counties 1 Cumbria",
+   "folder": "windermere",
+   "team1": 17640,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Cumbria table (id 191149): row \"Windermere\""
+  },
+  "WIG": {
+   "name": "Wigton",
+   "league": "Counties 1 Cumbria",
+   "team": "Wigton",
+   "was": "Regional 2 North",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Cumbria table (id 192786): row \"Wigton\""
+  },
+  "WIL": {
+   "name": "Wilmslow",
+   "league": "Regional 2 North West",
+   "team": "Wilmslow",
+   "was": "Counties 1 ADM Lancashire & Cheshire",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Wilmslow\""
+  },
+  "WIM": {
+   "name": "Wimbledon",
+   "league": "Regional 1 South Central",
+   "team": "Wimbledon",
+   "was": "Regional 1 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Wimbledon\""
+  },
+  "WIN": {
+   "name": "Winchester",
+   "league": "Regional 2 South Central",
+   "team": "Winchester",
+   "was": "Regional 2 South Central",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South Central table (id 190927): row \"Winchester\""
+  },
+  "WIO": {
+   "name": "Windsor",
+   "league": "Counties 1 Southern North",
+   "team": "Windsor",
+   "was": "Regional 2 Thames",
+   "folder": "windsorrugbyclub",
+   "team1": 269581,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 1 Southern North table (id 190974): row \"Windsor\", its own 1st XV page windsorrugbyclub/269581"
+  },
+  "WIR": {
+   "name": "Wirral",
+   "league": "Regional 1 North West",
+   "team": "Wirral",
+   "was": "Regional 1 North West",
+   "folder": "wirral",
+   "team1": 16027,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Regional 1 North West table (id 190968): row \"Wirral\", its own 1st XV page wirral/16027"
+  },
+  "WIS": {
+   "name": "Winscombe",
+   "league": "Regional 2 South West",
+   "team": "Winscombe",
+   "was": "Regional 2 South West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Winscombe\""
+  },
+  "WIT": {
+   "name": "Witney",
+   "league": "Regional 2 Severn",
+   "team": "Witney",
+   "was": "Regional 2 Severn",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Severn table (id 191020): row \"Witney\""
+  },
+  "WIV": {
+   "name": "Wiveliscombe",
+   "league": "Regional 2 South West",
+   "team": "Wiveliscombe",
+   "was": "Counties 1 Western West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 South West table (id 190990): row \"Wiveliscombe\""
+  },
+  "WLE": {
+   "name": "West Leeds",
+   "league": "Counties 1 Yorkshire",
+   "team": "West Leeds",
+   "was": "Counties 1 Yorkshire",
+   "folder": "westleedsrufc",
+   "team1": 69072,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"West Leeds\""
+  },
+  "WNO": {
+   "name": "West Norfolk",
+   "league": "Counties 1 Eastern Counties",
+   "team": "West Norfolk",
+   "was": "Counties 1 Eastern Counties",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Eastern Counties table (id 190883): row \"West Norfolk\""
+  },
+  "WOK": {
+   "name": "Workington",
+   "league": "Counties 2 Cumbria",
+   "team": "Workington",
+   "was": "Counties 1 Cumbria",
+   "folder": "workington",
+   "team1": 11918,
+   "confidence": "site",
+   "source": "Pitchero 2026-27 Counties 2 Cumbria table (id 191149): row \"Workington\", its own 1st XV page workington/11918"
+  },
+  "WOO": {
+   "name": "Woodford",
+   "league": "Regional 2 Anglia",
+   "team": "Woodford",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Woodford\""
+  },
+  "WOR": {
+   "name": "Worcester",
+   "league": "Championship",
+   "team": "Worcester Warriors",
+   "was": "Championship",
+   "confidence": "alias",
+   "source": "Wikipedia 2026–27 Champ Rugby: its table's \"Worcester Warriors\""
+  },
+  "WPA": {
+   "name": "Westcombe Park",
+   "league": "National League 2 East",
+   "team": "Westcombe Park",
+   "was": "National League 2 East",
+   "confidence": "name",
+   "source": "Wikipedia 2026–27 National League 2 East: its table's \"Westcombe Park\""
+  },
+  "WPR": {
+   "name": "Winnington Park",
+   "league": "Regional 2 North West",
+   "team": "Winnington Park",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 North West table (id 190971): row \"Winnington Park\""
+  },
+  "WPS": {
+   "name": "West Park",
+   "league": "Counties 1 Lancashire & Cheshire",
+   "team": "West Park (St Helens)",
+   "was": "Regional 2 North West",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Lancashire & Cheshire table (id 190955): row \"West Park (St Helens)\""
+  },
+  "WRA": {
+   "name": "Worthing Raiders",
+   "league": "Regional 1 South Central",
+   "team": "Worthing",
+   "was": "Regional 1 South Central",
+   "confidence": "record",
+   "source": "Pitchero 2026-27 Regional 1 South Central table (id 190924): row \"Worthing\", the name its 2025-26 row carried (place and W-D-L as the game has them)"
+  },
+  "WSM": {
+   "name": "Weston-s-Mare",
+   "league": "Regional 1 South West",
+   "team": "Weston-super-Mare",
+   "was": "Regional 2 South West",
+   "folder": "westonsupermare",
+   "team1": 436,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 South West table (id 191021): row \"Weston-super-Mare\""
+  },
+  "WWA": {
+   "name": "Worcester Wdrs",
+   "league": "Regional 2 Midlands West",
+   "team": "Worcester",
+   "was": "Counties 1 Midlands West (South)",
+   "confidence": "record",
+   "source": "Pitchero 2026-27 Regional 2 Midlands West table (id 190953): row \"Worcester\", the name its 2025-26 row carried (place and W-D-L as the game has them)"
+  },
+  "WYM": {
+   "name": "Wymondham",
+   "league": "Regional 2 Anglia",
+   "team": "Wymondham",
+   "was": "Regional 2 Anglia",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 2 Anglia table (id 190926): row \"Wymondham\""
+  },
+  "YAR": {
+   "name": "Yarnbury",
+   "league": "Counties 1 Yorkshire",
+   "team": "Yarnbury",
+   "was": "Counties 1 Yorkshire",
+   "folder": "yarnbury",
+   "team1": 1604,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 1 Yorkshire table (id 190958): row \"Yarnbury\""
+  },
+  "YOR": {
+   "name": "York",
+   "league": "Regional 1 North East",
+   "team": "York",
+   "was": "Regional 1 North East",
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Regional 1 North East table (id 190967): row \"York\""
+  }
+ },
+ "unmapped": [
+  {
+   "id": "PAM",
+   "name": "Pirates Amateurs",
+   "was": "Regional 2 South West"
+  },
+  {
+   "id": "PEY",
+   "name": "Penryn",
+   "was": "Counties 1 Western West"
+  },
+  {
+   "id": "PAO",
+   "name": "Plymstock Oaks",
+   "was": "Counties 1 Western West"
+  },
+  {
+   "id": "SWI",
+   "name": "Swindon",
+   "was": "Counties 1 Southern South"
+  },
+  {
+   "id": "ELY",
+   "name": "Ely",
+   "was": "Counties 1 Eastern Counties"
+  },
+  {
+   "id": "IYM",
+   "name": "Ipswich YM",
+   "was": "Counties 1 Eastern Counties"
+  },
+  {
+   "id": "UPM",
+   "name": "Upminster",
+   "was": "Counties 1 Essex"
+  },
+  {
+   "id": "CRA",
+   "name": "Cranbrook",
+   "was": "Counties 1 Kent"
+  },
+  {
+   "id": "CPA",
+   "name": "Charlton Park",
+   "was": "Counties 1 Kent"
+  },
+  {
+   "id": "ASU",
+   "name": "Aspull",
+   "was": "Counties 1 ADM Lancashire & Cheshire"
+  },
+  {
+   "id": "TMV",
+   "name": "Trafford MV",
+   "was": "Counties 1 ADM Lancashire & Cheshire"
+  },
+  {
+   "id": "ASB",
+   "name": "Ashby",
+   "was": "Counties 1 Midlands East (North)"
+  },
+  {
+   "id": "UOB",
+   "name": "UCS Old Boys",
+   "was": "Counties 1 Middlesex"
+  },
+  {
+   "id": "SAA",
+   "name": "Saracens Amateur",
+   "was": "Counties 1 Middlesex"
+  },
+  {
+   "id": "KCA",
+   "name": "Kidderminster",
+   "was": "Counties 1 Midlands West (South)"
+  },
+  {
+   "id": "THR",
+   "name": "Telford Hornets",
+   "was": "Counties 1 Midlands West (North)"
+  },
+  {
+   "id": "KEE",
+   "name": "Kesteven",
+   "was": "Counties 1 Midlands East (North)"
+  },
+  {
+   "id": "NMO",
+   "name": "Notts Moderns",
+   "was": "Counties 1 Midlands East (North)"
+  },
+  {
+   "id": "BAO",
+   "name": "Bridgwater",
+   "was": "Counties 1 Western North"
+  },
+  {
+   "id": "BEV",
+   "name": "Beverley",
+   "was": "Counties 1 Yorkshire"
+  },
+  {
+   "id": "ACK",
+   "name": "Acklam",
+   "was": "Counties 1 Durham & Northumberland"
+  },
+  {
+   "id": "LEO",
+   "name": "Leodiensian",
+   "was": "Counties 1 Yorkshire"
+  }
+ ],
+ "ambiguous": []
+}

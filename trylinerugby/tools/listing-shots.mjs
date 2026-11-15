@@ -10,6 +10,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { resultsServe } from './results-serve.mjs';
 
 export const GAME_DIR = fileURLToPath(new URL('../', import.meta.url));
 export const SHOTS_DIR = path.join(GAME_DIR, 'store-listing', 'screenshots');
@@ -107,6 +108,7 @@ const FONTS_FALLBACK = "@import url('https://fonts.googleapis.com/css2?family=At
 export function serve() {
   // the game's folder, served at /trylinerugby/ as GitHub Pages does, on a free local port
   const server = http.createServer((req, res) => {
+    if (resultsServe(req.url, res)) return;   // the week's results.json: 404 unless RESULTS_FILE (tools/results-serve.mjs)
     const url = new URL(req.url, 'http://x');
     let rel = decodeURIComponent(url.pathname).replace(/^\/trylinerugby\/?/, '');
     if (rel === '' || rel.endsWith('/')) rel += 'index.html';

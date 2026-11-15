@@ -68,7 +68,7 @@ function traitsArm() {
   if (!M.arcade) return;
   const mine = M.career && M.careerP ? M.careerP : null;
   for (const t of [0, 1]) {
-    const stars = teamStars(M.nat[t], t === 0 && mine ? [mine.n] : null);
+    const stars = teamStars(realBase(M.nat[t]), t === 0 && mine ? [mine.n] : null);   // the side as it is: this week's Form brings no star (src/results.js)
     for (const p of M.players) if (p.team === t && stars.has(p.n)) p.tr = Object.fromEntries(stars.get(p.n).map(id => [id, true]));
   }
   if (mine) { const ids = careerTraitIds(career); mine.tr = ids.length ? Object.fromEntries(ids.map(id => [id, true])) : null; }
