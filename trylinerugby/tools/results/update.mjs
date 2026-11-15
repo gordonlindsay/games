@@ -15,7 +15,7 @@
 // The sources' terms: see README, Real results: the weekly job. Players' devices never touch any of them.
 import fs from 'node:fs';
 import path from 'node:path';
-import { Fetcher, GAP_MS } from './fetch.mjs';
+import { Fetcher, GAP_MS, GIVE_UP } from './fetch.mjs';
 import { gameTeams, GAME_ROOT } from './teams.mjs';
 import * as L from './lib.mjs';
 
@@ -28,8 +28,15 @@ const SNAP = path.join(GAME_ROOT, 'tools/results/last-tables.json');
 const MAP = path.join(GAME_ROOT, 'docs/results-clubs.json');
 const FEED = 'https://api.wr-rims-prod.pulselive.com/rugby/v3';
 const NATION_DAYS = 400;            // how far back a nation's last Test may be
+const DEADLINE_MIN = 45;            // the run gives up fetching after this, and refuses with its summary written (the workflow's timeout is 60)
 const lines = [];
 const say = s => { lines.push(s); console.log(s); };
+/* The run's summary (--summary FILE): the pull request's body, and the workflow's step summary whether or not the week was refused. */
+function summary(notes, problems) {
+  if (!opt('--summary')) return;
+  const refused = problems.length ? `\n\n**Refused, nothing written:**\n${problems.map(p => '- ' + p).join('\n')}` : '';
+  fs.writeFileSync(opt('--summary'), lines.filter(x => !x.startsWith('NOTE ')).map(x => x.replace(/^ +/, '- ')).join('\n') + `\n\n${notes} notes in the run's log.${refused}\n`);
+}
 
 /* ---------- the clubs ---------- */
 /* One Wikipedia league: every mapped club's latest result, places before it from the results before its date. */
@@ -42,23 +49,42 @@ export function wikiLeague(name, html, variants, clubsHere, idOf, today) {
   if (teams.length < 8 || odd.length) return { entries, notes:[`${name}: refused, ${teams.length < 8 ? 'no table' : 'names its table does not hold: ' + odd.join(', ')}`], refused:true };
   const played = all.filter(m => m.hs != null && m.date <= today);
   const after = L.tableFrom(played, teams);
-  /* A page that lists only some rounds' matches (its table has more games than its results) cannot rebuild the table: the page's own table
-     gives the line, as of its last edit, and nobody gets places before a match. */
+  /* A page that lists only some rounds' matches (its table has more games than its results) cannot rebuild the table from scratch. Its own
+     table is as of the date under it ("Updated to match(es) played on 8 November 2026"), so the line is that table plus every result the
+     page lists after that date, and the places before a later match are that table plus the results before the match's day. A match on
+     or before that date: the page's own line, and no places before it. No date: no line and no places (a stale table would read as after
+     a match it is from before). */
   const partial = table.some(t => Number.isInteger(t.p) && after.get(t.name) && t.p > after.get(t.name).p);
   const own = new Map(table.map(t => [t.name, t]));
+  const updated = L.wikiUpdated(html);
+  const known = updated && updated <= today && table.every(t => [t.p, t.w, t.d, t.l, t.pts].every(Number.isInteger));
+  const onTop = upto => {   // the page's table plus the results after its date and before upto (or through today)
+    const since = played.filter(m => m.date > updated && (!upto || m.date < upto));
+    const add = L.tableFrom(since, teams);
+    const rows = table.map((t, i) => { const a = add.get(t.name); return { name:t.name, p:t.p + a.p, w:t.w + a.w, d:t.d + a.d, l:t.l + a.l, pf:(t.pf || 0) + a.pf, pa:(t.pa || 0) + a.pa, pts:t.pts + a.pts, pos:t.pos || i + 1 }; });
+    if (since.length) L.rankRows(rows);
+    return new Map(rows.map(r => [r.name, r]));
+  };
   for (const [id, team] of clubsHere) {
     const mine = played.filter(m => m.home === team || m.away === team);
     if (!mine.length) { notes.push(`${name}: ${id} ${team} has no result yet`); continue; }
     const m = mine[mine.length - 1], home = m.home === team, opp = home ? m.away : m.home;
-    const before = L.tableFrom(played, teams, m.date), me = before.get(team), them = before.get(opp);
-    const now = partial ? { ...own.get(team), pos:own.get(team).pos || table.indexOf(own.get(team)) + 1 } : after.get(team);
-    const places = partial ? {} : { prePos:me.pos, oppPos:them.pos, preP:me.p, oppPreP:them.p };
+    let now, places = {};
+    if (!partial) {
+      const before = L.tableFrom(played, teams, m.date), me = before.get(team), them = before.get(opp);
+      now = after.get(team); places = { prePos:me.pos, oppPos:them.pos, preP:me.p, oppPreP:them.p };
+    } else if (!known) now = {};
+    else if (m.date <= updated) now = { ...own.get(team), pos:own.get(team).pos || table.indexOf(own.get(team)) + 1 };
+    else {
+      const pre = onTop(m.date), me = pre.get(team), them = pre.get(opp);
+      now = onTop(null).get(team); places = { prePos:me.pos, oppPos:them.pos, preP:me.p, oppPreP:them.p };
+    }
     const next = all.filter(x => (x.home === team || x.away === team) && x.date > m.date && x.hs == null && !x.off).map(x => x.date).sort()[0] || null;
     entries[id] = L.entryOf({ date:m.date, ha:home ? 'h' : 'a', f:home ? m.hs : m.as, a:home ? m.as : m.hs, wo:m.wo, opp:idOf(name, opp), oppName:opp, comp:name,
-      league:name, pos:now.pos, of:teams.length, p:now.p, w:now.w, d:now.d, l:now.l, pts:now.pts,
+      league:now.pos ? name : null, pos:now.pos, of:teams.length, p:now.p, w:now.w, d:now.d, l:now.l, pts:now.pts,
       ...places, next, src:'wikipedia' });
   }
-  if (partial) notes.push(`${name}: the page lists only some rounds' matches, so its own table gives the line and no places before a match are known`);
+  if (partial) notes.push(`${name}: the page lists only some rounds' matches; ${known ? `its own table is updated to ${updated}, and the results it lists after that are added to it` : 'its table gives no date it is updated to, so no line and no places before a match'}`);
   return { entries, notes, refused:false };
 }
 
@@ -66,6 +92,14 @@ export function wikiLeague(name, html, variants, clubsHere, idOf, today) {
    clubsHere: [[id, rowName]]. Returns entries for clubs with a result found, and the ids with no new result (carried over by the caller). */
 export function pitcheroLeague(name, table, snap, pages, clubsHere, idOf, today) {
   const notes = [], problems = [], entries = {}, quiet = [];
+  /* A club's own page that lists nothing this season is a page the club left behind (some stopped in 2018): it is read as no page, so an
+     opponent's page or the club's table line gives its result. */
+  const seasonStart = L.seasonOf(today).slice(0, 4) + '-07-01';
+  pages = Object.fromEntries(Object.entries(pages).filter(([owner, list]) => {
+    if (list.some(g => g.date >= seasonStart)) return true;
+    notes.push(`${name}: ${owner}'s own page lists nothing this season (its latest ${list.length ? list[list.length - 1].date : 'none'}), so it is read as no page`);
+    return false;
+  }));
   const row = new Map(table.map(r => [r.name, r]));
   const was = snap ? new Map(snap.rows.map(r => [r.name, r])) : null;
   const snapDay = snap ? L.ukDate(snap.at) : null;
@@ -99,7 +133,7 @@ export function pitcheroLeague(name, table, snap, pages, clubsHere, idOf, today)
   const roundDays = [...new Set(results.filter(m => m.league && snapDay && m.date >= snapDay).map(m => m.date))];
   for (const [id, team] of clubsHere) {
     if (!row.has(team)) { notes.push(`${name}: ${id} "${team}" is not in this week's table`); continue; }
-    const own = pages[team];
+    let own = pages[team];
     const d = delta(team);
     let m = null, how = '';
     if (own) {
@@ -108,7 +142,11 @@ export function pitcheroLeague(name, table, snap, pages, clubsHere, idOf, today)
       if (g) { m = { date:g.date, ha:g.ha, f:g.f, a:g.a, wo:g.wo, opp:g.opp, comp:g.league ? name : g.comp, league:g.league }; how = 'own page'; }
       const nx = own.filter(x => !x.friendly && !x.off && x.f == null && m && x.date > m.date).map(x => x.date)[0] || null;
       if (m) m.next = nx;
-    } else {
+      /* the table has a game since last week's snapshot that the page does not: the page lags, so it is read as no page */
+      if (d && d.p >= 1 && snapDay && (!m || m.date < snapDay)) { notes.push(`${name}: ${team}'s own page has nothing since ${snapDay}, but its table line has ${d.p} more game${d.p > 1 ? 's' : ''}: read as no page`); m = null; own = null; }
+      else if (!m) own = null;
+    }
+    if (!own) {
       const mine = results.filter(x => x.home === team || x.away === team);
       const x = mine[mine.length - 1];
       const leagueLast = results.filter(r => r.league).map(r => r.date).pop() || null;
@@ -136,8 +174,23 @@ export function pitcheroLeague(name, table, snap, pages, clubsHere, idOf, today)
   return { entries, notes, problems, quiet };
 }
 
+/* ---------- last week's tables ---------- */
+const slim = rows => rows.map(({ rank, name:n, p, w, d, l, pf, pa, pts, hf, af }) => ({ rank, name:n, p, w, d, l, pf, pa, pts, hf, af }));
+/* The Friday before a day: the eve of the weekend's round a run reads (a Sunday or Monday run: the Friday just gone). */
+export function roundEve(today) { const dow = new Date(today + 'T12:00:00Z').getUTCDay(); return L.addDays(today, -((dow + 2) % 7 || 7)); }
+/* The snapshot a Pitchero league is read against: the newest one kept (tools/results/last-tables.json holds the last run's table and the
+   one that run read against) taken on or before the eve of this weekend's round, so a Monday run after the Sunday pull request was merged
+   still reads against last week's table, not the same weekend's. A snapshot from another season, or of another table, is no baseline. */
+export function baselineOf(stored, today, season, tableId = null) {
+  const fits = s => s && typeof s.at === 'string' && Array.isArray(s.rows) && L.seasonOf(L.ukDate(s.at)) === season && L.ukDate(s.at) <= today && (s.tableId == null || tableId == null || s.tableId === tableId);
+  const all = [stored, stored && stored.prev].filter(fits).map(({ prev, ...s }) => s).sort((a, b) => (a.at < b.at ? 1 : -1));
+  const eve = roundEve(today);
+  return all.find(s => L.ukDate(s.at) <= eve) || all[all.length - 1] || null;
+}
+
 /* ---------- the nations ---------- */
 const feedCode = { CAN:'CDN' };   // the feed's Canada is the game's CDN (CAN is Canberra)
+const venueOf = { 'United States':'USA', 'United States of America':'USA' };   // a venue's country as the feed names the team playing there
 export function nationEntries(sport, rankings, matches, want, today, nowMs) {
   const notes = [], entries = {};
   const ranked = new Map(rankings.entries.map(e => [e.team.id, e]));
@@ -157,7 +210,7 @@ export function nationEntries(sport, rankings, matches, want, today, nowMs) {
     const m = done[done.length - 1];
     if (!m) { notes.push(`${sport} ${id}: no Test in the last ${NATION_DAYS} days`); continue; }
     const i = m.teams[0].id === e.team.id ? 0 : 1, o = ranked.get(m.teams[1 - i].id);
-    const date = L.ukDate(m.time.millis), venue = m.venue && m.venue.country;
+    const date = L.ukDate(m.time.millis), venue = m.venue && m.venue.country && (venueOf[m.venue.country] || m.venue.country);
     const ha = venue && venue === m.teams[i].name.replace(/\s+Women$/i, '') ? 'h' : venue && venue === m.teams[1 - i].name.replace(/\s+Women$/i, '') ? 'a' : 'n';
     const later = mine.filter(x => x.time.millis > m.time.millis && x.status === 'U' && x.time.millis > nowMs).map(x => L.ukDate(x.time.millis)).find(dd => dd > date) || null;
     const ranks = effective && (effective <= date || L.daysBetween(date, effective) <= 7) ? { rank:rankBefore(e, date), oppRank:rankBefore(o, date) } : {};   // the table in force at kick-off, or the one just before the release that counted it
@@ -169,12 +222,13 @@ export function nationEntries(sport, rankings, matches, want, today, nowMs) {
 
 /* ---------- the run ---------- */
 async function main() {
-  for (const a of args) if (a.startsWith('--') && !['--dry-run', '--offline', '--cache', '--seed', '--baseline', '--now', '--summary'].includes(a)) throw new Error(`unknown option ${a}`);
+  for (const a of args) if (a.startsWith('--') && !['--dry-run', '--offline', '--cache', '--seed', '--baseline', '--now', '--summary', '--deadline'].includes(a)) throw new Error(`unknown option ${a}`);
   const dry = has('--dry-run'), nowMs = opt('--now') ? Date.parse(opt('--now')) : Date.now();
   if (!Number.isFinite(nowMs)) throw new Error('--now is not a time');
   const generated = new Date(nowMs).toISOString().replace(/\.\d{3}Z$/, 'Z'), today = L.ukDate(nowMs), season = L.seasonOf(today);
   const started = Date.now();
-  const F = new Fetcher({ dir:opt('--cache', path.join(GAME_ROOT, 'tools/results/.cache')), seeds:many('--seed'), offline:has('--offline'), log:s => console.log(s) });
+  const minutes = +opt('--deadline', DEADLINE_MIN);
+  const F = new Fetcher({ dir:opt('--cache', path.join(GAME_ROOT, 'tools/results/.cache')), seeds:many('--seed'), offline:has('--offline'), log:s => console.log(s), deadline:started + minutes*60e3 });
   const G = gameTeams(), map = JSON.parse(fs.readFileSync(MAP, 'utf8')), alias = JSON.parse(fs.readFileSync(path.join(GAME_ROOT, 'tools/results/aliases.json'), 'utf8'));
   let overrides = {}; try { overrides = JSON.parse(fs.readFileSync(path.join(GAME_ROOT, 'tools/results/overrides.json'), 'utf8')); } catch (e) { /* none */ }
   let prevText = null; try { prevText = fs.readFileSync(OUT, 'utf8'); } catch (e) { /* the first run */ }
@@ -204,7 +258,7 @@ async function main() {
     howMany[name] = Object.keys(got.entries).length;
   }
   /* Pitchero */
-  const baseline = opt('--baseline');
+  const baseline = opt('--baseline'), fromBaseline = [];
   for (const [name, l] of pitch) {
     let table = null, at = null;
     for (const v of l.via) {
@@ -214,19 +268,20 @@ async function main() {
       if (t && t.rows.length >= 4) { table = t.rows; at = r.fetched; break; }
     }
     if (!table) { notes.push(`${name}: no table this week`); continue; }
-    tablesNow[name] = { at, rows:table.map(({ rank, name:n, p, w, d, l:lo, pf, pa, pts, hf, af }) => ({ rank, name:n, p, w, d, l:lo, pf, pa, pts, hf, af })) };
-    let snap = snaps.leagues && snaps.leagues[name];
+    tablesNow[name] = { at, tableId:l.tableId, rows:slim(table) };
+    let snap = baselineOf(snaps.leagues && snaps.leagues[name], today, season, l.tableId);
     if (!snap && baseline) {
       for (const v of l.via) {
         const bf = new Fetcher({ dir:baseline, offline:true });
         const r = await bf.get(`https://www.pitchero.com/clubs/${v.folder}/teams/${v.team}/league-table`, { anyAge:true });
         const t = r.status === 200 && L.pitcheroTables(L.nextData(r.body)).filter(x => x.id === l.tableId || (x.season === season && L.leagueName(x.name) === name)).pop();
-        if (t && Date.parse(r.fetched) < nowMs) { snap = { at:r.fetched, rows:t.rows }; break; }
+        if (t && Date.parse(r.fetched) < nowMs) { snap = { at:r.fetched, rows:slim(t.rows) }; fromBaseline.push(r.fetched); break; }
       }
     }
     if (snap) {
       const wasP = snap.rows.reduce((s, r) => s + (r.p || 0), 0), nowP = table.reduce((s, r) => s + (r.p || 0), 0);
-      problems.push(...L.runProblems({}, null, [{ league:name, now:table, was:snap.rows }], overrides.shrink || []));
+      problems.push(...L.runProblems({}, null, [{ league:name, now:table, was:snap.rows, days:L.daysBetween(L.ukDate(snap.at), today) }], overrides.shrink || []));
+      tablesNow[name].prev = { at:snap.at, ...(snap.tableId != null ? { tableId:snap.tableId } : {}), rows:slim(snap.rows) };   // the next run's way back to this one's baseline
       if (nowP === wasP && snap.at && L.ukDate(snap.at) === today) { /* the same table: nothing new since */ }
     }
     const pages = {};
@@ -248,6 +303,7 @@ async function main() {
       if (!L.entryProblems(c, 'clubs', G.ids.clubs, today).length) { out.clubs[id] = c; howMany[name]++; }
     }
   }
+  if (fromBaseline.length) say(`Baseline: ${fromBaseline.length} leagues read against ${baseline}'s tables, fetched ${fromBaseline.sort()[0]} to ${fromBaseline.sort().pop()}.`);
   /* World Rugby */
   for (const [sport, kind, want] of [['mru', 'men', G.men], ['wru', 'women', G.women]]) {
     try {
@@ -268,6 +324,8 @@ async function main() {
   }
   /* order the keys, check, write */
   for (const k of ['clubs', 'men', 'women']) out[k] = Object.fromEntries(Object.entries(out[k]).sort((a, b) => (a[0] < b[0] ? -1 : 1)));
+  for (const h of F.dead) problems.push(`${h}: given up after ${GIVE_UP} failures in a row`);
+  if (F.late) problems.push(`the run passed its ${minutes}-minute deadline: pages after it were not fetched`);
   problems.push(...L.validate(out, G.ids), ...L.runProblems(out, prev));
   const placed = Object.values(out.clubs).filter(e => e.league).length;
   say(`Clubs: ${Object.keys(out.clubs).length} of ${G.clubs.length} have a result (${placed} with a league place); ${Object.keys(map.clubs).length} mapped, ${map.unmapped.length} unmapped.`);
@@ -276,7 +334,7 @@ async function main() {
   say(`Boosts live today (${today}): ${boosts}. Requests: ${F.requests} made, ${F.cached} from the cache. ${((Date.now() - started)/60000).toFixed(1)} minutes.`);
   for (const [n, c] of Object.entries(howMany)) if (c < clubsIn(n).length) say(`  ${n}: ${c} of ${clubsIn(n).length}`);
   for (const n of notes) say('NOTE ' + n);
-  if (opt('--summary')) fs.writeFileSync(opt('--summary'), lines.filter(x => !x.startsWith('NOTE ')).map(x => x.replace(/^ +/, '- ')).join('\n') + `\n\n${notes.length} notes in the run's log.\n`);
+  summary(notes.length, problems);
   if (problems.length) { for (const p of problems) console.error('REFUSED: ' + p); console.error('Nothing written.'); process.exitCode = 1; return; }
   if (dry) { say('Dry run: nothing written.'); return; }
   const text = JSON.stringify(out, null, 1) + '\n';
@@ -285,4 +343,4 @@ async function main() {
   fs.writeFileSync(SNAP + '.tmp', JSON.stringify(keep, null, 1) + '\n'); fs.renameSync(SNAP + '.tmp', SNAP);
   say(`Wrote results.json (${Buffer.byteLength(text)} bytes) and tools/results/last-tables.json.`);
 }
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === new URL(import.meta.url).pathname) main().catch(e => { console.error('REFUSED: ' + e.message); console.error('Nothing written.'); process.exitCode = 1; });
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === new URL(import.meta.url).pathname) main().catch(e => { summary(0, [e.message]); console.error('REFUSED: ' + e.message); console.error('Nothing written.'); process.exitCode = 1; });

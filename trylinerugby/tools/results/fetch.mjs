@@ -4,13 +4,17 @@
 // - One request at a time, and at least GAP_MS (or the host's Crawl-delay, the larger) from the end of one request to a host to the start
 //   of the next. At most 2 retries a page, never faster than that.
 // - Every page cached: a page fetched within maxAge is read from the cache and never fetched again. seeds are read-only caches of the same
-//   layout (an earlier research run's), used only where the caller allows a stale page (discovery).
+//   layout (an earlier research run's), used only where the caller allows a stale page (discovery). Offline, the cache is read at any age.
+// - A host that fails 3 times in a row (no answer, or a 5xx) is given up for the run, and nothing is fetched after the run's deadline: the
+//   caller refuses the week with its summary written, rather than running into the workflow's timeout. At most 3 redirects a page.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { UA } from './lib.mjs';
 
 export const GAP_MS = 5500;
+export const GIVE_UP = 3;            // failures in a row before a host is given up for the run
+export const MAX_HOPS = 3;           // redirects followed for one page
 const HOSTS = new Set(['www.pitchero.com', 'pitchero.com', 'en.wikipedia.org', 'api.wr-rims-prod.pulselive.com']);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -55,10 +59,12 @@ export function robotsAllows(rules, pathAndQuery) {
 
 export class Fetcher {
   /* dir: this run's cache. maxAge: ms a cached page stays good. seeds: read-only caches, used when allowSeed. log: a function for lines. */
-  constructor({ dir, maxAge = 6*3600e3, seeds = [], allowSeed = false, log = () => {}, offline = false }) {
-    Object.assign(this, { dir, maxAge, seeds, allowSeed, log, offline });
+  /* deadline: a time (ms) after which nothing more is fetched (the page answers status 0, and late is set). */
+  constructor({ dir, maxAge = 6*3600e3, seeds = [], allowSeed = false, log = () => {}, offline = false, deadline = Infinity }) {
+    Object.assign(this, { dir, maxAge, seeds, allowSeed, log, offline, deadline });
     fs.mkdirSync(dir, { recursive:true });
     this.last = new Map(); this.robots = new Map(); this.requests = 0; this.cached = 0;
+    this.fails = new Map(); this.dead = new Set(); this.late = false;
   }
   readCache(key, base, anyAge) {
     try {
@@ -93,6 +99,14 @@ export class Fetcher {
       return { status:0, body:'', error:(e.cause && e.cause.code) || e.message };
     } finally { this.last.set(host, Date.now()); }
   }
+  /* counts a host's failures in a row; GIVE_UP of them and the host is given up for the run */
+  tally(host, r) {
+    if (r.status === 0 || r.status >= 500) {
+      const n = (this.fails.get(host) || 0) + 1;
+      this.fails.set(host, n);
+      if (n >= GIVE_UP && !this.dead.has(host)) { this.dead.add(host); this.log(`  giving up ${host}: ${n} failures in a row`); }
+    } else this.fails.set(host, 0);
+  }
   async robotsFor(host) {
     if (this.robots.has(host)) return this.robots.get(host);
     const url = `https://${host}/robots.txt`, key = cacheKey(url);
@@ -108,27 +122,32 @@ export class Fetcher {
     return rules;
   }
   /* Returns { status, body, fetched, cached }. Throws on a refused URL. */
-  async get(url, { anyAge = false } = {}) {
+  async get(url, { anyAge = false, hops = 0 } = {}) {
     const u = new URL(url);
     if (u.protocol !== 'https:' || !HOSTS.has(u.host)) throw new Error(`not a host this job reads: ${u.host}`);
     const key = cacheKey(url);
-    const hit = this.readCache(key, this.dir, anyAge) || (this.allowSeed || anyAge ? this.seeds.map(s => this.readCache(key, s, true)).find(Boolean) : null);
+    const old = anyAge || this.offline;
+    const hit = this.readCache(key, this.dir, old) || (this.allowSeed || old ? this.seeds.map(s => this.readCache(key, s, true)).find(Boolean) : null);
     if (hit) { this.cached++; return { ...hit, cached:true }; }
     if (this.offline) return { status:0, body:null, cached:false, error:'offline' };
+    if (this.dead.has(u.host)) return { status:0, body:null, cached:false, error:'given up' };
+    if (Date.now() > this.deadline) { this.late = true; return { status:0, body:null, cached:false, error:'deadline' }; }
     const rules = await this.robotsFor(u.host);
     if (!robotsAllows(rules, u.pathname + u.search)) throw new Error(`robots.txt disallows ${url}`);
     let r;
     for (let attempt = 0; attempt < 3; attempt++) {
       r = await this.raw(url);
+      this.tally(u.host, r);
       if (r.status === 200 || (r.status >= 300 && r.status < 500 && r.status !== 408 && r.status !== 429)) break;
       this.log(`  retry ${url}: ${r.status || r.error}`);
+      if (this.dead.has(u.host) || attempt === 2 || Date.now() + (attempt ? 45000 : 15000) > this.deadline) break;
       await sleep(attempt ? 45000 : 15000);
     }
-    if (r.status >= 300 && r.status < 400 && r.location) {
+    if (r.status >= 300 && r.status < 400 && r.location && hops < MAX_HOPS) {
       const to = new URL(r.location, url);
       if (to.host === u.host || (HOSTS.has(to.host) && to.host.endsWith('pitchero.com') && u.host.endsWith('pitchero.com'))) {
         to.protocol = 'https:'; to.port = '';
-        if (to.href !== url) return this.get(to.href);
+        if (to.href !== url) return this.get(to.href, { hops:hops + 1 });
       }
     }
     const fetched = this.write(key, url, r.status, r.body);

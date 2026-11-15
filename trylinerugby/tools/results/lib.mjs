@@ -9,6 +9,7 @@ export const MAX_BYTES = 300*1024;
 export const WINDOW_MAX = 7;          // the owner: at most 7 days
 export const BIG_WIN = 15;            // the owner: a win by 15 or more
 export const MIN_SHARE = 0.9;         // fewer entries than 90% of the last file's: refuse
+export const CLUB_DAYS = 60;          // a club's result older than this is no club's latest: a page left behind, never shown (the game drops 30)
 const PLAIN = /^[^<>\u0000-\u001f\u007f]+$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const ID = /^[A-Z]{3}$/;
@@ -100,7 +101,8 @@ export function pitcheroFixtures(nd) {
       const ha = g.ha === 'h' || g.ha === 'a' ? g.ha : null;
       const status = String(g.status || ''), type = String(g.type || ''), comp = comps.get(String(g.competitionId)) || String(g.division || type || '');
       const league = !!g.division || /^d-/.test(String(g.competitionId));
-      const cup = !league && /\bcup|vase|plate|bowl|shield|trophy\b/i.test(type + ' ' + comp) && !FRIENDLY.test(type);
+      const friendlies = String(g.competitionId) === 'f' || /\bfriendl/i.test(comp);   // Pitchero's Friendlies competition: never a cup, whatever its type says
+      const cup = !league && !friendlies && /\bcup|vase|plate|bowl|shield|trophy\b/i.test(type + ' ' + comp) && !FRIENDLY.test(type);
       const friendly = !league && !cup;
       const score = v => (Number.isInteger(v) ? v : typeof v === 'string' && /^\d{1,3}$/.test(v.trim()) ? +v : null);   // the page gives "34"
       const hs = g.homeSide ? score(g.homeSide.score) : null, as = g.awaySide ? score(g.awaySide.score) : null;
@@ -161,9 +163,14 @@ export function tableFrom(matches, names, before = null) {
       if (f > a) r.w++; else if (f === a) r.d++; else r.l++;
     }
   }
-  const order = [...t.values()].sort((x, y) => y.pts - x.pts || y.w - x.w || (y.pf - y.pa) - (x.pf - x.pa) || y.pf - x.pf || (x.name < y.name ? -1 : 1));
-  order.forEach((r, i) => { r.pos = i + 1; });
+  rankRows([...t.values()]);
   return t;
+}
+/* Places rows (each { name, w, pf, pa, pts }) in a table's order, setting pos: points, then wins, then points difference, then points for. */
+export function rankRows(rows) {
+  const order = [...rows].sort((x, y) => y.pts - x.pts || y.w - x.w || (y.pf - y.pa) - (x.pf - x.pa) || y.pf - x.pf || (x.name < y.name ? -1 : 1));
+  order.forEach((r, i) => { r.pos = i + 1; });
+  return rows;
 }
 
 /* ---------- the owner's rules ---------- */
@@ -233,8 +240,10 @@ export function entryProblems(e, kind, known, today) {
   if (!(e.opp === null || (typeof e.opp === 'string' && ID.test(e.opp) && known.has(e.opp)))) p.push(`opp ${e.opp}`);
   if (!plain(e.oppName, 40)) p.push('oppName');
   if (!plain(e.comp, 60)) p.push('comp');
+  else if (/\bfriendl/i.test(e.comp)) p.push(`comp ${e.comp}: a friendly never counts`);
   const table = ['p', 'w', 'd', 'l', 'pts'].filter(k => k in e);
   if (kind === 'clubs') {
+    if (today && realDay(e.date) && e.date < addDays(today, -CLUB_DAYS)) p.push(`date ${e.date} is more than ${CLUB_DAYS} days before ${today}`);
     if ('league' in e || 'pos' in e || 'of' in e) {
       if (!plain(e.league, 60) || !int(e.pos, 1, 24) || !int(e.of, 2, 24) || e.pos > e.of) p.push(`league ${e.league} ${e.pos}/${e.of}`);
     }
@@ -293,22 +302,28 @@ export function validate(file, ids) {
   return p;
 }
 /* Run-level refusals: the last file (or null) against this one, and each league's table against its last snapshot.
-   shrink: leagues allowed a fall in games played this week (a club withdrawn, its results expunged: tools/results/overrides.json). */
+   shrink: leagues allowed a fall in games played this week (a club withdrawn, its results expunged: tools/results/overrides.json).
+   tables: [{ league, now, was, days }], days the snapshot's age (a week when not given): a club may have played one more game a week since,
+   so a snapshot left standing while pull requests were closed is no reason to refuse. A club's entry in the last file that has since aged
+   past CLUB_DAYS is not counted against this one (it leaves on its own date, not because a source broke). */
 export function runProblems(next, prev, tables = [], shrink = []) {
   const p = [];
   if (prev && prev.clubs && typeof prev.clubs === 'object') {
+    const today = realTime(next.generated) ? ukDate(next.generated) : null;
+    const live = (kind, e) => kind !== 'clubs' || !today || !e || !realDay(e.date) || e.date >= addDays(today, -CLUB_DAYS);
     for (const kind of ['clubs', 'men', 'women']) {
-      const was = Object.keys(prev[kind] || {}).length, now = Object.keys(next[kind] || {}).length;
+      const was = Object.entries(prev[kind] || {}).filter(([, e]) => live(kind, e)).length, now = Object.keys(next[kind] || {}).length;
       if (was >= 10 && now < Math.ceil(MIN_SHARE*was)) p.push(`${kind}: ${now} entries, under 90% of the last file's ${was}`);
     }
     if (realTime(prev.generated) && realTime(next.generated) && prev.generated > next.generated) p.push(`generated ${next.generated} is older than the last file's ${prev.generated}`);
   }
-  for (const { league, now, was } of tables) {
+  for (const { league, now, was, days = 7 } of tables) {
     if (!was || shrink.includes(league)) continue;
+    const most = Math.ceil(Math.max(days, 1)/7) + 2;   // 3 for a week's snapshot, one more for each week it has stood
     const back = now.filter(r => { const o = was.find(x => x.name === r.name); return o && Number.isInteger(o.p) && Number.isInteger(r.p) && r.p < o.p; });
     if (back.length > 1) p.push(`${league}: games played went backwards for ${back.map(r => r.name).join(', ')}`);
-    const jump = now.filter(r => { const o = was.find(x => x.name === r.name); return o && Number.isInteger(o.p) && Number.isInteger(r.p) && r.p - o.p > 3; });
-    if (jump.length > 1) p.push(`${league}: games played jumped by more than 3 for ${jump.map(r => r.name).join(', ')}`);
+    const jump = now.filter(r => { const o = was.find(x => x.name === r.name); return o && Number.isInteger(o.p) && Number.isInteger(r.p) && r.p - o.p > most; });
+    if (jump.length > 1) p.push(`${league}: games played jumped by more than ${most} for ${jump.map(r => r.name).join(', ')}`);
   }
   return p;
 }
@@ -339,4 +354,12 @@ export function wikiTable(html) {
     out.push({ pos:num('pos'), name, p:num('p'), w:num('w'), d:num('d'), l:num('l'), pf:num('pf'), pa:num('pa'), pts:num('pts') });
   }
   return out;
+}
+/* The date a Wikipedia season page's own table is updated to ("Updated to match(es) played on 8 November 2026", under the table), or null. */
+export function wikiUpdated(html) {
+  const s = String(html), i = s.search(/id="(League_table|Table|Standings)"/);
+  if (i < 0) return null;
+  const j = s.indexOf('<h2', i + 10), seg = s.slice(i, j < 0 ? undefined : j).replace(/<[^>]*>/g, ' ');
+  const m = seg.match(/Updated to (?:match(?:\(es\)|es)? played on )?(\d{1,2}\s+[A-Za-z]+\s+\d{4})/);
+  return m ? wikiDay(m[1]) : null;
 }

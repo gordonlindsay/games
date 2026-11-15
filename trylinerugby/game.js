@@ -1401,7 +1401,7 @@ function resultsEntry(e, kind, day) {
   }
   for (const [x, y, hi] of [['prePos', 'oppPos', 24], ['rank', 'oppRank', 120]]) {
     if (!has(x) && !has(y)) continue;
-    if (!realWhole(e[x], 1, hi) || !realWhole(e[y], 1, hi)) return null;
+    if (!realWhole(e[x], 1, hi) || !realWhole(e[y], 1, hi) || e[x] === e[y]) return null;   // two sides never share a place or a ranking
     out[x] = e[x]; out[y] = e[y];
   }
   const why = typeof e.why === 'string' && Object.prototype.hasOwnProperty.call(REAL_WHY, e.why) ? REAL_WHY[e.why] : null;
@@ -12560,8 +12560,8 @@ function homeFit() {
   for (let lvl = 1; lvl <= 6 && over(lvl - 1); lvl++) box.dataset.fit = String(lvl);
   let px = parseFloat(getComputedStyle(name).fontSize) || 30;
   while (name.scrollWidth > name.clientWidth + 0.5 && px > 16) { px -= 1; name.style.fontSize = px + 'px'; }
-  const rr = box.querySelector('.rr-line');   // real results: a long opponent (v United Services, Portsmouth) steps the result line down, to 14px at the least, before its end goes
-  if (rr && rr.style) { rr.style.fontSize = ''; for (let n = parseFloat(getComputedStyle(rr).fontSize) || 20; cut(rr) && n > 14; ) { n -= 1; rr.style.fontSize = n + 'px'; } }
+  const rr = box.querySelector('.rr-line');   // real results: a long opponent (v United Services, Portsmouth) steps the result line down, to 13px (the floor) at the least, before its end goes
+  if (rr && rr.style) { rr.style.fontSize = ''; for (let n = parseFloat(getComputedStyle(rr).fontSize) || 20; cut(rr) && n > 13; ) { n -= 1; rr.style.fontSize = n + 'px'; } }
   if (!strip.hidden) {
     delete strip.dataset.fit;
     const list = $('tc-list');

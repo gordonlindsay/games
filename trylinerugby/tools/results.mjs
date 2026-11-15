@@ -5,8 +5,8 @@
 // node tools/results.mjs
 import fs from 'node:fs';
 import * as L from './results/lib.mjs';
-import { robotsRules, robotsAllows, cacheKey, Fetcher, GAP_MS } from './results/fetch.mjs';
-import { pitcheroLeague, wikiLeague, nationEntries } from './results/update.mjs';
+import { robotsRules, robotsAllows, cacheKey, Fetcher, GAP_MS, GIVE_UP, MAX_HOPS } from './results/fetch.mjs';
+import { pitcheroLeague, wikiLeague, nationEntries, baselineOf, roundEve } from './results/update.mjs';
 import { gameTeams } from './results/teams.mjs';
 
 let passed = 0, failed = 0;
@@ -34,6 +34,14 @@ eq([last.date, last.ha, last.opp, last.f, last.a, last.league], ['2026-11-14', '
 ok(farFx.some(g => g.off && g.friendly), 'a postponed pre-season friendly is off and a friendly');
 ok(farFx.filter(g => g.friendly).every(g => !g.league), 'friendlies are never league matches');
 eq(farFx.find(g => g.date === '2026-09-12' && g.league).f, null, 'a league fixture with no result has no score');
+{ // a friendly Pitchero types "Cup" (Gordano v Bath University, 14 Nov) is still a friendly: never a result, never the next fixture
+  const raw = nd('pitchero-farnham-fixtures-2026-11-15.html'), fxs = raw.props.initialReduxState.teams.fixtures;
+  const [tid, map] = Object.entries(fxs.fixtures)[0], g = Object.values(map).find(x => x && x.dateTime && x.dateTime.startsWith('2026-11-21'));
+  const cupFriendly = JSON.parse(JSON.stringify(raw)), cg = Object.values(cupFriendly.props.initialReduxState.teams.fixtures.fixtures[tid]).find(x => x && x.id === g.id);
+  Object.assign(cg, { competitionId:'f', type:'Cup', division:null });
+  const got = L.pitcheroFixtures(cupFriendly).find(x => x.id === String(g.id));
+  eq([got.friendly, got.cup, got.league], [true, false, false], 'a fixture in the Friendlies competition typed Cup is a friendly, not a cup match');
+}
 eq(L.firstXV({ teams:[{ id:1, name:'Colts', section:'Juniors' }, { id:2, name:"Men's 1st XV", section:'Senior' }, { id:3, name:'1st XV Ladies', section:'Women' }] }).id, 2, 'the men\'s 1st XV, never the ladies\' or the colts');
 
 // 2. a Pitchero league: own pages, an opponent's page, the change in a table line, places before the match
@@ -61,6 +69,34 @@ const noSnapOld = pitcheroLeague('Regional 1 South Central', now.rows, null, { F
 ok(!noSnapOld.entries.SEO && !noSnapOld.entries.WIM, 'and nothing older than the latest round any page shows, which a club may have played since');
 const quietWeek = pitcheroLeague('Regional 1 South Central', now.rows, { at:'2026-11-15T12:00:00Z', rows:now.rows }, { Farnham:farFx }, here, idOf, '2026-11-15');
 eq([quietWeek.entries.OAE && quietWeek.entries.OAE.f, quietWeek.entries.OAE && quietWeek.entries.OAE.prePos], [34, undefined], 'a table unchanged since the match: the opponent\'s page stands, with no places before (that table is after it)');
+// a club's own page left behind years ago (13 clubs' pages stopped between 2018 and 2025) is read as no page
+const ages = (list, years) => list.map(g => ({ ...g, date:String(+g.date.slice(0, 4) - years) + g.date.slice(4) }));
+const stale = pitcheroLeague('Regional 1 South Central', now.rows, { at:'2026-11-14T11:09:22Z', rows:was.rows }, { ...pages, Wimbledon:ages(wimPage, 6) }, here, idOf, '2026-11-15');
+eq([stale.entries.WIM && stale.entries.WIM.date, stale.entries.WIM && stale.entries.WIM.f, stale.entries.WIM && stale.entries.WIM.opp], ['2026-11-14', 33, 'BRC'], 'a page that lists nothing this season: the result comes from an opponent\'s page instead');
+ok(stale.notes.some(n => /Wimbledon's own page lists nothing this season/.test(n)), 'and the run says so');
+const lagging = pitcheroLeague('Regional 1 South Central', now.rows, { at:'2026-11-14T11:09:22Z', rows:was.rows }, { Farnham:farFx.filter(g => g.date < '2026-11-14'), Bracknell:pages.Bracknell }, here, idOf, '2026-11-15');
+eq([lagging.entries.FAR && lagging.entries.FAR.date, lagging.entries.FAR && lagging.entries.FAR.f, lagging.entries.FAR && lagging.entries.FAR.a], ['2026-11-14', 38, 34], 'an own page with nothing since last week while its table line has a game more: read from the table line, not the page\'s older result');
+const noneHere = pitcheroLeague('Regional 1 South Central', now.rows, { at:'2026-11-14T11:09:22Z', rows:was.rows }, { Wimbledon:ages(wimPage, 6) }, [['WIM', 'Wimbledon']], idOf, '2026-11-15');
+ok(!noneHere.entries.WIM || noneHere.entries.WIM.date >= '2026-07-01', 'never a result from an earlier season as a club\'s latest');
+// the baseline: a Monday run after Sunday's pull request was merged still reads against last week's table, not the same weekend's
+eq([roundEve('2026-11-15'), roundEve('2026-11-16'), roundEve('2026-11-14'), roundEve('2026-11-13'), roundEve('2026-11-18')], ['2026-11-13', '2026-11-13', '2026-11-13', '2026-11-06', '2026-11-13'], 'the eve of the weekend\'s round: the Friday before');
+const sunday = { at:'2026-11-15T22:20:00Z', tableId:190924, rows:now.rows, prev:{ at:'2026-11-14T11:09:22Z', rows:was.rows } };
+eq(baselineOf(sunday, '2026-11-16', '2026-27', 190924).at, '2026-11-14T11:09:22Z', 'Monday, after the Sunday file was merged: last week\'s table');
+eq(baselineOf({ at:'2026-11-14T11:09:22Z', rows:was.rows }, '2026-11-16', '2026-27', 190924).at, '2026-11-14T11:09:22Z', 'Monday, the Sunday file unmerged: last week\'s table, as before');
+eq(baselineOf(sunday, '2026-11-22', '2026-27', 190924).at, '2026-11-15T22:20:00Z', 'the next Sunday: the last run\'s table');
+const monday = pitcheroLeague('Regional 1 South Central', now.rows, baselineOf(sunday, '2026-11-16', '2026-27', 190924), pages, here, idOf, '2026-11-16');
+eq([monday.entries.FAR.prePos, monday.entries.FAR.oppPos, monday.entries.FAR.boost], [6, 8, 1], 'so Monday\'s places before the match are Sunday\'s');
+{ // the review's case: 6th beats 3rd, read on Monday after the Sunday file was merged, keeps its +2
+  const row = (rank, name, p, pf, pa, hf, af, pts) => ({ rank, name, p, w:p - 1, d:0, l:1, pf, pa, hf, af, pts });
+  const nowT = [row(1, 'C', 7, 200, 100, 120, 80, 28), row(2, 'B', 7, 150, 100, 80, 70, 24), row(5, 'A', 7, 140, 120, 80, 60, 20)];
+  const weekAgo = { at:'2026-11-08T22:20:00Z', rows:[row(1, 'C', 6, 180, 90, 100, 80, 24), row(3, 'B', 6, 140, 80, 70, 70, 24), row(6, 'A', 6, 120, 110, 60, 60, 16)] };
+  const kept = { at:'2026-11-15T22:20:00Z', rows:nowT, prev:weekAgo };
+  const pg = { A:[{ date:'2026-11-14', ha:'h', f:20, a:10, opp:'B', league:true }, { date:'2026-11-21', ha:'a', f:null, a:null, opp:'C', league:true }] };
+  const e = pitcheroLeague('T', nowT, baselineOf(kept, '2026-11-16', '2026-27'), pg, [['AAA', 'A']], () => null, '2026-11-16').entries.AAA;
+  eq([e.why, e.boost, e.prePos, e.oppPos], ['higher', 2, 6, 3], 'a win over a side placed higher stays +2 on the Monday run');
+}
+eq(baselineOf({ at:'2026-05-02T22:20:00Z', rows:was.rows }, '2026-09-06', '2026-27', 190924), null, 'last season\'s table is no baseline for this one');
+eq(baselineOf({ at:'2026-11-14T11:09:22Z', tableId:1, rows:was.rows }, '2026-11-16', '2026-27', 190924), null, 'nor is another table\'s');
 
 // 3. Wikipedia
 const wl = fx('wikipedia-national-league-1-2026-11-15.html');
@@ -74,6 +110,16 @@ const V = { 'Bishops Stortford':"Bishop's Stortford", Sale:'Sale FC' };
 const NL1 = wikiLeague('National League 1', wl, V, [['RAM', 'Rams'], ['CAM', 'Cambridge']], () => null, '2026-11-15');
 eq([NL1.entries.RAM.res, NL1.entries.RAM.f, NL1.entries.RAM.a, NL1.entries.RAM.prePos, NL1.entries.RAM.oppPos, NL1.entries.RAM.boost, NL1.entries.RAM.why], ['W', 35, 31, 12, 2, 2, 'higher'], 'Rams, 12th, beat 2nd placed Camborne by 4: +2');
 eq([NL1.entries.CAM.p, NL1.entries.CAM.pos, NL1.entries.CAM.pts, NL1.entries.CAM.until], [10, 14, 7, '2026-11-20'], 'the table built from the results; no next fixture listed, so 6 days');
+// a page that lists only some rounds: its own table is updated to 7 Nov, and the 14 Nov round it lists is added to it
+const e2 = fx('wikipedia-national-league-2-east-2026-11-15.html'), V2 = { Guernsey:'Guernsey Raiders' };
+eq(L.wikiUpdated(e2), '2026-11-07', 'the date the page\'s table is updated to');
+eq(L.wikiUpdated(wl), null, 'none on a page that does not say');
+const E2 = wikiLeague('National League 2 East', e2, V2, [['DOR', 'Dorking'], ['WPA', 'Westcombe Park'], ['LLI', 'Leicester Lions']], () => null, '2026-11-15');
+eq([E2.entries.DOR.p, E2.entries.DOR.pts, E2.entries.DOR.pos, E2.entries.DOR.boost], [10, 37, 4, 2], 'Dorking\'s line after its 36-19 bonus point win on 14 Nov: P10, 37 points, not the page\'s P9 and 32');
+eq([E2.entries.WPA.prePos, E2.entries.WPA.oppPos, E2.entries.WPA.boost, E2.entries.WPA.why], [14, 12, 2, 'higher'], 'Westcombe Park, 14th, beat Leicester Lions, 12th, 36-35: +2, the places from the page\'s table before the round');
+ok(E2.entries.LLI.p === 10 && E2.entries.LLI.l >= 1, 'the loser\'s line counts the match too');
+const e2Undated = wikiLeague('National League 2 East', e2.replace(/Updated to match\(es\) played on [^<]*/, ''), V2, [['DOR', 'Dorking']], () => null, '2026-11-15');
+eq([e2Undated.entries.DOR.f, 'league' in e2Undated.entries.DOR, 'prePos' in e2Undated.entries.DOR], [36, false, false], 'with no date under its table: the result, but no line and no places (the table could be from before it)');
 const noVariant = wikiLeague('National League 1', wl, {}, [['RAM', 'Rams']], () => null, '2026-11-15');
 ok(noVariant.refused && !Object.keys(noVariant.entries).length, 'a name the table does not hold, with no variant, refuses the league');
 const t = L.tableFrom([{ date:'2026-09-05', home:'A', away:'B', hs:20, as:18, hbp:0, abp:1 }, { date:'2026-09-12', home:'B', away:'C', hs:40, as:0, hbp:1, abp:0 }], ['A', 'B', 'C']);
@@ -89,6 +135,8 @@ const rw = JSON.parse(fx('worldrugby-rankings-wru.json')), mw = JSON.parse(fx('w
 const W = nationEntries('wru', rw, mw, ['ENG', 'CDN', 'NZL', 'FRA'], '2026-11-15', Date.parse('2026-11-15T20:00:00Z'));
 ok(W.entries.CDN && !W.entries.CAN, 'the feed\'s Canada is the game\'s CDN, never CAN (Canberra)');
 ok(Object.values(W.entries).every(e => e.comp === 'Test' && e.src === 'worldrugby'), 'women\'s Tests only, never a club match in the same feed');
+const U = nationEntries('wru', rw, mw, ['USA', 'ENG'], '2026-10-31', Date.parse('2026-10-31T20:00:00Z'));
+eq([U.entries.USA && U.entries.USA.ha, U.entries.ENG && U.entries.ENG.ha], ['h', 'a'], 'USA at home in the United States, England away there (the feed\'s venue is "United States", its team "USA")');
 
 // 5. the owner's rules
 const B = (o) => { const b = L.boostOf(o); return [b.boost, b.why]; };
@@ -156,6 +204,11 @@ bent(['clubs', 'FAR', 'rank'], 3, 'a ranking on a club');
 bent(['men', 'ENG', 'pos'], 3, 'a table on a nation');
 bent(['clubs', 'FAR', 'oppPos'], 5, 'higher placed opponent given +1');
 bent(['men', 'ENG', 'oppRank'], 5, 'two sides on one ranking');
+bent(['clubs', 'FAR', 'comp'], 'Friendlies', 'a friendly');
+const oldGood = JSON.parse(JSON.stringify(good)); Object.assign(oldGood.clubs.FAR, { date:'2019-04-13', from:'2019-04-14', until:'2019-04-19', next:'2019-04-20' });
+ok(L.validate(oldGood, G.ids).some(p => /FAR: date 2019-04-13 is more than 60 days/.test(p)), 'refused: a club\'s result from a page left behind years ago');
+const nationOld = JSON.parse(JSON.stringify(good)); Object.assign(nationOld.men.ENG, { date:'2026-03-14', from:'2026-03-15', until:'2026-03-21' }); delete nationOld.men.ENG.next;
+eq(L.validate(nationOld, G.ids), [], 'a nation\'s last Test may be months back (no Tests between windows)');
 const wo = { ...F, f:28, a:0, res:'W', wo:true, boost:0, why:'none' };
 eq(L.validate({ ...good, clubs:{ FAR:wo } }, G.ids), [], 'a walkover: Won, no boost');
 eq(L.validate({ ...good, clubs:{ FAR:{ ...wo, boost:1, why:'win' } } }, G.ids).length > 0, true, 'a walkover with a boost is refused');
@@ -171,6 +224,11 @@ ok(L.runProblems({}, null, [{ league:'X', now:back, was:now.rows }]).length === 
 eq(L.runProblems({}, null, [{ league:'X', now:back, was:now.rows }], ['X']), [], 'unless overrides.json lets that league shrink (a club withdrawn)');
 const one = now.rows.map(r => ({ ...r })); one[0].p -= 1;
 eq(L.runProblems({}, null, [{ league:'X', now:one, was:now.rows }]), [], 'one club going back (a result struck off) is allowed');
+const jumpy = now.rows.map(r => ({ ...r, p:r.p + 4 }));
+ok(L.runProblems({}, null, [{ league:'X', now:jumpy, was:now.rows, days:7 }]).length === 1, 'games played up by 4 in a week for every club is refused');
+eq(L.runProblems({}, null, [{ league:'X', now:jumpy, was:now.rows, days:28 }]), [], 'but not against a snapshot four weeks old (pull requests closed since): the limit grows a game a week');
+const ageing = { generated:'2026-11-15T22:17:00Z', clubs:many(85), men:{}, women:{} }, prevAged = { generated:'2026-11-08T22:17:00Z', clubs:{ ...many(85), ...Object.fromEntries(G.clubs.slice(85, 100).map(c => [c.id, { ...F, date:'2026-09-05' }])) }, men:{}, women:{} };
+eq(L.runProblems(ageing, prevAged), [], 'entries that aged past 60 days are not counted as lost');
 ok(L.runProblems({ generated:'2026-11-08T22:17:00Z', clubs:{}, men:{}, women:{} }, { generated:'2026-11-15T22:17:00Z', clubs:{}, men:{}, women:{} }).length === 1, 'an older run than the file held is refused');
 
 // 8. polite fetching
@@ -190,6 +248,25 @@ let refused = false; try { await fe.get('https://www.example.com/x'); } catch (e
 ok(refused, 'a host the job does not read is refused before any request');
 eq((await fe.get('https://www.pitchero.com/clubs/farnham')).status, 0, 'offline: nothing fetched');
 eq(fe.requests, 0, 'no request made');
+fs.mkdirSync(tmp + '/old', { recursive:true });
+fs.writeFileSync(tmp + '/old/' + cacheKey('https://www.pitchero.com/clubs/farnham') + '.meta', JSON.stringify({ url:'x', status:200, fetched:'2026-11-01T10:00:00Z' }));
+fs.writeFileSync(tmp + '/old/' + cacheKey('https://www.pitchero.com/clubs/farnham') + '.html', 'kept');
+eq((await new Fetcher({ dir:tmp + '/old', offline:true }).get('https://www.pitchero.com/clubs/farnham')).body, 'kept', 'offline, the cache is read at any age (a week re-run from it)');
+{ // a host that stops answering is given up after GIVE_UP failures in a row; nothing is fetched after the deadline; redirects stop at MAX_HOPS
+  const fake = (answers, opts = {}) => { const f = new Fetcher({ dir:tmp + '/f' + Math.random().toString(36).slice(2), ...opts }); f.robots.set('www.pitchero.com', { rules:[], delay:0 }); f.pace = async () => {}; f.raw = async u => { f.requests++; return answers(u); }; return f; };
+  const down = fake(() => ({ status:0, body:'', error:'ETIMEDOUT' }));
+  const realSleep = global.setTimeout; global.setTimeout = (fn) => realSleep(fn, 0);
+  try {
+    for (let i = 0; i < 4; i++) await down.get('https://www.pitchero.com/clubs/a' + i);
+    eq([down.requests, [...down.dead]], [GIVE_UP, ['www.pitchero.com']], `a host that fails ${GIVE_UP} times in a row is given up for the run`);
+    const late = fake(() => ({ status:200, body:'x' }), { deadline:Date.now() - 1 });
+    eq([(await late.get('https://www.pitchero.com/clubs/b')).status, late.late, late.requests], [0, true, 0], 'nothing is fetched after the run\'s deadline');
+    let n = 0;
+    const loop = fake(u => ({ status:301, body:'', location:'https://www.pitchero.com/clubs/r' + (++n) }));
+    await loop.get('https://www.pitchero.com/clubs/r0');
+    ok(loop.requests === MAX_HOPS + 1, `redirects are followed ${MAX_HOPS} times at most (${loop.requests} requests)`);
+  } finally { global.setTimeout = realSleep; }
+}
 fs.rmSync(tmp, { recursive:true, force:true });
 
 // 9. the fixtures carry no person
@@ -247,6 +324,8 @@ ok(/branch="results\/\$week"/.test(wf) && /case "\$branch" in results\/20/.test(
 ok(!/\bmain\b.*git push|git push[^\n]*\bmain\b|HEAD:main|refs\/heads\/main/.test(wf), 'never pushes to main');
 ok(!/secrets\.(?!GITHUB_TOKEN)/.test(wf) && /github\.token/.test(wf), 'no secret but the run\'s own token');
 ok(/ref: main/.test(wf), 'it builds on main');
+ok(/if: always\(\)\n\s+run: if \[ -f "\$RUNNER_TEMP\/summary\.md" \]; then cat "\$RUNNER_TEMP\/summary\.md" >> "\$GITHUB_STEP_SUMMARY"/.test(wf), 'a refused run still shows its summary, with why');
+ok(/gh pr close "\$old"/.test(wf) && /startswith\(\\"results\/\\"\)/.test(wf) && /headRefName != \\"\$branch\\"/.test(wf), 'an earlier week\'s pull request still open is closed, never this week\'s');
 
 console.log(`${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

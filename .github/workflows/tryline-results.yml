@@ -30,6 +30,9 @@ jobs:
           node-version: 22
       - name: Gather the week's results (writes nothing unless every check passes)
         run: node tools/results/update.mjs --cache "$RUNNER_TEMP/results-cache" --summary "$RUNNER_TEMP/summary.md"
+      - name: The run's summary, refused or not
+        if: always()
+        run: if [ -f "$RUNNER_TEMP/summary.md" ]; then cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Open or update the week's pull request, if anything changed
         env:
           GH_TOKEN: ${{ github.token }}
@@ -52,4 +55,9 @@ jobs:
             gh pr edit "$number" --title "$title" --body-file "$RUNNER_TEMP/body.md"
           else
             gh pr create --base main --head "$branch" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+            number=$(gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number // empty')
           fi
+          # an earlier week's pull request left open is out of date: close it, so an older week is never merged over this one
+          for old in $(gh pr list --base main --state open --json number,headRefName --jq ".[] | select(.headRefName | startswith(\"results/\")) | select(.headRefName != \"$branch\") | .number"); do
+            gh pr close "$old" --comment "Replaced by #$number, the week of $week."
+          done

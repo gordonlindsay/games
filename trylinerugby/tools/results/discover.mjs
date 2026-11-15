@@ -57,7 +57,7 @@ const homes = new Map();   // folder -> club (a club home page)
 function scan(dir) {
   for (const f of fs.readdirSync(dir)) {
     if (!f.endsWith('.html') || !f.startsWith('www.pitchero.com_clubs_')) continue;
-    const m = f.match(/^www\.pitchero\.com_clubs_(.+?)(?:_teams_(\d+)_league-table)?\.html$/);
+    const m = f.match(/^www\.pitchero\.com_clubs_([a-z0-9-]+)(?:_teams_(\d+)_league-table)?\.html$/i);   // a club's home or a 1st XV table, never its fixtures page
     if (!m) continue;
     const nd = nextData(fs.readFileSync(path.join(dir, f), 'utf8'));
     const club = pitcheroClub(nd);

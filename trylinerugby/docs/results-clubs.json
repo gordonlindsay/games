@@ -2102,10 +2102,10 @@
    "league": "Counties 2 Cumbria",
    "team": "Creighton",
    "was": "Counties 1 Cumbria",
-   "confidence": "name",
-   "source": "Pitchero 2026-27 Counties 2 Cumbria table (id 191149): row \"Creighton\", its row's link to creighton (1st XV 54308, \"1st team\")",
    "folder": "creighton",
-   "team1": 54308
+   "team1": 54308,
+   "confidence": "name",
+   "source": "Pitchero 2026-27 Counties 2 Cumbria table (id 191149): row \"Creighton\""
   },
   "CRW": {
    "name": "Crowborough",
@@ -3686,6 +3686,14 @@
    "was": "Premiership",
    "confidence": "alias",
    "source": "Wikipedia 2026–27 Premiership Rugby: its table's \"Northampton Saints\""
+  },
+  "NUI": {
+   "name": "Nottingham Uni",
+   "league": "Regional 2 Midlands North",
+   "team": "University of Nottingham XV",
+   "was": "Counties 1 Midlands East (North)",
+   "confidence": "alias",
+   "source": "Pitchero 2026-27 Regional 2 Midlands North table (id 190952): row \"University of Nottingham XV\""
   },
   "NUN": {
    "name": "Nuneaton",
@@ -5320,11 +5328,6 @@
    "id": "THR",
    "name": "Telford Hornets",
    "was": "Counties 1 Midlands West (North)"
-  },
-  {
-   "id": "NUI",
-   "name": "Nottingham Uni",
-   "was": "Counties 1 Midlands East (North)"
   },
   {
    "id": "KEE",

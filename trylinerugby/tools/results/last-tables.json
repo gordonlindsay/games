@@ -3,6 +3,7 @@
  "leagues": {
   "Counties 1 Cumbria": {
    "at": "2026-11-15T12:19:54.984Z",
+   "tableId": 192786,
    "rows": [
     {
      "rank": 1,
@@ -108,10 +109,120 @@
      "hf": 61,
      "af": 46
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:59:07Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Aspatria",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 186,
+      "pa": 83,
+      "pts": 21,
+      "hf": 141,
+      "af": 45
+     },
+     {
+      "rank": 2,
+      "name": "Whitehaven",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 155,
+      "pa": 143,
+      "pts": 20,
+      "hf": 91,
+      "af": 64
+     },
+     {
+      "rank": 3,
+      "name": "Carlisle",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 258,
+      "pa": 79,
+      "pts": 16,
+      "hf": 209,
+      "af": 49
+     },
+     {
+      "rank": 4,
+      "name": "Wigton",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 171,
+      "pa": 159,
+      "pts": 12,
+      "hf": 54,
+      "af": 117
+     },
+     {
+      "rank": 5,
+      "name": "Hawcoat Park",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 137,
+      "pa": 153,
+      "pts": 12,
+      "hf": 95,
+      "af": 42
+     },
+     {
+      "rank": 6,
+      "name": "St Benedicts",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 114,
+      "pa": 150,
+      "pts": 8,
+      "hf": 32,
+      "af": 82
+     },
+     {
+      "rank": 7,
+      "name": "Cockermouth",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 112,
+      "pa": 232,
+      "pts": 4,
+      "hf": 21,
+      "af": 91
+     },
+     {
+      "rank": 8,
+      "name": "Egremont",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 90,
+      "pa": 224,
+      "pts": 4,
+      "hf": 61,
+      "af": 29
+     }
+    ]
+   }
   },
   "Counties 1 Eastern Counties": {
    "at": "2026-11-15T12:20:41.690Z",
+   "tableId": 190883,
    "rows": [
     {
      "rank": 1,
@@ -269,10 +380,172 @@
      "hf": 53,
      "af": 38
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:17:33Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Saffron Walden",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 274,
+      "pa": 43,
+      "pts": 24,
+      "hf": 103,
+      "af": 171
+     },
+     {
+      "rank": 2,
+      "name": "Norwich",
+      "p": 5,
+      "w": 4,
+      "d": 0,
+      "l": 1,
+      "pf": 218,
+      "pa": 139,
+      "pts": 16,
+      "hf": 83,
+      "af": 135
+     },
+     {
+      "rank": 3,
+      "name": "Newmarket",
+      "p": 6,
+      "w": 3,
+      "d": 1,
+      "l": 2,
+      "pf": 154,
+      "pa": 126,
+      "pts": 14,
+      "hf": 122,
+      "af": 32
+     },
+     {
+      "rank": 4,
+      "name": "Stowmarket",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 233,
+      "pa": 172,
+      "pts": 12,
+      "hf": 137,
+      "af": 96
+     },
+     {
+      "rank": 5,
+      "name": "Colchester II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 210,
+      "pa": 196,
+      "pts": 12,
+      "hf": 138,
+      "af": 72
+     },
+     {
+      "rank": 6,
+      "name": "Southwold",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 151,
+      "pa": 148,
+      "pts": 12,
+      "hf": 47,
+      "af": 104
+     },
+     {
+      "rank": 7,
+      "name": "Cantabrigian",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 139,
+      "pa": 158,
+      "pts": 12,
+      "hf": 60,
+      "af": 79
+     },
+     {
+      "rank": 8,
+      "name": "West Norfolk",
+      "p": 5,
+      "w": 3,
+      "d": 0,
+      "l": 2,
+      "pf": 125,
+      "pa": 174,
+      "pts": 12,
+      "hf": 68,
+      "af": 57
+     },
+     {
+      "rank": 9,
+      "name": "Ipswich",
+      "p": 6,
+      "w": 2,
+      "d": 1,
+      "l": 3,
+      "pf": 190,
+      "pa": 235,
+      "pts": 10,
+      "hf": 135,
+      "af": 55
+     },
+     {
+      "rank": 10,
+      "name": "Shelford II",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 166,
+      "pa": 228,
+      "pts": 8,
+      "hf": 104,
+      "af": 62
+     },
+     {
+      "rank": 11,
+      "name": "Holt",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 156,
+      "pa": 221,
+      "pts": 8,
+      "hf": 73,
+      "af": 83
+     },
+     {
+      "rank": 12,
+      "name": "Woodbridge",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 91,
+      "pa": 267,
+      "pts": 0,
+      "hf": 53,
+      "af": 38
+     }
+    ]
+   }
   },
   "Counties 1 Essex": {
    "at": "2026-11-15T12:21:06.677Z",
+   "tableId": 190884,
    "rows": [
     {
      "rank": 1,
@@ -430,10 +703,172 @@
      "hf": 0,
      "af": 24
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:46:02Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Eton Manor II",
+      "p": 5,
+      "w": 5,
+      "d": 0,
+      "l": 0,
+      "pf": 207,
+      "pa": 129,
+      "pts": 20,
+      "hf": 96,
+      "af": 111
+     },
+     {
+      "rank": 2,
+      "name": "Romford & Gidea Park",
+      "p": 4,
+      "w": 3,
+      "d": 0,
+      "l": 1,
+      "pf": 132,
+      "pa": 80,
+      "pts": 12,
+      "hf": 99,
+      "af": 33
+     },
+     {
+      "rank": 3,
+      "name": "Maldon",
+      "p": 3,
+      "w": 1,
+      "d": 0,
+      "l": 2,
+      "pf": 98,
+      "pa": 76,
+      "pts": 4,
+      "hf": 36,
+      "af": 62
+     },
+     {
+      "rank": 4,
+      "name": "Campion",
+      "p": 2,
+      "w": 1,
+      "d": 0,
+      "l": 1,
+      "pf": 63,
+      "pa": 50,
+      "pts": 4,
+      "hf": 22,
+      "af": 41
+     },
+     {
+      "rank": 5,
+      "name": "Epping Upper Clapton",
+      "p": 2,
+      "w": 1,
+      "d": 0,
+      "l": 1,
+      "pf": 57,
+      "pa": 64,
+      "pts": 4,
+      "hf": 0,
+      "af": 57
+     },
+     {
+      "rank": 6,
+      "name": "Southend II",
+      "p": 2,
+      "w": 1,
+      "d": 0,
+      "l": 1,
+      "pf": 46,
+      "pa": 61,
+      "pts": 4,
+      "hf": 34,
+      "af": 12
+     },
+     {
+      "rank": 7,
+      "name": "Stanford Le Hope",
+      "p": 2,
+      "w": 1,
+      "d": 0,
+      "l": 1,
+      "pf": 45,
+      "pa": 66,
+      "pts": 4,
+      "hf": 45,
+      "af": 0
+     },
+     {
+      "rank": 8,
+      "name": "Billericay",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 129,
+      "pa": 188,
+      "pts": 4,
+      "hf": 45,
+      "af": 84
+     },
+     {
+      "rank": 9,
+      "name": "East London",
+      "p": 0,
+      "w": 0,
+      "d": 0,
+      "l": 0,
+      "pf": 0,
+      "pa": 0,
+      "pts": 0,
+      "hf": 0,
+      "af": 0
+     },
+     {
+      "rank": 10,
+      "name": "Old Brentwoods",
+      "p": 0,
+      "w": 0,
+      "d": 0,
+      "l": 0,
+      "pf": 0,
+      "pa": 0,
+      "pts": 0,
+      "hf": 0,
+      "af": 0
+     },
+     {
+      "rank": 11,
+      "name": "Burnham-on-Crouch",
+      "p": 1,
+      "w": 0,
+      "d": 0,
+      "l": 1,
+      "pf": 10,
+      "pa": 36,
+      "pts": 0,
+      "hf": 10,
+      "af": 0
+     },
+     {
+      "rank": 12,
+      "name": "Chingford",
+      "p": 1,
+      "w": 0,
+      "d": 0,
+      "l": 1,
+      "pf": 24,
+      "pa": 61,
+      "pts": 0,
+      "hf": 0,
+      "af": 24
+     }
+    ]
+   }
   },
   "Counties 1 Hampshire": {
    "at": "2026-11-15T12:21:31.358Z",
+   "tableId": 190885,
    "rows": [
     {
      "rank": 1,
@@ -604,10 +1039,185 @@
      "hf": 36,
      "af": 49
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T13:16:06Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Chichester",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 226,
+      "pa": 109,
+      "pts": 24,
+      "hf": 178,
+      "af": 48
+     },
+     {
+      "rank": 2,
+      "name": "Farnham II",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 266,
+      "pa": 136,
+      "pts": 20,
+      "hf": 188,
+      "af": 78
+     },
+     {
+      "rank": 3,
+      "name": "Basingstoke",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 226,
+      "pa": 130,
+      "pts": 20,
+      "hf": 82,
+      "af": 144
+     },
+     {
+      "rank": 4,
+      "name": "Pulborough",
+      "p": 5,
+      "w": 4,
+      "d": 0,
+      "l": 1,
+      "pf": 135,
+      "pa": 118,
+      "pts": 16,
+      "hf": 54,
+      "af": 81
+     },
+     {
+      "rank": 5,
+      "name": "Ellingham & Ringwood",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 181,
+      "pa": 156,
+      "pts": 12,
+      "hf": 131,
+      "af": 50
+     },
+     {
+      "rank": 6,
+      "name": "Bournemouth II",
+      "p": 5,
+      "w": 3,
+      "d": 0,
+      "l": 2,
+      "pf": 132,
+      "pa": 118,
+      "pts": 12,
+      "hf": 28,
+      "af": 104
+     },
+     {
+      "rank": 7,
+      "name": "Trojans",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 186,
+      "pa": 177,
+      "pts": 12,
+      "hf": 44,
+      "af": 142
+     },
+     {
+      "rank": 8,
+      "name": "Andover",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 170,
+      "pa": 176,
+      "pts": 12,
+      "hf": 62,
+      "af": 108
+     },
+     {
+      "rank": 9,
+      "name": "Sandown & Shanklin",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 127,
+      "pa": 145,
+      "pts": 4,
+      "hf": 41,
+      "af": 86
+     },
+     {
+      "rank": 10,
+      "name": "Portsmouth",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 142,
+      "pa": 212,
+      "pts": 4,
+      "hf": 89,
+      "af": 53
+     },
+     {
+      "rank": 11,
+      "name": "Ellingham & Ringwood II",
+      "p": 0,
+      "w": 0,
+      "d": 0,
+      "l": 0,
+      "pf": 0,
+      "pa": 0,
+      "pts": 0,
+      "hf": 0,
+      "af": 0
+     },
+     {
+      "rank": 12,
+      "name": "Millbrook",
+      "p": 5,
+      "w": 0,
+      "d": 0,
+      "l": 5,
+      "pf": 66,
+      "pa": 208,
+      "pts": 0,
+      "hf": 36,
+      "af": 30
+     },
+     {
+      "rank": 13,
+      "name": "Winchester II",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 99,
+      "pa": 271,
+      "pts": 0,
+      "hf": 65,
+      "af": 34
+     }
+    ]
+   }
   },
   "Counties 1 Herts": {
    "at": "2026-11-15T12:21:50.114Z",
+   "tableId": 190886,
    "rows": [
     {
      "rank": 1,
@@ -739,10 +1349,146 @@
      "hf": 93,
      "af": 43
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:48:02Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Hitchin",
+      "p": 5,
+      "w": 5,
+      "d": 0,
+      "l": 0,
+      "pf": 277,
+      "pa": 56,
+      "pts": 20,
+      "hf": 106,
+      "af": 171
+     },
+     {
+      "rank": 2,
+      "name": "Old Albanian II",
+      "p": 5,
+      "w": 5,
+      "d": 0,
+      "l": 0,
+      "pf": 292,
+      "pa": 106,
+      "pts": 20,
+      "hf": 190,
+      "af": 102
+     },
+     {
+      "rank": 3,
+      "name": "Royston",
+      "p": 5,
+      "w": 3,
+      "d": 0,
+      "l": 2,
+      "pf": 158,
+      "pa": 173,
+      "pts": 12,
+      "hf": 94,
+      "af": 64
+     },
+     {
+      "rank": 4,
+      "name": "Bishop's Stortford II",
+      "p": 5,
+      "w": 2,
+      "d": 0,
+      "l": 3,
+      "pf": 133,
+      "pa": 153,
+      "pts": 8,
+      "hf": 55,
+      "af": 78
+     },
+     {
+      "rank": 5,
+      "name": "Hertford II",
+      "p": 5,
+      "w": 2,
+      "d": 0,
+      "l": 3,
+      "pf": 148,
+      "pa": 170,
+      "pts": 8,
+      "hf": 77,
+      "af": 71
+     },
+     {
+      "rank": 6,
+      "name": "Hemel Hempstead",
+      "p": 5,
+      "w": 2,
+      "d": 0,
+      "l": 3,
+      "pf": 119,
+      "pa": 146,
+      "pts": 8,
+      "hf": 86,
+      "af": 33
+     },
+     {
+      "rank": 7,
+      "name": "Fullerians",
+      "p": 5,
+      "w": 2,
+      "d": 0,
+      "l": 3,
+      "pf": 139,
+      "pa": 185,
+      "pts": 8,
+      "hf": 81,
+      "af": 58
+     },
+     {
+      "rank": 8,
+      "name": "Welwyn",
+      "p": 5,
+      "w": 2,
+      "d": 0,
+      "l": 3,
+      "pf": 95,
+      "pa": 154,
+      "pts": 8,
+      "hf": 32,
+      "af": 63
+     },
+     {
+      "rank": 9,
+      "name": "Biggleswade",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 113,
+      "pa": 182,
+      "pts": 4,
+      "hf": 53,
+      "af": 60
+     },
+     {
+      "rank": 10,
+      "name": "Datchworth",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 93,
+      "pa": 242,
+      "pts": 4,
+      "hf": 50,
+      "af": 43
+     }
+    ]
+   }
   },
   "Counties 1 Kent": {
    "at": "2026-11-15T12:22:09.050Z",
+   "tableId": 190887,
    "rows": [
     {
      "rank": 1,
@@ -900,10 +1646,172 @@
      "hf": 67,
      "af": 27
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:49:20Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Heathfield & Waldron",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 231,
+      "pa": 95,
+      "pts": 20,
+      "hf": 155,
+      "af": 76
+     },
+     {
+      "rank": 2,
+      "name": "Sevenoaks II",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 229,
+      "pa": 111,
+      "pts": 20,
+      "hf": 53,
+      "af": 176
+     },
+     {
+      "rank": 3,
+      "name": "Tonbridge Juddians II",
+      "p": 6,
+      "w": 4,
+      "d": 1,
+      "l": 1,
+      "pf": 207,
+      "pa": 138,
+      "pts": 18,
+      "hf": 114,
+      "af": 93
+     },
+     {
+      "rank": 4,
+      "name": "Ashford",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 233,
+      "pa": 101,
+      "pts": 16,
+      "hf": 109,
+      "af": 124
+     },
+     {
+      "rank": 5,
+      "name": "Canterbury II",
+      "p": 6,
+      "w": 3,
+      "d": 1,
+      "l": 2,
+      "pf": 184,
+      "pa": 125,
+      "pts": 14,
+      "hf": 118,
+      "af": 66
+     },
+     {
+      "rank": 6,
+      "name": "Deal & Betteshanger",
+      "p": 6,
+      "w": 3,
+      "d": 1,
+      "l": 2,
+      "pf": 167,
+      "pa": 157,
+      "pts": 14,
+      "hf": 93,
+      "af": 74
+     },
+     {
+      "rank": 7,
+      "name": "Dover",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 121,
+      "pa": 121,
+      "pts": 12,
+      "hf": 70,
+      "af": 51
+     },
+     {
+      "rank": 8,
+      "name": "Crowborough",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 149,
+      "pa": 185,
+      "pts": 8,
+      "hf": 26,
+      "af": 123
+     },
+     {
+      "rank": 9,
+      "name": "Gillingham Anchorians",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 132,
+      "pa": 195,
+      "pts": 8,
+      "hf": 97,
+      "af": 35
+     },
+     {
+      "rank": 10,
+      "name": "Park House",
+      "p": 6,
+      "w": 1,
+      "d": 1,
+      "l": 4,
+      "pf": 87,
+      "pa": 236,
+      "pts": 6,
+      "hf": 50,
+      "af": 37
+     },
+     {
+      "rank": 11,
+      "name": "Thanet Wanderers",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 125,
+      "pa": 222,
+      "pts": 4,
+      "hf": 91,
+      "af": 34
+     },
+     {
+      "rank": 12,
+      "name": "Beccehamian",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 82,
+      "pa": 261,
+      "pts": 4,
+      "hf": 55,
+      "af": 27
+     }
+    ]
+   }
   },
   "Counties 1 Lancashire & Cheshire": {
    "at": "2026-11-15T12:22:27.954Z",
+   "tableId": 190955,
    "rows": [
     {
      "rank": 1,
@@ -1061,10 +1969,172 @@
      "hf": 72,
      "af": 17
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:00:12Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Didsbury Toc H",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 236,
+      "pa": 90,
+      "pts": 24,
+      "hf": 97,
+      "af": 139
+     },
+     {
+      "rank": 2,
+      "name": "New Brighton",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 259,
+      "pa": 198,
+      "pts": 24,
+      "hf": 187,
+      "af": 72
+     },
+     {
+      "rank": 3,
+      "name": "Aldwinians",
+      "p": 7,
+      "w": 5,
+      "d": 1,
+      "l": 1,
+      "pf": 250,
+      "pa": 156,
+      "pts": 22,
+      "hf": 174,
+      "af": 76
+     },
+     {
+      "rank": 4,
+      "name": "Eccles",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 283,
+      "pa": 109,
+      "pts": 20,
+      "hf": 144,
+      "af": 139
+     },
+     {
+      "rank": 5,
+      "name": "West Park (St Helens)",
+      "p": 7,
+      "w": 4,
+      "d": 1,
+      "l": 2,
+      "pf": 197,
+      "pa": 178,
+      "pts": 18,
+      "hf": 108,
+      "af": 89
+     },
+     {
+      "rank": 6,
+      "name": "Southport",
+      "p": 7,
+      "w": 3,
+      "d": 1,
+      "l": 3,
+      "pf": 201,
+      "pa": 189,
+      "pts": 14,
+      "hf": 141,
+      "af": 60
+     },
+     {
+      "rank": 7,
+      "name": "Bolton",
+      "p": 7,
+      "w": 3,
+      "d": 1,
+      "l": 3,
+      "pf": 172,
+      "pa": 196,
+      "pts": 14,
+      "hf": 42,
+      "af": 130
+     },
+     {
+      "rank": 8,
+      "name": "Wigan",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 167,
+      "pa": 287,
+      "pts": 12,
+      "hf": 81,
+      "af": 86
+     },
+     {
+      "rank": 9,
+      "name": "Broughton Park",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 179,
+      "pa": 242,
+      "pts": 8,
+      "hf": 56,
+      "af": 123
+     },
+     {
+      "rank": 10,
+      "name": "Altrincham Kersal",
+      "p": 7,
+      "w": 1,
+      "d": 1,
+      "l": 5,
+      "pf": 181,
+      "pa": 209,
+      "pts": 6,
+      "hf": 57,
+      "af": 124
+     },
+     {
+      "rank": 11,
+      "name": "Liverpool St Helens",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 119,
+      "pa": 270,
+      "pts": 4,
+      "hf": 60,
+      "af": 59
+     },
+     {
+      "rank": 12,
+      "name": "Tarleton",
+      "p": 7,
+      "w": 0,
+      "d": 1,
+      "l": 6,
+      "pf": 89,
+      "pa": 209,
+      "pts": 2,
+      "hf": 72,
+      "af": 17
+     }
+    ]
+   }
   },
   "Counties 1 Middx": {
    "at": "2026-11-15T12:18:45.274Z",
+   "tableId": 190888,
    "rows": [
     {
      "rank": 1,
@@ -1226,6 +2296,7 @@
   },
   "Counties 1 Midlands East (North)": {
    "at": "2026-11-15T12:22:59.459Z",
+   "tableId": 190931,
    "rows": [
     {
      "rank": 1,
@@ -1383,10 +2454,172 @@
      "hf": 90,
      "af": 21
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:38:21Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Southwell",
+      "p": 7,
+      "w": 6,
+      "d": 1,
+      "l": 0,
+      "pf": 261,
+      "pa": 76,
+      "pts": 27,
+      "hf": 83,
+      "af": 178
+     },
+     {
+      "rank": 2,
+      "name": "Newark",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 259,
+      "pa": 53,
+      "pts": 24,
+      "hf": 182,
+      "af": 77
+     },
+     {
+      "rank": 3,
+      "name": "Market Rasen & Louth",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 225,
+      "pa": 113,
+      "pts": 20,
+      "hf": 85,
+      "af": 140
+     },
+     {
+      "rank": 4,
+      "name": "Lincoln",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 190,
+      "pa": 91,
+      "pts": 17,
+      "hf": 143,
+      "af": 47
+     },
+     {
+      "rank": 5,
+      "name": "Loughborough University II",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 182,
+      "pa": 161,
+      "pts": 16,
+      "hf": 110,
+      "af": 72
+     },
+     {
+      "rank": 6,
+      "name": "Mansfield",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 167,
+      "pa": 186,
+      "pts": 12,
+      "hf": 53,
+      "af": 114
+     },
+     {
+      "rank": 7,
+      "name": "Bourne",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 122,
+      "pa": 157,
+      "pts": 12,
+      "hf": 47,
+      "af": 75
+     },
+     {
+      "rank": 8,
+      "name": "Spalding",
+      "p": 5,
+      "w": 2,
+      "d": 1,
+      "l": 2,
+      "pf": 123,
+      "pa": 104,
+      "pts": 10,
+      "hf": 78,
+      "af": 45
+     },
+     {
+      "rank": 9,
+      "name": "Belgrave",
+      "p": 6,
+      "w": 1,
+      "d": 1,
+      "l": 4,
+      "pf": 118,
+      "pa": 192,
+      "pts": 6,
+      "hf": 77,
+      "af": 41
+     },
+     {
+      "rank": 10,
+      "name": "Keyworth",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 96,
+      "pa": 238,
+      "pts": 4,
+      "hf": 48,
+      "af": 48
+     },
+     {
+      "rank": 11,
+      "name": "Syston II",
+      "p": 5,
+      "w": 0,
+      "d": 1,
+      "l": 4,
+      "pf": 69,
+      "pa": 229,
+      "pts": 2,
+      "hf": 48,
+      "af": 21
+     },
+     {
+      "rank": 12,
+      "name": "Mellish",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 39,
+      "pa": 251,
+      "pts": 0,
+      "hf": 24,
+      "af": 15
+     }
+    ]
+   }
   },
   "Counties 1 Midlands East (South)": {
    "at": "2026-11-15T12:23:36.295Z",
+   "tableId": 190932,
    "rows": [
     {
      "rank": 1,
@@ -1544,10 +2777,172 @@
      "hf": 0,
      "af": 68
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:20:38Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Newbold on Avon",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 302,
+      "pa": 129,
+      "pts": 24,
+      "hf": 184,
+      "af": 118
+     },
+     {
+      "rank": 2,
+      "name": "Oundle II",
+      "p": 5,
+      "w": 5,
+      "d": 0,
+      "l": 0,
+      "pf": 359,
+      "pa": 48,
+      "pts": 20,
+      "hf": 107,
+      "af": 252
+     },
+     {
+      "rank": 3,
+      "name": "Wellingborough",
+      "p": 6,
+      "w": 4,
+      "d": 1,
+      "l": 1,
+      "pf": 199,
+      "pa": 98,
+      "pts": 18,
+      "hf": 186,
+      "af": 13
+     },
+     {
+      "rank": 4,
+      "name": "Towcestrians",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 197,
+      "pa": 156,
+      "pts": 16,
+      "hf": 149,
+      "af": 48
+     },
+     {
+      "rank": 5,
+      "name": "Long Buckby",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 191,
+      "pa": 210,
+      "pts": 16,
+      "hf": 119,
+      "af": 72
+     },
+     {
+      "rank": 6,
+      "name": "Leighton Buzzard",
+      "p": 6,
+      "w": 3,
+      "d": 1,
+      "l": 2,
+      "pf": 165,
+      "pa": 150,
+      "pts": 14,
+      "hf": 45,
+      "af": 120
+     },
+     {
+      "rank": 7,
+      "name": "Vipers",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 157,
+      "pa": 167,
+      "pts": 12,
+      "hf": 119,
+      "af": 38
+     },
+     {
+      "rank": 8,
+      "name": "Bugbrooke",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 137,
+      "pa": 187,
+      "pts": 12,
+      "hf": 67,
+      "af": 70
+     },
+     {
+      "rank": 9,
+      "name": "Nuneaton Old Edwardians",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 137,
+      "pa": 189,
+      "pts": 8,
+      "hf": 99,
+      "af": 38
+     },
+     {
+      "rank": 10,
+      "name": "Daventry",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 101,
+      "pa": 104,
+      "pts": 4,
+      "hf": 37,
+      "af": 64
+     },
+     {
+      "rank": 11,
+      "name": "Market Bosworth",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 85,
+      "pa": 259,
+      "pts": 0,
+      "hf": 29,
+      "af": 56
+     },
+     {
+      "rank": 12,
+      "name": "Leicester Forest",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 33,
+      "pa": 366,
+      "pts": 0,
+      "hf": 0,
+      "af": 33
+     }
+    ]
+   }
   },
   "Counties 1 Midlands West (North)": {
    "at": "2026-11-15T12:24:08.785Z",
+   "tableId": 190933,
    "rows": [
     {
      "rank": 1,
@@ -1705,10 +3100,172 @@
      "hf": 58,
      "af": 60
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:36:51Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Shrewsbury",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 422,
+      "pa": 49,
+      "pts": 24,
+      "hf": 285,
+      "af": 137
+     },
+     {
+      "rank": 2,
+      "name": "Crewe & Nantwich",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 172,
+      "pa": 121,
+      "pts": 20,
+      "hf": 55,
+      "af": 117
+     },
+     {
+      "rank": 3,
+      "name": "Trentham",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 189,
+      "pa": 149,
+      "pts": 16,
+      "hf": 165,
+      "af": 24
+     },
+     {
+      "rank": 4,
+      "name": "Old Halesonians",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 158,
+      "pa": 162,
+      "pts": 16,
+      "hf": 109,
+      "af": 49
+     },
+     {
+      "rank": 5,
+      "name": "Veseyans",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 226,
+      "pa": 152,
+      "pts": 12,
+      "hf": 165,
+      "af": 61
+     },
+     {
+      "rank": 6,
+      "name": "Newport (Salop) II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 195,
+      "pa": 129,
+      "pts": 12,
+      "hf": 74,
+      "af": 121
+     },
+     {
+      "rank": 7,
+      "name": "Newcastle (Staffs)",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 152,
+      "pa": 207,
+      "pts": 12,
+      "hf": 40,
+      "af": 112
+     },
+     {
+      "rank": 8,
+      "name": "Aston Old Edwardians",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 100,
+      "pa": 165,
+      "pts": 12,
+      "hf": 48,
+      "af": 52
+     },
+     {
+      "rank": 9,
+      "name": "Spartans (Midlands)",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 110,
+      "pa": 242,
+      "pts": 8,
+      "hf": 91,
+      "af": 19
+     },
+     {
+      "rank": 10,
+      "name": "Burntwood",
+      "p": 6,
+      "w": 1,
+      "d": 1,
+      "l": 4,
+      "pf": 105,
+      "pa": 157,
+      "pts": 6,
+      "hf": 32,
+      "af": 73
+     },
+     {
+      "rank": 11,
+      "name": "Willenhall",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 119,
+      "pa": 229,
+      "pts": 4,
+      "hf": 103,
+      "af": 16
+     },
+     {
+      "rank": 12,
+      "name": "Stourbridge II",
+      "p": 6,
+      "w": 0,
+      "d": 1,
+      "l": 5,
+      "pf": 94,
+      "pa": 280,
+      "pts": 2,
+      "hf": 34,
+      "af": 60
+     }
+    ]
+   }
   },
   "Counties 1 Midlands West (South)": {
    "at": "2026-11-15T12:24:33.887Z",
+   "tableId": 190934,
    "rows": [
     {
      "rank": 1,
@@ -1866,10 +3423,172 @@
      "hf": 38,
      "af": 66
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:44:16Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Stratford Upon Avon",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 325,
+      "pa": 73,
+      "pts": 29,
+      "hf": 254,
+      "af": 71
+     },
+     {
+      "rank": 2,
+      "name": "Ledbury",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 265,
+      "pa": 88,
+      "pts": 28,
+      "hf": 83,
+      "af": 182
+     },
+     {
+      "rank": 3,
+      "name": "Evesham",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 241,
+      "pa": 70,
+      "pts": 26,
+      "hf": 89,
+      "af": 152
+     },
+     {
+      "rank": 4,
+      "name": "Earlsdon",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 192,
+      "pa": 140,
+      "pts": 24,
+      "hf": 81,
+      "af": 111
+     },
+     {
+      "rank": 5,
+      "name": "Old Leamingtonians",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 210,
+      "pa": 167,
+      "pts": 17,
+      "hf": 181,
+      "af": 29
+     },
+     {
+      "rank": 6,
+      "name": "Camp Hill",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 223,
+      "pa": 162,
+      "pts": 14,
+      "hf": 124,
+      "af": 99
+     },
+     {
+      "rank": 7,
+      "name": "Berkswell & Balsall",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 133,
+      "pa": 170,
+      "pts": 13,
+      "hf": 97,
+      "af": 36
+     },
+     {
+      "rank": 8,
+      "name": "Alcester",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 126,
+      "pa": 240,
+      "pts": 11,
+      "hf": 66,
+      "af": 60
+     },
+     {
+      "rank": 9,
+      "name": "Manor Park",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 154,
+      "pa": 211,
+      "pts": 10,
+      "hf": 95,
+      "af": 59
+     },
+     {
+      "rank": 10,
+      "name": "Barkers Butts",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 106,
+      "pa": 287,
+      "pts": 6,
+      "hf": 48,
+      "af": 58
+     },
+     {
+      "rank": 11,
+      "name": "Leamington",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 84,
+      "pa": 270,
+      "pts": 5,
+      "hf": 34,
+      "af": 50
+     },
+     {
+      "rank": 12,
+      "name": "Bromyard",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 104,
+      "pa": 285,
+      "pts": 5,
+      "hf": 38,
+      "af": 66
+     }
+    ]
+   }
   },
   "Counties 1 North East": {
    "at": "2026-11-15T12:25:05.226Z",
+   "tableId": 190957,
    "rows": [
     {
      "rank": 1,
@@ -2027,10 +3746,172 @@
      "hf": 76,
      "af": 83
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:35:30Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Tynedale II",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 361,
+      "pa": 86,
+      "pts": 35,
+      "hf": 126,
+      "af": 235
+     },
+     {
+      "rank": 2,
+      "name": "Peterlee and Horden",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 314,
+      "pa": 153,
+      "pts": 30,
+      "hf": 216,
+      "af": 98
+     },
+     {
+      "rank": 3,
+      "name": "Ponteland",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 244,
+      "pa": 222,
+      "pts": 26,
+      "hf": 115,
+      "af": 129
+     },
+     {
+      "rank": 4,
+      "name": "Stockton",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 222,
+      "pa": 187,
+      "pts": 25,
+      "hf": 121,
+      "af": 101
+     },
+     {
+      "rank": 5,
+      "name": "Durham University",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 281,
+      "pa": 223,
+      "pts": 24,
+      "hf": 111,
+      "af": 170
+     },
+     {
+      "rank": 6,
+      "name": "Barnard Castle",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 236,
+      "pa": 183,
+      "pts": 20,
+      "hf": 148,
+      "af": 88
+     },
+     {
+      "rank": 7,
+      "name": "Darlington",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 168,
+      "pa": 157,
+      "pts": 19,
+      "hf": 74,
+      "af": 94
+     },
+     {
+      "rank": 8,
+      "name": "Bishop Auckland",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 209,
+      "pa": 232,
+      "pts": 17,
+      "hf": 92,
+      "af": 117
+     },
+     {
+      "rank": 9,
+      "name": "Gateshead",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 200,
+      "pa": 260,
+      "pts": 12,
+      "hf": 118,
+      "af": 82
+     },
+     {
+      "rank": 10,
+      "name": "Medicals",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 158,
+      "pa": 274,
+      "pts": 11,
+      "hf": 88,
+      "af": 70
+     },
+     {
+      "rank": 11,
+      "name": "Houghton",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 109,
+      "pa": 380,
+      "pts": 5,
+      "hf": 104,
+      "af": 5
+     },
+     {
+      "rank": 12,
+      "name": "Hartlepool",
+      "p": 7,
+      "w": 0,
+      "d": 0,
+      "l": 7,
+      "pf": 159,
+      "pa": 304,
+      "pts": 5,
+      "hf": 76,
+      "af": 83
+     }
+    ]
+   }
   },
   "Counties 1 Southern North": {
    "at": "2026-11-15T12:25:37.252Z",
+   "tableId": 190974,
    "rows": [
     {
      "rank": 1,
@@ -2188,10 +4069,172 @@
      "hf": 39,
      "af": 17
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:45:56Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Henley II",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 458,
+      "pa": 102,
+      "pts": 30,
+      "hf": 127,
+      "af": 331
+     },
+     {
+      "rank": 2,
+      "name": "Windsor",
+      "p": 7,
+      "w": 5,
+      "d": 1,
+      "l": 1,
+      "pf": 220,
+      "pa": 126,
+      "pts": 25,
+      "hf": 102,
+      "af": 118
+     },
+     {
+      "rank": 3,
+      "name": "Reading",
+      "p": 7,
+      "w": 5,
+      "d": 1,
+      "l": 1,
+      "pf": 234,
+      "pa": 154,
+      "pts": 24,
+      "hf": 122,
+      "af": 112
+     },
+     {
+      "rank": 4,
+      "name": "Buckingham",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 248,
+      "pa": 224,
+      "pts": 21,
+      "hf": 67,
+      "af": 181
+     },
+     {
+      "rank": 5,
+      "name": "Bicester",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 223,
+      "pa": 181,
+      "pts": 18,
+      "hf": 122,
+      "af": 101
+     },
+     {
+      "rank": 6,
+      "name": "Beaconsfield II",
+      "p": 7,
+      "w": 3,
+      "d": 1,
+      "l": 3,
+      "pf": 163,
+      "pa": 248,
+      "pts": 15,
+      "hf": 141,
+      "af": 22
+     },
+     {
+      "rank": 7,
+      "name": "Banbury II",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 169,
+      "pa": 218,
+      "pts": 14,
+      "hf": 125,
+      "af": 44
+     },
+     {
+      "rank": 8,
+      "name": "Reading Abbey",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 179,
+      "pa": 245,
+      "pts": 12,
+      "hf": 107,
+      "af": 72
+     },
+     {
+      "rank": 9,
+      "name": "Bracknell II",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 183,
+      "pa": 204,
+      "pts": 11,
+      "hf": 125,
+      "af": 58
+     },
+     {
+      "rank": 10,
+      "name": "High Wycombe",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 193,
+      "pa": 218,
+      "pts": 9,
+      "hf": 47,
+      "af": 146
+     },
+     {
+      "rank": 11,
+      "name": "Oxford Harlequins II",
+      "p": 7,
+      "w": 1,
+      "d": 1,
+      "l": 5,
+      "pf": 162,
+      "pa": 228,
+      "pts": 8,
+      "hf": 50,
+      "af": 112
+     },
+     {
+      "rank": 12,
+      "name": "Oxford",
+      "p": 7,
+      "w": 0,
+      "d": 0,
+      "l": 7,
+      "pf": 56,
+      "pa": 340,
+      "pts": 0,
+      "hf": 39,
+      "af": 17
+     }
+    ]
+   }
   },
   "Counties 1 Southern South": {
    "at": "2026-11-15T12:25:56.950Z",
+   "tableId": 190975,
    "rows": [
     {
      "rank": 1,
@@ -2349,10 +4392,172 @@
      "hf": 50,
      "af": 38
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T13:16:56Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Devizes",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 394,
+      "pa": 102,
+      "pts": 28,
+      "hf": 195,
+      "af": 199
+     },
+     {
+      "rank": 2,
+      "name": "Salisbury",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 301,
+      "pa": 101,
+      "pts": 28,
+      "hf": 210,
+      "af": 91
+     },
+     {
+      "rank": 3,
+      "name": "North Dorset",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 318,
+      "pa": 108,
+      "pts": 20,
+      "hf": 183,
+      "af": 135
+     },
+     {
+      "rank": 4,
+      "name": "Melksham",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 236,
+      "pa": 218,
+      "pts": 16,
+      "hf": 77,
+      "af": 159
+     },
+     {
+      "rank": 5,
+      "name": "Walcot",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 163,
+      "pa": 217,
+      "pts": 16,
+      "hf": 100,
+      "af": 63
+     },
+     {
+      "rank": 6,
+      "name": "Swanage & Wareham",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 89,
+      "pa": 192,
+      "pts": 13,
+      "hf": 59,
+      "af": 30
+     },
+     {
+      "rank": 7,
+      "name": "Dorchester",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 223,
+      "pa": 185,
+      "pts": 12,
+      "hf": 52,
+      "af": 171
+     },
+     {
+      "rank": 8,
+      "name": "Frome",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 162,
+      "pa": 139,
+      "pts": 12,
+      "hf": 133,
+      "af": 29
+     },
+     {
+      "rank": 9,
+      "name": "Chippenham II",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 164,
+      "pa": 311,
+      "pts": 8,
+      "hf": 159,
+      "af": 5
+     },
+     {
+      "rank": 10,
+      "name": "Trowbridge II",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 140,
+      "pa": 362,
+      "pts": 8,
+      "hf": 95,
+      "af": 45
+     },
+     {
+      "rank": 11,
+      "name": "Combe Down",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 123,
+      "pa": 259,
+      "pts": 4,
+      "hf": 65,
+      "af": 58
+     },
+     {
+      "rank": 12,
+      "name": "Corsham",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 88,
+      "pa": 207,
+      "pts": -5,
+      "hf": 50,
+      "af": 38
+     }
+    ]
+   }
   },
   "Counties 1 Surrey/Sussex": {
    "at": "2026-11-15T12:26:15.466Z",
+   "tableId": 190889,
    "rows": [
     {
      "rank": 1,
@@ -2510,10 +4715,172 @@
      "hf": 37,
      "af": 99
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T13:09:17Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Hove",
+      "p": 6,
+      "w": 5,
+      "d": 1,
+      "l": 0,
+      "pf": 268,
+      "pa": 128,
+      "pts": 28,
+      "hf": 88,
+      "af": 180
+     },
+     {
+      "rank": 2,
+      "name": "Old Rutlishians",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 284,
+      "pa": 108,
+      "pts": 26,
+      "hf": 226,
+      "af": 58
+     },
+     {
+      "rank": 3,
+      "name": "Old Wimbledonians",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 189,
+      "pa": 148,
+      "pts": 22,
+      "hf": 80,
+      "af": 109
+     },
+     {
+      "rank": 4,
+      "name": "Old Reigatian",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 168,
+      "pa": 125,
+      "pts": 20,
+      "hf": 74,
+      "af": 94
+     },
+     {
+      "rank": 5,
+      "name": "Trinity",
+      "p": 6,
+      "w": 3,
+      "d": 1,
+      "l": 2,
+      "pf": 173,
+      "pa": 195,
+      "pts": 18,
+      "hf": 103,
+      "af": 70
+     },
+     {
+      "rank": 6,
+      "name": "Old Caterhamians",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 195,
+      "pa": 170,
+      "pts": 17,
+      "hf": 95,
+      "af": 100
+     },
+     {
+      "rank": 7,
+      "name": "Haywards Heath",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 170,
+      "pa": 157,
+      "pts": 16,
+      "hf": 128,
+      "af": 42
+     },
+     {
+      "rank": 8,
+      "name": "Eastbourne",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 133,
+      "pa": 157,
+      "pts": 14,
+      "hf": 86,
+      "af": 47
+     },
+     {
+      "rank": 9,
+      "name": "London Cornish",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 170,
+      "pa": 192,
+      "pts": 13,
+      "hf": 138,
+      "af": 32
+     },
+     {
+      "rank": 10,
+      "name": "Old Hamptonians",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 157,
+      "pa": 226,
+      "pts": 13,
+      "hf": 58,
+      "af": 99
+     },
+     {
+      "rank": 11,
+      "name": "Reeds Weybridge",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 128,
+      "pa": 299,
+      "pts": 6,
+      "hf": 86,
+      "af": 42
+     },
+     {
+      "rank": 12,
+      "name": "Bec Old Boys",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 126,
+      "pa": 256,
+      "pts": 5,
+      "hf": 37,
+      "af": 89
+     }
+    ]
+   }
   },
   "Counties 1 Western North": {
    "at": "2026-11-15T12:26:58.684Z",
+   "tableId": 190976,
    "rows": [
     {
      "rank": 1,
@@ -2671,10 +5038,172 @@
      "hf": 59,
      "af": 63
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:21:31Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Dings Crusaders II",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 395,
+      "pa": 150,
+      "pts": 28,
+      "hf": 105,
+      "af": 290
+     },
+     {
+      "rank": 2,
+      "name": "Midsomer Norton",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 327,
+      "pa": 131,
+      "pts": 24,
+      "hf": 283,
+      "af": 44
+     },
+     {
+      "rank": 3,
+      "name": "Old Bristolians",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 212,
+      "pa": 212,
+      "pts": 20,
+      "hf": 176,
+      "af": 36
+     },
+     {
+      "rank": 4,
+      "name": "Burnham-on-Sea",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 280,
+      "pa": 209,
+      "pts": 16,
+      "hf": 128,
+      "af": 152
+     },
+     {
+      "rank": 5,
+      "name": "Clifton II",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 216,
+      "pa": 173,
+      "pts": 16,
+      "hf": 173,
+      "af": 43
+     },
+     {
+      "rank": 6,
+      "name": "Old Redcliffians II",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 220,
+      "pa": 200,
+      "pts": 16,
+      "hf": 31,
+      "af": 189
+     },
+     {
+      "rank": 7,
+      "name": "Gordon League",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 192,
+      "pa": 182,
+      "pts": 12,
+      "hf": 107,
+      "af": 85
+     },
+     {
+      "rank": 8,
+      "name": "Cinderford II",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 200,
+      "pa": 198,
+      "pts": 12,
+      "hf": 128,
+      "af": 72
+     },
+     {
+      "rank": 9,
+      "name": "Chard",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 182,
+      "pa": 184,
+      "pts": 12,
+      "hf": 64,
+      "af": 118
+     },
+     {
+      "rank": 10,
+      "name": "Gordano",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 210,
+      "pa": 275,
+      "pts": 8,
+      "hf": 101,
+      "af": 109
+     },
+     {
+      "rank": 11,
+      "name": "Wellington",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 152,
+      "pa": 344,
+      "pts": 4,
+      "hf": 120,
+      "af": 32
+     },
+     {
+      "rank": 12,
+      "name": "Cheltenham",
+      "p": 7,
+      "w": 0,
+      "d": 0,
+      "l": 7,
+      "pf": 122,
+      "pa": 450,
+      "pts": 0,
+      "hf": 59,
+      "af": 63
+     }
+    ]
+   }
   },
   "Counties 1 Western West": {
    "at": "2026-11-15T12:27:29.978Z",
+   "tableId": 190977,
    "rows": [
     {
      "rank": 1,
@@ -2832,10 +5361,172 @@
      "hf": 38,
      "af": 87
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:27:39Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Paignton",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 272,
+      "pa": 176,
+      "pts": 29,
+      "hf": 81,
+      "af": 191
+     },
+     {
+      "rank": 2,
+      "name": "Kingsbridge",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 208,
+      "pa": 122,
+      "pts": 28,
+      "hf": 43,
+      "af": 165
+     },
+     {
+      "rank": 3,
+      "name": "Cullompton",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 229,
+      "pa": 156,
+      "pts": 27,
+      "hf": 75,
+      "af": 154
+     },
+     {
+      "rank": 4,
+      "name": "Camborne II",
+      "p": 5,
+      "w": 5,
+      "d": 0,
+      "l": 0,
+      "pf": 262,
+      "pa": 81,
+      "pts": 25,
+      "hf": 164,
+      "af": 98
+     },
+     {
+      "rank": 5,
+      "name": "Torquay Athletic",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 239,
+      "pa": 180,
+      "pts": 21,
+      "hf": 206,
+      "af": 33
+     },
+     {
+      "rank": 6,
+      "name": "Saltash",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 182,
+      "pa": 202,
+      "pts": 16,
+      "hf": 105,
+      "af": 77
+     },
+     {
+      "rank": 7,
+      "name": "St Ives (SW)",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 141,
+      "pa": 163,
+      "pts": 15,
+      "hf": 81,
+      "af": 60
+     },
+     {
+      "rank": 8,
+      "name": "Newton Abbot",
+      "p": 7,
+      "w": 2,
+      "d": 1,
+      "l": 4,
+      "pf": 192,
+      "pa": 267,
+      "pts": 15,
+      "hf": 86,
+      "af": 106
+     },
+     {
+      "rank": 9,
+      "name": "Truro",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 124,
+      "pa": 251,
+      "pts": 10,
+      "hf": 71,
+      "af": 53
+     },
+     {
+      "rank": 10,
+      "name": "Redruth II",
+      "p": 5,
+      "w": 1,
+      "d": 1,
+      "l": 3,
+      "pf": 99,
+      "pa": 144,
+      "pts": 9,
+      "hf": 67,
+      "af": 32
+     },
+     {
+      "rank": 11,
+      "name": "Barnstaple II",
+      "p": 5,
+      "w": 1,
+      "d": 1,
+      "l": 3,
+      "pf": 136,
+      "pa": 218,
+      "pts": 8,
+      "hf": 97,
+      "af": 39
+     },
+     {
+      "rank": 12,
+      "name": "Devonport Services II",
+      "p": 7,
+      "w": 0,
+      "d": 1,
+      "l": 6,
+      "pf": 125,
+      "pa": 249,
+      "pts": 3,
+      "hf": 38,
+      "af": 87
+     }
+    ]
+   }
   },
   "Counties 1 Yorkshire": {
    "at": "2026-11-15T12:27:48.700Z",
+   "tableId": 190958,
    "rows": [
     {
      "rank": 1,
@@ -2993,10 +5684,172 @@
      "hf": 19,
      "af": 38
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:44:32Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Goole",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 241,
+      "pa": 77,
+      "pts": 34,
+      "hf": 164,
+      "af": 77
+     },
+     {
+      "rank": 2,
+      "name": "Old Crossleyans",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 197,
+      "pa": 163,
+      "pts": 29,
+      "hf": 101,
+      "af": 96
+     },
+     {
+      "rank": 3,
+      "name": "Old Otliensians",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 215,
+      "pa": 147,
+      "pts": 28,
+      "hf": 116,
+      "af": 99
+     },
+     {
+      "rank": 4,
+      "name": "Yarnbury",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 282,
+      "pa": 163,
+      "pts": 22,
+      "hf": 191,
+      "af": 91
+     },
+     {
+      "rank": 5,
+      "name": "Harrogate Pythons",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 251,
+      "pa": 168,
+      "pts": 22,
+      "hf": 145,
+      "af": 106
+     },
+     {
+      "rank": 6,
+      "name": "Wensleydale",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 209,
+      "pa": 195,
+      "pts": 20,
+      "hf": 116,
+      "af": 93
+     },
+     {
+      "rank": 7,
+      "name": "West Leeds",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 234,
+      "pa": 236,
+      "pts": 20,
+      "hf": 99,
+      "af": 135
+     },
+     {
+      "rank": 8,
+      "name": "Keighley",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 190,
+      "pa": 155,
+      "pts": 17,
+      "hf": 62,
+      "af": 128
+     },
+     {
+      "rank": 9,
+      "name": "Bridlington",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 187,
+      "pa": 192,
+      "pts": 17,
+      "hf": 108,
+      "af": 79
+     },
+     {
+      "rank": 10,
+      "name": "Hullensians",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 203,
+      "pa": 229,
+      "pts": 13,
+      "hf": 179,
+      "af": 24
+     },
+     {
+      "rank": 11,
+      "name": "Old Rishworthian",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 135,
+      "pa": 295,
+      "pts": 6,
+      "hf": 75,
+      "af": 60
+     },
+     {
+      "rank": 12,
+      "name": "Doncaster Phoenix",
+      "p": 7,
+      "w": 0,
+      "d": 0,
+      "l": 7,
+      "pf": 57,
+      "pa": 381,
+      "pts": 0,
+      "hf": 19,
+      "af": 38
+     }
+    ]
+   }
   },
   "Counties 2 Berks/Bucks & Oxon East": {
    "at": "2026-11-15T12:28:20.217Z",
+   "tableId": 190978,
    "rows": [
     {
      "rank": 1,
@@ -3154,10 +6007,172 @@
      "hf": 59,
      "af": 7
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:49:41Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Milton Keynes",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 280,
+      "pa": 92,
+      "pts": 29,
+      "hf": 78,
+      "af": 202
+     },
+     {
+      "rank": 2,
+      "name": "Amersham & Chiltern II",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 342,
+      "pa": 78,
+      "pts": 28,
+      "hf": 151,
+      "af": 191
+     },
+     {
+      "rank": 3,
+      "name": "Bletchley",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 241,
+      "pa": 151,
+      "pts": 25,
+      "hf": 86,
+      "af": 155
+     },
+     {
+      "rank": 4,
+      "name": "Chinnor IV",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 227,
+      "pa": 148,
+      "pts": 25,
+      "hf": 114,
+      "af": 113
+     },
+     {
+      "rank": 5,
+      "name": "Marlow II",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 218,
+      "pa": 135,
+      "pts": 22,
+      "hf": 105,
+      "af": 113
+     },
+     {
+      "rank": 6,
+      "name": "Maidenhead II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 185,
+      "pa": 187,
+      "pts": 16,
+      "hf": 133,
+      "af": 52
+     },
+     {
+      "rank": 7,
+      "name": "Chesham",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 179,
+      "pa": 195,
+      "pts": 11,
+      "hf": 102,
+      "af": 77
+     },
+     {
+      "rank": 8,
+      "name": "High Wycombe II",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 66,
+      "pa": 195,
+      "pts": 10,
+      "hf": 46,
+      "af": 20
+     },
+     {
+      "rank": 9,
+      "name": "Risborough",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 87,
+      "pa": 226,
+      "pts": 1,
+      "hf": 53,
+      "af": 34
+     },
+     {
+      "rank": 10,
+      "name": "Slough",
+      "p": 7,
+      "w": 0,
+      "d": 0,
+      "l": 7,
+      "pf": 98,
+      "pa": 375,
+      "pts": 1,
+      "hf": 48,
+      "af": 50
+     },
+     {
+      "rank": 11,
+      "name": "To be arranged 1",
+      "p": 0,
+      "w": 0,
+      "d": 0,
+      "l": 0,
+      "pf": 0,
+      "pa": 0,
+      "pts": 0,
+      "hf": 0,
+      "af": 0
+     },
+     {
+      "rank": 12,
+      "name": "Windsor II",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 66,
+      "pa": 207,
+      "pts": -5,
+      "hf": 59,
+      "af": 7
+     }
+    ]
+   }
   },
   "Counties 2 Berks/Bucks & Oxon West": {
    "at": "2026-11-15T12:28:32.611Z",
+   "tableId": 190979,
    "rows": [
     {
      "rank": 1,
@@ -3315,10 +6330,172 @@
      "hf": 29,
      "af": 53
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T13:09:56Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Didcot",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 421,
+      "pa": 115,
+      "pts": 24,
+      "hf": 158,
+      "af": 263
+     },
+     {
+      "rank": 2,
+      "name": "Wallingford",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 201,
+      "pa": 107,
+      "pts": 24,
+      "hf": 139,
+      "af": 62
+     },
+     {
+      "rank": 3,
+      "name": "Tadley",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 232,
+      "pa": 160,
+      "pts": 20,
+      "hf": 180,
+      "af": 52
+     },
+     {
+      "rank": 4,
+      "name": "Gosford All Blacks",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 189,
+      "pa": 129,
+      "pts": 16,
+      "hf": 92,
+      "af": 97
+     },
+     {
+      "rank": 5,
+      "name": "Grove",
+      "p": 5,
+      "w": 3,
+      "d": 0,
+      "l": 2,
+      "pf": 166,
+      "pa": 78,
+      "pts": 12,
+      "hf": 91,
+      "af": 75
+     },
+     {
+      "rank": 6,
+      "name": "Chipping Norton",
+      "p": 5,
+      "w": 2,
+      "d": 0,
+      "l": 3,
+      "pf": 114,
+      "pa": 130,
+      "pts": 8,
+      "hf": 47,
+      "af": 67
+     },
+     {
+      "rank": 7,
+      "name": "Reading II",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 128,
+      "pa": 230,
+      "pts": 8,
+      "hf": 68,
+      "af": 60
+     },
+     {
+      "rank": 8,
+      "name": "Abingdon",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 124,
+      "pa": 325,
+      "pts": 8,
+      "hf": 73,
+      "af": 51
+     },
+     {
+      "rank": 9,
+      "name": "Hungerford",
+      "p": 4,
+      "w": 1,
+      "d": 0,
+      "l": 3,
+      "pf": 77,
+      "pa": 104,
+      "pts": 4,
+      "hf": 48,
+      "af": 29
+     },
+     {
+      "rank": 10,
+      "name": "Witney II",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 119,
+      "pa": 166,
+      "pts": 4,
+      "hf": 76,
+      "af": 43
+     },
+     {
+      "rank": 11,
+      "name": "To be arranged 1",
+      "p": 0,
+      "w": 0,
+      "d": 0,
+      "l": 0,
+      "pf": 0,
+      "pa": 0,
+      "pts": 0,
+      "hf": 0,
+      "af": 0
+     },
+     {
+      "rank": 12,
+      "name": "Stow-on-the-Wold II",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 82,
+      "pa": 309,
+      "pts": 0,
+      "hf": 29,
+      "af": 53
+     }
+    ]
+   }
   },
   "Counties 2 Cumbria": {
    "at": "2026-11-15T12:18:32.251Z",
+   "tableId": 191149,
    "rows": [
     {
      "rank": 1,
@@ -3428,6 +6605,7 @@
   },
   "Counties 2 Gloucestershire": {
    "at": "2026-11-15T12:29:23.388Z",
+   "tableId": 190984,
    "rows": [
     {
      "rank": 1,
@@ -3572,10 +6750,159 @@
      "hf": 43,
      "af": 40
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:19:53Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Frampton Cotterell",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 309,
+      "pa": 53,
+      "pts": 30,
+      "hf": 198,
+      "af": 111
+     },
+     {
+      "rank": 2,
+      "name": "Smiths Rugby",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 232,
+      "pa": 176,
+      "pts": 27,
+      "hf": 118,
+      "af": 114
+     },
+     {
+      "rank": 3,
+      "name": "Chosen Hill Former Pupils",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 258,
+      "pa": 130,
+      "pts": 25,
+      "hf": 68,
+      "af": 190
+     },
+     {
+      "rank": 4,
+      "name": "Old Patesians",
+      "p": 7,
+      "w": 4,
+      "d": 1,
+      "l": 2,
+      "pf": 259,
+      "pa": 157,
+      "pts": 24,
+      "hf": 144,
+      "af": 115
+     },
+     {
+      "rank": 5,
+      "name": "Stroud",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 205,
+      "pa": 174,
+      "pts": 21,
+      "hf": 99,
+      "af": 106
+     },
+     {
+      "rank": 6,
+      "name": "Old Elizabethans",
+      "p": 7,
+      "w": 2,
+      "d": 1,
+      "l": 4,
+      "pf": 189,
+      "pa": 181,
+      "pts": 17,
+      "hf": 86,
+      "af": 103
+     },
+     {
+      "rank": 7,
+      "name": "St Mary's Old Boys (SW)",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 198,
+      "pa": 211,
+      "pts": 16,
+      "hf": 140,
+      "af": 58
+     },
+     {
+      "rank": 8,
+      "name": "Hucclecote",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 173,
+      "pa": 156,
+      "pts": 16,
+      "hf": 72,
+      "af": 101
+     },
+     {
+      "rank": 9,
+      "name": "Bristol Saracens",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 127,
+      "pa": 187,
+      "pts": 12,
+      "hf": 38,
+      "af": 89
+     },
+     {
+      "rank": 10,
+      "name": "Bream",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 116,
+      "pa": 326,
+      "pts": 5,
+      "hf": 62,
+      "af": 54
+     },
+     {
+      "rank": 11,
+      "name": "Tewkesbury",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 83,
+      "pa": 398,
+      "pts": 1,
+      "hf": 43,
+      "af": 40
+     }
+    ]
+   }
   },
   "Counties 2 Hampshire": {
    "at": "2026-11-15T12:29:35.870Z",
+   "tableId": 190892,
    "rows": [
     {
      "rank": 1,
@@ -3733,10 +7060,172 @@
      "hf": 64,
      "af": 56
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T13:07:44Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Guernsey II",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 362,
+      "pa": 137,
+      "pts": 30,
+      "hf": 244,
+      "af": 118
+     },
+     {
+      "rank": 2,
+      "name": "New Milton",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 230,
+      "pa": 99,
+      "pts": 26,
+      "hf": 157,
+      "af": 73
+     },
+     {
+      "rank": 3,
+      "name": "Tottonians II",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 219,
+      "pa": 129,
+      "pts": 25,
+      "hf": 178,
+      "af": 41
+     },
+     {
+      "rank": 4,
+      "name": "Gosport & Fareham",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 225,
+      "pa": 132,
+      "pts": 21,
+      "hf": 109,
+      "af": 116
+     },
+     {
+      "rank": 5,
+      "name": "Havant III",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 210,
+      "pa": 218,
+      "pts": 20,
+      "hf": 97,
+      "af": 113
+     },
+     {
+      "rank": 6,
+      "name": "Fordingbridge",
+      "p": 5,
+      "w": 3,
+      "d": 0,
+      "l": 2,
+      "pf": 185,
+      "pa": 127,
+      "pts": 15,
+      "hf": 33,
+      "af": 152
+     },
+     {
+      "rank": 7,
+      "name": "United Services, Portsmouth",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 195,
+      "pa": 197,
+      "pts": 15,
+      "hf": 70,
+      "af": 125
+     },
+     {
+      "rank": 8,
+      "name": "Fareham Heathens",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 122,
+      "pa": 174,
+      "pts": 12,
+      "hf": 84,
+      "af": 38
+     },
+     {
+      "rank": 9,
+      "name": "Ventnor",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 78,
+      "pa": 179,
+      "pts": 7,
+      "hf": 63,
+      "af": 15
+     },
+     {
+      "rank": 10,
+      "name": "Eastleigh",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 134,
+      "pa": 270,
+      "pts": 7,
+      "hf": 22,
+      "af": 112
+     },
+     {
+      "rank": 11,
+      "name": "Southampton",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 91,
+      "pa": 290,
+      "pts": 5,
+      "hf": 57,
+      "af": 34
+     },
+     {
+      "rank": 12,
+      "name": "Romsey",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 100,
+      "pa": 199,
+      "pts": 3,
+      "hf": 44,
+      "af": 56
+     }
+    ]
+   }
   },
   "Counties 2 Midlands East (South)": {
    "at": "2026-11-15T12:29:48.754Z",
+   "tableId": 190936,
    "rows": [
     {
      "rank": 1,
@@ -3894,10 +7383,172 @@
      "hf": 0,
      "af": 0
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:23:17Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Stockwood Park",
+      "p": 5,
+      "w": 5,
+      "d": 0,
+      "l": 0,
+      "pf": 208,
+      "pa": 64,
+      "pts": 20,
+      "hf": 108,
+      "af": 100
+     },
+     {
+      "rank": 2,
+      "name": "St Ives (Midlands)",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 224,
+      "pa": 123,
+      "pts": 20,
+      "hf": 184,
+      "af": 40
+     },
+     {
+      "rank": 3,
+      "name": "Stewarts & Lloyds",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 238,
+      "pa": 88,
+      "pts": 16,
+      "hf": 186,
+      "af": 52
+     },
+     {
+      "rank": 4,
+      "name": "Northampton Casuals",
+      "p": 6,
+      "w": 3,
+      "d": 1,
+      "l": 2,
+      "pf": 195,
+      "pa": 169,
+      "pts": 14,
+      "hf": 56,
+      "af": 139
+     },
+     {
+      "rank": 5,
+      "name": "Old Laurentians",
+      "p": 5,
+      "w": 3,
+      "d": 0,
+      "l": 2,
+      "pf": 127,
+      "pa": 98,
+      "pts": 12,
+      "hf": 103,
+      "af": 24
+     },
+     {
+      "rank": 6,
+      "name": "St Neots",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 118,
+      "pa": 117,
+      "pts": 12,
+      "hf": 96,
+      "af": 22
+     },
+     {
+      "rank": 7,
+      "name": "Rushden & Higham",
+      "p": 5,
+      "w": 2,
+      "d": 0,
+      "l": 3,
+      "pf": 133,
+      "pa": 171,
+      "pts": 8,
+      "hf": 91,
+      "af": 42
+     },
+     {
+      "rank": 8,
+      "name": "Leicester Lions II",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 162,
+      "pa": 217,
+      "pts": 8,
+      "hf": 77,
+      "af": 85
+     },
+     {
+      "rank": 9,
+      "name": "Old Northamptonians II",
+      "p": 6,
+      "w": 1,
+      "d": 1,
+      "l": 4,
+      "pf": 183,
+      "pa": 228,
+      "pts": 6,
+      "hf": 105,
+      "af": 78
+     },
+     {
+      "rank": 10,
+      "name": "Brackley",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 138,
+      "pa": 265,
+      "pts": 4,
+      "hf": 82,
+      "af": 56
+     },
+     {
+      "rank": 11,
+      "name": "Peterborough Lions",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 52,
+      "pa": 238,
+      "pts": 4,
+      "hf": 7,
+      "af": 45
+     },
+     {
+      "rank": 12,
+      "name": "Dunstablians",
+      "p": 0,
+      "w": 0,
+      "d": 0,
+      "l": 0,
+      "pf": 0,
+      "pa": 0,
+      "pts": 0,
+      "hf": 0,
+      "af": 0
+     }
+    ]
+   }
   },
   "Counties 2 Midlands West (East)": {
    "at": "2026-11-15T12:30:01.040Z",
+   "tableId": 190937,
    "rows": [
     {
      "rank": 1,
@@ -4055,10 +7706,172 @@
      "hf": 34,
      "af": 94
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:37:03Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Woodrush",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 237,
+      "pa": 154,
+      "pts": 29,
+      "hf": 167,
+      "af": 70
+     },
+     {
+      "rank": 2,
+      "name": "Birmingham & Solihull",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 246,
+      "pa": 157,
+      "pts": 26,
+      "hf": 86,
+      "af": 160
+     },
+     {
+      "rank": 3,
+      "name": "Harbury",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 191,
+      "pa": 166,
+      "pts": 26,
+      "hf": 77,
+      "af": 114
+     },
+     {
+      "rank": 4,
+      "name": "Bromsgrove II",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 192,
+      "pa": 143,
+      "pts": 25,
+      "hf": 138,
+      "af": 54
+     },
+     {
+      "rank": 5,
+      "name": "Bournville II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 236,
+      "pa": 218,
+      "pts": 19,
+      "hf": 78,
+      "af": 158
+     },
+     {
+      "rank": 6,
+      "name": "Lutterworth II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 171,
+      "pa": 192,
+      "pts": 17,
+      "hf": 100,
+      "af": 71
+     },
+     {
+      "rank": 7,
+      "name": "Broadstreet II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 196,
+      "pa": 156,
+      "pts": 16,
+      "hf": 154,
+      "af": 42
+     },
+     {
+      "rank": 8,
+      "name": "Southam",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 182,
+      "pa": 190,
+      "pts": 15,
+      "hf": 98,
+      "af": 84
+     },
+     {
+      "rank": 9,
+      "name": "Droitwich",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 142,
+      "pa": 160,
+      "pts": 11,
+      "hf": 41,
+      "af": 101
+     },
+     {
+      "rank": 10,
+      "name": "Tamworth",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 161,
+      "pa": 229,
+      "pts": 10,
+      "hf": 108,
+      "af": 53
+     },
+     {
+      "rank": 11,
+      "name": "Upton-on-Severn",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 146,
+      "pa": 204,
+      "pts": 8,
+      "hf": 115,
+      "af": 31
+     },
+     {
+      "rank": 12,
+      "name": "Claverdon",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 114,
+      "pa": 245,
+      "pts": 6,
+      "hf": 34,
+      "af": 80
+     }
+    ]
+   }
   },
   "Counties 2 Surrey": {
    "at": "2026-11-15T12:18:57.631Z",
+   "tableId": 192123,
    "rows": [
     {
      "rank": 1,
@@ -4220,6 +8033,7 @@
   },
   "Regional 1 Midlands": {
    "at": "2026-11-15T12:30:19.502Z",
+   "tableId": 190950,
    "rows": [
     {
      "rank": 1,
@@ -4377,10 +8191,172 @@
      "hf": 102,
      "af": 100
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:13:21Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Stourbridge",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 200,
+      "pa": 131,
+      "pts": 26,
+      "hf": 154,
+      "af": 46
+     },
+     {
+      "rank": 2,
+      "name": "Newport (Salop)",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 206,
+      "pa": 125,
+      "pts": 22,
+      "hf": 120,
+      "af": 86
+     },
+     {
+      "rank": 3,
+      "name": "Banbury",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 207,
+      "pa": 164,
+      "pts": 21,
+      "hf": 83,
+      "af": 124
+     },
+     {
+      "rank": 4,
+      "name": "Bromsgrove",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 233,
+      "pa": 173,
+      "pts": 18,
+      "hf": 74,
+      "af": 159
+     },
+     {
+      "rank": 5,
+      "name": "Bridgnorth",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 218,
+      "pa": 166,
+      "pts": 18,
+      "hf": 140,
+      "af": 78
+     },
+     {
+      "rank": 6,
+      "name": "Broadstreet",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 230,
+      "pa": 150,
+      "pts": 15,
+      "hf": 96,
+      "af": 134
+     },
+     {
+      "rank": 7,
+      "name": "Moseley Oak",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 178,
+      "pa": 210,
+      "pts": 14,
+      "hf": 144,
+      "af": 34
+     },
+     {
+      "rank": 8,
+      "name": "Lichfield",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 176,
+      "pa": 184,
+      "pts": 10,
+      "hf": 65,
+      "af": 111
+     },
+     {
+      "rank": 9,
+      "name": "Oxford Harlequins",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 147,
+      "pa": 192,
+      "pts": 9,
+      "hf": 116,
+      "af": 31
+     },
+     {
+      "rank": 10,
+      "name": "Lutterworth",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 140,
+      "pa": 219,
+      "pts": 4,
+      "hf": 55,
+      "af": 85
+     },
+     {
+      "rank": 11,
+      "name": "Burton",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 153,
+      "pa": 238,
+      "pts": 4,
+      "hf": 46,
+      "af": 107
+     },
+     {
+      "rank": 12,
+      "name": "Syston",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 169,
+      "pa": 305,
+      "pts": 2,
+      "hf": 102,
+      "af": 67
+     }
+    ]
+   }
   },
   "Regional 1 North East": {
    "at": "2026-11-15T12:30:57.626Z",
+   "tableId": 190967,
    "rows": [
     {
      "rank": 1,
@@ -4538,10 +8514,172 @@
      "hf": 87,
      "af": 77
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:30:44Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Alnwick",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 291,
+      "pa": 154,
+      "pts": 33,
+      "hf": 164,
+      "af": 127
+     },
+     {
+      "rank": 2,
+      "name": "Northern",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 221,
+      "pa": 165,
+      "pts": 29,
+      "hf": 111,
+      "af": 110
+     },
+     {
+      "rank": 3,
+      "name": "Scunthorpe",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 266,
+      "pa": 201,
+      "pts": 26,
+      "hf": 119,
+      "af": 147
+     },
+     {
+      "rank": 4,
+      "name": "Ilkley",
+      "p": 7,
+      "w": 4,
+      "d": 1,
+      "l": 2,
+      "pf": 270,
+      "pa": 200,
+      "pts": 25,
+      "hf": 198,
+      "af": 72
+     },
+     {
+      "rank": 5,
+      "name": "Hull",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 247,
+      "pa": 198,
+      "pts": 23,
+      "hf": 101,
+      "af": 146
+     },
+     {
+      "rank": 6,
+      "name": "Scarborough",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 209,
+      "pa": 200,
+      "pts": 21,
+      "hf": 142,
+      "af": 67
+     },
+     {
+      "rank": 7,
+      "name": "North Ribblesdale",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 142,
+      "pa": 202,
+      "pts": 15,
+      "hf": 103,
+      "af": 39
+     },
+     {
+      "rank": 8,
+      "name": "Driffield",
+      "p": 7,
+      "w": 2,
+      "d": 1,
+      "l": 4,
+      "pf": 204,
+      "pa": 239,
+      "pts": 14,
+      "hf": 76,
+      "af": 128
+     },
+     {
+      "rank": 9,
+      "name": "Blaydon",
+      "p": 7,
+      "w": 2,
+      "d": 1,
+      "l": 4,
+      "pf": 170,
+      "pa": 182,
+      "pts": 13,
+      "hf": 90,
+      "af": 80
+     },
+     {
+      "rank": 10,
+      "name": "York",
+      "p": 7,
+      "w": 2,
+      "d": 1,
+      "l": 4,
+      "pf": 191,
+      "pa": 247,
+      "pts": 13,
+      "hf": 71,
+      "af": 120
+     },
+     {
+      "rank": 11,
+      "name": "Middlesbrough",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 153,
+      "pa": 259,
+      "pts": 8,
+      "hf": 105,
+      "af": 48
+     },
+     {
+      "rank": 12,
+      "name": "Sandal",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 164,
+      "pa": 281,
+      "pts": 8,
+      "hf": 87,
+      "af": 77
+     }
+    ]
+   }
   },
   "Regional 1 North West": {
    "at": "2026-11-15T12:31:34.957Z",
+   "tableId": 190968,
    "rows": [
     {
      "rank": 1,
@@ -4699,10 +8837,172 @@
      "hf": 60,
      "af": 68
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:25:11Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Anselmians",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 294,
+      "pa": 136,
+      "pts": 35,
+      "hf": 135,
+      "af": 159
+     },
+     {
+      "rank": 2,
+      "name": "Macclesfield",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 240,
+      "pa": 156,
+      "pts": 33,
+      "hf": 138,
+      "af": 102
+     },
+     {
+      "rank": 3,
+      "name": "Wirral",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 235,
+      "pa": 97,
+      "pts": 31,
+      "hf": 125,
+      "af": 110
+     },
+     {
+      "rank": 4,
+      "name": "Stockport",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 238,
+      "pa": 146,
+      "pts": 29,
+      "hf": 166,
+      "af": 72
+     },
+     {
+      "rank": 5,
+      "name": "Rossendale",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 256,
+      "pa": 217,
+      "pts": 23,
+      "hf": 130,
+      "af": 126
+     },
+     {
+      "rank": 6,
+      "name": "Kendal",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 187,
+      "pa": 211,
+      "pts": 17,
+      "hf": 81,
+      "af": 106
+     },
+     {
+      "rank": 7,
+      "name": "Bowdon",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 180,
+      "pa": 210,
+      "pts": 13,
+      "hf": 85,
+      "af": 95
+     },
+     {
+      "rank": 8,
+      "name": "Vale of Lune",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 148,
+      "pa": 247,
+      "pts": 13,
+      "hf": 87,
+      "af": 61
+     },
+     {
+      "rank": 9,
+      "name": "Blackburn",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 175,
+      "pa": 215,
+      "pts": 12,
+      "hf": 88,
+      "af": 87
+     },
+     {
+      "rank": 10,
+      "name": "Leek",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 153,
+      "pa": 234,
+      "pts": 12,
+      "hf": 79,
+      "af": 74
+     },
+     {
+      "rank": 11,
+      "name": "Dronfield",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 129,
+      "pa": 239,
+      "pts": 7,
+      "hf": 78,
+      "af": 51
+     },
+     {
+      "rank": 12,
+      "name": "Rochdale",
+      "p": 7,
+      "w": 0,
+      "d": 0,
+      "l": 7,
+      "pf": 128,
+      "pa": 255,
+      "pts": 7,
+      "hf": 60,
+      "af": 68
+     }
+    ]
+   }
   },
   "Regional 1 South Central": {
    "at": "2026-11-15T12:32:07.262Z",
+   "tableId": 190924,
    "rows": [
     {
      "rank": 1,
@@ -4860,10 +9160,172 @@
      "hf": 68,
      "af": 74
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:09:22Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Sevenoaks",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 243,
+      "pa": 75,
+      "pts": 24,
+      "hf": 155,
+      "af": 88
+     },
+     {
+      "rank": 2,
+      "name": "Tunbridge Wells",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 212,
+      "pa": 142,
+      "pts": 16,
+      "hf": 85,
+      "af": 127
+     },
+     {
+      "rank": 3,
+      "name": "London Scottish Lions",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 175,
+      "pa": 146,
+      "pts": 16,
+      "hf": 57,
+      "af": 118
+     },
+     {
+      "rank": 4,
+      "name": "Wimbledon",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 161,
+      "pa": 165,
+      "pts": 16,
+      "hf": 132,
+      "af": 29
+     },
+     {
+      "rank": 5,
+      "name": "Brunel University",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 232,
+      "pa": 182,
+      "pts": 12,
+      "hf": 101,
+      "af": 131
+     },
+     {
+      "rank": 6,
+      "name": "Farnham",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 172,
+      "pa": 160,
+      "pts": 12,
+      "hf": 76,
+      "af": 96
+     },
+     {
+      "rank": 7,
+      "name": "Bournemouth",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 164,
+      "pa": 182,
+      "pts": 12,
+      "hf": 136,
+      "af": 28
+     },
+     {
+      "rank": 8,
+      "name": "Old Alleynians",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 172,
+      "pa": 196,
+      "pts": 12,
+      "hf": 55,
+      "af": 117
+     },
+     {
+      "rank": 9,
+      "name": "CS Stags 1863",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 155,
+      "pa": 201,
+      "pts": 8,
+      "hf": 125,
+      "af": 30
+     },
+     {
+      "rank": 10,
+      "name": "Bracknell",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 127,
+      "pa": 217,
+      "pts": 8,
+      "hf": 94,
+      "af": 33
+     },
+     {
+      "rank": 11,
+      "name": "Worthing",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 162,
+      "pa": 232,
+      "pts": 4,
+      "hf": 74,
+      "af": 88
+     },
+     {
+      "rank": 12,
+      "name": "Maidenhead",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 142,
+      "pa": 219,
+      "pts": 4,
+      "hf": 68,
+      "af": 74
+     }
+    ]
+   }
   },
   "Regional 1 South East": {
    "at": "2026-11-15T12:32:31.830Z",
+   "tableId": 190925,
    "rows": [
     {
      "rank": 1,
@@ -5021,10 +9483,172 @@
      "hf": 45,
      "af": 88
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:48:02Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "North Walsham",
+      "p": 6,
+      "w": 5,
+      "d": 1,
+      "l": 0,
+      "pf": 215,
+      "pa": 121,
+      "pts": 22,
+      "hf": 152,
+      "af": 63
+     },
+     {
+      "rank": 2,
+      "name": "Sudbury",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 252,
+      "pa": 172,
+      "pts": 20,
+      "hf": 104,
+      "af": 148
+     },
+     {
+      "rank": 3,
+      "name": "Hertford",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 175,
+      "pa": 143,
+      "pts": 20,
+      "hf": 123,
+      "af": 52
+     },
+     {
+      "rank": 4,
+      "name": "Eton Manor",
+      "p": 6,
+      "w": 4,
+      "d": 1,
+      "l": 1,
+      "pf": 213,
+      "pa": 170,
+      "pts": 18,
+      "hf": 94,
+      "af": 119
+     },
+     {
+      "rank": 5,
+      "name": "Old Colfeians",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 185,
+      "pa": 161,
+      "pts": 16,
+      "hf": 92,
+      "af": 93
+     },
+     {
+      "rank": 6,
+      "name": "Old Northamptonians",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 198,
+      "pa": 186,
+      "pts": 16,
+      "hf": 46,
+      "af": 152
+     },
+     {
+      "rank": 7,
+      "name": "Westcliff",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 178,
+      "pa": 185,
+      "pts": 12,
+      "hf": 125,
+      "af": 53
+     },
+     {
+      "rank": 8,
+      "name": "HUEL Tring",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 149,
+      "pa": 218,
+      "pts": 8,
+      "hf": 35,
+      "af": 114
+     },
+     {
+      "rank": 9,
+      "name": "Letchworth Garden City",
+      "p": 6,
+      "w": 1,
+      "d": 1,
+      "l": 4,
+      "pf": 195,
+      "pa": 202,
+      "pts": 6,
+      "hf": 140,
+      "af": 55
+     },
+     {
+      "rank": 10,
+      "name": "Sidcup",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 169,
+      "pa": 193,
+      "pts": 4,
+      "hf": 67,
+      "af": 102
+     },
+     {
+      "rank": 11,
+      "name": "Northampton Old Scouts",
+      "p": 6,
+      "w": 0,
+      "d": 1,
+      "l": 5,
+      "pf": 161,
+      "pa": 209,
+      "pts": 2,
+      "hf": 108,
+      "af": 53
+     },
+     {
+      "rank": 12,
+      "name": "Southend Saxons",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 120,
+      "pa": 250,
+      "pts": 0,
+      "hf": 45,
+      "af": 75
+     }
+    ]
+   }
   },
   "Regional 1 South West": {
    "at": "2026-11-15T12:32:56.768Z",
+   "tableId": 191021,
    "rows": [
     {
      "rank": 1,
@@ -5182,10 +9806,172 @@
      "hf": 62,
      "af": 74
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:11:42Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Trowbridge",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 200,
+      "pa": 109,
+      "pts": 24,
+      "hf": 152,
+      "af": 48
+     },
+     {
+      "rank": 2,
+      "name": "Brixham",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 289,
+      "pa": 97,
+      "pts": 20,
+      "hf": 203,
+      "af": 86
+     },
+     {
+      "rank": 3,
+      "name": "Exmouth",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 271,
+      "pa": 124,
+      "pts": 20,
+      "hf": 125,
+      "af": 146
+     },
+     {
+      "rank": 4,
+      "name": "Launceston",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 196,
+      "pa": 179,
+      "pts": 16,
+      "hf": 52,
+      "af": 144
+     },
+     {
+      "rank": 5,
+      "name": "St Austell",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 147,
+      "pa": 143,
+      "pts": 12,
+      "hf": 91,
+      "af": 56
+     },
+     {
+      "rank": 6,
+      "name": "Topsham",
+      "p": 6,
+      "w": 2,
+      "d": 2,
+      "l": 2,
+      "pf": 198,
+      "pa": 190,
+      "pts": 12,
+      "hf": 127,
+      "af": 71
+     },
+     {
+      "rank": 7,
+      "name": "Royal Wootton Bassett",
+      "p": 6,
+      "w": 2,
+      "d": 2,
+      "l": 2,
+      "pf": 168,
+      "pa": 221,
+      "pts": 12,
+      "hf": 101,
+      "af": 67
+     },
+     {
+      "rank": 8,
+      "name": "Sidmouth",
+      "p": 6,
+      "w": 2,
+      "d": 1,
+      "l": 3,
+      "pf": 153,
+      "pa": 187,
+      "pts": 10,
+      "hf": 105,
+      "af": 48
+     },
+     {
+      "rank": 9,
+      "name": "Lydney",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 143,
+      "pa": 284,
+      "pts": 8,
+      "hf": 64,
+      "af": 79
+     },
+     {
+      "rank": 10,
+      "name": "Weston-super-Mare",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 180,
+      "pa": 221,
+      "pts": 4,
+      "hf": 134,
+      "af": 46
+     },
+     {
+      "rank": 11,
+      "name": "Newent",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 111,
+      "pa": 223,
+      "pts": 4,
+      "hf": 57,
+      "af": 54
+     },
+     {
+      "rank": 12,
+      "name": "Chew Valley",
+      "p": 6,
+      "w": 0,
+      "d": 1,
+      "l": 5,
+      "pf": 108,
+      "pa": 186,
+      "pts": 2,
+      "hf": 34,
+      "af": 74
+     }
+    ]
+   }
   },
   "Regional 2 Anglia": {
    "at": "2026-11-15T12:33:33.897Z",
+   "tableId": 190926,
    "rows": [
     {
      "rank": 1,
@@ -5343,10 +10129,172 @@
      "hf": 41,
      "af": 80
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:51:25Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Rochford Hundred",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 250,
+      "pa": 129,
+      "pts": 24,
+      "hf": 193,
+      "af": 57
+     },
+     {
+      "rank": 2,
+      "name": "Harlow",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 217,
+      "pa": 153,
+      "pts": 20,
+      "hf": 122,
+      "af": 95
+     },
+     {
+      "rank": 3,
+      "name": "Wymondham",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 212,
+      "pa": 149,
+      "pts": 20,
+      "hf": 178,
+      "af": 34
+     },
+     {
+      "rank": 4,
+      "name": "Cheshunt",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 211,
+      "pa": 137,
+      "pts": 16,
+      "hf": 75,
+      "af": 136
+     },
+     {
+      "rank": 5,
+      "name": "Brentwood",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 219,
+      "pa": 152,
+      "pts": 16,
+      "hf": 173,
+      "af": 46
+     },
+     {
+      "rank": 6,
+      "name": "Thurrock",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 192,
+      "pa": 235,
+      "pts": 12,
+      "hf": 66,
+      "af": 126
+     },
+     {
+      "rank": 7,
+      "name": "Woodford",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 171,
+      "pa": 123,
+      "pts": 8,
+      "hf": 118,
+      "af": 53
+     },
+     {
+      "rank": 8,
+      "name": "Finchley",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 131,
+      "pa": 159,
+      "pts": 8,
+      "hf": 41,
+      "af": 90
+     },
+     {
+      "rank": 9,
+      "name": "Wanstead",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 140,
+      "pa": 197,
+      "pts": 8,
+      "hf": 79,
+      "af": 61
+     },
+     {
+      "rank": 10,
+      "name": "Braintree",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 140,
+      "pa": 228,
+      "pts": 8,
+      "hf": 88,
+      "af": 52
+     },
+     {
+      "rank": 11,
+      "name": "Bury St Edmunds II",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 186,
+      "pa": 273,
+      "pts": 4,
+      "hf": 53,
+      "af": 133
+     },
+     {
+      "rank": 12,
+      "name": "Chelmsford",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 102,
+      "pa": 236,
+      "pts": 0,
+      "hf": 22,
+      "af": 80
+     }
+    ]
+   }
   },
   "Regional 2 Midlands East": {
    "at": "2026-11-15T12:33:53.002Z",
+   "tableId": 190951,
    "rows": [
     {
      "rank": 1,
@@ -5504,10 +10452,172 @@
      "hf": 10,
      "af": 39
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T13:10:10Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Shelford",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 271,
+      "pa": 85,
+      "pts": 29,
+      "hf": 111,
+      "af": 160
+     },
+     {
+      "rank": 2,
+      "name": "Olney",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 278,
+      "pa": 71,
+      "pts": 25,
+      "hf": 230,
+      "af": 48
+     },
+     {
+      "rank": 3,
+      "name": "Peterborough",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 232,
+      "pa": 110,
+      "pts": 24,
+      "hf": 134,
+      "af": 98
+     },
+     {
+      "rank": 4,
+      "name": "Bedford Athletic",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 235,
+      "pa": 146,
+      "pts": 20,
+      "hf": 85,
+      "af": 150
+     },
+     {
+      "rank": 5,
+      "name": "Kettering",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 256,
+      "pa": 153,
+      "pts": 19,
+      "hf": 162,
+      "af": 94
+     },
+     {
+      "rank": 6,
+      "name": "Market Harborough",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 174,
+      "pa": 137,
+      "pts": 17,
+      "hf": 53,
+      "af": 121
+     },
+     {
+      "rank": 7,
+      "name": "Hinckley II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 153,
+      "pa": 145,
+      "pts": 17,
+      "hf": 89,
+      "af": 64
+     },
+     {
+      "rank": 8,
+      "name": "Stamford",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 200,
+      "pa": 152,
+      "pts": 13,
+      "hf": 155,
+      "af": 45
+     },
+     {
+      "rank": 9,
+      "name": "Oadby Wyggestonians",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 197,
+      "pa": 218,
+      "pts": 11,
+      "hf": 176,
+      "af": 21
+     },
+     {
+      "rank": 10,
+      "name": "Old Saltleians",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 111,
+      "pa": 192,
+      "pts": 10,
+      "hf": 72,
+      "af": 39
+     },
+     {
+      "rank": 11,
+      "name": "Old Coventrians",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 77,
+      "pa": 332,
+      "pts": 1,
+      "hf": 12,
+      "af": 65
+     },
+     {
+      "rank": 12,
+      "name": "Nuneaton",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 44,
+      "pa": 487,
+      "pts": 0,
+      "hf": 10,
+      "af": 34
+     }
+    ]
+   }
   },
   "Regional 2 Midlands North": {
    "at": "2026-11-15T12:34:05.337Z",
+   "tableId": 190952,
    "rows": [
     {
      "rank": 1,
@@ -5665,10 +10775,172 @@
      "hf": 0,
      "af": 68
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:25:00Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "West Bridgford",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 351,
+      "pa": 83,
+      "pts": 30,
+      "hf": 274,
+      "af": 77
+     },
+     {
+      "rank": 2,
+      "name": "University of Nottingham XV",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 267,
+      "pa": 123,
+      "pts": 29,
+      "hf": 212,
+      "af": 55
+     },
+     {
+      "rank": 3,
+      "name": "Walsall",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 292,
+      "pa": 136,
+      "pts": 26,
+      "hf": 192,
+      "af": 100
+     },
+     {
+      "rank": 4,
+      "name": "Long Eaton",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 278,
+      "pa": 166,
+      "pts": 24,
+      "hf": 179,
+      "af": 99
+     },
+     {
+      "rank": 5,
+      "name": "Whitchurch",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 219,
+      "pa": 156,
+      "pts": 22,
+      "hf": 144,
+      "af": 75
+     },
+     {
+      "rank": 6,
+      "name": "Derby",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 182,
+      "pa": 199,
+      "pts": 20,
+      "hf": 127,
+      "af": 55
+     },
+     {
+      "rank": 7,
+      "name": "Stoke on Trent",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 166,
+      "pa": 264,
+      "pts": 15,
+      "hf": 96,
+      "af": 70
+     },
+     {
+      "rank": 8,
+      "name": "Melbourne",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 188,
+      "pa": 204,
+      "pts": 13,
+      "hf": 83,
+      "af": 105
+     },
+     {
+      "rank": 9,
+      "name": "Ilkeston",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 218,
+      "pa": 263,
+      "pts": 13,
+      "hf": 107,
+      "af": 111
+     },
+     {
+      "rank": 10,
+      "name": "Paviors",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 159,
+      "pa": 266,
+      "pts": 6,
+      "hf": 54,
+      "af": 105
+     },
+     {
+      "rank": 11,
+      "name": "Sutton Coldfield",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 84,
+      "pa": 261,
+      "pts": 3,
+      "hf": 53,
+      "af": 31
+     },
+     {
+      "rank": 12,
+      "name": "Matlock",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 68,
+      "pa": 351,
+      "pts": 2,
+      "hf": 0,
+      "af": 68
+     }
+    ]
+   }
   },
   "Regional 2 Midlands West": {
    "at": "2026-11-15T12:34:36.165Z",
+   "tableId": 190953,
    "rows": [
     {
      "rank": 1,
@@ -5826,10 +11098,172 @@
      "hf": 0,
      "af": 0
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:17:17Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Worcester",
+      "p": 5,
+      "w": 5,
+      "d": 0,
+      "l": 0,
+      "pf": 205,
+      "pa": 82,
+      "pts": 20,
+      "hf": 72,
+      "af": 133
+     },
+     {
+      "rank": 2,
+      "name": "Shipston on Stour",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 179,
+      "pa": 147,
+      "pts": 20,
+      "hf": 108,
+      "af": 71
+     },
+     {
+      "rank": 3,
+      "name": "Luctonians II",
+      "p": 5,
+      "w": 4,
+      "d": 0,
+      "l": 1,
+      "pf": 119,
+      "pa": 79,
+      "pts": 16,
+      "hf": 40,
+      "af": 79
+     },
+     {
+      "rank": 4,
+      "name": "Dudley Kingswinford",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 158,
+      "pa": 135,
+      "pts": 16,
+      "hf": 107,
+      "af": 51
+     },
+     {
+      "rank": 5,
+      "name": "Kenilworth",
+      "p": 5,
+      "w": 3,
+      "d": 0,
+      "l": 2,
+      "pf": 125,
+      "pa": 105,
+      "pts": 12,
+      "hf": 50,
+      "af": 75
+     },
+     {
+      "rank": 6,
+      "name": "Malvern",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 147,
+      "pa": 152,
+      "pts": 12,
+      "hf": 64,
+      "af": 83
+     },
+     {
+      "rank": 7,
+      "name": "Drybrook",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 124,
+      "pa": 133,
+      "pts": 8,
+      "hf": 106,
+      "af": 18
+     },
+     {
+      "rank": 8,
+      "name": "Stow-on-the-Wold",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 91,
+      "pa": 126,
+      "pts": 4,
+      "hf": 55,
+      "af": 36
+     },
+     {
+      "rank": 9,
+      "name": "Hereford",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 88,
+      "pa": 130,
+      "pts": 4,
+      "hf": 52,
+      "af": 36
+     },
+     {
+      "rank": 10,
+      "name": "Silhillians",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 102,
+      "pa": 167,
+      "pts": 4,
+      "hf": 58,
+      "af": 44
+     },
+     {
+      "rank": 11,
+      "name": "Ludlow",
+      "p": 5,
+      "w": 1,
+      "d": 0,
+      "l": 4,
+      "pf": 104,
+      "pa": 186,
+      "pts": 4,
+      "hf": 19,
+      "af": 85
+     },
+     {
+      "rank": 12,
+      "name": "Edwardians",
+      "p": 0,
+      "w": 0,
+      "d": 0,
+      "l": 0,
+      "pf": 0,
+      "pa": 0,
+      "pts": 0,
+      "hf": 0,
+      "af": 0
+     }
+    ]
+   }
   },
   "Regional 2 North": {
    "at": "2026-11-15T12:34:48.674Z",
+   "tableId": 190969,
    "rows": [
     {
      "rank": 1,
@@ -5987,10 +11421,172 @@
      "hf": 65,
      "af": 69
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:59:45Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Percy Park",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 284,
+      "pa": 188,
+      "pts": 28,
+      "hf": 184,
+      "af": 100
+     },
+     {
+      "rank": 2,
+      "name": "Morpeth",
+      "p": 7,
+      "w": 5,
+      "d": 2,
+      "l": 0,
+      "pf": 313,
+      "pa": 134,
+      "pts": 24,
+      "hf": 177,
+      "af": 136
+     },
+     {
+      "rank": 3,
+      "name": "Novocastrians",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 224,
+      "pa": 180,
+      "pts": 20,
+      "hf": 103,
+      "af": 121
+     },
+     {
+      "rank": 4,
+      "name": "West Hartlepool",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 248,
+      "pa": 232,
+      "pts": 16,
+      "hf": 150,
+      "af": 98
+     },
+     {
+      "rank": 5,
+      "name": "Upper Eden",
+      "p": 7,
+      "w": 3,
+      "d": 1,
+      "l": 3,
+      "pf": 180,
+      "pa": 189,
+      "pts": 14,
+      "hf": 93,
+      "af": 87
+     },
+     {
+      "rank": 6,
+      "name": "Durham City",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 186,
+      "pa": 180,
+      "pts": 12,
+      "hf": 113,
+      "af": 73
+     },
+     {
+      "rank": 7,
+      "name": "Penrith",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 237,
+      "pa": 251,
+      "pts": 12,
+      "hf": 125,
+      "af": 112
+     },
+     {
+      "rank": 8,
+      "name": "Sunderland",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 199,
+      "pa": 278,
+      "pts": 12,
+      "hf": 105,
+      "af": 94
+     },
+     {
+      "rank": 9,
+      "name": "Consett",
+      "p": 7,
+      "w": 2,
+      "d": 1,
+      "l": 4,
+      "pf": 175,
+      "pa": 229,
+      "pts": 10,
+      "hf": 119,
+      "af": 56
+     },
+     {
+      "rank": 10,
+      "name": "Keswick",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 173,
+      "pa": 227,
+      "pts": 8,
+      "hf": 57,
+      "af": 116
+     },
+     {
+      "rank": 11,
+      "name": "Ryton",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 158,
+      "pa": 229,
+      "pts": 8,
+      "hf": 116,
+      "af": 42
+     },
+     {
+      "rank": 12,
+      "name": "Guisborough",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 134,
+      "pa": 194,
+      "pts": 0,
+      "hf": 65,
+      "af": 69
+     }
+    ]
+   }
   },
   "Regional 2 North East": {
    "at": "2026-11-15T12:35:26.924Z",
+   "tableId": 190970,
    "rows": [
     {
      "rank": 1,
@@ -6148,10 +11744,172 @@
      "hf": 60,
      "af": 73
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:47:39Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Moortown",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 218,
+      "pa": 137,
+      "pts": 29,
+      "hf": 112,
+      "af": 106
+     },
+     {
+      "rank": 2,
+      "name": "Old Brodleians",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 217,
+      "pa": 151,
+      "pts": 29,
+      "hf": 127,
+      "af": 90
+     },
+     {
+      "rank": 3,
+      "name": "Morley",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 235,
+      "pa": 184,
+      "pts": 28,
+      "hf": 127,
+      "af": 108
+     },
+     {
+      "rank": 4,
+      "name": "Pocklington",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 222,
+      "pa": 174,
+      "pts": 25,
+      "hf": 129,
+      "af": 93
+     },
+     {
+      "rank": 5,
+      "name": "Selby",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 208,
+      "pa": 180,
+      "pts": 21,
+      "hf": 108,
+      "af": 100
+     },
+     {
+      "rank": 6,
+      "name": "Pontefract",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 176,
+      "pa": 171,
+      "pts": 20,
+      "hf": 84,
+      "af": 92
+     },
+     {
+      "rank": 7,
+      "name": "Dinnington",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 174,
+      "pa": 208,
+      "pts": 18,
+      "hf": 71,
+      "af": 103
+     },
+     {
+      "rank": 8,
+      "name": "Bradford Salem",
+      "p": 7,
+      "w": 3,
+      "d": 0,
+      "l": 4,
+      "pf": 182,
+      "pa": 227,
+      "pts": 17,
+      "hf": 90,
+      "af": 92
+     },
+     {
+      "rank": 9,
+      "name": "Wath Upon Dearne",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 176,
+      "pa": 202,
+      "pts": 15,
+      "hf": 78,
+      "af": 98
+     },
+     {
+      "rank": 10,
+      "name": "Wetherby",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 160,
+      "pa": 202,
+      "pts": 10,
+      "hf": 89,
+      "af": 71
+     },
+     {
+      "rank": 11,
+      "name": "Cleckheaton",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 171,
+      "pa": 206,
+      "pts": 9,
+      "hf": 107,
+      "af": 64
+     },
+     {
+      "rank": 12,
+      "name": "Malton and Norton",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 133,
+      "pa": 230,
+      "pts": 7,
+      "hf": 60,
+      "af": 73
+     }
+    ]
+   }
   },
   "Regional 2 North West": {
    "at": "2026-11-15T12:36:05.181Z",
+   "tableId": 190971,
    "rows": [
     {
      "rank": 1,
@@ -6309,10 +12067,172 @@
      "hf": 60,
      "af": 109
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:24:43Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Sandbach",
+      "p": 7,
+      "w": 7,
+      "d": 0,
+      "l": 0,
+      "pf": 260,
+      "pa": 105,
+      "pts": 34,
+      "hf": 165,
+      "af": 95
+     },
+     {
+      "rank": 2,
+      "name": "Northwich",
+      "p": 7,
+      "w": 5,
+      "d": 1,
+      "l": 1,
+      "pf": 293,
+      "pa": 171,
+      "pts": 27,
+      "hf": 227,
+      "af": 66
+     },
+     {
+      "rank": 3,
+      "name": "Manchester",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 221,
+      "pa": 143,
+      "pts": 27,
+      "hf": 90,
+      "af": 131
+     },
+     {
+      "rank": 4,
+      "name": "Birkenhead Park",
+      "p": 7,
+      "w": 4,
+      "d": 1,
+      "l": 2,
+      "pf": 216,
+      "pa": 127,
+      "pts": 23,
+      "hf": 101,
+      "af": 115
+     },
+     {
+      "rank": 5,
+      "name": "Warrington",
+      "p": 7,
+      "w": 4,
+      "d": 0,
+      "l": 3,
+      "pf": 205,
+      "pa": 226,
+      "pts": 22,
+      "hf": 107,
+      "af": 98
+     },
+     {
+      "rank": 6,
+      "name": "Firwood Waterloo",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 198,
+      "pa": 188,
+      "pts": 21,
+      "hf": 53,
+      "af": 145
+     },
+     {
+      "rank": 7,
+      "name": "Douglas (I.O.M.)",
+      "p": 6,
+      "w": 2,
+      "d": 1,
+      "l": 3,
+      "pf": 191,
+      "pa": 171,
+      "pts": 16,
+      "hf": 127,
+      "af": 64
+     },
+     {
+      "rank": 8,
+      "name": "Widnes",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 193,
+      "pa": 215,
+      "pts": 15,
+      "hf": 131,
+      "af": 62
+     },
+     {
+      "rank": 9,
+      "name": "Wilmslow",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 154,
+      "pa": 226,
+      "pts": 12,
+      "hf": 42,
+      "af": 112
+     },
+     {
+      "rank": 10,
+      "name": "Kirkby Lonsdale",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 148,
+      "pa": 227,
+      "pts": 11,
+      "hf": 94,
+      "af": 54
+     },
+     {
+      "rank": 11,
+      "name": "Winnington Park",
+      "p": 7,
+      "w": 1,
+      "d": 1,
+      "l": 5,
+      "pf": 180,
+      "pa": 272,
+      "pts": 10,
+      "hf": 98,
+      "af": 82
+     },
+     {
+      "rank": 12,
+      "name": "Burnage",
+      "p": 7,
+      "w": 1,
+      "d": 0,
+      "l": 6,
+      "pf": 169,
+      "pa": 357,
+      "pts": 8,
+      "hf": 60,
+      "af": 109
+     }
+    ]
+   }
   },
   "Regional 2 Severn": {
    "at": "2026-11-15T12:36:23.727Z",
+   "tableId": 191020,
    "rows": [
     {
      "rank": 1,
@@ -6470,10 +12390,172 @@
      "hf": 42,
      "af": 37
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:45:06Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Matson",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 191,
+      "pa": 101,
+      "pts": 25,
+      "hf": 149,
+      "af": 42
+     },
+     {
+      "rank": 2,
+      "name": "Chippenham",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 243,
+      "pa": 69,
+      "pts": 24,
+      "hf": 81,
+      "af": 162
+     },
+     {
+      "rank": 3,
+      "name": "Cleve",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 316,
+      "pa": 92,
+      "pts": 20,
+      "hf": 95,
+      "af": 221
+     },
+     {
+      "rank": 4,
+      "name": "Marlborough",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 171,
+      "pa": 130,
+      "pts": 20,
+      "hf": 103,
+      "af": 68
+     },
+     {
+      "rank": 5,
+      "name": "Thornbury",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 196,
+      "pa": 151,
+      "pts": 16,
+      "hf": 66,
+      "af": 130
+     },
+     {
+      "rank": 6,
+      "name": "Longlevens",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 194,
+      "pa": 149,
+      "pts": 12,
+      "hf": 80,
+      "af": 114
+     },
+     {
+      "rank": 7,
+      "name": "Witney",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 149,
+      "pa": 206,
+      "pts": 12,
+      "hf": 95,
+      "af": 54
+     },
+     {
+      "rank": 8,
+      "name": "Keynsham",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 110,
+      "pa": 200,
+      "pts": 8,
+      "hf": 89,
+      "af": 21
+     },
+     {
+      "rank": 9,
+      "name": "Chinnor III",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 106,
+      "pa": 217,
+      "pts": 8,
+      "hf": 48,
+      "af": 58
+     },
+     {
+      "rank": 10,
+      "name": "Old Centralians",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 145,
+      "pa": 186,
+      "pts": 6,
+      "hf": 116,
+      "af": 29
+     },
+     {
+      "rank": 11,
+      "name": "Royal Wootton Bassett II",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 79,
+      "pa": 277,
+      "pts": 1,
+      "hf": 42,
+      "af": 37
+     },
+     {
+      "rank": 12,
+      "name": "Newbury Blues",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 127,
+      "pa": 249,
+      "pts": 0,
+      "hf": 64,
+      "af": 63
+     }
+    ]
+   }
   },
   "Regional 2 South Central": {
    "at": "2026-11-15T12:36:54.933Z",
+   "tableId": 190927,
    "rows": [
     {
      "rank": 1,
@@ -6631,10 +12713,172 @@
      "hf": 75,
      "af": 21
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T13:08:39Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Wimborne",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 324,
+      "pa": 64,
+      "pts": 27,
+      "hf": 233,
+      "af": 91
+     },
+     {
+      "rank": 2,
+      "name": "Tottonians",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 285,
+      "pa": 121,
+      "pts": 27,
+      "hf": 97,
+      "af": 188
+     },
+     {
+      "rank": 3,
+      "name": "Chobham",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 215,
+      "pa": 179,
+      "pts": 18,
+      "hf": 58,
+      "af": 157
+     },
+     {
+      "rank": 4,
+      "name": "Old Tiffinians",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 186,
+      "pa": 176,
+      "pts": 18,
+      "hf": 45,
+      "af": 141
+     },
+     {
+      "rank": 5,
+      "name": "Twickenham",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 188,
+      "pa": 170,
+      "pts": 15,
+      "hf": 118,
+      "af": 70
+     },
+     {
+      "rank": 6,
+      "name": "Havant II",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 192,
+      "pa": 137,
+      "pts": 14,
+      "hf": 127,
+      "af": 65
+     },
+     {
+      "rank": 7,
+      "name": "Winchester",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 204,
+      "pa": 168,
+      "pts": 14,
+      "hf": 100,
+      "af": 104
+     },
+     {
+      "rank": 8,
+      "name": "Petersfield",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 138,
+      "pa": 173,
+      "pts": 14,
+      "hf": 59,
+      "af": 79
+     },
+     {
+      "rank": 9,
+      "name": "Bognor",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 152,
+      "pa": 268,
+      "pts": 11,
+      "hf": 119,
+      "af": 33
+     },
+     {
+      "rank": 10,
+      "name": "Weybridge Vandals",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 142,
+      "pa": 209,
+      "pts": 10,
+      "hf": 111,
+      "af": 31
+     },
+     {
+      "rank": 11,
+      "name": "Guildford",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 115,
+      "pa": 242,
+      "pts": 5,
+      "hf": 41,
+      "af": 74
+     },
+     {
+      "rank": 12,
+      "name": "Camberley",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 91,
+      "pa": 325,
+      "pts": 2,
+      "hf": 70,
+      "af": 21
+     }
+    ]
+   }
   },
   "Regional 2 South East": {
    "at": "2026-11-15T12:37:25.638Z",
+   "tableId": 190928,
    "rows": [
     {
      "rank": 1,
@@ -6792,10 +13036,172 @@
      "hf": 115,
      "af": 41
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:49:59Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Beckenham",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 233,
+      "pa": 145,
+      "pts": 24,
+      "hf": 113,
+      "af": 120
+     },
+     {
+      "rank": 2,
+      "name": "Sutton & Epsom",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 176,
+      "pa": 157,
+      "pts": 20,
+      "hf": 77,
+      "af": 99
+     },
+     {
+      "rank": 3,
+      "name": "Medway",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 149,
+      "pa": 97,
+      "pts": 16,
+      "hf": 85,
+      "af": 64
+     },
+     {
+      "rank": 4,
+      "name": "Brighton",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 202,
+      "pa": 159,
+      "pts": 16,
+      "hf": 172,
+      "af": 30
+     },
+     {
+      "rank": 5,
+      "name": "Gravesend",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 185,
+      "pa": 147,
+      "pts": 16,
+      "hf": 36,
+      "af": 149
+     },
+     {
+      "rank": 6,
+      "name": "Cobham",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 186,
+      "pa": 195,
+      "pts": 16,
+      "hf": 127,
+      "af": 59
+     },
+     {
+      "rank": 7,
+      "name": "Bromley",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 173,
+      "pa": 182,
+      "pts": 12,
+      "hf": 118,
+      "af": 55
+     },
+     {
+      "rank": 8,
+      "name": "Horsham",
+      "p": 6,
+      "w": 2,
+      "d": 1,
+      "l": 3,
+      "pf": 203,
+      "pa": 201,
+      "pts": 10,
+      "hf": 78,
+      "af": 125
+     },
+     {
+      "rank": 9,
+      "name": "Battersea Ironsides",
+      "p": 7,
+      "w": 2,
+      "d": 0,
+      "l": 5,
+      "pf": 195,
+      "pa": 211,
+      "pts": 8,
+      "hf": 69,
+      "af": 126
+     },
+     {
+      "rank": 10,
+      "name": "Hammersmith & Fulham",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 170,
+      "pa": 190,
+      "pts": 4,
+      "hf": 96,
+      "af": 74
+     },
+     {
+      "rank": 11,
+      "name": "Old Elthamians",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 145,
+      "pa": 195,
+      "pts": 4,
+      "hf": 44,
+      "af": 101
+     },
+     {
+      "rank": 12,
+      "name": "Dartfordians",
+      "p": 6,
+      "w": 0,
+      "d": 1,
+      "l": 5,
+      "pf": 120,
+      "pa": 258,
+      "pts": 2,
+      "hf": 79,
+      "af": 41
+     }
+    ]
+   }
   },
   "Regional 2 South West": {
    "at": "2026-11-15T12:37:50.284Z",
+   "tableId": 190990,
    "rows": [
     {
      "rank": 1,
@@ -6953,10 +13359,172 @@
      "hf": 67,
      "af": 29
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T11:11:53Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Penzance & Newlyn",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 200,
+      "pa": 81,
+      "pts": 27,
+      "hf": 146,
+      "af": 54
+     },
+     {
+      "rank": 2,
+      "name": "Ivybridge",
+      "p": 6,
+      "w": 5,
+      "d": 0,
+      "l": 1,
+      "pf": 220,
+      "pa": 122,
+      "pts": 23,
+      "hf": 164,
+      "af": 56
+     },
+     {
+      "rank": 3,
+      "name": "North Petherton",
+      "p": 6,
+      "w": 4,
+      "d": 1,
+      "l": 1,
+      "pf": 154,
+      "pa": 121,
+      "pts": 22,
+      "hf": 94,
+      "af": 60
+     },
+     {
+      "rank": 4,
+      "name": "Tiverton",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 153,
+      "pa": 139,
+      "pts": 20,
+      "hf": 61,
+      "af": 92
+     },
+     {
+      "rank": 5,
+      "name": "Wadebridge Camels",
+      "p": 6,
+      "w": 3,
+      "d": 1,
+      "l": 2,
+      "pf": 195,
+      "pa": 140,
+      "pts": 16,
+      "hf": 91,
+      "af": 104
+     },
+     {
+      "rank": 6,
+      "name": "Okehampton",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 160,
+      "pa": 140,
+      "pts": 16,
+      "hf": 126,
+      "af": 34
+     },
+     {
+      "rank": 7,
+      "name": "Sherborne",
+      "p": 6,
+      "w": 3,
+      "d": 0,
+      "l": 3,
+      "pf": 127,
+      "pa": 143,
+      "pts": 15,
+      "hf": 83,
+      "af": 44
+     },
+     {
+      "rank": 8,
+      "name": "Nailsea & Backwell",
+      "p": 6,
+      "w": 2,
+      "d": 1,
+      "l": 3,
+      "pf": 190,
+      "pa": 129,
+      "pts": 15,
+      "hf": 85,
+      "af": 105
+     },
+     {
+      "rank": 9,
+      "name": "Wiveliscombe",
+      "p": 6,
+      "w": 2,
+      "d": 1,
+      "l": 3,
+      "pf": 166,
+      "pa": 150,
+      "pts": 15,
+      "hf": 51,
+      "af": 115
+     },
+     {
+      "rank": 10,
+      "name": "Crediton",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 140,
+      "pa": 142,
+      "pts": 11,
+      "hf": 53,
+      "af": 87
+     },
+     {
+      "rank": 11,
+      "name": "Winscombe",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 82,
+      "pa": 278,
+      "pts": 1,
+      "hf": 53,
+      "af": 29
+     },
+     {
+      "rank": 12,
+      "name": "Teignmouth",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 76,
+      "pa": 278,
+      "pts": 1,
+      "hf": 34,
+      "af": 42
+     }
+    ]
+   }
   },
   "Regional 2 Thames": {
    "at": "2026-11-15T12:38:09.351Z",
+   "tableId": 190929,
    "rows": [
     {
      "rank": 1,
@@ -7114,7 +13682,168 @@
      "hf": 71,
      "af": 49
     }
-   ]
+   ],
+   "prev": {
+    "at": "2026-11-14T12:50:28Z",
+    "rows": [
+     {
+      "rank": 1,
+      "name": "Amersham & Chiltern",
+      "p": 6,
+      "w": 6,
+      "d": 0,
+      "l": 0,
+      "pf": 279,
+      "pa": 131,
+      "pts": 30,
+      "hf": 168,
+      "af": 111
+     },
+     {
+      "rank": 2,
+      "name": "Belsize Park",
+      "p": 7,
+      "w": 6,
+      "d": 0,
+      "l": 1,
+      "pf": 235,
+      "pa": 171,
+      "pts": 29,
+      "hf": 172,
+      "af": 63
+     },
+     {
+      "rank": 3,
+      "name": "Ealing Trailfinders 1871",
+      "p": 7,
+      "w": 5,
+      "d": 0,
+      "l": 2,
+      "pf": 239,
+      "pa": 137,
+      "pts": 26,
+      "hf": 182,
+      "af": 57
+     },
+     {
+      "rank": 4,
+      "name": "Marlow",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 231,
+      "pa": 180,
+      "pts": 23,
+      "hf": 129,
+      "af": 102
+     },
+     {
+      "rank": 5,
+      "name": "Aylesbury Men I",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 208,
+      "pa": 212,
+      "pts": 22,
+      "hf": 63,
+      "af": 145
+     },
+     {
+      "rank": 6,
+      "name": "Harpenden",
+      "p": 6,
+      "w": 4,
+      "d": 0,
+      "l": 2,
+      "pf": 214,
+      "pa": 158,
+      "pts": 21,
+      "hf": 140,
+      "af": 74
+     },
+     {
+      "rank": 7,
+      "name": "London Irish Wild Geese",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 206,
+      "pa": 152,
+      "pts": 14,
+      "hf": 108,
+      "af": 98
+     },
+     {
+      "rank": 8,
+      "name": "Beaconsfield",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 187,
+      "pa": 164,
+      "pts": 14,
+      "hf": 100,
+      "af": 87
+     },
+     {
+      "rank": 9,
+      "name": "Old Priorians",
+      "p": 6,
+      "w": 2,
+      "d": 0,
+      "l": 4,
+      "pf": 189,
+      "pa": 235,
+      "pts": 14,
+      "hf": 101,
+      "af": 88
+     },
+     {
+      "rank": 10,
+      "name": "Teddington",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 141,
+      "pa": 225,
+      "pts": 8,
+      "hf": 89,
+      "af": 52
+     },
+     {
+      "rank": 11,
+      "name": "H.A.C.",
+      "p": 6,
+      "w": 1,
+      "d": 0,
+      "l": 5,
+      "pf": 163,
+      "pa": 259,
+      "pts": 7,
+      "hf": 69,
+      "af": 94
+     },
+     {
+      "rank": 12,
+      "name": "Grasshoppers",
+      "p": 6,
+      "w": 0,
+      "d": 0,
+      "l": 6,
+      "pf": 84,
+      "pa": 352,
+      "pts": 3,
+      "hf": 35,
+      "af": 49
+     }
+    ]
+   }
   }
  }
 }

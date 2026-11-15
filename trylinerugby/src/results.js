@@ -75,7 +75,7 @@ function resultsEntry(e, kind, day) {
   }
   for (const [x, y, hi] of [['prePos', 'oppPos', 24], ['rank', 'oppRank', 120]]) {
     if (!has(x) && !has(y)) continue;
-    if (!realWhole(e[x], 1, hi) || !realWhole(e[y], 1, hi)) return null;
+    if (!realWhole(e[x], 1, hi) || !realWhole(e[y], 1, hi) || e[x] === e[y]) return null;   // two sides never share a place or a ranking
     out[x] = e[x]; out[y] = e[y];
   }
   const why = typeof e.why === 'string' && Object.prototype.hasOwnProperty.call(REAL_WHY, e.why) ? REAL_WHY[e.why] : null;
