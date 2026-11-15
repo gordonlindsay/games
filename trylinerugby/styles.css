@@ -1841,7 +1841,7 @@ summary::-webkit-details-marker{display:none}
 .my-box.real[data-fit] .my-league{display:block}
 .my-box.real[data-fit] .my-league > span:last-child{display:block}
 #s-home.fan .my-box :is(.rr-out,.rr-when,.my-sub,.gap.form){color:var(--fan-gink)}   /* a Super Fan's box in the club's colours: the word says Won or Lost, the ink reads on any ground */
-#s-home.fan .my-box .my-sub::after{background:var(--fan-gink);opacity:.4}
+#s-home.fan .my-box.real > :is(.my-sub,.my-rec){border-top-color:color-mix(in srgb,var(--fan-gink) 40%,transparent)}   /* the Games hairline in the club's ink (1.9.1; 1.9's squeeze moved it from .my-sub::after to a border) */
 /* The card: the week's point on the bar, yellow for a point gained, coral hatched for one lost, and +1 or −1 after the ability's name */
 .pk-bar{position:relative}
 .pk-real{position:absolute;top:0;bottom:0;left:calc(var(--a)*100%);width:calc(var(--w)*100%)}
