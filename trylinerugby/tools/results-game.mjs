@@ -95,7 +95,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   const NOW = Date.parse('2026-11-16T09:00:00Z');
   const good = R.clean(FILE(), NOW, null);
   ok(good && Object.keys(good.clubs).length === 4 && Object.keys(good.men).length === 2 && Object.keys(good.women).length === 1, `the fixture passes whole (${good && Object.keys(good.clubs).join(',')})`);
-  ok(good && json(good.clubs.FAR) === json({ date:'2026-11-14', ha:'a', res:'W', f:38, a:34, opp:'OAE', oppName:'Old Alleynians', comp:'Regional 1 South Central', league:'Regional 1 South Central', pos:5, of:12, p:7, w:4, d:0, l:3, pts:16, prePos:6, oppPos:4, boost:2, from:'2026-11-15', until:'2026-11-20', next:'2026-11-21' }), 'Farnham\'s entry kept field for field, and nothing the game does not read (why, src)');
+  ok(good && json(good.clubs.FAR) === json({ date:'2026-11-14', ha:'a', res:'W', f:38, a:34, opp:'OAE', oppName:'Old Alleynians', comp:'Regional 1 South Central', league:'Regional 1 South Central', pos:5, of:12, p:7, w:4, d:0, l:3, pts:16, prePos:6, oppPos:8, boost:1, from:'2026-11-15', until:'2026-11-20', next:'2026-11-21' }), 'Farnham\'s entry kept field for field, and nothing the game does not read (why, src)');
   const f = () => FILE();
   const whole = {
     'null':null, 'a list':[], 'a string':'x', 'version 2':{ ...f(), v:2 }, 'no version':(v => { delete v.v; return v; })(f()), 'version as a string':{ ...f(), v:'1' },
@@ -117,8 +117,8 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
     'HTML in the opponent':['clubs', 'FAR', { ...far(), oppName:'<img src=x onerror=alert(1)>' }], 'a closing bracket':['clubs', 'FAR', { ...far(), oppName:'Old Alleynians>' }], 'a control character':['clubs', 'FAR', { ...far(), oppName:'Old\nAlleynians' }], 'a 41 character name':['clubs', 'FAR', { ...far(), oppName:'O'.repeat(41) }], 'an empty name':['clubs', 'FAR', { ...far(), oppName:'' }], 'a name with spaces round it':['clubs', 'FAR', { ...far(), oppName:' Old Alleynians' }],
     'no competition':['clubs', 'FAR', { ...far(), comp:undefined }], 'a 61 character league':['clubs', 'FAR', { ...far(), league:'L'.repeat(61) }], 'a place below the table':['clubs', 'FAR', { ...far(), pos:13 }], 'a table of 25':['clubs', 'FAR', { ...far(), of:25, pos:5 }], 'a place with no league':['clubs', 'FAR', { ...far(), league:undefined }],
     'games that do not add up':['clubs', 'FAR', { ...far(), w:5 }], 'half a table line':['clubs', 'FAR', { ...far(), pts:undefined }], 'points below -50':['clubs', 'FAR', { ...far(), pts:-51 }], 'one place before the match':['clubs', 'FAR', { ...far(), oppPos:undefined }], 'rankings on a club':['clubs', 'FAR', { ...far(), rank:5, oppRank:6 }], 'a league on a nation':['men', 'ENG', { ...eng(), league:'Six Nations', pos:1, of:6 }],
-    'a boost of 3':['clubs', 'FAR', { ...far(), boost:3 }], 'a boost the reason does not give':['clubs', 'FAR', { ...far(), boost:1 }], 'an unknown reason':['clubs', 'FAR', { ...far(), why:'great' }], 'a reason off the prototype':['clubs', 'FAR', { ...far(), why:'toString' }], 'a loss boosted':['clubs', 'WIM', { ...f().clubs.WIM, boost:1, why:'win' }],
-    'a big win by 14':['clubs', 'FAR', { ...far(), why:'big' }], 'higher placed by 15':['men', 'ENG', { ...eng(), why:'higher' }], 'a draw boosted':['clubs', 'NTH', { ...f().clubs.NTH, boost:1, why:'win' }], 'a walkover boosted':['clubs', 'FAR', { ...far(), wo:true }], 'a walkover flag that is not true':['clubs', 'FAR', { ...far(), wo:1 }],
+    'a boost of 3':['clubs', 'FAR', { ...far(), boost:3 }], 'a boost the reason does not give':['clubs', 'FAR', { ...far(), boost:2 }], 'an unknown reason':['clubs', 'FAR', { ...far(), why:'great' }], 'a reason off the prototype':['clubs', 'FAR', { ...far(), why:'toString' }], 'a loss boosted':['clubs', 'WIM', { ...f().clubs.WIM, boost:1, why:'win' }],
+    'a big win by 4':['clubs', 'FAR', { ...far(), why:'big', boost:2 }], 'higher placed by 15':['men', 'ENG', { ...eng(), why:'higher' }], 'a draw boosted':['clubs', 'NTH', { ...f().clubs.NTH, boost:1, why:'win' }], 'a walkover boosted':['clubs', 'FAR', { ...far(), wo:true }], 'a walkover flag that is not true':['clubs', 'FAR', { ...far(), wo:1 }],
     'from on the match day':['clubs', 'FAR', { ...far(), from:'2026-11-14' }], 'until past seven days':['clubs', 'FAR', { ...far(), until:'2026-11-22', next:undefined }], 'until before from':['clubs', 'FAR', { ...far(), until:'2026-11-14' }], 'until on the next fixture':['clubs', 'FAR', { ...far(), until:'2026-11-21', next:'2026-11-21' }], 'next before the match':['clubs', 'FAR', { ...far(), next:'2026-11-13' }], 'no until':['clubs', 'FAR', { ...far(), until:undefined }],
   };
   for (const [name, [kind, id, e]] of Object.entries(drop)) {
@@ -146,13 +146,13 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   // a window across the October change, by the device's moment
   const oct = { ...FILE(), generated:'2026-10-25T21:52:00Z', clubs:{ FAR:{ ...FILE().clubs.FAR, date:'2026-10-24', from:'2026-10-25', until:'2026-10-30', next:'2026-10-31' } }, men:{}, women:{} };
   const at = iso => { R.set(oct, iso); return R.delta(FAR()); };
-  ok(at('2026-10-24T22:59:59Z') === 0 && at('2026-10-24T23:00:00Z') === 2, 'it opens at midnight UK time on from (23:00 UTC in British Summer Time)');
-  ok(at('2026-10-30T23:59:59Z') === 2 && at('2026-10-31T00:00:00Z') === 0, 'it closes at midnight UK time after until (00:00 UTC once the clocks are back)');
+  ok(at('2026-10-24T22:59:59Z') === 0 && at('2026-10-24T23:00:00Z') === 1, 'it opens at midnight UK time on from (23:00 UTC in British Summer Time)');
+  ok(at('2026-10-30T23:59:59Z') === 1 && at('2026-10-31T00:00:00Z') === 0, 'it closes at midnight UK time after until (00:00 UTC once the clocks are back)');
   const mar = { ...FILE(), generated:'2026-03-29T21:52:00Z', clubs:{ FAR:{ ...FILE().clubs.FAR, date:'2026-03-28', from:'2026-03-29', until:'2026-04-03', next:'2026-04-04' } }, men:{}, women:{} };
   R.set(mar, '2026-03-28T23:59:59Z'); const before = R.delta(FAR()); R.set(mar, '2026-03-29T00:00:00Z'); const opened = R.delta(FAR());
   R.set(mar, '2026-04-03T22:59:59Z'); const last = R.delta(FAR()); R.set(mar, '2026-04-03T23:00:00Z'); const gone = R.delta(FAR());
-  ok(before === 0 && opened === 2 && last === 2 && gone === 0, 'across the March change: open at 00:00 UTC (GMT), closed at 23:00 UTC on until (BST)');
-  for (const [day, want] of [['2026-11-14', 0], ['2026-11-15', 2], ['2026-11-17', 2], ['2026-11-20', 2], ['2026-11-21', 0], ['2026-11-22', 0]]) { R.set(FILE(), day); ok(R.delta(FAR()) === want, `Farnham's +2 on ${day}: ${want} (${R.delta(FAR())})`); }
+  ok(before === 0 && opened === 1 && last === 1 && gone === 0, 'across the March change: open at 00:00 UTC (GMT), closed at 23:00 UTC on until (BST)');
+  for (const [day, want] of [['2026-11-14', 0], ['2026-11-15', 1], ['2026-11-17', 1], ['2026-11-20', 1], ['2026-11-21', 0], ['2026-11-22', 0]]) { R.set(FILE(), day); ok(R.delta(FAR()) === want, `Farnham's +1 on ${day}: ${want} (${R.delta(FAR())})`); }
   R.set(FILE(), '2026-12-14'); ok(!!R.news(FAR(), 'men'), 'the result line stays 30 days after the match (14 Dec)'); R.set(FILE(), '2026-12-15'); ok(R.news(FAR(), 'men') === null, 'and is gone on the 31st day: the box as it was');
   ok(R.day('2026-11-14') === 'Sat 14 Nov' && R.day('2026-11-20') === 'Fri 20 Nov', 'dates read Sat 14 Nov');
   R.set(null);
@@ -162,14 +162,14 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
 {
   R.set(FILE(), '2026-11-17');
   const lg = { ...FAR(), key:'lg-FAR' }, made = { ...FAR(), key:'my1', custom:true }, legend = X.natList('men').length && T.locker.LEGENDS[0];
-  ok(R.delta(FAR()) === 2 && R.delta(WIM()) === -1 && R.delta(nat('ENG')) === 2 && R.delta(nat('JPN')) === -1, 'Farnham +2 (a win over a side placed higher), Wimbledon -1, England +2 (by 15 or more), Japan -1');
+  ok(R.delta(FAR()) === 1 && R.delta(WIM()) === -1 && R.delta(nat('ENG')) === 2 && R.delta(nat('JPN')) === -1, 'Farnham +1 (a win, over a side placed lower), Wimbledon -1, England +2 (by 15 or more), Japan -1');
   ok(R.delta(by('NTH')) === 0 && R.delta(by('BRC')) === 0, 'a draw has none, and a side with no entry none');
   ok(R.delta(X.catSide(FAR(), 'women')) === 0 && R.delta(X.catSide(FAR(), 'minis')) === 0, 'a club\'s Women and Minis sides: none (they share its id, and are not its first XV)');
   ok(R.delta(nat('ENG', 'minis')) === 0, 'a Minis nation: none (it plays the men\'s ratings)');
   R.set(FILE(), '2026-11-14'); ok(R.delta(nat('ENG', 'women')) === 2 && R.delta(nat('ENG')) === 0, 'a women\'s nation takes the women\'s Tests (England Women +2 on 14 Nov, when the men\'s had none open)'); R.set(FILE(), '2026-11-17');
   ok(R.delta(made) === 0 && R.delta(lg) === 0 && (!legend || R.delta(legend) === 0) && R.delta({ ...FAR(), legend:true }) === 0, 'a team you made, a My League side and a Legend on the same code: none');
   S.kids = true; S.diff = 0; ok(R.delta(FAR()) === 0 && R.delta(nat('ENG')) === 0, 'the Kids level: none for anyone'); S.kids = false; S.diff = 1;
-  S.kids = true; S.diff = 1; ok(R.delta(FAR()) === 2, 'a Kids player moved up a level is no longer at the Kids level'); S.kids = false;
+  S.kids = true; S.diff = 1; ok(R.delta(FAR()) === 1, 'a Kids player moved up a level is no longer at the Kids level'); S.kids = false;
   R.set(null);
 }
 
@@ -179,7 +179,9 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   const was = json(X.ALL_TEAMS), r0 = rndCalls();
   const far = R.side(FAR()), wim = R.side(WIM()), eng = R.side(nat('ENG')), none = R.side(by('BRC'));
   ok(rndCalls() === r0, 'a boosted copy draws no random number');
-  ok(json(abil(FAR())) === '[3,2,3,2,1]' && json(abil(far)) === '[4,3,3,2,1]' && X.overallOf(far) === 64 && X.overallOf(FAR()) === 58 && far.real === 2, `Farnham +2: Pace 4, Power 3, overall 58 to 64 (${abil(far)})`);
+  ok(json(abil(FAR())) === '[3,2,3,2,1]' && json(abil(far)) === '[4,2,3,2,1]' && X.overallOf(far) === 61 && X.overallOf(FAR()) === 58 && far.real === 1, `Farnham +1: Pace 4, overall 58 to 61 (${abil(far)})`);
+  const two = (() => { const v = FILE(); v.clubs.FAR = { ...v.clubs.FAR, why:'higher', boost:2, oppPos:4 }; R.set(v, '2026-11-17'); const t = R.side(FAR()); R.set(FILE(), '2026-11-17'); return t; })();
+  ok(json(abil(two)) === '[4,3,3,2,1]' && X.overallOf(two) === 64 && two.real === 2, `Farnham +2, had it been over a side placed higher: Pace 4, Power 3, 58 to 64, as the design measured (${abil(two)})`);
   ok(X.overallOf(wim) === 52 && X.rateOf(wim) === X.rateOf(WIM()) - 1 && wim.real === -1, `Wimbledon -1: one point off where it is weakest (${abil(WIM())} to ${abil(wim)})`);
   ok(X.overallOf(eng) === 90 && json(abil(eng).map((v, i) => v - abil(nat('ENG'))[i]).filter(Boolean)) === '[1,1]', `England +2: 84 to 90, two abilities a point each (${abil(nat('ENG'))} to ${abil(eng)})`);
   ok(none === by('BRC') && R.side(FAR()) !== FAR() && json(X.ALL_TEAMS) === was, 'no boost: the side itself; a boost: a copy, and no list side is ever edited');
@@ -193,25 +195,25 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
 {
   R.set(FILE(), '2026-11-17');
   D.startMatch(FAR(), WIM(), false);
-  ok(T.M.nat[0].real === 2 && T.M.nat[1].real === -1 && X.overallOf(T.M.nat[0]) === 64 && X.overallOf(T.M.nat[1]) === 52 && X.overallOf(FAR()) === 58, 'Quick Match: Farnham plays at 64 and Wimbledon at 52, the list\'s sides unchanged');
+  ok(T.M.nat[0].real === 1 && T.M.nat[1].real === -1 && X.overallOf(T.M.nat[0]) === 61 && X.overallOf(T.M.nat[1]) === 52 && X.overallOf(FAR()) === 58, 'Quick Match: Farnham plays at 61 and Wimbledon at 52, the list\'s sides unchanged');
   D.exitMatch();
   X.setChamp(null); X.newChamp(FAR(), HUB()); X.save();
   const ch = X.champ(), saved = json(ch), p = ch.fixtures[ch.round].find(x => x.includes(ch.user)), opp = p[0] === ch.user ? p[1] : p[0];
   D.startMatch(ch.teams[ch.user], ch.teams[opp], true);
-  ok(T.M.nat[0].real === 2 && T.M.champ && json(X.champ()) === saved, `a saved championship's next match plays this week's Form (Farnham v ${ch.teams[opp].name}), and the saved sides are never edited`);
+  ok(T.M.nat[0].real === 1 && T.M.champ && json(X.champ()) === saved, `a saved championship's next match plays this week's Form (Farnham v ${ch.teams[opp].name}), and the saved sides are never edited`);
   D.exitMatch(); X.setChamp(null);
   S.kids = true; S.diff = 0; D.startMatch(FAR(), WIM(), false); ok(!T.M.nat[0].real && !T.M.nat[1].real && T.M.kids, 'the Kids level: the match plays the sides as they are'); D.exitMatch(); S.kids = false; S.diff = 1;
   S.cat = 'minis'; D.startMatch(X.catTeam(FAR(), 'minis'), X.catTeam(WIM(), 'minis'), false); ok(!T.M.nat[0].real && !T.M.nat[1].real, 'Minis: none'); D.exitMatch(); S.cat = 'men';
-  D.startMatch(FAR(), WIM(), false, { two:true, levels:[1, 1] }); ok(T.M.nat[0].real === 2 && T.M.nat[1].real === -1, '2 Players: both sides as one player has them'); D.exitMatch();
+  D.startMatch(FAR(), WIM(), false, { two:true, levels:[1, 1] }); ok(T.M.nat[0].real === 1 && T.M.nat[1].real === -1, '2 Players: both sides as one player has them'); D.exitMatch();
   // England +2 lifts an ability to 5: the star trait it would bring is not handed out; the side's own stars are
   D.startMatch(nat('ENG'), nat('FRA'), false);
   const raised = KEYS.filter((k, i) => abil(T.M.nat[0])[i] === 5 && abil(nat('ENG'))[i] < 5), sorted = m => json([...m.entries()].sort((a, b) => a[0] - b[0]));
   const own = T.traits.teamStars(nat('ENG')), boosted = T.traits.teamStars(T.M.nat[0]), got = new Map(T.M.players.filter(q => q.team === 0 && q.tr).map(q => [q.n, Object.keys(q.tr)]));
   ok(raised.length > 0 && sorted(own) === sorted(got) && sorted(boosted) !== sorted(own), `England at 90 (${raised.join(', ')} raised to 5, which would bring a star) has its own star traits only (${sorted(got)})`);
   D.exitMatch();
-  // Stronger Side reads the sides as they are: a side that Farnham's +2 would make Stronger Side against it is not told so
+  // Stronger Side reads the sides as they are: a side that Farnham's +1 would make Stronger Side against it is not told so
   const weaker = X.ALL_TEAMS.find(t => !X.isNation(t) && !X.outmatched(t, FAR()) && X.outmatched(t, R.side(FAR())));
-  ok(!!weaker && !X.outmatched(R.base(weaker), R.base(R.side(FAR()))), `Stronger Side reads the sides as they are, never this week's Form: ${weaker && weaker.name} against Farnham at 64 would be, against Farnham at 58 is not, and is not told so`);
+  ok(!!weaker && !X.outmatched(R.base(weaker), R.base(R.side(FAR()))), `Stronger Side reads the sides as they are, never this week's Form: ${weaker && weaker.name} against Farnham at 61 would be, against Farnham at 58 is not, and is not told so`);
   ok(/outmatched\(realBase\(M\.nat\[0\]\), realBase\(M\.nat\[1\]\)\)/.test(fs.readFileSync(new URL('../src/match.js', import.meta.url), 'utf8')) && /teamStars\(realBase\(M\.nat\[t\]\)/.test(fs.readFileSync(new URL('../src/traits.js', import.meta.url), 'utf8')), 'the kick-off line and the star traits read realBase');
   R.set(null);
 }
@@ -226,7 +228,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
     const matchKeys = ['quick', 'quickFI', 'two', 'champ', 'cup', 'career', 'auto', 'autoNat'];
     ok(off.rnd0 === table.rnd0 && json(table.auto) === json(off.auto) && json(table.autoNat) === json(off.autoNat), 'with a file loaded: AI v AI and the balance tools play as before, and loading it drew nothing');
     ok(json(table.quickFI) === json(off.quickFI), 'with a file: a match with no boosted side (Fiji v Italy) is exactly as before');
-    ok(json(table.quick) !== json(off.quick) && json(table.quick[4]) === '[4,3,3,2,1]' && json(table.champ) !== json(off.champ) && json(table.cup) !== json(off.cup), 'with a file: Farnham v Wimbledon, the Championship\'s and England\'s cup match play the boosted sides');
+    ok(json(table.quick) !== json(off.quick) && json(table.quick[4]) === '[4,2,3,2,1]' && json(table.champ) !== json(off.champ) && json(table.cup) !== json(off.cup), 'with a file: Farnham v Wimbledon, the Championship\'s and England\'s cup match play the boosted sides');
     ok(table.champTeams === off.champTeams && JSON.parse(table.champSaved).results.length === 1, 'and the saved championship\'s sides are byte for byte as before: only its result moved');
     ok(json(table.quick[3]) !== undefined && table.quick[3] >= 0, 'played to full time');
     ok(matchKeys.every(k => json(gone[k]) === json(off[k])), `after until (21 Nov): every match exactly as with no file`);
@@ -245,9 +247,9 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   const real = $('my-real').innerHTML;
   ok(!$('my-real').hidden && !$('my-sub').hidden && $('my-sub').innerHTML === '' && $('my-box').classList.contains('real'), 'a result: shown, with the Your Games label over the games in the game');
   ok(/<span class="rr-out w">Won<\/span> 38-34 <span class="rr-v">v<\/span> Old Alleynians<\/b>/.test(real), 'Won 38-34 v Old Alleynians: the outcome a coloured word, v lower case, the opponent by the game\'s own name');
-  ok(/<span class="rr-when">Sat 14 Nov<\/span><span class="gap form up">Form \+2<\/span>/.test(real), 'Sat 14 Nov with Form +2 beside it');
-  ok(/<span class="sr">Last Result: Won 38-34 v Old Alleynians, Away, Sat 14 Nov\. Form plus 2 until Fri 20 Nov<\/span>/.test(real) && /aria-hidden="true" class="rr-shown"/.test(real), 'read out: Last Result, Away, the date, Form plus 2 until Fri 20 Nov');
-  ok($('my-real').title === 'Away · Regional 1 South Central · Form +2 until Fri 20 Nov', `its title: Home or Away and the Form's last day (${$('my-real').title})`);
+  ok(/<span class="rr-when">Sat 14 Nov<\/span><span class="gap form up">Form \+1<\/span>/.test(real), 'Sat 14 Nov with Form +1 beside it');
+  ok(/<span class="sr">Last Result: Won 38-34 v Old Alleynians, Away, Sat 14 Nov\. Form plus 1 until Fri 20 Nov<\/span>/.test(real) && /aria-hidden="true" class="rr-shown"/.test(real), 'read out: Last Result, Away, the date, Form plus 1 until Fri 20 Nov');
+  ok($('my-real').title === 'Away · Regional 1 South Central · Form +1 until Fri 20 Nov', `its title: Home or Away and the Form's last day (${$('my-real').title})`);
   ok($('my-league').innerHTML === '<span>Regional 1 South Central</span><span class="sep"> · </span><span>5th<span class="pts"> · 16 Pts</span></span>', `this season's league over 5th · 16 Pts (${$('my-league').innerHTML})`);
   ok(/My Country: England\. Last Test: Won 78-15 v Japan, Form plus 2</.test($('my-nat').innerHTML), `My Country's read-out carries its last Test (its title too: the browser part) (${$('my-nat').innerHTML.replace(/^.*class="sr">/, '')})`);
   S.kids = true; S.diff = 0; D.goHome(); ok(/Won<\/span> 38-34/.test($('my-real').innerHTML) && !/gap form/.test($('my-real').innerHTML) && !/Form/.test($('my-nat').innerHTML) && /Last Test: Won 78-15/.test($('my-nat').innerHTML), 'the Kids level: the results show, no Form'); S.kids = false; S.diff = 1;
@@ -261,8 +263,8 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   const before = [$('t-side0').innerHTML, $('t-side1').innerHTML];
   R.set(FILE(), '2026-11-17'); D.openTeams('quick');
   const [c0, c1] = [$('t-side0').innerHTML, $('t-side1').innerHTML];
-  ok(/Farnham/.test(c0) && /<span class="gap mine">My Team<\/span><span class="gap form up"><span aria-hidden="true">Form \+2<\/span><span class="sr">Form plus 2<\/span><\/span>/.test(c0), 'Farnham\'s card: My Team, then Form +2, read as Form plus 2');
-  ok(/<span class="lbl">Pace<em class="pk-up" aria-hidden="true">\+1<\/em><\/span><span class="pk-bar" role="img" aria-label="Pace 4 of 5, Form plus 1"><i style="--v:0\.60"><\/i><b class="pk-real up" style="--a:0\.60;--w:0\.20"><\/b>/.test(c0) && /Power<em class="pk-up"/.test(c0) && !/Handling<em/.test(c0), 'its bars: Pace and Power +1 each, the point in yellow on the bar, the rest as they were');
+  ok(/Farnham/.test(c0) && /<span class="gap mine">My Team<\/span><span class="gap form up"><span aria-hidden="true">Form \+1<\/span><span class="sr">Form plus 1<\/span><\/span>/.test(c0), 'Farnham\'s card: My Team, then Form +1, read as Form plus 1');
+  ok(/<span class="lbl">Pace<em class="pk-up" aria-hidden="true">\+1<\/em><\/span><span class="pk-bar" role="img" aria-label="Pace 4 of 5, Form plus 1"><i style="--v:0\.60"><\/i><b class="pk-real up" style="--a:0\.60;--w:0\.20"><\/b>/.test(c0) && !/(Power|Handling|Kicking|Stamina)<em/.test(c0), 'its bars: Pace +1, the point in yellow on the bar, the rest as they were');
   ok(/gap form down"><span aria-hidden="true">Form −1<\/span><span class="sr">Form minus 1<\/span>/.test(c1) && /pk-real down/.test(c1) && /pk-down" aria-hidden="true">−1</.test(c1), 'Wimbledon\'s: Form −1, its point lost hatched in coral, −1 beside the name');
   const head = h => h.slice(0, h.indexOf('<span class="tname">'));   // the shirt and its overall badge, before the name
   const rate = h => h.slice(h.indexOf('<span class="pk-rate">'), h.indexOf('<span class="gap mine">'));
@@ -277,7 +279,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   // the hub
   R.set(FILE(), '2026-11-17'); X.newChamp(FAR(), HUB()); D.renderHub();
   const hub = $('hub-next').innerHTML;
-  ok(/<span class="fx-nm"><span>Farnham<\/span><span class="gap form up">/.test(hub) && /<span class="fx-nm"><span>Wimbledon<\/span><span class="gap form down">/.test(hub), 'the hub: Farnham with Form +2, v, Wimbledon with Form −1');
+  ok(/<span class="fx-nm"><span>Farnham<\/span><span class="gap form up">/.test(hub) && /<span class="fx-nm"><span>Wimbledon<\/span><span class="gap form down">/.test(hub), 'the hub: Farnham with Form +1, v, Wimbledon with Form −1');
   R.set(null); D.renderHub(); ok(/<span class="fx-team">[^]*?<span>Farnham<\/span><\/span>/.test($('hub-next').innerHTML) && !/fx-nm/.test($('hub-next').innerHTML), 'with no file: the fixture as it was');
   X.setChamp(null); S.pick = [null, null]; D.goHome();
 }
@@ -421,7 +423,7 @@ async function browserChecks() {
       ok(m.fanOn, `${kind}: the Super Fan's box was drawn in its colours (${m.fanColours.join(' on ')})`);
       ok(!m.card.scroll && Math.abs(m.card.names) <= 1 && Math.abs(m.card.bars) <= 1 && m.card.chips.every(Boolean) && !m.card.clip.length, `${kind} cards: no page scroll, both names and both bars level (${m.card.names.toFixed(1)}, ${m.card.bars.toFixed(1)}), Form on both, nothing cut (${m.card.clip.join(' | ')})`);
       ok(!m.card.small.length, `${kind} cards: every button 44px (${m.card.small.join(', ')})`);
-      ok(!m.hub.scroll && json(m.hub.chips.map(c => c.replace(/\s+/g, ' ').trim())) === json(['Form +2Form plus 2', 'Form −1Form minus 1']) && !m.hub.small.length, `${kind} hub: no page scroll, Farnham Form +2 and Wimbledon Form −1 (${json(m.hub.chips)})`);
+      ok(!m.hub.scroll && json(m.hub.chips.map(c => c.replace(/\s+/g, ' ').trim())) === json(['Form +1Form plus 1', 'Form −1Form minus 1']) && !m.hub.small.length, `${kind} hub: no page scroll, Farnham Form +1 and Wimbledon Form −1 (${json(m.hub.chips)})`);
       if ((kind === '844x390' || kind === '667x375')) {   // the screenshots, from a fresh page: no Trophy Cabinet or championship left by the checks above
         const out = shots || '/tmp/claude-0/-home-user/a86fd4cd-a20a-5749-8977-916237a3df3f/scratchpad/shots';
         if (fs.existsSync(out)) {
