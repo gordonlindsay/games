@@ -169,6 +169,12 @@ const BRK = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'brk').teams
   swipe(0, 30, 28); ok(view(0).group.key === 'sur' && view(0).i === 0, 'a short or slanting drag: nothing');
   swipe(1, -60, 0); P.click({ target:el(1, 'pick') });
   ok(!P.state().sides[1].set, 'the click a swipe ends with sets nothing');
+  // a swipe from a card's chevron is the card's (its edge); one from Previous or Next under the card is not, a tap's and a long press's alone
+  fresh(); D.openTeams('quick');
+  const swipeOn = (s, act, dx, dy) => { const t = el(s, act); $('t-sides').fire('pointerdown', { pointerId:8, target:t, clientX:300, clientY:200 }); $('t-sides').fire('pointermove', { pointerId:8, target:t, clientX:300 + dx, clientY:200 + dy }); $('t-sides').fire('pointerup', { pointerId:8, target:t }); };
+  swipeOn(0, 'cnext', -60, 4); const chevL = view(0).i; swipeOn(0, 'cprev', 60, -3); const chevR = view(0).i; swipeOn(0, 'cnext', 3, 70); const chevD = view(0).group.key; swipeOn(0, 'cnext', -3, -70);
+  swipeOn(0, 'next', -60, 4); const btnL = view(0).i + ':' + view(0).group.key;
+  ok(chevL === 1 && chevR === 0 && chevD === 'brk' && btnL === '0:sur', `a swipe starting on a card's chevron: left the next team, right the one before, down the next group, as on the card; one starting on Next under it moves nothing (${[chevL, chevR, chevD, btnL].join(' ')})`);
   // the long press on Previous or Next: a country
   // (in a browser, the timer; here, the same call it makes)
   // 2 Players: a mirror is allowed, the Opponent follows Player 1 to the next side
@@ -699,6 +705,98 @@ async function browserChecks() {
   const base = `http://127.0.0.1:${server.address().port}/index.html`;
   const SAVE = { settings:{ tut:['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop', 'maul'], coach:false, played:5 } };
   const SIZES = [[844, 390], [667, 375], [844, 340], [667, 320], [568, 320]];
+  // the arrows' look over every mode (section 9's arrows block, and the narrow and in-between sizes after the five)
+  const arrowsLook = () => {
+    const T = window.__tryline, P = T.picker, D = T.debug, X = T.teams, $ = id => document.getElementById(id), scr = $('s-teams');
+    const out = { bad:[], states:0, chev:0, hidden:0, bare:0, bareAt:{}, find:{} };
+    const R = el => el.getBoundingClientRect(), shown = el => !!el && R(el).width > 0 && getComputedStyle(el).visibility !== 'hidden';
+    const tone = v => { const p = document.createElement('i'); p.style.color = `var(${v})`; scr.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return c; };
+    const DIM = tone('--chalk-dim'), short = innerWidth <= 620;   // the card's chevrons hidden at 620 wide and under, at any height
+    const oneLine = box => { const parts = [...box.children], r = R(box), top = R(parts[0]).top; return !parts.some(p => { const q = R(p); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }); };
+    const needs = g => {                                   // pickFit's tests, with the chevron drawn: would it cost anything?
+      const was = g.classList.contains('bare'); g.classList.remove('bare');
+      const box = g.parentNode.querySelector('.pk-ctx > span'), gn = g.querySelector('.pk-gn'), who = g.parentNode.querySelector('.pk-who');
+      const why = [box && box.children.length && !oneLine(box) ? 'line' : '', gn.scrollWidth > gn.clientWidth + 0.5 ? 'cut' : '', R(g).height > 44.5 ? 'tall' : '', who && R(who).height > 1.5*parseFloat(getComputedStyle(who).lineHeight) ? 'who' : ''].filter(Boolean);
+      if (was) g.classList.add('bare');
+      return why;
+    };
+    const look = what => {
+      out.states++; document.getAnimations().forEach(a => a.finish());   // a move's slide done: measured where it rests
+      if (scr.scrollHeight > scr.clientHeight + 0.5) out.bad.push(`${what}: scrolls`);
+      if (/[‹›«»←-⇿⟵-⟿⌄˅∨<>]/.test(scr.innerText)) out.bad.push(`${what}: an arrow character in the text`);
+      for (const side of scr.querySelectorAll('.pk-side:not([hidden])')) {
+        const id = `${what} ${side.id}`, g = side.querySelector('.btn.pk-group');
+        if (g) {
+          const ico = g.querySelector('.pk-ico.d'), why = needs(g), bare = g.classList.contains('bare');
+          if (bare) { out.bare++; out.bareAt[P.view(+side.dataset.side).group.name] = why.join('+'); if (!why.length) out.bad.push(`${id}: ${g.textContent} bare, though the chevron costs nothing`); if (shown(ico)) out.bad.push(`${id}: bare yet drawn`); }
+          else {
+            if (why.length) out.bad.push(`${id}: ${g.textContent} keeps its chevron though it costs the ${why.join(', ')}`);
+            const gr = R(g), ir = R(ico), nr = R(g.querySelector('.pk-gn'));
+            if (!shown(ico) || ir.left < nr.right - 0.5 || ir.right > gr.right + 0.5) out.bad.push(`${id}: the group's chevron not after its name, inside the button`);
+          }
+          if (getComputedStyle(ico.querySelector('path')).stroke !== getComputedStyle(g).color) out.bad.push(`${id}: the group's chevron not in its text's colour`);
+        }
+        const pv = side.querySelector('.pk-step [data-act="prev"]'), nx = side.querySelector('.pk-step [data-act="next"]');
+        const pi = pv.querySelector('.pk-ico.l'), ni = nx.querySelector('.pk-ico.r');
+        if (!shown(pi) || !shown(ni) || pv.textContent !== 'Previous' || nx.textContent !== 'Next' || R(pi).right > R(pv).left + R(pv).width/2 || R(ni).left < R(nx).left + R(nx).width/2) out.bad.push(`${id}: Previous's chevron before the word, Next's after`);
+        if (getComputedStyle(pi.querySelector('path')).stroke !== getComputedStyle(pv).color) out.bad.push(`${id}: Previous's chevron not in its text's colour`);
+        const card = side.querySelector('.pk-card'), cr = R(card), many = P.view(+side.dataset.side).group.teams.length > 1;
+        const row = side.querySelector('.pk-row'), pb = row && row.querySelector(':scope > .pk-pick');
+        if (!row || !pb) out.bad.push(`${id}: no row round the card's button`);
+        else { const rr = R(row), rs = getComputedStyle(row), br = R(pb); if (Math.abs(br.left - rr.left - parseFloat(rs.paddingLeft)) > 0.5 || Math.abs(rr.right - parseFloat(rs.paddingRight) - br.right) > 0.5) out.bad.push(`${id}: the card's button not the row's full width (${Math.round(br.width)} of ${Math.round(rr.width)})`); }
+        for (const c of side.querySelectorAll('.pk-chev')) {
+          if (c.getAttribute('aria-hidden') !== 'true' || c.tabIndex !== -1 || c.hasAttribute('tabindex') || c.textContent.trim() || c.tagName !== 'SPAN') out.bad.push(`${id}: ${c.dataset.act} read out, in Tab or written`);
+          if (short) { if (R(c).width > 0) out.bad.push(`${id}: ${c.dataset.act} drawn at 568x320`); else out.hidden++; continue; }
+          if (!many) { if (shown(c)) out.bad.push(`${id}: ${c.dataset.act} shown on a group of one`); continue; }
+          out.chev++;
+          const r = R(c), gl = R(c.querySelector('svg'));
+          if (!shown(c) || r.width < 43.5 || r.height < 43.5 || r.left < -0.5 || r.right > innerWidth + 0.5 || r.top < -0.5 || r.bottom > innerHeight + 0.5) out.bad.push(`${id}: ${c.dataset.act} target ${Math.round(r.width)}x${Math.round(r.height)} at ${Math.round(r.left)},${Math.round(r.top)}`);
+          if (gl.left < cr.left || gl.right > cr.right || gl.top < cr.top || gl.bottom > cr.bottom) out.bad.push(`${id}: ${c.dataset.act}'s chevron outside the card`);
+          for (const o of side.querySelectorAll('.jw, .tname, .pk-league, .pk-rate, .pk-stats')) { const q = R(o); if (q.width && gl.left < q.right - 0.5 && gl.right > q.left + 0.5 && gl.top < q.bottom - 0.5 && gl.bottom > q.top + 0.5) out.bad.push(`${id}: ${c.dataset.act}'s chevron on ${o.className}`); }
+          if (getComputedStyle(c).color !== DIM || getComputedStyle(c.querySelector('path')).stroke !== DIM) out.bad.push(`${id}: ${c.dataset.act} not chalk-dim`);
+          for (let x = r.left + 1; x < r.right - 0.5; x += 4) for (let y = r.top + 1; y < r.bottom - 0.5; y += 4) {
+            const e = document.elementFromPoint(x, y), own = e && e.closest('.pk-chev, button');
+            if (own !== c) { out.bad.push(`${id}: ${c.dataset.act} at ${Math.round(x)},${Math.round(y)} is ${own ? own.className : e ? e.className || e.tagName : 'nothing'}'s`); break; }
+          }
+        }
+      }
+    };
+    T.debug.settings().cat = 'men'; T.debug.settings().pick = [null, null]; D.openTeams('quick');
+    const G = P.view(0).ladder.length;
+    for (const cat of ['men', 'women']) { T.debug.settings().cat = cat; D.openTeams('quick'); for (let g = 0; g < G; g++) { look(`quick ${cat} ${P.view(0).group.key}`); P.step(0, 1); P.step(1, 2); look(`quick ${cat} ${P.view(0).group.key} on`); P.group(0, 1); P.group(1, 1); } }
+    T.debug.settings().cat = 'men'; D.openJoin(); D.openTeams('two'); for (let g = 0; g < 12; g++) { look(`two ${P.view(0).group.key}`); P.group(0, 1); P.group(1, 3); }
+    D.setTwo(false);
+    D.openTeams('my'); for (let g = 0; g < P.view(0).ladder.length; g += 3) { look(`my ${P.view(0).group.key}`); P.group(0, 3); }
+    for (const cat of ['men', 'women']) { T.debug.settings().cat = cat; T.debug.settings().pick = [null, null]; D.openTeams('champ', 'county'); for (let g = 0; g < P.view(0).ladder.length; g++) { look(`county ${cat} ${P.view(0).group.key}`); P.group(0, 1); } }
+    T.debug.settings().cat = 'men'; D.openTeams('champ', 'world'); look('world');
+    X.custom().length = 0; X.custom().push(Object.assign({}, X.ALL_TEAMS.find(t => t.id === 'FAR'), { id:'ZZM', key:'zzm', name:'Made Side', custom:true }), Object.assign({}, X.ALL_TEAMS.find(t => t.id === 'FAR'), { id:'ZZN', key:'zzn', name:'Second Side', custom:true }));
+    T.debug.settings().pick = [null, null]; D.openTeams('quick'); P.group(0, P.view(0).ladder.findIndex(x => x.teams.some(t => t.custom)) - P.view(0).gi);
+    for (let n = 0; n < 60 && !P.view(0).team.custom; n++) P.step(0, 1);
+    out.made = !!$('t-side0').querySelector('.pk-edit') && $('t-side0').querySelector('.pk-card.made') !== null;
+    look('made'); const e = R($('t-side0').querySelector('.pk-edit')), c = R($('t-side0').querySelector('.pk-chev.next'));
+    if (c.width && e.left < c.right && e.right > c.left && e.top < c.bottom && e.bottom > c.top) out.bad.push(`made: Edit and the right chevron share points (${[e.left, e.top, e.right, e.bottom].map(Math.round)} v ${[c.left, c.top, c.right, c.bottom].map(Math.round)})`);
+    X.custom().length = 0;
+    // a card sliding in (Next from the right, Previous from the left) never carries the page sideways, its chevrons with it
+    T.debug.settings().pick = [null, null]; D.openTeams('quick'); document.getAnimations().forEach(a => a.finish());
+    for (const [s, d] of [[0, 1], [0, -1], [1, 1], [1, -1]]) {
+      P.step(s, d); const a = document.getAnimations(); a.forEach(x => { x.pause(); x.currentTime = 1; });
+      const wide = Math.max(scr.scrollWidth - scr.clientWidth, document.documentElement.scrollWidth - innerWidth);
+      if (!a.length && !short) out.bad.push(`slide ${s} ${d}: no slide`);
+      if (wide > 0) out.bad.push(`slide ${s} ${d}: the page ${wide}px sideways`);
+      a.forEach(x => x.finish());
+    }
+    // the Filter's word: shown, but for the icon alone at 568 with Men | Women | Minis beside it; its name Filter Teams or Filter Clubs
+    const find = mode => {
+      const f = $('t-find'), sp = f.querySelector('span'), fr = R(f), cat = !$('t-cat').hidden, word = R(sp).width > 1;
+      const title = $('t-title'), tr = R(title);
+      return { mode, cat, word, label:f.getAttribute('aria-label'), text:f.textContent, w:Math.round(fr.width), h:Math.round(fr.height), cut:title.scrollWidth > title.clientWidth + 0.5 || tr.right > fr.left + 0.5 || sp.scrollWidth > sp.clientWidth + 0.5 && word };
+    };
+    T.debug.settings().pick = [null, null]; D.openTeams('quick'); out.find.quick = find('quick');
+    T.career.set(null); T.career.newOpen(); T.career.clubOpen(); out.find.career = find('career');
+    T.profile.set({ age:'adult', gender:'female', look:null }); D.openTeams('quick'); out.find.profile = find('profile');
+    T.profile.set({ age:null, gender:null, look:null }); T.debug.settings().cat = 'men'; D.goHome();
+    return out;
+  };
   try {
     for (const [w, h] of SIZES) {
       const at = `${w}x${h}`;
@@ -1037,97 +1135,7 @@ async function browserChecks() {
           // too) and hidden at 568x320; the group's chevron left off (.bare) only where it would cost the card's line, cut the name, push Your
           // Team to two lines or the head past 44px, and only there; the Filter's word, its name, and the icon alone at 568 with Men | Women |
           // Minis beside it; no character drawn as an arrow
-          const arw = await page.evaluate(() => {
-            const T = window.__tryline, P = T.picker, D = T.debug, X = T.teams, $ = id => document.getElementById(id), scr = $('s-teams');
-            const out = { bad:[], states:0, chev:0, hidden:0, bare:0, bareAt:{}, find:{} };
-            const R = el => el.getBoundingClientRect(), shown = el => !!el && R(el).width > 0 && getComputedStyle(el).visibility !== 'hidden';
-            const tone = v => { const p = document.createElement('i'); p.style.color = `var(${v})`; scr.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return c; };
-            const DIM = tone('--chalk-dim'), short = innerWidth <= 620 && innerHeight <= 350;
-            const oneLine = box => { const parts = [...box.children], r = R(box), top = R(parts[0]).top; return !parts.some(p => { const q = R(p); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }); };
-            const needs = g => {                                   // pickFit's tests, with the chevron drawn: would it cost anything?
-              const was = g.classList.contains('bare'); g.classList.remove('bare');
-              const box = g.parentNode.querySelector('.pk-ctx > span'), gn = g.querySelector('.pk-gn'), who = g.parentNode.querySelector('.pk-who');
-              const why = [box && box.children.length && !oneLine(box) ? 'line' : '', gn.scrollWidth > gn.clientWidth + 0.5 ? 'cut' : '', R(g).height > 44.5 ? 'tall' : '', who && R(who).height > 1.5*parseFloat(getComputedStyle(who).lineHeight) ? 'who' : ''].filter(Boolean);
-              if (was) g.classList.add('bare');
-              return why;
-            };
-            const look = what => {
-              out.states++; document.getAnimations().forEach(a => a.finish());   // a move's slide done: measured where it rests
-              if (scr.scrollHeight > scr.clientHeight + 0.5) out.bad.push(`${what}: scrolls`);
-              if (/[‹›«»←-⇿⟵-⟿⌄˅∨<>]/.test(scr.innerText)) out.bad.push(`${what}: an arrow character in the text`);
-              for (const side of scr.querySelectorAll('.pk-side:not([hidden])')) {
-                const id = `${what} ${side.id}`, g = side.querySelector('.btn.pk-group');
-                if (g) {
-                  const ico = g.querySelector('.pk-ico.d'), why = needs(g), bare = g.classList.contains('bare');
-                  if (bare) { out.bare++; out.bareAt[P.view(+side.dataset.side).group.name] = why.join('+'); if (!why.length) out.bad.push(`${id}: ${g.textContent} bare, though the chevron costs nothing`); if (shown(ico)) out.bad.push(`${id}: bare yet drawn`); }
-                  else {
-                    if (why.length) out.bad.push(`${id}: ${g.textContent} keeps its chevron though it costs the ${why.join(', ')}`);
-                    const gr = R(g), ir = R(ico), nr = R(g.querySelector('.pk-gn'));
-                    if (!shown(ico) || ir.left < nr.right - 0.5 || ir.right > gr.right + 0.5) out.bad.push(`${id}: the group's chevron not after its name, inside the button`);
-                  }
-                  if (getComputedStyle(ico.querySelector('path')).stroke !== getComputedStyle(g).color) out.bad.push(`${id}: the group's chevron not in its text's colour`);
-                }
-                const pv = side.querySelector('.pk-step [data-act="prev"]'), nx = side.querySelector('.pk-step [data-act="next"]');
-                const pi = pv.querySelector('.pk-ico.l'), ni = nx.querySelector('.pk-ico.r');
-                if (!shown(pi) || !shown(ni) || pv.textContent !== 'Previous' || nx.textContent !== 'Next' || R(pi).right > R(pv).left + R(pv).width/2 || R(ni).left < R(nx).left + R(nx).width/2) out.bad.push(`${id}: Previous's chevron before the word, Next's after`);
-                if (getComputedStyle(pi.querySelector('path')).stroke !== getComputedStyle(pv).color) out.bad.push(`${id}: Previous's chevron not in its text's colour`);
-                const card = side.querySelector('.pk-card'), cr = R(card), many = P.view(+side.dataset.side).group.teams.length > 1;
-                const row = side.querySelector('.pk-row'), pb = row && row.querySelector(':scope > .pk-pick');
-                if (!row || !pb) out.bad.push(`${id}: no row round the card's button`);
-                else { const rr = R(row), rs = getComputedStyle(row), br = R(pb); if (Math.abs(br.left - rr.left - parseFloat(rs.paddingLeft)) > 0.5 || Math.abs(rr.right - parseFloat(rs.paddingRight) - br.right) > 0.5) out.bad.push(`${id}: the card's button not the row's full width (${Math.round(br.width)} of ${Math.round(rr.width)})`); }
-                for (const c of side.querySelectorAll('.pk-chev')) {
-                  if (c.getAttribute('aria-hidden') !== 'true' || c.tabIndex !== -1 || c.hasAttribute('tabindex') || c.textContent.trim() || c.tagName !== 'SPAN') out.bad.push(`${id}: ${c.dataset.act} read out, in Tab or written`);
-                  if (short) { if (R(c).width > 0) out.bad.push(`${id}: ${c.dataset.act} drawn at 568x320`); else out.hidden++; continue; }
-                  if (!many) { if (shown(c)) out.bad.push(`${id}: ${c.dataset.act} shown on a group of one`); continue; }
-                  out.chev++;
-                  const r = R(c), gl = R(c.querySelector('svg'));
-                  if (!shown(c) || r.width < 43.5 || r.height < 43.5 || r.left < -0.5 || r.right > innerWidth + 0.5 || r.top < -0.5 || r.bottom > innerHeight + 0.5) out.bad.push(`${id}: ${c.dataset.act} target ${Math.round(r.width)}x${Math.round(r.height)} at ${Math.round(r.left)},${Math.round(r.top)}`);
-                  if (gl.left < cr.left || gl.right > cr.right || gl.top < cr.top || gl.bottom > cr.bottom) out.bad.push(`${id}: ${c.dataset.act}'s chevron outside the card`);
-                  for (const o of side.querySelectorAll('.jw, .tname, .pk-league, .pk-rate, .pk-stats')) { const q = R(o); if (q.width && gl.left < q.right - 0.5 && gl.right > q.left + 0.5 && gl.top < q.bottom - 0.5 && gl.bottom > q.top + 0.5) out.bad.push(`${id}: ${c.dataset.act}'s chevron on ${o.className}`); }
-                  if (getComputedStyle(c).color !== DIM || getComputedStyle(c.querySelector('path')).stroke !== DIM) out.bad.push(`${id}: ${c.dataset.act} not chalk-dim`);
-                  for (let x = r.left + 1; x < r.right - 0.5; x += 4) for (let y = r.top + 1; y < r.bottom - 0.5; y += 4) {
-                    const e = document.elementFromPoint(x, y), own = e && e.closest('.pk-chev, button');
-                    if (own !== c) { out.bad.push(`${id}: ${c.dataset.act} at ${Math.round(x)},${Math.round(y)} is ${own ? own.className : e ? e.className || e.tagName : 'nothing'}'s`); break; }
-                  }
-                }
-              }
-            };
-            T.debug.settings().cat = 'men'; T.debug.settings().pick = [null, null]; D.openTeams('quick');
-            const G = P.view(0).ladder.length;
-            for (const cat of ['men', 'women']) { T.debug.settings().cat = cat; D.openTeams('quick'); for (let g = 0; g < G; g++) { look(`quick ${cat} ${P.view(0).group.key}`); P.step(0, 1); P.step(1, 2); look(`quick ${cat} ${P.view(0).group.key} on`); P.group(0, 1); P.group(1, 1); } }
-            T.debug.settings().cat = 'men'; D.openJoin(); D.openTeams('two'); for (let g = 0; g < 12; g++) { look(`two ${P.view(0).group.key}`); P.group(0, 1); P.group(1, 3); }
-            D.setTwo(false);
-            D.openTeams('my'); for (let g = 0; g < P.view(0).ladder.length; g += 3) { look(`my ${P.view(0).group.key}`); P.group(0, 3); }
-            for (const cat of ['men', 'women']) { T.debug.settings().cat = cat; T.debug.settings().pick = [null, null]; D.openTeams('champ', 'county'); for (let g = 0; g < P.view(0).ladder.length; g++) { look(`county ${cat} ${P.view(0).group.key}`); P.group(0, 1); } }
-            T.debug.settings().cat = 'men'; D.openTeams('champ', 'world'); look('world');
-            X.custom().length = 0; X.custom().push(Object.assign({}, X.ALL_TEAMS.find(t => t.id === 'FAR'), { id:'ZZM', key:'zzm', name:'Made Side', custom:true }), Object.assign({}, X.ALL_TEAMS.find(t => t.id === 'FAR'), { id:'ZZN', key:'zzn', name:'Second Side', custom:true }));
-            T.debug.settings().pick = [null, null]; D.openTeams('quick'); P.group(0, P.view(0).ladder.findIndex(x => x.teams.some(t => t.custom)) - P.view(0).gi);
-            for (let n = 0; n < 60 && !P.view(0).team.custom; n++) P.step(0, 1);
-            out.made = !!$('t-side0').querySelector('.pk-edit') && $('t-side0').querySelector('.pk-card.made') !== null;
-            look('made'); const e = R($('t-side0').querySelector('.pk-edit')), c = R($('t-side0').querySelector('.pk-chev.next'));
-            if (c.width && e.left < c.right && e.right > c.left && e.top < c.bottom && e.bottom > c.top) out.bad.push(`made: Edit and the right chevron share points (${[e.left, e.top, e.right, e.bottom].map(Math.round)} v ${[c.left, c.top, c.right, c.bottom].map(Math.round)})`);
-            X.custom().length = 0;
-            // a card sliding in (Next from the right, Previous from the left) never carries the page sideways, its chevrons with it
-            T.debug.settings().pick = [null, null]; D.openTeams('quick'); document.getAnimations().forEach(a => a.finish());
-            for (const [s, d] of [[0, 1], [0, -1], [1, 1], [1, -1]]) {
-              P.step(s, d); const a = document.getAnimations(); a.forEach(x => { x.pause(); x.currentTime = 1; });
-              const wide = Math.max(scr.scrollWidth - scr.clientWidth, document.documentElement.scrollWidth - innerWidth);
-              if (!a.length && !short) out.bad.push(`slide ${s} ${d}: no slide`);
-              if (wide > 0) out.bad.push(`slide ${s} ${d}: the page ${wide}px sideways`);
-              a.forEach(x => x.finish());
-            }
-            // the Filter's word: shown, but for the icon alone at 568 with Men | Women | Minis beside it; its name Filter Teams or Filter Clubs
-            const find = mode => {
-              const f = $('t-find'), sp = f.querySelector('span'), fr = R(f), cat = !$('t-cat').hidden, word = R(sp).width > 1;
-              const title = $('t-title'), tr = R(title);
-              return { mode, cat, word, label:f.getAttribute('aria-label'), text:f.textContent, w:Math.round(fr.width), h:Math.round(fr.height), cut:title.scrollWidth > title.clientWidth + 0.5 || tr.right > fr.left + 0.5 || sp.scrollWidth > sp.clientWidth + 0.5 && word };
-            };
-            T.debug.settings().pick = [null, null]; D.openTeams('quick'); out.find.quick = find('quick');
-            T.career.set(null); T.career.newOpen(); T.career.clubOpen(); out.find.career = find('career');
-            T.profile.set({ age:'adult', gender:'female', look:null }); D.openTeams('quick'); out.find.profile = find('profile');
-            T.profile.set({ age:null, gender:null, look:null }); T.debug.settings().cat = 'men'; D.goHome();
-            return out;
-          });
+          const arw = await page.evaluate(arrowsLook);
           const narrow = w <= 620, wantBare = at === '568x320';
           ok(arw.bad.length === 0 && arw.states > 150 && arw.made && (wantBare ? arw.hidden > 300 && arw.chev === 0 : arw.chev > 400 && arw.hidden === 0), `${at}: the arrows: every chevron where it belongs in its text's own colour, the card's button the row's full width between them, the card's chalk-dim, inside the card and off the shirt, name and bars, its 44px target on the screen and all its own (a made team's Edit beside it too), read out by nothing and in no Tab; ${wantBare ? 'the card\'s hidden at 568x320, Previous and Next keeping theirs' : 'the card\'s shown'}; no scroll, and none sideways as a card slides in; no arrow character (${arw.states} states, ${arw.chev} card chevrons, ${arw.hidden} hidden${arw.bad.length ? ': ' + arw.bad.slice(0, 5).join('; ') : ''})`);
           ok(wantBare ? arw.bare > 0 && Object.values(arw.bareAt).every(Boolean) : arw.bare === 0, `${at}: the group's chevron left off only where it would cost something (pickFit's .bare), its name's own room or the card's line as 1.8 drew it; ${wantBare ? 'at 568x320 on' : 'none at this size, the chevron taking its room from the padding'} (${arw.bare} cards: ${json(arw.bareAt)})`);
@@ -1158,6 +1166,30 @@ async function browserChecks() {
             await reset(); await page.waitForTimeout(300); const viaPrev = await press('#t-side0 .pk-step [data-act="prev"]');
             await reset(); await page.waitForTimeout(300); const viaChevL = await press('#t-side0 .pk-chev.prev');
             ok(json(viaChev) === json(viaNext) && viaChev.g !== 'sur' && json(viaChevL) === json(viaPrev) && viaChevL.g !== 'sur' && !viaChev.set && !viaChevL.set, `${at}: a long press on a card's chevron jumps a country, exactly as one on Next or Previous, and no extra step (${json([viaNext, viaChev, viaPrev, viaChevL])})`);
+            // a swipe that starts on a card's chevron is the card's, as one from anywhere else on it: left the next team, right the one
+            // before, and the finger held still after it jumps no country
+            const swipeFrom = async (sel, dx) => {
+              const p = await page.evaluate(q => { document.getAnimations().forEach(a => a.finish()); const r = document.querySelector(q).getBoundingClientRect(); return { x:r.left + r.width/2, y:r.top + r.height/2 }; }, sel);
+              await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[p] });
+              for (let st = 1; st <= 6; st++) await cdp.send('Input.dispatchTouchEvent', { type:'touchMove', touchPoints:[{ x:p.x + dx*st/6, y:p.y + 2 }] });
+              await page.waitForTimeout(700);                   // held past a long press's 500ms
+              await cdp.send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] }); await page.waitForTimeout(450);
+              return now();
+            };
+            await reset(); await page.waitForTimeout(300); const s0 = await now();
+            const s1 = await swipeFrom('#t-side0 .pk-chev.next', -90), s2 = await swipeFrom('#t-side0 .pk-chev.prev', 90);
+            ok(s1.g === s0.g && s1.i === s0.i + 1 && !s1.set && s2.g === s0.g && s2.i === s0.i && !s2.set, `${at}: a swipe left starting on the card's right chevron goes forward a team, one right from the left chevron back, as on the card, no country jumped and nothing set (${json([s0, s1, s2])})`);
+            // the keyboard's focus or a controller's ring on the card: its chevrons step aside, as the ring would run through them; back
+            // when it moves on
+            await reset(); await page.waitForTimeout(300);
+            await page.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
+            for (let n = 0; n < 8 && await page.evaluate(() => document.activeElement.dataset.act !== 'pick'); n++) await page.keyboard.press('Tab');
+            const vis = () => page.evaluate(() => ['t-side0', 't-side1'].map(id => [...document.querySelectorAll(`#${id} .pk-chev`)].map(c => getComputedStyle(c).visibility === 'hidden' ? 'off' : 'on').join('/')));
+            const fv = await page.evaluate(() => { const a = document.activeElement; return a.matches('.pk-pick:focus-visible') ? a.closest('.pk-side').id : 'none'; }), vk = await vis();
+            await page.keyboard.press('Tab'); const vk2 = await vis();
+            await page.evaluate(() => { document.activeElement.blur(); window.__tryline.home.ring(document.querySelector('#t-side1 .pk-pick')); }); const vr = await vis();
+            await page.evaluate(() => window.__tryline.home.ring(null)); const vr2 = await vis();
+            ok(fv === 't-side0' && json(vk) === json(['off/off', 'on/on']) && json(vk2) === json(['on/on', 'on/on']) && json(vr) === json(['on/on', 'off/off']) && json(vr2) === json(['on/on', 'on/on']), `${at}: the keyboard's focus on Your Team's card hides its chevrons alone, back as Tab moves on; a controller's ring on the Opponent's the same (${json({ fv, vk, vk2, vr, vr2 })})`);
           }
           await reset(); await page.waitForTimeout(300);
           await tapSure(page, '#t-side0 .tname'); await page.waitForTimeout(450); const pickedNow = await now();
@@ -1502,6 +1534,22 @@ async function browserChecks() {
       const closed = await page.evaluate(() => ({ open:!document.getElementById('m-filter').hidden, field:document.activeElement === document.getElementById('fl-q'), at:document.activeElement.id || document.activeElement.tagName }));
       ok(!closed.open && !closed.field, `a phone: Close tapped puts the focus in no field (${json(closed)})`);
       ok(errors.length === 0, `a phone: no page error (${errors.join('; ')})`);
+      await ctx.close();
+    }
+    // the arrows between and beside the five sizes (a computer's small window): at 620 wide and under, at any height, the card's chevrons
+    // hidden as at 568x320 (with the sides framed, 600x400 say, their targets ran 4px off the screen and onto the other side's across the
+    // V); just over it, framed and unframed, shown, every point of each target its own and on the screen
+    for (const [w, h] of [[600, 400], [620, 400], [640, 400], [640, 340]]) {
+      const at = `${w}x${h}`, narrow = w <= 620;
+      const ctx = await browser.newContext({ viewport:{ width:w, height:h }, hasTouch:true });
+      await ctx.addInitScript(s => { try { localStorage.setItem('tryline.v1', s); } catch (e) { /* none */ } }, JSON.stringify(SAVE));
+      const page = await ctx.newPage();
+      const errors = []; page.on('pageerror', e => errors.push(e.message));
+      await page.goto(base);
+      await page.waitForFunction(() => window.__tryline && !document.getElementById('s-home').hidden);
+      await page.evaluate(() => document.fonts && document.fonts.ready);
+      const arw = await page.evaluate(arrowsLook);
+      ok(arw.bad.length === 0 && arw.states > 150 && arw.made && (narrow ? arw.hidden > 300 && arw.chev === 0 : arw.chev > 400 && arw.hidden === 0) && Object.values(arw.bareAt).every(Boolean) && errors.length === 0, `${at}: the arrows: ${narrow ? 'the card\'s chevrons hidden at 620 wide and under, as at 568x320, Previous and Next keeping theirs' : 'the card\'s chevrons shown, each 44px target on the screen and all its own, off the other side\'s and a made team\'s Edit'}; every other chevron where it belongs; no scroll, none sideways as a card slides in (${arw.states} states, ${arw.chev} card chevrons, ${arw.hidden} hidden, ${arw.bare} bare${arw.bad.length ? ': ' + arw.bad.slice(0, 5).join('; ') : ''}${errors.length ? '; ' + errors.join('; ') : ''})`);
       await ctx.close();
     }
     // a computer (a mouse, no touch): a click on the icon opens the Filter with the field focused, to type at once

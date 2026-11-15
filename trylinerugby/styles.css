@@ -199,6 +199,7 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 .pk-chev.next{right:calc(var(--chr,6px) - 44px);justify-items:start;padding-left:4px}
 .pk-chev:hover,.pk-chev:active{color:var(--chalk)}
 .pk-chev.off{visibility:hidden}   /* a group of one: nowhere to go */
+.pk-row:has(>.pk-pick:focus-visible) .pk-chev,.pk-row:has(>.pk-pick.padfocus) .pk-chev{visibility:hidden}   /* the card with the keyboard's focus or a controller's ring: its chevrons, never theirs (Previous and Next are), step aside, as the ring would run through them (1.8.1) */
 .pk-card.made .pk-chev{top:auto;height:44px}   /* a team you made: both chevrons low in the row */
 .pk-card.made .btn.pk-edit{right:calc(12px + var(--chr,6px))}   /* and Edit just inside the right chevron's gutter, so no point is both Edit's and the chevron's (1.8.1: at 667 Edit covered the target's top) */
 .pk-card.made .tname,.pk-card.made .pk-rate,.pk-card.made .pk-league{margin-right:62px}   /* the name and its lines clear of Edit where it now sits */
@@ -271,9 +272,10 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
   .pk-stats{gap:4px}
   .pk-st .lbl{font-size:10.5px}
 }
-@media (max-width:620px) and (max-height:350px){
+@media (max-width:620px){
   .pk-card{--chr:0px}   /* 568x320: a 44px target would need a 31px gutter (12px to the screen's edge, 13 to the V), which costs the name
-     38px and makes the screen scroll for some teams; Previous and Next, with their chevrons, are there */
+     38px and makes the screen scroll for some teams; Previous and Next, with their chevrons, are there. The same at any height this narrow
+     (a computer's small window): with the sides framed the targets ran 4px off the screen and onto the other side's across the V (1.8.1) */
   .pk-chev{display:none}
   .pk-card.made .btn.pk-edit{right:6px}   /* no chevrons: Edit back in the corner, as 1.8 */
   .pk-card.made .tname,.pk-card.made .pk-rate,.pk-card.made .pk-league{margin-right:56px}

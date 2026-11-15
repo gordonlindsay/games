@@ -13422,15 +13422,17 @@ $('t-sides').addEventListener('pointerdown', e => {
   else if (at.act === 'prev' || at.act === 'next') {
     const d = at.act === 'next' ? 1 : -1;
     const h = pickHold = { id:e.pointerId, s:at.s, fired:false, timer:0 };
+    if (PICK_CHEV[b.dataset.act]) Object.assign(h, { x:e.clientX, y:e.clientY, swipe:true });   // a card's chevron is the card's edge: a swipe from it is the card's (a tap and a long press stay Previous's and Next's)
     h.timer = setTimeout(() => { h.fired = true; h.timer = 0; pickSwiped = performance.now(); pickCountry(at.s, d); }, PICK.hold);
   }
 });
 $('t-sides').addEventListener('pointermove', e => {
-  const h = pickHold; if (!h || h.id !== e.pointerId || !h.swipe) return;
+  const h = pickHold; if (!h || h.id !== e.pointerId || !h.swipe || h.fired) return;
   const dx = e.clientX - h.x, dy = e.clientY - h.y, ax = Math.abs(dx), ay = Math.abs(dy);
   const scr = $('s-teams'), scrolls = scr.scrollHeight > scr.clientHeight + 1;
-  if (ax >= PICK.swipe && ax > ay*PICK.ratio) { pickHold = null; pickSwiped = performance.now(); pickStep(h.s, dx < 0 ? 1 : -1); }
-  else if (!scrolls && ay >= PICK.swipe && ay > ax*PICK.ratio) { pickHold = null; pickSwiped = performance.now(); pickGroupStep(h.s, dy > 0 ? 1 : -1, dy > 0 ? 'up' : 'down'); }
+  const done = () => { pickHold = null; pickSwiped = performance.now(); if (h.timer) { clearTimeout(h.timer); h.timer = 0; } };   // a swipe from a chevron: no long press after it
+  if (ax >= PICK.swipe && ax > ay*PICK.ratio) { done(); pickStep(h.s, dx < 0 ? 1 : -1); }
+  else if (!scrolls && ay >= PICK.swipe && ay > ax*PICK.ratio) { done(); pickGroupStep(h.s, dy > 0 ? 1 : -1, dy > 0 ? 'up' : 'down'); }
 });
 const pickLetGo = e => { const h = pickHold; if (h && h.id === e.pointerId) { if (h.timer) clearTimeout(h.timer); if (h.fired) pickSwiped = performance.now(); pickHold = null; } };   // a long press let go: the click it ends with is not a step as well
 for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('t-sides').addEventListener(ev, pickLetGo);
