@@ -176,18 +176,18 @@ export function rankRows(rows) {
 /* ---------- the owner's rules ---------- */
 /* res from this side's view: 'W' | 'D' | 'L'. */
 export const resOf = (f, a) => (f > a ? 'W' : f === a ? 'D' : 'L');
-/* The boost, the owner's scale (15 Nov 2026): a win +1; a win by 15 or more, or over a side placed higher before the match, +2; a loss -1; a
-   draw 0. A walkover, conceded or void match gives nothing. Higher placed needs both places, and both sides past their first two games (a
-   club) or both rankings (a nation). */
+/* The boost, the owner's scale (15 Nov 2026): a win +1; a win by 15 or more, or over a side placed higher before the match, +1.5 (softened
+   from +2 the same day); a loss -1; a draw 0. A walkover, conceded or void match gives nothing. Higher placed needs both places, and both
+   sides past their first two games (a club) or both rankings (a nation). */
 export function boostOf({ f, a, wo = false, prePos = null, oppPos = null, preP = null, oppPreP = null, rank = null, oppRank = null }) {
   if (wo) return { boost:0, why:'none' };
   const res = resOf(f, a);
   if (res === 'L') return { boost:-1, why:'loss' };
   if (res === 'D') return { boost:0, why:'draw' };
-  if (f - a >= BIG_WIN) return { boost:2, why:'big' };
+  if (f - a >= BIG_WIN) return { boost:1.5, why:'big' };
   const clubHigher = Number.isInteger(prePos) && Number.isInteger(oppPos) && oppPos < prePos && (preP == null || preP >= 2) && (oppPreP == null || oppPreP >= 2);
   const nationHigher = Number.isInteger(rank) && Number.isInteger(oppRank) && oppRank < rank;
-  return clubHigher || nationHigher ? { boost:2, why:'higher' } : { boost:1, why:'win' };
+  return clubHigher || nationHigher ? { boost:1.5, why:'higher' } : { boost:1, why:'win' };
 }
 /* The window: the day after the match until the day before the next fixture, 7 days at most. With no next fixture known, 6 days (a
    Saturday's result runs Sunday to Friday), so a boost never runs into a match day nobody listed. Empty (null) when the next fixture is the
@@ -221,7 +221,7 @@ export function entryOf(m) {
 }
 
 /* ---------- the validator: the job refuses to write a file this finds anything wrong with ---------- */
-const WHY = { win:[1, 'W'], big:[2, 'W'], higher:[2, 'W'], loss:[-1, 'L'], draw:[0, 'D'], none:[0, null] };
+const WHY = { win:[1, 'W'], big:[1.5, 'W'], higher:[1.5, 'W'], loss:[-1, 'L'], draw:[0, 'D'], none:[0, null] };
 const KEYS = new Set(['date', 'ha', 'res', 'f', 'a', 'opp', 'oppName', 'comp', 'wo', 'league', 'pos', 'of', 'p', 'w', 'd', 'l', 'pts', 'prePos', 'oppPos', 'rank', 'oppRank', 'boost', 'why', 'from', 'until', 'next', 'src']);
 const plain = (s, max) => typeof s === 'string' && s.length >= 1 && s.length <= max && PLAIN.test(s) && s.trim() === s;
 const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;

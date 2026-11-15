@@ -117,10 +117,10 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
     'HTML in the opponent':['clubs', 'FAR', { ...far(), oppName:'<img src=x onerror=alert(1)>' }], 'a closing bracket':['clubs', 'FAR', { ...far(), oppName:'Old Alleynians>' }], 'a control character':['clubs', 'FAR', { ...far(), oppName:'Old\nAlleynians' }], 'a 41 character name':['clubs', 'FAR', { ...far(), oppName:'O'.repeat(41) }], 'an empty name':['clubs', 'FAR', { ...far(), oppName:'' }], 'a name with spaces round it':['clubs', 'FAR', { ...far(), oppName:' Old Alleynians' }],
     'no competition':['clubs', 'FAR', { ...far(), comp:undefined }], 'a 61 character league':['clubs', 'FAR', { ...far(), league:'L'.repeat(61) }], 'a place below the table':['clubs', 'FAR', { ...far(), pos:13 }], 'a table of 25':['clubs', 'FAR', { ...far(), of:25, pos:5 }], 'a place with no league':['clubs', 'FAR', { ...far(), league:undefined }],
     'games that do not add up':['clubs', 'FAR', { ...far(), w:5 }], 'half a table line':['clubs', 'FAR', { ...far(), pts:undefined }], 'points below -50':['clubs', 'FAR', { ...far(), pts:-51 }], 'one place before the match':['clubs', 'FAR', { ...far(), oppPos:undefined }], 'rankings on a club':['clubs', 'FAR', { ...far(), rank:5, oppRank:6 }], 'a league on a nation':['men', 'ENG', { ...eng(), league:'Six Nations', pos:1, of:6 }],
-    'a boost of 3':['clubs', 'FAR', { ...far(), boost:3 }], 'a boost the reason does not give':['clubs', 'FAR', { ...far(), boost:2 }], 'an unknown reason':['clubs', 'FAR', { ...far(), why:'great' }], 'a reason off the prototype':['clubs', 'FAR', { ...far(), why:'toString' }], 'a loss boosted':['clubs', 'WIM', { ...f().clubs.WIM, boost:1, why:'win' }],
-    'a big win by 4':['clubs', 'FAR', { ...far(), why:'big', boost:2 }], 'higher placed by 15':['men', 'ENG', { ...eng(), why:'higher' }], 'a draw boosted':['clubs', 'NTH', { ...f().clubs.NTH, boost:1, why:'win' }], 'a walkover boosted':['clubs', 'FAR', { ...far(), wo:true }], 'a walkover flag that is not true':['clubs', 'FAR', { ...far(), wo:1 }],
+    'a boost of 3':['clubs', 'FAR', { ...far(), boost:3 }], 'a boost the reason does not give':['clubs', 'FAR', { ...far(), boost:2 }], 'a big win given the old +2':['men', 'ENG', { ...eng(), boost:2 }], 'a higher win given the old +2':['clubs', 'FAR', { ...far(), why:'higher', oppPos:4, boost:2 }], 'a big win given +1.5 as a string':['men', 'ENG', { ...eng(), boost:'1.5' }], 'an unknown reason':['clubs', 'FAR', { ...far(), why:'great' }], 'a reason off the prototype':['clubs', 'FAR', { ...far(), why:'toString' }], 'a loss boosted':['clubs', 'WIM', { ...f().clubs.WIM, boost:1, why:'win' }],
+    'a big win by 4':['clubs', 'FAR', { ...far(), why:'big', boost:1.5 }], 'higher placed by 15':['men', 'ENG', { ...eng(), why:'higher' }], 'a draw boosted':['clubs', 'NTH', { ...f().clubs.NTH, boost:1, why:'win' }], 'a walkover boosted':['clubs', 'FAR', { ...far(), wo:true }], 'a walkover flag that is not true':['clubs', 'FAR', { ...far(), wo:1 }],
     'from on the match day':['clubs', 'FAR', { ...far(), from:'2026-11-14' }], 'until past seven days':['clubs', 'FAR', { ...far(), until:'2026-11-22', next:undefined }], 'until before from':['clubs', 'FAR', { ...far(), until:'2026-11-14' }], 'until on the next fixture':['clubs', 'FAR', { ...far(), until:'2026-11-21', next:'2026-11-21' }], 'next before the match':['clubs', 'FAR', { ...far(), next:'2026-11-13' }], 'no until':['clubs', 'FAR', { ...far(), until:undefined }],
-    'a win by 15 given +1':['clubs', 'FAR', { ...far(), f:49 }], 'higher over a side placed lower':['clubs', 'FAR', { ...far(), why:'higher', boost:2 }], 'higher with no places':['clubs', 'FAR', (e => { delete e.prePos; delete e.oppPos; return { ...e, why:'higher', boost:2 }; })(far())],
+    'a win by 15 given +1':['clubs', 'FAR', { ...far(), f:49 }], 'higher over a side placed lower':['clubs', 'FAR', { ...far(), why:'higher', boost:1.5 }], 'higher with no places':['clubs', 'FAR', (e => { delete e.prePos; delete e.oppPos; return { ...e, why:'higher', boost:1.5 }; })(far())],
     'a win over a side placed higher given +1':['clubs', 'FAR', { ...far(), oppPos:4 }], 'two clubs on one place before the match':['clubs', 'FAR', { ...far(), oppPos:far().prePos }], 'two nations on one ranking':['men', 'ENG', { ...eng(), oppRank:eng().rank }], 'a Test win over a higher ranking given +1':['women', 'ENG', { ...f().women.ENG, why:'win', boost:1 }],
     'a draw\'s window over the next fixture':['clubs', 'NTH', { ...f().clubs.NTH, next:'2026-11-03' }], 'a draw\'s until before from':['clubs', 'NTH', { ...f().clubs.NTH, until:'2026-10-31' }],
   };
@@ -182,11 +182,11 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
 {
   R.set(FILE(), '2026-11-17');
   const lg = { ...FAR(), key:'lg-FAR' }, made = { ...FAR(), key:'my1', custom:true }, legend = X.natList('men').length && T.locker.LEGENDS[0];
-  ok(R.delta(FAR()) === 1 && R.delta(WIM()) === -1 && R.delta(nat('ENG')) === 2 && R.delta(nat('JPN')) === -1, 'Farnham +1 (a win, over a side placed lower), Wimbledon -1, England +2 (by 15 or more), Japan -1');
+  ok(R.delta(FAR()) === 1 && R.delta(WIM()) === -1 && R.delta(nat('ENG')) === 1.5 && R.delta(nat('JPN')) === -1, 'Farnham +1 (a win, over a side placed lower), Wimbledon -1, England +1.5 (by 15 or more), Japan -1');
   ok(R.delta(by('NTH')) === 0 && R.delta(by('BRC')) === 0, 'a draw has none, and a side with no entry none');
   ok(R.delta(X.catSide(FAR(), 'women')) === 0 && R.delta(X.catSide(FAR(), 'minis')) === 0, 'a club\'s Women and Minis sides: none (they share its id, and are not its first XV)');
   ok(R.delta(nat('ENG', 'minis')) === 0, 'a Minis nation: none (it plays the men\'s ratings)');
-  R.set(FILE(), '2026-11-14'); ok(R.delta(nat('ENG', 'women')) === 2 && R.delta(nat('ENG')) === 0, 'a women\'s nation takes the women\'s Tests (England Women +2 on 14 Nov, when the men\'s had none open)'); R.set(FILE(), '2026-11-17');
+  R.set(FILE(), '2026-11-14'); ok(R.delta(nat('ENG', 'women')) === 1.5 && R.delta(nat('ENG')) === 0, 'a women\'s nation takes the women\'s Tests (England Women +1.5 on 14 Nov, when the men\'s had none open)'); R.set(FILE(), '2026-11-17');
   ok(R.delta(made) === 0 && R.delta(lg) === 0 && (!legend || R.delta(legend) === 0) && R.delta({ ...FAR(), legend:true }) === 0, 'a team you made, a My League side and a Legend on the same code: none');
   S.kids = true; S.diff = 0; ok(R.delta(FAR()) === 0 && R.delta(nat('ENG')) === 0, 'the Kids level: none for anyone'); S.kids = false; S.diff = 1;
   S.kids = true; S.diff = 1; ok(R.delta(FAR()) === 1, 'a Kids player moved up a level is no longer at the Kids level'); S.kids = false;
@@ -200,10 +200,14 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   const far = R.side(FAR()), wim = R.side(WIM()), eng = R.side(nat('ENG')), none = R.side(by('BRC'));
   ok(rndCalls() === r0, 'a boosted copy draws no random number');
   ok(json(abil(FAR())) === '[3,2,3,2,1]' && json(abil(far)) === '[4,2,3,2,1]' && X.overallOf(far) === 61 && X.overallOf(FAR()) === 58 && far.real === 1, `Farnham +1: Pace 4, overall 58 to 61 (${abil(far)})`);
-  const two = (() => { const v = FILE(); v.clubs.FAR = { ...v.clubs.FAR, why:'higher', boost:2, oppPos:4 }; R.set(v, '2026-11-17'); const t = R.side(FAR()); R.set(FILE(), '2026-11-17'); return t; })();
-  ok(json(abil(two)) === '[4,3,3,2,1]' && X.overallOf(two) === 64 && two.real === 2, `Farnham +2, had it been over a side placed higher: Pace 4, Power 3, 58 to 64, as the design measured (${abil(two)})`);
+  const two = (() => { const v = FILE(); v.clubs.FAR = { ...v.clubs.FAR, why:'higher', boost:1.5, oppPos:4 }; R.set(v, '2026-11-17'); const t = R.side(FAR()); R.set(FILE(), '2026-11-17'); return t; })();
+  ok(json(abil(two)) === '[4,2.5,3,2,1]' && X.rateOf(two) === X.rateOf(FAR()) + 1.5 && X.overallOf(two) === 62 && two.real === 1.5, `Farnham +1.5, had it been over a side placed higher: a whole point on Pace and half a point on Power, where abilitiesFor puts its next point, 58 to 62 (${abil(two)})`);
+  const halfAt = (t, d) => { const v = FILE(); v.clubs.FAR = { ...v.clubs.FAR, ...(d === 1.5 ? { why:'higher', boost:1.5, oppPos:4 } : {}) }; R.set(v, '2026-11-17'); const s = R.side({ ...FAR(), ...t }); R.set(FILE(), '2026-11-17'); return abil(s); };
+  ok(json(halfAt({ pace:5, power:5, handling:5, kicking:5, stamina:3 }, 1.5)) === '[5,5,5,5,4.5]', 'one ability below 5 takes the whole point and the half point too');
+  ok(json(halfAt({ pace:5, power:5, handling:5, kicking:5, stamina:4 }, 1.5)) === '[5,5,5,5,5]', 'a side one point short of 25 takes the whole point, and the half has nowhere to go');
+  ok(json(halfAt({ pace:4, power:4, handling:5, kicking:5, stamina:5 }, 1.5)) === '[5,4.5,5,5,5]', 'Pace before Power on a tie, as abilitiesFor orders them: the whole point on Pace, the half on Power');
   ok(X.overallOf(wim) === 52 && X.rateOf(wim) === X.rateOf(WIM()) - 1 && wim.real === -1, `Wimbledon -1: one point off where it is weakest (${abil(WIM())} to ${abil(wim)})`);
-  ok(X.overallOf(eng) === 90 && json(abil(eng).map((v, i) => v - abil(nat('ENG'))[i]).filter(Boolean)) === '[1,1]', `England +2: 84 to 90, two abilities a point each (${abil(nat('ENG'))} to ${abil(eng)})`);
+  ok(X.overallOf(eng) === 89 && json(abil(eng).map((v, i) => v - abil(nat('ENG'))[i]).filter(Boolean)) === '[1,0.5]' && X.rateOf(eng) === X.rateOf(nat('ENG')) + 1.5, `England +1.5: 84 to 89, a point on one ability and half a point on the next (${abil(nat('ENG'))} to ${abil(eng)})`);
   ok(none === by('BRC') && R.side(FAR()) !== FAR() && json(X.ALL_TEAMS) === was, 'no boost: the side itself; a boost: a copy, and no list side is ever edited');
   ok(json(abil(R.base(far))) === json(abil(FAR())) && R.base(by('BRC')) === by('BRC'), 'realBase gives the side as it is back from the copy');
   const top = { ...FAR(), pace:5, power:5, handling:5, kicking:5, stamina:5 }, low = { ...WIM(), pace:1, power:1, handling:1, kicking:1, stamina:1 };
@@ -225,7 +229,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   S.kids = true; S.diff = 0; D.startMatch(FAR(), WIM(), false); ok(!T.M.nat[0].real && !T.M.nat[1].real && T.M.kids, 'the Kids level: the match plays the sides as they are'); D.exitMatch(); S.kids = false; S.diff = 1;
   S.cat = 'minis'; D.startMatch(X.catTeam(FAR(), 'minis'), X.catTeam(WIM(), 'minis'), false); ok(!T.M.nat[0].real && !T.M.nat[1].real, 'Minis: none'); D.exitMatch(); S.cat = 'men';
   D.startMatch(FAR(), WIM(), false, { two:true, levels:[1, 1] }); ok(T.M.nat[0].real === 1 && T.M.nat[1].real === -1, '2 Players: both sides as one player has them'); D.exitMatch();
-  // England +2 lifts an ability to 5: the star trait it would bring is not handed out; the side's own stars are
+  // England +1.5 lifts an ability to 5: the star trait it would bring is not handed out; the side's own stars are
   D.startMatch(nat('ENG'), nat('FRA'), false);
   const raised = KEYS.filter((k, i) => abil(T.M.nat[0])[i] === 5 && abil(nat('ENG'))[i] < 5), sorted = m => json([...m.entries()].sort((a, b) => a[0] - b[0]));
   const own = T.traits.teamStars(nat('ENG')), boosted = T.traits.teamStars(T.M.nat[0]), got = new Map(T.M.players.filter(q => q.team === 0 && q.tr).map(q => [q.n, Object.keys(q.tr)]));
@@ -271,7 +275,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   ok(/<span class="sr">Last Result: Won 38-34 v Old Alleynians, Away, Sat 14 Nov\. Form plus 1 until Fri 20 Nov<\/span>/.test(real) && /aria-hidden="true" class="rr-shown"/.test(real), 'read out: Last Result, Away, the date, Form plus 1 until Fri 20 Nov');
   ok($('my-real').title === 'Away · Regional 1 South Central · Form +1 until Fri 20 Nov', `its title: Home or Away and the Form's last day (${$('my-real').title})`);
   ok($('my-league').innerHTML === '<span>Regional 1 South Central</span><span class="sep"> · </span><span>5th<span class="pts"> · 16 Pts</span></span>', `this season's league over 5th · 16 Pts (${$('my-league').innerHTML})`);
-  ok(/My Country: England\. Last Test: Won 78-15 v Japan, Form plus 2</.test($('my-nat').innerHTML), `My Country's read-out carries its last Test (its title too: the browser part) (${$('my-nat').innerHTML.replace(/^.*class="sr">/, '')})`);
+  ok(/My Country: England\. Last Test: Won 78-15 v Japan, Form plus 1\.5</.test($('my-nat').innerHTML), `My Country's read-out carries its last Test (its title too: the browser part) (${$('my-nat').innerHTML.replace(/^.*class="sr">/, '')})`);
   S.kids = true; S.diff = 0; D.goHome(); ok(/Won<\/span> 38-34/.test($('my-real').innerHTML) && !/gap form/.test($('my-real').innerHTML) && !/Form/.test($('my-nat').innerHTML) && /Last Test: Won 78-15/.test($('my-nat').innerHTML), 'the Kids level: the results show, no Form'); S.kids = false; S.diff = 1;
   S.cat = 'minis'; D.goHome(); ok(/Won<\/span> 38-34/.test($('my-real').innerHTML) && !/gap form/.test($('my-real').innerHTML), 'a Minis player: the club\'s result shows (its news), no Form'); S.cat = 'men';
   R.set(FILE(), '2026-11-22'); D.goHome(); ok(/Won<\/span> 38-34/.test($('my-real').innerHTML) && !/gap form/.test($('my-real').innerHTML) && !/Form/.test($('my-real').title), 'after until: the result stays, the Form goes');
@@ -286,6 +290,14 @@ const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FA
   ok(/Farnham/.test(c0) && /<span class="gap mine">My Team<\/span><span class="gap form up"><span aria-hidden="true">Form \+1<\/span><span class="sr">Form plus 1<\/span><\/span>/.test(c0), 'Farnham\'s card: My Team, then Form +1, read as Form plus 1');
   ok(/<span class="lbl">Pace<em class="pk-up" aria-hidden="true">\+1<\/em><\/span><span class="pk-bar" role="img" aria-label="Pace 4 of 5, Form plus 1"><i style="--v:0\.60"><\/i><b class="pk-real up" style="--a:0\.60;--w:0\.20"><\/b>/.test(c0) && !/(Power|Handling|Kicking|Stamina)<em/.test(c0), 'its bars: Pace +1, the point in yellow on the bar, the rest as they were');
   ok(/gap form down"><span aria-hidden="true">Form −1<\/span><span class="sr">Form minus 1<\/span>/.test(c1) && /pk-real down/.test(c1) && /pk-down" aria-hidden="true">−1</.test(c1), 'Wimbledon\'s: Form −1, its point lost hatched in coral, −1 beside the name');
+  { // a +1.5 side's card: the chip says +1.5, and the bars show what it plays, +1 on one ability and +0.5 on the next, never a rounded +2
+    const keep = S.pick; S.pick = [{ id:'ENG', cat:'men', g:null }, { id:'JPN', cat:'men', g:null }]; D.openTeams('quick');
+    const e0 = $('t-side0').innerHTML, marks = [...e0.matchAll(/<span class="lbl">(\w+)<em class="pk-up" aria-hidden="true">([^<]*)<\/em>/g)].map(m => m[1] + ' ' + m[2]);
+    ok(/<span class="gap form up"><span aria-hidden="true">Form \+1\.5<\/span><span class="sr">Form plus 1\.5<\/span><\/span>/.test(e0), 'England\'s card: Form +1.5, read as Form plus 1.5');
+    ok(json(marks) === '["Pace +1","Handling +0.5"]', `its bars: Pace +1 and Handling +0.5, as the match plays them (${marks.join(', ')})`);
+    ok(/aria-label="Handling 3\.5 of 5, Form plus 0\.5"><i style="--v:0\.60"><\/i><b class="pk-real up" style="--a:0\.60;--w:0\.10"><\/b>/.test(e0), 'the half point is half a pip on the bar, and read as 3.5 of 5');
+    S.pick = keep; D.openTeams('quick');
+  }
   const head = h => h.slice(0, h.indexOf('<span class="tname">'));   // the shirt and its overall badge, before the name
   const rate = h => h.slice(h.indexOf('<span class="pk-rate">'), h.indexOf('<span class="gap mine">'));
   ok(head(c0) === head(before[0]) && rate(c0).length > 30 && rate(c0) === rate(before[0]), 'the shirt, its overall and the stars are the side as it is (58, 3 stars), as without a file');
@@ -432,7 +444,7 @@ async function browserChecks() {
         const sides = [0, 1].map(s => $('t-side' + s)), at = (s, sel) => box(sides[s].querySelector(sel));
         out.card = { scroll:scroll(), names:at(0, '.tname').top - at(1, '.tname').top, bars:at(0, '.pk-stats').top - at(1, '.pk-stats').top, chips:sides.map(s => [...s.querySelectorAll('.gap.form')].filter(vis).length === 1), small:small($('s-teams')).filter(n => n),
           clip:[...document.querySelectorAll('#s-teams .pk-st .lbl, #s-teams .tname')].filter(cut).map(e => e.textContent) };
-        // nations with star traits, Stronger Side and Form (the fixture's England +2 and Japan -1): pickFit's Form steps keep the screen whole
+        // nations with star traits, Stronger Side and Form (the fixture's England +1.5 and Japan -1): pickFit's Form steps keep the screen whole
         const P = T.picker, grp = (n, key) => P.group(n, P.view(n).ladder.findIndex(g => g.key === key) - P.view(n).gi), scr = $('s-teams');
         const nations = what => ({ what, scroll:scr.scrollHeight - scr.clientHeight, step:scr.dataset.form || '0', chips:sides.map(s => [...s.querySelectorAll('.gap.form')].filter(vis).map(e => e.firstElementChild.textContent)),
           traits:sides.map(s => vis(s.querySelector('.tstars'))), clip:[...scr.querySelectorAll('.tname, .pk-league, .pk-rate, .pk-st .lbl')].filter(vis).filter(cut).map(e => e.textContent), small:small(scr).filter(n => n),

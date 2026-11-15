@@ -1073,7 +1073,7 @@ function pickTag(s, t) {                                   // Stronger Side (the
   return '';
 }
 /* This week's Form on a side's card (src/results.js): a chip after My Team or Stronger Side, and on each bar the point gained in yellow or
-   lost in coral, its number beside the ability's name. The side as the category plays it (a club's Women or Minis side has none). The
+   lost in coral, its number beside the ability's name (+1.5 shows as +1 on one bar and +0.5 on another, as realSide plays it). The side as the category plays it (a club's Women or Minis side has none). The
    overall, the stars, the star traits and Stronger Side stay on the side as it is. */
 /* The championship hub's next fixture: a side's name, with this week's Form under it when its next match will have one (the saved side
    as it is kept, which is what startMatch boosts). Without one, the name exactly as before. */
@@ -1097,10 +1097,10 @@ function pickPanel(s) {
   else {
     const stars = teamTraitNames(t), re = t.league ? realNews(t, 'men') : null, line = re && re.league ? re.league : pickHomeLine(t, cat), rc = realCard(t, cat);   // a club's league this season from results.json while its result is fresh: clubs have moved
     card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}${realChip(rc.d)}</span>${line ? `<span class="pk-league${line === g.name && !rc.d ? ' dup' : ''}">${rc.d ? realChip(rc.d, ' pk-lf') + `<span class="pk-lt">${esc(line)}</span>` : esc(line)}</span>` : rc.d ? `<span class="pk-league pk-lfo">${realChip(rc.d, ' pk-lf')}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
-      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round(b - a);
+      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round((b - a)*10)/10, pip = v => String(Math.round(v*10)/10);   // the real change, to a tenth: +1.5 is +1 on one ability and +0.5 on the next (realSide)
           if (!dv) return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`;
-          const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${Math.abs(dv)}</em>`;   // the week's point, beside the name: +1 or −1
-          return `<span class="pk-st"><span class="lbl">${l}${mark}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(b)} of 5, ${realFormSaid(dv)}"><i style="--v:${(Math.min(a, b)/5).toFixed(2)}"></i><b class="pk-real ${up ? 'up' : 'down'}" style="--a:${(Math.min(a, b)/5).toFixed(2)};--w:${(Math.abs(b - a)/5).toFixed(2)}"></b></span></span>`; }).join('')}</span>${edit}`;
+          const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${pip(Math.abs(dv))}</em>`;   // the week's point, beside the name: +1, +0.5 or −1
+          return `<span class="pk-st"><span class="lbl">${l}${mark}</span><span class="pk-bar" role="img" aria-label="${l} ${pip(b)} of 5, ${realFormSaid(dv)}"><i style="--v:${(Math.min(a, b)/5).toFixed(2)}"></i><b class="pk-real ${up ? 'up' : 'down'}" style="--a:${(Math.min(a, b)/5).toFixed(2)};--w:${(Math.abs(b - a)/5).toFixed(2)}"></b></span></span>`; }).join('')}</span>${edit}`;
   }
   card = card.replace(/^(<button class="team pk-pick[^]*?<\/button>)/, m => `<div class="pk-row">${pickChev('prev', one)}${m}${pickChev('next', one)}</div>`);   // the chevrons either side of the shirt and name; the bars under them keep the card's full width
   const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot

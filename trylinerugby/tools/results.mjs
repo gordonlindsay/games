@@ -86,14 +86,14 @@ eq(baselineOf({ at:'2026-11-14T11:09:22Z', rows:was.rows }, '2026-11-16', '2026-
 eq(baselineOf(sunday, '2026-11-22', '2026-27', 190924).at, '2026-11-15T22:20:00Z', 'the next Sunday: the last run\'s table');
 const monday = pitcheroLeague('Regional 1 South Central', now.rows, baselineOf(sunday, '2026-11-16', '2026-27', 190924), pages, here, idOf, '2026-11-16');
 eq([monday.entries.FAR.prePos, monday.entries.FAR.oppPos, monday.entries.FAR.boost], [6, 8, 1], 'so Monday\'s places before the match are Sunday\'s');
-{ // the review's case: 6th beats 3rd, read on Monday after the Sunday file was merged, keeps its +2
+{ // the review's case: 6th beats 3rd, read on Monday after the Sunday file was merged, keeps its +1.5
   const row = (rank, name, p, pf, pa, hf, af, pts) => ({ rank, name, p, w:p - 1, d:0, l:1, pf, pa, hf, af, pts });
   const nowT = [row(1, 'C', 7, 200, 100, 120, 80, 28), row(2, 'B', 7, 150, 100, 80, 70, 24), row(5, 'A', 7, 140, 120, 80, 60, 20)];
   const weekAgo = { at:'2026-11-08T22:20:00Z', rows:[row(1, 'C', 6, 180, 90, 100, 80, 24), row(3, 'B', 6, 140, 80, 70, 70, 24), row(6, 'A', 6, 120, 110, 60, 60, 16)] };
   const kept = { at:'2026-11-15T22:20:00Z', rows:nowT, prev:weekAgo };
   const pg = { A:[{ date:'2026-11-14', ha:'h', f:20, a:10, opp:'B', league:true }, { date:'2026-11-21', ha:'a', f:null, a:null, opp:'C', league:true }] };
   const e = pitcheroLeague('T', nowT, baselineOf(kept, '2026-11-16', '2026-27'), pg, [['AAA', 'A']], () => null, '2026-11-16').entries.AAA;
-  eq([e.why, e.boost, e.prePos, e.oppPos], ['higher', 2, 6, 3], 'a win over a side placed higher stays +2 on the Monday run');
+  eq([e.why, e.boost, e.prePos, e.oppPos], ['higher', 1.5, 6, 3], 'a win over a side placed higher stays +1.5 on the Monday run');
 }
 eq(baselineOf({ at:'2026-05-02T22:20:00Z', rows:was.rows }, '2026-09-06', '2026-27', 190924), null, 'last season\'s table is no baseline for this one');
 eq(baselineOf({ at:'2026-11-14T11:09:22Z', tableId:1, rows:was.rows }, '2026-11-16', '2026-27', 190924), null, 'nor is another table\'s');
@@ -108,15 +108,15 @@ const camb = wm.find(m => m.home === 'Camborne' && m.away === 'Bishops Stortford
 eq([camb.date, camb.hs, camb.as, camb.hbp, camb.abp], ['2026-11-07', 66, 35, 1, 1], 'a Rugbybox: the date, the score and both bonus points');
 const V = { 'Bishops Stortford':"Bishop's Stortford", Sale:'Sale FC' };
 const NL1 = wikiLeague('National League 1', wl, V, [['RAM', 'Rams'], ['CAM', 'Cambridge']], () => null, '2026-11-15');
-eq([NL1.entries.RAM.res, NL1.entries.RAM.f, NL1.entries.RAM.a, NL1.entries.RAM.prePos, NL1.entries.RAM.oppPos, NL1.entries.RAM.boost, NL1.entries.RAM.why], ['W', 35, 31, 12, 2, 2, 'higher'], 'Rams, 12th, beat 2nd placed Camborne by 4: +2');
+eq([NL1.entries.RAM.res, NL1.entries.RAM.f, NL1.entries.RAM.a, NL1.entries.RAM.prePos, NL1.entries.RAM.oppPos, NL1.entries.RAM.boost, NL1.entries.RAM.why], ['W', 35, 31, 12, 2, 1.5, 'higher'], 'Rams, 12th, beat 2nd placed Camborne by 4: +1.5');
 eq([NL1.entries.CAM.p, NL1.entries.CAM.pos, NL1.entries.CAM.pts, NL1.entries.CAM.until], [10, 14, 7, '2026-11-20'], 'the table built from the results; no next fixture listed, so 6 days');
 // a page that lists only some rounds: its own table is updated to 7 Nov, and the 14 Nov round it lists is added to it
 const e2 = fx('wikipedia-national-league-2-east-2026-11-15.html'), V2 = { Guernsey:'Guernsey Raiders' };
 eq(L.wikiUpdated(e2), '2026-11-07', 'the date the page\'s table is updated to');
 eq(L.wikiUpdated(wl), null, 'none on a page that does not say');
 const E2 = wikiLeague('National League 2 East', e2, V2, [['DOR', 'Dorking'], ['WPA', 'Westcombe Park'], ['LLI', 'Leicester Lions']], () => null, '2026-11-15');
-eq([E2.entries.DOR.p, E2.entries.DOR.pts, E2.entries.DOR.pos, E2.entries.DOR.boost], [10, 37, 4, 2], 'Dorking\'s line after its 36-19 bonus point win on 14 Nov: P10, 37 points, not the page\'s P9 and 32');
-eq([E2.entries.WPA.prePos, E2.entries.WPA.oppPos, E2.entries.WPA.boost, E2.entries.WPA.why], [14, 12, 2, 'higher'], 'Westcombe Park, 14th, beat Leicester Lions, 12th, 36-35: +2, the places from the page\'s table before the round');
+eq([E2.entries.DOR.p, E2.entries.DOR.pts, E2.entries.DOR.pos, E2.entries.DOR.boost], [10, 37, 4, 1.5], 'Dorking\'s line after its 36-19 bonus point win on 14 Nov: P10, 37 points, not the page\'s P9 and 32');
+eq([E2.entries.WPA.prePos, E2.entries.WPA.oppPos, E2.entries.WPA.boost, E2.entries.WPA.why], [14, 12, 1.5, 'higher'], 'Westcombe Park, 14th, beat Leicester Lions, 12th, 36-35: +1.5, the places from the page\'s table before the round');
 ok(E2.entries.LLI.p === 10 && E2.entries.LLI.l >= 1, 'the loser\'s line counts the match too');
 const e2Undated = wikiLeague('National League 2 East', e2.replace(/Updated to match\(es\) played on [^<]*/, ''), V2, [['DOR', 'Dorking']], () => null, '2026-11-15');
 eq([e2Undated.entries.DOR.f, 'league' in e2Undated.entries.DOR, 'prePos' in e2Undated.entries.DOR], [36, false, false], 'with no date under its table: the result, but no line and no places (the table could be from before it)');
@@ -129,7 +129,7 @@ eq([...L.tableFrom([], ['X'], null).values()][0].p, 0, 'no results, no games');
 // 4. World Rugby
 const rk = JSON.parse(fx('worldrugby-rankings-mru.json')), mt = JSON.parse(fx('worldrugby-match-mru-england.json')).content;
 const N = nationEntries('mru', rk, mt, ['ENG', 'JPN'], '2026-11-15', Date.parse('2026-11-15T20:00:00Z'));
-eq([N.entries.ENG.date, N.entries.ENG.ha, N.entries.ENG.f, N.entries.ENG.a, N.entries.ENG.opp, N.entries.ENG.rank, N.entries.ENG.oppRank, N.entries.ENG.boost, N.entries.ENG.why], ['2026-11-14', 'h', 78, 15, 'JPN', 5, 12, 2, 'big'], 'England 78-15 Japan: +2, the rankings in force at kick-off');
+eq([N.entries.ENG.date, N.entries.ENG.ha, N.entries.ENG.f, N.entries.ENG.a, N.entries.ENG.opp, N.entries.ENG.rank, N.entries.ENG.oppRank, N.entries.ENG.boost, N.entries.ENG.why], ['2026-11-14', 'h', 78, 15, 'JPN', 5, 12, 1.5, 'big'], 'England 78-15 Japan: +1.5, the rankings in force at kick-off');
 eq([N.entries.JPN.res, N.entries.JPN.boost, N.entries.JPN.ha], ['L', -1, 'a'], 'Japan, the same Test from the other side');
 const rw = JSON.parse(fx('worldrugby-rankings-wru.json')), mw = JSON.parse(fx('worldrugby-match-wru.json')).content;
 const W = nationEntries('wru', rw, mw, ['ENG', 'CDN', 'NZL', 'FRA'], '2026-11-15', Date.parse('2026-11-15T20:00:00Z'));
@@ -141,16 +141,16 @@ eq([U.entries.USA && U.entries.USA.ha, U.entries.ENG && U.entries.ENG.ha], ['h',
 // 5. the owner's rules
 const B = (o) => { const b = L.boostOf(o); return [b.boost, b.why]; };
 eq(B({ f:20, a:10 }), [1, 'win'], 'a win is +1');
-eq(B({ f:25, a:10 }), [2, 'big'], 'by 15 is +2');
+eq(B({ f:25, a:10 }), [1.5, 'big'], 'by 15 is +1.5 (the owner softened +2 to +1.5, 15 Nov)');
 eq(B({ f:24, a:10 }), [1, 'win'], 'by 14 is +1');
-eq(B({ f:20, a:10, prePos:6, oppPos:3, preP:5, oppPreP:5 }), [2, 'higher'], 'over a side placed higher is +2');
+eq(B({ f:20, a:10, prePos:6, oppPos:3, preP:5, oppPreP:5 }), [1.5, 'higher'], 'over a side placed higher is +1.5');
 eq(B({ f:20, a:10, prePos:6, oppPos:3, preP:1, oppPreP:1 }), [1, 'win'], 'nobody is higher placed in the first two rounds');
 eq(B({ f:20, a:10, prePos:3, oppPos:6 }), [1, 'win'], 'over a side placed lower is +1');
-eq(B({ f:40, a:10, prePos:6, oppPos:3 }), [2, 'big'], 'both together are still +2');
+eq(B({ f:40, a:10, prePos:6, oppPos:3 }), [1.5, 'big'], 'both together are still +1.5');
 eq(B({ f:10, a:20 }), [-1, 'loss'], 'a loss is -1');
 eq(B({ f:15, a:15 }), [0, 'draw'], 'a draw is 0');
 eq(B({ f:28, a:0, wo:true }), [0, 'none'], 'a walkover gives nothing');
-eq(B({ f:20, a:10, rank:9, oppRank:4 }), [2, 'higher'], 'a nation over a higher ranked one is +2');
+eq(B({ f:20, a:10, rank:9, oppRank:4 }), [1.5, 'higher'], 'a nation over a higher ranked one is +1.5');
 eq(L.windowOf('2026-11-14', '2026-11-21'), { from:'2026-11-15', until:'2026-11-20' }, 'Saturday to the next Saturday: Sunday to Friday');
 eq(L.windowOf('2026-11-14', null), { from:'2026-11-15', until:'2026-11-20' }, 'no next fixture known: 6 days');
 eq(L.windowOf('2026-11-14', '2026-12-05'), { from:'2026-11-15', until:'2026-11-21' }, 'a long gap: 7 days at most');
@@ -186,6 +186,9 @@ bent(['clubs', 'FAR', 'f'], 3.5, 'a score that is not whole');
 bent(['clubs', 'FAR', 'ha'], 'n', 'a club at a neutral ground');
 bent(['clubs', 'FAR', 'res'], 'L', 'a result the score does not give');
 bent(['clubs', 'FAR', 'boost'], 2, 'a boost that does not match the score');
+bent(['men', 'ENG', 'boost'], 2, 'a big win given the old +2 (now +1.5)');
+bent(['men', 'ENG', 'boost'], 1, 'a big win given +1');
+bent(['clubs', 'FAR', 'boost'], 1.5, 'a plain win given +1.5');
 bent(['clubs', 'FAR', 'why'], 'big', 'big under 15');
 bent(['clubs', 'OAE', 'boost'], 1, 'a loss with a plus');
 bent(['clubs', 'FAR', 'oppName'], '<b>Old Alleynians</b>', 'HTML in a name');

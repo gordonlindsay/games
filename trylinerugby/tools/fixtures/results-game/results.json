@@ -9,10 +9,10 @@
     "NTH": { "date": "2026-10-31", "ha": "h", "res": "D", "f": 20, "a": 20, "opp": "BTH", "oppName": "Bath", "comp": "Premiership", "league": "Premiership", "pos": 2, "of": 10, "p": 6, "w": 4, "d": 1, "l": 1, "pts": 22, "boost": 0, "why": "draw", "from": "2026-11-01", "until": "2026-11-06", "src": "wikipedia" }
   },
   "men": {
-    "ENG": { "date": "2026-11-14", "ha": "h", "res": "W", "f": 78, "a": 15, "opp": "JPN", "oppName": "Japan", "comp": "Test", "rank": 5, "oppRank": 13, "boost": 2, "why": "big", "from": "2026-11-15", "until": "2026-11-20", "next": "2026-11-21", "src": "worldrugby" },
+    "ENG": { "date": "2026-11-14", "ha": "h", "res": "W", "f": 78, "a": 15, "opp": "JPN", "oppName": "Japan", "comp": "Test", "rank": 5, "oppRank": 13, "boost": 1.5, "why": "big", "from": "2026-11-15", "until": "2026-11-20", "next": "2026-11-21", "src": "worldrugby" },
     "JPN": { "date": "2026-11-14", "ha": "a", "res": "L", "f": 15, "a": 78, "opp": "ENG", "oppName": "England", "comp": "Test", "rank": 13, "oppRank": 5, "boost": -1, "why": "loss", "from": "2026-11-15", "until": "2026-11-20", "src": "worldrugby" }
   },
   "women": {
-    "ENG": { "date": "2026-11-08", "ha": "a", "res": "W", "f": 22, "a": 19, "opp": "NZL", "oppName": "New Zealand", "comp": "Test", "rank": 2, "oppRank": 1, "boost": 2, "why": "higher", "from": "2026-11-09", "until": "2026-11-15", "src": "worldrugby" }
+    "ENG": { "date": "2026-11-08", "ha": "a", "res": "W", "f": 22, "a": 19, "opp": "NZL", "oppName": "New Zealand", "comp": "Test", "rank": 2, "oppRank": 1, "boost": 1.5, "why": "higher", "from": "2026-11-09", "until": "2026-11-15", "src": "worldrugby" }
   }
 }

@@ -1336,7 +1336,7 @@ function ratingsBoot() {
      strictly (resultsClean): a file shaped wrong is refused whole and the last good one stands; an entry that is wrong is dropped alone.
    - A file that arrives is held until nothing is being picked or played (resultsSync): the home redraws if it is showing, and
      otherwise it is used from the next goHome or openTeams, so a card never changes under a finger and a match never changes in play.
-   - The boost: +1, +2 or -1 ability points, from the entry's from to its until, inclusive UK dates (Europe/London: realToday), and never
+   - The boost: +1, +1.5 or -1 ability points, from the entry's from to its until, inclusive UK dates (Europe/London: realToday), and never
      after until, even offline. It lives on a copy of the side made at kick-off (realSide, from startMatch: Quick Match, 2 Players, the
      Championship, the cups and the career), so a saved championship's next match plays this week's Form and nothing saved is ever
      edited. The demo, AI v AI, simulate, the drills and the Skill Games never go through startMatch and never have it.
@@ -1374,7 +1374,7 @@ const realIds = { clubs:null, men:null, women:null };
 const realKnown = kind => (realIds[kind] ||= kind === 'clubs' ? realClubIds() : new Set(natList(kind).map(t => t.id)));
 const realWhole = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 const realText = (v, most) => typeof v === 'string' && v.length >= 1 && v.length <= most && v.trim() === v && !/[<>\u0000-\u001f\u007f]/.test(v);   // plain text, shown only through esc()
-const REAL_WHY = { win:['W', 1], big:['W', 2], higher:['W', 2], loss:['L', -1], draw:['D', 0], none:[null, 0] };
+const REAL_WHY = { win:['W', 1], big:['W', 1.5], higher:['W', 1.5], loss:['L', -1], draw:['D', 0], none:[null, 0] };   // the owner, 15 Nov 2026: +2 softened to +1.5
 /* One entry, or null to drop it: every rule docs/results-schema.md gives the job, so a file the job would write passes and nothing else does. */
 function resultsEntry(e, kind, day) {
   if (!e || typeof e !== 'object' || Array.isArray(e)) return null;
@@ -1466,15 +1466,24 @@ function realDelta(t) {
 }
 /* The side as this week's match plays it: a copy with the boost's points added where it is strongest, or taken where it is weakest
    (abilitiesFor, src/ratings.js: no random draw, each ability 1 to 5), with the side as it is kept on the copy (realBase) for the star
-   traits and Stronger Side. No boost: the side itself, so a match with none is exactly as before. */
+   traits and Stronger Side. No boost: the side itself, so a match with none is exactly as before.
+   +1.5 (the owner, 15 Nov 2026) is a whole point through abilitiesFor and a real half point on the ability abilitiesFor would give the next
+   whole point to (the strongest still below 5): abilitiesFor rounds its sum, so +1.5 handed to it whole would play as +2. The engine
+   reads abilities as given (abilityOf, the match's M.nat; a career player's are fractional already), so the half plays as a half, and the
+   card shows +1 on one ability and +0.5 on the other. A side at 5 everywhere has nowhere for it, and plays as it is. */
 function realSide(t) {
   const d = t && typeof t === 'object' ? realDelta(t) : 0;
   if (!d) return t;
   const base = Object.fromEntries(ABILITIES.map(([k]) => [k, abilityOf(t, k)]));
-  return { ...t, ...abilitiesFor(base, rateOf(t) + d), real:d, realBase:base };
+  const whole = Math.trunc(d), part = d - whole, out = abilitiesFor(base, rateOf(t) + whole);
+  if (part) {
+    const next = abilitiesFor(base, rateOf(t) + whole + Math.sign(part)), k = ABILITIES.map(([x]) => x).find(x => next[x] !== out[x]);
+    if (k) out[k] += part;
+  }
+  return { ...t, ...out, real:d, realBase:base };
 }
 const realBase = t => (t && t.realBase ? { ...t, ...t.realBase } : t);
-const realForm = d => 'Form ' + (d > 0 ? '+' + d : '−' + -d);   // Form +2, Form −1 (a minus sign)
+const realForm = d => 'Form ' + (d > 0 ? '+' + d : '−' + -d);   // Form +1.5, Form +1, Form −1 (a minus sign)
 const realFormSaid = d => 'Form ' + (d > 0 ? 'plus ' : 'minus ') + Math.abs(d);   // read out
 const REAL_WORD = { W:'Won', D:'Drew', L:'Lost' };
 const realScore = e => (e.wo ? '(Walkover)' : e.f + '-' + e.a);
@@ -13132,7 +13141,7 @@ function pickTag(s, t) {                                   // Stronger Side (the
   return '';
 }
 /* This week's Form on a side's card (src/results.js): a chip after My Team or Stronger Side, and on each bar the point gained in yellow or
-   lost in coral, its number beside the ability's name. The side as the category plays it (a club's Women or Minis side has none). The
+   lost in coral, its number beside the ability's name (+1.5 shows as +1 on one bar and +0.5 on another, as realSide plays it). The side as the category plays it (a club's Women or Minis side has none). The
    overall, the stars, the star traits and Stronger Side stay on the side as it is. */
 /* The championship hub's next fixture: a side's name, with this week's Form under it when its next match will have one (the saved side
    as it is kept, which is what startMatch boosts). Without one, the name exactly as before. */
@@ -13156,10 +13165,10 @@ function pickPanel(s) {
   else {
     const stars = teamTraitNames(t), re = t.league ? realNews(t, 'men') : null, line = re && re.league ? re.league : pickHomeLine(t, cat), rc = realCard(t, cat);   // a club's league this season from results.json while its result is fresh: clubs have moved
     card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}${realChip(rc.d)}</span>${line ? `<span class="pk-league${line === g.name && !rc.d ? ' dup' : ''}">${rc.d ? realChip(rc.d, ' pk-lf') + `<span class="pk-lt">${esc(line)}</span>` : esc(line)}</span>` : rc.d ? `<span class="pk-league pk-lfo">${realChip(rc.d, ' pk-lf')}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
-      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round(b - a);
+      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round((b - a)*10)/10, pip = v => String(Math.round(v*10)/10);   // the real change, to a tenth: +1.5 is +1 on one ability and +0.5 on the next (realSide)
           if (!dv) return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`;
-          const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${Math.abs(dv)}</em>`;   // the week's point, beside the name: +1 or −1
-          return `<span class="pk-st"><span class="lbl">${l}${mark}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(b)} of 5, ${realFormSaid(dv)}"><i style="--v:${(Math.min(a, b)/5).toFixed(2)}"></i><b class="pk-real ${up ? 'up' : 'down'}" style="--a:${(Math.min(a, b)/5).toFixed(2)};--w:${(Math.abs(b - a)/5).toFixed(2)}"></b></span></span>`; }).join('')}</span>${edit}`;
+          const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${pip(Math.abs(dv))}</em>`;   // the week's point, beside the name: +1, +0.5 or −1
+          return `<span class="pk-st"><span class="lbl">${l}${mark}</span><span class="pk-bar" role="img" aria-label="${l} ${pip(b)} of 5, ${realFormSaid(dv)}"><i style="--v:${(Math.min(a, b)/5).toFixed(2)}"></i><b class="pk-real ${up ? 'up' : 'down'}" style="--a:${(Math.min(a, b)/5).toFixed(2)};--w:${(Math.abs(b - a)/5).toFixed(2)}"></b></span></span>`; }).join('')}</span>${edit}`;
   }
   card = card.replace(/^(<button class="team pk-pick[^]*?<\/button>)/, m => `<div class="pk-row">${pickChev('prev', one)}${m}${pickChev('next', one)}</div>`);   // the chevrons either side of the shirt and name; the bars under them keep the card's full width
   const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot

@@ -24,7 +24,7 @@ This settles the points DESIGN.md left open. Where the two differ, this file win
       "src": "pitchero"
     }
   },
-  "men":   { "ENG": { "date": "2026-11-14", "ha": "h", "res": "W", "f": 78, "a": 15, "opp": "JPN", "oppName": "Japan", "comp": "Test", "rank": 5, "oppRank": 12, "boost": 2, "why": "big", "from": "2026-11-15", "until": "2026-11-20", "src": "worldrugby" } },
+  "men":   { "ENG": { "date": "2026-11-14", "ha": "h", "res": "W", "f": 78, "a": 15, "opp": "JPN", "oppName": "Japan", "comp": "Test", "rank": 5, "oppRank": 12, "boost": 1.5, "why": "big", "from": "2026-11-15", "until": "2026-11-20", "src": "worldrugby" } },
   "women": { }
 }
 ```
@@ -66,7 +66,7 @@ Every entry has all of the **always** fields. The others are present only when k
 | `p`, `w`, `d`, `l`, `pts` | no | integer | Clubs: the league table line after the match. All five or none; `w + d + l = p`; each 0 to 60, `pts` -50 to 200 (deductions exist). Only with `league`. |
 | `prePos`, `oppPos` | no | integer | Clubs: this side's and the opponent's places **before** the match, within the same league. Only when both were known; absent in the first two rounds of a season. Never equal. |
 | `rank`, `oppRank` | no | integer | Nations: World Rugby ranking positions in force **before** the match, 1 to 120. Present together, never equal. Women's Tests have none for now (see the README). |
-| `boost` | yes | integer | `-1`, `0`, `1` or `2`. See the rules below. |
+| `boost` | yes | number | `-1`, `0`, `1` or `1.5`, and nothing else (`1.5` is the one fraction). See the rules below. |
 | `why` | yes | string | `win`, `big`, `higher`, `loss`, `draw` or `none`. For the tools and the README; never shown. |
 | `from`, `until` | yes | string | The boost's window, inclusive UK dates. `from` is the day after `date`. `until` is at least `from`, at most `date` + 7 days, and before `next` when `next` is known. With no `next`, the job writes `date` + 6 (a Saturday's result runs Sunday to Friday). |
 | `next` | no | string | The side's next fixture date (UK date), when the source lists one that is not postponed or cancelled. After `date`. |
@@ -77,14 +77,14 @@ Everything shown goes through `esc()`.
 ## Boost rules (the owner's, 15 Nov 2026)
 
 - A win is `+1` (`why: "win"`).
-- A win by 15 or more points is `+2` (`why: "big"`). A win over a side placed higher before the match is `+2` (`why: "higher"`). Both together are still `+2` (`big`).
+- A win by 15 or more points is `+1.5` (`why: "big"`). A win over a side placed higher before the match is `+1.5` (`why: "higher"`). Both together are still `+1.5` (`big`). (The owner first set these at `+2`, and softened them to `+1.5` the same day, 15 Nov 2026.)
 - A loss is `-1` (`loss`). A draw is `0` (`draw`).
 - `0` with `why: "none"` is no boost whatever the score: a walkover, a conceded or void match, or a window that would be empty (the next fixture the very next day).
 - "Higher placed": clubs, `oppPos < prePos` in the same league; nobody counts as higher placed when either side had played fewer than two league matches before it, or when either place is unknown. Nations, `oppRank < rank` (World Rugby rankings before the match).
 - The counting match is the side's latest first XV league or cup match with a result (a Test for a nation). Friendlies never count, including a fixture in Pitchero's Friendlies competition that it types "Cup". A postponed or cancelled fixture, or a friendly, is neither a result nor a `next`.
 - Nothing stacks: one entry per side, the latest match.
 
-So the checks are: `why` is one of the six; `win` and `big` and `higher` need `res: "W"`; `loss` needs `L`; `draw` needs `D`; `boost` is 1 for `win`, 2 for `big` and `higher`, -1 for `loss`, 0 for `draw` and `none`; `big` needs `f - a >= 15`; `win` and `higher` need `f - a < 15`; `higher` needs both places (or both ranks) and the opponent's the higher, and a `win` is never over a side placed higher; `until` is at least `from`, and before `next` unless `why` is `none`; two sides never share a place or a ranking (`prePos` is not `oppPos`, `rank` is not `oppRank`). The job also refuses a club's `date` more than 60 days before `generated` and a `comp` that is a friendly; the game shows a result for 30 days and so never meets either. The job's `validate()` and the game's `resultsEntry` (`src/results.js`) both hold every one of these, and `tools/results-game.mjs` checks that the game's fixture passes the job's validator and that the game takes the real file whole.
+So the checks are: `why` is one of the six; `win` and `big` and `higher` need `res: "W"`; `loss` needs `L`; `draw` needs `D`; `boost` is 1 for `win`, 1.5 for `big` and `higher` (exactly: 2 is refused), -1 for `loss`, 0 for `draw` and `none`; `big` needs `f - a >= 15`; `win` and `higher` need `f - a < 15`; `higher` needs both places (or both ranks) and the opponent's the higher, and a `win` is never over a side placed higher; `until` is at least `from`, and before `next` unless `why` is `none`; two sides never share a place or a ranking (`prePos` is not `oppPos`, `rank` is not `oppRank`). The job also refuses a club's `date` more than 60 days before `generated` and a `comp` that is a friendly; the game shows a result for 30 days and so never meets either. The job's `validate()` and the game's `resultsEntry` (`src/results.js`) both hold every one of these, and `tools/results-game.mjs` checks that the game's fixture passes the job's validator and that the game takes the real file whole.
 
 ## When the game applies it (for the game's builder)
 
