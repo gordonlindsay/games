@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.9';
+const GAME_VERSION = '1.9.1';
 
 /* =========================================================
    Data
@@ -430,7 +430,7 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--) { const j = Math.flo
      78 kits are the owner's research (14 Nov 2026); where it gave no second colour the trim is marked a free choice.
    - designs: a club's design (plain, hoops, halves, quarters, stripes, sash, band) and third colour from the owner's research, drawn
      since 1.8: data.js puts each on its club (src/kit-design.js draws it). A hooped one is hoops on its line too, so KITS off draws a
-     club plain or hooped, as 1.7 did, whatever its design. Plain takes no third: a plain club's third is kept here and not drawn.
+     club plain or hooped, as 1.7 did, whatever its design. A plain club's third is drawn as an edge at its collar and cuffs (kitEdgeOf).
    - The game's own clubs (Farnham and the rest of Surrey's, Aldershot) are not here: data.js has them. shared: the game's clubs a county
      also lists (Aldershot, in Surrey's list since PR #14, shown under Hampshire).
    - cups: the county's own cups by level ({ name, to }, as COUNTY_CUPS), only what is sourced; null for the plain County Cup table.
@@ -1078,9 +1078,10 @@ function localCounties() {
 /* ---------- kit designs and a third colour (1.8) ----------
    The owner, 14 Nov 2026: "Quad sections are ok and add a third colour too for completeness". A club's kit is { kit, trim, design?, third? }:
    design one of KIT_DESIGNS, third an optional third colour (a hex). hoops:true with no design reads as 'hoops', so every 1.7 save, every
-   hooped side in the data and every older build reads it as it did; a hooped design is always written with hoops:true as well. Plain takes
-   no third. KITS (src/data.js) off draws every side plain or hooped exactly as 1.7: kitDesignOf and kitThirdOf are the one door every
-   drawing goes through, and with KITS off they answer as 1.7 would.
+   hooped side in the data and every older build reads it as it did; a hooped design is always written with hoops:true as well. A Plain
+   shirt's third is no design's third: it is an edge at the collar and cuffs (kitEdgeOf, below). KITS (src/data.js) off draws every side
+   plain or hooped exactly as 1.7: kitDesignOf, kitThirdOf and kitEdgeOf are the one door every drawing goes through, and with KITS off
+   they answer as 1.7 would.
    kitPaint is the one rule for which colour a point of the shirt takes, in the wearer's own body space, shared by the match sprites
    (render-art.js, painted per pixel when a picture is baked), the code-drawn men (fig side on, figFB front or back on: kitPaintBox) and
    the tests. The shirt icons draw the same designs in CSS (kitCss). Nothing here draws a random number. */
@@ -1099,6 +1100,26 @@ function kitThirdOf(t) {
   if (!KITS.on || !t || !kitHex(t.third) || kitDesignOf(t) === 'plain') return null;
   const c = t.third.toLowerCase();
   return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : t.third;
+}
+/* A Plain shirt's third (the owner, 15 Nov 2026: "Show It as a Collar Trim"): a thin edge in the third at the collar and cuffs, beside the
+   trim (the close-ups and the icon at its open edge, the neck and the arm, or outside it for a dark third on the icon; the sprites on the
+   shirt's side of it, where a band of its own reads at match size). Kept apart from kitThirdOf, which still answers null for Plain, so the
+   clash rule, the saves and every design's drawing are as they were; none with KITS off, on a design, or where it is the shirt's or the
+   trim's own colour. A club's side saved in a championship, cup or career keeps no third on Plain (kitClean), so, as cleanSide gives a 1.7
+   save its club's design, a side that is a club in the club's own shirt and trim takes the club's edge. A made side never has one: Create
+   Team gives Plain no third. */
+let KIT_EDGE_CLUBS = null;
+function kitEdgeOf(t) {
+  if (!KITS.on || !t || kitDesignOf(t) !== 'plain') return null;
+  let src = t;
+  if (!kitHex(t.third) && !t.custom && typeof ALL_TEAMS !== 'undefined') {
+    if (!KIT_EDGE_CLUBS) KIT_EDGE_CLUBS = new Map(ALL_TEAMS.filter(c => kitHex(c.third) && kitDesignOf(c) === 'plain').map(c => [c.id, c]));
+    const c = KIT_EDGE_CLUBS.get(t.id), same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+    if (c && same(c.kit, t.kit) && same(c.trim, t.trim)) src = c;
+  }
+  if (!kitHex(src.third)) return null;
+  const c = src.third.toLowerCase();
+  return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : src.third;
 }
 /* z: metres up a 1.8m man (hem 0.93, collar 1.44); xb: metres to his left of his centre line; u: metres across the shirt as seen, for
    stripes. 0 the shirt colour, 1 the trim, 2 the third (the trim when there is none). */
@@ -1160,7 +1181,8 @@ function kitPaintBox(g, kit, x0, x1, y0, y1, map) {
     }
   }
 }
-/* Saves (cleanTeam, cleanSide): a design only when it says more than hoops does, a hooped design as hoops:true, a third only where it shows */
+/* Saves (cleanTeam, cleanSide): a design only when it says more than hoops does, a hooped design as hoops:true, a third only on a design past
+   Plain, where it shows (a club's Plain edge is read from the club, kitEdgeOf) */
 function kitClean(t, team) {
   const d = KIT_DESIGNS.includes(t.design) ? t.design : t.hoops ? 'hoops' : 'plain';
   team.hoops = d === 'hoops';
@@ -2145,14 +2167,16 @@ function showCol(team) { const k = M.kit[team]; return colorDist(k.fill, '#0f1a1
    two colours: it clashes when either is near a colour the other side shows (its shirt, or either half of a split shirt). Hoops, stripes,
    sash and band read as their shirt colour, as hoops always have. A split shirt is never turned round: its colours swapped are the same
    shirt mirrored. The kit kept carries its design and third; a change kit, white or black is plain, its trim never the shirt's own colour.
-   With KITS off every design is plain or hoops, so this is 1.7's rule exactly, and so is every pairing with no split shirt. */
+   With KITS off every design is plain or hoops, so this is 1.7's rule exactly, and so is every pairing with no split shirt. A Plain
+   shirt's edge (kitEdgeOf) rides on the away side's own kit, or that kit turned round, and decides nothing. */
 const KIT_SPLIT = { halves:true, quarters:true };
 const kitShows = (fill, trim, d) => (KIT_SPLIT[d] ? [fill, trim] : [fill]);
 const kitNear = (a, b) => Math.min(...a.map(x => Math.min(...b.map(y => colorDist(x, y)))));
 function awayKit(n0, n1) {
-  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1), split = KIT_SPLIT[d0] || KIT_SPLIT[d1];
+  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1), e1 = kitEdgeOf(n1), split = KIT_SPLIT[d0] || KIT_SPLIT[d1];
   const plainOn = (c, other) => (!split || colorDist(c, n1.kit) >= 60 ? n1.kit : n1.trim && colorDist(c, n1.trim) >= 60 ? n1.trim : other);   // white or black: trimmed in the shirt colour, as 1.7, unless that is white or black too
-  const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1], ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
+  const own = [n1.kit, n1.trim, d1, t1], turned = KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1];
+  const opts = [own, [n1.alt, n1.altTrim, 'plain', null], turned, ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
   const home = kitShows(n0.kit, n0.trim, d0);
   const apart = o => (KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? kitNear(home, kitShows(o[0], o[1], o[2])) : colorDist(n0.kit, o[0]));
   /* A tie (every option sharing a colour with a split home shirt: white and black halves v white and black halves, or black and white)
@@ -2167,7 +2191,9 @@ function awayKit(n0, n1) {
     if (r[0] >= 140) { best = o; break; }
     if (!br || ahead(r, br)) { br = r; best = o; }
   }
-  return { fill:best[0], trim:best[1], hoops:best[2] === 'hoops', design:best[2], third:best[3] };
+  const out = { fill:best[0], trim:best[1], hoops:best[2] === 'hoops', design:best[2], third:best[3] };
+  if (e1 && (best === own || best === turned)) out.edge = e1;   // its own kit, or turned round: no key otherwise, so a kit is as it was
+  return out;
 }
 const teamOf = t => typeof t === 'number' ? NATIONS[t] : t;
 function newMatch(u, c, opts) {
@@ -2181,7 +2207,7 @@ function newMatch(u, c, opts) {
   earlyDiff = null;
   if (ease) { const d = DIFF[di], o = { ...d }; for (const k in EARLY.nudge) o[k] = d[k] + EARLY.nudge[k]; earlyDiff = o; }
   M = {
-    nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:kitDesignOf(n0) === 'hoops', design:kitDesignOf(n0), third:kitThirdOf(n0) }, awayKit(n0, n1)],
+    nat:[n0,n1], kit:[Object.assign({ fill:n0.kit, trim:n0.trim, hoops:kitDesignOf(n0) === 'hoops', design:kitDesignOf(n0), third:kitThirdOf(n0) }, kitEdgeOf(n0) ? { edge:kitEdgeOf(n0) } : null), awayKit(n0, n1)],
     players:[], ball:{ x:60, y:35, z:0, vx:0, vy:0, vz:0, state:'dead', carrier:null, f:null, last:0, kickInfo:null },
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
@@ -7829,7 +7855,7 @@ const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
 let SKIN = '#c69c7c', HAIR = '#2a1d16';   // let: paintMan sets them for one man
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
-function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, design:k.design || (k.hoops ? 'hoops' : 'plain'), third:k.third || null, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
+function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, design:k.design || (k.hoops ? 'hoops' : 'plain'), third:k.third || null, edge:k.edge || null, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
 function seg(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 function cutGeom() { const W = V.W, H = V.H; return { W, H, horizon:H*0.38, ground:H*0.83, sc:H*0.15 }; }
@@ -7863,6 +7889,7 @@ function fig(x, gy, sc, kit0, o) {
   const f = o.face || 1, lift = (o.lift || 0)*sc, lean = o.lean || 0, cr = o.crouch || 0, w = sc*0.15;
   const dk = o.dim || 0, tone = h => dk ? shade(h, dk) : h;
   const kit = { shirt:tone(kit0.shirt), trim:tone(kit0.trim), shorts:tone(kit0.shorts), third:kit0.third ? tone(kit0.third) : null, design:kit0.design }, skin = tone(SKIN), hair = tone(HAIR);
+  const edge = kit0.edge && !kitPainted(kit) ? tone(kit0.edge) : null;   // a Plain shirt's third (kitEdgeOf): the trim's top edge and the cuff
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ellipse(x, gy, sc*(0.42 - Math.min(o.lift || 0, 1.5)*0.12), sc*0.08); ctx.fill();
   ctx.save(); ctx.translate(x, gy - lift); ctx.scale(f, 1);
   ctx.lineCap = 'round';
@@ -7878,11 +7905,12 @@ function fig(x, gy, sc, kit0, o) {
   ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
   ctx.fillStyle = kit.shirt; rrect(-0.2*sc, -0.64*sc, 0.4*sc, 0.68*sc, 0.12*sc); ctx.fill();
   if (kitPainted(kit)) {                                     // a design (src/kit-design.js), side on: he shows his right side facing right, his left facing left
-    const xb = f > 0 ? -0.2 : 0.2, rim = KIT_ASYM[kit.design] && kit.design !== 'sash';   // halves and quarters side on: a strip of the far half at chest and back, or the shirt reads as one colour
-    ctx.save(); ctx.clip(); kitPaintBox(ctx, kit, -0.2*sc, 0.2*sc, -0.64*sc, 0.04*sc, (x, y) => ({ z:0.95 - y/sc*0.78, xb:rim && Math.abs(x/sc) > 0.15 ? -xb : xb, u:x/sc })); ctx.restore();
+    const xb = f > 0 ? -0.2 : 0.2, rim = KIT_ASYM[kit.design] && kit.design !== 'sash';   // halves and quarters side on: the far half at his back and his chest, the outer sixth of the torso each, a third in all, or the shirt reads as one colour (the owner, 15 Nov 2026: "Widen the Strip")
+    ctx.save(); ctx.clip(); kitPaintBox(ctx, kit, -0.2*sc, 0.2*sc, -0.64*sc, 0.04*sc, (x, y) => ({ z:0.95 - y/sc*0.78, xb:rim && Math.abs(x/sc) > 0.133 ? -xb : xb, u:x/sc })); ctx.restore();
     ctx.stroke();
   } else { ctx.stroke();
-  ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.07*sc); }
+  ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.07*sc);
+  if (edge) { ctx.fillStyle = edge; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.025*sc); ctx.fillStyle = kit.trim; } }
   if (kit0.hoops && !kitPainted(kit)) { ctx.fillRect(-0.19*sc, -0.34*sc, 0.38*sc, 0.07*sc); ctx.fillRect(-0.19*sc, -0.18*sc, 0.38*sc, 0.07*sc); }
   ctx.fillStyle = kit.shorts; rrect(-0.21*sc, -0.06*sc, 0.42*sc, 0.16*sc, 0.05*sc); ctx.fill();
   ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0.04*sc, -0.78*sc, 0.13*sc, 0, 7); ctx.fill();
@@ -7893,6 +7921,7 @@ function fig(x, gy, sc, kit0, o) {
   const mx = (sx + ex)/2, my = (sy + ey)/2;
   ctx.strokeStyle = kitPainted(kit) ? kitSleeve(kit, f > 0 ? -0.25 : 0.25) : kit.shirt; ctx.lineWidth = w*0.85; seg(sx, sy, mx, my);   // the near sleeve, the near shoulder's colour
   ctx.strokeStyle = skin; ctx.lineWidth = w*0.7; seg(mx, my, ex, ey);
+  if (edge) { const L = Math.hypot(mx - sx, my - sy) || 1, c = 0.04*sc/L; ctx.strokeStyle = edge; ctx.lineWidth = w*0.85; ctx.lineCap = 'butt'; seg(mx - (mx - sx)*c, my - (my - sy)*c, mx, my); }   // the cuff, at the sleeve's end
   ctx.restore();
 }
 function cutBall(x, y, sc, ang) {
@@ -8720,6 +8749,8 @@ function figFB(sx, sy, k, team, o) {
   }
   ctx.stroke();
   ctx.fillStyle = KIT_TRIM_HALF[kit.design] && kit.third ? kit.third : kit.trim; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.06*k);   // the collar: the third where the trim is half the shirt, as the icon's
+  const edge = kit.edge && !kitPainted(kit) ? kit.edge : null;   // a Plain shirt's third (kitEdgeOf): the collar's top edge and the cuffs
+  if (edge) { ctx.fillStyle = edge; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.025*k); ctx.fillStyle = kit.trim; }
   if (kit.hoops && !kitPainted(kit)) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; ctx.fillRect(-hw, y, hw*2, 0.07*k); }
   ctx.fillStyle = kit.shorts; rrect(-0.21*k, -hip - 0.02*k, 0.42*k, 0.16*k, 0.05*k); ctx.fill();
   if (o.back && o.num) {
@@ -8736,6 +8767,10 @@ function figFB(sx, sy, k, team, o) {
     const ex = ax*k, ey = (ay + (i ? swing : -swing))*k*(1 - 0.3*cr), s0 = (i ? 0.26 : -0.26)*k;
     ctx.strokeStyle = kitPainted(kit) ? kitSleeve(kit, (o.back ? -1 : 1)*Math.sign(s0)*0.25) : kit.shirt; ctx.lineWidth = 0.12*k; seg(s0, -shY + 0.05*k, (s0 + ex)/2, (-shY + ey)/2);   // each sleeve its own shoulder's colour
     ctx.strokeStyle = SKIN; ctx.lineWidth = 0.1*k; seg((s0 + ex)/2, (-shY + ey)/2, ex, ey);
+    if (edge) {                                               // the cuff, at the sleeve's end
+      const x1 = (s0 + ex)/2, y1 = (-shY + ey)/2, x0 = s0, y0 = -shY + 0.05*k, c = 0.04*k/(Math.hypot(x1 - x0, y1 - y0) || 1);
+      ctx.strokeStyle = edge; ctx.lineWidth = 0.12*k; ctx.lineCap = 'butt'; seg(x1 - (x1 - x0)*c, y1 - (y1 - y0)*c, x1, y1); ctx.lineCap = 'round';
+    }
   }
   // head
   const hy = -1.68*(1 - 0.3*cr)*k;
@@ -8838,7 +8873,7 @@ const ART_CLIPS = ['idle', 'carryidle', 'run', 'sprint', 'carry', 'pass', 'sides
 const ART_STEP_T = 0.36;                                    // the Side Step's six pictures play over this long. The move itself is unchanged: its push has already landed
 const ART_STEP = new WeakMap();                             // who stepped, when and which way across the pitch: render-only, off the player object
 const artStepped = (p, side) => { ART_STEP.set(p, { at:M.rt, s:side }); };
-const ART = { state:'idle', gen:0, man:null, pages:[], classes:{}, map:new Map(), sheets:0, tick:0, next:1, epoch:0, baked:0, bakeMs:0, scratch:null, sg:null, img:null, luts:new Map(), frames:new WeakMap(), dmaps:new Map(), last:null, promise:null };
+const ART = { state:'idle', gen:0, man:null, pages:[], classes:{}, map:new Map(), sheets:0, tick:0, next:1, epoch:0, baked:0, bakeMs:0, scratch:null, sg:null, img:null, luts:new Map(), frames:new WeakMap(), dmaps:new Map(), emaps:new Map(), last:null, promise:null };
 const artReady = () => ART.state === 'ready';
 function artInstall(man, pages) {                           // a parsed players.json and its decoded pages: [{ w, h, data }]
   ART.gen++; ART.man = man; ART.pages = pages; ART.ids = ART_CLIPS.reduce((o, c, i) => { o[c] = i; return o; }, {});
@@ -8886,7 +8921,7 @@ function artLoad(base = 'assets/players/') {                // once: over the ne
   })();
 }
 function artClear() {                                       // every picture is forgotten; the sheets are kept for the next match
-  ART.map.clear(); ART.tick = 0; ART.next = 1; ART.epoch++; ART.luts.clear(); ART.dmaps.clear(); ART.last = null;
+  ART.map.clear(); ART.tick = 0; ART.next = 1; ART.epoch++; ART.luts.clear(); ART.dmaps.clear(); ART.emaps.clear(); ART.last = null;
   for (const k in ART.classes) { const c = ART.classes[k]; c.free = 0; for (const slot of c.slots) slot.key = -1; }
 }
 function artTrim() {                                        // back on the menus: the demo needs one sheet a shape at the smaller tier, so the rest of a match's go. They are remade if the next match wants them
@@ -8947,18 +8982,19 @@ function artPaletteOf(kit, look) {
   for (const name of ART.parts) out.push(artLut(table[name]));
   // a design past plain and two-colour hoops (src/kit-design.js) is painted per pixel at bake (artDesignFrame): its three colours' tables ride on the palette
   out.design = design === 'plain' || (design === 'hoops' && !kit.third) ? null : design;
-  out.dl = [artLut(kit.shirt), artLut(kit.trim), artLut(kit.third || kit.trim)];
+  out.dl = [artLut(kit.shirt), artLut(kit.trim), artLut(kit.third || (design === 'plain' && kit.edge) || kit.trim)];
   out.third = kit.third || null;
+  out.edge = design === 'plain' && kit.edge ? kit.edge : null;   // a Plain shirt's third (kitEdgeOf): an edge at the collar and cuffs, its own frame (artEdgeFrame)
   return out;
 }
-function artBlit(g, r, luts, T, dx, dy, W, F) {              // one crop of the atlas, tinted, drawn at dx, dy in metres. F: a design's frame (artDesignFrame), for the body only
+function artBlit(g, r, luts, T, dx, dy, W, F) {              // one crop of the atlas, tinted, drawn at dx, dy in metres. F: a design's frame (artDesignFrame), for the body only, or a Plain edge's (artEdgeFrame), its marked pixels in the third
   const page = ART.pages[r[0]], d = page.data, w = r[3], h = r[4], out = ART.img.data, pw = page.w*4;
   for (let y = 0; y < h; y++) {
     let i = (r[2] + y)*pw + r[1]*4, j = y*W*4;
     for (let x = 0; x < w; x++, i += 4, j += 4) {
       const cov = d[i + 2];
       if (cov) {
-        const id = d[i + 1] >> 4, L = F && id <= 2 ? luts.dl[F.map[y*w + x]] : luts[id], s = d[i]*3;
+        const id = d[i + 1] >> 4, L = F && (F.edge ? F.map[y*w + x] : id <= 2) ? luts.dl[F.edge ? 2 : F.map[y*w + x]] : luts[id], s = d[i]*3;
         out[j] = L[s]; out[j + 1] = L[s + 1]; out[j + 2] = L[s + 2]; out[j + 3] = cov;
       }
       else out[j + 3] = 0;
@@ -8979,6 +9015,7 @@ function artBlit(g, r, luts, T, dx, dy, W, F) {              // one crop of the 
    mirror, design and whether there is a third (ART.dmaps, kept for the match: every man of a side shares it, whatever his look), so a
    bake reads a byte a pixel, and a steady frame pays nothing, as every baked picture is cached. */
 const ART_HOOP_Z = [1.325, 1.195, 1.065];
+const ART_FAR = 0.21;                                       // halves and quarters side on: the far half's share of the shirt's pixels at his back, and again at his chest; about a third of what shows, by hue, standing (the owner, 15 Nov 2026: "Widen the Strip")
 function artAxisOf(body, deg) {                             // how far the head's point sits right of the number's on an idle man at this facing, px
   const idle = body.idle, i = deg > 180 ? 360 - deg : deg, d = [0, 45, 90, 135, 180].indexOf(i), r = idle[(d < 0 ? 0 : d)*2];
   return (r[8] - r[10])*(deg > 180 ? -1 : 1);
@@ -8991,11 +9028,52 @@ function artDesignFrame(r, deg, mirror, body, design, third) {
   let maps = ART.dmaps.get(r);
   if (!maps) ART.dmaps.set(r, maps = {});
   if (!maps[key]) {
-    const rim = G.side && KIT_ASYM[design] && design !== 'sash' ? 2*G.A : 0;   // halves and quarters side on: a strip of the far half at chest and back (A: the half depth, px)
-    const F = { ...G, design, third, rim }, w = r[3], h = r[4], m = maps[key] = new Uint8Array(w*h), page = ART.pages[r[0]], d = page.data, pw = page.w*4;
+    const F = { ...G, design, third, lo:-Infinity, hi:Infinity }, w = r[3], h = r[4], m = maps[key] = new Uint8Array(w*h), page = ART.pages[r[0]], d = page.data, pw = page.w*4;
+    if (G.side && KIT_ASYM[design] && design !== 'sash') {   // halves and quarters side on: the far half at his back and his chest, ART_FAR of the shirt's pixels each, or it reads as one colour
+      const at = [];
+      for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2] && (d[i + 1] >> 4) <= 2) at.push(((x + 0.5 - G.sx)*-G.uy + (y + 0.5 - G.sy)*G.ux)/G.px);
+      if (at.length > 12) { at.sort((a, b) => a - b); F.lo = at[Math.floor(at.length*ART_FAR)]; F.hi = at[Math.ceil(at.length*(1 - ART_FAR)) - 1]; }
+    }
     for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2] && (d[i + 1] >> 4) <= 2) m[y*w + x] = artDesignAt(F, x, y);   // the shirt's pixels alone
   }
   return { map:maps[key] };
+}
+/* A Plain shirt's third (kitEdgeOf, src/kit-design.js): a band of the shirt alongside the trim at the collar and the cuffs, on the side
+   away from his skin. A run of trim that touches the shirt and not the socks is the collar or a cuff (a sock top touches the sock); the
+   shirt's pixels beside it, none with skin beside them, take the third, so the trim keeps its full width and the third adds its own band,
+   about a device pixel at match size (inside the trim, as first built, it blended into the trim and the skin). Once an atlas row
+   (ART.emaps): mirrored, the same pixels. */
+function artEdgeFrame(r) {
+  let m = ART.emaps.get(r);
+  if (!m) {
+    const w = r[3], h = r[4], page = ART.pages[r[0]], d = page.data, pw = page.w*4, P = ART.parts, TRIM = P.indexOf('trim') + 1, SHIRT = P.indexOf('shirt') + 1, HOOP = P.indexOf('hoop') + 1, SOCKS = P.indexOf('socks') + 1, BARE = P.indexOf('skin') + 1;
+    const id = new Uint8Array(w*h), run = new Int32Array(w*h).fill(-1), ok = [];
+    for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2]) id[y*w + x] = d[i + 1] >> 4;
+    const near = (x, y, f) => { for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) { const X = x + u, Y = y + v; if ((u || v) && X >= 0 && Y >= 0 && X < w && Y < h && f(id[Y*w + X])) return true; } return false; };
+    for (let k = 0; k < w*h; k++) {                           // each run of trim, its pixels joined at an edge or a corner
+      if (id[k] !== TRIM || run[k] >= 0) continue;
+      const n = ok.length, todo = [k]; let shirt = false, socks = false;
+      run[k] = n;
+      while (todo.length) {
+        const j = todo.pop(), x = j % w, y = (j - x)/w;
+        for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) {
+          const X = x + u, Y = y + v; if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
+          const q = Y*w + X, t = id[q];
+          if (t === SHIRT || t === HOOP) shirt = true; else if (t === SOCKS) socks = true;
+          else if (t === TRIM && run[q] < 0) { run[q] = n; todo.push(q); }
+        }
+      }
+      ok.push(shirt && !socks);
+    }
+    m = new Uint8Array(w*h);
+    for (let k = 0; k < w*h; k++) {
+      if (id[k] !== SHIRT && id[k] !== HOOP) continue;
+      const x = k % w, y = (k - x)/w;
+      if (!near(x, y, t => t === BARE)) for (let v = -1; v <= 1 && !m[k]; v++) for (let u = -1; u <= 1; u++) { const X = x + u, Y = y + v; if (X >= 0 && Y >= 0 && X < w && Y < h && run[Y*w + X] >= 0 && ok[run[Y*w + X]]) { m[k] = 1; break; } }
+    }
+    ART.emaps.set(r, m);
+  }
+  return { map:m, edge:true };
 }
 function artDesignGeom(r, deg, mirror, body) {
   const page = ART.pages[r[0]], d = page.data, w = r[3], h = r[4], pw = page.w*4, px = ART.man.px;
@@ -9027,7 +9105,7 @@ function artDesignAt(F, x, y) {                            // which of the shirt
   const dx = x + 0.5 - F.sx, dy = y + 0.5 - F.sy, along = dx*F.ux + dy*F.uy, lat = (dx*-F.uy + dy*F.ux)/F.px;
   const z = F.zc + along/F.sc;
   let xb = F.side ? F.near*0.2 : Math.max(-0.26, Math.min(0.26, F.lside*lat));
-  if (F.rim) { const t = lat*F.px/F.rim; if (t < 0.18 || t > 0.8) xb = -xb; }
+  if (lat < F.lo || lat > F.hi) xb = -xb;                     // side on, halves and quarters: the far half's strips (artDesignFrame)
   return kitPaint(F.design, z, xb, lat, F.third);
 }
 function artClass(shape, tier) {                            // the slots for one shape at one tier
@@ -9066,8 +9144,8 @@ function artPreview(cv, t, look) {
   if (!artReady() || !t) return false;
   artScratch();
   const man = ART.man, pose = artSprite('idle', 0, 3, false, look), r = pose.row, q = 1/man.px, T = man.px, g = cv.getContext('2d');
-  const kit = { shirt:t.kit, trim:t.trim, hoops:kitDesignOf(t) === 'hoops', design:kitDesignOf(t), third:kitThirdOf(t), shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
-  const F = luts.design ? artDesignFrame(r, pose.deg, false, artBody(look), luts.design, luts.third) : null;   // the club's design (src/kit-design.js)
+  const kit = { shirt:t.kit, trim:t.trim, hoops:kitDesignOf(t) === 'hoops', design:kitDesignOf(t), third:kitThirdOf(t), edge:kitEdgeOf(t), shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
+  const F = luts.design ? artDesignFrame(r, pose.deg, false, artBody(look), luts.design, luts.third) : luts.edge ? artEdgeFrame(r) : null;   // the club's design, or a Plain shirt's edge (src/kit-design.js)
   const style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
   g.clearRect(0, 0, cv.width, cv.height);
   g.save(); g.translate(cv.width/2, cv.height - 6); g.scale(look.b/man.builds[pose.build], 1);
@@ -9092,7 +9170,7 @@ function artBake(p, s, key, r, clip, deg, tier, mirror, dir = 0) {   // one pict
   g.fillStyle = sh; g.beginPath(); g.arc(0, 0, wide*T, 0, 7); g.fill(); g.restore();
   if (mirror) g.scale(-1, 1);
   const luts = artPalette(p), look = lookOf(p);
-  const F = luts.design ? artDesignFrame(r, man.clips[clip].dirs[dir], mirror, artBody(look), luts.design, luts.third) : null;   // a design's frame: his body as this picture holds it
+  const F = luts.design ? artDesignFrame(r, man.clips[clip].dirs[dir], mirror, artBody(look), luts.design, luts.third) : luts.edge ? artEdgeFrame(r) : null;   // a design's frame, his body as this picture holds it, or a Plain shirt's edge
   artBlit(g, r, luts, T, -r[5]*q, -r[6]*q, 256, F);
   const style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
   if (hk) artBlit(g, hk, luts, T, (r[8] - hk[5])*q, (r[9] - hk[6])*q, 256);
@@ -12730,9 +12808,12 @@ for (const s of [0, 1]) {
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 const keyOf = t => t.key || t.id;
 /* A side's shirt icon. Its design and third colour (1.8, src/kit-design.js) as the background, the collar and shoulder flash to suit
-   (kitAccent, kitFlash); Plain and two-colour Hoops as 1.7 drew them, and KITS off is 1.7's markup exactly. */
+   (kitAccent, kitFlash); Plain and two-colour Hoops as 1.7 drew them, and KITS off is 1.7's markup exactly. A Plain shirt with a third
+   (kitEdgeOf) is 1.7's shirt with the third inside the collar's trim and under the sleeves' (.jersey.edge, styles.css); a dark third
+   (luma under 0.2) goes outside the collar's trim instead (.out), or it melts into the neck hole beside it. */
 function jersey(t, cls) {
-  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', d = kitDesignOf(t), th = kitThirdOf(t);
+  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', d = kitDesignOf(t), th = kitThirdOf(t), e = kitEdgeOf(t);
+  if (e) return `<span class="jw ${cls || ''}"><span class="jersey edge${luma(e) < 0.2 ? ' out' : ''}" style="--kit:${k};--trim:${tr};--third:${e}"></span></span>`;
   if (!KITS.on || (d === 'plain' || d === 'hoops') && !th) return `<span class="jw ${cls || ''}"><span class="jersey${d === 'hoops' ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
   return `<span class="jw ${cls || ''}"><span class="jersey d-${d}" style="--kit:${k};--trim:${tr}${th ? ';--third:' + th : ''};--acc:${kitAccent(t)};--flash:${kitFlash(t)};background:${kitCss(t)}"></span></span>`;
 }
@@ -13985,8 +14066,8 @@ function openBuilder(t) {
 }
 function renderBuilder() {
   $('bd-title').textContent = draft.name.trim() || 'My Team';
-  $('bd-jersey').innerHTML = jersey(draft);
   const dsg = kitDesignOf(draft);
+  $('bd-jersey').innerHTML = jersey(dsg === 'plain' ? { ...draft, third:undefined } : draft);   // Plain keeps no third (kitClean), so a third left from another design shows no edge
   if (draft.third && (draft.third === draft.kit || draft.third === draft.trim)) delete draft.third;   // a third colour is never the shirt's or the trim's: changing either onto it clears it
   let shown = 0;
   for (const b of $('bd-design').children) {
@@ -19734,7 +19815,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, catPick, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   comp:{ COMP_LEAGUES, CLUB_LEVEL, CLUB_COUNTY, COUNTY_CUPS, COUNTY_CUP_NAMES, levelOf:compLevelOf, ownLevel:compOwnLevel, countyOf:compCountyOf, cupFor:compCupFor, rivals:compCupRivals, local:compLocal },
-  kits:{ KITS, KIT_DESIGNS, KIT_DESIGN_NAMES, KIT_ASYM, KIT_TRIM_HALF, designOf:kitDesignOf, thirdOf:kitThirdOf, paint:kitPaint, css:kitCss, accent:kitAccent, flash:kitFlash, painted:kitPainted, sleeve:kitSleeve, paintBox:kitPaintBox, clean:kitClean, jersey, awayKit, kitOf, fig, figFB, paintMan, frame:artDesignFrame, geom:artDesignGeom, palette:artPaletteOf, blit:artBlit, scratch:artScratch, sprite:artSprite, body:artBody, asym:artAsym, cell:artCell, lookOf, preview:artPreview, ART:() => ART, M:() => M, setCtx:g => { const k = ctx; ctx = g; return k; } },   // kit designs and a third colour (src/kit-design.js; tools/kits.mjs)
+  kits:{ KITS, KIT_DESIGNS, KIT_DESIGN_NAMES, KIT_ASYM, KIT_TRIM_HALF, designOf:kitDesignOf, thirdOf:kitThirdOf, edgeOf:kitEdgeOf, paint:kitPaint, css:kitCss, accent:kitAccent, flash:kitFlash, painted:kitPainted, sleeve:kitSleeve, paintBox:kitPaintBox, clean:kitClean, jersey, awayKit, kitOf, fig, figFB, paintMan, frame:artDesignFrame, edgeFrame:artEdgeFrame, geom:artDesignGeom, palette:artPaletteOf, blit:artBlit, scratch:artScratch, sprite:artSprite, body:artBody, asym:artAsym, cell:artCell, lookOf, preview:artPreview, ART:() => ART, M:() => M, setCtx:g => { const k = ctx; ctx = g; return k; } },   // kit designs and a third colour (src/kit-design.js; tools/kits.mjs)
   local:{ LOCAL, LOCAL_DATA, LOCAL_NEW, LOCAL_VIEW, listPlays, LOCAL_BAND, LOCAL_RATED, localRated, localKey, listHomeOf, myCounty, pickLevel, pickLocalOrder, FL_CAP, champCounty:() => champCounty },   // the county clubs (src/data.js, src/clubs-local.js)
   cups:{ CUPS, cupTitle, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },

@@ -4,7 +4,7 @@ const CROWD_C = ['#2b3a4a', '#4a3a2e', '#6b5a48', '#203528', '#5a2f35'];
 let SKIN = '#c69c7c', HAIR = '#2a1d16';   // let: paintMan sets them for one man
 function luma(hex) { const [r, g, b] = hexRgb(hex); return (0.299*r + 0.587*g + 0.114*b)/255; }
 function shade(hex, k) { const a = hexRgb(hex); return `rgb(${a.map(v => Math.round(v*(1-k) + 11*k)).join(',')})`; }
-function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, design:k.design || (k.hoops ? 'hoops' : 'plain'), third:k.third || null, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
+function kitOf(team, p = null) { const k = M.kit[team]; return { shirt:k.fill, trim:k.trim, hoops:k.hoops, design:k.design || (k.hoops ? 'hoops' : 'plain'), third:k.third || null, edge:k.edge || null, shorts:luma(k.fill) > 0.6 ? '#1b2233' : '#ece9df', boots:lockerBoots(team, p) }; }   // boots: the Locker's on your side in a match you play, else null for black (src/locker.js); p, the man drawn when a close-up knows him, so a career's are his alone
 function seg(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 function cutGeom() { const W = V.W, H = V.H; return { W, H, horizon:H*0.38, ground:H*0.83, sc:H*0.15 }; }
@@ -38,6 +38,7 @@ function fig(x, gy, sc, kit0, o) {
   const f = o.face || 1, lift = (o.lift || 0)*sc, lean = o.lean || 0, cr = o.crouch || 0, w = sc*0.15;
   const dk = o.dim || 0, tone = h => dk ? shade(h, dk) : h;
   const kit = { shirt:tone(kit0.shirt), trim:tone(kit0.trim), shorts:tone(kit0.shorts), third:kit0.third ? tone(kit0.third) : null, design:kit0.design }, skin = tone(SKIN), hair = tone(HAIR);
+  const edge = kit0.edge && !kitPainted(kit) ? tone(kit0.edge) : null;   // a Plain shirt's third (kitEdgeOf): the trim's top edge and the cuff
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ellipse(x, gy, sc*(0.42 - Math.min(o.lift || 0, 1.5)*0.12), sc*0.08); ctx.fill();
   ctx.save(); ctx.translate(x, gy - lift); ctx.scale(f, 1);
   ctx.lineCap = 'round';
@@ -53,11 +54,12 @@ function fig(x, gy, sc, kit0, o) {
   ctx.strokeStyle = C.outline; ctx.lineWidth = 1.5;
   ctx.fillStyle = kit.shirt; rrect(-0.2*sc, -0.64*sc, 0.4*sc, 0.68*sc, 0.12*sc); ctx.fill();
   if (kitPainted(kit)) {                                     // a design (src/kit-design.js), side on: he shows his right side facing right, his left facing left
-    const xb = f > 0 ? -0.2 : 0.2, rim = KIT_ASYM[kit.design] && kit.design !== 'sash';   // halves and quarters side on: a strip of the far half at chest and back, or the shirt reads as one colour
-    ctx.save(); ctx.clip(); kitPaintBox(ctx, kit, -0.2*sc, 0.2*sc, -0.64*sc, 0.04*sc, (x, y) => ({ z:0.95 - y/sc*0.78, xb:rim && Math.abs(x/sc) > 0.15 ? -xb : xb, u:x/sc })); ctx.restore();
+    const xb = f > 0 ? -0.2 : 0.2, rim = KIT_ASYM[kit.design] && kit.design !== 'sash';   // halves and quarters side on: the far half at his back and his chest, the outer sixth of the torso each, a third in all, or the shirt reads as one colour (the owner, 15 Nov 2026: "Widen the Strip")
+    ctx.save(); ctx.clip(); kitPaintBox(ctx, kit, -0.2*sc, 0.2*sc, -0.64*sc, 0.04*sc, (x, y) => ({ z:0.95 - y/sc*0.78, xb:rim && Math.abs(x/sc) > 0.133 ? -xb : xb, u:x/sc })); ctx.restore();
     ctx.stroke();
   } else { ctx.stroke();
-  ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.07*sc); }
+  ctx.fillStyle = kit.trim; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.07*sc);
+  if (edge) { ctx.fillStyle = edge; ctx.fillRect(-0.19*sc, -0.5*sc, 0.38*sc, 0.025*sc); ctx.fillStyle = kit.trim; } }
   if (kit0.hoops && !kitPainted(kit)) { ctx.fillRect(-0.19*sc, -0.34*sc, 0.38*sc, 0.07*sc); ctx.fillRect(-0.19*sc, -0.18*sc, 0.38*sc, 0.07*sc); }
   ctx.fillStyle = kit.shorts; rrect(-0.21*sc, -0.06*sc, 0.42*sc, 0.16*sc, 0.05*sc); ctx.fill();
   ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0.04*sc, -0.78*sc, 0.13*sc, 0, 7); ctx.fill();
@@ -68,6 +70,7 @@ function fig(x, gy, sc, kit0, o) {
   const mx = (sx + ex)/2, my = (sy + ey)/2;
   ctx.strokeStyle = kitPainted(kit) ? kitSleeve(kit, f > 0 ? -0.25 : 0.25) : kit.shirt; ctx.lineWidth = w*0.85; seg(sx, sy, mx, my);   // the near sleeve, the near shoulder's colour
   ctx.strokeStyle = skin; ctx.lineWidth = w*0.7; seg(mx, my, ex, ey);
+  if (edge) { const L = Math.hypot(mx - sx, my - sy) || 1, c = 0.04*sc/L; ctx.strokeStyle = edge; ctx.lineWidth = w*0.85; ctx.lineCap = 'butt'; seg(mx - (mx - sx)*c, my - (my - sy)*c, mx, my); }   // the cuff, at the sleeve's end
   ctx.restore();
 }
 function cutBall(x, y, sc, ang) {

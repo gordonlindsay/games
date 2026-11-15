@@ -13,7 +13,7 @@
      78 kits are the owner's research (14 Nov 2026); where it gave no second colour the trim is marked a free choice.
    - designs: a club's design (plain, hoops, halves, quarters, stripes, sash, band) and third colour from the owner's research, drawn
      since 1.8: data.js puts each on its club (src/kit-design.js draws it). A hooped one is hoops on its line too, so KITS off draws a
-     club plain or hooped, as 1.7 did, whatever its design. Plain takes no third: a plain club's third is kept here and not drawn.
+     club plain or hooped, as 1.7 did, whatever its design. A plain club's third is drawn as an edge at its collar and cuffs (kitEdgeOf).
    - The game's own clubs (Farnham and the rest of Surrey's, Aldershot) are not here: data.js has them. shared: the game's clubs a county
      also lists (Aldershot, in Surrey's list since PR #14, shown under Hampshire).
    - cups: the county's own cups by level ({ name, to }, as COUNTY_CUPS), only what is sourced; null for the plain County Cup table.

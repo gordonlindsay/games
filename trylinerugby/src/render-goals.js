@@ -370,6 +370,8 @@ function figFB(sx, sy, k, team, o) {
   }
   ctx.stroke();
   ctx.fillStyle = KIT_TRIM_HALF[kit.design] && kit.third ? kit.third : kit.trim; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.06*k);   // the collar: the third where the trim is half the shirt, as the icon's
+  const edge = kit.edge && !kitPainted(kit) ? kit.edge : null;   // a Plain shirt's third (kitEdgeOf): the collar's top edge and the cuffs
+  if (edge) { ctx.fillStyle = edge; ctx.fillRect(-0.27*k, -shY + 0.02*k, 0.54*k, 0.025*k); ctx.fillStyle = kit.trim; }
   if (kit.hoops && !kitPainted(kit)) for (const t of [0.36, 0.66]) { const y = -shY + (shY - hip)*t, hw = (0.27 - 0.08*t)*k; ctx.fillRect(-hw, y, hw*2, 0.07*k); }
   ctx.fillStyle = kit.shorts; rrect(-0.21*k, -hip - 0.02*k, 0.42*k, 0.16*k, 0.05*k); ctx.fill();
   if (o.back && o.num) {
@@ -386,6 +388,10 @@ function figFB(sx, sy, k, team, o) {
     const ex = ax*k, ey = (ay + (i ? swing : -swing))*k*(1 - 0.3*cr), s0 = (i ? 0.26 : -0.26)*k;
     ctx.strokeStyle = kitPainted(kit) ? kitSleeve(kit, (o.back ? -1 : 1)*Math.sign(s0)*0.25) : kit.shirt; ctx.lineWidth = 0.12*k; seg(s0, -shY + 0.05*k, (s0 + ex)/2, (-shY + ey)/2);   // each sleeve its own shoulder's colour
     ctx.strokeStyle = SKIN; ctx.lineWidth = 0.1*k; seg((s0 + ex)/2, (-shY + ey)/2, ex, ey);
+    if (edge) {                                               // the cuff, at the sleeve's end
+      const x1 = (s0 + ex)/2, y1 = (-shY + ey)/2, x0 = s0, y0 = -shY + 0.05*k, c = 0.04*k/(Math.hypot(x1 - x0, y1 - y0) || 1);
+      ctx.strokeStyle = edge; ctx.lineWidth = 0.12*k; ctx.lineCap = 'butt'; seg(x1 - (x1 - x0)*c, y1 - (y1 - y0)*c, x1, y1); ctx.lineCap = 'round';
+    }
   }
   // head
   const hy = -1.68*(1 - 0.3*cr)*k;
