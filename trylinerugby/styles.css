@@ -1789,3 +1789,52 @@ summary::-webkit-details-marker{display:none}
   #s-career-look .cr-lookpic{flex:1;padding:0}
   .pf-body{grid-template-columns:minmax(120px,150px) minmax(0,1fr)}
 }
+/* Real results (src/results.js): the club's latest first team result on My Team's box in the last five's place, Your Games over the games
+   played in the game, and this week's Form as a chip (the box, a side's card, the hub's fixture) and on a card's bars. The outcome is a
+   coloured word, never a filled block: the box's one yellow fill stays Play's. */
+.my-real{display:flex;flex-direction:column;min-width:0}
+.my-real[hidden],.my-sub[hidden]{display:none}
+.rr-shown{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rr-line{min-width:0;font:800 calc(20px*var(--k))/1 var(--display);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-out.w{color:var(--flood)}
+.rr-out.d{color:var(--silver)}
+.rr-out.l{color:var(--alert)}
+.rr-v{text-transform:none}   /* v, as the hub and the card write it, never a capital V */
+.rr-sub{display:flex;align-items:center;gap:10px;min-width:0}
+.rr-when{font:700 13px/1.1 var(--body);color:var(--chalk-dim);white-space:nowrap}
+.my-sub{margin:0;display:flex;align-items:center;gap:8px;font:800 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--chalk-dim);white-space:nowrap}   /* its hairline runs on from the word, so the label costs one 11px line */
+.my-sub::after{content:"";flex:1;height:1px;background:var(--rule-hi)}
+.my-box.real .my-form{display:none}   /* the result in the last five's place */
+.gap.form{position:relative;grid-column:auto;display:inline-block;flex:none;margin:0;padding:3px 6px;border:1.5px solid currentColor;border-radius:6px;font:800 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.gap.form.up{color:var(--flood)}
+.gap.form.down{color:var(--alert)}
+.my-real .gap.form{padding:2px 5px;font-size:11px}   /* as tall as the date beside it */
+/* homeFit with a result showing: Your Games goes first, the place line stays; then the place and the league share one line, the place
+   first and whole (5th · Regional 1 South Central), before either goes (the default levels drop the place line at the first step, and
+   the place is what the owner asked for here) */
+.my-box.real[data-fit] .my-sub{display:none}
+.my-box.real[data-fit="1"] .my-league > span:last-child{display:block}
+.my-box.real:is([data-fit="2"],[data-fit="3"]) .my-league{display:flex;align-items:baseline;white-space:nowrap}
+.my-box.real:is([data-fit="2"],[data-fit="3"]) .my-league > span:first-child{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.my-box.real:is([data-fit="2"],[data-fit="3"]) .my-league > .sep{display:inline;flex:none;white-space:pre;order:-1}
+.my-box.real:is([data-fit="2"],[data-fit="3"]) .my-league > span:last-child{display:block;flex:none;order:-2}   /* the place first, whole: 5th · Regional 1 South Central, the league's end the part that may go */
+.my-box.real:is([data-fit="2"],[data-fit="3"]) .my-league .pts{display:none}
+#s-home.fan .my-box :is(.rr-out,.rr-when,.my-sub,.gap.form){color:var(--fan-gink)}   /* a Super Fan's box in the club's colours: the word says Won or Lost, the ink reads on any ground */
+#s-home.fan .my-box .my-sub::after{background:var(--fan-gink);opacity:.4}
+/* The card: the week's point on the bar, yellow for a point gained, coral hatched for one lost, and +1 or −1 after the ability's name */
+.pk-bar{position:relative}
+.pk-real{position:absolute;top:0;bottom:0;left:calc(var(--a)*100%);width:calc(var(--w)*100%)}
+.pk-real.up{background:var(--flood)}
+.pk-real.down{background:repeating-linear-gradient(135deg,var(--alert) 0 3px,transparent 3px 6px)}
+.pk-st .lbl em{margin-left:4px;font-style:normal;font-weight:800}
+.pk-up{color:var(--flood)}
+.pk-down{color:var(--alert)}
+.fx-nm{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.fx-team.r .fx-nm{align-items:flex-end}
+.fx-team .fx-nm .gap.form{overflow-wrap:normal}
+@media (orientation:landscape) and (max-width:619px){ .pk-st .lbl em{display:none} }   /* 568 wide: the bars' own +1 goes (the card's Form chip says it), so Kicking and Stamina keep apart */
+/* A side's card holds its name block at the top and its bars at the foot, so a Form chip that wraps under the stars (My Team and Form +2)
+   never puts its name and bars out of line with the other card's; Stronger Side and a Legend's traits drifted the same way before. Make
+   a Team and Add Your Team keep their centred plus. */
+.pk-card:has(> .pk-stats){justify-content:space-between}
+.team.pk-pick:not(.pk-make){align-items:start}

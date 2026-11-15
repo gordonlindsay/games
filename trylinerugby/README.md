@@ -47,6 +47,21 @@ Your club and your country, picked once on the team screen (`openTeams('my')`, f
 - **Add Your Team**, once a club is saved, offers **Make This My Team | Not Now** (from the home's button or the team screen's card alike). It asks nothing when the club is My Team already.
 - The Super Fan's club still comes first where `storeFirst` put it: Championship's team lists and Career's clubs.
 
+## Real results
+
+The owner, 15 Nov 2026: "My club should show the most recent first team result for the club / league status. Key results from the week should be shared to provide a temporary performance boost".
+
+**Real results.** Each week a job reads the clubs' public results pages and publishes one file, `results.json`, beside `ratings.json` on the game's own site (its contract is `docs/results-schema.md`). Every player sees the same results and the same boosts, and the last good copy keeps working offline. With no file the game is exactly as it was: no result, no Form, every match the same.
+
+- **My Team's box** shows the club's latest first team result in place of the last five games: "Won 38-34 v Old Alleynians", the outcome a coloured word (Won yellow, Lost coral, Drew silver), then the date ("Sat 14 Nov") with this week's Form beside it. The league line is this season's from the file ("Regional 1 South Central" over "5th · 16 Pts"), and a small Your Games label heads Played, Won, Drawn, Lost, which stay the games you have played in the game. Home or Away and the Form's last day are in the result's title and read out. My Country's title and read-out carry its last Test. The result stays 30 days after the match, then the box goes back to how it was until the next one. A club with no entry, a team you made and a My League side show the box exactly as before.
+- **Form.** A win is +1, a win by 15 or more or over a side placed higher before the match +2, a loss -1, a draw 0. It runs from the day after the match to the day before the side's next fixture, 7 days at most, by the UK date, and ends on its own last day even offline. It moves ability points (one point added where the side is strongest, or taken where it is weakest, each ability held to 1 to 5) on a copy of the side made at kick-off, so it works in Quick Match, 2 Players, a Championship (a saved one's next match too), the cups and a career, and nothing saved is ever changed. The demo, the drills and the Skill Games never have it.
+- **Where it shows.** A Form +2 or Form −1 chip on the side's team card (after My Team), with the point gained in yellow or lost in coral on its bars and +1 or −1 by the ability's name; and under each side's name in the Championship's next fixture. The cup hub and the career's next match play it but show no chip yet.
+- **What stays.** The card's overall, its stars and its star traits are the side as it is, so they never move week to week, and Stronger Side reads the sides as they are too: for one week a card can call a side Stronger while the match plays the other one up.
+- **Who.** A built-in club's own side (Premiership, Championship, National 1 and 2, Regional 1 and 2, Counties 1) and the nations, men's and women's each from their own Tests. Never a club's Women or Minis side, a Minis nation, a team you made, a My League side or a Legend.
+- **Kids.** No boost at the Kids level and none for Minis, for anyone: Kids sets its own difficulty for the child. The result itself still shows on the home.
+- **The clock.** The window is checked against the device's clock (the UK date at that moment), so a device with its clock set back keeps an old boost. Acceptable for an offline game.
+- **Permission.** Pitchero's terms forbid copying its pages without written permission; the owner has switched this on accepting that risk, as with the ratings feed below.
+
 ## Profile
 
 The owner, 2026-11-11: "Profile setup for a new user? Allows them to create the avatar, gender (male/female/na), club and set age group (mini, junior, adult)". His answers: Junior is **Easy, by Gender**; Not Say is **Mixed by Default**; the avatar shows in **the My Team box, Career's New Player and Your Player in Matches**; and **New Players Only** get the setup. `src/profile.js`; `node tools/profile.mjs` checks it.
@@ -901,7 +916,7 @@ The stores link three pages beside the game, served by GitHub Pages and styled b
 has the steps on a Mac. The app carries the same files the site serves, and its native projects are landscape either
 way up. What it does differently is in `src/native.js`, and none of it runs in a browser (`nativeOn()` is false there):
 no service worker, no Install Game or Updating, no status bar, haptics through the phone's
-own engine, the save copied into the app's own storage and put back if the web view loses it, and Android's Back as the
+own engine, `results.json` asked of the game's own site by its address with its last good copy kept on the phone (`tryline.results`), the save copied into the app's own storage and put back if the web view loses it, and Android's Back as the
 game's own. `node tools/native.mjs` checks it under a stand-in Capacitor, the web build unchanged, the typefaces and the
 app's scripts.
 
@@ -925,6 +940,7 @@ The source files are **shared-closure sections, not independent ES modules**. Ea
 | `src/clubs-local.js` | The county clubs (LOCAL, 1.7): one function, `localCounties()`, written by `node tools/clubs-local.mjs` from `docs/clubs-local.json`, never by hand. After `data.js` in the manifest (which holds `'use strict'`); a hoisted declaration, so `data.js` calls it |
 | `src/competitions.js` | Where a Local club sits in the English game: its level, its county and the county cup it plays |
 | `src/ratings.js` | The ratings tables, abilities from a rating, `ratings.json` |
+| `src/results.js` | Real results: `results.json` read and checked, the UK date, this week's Form and the boosted copy a match plays (`RESULTS`, `realSide`) |
 | `src/match.js`, `src/ball.js` | Match state, restarts, possession and ball flight |
 | `src/passing.js`, `src/contact.js`, `src/movement.js` | Passing, tackling, sprint, team movement and match update |
 | `src/goal-kicks.js`, `src/set-pieces.js`, `src/duels.js` | Goal logic, scrums, lineouts and duel rules |

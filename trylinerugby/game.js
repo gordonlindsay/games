@@ -1325,6 +1325,206 @@ function ratingsBoot() {
   return true;
 }
 /* =========================================================
+   Real results: each built-in side's latest first team result, this season's league place, and a short Form boost while it is fresh.
+   The owner, 15 Nov 2026: "My club should show the most recent first team result for the club / league status. Key results from the
+   week should be shared to provide a temporary performance boost". The rules, all of them here:
+   - results.json, at the game's root beside ratings.json, written each week by a job (tools/results/update.mjs; its contract is
+     docs/results-schema.md, version 1). The game ships with no results of its own: with no file every screen and every match is
+     exactly as before, and the tools (node has no location, so it never fetches) see today's game.
+   - Read once at boot, as ratings.json is (src/ratings.js): on the web from the game's own site, same origin, offline through the
+     service worker's own copy; in the app from the game's own site too (RESULTS_SITE), the last good copy kept on the device. Checked
+     strictly (resultsClean): a file shaped wrong is refused whole and the last good one stands; an entry that is wrong is dropped alone.
+   - A file that arrives is held until nothing is being picked or played (resultsSync): the home redraws if it is showing, and
+     otherwise it is used from the next goHome or openTeams, so a card never changes under a finger and a match never changes in play.
+   - The boost: +1, +2 or -1 ability points, from the entry's from to its until, inclusive UK dates (Europe/London: realToday), and never
+     after until, even offline. It lives on a copy of the side made at kick-off (realSide, from startMatch: Quick Match, 2 Players, the
+     Championship, the cups and the career), so a saved championship's next match plays this week's Form and nothing saved is ever
+     edited. The demo, AI v AI, simulate, the drills and the Skill Games never go through startMatch and never have it.
+   - Who has one: a built-in club's own side on Men, and a nation in its own category (men or women). Never a club's Women or Minis
+     side, a Minis nation, a team you made, a My League side or a Legend, and nobody at the Kids level (the result line still shows).
+   - The card's overall, its stars, its star traits and Stronger Side read the side as it is (realBase): they never move week to week.
+   RESULTS='{"on":false}' (tools/harness.mjs) is the game without any of it; RESULTS='{"table":{...},"now":"2026-11-17"}' loads a table
+   and a fixed UK date for the tools, as T.real.set(table, now) does.
+   ========================================================= */
+const RESULTS = { on:true, days:30 };   // days: how long after the match the result line stays on My Team's box (then the box is as it was until the next)
+// RESULTS_TUNE
+const RESULTS_SITE = 'https://gordonlindsay.github.io/games/trylinerugby/';   // the game's own site: where the app asks for the file (the web asks the page's own folder)
+const RESULTS_KEPT = 'tryline.results';            // the app's last good file (it has no service worker); never part of the save
+const RESULTS_SLACK = 2*864e5;                     // generated this far ahead of the device's clock could be its clock; further is a broken file
+const RESULTS_MAX = 1000;                          // entries a table may hold: about 500 are written
+let realNow = null, realWaiting = null;            // the table in use, and one checked and fetched but held until nothing is being picked or played
+
+/* ---------- dates: UK dates as YYYY-MM-DD ---------- */
+const realIso = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && new Date(s + 'T12:00:00Z').toISOString().slice(0, 10) === s;   // a real date, never 2026-02-30
+const realAdd = (s, n) => new Date(Date.parse(s + 'T12:00:00Z') + n*864e5).toISOString().slice(0, 10);
+/* The date in the UK at a moment: British Summer Time (an hour ahead) from 01:00 UTC on the last Sunday of March to 01:00 UTC on the last
+   Sunday of October, Greenwich Mean Time otherwise. By the rule, not Intl, so every device and the tools agree. */
+function londonDate(ms) {
+  const y = new Date(ms).getUTCFullYear(), change = m => { const last = new Date(Date.UTC(y, m + 1, 0)); return Date.UTC(y, m, last.getUTCDate() - last.getUTCDay(), 1); };
+  return new Date(ms + (ms >= change(2) && ms < change(9) ? 36e5 : 0)).toISOString().slice(0, 10);
+}
+const realClock = () => { const n = RESULTS.now; return typeof n === 'string' && n ? Date.parse(realIso(n) ? n + 'T12:00:00Z' : n) : Date.now(); };   // the tools' fixed clock, or the device's
+const realToday = () => londonDate(realClock());
+const REAL_DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], REAL_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const realDay = s => { const d = new Date(s + 'T12:00:00Z'); return REAL_DAY[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + REAL_MON[d.getUTCMonth()]; };   // Sat 14 Nov
+
+/* ---------- results.json: checked strictly ---------- */
+const realClubIds = () => new Set(ALL_TEAMS.filter(t => !NATIONS.some(n => n.id === t.id) && !t.legend).map(t => t.id));
+const realIds = { clubs:null, men:null, women:null };
+const realKnown = kind => (realIds[kind] ||= kind === 'clubs' ? realClubIds() : new Set(natList(kind).map(t => t.id)));
+const realWhole = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+const realText = (v, most) => typeof v === 'string' && v.length >= 1 && v.length <= most && v.trim() === v && !/[<>\u0000-\u001f\u007f]/.test(v);   // plain text, shown only through esc()
+const REAL_WHY = { win:['W', 1], big:['W', 2], higher:['W', 2], loss:['L', -1], draw:['D', 0], none:[null, 0] };
+/* One entry, or null to drop it: every rule docs/results-schema.md gives the job, so a file the job would write passes and nothing else does. */
+function resultsEntry(e, kind, day) {
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return null;
+  const club = kind === 'clubs', has = k => Object.prototype.hasOwnProperty.call(e, k);
+  if (!realIso(e.date) || e.date > day || !['h', 'a', 'n'].includes(e.ha) || (club && e.ha === 'n')) return null;
+  if (!realWhole(e.f, 0, 200) || !realWhole(e.a, 0, 200) || !['W', 'D', 'L'].includes(e.res)) return null;
+  const wo = has('wo') ? e.wo === true : false;
+  if (has('wo') && !wo) return null;
+  if (!wo && e.res !== (e.f > e.a ? 'W' : e.f < e.a ? 'L' : 'D')) return null;
+  if (!(e.opp === null || (typeof e.opp === 'string' && realKnown(club ? 'clubs' : kind).has(e.opp))) || !realText(e.oppName, 40) || !realText(e.comp, 60)) return null;
+  const out = { date:e.date, ha:e.ha, res:e.res, f:e.f, a:e.a, opp:e.opp, oppName:e.oppName, comp:e.comp };
+  if (wo) out.wo = true;
+  const table = ['pos', 'of', 'p', 'w', 'd', 'l', 'pts', 'prePos', 'oppPos', 'rank', 'oppRank'];
+  if (!club && ['league', ...table.slice(0, 9)].some(has)) return null;   // a nation has no league table
+  if (club && ['rank', 'oppRank'].some(has)) return null;
+  if (has('league') || has('pos') || has('of')) {
+    if (!realText(e.league, 60) || !realWhole(e.of, 1, 24) || !realWhole(e.pos, 1, e.of)) return null;
+    Object.assign(out, { league:e.league, pos:e.pos, of:e.of });
+  }
+  const line = ['p', 'w', 'd', 'l', 'pts'];
+  if (line.some(has)) {
+    if (!out.league || !line.slice(0, 4).every(k => realWhole(e[k], 0, 60)) || !realWhole(e.pts, -50, 200) || e.w + e.d + e.l !== e.p) return null;
+    for (const k of line) out[k] = e[k];
+  }
+  for (const [x, y, hi] of [['prePos', 'oppPos', 24], ['rank', 'oppRank', 120]]) {
+    if (!has(x) && !has(y)) continue;
+    if (!realWhole(e[x], 1, hi) || !realWhole(e[y], 1, hi)) return null;
+    out[x] = e[x]; out[y] = e[y];
+  }
+  const why = typeof e.why === 'string' && Object.prototype.hasOwnProperty.call(REAL_WHY, e.why) ? REAL_WHY[e.why] : null;
+  if (!why || e.boost !== why[1]) return null;   // the boost the reason gives, and nothing else
+  if (why[0] && (wo || e.res !== why[0])) return null;   // win, big and higher a win, loss a loss, draw a draw; none any result (a walkover, or a window with no room)
+  if (wo && e.why !== 'none') return null;
+  if (e.why === 'big' && e.f - e.a < 15) return null;
+  if (e.why === 'higher' && e.f - e.a >= 15) return null;
+  if (!realIso(e.from) || !realIso(e.until) || e.from !== realAdd(e.date, 1) || e.until > realAdd(e.date, 7)) return null;   // from the day after the match, at most 7 days, never longer
+  if (e.boost && e.until < e.from) return null;
+  if (has('next') && (!realIso(e.next) || e.next <= e.date || (e.boost && e.until >= e.next))) return null;   // a boost ends before the next fixture
+  Object.assign(out, { boost:e.boost, from:e.from, until:e.until });
+  if (has('next')) out.next = e.next;
+  return out;
+}
+/* The whole file, or null: then the copy held stands. held: the table in use, whose generated a newer file must not be older than. */
+function resultsClean(v, now = realClock(), held = realNow) {
+  if (!v || typeof v !== 'object' || Array.isArray(v) || v.v !== 1 || typeof v.generated !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(v.generated)) return null;
+  const when = Date.parse(v.generated);
+  if (!Number.isFinite(when) || new Date(when).toISOString().slice(0, 19) + 'Z' !== v.generated || when > now + RESULTS_SLACK) return null;
+  if (held && held.generated && v.generated < held.generated) return null;   // never back to an older week
+  const day = londonDate(when), out = { v:1, generated:v.generated };
+  if (typeof v.season === 'string' && /^\d{4}-\d{2}$/.test(v.season)) out.season = v.season;
+  let n = 0;
+  for (const kind of ['clubs', 'men', 'women']) {
+    const t = v[kind];
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return null;
+    out[kind] = {};
+    const ids = Object.keys(t);
+    if ((n += ids.length) > RESULTS_MAX) return null;
+    for (const id of ids) {
+      if (!realKnown(kind).has(id)) continue;   // an unknown id, a Legend, a made team: dropped, the rest kept
+      const e = resultsEntry(t[id], kind, day);
+      if (e) out[kind][id] = e;
+    }
+  }
+  return out;
+}
+
+/* ---------- whose, and when ---------- */
+const realBuiltIn = t => !!t && !t.custom && !t.legend && !String(t.key || '').startsWith('lg-');   // a list's own side: never one you made, a My League side (whose code a list may share) or a Legend
+/* A side's entry for its matches: a built-in club's own side on Men, or a nation in its own category. null for everything else. */
+function realEntry(t) {
+  if (!RESULTS.on || !realNow || !realBuiltIn(t)) return null;
+  const cat = catOf(t);
+  if (isNation(t)) return cat === 'minis' ? null : realNow[cat === 'women' ? 'women' : 'men'][t.id] || null;
+  return cat === 'men' ? realNow.clubs[t.id] || null : null;
+}
+/* The club's or the country's news, for My Team's box: its result whatever category the player is on (a Minis player's club played
+   too), while it is fresh (RESULTS.days after the match). cat: the category a nation is read in (women for the women's Tests). */
+function realNews(t, cat) {
+  if (!RESULTS.on || !realNow || !realBuiltIn(t)) return null;
+  const e = isNation(t) ? realNow[cat === 'women' ? 'women' : 'men'][t.id] : realNow.clubs[t.id], today = realToday();
+  return e && today <= realAdd(e.date, RESULTS.days) ? e : null;
+}
+const realOpen = (e, today = realToday()) => !!e && !!e.boost && e.from <= today && today <= e.until;
+/* The week's Form for a side: its boost while the window is open, else 0. Nobody has one at the Kids level. */
+function realDelta(t) {
+  const e = realEntry(t);
+  return realOpen(e) && !(typeof kidsLevel === 'function' && kidsLevel()) ? e.boost : 0;
+}
+/* The side as this week's match plays it: a copy with the boost's points added where it is strongest, or taken where it is weakest
+   (abilitiesFor, src/ratings.js: no random draw, each ability 1 to 5), with the side as it is kept on the copy (realBase) for the star
+   traits and Stronger Side. No boost: the side itself, so a match with none is exactly as before. */
+function realSide(t) {
+  const d = t && typeof t === 'object' ? realDelta(t) : 0;
+  if (!d) return t;
+  const base = Object.fromEntries(ABILITIES.map(([k]) => [k, abilityOf(t, k)]));
+  return { ...t, ...abilitiesFor(base, rateOf(t) + d), real:d, realBase:base };
+}
+const realBase = t => (t && t.realBase ? { ...t, ...t.realBase } : t);
+const realForm = d => 'Form ' + (d > 0 ? '+' + d : '−' + -d);   // Form +2, Form −1 (a minus sign)
+const realFormSaid = d => 'Form ' + (d > 0 ? 'plus ' : 'minus ') + Math.abs(d);   // read out
+const REAL_WORD = { W:'Won', D:'Drew', L:'Lost' };
+const realScore = e => (e.wo ? '(Walkover)' : e.f + '-' + e.a);
+/* The opponent by the game's own name where it holds the side (v London West), else as the source names it. */
+function realOpp(e) {
+  const t = e.opp ? ALL_TEAMS.find(x => x.id === e.opp) || NATIONS.find(x => x.id === e.opp) : null;
+  return t ? listName(t) : e.oppName;
+}
+const realLine = e => REAL_WORD[e.res] + ' ' + realScore(e) + ' v ' + realOpp(e);   // Won 38-34 v Old Alleynians
+
+/* ---------- fetching ---------- */
+/* On the way to a pick, never during one: a waiting file is used from here. True when the table changed. */
+function resultsSync() {
+  if (!realWaiting) return false;
+  realNow = realWaiting; realWaiting = null;
+  return true;
+}
+const resultsQuiet = () => typeof document !== 'undefined' && !$('s-home').hidden && (typeof mode === 'undefined' || mode === 'menu') && (typeof M === 'undefined' || !M || M.demo);
+function resultsArrived(good) {
+  realWaiting = good;
+  if (resultsQuiet() && resultsSync() && typeof myHome === 'function') myHome();   // the home on show redraws; anywhere else it waits for goHome or openTeams
+}
+async function resultsFetch(get, url = 'results.json', keep = null) {   // resolves true when a good file is waiting; never throws, never retries
+  try {
+    const res = await get(url, { cache:'no-cache', credentials:url === 'results.json' ? 'same-origin' : 'omit' });
+    const raw = res && res.ok ? await res.json() : null, good = raw && resultsClean(raw, realClock(), realWaiting || realNow);
+    if (!good) return false;
+    if (keep) keep(raw);   // the file as it came, so the next start checks it again as a whole
+    resultsArrived(good);
+    return true;
+  } catch (e) { return false; }
+}
+/* At boot. On the web the file beside the page, so a relative address is the game's own site and nothing else; offline only when a
+   service worker controls the page, as it holds the last good copy. In the app (no worker) the game's own site by its address, with
+   no cookies, and the last good copy from the device first. Node has no location, so the tools never get here, and a page opened from
+   a file never asks. */
+function resultsBoot() {
+  if (!RESULTS.on || typeof location === 'undefined' || typeof fetch !== 'function') return false;
+  if (typeof nativeOn === 'function' && nativeOn()) {
+    try { const kept = resultsClean(JSON.parse(localStorage.getItem(RESULTS_KEPT) || 'null')); if (kept) resultsArrived(kept); } catch (e) { /* none kept, or storage refused */ }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+    resultsFetch((u, o) => fetch(u, o), RESULTS_SITE + 'results.json', raw => { try { localStorage.setItem(RESULTS_KEPT, JSON.stringify(raw)); } catch (e) { /* storage full: still used this time */ } });
+    return true;
+  }
+  if (!/^https?:$/.test(location.protocol)) return false;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false && !(navigator.serviceWorker && navigator.serviceWorker.controller)) return false;
+  resultsFetch((u, o) => fetch(u, o));
+  return true;
+}
+if (RESULTS.on && RESULTS.table) realNow = resultsClean(RESULTS.table, realClock(), null);   // the tools' table (RESULTS='{"table":...}')
+/* =========================================================
    Persistence. One browser key holds the settings, the teams
    you make, and the championship: its six sides, the fixtures,
    the results and the round. A match in progress is not stored.
@@ -2123,7 +2323,7 @@ function kickoff(team) {
   placeBall(60, 35);
   M.phaseCount = 0; M.poss = team;
   startSet({ kind:'kickoff', team, x:60, y:35, t:1.4, then:() => restartKick(team, 60, 35, 'kickoff') });
-  if (!M.two && outmatched(M.nat[0], M.nat[1])) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless
+  if (!M.two && outmatched(realBase(M.nat[0]), realBase(M.nat[1]))) say('Stronger Side', 'small');   // say itself is quiet in the demo and headless; the sides as they are, as the card said it, never this week's Form (src/results.js)
   if (M.career) careerKickoff();                           // a career match: the ring starts on your player
 }
 function dropOut(team) {
@@ -6937,7 +7137,7 @@ function traitsArm() {
   if (!M.arcade) return;
   const mine = M.career && M.careerP ? M.careerP : null;
   for (const t of [0, 1]) {
-    const stars = teamStars(M.nat[t], t === 0 && mine ? [mine.n] : null);
+    const stars = teamStars(realBase(M.nat[t]), t === 0 && mine ? [mine.n] : null);   // the side as it is: this week's Form brings no star (src/results.js)
     for (const p of M.players) if (p.team === t && stars.has(p.n)) p.tr = Object.fromEntries(stars.get(p.n).map(id => [id, true]));
   }
   if (mine) { const ids = careerTraitIds(career); mine.tr = ids.length ? Object.fromEntries(ids.map(id => [id, true])) : null; }
@@ -11440,6 +11640,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
+  u = realSide(teamOf(u)); c = realSide(teamOf(c));          // this week's Form (src/results.js): a copy of a boosted side for this match only, the side itself otherwise
   newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   M.you = !pair && typeof profileYou === 'function' ? profileYou() : null;   // your profile's look on one man of your side, the fly-half (src/profile.js): drawing only, made after the match so nothing in it moves
@@ -12078,6 +12279,7 @@ function goHome(focus) {
   if (typeof profileRun !== 'undefined') profileRun = null;   // a first launch's setup under way ends with nothing set (src/profile.js): the home is for a game that is set up, the app's late copy of a save included
   navOnly = null;
   homeStep = homeStepOf(focus);
+  resultsSync();                                             // a results file that came during a pick or a match is used from here (src/results.js)
   renderHome();
   showScreen('s-home');
   homeFit();
@@ -12285,6 +12487,26 @@ const myRecordLine = t => (t && t.league && t.w != null ? ['Won ' + t.w, ...(t.d
 const FORM_WORD = { W:'Won', D:'Drawn', L:'Lost' };
 /* My Team's box: the club's shirt, name, stars and league line; the games you have played as it (formOf, src/persistence.js) and its last
    five results, the latest on the right of them; the country's shirt and name; Change | Add Your Team | Locker. */
+/* The club's latest first team result (src/results.js), in the last five's place: one line with the outcome a coloured word (Won 38-34
+   v Old Alleynians), then its date with this week's Form beside it; Home or Away and the Form's last day in its title and read out. The
+   Form shows only where the player's matches would have it: the club's Men side, never at the Kids level. Your Games then heads the
+   games played in the game, so the club's real record and yours are never read as one. No result: the box exactly as it was. */
+function myReal(c, e) {
+  const box = $('my-real'), cat = settings.cat || 'men', d = e && cat === 'men' ? realDelta(c) : 0;
+  $('my-box').classList.toggle('real', !!e);
+  box.hidden = $('my-sub').hidden = !e;
+  if (!e) { box.innerHTML = ''; box.title = ''; return; }
+  const o = e.res, opp = realOpp(e), until = d ? ' until ' + realDay(e.until) : '', where = e.ha === 'h' ? 'Home' : e.ha === 'a' ? 'Away' : 'Neutral';
+  box.innerHTML = `<span aria-hidden="true" class="rr-shown"><b class="rr-line"><span class="rr-out ${o.toLowerCase()}">${REAL_WORD[o]}</span> ${esc(realScore(e))} <span class="rr-v">v</span> ${esc(opp)}</b>`
+    + `<span class="rr-sub"><span class="rr-when">${esc(realDay(e.date))}</span>${d ? `<span class="gap form ${d > 0 ? 'up' : 'down'}">${esc(realForm(d))}</span>` : ''}</span></span>`
+    + `<span class="sr">${esc('Last Result: ' + realLine(e) + ', ' + where + ', ' + realDay(e.date) + (d ? '. ' + realFormSaid(d) + until : ''))}</span>`;
+  box.title = where + ' · ' + e.comp + (d ? ' · ' + realForm(d) + until : '');
+}
+/* My Country's last Test, in its title and read out only (there is no room for a line of its own): the women's table on Women. */
+function myNatReal(n) {
+  const cat = settings.cat || 'men', e = realNews(n, cat), t = cat === 'men' || cat === 'women' ? natList(cat).find(x => x.id === n.id) : null, d = e && t ? realDelta(t) : 0;
+  return e ? { text:'Last Test: ' + realLine(e) + (d ? ', ' + realForm(d) : ''), said:'Last Test: ' + realLine(e) + (d ? ', ' + realFormSaid(d) : '') } : null;
+}
 function myHome() {
   const c = myClubTeam(), n = myNatTeam(null), f = formOf(c), g = formOf(n), played = r => r.w + r.d + r.l;
   const figs = r => ['Played ' + played(r), 'Won ' + r.w, 'Drawn ' + r.d, 'Lost ' + r.l].join(', ');
@@ -12292,14 +12514,17 @@ function myHome() {
   if (typeof profileHomePic === 'function') profileHomePic(c);   // your player in My Team's kit in the shirt's place, once there is a look and the art is in (src/profile.js)
   $('my-name').textContent = listName(c);
   $('my-stars').innerHTML = ratedStars(c);
-  $('my-league').innerHTML = c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
+  const re = realNews(c, 'men');   // the club's result and this season's place from results.json while the result is fresh; last season's line otherwise
+  $('my-league').innerHTML = re && re.league ? `<span>${esc(re.league)}</span><span class="sep"> · </span><span>${esc(ordinal(re.pos))}${re.pts != null ? `<span class="pts">${esc(' · ' + re.pts + ' Pts')}</span>` : ''}</span>`
+    : c.league ? `<span>${esc(c.league)}</span><span class="sep"> · </span><span>${esc(ordinal(c.place) + ' Last Season')}</span>` : '';   // myLeagueLine, the league over its place
+  myReal(c, re);
   $('my-rec').innerHTML = [['Played', played(f)], ['Won', f.w], ['Drawn', f.d], ['Lost', f.l]].map(([w, v]) => `<div><dt>${w}</dt><dd>${v}</dd></div>`).join('');
   const last = f.last.split('');
   $('my-form').innerHTML = last.map(x => `<li class="fm ${x.toLowerCase()}"><span aria-hidden="true">${x}</span><span class="sr">${FORM_WORD[x]}</span></li>`).join('') + '<li class="fm none" aria-hidden="true"></li>'.repeat(FORM_LAST - last.length);   // the letter seen, the word read out
   $('my-form').setAttribute('aria-label', last.length ? 'Last ' + (last.length === 1 ? 'Result' : last.length + ' Results') : 'No Results Yet');
-  const nat = $('my-nat');
-  nat.innerHTML = `${jersey(n, 'mini')}<b aria-hidden="true">${esc(listName(n))}</b><span class="sr">${esc('My Country: ' + listName(n) + (played(g) ? ', ' + figs(g) : ''))}</span>`;   // read out with its own record (a span takes no aria-label)
-  nat.setAttribute('title', listName(n) + (played(g) ? ': ' + figs(g) : ''));
+  const nat = $('my-nat'), nr = myNatReal(n);
+  nat.innerHTML = `${jersey(n, 'mini')}<b aria-hidden="true">${esc(listName(n))}</b><span class="sr">${esc('My Country: ' + listName(n) + (played(g) ? ', ' + figs(g) : '') + (nr ? '. ' + nr.said : ''))}</span>`;   // read out with its own record (a span takes no aria-label)
+  nat.setAttribute('title', listName(n) + (played(g) ? ': ' + figs(g) : '') + (nr ? (played(g) ? '. ' : ': ') + nr.text : ''));
   $('b-my').setAttribute('aria-label', 'Change My Profile: ' + listName(c) + ', ' + listName(n));   // it opens My Profile (src/profile.js), whose own Change is My Team's
   homeFit();
 }
@@ -12903,6 +13128,17 @@ function pickTag(s, t) {                                   // Stronger Side (the
   if (s === 0 && !tour && myIs(t)) return '<span class="gap mine">My Team</span>';   // Your Team's (or Player 1's, or the one side's): never the Opponent's
   return '';
 }
+/* This week's Form on a side's card (src/results.js): a chip after My Team or Stronger Side, and on each bar the point gained in yellow or
+   lost in coral, its number beside the ability's name. The side as the category plays it (a club's Women or Minis side has none). The
+   overall, the stars, the star traits and Stronger Side stay on the side as it is. */
+/* The championship hub's next fixture: a side's name, with this week's Form under it when its next match will have one (the saved side
+   as it is kept, which is what startMatch boosts). Without one, the name exactly as before. */
+const realHub = t => { const d = realDelta(t); return d ? `<span class="fx-nm"><span>${esc(t.name)}</span>${realChip(d)}</span>` : `<span>${esc(t.name)}</span>`; };
+const realChip = d => (d ? `<span class="gap form ${d > 0 ? 'up' : 'down'}"><span aria-hidden="true">${esc(realForm(d))}</span><span class="sr">${esc(realFormSaid(d))}</span></span>` : '');
+function realCard(t, cat) {
+  const side = !t || t.act ? null : cat ? catTeam(t, cat) : t, d = side ? realDelta(side) : 0;
+  return { d, side:d ? realSide(side) : null };
+}
 function pickPanel(s) {
   const v = pickView[s], g = v.group, t = v.team, st = pick.sides[s], cat = pickCat();
   const where = pickWhere(g), many = v.ladder.length > 1 && !g.fixed;
@@ -12915,9 +13151,12 @@ function pickPanel(s) {
   let card;
   if (!real) card = `<button class="team pk-pick pk-make" data-act="pick" data-make="${t.act}"><span class="plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="tname">${esc(t.name)}</span></button>`;
   else {
-    const stars = teamTraitNames(t), line = pickHomeLine(t, cat);
-    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}</span>${line ? `<span class="pk-league${line === g.name ? ' dup' : ''}">${esc(line)}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
-      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k); return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`; }).join('')}</span>${edit}`;
+    const stars = teamTraitNames(t), re = t.league ? realNews(t, 'men') : null, line = re && re.league ? re.league : pickHomeLine(t, cat), rc = realCard(t, cat);   // a club's league this season from results.json while its result is fresh: clubs have moved
+    card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}${realChip(rc.d)}</span>${line ? `<span class="pk-league${line === g.name ? ' dup' : ''}">${esc(line)}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
+      + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round(b - a);
+          if (!dv) return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`;
+          const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${Math.abs(dv)}</em>`;   // the week's point, beside the name: +1 or −1
+          return `<span class="pk-st"><span class="lbl">${l}${mark}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(b)} of 5, ${realFormSaid(dv)}"><i style="--v:${(Math.min(a, b)/5).toFixed(2)}"></i><b class="pk-real ${up ? 'up' : 'down'}" style="--a:${(Math.min(a, b)/5).toFixed(2)};--w:${(Math.abs(b - a)/5).toFixed(2)}"></b></span></span>`; }).join('')}</span>${edit}`;
   }
   card = card.replace(/^(<button class="team pk-pick[^]*?<\/button>)/, m => `<div class="pk-row">${pickChev('prev', one)}${m}${pickChev('next', one)}</div>`);   // the chevrons either side of the shirt and name; the bars under them keep the card's full width
   const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot
@@ -12935,6 +13174,7 @@ function pickEl(s, act) { const p = $('t-side' + s); return (p && p.querySelecto
    on show, to play as or change), 'my' (My Team: the club, then the country) or 'career' (Career's club: New Player's Change Club). */
 let pickFrom = null;                                       // the home's button that opened the team screen, where Back goes (Quick Match, Play, a competition)
 function openTeams(m, comp, o) {
+  resultsSync();                                             // a results file that came while the home was not showing (src/results.js)
   pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, made:null, lifter:null }; pickView = [null, null];
   pickFrom = (o && o.from) || null;
   champCounty = m === 'champ' && comp === 'county';         // Other County (LOCAL): every county on the ladder, your county first in view
@@ -13834,9 +14074,9 @@ function renderHub() {
     $('hub-next').innerHTML = `
       <div class="stack">
         <div class="fixture">
-          <span class="fx-team">${jersey(T[h])}<span>${esc(T[h].name)}</span></span>
+          <span class="fx-team">${jersey(T[h])}${realHub(T[h])}</span>
           <span class="fx-v">V</span>
-          <span class="fx-team r"><span>${esc(T[a].name)}</span>${jersey(T[a])}</span>
+          <span class="fx-team r">${realHub(T[a])}${jersey(T[a])}</span>
           ${stake ? `<p class="stake">${stake}</p>` : ''}
         </div>
         ${outmatched(T[c.user], foe) ? '<p class="eyebrow">Stronger Side</p>' : ''}
@@ -19317,6 +19557,8 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene, arrowShow },
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
   ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
+  real:{ RESULTS, SITE:RESULTS_SITE, KEPT:RESULTS_KEPT, clean:resultsClean, entry:realEntry, news:realNews, delta:realDelta, side:realSide, base:realBase, open:realOpen, today:realToday, london:londonDate, day:realDay, add:realAdd, form:realForm, said:realFormSaid, line:realLine, opp:realOpp,
+    sync:resultsSync, fetch:resultsFetch, boot:resultsBoot, now:() => realNow, waiting:() => realWaiting, set:(table, now) => { RESULTS.now = now || null; realWaiting = null; realNow = table == null ? null : resultsClean(table, realClock(), null); return realNow; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, catPick, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
@@ -19369,6 +19611,7 @@ function start(data) {
   try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => homeFit()); } catch (e) { /* no font loading API */ }   // My Team's names fitted again in the game's own typeface
   offlineStart();
   ratingsBoot();
+  resultsBoot();                                            // results.json, after the home is drawn (src/results.js)
   restStick();
   requestAnimationFrame(frame);
 }

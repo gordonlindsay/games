@@ -31,6 +31,28 @@ async function ratingsResponse() {
   } catch (_) { /* Offline: the copy below, if there is one. */ }
   return (await cache.match(RATINGS)) || Response.error();
 }
+// The results file (src/results.js) is data too, with a cache of its own on the same terms: network first, the last good copy offline,
+// kept only when the response is shaped like the file (the page checks every entry: resultsClean).
+const RESULTS = new URL('results.json', SCOPE).href;
+const RESULTS_CACHE = 'tryline-results-' + encodeURIComponent(SCOPE.pathname);
+async function resultsShaped(response) {
+  if (/html/i.test(response.headers.get('content-type') || '')) return false;
+  try {
+    const v = await response.clone().json(), table = t => !!t && typeof t === 'object' && !Array.isArray(t);
+    return !!v && typeof v === 'object' && !Array.isArray(v) && v.v === 1 && typeof v.generated === 'string' && table(v.clubs) && table(v.men) && table(v.women);
+  } catch (_) { return false; }
+}
+async function resultsResponse() {
+  const cache = await caches.open(RESULTS_CACHE);
+  try {
+    const response = await fetch(new Request(RESULTS, { cache: 'no-cache', credentials: 'same-origin' }));
+    if (response.ok && !response.redirected && await resultsShaped(response)) {
+      try { await cache.put(RESULTS, response.clone()); } catch (_) { /* Still usable online when storage is full. */ }
+      return response;
+    }
+  } catch (_) { /* Offline: the copy below, if there is one. */ }
+  return (await cache.match(RESULTS)) || Response.error();
+}
 async function verifiedResponse(url, asset) {
   const response = await fetch(new Request(url, { cache: 'reload', credentials: 'same-origin' }));
   if (!response.ok || response.redirected || (response.type && !['basic', 'default'].includes(response.type))) throw new Error('Shell asset unavailable: ' + url);
@@ -102,6 +124,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.origin !== SCOPE.origin || url.search || url.hash) return;
   if (url.href === RATINGS) { event.respondWith(ratingsResponse()); return; }
+  if (url.href === RESULTS) { event.respondWith(resultsResponse()); return; }
   const ownNavigation = event.request.mode === 'navigate' && (url.href === SCOPE.href || url.href === INDEX);
   if (!ownNavigation && !ALLOWED.has(url.href)) return;
   // A generation always serves its own HTML and scripts, even while online.
