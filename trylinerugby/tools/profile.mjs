@@ -13,6 +13,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { resultsServe } from './results-serve.mjs';
 process.env.SEED ??= '71';
 const { T, reseed, bot, rndCalls } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
@@ -486,6 +487,7 @@ async function browserChecks() {
   const dir = fileURLToPath(new URL('../', import.meta.url));
   const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.woff2':'font/woff2', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json', '.webp':'image/webp', '.webmanifest':'application/manifest+json' };
   const server = http.createServer((req, res) => {
+    if (resultsServe(req.url, res)) return;   // the week's results.json: 404 unless RESULTS_FILE (tools/results-serve.mjs)
     const file = path.resolve(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
     if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'content-type':TYPES[path.extname(file)] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);

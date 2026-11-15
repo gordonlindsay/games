@@ -73,6 +73,43 @@ for (const [url, mode, method] of [[scope+'game.js?v=2','cors','GET'], [scope+'s
   assert.equal(await (await failing.get(url)).text(), file('kept'), 'a 404 with a cached copy serves the copy');
   assert.equal(await failing.get(url + '?v=2'), null, 'only the plain address');
 }
+// results.json (src/results.js): the same terms as ratings.json, in a cache of its own
+{
+  const url = scope + 'results.json', resultsCache = 'tryline-results-%2Fgames%2Frugby%2F';
+  assert(!shellAssets.includes('results.json'), 'results.json is data, not shell');
+  const file = g => JSON.stringify({ v:1, generated:g, season:'2026-27', clubs:{}, men:{}, women:{} });
+  let body = file('2026-11-15T21:40:00Z'), online = true;
+  const net = async () => { if (!online) throw Error('Offline'); return new Response(body); };
+  const local = harness({ fetchFor: { 'results.json': net } });
+  await local.lifecycle('install'); await local.lifecycle('activate');
+  assert.equal(await (await local.get(url)).text(), body, 'results: online, from the network');
+  assert.equal(await (await local.stores.get(resultsCache).get(url)).text(), body, 'results: and kept');
+  body = file('2026-11-16T08:50:00Z');
+  assert.equal(await (await local.get(url)).text(), body, 'results: network first, not the cached copy');
+  online = false;
+  assert.equal(await (await local.get(url)).text(), body, 'results: offline, the cached copy');
+  await local.lifecycle('activate');
+  assert(local.stores.has(resultsCache), 'results: a new shell generation keeps it');
+  online = true;
+  for (const [name, bad, type] of [['an HTML page', '<!doctype html><title>Not here</title>', 'text/html'], ['HTML with no type', '<!doctype html><title>Not here</title>', ''], ['text that is not JSON', 'oops', ''], ['version 2', '{"v":2,"generated":"x","clubs":{},"men":{},"women":{}}', ''], ['no women', '{"v":1,"generated":"x","clubs":{},"men":{}}', ''], ['clubs a list', '{"v":1,"generated":"x","clubs":[],"men":{},"women":{}}', ''], ['a list', '[]', ''], ['null', 'null', ''], ['no generated', '{"v":1,"clubs":{},"men":{},"women":{}}', 'application/json'], ['the ratings file', '{"date":"2026-11-07","men":{"ENG":84},"women":{"ENG":96}}', '']]) {
+    body = bad;
+    const sent = () => new Response(body, type ? { headers:{ 'content-type':type } } : undefined), keep = harness({ fetchFor: { 'results.json': async () => sent() } });
+    await keep.lifecycle('install');
+    keep.stores.set(resultsCache, new Map([[url, new Response(file('good'))]]));
+    assert.equal(await (await keep.get(url)).text(), file('good'), `results, ${name}: the good copy is served`);
+    assert.equal(await (await keep.stores.get(resultsCache).get(url)).text(), file('good'), `results, ${name}: and stays in the cache`);
+    keep.stores.delete(resultsCache);
+    assert.equal((await keep.get(url)).type, 'error', `results, ${name}: with no copy, an error the game falls back from`);
+    assert.equal(keep.stores.get(resultsCache).get(url), undefined, `results, ${name}: and nothing is kept`);
+  }
+  const failing = harness({ fetchFor: { 'results.json': async () => new Response('gone', { status:404 }) } });
+  await failing.lifecycle('install');
+  assert.equal((await failing.get(url)).type, 'error', 'results: a 404 with nothing cached is an error the game falls back from (no file: no result, no Form)');
+  failing.stores.set(resultsCache, new Map([[url, new Response(file('kept'))]]));
+  assert.equal(await (await failing.get(url)).text(), file('kept'), 'results: a 404 with a cached copy serves the copy');
+  assert.equal(await failing.get(url + '?v=2'), null, 'results: only the plain address');
+  assert(!failing.stores.has('tryline-ratings-%2Fgames%2Frugby%2F') || failing.stores.get('tryline-ratings-%2Fgames%2Frugby%2F').get(url) === undefined, 'results: never in the ratings cache');
+}
 let status;
 await h.lifecycle('message', {data:{type:'OFFLINE_STATUS'}, ports:[{postMessage:value=>status=value}]});
 assert.equal(status.ready,true);
@@ -141,4 +178,4 @@ const expected = assembleWorker().version;
 const css = new URL('practice.css',root); const bytes=fs.readFileSync(css);
 try { fs.appendFileSync(css,'\n/* drift probe */\n'); assert.notEqual(assembleWorker().version,expected); }
 finally { fs.writeFileSync(css,bytes); }
-console.log('Offline core: atomic install, byte verification, immutable shell, navigation, exclusions, cache isolation, readiness, an update only for a lone game window (counted first, switching nothing), content drift and the ratings file passed.');
+console.log('Offline core: atomic install, byte verification, immutable shell, navigation, exclusions, cache isolation, readiness, an update only for a lone game window (counted first, switching nothing), content drift, the ratings file and the results file passed.');

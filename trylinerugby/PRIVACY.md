@@ -38,6 +38,8 @@ Once loaded, the game plays offline. When it is online it fetches only its own f
 
 The web version also reads one small file, `ratings.json`, when it starts and is online. It holds the national teams' ratings. It comes only from the game's own site, and nothing about the player is sent with the request. Offline, the game uses the last copy kept on the device and sends nothing. If it is missing or looks wrong, the game uses the ratings it already carries. The game never contacts a rankings service or any other third party for ratings.
 
+The web version and the app also read one file of real results, `results.json`, when they start and are online. It holds each club's and country's latest result, its league place and the week's Form. It comes only from the game's own site (in the app, by that site's address, gordonlindsay.github.io), and nothing about the player is sent with the request: no cookies, no account, no device details. That site sees the request and your device's internet address, as any website you visit does. Offline, the game uses the last copy kept on the device and sends nothing. If it is missing or looks wrong, the game shows no results. The game never contacts Pitchero, Wikipedia, World Rugby or any other third party for results.
+
 Its two typefaces come with the game, on the web and in the app. It never loads fonts from Google Fonts or any other site.
 
 ## Add Your Team

@@ -1,0 +1,105 @@
+{
+ "about": "Kept in the tools, never shipped. ids: the source names a game side goes by where its own name would not match (the top two tiers are matched by these alone, never by name, so Sale is never Sale FC and Leicester never Leicester Lions). variants: a misspelling or a short form a source uses for a team its own table names otherwise, by source page; a name in a page's matches that its table does not hold, and no variant explains, refuses that league for the week. Never fuzzy: add a line here instead. pitchero: a club's name in its Pitchero league table where neither its own name nor last season's row gives it. sites: a lead to a club's Pitchero site (folder, or folder/1st XV team id) for discovery to open when no cached table places the club; the club is placed only if that site's own row in this season's table matches it.",
+ "ids": {
+  "BTH": [
+   "Bath"
+  ],
+  "BRS": [
+   "Bristol Bears"
+  ],
+  "EXE": [
+   "Exeter Chiefs"
+  ],
+  "GLO": [
+   "Gloucester"
+  ],
+  "LEI": [
+   "Leicester Tigers"
+  ],
+  "NCL": [
+   "Newcastle Red Bulls",
+   "Newcastle Falcons"
+  ],
+  "NTH": [
+   "Northampton Saints"
+  ],
+  "SAL": [
+   "Sale Sharks"
+  ],
+  "LNO": [
+   "Saracens"
+  ],
+  "LWE": [
+   "Harlequins"
+  ],
+  "EAL": [
+   "Ealing Trailfinders"
+  ],
+  "BED": [
+   "Bedford Blues"
+  ],
+  "COV": [
+   "Coventry"
+  ],
+  "WOR": [
+   "Worcester Warriors"
+  ],
+  "CHN": [
+   "Chinnor"
+  ],
+  "HPY": [
+   "Hartpury",
+   "Hartpury University"
+  ],
+  "CWL": [
+   "Cornish Pirates"
+  ],
+  "DON": [
+   "Doncaster Knights"
+  ],
+  "NOT": [
+   "Nottingham"
+  ],
+  "AMP": [
+   "Ampthill"
+  ],
+  "CAL": [
+   "Caldy"
+  ],
+  "RIC": [
+   "Richmond"
+  ],
+  "CAM": [
+   "Cambridge"
+  ]
+ },
+ "variants": {
+  "2026–27_Champ_Rugby": {
+   "Cadly": "Caldy"
+  },
+  "2026–27_National_League_1": {
+   "Bishops Stortford": "Bishop's Stortford",
+   "Sale": "Sale FC"
+  },
+  "2026–27_National_League_2_East": {
+   "Guernsey": "Guernsey Raiders"
+  },
+  "2026–27_National_League_2_North": {
+   "Darlington Mowen Park": "Darlington Mowden Park",
+   "Wharfdale": "Wharfedale"
+  },
+  "2026–27_National_League_2_West": {
+   "Bourneville": "Bournville",
+   "Taunton": "Taunton Titans"
+  }
+ },
+ "pitchero": { "NUI": "University of Nottingham XV" },
+ "sites": {
+  "OHB": "oldhaberdashersrfc/134366",
+  "OST": "oldstreetonians",
+  "TMV": "traffordmv/9519",
+  "KOL": "kcsoldboysrfc",
+  "WOK": "workington",
+  "WAP": "waspsfootballclub"
+ }
+}

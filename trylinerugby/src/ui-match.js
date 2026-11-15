@@ -62,6 +62,7 @@ function startMatch(u, c, isChamp, o) {
   setTwo(pair);
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
+  u = realSide(teamOf(u)); c = realSide(teamOf(c));          // this week's Form (src/results.js): a copy of a boosted side for this match only, the side itself otherwise
   newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   M.you = !pair && typeof profileYou === 'function' ? profileYou() : null;   // your profile's look on one man of your side, the fly-half (src/profile.js): drawing only, made after the match so nothing in it moves

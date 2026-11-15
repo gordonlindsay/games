@@ -3,6 +3,7 @@
   "clubs-local.js",
   "kit-design.js",
   "ratings.js",
+  "results.js",
   "persistence.js",
   "store.js",
   "match.js",

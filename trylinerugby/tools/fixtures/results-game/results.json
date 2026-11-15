@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "generated": "2026-11-15T21:52:00Z",
+  "season": "2026-27",
+  "clubs": {
+    "FAR": { "date": "2026-11-14", "ha": "a", "res": "W", "f": 38, "a": 34, "opp": "OAE", "oppName": "Old Alleynians", "comp": "Regional 1 South Central", "league": "Regional 1 South Central", "pos": 5, "of": 12, "p": 7, "w": 4, "d": 0, "l": 3, "pts": 16, "prePos": 6, "oppPos": 8, "boost": 1, "why": "win", "from": "2026-11-15", "until": "2026-11-20", "next": "2026-11-21", "src": "pitchero" },
+    "WIM": { "date": "2026-11-14", "ha": "h", "res": "L", "f": 17, "a": 24, "opp": "TWE", "oppName": "Tunbridge Wells", "comp": "Regional 1 South Central", "league": "Regional 1 South Central", "pos": 4, "of": 12, "p": 7, "w": 5, "d": 0, "l": 2, "pts": 22, "prePos": 3, "oppPos": 2, "boost": -1, "why": "loss", "from": "2026-11-15", "until": "2026-11-20", "next": "2026-11-21", "src": "pitchero" },
+    "OAE": { "date": "2026-11-14", "ha": "h", "res": "L", "f": 34, "a": 38, "opp": "FAR", "oppName": "Farnham", "comp": "Regional 1 South Central", "league": "Regional 1 South Central", "pos": 6, "of": 12, "p": 7, "w": 4, "d": 0, "l": 3, "pts": 19, "prePos": 4, "oppPos": 6, "boost": -1, "why": "loss", "from": "2026-11-15", "until": "2026-11-20", "next": "2026-11-21", "src": "pitchero" },
+    "NTH": { "date": "2026-10-31", "ha": "h", "res": "D", "f": 20, "a": 20, "opp": "BTH", "oppName": "Bath", "comp": "Premiership", "league": "Premiership", "pos": 2, "of": 10, "p": 6, "w": 4, "d": 1, "l": 1, "pts": 22, "boost": 0, "why": "draw", "from": "2026-11-01", "until": "2026-11-06", "src": "wikipedia" }
+  },
+  "men": {
+    "ENG": { "date": "2026-11-14", "ha": "h", "res": "W", "f": 78, "a": 15, "opp": "JPN", "oppName": "Japan", "comp": "Test", "rank": 5, "oppRank": 13, "boost": 1.5, "why": "big", "from": "2026-11-15", "until": "2026-11-20", "next": "2026-11-21", "src": "worldrugby" },
+    "JPN": { "date": "2026-11-14", "ha": "a", "res": "L", "f": 15, "a": 78, "opp": "ENG", "oppName": "England", "comp": "Test", "rank": 13, "oppRank": 5, "boost": -1, "why": "loss", "from": "2026-11-15", "until": "2026-11-20", "src": "worldrugby" }
+  },
+  "women": {
+    "ENG": { "date": "2026-11-08", "ha": "a", "res": "W", "f": 22, "a": 19, "opp": "NZL", "oppName": "New Zealand", "comp": "Test", "rank": 2, "oppRank": 1, "boost": 1.5, "why": "higher", "from": "2026-11-09", "until": "2026-11-15", "src": "worldrugby" }
+  }
+}

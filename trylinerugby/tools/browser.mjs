@@ -6,12 +6,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resultsServe } from './results-serve.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const chrome = [process.env.CHROME, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(p => p && fs.existsSync(p));
 if (!chrome || typeof WebSocket === 'undefined') { console.log('Home fit: skipped, no Chrome here. 0 checks passed'); process.exit(0); }
 const TYPES = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.webp':'image/webp', '.png':'image/png', '.webmanifest':'application/json' };
-const server = http.createServer((q, r) => { const f = path.join(root, decodeURIComponent(q.url.split('?')[0]).replace(/^\/$/, '/index.html')); if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'content-type':TYPES[path.extname(f)] || 'application/octet-stream', 'cache-control':'no-store' }); r.end(fs.readFileSync(f)); });
+const server = http.createServer((q, r) => { if (resultsServe(q.url, r)) return; const f = path.join(root, decodeURIComponent(q.url.split('?')[0]).replace(/^\/$/, '/index.html')); if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'content-type':TYPES[path.extname(f)] || 'application/octet-stream', 'cache-control':'no-store' }); r.end(fs.readFileSync(f)); });
 await new Promise(ok => server.listen(0, '127.0.0.1', ok));
 const site = 'http://127.0.0.1:' + server.address().port, dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tryline-fit-')), port = 9500 + Math.floor(Math.random()*400);
 const browser = spawn(chrome, ['--headless=new', '--remote-debugging-port=' + port, '--user-data-dir=' + dir, '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio:'ignore' });

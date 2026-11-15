@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resultsServe } from './results-serve.mjs';
 const { T, inputs, rndCalls, reseed, bot, maulBot, fire, padStub } = await import('./harness.mjs');
 const D = T.debug, X = T.teams, C = T.contact, K = T.kick, STEP = T.STEP, M = () => T.M, inp = inputs[0], $ = id => document.getElementById(id);
 const L = T.maul, MAUL = L ? L.MAUL : null;
@@ -571,7 +572,7 @@ async function browserPart() {
   if (!pw || process.env.NO_BROWSER) { console.log('  the browser part is skipped: Playwright is not installed (npm i -g playwright && npx playwright install chromium)'); return; }
   const root = fileURLToPath(new URL('../', import.meta.url));
   const TYPES = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.webp':'image/webp', '.png':'image/png', '.svg':'image/svg+xml', '.webmanifest':'application/json', '.woff2':'font/woff2' };
-  const server = http.createServer((q, r) => { const f = path.join(root, decodeURIComponent(q.url.split('?')[0]).replace(/^\/$/, '/index.html')); if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'content-type':TYPES[path.extname(f)] || 'application/octet-stream', 'cache-control':'no-store' }); r.end(fs.readFileSync(f)); });
+  const server = http.createServer((q, r) => { if (resultsServe(q.url, r)) return; const f = path.join(root, decodeURIComponent(q.url.split('?')[0]).replace(/^\/$/, '/index.html')); if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'content-type':TYPES[path.extname(f)] || 'application/octet-stream', 'cache-control':'no-store' }); r.end(fs.readFileSync(f)); });
   await new Promise(res => server.listen(0, '127.0.0.1', res));
   let browser;
   try { browser = await pw.chromium.launch(); } catch (e) { console.log('  the browser part is skipped: no Chromium (npx playwright install chromium)'); server.close(); return; }

@@ -16,6 +16,7 @@ const { T, reseed, bot, duelBot, kickBot, dropBot, scrumBot, lineBot } = await i
 const { readGameSource } = await import('./source.mjs');
 const fs = await import('node:fs'), path = await import('node:path'), http = await import('node:http');
 const { createRequire } = await import('node:module'), { execFileSync } = await import('node:child_process'), { fileURLToPath } = await import('node:url');
+const { resultsServe } = await import('./results-serve.mjs');
 const C = T.career, X = T.teams, D = T.debug, L = T.careerLife, K = T.cups, LK = T.locker, P = T.careerPro, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } };
@@ -545,6 +546,7 @@ async function browserChecks() {
   const dir = fileURLToPath(new URL('../', import.meta.url));
   const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.woff2':'font/woff2', '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json' };
   const server = http.createServer((req, res) => {
+    if (resultsServe(req.url, res)) return;   // the week's results.json: 404 unless RESULTS_FILE (tools/results-serve.mjs)
     const file = path.resolve(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
     if (!file.startsWith(dir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'content-type':TYPES[path.extname(file)] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
