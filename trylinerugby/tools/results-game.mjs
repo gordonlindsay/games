@@ -423,8 +423,11 @@ async function browserChecks() {
         const over = () => { const b = $('my-box'); return b.scrollHeight > b.clientHeight + 0.5; };
         T.real.set(file, '2026-11-17'); T.debug.goHome(); T.home.fit();
         const st = T.debug.settings();
-        const joined = () => $('my-box').classList.contains('real') && ['2', '3'].includes($('my-box').dataset.fit);   // the place first and whole, the league's end the part that may go: the game builder's layout for a busy box, which drops Your Games and the points, and is NOT the approved one. It waits on the owner's Build or Change (UX review, 15 Nov); tools/home.mjs with RESULTS_FILE=results.json still fails on it, and is left failing until he answers
-        const home = () => ({ fit:$('my-box').dataset.fit || '0', scroll:scroll(), over:over(), cut:[...document.querySelectorAll('.rr-line, .my-league > span, .my-nat b')].filter(e => !(joined() && e === $('my-league').firstElementChild)).filter(cut).map(e => e.textContent), joined:joined(), placeWhole:!cut($('my-league').lastElementChild) && vis($('my-league').lastElementChild) && box($('my-league').lastElementChild).right <= box($('my-league')).right + 0.5, small:small($('home')), line:vis($('my-real')) ? $('my-real').querySelector('.rr-line').textContent : null, sub:vis($('my-sub')), chip:!!$('my-real').querySelector('.gap.form') && vis($('my-real').querySelector('.gap.form')), place:vis($('my-league').lastElementChild) ? $('my-league').lastElementChild.innerText.trim() : null });
+        const lg = () => $('my-league'), first = () => lg().firstElementChild, last = () => lg().lastElementChild;
+        const inside = () => { const b = box($('my-box')); return [...$('my-box').children].filter(vis).filter(e => !e.classList.contains('my-marks')).filter(e => { const r = box(e); return r.top < b.top - 0.5 || r.bottom > b.bottom + 0.5 || r.left < b.left - 0.5 || r.right > b.right + 0.5; }).map(e => e.id || e.className); };
+        const home = () => ({ fit:$('my-box').dataset.fit || '0', scroll:scroll(), over:over(), out:inside(), cut:[...document.querySelectorAll('.rr-line, .my-league > span, .my-nat b')].filter(cut).map(e => e.textContent),
+          league:vis(first()) ? first().innerText.trim() : null, ownLine:vis(first()) && vis(last()) && box(last()).top >= box(first()).bottom - 0.5, small:small($('home')), line:vis($('my-real')) ? $('my-real').querySelector('.rr-line').textContent : null,
+          sub:vis($('my-sub')), subBeside:vis($('my-sub')) && Math.abs(box($('my-sub')).top - box($('my-rec')).top) <= 0.5 && box($('my-sub')).right <= box($('my-rec')).left + 0.5, chip:!!$('my-real').querySelector('.gap.form') && vis($('my-real').querySelector('.gap.form')), place:vis(last()) ? last().innerText.trim() : null });
         out.home = home();
         { const long = JSON.parse(JSON.stringify(file)); Object.assign(long.clubs.FAR, { opp:null, oppName:'United Services, Portsmouth' });   // a long opponent: the line steps down before its end goes
           T.real.set(long, '2026-11-17'); T.debug.goHome(); T.home.fit(); const rr = $('my-real').querySelector('.rr-line');
@@ -465,7 +468,7 @@ async function browserChecks() {
       ok(!m.long.cut || m.long.px <= 13, `${kind}: a long opponent steps the result line down (to ${m.long.px}px) and is cut only at 13px, the floor (${m.long.cut ? 'cut' : 'whole'})`);
       ok(m.long.px >= 13, `${kind}: never below the 13px floor (${m.long.px}px)`);
       ok(m.home.fit === '0' && m.home.sub && m.home.place === '5th · 16 Pts', `${kind}: the plain home needs no fit level, Your Games and 5th · 16 Pts showing (level ${m.home.fit}, ${m.home.place})`);
-      for (const [name, s] of [['with more in the box', m.busy], ['a Super Fan\'s box', m.fan]]) ok(s.fit === '0' || (!s.sub && (s.fit === '1' ? s.place === '5th · 16 Pts' : ['2', '3'].includes(s.fit) ? s.joined && s.placeWhole && s.place === '5th' : true)), `${kind} ${name}: Your Games goes first, then the place and the league share a line, the place first and whole (level ${s.fit}, ${s.place})`);
+      for (const [name, s] of [['home', m.home], ['with more in the box', m.busy], ['a Super Fan\'s box', m.fan]]) ok(s.sub && s.subBeside && s.place === '5th · 16 Pts' && s.league === 'Regional 1 South Central' && s.ownLine && !s.out.length, `${kind} ${name}: Your Games beside Played, Won, Drawn and Lost, and the league whole over 5th · 16 Pts, never joined, everything inside the box (the owner, 15 Nov: level ${s.fit}, ${s.league} / ${s.place}${s.out.length ? ', outside: ' + s.out.join(' ') : ''})`);
       ok(m.fanOn, `${kind}: the Super Fan's box was drawn in its colours (${m.fanColours.join(' on ')})`);
       ok(!m.card.scroll && Math.abs(m.card.names) <= 1 && Math.abs(m.card.bars) <= 1 && m.card.chips.every(Boolean) && !m.card.clip.length, `${kind} cards: no page scroll, both names and both bars level (${m.card.names.toFixed(1)}, ${m.card.bars.toFixed(1)}), Form on both, nothing cut (${m.card.clip.join(' | ')})`);
       ok(!m.card.small.length, `${kind} cards: every button 44px (${m.card.small.join(', ')})`);
@@ -489,6 +492,61 @@ async function browserChecks() {
       }
       await ctx.close();
     }
+    // the census (the owner, 15 Nov 2026, "Squeeze the Games Row"): every club in the real results.json whose result shows, on the plain home
+    // and on the home with a Trophy Cabinet, at the five sizes: Your Games and the place line shown, the league whole (two lines at most,
+    // never cut, never joined to the place), no page scroll, nothing over the box, everything inside it
+    const REAL = fileURLToPath(new URL('../results.json', import.meta.url));
+    if (fs.existsSync(REAL)) {
+      const real = JSON.parse(fs.readFileSync(REAL, 'utf8'));
+      for (const [w, h] of [[844, 390], [667, 375], [844, 340], [667, 320], [568, 320]]) {
+        const ctx = await browser.newContext({ viewport:{ width:w, height:h }, deviceScaleFactor:1, isMobile:true, hasTouch:true, serviceWorkers:'block' });
+        const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+        await page.addInitScript(s => { try { localStorage.setItem('tryline.v1', JSON.stringify(s)); } catch (e) { /* blocked */ } }, SAVE);
+        await page.goto(base + 'index.html', { waitUntil:'load' }); await page.evaluate(() => document.fonts.ready);
+        const kind = `${w}x${h}`;
+        const c = await page.evaluate(real => {
+          const T = window.__tryline, X = T.teams, R = T.real, st = T.debug.settings(), $ = id => document.getElementById(id), out = {};
+          const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
+          const day = real.generated.slice(0, 10);
+          R.set(real, day);
+          const ids = Object.keys(real.clubs).filter(id => X.ALL_TEAMS.some(t => t.id === id && !X.isNation(t)));
+          const one = id => {
+            st.myClub = id; T.debug.goHome(); T.home.fit();
+            const e = R.news(X.ALL_TEAMS.find(t => t.id === id), 'men');
+            if (!e || !vis($('my-real'))) return null;
+            const b = $('my-box'), bb = box(b), lg = $('my-league'), first = lg.firstElementChild, last = lg.lastElementChild, sc = document.scrollingElement, why = [];
+            if (!vis($('my-sub'))) why.push('no Your Games');
+            if (!vis(last) || !/^\d+(st|nd|rd|th)( · -?\d+ Pts)?$/.test(last.innerText.trim())) why.push('no place line');
+            if (!vis(first) || first.innerText.trim() !== e.league || first.scrollWidth > first.clientWidth + 0.5) why.push('league cut');
+            else if (box(first).height > 2*parseFloat(getComputedStyle(first).lineHeight) + 1) why.push('league over two lines');
+            if (vis(first) && vis(last) && box(last).top < box(first).bottom - 0.5) why.push('league joined to the place');
+            if (sc.scrollHeight > innerHeight + 0.5 || sc.scrollWidth > innerWidth + 0.5) why.push('page scroll');
+            if (b.scrollHeight > b.clientHeight + 0.5) why.push('over the box');
+            if ([...b.children].filter(vis).filter(x => !x.classList.contains('my-marks')).some(x => { const r = box(x); return r.top < bb.top - 0.5 || r.bottom > bb.bottom + 0.5 || r.left < bb.left - 0.5 || r.right > bb.right + 0.5; })) why.push('outside the box');
+            return { fit:b.dataset.fit || '0', why };
+          };
+          const pass = name => {
+            const r = { shown:0, bad:[], fits:{} };
+            for (const id of ids) { const x = one(id); if (!x) continue; r.shown++; r.fits[x.fit] = (r.fits[x.fit] || 0) + 1; if (x.why.length) r.bad.push(id + ' (' + x.why.join(', ') + ', level ' + x.fit + ')'); }
+            out[name] = r;
+          };
+          pass('plain');
+          X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const ch = X.champ(); for (let i = 0; i < 5; i++) { ch.results.push(ch.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); ch.round++; } X.setChamp(ch); X.save(); X.load(); X.setChamp(null);
+          T.debug.goHome(); out.cabinet = !$('b-cabinet').hidden;
+          pass('with a Trophy Cabinet');
+          out.clubs = ids.length;
+          return out;
+        }, real);
+        ok(!errors.length, `${kind} census: no page error (${errors[0] || ''})`);
+        ok(c.cabinet, `${kind} census: the Trophy Cabinet showing for its pass`);
+        console.log(`${kind} census: ${c.plain.shown} clubs, fit levels plain ${json(c.plain.fits)}, with a Trophy Cabinet ${json(c['with a Trophy Cabinet'].fits)}`);
+        for (const name of ['plain', 'with a Trophy Cabinet']) {
+          const r = c[name];
+          ok(r.shown >= 300 && !r.bad.length, `${kind} census, ${name}: all ${r.shown} clubs whose real result shows (of ${c.clubs}) keep Your Games and the place line, the league whole and never joined, no page scroll, everything inside the box (fit levels ${json(r.fits)}${r.bad.length ? '; ' + r.bad.length + ' not: ' + r.bad.slice(0, 6).join('; ') : ''})`);
+        }
+        await ctx.close();
+      }
+    } else ok(true, 'no real results.json for the census');
     // reduced motion: nothing here moves, and the page says so
     // the file read at boot from the page's own folder, offline-safe, no other host asked
     serveFile = true; asked = 0;
