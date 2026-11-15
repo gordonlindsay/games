@@ -204,7 +204,7 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const lvl = LO.pickLevel;
   ok(eng.filter(g => g.local).every(g => g.teams.every((t, i) => i === 0 || lvl(t) > lvl(g.teams[i - 1]) || (lvl(t) === lvl(g.teams[i - 1]) && (t.place || 0) >= (g.teams[i - 1].place || 0)))), 'each county in its pyramid\'s order: level, then place (Quins, with no line, after Regional 1)');
   D.openTeams('quick');
-  ok(P.view(0).group.key === 'sur' && /<button class="btn pk-group two" data-act="sheet" aria-haspopup="dialog">Surrey<\/button>/.test(P.panel(0)) && /<span class="pk-area">Northern Hemi<span class="hx">sphere<\/span><\/span> <span>England<\/span><\/span>/.test(P.panel(0)), 'the card: Surrey on its group\'s button (two lines allowed), Northern Hemisphere · England above it (the area\'s end apart, for Northern Hemi)');
+  ok(P.view(0).group.key === 'sur' && /<button class="btn pk-group two" data-act="sheet" aria-haspopup="dialog"><span class="pk-gn">Surrey<\/span><svg class="pk-ico d" [^>]*aria-hidden="true"[^>]*><path [^>]*\/><\/svg><\/button>/.test(P.panel(0)) && /<span class="pk-area">Northern Hemi<span class="hx">sphere<\/span><\/span> <span>England<\/span><\/span>/.test(P.panel(0)), 'the card: Surrey on its group\'s button (two lines allowed; its name, then the down chevron, 1.8.1), Northern Hemisphere · England above it (the area\'s end apart, for Northern Hemi)');
   P.filter(0, '', { dev:'touch' });
   const F = P.filterState();
   ok(F.cols.map(c => c.head).slice(0, 3).join() === 'Area,Country,League' && F.cols[2].rows.map(n => n.name).join() === ['National', 'Premiership', 'Championship', 'Surrey', ...counties.slice(1).map(l => l.name)].join(), 'the Filter\'s England: National, Premiership, Championship, Surrey, then every other county A to Z');
