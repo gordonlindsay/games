@@ -42,14 +42,16 @@ function showCol(team) { const k = M.kit[team]; return colorDist(k.fill, '#0f1a1
    two colours: it clashes when either is near a colour the other side shows (its shirt, or either half of a split shirt). Hoops, stripes,
    sash and band read as their shirt colour, as hoops always have. A split shirt is never turned round: its colours swapped are the same
    shirt mirrored. The kit kept carries its design and third; a change kit, white or black is plain, its trim never the shirt's own colour.
-   With KITS off every design is plain or hoops, so this is 1.7's rule exactly, and so is every pairing with no split shirt. */
+   With KITS off every design is plain or hoops, so this is 1.7's rule exactly, and so is every pairing with no split shirt. A Plain
+   shirt's edge (kitEdgeOf) rides on the away side's own kit, or that kit turned round, and decides nothing. */
 const KIT_SPLIT = { halves:true, quarters:true };
 const kitShows = (fill, trim, d) => (KIT_SPLIT[d] ? [fill, trim] : [fill]);
 const kitNear = (a, b) => Math.min(...a.map(x => Math.min(...b.map(y => colorDist(x, y)))));
 function awayKit(n0, n1) {
-  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1), split = KIT_SPLIT[d0] || KIT_SPLIT[d1];
+  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1), e1 = kitEdgeOf(n1), split = KIT_SPLIT[d0] || KIT_SPLIT[d1];
   const plainOn = (c, other) => (!split || colorDist(c, n1.kit) >= 60 ? n1.kit : n1.trim && colorDist(c, n1.trim) >= 60 ? n1.trim : other);   // white or black: trimmed in the shirt colour, as 1.7, unless that is white or black too
-  const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1], ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
+  const own = [n1.kit, n1.trim, d1, t1], turned = KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1];
+  const opts = [own, [n1.alt, n1.altTrim, 'plain', null], turned, ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
   const home = kitShows(n0.kit, n0.trim, d0);
   const apart = o => (KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? kitNear(home, kitShows(o[0], o[1], o[2])) : colorDist(n0.kit, o[0]));
   /* A tie (every option sharing a colour with a split home shirt: white and black halves v white and black halves, or black and white)
@@ -64,7 +66,9 @@ function awayKit(n0, n1) {
     if (r[0] >= 140) { best = o; break; }
     if (!br || ahead(r, br)) { br = r; best = o; }
   }
-  return { fill:best[0], trim:best[1], hoops:best[2] === 'hoops', design:best[2], third:best[3] };
+  const out = { fill:best[0], trim:best[1], hoops:best[2] === 'hoops', design:best[2], third:best[3] };
+  if (e1 && (best === own || best === turned)) out.edge = e1;   // its own kit, or turned round: no key otherwise, so a kit is as it was
+  return out;
 }
 const teamOf = t => typeof t === 'number' ? NATIONS[t] : t;
 function newMatch(u, c, opts) {
@@ -78,7 +82,7 @@ function newMatch(u, c, opts) {
   earlyDiff = null;
   if (ease) { const d = DIFF[di], o = { ...d }; for (const k in EARLY.nudge) o[k] = d[k] + EARLY.nudge[k]; earlyDiff = o; }
   M = {
-    nat:[n0,n1], kit:[{ fill:n0.kit, trim:n0.trim, hoops:kitDesignOf(n0) === 'hoops', design:kitDesignOf(n0), third:kitThirdOf(n0) }, awayKit(n0, n1)],
+    nat:[n0,n1], kit:[Object.assign({ fill:n0.kit, trim:n0.trim, hoops:kitDesignOf(n0) === 'hoops', design:kitDesignOf(n0), third:kitThirdOf(n0) }, kitEdgeOf(n0) ? { edge:kitEdgeOf(n0) } : null), awayKit(n0, n1)],
     players:[], ball:{ x:60, y:35, z:0, vx:0, vy:0, vz:0, state:'dead', carrier:null, f:null, last:0, kickInfo:null },
     score:[0,0], tries:[0,0], half:1, clock:0, halfLen:opts.halfLen, diff:DIFF[di],
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,

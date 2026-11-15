@@ -635,9 +635,11 @@ for (const s of [0, 1]) {
 const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 const keyOf = t => t.key || t.id;
 /* A side's shirt icon. Its design and third colour (1.8, src/kit-design.js) as the background, the collar and shoulder flash to suit
-   (kitAccent, kitFlash); Plain and two-colour Hoops as 1.7 drew them, and KITS off is 1.7's markup exactly. */
+   (kitAccent, kitFlash); Plain and two-colour Hoops as 1.7 drew them, and KITS off is 1.7's markup exactly. A Plain shirt with a third
+   (kitEdgeOf) is 1.7's shirt with the third inside the collar's trim and under the sleeves' (.jersey.edge, styles.css). */
 function jersey(t, cls) {
-  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', d = kitDesignOf(t), th = kitThirdOf(t);
+  const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', d = kitDesignOf(t), th = kitThirdOf(t), e = kitEdgeOf(t);
+  if (e) return `<span class="jw ${cls || ''}"><span class="jersey edge" style="--kit:${k};--trim:${tr};--third:${e}"></span></span>`;
   if (!KITS.on || (d === 'plain' || d === 'hoops') && !th) return `<span class="jw ${cls || ''}"><span class="jersey${d === 'hoops' ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
   return `<span class="jw ${cls || ''}"><span class="jersey d-${d}" style="--kit:${k};--trim:${tr}${th ? ';--third:' + th : ''};--acc:${kitAccent(t)};--flash:${kitFlash(t)};background:${kitCss(t)}"></span></span>`;
 }
@@ -1873,8 +1875,8 @@ function openBuilder(t) {
 }
 function renderBuilder() {
   $('bd-title').textContent = draft.name.trim() || 'My Team';
-  $('bd-jersey').innerHTML = jersey(draft);
   const dsg = kitDesignOf(draft);
+  $('bd-jersey').innerHTML = jersey(dsg === 'plain' ? { ...draft, third:undefined } : draft);   // Plain keeps no third (kitClean), so a third left from another design shows no edge
   if (draft.third && (draft.third === draft.kit || draft.third === draft.trim)) delete draft.third;   // a third colour is never the shirt's or the trim's: changing either onto it clears it
   let shown = 0;
   for (const b of $('bd-design').children) {

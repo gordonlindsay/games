@@ -12,7 +12,7 @@ const ART_CLIPS = ['idle', 'carryidle', 'run', 'sprint', 'carry', 'pass', 'sides
 const ART_STEP_T = 0.36;                                    // the Side Step's six pictures play over this long. The move itself is unchanged: its push has already landed
 const ART_STEP = new WeakMap();                             // who stepped, when and which way across the pitch: render-only, off the player object
 const artStepped = (p, side) => { ART_STEP.set(p, { at:M.rt, s:side }); };
-const ART = { state:'idle', gen:0, man:null, pages:[], classes:{}, map:new Map(), sheets:0, tick:0, next:1, epoch:0, baked:0, bakeMs:0, scratch:null, sg:null, img:null, luts:new Map(), frames:new WeakMap(), dmaps:new Map(), last:null, promise:null };
+const ART = { state:'idle', gen:0, man:null, pages:[], classes:{}, map:new Map(), sheets:0, tick:0, next:1, epoch:0, baked:0, bakeMs:0, scratch:null, sg:null, img:null, luts:new Map(), frames:new WeakMap(), dmaps:new Map(), emaps:new Map(), last:null, promise:null };
 const artReady = () => ART.state === 'ready';
 function artInstall(man, pages) {                           // a parsed players.json and its decoded pages: [{ w, h, data }]
   ART.gen++; ART.man = man; ART.pages = pages; ART.ids = ART_CLIPS.reduce((o, c, i) => { o[c] = i; return o; }, {});
@@ -60,7 +60,7 @@ function artLoad(base = 'assets/players/') {                // once: over the ne
   })();
 }
 function artClear() {                                       // every picture is forgotten; the sheets are kept for the next match
-  ART.map.clear(); ART.tick = 0; ART.next = 1; ART.epoch++; ART.luts.clear(); ART.dmaps.clear(); ART.last = null;
+  ART.map.clear(); ART.tick = 0; ART.next = 1; ART.epoch++; ART.luts.clear(); ART.dmaps.clear(); ART.emaps.clear(); ART.last = null;
   for (const k in ART.classes) { const c = ART.classes[k]; c.free = 0; for (const slot of c.slots) slot.key = -1; }
 }
 function artTrim() {                                        // back on the menus: the demo needs one sheet a shape at the smaller tier, so the rest of a match's go. They are remade if the next match wants them
@@ -121,18 +121,19 @@ function artPaletteOf(kit, look) {
   for (const name of ART.parts) out.push(artLut(table[name]));
   // a design past plain and two-colour hoops (src/kit-design.js) is painted per pixel at bake (artDesignFrame): its three colours' tables ride on the palette
   out.design = design === 'plain' || (design === 'hoops' && !kit.third) ? null : design;
-  out.dl = [artLut(kit.shirt), artLut(kit.trim), artLut(kit.third || kit.trim)];
+  out.dl = [artLut(kit.shirt), artLut(kit.trim), artLut(kit.third || (design === 'plain' && kit.edge) || kit.trim)];
   out.third = kit.third || null;
+  out.edge = design === 'plain' && kit.edge ? kit.edge : null;   // a Plain shirt's third (kitEdgeOf): an edge at the collar and cuffs, its own frame (artEdgeFrame)
   return out;
 }
-function artBlit(g, r, luts, T, dx, dy, W, F) {              // one crop of the atlas, tinted, drawn at dx, dy in metres. F: a design's frame (artDesignFrame), for the body only
+function artBlit(g, r, luts, T, dx, dy, W, F) {              // one crop of the atlas, tinted, drawn at dx, dy in metres. F: a design's frame (artDesignFrame), for the body only, or a Plain edge's (artEdgeFrame), its marked pixels in the third
   const page = ART.pages[r[0]], d = page.data, w = r[3], h = r[4], out = ART.img.data, pw = page.w*4;
   for (let y = 0; y < h; y++) {
     let i = (r[2] + y)*pw + r[1]*4, j = y*W*4;
     for (let x = 0; x < w; x++, i += 4, j += 4) {
       const cov = d[i + 2];
       if (cov) {
-        const id = d[i + 1] >> 4, L = F && id <= 2 ? luts.dl[F.map[y*w + x]] : luts[id], s = d[i]*3;
+        const id = d[i + 1] >> 4, L = F && (F.edge ? F.map[y*w + x] : id <= 2) ? luts.dl[F.edge ? 2 : F.map[y*w + x]] : luts[id], s = d[i]*3;
         out[j] = L[s]; out[j + 1] = L[s + 1]; out[j + 2] = L[s + 2]; out[j + 3] = cov;
       }
       else out[j + 3] = 0;
@@ -153,6 +154,7 @@ function artBlit(g, r, luts, T, dx, dy, W, F) {              // one crop of the 
    mirror, design and whether there is a third (ART.dmaps, kept for the match: every man of a side shares it, whatever his look), so a
    bake reads a byte a pixel, and a steady frame pays nothing, as every baked picture is cached. */
 const ART_HOOP_Z = [1.325, 1.195, 1.065];
+const ART_FAR = 0.21;                                       // halves and quarters side on: the far half's share of the shirt's pixels at his back, and again at his chest; about a third of what shows, by hue, standing (the owner, 15 Nov 2026: "Widen the Strip")
 function artAxisOf(body, deg) {                             // how far the head's point sits right of the number's on an idle man at this facing, px
   const idle = body.idle, i = deg > 180 ? 360 - deg : deg, d = [0, 45, 90, 135, 180].indexOf(i), r = idle[(d < 0 ? 0 : d)*2];
   return (r[8] - r[10])*(deg > 180 ? -1 : 1);
@@ -165,11 +167,46 @@ function artDesignFrame(r, deg, mirror, body, design, third) {
   let maps = ART.dmaps.get(r);
   if (!maps) ART.dmaps.set(r, maps = {});
   if (!maps[key]) {
-    const rim = G.side && KIT_ASYM[design] && design !== 'sash' ? 2*G.A : 0;   // halves and quarters side on: a strip of the far half at chest and back (A: the half depth, px)
-    const F = { ...G, design, third, rim }, w = r[3], h = r[4], m = maps[key] = new Uint8Array(w*h), page = ART.pages[r[0]], d = page.data, pw = page.w*4;
+    const F = { ...G, design, third, lo:-Infinity, hi:Infinity }, w = r[3], h = r[4], m = maps[key] = new Uint8Array(w*h), page = ART.pages[r[0]], d = page.data, pw = page.w*4;
+    if (G.side && KIT_ASYM[design] && design !== 'sash') {   // halves and quarters side on: the far half at his back and his chest, ART_FAR of the shirt's pixels each, or it reads as one colour
+      const at = [];
+      for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2] && (d[i + 1] >> 4) <= 2) at.push(((x + 0.5 - G.sx)*-G.uy + (y + 0.5 - G.sy)*G.ux)/G.px);
+      if (at.length > 12) { at.sort((a, b) => a - b); F.lo = at[Math.floor(at.length*ART_FAR)]; F.hi = at[Math.ceil(at.length*(1 - ART_FAR)) - 1]; }
+    }
     for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2] && (d[i + 1] >> 4) <= 2) m[y*w + x] = artDesignAt(F, x, y);   // the shirt's pixels alone
   }
   return { map:maps[key] };
+}
+/* A Plain shirt's third (kitEdgeOf, src/kit-design.js): the trim's pixels at its open edge, next to his skin, at the collar and the cuffs.
+   A run of trim that touches the shirt and not the socks is the collar or a cuff (a sock top touches the sock); its pixels with skin
+   beside them take the third. Once an atlas row (ART.emaps): mirrored, the same pixels. */
+function artEdgeFrame(r) {
+  let m = ART.emaps.get(r);
+  if (!m) {
+    const w = r[3], h = r[4], page = ART.pages[r[0]], d = page.data, pw = page.w*4, P = ART.parts, TRIM = P.indexOf('trim') + 1, SHIRT = P.indexOf('shirt') + 1, HOOP = P.indexOf('hoop') + 1, SOCKS = P.indexOf('socks') + 1, BARE = P.indexOf('skin') + 1;
+    const id = new Uint8Array(w*h), run = new Int32Array(w*h).fill(-1), ok = [];
+    for (let y = 0; y < h; y++) for (let x = 0, i = (r[2] + y)*pw + r[1]*4; x < w; x++, i += 4) if (d[i + 2]) id[y*w + x] = d[i + 1] >> 4;
+    const near = (x, y, f) => { for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) { const X = x + u, Y = y + v; if ((u || v) && X >= 0 && Y >= 0 && X < w && Y < h && f(id[Y*w + X])) return true; } return false; };
+    for (let k = 0; k < w*h; k++) {                           // each run of trim, its pixels joined at an edge or a corner
+      if (id[k] !== TRIM || run[k] >= 0) continue;
+      const n = ok.length, todo = [k]; let shirt = false, socks = false;
+      run[k] = n;
+      while (todo.length) {
+        const j = todo.pop(), x = j % w, y = (j - x)/w;
+        for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) {
+          const X = x + u, Y = y + v; if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
+          const q = Y*w + X, t = id[q];
+          if (t === SHIRT || t === HOOP) shirt = true; else if (t === SOCKS) socks = true;
+          else if (t === TRIM && run[q] < 0) { run[q] = n; todo.push(q); }
+        }
+      }
+      ok.push(shirt && !socks);
+    }
+    m = new Uint8Array(w*h);
+    for (let k = 0; k < w*h; k++) if (run[k] >= 0 && ok[run[k]]) { const x = k % w; if (near(x, (k - x)/w, t => t === BARE)) m[k] = 1; }
+    ART.emaps.set(r, m);
+  }
+  return { map:m, edge:true };
 }
 function artDesignGeom(r, deg, mirror, body) {
   const page = ART.pages[r[0]], d = page.data, w = r[3], h = r[4], pw = page.w*4, px = ART.man.px;
@@ -201,7 +238,7 @@ function artDesignAt(F, x, y) {                            // which of the shirt
   const dx = x + 0.5 - F.sx, dy = y + 0.5 - F.sy, along = dx*F.ux + dy*F.uy, lat = (dx*-F.uy + dy*F.ux)/F.px;
   const z = F.zc + along/F.sc;
   let xb = F.side ? F.near*0.2 : Math.max(-0.26, Math.min(0.26, F.lside*lat));
-  if (F.rim) { const t = lat*F.px/F.rim; if (t < 0.18 || t > 0.8) xb = -xb; }
+  if (lat < F.lo || lat > F.hi) xb = -xb;                     // side on, halves and quarters: the far half's strips (artDesignFrame)
   return kitPaint(F.design, z, xb, lat, F.third);
 }
 function artClass(shape, tier) {                            // the slots for one shape at one tier
@@ -240,8 +277,8 @@ function artPreview(cv, t, look) {
   if (!artReady() || !t) return false;
   artScratch();
   const man = ART.man, pose = artSprite('idle', 0, 3, false, look), r = pose.row, q = 1/man.px, T = man.px, g = cv.getContext('2d');
-  const kit = { shirt:t.kit, trim:t.trim, hoops:kitDesignOf(t) === 'hoops', design:kitDesignOf(t), third:kitThirdOf(t), shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
-  const F = luts.design ? artDesignFrame(r, pose.deg, false, artBody(look), luts.design, luts.third) : null;   // the club's design (src/kit-design.js)
+  const kit = { shirt:t.kit, trim:t.trim, hoops:kitDesignOf(t) === 'hoops', design:kitDesignOf(t), third:kitThirdOf(t), edge:kitEdgeOf(t), shorts:luma(t.kit) > 0.6 ? '#1b2233' : '#ece9df' }, luts = artPaletteOf(kit, look);
+  const F = luts.design ? artDesignFrame(r, pose.deg, false, artBody(look), luts.design, luts.third) : luts.edge ? artEdgeFrame(r) : null;   // the club's design, or a Plain shirt's edge (src/kit-design.js)
   const style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
   g.clearRect(0, 0, cv.width, cv.height);
   g.save(); g.translate(cv.width/2, cv.height - 6); g.scale(look.b/man.builds[pose.build], 1);
@@ -266,7 +303,7 @@ function artBake(p, s, key, r, clip, deg, tier, mirror, dir = 0) {   // one pict
   g.fillStyle = sh; g.beginPath(); g.arc(0, 0, wide*T, 0, 7); g.fill(); g.restore();
   if (mirror) g.scale(-1, 1);
   const luts = artPalette(p), look = lookOf(p);
-  const F = luts.design ? artDesignFrame(r, man.clips[clip].dirs[dir], mirror, artBody(look), luts.design, luts.third) : null;   // a design's frame: his body as this picture holds it
+  const F = luts.design ? artDesignFrame(r, man.clips[clip].dirs[dir], mirror, artBody(look), luts.design, luts.third) : luts.edge ? artEdgeFrame(r) : null;   // a design's frame, his body as this picture holds it, or a Plain shirt's edge
   artBlit(g, r, luts, T, -r[5]*q, -r[6]*q, 256, F);
   const style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
   if (hk) artBlit(g, hk, luts, T, (r[8] - hk[5])*q, (r[9] - hk[6])*q, 256);

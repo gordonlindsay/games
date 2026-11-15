@@ -1,9 +1,10 @@
 /* ---------- kit designs and a third colour (1.8) ----------
    The owner, 14 Nov 2026: "Quad sections are ok and add a third colour too for completeness". A club's kit is { kit, trim, design?, third? }:
    design one of KIT_DESIGNS, third an optional third colour (a hex). hoops:true with no design reads as 'hoops', so every 1.7 save, every
-   hooped side in the data and every older build reads it as it did; a hooped design is always written with hoops:true as well. Plain takes
-   no third. KITS (src/data.js) off draws every side plain or hooped exactly as 1.7: kitDesignOf and kitThirdOf are the one door every
-   drawing goes through, and with KITS off they answer as 1.7 would.
+   hooped side in the data and every older build reads it as it did; a hooped design is always written with hoops:true as well. A Plain
+   shirt's third is no design's third: it is an edge at the collar and cuffs (kitEdgeOf, below). KITS (src/data.js) off draws every side
+   plain or hooped exactly as 1.7: kitDesignOf, kitThirdOf and kitEdgeOf are the one door every drawing goes through, and with KITS off
+   they answer as 1.7 would.
    kitPaint is the one rule for which colour a point of the shirt takes, in the wearer's own body space, shared by the match sprites
    (render-art.js, painted per pixel when a picture is baked), the code-drawn men (fig side on, figFB front or back on: kitPaintBox) and
    the tests. The shirt icons draw the same designs in CSS (kitCss). Nothing here draws a random number. */
@@ -22,6 +23,24 @@ function kitThirdOf(t) {
   if (!KITS.on || !t || !kitHex(t.third) || kitDesignOf(t) === 'plain') return null;
   const c = t.third.toLowerCase();
   return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : t.third;
+}
+/* A Plain shirt's third (the owner, 15 Nov 2026: "Show It as a Collar Trim"): a thin edge in the third at the collar and cuffs, at the
+   trim's open edge (the neck, the arm). Kept apart from kitThirdOf, which still answers null for Plain, so the clash rule, the saves and
+   every design's drawing are as they were; none with KITS off, on a design, or where it is the shirt's or the trim's own colour. A club's
+   side saved in a championship, cup or career keeps no third on Plain (kitClean), so, as cleanSide gives a 1.7 save its club's design, a
+   side that is a club in the club's own shirt and trim takes the club's edge. A made side never has one: Create Team gives Plain no third. */
+let KIT_EDGE_CLUBS = null;
+function kitEdgeOf(t) {
+  if (!KITS.on || !t || kitDesignOf(t) !== 'plain') return null;
+  let src = t;
+  if (!kitHex(t.third) && !t.custom && typeof ALL_TEAMS !== 'undefined') {
+    if (!KIT_EDGE_CLUBS) KIT_EDGE_CLUBS = new Map(ALL_TEAMS.filter(c => kitHex(c.third) && kitDesignOf(c) === 'plain').map(c => [c.id, c]));
+    const c = KIT_EDGE_CLUBS.get(t.id), same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+    if (c && same(c.kit, t.kit) && same(c.trim, t.trim)) src = c;
+  }
+  if (!kitHex(src.third)) return null;
+  const c = src.third.toLowerCase();
+  return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : src.third;
 }
 /* z: metres up a 1.8m man (hem 0.93, collar 1.44); xb: metres to his left of his centre line; u: metres across the shirt as seen, for
    stripes. 0 the shirt colour, 1 the trim, 2 the third (the trim when there is none). */
@@ -83,7 +102,8 @@ function kitPaintBox(g, kit, x0, x1, y0, y1, map) {
     }
   }
 }
-/* Saves (cleanTeam, cleanSide): a design only when it says more than hoops does, a hooped design as hoops:true, a third only where it shows */
+/* Saves (cleanTeam, cleanSide): a design only when it says more than hoops does, a hooped design as hoops:true, a third only on a design past
+   Plain, where it shows (a club's Plain edge is read from the club, kitEdgeOf) */
 function kitClean(t, team) {
   const d = KIT_DESIGNS.includes(t.design) ? t.design : t.hoops ? 'hoops' : 'plain';
   team.hoops = d === 'hoops';
