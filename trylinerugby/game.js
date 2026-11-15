@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.8.1';
+const GAME_VERSION = '1.8.2';
 
 /* =========================================================
    Data
@@ -11533,6 +11533,7 @@ function navMove(seat, dx, dy) {                           // the nearest candid
   if (!focusEl || !cands.includes(focusEl)) { const d = DEFAULT_FOCUS[layer.id], el = d && d(); setFocus(el && cands.includes(el) ? el : cands[0]); return focusEl; }   // the first press puts the ring on the default button
   if (!dx && !dy) return focusEl;
   if (layer.id === 's-home' && typeof homeNavTo === 'function') { const to = homeNavTo(focusEl, dx, dy, cands); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the home's boxes (src/ui-menus.js)
+  if (layer.id === 'm-import' && typeof importNav === 'function') { const to = importNav(focusEl, dx, dy); if (to && cands.includes(to)) { setFocus(to); return to; } }   // Add Your Team's link step: Paste and Import (src/import.js)
   if (layer.id === 'm-filter' && typeof pickFilterNav === 'function') { const to = pickFilterNav(focusEl, dx, dy); if (to !== undefined) { if (to) setFocus(to); return to; } }   // the team screen's Filter: its rows and columns, the field passed over (src/ui-menus.js)
   const skip = layer.id === 's-teams' && typeof pickSkip === 'function' ? pickSkip : null;   // the team screen: a ring lifted off a card passes over the cards (src/ui-menus.js)
   let best = layer.id === 's-setup' || layer.id === 's-profile' ? profileNav(cands, focusEl, dx, dy) : navNearest(skip ? cands.filter(el => !skip(el)) : cands, focusEl, dx, dy);   // the profile's screens: the nearest that way, or anywhere on that side (src/profile.js)
@@ -14421,16 +14422,17 @@ function cupEntryHtml(e, i, tag) {
   return `<article class="season-entry"><p class="eyebrow">${tag}${i === 0 ? 'Most Recent' : 'Earlier Cup'}</p><h3>${esc(c.teams[c.user].name)} · ${esc(cupFinish(c))}</h3><p>${s.played ? seasonRecord(s) : 'No matches played'}</p><p>Points ${s.pointsFor} for / ${s.pointsAgainst} against · Tries ${s.triesFor} for / ${s.triesAgainst} against</p><p class="season-awards">${award}</p></article>`;
 }
 /* =========================================================
-   Import: paste a Pitchero or tournament link and the game builds your club and its league.
+   Import, the part with no screen: a pasted link and the pages it leads to in, a club, its league and other sides out.
+   Shared by the game (src/import.js, which this file comes before in src/manifest.json) and the import service
+   (import-service/, where tools/build.mjs turns this file, with colorDist and the two helpers it needs from
+   src/data.js and src/match.js, into lib/import-core.cjs). Nothing here touches the page, the save or the game: no DOM,
+   and no game global but colorDist.
 
-   Three parts, kept apart:
-   - importUrl and importParse: text in, plain data out. No DOM, no network. Each source is one adapter in
-     IMPORT_SOURCES, reading the page through importDoc (its JSON scripts, meta tags, tables and links).
-   - importFetch: the Try Line app only, through Capacitor's native HTTP. The pasted page, then at most two pages it
-     links to on the same site (a league table, then fixtures): three requests in all, a plain "TryLineRugby"
-     User-Agent and nothing else about the device. The web build never fetches. Pitchero sends no CORS header, so a
-     browser on another site could not read its pages anyway.
-   - Add Your Team: the team screen's entry (My Clubs' My League) and the home's button, their card (#m-import), and the My League group.
+   - importUrl and importParse: text in, plain data out. No network. Each source is one adapter in IMPORT_SOURCES,
+     reading the page through importDoc (its JSON scripts, meta tags, tables and links).
+   - importFetch: the pasted page, then at most two pages it links to on the same site (a league table, then fixtures):
+     three requests in all, a plain "TryLineRugby" User-Agent and nothing else about the device. The network is handed
+     in (opts.http, with Capacitor's get): Capacitor's native HTTP in the Try Line app, node:https in the service.
 
    Safeguarding. Only club and team names, shirt colours and table numbers ever leave a parser. The Pitchero adapter
    reads named fields only (the club's name and colours, the table's team cells and numbers, each fixture's
@@ -14440,20 +14442,11 @@ function cupEntryHtml(e, i, tag) {
    an email, a phone number or a link. The structure does the work: the first-name list in importPersonal is a last
    net, not the defence. Nothing about a person, the link itself or the page is kept.
    ========================================================= */
-const IMPORT_POOL = 'my';                        // My League: settings.pool's key for it, the team screen's Local list after Surrey
-const IMPORT_MAX_SIDES = 16;                      // league opponents saved
 const IMPORT_MAX_ROWS = 24;                       // rows or names a parser returns
 const IMPORT_MAX_REQUESTS = 3;                    // the pasted page, a league table, fixtures
 const IMPORT_TIMEOUT = 12000;                     // ms one request may take
 const IMPORT_UA = 'TryLineRugby';
 const IMPORT_MAX_HTML = 4000000;                  // characters of a page read: Next.js puts its data at the very end
-const IMPORT_MSG = {
-  url:'Paste a link that starts with https.',
-  net:'Couldn’t open that page. Check the link.',
-  timeout:'That page took too long. Try again.',
-  empty:'No club or table on that page.',
-  full:'Delete a team to make room for this club.',
-};
 
 /* ---------- what the parsers look for: data, so a new page shape is a table edit ---------- */
 /* Keys whose whole subtree can hold people or their pictures: never walked. */
@@ -15022,14 +15015,18 @@ function importMerge(a, b) {
   return out;
 }
 
-/* ---------- fetching, in the app only ---------- */
-/* Capacitor's native HTTP when the game runs inside the Try Line app, else null: the web build never fetches. */
-function importHttp() {
-  const C = typeof window !== 'undefined' ? window.Capacitor : null;
-  try { if (!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) return null; } catch (e) { return null; }
-  const H = C.Plugins && C.Plugins.CapacitorHttp;
-  return H && typeof H.get === 'function' ? H : null;
+/* ---------- the level a page names ---------- */
+/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them, and so does National
+   League (England's third and fourth tiers, between Regional 1 and the Championship): Regional 1, 61, level with England 2's foot and under
+   its winners, so no import listed under Local is above an England 2 side (with LOCAL a step down, 58, as every level from Regional 1 down:
+   src/ratings.js). Null when the words say nothing. */
+const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b|\bnational league\b/, 'r1'], [/\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
+function importLevelFrom(texts) {
+  for (const t of texts) { const s = String(t || '').toLowerCase().slice(0, 300), hit = IMPORT_LEVEL_WORDS.find(([re]) => re.test(s)); if (hit) return hit[1]; }
+  return null;
 }
+
+/* ---------- fetching, through the network handed in ---------- */
 /* A response header, whatever case the platform gives its name in. */
 function importHeader(headers, name) {
   if (!headers || typeof headers !== 'object') return '';
@@ -15043,12 +15040,16 @@ function importHeader(headers, name) {
    importUrl as a pasted link is (so never an IP address or a local name), and counted as one of the three requests.
    A platform that follows one anyway is held to the same rule: a page whose final address importUrl refuses is a
    failed import, never read as if it came from the link asked for. opts.cancelled() true stops the run before its next
-   pause or request (Back while it imports). opts.sleep, opts.gap and opts.timeout are for the tests. */
+   pause or request (Back while it imports). opts.sleep, opts.gap and opts.timeout are for the tests.
+   opts.http is the network, handed in: anything with Capacitor's get({ url, headers, responseType, connectTimeout,
+   readTimeout, disableRedirects }) answering { status, headers, data, url }. In the app it is Capacitor's native HTTP
+   (importHttp, src/import.js); in the import service, node:https behind its own address check
+   (import-service/lib/service.cjs). With none there is nothing to fetch with: 'web'. */
 async function importFetch(url, opts = {}) {
   const href = importUrl(url);
   if (!href) return { ok:false, error:'url', requests:0 };
-  const http = importHttp();
-  if (!http) return { ok:false, error:'web', requests:0 };
+  const http = opts.http;
+  if (!http || typeof http.get !== 'function') return { ok:false, error:'web', requests:0 };
   const sleep = opts.sleep || (ms => new Promise(r => setTimeout(r, ms)));
   const timeout = opts.timeout ?? IMPORT_TIMEOUT;
   const stopped = () => typeof opts.cancelled === 'function' && !!opts.cancelled();
@@ -15100,6 +15101,149 @@ async function importFetch(url, opts = {}) {
     return { ok:true, data, requests };
   } catch (e) { return { ok:false, error:e && (e.message === 'timeout' || e.message === 'cancelled') ? e.message : 'net', requests }; }
 }
+/* =========================================================
+   Import: paste a Pitchero or tournament link and the game builds your club and its league.
+
+   Three parts, kept apart:
+   - The parsers and the fetch-and-follow (importUrl, importParse, importFetch): src/import-core.js, which has no screen
+     and is shared with the import service. Its header has the safeguarding: only club and team names, shirt colours
+     and table numbers ever leave a parser.
+   - Fetching. In the Try Line app, through Capacitor's native HTTP: the pasted page, then at most two pages it links
+     to on the same site (a league table, then fixtures), three requests in all, a plain "TryLineRugby" User-Agent and
+     nothing else about the device. On the web a browser cannot read those pages (Pitchero sends no CORS header), so the
+     link goes once, in a POST's body, to the game's own import service (IMPORT_SERVICE: import-service/, on Vercel),
+     which makes the same requests under the same rules and answers only what importSafe lets out. That answer is not
+     trusted: importClean puts it through the same rules again before anything is shown or saved.
+   - Add Your Team: the team screen's entry (My Clubs' My League) and the home's button, their card (#m-import), and the My League group.
+   ========================================================= */
+const IMPORT_POOL = 'my';                        // My League: settings.pool's key for it, the team screen's Local list after Surrey
+const IMPORT_MAX_SIDES = 16;                      // league opponents saved
+const IMPORT_MSG = {
+  url:'Paste a link that starts with https.',
+  net:'Couldn’t open that page. Check the link.',
+  timeout:'That page took too long. Try again.',
+  empty:'No club or table on that page.',
+  full:'Delete a team to make room for this club.',
+  offline:'You’re offline. Connect and try again.',
+  busy:'Too many imports. Try again in a minute.',
+  service:'Import isn’t working. Try again later.',
+};
+
+/* ---------- fetching: the app's own, or the web's through the import service ---------- */
+/* The game's import service (import-service/README.md): a POST of the link, text/plain so the browser sends it without
+   asking first, and { ok, data, requests } or { ok:false, error } back. importServiceUrl is the tests' to point
+   elsewhere (tools/import-service.mjs's browser run, at a copy on 127.0.0.1); the game never changes it. */
+const IMPORT_SERVICE = 'https://tryline-import.vercel.app/api/import';
+const IMPORT_SERVICE_TIMEOUT = 50000;                     // ms: the service gives a whole import 45 seconds
+const IMPORT_SERVICE_MAX = 200000;                        // bytes of an answer read, at most: one import's names and numbers are a few thousand
+/* The service's errors, each one of IMPORT_MSG's, by the statuses it sends them with (import-service/lib/service.cjs).
+   Anything else (no answer at all, one that is not JSON, a 403, a 405 or a 500, an error it never sends) is the
+   service itself not working, 'service', so a link that is fine is not blamed for it. 'net' is only the service's
+   word that the page itself could not be read. */
+const IMPORT_ERRORS = { url:[400, 413, 415], net:[502], timeout:[504], empty:[422], busy:[429] };
+let importServiceUrl = IMPORT_SERVICE;
+const IMPORT_WEB = Object.freeze({ service:true });       // importHttp's answer on the web: the service, not a fetch of the page
+/* How this copy of the game fetches. Capacitor's native HTTP when it runs inside the Try Line app (the app still fetches
+   the page itself), else on the web the import service (IMPORT_WEB) where the browser can make a request from a page it
+   loaded over http or https, else null: nothing to fetch with, and the card says Works in the Try Line App. */
+function importHttp() {
+  const C = typeof window !== 'undefined' ? window.Capacitor : null;
+  let app = false;
+  try { app = !!C && typeof C.isNativePlatform === 'function' && !!C.isNativePlatform(); } catch (e) { return null; }
+  if (app) { const H = C.Plugins && C.Plugins.CapacitorHttp; return H && typeof H.get === 'function' ? H : null; }
+  return typeof fetch === 'function' && typeof location !== 'undefined' && /^https?:$/.test(location.protocol) ? IMPORT_WEB : null;
+}
+/* A link pasted, fetched the way this copy of the game fetches: importFetch with Capacitor's HTTP in the app, the
+   service on the web. Either way { ok:true, data, requests } or { ok:false, error } with error a key of IMPORT_MSG
+   (or 'web', 'cancelled'). opts.cancelled() true (Back while it imports) stops it: the app before its next request,
+   the web at once, its request aborted. */
+async function importRequest(url, opts = {}) {
+  const href = importUrl(url);
+  if (!href) return { ok:false, error:'url', requests:0 };
+  const http = importHttp();
+  if (!http) return { ok:false, error:'web', requests:0 };
+  return http === IMPORT_WEB ? importService(href, opts) : importFetch(href, { ...opts, http });
+}
+/* The web's one request: the link in the body of a POST to the service, never in its address, with no cookies and no
+   Referer. 50 seconds at most (opts.timeout for the tests), Back aborts it. What comes back goes through importClean. */
+async function importService(href, opts = {}) {
+  const stopped = () => typeof opts.cancelled === 'function' && !!opts.cancelled();
+  if (stopped()) return { ok:false, error:'cancelled', requests:0 };
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok:false, error:'offline', requests:0 };
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  let timer = 0, poll = 0, done = false;
+  const ask = async () => {
+    let res;
+    try {
+      res = await fetch(importServiceUrl, { method:'POST', headers:{ 'Content-Type':'text/plain' }, body:href, signal:ctl ? ctl.signal : undefined,
+        credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer', redirect:'error', mode:'cors' });
+    } catch (e) { throw Error('service'); }                  // refused (no service there, CORS) or the network gone
+    const text = await importBody(res);
+    done = true;                                           // the answer is in: nothing left to abort
+    if (text === null) throw Error('service');
+    let j = null; try { j = JSON.parse(text); } catch (e) { throw Error('service'); }
+    if (!j || typeof j !== 'object' || Array.isArray(j)) throw Error('service');
+    if (j.ok !== true) {
+      const known = Object.prototype.hasOwnProperty.call(IMPORT_ERRORS, j.error) && IMPORT_ERRORS[j.error].includes(res.status);
+      return { ok:false, error:known ? j.error : 'service', requests:1 };
+    }
+    const data = importClean(j.data);
+    return data ? { ok:true, data, requests:1 } : { ok:false, error:'service', requests:1 };
+  };
+  try {
+    return await Promise.race([
+      ask(),
+      new Promise((_, no) => {
+        timer = setTimeout(() => no(Error('timeout')), opts.timeout ?? IMPORT_SERVICE_TIMEOUT);
+        poll = setInterval(() => { if (stopped()) no(Error('cancelled')); }, 100);
+      }),
+    ]);
+  } catch (e) {
+    return { ok:false, error:e && (e.message === 'timeout' || e.message === 'cancelled') ? e.message : 'service', requests:1 };
+  } finally {
+    clearTimeout(timer); clearInterval(poll);
+    if (ctl && !done) try { ctl.abort(); } catch (e) { /* gone already */ }   // a request still open (Back, the timeout) goes
+  }
+}
+/* The service's answer as text, or null when it is over IMPORT_SERVICE_MAX: refused by its Content-Length before a byte
+   is read, else read a chunk at a time and dropped (the rest cancelled) once it passes the limit, so a service gone
+   wrong cannot make the page hold a body of any size. */
+async function importBody(res) {
+  const h = res && res.headers, size = Number(h && typeof h.get === 'function' ? h.get('content-length') : NaN);
+  if (size > IMPORT_SERVICE_MAX) return null;
+  const reader = res.body && typeof res.body.getReader === 'function' ? res.body.getReader() : null;
+  if (!reader) { const t = await res.text(); return typeof t === 'string' && t.length <= IMPORT_SERVICE_MAX ? t : null; }
+  const dec = new TextDecoder();
+  let text = '', bytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return text + dec.decode();
+    bytes += value ? value.byteLength : 0;
+    if (bytes > IMPORT_SERVICE_MAX) { try { reader.cancel().catch(() => {}); } catch (e) { /* gone already */ } return null; }
+    text += dec.decode(value, { stream:true });
+  }
+}
+/* The service's answer, put through importSafe's rules again: a name passes importName, a colour importHex (through
+   importPair), a number importNum, at most IMPORT_MAX_ROWS rows of each list, a label only when importLabel reads it as
+   one and a level only by an id levelById knows. A name with a tag in it is dropped whole, before importSafe and again
+   after it, since importName decodes entities (&lt;script&gt; is <script> once read). Every other key is dropped.
+   Null for anything that is not an object. */
+function importClean(d) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
+  const obj = v => v && typeof v === 'object' && !Array.isArray(v);
+  const fair = v => typeof v === 'number' || (typeof v === 'string' && !/[<>]/.test(v));   // the service's names have been through importName: one still holding a tag was never its
+  const list = v => Array.isArray(v) ? v.slice(0, 200).filter(x => obj(x) && fair(x.name)) : [];
+  const source = IMPORT_SOURCES.some(s => s.id === d.source) ? d.source : 'generic';
+  const club = obj(d.club) && fair(d.club.name) ? { name:d.club.name, kit:d.club.kit, trim:d.club.trim } : null;
+  const out = importSafe(source, { club, league:list(d.league), teams:list(d.teams) }, '');
+  const tagged = v => typeof v !== 'string' || /[<>]/.test(v);
+  if (out.club && tagged(out.club.name)) out.club = null;
+  out.teams = out.teams.filter(t => !tagged(t.name)); out.league = out.league.filter(r => !tagged(r.name));
+  if (typeof d.label === 'string' && d.label.length <= 40 && !/[<>]/.test(d.label) && importLabel(d.label)) out.label = d.label.replace(/\s+/g, ' ').trim();
+  const level = typeof d.level === 'string' && levelById(d.level);
+  if (level) out.level = level.id;
+  return out;
+}
 
 /* ---------- saving ---------- */
 /* The league as saved: the table's other sides (the club's own row left out), else the fixture opponents, at most 16,
@@ -15109,15 +15253,6 @@ async function importFetch(url, opts = {}) {
    Colours are the page's where it gave them, else a shirt and trim picked from KIT_COLOURS
    by the name, so a side keeps its colours from one import to the next. Codes skip every built-in side's and yours. */
 const importTop = () => Math.max(...CLUBS.filter(t => t.league !== 'English Premiership').map(rateOf));   // Twickenham is a Premiership side: the Local list's own top is Farnham (and Quins), at 61: Regional 1 (58 with LOCAL, still Regional 1)
-/* A page's own words for its league, read to a level. The levels between (Counties 4, Counties 2) take the level under them, and so does National
-   League (England's third and fourth tiers, between Regional 1 and the Championship): Regional 1, 61, level with England 2's foot and under
-   its winners, so no import listed under Local is above an England 2 side (with LOCAL a step down, 58, as every level from Regional 1 down:
-   src/ratings.js). Null when the words say nothing. */
-const IMPORT_LEVEL_WORDS = [[/\bcounties\s*[45]\b/, 'c5'], [/\bcounties\s*[23]\b/, 'c3'], [/\bcounties\s*1\b/, 'c1'], [/\bregional\s*2\b/, 'r2'], [/\bregional\s*1\b|\bnational league\b/, 'r1'], [/\bchamp rugby\b|\b(?:rfu|english) championship\b/, 'nat'], [/\b(?:english premiership|premiership rugby|prem rugby|top 14|united rugby championship|super rugby)\b/, 'top']];
-function importLevelFrom(texts) {
-  for (const t of texts) { const s = String(t || '').toLowerCase().slice(0, 300), hit = IMPORT_LEVEL_WORDS.find(([re]) => re.test(s)); if (hit) return hit[1]; }
-  return null;
-}
 const importLevelDefault = () => TEAM_LEVELS.find(l => sumOfOverall(l.overall) === importTop()) || TEAM_LEVELS[4];
 /* The level an import is set at: the one chosen, else what its page says, else the Local list's best. */
 const importLevel = (data, id) => levelById(id) || (data && levelById(data.level)) || importLevelDefault();
@@ -15294,7 +15429,9 @@ function importGo() {
   u.armed = false;
   const href = importUrl($('im-url').value);
   if (!href) { u.err = IMPORT_MSG.url; importRender(); return; }
-  if (!importHttp()) { u.step = 'web'; importRender(); return; }
+  const http = importHttp();
+  if (!http) { u.step = 'web'; importRender(); return; }
+  if (http === IMPORT_WEB && typeof navigator !== 'undefined' && navigator.onLine === false) { u.err = IMPORT_MSG.offline; importRender(); return; }   // no sum for nothing
   const token = ++u.token;
   $('m-import').hidden = true;
   importGate(() => { if (token === importUi.token) importRun(href, token); }, () => { if (token === importUi.token) { $('m-import').hidden = false; importFocus(); } });
@@ -15302,7 +15439,7 @@ function importGo() {
 async function importRun(href, token, opts) {
   const u = importUi;
   u.step = 'busy'; u.err = ''; u.armed = false; importRender(); $('m-import').hidden = false; importFocus();
-  const r = await importFetch(href, { ...opts, cancelled:() => token !== importUi.token });   // Back, or another link: no more requests
+  const r = await importRequest(href, { ...opts, cancelled:() => token !== importUi.token });   // Back, or another link: no more requests
   if (token !== importUi.token) return;                   // closed, or another link, while it fetched
   const full = r.ok && !!r.data.club && !importRoom(r.data), data = full ? { ...r.data, club:null } : r.data;   // four teams made: the league can come in, the club can't
   const empty = r.ok && !data.club && !importSides(data).length;
@@ -15391,6 +15528,26 @@ $('im-make').addEventListener('click', () => importOffer(true));
 $('im-not').addEventListener('click', () => importOffer(false));
 $('im-url').addEventListener('input', () => { if (importUi.err) { importUi.err = ''; importRender(); } });
 $('im-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); importGo(); } });
+/* A controller's ring on the link step (navMove, src/input-devices.js): the link row is the field and Paste, the field
+   no stop for the ring, so down from Paste is Import, and up from the row under it is Paste. Undefined elsewhere: the
+   nearest that way, as everywhere. */
+function importNav(from, dx, dy) {
+  if (importUi.step !== 'link' || dx || !dy) return undefined;
+  const paste = $('im-paste'), go = $('im-go'), on = el => !!el && !el.hidden && !el.disabled;
+  if (dy > 0 && from === paste && on(go)) return go;
+  if (dy < 0 && on(paste) && [go, $('im-back'), $('im-alt')].includes(from)) return paste;
+  return undefined;
+}
+/* Escape on the card is its Back (Back to Teams or Back to Menu, or Not Now), as on the grown-up check and the Minis
+   card, and never the pause behind it. */
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || $('m-import').hidden || !$('m-gate').hidden) return;
+  const back = [...$('m-import').querySelectorAll('[data-back]')].find(el => !el.hidden && !(el.closest && el.closest('[hidden]')));
+  if (!back) return;
+  if (e.stopPropagation) e.stopPropagation();
+  if (e.preventDefault) e.preventDefault();
+  if (!e.repeat) back.click();
+}, true);
 $('im-paste').addEventListener('click', async () => {
   try { const t = await navigator.clipboard.readText(); if (t) { $('im-url').value = t.trim().slice(0, 2048); importUi.err = ''; importRender(); } } catch (e) { /* refused or empty */ }
 });
@@ -19587,7 +19744,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   careerPro:{ PRO, pinned:proPinned, run:proRun, spirit:proSpirit, open:proOpen, pass:proPass, carrier:proCarrier, canCall:proCanCall, call:proCall, calling:proCalling, skip:proSkip, mark:proMark, modePick:careerModePick, draft:() => careerDraft },
   careerLife:{ LIFE:CAREER_LIFE, KEYS:CAREER_LIFE_KEYS, COL:CAREER_LIFE_COL, DILEMMAS:CAREER_DILEMMAS, PLANS:CAREER_DILEMMA_PLANS, fresh:careerLifeNew, clean:careerLifeClean, spirit:careerSpirit, morale:careerMorale, energy:careerEnergy, tired:careerLifeTired, plan:careerDilemmaPlan, dilemma:careerDilemma, key:careerDilemmaKey, choose:careerLifeChoose, pick:careerLifePick, train:careerLifeTrain, round:careerLifeRound, arm:careerLifeArm, hands:careerLifeHands, pass:careerLifePass, support:careerLifeSupport, chip:careerLifeChip, barsHtml:careerLifeBarsHtml, dilemmaHtml:careerDilemmaHtml, render:careerLifeRender, hash:careerLifeHash },
   traits:{ TRAITS, TRAIT, teamStars, teamTraitNames, careerTraitIds, arm:traitsArm, on:traitOn, call:traitCall, marks:traitMarks, kicker:traitKicker, band:traitBand, hash:traitHash, chips:careerTraitChips, doKick, penChoice, catchBall, updateBallAir, goalKick, steer },
-  importer:{ levelFrom:importLevelFrom, level:importLevel, top:importTop, levelStep:importLevelStep, url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, shown:importShown, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
+  importer:{ levelFrom:importLevelFrom, level:importLevel, top:importTop, levelStep:importLevelStep, url:importUrl, parse:importParse, read:importRead, fetch:importRequest, fetchWith:importFetch, service:importService, cleanWeb:importClean, body:importBody, nav:importNav, SERVICE:IMPORT_SERVICE, WEB:IMPORT_WEB, serviceUrl:() => importServiceUrl, setService:u => { importServiceUrl = typeof u === 'string' && u ? u : IMPORT_SERVICE; }, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, shown:importShown, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
   drills:{ DV, DV_VIEW, dvOn, dvTurn, dvCovered, dvCamera, PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, ROUNDS:DRILL_ROUNDS, GAP:DRILL_GAP, DEFEND:DRILL_DEFEND, gapMark, gapRestage, defendRestage, TAG:DRILL_TAG, BACK:DRILL_BACK, COACH:PRACTICE_COACH, barred:practiceBarred, nextId:practiceNextId, groups:practiceGroups, tackleVerdict, tackleWhy:TACKLE_WHY, backVerdict, tagCanPull, tagLevel, tagLevers, drillName, drillMark, drillCanPull, practiceYoung, circleStartE, circleChestBox, driveGaugeBox, circleLap, circleRadius, circleRunAt, circleSpot, eggThrow, eggRing, tackleMeterBox, tackleRunScale, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_SCALE, KIDS_ADAPT, KIDS_EASY, ready:kidsReady, tune:kidsTune, step:kidsStep, next:kidsNext, adapt:kidsAdapt, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, minis:{ ask:minisAsk, open:() => minisCard, close:minisClose, on:minisOn }, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, GATE_KEY:KIDS_GATE_KEY, relaunch:() => { kidsGateMiss = 0; kidsGateRests = 0; kidsGateRest = null; kidsGateLoad(); }, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
   native:{ on:nativeOn, plugin:nativePlugin, call:nativeCall, boot:nativeBoot, start:nativeStart, webOnly:nativeWebOnly, bars:nativeBars, saved:nativeSaved, mirror:nativeMirror, late:nativeLate, putBack:nativePutBack, isSave:nativeIsSave, buzz:nativeBuzz, back:nativeBack, state:() => nativeApp },
