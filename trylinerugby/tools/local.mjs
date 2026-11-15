@@ -140,7 +140,7 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   }
   const placeOnly = all.filter(r => !r.existingId && r.w == null);
   // Re-pinned 15 Nov 2026 (1.9.2, the owner's "Research Last Season"): 8 of the 10 have their line now, the table's plus the league games it lacks
-  // from the clubs' own fixture lists; Nottingham and Market Rasen keep their place only, one figure each resting on a search snippet alone
+  // from the clubs' own fixture lists; Nottingham and Market Rasen keep their place only, both points figures for their missing game resting on search snippets alone
   ok(placeOnly.map(r => r.id).sort().join() === 'MRL,NUI' && placeOnly.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.place === r.place && !('w' in t) && !('pf' in t) && r.sources.some(l => l.startsWith('No line: '));}), `a club with no line it can be given has its place only, nothing invented: the 2 of the three tables short of fixtures whose missing game rests on a search snippet (${placeOnly.map(r => r.id).join()})`);
   const line15 = { RYT:[20, 0, 2, 867, 386], BAU:[7, 0, 15, 488, 662], NOV:[21, 0, 1, 1121, 331], MEI:[13, 1, 8, 817, 663], DBE:[17, 0, 5, 692, 437], BEE:[7, 1, 14, 630, 752], HWA:[17, 0, 5, 725, 470], CRW:[10, 1, 11, 473, 524] };
   ok(Object.entries(line15).every(([id, v]) => { const t = X.ALL_TEAMS.find(o => o.id === id); return json(['w', 'd', 'l', 'pf', 'pa'].map(k => t[k])) === json(v) && t.w + t.d + t.l === 22; }),
