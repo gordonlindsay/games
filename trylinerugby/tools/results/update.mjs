@@ -324,7 +324,7 @@ async function main() {
   }
   /* order the keys, check, write */
   for (const k of ['clubs', 'men', 'women']) out[k] = Object.fromEntries(Object.entries(out[k]).sort((a, b) => (a[0] < b[0] ? -1 : 1)));
-  for (const h of F.dead) problems.push(`${h}: given up after ${GIVE_UP} failures in a row`);
+  for (const h of F.dead) problems.push(`${h}: given up after ${GIVE_UP} different pages failed in a row`);
   if (F.late) problems.push(`the run passed its ${minutes}-minute deadline: pages after it were not fetched`);
   problems.push(...L.validate(out, G.ids), ...L.runProblems(out, prev));
   const placed = Object.values(out.clubs).filter(e => e.league).length;

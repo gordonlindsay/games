@@ -252,13 +252,28 @@ fs.mkdirSync(tmp + '/old', { recursive:true });
 fs.writeFileSync(tmp + '/old/' + cacheKey('https://www.pitchero.com/clubs/farnham') + '.meta', JSON.stringify({ url:'x', status:200, fetched:'2026-11-01T10:00:00Z' }));
 fs.writeFileSync(tmp + '/old/' + cacheKey('https://www.pitchero.com/clubs/farnham') + '.html', 'kept');
 eq((await new Fetcher({ dir:tmp + '/old', offline:true }).get('https://www.pitchero.com/clubs/farnham')).body, 'kept', 'offline, the cache is read at any age (a week re-run from it)');
-{ // a host that stops answering is given up after GIVE_UP failures in a row; nothing is fetched after the deadline; redirects stop at MAX_HOPS
+{ // a host is given up after GIVE_UP different pages fail in a row, each counted once after its retries; nothing is fetched after the deadline; redirects stop at MAX_HOPS
   const fake = (answers, opts = {}) => { const f = new Fetcher({ dir:tmp + '/f' + Math.random().toString(36).slice(2), ...opts }); f.robots.set('www.pitchero.com', { rules:[], delay:0 }); f.pace = async () => {}; f.raw = async u => { f.requests++; return answers(u); }; return f; };
   const down = fake(() => ({ status:0, body:'', error:'ETIMEDOUT' }));
   const realSleep = global.setTimeout; global.setTimeout = (fn) => realSleep(fn, 0);
   try {
     for (let i = 0; i < 4; i++) await down.get('https://www.pitchero.com/clubs/a' + i);
-    eq([down.requests, [...down.dead]], [GIVE_UP, ['www.pitchero.com']], `a host that fails ${GIVE_UP} times in a row is given up for the run`);
+    eq([down.requests, [...down.dead]], [GIVE_UP*3, ['www.pitchero.com']], `a host where ${GIVE_UP} different pages fail in a row (3 tries each) is given up for the run, and the page after is never asked for`);
+    { // one broken page among healthy ones: it is tried 3 times and counted once, the host carries on, and only its club misses its entry
+      const sick = fake(u => (u.endsWith('/broken/fixtures-results') ? { status:500, body:'' } : { status:200, body:'ok ' + u }));
+      const clubs = { BRK:'https://www.pitchero.com/clubs/broken/fixtures-results', HLT:'https://www.pitchero.com/clubs/healthy/fixtures-results' }, entries = {};
+      for (const [id, url] of Object.entries(clubs)) { const r = await sick.get(url); if (r.status === 200) entries[id] = r.body; }
+      eq([sick.requests, [...sick.dead], Object.keys(entries)], [4, [], ['HLT']], 'one page that 500s on every try, then a healthy page: 4 requests, the host is not given up, and only that club misses its entry');
+      for (let i = 0; i < 3; i++) await sick.get(clubs.BRK);
+      eq([sick.requests, [...sick.dead]], [4, []], 'the same broken page asked for again is read from the cache, never counted again: the host is not given up');
+      await sick.get(clubs.HLT);
+      eq(sick.fails.has('www.pitchero.com'), false, 'a page that answers clears the count');
+      const flaky = fake(u => (u.includes('/bad') ? { status:503, body:'' } : { status:200, body:'x' }));
+      for (const p of ['bad1', 'bad2', 'good', 'bad3', 'bad4']) await flaky.get('https://www.pitchero.com/clubs/' + p);
+      eq([...flaky.dead], [], 'two failed pages, a good one, then two more: never 3 in a row, so the host is kept');
+      await flaky.get('https://www.pitchero.com/clubs/bad5');
+      eq([...flaky.dead], ['www.pitchero.com'], 'a third different failed page in a row gives the host up');
+    }
     const late = fake(() => ({ status:200, body:'x' }), { deadline:Date.now() - 1 });
     eq([(await late.get('https://www.pitchero.com/clubs/b')).status, late.late, late.requests], [0, true, 0], 'nothing is fetched after the run\'s deadline');
     let n = 0;

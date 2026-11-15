@@ -5,7 +5,8 @@
 //   of the next. At most 2 retries a page, never faster than that.
 // - Every page cached: a page fetched within maxAge is read from the cache and never fetched again. seeds are read-only caches of the same
 //   layout (an earlier research run's), used only where the caller allows a stale page (discovery). Offline, the cache is read at any age.
-// - A host that fails 3 times in a row (no answer, or a 5xx) is given up for the run, and nothing is fetched after the run's deadline: the
+// - A host where 3 different pages in a row fail (no answer, or a 5xx, after the page's retries) is given up for the run: one page counts
+//   once however many times it is tried, so one broken club page costs only that club. Nothing is fetched after the run's deadline: the
 //   caller refuses the week with its summary written, rather than running into the workflow's timeout. At most 3 redirects a page.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,7 +14,7 @@ import crypto from 'node:crypto';
 import { UA } from './lib.mjs';
 
 export const GAP_MS = 5500;
-export const GIVE_UP = 3;            // failures in a row before a host is given up for the run
+export const GIVE_UP = 3;            // different pages failing in a row (each after its retries) before a host is given up for the run
 export const MAX_HOPS = 3;           // redirects followed for one page
 const HOSTS = new Set(['www.pitchero.com', 'pitchero.com', 'en.wikipedia.org', 'api.wr-rims-prod.pulselive.com']);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -99,13 +100,14 @@ export class Fetcher {
       return { status:0, body:'', error:(e.cause && e.cause.code) || e.message };
     } finally { this.last.set(host, Date.now()); }
   }
-  /* counts a host's failures in a row; GIVE_UP of them and the host is given up for the run */
-  tally(host, r) {
+  /* counts a page once, after its retries: the different pages of a host that failed in a row (no answer, or a 5xx). GIVE_UP of them and
+     the host is given up for the run; any page that answers clears the count. */
+  tally(host, url, r) {
     if (r.status === 0 || r.status >= 500) {
-      const n = (this.fails.get(host) || 0) + 1;
-      this.fails.set(host, n);
-      if (n >= GIVE_UP && !this.dead.has(host)) { this.dead.add(host); this.log(`  giving up ${host}: ${n} failures in a row`); }
-    } else this.fails.set(host, 0);
+      const pages = this.fails.get(host) || new Set();
+      pages.add(url); this.fails.set(host, pages);
+      if (pages.size >= GIVE_UP && !this.dead.has(host)) { this.dead.add(host); this.log(`  giving up ${host}: ${pages.size} pages failed in a row`); }
+    } else this.fails.delete(host);
   }
   async robotsFor(host) {
     if (this.robots.has(host)) return this.robots.get(host);
@@ -137,12 +139,12 @@ export class Fetcher {
     let r;
     for (let attempt = 0; attempt < 3; attempt++) {
       r = await this.raw(url);
-      this.tally(u.host, r);
       if (r.status === 200 || (r.status >= 300 && r.status < 500 && r.status !== 408 && r.status !== 429)) break;
       this.log(`  retry ${url}: ${r.status || r.error}`);
-      if (this.dead.has(u.host) || attempt === 2 || Date.now() + (attempt ? 45000 : 15000) > this.deadline) break;
+      if (attempt === 2 || Date.now() + (attempt ? 45000 : 15000) > this.deadline) break;
       await sleep(attempt ? 45000 : 15000);
     }
+    this.tally(u.host, url, r);
     if (r.status >= 300 && r.status < 400 && r.location && hops < MAX_HOPS) {
       const to = new URL(r.location, url);
       if (to.host === u.host || (HOSTS.has(to.host) && to.host.endsWith('pitchero.com') && u.host.endsWith('pitchero.com'))) {
