@@ -1,0 +1,610 @@
+{
+"label": "Mens Rugby Union",
+"entries": [
+{
+"team": {
+"id": "39",
+"altId": "a49729a5-a9e7-4a53-b18b-13b81d4752f4",
+"name": "South Africa",
+"abbreviation": "RSA",
+"countryCode": "ZAF",
+"annotations": null,
+"metadata": {}
+},
+"pts": 93.09175036626566,
+"pos": 1,
+"previousPts": 93.09175036626566,
+"previousPos": 1
+},
+{
+"team": {
+"id": "37",
+"altId": "ec6ede05-0367-4b75-a66d-2d7a58950dcd",
+"name": "New Zealand",
+"abbreviation": "NZL",
+"countryCode": "NZL",
+"annotations": null,
+"metadata": {}
+},
+"pts": 92.64616488656777,
+"pos": 2,
+"previousPts": 92.26927678109462,
+"previousPos": 2
+},
+{
+"team": {
+"id": "36",
+"altId": "f683c048-abc7-4713-9286-4dd1921a3285",
+"name": "Ireland",
+"abbreviation": "IRE",
+"countryCode": "IRL",
+"annotations": null,
+"metadata": {}
+},
+"pts": 88.70050464466892,
+"pos": 3,
+"previousPts": 88.07507891841169,
+"previousPos": 3
+},
+{
+"team": {
+"id": "42",
+"altId": "6f456794-9a4a-4623-abba-c7f93fbaf7d7",
+"name": "France",
+"abbreviation": "FRA",
+"countryCode": "FRA",
+"annotations": null,
+"metadata": {}
+},
+"pts": 87.48976513819092,
+"pos": 4,
+"previousPts": 87.42548925673894,
+"previousPos": 4
+},
+{
+"team": {
+"id": "34",
+"altId": "b543a019-7df4-4ba0-b1e9-bc796d20df88",
+"name": "England",
+"abbreviation": "ENG",
+"countryCode": "ENG",
+"annotations": null,
+"metadata": {}
+},
+"pts": 86.9949315868917,
+"pos": 5,
+"previousPts": 85.68341259649182,
+"previousPos": 5
+},
+{
+"team": {
+"id": "35",
+"altId": "84c81e4f-f67a-4812-9800-df4c554de009",
+"name": "Scotland",
+"abbreviation": "SCO",
+"countryCode": "SCO",
+"annotations": null,
+"metadata": {}
+},
+"pts": 84.40497604544251,
+"pos": 6,
+"previousPts": 84.78186415091567,
+"previousPos": 6
+},
+{
+"team": {
+"id": "38",
+"altId": "d655c863-3956-41fe-955d-02f7d2d00bc5",
+"name": "Australia",
+"abbreviation": "AUS",
+"countryCode": "AUS",
+"annotations": null,
+"metadata": {}
+},
+"pts": 83.11535354209109,
+"pos": 7,
+"previousPts": 84.42687253249096,
+"previousPos": 7
+},
+{
+"team": {
+"id": "40",
+"altId": "04d2f378-4674-4932-a2bf-9f36537b4618",
+"name": "Argentina",
+"abbreviation": "ARG",
+"countryCode": "ARG",
+"annotations": null,
+"metadata": {}
+},
+"pts": 81.61915803386935,
+"pos": 8,
+"previousPts": 82.24458376012659,
+"previousPos": 8
+},
+{
+"team": {
+"id": "46",
+"altId": "a33b6311-14e8-4ab9-82ef-5c4c0c5abcc0",
+"name": "Fiji",
+"abbreviation": "FIJ",
+"countryCode": "FJI",
+"annotations": null,
+"metadata": {}
+},
+"pts": 77.78971925163343,
+"pos": 9,
+"previousPts": 77.85399513308539,
+"previousPos": 9
+},
+{
+"team": {
+"id": "33",
+"altId": "f035348b-384c-4de8-aa26-5d417a2d006b",
+"name": "Wales",
+"abbreviation": "WAL",
+"countryCode": "WAL",
+"annotations": null,
+"metadata": {}
+},
+"pts": 77.36912549161428,
+"pos": 10,
+"previousPts": 76.38404174832975,
+"previousPos": 10
+},
+{
+"team": {
+"id": "41",
+"altId": "0879dded-32cc-4bee-bb36-7372f5da4eab",
+"name": "Italy",
+"abbreviation": "ITA",
+"countryCode": "ITA",
+"annotations": null,
+"metadata": {}
+},
+"pts": 76.30355101890964,
+"pos": 11,
+"previousPts": 76.30355101890964,
+"previousPos": 11
+},
+{
+"team": {
+"id": "49",
+"altId": "c5fb3422-dc1c-4438-b9aa-65dba1179e08",
+"name": "Japan",
+"abbreviation": "JPN",
+"countryCode": "JPN",
+"annotations": null,
+"metadata": {}
+},
+"pts": 75.24979543789046,
+"pos": 12,
+"previousPts": 76.23487918117497,
+"previousPos": 12
+},
+{
+"team": {
+"id": "720",
+"altId": "54fa7c9a-b7d9-4b88-b21b-b5f672df97d8",
+"name": "Georgia",
+"abbreviation": "GEO",
+"countryCode": "GEO",
+"annotations": null,
+"metadata": {}
+},
+"pts": 73.94398014603844,
+"pos": 13,
+"previousPts": 73.94398014603844,
+"previousPos": 13
+},
+{
+"team": {
+"id": "44",
+"altId": "ee3e3bb8-d200-4db8-ba27-03490248ae8a",
+"name": "Portugal",
+"abbreviation": "POR",
+"countryCode": "PRT",
+"annotations": null,
+"metadata": {}
+},
+"pts": 70.52457781006555,
+"pos": 14,
+"previousPts": 69.39199864910687,
+"previousPos": 14
+},
+{
+"team": {
+"id": "51",
+"altId": "e9f8b7d1-bd42-4e48-9197-28fbe1ae32b2",
+"name": "USA",
+"abbreviation": "USA",
+"countryCode": "USA",
+"annotations": null,
+"metadata": {}
+},
+"pts": 67.80092990961221,
+"pos": 15,
+"previousPts": 67.58247395478487,
+"previousPos": 15
+},
+{
+"team": {
+"id": "43",
+"altId": "449aea26-0789-476e-b426-60c200c1bf44",
+"name": "Spain",
+"abbreviation": "ESP",
+"countryCode": "ESP",
+"annotations": null,
+"metadata": {}
+},
+"pts": 67.72543772598978,
+"pos": 16,
+"previousPts": 66.83418362427102,
+"previousPos": 17
+},
+{
+"team": {
+"id": "47",
+"altId": "8d7dd372-3b2b-40e4-a4a1-f1158648574e",
+"name": "Tonga",
+"abbreviation": "TGA",
+"countryCode": "TON",
+"annotations": null,
+"metadata": {}
+},
+"pts": 65.86722768699964,
+"pos": 17,
+"previousPts": 65.13556291165912,
+"previousPos": 19
+},
+{
+"team": {
+"id": "708",
+"altId": "dcc552dd-10c0-48d4-b15c-f6ab13187002",
+"name": "Chile",
+"abbreviation": "CHI",
+"countryCode": "CHL",
+"annotations": null,
+"metadata": {}
+},
+"pts": 65.80994722787277,
+"pos": 18,
+"previousPts": 66.94252638883145,
+"previousPos": 16
+},
+{
+"team": {
+"id": "45",
+"altId": "37885802-c3b1-49a7-b337-cc1c58c086cb",
+"name": "Samoa",
+"abbreviation": "SAM",
+"countryCode": "WSM",
+"annotations": null,
+"metadata": {}
+},
+"pts": 65.314203879374,
+"pos": 19,
+"previousPts": 64.73354475680023,
+"previousPos": 20
+},
+{
+"team": {
+"id": "68",
+"altId": "56ef1ca9-ed13-4251-b82d-51d84adc9b4b",
+"name": "Uruguay",
+"abbreviation": "URU",
+"countryCode": "URY",
+"annotations": null,
+"metadata": {}
+},
+"pts": 64.85547053973981,
+"pos": 20,
+"previousPts": 65.74672464145856,
+"previousPos": 18
+},
+{
+"team": {
+"id": "50",
+"altId": "e890cd36-7a7e-4246-8ac9-c4687ff706cd",
+"name": "Canada",
+"abbreviation": "CAN",
+"countryCode": "CAN",
+"annotations": null,
+"metadata": {}
+},
+"pts": 62.28611634579251,
+"pos": 21,
+"previousPts": 62.28611634579251,
+"previousPos": 22
+},
+{
+"team": {
+"id": "699",
+"altId": "dfa39656-7ebb-447a-8f66-d904118f83bf",
+"name": "Belgium",
+"abbreviation": "BEL",
+"countryCode": "BEL",
+"annotations": null,
+"metadata": {}
+},
+"pts": 61.997796455068745,
+"pos": 22,
+"previousPts": 61.997796455068745,
+"previousPos": 23
+},
+{
+"team": {
+"id": "52",
+"altId": "37f427f7-a268-4be3-9a2b-3764c8272eca",
+"name": "Romania",
+"abbreviation": "ROU",
+"countryCode": "ROU",
+"annotations": null,
+"metadata": {}
+},
+"pts": 61.720545889723745,
+"pos": 23,
+"previousPts": 62.452210665064264,
+"previousPos": 21
+},
+{
+"team": {
+"id": "725",
+"altId": "4133e5d5-d6b2-40d3-96de-55cd2312815c",
+"name": "Hong Kong China",
+"abbreviation": "HKG",
+"countryCode": "HKG",
+"annotations": null,
+"metadata": {}
+},
+"pts": 59.54857754823088,
+"pos": 24,
+"previousPts": 59.767033503058215,
+"previousPos": 24
+},
+{
+"team": {
+"id": "57",
+"altId": "9581feea-5c79-47ae-a7ba-2be27d4ce640",
+"name": "Zimbabwe",
+"abbreviation": "ZIM",
+"countryCode": "ZWE",
+"annotations": null,
+"metadata": {}
+},
+"pts": 58.02394645138499,
+"pos": 25,
+"previousPts": 58.604605573958764,
+"previousPos": 25
+},
+{
+"team": {
+"id": "64",
+"altId": "ec655423-5d0f-4142-9d78-dfa61782c804",
+"name": "Netherlands",
+"abbreviation": "NED",
+"countryCode": "NLD",
+"annotations": null,
+"metadata": {}
+},
+"pts": 56.44477741279684,
+"pos": 26,
+"previousPts": 56.44477741279684,
+"previousPos": 26
+},
+{
+"team": {
+"id": "58",
+"altId": "59d6c9f4-c551-4879-b440-03e76e4250af",
+"name": "Namibia",
+"abbreviation": "NAM",
+"countryCode": "NAM",
+"annotations": null,
+"metadata": {}
+},
+"pts": 56.02826572067998,
+"pos": 27,
+"previousPts": 56.02826572067998,
+"previousPos": 27
+},
+{
+"team": {
+"id": "770",
+"altId": "93570717-63ce-4cb3-8bfc-621eced8a97d",
+"name": "Switzerland",
+"abbreviation": "SUI",
+"countryCode": "CHE",
+"annotations": null,
+"metadata": {}
+},
+"pts": 55.47280651404568,
+"pos": 28,
+"previousPts": 55.47280651404568,
+"previousPos": 28
+},
+{
+"team": {
+"id": "714",
+"altId": "2dac289b-591e-4e08-9519-430cde29065d",
+"name": "Czechia",
+"abbreviation": "CZE",
+"countryCode": "CZE",
+"annotations": null,
+"metadata": {}
+},
+"pts": 55.41593589777239,
+"pos": 29,
+"previousPts": 55.41593589777239,
+"previousPos": 29
+},
+{
+"team": {
+"id": "753",
+"altId": "5e0de057-30cc-4794-914b-60b6f022cba6",
+"name": "Poland",
+"abbreviation": "POL",
+"countryCode": "POL",
+"annotations": null,
+"metadata": {}
+},
+"pts": 54.53706216126246,
+"pos": 30,
+"previousPts": 54.53706216126246,
+"previousPos": 30
+},
+{
+"team": {
+"id": "751",
+"altId": "73ee33f3-edf9-444d-b1a8-479260b3c404",
+"name": "Paraguay",
+"abbreviation": "PAR",
+"countryCode": "PRY",
+"annotations": null,
+"metadata": {}
+},
+"pts": 52.15194540907321,
+"pos": 31,
+"previousPts": 52.15194540907321,
+"previousPos": 31
+},
+{
+"team": {
+"id": "756",
+"altId": "6591fc6f-f051-4f51-ba33-443773205613",
+"name": "Russia",
+"abbreviation": "RUS",
+"countryCode": "RUS",
+"annotations": null,
+"metadata": {}
+},
+"pts": 52.06119262441148,
+"pos": 32,
+"previousPts": 52.06119262441148,
+"previousPos": 32
+},
+{
+"team": {
+"id": "703",
+"altId": "b807e2da-5a37-4526-a4ab-e45fa0289add",
+"name": "Brazil",
+"abbreviation": "BRA",
+"countryCode": "BRA",
+"annotations": null,
+"metadata": {}
+},
+"pts": 51.49706521014096,
+"pos": 33,
+"previousPts": 51.49706521014096,
+"previousPos": 33
+},
+{
+"team": {
+"id": "769",
+"altId": "f549c679-2901-4f81-9335-f70237cb3c64",
+"name": "Sweden",
+"abbreviation": "SWE",
+"countryCode": "SWE",
+"annotations": null,
+"metadata": {}
+},
+"pts": 50.811161274653585,
+"pos": 34,
+"previousPts": 50.47714189744541,
+"previousPos": 35
+},
+{
+"team": {
+"id": "735",
+"altId": "d76f3590-9ef0-4393-bb4a-9dd202a08844",
+"name": "Kenya",
+"abbreviation": "KEN",
+"countryCode": "KEN",
+"annotations": null,
+"metadata": {}
+},
+"pts": 50.08791644542441,
+"pos": 35,
+"previousPts": 50.08791644542441,
+"previousPos": 36
+},
+{
+"team": {
+"id": "1247",
+"altId": "b59358d8-28d0-4796-bef1-f1df6aef599a",
+"name": "Mexico",
+"abbreviation": "MEX",
+"countryCode": "MEX",
+"annotations": null,
+"metadata": {}
+},
+"pts": 49.97383911441897,
+"pos": 36,
+"previousPts": 49.97383911441897,
+"previousPos": 37
+},
+{
+"team": {
+"id": "721",
+"altId": "7fa7fe00-831a-429e-b542-a913280be4d8",
+"name": "Germany",
+"abbreviation": "GER",
+"countryCode": "DEU",
+"annotations": null,
+"metadata": {}
+},
+"pts": 49.77097995293798,
+"pos": 37,
+"previousPts": 51.234837228257994,
+"previousPos": 34
+},
+{
+"team": {
+"id": "736",
+"altId": "8643572f-aace-4040-bce7-870f7b07dfe9",
+"name": "Korea",
+"abbreviation": "KOR",
+"countryCode": "KOR",
+"annotations": null,
+"metadata": {}
+},
+"pts": 49.29101317272516,
+"pos": 38,
+"previousPts": 49.29101317272516,
+"previousPos": 38
+},
+{
+"team": {
+"id": "1030",
+"altId": "f3186455-b7da-4a8d-8cf0-c11a26d214d3",
+"name": "Malta",
+"abbreviation": "MLT",
+"countryCode": "MLT",
+"annotations": null,
+"metadata": {}
+},
+"pts": 48.06012175037789,
+"pos": 39,
+"previousPts": 46.59626447505788,
+"previousPos": 42
+},
+{
+"team": {
+"id": "745",
+"altId": "7e189e64-4930-44e3-a3a7-052648f901fe",
+"name": "Morocco",
+"abbreviation": "MAR",
+"countryCode": "MAR",
+"annotations": null,
+"metadata": {}
+},
+"pts": 47.537319971755046,
+"pos": 40,
+"previousPts": 47.537319971755046,
+"previousPos": 39
+}
+],
+"effective": {
+"millis": 1794225689566,
+"gmtOffset": 0.0,
+"label": "2026-11-09"
+}
+}
