@@ -1088,6 +1088,7 @@ const KIT_DESIGNS = ['plain', 'hoops', 'halves', 'quarters', 'stripes', 'sash', 
 const KIT_DESIGN_NAMES = { plain:'Plain', hoops:'Hoops', halves:'Halves', quarters:'Quarters', stripes:'Stripes', sash:'Sash', band:'Chest Band' };
 const KIT_ASYM = { halves:true, quarters:true, sash:true };   // differ left to right: a mirrored picture must be baked mirrored
 const KIT_HEX = /^#[0-9a-f]{6}$/i;
+const kitHex = v => typeof v === 'string' && KIT_HEX.test(v);   // a string only: a hand-edited save's array or object passes the test once made a string, and then throws
 function kitDesignOf(t) {
   if (!t) return 'plain';
   if (KITS.on && KIT_DESIGNS.includes(t.design)) return t.design;
@@ -1095,7 +1096,7 @@ function kitDesignOf(t) {
 }
 /* The third colour a side shows: none with KITS off, on Plain, or where it is the shirt's or the trim's own colour (it would do nothing) */
 function kitThirdOf(t) {
-  if (!KITS.on || !t || !KIT_HEX.test(t.third) || kitDesignOf(t) === 'plain') return null;
+  if (!KITS.on || !t || !kitHex(t.third) || kitDesignOf(t) === 'plain') return null;
   const c = t.third.toLowerCase();
   return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : t.third;
 }
@@ -1143,9 +1144,12 @@ const kitFlash = t => (KIT_TRIM_HALF[kitDesignOf(t)] ? (kitThirdOf(t) ? 'var(--t
 const kitPainted = kit => !!kit && !!kit.design && kit.design !== 'plain' && !(kit.design === 'hoops' && !kit.third);
 const kitSleeve = (kit, xb) => [kit.shirt, kit.trim, kit.third || kit.trim][kitPaint(kit.design, 1.36, xb, xb, kit.third)];
 /* The code-drawn men (fig side on, figFB front or back on): the torso's box painted in rows of cells, each row's runs merged into one
-   rectangle, clipped to the torso by the caller. map(x, y) gives { z, xb, u } for a point in the man's own drawing space. About 16 rows of
-   one to four runs: a scrum of sixteen is a few hundred fillRects a frame. */
-function kitPaintBox(g, kit, x0, x1, y0, y1, map, rows = 16, cols = 14) {
+   rectangle, clipped to the torso by the caller. map(x, y) gives { z, xb, u } for a point in the man's own drawing space. 16 rows by 14
+   cells of one to four runs at a scrum's size (a scrum of sixteen is a few hundred fillRects a frame); a bigger man, a goal kicker close
+   up, gets a cell about every 3 device pixels, up to 48 by 42, so a sash's diagonal does not show as steps. */
+function kitPaintBox(g, kit, x0, x1, y0, y1, map) {
+  const m = typeof g.getTransform === 'function' ? g.getTransform() : null, s = m && Number.isFinite(m.a) ? Math.hypot(m.a, m.b) : 1;
+  const rows = Math.max(16, Math.min(48, Math.ceil(Math.abs(y1 - y0)*s/3))), cols = Math.max(14, Math.min(42, Math.ceil(Math.abs(x1 - x0)*s/3)));
   const d = kit.design, cs = [kit.shirt, kit.trim, kit.third || kit.trim], dy = (y1 - y0)/rows, dx = (x1 - x0)/cols;
   for (let r = 0; r < rows; r++) {
     const y = y0 + (r + 0.5)*dy;
@@ -1161,7 +1165,7 @@ function kitClean(t, team) {
   const d = KIT_DESIGNS.includes(t.design) ? t.design : t.hoops ? 'hoops' : 'plain';
   team.hoops = d === 'hoops';
   if (d !== 'plain' && d !== 'hoops') team.design = d;
-  if (d !== 'plain' && KIT_HEX.test(t.third)) { const c = t.third.toLowerCase(); if (c !== team.kit.toLowerCase() && c !== team.trim.toLowerCase()) team.third = t.third; }
+  if (d !== 'plain' && kitHex(t.third)) { const c = t.third.toLowerCase(); if (c !== String(team.kit).toLowerCase() && c !== String(team.trim).toLowerCase()) team.third = t.third; }
   return team;
 }
 /* =========================================================
@@ -1435,7 +1439,11 @@ function cleanSide(t) {
   if (!name) return null;
   const id = /^[A-Z]{3}$/.test(t.id) || /^[LW]\d{2}$/.test(t.id) ? t.id : codeFor(t.id, name);   // a Legends side keeps its code (L87, W91: src/locker.js), and so does one dropped since (W94)
   const team = { id, name, kit:HEX.test(t.kit) ? t.kit : '#2050b0', trim:HEX.test(t.trim) ? t.trim : '#f2efe6', hoops:!!t.hoops };
-  kitClean(t, team);                                         // a side's design and third colour (src/kit-design.js), kept with it
+  // a side's design and third colour (src/kit-design.js), kept with it. A club's side saved before 1.8 has neither: it takes its club's,
+  // where its shirt and trim are still the club's, so a championship, cup or career under way shows the club as everywhere else
+  const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  const club = !t.custom && !('design' in t) && !('third' in t) && typeof ALL_TEAMS !== 'undefined' ? ALL_TEAMS.find(c => c.id === id && ('design' in c || 'third' in c) && same(c.kit, team.kit) && same(c.trim, team.trim)) : null;
+  kitClean(club ? { ...t, design:club.design, third:club.third } : t, team);
   if (t.home) team.home = true;
   if (t.custom) team.custom = true;
   if (t.key) team.key = String(t.key).slice(0, 24);
@@ -1923,16 +1931,20 @@ function colorDist(a,b) { const x = hexRgb(a), y = hexRgb(b); return hyp(x[0]-y[
 function showCol(team) { const k = M.kit[team]; return colorDist(k.fill, '#0f1a12') >= 60 ? k.fill : colorDist(k.trim, '#0f1a12') >= 60 ? k.trim : '#f1eee4'; }
 
 /* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. The shirt colours
-   decide, as ever (the tests pin it); a split shirt (halves, quarters, 1.8) also clashes when each of its two colours has a near match in
-   the other side's shirt and trim, since half of it is the trim. Hoops, stripes, sash and band read as their shirt colour, as hoops always
-   have. The kit kept carries its design and third; a change kit, white or black is plain. With KITS off every design is plain or hoops,
-   so this is 1.7's rule exactly. */
+   decide, as ever (the tests pin it). A split shirt (halves, quarters, 1.8) shows one half at a time side on, so it reads as either of its
+   two colours: it clashes when either is near a colour the other side shows (its shirt, or either half of a split shirt). Hoops, stripes,
+   sash and band read as their shirt colour, as hoops always have. A split shirt is never turned round: its colours swapped are the same
+   shirt mirrored. The kit kept carries its design and third; a change kit, white or black is plain, its trim never the shirt's own colour.
+   With KITS off every design is plain or hoops, so this is 1.7's rule exactly, and so is every pairing with no split shirt. */
 const KIT_SPLIT = { halves:true, quarters:true };
-function kitApart(a, b) { const h = (p, q) => Math.max(...p.map(x => Math.min(...q.map(y => colorDist(x, y))))); return Math.max(h(a, b), h(b, a)); }
+const kitShows = (fill, trim, d) => (KIT_SPLIT[d] ? [fill, trim] : [fill]);
+const kitNear = (a, b) => Math.min(...a.map(x => Math.min(...b.map(y => colorDist(x, y)))));
 function awayKit(n0, n1) {
-  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1);
-  const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], [n1.trim, n1.kit, d1, t1], ['#f2efe6', n1.kit, 'plain', null], ['#1c1c1c', n1.kit, 'plain', null]].filter(o => o[0] && o[1]);
-  const apart = o => { const d = colorDist(n0.kit, o[0]); return KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? Math.min(d, kitApart(KIT_SPLIT[d0] ? [n0.kit, n0.trim] : [n0.kit], KIT_SPLIT[o[2]] ? [o[0], o[1]] : [o[0]])) : d; };
+  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1), split = KIT_SPLIT[d0] || KIT_SPLIT[d1];
+  const plainOn = (c, other) => (!split || colorDist(c, n1.kit) >= 60 ? n1.kit : n1.trim && colorDist(c, n1.trim) >= 60 ? n1.trim : other);   // white or black: trimmed in the shirt colour, as 1.7, unless that is white or black too
+  const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1], ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
+  const home = kitShows(n0.kit, n0.trim, d0);
+  const apart = o => (KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? kitNear(home, kitShows(o[0], o[1], o[2])) : colorDist(n0.kit, o[0]));
   let best = opts[0], bd = -1;
   for (const o of opts) {
     const d = apart(o);
@@ -11312,6 +11324,10 @@ function navMove(seat, dx, dy) {                           // the nearest candid
     const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
     if (sel && cands.includes(sel)) best = sel;
   }
+  if (best && dy && typeof best.closest === 'function' && best.closest('#bd-design')) {   // Create Team's Design strip from above or below: on the design chosen, never the nearest
+    const strip = best.closest('#bd-design'), sel = !strip.contains(focusEl) && strip.querySelector('[aria-pressed="true"]');
+    if (sel && cands.includes(sel)) best = sel;
+  }
   if (best) setFocus(best);
   return best;
 }
@@ -13618,9 +13634,9 @@ function buildBuilder() {
   });
   // Design (1.8): seven shirts in the draft's own colours, the chosen one named on the label's line; Third Colour under Trim, None first.
   // KITS off offers Plain and Hoops alone, as 1.7's Pattern did, and no Third Colour (src/kit-design.js)
-  $('bd-design').innerHTML = KIT_DESIGNS.map(d => `<button data-design="${d}" aria-label="${KIT_DESIGN_NAMES[d]}"${KITS.on || d === 'plain' || d === 'hoops' ? '' : ' hidden'}></button>`).join('');
+  $('bd-design').innerHTML = KIT_DESIGNS.map(d => `<button data-design="${d}" aria-label="${KIT_DESIGN_NAMES[d]}"></button>`).join('');
   for (const b of $('bd-design').children) b.addEventListener('click', () => { draft.design = b.dataset.design; draft.hoops = draft.design === 'hoops'; renderBuilder(); });
-  $('bd-third').innerHTML = `<button class="sw none" data-c="" aria-label="No Third Colour">None</button>` + sw();
+  $('bd-third').innerHTML = `<button class="sw none" data-c="">None</button>` + sw();   // named by what it says, so a voice can tap it; the row's label names the group
   for (const b of $('bd-third').querySelectorAll('.sw')) b.addEventListener('click', () => { if (b.dataset.c) draft.third = b.dataset.c; else delete draft.third; renderBuilder(); });
   $('bd-name').addEventListener('input', () => {
     draft.name = $('bd-name').value;
@@ -13673,10 +13689,13 @@ function renderBuilder() {
   $('bd-jersey').innerHTML = jersey(draft);
   const dsg = kitDesignOf(draft);
   if (draft.third && (draft.third === draft.kit || draft.third === draft.trim)) delete draft.third;   // a third colour is never the shirt's or the trim's: changing either onto it clears it
+  let shown = 0;
   for (const b of $('bd-design').children) {
     const d = b.dataset.design; b.setAttribute('aria-pressed', String(d === dsg));
+    b.hidden = !(KITS.on || d === 'plain' || d === 'hoops'); shown += !b.hidden;   // KITS off: Plain and Hoops alone, as 1.7's Pattern
     b.innerHTML = jersey({ kit:draft.kit, trim:draft.trim, third:d === 'plain' ? undefined : draft.third, design:d, hoops:d === 'hoops' });
   }
+  $('bd-design').style.setProperty('--n', shown);           // the strip in as many equal places as it shows: seven, or two halves with KITS off
   $('bd-dname').textContent = KIT_DESIGN_NAMES[dsg];
   $('bd-third-f').hidden = !KITS.on || dsg === 'plain';     // Plain takes no third colour
   let gone = 0;
@@ -19258,7 +19277,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   teams:{ overallOf, NATIONS, NAT_MEN, NAT_WOMEN, SIX_NATIONS, natList, natGroup, catTeam, isNation, listName, CLUBS, FRANCE, AUSTRALIA, SOUTH_AFRICA, ENGLAND, ENGLAND_TWO, CELTIC, SCOTLAND, NEW_ZEALAND, JAPAN, COUNTIES, NATIONAL, TEAM_TIERS, TEAM_LISTS, TEAM_CATS, POOL_OLD, poolKey, catOf, catSide, teamPool, poolTier, poolTeams, catPick, ALL_TEAMS, POOLS, BUDGET, KIT_COLOURS, EARLY, rateOf, outmatched, awayKit, colorDist, cleanTeam, cleanSide, cleanChamp, sidesMeet, allNations, codeFor, autoCode, showCol, shuffle, restore, newChamp, standings, honours, simMatch,
     recordChampResult, chaseLine, fixtureStake, chaseTitle, champNote, renderHub, renderHome, champ:() => champ, custom:() => custom, setChamp:c => { champ = c; }, load, save },
   comp:{ COMP_LEAGUES, CLUB_LEVEL, CLUB_COUNTY, COUNTY_CUPS, COUNTY_CUP_NAMES, levelOf:compLevelOf, ownLevel:compOwnLevel, countyOf:compCountyOf, cupFor:compCupFor, rivals:compCupRivals, local:compLocal },
-  kits:{ KITS, KIT_DESIGNS, KIT_DESIGN_NAMES, KIT_ASYM, KIT_TRIM_HALF, designOf:kitDesignOf, thirdOf:kitThirdOf, paint:kitPaint, css:kitCss, accent:kitAccent, flash:kitFlash, painted:kitPainted, sleeve:kitSleeve, paintBox:kitPaintBox, clean:kitClean, jersey, awayKit, kitOf, fig, figFB, paintMan, frame:artDesignFrame, geom:artDesignGeom, palette:artPaletteOf, blit:artBlit, scratch:artScratch, sprite:artSprite, body:artBody, asym:artAsym, preview:artPreview, ART:() => ART, M:() => M, setCtx:g => { const k = ctx; ctx = g; return k; } },   // kit designs and a third colour (src/kit-design.js; tools/kits.mjs)
+  kits:{ KITS, KIT_DESIGNS, KIT_DESIGN_NAMES, KIT_ASYM, KIT_TRIM_HALF, designOf:kitDesignOf, thirdOf:kitThirdOf, paint:kitPaint, css:kitCss, accent:kitAccent, flash:kitFlash, painted:kitPainted, sleeve:kitSleeve, paintBox:kitPaintBox, clean:kitClean, jersey, awayKit, kitOf, fig, figFB, paintMan, frame:artDesignFrame, geom:artDesignGeom, palette:artPaletteOf, blit:artBlit, scratch:artScratch, sprite:artSprite, body:artBody, asym:artAsym, cell:artCell, lookOf, preview:artPreview, ART:() => ART, M:() => M, setCtx:g => { const k = ctx; ctx = g; return k; } },   // kit designs and a third colour (src/kit-design.js; tools/kits.mjs)
   local:{ LOCAL, LOCAL_DATA, LOCAL_NEW, LOCAL_VIEW, listPlays, LOCAL_BAND, LOCAL_RATED, localRated, localKey, listHomeOf, myCounty, pickLevel, pickLocalOrder, FL_CAP, champCounty:() => champCounty },   // the county clubs (src/data.js, src/clubs-local.js)
   cups:{ CUPS, cupTitle, CUP_TRIPLE, CUP_POOL, TROPHY_METAL, trophyMetal, TROPHY_SHAPE, trophyShape, trophyMask, trophyShapeCss, shapesOn:trophyShapesOn, cupNew, cupFixture, cupRecord, cupDone, cupWinner, cupUserOut, cupLabel, cupFinish, cleanCup, cleanCupEntry, cupTriple, cupTripleAfter, cupTourSide, cupTourHost, cupListOf, cupTwelve, cupSeries, cupPoolRows, cupNext, cupKO, cupStage, cupRecordOf, get:() => cup, set:c => { cup = c; }, turn:() => cupTurn, setTurn:n => { cupTurn = n; }, history:() => champHistory, setHistory:h => { champHistory = h; }, cabinetKind, cabinetTrim, cabinetClean, savedHonours, renderCabinet, comp:() => champComp, compSet:cupCompSet, euroLeague:cupEuroLeague, poolsOn:() => cupPoolsOn, teamsView:cupTeamsView, begin:cupBegin, euroOn:cupEuroOn, euroStart:cupEuroStart, euroSkip:() => cupEuroSkip, recordMatch:cupRecordMatch, play:cupPlay, retain:cupRetain, render:renderCup, fixtureHtml:cupFixtureHtml, winHtml:cupWinHtml, note:cupNote, verdict:cupVerdict, breakLine:cupBreakLine, line:cupLine },
   arcade:{ ARCADE, heat, fireOut, onFire, fireTick, startGolden, goldenOn, periodLen, endHalf, scoreTry, dropGoal, maxSpeed },

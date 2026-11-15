@@ -273,6 +273,10 @@ function navMove(seat, dx, dy) {                           // the nearest candid
     const list = best.closest('[role="tablist"]'), sel = list && !list.contains(focusEl) && list.querySelector('[role="tab"][aria-selected="true"]');
     if (sel && cands.includes(sel)) best = sel;
   }
+  if (best && dy && typeof best.closest === 'function' && best.closest('#bd-design')) {   // Create Team's Design strip from above or below: on the design chosen, never the nearest
+    const strip = best.closest('#bd-design'), sel = !strip.contains(focusEl) && strip.querySelector('[aria-pressed="true"]');
+    if (sel && cands.includes(sel)) best = sel;
+  }
   if (best) setFocus(best);
   return best;
 }

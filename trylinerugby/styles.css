@@ -362,7 +362,7 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
    colours left out (None then takes two places, so it keeps their two rows of six); hidden on Plain */
 .bd-dhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 #bd-dname{font:700 13px/1.2 var(--body);color:var(--chalk)}
-.bd-design{grid-auto-flow:row;grid-template-columns:repeat(7,minmax(0,1fr))}
+.bd-design{grid-auto-flow:row;grid-template-columns:repeat(var(--n,7),minmax(0,1fr))}
 .bd-design button{min-width:0;min-height:44px;padding:0;display:grid;place-items:center}
 .bd-design button+button{border-left:1.5px solid var(--rule-hi)}
 .bd-design button[hidden]{display:none}

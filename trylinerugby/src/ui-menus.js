@@ -1783,9 +1783,9 @@ function buildBuilder() {
   });
   // Design (1.8): seven shirts in the draft's own colours, the chosen one named on the label's line; Third Colour under Trim, None first.
   // KITS off offers Plain and Hoops alone, as 1.7's Pattern did, and no Third Colour (src/kit-design.js)
-  $('bd-design').innerHTML = KIT_DESIGNS.map(d => `<button data-design="${d}" aria-label="${KIT_DESIGN_NAMES[d]}"${KITS.on || d === 'plain' || d === 'hoops' ? '' : ' hidden'}></button>`).join('');
+  $('bd-design').innerHTML = KIT_DESIGNS.map(d => `<button data-design="${d}" aria-label="${KIT_DESIGN_NAMES[d]}"></button>`).join('');
   for (const b of $('bd-design').children) b.addEventListener('click', () => { draft.design = b.dataset.design; draft.hoops = draft.design === 'hoops'; renderBuilder(); });
-  $('bd-third').innerHTML = `<button class="sw none" data-c="" aria-label="No Third Colour">None</button>` + sw();
+  $('bd-third').innerHTML = `<button class="sw none" data-c="">None</button>` + sw();   // named by what it says, so a voice can tap it; the row's label names the group
   for (const b of $('bd-third').querySelectorAll('.sw')) b.addEventListener('click', () => { if (b.dataset.c) draft.third = b.dataset.c; else delete draft.third; renderBuilder(); });
   $('bd-name').addEventListener('input', () => {
     draft.name = $('bd-name').value;
@@ -1838,10 +1838,13 @@ function renderBuilder() {
   $('bd-jersey').innerHTML = jersey(draft);
   const dsg = kitDesignOf(draft);
   if (draft.third && (draft.third === draft.kit || draft.third === draft.trim)) delete draft.third;   // a third colour is never the shirt's or the trim's: changing either onto it clears it
+  let shown = 0;
   for (const b of $('bd-design').children) {
     const d = b.dataset.design; b.setAttribute('aria-pressed', String(d === dsg));
+    b.hidden = !(KITS.on || d === 'plain' || d === 'hoops'); shown += !b.hidden;   // KITS off: Plain and Hoops alone, as 1.7's Pattern
     b.innerHTML = jersey({ kit:draft.kit, trim:draft.trim, third:d === 'plain' ? undefined : draft.third, design:d, hoops:d === 'hoops' });
   }
+  $('bd-design').style.setProperty('--n', shown);           // the strip in as many equal places as it shows: seven, or two halves with KITS off
   $('bd-dname').textContent = KIT_DESIGN_NAMES[dsg];
   $('bd-third-f').hidden = !KITS.on || dsg === 'plain';     // Plain takes no third colour
   let gone = 0;

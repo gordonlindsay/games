@@ -11,6 +11,7 @@ const KIT_DESIGNS = ['plain', 'hoops', 'halves', 'quarters', 'stripes', 'sash', 
 const KIT_DESIGN_NAMES = { plain:'Plain', hoops:'Hoops', halves:'Halves', quarters:'Quarters', stripes:'Stripes', sash:'Sash', band:'Chest Band' };
 const KIT_ASYM = { halves:true, quarters:true, sash:true };   // differ left to right: a mirrored picture must be baked mirrored
 const KIT_HEX = /^#[0-9a-f]{6}$/i;
+const kitHex = v => typeof v === 'string' && KIT_HEX.test(v);   // a string only: a hand-edited save's array or object passes the test once made a string, and then throws
 function kitDesignOf(t) {
   if (!t) return 'plain';
   if (KITS.on && KIT_DESIGNS.includes(t.design)) return t.design;
@@ -18,7 +19,7 @@ function kitDesignOf(t) {
 }
 /* The third colour a side shows: none with KITS off, on Plain, or where it is the shirt's or the trim's own colour (it would do nothing) */
 function kitThirdOf(t) {
-  if (!KITS.on || !t || !KIT_HEX.test(t.third) || kitDesignOf(t) === 'plain') return null;
+  if (!KITS.on || !t || !kitHex(t.third) || kitDesignOf(t) === 'plain') return null;
   const c = t.third.toLowerCase();
   return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : t.third;
 }
@@ -66,9 +67,12 @@ const kitFlash = t => (KIT_TRIM_HALF[kitDesignOf(t)] ? (kitThirdOf(t) ? 'var(--t
 const kitPainted = kit => !!kit && !!kit.design && kit.design !== 'plain' && !(kit.design === 'hoops' && !kit.third);
 const kitSleeve = (kit, xb) => [kit.shirt, kit.trim, kit.third || kit.trim][kitPaint(kit.design, 1.36, xb, xb, kit.third)];
 /* The code-drawn men (fig side on, figFB front or back on): the torso's box painted in rows of cells, each row's runs merged into one
-   rectangle, clipped to the torso by the caller. map(x, y) gives { z, xb, u } for a point in the man's own drawing space. About 16 rows of
-   one to four runs: a scrum of sixteen is a few hundred fillRects a frame. */
-function kitPaintBox(g, kit, x0, x1, y0, y1, map, rows = 16, cols = 14) {
+   rectangle, clipped to the torso by the caller. map(x, y) gives { z, xb, u } for a point in the man's own drawing space. 16 rows by 14
+   cells of one to four runs at a scrum's size (a scrum of sixteen is a few hundred fillRects a frame); a bigger man, a goal kicker close
+   up, gets a cell about every 3 device pixels, up to 48 by 42, so a sash's diagonal does not show as steps. */
+function kitPaintBox(g, kit, x0, x1, y0, y1, map) {
+  const m = typeof g.getTransform === 'function' ? g.getTransform() : null, s = m && Number.isFinite(m.a) ? Math.hypot(m.a, m.b) : 1;
+  const rows = Math.max(16, Math.min(48, Math.ceil(Math.abs(y1 - y0)*s/3))), cols = Math.max(14, Math.min(42, Math.ceil(Math.abs(x1 - x0)*s/3)));
   const d = kit.design, cs = [kit.shirt, kit.trim, kit.third || kit.trim], dy = (y1 - y0)/rows, dx = (x1 - x0)/cols;
   for (let r = 0; r < rows; r++) {
     const y = y0 + (r + 0.5)*dy;
@@ -84,6 +88,6 @@ function kitClean(t, team) {
   const d = KIT_DESIGNS.includes(t.design) ? t.design : t.hoops ? 'hoops' : 'plain';
   team.hoops = d === 'hoops';
   if (d !== 'plain' && d !== 'hoops') team.design = d;
-  if (d !== 'plain' && KIT_HEX.test(t.third)) { const c = t.third.toLowerCase(); if (c !== team.kit.toLowerCase() && c !== team.trim.toLowerCase()) team.third = t.third; }
+  if (d !== 'plain' && kitHex(t.third)) { const c = t.third.toLowerCase(); if (c !== String(team.kit).toLowerCase() && c !== String(team.trim).toLowerCase()) team.third = t.third; }
   return team;
 }

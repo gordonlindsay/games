@@ -38,16 +38,20 @@ function colorDist(a,b) { const x = hexRgb(a), y = hexRgb(b); return hyp(x[0]-y[
 function showCol(team) { const k = M.kit[team]; return colorDist(k.fill, '#0f1a12') >= 60 ? k.fill : colorDist(k.trim, '#0f1a12') >= 60 ? k.trim : '#f1eee4'; }
 
 /* The away side changes when the shirts are too alike: its change kit, then its colours swapped, then white or black. The shirt colours
-   decide, as ever (the tests pin it); a split shirt (halves, quarters, 1.8) also clashes when each of its two colours has a near match in
-   the other side's shirt and trim, since half of it is the trim. Hoops, stripes, sash and band read as their shirt colour, as hoops always
-   have. The kit kept carries its design and third; a change kit, white or black is plain. With KITS off every design is plain or hoops,
-   so this is 1.7's rule exactly. */
+   decide, as ever (the tests pin it). A split shirt (halves, quarters, 1.8) shows one half at a time side on, so it reads as either of its
+   two colours: it clashes when either is near a colour the other side shows (its shirt, or either half of a split shirt). Hoops, stripes,
+   sash and band read as their shirt colour, as hoops always have. A split shirt is never turned round: its colours swapped are the same
+   shirt mirrored. The kit kept carries its design and third; a change kit, white or black is plain, its trim never the shirt's own colour.
+   With KITS off every design is plain or hoops, so this is 1.7's rule exactly, and so is every pairing with no split shirt. */
 const KIT_SPLIT = { halves:true, quarters:true };
-function kitApart(a, b) { const h = (p, q) => Math.max(...p.map(x => Math.min(...q.map(y => colorDist(x, y))))); return Math.max(h(a, b), h(b, a)); }
+const kitShows = (fill, trim, d) => (KIT_SPLIT[d] ? [fill, trim] : [fill]);
+const kitNear = (a, b) => Math.min(...a.map(x => Math.min(...b.map(y => colorDist(x, y)))));
 function awayKit(n0, n1) {
-  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1);
-  const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], [n1.trim, n1.kit, d1, t1], ['#f2efe6', n1.kit, 'plain', null], ['#1c1c1c', n1.kit, 'plain', null]].filter(o => o[0] && o[1]);
-  const apart = o => { const d = colorDist(n0.kit, o[0]); return KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? Math.min(d, kitApart(KIT_SPLIT[d0] ? [n0.kit, n0.trim] : [n0.kit], KIT_SPLIT[o[2]] ? [o[0], o[1]] : [o[0]])) : d; };
+  const d0 = kitDesignOf(n0), d1 = kitDesignOf(n1), t1 = kitThirdOf(n1), split = KIT_SPLIT[d0] || KIT_SPLIT[d1];
+  const plainOn = (c, other) => (!split || colorDist(c, n1.kit) >= 60 ? n1.kit : n1.trim && colorDist(c, n1.trim) >= 60 ? n1.trim : other);   // white or black: trimmed in the shirt colour, as 1.7, unless that is white or black too
+  const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1], ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
+  const home = kitShows(n0.kit, n0.trim, d0);
+  const apart = o => (KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? kitNear(home, kitShows(o[0], o[1], o[2])) : colorDist(n0.kit, o[0]));
   let best = opts[0], bd = -1;
   for (const o of opts) {
     const d = apart(o);

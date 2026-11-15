@@ -163,11 +163,40 @@ const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = 
   const side = (f, d) => { const l = log(() => K.fig(0, 0, 100, kit(d), { face:f })); return [rects(l, '#1b2747').reduce((a, r) => a + r[4]*r[5], 0), rects(l, '#f2b01e').reduce((a, r) => a + r[4]*r[5], 0)]; };
   const [rs, rt] = side(1, 'halves'), [ls, lt] = side(-1, 'halves');
   ok(rs > rt && lt > ls && rt > 0 && ls > 0, `fig Halves side on: his right side (facing right) in the shirt colour, his left in the trim, each with a strip of the far half at chest and back (${[rs, rt, ls, lt].map(Math.round).join(', ')})`);
+  // the cells follow the man's size on screen: a scrum's man keeps 16 rows, a goal kicker close up gets one about every 3 device pixels (to 48)
+  const rowsAt = (scale, h) => { const ys = new Set(); const g = { getTransform:() => ({ a:scale, b:0 }), set fillStyle(v) { /* colour */ }, fillRect:(x, y) => ys.add(y.toFixed(4)) };
+    K.paintBox(g, kit('sash'), -h/4, h/4, -h, 0, (x, y) => ({ z:0.95 - y/h*0.49, xb:x/h, u:x/h })); return ys.size; };
+  ok(rowsAt(2, 20) === 16 && rowsAt(2, 45) === 30 && rowsAt(3, 100) === 48 && rowsAt(1, 30) === 16, `kitPaintBox: 16 rows at a scrum's size, a row about every 3 device pixels on a bigger man, at most 48 (${[rowsAt(2, 20), rowsAt(2, 45), rowsAt(3, 100), rowsAt(1, 30)].join(' ')})`);
+  // in a match: the close-ups a real HAC v Old Halesonians draws on Mid (the duels live, a lineout, a scrum, a goal kick) paint each side's
+  // design through kitOf, fig and figFB. A painted torso is a clip whose fills take two or more of the side's own colours; KITS off paints none
+  const painted = () => {
+    const per = [0, 0], third = [0, 0]; let kits = null, clip = 0, seen = null, fill = null;
+    S.cam = 2; reseed(81);
+    globalThis.__ctxSpy = (k, a) => {
+      if (k === 'fillStyle') fill = a[0];
+      else if (k === 'clip') { clip++; seen = new Set(); }
+      else if (k === 'fillRect' && clip && seen) seen.add(fill);
+      else if (k === 'restore' && clip && seen) {
+        clip--; kits.forEach((c, t) => { const n = [c.fill, c.trim, c.third].filter(x => x && seen.has(x)).length; if (n >= 2 && seen.has(c.fill) && seen.has(c.trim)) { per[t]++; if (c.third && seen.has(c.third)) third[t]++; } }); seen = clip ? new Set() : null;
+      }
+    };
+    try {
+      T.newMatch(team('HAC'), team('OHA'), { halfLen:240, diff:1, duels:'live' }); kits = T.M.kit.map(k => ({ ...k })); D.setMode('match'); D.setTwo(false);
+      for (let i = 0; i < 900; i++) { bot(0); T.update(STEP); D.render(STEP); }
+      for (const scene of [() => T.lineout(1, 62, 0, 'Into Touch'), () => T.scrum(0, 62, 35, 'Knock-On'), () => D.goalKick(0, 98, 24, 'conversion')]) { scene(); for (let i = 0; i < 240; i++) { T.update(STEP); D.render(STEP); } }
+    } finally { globalThis.__ctxSpy = null; }
+    D.exitMatch(); D.setMode('menu');
+    return { per, third, kits:kits.map(k => k.design + (k.third ? '+' + k.third : '')) };
+  };
+  const live = painted(), dark = offDo(painted);
+  ok(json(live.kits) === json(['halves', 'band+#c8102e']) && live.per[0] >= 20 && live.per[1] >= 20 && live.third[1] >= 10 && live.third[0] === 0 && dark.per[0] + dark.per[1] === 0,
+    `a real match's close-ups paint HAC's halves and Old Halesonians' band edged in red (torsos painted ${live.per.join(' and ')}, with the third ${live.third.join(' and ')}); KITS off paints none (${dark.per.join(' ')})`);
 }
 
 // 5. The clash rule (awayKit). The shirts decide, as 1.7 (tools/teams.mjs pins Farnham v Weybridge and the rest): every pairing of the game's
-//    sides with no split shirt changes exactly as with KITS off. A split shirt (Halves, Quarters) also clashes where each of its colours has a
-//    near match in the other side's; the kit kept carries its design and third, and a change kit, white or black is plain
+//    sides with no split shirt changes exactly as with KITS off. A split shirt (Halves, Quarters) shows one half at a time side on, so it
+//    also clashes where either of its colours is near a colour the other side shows, and is never turned round (its colours swapped are the
+//    same shirt mirrored); the kit kept carries its design and third, and a change kit, white or black is plain, never trimmed in its own colour
 {
   const sides = X.ALL_TEAMS, split = t => ['halves', 'quarters'].includes(K.designOf(t)), moved = [];
   let n = 0;
@@ -187,6 +216,33 @@ const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = 
   ok(k3.fill === s3.trim && k3.trim === s3.kit && k3.design === 'sash' && k3.third === '#c8102e', `a clash turned round keeps its design and third (${json(k3)})`);
   const s4 = { ...s3, alt:'#f2efe6', altTrim:'#2050b0' }, k4 = K.awayKit(mk('#2a5fb8', '#f2efe6', 'plain'), s4);
   ok(k4.fill === '#f2efe6' && k4.design === 'plain' && k4.third === null && k4.hoops === false, 'a change kit is plain');
+  // one split side against a plain one, both ways round: half of the split shirt in the other side's colour is a clash
+  const nw = mk('#1b2747', '#f2efe6', 'halves'), k5 = K.awayKit(nw, mk('#f2efe6', '#1b2747', 'plain')), k5off = offDo(() => K.awayKit(nw, mk('#f2efe6', '#1b2747', 'plain')));
+  ok(k5off.fill === '#f2efe6' && k5.fill !== '#f2efe6' && k5.design === 'plain' && k5.trim !== k5.fill, `navy and white Halves at home v a plain white side: its white half is the away shirt, so the away side changes, to the best it has (${k5.fill} ${k5.trim} ${k5.design}; KITS off ${k5off.fill})`);
+  const k6 = K.awayKit(mk('#1b2747', '#f2b01e', 'plain'), nw), k7 = K.awayKit(mk('#f2efe6', '#c8102e', 'plain'), nw);
+  ok(k6.design === 'plain' && X.colorDist(k6.fill, '#1b2747') >= 140 && k7.design === 'plain' && X.colorDist(k7.fill, '#f2efe6') >= 140,
+    `navy and white Halves away v a plain navy side, and v a plain white one: changed to a plain kit clear of the home shirt, never the same halves turned round (${k6.fill} ${k6.design}; ${k7.fill} ${k7.design})`);
+  // every Create Team colour pair, Halves or Quarters v Plain or a split shirt: never turned round, never a white or black kit trimmed in its own colour
+  const pal = X.KIT_COLOURS.map(c => c[1]), sweep = { n:0, turned:0, flat:0, near:0, missed:0 };
+  for (const hk of pal) for (const ht of pal) for (const hd of ['plain', 'halves']) for (const ak of pal) for (const at of pal) for (const ad of ['halves', 'quarters']) {
+    if (hk === ht || ak === at) continue;
+    const H = mk(hk, ht, hd), A = { ...mk(ak, at, ad), id:'TSA' }, k = K.awayKit(H, A); sweep.n++;
+    if (k.design === ad && k.fill === at && k.trim === ak) sweep.turned++;
+    if (X.colorDist(k.fill, k.trim) < 60 && !(k.fill === ak && k.trim === at)) sweep.flat++;   // a side's own two colours are its own choice
+    const shows = (f, t, d) => (['halves', 'quarters'].includes(d) ? [f, t] : [f]), gap = (f, t, d) => Math.min(...shows(hk, ht, hd).flatMap(x => shows(f, t, d).map(y => X.colorDist(x, y))));
+    if (gap(k.fill, k.trim, k.design) < 140) { sweep.near++; if (gap(ak, at, ad) >= 140 || gap('#f2efe6', ak, 'plain') >= 140 || gap('#1c1c1c', ak, 'plain') >= 140) sweep.missed++; }
+  }
+  ok(sweep.n > 60000 && sweep.turned === 0 && sweep.flat === 0, `${sweep.n} pairings of Create Team's colours with a split shirt away: none turned round, no white or black kit trimmed in its own colour (${json(sweep)})`);
+  ok(sweep.missed === 0, `and readable wherever its own kit, white or black would be: no colour either side shows within 140 of the other's (${sweep.near} left close, each with every option clashing; ${sweep.missed} missed)`);
+  // HAC, the one Halves club, against every side in the game, home and away: readable wherever any option is
+  let hacNear = 0; const hacOut = [];
+  for (const o of sides) for (const [h, a] of [[hac, o], [o, hac]]) {
+    if (o === hac) continue;
+    const k = K.awayKit(h, a), shows = (f, t, d) => (['halves', 'quarters'].includes(d) ? [f, t] : [f]), hs = shows(h.kit, h.trim, K.designOf(h));
+    const near = Math.min(...hs.flatMap(x => shows(k.fill, k.trim, k.design).map(y => X.colorDist(x, y))));
+    if (near < 140) { hacNear++; if (hacOut.length < 4) hacOut.push(h.id + 'v' + a.id + ':' + k.fill); }
+  }
+  ok(hacNear === 0, `HAC home and away against all ${sides.length - 1} sides: every pairing readable, no colour either side shows within 140 of the other's (${hacNear} close${hacOut.length ? ': ' + hacOut.join(' ') : ''})`);
   const m0 = (() => { T.newMatch(hac, team('WIL'), { halfLen:240, diff:1, headless:true }); const k = T.M.kit.map(k => ({ ...k })); D.exitMatch(); return k; })();
   ok(m0[0].design === 'halves' && m0[0].hoops === false && m0[1].design === 'hoops' && m0[1].third === '#f2efe6' && m0[1].hoops === true, `a match holds each side's design and third (${json(m0)})`);
 }
@@ -203,6 +259,28 @@ const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = 
   const bad = [X.cleanTeam({ ...old, design:'tartan' }, 0), X.cleanTeam({ ...old, design:'sash', third:'navy' }, 0), X.cleanTeam({ ...old, design:'plain', hoops:true, third:'#1b2747' }, 0), X.cleanTeam({ ...old, design:'band', third:'#F2EFE6' }, 0)];
   ok(!('design' in bad[0]) && bad[0].hoops === true && bad[1].design === 'sash' && !('third' in bad[1]) && !('design' in bad[2]) && bad[2].hoops === false && !('third' in bad[2]) && bad[3].design === 'band' && !('third' in bad[3]),
     'an unknown design reads as hoops:true says; a third that is not a hex, on Plain, or the trim\'s own colour is dropped');
+  // a hand-edited third that is not a string: dropped, never thrown (a throw in restore() would leave the rest of the save unread)
+  const odd = [['#1b2747'], { toString:() => '#1b2747' }, 1193287, null];
+  let threw = null; const odds = [];
+  try { for (const third of odd) { odds.push(X.cleanTeam({ ...old, design:'halves', third }, 0), X.cleanSide({ ...old, design:'halves', third })); odds.push(X.cleanTeam({ ...old, kit:['#c8102e'], design:'halves', third:'#1b2747' }, 0)); }
+    for (const third of odd) if (K.thirdOf({ kit:'#111111', trim:'#222222', design:'halves', third }) !== null) threw = 'thirdOf ' + json(third); } catch (e) { threw = e.message; }
+  ok(!threw && odds.every((t, i) => t.design === 'halves' && (i % 3 === 2 ? t.third === '#1b2747' : !('third' in t))), `a third that is an array, an object, a number or null is dropped, and an array shirt with a hex third keeps the third, none thrown (${threw || 'none thrown'})`);
+  const raw0 = json({ settings:{}, custom:[{ ...old, design:'halves', third:['#1b2747'] }] });
+  memory['tryline.v1'] = raw0; X.newChamp(team('HAC'), [team('OHA'), team('HWY'), team('BRY'), team('WIL'), team('FAR')]); H.save();
+  const st = JSON.parse(memory['tryline.v1']); st.custom = [{ ...old, design:'halves', third:['#1b2747'] }]; memory['tryline.v1'] = json(st); H.setChamp(null); H.custom().splice(0);
+  let loadErr = null; try { H.load(); } catch (e) { loadErr = e.message; }
+  ok(!loadErr && H.champ() && H.champ().teams.length === 6 && H.custom().length === 1 && H.custom()[0].design === 'halves' && !('third' in H.custom()[0]), `a save with a made side's third an array: the side loads without it, and the championship after it loads too (${loadErr || 'loaded'})`);
+  H.setChamp(null); H.custom().splice(0); delete memory['tryline.v1'];
+  // a championship, cup or career saved by 1.7: its county clubs carry no design, and take their club's where the shirt and trim are the club's
+  X.newChamp(team('HAC'), [team('OHA'), team('HWY'), team('BRY'), team('WIL'), team('FAR')]);
+  const was17 = JSON.parse(json(H.champ())); H.setChamp(null);
+  for (const t of was17.teams) { delete t.design; delete t.third; }
+  was17.teams[3] = { ...was17.teams[3], kit:'#2050b0' };   // Bromyard in another shirt: not the club's kit, so not the club's design
+  const c17 = X.cleanChamp(was17), by = id => c17.teams.find(t => t.id === id);
+  ok(c17 && K.designOf(by('HAC')) === 'halves' && K.thirdOf(by('OHA')) === '#c8102e' && K.designOf(by('OHA')) === 'band' && K.thirdOf(by('HWY')) === '#f2efe6' && K.designOf(by('BRY')) === 'plain' && !('design' in by('FAR')) && by('FAR').hoops === true,
+    `a 1.7 championship: HAC, Old Halesonians and High Wycombe take their clubs' designs and thirds; a side in another shirt, and Farnham, stay as saved (${c17 && c17.teams.map(t => t.id + ':' + K.designOf(t)).join(' ')})`);
+  const made17 = X.cleanSide({ id:'HAC', name:'HAC', kit:'#1b2747', trim:'#7c1431', custom:true, pace:3, power:3, handling:3, kicking:3, stamina:3 });
+  ok(K.designOf(made17) === 'plain', 'a made side with a club\'s code and colours keeps what it was saved with');
   const side = X.cleanSide({ id:'HAC', name:'HAC', kit:'#1b2747', trim:'#7c1431', design:'halves', pace:3, power:3, handling:3, kicking:3, stamina:3 }), oldSide = X.cleanSide({ id:'FAR', name:'Farnham', kit:'#1a1a1a', trim:'#f2efe6', hoops:true, pace:4, power:3, handling:4, kicking:3, stamina:3 });
   ok(side.design === 'halves' && !('third' in side) && !('design' in oldSide) && oldSide.hoops === true, 'a championship\'s, a cup\'s or a career\'s side (cleanSide) keeps its design; an old one is as it was');
   X.newChamp(team('HAC'), [team('OHA'), team('HWY'), team('BRY'), team('WIL'), team('FAR')]);
@@ -337,6 +415,33 @@ async function browserChecks() {
         ok(r.stripes[0] >= 4 && r.stripes[1] > 0.2, `Stripes: stripes across the back (${f(r.stripes)})`);
         ok(r.same.every(Boolean), 'Plain and two-colour Hoops bake byte for byte as a 1.7-shaped kit does');
         console.log(`  bake per picture, idle at 64px: plain ${r.ms[0].toFixed(3)} ms, Quarters with a third ${r.ms[1].toFixed(3)} ms (a row's frame and map cached after its first)`);
+        // a real match on Mid, one player: the pictures the game itself bakes (artCell, artBake) carry the design. A made Halves side in green and
+        // blue at home to Wilmslow: its colour maps are made, mirrored ones too, and its pictures, baked through artCell at each facing,
+        // put his left in the blue: the picture's left from behind, its right from in front, and side on his left (a picture baked
+        // mirrored, never his right flipped) mostly blue, his right far less so
+        const m = await page.evaluate(() => {
+          const T = window.__tryline, K = T.kits, D = T.debug, S = D.settings(), A = K.ART();
+          const made = T.teams.cleanTeam({ key:'kh', id:'KHV', name:'Halves Made', kit:'#109a52', trim:'#2050b0', design:'halves', pace:3, power:3, handling:3, kicking:3, stamina:3 }, 0);
+          S.cam = 2; T.newMatch(made, T.teams.ALL_TEAMS.find(t => t.id === 'WIL'), { halfLen:240, diff:1 }); D.setMode('match'); D.setTwo(false);
+          for (let i = 0; i < 600; i++) { T.update(T.STEP); D.render(T.STEP); }
+          const keys = new Set(); for (const mp of A.dmaps.values()) for (const k in mp) keys.add(k);
+          const p = T.M.players.find(q => q.team === 0), w = T.M.players.find(q => q.team === 1), look = K.lookOf(p);
+          const hue = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (mx < 40 || d/mx < 0.35) return -1; let h = mx === r ? ((g - b)/d) % 6 : mx === g ? (b - r)/d + 2 : (r - g)/d + 4; return (h*60 + 360) % 360; };
+          const at = d8 => {
+            const pose = { ...K.sprite('idle', 0, d8, false, look) }, slot = K.cell(p, {}, pose, 1, true), c = slot.c, px = slot.g.getImageData(slot.x, slot.y, c.w, c.h).data, pts = [[], []];
+            // above the shorts only: his socks are in the shirt colour
+            for (let y = 0; y < c.h*0.6; y++) for (let x = 0; x < c.w; x++) { const i = (y*c.w + x)*4; if (px[i + 3] < 200) continue; const h = hue(px[i], px[i + 1], px[i + 2]); if (h < 0) continue; [148, 220].forEach((v, j) => { if (Math.min(Math.abs(h - v), 360 - Math.abs(h - v)) < 22) pts[j].push(x); }); }
+            const mean = a => a.reduce((s, v) => s + v, 0)/Math.max(1, a.length), n = pts[0].length + pts[1].length;
+            return { s:pts[0].length/n, t:pts[1].length/n, dx:mean(pts[1]) - mean(pts[0]), mirror:pose.mirror };
+          };
+          const out = { keys:[...keys].sort(), asym:[K.asym(p), K.asym(w)], back:at(0), right:at(2), front:at(4), left:at(6) };
+          D.exitMatch(); D.setMode('menu');
+          return out;
+        });
+        const g = v => `${v.s.toFixed(2)}/${v.t.toFixed(2)} ${v.dx.toFixed(1)}`;
+        ok(m.keys.includes('0halves2') && m.keys.includes('1halves2') && m.asym[0] === true && m.asym[1] === false, `a real match on Mid: the Halves side's colour maps made, mirrored ones too, and it alone baked mirrored (${m.keys.join(' ')})`);
+        ok(m.back.dx < -4 && m.front.dx > 4 && m.left.mirror && m.left.t - m.right.t > 0.1 && m.left.t > m.left.s,
+          `the match's own bakes (artCell): his left in the trim from behind (${g(m.back)}) and in front (${g(m.front)}); side on, his left, baked mirrored, mostly the trim (${g(m.left)}) and far more of it than his right shows (${g(m.right)})`);
       }
       ok(!errors.length, `no page errors in the sprite checks (${errors.join('; ') || 'none'})`);
       await ctx.close();
@@ -355,12 +460,14 @@ async function browserChecks() {
       let s = await st();
       ok(json(s.labels) === json(['Plain', 'Hoops', 'Halves', 'Quarters', 'Stripes', 'Sash', 'Chest Band']) && s.pressed === 0 && s.name === 'Plain' && !s.thirdShown, `${at}: Design is seven shirts, Plain to Chest Band, Plain chosen and named, no Third Colour on Plain`);
       const minW = Math.min(...s.sizes.map(z => z[0])), hs = s.sizes.map(z => z[1]);
-      ok(hs.every(v => v >= 44) && minW >= 40.5 && (w !== 667 || minW < 44) && s.strip[0] >= s.strip[2] - 0.5 && s.strip[1] <= s.strip[3] + 0.5 + (s.strip[1] - s.strip[0]) && s.wide <= 0,
+      ok(hs.every(v => v >= 44) && minW >= 40.5 && (w !== 667 || minW < 44) && s.strip[0] >= s.strip[2] - 0.5 && s.strip[1] <= s.strip[3] + 0.5 && s.wide <= 0,
         `${at}: each Design button ${s.sizes[0][0]}x${s.sizes[0][1]} (44 tall; 41 wide at 667, as the owner approved), the strip inside the panel's padding, no sideways scroll`);
       await page.tap('#bd-design [data-design="quarters"]');
       s = await st();
       ok(s.design === 'quarters' && !s.hoops && s.name === 'Quarters' && s.thirdShown && s.first === 'None' && s.firstPressed === 'true' && s.two && json(s.hiddenCols.sort()) === json([s.kit, s.trim].sort()) && s.shownCols === 10,
         `${at}: a tap on Quarters names it and shows Third Colour, None first and chosen, the shirt's and the trim's colours left out (None over two places)`);
+      const none = await page.getByRole('button', { name:'None', exact:true }).count(), grp = await page.getByRole('group', { name:'Third Colour', exact:true }).count();
+      ok(none === 1 && grp === 1, `${at}: None is named None, as it reads, in a group named Third Colour (${none}, ${grp})`);
       await page.tap('#bd-third [aria-label="Red"]');
       s = await st();
       ok(s.third === '#c8102e' && s.firstPressed === 'false' && /d-quarters/.test(s.preview) && /--third:#c8102e/.test(s.preview), `${at}: Red as the third, shown on the preview shirt`);
@@ -377,6 +484,7 @@ async function browserChecks() {
       // a controller: Down from Change Level reaches the strip, Right walks it, A picks, Down to Shirt, Trim and Third Colour, Up back
       const pad = await page.evaluate(() => {
         const T = window.__tryline, $ = id => document.getElementById(id), f = () => document.querySelector('.padfocus'), where = el => !el ? 'none' : el.dataset.design ? 'd:' + el.dataset.design : el.closest('#bd-kit') ? 'kit' : el.closest('#bd-trim') ? 'trim' : el.closest('#bd-third') ? 'third' : el.id || el.className;
+        const chosen = 'd:' + T.kits.designOf(T.stamina.draft());
         T.navMove(0, 0, 0); for (let i = 0; i < 12 && f() !== $('bd-level-change'); i++) T.navMove(0, 0, -1);
         const path = [where(f())];
         for (let i = 0; i < 6 && !(f() && f().dataset.design); i++) { T.navMove(0, 0, 1); path.push(where(f())); }
@@ -385,11 +493,11 @@ async function browserChecks() {
         T.navPress(0); const picked = T.stamina.draft().design;
         const down = []; for (let i = 0; i < 6; i++) { T.navMove(0, 0, 1); down.push(where(f())); }
         const ups = []; for (let i = 0; i < 12 && !(f() && f().dataset.design); i++) { T.navMove(0, 0, -1); ups.push(where(f())); }
-        return { path, walk, picked, down, ups, ring:(() => { const el = f(), r = el && el.getBoundingClientRect(), s = $('bd-design').getBoundingClientRect(); return el ? [r.left >= s.left - 0.5, r.right <= s.right + 0.5] : []; })() };
+        return { chosen, path, walk, picked, down, ups, ring:(() => { const el = f(), r = el && el.getBoundingClientRect(), s = $('bd-design').getBoundingClientRect(); return el ? [r.left >= s.left - 0.5, r.right <= s.right + 0.5] : []; })() };
       });
-      ok(pad.path[0] === 'bd-level-change' && pad.path[pad.path.length - 1].startsWith('d:') && json(pad.walk) === json(['plain', 'hoops', 'halves', 'quarters', 'stripes', 'sash', 'band'].map(d => 'd:' + d)) && pad.picked === 'band'
-        && pad.down.includes('kit') && pad.down.includes('trim') && pad.down.includes('third') && pad.ups[pad.ups.length - 1].startsWith('d:') && pad.ring.every(Boolean),
-        `${at}: a controller: Down from Change Level onto the strip, Left and Right along it, Plain to Chest Band, A picks, Down through Shirt, Trim and Third Colour, Up back, the ring inside the strip (${pad.path.join('>')} | ${pad.walk.join(' ')} | ${pad.down.join(' ')} | ${pad.ups.join(' ')})`);
+      ok(pad.path[0] === 'bd-level-change' && pad.path[pad.path.length - 1] === pad.chosen && pad.chosen !== 'd:plain' && json(pad.walk) === json(['plain', 'hoops', 'halves', 'quarters', 'stripes', 'sash', 'band'].map(d => 'd:' + d)) && pad.picked === 'band'
+        && pad.down.includes('kit') && pad.down.includes('trim') && pad.down.includes('third') && pad.ups[pad.ups.length - 1] === 'd:band' && pad.ring.every(Boolean),
+        `${at}: a controller: Down from Change Level onto the design chosen (${pad.chosen}), Left and Right along it, Plain to Chest Band, A picks, Down through Shirt, Trim and Third Colour, Up back onto Chest Band, the ring inside the strip (${pad.path.join('>')} | ${pad.walk.join(' ')} | ${pad.down.join(' ')} | ${pad.ups.join(' ')})`);
       // the save, and the side reopened as it was
       const saved = await page.evaluate(() => {
         const T = window.__tryline, $ = id => document.getElementById(id);
@@ -401,6 +509,19 @@ async function browserChecks() {
       });
       ok(saved.t.design === 'quarters' && /^#/.test(saved.t.third) && saved.t.hoops === false && json(saved.raw) === json(saved.t) && saved.pressed === 'quarters' && saved.thirdPressed === 'Gold' && saved.name === 'Quarters',
         `${at}: saved with Quarters and a Gold third, and reopened with both chosen (${json(saved)})`);
+      if (at === '667x375' || at === '844x390') {   // KITS off: Plain and Hoops in two equal halves of the strip, as 1.7's Pattern, and no Third Colour
+        const off = await page.evaluate(() => {
+          const T = window.__tryline, $ = id => document.getElementById(id); T.kits.KITS.on = false;
+          try {
+            T.debug.openTeams('quick'); T.stamina.openBuilder(null); document.querySelectorAll('#bd-level-grid [data-level]')[5].click(); $('bd-design').querySelector('[data-design="hoops"]').click();
+            const shown = [...$('bd-design').children].filter(b => !b.hidden).map(b => { const r = b.getBoundingClientRect(); return [b.dataset.design, Math.round(r.width*10)/10, Math.round(r.height*10)/10]; }), s = $('bd-design').getBoundingClientRect();
+            return { shown, strip:Math.round(s.width*10)/10, third:!$('bd-third-f').hidden, design:T.stamina.draft().design, hoops:T.stamina.draft().hoops };
+          } finally { T.kits.KITS.on = true; }
+        });
+        const [a, b] = off.shown;
+        ok(off.shown.length === 2 && a[0] === 'plain' && b[0] === 'hoops' && Math.abs(a[1] - b[1]) < 1 && a[1] + b[1] >= off.strip - 2 && a[2] >= 44 && !off.third && off.hoops === true,
+          `${at}, KITS off: Plain and Hoops alone, in two equal halves of the strip (${a && a[1]} and ${b && b[1]} of ${off.strip}), Hoops picks, no Third Colour`);
+      }
       ok(!errors.length, `${at}: no page errors (${errors.join('; ') || 'none'})`);
       await ctx.close();
     }
