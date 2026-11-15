@@ -92,22 +92,35 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   // The owner's research (14 Nov 2026): 78 of the 84 guesses are sourced now (reported), the other 6 (Gateshead, Portsmouth, Syston, Ledbury, Spalding,
   // Old Crossleyans) still guesses. No guess and no free choice looks the same as another kit in its county; where two sourced kits do, both stay,
   // and the pairs that take in an owner's kit are the decided entry's, no more and no fewer.
+  // Re-pinned 15 Nov 2026 (1.9.2, the owner's answers on the six): Spalding confirmed, Old Crossleyans, Ledbury and Portsmouth reported, each a plain
+  // shirt (design 'plain', Portsmouth's third white); Gateshead and Syston still guesses. So 6 guesses become 2 (GAT, SYS) and the counts go from
+  // 70, 376, 6 to 71, 379, 2: exactly the four kits moved (one to confirmed, three to reported). The 78 owner's kits are as they were.
   const ownerKit = all.filter(r => r.sources.some(l => l.startsWith("Kit: the owner's research (14 Nov 2026)")));
-  ok(ownerKit.length === 78 && ownerKit.every(r => r.kitConfidence === 'reported' && r.design) && guess.map(r => r.id).sort().join() === 'GAT,LED,OCR,POT,SPL,SYS'
-    && ['confirmed', 'reported', 'guess'].map(k => all.filter(r => !r.existingId && r.kitConfidence === k).length).join() === '70,376,6',
-    `the owner's research: 78 kits reported, each with its design; 6 still guesses (${guess.map(r => r.id).join()}); confirmed, reported, guess ${['confirmed', 'reported', 'guess'].map(k => all.filter(r => !r.existingId && r.kitConfidence === k).length).join(', ')} of the 452 new`);
-  const movable = new Set([...ptKit, ...guess.map(r => r.id), ...free.map(r => r.id)]), clash2 = [], kept = [];
+  ok(ownerKit.length === 78 && ownerKit.every(r => r.kitConfidence === 'reported' && r.design) && guess.map(r => r.id).sort().join() === 'GAT,SYS'
+    && ['confirmed', 'reported', 'guess'].map(k => all.filter(r => !r.existingId && r.kitConfidence === k).length).join() === '71,379,2',
+    `the owner's research: 78 kits reported, each with its design; 2 still guesses (${guess.map(r => r.id).join()}); confirmed, reported, guess ${['confirmed', 'reported', 'guess'].map(k => all.filter(r => !r.existingId && r.kitConfidence === k).length).join(', ')} of the 452 new`);
+  const kit15 = { SPL:['#7c1431', '#1b2747', 'confirmed', null], OCR:['#1b2747', '#f2b01e', 'reported', null], LED:['#109a52', '#1c1c1c', 'reported', null], POT:['#f2b01e', '#1c1c1c', 'reported', '#f2efe6'] };
+  const k15 = all.filter(r => kit15[r.id]), d15 = research.decided.find(x => x.topic === "Last season's lines and six kits") || {};
+  ok(k15.length === 4 && k15.every(r => json([r.kit, r.trim, r.kitConfidence, r.third ?? null, r.design, r.hoops, r.kitFree ?? null]) === json([...kit15[r.id], 'plain', false, null]) && r.sources.some(l => l.includes('the owner, 15 Nov 2026')))
+    && ['GAT', 'SYS'].every(id => all.find(r => r.id === id).sources.some(l => l.startsWith('Kit: still not found (the kit research and its second check, 15 Nov 2026)'))),
+    `the owner's six (15 Nov 2026): Spalding maroon and navy (confirmed), Old Crossleyans navy and gold, Ledbury green and black, Portsmouth gold and black with a white third (reported), each a plain shirt, its sources saying so; Gateshead and Syston still guesses, the research's findings in their sources`);
+  const movable = new Set([...ptKit, ...guess.map(r => r.id), ...free.map(r => r.id)]), clash2 = [], kept = [], kept15 = [];
   const OWNER = new Set(ownerKit.map(r => r.id));
   for (const l of counties) { const ts = [...new Set(l.teams)]; ts.forEach((a, i) => ts.slice(i + 1).forEach(b => { if (!alike(a, b)) return;
     if ((movable.has(a.id) && !OWNER.has(a.id)) || (movable.has(b.id) && !OWNER.has(b.id)) || (free.some(r => r.id === a.id && OWNER.has(a.id)) || free.some(r => r.id === b.id && OWNER.has(b.id)))) clash2.push(a.name + '/' + b.name);
+    else if (kit15[a.id] || kit15[b.id]) kept15.push([a.id, b.id].sort().join('/'));   // the owner's six (15 Nov 2026): checked against their own decided entry, below
     else if (OWNER.has(a.id) || OWNER.has(b.id)) kept.push([a.id, b.id].sort().join('/')); })); }
   const keptWant = (research.decided.find(x => x.topic === "Kits from the owner's research") || {}).lookAlikesKept || [];
   ok(!clash2.length && kept.sort().join() === [...keptWant].sort().join(), `no guess or free choice looks the same as another kit in its county (${clash2.join(', ') || 'none'}); the ${kept.length} sourced pairs with an owner's kit that look alike stay, as decided (${kept.join(' ')})`);
+  ok(kept15.sort().join() === [...(d15.lookAlikesKept || [])].sort().join() && kept15.join() === 'GUS/OCR,LEO/OCR,OCR/WEN', `the owner's six (15 Nov 2026): the sourced pairs that take one in and look alike are their decided entry's, no more and no fewer, and stay (${kept15.join(' ')}: Old Crossleyans' navy and gold beside Leodiensian's, and Guisborough's and Wensleydale's black and gold, in Yorkshire)`);
   // design and third carried into src/clubs-local.js as designs, as the research has them, and (1.8) onto each club by data.js, the one place
   const designs = LO.LOCAL_DATA.designs || {}, withDesign = all.filter(r => r.design != null);
-  ok(withDesign.length === 78 && Object.keys(designs).length === 78 && withDesign.every(r => json(designs[r.id]) === json(r.third ? { design:r.design, third:r.third } : { design:r.design }))
-    && withDesign.every(r => r.hoops === (r.design === 'hoops')) && withDesign.filter(r => r.third).length === 33,
-    `design and third carried to src/clubs-local.js's designs (78, ${withDesign.filter(r => r.third).length} with a third); hooped exactly where the design is hoops (${['halves', 'band'].map(k => withDesign.filter(r => r.design === k).map(r => r.id).join(' ')).join(', ')}: halves and chest band, drawn since 1.8)`);
+  // Re-pinned 15 Nov 2026 (1.9.2): the owner's four sourced kits of that day (Spalding, Old Crossleyans, Ledbury, Portsmouth) carry design 'plain',
+  // Portsmouth a white third: 78 designs become 82 and 33 thirds 34, exactly those four and that one
+  ok(withDesign.length === 82 && Object.keys(designs).length === 82 && withDesign.every(r => json(designs[r.id]) === json(r.third ? { design:r.design, third:r.third } : { design:r.design }))
+    && withDesign.every(r => r.hoops === (r.design === 'hoops')) && withDesign.filter(r => r.third).length === 34
+    && withDesign.filter(r => !ownerKit.includes(r)).map(r => r.id).sort().join() === 'LED,OCR,POT,SPL' && withDesign.filter(r => r.third && !ownerKit.includes(r)).map(r => r.id).join() === 'POT',
+    `design and third carried to src/clubs-local.js's designs (82: the owner's research's 78 and the four of 15 Nov 2026, ${withDesign.filter(r => r.third).length} with a third); hooped exactly where the design is hoops (${['halves', 'band'].map(k => withDesign.filter(r => r.design === k).map(r => r.id).join(' ')).join(', ')}: halves and chest band, drawn since 1.8)`);
   // 1.8 reads them (the owner, 14 Nov: Build): the designs map is read in one place, data.js, which puts each club's design and third on it
   // exactly as the research gives them; no other club, nation or game club carries either; and the game draws what they say (kitDesignOf,
   // kitThirdOf and kitEdgeOf, src/kit-design.js: Plain shows no design's third, so the 12 plain clubs' thirds are drawn as an edge at the
@@ -119,14 +132,21 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
     const others = X.ALL_TEAMS.filter(t => !LO.LOCAL_NEW.has(t) && ('design' in t || 'third' in t));
     const drawn = carried.filter(t => KD.designOf(t) !== designs[t.id].design || KD.thirdOf(t) !== (designs[t.id].design === 'plain' ? null : designs[t.id].third ?? null)
       || KD.edgeOf(t) !== (designs[t.id].design === 'plain' ? designs[t.id].third ?? null : null));
-    ok(readers.join() === 'data.js' && /LOCAL_DATA\.designs/.test(srcOf('data.js')) && carried.length === 78 && !wrong.length && !others.length && !drawn.length
-      && carried.filter(t => KD.thirdOf(t)).length === 21 && carried.filter(t => t.design === 'plain' && t.third).length === 12 && X.ALL_TEAMS.filter(t => KD.edgeOf(t)).length === 12,
-      `the game reads them (1.8): the designs map in data.js alone (${readers.join() || 'none'}), the 78 clubs carry exactly their design and third and nothing else does (${wrong.map(t => t.id).join() || 'none'}; ${others.map(t => t.id).join() || 'none'}), each drawn as it says (${drawn.map(t => t.id).join() || 'all'}): 21 thirds shown (19 hoops, 2 chest bands), the 12 on Plain shown as an edge at the collar and cuffs, and no other side with one`);
+    // Re-pinned 15 Nov 2026 (1.9.2): 82 clubs carry a design (the four of that day added), and Portsmouth's white third on Plain is the 13th edge
+    ok(readers.join() === 'data.js' && /LOCAL_DATA\.designs/.test(srcOf('data.js')) && carried.length === 82 && !wrong.length && !others.length && !drawn.length
+      && carried.filter(t => KD.thirdOf(t)).length === 21 && carried.filter(t => t.design === 'plain' && t.third).length === 13 && X.ALL_TEAMS.filter(t => KD.edgeOf(t)).length === 13
+      && KD.edgeOf(X.ALL_TEAMS.find(t => t.id === 'POT')) === '#f2efe6',
+      `the game reads them (1.8): the designs map in data.js alone (${readers.join() || 'none'}), the 82 clubs carry exactly their design and third and nothing else does (${wrong.map(t => t.id).join() || 'none'}; ${others.map(t => t.id).join() || 'none'}), each drawn as it says (${drawn.map(t => t.id).join() || 'all'}): 21 thirds shown (19 hoops, 2 chest bands), the 13 on Plain (Portsmouth's white the 13th, 15 Nov 2026) shown as an edge at the collar and cuffs, and no other side with one`);
   }
   const placeOnly = all.filter(r => !r.existingId && r.w == null);
-  ok(placeOnly.map(r => r.id).sort().join() === 'BAU,BEE,CRW,DBE,HWA,MEI,MRL,NOV,NUI,RYT' && placeOnly.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.place === r.place && !('w' in t) && !('pf' in t); }), `a club with no line it can be given has its place only, nothing invented: the 10 of the three tables short of fixtures that played fewer games or are ranked off their place (${placeOnly.map(r => r.id).join()})`);
+  // Re-pinned 15 Nov 2026 (1.9.2, the owner's "Research Last Season"): 8 of the 10 have their line now, the table's plus the league games it lacks
+  // from the clubs' own fixture lists; Nottingham and Market Rasen keep their place only, one figure each resting on a search snippet alone
+  ok(placeOnly.map(r => r.id).sort().join() === 'MRL,NUI' && placeOnly.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.place === r.place && !('w' in t) && !('pf' in t) && r.sources.some(l => l.startsWith('No line: '));}), `a club with no line it can be given has its place only, nothing invented: the 2 of the three tables short of fixtures whose missing game rests on a search snippet (${placeOnly.map(r => r.id).join()})`);
+  const line15 = { RYT:[20, 0, 2, 867, 386], BAU:[7, 0, 15, 488, 662], NOV:[21, 0, 1, 1121, 331], MEI:[13, 1, 8, 817, 663], DBE:[17, 0, 5, 692, 437], BEE:[7, 1, 14, 630, 752], HWA:[17, 0, 5, 725, 470], CRW:[10, 1, 11, 473, 524] };
+  ok(Object.entries(line15).every(([id, v]) => { const t = X.ALL_TEAMS.find(o => o.id === id); return json(['w', 'd', 'l', 'pf', 'pa'].map(k => t[k])) === json(v) && t.w + t.d + t.l === 22; }),
+    `the 8 lines of 15 Nov 2026 (the owner, "Research Last Season"), 22 games each: ${Object.keys(line15).join(', ')}`);
   const pt = all.filter(r => !r.existingId && r.sources.some(l => /^Line: .*on Pitchero/.test(l)));
-  ok(pt.length === 192 && pt.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.w + t.d + t.l > 0 && t.pf > 0; }), `a line from Pitchero's 2025-26 tables for the clubs with none on Wikipedia: 168 from complete tables and 24 from the three short of fixtures (${pt.length})`);
+  ok(pt.length === 200 && pt.every(r => { const t = X.ALL_TEAMS.find(o => o.id === r.id); return t.w + t.d + t.l > 0 && t.pf > 0; }), `a line from Pitchero's 2025-26 tables for the clubs with none on Wikipedia: 168 from complete tables and 32 from the three short of fixtures (24, and 8 more with the games the table lacks, 15 Nov 2026) (${pt.length})`);
   ok(NEW.filter(t => /^National League/.test(t.league)).length === 56 && ['JES', 'GRA'].every(id => list('ham').teams.some(t => t.id === id)) && list('chs').teams.some(t => t.id === 'DOU'), 'National League 1 and 2 added (55, and Guernsey Raiders the 56th); Jersey and Guernsey Raiders under Hampshire, Douglas under Cheshire (the owner, 14 Nov)');
   ok(X.TEAM_LISTS.filter(l => l.tier === 2).every(l => l.teams.length >= 6) && counties.every(l => P.clubGroups('ENG').find(g => g.list === l.key).teams.length >= 6), `six at least in every county, as it shows and as it plays (${counties.map(l => l.key + ' ' + l.teams.length).join(', ')})`);
   const mer = X.COUNTIES.find(t => t.id === 'MER');
@@ -335,11 +355,15 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
 }
 
 // 7. A place-only club: no record line, its league and place everywhere a line is shown (Teddington was one until the Pitchero pass)
+//    Re-pinned 15 Nov 2026 (1.9.2): Novocastrians, the place-only club here until then, has its line now, so the place-only club is Nottingham
+//    (the same league, place and checks), and Novocastrians joins Teddington as a club given its line
 {
-  const t = X.ALL_TEAMS.find(o => o.id === 'NOV');
-  ok(!('w' in t) && H.recordLine(t) === '' && H.leagueLine(t) === 'Counties 1 Durham & Northumberland · 1st Last Season', `Novocastrians: its league and place (${H.leagueLine(t)}), no record line`);
-  s.myClub = 'NOV'; D.goHome(); H.render();
-  ok(!/undefined|NaN/.test($('my-league').innerHTML + $('my-rec').innerHTML) && /Counties 1 Durham/.test($('my-league').innerHTML), 'My Team\'s box at a place-only club: its line, nothing undefined');
+  const t = X.ALL_TEAMS.find(o => o.id === 'NUI');
+  ok(!('w' in t) && H.recordLine(t) === '' && H.leagueLine(t) === 'Counties 1 Midlands East (North) · 1st Last Season', `Nottingham Uni: its league and place (${H.leagueLine(t)}), no record line`);
+  s.myClub = 'NUI'; D.goHome(); H.render();
+  ok(!/undefined|NaN/.test($('my-league').innerHTML + $('my-rec').innerHTML) && /Counties 1 Midlands East/.test($('my-league').innerHTML), 'My Team\'s box at a place-only club: its line, nothing undefined');
+  const nov = X.ALL_TEAMS.find(o => o.id === 'NOV');
+  ok(H.recordLine(nov) === 'Won 21 · Lost 1 · 1121 Scored · 331 Conceded' && H.leagueLine(nov) === 'Counties 1 Durham & Northumberland · 1st Last Season', `Novocastrians, place only until 15 Nov 2026, has its line (${H.recordLine(nov)})`);
   const ted = X.ALL_TEAMS.find(o => o.id === 'TED');
   ok(H.recordLine(ted) === 'Won 10 · Lost 12 · 694 Scored · 702 Conceded', `Teddington, place only in 1.7's first build, has its Pitchero line (${H.recordLine(ted)})`);
   s.myClub = null;
